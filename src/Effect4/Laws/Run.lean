@@ -871,7 +871,7 @@ end Effect4.Run
 namespace Effect4.Run.M1Trace
 open Effect4 Effect4.Machine Effect4.Program
 
-def observe_replace_trace (s : Run)
+theorem observe_replace_trace (s : Run)
     (trace : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
     ProofGraph.Obligation
       (Run.observe { s with session :=

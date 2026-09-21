@@ -423,7 +423,8 @@ theorem fiberMeans_context {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.context = f₂.context :=
   congrArg FiberControl.context h.1
 
-def M1OriginBook.fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+theorem M1OriginBook.fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (_h : FiberMeans C S f₁ f₂) : ProofGraph.Obligation (
     f₁.origin = f₂.origin) := ⟨⟩
 
@@ -974,7 +975,7 @@ def HooksAgree (StOk : St → Prop) (C : κ₁ → κ₂ → Prop) (S : φ₁ �
 
 /-- The advance lemma (the timer, A4): fire by fire, the two instances drain the same owed
 resume, drive and flush in the book, and recur on machines in the book. -/
-def M1Clock.book_advanceState (_hstep : StepAgrees i₁ i₂ StOk C S)
+theorem M1Clock.book_advanceState (_hstep : StepAgrees i₁ i₂ StOk C S)
     (_hclock : ∀ millis s, StOk s →
       StOk (i₁.clockStep millis s).2 ∧ (i₁.clockStep millis s).2 = (i₂.clockStep millis s).2 ∧
         ListRel (OwedMeans C) (i₁.clockStep millis s).1.toList (i₂.clockStep millis s).1.toList)
@@ -983,7 +984,6 @@ def M1Clock.book_advanceState (_hstep : StepAgrees i₁ i₂ StOk C S)
       MachineOk StOk (advanceState i₁ fuel millis rounds a).1 ∧
         BookMeans C S (advanceState i₁ fuel millis rounds a).1 (advanceState i₂ fuel millis rounds b).1 ∧
         (advanceState i₁ fuel millis rounds a).2 = (advanceState i₂ fuel millis rounds b).2) := ⟨⟩
-#proof_wanted M1Clock.book_advanceState
 
 @[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem book_advanceState (hstep : StepAgrees i₁ i₂ StOk C S)
@@ -1278,5 +1278,8 @@ theorem bookMeans_controls {m₁ : RunMachine ν σ Val Err Defect FiberId Ann �
 end Observation
 
 end Effect4.Machine
+
+
+#obligation_proved Effect4.Machine.M1Clock.book_advanceState := @Effect4.Machine.book_advanceState
 
 #typed_state_obligations Effect4.Machine.M1OriginBook ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

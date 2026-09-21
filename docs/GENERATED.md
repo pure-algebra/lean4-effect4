@@ -49,9 +49,12 @@ constructs the skeleton inside `Laws/Program/Typed/State.lean` from its roots an
 `make gen-typed-state` and `make check-typed-state` run the same focused build and controls;
 the normal Laws/Test roots include them. The old `TypedStateEmit.lean` file writer is retired.
 
-The proof-ledger command reads typed obligation and placeholder declarations, searches with
-the supplied tactic, and checks the resulting theorem terms through `ProofGraph`. Rendered
-counts are a report, not an input. Its missing/stale/wrong-proposition/ceiling controls are
+The proof-ledger command reads obligation theorems and placeholder definitions, searches with
+the supplied tactic, and checks the resulting theorem terms through `ProofGraph`.
+`#obligation_proved X := term` supplies a proof of the exact statement directly; both routes
+share the dependency checks and reject a remaining placeholder for a proved statement.
+`#obligation_audit NS` compares complete binder lists and propositions against namesake laws;
+argument adapters must already have checked evidence. Rendered counts are a report, not an input. Its missing/stale/wrong-proposition/ceiling controls are
 in `Test/Audit/{ProofGraph,Obligations}.lean`. The concrete transition-preservation obligation
 set still requires the typing-world instantiation; frame premises are not that proof count.
 

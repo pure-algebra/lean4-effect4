@@ -954,7 +954,7 @@ def w10Into : M :=
     [RunDecision.evaluate ⟨0⟩]
 
 /-- `into` answers `true` and stores the body's failed exit as the completion. -/
-def M1Witnesses.w10_into_completes_on_failure : ProofGraph.Obligation (exitOf w10Into 0 = some (Exit.success (Val.bool true)) ∧
+theorem M1Witnesses.w10_into_completes_on_failure : ProofGraph.Obligation (exitOf w10Into 0 = some (Exit.success (Val.bool true)) ∧
       ((w10Into.state.deferreds.cellAt ⟨0⟩).map DeferredCell.completion) =
         some (some (Completion.ofExit (Exit.failure (Cause.fail Err.boom))))) := ⟨⟩
 

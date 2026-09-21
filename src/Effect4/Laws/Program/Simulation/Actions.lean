@@ -55,10 +55,9 @@ structure InterpAgree (i₁ : FInterp) (i₂ : RInterp) : Prop where
 /-- Registration keeps the loop's store invariant: the deferred half is untouched, and the
 registration-key bound survives because the allocated key is the supply's own value
 (`Machine.scopeLinkFiber_keysFresh`, `E4-CHECK-CE-016`). -/
-def M1Actions.scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.ScopeMode) (scope : Nat)
+theorem M1Actions.scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.ScopeMode) (scope : Nat)
     (fiber : FiberId) (s s' : Stores) (key : Nat) (_hs : StoresOk s)
     (_h : (interpOf root).scopeLinkFiber mode scope fiber s = some (s', key)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
-#proof_wanted M1Actions.scopeLinkFiber_ok
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.ScopeMode) (scope : Nat)
@@ -184,7 +183,7 @@ theorem listRel_evaluate (root : NativeEff) :
   | [] => ListRel.nil
   | _ :: rest => ListRel.cons rfl (listRel_evaluate root rest)
 
-def M1Origin.spawn_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (_hb : i₁.budgetOf = i₂.budgetOf)
+theorem M1Origin.spawn_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (_hb : i₁.budgetOf = i₂.budgetOf)
     {m₁ : FMachine} {m₂ : RState}
     (_hok : MachineOk StoresOk m₁) (_hm : BMeans root m₁ m₂) {p₁ : FRun} {p₂ : RFiber}
     (_hp : FMeans root p₁ p₂) {prog₁ : NCode} {prog₂ : RProgram} (_hprog : CodeMeans root prog₁ prog₂)
@@ -306,7 +305,7 @@ theorem countdownPark_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁
       · rw [hf.id]
         exact means_pushAsyncFinalizer hf.means _
 
-def M1Origin.beginRace_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
+theorem M1Origin.beginRace_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
     (_hok : MachineOk StoresOk m₁) (_hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
     (_hf : FMeans root f₁ f₂) (y : Bool) {e₁ : List NCode} {e₂ : List RProgram}
     (_he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) : ProofGraph.Obligation (IterRel root (beginRace (interpAt root c) m₁ f₁ y e₁ site) (beginRace (interpRAt root c) m₂ f₂ y e₂ site)) := ⟨⟩
@@ -511,10 +510,10 @@ theorem runIn_rel (target : FiberId) (scope : Nat) {a₁ : FAnswer} {a₂ : RAns
   dsimp only at hok' hm' hcs
   exact ⟨hok', hm', ha _ _ _ hf, rfl, outcomeOf_eq hm' false, hcs⟩
 
-def M1Origin.fork_rel {p₁ : NCode} {p₂ : RProgram} (_hp : CodeMeans root p₁ p₂)
+set_option linter.unusedSectionVars false in
+theorem M1Origin.fork_rel {p₁ : NCode} {p₂ : RProgram} (_hp : CodeMeans root p₁ p₂)
     (options : Supervision.ForkOptions) {a₁ : FAnswer} {a₂ : RAnswer} (_ha : AnswerRel root a₁ a₂) (site : List Nat := []) : ProofGraph.Obligation (IterRel root (FiberAction.fork (interpAt root c) m₁ f₁ y p₁ options a₁ site)
       (FiberAction.fork (interpRAt root c) m₂ f₂ y p₂ options a₂ site)) := ⟨⟩
-#proof_wanted M1Origin.fork_rel
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂)
@@ -564,11 +563,11 @@ theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂
     exact ⟨hok'', hm'', ha _ _ _ hf'', rfl, rfl,
       ListRel.append hn (ListRel.cons ⟨hf.id, rfl⟩ ListRel.nil)⟩
 
-def M1Origin.forkIn_rel {p₁ : NCode} {p₂ : RProgram} (_hp : CodeMeans root p₁ p₂)
+set_option linter.unusedSectionVars false in
+theorem M1Origin.forkIn_rel {p₁ : NCode} {p₂ : RProgram} (_hp : CodeMeans root p₁ p₂)
     (options : Supervision.ForkOptions) (scope : Nat) {a₁ : FAnswer} {a₂ : RAnswer}
     (_ha : AnswerRel root a₁ a₂) (site : List Nat := []) : ProofGraph.Obligation (IterRel root (FiberAction.forkIn (interpAt root c) m₁ f₁ y p₁ options scope a₁ site)
       (FiberAction.forkIn (interpRAt root c) m₂ f₂ y p₂ options scope a₂ site)) := ⟨⟩
-#proof_wanted M1Origin.forkIn_rel
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem forkIn_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂)
@@ -764,9 +763,9 @@ theorem cancelRace_rel (raceId : Nat) {a₁ : FAnswer} {a₂ : RAnswer} (ha : An
     exact ⟨hok, hm, hf, rfl, rfl,
       ListRel.cons ⟨rfl, hf.id, rfl, congrArg (fun s => s.live) (raceMeans_state hr), rfl⟩ ListRel.nil⟩
 
-def M1Origin.raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (_he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) : ProofGraph.Obligation (IterRel root (FiberAction.raceAll (interpAt root c) m₁ f₁ y e₁ site)
+set_option linter.unusedSectionVars false in
+theorem M1Origin.raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (_he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) : ProofGraph.Obligation (IterRel root (FiberAction.raceAll (interpAt root c) m₁ f₁ y e₁ site)
       (FiberAction.raceAll (interpRAt root c) m₂ f₂ y e₂ site)) := ⟨⟩
-#proof_wanted M1Origin.raceAll_rel
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) :
@@ -818,6 +817,12 @@ theorem join_rel (target : FiberId) (mode : Supervision.ObserverMode) :
 end Actions
 
 end Effect4.Program.Sched
+
+
+#obligation_proved Effect4.Program.Sched.M1Actions.scopeLinkFiber_ok := @Effect4.Program.Sched.scopeLinkFiber_ok
+#obligation_proved Effect4.Program.Sched.M1Origin.fork_rel := @Effect4.Program.Sched.fork_rel
+#obligation_proved Effect4.Program.Sched.M1Origin.forkIn_rel := @Effect4.Program.Sched.forkIn_rel
+#obligation_proved Effect4.Program.Sched.M1Origin.raceAll_rel := @Effect4.Program.Sched.raceAll_rel
 
 #typed_state_obligations Effect4.Program.Sched.M1Actions ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
 #typed_state_obligations Effect4.Program.Sched.M1Origin ceiling 7 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

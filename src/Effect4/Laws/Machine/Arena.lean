@@ -48,50 +48,50 @@ end Arena
 
 namespace ArenaSupportWanted
 
-def map_some_filterMap {α β : Type} (xs : List α) (f : α → Option β)
+theorem map_some_filterMap {α β : Type} (xs : List α) (f : α → Option β)
     (_present : ∀ a ∈ xs, (f a).isSome = true) : ProofGraph.Obligation
     ((xs.filterMap f).map some = xs.map f) := ⟨⟩
 
-def lookup_filterMap {α β : Type} (xs : List α) (f : α → Option β) (i : Nat) (a : α)
+theorem lookup_filterMap {α β : Type} (xs : List α) (f : α → Option β) (i : Nat) (a : α)
     (_present : ∀ x ∈ xs, (f x).isSome = true) (_lookup : xs[i]? = some a) :
     ProofGraph.Obligation ((xs.filterMap f)[i]? = f a) := ⟨⟩
 
-def peek_none {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) (i : Nat)
+theorem peek_none {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) (i : Nat)
     (_outside : Arena.size s ≤ i) : ProofGraph.Obligation (Arena.peek s i = none) := ⟨⟩
 
 end ArenaSupportWanted
 
 namespace ArenaObligations
 
-def list_lawful (α : Type) : ProofGraph.Obligation (LawfulArena (List α) α) := ⟨⟩
+theorem list_lawful (α : Type) : ProofGraph.Obligation (LawfulArena (List α) α) := ⟨⟩
 
-def toList_empty {σ α : Type} [Arena σ α] [LawfulArena σ α] :
+theorem toList_empty {σ α : Type} [Arena σ α] [LawfulArena σ α] :
     ProofGraph.Obligation (Arena.toList (Arena.empty : σ) = []) := ⟨⟩
 
-def toList_list {α : Type} [LawfulArena (List α) α] (xs : List α) :
+theorem toList_list {α : Type} [LawfulArena (List α) α] (xs : List α) :
     ProofGraph.Obligation (Arena.toList xs = xs) := ⟨⟩
 
-def toList_length {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) :
+theorem toList_length {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) :
     ProofGraph.Obligation ((Arena.toList s).length = Arena.size s) := ⟨⟩
 
-def peek_toList {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) (i : Nat) :
+theorem peek_toList {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) (i : Nat) :
     ProofGraph.Obligation (Arena.peek s i = (Arena.toList s)[i]?) := ⟨⟩
 
-def toList_poke {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) (i : Nat) (v : α) :
+theorem toList_poke {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) (i : Nat) (v : α) :
     ProofGraph.Obligation (Arena.toList (Arena.poke s i v) = (Arena.toList s).set i v) := ⟨⟩
 
-def toList_alloc {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) (v : α) :
+theorem toList_alloc {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) (v : α) :
     ProofGraph.Obligation (Arena.toList (Arena.alloc s v).2 = Arena.toList s ++ [v]) := ⟨⟩
 
-def deferred_make {κ : Type} (d : DeferredStore κ) : ProofGraph.Obligation (
+theorem deferred_make {κ : Type} (d : DeferredStore κ) : ProofGraph.Obligation (
     d.make =
       (⟨(Arena.alloc d.cells (⟨none, WakeList.empty⟩ : DeferredCell κ)).1⟩,
        { d with cells := (Arena.alloc d.cells (⟨none, WakeList.empty⟩ : DeferredCell κ)).2 })) := ⟨⟩
 
-def deferred_cellAt {κ : Type} (d : DeferredStore κ) (cell : DeferredKey) :
+theorem deferred_cellAt {κ : Type} (d : DeferredStore κ) (cell : DeferredKey) :
     ProofGraph.Obligation (d.cellAt cell = Arena.peek d.cells cell.index) := ⟨⟩
 
-def deferred_setCell {κ : Type} (d : DeferredStore κ) (cell : DeferredKey)
+theorem deferred_setCell {κ : Type} (d : DeferredStore κ) (cell : DeferredKey)
     (value : DeferredCell κ) : ProofGraph.Obligation (
     d.setCell cell value = { d with cells := Arena.poke d.cells cell.index value }) := ⟨⟩
 

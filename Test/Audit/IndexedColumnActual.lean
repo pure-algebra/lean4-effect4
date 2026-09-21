@@ -12,21 +12,21 @@ namespace Test.IndexedColumnActual
 def refLeafType {W : Type} (P : Preds W) : W → RefKey → Val → Prop := P.HeapCell
 def cellLeafType {W : Type} (P : Preds W) : W → DeferredKey → DeferredCell → Prop := P.PromiseCell
 
-def refs_projection {W : Type} (P : Preds W) (w : W) (e : Expect) (s : Stores) :
+theorem refs_projection {W : Type} (P : Preds W) (w : W) (e : Expect) (s : Stores) :
     ProofGraph.Obligation (StoresOk P w e s →
       ∀ i v, s.refs[i]? = some v → P.HeapCell w ⟨i⟩ v) := ⟨⟩
 
-def cells_projection {W : Type} (P : Preds W) (w : W) (e : Expect) (s : Stores) :
+theorem cells_projection {W : Type} (P : Preds W) (w : W) (e : Expect) (s : Stores) :
     ProofGraph.Obligation (StoresOk P w e s →
       ∀ i c, s.deferreds.cells[i]? = some c → P.PromiseCell w ⟨i⟩ c) := ⟨⟩
 
-def cells_owner_projection {W : Type} (P : Preds W) (w : W) (e : Expect)
+theorem cells_owner_projection {W : Type} (P : Preds W) (w : W) (e : Expect)
     (s : DeferredStore) :
     ProofGraph.Obligation (DeferredStoreOk P w e s →
       ∀ i c, s.cells[i]? = some c → P.PromiseCell w ⟨i⟩ c) := ⟨⟩
 
 -- The indexed cell owner cannot account away the due occurrence of Completion.
-def due_group_retained {W : Type} (P : Preds W) (w : W) (e : Expect) (s : Stores) :
+theorem due_group_retained {W : Type} (P : Preds W) (w : W) (e : Expect) (s : Stores) :
     ProofGraph.Obligation (StoresOk P w e s → P.PromiseTable w s) := ⟨⟩
 
 end Test.IndexedColumnActual

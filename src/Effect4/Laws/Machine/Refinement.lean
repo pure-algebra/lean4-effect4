@@ -59,54 +59,54 @@ namespace M1.DeferredWanted
 
 variable (f : κ → κ') (g : κ' → κ'') (d : DeferredStore κ)
 
-def cell_map_id (c : DeferredCell κ) : ProofGraph.Obligation
+theorem cell_map_id (c : DeferredCell κ) : ProofGraph.Obligation
     (c.map id = c) := ⟨⟩
 
-def cell_map_comp (c : DeferredCell κ) : ProofGraph.Obligation
+theorem cell_map_comp (c : DeferredCell κ) : ProofGraph.Obligation
     ((c.map f).map g = c.map (g ∘ f)) := ⟨⟩
 
-def map_id : ProofGraph.Obligation (d.map id = d) := ⟨⟩
+theorem map_id : ProofGraph.Obligation (d.map id = d) := ⟨⟩
 
-def map_comp : ProofGraph.Obligation ((d.map f).map g = d.map (g ∘ f)) := ⟨⟩
+theorem map_comp : ProofGraph.Obligation ((d.map f).map g = d.map (g ∘ f)) := ⟨⟩
 
 -- The ten operations, in the declaration order of Machine/Stores.lean.
 
-def map_make : ProofGraph.Obligation
+theorem map_make : ProofGraph.Obligation
     ((d.map f).make = ((d.make).1, (d.make).2.map f)) := ⟨⟩
 
-def map_cellAt (cell : DeferredKey) : ProofGraph.Obligation
+theorem map_cellAt (cell : DeferredKey) : ProofGraph.Obligation
     ((d.map f).cellAt cell = (d.cellAt cell).map (DeferredCell.map f)) := ⟨⟩
 
-def map_setCell (cell : DeferredKey) (value : DeferredCell κ) : ProofGraph.Obligation
+theorem map_setCell (cell : DeferredKey) (value : DeferredCell κ) : ProofGraph.Obligation
     ((d.map f).setCell cell (value.map f) = (d.setCell cell value).map f) := ⟨⟩
 
-def map_isDone (cell : DeferredKey) : ProofGraph.Obligation
+theorem map_isDone (cell : DeferredKey) : ProofGraph.Obligation
     ((d.map f).isDone cell = d.isDone cell) := ⟨⟩
 
-def map_poll (cell : DeferredKey) : ProofGraph.Obligation
+theorem map_poll (cell : DeferredKey) : ProofGraph.Obligation
     ((d.map f).poll cell = (d.poll cell).map (Option.map f)) := ⟨⟩
 
-def map_register (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
+theorem map_register (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
     ((d.map f).register cell waiter token =
       ((d.register cell waiter token).1.map f, (d.register cell waiter token).2.map f)) := ⟨⟩
 
-def map_cancel (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
+theorem map_cancel (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
     ((d.map f).cancel cell waiter token = (d.cancel cell waiter token).map f) := ⟨⟩
 
-def map_complete (cell : DeferredKey) (completion : κ) : ProofGraph.Obligation
+theorem map_complete (cell : DeferredKey) (completion : κ) : ProofGraph.Obligation
     ((d.map f).complete cell (f completion) =
       ((d.complete cell completion).1.map f, (d.complete cell completion).2)) := ⟨⟩
 
-def map_drainDue : ProofGraph.Obligation
+theorem map_drainDue : ProofGraph.Obligation
     ((d.map f).drainDue =
       ((d.drainDue).1.map (Owed.mapCode f), (d.drainDue).2.map f)) := ⟨⟩
 
-def map_wakeBatch (cell : DeferredKey) : ProofGraph.Obligation
+theorem map_wakeBatch (cell : DeferredKey) : ProofGraph.Obligation
     ((d.map f).wakeBatch cell = (d.wakeBatch cell).map f) := ⟨⟩
 
 end M1.DeferredWanted
 
-def M1.CellMapWanted.id_fun : ProofGraph.Obligation
+theorem M1.CellMapWanted.id_fun : ProofGraph.Obligation
     (DeferredCell.map (id : κ → κ) = id) := ⟨⟩
 
 section DeferredMapLaws
@@ -224,10 +224,10 @@ end Refinement
 namespace M1.DeferredWanted
 
 -- These are exact embedding/image statements, not a total read on arbitrary Program.
-def completionPrim_injective : ProofGraph.Obligation
+theorem completionPrim_injective : ProofGraph.Obligation
     (Function.Injective completionPrim) := ⟨⟩
 
-def deferredOk_iff_image (d : DeferredStore Program) : ProofGraph.Obligation
+theorem deferredOk_iff_image (d : DeferredStore Program) : ProofGraph.Obligation
     (Refinement.DeferredOk d ↔ ∃ d' : DeferredStore, d = d'.map completionPrim) := ⟨⟩
 
 end M1.DeferredWanted
@@ -246,63 +246,63 @@ open Refinement
 
 variable (f : κ → κ')
 
-def projects_make : ProofGraph.Obligation
+theorem projects_make : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) => some ((d.make).2, (d.make).1))
       (fun (_ : Unit) (d : DeferredStore κ') => some ((d.make).2, (d.make).1))
       (fun _ => True)) := ⟨⟩
 
-def projects_cellAt (cell : DeferredKey) : ProofGraph.Obligation
+theorem projects_cellAt (cell : DeferredKey) : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) => (d.cellAt cell).map fun c => (d, c.map f))
       (fun (_ : Unit) (d : DeferredStore κ') => (d.cellAt cell).map fun c => (d, c))
       (fun _ => True)) := ⟨⟩
 
-def projects_setCell (cell : DeferredKey) (value : DeferredCell κ) : ProofGraph.Obligation
+theorem projects_setCell (cell : DeferredKey) (value : DeferredCell κ) : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) => some (d.setCell cell value, ()))
       (fun (_ : Unit) (d : DeferredStore κ') => some (d.setCell cell (value.map f), ()))
       (fun _ => True)) := ⟨⟩
 
-def projects_isDone (cell : DeferredKey) : ProofGraph.Obligation
+theorem projects_isDone (cell : DeferredKey) : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) => (d.isDone cell).map fun done => (d, done))
       (fun (_ : Unit) (d : DeferredStore κ') => (d.isDone cell).map fun done => (d, done))
       (fun _ => True)) := ⟨⟩
 
-def projects_poll (cell : DeferredKey) : ProofGraph.Obligation
+theorem projects_poll (cell : DeferredKey) : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) => (d.poll cell).map fun c => (d, c.map f))
       (fun (_ : Unit) (d : DeferredStore κ') => (d.poll cell).map fun c => (d, c))
       (fun _ => True)) := ⟨⟩
 
-def projects_register (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
+theorem projects_register (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) =>
         some ((d.register cell waiter token).1, (d.register cell waiter token).2.map f))
       (fun (_ : Unit) (d : DeferredStore κ') => some (d.register cell waiter token))
       (fun _ => True)) := ⟨⟩
 
-def projects_cancel (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
+theorem projects_cancel (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) => some (d.cancel cell waiter token, ()))
       (fun (_ : Unit) (d : DeferredStore κ') => some (d.cancel cell waiter token, ()))
       (fun _ => True)) := ⟨⟩
 
-def projects_complete (cell : DeferredKey) (completion : κ) : ProofGraph.Obligation
+theorem projects_complete (cell : DeferredKey) (completion : κ) : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) => some (d.complete cell completion))
       (fun (_ : Unit) (d : DeferredStore κ') => some (d.complete cell (f completion)))
       (fun _ => True)) := ⟨⟩
 
-def projects_drainDue : ProofGraph.Obligation
+theorem projects_drainDue : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) =>
         some ((d.drainDue).2, (d.drainDue).1.map (Owed.mapCode f)))
       (fun (_ : Unit) (d : DeferredStore κ') => some ((d.drainDue).2, (d.drainDue).1))
       (fun _ => True)) := ⟨⟩
 
-def projects_wakeBatch (cell : DeferredKey) : ProofGraph.Obligation
+theorem projects_wakeBatch (cell : DeferredKey) : ProofGraph.Obligation
     (Projects (DeferredStore.map f)
       (fun (_ : Unit) (d : DeferredStore κ) => some (d.wakeBatch cell, ()))
       (fun (_ : Unit) (d : DeferredStore κ') => some (d.wakeBatch cell, ()))
@@ -330,21 +330,21 @@ universe u v w z
 
 /-- The packet's observation transfer uses these two shared laws, rather than
 repeating a specialized factorization proof at each representation instance. -/
-def factors_respects_eq {State : Type u} {Fine : Type v} {Coarse : Type w}
+theorem factors_respects_eq {State : Type u} {Fine : Type v} {Coarse : Type w}
     (fine : State → Fine) (coarse : State → Coarse) (a b : State) :
     ProofGraph.Obligation
       (Factors fine coarse → fine a = fine b → coarse a = coarse b) := ⟨⟩
 
-def factors_trans {State : Type u} {A : Type v} {B : Type w} {C : Type z}
+theorem factors_trans {State : Type u} {A : Type v} {B : Type w} {C : Type z}
     (a : State → A) (b : State → B) (c : State → C) : ProofGraph.Obligation
       (Factors a b → Factors b c → Factors a c) := ⟨⟩
 
-def factors_deferreds {Observation : Type u} (observe : DeferredStore Program → Observation) :
+theorem factors_deferreds {Observation : Type u} (observe : DeferredStore Program → Observation) :
     ProofGraph.Obligation
       (Factors Stores.deferreds (fun s => observe (s.deferreds.map completionPrim))) := ⟨⟩
 
 /-- A surrounding observation need only retain the actual Deferred store projection. -/
-def factors_through_deferreds {Fine : Type u} {Observation : Type v}
+theorem factors_through_deferreds {Fine : Type u} {Observation : Type v}
     (fine : Stores → Fine) (_h : Factors fine Stores.deferreds)
     (observe : DeferredStore Program → Observation) : ProofGraph.Obligation
       (Factors fine (fun s => observe (s.deferreds.map completionPrim))) := ⟨⟩
@@ -368,7 +368,7 @@ def listStepState (op : RefKey × RefKernel) (s : RefHeap) : Option (RefHeap × 
 
 namespace ArenaObligations
 
-def projects {σ : Type} [Arena σ Val] [LawfulArena σ Val] : ProofGraph.Obligation (
+theorem projects {σ : Type} [Arena σ Val] [LawfulArena σ Val] : ProofGraph.Obligation (
     Refinement.Projects (@Arena.toList σ Val _ _) arenaStepState listStepState
       (fun _ : σ => True)) := ⟨⟩
 
@@ -380,16 +380,16 @@ namespace Effect4.Machine.M1.DeferredImageSupportWanted
 
 universe u v
 
-def list_image_iff {α : Type u} {β : Type v} (f : α → β) (xs : List β) :
+theorem list_image_iff {α : Type u} {β : Type v} (f : α → β) (xs : List β) :
     ProofGraph.Obligation
       ((∀ x ∈ xs, ∃ y, x = f y) ↔ ∃ ys : List α, xs = ys.map f) := ⟨⟩
 
-def cell_image_iff {κ κ' : Type} (f : κ → κ') (cell : DeferredCell κ') :
+theorem cell_image_iff {κ κ' : Type} (f : κ → κ') (cell : DeferredCell κ') :
     ProofGraph.Obligation
       ((∀ p, cell.completion = some p → ∃ c, p = f c) ↔
         ∃ pre : DeferredCell κ, cell = pre.map f) := ⟨⟩
 
-def owed_image_iff {κ : Type u} {κ' : Type v} (f : κ → κ') (owed : Owed κ') :
+theorem owed_image_iff {κ : Type u} {κ' : Type v} (f : κ → κ') (owed : Owed κ') :
     ProofGraph.Obligation
       ((∃ c, owed.code = f c) ↔
         ∃ pre : Owed κ, owed = pre.mapCode f) := ⟨⟩

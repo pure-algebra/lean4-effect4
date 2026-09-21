@@ -626,7 +626,8 @@ def spawnChild (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine �
   RunFiber.make ⟨m.nextId⟩ program childInterruptible (interp.budgetOf parent.context) parent.context
     (.forked parent.id options.daemon site)
 
-def M1OriginClauses.spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+theorem M1OriginClauses.spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
     spawn interp m parent program options site =
@@ -646,7 +647,8 @@ theorem spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
           [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon],
         parent, ⟨m.nextId⟩) := by aesop
 
-def M1OriginClauses.spawnChild_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+theorem M1OriginClauses.spawnChild_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
     (spawnChild interp m parent program options site).id = ⟨m.nextId⟩ ∧
@@ -678,7 +680,8 @@ theorem spawnChild_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : R
   cases hm : options.maskMode <;>
     aesop (add norm simp [spawnChild, RunFiber.make, hm])
 
-def M1OriginClauses.spawn_untracked (interp : RunInterp ν σ β ε δ ι α χ St)
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+theorem M1OriginClauses.spawn_untracked (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ β ε δ ι α χ)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
     (spawn interp m parent program options site).2.1 = parent) := ⟨⟩
@@ -1356,7 +1359,7 @@ theorem drive_launch_exhausted (interp : RunInterp ν σ β ε δ ι α χ St) (
     drive interp (fuel + 1) m (Cmd.launch raceId :: rest) = drive interp fuel m rest := by
   simp [drive, driveState, driveStep, hs, hr, hp]
 
-def M1OriginClauses.drive_launch_runs (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+theorem M1OriginClauses.drive_launch_runs (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (raceId : Nat) (rest : List (Cmd ν σ β ε δ ι α))
     (race : Race ν σ β ε δ ι α) (program : Prim ν σ β ε δ ι α) (more : List (Prim ν σ β ε δ ι α))
     (host : RunFiber ν σ β ε δ ι α χ)
@@ -1464,7 +1467,7 @@ theorem drive_link (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
        drive interp fuel l.1 (l.2 ++ rest)) := by
   simp [drive, driveState, driveStep, hs]
 
-def M1OriginClauses.withFiber_fork (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+theorem M1OriginClauses.withFiber_fork (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
     evaluatePrim.withFiber interp m f yielding (WithFiberAction.fork program options site) =
@@ -1494,7 +1497,7 @@ theorem withFiber_fork (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunM
         t.2.2 ++ (if options.daemon then [] else [Cmd.trackChild f.id s.2.2])⟩) := by
   aesop (add norm simp [evaluatePrim.withFiber])
 
-def M1OriginClauses.withFiber_forkIn (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+theorem M1OriginClauses.withFiber_forkIn (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat := []) : ProofGraph.Obligation (
     evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope site) =
@@ -1522,7 +1525,7 @@ theorem withFiber_forkIn (interp : RunInterp ν σ β ε δ ι α χ St) (m : Ru
         t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope s.2.2 (some t.2.1.id)
           (interp.stackAnnotations t.2.1.id)]⟩) := by aesop
 
-def M1OriginClauses.withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ St)
+theorem M1OriginClauses.withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (scope : Nat)
     (_h : interp.ambientScope f.context = some scope) (site : List Nat := []) : ProofGraph.Obligation (
@@ -1552,7 +1555,7 @@ theorem withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ
           (interp.stackAnnotations t.2.1.id)]⟩) := by
   aesop (add norm simp [evaluatePrim.withFiber])
 
-def M1OriginClauses.withFiber_forkScoped_none (interp : RunInterp ν σ β ε δ ι α χ St)
+theorem M1OriginClauses.withFiber_forkScoped_none (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions)
     (_h : interp.ambientScope f.context = none) (site : List Nat := []) : ProofGraph.Obligation (
@@ -1767,7 +1770,8 @@ theorem withFiber_interruptAll (interp : RunInterp ν σ β ε δ ι α χ St)
           [Cmd.afterInterrupt f.id yielding (ParkKind.awaitAll targets)]⟩ :=
   by aesop
 
-def M1OriginClauses.launchEntrant_eq (interp : RunInterp ν σ β ε δ ι α χ St) (raceId : Nat)
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+theorem M1OriginClauses.launchEntrant_eq (interp : RunInterp ν σ β ε δ ι α χ St) (raceId : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (host : RunFiber ν σ β ε δ ι α χ)
     (program : Prim ν σ β ε δ ι α) (site : List Nat := []) : ProofGraph.Obligation (
     launchEntrant interp raceId m host program site =
@@ -1785,7 +1789,7 @@ theorem launchEntrant_eq (interp : RunInterp ν σ β ε δ ι α χ St) (raceId
       (let s := spawn interp m host program ⟨true, true, Supervision.MaskMode.interruptible⟩ site
        (s.1, s.2.2)) := by aesop
 
-def M1OriginClauses.withFiber_raceAll (interp : RunInterp ν σ β ε δ ι α χ St)
+theorem M1OriginClauses.withFiber_raceAll (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (entrants : List (Prim ν σ β ε δ ι α)) (site : Option (List Nat) := none) : ProofGraph.Obligation (
     evaluatePrim.withFiber interp m f yielding (WithFiberAction.raceAll entrants site) =

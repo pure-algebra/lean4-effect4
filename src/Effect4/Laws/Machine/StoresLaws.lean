@@ -440,7 +440,7 @@ theorem DeferredStore.setCell_cells_length (self : DeferredStore) (cell : Deferr
     (value : DeferredCell) : (self.setCell cell value).cells.length = self.cells.length :=
   List.length_set
 
-def M1.StoresLaws.DeferredStore.complete_cells_length (self : DeferredStore) (cell : DeferredKey)
+theorem M1.StoresLaws.DeferredStore.complete_cells_length (self : DeferredStore) (cell : DeferredKey)
     (e : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation ((self.complete cell e).1.cells.length = self.cells.length) := ⟨⟩
 
 /-- `complete` (`Stores.lean:742-751`) keeps the cell count: it answers the store itself or
@@ -558,7 +558,7 @@ theorem syncOpStep_deferredPoll (s : Stores) (cell : DeferredKey) :
       (s.deferreds.poll cell).map (fun slot => (s, Val.bool slot.isSome)) :=
   by aesop
 
-def M1.StoresLaws.syncOpStep_deferredCompleteWith (s : Stores) (cell : DeferredKey)
+theorem M1.StoresLaws.syncOpStep_deferredCompleteWith (s : Stores) (cell : DeferredKey)
     (c : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (syncOpStep (SyncOp.deferredCompleteWith cell c) s =
       some ({ s with deferreds := (s.deferreds.complete cell c).1 },
         Val.bool (s.deferreds.complete cell c).2)) := ⟨⟩
@@ -571,7 +571,7 @@ theorem syncOpStep_deferredCompleteWith (s : Stores) (cell : DeferredKey)
         Val.bool (s.deferreds.complete cell c).2) :=
   by aesop
 
-def M1.StoresLaws.syncOpStep_deferredInterruptWith (s : Stores) (cell : DeferredKey)
+theorem M1.StoresLaws.syncOpStep_deferredInterruptWith (s : Stores) (cell : DeferredKey)
     (interruptor : FiberId) : ProofGraph.Obligation (syncOpStep (SyncOp.deferredInterruptWith cell interruptor) s =
       some ({ s with deferreds :=
           (s.deferreds.complete cell
@@ -597,7 +597,7 @@ theorem syncOpStep_deferredAwaitCleanup (s : Stores) (cell : DeferredKey) (waite
       some ({ s with deferreds := s.deferreds.cancel cell waiter token }, Val.unit) :=
   by aesop
 
-def M1Clock.syncOpStep_clockNow (s : Stores) : ProofGraph.Obligation
+theorem M1Clock.syncOpStep_clockNow (s : Stores) : ProofGraph.Obligation
     (syncOpStep SyncOp.clockNow s = some (s, Val.nat s.timers.now.toNat)) := ⟨⟩
 
 /-- The clock read (the timer, A4). -/
@@ -716,7 +716,7 @@ theorem syncOpStep_memoGet_some (s : Stores) (layer : LayerId) (memoMap : MemoMa
         Val.pair (Val.promise entry.deferred) (Val.memoMap owner)) := by
   simp only [syncOpStep, h]
 
-def M1.StoresLaws.syncOpStep_memoBuild (s : Stores) (layer : LayerId) (memoMap : MemoMapId) : ProofGraph.Obligation (syncOpStep (SyncOp.memoBuild layer memoMap) s =
+theorem M1.StoresLaws.syncOpStep_memoBuild (s : Stores) (layer : LayerId) (memoMap : MemoMapId) : ProofGraph.Obligation (syncOpStep (SyncOp.memoBuild layer memoMap) s =
       some ({ s with
           scopes := s.scopes.make s.nextName FinalizerStrategy.sequential
           deferreds := s.deferreds.make.2
@@ -743,7 +743,7 @@ theorem syncOpStep_memoComplete_none (s : Stores) (layer : LayerId) (memoMap : M
     syncOpStep (SyncOp.memoComplete layer memoMap exit) s = some (s, Val.unit) := by
   simp only [syncOpStep, h]
 
-def M1.StoresLaws.syncOpStep_memoComplete_some (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
+theorem M1.StoresLaws.syncOpStep_memoComplete_some (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
     (exit : ExitV) {entry : MemoEntry} (_h : s.memo.entryAt memoMap layer = some entry) : ProofGraph.Obligation (syncOpStep (SyncOp.memoComplete layer memoMap exit) s =
       some ({ s with
           memo := s.memo.updateEntry memoMap layer id

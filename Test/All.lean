@@ -30,6 +30,7 @@ import Test.Codegen.EffectfulFieldContract
 import Test.Counterexamples.Codegen.EffectfulField
 import Test.Machine.Semantics.CauseExitContract
 import Test.Counterexamples.Machine.Semantics.CauseExit
+import Test.Counterexamples.Machine.Semantics.ActionAtRaceAllPremise
 import Test.Machine.Runtime.ScopeContract
 import Test.Machine.Runtime.ScopeMachineContract
 import Test.Machine.Runtime.ScopeRestorationContract

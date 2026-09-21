@@ -669,7 +669,7 @@ def Owed.keys {κ : Type} (ck : κ → List Handle) (d : Owed κ) : List Handle 
 
 /-- Mapping an owed resume carries no handles beyond the input keys when the code map
 has that property; the wake mode and waiter remain the same. -/
-def M1.Handles.owed_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
+theorem M1.Handles.owed_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
     (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)
     (_h : ∀ c, targetKeys (f c) ⊆ sourceKeys c) (d : Owed κ) : ProofGraph.Obligation (
     (d.mapCode f).keys targetKeys ⊆ d.keys sourceKeys) := ⟨⟩
@@ -683,7 +683,7 @@ theorem Owed.mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
     List.subset_append_right _ _⟩
 
 /-- Code-map handle bounds lift through an ordered list of owed resumes. -/
-def M1.Handles.owed_flatMap_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
+theorem M1.Handles.owed_flatMap_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
     (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)
     (_h : ∀ c, targetKeys (f c) ⊆ sourceKeys c) (ds : List (Owed κ)) : ProofGraph.Obligation (
     (ds.map (Owed.mapCode f)).flatMap (Owed.keys targetKeys) ⊆ ds.flatMap (Owed.keys sourceKeys)) := ⟨⟩
@@ -2054,7 +2054,7 @@ end Ops
 Each helper's receipt: the world grew, and the handles the helper leaves behind (its
 machine's, its fiber's, its commands') exist in the world it leaves. -/
 
-def M1Origin.make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
+theorem M1Origin.make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
     (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
       primKeys nk sk program ++ ctx.keys) := ⟨⟩
 
@@ -2073,12 +2073,11 @@ theorem keys_set_observers (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (
   simp only [RunFiber.keys]
   sub_tac
 
-def M1Origin.spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
+theorem M1Origin.spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (parent : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
     (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation ((spawnChild interp m parent program options site).keys nk sk ⊆
       Handle.fiber parent.id :: primKeys nk sk program ++ parent.context.keys) := ⟨⟩
-#proof_wanted M1Origin.spawnChild_keys_subset
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
@@ -2092,7 +2091,7 @@ theorem spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId 
   refine List.Subset.trans (make_keys_subset nk sk _ _ _ _ _ (.forked parent.id options.daemon site)) ?_
   sub_tac
 
-def M1Origin.spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
+theorem M1Origin.spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (parent : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
     (options : Supervision.ForkOptions)
@@ -2101,7 +2100,6 @@ def M1Origin.spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann C
         (Handle.fiber (spawn interp m parent program options site).2.2 ::
           (spawn interp m parent program options site).1.keys nk sk ++
           (spawn interp m parent program options site).2.1.keys nk sk)) := ⟨⟩
-#proof_wanted M1Origin.spawn_minted
 
 @[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
@@ -2329,7 +2327,7 @@ theorem countdownPark_minted (hb : KeyBounded nk sk interp ambient)
         Option.toList]
       sub_tac
 
-def M1Origin.launchEntrant_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores) (raceId : Nat)
+theorem M1Origin.launchEntrant_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores) (raceId : Nat)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (host : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
     (_hm : MintedIn m (Handle.fiber host.id :: m.keys nk sk ++ host.keys nk sk ++ primKeys nk sk program)) (site : List Nat := []) : ProofGraph.Obligation (m.world.le (launchEntrant interp raceId m host program site).1.world ∧
@@ -3135,7 +3133,7 @@ the arm forks in (the fork arm may have set the middleware latch first, so its w
 `S` and `T` name the spawn and the start, and the iteration `it` is whatever the arm built
 from them: its machine is `T.1`, its fiber names nothing beyond the started parent's handles and
 the child's, its commands nothing beyond the start's, and its outcome nothing. -/
-def M1Origin.fork_arm_minted (_hb : KeyBounded nk sk interp ambient)
+theorem M1Origin.fork_arm_minted (_hb : KeyBounded nk sk interp ambient)
     (m M : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (_hMw : M.world = m.world)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx)
     (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
@@ -3150,7 +3148,6 @@ def M1Origin.fork_arm_minted (_hb : KeyBounded nk sk interp ambient)
     (_hnest : cmdsKeys nk sk it.nested ⊆
       cmdsKeys nk sk T.2.2 ++ [Handle.fiber f.id, Handle.fiber S.2.2])
     (_hout : it.outcome.keys = []) : ProofGraph.Obligation (IterMinted nk sk m it) := ⟨⟩
-#proof_wanted M1Origin.fork_arm_minted
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fork_arm_minted (hb : KeyBounded nk sk interp ambient)
@@ -3193,14 +3190,13 @@ theorem fork_arm_minted (hb : KeyBounded nk sk interp ambient)
   · refine List.Subset.trans hfib ?_; sub_tac
   · refine List.Subset.trans hnest ?_; sub_tac
 
-def M1Origin.withFiber_fork_minted (_hb : KeyBounded nk sk interp ambient)
+theorem M1Origin.withFiber_fork_minted (_hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
     (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
     {site : List Nat}
     (_hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
       (WithFiberAction.fork program options site).keys nk sk)) : ProofGraph.Obligation (IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.fork program options site))) := ⟨⟩
-#proof_wanted M1Origin.withFiber_fork_minted
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem withFiber_fork_minted (hb : KeyBounded nk sk interp ambient)
@@ -3232,7 +3228,7 @@ theorem withFiber_fork_minted (hb : KeyBounded nk sk interp ambient)
     simp only [cmdsKeys, List.flatMap_append]
     split <;> simp only [List.flatMap_cons, List.flatMap_nil, Cmd.keys, List.append_nil] <;> sub_tac
 
-def M1Origin.withFiber_forkIn_minted (_hb : KeyBounded nk sk interp ambient)
+theorem M1Origin.withFiber_forkIn_minted (_hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
     (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions) (scope : Nat)
@@ -3259,7 +3255,7 @@ theorem withFiber_forkIn_minted (hb : KeyBounded nk sk interp ambient)
   · sub_tac
   · sub_tac
 
-def M1Origin.withFiber_forkScoped_minted (_hb : KeyBounded nk sk interp ambient)
+theorem M1Origin.withFiber_forkScoped_minted (_hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
     (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
@@ -3450,7 +3446,7 @@ theorem withFiber_awaitNewChildren_minted (hb : KeyBounded nk sk interp ambient)
     (Ok_of_subset (by sub_tac) hm)
     (Ok_of_subset (by sub_tac) (Ok_append.mpr ⟨hm, Ok_of_subset hfresh (Ok_of_subset (by sub_tac) hm)⟩))
 
-def M1Origin.withFiber_raceAll_minted (_hb : KeyBounded nk sk interp ambient)
+theorem M1Origin.withFiber_raceAll_minted (_hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
     (entrants : List (Prim ν σ Val Err Defect FiberId Ann))
@@ -4940,7 +4936,7 @@ theorem flushAllState_minted_of_evaluator (hb : KeyBounded nk sk interp)
 
 /-- An advance mints nothing it does not own (the timer, A4): each fire's owed resume names
 handles the store held, its drain, drive and flush keep the discipline, and the loop recurs. -/
-def M1Clock.advanceState_minted_of_evaluator (_hb : KeyBounded nk sk interp)
+theorem M1Clock.advanceState_minted_of_evaluator (_hb : KeyBounded nk sk interp)
     (_hEval : EvaluatorMinted nk sk interp) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores), MintedAt nk sk m →
       m.world.le (advanceState interp fuel millis rounds m).1.world ∧
         MintedAt nk sk (advanceState interp fuel millis rounds m).1) := ⟨⟩
@@ -5471,33 +5467,30 @@ theorem actionOf_keys (action : ActionName) :
 namespace M1.Handles
 open Effect4 Effect4.Machine
 
-def register_keys (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
+theorem register_keys (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
     ProofGraph.Obligation (
     (self.register cell waiter token).1.keys ⊆ self.keys ∧
       (∀ p, (self.register cell waiter token).2 = some p → p.keys ⊆ self.keys) ∧
       self.cells.length ≤ (self.register cell waiter token).1.cells.length) := ⟨⟩
-#proof_wanted register_keys
 
-def flatMap_resumes_const (ws : List (Waiter Unit)) (e : Completion Val Err Defect FiberId Ann) :
+theorem flatMap_resumes_const (ws : List (Waiter Unit)) (e : Completion Val Err Defect FiberId Ann) :
     ProofGraph.Obligation (
     (ws.map fun w => (⟨w.fiber, w.token, e, WakeMode.now⟩ : Owed (Completion Val Err Defect FiberId Ann))).flatMap
         (Owed.keys Completion.keys) ⊆ e.keys) := ⟨⟩
 
-def complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Completion Val Err Defect FiberId Ann) :
+theorem complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Completion Val Err Defect FiberId Ann) :
     ProofGraph.Obligation (
     (self.complete cell e).1.keys ⊆ self.keys ++ e.keys ∧
       self.cells.length ≤ (self.complete cell e).1.cells.length) := ⟨⟩
-#proof_wanted complete_keys
 
-def drainDue_keys (self : DeferredStore) : ProofGraph.Obligation (
+theorem drainDue_keys (self : DeferredStore) : ProofGraph.Obligation (
     (self.drainDue).2.keys ⊆ self.keys ∧
       (self.drainDue).1.flatMap (Owed.keys Completion.keys) ⊆ self.keys) := ⟨⟩
-#proof_wanted drainDue_keys
 
 end M1.Handles
 
 /-- Reading a Deferred cell exposes only handles already owned by its store. -/
-def M1.Handles.cellAt_keys_subset {self : DeferredStore} {cell : DeferredKey} {c : DeferredCell}
+theorem M1.Handles.cellAt_keys_subset {self : DeferredStore} {cell : DeferredKey} {c : DeferredCell}
     (_h : self.cellAt cell = some c) : ProofGraph.Obligation (c.keys ⊆ self.keys) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
@@ -5534,9 +5527,8 @@ attribute [aesop safe apply (rule_sets := [Effect4.Stores])]
   DeferredStore.setCell_keys_subset DeferredStore.setCell_le
 
 /-- Replacing a cell by already-owned handles does not enlarge the store's handle set. -/
-def M1.Handles.setCell_keys_of_subset (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
+theorem M1.Handles.setCell_keys_of_subset (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
     (_h : c.keys ⊆ self.keys) : ProofGraph.Obligation ((self.setCell cell c).keys ⊆ self.keys) := ⟨⟩
-#proof_wanted M1.Handles.setCell_keys_of_subset
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem DeferredStore.setCell_keys_of_subset (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
@@ -5545,12 +5537,11 @@ theorem DeferredStore.setCell_keys_of_subset (self : DeferredStore) (cell : Defe
     (List.append_subset.mpr ⟨List.Subset.refl _, h⟩)
 
 /-- Writing a cell and appending owed resumes adds only their common admitted handles. -/
-def M1.Handles.setCell_appendDue_keys (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
+theorem M1.Handles.setCell_appendDue_keys (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
     (due : List (Owed (Completion Val Err Defect FiberId Ann))) (extra : List Handle)
     (_hc : c.keys ⊆ extra) (_hd : due.flatMap (Owed.keys Completion.keys) ⊆ extra) :
     ProofGraph.Obligation (
     ({ self.setCell cell c with due := self.due ++ due } : DeferredStore).keys ⊆ self.keys ++ extra) := ⟨⟩
-#proof_wanted M1.Handles.setCell_appendDue_keys
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem DeferredStore.setCell_appendDue_keys (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
@@ -6662,7 +6653,7 @@ StoresLaws avoids a cycle through CompletionData and the generic Refinement modu
 namespace Effect4.Machine.M1.DeferredWanted
 
 /-- The deleted await program named precisely this handle; the new entry still owns it. -/
-def memoEntry_keys (entry : MemoEntry) : ProofGraph.Obligation
+theorem memoEntry_keys (entry : MemoEntry) : ProofGraph.Obligation
     (Handle.promise entry.deferred ∈ entry.keys) := ⟨⟩
 
 theorem memoEntry_keys_holds (entry : MemoEntry) : Handle.promise entry.deferred ∈ entry.keys :=
@@ -6708,6 +6699,17 @@ theorem DeferredStore.register_cells_le (self : DeferredStore) (cell : DeferredK
   (DeferredStore.register_keys self cell waiter token).2.2
 
 end Effect4.Machine
+
+
+#obligation_proved Effect4.Machine.M1Origin.spawnChild_keys_subset := @Effect4.Machine.spawnChild_keys_subset
+#obligation_proved Effect4.Machine.M1Origin.spawn_minted := @Effect4.Machine.spawn_minted
+#obligation_proved Effect4.Machine.M1Origin.fork_arm_minted := @Effect4.Machine.fork_arm_minted
+#obligation_proved Effect4.Machine.M1Origin.withFiber_fork_minted := @Effect4.Machine.withFiber_fork_minted
+#obligation_proved Effect4.Machine.M1.Handles.register_keys := @Effect4.Machine.DeferredStore.register_keys
+#obligation_proved Effect4.Machine.M1.Handles.complete_keys := @Effect4.Machine.DeferredStore.complete_keys
+#obligation_proved Effect4.Machine.M1.Handles.drainDue_keys := @Effect4.Machine.DeferredStore.drainDue_keys
+#obligation_proved Effect4.Machine.M1.Handles.setCell_keys_of_subset := @Effect4.Machine.DeferredStore.setCell_keys_of_subset
+#obligation_proved Effect4.Machine.M1.Handles.setCell_appendDue_keys := @Effect4.Machine.DeferredStore.setCell_appendDue_keys
 
 #typed_state_obligations Effect4.Machine.M1.Handles ceiling 5 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
 #typed_state_obligations Effect4.Machine.M1.DeferredWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

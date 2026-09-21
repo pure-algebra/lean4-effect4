@@ -79,7 +79,7 @@ theorem listRel_observe (root : NativeEff) {a b : FiberId} (hab : a = b) (exit :
   | _ :: rest => ListRel.cons ⟨hab, rfl, rfl⟩ (listRel_observe root hab exit rest)
 
 /-- The due resumes read into related owed entries: every owed program is a completion. -/
-def M1Drive.drain_rel (root : NativeEff) : ProofGraph.Obligation (∀ (l : List (Owed (Completion Val Err Defect FiberId Ann))),
+theorem M1Drive.drain_rel (root : NativeEff) : ProofGraph.Obligation (∀ (l : List (Owed (Completion Val Err Defect FiberId Ann))),
       ListRel (OwedMeans (CodeMeans root))
         (l.map (Owed.mapCode (fun c => embed (completionPrim c))))
         (l.map (Owed.mapCode denoteCompletion))) := ⟨⟩
@@ -186,9 +186,8 @@ theorem pendingOk_countdownEntry {w₁ : FRun} (hw : PendingOk w₁) {w₂ : RFi
 
 /-- The observer's removal keeps the loop's store invariant: removal only removes, so the
 registration-key bound survives (`E4-CHECK-CE-016`). -/
-def M1Drive.dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (_hs : StoresOk s)
+theorem M1Drive.dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (_hs : StoresOk s)
     (_h : (interpOf root).dropFinalizer scope key s = some s') : ProofGraph.Obligation (StoresOk s') := ⟨⟩
-#proof_wanted M1Drive.dropFinalizer_ok
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (hs : StoresOk s)
@@ -199,7 +198,7 @@ theorem dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (h
   · rw [← Option.some.inj h]
     exact ⟨ScopeStore.keysBelow_removeFinalizer hs.keysFresh⟩
 
-def M1Drive.dueResumes_frame (root : NativeEff) (s : Stores) : ProofGraph.Obligation ((interpOf root).dueResumes s =
+theorem M1Drive.dueResumes_frame (root : NativeEff) (s : Stores) : ProofGraph.Obligation ((interpOf root).dueResumes s =
       ((s.deferreds.drainDue).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
         { s with deferreds := (s.deferreds.drainDue).2 })) := ⟨⟩
 
@@ -209,7 +208,7 @@ theorem dueResumes_frame (root : NativeEff) (s : Stores) :
         { s with deferreds := (s.deferreds.drainDue).2 }) :=
   by aesop
 
-def M1Drive.dueResumes_term (root : NativeEff) (s : Stores) : ProofGraph.Obligation ((interpR root).dueResumes s =
+theorem M1Drive.dueResumes_term (root : NativeEff) (s : Stores) : ProofGraph.Obligation ((interpR root).dueResumes s =
       ((s.deferreds.drainDue).1.map (Owed.mapCode denoteCompletion),
         { s with deferreds := (s.deferreds.drainDue).2 })) := ⟨⟩
 
@@ -219,11 +218,11 @@ theorem dueResumes_term (root : NativeEff) (s : Stores) :
         { s with deferreds := (s.deferreds.drainDue).2 }) :=
   by aesop
 
-def M1Drive.clockStep_frame (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpOf root).clockStep millis s =
+theorem M1Drive.clockStep_frame (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpOf root).clockStep millis s =
       ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
         { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 })) := ⟨⟩
 
-def M1Clock.clockStep_frame (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpOf root).clockStep millis s =
+theorem M1Clock.clockStep_frame (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpOf root).clockStep millis s =
       ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
         { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 })) := ⟨⟩
 
@@ -233,11 +232,11 @@ theorem clockStep_frame (root : NativeEff) (millis : ClockMillis) (s : Stores) :
         { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 }) :=
   by aesop
 
-def M1Drive.clockStep_term (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpR root).clockStep millis s =
+theorem M1Drive.clockStep_term (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpR root).clockStep millis s =
       ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode denoteCompletion),
         { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 })) := ⟨⟩
 
-def M1Clock.clockStep_term (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpR root).clockStep millis s =
+theorem M1Clock.clockStep_term (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpR root).clockStep millis s =
       ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode denoteCompletion),
         { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 })) := ⟨⟩
 
@@ -250,12 +249,12 @@ theorem clockStep_term (root : NativeEff) (millis : ClockMillis) (s : Stores) :
 /-- The clock step in the book (the timer, A4): the same store on both routes, the fired
 resume — `void`, a completion — related, and the store invariant kept, since it reads nothing
 of the timer store. -/
-def M1Drive.clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (_hs : StoresOk s) : ProofGraph.Obligation (StoresOk ((interpOf root).clockStep millis s).2 ∧
+theorem M1Drive.clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (_hs : StoresOk s) : ProofGraph.Obligation (StoresOk ((interpOf root).clockStep millis s).2 ∧
       ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
       ListRel (OwedMeans (CodeMeans root)) ((interpOf root).clockStep millis s).1.toList
         ((interpR root).clockStep millis s).1.toList) := ⟨⟩
 
-def M1Clock.clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (_hs : StoresOk s) : ProofGraph.Obligation (StoresOk ((interpOf root).clockStep millis s).2 ∧
+theorem M1Clock.clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (_hs : StoresOk s) : ProofGraph.Obligation (StoresOk ((interpOf root).clockStep millis s).2 ∧
       ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
       ListRel (OwedMeans (CodeMeans root)) ((interpOf root).clockStep millis s).1.toList
         ((interpR root).clockStep millis s).1.toList) := ⟨⟩
@@ -1140,6 +1139,9 @@ theorem stepAgrees (root : NativeEff) :
     exact drive_wake root hok hm hr list phase
 
 end Effect4.Program.Sched
+
+
+#obligation_proved Effect4.Program.Sched.M1Drive.dropFinalizer_ok := @Effect4.Program.Sched.dropFinalizer_ok
 
 #typed_state_obligations Effect4.Program.Sched.M1Clock ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
 #typed_state_obligations Effect4.Program.Sched.M1Drive ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

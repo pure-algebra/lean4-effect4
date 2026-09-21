@@ -184,7 +184,7 @@ theorem flushAllState_preserved (p : NativeEff) (table : RowTable) (driver : Dri
         · exact fired.trans (ih _ fired.state)
         · exact fired
 
-def M1Clock.timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) : ProofGraph.Obligation (wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
+theorem M1Clock.timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) : ProofGraph.Obligation (wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) :
@@ -200,7 +200,7 @@ theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMi
       exact List.mem_append_left _ (List.mem_map.mpr ⟨w, List.mem_of_mem_erase hw, rfl⟩)
     · exact List.mem_append_right _ hk
 
-def M1Clock.clockStep_preserved (p : NativeEff) (table : RowTable)
+theorem M1Clock.clockStep_preserved (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (millis : ClockMillis) (_state : GuardState m) : ProofGraph.Obligation (Preserved m { m with state := ((interpOf p table).clockStep millis m.state).2 }) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
@@ -213,7 +213,7 @@ theorem clockStep_preserved (p : NativeEff) (table : RowTable)
   have st := guardState_withState state _ keys
   exact Preserved.of_eq_requests st (Nat.le_refl _) (fun _ _ => rfl) (fun _ h => h)
 
-def M1Clock.clockStep_owed_facts (p : NativeEff) (table : RowTable) (m : NativeMachine)
+theorem M1Clock.clockStep_owed_facts (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (millis : ClockMillis) (owed : Owed NCode)
     (_h : ((interpOf p table).clockStep millis m.state).1 = some owed) : ProofGraph.Obligation ((owed.waiter, owed.token) ∈ internalKeys m ∧ raceSites owed.code = [] ∧ owed.mode = .now) := ⟨⟩
 
@@ -234,7 +234,7 @@ theorem clockStep_owed_facts (p : NativeEff) (table : RowTable) (m : NativeMachi
     rw [facts.1]
     rfl
 
-def M1Clock.advanceTick_preserved (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+theorem M1Clock.advanceTick_preserved (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (m : NativeMachine) (owed : Owed NCode) (_state : GuardState m)
     (_clock : ((interpOf p table).clockStep millis m.state).1 = some owed) : ProofGraph.Obligation (
     letI := evaluatorFor p table
@@ -265,7 +265,7 @@ theorem advanceTick_preserved (p : NativeEff) (table : RowTable) (driver : Drive
   simpa only [drainOwed, facts.2.2, List.append_nil, taskCmds,
     List.cons_append, List.nil_append] using changed.trans run
 
-def M1Clock.advanceState_preserved (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+theorem M1Clock.advanceState_preserved (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m) : ProofGraph.Obligation (
     letI := evaluatorFor p table
     Preserved m (advanceState (interpOf p table) fuel millis rounds m).1) := ⟨⟩
@@ -358,7 +358,7 @@ theorem interruptedAt_flushAllState (p : NativeEff) (table : RowTable) (driver :
     InterruptedAt (flushAllState (interpOf p table) fuel rounds m).1 fiber :=
   (flushAllState_preserved p table driver fuel rounds m state).interrupted fiber before
 
-def M1Clock.guardState_advanceState (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+theorem M1Clock.guardState_advanceState (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m) : ProofGraph.Obligation (
     letI := evaluatorFor p table
     GuardState (advanceState (interpOf p table) fuel millis rounds m).1) := ⟨⟩
@@ -370,7 +370,7 @@ theorem guardState_advanceState (p : NativeEff) (table : RowTable) (driver : Dri
     GuardState (advanceState (interpOf p table) fuel millis rounds m).1 :=
   (advanceState_preserved p table driver fuel millis rounds m state).state
 
-def M1Clock.reservedKeys_advanceState (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+theorem M1Clock.reservedKeys_advanceState (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m)
     (keys : List GuardKey) (_reserved : ReservedKeys m keys) : ProofGraph.Obligation (
     letI := evaluatorFor p table
@@ -384,7 +384,7 @@ theorem reservedKeys_advanceState (p : NativeEff) (table : RowTable) (driver : D
     ReservedKeys (advanceState (interpOf p table) fuel millis rounds m).1 keys :=
   (advanceState_preserved p table driver fuel millis rounds m state).reserved keys reserved
 
-def M1Clock.requestOrInterrupted_advanceState (p : NativeEff) (table : RowTable)
+theorem M1Clock.requestOrInterrupted_advanceState (p : NativeEff) (table : RowTable)
     (_driver : DriverContract p table) (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine)
     (_state : GuardState m) (fiber : FiberId) (token : Nat) (request : NativeOp × Val)
     (_before : requestOf m fiber token = some request) : ProofGraph.Obligation (
@@ -402,7 +402,7 @@ theorem requestOrInterrupted_advanceState (p : NativeEff) (table : RowTable)
       InterruptedAt (advanceState (interpOf p table) fuel millis rounds m).1 fiber :=
   (advanceState_preserved p table driver fuel millis rounds m state).request fiber token request before
 
-def M1Clock.interruptedAt_advanceState (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+theorem M1Clock.interruptedAt_advanceState (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m)
     (fiber : FiberId) (_before : InterruptedAt m fiber) : ProofGraph.Obligation (
     letI := evaluatorFor p table

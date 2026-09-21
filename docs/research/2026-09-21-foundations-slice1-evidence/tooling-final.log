@@ -1,0 +1,12 @@
+ℹ [178/180] Replayed Test.Audit.ProofGraphSearch
+info: Test/Audit/ProofGraphSearch.lean:74:0: 'Test.ProofGraphSearch.closed' does not depend on any axioms
+info: Test/Audit/ProofGraphSearch.lean:192:0: 'Test.ProofGraphSearchPortability.closed' does not depend on any axioms
+info: Test/Audit/ProofGraphSearch.lean:193:0: 'Test.ProofGraphSearchPortability.polymorphic' does not depend on any axioms
+ℹ [179/180] Replayed Test.Audit.ProofGraph
+info: Test/Audit/ProofGraph.lean:83:0: 'Test.ProofGraph.searched' does not depend on any axioms
+ℹ [180/180] Built Test.Audit.Obligations (7.6s)
+info: Test/Audit/Obligations.lean:49:0: 'Test.Obligations.Positive.closed.checked' depends on axioms: [propext]
+info: Test/Audit/Obligations.lean:102:0: 'Test.Obligations.Reference.direct.checked' does not depend on any axioms
+info: Test/Audit/Obligations.lean:103:0: 'Test.Obligations.Included.statement.checked' does not depend on any axioms
+info: Test/Audit/Obligations.lean:127:0: Test.Obligations.BadAudit.Wanted.target: 1/2 binders; law Test.Obligations.BadAudit.target; exact false; adapter false
+Build completed successfully (180 jobs).

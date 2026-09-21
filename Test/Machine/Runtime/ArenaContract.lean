@@ -17,10 +17,10 @@ def sparseScopes : ScopeStore := ⟨[⟨2, Effect4.Scope.make .sequential⟩]⟩
 
 namespace Obligations
 
-def inserting_poke_fails_absent : ProofGraph.Obligation (
+theorem inserting_poke_fails_absent : ProofGraph.Obligation (
     ([] : List Nat).length ≤ 0 ∧ insertOnAbsent [] 0 7 ≠ []) := ⟨⟩
 
-def scopes_fail_dense : ProofGraph.Obligation (
+theorem scopes_fail_dense : ProofGraph.Obligation (
     ¬ ((sparseScopes.entryAt 0).isSome = true ↔ 0 < sparseScopes.entries.length)) := ⟨⟩
 
 end Obligations

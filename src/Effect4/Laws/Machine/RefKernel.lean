@@ -179,20 +179,20 @@ def refStepOfA {σ : Type} [Arena σ Val] (cell : RefKey) (k : RefKernel)
 
 namespace ArenaObligations
 
-def toList_refStepOf {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+theorem toList_refStepOf {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     (cell : RefKey) (k : RefKernel) (s : σ) : ProofGraph.Obligation (
     (refStepOfA cell k s).map (Prod.map id Arena.toList) =
       refStepOf cell k (Arena.toList s)) := ⟨⟩
 
-def refStepOfA_list (cell : RefKey) (k : RefKernel) (xs : List Val) :
+theorem refStepOfA_list (cell : RefKey) (k : RefKernel) (xs : List Val) :
     ProofGraph.Obligation (refStepOfA cell k xs = refStepOf cell k xs) := ⟨⟩
 
-def refStepOfA_size {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+theorem refStepOfA_size {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
     (_h : refStepOfA cell k s = some (a, s')) :
     ProofGraph.Obligation (Arena.size s' = Arena.size s) := ⟨⟩
 
-def refStepOfA_keeps {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+theorem refStepOfA_keeps {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     {P Q : Val → Prop} {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
     (_hheap : ∀ i v, Arena.peek s i = some v → P v)
     (_hk : RefKernel.Keeps P Q k) (_h : refStepOfA cell k s = some (a, s')) :
@@ -202,7 +202,7 @@ end ArenaObligations
 
 namespace M1.RefKernelSupport
 
-def toList_writeBackA {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+theorem toList_writeBackA {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     (s : σ) (cell : RefKey) (next : Option Val) : ProofGraph.Obligation
     (Arena.toList (writeBackA s cell next) = refWriteBack (Arena.toList s) cell next) := ⟨⟩
 

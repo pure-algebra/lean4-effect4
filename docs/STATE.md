@@ -12,7 +12,7 @@ ecosystem (the printer and readers). Programs are data: a canonical `Eff` tree w
 a computed typing certificate, folds, a journaled run with replay, and a printed image that
 reads back.
 
-## Current milestone (2026-09-20)
+## Current milestone (2026-09-21)
 
 Phase A, placement, the Phase B skeleton and the Phase C fills of the skeleton-first redirect
 are landed; the phase-by-phase account is
@@ -25,22 +25,21 @@ they are not a count of unique obligations. The banks are `Effect4.Stores`,
 
 The current foundations review and proposed execution plan is
 [`docs/core/post-phase-c-synthesis.md`](core/post-phase-c-synthesis.md), checked against
-`10d5c009`. A fresh Lean counterexample refutes the pending `M1Origin.actionAt_raceAll`
-statement because it omits the source-location premise of its backing theorem. It remains
-open; no false theorem was accepted. The review also proves that generated resume checks
+`10d5c009`. A retained Lean counterexample refutes the former `M1Origin.actionAt_raceAll`
+statement because it omitted the source-location premise of its backing theorem. Slice 1
+restores that premise and checks the backing proof; no false theorem was accepted. The review also proves that generated resume checks
 ignore target/token and capture checks ignore source path/root, and identifies the missing
 shared type between current code and its saved stack. These are statement/interface issues
 to resolve before the main typed-state proof, not evidence that the runtime is broken.
 
-Next: audit and explicitly amend false/mismatched statements; validate relational predicate
-interfaces and world transport; establish source/body admission and operation protocols (M3a);
+Next: validate relational predicate interfaces and world transport; establish source/body admission and operation protocols (M3a);
 then assemble the concrete state/stack/delivery relations (M3b/M4), denotation/hooks/init,
 the first real simultaneous-update proofs and an explicit transition inventory,
 transition preservation and transfer. Residue observation proofs and the invariant-backed
 memo cleanup can proceed independently. Placement is already landed. Decisions 86–88 record
 the new technical questions; existing open owner choices are not ratified by this review.
 
-The plan is solidified and the next two slices are dispatched in
+The foundations plan and slice briefs are in
 `docs/research/2026-09-20-foundations-plan-and-next-two-slices.md`: the review's findings
 hold; the false statement is one of seven obligations declared inside `include` sections (a
 `def` never receives an included hypothesis, a `theorem` always does), so slice 1 makes
@@ -51,7 +50,15 @@ slice 2 adds owner-level source rows so the skeleton states `SavedOk`, `ResumeOk
 interface parameterised in `TypedProg`; slice 3 (world validity and transport) is written
 and disjoint. Decisions D1–D11 of that note are the coordinator's; the five chat rulings of
 2026-09-20 still wait for the owner's word to be written into `decisions.md`.
-The older look-ahead's namesake-first closure forecast and M2b-before-M3 sequence are superseded.
+Slice 1 is landed in the commit carrying
+`docs/research/2026-09-21-foundations-slice1-receipt.md`: 329 obligation declarations
+in 40 files now use theorem binders, seven statements have their approved premises restored,
+and 32 explicit references close former markers. The fresh unique Effect4 ledger is
+309 obligations, 300 checked, nine open. The namesake audit reports zero unadapted mismatches;
+four pre-existing argument reorderings keep their statements. The counterexamples also
+refute all three premise-free Actions statements. `make build` and `make check` pass.
+Slice 2 is next. The older look-ahead's namesake-first closure forecast and
+M2b-before-M3 sequence are superseded.
 
 The owner's broader direction is captured in the review's §11: all 452 pinned TypeScript
 source files and all 137 public modules have a planning disposition, including the remaining

@@ -13,6 +13,13 @@ theorem another (n : Nat) : n ≤ n := by aesop
 def pending : ProofWanted (∀ n : Nat, n = n + 1) := ⟨⟩
 def ordinary : Nat := 3
 
+theorem declared : Obligation True := ⟨⟩
+
+run_cmd liftTermElabM do
+  let info ← getConstInfo ``declared
+  let reference : ProofRef := ⟨``declared, info.levelParams, info.type⟩
+  if let .error why ← reference.validate then throwError why
+
 run_cmd liftTermElabM do
   let goal : Goal := {id := `closed, proposition := (← getConstInfo ``reflexive).type}
   let waiting : Goal := {id := `open, proposition := (← getConstInfo ``pending).type.appArg!}

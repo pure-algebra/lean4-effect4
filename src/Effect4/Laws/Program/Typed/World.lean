@@ -141,65 +141,65 @@ namespace WorldWanted
 
 variable {K A : Type}
 
-def table_refl (table : K → Option A) : ProofGraph.Obligation
+theorem table_refl (table : K → Option A) : ProofGraph.Obligation
     (TableExtends table table) := ⟨⟩
 
-def table_trans (a b c : K → Option A) : ProofGraph.Obligation
+theorem table_trans (a b c : K → Option A) : ProofGraph.Obligation
     (TableExtends a b → TableExtends b c → TableExtends a c) := ⟨⟩
 
-def insert_extends [DecidableEq K] (table : K → Option A) (key : K) (value : A)
+theorem insert_extends [DecidableEq K] (table : K → Option A) (key : K) (value : A)
     (_fresh : table key = none) : ProofGraph.Obligation
     (TableExtends table (tableInsert table key value)) := ⟨⟩
 
-def insert_here [DecidableEq K] (table : K → Option A) (key : K) (value : A) :
+theorem insert_here [DecidableEq K] (table : K → Option A) (key : K) (value : A) :
     ProofGraph.Obligation (tableInsert table key value key = some value) := ⟨⟩
 
-def insert_other [DecidableEq K] (table : K → Option A) (key other : K) (value : A)
+theorem insert_other [DecidableEq K] (table : K → Option A) (key other : K) (value : A)
     (_different : other ≠ key) : ProofGraph.Obligation
     (tableInsert table key value other = table other) := ⟨⟩
 
-def order_refl (w : World) : ProofGraph.Obligation (w.le w) := ⟨⟩
+theorem order_refl (w : World) : ProofGraph.Obligation (w.le w) := ⟨⟩
 
-def order_trans (a b c : World) : ProofGraph.Obligation
+theorem order_trans (a b c : World) : ProofGraph.Obligation
     (a.le b → b.le c → a.le c) := ⟨⟩
 
 /-- Freeze the exact connection to the existing protocol's order interface. -/
-def protocol_order : ProofGraph.Obligation
+theorem protocol_order : ProofGraph.Obligation
     (∃ order : Effect4.Laws.Effects.WorldOrder World, order.le = World.le) := ⟨⟩
 
-def heap_typed_at_mono (w newer : World) (key : RefKey) (ty : Ty) : ProofGraph.Obligation
+theorem heap_typed_at_mono (w newer : World) (key : RefKey) (ty : Ty) : ProofGraph.Obligation
     (w.le newer → HeapTypedAt w key ty → HeapTypedAt newer key ty) := ⟨⟩
 
-def promise_typed_at_mono (w newer : World) (key : DeferredKey) (types : Ty × Ty) :
+theorem promise_typed_at_mono (w newer : World) (key : DeferredKey) (types : Ty × Ty) :
     ProofGraph.Obligation
     (w.le newer → PromiseTypedAt w key types → PromiseTypedAt newer key types) := ⟨⟩
 
-def ref_completion_inv (w : World) (cell : RefKey) (types : Ty × Ty) :
+theorem ref_completion_inv (w : World) (cell : RefKey) (types : Ty × Ty) :
     ProofGraph.Obligation
     (CompletionOk w types (.ofRefGet cell) ↔
       ∃ ty, w.Ρ cell = some ty ∧ ty.sub types.1 = true) := ⟨⟩
 
 /-- The columns plus coverage recover exactly the keywise judgments used by
 the order. This is the seam between generated leaves and handler premises. -/
-def heap_coverage_iff (w : World) : ProofGraph.Obligation
+theorem heap_coverage_iff (w : World) : ProofGraph.Obligation
     ((HeapTable w ∧ HeapCoverage w) ↔
       ∀ key value, refPeek w.state.refs key = some value →
         ∃ ty, HeapTypedAt w key ty) := ⟨⟩
 
-def promise_coverage_iff (w : World) : ProofGraph.Obligation
+theorem promise_coverage_iff (w : World) : ProofGraph.Obligation
     ((PromiseTable w ∧ PromiseCoverage w) ↔
       ∀ key cell, w.state.deferreds.cellAt key = some cell →
         ∃ types, PromiseTypedAt w key types) := ⟨⟩
 
 /-- The old all-nat column is exactly the polymorphic column when every live
 heap key is declared nat. Entries beyond the heap do not affect the equivalence. -/
-def heapNat_iff (w : World)
+theorem heapNat_iff (w : World)
     (_types : ∀ cell value, refPeek w.state.refs cell = some value →
       w.Ρ cell = some .nat) : ProofGraph.Obligation
     (HeapTable w ↔ Effect4.Program.Stores.HeapNat w.state) := ⟨⟩
 
 /-- Freshness is logical table freshness, not merely absence from an id list. -/
-def fork_extension (w : World) (id : FiberId) (ty : EffTy)
+theorem fork_extension (w : World) (id : FiberId) (ty : EffTy)
     (_fresh : w.Γ id = none) : ProofGraph.Obligation
     (w.le (w.addFiber id ty) ∧
       (w.addFiber id ty).Γ id = some ty ∧
@@ -208,7 +208,7 @@ def fork_extension (w : World) (id : FiberId) (ty : EffTy)
       (HeapCoverage w → HeapCoverage (w.addFiber id ty)) ∧
       (PromiseCoverage w → PromiseCoverage (w.addFiber id ty))) := ⟨⟩
 
-def refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key : RefKey)
+theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key : RefKey)
     (_step : syncOpStep (.refMake value) w.state = some (state, Val.cell key))
     (_fresh : w.Ρ key = none) (_value : ValueOk w ty value) : ProofGraph.Obligation
     (w.le (w.addRef state key ty) ∧ HeapTypedAt (w.addRef state key ty) key ty ∧
@@ -217,7 +217,7 @@ def refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key 
       (HeapCoverage w → HeapCoverage (w.addRef state key ty)) ∧
       (PromiseCoverage w → PromiseCoverage (w.addRef state key ty))) := ⟨⟩
 
-def deferredMake_extension (w : World) (types : Ty × Ty) (state : Stores)
+theorem deferredMake_extension (w : World) (types : Ty × Ty) (state : Stores)
     (key : DeferredKey)
     (_step : syncOpStep .deferredMake w.state = some (state, Val.promise key))
     (_fresh : w.«Π» key = none) : ProofGraph.Obligation
@@ -230,7 +230,7 @@ def deferredMake_extension (w : World) (types : Ty × Ty) (state : Stores)
 
 /-- Memo allocation uses the same deferred allocator, with the layer's own type.
 The returned value is the layer scope; the new promise key is the allocator's key. -/
-def memoBuild_extension (w : World) (types : Ty × Ty) (state : Stores)
+theorem memoBuild_extension (w : World) (types : Ty × Ty) (state : Stores)
     (layer : LayerId) (memoMap : MemoMapId) (answer : Val)
     (_step : syncOpStep (.memoBuild layer memoMap) w.state = some (state, answer))
     (_fresh : w.«Π» w.state.deferreds.make.1 = none) : ProofGraph.Obligation
@@ -241,10 +241,9 @@ def memoBuild_extension (w : World) (types : Ty × Ty) (state : Stores)
       (PromiseTable w → PromiseTable (w.addPromise state key types)) ∧
       (HeapCoverage w → HeapCoverage (w.addPromise state key types)) ∧
       (PromiseCoverage w → PromiseCoverage (w.addPromise state key types))) := ⟨⟩
-#proof_wanted memoBuild_extension
 
 /-- Retained universal falsifier: allocation growth alone cannot weaken HeapNat. -/
-def heapNotMonotone : ProofGraph.Obligation
+theorem heapNotMonotone : ProofGraph.Obligation
     (¬ (∀ state newer : Stores, state.le newer →
       Effect4.Program.Stores.HeapNat state → Effect4.Program.Stores.HeapNat newer)) := ⟨⟩
 
@@ -261,16 +260,16 @@ def worldBad : World :=
 
 namespace WorldControlWanted
 
-def stores_ordered : ProofGraph.Obligation (worldGood.state.le worldBad.state) := ⟨⟩
+theorem stores_ordered : ProofGraph.Obligation (worldGood.state.le worldBad.state) := ⟨⟩
 
-def heap_good : ProofGraph.Obligation (HeapTable worldGood) := ⟨⟩
+theorem heap_good : ProofGraph.Obligation (HeapTable worldGood) := ⟨⟩
 
-def heap_bad : ProofGraph.Obligation (¬ HeapTable worldBad) := ⟨⟩
+theorem heap_bad : ProofGraph.Obligation (¬ HeapTable worldBad) := ⟨⟩
 
-def world_order_refuses : ProofGraph.Obligation (¬ worldGood.le worldBad) := ⟨⟩
+theorem world_order_refuses : ProofGraph.Obligation (¬ worldGood.le worldBad) := ⟨⟩
 
 /-- An invalid world still relates to itself; validity is not an order premise. -/
-def invalid_refl : ProofGraph.Obligation (worldBad.le worldBad) := ⟨⟩
+theorem invalid_refl : ProofGraph.Obligation (worldBad.le worldBad) := ⟨⟩
 
 end WorldControlWanted
 
@@ -730,6 +729,9 @@ attribute [aesop norm simp (rule_sets := [Effect4.TypedState])]
   stores_ordered heap_good heap_bad world_order_refuses invalid_refl heapNotMonotone
 
 end Effect4.Program.Typed
+
+
+#obligation_proved Effect4.Program.Typed.WorldWanted.memoBuild_extension := @Effect4.Program.Typed.memoBuild_extension
 
 #typed_state_obligations Effect4.Program.Typed.WorldControlWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])
 #typed_state_obligations Effect4.Program.Typed.WorldWanted ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])

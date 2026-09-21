@@ -408,10 +408,9 @@ theorem scopeCloseSnapshot_scopes {scope : Nat} {ex : ExitV} {s st : Stores}
     simp [hentry] at h
     exact ⟨by rw [← h.1], by rw [← h.1]⟩
 
-def M1Deliver.storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s' : Stores}
+theorem M1Deliver.storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s' : Stores}
     {program : Option Program} (_hs : StoresOk s)
     (_h : storesCloseScopeUnsafe scope ex flag s = some (s', program)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
-#proof_wanted M1Deliver.storesOk_closeScopeUnsafe
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s' : Stores}
@@ -645,5 +644,8 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
                 rfl, rfl, ListRel.nil⟩
 
 end Effect4.Program.Sched
+
+
+#obligation_proved Effect4.Program.Sched.M1Deliver.storesOk_closeScopeUnsafe := @Effect4.Program.Sched.storesOk_closeScopeUnsafe
 
 #typed_state_obligations Effect4.Program.Sched.M1Deliver ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

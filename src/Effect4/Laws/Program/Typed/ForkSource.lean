@@ -25,7 +25,7 @@ open Effect4 Effect4.Machine Effect4.Program.Sched
 
 /-- Fresh source fork: Γ receives the checked body type at the id spawn returns,
 and the new fiber records the same site and source-denoted body. -/
-def source_fork_extension (root : NativeEff) (site : Point) (body : NativeEff)
+theorem source_fork_extension (root : NativeEff) (site : Point) (body : NativeEff)
     (env : TyEnv) (ty : EffTy) (w : World) (m : RState) (parent : RFiber)
     (options : Supervision.ForkOptions)
     (_bodyAt : Node.at_ (.eff root) (site.child 0).path = some (.eff body))
@@ -45,7 +45,6 @@ def source_fork_extension (root : NativeEff) (site : Point) (body : NativeEff)
        child.frame.current = denoteAt root (site.child 0) ∧
        Node.at_ (.eff root) (site.child 0).path = some (.eff body) ∧
        Checker.check nativeSignature env (site.child 0).path body = .ok ty) := ⟨⟩
-#proof_wanted source_fork_extension
 
 theorem fork_source_extension (root : NativeEff) (site : Point) (body : NativeEff)
     (env : TyEnv) (ty : EffTy) (w : World) (m : RState) (parent : RFiber)
@@ -83,5 +82,8 @@ theorem fork_source_extension (root : NativeEff) (site : Point) (body : NativeEf
 attribute [aesop unsafe 90% apply (rule_sets := [Effect4.TypedState])] fork_source_extension
 
 end Effect4.Program.Typed.M2ForkSourceWanted
+
+
+#obligation_proved Effect4.Program.Typed.M2ForkSourceWanted.source_fork_extension := @Effect4.Program.Typed.M2ForkSourceWanted.fork_source_extension
 
 #typed_state_obligations Effect4.Program.Typed.M2ForkSourceWanted ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])

@@ -9,14 +9,14 @@ set_option autoImplicit false
 namespace Effect4.Api.TraceFacts.M1Trace
 open Effect4 Effect4.Machine Effect4.Program
 
-def step_agrees (program : NativeEff) (table : RowTable) (compileFuel : Nat)
+theorem step_agrees (program : NativeEff) (table : RowTable) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
     (_reachable : Guard.Reachable program table compileFuel answers m)
     (_agrees : Agrees m) (fuel : Nat) (decision : NativeDecision) :
     ProofGraph.Obligation (Agrees (steppedBy program fuel table m decision)) := ⟨⟩
 #proof_wanted step_agrees
 
-def reachable_agrees (program : NativeEff) (table : RowTable) (compileFuel : Nat)
+theorem reachable_agrees (program : NativeEff) (table : RowTable) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
     (_reachable : Guard.Reachable program table compileFuel answers m) :
     ProofGraph.Obligation (forkedOf m.trace = originForks m) := ⟨⟩

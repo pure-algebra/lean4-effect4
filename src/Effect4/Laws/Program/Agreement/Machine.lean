@@ -617,7 +617,7 @@ theorem DeferredStore.make_quiet {d : DeferredStore} (hdue : d.due = [])
   · exact hcells c hc
   · exact ⟨rfl, rfl⟩
 
-def M1Quiet.complete_quiet {d : DeferredStore} (_hdue : d.due = [])
+theorem M1Quiet.complete_quiet {d : DeferredStore} (_hdue : d.due = [])
     (_hcells : ∀ c ∈ d.cells, c.wake.waiters = [] ∧ c.wake.batch = none) (cell : DeferredKey)
     (e : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (
     (d.complete cell e).1.due = [] ∧

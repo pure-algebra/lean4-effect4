@@ -1,0 +1,32 @@
+src/Effect4/Laws/Program/Intro/Weight.lean	Effect4.Program.Sched.M1Origin.actionAt_fork	@Effect4.Program.Sched.actionAt_fork
+src/Effect4/Laws/Program/Intro/Weight.lean	Effect4.Program.Sched.M1Origin.actionAt_forkIn	@Effect4.Program.Sched.actionAt_forkIn
+src/Effect4/Laws/Program/Intro/Weight.lean	Effect4.Program.Sched.M1Origin.actionAt_not_forkScoped	@Effect4.Program.Sched.actionAt_not_forkScoped
+src/Effect4/Laws/Program/Intro/Weight.lean	Effect4.Program.Sched.M1Origin.actionAt_raceAll	@Effect4.Program.Sched.actionAt_raceAll
+src/Effect4/Laws/Program/Simulation/Actions.lean	Effect4.Program.Sched.M1Actions.scopeLinkFiber_ok	@Effect4.Program.Sched.scopeLinkFiber_ok
+src/Effect4/Laws/Program/Simulation/Actions.lean	Effect4.Program.Sched.M1Origin.fork_rel	@Effect4.Program.Sched.fork_rel
+src/Effect4/Laws/Program/Simulation/Actions.lean	Effect4.Program.Sched.M1Origin.forkIn_rel	@Effect4.Program.Sched.forkIn_rel
+src/Effect4/Laws/Program/Simulation/Actions.lean	Effect4.Program.Sched.M1Origin.raceAll_rel	@Effect4.Program.Sched.raceAll_rel
+src/Effect4/Laws/Machine/Book.lean	Effect4.Machine.M1Clock.book_advanceState	@Effect4.Machine.book_advanceState
+src/Effect4/Laws/Program/Simulation/Drive.lean	Effect4.Program.Sched.M1Drive.dropFinalizer_ok	@Effect4.Program.Sched.dropFinalizer_ok
+src/Effect4/Laws/Program/Simulation/Deliver.lean	Effect4.Program.Sched.M1Deliver.storesOk_closeScopeUnsafe	@Effect4.Program.Sched.storesOk_closeScopeUnsafe
+src/Effect4/Laws/Program/Typed/World.lean	Effect4.Program.Typed.WorldWanted.memoBuild_extension	@Effect4.Program.Typed.memoBuild_extension
+src/Effect4/Laws/Program/Typed/ForkSource.lean	Effect4.Program.Typed.M2ForkSourceWanted.source_fork_extension	@Effect4.Program.Typed.M2ForkSourceWanted.fork_source_extension
+src/Effect4/Laws/Api/Supervision.lean	Effect4.Api.M1Trace.fork_forked	@Effect4.Api.fork_forked
+src/Effect4/Laws/Api/Supervision.lean	Effect4.Api.M1Trace.forkScoped_forked	@Effect4.Api.forkScoped_forked
+src/Effect4/Laws/Api/Supervision.lean	Effect4.Api.M1Trace.forkFinalizers_forked	@Effect4.Api.forkFinalizers_forked
+src/Effect4/Laws/Api/Supervision.lean	Effect4.Api.M1Trace.supervision_static	@Effect4.Api.TraceFacts.supervision_static_flags
+src/Effect4/Laws/Api/Supervision.lean	Effect4.Api.M1Origin.supervision_static	@Effect4.Api.supervision_static_origins
+src/Effect4/Laws/Api/Supervision.lean	Effect4.Api.M1Origin.source_fork	@Effect4.Api.source_fork_holds
+src/Effect4/Laws/Api/Supervision.lean	Effect4.Api.M1Origin.race_launch_origins	@Effect4.Api.race_launch_origins_holds
+src/Effect4/Laws/Machine/Handles.lean	Effect4.Machine.M1Origin.spawnChild_keys_subset	@Effect4.Machine.spawnChild_keys_subset
+src/Effect4/Laws/Machine/Handles.lean	Effect4.Machine.M1Origin.spawn_minted	@Effect4.Machine.spawn_minted
+src/Effect4/Laws/Machine/Handles.lean	Effect4.Machine.M1Origin.fork_arm_minted	@Effect4.Machine.fork_arm_minted
+src/Effect4/Laws/Machine/Handles.lean	Effect4.Machine.M1Origin.withFiber_fork_minted	@Effect4.Machine.withFiber_fork_minted
+src/Effect4/Laws/Machine/Handles.lean	Effect4.Machine.M1.Handles.register_keys	@Effect4.Machine.DeferredStore.register_keys
+src/Effect4/Laws/Machine/Handles.lean	Effect4.Machine.M1.Handles.complete_keys	@Effect4.Machine.DeferredStore.complete_keys
+src/Effect4/Laws/Machine/Handles.lean	Effect4.Machine.M1.Handles.drainDue_keys	@Effect4.Machine.DeferredStore.drainDue_keys
+src/Effect4/Laws/Machine/Handles.lean	Effect4.Machine.M1.Handles.setCell_keys_of_subset	@Effect4.Machine.DeferredStore.setCell_keys_of_subset
+src/Effect4/Laws/Machine/Handles.lean	Effect4.Machine.M1.Handles.setCell_appendDue_keys	@Effect4.Machine.DeferredStore.setCell_appendDue_keys
+src/Effect4/Laws/Program/Simulation/Pending.lean	Effect4.Program.Sched.M1PendingOrigin.fork_pendingOk	fun i m f y hf program options site a ha => @Effect4.Program.Sched.fork_pendingOk i m f y hf program options a ha site
+src/Effect4/Laws/Program/Simulation/Pending.lean	Effect4.Program.Sched.M1PendingOrigin.forkIn_pendingOk	fun i m f y hf program options scope site a ha => @Effect4.Program.Sched.forkIn_pendingOk i m f y hf program options scope a ha site
+src/Effect4/Laws/Program/Simulation/Pending.lean	Effect4.Program.Sched.M1PendingOrigin.forkScoped_pendingOk	fun i m f y hf program options site a ha => @Effect4.Program.Sched.forkScoped_pendingOk i m f y hf program options a ha site

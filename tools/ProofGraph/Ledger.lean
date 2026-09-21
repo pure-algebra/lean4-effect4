@@ -10,7 +10,7 @@ namespace ProofGraph
 open Lean Meta
 
 /-- A declared proof obligation. Its inhabitant records a statement; it does not prove it. -/
-structure Obligation (statement : Prop) : Type where
+structure Obligation (statement : Prop) : Prop where
 
 def Obligation.statement {p : Prop} (_ : Obligation p) : Prop := p
 

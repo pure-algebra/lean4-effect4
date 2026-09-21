@@ -120,7 +120,7 @@ theorem Links.interruptRecord (p : NativeEff) (table : RowTable) (completed)
     exact (requestOf_update_other m g id token
       (fun heq => he ((interruptRecord_id p table who extra f).symm.trans heq))) ▸ hr
 
-def M1Origin.Links.spawn (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)
+theorem M1Origin.Links.spawn (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)
     (f : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (Links m (spawn (interpAt p completed table) m f code options site).1) := ⟨⟩
 
 theorem Links.spawn (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)
@@ -150,7 +150,7 @@ theorem Links.forkFinalizers (p : NativeEff) (table : RowTable) (completed)
   | cons code rest ih =>
     exact (Links.spawn p table completed m f code ⟨true,true,.inherit⟩).trans (ih _)
 
-def M1Origin.Links.beginRace (interp : NInterp) (m : NativeMachine) (f : NFiber)
+theorem M1Origin.Links.beginRace (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (codes : List NCode) (site : Option (List Nat) := none) : ProofGraph.Obligation (Links m (beginRace interp m f yielding codes site).machine) := ⟨⟩
 
 theorem Links.beginRace (interp : NInterp) (m : NativeMachine) (f : NFiber)

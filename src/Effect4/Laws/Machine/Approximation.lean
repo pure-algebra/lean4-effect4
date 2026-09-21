@@ -311,7 +311,8 @@ macro_rules
 
 /-! ### The leaves -/
 
-def M1OriginApproximation.spawn_grows {interp : RunInterp ν σ β ε δ ι α χ St}
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+theorem M1OriginApproximation.spawn_grows {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {parent : RunFiber ν σ β ε δ ι α χ}
     {program : Prim ν σ β ε δ ι α} {options : Supervision.ForkOptions} {site : List Nat} :
     ProofGraph.Obligation (Grows m (spawn interp m parent program options site)) := ⟨⟩
@@ -381,7 +382,8 @@ macro "hops_leaf" : tactic => `(tactic| first
   | exact linkScope_grows
   | exact forkFinalizers_grows)
 
-def M1OriginApproximation.launchEntrant_grows {interp : RunInterp ν σ β ε δ ι α χ St}
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+theorem M1OriginApproximation.launchEntrant_grows {interp : RunInterp ν σ β ε δ ι α χ St}
     {raceId : Nat} {m : RunMachine ν σ β ε δ ι α χ St} {host : RunFiber ν σ β ε δ ι α χ}
     {program : Prim ν σ β ε δ ι α} {site : List Nat} :
     ProofGraph.Obligation (Grows m (launchEntrant interp raceId m host program site)) := ⟨⟩
@@ -677,7 +679,7 @@ theorem flushRoot_trace_extends (interp : RunInterp ν σ β ε δ ι α χ St) 
 
 /-- An advance extends the trace it starts from: every fire drains, drives and flushes, each of
 which extends (the timer, A4). -/
-def M1Clock.advance_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat} {millis : ClockMillis} : ProofGraph.Obligation (∀ {rounds : Nat} {m : RunMachine ν σ β ε δ ι α χ St},
+theorem M1Clock.advance_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat} {millis : ClockMillis} : ProofGraph.Obligation (∀ {rounds : Nat} {m : RunMachine ν σ β ε δ ι α χ St},
       Extends m (advanceState interp fuel millis rounds m).1) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
@@ -1000,7 +1002,7 @@ theorem flushRoot_eq_flushRootState (interp : RunInterp ν σ β ε δ ι α χ 
 /-- An advance whose fuel sufficed is the same advance, receipt included, at every larger fuel
 and fire budget (the timer, A4): each fire's drive was settled and each flush's receipt true,
 so both are stable, and the loop recurs on the same machine. -/
-def M1Clock.advanceState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η),
+theorem M1Clock.advanceState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η),
       (advanceState interp fuel millis rounds m).2 = true →
       ∀ k j, advanceState interp (fuel + k) millis (rounds + j) m =
         advanceState interp fuel millis rounds m) := ⟨⟩
@@ -1298,7 +1300,7 @@ def SingleLoop : RunDecision ν σ β ε δ ι α → Bool
 /-- More fuel and a larger fire budget extend an advance's trace (the timer, A4): a fire whose
 drive or flush stopped at the smaller fuel is extended by the larger one, and a fire that
 completed is the same fire. -/
-def M1Clock.advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St) (k j : Nat),
+theorem M1Clock.advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St) (k j : Nat),
       Extends (advanceState interp fuel millis rounds m).1
         (advanceState interp (fuel + k) millis (rounds + j) m).1) := ⟨⟩
 

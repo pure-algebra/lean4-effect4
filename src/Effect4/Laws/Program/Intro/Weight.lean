@@ -142,9 +142,9 @@ variable {root : NativeEff} {p : Point} {a : ActionTerm NativeOp}
 
 include h
 
-def M1Origin.actionAt_fork {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
+set_option linter.unusedSectionVars false in
+theorem M1Origin.actionAt_fork {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
     (_hact : actionAt root p = some (.fork program options site)) : ProofGraph.Obligation (program = resolve root ((p.child 0).child 0)) := ⟨⟩
-#proof_wanted M1Origin.actionAt_fork
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem actionAt_fork {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
@@ -153,9 +153,9 @@ theorem actionAt_fork {site : List Nat} {program : NCode} {options : Supervision
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
     cases hact; rfl
 
-def M1Origin.actionAt_forkIn {site : List Nat} {program : NCode} {options : Supervision.ForkOptions} {scope : Nat}
+set_option linter.unusedSectionVars false in
+theorem M1Origin.actionAt_forkIn {site : List Nat} {program : NCode} {options : Supervision.ForkOptions} {scope : Nat}
     (_hact : actionAt root p = some (.forkIn program options scope site)) : ProofGraph.Obligation (program = resolve root ((p.child 0).child 0)) := ⟨⟩
-#proof_wanted M1Origin.actionAt_forkIn
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem actionAt_forkIn {site : List Nat} {program : NCode} {options : Supervision.ForkOptions} {scope : Nat}
@@ -164,9 +164,9 @@ theorem actionAt_forkIn {site : List Nat} {program : NCode} {options : Supervisi
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
     cases hact; rfl
 
-def M1Origin.actionAt_not_forkScoped {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
+set_option linter.unusedSectionVars false in
+theorem M1Origin.actionAt_not_forkScoped {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
     (_hact : actionAt root p = some (.forkScoped program options site)) : ProofGraph.Obligation (False) := ⟨⟩
-#proof_wanted M1Origin.actionAt_not_forkScoped
 
 @[aesop safe forward (rule_sets := [Effect4.Fibers])]
 theorem actionAt_not_forkScoped {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
@@ -174,9 +174,9 @@ theorem actionAt_not_forkScoped {site : List Nat} {program : NCode} {options : S
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
     cases hact
 
-def M1Origin.actionAt_raceAll {site : Option (List Nat)} {entrants : List NCode}
+set_option linter.unusedSectionVars false in
+theorem M1Origin.actionAt_raceAll {site : Option (List Nat)} {entrants : List NCode}
     (_hact : actionAt root p = some (.raceAll entrants site)) : ProofGraph.Obligation (∃ es, a = .raceAll es ∧ entrants = actionAt.entrants es ((p.child 0).child 0)) := ⟨⟩
-#proof_wanted M1Origin.actionAt_raceAll
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem actionAt_raceAll {site : Option (List Nat)} {entrants : List NCode}
@@ -242,3 +242,9 @@ theorem finalizer_intro (root : NativeEff) (completed : List (FiberId × ExitV))
 
 
 end Effect4.Program.Sched
+
+
+#obligation_proved Effect4.Program.Sched.M1Origin.actionAt_fork := @Effect4.Program.Sched.actionAt_fork
+#obligation_proved Effect4.Program.Sched.M1Origin.actionAt_forkIn := @Effect4.Program.Sched.actionAt_forkIn
+#obligation_proved Effect4.Program.Sched.M1Origin.actionAt_not_forkScoped := @Effect4.Program.Sched.actionAt_not_forkScoped
+#obligation_proved Effect4.Program.Sched.M1Origin.actionAt_raceAll := @Effect4.Program.Sched.actionAt_raceAll

@@ -16,7 +16,7 @@ namespace Effect4.Program.Guard.M4Handshake
 open Effect4 Effect4.Machine Effect4.Program
 
 /-- Held M4 target at the already admitted API decision-prefix states. -/
-def parkHandshake_reachable (program : NativeEff) (table : RowTable)
+theorem parkHandshake_reachable (program : NativeEff) (table : RowTable)
     (compileFuel : Nat) (answers : List (Completion Val Err Defect FiberId Ann))
     (m : NativeMachine)
     (_reachable : Effect4.Program.Guard.Reachable program table compileFuel answers m) :

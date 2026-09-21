@@ -26,23 +26,23 @@ def onlyLeafPredicates : Preds Unit := ⟨fun _ _ _ => True, fun _ _ _ => True�
 def refLeafType {W : Type} (P : Preds W) : W → RefKey → Val → Prop := P.HeapCell
 def cellLeafType {W : Type} (P : Preds W) : W → DeferredKey → Cell → Prop := P.PromiseCell
 
-def refs_projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
+theorem refs_projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
     ProofGraph.Obligation (SampleOk P w .root x →
       ∀ i v, x.refs[i]? = some v → P.HeapCell w ⟨i⟩ v) := ⟨⟩
 
-def cells_projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
+theorem cells_projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
     ProofGraph.Obligation (SampleOk P w .root x →
       ∀ i v, x.cells[i]? = some v → P.PromiseCell w ⟨i⟩ v) := ⟨⟩
 
-def construct {W : Type} (P : Preds W) (w : W) (x : Sample) :
+theorem construct {W : Type} (P : Preds W) (w : W) (x : Sample) :
     ProofGraph.Obligation ((∀ i v, x.refs[i]? = some v → P.HeapCell w ⟨i⟩ v) →
       (∀ i v, x.cells[i]? = some v → P.PromiseCell w ⟨i⟩ v) → SampleOk P w .root x) := ⟨⟩
 
-def empty {W : Type} (P : Preds W) (w : W) :
+theorem empty {W : Type} (P : Preds W) (w : W) :
     ProofGraph.Obligation (SampleOk P w .root ⟨[], []⟩) := ⟨⟩
 
 def onlyFirst : Preds Unit := ⟨fun _ key _ => key.index = 0, fun _ _ _ => True⟩
-def duplicate_position (v : Val) :
+theorem duplicate_position (v : Val) :
     ProofGraph.Obligation (¬ SampleOk onlyFirst () .root ⟨[v, v], []⟩) := ⟨⟩
 #proof_wanted duplicate_position
 end Test.IndexedColumnDraft
@@ -64,7 +64,7 @@ def sources : List Row := [
 
 #typed_state Test.IndexedColumnDraft.Sibling.Sample using sources columns Test.IndexedColumnDraft.Sibling.Sample
 -- Owning cells cannot make the sibling due occurrence disappear.
-def due_required {W : Type} (P : Preds W) (w : W) (x : Sample) :
+theorem due_required {W : Type} (P : Preds W) (w : W) (x : Sample) :
     ProofGraph.Obligation (SampleOk P w .root x → P.PromiseTable w x) := ⟨⟩
 end Test.IndexedColumnDraft.Sibling
 
@@ -128,7 +128,7 @@ def leafType {W : Type} (P : Preds W) : W → RefKey → Nat → Prop := P.NatCe
 def columnType {W : Type} (leaf : W → RefKey → Nat → Prop) : W → List Nat → Prop :=
   Columns.Sample_items leaf
 
-def projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
+theorem projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
     ProofGraph.Obligation (SampleOk P w .root x →
       ∀ i v, x.items[i]? = some v → P.NatCell w ⟨i⟩ v) := ⟨⟩
 end Test.IndexedColumnDraft.NatDirect
@@ -152,7 +152,7 @@ def leafType {W : Type} (P : Preds W) : W → RefKey → Nat → Prop := P.NatCe
 def columnType {W : Type} (leaf : W → RefKey → Nat → Prop) : W → List Nat → Prop :=
   Columns.Leaf_items leaf
 
-def projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
+theorem projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
     ProofGraph.Obligation (SampleOk P w .root x →
       ∀ i v, x.child.items[i]? = some v → P.NatCell w ⟨i⟩ v) := ⟨⟩
 end Test.IndexedColumnDraft.NatNested

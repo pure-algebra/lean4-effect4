@@ -108,7 +108,7 @@ end Effect4.Machine
 namespace Effect4.Machine.M1Trace
 open Effect4
 
-def obs_replace_trace {ν σ χ κ φ η : Type}
+theorem obs_replace_trace {ν σ χ κ φ η : Type}
     (m : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ φ η)
     (trace : List (RunEvent ν σ Val Err Defect FiberId Ann χ κ η)) :
     ProofGraph.Obligation (obs { m with trace } = obs m) := ⟨⟩

@@ -13,7 +13,7 @@ attribute [aesop norm simp (rule_sets := [Effect4.StoreKernel])]
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
   Owed.mapCode_waiter Owed.mapCode_token Owed.mapCode_mode
 
-def M1.CompletionSupport.store_lookup_lt {α : Type} {xs : List α} {i : Nat} {a : α}
+theorem M1.CompletionSupport.store_lookup_lt {α : Type} {xs : List α} {i : Nat} {a : α}
     (_h : xs[i]? = some a) : ProofGraph.Obligation (
     i < xs.length) := ⟨⟩
 
@@ -29,16 +29,16 @@ section OwedMap
 universe u v w
 variable {κ : Type u} {κ' : Type v} {κ'' : Type w}
 
-def M1.OwedMapWanted.code (f : κ → κ') (d : Owed κ) : ProofGraph.Obligation
+theorem M1.OwedMapWanted.code (f : κ → κ') (d : Owed κ) : ProofGraph.Obligation
     ((d.mapCode f).code = f d.code) := ⟨⟩
 
-def M1.OwedMapWanted.id (d : Owed κ) : ProofGraph.Obligation
+theorem M1.OwedMapWanted.id (d : Owed κ) : ProofGraph.Obligation
     (d.mapCode id = d) := ⟨⟩
 
-def M1.OwedMapWanted.comp (f : κ → κ') (g : κ' → κ'') (d : Owed κ) : ProofGraph.Obligation
+theorem M1.OwedMapWanted.comp (f : κ → κ') (g : κ' → κ'') (d : Owed κ) : ProofGraph.Obligation
     ((d.mapCode f).mapCode g = d.mapCode (g ∘ f)) := ⟨⟩
 
-def M1.OwedMapWanted.id_fun : ProofGraph.Obligation
+theorem M1.OwedMapWanted.id_fun : ProofGraph.Obligation
     (Owed.mapCode (_root_.id : κ → κ) = _root_.id) := ⟨⟩
 
 theorem Owed.mapCode_code (f : κ → κ') (d : Owed κ) :
@@ -66,17 +66,17 @@ end Effect4.Machine
 namespace Effect4.Machine.M1.Core
 open Effect4 Effect4.Machine
 
-def deferredStore_register_done (self : DeferredStore) (cell : DeferredKey)
+theorem deferredStore_register_done (self : DeferredStore) (cell : DeferredKey)
     (c : DeferredCell) (e : Completion Val Err Defect FiberId Ann) (waiter : FiberId) (token : Nat)
     (_h : self.cellAt cell = some c) (_hc : c.completion = some e) : ProofGraph.Obligation (
     self.register cell waiter token = (self, some e)) := ⟨⟩
 
-def deferredStore_complete_done (self : DeferredStore) (cell : DeferredKey)
+theorem deferredStore_complete_done (self : DeferredStore) (cell : DeferredKey)
     (c : DeferredCell) (e e' : Completion Val Err Defect FiberId Ann) (_h : self.cellAt cell = some c)
     (_hc : c.completion = some e) : ProofGraph.Obligation (
     self.complete cell e' = (self, false)) := ⟨⟩
 
-def deferredStore_complete_pending (self : DeferredStore) (cell : DeferredKey)
+theorem deferredStore_complete_pending (self : DeferredStore) (cell : DeferredKey)
     (c : DeferredCell) (e : Completion Val Err Defect FiberId Ann) (_h : self.cellAt cell = some c)
     (_hc : c.completion = none) : ProofGraph.Obligation (
     self.complete cell e =
@@ -84,12 +84,12 @@ def deferredStore_complete_pending (self : DeferredStore) (cell : DeferredKey)
           due := self.due ++ (c.wake.wakeAll).1.map fun w =>
             ⟨w.fiber, w.token, e, WakeMode.now⟩ }, true)) := ⟨⟩
 
-def deferredStore_complete_stores_argument (self : DeferredStore) (cell : DeferredKey)
+theorem deferredStore_complete_stores_argument (self : DeferredStore) (cell : DeferredKey)
     (c : DeferredCell) (e : Completion Val Err Defect FiberId Ann) (_h : self.cellAt cell = some c)
     (_hc : c.completion = none) : ProofGraph.Obligation (
     ((self.complete cell e).1.cellAt cell).map DeferredCell.completion = some (some e)) := ⟨⟩
 
-def deferredStore_waiter_receives_stored (self : DeferredStore) (cell : DeferredKey)
+theorem deferredStore_waiter_receives_stored (self : DeferredStore) (cell : DeferredKey)
     (c : DeferredCell) (e : Completion Val Err Defect FiberId Ann) (waiter : FiberId) (token : Nat) (phase : WakePhase)
     (_h : self.cellAt cell = some c) (_hc : c.completion = none)
     (_hw : c.wake.waiters = [⟨waiter, token, phase, ()⟩]) : ProofGraph.Obligation (
@@ -100,7 +100,7 @@ def deferredStore_waiter_receives_stored (self : DeferredStore) (cell : Deferred
 end Effect4.Machine.M1.Core
 
 namespace Effect4.Machine
-def M1.CompletionSupport.poll_reads_cell (s : DeferredStore) (k : DeferredKey) (c : DeferredCell)
+theorem M1.CompletionSupport.poll_reads_cell (s : DeferredStore) (k : DeferredKey) (c : DeferredCell)
     (_h : s.cellAt k = some c) : ProofGraph.Obligation (
     s.poll k = some c.completion) := ⟨⟩
 

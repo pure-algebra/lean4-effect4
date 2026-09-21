@@ -1,0 +1,609 @@
+PAIR Effect4.Api.M1Origin.forkScoped_none_origins Effect4.Api.forkScoped_none_origins binders=21/21 exact=true
+UNPAIRED Effect4.Api.M1Origin.load_origins binders=3 candidates=[]
+PAIR Effect4.Api.M1Origin.race_launch_origins Effect4.Api.race_launch_origins_holds binders=12/12 exact=true
+PAIR Effect4.Api.M1Origin.source_fork Effect4.Api.source_fork_holds binders=9/9 exact=true
+UNPAIRED Effect4.Api.M1Origin.source_forkIn binders=12 candidates=[]
+UNPAIRED Effect4.Api.M1Origin.source_forkIn_site binders=12 candidates=[]
+UNPAIRED Effect4.Api.M1Origin.source_forkScoped binders=10 candidates=[]
+UNPAIRED Effect4.Api.M1Origin.source_forkScoped_site binders=10 candidates=[]
+UNPAIRED Effect4.Api.M1Origin.source_fork_site binders=9 candidates=[]
+UNPAIRED Effect4.Api.M1Origin.source_race binders=8 candidates=[]
+UNPAIRED Effect4.Api.M1Origin.source_race_site binders=5 candidates=[]
+UNPAIRED Effect4.Api.M1Origin.source_two_race_paths binders=5 candidates=[]
+UNPAIRED Effect4.Api.M1Origin.source_two_race_sites binders=5 candidates=[]
+PAIR Effect4.Api.M1Origin.spawn_fibers Effect4.Api.spawn_fibers binders=18/18 exact=true
+PAIR Effect4.Api.M1Origin.spawn_origins Effect4.Api.spawn_origins binders=19/19 exact=true
+PAIR Effect4.Api.M1Origin.start_origins Effect4.Api.start_origins binders=16/16 exact=true
+PAIR Effect4.Api.M1Origin.status_persists Effect4.Api.status_persists binders=8/8 exact=true
+PAIR Effect4.Api.M1Origin.supervision_static Effect4.Api.supervision_static_origins binders=24/24 exact=true
+PAIR Effect4.Api.M1Trace.action_forkIn_forked Effect4.Api.action_forkIn_forked binders=21/21 exact=true
+PAIR Effect4.Api.M1Trace.action_forkScoped_forked Effect4.Api.action_forkScoped_forked binders=22/22 exact=true
+PAIR Effect4.Api.M1Trace.action_fork_forked Effect4.Api.action_fork_forked binders=20/20 exact=true
+UNPAIRED Effect4.Api.M1Trace.fiberStatuses_replace_trace binders=2 candidates=[]
+PAIR Effect4.Api.M1Trace.forkFinalizers_forked Effect4.Api.forkFinalizers_forked binders=17/17 exact=true
+PAIR Effect4.Api.M1Trace.forkIn_forked Effect4.Api.forkIn_forked binders=20/20 exact=true
+PAIR Effect4.Api.M1Trace.forkScoped_forked Effect4.Api.forkScoped_forked binders=21/21 exact=true
+PAIR Effect4.Api.M1Trace.forkScoped_none_forked Effect4.Api.forkScoped_none_forked binders=20/20 exact=true
+PAIR Effect4.Api.M1Trace.fork_forked Effect4.Api.fork_forked binders=19/19 exact=true
+PAIR Effect4.Api.M1Trace.forkedOf_append Effect4.Api.forkedOf_append binders=12/12 exact=true
+PAIR Effect4.Api.M1Trace.launchEntrant_forked Effect4.Api.launchEntrant_forked binders=18/18 exact=true
+PAIR Effect4.Api.M1Trace.spawn_forked Effect4.Api.spawn_forked binders=18/18 exact=true
+PAIR Effect4.Api.M1Trace.start_forked Effect4.Api.start_forked binders=16/16 exact=true
+UNPAIRED Effect4.Api.M1Trace.statusOf_replace_trace binders=3 candidates=[]
+PAIR Effect4.Api.M1Trace.supervision_static Effect4.Api.TraceFacts.supervision_static_flags binders=22/22 exact=true
+UNPAIRED Effect4.Api.TraceFacts.M1Trace.load_agrees binders=3 candidates=[]
+UNPAIRED Effect4.Api.TraceFacts.M1Trace.reachable_agrees binders=6 candidates=[]
+UNPAIRED Effect4.Api.TraceFacts.M1Trace.step_agrees binders=9 candidates=[]
+PAIR Effect4.ClockMillis.M1.ofNat_toNat Effect4.ClockMillis.ofNat_toNat binders=1/1 exact=true
+PAIR Effect4.ClockMillis.M1.toNat_add Effect4.ClockMillis.toNat_add binders=2/2 exact=true
+PAIR Effect4.ClockMillis.M1.toNat_ofNat Effect4.ClockMillis.toNat_ofNat binders=1/1 exact=true
+PAIR Effect4.ClockMillis.M1Decimal.ofDecimal_exact Effect4.ClockMillis.ofDecimal_exact binders=3/3 exact=true
+PAIR Effect4.ClockMillis.M1Decimal.ofDecimal_toDecimal Effect4.ClockMillis.ofDecimal_toDecimal binders=1/1 exact=true
+UNPAIRED Effect4.ClockMillis.M1Decimal.readBytes_digits binders=3 candidates=[Effect4.ClockMillis.Decimal.readBytes_digits]
+UNPAIRED Effect4.ClockMillis.M1Decimal.readBytes_repr binders=1 candidates=[Effect4.ClockMillis.Decimal.readBytes_repr]
+UNPAIRED Effect4.ClockMillis.M1Decimal.readChars_core binders=4 candidates=[Effect4.ClockMillis.Decimal.readChars_core]
+PAIR Effect4.Machine.ArenaObligations.deferred_cellAt Effect4.Machine.Arena.deferred_cellAt binders=3/3 exact=true
+PAIR Effect4.Machine.ArenaObligations.deferred_make Effect4.Machine.Arena.deferred_make binders=2/2 exact=true
+PAIR Effect4.Machine.ArenaObligations.deferred_setCell Effect4.Machine.Arena.deferred_setCell binders=4/4 exact=true
+PAIR Effect4.Machine.ArenaObligations.list_lawful Effect4.Machine.Arena.list_lawful binders=1/1 exact=true
+PAIR Effect4.Machine.ArenaObligations.peek_toList Effect4.Machine.Arena.peek_toList binders=6/6 exact=true
+UNPAIRED Effect4.Machine.ArenaObligations.projects binders=3 candidates=[]
+PAIR Effect4.Machine.ArenaObligations.refStepOfA_keeps Effect4.Machine.refStepOfA_keeps binders=13/13 exact=true
+PAIR Effect4.Machine.ArenaObligations.refStepOfA_list Effect4.Machine.refStepOfA_list binders=3/3 exact=true
+PAIR Effect4.Machine.ArenaObligations.refStepOfA_size Effect4.Machine.refStepOfA_size binders=9/9 exact=true
+PAIR Effect4.Machine.ArenaObligations.toList_alloc Effect4.Machine.Arena.toList_alloc binders=6/6 exact=true
+PAIR Effect4.Machine.ArenaObligations.toList_empty Effect4.Machine.Arena.toList_empty binders=4/4 exact=true
+PAIR Effect4.Machine.ArenaObligations.toList_length Effect4.Machine.Arena.toList_length binders=5/5 exact=true
+PAIR Effect4.Machine.ArenaObligations.toList_list Effect4.Machine.Arena.toList_list binders=3/3 exact=true
+PAIR Effect4.Machine.ArenaObligations.toList_poke Effect4.Machine.Arena.toList_poke binders=7/7 exact=true
+PAIR Effect4.Machine.ArenaObligations.toList_refStepOf Effect4.Machine.toList_refStepOf binders=6/6 exact=true
+PAIR Effect4.Machine.ArenaSupportWanted.lookup_filterMap Effect4.Machine.Arena.lookup_filterMap binders=8/8 exact=true
+PAIR Effect4.Machine.ArenaSupportWanted.map_some_filterMap Effect4.Machine.Arena.map_some_filterMap binders=5/5 exact=true
+PAIR Effect4.Machine.ArenaSupportWanted.peek_none Effect4.Machine.Arena.peek_none binders=7/7 exact=true
+UNPAIRED Effect4.Machine.M1.CellMapWanted.id_fun binders=1 candidates=[]
+PAIR Effect4.Machine.M1.CompletionSupport.poll_reads_cell Effect4.Machine.poll_reads_cell binders=4/4 exact=true
+PAIR Effect4.Machine.M1.CompletionSupport.store_lookup_lt Effect4.Machine.store_lookup_lt binders=5/5 exact=true
+UNPAIRED Effect4.Machine.M1.Core.deferredStore_complete_done binders=7 candidates=[Effect4.Machine.deferredStore_complete_done]
+UNPAIRED Effect4.Machine.M1.Core.deferredStore_complete_pending binders=6 candidates=[Effect4.Machine.deferredStore_complete_pending]
+UNPAIRED Effect4.Machine.M1.Core.deferredStore_complete_stores_argument binders=6 candidates=[Effect4.Machine.deferredStore_complete_stores_argument]
+UNPAIRED Effect4.Machine.M1.Core.deferredStore_register_done binders=8 candidates=[Effect4.Machine.deferredStore_register_done]
+UNPAIRED Effect4.Machine.M1.Core.deferredStore_waiter_receives_stored binders=10 candidates=[Effect4.Machine.deferredStore_waiter_receives_stored]
+UNPAIRED Effect4.Machine.M1.DeferredImageSupportWanted.cell_image_iff binders=4 candidates=[]
+PAIR Effect4.Machine.M1.DeferredImageSupportWanted.list_image_iff Effect4.Machine.Refinement.list_image_iff binders=4/4 exact=true
+UNPAIRED Effect4.Machine.M1.DeferredImageSupportWanted.owed_image_iff binders=4 candidates=[]
+UNPAIRED Effect4.Machine.M1.DeferredWanted.cell_map_comp binders=6 candidates=[]
+UNPAIRED Effect4.Machine.M1.DeferredWanted.cell_map_id binders=2 candidates=[]
+PAIR Effect4.Machine.M1.DeferredWanted.completionPrim_injective Effect4.Machine.Refinement.completionPrim_injective binders=0/0 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.deferredOk_iff_image Effect4.Machine.Refinement.deferredOk_iff_image binders=1/1 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.factors_deferreds Effect4.Machine.Refinement.factors_deferreds binders=2/2 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.factors_respects_eq Effect4.Machine.Refinement.factors_respects_eq binders=9/9 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.factors_through_deferreds Effect4.Machine.Refinement.factors_through_deferreds binders=5/5 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.factors_trans Effect4.Machine.Refinement.factors_trans binders=9/9 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_cancel Effect4.Machine.DeferredStore.map_cancel binders=7/7 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_cellAt Effect4.Machine.DeferredStore.map_cellAt binders=5/5 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_comp Effect4.Machine.DeferredStore.map_comp binders=6/6 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_complete Effect4.Machine.DeferredStore.map_complete binders=6/6 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_drainDue Effect4.Machine.DeferredStore.map_drainDue binders=4/4 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_id Effect4.Machine.DeferredStore.map_id binders=2/2 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_isDone Effect4.Machine.DeferredStore.map_isDone binders=5/5 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_make Effect4.Machine.DeferredStore.map_make binders=4/4 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_poll Effect4.Machine.DeferredStore.map_poll binders=5/5 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_register Effect4.Machine.DeferredStore.map_register binders=7/7 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_setCell Effect4.Machine.DeferredStore.map_setCell binders=6/6 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.map_wakeBatch Effect4.Machine.DeferredStore.map_wakeBatch binders=5/5 exact=true
+UNPAIRED Effect4.Machine.M1.DeferredWanted.memoEntry_keys binders=1 candidates=[]
+PAIR Effect4.Machine.M1.DeferredWanted.projects_cancel Effect4.Machine.Refinement.projects_cancel binders=6/6 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.projects_cellAt Effect4.Machine.Refinement.projects_cellAt binders=4/4 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.projects_complete Effect4.Machine.Refinement.projects_complete binders=5/5 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.projects_drainDue Effect4.Machine.Refinement.projects_drainDue binders=3/3 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.projects_isDone Effect4.Machine.Refinement.projects_isDone binders=4/4 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.projects_make Effect4.Machine.Refinement.projects_make binders=3/3 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.projects_poll Effect4.Machine.Refinement.projects_poll binders=4/4 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.projects_register Effect4.Machine.Refinement.projects_register binders=6/6 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.projects_setCell Effect4.Machine.Refinement.projects_setCell binders=5/5 exact=true
+PAIR Effect4.Machine.M1.DeferredWanted.projects_wakeBatch Effect4.Machine.Refinement.projects_wakeBatch binders=4/4 exact=true
+PAIR Effect4.Machine.M1.Handles.cellAt_keys_subset Effect4.Machine.DeferredStore.cellAt_keys_subset binders=4/4 exact=true
+PAIR Effect4.Machine.M1.Handles.complete_keys Effect4.Machine.DeferredStore.complete_keys binders=3/3 exact=true
+PAIR Effect4.Machine.M1.Handles.drainDue_keys Effect4.Machine.DeferredStore.drainDue_keys binders=1/1 exact=true
+PAIR Effect4.Machine.M1.Handles.flatMap_resumes_const Effect4.Machine.flatMap_resumes_const binders=2/2 exact=true
+UNPAIRED Effect4.Machine.M1.Handles.owed_flatMap_mapCode_keys_subset binders=7 candidates=[]
+UNPAIRED Effect4.Machine.M1.Handles.owed_mapCode_keys_subset binders=7 candidates=[]
+PAIR Effect4.Machine.M1.Handles.register_keys Effect4.Machine.DeferredStore.register_keys binders=4/4 exact=true
+PAIR Effect4.Machine.M1.Handles.setCell_appendDue_keys Effect4.Machine.DeferredStore.setCell_appendDue_keys binders=7/7 exact=true
+PAIR Effect4.Machine.M1.Handles.setCell_keys_of_subset Effect4.Machine.DeferredStore.setCell_keys_of_subset binders=4/4 exact=true
+UNPAIRED Effect4.Machine.M1.OwedMapWanted.code binders=4 candidates=[]
+UNPAIRED Effect4.Machine.M1.OwedMapWanted.comp binders=6 candidates=[]
+UNPAIRED Effect4.Machine.M1.OwedMapWanted.id binders=2 candidates=[Effect4.Program.Sched.FMeans.id]
+UNPAIRED Effect4.Machine.M1.OwedMapWanted.id_fun binders=1 candidates=[]
+PAIR Effect4.Machine.M1.RefKernelSupport.toList_writeBackA Effect4.Machine.toList_writeBackA binders=6/6 exact=true
+PAIR Effect4.Machine.M1.StoresLaws.DeferredStore.complete_cells_length Effect4.Machine.DeferredStore.complete_cells_length binders=3/3 exact=true
+PAIR Effect4.Machine.M1.StoresLaws.syncOpStep_deferredCompleteWith Effect4.Machine.syncOpStep_deferredCompleteWith binders=3/3 exact=true
+PAIR Effect4.Machine.M1.StoresLaws.syncOpStep_deferredInterruptWith Effect4.Machine.syncOpStep_deferredInterruptWith binders=3/3 exact=true
+PAIR Effect4.Machine.M1.StoresLaws.syncOpStep_memoBuild Effect4.Machine.syncOpStep_memoBuild binders=3/3 exact=true
+PAIR Effect4.Machine.M1.StoresLaws.syncOpStep_memoComplete_some Effect4.Machine.syncOpStep_memoComplete_some binders=6/6 exact=true
+PAIR Effect4.Machine.M1Clock.advanceState_minted_of_evaluator Effect4.Machine.advanceState_minted_of_evaluator binders=13/13 exact=true
+PAIR Effect4.Machine.M1Clock.advanceState_stable Effect4.Machine.advanceState_stable binders=26/26 exact=true
+PAIR Effect4.Machine.M1Clock.advance_extends Effect4.Machine.advance_extends binders=18/18 exact=true
+PAIR Effect4.Machine.M1Clock.advance_trace_mono Effect4.Machine.advance_trace_mono binders=20/20 exact=true
+PAIR Effect4.Machine.M1Clock.book_advanceState Effect4.Machine.book_advanceState binders=37/37 exact=true
+PAIR Effect4.Machine.M1Clock.syncOpStep_clockNow Effect4.Machine.syncOpStep_clockNow binders=1/1 exact=true
+PAIR Effect4.Machine.M1Origin.fork_arm_minted Effect4.Machine.fork_arm_minted binders=24/24 exact=true
+PAIR Effect4.Machine.M1Origin.launchEntrant_minted Effect4.Machine.launchEntrant_minted binders=11/11 exact=true
+PAIR Effect4.Machine.M1Origin.make_keys_subset Effect4.Machine.make_keys_subset binders=10/10 exact=true
+PAIR Effect4.Machine.M1Origin.spawnChild_keys_subset Effect4.Machine.spawnChild_keys_subset binders=10/10 exact=true
+PAIR Effect4.Machine.M1Origin.spawn_minted Effect4.Machine.spawn_minted binders=11/11 exact=true
+PAIR Effect4.Machine.M1Origin.withFiber_forkIn_minted Effect4.Machine.withFiber_forkIn_minted binders=15/15 exact=true
+PAIR Effect4.Machine.M1Origin.withFiber_forkScoped_minted Effect4.Machine.withFiber_forkScoped_minted binders=14/14 exact=true
+PAIR Effect4.Machine.M1Origin.withFiber_fork_minted Effect4.Machine.withFiber_fork_minted binders=14/14 exact=true
+PAIR Effect4.Machine.M1Origin.withFiber_raceAll_minted Effect4.Machine.withFiber_raceAll_minted binders=13/13 exact=true
+PAIR Effect4.Machine.M1OriginApproximation.launchEntrant_grows Effect4.Machine.launchEntrant_grows binders=15/15 exact=true
+PAIR Effect4.Machine.M1OriginApproximation.spawn_grows Effect4.Machine.spawn_grows binders=15/15 exact=true
+PAIR Effect4.Machine.M1OriginBook.fiberMeans_origin Effect4.Machine.fiberMeans_origin binders=19/19 exact=true
+PAIR Effect4.Machine.M1OriginClauses.drive_launch_runs Effect4.Machine.drive_launch_runs binders=27/27 exact=true
+PAIR Effect4.Machine.M1OriginClauses.launchEntrant_eq Effect4.Machine.launchEntrant_eq binders=15/15 exact=true
+PAIR Effect4.Machine.M1OriginClauses.spawnChild_fields Effect4.Machine.spawnChild_fields binders=15/15 exact=true
+PAIR Effect4.Machine.M1OriginClauses.spawn_eq Effect4.Machine.spawn_eq binders=15/15 exact=true
+PAIR Effect4.Machine.M1OriginClauses.spawn_untracked Effect4.Machine.spawn_untracked binders=15/15 exact=true
+PAIR Effect4.Machine.M1OriginClauses.withFiber_fork Effect4.Machine.withFiber_fork binders=20/20 exact=true
+PAIR Effect4.Machine.M1OriginClauses.withFiber_forkIn Effect4.Machine.withFiber_forkIn binders=21/21 exact=true
+PAIR Effect4.Machine.M1OriginClauses.withFiber_forkScoped_ambient Effect4.Machine.withFiber_forkScoped_ambient binders=22/22 exact=true
+PAIR Effect4.Machine.M1OriginClauses.withFiber_forkScoped_none Effect4.Machine.withFiber_forkScoped_none binders=21/21 exact=true
+PAIR Effect4.Machine.M1OriginClauses.withFiber_raceAll Effect4.Machine.withFiber_raceAll binders=19/19 exact=true
+UNPAIRED Effect4.Machine.M1Trace.obs_replace_trace binders=8 candidates=[]
+PAIR Effect4.Machine.TimerStore.M1Clock.cancel_pending Effect4.Machine.TimerStore.cancel_pending binders=3/3 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.cancel_wf Effect4.Machine.TimerStore.cancel_wf binders=4/4 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.clockStep_finish Effect4.Machine.TimerStore.clockStep_finish binders=5/5 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.clockStep_owed Effect4.Machine.TimerStore.clockStep_owed binders=6/6 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.clockStep_wf Effect4.Machine.TimerStore.clockStep_wf binders=5/5 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.dueMin_first Effect4.Machine.TimerStore.dueMin_first binders=5/5 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.dueMin_le Effect4.Machine.TimerStore.dueMin_le binders=4/4 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.dueMin_mem Effect4.Machine.TimerStore.dueMin_mem binders=4/4 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.dueMin_min Effect4.Machine.TimerStore.dueMin_min binders=7/7 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.dueMin_none_of_late Effect4.Machine.TimerStore.dueMin_none_of_late binders=5/5 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.empty_quiet Effect4.Machine.TimerStore.empty_quiet binders=0/0 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.empty_wf Effect4.Machine.TimerStore.empty_wf binders=0/0 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.fireNext_none Effect4.Machine.TimerStore.fireNext_none binders=5/5 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.fireNext_now Effect4.Machine.TimerStore.fireNext_now binders=6/6 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.fireNext_owed Effect4.Machine.TimerStore.fireNext_owed binders=6/6 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.fireNext_wf Effect4.Machine.TimerStore.fireNext_wf binders=5/5 exact=true
+PAIR Effect4.Machine.TimerStore.M1Clock.sleep_wf Effect4.Machine.TimerStore.sleep_wf binders=5/5 exact=true
+PAIR Effect4.Machine.Witnesses.M1Witnesses.w10_into_completes_on_failure Effect4.Machine.Witnesses.w10_into_completes_on_failure binders=0/0 exact=true
+PAIR Effect4.Program.Agreement.M1Origin.withFiberOf_forkLayer Effect4.Program.Agreement.withFiberOf_forkLayer binders=4/4 exact=true
+PAIR Effect4.Program.Agreement.M1Quiet.complete_quiet Effect4.Program.Agreement.DeferredStore.complete_quiet binders=5/5 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1.deferred_register_sites Effect4.Program.Guard.FrameOwned.deferred_register_sites binders=4/4 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1.evaluateNative_frameOwned Effect4.Program.Guard.FrameOwned.evaluateNative_frameOwned binders=7/7 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1.evaluatePrim_owned Effect4.Program.Guard.FrameOwned.evaluatePrim_owned binders=8/8 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1.exitScoped_owned Effect4.Program.Guard.FrameOwned.exitScoped_owned binders=7/7 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1.iteration_frameOwned Effect4.Program.Guard.FrameOwned.iteration_frameOwned binders=7/7 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1.registerAsync_result_sites Effect4.Program.Guard.FrameOwned.registerAsync_result_sites binders=9/9 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1.registerAsync_sites Effect4.Program.Guard.FrameOwned.registerAsync_sites binders=7/7 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1Hooks.interruptAsCode_sites Effect4.Program.Guard.FrameOwned.interruptAsCode_sites binders=5/5 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1Hooks.interruptCode_sites Effect4.Program.Guard.FrameOwned.interruptCode_sites binders=4/4 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1Origin.beginRace_owned Effect4.Program.Guard.FrameOwned.beginRace_owned binders=10/10 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1Results.closeScopeUnsafe_some_sites Effect4.Program.Guard.FrameOwned.closeScopeUnsafe_some_sites binders=7/7 exact=true
+PAIR Effect4.Program.Guard.FrameOwned.M1Results.countdownPark_result_owned Effect4.Program.Guard.FrameOwned.countdownPark_result_owned binders=11/11 exact=true
+PAIR Effect4.Program.Guard.M1.codeSites_dueResumes Effect4.Program.Guard.codeSites_dueResumes binders=5/5 exact=true
+PAIR Effect4.Program.Guard.M1.guardState_storeFresh Effect4.Program.Guard.guardState_storeFresh binders=5/5 exact=true
+PAIR Effect4.Program.Guard.M1.guardState_withState Effect4.Program.Guard.guardState_withState binders=4/4 exact=true
+PAIR Effect4.Program.Guard.M1.guardState_withStoreKeys Effect4.Program.Guard.guardState_withStoreKeys binders=4/4 exact=true
+PAIR Effect4.Program.Guard.M1Clock.clock_resume_not_external_key Effect4.Program.Guard.clock_resume_not_external_key binders=11/11 exact=true
+PAIR Effect4.Program.Guard.M1Clock.requestOf_advance_zero Effect4.Program.Guard.requestOf_advance_zero binders=6/6 exact=true
+PAIR Effect4.Program.Guard.M1Clock.timer_clockStep_key Effect4.Program.Guard.timer_clockStep_key binders=6/6 exact=true
+PAIR Effect4.Program.Guard.M1Clock.timer_fireNext_key Effect4.Program.Guard.timer_fireNext_key binders=6/6 exact=true
+PAIR Effect4.Program.Guard.M1Completion.deferredKeys_complete_subset Effect4.Program.Guard.deferredKeys_complete_subset binders=3/3 exact=true
+PAIR Effect4.Program.Guard.M1Completion.deferredKeys_due_append Effect4.Program.Guard.deferredKeys_due_append binders=2/2 exact=true
+PAIR Effect4.Program.Guard.M1Origin.fiberGuardState_freshChild Effect4.Program.Guard.fiberGuardState_freshChild binders=7/7 exact=true
+PAIR Effect4.Program.Guard.M1Origin.guardQueue_launchEntrant Effect4.Program.Guard.guardQueue_launchEntrant binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.guardQueue_spawn Effect4.Program.Guard.guardQueue_spawn binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.guardState_launchEntrant Effect4.Program.Guard.guardState_launchEntrant binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.guardState_spawn Effect4.Program.Guard.guardState_spawn binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.interruptedAt_launchEntrant Effect4.Program.Guard.interruptedAt_launchEntrant binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.interruptedAt_spawn Effect4.Program.Guard.interruptedAt_spawn binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.raceCodeOwned_beginRace Effect4.Program.Guard.raceCodeOwned_beginRace binders=8/8 exact=true
+PAIR Effect4.Program.Guard.M1Origin.requestOf_launchEntrant Effect4.Program.Guard.requestOf_launchEntrant binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.requestOf_spawn Effect4.Program.Guard.requestOf_spawn binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.reservedKeys_launchEntrant Effect4.Program.Guard.reservedKeys_launchEntrant binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.reservedKeys_spawn Effect4.Program.Guard.reservedKeys_spawn binders=9/9 exact=true
+PAIR Effect4.Program.Guard.M1Origin.spawn_child_below Effect4.Program.Guard.spawn_child_below binders=7/7 exact=true
+PAIR Effect4.Program.Guard.M1Origin.spawn_child_fresh Effect4.Program.Guard.spawn_child_fresh binders=8/8 exact=true
+PAIR Effect4.Program.Guard.M1Origin.spawn_child_lookup Effect4.Program.Guard.spawn_child_lookup binders=8/8 exact=true
+PAIR Effect4.Program.Guard.M1Origin.spawn_child_raceSites Effect4.Program.Guard.spawn_child_raceSites binders=8/8 exact=true
+PAIR Effect4.Program.Guard.M1Origin.spawn_machine Effect4.Program.Guard.spawn_machine binders=7/7 exact=true
+PAIR Effect4.Program.Guard.M1Origin.spawn_parent_unchanged Effect4.Program.Guard.spawn_parent_unchanged binders=7/7 exact=true
+UNPAIRED Effect4.Program.Guard.M4Handshake.parkHandshake_reachable binders=6 candidates=[]
+PAIR Effect4.Program.Guard.NativeState.M1.StateStep.store Effect4.Program.Guard.NativeState.StateStep.store binders=4/4 exact=true
+PAIR Effect4.Program.Guard.NativeState.M1.StateStep.storeFresh Effect4.Program.Guard.NativeState.StateStep.storeFresh binders=5/5 exact=true
+PAIR Effect4.Program.Guard.NativeState.M1.registerAsync_state Effect4.Program.Guard.NativeState.registerAsync_state binders=7/7 exact=true
+PAIR Effect4.Program.Guard.NativeState.M1.registerExternal_storeKeys Effect4.Program.Guard.NativeState.registerExternal_storeKeys binders=7/7 exact=true
+PAIR Effect4.Program.Guard.NativeState.M1.storeKeys_registerDeferred Effect4.Program.Guard.NativeState.storeKeys_registerDeferred binders=4/4 exact=true
+PAIR Effect4.Program.Guard.NativeState.M1.storeKeys_sleep Effect4.Program.Guard.NativeState.storeKeys_sleep binders=4/4 exact=true
+PAIR Effect4.Program.Guard.NativeState.M1Origin.StateStep.beginRace Effect4.Program.Guard.NativeState.StateStep.beginRace binders=11/11 exact=true
+PAIR Effect4.Program.Guard.NativeState.M1Origin.StateStep.spawn Effect4.Program.Guard.NativeState.StateStep.spawn binders=10/10 exact=true
+PAIR Effect4.Program.Guard.NativeState.M1Results.countdown Effect4.Program.Guard.NativeState.StateStep.countdown_result binders=13/13 exact=true
+PAIR Effect4.Program.Guard.NativeState.M1Results.registerAsync Effect4.Program.Guard.NativeState.StateStep.registerAsync binders=7/7 exact=true
+PAIR Effect4.Program.Guard.NativeStateLinks.M1Origin.Links.beginRace Effect4.Program.Guard.NativeStateLinks.Links.beginRace binders=6/6 exact=true
+PAIR Effect4.Program.Guard.NativeStateLinks.M1Origin.Links.spawn Effect4.Program.Guard.NativeStateLinks.Links.spawn binders=8/8 exact=true
+PAIR Effect4.Program.Guard.OuterDriver.M1Clock.advanceState_preserved Effect4.Program.Guard.OuterDriver.advanceState_preserved binders=8/8 exact=true
+PAIR Effect4.Program.Guard.OuterDriver.M1Clock.advanceTick_preserved Effect4.Program.Guard.OuterDriver.advanceTick_preserved binders=9/9 exact=true
+PAIR Effect4.Program.Guard.OuterDriver.M1Clock.clockStep_owed_facts Effect4.Program.Guard.OuterDriver.clockStep_owed_facts binders=6/6 exact=true
+PAIR Effect4.Program.Guard.OuterDriver.M1Clock.clockStep_preserved Effect4.Program.Guard.OuterDriver.clockStep_preserved binders=5/5 exact=true
+PAIR Effect4.Program.Guard.OuterDriver.M1Clock.guardState_advanceState Effect4.Program.Guard.OuterDriver.guardState_advanceState binders=8/8 exact=true
+PAIR Effect4.Program.Guard.OuterDriver.M1Clock.interruptedAt_advanceState Effect4.Program.Guard.OuterDriver.interruptedAt_advanceState binders=10/10 exact=true
+PAIR Effect4.Program.Guard.OuterDriver.M1Clock.requestOrInterrupted_advanceState Effect4.Program.Guard.OuterDriver.requestOrInterrupted_advanceState binders=12/12 exact=true
+PAIR Effect4.Program.Guard.OuterDriver.M1Clock.reservedKeys_advanceState Effect4.Program.Guard.OuterDriver.reservedKeys_advanceState binders=10/10 exact=true
+PAIR Effect4.Program.Guard.OuterDriver.M1Clock.timer_clockStep_keys Effect4.Program.Guard.OuterDriver.timer_clockStep_keys binders=4/4 exact=true
+PAIR Effect4.Program.Guard.SingleGuard.M1Clock.clockStep_owed_safe Effect4.Program.Guard.SingleGuard.clockStep_owed_safe binders=10/10 exact=true
+PAIR Effect4.Program.Guard.SingleGuard.M1Clock.clockStep_storeKeys Effect4.Program.Guard.SingleGuard.clockStep_storeKeys binders=4/4 exact=true
+PAIR Effect4.Program.Guard.SingleGuard.M1Clock.held_advanceState Effect4.Program.Guard.SingleGuard.held_advanceState binders=10/10 exact=true
+PAIR Effect4.Program.Guard.SingleGuard.M1Clock.timer_clockStep_keys Effect4.Program.Guard.SingleGuard.timer_clockStep_keys binders=3/3 exact=true
+PAIR Effect4.Program.Guard.SingleGuard.M1Clock.timer_fireNext_keys Effect4.Program.Guard.SingleGuard.timer_fireNext_keys binders=3/3 exact=true
+PAIR Effect4.Program.Sched.M1Actions.scopeLinkFiber_ok Effect4.Program.Sched.scopeLinkFiber_ok binders=9/9 exact=true
+PAIR Effect4.Program.Sched.M1Clock.clockStep_frame Effect4.Program.Sched.clockStep_frame binders=3/3 exact=true
+PAIR Effect4.Program.Sched.M1Clock.clockStep_rel Effect4.Program.Sched.clockStep_rel binders=4/4 exact=true
+PAIR Effect4.Program.Sched.M1Clock.clockStep_term Effect4.Program.Sched.clockStep_term binders=3/3 exact=true
+PAIR Effect4.Program.Sched.M1Clock.registerAsyncR_sleep Effect4.Program.Sched.registerAsyncR_sleep binders=6/6 exact=true
+PAIR Effect4.Program.Sched.M1Clock.registerAsync_sleep Effect4.Program.Sched.registerAsync_sleep binders=6/6 exact=true
+PAIR Effect4.Program.Sched.M1Deliver.storesOk_closeScopeUnsafe Effect4.Program.Sched.storesOk_closeScopeUnsafe binders=8/8 exact=true
+PAIR Effect4.Program.Sched.M1Drive.clockStep_frame Effect4.Program.Sched.clockStep_frame binders=3/3 exact=true
+PAIR Effect4.Program.Sched.M1Drive.clockStep_rel Effect4.Program.Sched.clockStep_rel binders=4/4 exact=true
+PAIR Effect4.Program.Sched.M1Drive.clockStep_term Effect4.Program.Sched.clockStep_term binders=3/3 exact=true
+PAIR Effect4.Program.Sched.M1Drive.drain_rel Effect4.Program.Sched.drain_rel binders=2/2 exact=true
+PAIR Effect4.Program.Sched.M1Drive.dropFinalizer_ok Effect4.Program.Sched.dropFinalizer_ok binders=7/7 exact=true
+PAIR Effect4.Program.Sched.M1Drive.dueResumes_frame Effect4.Program.Sched.dueResumes_frame binders=2/2 exact=true
+PAIR Effect4.Program.Sched.M1Drive.dueResumes_term Effect4.Program.Sched.dueResumes_term binders=2/2 exact=true
+PAIR Effect4.Program.Sched.M1Evaluate.registerAsyncR_await Effect4.Program.Sched.registerAsyncR_await binders=6/6 exact=true
+PAIR Effect4.Program.Sched.M1Evaluate.registerAsync_await Effect4.Program.Sched.registerAsync_await binders=6/6 exact=true
+PAIR Effect4.Program.Sched.M1Hooks.exit_completion_means Effect4.Program.Sched.exit_completion_means binders=2/2 exact=true
+PAIR Effect4.Program.Sched.M1Hooks.storesOk_empty Effect4.Program.Sched.storesOk_empty binders=0/0 exact=true
+PAIR Effect4.Program.Sched.M1Hooks.storesOk_syncOpStep Effect4.Program.Sched.storesOk_syncOpStep binders=6/6 exact=true
+PAIR Effect4.Program.Sched.M1Hooks.storesOk_wakeList Effect4.Program.Sched.storesOk_wakeList binders=4/4 exact=true
+PAIR Effect4.Program.Sched.M1Origin.actionAt_fork Effect4.Program.Sched.actionAt_fork binders=6/8 exact=false
+OBLIGATION ∀ {root : Effect4.Program.NativeEff} {p : Effect4.Program.Point} {site : List Nat}
+  {program : Effect4.Program.NCode} {options : Effect4.Supervision.ForkOptions},
+  Effect4.Program.actionAt root p =
+      some
+        (Effect4.Machine.WithFiberAction.fork
+          (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          program options site) →
+    program = Effect4.Program.resolve root ((p.child 0).child 0)
+LAW ∀ {root : Effect4.Program.NativeEff} {p : Effect4.Program.Point}
+  {a : Effect4.Program.ActionTerm Effect4.Program.NativeOp},
+  (Effect4.Program.Node.eff root).at_ p.path = some (Effect4.Program.Node.eff (Effect4.Program.Eff.withFiber a)) →
+    ∀ {site : List Nat} {program : Effect4.Program.NCode} {options : Effect4.Supervision.ForkOptions},
+      Effect4.Program.actionAt root p =
+          some
+            (Effect4.Machine.WithFiberAction.fork
+              (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              program options site) →
+        program = Effect4.Program.resolve root ((p.child 0).child 0)
+PAIR Effect4.Program.Sched.M1Origin.actionAt_forkIn Effect4.Program.Sched.actionAt_forkIn binders=7/9 exact=false
+OBLIGATION ∀ {root : Effect4.Program.NativeEff} {p : Effect4.Program.Point} {site : List Nat}
+  {program : Effect4.Program.NCode} {options : Effect4.Supervision.ForkOptions} {scope : Nat},
+  Effect4.Program.actionAt root p =
+      some
+        (Effect4.Machine.WithFiberAction.forkIn
+          (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          program options scope site) →
+    program = Effect4.Program.resolve root ((p.child 0).child 0)
+LAW ∀ {root : Effect4.Program.NativeEff} {p : Effect4.Program.Point}
+  {a : Effect4.Program.ActionTerm Effect4.Program.NativeOp},
+  (Effect4.Program.Node.eff root).at_ p.path = some (Effect4.Program.Node.eff (Effect4.Program.Eff.withFiber a)) →
+    ∀ {site : List Nat} {program : Effect4.Program.NCode} {options : Effect4.Supervision.ForkOptions} {scope : Nat},
+      Effect4.Program.actionAt root p =
+          some
+            (Effect4.Machine.WithFiberAction.forkIn
+              (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              program options scope site) →
+        program = Effect4.Program.resolve root ((p.child 0).child 0)
+PAIR Effect4.Program.Sched.M1Origin.actionAt_not_forkScoped Effect4.Program.Sched.actionAt_not_forkScoped binders=6/8 exact=false
+OBLIGATION ∀ {root : Effect4.Program.NativeEff} {p : Effect4.Program.Point} {site : List Nat}
+  {program : Effect4.Program.NCode} {options : Effect4.Supervision.ForkOptions},
+  Effect4.Program.actionAt root p =
+      some
+        (Effect4.Machine.WithFiberAction.forkScoped
+          (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          program options site) →
+    False
+LAW ∀ {root : Effect4.Program.NativeEff} {p : Effect4.Program.Point}
+  {a : Effect4.Program.ActionTerm Effect4.Program.NativeOp},
+  (Effect4.Program.Node.eff root).at_ p.path = some (Effect4.Program.Node.eff (Effect4.Program.Eff.withFiber a)) →
+    ∀ {site : List Nat} {program : Effect4.Program.NCode} {options : Effect4.Supervision.ForkOptions},
+      Effect4.Program.actionAt root p =
+          some
+            (Effect4.Machine.WithFiberAction.forkScoped
+              (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              program options site) →
+        False
+PAIR Effect4.Program.Sched.M1Origin.actionAt_raceAll Effect4.Program.Sched.actionAt_raceAll binders=6/7 exact=false
+OBLIGATION ∀ {root : Effect4.Program.NativeEff} {p : Effect4.Program.Point}
+  {a : Effect4.Program.ActionTerm Effect4.Program.NativeOp} {site : Option (List Nat)}
+  {entrants : List Effect4.Program.NCode},
+  Effect4.Program.actionAt root p =
+      some
+        (Effect4.Machine.WithFiberAction.raceAll
+          (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          entrants site) →
+    ∃ es,
+      a = Effect4.Program.ActionTerm.raceAll es ∧ entrants = Effect4.Program.actionAt.entrants es ((p.child 0).child 0)
+LAW ∀ {root : Effect4.Program.NativeEff} {p : Effect4.Program.Point}
+  {a : Effect4.Program.ActionTerm Effect4.Program.NativeOp},
+  (Effect4.Program.Node.eff root).at_ p.path = some (Effect4.Program.Node.eff (Effect4.Program.Eff.withFiber a)) →
+    ∀ {site : Option (List Nat)} {entrants : List Effect4.Program.NCode},
+      Effect4.Program.actionAt root p =
+          some
+            (Effect4.Machine.WithFiberAction.raceAll
+              (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              entrants site) →
+        ∃ es,
+          a = Effect4.Program.ActionTerm.raceAll es ∧
+            entrants = Effect4.Program.actionAt.entrants es ((p.child 0).child 0)
+PAIR Effect4.Program.Sched.M1Origin.beginRace_rel Effect4.Program.Sched.beginRace_rel binders=14/14 exact=true
+PAIR Effect4.Program.Sched.M1Origin.forkIn_rel Effect4.Program.Sched.forkIn_rel binders=16/19 exact=false
+OBLIGATION ∀ (root : Effect4.Program.NativeEff) (c : List (Effect4.FiberId × Effect4.Machine.ExitV))
+  {m₁ : Effect4.Program.Sched.FMachine} {m₂ : Effect4.Program.Sched.RState} {f₁ : Effect4.Program.Sched.FRun}
+  {f₂ : Effect4.Program.Sched.RFiber} (y : Bool) {p₁ : Effect4.Program.NCode} {p₂ : Effect4.Program.Sched.RProgram},
+  Effect4.Program.Sched.CodeMeans root p₁ p₂ →
+    ∀ (options : Effect4.Supervision.ForkOptions) (scope : Nat) {a₁ : Effect4.Program.Sched.FAnswer}
+      {a₂ : Effect4.Program.Sched.RAnswer},
+      Effect4.Program.Sched.AnswerRel root a₁ a₂ →
+        ∀ (site : optParam (List Nat) []),
+          Effect4.Program.Sched.IterRel root
+            (Effect4.Machine.FiberAction.forkIn (Effect4.Program.interpAt root c) m₁ f₁ y p₁ options scope a₁ site)
+            (Effect4.Machine.FiberAction.forkIn (Effect4.Program.Sched.interpRAt root c) m₂ f₂ y p₂ options scope a₂
+              site)
+LAW ∀ (root : Effect4.Program.NativeEff) (c : List (Effect4.FiberId × Effect4.Machine.ExitV))
+  {m₁ : Effect4.Program.Sched.FMachine} {m₂ : Effect4.Program.Sched.RState},
+  Effect4.Machine.MachineOk Effect4.Program.Sched.StoresOk m₁ →
+    Effect4.Program.Sched.BMeans root m₁ m₂ →
+      ∀ {f₁ : Effect4.Program.Sched.FRun} {f₂ : Effect4.Program.Sched.RFiber},
+        Effect4.Program.Sched.FMeans root f₁ f₂ →
+          ∀ (y : Bool) {p₁ : Effect4.Program.NCode} {p₂ : Effect4.Program.Sched.RProgram},
+            Effect4.Program.Sched.CodeMeans root p₁ p₂ →
+              ∀ (options : Effect4.Supervision.ForkOptions) (scope : Nat) {a₁ : Effect4.Program.Sched.FAnswer}
+                {a₂ : Effect4.Program.Sched.RAnswer},
+                Effect4.Program.Sched.AnswerRel root a₁ a₂ →
+                  ∀ (site : optParam (List Nat) []),
+                    Effect4.Program.Sched.IterRel root
+                      (Effect4.Machine.FiberAction.forkIn (Effect4.Program.interpAt root c) m₁ f₁ y p₁ options scope a₁
+                        site)
+                      (Effect4.Machine.FiberAction.forkIn (Effect4.Program.Sched.interpRAt root c) m₂ f₂ y p₂ options
+                        scope a₂ site)
+PAIR Effect4.Program.Sched.M1Origin.fork_rel Effect4.Program.Sched.fork_rel binders=15/18 exact=false
+OBLIGATION ∀ (root : Effect4.Program.NativeEff) (c : List (Effect4.FiberId × Effect4.Machine.ExitV))
+  {m₁ : Effect4.Program.Sched.FMachine} {m₂ : Effect4.Program.Sched.RState} {f₁ : Effect4.Program.Sched.FRun}
+  {f₂ : Effect4.Program.Sched.RFiber} (y : Bool) {p₁ : Effect4.Program.NCode} {p₂ : Effect4.Program.Sched.RProgram},
+  Effect4.Program.Sched.CodeMeans root p₁ p₂ →
+    ∀ (options : Effect4.Supervision.ForkOptions) {a₁ : Effect4.Program.Sched.FAnswer}
+      {a₂ : Effect4.Program.Sched.RAnswer},
+      Effect4.Program.Sched.AnswerRel root a₁ a₂ →
+        ∀ (site : optParam (List Nat) []),
+          Effect4.Program.Sched.IterRel root
+            (Effect4.Machine.FiberAction.fork (Effect4.Program.interpAt root c) m₁ f₁ y p₁ options a₁ site)
+            (Effect4.Machine.FiberAction.fork (Effect4.Program.Sched.interpRAt root c) m₂ f₂ y p₂ options a₂ site)
+LAW ∀ (root : Effect4.Program.NativeEff) (c : List (Effect4.FiberId × Effect4.Machine.ExitV))
+  {m₁ : Effect4.Program.Sched.FMachine} {m₂ : Effect4.Program.Sched.RState},
+  Effect4.Machine.MachineOk Effect4.Program.Sched.StoresOk m₁ →
+    Effect4.Program.Sched.BMeans root m₁ m₂ →
+      ∀ {f₁ : Effect4.Program.Sched.FRun} {f₂ : Effect4.Program.Sched.RFiber},
+        Effect4.Program.Sched.FMeans root f₁ f₂ →
+          ∀ (y : Bool) {p₁ : Effect4.Program.NCode} {p₂ : Effect4.Program.Sched.RProgram},
+            Effect4.Program.Sched.CodeMeans root p₁ p₂ →
+              ∀ (options : Effect4.Supervision.ForkOptions) {a₁ : Effect4.Program.Sched.FAnswer}
+                {a₂ : Effect4.Program.Sched.RAnswer},
+                Effect4.Program.Sched.AnswerRel root a₁ a₂ →
+                  ∀ (site : optParam (List Nat) []),
+                    Effect4.Program.Sched.IterRel root
+                      (Effect4.Machine.FiberAction.fork (Effect4.Program.interpAt root c) m₁ f₁ y p₁ options a₁ site)
+                      (Effect4.Machine.FiberAction.fork (Effect4.Program.Sched.interpRAt root c) m₂ f₂ y p₂ options a₂
+                        site)
+PAIR Effect4.Program.Sched.M1Origin.pendingOk_make Effect4.Program.Sched.pendingOk_make binders=6/6 exact=true
+PAIR Effect4.Program.Sched.M1Origin.raceAll_rel Effect4.Program.Sched.raceAll_rel binders=11/14 exact=false
+OBLIGATION ∀ (root : Effect4.Program.NativeEff) (c : List (Effect4.FiberId × Effect4.Machine.ExitV))
+  {m₁ : Effect4.Program.Sched.FMachine} {m₂ : Effect4.Program.Sched.RState} {f₁ : Effect4.Program.Sched.FRun}
+  {f₂ : Effect4.Program.Sched.RFiber} (y : Bool) {e₁ : List Effect4.Program.NCode}
+  {e₂ : List Effect4.Program.Sched.RProgram},
+  Effect4.Machine.ListRel (Effect4.Program.Sched.CodeMeans root) e₁ e₂ →
+    ∀ (site : optParam (Option (List Nat)) none),
+      Effect4.Program.Sched.IterRel root
+        (Effect4.Machine.FiberAction.raceAll (Effect4.Program.interpAt root c) m₁ f₁ y e₁ site)
+        (Effect4.Machine.FiberAction.raceAll (Effect4.Program.Sched.interpRAt root c) m₂ f₂ y e₂ site)
+LAW ∀ (root : Effect4.Program.NativeEff) (c : List (Effect4.FiberId × Effect4.Machine.ExitV))
+  {m₁ : Effect4.Program.Sched.FMachine} {m₂ : Effect4.Program.Sched.RState},
+  Effect4.Machine.MachineOk Effect4.Program.Sched.StoresOk m₁ →
+    Effect4.Program.Sched.BMeans root m₁ m₂ →
+      ∀ {f₁ : Effect4.Program.Sched.FRun} {f₂ : Effect4.Program.Sched.RFiber},
+        Effect4.Program.Sched.FMeans root f₁ f₂ →
+          ∀ (y : Bool) {e₁ : List Effect4.Program.NCode} {e₂ : List Effect4.Program.Sched.RProgram},
+            Effect4.Machine.ListRel (Effect4.Program.Sched.CodeMeans root) e₁ e₂ →
+              ∀ (site : optParam (Option (List Nat)) none),
+                Effect4.Program.Sched.IterRel root
+                  (Effect4.Machine.FiberAction.raceAll (Effect4.Program.interpAt root c) m₁ f₁ y e₁ site)
+                  (Effect4.Machine.FiberAction.raceAll (Effect4.Program.Sched.interpRAt root c) m₂ f₂ y e₂ site)
+PAIR Effect4.Program.Sched.M1Origin.spawn_rel Effect4.Program.Sched.spawn_rel binders=16/16 exact=true
+UNPAIRED Effect4.Program.Sched.M1OriginFibers.FMeans_mk' binders=19 candidates=[]
+UNPAIRED Effect4.Program.Sched.M1OriginFibers.FMeans_origin binders=4 candidates=[]
+PAIR Effect4.Program.Sched.M1OriginFibers.fmeans_make Effect4.Program.Sched.fmeans_make binders=9/9 exact=true
+PAIR Effect4.Program.Sched.M1OriginFibers.make_pending_empty Effect4.Program.Sched.make_pending_empty binders=6/6 exact=true
+PAIR Effect4.Program.Sched.M1OriginFibers.raceMeans_mk' Effect4.Program.Sched.raceMeans_mk' binders=11/11 exact=true
+PAIR Effect4.Program.Sched.M1OriginFibers.raceMeans_nextSite Effect4.Program.Sched.raceMeans_nextSite binders=4/4 exact=true
+PAIR Effect4.Program.Sched.M1PendingOrigin.beginRace_pendingOk Effect4.Program.Sched.beginRace_pendingOk binders=7/7 exact=false
+OBLIGATION ∀ (i : Effect4.Program.Sched.FInterp) (m : Effect4.Program.Sched.FMachine) (f : Effect4.Program.Sched.FRun)
+  (y : Bool) (entrants : List Effect4.Program.NCode) (site : Option (List Nat)),
+  Effect4.Machine.PendingOk f →
+    Effect4.Machine.PendingOk
+      ((Effect4.Machine.beginRace i m f y entrants site).fiber
+        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+LAW ∀ (i : Effect4.Program.Sched.FInterp) (m : Effect4.Program.Sched.FMachine) (f : Effect4.Program.Sched.FRun)
+  (y : Bool) (entrants : List Effect4.Program.NCode),
+  Effect4.Machine.PendingOk f →
+    ∀ (site : optParam (Option (List Nat)) none),
+      Effect4.Machine.PendingOk
+        ((Effect4.Machine.beginRace i m f y entrants site).fiber
+          (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+PAIR Effect4.Program.Sched.M1PendingOrigin.forkIn_pendingOk Effect4.Program.Sched.forkIn_pendingOk binders=11/11 exact=false
+OBLIGATION ∀ (i : Effect4.Program.Sched.FInterp) (m : Effect4.Program.Sched.FMachine) (f : Effect4.Program.Sched.FRun)
+  (y : Bool),
+  Effect4.Machine.PendingOk f →
+    ∀ (program : Effect4.Program.NCode) (options : Effect4.Supervision.ForkOptions) (scope : Nat) (site : List Nat)
+      {a : Effect4.Program.Sched.FAnswer},
+      (∀
+          (g :
+            Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+              Effect4.Program.NCode Effect4.Program.Sched.FFiber)
+          (v : Effect4.Machine.Val), Effect4.Machine.PendingOk g → Effect4.Machine.PendingOk (a g v)) →
+        Effect4.Machine.PendingOk
+          ((Effect4.Machine.FiberAction.forkIn i m f y program options scope a site).fiber
+            (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+LAW ∀ (i : Effect4.Program.Sched.FInterp) (m : Effect4.Program.Sched.FMachine) (f : Effect4.Program.Sched.FRun)
+  (y : Bool),
+  Effect4.Machine.PendingOk f →
+    ∀ (program : Effect4.Program.NCode) (options : Effect4.Supervision.ForkOptions) (scope : Nat)
+      {a : Effect4.Program.Sched.FAnswer},
+      (∀
+          (g :
+            Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+              Effect4.Program.NCode Effect4.Program.Sched.FFiber)
+          (v : Effect4.Machine.Val), Effect4.Machine.PendingOk g → Effect4.Machine.PendingOk (a g v)) →
+        ∀ (site : optParam (List Nat) []),
+          Effect4.Machine.PendingOk
+            ((Effect4.Machine.FiberAction.forkIn i m f y program options scope a site).fiber
+              (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+PAIR Effect4.Program.Sched.M1PendingOrigin.forkScoped_pendingOk Effect4.Program.Sched.forkScoped_pendingOk binders=10/10 exact=false
+OBLIGATION ∀ (i : Effect4.Program.Sched.FInterp) (m : Effect4.Program.Sched.FMachine) (f : Effect4.Program.Sched.FRun)
+  (y : Bool),
+  Effect4.Machine.PendingOk f →
+    ∀ (program : Effect4.Program.NCode) (options : Effect4.Supervision.ForkOptions) (site : List Nat)
+      {a : Effect4.Program.Sched.FAnswer},
+      (∀
+          (g :
+            Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+              Effect4.Program.NCode Effect4.Program.Sched.FFiber)
+          (v : Effect4.Machine.Val), Effect4.Machine.PendingOk g → Effect4.Machine.PendingOk (a g v)) →
+        Effect4.Machine.PendingOk
+          ((Effect4.Machine.FiberAction.forkScoped i m f y program options a site).fiber
+            (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+LAW ∀ (i : Effect4.Program.Sched.FInterp) (m : Effect4.Program.Sched.FMachine) (f : Effect4.Program.Sched.FRun)
+  (y : Bool),
+  Effect4.Machine.PendingOk f →
+    ∀ (program : Effect4.Program.NCode) (options : Effect4.Supervision.ForkOptions) {a : Effect4.Program.Sched.FAnswer},
+      (∀
+          (g :
+            Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+              Effect4.Program.NCode Effect4.Program.Sched.FFiber)
+          (v : Effect4.Machine.Val), Effect4.Machine.PendingOk g → Effect4.Machine.PendingOk (a g v)) →
+        ∀ (site : optParam (List Nat) []),
+          Effect4.Machine.PendingOk
+            ((Effect4.Machine.FiberAction.forkScoped i m f y program options a site).fiber
+              (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+PAIR Effect4.Program.Sched.M1PendingOrigin.fork_pendingOk Effect4.Program.Sched.fork_pendingOk binders=10/10 exact=false
+OBLIGATION ∀ (i : Effect4.Program.Sched.FInterp) (m : Effect4.Program.Sched.FMachine) (f : Effect4.Program.Sched.FRun)
+  (y : Bool),
+  Effect4.Machine.PendingOk f →
+    ∀ (program : Effect4.Program.NCode) (options : Effect4.Supervision.ForkOptions) (site : List Nat)
+      {a : Effect4.Program.Sched.FAnswer},
+      (∀
+          (g :
+            Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+              Effect4.Program.NCode Effect4.Program.Sched.FFiber)
+          (v : Effect4.Machine.Val), Effect4.Machine.PendingOk g → Effect4.Machine.PendingOk (a g v)) →
+        Effect4.Machine.PendingOk
+          ((Effect4.Machine.FiberAction.fork i m f y program options a site).fiber
+            (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+LAW ∀ (i : Effect4.Program.Sched.FInterp) (m : Effect4.Program.Sched.FMachine) (f : Effect4.Program.Sched.FRun)
+  (y : Bool),
+  Effect4.Machine.PendingOk f →
+    ∀ (program : Effect4.Program.NCode) (options : Effect4.Supervision.ForkOptions) {a : Effect4.Program.Sched.FAnswer},
+      (∀
+          (g :
+            Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+              Effect4.Program.NCode Effect4.Program.Sched.FFiber)
+          (v : Effect4.Machine.Val), Effect4.Machine.PendingOk g → Effect4.Machine.PendingOk (a g v)) →
+        ∀ (site : optParam (List Nat) []),
+          Effect4.Machine.PendingOk
+            ((Effect4.Machine.FiberAction.fork i m f y program options a site).fiber
+              (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+PAIR Effect4.Program.Typed.M2ExpectWanted.saved_from_clauses Effect4.Program.Typed.saved_from_clauses binders=8/8 exact=true
+PAIR Effect4.Program.Typed.M2ForkSourceWanted.source_fork_extension Effect4.Program.Typed.M2ForkSourceWanted.fork_source_extension binders=14/14 exact=true
+PAIR Effect4.Program.Typed.WorldControlWanted.heap_bad Effect4.Program.Typed.heap_bad binders=0/0 exact=true
+PAIR Effect4.Program.Typed.WorldControlWanted.heap_good Effect4.Program.Typed.heap_good binders=0/0 exact=true
+PAIR Effect4.Program.Typed.WorldControlWanted.invalid_refl Effect4.Program.Typed.invalid_refl binders=0/0 exact=true
+PAIR Effect4.Program.Typed.WorldControlWanted.stores_ordered Effect4.Program.Typed.stores_ordered binders=0/0 exact=true
+PAIR Effect4.Program.Typed.WorldControlWanted.world_order_refuses Effect4.Program.Typed.world_order_refuses binders=0/0 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.deferredMake_extension Effect4.Program.Typed.deferredMake_extension binders=6/6 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.fork_extension Effect4.Program.Typed.fork_extension binders=4/4 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.heapNat_iff Effect4.Program.Typed.heapNat_iff binders=2/2 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.heapNotMonotone Effect4.Program.Typed.heapNotMonotone binders=0/0 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.heap_coverage_iff Effect4.Program.Typed.heap_coverage_iff binders=1/1 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.heap_typed_at_mono Effect4.Program.Typed.heap_typed_at_mono binders=6/6 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.insert_extends Effect4.Program.Typed.insert_extends binders=7/7 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.insert_here Effect4.Program.Typed.insert_here binders=6/6 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.insert_other Effect4.Program.Typed.insert_other binders=8/8 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.memoBuild_extension Effect4.Program.Typed.memoBuild_extension binders=8/8 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.order_refl Effect4.Program.Typed.order_refl binders=1/1 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.order_trans Effect4.Program.Typed.order_trans binders=5/5 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.promise_coverage_iff Effect4.Program.Typed.promise_coverage_iff binders=1/1 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.promise_typed_at_mono Effect4.Program.Typed.promise_typed_at_mono binders=6/6 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.protocol_order Effect4.Program.Typed.protocol_order binders=0/0 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.refMake_extension Effect4.Program.Typed.refMake_extension binders=8/8 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.ref_completion_inv Effect4.Program.Typed.ref_completion_inv binders=3/3 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.table_refl Effect4.Program.Typed.table_refl binders=3/3 exact=true
+PAIR Effect4.Program.Typed.WorldWanted.table_trans Effect4.Program.Typed.table_trans binders=7/7 exact=true
+UNPAIRED Effect4.Run.M1Trace.observe_replace_trace binders=2 candidates=[]
+PAIR Effect4.Store.ClockCanonical.M1.fits Effect4.Store.ClockCanonical.fits binders=1/1 exact=true
+PAIR Effect4.Store.ClockCanonical.M1.ofVal_exact Effect4.Store.ClockCanonical.ofVal_exact binders=3/3 exact=true
+PAIR Effect4.Store.ClockCanonical.M1.ofVal_toVal Effect4.Store.ClockCanonical.ofVal_toVal binders=1/1 exact=true
+AUDIT total=309 paired=268 mismatches=11

@@ -33,14 +33,14 @@ structure StoresOk (s : Stores) : Prop where
 #frame_rules StoresOk
 
 /-- The empty store has no registered scope keys. -/
-def M1Hooks.storesOk_empty : ProofGraph.Obligation (StoresOk Stores.empty) := ⟨⟩
+theorem M1Hooks.storesOk_empty : ProofGraph.Obligation (StoresOk Stores.empty) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_empty : StoresOk Stores.empty := by
   aesop (add safe constructors StoresOk) (add safe apply Stores.scopeKeysFresh_empty)
 
 /-- A wake changes only the deferred store, whose frame is generated above. -/
-def M1Hooks.storesOk_wakeList {s : Stores} (_hs : StoresOk s) (key : WakeKey) (phase : WakePhase) : ProofGraph.Obligation (StoresOk (Stores.wakeList key phase s)) := ⟨⟩
+theorem M1Hooks.storesOk_wakeList {s : Stores} (_hs : StoresOk s) (key : WakeKey) (phase : WakePhase) : ProofGraph.Obligation (StoresOk (Stores.wakeList key phase s)) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_wakeList {s : Stores} (hs : StoresOk s) (key : WakeKey) (phase : WakePhase) :
@@ -51,7 +51,7 @@ theorem storesOk_wakeList {s : Stores} (hs : StoresOk s) (key : WakeKey) (phase 
   · exact hs
 
 /-- Every store step keeps the registration-key bound. -/
-def M1Hooks.storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (_hs : StoresOk s)
+theorem M1Hooks.storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (_hs : StoresOk s)
     (_h : syncOpStep o s = some (s', v)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
@@ -162,7 +162,7 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
 /-! ## Code-valued hooks -/
 
 /-- An exit becomes the matching terminal code in both interpreters. -/
-def M1Hooks.exit_completion_means (root : NativeEff) (ex : ExitV) :
+theorem M1Hooks.exit_completion_means (root : NativeEff) (ex : ExitV) :
     ProofGraph.Obligation (CodeMeans root (embed (Prim.ofExit ex)) (.pure ex)) := ⟨⟩
 
 theorem exit_completion_means (root : NativeEff) (ex : ExitV) :

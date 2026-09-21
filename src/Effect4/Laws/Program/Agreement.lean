@@ -915,7 +915,7 @@ theorem suspendBodyAt_memoLookup (q : Point) (m : MemoMapId) (scope : Nat) :
     suspendBodyAt root (.memoLookup q m scope) =
       Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.path m))) (.memoize q m scope) := by aesop
 
-def M1Origin.withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
+theorem M1Origin.withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
     ProofGraph.Obligation ((interpOf root).withFiberOf (.forkLayer q m scope) =
       some (.fork (resolveLayer root q m scope) ⟨true, true, .inherit⟩ q.path)) := ⟨⟩
 
