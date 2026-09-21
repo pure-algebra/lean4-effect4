@@ -39,6 +39,18 @@ the first real simultaneous-update proofs and an explicit transition inventory,
 transition preservation and transfer. Residue observation proofs and the invariant-backed
 memo cleanup can proceed independently. Placement is already landed. Decisions 86–88 record
 the new technical questions; existing open owner choices are not ratified by this review.
+
+The plan is solidified and the next two slices are dispatched in
+`docs/research/2026-09-20-foundations-plan-and-next-two-slices.md`: the review's findings
+hold; the false statement is one of seven obligations declared inside `include` sections (a
+`def` never receives an included hypothesis, a `theorem` always does), so slice 1 makes
+`ProofGraph.Obligation` a `Prop`, declares every obligation as a theorem, records the seven
+amendments with their counterexamples, and adds the explicit reference `#obligation_proved`;
+slice 2 adds owner-level source rows so the skeleton states `SavedOk`, `ResumeOk` and
+`CaptureOk` whole, puts the ghost token table on the world, and declares the typed-stack
+interface parameterised in `TypedProg`; slice 3 (world validity and transport) is written
+and disjoint. Decisions D1–D11 of that note are the coordinator's; the five chat rulings of
+2026-09-20 still wait for the owner's word to be written into `decisions.md`.
 The older look-ahead's namesake-first closure forecast and M2b-before-M3 sequence are superseded.
 
 The owner's broader direction is captured in the review's §11: all 452 pinned TypeScript
