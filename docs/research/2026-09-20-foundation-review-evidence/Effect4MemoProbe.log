@@ -1,0 +1,7 @@
+'ReviewProbe.Memo.ids_unique_before' does not depend on any axioms
+'ReviewProbe.Memo.fork_collision_step' depends on axioms: [propext]
+'ReviewProbe.Memo.ids_not_unique_after' does not depend on any axioms
+'ReviewProbe.Memo.identity_write_changes_duplicate_world' depends on axioms: [propext]
+'ReviewProbe.Memo.identity_write_copies_first_map' does not depend on any axioms
+'ReviewProbe.Memo.duplicate_ids_below_supply' does not depend on any axioms
+'ReviewProbe.Memo.actual_complete_differs_from_deleted_write' depends on axioms: [propext]

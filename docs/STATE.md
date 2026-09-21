@@ -18,17 +18,36 @@ Phase A, placement, the Phase B skeleton and the Phase C fills of the skeleton-f
 are landed; the phase-by-phase account is
 `docs/research/2026-09-20-skeleton-first-receipt.md`, the review of that landing is
 `docs/research/2026-09-20-codex-landing-review.md`, and the close of Phase C with its numbers
-and its open residue is `docs/research/2026-09-20-phase-c-close-receipt.md`. The ledger has
-65 gates over 393 statements, 351 closed by the bank search and 42 open with their cause
-recorded; the banks are `Effect4.Stores` (equations and laws), `Effect4.StoreKernel` (store
-definitions, kernel modules only), `Effect4.Fibers` (fiber machine clauses) and
-`Effect4.TypedState`. The look-ahead `docs/research/2026-09-20-look-ahead-after-phase-c.md`
-sets the plan's slice table against the tree (M1 and P2 done, M2 and P1 half, M3–M7 and
-P3–P5 unstarted, the F5/F6 tooling amendments absent), names the five 2026-09-20 rulings not
-yet written in `decisions.md`, cuts the residue into five items (the ledger's namesake-theorem
-closer first, then the memo slice as its own regenerated commit), and lists seven probes
-G1–G7 for Gemini. Next in order: the residue, the memo slice, the register, `Preds World`
-(M2b), the F5/F6 amendments, then M3.
+and its open residue is `docs/research/2026-09-20-phase-c-close-receipt.md`. Its historical
+65 gate reports / 393 counted statements / 351 closed / 42 open include repeated scopes;
+they are not a count of unique obligations. The banks are `Effect4.Stores`,
+`Effect4.StoreKernel`, `Effect4.Fibers` and `Effect4.TypedState`.
+
+The current foundations review and proposed execution plan is
+[`docs/core/post-phase-c-synthesis.md`](core/post-phase-c-synthesis.md), checked against
+`10d5c009`. A fresh Lean counterexample refutes the pending `M1Origin.actionAt_raceAll`
+statement because it omits the source-location premise of its backing theorem. It remains
+open; no false theorem was accepted. The review also proves that generated resume checks
+ignore target/token and capture checks ignore source path/root, and identifies the missing
+shared type between current code and its saved stack. These are statement/interface issues
+to resolve before the main typed-state proof, not evidence that the runtime is broken.
+
+Next: audit and explicitly amend false/mismatched statements; validate relational predicate
+interfaces and world transport; establish source/body admission and operation protocols (M3a);
+then assemble the concrete state/stack/delivery relations (M3b/M4), denotation/hooks/init,
+the first real simultaneous-update proofs and an explicit transition inventory,
+transition preservation and transfer. Residue observation proofs and the invariant-backed
+memo cleanup can proceed independently. Placement is already landed. Decisions 86–88 record
+the new technical questions; existing open owner choices are not ratified by this review.
+The older look-ahead's namesake-first closure forecast and M2b-before-M3 sequence are superseded.
+
+The owner's broader direction is captured in the review's §11: all 452 pinned TypeScript
+source files and all 137 public modules have a planning disposition, including the remaining
+core library families, host semantics, translation and publication. This is inventory coverage,
+not a claim that their semantics are all implemented or proved. All 194 entries (88 decisions,
+101 design issues and five Config questions) are routed in the review's linked planning map.
+Prioritize semantic organization, reusable relations
+and focused proofs; add tools or repeat broad checks only when they serve concrete work.
 
 ## Earlier full-check landing (2026-09-17)
 
@@ -67,21 +86,22 @@ G1–G7 for Gemini. Next in order: the residue, the memo slice, the register, `P
 | `docs/core/ontology.md` | the frame: six sorts with one free object each, five arrow kinds with their obligations, coherence as a per-sort census; the probe of the "do now" rows; the Schema layer as the place to start over |
 | `docs/core/coherence-principle.md` | scout F: the principle in full, the seven squares, the arrows lacking obligations |
 | `docs/core/traversal-census.md` | the census numbers, every hand traversal by root, the converter design |
-| `docs/core/decisions.md` | every open decision, one list (status by row; rows 44–45 record the approved world and rows 78–85 the state/refinement proposals) with the order |
-| `docs/core/language-cut.md` | the language as cut, every alphabet against Effect: terms (first order, twenty atoms, positional binders), types, values and errors, the 25 constructors, the absent modules; which gaps are profile rulings, which are cuts nobody decided |
+| `docs/core/decisions.md` | every open decision, one list (status by row; rows 44–45 record the approved world and rows 78–85 the state/refinement proposals and 86–88 the foundation contracts) with the order |
+| `docs/core/language-cut.md` | the historical language-cut analysis and profile/cut distinctions; live whole-pin dispositions and remaining work are in the post-Phase C plan §11 |
 | `docs/core/api-surface.md` | the consolidated API and its awkward constructs |
 | `docs/core/lcnf-route.md` | what the LCNF lowering handles and refuses; the LLVM-shaped architecture |
 | `docs/core/machine-state.md` | The state and log owners, proposed representation changes, conditional transaction profile, and shared basis for the surveyed stateful modules. Approved world and open choices are separated; the implementation plan and supporting research are tracked under `docs/research/` |
 | `docs/DESIGN-ISSUES.md` | the DI register (rulings are made only when written here) |
 | `docs/ARCHITECTURE.md`, `docs/GENERATED.md`, `docs/DESIGN-BASIS.md`, `docs/DESIGN-MAP.md`, `docs/RUNTIME-COVERAGE.md` | the tree, the generated groups, the DB register, the earlier five-layer map (superseded in substance by `ontology.md` §5), the runtime census |
 | `docs/core/architecture-map.html` | the measured architecture map: the roots at their declared heights, the import matrix, every import against the direction, the typed-state stack with its planned modules, the file map by role; regenerated from the tree by `make gen-architecture`, roles declared in `tools/Tools/ArchitectureRoles.lean` |
+| `docs/core/post-phase-c-synthesis.md` | the checked post-Phase C review and full proposed execution plan: false pending statement, relational predicate gaps, decision reconciliation, slice contracts, controls and evidence; not an owner ruling |
 | `AGENTS.md` | the operating rules and the vocabulary |
 
 ## Next, in order
 
-The active remaining work in the owner's skeleton-first redirect is Phase C: fill the
-named proof banks and obligations. The dated plan
-notes below explain its background; they are not a new pause instruction.
+The active sequence is the foundations review above. Phase C's existing receipt remains
+historical evidence; the dated notes below explain the redirect and its earlier plans. They
+do not override the corrected protocol-before-assembly order or constitute a new pause instruction.
 
 **Design review before implementation resumes (2026-09-19).** The completed STM and stateful-API
 research is reconciled in `docs/core/machine-state.md`, with the detailed contracts, retained

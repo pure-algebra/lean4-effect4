@@ -1,0 +1,11 @@
+{
+  "Effect4FoundationProbe.lean": "80e9f5b5f120665172dfaf5739f645c68316a887d84417e0b0e1359d6990f21a",
+  "Effect4FoundationProbe.log": "61fe2106169214fea14f57a5f052b2712f8669e88029b866878c060b6ab39d85",
+  "Effect4MemoProbe.lean": "04a4d95effc0aba6746adaa67c04362b859a0225ee8f11ee4799894d55a2691a",
+  "Effect4MemoProbe.log": "5f6f4263820f150b98db36f59633274b09e63bdb12955d6455c0842c9d94ccc9",
+  "Effect4RaceObligationProbe.lean": "7744db1dc618c27b3b282307b0e7d26788679012ef5ca4a3da9f9e13c28ba0b6",
+  "Effect4RaceObligationProbe.log": "1c858a36ac007835ff9a77b406518bcaa7b5b8b5258b52ff0aa6bc5e505639bf",
+  "Effect4ResidueBoundedProbe.lean": "fc54ad44268a1e6729bad794dc67178c19216941c9adbb1d1042a89adb934995",
+  "Effect4ResidueProbe.lean": "77dda48dee90215acd86f50bedf5358d01232baea83a89beee389168b07d6f82",
+  "synthesis-as-received.md": "ee8b0654d0412f932726425791b066830368d17380315a04c9685cc80d476c68"
+}

@@ -1,0 +1,26 @@
+{
+  "reviewed_head": "10d5c00944eb6863e33970bfa109fa45a0797403",
+  "checks": {
+    "all_decision_rows": true,
+    "all_design_issue_rows": true,
+    "all_config_questions": true,
+    "unique_ids": true,
+    "every_row_has_plan": true,
+    "source_anchors": true,
+    "original_evidence_hashes": true,
+    "accepted_logs_no_errors_or_sorryAx": true,
+    "fourteen_axiom_reports": true,
+    "new_document_links_resolve": true,
+    "changed_paths_docs_only": true,
+    "git_diff_check": true
+  },
+  "counts": {
+    "decisions": 88,
+    "design_issues": 101,
+    "config": 5,
+    "all_records": 194
+  },
+  "anchor_errors": [],
+  "link_errors": [],
+  "scope": "One-time artifact consistency check; not a CI gate, full proof audit or semantic completeness claim."
+}

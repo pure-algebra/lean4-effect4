@@ -1,0 +1,32 @@
+@M1Origin.actionAt_raceAll : {root : NativeEff} →
+  {p : Point} →
+    {a : ActionTerm NativeOp} →
+      {site : Option (List Nat)} →
+        {entrants : List NCode} →
+          actionAt root p =
+              some (WithFiberAction.raceAll (Prim EffName EffThunk Val Err Defect FiberId Ann) entrants site) →
+            ProofGraph.Obligation
+              (∃ es, a = ActionTerm.raceAll es ∧ entrants = actionAt.entrants es ((p.child 0).child 0))
+@actionAt_raceAll : ∀ {root : NativeEff} {p : Point} {a : ActionTerm NativeOp},
+  (Node.eff root).at_ p.path = some (Node.eff (Eff.withFiber a)) →
+    ∀ {site : Option (List Nat)} {entrants : List NCode},
+      actionAt root p =
+          some (WithFiberAction.raceAll (Prim EffName EffThunk Val Err Defect FiberId Ann) entrants site) →
+        ∃ es, a = ActionTerm.raceAll es ∧ entrants = actionAt.entrants es ((p.child 0).child 0)
+@M1Origin.actionAt_fork : {root : NativeEff} →
+  {p : Point} →
+    {site : List Nat} →
+      {program : NCode} →
+        {options : Supervision.ForkOptions} →
+          actionAt root p =
+              some (WithFiberAction.fork (Prim EffName EffThunk Val Err Defect FiberId Ann) program options site) →
+            ProofGraph.Obligation (program = resolve root ((p.child 0).child 0))
+@actionAt_fork : ∀ {root : NativeEff} {p : Point} {a : ActionTerm NativeOp},
+  (Node.eff root).at_ p.path = some (Node.eff (Eff.withFiber a)) →
+    ∀ {site : List Nat} {program : NCode} {options : Supervision.ForkOptions},
+      actionAt root p =
+          some (WithFiberAction.fork (Prim EffName EffThunk Val Err Defect FiberId Ann) program options site) →
+        program = resolve root ((p.child 0).child 0)
+'ResidueProbe.decoded' depends on axioms: [propext]
+'ResidueProbe.frozen_raceAll_counterexample' depends on axioms: [propext]
+'ResidueProbe.universal_missing_premise_false' depends on axioms: [propext]

@@ -6,8 +6,9 @@ as the language's last major design push; reviewed against the completed scouts 
 The approved typed-world model is recorded in decisions rows 44–45. The new representation,
 observation and control choices remain proposals in rows 78–83; §6 points to that one register.
 
-The implementation sequence and proof contracts are in
-`docs/research/2026-09-19-state-refinement-plan.md`. That plan includes a finite rc.112 control
+The current proposed sequence and whole-core semantic workstreams are in
+`docs/core/post-phase-c-synthesis.md`; the earlier contracts are retained in
+`docs/research/2026-09-19-state-refinement-plan.md`. That earlier plan includes a finite rc.112 control
 showing that changing wake timing can change a returned value. It does not establish general
 agreement for a composed API or a lowered backend.
 
@@ -88,16 +89,16 @@ derived.
 
 | area | current cost or gap | proposed change and condition |
 | --- | --- | --- |
-| promise cells | storage now holds Completion data; the shape invariant and partial decoder are removed | retain deferred Ref reads and do not claim arbitrary Deferred.completeWith support; finish the representation connector in the Laws graph |
-| memo entries | the unused effect field is removed and census witnesses inspect the cell | the migration requires both cell-based replacement witnesses and the representation connector; the connector remains a Phase B/C obligation |
+| promise cells | storage now holds Completion data; the shape invariant and partial decoder are removed | retain deferred Ref reads and do not claim arbitrary Deferred.completeWith support; the mapping/representation connector landed through Phase C |
+| memo entries | the unused effect field is removed and census witnesses inspect the cell | cell-based witnesses and the connector landed through Phase C; identity-write deletion remains conditional on unique map IDs below the allocation supply and its reachable-state connector |
 | supervision and events | the holder now reads the fiber's origin instead of the event trace | retain separate semantic, holder/replay and diagnostic observations; prove the source-path and observation statements in the Laws graph |
 | optimized containers | OCaml already has interfaces, list twins and property tests, but no Lean refinement certificate for the swaps | use separate lawful interfaces for dense arenas, keyed tables, ordered work, append sequences and persistent paths; prove a relation to the reference |
 | identities | scope/finalizer/token/race spaces share Nat | distinguish their types while retaining the shared allocation policy; target overflow/freshness obligations remain |
 
 The completion and memo changes affect positions walked by the typed-state ledger. The proposed
 order is to settle their contract, migrate with a connector, then pin the semantic obligation
-count. Their actual radius is about twenty files, including simulation/census witnesses. They
-are not a six-file mechanical edit. The fast-container implementation can follow the milestone;
+count. Their landed radius includes runtime, simulation and census witnesses; measure the remaining
+cleanup against the current tree rather than reusing the early six- or twenty-file estimates. The fast-container implementation can follow the milestone;
 its interface and observation contract should be fixed now.
 
 Current Obs contains the full concrete Stores value. Book/BMeans relates machines with the same
@@ -176,8 +177,11 @@ not a rewrite of every store.
 scheduled waking, stored behaviors, and Clock/Random profiles. DI-11 remains the existing
 composition ruling; correcting a contradictory summary does not require ruling it again.
 
-`docs/research/2026-09-19-state-refinement-plan.md` owns the staged work and acceptance:
+`docs/core/post-phase-c-synthesis.md` now owns the proposed staged sequence and acceptance;
+`docs/research/2026-09-19-state-refinement-plan.md` is its historical contract basis:
 contracts and observations, completion/memo migration, generic-cell/world tooling and the
 concrete ledger, typed-state proofs, one storage refinement, then the additional primitive
-families and target profiles. The owner's skeleton-first redirect resumes implementation:
-finish the data changes, settle module placement, record every statement, then fill the proofs.
+families and target profiles. The data and placement slices of the owner's skeleton-first redirect are landed. Next are
+the checked statement amendments, relational predicate shape, protocol/validity contracts and
+their proof graph. The broader families use those same foundations; no new gate framework is
+a prerequisite for designing or proving the next real semantic slice.

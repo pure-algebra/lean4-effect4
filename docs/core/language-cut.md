@@ -1,5 +1,11 @@
 # The language, as cut: every alphabet against Effect (2026-09-18)
 
+Historical snapshot: subsequent landings have changed several status cells below. In particular,
+Config has an existing algebra/law implementation, release typing was amended, and generic
+cell work is partially landed. Use `post-phase-c-synthesis.md` §11 for the current whole-pin
+planning map; retain this note for the original profile decisions and identified expressiveness
+gaps, not as a claim that every listed absence is still current.
+
 What the stored-program language can and cannot say, read off its inductives at HEAD, and what
 each gap costs against Effect 4.0.0-rc.112. Three columns matter: whether the gap is a
 **profile decision** the owner ruled (DI-20, DI-28, DESIGN-BASIS "designs excluded"), a **cut**

@@ -1,0 +1,100 @@
+structure Effect4.Program.Typed.Preds (W : Type) : Type
+number of parameters: 1
+fields:
+  Effect4.Program.Typed.Preds.program : W → Typed.Expect → Effects.Program RSig ExitV → Prop
+  Effect4.Program.Typed.Preds.StackOk : W → Typed.Expect → List ScopeFrame → Prop
+  Effect4.Program.Typed.Preds.InterruptOnly : W → Typed.Expect → Option CauseV → Prop
+  Effect4.Program.Typed.Preds.PendingOk : W → Typed.Expect → List (Pending EffName Val Err Defect FiberId Ann) → Prop
+  Effect4.Program.Typed.Preds.exit : W → Typed.Expect → Exit Val Err Defect FiberId Ann → Prop
+  Effect4.Program.Typed.Preds.ResumeOk : W → Typed.Expect → RProgram → Prop
+  Effect4.Program.Typed.Preds.ServiceOk : W → Typed.Expect → Ctx → Prop
+  Effect4.Program.Typed.Preds.RaceOk : W →
+      Typed.Expect → List (Race EffName EffThunk Val Err Defect FiberId Ann RProgram) → Prop
+  Effect4.Program.Typed.Preds.PromiseTable : W → Stores → Prop
+  Effect4.Program.Typed.Preds.HeapCell : W → RefKey → Val → Prop
+  Effect4.Program.Typed.Preds.PromiseCell : W → DeferredKey → DeferredCell → Prop
+  Effect4.Program.Typed.Preds.CaptureOk : W → Typed.Expect → List Store.Val → Prop
+constructor:
+  Effect4.Program.Typed.Preds.mk {W : Type} (program : W → Typed.Expect → Effects.Program RSig ExitV → Prop)
+    (StackOk : W → Typed.Expect → List ScopeFrame → Prop) (InterruptOnly : W → Typed.Expect → Option CauseV → Prop)
+    (PendingOk : W → Typed.Expect → List (Pending EffName Val Err Defect FiberId Ann) → Prop)
+    (exit : W → Typed.Expect → Exit Val Err Defect FiberId Ann → Prop) (ResumeOk : W → Typed.Expect → RProgram → Prop)
+    (ServiceOk : W → Typed.Expect → Ctx → Prop)
+    (RaceOk : W → Typed.Expect → List (Race EffName EffThunk Val Err Defect FiberId Ann RProgram) → Prop)
+    (PromiseTable : W → Stores → Prop) (HeapCell : W → RefKey → Val → Prop)
+    (PromiseCell : W → DeferredKey → DeferredCell → Prop) (CaptureOk : W → Typed.Expect → List Store.Val → Prop) :
+    Typed.Preds W
+structure Effect4.Program.Typed.RSavedOk {W : Type} (P : Typed.Preds W) (w : W) (e : Typed.Expect) (x : RSaved) : Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.RSavedOk.c0 : P.program w e x.current
+  Effect4.Program.Typed.RSavedOk.c1 : P.StackOk w e x.stack
+  Effect4.Program.Typed.RSavedOk.c2 : P.InterruptOnly w e x.interruptedCause
+constructor:
+  Effect4.Program.Typed.RSavedOk.mk {W : Type} {P : Typed.Preds W} {w : W} {e : Typed.Expect} {x : RSaved}
+    (c0 : P.program w e x.current) (c1 : P.StackOk w e x.stack) (c2 : P.InterruptOnly w e x.interruptedCause) :
+    Typed.RSavedOk P w e x
+@[reducible] def Effect4.Program.Typed.RStateOk : {W : Type} → Typed.Preds W → W → RState → Prop :=
+fun {W} P w x => Typed.RunMachineOk P w Typed.Expect.root x
+def Effect4.Program.Typed.TaskOk : {W : Type} →
+  Typed.Preds W → W → Typed.Expect → Machine.Task EffName EffThunk Val Err Defect FiberId Ann RProgram → Prop :=
+fun {W} P w e x =>
+  match x with
+  | Task.start child => True
+  | Task.resume target token answer => P.ResumeOk w e answer
+  | Task.wake list phase => True
+def Effect4.Program.Typed.CmdOk : {W : Type} →
+  Typed.Preds W → W → Typed.Expect → Cmd EffName EffThunk Val Err Defect FiberId Ann RProgram → Prop :=
+fun {W} P w e x =>
+  match x with
+  | Cmd.evaluate fiber => True
+  | Cmd.loop fiber yielding => True
+  | Cmd.deliver fiber yielding => True
+  | Cmd.finish fiber exit => P.exit w (Typed.Expect.fiber fiber) exit
+  | Cmd.resume fiber token answer => P.ResumeOk w e answer
+  | Cmd.launch race => True
+  | Cmd.enrollRace race child => True
+  | Cmd.registrationDone race yielding => True
+  | Cmd.interruptTarget target who extra => True
+  | Cmd.afterInterrupt host yielding kind => True
+  | Cmd.raceCancel race host yielding remaining visited => True
+  | Cmd.trackChild parent child => True
+  | Cmd.observe fiber exit observer => P.exit w (Typed.Expect.fiber fiber) exit
+  | Cmd.exitDone fiber => True
+  | Cmd.closeParAwait host yielding fibers => True
+  | Cmd.link mode scope target interruptor extra => True
+  | Cmd.drainDue => True
+  | Cmd.wake list phase => True
+structure Effect4.Program.Typed.CaptureOk {W : Type} (P : Typed.Preds W) (w : W) (e : Typed.Expect) (x : Capture) : Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.CaptureOk.c0 : P.CaptureOk w e x.env
+  Effect4.Program.Typed.CaptureOk.c1 : P.ServiceOk w e x.ctx
+constructor:
+  Effect4.Program.Typed.CaptureOk.mk {W : Type} {P : Typed.Preds W} {w : W} {e : Typed.Expect} {x : Capture}
+    (c0 : P.CaptureOk w e x.env) (c1 : P.ServiceOk w e x.ctx) : Typed.CaptureOk P w e x
+structure Effect4.Program.Typed.StoresOk {W : Type} (P : Typed.Preds W) (w : W) (e : Typed.Expect) (x : Stores) : Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.StoresOk.c0 : P.PromiseTable w x
+  Effect4.Program.Typed.StoresOk.c1 : Typed.Columns.Stores_refs P.HeapCell w x.refs
+  Effect4.Program.Typed.StoresOk.c2 : Typed.DeferredStoreOk P w e x.deferreds
+  Effect4.Program.Typed.StoresOk.c3 : Typed.ScopeStoreOk P w e x.scopes
+  Effect4.Program.Typed.StoresOk.c4 : ∀ (v0 : MemoMap), v0 ∈ x.memo → Typed.MemoMapOk P w e v0
+  Effect4.Program.Typed.StoresOk.c5 : True
+constructor:
+  Effect4.Program.Typed.StoresOk.mk {W : Type} {P : Typed.Preds W} {w : W} {e : Typed.Expect} {x : Stores}
+    (c0 : P.PromiseTable w x) (c1 : Typed.Columns.Stores_refs P.HeapCell w x.refs)
+    (c2 : Typed.DeferredStoreOk P w e x.deferreds) (c3 : Typed.ScopeStoreOk P w e x.scopes)
+    (c4 : ∀ (v0 : MemoMap), v0 ∈ x.memo → Typed.MemoMapOk P w e v0) (c5 : True) : Typed.StoresOk P w e x
+Effect4.Program.Typed.protocol_order : ∃ order, order.le = Typed.World.le
+Effect4.Laws.Effects.Typed.mono.{u, v, w} {W : Type w} {S : Effects.Signature} {A : Type v}
+  {o : Laws.Effects.WorldOrder W} {Ψ : Laws.Effects.Protocol W S} {Q : W → A → Prop} {p : Effects.Program S A}
+  (hpre : ∀ (op : S.Op), Laws.Effects.Mono o fun w => Ψ.pre w op) (hQ : ∀ (a : A), Laws.Effects.Mono o fun w => Q w a)
+  {w w' : W} (hle : o.le w w') (h : Laws.Effects.Typed o Ψ w Q p) : Laws.Effects.Typed o Ψ w' Q p
+Effect4.Program.Sched.loadR (program : NativeEff) (fuel : Nat) (compileFuel : Nat := fuel) : RState
+Preds is a class: false
+'FoundationReview.resume_target_erased' depends on axioms: [propext]
+'FoundationReview.command_target_erased' depends on axioms: [propext]
+'FoundationReview.capture_location_erased' depends on axioms: [propext]
+'FoundationReview.conditional_not_monotone' does not depend on any axioms
