@@ -1,0 +1,6 @@
+{
+  "src/Effect4/Laws/Effects/Protocol.lean": "d63e0f4fec53c7e2c22d16d9f01078d5dbbd9a681398050d0bc7bc6a706da30f",
+  "src/Effect4/Laws/Effects/ProtocolObligations.lean": "2ad1bbff32e3f08408f014edd21ce4da3a2b094f74f301fa6505fefd0ecbf869",
+  "src/Effect4/Laws/Machine/RefKernel.lean": "152a119aff44480de078c332a5e2750555bebaac8558333c265e0cc124ef498b",
+  "src/Effect4/Laws/Machine/Refinement.lean": "121015965b11d6e83323503c8d6c6899a570473cb868a7bc615381b520ab72c1"
+}

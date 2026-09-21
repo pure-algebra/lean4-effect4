@@ -1,0 +1,14 @@
+{
+  "src/Effect4/Laws.lean": "b1df8f164698429994e4d9ec1733d524b036be92ad24ae6fe49ec18fc447fc8e",
+  "src/Effect4/Laws/Effects/Protocol.lean": "48e0798cc9139f5ce75b3311b803781dd70f5152c895826fdea7d24522071ed9",
+  "src/Effect4/Laws/Effects/ProtocolObligations.lean": "ebc6146b3e6339ba9c32cec9f58b8a4c185b846c3cf4bb78b293b617f66e09a1",
+  "src/Effect4/Laws/Machine/RefKernel.lean": "2bf7c32c3fd4b872b43d6d719da96123e8d9e29d76d4d0e793949668166f7e8d",
+  "src/Effect4/Laws/Machine/Refinement.lean": "93032f429ed0bd6663285853f9272cc31c527ee6e8afab62c689b44eaacc5c25",
+  "Test/All.lean": "927c35223a8257b13194dc7c4476acb32e68622f18d06de89bda671b0bc2e909",
+  "Test/Program/ProtocolCertificates.lean": "c366b40ca45b09e51316feaae125d9406938d5c225c1cb90452055aa9eb1629c",
+  "Test/Machine/Runtime/RepresentationFoundations.lean": "df5091afff2132166e83aeef3a38da5533cc51ecf4a33a402e66aaffb80c78ed",
+  "src/Effect4/Laws/Program/Typed/Contracts.lean": "2850962068f255521ac0f67cef28ba08f9f5f05288e77ed7704d45400ed7ddda",
+  "src/Effect4/Laws/Program/EvaluateR.lean": "a457a1df0a8576787957ca3e4fc8661708c1314ed365e33e8c36e834c7683777",
+  "Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean": "ea395d073f51853cbdbb23e28c04bd710f09f9fd19139b6e3893c2b8db537aab",
+  "Test/Counterexamples/Machine/Semantics/StrongExitDefect.lean": "142a8e849cd38e18127fa101ce10d2c213403feb9bb1a45284d6c7eea805451e"
+}

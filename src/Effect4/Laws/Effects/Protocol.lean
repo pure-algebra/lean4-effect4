@@ -32,10 +32,12 @@ structure WorldOrder (W : Type w) where
   refl : ∀ x, le x x
   trans : ∀ {x y z}, le x y → le y z → le x z
 
-/-- An effect protocol over a signature at worlds `W`. -/
+/-- An effect protocol with a ghost certificate chosen at each operation node.
+The certificate lives only in the typing derivation, never in Program or stored Eff data. -/
 structure Protocol (W : Type w) (S : Signature.{u, v}) where
-  pre : W → S.Op → Prop
-  post : W → (op : S.Op) → S.Answer op → Prop
+  Cert : S.Op → Type v
+  pre : W → (op : S.Op) → Cert op → Prop
+  post : W → (op : S.Op) → Cert op → S.Answer op → Prop
 
 variable {W : Type w} {S : Signature.{u, v}} {A : Type v}
 
@@ -43,8 +45,8 @@ variable {W : Type w} {S : Signature.{u, v}} {A : Type v}
 inductive Typed (o : WorldOrder W) (Ψ : Protocol W S) : W → (W → A → Prop) → Program S A → Prop
   | pure {w : W} {Q : W → A → Prop} {a : A} (h : Q w a) : Typed o Ψ w Q (.pure a)
   | vis {w : W} {Q : W → A → Prop} {op : S.Op} {k : S.Answer op → Program S A}
-      (hpre : Ψ.pre w op)
-      (hk : ∀ w', o.le w w' → ∀ ans, Ψ.post w' op ans → Typed o Ψ w' Q (k ans)) :
+      (cert : Ψ.Cert op) (hpre : Ψ.pre w op cert)
+      (hk : ∀ w', o.le w w' → ∀ ans, Ψ.post w' op cert ans → Typed o Ψ w' Q (k ans)) :
       Typed o Ψ w Q (.vis op k)
 
 /-- Upward closure along the world order. -/
@@ -53,12 +55,12 @@ def Mono (o : WorldOrder W) (P : W → Prop) : Prop := ∀ {w w'}, o.le w w' →
 /-- Weakening by construction: a demand and a result predicate that are upward closed make the
 whole judgement upward closed, by one `cases`. -/
 theorem Typed.mono {o : WorldOrder W} {Ψ : Protocol W S} {Q : W → A → Prop} {p : Program S A}
-    (hpre : ∀ op, Mono o (fun w => Ψ.pre w op)) (hQ : ∀ a, Mono o (fun w => Q w a))
+    (hpre : ∀ op cert, Mono o (fun w => Ψ.pre w op cert)) (hQ : ∀ a, Mono o (fun w => Q w a))
     {w w' : W} (hle : o.le w w') (h : Typed o Ψ w Q p) : Typed o Ψ w' Q p := by
   cases h with
   | pure h => exact .pure (hQ _ hle h)
-  | vis hp hk =>
-    exact .vis (hpre _ hle hp) (fun w'' hle' ans hpost => hk w'' (o.trans hle hle') ans hpost)
+  | vis cert hp hk =>
+    exact .vis cert (hpre _ _ hle hp) (fun w'' hle' ans hpost => hk w'' (o.trans hle hle') ans hpost)
 
 /-- Sequencing: the continuation is typed at whatever world the first program's leaf reaches. -/
 theorem Typed.bind {o : WorldOrder W} {Ψ : Protocol W S} {B : Type v}
@@ -67,7 +69,7 @@ theorem Typed.bind {o : WorldOrder W} {Ψ : Protocol W S} {B : Type v}
     Typed o Ψ w R (p.bind k) := by
   induction h with
   | pure h => exact hk _ _ h
-  | vis hp _ ih => exact .vis hp (fun w' hle ans hpost => ih w' hle ans hpost hk)
+  | vis cert hp _ ih => exact .vis cert hp (fun w' hle ans hpost => ih w' hle ans hpost hk)
 
 /-- Widening the result predicate. -/
 theorem Typed.widen {o : WorldOrder W} {Ψ : Protocol W S} {Q Q' : W → A → Prop}
@@ -75,17 +77,20 @@ theorem Typed.widen {o : WorldOrder W} {Ψ : Protocol W S} {Q Q' : W → A → P
     Typed o Ψ w Q' p := by
   induction h with
   | pure h => exact .pure (hQ _ _ h)
-  | vis hp _ ih => exact .vis hp (fun w' hle ans hpost => ih w' hle ans hpost hQ)
+  | vis cert hp _ ih => exact .vis cert hp (fun w' hle ans hpost => ih w' hle ans hpost hQ)
 
 /-- The protocol of a coproduct signature is the pair of protocols. -/
 def Protocol.sum {T : Signature.{u, v}} (Ψ₁ : Protocol W S) (Ψ₂ : Protocol W T) :
     Protocol W (Signature.sum S T) where
-  pre w op := match op with
-    | .inl o => Ψ₁.pre w o
-    | .inr o => Ψ₂.pre w o
-  post w op ans := match op, ans with
-    | .inl o, ans => Ψ₁.post w o ans
-    | .inr o, ans => Ψ₂.post w o ans
+  Cert op := match op with
+    | .inl o => Ψ₁.Cert o
+    | .inr o => Ψ₂.Cert o
+  pre w op cert := match op, cert with
+    | .inl o, cert => Ψ₁.pre w o cert
+    | .inr o, cert => Ψ₂.pre w o cert
+  post w op cert ans := match op, cert, ans with
+    | .inl o, cert, ans => Ψ₁.post w o cert ans
+    | .inr o, cert, ans => Ψ₂.post w o cert ans
 
 /-- A program typed for the left protocol is typed for the sum once injected: the store half's
 typing lifts to the scheduler's signature with no new arm. -/
@@ -94,7 +99,9 @@ theorem Typed.inl {o : WorldOrder W} {T : Signature.{u, v}} {Ψ₁ : Protocol W 
     (h : Typed o Ψ₁ w Q p) : Typed o (Ψ₁.sum Ψ₂) w Q p.inl := by
   induction h with
   | pure h => exact .pure h
-  | vis hp _ ih => exact .vis hp (fun w' hle ans hpost => ih w' hle ans hpost)
+  | vis cert hp _ ih =>
+    exact .vis (Ψ := Ψ₁.sum Ψ₂) (op := .inl _) cert hp
+      (fun w' hle ans hpost => ih w' hle ans hpost)
 
 /-- Inversion at a left node: the store protocol's demand now, its promise at every later
 world. -/
@@ -102,9 +109,10 @@ theorem Typed.inl_inv {o : WorldOrder W} {T : Signature.{u, v}} {Ψ₁ : Protoco
     {Ψ₂ : Protocol W T} {Q : W → A → Prop} {w : W} {op : S.Op}
     {k : (Signature.sum S T).Answer (.inl op) → Program (Signature.sum S T) A}
     (h : Typed o (Ψ₁.sum Ψ₂) w Q (.vis (.inl op) k)) :
-    Ψ₁.pre w op ∧ ∀ w', o.le w w' → ∀ ans, Ψ₁.post w' op ans → Typed o (Ψ₁.sum Ψ₂) w' Q (k ans) := by
+    ∃ cert : Ψ₁.Cert op, Ψ₁.pre w op cert ∧
+      ∀ w', o.le w w' → ∀ ans, Ψ₁.post w' op cert ans → Typed o (Ψ₁.sum Ψ₂) w' Q (k ans) := by
   cases h with
-  | vis hp hk => exact ⟨hp, hk⟩
+  | vis cert hp hk => exact ⟨cert, hp, hk⟩
 
 /-- Inversion at a right node: the fiber protocol's demand now, its promise at every later
 world. This is what every operation arm of the step lemma starts from. -/
@@ -112,14 +120,48 @@ theorem Typed.inr_inv {o : WorldOrder W} {T : Signature.{u, v}} {Ψ₁ : Protoco
     {Ψ₂ : Protocol W T} {Q : W → A → Prop} {w : W} {op : T.Op}
     {k : (Signature.sum S T).Answer (.inr op) → Program (Signature.sum S T) A}
     (h : Typed o (Ψ₁.sum Ψ₂) w Q (.vis (.inr op) k)) :
-    Ψ₂.pre w op ∧ ∀ w', o.le w w' → ∀ ans, Ψ₂.post w' op ans → Typed o (Ψ₁.sum Ψ₂) w' Q (k ans) := by
+    ∃ cert : Ψ₂.Cert op, Ψ₂.pre w op cert ∧
+      ∀ w', o.le w w' → ∀ ans, Ψ₂.post w' op cert ans → Typed o (Ψ₁.sum Ψ₂) w' Q (k ans) := by
   cases h with
-  | vis hp hk => exact ⟨hp, hk⟩
+  | vis cert hp hk => exact ⟨cert, hp, hk⟩
 
 /-- Inversion at a leaf. -/
 theorem Typed.pure_inv {o : WorldOrder W} {Ψ : Protocol W S} {Q : W → A → Prop} {w : W} {a : A}
     (h : Typed o Ψ w Q (.pure a)) : Q w a := by
   cases h with
   | pure h => exact h
+
+/-- A unit certificate recovers a certificate-free pre/post contract. -/
+def Protocol.plain (pre : W → S.Op → Prop)
+    (post : W → (op : S.Op) → S.Answer op → Prop) : Protocol W S :=
+  ⟨fun _ => PUnit, fun w op _ => pre w op, fun w op _ ans => post w op ans⟩
+
+/-- The original certificate-free typing rules, retained only as the comparison judgment
+for `Typed.plain_iff`. This is a predicate on the same Program, not another program carrier. -/
+inductive PlainTyped (o : WorldOrder W) (pre : W → S.Op → Prop)
+    (post : W → (op : S.Op) → S.Answer op → Prop) :
+    W → (W → A → Prop) → Program S A → Prop
+  | pure {w : W} {Q : W → A → Prop} {a : A} (h : Q w a) :
+      PlainTyped o pre post w Q (.pure a)
+  | vis {w : W} {Q : W → A → Prop} {op : S.Op} {k : S.Answer op → Program S A}
+      (hpre : pre w op)
+      (hk : ∀ w', o.le w w' → ∀ ans, post w' op ans → PlainTyped o pre post w' Q (k ans)) :
+      PlainTyped o pre post w Q (.vis op k)
+
+/-- For every world, result predicate and Program, unit certificates recover the old
+certificate-free rules. Both directions preserve the same future-world quantification. -/
+theorem Typed.plain_iff (o : WorldOrder W) (pre : W → S.Op → Prop)
+    (post : W → (op : S.Op) → S.Answer op → Prop)
+    (w : W) (Q : W → A → Prop) (p : Program S A) :
+    Typed o (Protocol.plain pre post) w Q p ↔ PlainTyped o pre post w Q p := by
+  constructor
+  · intro h
+    induction h with
+    | pure h => exact .pure h
+    | vis cert hp _ ih => exact .vis hp (fun w' hle ans hpost => ih w' hle ans hpost)
+  · intro h
+    induction h with
+    | pure h => exact .pure h
+    | vis hp _ ih => exact .vis PUnit.unit hp (fun w' hle ans hpost => ih w' hle ans hpost)
 
 end Effect4.Laws.Effects

@@ -31,6 +31,18 @@ residual/control contract is stopped under §2; no production stack judgment is 
 Slice 3 and the independently specified certificate/representation interfaces remain usable.
 The full M3a acceptance criteria below are not satisfied by landing those independent parts.
 
+**Approved independent landing, 2026-09-21.** The owner selected D12, C2 and C3/C4 after
+slice 3 (`5d63f91d`). These foundations are now implemented and checked; see the
+[slice 4 receipt](2026-09-21-foundations-slice4-receipt.md). D12's ledger is a companion
+`Laws/Effects/ProtocolObligations.lean`, keeping the generic protocol independent of the
+project's proof tooling. C3/C4 land in this independent subset rather than waiting for the
+later representation slice. The rest of §4 and the stack contracts in §5 remain held.
+The [additional probe disposition](2026-09-21-foundations-independent-probe-disposition.md)
+records why the new runtime and WalkPreempted proposals do not close that hold. In particular,
+the vendor failure evaluator may discard the continuation returned by getCont; the outer
+run loop's earlier interception is a separate comparison boundary. No runtime patch is approved
+by this landing, and no unproved scheduler payload is added to the production ledger.
+
 ## 0. The once-over of slices 1 and 2
 
 Both landed as briefed, with checks green and evidence retained.
@@ -192,9 +204,9 @@ explicitly authorizes them. Record the exact old/new public statement and reason
 
 5. **Placement & Scoped Landing of Architecture Candidates C1–C4.**
    - *C1 (`completion_transport`)*: Lands in `src/Effect4/Laws/Program/Typed/Validity.lean` in Slice 3, proving shape and completion transport under `Extends`.
-   - *C2 (`indexed_ref_step_preserves`)*: Lands in `src/Effect4/Laws/Machine/RefKernel.lean` in Slice 4. Generalizes `refStepOf_keeps` to heterogeneous heaps indexed by `P : Nat → Val → Prop`. Proves that updating cell $c$ preserves $P\ i$ for all $i \ne c$. Resolves FR-03, decoupling reference typing from `HeapNat`.
-   - *C3 (`projects_compose`)*: Lands in `src/Effect4/Laws/Machine/Refinement.lean` on the architecture track. Proves that exact step projections compose: if `Concrete` projects to `Middle` with invariant `concreteValid`, and `Middle` projects to `Model` with invariant `middleValid`, then `Concrete` projects to `Model` with invariant $\lambda c \Rightarrow \text{concreteValid } c \land \text{middleValid } (\text{first } c)$.
-   - *C4 (`projects_induces_refines`)*: Lands in `src/Effect4/Laws/Machine/Refinement.lean` on the architecture track. Proves that every valid `Projects` record induces a relational forward simulation `Refines (fun c m => valid c ∧ project c = m)`.
+   - *C2 (`indexed_ref_step_preserves`)*: Proved in `src/Effect4/Laws/Machine/RefKernel.lean` in the independent slice 4 landing. Generalizes `refStepOf_keeps` to heterogeneous heaps indexed by `P : Nat → Val → Prop`: the selected kernel keeps its cell predicate, every other lookup is unchanged, and the answer predicate and heap length are retained. Supplies FR-03's generic heap lemma; concrete M3a protocols still need their row premises.
+   - *C3 (`projects_compose`)*: Proved in `src/Effect4/Laws/Machine/Refinement.lean` in the independent landing. Exact step projections compose: if `Concrete` projects to `Middle` with invariant `concreteValid`, and `Middle` projects to `Model` with invariant `middleValid`, then `Concrete` projects to `Model` with invariant $\lambda c \Rightarrow \text{concreteValid } c \land \text{middleValid } (\text{first } c)$.
+   - *C4 (`projects_induces_refines`)*: Proved alongside C3. Every valid `Projects` record induces the forward simulation `Refines (fun c m => valid c ∧ project c = m)` on the same answer carrier and Option step. Backend instances and whole-machine connectors remain separate obligations.
 
 **Acceptance:** exact declarations elaborate; caught-error, marker-payload, forged-handle,
 open-type, valid-source and pending-interrupt controls distinguish the intended cases;
@@ -269,6 +281,9 @@ base existence order, table extension and spelling preservation before assemblin
 
 ## 4. Slice 4 = M3a: protocols, admission and `TypedProg` (row 87 second half; row 86's fill)
 
+Status: the independent D12 and C2 contracts below are proved. The concrete admission,
+residual/control protocols, answer inventory and settling program cases remain held.
+
 **Read.** `Laws/Effects/Protocol.lean` (all), `CertProtocolProbe.lean`,
 `Laws/Program/Sched.lean:97–210` (`FiberOp`, `FiberOp.answer`, `FiberSig`, `RSig`),
 `Machine/Stores.lean` (`SyncOp`, 31 constructors; `syncOpStep`), `Laws/Program/Progress.lean:340–362`
@@ -295,8 +310,8 @@ in `Test/Audit/AnswerGate.lean` and `Test/Program/TypedResidual.lean`.
   typing uses Ρ/Π, not `HeapNat`; retain `progress` only for its original nat profile.
   `post w' op cert ans` types the actual answer with `StrongValue w' ty ans`, and for an
   allocation declares the fresh key at `cert` in `w'`.
-  *Candidate C2 Integration (`Laws/Machine/RefKernel.lean`)*: Promote `indexed_ref_step_preserves` (`ArchitectureStatements.lean`)
-  to provide the heterogeneous indexed heap row theorem:
+  *C2 integration (`Laws/Machine/RefKernel.lean`)*: use the proved `indexed_ref_step_preserves`
+  for non-allocating heap rows, with its exact kernel premise:
   $$\forall (P : \text{Nat} \to \text{Val} \to \text{Prop})\ Q\ op\ cell\ kernel\ before\ after\ ans,$$
   $$op.\text{refKernel} = \text{some } (cell, kernel) \land (\forall i\ v,\ \text{refPeek } before\ \langle i \rangle = \text{some } v \to P\ i\ v) \land \text{RefKernel.Keeps } (P\ cell.index)\ Q\ kernel \land \text{refStep } op\ before = \text{some } (ans, after) \implies$$
   $$Q\ ans \land (\forall i\ v,\ \text{refPeek } after\ \langle i \rangle = \text{some } v \to P\ i\ v) \land after.length = before.length \land (\forall i \ne cell.index,\ \text{refPeek } after\ \langle i \rangle = \text{refPeek } before\ \langle i \rangle)$$
@@ -329,8 +344,8 @@ in `Test/Audit/AnswerGate.lean` and `Test/Program/TypedResidual.lean`.
      at `Ty.bool` on a heap already containing Nat references (`HeapTypedAt w ⟨0⟩ .nat`).
      Step 1: `Typed.vis` on `refMake (Val.bool true)` chooses `cert = Ty.bool`.
      Step 2: `syncOpStep` produces fresh key $k = \langle \text{length} \rangle$. By `valid_refMake_fresh`, $w.\text{Ρ}(k) = \text{none}$.
-     Step 3: `TableExtends` and `indexed_ref_step_preserves` prove $w'.\text{Ρ}(k) = \text{some .bool}$ and $\text{HeapTypedAt } w' \langle 0 \rangle \text{.nat}$.
-     Step 4: `refGet k` in continuation resolves to `Val.bool true` via `StrongValue w' .bool`, closing through `Typed.bind` and `inl_inv`.
+     Step 3: use `refMake_extension` and the table insertion laws to prove $w'.\text{Ρ}(k) = \text{some .bool}$ and $\text{HeapTypedAt } w' \langle 0 \rangle \text{.nat}$. C2 does not apply to allocation: `refMake.refKernel = none`.
+     Step 4: use C2's no-write row for the continuation's `refGet k`; its actual answer `Val.bool true` must satisfy `StrongValue w' .bool`, closing through `Typed.bind` and `inl_inv` once the concrete protocol is supplied.
   2. *Addressed Fork and Mask with Body Admission*: Prove that an addressed `fork child` with `BodyTyped root w child cert`
      and `mask flag body` with `BodyTyped root w body cert` satisfy `TypedProg`.
      Step 1: `PointTyped` establishes checker agreement at `child.path`.
@@ -468,7 +483,7 @@ instance. Reuse `Arena`/`LawfulArena`, `RefKernel`, `Projects`/`Refines` and `Fa
 exact scopes.
 
 **Architecture Landing in `Laws/Machine/Refinement.lean` (Candidates C3 & C4):**
-Promote the two representation-composition obligations from `ArchitectureStatements.lean`:
+The independent landing promotes and proves the two obligations from `ArchitectureStatements.lean`:
 1. `projects_compose`: proves that exact step projections compose while preserving both concrete
    and middle invariants:
    $$\forall {Concrete\ Middle\ Model\ Op\ Answer}\ (first : Concrete \to Middle)\ (second : Middle \to Model)$$
@@ -478,20 +493,20 @@ Promote the two representation-composition obligations from `ArchitectureStateme
 2. `projects_induces_refines`: proves that every valid `Projects` instance induces a forward simulation relation:
    $$\forall {Concrete\ Model\ Op\ Answer}\ (project : Concrete \to Model)\ stepConcrete\ stepModel\ valid,$$
    $$\text{Projects } project\ stepConcrete\ stepModel\ valid \implies \text{Refines } (\lambda c\ m \Rightarrow valid\ c \land project\ c = m)\ stepConcrete\ stepModel$$
-These two theorems allow multi-layer storage stacks (e.g. OCaml raw memory $\to$ dense arena $\to$ abstract Lean `Stores`)
-to be composed modularly.
+These compose mathematical projections at the same operation/answer interface once each
+instance and its invariant are proved. They do not supply a host-memory or compiler instance.
 
 **The Five-Step Portability Acceptance Criteria for Implementations:**
 Each target implementation must supply, in this exact sequence:
 1. *Mathematical Model & Observation*: Declare the abstract operations and the observation function (e.g. `Arena.toList`). State whether stepping is deterministic or relational.
 2. *Concrete Carrier & Invariant*: State the concrete data structure (e.g., OCaml `e4_table` array, `e4_memo` balanced tree), its well-formedness invariant, and abstraction projection `project : Concrete \to Model`.
-3. *Single-Step Simulation*: Prove `Projects` or `Refines` for all operations, ensuring concrete `none` matches model `none` and answers match.
+3. *Operation Simulation*: For deterministic `Option` steps at the same operation/answer carriers, prove `Projects` or `Refines`, including concrete `none` to model `none` and answer agreement. Effectful, relational or multi-step implementations need a named transition relation with their required stuttering/progress conditions; different keys or values need explicit relations.
 4. *World Predicate Transfer*: Transfer the typed-state invariants (`HeapTypedAt`, `PromiseTypedAt`) through the projection; lift the relation through the whole machine.
 5. *Target Platform / Host Boundary Profile*:
    - *OCaml 5*: Grounded in `ocaml/engine/e4_table.mli` and `e4_memo.mli`. Must establish density and the selected runtime's integer bounds; the abstract interface proves neither an OCaml implementation nor a fixed word size.
    - *Lean Standard C Compilation*: Follows official Lean runtime code reference; retains Lean runtime reference counting and memory layouts.
-   - *Direct C Memory Engine*: Requires explicit separation logic / ownership model for C pointers and malloc failure semantics.
-   - *TypeScript*: Interoperates with rc.112 AST profile via printer/reader; future JS machine target requires explicit ECMAScript IEEE-754 binary64 and UTF-16 code unit modeling.
+   - *Direct C Memory Engine*: Requires an explicit memory/ownership/aliasing model, scalar and allocation-failure semantics, and ABI/FFI obligations.
+   - *TypeScript*: The rc.112 image uses the printer/reader connection. A future JS machine target separately specifies its numeric and string domain, containers, mutation/snapshots, execution and host scheduling.
 
 No OCaml container law, compiler rule or bounded integer choice becomes an axiom of
 the abstract structure. See review §3 for target differences and proof-transfer acceptance.

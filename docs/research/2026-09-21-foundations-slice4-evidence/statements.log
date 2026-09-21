@@ -1,0 +1,21 @@
+ℹ [206/210] Replayed Effect4.Laws.Machine.Arena
+info: src/Effect4/Laws/Machine/Arena.lean:249:0: Effect4.Machine.ArenaObligations: 0 open, 10 proved, 10 total; ceiling 0
+info: src/Effect4/Laws/Machine/Arena.lean:252:0: Effect4.Machine.ArenaSupportWanted: 0 open, 3 proved, 3 total; ceiling 0
+ℹ [207/210] Replayed Effect4.Laws.Machine.RefKernel
+info: src/Effect4/Laws/Machine/RefKernel.lean:180:0: Effect4.Machine.RefKernelObligations: 1 open, 0 proved, 1 total; ceiling 1
+info: src/Effect4/Laws/Machine/RefKernel.lean:292:0: Effect4.Machine.ArenaObligations: 0 open, 14 proved, 14 total; ceiling 0
+info: src/Effect4/Laws/Machine/RefKernel.lean:295:0: Effect4.Machine.M1.RefKernelSupport: 0 open, 1 proved, 1 total; ceiling 0
+ℹ [208/210] Replayed Effect4.Laws.Machine.CompletionData
+info: src/Effect4/Laws/Machine/CompletionData.lean:61:0: Effect4.Machine.M1.OwedMapWanted: 0 open, 4 proved, 4 total; ceiling 0
+info: src/Effect4/Laws/Machine/CompletionData.lean:98:0: Effect4.Machine.M1.Core: 0 open, 5 proved, 5 total; ceiling 0
+info: src/Effect4/Laws/Machine/CompletionData.lean:113:0: Effect4.Machine.M1.CompletionSupport: 0 open, 2 proved, 2 total; ceiling 0
+ℹ [209/210] Replayed Effect4.Laws.Machine.Refinement
+info: src/Effect4/Laws/Machine/Refinement.lean:70:0: Effect4.Machine.Refinement.CompositionObligations: 2 open, 0 proved, 2 total; ceiling 2
+info: src/Effect4/Laws/Machine/Refinement.lean:243:0: Effect4.Machine.M1.CellMapWanted: 0 open, 1 proved, 1 total; ceiling 0
+info: src/Effect4/Laws/Machine/Refinement.lean:245:0: Effect4.Machine.M1.DeferredWanted: 0 open, 14 proved, 14 total; ceiling 0
+info: src/Effect4/Laws/Machine/Refinement.lean:682:0: Effect4.Machine.M1.DeferredImageSupportWanted: 0 open, 3 proved, 3 total; ceiling 0
+info: src/Effect4/Laws/Machine/Refinement.lean:685:0: Effect4.Machine.M1.DeferredWanted: 0 open, 30 proved, 30 total; ceiling 0
+info: src/Effect4/Laws/Machine/Refinement.lean:688:0: Effect4.Machine.ArenaObligations: 0 open, 15 proved, 15 total; ceiling 0
+ℹ [210/210] Built Effect4.Laws.Effects.ProtocolObligations (3.3s)
+info: src/Effect4/Laws/Effects/ProtocolObligations.lean:62:0: Effect4.Laws.Effects.D12: 8 open, 0 proved, 8 total; ceiling 8
+Build completed successfully (210 jobs).

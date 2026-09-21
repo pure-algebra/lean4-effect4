@@ -34,6 +34,8 @@ import Test.Counterexamples.Machine.Semantics.ActionAtRaceAllPremise
 import Test.Counterexamples.Machine.Semantics.InterruptDelivery
 import Test.Counterexamples.Machine.Semantics.StrongExitDefect
 import Test.Program.TypedWorldValidity
+import Test.Program.ProtocolCertificates
+import Test.Machine.Runtime.RepresentationFoundations
 import Test.Machine.Runtime.ScopeContract
 import Test.Machine.Runtime.ScopeMachineContract
 import Test.Machine.Runtime.ScopeRestorationContract

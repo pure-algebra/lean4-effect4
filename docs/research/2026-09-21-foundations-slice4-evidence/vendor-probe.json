@@ -1,0 +1,35 @@
+{
+  "scope": "Six finite calls into pinned rc.112; manual starting states, no reachability or whole-language claim.",
+  "rows": [
+    {
+      "name": "failure_discards_deferred_continuation",
+      "pass": true,
+      "observation": "The direct failure evaluator clears deferred interruption, skips the catch, and yields the original failure."
+    },
+    {
+      "name": "success_invokes_deferred_continuation",
+      "pass": true,
+      "observation": "The direct success evaluator returns the recorded interrupt cause."
+    },
+    {
+      "name": "raw_masked_deferred_failure",
+      "pass": true,
+      "observation": "getCont itself does not require interruptible; this manually constructed masked fixture returns the pending cause."
+    },
+    {
+      "name": "midwalk_unmask_skips_catch",
+      "pass": true,
+      "observation": "A visited restoration changes the mask before the failure loop decides whether to invoke the catch."
+    },
+    {
+      "name": "unvisited_unmask_does_not_preempt",
+      "pass": true,
+      "observation": "A restoration below the selected catch is not visited; mere membership in the stack does not witness preemption."
+    },
+    {
+      "name": "runloop_intercepts_before_failure_evaluator",
+      "pass": true,
+      "observation": "Starting runLoop with deferred interruption replaces its input before primitive evaluation; this is a different boundary."
+    }
+  ]
+}

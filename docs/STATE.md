@@ -35,9 +35,17 @@ connecting them to reachable execution remains the main typed-state proof.
 Slices 1 and 2 are merged at `2bcb99ff`. Slice 3 now has a checked implementation on
 `codex/foundations-slices-3-4`: exact world validity, allocation/token freshness, external
 spelling transport, completion transport and `park_extension`. Its receipt is
-[`foundations slice 3`](research/2026-09-21-foundations-slice3-receipt.md), with the fresh
-unique ledger **324 total; 315 proved; 9 open**. The initialization theorem types ghost data,
+[`foundations slice 3`](research/2026-09-21-foundations-slice3-receipt.md). Its initialization theorem types ghost data,
 not arbitrary source programs. `make build` and `make check` pass for this landing.
+
+The approved independent subset of slice 4 now proves certificate-indexed protocols and
+unit-certificate compatibility (D12), heterogeneous indexed heap preservation (C2), and
+projection composition and its induced relation (C3/C4). All twelve independent obligations
+are proved; the fresh unique ledger is **336 total; 327 proved; 9 open**. The generic protocol
+stays independent of project tooling through its separate obligation module. The receipt
+and retained checks are in
+[`foundations slice 4`](research/2026-09-21-foundations-slice4-receipt.md).
+`make build`, `make check`, the binder audit and the twelve-proof axiom report pass.
 
 The dispatch remains
 [`foundations slices 3–6`](research/2026-09-21-codex-brief-foundations-slices-3-6.md).
@@ -46,17 +54,22 @@ Its proposed slice 4/5 interrupt repair was refuted by the implementation prefli
 three checked counterexamples, including the separate defect-typing correction. The
 production stack judgment stays unchanged. Concrete M3a admission/residual/control typing,
 its answer inventory and settling program cases remain pending, as do slice 5 and M5–M7.
-The independent certificate and representation interfaces do not resolve that contract.
-[Slice 4's held receipt](research/2026-09-21-foundations-slice4-receipt.md) names the pending work.
+The independent certificate and representation proofs do not resolve that contract.
+The slice 4 receipt names the pending work. The
+[additional probe disposition](research/2026-09-21-foundations-independent-probe-disposition.md)
+retains six passing finite vendor controls and corrects the proposed runtime patch's
+justification, the unvisited-restoration case, the safety observation and the allocation
+walkthrough. No scheduler implementation or frozen stack judgment changes in this landing.
 
 The preceding review is retained in
 [`monotonicity and refinement findings`](research/2026-09-21-foundations-monotonicity-and-refinement-review.md)
 and its [historical controls](research/2026-09-21-foundations-review-evidence/README.md).
 Abstract store contracts remain target-neutral. OCaml is the first implementation;
 C compilation, a separate C representation and TypeScript need distinct named connections.
-The research packet's four open statements are prototypes; C1 has now been promoted and
-proved as `Typed.completion_transport`. Neither a prototype nor an abstract interface
-certifies a backend implementation.
+The research packet's C1–C4 statements have now been promoted and proved: C1 as
+`Typed.completion_transport`, C2 as `indexed_ref_step_preserves`, C3/C4 as
+`Refinement.projects_compose` and `projects_induces_refines`. Their research copies retain
+the original checkpoint. These conditional abstract laws do not certify a backend implementation.
 Decisions 86–88 record the technical questions; the five chat rulings of 2026-09-20 still wait
 for the owner's word to be written into `decisions.md`.
 

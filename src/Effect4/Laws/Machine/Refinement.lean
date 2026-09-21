@@ -36,6 +36,86 @@ structure Refines {C : Type u} {M : Type v} {Op : Type w} {Answer : Type z}
     ∃ m' a', stepM o m = some (m', a') ∧ a = a' ∧ related c' m'
   frontier : ∀ o c m, related c m → stepC o c = none → stepM o m = none
 
+namespace CompositionObligations
+universe x y
+/-- C3 retains both concrete and intermediate validity. -/
+theorem projects_compose : ProofGraph.Obligation (
+    ∀ {Concrete : Type u} {Middle : Type v} {Model : Type w}
+      {Op : Type x} {Answer : Type y}
+      (first : Concrete → Middle) (second : Middle → Model)
+      (stepConcrete : Op → Concrete → Option (Concrete × Answer))
+      (stepMiddle : Op → Middle → Option (Middle × Answer))
+      (stepModel : Op → Model → Option (Model × Answer))
+      (concreteValid : Concrete → Prop) (middleValid : Middle → Prop),
+      Projects first stepConcrete stepMiddle concreteValid →
+      Projects second stepMiddle stepModel middleValid →
+      Projects (second ∘ first) stepConcrete stepModel
+        (fun concrete => concreteValid concrete ∧ middleValid (first concrete))) := ⟨⟩
+
+
+/-- C4 retains concrete validity in the induced relation. -/
+theorem projects_induces_refines : ProofGraph.Obligation (
+    ∀ {Concrete : Type u} {Model : Type v} {Op : Type w} {Answer : Type x}
+      (project : Concrete → Model)
+      (stepConcrete : Op → Concrete → Option (Concrete × Answer))
+      (stepModel : Op → Model → Option (Model × Answer))
+      (valid : Concrete → Prop),
+      Projects project stepConcrete stepModel valid →
+      Refines (fun concrete model => valid concrete ∧ project concrete = model)
+        stepConcrete stepModel) := ⟨⟩
+
+end CompositionObligations
+universe x y
+
+/-- C3 composes exact one-step observations while retaining the validity domain required
+by each projection. The operation and answer carriers are unchanged across both steps. -/
+theorem projects_compose
+    {Concrete : Type u} {Middle : Type v} {Model : Type w} {Op : Type x} {Answer : Type y}
+    (first : Concrete → Middle) (second : Middle → Model)
+    (stepConcrete : Op → Concrete → Option (Concrete × Answer))
+    (stepMiddle : Op → Middle → Option (Middle × Answer))
+    (stepModel : Op → Model → Option (Model × Answer))
+    (concreteValid : Concrete → Prop) (middleValid : Middle → Prop)
+    (one : Projects first stepConcrete stepMiddle concreteValid)
+    (two : Projects second stepMiddle stepModel middleValid) :
+    Projects (second ∘ first) stepConcrete stepModel
+      (fun concrete => concreteValid concrete ∧ middleValid (first concrete)) := by
+  constructor
+  · intro op concrete valid
+    change (stepConcrete op concrete).map (fun (next, answer) => (second (first next), answer)) =
+      stepModel op (second (first concrete))
+    rw [← two.step op (first concrete) valid.2, ← one.step op concrete valid.1, Option.map_map]
+    rfl
+  · intro op concrete next answer valid step
+    refine ⟨one.keeps op concrete next answer valid.1 step, ?_⟩
+    apply two.keeps op (first concrete) (first next) answer valid.2
+    rw [← one.step op concrete valid.1, step]
+    rfl
+
+/-- C4 is a forward simulation on the graph of the projection, retaining concrete validity.
+A concrete unanswered step yields an unanswered model step. No initialization or host
+implementation instance is supplied by this generic connector. -/
+theorem projects_induces_refines
+    {Concrete : Type u} {Model : Type v} {Op : Type w} {Answer : Type x}
+    (project : Concrete → Model)
+    (stepConcrete : Op → Concrete → Option (Concrete × Answer))
+    (stepModel : Op → Model → Option (Model × Answer))
+    (valid : Concrete → Prop) (projection : Projects project stepConcrete stepModel valid) :
+    Refines (fun concrete model => valid concrete ∧ project concrete = model)
+      stepConcrete stepModel := by
+  constructor
+  · intro op concrete model next answer related step
+    refine ⟨project next, answer, ?_, rfl, projection.keeps op concrete next answer related.1 step, rfl⟩
+    rw [← related.2, ← projection.step op concrete related.1, step]
+    rfl
+  · intro op concrete model related step
+    rw [← related.2, ← projection.step op concrete related.1, step]
+    rfl
+
+#obligation_proved CompositionObligations.projects_compose := @projects_compose
+#obligation_proved CompositionObligations.projects_induces_refines := @projects_induces_refines
+#typed_state_obligations Effect4.Machine.Refinement.CompositionObligations ceiling 0 using aesop (rule_sets := [Effect4.Stores])
+
 end Effect4.Machine.Refinement
 
 -- BEGIN M1 PHASE B Refinement
@@ -654,4 +734,3 @@ end Effect4.Machine
 
 #typed_state_obligations Effect4.Machine.ArenaObligations ceiling 0
   using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
-

@@ -159,6 +159,83 @@ theorem refStepOf_keeps {P Q : Val → Prop} {cell : RefKey} {k : RefKernel}
   · exact hheap x hmem
   · exact hnext x hw
 
+namespace RefKernelObligations
+/-- The lookup fact used by C2 also covers indices outside the heap. -/
+theorem refWriteBack_peek_other (heap : RefHeap) (cell : RefKey) (next : Option Val)
+    (index : Nat) (_different : index ≠ cell.index) : ProofGraph.Obligation
+    (refPeek (refWriteBack heap cell next) ⟨index⟩ = refPeek heap ⟨index⟩) := ⟨⟩
+
+/-- C2: each heap index keeps its own predicate; allocation is a separate contract. -/
+theorem indexed_ref_step_preserves : ProofGraph.Obligation (
+    ∀ (P : Nat → Val → Prop) (Q : Val → Prop)
+      (op : SyncOp) (cell : RefKey) (kernel : RefKernel)
+      (before after : RefHeap) (answer : Val),
+      op.refKernel = some (cell, kernel) →
+      (∀ index value, refPeek before ⟨index⟩ = some value → P index value) →
+      RefKernel.Keeps (P cell.index) Q kernel →
+      refStep op before = some (answer, after) →
+      Q answer ∧
+      (∀ index value, refPeek after ⟨index⟩ = some value → P index value) ∧
+      after.length = before.length ∧
+      (∀ index, index ≠ cell.index →
+        refPeek after ⟨index⟩ = refPeek before ⟨index⟩)) := ⟨⟩
+
+end RefKernelObligations
+/-- Writing one cell leaves every other lookup exactly unchanged, including absent keys. -/
+theorem refWriteBack_peek_other (heap : RefHeap) (cell : RefKey) (next : Option Val)
+    (index : Nat) (different : index ≠ cell.index) :
+    refPeek (refWriteBack heap cell next) ⟨index⟩ = refPeek heap ⟨index⟩ := by
+  cases next with
+  | none => rfl
+  | some value =>
+    exact List.getElem?_set_ne (Ne.symm different)
+
+/-- C2 follows the actual refStep equation. The selected cell keeps its own predicate;
+all other predicates survive by exact lookup equality, not by a homogeneous heap assumption. -/
+theorem indexed_ref_step_preserves
+    (P : Nat → Val → Prop) (Q : Val → Prop)
+    (op : SyncOp) (cell : RefKey) (kernel : RefKernel)
+    (before after : RefHeap) (answer : Val)
+    (row : op.refKernel = some (cell, kernel))
+    (typed : ∀ index value, refPeek before ⟨index⟩ = some value → P index value)
+    (keeps : RefKernel.Keeps (P cell.index) Q kernel)
+    (step : refStep op before = some (answer, after)) :
+    Q answer ∧
+    (∀ index value, refPeek after ⟨index⟩ = some value → P index value) ∧
+    after.length = before.length ∧
+    (∀ index, index ≠ cell.index → refPeek after ⟨index⟩ = refPeek before ⟨index⟩) := by
+  rw [refStep_eq_refStepOf row] at step
+  obtain ⟨value, read, mapped⟩ := Option.bind_eq_some_iff.mp step
+  obtain ⟨pair, ran, output⟩ := Option.map_eq_some_iff.mp mapped
+  simp only [Prod.mk.injEq] at output
+  obtain ⟨rfl, rfl⟩ := output
+  obtain ⟨answerOk, written⟩ := keeps value pair (typed cell.index value read) ran
+  refine ⟨answerOk, ?_, refWriteBack_length before cell pair.2,
+    fun index different => refWriteBack_peek_other before cell pair.2 index different⟩
+  intro index current lookup
+  by_cases selected : index = cell.index
+  · subst index
+    cases hnext : pair.2 with
+    | none =>
+      rw [hnext] at lookup
+      exact typed cell.index current lookup
+    | some next =>
+      rw [hnext] at lookup
+      change refPeek (refPoke before cell next) cell = some current at lookup
+      have self := refPeek_poke_self before cell next value read
+      rw [self] at lookup
+      cases lookup
+      exact written _ hnext
+  · rw [refWriteBack_peek_other before cell pair.2 index selected] at lookup
+    exact typed index current lookup
+
+attribute [aesop safe -100 apply (rule_sets := [Effect4.Stores])] indexed_ref_step_preserves
+
+#obligation_proved RefKernelObligations.refWriteBack_peek_other := @refWriteBack_peek_other
+#obligation_proved RefKernelObligations.indexed_ref_step_preserves := @indexed_ref_step_preserves
+#typed_state_obligations Effect4.Machine.RefKernelObligations ceiling 0
+  using aesop (rule_sets := [Effect4.Stores])
+
 end Effect4.Machine
 
 -- BEGIN M1 PHASE B RefKernel

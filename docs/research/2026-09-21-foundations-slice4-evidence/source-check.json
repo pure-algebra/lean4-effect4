@@ -1,0 +1,46 @@
+{
+  "base": "5d63f91d6baf46ef4a448e616200ec4325e2b234",
+  "source_and_snapshot_hashes_match": true,
+  "unchanged_checkpoint_declarations": [
+    "Effect4.Laws.Effects.D12.mono",
+    "Effect4.Laws.Effects.D12.bind",
+    "Effect4.Laws.Effects.D12.widen",
+    "Effect4.Laws.Effects.D12.inl",
+    "Effect4.Laws.Effects.D12.inl_inv",
+    "Effect4.Laws.Effects.D12.inr_inv",
+    "Effect4.Laws.Effects.D12.pure_inv",
+    "Effect4.Laws.Effects.D12.plain_iff",
+    "RefKernelObligations.indexed_ref_step_preserves",
+    "CompositionObligations.projects_compose",
+    "CompositionObligations.projects_induces_refines"
+  ],
+  "source_changes": [
+    "Test/All.lean",
+    "Test/Machine/Runtime/RepresentationFoundations.lean",
+    "Test/Program/ProtocolCertificates.lean",
+    "src/Effect4/Laws.lean",
+    "src/Effect4/Laws/Effects/Protocol.lean",
+    "src/Effect4/Laws/Effects/ProtocolObligations.lean",
+    "src/Effect4/Laws/Machine/RefKernel.lean",
+    "src/Effect4/Laws/Machine/Refinement.lean"
+  ],
+  "held_runtime_and_generated_source_fence": "unchanged",
+  "ledger": {
+    "total": 336,
+    "proved": 327,
+    "open": 9
+  },
+  "open_names_unchanged": [
+    "Effect4.Api.M1Origin.source_forkIn_site",
+    "Effect4.Api.M1Origin.source_forkScoped_site",
+    "Effect4.Api.M1Origin.source_fork_site",
+    "Effect4.Api.M1Origin.source_race_site",
+    "Effect4.Api.M1Origin.source_two_race_sites",
+    "Effect4.Api.TraceFacts.M1Trace.reachable_agrees",
+    "Effect4.Api.TraceFacts.M1Trace.step_agrees",
+    "Effect4.Program.Guard.M4Handshake.parkHandshake_reachable",
+    "Effect4.Run.M1Trace.observe_replace_trace"
+  ],
+  "vendor_controls_passed": 6,
+  "required_build_and_check_logs": "pass"
+}

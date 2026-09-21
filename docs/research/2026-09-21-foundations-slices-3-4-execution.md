@@ -38,3 +38,19 @@ Slice 3 closes all 15 new obligations and park_extension, with full checks and a
 unique ledger of 324 total / 315 proved / 9 open. The preflight refutes three claims in the
 additional input. Slice 4 is held under dispatch §2; its pending scope choice and exact
 remaining work are recorded in `2026-09-21-foundations-slice4-receipt.md`.
+
+## Approved independent continuation
+
+The owner subsequently selected D12 certificate protocols, C2 indexed heap preservation
+and C3/C4 projection composition, from slice 3 head `5d63f91d`. The pre-implementation plan
+is `2026-09-21-foundations-slice4-independent-plan.md`. Its retained statement checkpoint
+has eleven open declarations (eight D12, one C2, two C3/C4); a named lookup helper brings the
+final independent ledger to twelve proved declarations. No main C2/C3/C4 payload was changed
+while filling it. The earlier seven generic protocol laws retain their conclusions with the
+approved certificate binders, and unit-certificate compatibility is proved universally.
+
+`2026-09-21-foundations-slice4-receipt.md` records the landing and checks. The new input's
+runtime proposal is not adopted: retained vendor probes distinguish getCont, the failure
+evaluator and the outer run loop. The dependent M3a residual/control judgment, answer manifest,
+settling cases and slice 5 stack theorem remain held. This continuation completes the approved
+independent subset, not all of the original slice 4.
