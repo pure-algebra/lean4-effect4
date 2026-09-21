@@ -12,3 +12,4 @@ tree at `10d5c009` (editor language-server workers were the only other Lean proc
 
 These are research probes, not batteries; slice 1 promotes the counterexample and the binder
 audit into `test/`.
+| `CertProtocolProbe.lean` (2026-09-21) | layer 0 with a ghost certificate per node (`Protocol.Cert`, `Typed.vis cert …`): `mono`, `bind`, `widen`, `inl`, `inr_inv` all check with no axioms; `Protocol.plain` recovers the landed protocol. Backs decision D12 of the slices 3–6 brief |

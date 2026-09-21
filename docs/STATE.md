@@ -32,12 +32,18 @@ ignored target/token and capture checks ignored source path/root, and identified
 shared type between current code and its saved stack. Slice 2 now states these correlations;
 connecting them to reachable execution remains the main typed-state proof.
 
-Next: world validity and transport (slice 3); establish source/body admission and operation protocols (M3a);
-then assemble the concrete state/stack/delivery relations (M3b/M4), denotation/hooks/init,
-the first real simultaneous-update proofs and an explicit transition inventory,
-transition preservation and transfer. Residue observation proofs and the invariant-backed
-memo cleanup can proceed independently. Placement is already landed. Decisions 86–88 record
-the new technical questions; existing open owner choices are not ratified by this review.
+Slices 1 and 2 are merged onto this branch (`2bcb99ff`, fast-forward of
+`codex/foundations-slices`). Next, dispatched to Codex in
+`docs/research/2026-09-21-codex-brief-foundations-slices-3-6.md`: slice 3 world validity and
+transport (`WorldValid`, allocation exclusion, transport under `World.leHost`, `park_extension`);
+slice 4 = M3a protocols and admission (the certificate-indexed protocol D12, checked in
+`CertProtocolProbe.lean`; `PointTyped`/`BodyTyped` before `TypedProg`, D13; `Ψ_S` over all 31
+`SyncOp` rows and `Ψ_F` over the 40 `FiberOp` arms under `#answer_gate`; the two settling cases
+proved); slice 5 = M3b/M4 assembly (`preds : Preds World`, `TypedState`, `RReachable` D14,
+`popR_typed`, `saveAnswerR_typed`, active/stale delivery, capture lookup, `Keeps`); slice 6 the
+residue proofs and the memo cleanup beside them. M5–M7 are briefed after slice 5's receipt.
+Decisions 86–88 record the technical questions; the five chat rulings of 2026-09-20 still wait
+for the owner's word to be written into `decisions.md`.
 
 The foundations plan and slice briefs are in
 `docs/research/2026-09-20-foundations-plan-and-next-two-slices.md`: the review's findings
