@@ -402,6 +402,17 @@ and the host continuation. Capture typing must connect a path and root to its le
 service environments, rather than type the same value list independently of where it is used.
 Interrupt provenance must distinguish scheduler interruption from arbitrary typed failure.
 
+### 5.6 The FR-08 ruling (2026-09-21)
+
+The delivery-state correlation this section asked for cannot be a frame-level fact. A typed
+failure escapes an interruptible catch whenever an interrupt was recorded while the fiber was
+masked and the masked region then fails; that is rc.112's own rule (`internal/core.ts:540-545`),
+the reference machine models it, and it is reachable from checker-typed source
+(`E4-SCHED-CE-008`). The typed-state theorem is therefore stated for escape-free runs under
+the walk premise `skipsClean`, `FrameAccepts.resume.skip` is guard-miss-only, and the hook
+contracts are filled under `HookLaws`. The ruling, its evidence and the exact statements are
+in `docs/research/2026-09-21-foundations-slices-3-4-review-and-fr08-ruling.md`.
+
 ## 6. Staged implementation plan
 
 Each slice starts with an exact path brief and frozen declarations, uses its own worktree if

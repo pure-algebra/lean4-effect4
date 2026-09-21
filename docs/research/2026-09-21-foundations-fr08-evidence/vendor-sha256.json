@@ -1,0 +1,8 @@
+{
+  "vendor/effect-4.0.0-rc.112/src/internal/core.ts": "233b7a1fb3a53b9f49f63c01f810052cb174cc13742f52ea2e8bd482f302fd11",
+  "vendor/effect-4.0.0-rc.112/src/internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+  "vendor/effect-4.0.0-rc.112/src/Effect.ts": "92372a76d06a1c66a47319cd67e1f25c8aa0bc81970ea7cfe7fea2253134e718",
+  "vendor/effect-4.0.0-rc.112/src/Fiber.ts": "53b9006580b03d9f7036229f20712595852521a29370f0fcb2d3a8efa4bba291",
+  "vendor/effect-4.0.0-rc.112/src/Deferred.ts": "78b5d3cd2ad37f9e4f8ebaf465c9375bb982a00bd22a9f3d50ed02e0cb65f0e9",
+  "vendor/effect-4.0.0-rc.112/src/Exit.ts": "f9e4baea6718bd6617069563028710cfaee3ba7b432826f87c405e0ca3513818"
+}

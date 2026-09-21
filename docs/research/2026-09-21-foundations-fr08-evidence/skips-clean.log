@@ -1,0 +1,5 @@
+'Probe.SkipsClean.strongExit_of_clean' depends on axioms: [propext, Quot.sound]
+'Probe.SkipsClean.masked_stack_accepted' depends on axioms: [propext, Quot.sound]
+'Probe.SkipsClean.masked_walk_not_clean' depends on axioms: [propext]
+'Probe.SkipsClean.interrupt_fits_after' depends on axioms: [propext, Quot.sound]
+PROBE EXIT 0

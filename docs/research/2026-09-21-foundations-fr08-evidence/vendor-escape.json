@@ -1,0 +1,15 @@
+{
+  "scope": "pinned rc.112 source run end to end with bun; the child is typed Fiber<number, never>",
+  "rows": [
+    {
+      "poison": false,
+      "tag": "Success",
+      "value": 0
+    },
+    {
+      "poison": true,
+      "tag": "Failure",
+      "cause": "Cause([Fail(42)])"
+    }
+  ]
+}

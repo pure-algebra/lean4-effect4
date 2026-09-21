@@ -33,6 +33,7 @@ import Test.Counterexamples.Machine.Semantics.CauseExit
 import Test.Counterexamples.Machine.Semantics.ActionAtRaceAllPremise
 import Test.Counterexamples.Machine.Semantics.InterruptDelivery
 import Test.Counterexamples.Machine.Semantics.StrongExitDefect
+import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.TypedResidual

@@ -32,38 +32,39 @@ ignored target/token and capture checks ignored source path/root, and identified
 shared type between current code and its saved stack. Slice 2 now states these correlations;
 connecting them to reachable execution remains the main typed-state proof.
 
-Slices 1 and 2 are merged at `2bcb99ff`. Slice 3 now has a checked implementation on
-`codex/foundations-slices-3-4`: exact world validity, allocation/token freshness, external
-spelling transport, completion transport and `park_extension`. Its receipt is
-[`foundations slice 3`](research/2026-09-21-foundations-slice3-receipt.md). Its initialization theorem types ghost data,
-not arbitrary source programs. `make build` and `make check` pass for this landing.
+Slices 1 and 2 are merged at `2bcb99ff`; slices 3 and 4 (Codex, `codex/foundations-slices-3-4`,
+head `ef38bf11`) are fast-forwarded onto this branch at the commit carrying
+[`slices 3–4 review and the FR-08 ruling`](research/2026-09-21-foundations-slices-3-4-review-and-fr08-ruling.md).
+Slice 3 landed exact world validity, allocation/token freshness, external spelling transport,
+completion transport and `park_extension`
+([receipt](research/2026-09-21-foundations-slice3-receipt.md)). Slice 4 landed the independent
+D12/C2–C4 foundations ([receipt](research/2026-09-21-foundations-slice4-receipt.md)) and the
+M3a residual: strong values/exits, D13 source admission, control admission with marker
+payload inversion, `Ψ_S` over the 31 `SyncOp` rows, `Ψ_F` over the 40 `FiberOp` rows under
+`#answer_gate`, concrete `TypedProg`, and the two settling cases
+([receipt](research/2026-09-21-foundations-slice4-m3a-receipt.md)). The review's once-over
+lists what those landings left as `True` (most `Ψ_F` rows, the hook contracts) and what was
+not declared (the M6 adequacy obligations); slice 5 is briefed to fill or name each.
 
-The approved independent subset of slice 4 (D12, C2–C4) and the unheld M3a foundations
-are landed on `codex/foundations-slices-3-4`. M3a proves strong values/exits, D13 lexical
-source admission, control admission and marker payload inversion, Store protocol Ψ_S (31
-SyncOp rows with ghost certificates), Fiber protocol Ψ_F (40 FiberOp rows with dependent
-carriers under `#answer_gate`), concrete `TypedProg`, interpreter hook contracts, and the two
-settling program cases: polymorphic ref allocation/read on a heterogeneous heap and addressed
-fork/mask with body admission.
+The brief's interrupt repair was refuted by Codex's preflight
+([amendment](research/2026-09-21-foundations-contract-preflight-amendment.md),
+`E4-SCHED-CE-006/007`). The coordinator then showed the refuting state is **source-reachable
+and is rc.112's behaviour**: `catchAll(uninterruptible(await >> fail 42), _ => succeed 0)`
+checks at answer `nat`, error `never`, and exits `Fail 42` on the frame machine, the term
+evaluator and the pinned vendor source when an interrupt is recorded during the masked
+region (`E4-SCHED-CE-008`, `Test/Counterexamples/Machine/Semantics/InterruptEscape.lean`,
+evidence in `research/2026-09-21-foundations-fr08-evidence/`). A re-masked walk runs a
+`nat`-typed catch on a string and dies with the bad-shape defect from defect-free source.
+The ruling: no runtime change; the typed-state theorem is stated for escape-free runs under
+the interpreter-free walk premise `skipsClean` (a preempted catch skip carries no `Fail`
+reason), `FrameAccepts.resume.skip` becomes guard-miss-only, and the hook contracts are filled
+under `HookLaws`. The replacement contract and `popR_typed` statement are elaborated and
+their finite controls checked in the evidence directory. Slice 5 is dispatched by
+[`foundations slice 5`](research/2026-09-21-codex-brief-foundations-slice-5.md).
 
-All six M3a obligations are proved; the fresh unique ledger is **342 total; 333 proved; 9 open**
-(0 open in the new obligations, ceiling 0; the 9 historical open names remain untouched).
-The receipts and retained checks are in [`foundations slice 4`](research/2026-09-21-foundations-slice4-receipt.md)
-and [`foundations slice 4 M3a`](research/2026-09-21-foundations-slice4-m3a-receipt.md).
-`make build`, `make check`, the binder audit and the full trust audit pass (483 modules and
-67,149 declarations checked at `[propext, Quot.sound]`).
-
-The dispatch remains [`foundations slices 3–6`](research/2026-09-21-codex-brief-foundations-slices-3-6.md).
-Its proposed slice 4/5 interrupt repair was refuted by the implementation preflight;
-[`the amendment`](research/2026-09-21-foundations-contract-preflight-amendment.md) records
-three checked counterexamples, including the separate defect-typing correction. The
-production stack judgment stays unchanged, and dependent stack/preemption contracts
-(`popR_typed`, `saveAnswerR_typed`, `DeliveryStateOk`, `FrameAccepts.resume` replacement) remain
-held. Slice 5 and M5–M7 remain pending.
-The [additional probe disposition](research/2026-09-21-foundations-independent-probe-disposition.md)
-retains six passing finite vendor controls and corrects the proposed runtime patch's
-justification, the unvisited-restoration case, the safety observation and the allocation
-walkthrough. No scheduler implementation or frozen stack judgment changes in this landing.
+Owner decisions pending: (1) the typed-state scope is escape-free runs, as ruled; (2)
+whether to report the rc.112 escape upstream (the evidence probe is a minimal reproduction);
+(3) the five chat rulings of 2026-09-20 still wait for the owner's word in `decisions.md`.
 
 The preceding review is retained in
 [`monotonicity and refinement findings`](research/2026-09-21-foundations-monotonicity-and-refinement-review.md)
