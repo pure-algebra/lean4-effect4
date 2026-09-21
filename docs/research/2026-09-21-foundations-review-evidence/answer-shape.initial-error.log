@@ -1,0 +1,78 @@
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:11:5: error(lean.unknownIdentifier): Unknown identifier `FiberOp.forkScoped`
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:12:16: error(lean.unknownIdentifier): Unknown identifier `Body`
+
+Note: It is not possible to treat `Body` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:13:5: error(lean.unknownIdentifier): Unknown identifier `FiberOp.fork`
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:14:16: error(lean.unknownIdentifier): Unknown identifier `GuardKind`
+
+Note: It is not possible to treat `GuardKind` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:14:30: error(lean.unknownIdentifier): Unknown identifier `FiberOp.guard_`
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:15:10: error(lean.unknownIdentifier): Unknown identifier `FiberOp.construction.answer`
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:16:24: error(lean.unknownIdentifier): Unknown identifier `FiberOp.raceRegister`
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:17:18: error(lean.unknownIdentifier): Unknown identifier `PendingReason`
+
+Note: It is not possible to treat `PendingReason` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:18:5: error(lean.unknownIdentifier): Unknown identifier `FiberOp.frontier`
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:20:41: error(lean.unknownIdentifier): Unknown identifier `RInterp`
+
+Note: It is not possible to treat `RInterp` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:20:55: error(lean.unknownIdentifier): Unknown identifier `RState`
+
+Note: It is not possible to treat `RState` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:20:68: error(lean.unknownIdentifier): Unknown identifier `RFiber`
+
+Note: It is not possible to treat `RFiber` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:22:20: error(lean.unknownIdentifier): Unknown identifier `RProgram`
+
+Note: It is not possible to treat `RProgram` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:23:5: error(lean.unknownIdentifier): Unknown identifier `evaluateFiberR`
+
+Note: It is not possible to treat `evaluateFiberR` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:24:6: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.pure` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `DoResultPR.pure`
+  [apply] `DoResultPRBC.pure`
+  [apply] `EST.pure`
+  [apply] `EStateM.pure`
+  [apply] `Except.pure`
+  [apply] `ExceptT.pure`
+  [apply] `OptionT.pure`
+  [apply] `pure`
+  [apply] `ReaderT.pure`
+  [apply] `ST.pure`
+  [apply] `StateT.pure`
+  [apply] `Task.pure`
+  [apply] `Thunk.pure`
+  [apply] `Effects.Program.pure`
+  [apply] `EffThunk.pure`
+  [apply] `EffTy.pure`
+  [apply] `Lean.Server.RequestTask.pure`
+  [apply] `Lean.Server.ServerTask.pure`
+  [apply] `Std.Async.AsyncTask.pure`
+  [apply] `Std.Async.BaseAsync.pure`
+  [apply] `Std.Async.EAsync.pure`
+  [apply] `Std.Async.ETask.pure`
+  [apply] `Std.Async.MaybeTask.pure`
+  [apply] `Std.Do.PostShape.pure`
+  [apply] `Std.Do.PredTrans.pure`
+  [apply] `Std.Do.SPred.pure`
+  [apply] `Std.Do.Spec.pure`
+  [apply] `Std.Do.Triple.pure`
+  [apply] `Std.Do.WP.pure`
+  [apply] `Std.Internal.Parsec.pure`
+  [apply] `Std.Iterators.HetT.pure`
+  [apply] `Std.Iterators.PostconditionT.pure`
+  [apply] `Env.UsesOnly.pure`
+  [apply] `Lean.Compiler.LCNF.Purity.pure`
+  [apply] `Lean.Elab.Do.ControlInfo.pure`
+  [apply] `Lean.Parser.Tactic.MCasesPat.pure`
+  [apply] `Lean.Parser.Tactic.MRefinePat.pure`
+  [apply] `Std.Do.ExceptConds.entails.pure`
+  [apply] `Std.Do.Internal.Ensures.pure`
+  [apply] `Std.Internal.Do.Spec.pure`
+  [apply] `Std.Internal.Do.Triple.pure`
+  [apply] `Env.UsesOnly.below.pure`
+  [apply] `Std.Do.SPred.Tactic.Cases.pure`
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:26:14: error(lean.unknownIdentifier): Unknown constant `raw_scopeExit_badShape`
+docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean:31:43: error(lean.unknownIdentifier): Unknown constant `Effect4.Program.FiberOp`

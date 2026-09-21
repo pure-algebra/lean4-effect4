@@ -1,0 +1,80 @@
+'FoundationsReview.AnswerShape.raw_scopeExit_badShape' depends on axioms: [propext, Quot.sound]
+'FoundationsReview.AnswerShape.forkScoped_answer' depends on axioms: [propext]
+'FoundationsReview.AnswerShape.fork_answer' depends on axioms: [propext]
+'FoundationsReview.AnswerShape.guard_answer' depends on axioms: [propext]
+'FoundationsReview.AnswerShape.construction_answer' depends on axioms: [propext]
+'FoundationsReview.AnswerShape.raceRegister_answer' depends on axioms: [propext]
+'FoundationsReview.AnswerShape.frontier_answer' depends on axioms: [propext]
+Effect4.Machine.SyncOp: 31 constructors
+  Effect4.Machine.SyncOp.refMake
+  Effect4.Machine.SyncOp.refGet
+  Effect4.Machine.SyncOp.refSet
+  Effect4.Machine.SyncOp.refGetAndSet
+  Effect4.Machine.SyncOp.refSetAndGet
+  Effect4.Machine.SyncOp.refUpdate
+  Effect4.Machine.SyncOp.refGetAndUpdate
+  Effect4.Machine.SyncOp.refUpdateAndGet
+  Effect4.Machine.SyncOp.refUpdateSome
+  Effect4.Machine.SyncOp.refGetAndUpdateSome
+  Effect4.Machine.SyncOp.refUpdateSomeAndGet
+  Effect4.Machine.SyncOp.refModify
+  Effect4.Machine.SyncOp.refModifySome
+  Effect4.Machine.SyncOp.deferredMake
+  Effect4.Machine.SyncOp.deferredIsDone
+  Effect4.Machine.SyncOp.deferredPoll
+  Effect4.Machine.SyncOp.deferredCompleteWith
+  Effect4.Machine.SyncOp.deferredInterruptWith
+  Effect4.Machine.SyncOp.deferredAwaitCleanup
+  Effect4.Machine.SyncOp.clockNow
+  Effect4.Machine.SyncOp.sleepCancel
+  Effect4.Machine.SyncOp.scopeMake
+  Effect4.Machine.SyncOp.scopeAdd
+  Effect4.Machine.SyncOp.scopeRemove
+  Effect4.Machine.SyncOp.scopeIsClosed
+  Effect4.Machine.SyncOp.scopeFork
+  Effect4.Machine.SyncOp.memoFork
+  Effect4.Machine.SyncOp.memoGet
+  Effect4.Machine.SyncOp.memoBuild
+  Effect4.Machine.SyncOp.memoComplete
+  Effect4.Machine.SyncOp.memoRelease
+Effect4.Program.Sched.FiberOp: 40 constructors
+  Effect4.Program.Sched.FiberOp.fork
+  Effect4.Program.Sched.FiberOp.forkIn
+  Effect4.Program.Sched.FiberOp.forkScoped
+  Effect4.Program.Sched.FiberOp.await
+  Effect4.Program.Sched.FiberOp.awaitAll
+  Effect4.Program.Sched.FiberOp.awaitAllFailFast
+  Effect4.Program.Sched.FiberOp.yieldNow
+  Effect4.Program.Sched.FiberOp.async
+  Effect4.Program.Sched.FiberOp.interrupt
+  Effect4.Program.Sched.FiberOp.interruptAs
+  Effect4.Program.Sched.FiberOp.interruptScoped
+  Effect4.Program.Sched.FiberOp.interruptAll
+  Effect4.Program.Sched.FiberOp.mask
+  Effect4.Program.Sched.FiberOp.closeScope
+  Effect4.Program.Sched.FiberOp.scoped
+  Effect4.Program.Sched.FiberOp.scopeExit
+  Effect4.Program.Sched.FiberOp.foreignRelease
+  Effect4.Program.Sched.FiberOp.raceAll
+  Effect4.Program.Sched.FiberOp.raceRegister
+  Effect4.Program.Sched.FiberOp.cancelRace
+  Effect4.Program.Sched.FiberOp.getId
+  Effect4.Program.Sched.FiberOp.getContext
+  Effect4.Program.Sched.FiberOp.setContext
+  Effect4.Program.Sched.FiberOp.snapshotChildren
+  Effect4.Program.Sched.FiberOp.awaitNewChildren
+  Effect4.Program.Sched.FiberOp.runIn
+  Effect4.Program.Sched.FiberOp.dropObservers
+  Effect4.Program.Sched.FiberOp.refuse
+  Effect4.Program.Sched.FiberOp.ambientScope
+  Effect4.Program.Sched.FiberOp.closeWalk
+  Effect4.Program.Sched.FiberOp.closeIter
+  Effect4.Program.Sched.FiberOp.frontier
+  Effect4.Program.Sched.FiberOp.guard_
+  Effect4.Program.Sched.FiberOp.unguard
+  Effect4.Program.Sched.FiberOp.finishFinalizer
+  Effect4.Program.Sched.FiberOp.suspend
+  Effect4.Program.Sched.FiberOp.sync
+  Effect4.Program.Sched.FiberOp.gen
+  Effect4.Program.Sched.FiberOp.loop
+  Effect4.Program.Sched.FiberOp.construction

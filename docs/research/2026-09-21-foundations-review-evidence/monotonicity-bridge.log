@@ -1,0 +1,12 @@
+'FoundationsReview.MonotonicityBridge.typed_transport_at' does not depend on any axioms
+'FoundationsReview.MonotonicityBridge.projects_transfers_selected_invariant' does not depend on any axioms
+'FoundationsReview.MonotonicityBridge.arena_indexed_lookup_transfer' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Arena.list_lawful' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Arena.toList_alloc' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Arena.toList_poke' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.refStep_eq_refStepOf' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.refStepOf_keeps' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.toList_refStepOf' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Refinement.projects_arena' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Refinement.deferredOk_iff_image' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Refinement.projects_complete' depends on axioms: [propext]

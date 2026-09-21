@@ -1,0 +1,231 @@
+ℹ [192/275] Replayed Effect4.Laws.Machine.Clauses
+info: src/Effect4/Laws/Machine/Clauses.lean:2115:0: Effect4.Machine.M1OriginClauses: 0 open, 10 proved, 10 total; ceiling 0
+ℹ [199/275] Replayed Effect4.Laws.Machine.Arena
+info: src/Effect4/Laws/Machine/Arena.lean:249:0: Effect4.Machine.ArenaObligations: 0 open, 10 proved, 10 total; ceiling 0
+info: src/Effect4/Laws/Machine/Arena.lean:252:0: Effect4.Machine.ArenaSupportWanted: 0 open, 3 proved, 3 total; ceiling 0
+ℹ [200/275] Replayed Effect4.Laws.Machine.RefKernel
+info: src/Effect4/Laws/Machine/RefKernel.lean:272:0: Effect4.Machine.ArenaObligations: 0 open, 14 proved, 14 total; ceiling 0
+info: src/Effect4/Laws/Machine/RefKernel.lean:275:0: Effect4.Machine.M1.RefKernelSupport: 0 open, 1 proved, 1 total; ceiling 0
+ℹ [201/275] Replayed Effect4.Laws.Machine.CompletionData
+info: src/Effect4/Laws/Machine/CompletionData.lean:61:0: Effect4.Machine.M1.OwedMapWanted: 0 open, 4 proved, 4 total; ceiling 0
+info: src/Effect4/Laws/Machine/CompletionData.lean:98:0: Effect4.Machine.M1.Core: 0 open, 5 proved, 5 total; ceiling 0
+info: src/Effect4/Laws/Machine/CompletionData.lean:113:0: Effect4.Machine.M1.CompletionSupport: 0 open, 2 proved, 2 total; ceiling 0
+ℹ [202/275] Replayed Effect4.Laws.Machine.StoresLaws
+info: src/Effect4/Laws/Machine/StoresLaws.lean:2058:0: Effect4.Machine.M1.StoresLaws: 0 open, 5 proved, 5 total; ceiling 0
+ℹ [203/275] Replayed Effect4.Laws.Machine.Approximation
+info: src/Effect4/Laws/Machine/Approximation.lean:1694:0: Effect4.Machine.M1OriginApproximation: 0 open, 2 proved, 2 total; ceiling 0
+ℹ [204/275] Replayed Effect4.Laws.Machine.Handles
+info: src/Effect4/Laws/Machine/Handles.lean:6714:0: Effect4.Machine.M1.Handles: 0 open, 9 proved, 9 total; ceiling 5
+info: src/Effect4/Laws/Machine/Handles.lean:6715:0: Effect4.Machine.M1.DeferredWanted: 0 open, 1 proved, 1 total; ceiling 0
+info: src/Effect4/Laws/Machine/Handles.lean:6716:0: Effect4.Machine.M1Origin: 0 open, 9 proved, 9 total; ceiling 4
+ℹ [209/275] Replayed Effect4.Program.AtomInventory
+info: src/Effect4/Program/AtomInventory.lean:61:0: 'Effect4.Program.NativeAtom.all_complete' depends on axioms: [propext]
+info: src/Effect4/Program/AtomInventory.lean:62:0: 'Effect4.Program.NativeAtom.covers_iff' depends on axioms: [propext, Quot.sound]
+ℹ [215/275] Replayed Effect4.Program.NodeLenses
+info: src/Effect4/Program/NodeLenses.lean:135:0: 'Effect4.Program.Node.child' depends on axioms: [propext]
+info: src/Effect4/Program/NodeLenses.lean:136:0: 'Effect4.Program.Node.setChild' depends on axioms: [propext]
+ℹ [216/275] Replayed Effect4.Program.Fold
+info: src/Effect4/Program/Fold.lean:3350:0: 'Effect4.Program.hom_eq_cata_ty' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3351:0: 'Effect4.Program.cata_id_ty' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3352:0: 'Effect4.Program.foldM_eq_cata_ty' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3353:0: 'Effect4.Program.foldM_id_ty' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3354:0: 'Effect4.Program.foldM_natural_ty' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3355:0: 'Effect4.Program.hom_eq_cata_term' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3356:0: 'Effect4.Program.hom_eq_cata_terms' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3357:0: 'Effect4.Program.cata_id_term' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3358:0: 'Effect4.Program.cata_id_terms' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3359:0: 'Effect4.Program.foldM_eq_cata_term' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3360:0: 'Effect4.Program.foldM_eq_cata_terms' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3361:0: 'Effect4.Program.foldM_id_term' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3362:0: 'Effect4.Program.foldM_id_terms' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3363:0: 'Effect4.Program.foldM_natural_term' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3364:0: 'Effect4.Program.foldM_natural_terms' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3365:0: 'Effect4.Program.hom_eq_cata_cause' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3366:0: 'Effect4.Program.cata_id_cause' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3367:0: 'Effect4.Program.foldM_eq_cata_cause' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3368:0: 'Effect4.Program.foldM_id_cause' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3369:0: 'Effect4.Program.foldM_natural_cause' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3370:0: 'Effect4.Program.hom_eq_cata_eff' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3371:0: 'Effect4.Program.hom_eq_cata_stmt' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3372:0: 'Effect4.Program.hom_eq_cata_stmts' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3373:0: 'Effect4.Program.hom_eq_cata_effs' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3374:0: 'Effect4.Program.hom_eq_cata_action' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3375:0: 'Effect4.Program.hom_eq_cata_layer' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3376:0: 'Effect4.Program.hom_eq_cata_layers' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3377:0: 'Effect4.Program.cata_id_eff' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3378:0: 'Effect4.Program.cata_id_stmt' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3379:0: 'Effect4.Program.cata_id_stmts' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3380:0: 'Effect4.Program.cata_id_effs' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3381:0: 'Effect4.Program.cata_id_action' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3382:0: 'Effect4.Program.cata_id_layer' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3383:0: 'Effect4.Program.cata_id_layers' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3384:0: 'Effect4.Program.foldM_eq_cata_eff' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3385:0: 'Effect4.Program.foldM_eq_cata_stmt' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3386:0: 'Effect4.Program.foldM_eq_cata_stmts' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3387:0: 'Effect4.Program.foldM_eq_cata_effs' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3388:0: 'Effect4.Program.foldM_eq_cata_action' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3389:0: 'Effect4.Program.foldM_eq_cata_layer' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3390:0: 'Effect4.Program.foldM_eq_cata_layers' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3391:0: 'Effect4.Program.foldM_id_eff' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3392:0: 'Effect4.Program.foldM_id_stmt' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3393:0: 'Effect4.Program.foldM_id_stmts' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3394:0: 'Effect4.Program.foldM_id_effs' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3395:0: 'Effect4.Program.foldM_id_action' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3396:0: 'Effect4.Program.foldM_id_layer' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3397:0: 'Effect4.Program.foldM_id_layers' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3398:0: 'Effect4.Program.foldM_natural_eff' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3399:0: 'Effect4.Program.foldM_natural_stmt' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3400:0: 'Effect4.Program.foldM_natural_stmts' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3401:0: 'Effect4.Program.foldM_natural_effs' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3402:0: 'Effect4.Program.foldM_natural_action' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3403:0: 'Effect4.Program.foldM_natural_layer' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3404:0: 'Effect4.Program.foldM_natural_layers' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3405:0: 'Effect4.Program.weaken_eq_cata_eff' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3406:0: 'Effect4.Program.weaken_eq_cata_stmt' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3407:0: 'Effect4.Program.weaken_eq_cata_stmts' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3408:0: 'Effect4.Program.weaken_eq_cata_effs' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3409:0: 'Effect4.Program.weaken_eq_cata_action' depends on axioms: [propext]
+ℹ [238/275] Replayed Effect4.Schema.Fold
+info: src/Effect4/Schema/Fold.lean:925:0: 'Effect4.ElementOf.map_map' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:926:0: 'Effect4.ElementOf.map_id' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:927:0: 'Effect4.PropertySignatureOf.map_map' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:928:0: 'Effect4.PropertySignatureOf.map_id' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:929:0: 'Effect4.IndexSignatureOf.map_map' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:930:0: 'Effect4.IndexSignatureOf.map_id' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:931:0: 'Effect4.CheckRepresentationAnnotationOf.map_map' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Schema/Fold.lean:932:0: 'Effect4.CheckRepresentationAnnotationOf.map_id' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Schema/Fold.lean:933:0: 'Effect4.cata_pos_list_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:934:0: 'Effect4.cata_pos_list_check_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:935:0: 'Effect4.cata_pos_elementOf_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:936:0: 'Effect4.cata_pos_list_elementOf_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:937:0: 'Effect4.cata_pos_propertySignatureOf_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:938:0: 'Effect4.cata_pos_list_propertySignatureOf_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:939:0: 'Effect4.cata_pos_indexSignatureOf_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:940:0: 'Effect4.cata_pos_list_indexSignatureOf_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:941:0: 'Effect4.cata_pos_option_list_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:942:0: 'Effect4.cata_pos_checkRepresentationAnnotationOf_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:943:0: 'Effect4.cata_pos_option_checkRepresentationAnnotationOf_representation_eq' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:944:0: 'Effect4.cata_representation_declaration' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:945:0: 'Effect4.cata_representation_reference' does not depend on any axioms
+info: src/Effect4/Schema/Fold.lean:946:0: 'Effect4.cata_representation_suspend' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:947:0: 'Effect4.cata_representation_null' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:948:0: 'Effect4.cata_representation_undefined' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:949:0: 'Effect4.cata_representation_void' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:950:0: 'Effect4.cata_representation_never' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:951:0: 'Effect4.cata_representation_unknown' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:952:0: 'Effect4.cata_representation_any' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:953:0: 'Effect4.cata_representation_string' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:954:0: 'Effect4.cata_representation_number' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:955:0: 'Effect4.cata_representation_boolean' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:956:0: 'Effect4.cata_representation_bigint' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:957:0: 'Effect4.cata_representation_symbol' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:958:0: 'Effect4.cata_representation_literal' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:959:0: 'Effect4.cata_representation_uniqueSymbol' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:960:0: 'Effect4.cata_representation_objectKeyword' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:961:0: 'Effect4.cata_representation_enum' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:962:0: 'Effect4.cata_representation_templateLiteral' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:963:0: 'Effect4.cata_representation_arrays' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:964:0: 'Effect4.cata_representation_objects' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:965:0: 'Effect4.cata_representation_union' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:966:0: 'Effect4.cata_check_filter' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:967:0: 'Effect4.cata_check_filterGroup' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:968:0: 'Effect4.hom_eq_cata_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:969:0: 'Effect4.hom_eq_cata_check' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:970:0: 'Effect4.hom_pos_list_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:971:0: 'Effect4.hom_pos_list_check' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:972:0: 'Effect4.hom_pos_elementOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:973:0: 'Effect4.hom_pos_list_elementOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:974:0: 'Effect4.hom_pos_propertySignatureOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:975:0: 'Effect4.hom_pos_list_propertySignatureOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:976:0: 'Effect4.hom_pos_indexSignatureOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:977:0: 'Effect4.hom_pos_list_indexSignatureOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:978:0: 'Effect4.hom_pos_option_list_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:979:0: 'Effect4.hom_pos_checkRepresentationAnnotationOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:980:0: 'Effect4.hom_pos_option_checkRepresentationAnnotationOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:981:0: 'Effect4.cata_id_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:982:0: 'Effect4.cata_id_check' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:983:0: 'Effect4.cata_id_pos_list_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:984:0: 'Effect4.cata_id_pos_list_check' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:985:0: 'Effect4.cata_id_pos_elementOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:986:0: 'Effect4.cata_id_pos_list_elementOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:987:0: 'Effect4.cata_id_pos_propertySignatureOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:988:0: 'Effect4.cata_id_pos_list_propertySignatureOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:989:0: 'Effect4.cata_id_pos_indexSignatureOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:990:0: 'Effect4.cata_id_pos_list_indexSignatureOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:991:0: 'Effect4.cata_id_pos_option_list_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:992:0: 'Effect4.cata_id_pos_checkRepresentationAnnotationOf_representation' depends on axioms: [propext]
+info: src/Effect4/Schema/Fold.lean:993:0: 'Effect4.cata_id_pos_option_checkRepresentationAnnotationOf_representation' depends on axioms: [propext]
+ℹ [246/275] Replayed Effect4.Laws.Program.Folds.Ty
+info: src/Effect4/Laws/Program/Folds/Ty.lean:23:0: fold_of: Effect4.Program.Ty.renderRaw.eq_cata : ∀ (a : Ty), a.renderRaw = cata_ty Ty.renderRaw.alg a
+info: src/Effect4/Laws/Program/Folds/Ty.lean:23:0: fold_of: Effect4.Program.Ty.renderRaw.alg : TyAlgebra fun fam => TyFam.rec String fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:24:0: fold_of: Effect4.Program.Ty.members.eq_cata : ∀ (a : Ty), a.members = (cata_ty Ty.members.alg a).snd
+info: src/Effect4/Laws/Program/Folds/Ty.lean:24:0: fold_of (paramorphism: the carrier pairs the value): Effect4.Program.Ty.members.alg : TyAlgebra fun fam =>
+  TyFam.rec (Ty × List Ty) fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:25:0: fold_of: Effect4.Program.Ty.key.eq_cata : ∀ (a : Ty), a.key = cata_ty Ty.key.alg a
+info: src/Effect4/Laws/Program/Folds/Ty.lean:25:0: fold_of: Effect4.Program.Ty.key.alg : TyAlgebra fun fam => TyFam.rec (List Nat) fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:26:0: fold_of: Effect4.Program.Ty.isNever.eq_cata : ∀ (a : Ty), a.isNever = cata_ty Ty.isNever.alg a
+info: src/Effect4/Laws/Program/Folds/Ty.lean:26:0: fold_of: Effect4.Program.Ty.isNever.alg : TyAlgebra fun fam => TyFam.rec Bool fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:27:0: fold_of: Effect4.Program.Ty.isMember.eq_cata : ∀ (a : Ty), a.isMember = cata_ty Ty.isMember.alg a
+info: src/Effect4/Laws/Program/Folds/Ty.lean:27:0: fold_of: Effect4.Program.Ty.isMember.alg : TyAlgebra fun fam => TyFam.rec Bool fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:28:0: fold_of: Effect4.Program.Ty.normalize.eq_cata : ∀ (a : Ty), a.normalize = cata_ty Ty.normalize.alg a
+info: src/Effect4/Laws/Program/Folds/Ty.lean:28:0: fold_of: Effect4.Program.Ty.normalize.alg : TyAlgebra fun fam => TyFam.rec Ty fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:29:0: fold_of: Effect4.Program.isTagTy.eq_cata : ∀ (a : Ty), isTagTy a = cata_ty isTagTy.alg a
+info: src/Effect4/Laws/Program/Folds/Ty.lean:29:0: fold_of: Effect4.Program.isTagTy.alg : TyAlgebra fun fam => TyFam.rec Bool fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:30:0: fold_of: Effect4.Program.rawSupportedErrTy.eq_cata : ∀ (a : Ty),
+  rawSupportedErrTy a = (cata_ty rawSupportedErrTy.alg a).snd
+info: src/Effect4/Laws/Program/Folds/Ty.lean:30:0: fold_of (paramorphism: the carrier pairs the value): Effect4.Program.rawSupportedErrTy.alg : TyAlgebra fun fam =>
+  TyFam.rec (Ty × Bool) fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:31:0: fold_of: Effect4.Program.NativeAtom.projectProduct.eq_cata : ∀ (second : Bool) (a : Ty),
+  NativeAtom.projectProduct second a = (cata_ty (NativeAtom.projectProduct.alg second) a).snd
+info: src/Effect4/Laws/Program/Folds/Ty.lean:31:0: fold_of (paramorphism: the carrier pairs the value): Effect4.Program.NativeAtom.projectProduct.alg : Bool →
+  TyAlgebra fun fam => TyFam.rec (Ty × Option Ty) fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:32:0: fold_of: Effect4.Program.findInt.eq_cata : ∀ (pos : Path) (a : Ty), findInt pos a = cata_ty findInt.alg a pos
+info: src/Effect4/Laws/Program/Folds/Ty.lean:32:0: fold_of: Effect4.Program.findInt.alg : TyAlgebra fun fam => TyFam.rec (Path → Option Path) fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:33:0: fold_of: Effect4.Program.Val.hasTy.eq_cata : ∀ (v : Machine.Val) (ty : Ty) (allocated : optParam (List String) []),
+  Val.hasTy v ty allocated = (cata_ty Val.hasTy.alg ty).snd v allocated
+info: src/Effect4/Laws/Program/Folds/Ty.lean:33:0: fold_of (paramorphism: the carrier pairs the value): Effect4.Program.Val.hasTy.alg : TyAlgebra fun fam =>
+  TyFam.rec (Ty × (Machine.Val → List String → Bool)) fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:34:0: fold_of: Effect4.Schema.Bridge.schema.eq_cata : ∀ (a : Ty), Schema.Bridge.schema a = cata_ty Schema.Bridge.schema.alg a
+info: src/Effect4/Laws/Program/Folds/Ty.lean:34:0: fold_of: Effect4.Schema.Bridge.schema.alg : TyAlgebra fun fam => TyFam.rec Representation fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:35:0: fold_of: Effect4.Schema.Codec.layout.eq_cata : ∀ (a : Ty),
+  Schema.Codec.layout a = (cata_ty Schema.Codec.layout.alg a).snd
+info: src/Effect4/Laws/Program/Folds/Ty.lean:35:0: fold_of (paramorphism: the carrier pairs the value): Effect4.Schema.Codec.layout.alg : TyAlgebra fun fam =>
+  TyFam.rec (Ty × Ty) fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:36:0: fold_of: Effect4.Schema.Codec.isSupported.eq_cata : ∀ (a : Ty),
+  Schema.Codec.isSupported a = cata_ty Schema.Codec.isSupported.alg a
+info: src/Effect4/Laws/Program/Folds/Ty.lean:36:0: fold_of: Effect4.Schema.Codec.isSupported.alg : TyAlgebra fun fam => TyFam.rec Bool fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:37:0: fold_of: Effect4.Schema.Codec.encodeRaw.eq_cata : ∀ (a : Ty) (a_1 : Machine.Val),
+  Schema.Codec.encodeRaw a a_1 = (cata_ty Schema.Codec.encodeRaw.alg a).snd a_1
+info: src/Effect4/Laws/Program/Folds/Ty.lean:37:0: fold_of (paramorphism: the carrier pairs the value): Effect4.Schema.Codec.encodeRaw.alg : TyAlgebra fun fam =>
+  TyFam.rec (Ty × (Machine.Val → Option Json)) fam
+info: src/Effect4/Laws/Program/Folds/Ty.lean:38:0: fold_of: Effect4.Schema.Codec.decodeRaw.eq_cata : ∀ (a : Ty) (a_1 : Json),
+  Schema.Codec.decodeRaw a a_1 = (cata_ty Schema.Codec.decodeRaw.alg a).snd a_1
+info: src/Effect4/Laws/Program/Folds/Ty.lean:38:0: fold_of (paramorphism: the carrier pairs the value): Effect4.Schema.Codec.decodeRaw.alg : TyAlgebra fun fam =>
+  TyFam.rec (Ty × (Json → Option Machine.Val)) fam
+ℹ [260/275] Replayed Effect4.Laws.Program.Agreement
+info: src/Effect4/Laws/Program/Agreement.lean:1931:0: Effect4.Program.Agreement.M1Origin: 0 open, 1 proved, 1 total; ceiling 0
+ℹ [262/275] Replayed Effect4.Laws.Machine.Behaviour
+info: src/Effect4/Laws/Machine/Behaviour.lean:119:0: Effect4.Machine.M1Trace: 0 open, 1 proved, 1 total; ceiling 1
+ℹ [271/275] Replayed Effect4.Laws.Program.Typed.State
+info: src/Effect4/Laws/Program/Typed/State.lean:21:0: 85 positions from 4 roots, 86 source rows
+  11	owner
+  8	custom
+  5	exit
+  3	column
+  1	refused
+  6	journal
+  51	hook
+  refused	Effect4.Machine.Stores.externals	external rows are the table-aware slice (DI-57); the reference parks them forever
+  refused	Effect4.ScopeState.closed.exit	DI-94 fixes the release type at Exit<unknown, unknown>; connecting stored scope exits to the invariant remains open
+ℹ [273/275] Replayed Effect4.Laws.Program.Typed.World
+info: src/Effect4/Laws/Program/Typed/World.lean:777:0: Effect4.Program.Typed.WorldControlWanted: 0 open, 5 proved, 5 total; ceiling 0
+info: src/Effect4/Laws/Program/Typed/World.lean:778:0: Effect4.Program.Typed.WorldWanted: 0 open, 20 proved, 20 total; ceiling 0
+ℹ [275/275] Built Test.Counterexamples.Machine.Semantics.InterruptDelivery (8.7s)
+info: Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean:92:0: 'Test.Counterexamples.InterruptDelivery.masked_satisfies_reviewed_correlation' depends on axioms: [propext]
+info: Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean:93:0: 'Test.Counterexamples.InterruptDelivery.masked_has_provenance' depends on axioms: [propext]
+info: Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean:94:0: 'Test.Counterexamples.InterruptDelivery.reviewed_catch_skip' depends on axioms: [propext, Quot.sound]
+info: Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean:95:0: 'Test.Counterexamples.InterruptDelivery.reviewed_catch_run' depends on axioms: [propext, Quot.sound]
+info: Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean:96:0: 'Test.Counterexamples.InterruptDelivery.restore_then_skip' depends on axioms: [propext]
+info: Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean:97:0: 'Test.Counterexamples.InterruptDelivery.proposed_entry_mask_exception_false' depends on axioms: [propext, Quot.sound]
+info: Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean:98:0: 'Test.Counterexamples.InterruptDelivery.delivery_does_not_intercept_failure' depends on axioms: [propext]
+Build completed successfully (275 jobs).

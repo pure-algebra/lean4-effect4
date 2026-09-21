@@ -1,0 +1,49 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/WorldReplayProbe.lean:99:2: error: failed to synthesize
+  Decidable (ValueOk (emptyTables (spellingStore ["A"])) (Ty.handle "A") (Value.external 0))
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/WorldReplayProbe.lean:103:2: error: failed to synthesize
+  Decidable ¬ValueOk (emptyTables (spellingStore ["B"])) (Ty.handle "A") (Value.external 0)
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/WorldReplayProbe.lean:108:2: error: failed to synthesize
+  Decidable (ValueOk (emptyTables (spellingStore ["A", "B"])) (Ty.handle "A") (Value.external 0))
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/WorldReplayProbe.lean:125:24: error(lean.unknownIdentifier): Unknown identifier `check`
+
+Note: It is not possible to treat `check` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/WorldReplayProbe.lean:125:67: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.ok` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.ok`
+  [apply] `EST.Out.ok`
+  [apply] `EStateM.Result.ok`
+  [apply] `Api.TypedLayer.ok`
+  [apply] `Lean.Meta.DefEqArgsFirstPassResult.ok`
+  [apply] `Std.Http.Response.ok`
+  [apply] `Std.Http.Status.ok`
+  [apply] `IterRel.ok`
+  [apply] `IterRelP.ok`
+  [apply] `Lean.Meta.Grind.CheckCoverageResult.ok`
+'FoundationsWorldReplayProbe.leHost_does_not_imply_wf_transport' depends on axioms: [propext, Quot.sound]
+'FoundationsWorldReplayProbe.allTokens_active_coverage' depends on axioms: [propext]
+'FoundationsWorldReplayProbe.allTokens_not_fresh' depends on axioms: [propext]
+'FoundationsWorldReplayProbe.token_bound_implies_fresh' depends on axioms: [propext]
+'FoundationsWorldReplayProbe.spelling_world_order' depends on axioms: [propext, Quot.sound]
+'FoundationsWorldReplayProbe.old_spelling_admitted' depends on axioms: [propext, sorryAx]
+'FoundationsWorldReplayProbe.renamed_spelling_refused' depends on axioms: [propext, sorryAx]
+'FoundationsWorldReplayProbe.appended_spelling_admitted' depends on axioms: [propext, sorryAx]
+'Effect4.Program.Extends' depends on axioms: [propext]
+'Effect4.Program.extends_append' depends on axioms: [propext]
+'Effect4.Program.hasTy_mono' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.hasTy_append' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.FitsIn.mono' depends on axioms: [propext, Quot.sound]
+'FoundationsWorldReplayProbe.valueOk_lookup_transport' depends on axioms: [propext, Quot.sound]
+'FoundationsWorldReplayProbe.reference_prepare_preserves_store' depends on axioms: [propext, Quot.sound]
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/WorldReplayProbe.lean:171:14: error(lean.unknownIdentifier): Unknown constant `yield_checked`
+'FoundationsWorldReplayProbe.delivered_nat_is_not_unit' depends on axioms: [propext]
+'FoundationsWorldReplayProbe.matching_yield_accepts_raw_nat' depends on axioms: [propext, Quot.sound]
+'FoundationsWorldReplayProbe.scheduled_yield_answers_unit' depends on axioms: [propext, Quot.sound]
+'FoundationsWorldReplayProbe.stale_yield_answer_is_inert' depends on axioms: [propext, Quot.sound]
+'FoundationsWorldReplayProbe.missing_fiber_answer_is_inert' depends on axioms: [propext, Quot.sound]

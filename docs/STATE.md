@@ -32,16 +32,31 @@ ignored target/token and capture checks ignored source path/root, and identified
 shared type between current code and its saved stack. Slice 2 now states these correlations;
 connecting them to reachable execution remains the main typed-state proof.
 
-Slices 1 and 2 are merged onto this branch (`2bcb99ff`, fast-forward of
-`codex/foundations-slices`). Next, dispatched to Codex in
-`docs/research/2026-09-21-codex-brief-foundations-slices-3-6.md`: slice 3 world validity and
-transport (`WorldValid`, allocation exclusion, transport under `World.leHost`, `park_extension`);
-slice 4 = M3a protocols and admission (the certificate-indexed protocol D12, checked in
-`CertProtocolProbe.lean`; `PointTyped`/`BodyTyped` before `TypedProg`, D13; `Ψ_S` over all 31
-`SyncOp` rows and `Ψ_F` over the 40 `FiberOp` arms under `#answer_gate`; the two settling cases
-proved); slice 5 = M3b/M4 assembly (`preds : Preds World`, `TypedState`, `RReachable` D14,
-`popR_typed`, `saveAnswerR_typed`, active/stale delivery, capture lookup, `Keeps`); slice 6 the
-residue proofs and the memo cleanup beside them. M5–M7 are briefed after slice 5's receipt.
+Slices 1 and 2 are merged at `2bcb99ff`. Slice 3 now has a checked implementation on
+`codex/foundations-slices-3-4`: exact world validity, allocation/token freshness, external
+spelling transport, completion transport and `park_extension`. Its receipt is
+[`foundations slice 3`](research/2026-09-21-foundations-slice3-receipt.md), with the fresh
+unique ledger **324 total; 315 proved; 9 open**. The initialization theorem types ghost data,
+not arbitrary source programs. `make build` and `make check` pass for this landing.
+
+The dispatch remains
+[`foundations slices 3–6`](research/2026-09-21-codex-brief-foundations-slices-3-6.md).
+Its proposed slice 4/5 interrupt repair was refuted by the implementation preflight;
+[`the amendment`](research/2026-09-21-foundations-contract-preflight-amendment.md) records
+three checked counterexamples, including the separate defect-typing correction. The
+production stack judgment stays unchanged. Concrete M3a admission/residual/control typing,
+its answer inventory and settling program cases remain pending, as do slice 5 and M5–M7.
+The independent certificate and representation interfaces do not resolve that contract.
+[Slice 4's held receipt](research/2026-09-21-foundations-slice4-receipt.md) names the pending work.
+
+The preceding review is retained in
+[`monotonicity and refinement findings`](research/2026-09-21-foundations-monotonicity-and-refinement-review.md)
+and its [historical controls](research/2026-09-21-foundations-review-evidence/README.md).
+Abstract store contracts remain target-neutral. OCaml is the first implementation;
+C compilation, a separate C representation and TypeScript need distinct named connections.
+The research packet's four open statements are prototypes; C1 has now been promoted and
+proved as `Typed.completion_transport`. Neither a prototype nor an abstract interface
+certifies a backend implementation.
 Decisions 86–88 record the technical questions; the five chat rulings of 2026-09-20 still wait
 for the owner's word to be written into `decisions.md`.
 

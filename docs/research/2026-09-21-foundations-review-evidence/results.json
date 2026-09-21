@@ -1,0 +1,104 @@
+{
+  "base": "641a0feabe8ff7c3899396cd2144380d6d8cf53c",
+  "results": [
+    {
+      "name": "answer-shape",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/AnswerShapeProbe.lean"
+      ],
+      "exit_code": 0,
+      "unexpected_axioms": [],
+      "declaration_kind": "research_theorems",
+      "declared_theorems": 7,
+      "missing_axiom_reports": []
+    },
+    {
+      "name": "monotonicity-bridge",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/MonotonicityBridgeProbe.lean"
+      ],
+      "exit_code": 0,
+      "unexpected_axioms": [],
+      "declaration_kind": "research_theorems",
+      "declared_theorems": 3,
+      "missing_axiom_reports": []
+    },
+    {
+      "name": "protocol-admission",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/ProtocolAdmissionProbe.lean"
+      ],
+      "exit_code": 0,
+      "unexpected_axioms": [],
+      "declaration_kind": "research_theorems",
+      "declared_theorems": 31,
+      "missing_axiom_reports": []
+    },
+    {
+      "name": "world-replay",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/WorldReplayProbe.lean"
+      ],
+      "exit_code": 0,
+      "unexpected_axioms": [],
+      "declaration_kind": "research_theorems",
+      "declared_theorems": 20,
+      "missing_axiom_reports": []
+    },
+    {
+      "name": "stack",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean"
+      ],
+      "exit_code": 0,
+      "unexpected_axioms": [],
+      "declaration_kind": "research_theorems",
+      "declared_theorems": 10,
+      "missing_axiom_reports": []
+    },
+    {
+      "name": "architecture-statements",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/ArchitectureStatements.lean"
+      ],
+      "exit_code": 0,
+      "unexpected_axioms": [],
+      "declaration_kind": "open_obligation_wrappers",
+      "declared_theorems": 4,
+      "ledger_ok": true,
+      "missing_axiom_reports": []
+    }
+  ],
+  "sha256": {
+    "AnswerShapeProbe.lean": "41dbbe62f788349389f24032bc622bc96a300550f4d3e1bd7fe98e41ae4df8fd",
+    "ArchitectureStatements.lean": "6784834cbb69985297aeb27d7482b7e8f7c3265723e9ea65ce6d638edcf907f9",
+    "MonotonicityBridgeProbe.lean": "a7b036f716803b2a64397f9e7bf287296a4c2f3a82e5086734b0aad9d4421d9c",
+    "ProtocolAdmissionProbe.lean": "a86cd220a6c973df4d970be2316f5b1320fdf450cc2d9110d437170b14509051",
+    "StackProbe.lean": "4a9e71a03e38b7d42bd327d050aef2813495b87f06f5a7160601e23ca9a0b2b2",
+    "WorldReplayProbe.lean": "4013a69fd6187bebad2be093f309032fe509de28581aa7d2d38700d2274464a2"
+  }
+}

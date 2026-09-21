@@ -1,0 +1,21 @@
+{
+  "base": "641a0feabe8ff7c3899396cd2144380d6d8cf53c",
+  "dependency_build": {
+    "command": "lake build Effect4.Laws.Program.Typed.Contracts Effect4.Laws.Machine.Refinement Effect4.Laws.Program.EvaluateR",
+    "exit_code": 0,
+    "jobs": 275,
+    "log": "build.log"
+  },
+  "production_source_changed": false,
+  "generated_source_changed": false,
+  "full_repository_check_run": false,
+  "native_or_host_differential_run": false,
+  "commit_created": false,
+  "push_performed": false,
+  "evidence_limits": [
+    "Arbitrary-world and saved-frame examples do not establish reachability.",
+    "Replay examples are finite controls at command fuel 30.",
+    "Conditional representation theorems require implementation instances.",
+    "Research obligations are declarations, not proofs of their payloads."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "src/Effect4/Laws/Effects/Protocol.lean": "2c920720cf04c33d0d29893c5517108ad384e44177fdacabd91c5942c8b9566f",
+  "src/Effect4/Laws/Program/Typed/World.lean": "a8c0fa6da3673ecd51e5ed3570e7e5fa1808bd129410eb0ed109dd0d797ea293",
+  "src/Effect4/Laws/Program/Typed/Contracts.lean": "2850962068f255521ac0f67cef28ba08f9f5f05288e77ed7704d45400ed7ddda",
+  "src/Effect4/Laws/Program/Typed.lean": "aa0f2a17fe0e3a931532b2c2cdfdca41da8e8c2f4b41db83c07cb1dd239d82ea",
+  "src/Effect4/Laws/Program/TyView.lean": "b4bb571e8705daa6b4a6e174b1555f6d12b467863c27b57732a646ad9a49883f",
+  "src/Effect4/Laws/Program/Admits.lean": "8467fa42c7dc86a157571d46522a9e235f00f4fd0d182a7bd5b4759c9cdb0297",
+  "src/Effect4/Laws/Machine/Arena.lean": "89b56076dde461a400adb08b99db0852307352494f7ccfa2443b9ec5cc4c4970",
+  "src/Effect4/Laws/Machine/RefKernel.lean": "6ed764ad94b863cafd01d53eb17aafaab0ccea196f196d3111821e01fe02ab1b",
+  "src/Effect4/Laws/Machine/Refinement.lean": "8a14d07357e0a34df094c9da4ed6689cc89ac1ff139aa5d44fb1385301a9e0c0",
+  "src/Effect4/Laws/Machine/StoresLaws.lean": "ce55a8b73268f1687eaf95a52c31f83ac9d0afd704bcb8bce067f908f25c9e16",
+  "src/Effect4/Machine/Stores.lean": "53931549b795628129b0e98a6b53b737bcd86d7cf713911e6c2ef3ab801078b1",
+  "src/Effect4/Machine/Fibers.lean": "acc2e0605aaf81c14e1c604ef476d5c02ebeca3a28ff3ed7200a21eb51f61649",
+  "src/Effect4/Laws/Program/Sched.lean": "0a26f79cbd0be936f60c0ec51b692e36712d73f3f54dcb9c4520a88a00485776",
+  "src/Effect4/Laws/Program/EvaluateR.lean": "a457a1df0a8576787957ca3e4fc8661708c1314ed365e33e8c36e834c7683777",
+  "src/Effect4/Laws/Program/InterpR.lean": "17c9cf25584304cf64ca7516fe78a6daf56b7faf4aca09b8e4d5f806d7bdd9ae",
+  "src/Effect4/Laws/Program/RuntimeR.lean": "ad7de04b313e20e7c6327e7f1b45413895c9a6c7a058893c752f844e755b5147",
+  "src/Effect4/Program/Checker.lean": "2098d1bfdfa32a3d7c9c862e8946a102432b6526a24c376647a01c300f3876b2",
+  "src/Effect4/Program/Typed.lean": "de510c59c9fb211d9d59c687aeaefe7bd0fe8970ff1427e1579402fba0b9a625",
+  "src/Effect4/Program/Ty.lean": "ca9e83f2e03e55a7454554c3ce606e645d962a75fc58154aa4e3f22745262655",
+  "ocaml/engine/e4_table.mli": "d513fc0fd4e5e54a822d7462705933befd7db61513faa9638ac93987d1fa52d8",
+  "ocaml/engine/e4_memo.mli": "bc583bf2d890e0346c358dfc70d96147458ec8fae3aa75f6fab1d75769340c47"
+}

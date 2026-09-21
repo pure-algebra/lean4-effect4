@@ -221,7 +221,6 @@ active parked machine belongs to M3b; world validity and transport belong to sli
 theorem park_extension (w : World) (id : FiberId) (token : Nat) (ty : EffTy)
     (_fresh : w.Θ id token = none) : ProofGraph.Obligation
     (w.le (w.addToken id token ty) ∧ (w.addToken id token ty).Θ id token = some ty) := ⟨⟩
-#proof_wanted park_extension
 
 theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key : RefKey)
     (_step : syncOpStep (.refMake value) w.state = some (state, Val.cell key))
@@ -403,6 +402,26 @@ theorem order_trans (a b c : World) : a.le b → b.le c → a.le c :=
 
 theorem protocol_order : ∃ order : Effect4.Laws.Effects.WorldOrder World, order.le = World.le :=
   ⟨⟨World.le, order_refl, fun h₁ h₂ => order_trans _ _ _ h₁ h₂⟩, rfl⟩
+
+theorem park_extension (w : World) (id : FiberId) (token : Nat) (ty : EffTy)
+    (fresh : w.Θ id token = none) :
+    w.le (w.addToken id token ty) ∧ (w.addToken id token ty).Θ id token = some ty := by
+  refine ⟨⟨Effect4.Machine.World.le_refl _, table_refl _, table_refl _, table_refl _,
+    ⟨fun _ _ h => h, fun _ _ h => h⟩, ?_⟩, ?_⟩
+  · intro target
+    by_cases same : target = id
+    · subst target
+      change TableExtends (w.Θ id) (fun query =>
+        (if id = id then tableInsert (w.Θ id) token ty else w.Θ id) query)
+      rw [if_pos rfl]
+      exact insert_extends _ _ _ fresh
+    · change TableExtends (w.Θ target) (fun query =>
+        (if target = id then tableInsert (w.Θ target) token ty else w.Θ target) query)
+      rw [if_neg same]
+      exact table_refl _
+  · change (if id = id then tableInsert (w.Θ id) token ty else w.Θ id) token = some ty
+    rw [if_pos rfl]
+    exact insert_here _ _ _
 
 theorem heap_typed_at_mono (w newer : World) (key : RefKey) (ty : Ty) :
     w.le newer → HeapTypedAt w key ty → HeapTypedAt newer key ty :=
@@ -751,7 +770,9 @@ attribute [aesop norm simp (rule_sets := [Effect4.TypedState])]
 end Effect4.Program.Typed
 
 
+#obligation_proved Effect4.Program.Typed.WorldWanted.park_extension := @Effect4.Program.Typed.park_extension
+
 #obligation_proved Effect4.Program.Typed.WorldWanted.memoBuild_extension := @Effect4.Program.Typed.memoBuild_extension
 
 #typed_state_obligations Effect4.Program.Typed.WorldControlWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])
-#typed_state_obligations Effect4.Program.Typed.WorldWanted ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])
+#typed_state_obligations Effect4.Program.Typed.WorldWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])

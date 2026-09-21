@@ -1,0 +1,9 @@
+{
+  "src/Effect4/Laws/Program/Typed/World.lean": "4bf3c68e1c1f09f5d4d2c68a0908e8e40174b02ee72aa69a3db30b0ca2e5b66d",
+  "src/Effect4/Laws/Program/Typed/Validity.lean": "dcaa03c738d39fb9c7f03a2094c0d44425b482e27498d2737e4984cdcc2e0030",
+  "Test/Program/TypedWorldValidity.lean": "a6b7df21b8ec96a2ea032cf4d45f81ff13f1f08ab1826b3349d3c8fa7879cadd",
+  "Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean": "ea395d073f51853cbdbb23e28c04bd710f09f9fd19139b6e3893c2b8db537aab",
+  "Test/Counterexamples/Machine/Semantics/StrongExitDefect.lean": "142a8e849cd38e18127fa101ce10d2c213403feb9bb1a45284d6c7eea805451e",
+  "src/Effect4/Laws.lean": "8f4d6b63f18e0e8493cf4203e5a515b26eeb48849bf99a33cd1a562aff9b1b9e",
+  "Test/All.lean": "cc2d76fd5890ebf6718febdeaf8cd94948a5b8caa2545dafdf54567b03edff69"
+}

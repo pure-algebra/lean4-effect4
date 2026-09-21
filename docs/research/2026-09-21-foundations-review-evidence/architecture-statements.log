@@ -1,0 +1,52 @@
+FoundationsArchitectureStatements: 4 open, 0 proved, 4 total; ceiling 4
+FoundationsArchitectureStatements.completion_transport :
+  ProofGraph.Obligation
+    (∀ (before after : Effect4.Program.Typed.World) (types : Effect4.Program.Ty × Effect4.Program.Ty),
+      Effect4.Program.Typed.TableExtends before.Ρ after.Ρ →
+        Effect4.Program.Extends before.state.externals.allocated after.state.externals.allocated →
+          ∀
+            (completion :
+              Effect4.Machine.Completion Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+                Effect4.Machine.Ann),
+            Effect4.Program.Typed.CompletionOk before types completion →
+              Effect4.Program.Typed.CompletionOk after types completion)
+FoundationsArchitectureStatements.indexed_ref_step_preserves :
+  ProofGraph.Obligation
+    (∀ (P : Nat → Effect4.Machine.Val → Prop) (Q : Effect4.Machine.Val → Prop) (op : Effect4.Machine.SyncOp)
+      (cell : Effect4.Machine.RefKey) (kernel : Effect4.Machine.RefKernel) (before after : Effect4.Machine.RefHeap)
+      (answer : Effect4.Machine.Val),
+      op.refKernel = some (cell, kernel) →
+        (∀ (index : Nat) (value : Effect4.Machine.Val),
+            Effect4.Machine.refPeek before { index := index } = some value → P index value) →
+          Effect4.Machine.RefKernel.Keeps (P cell.index) Q kernel →
+            Effect4.Machine.refStep op before = some (answer, after) →
+              Q answer ∧
+                (∀ (index : Nat) (value : Effect4.Machine.Val),
+                    Effect4.Machine.refPeek after { index := index } = some value → P index value) ∧
+                  List.length after = List.length before ∧
+                    ∀ (index : Nat),
+                      index ≠ cell.index →
+                        Effect4.Machine.refPeek after { index := index } =
+                          Effect4.Machine.refPeek before { index := index })
+FoundationsArchitectureStatements.projects_compose.{u, v, w, x, y} :
+  ProofGraph.Obligation
+    (∀ {Concrete : Type u} {Middle : Type v} {Model : Type w} {Op : Type x} {Answer : Type y}
+      (first : Concrete → Middle) (second : Middle → Model) (stepConcrete : Op → Concrete → Option (Concrete × Answer))
+      (stepMiddle : Op → Middle → Option (Middle × Answer)) (stepModel : Op → Model → Option (Model × Answer))
+      (concreteValid : Concrete → Prop) (middleValid : Middle → Prop),
+      Effect4.Machine.Refinement.Projects first stepConcrete stepMiddle concreteValid →
+        Effect4.Machine.Refinement.Projects second stepMiddle stepModel middleValid →
+          Effect4.Machine.Refinement.Projects (second ∘ first) stepConcrete stepModel fun concrete =>
+            concreteValid concrete ∧ middleValid (first concrete))
+FoundationsArchitectureStatements.projects_induces_refines.{u, v, w, x} :
+  ProofGraph.Obligation
+    (∀ {Concrete : Type u} {Model : Type v} {Op : Type w} {Answer : Type x} (project : Concrete → Model)
+      (stepConcrete : Op → Concrete → Option (Concrete × Answer)) (stepModel : Op → Model → Option (Model × Answer))
+      (valid : Concrete → Prop),
+      Effect4.Machine.Refinement.Projects project stepConcrete stepModel valid →
+        Effect4.Machine.Refinement.Refines (fun concrete model => valid concrete ∧ project concrete = model)
+          stepConcrete stepModel)
+'FoundationsArchitectureStatements.completion_transport' depends on axioms: [propext, Quot.sound]
+'FoundationsArchitectureStatements.indexed_ref_step_preserves' depends on axioms: [propext]
+'FoundationsArchitectureStatements.projects_compose' does not depend on any axioms
+'FoundationsArchitectureStatements.projects_induces_refines' does not depend on any axioms

@@ -1,0 +1,34 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/ProtocolAdmissionProbe.lean:80:28: error: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Program.Point.mk` has 6 explicit field, but only 4 were provided
+'FoundationsProtocolAdmissionProbe.higherOrder_certificate_applies' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.not_every_type_is_closed' does not depend on any axioms
+'FoundationsProtocolAdmissionProbe.open_reference_type_shape_admitted' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.typed_at_false_with_impossible_post' does not depend on any axioms
+'FoundationsProtocolAdmissionProbe.impossible_post_has_no_answer' does not depend on any axioms
+'FoundationsProtocolAdmissionProbe.inhabited_post_has_answer' does not depend on any axioms
+'FoundationsProtocolAdmissionProbe.typed_at_true_with_inhabited_post' does not depend on any axioms
+'FoundationsProtocolAdmissionProbe.pure_false_rejected' does not depend on any axioms
+'FoundationsProtocolAdmissionProbe.checker_accepts_static_nat_environment' depends on axioms: [propext, Quot.sound]
+'FoundationsProtocolAdmissionProbe.runtime_environment_returns_bool' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.runtime_bool_does_not_fit_static_nat' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.matching_runtime_environment_returns_nat' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.unchecked_environment_produces_open_type' depends on axioms: [propext, Quot.sound]
+'FoundationsProtocolAdmissionProbe.checker_path_is_only_a_diagnostic_location' depends on axioms: [propext,
+ sorryAx,
+ Quot.sound]
+'FoundationsProtocolAdmissionProbe.immutable_point_can_name_no_node' depends on axioms: [propext, sorryAx]
+'FoundationsProtocolAdmissionProbe.missing_node_refuses_at_reference_interpreter' depends on axioms: [propext,
+ sorryAx,
+ Quot.sound]
+'FoundationsProtocolAdmissionProbe.root_address_is_a_positive_control' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.forged_handle_exit_fits' depends on axioms: [propext, Quot.sound]
+'FoundationsProtocolAdmissionProbe.forged_handle_does_not_exist' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.coarse_pure_forged_handle_is_typed' depends on axioms: [propext, Quot.sound]
+'FoundationsProtocolAdmissionProbe.bad_shape_exit_fits' depends on axioms: [propext, Quot.sound]
+'FoundationsProtocolAdmissionProbe.coarse_pure_bad_shape_is_typed' depends on axioms: [propext, Quot.sound]
+'FoundationsProtocolAdmissionProbe.malformed_extension' depends on axioms: [propext, Quot.sound]
+'FoundationsProtocolAdmissionProbe.malformed_world_not_wf' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.wf_not_monotone_even_with_equal_external_spellings' depends on axioms: [propext,
+ Quot.sound]
+'FoundationsProtocolAdmissionProbe.bool_allocation_succeeds' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.bool_read_succeeds' depends on axioms: [propext]
+'FoundationsProtocolAdmissionProbe.bool_heap_is_not_legacy_nat_heap' depends on axioms: [propext]

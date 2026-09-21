@@ -31,3 +31,10 @@ controls or conditional theorems at their stated scopes.
 `lake build Effect4.Laws.Program.Typed.Validity` passed (360 jobs).
 `Effect4.Program.Typed.M2Validity`: 15 open, 0 proved, ceiling 15.
 This checkpoint establishes elaboration of declarations, not their payloads.
+
+## Implementation checkpoint
+
+Slice 3 closes all 15 new obligations and park_extension, with full checks and a fresh
+unique ledger of 324 total / 315 proved / 9 open. The preflight refutes three claims in the
+additional input. Slice 4 is held under dispatch §2; its pending scope choice and exact
+remaining work are recorded in `2026-09-21-foundations-slice4-receipt.md`.

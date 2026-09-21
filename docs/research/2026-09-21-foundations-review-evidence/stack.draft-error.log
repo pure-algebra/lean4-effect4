@@ -1,0 +1,83 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:11:40: error(lean.unknownIdentifier): Unknown identifier `Requirement.empty`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:16:33: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:18:40: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:26:17: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:26:80: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:35:65: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:44:68: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat FiberId 1
+numerals are polymorphic in Lean, but the numeral `1` cannot be used in a context where the expected type is
+  FiberId
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:59:39: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat FiberId 1
+numerals are polymorphic in Lean, but the numeral `1` cannot be used in a context where the expected type is
+  FiberId
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:59:4: error: 'change' tactic failed, pattern
+  some (Cause.interrupt (some 1)) = some cause
+is not definitionally equal to target
+  interruptSaved.interruptedCause = some cause
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:78:45: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:79:46: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:79:63: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-21-foundations-review-evidence/StackProbe.lean:86:34: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+
+  Machine.World : Type
+'FoundationsStackProbe.marker_has_continuation_type' depends on axioms: [propext, sorryAx, Quot.sound]
+'FoundationsStackProbe.marker_payload_wrong' depends on axioms: [propext, sorryAx, Quot.sound]
+'FoundationsStackProbe.answer_marker_discards_continuation' depends on axioms: [propext]
+'FoundationsStackProbe.failure_fits_before' depends on axioms: [propext, sorryAx, Quot.sound]
+'FoundationsStackProbe.failure_does_not_fit_after' depends on axioms: [propext, sorryAx, Quot.sound]
+'FoundationsStackProbe.landed_resume_rejects_catch' depends on axioms: [propext, sorryAx, Quot.sound]
+'FoundationsStackProbe.unchanged_type_is_admitted' depends on axioms: [propext, sorryAx, Quot.sound]
+'FoundationsStackProbe.handler_runs' depends on axioms: [propext]
+'FoundationsStackProbe.handler_skips_original_failure' depends on axioms: [propext, sorryAx]
+'FoundationsStackProbe.interrupt_saved_has_provenance' depends on axioms: [propext, sorryAx]
