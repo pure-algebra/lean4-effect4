@@ -451,13 +451,12 @@ theorem registerRace_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : Ru
   try dsimp only
   split <;> trace_leaf
 
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem finishFrame_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {next : FrameStep ν σ β ε δ ι α} {events : List (FrameEvent ν σ β ε δ ι α)}
     {nested : List (Cmd ν σ β ε δ ι α)} :
     Extends m (evaluatePrim.finishFrame m f yielding next events nested).machine := by
   unfold evaluatePrim.finishFrame
-  try dsimp only
+  dsimp only
   split <;> trace_leaf
 
 theorem stepFrame_extends {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}

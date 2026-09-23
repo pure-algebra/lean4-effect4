@@ -999,13 +999,12 @@ theorem step_fst_success (root : NativeEff) (v : Val) (K : List NCode) (i : Bool
     (some (Exit.success v))).1 = _
   unfold FrameFiber.resumeValue resumeOf
   generalize (fiberOf (Prim.success v) K i).getCont Effect4.Arm.contA false = pop
-  rcases pop with ⟨ans, _, _, fib⟩
-  cases ans
-  all_goals first
-    | rfl
-    | (rename_i fr
-       dsimp only
-       rcases Prim.armA (primOf root) fr v (some (Exit.success v)) with _ | ⟨_, _⟩ <;> rfl)
+  rcases pop with ⟨ans, _, _, fib, carried⟩
+  cases ans with
+  | frame fr =>
+    dsimp only
+    rcases Prim.armA (primOf root) fr v (some (Exit.success v)) with _ | ⟨_, _⟩ <;> rfl
+  | _ => rfl
 
 /-- The frame machine's answer to a cause, from the pop alone. -/
 theorem step_fst_failure (root : NativeEff) (c : CauseV) (K : List NCode) (i : Bool) :
@@ -1015,14 +1014,15 @@ theorem step_fst_failure (root : NativeEff) (c : CauseV) (K : List NCode) (i : B
   show (FrameFiber.resumeCause (primOf root) (fiberOf (Prim.failure c) K i) c
     (some (Exit.failure c))).1 = _
   unfold FrameFiber.resumeCause resumeOf
+  rw [FrameFiber.getCont_no_pending _ _ _ (some c) rfl]
+  simp only [FramePop.deliveredExit, Option.getD_some, Option.map_some]
   generalize (fiberOf (Prim.failure c) K i).getCont Effect4.Arm.contE true = pop
-  rcases pop with ⟨ans, _, _, fib⟩
-  cases ans
-  all_goals first
-    | rfl
-    | (rename_i fr
-       dsimp only
-       rcases Prim.armE (primOf root) fr c (some (Exit.failure c)) with _ | ⟨_, _⟩ <;> rfl)
+  rcases pop with ⟨ans, _, _, fib, carried⟩
+  cases ans with
+  | frame fr =>
+    dsimp only
+    rcases Prim.armE (primOf root) fr c (some (Exit.failure c)) with _ | ⟨_, _⟩ <;> rfl
+  | _ => rfl
 
 /-- The iteration a local step predicts, its events left open. -/
 def iterOf (m : Api.Machine) (f : NRunFiber) (ev : NTrace) : LocalStep → NIter
@@ -1043,58 +1043,59 @@ theorem evaluatePrim_localStep (root : NativeEff) (m : Api.Machine) (cur : NCode
     rw [evaluatePrim_success root m _ v rfl, localStep_success]
     unfold evaluatePrim.finalizerOr exitFrom popOf
     simp only [stepFrame_eq, fiberAt_frame, step_fst_success]
+    simp only [FramePop.deliveredExit]
     unfold iterOf evaluatePrim.finishFrame
     have hcur : (fiberOf (Prim.success v) K i).current = Prim.success v := rfl
     simp only [fiberAt_frame, frameExitState, hcur]
     generalize (fiberOf (Prim.success v) K i).getCont Effect4.Arm.contA false = pop
-    rcases pop with ⟨ans, _, _, fib⟩
+    rcases pop with ⟨ans, _, _, fib, carried⟩
     cases ans
     · exact ⟨_, rfl⟩
     · exact ⟨_, rfl⟩
     · rename_i fr
       dsimp only [resumeOf]
       generalize Prim.armA (primOf root) fr v (some (Exit.success v)) = arm
-      cases fr
-      all_goals first
-        | (rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩)
-        | (rename_i fin _
-           dsimp only
-           rcases (interpAt root []).finalizerProgram fin (Exit.success v) with _ | program
-           · rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
-           · exact ⟨_, rfl⟩)
+      cases fr with
+      | onExit body fin flag =>
+        dsimp only
+        rcases (interpAt root []).finalizerProgram fin (Exit.success v) with _ | program
+        · rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
+        · exact ⟨_, rfl⟩
+      | _ => rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
     · exact ⟨_, rfl⟩
   | failure c =>
     rw [evaluatePrim_failure root m _ c rfl, localStep_failure]
     unfold evaluatePrim.finalizerOr exitFrom popOf
     simp only [stepFrame_eq, fiberAt_frame, step_fst_failure]
+    rw [FrameFiber.getCont_no_pending _ _ _ (some c) rfl]
+    simp only [FramePop.deliveredExit, Option.getD_some]
     unfold iterOf evaluatePrim.finishFrame
     have hcur : (fiberOf (Prim.failure c) K i).current = Prim.failure c := rfl
     simp only [fiberAt_frame, frameExitState, hcur]
     generalize (fiberOf (Prim.failure c) K i).getCont Effect4.Arm.contE true = pop
-    rcases pop with ⟨ans, _, _, fib⟩
+    rcases pop with ⟨ans, _, _, fib, carried⟩
     cases ans
     · exact ⟨_, rfl⟩
     · exact ⟨_, rfl⟩
     · rename_i fr
       dsimp only [resumeOf]
       generalize Prim.armE (primOf root) fr c (some (Exit.failure c)) = arm
-      cases fr
-      all_goals first
-        | (rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩)
-        | (rename_i fin _
-           dsimp only
-           rcases (interpAt root []).finalizerProgram fin (Exit.failure c) with _ | program
-           · rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
-           · exact ⟨_, rfl⟩)
+      cases fr with
+      | onExit body fin flag =>
+        dsimp only
+        rcases (interpAt root []).finalizerProgram fin (Exit.failure c) with _ | program
+        · rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
+        · exact ⟨_, rfl⟩
+      | _ => rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
     · exact ⟨_, rfl⟩
   | sync t => exact absurd rfl (hns t)
-  | _ =>
-    first
-      | (rw [evaluatePrim_stepShape root m _ _ rfl (parkOf_plain root hpl) rfl, stepFrame_eq,
-          fiberAt_frame, localStep_other root _ K i m.state (fun _ h => by cases h)
-            (fun _ h => by cases h) (fun _ h => by cases h)]
-         rcases ((fiberOf _ K i).step (primOf root)).1 with _ | _ <;> exact ⟨_, rfl⟩)
-      | simp [PlainCode] at hpl
+  | yieldableError _ | suspend _ | onSuccess _ _ | onFailure _ _
+  | onSuccessAndFailure _ _ _ | exitFrame _ | onExit _ _ _ | whileLoop _ _ =>
+    rw [evaluatePrim_stepShape root m _ _ rfl (parkOf_plain root hpl) rfl, stepFrame_eq,
+      fiberAt_frame, localStep_other root _ K i m.state (fun _ h => by cases h)
+        (fun _ h => by cases h) (fun _ h => by cases h)]
+    rcases ((fiberOf _ K i).step (primOf root)).1 with _ | _ <;> exact ⟨_, rfl⟩
+  | _ => simp only [PlainCode, Bool.false_eq_true] at hpl
 
 /-! ### The native scope protocol does not intercept the plain run -/
 
@@ -1173,9 +1174,12 @@ theorem exitScoped_eq_evaluatePrim (root : NativeEff) (m : Api.Machine)
     exitScoped root m f yielding ex = evaluatePrim (interpAt root m.completedExits) m f yielding := by
   unfold exitScoped
   cases ex <;> dsimp only <;> split
-  all_goals first
-    | (next body previous scope flag hpop => exact False.elim (h body previous scope flag hpop))
-    | rfl
+  · next body previous scope flag hpop => exact False.elim (h body previous scope flag hpop)
+  · rfl
+  · next body previous scope flag hpop =>
+    rw [FrameFiber.getCont_answer_cause] at hpop
+    exact False.elim (h body previous scope flag hpop)
+  · rfl
 
 /-- Plain code and a plain stack exclude both native scoped entry and exit.
 The construction view remains the machine's actual completed-exit view. -/

@@ -86,7 +86,14 @@ def popR (interp : RInterp) (ex : ExitV) : List ScopeFrame → RSaved → RSaved
           | .onExit _ => { frame with stack := .finalizerMask flag :: frame.stack }
           | _ => frame
         ({ frame with current := next ex }, none)
-      else popR interp ex rest frame
+      else
+        -- Signed divergence U-01, checkpoint.exit-failcause-skip: a preempted
+        -- catch strips Fail reasons and retains the recorded interrupt.
+        let ex' := match ex, frame.interruptedCause with
+          | .failure cause, some interrupted =>
+            if kind.hasExitArm ex then .failure (Cause.sanitize cause interrupted) else ex
+          | _, _ => ex
+        popR interp ex' rest frame
     | .answer next =>
       match next ex with
       | .pure ex' => popR interp ex' rest frame

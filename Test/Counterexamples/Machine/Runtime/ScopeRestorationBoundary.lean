@@ -75,8 +75,10 @@ def failureCause : C := ⟨[Reason.die 2 ReasonAnnotations.empty, Reason.die 1 R
   some (.finished (.failure failureCause), maskEvents ++ [.yielded (.failure failureCause)])
 #guard referenceResume failedClose.1
     { successFiber with stack := [.setInterruptible true, .onFailure (.success 0) 77] } =
-  some (.finished (.failure failureCause), maskEvents ++
-    [.popped (.onFailure (.success 0) 77), .yielded (.failure failureCause)])
+  -- U-01: passing a preempted catch adds the recorded interrupt while retaining defects.
+  some (.finished (.failure (Cause.combine failureCause pending)), maskEvents ++
+    [.popped (.onFailure (.success 0) 77),
+      .yielded (.failure (Cause.combine failureCause pending))])
 #guard referenceResume failedClose.1
     { successFiber with stack := [.setInterruptible true, .onExit (.success 0) 8 false] } =
   some (.running ⟨.failure (Cause.combine failureCause (Cause.die 8)),

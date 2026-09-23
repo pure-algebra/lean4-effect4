@@ -5,7 +5,7 @@
   "effect": "4.0.0-rc.112",
   "bun": "1.4.2",
   "timeoutMs": 300,
-  "summary": "PASS: 36 programs, exits, schedules and sync exits agree with rc.112",
+  "summary": "PASS: 36 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
   "rows": [
     {
       "program": "p42",
@@ -5898,6 +5898,92 @@
           "0:OnSuccess",
           "0:Success",
           "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "exception": "U-01",
+      "scenario": "U-01",
+      "program": "pInterruptEscape",
+      "leanExit": "interrupt [{\"interrupt\":0}]",
+      "hostExit": "fail [{\"fail\":42}]",
+      "entry": "runPromiseExit",
+      "exitAgree": false,
+      "scheduleAgree": false,
+      "runSyncAgree": true,
+      "notes": [
+        "kind: Lean interrupt, rc.112 fail",
+        "schedule differ at row 4: Lean \"exited 0 interrupt\", rc.112 \"exited 0 fail\"",
+        "U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "fail": 42
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "parked 0",
+          "resumed 0",
+          "started 0",
+          "exited 0 fail"
+        ],
+        "events": [
+          "started 0",
+          "parkedOn 0",
+          "resumedWith 0",
+          "started 0",
+          "exited 0 {\"failure\":{\"reasons\":[{\"fail\":42}]}}"
+        ],
+        "frames": [
+          "0:OnFailure",
+          "0:WithFiber",
+          "0:OnSuccess",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:Async",
+          "0:Success",
+          "0:Failure"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "die": "asyncFiber"
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "parked 0"
+        ],
+        "events": [
+          "started 0",
+          "parkedOn 0"
+        ],
+        "frames": [
+          "0:OnFailure",
+          "0:WithFiber",
+          "0:OnSuccess",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:Async"
         ],
         "late": [],
         "settledLater": null

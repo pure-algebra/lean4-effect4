@@ -910,7 +910,7 @@ theorem w6_parallel_forks_and_merges :
       exitOf w6Parallel 0 =
         some (Exit.failure ⟨[Reason.fail (Err.tag 4) ReasonAnnotations.empty]⟩) ∧
       scopeClosed w6Parallel 4 = some true :=
-  by aesop
+  by decide +kernel
 
 /-! ## W10 — a program that masks its own fiber (M2)
 
@@ -1402,7 +1402,7 @@ theorem forbidden_observers_and_double_exit :
       traceWellFormed w11Cancelled.trace [] = true ∧
       traceWellFormed w12AwaitAll.trace [] = true ∧
       traceWellFormed w13.trace [] = true := by
-  decide
+  decide +kernel
 
 /-- Forbidden 2, as a fact about the step function rather than one tape: an interrupt of a
 *running* interruptible fiber is never applied; it sets `deferredInterrupt`

@@ -55,6 +55,10 @@ def main():
         subprocess.run([bun, 'run', host_path(truth/'run-truth.ts'), '--manifest', host_path(manifest),
                         '--out', host_path(Path(work)), '--timeout', '300',
                         '--tape-out', host_path(Path(work)/'tapes')], cwd=root, check=True, timeout=180)
+        signed = [row for row in json.loads((Path(work)/'result.json').read_text())['rows']
+                  if row.get('exception') == 'U-01']
+        if len(signed) != 1 or signed[0]['program'] != 'pInterruptEscape':
+            sys.exit('FAIL truth: the exact signed U-01 fixture must run once')
         # DI-49: the modules rc.112 just ran, and the adapter they call, under the pinned
         # compiler. The config is copied beside them so that `generated/` and `prelude.ts`
         # resolve as they do in the tree, and `effect`/`@types/bun` through the link above.
@@ -88,7 +92,7 @@ def main():
         for file in fresh.glob('*') if fresh.is_dir() else []:
             if file.read_bytes() != (tapes/file.name).read_bytes():
                 sys.exit(f'FAIL truth: tape {file.name} drifted; rc.112 answered differently from the committed tape')
-    print('PASS truth: pinned corpus and bounded exit/schedule differential agree; '
+    print('PASS truth: pinned corpus, bounded differential and signed U-01 divergence checked; '
           'the regenerated modules type-check')
     return 0
 

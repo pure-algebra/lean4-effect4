@@ -46,7 +46,7 @@ coverage_row="$(awk -F '\t' '$1 == "coverage" { print; exit }' "$tmp_root/eviden
   printf 'FAIL runtime coverage module emitted no coverage row\n' >&2
   exit 1
 }
-IFS=$'\t' read -r _ total denominator owned_green green partial absent <<<"$coverage_row"
+IFS=$'\t' read -r _ total denominator owned_green green partial absent diverged <<<"$coverage_row"
 excluded=$((total - denominator))
 partial_ids="$(awk -F '\t' '$1 == "row" && $5 == "partial" { print $2 }' "$tmp_root/evidence.tsv" | paste -sd ' ' -)"
 commit="$(cd -- "$repo_root" && git rev-parse --short HEAD 2>/dev/null || printf 'unknown')"
@@ -57,7 +57,8 @@ fi
 
 printf 'Effect rc.112 runtime coverage: denominator %s; owned-with-green %s/%s;\n' \
   "$denominator" "$owned_green" "$denominator"
-printf 'green %s, partial %s, absent %s; census %s rows, %s excluded\n' \
-  "$green" "$partial" "$absent" "$total" "$excluded"
+printf 'green %s, partial %s, absent %s, diverged %s; census %s rows, %s excluded\n' \
+  "$green" "$partial" "$absent" "$diverged" "$total" "$excluded"
 printf 'partial: %s\n' "${partial_ids:-none}"
+awk -F '\t' '$1 == "divergence" { printf "divergence: %s; %s; %s\n", $2, $3, $4 }' "$tmp_root/evidence.tsv"
 printf 'produced at %s%s by scripts/report-effect-runtime-coverage.sh\n' "$commit" "$dirty"

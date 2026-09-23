@@ -1296,7 +1296,17 @@ theorem exitScoped_restores
       .frame (Prim.onExit body (.scopedExit previous scope) flag)) :
     (exitScoped root m f yielding ex).fiber.context = previous := by
   unfold exitScoped
-  cases ex <;> dsimp only at ha ⊢ <;> rw [ha] <;> dsimp only <;> split <;> rfl
+  cases ex with
+  | success value =>
+    dsimp only at ha ⊢
+    rw [ha]
+    dsimp only
+    split <;> rfl
+  | failure cause =>
+    dsimp only at ha ⊢
+    rw [FrameFiber.getCont_answer_cause, ha]
+    dsimp only
+    split <;> rfl
 
 end joinWitnesses
 

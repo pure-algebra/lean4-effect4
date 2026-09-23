@@ -348,7 +348,7 @@ inductive FrameEvent (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Typ
   | yielded (exit : Exit β ε δ ι α)
 deriving DecidableEq
 
-/-- The four observations of one pop. -/
+/-- The stack observations and delivered failure of one pop. -/
 structure FramePop (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
   /-- What the pop answered. -/
   answer : ContAnswer ν σ β ε δ ι α
@@ -358,6 +358,9 @@ structure FramePop (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type 
   events : List (FrameEvent ν σ β ε δ ι α)
   /-- The fiber after the pop. -/
   fiber : FrameFiber ν σ β ε δ ι α
+  /-- The explicitly supplied failure after any preempted catches. `none` is
+  a structural walk without a delivered failure. Signed divergence U-01. -/
+  carriedCause : Option (Cause ε δ ι α) := none
 deriving DecidableEq
 
 /-- One step either continues or finishes with an exit. `running` at exhausted
@@ -371,6 +374,14 @@ inductive FrameStep (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type
 deriving DecidableEq
 
 variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+
+/-- The delivered exit after the walk. Successes retain their value; failure
+delivery uses the cause the walk carried through preempted handlers.
+census: checkpoint.exit-failcause-skip -/
+def FramePop.deliveredExit (pop : FramePop ν σ β ε δ ι α) :
+    Exit β ε δ ι α → Exit β ε δ ι α
+  | .success value => .success value
+  | .failure cause => .failure (pop.carriedCause.getD cause)
 
 namespace FrameFiber
 
@@ -1449,7 +1460,27 @@ ones the rest of the traversal produced. census: rule.frames-are-primitives -/
 def passOn (frame : Prim ν σ β ε δ ι α) (replacement : Option (Prim ν σ β ε δ ι α))
     (tail : FramePop ν σ β ε δ ι α) : FramePop ν σ β ε δ ι α :=
   FramePop.mk tail.answer (frame :: tail.popped)
-    (frame.passEvents replacement ++ tail.events) tail.fiber
+    (frame.passEvents replacement ++ tail.events) tail.fiber tail.carriedCause
+
+section Carried
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
+/-- Update only the failure carried past a preempted failure handler. Mask-hook
+replacements are not handlers: `SetInterruptible` has no failure arm.
+Signed divergence U-01 from rc.112 `internal/core.ts:539-545`.
+census: checkpoint.exit-failcause-skip -/
+def skippedCause (demand : Arm) (frame : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) : Option (Cause ε δ ι α) → Option (Cause ε δ ι α)
+  | none => none
+  | some cause =>
+    if demand == .contE && frame.hasArm .contE then
+      match fiber.interruptedCause with
+      | some interrupted => some (Cause.sanitize cause interrupted)
+      | none => some cause
+    else some cause
+
+@[simp] theorem skippedCause_none (demand : Arm) (frame : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) : skippedCause demand frame fiber none = none := rfl
 
 /-- One non-recursive step over the frames a `contAll` hook pushed. rc.112 pops
 from the live `_stack`, so a pushed frame is popped before the frames that were
@@ -1470,10 +1501,11 @@ answers with it, so the pop loop reads it as "keep going". A frame that answers
 while the skip is on and the fiber is interrupted is discarded the same way the
 loop discards it, which is `exitFailCause`'s outer loop.
 census: rule.frames-are-primitives -/
-def passPushed (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α) :
+def passPushed (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Option (Cause ε δ ι α) := none) :
     FramePop ν σ β ε δ ι α :=
   match fiber.stack with
-  | [] => FramePop.mk ContAnswer.empty [] [] fiber
+  | [] => FramePop.mk ContAnswer.empty [] [] fiber cause
   | pushed :: below =>
     FramePop.mk
       (match Prim.answerOf pushed demand
@@ -1486,26 +1518,66 @@ def passPushed (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ �
       [pushed]
       (pushed.passEvents (pushed.ensure { fiber with stack := below }).snd)
       (pushed.ensure { fiber with stack := below }).fst
+      (match Prim.answerOf pushed demand
+          (pushed.ensure { fiber with stack := below }).snd with
+        | some _ =>
+          if skip && (pushed.ensure { fiber with stack := below }).fst.interrupted then
+            skippedCause demand pushed (pushed.ensure { fiber with stack := below }).fst cause
+          else cause
+        | none => cause)
+
+theorem passPushed_fiber_cause (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Option (Cause ε δ ι α)) :
+    (passPushed demand skip fiber cause).fiber = (passPushed demand skip fiber).fiber := by
+  cases hs : fiber.stack <;> simp only [passPushed, hs]
+
+theorem passPushed_answer_cause (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Option (Cause ε δ ι α)) :
+    (passPushed demand skip fiber cause).answer = (passPushed demand skip fiber).answer := by
+  cases hs : fiber.stack <;> simp only [passPushed, hs]
+
+theorem passPushed_popped_cause (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Option (Cause ε δ ι α)) :
+    (passPushed demand skip fiber cause).popped = (passPushed demand skip fiber).popped := by
+  cases hs : fiber.stack <;> simp only [passPushed, hs]
+
+theorem passPushed_events_cause (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Option (Cause ε δ ι α)) :
+    (passPushed demand skip fiber cause).events = (passPushed demand skip fiber).events := by
+  cases hs : fiber.stack <;> simp only [passPushed, hs]
+
+@[simp] theorem passPushed_carriedCause_none (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    (passPushed demand skip fiber).carriedCause = none := by
+  unfold passPushed
+  split
+  · rfl
+  · dsimp only
+    split
+    · split <;> rfl
+    · rfl
 
 /-- What the traversal produces once a frame has been passed: the frame its hook
 pushed is popped first, and only if that frame did not answer does the traversal
 reach `tail`, the pop over the frames that were left.
 census: rule.frames-are-primitives -/
 def joinPushed (demand : Arm) (skip : Bool) (afterHook : FrameFiber ν σ β ε δ ι α)
-    (rest : List (Prim ν σ β ε δ ι α)) (tail : FramePop ν σ β ε δ ι α) :
+    (rest : List (Prim ν σ β ε δ ι α)) (tail : FramePop ν σ β ε δ ι α)
+    (cause : Option (Cause ε δ ι α) := none) :
     FramePop ν σ β ε δ ι α :=
-  match (passPushed demand skip afterHook).answer with
+  match (passPushed demand skip afterHook cause).answer with
   | ContAnswer.empty =>
     FramePop.mk tail.answer
-      ((passPushed demand skip afterHook).popped ++ tail.popped)
-      ((passPushed demand skip afterHook).events ++ tail.events)
-      tail.fiber
+      ((passPushed demand skip afterHook cause).popped ++ tail.popped)
+      ((passPushed demand skip afterHook cause).events ++ tail.events)
+      tail.fiber tail.carriedCause
   | answer =>
     FramePop.mk answer
-      (passPushed demand skip afterHook).popped
-      (passPushed demand skip afterHook).events
-      { (passPushed demand skip afterHook).fiber with
-        stack := (passPushed demand skip afterHook).fiber.stack ++ rest }
+      (passPushed demand skip afterHook cause).popped
+      (passPushed demand skip afterHook cause).events
+      { (passPushed demand skip afterHook cause).fiber with
+        stack := (passPushed demand skip afterHook cause).fiber.stack ++ rest }
+      (passPushed demand skip afterHook cause).carriedCause
 
 /-- rc.112's `getCont` pop loop fused with the handler-skipping loop of
 `exitFailCause`, as one structural recursion over the frame list. It is
@@ -1524,40 +1596,142 @@ The recursion stays structural on the frames the pop started with, so `popFrom`
 reduces in the kernel and `decide`/`rfl` receipts over `step` and `run` keep
 working. One drain step suffices by `ensure_stack_cases`, not by assumption.
 census: rule.frames-are-primitives -/
-def popFrom (demand : Arm) (skip : Bool) :
-    List (Prim ν σ β ε δ ι α) -> FrameFiber ν σ β ε δ ι α -> FramePop ν σ β ε δ ι α
-  | [], fiber => FramePop.mk ContAnswer.empty [] [] fiber
-  | frame :: rest, fiber =>
+def popFrom (demand : Arm) (skip : Bool) (frames : List (Prim ν σ β ε δ ι α))
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Option (Cause ε δ ι α) := none) :
+    FramePop ν σ β ε δ ι α :=
+  match frames with
+  | [] => FramePop.mk ContAnswer.empty [] [] fiber cause
+  | frame :: rest =>
     match Prim.answerOf frame demand (frame.ensure fiber).snd with
     | some answer =>
       if skip && (frame.ensure fiber).fst.interrupted then
+        let cause := skippedCause demand frame (frame.ensure fiber).fst cause
         passOn frame (frame.ensure fiber).snd
           (joinPushed demand skip (frame.ensure fiber).fst rest
             (popFrom demand skip rest
-              (passPushed demand skip (frame.ensure fiber).fst).fiber))
+              (passPushed demand skip (frame.ensure fiber).fst cause).fiber
+              (passPushed demand skip (frame.ensure fiber).fst cause).carriedCause) cause)
       else
         FramePop.mk answer [frame] (frame.passEvents (frame.ensure fiber).snd)
           { (frame.ensure fiber).fst with
-            stack := (frame.ensure fiber).fst.stack ++ rest }
+            stack := (frame.ensure fiber).fst.stack ++ rest } cause
     | none =>
       passOn frame (frame.ensure fiber).snd
         (joinPushed demand skip (frame.ensure fiber).fst rest
           (popFrom demand skip rest
-            (passPushed demand skip (frame.ensure fiber).fst).fiber))
+            (passPushed demand skip (frame.ensure fiber).fst cause).fiber
+            (passPushed demand skip (frame.ensure fiber).fst cause).carriedCause) cause)
+
+theorem popFrom_fiber_cause (demand : Arm) (skip : Bool)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Option (Cause ε δ ι α)) :
+    (popFrom demand skip frames fiber cause).fiber = (popFrom demand skip frames fiber).fiber := by
+  induction frames generalizing fiber cause with
+  | nil => rfl
+  | cons frame rest ih =>
+    simp only [popFrom]
+    split
+    · split
+      · simp only [passOn, joinPushed, passPushed_answer_cause, passPushed_fiber_cause]
+        split <;> simp only [ih]
+      · rfl
+    · simp only [passOn, joinPushed, passPushed_answer_cause, passPushed_fiber_cause]
+      split <;> simp only [ih]
+
+theorem popFrom_answer_cause (demand : Arm) (skip : Bool)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Option (Cause ε δ ι α)) :
+    (popFrom demand skip frames fiber cause).answer = (popFrom demand skip frames fiber).answer := by
+  induction frames generalizing fiber cause with
+  | nil => rfl
+  | cons frame rest ih =>
+    simp only [popFrom]
+    split
+    · split
+      · simp only [passOn, joinPushed, passPushed_answer_cause, passPushed_fiber_cause]
+        split <;> simp only [ih]
+      · rfl
+    · simp only [passOn, joinPushed, passPushed_answer_cause, passPushed_fiber_cause]
+      split <;> simp only [ih]
+
+theorem popFrom_popped_cause (demand : Arm) (skip : Bool)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Option (Cause ε δ ι α)) :
+    (popFrom demand skip frames fiber cause).popped = (popFrom demand skip frames fiber).popped := by
+  induction frames generalizing fiber cause with
+  | nil => rfl
+  | cons frame rest ih =>
+    simp only [popFrom]
+    split
+    · split
+      · simp only [passOn, joinPushed, passPushed_answer_cause, passPushed_fiber_cause, passPushed_popped_cause]
+        split <;> simp only [ih]
+      · rfl
+    · simp only [passOn, joinPushed, passPushed_answer_cause, passPushed_fiber_cause, passPushed_popped_cause]
+      split <;> simp only [ih]
+
+theorem popFrom_events_cause (demand : Arm) (skip : Bool)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Option (Cause ε δ ι α)) :
+    (popFrom demand skip frames fiber cause).events = (popFrom demand skip frames fiber).events := by
+  induction frames generalizing fiber cause with
+  | nil => rfl
+  | cons frame rest ih =>
+    simp only [popFrom]
+    split
+    · split
+      · simp only [passOn, joinPushed, passPushed_answer_cause, passPushed_fiber_cause, passPushed_events_cause]
+        split <;> simp only [ih]
+      · rfl
+    · simp only [passOn, joinPushed, passPushed_answer_cause, passPushed_fiber_cause, passPushed_events_cause]
+      split <;> simp only [ih]
 
 /-- rc.112's `getCont`: answer a deferred interrupt before touching the stack,
 then run the pop loop with the stack detached, so the fiber's own stack is the
 scratch area the hooks push onto and the loop visits those pushes next.
 census: checkpoint.getcont-deferred -/
-def getCont (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skipInterrupted : Bool) :
+def getCont (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skipInterrupted : Bool)
+    (cause : Option (Cause ε δ ι α) := none) :
     FramePop ν σ β ε δ ι α :=
   if self.deferredInterrupt && !skipInterrupted then
     FramePop.mk (ContAnswer.deferred self.pendingCause) []
       [FrameEvent.deferred self.pendingCause]
-      { self with deferredInterrupt := false }
+      { self with deferredInterrupt := false } cause
   else
     popFrom demand skipInterrupted self.stack
-      { self with stack := [], deferredInterrupt := false }
+      { self with stack := [], deferredInterrupt := false } cause
+
+theorem getCont_fiber_cause (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool)
+    (cause : Option (Cause ε δ ι α)) :
+    (self.getCont demand skip cause).fiber = (self.getCont demand skip).fiber := by
+  unfold getCont
+  split
+  · rfl
+  · exact popFrom_fiber_cause _ _ _ _ _
+
+theorem getCont_answer_cause (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool)
+    (cause : Option (Cause ε δ ι α)) :
+    (self.getCont demand skip cause).answer = (self.getCont demand skip).answer := by
+  unfold getCont
+  split
+  · rfl
+  · exact popFrom_answer_cause _ _ _ _ _
+
+theorem getCont_popped_cause (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool)
+    (cause : Option (Cause ε δ ι α)) :
+    (self.getCont demand skip cause).popped = (self.getCont demand skip).popped := by
+  unfold getCont
+  split
+  · rfl
+  · exact popFrom_popped_cause _ _ _ _ _
+
+theorem getCont_events_cause (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool)
+    (cause : Option (Cause ε δ ι α)) :
+    (self.getCont demand skip cause).events = (self.getCont demand skip).events := by
+  unfold getCont
+  split
+  · rfl
+  · exact popFrom_events_cause _ _ _ _ _
 
 /-- A deferred interrupt is answered before the stack is touched.
 census: checkpoint.getcont-deferred -/
@@ -1567,7 +1741,7 @@ theorem getCont_deferred (self : FrameFiber ν σ β ε δ ι α) (demand : Arm)
       FramePop.mk (ContAnswer.deferred self.pendingCause) []
         [FrameEvent.deferred self.pendingCause]
         (FrameFiber.mk self.current self.stack self.interruptible self.interruptedCause
-          false) := by
+          false) none := by
   simp [getCont, h]
 
 /-- The deferred answer pops nothing. census: checkpoint.getcont-deferred -/
@@ -1581,7 +1755,7 @@ theorem getCont_eq_popFrom (self : FrameFiber ν σ β ε δ ι α) (demand : Ar
     (h : self.deferredInterrupt = false) :
     self.getCont demand skip =
       popFrom demand skip self.stack
-        (FrameFiber.mk self.current [] self.interruptible self.interruptedCause false) := by
+        (FrameFiber.mk self.current [] self.interruptible self.interruptedCause false) none := by
   simp [getCont, h]
 
 /-- With skipping on, the fused loop clears the deferred flag and proceeds
@@ -1599,13 +1773,13 @@ theorem getCont_empty_stack (self : FrameFiber ν σ β ε δ ι α) (demand : A
     (hdeferred : self.deferredInterrupt = false) (hstack : self.stack = []) :
     self.getCont demand skip =
       FramePop.mk ContAnswer.empty [] []
-        (FrameFiber.mk self.current [] self.interruptible self.interruptedCause false) := by
+        (FrameFiber.mk self.current [] self.interruptible self.interruptedCause false) none := by
   rw [getCont_eq_popFrom self demand skip hdeferred, hstack]
   rfl
 
 /-- The exhausted stack answers nothing. census: rule.frames-are-primitives -/
 theorem popFrom_nil (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α) :
-    popFrom demand skip [] fiber = FramePop.mk ContAnswer.empty [] [] fiber := rfl
+    popFrom demand skip [] fiber = FramePop.mk ContAnswer.empty [] [] fiber none := rfl
 
 /-- An answering frame supplies the answer. census: rule.frames-are-primitives -/
 theorem popFrom_answer_answer (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
@@ -1663,7 +1837,7 @@ def continueFrom (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α
 census: rule.frames-are-primitives -/
 theorem passPushed_nil (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α)
     (h : fiber.stack = []) :
-    passPushed demand skip fiber = FramePop.mk ContAnswer.empty [] [] fiber := by
+    passPushed demand skip fiber = FramePop.mk ContAnswer.empty [] [] fiber none := by
   simp only [passPushed, h]
 
 /-- The drain over a pushed frame pops exactly that frame.
@@ -1748,7 +1922,7 @@ theorem passPushed_setInterruptible_substitutes (demand : Arm)
         ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).passEvents
           (some (Prim.failure cause)))
         (FrameFiber.mk fiber.current below true fiber.interruptedCause
-          fiber.deferredInterrupt) := by
+          fiber.deferredInterrupt) none := by
   simp only [passPushed, hstack]
   rw [Prim.ensure_setInterruptible_substitutes cause
     { fiber with stack := below } hcause]
@@ -1766,7 +1940,7 @@ theorem passPushed_setInterruptible_no_pending (demand : Arm) (skip : Bool)
       FramePop.mk ContAnswer.empty [Prim.setInterruptible true]
         ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).passEvents none)
         (FrameFiber.mk fiber.current below true fiber.interruptedCause
-          fiber.deferredInterrupt) := by
+          fiber.deferredInterrupt) none := by
   simp only [passPushed, hstack]
   rw [Prim.ensure_setInterruptible_no_pending true { fiber with stack := below } hcause]
   simp only []
@@ -1782,7 +1956,7 @@ theorem joinPushed_of_empty (demand : Arm) (skip : Bool)
       FramePop.mk tail.answer
         ((passPushed demand skip afterHook).popped ++ tail.popped)
         ((passPushed demand skip afterHook).events ++ tail.events)
-        tail.fiber := by
+        tail.fiber tail.carriedCause := by
   simp only [joinPushed, h]
 
 /-- A frame the hook pushed that answers ends the pop, with the frames that were
@@ -1798,7 +1972,8 @@ theorem joinPushed_of_answer (demand : Arm) (skip : Bool)
         (passPushed demand skip afterHook).popped
         (passPushed demand skip afterHook).events
         { (passPushed demand skip afterHook).fiber with
-          stack := (passPushed demand skip afterHook).fiber.stack ++ rest } := by
+          stack := (passPushed demand skip afterHook).fiber.stack ++ rest }
+        (passPushed demand skip afterHook).carriedCause := by
   simp only [joinPushed, h]
 
 /-- The drain's popped frame is exactly its trace's pop event.
@@ -1849,13 +2024,16 @@ theorem continueFrom_cases (demand : Arm) (skip : Bool) (frame : Prim ν σ β �
             (popFrom demand skip rest
               (passPushed demand skip (frame.ensure fiber).fst).fiber).events)
           (popFrom demand skip rest
-            (passPushed demand skip (frame.ensure fiber).fst).fiber).fiber ∨
+            (passPushed demand skip (frame.ensure fiber).fst).fiber).fiber
+          (popFrom demand skip rest
+            (passPushed demand skip (frame.ensure fiber).fst).fiber).carriedCause ∨
       continueFrom demand skip frame rest fiber =
         FramePop.mk (passPushed demand skip (frame.ensure fiber).fst).answer
           (passPushed demand skip (frame.ensure fiber).fst).popped
           (passPushed demand skip (frame.ensure fiber).fst).events
           { (passPushed demand skip (frame.ensure fiber).fst).fiber with
-            stack := (passPushed demand skip (frame.ensure fiber).fst).fiber.stack ++ rest } := by
+            stack := (passPushed demand skip (frame.ensure fiber).fst).fiber.stack ++ rest }
+          (passPushed demand skip (frame.ensure fiber).fst).carriedCause := by
   unfold continueFrom
   cases hd : (passPushed demand skip (frame.ensure fiber).fst).answer with
   | empty =>
@@ -1974,7 +2152,7 @@ theorem popFrom_asyncFinalizer_pops_its_push (onInterrupt : ν) (cause : Cause �
         ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).passEvents
           (some (Prim.failure cause)))
         (FrameFiber.mk fiber.current fiber.stack true fiber.interruptedCause
-          fiber.deferredInterrupt) := by
+          fiber.deferredInterrupt) none := by
     rw [hmask]
     exact passPushed_setInterruptible_substitutes Arm.contA _ fiber.stack cause rfl hcause
   have hne : (ContAnswer.replacement (Prim.failure cause) : ContAnswer ν σ β ε δ ι α) ≠
@@ -1985,7 +2163,7 @@ theorem popFrom_asyncFinalizer_pops_its_push (onInterrupt : ν) (cause : Cause �
         ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).passEvents
           (some (Prim.failure cause)))
         (FrameFiber.mk fiber.current (fiber.stack ++ []) true fiber.interruptedCause
-          fiber.deferredInterrupt) := by
+          fiber.deferredInterrupt) none := by
     unfold continueFrom
     rw [joinPushed_of_answer Arm.contA false _ [] _ _ hne (by rw [hdrain]), hdrain]
   refine ⟨?_, ?_⟩
@@ -2050,6 +2228,7 @@ theorem getCont_answer_hasArm (self : FrameFiber ν σ β ε δ ι α) (demand :
   · simp at h
   · exact popFrom_answer_hasArm demand skip self.stack _ frame h
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem poppedFrames_append (left right : List (FrameEvent ν σ β ε δ ι α)) :
     FrameEvent.poppedFrames (left ++ right) =
       FrameEvent.poppedFrames left ++ FrameEvent.poppedFrames right :=
@@ -2161,6 +2340,7 @@ theorem getCont_ranContAll (self : FrameFiber ν σ β ε δ ι α) (demand : Ar
   rw [getCont_eq_popFrom self demand skip hdeferred] at hmem ⊢
   exact popFrom_ranContAll demand skip self.stack _ frame hcontAll hmem
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem ensure_interruptedCause (frame : Prim ν σ β ε δ ι α)
     (fiber : FrameFiber ν σ β ε δ ι α) :
     (frame.ensure fiber).fst.interruptedCause = fiber.interruptedCause := by
@@ -2242,8 +2422,83 @@ private theorem popFrom_skip_eq_of_no_cause (demand : Arm) :
     cases hanswer : head.answerOf demand (head.ensure fiber).snd with
     | none =>
       simp only [popFrom, hanswer]
-      rw [hdrain, joinPushed_skip_eq demand (head.ensure fiber).fst rest _ hdrain, hrec]
+      rw [hdrain, joinPushed_skip_eq demand (head.ensure fiber).fst rest _ hdrain,
+        passPushed_carriedCause_none, hrec]
     | some answer => simp [popFrom, hanswer, hint]
+
+/-- Without a recorded interrupt a passed handler retains the supplied cause. -/
+theorem skippedCause_no_pending (demand : Arm) (frame : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Option (Cause ε δ ι α))
+    (hc : fiber.interruptedCause = none) : skippedCause demand frame fiber cause = cause := by
+  cases cause <;> simp only [skippedCause, hc, ite_self]
+
+theorem passPushed_carriedCause_no_pending (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Option (Cause ε δ ι α))
+    (hc : fiber.interruptedCause = none) :
+    (passPushed demand skip fiber cause).carriedCause = cause := by
+  unfold passPushed
+  split
+  · rfl
+  · dsimp only
+    split
+    · split
+      · exact skippedCause_no_pending _ _ _ _ ((ensure_interruptedCause _ _).trans hc)
+      · rfl
+    · rfl
+
+theorem popFrom_carriedCause_no_pending (demand : Arm) (skip : Bool)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Option (Cause ε δ ι α)) (hc : fiber.interruptedCause = none) :
+    (popFrom demand skip frames fiber cause).carriedCause = cause := by
+  induction frames generalizing fiber cause with
+  | nil => rfl
+  | cons frame rest ih =>
+    have ha := (ensure_interruptedCause frame fiber).trans hc
+    have hp := (passPushed_interruptedCause demand skip (frame.ensure fiber).fst).trans ha
+    simp only [popFrom]
+    split
+    · split
+      · simp only [skippedCause_no_pending _ _ _ _ ha, passOn, joinPushed,
+          passPushed_carriedCause_no_pending _ _ _ _ ha, passPushed_fiber_cause]
+        split
+        · exact ih _ _ hp
+        · rfl
+      · rfl
+    · simp only [passOn, joinPushed, passPushed_carriedCause_no_pending _ _ _ _ ha,
+        passPushed_fiber_cause]
+      split
+      · exact ih _ _ hp
+      · rfl
+
+theorem getCont_carriedCause_no_pending (self : FrameFiber ν σ β ε δ ι α)
+    (demand : Arm) (skip : Bool) (cause : Option (Cause ε δ ι α))
+    (hc : self.interruptedCause = none) :
+    (self.getCont demand skip cause).carriedCause = cause := by
+  unfold getCont
+  split
+  · rfl
+  · exact popFrom_carriedCause_no_pending _ _ _ _ _ hc
+
+/-- On a fiber with no pending interrupt the extra carrier changes no observation. -/
+theorem getCont_no_pending (self : FrameFiber ν σ β ε δ ι α)
+    (demand : Arm) (skip : Bool) (cause : Option (Cause ε δ ι α))
+    (hc : self.interruptedCause = none) :
+    self.getCont demand skip cause = { self.getCont demand skip with carriedCause := cause } := by
+  have ha := getCont_answer_cause self demand skip cause
+  have hp := getCont_popped_cause self demand skip cause
+  have he := getCont_events_cause self demand skip cause
+  have hf := getCont_fiber_cause self demand skip cause
+  have hc' := getCont_carriedCause_no_pending self demand skip cause hc
+  generalize self.getCont demand skip cause = pop at *
+  generalize self.getCont demand skip = base at *
+  cases pop
+  cases base
+  cases ha
+  cases hp
+  cases he
+  cases hf
+  cases hc'
+  rfl
 
 /-- With no interruption recorded the skip flag changes nothing at all.
 census: checkpoint.exit-failcause-skip -/
@@ -2340,6 +2595,7 @@ theorem interrupt_skips_every_handler (self : FrameFiber ν σ β ε δ ι α) (
   rw [getCont_skip_clears_deferred]
   exact popFrom_skip_all demand self.stack _ (by simp [interrupted, hflag, hcause]) hno
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem ensure_setInterruptible_fst (flag : Bool) (fiber : FrameFiber ν σ β ε δ ι α) :
     ((Prim.setInterruptible flag : Prim ν σ β ε δ ι α).ensure fiber).fst =
       FrameFiber.mk fiber.current fiber.stack flag fiber.interruptedCause
@@ -2366,6 +2622,8 @@ theorem getCont_mask_stops_skip (self : FrameFiber ν σ β ε δ ι α) (skip :
   unfold continueFrom
   rw [ensure_setInterruptible_fst]
   rfl
+
+end Carried
 
 /-- rc.112's `exitSucceed[evaluate]`: pop the value slot and resume. The pop
 does not skip, because only the failure path skips.
@@ -2424,32 +2682,22 @@ def resumeCause [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq 
     (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
     (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α)) :
     FrameStep ν σ β ε δ ι α × List (FrameEvent ν σ β ε δ ι α) :=
-  match (self.getCont Arm.contE true).answer with
+  let pop := self.getCont Arm.contE true (some cause)
+  let delivered := pop.deliveredExit (provided.getD (Exit.failure cause))
+  match pop.answer with
   | ContAnswer.empty =>
-    (FrameStep.finished (provided.getD (Exit.failure cause)),
-      (self.getCont Arm.contE true).events ++
-        [FrameEvent.yielded (provided.getD (Exit.failure cause))])
+    (FrameStep.finished delivered, pop.events ++ [FrameEvent.yielded delivered])
   | ContAnswer.deferred deferredCause =>
-    (FrameStep.running
-      { (self.getCont Arm.contE true).fiber with current := Prim.failure deferredCause },
-      (self.getCont Arm.contE true).events)
+    (FrameStep.running { pop.fiber with current := Prim.failure deferredCause }, pop.events)
   | ContAnswer.replacement next =>
-    (FrameStep.running { (self.getCont Arm.contE true).fiber with current := next },
-      (self.getCont Arm.contE true).events)
+    (FrameStep.running { pop.fiber with current := next }, pop.events)
   | ContAnswer.frame frame =>
-    match frame.armE interp cause provided with
+    match frame.armE interp (pop.carriedCause.getD cause) (provided.map pop.deliveredExit) with
     | some (next, pushed) =>
-      (FrameStep.running
-        { (self.getCont Arm.contE true).fiber with
-          current := next,
-          stack := pushed ++ (self.getCont Arm.contE true).fiber.stack },
-        (self.getCont Arm.contE true).events ++
-          frame.finalizerEvents (provided.getD (Exit.failure cause)) ++
-          pushed.map FrameEvent.pushed)
+      (FrameStep.running { pop.fiber with current := next, stack := pushed ++ pop.fiber.stack },
+        pop.events ++ frame.finalizerEvents delivered ++ pushed.map FrameEvent.pushed)
     | none =>
-      (FrameStep.finished (provided.getD (Exit.failure cause)),
-        (self.getCont Arm.contE true).events ++
-          [FrameEvent.yielded (provided.getD (Exit.failure cause))])
+      (FrameStep.finished delivered, pop.events ++ [FrameEvent.yielded delivered])
 
 /-- One machine step, one equation per pinned op. A total function, not a
 relation: this model has no decision source, so `docs/DESIGN-BASIS.md` DB-03's
@@ -2603,36 +2851,38 @@ census: op.Failure -/
 theorem resumeCause_empty [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
     (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α))
-    (h : (self.getCont Arm.contE true).answer = ContAnswer.empty) :
+    (h : (self.getCont Arm.contE true (some cause)).answer = ContAnswer.empty) :
     self.resumeCause interp cause provided =
-      (FrameStep.finished (provided.getD (Exit.failure cause)),
-        (self.getCont Arm.contE true).events ++
-          [FrameEvent.yielded (provided.getD (Exit.failure cause))]) := by
-  simp [resumeCause, h]
+      (FrameStep.finished ((self.getCont Arm.contE true (some cause)).deliveredExit
+          (provided.getD (Exit.failure cause))),
+        (self.getCont Arm.contE true (some cause)).events ++
+          [FrameEvent.yielded ((self.getCont Arm.contE true (some cause)).deliveredExit
+          (provided.getD (Exit.failure cause)))]) := by
+  simp only [resumeCause, h]
 
 /-- A deferred interrupt fails the fiber with the accumulated cause on the
 failure path too. census: checkpoint.getcont-deferred -/
 theorem resumeCause_deferred [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
     (cause deferredCause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α))
-    (h : (self.getCont Arm.contE true).answer = ContAnswer.deferred deferredCause) :
+    (h : (self.getCont Arm.contE true (some cause)).answer = ContAnswer.deferred deferredCause) :
     self.resumeCause interp cause provided =
       (FrameStep.running
-        { (self.getCont Arm.contE true).fiber with
+        { (self.getCont Arm.contE true (some cause)).fiber with
           current := Prim.failure deferredCause },
-        (self.getCont Arm.contE true).events) := by
-  simp [resumeCause, h]
+        (self.getCont Arm.contE true (some cause)).events) := by
+  simp only [resumeCause, h]
 
 /-- A substituted continuation is used for the cause arm as well.
 census: checkpoint.set-interruptible-contall -/
 theorem resumeCause_replacement [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
     [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
     (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α)) (next : Prim ν σ β ε δ ι α)
-    (h : (self.getCont Arm.contE true).answer = ContAnswer.replacement next) :
+    (h : (self.getCont Arm.contE true (some cause)).answer = ContAnswer.replacement next) :
     self.resumeCause interp cause provided =
-      (FrameStep.running { (self.getCont Arm.contE true).fiber with current := next },
-        (self.getCont Arm.contE true).events) := by
-  simp [resumeCause, h]
+      (FrameStep.running { (self.getCont Arm.contE true (some cause)).fiber with current := next },
+        (self.getCont Arm.contE true (some cause)).events) := by
+  simp only [resumeCause, h]
 
 /-- An answering frame runs its cause arm and pushes what the arm pushes.
 census: op.Failure -/
@@ -2640,17 +2890,19 @@ theorem resumeCause_frame [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [De
     (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
     (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α))
     (frame next : Prim ν σ β ε δ ι α) (pushed : List (Prim ν σ β ε δ ι α))
-    (hanswer : (self.getCont Arm.contE true).answer = ContAnswer.frame frame)
-    (harm : frame.armE interp cause provided = some (next, pushed)) :
+    (hanswer : (self.getCont Arm.contE true (some cause)).answer = ContAnswer.frame frame)
+    (harm : frame.armE interp ((self.getCont Arm.contE true (some cause)).carriedCause.getD cause)
+      (provided.map (self.getCont Arm.contE true (some cause)).deliveredExit) = some (next, pushed)) :
     self.resumeCause interp cause provided =
       (FrameStep.running
-        { (self.getCont Arm.contE true).fiber with
+        { (self.getCont Arm.contE true (some cause)).fiber with
           current := next,
-          stack := pushed ++ (self.getCont Arm.contE true).fiber.stack },
-        (self.getCont Arm.contE true).events ++
-          frame.finalizerEvents (provided.getD (Exit.failure cause)) ++
+          stack := pushed ++ (self.getCont Arm.contE true (some cause)).fiber.stack },
+        (self.getCont Arm.contE true (some cause)).events ++
+          frame.finalizerEvents ((self.getCont Arm.contE true (some cause)).deliveredExit
+          (provided.getD (Exit.failure cause))) ++
           pushed.map FrameEvent.pushed) := by
-  simp [resumeCause, hanswer, harm]
+  simp only [resumeCause, hanswer, harm]
 
 /-- `Success` pops the value slot and supplies itself as the pop's exit.
 census: op.Success -/
@@ -3170,6 +3422,9 @@ private theorem ensure_deferredInterrupt (frame : Prim ν σ β ε δ ι α)
   | exitFrame _ => rfl
   | whileLoop _ _ => rfl
 
+section Carried
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
 private theorem passPushed_deferredInterrupt (demand : Arm) (skip : Bool)
     (fiber : FrameFiber ν σ β ε δ ι α) :
     (passPushed demand skip fiber).fiber.deferredInterrupt = fiber.deferredInterrupt := by
@@ -3254,12 +3509,13 @@ theorem popFrom_never_skips (demand : Arm) (skip : Bool) (frame : Prim ν σ β 
     popFrom demand skip (frame :: rest) fiber =
       FramePop.mk answer [frame] (frame.passEvents (frame.ensure fiber).snd)
         { (frame.ensure fiber).fst with
-          stack := (frame.ensure fiber).fst.stack ++ rest } := by
+          stack := (frame.ensure fiber).fst.stack ++ rest } none := by
   have hint : (skip && (frame.ensure fiber).fst.interrupted) = false := by
     rw [interrupted_eq, ensure_interruptedCause, hcause]
     simp
   simp [popFrom, hanswer, hint]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem answerOf_ne_deferred (frame : Prim ν σ β ε δ ι α) (demand : Arm)
     (replacement : Option (Prim ν σ β ε δ ι α)) (answer : ContAnswer ν σ β ε δ ι α)
     (cause : Cause ε δ ι α)
@@ -3335,6 +3591,8 @@ theorem getCont_never_defers (self : FrameFiber ν σ β ε δ ι α) (demand : 
   rw [getCont_eq_popFrom self demand skip hdeferred]
   exact popFrom_answer_ne_deferred demand skip cause _ _
 
+end Carried
+
 private theorem resumeValue_uninterrupted [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
     [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self next : FrameFiber ν σ β ε δ ι α)
     (value : β) (provided : Option (Exit β ε δ ι α))
@@ -3365,6 +3623,8 @@ private theorem resumeCause_uninterrupted [DecidableEq ε] [DecidableEq δ] [Dec
     next.interruptedCause = none /\ next.deferredInterrupt = false := by
   obtain ⟨hc, hd⟩ := getCont_fiber_uninterrupted self Arm.contE true hcause hdeferred
   unfold resumeCause at h
+  dsimp only at h
+  simp only [getCont_fiber_cause] at h
   split at h
   · exact absurd h (by simp)
   · injection h with h'

@@ -74,7 +74,7 @@ theorem step_success_whileLoop (p : Point) (c v : Val) (K : List NCode) (i : Boo
          .running (fiberOf body (Prim.whileLoop (EffName.loop p) next :: K) i) s
        | .finish code => .running (fiberOf code K i) s) := by
   let pop : NPop :=
-    ⟨ContAnswer.frame (Prim.whileLoop (EffName.loop p) c), [], [], fiberOf (Prim.success v) K i⟩
+    ⟨ContAnswer.frame (Prim.whileLoop (EffName.loop p) c), [], [], fiberOf (Prim.success v) K i, none⟩
   have hanswer : (popOf (fiberOf (Prim.success v) (Prim.whileLoop (EffName.loop p) c :: K) i)
       (Exit.success v)).answer = pop.answer := by cases i <;> rfl
   have hfiber : (popOf (fiberOf (Prim.success v) (Prim.whileLoop (EffName.loop p) c :: K) i)

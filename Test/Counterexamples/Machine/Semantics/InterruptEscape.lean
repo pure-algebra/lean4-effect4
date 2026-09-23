@@ -3,23 +3,16 @@ import Effect4.Laws.Program.RuntimeR
 import Effect4.Laws.Program.Typed.Contracts
 
 /-!
-E4-SCHED-CE-008: a typed failure escapes an error-removing catch on the reference machine,
-the term evaluator and the pinned rc.112 source, from a checker-typed source program and a
-three-decision tape. `catchAll(uninterruptible(await >> fail 42), _ => succeed 0)` checks at
-answer `nat`, error `never`. When an interrupt is recorded while the fiber is masked and the
-masked region then fails, `popR` restores the mask, meets the catch under preemption
-(`failing ∧ interruptible ∧ interruptedCause.isSome`, `EvaluateR.lean:84`) and skips it; the
-walk ends with the original `Fail 42`. rc.112 `internal/core.ts:540-545` discards every
-failure continuation under the same condition; the end-to-end host run is retained in
-`docs/research/2026-09-21-foundations-fr08-evidence/`.
+E4-SCHED-CE-008, U-01: the signed interruption divergence from rc.112.
+The error-removing catch checks at answer `nat`, error `never`. rc.112 lets
+`Fail 42` escape when an interrupt arrives during the masked await and the
+region subsequently fails. Both Lean walks now strip Fail reasons at the
+preempted catch and retain the recorded interrupt, including `stack0`.
 
-The second program shows the escaped payload reaching a catch typed at a different error
-type once a `restoreMask false` re-masks the walk: a nat-typed handler receives a string and
-its `add` is the machine's bad-shape defect. No defect is in the source.
-
-These are exact runs, not claims about every tape: the typed-state theorem is stated for
-runs without such an escape (the `SkipsClean` walk premise of the FR-08 ruling), and this
-file is why that premise is necessary.
+The quiet tapes and the original failure's two typing facts remain controls.
+The poisoned tapes check the repaired outcome, including the nested program
+whose incorrectly delivered string used to cause a bad-shape defect. These
+are exact finite runs; the runtime agreement theorem is checked separately.
 -/
 set_option autoImplicit false
 set_option maxRecDepth 10000
@@ -57,13 +50,17 @@ def frameExit (p : NativeEff) (tape : List Api.Decision) : Option ExitV :=
   (Api.replay p budget tape).exit
 
 def escapedExit : ExitV := .failure (Cause.fail (.tag 42))
+def sanitizedExit : ExitV := .failure
+  ((Cause.interrupt (some Api.root)).annotate (stackAnnotationsOf Api.root) false)
 def checkedTy : EffTy := ⟨.nat, .never, .empty⟩
 
 #guard typeOf nativeSignature escape = some checkedTy
 #guard frameExit escape quiet = some (.success (.nat 0))
 #guard termExit escape quiet = some (.success (.nat 0))
-#guard frameExit escape poisoned = some escapedExit
-#guard termExit escape poisoned = some escapedExit
+/-- The formerly escaping typed failure is replaced by the recorded interrupt. -/
+def escaped_no_longer : Bool :=
+  frameExit escape poisoned == some sanitizedExit && termExit escape poisoned == some sanitizedExit
+#guard escaped_no_longer
 
 /-- The delivered exit does not fit the program's checked type at any world. -/
 theorem escaped_exit_does_not_fit (w : TWorld) : ¬ ExitFits w checkedTy escapedExit :=
@@ -94,8 +91,10 @@ def isBadShape : Option ExitV → Bool
 #guard typeOf nativeSignature leak = some checkedTy
 #guard frameExit leak quiet = some (.success (.nat 8))
 #guard termExit leak quiet = some (.success (.nat 8))
-#guard isBadShape (frameExit leak poisoned)
-#guard isBadShape (termExit leak poisoned)
+#guard frameExit leak poisoned = some sanitizedExit
+#guard termExit leak poisoned = some sanitizedExit
+#guard !isBadShape (frameExit leak poisoned)
+#guard !isBadShape (termExit leak poisoned)
 
 #print axioms escaped_exit_does_not_fit
 #print axioms escaped_exit_fits_region

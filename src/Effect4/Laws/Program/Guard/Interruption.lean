@@ -12,6 +12,12 @@ theorem getCont_interruptedCause (self : NFrame) (demand : Effect4.Arm) (skip : 
   · rfl
   · exact FrameFiber.popFrom_interruptedCause _ _ _ _
 
+theorem getCont_interruptedCause_carried (self : NFrame) (demand : Effect4.Arm)
+    (skip : Bool) (cause : Option CauseV) :
+    (self.getCont demand skip cause).fiber.interruptedCause = self.interruptedCause := by
+  rw [FrameFiber.getCont_fiber_cause]
+  exact getCont_interruptedCause _ _ _
+
 theorem resumeValue_interruptedCause (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
     (self next : NFrame) (value : Val) (provided : Option ExitV)
     (h : (self.resumeValue interp value provided).fst = FrameStep.running next) :
@@ -30,15 +36,16 @@ theorem resumeCause_interruptedCause (interp : PrimInterp EffName EffThunk Val E
     (self next : NFrame) (cause : Cause Err Defect FiberId Ann) (provided : Option ExitV)
     (h : (self.resumeCause interp cause provided).fst = FrameStep.running next) :
     next.interruptedCause = self.interruptedCause := by
-  have hc := getCont_interruptedCause self Effect4.Arm.contE true
+  have hc := getCont_interruptedCause_carried self Effect4.Arm.contE true (some cause)
   unfold FrameFiber.resumeCause at h
+  dsimp only at h
   split at h
-  · exact absurd h (by simp)
+  · cases h
   · injection h with h'; subst h'; exact hc
   · injection h with h'; subst h'; exact hc
   · split at h
     · injection h with h'; subst h'; exact hc
-    · exact absurd h (by simp)
+    · cases h
 
 theorem frame_step_interruptedCause (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
     (self next : NFrame) (h : (self.step interp).fst = FrameStep.running next) :
@@ -82,7 +89,7 @@ theorem finalizerOr_interruptedCause (interp : NInterp) (m : NativeMachine)
   all_goals
     split
     · split
-      · exact getCont_interruptedCause _ _ _
+      · exact getCont_interruptedCause_carried _ _ _ _
       · exact stepFrame_interruptedCause _ _ _ _
     · exact stepFrame_interruptedCause _ _ _ _
 
@@ -120,11 +127,12 @@ theorem exitScoped_interruptedCause (p : NativeEff) (m : NativeMachine)
     (exitScoped p m f yielding exit).fiber.frame.interruptedCause =
       f.frame.interruptedCause := by
   cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact evaluatePrim_interruptedCause _ _ _ _
-    | exact getCont_interruptedCause _ _ _
-    | rfl
-    | split
+  all_goals
+    split
+    · split
+      · exact getCont_interruptedCause_carried _ _ _ _
+      · exact getCont_interruptedCause_carried _ _ _ _
+    · exact evaluatePrim_interruptedCause _ _ _ _
 
 theorem evaluateNative_interruptedCause (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :

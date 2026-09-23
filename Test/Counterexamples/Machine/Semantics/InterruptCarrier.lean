@@ -1,16 +1,13 @@
 import Effect4.Laws.Program.Typed.Contracts
 
 /-!
-E4-SCHED-CE-009: the divergence cannot be confined to the two stack walks.
-`FrameFiber.resumeCause` retains its `cause` and `provided` arguments outside
-`getCont`. Every terminal result uses that supplied exit, regardless of the
-returned fiber's current code. A resumed handler also receives the original
-cause. Storing the sanitized failure in `FramePop.fiber.current` therefore
-does not implement the packet's rule; its consumers must change as well.
-
-The universal terminal theorem below does not unfold the stack walk. The
-remaining equations are local saved-state controls, not reachability claims.
-The reachable escape is retained separately as E4-SCHED-CE-008.
+E4-SCHED-CE-009: failure delivery must carry the exit explicitly through the pop.
+The original counterexample at commit 18373ad showed that changing only the saved
+current code did not change the terminal or handler argument. The approved repair
+adds `FramePop.carriedCause` and makes each consumer read it. The universal terminal
+law below treats the walk as opaque; the local controls distinguish a preempted
+catch from an empty stack and a catch entered while masked. Reachable source runs
+are checked separately by E4-SCHED-CE-008.
 -/
 set_option autoImplicit false
 
@@ -28,13 +25,14 @@ theorem original_ne_sanitized : original ≠ sanitized := by
   intro h
   cases h
 
-/-- Every terminal arm reads the arguments captured before the pop. This
-proof treats `getCont` as opaque, including every field of its result. -/
-theorem finished_uses_supplied_exit (interp : Interp) (frame : Frame)
+/-- Every terminal arm uses the exit returned by the walk, including sanitation. -/
+theorem finished_uses_carried_exit (interp : Interp) (frame : Frame)
     (cause : CauseV) (provided : Option ExitV) (result : ExitV)
     (h : (frame.resumeCause interp cause provided).1 = .finished result) :
-    result = provided.getD (.failure cause) := by
+    result = (frame.getCont .contE true (some cause)).deliveredExit
+      (provided.getD (.failure cause)) := by
   unfold FrameFiber.resumeCause at h
+  dsimp only at h
   split at h
   · cases h
     rfl
@@ -45,16 +43,6 @@ theorem finished_uses_supplied_exit (interp : Interp) (frame : Frame)
     · cases h
       rfl
 
-/-- Neither a changed saved fiber nor a replacement continuation can make
-the unchanged consumer finish with the sanitized exit in this step. -/
-theorem cannot_finish_sanitized (interp : Interp) (frame : Frame) :
-    (frame.resumeCause interp original (some (.failure original))).1 ≠
-      .finished (.failure sanitized) := by
-  intro h
-  have heq := finished_uses_supplied_exit interp frame original
-    (some (.failure original)) (.failure sanitized) h
-  cases heq
-
 /-- The proposed current-code carrier already contains the desired failure. -/
 def exhausted : Frame :=
   ⟨.failure sanitized, [], true, some sanitized, false⟩
@@ -64,17 +52,17 @@ theorem sanitized_current_is_ignored (interp : Interp) :
     (exhausted.resumeCause interp original (some (.failure original))).1 =
       .finished (.failure original) := rfl
 
-/-- The original masked catch state reaches the same terminal consumer. -/
+/-- The original masked catch state now yields the sanitized failure. -/
 def masked (handler : EffName) : Frame :=
   ⟨.failure original,
     [.setInterruptible true, .onFailure (.failure original) handler],
     false, some sanitized, false⟩
 
-theorem masked_catch_returns_original (interp : Interp) (handler : EffName) :
-    ((masked handler).step interp).1 = .finished (.failure original) := rfl
+theorem masked_catch_returns_sanitized (interp : Interp) (handler : EffName) :
+    ((masked handler).step interp).1 = .finished (.failure sanitized) := rfl
 
-/-- After a skipped catch, a later mask may permit another handler to run.
-Even if current code carried the sanitized cause, the consumer uses its old argument. -/
+/-- With no preempted catch, re-masking leaves the supplied failure unchanged.
+The current code is deliberately different: it is not the delivery carrier. -/
 def remasked (handler : EffName) : Frame :=
   ⟨.failure sanitized,
     [.setInterruptible false, .onFailure (.failure original) handler],
@@ -84,10 +72,19 @@ theorem remasked_handler_receives_original (interp : Interp) (handler : EffName)
     ((remasked handler).resumeCause interp original (some (.failure original))).1 =
       .running ⟨interp.contE handler original, [], false, some sanitized, false⟩ := rfl
 
+/-- A catch skipped before a re-mask changes the next handler's input. -/
+def skippedThenRemasked (handler : EffName) : Frame :=
+  { remasked handler with
+    stack := .onFailure (.failure original) handler :: (remasked handler).stack }
+
+theorem remasked_handler_receives_sanitized (interp : Interp) (handler : EffName) :
+    ((skippedThenRemasked handler).resumeCause interp original (some (.failure original))).1 =
+      .running ⟨interp.contE handler sanitized, [], false, some sanitized, false⟩ := rfl
+
 #print axioms original_ne_sanitized
-#print axioms finished_uses_supplied_exit
-#print axioms cannot_finish_sanitized
+#print axioms finished_uses_carried_exit
 #print axioms sanitized_current_is_ignored
-#print axioms masked_catch_returns_original
+#print axioms masked_catch_returns_sanitized
 #print axioms remasked_handler_receives_original
+#print axioms remasked_handler_receives_sanitized
 end Test.Counterexamples.InterruptCarrier

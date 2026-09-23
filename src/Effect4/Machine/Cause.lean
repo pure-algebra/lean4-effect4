@@ -820,6 +820,27 @@ def combine {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableE
   else if that.reasons = [] then self
   else Cause.mk (dedup (self.reasons ++ that.reasons))
 
+/-- Remove typed failures while retaining defects, interrupts and their annotations.
+Signed divergence U-01 from rc.112 `internal/core.ts:539-545`.
+census: checkpoint.exit-failcause-skip -/
+def stripFail {ε δ ι α : Type u} (self : Cause ε δ ι α) : Cause ε δ ι α :=
+  ⟨self.reasons.filter fun reason => reason.tag != .fail⟩
+
+/-- A preempted catch passes the remaining reasons and its recorded interrupt.
+Signed divergence U-01; census: checkpoint.exit-failcause-skip -/
+def sanitize {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (self interrupted : Cause ε δ ι α) : Cause ε δ ι α :=
+  combine (stripFail self) interrupted
+
+theorem mem_stripFail {ε δ ι α : Type u} (reason : Reason ε δ ι α)
+    (self : Cause ε δ ι α) :
+    reason ∈ self.stripFail.reasons ↔ reason ∈ self.reasons ∧ reason.tag ≠ .fail := by
+  simp only [stripFail, List.mem_filter, bne_iff_ne]
+
+theorem stripFail_nodup {ε δ ι α : Type u} (self : Cause ε δ ι α)
+    (h : self.reasons.Nodup) : self.stripFail.reasons.Nodup :=
+  h.sublist List.filter_sublist
+
 private theorem combine_eq {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
     [DecidableEq ι] [DecidableEq α] (self that : Cause ε δ ι α) :
     combine self that =
@@ -874,6 +895,17 @@ theorem mem_combine {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
         | inl hmem => exact hmem
         | inr hmem => exact absurd hmem List.not_mem_nil
     · rw [combine_reasons self that hself hthat, mem_dedup, List.mem_append]
+
+/-- A recorded cause without typed failures makes a skipped catch's result clean.
+Signed divergence U-01; census: checkpoint.exit-failcause-skip -/
+theorem sanitize_clean {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
+    [DecidableEq ι] [DecidableEq α] (self interrupted : Cause ε δ ι α)
+    (h : ∀ reason ∈ interrupted.reasons, reason.tag ≠ .fail) :
+    ∀ reason ∈ (sanitize self interrupted).reasons, reason.tag ≠ .fail := by
+  intro reason mem
+  rcases (mem_combine reason (stripFail self) interrupted).mp mem with left | right
+  · exact ((mem_stripFail reason self).mp left).2
+  · exact h reason right
 
 /-- Combining introduces no reason, so there is no cause node.
 census: rule.cause-has-no-structure -/

@@ -406,3 +406,5 @@ while IFS='|' read -r input_rel expected_sha; do
 done < <(pinned_inputs)
 printf 'columns\tmechanism\tkind\tid\tfile\tlines\tspan-sha256\tsummary\n'
 cat "$data_rows"
+# Signed disposition; the source mechanism remains in the census and denominator.
+printf 'divergence\tcheckpoint.exit-failcause-skip\tU-01\tTest/Counterexamples/Machine/Semantics/InterruptEscape.lean\n'

@@ -53,7 +53,7 @@ census: rule.frames-are-primitives -/
 def popLive (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool) :
     FramePop ν σ β ε δ ι α :=
   match _stackEq : self.stack with
-  | [] => ⟨.empty, [], [], self⟩
+  | [] => ⟨.empty, [], [], self, none⟩
   | frame :: rest =>
     let after := frame.ensure { self with stack := rest }
     match _answerEq : frame.answerOf demand after.snd with
@@ -61,7 +61,7 @@ def popLive (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool
     | some answer =>
       if _skipping : skip && after.fst.interrupted then
         prefixPop frame (frame.passEvents after.snd) (popLive after.fst demand skip)
-      else ⟨answer, [frame], frame.passEvents after.snd, after.fst⟩
+      else ⟨answer, [frame], frame.passEvents after.snd, after.fst, none⟩
 termination_by 2 * self.stack.length + (if self.interruptible = true then 1 else 0)
 decreasing_by
   all_goals
@@ -79,7 +79,7 @@ def getContLive (self : FrameFiber ν σ β ε δ ι α) (demand : Arm)
     if skipInterrupted && self.interrupted then
       let next := cleared.popLive demand skipInterrupted
       { next with events := .deferred self.pendingCause :: next.events }
-    else ⟨.deferred self.pendingCause, [], [.deferred self.pendingCause], cleared⟩
+    else ⟨.deferred self.pendingCause, [], [.deferred self.pendingCause], cleared, none⟩
   else cleared.popLive demand skipInterrupted
 
 private def appendStack (fiber : FrameFiber ν σ β ε δ ι α)
@@ -116,6 +116,8 @@ private theorem with_stack_self (fiber : FrameFiber ν σ β ε δ ι α) :
   cases fiber
   rfl
 
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
 /-- The detached loop's pass step as a whole result, not field by field. -/
 private theorem popFrom_pass (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
     (rest : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
@@ -145,6 +147,7 @@ private theorem popFrom_scratch_nil (demand : Arm) (skip : Bool) (frame : Prim �
     drained, empty, List.nil_append, clear_empty_stack (frame.ensure fiber).fst empty]
   simp
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem answer_nonempty (frame : Prim ν σ β ε δ ι α) (demand : Arm)
     (replacement : Option (Prim ν σ β ε δ ι α)) (answer : ContAnswer ν σ β ε δ ι α)
     (selected : frame.answerOf demand replacement = some answer) : answer ≠ .empty := by
@@ -308,6 +311,7 @@ theorem getContLive_false_eq_getCont (self : FrameFiber ν σ β ε δ ι α)
     (demand : Arm) : self.getContLive demand false = self.getCont demand false := by
   simp [getContLive, getCont, popLive_eq_popFrom]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Keep the full deferred result whenever post-entry interruption is not
 being skipped. census: checkpoint.getcont-deferred -/
 theorem getContLive_deferred_kept (self : FrameFiber ν σ β ε δ ι α)
@@ -315,9 +319,10 @@ theorem getContLive_deferred_kept (self : FrameFiber ν σ β ε δ ι α)
     (hkeep : (skip && self.interrupted) = false) :
     self.getContLive demand skip =
       ⟨.deferred self.pendingCause, [], [.deferred self.pendingCause],
-        { self with deferredInterrupt := false }⟩ := by
+        { self with deferredInterrupt := false }, none⟩ := by
   simp [getContLive, hdeferred, hkeep]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Discarding the deferred answer does not discard its chronological event.
 census: checkpoint.getcont-deferred -/
 theorem getContLive_deferred_discarded (self : FrameFiber ν σ β ε δ ι α)
@@ -339,6 +344,7 @@ private def skipPop (first : FramePop ν σ β ε δ ι α) (demand : Arm) :
                   events := first.events ++ next.events }
     else first
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem skipPop_prefix (frame : Prim ν σ β ε δ ι α)
     (events : List (FrameEvent ν σ β ε δ ι α))
     (result : FramePop ν σ β ε δ ι α) (demand : Arm) :
@@ -347,6 +353,7 @@ private theorem skipPop_prefix (frame : Prim ν σ β ε δ ι α)
   cases flag : result.fiber.interrupted <;> cases answer : result.answer <;>
     simp [skipPop, prefixPop, flag, answer, List.append_assoc]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem popLive_stack_while_aux (demand : Arm) :
     forall (fuel : Nat) (stack : List (Prim ν σ β ε δ ι α))
       (fiber : FrameFiber ν σ β ε δ ι α),
@@ -392,6 +399,7 @@ private theorem popLive_stack_while_aux (demand : Arm) :
         cases flag : (frame.ensure { fiber with stack := rest }).fst.interrupted <;>
           cases answer <;> simp_all [skipPop, prefixPop]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem popLive_stack_while (demand : Arm)
     (stack : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α) :
     popLive { fiber with stack := stack } demand true =
@@ -408,6 +416,7 @@ private theorem popLive_deferred (self : FrameFiber ν σ β ε δ ι α)
     (self.popLive demand skip).fiber.deferredInterrupt = self.deferredInterrupt := by
   rw [popLive_eq_popFrom, popFrom_deferred]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem cleared_eq (self : FrameFiber ν σ β ε δ ι α)
     (hdeferred : self.deferredInterrupt = false) :
     { self with deferredInterrupt := false } = self := by
@@ -415,11 +424,13 @@ private theorem cleared_eq (self : FrameFiber ν σ β ε δ ι α)
   cases hdeferred
   rfl
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem getContLive_plain (self : FrameFiber ν σ β ε δ ι α)
     (demand : Arm) (skip : Bool) (hdeferred : self.deferredInterrupt = false) :
     self.getContLive demand skip = self.popLive demand skip := by
   simp [getContLive, hdeferred, cleared_eq self hdeferred]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 private theorem cleared_interrupted (self : FrameFiber ν σ β ε δ ι α) :
     ({ self with deferredInterrupt := false }).interrupted = self.interrupted := rfl
 

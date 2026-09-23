@@ -1,5 +1,5 @@
 format	effect4-effect-runtime-census-v1
-generator	scripts/generate-effect-runtime-census.sh	sha256=4ecd8783b85ae488e57e97f3e66e44c0bf7b2e718b50124b92618eb047b5fdc2
+generator	scripts/generate-effect-runtime-census.sh	sha256=9045a4d7272a189b1fc63d4e322be79365aa58db5be7436e403d473b30a3ae7c
 regenerate	./scripts/generate-effect-runtime-census.sh > generated/effect-runtime-census.tsv
 pin	effect	4.0.0-rc.112	upstream=2600f62f4532026928454dcea8d1c48557b3f942
 input	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	sha256=0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0
@@ -152,3 +152,4 @@ mechanism	layer	layer.provide-dependency-first	Layer.ts	1907-1926	sha256=1ae74e2
 mechanism	layer	layer.fresh-drops-memoization	Layer.ts	3850-3851	sha256=ed22d78ebc3b4595dde975b9795be8c5cbc535e9591e1c78bc29f0c4dcec84ba	fresh calls the layer's build directly with a brand new memo map, so the layer is rebuilt even where the ambient memo map already holds it and it gets no fromBuild child scope of its own.
 mechanism	layer	layer.launch-holds-scope	Layer.ts	3897-3898	sha256=1389c935e46ef059f3b6c34ba0451f7d6543a1fea5c9519108cff34cd7b53988	launch builds the layer inside a fresh scope and then runs never, so the built layer stays alive until that effect is interrupted and the scope close runs the acquisition finalizers.
 mechanism	layer	layer.provide-effect-scope	internal/layer.ts	8-22	sha256=4f1f46040fd784e2c2d704b1b9b69bd97d14b37edb5a52559a1d04483d78044a	Providing a layer to an effect opens a fresh scope around that effect, builds the layer into it, and provides the resulting context, so the layer's lifetime is exactly the provided program's scope; the local option builds through a private memo map instead of the ambient one.
+divergence	checkpoint.exit-failcause-skip	U-01	Test/Counterexamples/Machine/Semantics/InterruptEscape.lean

@@ -34,15 +34,22 @@ for the life of the census.
 **Disposition** is defined here and answers who owns the
 behaviour's carrier. `targetOnly`, `excludedInternal`, and `evidenceOnly`
 rows are outside the denominator and may carry no witness. Every other
-disposition counts. `owned` rows must carry at least one witness.
+disposition counts, including `divergence`. `owned` rows must carry at least one witness.
 
 **Coverage state** answers what Effect4 has proved about the row today:
 
 | State | Meaning | Rule |
 | --- | --- | --- |
+| `diverged` | an owner-signed departure from the pinned behavior | requires disposition `divergence`, a finding in `docs/UPSTREAM-BACKLOG.md`, an executable witness path, and witness theorems; remains in the denominator |
 | `absent` | no witness | the only state allowed with an empty witness list |
 | `partial` | at least one witness, but some clause of the row's summary line has no theorem | must list what is missing in the row's comment |
 | `green` | every clause of the row's summary line is a named theorem over the Effect4 model, at the axiom ceiling the gate holds | never declared to make a number move |
+
+A signed divergence is emitted as a separate `divergence\tid\tfinding\twitness-path`
+record in the census and the Lean output. The gate joins those records exactly and
+checks that each witness file and upstream finding exist. `RuntimeCoverage.lean` imports
+the executable witness, so its guards are built by the gate. The row is reported as
+diverged, never green or excluded.
 
 The green criterion is clause-by-clause against the census summary. A finite
 probe, a compile, a test, or a theorem about the Lean model's own invariants
@@ -68,8 +75,9 @@ which runs the Lean emit and prints, from the emitted `coverage` row:
 
 ```
 Effect rc.112 runtime coverage: denominator <D>; owned-with-green <O>/<D>;
-green <G>, partial <P>, absent <A>; census <total> rows, <E> excluded
+green <G>, partial <P>, absent <A>, diverged <V>; census <total> rows, <E> excluded
 partial: <ids>
+divergence: <id>; <upstream finding>; <executable witness path>
 ```
 
 Quote that block verbatim, with the commit it was produced at. Do not compute

@@ -15,6 +15,7 @@ abbrev TWorld := Effect4.Program.Typed.World
 def beforeCatch : EffTy := ⟨.nat, .nat, Effect4.Machine.Env.Requirement.empty⟩
 def afterCatch : EffTy := EffTy.pure .nat
 def failure : ExitV := .failure (Cause.fail (.tag 42))
+def sanitized : ExitV := .failure (Cause.interrupt (some ⟨1⟩))
 def recovery (_ex : ExitV) : RProgram := .pure (.success (.nat 0))
 def masked : RSaved :=
   ⟨.pure failure, [.restoreMask true, .resume .onFailure recovery], false,
@@ -61,9 +62,9 @@ theorem reviewed_catch_run (w : TWorld) (ex : ExitV) :
   ⟨.success (.nat 0), rfl, rfl⟩
 
 /-- Restoring the mask inside popR makes the catch skip, even though the entry mask
-was false and the audit's correlation held at entry. -/
+was false and the audit's correlation held at entry. U-01 now sanitizes that skip. -/
 theorem restore_then_skip (interp : RInterp) :
-    (popR interp failure masked.stack masked).2 = some failure := rfl
+    (popR interp failure masked.stack masked).2 = some sanitized := rfl
 
 /-- Even the coarse consequence of the proposed StrongExit conclusion is false. Any
 StrongExit that retains CompletionOk is therefore unable to establish that conclusion. -/
@@ -85,9 +86,11 @@ def deferred : RSaved := { masked with
 theorem deferred_satisfies_reviewed_correlation : ReviewedDeliveryStateOk deferred failure :=
   fun _ _ => Or.inl rfl
 
+/-- Failure delivery bypasses the deferred-success interception and reaches the U-01
+sanitized skip. The original input-proposal refutation above is unchanged. -/
 theorem delivery_does_not_intercept_failure (interp : RInterp) (m : RState) (f : RFiber)
     (yielding : Bool) :
-    (deliverR interp m { f with frame := deferred } yielding failure).outcome = .finished failure := rfl
+    (deliverR interp m { f with frame := deferred } yielding failure).outcome = .finished sanitized := rfl
 
 #print axioms masked_satisfies_reviewed_correlation
 #print axioms masked_has_provenance

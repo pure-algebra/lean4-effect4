@@ -40,5 +40,6 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pTagTwoFail | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
 | pOptionSome | success [true,7] | success [true,7] | yes | yes | yes | runSyncExit | same value |
 | pOptionNone | success [false,9] | success [false,9] | yes | yes | yes | runSyncExit | same value |
+| pInterruptEscape | interrupt [{"interrupt":0}] | fail [{"fail":42}] | NO | NO | yes | runPromiseExit | kind: Lean interrupt, rc.112 fail; schedule differ at row 4: Lean "exited 0 interrupt", rc.112 "exited 0 fail"; U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42 |
 
-PASS: 36 programs, exits, schedules and sync exits agree with rc.112
+PASS: 36 programs agree on exits, schedules and sync exits; 1 signed divergence(s)

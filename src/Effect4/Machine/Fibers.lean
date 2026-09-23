@@ -1164,7 +1164,11 @@ where
     let skip := match exit with
       | Exit.success _ => false
       | Exit.failure _ => true
-    let pop := f.frame.getCont demand skip
+    let cause := match exit with
+      | Exit.success _ => none
+      | Exit.failure cause => some cause
+    let pop := f.frame.getCont demand skip cause
+    let exit := pop.deliveredExit exit
     match pop.answer with
     | ContAnswer.frame (Prim.onExit _ fin _) =>
       match interp.finalizerProgram fin exit with

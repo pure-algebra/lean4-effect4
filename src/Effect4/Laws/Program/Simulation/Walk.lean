@@ -121,7 +121,9 @@ theorem popR_resume_onSuccess (v : Val) (K : ExitV → RProgram) :
 
 theorem popR_resume_onSuccess_fail (c : CauseV) (K : ExitV → RProgram) :
     popR i (.failure c) (.resume .onSuccess K :: T) frame =
-      popR i (.failure c) T { frame with stack := T } := rfl
+      popR i (.failure c) T { frame with stack := T } := by
+  cases frame with
+  | mk current stack flag interrupted deferred => cases interrupted <;> rfl
 
 theorem popR_resume_onFailure_succ (v : Val) (K : ExitV → RProgram) :
     popR i (.success v) (.resume .onFailure K :: T) frame =
@@ -136,8 +138,16 @@ theorem popR_resume_onFailure (c : CauseV) (K : ExitV → RProgram)
 theorem popR_resume_onFailure_skip (c : CauseV) (K : ExitV → RProgram)
     (hint : (frame.interruptible && frame.interruptedCause.isSome) = true) :
     popR i (.failure c) (.resume .onFailure K :: T) frame =
-      popR i (.failure c) T { frame with stack := T } := by
-  simp [popR, GuardKind.hasExitArm, hint]
+      popR i (.failure (Cause.sanitize c frame.pendingCause)) T { frame with stack := T }   := by
+  cases frame with
+  | mk current stack flag interrupted deferred =>
+    cases interrupted with
+    | none =>
+      simp only [Option.isSome_none, Bool.and_false, Bool.false_eq_true] at hint
+    | some interrupted =>
+      simp only [Option.isSome_some, Bool.and_true] at hint
+      subst flag
+      rfl
 
 theorem popR_resume_all_succ (v : Val) (K : ExitV → RProgram) :
     popR i (.success v) (.resume .all K :: T) frame =
@@ -152,8 +162,16 @@ theorem popR_resume_all (c : CauseV) (K : ExitV → RProgram)
 theorem popR_resume_all_skip (c : CauseV) (K : ExitV → RProgram)
     (hint : (frame.interruptible && frame.interruptedCause.isSome) = true) :
     popR i (.failure c) (.resume .all K :: T) frame =
-      popR i (.failure c) T { frame with stack := T } := by
-  simp [popR, GuardKind.hasExitArm, hint]
+      popR i (.failure (Cause.sanitize c frame.pendingCause)) T { frame with stack := T }   := by
+  cases frame with
+  | mk current stack flag interrupted deferred =>
+    cases interrupted with
+    | none =>
+      simp only [Option.isSome_none, Bool.and_false, Bool.false_eq_true] at hint
+    | some interrupted =>
+      simp only [Option.isSome_some, Bool.and_true] at hint
+      subst flag
+      rfl
 
 theorem popR_resume_onExit (ex : ExitV) (K : ExitV → RProgram) :
     popR i ex (.resume (.onExit false) K :: T) frame =
@@ -333,7 +351,7 @@ theorem popFrom_asyncFinalizer_succ (name : EffName) (rest : List NCode) (fiber 
         FramePop.mk (.replacement (Prim.failure cause)) [Prim.setInterruptible true]
           ((Prim.setInterruptible true : NCode).passEvents (some (Prim.failure cause)))
           (FrameFiber.mk fiber.current fiber.stack true fiber.interruptedCause
-            fiber.deferredInterrupt) := by
+            fiber.deferredInterrupt) none := by
       rw [hmask]
       exact passPushed_setInterruptible_substitutes .contA _ fiber.stack cause rfl hcause
     have hne : (ContAnswer.replacement (Prim.failure cause) :
@@ -347,7 +365,7 @@ theorem popFrom_asyncFinalizer_succ (name : EffName) (rest : List NCode) (fiber 
         FramePop.mk .empty [Prim.setInterruptible true]
           ((Prim.setInterruptible true : NCode).passEvents none)
           (FrameFiber.mk fiber.current fiber.stack true fiber.interruptedCause
-            fiber.deferredInterrupt) := by
+            fiber.deferredInterrupt) none := by
       rw [hmask]
       exact passPushed_setInterruptible_no_pending .contA false _ fiber.stack rfl rfl hcause
     rw [popFrom_continue_answer .contA false _ rest fiber (Or.inl hpass),
@@ -369,6 +387,148 @@ theorem ensure_mask_deferred (flag : Bool) (fiber : FFiber) :
 theorem ensure_mask_current (flag : Bool) (fiber : FFiber) :
     ((Prim.setInterruptible flag : NCode).ensure fiber).fst.current = fiber.current := by
   cases hcause : fiber.interruptedCause <;> cases flag <;> simp [Prim.ensure, hcause]
+
+/-- The failure explicitly supplied by exit delivery; a success has no failure carrier. -/
+def causeOf : ExitV → Option CauseV
+  | .success _ => none
+  | .failure cause => some cause
+
+/-- The exit carried through the compiled walk, before a consumer runs its answer. -/
+def walkExit (ex : ExitV) (stack : List NCode) (fiber : FFiber) : ExitV :=
+  (popFrom (demandOf ex) (skipOf ex) stack fiber (causeOf ex)).deliveredExit ex
+
+theorem walkExit_success (value : Val) (stack : List NCode) (fiber : FFiber) :
+    walkExit (.success value) stack fiber = .success value := rfl
+
+theorem walkExit_nil (ex : ExitV) (fiber : FFiber) : walkExit ex [] fiber = ex := by
+  cases ex <;> rfl
+
+private theorem skippedCause_isSome (demand : Effect4.Arm) (frame : NCode) (fiber : FFiber)
+    (cause : Option CauseV) :
+    (skippedCause demand frame fiber cause).isSome = cause.isSome := by
+  cases cause with
+  | none => rfl
+  | some cause =>
+    simp only [skippedCause]
+    split
+    · split <;> rfl
+    · rfl
+
+private theorem passPushed_carried_isSome (demand : Effect4.Arm) (skip : Bool) (fiber : FFiber)
+    (cause : Option CauseV) :
+    (passPushed demand skip fiber cause).carriedCause.isSome = cause.isSome := by
+  unfold passPushed
+  split
+  · rfl
+  · dsimp only
+    split
+    · split
+      · exact skippedCause_isSome _ _ _ _
+      · rfl
+    · rfl
+
+private theorem popFrom_carried_isSome (demand : Effect4.Arm) (skip : Bool)
+    (stack : List NCode) (fiber : FFiber) (cause : Option CauseV) :
+    (popFrom demand skip stack fiber cause).carriedCause.isSome = cause.isSome := by
+  induction stack generalizing fiber cause with
+  | nil => rfl
+  | cons frame rest ih =>
+    simp only [popFrom]
+    split
+    · split
+      · simp only [passOn, joinPushed]
+        split <;> simp only [ih, passPushed_carried_isSome, skippedCause_isSome]
+      · rfl
+    · simp only [passOn, joinPushed]
+      split <;> simp only [ih, passPushed_carried_isSome]
+
+/-- A frame that answers without preemption retains the incoming exit. -/
+theorem walkExit_answer (ex : ExitV) (frame : NCode) (rest : List NCode) (fiber : FFiber)
+    (answer : ContAnswer EffName EffThunk Val Err Defect FiberId Ann)
+    (ha : frame.answerOf (demandOf ex) (frame.ensure fiber).snd = some answer)
+    (hs : (skipOf ex && (frame.ensure fiber).fst.interrupted) = false) :
+    walkExit ex (frame :: rest) fiber = ex := by
+  simp only [walkExit, popFrom, ha, hs, Bool.false_eq_true, ↓reduceIte]
+  cases ex <;> rfl
+
+theorem walkExit_plain_answer (ex : ExitV) {frame : NCode} {rest : List NCode} {fiber : FFiber}
+    (hens : frame.ensure fiber = (fiber, none)) (harm : frame.hasArm (demandOf ex) = true)
+    (hs : (skipOf ex && fiber.interrupted) = false) :
+    walkExit ex (frame :: rest) fiber = ex := by
+  apply walkExit_answer ex frame rest fiber (.frame frame)
+  · rw [hens]
+    exact Prim.answerOf_arm _ _ harm
+  · rw [hens]
+    exact hs
+
+theorem walkExit_miss (ex : ExitV) (frame : NCode) (rest : List NCode) (fiber : FFiber)
+    (hstack : (frame.ensure fiber).fst.stack = [])
+    (ha : frame.answerOf (demandOf ex) (frame.ensure fiber).snd = none) :
+    walkExit ex (frame :: rest) fiber = walkExit ex rest (frame.ensure fiber).fst := by
+  simp only [walkExit, popFrom, ha, passOn, joinPushed, passPushed, hstack, FramePop.deliveredExit]
+
+private theorem pendingCause_present (frame : RSaved)
+    (hint : (frame.interruptible && frame.interruptedCause.isSome) = true) :
+    frame.interruptedCause = some frame.pendingCause := by
+  cases hc : frame.interruptedCause with
+  | none => simp only [hc, Option.isSome_none, Bool.and_false, Bool.false_eq_true] at hint
+  | some interrupted => simp only [RSaved.pendingCause, hc, Option.getD_some]
+
+/-- A guard miss, or a passed non-handler such as the restoring mask, leaves the exit alone. -/
+theorem walkExit_pass (ex : ExitV) (frame : NCode) (rest : List NCode) (fiber : FFiber)
+    (hstack : (frame.ensure fiber).fst.stack = [])
+    (h : frame.answerOf (demandOf ex) (frame.ensure fiber).snd = none ∨
+      (skipOf ex && (frame.ensure fiber).fst.interrupted) = true)
+    (hc : skippedCause (demandOf ex) frame (frame.ensure fiber).fst (causeOf ex) = causeOf ex) :
+    walkExit ex (frame :: rest) fiber = walkExit ex rest (frame.ensure fiber).fst := by
+  rcases h with ha | hs
+  · simp only [walkExit, popFrom, ha, passOn, joinPushed, passPushed, hstack, FramePop.deliveredExit]
+  · cases ha : frame.answerOf (demandOf ex) (frame.ensure fiber).snd with
+    | none => simp only [walkExit, popFrom, ha, passOn, joinPushed, passPushed, hstack, FramePop.deliveredExit]
+    | some answer =>
+      simp only [walkExit, popFrom, ha, hs, ↓reduceIte, hc, passOn, joinPushed, passPushed, hstack, FramePop.deliveredExit]
+
+/-- The answering failure handler is skipped under interruption; the remainder of the
+walk receives the sanitized cause. This is U-01, checkpoint.exit-failcause-skip. -/
+theorem walkExit_preempted (cause interrupted : CauseV) (frame : NCode) (rest : List NCode)
+    (fiber : FFiber) (hens : frame.ensure fiber = (fiber, none))
+    (hstack : fiber.stack = []) (harm : frame.hasArm .contE = true)
+    (hint : fiber.interrupted = true) (hc : fiber.interruptedCause = some interrupted) :
+    walkExit (.failure cause) (frame :: rest) fiber =
+      walkExit (.failure (Cause.sanitize cause interrupted)) rest fiber := by
+  have ha : frame.answerOf .contE none = some (.frame frame) := Prim.answerOf_arm _ _ harm
+  simp only [walkExit, demandOf, skipOf, causeOf, popFrom, ha, hens, hint, Bool.true_and,
+    ↓reduceIte, skippedCause, harm, hc, BEq.rfl, passOn, joinPushed, passPushed, hstack,
+    FramePop.deliveredExit]
+  have hp := popFrom_carried_isSome .contE true rest fiber (some (Cause.sanitize cause interrupted))
+  cases he : (popFrom .contE true rest fiber
+      (some (Cause.sanitize cause interrupted))).carriedCause with
+  | none => rw [he] at hp; cases hp
+  | some result => rfl
+
+/-- A masking finalizer answers before the interruption skip can fire. -/
+theorem walkExit_onExit (ex : ExitV) (body : NCode) (fin : EffName) (rest : List NCode)
+    (fiber : FFiber) : walkExit ex (Prim.onExit body fin false :: rest) fiber = ex := by
+  cases fiber with
+  | mk current stack flag interrupted deferred => cases ex <;> cases flag <;> rfl
+
+theorem walkExit_asyncFinalizer_failure (cause : CauseV) (name : EffName) (rest : List NCode)
+    (fiber : FFiber) :
+    walkExit (.failure cause) (Prim.asyncFinalizer name :: rest) fiber = .failure cause := by
+  cases fiber with
+  | mk current stack flag interrupted deferred => cases flag <;> rfl
+
+/-- Restoring a mask passes failures without changing their payload. -/
+theorem walkExit_mask_failure (cause : CauseV) (flag : Bool) (rest : List NCode)
+    (fiber : FFiber) (hstack : fiber.stack = []) :
+    walkExit (.failure cause) (Prim.setInterruptible flag :: rest) fiber =
+      walkExit (.failure cause) rest ((Prim.setInterruptible flag : NCode).ensure fiber).fst := by
+  cases fiber with
+  | mk current stack prior interrupted deferred =>
+    dsimp only at hstack
+    subst stack
+    cases interrupted <;> cases flag <;> rfl
+
 
 /-! ## What the two walks may leave -/
 
@@ -473,7 +633,7 @@ theorem walk_mask (root : NativeEff) (completed : List (FiberId × ExitV)) (ex :
       fiber.interruptible = frame.interruptible → fiber.interruptedCause = frame.interruptedCause →
       fiber.deferredInterrupt = frame.deferredInterrupt → MaskInv frame.interruptible T' →
       frame.current = cur →
-      WalkRel root completed ex cur (popFrom (demandOf ex) (skipOf ex) S' fiber)
+      WalkRel root completed (walkExit ex S' fiber) cur (popFrom (demandOf ex) (skipOf ex) S' fiber)
         (popR (interpRAt root completed) ex T' frame).1 (popR (interpRAt root completed) ex T' frame).2)
     (flag : Bool) (s : ScopeFrame) (hs : s = .restoreMask flag ∨ s = .finalizerMask flag)
     (fiber : FFiber) (frame : RSaved) (hstack : fiber.stack = [])
@@ -481,11 +641,16 @@ theorem walk_mask (root : NativeEff) (completed : List (FiberId × ExitV)) (ex :
     (hc : fiber.interruptedCause = frame.interruptedCause)
     (hd : fiber.deferredInterrupt = frame.deferredInterrupt) (hm : MaskInv flag T')
     (hcur : frame.current = cur) :
-    WalkRel root completed ex cur
+    WalkRel root completed (walkExit ex (Prim.setInterruptible flag :: S') fiber) cur
       (popFrom (demandOf ex) (skipOf ex) (Prim.setInterruptible flag :: S') fiber)
       (popR (interpRAt root completed) ex (s :: T') frame).1
       (popR (interpRAt root completed) ex (s :: T') frame).2 := by
-  rw [popR_mask _ _ _ ex flag s hs]
+  have hx : walkExit ex (Prim.setInterruptible flag :: S') fiber =
+      walkExit ex S' ((Prim.setInterruptible flag : NCode).ensure fiber).fst := by
+    cases ex with
+    | success value => rfl
+    | failure cause => exact walkExit_mask_failure cause flag S' fiber hstack
+  rw [hx, popR_mask _ _ _ ex flag s hs]
   have hpush : ((Prim.setInterruptible flag : NCode).ensure fiber).fst.stack = fiber.stack :=
     Prim.ensure_setInterruptible_stack flag fiber
   have hmissing : (Prim.setInterruptible flag : NCode).hasArm (demandOf ex) = false := by
@@ -557,13 +722,14 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
       fiber.interruptible = frame.interruptible → fiber.interruptedCause = frame.interruptedCause →
       fiber.deferredInterrupt = frame.deferredInterrupt → MaskInv frame.interruptible T →
       frame.current = cur →
-      WalkRel root completed ex cur (popFrom (demandOf ex) (skipOf ex) S fiber)
+      WalkRel root completed (walkExit ex S fiber) cur (popFrom (demandOf ex) (skipOf ex) S fiber)
         (popR (interpRAt root completed) ex T frame).1
         (popR (interpRAt root completed) ex T frame).2 := by
   intro S T h
-  induction h with
+  induction h generalizing ex with
   | nil =>
     intro fiber frame hstack hi hc hd _ hcur
+    rw [walkExit_nil]
     exact WalkRel.finished rfl hstack rfl hi hc hd hcur
   | @slot f s S' T' hs rest ih =>
     intro fiber frame hstack hi hc hd hm hcur
@@ -574,6 +740,7 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
     | onSuccess body n K hK =>
       cases ex with
       | success v =>
+        rw [walkExit_success]
         simp only [demandOf, skipOf]
         have hp := popFrom_plain_answer .contA false (f := Prim.onSuccess body n) (rest := S')
           rfl rfl rfl hstack
@@ -589,10 +756,13 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
         have hp := popFrom_plain_pass .contE true (f := Prim.onSuccess body n) (rest := S')
           (fiber := fiber) rfl (Or.inl (Prim.answerOf_missing _ _ rfl)) hstack
         rw [popR_resume_onSuccess_fail]
-        exact WalkRel.of_eq hp.1 hp.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+        rw [walkExit_miss (.failure c) (Prim.onSuccess body n) S' fiber hstack
+          (Prim.answerOf_missing _ _ rfl)]
+        exact WalkRel.of_eq hp.1 hp.2 (ih _ fiber { frame with stack := T' } hstack hi hc hd hm hcur)
     | onSuccessConst body next K hK =>
       cases ex with
       | success v =>
+        rw [walkExit_success]
         simp only [demandOf, skipOf]
         have hp := popFrom_plain_answer .contA false (f := Prim.onSuccessConst body next) (rest := S')
           rfl rfl rfl hstack
@@ -608,20 +778,26 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
         have hp := popFrom_plain_pass .contE true (f := Prim.onSuccessConst body next) (rest := S')
           (fiber := fiber) rfl (Or.inl (Prim.answerOf_missing _ _ rfl)) hstack
         rw [popR_resume_onSuccess_fail]
-        exact WalkRel.of_eq hp.1 hp.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+        rw [walkExit_miss (.failure c) (Prim.onSuccessConst body next) S' fiber hstack
+          (Prim.answerOf_missing _ _ rfl)]
+        exact WalkRel.of_eq hp.1 hp.2 (ih _ fiber { frame with stack := T' } hstack hi hc hd hm hcur)
     | onFailure body n K hK =>
       cases ex with
       | success v =>
+        rw [walkExit_success]
         have hp := popFrom_plain_pass .contA false (f := Prim.onFailure body n) (rest := S')
           (fiber := fiber) rfl (Or.inl (Prim.answerOf_missing _ _ rfl)) hstack
         rw [popR_resume_onFailure_succ]
-        exact WalkRel.of_eq hp.1 hp.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+        exact WalkRel.of_eq hp.1 hp.2 (ih (.success v) fiber { frame with stack := T' } hstack hi hc hd hm hcur)
       | failure c =>
         simp only [demandOf, skipOf]
         rcases hb : (frame.interruptible && frame.interruptedCause.isSome) with _ | _
         · have hp := popFrom_plain_answer .contE true (f := Prim.onFailure body n) (rest := S')
             rfl rfl (by show (true && (fiber.interruptible && fiber.interruptedCause.isSome)) = false; rw [Bool.true_and, hint, hb]) hstack
           rw [popR_resume_onFailure _ _ _ _ _ hb]
+          rw [walkExit_plain_answer (.failure c) (frame := Prim.onFailure body n) rfl rfl
+            (by change (true && (fiber.interruptible && fiber.interruptedCause.isSome)) = false
+                rw [Bool.true_and, hint, hb])]
           refine WalkRel.arm _ hp.1 (by nofun) ?_ rfl (by rw [hp.2]; exact hi) (by rw [hp.2]; exact hc)
             (by rw [hp.2]; exact hd) hm
           intro next pushed harm
@@ -632,10 +808,14 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
             (fiber := fiber) rfl
             (Or.inr (by show (true && (fiber.interruptible && fiber.interruptedCause.isSome)) = true; rw [Bool.true_and, hint, hb])) hstack
           rw [popR_resume_onFailure_skip _ _ _ _ _ hb]
-          exact WalkRel.of_eq hp.1 hp.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+          rw [walkExit_preempted c frame.pendingCause (Prim.onFailure body n) S' fiber rfl hstack rfl
+            (by change (fiber.interruptible && fiber.interruptedCause.isSome) = true; rw [hint, hb])
+            (hc.trans (pendingCause_present frame hb))]
+          exact WalkRel.of_eq hp.1 hp.2 (ih _ fiber { frame with stack := T' } hstack hi hc hd hm hcur)
     | onBoth body a e K hA hE =>
       cases ex with
       | success v =>
+        rw [walkExit_success]
         simp only [demandOf, skipOf]
         have hp := popFrom_plain_answer .contA false (f := Prim.onSuccessAndFailure body a e)
           (rest := S') rfl rfl rfl hstack
@@ -653,6 +833,9 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
             (rest := S') rfl rfl
             (by show (true && (fiber.interruptible && fiber.interruptedCause.isSome)) = false; rw [Bool.true_and, hint, hb]) hstack
           rw [popR_resume_all _ _ _ _ _ hb]
+          rw [walkExit_plain_answer (.failure c) (frame := Prim.onSuccessAndFailure body a e) rfl rfl
+            (by change (true && (fiber.interruptible && fiber.interruptedCause.isSome)) = false
+                rw [Bool.true_and, hint, hb])]
           refine WalkRel.arm _ hp.1 (by nofun) ?_ rfl (by rw [hp.2]; exact hi) (by rw [hp.2]; exact hc)
             (by rw [hp.2]; exact hd) hm
           intro next pushed harm
@@ -663,10 +846,14 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
             (rest := S') (fiber := fiber) rfl
             (Or.inr (by show (true && (fiber.interruptible && fiber.interruptedCause.isSome)) = true; rw [Bool.true_and, hint, hb])) hstack
           rw [popR_resume_all_skip _ _ _ _ _ hb]
-          exact WalkRel.of_eq hp.1 hp.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+          rw [walkExit_preempted c frame.pendingCause (Prim.onSuccessAndFailure body a e) S' fiber rfl hstack rfl
+            (by change (fiber.interruptible && fiber.interruptedCause.isSome) = true; rw [hint, hb])
+            (hc.trans (pendingCause_present frame hb))]
+          exact WalkRel.of_eq hp.1 hp.2 (ih _ fiber { frame with stack := T' } hstack hi hc hd hm hcur)
     | exitFrame body K hK =>
       cases ex with
       | success v =>
+        rw [walkExit_success]
         simp only [demandOf, skipOf]
         have hp := popFrom_plain_answer .contA false (f := Prim.exitFrame body) (rest := S')
           rfl rfl rfl hstack
@@ -684,6 +871,9 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
             rfl rfl
             (by show (true && (fiber.interruptible && fiber.interruptedCause.isSome)) = false; rw [Bool.true_and, hint, hb]) hstack
           rw [popR_resume_all _ _ _ _ _ hb]
+          rw [walkExit_plain_answer (.failure c) (frame := Prim.exitFrame body) rfl rfl
+            (by change (true && (fiber.interruptible && fiber.interruptedCause.isSome)) = false
+                rw [Bool.true_and, hint, hb])]
           refine WalkRel.arm _ hp.1 (by nofun) ?_ rfl (by rw [hp.2]; exact hi) (by rw [hp.2]; exact hc)
             (by rw [hp.2]; exact hd) hm
           intro next pushed harm
@@ -694,10 +884,13 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
             (fiber := fiber) rfl
             (Or.inr (by show (true && (fiber.interruptible && fiber.interruptedCause.isSome)) = true; rw [Bool.true_and, hint, hb])) hstack
           rw [popR_resume_all_skip _ _ _ _ _ hb]
-          exact WalkRel.of_eq hp.1 hp.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+          rw [walkExit_preempted c frame.pendingCause (Prim.exitFrame body) S' fiber rfl hstack rfl
+            (by change (fiber.interruptible && fiber.interruptedCause.isSome) = true; rw [hint, hb])
+            (hc.trans (pendingCause_present frame hb))]
+          exact WalkRel.of_eq hp.1 hp.2 (ih _ fiber { frame with stack := T' } hstack hi hc hd hm hcur)
     | onExit body fin K hK hsome_prog =>
       have hp := popFrom_onExit (demandOf ex) (skipOf ex) body fin S' fiber hstack
-      rw [popR_resume_onExit]
+      rw [walkExit_onExit, popR_resume_onExit]
       refine WalkRel.finalizer body fin hp.1 ?_ (fun program hprog => hK completed ex program hprog)
         (hsome_prog completed ex) ?_ (by rw [hp.2]) (by rw [hp.2]; exact hc) (by rw [hp.2]; exact hd)
         ⟨rfl, hm⟩
@@ -711,7 +904,7 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
         · exact StackMeans.finMaskTrue rest
     | scopedFrame body previous scope K k hk hK =>
       have hp := popFrom_onExit (demandOf ex) (skipOf ex) body (.scopedExit previous scope) S' fiber hstack
-      rw [popR_resume_onExit]
+      rw [walkExit_onExit, popR_resume_onExit]
       refine WalkRel.scopedExit body previous scope k hp.1 (hK ex) hk ?_ (by rw [hp.2])
         (by rw [hp.2]; exact hc) (by rw [hp.2]; exact hd) ⟨rfl, hm⟩
       rw [hp.2, ← hi]
@@ -721,6 +914,7 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
     | iterator g cursor =>
       cases ex with
       | success v =>
+        rw [walkExit_success]
         simp only [demandOf, skipOf]
         have hp := popFrom_plain_answer .contA false (f := Prim.iterator g cursor) (rest := S')
           rfl rfl rfl hstack
@@ -759,10 +953,13 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
         have hp := popFrom_plain_pass .contE true (f := Prim.iterator g cursor) (rest := S')
           (fiber := fiber) rfl (Or.inl (Prim.answerOf_missing _ _ rfl)) hstack
         rw [popR_iter_fail]
-        exact WalkRel.of_eq hp.1 hp.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+        rw [walkExit_miss (.failure c) (Prim.iterator g cursor) S' fiber hstack
+          (Prim.answerOf_missing _ _ rfl)]
+        exact WalkRel.of_eq hp.1 hp.2 (ih _ fiber { frame with stack := T' } hstack hi hc hd hm hcur)
     | whileLoop p p' cursor hp =>
       cases ex with
       | success v =>
+        rw [walkExit_success]
         simp only [demandOf, skipOf]
         have hp0 := popFrom_plain_answer .contA false (f := Prim.whileLoop (.loop p') cursor)
           (rest := S') rfl rfl rfl hstack
@@ -794,13 +991,16 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
         have hp0 := popFrom_plain_pass .contE true (f := Prim.whileLoop (.loop p') cursor)
           (rest := S') (fiber := fiber) rfl (Or.inl (Prim.answerOf_missing _ _ rfl)) hstack
         rw [popR_loop_fail]
-        exact WalkRel.of_eq hp0.1 hp0.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+        rw [walkExit_miss (.failure c) (Prim.whileLoop (.loop p') cursor) S' fiber hstack
+          (Prim.answerOf_missing _ _ rfl)]
+        exact WalkRel.of_eq hp0.1 hp0.2 (ih _ fiber { frame with stack := T' } hstack hi hc hd hm hcur)
     | mask flag =>
-      exact walk_mask root completed ex cur rest ih flag (.restoreMask flag) (Or.inl rfl) fiber frame
+      exact walk_mask root completed ex cur rest (ih ex) flag (.restoreMask flag) (Or.inl rfl) fiber frame
         hstack hi hc hd hm hcur
     | asyncFinalizer name =>
       cases ex with
       | success v =>
+        rw [walkExit_success]
         simp only [demandOf, skipOf]
         cases hflag : fiber.interruptible with
         | true =>
@@ -822,7 +1022,7 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
               rw [← hint, hcause]; simp
             rw [popR_asyncFinalizer_succ_pass _ _ _ _ _ hb]
             have hq := hp.2 hcause
-            exact WalkRel.of_eq hq.1 hq.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+            exact WalkRel.of_eq hq.1 hq.2 (ih (.success v) fiber { frame with stack := T' } hstack hi hc hd hm hcur)
         | false =>
           have hb : (frame.interruptible && frame.interruptedCause.isSome) = false := by
             rw [← hint, hflag]; rfl
@@ -833,11 +1033,11 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
             (Or.inl (by rw [hens]; exact Prim.answerOf_missing _ _ (Prim.hasArm_asyncFinalizer_contA_false name)))
             hstack
           rw [hens] at hp
-          exact WalkRel.of_eq hp.1 hp.2 (ih fiber { frame with stack := T' } hstack hi hc hd hm hcur)
+          exact WalkRel.of_eq hp.1 hp.2 (ih (.success v) fiber { frame with stack := T' } hstack hi hc hd hm hcur)
       | failure c =>
         simp only [demandOf, skipOf]
         have hp := popFrom_asyncFinalizer_fail name S' fiber hstack
-        rw [popR_asyncFinalizer_fail]
+        rw [walkExit_asyncFinalizer_failure, popR_asyncFinalizer_fail]
         refine WalkRel.arm _ hp.1 (by nofun) ?_ rfl (by rw [hp.2]) (by rw [hp.2]; exact hc)
           (by rw [hp.2]; exact hd) ?_
         · intro next pushed harm
@@ -861,16 +1061,31 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
     intro fiber frame hstack hi hc hd hm hcur
     rw [popR_answer]
     rcases hd' ex with h1 | ⟨k', h1⟩
-    · rw [h1]; exact ih fiber { frame with stack := T' } hstack hi hc hd hm hcur
-    · rw [h1]; exact ih fiber { frame with stack := T' } hstack hi hc hd hm hcur
+    · rw [h1]; exact ih _ fiber { frame with stack := T' } hstack hi hc hd hm hcur
+    · rw [h1]; exact ih _ fiber { frame with stack := T' } hstack hi hc hd hm hcur
   | @finMaskTrue S' T' rest ih =>
     intro fiber frame hstack hi hc hd hm hcur
-    exact walk_mask root completed ex cur rest ih true (.finalizerMask true) (Or.inr rfl) fiber frame
+    exact walk_mask root completed ex cur rest (ih ex) true (.finalizerMask true) (Or.inr rfl) fiber frame
       hstack hi hc hd hm.2 hcur
   | @finMaskFalse S' T' rest ih =>
     intro fiber frame hstack hi hc hd hm hcur
     rw [popR_mask_false _ _ _ ex (.finalizerMask false) (Or.inr rfl)]
-    exact ih fiber { frame with stack := T', interruptible := false } hstack (hi.trans hm.1) hc hd hm.2
+    exact ih _ fiber { frame with stack := T', interruptible := false } hstack (hi.trans hm.1) hc hd hm.2
       hcur
+
+/-- The same agreement on the pop that actually carries the delivered failure. -/
+theorem walk_rel_carried (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : ExitV)
+    (cur : RProgram) {S : List NCode} {T : List ScopeFrame} (hst : StackMeans root S T)
+    (fiber : FFiber) (frame : RSaved) (hs : fiber.stack = [])
+    (hi : fiber.interruptible = frame.interruptible)
+    (hc : fiber.interruptedCause = frame.interruptedCause)
+    (hd : fiber.deferredInterrupt = frame.deferredInterrupt) (hm : MaskInv frame.interruptible T)
+    (hcur : frame.current = cur) :
+    WalkRel root completed (walkExit ex S fiber) cur
+      (popFrom (demandOf ex) (skipOf ex) S fiber (causeOf ex))
+      (popR (interpRAt root completed) ex T frame).1
+      (popR (interpRAt root completed) ex T frame).2 := by
+  exact WalkRel.of_eq (popFrom_answer_cause _ _ _ _ _) (popFrom_fiber_cause _ _ _ _ _)
+    (walk_rel root completed ex cur hst fiber frame hs hi hc hd hm hcur)
 
 end Effect4.Program.Sched

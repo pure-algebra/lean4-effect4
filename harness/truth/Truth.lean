@@ -1,3 +1,4 @@
+import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
@@ -361,6 +362,8 @@ def pOptionNone : Api.Program := optionResult false
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
 the S2 error-image, S3 handler and part-4 residual fixtures. Every listed program contributes
 one manifest entry. -/
+def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
+
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
     ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
@@ -369,7 +372,7 @@ def corpus : List (String × Api.Program) :=
     ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie),
     ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
     ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
-    ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone)]
+    ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pInterruptEscape", pInterruptEscape)]
 
 /-! ## The value wire -/
 
@@ -606,9 +609,17 @@ def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J
 
 def strings (xs : List String) : J := Lean.Json.arr (xs.map Lean.Json.str).toArray
 
+/-- U-01 replays the same explicit decisions as the counterexample; other fixtures use
+ordinary run/flush. The host recorder executes these decisions at the masked park. -/
+def fixtureRun (name : String) (p : Api.Program) (fuel : Nat) (table : RowTable)
+    (answers : List (Completion Val Err Defect FiberId Ann)) : Api.Inspection :=
+  if name == "pInterruptEscape" then
+    Api.replay p fuel Test.Counterexamples.InterruptEscape.poisoned answers table
+  else Api.run p fuel answers table
+
 def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) : J :=
-  let r := Api.run p fuel answers table
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) (name : String := "") : J :=
+  let r := fixtureRun name p fuel table answers
   let trace := r.trace
   Lean.Json.mkObj
     [ ("outcome", Lean.Json.str (outcomeText r.outcome))
@@ -652,6 +663,7 @@ def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fiber
     String.join (m.decls.map fun d => TypeScript.Render.decl house0 (unannotated d))
   Lean.Json.mkObj
     [ ("name", Lean.Json.str name)
+    , ("scenario", if name == "pInterruptEscape" then Lean.Json.str "U-01" else Lean.Json.null)
     , ("wellTyped", Lean.Json.bool ty.isSome)
     , ("straight", Lean.Json.bool (Effect4.Program.Denote.Straight p))
     , ("type", match ty with | some t => typeJson (nativeSignature table) t | none => Lean.Json.null)
@@ -667,7 +679,7 @@ def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fiber
     , ("declInferred", match declInferred with
         | some text => Lean.Json.str text
         | none => Lean.Json.null)
-    , ("run", runJson p fuel table answers)
+    , ("run", runJson p fuel table answers name)
     , ("runSync", runSyncJson p fuel table answers) ]
 
 /-- The whole manifest; `tapes` gives each program the answers rc.112 recorded for its package
@@ -782,7 +794,7 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
-   "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone"]
+   "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pInterruptEscape"]
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))
@@ -895,7 +907,7 @@ def observesReasons (why : Exhaustion) (m : Api.Machine) : Bool :=
 
 #guard corpus.all fun (name, p) =>
   let (table, answers) := hostInputs name
-  let m := (Api.run p 1000 answers table).machine
+  let m := (fixtureRun name p 1000 table answers).machine
   observesReasons .fuel m && observesReasons .tape m
 
 -- The universal law instantiates at every corpus member, for any actual host replies.
@@ -939,7 +951,7 @@ def main (args : List String) : IO Unit := do
   let tapes ← readTapes tapeDir
   for (name, p) in OCaml5.Truth.corpus do
     let (table, builtIn) := OCaml5.Truth.hostInputs name
-    let m := (Effect4.Api.run p fuel (builtIn ++ tapes name) table).machine
+    let m := (OCaml5.Truth.fixtureRun name p fuel table (builtIn ++ tapes name)).machine
     unless OCaml5.Truth.observesReasons .fuel m && OCaml5.Truth.observesReasons .tape m do
       throw (IO.userError s!"observation reasons disagree for {name}")
   let text := (OCaml5.Truth.manifest fuel tapes).pretty 100 ++ "\n"

@@ -116,6 +116,28 @@ if ! cmp -s -- "$tmp_root/census.kinds" "$tmp_root/lean.kinds"; then
   exit 1
 fi
 
+# 5. Signed divergences must join in both directions. A signature changes the
+# disposition, never the mechanism inventory, denominator, or witness checks.
+awk -F '\t' '$1 == "divergence" { print }' "$candidate" | sort >"$tmp_root/census.divergences"
+awk -F '\t' '$1 == "divergence" { print }' "$tmp_root/evidence.tsv" | sort >"$tmp_root/lean.divergences"
+if ! cmp -s -- "$tmp_root/census.divergences" "$tmp_root/lean.divergences"; then
+  printf 'FAIL runtime census signed divergences and Lean dispositions differ\n' >&2
+  diff -u -- "$tmp_root/census.divergences" "$tmp_root/lean.divergences" >&2 || true
+  exit 1
+fi
+while IFS=$'\t' read -r _ id ruling witness; do
+  [[ -f "$repo_root/$witness" && ! -L "$repo_root/$witness" ]] || {
+    printf 'FAIL signed divergence %s (%s) has no executable witness: %s\n' "$id" "$ruling" "$witness" >&2
+    exit 1
+  }
+  awk -F '|' -v finding="$ruling" '$2 == " `" finding "` " { found=1 } END { exit !found }' \
+    "$repo_root/docs/UPSTREAM-BACKLOG.md" || {
+    printf 'FAIL signed divergence %s has no upstream finding: %s\n' "$id" "$ruling" >&2
+    exit 1
+  }
+  printf 'DIVERGED %s: %s; %s\n' "$id" "$ruling" "$witness"
+done <"$tmp_root/census.divergences"
+
 census_total="$(wc -l <"$tmp_root/census.ids" | tr -d ' ')"
 
 if [[ "$mode" == "dry-run" ]]; then

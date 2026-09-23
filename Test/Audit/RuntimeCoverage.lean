@@ -8,6 +8,8 @@ import Effect4.Laws.Machine.Clauses
 import Effect4.Machine.Stores
 import Effect4.Laws.Machine.Witnesses
 import Effect4.Laws.Program.Intro
+import Effect4.Laws.Program.Simulation.Walk
+import Test.Counterexamples.Machine.Semantics.InterruptEscape
 
 /-!
 # Effect v4 fiber runtime coverage
@@ -58,10 +60,12 @@ private structure Row where
   kind : String
   /-- `PORT-MANIFEST.md` disposition vocabulary. -/
   disposition : String
-  /-- `green`, `partial` or `absent`. -/
+  /-- `green`, `partial`, `absent` or the signed `diverged` state. -/
   coverage : String
   /-- The witness theorems. -/
   witnesses : List Name
+  /-- Signed upstream finding and executable witness path; only a divergence may carry it. -/
+  divergence : Option (String × String) := none
 
 /-- Manifest dispositions that place a row outside the coverage denominator. -/
 private def excludedDispositions : List String :=
@@ -69,13 +73,13 @@ private def excludedDispositions : List String :=
 
 private def knownDispositions : List String :=
   [ "owned", "split", "downstreamAdapter", "separateCalculus", "derivedExpansion"
-  , "foreignBoundary", "targetOnly", "evidenceOnly", "excludedInternal" ]
+  , "foreignBoundary", "targetOnly", "evidenceOnly", "excludedInternal", "divergence" ]
 
 private def knownKinds : List String :=
   [ "op", "frame-arm", "checkpoint", "interrupt", "fork", "scope", "scheduler"
   , "exit", "cause", "entry", "rule", "ref", "deferred", "layer" ]
 
-private def knownCoverage : List String := ["green", "partial", "absent"]
+private def knownCoverage : List String := ["green", "partial", "absent", "diverged"]
 
 private def censusRows : List Row :=
   [ { id := "op.Success", kind := "op", disposition := "separateCalculus", coverage := "green"
@@ -275,9 +279,12 @@ private def censusRows : List Row :=
         , `Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push
         , `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer
         , `Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants ] }
-  , { id := "checkpoint.exit-failcause-skip", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
+  , { id := "checkpoint.exit-failcause-skip", kind := "checkpoint", disposition := "divergence", coverage := "diverged"
+    , divergence := some ("U-01", "Test/Counterexamples/Machine/Semantics/InterruptEscape.lean")
     , witnesses :=
-        [ `Effect4.FrameFiber.popFrom_continue_answer
+        [ `Effect4.Cause.sanitize_clean
+        , `Effect4.Program.Sched.walkExit_preempted
+        , `Effect4.FrameFiber.popFrom_continue_answer
         , `Effect4.FrameFiber.getCont_skip_of_no_pending_cause
         , `Effect4.FrameFiber.interrupt_skips_every_handler ] }
   , { id := "checkpoint.set-fiber-interruptible", kind := "checkpoint", disposition := "owned", coverage := "green"
@@ -1131,6 +1138,13 @@ private def checkRowShape : CommandElabM Unit := do
       failJoin m!"row {row.id} has unknown coverage {row.coverage}"
     if let some duplicate := firstDuplicateName? row.witnesses then
       failJoin m!"row {row.id} lists witness {duplicate} twice"
+    if (row.disposition == "divergence") != (row.coverage == "diverged") then
+      failJoin m!"row {row.id}: divergence disposition and diverged coverage must agree"
+    if row.divergence.isSome != (row.disposition == "divergence") then
+      failJoin m!"row {row.id}: only a signed divergence may carry a ruling and witness path"
+    if let some (ruling, witness) := row.divergence then
+      if ruling.isEmpty || witness.isEmpty then
+        failJoin m!"row {row.id}: empty divergence ruling or executable witness path"
     let hasWitness := !row.witnesses.isEmpty
     if row.coverage == "absent" && hasWitness then
       failJoin m!"row {row.id} is declared absent but carries witnesses"
@@ -1168,11 +1182,12 @@ private def checkRuntimeCoverage : CommandElabM Unit := do
   let green := (denominatorRows.filter fun row => row.coverage == "green").length
   let partial_ := (denominatorRows.filter fun row => row.coverage == "partial").length
   let absent := (denominatorRows.filter fun row => row.coverage == "absent").length
+  let diverged := (denominatorRows.filter fun row => row.coverage == "diverged").length
   let ownedGreen :=
     (denominatorRows.filter fun row => row.disposition == "owned" && row.coverage == "green").length
   let partialIds := (denominatorRows.filter fun row => row.coverage == "partial").map Row.id
   let absentIds := (denominatorRows.filter fun row => row.coverage == "absent").map Row.id
-  logInfo m!"Effect v4 runtime coverage: {total} census rows; {excluded} excluded by disposition; denominator {denominator}; owned-with-green {ownedGreen}/{denominator}; green {green}, partial {partial_}, absent {absent}"
+  logInfo m!"Effect v4 runtime coverage: {total} census rows; {excluded} excluded by disposition; denominator {denominator}; owned-with-green {ownedGreen}/{denominator}; green {green}, partial {partial_}, absent {absent}, diverged {diverged}"
   logInfo m!"partial rows: {partialIds}"
   logInfo m!"absent rows: {absentIds}"
 
@@ -1182,16 +1197,19 @@ private def emitRuntimeCoverage : CommandElabM Unit := do
     liftIO <| IO.println
       s!"E4RTCOV\trow\t{row.id}\t{row.kind}\t{row.disposition}\t{row.coverage}\t{row.witnesses.length}"
   for row in censusRows do
+    if let some (ruling, witness) := row.divergence then
+      liftIO <| IO.println s!"E4RTCOV\tdivergence\t{row.id}\t{ruling}\t{witness}"
     for name in row.witnesses do
       liftIO <| IO.println s!"E4RTCOV\twitness\t{row.id}\t{name}"
   let denominator := denominatorRows.length
   let green := (denominatorRows.filter fun row => row.coverage == "green").length
   let partial_ := (denominatorRows.filter fun row => row.coverage == "partial").length
   let absent := (denominatorRows.filter fun row => row.coverage == "absent").length
+  let diverged := (denominatorRows.filter fun row => row.coverage == "diverged").length
   let ownedGreen :=
     (denominatorRows.filter fun row => row.disposition == "owned" && row.coverage == "green").length
   liftIO <| IO.println
-    s!"E4RTCOV\tcoverage\t{censusRows.length}\t{denominator}\t{ownedGreen}\t{green}\t{partial_}\t{absent}"
+    s!"E4RTCOV\tcoverage\t{censusRows.length}\t{denominator}\t{ownedGreen}\t{green}\t{partial_}\t{absent}\t{diverged}"
 
 syntax (name := effect4CheckRuntimeCoverage)
   "#effect4_check_runtime_coverage" : command

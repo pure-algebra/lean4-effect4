@@ -141,7 +141,8 @@ theorem popFrom_sites (demand : Effect4.Arm) (skip : Bool) :
     have hpf : frameSites (FrameFiber.passPushed demand skip (frame.ensure fiber).1).fiber ⊆
         frameSites fiber :=
       List.Subset.trans (List.append_subset.mp hpp).2 hens
-    simp only [FrameFiber.popFrom, List.flatMap_cons]
+    simp only [FrameFiber.popFrom, List.flatMap_cons,
+      FrameFiber.skippedCause_none, FrameFiber.passPushed_carriedCause_none]
     split
     · next ans hans =>
       split
@@ -184,6 +185,12 @@ theorem getCont_sites (self : NFrame) (demand : Effect4.Arm)
   · refine List.Subset.trans (popFrom_sites demand skip self.stack _) ?_
     simp only [frameSites, List.flatMap_nil, List.append_nil]
     sub_tac
+
+theorem getCont_sites_carried (self : NFrame) (demand : Effect4.Arm)
+    (skip : Bool) (cause : Option CauseV) :
+    popSites (self.getCont demand skip cause) ⊆ frameSites self := by
+  simpa only [popSites, FrameFiber.getCont_answer_cause, FrameFiber.getCont_fiber_cause]
+    using getCont_sites self demand skip
 
 /-- A pop that answers with a frame: that frame's race sites and the popped fiber's are the
 fiber's. -/
@@ -317,9 +324,10 @@ theorem resumeValue_sites (interp : PrimInterp EffName EffThunk Val Err Defect F
 theorem resumeCause_sites (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
     (hb : HooksNoRace interp) (self : NFrame) (cause : CauseV) (provided : Option ExitV) :
     stepSites (self.resumeCause interp cause provided).1 ⊆ frameSites self := by
-  have hg := getCont_sites self Effect4.Arm.contE true
+  have hg := getCont_sites_carried self Effect4.Arm.contE true (some cause)
   simp only [popSites] at hg
   unfold FrameFiber.resumeCause
+  dsimp only
   split
   · exact List.nil_subset _
   · next cause' heq =>
@@ -337,7 +345,7 @@ theorem resumeCause_sites (interp : PrimInterp EffName EffThunk Val Err Defect F
     simp only [answerSites, frameSites, List.append_subset] at hg
     split
     · next code pushed harm =>
-      have ha := armE_sites interp hb frame cause provided code pushed harm
+      have ha := armE_sites interp hb frame _ _ code pushed harm
       have ha' := List.Subset.trans ha hg.1
       simp only [List.append_subset] at ha'
       simp only [stepSites, frameSites, List.flatMap_append]
@@ -463,6 +471,12 @@ theorem getCont_frameSites (f : NFrame) (demand : Effect4.Arm) (skip : Bool) :
   intro rid hr
   exact FrameProof.getCont_sites f demand skip (List.mem_append_right _ hr)
 
+theorem getCont_frameSites_carried (f : NFrame) (demand : Effect4.Arm)
+    (skip : Bool) (cause : Option CauseV) :
+    frameSites (f.getCont demand skip cause).fiber ⊆ frameSites f := by
+  rw [FrameFiber.getCont_fiber_cause]
+  exact getCont_frameSites f demand skip
+
 theorem replace_current_sites (f : NFrame) (code : NCode) (hc : raceSites code = []) :
     frameSites { f with current := code } ⊆ frameSites f := by
   simp only [frameSites, hc, List.nil_append]
@@ -546,8 +560,8 @@ theorem finalizerOr_owned (p : NativeEff) (completed : List (FiberId × ExitV)) 
     split
     · split
       · rename_i code hc
-        apply frameCodeOwned_same_races hf <;> try rfl
-        apply List.Subset.trans (replace_current_sites _ _ _) (getCont_frameSites _ _ _)
+        refine frameCodeOwned_same_races hf rfl rfl ?_
+        apply List.Subset.trans (replace_current_sites _ _ _) (getCont_frameSites_carried _ _ _ _)
         rw [raceSites_finalizerCode]
         exact raceSites_finalizerProgram _ _ _ _ _ _ hc
       · exact stepFrame_owned _ _ _ _ _ _ hf
@@ -805,15 +819,17 @@ theorem exitScoped_owned (p : NativeEff) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (exit : ExitV) (bounds : RaceIdsBelow m)
     (hf : FrameCodeOwned m f) :
     FrameCodeOwned (exitScoped p m f yielding exit).machine (exitScoped p m f yielding exit).fiber := by
-  have replaced (demand : Effect4.Arm) (skip : Bool) (code : NCode) (sites : raceSites code = []) :
-      frameSites { (f.frame.getCont demand skip).fiber with current := code } ⊆
+  have replaced (demand : Effect4.Arm) (skip : Bool) (cause : Option CauseV)
+      (code : NCode) (sites : raceSites code = []) :
+      frameSites { (f.frame.getCont demand skip cause).fiber with current := code } ⊆
         frameSites f.frame :=
-    List.Subset.trans (replace_current_sites _ code sites) (getCont_frameSites f.frame demand skip)
+    List.Subset.trans (replace_current_sites _ code sites)
+      (getCont_frameSites_carried f.frame demand skip cause)
   cases exit <;> simp only [exitScoped]
   all_goals repeat' split
   all_goals
     aesop (rule_sets := [Effect4.Stores])
-      (add safe apply [evaluatePrim_owned, getCont_frameSites, replaced])
+      (add safe apply [evaluatePrim_owned, getCont_frameSites_carried, replaced])
       (add norm simp [RunMachine.emit, raceSites_ofExit, raceSites_finalizerCode])
       (add safe 50 (by apply frameCodeOwned_same_races hf))
 

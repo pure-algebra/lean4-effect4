@@ -1362,7 +1362,8 @@ theorem popFrom_keys (demand : Arm) (skip : Bool) :
     have hpf : frameKeys nk sk (FrameFiber.passPushed demand skip (frame.ensure fiber).1).fiber ⊆
         frameKeys nk sk fiber :=
       List.Subset.trans (List.append_subset.mp hpp).2 hens
-    simp only [FrameFiber.popFrom, List.flatMap_cons]
+    simp only [FrameFiber.popFrom, List.flatMap_cons, FrameFiber.skippedCause_none,
+      FrameFiber.passPushed_carriedCause_none]
     split
     · next ans hans =>
       split
@@ -1405,6 +1406,24 @@ theorem getCont_keys (self : FrameFiber ν σ Val Err Defect FiberId Ann) (deman
   · refine List.Subset.trans (popFrom_keys nk sk demand skip self.stack _) ?_
     simp only [frameKeys, List.flatMap_nil, List.append_nil]
     sub_tac
+
+/-- Carried causes do not change the handles observed by the structural walk. -/
+theorem getCont_keys_carried (self : FrameFiber ν σ Val Err Defect FiberId Ann)
+    (demand : Arm) (skip : Bool) (cause : Option CauseV) :
+    popKeys nk sk (self.getCont demand skip cause) ⊆ frameKeys nk sk self := by
+  simpa only [popKeys, FrameFiber.getCont_answer_cause, FrameFiber.getCont_fiber_cause]
+    using getCont_keys nk sk self demand skip
+
+/-- Failure reasons contain no dereferenced handles; changing them keeps exit handles. -/
+theorem exitKeys_delivered (pop : FramePop ν σ Val Err Defect FiberId Ann) (exit : ExitV) :
+    exitKeys (pop.deliveredExit exit) = exitKeys exit := by
+  cases exit <;> rfl
+
+theorem optExitKeys_delivered (pop : FramePop ν σ Val Err Defect FiberId Ann)
+    (exit : Option ExitV) : optExitKeys (exit.map pop.deliveredExit) = optExitKeys exit := by
+  cases exit with
+  | none => rfl
+  | some ex => exact exitKeys_delivered pop ex
 
 /-- A pop that answers with a frame: that frame's handles and the popped fiber's are the
 fiber's. -/
@@ -1603,12 +1622,13 @@ theorem resumeCause_keys_with_ambient (hb : KeyBounded nk sk interp ambient)
     (self : FrameFiber ν σ Val Err Defect FiberId Ann) (cause : CauseV) (provided : Option ExitV) :
     stepKeys nk sk (self.resumeCause interp.toPrimInterp cause provided).1 ⊆
       ambient ++ (frameKeys nk sk self ++ optExitKeys provided) := by
-  have hg := getCont_keys nk sk self Arm.contE true
+  have hg := getCont_keys_carried nk sk self Arm.contE true (some cause)
   simp only [popKeys] at hg
   unfold FrameFiber.resumeCause
+  dsimp only
   split
   · next heq =>
-    simp only [stepKeys]
+    simp only [stepKeys, exitKeys_delivered]
     refine List.Subset.trans (optExitKeys_getD_failure provided cause) ?_
     sub_tac
   · next cause' heq =>
@@ -1631,7 +1651,8 @@ theorem resumeCause_keys_with_ambient (hb : KeyBounded nk sk interp ambient)
     simp only [contAnswerKeys, frameKeys, List.append_subset] at hg
     split
     · next next pushed harm =>
-      have ha := armE_keys_with_ambient nk sk hb frame cause provided next pushed harm
+      have ha := armE_keys_with_ambient nk sk hb frame _ _ next pushed harm
+      rw [optExitKeys_delivered] at ha
       simp only [List.append_subset] at ha
       simp only [stepKeys, frameKeys, List.flatMap_append]
       refine List.append_subset.mpr ⟨?_, List.append_subset.mpr ⟨?_, ?_⟩⟩
@@ -1640,7 +1661,7 @@ theorem resumeCause_keys_with_ambient (hb : KeyBounded nk sk interp ambient)
       · refine List.Subset.trans ha.2 ?_
         sub_tac using hg.1
       · refine List.Subset.trans hg.2.2 ?_; sub_tac
-    · simp only [stepKeys]
+    · simp only [stepKeys, exitKeys_delivered]
       refine List.Subset.trans (optExitKeys_getD_failure provided cause) ?_
       sub_tac
 
@@ -3066,23 +3087,35 @@ theorem finalizerOr_minted_with_ambient (hb : KeyBounded nk sk interp ambient)
     (hm : MintedIn m (ambient ++ (m.keys nk sk ++ f.keys nk sk ++ exitKeys exit))) :
     IterMinted nk sk m (evaluatePrim.finalizerOr interp m f yielding exit) := by
   obtain ⟨ha, hm⟩ := Ok_append.mp hm
+  let pop := (fun ex : ExitV => f.frame.getCont
+    (match ex with | .success _ => .contA | .failure _ => .contE)
+    (match ex with | .success _ => false | .failure _ => true)
+    (match ex with | .success _ => none | .failure c => some c)) exit
+  have hg : popKeys nk sk pop ⊆ frameKeys nk sk f.frame := by
+    dsimp only [pop]
+    exact getCont_keys_carried nk sk f.frame _ _ _
+  let delivered := pop.deliveredExit exit
+  have hex : exitKeys delivered = exitKeys exit := exitKeys_delivered pop exit
   unfold evaluatePrim.finalizerOr
-  try dsimp only
+  dsimp only
   split
   · next body fin flag hpop =>
     split
     · next program hprog =>
-      have hg := getCont_answer_frame_keys nk sk f.frame _ _ _ hpop
-      simp only [primKeys, List.append_subset] at hg
+      have hpop' : pop.answer = ContAnswer.frame (Prim.onExit body fin flag) := by
+        cases exit <;> exact hpop
+      have hprog' : interp.finalizerProgram fin delivered = some program := by
+        cases exit <;> exact hprog
+      simp only [popKeys, hpop', contAnswerKeys, primKeys, List.append_subset] at hg
       have hF : Ok m.world (frameKeys nk sk f.frame) := Ok_of_subset (by sub_tac) hm
       have hfin : Ok m.world (primKeys nk sk program) :=
-        Ok_of_subset (hb.finalizerProgram fin exit program hprog)
+        Ok_of_subset (hb.finalizerProgram fin delivered program hprog')
           (Ok_append.mpr ⟨ha, Ok_append.mpr ⟨Ok_of_subset hg.1.2 hF,
-            Ok_of_subset (by sub_tac) hm⟩⟩)
-      have hres : Ok m.world (nk (interp.restoreName exit)) :=
-        Ok_of_subset (hb.restoreName exit) (Ok_of_subset (by sub_tac) hm)
-      have hmerge : Ok m.world (nk (interp.mergeName exit)) :=
-        Ok_of_subset (hb.mergeName exit) (Ok_of_subset (by sub_tac) hm)
+            Ok_of_subset (by rw [hex]; sub_tac) hm⟩⟩)
+      have hres : Ok m.world (nk (interp.restoreName delivered)) :=
+        Ok_of_subset (hb.restoreName delivered) (Ok_of_subset (by rw [hex]; sub_tac) hm)
+      have hmerge : Ok m.world (nk (interp.mergeName delivered)) :=
+        Ok_of_subset (hb.mergeName delivered) (Ok_of_subset (by rw [hex]; sub_tac) hm)
       have hpopf := Ok_of_subset hg.2 hF
       have hall := Ok_append.mpr ⟨Ok_append.mpr ⟨Ok_append.mpr ⟨Ok_append.mpr ⟨hm, hfin⟩, hres⟩, hmerge⟩, hpopf⟩
       unfold IterMinted
@@ -3090,7 +3123,8 @@ theorem finalizerOr_minted_with_ambient (hb : KeyBounded nk sk interp ambient)
       simp only [MintedIn]
       rw [world_emit]
       refine Ok_of_subset ?_ hall
-      cases exit <;> simp only [finalizerCode] <;> sub_tac
+      dsimp only [pop, delivered]
+      cases exit <;> simp only [FramePop.deliveredExit, finalizerCode] <;> sub_tac
     · exact stepFrame_minted_with_ambient nk sk hb m f yielding
           (Ok_append.mpr ⟨ha, Ok_of_subset (by sub_tac) hm⟩)
   · exact stepFrame_minted_with_ambient nk sk hb m f yielding

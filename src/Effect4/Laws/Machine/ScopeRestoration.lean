@@ -69,14 +69,30 @@ theorem resumeClosedScope_failure_pending (interp : PrimInterp ν τ β ε δ ι
       some (continued.1,
         [.popped (.setInterruptible true), .ranContAll (.setInterruptible true), .substituted pending]
           ++ continued.2) := by
-  -- The unfused traversal (`continueFrom`/`joinPushed`/`passPushed`) is unfolded with the
-  -- rest: the restoring frame pushes nothing, so the drain is empty and the traversal
-  -- continues on `rest` exactly as before.
-  simp [resumeClosedScope, completed, Prim.ofExit, FrameFiber.step, FrameFiber.resumeCause,
-    FrameFiber.getCont, FrameFiber.popFrom, FrameFiber.joinPushed,
-    FrameFiber.passPushed, FrameFiber.passOn, Prim.ensure, Prim.answerOf, Prim.passEvents,
-    Prim.hasArm, Prim.arms, FrameFiber.interrupted, List.append_assoc]
-  split <;> (try simp_all) <;> (split <;> simp_all)
+  -- The mask hook leaves the cause alone; catches in the tail sanitize it.
+  let tail : FrameFiber ν τ β ε δ ι α :=
+    ⟨.failure failed, rest, true, some pending, false⟩
+  have hpop :
+      (⟨.failure failed, .setInterruptible true :: rest, false, some pending, false⟩ :
+        FrameFiber ν τ β ε δ ι α).getCont .contE true (some failed) =
+      FrameFiber.passOn (.setInterruptible true) (some (.failure pending))
+        (tail.getCont .contE true (some failed)) := by rfl
+  dsimp only [resumeClosedScope]
+  rw [completed]
+  change some ((⟨.failure failed, .setInterruptible true :: rest, false, some pending, false⟩ :
+    FrameFiber ν τ β ε δ ι α).resumeCause interp failed (some (.failure failed))) =
+    let continued := tail.resumeCause interp failed (some (.failure failed))
+    some (continued.1,
+      [.popped (.setInterruptible true), .ranContAll (.setInterruptible true), .substituted pending]
+        ++ continued.2)
+  simp only [FrameFiber.resumeCause, hpop, FrameFiber.passOn, Prim.passEvents,
+    Prim.hasArm, Prim.arms, Option.map_some, Option.getD_some, FramePop.deliveredExit,
+    show [Arm.contAll].contains Arm.contAll = true from rfl, if_true]
+  split
+  · rfl
+  · rfl
+  · rfl
+  · split <;> simp only [List.append_assoc]
 
 /-- The actual stateful close and adapter agree with existing closeExitsM, exact restoration and the real frame step. census: scope.close-sequential -/
 theorem resumeClosedScope_complete

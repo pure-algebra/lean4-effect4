@@ -1611,10 +1611,12 @@ def exitScoped (root : NativeEff)
   let pop := f.frame.getCont
     (match exit with | .success _ => .contA | .failure _ => .contE)
     (match exit with | .success _ => false | .failure _ => true)
+    (match exit with | .success _ => none | .failure cause => some cause)
+  let exit := pop.deliveredExit exit
   match pop.answer with
   | .frame (.onExit _ (.scopedExit previous scope) _) =>
     let f := { f with
-      frame := pop.fiber
+      frame := { pop.fiber with current := Prim.ofExit exit }
       context := previous
       maxOpsBeforeYield := previous.maxOpsBeforeYield
       preventYield := previous.preventYield }

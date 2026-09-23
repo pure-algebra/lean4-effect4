@@ -7,8 +7,8 @@ set_option synthInstance.maxSize 2048
 
 /-!
 Frozen ScopeRestoration surface and finite controls.
-The independently executable boundary file owns old-meaning witnesses.
-No old assertion or semantic owner is changed by this packet.
+The independently executable boundary file owns the matching finite witnesses.
+U-01 updates the preempted-catch expectation; the public equations stay unchanged.
 -/
 namespace Test.Runtime.ScopeRestorationContract
 open Effect4
@@ -160,8 +160,9 @@ open Test.Counterexamples.Runtime.ScopeRestorationBoundary
   some (.finished (.failure failureCause), maskEvents ++ [.yielded (.failure failureCause)])
 #guard ScopeRestoration.resumeClosedScope interp failedClose.1
     { successFiber with stack := [.setInterruptible true, .onFailure (.success 0) 77] } =
-  some (.finished (.failure failureCause), maskEvents ++
-    [.popped (.onFailure (.success 0) 77), .yielded (.failure failureCause)])
+  some (.finished (.failure (Cause.combine failureCause pending)), maskEvents ++
+    [.popped (.onFailure (.success 0) 77),
+      .yielded (.failure (Cause.combine failureCause pending))])
 #guard ScopeRestoration.resumeClosedScope interp failedClose.1
     { successFiber with stack := [.setInterruptible true, .onExit (.success 0) 8 false] } =
   some (.running ⟨.failure (Cause.combine failureCause (Cause.die 8)),

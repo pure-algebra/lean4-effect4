@@ -196,12 +196,23 @@ theorem exitScoped_minted (root : NativeEff) (m : Api.Machine)
       (Handle.fiber f.id :: m.keys EffName.keys EffThunk.keys ++
         f.keys EffName.keys EffThunk.keys ++ exitKeys exit)) :
     IterMinted EffName.keys EffThunk.keys m (exitScoped root m f yielding exit) := by
+  let pop := (fun ex : ExitV => f.frame.getCont
+    (match ex with | .success _ => .contA | .failure _ => .contE)
+    (match ex with | .success _ => false | .failure _ => true)
+    (match ex with | .success _ => none | .failure c => some c)) exit
+  have hg : popKeys EffName.keys EffThunk.keys pop ⊆
+      frameKeys EffName.keys EffThunk.keys f.frame := by
+    dsimp only [pop]
+    exact getCont_keys_carried EffName.keys EffThunk.keys f.frame _ _ _
+  let delivered := pop.deliveredExit exit
+  have hex : exitKeys delivered = exitKeys exit := exitKeys_delivered pop exit
   unfold exitScoped
   dsimp only
   split
   · next body previous scope flag hpop =>
-    have hg := getCont_answer_frame_keys EffName.keys EffThunk.keys f.frame _ _ _ hpop
-    simp only [primKeys, List.append_subset] at hg
+    have hpop' : pop.answer = ContAnswer.frame (Prim.onExit body (.scopedExit previous scope) flag) := by
+      cases exit <;> exact hpop
+    simp only [popKeys, hpop', contAnswerKeys, primKeys, List.append_subset] at hg
     have hF : Ok m.world (frameKeys EffName.keys EffThunk.keys f.frame) :=
       Ok_of_subset (by sub_tac) hm
     have hname : Ok m.world (Handle.scope scope :: previous.keys) := Ok_of_subset hg.1.2 hF
@@ -213,25 +224,31 @@ theorem exitScoped_minted (root : NativeEff) (m : Api.Machine)
       simp only [MintedIn]
       rw [world_emit]
       refine Ok_of_subset ?_ hall
-      sub_tac
+      dsimp only [pop, delivered] at hall
+      cases exit <;> simp only [FramePop.deliveredExit] <;> sub_tac
     · next state program hclose =>
-      obtain ⟨hle, hkeys⟩ := storesCloseScopeUnsafe_keys scope exit _ m.state state program hclose
+      have hclose' : storesCloseScopeUnsafe scope delivered pop.fiber.interruptible m.state =
+          some (state, program) := by
+        cases exit <;> exact hclose
+      obtain ⟨hle, hkeys⟩ := storesCloseScopeUnsafe_keys scope delivered _ m.state state program hclose'
       have hworld : m.world.le ⟨m.fibers.map RunFiber.id, state⟩ := World.le_of_state hle
       have hold := Ok_mono hworld hall
       have hclosed : Ok ⟨m.fibers.map RunFiber.id, state⟩
           (program.toList.flatMap programKeys ++ state.keys) :=
-        Ok_of_subset hkeys (Ok_mono hworld (Ok_of_subset (by sub_tac) hm))
+        Ok_of_subset hkeys (Ok_mono hworld (Ok_of_subset (by rw [hex]; sub_tac) hm))
       cases program with
       | none =>
         unfold IterMinted
         refine ⟨hworld, ?_⟩
         refine Ok_of_subset ?_ (Ok_append.mpr ⟨hold, hclosed⟩)
-        sub_tac norm [primKeys_ofExit]
+        dsimp only [pop, delivered] at hold
+        cases exit <;> simp only [FramePop.deliveredExit] <;> sub_tac norm [primKeys_ofExit]
       | some program =>
         unfold IterMinted
         refine ⟨hworld, ?_⟩
         refine Ok_of_subset ?_ (Ok_append.mpr ⟨hold, hclosed⟩)
-        cases exit <;> simp only [finalizerCode, interpAt, interpOf] <;>
+        dsimp only [pop, delivered] at hold
+        cases exit <;> simp only [FramePop.deliveredExit, finalizerCode, interpAt, interpOf] <;>
           sub_tac norm [embed_keys]
   · exact evaluatePrimAt_minted root m f yielding (Ok_of_subset (by sub_tac) hm)
 

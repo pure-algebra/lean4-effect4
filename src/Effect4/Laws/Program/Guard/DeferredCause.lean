@@ -27,6 +27,12 @@ theorem getCont_interruptedCause (self : NFrame) (demand : Effect4.Arm) (skip : 
   · rfl
   · exact FrameFiber.popFrom_interruptedCause _ _ _ _
 
+theorem getCont_interruptedCause_carried (self : NFrame) (demand : Effect4.Arm)
+    (skip : Bool) (cause : Option CauseV) :
+    (self.getCont demand skip cause).fiber.interruptedCause = self.interruptedCause := by
+  rw [FrameFiber.getCont_fiber_cause]
+  exact getCont_interruptedCause _ _ _
+
 theorem resumeValue_interruptedCause (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
     (self next : NFrame) (value : Val) (provided : Option ExitV)
     (h : (self.resumeValue interp value provided).fst = FrameStep.running next) :
@@ -45,15 +51,16 @@ theorem resumeCause_interruptedCause (interp : PrimInterp EffName EffThunk Val E
     (self next : NFrame) (cause : Cause Err Defect FiberId Ann) (provided : Option ExitV)
     (h : (self.resumeCause interp cause provided).fst = FrameStep.running next) :
     next.interruptedCause = self.interruptedCause := by
-  have hc := getCont_interruptedCause self Effect4.Arm.contE true
+  have hc := getCont_interruptedCause_carried self Effect4.Arm.contE true (some cause)
   unfold FrameFiber.resumeCause at h
+  dsimp only at h
   split at h
-  · exact absurd h (by simp)
+  · cases h
   · injection h with h'; subst h'; exact hc
   · injection h with h'; subst h'; exact hc
   · split at h
     · injection h with h'; subst h'; exact hc
-    · exact absurd h (by simp)
+    · cases h
 
 theorem frame_step_interruptedCause (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
     (self next : NFrame) (h : (self.step interp).fst = FrameStep.running next) :
@@ -78,6 +85,11 @@ theorem getCont_deferredCause (self : NFrame) (demand : Effect4.Arm) (skip : Boo
   intro hd
   rw [getCont_deferred_false] at hd
   cases hd
+
+theorem getCont_deferredCause_carried (self : NFrame) (demand : Effect4.Arm)
+    (skip : Bool) (cause : Option CauseV) : DeferredCause (self.getCont demand skip cause).fiber := by
+  rw [FrameFiber.getCont_fiber_cause]
+  exact getCont_deferredCause _ _ _
 
 theorem frame_step_deferredCause (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
     (self next : NFrame) (hf : DeferredCause self)
@@ -120,7 +132,7 @@ theorem finalizerOr_deferredCause (interp : NInterp) (m : NativeMachine)
   all_goals
     split
     · split
-      · exact getCont_deferredCause _ _ _
+      · exact getCont_deferredCause_carried _ _ _ _
       · exact stepFrame_deferredCause _ _ _ _ hf
     · exact stepFrame_deferredCause _ _ _ _ hf
 
@@ -152,11 +164,12 @@ theorem exitScoped_deferredCause (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (hf : DeferredCause f.frame) :
     DeferredCause (exitScoped p m f yielding exit).fiber.frame := by
   cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact evaluatePrim_deferredCause _ _ _ _ hf
-    | exact getCont_deferredCause _ _ _
-    | exact hf
-    | split
+  all_goals
+    split
+    · split
+      · exact getCont_deferredCause_carried _ _ _ _
+      · exact getCont_deferredCause_carried _ _ _ _
+    · exact evaluatePrim_deferredCause _ _ _ _ hf
 
 /-- Native evaluation retains the deferred-cause implication for its returned
 fiber, for every root, table, machine, fiber, and yielding latch. -/

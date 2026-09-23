@@ -5,7 +5,8 @@
  * `harness/truth/Truth.lean`), writes one generated module per program under
  * `generated/`, runs each under the pinned `effect@4.0.0-rc.112`, and compares rc.112's exit
  * and observable schedule with the Lean machine's. Writes `result.json` and `result.md`
- * (both GENERATED), prints the table, exits non-zero on any disagreement.
+ * (both GENERATED), prints the table, and refuses every unsigned disagreement. U-01
+ * permits only its exact exit/schedule pair; the result still prints NO for agreement.
  *
  *     bun run <abs path>/harness/truth/run-truth.ts --manifest <corpus.json> [--out <dir>] [--timeout ms] [--only <name>]
  *     bun run <abs path>/harness/truth/run-truth.ts --manifest <corpus.json> --out <dir> --emit
@@ -118,6 +119,7 @@ interface LeanRun {
 }
 interface Entry {
   name: string
+  scenario?: string | null
   wellTyped: boolean
   type: { answer: string; error: string; requiresEmpty: boolean } | null
   expr: string | null
@@ -208,6 +210,8 @@ const emitModules = (manifest: Manifest): number => {
 // ---- the recorder -------------------------------------------------------------------
 interface FiberLike {
   readonly id: number
+  readonly interruptible: boolean
+  evaluate(effect: unknown): void
   _children?: Set<FiberLike> | undefined
   _yielded?: unknown
   _exit?: unknown
@@ -575,7 +579,7 @@ const runSyncEntry = async (main: any): Promise<Observation> => {
   }
 }
 
-const runPromiseEntry = async (main: any): Promise<Observation> => {
+const runPromiseEntry = async (main: any, scenario?: string | null): Promise<Observation> => {
   const recorder = new Recorder()
   const rows = recording(recorder)
   const scheduler = new TracedScheduler(recorder)
@@ -583,6 +587,18 @@ const runPromiseEntry = async (main: any): Promise<Observation> => {
   // observer; spelled out here so the deadline can interrupt the leftover fiber (`:574`).
   const fiber = Effect.runForkWith(tracedContext(recorder, scheduler))(main) as unknown as FiberLike
   const settled = new Promise<unknown>((resolve) => fiber.addObserver(resolve))
+  if (scenario === "U-01") {
+    // The printed program is unchanged. Replay the Lean tape's two external decisions:
+    // interrupt while masked (internal/effect.ts:574-595), then answer the parked await
+    // with unit through evaluate (:599-607), which clears its cancellation registration.
+    if (fiber.interruptible || typeof fiber._yielded !== "function" || fiber._exit !== undefined) {
+      throw new Error("U-01: expected the generated root at its masked await")
+    }
+    fiber.interruptUnsafe(fiber.id)
+    fiber.evaluate(Exit.succeed(undefined))
+  } else if (scenario != null) {
+    throw new Error(`unrecognized truth scenario ${scenario}`)
+  }
   const deadline = Symbol("deadline")
   const first = await Promise.race([settled, sleep(timeoutMs).then(() => deadline)])
   if (first === deadline) {
@@ -727,6 +743,42 @@ const compareSchedules = (lean: string[], host: string[]): Comparison => {
   return { agree: false, note: `differ at row ${where}: Lean ${JSON.stringify(l[where] ?? "∅")}, rc.112 ${JSON.stringify(h[where] ?? "∅")}` }
 }
 
+/** U-01 signs one exact observation pair, including the complete compared schedules.
+ * A regression to the original Lean failure fails even if both faces then agree. */
+const signedU01 = (name: string, scenario: string | null | undefined, lean: Json | null,
+  host: Json | null, leanSchedule: string[], hostSchedule: string[], syncAgree: boolean,
+  parked: boolean): boolean =>
+  name === "pInterruptEscape" && scenario === "U-01" && syncAgree && !parked &&
+  deepEqual(lean, { failure: { reasons: [{ interrupt: 0 }] } }) &&
+  deepEqual(host, { failure: { reasons: [{ fail: 42 }] } }) &&
+  deepEqual(leanSchedule.filter((row) => !isScheduledRow(row)),
+    ["started 0", "parked 0", "resumed 0", "started 0", "exited 0 interrupt"]) &&
+  deepEqual(hostSchedule.filter((row) => !isScheduledRow(row)),
+    ["started 0", "parked 0", "resumed 0", "started 0", "exited 0 fail"])
+
+const selfTestDivergence = (): number => {
+  const lean: Json = { failure: { reasons: [{ interrupt: 0 }] } }
+  const host: Json = { failure: { reasons: [{ fail: 42 }] } }
+  const ls = ["started 0", "parked 0", "resumed 0", "started 0", "exited 0 interrupt"]
+  const hs = ["started 0", "parked 0", "resumed 0", "started 0", "exited 0 fail"]
+  const check = (l = lean, h = host, n = "pInterruptEscape", s: string | null = "U-01",
+    sched = ls, sync = true, parked = false) => signedU01(n, s, l, h, sched, hs, sync, parked)
+  const cases: Array<[string, boolean]> = [
+    ["exact signed pair", check()],
+    ["old Lean failure rejected despite agreement", !check(host)],
+    ["wrong interruptor rejected", !check({ failure: { reasons: [{ interrupt: 1 }] } })],
+    ["changed host payload rejected", !check(lean, { failure: { reasons: [{ fail: 43 }] } })],
+    ["renamed fixture rejected", !check(lean, host, "different")],
+    ["unsigned fixture rejected", !check(lean, host, "pInterruptEscape", null)],
+    ["altered schedule rejected", !check(lean, host, "pInterruptEscape", "U-01", ls.slice(1))],
+    ["sync disagreement rejected", !check(lean, host, "pInterruptEscape", "U-01", ls, false)],
+    ["parked host rejected", !check(lean, host, "pInterruptEscape", "U-01", ls, true, true)]
+  ]
+  const failures = cases.filter(([, pass]) => !pass).map(([name]) => name)
+  console.log(JSON.stringify({ kind: "signed-divergence-controls", checks: cases.length, failures }))
+  return failures.length === 0 ? 0 : 1
+}
+
 // ---- main ---------------------------------------------------------------------------
 interface Row {
   program: string
@@ -736,12 +788,15 @@ interface Row {
   exitAgree: boolean | null
   scheduleAgree: boolean | null
   runSyncAgree: boolean | null
+  exception?: "U-01"
+  scenario?: string
   notes: string[]
   host: Observation | null
   hostSync: Observation | null
 }
 
 const main = async (): Promise<number> => {
+  if (selfTestDivergence() !== 0) return 2
   const failures = selfTest()
   if (failures.length > 0) {
     console.error("prelude self-test failed:\n  " + failures.join("\n  "))
@@ -809,7 +864,7 @@ const main = async (): Promise<number> => {
 
     // The fork entry always: `Api.run` is `runFork` (Fibers.lean:339-340, `RunDecision.evaluate`)
     // plus the event loop's flush rounds, so its schedule is compared with this observation.
-    const hostFork = await runPromiseEntry(program)
+    const hostFork = await runPromiseEntry(program, entry.scenario)
     // The verdict entry for the exit column: the one the Lean verdict names.
     const lean = leanVerdict(entry.run)
     const host = entry.runSync.sync ? hostSync : hostFork
@@ -832,7 +887,12 @@ const main = async (): Promise<number> => {
       notes.push(`tape: ${hostFork.tape.length} calls`)
       if (JSON.stringify(hostSync.tape) !== JSON.stringify(hostFork.tape)) notes.push("the runSyncExit entry's tape differs from the runFork entry's")
     }
+    const exception = signedU01(entry.name, entry.scenario, entry.run.exit, hostFork.exit,
+      entry.run.schedule, hostFork.schedule, runSyncAgree, hostFork.parked)
+    if (exception) notes.push("U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42")
     rows.push({
+      ...(exception ? { exception: "U-01" as const } : {}),
+      ...(entry.scenario == null ? {} : { scenario: entry.scenario }),
       program: entry.name, leanExit: lean.text, hostExit: host.parked ? "parked (deadline)" : renderExit(host.exit),
       entry: host.entry, exitAgree: exits.agree, scheduleAgree: schedule.agree, runSyncAgree, notes, host: hostFork, hostSync
     })
@@ -850,9 +910,11 @@ const main = async (): Promise<number> => {
   // Every compared dimension counts: the verdict entry's exit, the fork entry's schedule, and
   // the sync entry's exit (a program whose `runSyncExit` disagrees is a disagreement, whatever
   // the other two say).
-  const disagreements = rows.filter((r) => r.exitAgree === false || r.scheduleAgree === false || r.runSyncAgree === false)
+  const disagreements = rows.filter((r) => r.exception !== "U-01" &&
+    (r.program === "pInterruptEscape" || r.scenario != null || r.exitAgree === false || r.scheduleAgree === false || r.runSyncAgree === false))
+  const signed = rows.filter((r) => r.exception === "U-01").length
   const summary = disagreements.length === 0
-    ? `PASS: ${rows.length} programs, exits, schedules and sync exits agree with rc.112`
+    ? `PASS: ${rows.length - signed} programs agree on exits, schedules and sync exits; ${signed} signed divergence(s)`
     : `FAIL: ${disagreements.length} of ${rows.length} programs disagree with rc.112 (${disagreements.map((r) => r.program).join(", ")})`
   console.log(summary)
 
@@ -902,6 +964,7 @@ const observeModule = async (): Promise<number> => {
   }
 }
 
-if (argv.includes("--self-test-errors")) process.exitCode = selfTestErrors()
+if (argv.includes("--self-test-divergence")) process.exitCode = selfTestDivergence()
+else if (argv.includes("--self-test-errors")) process.exitCode = selfTestErrors()
 else if (argv.includes("--observe")) process.exit(await observeModule())
 else process.exitCode = await main()

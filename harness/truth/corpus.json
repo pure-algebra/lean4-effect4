@@ -5,6 +5,7 @@
  [{"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": true,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 42}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -24,6 +25,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": true,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 2}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -46,6 +48,7 @@
    "type":
    {"requiresEmpty": true, "requires": [], "error": "never", "answer": "Exit.Exit<number, never>"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": false, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "asyncFiber"}]}}},
    "run":
@@ -99,6 +102,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "number", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": false, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "asyncFiber"}]}}},
    "run":
@@ -121,6 +125,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "boolean"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": false}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -143,6 +148,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "void"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": null}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -165,6 +171,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "void"},
    "straight": true,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": null}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -187,6 +194,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "void"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": null}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -210,6 +218,7 @@
    "type":
    {"requiresEmpty": true, "requires": [], "error": "never", "answer": "Exit.Exit<number, never>"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": false, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "asyncFiber"}]}}},
    "run":
@@ -282,6 +291,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -305,6 +315,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule":
@@ -354,6 +365,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -388,6 +400,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 2}},
    "run":
    {"schedule":
@@ -477,6 +490,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 2}},
    "run":
    {"schedule":
@@ -560,6 +574,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 1}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -613,6 +628,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 3}},
    "run":
    {"schedule":
@@ -719,6 +735,7 @@
     "error": "never",
     "answer": "readonly [Host.Resource, number]"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [{"external": 0}, 1]}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -747,6 +764,7 @@
     "error": "readonly [\"SqlError\", \"boom\"]",
     "answer": "never"},
    "straight": true,
+   "scenario": null,
    "runSync":
    {"sync": true,
     "exitKind": "fail",
@@ -779,6 +797,7 @@
     "error": "readonly [string, string]",
     "answer": "ReadonlyArray<ReadonlyArray<readonly [string, string]>>"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": true, "exitKind": "success", "exit": {"success": [[["a", "7"], ["b", "\"x\""]]]}},
    "run":
@@ -811,6 +830,7 @@
     "error": "readonly [string, string]",
     "answer": "readonly [Option.Option<string>, boolean]"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [{"some": "1"}, true]}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -838,6 +858,7 @@
     "error": "readonly [string, string]",
     "answer": "ReadonlyArray<ReadonlyArray<readonly [string, string]>>"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": true,
     "exitKind": "fail",
@@ -870,6 +891,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "string"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": "recovered"}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -898,6 +920,7 @@
     "answer":
     "Exit.Exit<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]>"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": true,
     "exitKind": "success",
@@ -934,6 +957,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": true,
     "exitKind": "die",
@@ -980,6 +1004,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "string", "answer": "never"},
    "straight": true,
+   "scenario": null,
    "runSync":
    {"sync": true, "exitKind": "fail", "exit": {"failure": {"reasons": [{"fail": "lost"}]}}},
    "run":
@@ -1004,6 +1029,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "string", "answer": "never"},
    "straight": true,
+   "scenario": null,
    "runSync":
    {"sync": true, "exitKind": "fail", "exit": {"failure": {"reasons": [{"fail": "boom"}]}}},
    "run":
@@ -1028,6 +1054,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": true,
     "exitKind": "die",
@@ -1067,6 +1094,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -1087,6 +1115,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "number", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -1109,6 +1138,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "number", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": true,
     "exitKind": "fail",
@@ -1140,6 +1170,7 @@
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 9}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -1166,6 +1197,7 @@
     "error": "string | readonly [\"A\", \"m\"]",
     "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 1}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -1192,6 +1224,7 @@
     "error": "string | readonly [\"A\", \"m\"]",
     "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": true, "exitKind": "fail", "exit": {"failure": {"reasons": [{"fail": ["A", "m"]}]}}},
    "run":
@@ -1223,6 +1256,7 @@
     "error": "readonly [\"A\", \"m\"] | readonly [\"B\", \"x\"]",
     "answer": "number"},
    "straight": false,
+   "scenario": null,
    "runSync":
    {"sync": true,
     "exitKind": "fail",
@@ -1258,6 +1292,7 @@
     "error": "never",
     "answer": "readonly [boolean, number]"},
    "straight": true,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [true, 7]}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -1284,6 +1319,7 @@
     "error": "never",
     "answer": "readonly [boolean, number]"},
    "straight": true,
+   "scenario": null,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [false, 9]}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -1302,7 +1338,40 @@
    "declInferred":
    "export const main = Effect.flatMap(Effect.exit(Effect.suspend(() => false ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))\n",
    "decl":
-   "export const main: Effect.Effect<readonly [boolean, number], never> = Effect.flatMap(Effect.exit(Effect.suspend(() => false ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))\n"}],
+   "export const main: Effect.Effect<readonly [boolean, number], never> = Effect.flatMap(Effect.exit(Effect.suspend(() => false ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))\n"},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
+   "straight": false,
+   "scenario": "U-01",
+   "runSync":
+   {"sync": false, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "asyncFiber"}]}}},
+   "run":
+   {"schedule": ["started 0", "parked 0", "resumed 0", "started 0", "exited 0 interrupt"],
+    "outcome": "finished",
+    "internal": ["interruptRecorded by=0 target=0"],
+    "frames": 12,
+    "fibers":
+    [{"parkedToken": null,
+      "id": 0,
+      "exited": true,
+      "exit": {"failure": {"reasons": [{"interrupt": 0}]}}}],
+    "fiberCount": 1,
+    "exitKind": "interrupt",
+    "exit": {"failure": {"reasons": [{"interrupt": 0}]}},
+    "events":
+    ["started 0",
+     "parkedOn 0 token=0",
+     "resumedWith 0 token=0",
+     "started 0",
+     "exited 0 {\"failure\":{\"reasons\":[{\"interrupt\":0}]}}"]},
+   "name": "pInterruptEscape",
+   "exprRefusal": null,
+   "expr":
+   "Effect.catch(Effect.uninterruptible(Effect.flatMap(Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0)), (a0) => Effect.fail(42))), (a0) => Effect.succeed(0))",
+   "declInferred":
+   "export const main = Effect.catch(Effect.uninterruptible(Effect.flatMap(Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0)), (a0) => Effect.fail(42))), (a0) => Effect.succeed(0))\n",
+   "decl":
+   "export const main: Effect.Effect<number, never> = Effect.catch(Effect.uninterruptible(Effect.flatMap(Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0)), (a0) => Effect.fail(42))), (a0) => Effect.succeed(0))\n"}],
  "hostRows":
  [{"typeArgs": [],
    "trailing": [],
