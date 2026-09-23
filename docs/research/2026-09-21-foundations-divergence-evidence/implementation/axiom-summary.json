@@ -1,0 +1,8 @@
+{
+  "theorems": 6985,
+  "axioms": {
+    "none": 3159,
+    "propext": 2842,
+    "Quot.sound,propext": 984
+  }
+}

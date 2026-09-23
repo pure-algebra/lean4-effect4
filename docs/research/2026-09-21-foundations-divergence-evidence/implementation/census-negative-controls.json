@@ -1,0 +1,32 @@
+[
+  {
+    "control": "missing",
+    "command": [
+      "bash",
+      "scripts/check-effect-runtime-census.sh",
+      "--dry-run",
+      "/private/tmp/effect4-foundations-divergence/docs/research/2026-09-21-foundations-divergence-evidence/implementation/census-missing.tsv"
+    ],
+    "exit": 1
+  },
+  {
+    "control": "wrong-finding",
+    "command": [
+      "bash",
+      "scripts/check-effect-runtime-census.sh",
+      "--dry-run",
+      "/private/tmp/effect4-foundations-divergence/docs/research/2026-09-21-foundations-divergence-evidence/implementation/census-wrong-finding.tsv"
+    ],
+    "exit": 1
+  },
+  {
+    "control": "wrong-witness",
+    "command": [
+      "bash",
+      "scripts/check-effect-runtime-census.sh",
+      "--dry-run",
+      "/private/tmp/effect4-foundations-divergence/docs/research/2026-09-21-foundations-divergence-evidence/implementation/census-wrong-witness.tsv"
+    ],
+    "exit": 1
+  }
+]

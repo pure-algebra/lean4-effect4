@@ -1,118 +1,221 @@
-# Foundations divergence receipt: stopped at E4-SCHED-CE-009
+# Interruption divergence receipt
 
-The divergence is not implemented. The unchanged compiled failure consumer cannot return
-an updated failure in the same step: it retains the exit supplied before the stack walk.
-The packet's explicit stop condition applies. E4-SCHED-CE-009 is retained as a checked
-counterexample; slice 5 has not started. The coordinator must approve the consumer changes
-in the amendment below before the runtime work resumes.
+Ready for the coordinator's once-over and fast-forward. This slice deliberately differs
+from rc.112 on U-01: both Lean walks sanitize a preempted failure handler; the host still
+returns `Fail 42`. Every required acceptance check passed. Slice 5 is held at the packet's
+coordinator integration/retarget boundary. Nothing was merged or pushed.
 
-## Base, delivery and scope
+## Base, head and authorization
 
-- Base: `439f27f368465355b24428690fec9215027d2052`, the packet's final-text commit.
-- Verified code head: `18373ad39ef28b9f8c6fd2440067c2827dbd0fde` (counterexample and evidence).
-  The following documentation commit adds this receipt; neither commit changes runtime code.
-- Branch: `codex/foundations-divergence`.
-- Worktree: `/private/tmp/effect4-foundations-divergence`.
-- No runtime source, generated output, pinned expectation, obligation declaration, gate
-  ceiling, owner register, `docs/STATE.md` or `README.md` changed. Nothing was pushed or
-  merged. The runtime still has the old escape behavior.
+- Packet base: `439f27f368465355b24428690fec9215027d2052`.
+- Original checked obstruction: `18373ad39ef28b9f8c6fd2440067c2827dbd0fde` (CE-009).
+- Stop receipt / continuation base: `0d5e109c`.
+- Verified implementation head: `5f33fe3c47725bf9ff9c6632d90bea50d7a442b6`.
+- Branch: `codex/foundations-divergence`, worktree `/private/tmp/effect4-foundations-divergence`.
+- Verification completed 2026-09-23. The documentation commit following the implementation
+  adds this receipt, retained evidence and the actual commit references in the two registers.
 
-Authority: the [divergence brief](2026-09-21-codex-brief-foundations-divergence-slice.md)
-§5 says: “If the frame machine's walk cannot carry the sanitized exit without a second
-change to the evaluator, stop, retain the case as `E4-SCHED-CE-009`, and report.”
-Its §1 permits only the runtime changes in §2. The amendment here is a proposal,
-not an additional ruling or authorization.
+The original brief required a stop if the compiled exit consumers also needed a change.
+That stop was observed and CE-009 was checked before runtime edits. The owner then approved
+“yes proceed”. The [approved amendment](2026-09-21-foundations-divergence-amendment.md)
+opens the explicit cause carrier, its three consumers and their dependent proofs.
+The [original stop receipt](2026-09-21-foundations-divergence-evidence/implementation/original-stop-receipt.md)
+is retained verbatim; its old results describe the obstruction, not the current implementation.
 
-## Checked obstruction
+## Runtime change and observations
 
-`FramePop` has `answer`, `popped`, `events` and `fiber`; it does not carry a delivered exit.
-`popFrom` and `passPushed` receive a demand and skip flag, not the exit being delivered.
-The current primitive is present in `fiber.current`, but the consumers keep separate exit
-arguments. Merely changing that current primitive does not change those arguments.
+`Cause.stripFail` filters typed failures while retaining defects, interrupts and annotations.
+`Cause.sanitize c ic` is exactly `Cause.combine (Cause.stripFail c) ic`.
+`sanitize_clean` requires that the recorded cause contains no Fail reasons. It does not
+claim cleanliness for an arbitrary malformed recorded cause.
 
-The counterexample is
-[`InterruptCarrier.lean`](../../Test/Counterexamples/Machine/Semantics/InterruptCarrier.lean):
+The term walk's `.resume` branch sanitizes only when a failure arm that would have answered
+is skipped under interruption. Guard misses keep their exit. The compiled walk carries an
+explicit optional cause through `popFrom`, `passPushed`, `joinPushed` and `getCont` into
+`FramePop.carriedCause`. `skippedCause` changes it at the same failure-arm skip. A discarded
+mask-hook replacement has no failure arm and does not sanitize.
 
-| Statement | What it establishes | Axioms |
+`FramePop.deliveredExit` keeps a successful exit and substitutes the returned cause on a
+failure. `FrameFiber.resumeCause`, `evaluatePrim.finalizerOr` and `Program.exitScoped` use it
+for handler inputs, terminal exits, finalizer programs/events and restored exits. A scoped
+exit also puts the delivered exit into the returned frame's current code, including the
+unknown-scope result. This is within the approved consumer amendment.
+
+The default `none` carrier leaves the structural walk available to existing callers. The
+answer, popped frames, events and saved fiber are independent of the supplied cause, with
+separate projection lemmas. Generic helpers that call the cause-aware walk now require the
+four `DecidableEq` instances used by `Cause.combine`. No run premise was added to the final
+runtime agreement theorem. Success injection, guard misses, deferred-success interception,
+masked finalizers and step count keep their prior rules.
+
+The implementation commit changes 45 files. The full lists are
+[implementation files](2026-09-21-foundations-divergence-evidence/implementation/implementation-files.txt)
+and [all packet files through the code head](2026-09-21-foundations-divergence-evidence/implementation/packet-files.txt).
+The former covers the four runtime files, the dependent walk/delivery/ownership/handle
+proofs, counterexamples, census tools and truth harness. The original two stop commits
+also added CE-009 to the test root and retained its evidence.
+
+## Statements, gates and proof trust
+
+| Surface | Before | After / evidence |
 | --- | --- | --- |
-| `original_ne_sanitized` | `Fail 42` and the recorded interrupt are distinct causes | none |
-| `finished_uses_supplied_exit` | For every native interpreter, saved frame, cause and optional supplied exit, any terminal result of `resumeCause` equals the supplied exit, or the original cause when no exit was supplied | `[propext]` |
-| `cannot_finish_sanitized` | For every saved frame, the unchanged consumer cannot finish with the interrupt when its supplied exit is `Fail 42` | `[propext]` |
-| `sanitized_current_is_ignored` | An exhausted frame whose current code already contains the interrupt still returns the supplied `Fail 42` | `[propext]` |
-| `masked_catch_returns_original` | A mask restoration followed by the preempted catch finishes with the original failure | `[propext]` |
-| `remasked_handler_receives_original` | When a later mask permits another handler to run, the unchanged consumer passes the original cause even if current code already carries the interrupt | `[propext]` |
+| `FramePop` | four fields; no delivered cause | fifth field `carriedCause : Option (Cause …) := none`; consumers read `deliveredExit` |
+| compiled walk calls | demand, skip flag and saved frame | trailing optional cause, default `none`; cause projection laws describe the returned payload |
+| `walk_rel` / carried walk bridge | original exit supplied to the relation | the relation observes `walkExit`; `walk_rel_carried` connects the actual cause-aware pop |
+| `run_eq_ref`, `run_eq_ref_exit` | existing conclusions and premises | source byte-identical; both `[propext, Quot.sound]` |
+| `RuntimeRContract`, `RuntimeRReference` | existing agreement battery and pins | byte-identical and green |
+| scope-restoration public equations | nine frozen full-result equations | unchanged statements; the failure-mask equation delegates to the real tail as before |
+| `Cause.mem_stripFail`, `stripFail_nodup`, `sanitize_clean` | absent | `[propext]`; `stripFail_nodup` assumes input Nodup because Cause has no intrinsic Nodup law |
+| `walkExit_preempted` | absent | `[propext, Quot.sound]` |
+| `resumeClosedScope_failure_pending` | original full-result equation | same equation, `[propext, Quot.sound]` |
+| CE-009 terminal law | `finished_uses_supplied_exit`; original consumer cannot return the sanitized exit | `finished_uses_carried_exit` reads the returned cause; historical obstruction retained at `18373ad3` |
+| production obligation graph | ceiling 9 | ceiling 9; no declaration added, removed, closed or weakened |
+| module / axiom gate | `[propext, Quot.sound]`; exact existing implementation exceptions | unchanged ceiling and exception lists; 485 modules, 67,319 declarations checked |
 
-`finished_uses_supplied_exit` unfolds `resumeCause` alone and leaves `getCont` opaque.
-Thus changing which result the walk returns does not repair its terminal branch.
-The existing `deferred` and `replacement` answers produce a running frame, not the required
-terminal result in that step. This is a statement about that consumer and step; it is not a
-claim that every possible redesign is impossible.
+The root check reports 138 API/utility modules and 204 Laws-only modules, every library
+source reachable, with no Laws import from `Effect4`. The existing implementation exceptions
+remain exactly 15 modules and 29 named declarations.
 
-The local saved-state equations do not claim source reachability. E4-SCHED-CE-008 remains
-the separate reachable-program witness. Its fixtures and CE-006/007 are unchanged because
-no runtime fix landed.
+[Axioms.lean](2026-09-21-foundations-divergence-evidence/implementation/Axioms.lean) prints the
+four central axiom reports and every theorem in the edited modules, including equation
+lemmas and test examples: 6,985 theorem reports, all within the ceiling. The complete
+[per-theorem table](2026-09-21-foundations-divergence-evidence/implementation/axioms.tsv)
+and [summary](2026-09-21-foundations-divergence-evidence/implementation/axiom-summary.json)
+are retained. Two finite witnesses (`w6_parallel_forks_and_merges` and
+`forbidden_observers_and_double_exit`) use `decide +kernel` after ordinary reduction exceeded
+the existing limits. Their statements, expected values and limits are unchanged; both report
+`[propext, Quot.sound]`. No native evaluator or trust exception was introduced.
 
-Three consumers retain the old exit:
+## Every changed expected value
 
-| Consumer | Source at base | Use outside the walk |
+| Witness / pin | Old | New and reason |
 | --- | --- | --- |
-| `FrameFiber.resumeCause` | `src/Effect4/Machine/Frames.lean:2423` | Terminal exit and yielded event; `armE` arguments; finalizer events |
-| `evaluatePrim.finalizerOr` | `src/Effect4/Machine/Fibers.lean:1154` | `finalizerProgram`, restoring continuation and finalizer event |
-| `Program.exitScoped` | `src/Effect4/Program/Compile.lean:1606` | `storesCloseScopeUnsafe`, finalizer event and restored exit |
+| CE-006 `restore_then_skip` | `some (.failure (Cause.fail (.tag 42)))` | `some (.failure (Cause.interrupt (some ⟨1⟩)))`, empty annotations; preempted catch sanitizes |
+| CE-007 `delivery_does_not_intercept_failure` | `.finished` with the same `Fail 42` | `.finished` with interrupt 1; sanitation is in the walk, not deferred interception |
+| CE-008 poisoned escape, both machines | `Fail 42` | exact annotated root interrupt in `sanitizedExit`; `escaped_no_longer` checks both |
+| CE-008 poisoned contagion, both machines | bad-shape defect after a string reaches the wrong handler | the same annotated root interrupt; explicit no-bad-shape guards stay green |
+| CE-009 masked catch | original `Fail 42` | interrupt 1 with empty annotations; terminal consumer reads the carrier |
+| CE-009 terminal observation | universally uses supplied/original exit | universally uses the walk's delivered exit; the old impossibility is historical, not asserted after repair |
+| scope boundary and its contract, restoration followed by `onFailure … 77` | causes `[die 2, die 1]` and a yielded event with that cause | `[die 2, die 1, interrupt 101]` and the matching yielded event; defects remain and the skipped catch adds the pending interrupt |
+| live-stack pop/entry tables | 22 four-field expected pop records | the same records with `carriedCause = none`; all prior structural values and order unchanged |
+| truth corpus inventory | 36 programs | 37, adding `pInterruptEscape`; existing rows only gain `scenario: null`, and all 36 prior host result rows are identical |
+| census disposition for `checkpoint.exit-failcause-skip` | `separateCalculus`, `green` | `divergence`, `diverged`, signed `U-01` plus the executable witness path; all mechanism rows unchanged |
 
-The first row is established by the Lean theorems. The latter two are source-inspection
-findings, not new universal theorems.
+The exact root cause is
+`.failure ((Cause.interrupt (some Api.root)).annotate (stackAnnotationsOf Api.root) false)`:
+root id 0, annotation entry `("stack0", ())`. The host wire drops annotations and prints
+`{"failure":{"reasons":[{"interrupt":0}]}}` for Lean versus
+`{"failure":{"reasons":[{"fail":42}]}}` for rc.112.
+The compared schedules are
+`["started 0", "parked 0", "resumed 0", "started 0", "exited 0 interrupt"]`
+and the same first four entries ending in `"exited 0 fail"` on the host.
+Both synchronous runs return the async-fiber defect.
 
-## Smallest proposed amendment
+Quiet CE-008 rows still return 0 and 8; both original typing theorems remain. CE-006's
+original-input refutation is unchanged. CE-009 retains the current-code-only negative
+controls, and adds a skipped-then-remasked handler control that receives interrupt 1.
+Mask-only cleanup restoration and masked finalization controls remain unchanged.
 
-Authorize the following additional plumbing within the divergence slice:
+## Generated files and host boundary
 
-1. Pass the delivered failure into the compiled walk and expose its updated value in the
-   returned pop result. `FramePop` is the proposed explicit carrier; the exit supplied to
-   the walk is authoritative, rather than an inference from unrelated current code.
-2. At an answering failure arm discarded under preemption, update that carried failure
-   with `Cause.combine (stripFail cause) ic`. Continue the same walk with it. A guard miss
-   leaves it unchanged. This is the already ruled sanitization, not a different rule.
-3. Update `FrameFiber.resumeCause`, `evaluatePrim.finalizerOr` and `Program.exitScoped` to
-   use the returned failure consistently when finishing, invoking the next handler,
-   constructing cleanup, recording its exit, and restoring it. The amended fence must
-   therefore include `Machine/Fibers.lean` and `Program/Compile.lean`, as well as the
-   additional consumer code in `Machine/Frames.lean`.
-4. Permit the corresponding statement adjustments for carrier threading and the affected
-   consumer agreement proofs, including `Laws/Program/Simulation/Walk.lean` and
-   `Deliver.lean`. Keep the final `RuntimeR.run_eq_ref` observation and trust ceiling
-   unchanged. Regenerate the affected representations and OCaml only through their
-   existing producers, as the packet already requires.
+`make gen` ran the fixed sequence: variances, derived, lcnf, eff, wire, cas, ts, readme,
+truth, host-protocol, schema-ts, census. These eleven files changed, only through producers:
 
-The amendment must account for terminal delivery, a later re-masked handler, finalizers
-and scoped cleanup. Replacing the skipped frame with another executable failure is not
-a substitute: it adds a running result where the specified walk finishes in the same
-step. All other runtime behavior remains under the original fence.
+- `generated/effect-runtime-census.tsv`
+- `harness/truth/corpus.json`
+- `harness/truth/generated/pInterruptEscape.ts`
+- `harness/truth/result.json`
+- `harness/truth/result.md`
+- `ocaml/engine/api_engine.ml`
+- `ocaml/gen/api_gen.ml`
+- `ocaml/gen/closure-api_engine.tsv`
+- `ocaml/gen/closure-api_gen.tsv`
+- `ocaml/gen/closure-fibers_gen.tsv`
+- `ocaml/gen/fibers_gen.ml`
 
-## Verification and evidence
+The [inventory with SHA-256 hashes](2026-09-21-foundations-divergence-evidence/implementation/generated-inventory.json)
+records the reviewed bytes. Other generated groups, original host modules and recorded
+row tapes stayed byte-identical. The census diff is only its generator digest and the U-01
+signature record; no mechanism row was removed or rewritten.
 
-Evidence directory: [`2026-09-21-foundations-divergence-evidence/`](2026-09-21-foundations-divergence-evidence/).
-All Lean commands ran with `LEAN_NUM_THREADS=1` from the assigned worktree.
+The host harness executes the printed escape program against pinned rc.112. It records an
+interrupt on the masked parked root, then supplies the await answer through the pinned
+fiber API, matching the Lean decision tape. Its signed exception requires the exact program
+name, scenario, exit pair, compared schedule pair, synchronous agreement and settled host.
+The result keeps `exitAgree = false` and `scheduleAgree = false` and names U-01 in `notes`.
+All unsigned differences fail, and reverting Lean to `Fail 42` fails even if ordinary
+agreement becomes true. `check-truth` additionally requires exactly one signed fixture and
+checks generated TypeScript and byte reproduction. These are finite host observations,
+not a compiler-correctness theorem or the slice 5 typed-state theorem.
 
-| Command | Exit | Evidence |
+After `make check-census` passed, the sanctioned report printed:
+
+```text
+Effect rc.112 runtime coverage: denominator 135; owned-with-green 8/135;
+green 132, partial 2, absent 0, diverged 1; census 137 rows, 2 excluded
+partial: op.Failure layer.launch-holds-scope
+divergence: checkpoint.exit-failcause-skip; U-01; Test/Counterexamples/Machine/Semantics/InterruptEscape.lean
+produced at 5f33fe3c by scripts/report-effect-runtime-coverage.sh
+```
+
+## Fresh verification
+
+All Lean invocations use `LEAN_NUM_THREADS=1`, one Lake process at a time in the assigned
+worktree. [commands.jsonl](2026-09-21-foundations-divergence-evidence/implementation/commands.jsonl)
+records the final acceptance and last repair commands, exits and elapsed time. Logs are gzip-compressed without
+content changes; [compressed-logs.json](2026-09-21-foundations-divergence-evidence/implementation/compressed-logs.json)
+maps their original names and hashes. Green acceptance evidence is:
+
+| Command | Exit | Log |
 | --- | --- | --- |
-| `lake env lean -M4096 -DwarningAsError=true docs/research/2026-09-21-foundations-divergence-evidence/CarrierRed.lean` | 1, expected | `carrier-red.log`: the desired equality fails |
-| `lake env lean -M4096 -DwarningAsError=true Test/Counterexamples/Machine/Semantics/InterruptCarrier.lean` | 0 | `carrier-green.log`: all six theorem axiom reports |
-| `lake build Test.Counterexamples.Machine.Semantics.InterruptCarrier` | 0 | `narrow-build.log`: 275 jobs, including the newly compiled counterexample |
-| `lake build Test.All` | 0 | `test-all.log.gz`: 702 jobs; the modified test root was freshly compiled |
-| `lake env lean -M4096 -DwarningAsError=true docs/research/2026-09-21-foundations-divergence-evidence/Audit.lean` | 0 | `audit.log`: exact proposition checks, current unique ledger and every open name |
-| `git diff --check` | 0 | `diff-check.log` |
-| `git diff --exit-code HEAD -- src generated ocaml harness docs/core/decisions.md docs/STATE.md README.md` | 0 | `runtime-unchanged.log` |
+| `make build` | 0 | [make-build-3.log.gz](2026-09-21-foundations-divergence-evidence/implementation/make-build-3.log.gz) |
+| `make gen` | 0 | [make-gen.log.gz](2026-09-21-foundations-divergence-evidence/implementation/make-gen.log.gz) |
+| `lake env lean -M4096 -DwarningAsError=true docs/research/2026-09-21-foundations-divergence-evidence/implementation/Axioms.lean` | 0 | [axioms.log.gz](2026-09-21-foundations-divergence-evidence/implementation/axioms.log.gz) |
+| `lake env lean -M4096 -DwarningAsError=true docs/research/2026-09-21-foundations-divergence-evidence/Audit.lean` | 0 | [ledger.log.gz](2026-09-21-foundations-divergence-evidence/implementation/ledger.log.gz) |
+| `make check` | 0 | [make-check.log.gz](2026-09-21-foundations-divergence-evidence/implementation/make-check.log.gz) |
+| `make check-ocaml` | 0 | [make-check-ocaml.log.gz](2026-09-21-foundations-divergence-evidence/implementation/make-check-ocaml.log.gz) |
+| `make check-truth` | 0 | [make-check-truth.log.gz](2026-09-21-foundations-divergence-evidence/implementation/make-check-truth.log.gz) |
+| `make check-census` | 0 | [make-check-census.log.gz](2026-09-21-foundations-divergence-evidence/implementation/make-check-census.log.gz) |
+| `make check-cases` | 0 | [make-check-cases.log.gz](2026-09-21-foundations-divergence-evidence/implementation/make-check-cases.log.gz) |
+| `bash scripts/report-effect-runtime-coverage.sh` | 0 | [coverage-report-committed.log.gz](2026-09-21-foundations-divergence-evidence/implementation/coverage-report-committed.log.gz) |
+| `python3 docs/research/2026-09-21-foundations-divergence-evidence/implementation/VerifyArtifacts.py` | 0 | [artifact-review.log.gz](2026-09-21-foundations-divergence-evidence/implementation/artifact-review.log.gz) |
 
-The fresh `Test.All` gate checked **485 modules and 67,199 declarations**. Every semantic
-and test declaration remains within `[propext, Quot.sound]`; the existing metaprogramming
-exceptions remain 15 modules and 29 named declarations. The root gate reports 138
-API/utility modules and 204 Laws-only modules, every library source reachable, with no
-Laws import from `Effect4`.
+`make check` includes the post-generation build and generated drift check. Reviewed
+generated paths were staged before it, so its unstaged diff checked fresh output against
+the reviewed index. It produced no drift or untracked generated files. `check-ocaml` built
+and tested the generated/engine faces and passed the interface-only seam check.
+`check-truth` reports 36 agreeing programs and one signed divergence, with the freshly
+printed modules type-checking. `check-cases` reports 174/174 subjects, all passed, zero
+refused, counterexample or unresolved rows; its
+[receipt](2026-09-21-foundations-divergence-evidence/implementation/cases-receipt.json)
+and [report](2026-09-21-foundations-divergence-evidence/implementation/cases-report.json)
+are retained outside `.lake`.
 
-The unique production ledger is **342 total; 333 proved; 9 open**, at ceiling 9, unchanged
-by this work. No proof-obligation declaration or ceiling was added, removed or amended.
-The exact open names printed by this run are:
+The three census mutations (missing signature, wrong finding, wrong witness) each exit 1,
+with exact commands in `census-negative-controls.json`. The truth controls have one positive
+and eight negative cases, all passing. The first host signature probe rejected an incomplete
+four-row schedule; the actual five-row observation was retained and the exact check repaired.
+These failed observations and the unsuccessful proof/build attempts remain diagnostic
+logs, never acceptance evidence. In particular, `make-build-1` and `make-build-2` failed
+before the dependent repairs; `make-build-3` and the later required checks passed.
+
+The full `git diff HEAD --check` before committing returned 2 only for eight blank lines
+with indentation emitted by the existing OCaml engine printer. The base already contained
+653 such producer-written blank lines. Generated bytes were kept intact as required by the
+packet. The same check over every other changed file returned 0 (`diff-check-authored.log`),
+and no generated output was hand-edited. This is a formatting observation, not a waived
+build, trust or generation gate.
+
+## Unique production ledger and coordinator handoff
+
+Fresh `Audit.lean`, importing the production Laws root and CE-009, reports:
+
+```text
+Effect4: 262 paired, 80 without a namesake, 0 mismatches
+UNIQUE LEDGER: 342 total; 333 proved; 9 open
+```
+
+At ceiling 9, the unchanged open names are:
 
 - `Effect4.Api.M1Origin.source_fork_site`
 - `Effect4.Api.TraceFacts.M1Trace.step_agrees`
@@ -124,38 +227,18 @@ The exact open names printed by this run are:
 - `Effect4.Api.M1Origin.source_forkIn_site`
 - `Effect4.Run.M1Trace.observe_replace_trace`
 
-A diagnostic audit importing the whole test root counted 344 statements because
-`Test/Machine/Runtime/ArenaContract.lean` declares the two existing test-only obligations
-`Effect4.Machine.ArenaRed.Obligations.inserting_poke_fails_absent` and
-`Effect4.Machine.ArenaRed.Obligations.scopes_fail_dense`. That output is retained as
-`audit-test-inclusive.log`; it is not the production count. `Audit.lean` uses the same
-production import scope as the previous foundations receipts, while the full trust and
-module-closure gate runs in `Test.All`.
+The audit deliberately excludes the two existing test-only Arena obligations; the full
+`Test.All` gate independently checks every test declaration. No typed-state contract,
+M3b assembly, M4 stack obligation, hook-law marker or M6 adequacy marker changed in this
+slice. Those are slice 5 work.
 
-The red control attempts the desired terminal equality with an already sanitized current
-primitive and fails. The green controls prove the opposite behavior and the universal
-consumer property. The failed proof-development attempt is retained separately and is not
-proof evidence: its temporary `sorryAx` output came from an elaboration failure, not an
-accepted declaration. The first audit attempt omitted the full test root and was correctly
-rejected by the unchanged module-closure gate; verification then used `Test.All`.
+`docs/core/decisions.md`, `docs/STATE.md`, root `README.md` and `lakefile.toml` remain
+byte-identical. Proposed coordinator record: U-01 is implemented at `5f33fe3c47725bf9ff9c6632d90bea50d7a442b6`, both
+runtime agreement conclusions retain `[propext, Quot.sound]`, and the signed census/truth
+checks pass. The current typed-state theorem must not be reported proved by this slice.
 
-No generated file was regenerated, and no expected value was flipped. `make gen`,
-`make check`, `make check-ocaml`, `make check-truth` and `make check-census` are not claimed
-for an unimplemented divergence. The counterexample is wired into `Test/All.lean`; its
-registered row records the additional consumer scope that must be approved.
-
-
-## Changed files
-
-- `Test/Counterexamples/Machine/Semantics/InterruptCarrier.lean`: the six checked statements.
-- `Test/All.lean`: one import, immediately after `InterruptEscape`.
-- `Test/Counterexamples/REGISTER.md`: one new row, E4-SCHED-CE-009.
-- `docs/research/2026-09-21-foundations-divergence-evidence/`: the red input, ledger audit,
-  build and axiom output, diagnostic attempts, and unchanged-runtime checks.
-- This receipt.
-
-The full test build log is stored as gzip to preserve its raw tabular output, including
-trailing empty TSV columns, without introducing whitespace errors in the patch.
-Decompress with `gzip -dc docs/research/2026-09-21-foundations-divergence-evidence/test-all.log.gz`.
-The uncompressed SHA-256 is `eec2d2b2655594722f0b67b85cb984963c236a16655727b3cd78703e969bfb92`.
-The compressed file was round-tripped byte for byte.
+At handoff the main checkout remains `439f27f368465355b24428690fec9215027d2052`, and the clean
+slice 5 worktree remains `2966e82e7d458634351d0ee48f21f1e6b0ac7690`. The
+[packet](2026-09-21-codex-packet-divergence-and-slice-5.md) assigns the once-over, fast-forward
+integration and slice 5 retarget to the coordinator before dispatch. This seat has done
+neither step. Reporting U-01 upstream also remains the owner's action.

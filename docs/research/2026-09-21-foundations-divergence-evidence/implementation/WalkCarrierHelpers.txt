@@ -1,0 +1,119 @@
+/-- The failure explicitly supplied by exit delivery; a success has no failure carrier. -/
+def causeOf : ExitV → Option CauseV
+  | .success _ => none
+  | .failure cause => some cause
+
+/-- The exit carried through the compiled walk, before a consumer runs its answer. -/
+def walkExit (ex : ExitV) (stack : List NCode) (fiber : FFiber) : ExitV :=
+  (popFrom (demandOf ex) (skipOf ex) stack fiber (causeOf ex)).deliveredExit ex
+
+theorem walkExit_success (value : Val) (stack : List NCode) (fiber : FFiber) :
+    walkExit (.success value) stack fiber = .success value := rfl
+
+theorem walkExit_nil (ex : ExitV) (fiber : FFiber) : walkExit ex [] fiber = ex := by
+  cases ex <;> rfl
+
+private theorem skippedCause_isSome (demand : Effect4.Arm) (frame : NCode) (fiber : FFiber)
+    (cause : Option CauseV) :
+    (skippedCause demand frame fiber cause).isSome = cause.isSome := by
+  cases cause with
+  | none => rfl
+  | some cause =>
+    unfold skippedCause
+    split
+    · split <;> rfl
+    · rfl
+
+private theorem passPushed_carried_isSome (demand : Effect4.Arm) (skip : Bool) (fiber : FFiber)
+    (cause : Option CauseV) :
+    (passPushed demand skip fiber cause).carriedCause.isSome = cause.isSome := by
+  unfold passPushed
+  split
+  · rfl
+  · dsimp only
+    split
+    · split
+      · exact skippedCause_isSome _ _ _ _
+      · rfl
+    · rfl
+
+private theorem popFrom_carried_isSome (demand : Effect4.Arm) (skip : Bool)
+    (stack : List NCode) (fiber : FFiber) (cause : Option CauseV) :
+    (popFrom demand skip stack fiber cause).carriedCause.isSome = cause.isSome := by
+  induction stack generalizing fiber cause with
+  | nil => rfl
+  | cons frame rest ih =>
+    simp only [popFrom]
+    split
+    · split
+      · simp only [passOn, joinPushed]
+        split <;> simp only [ih, passPushed_carried_isSome, skippedCause_isSome]
+      · rfl
+    · simp only [passOn, joinPushed]
+      split <;> simp only [ih, passPushed_carried_isSome]
+
+/-- A frame that answers without preemption retains the incoming exit. -/
+theorem walkExit_answer (ex : ExitV) (frame : NCode) (rest : List NCode) (fiber : FFiber)
+    (answer : ContAnswer EffName EffThunk Val Err Defect FiberId Ann)
+    (ha : frame.answerOf (demandOf ex) (frame.ensure fiber).snd = some answer)
+    (hs : (skipOf ex && (frame.ensure fiber).fst.interrupted) = false) :
+    walkExit ex (frame :: rest) fiber = ex := by
+  simp only [walkExit, popFrom, ha, hs, Bool.false_eq_true, ↓reduceIte]
+  cases ex <;> rfl
+
+/-- A guard miss, or a passed non-handler such as the restoring mask, leaves the exit alone. -/
+theorem walkExit_pass (ex : ExitV) (frame : NCode) (rest : List NCode) (fiber : FFiber)
+    (hstack : (frame.ensure fiber).fst.stack = [])
+    (h : frame.answerOf (demandOf ex) (frame.ensure fiber).snd = none ∨
+      (skipOf ex && (frame.ensure fiber).fst.interrupted) = true)
+    (hc : skippedCause (demandOf ex) frame (frame.ensure fiber).fst (causeOf ex) = causeOf ex) :
+    walkExit ex (frame :: rest) fiber = walkExit ex rest (frame.ensure fiber).fst := by
+  rcases h with ha | hs
+  · simp only [walkExit, popFrom, ha, passOn, joinPushed, passPushed, hstack]
+  · cases ha : frame.answerOf (demandOf ex) (frame.ensure fiber).snd with
+    | none => simp only [walkExit, popFrom, ha, passOn, joinPushed, passPushed, hstack]
+    | some answer =>
+      simp only [walkExit, popFrom, ha, hs, ↓reduceIte, hc, passOn, joinPushed, passPushed, hstack]
+
+/-- The answering failure handler is skipped under interruption; the remainder of the
+walk receives the sanitized cause. This is U-01, checkpoint.exit-failcause-skip. -/
+theorem walkExit_preempted (cause interrupted : CauseV) (frame : NCode) (rest : List NCode)
+    (fiber : FFiber) (hens : frame.ensure fiber = (fiber, none))
+    (hstack : fiber.stack = []) (harm : frame.hasArm .contE = true)
+    (hint : fiber.interrupted = true) (hc : fiber.interruptedCause = some interrupted) :
+    walkExit (.failure cause) (frame :: rest) fiber =
+      walkExit (.failure (Cause.sanitize cause interrupted)) rest fiber := by
+  have ha : frame.answerOf .contE (frame.ensure fiber).snd = some (.frame frame) := by
+    rw [hens]
+    exact Prim.answerOf_arm _ _ harm
+  simp only [walkExit, demandOf, skipOf, causeOf, popFrom, ha, hens, hint, Bool.true_and,
+    ↓reduceIte, skippedCause, harm, hc, BEq.rfl, passOn, joinPushed, passPushed, hstack,
+    FramePop.deliveredExit]
+  have hp := popFrom_carried_isSome .contE true rest fiber (some (Cause.sanitize cause interrupted))
+  cases he : (popFrom .contE true rest fiber
+      (some (Cause.sanitize cause interrupted))).carriedCause with
+  | none => rw [he] at hp; cases hp
+  | some result => rfl
+
+/-- A masking finalizer answers before the interruption skip can fire. -/
+theorem walkExit_onExit (ex : ExitV) (body : NCode) (fin : EffName) (rest : List NCode)
+    (fiber : FFiber) : walkExit ex (Prim.onExit body fin false :: rest) fiber = ex := by
+  cases fiber with
+  | mk current stack flag interrupted deferred => cases ex <;> cases flag <;> rfl
+
+theorem walkExit_asyncFinalizer_failure (cause : CauseV) (name : EffName) (rest : List NCode)
+    (fiber : FFiber) :
+    walkExit (.failure cause) (Prim.asyncFinalizer name :: rest) fiber = .failure cause := by
+  cases fiber with
+  | mk current stack flag interrupted deferred => cases flag <;> rfl
+
+/-- Restoring a mask passes failures without changing their payload. -/
+theorem walkExit_mask_failure (cause : CauseV) (flag : Bool) (rest : List NCode)
+    (fiber : FFiber) (hstack : fiber.stack = []) :
+    walkExit (.failure cause) (Prim.setInterruptible flag :: rest) fiber =
+      walkExit (.failure cause) rest ((Prim.setInterruptible flag : NCode).ensure fiber).fst := by
+  cases fiber with
+  | mk current stack prior interrupted deferred =>
+    dsimp only at hstack
+    subst stack
+    cases interrupted <;> cases flag <;> rfl

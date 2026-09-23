@@ -1,0 +1,307 @@
+[
+  {
+    "original": "axioms.log",
+    "stored": "axioms.log.gz",
+    "uncompressed_sha256": "fd8f7fb155b61a2a4cc41df3ba66b26c89e6beb50f3fd6f5638e50165e017a7e"
+  },
+  {
+    "original": "evaluators.log",
+    "stored": "evaluators.log.gz",
+    "uncompressed_sha256": "e90bbe6d6dd1551677a29985509fd5a62ffb8f5e51219e9ada7c349d173b9aab"
+  },
+  {
+    "original": "make-build-1.log",
+    "stored": "make-build-1.log.gz",
+    "uncompressed_sha256": "48600def682f0a4b1817ac34a0eb28e7d4170e079cbe7309862765f6d18a81e5"
+  },
+  {
+    "original": "make-build-2.log",
+    "stored": "make-build-2.log.gz",
+    "uncompressed_sha256": "ce3c725b3d8d556ce9a42ebca6eed38ede3dc79f36263601644e3a38b8b67e0c"
+  },
+  {
+    "original": "make-build-3.log",
+    "stored": "make-build-3.log.gz",
+    "uncompressed_sha256": "9927a06f973853820b0b59852ed4ee8a790dcb5dfcf948219ad792d1b2279fb4"
+  },
+  {
+    "original": "make-check-ocaml.log",
+    "stored": "make-check-ocaml.log.gz",
+    "uncompressed_sha256": "f401e90d485c6a9a5f288403c2b20db5d6f680f6ab3727a049990e44f1df150a"
+  },
+  {
+    "original": "make-check.log",
+    "stored": "make-check.log.gz",
+    "uncompressed_sha256": "cbf0ced667badd7b84fe7a5eb29275a57268cae6ec75c3a8ef3591ebe1fcf98a"
+  },
+  {
+    "original": "make-gen.log",
+    "stored": "make-gen.log.gz",
+    "uncompressed_sha256": "105b1a2264dcdfdec2350873b8e24f506b2c0148c2d8db5d12a9cfc9b9f169f1"
+  },
+  {
+    "original": "remaining-laws-2.log",
+    "stored": "remaining-laws-2.log.gz",
+    "uncompressed_sha256": "74d1ad0dc3578834833a3c0f1f868eec669485497b74329c1b5797d410fbedfe"
+  },
+  {
+    "original": "runtime-contracts-2.log",
+    "stored": "runtime-contracts-2.log.gz",
+    "uncompressed_sha256": "63d0ad7852fa9a6bd95b51171ab7bddd337a2c84695cbdd6a87e78b60de416a0"
+  },
+  {
+    "original": "runtime-contracts-4.log",
+    "stored": "runtime-contracts-4.log.gz",
+    "uncompressed_sha256": "cb7e0014d0a8154b311fb292b312da420701c7cab822c0ee98d282dd614ef14a"
+  },
+  {
+    "original": "runtime-contracts-6.log",
+    "stored": "runtime-contracts-6.log.gz",
+    "uncompressed_sha256": "e0968957e6f28df1d5baf374c2c7e3b124a18e23b28fb841711afbac6074c9c7"
+  },
+  {
+    "original": "runtime-contracts-9.log",
+    "stored": "runtime-contracts-9.log.gz",
+    "uncompressed_sha256": "1c3aadc00ca3e2342d3bcd5c9016226d897372e2b3698ccc140ad4855850120f"
+  },
+  {
+    "original": "walk.log",
+    "stored": "walk.log.gz",
+    "uncompressed_sha256": "0ba95085b1263a42b17d86be4fa1cb4efd6d7a08bbd7017aa83c0fea6800b12f"
+  },
+  {
+    "original": "make-check-cases.log",
+    "stored": "make-check-cases.log.gz",
+    "uncompressed_sha256": "4bce42affb7925186c1a01548061f6395f5426e9e3d4d3642cc7506386106006"
+  },
+  {
+    "original": "artifact-review.log",
+    "stored": "artifact-review.log.gz",
+    "uncompressed_sha256": "8d4684ba85e6edaccc44355deb0e002d0a8b20810da329d7071aeec255aa5b28"
+  },
+  {
+    "original": "cause.log",
+    "stored": "cause.log.gz",
+    "uncompressed_sha256": "7edac581b78acd15b34cc93db3fded14e2dac0053e4820a04d9eae696acf4c95"
+  },
+  {
+    "original": "census-missing.log",
+    "stored": "census-missing.log.gz",
+    "uncompressed_sha256": "c19a4345ebe74a1439817f070134387df8548a04ce349762f33ff9a96409264d"
+  },
+  {
+    "original": "census-wrong-finding.log",
+    "stored": "census-wrong-finding.log.gz",
+    "uncompressed_sha256": "debf7b7e676f761b4738a9f7bd996b9a0a6a85eaf829f4e2c8443f0f4dc9e4d0"
+  },
+  {
+    "original": "census-wrong-witness.log",
+    "stored": "census-wrong-witness.log.gz",
+    "uncompressed_sha256": "1be5d2e2acd64ced572cd3837c3d50bf17994f4098933dbbf774dca2282e6584"
+  },
+  {
+    "original": "consumers.log",
+    "stored": "consumers.log.gz",
+    "uncompressed_sha256": "fa0ecd8b1db1db08a2210b44a627b52dfc1d6635471bca2884a967e08a64e1c1"
+  },
+  {
+    "original": "coverage-report-committed.log",
+    "stored": "coverage-report-committed.log.gz",
+    "uncompressed_sha256": "ffc5aec18dda5c29695c62076e11e8b7b5637c883ac14c36ea9c15d469d058e4"
+  },
+  {
+    "original": "coverage-report.log",
+    "stored": "coverage-report.log.gz",
+    "uncompressed_sha256": "7e3435e3e632dc74c81f68465b57d3ef4f4525496c35b2070aab9a9e2ef204c8"
+  },
+  {
+    "original": "deliver.log",
+    "stored": "deliver.log.gz",
+    "uncompressed_sha256": "7fd66ba2a049a8f557e5f378ba9a27840f7111d754e5bac5890049fdfe14eb3f"
+  },
+  {
+    "original": "diff-check-authored.log",
+    "stored": "diff-check-authored.log.gz",
+    "uncompressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original": "diff-check-generated.log",
+    "stored": "diff-check-generated.log.gz",
+    "uncompressed_sha256": "66bf15e69c0d291259da4f41a657b89654637277ccc6474dbf5260ec9e458ba4"
+  },
+  {
+    "original": "evaluator-2.log",
+    "stored": "evaluator-2.log.gz",
+    "uncompressed_sha256": "81219bb8b44024cd2ec0fd618a226c829a10ce7bb07faf6d20e959562c372718"
+  },
+  {
+    "original": "evaluator-3.log",
+    "stored": "evaluator-3.log.gz",
+    "uncompressed_sha256": "a504831d2e260d77b3059f4d1cc13a92f0333ef57a822ad27bc1c2eb7d371f7f"
+  },
+  {
+    "original": "evaluator-4.log",
+    "stored": "evaluator-4.log.gz",
+    "uncompressed_sha256": "5d39dbd4f0d63955392b3a995084ae290f93e4a63242ae94d1e03ca63b212cf2"
+  },
+  {
+    "original": "frame-escape-observe-2.log",
+    "stored": "frame-escape-observe-2.log.gz",
+    "uncompressed_sha256": "13dcadb525531a9b6e468cf5b3b124bcca6ad7915b1e9e2543a226e0fb43ede1"
+  },
+  {
+    "original": "frame-escape-observe.log",
+    "stored": "frame-escape-observe.log.gz",
+    "uncompressed_sha256": "bdb4f49ba9c9386e1e78f105bdec66a6c7ff1ea7defd1440d3248d732fd801a2"
+  },
+  {
+    "original": "frame-escape.log",
+    "stored": "frame-escape.log.gz",
+    "uncompressed_sha256": "2fdb4be433f5ce8057239680d83f3dbb04334e10668fad9bc1d4afcee9df53ac"
+  },
+  {
+    "original": "frames-2.log",
+    "stored": "frames-2.log.gz",
+    "uncompressed_sha256": "0b5339f4632266ab49189386a3536940dce89dbb4d45fdfd2aa25d891c781c48"
+  },
+  {
+    "original": "frames-3.log",
+    "stored": "frames-3.log.gz",
+    "uncompressed_sha256": "37b97d6534b0106ebb22a35261eec1f0c37e413709a01f430871b2ee0bc674f8"
+  },
+  {
+    "original": "frames-4.log",
+    "stored": "frames-4.log.gz",
+    "uncompressed_sha256": "89e3f579ade0c42e2ab2654ef8639d9868002c38fa20b0d6a8a2bc76672f9b43"
+  },
+  {
+    "original": "frames.log",
+    "stored": "frames.log.gz",
+    "uncompressed_sha256": "ac78ec607f534bf68f0f848f1fa4882f913235eebe1b433be384bc8bf8453f0d"
+  },
+  {
+    "original": "hooks.log",
+    "stored": "hooks.log.gz",
+    "uncompressed_sha256": "135fb33de746b2526932c7d697b2ca573a39a3337c01172b02a70089b9fc5663"
+  },
+  {
+    "original": "ledger.log",
+    "stored": "ledger.log.gz",
+    "uncompressed_sha256": "33c83c0a3de27a5bcde5b7a0ba99905dbb59d08a5b04d3771f4c23c32a0560f8"
+  },
+  {
+    "original": "make-check-census.log",
+    "stored": "make-check-census.log.gz",
+    "uncompressed_sha256": "79eefe16e8b0f8490c031d4f4d74f949a59230a57357d34c965c87acc33c8dee"
+  },
+  {
+    "original": "make-check-truth.log",
+    "stored": "make-check-truth.log.gz",
+    "uncompressed_sha256": "b3317ddf611c9abde4b44b8cbfbd82ab5b888a53555accd6640491c3143c0c01"
+  },
+  {
+    "original": "parallel-close-observation.log",
+    "stored": "parallel-close-observation.log.gz",
+    "uncompressed_sha256": "0683620bf4c480d2e8e62aa03fed395d67520b593e15d3d722bccf270cc55d87"
+  },
+  {
+    "original": "remaining-laws-1.log",
+    "stored": "remaining-laws-1.log.gz",
+    "uncompressed_sha256": "7eb89c0c100d64591c24b5cd0286836549b1f760fbbc29cbb4fea73242605afa"
+  },
+  {
+    "original": "remaining-laws-3.log",
+    "stored": "remaining-laws-3.log.gz",
+    "uncompressed_sha256": "93f1471f6bd76eabbc5f957ec8ddcf0fc8727a46a08bf13e39240b7dcde7a0a8"
+  },
+  {
+    "original": "runtime-contracts-3.log",
+    "stored": "runtime-contracts-3.log.gz",
+    "uncompressed_sha256": "d89aed83f5ee5eab76fd5556ccab36a21e33edc7cd4884b724d25df161913c4b"
+  },
+  {
+    "original": "runtime-contracts-5.log",
+    "stored": "runtime-contracts-5.log.gz",
+    "uncompressed_sha256": "c4eaf541d37f7984f22cc80e61c3cc6e52b11af44587de51f0cb44423c966783"
+  },
+  {
+    "original": "runtime-contracts-7.log",
+    "stored": "runtime-contracts-7.log.gz",
+    "uncompressed_sha256": "7d7a5aefe6bf7815a40467e305af898bef3896505a3162669d6db582f56cd47d"
+  },
+  {
+    "original": "runtime-contracts-8.log",
+    "stored": "runtime-contracts-8.log.gz",
+    "uncompressed_sha256": "932cf329da5d1d25ff0b3850738768d9eca134c6da9f8ebf4da883e78c95783d"
+  },
+  {
+    "original": "runtime-contracts.log",
+    "stored": "runtime-contracts.log.gz",
+    "uncompressed_sha256": "0bf780715004879c4af4dc44f931a8dd4ee4adf3f3feae12729ac7821cb8c95c"
+  },
+  {
+    "original": "scope-contract.log",
+    "stored": "scope-contract.log.gz",
+    "uncompressed_sha256": "2681631c548f505cd796ad12d4fb54680016469ee929a4e5f4b53d1493a68bf8"
+  },
+  {
+    "original": "truth-manifest-2.log",
+    "stored": "truth-manifest-2.log.gz",
+    "uncompressed_sha256": "3a4de89abe2b220e4f669f4087def01e8156636778d1bf9257263ae96010780b"
+  },
+  {
+    "original": "truth-manifest.log",
+    "stored": "truth-manifest.log.gz",
+    "uncompressed_sha256": "24194081718a1a8610edb53f1e732fbebbd667681466feb31447cc8bf7c9835d"
+  },
+  {
+    "original": "truth-recorder-typecheck.log",
+    "stored": "truth-recorder-typecheck.log.gz",
+    "uncompressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original": "truth-signature-controls-2.log",
+    "stored": "truth-signature-controls-2.log.gz",
+    "uncompressed_sha256": "da7a1425bdeab6dac20227ee848f6fa7f7d6e176f247c396a53f8fff7866416e"
+  },
+  {
+    "original": "truth-signature-controls.log",
+    "stored": "truth-signature-controls.log.gz",
+    "uncompressed_sha256": "da7a1425bdeab6dac20227ee848f6fa7f7d6e176f247c396a53f8fff7866416e"
+  },
+  {
+    "original": "truth-typecheck-first.log",
+    "stored": "truth-typecheck-first.log.gz",
+    "uncompressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original": "truth-u01-2.log",
+    "stored": "truth-u01-2.log.gz",
+    "uncompressed_sha256": "afe5a913e4323a3119e5154b3b6063730d495e837467d04c137863d271bba316"
+  },
+  {
+    "original": "truth-u01-3.log",
+    "stored": "truth-u01-3.log.gz",
+    "uncompressed_sha256": "ee93604ea3eb08357bc2dd5e3dc3ec4a7784f442768f9a5d178e292fa3b21999"
+  },
+  {
+    "original": "truth-u01-first.log",
+    "stored": "truth-u01-first.log.gz",
+    "uncompressed_sha256": "7cf27f262a15168a809ce7d7cfcba7d4fc9b9f36ad650c28f747ddbf48ec6208"
+  },
+  {
+    "original": "walk-2.log",
+    "stored": "walk-2.log.gz",
+    "uncompressed_sha256": "dbda4c4138e467ebb79a3cdd169802c16262734f400fa6268df9f26d560a95fa"
+  },
+  {
+    "original": "walk-helpers-2.log",
+    "stored": "walk-helpers-2.log.gz",
+    "uncompressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original": "walk-helpers.log",
+    "stored": "walk-helpers.log.gz",
+    "uncompressed_sha256": "56a28d935d9bbed99530b75dd3f37e56715ffa718f86b66b08acd8fc337f8a96"
+  }
+]
