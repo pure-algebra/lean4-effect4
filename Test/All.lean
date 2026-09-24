@@ -35,6 +35,7 @@ import Test.Counterexamples.Machine.Semantics.InterruptDelivery
 import Test.Counterexamples.Machine.Semantics.StrongExitDefect
 import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Test.Counterexamples.Machine.Semantics.InterruptCarrier
+import Test.Counterexamples.Machine.Semantics.AsyncHookContract
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.TypedResidual
