@@ -10,6 +10,7 @@ set_option autoImplicit false
 namespace Test.Counterexamples.InterruptDelivery
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
 open Effect4.Program.Typed.Contracts
+open Effect4.Program.Typed (ExitFits)
 abbrev TWorld := Effect4.Program.Typed.World
 
 def beforeCatch : EffTy := ⟨.nat, .nat, Effect4.Machine.Env.Requirement.empty⟩

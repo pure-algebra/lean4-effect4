@@ -2,17 +2,14 @@ import Effect4.Laws.Program.Typed.World
 
 /-!
 Typed saved-stack interfaces (foundations plan D3–D5). These are judgments over the existing
-reference proof carrier, not new stored program syntax. `TypedProg` and the named-frame
-protocols are parameters until M3a. No evaluator preservation or world transport is asserted.
+reference proof carrier, not new stored program syntax. The program judgment, the exit
+judgment and the named-frame protocols are parameters: this module imports only the world,
+and `Typed/Residual.lean` instantiates them. No evaluator preservation or world transport is
+asserted.
 -/
 set_option autoImplicit false
 namespace Effect4.Program.Typed.Contracts
 open Effect4 Effect4.Machine Effect4.Program.Sched Effect4.Program.Denote
-
-/-- The exit observation at an effect type. Interruption is admitted separately from the
-error column by the existing cause judgment. -/
-def ExitFits (w : World) (ty : EffTy) (ex : ExitV) : Prop :=
-  CompletionOk w (ty.answer, ty.error) (.ofExit ex)
 
 /-- Named continuations need M3a's interpreter protocols. Keeping these requirements as
 parameters avoids assuming meanings for names from their spelling alone. Each is an arrow
@@ -23,19 +20,22 @@ structure FrameProtocols where
   loop : World → EffTy → EffTy → EffName → Val → Prop
 
 section
-variable (TypedProg : World → EffTy → RProgram → Prop) (hooks : FrameProtocols)
+variable (TypedProg : World → EffTy → RProgram → Prop)
+  (Exits : World → EffTy → ExitV → Prop) (hooks : FrameProtocols)
 
-/-- Seven arms of `ScopeFrame` as typed arrows. `resume` also accounts for skipped arms and
-interrupting failures; masks pass the exit type through. Named hooks retain their protocol
-premise, including the cursor for a loop. Connection to `popR` is a later obligation. -/
+/-- Seven arms of `ScopeFrame` as typed arrows (slice 5 R3, ruled 2026-09-21). `resume` types
+the running arm and the guard miss separately; a preempted skip passes the sanitized exit,
+which carries no `Fail` and fits every type (`strongExit_of_clean`; divergence `U-01`,
+`E4-SCHED-CE-008`). The former all-failures disjunct stood in for preemption and rejected
+every error-removing catch. Masks pass the exit type through; named hooks retain their
+protocol premise, including the cursor for a loop. Connection to `popR` is slice 5's. -/
 inductive FrameAccepts (w : World) : EffTy → EffTy → ScopeFrame → Prop
   | resume {tin tout : EffTy} (kind : GuardKind) (next : ExitV → RProgram)
-      (run : ∀ ex, ExitFits w tin ex → kind.hasExitArm ex = true → TypedProg w tout (next ex))
-      (skip : ∀ ex, ExitFits w tin ex →
-        (kind.hasExitArm ex = false ∨ ∃ cause, ex = .failure cause) → ExitFits w tout ex) :
+      (run : ∀ ex, Exits w tin ex → kind.hasExitArm ex = true → TypedProg w tout (next ex))
+      (skip : ∀ ex, Exits w tin ex → kind.hasExitArm ex = false → Exits w tout ex) :
       FrameAccepts w tin tout (.resume kind next)
   | answer {tin tout : EffTy} (next : ExitV → RProgram)
-      (run : ∀ ex, ExitFits w tin ex → TypedProg w tout (next ex)) :
+      (run : ∀ ex, Exits w tin ex → TypedProg w tout (next ex)) :
       FrameAccepts w tin tout (.answer next)
   | restoreMask (ty : EffTy) (flag : Bool) : FrameAccepts w ty ty (.restoreMask flag)
   | asyncFinalizer {tin tout : EffTy} (name : EffName)
@@ -51,7 +51,7 @@ inductive FrameAccepts (w : World) : EffTy → EffTy → ScopeFrame → Prop
 inductive StackAccepts (w : World) : EffTy → EffTy → List ScopeFrame → Prop
   | nil (ty : EffTy) : StackAccepts w ty ty []
   | cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
-      (head : FrameAccepts TypedProg hooks w tin middle frame)
+      (head : FrameAccepts TypedProg Exits hooks w tin middle frame)
       (tail : StackAccepts w middle tout rest) : StackAccepts w tin tout (frame :: rest)
 
 /-- Structural scheduler provenance: recorded reasons are interrupts, not typed failures;
@@ -65,7 +65,7 @@ structure InterruptProvenance (x : RSaved) : Prop where
 
 /-- Current code and stack meet at the same existentially chosen intermediate type. -/
 def SavedOk (w : World) (final : EffTy) (x : RSaved) : Prop :=
-  ∃ tin, TypedProg w tin x.current ∧ StackAccepts TypedProg hooks w tin final x.stack ∧
+  ∃ tin, TypedProg w tin x.current ∧ StackAccepts TypedProg Exits hooks w tin final x.stack ∧
     InterruptProvenance x
 
 /-- A resume reads the target's own token declaration, not the fiber's final type. Active
@@ -91,8 +91,9 @@ def Programs (_w : World) (ty : EffTy) (code : RProgram) : Prop :=
 
 /-- Nat → Bool → Unit uses two answer frames, with a middle distinct from both ends.
 This is a kernel-checked interface example, not an evaluator theorem. -/
-theorem changing_middle (w : World) (hooks : FrameProtocols) :
-    StackAccepts Programs hooks w (EffTy.pure .nat) (EffTy.pure .unit)
+theorem changing_middle (Exits : World → EffTy → ExitV → Prop)
+    (w : World) (hooks : FrameProtocols) :
+    StackAccepts Programs Exits hooks w (EffTy.pure .nat) (EffTy.pure .unit)
       [.answer (fun _ => .pure (.success (.bool true))),
        .answer (fun _ => .pure (.success .unit))] :=
   .cons (.answer _ (fun _ _ => Or.inl ⟨rfl, rfl⟩))

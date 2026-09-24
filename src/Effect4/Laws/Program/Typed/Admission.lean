@@ -1,20 +1,14 @@
 import Effect4.Laws.Program.Typed.Validity
-import Effect4.Laws.Program.Typed.Contracts
 import Effect4.Program.Checker
-import Effect4.Program.Admission
-import Effect4.Laws.Program.Handles
 import Effect4.Laws.Program.Sched
-import Effect4.Laws.Effects.Protocol
-import Effect4.Laws.Auto.Obligations
 
 /-!
 # Laws.Program.Typed.Admission — source and control admission for typed programs
 
 D13 source admission (checking paths and environments against the checker) before protocol
-contracts; strong value/cause/exit judgments resolving FR-07; control admission and marker
-payload inversion resolving FR-09.
-
-Stack and interruption preemption contracts remain held.
+contracts; strong value/cause/exit judgments resolving FR-07; the clean-exit lemmas that type
+interrupt-only and defect-only failures at every effect type. Control admission (FR-09) is an
+arm of the one program judgment `TypedProg` in `Typed/Residual.lean` (ruling 2026-09-23).
 -/
 
 set_option autoImplicit false
@@ -63,7 +57,7 @@ def StrongCause (w : World) (errTy : Ty) (c : CauseV) : Prop :=
 /-- Strong exits: successful values and failure causes carry strong typing. Defects and
 interruptions remain admitted. -/
 def StrongExit (w : World) (ty : EffTy) (ex : ExitV) : Prop :=
-  Contracts.ExitFits w ty ex ∧
+  ExitFits w ty ex ∧
   (∀ v, ex = .success v → StrongValue w ty.answer v) ∧
   (∀ c, ex = .failure c → StrongCause w ty.error c)
 
@@ -94,67 +88,53 @@ inductive BodyTyped (root : NativeEff) (w : World) : Body → EffTy → Prop
   | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (ty : EffTy) (h : PointTyped root w p ty) :
       BodyTyped root w (.layerBuild p m scope) ty
 
-/-- Dedicated control-admission predicate guaranteeing that top-level control nodes
-carry payloads satisfying `StrongExit`. For pure leaves and other operations, holds by
-recursion on continuations. -/
-inductive ControlAdmitted (root : NativeEff) : World → EffTy → RProgram → Prop
-  | pure (w : World) (ty : EffTy) (ex : ExitV) :
-      ControlAdmitted root w ty (.pure ex)
-  | vis_inl (w : World) (ty : EffTy) (op : SyncOp) (k : Val → RProgram) :
-      (∀ w', w.leHost w' → ∀ ans, ControlAdmitted root w' ty (k ans)) →
-      ControlAdmitted root w ty (.vis (.inl op) k)
-  | unguard (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
-      StrongExit w ty ex →
-      (∀ w', w.leHost w' → ControlAdmitted root w' ty (k ex)) →
-      ControlAdmitted root w ty (.vis (.inr (.unguard ex)) k)
-  | finishFinalizer (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
-      StrongExit w ty ex →
-      (∀ w', w.leHost w' → ControlAdmitted root w' ty (k ex)) →
-      ControlAdmitted root w ty (.vis (.inr (.finishFinalizer ex)) k)
-  | scoped (w : World) (ty : EffTy) (body : Point) (bty : EffTy) (k : ExitV → RProgram) :
-      PointTyped root w body bty →
-      (∀ w', w.leHost w' → ∀ ans, ControlAdmitted root w' ty (k ans)) →
-      ControlAdmitted root w ty (.vis (.inr (.scoped body)) k)
-  | scopeExit (w : World) (ty : EffTy) (prev : Ctx) (sc : Nat) (ex : ExitV) (k : ExitV → RProgram) :
-      StrongExit w ty ex →
-      (∀ w', w.leHost w' → ∀ ans, ControlAdmitted root w' ty (k ans)) →
-      ControlAdmitted root w ty (.vis (.inr (.scopeExit prev sc ex)) k)
-  | other (w : World) (ty : EffTy) (op : FiberOp) (k : op.answer → RProgram) :
-      (∀ ex, op ≠ .unguard ex) →
-      (∀ ex, op ≠ .finishFinalizer ex) →
-      (∀ pt, op ≠ .scoped pt) →
-      (∀ prev sc ex, op ≠ .scopeExit prev sc ex) →
-      (∀ w', w.leHost w' → ∀ ans, ControlAdmitted root w' ty (k ans)) →
-      ControlAdmitted root w ty (.vis (.inr op) k)
+/-- An exit whose failure carries no `Fail` reason: interruptions and defects only. Every
+success is clean. The sanitized exit at a preempted skip is clean (`Cause.sanitize_clean`). -/
+def cleanExit : ExitV → Bool
+  | .success _ => true
+  | .failure c => c.reasons.all fun r => r.tag != .fail
 
-theorem unguard_payload_inv (root : NativeEff) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram)
-    (h : ControlAdmitted root w ty (.vis (.inr (.unguard ex)) k)) : StrongExit w ty ex := by
-  cases h with
-  | unguard _ _ _ _ hex _ => exact hex
-  | other _ _ _ _ hne _ _ _ _ => exact False.elim (hne ex rfl)
+/-- A clean failure fits every effect type at every world: the error column constrains
+`Fail` reasons only. -/
+theorem strongExit_of_clean (w : World) (ty : EffTy) (c : CauseV)
+    (h : cleanExit (.failure c) = true) : StrongExit w ty (.failure c) := by
+  have hall : ∀ r ∈ c.reasons, r.tag ≠ .fail := by
+    intro r hr
+    exact bne_iff_ne.mp (List.all_eq_true.mp h r hr)
+  refine ⟨?_, (fun _ heq => nomatch heq), fun c' heq => ?_⟩
+  · change causeAdmits _ ty.error c = true
+    unfold causeAdmits
+    rw [List.all_eq_true]
+    intro r hr
+    have hne := hall r hr
+    cases r with
+    | fail e ann => exact absurd rfl hne
+    | die _ _ => rfl
+    | interrupt _ _ => rfl
+  · cases heq
+    intro r hr
+    have hne := hall r hr
+    cases r with
+    | fail e ann => exact absurd rfl hne
+    | die _ _ => trivial
+    | interrupt _ _ => trivial
 
-theorem finishFinalizer_payload_inv (root : NativeEff) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram)
-    (h : ControlAdmitted root w ty (.vis (.inr (.finishFinalizer ex)) k)) : StrongExit w ty ex := by
-  cases h with
-  | finishFinalizer _ _ _ _ hex _ => exact hex
-  | other _ _ _ _ _ hne _ _ _ => exact False.elim (hne ex rfl)
-
-namespace M3aAdmissionObligations
-
-theorem unguard_payload_inv (root : NativeEff) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
-    ProofGraph.Obligation (ControlAdmitted root w ty (.vis (.inr (.unguard ex)) k) → StrongExit w ty ex) := ⟨⟩
-
-theorem finishFinalizer_payload_inv (root : NativeEff) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
-    ProofGraph.Obligation (ControlAdmitted root w ty (.vis (.inr (.finishFinalizer ex)) k) → StrongExit w ty ex) := ⟨⟩
-
-end M3aAdmissionObligations
+/-- At a `never` error column a strong failure is clean: no value has type `never`. -/
+theorem cleanExit_of_never (w : World) (ty : EffTy) (c : CauseV) (never : ty.error = .never)
+    (h : StrongExit w ty (.failure c)) : cleanExit (.failure c) = true := by
+  have hadm : causeAdmits (fun value ty => Val.hasTy value ty w.state.externals.allocated)
+      ty.error c = true := h.1
+  rw [never] at hadm
+  unfold cleanExit
+  rw [List.all_eq_true]
+  intro r hr
+  have hr' := List.all_eq_true.mp hadm r hr
+  cases r with
+  | fail e ann =>
+    cases hval : valOfErr e with
+    | none => simp only [reasonAdmits, hval] at hr'; cases hr'
+    | some v => simp only [reasonAdmits, hval] at hr'; cases hr'
+  | die _ _ => rfl
+  | interrupt _ _ => rfl
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M3aAdmissionObligations.unguard_payload_inv :=
-  @Effect4.Program.Typed.unguard_payload_inv
-#obligation_proved Effect4.Program.Typed.M3aAdmissionObligations.finishFinalizer_payload_inv :=
-  @Effect4.Program.Typed.finishFinalizer_payload_inv
-
-#typed_state_obligations Effect4.Program.Typed.M3aAdmissionObligations ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])

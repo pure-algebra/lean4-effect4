@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.Typed.Contracts
+import Effect4.Laws.Program.Typed.World
 import Effect4.Laws.Program.RuntimeR
 
 /-!
@@ -75,7 +75,7 @@ theorem heapTypedAt_mono (w newer : World) (key : RefKey) (ty : Ty) : ProofGraph
 theorem promiseTypedAt_mono (w newer : World) (key : DeferredKey) (types : Ty × Ty) : ProofGraph.Obligation
     (w.leHost newer → PromiseTypedAt w key types → PromiseTypedAt newer key types) := ⟨⟩
 theorem exitFits_mono (w newer : World) (ty : EffTy) (ex : ExitV) : ProofGraph.Obligation
-    (w.leHost newer → Contracts.ExitFits w ty ex → Contracts.ExitFits newer ty ex) := ⟨⟩
+    (w.leHost newer → ExitFits w ty ex → ExitFits newer ty ex) := ⟨⟩
 theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat) :
     ProofGraph.Obligation (ClosedEff rootTy → WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel)) := ⟨⟩
 end M2Validity
@@ -156,7 +156,7 @@ theorem promiseTypedAt_mono (w newer : World) (key : DeferredKey) (types : Ty ×
   promise_typed_at_mono w newer key types ordered.1
 
 theorem exitFits_mono (w newer : World) (ty : EffTy) (ex : ExitV) (ordered : w.leHost newer) :
-    Contracts.ExitFits w ty ex → Contracts.ExitFits newer ty ex :=
+    ExitFits w ty ex → ExitFits newer ty ex :=
   completionOk_mono w newer (ty.answer, ty.error) (.ofExit ex) ordered
 
 theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat)

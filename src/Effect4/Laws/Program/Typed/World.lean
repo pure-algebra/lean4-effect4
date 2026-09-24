@@ -80,6 +80,11 @@ def CompletionOk (w : World) (types : Ty × Ty) :
       types.2 cause = true
   | .ofRefGet cell => ∃ ty, w.Ρ cell = some ty ∧ ty.sub types.1 = true
 
+/-- The exit observation at an effect type: `CompletionOk` at the type's answer and error
+columns. Interruption and defects are admitted by the cause judgment at every error type. -/
+def ExitFits (w : World) (ty : EffTy) (ex : ExitV) : Prop :=
+  CompletionOk w (ty.answer, ty.error) (.ofExit ex)
+
 /-- The generated heap-column leaf: actual field payload in, table lookup read
 here. Coverage is separate; an undeclared key satisfies this conditional leaf. -/
 def HeapCell (w : World) (key : RefKey) (value : Val) : Prop :=

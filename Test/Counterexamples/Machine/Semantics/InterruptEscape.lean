@@ -1,6 +1,6 @@
 import Effect4.Api
 import Effect4.Laws.Program.RuntimeR
-import Effect4.Laws.Program.Typed.Contracts
+import Effect4.Laws.Program.Typed.World
 
 /-!
 E4-SCHED-CE-008, U-01: the signed interruption divergence from rc.112.
@@ -18,7 +18,7 @@ set_option autoImplicit false
 set_option maxRecDepth 10000
 namespace Test.Counterexamples.InterruptEscape
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
-open Effect4.Program.Typed.Contracts
+open Effect4.Program.Typed (ExitFits)
 abbrev TWorld := Effect4.Program.Typed.World
 
 def n (i : Nat) : Term := .lit (.nat i)

@@ -83,7 +83,7 @@ theorem forged_fiber_not_fit (w : World) (id : FiberId) (hnone : w.Γ id = none)
 /-- Negative control: `unguard` payload inversion rejects unadmitted payloads. -/
 theorem unguard_inversion_rejects_unadmitted (root : NativeEff) (w : World) (ex : ExitV)
     (k : ExitV → RProgram)
-    (hadmit : ControlAdmitted root w (EffTy.pure (Ty.refOf .bool)) (.vis (.inr (.unguard ex)) k))
+    (hadmit : TypedProg root w (EffTy.pure (Ty.refOf .bool)) (.vis (.inr (.unguard ex)) k))
     (hex : ex = .success (Val.cell ⟨0⟩))
     (hnone : w.Ρ ⟨0⟩ = none) : False := by
   have hstrong := unguard_payload_inv root w (EffTy.pure (Ty.refOf .bool)) ex k hadmit
@@ -93,7 +93,7 @@ theorem unguard_inversion_rejects_unadmitted (root : NativeEff) (w : World) (ex 
 /-- Negative control: `finishFinalizer` payload inversion rejects unadmitted payloads. -/
 theorem finishFinalizer_inversion_rejects_unadmitted (root : NativeEff) (w : World) (ex : ExitV)
     (k : ExitV → RProgram)
-    (hadmit : ControlAdmitted root w (EffTy.pure (Ty.refOf .bool)) (.vis (.inr (.finishFinalizer ex)) k))
+    (hadmit : TypedProg root w (EffTy.pure (Ty.refOf .bool)) (.vis (.inr (.finishFinalizer ex)) k))
     (hex : ex = .success (Val.cell ⟨0⟩))
     (hnone : w.Ρ ⟨0⟩ = none) : False := by
   have hstrong := finishFinalizer_payload_inv root w (EffTy.pure (Ty.refOf .bool)) ex k hadmit
