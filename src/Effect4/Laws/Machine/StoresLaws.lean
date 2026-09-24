@@ -1362,6 +1362,205 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     cases hf
     exact hsame rfl hle
 
+/-! ## Memo map ids (slice 6, the memo cleanup)
+
+Memo maps have distinct ids, each below the next fresh name. Every entry update rewrites a map
+in place under its own id, so the id list is unchanged; `memoFork` appends a fresh id. Under the
+invariant, `memoComplete`'s write-back of the entry it read is the identity
+(`MemoWorld.updateEntry_id_of_nodup`). -/
+
+/-- Memo maps have distinct ids, each below the next fresh name. -/
+def Stores.MemoIdsOk (s : Stores) : Prop :=
+  (s.memo.map (·.id)).Nodup ∧ ∀ i ∈ s.memo.map (·.id), i.index < s.nextName
+
+theorem Stores.empty_memoIdsOk : Stores.empty.MemoIdsOk :=
+  ⟨List.nodup_nil, fun _ h => nomatch h⟩
+
+namespace MemoWorld
+
+theorem setMap_ids (w : MemoWorld) (m : MemoMap) : (w.setMap m).map (·.id) = w.map (·.id) := by
+  simp only [setMap, List.map_map]
+  congr 1
+  funext n
+  simp only [Function.comp_apply]
+  split
+  · rename_i h
+    exact h.symm
+  · rfl
+
+theorem updateEntry_ids (w : MemoWorld) (id : MemoMapId) (layer : LayerId)
+    (f : MemoEntry → MemoEntry) : (w.updateEntry id layer f).map (·.id) = w.map (·.id) := by
+  unfold updateEntry
+  split
+  · rfl
+  · exact setMap_ids _ _
+
+theorem insertEntry_ids (w : MemoWorld) (id : MemoMapId) (layer : LayerId) (entry : MemoEntry) :
+    (w.insertEntry id layer entry).map (·.id) = w.map (·.id) := by
+  unfold insertEntry
+  split
+  · rfl
+  · exact setMap_ids _ _
+
+theorem deleteEntry_ids (w : MemoWorld) (id : MemoMapId) (layer : LayerId) :
+    (w.deleteEntry id layer).map (·.id) = w.map (·.id) := by
+  unfold deleteEntry
+  split
+  · rfl
+  · exact setMap_ids _ _
+
+/-- Distinct ids make a map determined by its id among the world's maps. -/
+theorem eq_of_id_eq : ∀ {w : MemoWorld} {a b : MemoMap}, (w.map (·.id)).Nodup → a ∈ w → b ∈ w →
+    a.id = b.id → a = b
+  | [], _, _, _, ha, _, _ => nomatch ha
+  | c :: rest, a, b, hnd, ha, hb, hid => by
+    rw [List.map_cons, List.nodup_cons] at hnd
+    rcases List.mem_cons.mp ha with rfl | ha' <;> rcases List.mem_cons.mp hb with rfl | hb'
+    · rfl
+    · exact absurd (hid ▸ List.mem_map_of_mem hb') hnd.1
+    · exact absurd (hid.symm ▸ List.mem_map_of_mem ha') hnd.1
+    · exact eq_of_id_eq hnd.2 ha' hb' hid
+
+/-- Writing back the entry just read is the identity when map ids are distinct. -/
+theorem updateEntry_id_of_nodup (w : MemoWorld) (id : MemoMapId) (layer : LayerId)
+    (hnd : (w.map (·.id)).Nodup) : w.updateEntry id layer (fun e => e) = w := by
+  unfold updateEntry
+  split
+  · rfl
+  · rename_i m hm
+    have hmem : m ∈ w := List.mem_of_find?_eq_some hm
+    have hentries : m.entries.map (fun e => if e.1 = layer then (e.1, e.2) else e) = m.entries := by
+      conv => rhs; rw [← List.map_id m.entries]
+      apply List.map_congr_left
+      intro e _
+      split <;> rfl
+    rw [hentries]
+    show w.map (fun n => if n.id = m.id then m else n) = w
+    conv => rhs; rw [← List.map_id w]
+    apply List.map_congr_left
+    intro n hn
+    split
+    · rename_i hid
+      exact (eq_of_id_eq hnd hn hmem hid).symm
+    · rfl
+
+end MemoWorld
+
+theorem syncOpStep_memoIdsOk (o : SyncOp) (s s' : Stores) (v : Val) (hok : s.MemoIdsOk)
+    (h : syncOpStep o s = some (s', v)) : s'.MemoIdsOk := by
+  have hle := syncOpStep_le o s s' v h
+  have hsame : ∀ {t : Stores}, t.memo.map (·.id) = s.memo.map (·.id) → s.le t → t.MemoIdsOk := by
+    intro t ht hlt
+    show (t.memo.map (·.id)).Nodup ∧ ∀ i ∈ t.memo.map (·.id), i.index < t.nextName
+    rw [ht]
+    exact ⟨hok.1, fun i hi => Nat.lt_of_lt_of_le (hok.2 i hi) hlt.2.2.2.1⟩
+  cases o with
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    show ((s.memo ++ [(⟨⟨s.nextName⟩, parent, []⟩ : MemoMap)]).map (fun m : MemoMap => m.id)).Nodup ∧
+      ∀ i ∈ (s.memo ++ [(⟨⟨s.nextName⟩, parent, []⟩ : MemoMap)]).map (fun m : MemoMap => m.id),
+        i.index < s.nextName + 1
+    rw [List.map_append]
+    refine ⟨List.nodup_append.mpr ⟨hok.1, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩, ?_⟩, fun i hi => ?_⟩
+    · intro a ha b hb heq
+      rw [List.map_singleton, List.mem_singleton] at hb
+      subst hb
+      have := hok.2 a ha
+      rw [heq] at this
+      exact Nat.lt_irrefl _ this
+    · rcases List.mem_append.mp hi with hi | hi
+      · exact Nat.lt_succ_of_lt (hok.2 i hi)
+      · rw [List.map_singleton, List.mem_singleton] at hi
+        subst hi
+        exact Nat.lt_succ_self _
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hok
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hsame (by simp only [MemoWorld.updateEntry_ids]) hle
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact hsame (MemoWorld.insertEntry_ids s.memo memoMap layer _) hle
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hok
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hsame (MemoWorld.updateEntry_ids s.memo memoMap layer _) hle
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hok
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame (MemoWorld.deleteEntry_ids s.memo memoMap layer) hle
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame (by simp only [MemoWorld.updateEntry_ids]) hle
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hsame rfl hle
+  | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
+  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ =>
+    simp only [syncOpStep_deferredMake, syncOpStep_deferredCompleteWith,
+      syncOpStep_deferredInterruptWith, syncOpStep_deferredAwaitCleanup, syncOpStep_scopeMake,
+      syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact hsame rfl hle
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame rfl hle
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame rfl hle
+  | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
+    simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
+    obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hsame rfl hle
+  | clockNow | sleepCancel _ _ =>
+    simp only [syncOpStep_clockNow, syncOpStep_sleepCancel, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact hsame rfl hle
+  | _ =>
+    simp only [syncOpStep] at h
+    obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hsame rfl hle
+
 /-- The timer's law across a step (the timer, A4): only `sleepCancel` touches the timer store,
 and a cancel keeps every remaining deadline ahead of the clock. -/
 theorem syncOpStep_timers_wf (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.timers.WF)
