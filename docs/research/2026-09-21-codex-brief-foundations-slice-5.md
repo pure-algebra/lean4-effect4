@@ -23,6 +23,8 @@ and its contract repair is landed by the coordinator: the R3 frame contract, the
 controls in `Test/Program/TypedControl.lean`. Resume from `Typed/Stack.lean` (§3.2's
 `sanitize_clean_exit`, §3.3's `HookLaws`, §3.4) on the coordinator's recorded head. Where
 this brief and the ruling differ, the ruling governs; the sections below are amended in place.
+**Hold, 2026-09-23:** §3.5 (assembly) waits on decision row 89
+([typed-state admission audit](2026-09-23-typed-state-admission-audit.md)); §3.2–§3.4 can proceed.
 
 Goal in one sentence: **assemble the typed-state invariant on the reference machine and
 prove its first hard cases with no run premise, so that every remaining obligation has a
@@ -203,6 +205,10 @@ run-level premise: the M7 corollaries (no `badShape`, no halting) are stated ove
 `RReachable` and `AnswersOk` alone.
 
 ### 3.6 Declared delivery adequacy (`Typed/Adequacy.lean`, gate `Typed.M6Adequacy`)
+
+**Superseded the same day by [the typed-state admission audit](2026-09-23-typed-state-admission-audit.md):**
+the strengthened posts land before assembly, not in M6, and the row list below is replaced by
+the audit's §3. Do not start §3.5 until decision row 89 is ruled.
 
 **Amended 2026-09-23 (contract ruling, CE-011 widened).** A `True` post on a row whose answer
 flows into a leaf makes the program untypable (`joinAll_untypable`,

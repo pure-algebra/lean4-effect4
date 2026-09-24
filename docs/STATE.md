@@ -96,9 +96,17 @@ slice 5, with every tracking item's end state, is
 
 ## What the owner must decide
 
-Nothing blocks the packet. Reporting `U-01` upstream remains the owner's decision; its
-reproduction and Effect 3 comparison are in `docs/UPSTREAM-BACKLOG.md`. The other choices
-below do not block slice 5.
+Decision row 89 blocks slice 5's assembly. The [typed-state admission
+audit](research/2026-09-23-typed-state-admission-audit.md) found that the program judgment
+refuses most programs the checker admits: every row with a `True` postcondition whose answer the
+generated code consumes (sleep, joins, races, generators, loops, scopes, performed store rows,
+memoized layers), and every body using host rows. Until the guard fix today it refused every
+program with a `bind`. The checker, meaning soundness on the straight and looped fragments and
+runtime agreement are proved and unaffected; type soundness for the rest of the language has no
+proof yet. The audit recommends a generated-code admission census and a dynamic exit-type lane
+before the repair lands. Slice 5's generic stack proofs can proceed meanwhile. Reporting `U-01`
+upstream remains the owner's decision; its reproduction and Effect 3 comparison are in
+`docs/UPSTREAM-BACKLOG.md`.
 
 | row | question | the register's recommendation (first line) |
 | --- | --- | --- |

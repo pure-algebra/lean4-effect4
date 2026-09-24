@@ -1,5 +1,9 @@
 # Slice 5 contract ruling (2026-09-23)
 
+**Erratum, same day:** the list of affected rows below is incomplete and has one wrong entry,
+and deferring those rows to M6 blocks slice 5's assembly. See
+[the typed-state admission audit](2026-09-23-typed-state-admission-audit.md) §3 and §7.
+
 Ruling on [the proposed amendment](2026-09-23-foundations-slice5-contract-amendment.md) after
 the coordinator's review. The owner approved landing it in the coordinator session on
 2026-09-23. It governs slice 5 from here and amends the
