@@ -1,0 +1,134 @@
+[
+  {
+    "declaration": "Effect4.Cause.interrupt.eq_1",
+    "axioms": "[]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.ReviewedAsync",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.ReviewedSleepStack",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.W",
+    "axioms": "[]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep._sparseCasesOn_1",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep._sparseCasesOn_2",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep._sparseCasesOn_3",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep._sparseCasesOn_4",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep._sparseCasesOn_5",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep._sparseCasesOn_6",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep._sparseCasesOn_7",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep.match_1",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.atSleep.match_10",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.cancellation_cannot_type",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.cancellation_exit",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.clean_cancellation_cannot_type",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.clean_cancellation_still_rejected",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.clean_input_fits",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.clean_input_fits._simp_1_4",
+    "axioms": "[propext]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.clean_input_fits.match_1_1",
+    "axioms": "[]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.control_cancellation_cannot_type",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.does_not_fit",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.frozen_hook_rejects_unit",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.guard_admits_wrong_arm",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.parked",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.poisonedCause",
+    "axioms": "[]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.sleepCancel",
+    "axioms": "[]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.sleepStack",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.sleep_stack_exact",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.sleep_stack_rejected",
+    "axioms": "[propext, Quot.sound]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.sleeping",
+    "axioms": "[]"
+  },
+  {
+    "declaration": "Test.Counterexamples.AsyncHookContract.store_rejects_wrong_answer",
+    "axioms": "[propext]"
+  }
+]

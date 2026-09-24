@@ -1,0 +1,101 @@
+import Effect4.Laws.Program.Typed.Residual
+
+/-! The saved-stack arrows and their connection to the actual `popR` walk. The only
+interpreter hypotheses are the three hook arrows; interruption uses recorded provenance.
+No run predicate or restriction on decision tapes occurs in this module. -/
+set_option autoImplicit false
+namespace Effect4.Program.Typed
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+open Effect4.Laws.Effects Contracts
+
+/-- Failure reasons contain no typed failures; every successful exit is clean. -/
+def cleanExit : ExitV → Bool
+  | .success _ => true
+  | .failure c => c.reasons.all fun r => r.tag != .fail
+
+/-- Exactly the local obligations of the three named-hook arms in `popR`. -/
+structure HookLaws (root : NativeEff) (interp : RInterp) (hooks : FrameProtocols) : Prop where
+  asyncFinalizer : ∀ w tin tout name, hooks.asyncFinalizer w tin tout name →
+    tin = tout ∧ ∀ cause, cause.hasInterrupts = true →
+      TypedProg root w tout (interp.cancelThenFail name cause)
+  iterator : ∀ w tin tout name, hooks.iterator w tin tout name →
+    tin.error = tout.error ∧ ∀ v, StrongValue w tin.answer v →
+      match (interp.iterNext name v).2 with
+      | .done result => StrongExit w tout (.success result)
+      | .halt cause => StrongExit w tout (.failure cause)
+      | .resume code name' => ∃ tin', TypedProg root w tin' code ∧
+          hooks.iterator w tin' tout name'
+  loop : ∀ w tin tout name cursor, hooks.loop w tin tout name cursor →
+    tin.error = tout.error ∧ ∀ v, StrongValue w tin.answer v →
+      match interp.loopResume name cursor v with
+      | .continue cursor' body => ∃ tin', TypedProg root w tin' body ∧
+          hooks.loop w tin' tout name cursor'
+      | .finish code => TypedProg root w tout code
+
+/-- The two outcomes of the actual walk, at the saved stack's final type. -/
+def WalkTyped (root : NativeEff) (hooks : FrameProtocols) (w : World) (tout : EffTy) :
+    RSaved × Option ExitV → Prop
+  | (frame, none) => SavedOk (TypedProg root) StrongExit hooks w tout frame
+  | (_, some ex) => StrongExit w tout ex
+
+namespace M4Stack
+/-- Frozen slice 5 §3.4: arbitrary interpreter, HookLaws, recorded interrupts, no run premise. -/
+theorem popR_typed (root : NativeEff) (interp : RInterp) (hooks : FrameProtocols)
+    (w : World) (tin tout : EffTy) (ex : ExitV) (stack : List ScopeFrame) (frame : RSaved) :
+    ProofGraph.Obligation (HookLaws root interp hooks →
+      StackAccepts (TypedProg root) StrongExit hooks w tin tout stack →
+      StrongExit w tin ex → InterruptProvenance frame →
+      WalkTyped root hooks w tout (popR interp ex stack frame)) := ⟨⟩
+
+/-- Install the operation's code below its answer adapter. The adapter and the existing
+stack meet at `middle`; the installed code has the operation's own type `tin`. -/
+theorem saveAnswerR_typed (root : NativeEff) (hooks : FrameProtocols) (w : World)
+    (tin middle final : EffTy) (f : RFiber) (next : ExitV → RProgram) (code : RProgram) :
+    ProofGraph.Obligation (TypedProg root w tin code →
+      (∀ ex, StrongExit w tin ex → TypedProg root w middle (next ex)) →
+      StackAccepts (TypedProg root) StrongExit hooks w middle final f.frame.stack →
+      InterruptProvenance f.frame →
+      SavedOk (TypedProg root) StrongExit hooks w final (answerR (saveAnswerR f next) code).frame) := ⟨⟩
+
+/-- The resume command installs code and preserves the stack at the active token's type.
+The queued evaluate command is separate; this theorem names the installation boundary. -/
+theorem deliver_active (root : NativeEff) (interp : RInterp) (hooks : FrameProtocols)
+    (w : World) (tin final : EffTy) (m : RState) (f : RFiber) (token : Nat)
+    (code : RProgram) (rest : List RCmd) : ProofGraph.Obligation (
+      m.fiber? f.id = some f → f.parked = .withGuard token →
+      w.Θ f.id token = some tin → ResumeOk (TypedProg root) w f.id token code →
+      StackAccepts (TypedProg root) StrongExit hooks w tin final f.frame.stack →
+      InterruptProvenance f.frame →
+      let f' := { f with
+        parked := .notParked
+        pending := f.pending.filter (fun p => p.token ≠ token)
+        frame := { f.frame with current := code } }
+      (letI := termEvaluatorFor root
+       driveStep interp m (.resume f.id token code) rest) =
+        ((m.update f').emit [.resumedWith f.id token code], .evaluate f.id :: rest) ∧
+      f'.frame.current = code ∧ f'.parked = .notParked ∧ f'.frame.stack = f.frame.stack ∧
+      TypedProg root w tin f'.frame.current ∧
+      SavedOk (TypedProg root) StrongExit hooks w final f'.frame) := ⟨⟩
+
+theorem deliver_stale (root : NativeEff) (interp : RInterp) (m : RState) (f : RFiber)
+    (parkedToken token : Nat) (code : RProgram) (rest : List RCmd) : ProofGraph.Obligation (
+      m.fiber? f.id = some f → f.parked = .withGuard parkedToken → parkedToken ≠ token →
+      (letI := termEvaluatorFor root
+       driveStep interp m (.resume f.id token code) rest) = (m, rest)) := ⟨⟩
+end M4Stack
+
+namespace M5Hooks
+theorem hookLaws_interpR (root : NativeEff) :
+    ProofGraph.Obligation (HookLaws root (interpR root) (frameProtocols root)) := ⟨⟩
+end M5Hooks
+end Effect4.Program.Typed
+
+#proof_wanted Effect4.Program.Typed.M4Stack.popR_typed
+#proof_wanted Effect4.Program.Typed.M4Stack.saveAnswerR_typed
+#proof_wanted Effect4.Program.Typed.M4Stack.deliver_active
+#proof_wanted Effect4.Program.Typed.M4Stack.deliver_stale
+#typed_state_obligations Effect4.Program.Typed.M4Stack ceiling 4
+  using aesop (rule_sets := [Effect4.TypedState])
+#proof_wanted Effect4.Program.Typed.M5Hooks.hookLaws_interpR
+#typed_state_obligations Effect4.Program.Typed.M5Hooks ceiling 1
+  using aesop (rule_sets := [Effect4.TypedState])

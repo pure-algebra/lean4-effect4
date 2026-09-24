@@ -1,0 +1,87 @@
+[
+  {
+    "original": "async-hook-preflight-2.log",
+    "stored": "async-hook-preflight-2.log.gz",
+    "uncompressed_sha256": "052565d57530b4b5418cc7bbc31e1e598264457a6468ee3bee3ab0f573fa747e"
+  },
+  {
+    "original": "async-hook-preflight-3.log",
+    "stored": "async-hook-preflight-3.log.gz",
+    "uncompressed_sha256": "55d927749464b003ca48790a38498fea946a8bf251a5a242cbefa1ca0ff58145"
+  },
+  {
+    "original": "async-hook-preflight-4.log",
+    "stored": "async-hook-preflight-4.log.gz",
+    "uncompressed_sha256": "41ea97c2f96742aceb6ad7e064b03e82f63816705ab3bca0d6825837a944b07b"
+  },
+  {
+    "original": "async-hook-preflight-5.log",
+    "stored": "async-hook-preflight-5.log.gz",
+    "uncompressed_sha256": "3b7ac0a9766fe4d9444bd641bb834b1f10b4e9bdd578a3811f5d09249190106b"
+  },
+  {
+    "original": "async-hook-preflight.log",
+    "stored": "async-hook-preflight.log.gz",
+    "uncompressed_sha256": "c4388eb60db66d541e24ded76ed2894ae1c827585fa47aa2d6d7062624b1e2de"
+  },
+  {
+    "original": "contracts-2.log",
+    "stored": "contracts-2.log.gz",
+    "uncompressed_sha256": "4c1bfdbb35df36a98b9fc34bcb112da0d2e97c990cf1d5504b83b0ef63e1559f"
+  },
+  {
+    "original": "contracts.log",
+    "stored": "contracts.log.gz",
+    "uncompressed_sha256": "a27ecf63951cb4da858af5b0123f66c11371cf9c0dea3eae148bab5b7ebc5782"
+  },
+  {
+    "original": "counterexamples.log",
+    "stored": "counterexamples.log.gz",
+    "uncompressed_sha256": "3023fd7057dcd4247d70c58ab4bee63828a9415ca334ed869587545784c2b28c"
+  },
+  {
+    "original": "diff-check.log",
+    "stored": "diff-check.log.gz",
+    "uncompressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original": "ledger-and-axioms-2.log",
+    "stored": "ledger-and-axioms-2.log.gz",
+    "uncompressed_sha256": "254c91e9f2dc830e8ebf08274db9fde8e0337a2638526ecbe3c505fe7c2e65cd"
+  },
+  {
+    "original": "ledger-and-axioms.log",
+    "stored": "ledger-and-axioms.log.gz",
+    "uncompressed_sha256": "7d9d3c4d4628bc5c6afc09224f52348a3caefe2cd25bbdf771ea52132449e9a9"
+  },
+  {
+    "original": "production-unchanged.log",
+    "stored": "production-unchanged.log.gz",
+    "uncompressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original": "restored-residual.log",
+    "stored": "restored-residual.log.gz",
+    "uncompressed_sha256": "b55f62215a6004bc64190561f7914074374e9322ee6b215aaa3f94c4f31f7f21"
+  },
+  {
+    "original": "stack-statements-2.log",
+    "stored": "stack-statements-2.log.gz",
+    "uncompressed_sha256": "90a141ff6d8d0d1790d61aff02c323edf45c1cbe1915ac71511fa2fed6e25a65"
+  },
+  {
+    "original": "stack-statements-3.log",
+    "stored": "stack-statements-3.log.gz",
+    "uncompressed_sha256": "4f92a3fe6d6f2dbb03026bbddff566290990fbdeadf25d730078d412735ab375"
+  },
+  {
+    "original": "stack-statements-4.log",
+    "stored": "stack-statements-4.log.gz",
+    "uncompressed_sha256": "ef6e66b808f8677e7f766adab58a6ed220d4adb49d89c6e2a25693cba4378242"
+  },
+  {
+    "original": "stack-statements.log",
+    "stored": "stack-statements.log.gz",
+    "uncompressed_sha256": "0b7a577513ecd389d3daeea6b279b40a4282dbddf87677936fb9448fbcd36693"
+  }
+]
