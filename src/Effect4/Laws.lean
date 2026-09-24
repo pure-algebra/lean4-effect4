@@ -88,7 +88,7 @@ import Effect4.Laws.Program.Typed.TypedStateDecl
 import Effect4.Laws.Auto.Frames
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Effects.Protocol
-import Effect4.Laws.Effects.ProtocolObligations
+import Effect4.Laws.Program.Typed.ProtocolObligations
 import Effect4.Laws.Program.Typed.Vocabulary
 import Effect4.Laws.Program.Typed.TypedSources
 import Effect4.Laws.Program.Typed.Sources
@@ -117,7 +117,7 @@ import Effect4.Laws.Program.Typed.ForkSource
 import Effect4.Laws.Program.Typed.Admission
 import Effect4.Laws.Program.Typed.Residual
 import Effect4.Laws.Auto.AnswerGate
-import Effect4.Laws.Program.Guard.TraceOrigin
+import Effect4.Laws.Api.TraceOrigin
 import Effect4.Laws.Machine.Handshake
 import Effect4.Laws.Program.Guard.Handshake
 

@@ -1,4 +1,4 @@
-import Effect4.Laws.Effects.ProtocolObligations
+import Effect4.Laws.Program.Typed.ProtocolObligations
 
 /-! D12 controls use two different certificate families. These are judgments on the
 existing free Program; certificates are proof data, not a runtime representation. -/

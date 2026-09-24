@@ -1,4 +1,5 @@
 import Effect4.Laws.Auto.AnswerGate
+import Effect4.Laws.Program.Sched
 
 /-!
 # Test.Audit.AnswerGate — completeness check for SyncOp and FiberOp protocols

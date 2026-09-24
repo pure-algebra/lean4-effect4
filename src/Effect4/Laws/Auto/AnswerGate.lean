@@ -1,13 +1,13 @@
 import Lean
 import Effect4.Machine.Stores
-import Effect4.Laws.Program.Sched
 
 /-!
 # Laws.Auto.AnswerGate — completeness check for SyncOp and FiberOp protocols
 
 #answer_gate checks that the protocol manifest accounts for every constructor of `SyncOp`
 (31 rows) and `FiberOp` (40 rows). Rejects any missing, duplicate or stale rows and prints
-the manifest table.
+the manifest table. The fiber alphabet is looked up by name in the invoking file's
+environment, so this instrument does not import the scheduler it audits.
 -/
 
 open Lean Elab Command Meta
@@ -21,7 +21,7 @@ def elabAnswerGate : CommandElab := fun _ => do
     | throwError "unknown type Effect4.Machine.SyncOp"
   let .inductInfo syncInduct := syncInfo
     | throwError "Effect4.Machine.SyncOp is not an inductive"
-  let some fiberInfo := env.find? ``Effect4.Program.Sched.FiberOp
+  let some fiberInfo := env.find? `Effect4.Program.Sched.FiberOp
     | throwError "unknown type Effect4.Program.Sched.FiberOp"
   let .inductInfo fiberInduct := fiberInfo
     | throwError "Effect4.Program.Sched.FiberOp is not an inductive"

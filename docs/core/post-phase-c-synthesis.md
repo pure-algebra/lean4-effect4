@@ -258,7 +258,7 @@ The current completion functor connector does not supply this old/new transition
 
 ### F6. Trace freedom and static-site membership still need proofs
 
-`Guard/TraceOrigin.lean` holds `step_agrees` and `reachable_agrees` open on the actual
+`Laws/Api/TraceOrigin.lean` (moved from `Laws/Program/Guard/` on 2026-09-23, so the guard laws no longer import the API layer) holds `step_agrees` and `reachable_agrees` open on the actual
 `Guard.Reachable` decision-prefix domain. A sole event-emission site does not prove invariance
 under record replacement, evaluation and scheduling. Preserve reachable-state hypotheses and
 prove spawn/update/driver lemmas before composing the result.

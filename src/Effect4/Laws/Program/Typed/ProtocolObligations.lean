@@ -1,8 +1,9 @@
 import Effect4.Laws.Effects.Protocol
 import Effect4.Laws.Auto.Obligations
 
-/-! D12's declaration-backed proof ledger. The generic Protocol module stays independent
-of Effect4's tooling, stores, scheduler and source language. -/
+/-! D12's declaration-backed proof ledger for the laws of `Laws/Effects/Protocol.lean`. The
+registrations sit here, beside the ledger's users, so the generic Protocol module and its
+area import only the pinned `Effects` (moved from `Laws/Effects/` on 2026-09-23). -/
 set_option autoImplicit false
 namespace Effect4.Laws.Effects.D12
 open _root_.Effects
