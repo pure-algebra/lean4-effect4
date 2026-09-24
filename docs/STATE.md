@@ -96,20 +96,18 @@ slice 5, with every tracking item's end state, is
 
 ## What the owner must decide
 
-Decision row 89 blocks slice 5's assembly. The [typed-state admission
-audit](research/2026-09-23-typed-state-admission-audit.md) found that the program judgment
-refuses most programs the checker admits: every row with a `True` postcondition whose answer the
-generated code consumes (sleep, joins, races, generators, loops, scopes, performed store rows,
-memoized layers), and every body using host rows. Until the guard fix today it refused every
-program with a `bind`. The checker, meaning soundness on the straight and looped fragments and
-runtime agreement are proved and unaffected; type soundness for the rest of the language has no
-proof yet. You ruled for the census and the dynamic lane first; both landed with a typed corpus
-(`Test/Program/TypedCorpus.lean`: every construct and operation, 8,584 typed programs). The lane
-ran 34,336 runs and found no exit outside its checked type; the census confirms from generated
-code that 33 of 77 entries reach a `True`-post row, and that `construction` (every `bind`) is a
-real case (audit §8). The repair is next, with an admission theorem per corpus entry as its
-acceptance test. Slice 5's generic stack proofs can proceed meanwhile. Reporting `U-01`
-upstream remains the owner's decision; its reproduction and Effect 3 comparison are in
+Decision row 90 is open: how to type a fiber's context and a memo map, so that programs reading
+a service or building a memoized layer are admitted (the register's recommendation: a per-fiber
+service environment in the typed state). Slice 5's assembly proceeds for programs outside that
+fragment. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
+found that the program judgment refused most programs the checker admits; the census and the
+dynamic lane landed on your ruling (8,584 typed programs, 34,336 runs, no exit outside its
+checked type), and the [protocol repair](research/2026-09-24-typed-state-protocol-repair.md)
+landed on 2026-09-24: every consumed row certifies its answer's type, source admission reads the
+program's row table, fiber handles are covariant, and five loaded programs are proved admitted.
+The other corpus entries' admission proofs are briefed to Codex. The checker, meaning soundness
+on the straight and looped fragments and runtime agreement were never affected. Reporting
+`U-01` upstream remains the owner's decision; its reproduction and Effect 3 comparison are in
 `docs/UPSTREAM-BACKLOG.md`.
 
 | row | question | the register's recommendation (first line) |

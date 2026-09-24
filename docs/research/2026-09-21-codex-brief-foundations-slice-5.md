@@ -23,8 +23,13 @@ and its contract repair is landed by the coordinator: the R3 frame contract, the
 controls in `Test/Program/TypedControl.lean`. Resume from `Typed/Stack.lean` (§3.2's
 `sanitize_clean_exit`, §3.3's `HookLaws`, §3.4) on the coordinator's recorded head. Where
 this brief and the ruling differ, the ruling governs; the sections below are amended in place.
-**Hold, 2026-09-23:** §3.5 (assembly) waits on decision row 89
-([typed-state admission audit](2026-09-23-typed-state-admission-audit.md)); §3.2–§3.4 can proceed.
+**Hold lifted, 2026-09-24:** decision row 89's repair landed
+([protocol repair](2026-09-24-typed-state-protocol-repair.md)). §3.5 proceeds with
+`typedState_load` stated for programs outside the context fragment (no `service`,
+`provideService`, `provideLayer`), widened when decision row 90 lands. §3.6 declares an adequacy
+obligation for each strengthened row the repair note lists, plus the race-state and host-slot
+correlations as state-predicate obligations. The `M3bWorld` laws are the world transport §3.4
+needs; prove them if the stack proofs need them, or keep them as named hypotheses.
 
 Goal in one sentence: **assemble the typed-state invariant on the reference machine and
 prove its first hard cases with no run premise, so that every remaining obligation has a

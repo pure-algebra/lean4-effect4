@@ -80,7 +80,11 @@ The corrected list is §3.
   under the same tape family and check every exit fits its checked type. Empirical and bounded,
   for the fragment with no proof; `U-01` is the kind of hole it finds. A driver and a make target.
 
-## 6. The repair (proposed, not landed)
+## 6. The repair (landed 2026-09-24, except contexts)
+
+Landed as [the protocol repair](2026-09-24-typed-state-protocol-repair.md); what follows is the
+proposal as written.
+
 
 1. Each A1/A2 row certifies the type of its answer, ties it to the source in its precondition (a
    scoped or forked body checked at it, a race's entrants, a join's targets through the fiber
