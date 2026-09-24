@@ -98,7 +98,10 @@ slice 5, with every tracking item's end state, is
 
 Decision row 90 is ruled and landed (2026-09-24): contexts are typed by their keys' static
 service types, which is what the checker uses (the recommendation's per-fiber premise was wrong
-and is corrected in the register). Slices 5 and 6 are in progress in the coordinator session. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
+and is corrected in the register). Slice 5 landed the same day ([landing record](research/2026-09-24-foundations-slice5-landing.md)):
+the stack walk is proved type-preserving with no run premise, delivery and the hook laws are proved,
+the typed state is assembled, and the transition ledger is declared per command. Slice 6 is in
+progress in the coordinator session. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
 found that the program judgment refused most programs the checker admits; the census and the
 dynamic lane landed on your ruling (8,584 typed programs, 34,336 runs, no exit outside its
 checked type), and the [protocol repair](research/2026-09-24-typed-state-protocol-repair.md)
