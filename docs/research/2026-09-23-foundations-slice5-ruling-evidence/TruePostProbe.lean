@@ -16,13 +16,13 @@ def joinAll (targets : List FiberId) : RProgram :=
 
 /-- Under the protocol judgment the M3a program judgment conjoined. -/
 theorem joinAll_protocol_untypable (root : NativeEff) (w : W) (targets : List FiberId) :
-    ¬ Typed hostOrder (Ψ_S.sum (Ψ_F root)) w (fun w' ex => StrongExit w' (EffTy.pure .nat) ex)
+    ¬ Typed hostOrder ((Ψ_S root).sum (Ψ_F root)) w (fun w' ex => StrongExit w' (EffTy.pure .nat) ex)
       (joinAll targets) := by
   intro h
   obtain ⟨_, _, next⟩ := Typed.inr_inv h
   have leaf := next w (leHost_refl w) (Val.bool true) trivial
   have exit : StrongExit w (EffTy.pure .nat) (.success (Val.bool true)) :=
-    Typed.pure_inv (o := hostOrder) (Ψ := Ψ_S.sum (Ψ_F root))
+    Typed.pure_inv (o := hostOrder) (Ψ := (Ψ_S root).sum (Ψ_F root))
       (Q := fun w' ex => StrongExit w' (EffTy.pure .nat) ex) (w := w)
       (a := .success (Val.bool true)) leaf
   exact Bool.noConfusion exit.1

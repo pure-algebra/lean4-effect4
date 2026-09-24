@@ -12,11 +12,10 @@ protocol rows reached.
 First phase (2026-09-23, before the repair): 33 of the 77 entries reached a row whose post was
 `True`, which refuses every program consuming its answer (`E4-SCHED-CE-013`). After the repair
 (typed-state admission audit §6) no consumed row has a `True` post; `fiberPostTrivial_sound`
-checks the two that keep one (`suspend`, `refuse`) against the protocol. The census now reports
-the two classes the repair leaves: shape-only rows, whose post types the answer's shape but not
-its contents (the context read, the memo lookup), so programs reading the contents stay
-untypable until contexts and memo maps are typed; and correlated rows, whose certified type the
-state predicate or the host protocol pins.
+checks the two that keep one (`suspend`, `refuse`) against the protocol. The shape-only rows the
+repair left (the context read, the memo lookup) were closed by decision row 90 (2026-09-24). The
+census now reports the rows reached and the correlated ones, whose certified type the state
+predicate or the host protocol pins.
 
 This is a report, not a proof: the walk follows one answer per operation and under-approximates
 the rows a program reaches, and a program the report calls clear is a candidate, not an
@@ -79,12 +78,13 @@ theorem fiberPostTrivial_sound : (op : FiberOp) → fiberPostTrivial op = true �
   | .loop _ _, h => Bool.noConfusion h
   | .construction, h => Bool.noConfusion h
 
-/-- How a reached row bears on admission after the repair of 2026-09-23. `shapeOnly`: the post
-types the answer's shape but not its contents, so code reading the contents stays untypable
-(the context read's services, the memo lookup's hit). `correlated`: the answer's certified type
-is pinned by the state predicate or the host protocol, not by the row's precondition (a race's
-registration, a host slot's park); admission holds, adequacy is theirs. `clear`: otherwise. -/
-inductive Bearing | shapeOnly | correlated | clear
+/-- How a reached row bears on admission. `correlated`: the answer's certified type is pinned
+by the state predicate or the host protocol, not by the row's precondition (a race's
+registration, a host slot's park); admission holds, adequacy is theirs. `clear`: otherwise.
+The shape-only class of the protocol repair (the context read, the memo lookup) closed with
+decision row 90 (2026-09-24): a context handle carries its services' typing and a memo lookup
+certifies its layer's error type. -/
+inductive Bearing | correlated | clear
 deriving BEq, DecidableEq
 
 /-- A row reached: store or fiber, its constructor index, and its bearing. -/
@@ -95,13 +95,10 @@ structure Reach where
 deriving BEq
 
 def fiberBearing (op : FiberOp) : Bearing := match op with
-  | .getContext => .shapeOnly
   | .raceRegister _ | .async (.store (.externalRegister _)) _ => .correlated
   | _ => .clear
 
-def storeBearing (op : SyncOp) : Bearing := match op with
-  | .memoGet _ _ => .shapeOnly
-  | _ => .clear
+def storeBearing (_ : SyncOp) : Bearing := .clear
 
 /-- A realistic answer for each store row, so the walk takes the branch the machine takes: a
 fresh handle for an allocation, a number for a read, `unit` otherwise. -/
@@ -142,20 +139,12 @@ def footprint (e : Entry) : List Reach :=
 
 #guard programs.all fun e => (loaded e).isSome
 
-/-- The programs the report calls clear: no shape-only row reached. -/
-def blocked (e : Entry) : Bool := (footprint e).any (·.bearing == .shapeOnly)
-
-def clear : List String := (programs.filter fun e => !blocked e).map (·.name)
-
-/-- Entries (no context) the report calls clear. -/
-def clearEntries : List String := (entries.filter fun e => !blocked e).map (·.name)
-
 /-- Entries whose code reaches a correlated row. -/
 def correlatedEntries : List String :=
   (entries.filter fun e => (footprint e).any (·.bearing == .correlated)).map (·.name)
 
--- The census report: per shape-only row, the number of corpus programs that reach it; the
--- entries that reach none; the entries that reach a correlated row. Printed, not pinned.
+-- The census report: the rows the corpus reaches, and the entries reaching a correlated row.
+-- Printed, not pinned.
 run_cmd do
   let env ← Lean.getEnv
   let names (n : Lean.Name) : List String := match env.find? n with
@@ -164,10 +153,7 @@ run_cmd do
   let fiber := names ``Effect4.Program.Sched.FiberOp
   let store := names ``Effect4.Machine.SyncOp
   let label (r : Reach) := if r.store then "store." ++ store.getD r.index "?" else "fiber." ++ fiber.getD r.index "?"
-  let shapeOf (e : Entry) := ((footprint e).filter (·.bearing == .shapeOnly)).map label
-  let rows := (programs.flatMap shapeOf).eraseDups
-  let counts := rows.map fun r => s!"{r} {(programs.filter fun e => (shapeOf e).contains r).length}"
-  let perEntry := (entries.filter blocked).map fun e => s!"{e.name}: {(shapeOf e).eraseDups}"
-  Lean.logInfo m!"admission census: {programs.length} programs, {clear.length} reach no shape-only row, {programs.length - clear.length} do\nshape-only rows (programs reaching each): {counts}\nclear entries ({clearEntries.length} of {entries.length})\nentries reaching a shape-only row: {perEntry}\nentries reaching a correlated row: {correlatedEntries}"
+  let rows := (programs.flatMap fun e => (footprint e).map label).eraseDups
+  Lean.logInfo m!"admission census: {programs.length} programs reach {rows.length} protocol rows, none with a consumed `True` post\nentries reaching a correlated row: {correlatedEntries}"
 
 end Test.Program.AdmissionCensus

@@ -16,11 +16,8 @@ protocol repair ([repair note](2026-09-24-typed-state-protocol-repair.md)).
 
 ## Scope
 
-- In: the 66 entries the census reports clear, including every `bind`, catch, finalizer, mask,
-  fork/join, interrupt, race, generator, loop, store operation, deferred and timer entry.
-- Out: the 11 entries that read a service or build a memoized layer (`provideService`, the
-  non-local `provideLayer` and `layer.*` entries, `getContext`, `setContext`); they wait on
-  decision row 90. List them by name in the file with that reason.
+- In: all 77 entries. Decision row 90 landed (2026-09-24): services and memoized layers are
+  typed (`service_admitted`, `memoAwait_typed` show the moves).
 
 ## The pattern
 

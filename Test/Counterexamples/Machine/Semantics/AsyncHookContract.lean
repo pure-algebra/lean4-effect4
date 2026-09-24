@@ -140,7 +140,7 @@ theorem reviewed_unguard_payload_inv (root : NativeEff) (w : W) (ty : EffTy) (ex
 /-- The M3a program judgment: the protocol judgment and control admission, each choosing
 its own certificates. -/
 def ReviewedTypedProg (root : NativeEff) (w : W) (ty : EffTy) (p : RProgram) : Prop :=
-  Typed hostOrder (Ψ_S.sum (ReviewedΨ_F root)) w (fun w' ex => StrongExit w' ty ex) p ∧
+  Typed hostOrder ((Ψ_S root).sum (ReviewedΨ_F root)) w (fun w' ex => StrongExit w' ty ex) p ∧
   ReviewedControlAdmitted root w ty p
 
 /-- The M3a guard row admits the wrong arm used by CE-011. -/
@@ -157,7 +157,7 @@ theorem clean_cancellation_cannot_type (root : NativeEff) (w : W) (name : EffNam
   obtain ⟨cert, _pre, next⟩ := Typed.inr_inv h.1
   have leaf := next w (leHost_refl w) (some (.failure poisonedCause)) trivial
   have exit : StrongExit w (EffTy.pure .unit) (.failure poisonedCause) :=
-    Typed.pure_inv (o := hostOrder) (Ψ := Ψ_S.sum (ReviewedΨ_F root))
+    Typed.pure_inv (o := hostOrder) (Ψ := (Ψ_S root).sum (ReviewedΨ_F root))
       (Q := fun w' ex => StrongExit w' (EffTy.pure .unit) ex) (w := w)
       (a := .failure poisonedCause) leaf
   exact does_not_fit w exit
@@ -175,7 +175,7 @@ theorem clean_cancellation_still_rejected (root : NativeEff) (w : W) (name : Eff
 
 /-- The store protocol excludes CE-012's challenge, but M3a's control admission ignored it. -/
 theorem store_rejects_wrong_answer (w : W) :
-    ¬ Ψ_S.post w (.sleepCancel Api.root 0) () (.nat 42) := by
+    ¬ (Ψ_S sleeping).post w (.sleepCancel Api.root 0) () (.nat 42) := by
   intro h
   cases h
 

@@ -25,6 +25,14 @@ def HandlesLive (w : World) (v : Val) : Prop :=
   | .fiber id => (w.Γ id).isSome = true
   | _ => True
 
+/-- A context's services fit their keys' static types, the ones the checker reads
+(`nativeServiceTy`, `Checker.lean` `.service`/`.provideService`). Decision row 90 (2026-09-24):
+the checker types a service by its key, so the typing is static; a service value's own nested
+handles are not re-checked here (a ref-typed service is refused, not mistyped). -/
+def ServicesOk (w : World) (services : Env.Ctx) : Prop :=
+  ∀ key sv sty, services.getV key = some sv → nativeServiceTy key = some sty →
+    ValueOk w sty sv ∧ HandlesLive w sv
+
 /-- Nested handle types align with the world typing tables. A fiber handle is covariant, as the
 checker's `Ty.sub` is (`Program/Ty.lean`), so a handle widened to `fiberOf unknown unknown` fits
 (ruling 2026-09-23, audit §8); refs and deferreds are invariant, as there. -/
@@ -45,6 +53,8 @@ def HandlesFit (w : World) (v : Val) (ty : Ty) : Prop :=
     | _ => True
   | .union a b => HandlesFit w v a ∨ HandlesFit w v b
   | .unknown => HandlesLive w v
+  -- the context handle carries its services' typing (decision row 90)
+  | .handle s => s = Ty.contextTarget → ∀ ctx, Val.context? v = some ctx → ServicesOk w ctx.services
   | _ => True
 
 /-- Strong values: well-shaped, nested handles declared at the right types, and live. -/

@@ -96,10 +96,9 @@ slice 5, with every tracking item's end state, is
 
 ## What the owner must decide
 
-Decision row 90 is open: how to type a fiber's context and a memo map, so that programs reading
-a service or building a memoized layer are admitted (the register's recommendation: a per-fiber
-service environment in the typed state). Slice 5's assembly proceeds for programs outside that
-fragment. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
+Decision row 90 is ruled and landed (2026-09-24): contexts are typed by their keys' static
+service types, which is what the checker uses (the recommendation's per-fiber premise was wrong
+and is corrected in the register). Slices 5 and 6 are in progress in the coordinator session. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
 found that the program judgment refused most programs the checker admits; the census and the
 dynamic lane landed on your ruling (8,584 typed programs, 34,336 runs, no exit outside its
 checked type), and the [protocol repair](research/2026-09-24-typed-state-protocol-repair.md)

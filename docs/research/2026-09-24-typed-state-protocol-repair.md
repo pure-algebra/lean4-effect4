@@ -62,10 +62,7 @@ ceiling 3 (`strongValue_mono`, `strongExit_mono`, `typedProg_mono`).
 
 ## What is not done
 
-1. **Contexts (decision row 90).** The context read's post types the context as a handle but
-   not its services, and a memo hit's cell has no type, so every program that reads a service or
-   builds a memoized layer (146 of the 1,349 context programs, 11 of the 77 entries) is still
-   untypable. Typing them needs a typing of the fiber's context, a representation decision.
+1. **Contexts (decision row 90).** Closed the same day; see the addendum.
 2. **Admission of every corpus entry.** Five loaded programs are proved; the other entries,
    most of which pass through `bind`'s guard and construction, follow the same pattern with value
    inversions. Briefed to Codex:
@@ -75,3 +72,25 @@ ceiling 3 (`strongValue_mono`, `strongExit_mono`, `typedProg_mono`).
    predicate. Empirically, every row whose answer can become a root exit was exercised by the lane
    with no violation.
 4. **World weakening.** Declared, not proved.
+
+## Addendum: decision row 90, contexts (2026-09-24)
+
+The owner took the recommendation. On implementation its premise proved wrong: the checker
+types a service by its key's static type (`nativeServiceTy`), and `provideService` only checks
+the provided value is a subtype of it. So contexts are typed statically, which is simpler than
+the recommendation and admits the same programs:
+
+- `ServicesOk w services`: every present service fits its key's static type (`Typed/Admission.lean`).
+- A value's fit at the `Context` handle type carries `ServicesOk`, so the typing survives the
+  guard the context read passes through; `setContext` requires it.
+- The store protocol takes the program source (`Ψ_S root`); a memo lookup certifies its layer's
+  own checked error type (`Checker.checkLayer` at the layer's path) and a hit's deferred is
+  declared at the context handle and that error.
+
+Checked: `service_admitted` types the loaded code of a service read; `memoAwait_typed` types a
+memo hit's await at the layer's context. The census reports no shape-only row left: the 1,349
+programs reach 48 protocol rows, none with a consumed `True` post, and no correlated one. A
+ref-typed service is refused rather than mistyped, since its nested handle is not re-checked.
+The state predicate owes that every fiber's context and every memo entry's deferred is typed as
+above. `make check` exit 0 (492 modules, 67,776 declarations); evidence in
+`2026-09-24-row90-evidence/`.

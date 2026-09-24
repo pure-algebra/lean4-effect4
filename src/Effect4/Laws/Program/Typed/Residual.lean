@@ -27,11 +27,11 @@ open Effect4.Laws.Effects
 /-! ## The Store Protocol (31 SyncOp rows) -/
 
 def StoreCert : SyncOp → Type
-  | .refMake _ => Ty
+  | .refMake _ | .memoGet _ _ => Ty
   | .deferredMake | .memoBuild _ _ => Ty × Ty
   | _ => PUnit
 
-def storePre (w : World) (op : SyncOp) (cert : StoreCert op) : Prop :=
+def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert op) : Prop :=
   match op with
   | .refMake initial => cert.closed = true ∧ StrongValue w cert initial
   | .refGet cell => ∃ ty, w.Ρ cell = some ty
@@ -47,7 +47,10 @@ def storePre (w : World) (op : SyncOp) (cert : StoreCert op) : Prop :=
   | .deferredInterruptWith key _ => (w.«Π» key).isSome = true
   | .clockNow | .sleepCancel _ _ => True
   | .scopeMake _ | .scopeAdd _ _ | .scopeRemove _ _ | .scopeIsClosed _ | .scopeFork _ _ => True
-  | .memoFork _ | .memoGet _ _ | .memoComplete _ _ _ | .memoRelease _ _ => True
+  | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
+  -- the looked-up layer's own checked error type (decision row 90)
+  | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
+      Checker.checkLayer (nativeSignature root.table) layer l = .ok lt ∧ lt.error = cert
   | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
 
 def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Prop :=
@@ -72,13 +75,14 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .scopeIsClosed _ => ∃ b, ans = Val.bool b
   | .scopeFork _ _ => ∃ sc, ans = Val.scopeHandle sc
   | .memoFork _ => ∃ id, ans = Val.memoMap id
-  | .memoGet _ _ => ans = Val.unit ∨ ∃ hit, Val.memoHit? ans = some hit
+  | .memoGet _ _ => ans = Val.unit ∨ ∃ cell owner, Val.memoHit? ans = some (cell, owner) ∧
+      w'.«Π» cell = some (.handle Ty.contextTarget, cert)
   | .memoBuild _ _ => ∃ sc, ans = Val.scopeHandle sc
   | .memoComplete _ _ _ | .memoRelease _ _ => ans = Val.unit
 
-def Ψ_S : Protocol World StoreSig where
+def Ψ_S (root : ProgramSource) : Protocol World StoreSig where
   Cert := StoreCert
-  pre := storePre
+  pre := storePre root
   post := storePost
 
 /-! ## The Fiber Protocol (40 FiberOp rows) -/
@@ -111,7 +115,9 @@ def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : Eff
 
 def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert op) : Prop :=
   match op with
-  | .getId | .setContext _ | .yieldNow _ | .ambientScope | .sync _ => True
+  | .getId | .yieldNow _ | .ambientScope | .sync _ => True
+  -- the context set keeps every service at its key's type (decision row 90)
+  | .setContext ctx => ServicesOk w ctx.services
   | .getContext => cert = .handle Ty.contextTarget
   | .await target _ => (w.Γ target).isSome = true
   | .awaitAll targets | .awaitAllFailFast targets =>
@@ -181,8 +187,8 @@ inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Pr
   | pure {w : World} {ty : EffTy} {ex : ExitV} (exit : StrongExit w ty ex) :
       TypedProg root w ty (.pure ex)
   | store {w : World} {ty : EffTy} {op : SyncOp} {k : Val → RProgram}
-      (cert : Ψ_S.Cert op) (pre : Ψ_S.pre w op cert)
-      (next : ∀ w', w.leHost w' → ∀ ans, Ψ_S.post w' op cert ans → TypedProg root w' ty (k ans)) :
+      (cert : (Ψ_S root).Cert op) (pre : (Ψ_S root).pre w op cert)
+      (next : ∀ w', w.leHost w' → ∀ ans, (Ψ_S root).post w' op cert ans → TypedProg root w' ty (k ans)) :
       TypedProg root w ty (.vis (.inl op) k)
   | fiber {w : World} {ty : EffTy} {op : FiberOp} {k : op.answer → RProgram}
       (notGuard : ∀ kind, op ≠ .guard_ kind) (notUnguard : ∀ ex, op ≠ .unguard ex)
@@ -217,8 +223,8 @@ theorem pure_inv {root : ProgramSource} {w : World} {ty : EffTy} {ex : ExitV}
 
 theorem store_inv {root : ProgramSource} {w : World} {ty : EffTy} {op : SyncOp} {k : Val → RProgram}
     (h : TypedProg root w ty (.vis (.inl op) k)) :
-    ∃ cert : Ψ_S.Cert op, Ψ_S.pre w op cert ∧
-      ∀ w', w.leHost w' → ∀ ans, Ψ_S.post w' op cert ans → TypedProg root w' ty (k ans) := by
+    ∃ cert : (Ψ_S root).Cert op, (Ψ_S root).pre w op cert ∧
+      ∀ w', w.leHost w' → ∀ ans, (Ψ_S root).post w' op cert ans → TypedProg root w' ty (k ans) := by
   cases h with
   | store cert pre next => exact ⟨cert, pre, next⟩
 

@@ -103,9 +103,90 @@ theorem generator_admitted (w : W) :
     (fun _ _ _ h => nomatch h) (EffTy.pure .nat) ⟨generator, [], rfl, generator_checks, env0 w'⟩
     (fun _ _ _ hpost => TypedProg.pure hpost)
 
+/-! ## Contexts (decision row 90)
+
+A service read's loaded code: the context read, then the lookup. The context handle's fit
+carries its services' static typing, so the looked-up value is typed at the key's type. -/
+
+def natKey : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+def readService : NativeEff := .service natKey
+#guard (typeOf nativeSignature readService).map (·.answer) = some .nat
+
+theorem natKey_ty : nativeServiceTy natKey = some .nat := by decide +kernel
+
+/-- The lookup is typed at the key's type for every context whose services are typed. -/
+theorem lookup_typed (w : W) (ty : EffTy) (answer : ty.answer = .nat) (v : Val)
+    (typed : ∀ ctx, Val.context? v = some ctx → ServicesOk w ctx.services) :
+    TypedProg readService w ty (serviceLookupR natKey v) := by
+  unfold serviceLookupR
+  split
+  · rename_i ctx hctx
+    split
+    · rename_i sv hget
+      obtain ⟨ok, live⟩ := typed ctx hctx natKey sv .nat hget natKey_ty
+      refine TypedProg.pure (strongExit_success w ty sv ⟨?_, ?_, live⟩)
+      · rw [answer]
+        exact ok
+      · rw [answer]
+        trivial
+    · exact TypedProg.pure (strongExit_of_clean w ty _ rfl)
+  · exact TypedProg.pure (strongExit_of_clean w ty _ rfl)
+
+theorem service_admitted (w : W) (ty : EffTy) (answer : ty.answer = .nat) :
+    TypedProg readService w ty (denoteR readService readService (rootPoint 20)) := by
+  refine TypedProg.guard (EffTy.pure (.handle Ty.contextTarget)) ?_ ?_ ?_
+  · refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) (Ty.handle Ty.contextTarget) rfl ?_
+    intro w' _ ans hpost
+    exact TypedProg.unguard (strongExit_success w' _ ans hpost)
+  · intro w' _ ex hpost
+    cases ex with
+    | failure c => exact Bool.noConfusion hpost.1
+    | success v =>
+      have hv : StrongValue w' (.handle Ty.contextTarget) v := hpost.2.2.1 v rfl
+      exact lookup_typed w' ty answer v (hv.2.1 rfl)
+  · intro w' _ ex hex miss
+    cases ex with
+    | success v => exact Bool.noConfusion miss
+    | failure c => exact strongExit_of_clean w' ty c (cleanExit_of_never w' _ c rfl hex)
+
+/-- A memo hit's await is typed at the layer's context: the lookup certifies the layer's own
+checked error type, and the hit's deferred is declared at the context handle and that error. -/
+def layered : NativeEff :=
+  .provideLayer (.effect natKey (.succeed (.lit (.nat 1)))) false (.service natKey)
+
+theorem layer_checks :
+    Checker.checkLayer (nativeSignature []) [0] (.effect natKey (.succeed (.lit (.nat 1)))) =
+      .ok ⟨Env.Requirement.single natKey, .never, Env.Requirement.empty⟩ := by decide +kernel
+
+def memoAwait (m : MemoMapId) : RProgram :=
+  .vis (.inl (.memoGet [0] m)) fun v => match Val.memoHit? v with
+    | some (cell, _) => .vis (.inr (.async (.registerAwait cell) (Val.promise cell))) Effects.Program.pure
+    | none => .pure (.failure (Cause.interrupt none))
+
+theorem memoAwait_typed (w : W) (m : MemoMapId) :
+    TypedProg layered w (EffTy.pure (.handle Ty.contextTarget)) (memoAwait m) := by
+  refine TypedProg.store Ty.never ⟨_, _, rfl, layer_checks, rfl⟩ ?_
+  intro w' _ ans hpost
+  dsimp only [memoAwait]
+  split
+  · rename_i cell owner hhit
+    rcases hpost with hunit | ⟨cell', owner', hhit', hPi⟩
+    · subst hunit
+      exact nomatch hhit
+    · rw [hhit] at hhit'
+      cases hhit'
+      exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) (EffTy.pure (.handle Ty.contextTarget))
+        ⟨_, _, hPi, Ty.sub_refl _, Ty.sub_refl _⟩ (fun _ _ _ hpost => TypedProg.pure hpost)
+  · exact TypedProg.pure (strongExit_of_clean w' _ _ rfl)
+
 #print axioms sleep_admitted
 #print axioms fork_admitted
 #print axioms scoped_admitted
 #print axioms race_admitted
 #print axioms generator_admitted
+#print axioms service_admitted
+#print axioms lookup_typed
+#print axioms memoAwait_typed
 end Test.Program.LoadedAdmission
