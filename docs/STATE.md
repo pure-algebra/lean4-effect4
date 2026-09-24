@@ -12,7 +12,7 @@ ecosystem (the printer and readers). Programs are data: a canonical `Eff` tree w
 a computed typing certificate, folds, a journaled run with replay, and a printed image that
 reads back.
 
-## Current milestone (2026-09-21)
+## Current milestone (2026-09-23)
 
 Phase A, placement, the Phase B skeleton and the Phase C fills of the skeleton-first redirect
 are landed; the phase-by-phase account is
@@ -58,14 +58,21 @@ evidence in `research/2026-09-21-foundations-fr08-evidence/`). A re-masked walk 
 The owner ruled the same day (ruling §4): the machine does **not** adopt the regression. At
 a preempted skip of a catch that would have run, both walks pass on the failure stripped of
 its `Fail` reasons and combined with the recorded interrupt, which is Effect 3's rule; this
-is a signed divergence, `U-01` in [`docs/UPSTREAM-BACKLOG.md`](UPSTREAM-BACKLOG.md). The
-typed-state theorem is therefore unconditional; `FrameAccepts.resume.skip` becomes
-guard-miss-only and the hook contracts are filled under `HookLaws`. The divergence is its own
-slice, dispatched first by
-[`the divergence slice`](research/2026-09-21-codex-brief-foundations-divergence-slice.md)
-(both walks, `Cause.stripFail`, regeneration, the census row as a signed divergence, a truth
-fixture with a signed host exception); slice 5 follows on its head by
-[`foundations slice 5`](research/2026-09-21-codex-brief-foundations-slice-5.md), retargeted.
+is a signed divergence, `U-01` in [`docs/UPSTREAM-BACKLOG.md`](UPSTREAM-BACKLOG.md). The planned typed-state statements have no run premise; their proof is still open.
+
+The divergence landed at `5f33fe3c`, with its receipt and evidence at `7c3b62ea`, and was
+fast-forwarded onto this branch on 2026-09-23 after the
+[once-over](research/2026-09-23-foundations-divergence-integration.md). The approved CE-009
+amendment carries the sanitized cause through the compiled walk and its three consumers.
+The unchanged runtime agreement statements remain at `[propext, Quot.sound]`. The receipt
+records green `make check`, `check-ocaml`, `check-truth` and `check-census`; the once-over
+verified the retained evidence hashes and reran the exact-exception controls. The unique
+production ledger remains 342 total, 333 proved, 9 open.
+
+[Foundations slice 5](research/2026-09-21-codex-brief-foundations-slice-5.md) continues from
+this integration: guard-miss-only frame contracts, the first stack and delivery proofs,
+filled hook contracts, typed-state assembly and named M6 delivery obligations. No full
+state-preservation or progress theorem is claimed by the divergence landing.
 
 The five chat rulings of 2026-09-20 (rows 20, 48, 51, 52, 79) are written into
 `decisions.md` as of 2026-09-21. The Codex packet that sequences the divergence slice and

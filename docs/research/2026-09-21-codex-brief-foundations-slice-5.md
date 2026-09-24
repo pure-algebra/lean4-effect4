@@ -4,7 +4,9 @@ Repo `lean4-effect4` (Lean 4.33.1). Base: the head of `refactor/phase1-phase3` a
 divergence slice (`2026-09-21-codex-brief-foundations-divergence-slice.md`) is merged; this
 slice does not start before that merge. Branch `codex/foundations-slice-5` in the worktree
 `/private/tmp/effect4-foundations-slice-5`, fast-forwarded to that base by the coordinator at
-dispatch; nothing is pushed. **Retargeted 2026-09-21** after the owner overruled R1 and R2:
+dispatch; nothing is pushed. **Integration retarget, 2026-09-23:** divergence head
+`7c3b62ea` passed its once-over and is merged. The base for this slice is the coordinator
+commit containing this retarget, recorded before implementation in the slice 5 receipt. **Retargeted 2026-09-21** after the owner overruled R1 and R2:
 the machine strips at a preempted skip, so `popR_typed` is unconditional and the walk premise
 machinery of the earlier text (`skipsClean`, `DeliveryClean`, `NoEscape`) is not landed. This brief supersedes §2a.3 and §5 of
 [`foundations slices 3–6`](2026-09-21-codex-brief-foundations-slices-3-6.md); everything else
@@ -14,9 +16,8 @@ stands. Ruling of record:
 with its checked evidence in `2026-09-21-foundations-fr08-evidence/`.
 
 Goal in one sentence: **assemble the typed-state invariant on the reference machine and
-prove its first hard cases, with `popR_typed` stated under the walk premise the ruling
-names, so that every remaining obligation is a named, ceilinged statement rather than a
-guess about interruption.**
+prove its first hard cases with no run premise, so that every remaining obligation has a
+named statement and an exact open-proof ceiling.**
 
 ## 0. What the ruling changed
 
@@ -31,8 +32,8 @@ with the original typed failure. `Effect<number, never>` completes with `Fail 42
 walk then runs a `nat`-typed handler on a string and dies with the bad-shape defect from
 defect-free source.
 
-So no invariant of the form "every reachable delivery fits its declared error column" is
-true of the reference machine, and none should be attempted. The ruling:
+That invariant was false before the divergence. Both walks now sanitize the preempted
+failure, and the following ruling governs this slice:
 
 - **R1 (overruled, ruling §4).** The machine diverges from rc.112 as a signed divergence
   (`U-01`): at a preempted skip of a catch that would have run, both walks pass on
@@ -43,7 +44,7 @@ true of the reference machine, and none should be attempted. The ruling:
   (`strongExit_of_clean`); no run premise exists.
 - **R3.** `FrameAccepts.resume.skip` becomes guard-miss-only, and every frame arrow reads
   `StrongExit`/`TypedProg` instead of `ExitFits`/the parameter. The former all-failures
-  disjunct was standing in for the preemption case, which the walk premise now carries.
+  disjunct was standing in for preemption; the sanitized-exit lemma now handles that case.
 - **R4.** `InterruptProvenance` stays as the frame premise: the causes `popR` and `deliverR`
   inject on the success paths are recorded interrupts, which fit every effect type.
 - **R5.** The interpreter hook contracts landed as `True` in `Residual.lean` are filled, and
@@ -112,7 +113,7 @@ beside `TypedProg` (Contracts must not import Admission; `SavedOk`, `ResumeOk` a
 
 The other five arms are unchanged. Reason: the all-failures disjunct rejected every
 error-removing catch (`StackProbe.lean:23-33`) while standing in for preemption, and
-`E4-SCHED-CE-008` shows preemption is a run-level fact, not a frame-level one. Add the
+`E4-SCHED-CE-008` motivates the runtime sanitation rule for preemption. Add the
 register row citation to the amendment comment.
 
 ### 3.2 The clean-exit lemma (`Typed/Stack.lean`)
@@ -219,5 +220,6 @@ the receipt in `2026-09-21-foundations-slice5-receipt.md` with base and head, ev
 statement with its gate and ceiling before and after, the old/new `FrameAccepts` text,
 the axioms of every proof, the red-then-green control logs, the commands with exit codes,
 and the unique ledger line with every open name. If `popR_typed` needs a premise beyond
-`InterruptProvenance` and `HookLaws`, stop, retain the counterexample as `E4-SCHED-CE-009`,
-and amend the divergence before any S2 work.
+`InterruptProvenance` and `HookLaws`, stop, retain a checked counterexample under the next unused stable ID (`E4-SCHED-CE-009`
+already records the approved carrier amendment), and propose the smallest amendment
+before any S2 work.
