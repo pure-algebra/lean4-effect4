@@ -15,6 +15,15 @@ stands. Ruling of record:
 [`slices 3–4 review and the FR-08 ruling`](2026-09-21-foundations-slices-3-4-review-and-fr08-ruling.md)
 with its checked evidence in `2026-09-21-foundations-fr08-evidence/`.
 
+**Contract ruling, 2026-09-23.** The preflight stop (`E4-SCHED-CE-010/011/012`) is ruled in
+[`2026-09-23-foundations-slice5-contract-ruling.md`](2026-09-23-foundations-slice5-contract-ruling.md)
+and its contract repair is landed by the coordinator: the R3 frame contract, the guard row,
+`TypedProg` as one inductive judgment (`ControlAdmitted` retired), `frameProtocols root`,
+`cleanExit`/`strongExit_of_clean`/`cleanExit_of_never` in `Typed/Admission.lean`, and the
+controls in `Test/Program/TypedControl.lean`. Resume from `Typed/Stack.lean` (§3.2's
+`sanitize_clean_exit`, §3.3's `HookLaws`, §3.4) on the coordinator's recorded head. Where
+this brief and the ruling differ, the ruling governs; the sections below are amended in place.
+
 Goal in one sentence: **assemble the typed-state invariant on the reference machine and
 prove its first hard cases with no run premise, so that every remaining obligation has a
 named statement and an exact open-proof ceiling.**
@@ -67,10 +76,12 @@ proposal, which is what their `Reviewed…` names say. Do not rename them.
 
 ## 2. Files
 
-- `Typed/Contracts.lean`: the R3 amendment only (old and new statements below).
-- `Typed/Residual.lean`: `frameProtocols` becomes `frameProtocols (root : NativeEff)` with
+- `Typed/Contracts.lean`: the R3 amendment only (old and new statements below). **Landed
+  2026-09-23**; `ExitFits` moved to `Typed/World.lean`.
+- `Typed/Residual.lean` (**landed 2026-09-23**, contract ruling): the guard row and the one
+  program judgment `TypedProg`; `frameProtocols` becomes `frameProtocols (root : NativeEff)` with
   the real hook arrows (§3.3); nothing else moves.
-- New `Typed/Stack.lean`: `cleanExit`, `strongExit_of_clean`, `HookLaws`, `popR_typed`,
+- New `Typed/Stack.lean`: `sanitize_clean_exit`, `HookLaws`, `popR_typed`,
   `saveAnswerR_typed`, `deliver_active`, `deliver_stale`.
 - New `Typed/Assembly.lean`: `preds`, `TypedState`, `RReachable`, `AnswersOk`,
   `typedState_load` (marker), `capture_lookup`.
@@ -118,6 +129,10 @@ register row citation to the amendment comment.
 
 ### 3.2 The clean-exit lemma (`Typed/Stack.lean`)
 
+**Amended 2026-09-23:** `cleanExit`, `strongExit_of_clean` and `cleanExit_of_never` are landed
+in `Typed/Admission.lean`, beside `StrongExit`. Only `sanitize_clean_exit` is written in
+`Typed/Stack.lean`.
+
 Exactly the probe's `cleanExit` and `strongExit_of_clean : cleanExit (.failure c) = true →
 StrongExit w ty (.failure c)` (proved at `[propext, Quot.sound]`), plus
 `sanitize_clean_exit : cleanExit (.failure (Cause.sanitize cause ic)) = true` for
@@ -129,7 +144,11 @@ run-level premise.
 
 `frameProtocols (root : NativeEff) : Contracts.FrameProtocols`:
 
-- `asyncFinalizer w tin tout name := tin = tout ∧ ∀ cause, cause.hasInterrupts = true →
+- **Amended and landed 2026-09-23 (CE-010):** `asyncFinalizer w tin tout name := tin = tout ∧
+  ∀ cause, StrongExit w tin (.failure cause) → cause.hasInterrupts = true →
+  TypedProg root w tout ((interpR root).cancelThenFail name cause)`; `HookLaws`'s field takes the
+  same text. The text before the ruling was
+  `asyncFinalizer w tin tout name := tin = tout ∧ ∀ cause, cause.hasInterrupts = true →
   TypedProg root w tout ((interpR root).cancelThenFail name cause)`.
 - `iterator w tin tout name := tin.error = tout.error ∧ ∀ v, StrongValue w tin.answer v →
   match ((interpR root).iterNext name v).2 with
@@ -162,7 +181,9 @@ HookLaws (interpR root) (frameProtocols root)` is declared with its marker in ga
    a run arm uses `run`; a guard miss uses `skip`; a preempted skip passes the sanitized
    exit, clean by `sanitize_clean_exit`, so `strongExit_of_clean` types it at every
    `tout'`; `answer` glue uses `run`, `Typed.pure_inv` and
-   `typedProg_unguard_inv`; the hook arms use `HookLaws`. The `onExit` push of
+   `unguard_payload_inv` (the landed name); the hook arms use `HookLaws`. A `guard_` in the
+   current code saves `.resume kind (fun ex => k (some ex))`: `TypedProg.guard_inv` gives
+   `mid`, the body at `mid`, and exactly that frame's `run` and `skip`. The `onExit` push of
    `finalizerMask` is the identity arrow at the handler's output type.
 2. `saveAnswerR_typed`: pushing `.answer next` with `run` preserves `SavedOk` at the
    operation's own type.
@@ -182,6 +203,15 @@ run-level premise: the M7 corollaries (no `badShape`, no halting) are stated ove
 `RReachable` and `AnswersOk` alone.
 
 ### 3.6 Declared delivery adequacy (`Typed/Adequacy.lean`, gate `Typed.M6Adequacy`)
+
+**Amended 2026-09-23 (contract ruling, CE-011 widened).** A `True` post on a row whose answer
+flows into a leaf makes the program untypable (`joinAll_untypable`,
+`2026-09-23-foundations-slice5-ruling-evidence/TruePostProbe.lean`). For each such row
+(`awaitAll`, `awaitAllFailFast`, `snapshotChildren`, `awaitNewChildren`, `raceAll`,
+`raceRegister`, `async`, `gen`, `loop`, `closeIter`, `frontier`) the M6 declaration states the
+strengthened post in the guard row's shape, and its obligation is that the machine's actual
+answer satisfies that post. The posts are installed in the M6 slice, not here. The receipt
+lists the rows and, per row, the program shape that the probe pattern refutes.
 
 The slices 3–6 brief asked for an actual-delivery adequacy obligation for every answered
 `Ψ_F` row; `ef38bf11` landed rows whose `pre`/`post` are `True` for most of categories 1–3

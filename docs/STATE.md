@@ -71,16 +71,23 @@ production ledger remains 342 total, 333 proved, 9 open.
 
 [Foundations slice 5](research/2026-09-21-codex-brief-foundations-slice-5.md) was retargeted to
 `fc638550`. Its preflight stopped on three checked admission counterexamples, retained at
-`2a00ce29` with the [stop receipt](research/2026-09-21-foundations-slice5-receipt.md) and evidence
-at `e9ffc148`, integrated as a counterexample checkpoint. A checker-typed `sleep(1)` reaches
-the exact cleanup stack the frozen hook clause rejects. CE-010 records the untyped cause
-quantifier, CE-011 the guard post that accepts the wrong arm, and CE-012 the control judgment
-that ignores the operation's post. The new test builds; all 33 compiled declarations satisfy
-the existing axiom ceiling. The fresh production ledger remains 342 total, 333 proved, 9 open.
-Production contracts and runtime code are unchanged by this checkpoint; no slice 5 proof or
-assembly is claimed complete. The next step is the owner ruling on the
-[bounded contract amendment](research/2026-09-23-foundations-slice5-contract-amendment.md), then
-the original stack/delivery proofs, assembly and named M6 obligations. No run premise is proposed.
+`2a00ce29` with the [stop receipt](research/2026-09-21-foundations-slice5-receipt.md): a
+checker-typed `sleep(1)` reached a cleanup stack the frozen contracts refused. The owner
+approved the [contract ruling](research/2026-09-23-foundations-slice5-contract-ruling.md) on
+2026-09-23 and the coordinator landed it. The async hook takes the incoming typed failure; the
+guard row certifies its intermediate type; `TypedProg` is one inductive judgment that shares
+each operation's certificate and types a guard's body at that type, and the old separate
+control judgment is retired; the R3 frame contract and the concrete hook protocols are in
+place. The exact reachable sleep stack is now accepted, and the three old contracts stay
+refuted in the counterexample file. A wider finding is recorded for M6: every fiber row whose
+answer feeds a leaf under a `True` post makes its programs untypable, so those posts are stated
+with the M6 declarations. The typed-state modules now layer as the world, validity, admission,
+then the residual protocols, with the stack contracts a parametric interface only the residual
+module instantiates. The regenerated [architecture map](core/architecture-map.html) found three
+upward imports that arrived after 2026-09-20 (the answer gate, the trace-origin obligations and
+the protocol ledger file); all three are repaired, so the map shows no import against the
+declared direction beyond the two accepted ones, and no pair of areas importing each other. The production ledger is unchanged at 342 total, 333 proved, 9 open. Slice
+5's stack and delivery proofs, assembly and M6 declarations remain Codex's, on the recorded head.
 
 The five chat rulings of 2026-09-20 (rows 20, 48, 51, 52, 79) are written into
 `decisions.md` as of 2026-09-21. The Codex packet that sequences the divergence slice and
@@ -89,12 +96,9 @@ slice 5, with every tracking item's end state, is
 
 ## What the owner must decide
 
-The [slice 5 contract amendment](research/2026-09-23-foundations-slice5-contract-amendment.md)
-blocks the remaining packet: approve reopening the async input premise, the guard protocol
-row and control admission before implementation resumes. The unchanged write fence currently
-forbids the last two changes. Reporting `U-01` upstream remains a separate owner decision;
-its reproduction and Effect 3 comparison are in `docs/UPSTREAM-BACKLOG.md`. The other choices
-below do not block this repair.
+Nothing blocks the packet. Reporting `U-01` upstream remains the owner's decision; its
+reproduction and Effect 3 comparison are in `docs/UPSTREAM-BACKLOG.md`. The other choices
+below do not block slice 5.
 
 | row | question | the register's recommendation (first line) |
 | --- | --- | --- |
