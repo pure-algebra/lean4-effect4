@@ -69,10 +69,18 @@ records green `make check`, `check-ocaml`, `check-truth` and `check-census`; the
 verified the retained evidence hashes and reran the exact-exception controls. The unique
 production ledger remains 342 total, 333 proved, 9 open.
 
-[Foundations slice 5](research/2026-09-21-codex-brief-foundations-slice-5.md) continues from
-this integration: guard-miss-only frame contracts, the first stack and delivery proofs,
-filled hook contracts, typed-state assembly and named M6 delivery obligations. No full
-state-preservation or progress theorem is claimed by the divergence landing.
+[Foundations slice 5](research/2026-09-21-codex-brief-foundations-slice-5.md) was retargeted to
+`fc638550`. Its preflight stopped on three checked admission counterexamples, retained at
+`2a00ce29` with the [stop receipt](research/2026-09-21-foundations-slice5-receipt.md) and evidence
+at `e9ffc148`, integrated as a counterexample checkpoint. A checker-typed `sleep(1)` reaches
+the exact cleanup stack the frozen hook clause rejects. CE-010 records the untyped cause
+quantifier, CE-011 the guard post that accepts the wrong arm, and CE-012 the control judgment
+that ignores the operation's post. The new test builds; all 33 compiled declarations satisfy
+the existing axiom ceiling. The fresh production ledger remains 342 total, 333 proved, 9 open.
+Production contracts and runtime code are unchanged by this checkpoint; no slice 5 proof or
+assembly is claimed complete. The next step is the owner ruling on the
+[bounded contract amendment](research/2026-09-23-foundations-slice5-contract-amendment.md), then
+the original stack/delivery proofs, assembly and named M6 obligations. No run premise is proposed.
 
 The five chat rulings of 2026-09-20 (rows 20, 48, 51, 52, 79) are written into
 `decisions.md` as of 2026-09-21. The Codex packet that sequences the divergence slice and
@@ -81,10 +89,12 @@ slice 5, with every tracking item's end state, is
 
 ## What the owner must decide
 
-None of these blocks the packet. Each row in `docs/core/decisions.md` carries alternatives,
-evidence and the coordinator's recommendation; this list is the index so nothing waits
-unseen. From today: whether and when to report `U-01` upstream (recommended; reproduction and
-the Effect 3 comparison are in `docs/UPSTREAM-BACKLOG.md`).
+The [slice 5 contract amendment](research/2026-09-23-foundations-slice5-contract-amendment.md)
+blocks the remaining packet: approve reopening the async input premise, the guard protocol
+row and control admission before implementation resumes. The unchanged write fence currently
+forbids the last two changes. Reporting `U-01` upstream remains a separate owner decision;
+its reproduction and Effect 3 comparison are in `docs/UPSTREAM-BACKLOG.md`. The other choices
+below do not block this repair.
 
 | row | question | the register's recommendation (first line) |
 | --- | --- | --- |
