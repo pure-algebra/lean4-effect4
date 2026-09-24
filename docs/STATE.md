@@ -103,8 +103,12 @@ generated code consumes (sleep, joins, races, generators, loops, scopes, perform
 memoized layers), and every body using host rows. Until the guard fix today it refused every
 program with a `bind`. The checker, meaning soundness on the straight and looped fragments and
 runtime agreement are proved and unaffected; type soundness for the rest of the language has no
-proof yet. The audit recommends a generated-code admission census and a dynamic exit-type lane
-before the repair lands. Slice 5's generic stack proofs can proceed meanwhile. Reporting `U-01`
+proof yet. You ruled for the census and the dynamic lane first; both landed with a typed corpus
+(`Test/Program/TypedCorpus.lean`: every construct and operation, 8,584 typed programs). The lane
+ran 34,336 runs and found no exit outside its checked type; the census confirms from generated
+code that 33 of 77 entries reach a `True`-post row, and that `construction` (every `bind`) is a
+real case (audit §8). The repair is next, with an admission theorem per corpus entry as its
+acceptance test. Slice 5's generic stack proofs can proceed meanwhile. Reporting `U-01`
 upstream remains the owner's decision; its reproduction and Effect 3 comparison are in
 `docs/UPSTREAM-BACKLOG.md`.
 

@@ -1,7 +1,9 @@
 # Typed-state admission audit (2026-09-23)
 
-Status: findings recorded with checked witnesses; the repair is proposed and **not landed**. The
-owner asked for this audit before any repair lands. Decision row 89 carries the choice.
+Status: findings recorded with checked witnesses. The owner ruled on decision row 89
+(2026-09-23): the census and the dynamic lane first, and the corpus expanded where it falls
+short. Both landed, with the typed corpus; results in §8. The repair is proposed and **not
+landed**.
 
 ## 1. The finding
 
@@ -95,3 +97,83 @@ then slice 5's assembly. Slice 5's generic stack proofs do not depend on the row
 
 - Its list of affected rows is replaced by §3 A1–A2.
 - `docs/STATE.md` said nothing blocks the packet. Slice 5's assembly is blocked on §6.
+
+## 8. Census and dynamic lane: results (2026-09-23)
+
+### The corpus was not comprehensive, and is now
+
+The random corpus (`Test/Program/Gen.lean`, 400 programs) is drawn for the printer and reader.
+Only 127 of its programs are well typed, and those use none of 21 constructs (among them
+`awaitFiber`, `acquireRelease`, `catchIf`, `iterate`, the generator loop statements, `forkIn`,
+`runIn`, the interrupt actions, the join-all waits, `closeScope` and three layer forms) and only
+one of the 23 performed operations. Its coverage pin counted every sampled program, typed or not.
+
+`Test/Program/TypedCorpus.lean` is the typed complement: 77 checked entries, one or more per
+construct, fiber action, layer form, generator statement and operation; each entry in 19
+type-preserving contexts (masks, fork and join, fork-interrupt-join, races with and without a
+sleeper, finalizers, catches, resources, generators, a service); and each entry under every
+ordered pair of the 11 contexts that move interrupts, masks, timers and finalizers against each
+other. Pins: every entry and kept program checks; the typed programs use every case of the
+program syntax (through the derived shapes, as `Gen.lean` does) and every `NativeOp` constructor.
+
+| set | programs |
+| --- | --- |
+| entries in one context | 1,349 |
+| entries in context pairs | 7,108 |
+| random corpus, typed | 127 |
+
+### The dynamic lane finds no violation
+
+`Test/Program/ExitTypeLane.lean` runs all 8,584 programs on the shipped machine under four
+decision tapes (quiet; clock advanced; root interrupted at once; interrupted after the first
+timer), 34,336 runs. It checks every root exit against the checked type and for bad-shape,
+not-implemented and unrequired missing-service defects. Result: no violation; every program
+exits under some tape; the negative controls (the pre-divergence escape exit, the contagion's
+defect, a correct exit against a wrong type) are refused. Two findings on the way were budget
+limits, not bugs: nested races around a failing layer need more than 400 commands, and two host
+calls in a race need two replies.
+
+Bounds: root exits only (forked fibers' exits are not checked); four tapes (no yield verdicts,
+no host replies of other shapes); a finite program family. This is empirical evidence, not a
+proof. It says the machine, with the `U-01` divergence, respected types on every run tried,
+across the whole construct set.
+
+### The census confirms the audit from generated code
+
+`Test/Program/AdmissionCensus.lean` loads each of the 1,349 programs on the reference machine
+and walks the root's code with realistic answers (a handle for an allocation, a fiber for a
+fork, a successful exit otherwise), recording the protocol rows reached. The triviality tables
+are checked against the protocol in the direction the report uses. Result:
+
+| rows reached with a `True` post (A1, A2) | programs reaching |
+| --- | --- |
+| `scoped` | 187 |
+| `getContext` | 146 |
+| `raceAll` | 127 |
+| `async` | 103 |
+| `gen` | 90 |
+| `snapshotChildren` | 13 |
+| `loop` | 12 |
+| `awaitAll`, `awaitAllFailFast`, `awaitNewChildren` | 6 each |
+| `refModify`, `refModifySome`, `deferredPoll` | 6 each |
+
+Of the 77 entries, 33 reach such a row. Of the other 44, 28 reach `construction`, which every
+`bind` passes through; its answer (the completed exits) is read by a join after a bind
+(`inlineYield`'s `awaitFiber` arm, `DenoteR.lean:511-512`), so A9 is real:
+`construction_read_untypable` (`E4-SCHED-CE-013`) checks the shape. Only 16 entries reach no
+trivial row at all. The walk follows one answer per operation, so it under-approximates:
+`raceRegister`, `forkScoped`, `frontier`, `memoGet` and `memoBuild` sit behind rows it stops
+short of, and are known from reading (§3).
+
+### What this means for the repair
+
+The gap is in the proof judgment, not in observed behaviour: every construct runs type-correctly
+in the lane, and the judgment refuses most of them. The repair (§6) gains one item: `construction`
+answers the completed exits typed at the fibers' certified types (the join reads them), so it
+joins the A1 list. Its acceptance test is the census's second phase: an admission theorem for
+each entry, replacing the report. The lane stays as the empirical net for the fragment with no
+proof.
+
+Next corpus steps, not done here: feed the typed corpus into the printer round trip, the
+TypeScript type oracle and the truth harness (host against Lean on the concurrent fragment);
+check forked fibers' exits in the lane; add yield-verdict and host-reply tapes.

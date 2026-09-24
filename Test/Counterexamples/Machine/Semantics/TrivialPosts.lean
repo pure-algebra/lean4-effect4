@@ -77,6 +77,23 @@ theorem frontier_untypable (root : NativeEff) (w : W) (reason : PendingReason) (
   | fiber _ _ _ _ _ _ next =>
     exact Bool.noConfusion (TypedProg.pure_inv (next w (leHost_refl w) (.success (.nat 5)) trivial)).1
 
+/-- A construction whose continuation returns a completed fiber's exit, as `inlineYield`'s
+`awaitFiber` arm does for a join after a bind (`DenoteR.lean:511-512`): the `True` post admits
+any completed list, so the join's result is untyped (audit A9). A continuation that ignores the
+list, as a bind without a join does, is not refused. -/
+def joinsCompleted : RProgram :=
+  .vis (.inr .construction) fun completed => .pure (match completed with
+    | (_, ex) :: _ => ex
+    | [] => .success (.nat 0))
+
+theorem construction_read_untypable (root : NativeEff) (w : W) :
+    ¬ TypedProg root w (EffTy.pure .nat) joinsCompleted := by
+  intro h
+  cases h with
+  | fiber _ _ _ _ _ _ next =>
+    exact Bool.noConfusion
+      (TypedProg.pure_inv (next w (leHost_refl w) [(⟨1⟩, .success (.bool true))] trivial)).1
+
 /-! ## CE-014 -/
 
 /-- A body performing host row 0 (`query`, answering `nat`) of the external-row battery. -/
@@ -91,4 +108,5 @@ def checks (r : Except TypeRefusal EffTy) : Bool := match r with | .ok _ => true
 #print axioms joinAll_untypable
 #print axioms modify_untypable
 #print axioms frontier_untypable
+#print axioms construction_read_untypable
 end Test.Counterexamples.TrivialPosts
