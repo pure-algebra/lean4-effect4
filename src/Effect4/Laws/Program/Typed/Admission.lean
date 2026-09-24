@@ -25,12 +25,15 @@ def HandlesLive (w : World) (v : Val) : Prop :=
   | .fiber id => (w.Γ id).isSome = true
   | _ => True
 
-/-- Nested handle types align with the world typing tables. -/
+/-- Nested handle types align with the world typing tables. A fiber handle is covariant, as the
+checker's `Ty.sub` is (`Program/Ty.lean`), so a handle widened to `fiberOf unknown unknown` fits
+(ruling 2026-09-23, audit §8); refs and deferreds are invariant, as there. -/
 def HandlesFit (w : World) (v : Val) (ty : Ty) : Prop :=
   match ty with
   | .refOf t => ∀ key, Handle.cell key ∈ v.keys → w.Ρ key = some t
   | .deferredOf a e => ∀ key, Handle.promise key ∈ v.keys → w.«Π» key = some (a, e)
-  | .fiberOf a e => ∀ id, Handle.fiber id ∈ v.keys → ∃ fty, w.Γ id = some fty ∧ fty.answer = a ∧ fty.error = e
+  | .fiberOf a e => ∀ id, Handle.fiber id ∈ v.keys → ∃ fty, w.Γ id = some fty ∧
+      fty.answer.sub a = true ∧ fty.error.sub e = true
   | .prod a b => match v with
     | .pair v1 v2 => HandlesFit w v1 a ∧ HandlesFit w v2 b
     | _ => True
@@ -66,27 +69,44 @@ def EnvTyped (w : World) (env : List Ty) (vals : List Val) : Prop :=
   env.length = vals.length ∧
   ∀ (i : Nat) (ty : Ty) (v : Val), env[i]? = some ty → vals[i]? = some v → StrongValue w ty v
 
-/-- D13 source admission at an addressed program node. -/
-def PointTyped (root : NativeEff) (w : World) (point : Point) (ty : EffTy) : Prop :=
+/-- The program the typed state is about, with the host-row table its checker reads. A bare
+program coerces to a source with the empty table. -/
+structure ProgramSource where
+  program : NativeEff
+  table : RowTable := []
+
+instance : Coe NativeEff ProgramSource := ⟨fun program => { program }⟩
+
+/-- D13 source admission at an addressed program node, under the source's row table
+(`E4-SCHED-CE-014`: the empty table refused bodies that perform a host row). -/
+def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : Prop :=
   ∃ (e : NativeEff) (env : List Ty),
-    Node.at_ (.eff root) point.path = some (.eff e) ∧
-    Checker.check (nativeSignature []) env point.path e = .ok ty ∧
+    Node.at_ (.eff src.program) point.path = some (.eff e) ∧
+    Checker.check (nativeSignature src.table) env point.path e = .ok ty ∧
     EnvTyped w env point.env
 
 /-- Admitted bodies covering all six `Body` constructors. -/
-inductive BodyTyped (root : NativeEff) (w : World) : Body → EffTy → Prop
-  | at_ (p : Point) (ty : EffTy) (h : PointTyped root w p ty) :
-      BodyTyped root w (.at_ p) ty
+inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
+  | at_ (p : Point) (ty : EffTy) (h : PointTyped src w p ty) :
+      BodyTyped src w (.at_ p) ty
   | fin (name : FinName) (ex : ExitV) (ty : EffTy) (hex : StrongExit w ty ex) :
-      BodyTyped root w (.fin name ex) ty
+      BodyTyped src w (.fin name ex) ty
   | raceCleanup (race : Nat) :
-      BodyTyped root w (.raceCleanup race) (EffTy.pure .unit)
-  | acquireIn (p : Point) (ctx : Ctx) (ty : EffTy) (h : PointTyped root w p ty) :
-      BodyTyped root w (.acquireIn p ctx) ty
-  | release (p : Point) (prev : Ctx) (ty : EffTy) (h : PointTyped root w p ty) :
-      BodyTyped root w (.release p prev) ty
-  | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (ty : EffTy) (h : PointTyped root w p ty) :
-      BodyTyped root w (.layerBuild p m scope) ty
+      BodyTyped src w (.raceCleanup race) (EffTy.pure .unit)
+  | acquireIn (p : Point) (ctx : Ctx) (ty : EffTy) (h : PointTyped src w p ty) :
+      BodyTyped src w (.acquireIn p ctx) ty
+  | release (p : Point) (prev : Ctx) (ty : EffTy) (h : PointTyped src w p ty) :
+      BodyTyped src w (.release p prev) ty
+  | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (ty : EffTy) (h : PointTyped src w p ty) :
+      BodyTyped src w (.layerBuild p m scope) ty
+
+/-- A strong value at the answer column is a strong successful exit. -/
+theorem strongExit_success (w : World) (ty : EffTy) (v : Val) (h : StrongValue w ty.answer v) :
+    StrongExit w ty (.success v) := by
+  refine ⟨h.1, fun v' heq => ?_, fun _ heq => nomatch heq⟩
+  injection heq with heq
+  subst heq
+  exact h
 
 /-- An exit whose failure carries no `Fail` reason: interruptions and defects only. Every
 success is clean. The sanitized exit at a preempted skip is clean (`Cause.sanitize_clean`). -/

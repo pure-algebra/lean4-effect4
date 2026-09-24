@@ -44,6 +44,7 @@ import Test.Program.TypedControl
 import Test.Program.TypedCorpus
 import Test.Program.ExitTypeLane
 import Test.Program.AdmissionCensus
+import Test.Program.LoadedAdmission
 import Test.Audit.AnswerGate
 import Test.Machine.Runtime.RepresentationFoundations
 import Test.Machine.Runtime.ScopeContract

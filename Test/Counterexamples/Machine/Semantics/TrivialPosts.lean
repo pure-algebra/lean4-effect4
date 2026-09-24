@@ -1,20 +1,18 @@
 import Effect4.Laws.Program.Typed.Residual
 import Test.Api.ExternalContract
 /-!
-E4-SCHED-CE-013: a protocol row whose postcondition is `True` refuses every program that
-feeds that row's answer into its result. The judgment demands a typed continuation for every
-admitted answer, including answers of the wrong type. `denoteR` emits exactly that shape for
-`async` (sleep, deferred await, external calls), the join-all waits, child snapshots, races,
-generators, loops, scopes, the fuel frontier, and every performed store operation; the rows
-are listed in `docs/research/2026-09-23-typed-state-admission-audit.md`. The witnesses below
-are four of them, at every world and root.
+E4-SCHED-CE-013 and E4-SCHED-CE-014, repaired (typed-state admission audit §6, 2026-09-23).
 
-E4-SCHED-CE-014: source admission (`PointTyped`) checks a body against the empty host-row
-table, so a forked, scoped or masked body that performs a host row is refused although the
-checker admits it under the program's table.
+CE-013: a protocol row whose postcondition was `True` refused every program feeding the row's
+answer into its result. The original witnesses (`sleep_code_untypable`, `joinAll_untypable`,
+`modify_untypable`, `frontier_untypable`, `construction_read_untypable`) are retained at
+`7401afc6`; after the repair each row certifies its answer's type, so the same shapes are the
+positive controls below. The loaded code of a checker-typed `sleep(1)` still has the shape
+`sleepCode` has (`loadedIsAsyncLeaf`).
 
-Finite controls tie the witnesses to generated code: the loaded code of a checker-typed
-`sleep(1)` has the refused shape.
+CE-014: source admission checked a body under the empty host-row table. It now reads the
+source's table (`ProgramSource`); the empty-table refusal below is the checker's, retained as
+the historical attack, and `hostBody_admitted` is its repair.
 -/
 set_option autoImplicit false
 namespace Test.Counterexamples.TrivialPosts
@@ -22,7 +20,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Progr
 open Effect4.Program.Typed
 abbrev W := Effect4.Program.Typed.World
 
-/-! ## CE-013 -/
+/-! ## CE-013, repaired -/
 
 /-- The code `denoteR` gives `sleep(1)`: an async registration whose answer is the leaf. -/
 def sleepCode : RProgram :=
@@ -40,73 +38,95 @@ def loadedIsAsyncLeaf : Bool :=
   | none => false
 #guard loadedIsAsyncLeaf
 
-theorem sleep_code_untypable (root : NativeEff) (w : W) :
-    ¬ TypedProg root w (EffTy.pure .unit) sleepCode := by
-  intro h
-  cases h with
-  | fiber _ _ _ _ _ _ next =>
-    exact Bool.noConfusion (TypedProg.pure_inv (next w (leHost_refl w) (.success (.nat 5)) trivial)).1
+/-- The timer's answer is certified at `unit`. -/
+theorem sleep_code_typed (root : ProgramSource) (w : W) :
+    TypedProg root w (EffTy.pure .unit) sleepCode :=
+  TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) (EffTy.pure .unit) (Ty.sub_refl _)
+    (fun _ _ _ hpost => TypedProg.pure hpost)
 
 /-- The join-all park code `interpR` installs. -/
 def joinAll (targets : List FiberId) : RProgram :=
   .vis (.inr (.awaitAll targets)) fun v => .pure (.success v)
 
-theorem joinAll_untypable (root : NativeEff) (w : W) (targets : List FiberId) :
-    ¬ TypedProg root w (EffTy.pure .nat) (joinAll targets) := by
-  intro h
-  cases h with
-  | fiber _ _ _ _ _ _ next =>
-    exact Bool.noConfusion (TypedProg.pure_inv (next w (leHost_refl w) (Val.bool true) trivial)).1
+/-- Certified at the list of the targets' exits, read through the fiber table. -/
+theorem joinAll_typed (root : ProgramSource) (w : W) (targets : List FiberId) (a e : Ty)
+    (declared : ∀ t ∈ targets, ∃ fty, w.Γ t = some fty ∧ fty.answer.sub a = true ∧
+      fty.error.sub e = true) :
+    TypedProg root w (EffTy.pure (.list (.exitOf a e))) (joinAll targets) :=
+  TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) (Ty.list (.exitOf a e)) ⟨a, e, rfl, declared⟩
+    (fun w' _ ans hpost => TypedProg.pure (strongExit_success w' _ ans hpost))
 
 /-- A performed store operation, in the shape `denoteR`'s `.perform` arm emits for a sync row. -/
 def modifyCode (cell : RefKey) (f : FnName) : RProgram :=
   .vis (.inl (.refModify cell f)) fun v => .pure (.success v)
 
-theorem modify_untypable (root : NativeEff) (w : W) (cell : RefKey) (f : FnName) :
-    ¬ TypedProg root w (EffTy.pure .unit) (modifyCode cell f) := by
-  intro h
-  obtain ⟨_, _, next⟩ := TypedProg.store_inv h
-  exact Bool.noConfusion (TypedProg.pure_inv (next w (leHost_refl w) (.nat 5) trivial)).1
+/-- `Ref.modify` answers a `nat`, the row's answer column. -/
+theorem modify_typed (root : ProgramSource) (w : W) (cell : RefKey) (f : FnName)
+    (declared : ∃ ty, w.Ρ cell = some ty) :
+    TypedProg root w (EffTy.pure .nat) (modifyCode cell f) := by
+  refine TypedProg.store () declared ?_
+  intro w' _ ans hpost
+  obtain ⟨n, rfl⟩ := hpost
+  exact TypedProg.pure (strongExit_success w' _ _ ⟨rfl, trivial, fun _ mem => by cases mem⟩)
 
-/-- The fuel frontier `denoteR` emits: a live frontier is never answered, yet its `True` post
-demands a typed leaf for every exit. -/
-theorem frontier_untypable (root : NativeEff) (w : W) (reason : PendingReason) (at_ : Point) :
-    ¬ TypedProg root w (EffTy.pure .unit) (.vis (.inr (.frontier reason at_)) Effects.Program.pure) := by
-  intro h
-  cases h with
-  | fiber _ _ _ _ _ _ next =>
-    exact Bool.noConfusion (TypedProg.pure_inv (next w (leHost_refl w) (.success (.nat 5)) trivial)).1
+/-- The fuel frontier is never answered, so its continuation owes nothing. -/
+theorem frontier_typed (root : ProgramSource) (w : W) (ty : EffTy) (reason : PendingReason)
+    (at_ : Point) :
+    TypedProg root w ty (.vis (.inr (.frontier reason at_)) Effects.Program.pure) :=
+  TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () trivial (fun _ _ _ hpost => nomatch hpost)
 
-/-- A construction whose continuation returns a completed fiber's exit, as `inlineYield`'s
-`awaitFiber` arm does for a join after a bind (`DenoteR.lean:511-512`): the `True` post admits
-any completed list, so the join's result is untyped (audit A9). A continuation that ignores the
-list, as a bind without a join does, is not refused. -/
-def joinsCompleted : RProgram :=
-  .vis (.inr .construction) fun completed => .pure (match completed with
-    | (_, ex) :: _ => ex
-    | [] => .success (.nat 0))
+/-- A callback that reads one fiber's completed exit, as `inlineYield`'s `awaitFiber` arm does
+for a join after a bind (`DenoteR.lean:511-512`); an absent fiber answers an interruption. -/
+def joinsFiber (target : FiberId) : RProgram :=
+  .vis (.inr .construction) fun completed =>
+    match completed.find? (·.1 == target) with
+    | some (_, ex) => .pure ex
+    | none => .pure (.failure (Cause.interrupt none))
 
-theorem construction_read_untypable (root : NativeEff) (w : W) :
-    ¬ TypedProg root w (EffTy.pure .nat) joinsCompleted := by
-  intro h
-  cases h with
-  | fiber _ _ _ _ _ _ next =>
-    exact Bool.noConfusion
-      (TypedProg.pure_inv (next w (leHost_refl w) [(⟨1⟩, .success (.bool true))] trivial)).1
+/-- The completed exits are typed at their fibers' declared types. -/
+theorem joinsFiber_typed (root : ProgramSource) (w : W) (target : FiberId) (ty : EffTy)
+    (declared : ∀ w', w.leHost w' → w'.Γ target = some ty) :
+    TypedProg root w ty (joinsFiber target) := by
+  refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () trivial ?_
+  intro w' hle ans hpost
+  cases hfind : ans.find? (·.1 == target) with
+  | none => exact TypedProg.pure (strongExit_of_clean w' ty _ rfl)
+  | some entry =>
+    obtain ⟨id, ex⟩ := entry
+    have mem := List.mem_of_find?_eq_some hfind
+    have hit := List.find?_some hfind
+    have same : id = target := beq_iff_eq.mp hit
+    obtain ⟨ty', hΓ, typed⟩ := hpost (id, ex) mem
+    rw [same, declared w' hle] at hΓ
+    cases hΓ
+    exact TypedProg.pure typed
 
-/-! ## CE-014 -/
+/-! ## CE-014, repaired -/
 
 /-- A body performing host row 0 (`query`, answering `nat`) of the external-row battery. -/
 def hostBody : NativeEff := .perform (.external 0) (.lit (.nat 1))
 def checks (r : Except TypeRefusal EffTy) : Bool := match r with | .ok _ => true | .error _ => false
--- The checker admits the body under its table and refuses it under the empty table that
--- `PointTyped` uses.
+-- The attack: the checker admits the body under its table and refuses it under the empty one.
 #guard checks (Checker.check (nativeSignature Test.Api.ExternalContract.table) [] [] hostBody)
 #guard !checks (Checker.check (nativeSignature []) [] [] hostBody)
 
-#print axioms sleep_code_untypable
-#print axioms joinAll_untypable
-#print axioms modify_untypable
-#print axioms frontier_untypable
-#print axioms construction_read_untypable
+/-- The repair: source admission reads the source's own table. -/
+theorem hostBody_checks :
+    Checker.check (nativeSignature Test.Api.ExternalContract.table) [] [] hostBody =
+      .ok (EffTy.pure .nat) := by decide +kernel
+
+theorem hostBody_admitted (w : W) :
+    PointTyped ⟨hostBody, Test.Api.ExternalContract.table⟩ w (rootPoint 20) (EffTy.pure .nat) :=
+  ⟨hostBody, [], rfl, hostBody_checks, rfl, fun _ _ _ h => nomatch h⟩
+
+#print axioms sleep_code_typed
+#print axioms joinAll_typed
+#print axioms modify_typed
+#print axioms frontier_typed
+#print axioms joinsFiber_typed
+#print axioms hostBody_admitted
 end Test.Counterexamples.TrivialPosts

@@ -60,10 +60,10 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .refUpdate _ _ | .refUpdateSome _ _ => ans = Val.unit
   | .refGetAndUpdate cell _ | .refGetAndUpdateSome cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
   | .refUpdateAndGet cell _ | .refUpdateSomeAndGet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
-  | .refModify _ _ | .refModifySome _ _ => True
+  | .refModify _ _ | .refModifySome _ _ => ∃ n, ans = Val.nat n
   | .deferredMake => ∃ key : DeferredKey, ans = Val.promise key ∧ w'.«Π» key = some cert
   | .deferredIsDone _ => ∃ b, ans = Val.bool b
-  | .deferredPoll _ => True
+  | .deferredPoll _ => ∃ b, ans = Val.bool b
   | .deferredCompleteWith _ _ | .deferredInterruptWith _ _ | .deferredAwaitCleanup _ _ _ => ∃ b, ans = Val.bool b
   | .clockNow => ∃ n, ans = Val.nat n
   | .sleepCancel _ _ => ans = Val.unit
@@ -72,8 +72,8 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .scopeIsClosed _ => ∃ b, ans = Val.bool b
   | .scopeFork _ _ => ∃ sc, ans = Val.scopeHandle sc
   | .memoFork _ => ∃ id, ans = Val.memoMap id
-  | .memoGet _ _ => True
-  | .memoBuild _ _ => True
+  | .memoGet _ _ => ans = Val.unit ∨ ∃ hit, Val.memoHit? ans = some hit
+  | .memoBuild _ _ => ∃ sc, ans = Val.scopeHandle sc
   | .memoComplete _ _ _ | .memoRelease _ _ => ans = Val.unit
 
 def Ψ_S : Protocol World StoreSig where
@@ -83,53 +83,85 @@ def Ψ_S : Protocol World StoreSig where
 
 /-! ## The Fiber Protocol (40 FiberOp rows) -/
 
-/-- Fork and mask certify their body's type. A guard certifies its intermediate type: the type
-of its body and of every exit its saved arm receives (ruling 2026-09-23, `E4-SCHED-CE-011`). -/
+/-- An operation whose answer is an installed body's exit, a registration's delivery or a
+spawned fiber certifies that type (`EffTy`); one answering a typed value certifies the value's
+type (`Ty`). A guard certifies its intermediate type (`E4-SCHED-CE-011`). Ruling 2026-09-23,
+typed-state admission audit: a `True` post refused every program consuming the answer
+(`E4-SCHED-CE-013`). -/
 def FiberCert : FiberOp → Type
-  | .fork _ _ _ | .mask _ _ | .guard_ _ => EffTy
+  | .fork _ _ _ | .forkIn _ _ _ _ | .forkScoped _ _ _ | .mask _ _ | .guard_ _ | .scoped _
+  | .raceAll _ _ | .raceRegister _ | .async _ _ | .gen _ | .loop _ _ => EffTy
+  | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren | .getContext => Ty
   | _ => PUnit
 
-def fiberPre (root : NativeEff) (w : World) (op : FiberOp) (cert : FiberCert op) : Prop :=
+/-- The type an async registration's answer is certified at: a timer's `unit`, a deferred's
+completion at the promise table's columns, a host row's columns from the source's row table.
+A host slot (`FinName.parkThen`'s release) is certified by the host protocol, a correlation the
+state predicate owns; any other registration is not generated code and is refused. -/
+def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : EffTy) : Prop :=
+  match register with
+  | .store (.registerSleep _) => Ty.unit.sub cert.answer = true
+  | .registerAwait cell | .store (.registerAwait cell) =>
+    ∃ a e, w.«Π» cell = some (a, e) ∧ a.sub cert.answer = true ∧ e.sub cert.error = true
+  | .external op _ =>
+    ((nativeSignature root.table).rowOf op).answer.sub cert.answer = true ∧
+      ((nativeSignature root.table).rowOf op).error.sub cert.error = true
+  | .store (.externalRegister _) => True
+  | _ => False
+
+def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert op) : Prop :=
   match op with
-  | .getId | .getContext | .setContext _ | .yieldNow _ | .ambientScope | .sync _ => True
+  | .getId | .setContext _ | .yieldNow _ | .ambientScope | .sync _ => True
+  | .getContext => cert = .handle Ty.contextTarget
   | .await target _ => (w.Γ target).isSome = true
-  | .awaitAll targets | .awaitAllFailFast targets => ∀ t ∈ targets, (w.Γ t).isSome = true
-  | .raceAll _ _ | .async _ _ | .suspend _ | .interrupt _ | .interruptAs _ _
-  | .interruptScoped _ | .interruptAll _ _ | .runIn _ _ | .awaitNewChildren _ => True
+  | .awaitAll targets | .awaitAllFailFast targets =>
+    ∃ a e, cert = .list (.exitOf a e) ∧ ∀ t ∈ targets, ∃ fty, w.Γ t = some fty ∧
+      fty.answer.sub a = true ∧ fty.error.sub e = true
+  | .raceAll entrants _ => ∀ p ∈ entrants, ∃ ty, PointTyped root w p ty ∧
+      ty.answer.sub cert.answer = true ∧ ty.error.sub cert.error = true
+  | .async register _ => asyncPre root w register cert
+  | .suspend _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _ | .interruptAll _ _
+  | .runIn _ _ | .awaitNewChildren _ => True
   | .guard_ _ | .unguard _ | .finishFinalizer _ | .scopeExit _ _ _ | .construction
   | .closeScope _ _ | .foreignRelease _ _ | .closeWalk _ _ _ | .closeIter _ _ _
-  | .gen _ | .loop _ _ | .raceRegister _ | .cancelRace _ | .snapshotChildren
-  | .dropObservers _ => True
-  | .scoped body => ∃ ty, PointTyped root w body ty
+  | .raceRegister _ | .cancelRace _ | .dropObservers _ | .frontier _ _ => True
+  | .snapshotChildren => cert = .list (.fiberOf .unknown .unknown)
+  | .scoped body => PointTyped root w body cert
   | .mask _ body => BodyTyped root w body cert
-  | .forkScoped child _ _ => ∃ ty, PointTyped root w child ty
+  | .forkScoped child _ _ => PointTyped root w child cert
   | .fork body _ _ => BodyTyped root w body cert
-  | .forkIn child _ _ _ => ∃ ty, PointTyped root w child ty
-  | .frontier _ _ => True
+  | .forkIn child _ _ _ => PointTyped root w child cert
+  | .gen p => PointTyped root w p cert
+  | .loop p _ => PointTyped root w p cert
   | .refuse _ => False
 
 def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer) : Prop :=
   match op with
   | .getId => ∃ (id : FiberId), ans = Val.nat id.value
-  | .getContext => True
+  | .getContext | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren => StrongValue w' cert ans
   | .setContext _ | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _
   | .interruptAll _ _ | .runIn _ _ | .cancelRace _ | .dropObservers _
-  | .foreignRelease _ _ | .closeWalk _ _ _ => ans = Val.unit
+  | .foreignRelease _ _ | .closeWalk _ _ _ | .awaitNewChildren _ => ans = Val.unit
   | .ambientScope => ∃ sc, ans = Val.scopeHandle sc
   | .sync value => ans = value
   | .await target mode => match mode with
     | .joinEffect => ∃ ty, w'.Γ target = some ty ∧ StrongExit w' ty ans
     | .awaitValue => ∃ ty, w'.Γ target = some ty ∧ StrongValue w' ty.answer ans
-  | .fork _ _ _ => ∃ id : FiberId, ans = Val.fiber id ∧ w'.Γ id = some cert
-  | .forkIn _ _ _ _ => ∃ (c : EffTy) (id : FiberId), ans = Val.fiber id ∧ w'.Γ id = some c
-  | .mask _ _ => StrongExit w' cert ans
+  | .fork _ _ _ | .forkIn _ _ _ _ => ∃ id : FiberId, ans = Val.fiber id ∧ w'.Γ id = some cert
+  | .forkScoped _ _ _ => ∃ id : FiberId, ans = .success (Val.fiber id) ∧ w'.Γ id = some cert
+  | .mask _ _ | .scoped _ | .raceAll _ _ | .raceRegister _ | .async _ _ | .gen _ | .loop _ _ =>
+    StrongExit w' cert ans
   | .unguard ex | .finishFinalizer ex | .closeScope _ ex | .scopeExit _ _ ex | .closeIter _ _ ex => ans = ex
   | .guard_ kind => match ans with
     | none => True
     | some ex => kind.hasExitArm ex = true ∧ StrongExit w' cert ex
-  | _ => True
+  -- a live frontier is never answered (fuel exhaustion is not an exit)
+  | .frontier _ _ => False
+  -- the completed exits a callback reads, each at its fiber's declared type
+  | .construction => ∀ p ∈ ans, ∃ ty, w'.Γ p.1 = some ty ∧ StrongExit w' ty p.2
+  | .suspend _ | .refuse _ => True
 
-def Ψ_F (root : NativeEff) : Protocol World FiberSig where
+def Ψ_F (root : ProgramSource) : Protocol World FiberSig where
   Cert := FiberCert
   pre := fiberPre root
   post := fiberPost
@@ -145,7 +177,7 @@ not take must fit the outer type. `unguard` and `finishFinalizer` carry an exit 
 type and type no continuation: the reference machine never resumes one (`evaluateFiberR`
 hands the payload to `deliverR`; `popR`'s answer glue passes it to the next frame).
 `scopeExit` carries its exit and keeps its continuation. -/
-inductive TypedProg (root : NativeEff) : World → EffTy → RProgram → Prop
+inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Prop
   | pure {w : World} {ty : EffTy} {ex : ExitV} (exit : StrongExit w ty ex) :
       TypedProg root w ty (.pure ex)
   | store {w : World} {ty : EffTy} {op : SyncOp} {k : Val → RProgram}
@@ -178,12 +210,12 @@ inductive TypedProg (root : NativeEff) : World → EffTy → RProgram → Prop
 
 namespace TypedProg
 
-theorem pure_inv {root : NativeEff} {w : World} {ty : EffTy} {ex : ExitV}
+theorem pure_inv {root : ProgramSource} {w : World} {ty : EffTy} {ex : ExitV}
     (h : TypedProg root w ty (.pure ex)) : StrongExit w ty ex := by
   cases h with
   | pure exit => exact exit
 
-theorem store_inv {root : NativeEff} {w : World} {ty : EffTy} {op : SyncOp} {k : Val → RProgram}
+theorem store_inv {root : ProgramSource} {w : World} {ty : EffTy} {op : SyncOp} {k : Val → RProgram}
     (h : TypedProg root w ty (.vis (.inl op) k)) :
     ∃ cert : Ψ_S.Cert op, Ψ_S.pre w op cert ∧
       ∀ w', w.leHost w' → ∀ ans, Ψ_S.post w' op cert ans → TypedProg root w' ty (k ans) := by
@@ -192,7 +224,7 @@ theorem store_inv {root : NativeEff} {w : World} {ty : EffTy} {op : SyncOp} {k :
 
 /-- A guard's typing is exactly the saved frame's arrow (`Contracts.FrameAccepts.resume`) at
 `mid`, with the body typed at `mid`. -/
-theorem guard_inv {root : NativeEff} {w : World} {ty : EffTy} {kind : GuardKind}
+theorem guard_inv {root : ProgramSource} {w : World} {ty : EffTy} {kind : GuardKind}
     {k : Option ExitV → RProgram} (h : TypedProg root w ty (.vis (.inr (.guard_ kind)) k)) :
     ∃ mid : EffTy, TypedProg root w mid (k none) ∧
       (∀ w', w.leHost w' → ∀ ex, fiberPost w' (.guard_ kind) mid (some ex) →
@@ -206,14 +238,14 @@ theorem guard_inv {root : NativeEff} {w : World} {ty : EffTy} {kind : GuardKind}
 end TypedProg
 
 /-- FR-09's marker payload inversion: a typed `unguard` carries an exit at the current type. -/
-theorem unguard_payload_inv (root : NativeEff) (w : World) (ty : EffTy) (ex : ExitV)
+theorem unguard_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV)
     (k : ExitV → RProgram) (h : TypedProg root w ty (.vis (.inr (.unguard ex)) k)) :
     StrongExit w ty ex := by
   cases h with
   | fiber _ notUnguard _ _ _ _ _ => exact absurd rfl (notUnguard ex)
   | unguard payload => exact payload
 
-theorem finishFinalizer_payload_inv (root : NativeEff) (w : World) (ty : EffTy) (ex : ExitV)
+theorem finishFinalizer_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV)
     (k : ExitV → RProgram) (h : TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k)) :
     StrongExit w ty ex := by
   cases h with
@@ -227,13 +259,13 @@ strictly positive form of the brief's existential resume clause: the resume cons
 stores its intermediate type and the next protocol witness. No new program syntax is
 stored, and no termination theorem for arbitrary source code is asserted. -/
 mutual
-  inductive IteratorProtocol (root : NativeEff) (w : World) : EffTy → EffTy → EffName → Prop
+  inductive IteratorProtocol (root : ProgramSource) (w : World) : EffTy → EffTy → EffName → Prop
     | step {tin tout : EffTy} {name : EffName}
         (errors : tin.error = tout.error)
         (next : ∀ v, StrongValue w tin.answer v →
-          IteratorAnswer root w tout ((interpR root).iterNext name v).2) :
+          IteratorAnswer root w tout ((interpR root.program).iterNext name v).2) :
         IteratorProtocol root w tin tout name
-  inductive IteratorAnswer (root : NativeEff) (w : World) :
+  inductive IteratorAnswer (root : ProgramSource) (w : World) :
       EffTy → IterStep EffName EffThunk Val Err Defect FiberId Ann RProgram → Prop
     | done {tout : EffTy} (result : Val) (typed : StrongExit w tout (.success result)) :
         IteratorAnswer root w tout (.done result)
@@ -245,13 +277,13 @@ mutual
 end
 
 mutual
-  inductive LoopProtocol (root : NativeEff) (w : World) : EffTy → EffTy → EffName → Val → Prop
+  inductive LoopProtocol (root : ProgramSource) (w : World) : EffTy → EffTy → EffName → Val → Prop
     | step {tin tout : EffTy} {name : EffName} {cursor : Val}
         (errors : tin.error = tout.error)
         (next : ∀ v, StrongValue w tin.answer v →
-          LoopAnswer root w tout name ((interpR root).loopResume name cursor v)) :
+          LoopAnswer root w tout name ((interpR root.program).loopResume name cursor v)) :
         LoopProtocol root w tin tout name cursor
-  inductive LoopAnswer (root : NativeEff) (w : World) :
+  inductive LoopAnswer (root : ProgramSource) (w : World) :
       EffTy → EffName → LoopNext Val RProgram → Prop
     | continue {tout : EffTy} {name : EffName} (cursor : Val) (body : RProgram) (tin : EffTy)
         (typed : TypedProg root w tin body) (tail : LoopProtocol root w tin tout name cursor) :
@@ -263,9 +295,9 @@ end
 /-- The three named hook arrows (slice 5 brief §3.3 as amended 2026-09-23). The async clause
 types the cancellation only for an incoming failure that is itself typed at the frame's
 type, the evidence `popR` holds at that arm (`E4-SCHED-CE-010`). -/
-def frameProtocols (root : NativeEff) : Contracts.FrameProtocols where
+def frameProtocols (root : ProgramSource) : Contracts.FrameProtocols where
   asyncFinalizer w tin tout name := tin = tout ∧ ∀ cause, StrongExit w tin (.failure cause) →
-    cause.hasInterrupts = true → TypedProg root w tout ((interpR root).cancelThenFail name cause)
+    cause.hasInterrupts = true → TypedProg root w tout ((interpR root.program).cancelThenFail name cause)
   iterator := IteratorProtocol root
   loop := LoopProtocol root
 
@@ -289,7 +321,7 @@ theorem strongExit_bool (w : World) (v : Val) (hv : StrongValue w .bool v) :
   subst heq
   exact hv
 
-theorem settling_ref_allocation (root : NativeEff) (w : World) (_h0 : HeapTypedAt w ⟨0⟩ .nat) :
+theorem settling_ref_allocation (root : ProgramSource) (w : World) (_h0 : HeapTypedAt w ⟨0⟩ .nat) :
     TypedProg root w (EffTy.pure .bool) refAllocGetProg := by
   refine TypedProg.store (cert := Ty.bool) ⟨rfl, strongValue_bool_true w⟩ ?_
   intro w' _ ans hpost
@@ -317,7 +349,7 @@ def forkProg (child : Body) : RProgram :=
 def maskProg (flag : Bool) (body : Body) : RProgram :=
   .vis (.inr (.mask flag body)) fun ans => .pure ans
 
-theorem settling_fork (root : NativeEff) (w : World) (child : Body) (cert : EffTy)
+theorem settling_fork (root : ProgramSource) (w : World) (child : Body) (cert : EffTy)
     (hbody : BodyTyped root w child cert) :
     TypedProg root w (EffTy.pure (.fiberOf cert.answer cert.error)) (forkProg child) := by
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
@@ -332,14 +364,14 @@ theorem settling_fork (root : NativeEff) (w : World) (child : Body) (cert : EffT
   · simp only [Val.keys, Handle.ofCode_fiber, Option.toList, List.mem_singleton] at mem
     injection mem with eq_id
     subst eq_id
-    exact ⟨cert, hid, rfl, rfl⟩
+    exact ⟨cert, hid, Ty.sub_refl _, Ty.sub_refl _⟩
   · simp only [Val.keys, Handle.ofCode_fiber, Option.toList, List.mem_singleton] at mem
     subst h
     dsimp only [handleLive]
     rw [hid]
     rfl
 
-theorem settling_mask (root : NativeEff) (w : World) (flag : Bool) (body : Body) (cert : EffTy)
+theorem settling_mask (root : ProgramSource) (w : World) (flag : Bool) (body : Body) (cert : EffTy)
     (hbody : BodyTyped root w body cert) :
     TypedProg root w cert (maskProg flag body) := by
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
@@ -351,31 +383,48 @@ theorem settling_mask (root : NativeEff) (w : World) (flag : Bool) (body : Body)
 /-! FR-09's payload inversions, restated over the one judgment under their M3a names. -/
 namespace M3aAdmissionObligations
 
-theorem unguard_payload_inv (root : NativeEff) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
+theorem unguard_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
     ProofGraph.Obligation (TypedProg root w ty (.vis (.inr (.unguard ex)) k) → StrongExit w ty ex) := ⟨⟩
 
-theorem finishFinalizer_payload_inv (root : NativeEff) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
+theorem finishFinalizer_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
     ProofGraph.Obligation (TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k) → StrongExit w ty ex) := ⟨⟩
 
 end M3aAdmissionObligations
 
 namespace M3aResidualObligations
 
-theorem settling_ref_allocation (_root : NativeEff) (_w : World) (_h0 : HeapTypedAt _w ⟨0⟩ .nat) :
+theorem settling_ref_allocation (_root : ProgramSource) (_w : World) (_h0 : HeapTypedAt _w ⟨0⟩ .nat) :
     ProofGraph.Obligation (TypedProg _root _w (EffTy.pure .bool) refAllocGetProg) := ⟨⟩
 
 theorem settling_ref_preserves_nat (_w _w' : World) (_ordered : _w.leHost _w') (_h0 : HeapTypedAt _w ⟨0⟩ .nat) :
     ProofGraph.Obligation (HeapTypedAt _w' ⟨0⟩ .nat) := ⟨⟩
 
-theorem settling_fork (_root : NativeEff) (_w : World) (_child : Body) (_cert : EffTy)
+theorem settling_fork (_root : ProgramSource) (_w : World) (_child : Body) (_cert : EffTy)
     (_hbody : BodyTyped _root _w _child _cert) :
     ProofGraph.Obligation (TypedProg _root _w (EffTy.pure (.fiberOf _cert.answer _cert.error)) (forkProg _child)) := ⟨⟩
 
-theorem settling_mask (_root : NativeEff) (_w : World) (_flag : Bool) (_body : Body) (_cert : EffTy)
+theorem settling_mask (_root : ProgramSource) (_w : World) (_flag : Bool) (_body : Body) (_cert : EffTy)
     (_hbody : BodyTyped _root _w _body _cert) :
     ProofGraph.Obligation (TypedProg _root _w _cert (maskProg _flag _body)) := ⟨⟩
 
 end M3aResidualObligations
+
+/-! World weakening (ruling 2026-09-23, audit A4): typing survives every later world the host
+order allows. The hook clauses are stated at one world and consumed at later ones, and every
+continuation of `TypedProg` is typed at the world its answer arrives in, so the stack and
+delivery proofs of slice 5 need these three. Declared, not proved. -/
+namespace M3bWorld
+
+theorem strongValue_mono (w w' : World) (ty : Ty) (v : Val) :
+    ProofGraph.Obligation (w.leHost w' → StrongValue w ty v → StrongValue w' ty v) := ⟨⟩
+
+theorem strongExit_mono (w w' : World) (ty : EffTy) (ex : ExitV) :
+    ProofGraph.Obligation (w.leHost w' → StrongExit w ty ex → StrongExit w' ty ex) := ⟨⟩
+
+theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : RProgram) :
+    ProofGraph.Obligation (w.leHost w' → TypedProg root w ty p → TypedProg root w' ty p) := ⟨⟩
+
+end M3bWorld
 
 end Effect4.Program.Typed
 
@@ -396,4 +445,10 @@ end Effect4.Program.Typed
 #typed_state_obligations Effect4.Program.Typed.M3aAdmissionObligations ceiling 0
   using aesop (rule_sets := [Effect4.TypedState])
 #typed_state_obligations Effect4.Program.Typed.M3aResidualObligations ceiling 0
+  using aesop (rule_sets := [Effect4.TypedState])
+
+#proof_wanted Effect4.Program.Typed.M3bWorld.strongValue_mono
+#proof_wanted Effect4.Program.Typed.M3bWorld.strongExit_mono
+#proof_wanted Effect4.Program.Typed.M3bWorld.typedProg_mono
+#typed_state_obligations Effect4.Program.Typed.M3bWorld ceiling 3
   using aesop (rule_sets := [Effect4.TypedState])
