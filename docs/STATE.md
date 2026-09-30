@@ -120,6 +120,13 @@ documentation is cut over:
 - The open choices are decisions rows 95–101.
 - The [architecture map](core/architecture-map.html) is regenerated from the tree.
 
+**Right-sized by the owner the same day:** the route stands (`system-map.md` §1, §3).
+- **Near term:** slice 6, plus three bounded fixes: rows 95, 96, and 97's interim rule.
+- **Then:** M5–M7.
+- **Then expansion on the proven route:** queues first, ergonomic run APIs, MCP authoring after
+  LCNF, and WASM through the generated OCaml.
+- **Parked until needed:** the full host-services contract.
+
 A five-seat design and probing pass, each seat checked by an adversarial verifier, is writing
 under `research/2026-09-30-pass/`. Its seats are the handle registry, the membership judgment, the
 step lifts, numbers with FloatLib, and the fiber slice.

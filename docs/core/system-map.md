@@ -11,13 +11,24 @@ Status words: **proved** means a theorem at the trust ceiling `[propext, Quot.so
 
 ## 1. The goal
 
-An agent-first language of algebraic effects whose programs are first-order data. An agent
-writes a program; a checker certifies its type or refuses with a located reason; a machine
-defined in Lean runs it with every choice explicit, so a run replays exactly. The machine's
-meaning is Effect's own: every behavior it models cites the line of the pinned Effect rc.112
-source it transcribes. The same program reads from and writes to Effect TypeScript, and the same
-machine compiles to native OCaml. Proofs connect each of these faces to the others, or the gap is
+The entry point is the Lean model of Effect's fiber machine: Effect's runtime reified in Lean as a
+general model with defined semantics. Its definitions (the API) are kept apart from its theorems,
+so everything built on it builds on the verified core. Around it:
+
+- **Programs are typed, first-order data.** One canonical tree that can be inspected as a graph,
+  stored by its digest, and folded over.
+- **The model runs natively.** The same Lean machine is compiled through LCNF into OCaml today.
+  WASM is next, most likely through that same generated OCaml.
+- **Code generation and read-back.** Programs print as Effect TypeScript and read back.
+- **Ergonomic APIs for running full Effect programs,** and authoring through MCP tools.
+
+The power is Effect everywhere with one defined semantics. Every behavior the model has cites the
+line of the pinned Effect rc.112 source it transcribes, and proofs connect the faces, or the gap is
 written down with its decisions row.
+
+**Scope discipline (owner, 2026-09-30).** The route above stands. A finding is fixed as a bounded
+repair that keeps the verified claims true, not by redefining the route. A large contract is
+written down and parked until a need arrives.
 
 ## 2. The layers
 
@@ -28,11 +39,11 @@ written down with its decisions row.
 | 3. Meaning | One denotation; a reference machine for proofs; the native (frame) machine for execution. | `docs/core/machine-state.md` | proved: meaning soundness; `run_eq_meaning` (straight fragment); `loopAgreement` (looped); `run_eq_ref` (the two machines, **empty host table only**) |
 | 4. Choices as data | Every scheduling, timing and host-answer choice is a decision; a run's journal replays it. | `Run.lean`, `Api/Runner.lean` | proved: `replay_unique`, `journal_replays` |
 | 5. The typed-state guarantee | A checked program never reaches a malformed state, and every fiber finishes at its type. | `docs/core/post-phase-c-synthesis.md`; `Laws/Program/Typed/` | slices 1–5 proved (world, admission, protocols, stack walk, delivery, assembly); M5–M7 open; statement repair (row 95) and value membership (row 96) open |
-| 6. The host boundary | Host services are rows in a table. A program's call parks a fiber; the host answers through one keyed session that checks each reply and prepares it. | `docs/core/host-boundary.md` | exists: session, envelope, admission, preparation. Open: handle types (a live hole), the registry, lifecycle, the reference connection (rows 97–100) |
-| 7. State and storage | The machine's state families, each owned by one of six storage interfaces with laws; facts fixed at creation in append-only ledgers; derived views, such as a handle's declared type, computed from ledgers and the checker. | `docs/core/machine-state.md` §7 | arena laws and `Projects`/`Refines` proved; interfaces, fork ledger and registry open (rows 91, 97, 101) |
+| 6. The host boundary | Host services are rows in a table. A program's call parks a fiber; the host answers through one keyed session that checks each reply and prepares it. | `docs/core/host-boundary.md` | exists: session, envelope, admission, preparation. Next: the interim handle rule that closes the live hole (row 97). The full host-services contract is parked until needed |
+| 7. State and storage | The machine's state families, each owned by one of six storage interfaces with laws; facts fixed at creation in append-only ledgers; derived views, such as a handle's declared type, computed from ledgers and the checker. | `docs/core/machine-state.md` §7 | arena laws and `Projects`/`Refines` proved; the fork ledger is next (row 91); the registry and further storage instances are parked (rows 97, 101) |
 | 8. Compilation | Three compilations: a program to the machine's first-order runtime code (`compileEff`); the Lean machine itself to OCaml through Lean's LCNF (OCaml is made only from LCNF); a program to and from Effect TypeScript. Each stage is a named connection with its own evidence. | `docs/core/lcnf-route.md` §8 | printer/reader laws and completeness over the template table proved; the OCaml engine checked by differential runs (finite); number policy mixed; rows 28/29/31 open |
 | 9. Faithfulness to Effect | The pinned vendor source, the runtime census and its coverage report, the truth harness against real Effect runs, signed divergences (`U-01`). | `docs/RUNTIME-COVERAGE.md`, `docs/UPSTREAM-BACKLOG.md` | exists; coverage is quoted only from the report |
-| 10. Authoring and use | A named authoring surface elaborated once into `Eff`; a certificate-first API; the MCP face after LCNF, by the owner's order. | `docs/core/api-surface.md` | exists in part; the agent authoring surface is the stated purpose |
+| 10. Authoring and use | A named authoring surface elaborated once into `Eff`; a certificate-first API; the MCP face after LCNF, by the owner's order. | `docs/core/api-surface.md` | exists in part; ergonomic run APIs and MCP authoring are the next expansion |
 
 **How the pieces connect.** A program comes in, from the authoring surface or read from
 TypeScript. The checker certifies it. The machine runs it, reference for proofs and native for
@@ -40,20 +51,35 @@ execution, with explicit choices, and with host calls through the keyed session.
 compiled through LCNF, runs natively in OCaml. The printer writes the program back as Effect
 TypeScript. Every arrow is one of the kinds in §5 with its obligation met, or it is listed as open.
 
-## 3. Where it is going
+## 3. Where it is going (the owner's route, 2026-09-30)
 
+**Now: finish the foundation, small.**
 1. **Slice 6's last item:** the fork ledger and the trace agreement
    (`docs/research/2026-09-30-origin-ledger-and-step-invariants-plan.md`; rows 91–94).
-2. **The M6 statement repair and the value membership amendment** (rows 95, 96).
-3. **M5–M7:** the typed-state guarantee on runs without host answers, a first and provisional
-   result (row 99).
-4. **The external lane** (`host-boundary.md` §6): the fiber slice first, then the Ref slice
-   after generic cells.
-5. **The first storage replacement** (row 85).
-6. **The first real target closure** (rows 28/29/31).
-7. **Composition** of the three (row 101).
+2. **Three bounded fixes found on 2026-09-30:**
+   - M6's finish line covers runs with no host answers (row 95);
+   - the proof's value check looks inside pairs, Results and exits (row 96; proof side only);
+   - host rows may not answer with internal handles (fiber, cell, deferred, scope, context), the
+     interim rule of row 97 (`host-boundary.md` §5).
+3. **M5–M7:** the typed-state guarantee, the proof that makes "verified runtime" complete on runs
+   without host answers. Row 99 says what is claimed until the host lane lands.
 
-The authoring surface and reading go alongside, and the MCP face comes after LCNF.
+**Next: expand on the proven route.**
+4. **More of Effect, one module at a time, queues first.** Each is modeled in Lean over the
+   machine's existing pieces (references, deferreds, wake lists) by DI-89's routes, then generated
+   to OCaml through LCNF, and printed and read back as Effect TypeScript.
+5. **Ergonomic APIs for running full Effect programs.** These include the checked typed replay over
+   the session journal (row 98), and authoring through MCP after LCNF (the owner's order).
+6. **WASM,** through the generated OCaml first rather than a new backend. Not yet checked.
+
+**Parked until needed** (written down, not scheduled):
+- **The full host-services contract** (`host-boundary.md` §4; row 97's route part, row 100): the
+  handle registry beyond fibers, the reply lifecycle and resource ownership, the 20-constructor
+  boundary matrix.
+- **Storage replacements** (row 85) and the composition of stages (row 101).
+- **Proofs of the compilation stages** (rows 28/29/31).
+- **FloatLib,** when a JavaScript-number type is added for durations, clocks and random numbers
+  (`lcnf-route.md` §8).
 
 ## 4. Sorts: one representation each
 

@@ -12,6 +12,11 @@ derivations and probes are research records:
 - the probes in `docs/research/2026-09-30-host-answers-evidence/` and
   `docs/research/2026-09-30-external-runtime-contract/`.
 
+**Status (owner, 2026-09-30).** The near-term work here is the interim rule (§5), with the M6
+in-scope repair (row 95) and the value membership fix (row 96). The full contract (§4) and its
+order (§6) are parked until host services need them. They stay written down so the path is known
+(`system-map.md` §3).
+
 ## 1. Scope and completion
 
 "Complete" has two named scopes.
@@ -218,7 +223,7 @@ located refusal. All fifteen host rows in the tree pass this rule
 (`PathProbes.lean`, path A). The rule is stricter than row 7's open recommendation, which admits
 handles arriving in-process. It is lifted kind by kind as declarations land.
 
-## 6. Order
+## 6. Order (parked until needed, except X0's rows 95–96 and the interim rule)
 
 These are the contract's X-steps (its §9), with the fiber slice first:
 
