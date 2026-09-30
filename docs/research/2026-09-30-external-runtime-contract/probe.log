@@ -1,0 +1,2 @@
+'Test.ExternalRuntimeContract.wrongFiber_checked_type' depends on axioms: [propext, Quot.sound]
+External contract probes: 11 finite guards passed.

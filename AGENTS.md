@@ -9,12 +9,12 @@ full, then open only the authority documents named for the current task.
 | --- | --- |
 | `README.md` | what the product is, the application face, how to build |
 | `docs/STATE.md` | the entry point: true at HEAD, the documents, what is next, what the owner must decide |
-| `docs/core/` | the current authorities: `ontology.md` (the frame and the vocabulary's definitions), `coherence-principle.md`, `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md`, `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land) |
+| `docs/core/` | the current authorities: `system-map.md` (the goal, the layers and their owners, the sorts and arrow kinds: the frame and the vocabulary's definitions), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `coherence-principle.md`, `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md`, `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land) |
 | `docs/ARCHITECTURE.md` | the source tree, module boundaries, dependency direction, the API seam |
 | `docs/GENERATED.md` | the generated groups: producers (`make gen-<group>`), inputs, consumers and checks |
 | `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-15), their status and sources |
 | `docs/DESIGN-ISSUES.md` | the open design questions (DI-nn): status, what each would force to be redone, the milestone to decide by; a ruling is made only when written into a tracked file |
-| `docs/DESIGN-MAP.md` | the earlier five-layer map, cited by section from code; superseded in substance by `docs/core/ontology.md` §5 |
+| `docs/DESIGN-MAP.md` | the earlier five-layer map, cited by section from code; superseded in substance by `docs/core/system-map.md` |
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
 | `Test/contracts/` | frozen contract packets and their executable falsifiers |
 | `Test/Counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
@@ -58,8 +58,8 @@ number in a report behind a command; `ocaml/README.md` is its map.
 
 ## Vocabulary
 
-The words below have one meaning each (`docs/core/ontology.md` §5 defines them against the
-tree). A new representation is admitted by naming its sort's signature and the kind of each of
+The words below have one meaning each (`docs/core/system-map.md` §§4–5 defines them against
+the tree). A new representation is admitted by naming its sort's signature and the kind of each of
 its arrows; anything else is a leak.
 
 - **Free object**: the one representation of a sort, an inductive family with its signature as

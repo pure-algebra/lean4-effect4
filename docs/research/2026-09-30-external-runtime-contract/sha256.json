@@ -1,0 +1,8 @@
+{
+  "docs/research/2026-09-30-external-runtime-contract.md": "4261fc0ed9bd1afc480bd9d09c687a1611017a4533ab3e2a1960b2e46dd91564",
+  "docs/research/2026-09-30-external-runtime-contract/PredicateProbe.lean": "937174c117335ad625c735ce42fdf886b95df92b7915a1267ba9ece753546ddf",
+  "docs/research/2026-09-30-external-runtime-contract/Probe.lean": "a09b363823a27d2aebd59ece0d56bb6592b577df729ff2215d31af9a97e3ec7f",
+  "docs/research/2026-09-30-external-runtime-contract/predicate-probe.log": "fc9b760a2fce238b8e58caeb52fbf29eac9a297b0fb9fc9dd248d74324969aa0",
+  "docs/research/2026-09-30-external-runtime-contract/probe.log": "4f5da7e221c943c6e6b1eafab7f999ebcbfc911c98648ab8b0a9a42a7c741cd3",
+  "docs/research/2026-09-30-external-runtime-contract/verify_packet.py": "44eadfcc971fb835877829c8b48f09268dc3c973a29b3a27af8ab92b036bce12"
+}

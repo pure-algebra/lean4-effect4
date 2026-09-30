@@ -148,7 +148,7 @@ def areas : List Area := [
   ⟨"scripts", .host, 0, "scripts", "the check and generate scripts the Makefile runs", false, true⟩,
   ⟨"generated", .host, 0, "generated", "the promoted TSVs: the corpus index, assignability, row citations, tsdiag, the runtime census, the proof shape", false, true⟩,
   -- the authorities and the record
-  ⟨"docs/core", .docs, 0, "docs/core", "the authorities: ontology, coherence, the census, decisions, the language cut, the API surface, the LCNF route, the machine's state", false, true⟩,
+  ⟨"docs/core", .docs, 0, "docs/core", "the authorities: the system map, the host boundary, coherence, the census, decisions, the language cut, the API surface, the LCNF route, the machine's state", false, true⟩,
   ⟨"docs/STATE.md", .docs, 0, "STATE", "one page: what is true at HEAD, what is next, what the owner must decide", false, true⟩,
   ⟨"docs/ARCHITECTURE.md", .docs, 0, "ARCHITECTURE", "the tree and its dependency direction, in prose", false, true⟩,
   ⟨"docs/GENERATED.md", .docs, 0, "GENERATED", "every generated group: producer, inputs, consumers, check, evidence", false, true⟩,

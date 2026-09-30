@@ -94,6 +94,36 @@ The five chat rulings of 2026-09-20 (rows 20, 48, 51, 52, 79) are written into
 slice 5, with every tracking item's end state, is
 [`codex packet: divergence and slice 5`](research/2026-09-21-codex-packet-divergence-and-slice-5.md).
 
+**Slice 6 (2026-09-30).** Three of its four items are landed on this branch: the five source-site
+connectors and the observation erasure (`40e3bfa3`), the memo write-back deletion (`be15b062`).
+The last, the trace agreement, is to hold by construction: the fork record moves from the fiber to
+an append-only list on the machine that only `spawn` writes. The plan,
+[`origin ledger and step invariants`](research/2026-09-30-origin-ledger-and-step-invariants-plan.md),
+is reviewed three times and its decisions are rows 91–94.
+
+**Foundation completion (2026-09-30).** The same reviews, and a probe of the external-reply lane,
+found three things:
+- M6's capstone is false as written: a `sleep` answered with `42` finishes with `42`.
+- The proof's value predicate checks nothing inside pairs, Results or successful exits, and a
+  closed program exercises that.
+- The runtime's reply check admits a fiber handle of the wrong type on the live host session.
+
+The Codex contract proposes, and the coordinator recommends, that the external-reply lane
+belongs to the foundation's completion (row 99, open). On the owner's word to consolidate, the
+documentation is cut over:
+- [`system-map.md`](core/system-map.md) is the frame: the goal, the ten layers with their owners
+  and status, the sorts and arrow kinds. It replaces `ontology.md`, whose dated sections are
+  history.
+- [`host-boundary.md`](core/host-boundary.md) is the authority for the lane.
+- `machine-state.md` §7 holds the six storage interfaces.
+- `lcnf-route.md` §8 holds the compilation stages and the number policy.
+- The open choices are decisions rows 95–101.
+- The [architecture map](core/architecture-map.html) is regenerated from the tree.
+
+A five-seat design and probing pass, each seat checked by an adversarial verifier, is writing
+under `research/2026-09-30-pass/`. Its seats are the handle registry, the membership judgment, the
+step lifts, numbers with FloatLib, and the fiber slice.
+
 ## What the owner must decide
 
 Decision row 90 is ruled and landed (2026-09-24): contexts are typed by their keys' static
@@ -101,7 +131,7 @@ service types, which is what the checker uses (the recommendation's per-fiber pr
 and is corrected in the register). Slice 5 landed the same day ([landing record](research/2026-09-24-foundations-slice5-landing.md)):
 the stack walk is proved type-preserving with no run premise, delivery and the hook laws are proved,
 the typed state is assembled, and the transition ledger is declared per command. Slice 6 is in
-progress in the coordinator session. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
+progress in the coordinator session. The open choices from 2026-09-30 are decisions rows 91–101 (the fork ledger 91–94; the host boundary and its connections 95–101); rows 102–103 (the documentation homes) are ruled. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
 found that the program judgment refused most programs the checker admits; the census and the
 dynamic lane landed on your ruling (8,584 typed programs, 34,336 runs, no exit outside its
 checked type), and the [protocol repair](research/2026-09-24-typed-state-protocol-repair.md)
@@ -224,7 +254,8 @@ and focused proofs; add tools or repeat broad checks only when they serve concre
 
 | file | what it holds |
 | --- | --- |
-| `docs/core/ontology.md` | the frame: six sorts with one free object each, five arrow kinds with their obligations, coherence as a per-sort census; the probe of the "do now" rows; the Schema layer as the place to start over |
+| `docs/core/system-map.md` | the frame: the goal, the ten layers with their owners and status, the sorts with one representation each, the five arrow kinds and what each owes, coherence, scope-correct composition, generation as a fixed point |
+| `docs/core/host-boundary.md` | the external-reply lane: how host answers flow today, the known holes with evidence, the boundary contract (lifecycle, handle declarations, membership matrix, entry paths, controls), the interim profile and the order |
 | `docs/core/coherence-principle.md` | scout F: the principle in full, the seven squares, the arrows lacking obligations |
 | `docs/core/traversal-census.md` | the census numbers, every hand traversal by root, the converter design |
 | `docs/core/decisions.md` | every open decision, one list (status by row; rows 44–45 record the approved world and rows 78–85 the state/refinement proposals and 86–88 the foundation contracts) with the order |
@@ -233,7 +264,7 @@ and focused proofs; add tools or repeat broad checks only when they serve concre
 | `docs/core/lcnf-route.md` | what the LCNF lowering handles and refuses; the LLVM-shaped architecture |
 | `docs/core/machine-state.md` | The state and log owners, proposed representation changes, conditional transaction profile, and shared basis for the surveyed stateful modules. Approved world and open choices are separated; the implementation plan and supporting research are tracked under `docs/research/` |
 | `docs/DESIGN-ISSUES.md` | the DI register (rulings are made only when written here) |
-| `docs/ARCHITECTURE.md`, `docs/GENERATED.md`, `docs/DESIGN-BASIS.md`, `docs/DESIGN-MAP.md`, `docs/RUNTIME-COVERAGE.md` | the tree, the generated groups, the DB register, the earlier five-layer map (superseded in substance by `ontology.md` §5), the runtime census |
+| `docs/ARCHITECTURE.md`, `docs/GENERATED.md`, `docs/DESIGN-BASIS.md`, `docs/DESIGN-MAP.md`, `docs/RUNTIME-COVERAGE.md` | the tree, the generated groups, the DB register, the earlier five-layer map (superseded in substance by `docs/core/system-map.md`), the runtime census |
 | `docs/core/architecture-map.html` | the measured architecture map: the roots at their declared heights, the import matrix, every import against the direction, the typed-state stack with its planned modules, the file map by role; regenerated from the tree by `make gen-architecture`, roles declared in `tools/Tools/ArchitectureRoles.lean` |
 | `docs/core/post-phase-c-synthesis.md` | the checked post-Phase C review and full proposed execution plan: false pending statement, relational predicate gaps, decision reconciliation, slice contracts, controls and evidence; not an owner ruling |
 | `AGENTS.md` | the operating rules and the vocabulary |
@@ -368,7 +399,7 @@ decisions 34/40 still close the fusion/conversion campaign. No open semantic cho
 2. **Row 39** (ruled): `EffectfulField` first, then `Check`/`Accepts`/`Image`/`schemaOf`, the
    `Annotations` trim, the `render` move. Then the simple rows still open: 8 (in the move), 23 as
    a delete, 24, 17, 16.
-3. **The Schema layer** re-cut (`ontology.md` §3): the five files that carry the two real claims
+3. **The Schema layer** re-cut (`docs/research/2026-09-17-ontology-and-do-now-probe.md` §3): the five files that carry the two real claims
    stay; the rest is converted where it is a fold or an embedding and deleted where it is
    neither; `Store.render` leaves `Shape.lean` first.
 4. Group B of `decisions.md` (the digest, the Lean MCP driver) with the observation dogfood as
@@ -393,7 +424,7 @@ table under a totality gate (87/87, two refusals named), layer 0, and the genera
 Owed: the concrete transition-obligation set and its pinned count, at M6 of plan §14 after M1
 and M2. Open, in the order `decisions.md`'s last section
 gives: group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2, 7, 10, 11; then 1
-with 3, and 19–22. Row 5 has the restatement `ontology.md` §2 gives.
+with 3, and 19–22. Row 5 has the restatement `docs/research/2026-09-17-ontology-and-do-now-probe.md` §2 gives.
 
 ## What row 39 does (for the owner, 2026-09-18)
 

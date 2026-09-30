@@ -1,5 +1,8 @@
 # The do-now set probed, what to wipe, and the estate's ontology stated formally (2026-09-17)
 
+**History.** Moved from `docs/core/ontology.md` on 2026-09-30. Its formal frame (§5) is carried,
+condensed and updated, by `docs/core/system-map.md`; this copy is the dated record.
+
 Owner's asks, after the one list: probe the "do now, no rulings needed" rows to see whether they
 are that simple; say honestly where starting from scratch is easier ("`Api.schemaOf`, I'm fine
 wiping that, and any other services that are more trouble than they're worth; we do not want to

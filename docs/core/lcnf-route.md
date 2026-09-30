@@ -167,3 +167,58 @@ ourselves." Read against that document:
 - **Shape:** `Lowering/Profile`, `Lowering/IR`, `Lowering/Legalize`, per-target printers with
   readers; the WASM/native path leaves through Lean's RC IR into LLVM. Held until scout E's
   Part 3 (the TypeScript printer is the profile's first customer).
+
+## 8. The compilation stages as named connections, and numbers (2026-09-30)
+
+From the external runtime contract's §8 (`docs/research/2026-09-30-external-runtime-contract.md`),
+row 101. Two compilations exist and must not be confused:
+- **`compileEff`** turns an `Eff` at a source point into first-order runtime code (`Prim`) that
+  refers back to the canonical program.
+- **The LCNF route** translates persisted Lean declarations, the machine and the compiler
+  included, through mono LCNF into OCaml. It does not consume the `Prim` values above.
+
+A future specializing or multistage compiler needs its own stages and connection theorems.
+Neither route supplies a self-application theorem.
+
+| Connection | What it owes | Where it stands |
+| --- | --- | --- |
+| Admitted source to reference | meaning under explicit choices; results, requests, public state, frontiers; state kept for finalization | fragment theorems (`run_eq_meaning`, `loopAgreement`) |
+| Reference to compiled runtime | preparation, registration, resume, frames, worlds, stores and queued work correspond; progress and frontiers relate | `run_eq_ref` at the empty table; the table-aware lane open (`host-boundary.md`) |
+| Abstract storage to backing implementation | initialization, operation, state and answer relation, aliases, snapshots, progress; lifted through machine and holder | arena laws; no certificate yet for the OCaml arrays and maps |
+| Lean declarations to compiler IR | a pinned compiler and erasure assumption or a checked certificate; roots and complete closure; layout | reading the IR is not a compiler proof |
+| Compiler IR to target semantics | a refusing reader; value and layout relation; each rewrite and extern justified | evaluator and vector evidence for selected closures |
+| Target syntax to bytes | an exact printer and reader image, or independent artifact validation | open |
+| Artifact to execution | compiler, runtime, ABI and FFI versions and semantics; scalar, memory and ownership policy; scheduling | separate trust boundaries |
+| `Eff` to Effect TypeScript | the program printer and reader profile, and pinned runtime behavior on a named observation | printer/reader laws proved over the template table; the truth harness is finite |
+
+**Rules for every stage.**
+- An optimization produces only behavior the source allows under the named observation.
+- A ready admitted operation gets no new stuck state.
+- A step that becomes several steps needs a bound or a progress measure, so infinite stuttering
+  cannot satisfy safety vacuously.
+- Identities are related consistently across returns, stored values, requests and causes.
+- Budgets correspond where work counts change.
+- Every validation certificate binds the exact artifact, profile, layout, extern table and
+  toolchain.
+- A universal claim needs a kernel-checked certificate or a proved checker; finite tests are never
+  promoted to certificates.
+
+**Numbers, as they stand.** Verified at the translation table
+(`src/OCaml5/Lcnf/Translate.lean`):
+- natural addition lowers to raw 63-bit `+` (line 162), and so does successor (line 175), so a
+  large enough sum wraps;
+- multiplication and powers saturate at the largest integer (lines 163, 182);
+- subtraction floors at zero.
+
+The TypeScript face prints `nat` as a JavaScript number, exact only up to 2^53. The profile's
+`natBound` (`Program/Profile.lean:90`, DI-56) bounds requests and answers, not intermediate values.
+
+So the three faces agree only on a bounded range, and the policy for intermediate values is not
+yet stated. The choice is between an exact representation on the native face and a bounded
+profile with checked intermediate arithmetic. The numbers seat of the 2026-09-30 pass
+(`docs/research/2026-09-30-pass/numbers/`) is assessing that choice, and what the verified
+floating-point library FloatLib (arXiv 2609.19352) offers. Floating point does not make natural
+numbers exact; its place is modeling Effect's JavaScript `number` behavior.
+
+Rows 28, 29 and 31 remain open: full proof or a fragment-and-rule strategy, the common target and
+legalization design, and TypeScript read-back ordering.

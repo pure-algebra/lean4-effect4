@@ -58,7 +58,7 @@ for validation above the canonical expression reader.
 The schema authoring boundary sits above Program and Schema. `Schema/Image` connects
 concrete Lean carriers to admitted program values; its proofs are `Laws/Schema/Image`.
 (`Schema/Transform` and `Schema/Endpoint`, the second authoring plane, were deleted on
-2026-09-18 under `docs/core/ontology.md` §3.)
+2026-09-18 under `docs/research/2026-09-17-ontology-and-do-now-probe.md` §3.)
 
 | Area | Responsibility |
 | --- | --- |

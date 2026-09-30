@@ -185,3 +185,56 @@ families and target profiles. The data and placement slices of the owner's skele
 the checked statement amendments, relational predicate shape, protocol/validity contracts and
 their proof graph. The broader families use those same foundations; no new gate framework is
 a prerequisite for designing or proving the next real semantic slice.
+
+## 7. Storage interfaces, creation ledgers, derived declarations (2026-09-30)
+
+From the external runtime contract's §7
+(`docs/research/2026-09-30-external-runtime-contract.md`), row 101. Six operational interfaces,
+each with a small lawful model before a real consumer moves onto it. None is a universal container
+that hides order or allocation policy.
+
+| Interface | Laws each backing implementation owes |
+| --- | --- |
+| Dense arena | empty, extent, lookup, replace, allocate; a fresh key is the old extent; old keys stay stable; a stated policy for updating an absent key; earlier snapshots persist |
+| Keyed table | equality and hash agree; stated duplicate and missing policies; stated iteration order; sparse ids distinct from the count and the allocation supply |
+| Ordered work | selection; priority or FIFO where specified; cancellation; snapshot versus live drain; reentrancy; no loss and no duplication |
+| Append sequence | ordered append, index and projection; prefixes retained; an authoritative journal never becomes a lossy ring |
+| Persistent path and environment | resolution against the owning program; captures and layout agree; scope and lifetime; aliases kept |
+| Derived view | the cache equals one fixed projection of the owner's state after every operation |
+
+**The families and their owners.**
+
+| Family | Source | Interface | Invariants kept |
+| --- | --- | --- | --- |
+| Fibers | `Machine/Fibers.lean` | keyed table | unique ids below the supply, children, ordered observers, exited fibers retained |
+| Fork records | row 91 | append sequence | written only by `spawn`; one record per forked fiber |
+| Saved frames | `Machine/Frames.lean` | persistent path | typed intermediate continuation, masking, catches, finalizers, loops, context, interruption |
+| Race, iterator and driver work | `Machine/Fibers.lean` | ordered work | entrants, results, sites and tokens correlate; launch and cancel order |
+| Dispatchers and armed callbacks | `Machine/Fibers.lean` | ordered work | snapshot drain, reentrant enqueue, arming order |
+| Ref heap | `Machine/Stores.lean` | dense arena (`Laws/Machine/Arena.lean`, `RefKernel.lean`) | atomic answer and state, aliases, absent-update policy |
+| Deferreds, due work, wakes | `Machine/Stores.lean`, `Machine/Wake.lean` | ordered work over a keyed table | first completion wins, stored `Completion`, registration-order broadcast, delayed reads, active-token receiver typing, stale-token inertness |
+| Scopes and releases | `Machine/Scope.lean` | keyed table | sparse ids, closing marked before cleanup, sequential or parallel strategy, failure accumulation |
+| Layer memo world | `Machine/Stores.lean` | keyed table | unique map ids below the shared supply (`Stores.MemoIdsOk`), parent lookup, correspondences, sharing and release |
+| Clock and timers | `Machine/Timer.lean` | ordered work | exact clock, monotone, deadline and tie order, staged advance |
+| Context and captures | `Machine/Stores.lean`, `Program/Compile.lean` | persistent path | service identity, override, inheritance, static types, capture lifetime |
+| External allocations and replies | `Machine/Stores.lean`, `Program/Admit.lean` | dense arena plus a keyed host table | prepared-value relation, target extension, no allocation on a refused reply |
+| Session and capability ledgers | `Api/HostSession.lean` | append sequence and keyed table | call ids distinct from tokens, exact active, pending, consumed and retired sets |
+| Journal and diagnostics | `Run.lean`, `Api/Runner.lean`, the trace | append sequence | authoritative command replay; semantic, holder and diagnostic projections kept apart |
+
+**Two patterns.**
+
+- **Creation facts live in append-only records.** A fact fixed when something is created, and
+  needed later, is kept where ordinary updates of the working record cannot reach it. The fork
+  record of row 91 is the first case.
+- **Declarations are derived views.** A handle's declared type is computed from its creation
+  record and the checker (`host-boundary.md` §4.3), never stored in a value.
+
+**What is proved today.**
+- The arena and list laws, and the `refStepOfA` connection.
+- `Projects` composition, and `Refines` induced by a projection, for the same operation and
+  answer carriers with exactly corresponding steps.
+
+Initialization, whole-machine store replacement, id renaming, different event encodings and
+stuttering simulation are not provided automatically. The behavior observation includes the whole
+concrete `Stores`, so a named logical projection and its connector come before any layout is
+replaced or private state is hidden.

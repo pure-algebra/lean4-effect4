@@ -434,7 +434,7 @@ order that kept every commit green.
   (`EmitSpecs`, `specs.json`, Makefile, `generate.py`, `GENERATED.md`); `Provision.lean`'s
   `build_total`/`buildAll_total` (no consumer, 175 lines); `effTy_provideService_twice` (no
   consumer); `Schema/Endpoint.lean`, `Schema/Transform.lean`, `Laws/Schema/Transform.lean`
-  (the wipe list, `ontology.md` §3; imported only by `Api` re-exports and one test section,
+  (the wipe list, `docs/research/2026-09-17-ontology-and-do-now-probe.md` §3; imported only by `Api` re-exports and one test section,
   both cut). `Laws/Program/Typing/Check.lean` stays: the typing-check contract consumes it.
 
 Every battery in `Test/All.lean` and both roots build; `effTy_sound`, `hasTy_weaken`,
