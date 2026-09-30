@@ -131,6 +131,15 @@ A five-seat design and probing pass, each seat checked by an adversarial verifie
 under `research/2026-09-30-pass/`. Its seats are the handle registry, the membership judgment, the
 step lifts, numbers with FloatLib, and the fiber slice.
 
+**Implementation, go-ahead the same day.** Codex holds the near term in its own worktree
+(`/Users/pooks/Dev/lean4-effect4-slice6`, branch `codex/slice6-fixes`) by the
+[slice 6 brief](research/2026-09-30-codex-brief-slice6-and-fixes.md):
+- A: host rows and replies carry no internal handle (`E4-HOST-CE-007`);
+- B: M6 counts runs with no host answer (`E4-SCHED-CE-015`);
+- C: the fork ledger's runtime steps.
+
+The lifts (D) and the membership judgment (E) follow as addenda once the pass is checked.
+
 ## What the owner must decide
 
 Decision row 90 is ruled and landed (2026-09-24): contexts are typed by their keys' static

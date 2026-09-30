@@ -223,6 +223,13 @@ located refusal. All fifteen host rows in the tree pass this rule
 (`PathProbes.lean`, path A). The rule is stricter than row 7's open recommendation, which admits
 handles arriving in-process. It is lifted kind by kind as declarations land.
 
+The reply check enforces the same rule on values. A reply carries no handle except a fresh
+external allocation, in success values and in typed failures. Today the success check refuses
+only external handles (`externalValue`, `Program/Compile.lean:1352`), and the failure check looks
+at the error type alone (`admitAnswer`, `Program/Admit.lean`). So a row that answers or fails at
+`unknown` could carry a live internal handle even with the table rule in place. Both parts are
+item A of the [slice 6 brief](../research/2026-09-30-codex-brief-slice6-and-fixes.md).
+
 ## 6. Order (parked until needed, except X0's rows 95–96 and the interim rule)
 
 These are the contract's X-steps (its §9), with the fiber slice first:
