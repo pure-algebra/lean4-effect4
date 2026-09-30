@@ -6173,16 +6173,9 @@ let memo_world_insert_entry (w : memo_map list) (id : int) (layer : int list) (e
 
 
 
-(* LCNF mono: Effect4.Machine.syncOpStep._lam_1 (_y.1 : Effect4.Machine.MemoEntry) : Effect4.Machine.MemoEntry *)
+(* LCNF mono: Effect4.Machine.syncOpStep._lam_1 (_x.1 : Nat) (e : Effect4.Machine.MemoEntry) : Effect4.Machine.MemoEntry *)
 
-let sync_op_step__lam_1 (_y_1 : memo_entry) : memo_entry =
-  _y_1
-
-
-
-(* LCNF mono: Effect4.Machine.syncOpStep._lam_2 (_x.1 : Nat) (e : Effect4.Machine.MemoEntry) : Effect4.Machine.MemoEntry *)
-
-let sync_op_step__lam_2 (_x_1 : int) (e : memo_entry) : memo_entry =
+let sync_op_step__lam_1 (_x_1 : int) (e : memo_entry) : memo_entry =
   match (e : memo_entry) with
     | { observers = observers; layer_scope = layer_scope; deferred = deferred; finalizer = finalizer } -> (let _x_2 = max 0 (observers - _x_1) in
       let _x_3 = ({ observers = _x_2; layer_scope = layer_scope; deferred = deferred; finalizer = finalizer } : memo_entry) in
@@ -6660,46 +6653,44 @@ let sync_op_step (x_1 : sync_op) (x_2 : stores) : (stores * val_) option =
                 | { deferred = deferred_1; _ } -> (let _x_184 = Completion_ofExit exit__178 in
                   let _x_185 = deferred_store_complete deferreds_14 deferred_1 _x_184 in
                   match _x_185 with
-                    | fst_186, _ -> (let _f_188 = sync_op_step__lam_1 in
-                      let _x_189 = memo_world_update_entry memo_12 memo_map_177 layer_176 _f_188 in
-                      let _x_190 = ({ refs = refs_12; deferreds = fst_186; scopes = scopes_13; memo = _x_189; timers = timers_13; next_name = next_name_12; externals = externals_12 } : stores) in
-                      let _x_191 = Val_unit in
-                      let _x_192 = _x_190, _x_191 in
-                      let _x_193 = Some _x_192 in
-                      _x_193)))))
-    | SyncOp_memoRelease (layer_194, memo_map_195) -> (match (x_2 : stores) with
-        | { refs = refs_13; deferreds = deferreds_15; scopes = scopes_14; memo = memo_13; timers = timers_14; next_name = next_name_13; externals = externals_13 } -> (let _x_196 = memo_world_entry_at memo_13 memo_map_195 layer_194 in
-          match _x_196 with
-            | None -> (let _x_197 = Val_unit in
-              let _x_198 = x_2, _x_197 in
-              let _x_199 = Some _x_198 in
-              _x_199)
-            | Some val__200 -> (match (val__200 : memo_entry) with
-                | { observers = observers; layer_scope = layer_scope; _ } -> (let _x_201 = 1 in
-                  let _x_202 = observers <= _x_201 in
-                  if _x_202 then (let _x_209 = memo_world_delete_entry memo_13 memo_map_195 layer_194 in
-                    let _x_210 = ({ refs = refs_13; deferreds = deferreds_15; scopes = scopes_14; memo = _x_209; timers = timers_14; next_name = next_name_13; externals = externals_13 } : stores) in
-                    let _x_211 = 4 in
-                    let _x_212 = Val_handle (_x_211, layer_scope) in
-                    let _x_213 = _x_210, _x_212 in
-                    let _x_214 = Some _x_213 in
-                    _x_214) else (let _f_203 = sync_op_step__lam_2 _x_201 in
-                    let _x_204 = memo_world_update_entry memo_13 memo_map_195 layer_194 _f_203 in
-                    let _x_205 = ({ refs = refs_13; deferreds = deferreds_15; scopes = scopes_14; memo = _x_204; timers = timers_14; next_name = next_name_13; externals = externals_13 } : stores) in
-                    let _x_206 = Val_unit in
-                    let _x_207 = _x_205, _x_206 in
-                    let _x_208 = Some _x_207 in
-                    _x_208)))))
+                    | fst_186, _ -> (let _x_188 = ({ refs = refs_12; deferreds = fst_186; scopes = scopes_13; memo = memo_12; timers = timers_13; next_name = next_name_12; externals = externals_12 } : stores) in
+                      let _x_189 = Val_unit in
+                      let _x_190 = _x_188, _x_189 in
+                      let _x_191 = Some _x_190 in
+                      _x_191)))))
+    | SyncOp_memoRelease (layer_192, memo_map_193) -> (match (x_2 : stores) with
+        | { refs = refs_13; deferreds = deferreds_15; scopes = scopes_14; memo = memo_13; timers = timers_14; next_name = next_name_13; externals = externals_13 } -> (let _x_194 = memo_world_entry_at memo_13 memo_map_193 layer_192 in
+          match _x_194 with
+            | None -> (let _x_195 = Val_unit in
+              let _x_196 = x_2, _x_195 in
+              let _x_197 = Some _x_196 in
+              _x_197)
+            | Some val__198 -> (match (val__198 : memo_entry) with
+                | { observers = observers; layer_scope = layer_scope; _ } -> (let _x_199 = 1 in
+                  let _x_200 = observers <= _x_199 in
+                  if _x_200 then (let _x_207 = memo_world_delete_entry memo_13 memo_map_193 layer_192 in
+                    let _x_208 = ({ refs = refs_13; deferreds = deferreds_15; scopes = scopes_14; memo = _x_207; timers = timers_14; next_name = next_name_13; externals = externals_13 } : stores) in
+                    let _x_209 = 4 in
+                    let _x_210 = Val_handle (_x_209, layer_scope) in
+                    let _x_211 = _x_208, _x_210 in
+                    let _x_212 = Some _x_211 in
+                    _x_212) else (let _f_201 = sync_op_step__lam_1 _x_199 in
+                    let _x_202 = memo_world_update_entry memo_13 memo_map_193 layer_192 _f_201 in
+                    let _x_203 = ({ refs = refs_13; deferreds = deferreds_15; scopes = scopes_14; memo = _x_202; timers = timers_14; next_name = next_name_13; externals = externals_13 } : stores) in
+                    let _x_204 = Val_unit in
+                    let _x_205 = _x_203, _x_204 in
+                    let _x_206 = Some _x_205 in
+                    _x_206)))))
     | _ -> (match (x_2 : stores) with
-        | { refs = refs_14; deferreds = deferreds_16; scopes = scopes_15; memo = memo_14; timers = timers_15; next_name = next_name_14; externals = externals_14 } -> (let _x_215 = ref_step x_1 refs_14 in
-          match _x_215 with
-            | None -> (let _x_216 = None in
-              _x_216)
-            | Some val__217 -> (match val__217 with
-                | fst_1, snd_1 -> (let _x_218 = ({ refs = snd_1; deferreds = deferreds_16; scopes = scopes_15; memo = memo_14; timers = timers_15; next_name = next_name_14; externals = externals_14 } : stores) in
-                  let _x_219 = _x_218, fst_1 in
-                  let _x_220 = Some _x_219 in
-                  _x_220))))
+        | { refs = refs_14; deferreds = deferreds_16; scopes = scopes_15; memo = memo_14; timers = timers_15; next_name = next_name_14; externals = externals_14 } -> (let _x_213 = ref_step x_1 refs_14 in
+          match _x_213 with
+            | None -> (let _x_214 = None in
+              _x_214)
+            | Some val__215 -> (match val__215 with
+                | fst_1, snd_1 -> (let _x_216 = ({ refs = snd_1; deferreds = deferreds_16; scopes = scopes_15; memo = memo_14; timers = timers_15; next_name = next_name_14; externals = externals_14 } : stores) in
+                  let _x_217 = _x_216, fst_1 in
+                  let _x_218 = Some _x_217 in
+                  _x_218))))
 
 
 

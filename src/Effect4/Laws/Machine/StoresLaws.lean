@@ -745,9 +745,7 @@ theorem syncOpStep_memoComplete_none (s : Stores) (layer : LayerId) (memoMap : M
 
 theorem M1.StoresLaws.syncOpStep_memoComplete_some (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
     (exit : ExitV) {entry : MemoEntry} (_h : s.memo.entryAt memoMap layer = some entry) : ProofGraph.Obligation (syncOpStep (SyncOp.memoComplete layer memoMap exit) s =
-      some ({ s with
-          memo := s.memo.updateEntry memoMap layer id
-          deferreds := (s.deferreds.complete entry.deferred (.ofExit exit)).1 },
+      some ({ s with deferreds := (s.deferreds.complete entry.deferred (.ofExit exit)).1 },
         Val.unit)) := ⟨⟩
 
 /-- `memoMapBuild`'s `onExit` (`Layer.ts:414-417`): the exit stored, the Deferred completed —
@@ -755,9 +753,7 @@ the wakeup borrowed from the Deferred family. census: layer.memo-build-once -/
 theorem syncOpStep_memoComplete_some (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
     (exit : ExitV) {entry : MemoEntry} (h : s.memo.entryAt memoMap layer = some entry) :
     syncOpStep (SyncOp.memoComplete layer memoMap exit) s =
-      some ({ s with
-          memo := s.memo.updateEntry memoMap layer id
-          deferreds := (s.deferreds.complete entry.deferred (.ofExit exit)).1 },
+      some ({ s with deferreds := (s.deferreds.complete entry.deferred (.ofExit exit)).1 },
         Val.unit) := by
   simp only [syncOpStep, h]
 
@@ -948,10 +944,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
       exact ⟨Nat.le_refl _, Nat.le_of_eq (DeferredStore.complete_cells_length _ _ _).symm,
-        fun _ hk => hk, Nat.le_refl _, fun id hm => by
-          show ((s.memo.updateEntry memoMap layer (fun e => e)).mapAt
-            id).isSome = true
-          exact MemoWorld.mapAt_updateEntry_isSome hm, Nat.le_refl _⟩
+        fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
   | memoRelease layer memoMap =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -1285,13 +1278,8 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
       intro m hm e he
-      have hm' : m ∈ s.memo.updateEntry memoMap layer (fun e => e) :=
-        hm
-      obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
-      obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e₀ he₀
-      rcases heq with rfl | rfl
-      · exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hs⟩
-      · exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hs⟩
+      obtain ⟨hd, hs⟩ := hwf.2.2.1 m hm e he
+      exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hs⟩
   | memoRelease layer memoMap =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -1500,7 +1488,7 @@ theorem syncOpStep_memoIdsOk (o : SyncOp) (s s' : Stores) (v : Val) (hok : s.Mem
       rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      exact hsame (MemoWorld.updateEntry_ids s.memo memoMap layer _) hle
+      exact hsame rfl hle
   | memoRelease layer memoMap =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -2038,7 +2026,7 @@ theorem syncOpStep_memoKeysNodup (o : SyncOp) (s s' : Stores) (v : Val) (hnodup 
       rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      exact fun m hm => memoKeysNodup_updateEntry hnodup m (by dsimp only at hm; exact hm)
+      exact hnodup
   | memoRelease layer memoMap =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -2152,14 +2140,7 @@ theorem syncOpStep_memoObserved (o : SyncOp) (s s' : Stores) (v : Val) (hnodup :
       rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      intro m hm e he
-      have hm' : m ∈ s.memo.updateEntry memoMap layer (fun e => e) :=
-        hm
-      obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
-      have h₀ := hobs m₀ hm₀ e₀ he₀
-      rcases heq with rfl | rfl
-      · exact h₀
-      · exact h₀
+      exact hobs
   | memoRelease layer memoMap =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>

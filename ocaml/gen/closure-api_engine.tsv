@@ -175,7 +175,7 @@ Effect4.Machine.reasonsOfVal	reasons_of_val	true	10	0	0	0	6	7	0	1	0	0	8	1	1	0	0	
 Effect4.Machine.closeDone._redArg	close_done	false	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	16	2	0	2	0	1	0	5292085095127107823
 Effect4.Machine.cancelProgram	cancel_program	false	14	0	1	2	2	5	0	0	0	0	14	0	0	0	0	0	0	0	0	35	16	0	5	2	1	0	2276323517876579053
 Effect4.Machine.actionOf	action_of	false	35	0	0	0	1	22	0	0	0	0	35	0	0	0	0	0	0	0	0	204	41	0	22	0	1	0	16473186714885959780
-Effect4.Machine.syncOpStep	sync_op_step	false	165	0	1	2	45	30	0	15	0	0	150	0	7	0	8	0	0	0	0	96	326	0	74	1	1	0	15808318556652023039
+Effect4.Machine.syncOpStep	sync_op_step	false	163	0	1	2	45	30	0	15	0	0	148	0	7	0	8	0	0	0	0	96	322	0	74	1	1	0	14534517006618152433
 Effect4.Machine.DeferredStore.register._redArg	deferred_store_register	false	9	0	0	0	3	3	0	0	0	0	9	0	0	0	0	0	0	0	0	8	17	0	5	0	1	0	14365351895425541965
 Effect4.Machine.TimerStore.sleep	timer_store_sleep	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	9	0	1	0	1	0	14431578939558481171
 Effect4.Machine.finProgram	fin_program	false	39	0	0	0	4	13	0	0	0	0	39	0	0	0	0	0	0	0	0	99	45	0	16	0	1	0	5186975237059240151
@@ -303,8 +303,7 @@ Effect4.Scope.addUnsafe._at_.Effect4.Scope.addExit._at_.Effect4.Machine.ScopeSto
 Effect4.Scope.isClosed._redArg	scope_is_closed	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	1	0	1	0	1	0	5178395835239141857
 Effect4.Machine.MemoWorld.get	memo_world_get	false	4	0	0	0	0	1	0	1	0	0	3	0	1	0	0	0	0	0	0	0	7	0	0	0	1	0	14540793992013320567
 Effect4.Machine.syncOpStep._lam_0	sync_op_step__lam_0	false	3	0	0	0	1	1	0	1	0	0	2	0	1	0	0	0	0	0	0	0	6	0	1	0	1	0	15317362682319866950
-Effect4.Machine.syncOpStep._lam_1	sync_op_step__lam_1	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	6037926349254907927
-Effect4.Machine.syncOpStep._lam_2	sync_op_step__lam_2	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	6	0	1	0	1	0	235892469554813995
+Effect4.Machine.syncOpStep._lam_1	sync_op_step__lam_1	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	6	0	1	0	1	0	6664544959681741359
 Effect4.Machine.WakeList.register._redArg	wake_list_register	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	4	11	0	1	0	1	0	15423574983730355961
 Effect4.Scope.addExit._at_.Effect4.Machine.ScopeStore.addFinalizer.spec_0._redArg	scope_add_exit_at_scope_store_add_finalizer_spec_0	false	6	0	0	0	1	2	0	0	0	0	5	1	0	0	0	0	0	0	0	8	10	0	2	0	1	0	17590838872075173101
 Effect4.Scope.removeUnsafe._at_.Effect4.Machine.ScopeStore.removeFinalizer.spec_0._redArg	scope_remove_unsafe_at_scope_store_remove_finalizer_spec_0	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	7	4	0	1	0	1	0	17467623458711433245

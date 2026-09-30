@@ -2015,11 +2015,11 @@ def syncOpStep : SyncOp → Stores → Option (Stores × Val)
     match st.memo.entryAt memoMap layer with
     | none => some (st, Val.unit)
     | some entry =>
+      -- the entry keeps its fields: `entry.effect = exit` is the Deferred's completion here, and
+      -- the write-back of the entry just read was the identity (`MemoWorld.updateEntry_id_of_nodup`
+      -- under `Stores.MemoIdsOk`, slice 6)
       let (deferreds, _) := st.deferreds.complete entry.deferred (Completion.ofExit exit)
-      some ({ st with
-          memo := st.memo.updateEntry memoMap layer id
-          deferreds := deferreds },
-        Val.unit)
+      some ({ st with deferreds := deferreds }, Val.unit)
   | SyncOp.memoRelease layer memoMap, st =>                                               -- :403-408
     match st.memo.entryAt memoMap layer with
     | none => some (st, Val.unit)

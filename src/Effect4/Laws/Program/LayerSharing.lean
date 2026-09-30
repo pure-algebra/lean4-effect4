@@ -229,10 +229,7 @@ theorem local_step {inside : List MemoMapId} {s s' : Stores} {op : SyncOp} {v : 
     | some entry =>
       rw [syncOpStep_memoComplete_some s layer id exit he] at hs
       cases hs
-      refine ⟨isolated_updateEntry hw id layer (fun e => e), ?_⟩
-      intro outside ho
-      exact mapAt_updateEntry_other s.memo id outside layer
-        (fun e => e) (fun h => ho (h ▸ hl))
+      exact ⟨hw, fun _ _ => rfl⟩
   case memoRelease layer id =>
     cases he : s.memo.entryAt id layer with
     | none =>

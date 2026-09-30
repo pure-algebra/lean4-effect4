@@ -77,7 +77,7 @@ Effect4.Machine.actionOf	action_of	false	35	0	0	0	1	22	0	0	0	0	35	0	0	0	0	0	0	0	
 Effect4.Program.embedAction	program_embed_action	false	31	0	0	0	1	23	0	0	0	0	31	0	0	0	0	0	0	0	0	209	40	0	23	0	1	0	8807579475073265470
 Effect4.Program.resolve	program_resolve	false	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	5	0	3	2	1	0	7261341979395606169
 Effect4.Program.resolveLayer	program_resolve_layer	false	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	8	0	3	2	1	0	11607604038877138060
-Effect4.Machine.syncOpStep	sync_op_step	false	165	0	1	2	45	30	0	15	0	0	150	0	7	0	8	0	0	0	0	96	326	0	74	1	1	0	15808318556652023039
+Effect4.Machine.syncOpStep	sync_op_step	false	163	0	1	2	45	30	0	15	0	0	148	0	7	0	8	0	0	0	0	96	322	0	74	1	1	0	14534517006618152433
 Effect4.Machine.DeferredStore.register._redArg	deferred_store_register	false	9	0	0	0	3	3	0	0	0	0	9	0	0	0	0	0	0	0	0	8	17	0	5	0	1	0	14365351895425541965
 Effect4.Machine.completionPrim	completion_prim	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	7	4	0	2	0	1	0	11941419879888509188
 Effect4.Machine.TimerStore.sleep	timer_store_sleep	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	9	0	1	0	1	0	14431578939558481171
@@ -235,8 +235,7 @@ Effect4.Machine.syncOpStep._lam_0	sync_op_step__lam_0	false	3	0	0	0	1	1	0	1	0	0	
 Effect4.Machine.MemoWorld.updateEntry	memo_world_update_entry	false	5	0	0	0	2	2	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	3	0	1	0	17023196141301387690
 Effect4.Machine.MemoWorld.insertEntry	memo_world_insert_entry	false	7	0	0	0	2	2	0	0	0	0	7	0	0	0	0	0	0	0	0	4	13	0	3	0	1	0	2201801107694509760
 Effect4.Machine.MemoWorld.entryAt	memo_world_entry_at	false	5	0	0	0	4	3	0	0	0	0	5	0	0	0	0	0	0	0	0	3	5	0	6	0	1	0	15868151588380298666
-Effect4.Machine.syncOpStep._lam_1	sync_op_step__lam_1	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	6037926349254907927
-Effect4.Machine.syncOpStep._lam_2	sync_op_step__lam_2	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	6	0	1	0	1	0	235892469554813995
+Effect4.Machine.syncOpStep._lam_1	sync_op_step__lam_1	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	6	0	1	0	1	0	6664544959681741359
 Effect4.Machine.MemoWorld.deleteEntry	memo_world_delete_entry	false	5	0	0	0	2	2	0	0	0	0	5	0	0	0	0	0	0	0	0	1	10	0	3	0	1	0	6374010683480676408
 Effect4.Machine.refStep	ref_step	false	88	0	1	2	20	30	0	2	0	0	86	0	0	0	2	0	0	0	0	64	134	0	49	1	1	0	16479998470594638855
 Effect4.Machine.DeferredStore.cellAt._redArg	deferred_store_cell_at	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	1	0	1	0	2683930862243776319
