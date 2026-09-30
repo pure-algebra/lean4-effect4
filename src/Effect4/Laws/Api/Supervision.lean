@@ -141,6 +141,108 @@ theorem supervision_isDaemon_flag (e : Effect4.Program.Eff Op) (s : ForkSite)
   have := forkSite_isDaemon s
   aesop
 
+/-! ## (a) The static half: a located site is a site of the table
+
+The fold reads a node's own sites and each child's at the child's path, in the order
+`Node.child` numbers children. `child_sub` checks that order against the generated child
+table, one case per table row, by the same step; the rest is induction on the path. -/
+
+/-- The supervision fold of a node, read at a path. -/
+def foldNode : Node Op → List Nat → List ForkSite
+  | .eff e => cataFam superAlg .eff e
+  | .stmts s => cataFam superAlg .stmts s
+  | .stmt s => cataFam superAlg .stmt s
+  | .action a => cataFam superAlg .action a
+  | .effs es => cataFam superAlg .effs es
+  | .layer l => cataFam superAlg .layer l
+  | .layers ls => cataFam superAlg .layers ls
+
+/-- A site of the reader at position `i` of `atChildPaths`, read at its child path. -/
+theorem mem_atChildPaths_index : ∀ (readers : List (List Nat → List ForkSite)) (p : List Nat)
+    (k i : Nat) (r : List Nat → List ForkSite) (s : ForkSite),
+    readers[i]? = some r → s ∈ r (p ++ [k + i]) → s ∈ atChildPaths readers p k
+  | [], _, _, _, _, _, h, _ => nomatch h
+  | reader :: rest, p, k, 0, r, s, h, hs => by
+    simp only [List.getElem?_cons_zero, Option.some.injEq] at h
+    subst h
+    simp only [atChildPaths, List.mem_append]
+    exact Or.inl (by simpa only [Nat.add_zero] using hs)
+  | reader :: rest, p, k, i + 1, r, s, h, hs => by
+    simp only [List.getElem?_cons_succ] at h
+    simp only [atChildPaths, List.mem_append]
+    refine Or.inr (mem_atChildPaths_index rest p (k + 1) i r s h ?_)
+    rwa [Nat.add_assoc, Nat.add_comm 1 i]
+
+/-- A site of a child reader belongs to the node's fold. -/
+theorem fold_child_mem (fam : EffFam) (e : EffSelfCarrier Op fam) (i : Nat)
+    (r : List Nat → List ForkSite)
+    (hr : (childReaders ((view fam e).2.map (ArgF.fold superAlg)))[i]? = some r)
+    (p : List Nat) (s : ForkSite) (hs : s ∈ r (p ++ [i])) : s ∈ cataFam superAlg fam e p := by
+  have hb := cata_build superLayer fam (view fam e).1 (view fam e).2 e (build_view fam e)
+  rw [show (superAlg : EffAlgebra Op SiteReader) = EffAlgebra.ofLayer superLayer from rfl, hb,
+    superLayer, List.mem_append]
+  exact Or.inr (mem_atChildPaths_index _ p 0 i r s hr (by simpa only [Nat.zero_add] using hs))
+
+/-- A node's own sites belong to its fold. -/
+theorem fold_own_mem (fam : EffFam) (e : EffSelfCarrier Op fam) (p : List Nat) (s : ForkSite)
+    (hs : s ∈ forkSitesOf fam (view fam e).1 ((view fam e).2.map (ArgF.fold superAlg)) p) :
+    s ∈ cataFam superAlg fam e p := by
+  have hb := cata_build superLayer fam (view fam e).1 (view fam e).2 e (build_view fam e)
+  rw [show (superAlg : EffAlgebra Op SiteReader) = EffAlgebra.ofLayer superLayer from rfl, hb,
+    superLayer, List.mem_append]
+  exact Or.inl hs
+
+/-- A node's folded child readers, in child order. -/
+def readersOf : Node Op → List (List Nat → List ForkSite)
+  | .eff e => childReaders ((view .eff e).2.map (ArgF.fold superAlg))
+  | .stmts s => childReaders ((view .stmts s).2.map (ArgF.fold superAlg))
+  | .stmt s => childReaders ((view .stmt s).2.map (ArgF.fold superAlg))
+  | .action a => childReaders ((view .action a).2.map (ArgF.fold superAlg))
+  | .effs es => childReaders ((view .effs es).2.map (ArgF.fold superAlg))
+  | .layer l => childReaders ((view .layer l).2.map (ArgF.fold superAlg))
+  | .layers ls => childReaders ((view .layers ls).2.map (ArgF.fold superAlg))
+
+theorem foldNode_child_mem (n : Node Op) (i : Nat) (r : List Nat → List ForkSite)
+    (hr : (readersOf n)[i]? = some r) (p : List Nat) (s : ForkSite) (hs : s ∈ r (p ++ [i])) :
+    s ∈ foldNode n p := by
+  cases n with
+  | eff e => exact fold_child_mem .eff e i r hr p s hs
+  | stmts x => exact fold_child_mem .stmts x i r hr p s hs
+  | stmt x => exact fold_child_mem .stmt x i r hr p s hs
+  | action a => exact fold_child_mem .action a i r hr p s hs
+  | effs es => exact fold_child_mem .effs es i r hr p s hs
+  | layer l => exact fold_child_mem .layer l i r hr p s hs
+  | layers ls => exact fold_child_mem .layers ls i r hr p s hs
+
+theorem child_sub (n c : Node Op) (i : Nat) (h : n.child i = some c) (p : List Nat)
+    (s : ForkSite) (hs : s ∈ foldNode c (p ++ [i])) : s ∈ foldNode n p := by
+  unfold Node.child at h
+  split at h <;> cases h <;> refine foldNode_child_mem _ _ _ ?_ p s hs <;> rfl
+
+/-- **Path inclusion.** The sites of the node at a path, read at that path, are the program's. -/
+theorem at_sub : ∀ (path : List Nat) (n m : Node Op) (p : List Nat) (s : ForkSite),
+    Node.at_ n path = some m → s ∈ foldNode m (p ++ path) → s ∈ foldNode n p
+  | [], n, m, p, s, h, hs => by
+    simp only [Node.at_, Option.some.injEq] at h
+    subst h
+    simpa only [List.append_nil] using hs
+  | i :: rest, n, m, p, s, h, hs => by
+    simp only [Node.at_] at h
+    cases hc : n.child i with
+    | none => rw [hc] at h; cases h
+    | some c =>
+      rw [hc] at h
+      have hs' : s ∈ foldNode m ((p ++ [i]) ++ rest) := by
+        simpa only [List.append_assoc, List.singleton_append] using hs
+      exact child_sub n c i hc p s (at_sub rest c m (p ++ [i]) s h hs')
+
+/-- A located node's own sites, read at its path, are the program's. -/
+theorem mem_supervision_of_at (program : Eff Op) (path : List Nat) (m : Node Op) (s : ForkSite)
+    (located : Node.at_ (.eff program) path = some m) (own : s ∈ foldNode m path) :
+    s ∈ supervision program :=
+  at_sub path (.eff program) m [] s located (by simpa only [List.nil_append] using own)
+
+
 /-! ## (a) The machine half: what a fork stamps -/
 
 section MachineForks
@@ -761,7 +863,6 @@ theorem source_race (program : NativeEff) (point : Point) (entrants : Effs Nativ
 theorem source_race_site (program body : NativeEff) (rest : Effs NativeOp) (path : List Nat)
     (_located : Node.at_ (.eff program) path = some (.effs (.cons body rest))) : ProofGraph.Obligation
     ((⟨path, .raceEntrant, raceEntrantOptions⟩ : ForkSite) ∈ supervision program) := ⟨⟩
-#proof_wanted source_race_site
 
 /-- Exact local launch boundary, including the no-accepted-answer condition.
 The driver may stop between launches; nothing here forces the next one to occur. -/
@@ -791,7 +892,6 @@ theorem source_fork_site (program body : NativeEff) (point : Point)
     (let q := point.child 0
      let site : ForkSite := ⟨q.path, if options.daemon then .daemon else .child, options⟩
      site ∈ supervision program) := ⟨⟩
-#proof_wanted source_fork_site
 
 theorem source_forkIn_site (program body : NativeEff) (point : Point)
     (options : Supervision.ForkOptions) (scopeTerm : Term) (scope : Nat)
@@ -802,7 +902,6 @@ theorem source_forkIn_site (program body : NativeEff) (point : Point)
     (let q := point.child 0
      let site : ForkSite := ⟨q.path, .pinned (some scopeTerm), options⟩
      site ∈ supervision program) := ⟨⟩
-#proof_wanted source_forkIn_site
 
 theorem source_forkScoped_site (program body : NativeEff) (point : Point)
     (options : Supervision.ForkOptions) (_scope : Nat)
@@ -812,7 +911,6 @@ theorem source_forkScoped_site (program body : NativeEff) (point : Point)
     (let q := point.child 0
      let site : ForkSite := ⟨q.path, .pinned none, options⟩
      site ∈ supervision program) := ⟨⟩
-#proof_wanted source_forkScoped_site
 
 theorem source_two_race_sites (program first second : NativeEff) (point : Point)
     (_located : Node.at_ (.eff program) point.path =
@@ -820,7 +918,65 @@ theorem source_two_race_sites (program first second : NativeEff) (point : Point)
     (let q := (point.child 0).child 0
      (⟨q.path, .raceEntrant, raceEntrantOptions⟩ : ForkSite) ∈ supervision program ∧
       (⟨(q.child 1).path, .raceEntrant, raceEntrantOptions⟩ : ForkSite) ∈ supervision program) := ⟨⟩
-#proof_wanted source_two_race_sites
+
+
+/-! The five source-site connectors (slice 6), proved. -/
+
+theorem source_race_site_proof (program body : NativeEff) (rest : Effs NativeOp) (path : List Nat)
+    (located : Node.at_ (.eff program) path = some (.effs (.cons body rest))) :
+    (⟨path, .raceEntrant, raceEntrantOptions⟩ : ForkSite) ∈ supervision program :=
+  mem_supervision_of_at program path _ _ located (fold_own_mem .effs _ path _ (List.mem_singleton_self _))
+
+theorem source_fork_site_proof (program body : NativeEff) (point : Point)
+    (options : Supervision.ForkOptions)
+    (located : Node.at_ (.eff program) point.path = some (.eff (.withFiber (.fork body options))))
+    (_table : RowTable) (_m : Machine) (_parent : Fiber) (_yielding : Bool) :
+    (let q := point.child 0
+     let site : ForkSite := ⟨q.path, if options.daemon then .daemon else .child, options⟩
+     site ∈ supervision program) :=
+  at_sub point.path (.eff program) _ [] _ located
+    (child_sub _ (.action (.fork body options)) 0 rfl _ _
+      (fold_own_mem .action _ _ _ (List.mem_singleton_self _)))
+
+theorem source_forkIn_site_proof (program body : NativeEff) (point : Point)
+    (options : Supervision.ForkOptions) (scopeTerm : Term) (scope : Nat)
+    (located : Node.at_ (.eff program) point.path =
+      some (.eff (.withFiber (.forkIn body options scopeTerm))))
+    (_scope : evalTerm point.env scopeTerm = some (Val.scopeHandle scope))
+    (_table : RowTable) (_m : Machine) (_parent : Fiber) (_yielding : Bool) :
+    (let q := point.child 0
+     let site : ForkSite := ⟨q.path, .pinned (some scopeTerm), options⟩
+     site ∈ supervision program) :=
+  at_sub point.path (.eff program) _ [] _ located
+    (child_sub _ (.action (.forkIn body options scopeTerm)) 0 rfl _ _
+      (fold_own_mem .action _ _ _ (List.mem_singleton_self _)))
+
+theorem source_forkScoped_site_proof (program body : NativeEff) (point : Point)
+    (options : Supervision.ForkOptions) (_scope : Nat)
+    (located : Node.at_ (.eff program) point.path =
+      some (.eff (.withFiber (.forkScoped body options))))
+    (_table : RowTable) (_m : Machine) (_parent : Fiber) (_yielding : Bool) :
+    (let q := point.child 0
+     let site : ForkSite := ⟨q.path, .pinned none, options⟩
+     site ∈ supervision program) :=
+  at_sub point.path (.eff program) _ [] _ located
+    (child_sub _ (.action (.forkScoped body options)) 0 rfl _ _
+      (fold_own_mem .action _ _ _ (List.mem_singleton_self _)))
+
+theorem source_two_race_sites_proof (program first second : NativeEff) (point : Point)
+    (located : Node.at_ (.eff program) point.path =
+      some (.eff (.withFiber (.raceAll (.cons first (.cons second .nil)))))) :
+    (let q := (point.child 0).child 0
+     (⟨q.path, .raceEntrant, raceEntrantOptions⟩ : ForkSite) ∈ supervision program ∧
+      (⟨(q.child 1).path, .raceEntrant, raceEntrantOptions⟩ : ForkSite) ∈ supervision program) := by
+  have toEffs : ∀ s, s ∈ foldNode (.effs (.cons first (.cons second .nil))) (point.path ++ [0] ++ [0]) →
+      s ∈ supervision program := fun s hs =>
+    at_sub point.path (.eff program) _ [] s located
+      (child_sub _ (.action (.raceAll (.cons first (.cons second .nil)))) 0 rfl _ _
+        (child_sub _ _ 0 rfl _ _ hs))
+  refine ⟨toEffs _ (fold_own_mem .effs _ _ _ (List.mem_singleton_self _)), toEffs _ ?_⟩
+  exact child_sub _ (.effs (.cons second .nil)) 1 rfl _ _
+    (fold_own_mem .effs _ _ _ (List.mem_singleton_self _))
 
 end M1Origin
 end Effect4.Api
@@ -1130,5 +1286,12 @@ end Effect4.Api
 #obligation_proved Effect4.Api.M1Origin.source_fork := @Effect4.Api.source_fork_holds
 #obligation_proved Effect4.Api.M1Origin.race_launch_origins := @Effect4.Api.race_launch_origins_holds
 
-#typed_state_obligations Effect4.Api.M1Origin ceiling 8 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#obligation_proved Effect4.Api.M1Origin.source_race_site := @Effect4.Api.M1Origin.source_race_site_proof
+#obligation_proved Effect4.Api.M1Origin.source_fork_site := @Effect4.Api.M1Origin.source_fork_site_proof
+#obligation_proved Effect4.Api.M1Origin.source_forkIn_site := @Effect4.Api.M1Origin.source_forkIn_site_proof
+#obligation_proved Effect4.Api.M1Origin.source_forkScoped_site :=
+  @Effect4.Api.M1Origin.source_forkScoped_site_proof
+#obligation_proved Effect4.Api.M1Origin.source_two_race_sites :=
+  @Effect4.Api.M1Origin.source_two_race_sites_proof
+#typed_state_obligations Effect4.Api.M1Origin ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
 #typed_state_obligations Effect4.Api.M1Trace ceiling 4 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

@@ -878,9 +878,29 @@ theorem observe_replace_trace (s : Run)
         { s.session with machine := { s.session.machine with trace } } } =
        Run.observe s) := ⟨⟩
 
-#proof_wanted observe_replace_trace
+/-- The observation reads the machine's fibers, store, stuck flag and host readers, never its
+trace: every reader but the zero-fuel inspection reduces as is, and the inspection's replay
+splits only on the stuck flag and the finished test, which the trace does not touch. -/
+theorem observe_replace_trace_proof (s : Run)
+    (trace : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
+      Run.observe { s with session :=
+        { s.session with machine := { s.session.machine with trace } } } =
+       Run.observe s := by
+  have hfin : RunMachine.finished ({ s.session.machine with trace } : Api.Machine) =
+      s.session.machine.finished := rfl
+  unfold Run.observe Run.inspect Api.HostSession.inspect
+  simp only [replayEval, hfin]
+  cases s.session.machine.stuck with
+  | some why => rfl
+  | none =>
+    cases s.session.machine.finished with
+    | true => rfl
+    | false => rfl
 
 end Effect4.Run.M1Trace
+
+#obligation_proved Effect4.Run.M1Trace.observe_replace_trace :=
+  @Effect4.Run.M1Trace.observe_replace_trace_proof
 -- END M1 PHASE B Run
 
-#typed_state_obligations Effect4.Run.M1Trace ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Run.M1Trace ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
