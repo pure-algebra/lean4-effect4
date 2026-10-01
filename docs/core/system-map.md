@@ -360,11 +360,28 @@ theorem; a code clause read at a cut it could not see; a comparison in the raw o
 the checker's; a presence fact spelled at a store instead of as a world-indexed predicate. Each
 repair moved the clause into the construction and proved its monotonicity or its adequacy once.
 No repair changed a construction. That is the reason the expansion is bounded: a clause can be
-missing or weak only in three enumerated places, and each is finite.
+missing or weak only in five enumerated places, and each is finite. (The first version of this
+section, 2026-10-01 morning, named three; wave 2 found the other two the same day, by
+refutation: seat D3's eight command refutations, rows 134 (a)–(e), and seat D2's three
+refutations of the denotation statement, rows 170 and 175. The list below is the amended one,
+and the finiteness claim for the two new places rests on a census that is not yet an instrument,
+row 181.)
 
-- A **missing clause** can only come from a halting site of the machine that `I` does not
-  exclude: the census of halting sites is finite (nine, decisions row 139, receipt C step 4), and
-  every site has its clause (row 156 closed the last).
+- A **missing clause that excludes a halting site** can only come from a halting site of the
+  machine that `I` does not exclude: the census of halting sites is finite (nine, decisions row
+  139, receipt C step 4), and every site has its clause (row 156 closed the last).
+- A **missing clause that types a field** (the shape of rows 134 (a)–(e): a step is well defined
+  and keeps every clause `J` states, but writes a field whose contents `J` never typed, so no later
+  world is typed): bounded by the fields of the machine state the steps write, which are finite
+  (the records `RState`, `Stores`, `SchedulerState` and the queue); the check is a census of those
+  fields against the rows of `Typed/Sources.lean` (row 181, owed as an instrument; until it
+  exists, this place is bounded by reading, not by a gate).
+- A **missing premise of a statement** (the shape of rows 170 and 175: the proposition quantifies
+  over more than the construction's instance can handle, a point whose completed view is untyped,
+  a world whose service table is not the source's, a root whose references are malformed): bounded
+  by the data the statement reads, the fields of `Point`, `ProgramSource` and `World`, which are
+  finite; the check is that every field a denotation arm reads is constrained by the statement's
+  premises, read off the arm lemmas (seat D2's receipt lists them).
 - A **post too weak for its handler** cannot recur: construction 4 proves each post against the
   handler (8 instances open, all of one kind: the memo-table clause and six `f.total` rows).
 - A **post too weak for a continuation** (the shape of `E4-TYPED-CE-018`) can appear only in a
@@ -382,6 +399,7 @@ missing or weak only in three enumerated places, and each is finite.
 | S5 the eighteen command proofs and the denotation lemma close, every clause they needed named by a decisions row with its checked refutation (a statement found false is repaired at the contract, never weakened: rows 156, 170, 175) | `M6Ledger`, `M3bAssembly`; the register's `E4-TYPED-CE-*` rows | 9 and 3 open after seat D3 (the ledger 21 open of 484); wave 2 is finding the missing clauses as much as closing goals: M5 needed the formation premise, the completed view and the world's service table (rows 170, 175, proved on seat D2; row 176 under measurement), and seat D3 refuted eight command statements on constructed typed states (`E4-TYPED-CE-024`–`029`: timers, deferred waiters, terminal stacks, observer and race key disjointness, fresh-id bounds), the five clauses ruled as row 134 (a)–(e); the criterion is met when the ledger closes with those clauses in the rows, and not before |
 | S6 the type signature is closed for the target profile: every form the profile needs is a constructor or an `app` declaration, and the order and membership laws are theorems over the signature's description (a 22nd constructor costs its arms and no law) | probe T's census; the data wave's commits 2 and 4 (the shared table of exceptional rules, the generated `TyView`) | the census is in; the laws are per constructor today; the wave makes them generic |
 | S7 the boundary embeddings are exact | row 128's two theorems | the wave's commit 1 |
+| S8 every field of the machine state a step writes is typed by a clause of `J` or `I` (the field census), and every field a denotation arm reads is constrained by the statement's premises | row 181's instrument (owed); seat D2's arm list | not an instrument yet: five fields found untyped by refutation (rows 134 (a)–(e)), three statement premises by refutation (rows 170, 175); the census is the instrument that would have found them first |
 
 When S1–S7 hold, "stable" is a theorem of the tree, not a judgment: a new program form is a
 signature row or an `app` declaration and reopens no law; a new machine behaviour is a halting
@@ -402,7 +420,7 @@ status. This is the table a release reads; §10.3 is the table a landing reads.
 | O2 run it: the machine executes it under the host session with scripted host answers, every exit typed, every store typed, never halting on the fragment | constructions 3 and 4 (S1–S3, S5) and the route (construction 5) | `run_eq_ref` at the empty table; the truth harness's differential (121/127 agree); M7's three lines once M5 and M6 close | the route proved; M5, M6 open (wave 2) |
 | O3 print it as idiomatic TypeScript that tsgo 7 accepts and that behaves as rc.112, and read it back exactly | the faces (`read_print`, `read_exact`), the exact embeddings (S7), the vendored syntax after row 164 | `check-target` (row 68's vectors, both readings), `check-truth` (the corpus differential), the p2 printed module against its idiomatic signatures | present forms green; the wave's commits 8–10 for the new forms |
 | O4 lower it to a concrete implementation: the OCaml engine from LCNF, the CAS store with content addresses, byte-identical generated groups | the generated groups (one producer order), the LCNF route, conservativity (DI-47) | `make check-gen`, `dune build`, `make check-ocaml`, the CAS goldens; `run_eq_ref` carried through `replayR_bmeans_reachable` | green today; the wave regenerates once (row 162) and keeps the goldens byte-identical |
-| O5 extend it without reopening O1–O4: a new Effect module is a row table or an `app` declaration, a new behaviour is a halting site with its clause or a command with its instance | S3, S4, S6 | the census instrument (row 143), §10.3's table re-checked at each landing | holds once S5–S7 close |
+| O5 extend it without reopening O1–O4: a new Effect module is a row table or an `app` declaration, a new behaviour is a halting site with its clause or a command with its instance | S3, S4, S6, S8 | the census instruments (rows 143, 181), §10.3's table re-checked at each landing | holds once S5–S8 close |
 | O6 the proof infrastructure stays manageable: obligations are declared by name, searched by `aesop` banks, counted per scope, and the map is measured, not drawn | the ledger commands (`#typed_state_obligations`, `#obligation_proved`, `#obligation_audit`), the banks (row 65), the architecture map (`make gen-architecture`) | the open counts per scope; the map's "0 imports against the direction" | in place; the counts are the distance |
 
 The link the owner asked for: O1 is why S6 matters (a form the signature cannot say is a program a
