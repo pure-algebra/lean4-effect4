@@ -1,4 +1,4 @@
 $ cd /Users/pooks/Dev/lean4-effect4-probe-Q
 $ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M 4096 --run docs/research/2026-10-01-type-language-probe/Q/tools/Effect4Gen/View.lean --group TyView --imports ProbeQW.Fold\,Effect4.Laws.Auto.RuleSets\,Effect4.Machine.Alphabets --variances docs/research/2026-10-01-type-language-probe/Q/generated/variances-wave.json --out docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQW/TyView.lean ProbeQW.Ty
-# started 2026-10-01T19:28:20Z (LEAN_NUM_THREADS=1)
-# exit=0 seconds=12
+# started 2026-10-01T19:47:48Z (LEAN_NUM_THREADS=1)
+# exit=0 seconds=33

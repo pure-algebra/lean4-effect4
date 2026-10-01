@@ -1,4 +1,15 @@
-{"pin":
+{"rules":
+ [{"rule": "refl"},
+  {"rule": "never"},
+  {"rule": "unionLeft"},
+  {"rule": "unionRight"},
+  {"rule": "top"},
+  {"rule": "edge", "right": ".string", "name": "lit", "left": ".lit _"},
+  {"rule": "edge", "right": ".unit", "name": "undefinedUnit", "left": ".undefined"},
+  {"rule": "edge", "right": ".int", "name": "natInt", "left": ".nat"},
+  {"rule": "edge", "right": ".number", "name": "intNumber", "left": ".int"},
+  {"rule": "edge", "right": ".number", "name": "natNumber", "left": ".nat"}],
+ "pin":
  {"version": "4.0.0-rc.112",
   "root": "vendor/effect-4.0.0-rc.112/src",
   "modules":

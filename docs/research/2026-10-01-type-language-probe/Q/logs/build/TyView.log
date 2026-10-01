@@ -1,4 +1,4 @@
 $ cd /Users/pooks/Dev/lean4-effect4-probe-Q
 $ docs/research/2026-10-01-type-language-probe/Q/bin/olean.sh docs/research/2026-10-01-type-language-probe/Q/generated docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQ/TyView.lean
-# started 2026-10-01T19:27:07Z (LEAN_NUM_THREADS=1)
-# exit=0 seconds=8
+# started 2026-10-01T19:52:01Z (LEAN_NUM_THREADS=1)
+# exit=0 seconds=35

@@ -1,6 +1,6 @@
 $ cd /Users/pooks/Dev/lean4-effect4-probe-Q
 $ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M6144 -R docs/research/2026-10-01-type-language-probe/Q/probes docs/research/2026-10-01-type-language-probe/Q/probes/Q2/ViewLaws.lean
-# started 2026-10-01T19:27:15Z (LEAN_NUM_THREADS=1)
+# started 2026-10-01T19:52:36Z (LEAN_NUM_THREADS=1)
 sub_eq_args : ∀ (a b : Ty),
   a.isMember = true →
     b.isMember = true → a.litRule b = false → a.topRule b = false → a.sub b = (a.sameHead b && argsBelow sub a b)
@@ -32,4 +32,4 @@ args : Ty → List (Variance × Ty)
 'ProbeQ.Ty.headCanon_of_args_nil' depends on axioms: [propext]
 'ProbeQ.Ty.eq_of_fields_record' depends on axioms: [propext]
 'eq_of_sameHead_needs_canon' depends on axioms: [propext]
-# exit=0 seconds=1
+# exit=0 seconds=4

@@ -83,13 +83,10 @@ def sameHead : Ty → Ty → Bool
   -- `union` is deliberately absent: the order distributes a union on the left and chooses on the right (`sub_union_left`/`sub_union_right`), so it is row structure and not a head
   | _, _ => false
 
-/-- The literal rule: one of the order's rules between members that is not a congruence
-(`sub_lit_string`). -/
-def litRule : Ty → Ty → Bool
-  | .lit _, .string => true
-  | _, _            => false
+-- The order's leaf edges are the core's `edgeRule`, one arm per row of the rule table
+-- (`variances.json`'s `rules`); `sub`'s catch-all answers it.
 
-/-- The top (decisions row 46), the other one (`sub_unknown`). -/
+/-- The top (decisions row 46), the one rule that is not an edge between heads. -/
 def topRule : Ty → Ty → Bool
   | _, .unknown => true
   | _, _        => false
@@ -183,6 +180,20 @@ order. A variance row that does not match `sub`'s arm makes this file red, which
 #guard !Ty.sub (.app "Undeclared.Name" [.lit "a"]) (.app "Undeclared.Name" [.string])
 #guard !Ty.sub (.app "Fiber.Fiber" [.nat, .nat]) (.app "Exit.Exit" [.nat, .nat])
 #guard !Ty.sub (.app "Fiber.Fiber" [.nat]) (.app "Fiber.Fiber" [.nat, .nat])
+
+/-! ### The order's leaf edges, from the rule table: each accepted, its converse refused -/
+
+#guard Ty.sub (.lit "a") .string  -- lit
+#guard !Ty.sub .string (.lit "a")
+#guard Ty.sub .undefined .unit  -- undefinedUnit
+#guard !Ty.sub .unit .undefined
+#guard Ty.sub .nat .int  -- natInt
+#guard !Ty.sub .int .nat
+#guard Ty.sub .int .number  -- intNumber
+#guard !Ty.sub .number .int
+#guard Ty.sub .nat .number  -- natNumber
+#guard !Ty.sub .number .nat
+#guard Ty.sub .nat .number  -- through int
 
 /-! ### What a head of variable arity reads its children through -/
 
@@ -335,6 +346,44 @@ theorem Variance.holds_antisymm {r : Ty → Ty → Bool} (v : Variance) {x y : T
     r x y = true ∧ r y x = true := by
   cases v <;> aesop (add norm simp [Variance.holds])
 
+/-- An edge joins two different heads, so it never fires at one head. -/
+theorem edgeRule_eq_false_of_sameHead {a b : Ty} (h : sameHead a b = true) :
+    edgeRule a b = false := by
+  revert h
+  fun_cases edgeRule a b
+  case case1 => intro h; simp only [sameHead, Bool.false_eq_true] at h
+  case case2 => intro h; simp only [sameHead, Bool.false_eq_true] at h
+  case case3 => intro h; simp only [sameHead, Bool.false_eq_true] at h
+  case case4 => intro h; simp only [sameHead, Bool.false_eq_true] at h
+  case case5 => intro h; simp only [sameHead, Bool.false_eq_true] at h
+  case case6 => intro _; rfl
+
+/-- The edges, as an inversion: one disjunct per row of the table. -/
+theorem edgeRule_eq_true {a b : Ty} (h : edgeRule a b = true) :
+    (∃ x0l, a = .lit x0l ∧ b = .string) ∨ (a = .undefined ∧ b = .unit) ∨ (a = .nat ∧ b = .int) ∨ (a = .int ∧ b = .number) ∨ (a = .nat ∧ b = .number) := by
+  revert h
+  fun_cases edgeRule a b
+  case case1 => intro _; exact Or.inl ⟨_, rfl, rfl⟩
+  case case2 => intro _; exact Or.inr (Or.inl ⟨rfl, rfl⟩)
+  case case3 => intro _; exact Or.inr (Or.inr (Or.inl ⟨rfl, rfl⟩))
+  case case4 => intro _; exact Or.inr (Or.inr (Or.inr (Or.inl ⟨rfl, rfl⟩)))
+  case case5 => intro _; exact Or.inr (Or.inr (Or.inr (Or.inr (⟨rfl, rfl⟩))))
+  case case6 => intro h; exact Bool.noConfusion h
+
+/-- **The table is transitively closed**: two edges compose to an edge. What `sub`'s
+transitivity needs at a leaf (`nat ⊑ int ⊑ number`); a table missing a composite edge makes
+this theorem, and so the generated file, red. -/
+theorem edgeRule_trans {a b c : Ty} (h1 : edgeRule a b = true) (h2 : edgeRule b c = true) :
+    edgeRule a c = true := by
+  revert h1
+  fun_cases edgeRule a b
+  case case1 => intro _; cases c <;> simp only [edgeRule, Bool.false_eq_true] at h2 ⊢
+  case case2 => intro _; cases c <;> simp only [edgeRule, Bool.false_eq_true] at h2 ⊢
+  case case3 => intro _; cases c <;> simp only [edgeRule, Bool.false_eq_true] at h2 ⊢
+  case case4 => intro _; cases c <;> simp only [edgeRule, Bool.false_eq_true] at h2 ⊢
+  case case5 => intro _; cases c <;> simp only [edgeRule, Bool.false_eq_true] at h2 ⊢
+  case case6 => intro h; exact Bool.noConfusion h
+
 /-! ### The congruence arms, one lemma each
 
 A1 of the tooling plan's assumption table asked whether ONE generated proof closes over
@@ -468,34 +517,31 @@ theorem sub_args_app (n1 : String) (xs : List Ty) (n2 : String) (ys : List Ty)
     exact all_attach_eq _ (fun (pq : (Ty × Nat) × (Ty × Nat)) =>
       (argVariance n1 pq.1.2).select (sub pq.1.1 pq.2.1) (sub pq.2.1 pq.1.1))
 
-/-- Different heads: the order answers `false`. `fun_cases Ty.sub` makes the catch-all —
-the one case a square-of-constructors proof cannot discharge without search — into `rfl`,
-because the arm it takes IS `false`. -/
-theorem sub_eq_false_of_not_sameHead (a b : Ty) (ha : isMember a = true)
-    (hb : isMember b = true) (hlit : litRule a b = false) (htop : topRule a b = false)
-    (hh : sameHead a b = false) : sub a b = false := by
+/-- Different heads: the order answers the declared edge, `false` where the table declares
+none. `fun_cases Ty.sub` makes the catch-all, whose value IS `edgeRule a b`, into `rfl`. -/
+theorem sub_eq_edgeRule_of_not_sameHead (a b : Ty) (ha : isMember a = true)
+    (hb : isMember b = true) (htop : topRule a b = false)
+    (hh : sameHead a b = false) : sub a b = edgeRule a b := by
   fun_cases Ty.sub a b
   case case1 => rw [sameHead_refl _ ha] at hh; exact Bool.noConfusion hh
   case case2 => exact Bool.noConfusion ha
   case case3 => exact Bool.noConfusion ha
   case case4 => exact Bool.noConfusion hb
   case case5 => exact Bool.noConfusion htop
-  case case6 => exact Bool.noConfusion hlit
-  case case16 =>
+  case case15 =>
     simp only [sameHead] at hh
-    simp only [hh, Bool.false_and]
+    simp only [hh, Bool.false_and, edgeRule]
+  case case17 =>
+    simp only [sameHead] at hh
+    simp only [hh, Bool.false_and, edgeRule]
   case case18 =>
     simp only [sameHead] at hh
-    simp only [hh, Bool.false_and]
-  case case19 =>
-    simp only [sameHead] at hh
-    simp only [hh, Bool.false_and]
-  case case20 => rfl
+    simp only [hh, Bool.false_and, edgeRule]
+  case case19 => rfl
   -- the congruence arms: `sameHead` answers `true` at a matching head, so `hh` is absurd
   all_goals simp only [sameHead, Bool.true_eq_false] at hh
 
-/-- Same head: the order IS the variance-wise comparison. `fun_cases Ty.sameHead` splits on
-the head test's own arms, so there is one case per constructor and no square. -/
+/-- Same head: the order IS the variance-wise comparison. -/
 theorem sub_eq_argsBelow_of_sameHead (a b : Ty) (hh : sameHead a b = true) :
     sub a b = argsBelow sub a b := by
   revert hh
@@ -542,17 +588,15 @@ theorem sub_eq_argsBelow_of_sameHead (a b : Ty) (hh : sameHead a b = true) :
   case case28 => intro hh; exact Bool.noConfusion hh
 
 /-- **`sub` between union members is the variance-wise comparison of corresponding
-arguments.** Everything a relational proof needs to know about `Ty`'s constructors, in one
-statement: the exceptional rules are excluded by the four hypotheses, and the congruence
-arms are the right-hand side. The two directions above are the proof, and neither names a
-constructor: a new one adds an arm lemma and a `case`, both generated. -/
+arguments, or a declared leaf edge.** The top is the one rule excluded by hypothesis; the
+edges are the table's, so a new edge is a row of the table, not a case of this law. -/
 theorem sub_eq_args (a b : Ty) (ha : isMember a = true) (hb : isMember b = true)
-    (hlit : litRule a b = false) (htop : topRule a b = false) :
-    sub a b = (sameHead a b && argsBelow sub a b) := by
+    (htop : topRule a b = false) :
+    sub a b = ((sameHead a b && argsBelow sub a b) || edgeRule a b) := by
   cases hh : sameHead a b
-  · rw [Bool.false_and]
-    exact sub_eq_false_of_not_sameHead a b ha hb hlit htop hh
-  · rw [Bool.true_and]
+  · rw [Bool.false_and, Bool.false_or]
+    exact sub_eq_edgeRule_of_not_sameHead a b ha hb htop hh
+  · rw [Bool.true_and, edgeRule_eq_false_of_sameHead hh, Bool.or_false]
     exact sub_eq_argsBelow_of_sameHead a b hh
 
 /-- A child is smaller: the termination measure of every relational law. One arm per
@@ -751,12 +795,6 @@ theorem topRule_eq_false {a b : Ty} (h : b ≠ .unknown) : topRule a b = false :
   case unknown => exact absurd rfl h
   all_goals rfl
 
-/-- The literal rule fires only into `string`. -/
-theorem litRule_eq_false {a b : Ty} (h : b ≠ .string) : litRule a b = false := by
-  cases b
-  case string => exact absurd rfl h
-  all_goals cases a <;> rfl
-
 /-- At a head with no children, `sameHead` IS equality: a node is its head and its children,
 and there are none. -/
 theorem eq_of_sameHead_nil {a b : Ty} (h : sameHead a b = true) (hx : a.args = []) : a = b := by
@@ -764,23 +802,6 @@ theorem eq_of_sameHead_nil {a b : Ty} (h : sameHead a b = true) (hx : a.args = [
   rw [hx, List.length_nil] at hlen
   have hb : b.args = [] := List.eq_nil_of_length_eq_zero hlen.symm
   exact eq_of_sameHead h (by rw [hx, hb]) (headCanon_of_args_nil hx) (headCanon_of_args_nil hb)
-
-/-- The literal rule fires at exactly one pair of shapes. -/
-theorem litRule_eq_true {a b : Ty} (h : litRule a b = true) :
-    ∃ s, a = .lit s ∧ b = .string := by
-  cases a
-  case lit s =>
-    cases b
-    case string => exact ⟨s, rfl, rfl⟩
-    all_goals exact Bool.noConfusion h
-  all_goals exact Bool.noConfusion h
-
-/-- …so it does not fire whenever either side is known not to be that shape. -/
-theorem litRule_eq_false_of_head {a b : Ty} (h : ¬ ∃ s, a = .lit s ∧ b = .string) :
-    litRule a b = false := by
-  cases hl : litRule a b
-  · rfl
-  · exact absurd (litRule_eq_true hl) h
 
 end Ty
 

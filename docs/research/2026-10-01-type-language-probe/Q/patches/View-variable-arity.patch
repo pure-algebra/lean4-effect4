@@ -10,7 +10,7 @@
  deriving Repr
  
  /-- The `heads` rows of `tools/Effect4Gen/variances.json`. A row with an unknown variance word
-@@ -107,38 +110,105 @@
+@@ -107,37 +110,131 @@
      let cite :=
        match row.getObjValAs? String "cite" with
        | .ok c => c
@@ -30,6 +30,33 @@
 +    out := out ++ [({ name := name, variance := variance, cite := cite, arity := arity } : Head)]
    return out
  
++/-- One row of the order's rule table (`variances.json`'s `rules`): a structural case of `sub`,
++or a leaf edge `left ⊑ right` given as a pattern on each side. -/
++inductive RuleRow where
++  | structural (kind : String)
++  | edge (name left right : String)
++deriving Repr
++
++/-- The `rules` section, when the table has one. Without it the view is today's: six fixed
++cases, the literal rule an arm of `sub`. With it, the structural rows are `sub`'s first arms in
++that order and the edges are data (`Ty.edgeRule`, the core's, read by `sub`'s catch-all). -/
++def readRules (text : String) : Except String (Option (List RuleRow)) := do
++  let j ← Json.parse text
++  match j.getObjVal? "rules" with
++  | .error _ => return none
++  | .ok v =>
++    let arr ← v.getArr?
++    let mut out : List RuleRow := []
++    for row in arr do
++      let k ← row.getObjValAs? String "rule"
++      if k == "edge" then
++        out := out ++ [RuleRow.edge (← row.getObjValAs? String "name")
++          (← row.getObjValAs? String "left") (← row.getObjValAs? String "right")]
++      else if ["refl", "never", "unionLeft", "unionRight", "top"].contains k then
++        out := out ++ [RuleRow.structural k]
++      else throw s!"variances.json: rule {k} is not refl/never/unionLeft/unionRight/top/edge"
++    return some out
++
  /-! ## The constructor declarations -/
  
 -/-- One field of a constructor: a `Ty` child, or a payload `sameHead` compares by `==`. -/
@@ -99,7 +126,7 @@
  def srcOf (e : Expr) : MetaM String := do
    withOptions (fun o => (o.setBool `pp.fullNames true).setBool `pp.universes false) do
      return toString (← ppExpr e)
- 
++
 +/-- A field list `List (String × Ty)` or `List (String × Ty × P)`, `P` a known element payload:
 +the child's selector, the payload selectors with their types, and the element type with the
 +member written `{M}`. `none` for any other type. -/
@@ -117,11 +144,10 @@
 +    if knownElemPayload.contains p then
 +      return some (".2.1", [(".1", "String"), (".2.2", p)], "String × {M} × " ++ p)
 +  return none
-+
+ 
  /-- `Ty`'s constructors with their fields: the walk of `Fold.readBlock`/`Main.ctorFields`. -/
  def readCtors (root : Name) : MetaM (List Ctor) := do
-   let iv ← getConstInfoInduct root
-@@ -156,6 +226,11 @@
+@@ -156,6 +253,11 @@
          | .const n _ =>
            if n == root then
              acc := acc ++ [Field.child nm]
@@ -133,7 +159,7 @@
            else
              let tyText ← srcOf ty
              unless knownPayload.contains tyText do
-@@ -183,14 +258,29 @@
+@@ -183,14 +285,29 @@
    let mut out : List Row := []
    for c in ctors do
      let n := c.children.length
@@ -164,7 +190,7 @@
          return .error s!"View: `Ty.{c.name}` has {n} recursive field(s) and no row in \
            tools/Effect4Gen/variances.json's `heads`; declare its variance from rc.112 \
            (tools/Tools/Variances.lean) before generating the view"
-@@ -220,9 +310,17 @@
+@@ -220,9 +337,17 @@
  private def patOf (c : Ctor) (suffix : String) : String :=
    if c.fields.isEmpty then s!".{c.name}"
    else s!".{c.name} " ++ String.intercalate " " (c.fields.map fun f =>
@@ -184,7 +210,7 @@
    [ "/-- How a relation reads a recursive argument: as rc.112 declares the parameter",
      "(`Fiber<out A, out E>` covariant, `Ref<in out A>` invariant; decisions row 55). -/",
      "inductive Variance where",
-@@ -247,6 +345,14 @@
+@@ -247,6 +372,14 @@
        "def args : Ty → List (Variance × Ty)" ]
    for r in rs do
      let kids := r.ctor.children
@@ -199,7 +225,7 @@
      let body :=
        if kids.isEmpty then "[]"
        else
-@@ -260,7 +366,7 @@
+@@ -260,7 +393,7 @@
      let lhs :=
        if c.fields.isEmpty then s!".{c.name}"
        else s!".{c.name} " ++ String.intercalate " " (c.fields.map fun f =>
@@ -208,7 +234,7 @@
      s := s ++ [s!"  | {lhs} => {body}{cite}"]
    return s ++ [""]
  
-@@ -271,6 +377,17 @@
+@@ -271,6 +404,17 @@
    for r in rs do
      let c := r.ctor
      if notCongruent.any (fun p => p.1 == c.name) then continue
@@ -226,7 +252,7 @@
      let ps := c.payloads
      let body :=
        if ps.isEmpty then "true"
-@@ -280,7 +397,7 @@
+@@ -280,7 +424,7 @@
      let side (suffix : String) : String :=
        if c.fields.isEmpty then s!".{c.name}"
        else s!".{c.name} " ++ String.intercalate " " (c.fields.map fun f =>
@@ -235,7 +261,30 @@
      let l := side "1"
      let rgt := side "2"
      s := s ++ [s!"  | {l}, {rgt} => {body}"]
-@@ -305,6 +422,102 @@
+@@ -288,7 +432,21 @@
+     s := s ++ [s!"  -- `{p.1}` is deliberately absent: {p.2}"]
+   return s ++ ["  | _, _ => false", ""]
+ 
+-def emitRules : List String :=
++def emitRules (hasTable : Bool := false) : List String :=
++  if hasTable then
++  [ "-- The order's leaf edges are the core's `edgeRule`, one arm per row of the rule table",
++    "-- (`variances.json`'s `rules`); `sub`'s catch-all answers it.",
++    "",
++    "/-- The top (decisions row 46), the one rule that is not an edge between heads. -/",
++    "def topRule : Ty → Ty → Bool",
++    "  | _, .unknown => true",
++    "  | _, _        => false",
++    "",
++    "/-- The variance-wise comparison of corresponding arguments. -/",
++    "def argsBelow (r : Ty → Ty → Bool) (a b : Ty) : Bool :=",
++    "  (a.args.zip b.args).all fun p => p.1.1.holds r p.1.2 p.2.2",
++    "" ]
++  else
+   [ "/-- The literal rule: one of the order's rules between members that is not a congruence",
+     "(`sub_lit_string`). -/",
+     "def litRule : Ty → Ty → Bool",
+@@ -305,6 +463,262 @@
      "  (a.args.zip b.args).all fun p => p.1.1.holds r p.1.2 p.2.2",
      "" ]
  
@@ -335,10 +384,170 @@
 +          s!"    rw [h1.1, h2.1, eq_of_fields_{c} h1.2 h2.2]" ]) ++ [""]
 +  return s
 +
++/-- A pattern `.C` or `.C _` on `Ty`: the constructor and whether it binds a payload. -/
++def patParts (pat : String) : String × Bool :=
++  let ws := ((pat.drop 1).toString.splitOn " ").filter (· != "")
++  (ws.headD "", ws.length > 1)
++
++/-- A closed term of a pattern, for a probe: a payload is `"a"`, `0` or `true` by its type. -/
++def sampleOf (ctors : List Ctor) (pat : String) : String :=
++  let (c, binds) := patParts pat
++  if !binds then s!".{c}" else
++  match ctors.find? (·.name == c) with
++  | some k =>
++    let args := k.fields.map fun f => match f with
++      | .payload _ "String" => "\"a\"" | .payload _ "Nat" => "0" | .payload _ _ => "default"
++      | .child _ => ".nat" | .childList _ => "[]" | .fieldList .. => "[]"
++    s!"(.{c} " ++ String.intercalate " " args ++ ")"
++  | none => s!".{c}"
++
++/-- The edges' probes: each accepted, its converse refused, and every two-step chain through a
++leaf accepted (transitivity through an edge, the law to watch). -/
++def emitEdgeProbes (ctors : List Ctor) (edges : List (String × String × String)) : List String := Id.run do
++  let mut s : List String :=
++    [ "/-! ### The order's leaf edges, from the rule table: each accepted, its converse refused -/", "" ]
++  for (n, l, r) in edges do
++    s := s ++ [s!"#guard Ty.sub {sampleOf ctors l} {sampleOf ctors r}  -- {n}",
++               s!"#guard !Ty.sub {sampleOf ctors r} {sampleOf ctors l}"]
++  for (_, l, r) in edges do
++    for (_, l', r') in edges do
++      if (patParts r).1 == (patParts l').1 then
++        s := s ++ [s!"#guard Ty.sub {sampleOf ctors l} {sampleOf ctors r'}  -- through {(patParts r).1}"]
++  return s ++ [""]
++
++/-- The edge laws, from the table: `edgeRule` never fires at one head, its inversion (one
++disjunct per edge), and the closure certificate `edgeRule_trans`, which fails to compile when
++the table is not transitively closed. -/
++def emitEdgeLaws (edges : List (String × String × String)) : List String := Id.run do
++  let n := edges.length
++  let side (v pat : String) (x : String) : String :=
++    let (c, binds) := patParts pat
++    if binds then s!"{v} = .{c} {x}" else s!"{v} = .{c}"
++  let disj : List String := (edges.zipIdx.map fun ((_, l, r), i) =>
++    let (_, bl) := patParts l
++    let (_, br) := patParts r
++    let xs := (if bl then [s!"x{i}l"] else []) ++ (if br then [s!"x{i}r"] else [])
++    let body := s!"{side "a" l s!"x{i}l"} ∧ {side "b" r s!"x{i}r"}"
++    if xs.isEmpty then s!"({body})" else s!"(∃ {String.intercalate " " xs}, {body})")
++  let witness : Nat → String := fun i =>
++    let (_, l, r) := edges[i]!
++    let k := (if (patParts l).2 then 1 else 0) + (if (patParts r).2 then 1 else 0)
++    "⟨" ++ String.intercalate ", " ((List.replicate k "_") ++ ["rfl", "rfl"]) ++ "⟩"
++  -- the disjunct `i` of `n`: `i` right injections around a left one, the last disjunct bare
++  let inj : Nat → String → String := fun i w =>
++    let core := if n == 1 || i + 1 == n then w else s!"Or.inl {w}"
++    (List.range i).foldl (fun acc _ => s!"Or.inr ({acc})") core
++  let mut s : List String :=
++    [ "/-- An edge joins two different heads, so it never fires at one head. -/",
++      "theorem edgeRule_eq_false_of_sameHead {a b : Ty} (h : sameHead a b = true) :",
++      "    edgeRule a b = false := by",
++      "  revert h",
++      "  fun_cases edgeRule a b" ]
++  for i in [:n] do
++    s := s ++ [s!"  case case{i + 1} => intro h; simp only [sameHead, Bool.false_eq_true] at h"]
++  s := s ++ [s!"  case case{n + 1} => intro _; rfl", "",
++    "/-- The edges, as an inversion: one disjunct per row of the table. -/",
++    "theorem edgeRule_eq_true {a b : Ty} (h : edgeRule a b = true) :",
++    "    " ++ String.intercalate " ∨ " disj ++ " := by",
++    "  revert h",
++    "  fun_cases edgeRule a b" ]
++  for i in [:n] do
++    s := s ++ [s!"  case case{i + 1} => intro _; exact {inj i (witness i)}"]
++  s := s ++ [s!"  case case{n + 1} => intro h; exact Bool.noConfusion h", "",
++    "/-- **The table is transitively closed**: two edges compose to an edge. What `sub`'s",
++    "transitivity needs at a leaf (`nat ⊑ int ⊑ number`); a table missing a composite edge makes",
++    "this theorem, and so the generated file, red. -/",
++    "theorem edgeRule_trans {a b c : Ty} (h1 : edgeRule a b = true) (h2 : edgeRule b c = true) :",
++    "    edgeRule a c = true := by",
++    "  revert h1",
++    "  fun_cases edgeRule a b" ]
++  for i in [:n] do
++    s := s ++ [s!"  case case{i + 1} => intro _; cases c <;> simp only [edgeRule, Bool.false_eq_true] at h2 ⊢"]
++  s := s ++ [s!"  case case{n + 1} => intro h; exact Bool.noConfusion h", ""]
++  return s
++
++/-- The dispatch when the rule table exists: the structural rows are `sub`'s first arms in the
++table's order, the edges are data in the catch-all, so the different-head theorem says `sub` is
++`edgeRule` there: false exactly at heads with no declared edge. -/
++def emitDispatchTable (rs : List Row) (structural : List String) : List String := Id.run do
++  let cong := rs.filter fun r => r.head.isSome &&
++    (r.ctor.children.length != 0 || r.ctor.varKind?.isSome) &&
++    !notCongruent.any (fun p => p.1 == r.ctor.name)
++  let base := structural.length
++  let ruleCase : String → Nat → String := fun k i => match k with
++    | "refl" => s!"  case case{i} => rw [sameHead_refl _ ha] at hh; exact Bool.noConfusion hh"
++    | "never" | "unionLeft" => s!"  case case{i} => exact Bool.noConfusion ha"
++    | "unionRight" => s!"  case case{i} => exact Bool.noConfusion hb"
++    | _ => s!"  case case{i} => exact Bool.noConfusion htop"
++  let varCases : List String := (cong.zipIdx.filterMap fun (r, k) =>
++    if r.ctor.varKind?.isSome then
++      some [s!"  case case{base + 1 + k} =>", "    simp only [sameHead] at hh",
++            "    simp only [hh, Bool.false_and, edgeRule]"]
++    else none).flatten
++  let catchAll := base + 1 + cong.length
++  let mut s : List String :=
++    [ "/-- Different heads: the order answers the declared edge, `false` where the table declares",
++      "none. `fun_cases Ty.sub` makes the catch-all, whose value IS `edgeRule a b`, into `rfl`. -/",
++      "theorem sub_eq_edgeRule_of_not_sameHead (a b : Ty) (ha : isMember a = true)",
++      "    (hb : isMember b = true) (htop : topRule a b = false)",
++      "    (hh : sameHead a b = false) : sub a b = edgeRule a b := by",
++      "  fun_cases Ty.sub a b" ] ++
++    (structural.zipIdx.map fun (k, i) => ruleCase k (i + 1)) ++ varCases ++
++    [ s!"  case case{catchAll} => rfl",
++      "  -- the congruence arms: `sameHead` answers `true` at a matching head, so `hh` is absurd",
++      "  all_goals simp only [sameHead, Bool.true_eq_false] at hh",
++      "",
++      "/-- Same head: the order IS the variance-wise comparison. -/",
++      "theorem sub_eq_argsBelow_of_sameHead (a b : Ty) (hh : sameHead a b = true) :",
++      "    sub a b = argsBelow sub a b := by",
++      "  revert hh",
++      "  fun_cases Ty.sameHead a b" ]
++  let mut i : Nat := 0
++  for r in rs do
++    let c := r.ctor
++    if notCongruent.any (fun p => p.1 == c.name) then continue
++    i := i + 1
++    if c.varKind?.isSome then
++      let unders := String.intercalate " " (repeatStr (2 * c.fields.length) "_")
++      s := s ++ [s!"  case case{i} => intro hh; exact sub_args_{c.name} {unders} hh"]
++      continue
++    let n := c.children.length
++    let ps := c.payloads
++    if n != 0 then
++      let unders := String.intercalate " " (repeatStr (2 * n) "_")
++      s := s ++ [s!"  case case{i} => intro _; exact sub_args_{c.name} {unders}"]
++    else if ps.isEmpty then
++      s := s ++ [s!"  case case{i} => intro _; rw [sub_refl, argsBelow_refl]"]
++    else if ps.length == 1 then
++      s := s ++
++        [ s!"  case case{i} =>", "    intro hh", "    have hp := of_decide_eq_true hh",
++          "    subst hp", "    rw [sub_refl, argsBelow_refl]" ]
++    else
++      let rfls := String.intercalate ", " (repeatStr ps.length "rfl")
++      s := s ++
++        [ s!"  case case{i} =>", "    intro hh", "    simp only [Bool.and_eq_true, decide_eq_true_eq] at hh",
++          s!"    obtain ⟨{rfls}⟩ := hh", "    rw [sub_refl, argsBelow_refl]" ]
++  s := s ++
++    [ s!"  case case{i + 1} => intro hh; exact Bool.noConfusion hh",
++      "",
++      "/-- **`sub` between union members is the variance-wise comparison of corresponding",
++      "arguments, or a declared leaf edge.** The top is the one rule excluded by hypothesis; the",
++      "edges are the table's, so a new edge is a row of the table, not a case of this law. -/",
++      "theorem sub_eq_args (a b : Ty) (ha : isMember a = true) (hb : isMember b = true)",
++      "    (htop : topRule a b = false) :",
++      "    sub a b = ((sameHead a b && argsBelow sub a b) || edgeRule a b) := by",
++      "  cases hh : sameHead a b",
++      "  · rw [Bool.false_and, Bool.false_or]",
++      "    exact sub_eq_edgeRule_of_not_sameHead a b ha hb htop hh",
++      "  · rw [Bool.true_and, edgeRule_eq_false_of_sameHead hh, Bool.or_false]",
++      "    exact sub_eq_argsBelow_of_sameHead a b hh",
++      "" ]
++  return s
++
  /-- The probes that make a wrong variance, or a crossed pair of arms, a red build. -/
  def emitProbes (rs : List Row) : List String := Id.run do
    let atoms := [".nat", ".bool", ".unit", ".int"]
-@@ -320,6 +533,47 @@
+@@ -320,6 +734,47 @@
        "" ]
    for r in rs do
      let some h := r.head | continue
@@ -386,7 +595,7 @@
      let n := r.ctor.children.length
      if n == 0 then continue
      -- a head `sameHead` refuses is not a congruence, so `sub_eq_args` never reads its `args`
-@@ -350,10 +604,42 @@
+@@ -350,10 +805,42 @@
    for r in rs do
      let c := r.ctor
      let n := c.children.length
@@ -430,16 +639,16 @@
      if n == 0 then
        s := s ++ [s!"  case {c.name}{binders} => simp only [args, List.not_mem_nil] at h"]
      else
-@@ -375,7 +661,7 @@
+@@ -375,7 +862,7 @@
  this block is fixed text — it is here rather than in a hand module because the view is the
  order's whole vocabulary and a consumer should need no second import to reason about it.
  Emitted after `sizeOf_args`, which the measure arguments use. -/
 -def emitOrderLaws : List String :=
-+def emitOrderLaws (hasVar : Bool) : List String :=
++def emitOrderLaws (hasVar : Bool) (edgeLaws : Option (List String) := none) : List String :=
    [ "/-! ### The order's two generic steps -/",
        "",
        "/-- Composition at each variance under a measure: the composed pair is read at the same",
-@@ -484,8 +770,10 @@
+@@ -484,8 +971,10 @@
        "theorem argsBelow_antisymm {r : Ty → Ty → Bool} {a b : Ty} (hab : sameHead a b = true)",
        "    (heq : ∀ x ∈ a.args.map Prod.snd, ∀ y ∈ b.args.map Prod.snd,",
        "      r x y = true → r y x = true → x = y)",
@@ -452,17 +661,49 @@
        "  intro x hx y hy hxy hyx",
        "  exact heq x.2 (List.mem_map_of_mem hx) y.2 (List.mem_map_of_mem hy) hxy hyx",
        "",
-@@ -509,7 +797,8 @@
+@@ -496,22 +985,25 @@
+       "  cases b",
+       "  case unknown => exact absurd rfl h",
+       "  all_goals rfl",
+-      "",
+-      "/-- The literal rule fires only into `string`. -/",
++      "" ] ++
++    (if edgeLaws.isSome then [] else
++    [ "/-- The literal rule fires only into `string`. -/",
+       "theorem litRule_eq_false {a b : Ty} (h : b ≠ .string) : litRule a b = false := by",
+       "  cases b",
+       "  case string => exact absurd rfl h",
+       "  all_goals cases a <;> rfl",
+-      "",
+-      "/-- At a head with no children, `sameHead` IS equality: a node is its head and its children,",
++      "" ]) ++
++    [ "/-- At a head with no children, `sameHead` IS equality: a node is its head and its children,",
+       "and there are none. -/",
+       "theorem eq_of_sameHead_nil {a b : Ty} (h : sameHead a b = true) (hx : a.args = []) : a = b := by",
        "  have hlen := (args_congr h).1",
        "  rw [hx, List.length_nil] at hlen",
        "  have hb : b.args = [] := List.eq_nil_of_length_eq_zero hlen.symm",
 -      "  exact eq_of_sameHead h (by rw [hx, hb])",
+-      "",
+-      "/-- The literal rule fires at exactly one pair of shapes. -/",
 +      (if hasVar then "  exact eq_of_sameHead h (by rw [hx, hb]) (headCanon_of_args_nil hx) (headCanon_of_args_nil hb)"
 +       else "  exact eq_of_sameHead h (by rw [hx, hb])"),
-       "",
-       "/-- The literal rule fires at exactly one pair of shapes. -/",
++      "" ] ++
++    (edgeLaws.getD
++    [ "/-- The literal rule fires at exactly one pair of shapes. -/",
        "theorem litRule_eq_true {a b : Ty} (h : litRule a b = true) :",
-@@ -546,6 +835,35 @@
+       "    ∃ s, a = .lit s ∧ b = .string := by",
+       "  cases a",
+@@ -527,7 +1019,7 @@
+       "  cases hl : litRule a b",
+       "  · rfl",
+       "  · exact absurd (litRule_eq_true hl) h",
+-    "" ]
++    "" ])
+ 
+ /-- One lemma per congruence arm: `sub` at a pair of nodes with the same head IS the
+ variance-wise comparison of their arguments. Generated, so a new constructor adds a lemma
+@@ -546,6 +1038,35 @@
        "" ]
    for r in rs do
      let c := r.ctor
@@ -498,7 +739,7 @@
      let n := c.children.length
      if n == 0 then continue
      if notCongruent.any (fun p => p.1 == c.name) then continue
-@@ -574,6 +892,18 @@
+@@ -574,6 +1095,18 @@
  /-- The two directions, then the law. The `false` direction is `fun_cases Ty.sub`, where the
  catch-all is `rfl`; the `true` direction is `fun_cases Ty.sameHead`, one arm lemma per case. -/
  def emitDispatch (rs : List Row) : List String := Id.run do
@@ -517,7 +758,7 @@
    let mut s : List String :=
      [ "/-- Different heads: the order answers `false`. `fun_cases Ty.sub` makes the catch-all —",
        "the one case a square-of-constructors proof cannot discharge without search — into `rfl`,",
-@@ -587,8 +917,8 @@
+@@ -587,8 +1120,8 @@
        "  case case3 => exact Bool.noConfusion ha",
        "  case case4 => exact Bool.noConfusion hb",
        "  case case5 => exact Bool.noConfusion htop",
@@ -528,7 +769,7 @@
        "  -- the congruence arms: `sameHead` answers `true` at a matching head, so `hh` is absurd",
        "  all_goals simp only [sameHead, Bool.true_eq_false] at hh",
        "",
-@@ -603,6 +933,10 @@
+@@ -603,6 +1136,10 @@
      let c := r.ctor
      if notCongruent.any (fun p => p.1 == c.name) then continue
      i := i + 1
@@ -539,7 +780,7 @@
      let n := c.children.length
      let ps := c.payloads
      if n != 0 then
-@@ -648,12 +982,63 @@
+@@ -648,12 +1185,63 @@
    -- only a constructor with fields has an `injEq`
    let injEqs := String.intercalate ", "
      ((rs.filter fun r => !r.ctor.fields.isEmpty).map fun r => s!"Ty.{r.ctor.name}.injEq")
@@ -604,7 +845,7 @@
      "  exact h",
      "",
      "theorem sameHead_symm {a b : Ty} (h : sameHead a b = true) : sameHead b a = true := by",
-@@ -666,21 +1051,38 @@
+@@ -666,21 +1254,38 @@
      "  fun_cases Ty.sameHead a b <;> cases c <;> aesop (add norm simp [sameHead])",
      "",
      "/-- The variance-wise comparison of a node with itself, from `sub_refl`. -/",
@@ -655,7 +896,7 @@
      "/-- Composition at each variance, once, for every relational law that needs it. -/",
      "theorem Variance.holds_trans {r : Ty → Ty → Bool} (v : Variance)",
      "    (htrans : ∀ x y z, r x y = true → r y z = true → r x z = true) {x y z : Ty}",
-@@ -738,6 +1140,28 @@
+@@ -738,6 +1343,28 @@
    for r in rs do
      let c := r.ctor
      let some h := r.head | continue
@@ -684,7 +925,7 @@
      let kids := c.children
      if kids.isEmpty then continue
      if notCongruent.any (fun p => p.1 == c.name) then continue
-@@ -765,7 +1189,7 @@
+@@ -765,7 +1392,7 @@
  
  /-- `AdmitsExtend`: one field per constructor, the condition under which an admission algebra's
  fold preserves extension of the allocation table. -/
@@ -693,7 +934,7 @@
    let mut s : List String :=
      [ "/-- The allocation table `after` agrees with `before` at every index `before` has. -/",
        "def Extends (before after : List String) : Prop :=",
-@@ -780,13 +1204,25 @@
+@@ -780,13 +1407,25 @@
        "/-- Pointwise monotonicity in the allocation table: if `Extends a b`, what is admitted",
        "at `a` is admitted at `b`. -/",
        "def Adm.Extends (p : Adm) : Prop :=",
@@ -720,7 +961,17 @@
      let n := c.children.length
      let ps := c.payloads
      if n == 0 && ps.isEmpty then
-@@ -852,16 +1288,36 @@
+@@ -837,7 +1476,8 @@
+       if rest.isEmpty then .error s!"{t} needs a value" else .error s!"unknown option {t}"
+     else parseArgs rest { a with types := a.types ++ [t] }
+ 
+-def run (args : Args) (heads : List Head) : MetaM (Array String) := do
++def run (args : Args) (heads : List Head) (rulesTable : Option (List RuleRow) := none) :
++    MetaM (Array String) := do
+   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
+   let head := "lake env lean -M 4096 --run tools/Effect4Gen/View.lean --group " ++ args.group
+     ++ " --imports " ++ String.intercalate "," args.imports
+@@ -852,16 +1492,51 @@
    if let some p := args.append then
      lines := lines.push s!"-- Acceptance guards appended verbatim from: {p.replace "\\" "/"}"
    lines := lines ++ (args.imports.map fun i => s!"import {i}").toArray
@@ -755,10 +1006,46 @@
 +          `{t.toName ++ nm}`; it is not in the environment"
 +    -- a core `Ty.Variance` (the variance module `sub` reads) replaces the view's own
 +    let coreVariance := (← getEnv).contains (t.toName ++ `Variance)
++    -- the rule table: the edges are the core's `edgeRule`, which `sub`'s catch-all answers
++    let structural := (rulesTable.getD []).filterMap fun r => match r with
++      | .structural k => some k | _ => none
++    let edges := (rulesTable.getD []).filterMap fun r => match r with
++      | .edge n l rt => some (n, l, rt) | _ => none
++    if rulesTable.isSome then
++      unless (← getEnv).contains (t.toName ++ `edgeRule) do
++        throwError "View: the rule table declares edges, which the view reads through \
++          `{t.toName ++ `edgeRule}` (the core's, generated from the same table); it is not in \
++          the environment"
++    let hasTable := rulesTable.isSome
 +    lines := lines.push (join (["namespace Ty", ""] ++ emitVariance coreVariance ++ emitArgs rs ++
-+      emitSameHead rs ++ emitRules ++ emitProbes rs ++ emitVarHelpers rs ++ emitLaws rs ++ emitArmLemmas rs ++ emitDispatch rs ++ emitSizeOf rs ++ emitOrderLaws hasVar ++
++      emitSameHead rs ++ emitRules hasTable ++ emitProbes rs ++
++      (if hasTable then emitEdgeProbes ctors edges else []) ++ emitVarHelpers rs ++ emitLaws rs ++
++      (if hasTable then emitEdgeLaws edges else []) ++ emitArmLemmas rs ++
++      (if hasTable then emitDispatchTable rs structural else emitDispatch rs) ++ emitSizeOf rs ++
++      emitOrderLaws hasVar (if hasTable then some [] else none) ++
 +      ["end Ty", ""] ++ emitAdmits rs ++ emitAdmitsExtend ns rs))
 +  lines := lines ++ #["end " ++ ns, ""]
    if let some p := args.append then
      let txt ← IO.FS.readFile p
      lines := lines ++ (txt.splitOn "\n").toArray.map (·.replace "\r" "")
+@@ -878,14 +1553,18 @@
+     throw (IO.userError "--imports names the modules the emitted file imports; none given")
+   if args.types.isEmpty then
+     throw (IO.userError "no types to generate")
+-  let heads ← match readHeads (← IO.FS.readFile ⟨args.variances⟩) with
++  let variancesText ← IO.FS.readFile ⟨args.variances⟩
++  let heads ← match readHeads variancesText with
+     | .ok h => pure h
+     | .error e => throw (IO.userError e)
++  let rulesTable ← match readRules variancesText with
++    | .ok r => pure r
++    | .error e => throw (IO.userError e)
+   Lean.initSearchPath (← Lean.findSysroot)
+   let env ← Lean.importModules (args.imports.map fun i => { module := i.toName }).toArray {} 0
+   let ctx : Core.Context := { fileName := "<gen>", fileMap := default }
+   let act : MetaM Unit := do
+-    let lines ← run args heads
++    let lines ← run args heads rulesTable
+     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/View.lean"
+     let text := "-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n"
+     match args.out with

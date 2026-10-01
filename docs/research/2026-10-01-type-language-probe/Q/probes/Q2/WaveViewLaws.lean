@@ -6,13 +6,17 @@ import ProbeQW.TyView
 Seat Q probe (2026-10-01). `ProbeQW.TyView` is written by the copy `Q/tools/Effect4Gen/View.lean`
 from `ProbeQW.Ty` (record with optional flags, map, tuple, app, four leaves) and
 `Q/generated/variances-wave.json` (`record` and `tuple` at `"arity": "each"`, `app` at
-`"arity": "byName"`, `map` `[inv, co]`). `Variance` is the core module's (`ProbeQW.TyVariance`,
-generated from the same table), which `sub`'s `app` arm reads.
+`"arity": "byName"`, `map` `[inv, co]`, and the order's rule table: five structural cases and five
+leaf edges). `Variance` and `edgeRule` are the core module's (`ProbeQW.TyVariance`, generated from
+the same table), which `sub`'s `app` arm and catch-all read.
 -/
 
 open ProbeQW ProbeQW.Ty
 
 #check @Ty.sub_eq_args
+#check @Ty.sub_eq_edgeRule_of_not_sameHead
+#check @Ty.edgeRule_trans
+#check @Ty.edgeRule_eq_true
 #check @Ty.args
 #check @Ty.sub_args_record
 #check @Ty.sub_args_tuple
@@ -41,6 +45,27 @@ open ProbeQW ProbeQW.Ty
   (Ty.sameHead (.tuple [.lit "a", .nat]) (.tuple [.string, .nat]) &&
    Ty.argsBelow Ty.sub (.tuple [.lit "a", .nat]) (.tuple [.string, .nat]))
 
+-- The two controls of a cross-head edge: accepted, and its converse refused, through the law
+#guard Ty.sub .nat .number = ((Ty.sameHead .nat .number && Ty.argsBelow Ty.sub .nat .number) || Ty.edgeRule .nat .number)
+#guard Ty.sub .nat .number && Ty.edgeRule .nat .number && !Ty.sameHead .nat .number
+#guard !Ty.sub .number .nat && !Ty.edgeRule .number .nat
+-- heads with no declared edge: the different-head theorem's `false`
+#guard !Ty.sub .number .string && !Ty.edgeRule .number .string
+#guard !Ty.sub .bytes .string
+
+/-- Transitivity through a leaf edge, from the generated closure certificate. -/
+example : Ty.edgeRule .nat .number = true := Ty.edgeRule_trans (b := .int) rfl rfl
+
+/-- The accepted cross-head case, as a theorem through the restated law. -/
+theorem nat_sub_number : Ty.sub .nat .number = true := by
+  rw [Ty.sub_eq_args .nat .number rfl rfl rfl]
+  rfl
+
+/-- Its converse, refused through the different-head theorem: no edge goes down the tower. -/
+theorem number_not_sub_nat : Ty.sub .number .nat = false := by
+  rw [Ty.sub_eq_edgeRule_of_not_sameHead .number .nat rfl rfl rfl rfl]
+  rfl
+
 /-- At a tuple or a reference the node law needs no canonicity: position is the order. -/
 example (xs ys : List Ty) (h : Ty.sameHead (.tuple xs) (.tuple ys) = true)
     (hx : (Ty.tuple xs).args.map Prod.snd = (Ty.tuple ys).args.map Prod.snd) : Ty.tuple xs = Ty.tuple ys :=
@@ -55,7 +80,12 @@ theorem wave_eq_of_sameHead_needs_canon :
   exact absurd this (by decide)
 
 #print axioms Ty.sub_eq_args
-#print axioms Ty.sub_eq_false_of_not_sameHead
+#print axioms Ty.sub_eq_edgeRule_of_not_sameHead
+#print axioms Ty.edgeRule_eq_false_of_sameHead
+#print axioms Ty.edgeRule_eq_true
+#print axioms Ty.edgeRule_trans
+#print axioms nat_sub_number
+#print axioms number_not_sub_nat
 #print axioms Ty.sub_eq_argsBelow_of_sameHead
 #print axioms Ty.sub_args_record
 #print axioms Ty.sub_args_tuple

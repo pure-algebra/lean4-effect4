@@ -429,8 +429,7 @@ def rules : List Rule :=
     .edge "lit" ".lit _" ".string",
     .edge "undefinedUnit" ".undefined" ".unit",
     .edge "natInt" ".nat" ".int",
-    .edge "intNumber" ".int" ".number",
-    .edge "natNumber" ".nat" ".number" ]
+    .edge "intNumber" ".int" ".number" ]
 
 def ruleJson : Rule → Json
   | .refl => Json.mkObj [("rule", Json.str "refl")]

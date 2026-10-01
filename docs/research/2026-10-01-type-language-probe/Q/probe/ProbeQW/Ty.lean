@@ -145,7 +145,10 @@ def isMember : Ty → Bool
   | .lit _ | .refOf _ | .deferredOf _ _ | .var _ | .unknown
   | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => true
 
-/-- `Ty.lean:437` with the wave's four congruence arms; no new rule beside the congruences. -/
+/-- `Ty.lean:437` with the wave's four congruence arms and the order's leaf edges as data: the
+five structural rules in the rule table's order, the congruences, then the catch-all answers the
+generated `edgeRule` (`ProbeQW.TyVariance`), so `lit ⊑ string` is a row of the table, not an arm,
+and a new edge (`undefined ⊑ unit`, the number tower) is a row too. -/
 def sub (a b : Ty) : Bool :=
   if a = b then true
   else match a, b with
@@ -153,7 +156,6 @@ def sub (a b : Ty) : Bool :=
   | .union a1 a2, b => sub a1 b && sub a2 b
   | a, .union b1 b2 => sub a b1 || sub a b2
   | _, .unknown => true
-  | .lit _, .string => true
   | .option a, .option b => sub a b
   | .list a, .list b => sub a b
   | .prod a1 a2, .prod b1 b2 => sub a1 b1 && sub a2 b2
@@ -181,7 +183,7 @@ def sub (a b : Ty) : Bool :=
         have : sizeOf pq.1.1 + sizeOf pq.2.1 < 1 + sizeOf n1 + sizeOf xs + (1 + sizeOf n2 + sizeOf ys) :=
           sizeOf_lt_of_mem_zipIdx_zip h
         (argVariance n1 pq.1.2).select (sub pq.1.1 pq.2.1) (sub pq.2.1 pq.1.1)
-  | _, _ => false
+  | _, _ => edgeRule a b
 termination_by sizeOf a + sizeOf b
 
 theorem sub_refl (t : Ty) : sub t t = true := by
@@ -204,6 +206,11 @@ theorem sub_unknown (t : Ty) : sub t unknown = true := by
 #guard !sub (.app "Undeclared.Name" [.lit "x"]) (.app "Undeclared.Name" [.string])
 #guard !sub (.app "Fiber.Fiber" [.nat, .nat]) (.app "Exit.Exit" [.nat, .nat])
 #guard sub (.map .string (.lit "v")) (.map .string .string)
+-- the leaf edges, from the table: accepted, converse refused, and through a leaf
+#guard sub (.lit "a") .string && !sub .string (.lit "a")
+#guard sub .undefined .unit && !sub .unit .undefined
+#guard sub .nat .int && sub .int .number && sub .nat .number && !sub .number .nat && !sub .int .nat
+#guard !sub .number .string
 #guard !sub (.map (.lit "k") .nat) (.map .string .nat)
 
 end Ty
