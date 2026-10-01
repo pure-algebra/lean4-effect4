@@ -169,6 +169,17 @@ The owner ruled rows 96, 104–107 and 110 the same day.
 
 The M5–M7 proofs are the next brief. Row 108 (numbers) is open, with the audit's two additions.
 
+**Real programs, as theory (owner, 2026-09-30).** The owner asked for real, full programs to be
+formalized as requirements of the proof architecture, building on the research already done.
+[The model of a full program](research/2026-09-30-full-program-model-requirements.md) is that
+synthesis, for review.
+- **The model was built for an open signature.** The typing layer is stated over any
+  signature.
+- **The rest is pinned.** Admission, the soundness theorems and the typed state are fixed to
+  the built-in one. Service, cell and data types are closed.
+- **The recommendation.** State the milestone over a signature parameter before proving M5–M7.
+  Then later services, cell types and data types add obligations instead of reopening proofs.
+
 ## What the owner must decide
 
 Decision row 90 is ruled and landed (2026-09-24): contexts are typed by their keys' static
