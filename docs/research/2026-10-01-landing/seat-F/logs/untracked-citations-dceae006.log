@@ -1,0 +1,54 @@
+rev dceae006, extensions ('.md',): 140 cited research paths, 53 untracked
+on disk	docs/research/2026-09-03-lowering-l2-host-tails.md	<- vendor/effect-4.0.0-rc.112/README.md
+on disk	docs/research/2026-09-03-spike-s1-prim-parking.md	<- Test/Counterexamples/REGISTER.md
+on disk	docs/research/2026-09-04-cas-trait-facts.md	<- Test/Counterexamples/REGISTER.md
+on disk	docs/research/2026-09-04-cas-trait-plan.md	<- docs/ARCHITECTURE.md
+on disk	docs/research/2026-09-04-deep-review-2.md	<- Test/Counterexamples/Archive/REGISTER.md, Test/Counterexamples/REGISTER.md
+on disk	docs/research/2026-09-04-eff-compile.md	<- Test/Counterexamples/REGISTER.md
+on disk	docs/research/2026-09-04-ocaml-packages-plan.md	<- ocaml/STANDARDS.md
+on disk	docs/research/2026-09-04-prod-cleanup-inventory.md	<- Test/Counterexamples/Archive/REGISTER.md
+on disk	docs/research/2026-09-04-production-standards-spike.md	<- docs/ARCHITECTURE.md
+on disk	docs/research/2026-09-04-provision-algebra.md	<- docs/ARCHITECTURE.md
+on disk	docs/research/2026-09-04-retire-old-machines.md	<- Test/Counterexamples/Archive/REGISTER.md, docs/RUNTIME-COVERAGE.md
+on disk	docs/research/2026-09-04-spike-a0-avatar.md	<- Test/Counterexamples/Archive/REGISTER.md
+on disk	docs/research/2026-09-04-stress-plan.md	<- Test/Counterexamples/REGISTER.md
+on disk	docs/research/2026-09-04-surface-library-plan.md	<- Test/contracts/archive/surface-agent.contract.md, Test/contracts/archive/surface-api.contract.md, Test/contracts/archive/surface-deploy.contract.md, Test/contracts/archive/surface-derive.contract.md, Test/contracts/archive/surface-emit.contract.md, Test/contracts/archive/surface-entity.contract.md, Test/contracts/archive/surface-facts.contract.md, Test/contracts/archive/surface-handler-fits.contract.md, Test/contracts/archive/surface-handler.contract.md, Test/contracts/archive/surface-ingest.contract.md, Test/contracts/archive/surface-jsonschema.contract.md, Test/contracts/archive/surface-kind.contract.md, Test/contracts/archive/surface-site.contract.md
+on disk	docs/research/2026-09-04-timer-semantics-and-proofs.md	<- Test/Counterexamples/REGISTER.md, docs/DESIGN-BASIS.md
+on disk	docs/research/2026-09-05-effects-papers-review.md	<- Test/contracts/machine-approximation.contract.md
+on disk	docs/research/2026-09-05-fuel-laws.md	<- Test/contracts/machine-approximation.contract.md
+on disk	docs/research/2026-09-05-runtime-proof-graph.md	<- Test/contracts/program-sched.contract.md
+on disk	docs/research/2026-09-05-slice-1-compile-ground.md	<- Test/contracts/program-denotation.contract.md
+on disk	docs/research/2026-09-05-slices-2-3-worksheets.md	<- Test/contracts/program-sched.contract.md
+on disk	docs/research/2026-09-06-p0-fable-record.md	<- Test/Counterexamples/REGISTER.md, Test/contracts/program-runtime-r.contract.md, Test/contracts/program-sched.contract.md
+on disk	docs/research/2026-09-06-r3-r4-implementation.md	<- Test/contracts/program-denote-r.contract.md, Test/contracts/program-runtime-r.contract.md, Test/contracts/program-sched.contract.md
+on disk	docs/research/2026-09-06-w3-r2-continuation.md	<- Test/contracts/program-denote-r.contract.md
+on disk	docs/research/2026-09-07-grill-agenda.md	<- docs/design/string-diagrams-notes.md
+on disk	docs/research/2026-09-07-p3-p4-audit.md	<- Test/Counterexamples/Archive/REGISTER.md, Test/contracts/program-runtime-r.contract.md
+on disk	docs/research/2026-09-08-build-path.md	<- docs/DESIGN-BASIS.md
+on disk	docs/research/2026-09-08-engine-brief.md	<- ocaml/README.md
+on disk	docs/research/2026-09-08-host-rows-slice.md	<- docs/DESIGN-BASIS.md
+on disk	docs/research/2026-09-08-one-generator-plan-v2.md	<- ocaml/README.md
+on disk	docs/research/2026-09-08-scheduler-surface-dispatch.md	<- Test/Counterexamples/REGISTER.md
+on disk	docs/research/2026-09-08-timer-dispatch.md	<- docs/DESIGN-BASIS.md
+on disk	docs/research/2026-09-09-coordinator-log.md	<- Test/fixtures/baseline/66ee4657/README.md
+on disk	docs/research/2026-09-09-scout-proof-statements.md	<- Test/contracts/machine-scheduler-core.contract.md
+on disk	docs/research/2026-09-10-stream-and-completion-specification.md	<- docs/DESIGN-ISSUES.md
+on disk	docs/research/2026-09-11-eff-formal-foundations-implementation.md	<- Test/contracts/foundation-wave2.contract.md, docs/DESIGN-ISSUES.md
+on disk	docs/research/2026-09-12-p4-subsumption-receipt.md	<- docs/DESIGN-ISSUES.md
+on disk	docs/research/2026-09-13-ci-refactor-proposals.md	<- docs/DESIGN-ISSUES.md
+on disk	docs/research/2026-09-13-test-ledger-verdicts.md	<- docs/core/decisions.md
+on disk	docs/research/2026-09-16-plan-adversarial-remediation-evidence/FailureFalsifiers.lean	<- docs/DESIGN-ISSUES.md
+on disk	docs/research/2026-09-16-testing-corpus-coverage.md	<- docs/DESIGN-ISSUES.md
+on disk	docs/research/2026-09-19-atoms-slice-receipt.md	<- docs/STATE.md
+on disk	docs/research/CAUSE-DAG.md	<- Test/Counterexamples/Machine/Semantics/ATTACKS.md, Test/Counterexamples/REGISTER.md, Test/contracts/cause-exit.contract.md, docs/design/design-language.md
+on disk	docs/research/DENOTE-DAG.md	<- Test/contracts/program-denotation.contract.md
+MISSING	docs/research/EFFECTS-SPLIT-PLAN.md	<- Test/Counterexamples/Archive/algebra/ATTACKS.md, docs/DESIGN-BASIS.md
+on disk	docs/research/ENVIRONMENT-DAG.md	<- Test/Counterexamples/Machine/Environment/ATTACKS.md, Test/contracts/environment-context-key.contract.md
+on disk	docs/research/FRAMES-DAG.md	<- Test/Counterexamples/Machine/Runtime/ATTACKS.md, Test/contracts/frames.contract.md
+on disk	docs/research/SCHEMA-CUTOVER.md	<- Test/Counterexamples/Schema/ATTACKS.md, Test/contracts/environment-context-key.contract.md, Test/contracts/schema-payload.contract.md, Test/contracts/schema-representation.contract.md, Test/contracts/schema-subalphabets.contract.md, Test/fixtures/schema-representation/README.md
+on disk	docs/research/SCOPE-DAG.md	<- Test/Counterexamples/Machine/Runtime/ATTACKS.md, Test/contracts/scope.contract.md
+MISSING	docs/research/TRACE-DAG.md	<- Test/Counterexamples/Archive/REGISTER.md, Test/Counterexamples/Machine/Semantics/ATTACKS.md, harness/README.md
+MISSING	docs/research/TYPESCRIPT-TARGET-DAG.md	<- Test/contracts/typescript-target-expr.contract.md
+on disk	docs/research/probes/p0-fable/host-results.json	<- Test/Counterexamples/REGISTER.md
+on disk	docs/research/probes/p012-review/d7-emitted-host-results.json	<- Test/Counterexamples/Archive/REGISTER.md
+on disk	docs/research/probes/p012-review/p02_witnesses.lean	<- Test/Counterexamples/Archive/REGISTER.md
