@@ -73,9 +73,12 @@ its arrows; anything else is a leak.
 - **Exact embedding**: a write/read pair `write : A → F`, `read : F → Option A` with three
   laws — total on its domain, retraction `read (write a) = some a`, exactness
   `read v = some a → v ≡ write a` modulo a named normaliser (`Canonical`; `print`/`read` on the
-  readable domain; the store, node and program byte codecs; `Config.Val`). `Ty.schema`/`ofSchema`
-  and the JSON codec are retractions until their exactness theorems land (decisions row 128). A
-  read without exactness is a widening, not an embedding.
+  readable domain; the store, node and program byte codecs; `Config.Val`). The JSON codec is exact
+  modulo `normJ`, the object-key sort (`decode_iff`), and `Bridge.schema`/`ofSchema` modulo `normS`,
+  the annotation keys that change no decoding erased (row 179's nine; `ofSchema_exact`; its
+  retraction on closed types whose handles avoid `effect/schema/TypeParameter`), stated at the
+  bridge because `Ty.schema` normalizes first (decisions row 128). A read without exactness is a
+  widening, not an embedding.
 - **Simulation**: two behaviours related on one observation over a named fragment. The
   statements are equal-observation theorems (`run_eq_meaning` on `Straight`, `loopAgreement` on
   `Looped`, `run_eq_ref` at the empty host table), proved through a simulation relation (the
