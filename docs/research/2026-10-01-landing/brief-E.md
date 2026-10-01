@@ -80,3 +80,12 @@ receipt (no `Classical.choice`, no `sorryAx`). At the end: `lake build Effect4.L
 the one thing first; base and head; every changed path; each landing with its theorem names,
 file:line, the probe it came from and the axiom line; the fixtures; the exact commands and
 results; what was not landed and why; proposed register and decisions lines.
+
+## Closed (2026-10-01): landed and merged at `a561d604`
+
+Receipt `receipt-E.md`. Amendments applied during the run: landing 1's red control came from the
+`HeadBindGuard` port (P6's no longer elaborated; `typedProg_not_bind_closed` restated against
+`ExitOk` and kept); landing 8's `build_total` header had already been removed by Codex's item G,
+so only the two remaining texts were corrected; three homes moved for layering
+(`Laws/Program/{StoreComodel,Provision,IterLimit}.lean`); P6's `Refines` landed as `Protocol.Le`;
+P5's `guardR_bind` already existed (`Laws/Program/Intro/Prepare.lean:44`) and is cited.

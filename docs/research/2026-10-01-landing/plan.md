@@ -83,7 +83,7 @@ inductions, the twelve slack ceilings, the literature names.
 | O7 | The glossary's home | system map §9 (the map owns the vocabulary), the basis links |
 | O8 | `coherence-principle.md`, `traversal-census.md` | keep in `docs/core` with a dated banner; the system map names the census instrument and the census document as the one owner |
 
-## 2. Register ids allocated (SEEDED now, repaired by the seats named)
+## 2. Register ids allocated (SEEDED now, repaired by the seats named; the witness column names the seats' probes at `ea5b28b5`, which no longer elaborate on the merged tree: the tracked ports at `ports-at-dceae006/` are the witnesses the register cites, and `E4-TYPED-CE-011` claims the cut only)
 
 | Id | Claim refuted | Witness | Repaired by |
 | --- | --- | --- | --- |
@@ -97,7 +97,7 @@ inductions, the twelve slack ceilings, the literature names.
 
 ## 3. Seats and waves
 
-**Wave 1 (parallel, from `dceae006`):**
+**Wave 1 (parallel, from `dceae006`; E merged `a561d604`, F merged `efcf1ae2`):**
 - **E, algebra lemma landings** (`brief-E.md`): A5–A9, A11, the scope-marker laws, the sum
   coproduct, the tape action and `behaviour_unique`, the limit laws, the comodel laws, the
   provision laws and header, the `seqR` bind lemma. Additive; every theorem already proved in a

@@ -99,3 +99,26 @@ head; every changed path; per step the statements with old and new text, the the
 file:line, axioms), the controls (red retained, positive proved); the exact hunks for seats A and
 C; the lines for rows 87, 106, 117, 135, 136, 137; what is owed (the adequacy instances left
 declared, with their count).
+
+## Amendments (2026-10-01, after the synthesis and the owner's ratification; these win over the text above)
+
+1. **Step 1 uses the tracked ports** at `ports-at-dceae006/`: `HeadStepLoop.lean`,
+   `HeadKripkeWalk.lean`, `HeadTypedProgMono.lean`, `HeadStorePostAdequacy.lean`,
+   `HeadCloseScopePost.lean`, `HeadAwaitValuePost.lean`, `HeadVerifyPosts.lean`, with their axiom
+   logs. Copy from them; do not re-port.
+2. **Row 136, made exact:** the close-scope and `closeIter` posts are
+   `ExitOk w' (EffTy.pure .unit) ans`; `refModify`/`refModifySome`'s pre is at the native row's
+   declared cell type; `memoRelease`'s post is what the store answers (the last release answers the
+   layer's scope handle).
+3. **Step 4's "completion entries" are not this seat's files:** `World.lean:81` is seat A's and
+   `Assembly.lean:40` is seat C's. With `fits_normalize` available, `Residual.lean`'s
+   derivation-chosen certificates (`asyncPre`'s deferred arm, `fiberPre`'s `awaitAll`/`raceAll`)
+   need not change: review them and record the verdict.
+4. **Plan §5 (Codex's observation):** the generic handler-adequacy theorem is proved, not only
+   declared, and instantiated at least for the rows whose posts this seat fixes and for
+   await-by-value; the remaining instances stay declared as `M3bAdequacy` goals for wave 2. The
+   receipt reports which per-row arguments the generic theorem replaced and how many instances
+   remain open.
+5. Row 137 is ruled (a). Seats E (`a561d604`) and F (`efcf1ae2`) are merged on
+   `refactor/phase1-phase3`; E's `Laws/Program/Typed/Seq.lean` imports `Residual.lean`, so the
+   coordinator re-checks it at this seat's merge.

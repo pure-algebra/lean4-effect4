@@ -103,3 +103,23 @@ first; base and head; every changed path; per step the theorems (name, file:line
 statements changed with old and new text, the dependents repaired; the lines for seats B and C
 and for the coordinator's files (rows 96, 111–116, 127, 137; DI-15; DI-67; the contract line);
 what is owed and why.
+
+## Amendments (2026-10-01, after the synthesis and the owner's ratification; these win over the text above)
+
+1. **Step 1 uses the tracked port.** The synthesis ported the TY-01 probes to the merged tree at
+   `dceae006`: `ports-at-dceae006/HeadM5Fits.lean` (`m5_false`, `capstone_false`, the three red
+   controls) with its axiom log beside it. Copy from it; do not re-port.
+2. **Row 149, ruled:** keep the frozen `AdmitRefusal.uninhabited (at : Path)` for the `int` scan
+   exactly as DI-67 and `foundation-wave2.contract.md:217-219` name it; the new emptiness check is
+   `emptyColumn at`; no contract revision, no rename of the `int` scan (step 6 and step 7's
+   proposals change accordingly).
+3. **Row 137, ruled (a):** the raw-order sites in this seat's files are `Membership.lean`'s handle
+   arms and `Typed/World.lean:81` (`CompletionOk.ofRefGet`). `Residual.lean`'s entries are seat
+   B's; `Assembly.lean:40` and `Scheduler.lean:55`, `:67`, `:69` are seat C's.
+4. Measure the audit's 27-site Σ_app inventory first
+   (`docs/research/2026-09-30-codex-review-model-probe/audit.md` §4); the positive M5 control goes
+   through `typedStateF_load` (`ValueMembership.lean:984`).
+5. Rows 111–116, 127, 137 and 149 are ruled; seats E (`a561d604`) and F (`efcf1ae2`) are merged on
+   `refactor/phase1-phase3`; F's `ExitConnector.lean` reads `fits_hasTy`, `fitsExit_success_iff`,
+   `fitsExit_failure_iff` and `causeFits_admits` from `Membership.lean`, so the coordinator
+   re-checks it at this seat's merge.

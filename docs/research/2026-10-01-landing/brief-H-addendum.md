@@ -61,3 +61,23 @@ checkout by absolute path.
 Base `dceae006`. The receipt as the brief says, at
 `docs/research/2026-10-01-design-basis-refresh/receipt.md`, with the citation check run at
 `dceae006`.
+
+## Second addendum (2026-10-01, after the synthesis and seat E's merge; wins over the text above)
+
+- Inputs: the synthesis `docs/research/2026-10-01-formal-pass/synthesis.md` §2 (the formal
+  account) and §5 (the glossary, now system map §9); decisions rows 134–150.
+- DB-11 cites row 137 (`Fits` in the checker's order). DB-17 says semilattice, substitution, flat
+  coeffect, "satisfaction is inclusion into `keysRow`", never adjunction. DB-03 says injectivity
+  of the behaviour map is not claimed. The step-indexing sentence: "no step-indexing is needed
+  because worlds hold syntactic types read as declarations".
+- Cite the tree, not the probes, for seat E's laws (merged `a561d604`): `sum_is_coproduct`,
+  `Typed.inl_iff`/`inr_iff` (`Laws/Effects/Sum.lean`, `Protocol.lean`; `sum_not_tensor` red in
+  `Test/Program/SignatureSum.lean`); `replayEval_append` (`Laws/Machine/Approximation.lean`);
+  `behaviour_unique` (`Laws/Api/Runner.lean`); `conv_fixpoint`, `conv_least`, `conv_unique`
+  (`Laws/Program/IterLimit.lean`; `budget_not_fixpoint` red); `put_get`, `get_get`, `put_put`
+  (`Laws/Program/StoreComodel.lean`; `put_get_dead_fails` red); `provide_not_assoc` red
+  (`Test/Program/ProvideRows.lean`); `provideMerge_assoc` (`Laws/Program/Provision.lean`);
+  `guardR_bind` (`Laws/Program/Intro/Prepare.lean:44`, already in the tree);
+  `eraseControl_guardR_bind` (`Laws/Program/ScopeMarkers.lean`).
+- Seat F (merged `efcf1ae2`) renamed `Denote.ExitOk` to `Denote.ExitHasTy` and wrote Decision 12
+  and the boundary rule into `host-boundary.md` §7: the basis links there, copies nothing.

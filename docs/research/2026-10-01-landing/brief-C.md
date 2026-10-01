@@ -116,3 +116,29 @@ per-command table of `I`'s code lines; the ledger before and after (declared, pr
 scope); the statements changed with old and new text; the theorems (name, file:line, axioms);
 the exact lines for seats A and B and for the coordinator's files (rows 133, 134, 138, 139, 140,
 148; system map §8 R1's exception, R9, R12); what is owed.
+
+## Amendments (2026-10-01, after the synthesis and the owner's ratification; these win over the text above)
+
+1. **Step 1 uses the tracked ports** at `ports-at-dceae006/`: `HeadCut.lean` (19 theorems) and
+   `HeadAwaitLoad.lean`, with their axiom logs. Copy from them; do not re-port.
+2. **`E4-TYPED-CE-011` claims the cut only:** at the merged head the finished run at budget 9 is
+   covered by H1's published-exit disjunct (`HeadCut.m9_root_inert`, proved). Drop
+   `capstone_false_finished9` from step 1; keep the cut theorems (`window_untyped`,
+   `capstone_false_window`, `ledger_jointly_false_window`) and the positive controls
+   `running_exempt_at_m6` and `running_clause_vacuous_at_m6`. `HaltTyped`'s facts hold by design
+   at the merged head (`CodeInert` tolerates a halt): record the old and new statements side by
+   side; under row 139 the halted disjunct goes and `stuck = none` enters `J`.
+3. **Row 137's sites in this seat's files:** `Assembly.lean:40` (`CompletionStrong.ofRefGet`) and
+   `Scheduler.lean:55`, `:67`, `:69` (`FiberColumnsBelow`, `RacePayload`) compare in the checker's
+   order (`sub (normalize a) (normalize b)` inline until seat A's `Ty.subN` lands).
+4. **Row 134 in the merged vocabulary:** a running fiber that no queued `loop` or `deliver`
+   continues is inert; `J` reads that at the empty queue, `I` at the real queue; `DecisionLift`
+   unchanged.
+5. **Ratified by the owner (2026-10-01):** rows 134 and 138 as recommended; row 133's halt
+   extension is superseded by row 134; R1's exception is ruled (M7 at the empty row table; the
+   OCaml engine outside M7 until row 28).
+6. Seats E (`a561d604`) and F (`efcf1ae2`) are merged on `refactor/phase1-phase3`: F moved
+   `Admitted`/`foldl_lift`/`admitted_true` into a new `History` section of
+   `Laws/Machine/Lift.lean` (statements unchanged), so a lemma this seat adds to `Lift.lean` goes
+   beside it; the coordinator resolves the merge. Row 150 (the `FoldLift` route) lands after this
+   seat merges.

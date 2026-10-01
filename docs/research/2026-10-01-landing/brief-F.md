@@ -110,3 +110,14 @@ no `make check`.
 first; base and head; every changed path; per item the before/after measurement (census counts
 per family, the `Effects` closure, the ceilings, the rename's declaration count), the exact
 commands and results, axiom lines; the obstacles; the proposed lines for the coordinator's files.
+
+## Closed (2026-10-01): landed and merged at `efcf1ae2`
+
+Receipt `receipt-F.md`. Additions applied during the run: row 122's write-up
+(`host-boundary.md` §7, the two 2026-09-10 notes tracked, DI-08 ruled); the register witnesses
+are the tracked ports at `ports-at-dceae006/`; `E4-TYPED-CE-011` claims the cut only;
+`E4-TYPED-CE-015` cites the data probe's `pedigree/verify-Probe.lean` V3 and
+`types/InhabitedProbe.lean`; `E4-DEN-CE-002` in comodel terms (seat E's line); the header counts
+re-measured; `Test/Audit/AxiomGate.lean:29-31` corrected; row 143's counting sentence as ruled.
+Not landed, by the brief's own rule: the six fold-level Guard inductions (row 150, the `FoldLift`
+route, proved off-tree; wave 3 after seat C merges).
