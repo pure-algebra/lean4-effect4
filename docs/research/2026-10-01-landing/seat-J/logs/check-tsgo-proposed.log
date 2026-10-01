@@ -1,0 +1,5 @@
+# the proposed check-tsgo guard, run as one line from the worktree root (seat J, step 7 (iii))
+$ python3 -c '<the one line in receipt-J, step 7>'
+FAIL check-tsgo: typescript below 7 (tsgo 7 is the one compiler):
+ts/eff/node_modules/typescript/package.json: 5.9.2
+exit=1

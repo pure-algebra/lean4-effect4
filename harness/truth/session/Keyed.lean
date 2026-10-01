@@ -222,7 +222,7 @@ def walk {p : Api.Program} {rows : RowTable} (s : Session p rows) (fuel : Nat)
       | _ => walk result.session fuel (pos + 1) rest
 
 def awaitJson (entry : Await) : J :=
-  let (fiber, token, op, request) := entry
+  let ⟨fiber, token, op, request⟩ := entry
   Json.mkObj [("fiber", toJson fiber.value), ("token", toJson token),
     ("row", match op with | .external n => toJson n | _ => .null), ("request", valJson request)]
 
@@ -305,7 +305,7 @@ def planRun (f : Fixture) (s : Session f.program f.table) (model : ModelState) :
   | fuel + 1 => do
     let mut current := s
     let mut calls := []
-    for (fiber, token, op, request) in outstanding s do
+    for ⟨fiber, token, op, request⟩ in outstanding s do
       let key : Key := ⟨fiber, token⟩
       unless current.active.any (fun b => b.key == key) do
         let call : Call := ⟨version, current.header.session, f.table, current.nextCall, fiber, op, request⟩

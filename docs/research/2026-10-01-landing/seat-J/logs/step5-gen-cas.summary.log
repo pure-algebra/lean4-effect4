@@ -1,0 +1,18 @@
+# summary of step5-gen-cas.log (12313 lines)
+## commands
+lake build
+python3 scripts/generate.py --only cas
++ lake build OCaml5.Tools.CasGoldens
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/CasGoldens.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-6cohtq11/ocaml/engine/cas/goldens
+## errors and warnings
+(none)
+## gates
+info: Test/All.lean:169:0: Effect4 library-root gate: 135 API/utility modules, 221 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:169:0: Effect4 module and axiom gate: checked 525 modules and 72539 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+## built (not replayed)
+(none)
+## tail
+val_handle	0a00000000000000320200000000000000000c000000000000000201030400000000000000150c0000000000000002020402000000000000000109
+PASS generate: requested producers ran in dependency order
+LEAN_NUM_THREADS=1 make gen-$g  1.91s user 0.67s system 95% cpu 2.695 total

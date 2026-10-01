@@ -138,7 +138,7 @@ variable {κ φ η : Type (max u v)} [FiberCore ν β ε δ ι α κ φ]
 variable [FiberEvaluator ν σ β ε δ ι α χ St κ φ η]
 
 /-- The same machine, and the old residue followed by the suffix; or, on a halt, both
-residues empty (`settle`'s stuck arm returns `[]`, `Machine/Fibers.lean:1798-1799`). -/
+residues empty (`settle`'s stuck arm returns `[]`, `Machine/Fibers.lean:1825-1826`). -/
 def Framed (s : List (Cmd ν σ β ε δ ι α κ))
     (r r' : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)) : Prop :=
   r'.1 = r.1 ∧ (r'.2 = r.2 ++ s ∨ (r.2 = [] ∧ r'.2 = [] ∧ r.1.stuck.isSome = true))
@@ -273,7 +273,7 @@ variable {W : Type w}
 
 /-- The invariant a decision runs its loops under: `J` always; while the machine runs, the
 queue fact `I` and the snapshot fact `O` about the tasks a `fire` has drained and not yet run
-(`Machine/Fibers.lean:2009-2016`: the snapshot is held by the fold, outside both the machine
+(`Machine/Fibers.lean:2036-2043`: the snapshot is held by the fold, outside both the machine
 and the queue). -/
 def Guarded (J : W → RunMachine ν σ β ε δ ι α χ St κ φ η → Prop)
     (I : W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd ν σ β ε δ ι α κ) → Prop)
@@ -283,12 +283,12 @@ def Guarded (J : W → RunMachine ν σ β ε δ ι α χ St κ φ η → Prop)
   fun w m cmds => J w m ∧ (m.stuck = none → I w m cmds ∧ O w m ts)
 
 /-- The fiber is parked at this token: the only case in which an answer resumes it
-(`Machine/Fibers.lean:1838-1851`). -/
+(`Machine/Fibers.lean:1865-1878`). -/
 def ParkedAt (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : FiberId) (token : Nat) : Prop :=
   ∃ f, m.fiber? id = some f ∧ f.parked = .withGuard token
 
 /-- The machine an `interruptFrom` decision builds before its loop
-(`Machine/Fibers.lean:2098-2106`). -/
+(`Machine/Fibers.lean:2125-2133`). -/
 def interruptEdit (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (who : Option FiberId)
     (extra : ReasonAnnotations α) (target : FiberId) (t : RunFiber ν σ β ε δ ι α χ κ φ) :
@@ -301,9 +301,9 @@ def interruptEdit (interp : RunInterp ν σ β ε δ ι α χ St κ)
 
 /-- **The decision premises.** One per command (with the snapshot carried), one per loop
 entry, and one per edit a decision makes outside the command loop: the dispatcher drained and
-disarmed (`:2015-2016`), the `ranTask` event (`:2003`), `yieldVerdict`'s modify (`:2090-2091`),
-the interrupt record (`:2098-2106`), the middleware latch (`:2108`), `clockStep` (`:2045-2048`)
-and `prepareAnswer` (`:2096-2097`). `A` is the decision's admission (an `AnswerOk`); only the
+disarmed (`:2042-2043`), the `ranTask` event (`:2030`), `yieldVerdict`'s modify (`:2117-2118`),
+the interrupt record (`:2125-2133`), the middleware latch (`:2135`), `clockStep` (`:2072-2075`)
+and `prepareAnswer` (`:2123-2124`). `A` is the decision's admission (an `AnswerOk`); only the
 answer premise reads it. -/
 structure DecisionLift (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (J : W → RunMachine ν σ β ε δ ι α χ St κ φ η → Prop)
@@ -345,7 +345,7 @@ structure DecisionLift (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι 
   /-- An answer on a running machine: after `prepareAnswer` and the `resume` it enqueues, the
   loop invariant holds (the guard runs that first command by hand, `AnswerDecision.lean:94-112`;
   `answer_of_split` builds this from a queue fact at the entry). A halted machine keeps its
-  store (`prepareAsyncAnswer`, `Machine/Fibers.lean:2076`), so it needs no premise. -/
+  store (`prepareAsyncAnswer`, `Machine/Fibers.lean:2103`), so it needs no premise. -/
   answer : ∀ w m id token answer, J w m → m.stuck = none → A w m (.answerAsync id token answer) →
     ∃ w', o.le w w' ∧ Guarded J I O [] w'
       (driveStep interp { m with state := (prepareAsyncAnswer interp m id token answer).1 }
@@ -443,7 +443,7 @@ theorem parkedAt_em (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : F
         cases hg
         exact he rfl
 
-/-- An answer to a fiber not parked at that token is a no-op command (`Machine/Fibers.lean:1838-1851`). -/
+/-- An answer to a fiber not parked at that token is a no-op command (`Machine/Fibers.lean:1865-1878`). -/
 theorem inert_resume (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : FiberId) (token : Nat) (code : κ)
     (rest : List (Cmd ν σ β ε δ ι α κ)) (h : ¬ ParkedAt m id token) :
@@ -708,7 +708,7 @@ variable {W : Type w}
 
 /-- The decisions replay applies, each admitted at the machine it meets. Replay stops at a
 halted machine and at the first decision whose loop runs out of fuel
-(`Machine/Fibers.lean:2161-2174`); decisions after that are never applied and impose nothing. -/
+(`Machine/Fibers.lean:2188-2200`); decisions after that are never applied and impose nothing. -/
 def AdmittedReplay (J : W → RunMachine ν σ β ε δ ι α χ St κ φ η → Prop)
     (A : W → RunMachine ν σ β ε δ ι α χ St κ φ η → RunDecision ν σ β ε δ ι α → Prop)
     (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) :

@@ -1,0 +1,13 @@
+python3 scripts/check-host-protocol.py
+Build completed successfully (285 jobs).
+Build completed successfully (286 jobs).
+PASS keyed host: 57 actual rc.112 runs; 52 admitted printed programs
+bun test v1.4.2 (744846f84)
+
+ 42 pass
+ 0 fail
+ 179 expect() calls
+Ran 42 tests across 4 files. [66.00ms]
+PASS keyed differential: 57 runs, 52 programs, 30 controls; exact exits and keyed applications
+PASS host-protocol: fresh projections, typed host programs, keyed replay and negative controls
+LEAN_NUM_THREADS=2 make check-host-protocol  4.04s user 2.16s system 111% cpu 5.570 total

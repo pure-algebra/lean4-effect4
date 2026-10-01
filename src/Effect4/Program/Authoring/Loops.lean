@@ -9,7 +9,7 @@ function that authors one `iterate` through the generated lift. None adds a cons
 a wire tag or a printed shape, so there is one owner of what a loop means and prints
 (`docs/research/2026-09-17-loop-sugar-and-list-elimination.md`; the compiled probe beside it).
 
-Binders are Lean functions over names minted from the scope's length, as `bindWith` does. The
+Binders are Lean functions over names minted for the scope (`minting`), as `bindWith`'s are. The
 cursor carries no annotation unless the author states one (DI-91): its type is its initial
 value's.
 -/
@@ -29,12 +29,12 @@ structure LoopSpec (Op : Type) where
   result : TermSrc → TermSrc := id
   cursorTy : Option Ty := none
 
-/-- `iterateWith initial spec`: `iterate` with its two binders as Lean functions. -/
-def iterateWith {Op : Type} (initial : TermSrc) (spec : LoopSpec Op) : Src Op := fun env p =>
-  let c := "_c" ++ toString env.names.length
-  let a := "_a" ++ toString env.names.length
-  iterate c a spec.cursorTy initial (spec.while_ (var c)) (spec.step (var c) (var a))
-    (spec.result (var c)) (spec.body (var c)) env p
+/-- `iterateWith initial spec`: `iterate` with its two binders as Lean functions over minted
+names, read through `minted`. -/
+def iterateWith {Op : Type} (initial : TermSrc) (spec : LoopSpec Op) : Src Op :=
+  minting "cursor" fun c => minting "answer" fun a =>
+    iterate c a spec.cursorTy initial (spec.while_ (minted c)) (spec.step (minted c) (minted a))
+      (spec.result (minted c)) (spec.body (minted c))
 
 /-- `forRange lo hi body`: `body i` for `lo ≤ i < hi`, in order. Answers the final counter. -/
 def forRange {Op : Type} (lo hi : TermSrc) (body : TermSrc → Src Op) : Src Op :=

@@ -11,7 +11,10 @@ over argument slots, printed back by recognition), and emits:
 * group `Forms` → `src/Effect4/Codegen/Authoring/Forms.lean`: one `Src NativeOp`
   combinator per form, the template read on the scope-reader carrier. A template binder an
   argument can see becomes a name parameter (`tapContinuation answer body continuation`);
-  a binder no argument sees is internal. The template's own `here k` references and the
+  a binder no argument sees is internal, and its name is minted for the scope it is bound in
+  (`Authoring.minting "<role>"`, `Env.mint`) and read through `Authoring.minted`, so no name an
+  author passes can be bound in its place or read it (B-9; a constant spelling here was one an
+  author could pass back and be captured by). The template's own `here k` references and the
   argument's own names resolve through the one scope, so the offset-and-count weakening
   the printer's `Template.expand` performs is nothing here: the reader elaborates each
   argument at the depth of its slot. Every form carries a guard that its elaboration on
@@ -21,7 +24,10 @@ over argument slots, printed back by recognition), and emits:
   every combinator, `unfold` then `authoring_scoped`.
 
     lake env lean -M 4096 --run tools/Effect4Gen/Forms.lean --group Forms
-      --imports Effect4.Program.Authoring.Lifts --out src/Effect4/Codegen/Authoring/Forms.lean
+      --imports Effect4.Program.Authoring.Lifts,Effect4.Program.Authoring.Sugar,
+        Effect4.Codegen.Forms --out src/Effect4/Codegen/Authoring/Forms.lean
+
+(the manifest, `tools/Effect4Gen/manifest.json`, is the authority on each group's arguments).
 -/
 
 open Lean Meta
@@ -39,6 +45,8 @@ structure Occurrence where
 structure Emit where
   /-- Name parameters, in order of encounter: (role, parameter name). -/
   binderParams : List String := []
+  /-- The Lean variables that hold a minted binder name, read through `Authoring.minted`. -/
+  mintedNames : List String := []
   effScopes : List (Nat × Occurrence) := []
   termScopes : List (Nat × Occurrence) := []
   counter : Nat := 0
@@ -72,17 +80,27 @@ def optionsText (o : Supervision.ForkOptions) : Except String String :=
   else if o == defaults false then .ok "(Effect4.Codegen.Forms.defaults false)"
   else .error "a form's fork options are not `defaults`"
 
-/-- A binder's name at depth `d` with a role: a parameter when arguments can see it, an
-internal name otherwise. -/
-def binderName (named : Nat) (d : Nat) (role : String) : StateM Emit String := do
+/-- A template binder as the combinator writes it: `name` names it in the lift (a parameter, or
+the Lean variable holding a minted name) and `wrap` puts the minting around the construct that
+binds it (nothing for a parameter). -/
+structure Binder where
+  name : String
+  wrap : String → String
+
+/-- A binder at depth `d` with a role: a parameter when arguments can see it; otherwise a name
+minted where its construct is entered (`Authoring.minting "<role>"`), held by the Lean variable
+`minted<Role><d>`. -/
+def binderName (named : Nat) (d : Nat) (role : String) : StateM Emit Binder := do
   if d < named then
     let st ← get
     let base := role
     let name := if st.binderParams.contains base then s!"{base}{st.counter}" else base
     set { st with binderParams := st.binderParams ++ [name], counter := st.counter + 1 }
-    return name
+    return ⟨name, id⟩
   else
-    return s!"\"_{role}{d}\""
+    let name := s!"minted{role.capitalize}{d}"
+    modify fun st => { st with mintedNames := st.mintedNames ++ [name] }
+    return ⟨name, fun body => s!"Authoring.minting {repr role} fun {name} => {body}"⟩
 
 /-- The template on the scope reader: the text of a `Src NativeOp`. -/
 partial def emitTemplate (named : Nat) (effNames termNames keyNames : List String) :
@@ -95,26 +113,28 @@ partial def emitTemplate (named : Nat) (effNames termNames keyNames : List Strin
   | .bind a b, ns => do
     let x ← binderName named ns.length "answer"
     let ta ← emitTemplate named effNames termNames keyNames a ns
-    let tb ← emitTemplate named effNames termNames keyNames b (ns ++ [x])
-    return do pure s!"Authoring.bind {x} ({← ta}) ({← tb})"
+    let tb ← emitTemplate named effNames termNames keyNames b (ns ++ [x.name])
+    return do pure (x.wrap s!"Authoring.bind {x.name} ({← ta}) ({← tb})")
   | .onExit a b, ns => do
     let x ← binderName named ns.length "exit"
     let ta ← emitTemplate named effNames termNames keyNames a ns
-    let tb ← emitTemplate named effNames termNames keyNames b (ns ++ [x])
-    return do pure s!"Authoring.onExit {x} ({← ta}) ({← tb})"
+    let tb ← emitTemplate named effNames termNames keyNames b (ns ++ [x.name])
+    return do pure (x.wrap s!"Authoring.onExit {x.name} ({← ta}) ({← tb})")
   | .matchCause a b c, ns => do
     let v ← binderName named ns.length "value"
     let w ← binderName named ns.length "cause"
     let ta ← emitTemplate named effNames termNames keyNames a ns
-    let tb ← emitTemplate named effNames termNames keyNames b (ns ++ [v])
-    let tc ← emitTemplate named effNames termNames keyNames c (ns ++ [w])
-    return do pure s!"Authoring.matchCause {v} {w} ({← ta}) ({← tb}) ({← tc})"
+    let tb ← emitTemplate named effNames termNames keyNames b (ns ++ [v.name])
+    let tc ← emitTemplate named effNames termNames keyNames c (ns ++ [w.name])
+    return do pure (v.wrap (w.wrap
+      s!"Authoring.matchCause {v.name} {w.name} ({← ta}) ({← tb}) ({← tc})"))
   | .acquireRelease a b, ns => do
     let r ← binderName named ns.length "resource"
     let x ← binderName named (ns.length + 1) "exit"
     let ta ← emitTemplate named effNames termNames keyNames a ns
-    let tb ← emitTemplate named effNames termNames keyNames b (ns ++ [r, x])
-    return do pure s!"Authoring.acquireRelease {r} {x} ({← ta}) ({← tb})"
+    let tb ← emitTemplate named effNames termNames keyNames b (ns ++ [r.name, x.name])
+    return do pure (r.wrap (x.wrap
+      s!"Authoring.acquireRelease {r.name} {x.name} ({← ta}) ({← tb})"))
   | .fork body o, ns => do
     let tb ← emitTemplate named effNames termNames keyNames body ns
     return do pure s!"Authoring.withFiber (Authoring.Action.fork ({← tb}) {← optionsText o})"
@@ -133,7 +153,11 @@ where
     | .argument k, ns => do
       modify fun st => { st with termScopes := st.termScopes ++ [(k, ⟨ns, ns.length⟩)] }
       return .ok (termNames.getD k s!"?t{k}")
-    | .here k, ns => return .ok s!"(Authoring.var {ns.getD k s!"?h{k}"})"
+    | .here k, ns => do
+      let name := ns.getD k s!"?h{k}"
+      let minted := (← get).mintedNames.contains name
+      let reader := if minted then "Authoring.minted" else "Authoring.var"
+      return .ok s!"({reader} {name})"
 
 /-- Parameter names by argument class, in slot order. -/
 def argumentNames (classes : List ArgClass) : List String × List String × List String :=
@@ -184,10 +208,12 @@ def emitForm (f : Form) : Except String Emitted := do
   let lemma := s!"theorem {f.id}_scoped {lemmaParams} :\n    (({app}) : Src NativeOp).Scoped := by\n  unfold {f.id}; authoring_scoped\n"
   -- the guard: the form read on the reader, at the table's example arguments, is its expansion
   let binderArgs := binderParams.zipIdx.map fun (_, i) => s!"\"b{i}\""
+  -- an argument sees only binders below `named`, all of them parameters, so an example names
+  -- a parameter and never a minted binder
   let exampleName (occ : Option (Nat × Occurrence)) : String :=
     match occ with
     | some (_, o) => match o.scope.head? with
-      | some n => if n.startsWith "_" then n else s!"b{binderParams.findIdx (· == n)}"
+      | some n => s!"b{binderParams.findIdx (· == n)}"
       | none => "?"
     | none => "?"
   let effArgs := effNames.zipIdx.map fun (_, slot) =>

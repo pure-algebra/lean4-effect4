@@ -1,0 +1,12 @@
+## tsgo Version 7.0.0-dev.20260629.1
+## green: the host programs the check kept and the adapter sources
+exit=0
+70
+## red: the same plus one file with a type error
+<scratch>/bad.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.
+exit=1
+
+## the two tsconfig files (in the seat's scratch directory): green.json includes
+##   harness/truth/session/.work/latest/host/*.ts and harness/truth/session/*.ts, extends harness/truth/tsconfig.json,
+##   types [bun], typeRoots [ts/eff/node_modules/@types] (the check's own settings); red.json adds <scratch>/bad.ts:
+##   const n: number = "one"

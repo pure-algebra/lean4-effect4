@@ -7,9 +7,10 @@ import Effect4.Program.Authoring.Rows
 The native rows' wrappers (`Ref.make`, `Deferred.await`) are generated from the row table
 (`Authoring/Rows.lean`) and the derived forms (`Forms.tapContinuation`, `Forms.ensuring`)
 from the form table (`Authoring/Forms.lean`, each pinned against the printer's expansion);
-this module is the five conveniences that are neither: the binders over a fresh name and
-the short spellings `flatMap`, `andThen`, `map`, `ifElse`, `Src`-level functions over the
-generated lifts with no constructor and no second expansion owner.
+this module is the conveniences that are neither: the binders over a fresh name and the short
+spellings `flatMap`, `andThen`, `map`, `ifElse`, `Src`-level functions over the generated lifts
+with no constructor and no second expansion owner. `minting` is the one way the surface names
+a binder of its own, here and in the generated forms.
 -/
 
 namespace Effect4.Program.Authoring
@@ -18,13 +19,20 @@ open Effect4.Program
 
 /-! ## Binders as Lean functions over a fresh name.
 
-The fresh name is minted from the scope's length, so it can shadow nothing an author wrote
-with a different spelling and resolves to itself at the nearest binder. -/
+The fresh name is minted for the scope it is bound in (`Env.mint`: the reserved prefix, a stem
+naming the binder's role, the scope's length) and read through `minted`. `var` refuses the
+reserved prefix, so no name an author writes is bound in a mint's place and no name an author
+writes reads a mint (B-9; `var_push_minted`, `Laws/Program/Author.lean`). -/
 
-/-- `bindWith first (fun r => rest)` is `bind "_<level>" first rest` with `r` the variable. -/
-def bindWith {Op : Type} (first : Src Op) (rest : TermSrc → Src Op) : Src Op := fun env p =>
-  let x := "_" ++ toString env.names.length
-  bind x first (rest (var x)) env p
+/-- `minting stem k` is `k` handed a binder name minted for this scope: a convenience binds the
+name with a lift and reads it through `minted`. A lift that binds two names takes two stems
+minted at the scope it is entered in. -/
+def minting {Op : Type} (stem : String) (k : String → Src Op) : Src Op := fun env p =>
+  k (env.mint stem) env p
+
+/-- `bindWith first (fun r => rest)` is `bind` of a minted name, with `r` reading it. -/
+def bindWith {Op : Type} (first : Src Op) (rest : TermSrc → Src Op) : Src Op :=
+  minting "answer" fun x => bind x first (rest (minted x))
 
 /-- `bindName name first (fun x => rest)` is `bind name first (rest (var name))` with user-chosen name. -/
 def bindName {Op : Type} (name : String) (first : Src Op) (rest : TermSrc → Src Op) : Src Op := fun env p =>
@@ -33,8 +41,9 @@ def bindName {Op : Type} (name : String) (first : Src Op) (rest : TermSrc → Sr
 /-- `Effect.flatMap` under its Effect name. -/
 def flatMap {Op : Type} (answer : String) (first rest : Src Op) : Src Op := bind answer first rest
 
-/-- `Effect.andThen` with a discarded answer. -/
-def andThen {Op : Type} (first rest : Src Op) : Src Op := bind "_" first rest
+/-- `Effect.andThen` with a discarded answer, bound under a minted name. -/
+def andThen {Op : Type} (first rest : Src Op) : Src Op :=
+  minting "answer" fun x => bind x first rest
 
 /-- `Effect.map` through a pure atom: `bind` then `succeed` of the atom applied to the answer. -/
 def map {Op : Type} (atom : String) (effect : Src Op) : Src Op :=

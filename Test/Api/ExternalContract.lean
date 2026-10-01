@@ -66,7 +66,7 @@ def refusal (p : NativeEff) (tape : List Api.Decision)
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 accepted,
   .answerAsync Api.root 0 accepted] = some (.notParked Api.root)
 #guard (Api.replaySteps (program 0) 1000 [Api.evaluate] [] table).map (fun step => step.2.2) =
-  [[(Api.root, 0, .external 0, Val.nat 1)]]
+  [[⟨Api.root, 0, .external 0, Val.nat 1⟩]]
 
 /-- A live cell alone is not enough: its value must inhabit the awaited type. -/
 def boolAfterCell : NativeEff := .bind (.perform .refMake (.lit (.nat 7))) (program 2)

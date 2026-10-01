@@ -78,21 +78,6 @@ theorem taskCmds_guardQueue (p : NativeEff) (table : RowTable) (m : NativeMachin
 theorem taskCmds_registration (task : NTask) : RegistrationQueue (taskCmds task) := by
   cases task <;> exact ⟨True.intro, True.intro, True.intro⟩
 
-theorem fireStep_preserved (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
-    (fuel : Nat) (owner : FiberId) (acc : NativeMachine × Bool) (task : NTask)
-    (state : GuardState acc.1) (keys : ReservedKeys acc.1 (taskKeys task))
-    (sites : taskRaceSites task = []) :
-    letI := evaluatorFor p table
-    Preserved acc.1 (fireStep (interpOf p table) fuel owner acc task).1 := by
-  letI := evaluatorFor p table
-  unfold fireStep
-  split
-  · have emitted := Preserved.emit state [RunEvent.ranTask owner task]
-    exact emitted.trans (Preserved.drive p table driver fuel _ _ emitted.state
-      (taskCmds_guardQueue p table _ task (emitted.reserved _ keys) sites)
-      (taskCmds_registration task))
-  · exact Preserved.refl state
-
 theorem clearDispatcher_preserved {m : NativeMachine} (state : GuardState m) (f : NFiber)
     (lookup : m.fiber? f.id = some f) :
     Preserved m (m.update { f with dispatcher := f.dispatcher.drain.2 }) := by

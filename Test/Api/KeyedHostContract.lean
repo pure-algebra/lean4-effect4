@@ -39,7 +39,7 @@ def a : Reply := ⟨version, "multi", 0, ⟨⟨1⟩, 0⟩, .ofExit (.success (.n
 def b : Reply := ⟨version, "multi", 1, ⟨⟨2⟩, 1⟩, .ofExit (.success (.nat 3))⟩
 def ab := (submit (submit bound a).session b).session
 def ba := (submit (submit bound b).session a).session
-#guard (outstanding parked).map (fun x => (x.1, x.2.1)) = [(⟨1⟩, 0), (⟨2⟩, 1)]
+#guard (outstanding parked).map (fun x => (x.fiber, x.token)) = [(⟨1⟩, 0), (⟨2⟩, 1)]
 #guard bound.active.length = 2
 #guard bound.nextCall = 2
 #guard (bindCall bound { ca with callId := 2 } 0).phase = .refused .duplicateCall

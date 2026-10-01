@@ -264,7 +264,7 @@ theorem awaits_ne_nil (m : NativeMachine) (fiber : FiberId) (token : Nat)
   have hid : f.id = fiber := by
     have hfound := List.find?_some hf
     simpa using hfound
-  have hmem : (f.id, token, op, request) ∈ awaits m := by
+  have hmem : (⟨f.id, token, op, request⟩ : Await) ∈ awaits m := by
     refine List.mem_filterMap.mpr ⟨f, List.mem_of_find?_eq_some hf, ?_⟩
     rw [hp, hid]
     aesop (add norm simp [h])
@@ -599,7 +599,7 @@ theorem play_built (s : Run) (rows : List Command) : (s.play rows).built = s.bui
 
 /-- A machine waiting on a call is holding it. -/
 theorem requestOf_of_mem_awaits (m : NativeMachine) (a : Await) (h : a ∈ awaits m) :
-    requestOf m a.1 a.2.1 = some (a.2.2.1, a.2.2.2) := by
+    requestOf m a.fiber a.token = some (a.op, a.request) := by
   obtain ⟨f, hf, hsome⟩ := List.mem_filterMap.mp h
   aesop
 
@@ -612,8 +612,8 @@ theorem rowOf_external (s : Run) (op : NativeOp) (row : Program.Row) (h : s.rowO
 session has neither a binding nor a slot for it. -/
 theorem freshCall_facts (s : Run) (await : Await) (h : s.freshCall = some await) :
     await ∈ s.outstanding ∧
-      (s.session.active.any fun b => b.key == (⟨await.1, await.2.1⟩ : Key)) = false ∧
-      (s.session.pending.any fun slot => slot.key == (⟨await.1, await.2.1⟩ : Key)) = false := by
+      (s.session.active.any fun b => b.key == (⟨await.fiber, await.token⟩ : Key)) = false ∧
+      (s.session.pending.any fun slot => slot.key == (⟨await.fiber, await.token⟩ : Key)) = false := by
   have hp := List.find?_some h
   have hm := List.mem_of_find?_eq_some h
   unfold Run.freshCall at h hp
@@ -651,27 +651,27 @@ theorem drive_envelope {σ : Type} (r : Reactor σ) (table : RowTable) (henv : r
         · exact ⟨[], (List.append_nil _).symm, List.not_mem_nil⟩
         · rename_i completion next hreact
           obtain ⟨hmem, hactive, hpending⟩ := freshCall_facts s await hfresh
-          obtain ⟨i, hop, hext⟩ := rowOf_external s await.2.2.1 row hrow
-          have hreq : requestOf s.machine await.1 await.2.1 =
-              some (await.2.2.1, await.2.2.2) := requestOf_of_mem_awaits s.machine await hmem
-          have hreqi : requestOf s.machine (⟨await.1, await.2.1⟩ : Key).fiber
-              (⟨await.1, await.2.1⟩ : Key).token = some (.external i, await.2.2.2) := by
+          obtain ⟨i, hop, hext⟩ := rowOf_external s await.op row hrow
+          have hreq : requestOf s.machine await.fiber await.token =
+              some (await.op, await.request) := requestOf_of_mem_awaits s.machine await hmem
+          have hreqi : requestOf s.machine (⟨await.fiber, await.token⟩ : Key).fiber
+              (⟨await.fiber, await.token⟩ : Key).token = some (.external i, await.request) := by
             rw [← hop]
             exact hreq
           have hfits : admit s.built.table s.machine
-              (.answerAsync (⟨await.1, await.2.1⟩ : Key).fiber
-                (⟨await.1, await.2.1⟩ : Key).token completion) = none := by
+              (.answerAsync (⟨await.fiber, await.token⟩ : Key).fiber
+                (⟨await.fiber, await.token⟩ : Key).token completion) = none := by
             rw [htable]
-            exact henv s.machine await.1 await.2.1 i row await.2.2.2 st completion next
+            exact henv s.machine await.fiber await.token i row await.request st completion next
               hreqi (by rw [← htable]; exact hext) hreact
-          have hanswer := answer_accepted s ⟨await.1, await.2.1⟩ completion
-            (Api.HostSession.Call.claim s ⟨await.1, await.2.1⟩ (.external i) await.2.2.2)
-            (at_of_requestOf s ⟨await.1, await.2.1⟩ (.external i) await.2.2.2 hreqi)
+          have hanswer := answer_accepted s ⟨await.fiber, await.token⟩ completion
+            (Api.HostSession.Call.claim s ⟨await.fiber, await.token⟩ (.external i) await.request)
+            (at_of_requestOf s ⟨await.fiber, await.token⟩ (.external i) await.request hreqi)
             hactive hpending hfits
-          have hplayed : s.play (Rows.answer s ⟨await.1, await.2.1⟩ completion) =
-              s.answer ⟨await.1, await.2.1⟩ completion := rfl
+          have hplayed : s.play (Rows.answer s ⟨await.fiber, await.token⟩ completion) =
+              s.answer ⟨await.fiber, await.token⟩ completion := rfl
           obtain ⟨rest, hrest, hnorest⟩ :=
-            ih (s.play (Rows.answer s ⟨await.1, await.2.1⟩ completion)) next
+            ih (s.play (Rows.answer s ⟨await.fiber, await.token⟩ completion)) next
               (by rw [play_built]; exact htable)
           rcases hanswer with hph | hph <;>
             exact ⟨[Phase.bound, Phase.preflight, _] ++ rest,

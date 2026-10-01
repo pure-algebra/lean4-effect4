@@ -125,9 +125,28 @@
       ]
     },
     {
-      "Note": "The runner's byte boundary: a journal row, its verdict and what a holder observes. `ReasonAnnotations` has a proof field, so its instance is the hand one in Store/AnnotationsCanonical.lean; every applied carrier is listed before the type that holds it.",
+      "Note": "The refusals an agent can be shown, as content (decisions row 17): the scope reader's, the checker's, the authoring call's, the printer's and the reader's (seven of the eight of the row's source, scout C 3.3), with admission's and the table's, which the Runner group carried before. Placed before Runner, which imports it. The build refusal is not here: it is declared in Effect4.Api.Author, whose import brings the authoring syntax (the `daemon` and `eff` keywords) into every module that imports Runner. The host session's refusal stays in Runner: the generator names a type's section by its last name, and Authoring.Refusal is here.",
+      "Name": "Refusals",
+      "Imports": "Effect4.Api,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program",
+      "Out": "src\\Effect4\\Api\\RefusalsDerived.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\refusals.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.TableRefusal",
+        "Effect4.Program.AdmitRefusal",
+        "Effect4.Program.Authoring.Reason",
+        "Effect4.Program.Authoring.Refusal",
+        "Effect4.Program.TypeReason",
+        "Effect4.Program.TypeRefusal",
+        "Effect4.Api.AuthorRefusal",
+        "Effect4.Program.PrintRefusal",
+        "Effect4.Program.ReadRefusal"
+      ]
+    },
+    {
+      "Note": "The runner's byte boundary: a journal row, its verdict and what a holder observes. `ReasonAnnotations` has a proof field, so its instance is the hand one in Store/AnnotationsCanonical.lean; every applied carrier is listed before the type that holds it. Admission's and the table's refusals are the Refusals group's; a call the machine waits on (a record, decisions row 16), a fiber's status and a run's observation are the readings of Run.observe (decisions row 17).",
       "Name": "Runner",
-      "Imports": "Effect4.Api.Runner,Effect4.Store.Domain.Derived.Value,Effect4.Store.Domain.AnnotationsCanonical,Effect4.Store.Domain.Clock,Effect4.Store.Domain.Derived.Program,Effect4.Api.Derived",
+      "Imports": "Effect4.Api.Runner,Effect4.Store.Domain.Derived.Value,Effect4.Store.Domain.AnnotationsCanonical,Effect4.Store.Domain.Clock,Effect4.Store.Domain.Derived.Program,Effect4.Api.Derived,Effect4.Api.RefusalsDerived,Effect4.Run",
       "Out": "src\\Effect4\\Api\\RunnerDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\runner.lean",
       "Kinds": [],
@@ -140,8 +159,6 @@
         "Effect4.Exit@Effect4.Store.Val@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
         "Effect4.Machine.Completion@Effect4.Store.Val@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
         "Effect4.Machine.RunDecision@Effect4.Program.EffName@Effect4.Program.EffThunk@Effect4.Store.Val@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
-        "Effect4.Program.TableRefusal",
-        "Effect4.Program.AdmitRefusal",
         "Effect4.Api.HostSession.Header",
         "Effect4.Api.HostSession.Call",
         "Effect4.Api.HostSession.Reply",
@@ -150,7 +167,10 @@
         "Effect4.Api.Runner.Command",
         "Effect4.Api.HostProtocol.State",
         "Effect4.Machine.Stuck",
-        "Effect4.Api.Outcome"
+        "Effect4.Api.Outcome",
+        "Effect4.Program.Await",
+        "Effect4.Api.FiberStatus",
+        "Effect4.Run.Observation"
       ]
     },
     {
@@ -297,7 +317,7 @@
       "Note": "The derived forms as authoring combinators, from Codegen.Forms.all: each template read on the scope reader, with a drift guard per form against the printer's Template.expand.",
       "Name": "Forms",
       "Tool": "tools/Effect4Gen/Forms.lean",
-      "Imports": "Effect4.Program.Authoring.Lifts,Effect4.Codegen.Forms",
+      "Imports": "Effect4.Program.Authoring.Lifts,Effect4.Program.Authoring.Sugar,Effect4.Codegen.Forms",
       "Out": "src\\Effect4\\Codegen\\Authoring\\Forms.lean",
       "Guards": "",
       "Kinds": [],
@@ -329,7 +349,7 @@
       "Note": "The scope lemma of every form combinator.",
       "Name": "FormsLaws",
       "Tool": "tools/Effect4Gen/Forms.lean",
-      "Imports": "Effect4.Laws.Program.Authoring.Lifts,Effect4.Codegen.Authoring.Forms,Effect4.Codegen.Forms",
+      "Imports": "Effect4.Laws.Program.Authoring.Lifts,Effect4.Laws.Program.Authoring.Sugar,Effect4.Codegen.Authoring.Forms,Effect4.Codegen.Forms",
       "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Forms.lean",
       "Guards": "",
       "Kinds": [],

@@ -1,0 +1,13 @@
+# summary of step5-tools-build.log (690 lines)
+## commands
+## errors and warnings
+(none)
+## gates
+(none)
+## built (not replayed)
+✔ [190/191] Built Drivers.ForeignCorpus (2.4s)
+✔ [191/191] Built Drivers.Corpus (1.0s)
+## tail
+✔ [191/191] Built Drivers.Corpus (1.0s)
+Build completed successfully (191 jobs).
+LEAN_NUM_THREADS=2 lake build Effect4 OCaml5.Tools.LcnfGen OCaml5.Tools.EffGe  2.08s user 2.69s system 98% cpu 4.859 total

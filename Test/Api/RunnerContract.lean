@@ -49,7 +49,7 @@ def exitAfter (rows : List Command) : Option (Option ExitV) :=
 #guard exitAfter journal = some (some (.success (.nat 3)))
 #guard runner.map (fun p => observe (replay p journal).1) = some .terminated
 #guard runner.map (fun p => outstanding (replay p (journal.take 1)).1) =
-  some [(Api.root, 0, .external 0, .nat 2)]
+  some [⟨Api.root, 0, .external 0, .nat 2⟩]
 
 /-! ## A refused row is the unit -/
 
@@ -103,7 +103,7 @@ def junkRow : Bytes := [0, 1, 2]
 #guard runner.map (fun p =>
     Effect4.Store.Canonical.decode (α := List Await)
       (outstandingBytes (replayRows p (rows.take 1)).1)) =
-  some (some [(Api.root, 0, .external 0, .nat 2)])
+  some (some [⟨Api.root, 0, .external 0, .nat 2⟩])
 -- Every schema is content the `Schema` entry reads, and the named ones are all there.
 #guard schemas.all fun entry =>
   ((schemaBytes entry.1).bind fun bytes =>

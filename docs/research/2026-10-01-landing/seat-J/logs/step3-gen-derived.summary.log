@@ -1,0 +1,108 @@
+# summary of step3-gen-derived.log (14122 lines)
+## commands
+lake build
+python3 scripts/generate.py --only derived
++ lake env lean -DwarningAsError=true -M4096 --run tools/Effect4Gen/Driver.lean --commands
++ lake build Tools.GeneratedStamp
++ lake build Effect4.Store.Domain.Canonical
++ lake env lean -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Main.lean --group Json --imports Effect4.Store.Domain.Canonical --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-6885tso9/src/Effect4/Store/Domain/Derived/Json.lean --append tools/Effect4Gen/guards/json.lean Effect4.Float64 Effect4.Json --header-out src/Effect4/Store/Domain/Derived/Json.lean
++ lake build Effect4.Store.Domain.Derived.Json
++ lake build Tools.GeneratedStamp
++ lake build Effect4.Store.Domain.Derived.Json
++ lake env lean -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Main.lean --group Schema --imports Effect4.Store.Domain.Derived.Json --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-6885tso9/src/Effect4/Store/Domain/Derived/Schema.lean --append tools/Effect4Gen/guards/schema.lean Effect4.ReferenceKey Effect4.GlobalSymbolKey Effect4.AnnotationEntry Effect4.LiteralValue E
++ lake build Effect4.Store.Domain.Derived.Schema
++ lake build Tools.GeneratedStamp
++ lake build Effect4.Program.Native
++ lake build Effect4.Store.Domain.Canonical
++ lake build Effect4.Store.Domain.RowCanonical
++ lake env lean -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Main.lean --group Program --imports Effect4.Program.Native,Effect4.Store.Domain.Canonical,Effect4.Store.Domain.RowCanonical --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-6885tso9/src/Effect4/Store/Domain/Derived/Program.lean --append tools/Effect4Gen/guards/program.lean Effect4.Program.Lit Effect4.Machin
++ lake build Effect4.Store.Domain.Derived.Program
++ lake build Tools.GeneratedStamp
++ lake build Effect4.Store.Domain.Pin
++ lake build Effect4.Store.Domain.Node
++ lake env lean -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Main.lean --group Pin --imports Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-6885tso9/src/Effect4/Store/Domain/PinDerived.lean --append tools/Effect4Gen/guards/pin.lean --kind Effect4.Store.Pin=source --kind Effect4.Store.Tree=tree Effect4.Store.PinRole
++ lake build Effect4.Store.Domain.PinDerived
++ lake build Tools.GeneratedStamp
++ lake build Effect4.Api.Frontier
++ lake build Effect4.Store.Domain.Canonical
++ lake build Effect4.Store.Domain.Clock
++ lake env lean -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Main.lean --group Api --imports Effect4.Api.Frontier,Effect4.Store.Domain.Canonical,Effect4.Store.Domain.Clock --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-6885tso9/src/Effect4/Api/Derived.lean --append tools/Effect4Gen/guards/api.lean Effect4.FiberId Effect4.Api.HostProtocol.Key Effect4.Machine.Exhaust
++ lake build Effect4.Api.Derived
++ lake build Tools.GeneratedStamp
++ lake build Effect4.Store.Domain.Canonical
++ lake env lean -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Main.lean --group Value --imports Effect4.Store.Domain.Canonical --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-6885tso9/src/Effect4/Store/Domain/Derived/Value.lean --append tools/Effect4Gen/guards/value.lean Effect4.Store.Val Effect4.Store.Kind Effect4.Store.Shape Effect4.Store.ShapeDoc --header-out src/
++ lake build Effect4.Store.Domain.Derived.Value
++ lake build Tools.GeneratedStamp
++ lake build Effect4.Api.Author
++ lake build Effect4.Api.HostSession
++ lake build Effect4.Store.Domain.Derived.Program
++ lake env lean -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Main.lean --group Refusals --imports Effect4.Api.Author,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-6885tso9/src/Effect4/Api/RefusalsDerived.lean --append tools/Effect4Gen/guards/refusals.lean Effect4.Program.TableRefusal Effect4.Program.Admi
++ lake build Effect4.Api.RefusalsDerived
+## errors and warnings
+13949:✖ [120/120] Building Effect4.Api.RefusalsDerived (5.8s)
+13951:error: src/Effect4/Api/RefusalsDerived.lean:408:4: `Effect4.Store.RefusalsGen.RefusalC.shapeDoc` has already been declared
+13952:error: src/Effect4/Api/RefusalsDerived.lean:414:4: `Effect4.Store.RefusalsGen.RefusalC.toVal` has already been declared
+13953:error: src/Effect4/Api/RefusalsDerived.lean:417:4: `Effect4.Store.RefusalsGen.RefusalC.ofVal` has already been declared
+13954:error: src/Effect4/Api/RefusalsDerived.lean:425:8: `Effect4.Store.RefusalsGen.RefusalC.ofVal_toVal` has already been declared
+13955:error: src/Effect4/Api/RefusalsDerived.lean:429:8: `Effect4.Store.RefusalsGen.RefusalC.ofVal_exact` has already been declared
+13956:error: src/Effect4/Api/RefusalsDerived.lean:453:8: `Effect4.Store.RefusalsGen.RefusalC.fits` has already been declared
+13957:error: src/Effect4/Api/RefusalsDerived.lean:460:9: `Effect4.Store.RefusalsGen.RefusalC.instCanonical` has already been declared
+13958:error: src/Effect4/Api/RefusalsDerived.lean:810:33: failed to synthesize instance of type class
+13962:error: src/Effect4/Api/RefusalsDerived.lean:812:4: failed to synthesize instance of type class
+13966:error: src/Effect4/Api/RefusalsDerived.lean:816:26: failed to synthesize instance of type class
+13970:error: src/Effect4/Api/RefusalsDerived.lean:820:21: failed to synthesize instance of type class
+13974:error: src/Effect4/Api/RefusalsDerived.lean:825:89: unsolved goals
+13978:error: src/Effect4/Api/RefusalsDerived.lean:826:20: declaration uses `sorry`
+13979:error: src/Effect4/Api/RefusalsDerived.lean:826:27: declaration uses `sorry`
+13980:error: src/Effect4/Api/RefusalsDerived.lean:826:27: declaration uses `sorry`
+13981:error: src/Effect4/Api/RefusalsDerived.lean:839:12: Missing cases:
+13983:error: src/Effect4/Api/RefusalsDerived.lean:837:18: declaration uses `sorry`
+13984:error: src/Effect4/Api/RefusalsDerived.lean:843:7: failed to synthesize instance of type class
+13988:error: src/Effect4/Api/RefusalsDerived.lean:842:29: failed to synthesize instance of type class
+13992:error: src/Effect4/Api/RefusalsDerived.lean:845:9: failed to synthesize instance of type class
+13996:error: src/Effect4/Api/RefusalsDerived.lean:846:8: declaration uses `sorry`
+13997:error: src/Effect4/Api/RefusalsDerived.lean:852:8: declaration uses `sorry`
+13998:error: src/Effect4/Api/RefusalsDerived.lean:865:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.AuthorRefusalC.shapeDoc' uses 'sorry' and/or contains errors
+13999:error: src/Effect4/Api/RefusalsDerived.lean:873:33: failed to synthesize instance of type class
+14003:error: src/Effect4/Api/RefusalsDerived.lean:879:4: failed to synthesize instance of type class
+14007:error: src/Effect4/Api/RefusalsDerived.lean:886:26: failed to synthesize instance of type class
+14011:error: src/Effect4/Api/RefusalsDerived.lean:893:21: failed to synthesize instance of type class
+14015:error: src/Effect4/Api/RefusalsDerived.lean:905:88: unsolved goals
+14019:error: src/Effect4/Api/RefusalsDerived.lean:906:20: declaration uses `sorry`
+14020:error: src/Effect4/Api/RefusalsDerived.lean:906:27: declaration uses `sorry`
+14021:error: src/Effect4/Api/RefusalsDerived.lean:906:27: declaration uses `sorry`
+14022:error: src/Effect4/Api/RefusalsDerived.lean:927:12: Missing cases:
+14024:error: src/Effect4/Api/RefusalsDerived.lean:917:18: declaration uses `sorry`
+14025:error: src/Effect4/Api/RefusalsDerived.lean:931:7: failed to synthesize instance of type class
+14029:error: src/Effect4/Api/RefusalsDerived.lean:930:29: failed to synthesize instance of type class
+14033:error: src/Effect4/Api/RefusalsDerived.lean:933:9: failed to synthesize instance of type class
+14037:error: src/Effect4/Api/RefusalsDerived.lean:934:8: declaration uses `sorry`
+14038:error: src/Effect4/Api/RefusalsDerived.lean:939:8: declaration uses `sorry`
+14039:error: src/Effect4/Api/RefusalsDerived.lean:944:8: declaration uses `sorry`
+14040:error: src/Effect4/Api/RefusalsDerived.lean:948:8: declaration uses `sorry`
+14041:error: src/Effect4/Api/RefusalsDerived.lean:952:8: declaration uses `sorry`
+14042:error: src/Effect4/Api/RefusalsDerived.lean:958:8: declaration uses `sorry`
+14043:error: src/Effect4/Api/RefusalsDerived.lean:979:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.BuildRefusalC.shapeDoc' uses 'sorry' and/or contains errors
+14044:error: src/Effect4/Api/RefusalsDerived.lean:1201:70: failed to synthesize instance of type class
+14048:error: src/Effect4/Api/RefusalsDerived.lean:1201:27: failed to synthesize instance of type class
+14052:error: src/Effect4/Api/RefusalsDerived.lean:1201:0: cannot evaluate code because 'List.all._at_._private.Effect4.Api.RefusalsDerived.0._tmp._@.Effect4.Api.RefusalsDerived.4267254129._hygCtx._hyg.20.spec_0' uses 'sorry' and/or contains errors
+14053:error: src/Effect4/Api/RefusalsDerived.lean:1203:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.AuthorRefusalC.toVal' uses 'sorry' and/or contains errors
+14054:error: src/Effect4/Api/RefusalsDerived.lean:1204:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.BuildRefusalC.toVal' uses 'sorry' and/or contains errors
+14055:error: src/Effect4/Api/RefusalsDerived.lean:1208:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.BuildRefusalC.toVal' uses 'sorry' and/or contains errors
+14056:error: src/Effect4/Api/RefusalsDerived.lean:1209:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.BuildRefusalC.toVal' uses 'sorry' and/or contains errors
+14057:error: src/Effect4/Api/RefusalsDerived.lean:1213:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.BuildRefusalC.shapeDoc' uses 'sorry' and/or contains errors
+14058:error: src/Effect4/Api/RefusalsDerived.lean:1214:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.AuthorRefusalC.shapeDoc' uses 'sorry' and/or contains errors
+14059:error: src/Effect4/Api/RefusalsDerived.lean:1219:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.BuildRefusalC.toVal' uses 'sorry' and/or contains errors
+14060:error: src/Effect4/Api/RefusalsDerived.lean:1222:0: cannot evaluate code because 'Effect4.Store.RefusalsGen.BuildRefusalC.toVal' uses 'sorry' and/or contains errors
+14116:error: Lean exited with code 1
+14119:error: build failed
+## gates
+info: Test/All.lean:169:0: Effect4 library-root gate: 134 API/utility modules, 221 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:169:0: Effect4 module and axiom gate: checked 524 modules and 72072 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+## built (not replayed)
+(none)
+## tail
+FAIL generate: Command '['timeout', '5400', 'lake', 'build', 'Effect4.Api.RefusalsDerived']' returned non-zero exit status 1.
+make: *** [.lake/gen/derived] Error 1
+LEAN_NUM_THREADS=1 make gen-derived  26.80s user 13.75s system 100% cpu 40.487 total

@@ -45,7 +45,7 @@ def finished : Session program table := (applyPending pending1 100).session
 #guard match start program table "serial-root-scalar-v1" header 100 with | .ok _ => true | _ => false
 #guard match start program table "serial-root-scalar-v1" { header with version := 2 } 100 with | .error .version => true | _ => false
 #guard match start program table "serial-root-scalar-v1" { header with version := 99 } 100 with | .error .version => true | _ => false
-#guard outstanding parked = [(Api.root, 0, .external 0, .nat 2)]
+#guard outstanding parked = [⟨Api.root, 0, .external 0, .nat 2⟩]
 #guard parked.machine.state.externals.answers = []
 #guard (bindCall parked call0 0).phase = .bound
 #guard (submit bound0 reply0).phase = .preflight
@@ -59,7 +59,7 @@ def finished : Session program table := (applyPending pending1 100).session
 #guard after0.applied = 1
 #guard after0.consumed = [0]
 #guard (inspect after0).outcome = .frontier
-#guard outstanding after0 = [(Api.root, 1, .external 0, .nat 3)]
+#guard outstanding after0 = [⟨Api.root, 1, .external 0, .nat 3⟩]
 #guard (submit after0 reply0).phase = .refused .noCall
 #guard (bindCall after0 call1 1).phase = .bound
 #guard (submit bound1 reply0).phase = .refused .noCall
@@ -81,13 +81,13 @@ theorem evaluate_retains_token :
     repeatedEvaluation.machine.nextToken = parked.machine.nextToken :=
   by aesop
 
-#guard outstanding evaluatedAgain = [(Api.root, 0, .external 0, .nat 2)]
+#guard outstanding evaluatedAgain = [⟨Api.root, 0, .external 0, .nat 2⟩]
 #guard (advance bound0 100 Api.evaluate).phase = .progressed
 #guard (submit evaluatedAgain reply0).phase = .preflight
 #guard (applyPending replyAfterEvaluate 100).phase = .applied
 #guard (applyPending replyAfterEvaluate 100).session.consumed = [0]
 #guard outstanding (applyPending replyAfterEvaluate 100).session =
-  [(Api.root, 1, .external 0, .nat 3)]
+  [⟨Api.root, 1, .external 0, .nat 3⟩]
 
 #print axioms evaluate_retains_guard
 #print axioms evaluate_retains_token
@@ -98,7 +98,7 @@ def shortApplied : Session program table := (applyPending pending0 1).session
 #guard shortApplied.applied = 1
 #guard requestOf shortApplied.machine Api.root 0 = none
 #guard (inspect shortApplied).outcome = .frontier
-#guard outstanding (advance shortApplied 100 Api.evaluate).session = [(Api.root, 1, .external 0, .nat 3)]
+#guard outstanding (advance shortApplied 100 Api.evaluate).session = [⟨Api.root, 1, .external 0, .nat 3⟩]
 
 -- Independent identity/type mutations at the same valid park.
 #guard (bindCall parked { call0 with version := 99 } 0).phase = .refused .version

@@ -65,9 +65,9 @@ def driven : Run := (Run.runWith twice echo () (id := "session-A")).1
 -- Opened, the run has done nothing; started, it is parked on the first call.
 #guard (Run.open twice "session-A").outstanding = []
 #guard ((Run.open twice "session-A").play Rows.start).outstanding =
-  [(Api.root, 0, .external 0, .nat 2)]
+  [⟨Api.root, 0, .external 0, .nat 2⟩]
 #guard ((Run.open twice "session-A").play Rows.start).freshCall =
-  some (Api.root, 0, .external 0, .nat 2)
+  some ⟨Api.root, 0, .external 0, .nat 2⟩
 
 -- The claim a row carries is built from the machine, not written by the caller.
 #guard Api.HostSession.Call.at ((Run.open twice "session-A").play Rows.start) ⟨Api.root, 0⟩ =
@@ -79,7 +79,7 @@ def driven : Run := (Run.runWith twice echo () (id := "session-A")).1
 #guard (Run.runPure twice).exit = none
 #guard (Run.runPure twice).phases = [.progressed, .progressed]
 #guard (Run.runPure twice).observe.state = .awaitingAsync
-#guard (Run.runPure twice).observe.awaiting = [(Api.root, 0, .external 0, .nat 2)]
+#guard (Run.runPure twice).observe.awaiting = [⟨Api.root, 0, .external 0, .nat 2⟩]
 #guard (Run.runPure twice).observe.reasons = [.awaitHost ⟨Api.root, 0⟩]
 
 /-! ## A fork and an await -/
@@ -123,9 +123,9 @@ def forked : Run := (Run.runWith pairUp echo () (id := "multi")).1
 #guard ((Run.open pairUp "multi").play forked.journal).exit = forked.exit
 
 -- Both children are parked before either is answered, and the drive takes the first.
-#guard ((Run.open pairUp "multi").play Rows.start).outstanding.map (fun a => (a.1, a.2.1)) =
+#guard ((Run.open pairUp "multi").play Rows.start).outstanding.map (fun a => (a.fiber, a.token)) =
   [(⟨1⟩, 0), (⟨2⟩, 1)]
-#guard ((Run.open pairUp "multi").play Rows.start).freshCall.map (fun a => (a.1, a.2.1)) =
+#guard ((Run.open pairUp "multi").play Rows.start).freshCall.map (fun a => (a.fiber, a.token)) =
   some (⟨1⟩, 0)
 
 -- Answering by key instead: the two receipts commute, which is `reply_commute`.

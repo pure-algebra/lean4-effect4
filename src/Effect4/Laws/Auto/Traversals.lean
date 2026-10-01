@@ -105,6 +105,9 @@ def leadingImplicits : Expr → Nat
   | .forallE _ _ body bi => if bi == .default then 0 else leadingImplicits body + 1
   | _ => 0
 
+/-- The name a definition was written with: a private definition's user name. -/
+def writtenName (name : Name) : Name := (privateToUserName? name).getD name
+
 /-- Read the algebra an application passes to a fold. -/
 def describeAlgebra (env : Environment) (e : Expr) : String :=
   match e.getAppFn with
@@ -112,13 +115,13 @@ def describeAlgebra (env : Environment) (e : Expr) : String :=
     match env.find? n with
     | some (.ctorInfo _) => "inline literal"
     | _ =>
-      if e.getAppNumArgs == 0 then n.toString
+      if e.getAppNumArgs == 0 then (writtenName n).toString
       else
         -- a builder such as `EffAlgebra.ofLayer layer`: name the builder and its last argument
         let last := e.getAppArgs.back!
         match last.getAppFn with
-        | .const m _ => s!"{n} {m}"
-        | _ => s!"{n} …"
+        | .const m _ => s!"{writtenName n} {writtenName m}"
+        | _ => s!"{writtenName n} …"
   | .fvar _ | .bvar _ => "(an argument)"
   | .lam .. => "inline"
   | _ => "?"
@@ -158,9 +161,6 @@ def isCompilerHelper (name : Name) : Bool :=
 def moduleOf (env : Environment) (name : Name) : Option Name := do
   let idx ← env.getModuleIdxFor? name
   env.header.moduleNames[idx.toNat]?
-
-/-- The name a definition was written with: a private definition's user name. -/
-def writtenName (name : Name) : Name := (privateToUserName? name).getD name
 
 /-- Whether a person wrote the declaration: not a detail the compiler or an elaborator made
 (`foo._unary`, `foo.match_1`, `foo.proof_2`, a match splitter, a recursor, `noConfusion`, …).

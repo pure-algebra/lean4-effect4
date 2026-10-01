@@ -1,0 +1,12 @@
+# summary of step4-imports-build.log (351 lines)
+## commands
+## errors and warnings
+(none)
+## gates
+(none)
+## built (not replayed)
+✔ [120/120] Built Effect4.Run (557ms)
+## tail
+✔ [120/120] Built Effect4.Run (557ms)
+Build completed successfully (120 jobs).
+LEAN_NUM_THREADS=2 lake build Effect4.Program.Admit Effect4.Api.Frontier       0.40s user 0.37s system 98% cpu 0.787 total

@@ -28,11 +28,11 @@ def requestOfR (m : RState) (fiber : FiberId) (token : Nat) : Option (NativeOp �
 def awaitsR (m : RState) : List Await :=
   m.fibers.filterMap fun f =>
     match f.parked with
-    | .withGuard token => (requestOfR m f.id token).map fun (op, req) => (f.id, token, op, req)
+    | .withGuard token => (requestOfR m f.id token).map fun (op, req) => ⟨f.id, token, op, req⟩
     | .notParked => none
 
 def hostReasonsR (m : RState) : List FrontierReason :=
-  (awaitsR m).map fun (fiber, token, _, _) => .awaitHost ⟨fiber, token⟩
+  (awaitsR m).map fun a => .awaitHost ⟨a.fiber, a.token⟩
 
 def timerReasonsR (m : RState) : List FrontierReason :=
   m.state.timers.wake.waiters.map fun w => .awaitTimer w.fiber w.payload

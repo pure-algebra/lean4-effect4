@@ -155,14 +155,14 @@ def tags (r : Api.Inspection) : List (FiberId × Nat) :=
 /-! ## `awaits` and `fiberStatuses` agree on the parked fibers -/
 
 #guard Program.awaits childRun.machine = []
-#guard Program.awaits looseRun.machine = [(⟨1⟩, 0, .external 0, .nat 2)]
+#guard Program.awaits looseRun.machine = [⟨⟨1⟩, 0, .external 0, .nat 2⟩]
 #guard Program.awaits pinnedRun.machine =
-  [(⟨0⟩, 1, .external 0, .nat 3), (⟨1⟩, 0, .external 0, .nat 2)]
+  [⟨⟨0⟩, 1, .external 0, .nat 3⟩, ⟨⟨1⟩, 0, .external 0, .nat 2⟩]
 
 -- `awaits_live` on these machines: every outstanding call names a fiber whose status is live.
 #guard [childRun, looseRun, pinnedRun].all fun r =>
   (Program.awaits r.machine).all fun a =>
-    (Api.Inspection.fibers r).any fun entry => entry.1 == a.1 && entry.2.live
+    (Api.Inspection.fibers r).any fun entry => entry.1 == a.fiber && entry.2.live
 
 /-! ## The property at the observation -/
 
