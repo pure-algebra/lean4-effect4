@@ -48,6 +48,15 @@ parallel, slot in, delete at a good place; the owner's 2026-09-18 rule on gate r
   `OCaml5.Eff`'s `tyO`/`tyV`, `ProfileJson.tyJson`, `LcnfMl.tyOcaml`/`tyT`, `LcnfSemantics.tyValue`)
   generated from the family description where the generator reaches them. A hand table that
   stays is named in the receipt with the reason.
+- **Every `Ty` traversal an algebra of the one fold** (the owner, 2026-10-01; probe U measures
+  it): in the append commit no hand `match` on `Ty` remains outside the generated folds and
+  `Membership.lean`; the spelling folds (`renderRaw`, `ofNormalized`, `Bridge.schema`, the keys, the
+  mirrors' constructor tables, the wire tags) are one generic fold each over a per-constructor
+  table the generator reads, and the OCaml mirrors are that table emitted a second time, checked by
+  the conform lane, never hand-maintained; the collection and predicate folds are `foldMap`; the
+  semantic algebras (`Fits`, `sub`'s congruence arms, `inhabited`, `normalize`) keep one field per
+  constructor, which fails to compile at a missing arm instead of a catch-all that compiles silently.
+  Two folds agree when their algebras do (`hom_eq_cata_ty`); composed folds fuse.
 - **Laws stated once over the signature.** The order and membership laws (S6) land as theorems
   over the signature's description (the congruence rows, the declared leaf-order table, the union
   rules), and the per-constructor proofs they subsume are deleted in the same commit; the receipt
