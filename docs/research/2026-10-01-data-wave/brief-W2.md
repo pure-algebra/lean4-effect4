@@ -60,3 +60,23 @@ case and its rejected converse) and probe U's measurement (the hand tables gener
 emitters) arrive as amendments by message when P and U land. If step 1 is done and they have not
 arrived, write the receipt for step 1 and hand back; the coordinator resumes you with the
 amendments.
+
+## Amendment 2 (2026-10-01, probe P merged at `714d2601`): the leaf-order table
+
+Row 177 is ruled. The table is `leafEdges` (`P/probes/P2Ty.lean:693`) over `LeafHead` (`:666`),
+with `leafHead` (`:680`), `leafReach`/`leafLe` (`:700`, `:706`) and `leafRule` (`:710`), in the
+core because `sub` consults it (`:739`); the generator reads `Ty.leafEdges` from the environment
+and emits its laws (`P3View.lean:666-826`), each by `decide` over `LeafHead.all`, plus
+`leafHead_facts` per head; `litRule` and its three lemmas are deleted. `sub_eq_args` and the
+different-head theorem take `hleaf : leafRule a b = false` (`P3View.lean:401`, `:472`). Controls:
+the accepted cross-head case `sub .nat .number` with its rejected converse (`P2Ty.lean:1281-1283`)
+and the cyclic table (`:1285`). Membership's obligation is one lemma per edge (`hasTy_leafEdge`,
+W4's). The reconciliation with Q's `rules` section (row 177): the table holds the declared edges
+(`lit < string`, `nat < int`, `int < number`, `undefined < unit`; `nat ⊑ number` is derived, never
+an entry), the closure is computed as P's `leafLe`, and the producer refuses a cyclic table, not an
+unclosed one. In this commit (no `Ty` change) the mechanism lands with today's one edge
+(`lit < string`) as the only row, so every producer still writes today's bytes; the wave's edges
+are commit 4's data rows. Probe U's amendment (the hand tables generated) is still to come by
+message; the Makefile: add `check-conservativity` as its own rule at the end of the checks block
+and touch neither `check:`'s prerequisite line, `CHECKS`, nor the help text (seat J2 edits those;
+the coordinator wires yours in after both merge).

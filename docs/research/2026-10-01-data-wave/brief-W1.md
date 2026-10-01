@@ -52,3 +52,30 @@ the red controls kept, the proposed lines for row 128 and the vocabulary.
 - **If row 121's safe-integer bound is ruled:** `nat`/`int` refuse |n| > 2^53 − 1 at encode and
   decode, with 2^53 and −2^53 as red controls (`K2Copy.lean:1749`, `red_int2p53`).
 - P's half (question 5 of its brief) is filled when P lands.
+
+## Amendments at dispatch (2026-10-01, probe P merged at `714d2601`)
+
+Route (b) is proved on probe P's copy at today's forms (`P/probes/P8Codec.lean`, `P8Schema.lean`;
+decisions row 128 amended, row 179 ruled: seat S's allowlist is the one annotation policy of `N_S`
+and the reader's guard). Take it, not the guard. P's brief text, your steps:
+
+1. `Schema/Codec.lean`: `decodeRaw`'s union arm reads its second branch only for a value that is
+   not a member of the first (`P8Codec.lean:408`). `N_J` is `normJ` (`:47`): a stable sort of
+   every object's entries by key bytes, recursively.
+2. `Laws/Schema/Codec.lean`: `decodeRaw_normJ` (`decodeRawC_normJ`, `:487`; its lemmas
+   `fields?_normJ`, `payload?_normJ` and the four sub-decoders' versions), `decodeRaw_exact`
+   (`:851`; `nat?_exact`, `fields?_two`, `payload?_exact`, `normJ_tagged_of_payload`, the
+   sub-decoders' exactness), then `encode_of_decode` and `decode_iff` (`:1053`, `:1088`) beside
+   `decode_of_encode`; the red control `codec_not_exact` (`:1108`) as a fixture.
+3. `Schema/Bridge.lean`: `ofSchema` with whole checks, the `TypeParameter` refusal, the
+   annotation guard first in each arm and `isDefect` reading the defect slot's annotations
+   (`P8Schema.lean:89`); `N_S` the fold `normS` (`:76`) with row 179's `normAnn` (S's allowlist);
+   `ofSchema_exact` by `fun_induction ofSchema` (`:411`; 39 cases), `normS_schema`, the
+   retraction with `reservedFree` (or `schemaWf`). Red controls `:170`, `:176`, `:186`.
+4. Every proof in `P8Codec.lean` and `P8Schema.lean` is `[propext, Quot.sound]`, uses no `try`,
+   `first` or `simp_all`, and states its `simp` as `simp only`; copy them, renaming `C`.
+
+Seat S's half (above, from S §7.1) stands where it does not conflict; where S wrote "exactness
+by a guard", P's plain-reader proof replaces it. The register: `E4-SCHEMA-CE-061` stays as the
+defect-id finding (S); the red controls above are fixtures, not register rows, unless one changes
+a declaration. Codex's 20:16 finding (`E4-SCHEMA-CE-062`) is W5's, not yours.

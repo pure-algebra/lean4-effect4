@@ -342,7 +342,11 @@ and tag pushed (`v0.7.0` at `f5878bf`); seat D4 lands row 151 (a″) and the clo
 Probe Q merged (`818c26ff`): the generator work lands alone before the append with byte-identical
 outputs (row 171, seat W2), conservativity as one command (row 172; the promotion of the four stale
 `Ty` constructors is the owner's), the per-constructor tables' cut-over (row 173), two tooling gaps
-(row 174), and no `Val` frame for the numbers (rows 121, 109 amended).
+(row 174). Probe P merged (`714d2601`): every law the wave needs proved on one
+production-shaped copy; row 128's exactness theorems proved by construction (W1's route (b)); the
+leaf-order table (row 177, ruled); required-below-optional (row 178) and the `N_S` annotation policy
+(row 179) ruled; the number images must nest, so the wave's commit 3 lands the two frames after all
+(rows 121, 109 amended twice).
 
 **The type-language probe's first result (probe T, 2026-10-01, merged `8036f0b4`; rows 157–164).**
 The data wave can finish `Ty` once only if its single append also carries a structured nominal

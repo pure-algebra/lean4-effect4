@@ -33,3 +33,40 @@ subsume deleted.
 Receipt `receipt-W4.md`: the constructors and frames landed; the laws (name, axioms) and the
 per-constructor proofs deleted; the generated files with their producer commands; the
 conservativity log; the lines for rows 119, 121, 125, 157–162, 165.
+
+## Amendments at dispatch (2026-10-01, probes P and Q merged)
+
+**The `Val` append (commit 3, your first step) is not empty.** Probe P proved that the order's
+edges `nat ⊑ int ⊑ number` are membership inclusions only if the images nest, and Lean's generated
+`Int` image breaks `nat ⊑ int` (`generated_int_image_breaks_tower`): so the signed frame holds the
+negative integers only (a non-negative integer is its `nat` image) and the binary64 frame only the
+doubles that are not integers; one value, one image. Probe Q measured the frames
+(`Q/patches/Val-two-frames.patch`, +138/−7, laws at `[propext, Quot.sound]`; `printIn`'s two arms,
+`Store/Domain/Shape.lean:383`); re-point `Canonical Int` and `Float64` at the nesting images as a
+named byte promotion in the policy (rows 121, 109 amended), regenerate the `Value` and `ValFold`
+groups once (`make gen-derived`), and run `scripts/check-conservativity.sh <base>` (landed by W2),
+whose C1 lists every stored `Int` and `Float64` vector.
+
+**The `Ty` append (commit 4), P's half, verbatim:** the laws, with their text on seat P's copy
+(`P/probes/P2Ty.lean` to `P7Tagged.lean`): `sub` with the table and the four congruence arms;
+`normalize` (record via `canonF`, `tuple [a, b]` to `prod`, `app t []` to `handle t`); `Normal`
+(record ascending, tuple arity ≠ 2, app args ≠ []); `sub_trans_core`, `sub_antisymm_normal`
+(through `Normal.canonHead`), `sub_normalize_of_sub`; `Val.hasTy` and `Fits` with the named record
+arm (`namedHasTy`/`NamedFit`), the map, tuple, app and leaf arms; `hasTy_sub`/`fits_sub` (the
+table's case by `hasTy_leafRule`), `hasTy_normalize` and `fits_normalize` with their record, tuple
+and app cases, `fits_hasTy`, `fits_live`, `fits_map`; `inhabited` and `inhabited_iff_fits`; the tag
+decision by name; `record_sub_not_complete`. The leaf images must nest (row 121's amendment). Red
+controls kept as fixtures: `eq_of_sameHead_raw_false`, `written_order_not_invariant`,
+`named_width_refused`, `bytes_order_ambiguous`, `raw_fold_disagrees`, `neverField_empty`,
+`generated_int_image_breaks_tower`, the cyclic table. Eight production proofs touched by the
+append use `try` or `simp_all` and are rewritten on the copy without them (the rule for a touched
+proof): `key_injective` (`P2Ty.lean:254`), `members_atom` (`:525`), `factors_isFactor` (`:790`),
+`factors_singleton` (`:804`), `sub_member_right_iff` (`P4Algebra.lean:156`), `normal_members`
+(`:197`), the `decreasing_by` of `sub_antisymm_normal` (`:286`), and `hasTy_members`
+(`P4Check.lean:627`). Rows 177 (the table's inclusions), 178 ((a): flags exact in `sub`), 158
+(`app` invariant until the per-name variance table) and 119/125/157 as amended by P are the
+statements. Q's commit-4 producer order (`Q/note.md`, "Brief text", T's commit 4) is the
+regeneration recipe: wire tags 20–27, the head rows and the `rules` data rows, the `TyEq` group
+first in the manifest, then the producers one at a time with `LEAN_NUM_THREADS=1`, `make corpus`,
+the policy re-seeded, `make check-cases`, `scripts/check-conservativity.sh <base>`; stop if C1,
+C2 or C3 refuses.
