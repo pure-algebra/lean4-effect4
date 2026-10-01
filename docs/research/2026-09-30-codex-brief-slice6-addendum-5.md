@@ -7,6 +7,10 @@ where they differ, this one wins. The owner ruled on 2026-10-01, after reading C
 [audit](2026-09-30-codex-review-model-probe/audit.md) of the model probe's plan: "H2 part one go,
 D1–D6 as amended."
 
+**Amended by the owner on 2026-10-01, directly to Codex; see the end of this note.** Part one's
+clause excludes `badName` and `notImplemented` only; `missingService` waits for row 117. Three
+further rulings widen C's scope.
+
 **The one thing first.** H2 part one is go, in addendum 4's order after H1: the eight named
 existing-body repairs, the explicit clean-failure premise, the local exclusion lemmas, and nothing
 more. H2 part two stays held: the audit's saved-frame counterexample makes it a design item (row
@@ -125,3 +129,29 @@ extension family selected from `R2Probe.lean`), measured by a fresh compilation 
 Same rules as addendum 4: narrow builds, commits by explicit paths, `LEAN_NUM_THREADS=1` for
 regeneration, no push, no edits to `decisions.md`. Update the receipt in place: a new section
 "After addendum 5" at the top with its one thing, the earlier sections kept below as history.
+
+## Amendments by the owner, 2026-10-01 (ruled directly to Codex; recorded here by the coordinator)
+
+1. **H2 part one's clause, corrected.** The "judgment" paragraph above wrote the full clause,
+   `missingService` excluded when `ty.requires` is empty, while the part-two section held the
+   contract that clause needs; Codex read the contradiction (receipt, "H2 — part-one exclusion
+   clarified"). The owner: "two defects in part one; `missingService` waits." So part one keeps
+   `ExitOk w ty ex` and the signature-free `NoShapeDefect ty ex` interface, but the clause ignores
+   `ty` for now and excludes `badName` and `notImplemented` only. The conditional `missingService`
+   clause is part two, with row 117's contract amendment. The eight-body cap, the clean-failure
+   premise, the local lemmas, the controls and the no-ninth-repair rule are unchanged.
+2. **C's reader checklist gains two handwritten OCaml files.** Step 5 found that the engine
+   prelude (`ocaml/engine/tools/api_engine_prelude.ml`) still constructs the old fiber field and
+   that both spawn substitutions advance fibers without a ledger append, and that the engine tests
+   (`ocaml/engine/test/test_engine.ml`) read `.origin`. The owner: "finish C with this amendment."
+   The prelude's load, make and spawn transcriptions append the exact `ForkRecord`; the four
+   Fast/Ref provenance assertions inspect the machine ledger (a root has no record; a child keeps
+   its parent, daemon flag and exact site). The extern map is unchanged.
+3. **Two more generated manifests are permitted as C's producer outputs:**
+   `ocaml/gen/closure-fibers_gen.tsv` and `ocaml/gen/closure-machine_gen.tsv`, the producer's own
+   closure statistics for the changed record layout and spawn body. The owner: "include both
+   generated manifests."
+4. **One producer input changes:** `Effect4.Machine.ForkRecord` joins the engine entry's type
+   roots in `ocaml/gen/roots.json`, because both spawn definitions are replaced by the prelude and
+   the producer would otherwise emit a placeholder for the record. The owner: "include the
+   ForkRecord type root."

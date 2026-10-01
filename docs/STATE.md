@@ -222,7 +222,11 @@ fixed point for deadlock; load inputs as a congruence law). The owner ruled: H2 
 as amended. Recorded: rows 111–118, row 107 and row 21;
 [addendum 5](research/2026-09-30-codex-brief-slice6-addendum-5.md) to Codex. Meanwhile Codex
 landed A (`90df5d21`) and C's steps 3–4 (`be6631ab`, `e5cc184b`) on its branch; C's step 5 is in
-progress, and the merge follows it. The same day the system map gained §1.1, what a full program
+progress, and the merge follows it. Four rulings the owner gave Codex directly on 2026-10-01 are
+recorded in addendum 5's amendments and rows 91 and 107: part one's clause excludes `badName` and
+`notImplemented` only (the addendum had stated the full clause, which part two holds); the engine
+prelude and the engine tests join C's checklist; two more closure manifests and the `ForkRecord`
+type root are permitted. The same day the system map gained §1.1, what a full program
 is, and §8, the requirements R1–R13 with their status, the one place status lives; R10–R13 are
 stated as the audit corrected them. The design-basis refresh is briefed as a docs-only seat
 ([brief](research/2026-10-01-design-basis-refresh-brief.md)): one row shape, two new rows (DB-16
