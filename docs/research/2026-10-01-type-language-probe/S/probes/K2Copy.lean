@@ -1748,6 +1748,15 @@ def vA : Val := rv [("_tag", .str "A"), ("x", intVal 1)]
 #guard decodeP .int (jn (2 ^ 53)) = some (intVal (2 ^ 53))
 #guard Effect4.Schema.decode .nat (jn (2 ^ 53)) = some (.nat (2 ^ 53))
 #guard Effect4.Schema.decode .nat (.number Float64.negZero) = none
+-- the defect slot (question 4, `host/logs/q4-defect.log`): rc.112's own `Exit(Int, String, Defect())`
+-- names its defect `effect/schema/Json`, which production's `isDefect` (`Bridge.lean:70`) does not
+-- read; the same document with Lean's id reads. Both on the production reader.
+def rcExitDoc (defectId : String) : Representation :=
+  .declaration ⟨"effect/schema/Exit", .null⟩ (some [⟨"expected", .str "Exit"⟩])
+    [Effect4.Schema.Bridge.schema .int, Schema.string,
+     .declaration ⟨defectId, .null⟩ (some [⟨"expected", .str "JSON value"⟩]) [] []] []
+#guard (Effect4.Schema.Bridge.ofSchema (rcExitDoc "effect/schema/Json")).isNone
+#guard Effect4.Schema.Bridge.ofSchema (rcExitDoc "effect/schema/Defect") = some (.exitOf .int .string)
 -- (i) row 128's witness: RED CONTROL on the production decoder, then the copy
 def overlapEE : PTy := .union (.except .nat .nat) (.exitOf .nat .nat)
 def jFailure : Json := jobj [("_tag", .str "Failure"), ("failure", jn 1)]

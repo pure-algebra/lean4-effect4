@@ -1,8 +1,8 @@
 # probe: docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
-# date: 2026-10-01T20:00:49Z
+# date: 2026-10-01T20:07:01Z
 # command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
 # toolchain: leanprover/lean4:v4.33.1
-# sha256: 7aa4ec3631ec7efa2062e793998300901e267f53587481e464c901c96f0005d3
+# sha256: e3a3377ba97b3768e35568a7ebf3ecd151805b8c978de7f2db238bad3df88d26
 'SeatS.K2.PTy.ind'' does not depend on any axioms
 'SeatS.K2.nameLt_irrefl' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.nameLt_trans' depends on axioms: [propext, Quot.sound]
@@ -46,4 +46,4 @@
 'SeatS.K2.fieldDecoders_names' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.fieldCheckers_names' depends on axioms: [propext]
 'SeatS.K2.prepared_agrees' depends on axioms: [propext, Quot.sound]
-# exit=0 seconds=9
+# exit=0 seconds=6
