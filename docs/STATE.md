@@ -346,6 +346,9 @@ that carry their canonical names in the existing frames (row 165 (a), the owner'
 keys for `__proto__` (167). Probes P, Q and S are running with that shape in hand. **The data wave started 2026-10-01** on
 the owner's instruction, in parallel with wave 2 ([the series and its seats](research/2026-10-01-data-wave/README.md));
 its `Ty` append follows D1's merge; seat W0 (the lean4-typescript bump, row 164) is first.
+The system map's new §10 states the five constructions the tree rests on and the seven stability
+criteria with their status; "stable" is a theorem of the tree once S1–S7 hold, and the open counts are
+the distance.
 
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
