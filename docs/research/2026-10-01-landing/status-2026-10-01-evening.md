@@ -221,3 +221,28 @@ same data generates what a reader looks at. The mechanism, as the first step of 
 The bound this gives: the set of obligations is the union of the chapter lemma lists, printed
 by the census from the environment, so "what remains to prove" is a number per chapter on the
 map, and a theorem that fits no chapter is visible as unplaced the day it lands.
+
+## 7c. The meta-documentation as a Schema document (the owner's idea, 18:45)
+
+The owner's proposal: the language's documentation defined in terms of Effect schemas,
+documents and annotations, one consistent thing throughout, with TAPL and our formalization
+notes doing the categorization and giving the annotation schema; probably a fold over the code
+through the existing `cata` machinery. The coordinator's reading, folded into §7b as its output
+format rather than a separate project:
+
+- **The document is a `Representation`** (the Schema AST's free algebra, persisted as JSON, printed
+  by the readable profile of row 169, read by the TypeScript side). A chapter, a judgment, a
+  theorem or an obligation is a node; the TAPL categorization is a set of annotation keys on it.
+- **The keys are documentation keys** in row 179's sense (`effect4/chapter`, `effect4/lemma`,
+  `effect4/status`, `effect4/row`, …): erased by `N_S`, so the exactness theorems and every
+  reading ignore them by construction, and the one reader that erases `title` erases them.
+- **Produced by folds.** Each sort's signature is already a shape document (a fold over the
+  free object: `ShapeDoc`, `Ty.schema`); the proof-graph side is the environment walk the ledger
+  commands do, which the chapter attribute and `#chapter_census` of §7b make a fold over
+  declarations. Both emit into one generated document, `generated/semantics.json` (a `docs`
+  group with its producer in the fixed order), and the map's chapter section, `semantics.md`'s
+  tables and the TypeScript tools read that one source. Measured, never drawn.
+- **Hand-written stays small:** the chapter table (what TAPL demands per chapter) and the prose.
+- **Not allowed:** a second documentation vocabulary beside the Schema annotations; a
+  hand-maintained status anywhere; a key that would change a reading (then it is a row, not
+  documentation). First cut: four keys, one document, one printer.
