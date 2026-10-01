@@ -1355,7 +1355,11 @@ the order itself (`Ty.WidensSub`, `fits_instantiate_widens`), because membership
 declarations at handles where the coarse check reads kinds. And `fst`/`snd` over a union of
 products answer at `Ty.join`, which the checker's join closure covers (`projectProduct_fits`). -/
 
-/-! ### Inversions at the scalar and value formers -/
+/-! ### Inversions at the scalar and value formers
+
+`fits_unit_inv` and `fits_nat_inv` are also the store rows' value facts (seat B's
+`Typed/Adequacy.lean` stated them as `fits_unit_val` and `fits_nat_val`; row 132 keeps person-written
+`Ty` cases here, so they have one home). -/
 
 theorem fits_unit_inv {w : World} {v : Val} (h : Fits w v .unit) : v = Val.unit := by
   simp only [Fits] at h
@@ -1389,6 +1393,26 @@ theorem fits_option_inv {w : World} {v : Val} {a : Ty} (h : Fits w v (.option a)
   · rename_i x
     exact Or.inr ⟨x, rfl, h⟩
   · exact h.elim
+
+/-- Membership of a number does not read the number: the `nat` arm is the only one a number
+reaches, a union passes it to a branch, and `unknown` reads no keys (one induction over the
+judgment; the store rows that overwrite a `nat` cell read it). -/
+theorem fits_nat_irrel (w : World) (n m : Nat) : ∀ t, Fits w (Val.nat n) t → Fits w (Val.nat m) t := by
+  intro t
+  induction t with
+  | nat => intro _; trivial
+  | union l r ihl ihr =>
+    intro h
+    rcases h with h | h
+    · exact Or.inl (ihl h)
+    · exact Or.inr (ihr h)
+  | unknown => intro _; exact live_of_keys_nil rfl
+  | handle target =>
+    intro h
+    obtain ⟨_, ctx, hctx, _⟩ := h
+    exact (nomatch hctx)
+  | never | unit | int | string | bool | option | list | prod | except | exitOf | causeOf
+  | fiberOf | lit | refOf | deferredOf | var => intro h; exact h.elim
 
 /-! ### Values fitting an argument list -/
 

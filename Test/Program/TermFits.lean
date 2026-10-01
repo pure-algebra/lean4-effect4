@@ -132,6 +132,7 @@ theorem widens_needs_valueVars :
 #print axioms Effect4.Program.Typed.fits_bool_inv
 #print axioms Effect4.Program.Typed.fits_string_inv
 #print axioms Effect4.Program.Typed.fits_option_inv
+#print axioms Effect4.Program.Typed.fits_nat_irrel
 #print axioms Effect4.Program.Typed.FitsAll.get?
 #print axioms Effect4.Program.Typed.FitsAll.nil_inv
 #print axioms Effect4.Program.Typed.FitsAll.singleton_inv
