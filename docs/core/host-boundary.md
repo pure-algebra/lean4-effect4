@@ -254,3 +254,50 @@ These are the contract's X-steps (its §9), with the fiber slice first:
    typed entry paths.
 7. **The Ref slice** (acquisition, a handle in a Ref, a second call, release) after the
    generic-cell work of rows 42–43.
+
+## 7. Decision 12 and the boundary rule (2026-09-10; written here 2026-10-01, row 122)
+
+Two owner rulings of 2026-09-10 govern every boundary in this document. Until 2026-10-01 they
+lived only in research notes, now force-added
+([Decision 12](../research/2026-09-10-schema-at-boundaries.md),
+[the boundary decisions](../research/2026-09-10-boundary-decisions.md)); decisions row 122 writes
+them here. Cite the first as "Decision 12", never "D12": in tracked files "D12" also names other
+things.
+
+**Decision 12: every boundary value carries an Effect Schema.** The owner's words: "an Effect
+Schema representation of all boundaries. The program at its most degenerate still emits an
+Effect Schema representation of whatever value is there." What it means at `dceae006`:
+- **Landed.** S-1, `Ty.schema : Ty → Representation` (`src/Effect4/Schema/Bridge.lean:38`); S-2,
+  the documents, `EffTy.document` (as an effect: the exit schema with its requirement keys,
+  `Schema/Bridge.lean:246`) and `Row.document` (a row's request, answer and error, `:254`); S-3,
+  the codec at a type, `Effect4.Schema.encode`/`decode` (`src/Effect4/Schema/Codec.lean:230`,
+  `:239`). `EffTy.document` publishes a program's exit schema; `Api.schemaOf` was deleted with
+  row 39. Until their exactness theorems land, `Ty.ofSchema` and the JSON codec are retractions,
+  not exact embeddings (row 128).
+- **Not started.** S-5, the gate that every recorded exit decodes under its program's published
+  `Schema.Exit` on rc.112: row 5 (finite, host evidence when it runs).
+- **DI-08 is answered by it** (ruled, row 122): Schema is in the release as the persisted
+  description plane, the language every boundary is described in; the authoring plane stays
+  archive-tier (the note's own answer, `2026-09-10-schema-at-boundaries.md:11-13`).
+
+**The boundary rule.** The owner's rule for every boundary: "fidelity to a normal Effect TS
+project where possible; never break host code because a type at a boundary was declared narrower
+or differently than the host sees it; be comprehensive and overload rather than refuse"
+(`2026-09-10-boundary-decisions.md` §1). There are four boundaries where a type is declared on
+one side and observed on the other:
+
+| boundary | declared by | observed by | what "not breaking" means |
+| --- | --- | --- | --- |
+| B-print | the checker's type, printed as `Effect.Effect<A, E, R>` on the module | the pinned TypeScript compiler | mutually assignable, both directions |
+| B-accept | Lean's typing rules | a program rc.112 accepts | Lean accepts it too, or refuses it by a named refusal, never by a wrong type |
+| B-row | a row's request, answer and error columns | the real package through the adapter | the adapter's projection inhabits the column exactly |
+| B-tape | the row's answer and error columns | a recorded host answer on replay | admitted whenever the host's value is a member, at any subtype of the column |
+
+"Overload" means: at B-accept and B-tape, widen what Lean admits; at B-print, declare what the
+compiler would infer; at B-row, project at the adapter, never in the program.
+
+**Route A, the one boundary decode route** (row 122). Host data enters a program as a typed host
+answer checked by membership at the reply (§4.4): every reply the session accepts at a row is a
+member at the row's answer type in the new world. The host adapter decodes with the row's own
+schema; the session checks a `Val`, and nothing in the program parses. A reply that is not a
+member is refused with a located `envelope` refusal; an internal handle is refused by §5's rule.
