@@ -1,5 +1,11 @@
 # The organizing principle: initial algebras for syntax, observations for behaviour, coherence as uniqueness (scout F, 2026-09-17)
 
+> **Record of 2026-09-17 (scout F), kept as history.** Current status lives in
+> `docs/core/system-map.md` §5 (the arrow kinds and their proved instances) and in the traversal
+> census at HEAD (`#traversal_census`, `docs/core/traversal-census.md`). The corrections of
+> 2026-10-01 (the formal pass, decisions rows 141–146) are marked inline; everything else here
+> is as written on 2026-09-17/18.
+
 **The answer, in one paragraph.** The estate has exactly two universal properties and is already
 living off them without saying so. Everything the owner calls a *representation* is either a **free
 object for a signature given as data** (`Eff`, `Ty`, `Term`, `CauseTerm`, `Representation`, `Val`,
@@ -60,7 +66,7 @@ is still missing (§2 row 19).
 | object | free object | signature as data | uniqueness |
 | --- | --- | --- | --- |
 | programs | `Eff Op` + 6 families, 25+6+2+2+16+10+2 ctors (`Program/Eff.lean:301`) | `LayerView.lean:120-274` | `hom_eq_cata_eff` (`Fold.lean:1172`), one per family |
-| types | `Ty`, 16 ctors (`Program/Ty.lean`) | `TyAlgebra` (`Fold.lean:31`) | `hom_eq_cata_ty` (`Fold.lean:89`) |
+| types | `Ty`, 20 ctors (`Program/Ty.lean`) | `TyAlgebra` (`Fold.lean:31`) | `hom_eq_cata_ty` (`Fold.lean:89`) |
 | pure values | `Term`/`Terms`, `CauseTerm` (`Eff.lean:251`, `:271`) | `TermAlgebra`, `CauseTermAlgebra` | `hom_eq_cata_term`, `…_cause` |
 | schemas | `Representation`, 22 tags (`Schema/Representation.lean`) | `Schema/Fold.lean` (1,066 lines) | fold exists; **no `hom_eq` law** |
 | stored values | `Val` (`Store/Val.lean`) | `Shape`/`ShapeDoc` (`Store/Shape.lean`) | `Val.decode_encode`, `Val.decode_exact` |
@@ -75,14 +81,18 @@ preserved by steps and reflected in that observation. `run_eq_ref` is exactly th
 `obs` agree because `ReplayRel` holds at the load and is preserved by every command. This is
 universal coalgebra (Rutten 2000; Jacobs 2016) and forward simulation (Lynch–Vaandrager 1995), and
 the estate is right to state it as a relation. Where it does give an equation (`run_eq_meaning`,
-`loopAgreement`) that is a simulation collapsed at the exit, on a named fragment.
+`loopAgreement`) that is an equal-observation statement (computational adequacy against the
+meaning; semantic preservation against the reference), proved through the simulation relation (the
+book's `ReplayRel`/`BMeans`), on a named fragment (wording corrected 2026-10-01).
 
 **(C) Retracts and exact embeddings.** Every "same thing in another form" is a (write, read) pair
 between objects of (A), with one to three laws. `Canonical` states all three as *class fields*, so an
 unlawful instance cannot land (`Store/Canonical.lean:32-46`: `ofVal_toVal`, `ofVal_exact`, `fits`) —
-a lawful `Prism` (Pickering–Gibbons–Wu 2017). `Ty` inside `Representation` is an *ornament* (McBride
-2011): information added, forgetful fold back (`ofSchema`). Print/read is the same kind in the syntax
-direction, and is exactly Rendel–Ostermann's invertible syntax description (2010).
+a lawful `Prism` (Pickering–Gibbons–Wu 2017). `Ty` inside `Representation` is a partial isomorphism
+onto its image, a retraction until exactness lands (row 128): not an ornament (McBride 2011), whose
+forgetful map would be total where `ofSchema` is partial (corrected 2026-10-01). Print/read is the
+same kind in the syntax direction, and is exactly Rendel–Ostermann's invertible syntax description
+(2010).
 
 The brief's other candidates are not separate kinds. Free monads and Elgot iteration are models, not
 objects: `Eff` is syntax with **no equations**, and the monad and iteration laws live in the carriers
@@ -115,13 +125,13 @@ be, so `Transform`'s category laws can only be stated at the meaning (§2 row 25
 | 9 | `size` (`sizeAlg`), `supervision` (`superAlg`) | K1 | ✔ with `supervision_static` |
 | 10 | authoring lifts over `binders.json` into `Src = Env → List Nat → Except Refusal (Eff Op)` (`Authoring.lean:113`) | K1+K4 | ✔ generated, scope-safe by construction |
 | 11 | `elaborate`, `elaborateModule` (`Authoring.lean:306`) | K4 | ✔ located `Refusal` (path + reason) |
-| 12 | `explain`/`blame` | K4 | ✔ `explain_none_iff` (`Typing/Blame.lean:768`) |
+| 12 | `explain`/`blame` | K4 | ✔ `explain_none_iff` (`Program/Typing/Agreement.lean:82` since the typing split; corrected 2026-10-01) |
 | 13 | `Author.build` (`Api/Author.lean:55`) | K4 | ✔ refusals; `build_check` still owed (consolidation §3.2) |
 | 14 | `admitProgram` | K4 | ✔ `admitProgram_certificate`, `admitted_unique` |
-| 15 | `effTy` + 7 siblings (`Typing.lean:284`) | K1 claimed | **✘ not a fold** (0 uses of `cata_eff`); `HasTy` agreement ✔ |
-| 16 | `denote` (`Denote.lean:66`) | K1 claimed | **✘ not a fold**; soundness ✔ (`meaning_typed`, `meaning_never_wrong`) |
+| 15 | `effTy` + 7 siblings (`Typing.lean:284`) | K1 claimed | ✔ since 2026-09-18: `effTy` is the checker fold's success by definition (`Program/Typing.lean:28`; census §7.5); `HasTy` agreement ✔ (corrected 2026-10-01) |
+| 16 | `denote` (`Denote.lean:66`) | K1 claimed | ✔ a fold since the universal-algebra refactor (`fold_of … denote`, `Laws/Program/Folds/Denote.lean:21`; `denote.eq_cata`); soundness ✔ (`meaning_typed`, `meaning_never_wrong`) (corrected 2026-10-01) |
 | 17 | `compileEff` (`Compile.lean:549`) | K1 claimed | **✘ not a fold**; agreement ✔ only on `Straight`/`Looped` |
-| 18 | `Straight` (`Fragment.lean:20`), `Looped` (`DenoteB.lean:123`) | — | **✘ no obligation**: they end `_ => false` / `e => Straight e`, so a new constructor silently leaves the fragment and every theorem stays true over less |
+| 18 | `Straight` (`Fragment.lean:20`), `Looped` (`DenoteB.lean:123`) | — | ✔ since 2026-09-18 (census §7.10): both name every constructor (`Straight.eq_cata`, `Looped.eq_cata`), so a new constructor is a compile error, not a silent exclusion (corrected 2026-10-01) |
 | 19 | `cata_fusion` / `AlgMap` for `Eff` | K1 | **✘ absent**: `print ∘ weaken`, `read` then `effTy` have no composition law |
 | 20 | `Canonical α` (`Store/Canonical.lean:32`) | K2 | ✔ all three laws, as fields |
 | 21 | program bytes `Wire.encodeProgram`/`decodeProgram` | K2 | ✔ `decode_encode` + `decode_exact` |
@@ -141,7 +151,7 @@ be, so `Transform`'s category laws can only be stated at the meaning (§2 row 25
 | 35 | `effTy` vs `tsc`'s inferred type | K3 | **▣** 110 agree / 8 refused / 9 mismatch of 127 |
 | 36 | `read` on *foreign* TypeScript | K4 | **✘ no domain statement**: laws 11/12 speak only of the reader's image and the printer's output |
 | 37 | the four JSON images of one `Val` | K1/K2 | **✘ no square**: `Schema.encode` (`Codec.lean:224`), `ShapeDoc.print` (`Shape.lean:539`), `Canonical.print` (`Canonical.lean:111`), the harness's `valJson` (`harness/truth/Truth.lean:404`, again at `harness/truth/session/Keyed.lean:104`) — four definitions, no theorem relating any two |
-| 38 | run observations | K5 / final | **✘ no finality**: nothing says equal observations imply equal runs, so `obs` projects without reflecting |
+| 38 | run observations | K5 / final | **✘ no finality**: nothing says equal observations imply equal runs, so `obs` projects without reflecting. Correction 2026-10-01: that property is injectivity of the behaviour map, neither claimed nor needed (row 146); `behaviour_unique` (the session runner's map is unique by its unfolding) is a different fact |
 
 ### 2.1 Where the water leaks
 
@@ -557,15 +567,17 @@ asked where to *go*; there is nowhere to go, and the vocabulary is what makes th
 - **Foster–Greenwald–Moore–Pierce–Schmitt, TOPLAS 29(3), 2007; Pickering–Gibbons–Wu, "Profunctor Optics",
   Programming 1(2), 2017** — `Canonical`'s three fields are the lawful-Prism laws; GetPut/PutGet is why
   exactness is not optional (F-6).
-- **McBride, "Ornamental algebras, algebraic ornaments", 2011; Dagand–McBride, ICFP 2012** — `Ty` versus
-  `Representation` as an ornament with a forgetful fold (`ofSchema`); the frame in which "the checkable
-  fragment" is precise rather than a slogan.
+- **McBride, "Ornamental algebras, algebraic ornaments", 2011; Dagand–McBride, ICFP 2012** — cited by
+  name for `Ty` versus `Representation`; the reading is wrong (an ornament's forgetful map is total,
+  `ofSchema` is partial): the pair is a partial isomorphism onto the image (Rendel–Ostermann), a
+  retraction until exactness lands (row 128; corrected 2026-10-01).
 - **Power–Robinson, MSCS 7, 1997; Levy–Power–Thielecke, I&C 185, 2003; Katsumata, POPL 2014;
   Orchard–Petricek–Mycroft 2014** — §4b's shape: `Transform σ Γ A B E R` as an arrow of an effectful category
   graded by its error and requirement columns, `PureMap` the value category.
 - **Rutten, "Universal coalgebra", TCS 249, 2000; Jacobs, "Introduction to Coalgebra", CUP 2016;
-  Lynch–Vaandrager, I&C 121(2), 1995** — the behaviour side: why `run_eq_ref` is a relation, and what the
-  missing finality law (row 38) would say.
+  Lynch–Vaandrager, I&C 121(2), 1995** — the behaviour side: why `run_eq_ref` is a relation. What
+  row 38 of this census calls a missing finality law is injectivity of the behaviour map, neither
+  claimed nor needed (row 146; corrected 2026-10-01).
 - **Leroy, "Formal verification of a realistic compiler", CACM 52(7), 2009** — §6's CompCert-shaped option and
   the cost evidence against doing it whole.
 - **Pnueli–Siegel–Singerman, "Translation validation", TACAS 1998; Yang–Chen–Eide–Regehr, PLDI 2011** — the two

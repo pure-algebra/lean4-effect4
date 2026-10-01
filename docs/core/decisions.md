@@ -1,4 +1,4 @@
-# The one list — every open decision of 2026-09-17, deduplicated (2026-09-17; reviewed 2026-09-18)
+# The one list — every open decision, one register (started 2026-09-17; rows added through 2026-10-01; each row's status column is the owner of its status)
 
 Folded from: the consolidation note (D-A…D-J), the three seat receipts (daemons D1–D4, author
 C1 and its three decisions, run §4–§5), scout C (D1–D12), scout D (D-1…D-8), scout E (E-1…E-10
@@ -17,7 +17,7 @@ allows, delete at a good place") is applied to the rows argued from consumer cou
 
 ## A. Types and schemas at the boundary
 
-| # | decision | recommendation | sources | who | status 2026-09-18 |
+| # | decision | recommendation | sources | who | status (dated per row) |
 | --- | --- | --- | --- | --- | --- |
 | 1 | **The canonical schema object.** (a) the Schema AST replaces `Representation`; (b) the AST is a second carrier whose `toRepresentation` fold lands in the pinned 22-tag one; (c) no AST carrier | **(b), after row 6 and row 11 land** — the pin and `fromJson` are about the persisted projection, so (a) discards the estate's only stamped schema claim; the AST is needed only for the three things the projection drops, and only one of them (a transformation) is something Lean owns better than rc.112. This reverses the coordinator's earlier position, on E's evidence | E-1, E §13; D §5; consolidation D-J | owner | open; the evidence moved: `Endpoint` and `Transform` are deleted (`b08f3b58`), so the "transformation" the AST was needed for is gone; the trigger is now the first foreign schema actually read (row 32 step 2), as `docs/research/2026-09-17-ontology-and-do-now-probe.md` §3.4 says |
 | 2 | **Names for records and sums.** (a) sugar only; (b) `Ty.record`/`Ty.variant`; (c) annotation-carried names | **(c) now, (b) before the first foreign consumer, as stages** — `select` reads the tagged tuple that `Arrays[Literal t, T]` already is, so annotations keep the eliminator working; a foreign `decodeUnknownSync` never reads an annotation, so the first consumer of a published record dates (b) | D-A, D-1, E-5, C §3.4 | owner | open Row 119 (2026-10-01) rules stage (b): `Ty.record` with annotation-carried names in canonical order; (c) is superseded by it |
@@ -35,7 +35,7 @@ allows, delete at a good place") is applied to the rows argued from consumer cou
 
 ## B. The run and the MCP surface
 
-| # | decision | recommendation | sources | who | status 2026-09-18 |
+| # | decision | recommendation | sources | who | status (dated per row) |
 | --- | --- | --- | --- | --- | --- |
 | 14 | **The table travels by digest.** `Built.digest` over `programBytes ++ tableBytes`; `(digest, Run.id)` the wire identity; `Call`/`Header` carry the digest | **yes, now** — 89% of an answer's bytes and a 231 KB advertised schema are the table by value; `Canonical RowTable` exists. Changes the wire shape of `Header`/`Call` (compat policy) | C-D3, C-D7, D-C | owner | open; no `digest` under `src/Effect4/Api/` |
 | 15 | **The MCP server.** Lean `--run` driver in `src/Tools` first, generated bun second; fourteen tools, `run.play` withheld; the server holds the journal, not the `Run`; no reactor over the wire; `ToolSpec` table inside the gate; the run protocol before R12's inspection protocol | **yes, as one choice** — only a Lean host gets `open_total` (a `Module` is a function, a certificate is a `Prop` record); `journal_replays` makes the cached `Run` an optimisation; four of R12's nine commands are buildable and five need a `Doc` that does not exist | C-D1, D2, D4, D9, D10, D11; D-F | owner | open; no `src/Tools`, no `ToolSpec` |
@@ -45,7 +45,7 @@ allows, delete at a good place") is applied to the rows argued from consumer cou
 
 ## C. Authoring, daemons, and the older face
 
-| # | decision | recommendation | sources | who | status 2026-09-18 |
+| # | decision | recommendation | sources | who | status (dated per row) |
 | --- | --- | --- | --- | --- | --- |
 | 19 | **The three root modules and the daemon words.** `Effect4.Author` / `Run` / `Face` as the imports an agent writes, `Api.*` the deep source; `fork` / `daemon p in s` / `detach p`, no author-written flag at a pin | **yes, as a file-move wave after group A's first slice** | D-G, D-I2, daemons D4 | owner | open; `docs/research/2026-09-17-ontology-and-do-now-probe.md` §3.4 adds: write the three fresh and leave `Api.lean` with what they import, rather than move |
 | 20 | **One machine edit.** A path on `RunEvent.forked` (closes `supervision_static` "at those paths"); the race-entrant options named once (a literal at 9 sites) | **yes, together, one rebuild** | D-H, daemons D3, consolidation §2.11 | owner | open in register; origin/site implementation landed in `8b64039f`; source-site and trace connectors remain, and the separate options consolidation must be checked **Ruled 2026-09-20 (owner), written 2026-09-21: yes, together, one rebuild.** Origin/site landed (`8b64039f`); the five `source_*_site` obligations open in the ledger are its remaining connectors (slice 6, `2026-09-21-codex-packet-divergence-and-slice-5.md` §4). |
@@ -57,7 +57,7 @@ allows, delete at a good place") is applied to the rows argued from consumer cou
 
 ## D. Lowering, TypeScript generation, vendoring
 
-| # | decision | recommendation | sources | who | status 2026-09-18 |
+| # | decision | recommendation | sources | who | status (dated per row) |
 | --- | --- | --- | --- | --- | --- |
 | 26 | **The rules for canonical TypeScript**, corrected by E. Every TypeScript artefact is a fold of a *committed table or free object* (`Eff` for programs; the row/`Entry` table for types, folded two ways — a Schema AST for values and a `TypeRef` for types, never one from the other; the LCNF closure for code); no artefact from the Lean environment (`TsGen`'s read retired) or from a hand transcription (`prelude.ts` generated); the emitter targets the TypeScript **syntax** AST; type generation is split — tables own types, LCNF owns semantics, sugar owns authoring | **adopt** — E's count (91 of 7,008 exports are AST-typed entries; `Effect`, `Layer`, `Stream`, `Ref`, `Deferred`, `Queue`, `Scope`, `Fiber`, `Exit` all 0) is why "TypeScript types from the Schema AST" cannot be the rule and "two parallel folds" can | D-J, E-6, E-7, E §10, F-11(b), D §5 | owner | open; `tools/Tools/TsGen.lean` still reads the environment, `harness/truth/prelude.ts` is still hand-written |
 | 27 | **The LCNF per-module recipe** (roots → closure + case-site policy → emit → rung 2/3 differential → truth differential → `Entry` table) with *decision agreement on the observation* as the obligation, and the fact that **certificates do not cross** (`Prop` erasure); root order: codecs, the checker, the `Run` transitions, the authoring lifts | **adopt** | F-9, F §6, LCNF survey §5 | owner | open; the checker root is now one fold (`Program/Checker.lean`), the shape the recipe wants |
@@ -70,9 +70,9 @@ allows, delete at a good place") is applied to the rows argued from consumer cou
 
 ## E. Coherence gates and the vocabulary
 
-| # | decision | recommendation | sources | who | status 2026-09-18 |
+| # | decision | recommendation | sources | who | status (dated per row) |
 | --- | --- | --- | --- | --- | --- |
-| 34 | **The traversal census as a gate** (C1: every `Eff` traversal is `cataFam alg` for a declared algebra or a named exemption; ten algebras, six exemptions today) and **fusion generated** for `Eff` (C2) | do — one generated table and one generator change; the exemption list's length becomes the honest distance from the principle | F-1, F-2 | do | half: the census is an instrument, not a gate (`#traversal_census`, `Test/Audit/TraversalCensus.lean` prints and asserts nothing); it counts 81 hand traversals over five free objects, 68 with a fold and connector, 13 without (`compileEff` 5 exempt, `Sched` 5, `valCode`, `ofSchema`, one derived instance) — not six. The gate form is scout G's `env_linter` with the exemption list as data (census §8), worth writing once row 40 has shortened the list. Fusion is not generated. **Ruled 2026-09-18 (owner): no gate, no fusion; the census stays an instrument and the exemption list is tracked debt** |
+| 34 | **The traversal census as a gate** (C1: every `Eff` traversal is `cataFam alg` for a declared algebra or a named exemption; ten algebras, six exemptions today) and **fusion generated** for `Eff` (C2) | do — one generated table and one generator change; the exemption list's length becomes the honest distance from the principle | F-1, F-2 | do | half: the census is an instrument, not a gate (`#traversal_census`, `Test/Audit/TraversalCensus.lean` prints and asserts nothing); it counts 81 hand traversals over five free objects, 68 with a fold and connector, 13 without (`compileEff` 5 exempt, `Sched` 5, `valCode`, `ofSchema`, one derived instance) — not six. The gate form is scout G's `env_linter` with the exemption list as data (census §8), worth writing once row 40 has shortened the list. Fusion is not generated. **Ruled 2026-09-18 (owner): no gate, no fusion; the census stays an instrument and the exemption list is tracked debt** The counts in this row are 2026-09-17's; the census at HEAD is the instrument's (row 143) |
 | 35 | **Fragments by exclusion** (`Straight`, `Looped`, C5) and **exactness wherever a read exists** (C3: `ofSchema` first, the JSON codec second) | do — a new constructor silently leaves both fragments today | F-4, F-6 | do | the fragments: done 2026-09-18 (census §7.10) — `Straight` and `Looped` name every constructor, no wildcard and no fallback, so a constructor added to `Eff` is a missing case at each definition until classified. Exactness (`ofSchema`, the JSON codec): open, with row 6 |
 | 36 | **The vocabulary in `AGENTS.md`**: free object, algebra, fold, exact embedding (three laws), simulation, located refusal, monoid action; the rule that a new representation is admitted by naming its signature and the kind of each of its arrows; row 13's schema/program rule | do — "the owner asked where to *go*; there is nowhere to go, and the vocabulary is what makes that usable" | F-12, F-7 | done | written (`AGENTS.md` Vocabulary, `f8c9b7fe`) |
 | 37 | **CI repaired** (broken since `78684a8`; the other reason the corpus pin went stale) | done 2026-09-18 (`3a394912`: the cache key inline in each cache step); unverified until pushed | ledger | done | unverified until the owner pushes |
@@ -80,7 +80,7 @@ allows, delete at a good place") is applied to the rows argued from consumer cou
 
 ## F. Added at the 2026-09-18 review
 
-| # | decision | recommendation | sources | who | status 2026-09-18 |
+| # | decision | recommendation | sources | who | status (dated per row) |
 | --- | --- | --- | --- | --- | --- |
 | 39 | **The Schema wipe as one ruling** (`docs/research/2026-09-17-ontology-and-do-now-probe.md` §3.4, less what `b08f3b58` took): `Schema/Check.lean` (1,499 lines: the field-admission judgment, 64 theorems, called by nothing), `Schema/EffectfulField.lean` (960) with `Codegen/EffectfulField.lean` (192), `Schema/Image.lean` with `Laws/Schema/Image.lean` (81), `Arch/Accepts.lean` (117, the third value-fits checker), `Api.schemaOf`, `Annotations.lean` cut to its carrier and two keys (about 150 of 1,193), the `schema-annotations` and `schema-effectful-field` harnesses, the tests §3.4 names; then `Store.render`/`ShapeDoc.document` out of `Store/Domain/Shape.lean` into a downstream Schema bridge, so the pure shape foundation stops importing Schema; Store Domain remains above Schema. The placement landed in `05417cc6`; `Canonical.document` and domain schema addresses also need explicit owners before the renderer split (post-Phase C review F8) | **rule the list once, land it as a commit series with narrow builds**, in the order: `EffectfulField` first (it imports the standalone `Effects` package — a second effect algebra inside the core root's closure, which the vocabulary forbids whatever its consumers), then `Check`/`Accepts`/`Image`/`schemaOf`, then the `Annotations` trim, then the `render` move. Closes rows 4, 9 and 12's residue; `Schema/Fold.lean` (1,094 generated) stays while `Codegen/Schema.lean`'s printer folds with it | ontology §3; owner steer 2026-09-17 | owner | **ruled 2026-09-18** (owner: "row 39 seems reasonable"); the annotations trim and the `render` move explained to the owner the same day (STATE "What row 39 does"), landing after that note is confirmed; nothing deleted yet **Landed 2026-10-01** (Codex, four deletion slices `f0591f36`, `d75f5c25`, `3d5ea883`, `8cdc931b`; verification `bd142695`; merged `0c534f06`). Deleted: `Schema/Check.lean`, `Schema/EffectfulField.lean` with `Codegen/EffectfulField.lean`, `Schema/Image.lean` with `Laws/Schema/Image.lean`, `Schema/Accepts.lean`, `Api.schemaOf`, the two harnesses with their scripts and the `check-schema-host` gate, and `Codegen.Schema`'s convenience-admission chain (`documentReady`, `generationReady`, `module?`, `source?`, `generate?`): the row's "called by nothing" premise was false, `documentReady` called field admission, so the chain went with it rather than surviving as a second checker. Kept: `Annotations.lean`'s `AnnotationKey`, the two keys, `Representation.nodeAnnotations` and its law; `Store.render` and `ShapeDoc.document` moved unchanged to `Schema/OfShape.lean`, so pure `Store/Domain/Shape.lean` imports no Schema module. Twenty-one register rows moved verbatim to the archive; three contract packets retired. The producer chain regenerated byte-identical; schema-ts, dune, `check-ocaml` and `check-cases` pass. Row 8's dedupe did not land in the move (deletion only) and stays open. |
 | 40 | **The callers phase, continued** — the pattern of census §7.8 (the fold is the definition; the hand block, its agreement and its inductions go): the term typer (done, §7.9); `Straight`/`Looped` (row 35, done at the definition, §7.10); the value sort's block (`render`, `encode`, `WF`, `hasTy`, … 16 of 17 folded); the `Ty` block (16 of 17); `ofSchema` and `valCode` with row 6. Also: `Laws/Program/Typing/Check.lean` (58 lines) is kept for one contract test; `tools/Conform/Spec/Reflect.lean` fed the deleted `specs` group and is unaudited | do, in that order; the term typer first (smallest, closes `Term` entirely) | census §7.8; STATE "Next" | do | in progress; the checker's, `explain`'s and the term typer's slices landed (census §7.9: `Term` 11 of 11, 78 hand traversals, 65 with connectors); `Straight`/`Looped` were not a callers move (one definition each) and are done at the definition (§7.10). **Closed 2026-09-18 (owner): the remaining thirteen exemptions (`compileEff`'s five, the reference evaluator's five, `valCode`, `ofSchema`, the derived instance) stay as they are, tracked in census §7.4; nothing is converted for uniformity's sake — a hand definition that is not a fold is not thereby wrong** |
@@ -243,6 +243,10 @@ amend 95–101.
 
 ## The order (milestone before the MCP server; state/refinement review before the concrete ledger pin)
 
+**History, written 2026-09-19 and kept as the dated record.** Each row's status column above is the
+owner of its status; a row named open here may have been ruled or landed since (rows 20, 21 and 86
+are ruled; row 39 landed on 2026-10-01; rows 134–149 came from the formal pass).
+
 The owner paused implementation on 2026-09-19 to reconcile the completed research. The proposed
 D0–D7 sequence in the refinement plan refines the milestone work below; rows 78–83 are still
 open. Generic language prerequisites already authorized by rows 42–43 precede the proof arms
@@ -253,8 +257,9 @@ for the typed-state milestone.
    with 23, 5 restated at `Ty`. (Row 40 closed and row 34 ruled out on 2026-09-18: the fold work
    stops here; the thirteen exemptions are tracked, not converted.)
 2. **Row 39, one ruling** — the Schema wipe. It closes 4 and 9, takes `Image` out of row 10's
-   count, and ends with `render` leaving `Shape.lean` (row 8's `ShapeDoc.document` fix lands in
-   the move). Then row 10 (one `Val → Json`) over what remains.
+   count, and ends with `render` leaving `Shape.lean`. (Landed 2026-10-01: the move was deletion
+   only, so row 8's `ShapeDoc.document` fix did not land in it and stays open in
+   `Schema/OfShape.lean`.) Then row 10 (one `Val → Json`) over what remains.
 3. **Row 41, the milestone** — the typed-state invariant on the reference machine, in the corrected order
    of `docs/core/post-phase-c-synthesis.md` §§5–6: relational interfaces and valid-world
    transport, protocols before predicate assembly, stack/delivery, denotation and initialization,
@@ -276,7 +281,7 @@ for the typed-state milestone.
    step 2 reads a foreign schema, `Ty.app` with it, the file moves and daemon words, the machine
    edit, the two confirmations.
 
-Owner rows open after the review: 1, 2, 7, 10, 11, 14, 15, 19, 20, 21, 22, 26, 27, 28, 29, 30
+Owner rows open after the review (as of 2026-09-19): 1, 2, 7, 10, 11, 14, 15, 19, 20, 21, 22, 26, 27, 28, 29, 30
 (`compileEff` only), 32, and the proposed policy rows 78–85; 4 and 9 are folded into 39, which is ruled.
 Row 41 is ruled but unfinished. Coordinator design questions 86–88 are open technical
 contracts, not newly required owner approvals. Rows 44–45 are approved; the current implementation home of Protocol is established, with its

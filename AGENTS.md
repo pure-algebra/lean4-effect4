@@ -18,7 +18,7 @@ full, then open only the authority documents named for the current task.
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
 | `Test/contracts/` | frozen contract packets and their executable falsifiers |
 | `Test/Counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
-| `Test/fixtures/baseline/<commit>/` | retained pre-change baselines of the descriptions and alphabets, the independent authority a compatibility gate compares against (DI-47). No generator writes here; it changes only by a named promotion command, and a diff in it is a review event, not drift |
+| `Test/fixtures/baseline/<commit>/` | retained pre-change baselines of the descriptions and alphabets, the independent authority a compatibility gate compares against (DI-47). No generator writes here; it changes only by a named promotion command, and a diff in it is a review event, not drift; the mirror census reads it, and no comparator runs against it |
 | `src/Effect4/` | API and functional utilities through `Effect4`; the proof graph through `Effect4.Laws`, with declaration namespaces unchanged |
 | `Test/` | batteries, attacks and proof receipts; `Audit/AxiomGate.lean` is the gate |
 | `generated/` | deterministic projections only; never hand-edited |
@@ -72,12 +72,15 @@ its arrows; anything else is a leak.
   Two folds agree when their algebras do (`hom_eq_cata_eff`); no pairwise agreement proof.
 - **Exact embedding**: a write/read pair `write : A → F`, `read : F → Option A` with three
   laws — total on its domain, retraction `read (write a) = some a`, exactness
-  `read v = some a → v ≡ write a` modulo a named normaliser (`Canonical`; `print`/`read`;
-  `Ty.schema`/`ofSchema`; the JSON codec). A read without exactness is a widening, not an
-  embedding.
-- **Simulation**: two behaviours related on one observation over a named fragment
-  (`run_eq_meaning` on `Straight`, `loopAgreement` on `Looped`, the Conform rungs, the truth
-  lane). The only statement about two behaviours; never "equivalent" without the observation.
+  `read v = some a → v ≡ write a` modulo a named normaliser (`Canonical`; `print`/`read` on the
+  readable domain; the store, node and program byte codecs; `Config.Val`). `Ty.schema`/`ofSchema`
+  and the JSON codec are retractions until their exactness theorems land (decisions row 128). A
+  read without exactness is a widening, not an embedding.
+- **Simulation**: two behaviours related on one observation over a named fragment. The
+  statements are equal-observation theorems (`run_eq_meaning` on `Straight`, `loopAgreement` on
+  `Looped`, `run_eq_ref` at the empty host table), proved through a simulation relation (the
+  book's `ReplayRel`/`BMeans`); the Conform rungs and the truth lane are finite checks of one. The
+  only statement about two behaviours; never "equivalent" without the observation.
 - **Located refusal**: a total-by-refusal map `Src → Except Refusal F` whose refusal names a
   path and a reason, complete against the judgment (`explain = none ↔ wellTyped`).
 - **Monoid action**: the journal `List Command` acting on the run (`replay_unique`,
@@ -90,8 +93,8 @@ its arrows; anything else is a leak.
 ## Trust
 
 - No `sorry`, `partial`, `unsafe`, `native_decide`, `axiom`, `extern`,
-  `implemented_by`. The gate audits every `Effect4.*` and `Test.*`
-  declaration at `[propext, Quot.sound]`; a rendering declaration that must
+  `implemented_by`. The gate audits every declaration of every `Effect4.*` and `Test.*`
+  module at `[propext, Quot.sound]`; a rendering declaration that must
   traverse a `String` is admitted by exact name in `AxiomGate.lean`, never by
   module. A battery `def` over rendered text reaches `Classical.choice`: keep
   rendered bytes inside `#guard`s.
