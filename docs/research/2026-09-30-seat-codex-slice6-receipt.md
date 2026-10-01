@@ -408,7 +408,52 @@ old definitions are Test controls only. The runtime twin and host-reply-to-Fits 
 parked. The two concrete loaded-state proofs do not claim the general initialization theorem.
 
 ## H1 — command queue conditions
-Pending.
+
+**STOPPED under original §6: a checked new counterexample refutes the proposed step_observe
+statement, even with all of addendum 3's queue conditions. No H1 source change landed.**
+`H1/ObserveGap.candidate.lean` retains the proposed queue/step statements locally and proves
+`proposed_step_observe_false`. All eleven printed theorems pass the axiom ceiling.
+
+The witness has the checked pure-unit program, its loaded reference machine with nextToken 1,
+and an initial world extended with the historical declaration Θ(root,0) = unit. It proves
+WorldValid and TypedState, the internal-key bound, and every proposed queue field for
+`observe root (success unit) (resumeAwait root 0 awaitValue)`: source exit typing, authority,
+unique owners, key bound, external-key exclusion and code-site condition. The command emits
+`resume root 0 (pure (success (reifyExitVal (success unit))))`. The resulting encoded exit is
+not unit, so ResumeOk rejects it in every later world: world extension cannot change token 0's
+declared type. Thus the proposed step cannot keep the queue typed.
+
+This is a constructed typed state, not a reached run. There is no active park, and executing
+that stale resume would be inert. The refutation concerns the required unconditional typing
+of every queued command; it does not claim an observed runtime result is mistyped. The proof
+quantifies over any proposed reference resume-code-site predicate: the input observe command
+has no code field, so no disputed continuation scan can repair this witness. Factoring the
+internal bound into TypedState rather than as a separate conjunct does not remove it.
+
+Smallest amendment: require an observer's emitted result to fit the waiting token, including
+awaitValue's encoded-exit conversion, before admitting that observe command. An alternative
+would amend how inert resumes are typed, but that changes the all-commands requirement and
+needs an explicit ruling. Inspect the other observer modes under the same connection before
+dispatching step_observe. No extra condition has been silently installed to evade the stop.
+Propose a new register row for this observer-to-token mismatch; CE-016 remains SEEDED and
+CE-017 has not been marked repaired.
+
+Checked commands (all from this worktree):
+- `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.Core
+  Effect4.Laws.Program.ReasonsR`: exit 0, 346 jobs (`H1/dependencies.log`).
+- `LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true
+  docs/research/2026-09-30-seat-codex-slice6-evidence/H1/PendingBelow.candidate.lean`:
+  exit 0; pending_below within [propext, Quot.sound] (`pending.log`). This confirms the
+  pending-token question without an added bound, but the law is preserved in evidence only.
+- Same command for `H1/ObserveGap.candidate.lean`: exit 0 (`observe.log`); all eleven
+  checks within [propext, Quot.sound], no recovery axioms.
+
+`H1/GuardCore.candidate.diff` and `draft-notes.md` retain the proposed generic helpers and the
+18-command condition matrix, uninstalled and uncompiled. Existing requestOfR can be reused;
+registrationDone must inspect the reference raceRegister operation, since interpR.parkOf
+always returns none. The recursive reference code-site scan remains a named open design
+point; blindly quantifying over every continuation answer would strengthen the native rule.
+Rows 106 and the command ledger remain open; no M5–M7 proof was started. E4 is `0c1e9915`.
 
 ## H2 — shared exit judgment, probe first
 Pending.
