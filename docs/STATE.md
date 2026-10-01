@@ -349,7 +349,9 @@ leaf-order table (row 177, ruled); required-below-optional (row 178) and the `N_
 (rows 121, 109 amended twice). lean4-typescript 0.7.0 is pinned on main with W0's consumer diffs
 (row 164 closed); seats W1 (commit 1, route (b)) and W2 (commit 2, the generator) dispatched from the
 pinned head. Codex's 20:46 and 21:16 reviews folded: the conservativity checker's invalid-revision
-false PASS (row 172 amended, W2) and the check-annotation profile mismatch (row 179 amended, W1).
+false PASS (row 172 amended, W2) and the check-annotation profile mismatch (row 179 amended, W1). Seat D3 merged (`7d50cfe6`): sixteen ledger goals closed (the ledger 21 open of
+484), eight refuted with five clauses ruled as row 134 (a)–(e) for the next command seat (D5); the
+registered-handle-bytes premise of M7 is row 180.
 
 **The type-language probe's first result (probe T, 2026-10-01, merged `8036f0b4`; rows 157–164).**
 The data wave can finish `Ty` once only if its single append also carries a structured nominal
