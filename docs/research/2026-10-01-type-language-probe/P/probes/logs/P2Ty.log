@@ -13,9 +13,12 @@
 'ProbeP.Ty.normalizeFields_fixed' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.Normal.fixed' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.normalize_idem' depends on axioms: [propext, Quot.sound]
+'ProbeP.Ty.leafRule_of_left_none' depends on axioms: [propext]
+'ProbeP.Ty.leafRule_of_right_none' depends on axioms: [propext]
+'ProbeP.Ty.sub_of_leafRule' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.sub_refl' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.sub_union_right' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.sub_union_left' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.sub_lit_string' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.sub_unknown' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=3
+exit=0 seconds=32

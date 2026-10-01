@@ -1,11 +1,9 @@
-'ProbeP.tag_key_least' does not depend on any axioms
-'ProbeP.tag_head' depends on axioms: [propext, Quot.sound]
-'ProbeP.fits_tagged_head' depends on axioms: [propext, Quot.sound]
+'ProbeP.fits_tagged_name' depends on axioms: [propext, Quot.sound]
 'ProbeP.tagged_disjoint' depends on axioms: [propext, Quot.sound]
 'ProbeP.tagHit_of_isTagged' depends on axioms: [propext, Quot.sound]
 'ProbeP.diffTag_sound' depends on axioms: [propext, Quot.sound]
 'ProbeP.payload_hasTy' depends on axioms: [propext, Quot.sound]
-'ProbeP.fits_tag_split' depends on axioms: [propext, Quot.sound]
+'ProbeP.fits_field_split' depends on axioms: [propext, Quot.sound]
 'ProbeP.bytes_order_ambiguous' depends on axioms: [propext]
-'ProbeP.tagFirst_order_disjoint' depends on axioms: [propext]
-exit=0 seconds=2
+'ProbeP.named_tag_disjoint' depends on axioms: [propext]
+exit=0 seconds=11

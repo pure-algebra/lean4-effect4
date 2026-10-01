@@ -2,13 +2,13 @@ import P4Check
 import Effect4.Laws.Program.Typed.Membership
 
 /-!
-# Seat P: the membership judgment `Fits` on the copy (type-language probe, 2026-10-01)
+# Seat P: the membership judgment `Fits` on the copy, records named (type-language probe, 2026-10-01)
 
 Research probe. A copy of `Fits` (`src/Effect4/Laws/Program/Typed/Membership.lean`) in the form
 pass I2 leaves it (seat A's row 137: the handle arms compare declarations in the checker's
-order `subN`; row 156: the scope arm reads presence), over `ProbeP.Ty`, with the record and map
-arms, and the laws question 2 names: `fits_hasTy`, `fits_live`, `fits_map`, `fits_sub` (one arm
-each), `fits_normalize` (row 137's law, with the record case), `fits_subN`, the join laws.
+order `subN`; row 156: the scope arm reads presence), over `ProbeP.Ty`, with the arms the wave
+appends, and the laws question 2 names: `fits_hasTy`, `fits_live`, `fits_map`, `fits_sub` (one arm
+each), `fits_normalize` (row 137's law), `fits_subN`, the join laws, and the boundary projection.
 
 The world is a model of `Typed.World` with the tables `Fits` reads, over the copied type
 language (`Typed.World`'s tables hold the tree's `Ty`, so they cannot hold the copy's): the
@@ -16,9 +16,18 @@ fiber, promise and cell declarations, scope presence, the external allocation ta
 static service table. Everything `Fits` reads that is not a type (`Val.keys`, `HandleKind`,
 `causeImage`, `CauseFits`, `Val.context?`, the table order) is the tree's own definition.
 
-**The record arm is the canonical read, as a fold**: one membership predicate per written field
-(`fitters`, the field-list companion), sorted by the payload-polymorphic `canonF`, read
-positionally against the value's arguments. An optional slot is `none` or `some x`.
+**The record arm is the canonical read, named** (row 165 (a)): one membership predicate per
+written field (`fitters`, the field-list companion), sorted by the payload-polymorphic `canonF`,
+read by a merge against the value's names and values (`NamedFit`, the proposition of
+`namedHasTy`): a name equal to the next canonical field's is read at its type, a field the value
+does not name must be optional (absent from both lists), anything else fails. The positional
+arm (`FieldsFit` over `ctor 0 [v₁ … vₙ]`, an optional slot `none`/`some x`) is at commit
+`1b069d15`.
+
+**T's arms**: `tuple` item by item; `app n _` the handle arm at target `n` (`HandleArm`, I2's
+`.handle` arm extracted so both share it); `null`, `undefined`, `int`, `number`, `bytes` at the
+stand-in images of `P4Check.lean`. The leaf order is the table's (`leafRule`): `fits_sub`'s
+`case2` is discharged by one obligation per edge (`fits_leafEdge`), the closure by a path.
 -/
 
 set_option autoImplicit false
@@ -99,22 +108,29 @@ def FlatFits (w : World) (v : Val) : Ty → Prop
 def ServicesFit (w : World) (services : Env.Ctx) : Prop :=
   ∀ key sv sty, services.getV key = some sv → w.serviceTy key = some sty → FlatFits w sv sty
 
-/-! ## The record and map arms' value predicates -/
 
-/-- One slot against one canonical field (`slotHasTy`'s proposition). -/
-def slotFits (optional : Bool) (P : Val → Prop) (x : Val) : Prop :=
-  match optional with
-  | true =>
-    match x with
-    | .none => True
-    | .some y => P y
-    | _ => False
-  | false => P x
+/-- I2's `.handle` arm, extracted so that `app` shares it (copied text). -/
+def HandleArm (w : World) (v : Val) (target : String) : Prop :=
+  match v with
+  | .handle kind index => HandleFits w kind index target
+  | _ => target = Effect4.Program.Ty.contextTarget ∧
+      ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services ∧ Live w v
 
-/-- The arguments of a record value against the canonical field predicates, one for one. -/
-def FieldsFit : List Val → List (String × Bool × (Val → Prop)) → Prop
+/-! ## The record, tuple and map arms' value predicates -/
+
+/-- **The named read, as a proposition** (`namedHasTy`'s). -/
+def NamedFit : List (String × Bool × (Val → Prop)) → List Val → List Val → Prop
+  | [], [], [] => True
+  | (_, o, _) :: ps, [], [] => o = true ∧ NamedFit ps [] []
+  | (n, o, P) :: ps, .str m :: ns, x :: xs =>
+    if m = n then P x ∧ NamedFit ps ns xs
+    else o = true ∧ NamedFit ps (.str m :: ns) (x :: xs)
+  | _, _, _ => False
+
+/-- A tuple's items, one for one. -/
+def ItemsFit : List (Val → Prop) → List Val → Prop
   | [], [] => True
-  | x :: xs, (_, o, P) :: ps => slotFits o P x ∧ FieldsFit xs ps
+  | P :: ps, x :: xs => P x ∧ ItemsFit ps xs
   | _, _ => False
 
 /-- The entries of a map value: sorted pairs whose keys and values fit. -/
@@ -124,20 +140,16 @@ def EntriesFit (PK PV : Val → Prop) (es : List Val) : Prop :=
     | _ => False
 
 mutual
-/-- **The membership judgment**, I2's arms, plus the record arm (the canonical read) and the map
-arm. -/
+/-- **The membership judgment**, I2's arms, plus the wave's: the record arm (the canonical read,
+named), the map arm and T's. -/
 def Fits (w : World) (v : Val) : Ty → Prop
   | .never => False
   | .unit => match v with | .unit => True | _ => False
   | .nat => match v with | .nat _ => True | _ => False
-  | .int => False
+  | .int => intImage v = true
   | .string => match v with | .str _ => True | _ => False
   | .bool => match v with | .bool _ => True | _ => False
-  | .handle target =>
-    match v with
-    | .handle kind index => HandleFits w kind index target
-    | _ => target = Effect4.Program.Ty.contextTarget ∧
-        ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services ∧ Live w v
+  | .handle target => HandleArm w v target
   | .option a =>
     match v with
     | .none => True
@@ -189,17 +201,30 @@ def Fits (w : World) (v : Val) : Ty → Prop
   | .var _ => False
   | .unknown => Live w v
   | .record fs =>
-    match v with
-    | .ctor 0 vs => FieldsFit vs (canonF (fitters w fs))
-    | _ => False
+    match recordParts? v with
+    | some (ns, xs) => NamedFit (canonF (fitters w fs)) ns xs
+    | none => False
   | .map k t =>
     match v with
     | .list es => EntriesFit (fun a => Fits w a k) (fun x => Fits w x t) es
     | _ => False
+  | .tuple ts =>
+    match v with
+    | .list xs => ItemsFit (itemFitters w ts) xs
+    | _ => False
+  | .app name _ => HandleArm w v name
+  | .null => match v with | .none => True | _ => False
+  | .undefined => match v with | .unit => True | _ => False
+  | .number => numberImage v = true
+  | .bytes => match v with | .bytes _ => True | _ => False
 /-- The field-list companion: one membership predicate per written field. -/
 def fitters (w : World) : List (String × Bool × Ty) → List (String × Bool × (Val → Prop))
   | [] => []
   | (n, o, t) :: rest => (n, o, fun x => Fits w x t) :: fitters w rest
+/-- The item-list companion. -/
+def itemFitters (w : World) : List Ty → List (Val → Prop)
+  | [] => []
+  | t :: rest => (fun x => Fits w x t) :: itemFitters w rest
 end
 
 /-- A field's predicate. -/
@@ -214,55 +239,98 @@ theorem fitters_eq_map (w : World) (fs : List (String × Bool × Ty)) :
     rw [fitters, ih]
     rfl
 
-/-- **The record arm (R3.1)**: a record value is `ctor 0` of its slots, read in canonical order. -/
-theorem fits_record (w : World) (vs : List Val) (fs : List (String × Bool × Ty)) :
-    Fits w (.ctor 0 vs) (.record fs) ↔
-      FieldsFit vs ((canonF fs).map (fun q => (q.1, fitterOf w q.2))) := by
-  rw [Fits, fitters_eq_map, canonBy_map]
+theorem itemFitters_eq_map (w : World) (ts : List Ty) :
+    itemFitters w ts = ts.map (fun t x => Fits w x t) := by
+  induction ts with
+  | nil => rfl
+  | cons t ts ih =>
+    rw [itemFitters, ih]
+    rfl
+
+/-- **The record arm (R3.1), named**: a record value is its names and values, read in canonical
+order. -/
+theorem fits_record (w : World) {v : Val} {ns xs : List Val} (hv : recordParts? v = some (ns, xs))
+    (fs : List (String × Bool × Ty)) :
+    Fits w v (.record fs) ↔ NamedFit ((canonF fs).map (fun q => (q.1, fitterOf w q.2))) ns xs := by
+  rw [Fits, hv, fitters_eq_map, canonBy_map]
 
 /-- Nothing else is a record value. -/
 theorem fits_record_inv (w : World) (v : Val) (fs : List (String × Bool × Ty))
-    (h : Fits w v (.record fs)) : ∃ vs, v = .ctor 0 vs ∧
-      FieldsFit vs ((canonF fs).map (fun q => (q.1, fitterOf w q.2))) := by
-  cases v
-  case ctor i vs =>
-    cases i
-    case zero => exact ⟨vs, rfl, (fits_record w vs fs).mp h⟩
-    case succ n => exact absurd h (by simp only [Fits]; exact not_false)
-  all_goals exact absurd h (by simp only [Fits]; exact not_false)
+    (h : Fits w v (.record fs)) : ∃ ns xs, recordParts? v = some (ns, xs) ∧
+      NamedFit ((canonF fs).map (fun q => (q.1, fitterOf w q.2))) ns xs := by
+  cases hv : recordParts? v with
+  | none =>
+    rw [Fits, hv] at h
+    exact h.elim
+  | some parts =>
+    obtain ⟨ns, xs⟩ := parts
+    exact ⟨ns, xs, rfl, (fits_record w hv fs).mp h⟩
+
+/-- A record value's frame, from its parts. -/
+theorem recordParts?_eq_some {v : Val} {ns xs : List Val} (h : recordParts? v = some (ns, xs)) :
+    v = .ctor 0 [.list ns, .list xs] := by
+  match v, h with
+  | .ctor 0 [.list _, .list _], rfl => rfl
+
+/-- The tuple arm. -/
+theorem fits_tuple (w : World) (xs : List Val) (ts : List Ty) :
+    Fits w (.list xs) (.tuple ts) ↔ ItemsFit (ts.map (fun t x => Fits w x t)) xs := by
+  rw [Fits, itemFitters_eq_map]
 
 /-! ## Membership implies the executable check -/
 
-theorem slotFits_hasTy {o : Bool} {P : Val → Prop} {c : Val → Bool} (h : ∀ x, P x → c x = true)
-    (x : Val) (hx : slotFits o P x) : slotHasTy o c x = true := by
-  cases o
-  · exact h x hx
-  · unfold slotFits at hx
-    unfold slotHasTy
-    cases x
-    case none => rfl
-    case some y => exact h y hx
-    all_goals exact hx.elim
-
-theorem fieldsFit_hasTy :
-    ∀ (vs : List Val) (ps : List (String × Bool × (Val → Prop))) (cs : List (String × Bool × (Val → Bool))),
+/-- The named read: the proposition implies the check. -/
+theorem namedFit_hasTy :
+    ∀ (ps : List (String × Bool × (Val → Prop))) (cs : List (String × Bool × (Val → Bool)))
+      (ns xs : List Val),
       ps.map (fun p => (p.1, p.2.1)) = cs.map (fun p => (p.1, p.2.1)) →
       (∀ pc ∈ ps.zip cs, ∀ x, pc.1.2.2 x → pc.2.2.2 x = true) →
-      FieldsFit vs ps → fieldsHasTy vs cs = true
-  | [], [], [], _, _, _ => rfl
-  | x :: xs, (n, o, P) :: ps, (m, p, c) :: cs, hh, hpt, h => by
+      NamedFit ps ns xs → namedHasTy cs ns xs = true
+  | [], [], [], [], _, _, _ => rfl
+  | [], [], [], _ :: _, _, _, h => h.elim
+  | [], [], _ :: _, _, _, _, h => h.elim
+  | [], _ :: _, _, _, hh, _, _ => nomatch hh
+  | _ :: _, [], _, _, hh, _, _ => nomatch hh
+  | (n, o, P) :: ps, (m, p, c) :: cs, ns, xs, hh, hpt, h => by
     simp only [List.map_cons, List.cons.injEq, Prod.mk.injEq] at hh
-    obtain ⟨⟨-, hop⟩, hrest⟩ := hh
-    simp only [fieldsHasTy, Bool.and_eq_true]
-    refine ⟨?_, fieldsFit_hasTy xs ps cs hrest (fun q hq => hpt q (List.mem_cons_of_mem _ hq)) h.2⟩
-    rw [← hop]
-    exact slotFits_hasTy (hpt ((n, o, P), (m, p, c)) List.mem_cons_self) x h.1
-  | [], [], _ :: _, hh, _, _ => nomatch hh
-  | [], _ :: _, [], hh, _, _ => nomatch hh
-  | [], _ :: _, _ :: _, _, _, h => h.elim
-  | _ :: _, [], [], _, _, h => h.elim
-  | _ :: _, [], _ :: _, hh, _, _ => nomatch hh
-  | _ :: _, _ :: _, [], hh, _, _ => nomatch hh
+    obtain ⟨⟨rfl, rfl⟩, hrest⟩ := hh
+    have hc : ∀ x, P x → c x = true := hpt ((n, o, P), (n, o, c)) List.mem_cons_self
+    have hpt' : ∀ q ∈ ps.zip cs, ∀ x, q.1.2.2 x → q.2.2.2 x = true :=
+      fun q hq => hpt q (List.mem_cons_of_mem _ hq)
+    match ns, xs, h with
+    | [], [], h =>
+      simp only [NamedFit] at h
+      simp only [namedHasTy, Bool.and_eq_true]
+      exact ⟨h.1, namedFit_hasTy ps cs [] [] hrest hpt' h.2⟩
+    | [], _ :: _, h => exact h.elim
+    | v0 :: _, [], h => cases v0 <;> exact h.elim
+    | v0 :: ns, x :: xs, h =>
+      cases v0 with
+      | str k =>
+        simp only [NamedFit] at h
+        simp only [namedHasTy]
+        by_cases hk : k = n
+        · rw [if_pos hk] at h
+          rw [if_pos hk, Bool.and_eq_true]
+          exact ⟨hc x h.1, namedFit_hasTy ps cs ns xs hrest hpt' h.2⟩
+        · rw [if_neg hk] at h
+          rw [if_neg hk, Bool.and_eq_true]
+          exact ⟨h.1, namedFit_hasTy ps cs (.str k :: ns) (x :: xs) hrest hpt' h.2⟩
+      | _ => exact h.elim
+
+/-- The tuple read: the proposition implies the check. -/
+theorem itemsFit_hasTy :
+    ∀ (ps : List (Val → Prop)) (cs : List (Val → Bool)) (xs : List Val), ps.length = cs.length →
+      (∀ pc ∈ ps.zip cs, ∀ x, pc.1 x → pc.2 x = true) → ItemsFit ps xs → itemsHasTy cs xs = true
+  | [], [], [], _, _, _ => rfl
+  | P :: ps, c :: cs, x :: xs, hlen, hpt, h => by
+    simp only [itemsHasTy, Bool.and_eq_true]
+    exact ⟨hpt (P, c) List.mem_cons_self x h.1,
+      itemsFit_hasTy ps cs xs (Nat.succ.inj hlen) (fun q hq => hpt q (List.mem_cons_of_mem _ hq)) h.2⟩
+  | [], [], _ :: _, _, _, h => h.elim
+  | [], _ :: _, _, hlen, _, _ => nomatch hlen
+  | _ :: _, [], _, hlen, _, _ => nomatch hlen
+  | _ :: _, _ :: _, [], _, _, h => h.elim
 
 theorem causeFits_admitsP {member : Val → Prop} {m : Val → Bool}
     (h : ∀ x, member x → m x = true) (c : CauseV) (hc : CauseFits member c) :
@@ -289,7 +357,36 @@ theorem mem_zip_self {α : Type} : ∀ {l : List α} {a b : α}, (a, b) ∈ l.zi
       rw [h.1, h.2]
     · exact mem_zip_self h
 
-/-- **Fits implies the shape check**, at the world's allocation table. arm: two. -/
+
+/-- I2's handle arm implies the check's (`handleHasTy`). -/
+theorem handleArm_hasTy (w : World) {v : Val} {target : String} (h : HandleArm w v target) :
+    handleHasTy target v w.allocated = true := by
+  unfold HandleArm at h
+  split at h
+  · rename_i kind index
+    simp only [HandleFits] at h
+    simp only [handleHasTy]
+    split at h
+    · rename_i hk
+      simp only [hk]
+      exact beq_iff_eq.mpr h.1
+    · rename_i hk
+      simp only [hk]
+      exact beq_iff_eq.mpr h.1
+    · rename_i hk
+      simp only [hk]
+      exact beq_iff_eq.mpr h.1
+    · rename_i hk
+      simp only [hk]
+      exact Bool.and_eq_true_iff.mpr ⟨h.1, beq_iff_eq.mpr h.2⟩
+    · exact h.elim
+  · obtain ⟨ht, ctx, hctx, _, _⟩ := h
+    simp only [handleHasTy]
+    rw [hctx]
+    exact Bool.and_eq_true_iff.mpr ⟨beq_iff_eq.mpr ht, rfl⟩
+
+/-- **Fits implies the shape check**, at the world's allocation table. arm: one per appended
+constructor. -/
 theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → hasTy v ty w.allocated = true := by
   intro ty
   induction ty with
@@ -306,7 +403,7 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → hasTy 
     split at h
     · rfl
     · exact h.elim
-  | int => intro v h; exact h.elim
+  | int => intro v h; exact h
   | string =>
     intro v h
     simp only [Fits] at h
@@ -319,31 +416,7 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → hasTy 
     split at h
     · rfl
     · exact h.elim
-  | handle target =>
-    intro v h
-    simp only [Fits] at h
-    split at h
-    · rename_i kind index
-      simp only [HandleFits] at h
-      simp only [hasTy]
-      split at h
-      · rename_i hk
-        simp only [hk]
-        exact beq_iff_eq.mpr h.1
-      · rename_i hk
-        simp only [hk]
-        exact beq_iff_eq.mpr h.1
-      · rename_i hk
-        simp only [hk]
-        exact beq_iff_eq.mpr h.1
-      · rename_i hk
-        simp only [hk]
-        exact Bool.and_eq_true_iff.mpr ⟨h.1, beq_iff_eq.mpr h.2⟩
-      · exact h.elim
-    · obtain ⟨ht, ctx, hctx, _, _⟩ := h
-      simp only [hasTy]
-      rw [hctx]
-      exact Bool.and_eq_true_iff.mpr ⟨beq_iff_eq.mpr ht, rfl⟩
+  | handle target => intro v h; exact handleArm_hasTy w h
   | option a ih =>
     intro v h
     simp only [Fits] at h
@@ -442,9 +515,9 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → hasTy 
   | unknown => intro v _; rfl
   | record fs ih =>
     intro v h
-    obtain ⟨vs, rfl, hv⟩ := fits_record_inv w v fs h
-    rw [hasTy_record]
-    refine fieldsFit_hasTy vs _ _ ?_ ?_ hv
+    obtain ⟨ns, xs, hv, hfit⟩ := fits_record_inv w v fs h
+    rw [hasTy_record hv]
+    refine namedFit_hasTy _ _ ns xs ?_ ?_ hfit
     · simp only [List.map_map]
       rfl
     · intro pc hpc x hx
@@ -467,6 +540,40 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → hasTy 
       cases e
       case pair a x => exact Bool.and_eq_true_iff.mpr ⟨ihk a this.1, iht x this.2⟩
       all_goals exact this.elim
+    · exact h.elim
+  | tuple ts ih =>
+    intro v h
+    cases v
+    case list xs =>
+      rw [fits_tuple] at h
+      rw [hasTy_tuple]
+      refine itemsFit_hasTy _ _ xs (by rw [List.length_map, List.length_map]) ?_ h
+      intro pc hpc x hx
+      rw [List.zip_map, List.mem_map] at hpc
+      obtain ⟨⟨t1, t2⟩, ht, rfl⟩ := hpc
+      have heq : t1 = t2 := mem_zip_self ht
+      subst heq
+      exact ih t1 (List.of_mem_zip ht).1 x hx
+    all_goals exact h.elim
+  | app name _ _ => intro v h; exact handleArm_hasTy w h
+  | null =>
+    intro v h
+    simp only [Fits] at h
+    split at h
+    · rfl
+    · exact h.elim
+  | undefined =>
+    intro v h
+    simp only [Fits] at h
+    split at h
+    · rfl
+    · exact h.elim
+  | number => intro v h; exact h
+  | bytes =>
+    intro v h
+    simp only [Fits] at h
+    split at h
+    · rfl
     · exact h.elim
 
 /-! ## Membership implies declared liveness -/
@@ -566,27 +673,76 @@ theorem live_handle {w : World} {kind : UInt8} {index : Nat} {target : String}
     trivial
   · exact h.elim
 
-/-- A record value's slots are live when every canonical field's members are. -/
-theorem fieldsFit_live {w : World} :
-    ∀ (vs : List Val) (ps : List (String × Bool × (Val → Prop))),
-      (∀ p ∈ ps, ∀ y, p.2.2 y → Live w y) → FieldsFit vs ps → ∀ x ∈ vs, Live w x
-  | [], _, _, _ => fun _ hx => absurd hx List.not_mem_nil
-  | x :: xs, (n, o, P) :: ps, hp, h => by
+
+theorem handleArm_live {w : World} {v : Val} {target : String} (h : HandleArm w v target) :
+    Live w v := by
+  unfold HandleArm at h
+  split at h
+  · exact live_handle h
+  · obtain ⟨_, _, _, _, hl⟩ := h
+    exact hl
+
+theorem intImage_keys {v : Val} (h : intImage v = true) : v.keys = [] := by
+  unfold intImage at h
+  split at h
+  · rfl
+  · rfl
+  · exact Bool.noConfusion h
+
+theorem numberImage_keys {v : Val} (h : numberImage v = true) : v.keys = [] := by
+  unfold numberImage at h
+  rcases Bool.or_eq_true_iff.mp h with h | h
+  · exact intImage_keys h
+  · split at h
+    · rfl
+    · exact Bool.noConfusion h
+
+/-- A record value's names and values are live when every canonical field's members are. -/
+theorem namedFit_live {w : World} :
+    ∀ (ps : List (String × Bool × (Val → Prop))) (ns xs : List Val),
+      (∀ p ∈ ps, ∀ y, p.2.2 y → Live w y) → NamedFit ps ns xs →
+      (∀ x ∈ ns, Live w x) ∧ (∀ x ∈ xs, Live w x)
+  | [], [], [], _, _ => ⟨fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil⟩
+  | [], [], _ :: _, _, h => h.elim
+  | [], _ :: _, _, _, h => h.elim
+  | (n, o, P) :: ps, ns, xs, hp, h => by
+    have hP := hp (n, o, P) List.mem_cons_self
+    have hp' : ∀ q ∈ ps, ∀ y, q.2.2 y → Live w y := fun q hq => hp q (List.mem_cons_of_mem _ hq)
+    match ns, xs, h with
+    | [], [], h => exact namedFit_live ps [] [] hp' h.2
+    | [], _ :: _, h => exact h.elim
+    | v0 :: _, [], h => cases v0 <;> exact h.elim
+    | v0 :: ns, x :: xs, h =>
+      cases v0 with
+      | str k =>
+        simp only [NamedFit] at h
+        by_cases hk : k = n
+        · rw [if_pos hk] at h
+          obtain ⟨hns, hxs⟩ := namedFit_live ps ns xs hp' h.2
+          refine ⟨fun y hy => ?_, fun y hy => ?_⟩
+          · rcases List.mem_cons.mp hy with rfl | hy
+            · exact live_of_keys_nil rfl
+            · exact hns y hy
+          · rcases List.mem_cons.mp hy with rfl | hy
+            · exact hP y h.1
+            · exact hxs y hy
+        · rw [if_neg hk] at h
+          exact namedFit_live ps (.str k :: ns) (x :: xs) hp' h.2
+      | _ => exact h.elim
+
+/-- A tuple's items are live when every position's members are. -/
+theorem itemsFit_live {w : World} :
+    ∀ (ps : List (Val → Prop)) (xs : List Val), (∀ P ∈ ps, ∀ y, P y → Live w y) → ItemsFit ps xs →
+      ∀ x ∈ xs, Live w x
+  | _, [], _, _ => fun _ hx => absurd hx List.not_mem_nil
+  | P :: ps, x :: xs, hp, h => by
     intro z hz
     rcases List.mem_cons.mp hz with rfl | hz
-    · have hP := hp (n, o, P) List.mem_cons_self
-      cases o
-      · exact hP z h.1
-      · have h1 : slotFits true P z := h.1
-        unfold slotFits at h1
-        cases z
-        case none => exact live_of_keys_nil rfl
-        case some y => exact live_some (hP y h1)
-        all_goals exact h1.elim
-    · exact fieldsFit_live xs ps (fun q hq => hp q (List.mem_cons_of_mem _ hq)) h.2 z hz
-  | _ :: _, [], _, h => h.elim
+    · exact hp P List.mem_cons_self z h.1
+    · exact itemsFit_live ps xs (fun Q hQ => hp Q (List.mem_cons_of_mem _ hQ)) h.2 z hz
+  | [], _ :: _, _, h => h.elim
 
-/-- **Membership implies declared liveness.** arm: two. -/
+/-- **Membership implies declared liveness.** arm: one per appended constructor. -/
 theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w v := by
   intro ty
   induction ty with
@@ -603,7 +759,7 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
     split at h
     · exact live_of_keys_nil rfl
     · exact h.elim
-  | int => intro v h; exact h.elim
+  | int => intro v h; exact live_of_keys_nil (intImage_keys h)
   | string =>
     intro v h
     simp only [Fits] at h
@@ -616,13 +772,7 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
     split at h
     · exact live_of_keys_nil rfl
     · exact h.elim
-  | handle target =>
-    intro v h
-    simp only [Fits] at h
-    split at h
-    · exact live_handle h
-    · obtain ⟨_, _, _, _, hl⟩ := h
-      exact hl
+  | handle target => intro v h; exact handleArm_live h
   | option a ih =>
     intro v h
     simp only [Fits] at h
@@ -716,12 +866,19 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
   | unknown => intro v h; exact h
   | record fs ih =>
     intro v h
-    obtain ⟨vs, rfl, hv⟩ := fits_record_inv w v fs h
-    refine live_ctor (fieldsFit_live vs _ ?_ hv)
-    intro p hp y hy
-    rw [List.mem_map] at hp
-    obtain ⟨q, hq, rfl⟩ := hp
-    exact ih q (mem_canonBy hq) y hy
+    obtain ⟨ns, xs, hv, hfit⟩ := fits_record_inv w v fs h
+    have hp : ∀ p ∈ (canonF fs).map (fun q => (q.1, fitterOf w q.2)), ∀ y, p.2.2 y → Live w y := by
+      intro p hp y hy
+      rw [List.mem_map] at hp
+      obtain ⟨q, hq, rfl⟩ := hp
+      exact ih q (mem_canonBy hq) y hy
+    obtain ⟨hns, hxs⟩ := namedFit_live _ ns xs hp hfit
+    rw [recordParts?_eq_some hv]
+    refine live_ctor fun y hy => ?_
+    rw [List.mem_cons, List.mem_singleton] at hy
+    rcases hy with rfl | rfl
+    · exact live_list hns
+    · exact live_list hxs
   | map k t ihk iht =>
     intro v h
     simp only [Fits] at h
@@ -732,6 +889,37 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
       cases e
       case pair a x => exact live_pair (ihk a this.1) (iht x this.2)
       all_goals exact this.elim
+    · exact h.elim
+  | tuple ts ih =>
+    intro v h
+    cases v
+    case list xs =>
+      rw [fits_tuple] at h
+      refine live_list (itemsFit_live _ xs ?_ h)
+      intro P hP y hy
+      rw [List.mem_map] at hP
+      obtain ⟨t, ht, rfl⟩ := hP
+      exact ih t ht y hy
+    all_goals exact h.elim
+  | app name _ _ => intro v h; exact handleArm_live h
+  | null =>
+    intro v h
+    simp only [Fits] at h
+    split at h
+    · exact live_of_keys_nil rfl
+    · exact h.elim
+  | undefined =>
+    intro v h
+    simp only [Fits] at h
+    split at h
+    · exact live_of_keys_nil rfl
+    · exact h.elim
+  | number => intro v h; exact live_of_keys_nil (numberImage_keys h)
+  | bytes =>
+    intro v h
+    simp only [Fits] at h
+    split at h
+    · exact live_of_keys_nil rfl
     · exact h.elim
 
 /-! ## Membership under world growth -/
@@ -797,40 +985,60 @@ theorem servicesFit_map {services : Env.Ctx} (h : ServicesFit w1 services) :
 
 end Map
 
-theorem fieldsFit_map {ps qs : List (String × Bool × (Val → Prop))}
-    (hh : ps.map (fun p => (p.1, p.2.1)) = qs.map (fun p => (p.1, p.2.1)))
-    (hpt : ∀ pq ∈ ps.zip qs, ∀ x, pq.1.2.2 x → pq.2.2.2 x) :
-    ∀ vs, FieldsFit vs ps → FieldsFit vs qs := by
-  induction ps generalizing qs with
-  | nil =>
-    cases qs with
-    | nil => intro vs h; exact h
-    | cons q qs => simp only [List.map_nil, List.map_cons, reduceCtorEq] at hh
-  | cons p ps ih =>
-    cases qs with
-    | nil => simp only [List.map_nil, List.map_cons, reduceCtorEq] at hh
-    | cons q qs =>
-      obtain ⟨n, o, P⟩ := p
-      obtain ⟨m, o', Q⟩ := q
-      simp only [List.map_cons, List.cons.injEq, Prod.mk.injEq] at hh
-      obtain ⟨⟨-, hoo⟩, hrest⟩ := hh
-      intro vs h
-      cases vs with
-      | nil => exact h.elim
-      | cons x xs =>
-        refine ⟨?_, ih hrest (fun pq hpq => hpt pq (List.mem_cons_of_mem _ hpq)) xs h.2⟩
-        have hPQ := hpt ((n, o, P), (m, o', Q)) List.mem_cons_self
-        subst hoo
-        cases o
-        · exact hPQ x h.1
-        · have h1 := h.1
-          unfold slotFits at h1 ⊢
-          cases x
-          case none => trivial
-          case some y => exact hPQ y h1
-          all_goals exact h1.elim
+theorem handleArm_map {w1 w2 : World} (g : Grows w1 w2) {v : Val} {target : String}
+    (h : HandleArm w1 v target) : HandleArm w2 v target := by
+  unfold HandleArm at h
+  split at h
+  · exact handleFits_map g h
+  · obtain ⟨ht, ctx, hctx, hs, hl⟩ := h
+    simp only [HandleArm]
+    exact ⟨ht, ctx, hctx, servicesFit_map g hs, live_map g hl⟩
 
-/-- Membership moves to a later world. arm: two. -/
+/-- **Monotonicity of the named read** (the proposition): under one list of names, a field
+optional where it was required and a predicate that admits more admit more. -/
+theorem namedFit_mono :
+    ∀ (ps qs : List (String × Bool × (Val → Prop))) (ns xs : List Val),
+      ps.map Prod.fst = qs.map Prod.fst →
+      (∀ pq ∈ ps.zip qs, (pq.1.2.1 = true → pq.2.2.1 = true) ∧ ∀ x, pq.1.2.2 x → pq.2.2.2 x) →
+      NamedFit ps ns xs → NamedFit qs ns xs
+  | [], [], _, _, _, _, h => h
+  | [], _ :: _, _, _, hh, _, _ => nomatch hh
+  | _ :: _, [], _, _, hh, _, _ => nomatch hh
+  | (n, o, P) :: ps, (m, p, Q) :: qs, ns, xs, hh, hpt, h => by
+    simp only [List.map_cons, List.cons.injEq] at hh
+    obtain ⟨rfl, hrest⟩ := hh
+    obtain ⟨hop, hPQ⟩ := hpt ((n, o, P), (n, p, Q)) List.mem_cons_self
+    have hpt' : ∀ pq ∈ ps.zip qs,
+        (pq.1.2.1 = true → pq.2.2.1 = true) ∧ ∀ x, pq.1.2.2 x → pq.2.2.2 x :=
+      fun pq hpq => hpt pq (List.mem_cons_of_mem _ hpq)
+    match ns, xs, h with
+    | [], [], h => exact ⟨hop h.1, namedFit_mono ps qs [] [] hrest hpt' h.2⟩
+    | [], _ :: _, h => exact h.elim
+    | v0 :: _, [], h => cases v0 <;> exact h.elim
+    | v0 :: ns, x :: xs, h =>
+      cases v0 with
+      | str k =>
+        simp only [NamedFit] at h ⊢
+        by_cases hk : k = n
+        · rw [if_pos hk] at h ⊢
+          exact ⟨hPQ x h.1, namedFit_mono ps qs ns xs hrest hpt' h.2⟩
+        · rw [if_neg hk] at h ⊢
+          exact ⟨hop h.1, namedFit_mono ps qs (.str k :: ns) (x :: xs) hrest hpt' h.2⟩
+      | _ => exact h.elim
+
+/-- Pointwise stronger predicates of one arity admit more (the tuple read). -/
+theorem itemsFit_mono :
+    ∀ (ps qs : List (Val → Prop)) (xs : List Val), ps.length = qs.length →
+      (∀ pq ∈ ps.zip qs, ∀ x, pq.1 x → pq.2 x) → ItemsFit ps xs → ItemsFit qs xs
+  | [], [], _, _, _, h => h
+  | P :: ps, Q :: qs, x :: xs, hlen, hpt, h =>
+    ⟨hpt (P, Q) List.mem_cons_self x h.1,
+      itemsFit_mono ps qs xs (Nat.succ.inj hlen) (fun q hq => hpt q (List.mem_cons_of_mem _ hq)) h.2⟩
+  | _ :: _, _ :: _, [], _, _, h => h.elim
+  | [], _ :: _, _, hlen, _, _ => nomatch hlen
+  | _ :: _, [], _, hlen, _, _ => nomatch hlen
+
+/-- Membership moves to a later world. arm: one per appended constructor. -/
 theorem fits_map {w1 w2 : World} (g : Grows w1 w2) :
     ∀ (ty : Ty) (v : Val), Fits w1 v ty → Fits w2 v ty := by
   intro ty
@@ -838,17 +1046,10 @@ theorem fits_map {w1 w2 : World} (g : Grows w1 w2) :
   | never => intro v h; exact h.elim
   | unit => intro v h; exact h
   | nat => intro v h; exact h
-  | int => intro v h; exact h.elim
+  | int => intro v h; exact h
   | string => intro v h; exact h
   | bool => intro v h; exact h
-  | handle target =>
-    intro v h
-    simp only [Fits] at h
-    split at h
-    · exact handleFits_map g h
-    · obtain ⟨ht, ctx, hctx, hs, hl⟩ := h
-      simp only [Fits]
-      exact ⟨ht, ctx, hctx, servicesFit_map g hs, live_map g hl⟩
+  | handle target => intro v h; exact handleArm_map g h
   | option a ih =>
     intro v h
     simp only [Fits] at h
@@ -932,17 +1133,17 @@ theorem fits_map {w1 w2 : World} (g : Grows w1 w2) :
   | unknown => intro v h; exact live_map g h
   | record fs ih =>
     intro v h
-    obtain ⟨vs, rfl, hv⟩ := fits_record_inv w1 v fs h
-    rw [fits_record]
-    refine fieldsFit_map ?_ ?_ vs hv
+    obtain ⟨ns, xs, hv, hfit⟩ := fits_record_inv w1 v fs h
+    rw [fits_record w2 hv]
+    refine namedFit_mono _ _ ns xs ?_ ?_ hfit
     · simp only [List.map_map]
       rfl
-    · intro pq hpq x hx
+    · intro pq hpq
       rw [List.zip_map, List.mem_map] at hpq
       obtain ⟨⟨q1, q2⟩, hq, rfl⟩ := hpq
       have heq : q1 = q2 := mem_zip_self hq
       subst heq
-      exact ih q1 (mem_canonBy (List.of_mem_zip hq).1) x hx
+      exact ⟨id, fun x hx => ih q1 (mem_canonBy (List.of_mem_zip hq).1) x hx⟩
   | map k t ihk iht =>
     intro v h
     simp only [Fits] at h
@@ -954,31 +1155,95 @@ theorem fits_map {w1 w2 : World} (g : Grows w1 w2) :
       case pair a x => exact ⟨ihk a this.1, iht x this.2⟩
       all_goals exact this.elim
     · exact h.elim
+  | tuple ts ih =>
+    intro v h
+    cases v
+    case list xs =>
+      rw [fits_tuple] at h ⊢
+      refine itemsFit_mono _ _ xs (by rw [List.length_map, List.length_map]) ?_ h
+      intro pq hpq x hx
+      rw [List.zip_map, List.mem_map] at hpq
+      obtain ⟨⟨t1, t2⟩, ht, rfl⟩ := hpq
+      have heq : t1 = t2 := mem_zip_self ht
+      subst heq
+      exact ih t1 (List.of_mem_zip ht).1 x hx
+    all_goals exact h.elim
+  | app name _ _ => intro v h; exact handleArm_map g h
+  | null => intro v h; exact h
+  | undefined => intro v h; exact h
+  | number => intro v h; exact h
+  | bytes => intro v h; exact h
+
+/-! ## The leaf table's obligation in `Fits`: one line per edge -/
+
+theorem fits_leafRep {t : Ty} {x : LeafHead} (h : leafHead t = some x) (w : World) (v : Val)
+    (hv : Fits w v t) : Fits w v (leafRep x) := by
+  cases t
+  case lit s =>
+    cases h
+    cases v
+    case str => trivial
+    all_goals exact hv.elim
+  case string | nat | int | number | undefined | unit => cases h; exact hv
+  all_goals cases h
+
+theorem fits_of_leafRep {t : Ty} {x : LeafHead} (h : leafHead t = some x) (hx : x ≠ .lit)
+    (w : World) (v : Val) (hv : Fits w v (leafRep x)) : Fits w v t := by
+  cases t
+  case lit => cases h; exact absurd rfl hx
+  case string | nat | int | number | undefined | unit => cases h; exact hv
+  all_goals cases h
+
+/-- **The membership obligation of the leaf table, in `Fits`: one line per edge.** -/
+theorem fits_leafEdge {x y : LeafHead} (he : (x, y) ∈ leafEdges) (w : World) (v : Val)
+    (hv : Fits w v (leafRep x)) : Fits w v (leafRep y) := by
+  simp only [leafEdges, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at he
+  rcases he with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+  · exact hv                                      -- lit → string
+  · cases v                                        -- nat → int
+    case nat => rfl
+    all_goals exact hv.elim
+  · show (intImage v || _) = true                  -- int → number
+    rw [show intImage v = true from hv, Bool.true_or]
+  · cases v <;> exact hv                           -- undefined → unit
+
+theorem fits_leafPath {x y : LeafHead} (h : LeafPath leafEdges x y) (w : World) (v : Val)
+    (hv : Fits w v (leafRep x)) : Fits w v (leafRep y) := by
+  induction h with
+  | refl => exact hv
+  | step he _ ih => exact ih (fits_leafEdge he w v hv)
+
+/-- **The table's rule keeps membership**: no edge is named. -/
+theorem fits_leafRule {a b : Ty} (h : leafRule a b = true) (w : World) (v : Val)
+    (hv : Fits w v a) : Fits w v b := by
+  obtain ⟨x, y, hx, hy, hxy, hle⟩ := leafRule_eq_true h
+  have hpath := leafLe_iff_path.mp hle
+  have hy_ne : y ≠ .lit := by
+    rcases hpath.target with rfl | ⟨e, he, rfl⟩
+    · exact absurd rfl hxy
+    · exact leafEdges_target_ne_lit e he
+  exact fits_of_leafRep hy hy_ne w v (fits_leafPath hpath w v (fits_leafRep hx w v hv))
 
 /-! ## Membership respects `sub` -/
 
-/-- **Fits is closed under `sub`**, by `fun_induction sub`: two new cases (record, map); the
-handle cases are I2's (`subN` through `sub_le_subN`). -/
+/-- **Fits is closed under `sub`**, by `fun_induction sub`: `case2` is the table's line
+(`fits_leafRule`); the record case reads the named read's monotonicity; the handle cases are I2's
+(`subN` through `sub_le_subN`). -/
 theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w v a → Fits w v b := by
   fun_induction sub a b
   case case1 => intro v h; exact h
-  case case2 => intro v h; exact h.elim
-  case case3 a1 a2 b _ iha ihb =>
+  case case2 _ hl => intro v h; exact fits_leafRule hl w v h
+  case case3 => intro v h; exact h.elim
+  case case4 a1 a2 b _ _ iha ihb =>
     obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
     intro v h
     exact h.elim (iha h1 v) (ihb h2 v)
-  case case4 a b1 b2 _ _ _ iha ihb =>
+  case case5 a b1 b2 _ _ _ _ iha ihb =>
     intro v h
     exact (Bool.or_eq_true_iff.mp hsub).elim (fun hx => Or.inl (iha hx v h))
       (fun hx => Or.inr (ihb hx v h))
-  case case5 => intro v h; exact fits_live w _ v h
-  case case6 =>
-    intro v h
-    simp only [Fits] at h
-    split at h
-    · trivial
-    · exact h.elim
-  case case7 x y _ ih =>
+  case case6 => intro v h; exact fits_live w _ v h
+  case case7 x y _ _ ih =>
     intro v h
     simp only [Fits] at h
     split at h
@@ -986,7 +1251,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
     · rename_i z
       exact ih hsub z h
     · exact h.elim
-  case case8 x y _ ih =>
+  case case8 x y _ _ ih =>
     intro v h
     simp only [Fits] at h
     split at h
@@ -998,14 +1263,14 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
       · exact h.elim
     · exact fun z hz => ih hsub z (h z hz)
     · exact h.elim
-  case case9 a1 a2 b1 b2 _ iha ihb =>
+  case case9 a1 a2 b1 b2 _ _ iha ihb =>
     obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
     intro v h
     simp only [Fits] at h
     split at h
     · exact ⟨iha h1 _ h.1, ihb h2 _ h.2⟩
     · exact h.elim
-  case case10 e1 a1 e2 a2 _ ihe iha =>
+  case case10 e1 a1 e2 a2 _ _ ihe iha =>
     obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
     intro v h
     simp only [Fits] at h
@@ -1013,7 +1278,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
     · exact ihe h1 _ h
     · exact iha h2 _ h
     · exact h.elim
-  case case11 a1 e1 a2 e2 _ iha ihe =>
+  case case11 a1 e1 a2 e2 _ _ iha ihe =>
     obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
     intro v h
     simp only [Fits] at h
@@ -1026,7 +1291,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
         exact causeFits_map (fun x hx => ihe h2 x hx) h
       · exact h.elim
     · exact h.elim
-  case case12 e1 e2 _ ih =>
+  case case12 e1 e2 _ _ ih =>
     intro v h
     simp only [Fits] at h
     split at h
@@ -1034,7 +1299,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
       simp only [Fits, hc]
       exact causeFits_map (fun x hx => ih hsub x hx) h
     · exact h.elim
-  case case13 a1 e1 a2 e2 _ _ _ =>
+  case case13 a1 e1 a2 e2 _ _ _ _ =>
     obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
     intro v h
     simp only [Fits] at h
@@ -1042,7 +1307,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
     · obtain ⟨fty, hs, ha, he⟩ := h
       exact ⟨fty, hs, subN_trans ha (sub_le_subN h1), subN_trans he (sub_le_subN h2)⟩
     · exact h.elim
-  case case14 a1 a2 _ _ _ =>
+  case case14 a1 a2 _ _ _ _ =>
     obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
     intro v h
     simp only [Fits] at h
@@ -1050,7 +1315,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
     · obtain ⟨t', hs, hl, hr⟩ := h
       exact ⟨t', hs, subN_trans hl (sub_le_subN h1), subN_trans (sub_le_subN h2) hr⟩
     · exact h.elim
-  case case15 a1 e1 a2 e2 _ _ _ _ _ =>
+  case case15 a1 e1 a2 e2 _ _ _ _ _ _ =>
     obtain ⟨h123, h4⟩ := Bool.and_eq_true_iff.mp hsub
     obtain ⟨h12, h3⟩ := Bool.and_eq_true_iff.mp h123
     obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp h12
@@ -1061,7 +1326,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
       exact ⟨a', e', hs, ⟨subN_trans ha1 (sub_le_subN h1), subN_trans (sub_le_subN h2) ha2⟩,
         ⟨subN_trans he1 (sub_le_subN h3), subN_trans (sub_le_subN h4) he2⟩⟩
     · exact h.elim
-  case case16 fs gs _ ih =>
+  case case16 fs gs _ _ ih =>
     obtain ⟨hh, hall⟩ := Bool.and_eq_true_iff.mp hsub
     have hh' : heads (canonF fs) = heads (canonF gs) := of_decide_eq_true hh
     have hall' : ((canonF fs).zip (canonF gs)).all (fun pq => sub pq.1.2.2 pq.2.2.2) = true := by
@@ -1069,18 +1334,23 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
       exact hall
     rw [List.all_eq_true] at hall'
     intro v h
-    obtain ⟨vs, rfl, hv⟩ := fits_record_inv w v fs h
-    rw [fits_record]
-    refine fieldsFit_map ?_ ?_ vs hv
-    · simp only [List.map_map]
-      exact hh'
-    · intro pq hpq x hx
+    obtain ⟨ns, xs, hv, hfit⟩ := fits_record_inv w v fs h
+    rw [fits_record w hv]
+    refine namedFit_mono _ _ ns xs ?_ ?_ hfit
+    · have hn := congrArg (List.map Prod.fst) hh'
+      simp only [heads, List.map_map, Function.comp_def] at hn ⊢
+      exact hn
+    · intro pq hpq
       rw [List.zip_map, List.mem_map] at hpq
       obtain ⟨⟨q1, q2⟩, hq, rfl⟩ := hpq
       have hq1 : q1 ∈ canonF fs := (List.of_mem_zip hq).1
       have hq2 : q2 ∈ canonF gs := (List.of_mem_zip hq).2
-      exact ih ⟨⟨q1, hq1⟩, ⟨q2, hq2⟩⟩ (hall' (q1, q2) hq) x hx
-  case case17 k1 v1 k2 v2 _ ihk _ ihv =>
+      refine ⟨fun hf => ?_, fun x hx => ih ⟨⟨q1, hq1⟩, ⟨q2, hq2⟩⟩ (hall' (q1, q2) hq) x hx⟩
+      have he : q1.2.1 = q2.2.1 := heads_zip _ _ hh' (q1, q2) hq
+      show q2.2.1 = true
+      rw [← he]
+      exact hf
+  case case17 k1 v1 k2 v2 _ _ ihk _ ihv =>
     obtain ⟨hk12, hv⟩ := Bool.and_eq_true_iff.mp hsub
     obtain ⟨hk, _⟩ := Bool.and_eq_true_iff.mp hk12
     intro v h
@@ -1093,9 +1363,31 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : sub a b = true) : ∀ v, Fits w 
       case pair a x => exact ⟨ihk hk a this.1, ihv hv x this.2⟩
       all_goals exact this.elim
     · exact h.elim
-  case case18 => exact Bool.noConfusion hsub
+  case case18 ts us _ _ ih =>
+    obtain ⟨hlen, hall⟩ := Bool.and_eq_true_iff.mp hsub
+    have hlen' : ts.length = us.length := of_decide_eq_true hlen
+    have hall' : (ts.zip us).all (fun pq => sub pq.1 pq.2) = true := by
+      rw [← all_zip_attach (fun p q : Ty => sub p q)]
+      exact hall
+    rw [List.all_eq_true] at hall'
+    intro v h
+    cases v
+    case list xs =>
+      rw [fits_tuple] at h ⊢
+      refine itemsFit_mono _ _ xs (by rw [List.length_map, List.length_map, hlen']) ?_ h
+      intro p hp x hx
+      rw [List.zip_map, List.mem_map] at hp
+      obtain ⟨⟨t, u⟩, htu, rfl⟩ := hp
+      exact ih ⟨⟨t, (List.of_mem_zip htu).1⟩, ⟨u, (List.of_mem_zip htu).2⟩⟩ (hall' (t, u) htu) x hx
+    all_goals exact h.elim
+  case case19 n ts m us _ _ _ =>
+    obtain ⟨hnm, _⟩ := Bool.and_eq_true_iff.mp hsub
+    obtain ⟨rfl, _⟩ := of_decide_eq_true hnm
+    intro v h
+    exact h
+  case case20 => exact Bool.noConfusion hsub
 
-/-! ## Normalization and the checker's order (row 137, with the record and map cases) -/
+/-! ## Normalization and the checker's order (row 137, with the appended cases) -/
 
 theorem exists_mem_singleton_iff (P : Ty → Prop) (t : Ty) : (∃ x ∈ [t], P x) ↔ P t :=
   ⟨fun ⟨x, hx, hp⟩ => by rw [List.mem_singleton] at hx; subst hx; exact hp,
@@ -1190,30 +1482,84 @@ theorem equiv_normalize (declared t : Ty) : Equiv declared t.normalize ↔ Equiv
   unfold Equiv
   rw [subN_normalize_right, subN_normalize_left]
 
-/-- new: the record case of `fits_normalize`. -/
+
+/-- A value without record parts is no record's member. -/
+theorem fits_record_none (w : World) {v : Val} (hv : recordParts? v = none)
+    (fs : List (String × Bool × Ty)) : Fits w v (.record fs) ↔ False := by
+  rw [Fits, hv]
+
+/-- new: the record case of `fits_normalize`, named. -/
 theorem fits_normalize_record (w : World) (fs : List (String × Bool × Ty)) (v : Val)
     (ih : ∀ p ∈ fs, ∀ v, Fits w v (normalize p.2.2) ↔ Fits w v p.2.2) :
     Fits w v (normalize (.record fs)) ↔ Fits w v (.record fs) := by
   rw [normalize_record]
+  cases hv : recordParts? v with
+  | none => rw [fits_record_none w hv, fits_record_none w hv]
+  | some parts =>
+    obtain ⟨ns, xs⟩ := parts
+    rw [fits_record w hv, fits_record w hv,
+      canonBy_of_ascending _ (ascending_map normPayload (canonBy_ascending fs)), List.map_map]
+    have hmap : (canonF fs).map ((fun q => (q.1, fitterOf w q.2)) ∘ (fun q => (q.1, normPayload q.2))) =
+        (canonF fs).map (fun q => (q.1, fitterOf w q.2)) := by
+      apply List.map_congr_left
+      intro q hq
+      have hfun : (fun x => Fits w x (normalize q.2.2)) = fun x => Fits w x q.2.2 :=
+        funext fun x => propext (ih q (mem_canonBy hq) x)
+      simp only [Function.comp_apply, fitterOf, normPayload]
+      rw [hfun]
+    rw [hmap]
+
+/-- A pair tuple and a product have the same members. -/
+theorem fits_tuple_pair (w : World) (v : Val) (a b : Ty) :
+    Fits w v (.tuple [a, b]) ↔ Fits w v (.prod a b) := by
   cases v
-  case ctor i vs =>
-    cases i
-    case zero =>
-      rw [fits_record, fits_record,
-        canonBy_of_ascending _ (ascending_map normPayload (canonBy_ascending fs)), List.map_map]
-      have hmap : (canonF fs).map ((fun q => (q.1, fitterOf w q.2)) ∘ (fun q => (q.1, normPayload q.2))) =
-          (canonF fs).map (fun q => (q.1, fitterOf w q.2)) := by
-        apply List.map_congr_left
-        intro q hq
-        have hfun : (fun x => Fits w x (normalize q.2.2)) = fun x => Fits w x q.2.2 :=
-          funext fun x => propext (ih q (mem_canonBy hq) x)
-        simp only [Function.comp_apply, fitterOf, normPayload]
-        rw [hfun]
-      rw [hmap]
-    case succ n => exact Iff.rfl
+  case list xs =>
+    rw [fits_tuple]
+    match xs with
+    | [] => exact Iff.rfl
+    | [_] => exact ⟨fun h => h.2.elim, fun h => h.elim⟩
+    | [_, _] => exact ⟨fun h => ⟨h.1, h.2.1⟩, fun h => ⟨h.1, h.2, trivial⟩⟩
+    | _ :: _ :: _ :: _ => exact ⟨fun h => h.2.2.elim, fun h => h.elim⟩
   all_goals exact Iff.rfl
 
-/-- **Membership is invariant under normalization** (row 137's `fits_normalize`). case: two. -/
+/-- The product case of `fits_normalize`, extracted so the pair tuple reads it. -/
+theorem fits_normalize_prod (w : World) (a b : Ty) (v : Val)
+    (iha : ∀ v, Fits w v a.normalize ↔ Fits w v a) (ihb : ∀ v, Fits w v b.normalize ↔ Fits w v b) :
+    Fits w v (normalize (.prod a b)) ↔ Fits w v (.prod a b) := by
+  show Fits w v (ofMembers (normalizeRow (productMembers a.normalize b.normalize)).elems) ↔
+    Fits w v (.prod a b)
+  rw [fits_ofMembers, fits_normalizeRow, fits_productMembers, fits_prod_iff, fits_prod_iff]
+  constructor
+  · rintro ⟨p, q, hv, hp, hq⟩
+    exact ⟨p, q, hv, (iha p).mp hp, (ihb q).mp hq⟩
+  · rintro ⟨p, q, hv, hp, hq⟩
+    exact ⟨p, q, hv, (iha p).mpr hp, (ihb q).mpr hq⟩
+
+/-- new: the tuple case: a pair is a product, any other arity in place. -/
+theorem fits_normalize_tuple (w : World) (ts : List Ty) (v : Val)
+    (ih : ∀ t ∈ ts, ∀ v, Fits w v (normalize t) ↔ Fits w v t) :
+    Fits w v (normalize (.tuple ts)) ↔ Fits w v (.tuple ts) := by
+  by_cases h2 : ts.length = 2
+  · match ts, h2, ih with
+    | [a, b], _, ih =>
+      show Fits w v (normalize (.prod a b)) ↔ Fits w v (.tuple [a, b])
+      rw [fits_tuple_pair]
+      exact fits_normalize_prod w a b v (ih a List.mem_cons_self)
+        (ih b (List.mem_cons_of_mem _ List.mem_cons_self))
+  · rw [normalize_tuple_of_ne ts h2, normalizeItems_eq_map]
+    cases v
+    case list xs =>
+      rw [fits_tuple, fits_tuple, List.map_map]
+      have hmap : ts.map ((fun t x => Fits w x t) ∘ normalize) = ts.map (fun t x => Fits w x t) := by
+        apply List.map_congr_left
+        intro t ht
+        funext x
+        exact propext (ih t ht x)
+      rw [hmap]
+    all_goals exact Iff.rfl
+
+/-- **Membership is invariant under normalization** (row 137's `fits_normalize`). case: one per
+appended constructor. -/
 theorem fits_normalize (w : World) : ∀ (t : Ty) (v : Val), Fits w v t.normalize ↔ Fits w v t := by
   intro t
   induction t with
@@ -1227,6 +1573,10 @@ theorem fits_normalize (w : World) : ∀ (t : Ty) (v : Val), Fits w v t.normaliz
   | handle _ => intro v; exact Iff.rfl
   | lit _ => intro v; exact Iff.rfl
   | var _ => intro v; exact Iff.rfl
+  | null => intro v; exact Iff.rfl
+  | undefined => intro v; exact Iff.rfl
+  | number => intro v; exact Iff.rfl
+  | bytes => intro v; exact Iff.rfl
   | union a b iha ihb =>
     intro v
     show Fits w v (ofMembers (normalizeRow (a.normalize.members ++ b.normalize.members)).elems) ↔
@@ -1241,16 +1591,7 @@ theorem fits_normalize (w : World) : ∀ (t : Ty) (v : Val), Fits w v t.normaliz
     · rintro (⟨x, hx, hv⟩ | ⟨x, hx, hv⟩)
       · exact ⟨x, List.mem_append_left _ hx, hv⟩
       · exact ⟨x, List.mem_append_right _ hx, hv⟩
-  | prod a b iha ihb =>
-    intro v
-    show Fits w v (ofMembers (normalizeRow (productMembers a.normalize b.normalize)).elems) ↔
-      Fits w v (.prod a b)
-    rw [fits_ofMembers, fits_normalizeRow, fits_productMembers, fits_prod_iff, fits_prod_iff]
-    constructor
-    · rintro ⟨p, q, hv, hp, hq⟩
-      exact ⟨p, q, hv, (iha p).mp hp, (ihb q).mp hq⟩
-    · rintro ⟨p, q, hv, hp, hq⟩
-      exact ⟨p, q, hv, (iha p).mpr hp, (ihb q).mpr hq⟩
+  | prod a b iha ihb => intro v; exact fits_normalize_prod w a b v iha ihb
   | option t ih =>
     intro v
     show Fits w v (.option t.normalize) ↔ Fits w v (.option t)
@@ -1328,6 +1669,14 @@ theorem fits_normalize (w : World) : ∀ (t : Ty) (v : Val), Fits w v t.normaliz
     split
     · rw [hk, ht]
     · exact Iff.rfl
+  | tuple ts ih => exact fun v => fits_normalize_tuple w ts v (fun t ht v => ih t ht v)
+  | app n ts _ =>
+    intro v
+    cases ts with
+    | nil => exact Iff.rfl
+    | cons t ts =>
+      rw [normalize_app_of_ne n _ (List.cons_ne_nil _ _)]
+      exact Iff.rfl
 
 /-- **Membership is closed under the checker's order.** -/
 theorem fits_subN (w : World) {a b : Ty} (h : subN a b = true) (v : Val) (hv : Fits w v a) :
@@ -1342,12 +1691,16 @@ theorem fits_join_right (w : World) (a b : Ty) (v : Val) (h : Fits w v b) : Fits
 
 /-! ## The boundary projection (R3.3): width at the row adapter, never inside a program
 
-`sub` is exact: a wider record is not below a narrower one (`#guard`s in `P2Ty.lean`). The row
-adapter, which receives rc.112's objects, projects the wider value onto the declared record. Its
-relation is TypeScript's width-and-depth rule for readonly properties (`widthSub`, defined only
-here) and its law is `fits_project`: a value of the wider record, projected, fits the declared
-one. Bound: the projection recurses through record fields; under `option`, `list` and the other
-heads the relation is `sub` (exact), so a record nested in a list is not projected. -/
+`sub` is exact: a wider record is not below a narrower one (`#guard`s in `P2Ty.lean`), and a
+wider value is no member of the narrower record (`record_width_refused`, `P4Check.lean`: the name
+lists differ). The row adapter, which receives rc.112's objects, projects the wider value onto the
+declared record and keeps the declared names. Its relation is TypeScript's width-and-depth rule
+for readonly properties (`widthSub`, defined only here) and its law is `fits_project`. Under the
+named clause the projection is type-blind on the value: a declared field is found by its name in
+the value's own names (`lookupName`), the search the evaluator's projection and the readers
+share; the source type is read only by the relation. Bound: the projection recurses through
+record fields; under `option`, `list` and the other heads the relation is `sub` (exact), so a
+record nested in a list is not projected. -/
 
 /-- The order reads names only, even when the payload map reads the name. -/
 theorem insertBy_mapName {β γ : Type} (f : String × β → γ) (p : String × β) (l : List (String × β)) :
@@ -1384,9 +1737,10 @@ theorem canonBy_mapName {β γ : Type} (f : String × β → γ) (fs : List (Str
       exact ih (insertBy fieldKey x acc)
   exact step fs []
 
-/-- The slot of a named field in a value laid out at a field list. -/
-def slotOf (n : String) : List (String × Bool × Ty) → List Val → Option (Bool × Ty × Val)
-  | (m, o, s) :: fs, x :: xs => if m = n then some (o, s, x) else slotOf n fs xs
+
+/-- A value's field by name: the first occurrence in the value's own names. -/
+def lookupName (n : String) : List Val → List Val → Option Val
+  | .str m :: ns, x :: xs => if m = n then some x else lookupName n ns xs
   | _, _ => none
 
 mutual
@@ -1407,44 +1761,27 @@ def widthFields (fs : List (String × Bool × Ty)) : List (String × Bool × Ty)
 end
 
 mutual
-/-- **The boundary projection.** A value laid out at a record `a`, read at the declared record:
-each declared field takes the slot of the source field of its name, projected; an optional
-declared field the source lacks is `none`; the source's other fields are dropped. The declared
-fields' values are produced in written order and placed by `canonF` (the fold's sort). -/
-def project (a : Ty) (v : Val) : Ty → Val
+/-- **The boundary projection, named.** A record value read at a declared record keeps each
+declared field the value names, projected, in canonical order; a declared optional field the
+value lacks stays absent from both lists; the value's other names are dropped. The declared
+fields' results are produced in written order and placed by `canonF` (the fold's sort). -/
+def project (v : Val) : Ty → Val
   | .record gs =>
-    match a, v with
-    | .record fs, .ctor 0 vs => .ctor 0 ((canonF (projectNamed (canonF fs) vs gs)).map fun q => q.2.2)
-    | _, _ => v
+    match recordParts? v with
+    | some (ns, xs) =>
+      .ctor 0 [.list ((canonF (projectNamed ns xs gs)).filterMap fun e => e.2.map fun _ => .str e.1),
+        .list ((canonF (projectNamed ns xs gs)).filterMap fun e => e.2)]
+    | none => v
   | _ => v
-def projectNamed (cf : List (String × Bool × Ty)) (vs : List Val) :
-    List (String × Bool × Ty) → List (String × Bool × Val)
+def projectNamed (ns xs : List Val) : List (String × Bool × Ty) → List (String × Option Val)
   | [] => []
-  | (n, o, t) :: rest =>
-    (n, o, match slotOf n cf vs with
-      | some (o', s, x) =>
-        match o, o', x with
-        | true, true, .some y => .some (project s y t)
-        | true, true, _ => .none
-        | true, false, x => .some (project s x t)
-        | false, _, x => project s x t
-      | none => .none) :: projectNamed cf vs rest
+  | (n, _, t) :: rest =>
+    (n, (lookupName n ns xs).map (fun x => project x t)) :: projectNamed ns xs rest
 end
 
-/-- A declared field's projected slot. -/
-def projSlot (cf : List (String × Bool × Ty)) (vs : List Val) (q : String × Bool × Ty) : Val :=
-  match slotOf q.1 cf vs with
-  | some (o', s, x) =>
-    match q.2.1, o', x with
-    | true, true, .some y => .some (project s y q.2.2)
-    | true, true, _ => .none
-    | true, false, x => .some (project s x q.2.2)
-    | false, _, x => project s x q.2.2
-  | none => .none
-
-theorem projectNamed_eq_map (cf : List (String × Bool × Ty)) (vs : List Val)
-    (gs : List (String × Bool × Ty)) :
-    projectNamed cf vs gs = gs.map (fun q => (q.1, (q.2.1, projSlot cf vs q))) := by
+theorem projectNamed_eq_map (ns xs : List Val) (gs : List (String × Bool × Ty)) :
+    projectNamed ns xs gs =
+      gs.map (fun q => (q.1, (lookupName q.1 ns xs).map (fun x => project x q.2.2))) := by
   induction gs with
   | nil => rfl
   | cons q gs ih =>
@@ -1452,41 +1789,130 @@ theorem projectNamed_eq_map (cf : List (String × Bool × Ty)) (vs : List Val)
     rw [projectNamed, ih]
     rfl
 
-/-- A fitting value list answers each first-named field with a fitting slot. -/
-theorem fieldsFit_slotOf (w : World) {n : String} {o' : Bool} {s : Ty} :
-    ∀ (cf : List (String × Bool × Ty)) (vs : List Val),
-      FieldsFit vs (cf.map (fun q => (q.1, fitterOf w q.2))) → firstOf n cf = some (o', s) →
-      ∃ x, slotOf n cf vs = some (o', s, x) ∧ slotFits o' (fun y => Fits w y s) x
-  | [], _, _, hf => nomatch hf
-  | (m, o, t) :: cf, [], h, _ => h.elim
-  | (m, o, t) :: cf, x :: xs, h, hf => by
-    unfold firstOf at hf
-    by_cases hm : m = n
-    · rw [if_pos hm] at hf
-      cases hf
-      exact ⟨x, by rw [slotOf, if_pos hm], h.1⟩
-    · rw [if_neg hm] at hf
-      obtain ⟨y, hy, hfit⟩ := fieldsFit_slotOf w cf xs h.2 hf
-      exact ⟨y, by rw [slotOf, if_neg hm]; exact hy, hfit⟩
+/-- One step of the named read at a name the value carries. -/
+theorem namedFit_cons_eq (n : String) (o : Bool) (P : Val → Prop)
+    (ps : List (String × Bool × (Val → Prop))) (ns xs : List Val) (y : Val) :
+    NamedFit ((n, o, P) :: ps) (.str n :: ns) (y :: xs) ↔ P y ∧ NamedFit ps ns xs := by
+  simp only [NamedFit]
+  rw [if_pos trivial]
 
-theorem slotOf_none {n : String} : ∀ (cf : List (String × Bool × Ty)) (vs : List Val),
-    firstOf n cf = none → slotOf n cf vs = none
-  | [], _, _ => rfl
-  | (_, _, _) :: _, [], _ => rfl
-  | (m, o, t) :: cf, x :: xs, hf => by
-    unfold firstOf at hf
-    by_cases hm : m = n
-    · rw [if_pos hm] at hf
-      cases hf
-    · rw [if_neg hm] at hf
-      rw [slotOf, if_neg hm]
-      exact slotOf_none cf xs hf
+/-- A name the value carries, at a fitting read, is some field's, and its value fits that field. -/
+theorem namedFit_lookup {n : String} {x : Val} :
+    ∀ (ps : List (String × Bool × (Val → Prop))) (ns xs : List Val), NamedFit ps ns xs →
+      lookupName n ns xs = some x → ∃ q ∈ ps, q.1 = n ∧ q.2.2 x
+  | [], [], [], _, hl => by cases hl
+  | [], [], _ :: _, h, _ => h.elim
+  | [], _ :: _, _, h, _ => h.elim
+  | (m, o, Q) :: ps, ns, xs, h, hl => by
+    match ns, xs, h, hl with
+    | [], [], _, hl => cases hl
+    | [], _ :: _, h, _ => exact h.elim
+    | v0 :: _, [], h, _ => cases v0 <;> exact h.elim
+    | v0 :: ns, y :: xs, h, hl =>
+      cases v0 with
+      | str k =>
+        simp only [NamedFit] at h
+        simp only [lookupName] at hl
+        by_cases hk : k = m
+        · rw [if_pos hk] at h
+          by_cases hkn : k = n
+          · rw [if_pos hkn] at hl
+            cases hl
+            exact ⟨(m, o, Q), List.mem_cons_self, hk.symm.trans hkn, h.1⟩
+          · rw [if_neg hkn] at hl
+            obtain ⟨q, hq, hqn, hqx⟩ := namedFit_lookup ps ns xs h.2 hl
+            exact ⟨q, List.mem_cons_of_mem _ hq, hqn, hqx⟩
+        · rw [if_neg hk] at h
+          have hl' : lookupName n (.str k :: ns) (y :: xs) = some x := by
+            simp only [lookupName]
+            exact hl
+          obtain ⟨q, hq, hqn, hqx⟩ := namedFit_lookup ps (.str k :: ns) (y :: xs) h.2 hl'
+          exact ⟨q, List.mem_cons_of_mem _ hq, hqn, hqx⟩
+      | _ => exact h.elim
 
-theorem fieldsFit_of_forall (w : World) (val : String × Bool × Ty → Val) :
-    ∀ (l : List (String × Bool × Ty)), (∀ q ∈ l, slotFits q.2.1 (fun y => Fits w y q.2.2) (val q)) →
-      FieldsFit (l.map val) (l.map (fun q => (q.1, fitterOf w q.2)))
-  | [], _ => trivial
-  | q :: l, h => ⟨h q List.mem_cons_self, fieldsFit_of_forall w val l (fun r hr => h r (List.mem_cons_of_mem _ hr))⟩
+/-- A required field is named by every value the read admits. -/
+theorem namedFit_required {n : String} {P : Val → Prop} :
+    ∀ (ps : List (String × Bool × (Val → Prop))) (ns xs : List Val), NamedFit ps ns xs →
+      (n, false, P) ∈ ps → ∃ x, lookupName n ns xs = some x
+  | [], _, _, _, hmem => absurd hmem List.not_mem_nil
+  | (m, o, Q) :: ps, ns, xs, h, hmem => by
+    rcases List.mem_cons.mp hmem with heq | hmem
+    · simp only [Prod.mk.injEq] at heq
+      obtain ⟨rfl, rfl, rfl⟩ := heq
+      match ns, xs, h with
+      | [], [], h => exact absurd h.1 Bool.false_ne_true
+      | [], _ :: _, h => exact h.elim
+      | v0 :: _, [], h => cases v0 <;> exact h.elim
+      | v0 :: ns, x :: xs, h =>
+        cases v0 with
+        | str k =>
+          simp only [NamedFit] at h
+          by_cases hk : k = n
+          · exact ⟨x, by simp only [lookupName, if_pos hk]⟩
+          · rw [if_neg hk] at h
+            exact absurd h.1 Bool.false_ne_true
+        | _ => exact h.elim
+    · match ns, xs, h with
+      | [], [], h => exact namedFit_required ps [] [] h.2 hmem
+      | [], _ :: _, h => exact h.elim
+      | v0 :: _, [], h => cases v0 <;> exact h.elim
+      | v0 :: ns, x :: xs, h =>
+        cases v0 with
+        | str k =>
+          simp only [NamedFit] at h
+          by_cases hk : k = m
+          · rw [if_pos hk] at h
+            obtain ⟨y, hy⟩ := namedFit_required ps ns xs h.2 hmem
+            by_cases hkn : k = n
+            · exact ⟨x, by simp only [lookupName, if_pos hkn]⟩
+            · exact ⟨y, by simp only [lookupName, if_neg hkn]; exact hy⟩
+          · rw [if_neg hk] at h
+            exact namedFit_required ps (.str k :: ns) (x :: xs) h.2 hmem
+        | _ => exact h.elim
+
+/-- An optional field the value does not name is skipped (absent from both lists). -/
+theorem namedFit_skip (n : String) (o : Bool) (P : Val → Prop)
+    (ps : List (String × Bool × (Val → Prop))) (ns xs : List Val) (h : NamedFit ps ns xs)
+    (ho : o = true) (hfresh : ∀ k, .str k ∈ ns → k ≠ n) : NamedFit ((n, o, P) :: ps) ns xs := by
+  match ns, xs with
+  | [], [] => exact ⟨ho, h⟩
+  | [], _ :: _ => cases ps <;> exact h.elim
+  | v0 :: _, [] => cases v0 <;> cases ps <;> exact h.elim
+  | v0 :: ns, x :: xs =>
+    cases v0 with
+    | str k =>
+      simp only [NamedFit]
+      rw [if_neg (hfresh k List.mem_cons_self)]
+      exact ⟨ho, h⟩
+    | _ => cases ps <;> exact h.elim
+
+/-- A value assembled field by field over a list with distinct names fits the named read. -/
+theorem namedFit_of_forall (w : World) (val : String × Bool × Ty → Option Val) :
+    ∀ (l : List (String × Bool × Ty)), (l.map Prod.fst).Nodup →
+      (∀ q ∈ l, (val q = none → q.2.1 = true) ∧ ∀ y, val q = some y → Fits w y q.2.2) →
+      NamedFit (l.map (fun q => (q.1, fitterOf w q.2)))
+        (l.filterMap (fun q => (val q).map (fun _ => Val.str q.1))) (l.filterMap val)
+  | [], _, _ => trivial
+  | (n, o, t) :: l, hnd, h => by
+    rw [List.map_cons, List.nodup_cons] at hnd
+    have ih := namedFit_of_forall w val l hnd.2 (fun r hr => h r (List.mem_cons_of_mem _ hr))
+    obtain ⟨hnone, hsome⟩ := h (n, o, t) List.mem_cons_self
+    cases hv : val (n, o, t) with
+    | none =>
+      simp only [List.map_cons, List.filterMap_cons, hv, Option.map_none]
+      refine namedFit_skip n o (fun x => Fits w x t) _ _ _ ih (hnone hv) ?_
+      intro k hk hkn
+      rw [List.mem_filterMap] at hk
+      obtain ⟨q, hq, hqk⟩ := hk
+      rw [Option.map_eq_some_iff] at hqk
+      obtain ⟨_, _, hqk⟩ := hqk
+      injection hqk with hqk
+      apply hnd.1
+      rw [List.mem_map]
+      exact ⟨q, hq, hqk.trans hkn⟩
+    | some y =>
+      simp only [List.map_cons, List.filterMap_cons, hv, Option.map_some]
+      exact (namedFit_cons_eq n o (fun x => Fits w x t) _ _ _ y).mpr ⟨hsome y hv, ih⟩
 
 theorem widthFields_mem {fs : List (String × Bool × Ty)} :
     ∀ {gs : List (String × Bool × Ty)}, widthFields fs gs = true → ∀ q ∈ gs,
@@ -1500,11 +1926,11 @@ theorem widthFields_mem {fs : List (String × Bool × Ty)} :
     · exact h.1
     · exact widthFields_mem h.2 q hq
 
-/-- **The boundary projection's law** (proved): a value of a record, projected onto any record
-its relation allows, fits the declared record (the tree verifier's `fits_coerce` shape, on the
-production-shaped judgment with worlds, handles and optional keys). -/
+/-- **The boundary projection's law** (proved), named: a value of a record, projected onto any
+record its relation allows, fits the declared record (the tree verifier's `fits_coerce` shape, on
+the production-shaped judgment with worlds, handles and optional keys). -/
 theorem fits_project (w : World) : ∀ (b a : Ty) (v : Val), widthSub a b = true → Fits w v a →
-    Fits w (project a v b) b := by
+    Fits w (project v b) b := by
   intro b
   induction b with
   | record gs ih =>
@@ -1512,41 +1938,55 @@ theorem fits_project (w : World) : ∀ (b a : Ty) (v : Val), widthSub a b = true
     cases a
     case record fs =>
       have hw' : widthFields fs gs = true := hw
-      obtain ⟨vs, rfl, hvs⟩ := fits_record_inv w v fs hv
-      show Fits w (.ctor 0 ((canonF (projectNamed (canonF fs) vs gs)).map fun q => q.2.2)) (.record gs)
-      rw [fits_record, projectNamed_eq_map, canonBy_mapName (fun q => (q.2.1, projSlot (canonF fs) vs q)),
-        List.map_map]
-      refine fieldsFit_of_forall w _ (canonF gs) ?_
+      obtain ⟨ns, xs, hparts, hfit⟩ := fits_record_inv w v fs hv
+      have hpv : project v (.record gs) =
+          .ctor 0 [.list ((canonF gs).filterMap (fun q =>
+              ((lookupName q.1 ns xs).map (fun x => project x q.2.2)).map (fun _ => Val.str q.1))),
+            .list ((canonF gs).filterMap (fun q => (lookupName q.1 ns xs).map (fun x => project x q.2.2)))] := by
+        rw [project, hparts]
+        simp only [projectNamed_eq_map,
+          canonBy_mapName (fun q : String × Bool × Ty => (lookupName q.1 ns xs).map (fun x => project x q.2.2)),
+          List.filterMap_map, Function.comp_def]
+      rw [hpv, fits_record w rfl]
+      refine namedFit_of_forall w (fun q => (lookupName q.1 ns xs).map (fun x => project x q.2.2))
+        (canonF gs) (canonBy_names_nodup gs) ?_
       intro q hq
       obtain ⟨n, o, t⟩ := q
       have hq' : (n, o, t) ∈ gs := mem_canonBy hq
       have hrel := widthFields_mem hw' (n, o, t) hq'
       have hfirst : firstOf n (canonF fs) = firstOf n fs := firstOf_canonBy fieldKey_injective n fs
-      show slotFits o (fun y => Fits w y t) (projSlot (canonF fs) vs (n, o, t))
-      unfold projSlot
-      cases hf : firstOf n fs with
-      | none =>
-        rw [hf] at hrel
-        have hnone := slotOf_none (canonF fs) vs (hfirst.trans hf)
-        simp only at hrel
-        rw [hnone, hrel]
-        trivial
-      | some os =>
-        obtain ⟨o', s⟩ := os
-        rw [hf] at hrel
-        simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hrel
-        obtain ⟨hflag, hws⟩ := hrel
-        obtain ⟨x, hx, hfit⟩ := fieldsFit_slotOf w (canonF fs) vs hvs (hfirst.trans hf)
-        rw [hx]
-        have ihq := ih (n, o, t) hq'
-        cases o <;> cases o'
-        · exact ihq s x hws hfit
-        · rcases hflag with hflag | hflag <;> exact absurd hflag (by decide)
-        · exact ihq s x hws hfit
-        · cases x
-          case none => trivial
-          case some y => exact ihq s y hws hfit
-          all_goals exact hfit.elim
+      constructor
+      · intro hnone
+        cases hf : firstOf n fs with
+        | none =>
+          rw [hf] at hrel
+          exact hrel
+        | some os =>
+          obtain ⟨o', s⟩ := os
+          rw [hf] at hrel
+          simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hrel
+          rcases hrel.1 with ho | ho'
+          · exact ho
+          · exfalso
+            have hmem : (n, (o', s)) ∈ canonF fs := firstOf_mem (hfirst.trans hf)
+            rw [ho'] at hmem
+            obtain ⟨x, hx⟩ := namedFit_required _ ns xs hfit
+              (List.mem_map.mpr ⟨(n, false, s), hmem, rfl⟩)
+            simp only [hx, Option.map_some] at hnone
+            cases hnone
+      · intro y hy
+        simp only [Option.map_eq_some_iff] at hy
+        obtain ⟨x, hx, rfl⟩ := hy
+        obtain ⟨p, hp, hpn, hpx⟩ := namedFit_lookup _ ns xs hfit hx
+        rw [List.mem_map] at hp
+        obtain ⟨⟨n', o'', s''⟩, hq'', rfl⟩ := hp
+        simp only at hpn
+        subst hpn
+        have hf'' : firstOf n' fs = some (o'', s'') :=
+          hfirst.symm.trans (firstOf_of_nodup (canonBy_names_nodup fs) hq'')
+        rw [hf''] at hrel
+        simp only [Bool.and_eq_true] at hrel
+        exact ih (n', o, t) hq' s'' x hrel.2 hpx
     all_goals exact absurd hw (by simp only [widthSub, Bool.false_eq_true, not_false_eq_true])
   | _ =>
     intro a v hw hv
@@ -1554,35 +1994,47 @@ theorem fits_project (w : World) : ∀ (b a : Ty) (v : Val), widthSub a b = true
 
 /-! ## The red controls, on the copy -/
 
-/-- RED CONTROL (proved): width with positional values is unsound. The boundary relation holds,
-the value fits the wider record, and the same value does not fit the narrower one; the projection
-is what makes it fit. -/
-theorem positional_width_unsound (w : World) :
+/-- RED CONTROL (proved), named: the boundary relation holds, the value fits the wider record,
+the same value is no member of the narrower one (its names are not the declared names: width is
+refused by the name list), and the projection is what makes it fit. Under the positional clause
+the same four facts were unsoundness (`positional_width_unsound`, commit `1b069d15`: the slots were
+read at the wrong positions); under the named clause they are a refusal. -/
+theorem named_width_refused (w : World) :
     widthSub (.record [("id", false, .nat), ("name", false, .string)]) (.record [("id", false, .nat)]) = true ∧
-      Fits w (.ctor 0 [.nat 7, .str "Ada"]) (.record [("id", false, .nat), ("name", false, .string)]) ∧
-      ¬ Fits w (.ctor 0 [.nat 7, .str "Ada"]) (.record [("id", false, .nat)]) ∧
-      Fits w (project (.record [("id", false, .nat), ("name", false, .string)]) (.ctor 0 [.nat 7, .str "Ada"])
+      Fits w (.ctor 0 [.list [.str "id", .str "name"], .list [.nat 7, .str "Ada"]])
+        (.record [("id", false, .nat), ("name", false, .string)]) ∧
+      ¬ Fits w (.ctor 0 [.list [.str "id", .str "name"], .list [.nat 7, .str "Ada"]])
+        (.record [("id", false, .nat)]) ∧
+      Fits w (project (.ctor 0 [.list [.str "id", .str "name"], .list [.nat 7, .str "Ada"]])
         (.record [("id", false, .nat)])) (.record [("id", false, .nat)]) := by
-  refine ⟨by decide +kernel, ?_, ?_, ?_⟩
-  · rw [fits_record]
+  have hc : canonF [("id", false, Ty.nat), ("name", false, Ty.string)] =
+      [("id", false, .nat), ("name", false, .string)] := by decide +kernel
+  have hwide : Fits w (.ctor 0 [.list [.str "id", .str "name"], .list [.nat 7, .str "Ada"]])
+      (.record [("id", false, .nat), ("name", false, .string)]) := by
+    rw [fits_record w rfl, hc]
+    simp only [List.map_cons, List.map_nil, fitterOf]
+    rw [namedFit_cons_eq, namedFit_cons_eq]
     exact ⟨trivial, trivial, trivial⟩
-  · rw [fits_record]
-    intro h
-    exact h.2
-  · exact fits_project w _ _ _ (by decide +kernel) (by rw [fits_record]; exact ⟨trivial, trivial, trivial⟩)
+  refine ⟨by decide +kernel, hwide, ?_, fits_project w _ _ _ (by decide +kernel) hwide⟩
+  rw [fits_record w rfl]
+  simp only [canonBy_single, List.map_cons, List.map_nil, fitterOf]
+  rw [namedFit_cons_eq]
+  intro h
+  exact h.2.elim
 
-/-- The written-order read, as a check: the value's slots against the written fields. -/
+/-- The written-order read, as a check: the value's names against the written fields. -/
 def hasTyWritten (v : Val) (t : Ty) (al : List String) : Bool :=
-  match t, v with
-  | .record fs, .ctor 0 vs => fieldsHasTy vs (checkers fs al)
-  | t, v => hasTy v t al
+  match t, recordParts? v with
+  | .record fs, some (ns, xs) => namedHasTy (checkers fs al) ns xs
+  | t, _ => hasTy v t al
 
 /-- RED CONTROL (proved): the written-order read is not invariant under normalization (the
-verifier's `hasTyV_normalize_fails`, on the copy). -/
+verifier's `hasTyV_normalize_fails`, on the copy, named). -/
 theorem written_order_not_invariant :
-    hasTyWritten (.ctor 0 [.str "x", .nat 1]) (.record [("b", false, .nat), ("a", false, .string)]) [] = false ∧
-      hasTyWritten (.ctor 0 [.str "x", .nat 1])
-        (normalize (.record [("b", false, .nat), ("a", false, .string)])) [] = true := by
+    hasTyWritten (.ctor 0 [.list [.str "b", .str "a"], .list [.nat 1, .str "x"]])
+        (.record [("b", false, .nat), ("a", false, .string)]) [] = true ∧
+      hasTyWritten (.ctor 0 [.list [.str "b", .str "a"], .list [.nat 1, .str "x"]])
+        (normalize (.record [("b", false, .nat), ("a", false, .string)])) [] = false := by
   decide +kernel
 
 end ProbeP
@@ -1591,20 +2043,28 @@ end ProbeP
 #print axioms ProbeP.sub_le_subN
 #print axioms ProbeP.fits_record
 #print axioms ProbeP.fits_record_inv
+#print axioms ProbeP.namedFit_hasTy
 #print axioms ProbeP.fits_hasTy
+#print axioms ProbeP.namedFit_live
 #print axioms ProbeP.fits_live
+#print axioms ProbeP.namedFit_mono
 #print axioms ProbeP.fits_map
+#print axioms ProbeP.fits_leafEdge
+#print axioms ProbeP.fits_leafRule
 #print axioms ProbeP.fits_sub
 #print axioms ProbeP.fits_members
 #print axioms ProbeP.fits_normalizeRow
 #print axioms ProbeP.fits_productMembers
 #print axioms ProbeP.fits_normalize_record
+#print axioms ProbeP.fits_normalize_tuple
 #print axioms ProbeP.fits_normalize
 #print axioms ProbeP.fits_subN
 #print axioms ProbeP.fits_join_left
 #print axioms ProbeP.fits_join_right
 #print axioms ProbeP.canonBy_mapName
-#print axioms ProbeP.fieldsFit_slotOf
+#print axioms ProbeP.namedFit_lookup
+#print axioms ProbeP.namedFit_required
+#print axioms ProbeP.namedFit_of_forall
 #print axioms ProbeP.fits_project
-#print axioms ProbeP.positional_width_unsound
+#print axioms ProbeP.named_width_refused
 #print axioms ProbeP.written_order_not_invariant

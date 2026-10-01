@@ -7,7 +7,8 @@
 'ProbeP.FreshFrom.allocExternal' depends on axioms: [propext]
 'ProbeP.FreshFrom.allocScope' depends on axioms: [propext]
 'ProbeP.fits_handle_fresh' depends on axioms: [propext, Quot.sound]
-'ProbeP.fieldsFit_fresh' depends on axioms: [propext, Quot.sound]
+'ProbeP.namedFit_fresh' depends on axioms: [propext, Quot.sound]
+'ProbeP.itemsFit_fresh' depends on axioms: [propext, Quot.sound]
 'ProbeP.fits_of_inhabited_fresh' depends on axioms: [propext, Quot.sound]
 'ProbeP.inhabited_iff_fits' depends on axioms: [propext, Quot.sound]
 'ProbeP.inhabited_normalize' depends on axioms: [propext, Quot.sound]
@@ -17,4 +18,4 @@
 'ProbeP.optionalNever_fits' depends on axioms: [propext, Quot.sound]
 'ProbeP.emptyMap_fits' depends on axioms: [propext, Quot.sound]
 'ProbeP.raw_fold_disagrees' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=1
+exit=0 seconds=13
