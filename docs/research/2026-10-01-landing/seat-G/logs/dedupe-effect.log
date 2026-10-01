@@ -1,0 +1,5 @@
+(30, 8)
+(92462, 40371)
+"2794d94c40e85c5643ebc081a54eed287da0e746537f4f8ecfd4efc3020c2926"
+"5883cd32db2f857d8ccc8f2a67e6e936f06179c4a34e1835691e966980f164bd"
+## exit=0 seconds=3 cmd=LEAN_NUM_THREADS=4 lake env lean -M6144 docs/research/2026-10-01-landing/seat-G/probes/DedupeEffect.lean head=6ca2326e dirty=0

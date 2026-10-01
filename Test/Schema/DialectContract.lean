@@ -1,5 +1,6 @@
 import Effect4.Schema.Bridge
 import Effect4.Schema.OfShape
+import Effect4.Codegen.Read
 
 /-!
 # Dialect contract — the store's shapes against the program's types, through the schema
@@ -46,5 +47,37 @@ def shapeTy (s : Shape) : Option Ty := Bridge.ofSchema (Effect4.Store.render s)
 #guard shapeTy (.named "Tree") = none
 #guard shapeTy (.sum "Tree" [("leaf", 0, [("value", .nat)])]) = none
 #guard shapeTy (.struct "P" [("x", .nat)]) = none
+
+/-! ## A requirement's key in an effect document (decisions row 8)
+
+`EffTy.document` files each requirement under the whole `ServiceKey` (`Bridge.requirementKey`),
+spelled as the printer and the reader spell a service key's runtime identity (`keyText`,
+`Codegen/Read.lean`). Until 2026-10-01 it was filed under the name alone, `service_{name}`, so two
+keys that share a name and differ in service were filed under one key. -/
+
+/-- The schema's key is the printer's key. -/
+theorem requirementKey_eq_keyText (k : ServiceKey) : Bridge.requirementKey k = keyText k := rfl
+
+/-- The key determines the service key: the reader recovers both fields from it
+(`keyFromText_print`), so distinct requirements are distinct references. -/
+theorem requirementKey_injective {k k' : ServiceKey}
+    (h : Bridge.requirementKey k = Bridge.requirementKey k') : k = k' :=
+  (keyFromText_print k.name.value k.service.value).symm.trans
+    ((congrArg keyFromText h).trans (keyFromText_print k'.name.value k'.service.value))
+
+/-- Red control: the old key, the name alone, files two services that share a name together. -/
+def nameOnlyKey (k : ServiceKey) : String := s!"service_{k.name.value}"
+#guard nameOnlyKey ⟨⟨3⟩, ⟨7⟩⟩ = nameOnlyKey ⟨⟨3⟩, ⟨8⟩⟩
+
+/-- An effect that needs two services sharing name 3: two references, `k3_7` and `k3_8`, each
+with a placeholder declaration of its own key. -/
+def twoServices : EffTy :=
+  ⟨.nat, .never, Machine.Env.Requirement.ofList [⟨⟨3⟩, ⟨8⟩⟩, ⟨⟨3⟩, ⟨7⟩⟩]⟩
+#guard (EffTy.document twoServices).references.map (·.key) = ["answer", "error", "k3_7", "k3_8"]
+#guard ((EffTy.document twoServices).references.drop 2).map (·.representation) =
+  [Bridge.schema (.handle "k3_7"), Bridge.schema (.handle "k3_8")]
+
+#print axioms requirementKey_eq_keyText
+#print axioms requirementKey_injective
 
 end Test.Schema.DialectContract

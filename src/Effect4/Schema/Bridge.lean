@@ -205,13 +205,23 @@ theorem ofSchema_schema_cty (t : CTy) (h : t.toRaw.closed = true) :
     ofSchema (schema t.toRaw) = some t.toRaw :=
   ofSchema_schema t.toRaw h
 
-/-- As an effect: the exit schema root with answer, error, and requirement references (S-2). -/
+/-- A requirement's reference key: the whole `ServiceKey`, its name and its service code, spelled
+as the printer spells a service key's runtime identity, `k{name}_{service}`
+(`Codegen/PrintLeaf.lean`'s `printKey`, `Codegen/Read.lean`'s `keyText`). Schema sits below
+Codegen, so the spelling is restated here; `Test/Schema/DialectContract.lean` proves the two equal
+and the key injective. Two keys that share a name and differ in service are two references
+(decisions row 8). -/
+def requirementKey (k : ServiceKey) : String :=
+  "k" ++ toString k.name.value ++ "_" ++ toString k.service.value
+
+/-- As an effect: the exit schema root with answer, error, and requirement references (S-2). A
+requirement is filed under its `requirementKey`, with a placeholder declaration of that name. -/
 def effDocument (eff : EffTy) : Document :=
   { representation := schema (.exitOf eff.answer.normalize eff.error.normalize)
     references :=
       [ ⟨"answer", schema eff.answer.normalize⟩
       , ⟨"error", schema eff.error.normalize⟩ ] ++
-      eff.requires.elems.map (fun k => ⟨s!"service_{k.name.value}", schema (.handle s!"service_{k.name.value}")⟩) }
+      eff.requires.elems.map (fun k => ⟨requirementKey k, schema (.handle (requirementKey k))⟩) }
 
 /-- As a plain object: the answer schema alone (S-2). -/
 def effObjectDocument (eff : EffTy) : Document :=
