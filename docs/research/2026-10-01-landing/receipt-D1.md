@@ -9,7 +9,9 @@ here: a build's report, a `#guard`, a `grep`), **assumed** (not run here; a read
 lines read).
 
 This file is written incrementally: a stop at any point leaves a true record of what was done up
-to that point. The sections below the work log are filled as the rows land.
+to that point. The sections below the work log are filled as the rows land. A `file:line` cited in
+a row's section is at the commit named in that section's heading (later commits shift
+`ProtocolPosts.lean`'s lines: at the head, `CloseIter` sits 132 lines lower than at `64df7977`).
 
 ## The one thing first
 
