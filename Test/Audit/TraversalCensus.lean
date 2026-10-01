@@ -10,7 +10,7 @@ import Test.Audit.ExhaustiveFixture
 Builds print the census (`lake build Test.Audit.TraversalCensus`); nothing is asserted. The
 `structural` and `wf` rows of each census are the exemption list of the principle "every
 traversal is a fold"; the count is the distance from it. Read against
-`docs/core/ontology.md` §5.
+`docs/core/system-map.md` §§5–6.
 
 Beside it, the exhaustiveness inventory: which matches on a type have no catch-all, and so
 are the definitions a new constructor refuses. It is printed, not asserted, for the same

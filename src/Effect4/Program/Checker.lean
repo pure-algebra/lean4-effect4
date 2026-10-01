@@ -3,7 +3,7 @@ import Effect4.Program.Typing.Blame
 /-!
 # Program.Checker — typing with located refusal, as one fold of the program
 
-The located-refusal arrow of the ontology (`docs/core/ontology.md` §5, K4) as one function:
+The located-refusal arrow of the system map (`docs/core/system-map.md` §5, K4) as one function:
 `check sig env p e : Except TypeRefusal EffTy` is the program's type, or the refusal at the path
 that earns it. `Program/Typing.lean`'s `effTy` is its success projection (`check_eq`,
 `Typing/Agreement.lean`, one theorem per sort), `explain` below is its refusal at the root by
