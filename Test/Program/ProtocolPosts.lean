@@ -445,14 +445,34 @@ theorem close_code_refused (root : ProgramSource) (w : W) :
     exact Bool.noConfusion clean
 
 /-- The flips: the current post admits the close's answer, and the denoted close code is typed at
-the checker's `pure unit` at every world. -/
+the checker's `pure unit` at every world whose store holds the scope. Row 139's pre on the
+close-scope row (seat I, 2026-10-01) restated the second from "at every world": closing an absent
+scope halts (`FiberAction.closeScope`, `Machine/Fibers.lean:1514-1523`), and at such a world the
+code is now refused (`close_code_refused_absent`). -/
 theorem post_admits_answer (w' : W) (cert : FiberCert (.closeScope 0 failed)) :
     fiberPost w' (.closeScope 0 failed) cert (.success .unit) := ⟨trivial, trivial⟩
 
-theorem close_code_typed (root : ProgramSource) (w : W) :
+theorem close_code_typed (root : ProgramSource) (w : W)
+    (live : (w.state.scopes.entryAt 0).isSome = true) :
     TypedProg root w (EffTy.pure .unit) closeCode :=
   TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () trivial (fun _ _ _ post => TypedProg.pure post)
+    (fun _ _ _ h => nomatch h) () live (fun _ _ _ post => TypedProg.pure post)
+
+/-- Row 139: at a world whose store holds no scope 0 the close code is refused, so the halting
+arm `FiberAction.closeScope` is unreachable from typed code. -/
+theorem close_code_refused_absent (root : ProgramSource) :
+    ¬ TypedProg root (initialWorld (EffTy.pure .unit)) (EffTy.pure .unit) closeCode := by
+  intro h
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change (Stores.empty.scopes.entryAt 0).isSome = true at pre
+  exact Bool.noConfusion pre
+
+/-- The positive instance: over a store holding one open scope at 0 the close code is typed. -/
+theorem close_code_typed_live (root : ProgramSource) :
+    TypedProg root { initialWorld (EffTy.pure .unit) with state := StoreUnit.oneScope }
+      (EffTy.pure .unit) closeCode :=
+  close_code_typed root _ (by decide +kernel)
 
 /-- Red control (found landing row 136): a scope's lone finalizer is the close's program, so a
 scope holding one `release` finalizer that fails answers a typed failure, outside the close-scope
@@ -1011,6 +1031,10 @@ open Test.Program.ProtocolPosts in
 #print axioms CloseScope.post_admits_answer
 open Test.Program.ProtocolPosts in
 #print axioms CloseScope.close_code_typed
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.close_code_refused_absent
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.close_code_typed_live
 open Test.Program.ProtocolPosts in
 #print axioms CloseScope.lone_release_answer
 open Test.Program.ProtocolPosts in

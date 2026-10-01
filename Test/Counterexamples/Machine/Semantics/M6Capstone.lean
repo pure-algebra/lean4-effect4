@@ -2365,11 +2365,13 @@ theorem output_outside (w : W) : ¬ MachineTyped (rootProgram : ProgramSource) u
 
 /-- **Red control on the new `step_deliver` (rows 134 and 139).** With `stuck = none` in `J`, the
 worker's typed scope-exit callback for the absent scope 0 refutes `StepPreserves` for this
-`deliver`: `fiberPre` admits `.scopeExit` on any scope (`Laws/Program/Typed/Residual.lean:132`),
-so `TypedProg` types the callback (`callback_typed`) and the step halts
-(`prepareScopedExitR`, `Laws/Program/EvaluateR.lean:319`). The repair is a scope-liveness premise
-on the scope-reading fiber rows (`scopeExit`, `closeScope`, `runIn`, `forkIn`; seat B's
-`fiberPre`), after which `callback_typed` no longer holds at a world whose store lacks scope 0. -/
+`deliver`: `TypedProg` types the callback (`callback_typed`) and the step halts
+(`prepareScopedExitR`, `Laws/Program/EvaluateR.lean:319`). Still red after row 139's hunk on
+`fiberPre` (seat I, 2026-10-01; tested: this file builds with it): `fiberPre`'s `scopeExit` arm
+demands the scope's liveness, but `TypedProg` types the marker through its own `scopeExit`
+constructor, which reads no pre (the `fiber` arm excludes the marker), so `callback_typed` holds
+at every world. The repair is the liveness premise on that constructor; it reaches
+`callback_typed` and every control in this section that types the callback (seat I's receipt). -/
 theorem step_deliver_refuted_by_absent_scope :
     ¬ StepPreserves (rootProgram : ProgramSource) unitTy command := by
   intro step
@@ -2421,6 +2423,51 @@ theorem drop_absent_refused (root : ProgramSource) (w : W) : ¬ QueueOk root w m
 #print axioms drop_absent_halts
 #print axioms link_absent_refused
 #print axioms drop_absent_refused
+
+/-! Row 139's premises on the halting fiber rows (seat C's hunk on `fiberPre`, landed by seat I):
+typed code names no unknown interrupt target and no absent scope for `runIn`, `forkIn` or
+`Scope.close`, and never performs the race registration marker itself. At the initial world (the
+root alone declared, no scope) each is refused (`close_code_refused_absent` in
+`Test/Program/ProtocolPosts.lean` is the close-scope row's). -/
+
+def startWorld : W := initialWorld (EffTy.pure .unit)
+
+theorem interruptAs_unknown_refused (root : ProgramSource) (k : Val → RProgram) :
+    ¬ TypedProg root startWorld (EffTy.pure .unit) (.vis (.inr (.interruptAs ⟨5⟩ Api.root)) k) := by
+  intro h
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change (startWorld.Γ ⟨5⟩).isSome = true at pre
+  exact Bool.noConfusion pre
+
+theorem runIn_absent_refused (root : ProgramSource) (k : Val → RProgram) :
+    ¬ TypedProg root startWorld (EffTy.pure .unit) (.vis (.inr (.runIn Api.root 7)) k) := by
+  intro h
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have absent : (Stores.empty.scopes.entryAt 7).isSome = true := pre.2
+  exact Bool.noConfusion absent
+
+theorem forkIn_absent_refused (root : ProgramSource) (child : Point)
+    (options : Supervision.ForkOptions) (k : Val → RProgram) :
+    ¬ TypedProg root startWorld (EffTy.pure .unit) (.vis (.inr (.forkIn child options 7 [])) k) := by
+  intro h
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have absent : (Stores.empty.scopes.entryAt 7).isSome = true := pre.2
+  exact Bool.noConfusion absent
+
+theorem raceRegister_refused (root : ProgramSource) (w : W) (ty : EffTy) (race : Nat)
+    (k : ExitV → RProgram) : ¬ TypedProg root w ty (.vis (.inr (.raceRegister race)) k) := by
+  intro h
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  exact pre
+
+#print axioms interruptAs_unknown_refused
+#print axioms runIn_absent_refused
+#print axioms forkIn_absent_refused
+#print axioms raceRegister_refused
 
 end Liveness
 
