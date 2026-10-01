@@ -63,6 +63,8 @@ open Effect4.Program.Typed
 #print axioms Effect4.Program.Typed.savedMono_of_stackMono
 #print axioms Effect4.Program.Typed.admittedReplay_noHostAnswer
 #print axioms Effect4.Program.Typed.reachable_of_ledger
+#print axioms Effect4.Program.Typed.replayR_nil_machine
+#print axioms Effect4.Program.Typed.rreachable_load
 #print axioms Effect4.Program.Typed.queueOk_nil
 #print axioms Effect4.Program.Typed.not_readsCode_taskCmds
 #print axioms Effect4.Program.Typed.edit_nil

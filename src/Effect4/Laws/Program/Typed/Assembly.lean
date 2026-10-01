@@ -973,6 +973,21 @@ theorem reachable_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (admittedReplay_noHostAnswer root (MachineTyped root rootTy) fuel tape free _)
   exact ⟨w, typed⟩
 
+/-- The empty tape leaves the loaded machine. -/
+theorem replayR_nil_machine (p : NativeEff) (fuel : Nat) :
+    (replayR p fuel []).machine = loadR p fuel fuel := by
+  unfold replayR replayEval
+  split
+  · rfl
+  · split
+    · rfl
+    · rfl
+
+/-- The loaded machine is reachable (the empty tape), so the capstone at the load is M5. -/
+theorem rreachable_load (root : ProgramSource) (fuel : Nat) :
+    RReachable root fuel (loadR root.program fuel fuel) :=
+  ⟨[], (fun _ h => nomatch h), (replayR_nil_machine root.program fuel).symm⟩
+
 /-! ## The decision edits and the fire snapshot (decisions row 140; R3)
 
 `DecisionLift`'s thirteen fields (`Laws/Machine/Lift.lean:308-355`) at `J`, `I`, `O` and the
@@ -1424,9 +1439,10 @@ checked, closed source is in `J` (`reachable_of_ledger` derives it from `typedSt
 Live refutations at this commit: `E4-TYPED-CE-009` (`Fits` compares declared types in the raw
 order while the checker normalizes, so M5 is false for a checked program; seat A, row 137) and
 `E4-TYPED-CE-010` (the await-by-value post reads the target's answer column, so M5 is false for
-the typed corpus's `awaitFiber.value`; seat B, row 136; restated against `J` in
-`Test/Counterexamples/Machine/Semantics/AwaitLoad.lean`, `loadsTyped_false`); either falsifies the
-capstone at the loaded machine. `E4-TYPED-CE-011` (the saved-code clause read at a budget cut) refuted the
+the typed corpus's `awaitFiber.value`; seat B, row 136). Both are proved against these statements,
+M5's and this capstone's at the loaded machine, which the empty tape reaches (`rreachable_load`):
+`Test/Counterexamples/Machine/Semantics/RawOrderLoad.lean` and `AwaitLoad.lean`, `loadsTyped_false`
+and `capstone_false`. `E4-TYPED-CE-011` (the saved-code clause read at a budget cut) refuted the
 statement over the typed state before row 134 and is repaired by the split
 (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), as is `E4-TYPED-CE-014` (a halted
 machine typed) by `J`'s `stuck = none`.

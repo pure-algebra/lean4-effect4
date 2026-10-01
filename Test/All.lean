@@ -25,6 +25,7 @@ import Test.Counterexamples.Machine.Semantics.TrivialPosts
 import Test.Counterexamples.Machine.Semantics.M6Capstone
 import Test.Counterexamples.Machine.Semantics.StaleCode
 import Test.Counterexamples.Machine.Semantics.AwaitLoad
+import Test.Counterexamples.Machine.Semantics.RawOrderLoad
 import Test.Program.TypedSplit
 import Test.Counterexamples.Machine.Semantics.LayerValue
 import Test.Counterexamples.Machine.Semantics.ValueMembership

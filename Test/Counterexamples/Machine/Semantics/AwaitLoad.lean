@@ -11,7 +11,8 @@ compiled there at `dceae006`; brief amendment 1: copy, do not re-port). The awai
 admits the target's *answer* column (`nat`), and the await's continuation returns it as the
 program's success value, which cannot fit `exitOf nat never` (seat B's post, decisions row 136).
 
-New here: the refutation of `LoadsTyped`, M5's proposition after row 134's split. `J`'s
+New here: the refutations of `LoadsTyped`, M5's proposition after row 134's split, and of the
+capstone's (`ReachableTyped`) at the loaded machine. `J`'s
 `LiveCode` types the loaded root (not exited, not running, not a race marker), so the refused
 code refutes `J` at every world of the load. The port's H1-shaped `typedState_load_false` and
 `load_not_inert` are not restated: `TypedState` no longer types current code.
@@ -122,6 +123,13 @@ theorem loadsTyped_false : ¬ LoadsTyped (awaitProg : ProgramSource) rootTy 5 5 
   cases hstack
   exact root_code_refused w fresh hcode
 
+/-- **The capstone restated over `J` is false here**, at the loaded machine, which the empty tape
+reaches. -/
+theorem capstone_false : ¬ ReachableTyped (awaitProg : ProgramSource) rootTy 5 (loadR awaitProg 5 5) :=
+  fun cap => by
+    obtain ⟨w, typed⟩ := cap rfl typed_source closed_root (rreachable_load (awaitProg : ProgramSource) 5)
+    exact loadsTyped_false (fun _ _ _ => ⟨w, typed⟩)
+
 end Test.Counterexamples.Machine.Semantics.AwaitLoad
 
 open Test.Counterexamples.Machine.Semantics.AwaitLoad in
@@ -136,3 +144,5 @@ open Test.Counterexamples.Machine.Semantics.AwaitLoad in
 #print axioms one_not_loaded
 open Test.Counterexamples.Machine.Semantics.AwaitLoad in
 #print axioms loadsTyped_false
+open Test.Counterexamples.Machine.Semantics.AwaitLoad in
+#print axioms capstone_false
