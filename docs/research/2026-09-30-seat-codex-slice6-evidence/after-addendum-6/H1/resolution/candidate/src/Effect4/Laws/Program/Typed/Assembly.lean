@@ -79,7 +79,7 @@ def TerminalPosition (m : RState) (commands : List RCmd) : Expect → Prop
 
 /-- Current code is inert after a machine halt, while its finish is queued, or after its exit
 has been published. Halting does not require an empty queue: some native halt paths retain it.
-The executable command loop checks halt before dispatch; raw `driveStep` requires its explicit
+Only dispatch through the command loop reads this code; raw `driveStep` requires its explicit
 not-halted premise in `StepPreserves`. -/
 def CodeInert (m : RState) (commands : List RCmd) (position : Expect) : Prop :=
   m.stuck.isSome = true ∨ TerminalPosition m commands position

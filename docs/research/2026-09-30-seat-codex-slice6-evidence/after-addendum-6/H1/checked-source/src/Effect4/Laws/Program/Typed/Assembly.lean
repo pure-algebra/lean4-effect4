@@ -1,5 +1,4 @@
 import Effect4.Laws.Program.Typed.Stack
-import Effect4.Laws.Machine.Lift
 import Effect4.Laws.Program.Typed.State
 import Effect4.Laws.Program.Typed.Scheduler
 import Effect4.Laws.Program.Agreement
@@ -77,23 +76,16 @@ def TerminalPosition (m : RState) (commands : List RCmd) : Expect → Prop
   | .fiber id => TerminalFiber m commands id
   | .hook _ => False
 
-/-- Current code is inert after a machine halt, while its finish is queued, or after its exit
-has been published. Halting does not require an empty queue: some native halt paths retain it.
-The executable command loop checks halt before dispatch; raw `driveStep` requires its explicit
-not-halted premise in `StepPreserves`. -/
-def CodeInert (m : RState) (commands : List RCmd) (position : Expect) : Prop :=
-  m.stuck.isSome = true ∨ TerminalPosition m commands position
-
 /-- Only the current-code premise is conditional. The stack still composes to the declared
-fiber type, and interrupt provenance is required even when current code is inert. -/
+fiber type, and interrupt provenance is required on both sides of the terminal boundary. -/
 def SavedPosition (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd)
     (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
-  ∃ tin, (¬ CodeInert m commands position → TypedProg root w tin saved.current) ∧
+  ∃ tin, (¬ TerminalPosition m commands position → TypedProg root w tin saved.current) ∧
     StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final saved.stack ∧
     InterruptProvenance saved
 
-/-- All generated data clauses are unchanged. Only saved current code is conditional on
-`CodeInert`; queued exit typing is still the unchanged `preds.exit` in `RCmdOk`. -/
+/-- All generated data clauses are unchanged. Only saved current code is conditional on its
+queued or published exit; queued exit typing is still the unchanged `preds.exit` in `RCmdOk`. -/
 def statePreds (root : ProgramSource) (m : RState) (commands : List RCmd) : Preds World :=
   { preds root with
     SavedOk := fun w position saved => ∀ ty, expectOf w position = some ty →
@@ -174,41 +166,12 @@ structure QueueOk (root : ProgramSource) (w : World) (m : RState)
 theorem QueueOk.fresh {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
     (queue : QueueOk root w m commands) : QueueFresh m commands := queue.keys.below
 
-/-- One dispatched command keeps the typed state and queue typed at some later world.
-The exact `m.stuck = none` dispatch premise is shared with `Machine.Lift.StepKeeps` and
-`driveState`; it does not assert reachability or constrain the pending suffix. -/
+/-- One command keeps the typed state and the queue typed, at some later world. -/
 def StepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop :=
-  ∀ w m rest, m.stuck = none → TypedState root rootTy w m (cmd :: rest) →
-    QueueOk root w m (cmd :: rest) →
+  ∀ w m rest, TypedState root rootTy w m (cmd :: rest) → QueueOk root w m (cmd :: rest) →
     let r := (letI := termEvaluatorFor root.program
               driveStep (interpR root.program) m cmd rest)
     ∃ w', w.leHost w' ∧ TypedState root rootTy w' r.1 r.2 ∧ QueueOk root w' r.1 r.2
-
-/-- The eighteen command facts, once proved, provide exactly the existing generic loop
-premise. This adapter proves no individual command fact and requires no reachability premise. -/
-theorem stepKeeps_of_stepPreserves (root : ProgramSource) (rootTy : EffTy)
-    (steps : ∀ command, StepPreserves root rootTy command) :
-    letI := termEvaluatorFor root.program
-    Machine.Lift.StepKeeps hostOrder (interpR root.program)
-      (fun w m commands => TypedState root rootTy w m commands ∧ QueueOk root w m commands) := by
-  letI := termEvaluatorFor root.program
-  intro w m command rest running typed
-  exact steps command w m rest running typed.1 typed.2
-
-/-- Conditional assembly lift through the actual command loop, including its halt boundary.
-All eighteen `StepPreserves` facts remain hypotheses, not discharged obligations. -/
-theorem driveState_typed_of_stepPreserves (root : ProgramSource) (rootTy : EffTy)
-    (steps : ∀ command, StepPreserves root rootTy command)
-    (fuel : Nat) (w : World) (m : RState) (commands : List RCmd)
-    (typed : TypedState root rootTy w m commands) (queue : QueueOk root w m commands) :
-    letI := termEvaluatorFor root.program
-    let result := driveState (interpR root.program) fuel m commands
-    ∃ w', w.leHost w' ∧ TypedState root rootTy w' result.1 result.2 ∧
-      QueueOk root w' result.1 result.2 := by
-  letI := termEvaluatorFor root.program
-  exact Machine.Lift.driveState_lift hostOrder (interpR root.program)
-    (fun w m commands => TypedState root rootTy w m commands ∧ QueueOk root w m commands)
-    (stepKeeps_of_stepPreserves root rootTy steps) fuel w m commands ⟨typed, queue⟩
 
 /-! ## The capture lookup -/
 

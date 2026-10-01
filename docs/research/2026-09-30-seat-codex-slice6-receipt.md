@@ -11,7 +11,7 @@ Authority was read from the main checkout; its path/hash and starting HEAD `c42f
 retained in `after-addendum-6/authority.json`. No integration merge or coordinator-register
 edit is performed here.
 
-### G — landed in the commit containing this section
+### G — landed at `57c93ba4`
 
 Base `c42f4a46`. The two checker leaves and LayerHasTy leaf rules now require a declared
 service carrier and normalized value subtyping. Their two inversion and soundness cases are
@@ -48,6 +48,63 @@ import. The register, generated corpus index, receipt and evidence are the remai
 No engine regeneration is required by G's brief; no OCaml source changes. The generated corpus
 index comes only from its prescribed producer. `G/final-source.patch` retains the final diff.
 Independent source review found no additional issue. Nothing is pushed.
+
+
+### Owner continuation: resolve the remaining issues
+
+The owner subsequently directed: “dont stop work.. resolve the issues consistent with previous
+decisions in as rigorous and comprehensive a way as possible”. The checked counterexamples
+remain evidence, but the earlier proposal-only stop is superseded for necessary, consistent
+repairs. The queued-finish gap is being resolved using the tree's existing dispatch boundary:
+`Machine.Lift.StepKeeps` already requires `m.stuck = none`, matching `driveState`. H1 retains all
+stored-data, stack and provenance clauses; only current code becomes inert after a global halt.
+No runtime behavior changes. Additional H1/H2 adaptations will be named and measured rather
+than silently exempted from the earlier inventory. Coordinator-owned decisions remain untouched.
+
+### H1 — resolved and landed in the commit containing this section
+
+Base `57c93ba4`. The queued/published-finish clause repairs the original terminal witness;
+its 28 printed facts pass. A new checked two-fiber witness showed why that clause alone fails:
+a typed worker halts on an absent scope and clears the root's valid pending finish, leaving stale
+Nat 42 in a Unit root. The exact failed statement and candidate remain in `H1/checked-source/`
+and `H1/candidate/QueueDiscardWitness.lean`; all fifteen original witness prints pass.
+
+The owner's continuation instruction resolves this through the **existing dispatch rule**,
+not a runtime or reachability change. `CodeInert` adds global halt to queued/published completion.
+Only the current-code component of generated SavedOk is conditional; saved stacks, interrupt
+provenance, all generated value/exit/store positions, world validity, scheduler and observer
+connections remain checked. `StepPreserves` now explicitly requires `m.stuck = none`, exactly
+as the already-proved `Machine.Lift.StepKeeps` and the executable command loop do. Two local
+adapters connect the eighteen command assumptions to that existing lift. They prove no command
+case. Halting does not require an empty residue: native halt paths may retain a suffix.
+
+The same queue-discard witness is now a full typed input/output and queue positive. The 32
+printed facts also retain its old-state refutation and prove that omitting the dispatch guard
+would still be false: raw stepping after halt reads stale code and emits a wrong finish, whereas
+the real loop retains any supplied queue. A separate negative test still refuses a bad published
+exit on a halted machine. The normal queued/published terminal controls are landed alongside
+these in M6Capstone. Earlier finish, observer, race/registration and premature-token controls
+remain, with direct historical loaded-state builders. ValueMembership's two loaded positives
+are migrated to the stronger state without assuming M5.
+
+QueueOk applies generated RCmdOk to every command, checks authority and owner uniqueness,
+reserved keys and the actual observer delivery, and mirrors the settled guard conditions.
+`pending_below` is a law. The full command/observer census is in the retained H1 candidate README
+and `H1/resolution/README.md`. H1-RCODE-SITES stays explicitly open as addendum 4 ruled; no
+universal continuation scan is invented. CE-016/017/018/019/020 record their concrete repairs.
+
+Validation: `resolved-source-1` and `final-direct` pass (the latter 406 jobs, every direct Guard
+consumer plus M6Capstone, ValueMembership and TypedStack). The exact standalone normal-terminal
+and halt controls pass. `final-axioms` prints every theorem in the two touched batteries plus
+thirteen source helpers/adapters, all at `[propext, Quot.sound]` or less; its exact count and names
+are in `resolution/trust-summary.json`. `make check-cases` passes and its machine-readable report
+is retained. Earlier failed draft runs are preserved with final successful successors; none of
+their error placeholders is proof evidence. M3bWorld/M3bAssembly/M6 ceilings remain 1/1/20.
+
+Changed implementation paths: Guard/Core, Guard/RegistrationQueue, new Typed/Scheduler,
+Typed/Assembly, M6Capstone and ValueMembership; register, receipt and evidence accompany them.
+No generated producer or runtime change. The next item is H2 part one, including the newly
+measured consequences of H1 under the owner's continuation instruction. Nothing is pushed.
 
 
 ## After addendum 5

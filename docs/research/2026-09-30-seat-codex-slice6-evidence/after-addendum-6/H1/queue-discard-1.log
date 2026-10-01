@@ -1,0 +1,34 @@
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H1/candidate/QueueDiscardWitness.lean:35:57: error: unexpected identifier; expected '}'
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H1/candidate/QueueDiscardWitness.lean:44:2: error: Type mismatch: After simplification, term
+  member
+ has type
+  f = rootFiber ∨ f = workerFiber ∨ f ∈ []
+but is expected to have type
+  f = rootFiber ∨ f = workerFiber
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H1/candidate/QueueDiscardWitness.lean:50:4: error: 'change' tactic failed, pattern
+  (if id = Api.root ∨ id = workerId then some unitTy else none).isSome = true ↔ id ∈ [Api.root, workerId]
+is not definitionally equal to target
+  (world.Γ id).isSome = true ↔ id ∈ List.map (fun x => x.id) machine.fibers
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H1/candidate/QueueDiscardWitness.lean:72:4: error: 'change' tactic failed, pattern
+  (if id = Api.root ∨ id = workerId then some unitTy else none) = some ty
+is not definitionally equal to target
+  world.Γ id = some ty
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H1/candidate/QueueDiscardWitness.lean:145:8: error: 'change' tactic failed, pattern
+  some unitTy = some ty
+is not definitionally equal to target
+  expectOf world (Expect.fiber workerFiber.id) = some ty
+'H1QueueDiscardWitness.member_cases' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1QueueDiscardWitness.valid' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1QueueDiscardWitness.no_requests' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1QueueDiscardWitness.scheduler' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1QueueDiscardWitness.observers' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1QueueDiscardWitness.registration' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1QueueDiscardWitness.callback_typed' depends on axioms: [propext, Quot.sound]
+'H1QueueDiscardWitness.typed' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1QueueDiscardWitness.queue' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1QueueDiscardWitness.result_queue' depends on axioms: [propext, Quot.sound]
+'H1QueueDiscardWitness.result_halted' depends on axioms: [propext, Quot.sound]
+'H1QueueDiscardWitness.root_unchanged' depends on axioms: [propext, Quot.sound]
+'H1QueueDiscardWitness.root_not_terminal' depends on axioms: [propext, Quot.sound]
+'H1QueueDiscardWitness.output_not_typed' depends on axioms: [propext, Quot.sound]
+'H1QueueDiscardWitness.step_deliver_false' depends on axioms: [propext, sorryAx, Quot.sound]
