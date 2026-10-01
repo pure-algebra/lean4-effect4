@@ -1,0 +1,175 @@
+--- src/Effect4/Laws/Program/Typed/Admission.lean
++++ candidate/Admission.lean
+@@ -1,4 +1,4 @@
+-import Effect4.Laws.Program.Typed.Validity
++import Effect4.Laws.Program.Typed.Membership
+ import Effect4.Program.Checker
+ import Effect4.Laws.Program.Sched
+ 
+@@ -6,8 +6,8 @@
+ # Laws.Program.Typed.Admission — source and control admission for typed programs
+ 
+ D13 source admission (checking paths and environments against the checker) before protocol
+-contracts; strong value/cause/exit judgments resolving FR-07; the clean-exit lemmas that type
+-interrupt-only and defect-only failures at every effect type. Control admission (FR-09) is an
++contracts, using the value membership judgments from `Typed/Membership.lean`; the clean-exit
++lemmas type interrupt-only and defect-only failures at every effect type. Control admission (FR-09) is an
+ arm of the one program judgment `TypedProg` in `Typed/Residual.lean` (ruling 2026-09-23).
+ -/
+ 
+@@ -17,67 +17,10 @@
+ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+ open Effect4.Laws.Effects
+ 
+-/-- A value's handle indices are within the allocated bounds of the world. -/
+-def HandlesLive (w : World) (v : Val) : Prop :=
+-  ∀ h ∈ v.keys, match h with
+-  | .cell key => key.index < w.state.refs.length
+-  | .promise key => key.index < w.state.deferreds.cells.length
+-  | .fiber id => (w.Γ id).isSome = true
+-  | _ => True
+-
+-/-- A context's services fit their keys' static types, the ones the checker reads
+-(`nativeServiceTy`, `Checker.lean` `.service`/`.provideService`). Decision row 90 (2026-09-24):
+-the checker types a service by its key, so the typing is static; a service value's own nested
+-handles are not re-checked here (a ref-typed service is refused, not mistyped). -/
+-def ServicesOk (w : World) (services : Env.Ctx) : Prop :=
+-  ∀ key sv sty, services.getV key = some sv → nativeServiceTy key = some sty →
+-    ValueOk w sty sv ∧ HandlesLive w sv
+-
+-/-- Nested handle types align with the world typing tables. A fiber handle is covariant, as the
+-checker's `Ty.sub` is (`Program/Ty.lean`), so a handle widened to `fiberOf unknown unknown` fits
+-(ruling 2026-09-23, audit §8); refs and deferreds are invariant, as there. -/
+-def HandlesFit (w : World) (v : Val) (ty : Ty) : Prop :=
+-  match ty with
+-  | .refOf t => ∀ key, Handle.cell key ∈ v.keys → w.Ρ key = some t
+-  | .deferredOf a e => ∀ key, Handle.promise key ∈ v.keys → w.«Π» key = some (a, e)
+-  | .fiberOf a e => ∀ id, Handle.fiber id ∈ v.keys → ∃ fty, w.Γ id = some fty ∧
+-      fty.answer.sub a = true ∧ fty.error.sub e = true
+-  | .prod a b => match v with
+-    | .pair v1 v2 => HandlesFit w v1 a ∧ HandlesFit w v2 b
+-    | _ => True
+-  | .option a => match v with
+-    | .some v1 => HandlesFit w v1 a
+-    | _ => True
+-  | .list a => match v with
+-    | .list vs => ∀ x ∈ vs, HandlesFit w x a
+-    | _ => True
+-  | .union a b => HandlesFit w v a ∨ HandlesFit w v b
+-  | .unknown => HandlesLive w v
+-  -- the context handle carries its services' typing (decision row 90)
+-  | .handle s => s = Ty.contextTarget → ∀ ctx, Val.context? v = some ctx → ServicesOk w ctx.services
+-  | _ => True
+-
+-/-- Strong values: well-shaped, nested handles declared at the right types, and live. -/
+-def StrongValue (w : World) (ty : Ty) (v : Val) : Prop :=
+-  ValueOk w ty v ∧ HandlesFit w v ty ∧ HandlesLive w v
+-
+-/-- Strong causes: every failure payload has an admitted image satisfying `StrongValue`. -/
+-def StrongCause (w : World) (errTy : Ty) (c : CauseV) : Prop :=
+-  ∀ r ∈ c.reasons, match r with
+-  | .fail e _ => ∃ v, valOfErr e = some v ∧ StrongValue w errTy v
+-  | .die _ _ | .interrupt _ _ => True
+-
+-/-- Strong exits: successful values and failure causes carry strong typing. Defects and
+-interruptions remain admitted. -/
+-def StrongExit (w : World) (ty : EffTy) (ex : ExitV) : Prop :=
+-  ExitFits w ty ex ∧
+-  (∀ v, ex = .success v → StrongValue w ty.answer v) ∧
+-  (∀ c, ex = .failure c → StrongCause w ty.error c)
+-
+ /-- An evaluation environment typed pointwise at the corresponding static types. -/
+ def EnvTyped (w : World) (env : List Ty) (vals : List Val) : Prop :=
+   env.length = vals.length ∧
+-  ∀ (i : Nat) (ty : Ty) (v : Val), env[i]? = some ty → vals[i]? = some v → StrongValue w ty v
++  ∀ (i : Nat) (ty : Ty) (v : Val), env[i]? = some ty → vals[i]? = some v → Fits w v ty
+ 
+ /-- The program the typed state is about, with the host-row table its checker reads. A bare
+ program coerces to a source with the empty table. -/
+@@ -99,7 +42,7 @@
+ inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
+   | at_ (p : Point) (ty : EffTy) (h : PointTyped src w p ty) :
+       BodyTyped src w (.at_ p) ty
+-  | fin (name : FinName) (ex : ExitV) (ty : EffTy) (hex : StrongExit w ty ex) :
++  | fin (name : FinName) (ex : ExitV) (ty : EffTy) (hex : FitsExit w ty ex) :
+       BodyTyped src w (.fin name ex) ty
+   | raceCleanup (race : Nat) :
+       BodyTyped src w (.raceCleanup race) (EffTy.pure .unit)
+@@ -110,60 +53,37 @@
+   | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (ty : EffTy) (h : PointTyped src w p ty) :
+       BodyTyped src w (.layerBuild p m scope) ty
+ 
+-/-- A strong value at the answer column is a strong successful exit. -/
+-theorem strongExit_success (w : World) (ty : EffTy) (v : Val) (h : StrongValue w ty.answer v) :
+-    StrongExit w ty (.success v) := by
+-  refine ⟨h.1, fun v' heq => ?_, fun _ heq => nomatch heq⟩
+-  injection heq with heq
+-  subst heq
+-  exact h
+-
+-/-- An exit whose failure carries no `Fail` reason: interruptions and defects only. Every
+-success is clean. The sanitized exit at a preempted skip is clean (`Cause.sanitize_clean`). -/
+-def cleanExit : ExitV → Bool
+-  | .success _ => true
+-  | .failure c => c.reasons.all fun r => r.tag != .fail
++/-- Membership at the answer column gives membership of the successful exit. -/
++theorem strongExit_success (w : World) (ty : EffTy) (v : Val) (h : Fits w v ty.answer) :
++    FitsExit w ty (.success v) := h
+ 
+ /-- A clean failure fits every effect type at every world: the error column constrains
+ `Fail` reasons only. -/
+ theorem strongExit_of_clean (w : World) (ty : EffTy) (c : CauseV)
+-    (h : cleanExit (.failure c) = true) : StrongExit w ty (.failure c) := by
++    (h : cleanExit (.failure c) = true) : FitsExit w ty (.failure c) := by
+   have hall : ∀ r ∈ c.reasons, r.tag ≠ .fail := by
+     intro r hr
+     exact bne_iff_ne.mp (List.all_eq_true.mp h r hr)
+-  refine ⟨?_, (fun _ heq => nomatch heq), fun c' heq => ?_⟩
+-  · change causeAdmits _ ty.error c = true
+-    unfold causeAdmits
+-    rw [List.all_eq_true]
+-    intro r hr
+-    have hne := hall r hr
+-    cases r with
+-    | fail e ann => exact absurd rfl hne
+-    | die _ _ => rfl
+-    | interrupt _ _ => rfl
+-  · cases heq
+-    intro r hr
+-    have hne := hall r hr
+-    cases r with
+-    | fail e ann => exact absurd rfl hne
+-    | die _ _ => trivial
+-    | interrupt _ _ => trivial
++  rw [fitsExit_failure_iff]
++  intro r hr
++  have hne := hall r hr
++  cases r with
++  | fail e ann => exact absurd rfl hne
++  | die _ _ => trivial
++  | interrupt _ _ => trivial
+ 
+-/-- At a `never` error column a strong failure is clean: no value has type `never`. -/
++/-- At a `never` error column a fitting failure is clean: no value has type `never`. -/
+ theorem cleanExit_of_never (w : World) (ty : EffTy) (c : CauseV) (never : ty.error = .never)
+-    (h : StrongExit w ty (.failure c)) : cleanExit (.failure c) = true := by
+-  have hadm : causeAdmits (fun value ty => Val.hasTy value ty w.state.externals.allocated)
+-      ty.error c = true := h.1
+-  rw [never] at hadm
++    (h : FitsExit w ty (.failure c)) : cleanExit (.failure c) = true := by
++  rw [fitsExit_failure_iff, never] at h
+   unfold cleanExit
+   rw [List.all_eq_true]
+   intro r hr
+-  have hr' := List.all_eq_true.mp hadm r hr
++  have hr' := h r hr
+   cases r with
+   | fail e ann =>
+-    cases hval : valOfErr e with
+-    | none => simp only [reasonAdmits, hval] at hr'; cases hr'
+-    | some v => simp only [reasonAdmits, hval] at hr'; cases hr'
++    obtain ⟨v, _, hv⟩ := hr'
++    exact False.elim hv
+   | die _ _ => rfl
+   | interrupt _ _ => rfl
+ 

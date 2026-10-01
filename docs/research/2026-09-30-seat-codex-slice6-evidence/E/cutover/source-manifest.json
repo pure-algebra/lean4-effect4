@@ -1,0 +1,30 @@
+{
+  "Admission": {
+    "source_path": "/Users/pooks/Dev/lean4-effect4-slice6/src/Effect4/Laws/Program/Typed/Admission.lean",
+    "source_sha256": "b6775a9395345000870973e0b19690b9faf99599f939e9e30dd372f50f72bf29",
+    "candidate_sha256": "0f437beae4538aa7ea57973a010a4d8148ad1ca44102a87612b32ff97eac38a0",
+    "source_lines": 170,
+    "candidate_lines": 90
+  },
+  "Residual": {
+    "source_path": "/Users/pooks/Dev/lean4-effect4-slice6/src/Effect4/Laws/Program/Typed/Residual.lean",
+    "source_sha256": "016a157c0f9995223c3be38f33ed9c2c55c6e940d0e3f99696f87e519fec4673",
+    "candidate_sha256": "d233dc0b5f4f22c5a6cb17a25a3a15398158d377cefca754850a2790997b2ef4",
+    "source_lines": 460,
+    "candidate_lines": 457
+  },
+  "Stack": {
+    "source_path": "/Users/pooks/Dev/lean4-effect4-slice6/src/Effect4/Laws/Program/Typed/Stack.lean",
+    "source_sha256": "867d0d87f7b2253d7a81c596b378e5ab19f8c28be5c08d18a072d009fd3db7a0",
+    "candidate_sha256": "dc88cf42d832d3bc832a1307cf54b8be2d7b09525fc6c9c5cff664025369a9f1",
+    "source_lines": 439,
+    "candidate_lines": 436
+  },
+  "Assembly": {
+    "source_path": "/Users/pooks/Dev/lean4-effect4-slice6/src/Effect4/Laws/Program/Typed/Assembly.lean",
+    "source_sha256": "11a0b09ca39df7d686ff74596cf7e99fbecf1407f5fc47597c1d95c88c035290",
+    "candidate_sha256": "266b401f702487041cfca861e80370e721d8262bf64e1183f553466049279108",
+    "source_lines": 274,
+    "candidate_lines": 274
+  }
+}

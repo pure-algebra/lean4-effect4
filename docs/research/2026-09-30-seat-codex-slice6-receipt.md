@@ -322,6 +322,31 @@ The old judgments and all their callers remain in place at this first commit.
 Changed files for E1: Membership.lean, Admission.lean and this receipt/evidence.
 The preceding stop commit is `1d8ef8e1`. Cutover, test migration and retirement follow below.
 
+### E2: source caller cutover
+
+The four modules Admission, Residual, Stack and Assembly now use Fits/FitsExit/FitsCause and
+ServicesFit. Fits is applied in its native `(world, value, type)` order. The old definitions
+remain beside them temporarily for the test migration; they are no longer the production
+judgments. The runtime checker/twin and its bridge remain parked.
+
+The eight prescribed body changes are exactly Admission's strongExit_success,
+strongExit_of_clean and cleanExit_of_never; Residual's strongValue_bool_true, strongExit_bool
+and settling_fork; Stack's strongExit_failure_of_error and popR_typed. Two new binder-exact
+adapters, strongValue_mono and strongExit_mono, close the corresponding M3bWorld obligations.
+The obligation audit checks 6/6 binders for both, exact true, zero mismatches; the remaining
+residual-program weakening obligation keeps ceiling 1 (from 3). M6 remains 20 open.
+
+- Separate `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.<Module>` runs in order
+  Admission, Residual, Stack, Assembly: all exit 0 (`E/cutover-build.log`).
+- `LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true
+  docs/research/2026-09-30-seat-codex-slice6-evidence/E/cutover-axioms.lean`: exit 0; all eight
+  repaired bodies and both new adapters within [propext, Quot.sound].
+- Source `git diff --check`: exit 0. No additional existing source proof body outside the
+  measured eight changed. No M5–M7 proof or regeneration was added.
+
+E1 is `5e142337`. This commit owns the four cutover modules and receipt/evidence. Existing
+Test callers are migrated in E3; this intermediate commit records the narrow law build only.
+
 ## H1 — command queue conditions
 Pending.
 
