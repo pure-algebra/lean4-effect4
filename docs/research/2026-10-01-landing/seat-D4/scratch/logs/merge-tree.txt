@@ -1,0 +1,23 @@
+== git merge-tree --write-tree --name-only --messages f4881f74 c0e608e4
+2a4aee46c7faf6e9044fdf31f5aec45daeae3519
+
+Auto-merging src/Effect4/Laws/Program/Typed/Assembly.lean
+exit=0
+
+== git merge-tree --write-tree --name-only --messages seat/D2 c0e608e4 (seat/D2 at 5e82aacf)
+2208822f6e51f82dc4cccbf2cad0bb67b371236a
+Test/Counterexamples/Machine/Semantics/AwaitLoad.lean
+Test/Counterexamples/Machine/Semantics/FitsOrder.lean
+src/Effect4/Laws/Program/Typed/Assembly.lean
+
+Auto-merging Test/Counterexamples/Machine/Semantics/AwaitLoad.lean
+CONFLICT (content): Merge conflict in Test/Counterexamples/Machine/Semantics/AwaitLoad.lean
+Auto-merging Test/Counterexamples/Machine/Semantics/FitsOrder.lean
+CONFLICT (content): Merge conflict in Test/Counterexamples/Machine/Semantics/FitsOrder.lean
+Auto-merging Test/Program/ProtocolPosts.lean
+Auto-merging src/Effect4/Laws/Program/Typed/Admission.lean
+Auto-merging src/Effect4/Laws/Program/Typed/Assembly.lean
+CONFLICT (content): Merge conflict in src/Effect4/Laws/Program/Typed/Assembly.lean
+Auto-merging src/Effect4/Laws/Program/Typed/Membership.lean
+Auto-merging src/Effect4/Laws/Program/Typed/Residual.lean
+exit=1

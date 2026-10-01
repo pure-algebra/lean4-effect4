@@ -1,0 +1,54 @@
+== s1-a.log (69214 bytes)
+Build completed successfully (372 jobs).
+== s1-b.log (170294 bytes)
+Build completed successfully (555 jobs).
+== s1-c.log (171153 bytes)
+error: Test/Program/RuntimeRContract.lean:955:0: Expression
+error: Test/Program/RuntimeRContract.lean:956:0: Expression
+error: Test/Program/RuntimeRContract.lean:957:0: Expression
+error: Test/Program/RuntimeRContract.lean:958:0: Expression
+error: build failed
+== s1-d.log (54690 bytes)
+error: src/Effect4/Machine/Stores.lean:1958:15: This simp argument is unused:
+error: src/Effect4/Machine/Stores.lean:1958:34: This simp argument is unused:
+error: build failed
+== s1-e.log (173480 bytes)
+Build completed successfully (555 jobs).
+== s1-f.log (180455 bytes)
+Build completed successfully (427 jobs).
+== simpq.log (426 bytes)
+== s1-g.log (10106 bytes)
+Build completed successfully (238 jobs).
+== s2-a.log (11902 bytes)
+error: src/Effect4/Laws/Program/Typed/State.lean:25:0: ❌️ Docstring on `#guard_msgs` does not match generated message:
+error: build failed
+== s2-b.log (9964 bytes)
+Build completed successfully (246 jobs).
+== s2-c.log (56889 bytes)
+error: src/Effect4/Laws/Program/Typed/Residual.lean:829:60: Application type mismatch: The argument
+error: src/Effect4/Laws/Program/Typed/Residual.lean:831:60: Application type mismatch: The argument
+error: build failed
+== s2-d.log (71001 bytes)
+error: src/Effect4/Laws/Program/Typed/Assembly.lean:913:24: Application type mismatch: The argument
+error: src/Effect4/Laws/Program/Typed/Assembly.lean:916:2: Tactic `rfl` failed: The left-hand side
+error: build failed
+== s2-e.log (68948 bytes)
+Build completed successfully (385 jobs).
+== s2-f.log (169935 bytes)
+Build completed successfully (555 jobs).
+== s2-g.log (790977 bytes)
+error: Test/Program/ProtocolPosts.lean:796:40: Expected type must not contain free variables
+error: Test/Program/ProtocolPosts.lean:1433:2: 'change' tactic failed, pattern
+error: Test/Program/ProtocolPosts.lean:1429:0: ❌️ Docstring on `#guard_msgs` does not match generated message:
+error: build failed
+== s2-h.log (790849 bytes)
+Build completed successfully (599 jobs).
+== s2-fix.log (87920 bytes)
+Build completed successfully (387 jobs).
+== s3-a.log (790919 bytes)
+Build completed successfully (599 jobs).
+== s3-b.log (147661 bytes)
+Build completed successfully (541 jobs).
+== s4-tools.log (40264 bytes)
+Build completed successfully (132 jobs).
+== s4-dune.log (0 bytes)
