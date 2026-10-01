@@ -331,6 +331,10 @@ expansion through the redirect lemma) landed; row 117's side condition landed, i
 proved not walk-invariant and stopped; row 151 measured and stopped: both need the owner's ruling
 (rows 117 and 151). Probe S merged (`4bb22835`): the Schema side of every form on a copy, the
 readable profile (row 169), the defect-id counterexample (`E4-SCHEMA-CE-061`), row 8's (C) clean.
+Seat W0 landed lean4-typescript 0.7.0 in the package's own worktree (`wave/typescript-0.7` at
+`f5878bf`, row 164): the push to `pure-algebra/lean4-typescript` and the pin at the wave's commit 8
+are owed. Seats D2 (M5's denotation lemma, brief-D2 with its amendments) and J2 (row 168, `check-tsgo`
+into `check`, seat J's owed items, brief-J2) dispatched from `bd5462df`.
 
 **The type-language probe's first result (probe T, 2026-10-01, merged `8036f0b4`; rows 157–164).**
 The data wave can finish `Ty` once only if its single append also carries a structured nominal
