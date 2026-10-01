@@ -1,0 +1,11 @@
+# check: q4-defect
+# date: 2026-10-01T19:33:46Z
+# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
+# command: bun run q4-defect.ts
+# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
+DEFECT {"_tag":"Declaration","representation":{"id":"effect/schema/Json","payload":null},"annotations":{"expected":"JSON value"},"typeParameters":[],"checks":[]}
+EXIT {"_tag":"Declaration","representation":{"id":"effect/schema/Exit","payload":null},"annotations":{"expected":"Exit"},"typeParameters":[{"_tag":"Number","checks":[]},{"_tag":"String","checks":[]},{"_tag":"Declaration","representation":{"id":"effect/schema/Json","payload":null},"annotations":{"expected":"JSON value"},"typeParameters":[],"checks":[]}],"checks":[]}
+CAUSE {"_tag":"Declaration","representation":{"id":"effect/schema/Cause","payload":null},"annotations":{"expected":"Cause"},"typeParameters":[{"_tag":"String","checks":[]},{"_tag":"Declaration","representation":{"id":"effect/schema/Json","payload":null},"annotations":{"expected":"JSON value"},"typeParameters":[],"checks":[]}],"checks":[]}
+EXIT declaration ids ["effect/schema/Exit","effect/schema/Json"]
+ok: rc.112 has no effect/schema/Defect declaration; its defect slot persists as {"_tag":"Declaration","representation":{"id":"effect/schema/Json","payload":null
+# exit=0 seconds=0

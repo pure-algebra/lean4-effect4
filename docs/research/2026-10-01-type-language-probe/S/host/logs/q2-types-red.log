@@ -1,0 +1,8 @@
+# check: q2-types-red
+# date: 2026-10-01T18:38:20Z
+# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
+# command: /opt/homebrew/bin/tsgo -p tsconfig.q2red.json --pretty false
+# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
+q2-types-red.ts(5,44): error TS2344: Type 'false' does not satisfy the constraint 'true'.
+q2-types-red.ts(6,35): error TS2344: Type 'false' does not satisfy the constraint 'true'.
+# exit=1 seconds=0

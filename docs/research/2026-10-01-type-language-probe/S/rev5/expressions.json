@@ -1,0 +1,21 @@
+{
+  "NAT": "Schema.Natural",
+  "INT": "Schema.Int",
+  "NUMBER": "Schema.Number",
+  "NESTED": "Schema.Struct({ \"user\": Schema.Struct({ \"age\": Schema.Natural, \"name\": Schema.String }) })",
+  "UNIQUE": "Schema.Struct({ \"a\": Schema.Number, \"b\": Schema.String })",
+  "DUP": "REFUSED",
+  "CHECK_CHILD": "REFUSED",
+  "MODIFIER": "Schema.Struct({ \"a-b\": Schema.optionalKey(Schema.mutableKey(Schema.String)) })",
+  "ESCAPE": "Schema.Struct({ \"x\\\"\\n\\\\y\": Schema.String })",
+  "ANNOT_ERROR": "REFUSED",
+  "ANNOT_PRESERVE": "REFUSED",
+  "ANNOT_DISABLE": "REFUSED",
+  "DOC_STRING": "Schema.String",
+  "DOC_PROPERTY": "Schema.Struct({ \"child\": Schema.String })",
+  "DOC_ELEMENT": "Schema.Tuple([Schema.String])",
+  "DOC_FILTER": "Schema.Int",
+  "TUPLE": "Schema.Tuple([Schema.String])",
+  "ARRAY": "Schema.Array(Schema.String)",
+  "UNION": "Schema.Union([Schema.String, Schema.Number])"
+}

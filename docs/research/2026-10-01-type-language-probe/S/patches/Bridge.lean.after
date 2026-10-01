@@ -1,0 +1,690 @@
+import Effect4.Program.Typing
+import Effect4.Program.Eff
+import Effect4.Schema.Authoring
+import Effect4.Schema.Document
+import Effect4.Schema.Payload
+import Effect4.Schema.Fold
+
+/-!
+# Effect4.Schema.Bridge — Program Type to Schema Representation Bridge (S-1 / S-2)
+
+This module implements Decision 12 (S-1, S-2) from `docs/research/2026-09-10-schema-at-boundaries.md`:
+1. `Ty.schema : Ty → Representation`: Lowering any program type into an rc.112 `SchemaRepresentation`.
+2. `Ty.ofSchema : Representation → Option Ty`: Partial inverse recovering the first-order program type.
+3. `ofSchema_schema`: Constructive retraction theorem proving `ofSchema (schema t) = some t` for all types.
+4. `EffTy.document` & `Row.document`: As-an-effect and as-a-plain-object schema documents for program boundaries.
+
+Per findings from Seat A and Seat B:
+* `Ty.nat` is distinguished from `Ty.int` via `isGreaterThanOrEqualTo 0` (`Check.nonNegative`).
+* `Ty.fiberOf` preserves type arguments in its declaration node without host encoding.
+* The retraction theorem holds constructively over all 16 `Ty` constructors at `[propext]`.
+-/
+
+namespace Effect4.Schema.Bridge
+
+open Effect4 Effect4.Program Effect4.Schema
+
+/-- Persisted check selecting rc.112 integer refinement (`isInt`). -/
+def isIntCheck : Check := Check.named "effect/schema/isInt"
+
+/-- Persisted check selecting non-negative integers (`isGreaterThanOrEqualTo 0`). -/
+def nonNegativeCheck : Check :=
+  Check.named "effect/schema/isGreaterThanOrEqualTo" (.obj [("minimum", .number Float64.zero)])
+
+/-- The rc.112 `Defect` declaration schema node (`Schema.ts:10844`). -/
+def defectRep : Representation :=
+  .declaration ⟨"effect/schema/Defect", .null⟩ none [] []
+
+mutual
+/-- Lowers any first-order `Ty` into its canonical rc.112 `SchemaRepresentation`. A record's fields
+are written in the type's order (`Ty.schema` normalizes first, so they arrive canonical). -/
+def schema : Ty → Representation
+  | .never => Schema.never
+  | .unknown => .unknown none []
+  | .unit => Schema.void
+  | .nat => .number none [isIntCheck, nonNegativeCheck]
+  | .int => .number none [isIntCheck]
+  | .string => Schema.string
+  | .bool => Schema.boolean
+  | .lit s => Schema.literalString s
+  | .handle target => .declaration ⟨target, .null⟩ none [] []
+  | .option inner => .declaration ⟨"effect/schema/Option", .null⟩ none [schema inner] []
+  | .list inner => Schema.array (schema inner)
+  | .prod left right => Schema.tuple [Schema.element (schema left), Schema.element (schema right)]
+  | .except error value => .declaration ⟨"effect/schema/Result", .null⟩ none [schema value, schema error] []
+  | .exitOf value error => .declaration ⟨"effect/schema/Exit", .null⟩ none [schema value, schema error, defectRep] []
+  | .causeOf error => .declaration ⟨"effect/schema/Cause", .null⟩ none [schema error, defectRep] []
+  | .fiberOf value error => .declaration ⟨"effect/schema/Fiber", .null⟩ none [schema value, schema error] []
+  | .refOf value => .declaration ⟨"effect/schema/Ref", .null⟩ none [schema value] []
+  | .deferredOf value error => .declaration ⟨"effect/schema/Deferred", .null⟩ none [schema value, schema error] []
+  -- a row template's parameter has no schema: an opaque node `ofSchema` does not read back
+  | .var _ => .declaration ⟨"effect/schema/TypeParameter", .null⟩ none [] []
+  | .union left right => .union none [] [schema left, schema right] .anyOf
+  -- a struct: named properties, no index signature (rc.112 `Schema.Struct`)
+  | .record fields => .objects none [] (schemaProps fields) []
+  -- an optional key outside a record field is refused at formation: the inner schema
+  | .optKey inner => schema inner
+  -- a map: one index signature (rc.112 `Schema.Record(K, V)`)
+  | .map key value => .objects none [] [] [{ parameter := schema key, type := schema value }]
+  -- a tuple of any arity but two (`prod` at two): plain elements, no rest
+  | .tuple items => .arrays none [] (schemaElems items) []
+  -- a nominal reference: a declaration with type parameters
+  | .app name args => .declaration ⟨name, .null⟩ none (schemaList args) []
+  | .null => .null none []
+  | .undefined => .undefined none []
+  -- binary64 (row 121)
+  | .number => .number none []
+  -- rc.112 `Schema.Uint8Array` (`Schema.ts:13605-13621`)
+  | .bytes => .declaration ⟨"effect/schema/Uint8Array", .null⟩ none [] []
+def schemaElems : List Ty → List Element
+  | [] => []
+  | t :: ts => { isOptional := false, type := schema t, annotations := none } :: schemaElems ts
+def schemaList : List Ty → List Representation
+  | [] => []
+  | t :: ts => schema t :: schemaList ts
+/-- A record's properties; an optional key is `Schema.optionalKey`, the flag over its type. -/
+def schemaProps : List (String × Ty) → List PropertySignature
+  | [] => []
+  | (n, t) :: fs =>
+    (match t with
+     | .optKey u =>
+       { name := .string n, type := schema u, isOptional := true, isMutable := false,
+         annotations := none }
+     | t' =>
+       { name := .string n, type := schema t', isOptional := false, isMutable := false,
+         annotations := none }) :: schemaProps fs
+end
+
+/-- Extracts the identifier of a persisted check. -/
+def checkId : Check → String
+  | .filter rep _ _ => rep.id
+  | .filterGroup (some rep) _ _ => rep.id
+  | .filterGroup none _ _ => ""
+
+/-- The defect slot of an `Exit` or `Cause` declaration is the `Defect` declaration `schema` mints
+(`defectRep`), nothing else. -/
+def isDefect : Representation → Bool
+  | .declaration ⟨"effect/schema/Defect", .null⟩ _ [] [] => true
+  | _ => false
+
+/-- A located refusal: the path from the root, then the reason. -/
+structure Refusal where
+  path : List String
+  reason : String
+deriving DecidableEq
+
+abbrev Read (α : Type) := Except Refusal α
+
+def refuse {α : Type} (path : List String) (reason : String) : Read α := .error ⟨path, reason⟩
+
+/-- Prefix a child's refusal with the child's position. -/
+def under {α : Type} (segment : String) : Read α → Read α
+  | .ok a => .ok a
+  | .error e => .error { e with path := segment :: e.path }
+
+/-- The documentation annotations a read erases (`N_S`): revision 5's eight keys
+(`annotation-review.md`) and `arbitrary`, which rc.112 writes on its own `isInt` filter. Every
+other key refuses by name: `parseOptions` changes decoding, an unknown key may. -/
+def docKeys : List String :=
+  ["identifier", "title", "description", "documentation", "examples", "default", "message",
+   "expected", "arbitrary"]
+
+def annOk : Annotations → Bool
+  | none => true
+  | some entries => entries.all fun e => docKeys.contains e.key
+
+def checkAnn (path : List String) : Annotations → Read Unit
+  | none => .ok ()
+  | some entries =>
+    match entries.find? (fun e => !docKeys.contains e.key) with
+    | some e => refuse (path ++ ["annotations"])
+        ("annotation '" ++ e.key ++ "' is not documentation: it changes decoding or is unknown")
+    | none => .ok ()
+
+/-- The whole-check comparison (decisions row 128): the `isInt` filter exactly. -/
+def isIntC : Check → Bool
+  | .filter ⟨"effect/schema/isInt", .null, none⟩ a false => annOk a
+  | _ => false
+
+/-- The whole-check comparison: `isGreaterThanOrEqualTo` at `+0` exactly. -/
+def nonNegC : Check → Bool
+  | .filter ⟨"effect/schema/isGreaterThanOrEqualTo", .obj [("minimum", .number z)], none⟩ a false =>
+    z.bits == 0 && annOk a
+  | _ => false
+
+/-- The declaration ids the reader maps to other constructors: an `app` may not take one, and
+`bytes` takes `Uint8Array` from `handle` as the `var` repair takes `TypeParameter`. -/
+def reservedId (id : String) : Bool :=
+  ["effect/schema/Option", "effect/schema/Ref", "effect/schema/Result", "effect/schema/Fiber",
+   "effect/schema/Deferred", "effect/schema/Cause", "effect/schema/Exit",
+   "effect/schema/TypeParameter", "effect/schema/Uint8Array"].contains id
+
+mutual
+/-- Reconstitutes a first-order `Ty` from an rc.112 `SchemaRepresentation` (decisions rows 6,
+128), refusing with a path and a reason: exactly the nodes `schema` mints, modulo `N_S`, and an
+n-ary `anyOf` union, read right-nested. A check is compared whole; the template parameter's
+declaration refuses (the `var` repair). -/
+def ofSchemaLocated : Representation → Read Ty
+  | .never a [] => do checkAnn [] a; .ok .never
+  | .unknown a [] => do checkAnn [] a; .ok .unknown
+  | .void a [] => do checkAnn [] a; .ok .unit
+  | .number a [c] => do
+    checkAnn [] a
+    if isIntC c then .ok .int else refuse ["checks[0]"] "a check Ty cannot represent"
+  | .number a [c, d] => do
+    checkAnn [] a
+    if isIntC c then
+      if nonNegC d then .ok .nat else refuse ["checks[1]"] "a check Ty cannot represent"
+    else refuse ["checks[0]"] "a check Ty cannot represent"
+  | .number a [] => do checkAnn [] a; .ok .number
+  | .string a [] => do checkAnn [] a; .ok .string
+  | .boolean a [] => do checkAnn [] a; .ok .bool
+  | .literal a [] (.string s) => do checkAnn [] a; .ok (.lit s)
+  | .declaration ⟨id, .null⟩ a params [] => do
+    checkAnn [] a
+    if reservedId id then readReserved id params
+    else
+      match params with
+      | [] => .ok (.handle id)
+      | _ => (readArgs 0 params).map (.app id)
+  | .arrays a [] [] [item] => do
+    checkAnn [] a
+    (under "rest[0]" (ofSchemaLocated item)).map .list
+  | .arrays a [] [⟨false, x, ax⟩, ⟨false, y, ay⟩] [] => do
+    checkAnn [] a
+    checkAnn ["elements[0]"] ax
+    checkAnn ["elements[1]"] ay
+    let tx ← under "elements[0]" (ofSchemaLocated x)
+    let ty ← under "elements[1]" (ofSchemaLocated y)
+    .ok (.prod tx ty)
+  | .arrays a [] els [] => do
+    checkAnn [] a
+    (readElems 0 els).map .tuple
+  | .null a [] => do checkAnn [] a; .ok .null
+  | .union a [] (m :: m' :: ms) .anyOf => do
+    checkAnn [] a
+    readMembers 0 (m :: m' :: ms)
+  | .objects a [] ps [] => do
+    checkAnn [] a
+    let fs ← readProps ps
+    match Ty.firstRepeat fs [] with
+    | some n => refuse [n] "repeatedField: a record names each field once"
+    | none => .ok (.record fs)
+  | .objects a [] [] [⟨.string pa [], v⟩] => do
+    checkAnn [] a
+    checkAnn ["indexSignatures[0]", "parameter"] pa
+    (under "indexSignatures[0]" (ofSchemaLocated v)).map (.map .string)
+  | .objects _ [] [] [_] => refuse ["indexSignatures[0]", "parameter"]
+      "a map is keyed by Schema.String only (row 125)"
+  | .objects _ [] _ _ =>
+    refuse ["indexSignatures"] "index signatures beside properties (StructWithRest) have no Ty"
+  | .undefined a [] => do checkAnn [] a; .ok .undefined
+  | _ => refuse [] "a node Ty cannot represent"
+/-- The production declaration arms, by arity, for the reserved ids. -/
+def readReserved (id : String) : List Representation → Read Ty
+  | [] =>
+    if id = "effect/schema/TypeParameter" then
+      refuse [] "a row template's parameter is not a program type (row 128)"
+    else if id = "effect/schema/Uint8Array" then .ok .bytes
+    else .ok (.handle id)
+  | [val] =>
+    if id = "effect/schema/Option" then
+      (under "typeParameters[0]" (ofSchemaLocated val)).map .option
+    else if id = "effect/schema/Ref" then
+      (under "typeParameters[0]" (ofSchemaLocated val)).map .refOf
+    else refuse [] ("declaration '" ++ id ++ "' with one parameter has no Ty")
+  | [x, y] =>
+    if id = "effect/schema/Result" then do
+      let tv ← under "typeParameters[0]" (ofSchemaLocated x)
+      let te ← under "typeParameters[1]" (ofSchemaLocated y)
+      .ok (.except te tv)
+    else if id = "effect/schema/Fiber" then do
+      let tv ← under "typeParameters[0]" (ofSchemaLocated x)
+      let te ← under "typeParameters[1]" (ofSchemaLocated y)
+      .ok (.fiberOf tv te)
+    else if id = "effect/schema/Deferred" then do
+      let tv ← under "typeParameters[0]" (ofSchemaLocated x)
+      let te ← under "typeParameters[1]" (ofSchemaLocated y)
+      .ok (.deferredOf tv te)
+    else if id = "effect/schema/Cause" && isDefect y then
+      (under "typeParameters[0]" (ofSchemaLocated x)).map .causeOf
+    else refuse [] ("declaration '" ++ id ++ "' with two parameters has no Ty")
+  | [v, e, d] =>
+    if id = "effect/schema/Exit" && isDefect d then do
+      let tv ← under "typeParameters[0]" (ofSchemaLocated v)
+      let te ← under "typeParameters[1]" (ofSchemaLocated e)
+      .ok (.exitOf tv te)
+    else refuse [] ("declaration '" ++ id ++ "' with three parameters has no Ty")
+  | _ => refuse [] ("the reserved declaration '" ++ id ++ "' at this arity has no Ty")
+/-- A tuple's elements: plain, documentation annotations only. -/
+def readElems (i : Nat) : List Element → Read (List Ty)
+  | [] => .ok []
+  | ⟨false, t, a⟩ :: es => do
+    checkAnn ["elements[" ++ toString i ++ "]"] a
+    let tt ← under ("elements[" ++ toString i ++ "]") (ofSchemaLocated t)
+    let rest ← readElems (i + 1) es
+    .ok (tt :: rest)
+  | ⟨true, _, _⟩ :: _ =>
+    refuse ["elements[" ++ toString i ++ "]"] "an optional tuple element has no Ty"
+/-- A nominal reference's arguments. -/
+def readArgs (i : Nat) : List Representation → Read (List Ty)
+  | [] => .ok []
+  | r :: rs => do
+    let t ← under ("typeParameters[" ++ toString i ++ "]") (ofSchemaLocated r)
+    let rest ← readArgs (i + 1) rs
+    .ok (t :: rest)
+/-- An n-ary `anyOf` union's members, right-nested. -/
+def readMembers (i : Nat) : List Representation → Read Ty
+  | [] => refuse [] "an empty union"
+  | [m] => under ("types[" ++ toString i ++ "]") (ofSchemaLocated m)
+  | m :: ms => do
+    let a ← under ("types[" ++ toString i ++ "]") (ofSchemaLocated m)
+    let b ← readMembers (i + 1) ms
+    .ok (.union a b)
+/-- A struct's properties, in written order; `isOptional` reads as the optional-key modifier. -/
+def readProps : List PropertySignature → Read (List (String × Ty))
+  | [] => .ok []
+  | ⟨.string n, t, opt, isMut, a⟩ :: ps => do
+    if isMut then refuse [n] "mutableKey: Ty records are readonly"
+    else do
+      checkAnn [n] a
+      let tt ← under n (ofSchemaLocated t)
+      let rest ← readProps ps
+      .ok ((n, if opt then .optKey tt else tt) :: rest)
+  | ⟨.number _, _, _, _, _⟩ :: _ => refuse [] "a numeric property key has no Ty field name"
+  | ⟨.globalSymbol k, _, _, _, _⟩ :: _ => refuse [k.key] "a symbol property key has no Ty field name"
+end
+
+/-- The unlocated read, for the callers that only branch on success. -/
+def ofSchema (r : Representation) : Option Ty := (ofSchemaLocated r).toOption
+
+mutual
+/-- What the Schema arms read back: a record names each field once; an optional key is a
+record field's type only; a map is keyed by `string`; the handle named `TypeParameter` is the
+template parameter's image (the `var` repair takes the name). Formation guarantees it. -/
+def Ty.schemaWf : Ty → Bool
+  | .optKey _ => false
+  | .handle s => !(s = "effect/schema/TypeParameter") && !(s = "effect/schema/Uint8Array")
+  | .tuple ts => !(ts.length = 2) && Ty.schemaWfList ts
+  | .app n ts => !ts.isEmpty && !reservedId n && Ty.schemaWfList ts
+  | .record fs => (Ty.firstRepeat fs []).isNone && Ty.schemaWfFields fs
+  | .map .string v => Ty.schemaWf v
+  | .map _ _ => false
+  | .option t | .list t | .causeOf t | .refOf t => Ty.schemaWf t
+  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b =>
+    Ty.schemaWf a && Ty.schemaWf b
+  | _ => true
+def Ty.schemaWfFields : List (String × Ty) → Bool
+  | [] => true
+  | (_, t) :: fs => (match t with | .optKey u => Ty.schemaWf u | t' => Ty.schemaWf t') && Ty.schemaWfFields fs
+def Ty.schemaWfList : List Ty → Bool
+  | [] => true
+  | t :: ts => Ty.schemaWf t && Ty.schemaWfList ts
+end
+
+/-- The retraction's motive: at `t`, and, at an optional key, at the type it modifies. -/
+def RetractMotive (t : Ty) : Prop :=
+  t.closed = true →
+    (t.schemaWf = true → ofSchemaLocated (schema t) = .ok t) ∧
+    (∀ u, t = .optKey u → u.schemaWf = true → ofSchemaLocated (schema u) = .ok u)
+
+theorem readProps_cons_plain (n : String) (t : Ty) (fs gs : List (String × Ty))
+    (ht : ofSchemaLocated (schema t) = .ok t) (hs : readProps (schemaProps fs) = .ok gs) :
+    readProps (⟨.string n, schema t, false, false, none⟩ :: schemaProps fs) =
+      .ok ((n, t) :: gs) := by
+  simp only [readProps, Bool.false_eq_true, ↓reduceIte, checkAnn, ht, under, hs]
+  rfl
+
+theorem readProps_cons_opt (n : String) (u : Ty) (fs gs : List (String × Ty))
+    (hu : ofSchemaLocated (schema u) = .ok u) (hs : readProps (schemaProps fs) = .ok gs) :
+    readProps (⟨.string n, schema u, true, false, none⟩ :: schemaProps fs) =
+      .ok ((n, .optKey u) :: gs) := by
+  simp only [readProps, Bool.false_eq_true, ↓reduceIte, checkAnn, hu, under, hs]
+  rfl
+
+theorem readProps_schemaProps (fs : List (String × Ty))
+    (ih : ∀ p ∈ fs, RetractMotive p.2) (hc : Ty.closedFields fs = true)
+    (hw : Ty.schemaWfFields fs = true) : readProps (schemaProps fs) = .ok fs := by
+  induction fs with
+  | nil => rfl
+  | cons p fs ihl =>
+    obtain ⟨n, t⟩ := p
+    simp only [Ty.closedFields, Bool.and_eq_true] at hc
+    have ihp := ih (n, t) List.mem_cons_self hc.1
+    have ihs : Ty.schemaWfFields fs = true → readProps (schemaProps fs) = .ok fs :=
+      fun hw' => ihl (fun q hq => ih q (List.mem_cons_of_mem _ hq)) hc.2 hw'
+    cases t
+    case optKey u =>
+      simp only [Ty.schemaWfFields, Bool.and_eq_true] at hw
+      simp only [schemaProps]
+      exact readProps_cons_opt n u fs fs (ihp.2 u rfl hw.1) (ihs hw.2)
+    all_goals
+      simp only [Ty.schemaWfFields, Bool.and_eq_true] at hw
+      simp only [schemaProps]
+      exact readProps_cons_plain n _ fs fs (ihp.1 hw.1) (ihs hw.2)
+
+theorem rOption : reservedId "effect/schema/Option" = true := rfl
+theorem rRef : reservedId "effect/schema/Ref" = true := rfl
+theorem rResult : reservedId "effect/schema/Result" = true := rfl
+theorem rFiber : reservedId "effect/schema/Fiber" = true := rfl
+theorem rDeferred : reservedId "effect/schema/Deferred" = true := rfl
+theorem rCause : reservedId "effect/schema/Cause" = true := rfl
+theorem rExit : reservedId "effect/schema/Exit" = true := rfl
+theorem rUint8 : reservedId "effect/schema/Uint8Array" = true := rfl
+
+theorem readElems_schemaElems (ts : List Ty) (ih : ∀ t ∈ ts, RetractMotive t)
+    (hc : Ty.closedList ts = true) (hw : Ty.schemaWfList ts = true) (i : Nat) :
+    readElems i (schemaElems ts) = .ok ts := by
+  induction ts generalizing i with
+  | nil => rfl
+  | cons t ts ihl =>
+    simp only [Ty.closedList, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWfList, Bool.and_eq_true] at hw
+    have h1 := (ih t List.mem_cons_self hc.1).1 hw.1
+    have h2 := ihl (fun u hu => ih u (List.mem_cons_of_mem _ hu)) hc.2 hw.2 (i + 1)
+    simp only [schemaElems, readElems, checkAnn, under, h1, h2]
+    rfl
+
+theorem readArgs_schemaList (ts : List Ty) (ih : ∀ t ∈ ts, RetractMotive t)
+    (hc : Ty.closedList ts = true) (hw : Ty.schemaWfList ts = true) (i : Nat) :
+    readArgs i (schemaList ts) = .ok ts := by
+  induction ts generalizing i with
+  | nil => rfl
+  | cons t ts ihl =>
+    simp only [Ty.closedList, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWfList, Bool.and_eq_true] at hw
+    have h1 := (ih t List.mem_cons_self hc.1).1 hw.1
+    have h2 := ihl (fun u hu => ih u (List.mem_cons_of_mem _ hu)) hc.2 hw.2 (i + 1)
+    simp only [schemaList, readArgs, under, h1, h2]
+    rfl
+
+/-- **The retraction at every form** (K2's second law, the copy's `ofSchema_schema`): on a closed,
+well-formed type the located reader answers the type the writer wrote. -/
+theorem retract (t : Ty) : RetractMotive t := by
+  induction t with
+  | never => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | unit => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | nat => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | int => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | string => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | bool => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | lit s => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | unknown => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | null => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | undefined => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | number => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | bytes => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | var i => exact fun hc => absurd hc Bool.false_ne_true
+  | handle s =>
+    refine fun _ => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.schemaWf, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+      decide_eq_false_iff_not] at hw
+    cases hr : reservedId s with
+    | true => simp only [schema, ofSchemaLocated, checkAnn, hr, ↓reduceIte, readReserved, hw.1, hw.2]; rfl
+    | false => simp only [schema, ofSchemaLocated, checkAnn, hr, Bool.false_eq_true, ↓reduceIte]; rfl
+  | option t ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [schema, ofSchemaLocated, checkAnn, rOption, ↓reduceIte, readReserved, (ih hc).1 hw]
+    rfl
+  | list t ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [schema, Schema.array, ofSchemaLocated, checkAnn, under, (ih hc).1 hw]
+    rfl
+  | refOf t ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [schema, ofSchemaLocated, checkAnn, rRef, ↓reduceIte, readReserved, (ih hc).1 hw]
+    rfl
+  | causeOf t ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [schema, ofSchemaLocated, checkAnn, rCause, ↓reduceIte, readReserved, (ih hc).1 hw]
+    rfl
+  | prod a b iha ihb =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true] at hw
+    simp only [schema, Schema.tuple, Schema.element, ofSchemaLocated, checkAnn, under,
+      (iha hc.1).1 hw.1, (ihb hc.2).1 hw.2]
+    rfl
+  | except e a ihe iha =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true] at hw
+    simp only [schema, ofSchemaLocated, checkAnn, rResult, ↓reduceIte, readReserved,
+      (ihe hc.1).1 hw.1, (iha hc.2).1 hw.2]
+    rfl
+  | exitOf a e iha ihe =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true] at hw
+    simp only [schema, ofSchemaLocated, checkAnn, rExit, ↓reduceIte, readReserved,
+      (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
+    rfl
+  | fiberOf a e iha ihe =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true] at hw
+    simp only [schema, ofSchemaLocated, checkAnn, rFiber, ↓reduceIte, readReserved,
+      (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
+    rfl
+  | deferredOf a e iha ihe =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true] at hw
+    simp only [schema, ofSchemaLocated, checkAnn, rDeferred, ↓reduceIte, readReserved,
+      (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
+    rfl
+  | union a b iha ihb =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true] at hw
+    simp only [schema, ofSchemaLocated, checkAnn, readMembers, under,
+      (iha hc.1).1 hw.1, (ihb hc.2).1 hw.2]
+    rfl
+  | record fs ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true, Option.isNone_iff_eq_none] at hw
+    simp only [schema, ofSchemaLocated, checkAnn, readProps_schemaProps fs ih hc hw.2, bind,
+      Except.bind, hw.1]
+  | optKey u ih =>
+    refine fun hc => ⟨fun hw => absurd hw Bool.false_ne_true, fun u' h hw => ?_⟩
+    cases h
+    exact (ih hc).1 hw
+  | map k v ihk ihv =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed, Bool.and_eq_true] at hc
+    cases k with
+    | string =>
+      simp only [Ty.schemaWf] at hw
+      simp only [schema, Schema.string, ofSchemaLocated, checkAnn, under, (ihv hc.2).1 hw]
+      rfl
+    | _ => simp only [Ty.schemaWf, Bool.false_eq_true] at hw
+  | tuple ts ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+      decide_eq_false_iff_not] at hw
+    have hr := readElems_schemaElems ts ih hc hw.2 0
+    rcases ts with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩
+    · rfl
+    · simp only [schemaElems] at hr
+      simp only [schema, schemaElems, ofSchemaLocated, checkAnn, hr]
+      rfl
+    · exact absurd rfl hw.1
+    · simp only [schemaElems] at hr
+      simp only [schema, schemaElems, ofSchemaLocated, checkAnn, hr]
+      rfl
+  | app n ts ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at hw
+    have hr := readArgs_schemaList ts ih hc hw.2 0
+    rcases ts with _ | ⟨a, rest⟩
+    · simp only [List.isEmpty_nil] at hw
+      exact absurd hw.1.1 (by decide)
+    · simp only [schemaList] at hr
+      simp only [schema, schemaList, ofSchemaLocated, checkAnn, hw.1.2, Bool.false_eq_true, ↓reduceIte,
+        hr]
+      rfl
+
+/-- The retraction (decisions row 6), every form: the located read, then the unlocated one. -/
+theorem ofSchemaLocated_schema (t : Ty) (h : t.closed = true) (hw : t.schemaWf = true) :
+    ofSchemaLocated (schema t) = .ok t :=
+  ((retract t) h).1 hw
+
+theorem ofSchema_schema (t : Ty) (h : t.closed = true) (hw : t.schemaWf = true) :
+    ofSchema (schema t) = some t := by
+  unfold ofSchema
+  rw [ofSchemaLocated_schema t h hw]
+  rfl
+
+/-- `N_S`'s union step: an `anyOf` union whose last member is an unchecked `anyOf` union splices it. -/
+def spliceLast (checks : List Check) (mode : UnionMode) (ts : List Representation) :
+    List Representation :=
+  match mode, checks, ts.getLast? with
+  | .anyOf, [], some (.union none [] ms .anyOf) => ts.dropLast ++ ms
+  | _, _, _ => ts
+
+/-- The named normaliser `N_S` (decisions row 128), an algebra of the generated fold: erase every
+annotation bag, and flatten an `anyOf` union's right spine. -/
+def nsAlg : RepresentationAlgebra RepresentationSelfCarrier where
+  representation_declaration rep _ tps cs := .declaration rep none tps cs
+  representation_reference k := .reference k
+  representation_suspend _ cs th := .suspend none cs th
+  representation_null _ cs := .null none cs
+  representation_undefined _ cs := .undefined none cs
+  representation_void _ cs := .void none cs
+  representation_never _ cs := .never none cs
+  representation_unknown _ cs := .unknown none cs
+  representation_any _ cs := .any none cs
+  representation_string _ cs := .string none cs
+  representation_number _ cs := .number none cs
+  representation_boolean _ cs := .boolean none cs
+  representation_bigint _ cs := .bigint none cs
+  representation_symbol _ cs := .symbol none cs
+  representation_literal _ cs v := .literal none cs v
+  representation_uniqueSymbol _ cs k := .uniqueSymbol none cs k
+  representation_objectKeyword _ cs := .objectKeyword none cs
+  representation_enum _ cs es := .enum none cs es
+  representation_templateLiteral _ cs ps := .templateLiteral none cs ps
+  representation_arrays _ cs els rest :=
+    .arrays none cs (els.map fun e => { e with annotations := none }) rest
+  representation_objects _ cs ps is :=
+    .objects none cs (ps.map fun p => { p with annotations := none }) is
+  representation_union _ cs ts mode := .union none cs (spliceLast cs mode ts) mode
+  check_filter rep _ ab := .filter rep none ab
+  check_filterGroup rep _ cs := .filterGroup rep none cs
+
+def normalizeSchema (r : Representation) : Representation := cata_representation nsAlg r
+
+/-- The read guarded by the writer's image modulo `N_S` (the formal pass's TY-09, route 1). -/
+def ofSchemaExact (r : Representation) : Read Ty :=
+  match ofSchemaLocated r with
+  | .ok t =>
+    if normalizeSchema (schema t) = normalizeSchema r then .ok t
+    else refuse [] "exactness: the reading's schema differs from the input modulo N_S"
+  | .error e => .error e
+
+/-- Exactness modulo `N_S` (K2's third law). -/
+theorem ofSchemaExact_exact {r : Representation} {t : Ty} (h : ofSchemaExact r = .ok t) :
+    normalizeSchema (schema t) = normalizeSchema r := by
+  unfold ofSchemaExact at h
+  split at h
+  · rename_i t' _
+    by_cases hN : normalizeSchema (schema t') = normalizeSchema r
+    · rw [if_pos hN] at h
+      cases h
+      exact hN
+    · rw [if_neg hN] at h
+      exact nomatch h
+  · exact nomatch h
+
+/-- The retraction kept under the guard. -/
+theorem ofSchemaExact_schema (t : Ty) (hc : t.closed = true) (hw : t.schemaWf = true) :
+    ofSchemaExact (schema t) = .ok t := by
+  unfold ofSchemaExact
+  rw [ofSchemaLocated_schema t hc hw]
+  simp only [↓reduceIte]
+
+/-- Retraction over canonical types `CTy`. -/
+theorem ofSchema_schema_cty (t : CTy) (h : t.toRaw.closed = true)
+    (hw : t.toRaw.schemaWf = true) :
+    ofSchema (schema t.toRaw) = some t.toRaw :=
+  ofSchema_schema t.toRaw h hw
+
+/-- A requirement's reference key: the whole `ServiceKey`, its name and its service code, spelled
+as the printer spells a service key's runtime identity, `k{name}_{service}`
+(`Codegen/PrintLeaf.lean`'s `printKey`, `Codegen/Read.lean`'s `keyText`). Schema sits below
+Codegen, so the spelling is restated here; `Test/Schema/DialectContract.lean` proves the two equal
+and the key injective. Two keys that share a name and differ in service are two references
+(decisions row 8). -/
+def requirementKey (k : ServiceKey) : String :=
+  "k" ++ toString k.name.value ++ "_" ++ toString k.service.value
+
+/-- As an effect: the exit schema root with answer, error, and requirement references (S-2). A
+requirement is filed under its `requirementKey`, with a placeholder declaration of that name. -/
+def effDocument (eff : EffTy) : Document :=
+  { representation := schema (.exitOf eff.answer.normalize eff.error.normalize)
+    references :=
+      [ ⟨"answer", schema eff.answer.normalize⟩
+      , ⟨"error", schema eff.error.normalize⟩ ] ++
+      eff.requires.elems.map (fun k => ⟨requirementKey k, schema (.handle (requirementKey k))⟩) }
+
+/-- As a plain object: the answer schema alone (S-2). -/
+def effObjectDocument (eff : EffTy) : Document :=
+  { representation := schema eff.answer.normalize
+    references := [] }
+
+/-- A row's schema document: request, answer, and error (S-2). -/
+def rowDocument (row : Effect4.Program.Row) : Document :=
+  { representation := schema (.exitOf row.answer.normalize row.error.normalize)
+    references :=
+      [ ⟨"request", schema row.request.normalize⟩
+      , ⟨"answer", schema row.answer.normalize⟩
+      , ⟨"error", schema row.error.normalize⟩ ] }
+
+end Effect4.Schema.Bridge
+
+namespace Effect4.Program.Ty
+
+/-- Effect Schema representation of this type (Decision 12 / S-1). -/
+abbrev schema (t : Effect4.Program.Ty) : Effect4.Representation :=
+  Effect4.Schema.Bridge.schema t.normalize
+
+/-- Reconstitute a `Ty` from its Effect Schema representation (Decision 12 / S-1). -/
+abbrev ofSchema (r : Effect4.Representation) : Option Effect4.Program.Ty :=
+  Effect4.Schema.Bridge.ofSchema r
+
+end Effect4.Program.Ty
+
+namespace Effect4.Program.EffTy
+
+/-- As an effect: the Schema Document describing running this program (Exit with requirements). -/
+abbrev document (eff : Effect4.Program.EffTy) : Effect4.Document :=
+  Effect4.Schema.Bridge.effDocument eff
+
+end Effect4.Program.EffTy
+
+namespace Effect4.Program.Row
+
+/-- Schema Document describing the request, answer, and error of this operation row. -/
+abbrev document (row : Effect4.Program.Row) : Effect4.Document :=
+  Effect4.Schema.Bridge.rowDocument row
+
+end Effect4.Program.Row
+
+namespace Effect4.Program.CTy
+
+/-- Schema projection of a canonical type. -/
+def schema (t : CTy) : Effect4.Representation := Ty.schema t.toRaw
+
+/-- The public schema boundary retracts on closed canonical types; integer parsing is retained.
+A row template's parameter is not a program type (`Ty.closed`). -/
+theorem ofSchema_schema (t : CTy) (h : t.toRaw.closed = true)
+    (hw : t.toRaw.schemaWf = true) :
+    Ty.ofSchema (schema t) = some t.toRaw := by
+  change Effect4.Schema.Bridge.ofSchema (Effect4.Schema.Bridge.schema t.val.normalize) = _
+  rw [t.property]
+  exact Effect4.Schema.Bridge.ofSchema_schema t.toRaw h hw
+
+end Effect4.Program.CTy

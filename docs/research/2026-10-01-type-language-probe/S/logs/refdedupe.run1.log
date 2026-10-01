@@ -1,0 +1,32 @@
+# probe: docs/research/2026-10-01-type-language-probe/S/probes/RefDedupe.lean
+# date: 2026-10-01T19:38:17Z
+# command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/RefDedupe.lean
+# toolchain: leanprover/lean4:v4.33.1
+# sha256: 1367fc6cfb53253b767ec603b8d801b156ac3309676a6ff7b30aa97bd8bc6554
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/RefDedupe.lean:78:36: error: Type mismatch: After simplification, term
+  h
+ has type
+  keysDistinct es
+but is expected to have type
+  (List.map (fun x => x.key) es).Nodup
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/RefDedupe.lean:94:42: error(lean.unknownIdentifier): Unknown constant `List.nodup_singleton`
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/RefDedupe.lean:198:6: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.ok` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.ok`
+  [apply] `EST.Out.ok`
+  [apply] `EStateM.Result.ok`
+  [apply] `Api.TypedLayer.ok`
+  [apply] `Lean.Meta.DefEqArgsFirstPassResult.ok`
+  [apply] `Std.Http.Response.ok`
+  [apply] `Std.Http.Status.ok`
+  [apply] `Lean.Meta.Grind.CheckCoverageResult.ok`
+'SeatS.RefDedupe.find?_none_of_not_mem' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.dedupeFrom_distinct' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.dedupeRefs_distinct' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.RefDedupe.dedupeFrom_nodup' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.RefDedupe.dedupeRefs_nodup' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.RefDedupe.moduleSyntaxChecked_distinct' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.RefDedupe.dedupeRefs' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.moduleSyntaxChecked' depends on axioms: [propext, Quot.sound]
+# exit=1 seconds=2

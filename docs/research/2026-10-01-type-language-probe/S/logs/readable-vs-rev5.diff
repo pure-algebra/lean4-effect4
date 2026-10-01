@@ -1,0 +1,344 @@
+4a5
+> import Effect4.Codegen.Schema
+7a9,31
+> /-!
+> # Seat S, question 3: the readable profile, per form
+> 
+> Revision 5 of the Schema scouting (`S-inputs/revision-5/DefinitiveSchemaProbe.lean`, SHA-256
+> `8ec10148…f4e8`, reproduced in `S/rev5/`) is the base, kept line for line; this file extends it
+> (`diff rev5/DefinitiveSchemaProbe.lean probes/ReadableProfile.lean` is the new work), each change
+> under a `-- [S:<what>]` marker:
+> 
+> * exact property spelling: an identifier bare, any other name quoted, `__proto__` computed
+>   (revision 5 refuses `__proto__`); a name that needs escapes falls back to the all-quoted object,
+>   and beside `__proto__` it refuses by name (the target syntax has no per-key spelling yet);
+> * maps: an `objects` node with one index signature over `Schema.String` and no property emits
+>   `Schema.Record(Schema.String, V)` (revision 5 refuses every index signature);
+> * unions: a union of plain literals emits `Schema.Literals([…])`, and an `anyOf` union's last
+>   member that is itself an emitted union is spliced (`N_S`'s spine step, so `Ty.schema`'s nested
+>   binary unions print flat);
+> * the profile predicate `admits` and the agreement `admits r = true ↔ emission succeeds`.
+> 
+> The annotation policy is revision 5's, as the amended brief adopts it: the eight documentation
+> keys of `annotation-review.md` are erased under the observation "structural type, acceptance and
+> decoded value"; every other key refuses by name with its path.
+> -/
+> 
+10c34
+< namespace DefinitiveSchemaScout
+---
+> namespace SeatS.Readable
+93c117,142
+< /-- Process object properties: verifies no duplicates, refuses __proto__, validates property annotations. -/
+---
+> -- [S:spelling] The bytes a JavaScript string literal must escape (the target renderer's set).
+> def needsEscape (name : String) : Bool :=
+>   name.toUTF8.data.toList.any fun b => b == 34 || b == 92 || b == 10 || b == 13 || b == 9
+> 
+> -- [S:spelling] A property's spelling in an object literal, rendered here only where no escape is
+> -- needed: `__proto__` computed (a quoted or bare `__proto__` sets the prototype: question 2 E8),
+> -- an identifier bare, any other name quoted; `none` when the name needs escapes.
+> def keySpelling (name : String) : Option String :=
+>   if name == "__proto__" then some "[\"__proto__\"]"
+>   else if targetIdentifier name then some name
+>   else if needsEscape name then none
+>   else some ("\"" ++ name ++ "\"")
+> 
+> -- [S:spelling] The struct's object: per-key spelling when every key has one; otherwise the
+> -- all-quoted object (the renderer escapes), refused beside `__proto__`.
+> def structObject (fields : List (String × Expr)) : Result Expr :=
+>   match fields.mapM (fun f => (keySpelling f.1).map (fun k => (k, f.2))) with
+>   | some spelled => .ok (.object spelled)
+>   | none =>
+>     if fields.any (fun f => f.1 == "__proto__") then
+>       match fields.find? (fun f => needsEscape f.1) with
+>       | some f => .error ⟨[f.1], "A name needing escapes beside '__proto__': per-key spelling needs the target syntax"⟩
+>       | none => .ok (.objectQuoted fields)
+>     else .ok (.objectQuoted fields)
+> 
+> /-- Process object properties: verifies no duplicates, validates property annotations. -/
+102,103d150
+<             else if name == "__proto__" then
+<               .error ⟨[name], "Field '__proto__' requires computed property syntax not yet supported in target AST"⟩
+119a167,181
+> -- [S:union] A member emitted as `Schema.Literal(x)`: its argument.
+> def literalArg : Expr → Option Expr
+>   | .call (.ident "Schema.Literal") [x] => some x
+>   | _ => none
+> 
+> -- [S:union] The last member, when it is an emitted union, spliced into the list (the right
+> -- spine of `Ty`'s binary unions; rc.112 decodes the nested and the flat union alike, question 2
+> -- E10f, and `N_S` identifies them).
+> def spliceLastMember (ms : List Expr) : List Expr :=
+>   match ms.getLast? with
+>   | some (.call (.ident "Schema.Union") [.arr inner]) => ms.dropLast ++ inner
+>   | some (.call (.ident "Schema.Literals") [.arr lits]) =>
+>     ms.dropLast ++ lits.map (fun l => .call (.ident "Schema.Literal") [l])
+>   | _ => ms
+> 
+229,231c291,304
+<     if !indexes.isEmpty then .error ⟨[], "Index signatures not supported in Stage 1"⟩
+<     let fieldExprs ← processProperties properties
+<     .ok (.call (.ident "Schema.Struct") [.objectQuoted fieldExprs])
+---
+>     match properties, indexes with
+>     -- [S:map] `Schema.Record(Schema.String, V)`: one index signature over a plain `Schema.String`
+>     | [], [⟨.ok (.ident "Schema.String"), v⟩] => do
+>         let ve ← prefixPath "indexSignatures[0]" v
+>         .ok (.call (.ident "Schema.Record") [.ident "Schema.String", ve])
+>     | [], [⟨p, _⟩] => do
+>         let _ ← prefixPath "indexSignatures[0]" (prefixPath "parameter" p)
+>         .error ⟨["indexSignatures[0]", "parameter"], "A map is keyed by Schema.String only (row 125)"⟩
+>     | _, [] => do
+>         let fieldExprs ← processProperties properties
+>         -- [S:spelling]
+>         let obj ← structObject fieldExprs
+>         .ok (.call (.ident "Schema.Struct") [obj])
+>     | _, _ => .error ⟨["indexSignatures"], "Index signatures beside properties (StructWithRest) not supported"⟩
+237c310,314
+<     .ok (.call (.ident "Schema.Union") [.arr memberExprs])
+---
+>     -- [S:union] `N_S`'s spine step, then the literal union's own spelling
+>     let flat := spliceLastMember memberExprs
+>     match flat.mapM literalArg with
+>     | some lits => .ok (.call (.ident "Schema.Literals") [.arr lits])
+>     | none => .ok (.call (.ident "Schema.Union") [.arr flat])
+292c369
+< -- 6. "__proto__" is REFUSED with exact path ["config", "__proto__"]
+---
+> -- 6. [S:spelling] "__proto__" is now EMITTED, computed (revision 5 refused it at ["config", "__proto__"])
+303c380,381
+<   | .error ⟨["config", "__proto__"], reason⟩ => reason.contains "requires computed property syntax"
+---
+>   | .ok (.call (.ident "Schema.Struct") [.object [("config", .call (.ident "Schema.Struct")
+>       [.object [("[\"__proto__\"]", .ident "Schema.Number")]])]]) => true
+332a411
+> -- [S:spelling] identifier names are now bare (`.object`), not quoted
+334c413
+<   | .ok (.call (.ident "Schema.Struct") [.objectQuoted [("user", .call (.ident "Schema.Struct") [.objectQuoted [("age", .ident "Schema.Natural"), ("name", .ident "Schema.String")]])]]) => true
+---
+>   | .ok (.call (.ident "Schema.Struct") [.object [("user", .call (.ident "Schema.Struct") [.object [("age", .ident "Schema.Natural"), ("name", .ident "Schema.String")]])]]) => true
+417c496
+< end DefinitiveSchemaScout
+---
+> /-! ## 6. [S] The profile, per form: the predicate, the emissions, the refusals -/
+419,422c498,711
+< #print axioms DefinitiveSchemaScout.validateAnnotations
+< #print axioms DefinitiveSchemaScout.validateFilter
+< #print axioms DefinitiveSchemaScout.processProperties
+< #print axioms DefinitiveSchemaScout.toReadableSchema
+---
+> /-- The readable profile's admission predicate: the domain of the emission, with its located
+> refusal (`explain`). Admitted (each arm above): `Null`, `Undefined`, `Void`, `Never`, `Unknown`,
+> `Any`, `String`, `Boolean`, `BigInt`, `Symbol`, `ObjectKeyword` with no check; `Number` with no
+> check, `[isInt]` or `[isInt, isGreaterThanOrEqualTo 0]` (the checks `Bridge.schema` writes,
+> compared whole); string, number and boolean literals; arrays (one rest) and tuples (plain
+> elements, no rest); structs of string-named properties, no repeat, `optionalKey`/`mutableKey`
+> kept; one index signature over `Schema.String` (a map); `anyOf` unions. Annotations: revision
+> 5's eight documentation keys, erased; every other key refused by name, at its path. Observation:
+> the emitted schema's structural `Type`, its acceptance and its decoded values, against the
+> document's own (`S/host/q3-profile.ts`); messages, identifiers and brands are outside it. -/
+> def admits (r : Representation) : Bool :=
+>   match toReadableSchema r with
+>   | .ok _ => true
+>   | .error _ => false
+> 
+> def explain (r : Representation) : Option SchemaRefusal :=
+>   match toReadableSchema r with
+>   | .ok _ => none
+>   | .error e => some e
+> 
+> theorem admits_iff_explain (r : Representation) : admits r = true ↔ explain r = none := by
+>   unfold admits explain
+>   split <;> simp only [reduceCtorEq]
+> 
+> def text (r : Representation) : Option String :=
+>   match toReadableSchema r with
+>   | .ok e => some (Render.expr house0 0 e)
+>   | .error _ => none
+> 
+> def refusedAt (path : List String) (r : Representation) : Bool :=
+>   match explain r with
+>   | some e => e.path == path
+>   | none => false
+> 
+> def prop (n : String) (r : Representation) (opt : Bool := false) (isMut : Bool := false) :
+>     PropertySignature :=
+>   { name := .string n, type := r, isOptional := opt, isMutable := isMut, annotations := none }
+> def lit (s : String) : Representation := .literal none [] (.string s)
+> def tagged (tag : String) (ps : List PropertySignature) : Representation :=
+>   .objects none [] (prop "_tag" (lit tag) :: ps) []
+> def intRepS : Representation := Effect4.Schema.Bridge.schema .int
+> def natRepS : Representation := Effect4.Schema.Bridge.schema .nat
+> 
+> -- the per-form inputs: what `schema` writes for each form (`S/probes/K2Copy.lean` §4), and rc.112's
+> def recordRep : Representation := .objects none [] [prop "a" intRepS, prop "b" (.string none [])] []
+> def optionalRep : Representation :=
+>   .objects none [] [prop "a" intRepS (opt := true), prop "b" (.string none [])] []
+> def optionalUndefRep : Representation :=
+>   .objects none [] [prop "a" (.union none [] [intRepS, .undefined none []] .anyOf) (opt := true)] []
+> def mapRep : Representation := .objects none [] [] [{ parameter := .string none [], type := intRepS }]
+> def tagged2Rep : Representation := .union none []
+>   [tagged "A" [prop "x" intRepS], tagged "B" [prop "y" (.string none [])]] .anyOf
+> def tagged3Rep : Representation := .union none []
+>   [tagged "A" [prop "x" intRepS], .union none []
+>     [tagged "B" [prop "y" (.string none [])], tagged "C" []] .anyOf] .anyOf
+> def lit3NestedRep : Representation := .union none [] [lit "a", .union none [] [lit "b", lit "c"] .anyOf] .anyOf
+> def lit3FlatRep : Representation := .union none [] [lit "a", lit "b", lit "c"] .anyOf
+> def tuple3Rep : Representation := .arrays none []
+>   [⟨false, intRepS, none⟩, ⟨false, .string none [], none⟩, ⟨false, .boolean none [], none⟩] []
+> def arrayRep : Representation := .arrays none [] [] [.string none []]
+> def specialRep : Representation := .objects none []
+>   [prop "__proto__" intRepS, prop "a-b" (.string none []), prop "é" (.boolean none []),
+>    prop "constructor" (.string none []), prop "" intRepS, prop "10" intRepS, prop "9" natRepS] []
+> def escapedRep : Representation := .objects none [] [prop "x\"y" (.string none []), prop "a" intRepS] []
+> def mutableRep : Representation := .objects none [] [prop "a-b" (.string none []) (opt := true) (isMut := true)] []
+> 
+> #guard text recordRep = some "Schema.Struct({ a: Schema.Int, b: Schema.String })"
+> #guard text optionalRep = some "Schema.Struct({ a: Schema.optionalKey(Schema.Int), b: Schema.String })"
+> #guard text optionalUndefRep =
+>   some "Schema.Struct({ a: Schema.optionalKey(Schema.Union([Schema.Int, Schema.Undefined])) })"
+> #guard text mapRep = some "Schema.Record(Schema.String, Schema.Int)"
+> #guard text tagged2Rep = some ("Schema.Union([Schema.Struct({ _tag: Schema.Literal(\"A\"), x: Schema.Int }), " ++
+>   "Schema.Struct({ _tag: Schema.Literal(\"B\"), y: Schema.String })])")
+> -- a nested union prints flat (N_S's spine step); a literal union as `Schema.Literals`
+> #guard text tagged3Rep = some ("Schema.Union([Schema.Struct({ _tag: Schema.Literal(\"A\"), x: Schema.Int }), " ++
+>   "Schema.Struct({ _tag: Schema.Literal(\"B\"), y: Schema.String }), Schema.Struct({ _tag: Schema.Literal(\"C\") })])")
+> #guard text lit3NestedRep = some "Schema.Literals([\"a\", \"b\", \"c\"])"
+> #guard text lit3FlatRep = text lit3NestedRep
+> -- a tuple is not an array
+> #guard text tuple3Rep = some "Schema.Tuple([Schema.Int, Schema.String, Schema.Boolean])"
+> #guard text arrayRep = some "Schema.Array(Schema.String)"
+> -- exact property spelling: computed, quoted, bare; and the all-quoted fallback for escapes
+> #guard text specialRep = some ("Schema.Struct({ [\"__proto__\"]: Schema.Int, \"a-b\": Schema.String, " ++
+>   "\"é\": Schema.Boolean, constructor: Schema.String, \"\": Schema.Int, \"10\": Schema.Int, \"9\": Schema.Natural })")
+> #guard text escapedRep = some "Schema.Struct({ \"x\\\"y\": Schema.String, \"a\": Schema.Int })"
+> -- a mutable field keeps `mutableKey`
+> #guard text mutableRep = some "Schema.Struct({ \"a-b\": Schema.optionalKey(Schema.mutableKey(Schema.String)) })"
+> -- the refusals, located
+> def escapedProtoRep : Representation := .objects none [] [prop "__proto__" intRepS, prop "x\"y" (.string none [])] []
+> #guard refusedAt ["x\"y"] escapedProtoRep
+> def mapNumberRep : Representation := .objects none [] [] [{ parameter := .number none [], type := intRepS }]
+> #guard refusedAt ["indexSignatures[0]", "parameter"] mapNumberRep
+> def restRep : Representation := .objects none [] [prop "a" intRepS] [{ parameter := .string none [], type := intRepS }]
+> #guard refusedAt ["indexSignatures"] restRep
+> def oneOfRep : Representation := .union none [] [.string none [], .number none []] .oneOf
+> #guard refusedAt [] oneOfRep
+> def bigintLitRep : Representation := .literal none [] (.bigint 1)
+> #guard refusedAt [] bigintLitRep
+> -- an annotation on an unsupported node refuses (revision 5: the node's own refusal, after its bag)
+> #guard refusedAt ["annotations"] (.enum (some [⟨"parseOptions", .obj []⟩]) [] [])
+> -- rc.112's own persisted `Schema.Int` carries `arbitrary` (question 2 E9d): outside the eight keys
+> def rcIntRep : Representation := .number none [.filter ⟨"effect/schema/isInt", .null, none⟩
+>   (some [⟨"expected", .str "an integer"⟩, ⟨"arbitrary", .obj [("constraint", .obj [("integer", .bool true)])]⟩]) false]
+> #guard refusedAt ["check[0]", "annotations"] rcIntRep
+> #guard admits recordRep && admits mapRep && admits tagged3Rep && !admits restRep && explain recordRep == none
+> 
+> /-! ## 6b. [S] Red controls: each claim is false, and `#guard_msgs` asserts its `#guard` fails -/
+> 
+> /-- RED: a three-element tuple prints as an array. -/
+> def red_tupleAsArray : Bool := text tuple3Rep == some "Schema.Array(Schema.Int)"
+> /--
+> error: Expression
+>   red_tupleAsArray
+> did not evaluate to `true`
+> -/
+> #guard_msgs (error) in
+> #guard red_tupleAsArray
+> 
+> /-- RED: a union prints in the variadic call shape `Schema.Union(a, b)`, which rc.112 rejects (question 2 E7). -/
+> def red_unionVariadic : Bool := (text tagged2Rep).map (·.startsWith "Schema.Union(Schema.Struct") == some true
+> /--
+> error: Expression
+>   red_unionVariadic
+> did not evaluate to `true`
+> -/
+> #guard_msgs (error) in
+> #guard red_unionVariadic
+> 
+> /-- RED: a mutable optional field prints without `mutableKey`. -/
+> def red_mutableDropped : Bool := text mutableRep == some "Schema.Struct({ \"a-b\": Schema.optionalKey(Schema.String) })"
+> /--
+> error: Expression
+>   red_mutableDropped
+> did not evaluate to `true`
+> -/
+> #guard_msgs (error) in
+> #guard red_mutableDropped
+> 
+> /-- RED: an annotation on an unsupported node is dropped and the node admitted. -/
+> def red_annotationDropped : Bool := admits (.enum (some [⟨"parseOptions", .obj []⟩]) [] [])
+> /--
+> error: Expression
+>   red_annotationDropped
+> did not evaluate to `true`
+> -/
+> #guard_msgs (error) in
+> #guard red_annotationDropped
+> 
+> /-- RED: `__proto__` is spelled quoted (upstream `toCodeDocument`'s spelling, which sets the prototype at run time: question 2 E8). -/
+> def red_quotedProto : Bool := keySpelling "__proto__" == some "\"__proto__\""
+> /--
+> error: Expression
+>   red_quotedProto
+> did not evaluate to `true`
+> -/
+> #guard_msgs (error) in
+> #guard red_quotedProto
+> 
+> /-- RED: revision 5's eight-key allowlist admits rc.112's own persisted `Schema.Int` (its `isInt` filter carries `arbitrary`). -/
+> def red_rcIntAdmitted : Bool := admits rcIntRep
+> /--
+> error: Expression
+>   red_rcIntAdmitted
+> did not evaluate to `true`
+> -/
+> #guard_msgs (error) in
+> #guard red_rcIntAdmitted
+> 
+> /-! ## 7. [S] The examples for the host harness (`S/host/q3-profile.ts`) -/
+> 
+> def examples : List (String × Representation) :=
+>   [ ("NAT", natRepS), ("INT", intRepS), ("RECORD", recordRep), ("OPTIONAL", optionalRep),
+>     ("OPTIONAL_UNDEF", optionalUndefRep), ("MAP", mapRep), ("TAGGED2", tagged2Rep),
+>     ("TAGGED3", tagged3Rep), ("LIT3_NESTED", lit3NestedRep), ("LIT3_FLAT", lit3FlatRep),
+>     ("TUPLE3", tuple3Rep), ("ARRAY", arrayRep), ("NESTED", validNestedRep),
+>     ("SPECIAL", specialRep), ("ESCAPED", escapedRep), ("MUTABLE", mutableRep),
+>     ("ESC_PROTO", escapedProtoRep), ("MAP_NUMBER", mapNumberRep), ("REST", restRep),
+>     ("RC_INT", rcIntRep),
+>     -- adversarial names one at a time, so `__proto__` hides no other spelling bug
+>     ("N_PROTO", .objects none [] [prop "__proto__" intRepS] []),
+>     ("N_HYPHEN", .objects none [] [prop "a-b" (.string none [])] []),
+>     ("N_UNICODE", .objects none [] [prop "é" (.boolean none []), prop "日本" intRepS, prop "😀" (.string none [])] []),
+>     ("N_RESERVED", .objects none [] [prop "constructor" (.string none []), prop "toString" (.string none []),
+>       prop "default" intRepS, prop "class" (.boolean none [])] []),
+>     ("N_EMPTY", .objects none [] [prop "" intRepS] []),
+>     ("N_NUMERIC", .objects none [] [prop "01" intRepS, prop "10" intRepS, prop "9" intRepS, prop "1e3" intRepS] []),
+>     ("N_QUOTE", .objects none [] [prop "x\"y" (.string none []), prop "line\nbreak" intRepS] []),
+>     -- the declarations `Bridge.schema` writes, which the profile refuses (rc.112 revives them)
+>     ("OPTION", Effect4.Schema.Bridge.schema (.option .int)),
+>     ("RESULT", Effect4.Schema.Bridge.schema (.except .string .int)),
+>     ("EXIT", Effect4.Schema.Bridge.schema (.exitOf .int .string)),
+>     ("BYTES", .declaration ⟨"effect/schema/Uint8Array", .null⟩ none [] []) ]
+> 
+> #eval do
+>   for (name, rep) in examples do
+>     let expr := match text rep with
+>       | some t => t
+>       | none => "REFUSED"
+>     -- the renderer's own string literal (it escapes quote, backslash, newline, return, tab): JSON
+>     IO.println ("EXPR_" ++ name ++ ":" ++ Render.quoted house0 expr)
+>     IO.println ("REPR_" ++ name ++ ":" ++
+>       Render.quoted house0 (Effect4.Codegen.Schema.representationSource rep))
+> 
+> end SeatS.Readable
+> 
+> #print axioms SeatS.Readable.validateAnnotations
+> #print axioms SeatS.Readable.validateFilter
+> #print axioms SeatS.Readable.processProperties
+> #print axioms SeatS.Readable.structObject
+> #print axioms SeatS.Readable.keySpelling
+> #print axioms SeatS.Readable.toReadableSchema
+> #print axioms SeatS.Readable.admits
+> #print axioms SeatS.Readable.admits_iff_explain
+> 

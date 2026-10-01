@@ -1,0 +1,20 @@
+# probe: docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# date: 2026-10-01T18:57:02Z
+# command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# toolchain: leanprover/lean4:v4.33.1
+# sha256: d3d701ce91517275ffeea6ac7710d5a5a03e95d9f2a77ee4759e9a639485a6b9
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:646:12: error(lean.unknownIdentifier): Unknown identifier `RepresentationAlgebra`
+
+Note: It is not possible to treat `RepresentationAlgebra` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:675:49: error(lean.unknownIdentifier): Unknown identifier `cata_representation`
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:776:90: error: unexpected identifier; expected '}'
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:801:0: error: cannot evaluate code because 'SeatS.K2.N_S' uses 'sorry' and/or contains errors
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:825:0: error: cannot evaluate code because 'SeatS.K2.N_S' uses 'sorry' and/or contains errors
+'SeatS.K2.PTy.ind'' does not depend on any axioms
+'SeatS.K2.canonF_of_sorted' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.canonF_map' depends on axioms: [propext]
+'SeatS.K2.ofSchemaL_schema' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.ofSchemaExact_exact' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.K2.ofSchemaExact_le' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.K2.ofSchemaExact_schema' depends on axioms: [propext, sorryAx, Quot.sound]
+# exit=1 seconds=6

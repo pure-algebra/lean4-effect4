@@ -1,0 +1,49 @@
+--- src/Effect4/Laws/Schema/Codec.lean	2026-10-01 13:14:44
++++ docs/research/2026-10-01-type-language-probe/S/patches/LawsSchemaCodec.lean.after	2026-10-01 14:28:23
+@@ -95,6 +95,46 @@
+   exact Option.some.inj
+     ((decode_of_encode (t := t) hv).symm.trans (decode_of_encode (t := t) hw))
+ 
++/-- The row adapter answers members (route A's receipt clause; probe R's `adapt_member`). -/
++theorem adapt_member {t : CTy} {j : Json} {v : Val} (h : adapt t.toRaw j = some v) :
++    Val.hasTy v t.toRaw = true := by
++  have hn : t.toRaw.normalize = t.toRaw := t.property
++  unfold adapt at h
++  rw [hn, Option.filter_eq_some_iff] at h
++  exact h.2
++
++/-- The decoder guarded by the encoder's image modulo `N_J` (the formal pass's TY-09, route 1). -/
++def decodeExact (t : Ty) (j : Json) : Option Val :=
++  (decode t j).filter (fun v => decide ((encode t v).map Codec.normalizeJson =
++    some (Codec.normalizeJson j)))
++
++/-- Exactness modulo `N_J` (K2's third law). -/
++theorem decodeExact_exact {t : Ty} {j : Json} {v : Val} (h : decodeExact t j = some v) :
++    ∃ j', encode t v = some j' ∧ Codec.normalizeJson j' = Codec.normalizeJson j := by
++  unfold decodeExact at h
++  rw [Option.filter_eq_some_iff] at h
++  have hg := of_decide_eq_true h.2
++  cases hw : encode t v with
++  | none => rw [hw] at hg; exact nomatch hg
++  | some j' =>
++    rw [hw, Option.map_some, Option.some.injEq] at hg
++    exact ⟨j', rfl, hg⟩
++
++/-- The retraction kept under the guard. -/
++theorem decodeExact_retract {t : CTy} {v : Val} {j : Json} (h : encode t.toRaw v = some j) :
++    decodeExact t.toRaw j = some v := by
++  unfold decodeExact
++  rw [decode_of_encode h, Option.filter_eq_some_iff]
++  refine ⟨rfl, decide_eq_true ?_⟩
++  rw [h, Option.map_some]
++
++/-- The guard only refuses. -/
++theorem decodeExact_le {t : Ty} {j : Json} {v : Val} (h : decodeExact t j = some v) :
++    decode t j = some v := by
++  unfold decodeExact at h
++  rw [Option.filter_eq_some_iff] at h
++  exact h.1
++
+ /-- All strings cross the JSON boundary, not merely the finite examples in the battery. -/
+ theorem encode_string (s : String) : encode .string (.str s) = some (.str s) := by
+   simp [encode, Ty.normalize, Val.hasTy, Codec.layout, Codec.encodeRaw, Codec.decodeRaw]

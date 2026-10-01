@@ -1,0 +1,13 @@
+# probe: docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# date: 2026-10-01T18:57:25Z
+# command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# toolchain: leanprover/lean4:v4.33.1
+# sha256: b6b845a277853fc9431ebf4bfcdebf9bff58800d96f57cd095eb3747ec786237
+'SeatS.K2.PTy.ind'' does not depend on any axioms
+'SeatS.K2.canonF_of_sorted' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.canonF_map' depends on axioms: [propext]
+'SeatS.K2.ofSchemaL_schema' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.ofSchemaExact_exact' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.ofSchemaExact_le' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.ofSchemaExact_schema' depends on axioms: [propext, Quot.sound]
+# exit=0 seconds=5

@@ -1,0 +1,6 @@
+# check: smoke-tsgo
+# date: 2026-10-01T18:35:23Z
+# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
+# command: /opt/homebrew/bin/tsgo -p tsconfig.tsgo.json --pretty false
+# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
+# exit=0 seconds=0

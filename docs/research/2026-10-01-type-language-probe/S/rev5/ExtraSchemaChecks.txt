@@ -1,0 +1,148 @@
+
+namespace FinalSchemaAudit
+open Effect4 TypeScript DefinitiveSchemaScout
+set_option maxRecDepth 4096
+
+def field (name : String) (rep : Representation) : PropertySignatureOf Representation :=
+  ⟨.string name, rep, false, false, none⟩
+def uniqueRecord : Representation := .objects none []
+  [field "a" (.number none []), field "b" (.string none [])] []
+def bad : Representation := .declaration ⟨"custom/missing", .null⟩ none [] []
+def intWithChildren (children : Option (List Representation)) : Representation :=
+  .number none [.filter ⟨"effect/schema/isInt", .null, children⟩ none false]
+def nonAdjacentDuplicate : Representation := .objects none []
+  [field "a" (.number none []), field "b" (.string none []), field "a" (.string none [])] []
+def nestedDuplicate : Representation := .objects none [] [field "config" nonAdjacentDuplicate] []
+def modifierRecord : Representation := .objects none [] [
+  {name := .string "a-b", type := .string none [], isOptional := true,
+   isMutable := true, annotations := none}] []
+def escapedRecord : Representation := .objects none [] [field "x\"\n\\y" (.string none [])] []
+def objectWithOption (option : String) : Representation := .objects
+  (some [⟨"parseOptions", .obj [("onExcessProperty", .str option)]⟩]) []
+  [field "a" (.number none [])] []
+def intWithDisabledCheck : Representation := .number none [
+  .filter ⟨"effect/schema/isInt", .null, none⟩
+    (some [⟨"parseOptions", .obj [("disableChecks", .bool true)]⟩]) false]
+
+theorem semantic_object_annotation_refused (option : String) :
+    toReadableSchema (objectWithOption option) = .error ⟨["annotations"], "Semantic or unadmitted annotation 'parseOptions' not supported in readable profile"⟩ := rfl
+theorem check_disabling_annotation_refused :
+    toReadableSchema intWithDisabledCheck = .error ⟨["check[0]", "annotations"], "Semantic or unadmitted annotation 'parseOptions' not supported in readable profile"⟩ := rfl
+
+theorem child_error_preserved : toReadableSchema (intWithChildren (some [.string none [], bad])) =
+    .error ⟨["check[0]", "schemas[1]"], "Custom declarations not supported in readable profile"⟩ := rfl
+theorem empty_children_normalized : toReadableSchema (intWithChildren (some [])) =
+    toReadableSchema (intWithChildren none) := rfl
+theorem nonempty_children_refused : toReadableSchema (intWithChildren (some [.string none []])) =
+    .error ⟨["check[0]", "schemas"], "Child schemas on canonical check 'effect/schema/isInt' not supported in readable profile"⟩ := rfl
+theorem duplicate_refused : toReadableSchema nestedDuplicate =
+    .error ⟨["config", "a"], "Duplicate object field 'a' not admitted in readable profile (TS1117)"⟩ := rfl
+
+-- Keep former rejecting controls rather than replacing them with only the latest examples.
+#guard match toReadableSchema (.number none [.filter ⟨"custom/unknown", .null, none⟩ none false]) with
+  | .error ⟨["check[0]"], _⟩ => true
+  | _ => false
+#guard match toReadableSchema (.number none [.filter ⟨"effect/schema/isInt", .bool true, none⟩ none false]) with
+  | .error ⟨["check[0]"], _⟩ => true
+  | _ => false
+#guard match toReadableSchema (.number none [.filter ⟨"effect/schema/isInt", .null, none⟩ none true]) with
+  | .error ⟨["check[0]"], _⟩ => true
+  | _ => false
+#guard match toReadableSchema (.number none [.filterGroup none none [Effect4.Schema.Bridge.isIntCheck]]) with
+  | .error ⟨["check[0]"], _⟩ => true
+  | _ => false
+#guard match toReadableSchema (.number none [Effect4.Schema.Bridge.isIntCheck,
+    .filter ⟨"effect/schema/isGreaterThanOrEqualTo", .obj [("minimum", .number (Float64.ofBits 0x3ff0000000000000))], none⟩ none false]) with
+  | .error ⟨["check[1]"], _⟩ => true
+  | _ => false
+#guard match toReadableSchema (.objects none [] [field "left" uniqueRecord, field "right" uniqueRecord] []) with
+  | .ok _ => true
+  | _ => false
+
+#print axioms child_error_preserved
+#print axioms empty_children_normalized
+#print axioms nonempty_children_refused
+#print axioms duplicate_refused
+#print axioms semantic_object_annotation_refused
+#print axioms check_disabling_annotation_refused
+#print axioms DefinitiveSchemaScout.validateFilter
+#print axioms DefinitiveSchemaScout.processProperties
+#print axioms DefinitiveSchemaScout.toReadableSchema
+
+def badAnnotations : Annotations := some [⟨"parseOptions", .obj []⟩]
+def docAnnotations : Annotations := some [⟨"title", .str "Example"⟩, ⟨"description", .str "Fixture"⟩]
+def annotateAcceptedNodes : List (Annotations → Representation) := [
+  fun a => .null a [], fun a => .undefined a [], fun a => .void a [],
+  fun a => .never a [], fun a => .unknown a [], fun a => .any a [],
+  fun a => .string a [], fun a => .number a [], fun a => .boolean a [],
+  fun a => .bigint a [], fun a => .symbol a [],
+  fun a => .literal a [] (.string "x"), fun a => .objectKeyword a [],
+  fun a => .arrays a [] [⟨false, .string none [], none⟩] [],
+  fun a => .objects a [] [field "a" (.number none [])] [],
+  fun a => .union a [] [.string none [], .number none []] .anyOf]
+
+def refusedAt (path : List String) (rep : Representation) : Bool :=
+  match toReadableSchema rep with
+  | .error e => e.path == path
+  | .ok _ => false
+def emits (rep : Representation) : Bool :=
+  match toReadableSchema rep with
+  | .ok _ => true
+  | .error _ => false
+
+-- Covers every accepted node constructor; neighbors prevent an always-refusing validator.
+#guard annotateAcceptedNodes.all fun f => refusedAt ["annotations"] (f badAnnotations)
+#guard annotateAcceptedNodes.all fun f => emits (f docAnnotations)
+#guard annotateAcceptedNodes.all fun f => emits (f (some [])) && emits (f none)
+
+def annotatedProperty (a : Annotations) : Representation := .objects none []
+  [{name := .string "child", type := .string none [], isOptional := false,
+    isMutable := false, annotations := a}] []
+def annotatedElement (a : Annotations) : Representation := .arrays none []
+  [⟨false, .string none [], a⟩] []
+def annotatedFilter (a : Annotations) : Representation := .number none [
+  .filter ⟨"effect/schema/isInt", .null, none⟩ a false]
+
+#guard refusedAt ["child", "annotations"] (annotatedProperty badAnnotations)
+#guard refusedAt ["elements[0]", "annotations"] (annotatedElement badAnnotations)
+#guard refusedAt ["check[0]", "annotations"] (annotatedFilter badAnnotations)
+#guard emits (annotatedProperty docAnnotations) && emits (annotatedElement docAnnotations)
+  && emits (annotatedFilter docAnnotations)
+#guard refusedAt ["elements[0]", "annotations"]
+  (.arrays none [] [⟨false, .string badAnnotations [], none⟩] [])
+#guard refusedAt ["rest[0]", "annotations"] (.arrays none [] [] [.string badAnnotations []])
+#guard refusedAt ["union[1]", "annotations"] (.union none [] [.string none [], .number badAnnotations []] .anyOf)
+#guard refusedAt ["outer", "child", "annotations"]
+  (.objects none [] [field "outer" (annotatedProperty badAnnotations)] [])
+#guard refusedAt ["check[0]", "schemas[0]", "annotations"]
+  (intWithChildren (some [.string badAnnotations []]))
+#guard refusedAt ["annotations"] (.string
+  (some [⟨"title", .str "Okay"⟩, ⟨"unknownKey", .null⟩, ⟨"description", .str "Okay"⟩]) [])
+#guard refusedAt ["annotations"] (.string (some [⟨"brands", .arr [.str "Brand"]⟩]) [])
+#guard allowedDocKeys.all fun key => emits (.string (some [⟨key, .str "Fixture"⟩]) [])
+
+-- Both semantic-option variants must now refuse; the previous erasure equation is not retained.
+#guard refusedAt ["annotations"] (objectWithOption "error")
+#guard refusedAt ["annotations"] (objectWithOption "preserve")
+
+#eval do
+  for (name, rep) in [
+    ("NAT", natRep), ("INT", intRep), ("NUMBER", .number none []),
+    ("NESTED", validNestedRep), ("UNIQUE", uniqueRecord),
+    ("DUP", nestedDuplicate), ("CHECK_CHILD", intWithChildren (some [bad])),
+    ("MODIFIER", modifierRecord), ("ESCAPE", escapedRecord),
+    ("ANNOT_ERROR", objectWithOption "error"),
+    ("ANNOT_PRESERVE", objectWithOption "preserve"),
+    ("ANNOT_DISABLE", intWithDisabledCheck),
+    ("DOC_STRING", .string docAnnotations []),
+    ("DOC_PROPERTY", annotatedProperty docAnnotations),
+    ("DOC_ELEMENT", annotatedElement docAnnotations),
+    ("DOC_FILTER", annotatedFilter docAnnotations),
+    ("TUPLE", .arrays none [] [⟨false, .string none [], none⟩] []),
+    ("ARRAY", .arrays none [] [] [.string none []]),
+    ("UNION", .union none [] [.string none [], .number none []] .anyOf)] do
+    match toReadableSchema rep with
+    | .ok e => IO.println ("EXPR_" ++ name ++ ":" ++ Render.expr house0 0 e)
+    | .error _ => IO.println ("EXPR_" ++ name ++ ":REFUSED")
+
+end FinalSchemaAudit

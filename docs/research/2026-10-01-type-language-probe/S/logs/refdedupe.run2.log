@@ -1,0 +1,25 @@
+# probe: docs/research/2026-10-01-type-language-probe/S/probes/RefDedupe.lean
+# date: 2026-10-01T19:38:35Z
+# command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/RefDedupe.lean
+# toolchain: leanprover/lean4:v4.33.1
+# sha256: 05ee4290c613416b1dd1ec7bef41ffb14ac032aaac93cb60078c21725fb1d0ff
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/RefDedupe.lean:203:6: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.ok` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.ok`
+  [apply] `EST.Out.ok`
+  [apply] `EStateM.Result.ok`
+  [apply] `Api.TypedLayer.ok`
+  [apply] `Lean.Meta.DefEqArgsFirstPassResult.ok`
+  [apply] `Std.Http.Response.ok`
+  [apply] `Std.Http.Status.ok`
+  [apply] `Lean.Meta.Grind.CheckCoverageResult.ok`
+'SeatS.RefDedupe.find?_none_of_not_mem' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.dedupeFrom_distinct' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.dedupeRefs_distinct' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.dedupeFrom_nodup' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.dedupeRefs_nodup' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.moduleSyntaxChecked_distinct' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.dedupeRefs' depends on axioms: [propext, Quot.sound]
+'SeatS.RefDedupe.moduleSyntaxChecked' depends on axioms: [propext, Quot.sound]
+# exit=1 seconds=2

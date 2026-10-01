@@ -1,0 +1,86 @@
+# probe: docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# date: 2026-10-01T18:53:43Z
+# command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# toolchain: leanprover/lean4:v4.33.1
+# sha256: ea83582861ae36b0e7045696f7d1dac344808a27a12189205064ddddda772350
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:511:8: error: (kernel) application type mismatch
+  failed to pretty print expression (use 'set_option pp.rawOnError true' for raw representation)
+argument has type
+  failed to pretty print expression (use 'set_option pp.rawOnError true' for raw representation)
+but function has type
+  failed to pretty print expression (use 'set_option pp.rawOnError true' for raw representation)
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:626:4: error: Tactic `rfl` failed: The left-hand side
+  do
+    Except.ok ()
+    let fs ← Except.ok fs
+    match firstRepeat fs [] with
+      | some n => refuse [n] "repeatedField: a record names each field once"
+      | none => Except.ok (PTy.record fs)
+is not definitionally equal to the right-hand side
+  Except.ok (PTy.record fs)
+
+case record
+fs : List (String × PTy)
+ih : ∀ (p : String × PTy), p ∈ fs → RetractMotive p.snd
+hc : PTy.closedFields fs = true
+hw : firstRepeat fs [] = none ∧ PTy.wfFields fs = true
+⊢ (do
+      Except.ok ()
+      let fs ← Except.ok fs
+      match firstRepeat fs [] with
+        | some n => refuse [n] "repeatedField: a record names each field once"
+        | none => Except.ok (PTy.record fs)) =
+    Except.ok (PTy.record fs)
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:638:6: error: Tactic `rfl` failed: The left-hand side
+  ofSchemaL (Representation.objects none [] [] [{ parameter := Schema.string, type := schema v }])
+is not definitionally equal to the right-hand side
+  Except.ok (PTy.string.map v)
+
+case map.string
+v : PTy
+ihv : RetractMotive v
+ihk : RetractMotive PTy.string
+hw : v.wf = true
+hc : PTy.string.closed = true ∧ v.closed = true
+⊢ ofSchemaL (Representation.objects none [] [] [{ parameter := Schema.string, type := schema v }]) =
+    Except.ok (PTy.string.map v)
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:625:81: error: This simp argument is unused:
+  hw.1
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [schema, ofSchemaL, checkAnn, readProps_schemaProps fs ih hc hw.2]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:637:25: error: This simp argument is unused:
+  ofSchemaL
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [schema, checkAnn, under, (ihv hc.2).1 hw]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:637:36: error: This simp argument is unused:
+  checkAnn
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [schema, ofSchemaL, under, (ihv hc.2).1 hw]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:637:46: error: This simp argument is unused:
+  under
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [schema, ofSchemaL, checkAnn, (ihv hc.2).1 hw]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:637:53: error: This simp argument is unused:
+  (ihv hc.2).1 hw
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [schema, ofSchemaL, checkAnn, under]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+'SeatS.K2.PTy.ind'' does not depend on any axioms
+'SeatS.K2.canonF_of_sorted' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.canonF_map' depends on axioms: [propext]
+'SeatS.K2.ofSchemaL_schema' depends on axioms: [propext, sorryAx, Quot.sound]
+# exit=1 seconds=5
