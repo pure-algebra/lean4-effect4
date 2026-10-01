@@ -140,7 +140,7 @@ be, so `Transform`'s category laws can only be stated at the meaning (§2 row 25
 | 24 | `ShapeDoc.document` (`Shape.lean:468`), `effDocument` (`Bridge.lean:162`), `Row.document`, `Api.schemaOf` | K2 | **✘ no reader at all**, hence no law; `Api.schemaOf` (`Api.lean:138`) has zero call sites — the `RunnerBytes.schemaOf` of the same name (`:89`) is a different function, used twice in `Test/`; `Api.schemaOf` deleted 2026-10-01 under row 39 |
 | 25 | `Transform.id`/`andThen`/`dimap` (`Schema/Transform.lean:39-77`; deleted 2026-09-18) | composition | **✘ no identity, no associativity**; only `andThen_typed` (the signature) |
 | 26 | `SchemaTransform.check` (`Transform.lean:92`; deleted 2026-09-18) | K4 | **✘ no completeness**: a refusal is not tied to ill-typedness |
-| 27 | `replay`/`replayPlay`, `behaviour` | K5 | ✔ `replay_unique`, `replay_append`, `replay_skip_refused` |
+| 27 | `replay`/`replayPlay`, `behaviour` | K5 | ✔ `replay_unique`, `replay_append`, `replay_skip_refused`; `behaviour_unique` ✔ (seat E, 2026-10-01, `Laws/Api/Runner.lean`: the map is unique by its unfolding) |
 | 28 | `journal_replays`, `drive_eq_play` | K5 | ✔ |
 | 29 | `HostSession.advance` | K3 | ✔ `advance_step` trichotomy (`Laws/Run.lean:769`), `open_total` (`:210`) |
 | 30 | frame machine vs term reference | K3 | ✔ `run_eq_ref`, empty table, no oracle (DI-57 names its four gaps) |
