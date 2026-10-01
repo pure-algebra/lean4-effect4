@@ -201,6 +201,19 @@ def closedFields : List (String × Ty) → Bool
   | (_, t) :: rest => closed t && closedFields rest
 end
 
+mutual
+/-- The field types a record carries, outermost first; a paramorphism through the field list
+(its sibling keeps each field's type as a value and recurses into it). -/
+def fieldTys : Ty → List Ty
+  | .record fields => fieldTysOf fields
+  | .option t | .list t => fieldTys t
+  | _ => []
+/-- The record arm's sibling over the field list. -/
+def fieldTysOf : List (String × Ty) → List Ty
+  | [] => []
+  | (_, t) :: rest => t :: (fieldTys t ++ fieldTysOf rest)
+end
+
 /-- A union member has neither an empty nor a union head. -/
 def isMember : Ty → Bool
   | .never | .union _ _ => false

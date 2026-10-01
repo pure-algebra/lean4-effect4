@@ -23,6 +23,8 @@ The cases and what each one holds (the evidence words of the seat's receipt):
   elim-record           tested: the `elim` kind on the record fixture; the output compiles
   elim-val-agrees       proved: on `Store.Val` the generated companions are the hand ones
   fold-record           tested: the fold group of the nested record fixture compiles
+  foldof-record         proved: `fold_of` through a product position and a field-list sibling
+                        (`List (String × Ty)`), a paramorphism among them: six connectors
   view-record           tested: the view at a field-list head (no table: today's literal rule) compiles
   view-no-arity         tested: a field-list head whose variance row has no arity word is refused
   view-leaf-one         tested: the view in table mode at today's one edge (`lit < string`) compiles
@@ -191,6 +193,14 @@ def fold_record(cx):
     cx.compile(out, cx.src)
 
 
+def foldof_record(cx):
+    text = cx.compile(FIXTURES / 'GenFix/Record/FoldOfScan.lean')
+    for name in ['members.eq_cata', 'renderRaw.eq_cata', 'renderFields.eq_foldr', 'renderFields.eq_cata',
+                 'closedFields.eq_cata', 'fieldTys.eq_cata', 'fieldTysOf.eq_foldr', 'fieldTysOf.eq_cata']:
+        if f"'GenFix.Record.Ty.{name}'" not in text:
+            raise CaseFailed(f'FoldOfScan: no axiom receipt for {name}')
+
+
 def view_record(cx):
     table = variances_with(cx, 'variances-record.json', [RECORD_ROW])
     out = cx.gen('GenFix/Record/TyView.lean')
@@ -287,6 +297,7 @@ CASES = [
     ('elim-record', elim_record),
     ('elim-val-agrees', elim_val_agrees),
     ('fold-record', fold_record),
+    ('foldof-record', foldof_record),
     ('view-record', view_record),
     ('view-no-arity', view_no_arity),
     ('view-leaf-one', view_leaf_one),

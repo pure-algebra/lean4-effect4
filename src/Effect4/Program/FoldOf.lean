@@ -105,6 +105,9 @@ structure Member where
   arity : Nat
   /-- The binder is `List M` rather than `M`: a positional sibling, folded by `List.foldr`. -/
   isList : Bool
+  /-- For a sibling over a list of products holding the member (`renderFields : List (String ×
+  Ty) → String` beside `renderRaw`): the element type. `none` for a sibling over `List M`. -/
+  elem : Option Expr := none
 deriving Inhabited
 
 /-- Which family member a type is, directly or under `List`, with the inductive's parameters
@@ -118,8 +121,41 @@ def familyArgsOf (fam : Family) (t : Expr) : MetaM (Option (Nat × Array Expr ×
   let some j := fam.members.idxOf? c | return none
   return some (j, t.getAppArgs.extract 0 fam.params.size, isList)
 
+/-- The leaves of a product type, left to right (a non-product type is its own one leaf). -/
+def prodLeaves : Nat → Expr → MetaM (Array Expr)
+  | 0, t => throwError "fold_of: the product {t} is nested too deep"
+  | fuel + 1, t => do
+    let t ← whnfR t
+    if t.isAppOfArity ``Prod 2 then
+      return (← prodLeaves fuel t.appFn!.appArg!) ++ (← prodLeaves fuel t.appArg!)
+    return #[t]
+
+/-- `List E` with `E` a product holding exactly one family member among its leaves, the others
+naming none (`List (String × Ty)`, `List (String × Ty × Bool)`): the member and the element type.
+What a sibling over a field list reads (decisions row 171; probe Q, Q3). -/
+def pairElemOf (fam : Family) (t : Expr) : MetaM (Option (Nat × Expr)) := do
+  let t ← whnf t
+  unless t.isAppOfArity ``List 1 do return none
+  let e ← whnfR t.appArg!
+  unless e.isAppOfArity ``Prod 2 do return none
+  let mentions := fun (s : Expr) => fam.members.any fun mem => (s.find? (·.isConstOf mem)).isSome
+  let mut found : Option Nat := none
+  for leaf in ← prodLeaves 8 e do
+    match ← familyArgsOf fam leaf with
+    | some (j, _, false) =>
+      if found.isSome then return none
+      found := some j
+    | _ => if mentions leaf then return none
+  match found with
+  | some j =>
+    if e.hasFVar || e.hasMVar then
+      throwError "fold_of: the element type {e} depends on a binder; a field-list sibling reads a closed one"
+    return some (j, e)
+  | none => return none
+
 /-- Read `g`'s signature: the first binder whose type is a family member, or, when there is
-none, the first whose type is a list of one (the list sibling). -/
+none, the first whose type is a list of one (the list sibling), or a list of products holding one
+(the field-list sibling). -/
 def memberOf (fam : Family) (g : Name) : MetaM Member := do
   let info ← getConstInfoDefn g
   forallTelescope info.type fun xs _ => do
@@ -129,6 +165,10 @@ def memberOf (fam : Family) (g : Name) : MetaM Member := do
     for h : i in [:xs.size] do
       if let some (j, _, true) ← familyArgsOf fam (← inferType xs[i]) then
         return { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList := true }
+    for h : i in [:xs.size] do
+      if let some (j, e) ← pairElemOf fam (← inferType xs[i]) then
+        return { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList := true,
+                 elem := some e }
     throwError "fold_of: {g} takes no value of the family {fam.members}"
 
 /-- `XFam.rec (motive := fun _ => Type u) T₁ … Tₙ`, as a function of the family. -/
@@ -282,16 +322,98 @@ def ctorsOf (fam : Family) (m : Member) : MetaM (Array Name) := do
   if m.isList then return #[``List.nil, ``List.cons]
   return (← getConstInfoInduct fam.members[m.member]!).ctors.toArray
 
+/-- A list sibling's element type: the member, or the product a field-list sibling reads. -/
+def elemTypeOf (fam : Family) (m : Member) (params : Array Expr) : Expr :=
+  m.elem.getD (mkAppN (mkConst fam.members[m.member]!) params)
+
 /-- A constructor's type at the member's parameters (`List`'s at the element type). -/
 def ctorTypeAt (fam : Family) (m : Member) (ctor : Name) (params : Array Expr) : MetaM Expr := do
   let ty := (← getConstInfoCtor ctor).type
-  if m.isList then instantiateForall ty #[mkAppN (mkConst fam.members[m.member]!) params]
+  if m.isList then instantiateForall ty #[elemTypeOf fam m params]
   else instantiateForall ty params
 
 /-- A constructor applied to the member's parameters and its arguments. -/
 def nodeOf (fam : Family) (m : Member) (ctor : Name) (params : Array Expr) (args : Array Expr) : Expr :=
-  if m.isList then mkAppN (mkAppN (mkConst ctor [Level.zero]) #[mkAppN (mkConst fam.members[m.member]!) params]) args
+  if m.isList then mkAppN (mkAppN (mkConst ctor [Level.zero]) #[elemTypeOf fam m params]) args
   else mkAppN (mkAppN (mkConst ctor) params) args
+
+/-- The fold generator's name for a position (`tools/Effect4Gen/Fold.lean`, `Pos.suffix` and
+`leafHint`): a member by its family label, a product `prod_<a>_<b>`, a leaf by the last dotted
+component of its printed type with the first letter lowered. A field-list sibling's `eq_cata`
+reads the generated `cata_pos_list_<suffix>_eq` by this name. -/
+def posSuffix (fam : Family) : Nat → Expr → MetaM String
+  | 0, t => throwError "fold_of: the position {t} is nested too deep"
+  | fuel + 1, t => do
+    let t ← whnfR t
+    if t.isAppOfArity ``Prod 2 then
+      return "prod_" ++ (← posSuffix fam fuel t.appFn!.appArg!) ++ "_" ++ (← posSuffix fam fuel t.appArg!)
+    if let some (j, _, false) ← familyArgsOf fam t then return fam.fams[j]!.getString!
+    let text ← withOptions (fun o => (o.setBool `pp.fullNames true).setBool `pp.universes false) do
+      return toString (← ppExpr t)
+    let kept := text.foldl (fun acc c => if c.isAlphanum || c == '.' then acc.push c else acc) ""
+    let last := ((kept.splitOn ".").reverse.head?).getD ""
+    match last.toList with
+    | [] => return "leaf"
+    | c :: rest => return String.ofList (c.toLower :: rest)
+
+/-- An element of a product type as a constructor tree over fresh locals, one per leaf, so that the
+pair split of a field-list sibling's arm reduces (`(n, t) :: rest`, not `x :: rest`). -/
+def withElemCtor {α : Type} : Nat → Expr → Array Expr → (Array Expr → Expr → MetaM α) → MetaM α
+  | 0, t, _, _ => throwError "fold_of: the product {t} is nested too deep"
+  | fuel + 1, t, acc, k => do
+    let t ← whnfR t
+    if t.isAppOfArity ``Prod 2 then
+      withElemCtor fuel t.appFn!.appArg! acc fun acc1 ea =>
+        withElemCtor fuel t.appArg! acc1 fun acc2 eb => do
+          k acc2 (← mkAppM ``Prod.mk #[ea, eb])
+    else withLocalDeclD (Name.mkSimple s!"e{acc.size}") t fun x => k (acc.push x) x
+
+/-- The leaves of a value of a product type, by projection, left to right. -/
+def elemProjs : Nat → Expr → Expr → MetaM (Array Expr)
+  | 0, t, _ => throwError "fold_of: the product {t} is nested too deep"
+  | fuel + 1, t, e => do
+    let t ← whnfR t
+    if t.isAppOfArity ``Prod 2 then
+      return (← elemProjs fuel t.appFn!.appArg! (← mkAppM ``Prod.fst #[e])) ++
+        (← elemProjs fuel t.appArg! (← mkAppM ``Prod.snd #[e]))
+    return #[e]
+
+/-- A proof of `motive x` for `x` of a product type, from one of `motive` at the constructor tree
+over the leaves (`Prod.rec`, nested): what reduces a field-list sibling's arm in its `eq_foldr`. -/
+def caseElem : Nat → Expr → Expr → (Expr → MetaM Expr) → MetaM Expr
+  | 0, x, _, _ => throwError "fold_of: the product at {x} is nested too deep"
+  | fuel + 1, x, motive, k => do
+    let t ← whnfR (← inferType x)
+    unless t.isAppOfArity ``Prod 2 do return ← k x
+    let α := t.appFn!.appArg!
+    let β := t.appArg!
+    let mk ← withLocalDeclD `a α fun a => withLocalDeclD `b β fun b => do
+      let motiveA ← withLocalDeclD `a' α fun a' => do
+        mkLambdaFVars #[a'] (motive.beta #[← mkAppM ``Prod.mk #[a', b]])
+      let pa ← caseElem fuel a motiveA fun aval => do
+        let motiveB ← withLocalDeclD `b' β fun b' => do
+          mkLambdaFVars #[b'] (motive.beta #[← mkAppM ``Prod.mk #[aval, b']])
+        caseElem fuel b motiveB fun bval => do
+          let v ← mkAppM ``Prod.mk #[aval, bval]
+          mkExpectedTypeHint (← k v) (motive.beta #[v])
+      mkLambdaFVars #[a, b] pa
+    mkAppOptM ``Prod.rec #[some α, some β, some motive, some mk, some x]
+
+/-- The arguments and the node of `m`'s arm at a constructor: the constructor's fields, or, for a
+field-list sibling at `List.cons`, the element's leaves and the tail with the element built as a
+constructor tree. -/
+def withArmNode {α : Type} (fam : Family) (m : Member) (ctor : Name) (params : Array Expr)
+    (k : Array Expr → Expr → MetaM α) : MetaM α := do
+  match m.elem with
+  | some e =>
+    if ctor == ``List.cons then
+      withElemCtor 8 e #[] fun leaves xval =>
+        withLocalDeclD `rest (mkApp (mkConst ``List [Level.zero]) e) fun restV =>
+          k (leaves.push restV) (mkAppN (mkConst ``List.cons [Level.zero]) #[e, xval, restV])
+    else k #[] (mkApp (mkConst ``List.nil [Level.zero]) e)
+  | none =>
+    let ctorTy ← ctorTypeAt fam m ctor params
+    forallTelescope ctorTy fun args _ => k args (nodeOf fam m ctor params args)
 
 /-- The number of leading binders that every member has and that every recursive call in the
 block passes through unchanged: the fixed prefix. -/
@@ -299,13 +421,23 @@ def fixedPrefix (block : Array Name) (members : Array Member) (fam : Family) : M
   let mut k := members.foldl (fun k m => min k m.at_) members[0]!.at_
   for m in members do
     k ← forallTelescope m.type fun xs _ => do
-      let some (_, params, _) ← familyArgsOf fam (← inferType xs[m.at_]!)
-        | throwError "fold_of: {m.fn}: the family value's type could not be read"
+      -- the family's parameters as the member's binder applies them; a field-list sibling's
+      -- binder is a list of products, so they are read off the element's member leaf
+      let params ← match m.elem with
+        | some e => do
+          let mut found : Option (Array Expr) := none
+          for leaf in ← prodLeaves 8 e do
+            if let some (_, ps, false) ← familyArgsOf fam leaf then found := some ps
+          let some ps := found
+            | throwError "fold_of: {m.fn}: no leaf of the element {e} is a member of the family"
+          pure ps
+        | none => do
+          let some (_, ps, _) ← familyArgsOf fam (← inferType xs[m.at_]!)
+            | throwError "fold_of: {m.fn}: the family value's type could not be read"
+          pure ps
       let mut k := k
       for ctor in ← ctorsOf fam m do
-        let ctorTy ← ctorTypeAt fam m ctor params
-        k ← forallTelescope ctorTy fun args _ => do
-          let node := nodeOf fam m ctor params args
+        k ← withArmNode fam m ctor params fun _ node => do
           let (_, arm) ← armOf m (xs.extract 0 m.at_) node (xs.extract (m.at_ + 1) xs.size)
           let mut k := k
           for call in callsIn block arm #[] do
@@ -328,6 +460,8 @@ def withShape {α : Type} (fixed : Array Expr) (fixedCount : Nat) (m : Member)
 first projection out of the paired carrier, and the hom's function at each member. -/
 structure Positions where
   members : Array Name
+  /-- The family's namespace: the fold generator's `prodMapSnd`/`prodMapFst`/`prodMapBoth`. -/
+  ns : Name
   memberTy : Nat → Expr
   /-- `Prod.fst : M × R → M` at member `j`. -/
   fstFn : Nat → Expr
@@ -346,6 +480,20 @@ def mapThrough (P : Positions) (atMember : Nat → Expr) : Nat → Expr → Meta
         throwError "fold_of: {t} is not the member at the family's parameters"
       return atMember j
     unless t.isApp do throwError "fold_of: no functor map through the position {t}"
+    -- a product: the generated map of the side(s) naming a member, the other side's type given
+    -- (core's `Prod.map` takes two functions and is not a one-parameter wrapper's map)
+    if t.isAppOfArity ``Prod 2 then
+      let a := t.appFn!.appArg!
+      let b := t.appArg!
+      let names := fun (s : Expr) => P.members.any fun mem => (s.find? (·.isConstOf mem)).isSome
+      match names a, names b with
+      | false, true =>
+        return ← mkAppOptM (P.ns ++ `prodMapSnd) #[some a, none, none, some (← mapThrough P atMember fuel b)]
+      | true, false =>
+        return ← mkAppOptM (P.ns ++ `prodMapFst) #[none, some b, none, some (← mapThrough P atMember fuel a)]
+      | true, true =>
+        return ← mkAppM (P.ns ++ `prodMapBoth) #[← mapThrough P atMember fuel a, ← mapThrough P atMember fuel b]
+      | false, false => throwError "fold_of: the product {t} names no member"
     let inner ← mapThrough P atMember fuel t.appArg!
     if t.isAppOfArity ``List 1 then return ← mkAppM ``List.map #[inner]
     if t.isAppOfArity ``Option 1 then return ← mkAppM ``Option.map #[inner]
@@ -366,6 +514,17 @@ def identThrough (P : Positions) : Nat → Expr → Expr → MetaM Expr
       let lhs := mkApp (P.fstFn j) (mkApp (P.fv j) x)
       return ← mkExpectedTypeHint (← mkEqRefl x) (← mkEq lhs x)
     unless t.isApp do throwError "fold_of: no functor map through the position {t}"
+    if t.isAppOfArity ``Prod 2 then
+      let a := t.appFn!.appArg!
+      let b := t.appArg!
+      let names := fun (s : Expr) => P.members.any fun mem => (s.find? (·.isConstOf mem)).isSome
+      let lhs := mkApp (← mapThrough P P.fstFn (fuel + 1) t) (mkApp (← mapThrough P P.fv (fuel + 1) t) x)
+      let side := fun (proj : Name) (s : Expr) => do
+        let xs ← mkAppM proj #[x]
+        let goal ← mkEq (← mkAppM proj #[lhs]) xs
+        if names s then mkExpectedTypeHint (← identThrough P fuel s xs) goal
+        else mkExpectedTypeHint (← mkEqRefl xs) goal
+      return ← mkAppM ``Prod.ext #[← side ``Prod.fst a, ← side ``Prod.snd b]
     let inner := t.appArg!
     let h ← mapThrough P P.fstFn fuel inner
     let g ← mapThrough P P.fv fuel inner
@@ -497,10 +656,9 @@ def convert (target : Name) : MetaM Unit := do
       let mut needsPara := false
       for m in members do
         for ctor in ← ctorsOf fam m do
-          let ctorTy ← ctorTypeAt fam m ctor fam.params
-          let usesChild ← forallTelescope ctorTy fun args _ => withShape m fun ys pre _ => do
+          -- a field-list sibling's cons arm is read at `(n, t) :: rest`, so its pair split reduces
+          let usesChild ← withArmNode fam m ctor fam.params fun args node => withShape m fun ys pre _ => do
             let acc := ys.eraseIdx! pre
-            let node := nodeOf fam m ctor fam.params args
             let childFam ← childrenOf args
             let (_, arm) ← armOf m (fixed ++ acc.extract 0 pre) node (acc.extract pre acc.size)
             let marks := childFam.map fun (k, _, _) =>
@@ -543,6 +701,23 @@ def convert (target : Name) : MetaM Unit := do
         mkLambdaFVars #[e] r
       let mut fns : Array Expr := #[]
       for i in [:fam.members.size] do fns := fns.push (← homFnOf i)
+      -- the positions: a container child's value is read back from its paired results through
+      -- the position's functor map (a field-list sibling maps its elements with it too)
+      let P : Positions :=
+        { members := fam.members, ns, memberTy
+          fstFn := fun j => mkAppN (mkConst ``Prod.fst [Level.zero, level]) #[memberTy j, results[j]!]
+          fv := fun j => fns[j]! }
+      -- a sibling's element type (the member, or a field-list sibling's product), its list, the
+      -- element with the member replaced by the carrier, and the element map built from one at
+      -- the member
+      let sibElem := fun (m : Member) => elemTypeOf fam m fam.params
+      let sibList := fun (m : Member) => mkApp (mkConst ``List [Level.zero]) (sibElem m)
+      let sibElemR := fun (m : Member) => match m.elem with
+        | some e => carrierTyped e
+        | none => rTy m.member
+      let sibMap := fun (m : Member) (f : Expr) => match m.elem with
+        | some e => mapThrough P (fun _ => f) 8 e
+        | none => pure f
       -- the list siblings, each as a `List.foldr` over the mapped results: its `nil` and
       -- `cons` read off its two arms, with `f … x …` the element's result and `s … rest …`
       -- the fold of the rest
@@ -558,7 +733,42 @@ def convert (target : Name) : MetaM Unit := do
           if stillRecursive arm then
             throwError "fold_of: {m.fn} at []: a recursive call in the base arm:\n  {← ppExpr arm}"
           mkLambdaFVars acc arm
-        let consArm ← withLocalDeclD `x (memberTy j) fun x =>
+        let consArm ← if let some e := m.elem then
+          -- a field-list sibling: the arm read at `(n, t) :: rest`, the member's call its result
+          -- and the other leaves the mapped element's own components
+          withLocalDeclD `x (sibElemR m) fun x =>
+          withLocalDeclD `rrest carrier fun rrest => withShape m fun ys pre _ => do
+            let acc := ys.eraseIdx! pre
+            withArmNode fam m ``List.cons fam.params fun args node => do
+              let leaves := args.pop
+              let restV := args.back!
+              let (_, arm) ← armOf m (fixed ++ acc.extract 0 pre) node (acc.extract pre acc.size)
+              let projs ← elemProjs 8 e x
+              let mut found : Option Nat := none
+              for h : i in [:leaves.size] do
+                if let some (_, _, false) ← familyArgsOf fam (← inferType leaves[i]) then found := some i
+              let some mi := found
+                | throwError "fold_of: {m.fn}: no leaf of the element {e} is a member of the family"
+              let r := projs[mi]!
+              let body := abstractCalls #[(leaves[mi]!, none, if para then sndOf j r else r),
+                (restV, some m.fn, rrest)] arm
+              if stillRecursive body then
+                throwError "fold_of: {m.fn} at (…) :: rest: a recursive call that is not on the \
+                  element's member or the tail:\n  {← ppExpr arm}"
+              if body.containsFVar restV.fvarId! then
+                throwError "fold_of: {m.fn} at (…) :: rest: the tail is used as a value; a fold of \
+                  the list does not carry it:\n  {← ppExpr arm}"
+              let mut body := body
+              for h : i in [:leaves.size] do
+                if i != mi then body := body.replaceFVar leaves[i] projs[i]!
+              -- under `para` the member's value is its result's first component
+              if para then body := body.replaceFVar leaves[mi]! (fstOf j r)
+              if body.containsFVar leaves[mi]!.fvarId! then
+                throwError "fold_of: {m.fn} at (…) :: rest: the member is used as a value but no \
+                  arm of the block made this a paramorphism:\n  {← ppExpr arm}"
+              mkLambdaFVars #[x, rrest] (← mkLambdaFVars acc body)
+        else
+          withLocalDeclD `x (memberTy j) fun x =>
           withLocalDeclD `rest (listTy j) fun restV =>
           withLocalDeclD `r (rTy j) fun r =>
           withLocalDeclD `rrest carrier fun rrest => withShape m fun ys pre _ => do
@@ -585,7 +795,7 @@ def convert (target : Name) : MetaM Unit := do
         let some m := members.find? (·.fn == s) | throwError "fold_of: {s} is not a member"
         -- `List.foldr : (α → β → β) → β → List α → β`
         let foldr := mkConst ``List.foldr [Level.zero, level]
-        pure (mkAppN foldr #[rTy m.member, carrier, consArm, nilArm, rs])
+        pure (mkAppN foldr #[sibElemR m, carrier, consArm, nilArm, rs])
       -- `s.eq_foldr : ∀ xs, (fun pre post => s fixed pre xs post) = List.foldr cons nil (xs.map f)`
       -- by induction on the list, the base and the step by the sibling's unfold equations
       let mut siblingLemmas : Array (Name × Name) := #[]
@@ -593,11 +803,11 @@ def convert (target : Name) : MetaM Unit := do
         unless m.isList do continue
         let j := m.member
         let some (_, carrier, nilArm, consArm) := siblingFolds.find? (·.1 == m.fn) | continue
-        let fv := fns[j]!
+        let fv ← sibMap m fns[j]!
         let mapped := fun (xs : Expr) =>
-          mkAppN (mkConst ``List.map [Level.zero, level]) #[memberTy j, rTy j, fv, xs]
+          mkAppN (mkConst ``List.map [Level.zero, level]) #[sibElem m, sibElemR m, fv, xs]
         let foldOf := fun (xs : Expr) =>
-          mkAppN (mkConst ``List.foldr [Level.zero, level]) #[rTy j, carrier, consArm, nilArm, mapped xs]
+          mkAppN (mkConst ``List.foldr [Level.zero, level]) #[sibElemR m, carrier, consArm, nilArm, mapped xs]
         let asFn := fun (xs : Expr) => withShape m fun ys pre _ => do
           let acc := ys.eraseIdx! pre
           mkLambdaFVars acc (mkAppN (memberFn m) (acc.extract 0 pre ++ #[xs] ++ acc.extract pre acc.size))
@@ -608,28 +818,37 @@ def convert (target : Name) : MetaM Unit := do
           for a in acc.reverse do
             h ← mkFunExt (← mkLambdaFVars #[a] h)
           pure h
-        let motive ← withLocalDeclD `xs (listTy j) fun xs => do
+        let motive ← withLocalDeclD `xs (sibList m) fun xs => do
           mkLambdaFVars #[xs] (← mkEq (← asFn xs) (foldOf xs))
         let base ← eqAt (nodeOf fam m ``List.nil fam.params #[]) fun acc pre =>
           unfoldEqAt m levelParams (fixed ++ acc.extract 0 pre) (nodeOf fam m ``List.nil fam.params #[]) (acc.extract pre acc.size)
-        let step ← withLocalDeclD `x (memberTy j) fun x => withLocalDeclD `rest (listTy j) fun restV => do
+        let step ← withLocalDeclD `x (sibElem m) fun x => withLocalDeclD `rest (sibList m) fun restV => do
           let ihTy ← mkEq (← asFn restV) (foldOf restV)
           withLocalDeclD `ih ihTy fun ih => do
-            let node := nodeOf fam m ``List.cons fam.params #[x, restV]
-            let h ← eqAt node fun acc pre => do
-              let before := fixed ++ acc.extract 0 pre
-              let after := acc.extract pre acc.size
-              let (_, arm) ← armOf m before node after
-              let h₀ ← unfoldEqAt m levelParams before node after
-              -- the arm with every `s fixed a rest b` as `F a b`, for the induction hypothesis
-              let motive' ← withLocalDeclD `F carrier fun F => do
-                mkLambdaFVars #[F] (abstractCalls #[(restV, some m.fn, F)] arm)
-              mkEqTrans h₀ (← mkCongrArg motive' ih)
+            let proofAt := fun (xval : Expr) => do
+              let node := nodeOf fam m ``List.cons fam.params #[xval, restV]
+              eqAt node fun acc pre => do
+                let before := fixed ++ acc.extract 0 pre
+                let after := acc.extract pre acc.size
+                let (_, arm) ← armOf m before node after
+                let h₀ ← unfoldEqAt m levelParams before node after
+                -- the arm with every `s fixed a rest b` as `F a b`, for the induction hypothesis
+                let motive' ← withLocalDeclD `F carrier fun F => do
+                  mkLambdaFVars #[F] (abstractCalls #[(restV, some m.fn, F)] arm)
+                mkEqTrans h₀ (← mkCongrArg motive' ih)
+            -- a field-list sibling's element is cased into its leaves first, so the arm's pair
+            -- split reduces
+            let h ← if m.elem.isSome then do
+                let motiveX ← withLocalDeclD `x' (sibElem m) fun x' => do
+                  let node := nodeOf fam m ``List.cons fam.params #[x', restV]
+                  mkLambdaFVars #[x'] (← mkEq (← asFn node) (foldOf node))
+                caseElem 8 x motiveX proofAt
+              else proofAt x
             mkLambdaFVars #[x, restV, ih] h
         let lemmaName := m.fn ++ `eq_foldr
-        let (thmTy, thmVal) ← withLocalDeclD `xs (listTy j) fun xs => do
+        let (thmTy, thmVal) ← withLocalDeclD `xs (sibList m) fun xs => do
           let ty ← mkForallFVars (fixed ++ #[xs]) (← mkEq (← asFn xs) (foldOf xs))
-          let recApp := mkAppN (mkConst ``List.rec [Level.zero, Level.zero]) #[memberTy j, motive, base, step, xs]
+          let recApp := mkAppN (mkConst ``List.rec [Level.zero, Level.zero]) #[sibElem m, motive, base, step, xs]
           pure (ty, ← mkLambdaFVars (fixed ++ #[xs]) recApp)
         addDecl <| .thmDecl { name := lemmaName, levelParams := info.levelParams, type := thmTy, value := thmVal }
         siblingLemmas := siblingLemmas.push (m.fn, lemmaName)
@@ -638,12 +857,6 @@ def convert (target : Name) : MetaM Unit := do
       -- to the field at the recursive results (a matcher on a constructor; never through the
       -- recursion's `brecOn`); a list child's sibling call is rewritten by `s.eq_foldr`; closed
       -- by `funext` over the varying binders and `congrArg (node, ·)` under `para`
-      -- the positions: a container child's value is read back from its paired results through
-      -- the position's functor map
-      let P : Positions :=
-        { members := fam.members, memberTy
-          fstFn := fun j => mkAppN (mkConst ``Prod.fst [Level.zero, level]) #[memberTy j, results[j]!]
-          fv := fun j => fns[j]! }
       let mut fields : Array Expr := #[]
       let mut homEqs : Array Expr := #[]
       for i in [:fam.members.size] do
@@ -703,7 +916,15 @@ def convert (target : Name) : MetaM Unit := do
                   let mut calls : Array (Expr × Option Name × Expr) := #[]
                   let mut listChildren : Array (Expr × Name) := #[]
                   for ((k, j, kind), r) in childFam.zip rs do
-                    if kind == 2 then pure ()
+                    if kind == 2 then
+                      -- a field-list child (`List (String × Ty)`): every sibling reading a list
+                      -- of this element folds the mapped elements; another position is read back
+                      -- as a value below
+                      for s in members do
+                        if let some e := s.elem then
+                          if ← isDefEq argTys[k]! (mkApp (mkConst ``List [Level.zero]) e) then
+                            calls := calls.push (args[k]!, some s.fn, ← foldOfSibling s.fn r)
+                            listChildren := listChildren.push (args[k]!, s.fn)
                     else if kind == 1 then
                       -- every sibling reading a list of this member folds the same results; a
                       -- list child the arm never mentions (`| .list _ => Tag.list`) needs none,
@@ -753,8 +974,9 @@ def convert (target : Name) : MetaM Unit := do
                       let some sm := members.find? (·.fn == s) | throwError "fold_of: {s}"
                       let j := sm.member
                       let some (_, carrier', nilArm, consArm) := siblingFolds.find? (·.1 == s) | throwError "fold_of: {s}"
-                      let mapped := mkAppN (mkConst ``List.map [Level.zero, level]) #[memberTy j, rTy j, fns[j]!, xs]
-                      pure (mkAppN (mkConst ``List.foldr [Level.zero, level]) #[rTy j, carrier', consArm, nilArm, mapped]))]
+                      let mapped := mkAppN (mkConst ``List.map [Level.zero, level])
+                        #[sibElem sm, sibElemR sm, ← sibMap sm fns[j]!, xs]
+                      pure (mkAppN (mkConst ``List.foldr [Level.zero, level]) #[sibElemR sm, carrier', consArm, nilArm, mapped]))]
                   for a in acc.reverse do
                     h ← mkFunExt (← mkLambdaFVars #[a] h)
                   let proof ← if para then
@@ -853,7 +1075,11 @@ def convert (target : Name) : MetaM Unit := do
         let j := m.member
         let some (_, lemmaName) := siblingLemmas.find? (·.1 == m.fn) | continue
         let some (_, carrier, nilArm, consArm) := siblingFolds.find? (·.1 == m.fn) | continue
-        let stem := fam.fams[j]!.getString!
+        -- the list position's helper: `cata_pos_list_ty`, or for a field-list sibling the
+        -- element's (`cata_pos_list_prod_string_ty`)
+        let stem ← match m.elem with
+          | some e => posSuffix fam 8 e
+          | none => pure fam.fams[j]!.getString!
         let posEqName := ns ++ Name.mkSimple ("cata_pos_list_" ++ stem ++ "_eq")
         let posName := ns ++ Name.mkSimple ("cata_pos_list_" ++ stem)
         unless (← getEnv).contains posEqName do
@@ -864,7 +1090,7 @@ def convert (target : Name) : MetaM Unit := do
           let lhs := mkAppN (memberFn m) (acc.extract 0 pre ++ #[xs] ++ acc.extract pre acc.size)
           let cataL := mkAppN (mkConst posName (← levelsFor posName)) (fam.params ++ #[R, alg, xs])
           let foldr := fun (l : Expr) =>
-            mkAppN (mkConst ``List.foldr [Level.zero, level]) #[rTy j, carrier, consArm, nilArm, l]
+            mkAppN (mkConst ``List.foldr [Level.zero, level]) #[sibElemR m, carrier, consArm, nilArm, l]
           -- e₁ : (fun acc => s … xs …) = foldr (xs.map fv)
           let e₁ := mkAppN (mkConst lemmaName levelParams) (fixed ++ #[xs])
           -- e₂ : xs.map fv = xs.map (cata alg), pointwise by the uniqueness theorem
@@ -873,12 +1099,13 @@ def convert (target : Name) : MetaM Unit := do
           let unique := mkConst fam.uniques[j]! (← levelsFor fam.uniques[j]!)
           let pointwise ← withLocalDeclD `x (memberTy j) fun x =>
             mkLambdaFVars #[x] (mkAppN unique (fam.params ++ #[R, alg, hom, x]))
-          let e₂ ← mkCongrArg (← withLocalDeclD `g (← mkArrow (memberTy j) (rTy j)) fun g =>
-              mkLambdaFVars #[g] (mkAppN (mkConst ``List.map [Level.zero, level]) #[memberTy j, rTy j, g, xs]))
+          let e₂ ← mkCongrArg (← withLocalDeclD `g (← mkArrow (memberTy j) (rTy j)) fun g => do
+              mkLambdaFVars #[g] (mkAppN (mkConst ``List.map [Level.zero, level])
+                #[sibElem m, sibElemR m, ← sibMap m g, xs]))
             (← mkFunExt pointwise)
           -- e₃ : cata_pos_list alg xs = xs.map (cata alg)
           let e₃ := mkAppN (mkConst posEqName (← levelsFor posEqName)) (fam.params ++ #[R, alg, xs])
-          let foldrFn ← withLocalDeclD `l (mkApp (mkConst ``List [level]) (rTy j)) fun l => mkLambdaFVars #[l] (foldr l)
+          let foldrFn ← withLocalDeclD `l (mkApp (mkConst ``List [level]) (sibElemR m)) fun l => mkLambdaFVars #[l] (foldr l)
           -- e₄ : foldr (cata_pos_list alg xs) = foldr (xs.map fv)
           let e₄ ← mkCongrArg foldrFn (← mkEqTrans e₃ (← mkEqSymm e₂))
           let h ← mkEqTrans e₁ (← mkEqSymm e₄)
