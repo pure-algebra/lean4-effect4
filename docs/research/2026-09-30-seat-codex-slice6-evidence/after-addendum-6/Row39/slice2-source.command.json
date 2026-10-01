@@ -1,0 +1,19 @@
+{
+  "command": [
+    "lake",
+    "build",
+    "Effect4.Schema.Authoring",
+    "Effect4.Codegen.Schema",
+    "Effect4.Codegen.Target",
+    "Effect4.Api",
+    "Effect4.Laws",
+    "Test.Schema.AuthoringContract",
+    "Test.Schema.PayloadContract",
+    "Test.Codegen.SchemaGenerationContract",
+    "Test.Codegen.SchemaGenerationCoverage"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  }
+}

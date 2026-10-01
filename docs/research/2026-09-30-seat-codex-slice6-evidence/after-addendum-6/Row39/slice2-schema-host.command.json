@@ -1,0 +1,10 @@
+{
+  "command": [
+    "bash",
+    "scripts/check-schema-typescript-generation.sh"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  }
+}

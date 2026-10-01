@@ -5,8 +5,10 @@ import TypeScript
 # Raw Schema TypeScript generation
 
 Lowers the canonical Effect4 raw Schema carriers to the retained TypeScript
-syntax. The public entry points return syntax or declarations; `source` is the
-final convenience boundary that applies the deterministic renderer.
+syntax. The public entry points return raw syntax or declarations; the
+`*Source` functions apply the deterministic renderer. `moduleSyntax` constructs
+raw module syntax and performs no field admission. Its emitted `fromJson` call
+is checked by the pinned host when the generated module is executed.
 
 This is a raw persisted-document generator. It does not claim a live Schema
 reviver, decoded-value denotation, codec law, or `Described` instance.
@@ -333,85 +335,6 @@ def documentSource (value : Document) (style : Style := house0) : String :=
 def multiDocumentSource (value : MultiDocument) (style : Style := house0) : String :=
   Render.expr style 0 (multiDocumentExpr value)
 
-/-! ## Generation admission -/
-
-@[simp] private theorem exprFieldValue_sizeOf_lt
-    (field : String × Expr) : sizeOf field.2 < sizeOf field := by
-  cases field
-  simp +arith
-
-private def stringsUnique : List String → Bool
-  | [] => true
-  | first :: rest => !(rest.contains first) && stringsUnique rest
-
-private def fieldNamesUnique (fields : List (String × Expr)) : Bool :=
-  stringsUnique (fields.map Prod.fst)
-
-mutual
-private def exprKeysUnique : Expr → Bool
-  | .ident _ | .str _ | .int _ | .float64Bits _ | .bool _ | .jsNull => true
-  | .call fn arguments => exprKeysUnique fn && exprListKeysUnique arguments
-  | .object fields | .objectML fields | .objectQuoted fields | .objectQuotedML fields |
-      .objectFromEntries fields =>
-      fieldNamesUnique fields && exprFieldsKeysUnique fields
-  | .arr items => exprListKeysUnique items
-  | .arrow _ body => exprKeysUnique body
-  | .generic fn _ => exprKeysUnique fn
-  | .lambda _ body _ => exprKeysUnique body
-  | .method target _ arguments => exprKeysUnique target && exprListKeysUnique arguments
-  | .member target _ => exprKeysUnique target
-  | .cond test thenBranch elseBranch =>
-      exprKeysUnique test && exprKeysUnique thenBranch && exprKeysUnique elseBranch
-  -- The statement-bearing formers (lean4-typescript v0.5.0, for the `Eff` printer) are
-  -- not schema content: the admission refuses them rather than skipping their bodies.
-  | .generator _ => false
-  | .arrowBlock _ _ _ => false
-termination_by value => sizeOf value
-decreasing_by all_goals decreasing_tactic
-
-private def exprListKeysUnique : List Expr → Bool
-  | [] => true
-  | first :: rest => exprKeysUnique first && exprListKeysUnique rest
-termination_by values => sizeOf values
-decreasing_by all_goals decreasing_tactic
-
-private def exprFieldsKeysUnique : List (String × Expr) → Bool
-  | [] => true
-  | first :: rest => exprKeysUnique first.2 && exprFieldsKeysUnique rest
-termination_by fields => sizeOf fields
-decreasing_by
-  all_goals first
-    | decreasing_tactic
-    | exact Nat.lt_trans (exprFieldValue_sizeOf_lt _) (by simp +arith)
-end
-
-/-- The generated-binding profile, owned by the `typescript` package. -/
-abbrev targetIdentifier (name : String) : Bool := TypeScript.targetIdentifier name
-
-/-- A document can enter the convenience generator when its existing field
-admission holds and every object expression produced from it has unique keys.
-This rejects duplicate raw JSON, annotation, and references keys before a
-JavaScript object could collapse them. -/
-def documentReady (document : Document) : Bool :=
-  document.fieldAdmissible && exprKeysUnique (documentExpr document)
-
-/-- All generated bindings are legal and distinct, the document is admitted,
-and every associated datum retains unique object keys. -/
-def generationReady (schemaName : String) (document : Document)
-    (data : List (String × Json)) : Bool :=
-  let names := schemaName :: (schemaName ++ "Json") :: data.map Prod.fst
-  names.all targetIdentifier && stringsUnique names && documentReady document &&
-    data.all fun entry => exprKeysUnique (json entry.2)
-
-def GenerationReady (schemaName : String) (document : Document)
-    (data : List (String × Json)) : Prop :=
-  generationReady schemaName document data = true
-
-theorem generationReady_iff (schemaName : String) (document : Document)
-    (data : List (String × Json)) :
-    generationReady schemaName document data = true ↔
-      GenerationReady schemaName document data := Iff.rfl
-
 /-- One exported raw persisted Schema JSON value. -/
 def rawDocumentDecl (name : String) (document : Document) : Decl :=
   .const
@@ -439,8 +362,9 @@ def dataDecl (name : String) (value : Json) : Decl :=
       value := json value
       type := some (.name ["Schema", "Json"] []) }
 
-/-- Build a complete target module without asking callers to assemble target
-syntax or invoke the low-level renderer themselves. -/
+/-- Build raw target module syntax. This constructor checks neither binding
+names nor document fields; emitted object expressions have the target runtime's
+key behavior. The caller chooses when to render and execute the module. -/
 def moduleSyntax (schemaName : String) (document : Document)
     (data : List (String × Json) := []) : Module :=
   { header := ["Generated by Effect4 Schema.", "", "Do not edit."]
@@ -449,24 +373,5 @@ def moduleSyntax (schemaName : String) (document : Document)
       , .all "SchemaRepresentation" "effect/SchemaRepresentation" ]
     decls := rawDocumentDecl schemaName document :: documentDecl schemaName ::
       data.map fun entry => dataDecl entry.1 entry.2 }
-
-/-- Checked module construction. Invalid identifiers, collisions, inadmissible
-documents, and duplicate object keys return `none`. -/
-def module? (schemaName : String) (document : Document)
-    (data : List (String × Json) := []) : Option Module :=
-  if generationReady schemaName document data then
-    some (moduleSyntax schemaName document data)
-  else none
-
-/-- Convenience generation boundary using the declared house style. -/
-def source? (schemaName : String) (document : Document)
-    (data : List (String × Json) := []) (style : Style := house0) : Option String :=
-  (module? schemaName document data).map (Render.module style)
-
-/-- Checked, high-level generation alias for callers that should not need to
-name either the target syntax tree or its renderer. -/
-def generate? (schemaName : String) (document : Document)
-    (data : List (String × Json) := []) (style : Style := house0) : Option String :=
-  source? schemaName document data style
 
 end Effect4.Codegen.Schema

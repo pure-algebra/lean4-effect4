@@ -4,8 +4,9 @@ import Test.Codegen.SchemaGenerationCoverage
 namespace Effect4Harness.SchemaGenerationCoverage
 
 private def fixture : String :=
-  (Effect4.Codegen.Schema.generate? "AllRepresentationsSchema"
-    Test.Codegen.SchemaGenerationCoverage.document).getD ""
+  TypeScript.Render.module TypeScript.house0
+    (Effect4.Codegen.Schema.moduleSyntax "AllRepresentationsSchema"
+      Test.Codegen.SchemaGenerationCoverage.document)
 
 #eval do
   IO.println ("// " ++ Tools.GeneratedStamp.note "harness/schema-generation/EmitCoverageFixture.lean")

@@ -262,17 +262,17 @@ doctor: ## the tools and installs every tier needs, with their versions
 	@printf 'dune       %s\n' "$$($(OCAML) dune --version 2>&1 || echo 'missing (the OCaml lane needs the effect4 switch)')"
 	@printf 'ts/eff     %s\n' "$$(test -d ts/eff/node_modules/effect && echo 'installed (effect, @effect/sql-sqlite-bun, oxc-parser)' || echo 'missing: bun install --frozen-lockfile --cwd ts/eff')"
 	@printf 'truth link %s\n' "$$(test -e harness/truth/node_modules && echo 'present' || echo 'missing: make harness/truth/node_modules')"
-	@printf 'schema-host %s\n' "$$(test -d harness/schema-host/node_modules/effect && echo 'installed (typescript 7.0.2, tsgo)' || echo 'missing: npm ci --prefix harness/schema-host (check-schema-ts, check-schema-host)')"
+	@printf 'schema-host %s\n' "$$(test -d harness/schema-host/node_modules/effect && echo 'installed (typescript 7.0.2, tsgo)' || echo 'missing: npm ci --prefix harness/schema-host (check-schema-ts)')"
 
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
-  host-protocol census schema-ts schema-pins schema-host tools corpus
+  host-protocol census schema-ts schema-pins tools corpus
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
 FORCE:
 
 check: build check-roots check-gen ## after every change: the build with its axiom audit, the fresh root elaboration, the generated-file drift
-check-full: check check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-schema-host ## everything else: the outside oracles, the host groups and the tool harnesses
+check-full: check check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -466,15 +466,11 @@ $(CHK)/schema-ts: $(SCHEMA_SOURCES) $(wildcard $(SCHEMA_TS_DIR)/*) scripts/check
 	@mkdir -p $(CHK) && touch $@
 
 # The rest of the Schema slice, on its inputs (ledger decision 3): the rc.112 tag pins
-# are a textual extraction from the vendored SchemaRepresentation.ts; the host
-# harnesses run the pinned Schema host (EFFECT4_EFFECT_NODE_MODULES, harness/schema-host).
+# are a textual extraction from the vendored SchemaRepresentation.ts. The retained
+# generation gate uses the pinned host (EFFECT4_EFFECT_NODE_MODULES, harness/schema-host).
 SCHEMA_PIN := vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts
 $(CHK)/schema-pins: $(SCHEMA_PIN) src/Effect4/Schema/Representation.lean scripts/check-schema-census.sh
 	bash scripts/check-schema-census.sh $(SCHEMA_PIN)
-	@mkdir -p $(CHK) && touch $@
-
-$(CHK)/schema-host: $(SCHEMA_SOURCES) $(shell find harness/schema-annotations -type f -not -path '*/node_modules/*') scripts/check-schema-annotations.sh | build
-	bash scripts/check-schema-annotations.sh
 	@mkdir -p $(CHK) && touch $@
 
 # The one tool harness: the exact `Classical.choice` admissions against compiled declarations.
@@ -492,7 +488,7 @@ help: ## this list
 	@echo
 	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
 	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts, corpus,'
-	@echo '                     schema-pins, schema-host, tools'
+	@echo '                     schema-pins, tools'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
 	@echo '                     truth, host-protocol, schema-ts, census'

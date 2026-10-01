@@ -12,7 +12,7 @@ package is pinned (§8 of the design). A target owns a syntax, and an emitter an
 syntax and never text: `TypeScript.Module` is the pinned package's, `Json` is the estate's.
 An **artefact** is one emitted value of one target, and `Artefact.render` is the one place
 syntax becomes bytes. It is admitted by exact name in the axiom gate, exactly as
-`Codegen.Schema.generate?` was; nothing inside the seam calls it.
+the raw Schema generator was; nothing inside the seam calls it.
 
 ## JSON text
 

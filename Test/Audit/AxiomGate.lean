@@ -165,8 +165,6 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Codegen.Schema.representationSource
   , ``Effect4.Codegen.Schema.documentSource
   , ``Effect4.Codegen.Schema.multiDocumentSource
-  , ``Effect4.Codegen.Schema.source?
-  , ``Effect4.Codegen.Schema.generate?
   -- The codegen crossing to bytes (`docs/research/2026-09-04-codegen-api-design.md` §3.1):
   -- JSON text folds over `String`s for escaping, and the artefact renderer is one call to
   -- the pinned package's renderer or to it. `JsonText.number` is deliberately not here: it

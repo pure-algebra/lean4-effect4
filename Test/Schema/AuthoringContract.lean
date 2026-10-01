@@ -6,11 +6,6 @@ namespace Test.Schema.AuthoringContract
 
 open Effect4
 
-#check Effect4.Schema.Predicate.decide
-#check Effect4.Schema.Predicate.and
-#check Effect4.Schema.Predicate.contramap
-#check Effect4.Schema.check
-
 private def nameSchema : Representation :=
   Effect4.Schema.struct [Effect4.Schema.property "name" Effect4.Schema.string]
 
@@ -29,22 +24,6 @@ private def nameSchema : Representation :=
 
 #guard Effect4.Schema.withCheck (Effect4.Schema.suspend Effect4.Schema.string)
     Effect4.Schema.Check.trimmed = none
-
-private def even (value : Nat) : Bool := value % 2 == 0
-private def positive (value : Nat) : Bool := value > 0
-
-#guard Effect4.Schema.check (Effect4.Schema.Predicate.and even positive) 4
-#guard !Effect4.Schema.check (Effect4.Schema.Predicate.and even positive) 3
-#guard Effect4.Schema.check
-  (Effect4.Schema.Predicate.contramap String.length positive) "Lean"
-
-#guard Effect4.Schema.check
-  (Effect4.Schema.Predicate.all [even, positive, fun value => value < 10]) 4
-
-#guard Effect4.Schema.check
-  (Effect4.Schema.Predicate.any [even, fun value => value == 3]) 3
-
-#guard Effect4.Schema.check (Effect4.Schema.Predicate.each positive) [1, 2, 3]
 
 #guard nameSchema = .objects none []
   [{ name := .string "name", type := .string none [], isOptional := false,

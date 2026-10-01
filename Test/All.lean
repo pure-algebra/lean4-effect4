@@ -5,15 +5,6 @@ import Test.Schema.AnnotationDataPlaneContract
 import Test.Schema.AuthoringContract
 import Test.Schema.DialectContract
 import Test.Counterexamples.Codegen.TypeScriptRender
-import Test.Counterexamples.Schema.CensusCoverage
-import Test.Counterexamples.Schema.KindAlphabetSeparation
-import Test.Counterexamples.Schema.NoLocalSymbolPropertyKey
-import Test.Counterexamples.Schema.NoNullLiteralKind
-import Test.Counterexamples.Schema.SemanticTagSeparation
-import Test.Counterexamples.Schema.WireSpellingDrift
-import Test.Counterexamples.Schema.AnnotationDataPlane
-import Test.Counterexamples.Schema.RecursiveElimination
-import Test.Counterexamples.Schema.Codec
 import Test.Schema.RepresentationContract
 import Test.Schema.SubAlphabetContract
 import Test.Schema.PayloadContract

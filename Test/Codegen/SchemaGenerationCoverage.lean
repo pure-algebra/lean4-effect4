@@ -22,8 +22,9 @@ private def representedGroup : Check :=
         payload := .null
         schemas := some [Schema.string] })
 
-/-- One field-admissible representative for each tag, in the exact canonical
-tag-census order. Nested values also exercise both union modes, all literal
+/-- One raw representative for each tag, in the exact canonical tag-census
+order. The retained host fixture checks this document with rc.112.
+Nested values also exercise both union modes, all literal
 payload legs, global-symbol property keys, annotations, and both check nodes. -/
 def allRepresentations : List Representation :=
   [ .declaration
@@ -84,9 +85,5 @@ def document : Document :=
     (referenceEntries ++ [{ key := "StringRef", representation := Schema.string }])
 
 #guard allRepresentations.map Representation.tag = RepresentationTag.census
-#guard document.fieldAdmissible
-#guard Effect4.Codegen.Schema.documentReady document
-#guard Effect4.Codegen.Schema.generationReady
-  "AllRepresentationsSchema" document []
 
 end Test.Codegen.SchemaGenerationCoverage

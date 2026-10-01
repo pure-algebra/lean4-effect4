@@ -229,6 +229,34 @@ so this slice runs no producer. Retired counterexample rows move with immutable 
 into the existing archive; their IDs and original row text remain intact.
 
 
+
+#### Slice 2 — retire Check, Accepts, Image and schemaOf
+
+Base `f0591f36`; this commit is a source checkpoint, with the final row39 generator chain
+explicitly pending. Deletes the ruled modules, predicate conveniences, retired batteries and
+annotation harness. The old “called by nothing” premise was false: Codegen.Schema's
+`documentReady` called field admission. The entire obsolete convenience-admission chain is
+therefore deleted rather than weakened or moved to a second checker. Both fixed fixture
+emitters use the existing raw renderer. No surviving checked API accepts a new input. The
+retired API's general name/collision/field refusal behavior is not attributed to the host
+fixture tests, which cover only their stated inputs.
+
+`slice2-source` passes all named retained consumers and direct Schema tests (533 jobs).
+`slice2-schema-host` passes before any expected-file regeneration: all three stored fixture
+files compare byte-for-byte; the pinned TypeScript 7.0.2 compiler, six-file tsgo 0.38.0 check,
+and Effect rc.112 runtime checks pass, including 22 representations/two checks and two roots
+sharing one reference. Locked dependencies were installed only in this worktree, with no
+lockfile change. `slice2-gate-build` compiles the changed core root and named trust exceptions.
+Fourteen retired attack rows move verbatim to the existing archive; two mixed-evidence rows
+keep their live witnesses and pin deleted evidence to immutable history.
+
+The generated groups transitively read the retired modules, so the addendum's generator
+exception applies. One complete derived→lcnf→eff→wire→cas chain follows the final source slice;
+intermediate source checkpoints are not claimed to be regenerated integrations. The retained
+regeneration review names the Make dependencies and selected declarations. Every actual
+generated diff will be checked before this deletion series is declared complete.
+
+
 ## After addendum 5
 
 **The one thing first.** C is merged into `refactor/phase1-phase3` at `bc77e97f`, with

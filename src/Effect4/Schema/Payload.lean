@@ -11,8 +11,9 @@ and wire spellings all live above this boundary.
 
 The carriers are permissive raw data.  Non-empty reference keys and annotation
 identifiers, finite retained JSON payloads, and the other persisted field
-constraints are checked later by `Effect4.Schema.Check`; they are not hidden
-inside constructors here.
+constraints belong to the persisted host decoding boundary; they are not
+hidden inside constructors here. Row 39 retires the separate Lean field-admission
+judgment while retaining these raw carriers.
 -/
 
 namespace Effect4

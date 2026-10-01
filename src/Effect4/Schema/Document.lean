@@ -179,9 +179,8 @@ The single-root embedding does not reach every multi-root document.
 
 The witness carries **two** roots rather than none. An empty-root witness would
 conflate this nominal one-root/many-root distinction with the separate
-non-empty-root admission clause of `src/Effect4/Schema/Check.lean`, and
-`MultiDocument.fieldAdmissible_two_roots` records that this witness is itself
-field-admissible.
+non-empty-root constraint of the persisted host document codec. This theorem
+concerns the raw container embedding alone.
 -/
 theorem Document.toMulti_two_roots_not_image (document : Document) :
     Document.toMulti document ≠

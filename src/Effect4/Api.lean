@@ -17,7 +17,6 @@ import Effect4.Codegen.Target
 import Effect4.Store.Domain.Cascade
 import Effect4.Schema.Bridge
 import Effect4.Schema.Codec
-import Effect4.Schema.Image
 
 /-!
 # Effect4.Api — the application face
@@ -55,10 +54,11 @@ One module, the whole pipeline, small interface:
   The `answers` list `load`, `replay`, `run` and `runSync` still accept is the legacy route
   the session replaces; it stays only until the truth corpus runs on keyed tapes (DI-23's
   amendment), and nothing new should use it.
-* The Schema half: a persisted document or representation as its `Schema.Struct({…})`
-  syntax (`schemaDocument`, `schemaRepresentation`) and the JSON payload beside it
-  (`jsonExpr`). Text generation with its module assembler is
-  `Effect4.Codegen.Schema.generate?`, admitted by exact name in the axiom gate.
+* The Schema half: persisted `SchemaRepresentation` JSON syntax
+  (`schemaDocument`, `schemaRepresentation`) and the JSON payload beside it
+  (`jsonExpr`). `Codegen.Schema.moduleSyntax` assembles raw module syntax;
+  `Effect4.Codegen.Schema.documentSource` renders one raw document and is admitted
+  by exact name in the axiom gate.
 * The codegen crossing: `Target` and `Artefact` represent emitted syntax, and `render`
   is the one crossing from an artefact to bytes — admitted by exact name in the gate as
   `Effect4.Codegen.Artefact.render`, and the reason the rest of this face never returns text.
@@ -131,11 +131,6 @@ theorem explain_none_iff (program : Program) (table : RowTable) :
 theorem blame_none_iff (program : Program) (table : RowTable) :
     blame program table = none ↔ wellTyped program table = true := by
   simp [blame, ← explain_none_iff]
-
-/-- A program's boundary schema document (Decision 12 / S-4): computes the Document for
-any well-typed program, refusing when the program is ill-typed. -/
-def schemaOf (program : Program) (table : RowTable := []) : Option Effect4.Document :=
-  (typeOf program table).map Effect4.Program.EffTy.document
 
 /-- The program as one TypeScript expression, at the empty environment. -/
 def print (program : Program) (table : RowTable := []) : Except PrintRefusal TypeScript.Expr :=
@@ -572,11 +567,11 @@ end TypedLayer
 
 /-! ## Schema, as syntax -/
 
-/-- A persisted Schema document as its `Schema.Struct({…})` Program. -/
+/-- A persisted Schema document as raw `SchemaRepresentation` JSON syntax. -/
 def schemaDocument (document : Effect4.Document) : TypeScript.Expr :=
   Effect4.Codegen.Schema.documentExpr document
 
-/-- A persisted representation as its Schema Program. -/
+/-- A persisted representation as raw `SchemaRepresentation` JSON syntax. -/
 def schemaRepresentation (representation : Effect4.Representation) : TypeScript.Expr :=
   Effect4.Codegen.Schema.representation representation
 
@@ -592,9 +587,5 @@ export Effect4.Codegen.Artefact (render)
 /-! ## Multi-Tier Cascading CAS Store -/
 
 export Effect4.Store (CascadingStore)
-
-/-! ## The program image -/
-
-export Effect4.Schema (ProgramImage)
 
 end Effect4.Api

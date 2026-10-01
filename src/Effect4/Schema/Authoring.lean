@@ -1,4 +1,4 @@
-import Effect4.Schema.Check
+import Effect4.Schema.Document
 
 /-!
 # Schema authoring conveniences
@@ -8,84 +8,6 @@ not define a second schema AST or executable predicate language.
 -/
 
 namespace Effect4.Schema
-
-universe u v
-
-/-! ## Higher-order executable predicates -/
-
-/-- Derive an executable Boolean predicate from a decidable proposition. -/
-def Predicate.decide {α : Type u} (property : α → Prop) [DecidablePred property] : α → Bool :=
-  fun value => if property value then true else false
-
-/-- The derived Boolean predicate reflects its proposition. -/
-theorem Predicate.decide_iff {α : Type u} (property : α → Prop) [DecidablePred property]
-    (value : α) :
-    Predicate.decide property value = true ↔ property value := by
-  simp [Predicate.decide]
-
-/-- Conjunction of executable predicates. -/
-def Predicate.and {α : Type u} (left right : α → Bool) : α → Bool :=
-  fun value => left value && right value
-
-/-- Disjunction of executable predicates. -/
-def Predicate.or {α : Type u} (left right : α → Bool) : α → Bool :=
-  fun value => left value || right value
-
-/-- Negation of an executable predicate. -/
-def Predicate.not {α : Type u} (predicate : α → Bool) : α → Bool :=
-  fun value => !predicate value
-
-/-- Read a predicate through a projection. This is the usual contravariant
-composition operation and is the basis for derived field predicates. -/
-def Predicate.contramap {α : Type u} {β : Type v}
-    (project : β → α) (predicate : α → Bool) : β → Bool :=
-  fun value => predicate (project value)
-
-/-- Every predicate in an ordered list must hold. -/
-def Predicate.all {α : Type u} (predicates : List (α → Bool)) : α → Bool :=
-  fun value => predicates.all fun predicate => predicate value
-
-/-- At least one predicate in an ordered list must hold. -/
-def Predicate.any {α : Type u} (predicates : List (α → Bool)) : α → Bool :=
-  fun value => predicates.any fun predicate => predicate value
-
-/-- Lift an element predicate to every member of a list. -/
-def Predicate.each {α : Type u} (predicate : α → Bool) : List α → Bool :=
-  fun values => values.all predicate
-
-/-- Execute a higher-order predicate. Kept as a named boundary so authoring
-code reads `Schema.check predicate value`. -/
-def check {α : Type u} (predicate : α → Bool) (value : α) : Bool := predicate value
-
-theorem Predicate.and_eq_true {α : Type u} (left right : α → Bool) (value : α) :
-    Predicate.and left right value = true ↔
-      left value = true ∧ right value = true := by
-  simp [Predicate.and]
-
-theorem Predicate.or_eq_true {α : Type u} (left right : α → Bool) (value : α) :
-    Predicate.or left right value = true ↔
-      left value = true ∨ right value = true := by
-  simp [Predicate.or]
-
-theorem Predicate.not_eq_true {α : Type u} (predicate : α → Bool) (value : α) :
-    Predicate.not predicate value = true ↔ predicate value = false := by
-  simp [Predicate.not]
-
-@[simp] theorem Predicate.contramap_apply {α : Type u} {β : Type v}
-    (project : β → α) (predicate : α → Bool) (value : β) :
-    Predicate.contramap project predicate value = predicate (project value) := rfl
-
-theorem Predicate.all_eq_true {α : Type u}
-    (predicates : List (α → Bool)) (value : α) :
-    Predicate.all predicates value = true ↔
-      ∀ predicate ∈ predicates, predicate value = true := by
-  simp [Predicate.all]
-
-theorem Predicate.any_eq_true {α : Type u}
-    (predicates : List (α → Bool)) (value : α) :
-    Predicate.any predicates value = true ↔
-      ∃ predicate ∈ predicates, predicate value = true := by
-  simp [Predicate.any]
 
 /-! ## Registered, persisted check descriptions -/
 

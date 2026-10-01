@@ -1,0 +1,12 @@
+
+> effect4-schema-host@0.0.0 prepare
+> effect-tsgo patch --typescript
+
+Patched typescript at /Users/pooks/Dev/lean4-effect4-slice6/harness/schema-host/node_modules/@typescript/typescript-darwin-arm64/lib/tsc
+
+added 14 packages, and audited 15 packages in 6s
+
+2 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities

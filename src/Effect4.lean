@@ -44,14 +44,11 @@ import Effect4.Machine.Exit
 -- The shared value foundation, Machine side (U0): the handle-kind and runtime constructor
 -- tables, the `Value.*` spellings, and the generic cause/exit images over the carrier.
 import Effect4.Machine.Value
--- The Schema data plane: the persisted carrier, the annotation data plane, the
--- checker, the authoring face, and the value, transformation, codec,
--- registry and foreign rows.
+-- The Schema data plane: the persisted carriers, annotations and raw authoring face.
 import Effect4.Schema.Payload
 import Effect4.Schema.Representation
 import Effect4.Schema.Annotations
 import Effect4.Schema.Document
-import Effect4.Schema.Check
 import Effect4.Schema.Authoring
 -- Service keys, the rc.112 scope state machine, the frame alphabet (`Prim`,
 -- `PrimInterp`, `FrameFiber`).
@@ -77,8 +74,6 @@ import Effect4.Machine.Alphabets
 import Effect4.Machine.Term
 import Effect4.Machine.Stores
 import Effect4.Machine.Context
--- Structural acceptance of persisted Schema documents.
-import Effect4.Schema.Accepts
 -- The codegen target and artefact definitions with the one crossing to bytes.
 import Effect4.Codegen.Target
 import Effect4.Codegen.Template

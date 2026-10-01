@@ -1,0 +1,38 @@
+{
+  "checks": {
+    "identifierKey_exact": true,
+    "refKey_exact": true,
+    "rendering_block_exact": true,
+    "nodeAnnotations_definition_exact": true,
+    "key_laws_exact": true,
+    "key_carrier_exact": true,
+    "entry_singleton_append_exact": true,
+    "four_guards_exact_and_removed": true,
+    "pure_printer_tail_exact_except_four_moved_guards": true,
+    "shape_schema_free": true,
+    "ofshape_reachable_from_effect4": true,
+    "ofshape_avoids_canonical_cycle": true,
+    "printer_imports_fold_directly": true,
+    "annotations_no_fold_import": true,
+    "canonical_explicit_ofshape": true,
+    "document_raw_result": true,
+    "node_genesis_untouched": true
+  },
+  "pure_shape_closure": [
+    "Effect4.Data.Json",
+    "Effect4.Data.JsonNumber",
+    "Effect4.Store.Carrier.Digest",
+    "Effect4.Store.Carrier.Digits",
+    "Effect4.Store.Carrier.Kind",
+    "Effect4.Store.Carrier.Utf8",
+    "Effect4.Store.Carrier.Val",
+    "Effect4.Store.Domain.Shape",
+    "Hash.Sha256.Api",
+    "Std"
+  ],
+  "reviewed_files": {
+    "/private/tmp/row39-series/03-annotations/source.patch": "80283bd9e89d81fd6d891f7547a52c84a58f9a1b4c8f6bc1526bc8066e801d01",
+    "/private/tmp/row39-series/04-of-shape/source.patch": "5f79f5527f5de6f78cf9eb3eceaddbb429829dc3a13ebb0b5ba1508f0df7a76f"
+  },
+  "scope": "Static source/import comparison only; no Lean or generated output execution"
+}
