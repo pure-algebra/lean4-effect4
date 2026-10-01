@@ -191,12 +191,11 @@ theorem Document.toMulti_two_roots_not_image (document : Document) :
   injection rootsEqual with _ tailEqual
   exact absurd tailEqual (by simp)
 
-/-! ## Structural annotation data plane
+/-! ## Structural representation sites
 
-These traversals are deliberately acyclic: they visit the stored document
-containers and delegate each representation subtree to
-`Representation.annotationBags`.  Reference keys are never resolved, so dead
-and duplicate entries remain visible in their original order.
+These retained traversals visit only the roots and stored reference representations.
+Reference keys are never resolved, so dead and duplicate entries remain visible
+in their original order. The recursive annotation traversal is retired by row 39.
 -/
 
 private def collectReferenceRepresentations : List ReferenceEntry →
@@ -343,17 +342,6 @@ private theorem representationSites_lawful :
         rw [collectReferenceRepresentations_modify]
         rfl
 
-/-- Every annotation bag in the root and every stored reference entry, in
-structural preorder. -/
-def annotationBags : Traversal Document Annotations :=
-  representationSites.compose Representation.annotationBags
-
-/-- The document annotation data-plane traversal satisfies the four pure
-traversal equations. -/
-theorem annotationBags_lawful : Traversal.Lawful annotationBags := by
-  exact Traversal.Lawful.compose representationSites_lawful
-    Representation.annotationBags_lawful
-
 end Document
 
 namespace MultiDocument
@@ -403,17 +391,6 @@ private theorem representationSites_lawful :
             (modifyReferenceRepresentations f references) =
           (roots ++ collectReferenceRepresentations references).map f
         rw [collectReferenceRepresentations_modify, map_append_exact]
-
-/-- Every annotation bag in every root and stored reference entry, in
-structural preorder. -/
-def annotationBags : Traversal MultiDocument Annotations :=
-  representationSites.compose Representation.annotationBags
-
-/-- The multi-root annotation data-plane traversal satisfies the four pure
-traversal equations. -/
-theorem annotationBags_lawful : Traversal.Lawful annotationBags := by
-  exact Traversal.Lawful.compose representationSites_lawful
-    Representation.annotationBags_lawful
 
 end MultiDocument
 

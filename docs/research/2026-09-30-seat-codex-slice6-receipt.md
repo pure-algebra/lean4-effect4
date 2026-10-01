@@ -257,6 +257,19 @@ regeneration review names the Make dependencies and selected declarations. Every
 generated diff will be checked before this deletion series is declared complete.
 
 
+
+#### Slice 3 — trim annotations to the retained carrier and keys
+
+Base `d75f5c25`; this commit is the third source checkpoint, with final generation still
+pending. The key/carrier, entry/singleton/append and local node optional remain. Recursive
+editing APIs and four now-dead Document/MultiDocument wrappers are deleted. Codegen.Schema
+imports the retained Fold explicitly. The node optional's law keeps its statement and uses
+constructor cases instead of the former silent fallback; the independent review checks the
+retained definition text. `slice3-source` passes the eight named source/test targets (291 jobs),
+and `slice3-axioms` reports the retained law at `[propext, Quot.sound]` or less. No generated
+output is hand-edited and no duplicate-key behavior is introduced.
+
+
 ## After addendum 5
 
 **The one thing first.** C is merged into `refactor/phase1-phase3` at `bc77e97f`, with
