@@ -520,7 +520,7 @@ theorem storedObserverOk_halt {root : ProgramSource} {w : W} {m : RState} {why :
     rw [halt_race?]
     exact h
   | untrackChild parent => trivial
-  | dropScopeFinalizer scope key => trivial
+  | dropScopeFinalizer scope key => exact h
   | callback key => trivial
 
 
@@ -557,7 +557,7 @@ theorem queueOk_nil (root : ProgramSource) (w : W) (m : RState) : QueueOk root w
     delivery := fun _ h => (nomatch h), owners := List.nodup_nil, registration := trivial,
     keys := ⟨fun _ h => (nomatch h), fun _ _ _ _ h => (nomatch h)⟩,
     observer := fun _ _ _ h => (nomatch h), enroll := fun _ _ h => (nomatch h),
-    noRaceAfterInterrupt := fun _ _ _ h => (nomatch h) }
+    noRaceAfterInterrupt := fun _ _ _ h => (nomatch h), links := fun _ _ _ _ _ h => (nomatch h) }
 
 /-- A command whose result is `(m.halt why, [])` (for example `linkScope` on an unknown scope,
 `Machine/Fibers.lean:1010`) meets the conclusion `StepPreserves` asks for, at the same world. -/
@@ -715,7 +715,8 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
       promiseClosed := old.promiseClosed
       tokenClosed := old.tokenClosed
       root := old.root }
-  refine ⟨⟨valid, ⟨fun f hf => ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩, ?_, ⟨q.stuck⟩⟩
+  refine ⟨⟨valid, ⟨fun f hf => ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩, ?_,
+    ⟨q.stuck, fun f hf scope ambient => ?_, fun o ho => ?_⟩⟩
   · have fact := facts f hf
     refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
     · intro t _
@@ -794,6 +795,10 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
       cases running
     · rw [hexit] at exited
       cases exited
+  · rw [(facts f hf).context] at ambient
+    cases ambient
+  · rw [due] at ho
+    cases ho
 
 theorem quiet6 : QuietRoot m6 :=
   { ids := by decide +kernel, races := by decide +kernel, stuck := m6_stuck_none,

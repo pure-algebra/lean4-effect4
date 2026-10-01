@@ -100,7 +100,8 @@ def CountdownAt (w : World) (m : RState) (waiter : FiberId) (token : Nat)
     | some pending => ∃ answer error tokenTy,
         CountdownPayload w m waiter pending answer error tokenTy ∧ incoming answer error
 
-/-- A stored observer's source declaration is connected to the destination token. -/
+/-- A stored observer's source declaration is connected to the destination token; a stored
+scope-finalizer drop names a scope the store holds (row 139). -/
 def StoredObserverOk (root : ProgramSource) (w : World) (m : RState)
     (source : FiberId) : Observer → Prop
   | .resumeAwait waiter token mode => ∃ sourceTy,
@@ -111,10 +112,13 @@ def StoredObserverOk (root : ProgramSource) (w : World) (m : RState)
     | none => True
     | some race => ∃ resultTy, RacePayload root w race resultTy ∧
         (source ∈ race.state.live → FiberColumnsBelow w source resultTy.answer resultTy.error)
-  | .untrackChild _ | .dropScopeFinalizer _ _ | .callback _ => True
+  -- `fireObserver` halts on an absent scope (`Machine/Fibers.lean:1668-1671`; row 139)
+  | .dropScopeFinalizer scope _ => (m.state.scopes.entryAt scope).isSome = true
+  | .untrackChild _ | .callback _ => True
 
 /-- A queued observer must type what it can deliver or buffer, including a race callback
-while registration is still active. The three no-payload variants keep their machine guards. -/
+while registration is still active; a scope-finalizer drop names a scope the store holds. The two
+remaining no-payload variants keep their machine guards. -/
 def ObserverCommandOk (root : ProgramSource) (w : World) (m : RState)
     (source : FiberId) (exit : ExitV) : Observer → Prop
   | .resumeAwait waiter token mode => ∃ sourceTy,
@@ -127,7 +131,9 @@ def ObserverCommandOk (root : ProgramSource) (w : World) (m : RState)
     | none => True
     | some race => ∃ resultTy, RacePayload root w race resultTy ∧
         (source ∈ race.state.live → ExitOk w resultTy exit)
-  | .untrackChild _ | .dropScopeFinalizer _ _ | .callback _ => True
+  -- `fireObserver` halts on an absent scope (`Machine/Fibers.lean:1668-1671`; row 139)
+  | .dropScopeFinalizer scope _ => (m.state.scopes.entryAt scope).isSome = true
+  | .untrackChild _ | .callback _ => True
 
 /-- Enrollment may fire an already-exited entrant immediately, so queueing only a typed
 observe command is insufficient. This clause uses the same declared result as RacePayload. -/

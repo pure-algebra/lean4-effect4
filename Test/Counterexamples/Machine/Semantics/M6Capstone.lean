@@ -1283,7 +1283,7 @@ def command : RCmd := .deliver Api.root false
 
 theorem queue : QueueOk (rootProgram : ProgramSource) world machine [command] := by
   refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩, ⟨trivial, trivial⟩,
-    ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+    ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c hc
     rw [List.mem_singleton] at hc
     subst c
@@ -1307,6 +1307,9 @@ theorem queue : QueueOk (rootProgram : ProgramSource) world machine [command] :=
     rw [List.mem_singleton] at member
     cases member
   · intro host yielding race member
+    rw [List.mem_singleton] at member
+    cases member
+  · intro mode scope target interruptor extra member
     rw [List.mem_singleton] at member
     cases member
 
@@ -1511,7 +1514,7 @@ theorem result_typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy 
 theorem result_queue : QueueOk (rootProgram : ProgramSource) world result.1 result.2 := by
   rw [result_commands]
   refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩, ⟨trivial, trivial⟩,
-    ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+    ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c member
     rw [List.mem_singleton] at member
     subst c
@@ -1539,6 +1542,9 @@ theorem result_queue : QueueOk (rootProgram : ProgramSource) world result.1 resu
     rw [List.mem_singleton] at member
     cases member
   · intro host yielding race member
+    rw [List.mem_singleton] at member
+    cases member
+  · intro mode scope target interruptor extra member
     rw [List.mem_singleton] at member
     cases member
 
@@ -1586,6 +1592,16 @@ theorem published_saved_typed : H1Shapes.SavedPosition (rootProgram : ProgramSou
 #print axioms completed_position
 #print axioms published_saved_typed
 
+/-- Row 139's liveness at a machine with the empty context everywhere and no owed resume. -/
+theorem quiet_live (m : RState) (stuck : m.stuck = none)
+    (contexts : ∀ f ∈ m.fibers, f.context = emptyCtx)
+    (due : m.state.deferreds.due = []) : MachineLive m := by
+  refine ⟨stuck, fun f hf scope ambient => ?_, fun o ho => ?_⟩
+  · rw [contexts f hf] at ambient
+    cases ambient
+  · rw [due] at ho
+    cases ho
+
 /-! Row 134: the same terminal delivery under the split. The input's running root is read by the
 queued `deliver` (`ReadCode`); after the step its running root is continued by the queued
 `finish`, so its stale code is inert in `I` while the queue types its exit (`QueueOk.payload`).
@@ -1621,7 +1637,7 @@ theorem typedState_machine : TypedState (rootProgram : ProgramSource) unitTy wor
     cases hp
 
 theorem machine_typed : MachineTyped (rootProgram : ProgramSource) unitTy world machine := by
-  refine ⟨typedState_machine, ?_, ⟨rfl⟩⟩
+  refine ⟨typedState_machine, ?_, quiet_live machine rfl (by decide) rfl⟩
   intro f hf _ idle
   change f ∈ [fiber] at hf
   rw [List.mem_singleton] at hf
@@ -1672,7 +1688,7 @@ theorem typedState_result : TypedState (rootProgram : ProgramSource) unitTy worl
 `finish` is queued. -/
 theorem result_config_typed :
     ConfigTyped (rootProgram : ProgramSource) unitTy world result.1 result.2 := by
-  refine ⟨⟨typedState_result, ?_, ⟨rfl⟩⟩, ?_, result_queue⟩
+  refine ⟨⟨typedState_result, ?_, quiet_live result.1 rfl (by decide) rfl⟩, ?_, result_queue⟩
   · intro f hf _ idle
     change f ∈ [afterFiber] at hf
     rw [List.mem_singleton] at hf
@@ -1699,6 +1715,7 @@ theorem completed_liveCode : LiveCode (rootProgram : ProgramSource) world comple
   subst f
   cases live
 
+#print axioms quiet_live
 #print axioms typedState_machine
 #print axioms machine_typed
 #print axioms config_typed
@@ -1952,7 +1969,7 @@ theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world mac
     rcases member_cases f member with rfl | rfl <;> cases parked
 
 theorem queue : QueueOk (rootProgram : ProgramSource) world machine commands := by
-  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c member
     change c ∈ [command, .finish Api.root (.success .unit)] at member
     rcases List.mem_cons.mp member with rfl | tail
@@ -1990,6 +2007,11 @@ theorem queue : QueueOk (rootProgram : ProgramSource) world machine commands := 
     · rw [List.mem_singleton] at h; cases h
   · intro host yielding race member
     change .afterInterrupt host yielding (.race race) ∈ [command, .finish Api.root (.success .unit)] at member
+    rcases List.mem_cons.mp member with h | h
+    · cases h
+    · rw [List.mem_singleton] at h; cases h
+  · intro mode scope target interruptor extra member
+    change .link mode scope target interruptor extra ∈ [command, .finish Api.root (.success .unit)] at member
     rcases List.mem_cons.mp member with h | h
     · cases h
     · rw [List.mem_singleton] at h; cases h
@@ -2154,7 +2176,7 @@ theorem result_typed (commands : List RCmd) :
 
 theorem result_queue_typed : QueueOk (rootProgram : ProgramSource) world result.1 result.2 := by
   rw [result_queue]
-  refine ⟨?_, ?_, ?_, List.nodup_nil, trivial, ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, List.nodup_nil, trivial, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c member; cases member
   · intro c member; cases member
   · intro c member; cases member
@@ -2165,6 +2187,7 @@ theorem result_queue_typed : QueueOk (rootProgram : ProgramSource) world result.
   · intro source exit observer member; cases member
   · intro race child member; cases member
   · intro host yielding race member; cases member
+  · intro mode scope target interruptor extra member; cases member
 
 /-- H1 (historical): the dispatched input and the halted output were both typed under the halt
 extension of row 133; row 139 removes it (`step_deliver_refuted_by_absent_scope`). -/
@@ -2213,7 +2236,7 @@ def rawResult : RState × List RCmd :=
 
 theorem raw_input_queue : QueueOk (rootProgram : ProgramSource) world result.1 [rawCommand] := by
   refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩,
-    ⟨trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+    ⟨trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c member
     rw [List.mem_singleton] at member
     subst c
@@ -2237,6 +2260,9 @@ theorem raw_input_queue : QueueOk (rootProgram : ProgramSource) world result.1 [
     rw [List.mem_singleton] at member
     cases member
   · intro host yielding race member
+    rw [List.mem_singleton] at member
+    cases member
+  · intro mode scope target interruptor extra member
     rw [List.mem_singleton] at member
     cases member
 
@@ -2311,7 +2337,8 @@ theorem typedState_input : TypedState (rootProgram : ProgramSource) unitTy world
     rcases member_cases f member with rfl | rfl <;> cases parked
 
 theorem config_input : ConfigTyped (rootProgram : ProgramSource) unitTy world machine commands := by
-  refine ⟨⟨typedState_input, ?_, ⟨rfl⟩⟩, ?_, queue⟩
+  refine ⟨⟨typedState_input, ?_,
+    H1TerminalAmendment.quiet_live machine rfl (by decide +kernel) rfl⟩, ?_, queue⟩
   · intro f member _ idle
     rcases member_cases f member with rfl | rfl <;> cases idle
   · intro f member _ reads _ ty declared
@@ -2354,5 +2381,46 @@ theorem step_deliver_refuted_by_absent_scope :
 #print axioms step_deliver_refuted_by_absent_scope
 
 end H1HaltAmendment
+
+/-! Row 139's liveness clauses, each against the halting arm it rules out: a queued `link` or a
+queued scope-finalizer drop naming a scope the store does not hold halts the machine
+(`linkScope`, `fireObserver`), and the new clause refuses exactly that configuration. -/
+namespace Liveness
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Typed
+abbrev W := Effect4.Program.Typed.World
+
+def program : NativeEff := .succeed (.lit .unit)
+def m0 : RState := loadR program 20 20
+def linkAbsent : RCmd := .link .forkIn 7 Api.root none ReasonAnnotations.empty
+def dropAbsent : RCmd := .observe Api.root (.success .unit) (.dropScopeFinalizer 7 0)
+
+theorem link_absent_halts :
+    (letI := termEvaluatorFor program
+     driveStep (interpR program) m0 linkAbsent []).1.stuck = some (.unknownScope 7) := by
+  decide +kernel
+
+theorem drop_absent_halts :
+    (letI := termEvaluatorFor program
+     driveStep (interpR program) m0 dropAbsent []).1.stuck = some (.unknownScope 7) := by
+  decide +kernel
+
+theorem link_absent_refused (root : ProgramSource) (w : W) : ¬ QueueOk root w m0 [linkAbsent] := by
+  intro queue
+  have live := (queue.links .forkIn 7 Api.root none ReasonAnnotations.empty
+    (List.mem_singleton_self _)).1
+  cases live
+
+theorem drop_absent_refused (root : ProgramSource) (w : W) : ¬ QueueOk root w m0 [dropAbsent] := by
+  intro queue
+  have live := queue.observer Api.root (.success .unit) (.dropScopeFinalizer 7 0)
+    (List.mem_singleton_self _)
+  cases live
+
+#print axioms link_absent_halts
+#print axioms drop_absent_halts
+#print axioms link_absent_refused
+#print axioms drop_absent_refused
+
+end Liveness
 
 end Test.Counterexamples.Machine.Semantics.M6Capstone

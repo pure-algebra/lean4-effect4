@@ -164,9 +164,9 @@ def AnswerOk (w : World) (m : RState) : Api.Decision → Prop
   | _ => True
 
 /-- Every queued command's generated content judgment, scheduler authority and keys, plus
-observer and enrollment payload correlation. The code a queued `loop` or `deliver` reads is
-`ReadCode`'s, beside this structure in `ConfigTyped`. The direct forbidden afterInterrupt race
-form is recorded separately and exactly. -/
+observer and enrollment payload correlation and the liveness of a queued link. The code a queued
+`loop` or `deliver` reads is `ReadCode`'s, beside this structure in `ConfigTyped`. The direct
+forbidden afterInterrupt race form is recorded separately and exactly. -/
 structure QueueOk (root : ProgramSource) (w : World) (m : RState)
     (commands : List RCmd) : Prop where
   payload : ∀ command ∈ commands, RCmdOk (preds root) w command
@@ -180,6 +180,11 @@ structure QueueOk (root : ProgramSource) (w : World) (m : RState)
   enroll : ∀ race child, .enrollRace race child ∈ commands → EnrollRaceOk root w m race child
   noRaceAfterInterrupt : ∀ host yielding race,
     .afterInterrupt host yielding (.race race) ∉ commands
+  /-- A queued `link` names a scope the store holds and an existing target: `linkScope` halts
+  otherwise (`Machine/Fibers.lean:1005-1036`). Row 139's typed scope on a queued link. -/
+  links : ∀ mode scope target interruptor extra,
+    .link mode scope target interruptor extra ∈ commands →
+      (m.state.scopes.entryAt scope).isSome = true ∧ (m.fiber? target).isSome = true
 
 theorem QueueOk.fresh {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
     (queue : QueueOk root w m commands) : QueueFresh m commands := queue.keys.below
@@ -211,11 +216,29 @@ def ReadCode (root : ProgramSource) (w : World) (m : RState) (commands : List RC
     raceRegistrationR f.frame.current = none → ∀ ty, w.Γ f.id = some ty →
       Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty f.frame
 
-/-- Row 139's halting freedom and liveness, on the machine alone. -/
+/-- Row 139's halting freedom and liveness, on the machine alone. Each clause names the halting
+arm it rules out; with the scope-finalizer drops of `ObserverState` and `QueueOk.observer`, with
+`QueueOk.links` (in `I`) and a scope-liveness premise on the scope-reading fiber rows (seat B's
+`fiberPre`, pending: `M6Capstone.step_deliver_refuted_by_absent_scope`) they are what each command
+proof needs to show its halting arms unreachable. Race-id liveness for the
+codes that name a race is `RegistrationState` (in `TypedState`): the only race halt is
+`registerRace` on a registration marker (`Machine/Fibers.lean:937-944`), and both code clauses
+leave the marker to it. A fiber handle's liveness is `Fits`'s fiber arm with
+`WorldValid.fibers`. -/
 structure MachineLive (m : RState) : Prop where
   /-- The machine has not halted (`E4-TYPED-CE-014`): every halting arm of a command is an
   obligation of that command's preservation proof. -/
   running : m.stuck = none
+  /-- `forkScoped` links the child into the context's ambient scope (`:1474-1489`; `linkScope`,
+  `:1005-1036`). The scope arm of `HandleFits` reading the scope store (seat A) makes
+  `ServiceOk` carry this for every typed context; until it lands the clause is stated here. -/
+  ambientScopes : ∀ f ∈ m.fibers, ∀ scope, Ctx.ambientScope f.context = some scope →
+    (m.state.scopes.entryAt scope).isSome = true
+  /-- `drainOwed` posts a scheduled resume on its owner's dispatcher and halts on an absent owner
+  (`postTask`, `:709-716`). Today's stores owe only `now` resumes (`DeferredStore.due`,
+  `Machine/Stores.lean:1090`), so this holds vacuously on reachable machines. -/
+  dueOwners : ∀ o ∈ m.state.deferreds.due, ∀ owner priority, o.mode = .scheduled owner priority →
+    (m.fiber? owner).isSome = true
 
 /-- **`J`**, the machine-only typed state (decisions row 134): what every reachable machine
 carries, a budget cut included. -/
@@ -253,7 +276,7 @@ included. The proofs seat's split keyed on a queued `finish` fails exactly here
 theorem evaluate_entry (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
     (id : FiberId) (typed : MachineTyped root rootTy w m) :
     ConfigTyped root rootTy w m [Cmd.evaluate id, Cmd.drainDue] := by
-  refine ⟨typed, ?_, ⟨?_, ?_, ?_, List.nodup_nil, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_⟩⟩
+  refine ⟨typed, ?_, ⟨?_, ?_, ?_, List.nodup_nil, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩⟩
   · rintro f _ _ ⟨yielding, member | member⟩ <;>
       simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
   · intro command member
@@ -274,6 +297,8 @@ theorem evaluate_entry (root : ProgramSource) (rootTy : EffTy) (w : World) (m : 
   · intro race child member
     simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
   · intro host yielding race member
+    simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
+  · intro mode scope target interruptor extra member
     simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
 
 /-- One dispatched command keeps the typed configuration at some later world. The dispatch
@@ -365,6 +390,14 @@ theorem taskCmd_not_reads {command : RCmd} {tasks : List RTask}
     command ≠ .loop id yielding ∧ command ≠ .deliver id yielding := by
   rcases mem_taskCmds member with ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ | ⟨_, _, rfl⟩ | rfl <;>
     exact ⟨fun h => (nomatch h), fun h => (nomatch h)⟩
+
+/-- A task command is not a scope link. -/
+theorem taskCmd_not_link {command : RCmd} {tasks : List RTask}
+    (member : command ∈ tasks.flatMap taskCmds) (mode : Supervision.ScopeMode) (scope : Nat)
+    (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann) :
+    command ≠ .link mode scope target interruptor extra := by
+  rcases mem_taskCmds member with ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ | ⟨_, _, rfl⟩ | rfl <;>
+    exact fun h => nomatch h
 
 /-- A task command is not a registration's work (`launch`, `enrollRace`). -/
 theorem taskCmd_tail {command : RCmd} {tasks : List RTask}
@@ -462,7 +495,8 @@ theorem queueOk_append_tasks {root : ProgramSource} {w : World} {m : RState}
             rw [List.flatMap_append]; exact List.mem_append_left _ hk)⟩,
         fun s e o ho => queue.observer s e o (List.mem_append_left _ ho),
         fun r c hc => queue.enroll r c (List.mem_append_left _ hc),
-        fun h y r hr => queue.noRaceAfterInterrupt h y r (List.mem_append_left _ hr)⟩,
+        fun h y r hr => queue.noRaceAfterInterrupt h y r (List.mem_append_left _ hr),
+        fun md sc tg ir ex hl => queue.links md sc tg ir ex (List.mem_append_left _ hl)⟩,
       ⟨fun c hc => queue.payload c (List.mem_append_right _ hc),
         fun c hc => queue.authority c (List.mem_append_right _ hc),
         fun c hc => queue.delivery c (List.mem_append_right _ hc),
@@ -473,11 +507,12 @@ theorem queueOk_append_tasks {root : ProgramSource} {w : World} {m : RState}
             rw [List.flatMap_append]; exact List.mem_append_right _ hk)⟩,
         fun s e o ho => queue.observer s e o (List.mem_append_right _ ho),
         fun r c hc => queue.enroll r c (List.mem_append_right _ hc),
-        fun h y r hr => queue.noRaceAfterInterrupt h y r (List.mem_append_right _ hr)⟩⟩
+        fun h y r hr => queue.noRaceAfterInterrupt h y r (List.mem_append_right _ hr),
+        fun md sc tg ir ex hl => queue.links md sc tg ir ex (List.mem_append_right _ hl)⟩⟩
   · rintro ⟨queue, snapshot⟩
     refine ⟨fun c hc => ?_, fun c hc => ?_, fun c hc => ?_, ?_,
       registrationQueue_append_tasks.mpr ⟨queue.registration, snapshot.registration⟩, ⟨?_, ?_⟩,
-      fun s e o ho => ?_, fun r c hc => ?_, fun h y r hr => ?_⟩
+      fun s e o ho => ?_, fun r c hc => ?_, fun h y r hr => ?_, fun md sc tg ir ex hl => ?_⟩
     · rcases List.mem_append.mp hc with hc | hc
       · exact queue.payload c hc
       · exact snapshot.payload c hc
@@ -508,6 +543,9 @@ theorem queueOk_append_tasks {root : ProgramSource} {w : World} {m : RState}
     · rcases List.mem_append.mp hr with hr | hr
       · exact queue.noRaceAfterInterrupt h y r hr
       · exact snapshot.noRaceAfterInterrupt h y r hr
+    · rcases List.mem_append.mp hl with hl | hl
+      · exact queue.links md sc tg ir ex hl
+      · exact absurd rfl (taskCmd_not_link hl md sc tg ir ex)
 
 /-- The snapshot's commands read no code, so `ReadCode` ignores them. -/
 theorem readsCode_append_tasks {id : FiberId} {commands : List RCmd} {tasks : List RTask} :
@@ -732,6 +770,18 @@ def M7NoHalt (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List A
     Prop :=
   M7Fragment root rootTy tape → (Api.replay root.program fuel tape).machine.stuck = none
 
+/-- Organization M4 (decisions row 139): every recorded exit's success value names only handles
+its machine's stores hold, on every reachable machine. The exit connector from `FitsExit` to the
+meaning layer's exit judgment (`organization/verify-ExitOkConnector.lean`, `exitOk_of_fitsExit`)
+takes this as its validity premise. It does not follow from `J` while the scope arm of
+`HandleFits` checks only the spelling (`organization/verify-ExitOkConnector.lean`'s `redA_scope`)
+and `Live` admits scope and memo handles unchecked; with seat A's scope arm and those arms it is a
+consequence of `J`, otherwise the native guard's handle facts transport through R4's bridge. -/
+def ExitHandlesValid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
+  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
+    RReachable root fuel m →
+      ∀ f ∈ m.fibers, ∀ v, f.exit = some (.success v) → Val.validIn m.state v = true
+
 /-- `J` on a reference machine types its observation: the exits and the stores. -/
 theorem obsTyped_of_machineTyped {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     (typed : MachineTyped root rootTy w m) :
@@ -951,6 +1001,11 @@ theorem stores_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape 
 theorem never_halts (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
     ProofGraph.Obligation (M7NoHalt root rootTy fuel tape) := ⟨⟩
 
+/-- Scope-handle validity (organization M4, row 139): recorded exits name only live handles on
+every reachable machine; the exit connector's premise. -/
+theorem exitHandles_valid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
+    ProofGraph.Obligation (ExitHandlesValid root rootTy fuel m) := ⟨⟩
+
 end M7
 
 end Effect4.Program.Typed
@@ -985,5 +1040,6 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M7.exits_typed
 #proof_wanted Effect4.Program.Typed.M7.stores_typed
 #proof_wanted Effect4.Program.Typed.M7.never_halts
-#typed_state_obligations Effect4.Program.Typed.M7 ceiling 3
+#proof_wanted Effect4.Program.Typed.M7.exitHandles_valid
+#typed_state_obligations Effect4.Program.Typed.M7 ceiling 4
   using aesop (rule_sets := [Effect4.TypedState])
