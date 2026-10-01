@@ -102,6 +102,7 @@ import Test.Api.KeyedHostContract
 import Test.Run.RunContract
 import Test.Program.SchedContract
 import Test.Program.DenoteRContract
+import Test.Program.ScopeMarkers
 import Test.Program.RuntimeRContract
 import Test.Program.RuntimeRShapesContract
 import Test.Program.SimulationContract

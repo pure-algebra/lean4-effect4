@@ -32,6 +32,7 @@ import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.DenoteR
 import Effect4.Laws.Program.InterpR
 import Effect4.Laws.Program.EvaluateR
+import Effect4.Laws.Program.ScopeMarkers
 import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.ScopedTyping
 import Effect4.Laws.Program.TypeAlgebra
