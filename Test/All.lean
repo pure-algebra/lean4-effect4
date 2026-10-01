@@ -116,6 +116,7 @@ import Test.Audit.RuntimeCoverage
 import Test.Audit.ClockLowering
 import Test.Audit.AxiomGate
 import Test.Audit.ExhaustiveFixture
+import Test.Audit.TraversalFixture
 import Test.Audit.TraversalCensus
 import Test.Audit.PositionCensus
 import Test.Audit.PositionAnalysis

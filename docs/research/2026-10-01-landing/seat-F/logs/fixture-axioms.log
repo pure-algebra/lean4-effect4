@@ -1,0 +1,9 @@
+'Test.Audit.TraversalFixture.wfPair' depends on axioms: [propext, Quot.sound]
+'Test.Audit.TraversalFixture.fuelWalk' depends on axioms: [propext]
+'Test.Audit.TraversalFixture.notUnion' depends on axioms: [propext]
+'Test.Audit.TraversalFixture.isOption' does not depend on any axioms
+'Test.Audit.TraversalFixture.depth' depends on axioms: [propext]
+'Test.Audit.TraversalFixture.fuelDepth' depends on axioms: [propext]
+'Test.Audit.TraversalFixture.viaDepth' depends on axioms: [propext]
+'Test.Audit.TraversalFixture.pairUp' does not depend on any axioms
+## exit=0 seconds=2 cmd=lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-landing/seat-F/probes/FixtureAxioms.lean

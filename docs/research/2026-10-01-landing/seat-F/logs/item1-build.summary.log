@@ -1,0 +1,4 @@
+✔ [543/546] Built Effect4.Laws.Auto.Traversals (1.7s)
+✔ [544/546] Built Effect4.Laws.Auto.Exhaustive (1.4s)
+Build completed successfully (546 jobs).
+## exit=0 seconds=56 cmd=lake build Effect4.Laws.Auto.Traversals Effect4.Laws.Auto.Exhaustive Effect4.Laws Test.Audit.TraversalFixture Test.Audit.TraversalCensus

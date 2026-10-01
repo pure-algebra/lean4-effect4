@@ -10,21 +10,52 @@ second file, then slot it in; delete once we're at a good place." Instrument:
 
 ## 1. What the instrument measures
 
-For an inductive and everything mutual with it (the *family*), every definition of the
-`Effect4.*` modules that takes a family value, classified by how it reads it:
+For an inductive and everything mutual with it (the *family*), every authored definition of the
+`Effect4.*` modules that takes a family value — private definitions included, under the name
+they were written with — classified by what its *own code* does with the value:
 
 | class | meaning |
 | --- | --- |
 | `fold` | through a declared fold (`cataFam`, `cata_eff`, `cata_ty`, …); the algebra is named |
-| `generated` | its own recursion, but in a module `tools/Effect4Gen/manifest.json` writes from the signature (`foldMap_*`, `foldM_*`, `view_*`, the `Canonical` encoders) |
-| `structural` | its own `match` or structural recursion — a hand traversal |
-| `wf` | well-founded recursion with its own `match` |
+| `generated` | its own case analysis, in a module `tools/Effect4Gen/manifest.json` writes from the signature (`foldMap_*`, `foldM_*`, `view_*`, the `Canonical` encoders) |
+| `structural` | its own case analysis under structural recursion (a `brecOn`) — a hand traversal |
+| `wf` | its own case analysis under well-founded recursion (`WellFounded.fix`, `WellFounded.Nat.fix`) — a hand traversal |
+| `one-level` | its own case analysis with no recursion: a `match` on the value |
 | `delegates` | never looks inside: hands the value to other rows (named) |
 | `opaque` | neither looks inside nor hands it on (stores or returns it) |
 
-Helpers the compiler makes (`noConfusion`, `ctorIdx`, `brecOn.go`, a derived `decEq_n` — 77 of
-the first run's 157 "structural" rows for `Eff` were these) are not rows. Nothing is asserted;
-the `structural` + `wf` count is the distance from "every traversal is a fold or generated".
+A definition's own code is its value and the helpers the compiler made for it, followed
+transitively: the matcher, the sparse `casesOn` a `match` with a catch-all compiles through
+(shared across definitions and named after whichever needed it first:
+`Ty.isFactor.match_1` uses `Ty.infer._sparseCasesOn_13`), the `_unary`/`_mutual` helper of a
+well-founded definition of two or more arguments, the `_f` functional of a structural one. Never
+a definition a person wrote (handing a value to one is `delegates`), never the family's own
+recursors, never a derived `sizeOf`. The recursion may be on the family value, on another
+argument the value is read in step with (`Typed.Fits` reads a `Val` in step with its `Ty`), or
+on fuel (`runStmts`); the instrument does not ask which, and §7.4 gives the reason for each row
+without a fold. A definition that reads two families is a row in each. Helpers the compiler
+makes (`noConfusion`, `ctorIdx`, `brecOn.go`, a derived `decEq_n`, a match splitter — 77 of the
+first run's 157 "structural" rows for `Eff` were these) are not rows. Nothing is asserted about
+the tree; the instrument's own red controls are (`Test/Audit/TraversalCensus.lean`, over the
+planted shapes of `Test/Audit/TraversalFixture.lean` and four definitions of the tree).
+
+**The distance.** The `structural` and `wf` rows are the hand traversals; their count, less the
+members of the two fold definitions (`Checker.check`'s seven, `argTy`/`argsTy`, §7.8–§7.9), is
+the distance from "every traversal is a fold or generated".
+
+**A one-level match does not count** (this document's rule since 2026-10-01; the landing brief
+asked it to say which). It is listed by name in its own class, so AGENTS.md's "a hand `match` is
+an exemption the census lists by name" holds, but it is not in the distance, for three reasons.
+A case analysis that does not recurse is already a fold whose arms ignore the recursive results
+(`fold_of` reads it as one, pairing the value in — the paramorphism of §7), so converting it
+changes its spelling and nothing else; the principle is about recursion. What a new constructor
+costs a `match`, with or without a catch-all, is measured by the exhaustiveness inventory
+(`#exhaustive_gate`, read from the matcher's own type) and governed by the case-site policy
+(row 56, `make check-cases`); counting matches here as well would give that fact a second owner.
+And until 2026-10-01 the census counted a one-level match only when the compiler encoded it
+through the family's own `casesOn` (an exhaustive `match`, `Ty.isNever`) and missed it when the
+encoding went through a sparse `casesOn` (a catch-all, `Ty.isFactor`), so the old `structural`
+counts mixed the two; now every one-level match is a `one-level` row, whatever its encoding.
 
 ## 2. The numbers
 
@@ -69,7 +100,8 @@ uses.
 `Ty.lean`: `instReprTy.repr`, `renderRaw`, `members`, `key`, `isNever`, `isMember`, `normalize`;
 `Eff.lean`: `isTagTy`, `rawSupportedErrTy`; `Admission.findInt`; `NativeAtom.projectProduct`;
 `Typed.Val.hasTy`; `Schema/Bridge.schema`; `Schema/Codec.{layout,isSupported,encodeRaw,decodeRaw}`.
-All pure, all on one non-mutual inductive of 16 constructors: the cheapest family to convert
+All pure, all on one non-mutual inductive of 16 constructors when this census was taken (20 since
+2026-09-18: `refOf`, `deferredOf` and `var` at `7db30c8a`, `unknown` at `0a2cb898`): the cheapest family to convert
 wholesale, and the one where a new constructor (`Ty.app`, row 3; `Ty.record`/`variant`, row 2)
 costs 17 hand edits today and one algebra field each after.
 
@@ -168,8 +200,9 @@ lake build Test.Audit.TraversalCensus 2>&1 | grep -v '^trace'
 ```
 
 `#traversal_census T` scans every imported `Effect4.*` module; `#traversal_census T under
-Effect4.Program` narrows it. Rows are `class ⟨tab⟩ module:line ⟨tab⟩ name [instance] ⟨tab⟩
-(family member) ⟨tab⟩ detail`, sorted by class, module, line.
+Effect4.Program` narrows it. Rows are `class ⟨tab⟩ module:line ⟨tab⟩ name [instance] [private]
+⟨tab⟩ (family member) ⟨tab⟩ detail` (no detail column when it is empty), sorted by class, module,
+line. `#traversal_class T for a b …` prints only the class of the named definitions.
 
 ## 7. The converter, landed (`fb7a5784`)
 
@@ -295,6 +328,25 @@ The count after §7.8: 81 hand traversals, 68 with connectors, 13 named above.
 The step after the connectors is the callers: each `f`'s callers move to `cata alg`, the
 proofs that unfold `f` rewrite by `f.eq_cata`, and `f` is deleted. That is where the count in
 §2 goes down.
+
+**The named exemptions at `dceae006` (2026-10-01, by the instrument as repaired in §7.11).**
+Row 40 closed this list as tracked debt — nothing is converted for uniformity's sake, a hand
+definition that is not a fold is not thereby wrong — so naming each row with its shape is the
+whole obligation. The 24 hand traversals without a fold beside them:
+
+| rows | where | shape | why no connector |
+| --- | --- | --- | --- |
+| `compileEff`, `compileLayer`, `localBinds`, `actionAt.entrants` | `Program/Compile.lean` | structural over the program, `Point` (fuel, addresses) threaded | exempt by ruling (row 30). `actionAt` itself does not recurse: a `one-level` row since 2026-10-01 |
+| `Sched.denoteLayerZero`, `Sched.entrantPoints`, `Sched.inlineYield` | `Laws/Program/DenoteR.lean` | the reference evaluator's helpers, `compileEff`'s shape | follow `compileEff` (row 40). `denoteEffBody` and `denoteLayerBody` take their recursion as a parameter: `one-level` rows since 2026-10-01 |
+| `runStmts`, `runStmts.yieldOf`, `Sched.walkR`, `Sched.walkR.yieldOf` | `Program/Compile.lean`, `Laws/Program/InterpR.lean` | `wf` on fuel: the statement walk looks up the node at a program counter and destructs it, one level per step | the recursion is on fuel and the node is looked up, not a child: no fold applies. Printed `opaque` until 2026-10-01 (the fixpoint sits in a `_mutual` helper) |
+| `loopExit` | `Program/Compile.lean` | structural on a depth: walks up the enclosing blocks by path | as the statement walk. Printed `opaque` until 2026-10-01 |
+| `Ty.closed`, `Ty.instantiate`, `Ty.varsOf`, `Ty.templateAdmissible` | `Program/Ty.lean`, `Laws/Program/Template.lean` | structural and pure (`instantiate` with its substitution fixed): §4's shape 1 | the row-template calculus (rows 42–43, written the evening of 2026-09-18, after the converter's run); never put through `fold_of` |
+| `Ty.infer` | `Program/Ty.lean` | structural on the template, the request read in step, the substitution threaded | two values walked together; §7.1's accumulator shape with the request among the varying binders, not tried |
+| `Ty.sub` | `Program/Ty.lean` | `wf` on `sizeOf a + sizeOf b`, two values walked together | not a fold of one value. Printed `opaque` until 2026-10-01 (the fixpoint sits in `Ty.sub._unary` over `WellFounded.Nat.fix`) |
+| `Codegen.Types.ofNormalized` [private] | `Codegen/Types.lean` | structural and pure, every constructor named: shape 1 | private, so no census row until 2026-10-01; never put through `fold_of` |
+| `Representation.beq`, `Check.beq` [private] | `Schema/Representation.lean` | `wf`, mutual: the hand `DecidableEq` of the nested mutual family (no deriving handler covers it), two values walked together | private and well-founded, so no census row until 2026-10-01; not a fold of one value |
+| `Bridge.ofSchema`, `Witnesses.valCode` | `Schema/Bridge.lean`, `Laws/Machine/Witnesses.lean` | a container child's grandchild (the first bullet above) | as above |
+| `instReprTy.repr` [instance] | `Program/Ty.lean` | the derived `Repr` | generated by Lean's deriving handler (§7.6) |
 
 ### 7.5 The statement sort, and typing with located refusal as one fold (2026-09-18)
 
@@ -477,6 +529,9 @@ Both roots and `Test.All` build; `argTy_weaken`, `termTy_weaken`, `argTy.eq_cata
 14: the three of the hand term block), **65 with a fold and a connector**; `Term` is 11 of 11
 (the driver prints `structural 13 (of which 13 with a fold beside them)`: the two fold members
 are rows too); the thirteen without unchanged. `termTy` classifies as delegating to `argTy`.
+That count is the 2026-09-18 instrument's. At `dceae006` (2026-10-01), with the instrument's three
+blind spots closed (§7.11), the count is **84 hand traversals, 60 with a fold and a connector,
+24 without** (named in §7.4).
 
 ### 7.10 The fragments by exclusion (2026-09-18, decisions row 35)
 
@@ -500,6 +555,63 @@ found its term through the fallback (the only way `Looped (.succeed v)` could un
 `Straight ?e`); they now go through one lemma, `soundB_leaf`, that takes the `Straight` witness
 explicitly, one call per leaf. Everything else compiled untouched. Both roots and `Test.All`
 build; the census is unchanged (the two rows were structural with folds before and after).
+
+### 7.11 The instrument's three blind spots closed (2026-10-01)
+
+The organization seat of the formal pass and its verifier found the census unable to measure the
+distance (`docs/research/2026-10-01-formal-pass/organization/note.md` §1.4, `verify.md` ORG-04 and
+§3 M1): it classed a row `wf` only when the definition's own value named `WellFounded.fix`, but
+on this toolchain a well-founded definition of two or more arguments keeps its fixpoint in a
+`_unary`/`_mutual` helper, and a `Nat` measure uses `WellFounded.Nat.fix`, so `wf` was 0 for every
+family; it dropped private definitions with the compiler's internal names; and it saw a `match`
+only through the family's own `casesOn`, so a `match` with a catch-all, compiled through a sparse
+`casesOn` named after another definition, was invisible. The repair (`Laws/Auto/Traversals.lean`)
+reads a definition's own code through the compiler's helpers, admits private definitions under
+their written name, and gives a case analysis that does not recurse its own class, `one-level`
+(§1). Its red controls are pinned in `Test/Audit/TraversalCensus.lean`: the planted shapes of
+`Test/Audit/TraversalFixture.lean` (the instrument of `dceae006` misreads five of the nine and
+does not see the private one), and the classes of `Ty.sub` (`wf`), `Codegen.Types.ofNormalized`
+(`structural`, `[private]`), `Ty.isFactor` (`one-level`) and `Ty.closed` (`structural`).
+
+At `dceae006`, the instrument before and after (the driver's commands; before: `lake build
+Test.Audit.TraversalCensus` replaying the cached run; after: the same commands over the repaired
+instrument):
+
+| free object | takers | fold | generated | structural (fold beside) | wf | one-level (fold beside) | delegates | opaque |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `Eff` family, before | 343 | 22 | 40 | 35 (25) | 0 | — | 177 | 69 |
+| `Eff` family, after | 348 (5 private) | 22 | 42 | 33 (25) | 4 | 28 (0) | 173 | 46 |
+| `Ty`, before | 112 | 1 | 5 | 23 (17; 1 instance) | 0 | — | 45 | 38 |
+| `Ty`, after | 115 (3 private) | 1 | 8 | 22 (15; 1 instance) | 1 | 14 (2) | 46 | 23 |
+| `Term` family, before | 116 | 0 | 8 | 13 (13) | 0 | — | 19 | 76 |
+| `Term` family, after | 116 | 0 | 8 | 12 (12) | 0 | 4 (1) | 18 | 74 |
+| `Representation` family, before | 31 | 2 | 4 | 5 (4) | 0 | — | 6 | 14 |
+| `Representation` family, after | 33 (2 private) | 2 | 4 | 1 (0) | 2 | 5 (4) | 8 | 11 |
+| `Store.Val`, before | 243 | 0 | 28 | 17 (16) | 0 | — | 119 | 79 |
+| `Store.Val`, after | 243 | 0 | 85 | 18 (17) | 0 | 64 (2) | 49 | 27 |
+
+Hand traversals (structural and `wf` rows less the nine fold members), with a fold beside them,
+without: before **84 / 66 / 18**; after **84 / 60 / 24** — `Eff` 30 / 18 / 12, `Ty` 23 / 15 / 8,
+`Term` 10 / 10 / 0, `Representation` 3 / 0 / 3, `Val` 18 / 17 / 1. The equal totals are a
+coincidence of two movements:
+
+- **Into the distance** (rows the old instrument printed `opaque` or did not print): the statement
+  walks `runStmts`, `runStmts.yieldOf`, `Sched.walkR`, `Sched.walkR.yieldOf` (`wf`) and `loopExit`
+  (`structural`); `Ty.sub` (`wf`) and `Codegen.Types.ofNormalized` (private); the private
+  `Representation.beq` and `Check.beq` (`wf`); and three `Val` readings in step with a `Ty`
+  recursion, each with its `Ty` fold beside it — `Typed.Fits`, `Val.hasTy`, `Codec.encodeRaw`.
+- **Out of it** (one-level matches the old instrument counted because they compiled through the
+  family's `casesOn`): `actionAt`, `Sched.denoteEffBody`, `Sched.denoteLayerBody`; `Ty.isNever`,
+  `Ty.isMember`; `noRow`; `Representation.tag`, `Check.tag`, `Bridge.checkId`,
+  `Schema.withChecks?`; `Store.Val.payload`, `Store.Val.tag` — nine of these twelve with a fold
+  beside them.
+
+The `one-level` rows (115 in all; the old instrument counted 12 of them as `structural` and missed
+103) and the new `generated` rows (3 `Ty`, 2 `Eff`, 57 `Val`) agree exactly with the verifier's
+independent probe (`verify-CensusConsistency.lean`: its B + C and D per family). The
+exhaustiveness inventory reads the same authored definitions, so it now sees private matches too:
+`#exhaustive_gate Effect4.Program.Ty` reports 66 matches, 28 with no catch-all (65 / 27 before);
+the new one is `ofNormalized`'s twenty-arm match, which row 119's `Ty.record` must also extend.
 
 ## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
 
