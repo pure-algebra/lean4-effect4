@@ -1043,10 +1043,15 @@ dropped trailing names; `LawfulSig.tableLawful`) and adds the service-table clau
 `MachineTyped` (row 112). -/
 def LawfulSource (root : ProgramSource) : Prop := LawfulSig root.sig
 
-/-- M5's proposition: a lawful, checked, closed source loads into `J`. -/
+/-- M5's proposition: a lawful, checked, closed source whose requirement row is empty loads into
+`J`. The empty row is rc.112's own rule for a run (decisions row 117, ruled 2026-10-01):
+`Effect.runPromise` takes an `Effect<A, E>`, whose requirement parameter is `never`
+(`Effect.ts:17494-17497`); an open row runs only through `runPromiseWith(context)`. No proof reads
+the premise yet: it is part two's (the presence clause), which stays open. -/
 def LoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
   LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
-    ClosedEff rootTy → ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel)
+    ClosedEff rootTy → rootTy.requires = Env.Requirement.empty →
+      ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel)
 
 /-- M6b's proposition: one tape decision keeps `J` when its host answer, if any, is admitted. -/
 def DecisionKeeps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.Decision) :
@@ -1057,10 +1062,12 @@ def DecisionKeeps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.
        stepDecisionState (interpR root.program) fuel m d).1
 
 /-- M6c's proposition: every machine an answer-free tape reaches from a lawful, checked, closed
-source is in `J`. -/
+source whose requirement row is empty is in `J` (the empty row as `LoadsTyped` takes it, rc.112's
+`runPromise`, `Effect.ts:17494-17497`; decisions row 117). -/
 def ReachableTyped (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
   LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
-    ClosedEff rootTy → RReachable root fuel m → ∃ w, MachineTyped root rootTy w m
+    ClosedEff rootTy → rootTy.requires = Env.Requirement.empty → RReachable root fuel m →
+      ∃ w, MachineTyped root rootTy w m
 
 /-- Row 148 (algebra A3): M5's fundamental property. A checked point denotes, at the node its
 path names, a program typed at the point's certificate, at every world. -/
@@ -1179,7 +1186,7 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
     (denotes : DenotesTyped root)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none) :
     LoadsTyped root rootTy fuel compileFuel := by
-  intro _ checked closed
+  intro _ checked closed _
   have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
     rw [Eff.expandIn_self]
     unfold Program.typeOfProgram at checked
@@ -1243,8 +1250,8 @@ theorem admittedReplay_noHostAnswer (root : ProgramSource) (J : World → RState
 theorem reachable_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (load : LoadsTyped root rootTy fuel fuel) (decisions : ∀ d, DecisionKeeps root rootTy fuel d)
     (m : RState) : ReachableTyped root rootTy fuel m := by
-  rintro lawful checked closed ⟨tape, free, rfl⟩
-  obtain ⟨w₀, loaded⟩ := load lawful checked closed
+  rintro lawful checked closed row ⟨tape, free, rfl⟩
+  obtain ⟨w₀, loaded⟩ := load lawful checked closed row
   letI := termEvaluatorFor root.program
   obtain ⟨w, _, typed⟩ := Machine.Lift.replayEval_lift hostOrder (MachineTyped root rootTy)
     (fun w m d => AnswerOk w m d) (interpR root.program) fuel
@@ -1464,14 +1471,16 @@ The route is proved here (`m7_of_ledger`): from `typedState_load` and `decision_
 through `replayEval_lift`, to `J` on the reference replay, then across `BMeans`
 (`bookMeans_obs`, `BookMeans.stuck`). M7a–c stay open while M5 and M6 are. -/
 
-/-- The M7 fragment: a lawful source at the empty host table, checked and closed, and a tape with
-no host answer. -/
+/-- The M7 fragment: a lawful source at the empty host table, checked and closed, its requirement
+row empty (decisions row 117: rc.112's `runPromise` takes `Effect<A, E>`, `Effect.ts:17494-17497`),
+and a tape with no host answer. -/
 structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.Decision) :
     Prop where
   lawful : LawfulSource root
   emptyTable : root.table = []
   checked : Program.typeOfProgram root.signature root.program = some rootTy
   closed : ClosedEff rootTy
+  closedRow : rootTy.requires = Env.Requirement.empty
   answerFree : ∀ d ∈ tape, NoHostAnswer d
 
 /-- M7a's conclusion on an observation: the root is declared at the program's type, the world's
@@ -1549,7 +1558,7 @@ theorem m7_of_capstone (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
         (replayR root.program fuel tape).machine.stuck := by
     intro fragment
     obtain ⟨w, typed⟩ := capstone _ fragment.lawful fragment.checked fragment.closed
-      ⟨tape, fragment.answerFree, rfl⟩
+      fragment.closedRow ⟨tape, fragment.answerFree, rfl⟩
     have related := ReplayRel.machine (replay_rel root.program fuel fuel tape)
     refine ⟨w, typed, ?_, replay_stuck_eq root.program fuel tape⟩
     rw [replay_machine]
