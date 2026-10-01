@@ -36,7 +36,9 @@ What this module adds to the tree, and what it deliberately reuses:
   leaves supplied as a `LeafSem` hook (the trusted-boundary position `ServiceUniverse` and
   `RunInterp` already occupy). The proved laws concern the requirement and context algebra,
   including when a layer signature closes an application's requirements. The connection from
-  a well-typed layer to its built context is checked by the finite witnesses below.
+  a well-typed layer to its built context is checked by the finite witnesses below. `build`'s
+  totality theorem (`build_total`) was cut as unused at `b08f3b58`; restoring it is owed under
+  R5 (`docs/core/system-map.md`).
 * **The machine half, on the compile route.** `Effect.provide(self, layer)` is a program
   (`Eff.provideLayer`), so the witnesses are runs: `buildServices`, `buildSucceeds` and
   `provideThenService` run native programs through `runSyncExit` at `interpOf` and pin, by
@@ -239,8 +241,8 @@ theorem satisfies_single_addV (key : ServiceKey) (v : Effect4.Machine.Env.Val) :
 `LayerTerm` is a member of the program family since the join (`Program/Eff.lean`: a layer is
 a subterm of the program that provides it, and its build runs at its point), and `layerTy`,
 `bodyRequires`, `litVal` and `WellTypedLayer` type it beside `typeOf` (`Program/Typing.lean`).
-This module keeps the algebra's laws, the specification `build` and its totality, and the
-docs deployment the laws are shown on. -/
+This module keeps the algebra's laws, the specification `build` (its totality is owed; see
+the header), and the docs deployment the laws are shown on. -/
 
 /-! ## `App` — `Effect.provide(program, layer)` (`internal/layer.ts:8-22`) -/
 

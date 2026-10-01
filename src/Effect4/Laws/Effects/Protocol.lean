@@ -12,18 +12,21 @@ continuation is typed at every later world in which the handler answers within t
 
 The continuation clause is quantified over later worlds, so weakening along the world order is
 one `cases` and needs no induction on the tree; sequencing, widening of the result predicate
-and the coproduct lift are one induction each. The tree's world is the typing tables and the
-store; its protocols are the store's (`progress`'s hypotheses and conclusion) and the fiber
-alphabet's (`OpOk`/`AnswerOk`). This module imports the pinned `Effects` algebra and nothing
-of `Effect4`: it is a law of the free monad, kept here until the algebra takes it.
+and the coproduct lift are one induction each. The tree's world is the typing tables over the
+store (`Laws/Program/Typed/World.lean`); its protocols are the store's `Ψ_S` (31 rows) and the
+fiber alphabet's `Ψ_F` (40 rows), and its program judgment `TypedProg` is its own inductive
+(`Laws/Program/Typed/Residual.lean`, ruling of 2026-09-23). This module imports the pinned
+`Effects` algebra and nothing of `Effect4`: it is a law of the free monad, kept here until the
+algebra takes it.
 
 Both injections lift typing (`Typed.inl`, `Typed.inr`) and reflect it (`Typed.inl_iff`,
 `Typed.inr_iff`), so an injected program is typed for the sum exactly when it is typed for its
 own side: the generic half of conservativity C4 (model probe, pedigree seat,
 `docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`, `inl_iff`/`inr_iff`). Typing
 is monotone in the protocol order (`Protocol.Le`, `Typed.refine`; formal pass, algebra note A5,
-`docs/research/2026-10-01-formal-pass/algebra/note.md`). None of this holds for the concrete
-`TypedProg` by itself: it is its own inductive, and C4 for it is owed.
+`docs/research/2026-10-01-formal-pass/algebra/note.md`). These are laws of the generic
+judgment only; `TypedProg` is its own inductive, so each is owed for it separately (C4 for
+`TypedProg` is owed, and it is not closed under bind: `Laws/Program/Typed/Seq.lean`).
 -/
 
 set_option autoImplicit false

@@ -7,7 +7,9 @@ The single home of budgets for every loop-shaped meaning (the `select` and `iter
 §2.2, the core constructs brief §4). `iter f k x` runs the step `f` from the cursor `x` at most
 `k` times: a step answers `inl y` to stop with `y` and `inr x'` to continue at `x'`. `none`
 means the budget ended first. It is Elgot iteration cut at a budget, generic over the
-signature, so the loop arm of a meaning is one application of it.
+signature, so the loop arm of a meaning is one application of it. Each budget is one
+approximant of the loop's least fixed point; Elgot's laws hold for the limit of the budgets
+and for no single budget (`Laws/Program/IterLimit.lean`).
 
 `iter_zero` and `iter_succ` are the unfolding. `iter_uniform` is uniformity: a pure change of
 the cursor's representation relates two iterations, which is the law an index cursor against an
