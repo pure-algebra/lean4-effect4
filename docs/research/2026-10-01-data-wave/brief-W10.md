@@ -39,3 +39,23 @@ in-program decoding (row 123) and structured service carriers are not this commi
 Rules: plan §4; one TypeScript compiler, tsgo 7; nothing pushed. Receipt `receipt-W10.md` here: the
 one thing first; the three answers as run; the printed module's tsgo result; where p1, p3, p5 stop;
 the STATE line "v0's acceptance program runs".
+
+## Amendments (2026-10-01, after Codex's 19:30 review; `reviews/codex-1930-data-wave-review.md`)
+
+- **The label.** The milestone is "p2's handler with host-side decoding" (route A); say so in the
+  battery's docstring, the receipt and the STATE line. In-program decoding (row 123) is not this
+  commit and is not implied by its passing.
+- **The adapter check compares values, not shapes.** R's skeleton (`P2RecordHarness.lean:354-368`)
+  tests only that adaptation answers and strict decoding refuses. Compare the adapted value with
+  the exact expected canonical named record (or encode it and compare with the expected reduced
+  object), and keep two rejecting controls: a retained extra field, and an incorrect retained value.
+- **The comparator rejects duplicate keys.** The skeleton's `canon` (`:232-239`) keeps the first
+  duplicate name and `normJ` (`:315-323`) uses it, so a later conflicting duplicate disappears while
+  the comment at `:455` says only key order is ignored. Either restrict the comparator to
+  recursively duplicate-free objects (checked, refusing otherwise), or define the sort without
+  deletion; if the landed encoder proves duplicate freedom, thread that theorem into the boundary
+  as the premise and cite it.
+- **Read the rendered text.** `readBack` (`:363-366`) passes the printed syntax object to
+  `Api.readModule`. Acceptance includes the external reader: parse the rendered TypeScript text
+  with `ts/eff/read.ts` (W8 lands its `TSTypeLiteral` and object/member arms) and compare with the
+  built program; keep the syntax-object round trip as the narrower control, named as such.
