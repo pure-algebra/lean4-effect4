@@ -1,0 +1,8 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ docs/research/2026-10-01-type-language-probe/Q/bin/olean.sh docs/research/2026-10-01-type-language-probe/Q/probe docs/research/2026-10-01-type-language-probe/Q/probe/ProbeQW/Ty.lean
+# started 2026-10-01T19:21:41Z (LEAN_NUM_THREADS=1)
+'ProbeQW.Ty.mem_canon' depends on axioms: [propext]
+'ProbeQW.Ty.canon_eq_nil' does not depend on any axioms
+'ProbeQW.Ty.sub_refl' depends on axioms: [propext, Quot.sound]
+'ProbeQW.Ty.sub_unknown' depends on axioms: [propext, Quot.sound]
+# exit=0 seconds=2

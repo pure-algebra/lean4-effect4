@@ -1,0 +1,4 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -M 4096 --run docs/research/2026-10-01-type-language-probe/Q/tools/Effect4Gen/Fold.lean --group TyEq --imports ProbeQW.TyCore --out docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQW/TyEq.lean --kind ProbeQW.Ty=elim ProbeQW.Ty
+# started 2026-10-01T19:20:44Z (LEAN_NUM_THREADS=1)
+# exit=0 seconds=8

@@ -1,6 +1,6 @@
 $ cd /Users/pooks/Dev/lean4-effect4-probe-Q
 $ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M6144 -R docs/research/2026-10-01-type-language-probe/Q/probes docs/research/2026-10-01-type-language-probe/Q/probes/Q2/ViewLaws.lean
-# started 2026-10-01T19:15:59Z (LEAN_NUM_THREADS=1)
+# started 2026-10-01T19:27:15Z (LEAN_NUM_THREADS=1)
 sub_eq_args : ∀ (a b : Ty),
   a.isMember = true →
     b.isMember = true → a.litRule b = false → a.topRule b = false → a.sub b = (a.sameHead b && argsBelow sub a b)

@@ -84,8 +84,9 @@ structure Head where
   variance : List Variance
   /-- Where the declaration comes from, for the emitted comment. -/
   cite : String
-  /-- `"arity": "each"`: a head of variable arity, its one variance read at every child. -/
-  each : Bool := false
+  /-- `"arity"`: `""` for a fixed head; `"each"` (one variance read at every child) or
+  `"byName"` (each argument at the named declaration's variance) for a head of variable arity. -/
+  arity : String := ""
 deriving Repr
 
 /-- The `heads` rows of `tools/Effect4Gen/variances.json`. A row with an unknown variance word
@@ -109,27 +110,41 @@ def readHeads (text : String) : Except String (List Head) := do
     let cite :=
       match row.getObjValAs? String "cite" with
       | .ok c => c
-      | .error _ => (row.getObjValAs? String "spelling").toOption.getD "(the printer's spelling)"
-    let each ← match row.getObjVal? "arity" with
+      | .error _ =>
+        if (row.getObjValAs? String "source").toOption == some "declarations" then
+          "rc.112's declared variances, by name (Ty.declaredVariance)"
+        else (row.getObjValAs? String "spelling").toOption.getD "(the printer's spelling)"
+    let arity ← match row.getObjVal? "arity" with
       | .ok v => do
         let a ← v.getStr?
-        unless a == "each" do
-          throw s!"variances.json: head {name} has arity {a}; the one arity word is `each`"
-        pure true
-      | .error _ => pure false
-    out := out ++ [({ name := name, variance := variance, cite := cite, each := each } : Head)]
+        unless a == "each" || a == "byName" do
+          throw s!"variances.json: head {name} has arity {a}; the arity words are `each` and `byName`"
+        pure a
+      | .error _ => pure ""
+    out := out ++ [({ name := name, variance := variance, cite := cite, arity := arity } : Head)]
   return out
 
 /-! ## The constructor declarations -/
 
-/-- One field of a constructor: a `Ty` child, a payload `sameHead` compares by `==`, or a
-field list (variable arity): a `List` of elements `String × Ty` (or `String × Ty × P`), the `Ty`
-at the selector `child`, the payload components at `payloads` (selector, type), the element's
-printed type with the member written `{M}`. -/
+/-- One field of a constructor: a `Ty` child, a payload `sameHead` compares by `==`, a list of
+`Ty` children (`List Ty`), or a field list `List (String × Ty)`/`List (String × Ty × P)` whose
+`Ty` sits at the selector `child`, its payload components at `payloads` (selector, type), the
+element's printed type with the member written `{M}`. -/
 inductive Field where
   | child (name : String)
   | payload (name : String) (ty : String)
+  | childList (name : String)
   | fieldList (name : String) (child : String) (payloads : List (String × String)) (elem : String)
+deriving Repr
+
+/-- A head of variable arity, as the view reads it. -/
+inductive VarKind where
+  /-- a field list read in canonical order (`Ty.canon`), its payloads the head (`record`) -/
+  | fields (nm ch : String) (ps : List (String × String)) (elem : String)
+  /-- a `List Ty` at one variance, position the order, the arity the head (`tuple`) -/
+  | items (nm : String)
+  /-- a name and a `List Ty`, argument `i` at the name's declared variance (`app`) -/
+  | applied (pn nm : String)
 deriving Repr
 
 structure Ctor where
@@ -143,14 +158,22 @@ def Ctor.children (c : Ctor) : List String :=
 def Ctor.payloads (c : Ctor) : List (String × String) :=
   c.fields.filterMap fun f => match f with | .payload n t => some (n, t) | _ => none
 
-/-- The field list of a head of variable arity: (name, child selector, payloads, element). -/
-def Ctor.fieldList? (c : Ctor) : Option (String × String × List (String × String) × String) :=
-  c.fields.findSome? fun f => match f with
-    | .fieldList n ch ps e => some (n, ch, ps, e)
-    | _ => none
+/-- The constructor's variable kind, when it has one: exactly one field list, exactly one `List
+Ty`, or a `String` name followed by one `List Ty`. -/
+def Ctor.varKind? (c : Ctor) : Option VarKind :=
+  match c.fields with
+  | [.fieldList nm ch ps e] => some (.fields nm ch ps e)
+  | [.childList nm] => some (.items nm)
+  | [.payload pn "String", .childList nm] => some (.applied pn nm)
+  | _ => none
 
-/-- A field-list element's payload as an expression of the element `p`: its one selector, or the
-tuple of them. -/
+/-- Does the constructor hold a list of children in a shape the view does not read? -/
+def Ctor.unreadList (c : Ctor) : Bool :=
+  c.varKind?.isNone && c.fields.any fun f => match f with
+    | .childList _ | .fieldList .. => true
+    | _ => false
+
+/-- A field-list element's payload as an expression of the element `p`. -/
 def payText (ps : List (String × String)) : String :=
   match ps with
   | [(sel, _)] => "p" ++ sel
@@ -170,7 +193,7 @@ def srcOf (e : Expr) : MetaM String := do
 
 /-- A field list `List (String × Ty)` or `List (String × Ty × P)`, `P` a known element payload:
 the child's selector, the payload selectors with their types, and the element type with the
-member written `{M}`. `none` for any other type, which the caller refuses as before. -/
+member written `{M}`. `none` for any other type. -/
 def fieldElem (root : Name) (ty : Expr) : MetaM (Option (String × List (String × String) × String)) := do
   let ty ← whnfR ty
   unless ty.isAppOfArity ``List 1 do return none
@@ -203,6 +226,8 @@ def readCtors (root : Name) : MetaM (List Ctor) := do
         | .const n _ =>
           if n == root then
             acc := acc ++ [Field.child nm]
+          else if ty.isAppOfArity ``List 1 && ty.appArg!.isConstOf root then
+            acc := acc ++ [Field.childList nm]
           else if let some fl ← fieldElem root ty then
             let (ch, ps, e) := fl
             acc := acc ++ [Field.fieldList nm ch ps e]
@@ -233,27 +258,29 @@ def rows (ctors : List Ctor) (heads : List Head) : Except String (List Row) := I
   let mut out : List Row := []
   for c in ctors do
     let n := c.children.length
-    let isVar := c.fieldList?.isSome
+    if c.unreadList then
+      return .error s!"View: `Ty.{c.name}` holds a list of children in a shape the view does not \
+        read (one field list, one `List Ty`, or a `String` name and a `List Ty`)"
     match heads.find? (fun h => h.name == c.name) with
     | some h =>
-      if isVar then
-        unless h.each && h.variance.length == 1 && c.fields.length == 1 do
-          return .error s!"View: `Ty.{c.name}` has a field list (variable arity): its row in \
-            tools/Effect4Gen/variances.json must say \"arity\": \"each\" with one variance, and \
-            the constructor must have that one field"
-        unless h.variance == [Variance.co] do
-          return .error s!"View: `Ty.{c.name}`: a variable-arity head is read covariantly only \
-            (its arm lemma reads `sub` at each field)"
+      if let some k := c.varKind? then
+        let ok := match k with
+          | .fields .. | .items _ => h.arity == "each" && h.variance == [Variance.co]
+          | .applied .. => h.arity == "byName"
+        unless ok do
+          return .error s!"View: `Ty.{c.name}` has variable arity: a field list or a `List Ty` needs \
+            a row with \"arity\": \"each\" and the one variance co; a name and a `List Ty` needs \
+            \"arity\": \"byName\" (tools/Effect4Gen/variances.json)"
         out := out ++ [({ ctor := c, head := some h } : Row)]
         continue
-      if h.each then
-        return .error s!"View: `Ty.{c.name}` has fixed arity but its row says \"arity\": \"each\""
+      if h.arity != "" then
+        return .error s!"View: `Ty.{c.name}` has fixed arity but its row says \"arity\": \"{h.arity}\""
       if h.variance.length != n then
         return .error s!"View: `Ty.{c.name}` has {n} recursive field(s) but \
           tools/Effect4Gen/variances.json declares {h.variance.length} variance(s) for it"
       out := out ++ [({ ctor := c, head := some h } : Row)]
     | none =>
-      if n != 0 || isVar then
+      if n != 0 || c.varKind?.isSome then
         return .error s!"View: `Ty.{c.name}` has {n} recursive field(s) and no row in \
           tools/Effect4Gen/variances.json's `heads`; declare its variance from rc.112 \
           (tools/Tools/Variances.lean) before generating the view"
@@ -283,9 +310,17 @@ private def repeatStr (n : Nat) (s : String) : List String := (List.range n).map
 private def patOf (c : Ctor) (suffix : String) : String :=
   if c.fields.isEmpty then s!".{c.name}"
   else s!".{c.name} " ++ String.intercalate " " (c.fields.map fun f =>
-    match f with | .child n => n ++ suffix | .payload n _ => n ++ suffix | .fieldList n _ _ _ => n ++ suffix)
+    match f with
+      | .child n => n ++ suffix
+      | .payload n _ => n ++ suffix
+      | .childList n => n ++ suffix
+      | .fieldList n _ _ _ => n ++ suffix)
 
-def emitVariance : List String :=
+def emitVariance (coreVariance : Bool := false) : List String :=
+  if coreVariance then
+    [ "-- `Variance` and `Variance.holds` are the core's (`TyVariance`, generated from",
+      "-- variances.json), which `sub` itself reads for a reference's declared variances.", "" ]
+  else
   [ "/-- How a relation reads a recursive argument: as rc.112 declares the parameter",
     "(`Fiber<out A, out E>` covariant, `Ref<in out A>` invariant; decisions row 55). -/",
     "inductive Variance where",
@@ -310,10 +345,13 @@ def emitArgs (rs : List Row) : List String := Id.run do
       "def args : Ty → List (Variance × Ty)" ]
   for r in rs do
     let kids := r.ctor.children
-    if let some (nm, ch, _, _) := r.ctor.fieldList? then
-      let v := ((r.head.map (fun h => h.variance)).getD [.co]).headD .co
+    if let some k := r.ctor.varKind? then
       let cite := (r.head.map (fun h => s!"  -- {h.cite}")).getD ""
-      s := s ++ [s!"  | .{r.ctor.name} {nm} => (canon {nm}).map fun p => (.{v.text}, p{ch}){cite}"]
+      let line := match k with
+        | .fields _ ch _ _ => s!"  | .{r.ctor.name} fs => (canon fs).map fun p => (.co, p{ch}){cite}"
+        | .items _ => s!"  | .{r.ctor.name} xs => xs.map fun x => (.co, x){cite}"
+        | .applied _ _ => s!"  | .{r.ctor.name} n xs => xs.zipIdx.map fun p => (argVariance n p.2, p.1){cite}"
+      s := s ++ [line]
       continue
     let body :=
       if kids.isEmpty then "[]"
@@ -339,11 +377,16 @@ def emitSameHead (rs : List Row) : List String := Id.run do
   for r in rs do
     let c := r.ctor
     if notCongruent.any (fun p => p.1 == c.name) then continue
-    if let some (nm, _, ps, _) := c.fieldList? then
-      -- the head of a field list is its payloads (the names, and any modifier) in canonical order
-      let pay := payText ps
-      s := s ++ [s!"  | .{c.name} {nm}1, .{c.name} {nm}2 =>",
-        s!"    decide ((canon {nm}1).map (fun p => {pay}) = (canon {nm}2).map (fun p => {pay}))"]
+    if let some k := c.varKind? then
+      let lines := match k with
+        | .fields _ _ ps _ =>
+          [ s!"  | .{c.name} fs1, .{c.name} fs2 =>",
+            s!"    decide ((canon fs1).map (fun p => {payText ps}) = (canon fs2).map (fun p => {payText ps}))" ]
+        | .items _ =>
+          [ s!"  | .{c.name} xs1, .{c.name} xs2 => decide (xs1.length = xs2.length)" ]
+        | .applied _ _ =>
+          [ s!"  | .{c.name} n1 xs1, .{c.name} n2 xs2 => decide (n1 = n2) && decide (xs1.length = xs2.length)" ]
+      s := s ++ lines
       continue
     let ps := c.payloads
     let body :=
@@ -379,17 +422,20 @@ def emitRules : List String :=
     "  (a.args.zip b.args).all fun p => p.1.1.holds r p.1.2 p.2.2",
     "" ]
 
-/-- What a head of variable arity needs beside the laws: the list facts its children are read
-through (fixed text), and per field-list constructor its `headCanon` arm, the measure of a field,
-and the field list from its payloads and children. Empty when no head has variable arity, so
-the view of a family without one is byte-identical to what the generator wrote before. -/
+/-- What heads of variable arity need beside the laws: the list facts their children are read
+through (fixed text), the canonicity predicate (`headCanon`, `true` except at a field list), and
+per field-list constructor the measure of a field and the field list from its payloads and
+children. Empty when no head has variable arity, so the view of a family without one is
+byte-identical to what the generator wrote before. -/
 def emitVarHelpers (rs : List Row) : List String := Id.run do
-  let vrs := rs.filter fun r => r.ctor.fieldList?.isSome
+  let vrs := rs.filter fun r => r.ctor.varKind?.isSome
   if vrs.isEmpty then return []
+  let frs := vrs.filter fun r => match r.ctor.varKind? with | some (.fields ..) => true | _ => false
+  let ars := vrs.filter fun r => match r.ctor.varKind? with | some (.applied ..) => true | _ => false
   let mut s : List String :=
     [ "/-! ### What a head of variable arity reads its children through -/",
       "",
-      "/-- A list zipped with itself compares each child with itself. -/",
+      "/-- A list zipped with itself compares each child with itself, at any variance. -/",
       "theorem zip_self_all (r : Ty → Ty → Bool) (hr : ∀ x, r x x = true) :",
       "    ∀ (l : List (Variance × Ty)), (l.zip l).all (fun p => p.1.1.holds r p.1.2 p.2.2) = true",
       "  | [] => rfl",
@@ -401,35 +447,50 @@ def emitVarHelpers (rs : List Row) : List String := Id.run do
       "    l.map (fun _ => c) = l'.map (fun _ => c) := by",
       "  rw [List.map_const', List.map_const', h]",
       "",
-      "/-- `all` over an attached list reads the values: `sub`'s field-list arm attaches for its",
+      "/-- `all` over an attached list reads the values: `sub`'s variable arms attach for their",
       "termination, the view does not. -/",
       "theorem all_attach_eq {α : Type} (l : List α) (f : α → Bool) :",
       "    (l.attach.all fun x => f x.1) = l.all f := by",
       "  have h := List.all_map (l := l.attach) (f := Subtype.val) (p := f)",
       "  rw [List.attach_map_subtype_val] at h",
       "  exact h.symm",
+      "" ] ++
+    (if ars.isEmpty then [] else
+    [ "/-- Two argument lists of one length are read at the same variances. -/",
+      "theorem map_zipIdx_snd_eq {α β : Type} (f : Nat → β) {xs ys : List α}",
+      "    (h : xs.length = ys.length) :",
+      "    xs.zipIdx.map (fun p => f p.2) = ys.zipIdx.map (fun p => f p.2) := by",
+      "  have hx : xs.zipIdx.map (fun p => f p.2) = (xs.zipIdx.map Prod.snd).map f := by",
+      "    rw [List.map_map]; rfl",
+      "  have hy : ys.zipIdx.map (fun p => f p.2) = (ys.zipIdx.map Prod.snd).map f := by",
+      "    rw [List.map_map]; rfl",
+      "  rw [hx, hy, List.zipIdx_map_snd, List.zipIdx_map_snd, h]",
       "",
-      "/-- A head whose children are read in canonical order is in that order already. -/",
+      "theorem map_fst_zipIdx {α : Type} (l : List α) : l.zipIdx.map (fun p => p.1) = l :=",
+      "  List.zipIdx_map_fst 0 l",
+      "" ]) ++
+    [ "/-- A head whose children are read in canonical order is in that order already. -/",
       "def headCanon : Ty → Bool" ]
-  for r in vrs do
-    let some (nm, _, _, _) := r.ctor.fieldList? | continue
-    s := s ++ [s!"  | .{r.ctor.name} {nm} => decide (canon {nm} = {nm})"]
+  for r in frs do
+    s := s ++ [s!"  | .{r.ctor.name} fs => decide (canon fs = fs)"]
   s := s ++ [ "  | _ => true", "",
-    "theorem headCanon_of_args_nil {t : Ty} (h : t.args = []) : headCanon t = true := by",
-    "  cases t" ]
-  for r in vrs do
-    s := s ++
-      [ s!"  case {r.ctor.name} fields =>",
-        "    have hf : fields = [] := canon_eq_nil (List.map_eq_nil_iff.mp h)",
-        "    subst hf",
-        "    rfl" ]
-  s := s ++ [ "  all_goals rfl", "" ]
-  for r in vrs do
-    let some (_, ch, ps, elem) := r.ctor.fieldList? | continue
+    "theorem headCanon_of_args_nil {t : Ty} (h : t.args = []) : headCanon t = true := by" ]
+  if frs.isEmpty then
+    s := s ++ [ "  cases t <;> rfl", "" ]
+  else
+    s := s ++ [ "  cases t" ]
+    for r in frs do
+      s := s ++
+        [ s!"  case {r.ctor.name} fs =>",
+          "    have hf : fs = [] := canon_eq_nil (List.map_eq_nil_iff.mp h)",
+          "    subst hf",
+          "    rfl" ]
+    s := s ++ [ "  all_goals rfl", "" ]
+  for r in frs do
+    let some (.fields _ ch ps elem) := r.ctor.varKind? | continue
     let el := elem.replace "{M}" "Ty"
     let c := r.ctor.name
     let triple := ch != ".2"
-    let pay := payText ps
     s := s ++
       [ s!"/-- A field's type is smaller than its `{c}`'s field list. -/",
         s!"theorem sizeOf_field_lt_{c} \{p : {el}} \{fs : List ({el})} (h : p ∈ fs) :",
@@ -442,7 +503,7 @@ def emitVarHelpers (rs : List Row) : List String := Id.run do
         "",
         s!"/-- Two field lists with the same payloads and the same children are equal. -/",
         s!"theorem eq_of_fields_{c} :",
-        s!"    ∀ \{l l' : List ({el})}, l.map (fun p => {pay}) = l'.map (fun p => {pay}) →",
+        s!"    ∀ \{l l' : List ({el})}, l.map (fun p => {payText ps}) = l'.map (fun p => {payText ps}) →",
         s!"      l.map (fun p => p{ch}) = l'.map (fun p => p{ch}) → l = l'",
         "  | [], [], _, _ => rfl",
         "  | [], _ :: _, h, _ => absurd h (List.cons_ne_nil _ _).symm",
@@ -472,28 +533,46 @@ def emitProbes (rs : List Row) : List String := Id.run do
       "" ]
   for r in rs do
     let some h := r.head | continue
-    if let some (_, ch, ps, _) := r.ctor.fieldList? then
-      -- an element: the name, the field's type, and `false` for a flag the element carries
-      let el (name ty : String) : String :=
-        if ch == ".2" then s!"(\"{name}\", {ty})" else s!"(\"{name}\", {ty}, false)"
-      let rec_ (els : List String) : String := s!"(.{r.ctor.name} [" ++ String.intercalate ", " els ++ "])"
+    if let some k := r.ctor.varKind? then
       let c := r.ctor.name
-      s := s ++
-        [ s!"-- `{c}`: variable arity, every field {h.variance.headD .co |>.text}; the head is the canonical name list",
-          s!"#guard Ty.sub {rec_ [el "a" "(.lit \"a\")"]} {rec_ [el "a" ".string"]}",
-          s!"#guard !Ty.sub {rec_ [el "a" ".string"]} {rec_ [el "a" "(.lit \"a\")"]}",
-          s!"#guard !Ty.sub {rec_ [el "a" ".nat", el "b" ".bool"]} {rec_ [el "a" ".bool", el "b" ".unit"]}",
-          s!"-- TY-10's positive control: a permuted field list is below its canonical order, both ways",
-          s!"#guard Ty.sub {rec_ [el "b" ".nat", el "a" ".bool"]} {rec_ [el "a" ".bool", el "b" ".nat"]}",
-          s!"#guard Ty.sub {rec_ [el "a" ".bool", el "b" ".nat"]} {rec_ [el "b" ".nat", el "a" ".bool"]}",
-          s!"-- names are the head's payload; width is not a rule",
-          s!"#guard !Ty.sub {rec_ [el "a" ".nat"]} {rec_ [el "b" ".nat"]}",
-          s!"#guard !Ty.sub {rec_ [el "a" ".nat", el "b" ".nat"]} {rec_ [el "a" ".nat"]}" ]
-      if ps.length > 1 then
+      match k with
+      | .fields _ ch ps _ =>
+        let el (name ty : String) : String :=
+          if ch == ".2" then s!"(\"{name}\", {ty})" else s!"(\"{name}\", {ty}, false)"
+        let r_ (els : List String) : String := s!"(.{c} [" ++ String.intercalate ", " els ++ "])"
         s := s ++
-          [ s!"-- a modifier is payload too: the exact rule does not put a required field below an optional one",
-            s!"#guard !Ty.sub (.{c} [(\"a\", .nat, false)]) (.{c} [(\"a\", .nat, true)])" ]
-      s := s ++ [""]
+          [ s!"-- `{c}`: every field co, read in canonical order; the head is the canonical payload list",
+            s!"#guard Ty.sub {r_ [el "a" "(.lit \"a\")"]} {r_ [el "a" ".string"]}",
+            s!"#guard !Ty.sub {r_ [el "a" ".string"]} {r_ [el "a" "(.lit \"a\")"]}",
+            s!"#guard !Ty.sub {r_ [el "a" ".nat", el "b" ".bool"]} {r_ [el "a" ".bool", el "b" ".unit"]}",
+            "-- TY-10's positive control: a permuted field list is below its canonical order, both ways",
+            s!"#guard Ty.sub {r_ [el "b" ".nat", el "a" ".bool"]} {r_ [el "a" ".bool", el "b" ".nat"]}",
+            s!"#guard Ty.sub {r_ [el "a" ".bool", el "b" ".nat"]} {r_ [el "b" ".nat", el "a" ".bool"]}",
+            "-- names are the head's payload; width is not a rule",
+            s!"#guard !Ty.sub {r_ [el "a" ".nat"]} {r_ [el "b" ".nat"]}",
+            s!"#guard !Ty.sub {r_ [el "a" ".nat", el "b" ".nat"]} {r_ [el "a" ".nat"]}" ] ++
+          (if ps.length > 1 then
+            [ "-- a modifier is payload too: the exact rule does not put a required field below an optional one",
+              s!"#guard !Ty.sub (.{c} [(\"a\", .nat, false)]) (.{c} [(\"a\", .nat, true)])" ]
+           else []) ++ [""]
+      | .items _ =>
+        s := s ++
+          [ s!"-- `{c}`: every item co, by position; the head is the arity",
+            s!"#guard Ty.sub (.{c} [.lit \"a\", .nat]) (.{c} [.string, .nat])",
+            s!"#guard !Ty.sub (.{c} [.string, .nat]) (.{c} [.lit \"a\", .nat])",
+            s!"#guard !Ty.sub (.{c} [.nat, .bool]) (.{c} [.bool, .unit])",
+            s!"#guard !Ty.sub (.{c} [.nat]) (.{c} [.nat, .nat])", "" ]
+      | .applied _ _ =>
+        s := s ++
+          [ s!"-- `{c}`: each argument at the name's declared variance (rc.112, `declaredVariance`);",
+            "-- invariant where nothing is declared; the head is the name and the arity",
+            s!"#guard Ty.sub (.{c} \"Fiber.Fiber\" [.lit \"a\", .nat]) (.{c} \"Fiber.Fiber\" [.string, .nat])",
+            s!"#guard !Ty.sub (.{c} \"Fiber.Fiber\" [.string, .nat]) (.{c} \"Fiber.Fiber\" [.lit \"a\", .nat])",
+            s!"#guard !Ty.sub (.{c} \"Ref.Ref\" [.lit \"a\"]) (.{c} \"Ref.Ref\" [.string])",
+            s!"#guard Ty.sub (.{c} \"Layer.Layer\" [.string, .nat, .nat]) (.{c} \"Layer.Layer\" [.lit \"a\", .nat, .nat])",
+            s!"#guard !Ty.sub (.{c} \"Undeclared.Name\" [.lit \"a\"]) (.{c} \"Undeclared.Name\" [.string])",
+            s!"#guard !Ty.sub (.{c} \"Fiber.Fiber\" [.nat, .nat]) (.{c} \"Exit.Exit\" [.nat, .nat])",
+            s!"#guard !Ty.sub (.{c} \"Fiber.Fiber\" [.nat]) (.{c} \"Fiber.Fiber\" [.nat, .nat])", "" ]
       continue
     let n := r.ctor.children.length
     if n == 0 then continue
@@ -525,20 +604,42 @@ def emitSizeOf (rs : List Row) : List String := Id.run do
   for r in rs do
     let c := r.ctor
     let n := c.children.length
-    if let some (nm, _, _, _) := c.fieldList? then
-      s := s ++
-        [ s!"  case {c.name} {nm} =>",
-          "    simp only [args, List.mem_map, Prod.mk.injEq] at h",
-          "    obtain ⟨p, hp, _, hpx⟩ := h",
-          s!"    have hlt := sizeOf_field_lt_{c.name} (mem_canon hp)",
-          "    rw [hpx] at hlt",
-          s!"    simp only [Ty.{c.name}.sizeOf_spec]",
-          "    omega" ]
+    if let some k := c.varKind? then
+      let lines := match k with
+        | .fields .. =>
+          [ s!"  case {c.name} fs =>",
+            "    simp only [args, List.mem_map, Prod.mk.injEq] at h",
+            "    obtain ⟨p, hp, _, hpx⟩ := h",
+            s!"    have hlt := sizeOf_field_lt_{c.name} (mem_canon hp)",
+            "    rw [hpx] at hlt",
+            s!"    simp only [Ty.{c.name}.sizeOf_spec]",
+            "    omega" ]
+        | .items _ =>
+          [ s!"  case {c.name} xs =>",
+            "    simp only [args, List.mem_map, Prod.mk.injEq] at h",
+            "    obtain ⟨y, hy, _, hyx⟩ := h",
+            "    have hlt := List.sizeOf_lt_of_mem hy",
+            "    rw [hyx] at hlt",
+            s!"    simp only [Ty.{c.name}.sizeOf_spec]",
+            "    omega" ]
+        | .applied .. =>
+          [ s!"  case {c.name} nm xs =>",
+            "    simp only [args, List.mem_map, Prod.mk.injEq] at h",
+            "    obtain ⟨p, hp, _, hpx⟩ := h",
+            "    have hlt := List.sizeOf_lt_of_mem (List.fst_mem_of_mem_zipIdx hp)",
+            "    rw [hpx] at hlt",
+            s!"    simp only [Ty.{c.name}.sizeOf_spec]",
+            "    omega" ]
+      s := s ++ lines
       continue
     let binders :=
       if c.fields.isEmpty then ""
       else " " ++ String.intercalate " " (c.fields.map fun f =>
-        match f with | .child nm => nm | .payload nm _ => nm | .fieldList nm _ _ _ => nm)
+        match f with
+          | .child nm => nm
+          | .payload nm _ => nm
+          | .childList nm => nm
+          | .fieldList nm _ _ _ => nm)
     if n == 0 then
       s := s ++ [s!"  case {c.name}{binders} => simp only [args, List.not_mem_nil] at h"]
     else
@@ -734,22 +835,33 @@ def emitArmLemmas (rs : List Row) : List String := Id.run do
       "" ]
   for r in rs do
     let c := r.ctor
-    if let some (_, ch, _, elem) := c.fieldList? then
-      let el := elem.replace "{M}" "Ty"
+    if let some k := c.varKind? then
+      let (bind, lhsA, rhsA, tail, fn) : String × String × String × List String × String := match k with
+        | .fields _ ch _ elem =>
+          let el := elem.replace "{M}" "Ty"
+          (s!"(fs gs : List ({el}))", "fs", "gs", ["Prod.map", "Variance.holds"],
+           s!"(fun (pq : ({el}) × ({el})) => sub pq.1{ch} pq.2{ch})")
+        | .items _ =>
+          ("(xs ys : List Ty)", "xs", "ys", ["Prod.map", "Variance.holds"],
+           "(fun (pq : Ty × Ty) => sub pq.1 pq.2)")
+        | .applied _ _ =>
+          ("(n1 : String) (xs : List Ty) (n2 : String) (ys : List Ty)", "n1 xs", "n2 ys",
+           ["Prod.map", "Variance.holds_eq_select"],
+           "(fun (pq : (Ty × Nat) × (Ty × Nat)) =>\n      (argVariance n1 pq.1.2).select (sub pq.1.1 pq.2.1) (sub pq.2.1 pq.1.1))")
       s := s ++
-        [ s!"/-- The field-list arm: under the head (the canonical name lists equal), `sub` is the",
-          "fieldwise comparison in canonical order. It reads `sub`'s arm in the form",
-          "`decide (names) && (zip).attach.all …`, the one form this generator proves. -/",
-          s!"theorem sub_args_{c.name} (fs gs : List ({el}))",
-          s!"    (hh : sameHead (.{c.name} fs) (.{c.name} gs) = true) :",
-          s!"    sub (.{c.name} fs) (.{c.name} gs) = argsBelow sub (.{c.name} fs) (.{c.name} gs) := by",
-          s!"  by_cases h : Ty.{c.name} fs = Ty.{c.name} gs",
+        [ s!"/-- The `{c.name}` arm: under the head, `sub` is the comparison of corresponding",
+          "children. It reads `sub`'s arm in the form `decide (head) && (zip).attach.all …`, the one",
+          "form this generator proves. -/",
+          s!"theorem sub_args_{c.name} {bind}",
+          s!"    (hh : sameHead (.{c.name} {lhsA}) (.{c.name} {rhsA}) = true) :",
+          s!"    sub (.{c.name} {lhsA}) (.{c.name} {rhsA}) = argsBelow sub (.{c.name} {lhsA}) (.{c.name} {rhsA}) := by",
+          s!"  by_cases h : Ty.{c.name} {lhsA} = Ty.{c.name} {rhsA}",
           "  · rw [h, sub_refl, argsBelow_refl]",
           "  · simp only [sameHead] at hh",
           "    conv => lhs; unfold sub",
           "    simp only [h, ↓reduceIte, hh, Bool.true_and, argsBelow, args, List.zip_map, List.all_map,",
-          "      Function.comp_def, Prod.map, Variance.holds]",
-          s!"    exact all_attach_eq _ (fun (pq : ({el}) × ({el})) => sub pq.1{ch} pq.2{ch})",
+          "      Function.comp_def, " ++ String.intercalate ", " tail ++ "]",
+          s!"    exact all_attach_eq _ {fn}",
           "" ]
       continue
     let n := c.children.length
@@ -781,14 +893,14 @@ def emitArmLemmas (rs : List Row) : List String := Id.run do
 catch-all is `rfl`; the `true` direction is `fun_cases Ty.sameHead`, one arm lemma per case. -/
 def emitDispatch (rs : List Row) : List String := Id.run do
   -- `sub`'s arms in order: six rules, one congruence arm per head with children (declaration
-  -- order, `union` excepted), then the catch-all, so its `fun_cases` number is computed, not
-  -- written: an appended head moves it. A field-list arm's value is not constant at a
+  -- order, `union` excepted), then the catch-all; its `fun_cases` number is computed, not
+  -- written, since every appended head moves it. A variable head's arm is not constant at a
   -- different head, so it gets its own case.
   let cong := rs.filter fun r => r.head.isSome &&
-    (r.ctor.children.length != 0 || r.ctor.fieldList?.isSome) &&
+    (r.ctor.children.length != 0 || r.ctor.varKind?.isSome) &&
     !notCongruent.any (fun p => p.1 == r.ctor.name)
   let varCases : List String := (cong.zipIdx.filterMap fun (r, k) =>
-    if r.ctor.fieldList?.isSome then
+    if r.ctor.varKind?.isSome then
       some [s!"  case case{7 + k} =>", "    simp only [sameHead] at hh", "    simp only [hh, Bool.false_and]"]
     else none).flatten
   let catchAll := 7 + cong.length
@@ -821,8 +933,9 @@ def emitDispatch (rs : List Row) : List String := Id.run do
     let c := r.ctor
     if notCongruent.any (fun p => p.1 == c.name) then continue
     i := i + 1
-    if c.fieldList?.isSome then
-      s := s ++ [s!"  case case{i} => intro hh; exact sub_args_{c.name} _ _ hh"]
+    if c.varKind?.isSome then
+      let unders := String.intercalate " " (repeatStr (2 * c.fields.length) "_")
+      s := s ++ [s!"  case case{i} => intro hh; exact sub_args_{c.name} {unders} hh"]
       continue
     let n := c.children.length
     let ps := c.payloads
@@ -869,30 +982,63 @@ def emitLaws (rs : List Row) : List String :=
   -- only a constructor with fields has an `injEq`
   let injEqs := String.intercalate ", "
     ((rs.filter fun r => !r.ctor.fields.isEmpty).map fun r => s!"Ty.{r.ctor.name}.injEq")
-  let vrs := rs.filter fun r => r.ctor.fieldList?.isSome
+  let vrs := rs.filter fun r => r.ctor.varKind?.isSome
   let hasVar := !vrs.isEmpty
-  let reflCases := vrs.map fun r =>
-    s!"  case {r.ctor.name} fields => exact zip_self_all sub sub_refl _"
-  let congrCases := (vrs.map fun r =>
-    [ s!"  case {r.ctor.name}.{r.ctor.name} fs gs =>",
-      "    have hl := congrArg List.length (of_decide_eq_true h)",
-      "    simp only [List.length_map] at hl",
-      "    simp only [args, List.length_map, List.map_map, Function.comp_def]",
-      "    exact ⟨hl, map_const_eq _ hl⟩" ]).flatten
-  let eqCases := (vrs.map fun r =>
-    [ s!"  case {r.ctor.name}.{r.ctor.name} fs gs =>",
-      "    have hn := of_decide_eq_true h",
-      "    simp only [args, List.map_map, Function.comp_def] at hx",
-      s!"    have hc : canon fs = canon gs := eq_of_fields_{r.ctor.name} hn hx",
-      "    have hf : canon fs = fs := of_decide_eq_true hca",
-      "    have hg : canon gs = gs := of_decide_eq_true hcb",
-      "    rw [← hf, ← hg, hc]" ]).flatten
+  let hasFields := vrs.any fun r => match r.ctor.varKind? with | some (.fields ..) => true | _ => false
+  let binders : VarKind → String := fun k => match k with
+    | .fields .. => "fs" | .items _ => "xs" | .applied .. => "n xs"
+  let reflCases := vrs.filterMap fun r => r.ctor.varKind?.map fun k =>
+    s!"  case {r.ctor.name} {binders k} => exact zip_self_all sub sub_refl _"
+  let congrCases := (vrs.filterMap fun r => r.ctor.varKind?.map fun k =>
+    let c := r.ctor.name
+    match k with
+    | .fields .. =>
+      [ s!"  case {c}.{c} fs gs =>",
+        "    have hl := congrArg List.length (of_decide_eq_true h)",
+        "    simp only [List.length_map] at hl",
+        "    simp only [args, List.length_map, List.map_map, Function.comp_def]",
+        "    exact ⟨hl, map_const_eq _ hl⟩" ]
+    | .items _ =>
+      [ s!"  case {c}.{c} xs ys =>",
+        "    have hl : xs.length = ys.length := of_decide_eq_true h",
+        "    simp only [args, List.length_map, List.map_map, Function.comp_def]",
+        "    exact ⟨hl, map_const_eq _ hl⟩" ]
+    | .applied .. =>
+      [ s!"  case {c}.{c} n1 xs n2 ys =>",
+        "    simp only [sameHead, Bool.and_eq_true, decide_eq_true_eq] at h",
+        "    obtain ⟨rfl, hl⟩ := h",
+        "    simp only [args, List.length_map, List.length_zipIdx, List.map_map, Function.comp_def]",
+        "    exact ⟨hl, map_zipIdx_snd_eq _ hl⟩" ]).flatten
+  let eqCases := (vrs.filterMap fun r => r.ctor.varKind?.map fun k =>
+    let c := r.ctor.name
+    match k with
+    | .fields .. =>
+      [ s!"  case {c}.{c} fs gs =>",
+        "    have hn := of_decide_eq_true h",
+        "    simp only [args, List.map_map, Function.comp_def] at hx",
+        s!"    have hc : canon fs = canon gs := eq_of_fields_{c} hn hx",
+        "    have hf : canon fs = fs := of_decide_eq_true hca",
+        "    have hg : canon gs = gs := of_decide_eq_true hcb",
+        "    rw [← hf, ← hg, hc]" ]
+    | .items _ =>
+      [ s!"  case {c}.{c} xs ys =>",
+        "    simp only [args, List.map_map, Function.comp_def, List.map_id'] at hx",
+        "    rw [hx]" ]
+    | .applied .. =>
+      [ s!"  case {c}.{c} n1 xs n2 ys =>",
+        "    simp only [sameHead, Bool.and_eq_true, decide_eq_true_eq] at h",
+        "    obtain ⟨rfl, _⟩ := h",
+        "    simp only [args, List.map_map, Function.comp_def] at hx",
+        "    rw [map_fst_zipIdx, map_fst_zipIdx] at hx",
+        "    rw [hx]" ]).flatten
   [ "/-- `union` is the one head `sameHead` refuses, so reflexivity is stated at a member; an",
     "`isMember` hypothesis is exactly what every caller of the view has: the one goal the",
     "normalisation leaves is that head, and `isMember` is `false` there. -/",
     "theorem sameHead_refl (t : Ty) (h : isMember t = true) : sameHead t t = true := by",
     "  cases t <;> simp only [sameHead, decide_eq_true_eq" ++
-      (if rs.any (fun r => r.ctor.payloads.length >= 2) then ", and_self]" else "]") ++ "",
+      (if rs.any (fun r => match r.ctor.varKind? with | some (.applied ..) => true | _ => false)
+        then ", Bool.and_eq_true, and_self]"
+       else if rs.any (fun r => r.ctor.payloads.length >= 2) then ", and_self]" else "]") ++ "",
     "  exact h",
     "",
     "theorem sameHead_symm {a b : Ty} (h : sameHead a b = true) : sameHead b a = true := by",
@@ -921,9 +1067,9 @@ def emitLaws (rs : List Row) : List String :=
    else [ "  cases a <;> cases b <;> aesop (add norm simp [sameHead, args])" ]) ++
   (if hasVar then
     [ "",
-      "/-- A node is its head and its children, read in canonical order: at a head of variable",
-      "arity the children are in that order, so the node must be (`headCanon`); a permuted record",
-      "has its canonical record's head and children and is a different term. -/",
+      "/-- A node is its head and its children, read in canonical order: at a field list the" ,
+      "children are in that order, so the node must be (`headCanon`); a permuted record has its",
+      "canonical record's head and children and is another term. -/",
       "theorem eq_of_sameHead {a b : Ty} (h : sameHead a b = true)",
       "    (hx : a.args.map Prod.snd = b.args.map Prod.snd)",
       "    (hca : headCanon a = true) (hcb : headCanon b = true) : a = b := by",
@@ -935,6 +1081,7 @@ def emitLaws (rs : List Row) : List String :=
       "theorem eq_of_sameHead {a b : Ty} (h : sameHead a b = true)",
       "    (hx : a.args.map Prod.snd = b.args.map Prod.snd) : a = b := by",
       "  cases a <;> cases b <;> aesop (add norm simp [sameHead, args, " ++ injEqs ++ "])" ]) ++
+  (if hasFields then [] else []) ++
   [ "",
     "/-- Composition at each variance, once, for every relational law that needs it. -/",
     "theorem Variance.holds_trans {r : Ty → Ty → Bool} (v : Variance)",
@@ -993,15 +1140,27 @@ def emitAdmits (rs : List Row) : List String := Id.run do
   for r in rs do
     let c := r.ctor
     let some h := r.head | continue
-    if let some (_, ch, ps, elem) := c.fieldList? then
-      let el := elem.replace "{M}" "AdmCarrier .ty"
-      let pay := payText ps
-      s := s ++
-        [ s!"  /-- every field co, the names equal in canonical order ({h.cite}) -/",
-          s!"  {c.name} : ∀ (ps qs : List ({el})),",
-          s!"    (Ty.canon ps).map (fun p => {pay}) = (Ty.canon qs).map (fun p => {pay}) →",
-          s!"    (∀ p q, (p, q) ∈ (Ty.canon ps).zip (Ty.canon qs) → Adm.le (p{ch}).2 (q{ch}).2) →",
-          s!"    Adm.le (alg.ty_{c.name} ps).2 (alg.ty_{c.name} qs).2" ]
+    if let some k := c.varKind? then
+      let lines := match k with
+        | .fields _ ch ps elem =>
+          let el := elem.replace "{M}" "AdmCarrier .ty"
+          [ s!"  /-- every field co, the payloads equal in canonical order ({h.cite}) -/",
+            s!"  {c.name} : ∀ (ps qs : List ({el})),",
+            s!"    (Ty.canon ps).map (fun p => {payText ps}) = (Ty.canon qs).map (fun p => {payText ps}) →",
+            s!"    (∀ p q, (p, q) ∈ (Ty.canon ps).zip (Ty.canon qs) → Adm.le (p{ch}).2 (q{ch}).2) →",
+            s!"    Adm.le (alg.ty_{c.name} ps).2 (alg.ty_{c.name} qs).2" ]
+        | .items _ =>
+          [ s!"  /-- every item co, by position ({h.cite}) -/",
+            s!"  {c.name} : ∀ (ps qs : List (AdmCarrier .ty)), ps.length = qs.length →",
+            "    (∀ p q, (p, q) ∈ ps.zip qs → Adm.le p.2 q.2) →",
+            s!"    Adm.le (alg.ty_{c.name} ps).2 (alg.ty_{c.name} qs).2" ]
+        | .applied _ _ =>
+          [ s!"  /-- each argument at the name's declared variance, an invariant one ignored ({h.cite}) -/",
+            s!"  {c.name} : ∀ (n : String) (ps qs : List (AdmCarrier .ty)), ps.length = qs.length →",
+            "    (∀ p q, (p, q) ∈ ps.zipIdx.zip qs.zipIdx → match Ty.argVariance n p.2 with",
+            "      | .co => Adm.le p.1.2 q.1.2 | .contra => Adm.le q.1.2 p.1.2 | .inv => True) →",
+            s!"    Adm.le (alg.ty_{c.name} n ps).2 (alg.ty_{c.name} n qs).2" ]
+      s := s ++ lines
       continue
     let kids := c.children
     if kids.isEmpty then continue
@@ -1052,10 +1211,17 @@ def emitAdmitsExtend (ns : String) (rs : List Row) : List String := Id.run do
       "structure AdmitsExtend (alg : TyAlgebra AdmCarrier) : Prop where" ]
   for r in rs do
     let c := r.ctor
-    if let some (_, ch, _, elem) := c.fieldList? then
-      let el := elem.replace "{M}" "AdmCarrier .ty"
-      s := s ++ [s!"  {c.name} : ∀ (ps : List ({el})), (∀ p ∈ ps, Adm.Extends (p{ch}).2) → \
-        Adm.Extends (alg.ty_{c.name} ps).2"]
+    if let some k := c.varKind? then
+      let line := match k with
+        | .fields _ ch _ elem =>
+          let el := elem.replace "{M}" "AdmCarrier .ty"
+          s!"  {c.name} : ∀ (ps : List ({el})), (∀ p ∈ ps, Adm.Extends (p{ch}).2) → Adm.Extends (alg.ty_{c.name} ps).2"
+        | .items _ =>
+          s!"  {c.name} : ∀ (ps : List (AdmCarrier .ty)), (∀ p ∈ ps, Adm.Extends p.2) → Adm.Extends (alg.ty_{c.name} ps).2"
+        | .applied _ _ =>
+          s!"  {c.name} : ∀ (n : String) (ps : List (AdmCarrier .ty)), (∀ p ∈ ps, Adm.Extends p.2) → \
+            Adm.Extends (alg.ty_{c.name} n ps).2"
+      s := s ++ [line]
       continue
     let n := c.children.length
     let ps := c.payloads
@@ -1132,15 +1298,23 @@ def run (args : Args) (heads : List Head) : MetaM (Array String) := do
     let rs ← match rows ctors heads with
       | .error e => throwError e
       | .ok rs => pure rs
-    -- a head of variable arity reads its children through `Ty.lean`'s canonical order: the
-    -- order and the two facts the laws use must exist, or the view is refused by name
-    let hasVar := rs.any fun r => r.ctor.fieldList?.isSome
-    if hasVar then
-      for nm in ["canon", "mem_canon", "canon_eq_nil"] do
-        unless (← getEnv).contains (t.toName ++ nm.toName) do
-          throwError "View: `{t}` has a head of variable arity, which the view reads through \
-            `{t}.{nm}`; it is not in the environment (the order and its facts belong to Ty.lean)"
-    lines := lines.push (join (["namespace Ty", ""] ++ emitVariance ++ emitArgs rs ++
+    -- what a head of variable arity reads must exist in `Ty.lean` (the canonical order and its
+    -- two facts) and in the core variance module (a reference's declared variances); refused
+    -- by name otherwise
+    let kinds := rs.filterMap (·.ctor.varKind?)
+    let hasVar := !kinds.isEmpty
+    let needs : List Name :=
+      (if kinds.any (fun k => match k with | .fields .. => true | _ => false)
+        then [`canon, `mem_canon, `canon_eq_nil] else []) ++
+      (if kinds.any (fun k => match k with | .applied .. => true | _ => false)
+        then [`argVariance, `Variance.select, `Variance.holds_eq_select] else [])
+    for nm in needs do
+      unless (← getEnv).contains (t.toName ++ nm) do
+        throwError "View: `{t}` has a head of variable arity, which the view reads through \
+          `{t.toName ++ nm}`; it is not in the environment"
+    -- a core `Ty.Variance` (the variance module `sub` reads) replaces the view's own
+    let coreVariance := (← getEnv).contains (t.toName ++ `Variance)
+    lines := lines.push (join (["namespace Ty", ""] ++ emitVariance coreVariance ++ emitArgs rs ++
       emitSameHead rs ++ emitRules ++ emitProbes rs ++ emitVarHelpers rs ++ emitLaws rs ++ emitArmLemmas rs ++ emitDispatch rs ++ emitSizeOf rs ++ emitOrderLaws hasVar ++
       ["end Ty", ""] ++ emitAdmits rs ++ emitAdmitsExtend ns rs))
   lines := lines ++ #["end " ++ ns, ""]
