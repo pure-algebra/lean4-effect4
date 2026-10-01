@@ -25,6 +25,7 @@ import Test.Counterexamples.Machine.Semantics.TrivialPosts
 import Test.Counterexamples.Machine.Semantics.M6Capstone
 import Test.Counterexamples.Machine.Semantics.LayerValue
 import Test.Counterexamples.Machine.Semantics.ValueMembership
+import Test.Counterexamples.Machine.Semantics.FitsOrder
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.TypedResidual
