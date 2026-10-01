@@ -23,6 +23,7 @@ import Test.Counterexamples.Machine.Semantics.InterruptCarrier
 import Test.Counterexamples.Machine.Semantics.AsyncHookContract
 import Test.Counterexamples.Machine.Semantics.TrivialPosts
 import Test.Counterexamples.Machine.Semantics.M6Capstone
+import Test.Counterexamples.Machine.Semantics.StaleCode
 import Test.Counterexamples.Machine.Semantics.LayerValue
 import Test.Counterexamples.Machine.Semantics.ValueMembership
 import Test.Program.TypedWorldValidity
