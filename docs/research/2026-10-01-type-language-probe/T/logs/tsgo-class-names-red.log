@@ -1,0 +1,3 @@
+# RED CONTROL. Version 7.0.0-dev.20260629.1 (/opt/homebrew/bin/tsgo); tsgo -p tsconfig.class-names-red.json --pretty false
+class-names-red.ts(7,14): error TS2322: Type 'true' is not assignable to type 'false'.
+exit=1

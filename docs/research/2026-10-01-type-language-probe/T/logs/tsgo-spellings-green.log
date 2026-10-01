@@ -1,0 +1,2 @@
+# Version 7.0.0-dev.20260629.1 (/opt/homebrew/bin/tsgo); pinned twin Version 7.0.0-dev.20260629.1 (/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo); tsgo -p tsconfig.green.json --pretty false
+exit=0
