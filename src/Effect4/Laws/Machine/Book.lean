@@ -169,10 +169,9 @@ def controlOf {κ φ : Type (max u v)} [c : FiberCore ν β ε δ ι α κ φ]
     if f.exit.isSome then none else some (c.interruptible f.frame),
     c.interruptedCause f.frame, c.deferredInterrupt f.frame, f.context⟩
 
-/-! ## The runtime fields and the machine fork ledger
+/-! ## The fifteen fields of RunFiber and the eleven of RunMachine
 
-The old RunFiber.origin field is retained only for the step-3 comparison runner until
-step 5 deletes it. It is no longer part of this relation; provenance is the machine ledger.
+Creation provenance is held only in the machine fork ledger.
 -/
 
 /-- Code-free by equality: `id`, `running`, `parked`, `pending`, `finalizing`, `exit`,

@@ -240,7 +240,7 @@ structure ForkRecord where
   site : List Nat
 deriving DecidableEq, Repr
 
-/-- rc.112 `FiberImpl` (`:505-555`), seventeen fields read through one record. `frame` is
+/-- rc.112 `FiberImpl` (`:505-555`), fifteen fields read through one record. `frame` is
 the five-field machine of `Runtime.lean`; `running` (`:537`), `parked` (`:536`), `pending`,
 `finalizing` (the exit held while the children are interrupted, `:613-617`), `exit`
 (`:533`), the op counter and the two `Context`-cached budget fields (`:530`, `:549-550`),
@@ -264,8 +264,6 @@ structure RunFiber (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
   children : List FiberId
   dispatcher : Dispatcher ν σ β ε δ ι α κ
   context : χ
-  /-- Set at creation; later tracking and trace changes do not alter provenance. -/
-  origin : Origin := .root
 deriving DecidableEq
 
 namespace RunFiber
@@ -279,7 +277,7 @@ def interruptPending (f : RunFiber ν σ β ε δ ι α χ κ φ) : Bool :=
 /-- `new FiberImpl(context, interruptible)` (`:512-514`) with the modelled fields; the
 budget fields are read off the context as `setContext` does (`:726-727`). -/
 def make (id : FiberId) (current : κ) (interruptible : Bool)
-    (budget : Nat × Bool) (context : χ) (origin : Origin := .root) : RunFiber ν σ β ε δ ι α χ κ φ where
+    (budget : Nat × Bool) (context : χ) : RunFiber ν σ β ε δ ι α χ κ φ where
   id := id
   frame := core.start current interruptible
   running := false
@@ -295,7 +293,6 @@ def make (id : FiberId) (current : κ) (interruptible : Bool)
   children := []
   dispatcher := Dispatcher.empty
   context := context
-  origin := origin
 
 /-- Park on `p.token`, remembering what resumes it. -/
 def park (f : RunFiber ν σ β ε δ ι α χ κ φ) (p : Pending ν β ε δ ι α) :
@@ -959,7 +956,7 @@ def spawn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν 
     | Supervision.MaskMode.uninterruptible => false
     | Supervision.MaskMode.inherit => core.interruptible parent.frame
   let child := RunFiber.make childId program childInterruptible
-    (interp.budgetOf parent.context) parent.context (.forked parent.id options.daemon site)
+    (interp.budgetOf parent.context) parent.context
   -- tracking (`:5279-5282`) is `Cmd.trackChild`, after the child's immediate run or its
   -- scheduling (source-repairs §19, D6b); the parent is returned unchanged
   let m := { m with
@@ -2214,7 +2211,7 @@ def runFork (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (program : κ) (context : χ) :
     RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
   let root : FiberId := ⟨m.nextId⟩
-  let fiber := RunFiber.make root program true (interp.budgetOf context) context .root
+  let fiber := RunFiber.make root program true (interp.budgetOf context) context
   let m := { m with fibers := m.fibers ++ [fiber], nextId := m.nextId + 1 }
   (drive interp fuel m [Cmd.evaluate root, Cmd.drainDue], root)
 
@@ -2224,7 +2221,7 @@ def runCallback (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (program : κ) (context : χ)
     (key : Nat) : RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
   let root : FiberId := ⟨m.nextId⟩
-  let fiber := RunFiber.make root program true (interp.budgetOf context) context .root
+  let fiber := RunFiber.make root program true (interp.budgetOf context) context
   let fiber := { fiber with observers := [Observer.callback key] }
   let m := { m with fibers := m.fibers ++ [fiber], nextId := m.nextId + 1 }
   (drive interp fuel m [Cmd.evaluate root, Cmd.drainDue], root)

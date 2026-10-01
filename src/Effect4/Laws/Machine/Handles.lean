@@ -2078,13 +2078,13 @@ Each helper's receipt: the world grew, and the handles the helper leaves behind 
 machine's, its fiber's, its commands') exist in the world it leaves. -/
 
 theorem M1Origin.make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
-    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
+    (budget : Nat × Bool) (ctx : Ctx) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
       primKeys nk sk program ++ ctx.keys) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
-    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
-    (RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
+    (budget : Nat × Bool) (ctx : Ctx) :
+    (RunFiber.make id program flag budget ctx : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
       primKeys nk sk program ++ ctx.keys := by
   show primKeys nk sk program ++ [] ++ [] ++ [] ++ [] ++ [] ++ [] ++ [] ++ ctx.keys ⊆ _
   simp only [List.append_nil]
@@ -2111,7 +2111,7 @@ theorem spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId 
       Handle.fiber parent.id :: primKeys nk sk program ++ parent.context.keys := by
   unfold spawnChild
   dsimp only
-  refine List.Subset.trans (make_keys_subset nk sk _ _ _ _ _ (.forked parent.id options.daemon site)) ?_
+  refine List.Subset.trans (make_keys_subset nk sk _ _ _ _ _) ?_
   sub_tac
 
 theorem M1Origin.spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)

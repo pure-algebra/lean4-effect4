@@ -1,5 +1,140 @@
 # Slice 6 implementation receipt
 
+## After addendum 5
+
+**The one thing first.** The audit, A, and all three C steps are complete. C step 5 is
+integration-ready: the old fiber field and its comparison runner are removed together, the
+Lean and OCaml paths read/write the machine ledger, generation is current, and the required
+OCaml and repository checks pass. The owner authorized the additional prelude/test readers,
+two closure manifests, and explicit ForkRecord type root as recorded below. D's held users
+follow, then F, G, H1, and H2 part one. H2 excludes only badName and notImplemented;
+missingService waits for part two. Nothing has been pushed.
+
+Authority read from the main checkout:
+`/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-codex-brief-slice6-addendum-5.md`,
+commit `56da0e1edeefc97ce878afaefe34ca702f86c35f` (hash receipt under
+`2026-09-30-seat-codex-slice6-evidence/after-addendum-5/authority.json`). It is not merged into
+this branch; the coordinator owns that merge. Rows 111–117 are not implementation work here.
+The After-addendum-4 and first receipt sections below are retained as checkpoint history.
+
+### C — additional OCaml reader, stop lifted by the owner
+
+The Lean deletion and focused dependency repairs pass, including the two repaired race bodies
+at `[propext, Quot.sound]`. `make gen-derived` then passed, including its 724-job full
+prerequisite build. Derived output was byte-identical. The earlier failed build and the focused
+332-job repair build are retained in C evidence. The two new
+mechanical repairs are the generated frame-rule count fixtures (one old fiber field disappears,
+one ledger field appears) and two unchanged race statements proved by explicit launch cases.
+They are not extra origin readers.
+
+The actual extra reader is `ocaml/engine/test/test_engine.ml:545,551,560,566`: Fast and Ref
+fetch raw fiber records with `I.fibers` and inspect `parent.origin` / `child.origin`. The
+handwritten `ocaml/engine/tools/api_engine_prelude.ml:99–106` still constructs the old fiber
+field; `sh_api_load` passes `Origin_root` at :117, and `sh_spawn` / `sh_spawn_generic` pass
+`Origin_forked` at :136–137 and :162–163. Both spawn substitutions advance fibers and next_id
+without a ledger append (:139–142, :165–168). `ocaml/engine/externs.txt:88–90` makes those
+substitutions actual engine behavior. Regeneration alone cannot repair this handwritten source.
+
+**Owner amendment, 2026-10-01:** “Yes—finish C with this amendment.” Include the prelude's load/make/spawn transcriptions and the four
+Fast/Ref creation-provenance assertions in C's checklist. Remove the fiber-origin argument,
+append the exact ForkRecord at both spawn substitutions, and make the assertions inspect the
+machine ledger (root has no record; child retains parent, daemon and exact site). Keep the
+same independent Fast/Ref controls and prescribed producer/OCaml checks. The extern map is unchanged. Subsequent generated-path and producer-input amendments are
+recorded separately below.
+
+### C — two additional generated manifests, stop lifted by the owner
+
+`make gen-lcnf` completed the fibers, machine and API-oracle cuts, then was interrupted
+(exit 130) before the engine cut completed, upon observing two additional generated paths:
+`ocaml/gen/closure-fibers_gen.tsv` and `ocaml/gen/closure-machine_gen.tsv`. The first changes
+67 existing rows and the second 9; declaration names/counts are unchanged. These are the
+producer's own closure statistics/hashes for the changed record layout and spawn body.
+The exact diff and keyed row inventory are `C/additional-manifests.diff` and `.json`.
+No generated output was hand-edited.
+
+The original §6 generated-path stop and addendum 5's “No other generated path is permitted”
+required a further explicit amendment. **Owner ruling, 2026-10-01:** “Yes—include both
+generated manifests.” These two companion manifests are permitted as
+producer outputs of C, like the already allowed API manifests. Rerun the prescribed
+LCNF stage before eff/wire/cas and the named checks. The second LCNF run completed the interrupted engine cut. Its subsequent OCaml build
+exposed the separate producer-input amendment below.
+
+### C — engine type root, measured producer amendment
+
+All five generation stages passed. `dune build` then failed at the approved spawn
+transcription: the engine producer emitted `fork_record = Placeholder_fork_record` rather
+than its record fields. Both spawn definitions are replaced by the handwritten prelude, so
+the producer does not see their constructor. The explicit type-root list already handles
+`Origin` for this reason. The proposed amendment adds exactly `Effect4.Machine.ForkRecord`
+to the engine entry in `ocaml/gen/roots.json`, keeping all other fields unchanged.
+`C/roots-amendment.patch` is the exact change; `C/dune.log` and its command/result JSON
+retain the compiler evidence. This new producer-input path awaits the owner under §6's
+scope stop. **Owner ruling, 2026-10-01:** “Yes—include the ForkRecord type root.”
+The exact proposed recipe change is now authorized and applied; regeneration and checks resume.
+
+### C — step 5 complete
+
+Base: `e5cc184ba820ab4ea79b38fd32820421514812b9`. The commit containing this section
+is C step 5. `C/step5-paths.json` lists its exact implementation paths and `C/step5-source.patch`
+retains the source diff. The eight site defaults remain as ruled. No second origin owner remains
+in Lean or the handwritten engine. The `Origin` result alphabet remains available to the API.
+
+The comparison runner's final execution was at that exact base (`runner-at-step4.commit.txt`):
+8,594 programs, 34,376 runs, 189,068 decision boundaries, 348,162 member comparisons,
+zero mismatches; all three ledger mutants were rejected. Its source and Test/All import are
+retired in this same commit as `RunFiber.origin` and the constructor argument.
+
+Verification, one Lean process at a time, `LEAN_NUM_THREADS=1`:
+- The deletion's focused builds pass (`delete-narrow-1`, `delete-broad-repairs`). Both repaired
+  race statements retain their statements and print only `[propext, Quot.sound]` (`step5-axioms`).
+- Full producer order passed: derived (`gen-derived-2`), LCNF (`gen-lcnf-3`), eff/wire/cas
+  (`post-root-generation`). The four LCNF outputs and their four manifests are the only
+  generated diffs. The failed/interrupted intermediate runs remain alongside the final logs.
+- `opam exec --switch=effect4 -- dune build`, inside `ocaml/`: exit 0 (`dune-2`).
+- `opam exec --switch=effect4 -- dune exec engine/test/test_engine.exe`: exit 0; 80 checks,
+  including all four Fast/Ref root and exact child-provenance assertions (`engine-test`).
+- `make check-ocaml`: exit 0. The three-engine differential covers 472 programs, 2,960 tapes,
+  65,712 positions and 131,424 projection comparisons, with zero divergences, profile-refused
+  tapes or raised tapes. The independent seam/prelude checks also pass (`check-ocaml`).
+- `make check`: exit 0 (`make-check`): 724-job build, fresh Test/All root, library/test closure
+  and axiom gate, and regenerated-file drift. The semantic/test ceiling remains
+  `[propext, Quot.sound]`; the gate's existing exact implementation exceptions are unchanged.
+- Implementation whitespace checks: exit 0 (`git diff HEAD^ HEAD --check -- src Test ocaml`).
+  Raw retained compiler logs and diff artifacts include emitted trailing whitespace; the
+  all-artifact check reports that whitespace, and those evidence bytes are retained unchanged.
+  Generated outputs were explicitly staged
+  before the drift gate, whose comparison is against the index; regeneration changed none of
+  those bytes. No generated output was edited by hand.
+
+`C/check.py` and each `.command.json` / `.result.json` retain exact argv, cwd, environment,
+exit and elapsed time; earlier generation uses `C/run.py` with command/result text files.
+These execution comparisons are finite evidence. D still owes the general reachable ledger
+facts and trace agreement; C does not claim them from the runner or backend differential.
+
+### H2 — part-one exclusion clarified by the owner
+
+Addendum 5's “The judgment” requires `NoShapeDefect ty ex` to exclude `missingService` when
+`ty.requires` is empty, and sends that judgment through the saved-stack contract. Its part-two
+section simultaneously holds the contract amendment needed to transport this same clause.
+The already checked `AuditH2.loop_admitted`, `output_eq`, and `output_bad` refute that full
+transport at the current contracts. This is a contradiction in scope, not a prediction of a
+ninth compiler failure. The eight-body PartOne harness and its named repair plan deliberately
+exclude only `badName` and `notImplemented`; they do not implement the full conditional clause.
+
+**Owner clarification, 2026-10-01:** “Yes—two defects in part one; missingService waits.”
+The user approved the following exact clarification: part one keeps `ExitOk w ty ex` and the signature-free
+`NoShapeDefect ty ex` interface, but the latter ignores `ty` for now and excludes only
+`badName` and `notImplemented`. The conditional `missingService` clause remains part two,
+with row 117's contract amendment. The eight-body cap, clean-failure premise, local lemmas,
+controls, and no-ninth-repair rule remain exactly as addendum 5 states. This resolves the
+wording conflict; H2 part one remains in queue after H1. The full clause is not silently retained.
+
+**Proposed register row, not written to the register:**
+
+| ID | Status | Claim under attack | Witness | Next action |
+| --- | --- | --- | --- | --- |
+| `E4-TYPED-CE-008` | SEEDED 2026-10-01 | The frame contracts transport `missingService` across a change in the requirement row | `docs/research/2026-09-30-codex-review-model-probe/probes/SavedFrameTransport.lean`: `AuditH2.loop_admitted`, `output_eq`, `output_bad`; logs in that audit | A never-answer loop frame accepts the failure at a nonempty requirement row and returns it unchanged at an empty row, where the full exclusion refuses it. Row 117 holds a frame/operation contract amendment with scoped/provision positive controls. This is a saved-frame witness, not a reached-run claim. |
+
 ## After addendum 4
 
 **The one thing first.** The model-probe audit is committed at

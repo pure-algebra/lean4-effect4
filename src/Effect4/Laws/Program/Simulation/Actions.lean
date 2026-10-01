@@ -201,21 +201,21 @@ theorem spawn_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hb : i�
   rw [hm.nextId, hp.context, hb, hp.id]
   cases options.maskMode with
   | interruptible =>
-    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _)
+    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _)
       (m₁.forks ++ [ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site])) _,
-      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _).appendFork
+      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _) _).appendFork
         (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
   | uninterruptible =>
-    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _)
+    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _)
       (m₁.forks ++ [ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site])) _,
-      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _).appendFork
+      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _) _).appendFork
         (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
   | inherit =>
     dsimp only
     rw [hp.interruptible]
-    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _)
+    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _)
       (m₁.forks ++ [ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site])) _,
-      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _).appendFork
+      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _) _).appendFork
         (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
 
 theorem start_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)

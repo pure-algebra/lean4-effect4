@@ -256,15 +256,15 @@ theorem FMeans.enqueue (h : FMeans root f₁ f₂) (priority : Nat) {t₁ : FTas
     h.means
 
 theorem M1OriginFibers.fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
-    (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (
-    FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin)) := ⟨⟩
+    (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) : ProofGraph.Obligation (
+    FMeans root (RunFiber.make id c₁ flag budget ctx) (RunFiber.make id c₂ flag budget ctx)) := ⟨⟩
 
 /-- A fresh fiber over related programs. -/
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
-    (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
-    FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin) :=
+    (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
+    FMeans root (RunFiber.make id c₁ flag budget ctx) (RunFiber.make id c₂ flag budget ctx) :=
   FMeans.mk' rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl ⟨ListRel.nil, rfl⟩
     (means_start root hc flag)
 
@@ -476,23 +476,21 @@ end Machine
 
 /-! ## The invariant, at the shapes the arms produce -/
 
-theorem M1Origin.pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx)
-    (origin : Origin := .root) :
-    ProofGraph.Obligation (PendingOk (RunFiber.make id c flag budget ctx origin : FRun)) := ⟨⟩
+theorem M1Origin.pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
+    ProofGraph.Obligation (PendingOk (RunFiber.make id c flag budget ctx : FRun)) := ⟨⟩
 
 theorem M1OriginFibers.make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
-    (ctx : Ctx) (origin : Origin) : ProofGraph.Obligation (
-    (RunFiber.make id c flag budget ctx origin : FRun).pending = []) := ⟨⟩
+    (ctx : Ctx) : ProofGraph.Obligation (
+    (RunFiber.make id c flag budget ctx : FRun).pending = []) := ⟨⟩
 
 @[aesop norm simp (rule_sets := [Effect4.Stores])]
 theorem make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
-    (ctx : Ctx) (origin : Origin) :
-    (RunFiber.make id c flag budget ctx origin : FRun).pending = [] := by aesop
+    (ctx : Ctx) :
+    (RunFiber.make id c flag budget ctx : FRun).pending = [] := by aesop
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])] PendingOk
 
-theorem pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx)
-    (origin : Origin := .root) : PendingOk (RunFiber.make id c flag budget ctx origin : FRun) := by
+theorem pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) : PendingOk (RunFiber.make id c flag budget ctx : FRun) := by
   aesop (rule_sets := [Effect4.Stores])
 
 theorem pendingOk_park {f : FRun} (hf : PendingOk f) (p : Pending EffName Val Err Defect FiberId Ann)
