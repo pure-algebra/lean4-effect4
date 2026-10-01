@@ -20,8 +20,11 @@ What is measured, and how:
 - the roots of `Tools.Architecture.roots`, loaded with `importModules`, for the theorems,
   definitions and inductives each module declares (auxiliary declarations skipped by name);
 - every estate outside the Lean roots by file walk, lines counted for text extensions;
-- the generated groups from `docs/GENERATED.md`'s table and the pinned packages from
-  `lakefile.toml`, read as text so the map cannot disagree with either.
+- the generated groups in the order of the Makefile's `GEN_GROUPS` (the list `make gen` runs),
+  the derived group's outputs from `tools/Effect4Gen/manifest.json`, each group's description
+  from `docs/GENERATED.md`'s table, and the pinned packages from `lakefile.toml`, read as text so
+  the map cannot disagree with any of them; a group the Makefile runs and the table does not
+  describe is shown as such.
 
 What is declared, in `Tools.ArchitectureRoles`: the areas and their roles, the column and
 height of each, the layering rule, the accepted exceptions, the milestone's modules. The
@@ -238,7 +241,7 @@ def cells (line : String) : List String :=
   if parts.getLast? == some "" then parts.dropLast else parts
 
 /-- The table under `## The groups`: every row after the header and its rule. -/
-def readGroups : IO (List Group) := do
+def readTable : IO (List Group) := do
   let text ← IO.FS.readFile "docs/GENERATED.md"
   let lines := text.splitOn "\n"
   let after := lines.dropWhile (fun l => l.trimAscii.toString != "## The groups")
@@ -249,6 +252,42 @@ def readGroups : IO (List Group) := do
     | [n, p, i, c, k, e] => some ⟨n, p, i, c, k, e⟩
     | n :: p :: i :: c :: k :: e :: _ => some ⟨n, p, i, c, k, e⟩
     | _ => none
+
+/-- The Makefile's `GEN_GROUPS`, in order: the one list of the groups `make gen` runs. -/
+def readGenGroups : IO (List String) := do
+  let text ← IO.FS.readFile "Makefile"
+  match (text.splitOn "\n").find? (·.startsWith "GEN_GROUPS :=") with
+  | some line =>
+    match line.splitOn ":=" with
+    | _ :: rest :: _ => return (rest.trimAscii.toString.splitOn " ").filter (· ≠ "")
+    | _ => return []
+  | none => return []
+
+/-- Every group of the generator's manifest with the file its `Out` names. -/
+def readManifestGroups : IO (List (String × String)) := do
+  let text ← IO.FS.readFile "tools/Effect4Gen/manifest.json"
+  let .ok json := Json.parse text | return []
+  let .ok groups := json.getObjVal? "groups" | return []
+  let .ok groups := groups.getArr? | return []
+  return groups.toList.filterMap fun g =>
+    match g.getObjValAs? String "Name", g.getObjValAs? String "Out" with
+    | .ok name, .ok out => some (name, out.replace "\\" "/")
+    | _, _ => none
+
+/-- The groups the map shows: the Makefile's, in its order, each with the table's description
+(or a note that the table has none), the derived group's outputs read from the manifest; then
+the table's rows `make gen` does not run (they are run by name). -/
+def readGroups : IO (List Group) := do
+  let described ← readTable
+  let order ← readGenGroups
+  let manifest ← readManifestGroups
+  let outputs := "; ".intercalate (manifest.map fun (n, o) => s!"`{n}` → `{o}`")
+  let ordered := order.map fun name =>
+    match described.find? (·.name == name) with
+    | some g => if name == "derived" then { g with consumers := outputs } else g
+    | none => ⟨name, "(no row in `docs/GENERATED.md`)", "", "", "", ""⟩
+  let byName := described.filter fun g => !order.contains g.name
+  return ordered ++ byName.map fun g => { g with check := g.check ++ " (not in `GEN_GROUPS`: run by name)" }
 
 /-- One `[[require]]` of `lakefile.toml`. -/
 structure Pin where
@@ -702,10 +741,10 @@ def page (f : Facts) : IO String := do
   let map := "<section id=\"map\"><h2>The file map</h2><p class=\"lede\">Every area by column, top of the column first, with its detail directories indented. Files and lines are the area's own; a tag counts its <code>--run</code> drivers and any module without a built olean.</p>" ++
     renderLeanColumn f .runtime ++ renderLeanColumn f .laws ++ renderLeanColumn f .tools ++ renderLeanColumn f .tests ++
     renderEstates f .ocaml ++ renderEstates f .ts ++ renderEstates f .host ++ renderEstates f .docs ++ "</section>"
-  let faces := "<section id=\"faces\"><h2>Faces and generated groups</h2><p class=\"lede\">How a Lean definition becomes an OCaml or TypeScript face: the groups of <code>docs/GENERATED.md</code>, read from that table so the two cannot disagree.</p>" ++ renderGroups f ++ "</section>"
+  let faces := "<section id=\"faces\"><h2>Faces and generated groups</h2><p class=\"lede\">How a Lean definition becomes an OCaml or TypeScript face: the Makefile's <code>GEN_GROUPS</code> in order, described by <code>docs/GENERATED.md</code>, the derived group's outputs read from <code>tools/Effect4Gen/manifest.json</code>.</p>" ++ renderGroups f ++ "</section>"
   let pins := "<section id=\"pins\"><h2>Pinned references</h2><p class=\"lede\">The packages <code>lakefile.toml</code> requires, at their exact revisions, and the vendored behavioral reference.</p>" ++ renderPins f ++ "</section>"
   let audit := "<section id=\"audit\"><h2>Audit</h2><p class=\"lede\">What the tree says about itself at this measurement. None of it fails a build; all of it is a question for the next slice.</p>" ++ renderAudit f ++ "</section>"
-  let footer := "<footer>Generated by <code>tools/Tools/Architecture.lean</code> from the tree: import headers through <code>Lean.Elab.parseImports</code>, declaration counts from the loaded roots, sizes by file walk, the groups from <code>docs/GENERATED.md</code>, the pins from <code>lakefile.toml</code>. The role register <code>tools/Tools/ArchitectureRoles.lean</code> is the one hand input and is checked for totality on every run. No commit or date is embedded; the map changes when the tree does.</footer>"
+  let footer := "<footer>Generated by <code>tools/Tools/Architecture.lean</code> from the tree: import headers through <code>Lean.Elab.parseImports</code>, declaration counts from the loaded roots, sizes by file walk, the groups from the Makefile's <code>GEN_GROUPS</code>, the manifest and <code>docs/GENERATED.md</code>, the pins from <code>lakefile.toml</code>. The role register <code>tools/Tools/ArchitectureRoles.lean</code> is the one hand input and is checked for totality on every run. No commit or date is embedded; the map changes when the tree does.</footer>"
   return head ++ header ++ roots ++ matrix ++ against ++ stack ++ map ++ faces ++ pins ++ audit ++ footer ++ "\n</div>\n</body>\n</html>\n"
 
 end Tools.Architecture

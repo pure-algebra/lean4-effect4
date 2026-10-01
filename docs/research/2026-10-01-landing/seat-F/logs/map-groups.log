@@ -1,0 +1,17 @@
+GEN_GROUPS (12): [variances, derived, lcnf, eff, wire, cas, ts, readme, truth, host-protocol, schema-ts, census]
+manifest groups: 23
+variances	`tools/Tools/Variances.lean` (`scripts/generate.py --only va
+derived	`tools/Effect4Gen/Driver.lean` runs every group of `tools/Ef
+lcnf	`src/OCaml5/Tools/LcnfGen.lean`; each output's header carrie
+eff	`src/OCaml5/Tools/EffGen.lean`, then `scripts/generate-engin
+wire	`src/OCaml5/Tools/EffWire.lean`
+cas	`src/OCaml5/Tools/CasGoldens.lean`
+ts	`tools/Drivers/TsGen.lean` (`scripts/generate.py --only ts`)
+readme	`bun ts/eff/ingest/render-readme.ts` (a host producer; write
+truth	`harness/truth/Truth.lean` writes the corpus from the commit
+host-protocol	`tools/Tools/HostProtocol.lean` (the `gen-host-protocol` rec
+schema-ts	`harness/schema-generation/Emit{Fixture,CoverageFixture,Mult
+census	`scripts/generate-effect-runtime-census.sh` (stdout)
+architecture	`tools/Tools/Architecture.lean` (`make gen-architecture`)
+derived consumers: `Json` → `src/Effect4/Store/Domain/Derived/Json.lean`; `Schema` → `src/Effect4/Store/Domain/Derived/Schema.lean`; `Program` → `src/Effect4/Store/Domain/Derived/Program.lean`; `Pin` → `src/Effect4/Stor…
+## exit=0 seconds=7 cmd=lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-landing/seat-F/probes/MapGroups.lean
