@@ -187,6 +187,37 @@ Proof-search note for row 94: this replacement composes explicit existing per-co
 no new search bank or four separate induction proofs were required. It establishes only the
 same guard contract. `75ee115c` is the preceding generic-lift commit.
 
+### D native memo-id user
+
+`src/Effect4/Laws/Program/Guard/MemoIds.lean` proves `steppedBy_memoIdsOk` and
+`reachable_memoIdsOk`: on every native machine reached from Api.load by a raw decision prefix,
+memo-map ids are distinct and below nextName. The claim fixes program/table/compile budget and
+initial replies but permits arbitrary decisions and per-step budgets. **The reference machine
+is not covered.** The existing `Laws/Program/Guard.lean` aggregate imports the new module, so
+there is no orphan source or core-root dependency.
+
+The proof covers all nine interpreter store hooks, plus direct native enterScoped and
+exitScoped writes. The shared store view lemma transports exactly memo ids and the nextName
+bound, not a generic store-order assumption. The outer decision proof instantiates
+MachineEdits/machineFact_stepDecision, then reachable_lift_pure supplies the history step.
+
+- `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.MemoIds`: final exit 0 (309 jobs,
+  `D/memo-build-2.log`); `memo-build.log` records the first failed draft, whose copied record
+  syntax and unresolved projection/search goals were repaired locally.
+- `lake env lean -DwarningAsError=true docs/research/2026-09-30-seat-codex-slice6-evidence/D/memo-axioms.lean`:
+  exit 0, all 46 new theorem checks within `[propext, Quot.sound]` (`memo-axioms.log`).
+- `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard Effect4.Laws.Api.Guard`: exit 0,
+  345 jobs (`memo-integration.log`). `git diff --check`: exit 0. No regeneration.
+
+Row 94 evidence: explicit store-view, hook and state-projection lemmas support aesop assembly
+in four places (withFiber, evaluatePrim, fireObserver and driveStep). The decision and history
+lifts are composed by hand. No new bank or statement-generating command was added. There is
+still no three-user comparison because the trace and ledger users are held at C.
+
+D now has its generic family, guard re-derivation, and native memo-id user. The two ledger users,
+AgreesUpdates, the trace-control move, and M1Trace ceiling reduction remain blocked by C's exact
+reader-list amendment. `9dddff27` is the guard-replacement commit preceding this memo commit.
+
 ## F — closed layer build environment
 Pending.
 
