@@ -1,0 +1,26 @@
+== tsgo -p tsconfig.json (green)
+exit=0
+== tsgo -p tsconfig.red.json (red)
+printed-p2-red.ts(32,14): error TS2375: Type 'Effect<readonly [number, string] | readonly [200, unknown] | readonly [401, "bad token"] | readonly [404, string], readonly [string, string], never>' is not assignable to type 'Effect<readonly [number, string], readonly [string, string], never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'readonly [number, string] | readonly [200, unknown] | readonly [401, "bad token"] | readonly [404, string]' is not assignable to type 'readonly [number, string]'.
+    Type 'readonly [200, unknown]' is not assignable to type 'readonly [number, string]'.
+      Type at position 1 in source is not compatible with type at position 1 in target.
+        Type 'unknown' is not assignable to type 'string'.
+printed-p2-red.ts(32,198): error TS2375: Type 'Effect<never, readonly ["Unauthorized", "bad token"], never> | Effect<User, SqlError | readonly ["NotFound", "1"] | readonly ["Unauthorized", "not yours"], never>' is not assignable to type 'Effect<User, readonly ["Unauthorized", "bad token"], never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<User, SqlError | readonly ["NotFound", "1"] | readonly ["Unauthorized", "not yours"], never>' is not assignable to type 'Effect<User, readonly ["Unauthorized", "bad token"], never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'SqlError | readonly ["NotFound", "1"] | readonly ["Unauthorized", "not yours"]' is not assignable to type 'readonly ["Unauthorized", "bad token"]'.
+      Type 'SqlError' is not assignable to type 'readonly ["Unauthorized", "bad token"]'.
+printed-p2-red.ts(32,215): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+printed-p2-red.ts(32,219): error TS2345: Argument of type 'AppConfigShape' is not assignable to parameter of type 'readonly [unknown, unknown]'.
+printed-p2-red.ts(32,452): error TS2375: Type 'Effect<never, readonly ["Unauthorized", "not yours"], never> | Effect<User, SqlError | readonly ["NotFound", "2"], never>' is not assignable to type 'Effect<User, readonly ["Unauthorized", "not yours"], never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<User, SqlError | readonly ["NotFound", "2"], never>' is not assignable to type 'Effect<User, readonly ["Unauthorized", "not yours"], never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'SqlError | readonly ["NotFound", "2"]' is not assignable to type 'readonly ["Unauthorized", "not yours"]'.
+      Type 'SqlError' is not assignable to type 'readonly ["Unauthorized", "not yours"]'.
+printed-p2-red.ts(32,463): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+printed-p2-red.ts(32,467): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'readonly [unknown, unknown]'.
+printed-p2-red.ts(32,471): error TS2345: Argument of type 'User' is not assignable to parameter of type 'readonly [unknown, unknown]'.
+printed-p2-red.ts(32,495): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+printed-p2-red.ts(32,499): error TS2345: Argument of type 'User' is not assignable to parameter of type 'readonly [unknown, unknown]'.
+printed-p2-red.ts(32,733): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'readonly [unknown, unknown]'.
+printed-p2-red.ts(32,737): error TS2345: Argument of type 'User' is not assignable to parameter of type 'readonly [unknown, unknown]'.
+exit=1

@@ -1,0 +1,4 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/effect/verify-ProbeRed7_ThreeLiteralsRead.lean:12:0: error: Expression
+  decide (Ty.ofSchema lit3 ≠ none)
+did not evaluate to `true`
+exit=1 (red control: must be nonzero) elapsed=1s

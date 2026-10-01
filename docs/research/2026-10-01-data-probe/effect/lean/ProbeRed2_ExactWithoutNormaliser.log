@@ -1,0 +1,4 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/effect/lean/ProbeRed2_ExactWithoutNormaliser.lean:13:0: error: Expression
+  decide (Schema.encode Ty.nat.option (Val.nat 1).some = some reordered)
+did not evaluate to `true`
+exit=1 (red control: must be nonzero)

@@ -1,0 +1,237 @@
+931 line sites; sample of 40
+--- dearlordylord-huly-mcp scripts/smoke-packed-cli.ts:27
+    const INPUT_EXIT_STATUS = 2
+    
+    const [executable, expectedVersion] = Schema.decodeUnknownSync(PackedCliArgumentsSchema)(
+      process.argv.slice(NODE_ARGUMENT_OFFSET)
+    )
+--- dearlordylord-huly-mcp src/domain/schemas/calendar-schedules.ts:293
+    export const parseCreateScheduleParams = Schema.decodeUnknownEffect(CreateScheduleParamsSchema)
+    export const parseUpdateScheduleParams = Schema.decodeUnknownEffect(UpdateScheduleParamsSchema)
+    export const parseDeleteScheduleParams = Schema.decodeUnknownEffect(DeleteScheduleParamsSchema)
+    export const parseHulyScheduleAvailability = Schema.decodeUnknownEffect(HulyScheduleAvailabilitySchema, {
+      onExcessProperty: "error"
+--- dearlordylord-huly-mcp src/domain/schemas/chat-message-attachments.ts:198
+        CHAT_MESSAGE_ATTACHMENT_FIELD_DESCRIPTIONS
+      )
+      const root = Schema.decodeUnknownSync(JsonSchemaRecordSchema)(jsonSchema)
+      const properties = Schema.decodeUnknownSync(JsonSchemaRecordSchema)(root.properties)
+      const target = Schema.decodeUnknownSync(JsonSchemaRecordSchema)(properties.target)
+--- dearlordylord-huly-mcp src/huly/operations/workflow-status-writes.ts:62
+    )
+    const StatusAttributeTypeSchema = Schema.Struct({ to: StatusClassRefSchema })
+    const parseStatusAttributeType = Schema.decodeUnknownOption(StatusAttributeTypeSchema)
+    
+    const resolveStatusClass = (
+--- dearlordylord-huly-mcp src/domain/schemas/leads.ts:234
+    export const parseListFunnelsParams = Schema.decodeUnknownEffect(ListFunnelsParamsSchema)
+    export const parseListLeadsParams = Schema.decodeUnknownEffect(ListLeadsParamsSchema)
+    export const parseGetLeadParams = Schema.decodeUnknownEffect(GetLeadParamsSchema)
+    export const parseCreateLeadParams = Schema.decodeUnknownEffect(CreateLeadParamsSchema, { onExcessProperty: "error" })
+    export const parseLeadDetail = Schema.decodeUnknownEffect(LeadDetailSchema)
+--- dearlordylord-huly-mcp src/domain/schemas/notifications.ts:240
+    export const parseHideNotificationContextParams = Schema.decodeUnknownEffect(HideNotificationContextParamsSchema)
+    export const parseListNotificationSettingsParams = Schema.decodeUnknownEffect(ListNotificationSettingsParamsSchema)
+    export const parseUpdateNotificationProviderSettingParams = Schema.decodeUnknownEffect(
+      UpdateNotificationProviderSettingParamsSchema
+    )
+--- dearlordylord-huly-mcp src/domain/schemas/test-management-plans.ts:353
+    export const runTestPlanParamsJsonSchema = toDraft07JsonSchema(RunTestPlanParamsSchema)
+    
+    export const parseListTestPlansParams = Schema.decodeUnknownEffect(ListTestPlansParamsSchema)
+    export const parseGetTestPlanParams = Schema.decodeUnknownEffect(GetTestPlanParamsSchema)
+    export const parseCreateTestPlanParams = Schema.decodeUnknownEffect(CreateTestPlanParamsSchema)
+--- dearlordylord-huly-mcp src/domain/schemas/recruiting.ts:358
+    export const parseListRecruitingVacanciesParams = Schema.decodeUnknownEffect(ListRecruitingVacanciesParamsSchema)
+    export const parseGetRecruitingVacancyParams = Schema.decodeUnknownEffect(GetRecruitingVacancyParamsSchema)
+    export const parseCreateRecruitingVacancyParams = Schema.decodeUnknownEffect(CreateRecruitingVacancyParamsSchema)
+    export const parseUpdateRecruitingVacancyParams = Schema.decodeUnknownEffect(UpdateRecruitingVacancyParamsSchema)
+    export const parseArchiveRecruitingVacancyParams = Schema.decodeUnknownEffect(ArchiveRecruitingVacancyParamsSchema)
+--- dearlordylord-huly-mcp src/domain/schemas/contact-channels.ts:348
+    )
+    export const parseListPersonChannelsParams = Schema.decodeUnknownEffect(ListPersonChannelsParamsSchema)
+    export const parseUpdatePersonChannelParams = Schema.decodeUnknownEffect(UpdatePersonChannelParamsSchema)
+    export const parseRemovePersonChannelParams = Schema.decodeUnknownEffect(RemovePersonChannelParamsSchema)
+    export const parseAddOrganizationChannelParams = Schema.decodeUnknownEffect(AddOrganizationChannelParamsSchema)
+--- latitude-dev-latitude-llm packages/platform/ai/src/cache.ts:151
+          if (cached !== null) {
+            const decoded = yield* Effect.try({
+              try: () => Schema.decodeUnknownSync(generateResultFromJsonStringSchema)(cached),
+              catch: toAIError("read"),
+            })
+--- dearlordylord-huly-mcp src/huly/operations/external-channel-messages.ts:116
+    
+    const parseTelegramChannel = (input: unknown): Effect.Effect<TelegramChannelProjection, HulyError> =>
+      Schema.decodeUnknownEffect(TelegramChannelProjectionSchema)(input).pipe(
+        Effect.mapError(
+          (cause) => new HulyError({ message: "Huly returned malformed Telegram contact-channel metadata.", cause })
+--- dearlordylord-huly-mcp src/huly/operations/recruiting-shared.ts:325
+    
+    const extractUpdatedSequence = (txResult: unknown): number | undefined => {
+      const decoded = Schema.decodeUnknownOption(TxIncResult)(txResult)
+      return decoded._tag === "Some" ? decoded.value.object.sequence : undefined
+    }
+--- brandhaug-b2b-saas-starter apps/web/src/lib/server/workspace-lifecycle.ts:35
+    })
+    
+    const decodeCreateInput = Schema.decodeUnknownSync(CreateWorkspaceInput)
+    
+    export const createWorkspaceServerFn = createServerFn({ method: 'POST' })
+--- dearlordylord-huly-mcp src/domain/schemas/projects.ts:133
+    export const parseListProjectsParams = Schema.decodeUnknownEffect(ListProjectsParamsSchema)
+    export const parseListStatusesParams = Schema.decodeUnknownEffect(ListStatusesParamsSchema)
+    export const parseGetProjectParams = Schema.decodeUnknownEffect(GetProjectParamsSchema)
+    export const parseCreateProjectParams = Schema.decodeUnknownEffect(CreateProjectParamsSchema)
+    export const parseUpdateProjectParams = Schema.decodeUnknownEffect(UpdateProjectParamsSchema)
+--- dearlordylord-huly-mcp packages/huly-cli/src/help-schema.ts:97
+    const helpPath = (argv: ReadonlyArray<string>): Option.Option<CliCommandPathType> => {
+      const flag = argv.at(LAST_ARGUMENT_OFFSET)
+      if (Option.isNone(Schema.decodeUnknownOption(CliHelpFlag)(flag))) return Option.none()
+      return Schema.decodeUnknownOption(CliCommandPath)(argv.slice(0, LAST_ARGUMENT_OFFSET))
+    }
+--- dearlordylord-huly-mcp scripts/cli-full-integration-adapter.ts:100
+        jsonrpc: "2.0",
+        id: request.id,
+        result: Schema.decodeUnknownSync(FullIntegrationAdapterResultSchema)(toMcpResponse(toolResponse))
+      }
+    }
+--- dearlordylord-huly-mcp src/domain/schemas/workflow-statuses.ts:213
+    export const parseCreateWorkflowStatusParams = Schema.decodeUnknownEffect(CreateWorkflowStatusParamsSchema)
+    export const parseUpdateWorkflowStatusParams = Schema.decodeUnknownEffect(UpdateWorkflowStatusParamsSchema)
+    export const parseDeleteWorkflowStatusParams = Schema.decodeUnknownEffect(DeleteWorkflowStatusParamsSchema)
+    export const parseListStatusCategoriesParams = Schema.decodeUnknownEffect(ListStatusCategoriesParamsSchema)
+    export const parseGetStatusCategoryParams = Schema.decodeUnknownEffect(GetStatusCategoryParamsSchema)
+--- dearlordylord-huly-mcp src/domain/schemas/time.ts:121
+    export const stopTimerParamsJsonSchema = toDraft07JsonSchema(StopTimerParamsSchema)
+    
+    export const parseLogTimeParams = Schema.decodeUnknownEffect(LogTimeParamsSchema)
+    export const parseGetTimeReportParams = Schema.decodeUnknownEffect(GetTimeReportParamsSchema)
+    export const parseListTimeSpendReportsParams = Schema.decodeUnknownEffect(ListTimeSpendReportsParamsSchema)
+--- anomalyco-opencode packages/opencode/src/plugin/modal/models.ts:42
+    })
+    
+    const decode = Schema.decodeUnknownSync(response)
+    
+    function price(value: string | number | undefined, fallback: number) {
+--- dearlordylord-huly-mcp src/domain/schemas/spaces-administration.ts:100
+    export const parseCreateSpaceParams = Schema.decodeUnknownEffect(CreateSpaceParamsSchema)
+    export const parseGetGlobalSpaceAdminsParams = Schema.decodeUnknownEffect(GetGlobalSpaceAdminsParamsSchema)
+    export const parseSetGlobalSpaceAdminsParams = Schema.decodeUnknownEffect(SetGlobalSpaceAdminsParamsSchema)
+--- brandhaug-b2b-saas-starter packages/capabilities/src/governance/plugin-binding-failure.ts:18
+    })
+    
+    const decodePluginRejection = Schema.decodeUnknownOption(PluginRejection)
+    
+    /**
+--- anomalyco-opencode packages/core/src/session/store.ts:32
+      Effect.gen(function* () {
+        const { db } = yield* Database.Service
+        const decodeMessage = Schema.decodeUnknownEffect(SessionMessage.Message)
+    
+        return Service.of({
+--- latitude-dev-latitude-llm packages/platform/ai/src/cache.ts:189
+          if (cached !== null) {
+            const decoded = yield* Effect.try({
+              try: () => Schema.decodeUnknownSync(embedResultFromJsonStringSchema)(cached),
+              catch: toAIError("read"),
+            })
+--- dearlordylord-huly-mcp scripts/cli-full-integration-adapter.ts:90
+          : createImageSuccessResponse(
+              result,
+              Schema.decodeUnknownSync(McpImageContentSchema)({
+                type: "image",
+                data: readFileSync(imagePath).toString("base64"),
+--- dearlordylord-huly-mcp src/domain/schemas/generic-associations.ts:441
+      strictParseOptions
+    )
+    export const parseListRelationsParams = Schema.decodeUnknownEffect(ListRelationsParamsSchema, strictParseOptions)
+    export const parseCreateRelationParams = Schema.decodeUnknownEffect(CreateRelationParamsSchema, strictParseOptions)
+    export const parseDeleteRelationParams = Schema.decodeUnknownEffect(DeleteRelationParamsSchema, strictParseOptions)
+--- dearlordylord-huly-mcp src/domain/schemas/comments.ts:101
+    export const parseListCommentsParams = Schema.decodeUnknownEffect(ListCommentsParamsSchema)
+    export const parseAddCommentParams = Schema.decodeUnknownEffect(AddCommentParamsSchema)
+    export const parseUpdateCommentParams = Schema.decodeUnknownEffect(UpdateCommentParamsSchema)
+    export const parseDeleteCommentParams = Schema.decodeUnknownEffect(DeleteCommentParamsSchema)
+    export const AddCommentResultSchema = Schema.Struct({ commentId: CommentId, issueIdentifier: IssueIdentifier })
+--- dearlordylord-huly-mcp scripts/integration-custom-field-date.ts:31
+    type CliArgs = Schema.Schema.Type<typeof CliArgsSchema>
+    const parseCliArgsInput = Schema.decodeUnknownSync(CliArgsSchema)
+    const parseDynamicDocument = Schema.decodeUnknownSync(DynamicDocumentSchema)
+    const parseCustomFieldDateTimestamp = Schema.decodeUnknownSync(CustomFieldDateTimestamp)
+    const encodeSetupResult = Schema.encodeUnknownSync(SetupResultSchema)
+--- dearlordylord-huly-mcp src/domain/schemas/channels.ts:293
+    // --- Parsers ---
+    
+    export const parseListChannelsParams = Schema.decodeUnknownEffect(ListChannelsParamsSchema)
+    export const parseGetChannelParams = Schema.decodeUnknownEffect(GetChannelParamsSchema)
+    export const parseCreateChannelParams = Schema.decodeUnknownEffect(CreateChannelParamsSchema)
+--- dearlordylord-huly-mcp scripts/effect4-oracle-data.ts:106
+      const defect = presentCliFailure(new Error("secret oracle defect"), true, isKnownCliError)
+      return {
+        defect: { ...defect, decoded: Schema.decodeUnknownSync(Schema.fromJsonString(CliFailureSchema))(defect.stderr) },
+        human,
+        json: { ...json, decoded: Schema.decodeUnknownSync(Schema.fromJsonString(CliFailureSchema))(json.stderr) }
+--- dearlordylord-huly-mcp src/domain/schemas/notification-preferences.ts:163
+      UnarchiveNotificationContextParamsSchema
+    )
+    export const parseSubscribeToObjectNotificationsParams = Schema.decodeUnknownEffect(
+      SubscribeToObjectNotificationsParamsSchema
+    )
+--- kitlangton-ghui src/services/CacheService.ts:193
+    
+    const decodeCached = <S extends Schema.Top>(operation: string, schema: S, value: unknown) =>
+    	Schema.decodeUnknownEffect(schema)(value).pipe(Effect.mapError((cause) => new CacheError({ operation, cause })))
+    
+    const toCacheError = (operation: string, cause: unknown) => (cause instanceof CacheError ? cause : new CacheError({ operation, cause }))
+--- dearlordylord-huly-mcp src/domain/schemas/approval-requests.ts:335
+    })
+    
+    export const parseListApprovalRequestsParams = Schema.decodeUnknownEffect(ListApprovalRequestsParamsSchema)
+    export const parseGetApprovalRequestParams = Schema.decodeUnknownEffect(GetApprovalRequestParamsSchema)
+    export const parseAddApprovalRequestParams = Schema.decodeUnknownEffect(AddApprovalRequestParamsSchema)
+--- dearlordylord-huly-mcp src/domain/schemas/activity-messages.ts:132
+    export const parseGetActivityMessageParams = Schema.decodeUnknownEffect(GetActivityMessageParamsSchema)
+    export const parsePinActivityMessageParams = Schema.decodeUnknownEffect(PinActivityMessageParamsSchema)
+    export const parseListActivityFiltersParams = Schema.decodeUnknownEffect(ListActivityFiltersParamsSchema)
+    export const parseListActivityReferencesParams = Schema.decodeUnknownEffect(ListActivityReferencesParamsSchema)
+    export const parseListActivityRepliesParams = Schema.decodeUnknownEffect(ListActivityRepliesParamsSchema)
+--- dearlordylord-huly-mcp src/huly/operations/notification-metadata.ts:110
+    
+    const displayText = (value: unknown): DisplayText | undefined => {
+      const parsed = Schema.decodeUnknownResult(DisplayText)(value)
+      return Result.isSuccess(parsed) ? parsed.success : undefined
+    }
+--- dearlordylord-huly-mcp src/domain/schemas/contact-channels.ts:347
+      ListContactChannelProvidersParamsSchema
+    )
+    export const parseListPersonChannelsParams = Schema.decodeUnknownEffect(ListPersonChannelsParamsSchema)
+    export const parseUpdatePersonChannelParams = Schema.decodeUnknownEffect(UpdatePersonChannelParamsSchema)
+    export const parseRemovePersonChannelParams = Schema.decodeUnknownEffect(RemovePersonChannelParamsSchema)
+--- dearlordylord-huly-mcp src/huly/operations/issues-write.ts:59
+    
+    const extractUpdatedSequence = (txResult: unknown): number | undefined => {
+      const decoded = Schema.decodeUnknownOption(TxIncResult)(txResult)
+      return decoded._tag === "Some" ? decoded.value.object.sequence : undefined
+    }
+--- dearlordylord-huly-mcp src/domain/schemas/workflow-statuses.ts:211
+    export const parseListWorkflowStatusesParams = Schema.decodeUnknownEffect(ListWorkflowStatusesParamsSchema)
+    export const parseGetWorkflowStatusParams = Schema.decodeUnknownEffect(GetWorkflowStatusParamsSchema)
+    export const parseCreateWorkflowStatusParams = Schema.decodeUnknownEffect(CreateWorkflowStatusParamsSchema)
+    export const parseUpdateWorkflowStatusParams = Schema.decodeUnknownEffect(UpdateWorkflowStatusParamsSchema)
+    export const parseDeleteWorkflowStatusParams = Schema.decodeUnknownEffect(DeleteWorkflowStatusParamsSchema)
+--- dearlordylord-huly-mcp scripts/effect4-oracle-process.ts:60
+      const directServerInfo = response.result.serverInfo
+      if (isJsonRecord(directServerInfo) && typeof directServerInfo.version === "string") {
+        return Schema.decodeUnknownSync(OracleJsonRpcResponseSchema)({
+          ...response,
+          result: { ...response.result, serverInfo: { ...directServerInfo, version: PACKAGE_VERSION_PLACEHOLDER } }
+--- dearlordylord-huly-mcp src/domain/schemas/boards.ts:409
+    export const parseCreateBoardCardParams = Schema.decodeUnknownEffect(CreateBoardCardParamsSchema)
+    export const parseUpdateBoardCardParams = Schema.decodeUnknownEffect(UpdateBoardCardParamsSchema)
+    export const parseBoardCardMutationParams = Schema.decodeUnknownEffect(BoardCardMutationParamsSchema)
+--- anomalyco-opencode packages/core/src/event.ts:455
+                  id: event.id,
+                  type: definition.type,
+                  data: Schema.decodeUnknownSync(definition.data)(event.data),
+                } as Payload
+                const committed = yield* commitDurableEvent(definition, payload, {

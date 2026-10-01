@@ -1,0 +1,10 @@
+# run 1 of PedigreeProbe.lean (exit 1), restored verbatim from the session transcript after an accidental delete.
+# Cause: my naming error at T8 (`Effect4.Machine.NativeAtom.eq`; the inductive lives in `Effect4.Program`).
+# Every other guard and theorem passed in this run.
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/pedigree/PedigreeProbe.lean:85:41: error(lean.unknownIdentifier): Unknown identifier `Effect4.Machine.NativeAtom.eq`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/pedigree/PedigreeProbe.lean:85:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/pedigree/PedigreeProbe.lean:87:41: error(lean.unknownIdentifier): Unknown identifier `Effect4.Machine.NativeAtom.eq`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/pedigree/PedigreeProbe.lean:87:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+'DataProbe.Pedigree.fits_int_empty' depends on axioms: [propext, Quot.sound]
+'DataProbe.Pedigree.fits_prod_never_empty' depends on axioms: [propext, Quot.sound]
+'DataProbe.Pedigree.inhabitance_needs_admission' depends on axioms: [propext, Quot.sound]

@@ -1,0 +1,5 @@
+'DataProbe.PedigreeVerify.fits_except_never_never_empty' depends on axioms: [propext, Quot.sound]
+'DataProbe.PedigreeVerify.hasTy_except_never_never_false' depends on axioms: [propext]
+'DataProbe.PedigreeVerify.fits_var_empty' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.76s user 1.71s system 0% cpu 18:24.78 total
+exit=0

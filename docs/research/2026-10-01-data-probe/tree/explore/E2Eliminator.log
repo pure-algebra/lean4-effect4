@@ -1,0 +1,2 @@
+'E2.C.depth_lt_of_record' depends on axioms: [propext, Quot.sound]
+'E2.B.record_ne' depends on axioms: [propext, Quot.sound]

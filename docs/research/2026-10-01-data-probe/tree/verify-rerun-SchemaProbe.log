@@ -1,0 +1,16 @@
+'Effect4.Schema.Bridge.ofSchema_schema' depends on axioms: [propext]
+'Effect4.Program.CTy.ofSchema_schema' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.decode_of_encode' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.decode_encode' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.hasTy_decode' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_injective' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_sub' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.ProgramImage.decode_of_encode' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.ProgramImage.decode_exact' depends on axioms: [propext, Quot.sound]
+'Effect4.Representation.fieldAdmissible_iff' depends on axioms: [propext]
+'Effect4.Document.toMulti_injective' depends on axioms: [propext]
+'Effect4.hom_eq_cata_representation' depends on axioms: [propext]
+'Effect4.AnnotationKey.Lawful.encode_injective' does not depend on any axioms
+'Effect4.EffectfulFieldSpec.annotationKey_lawful' does not depend on any axioms
+'Effect4.Program.Typed.fits_sub' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.fits_hasTy' depends on axioms: [propext, Quot.sound]

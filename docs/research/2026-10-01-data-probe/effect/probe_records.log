@@ -1,0 +1,5 @@
+p1-http-cache.ts         interface=1  TaggedError<{=2  Service<X,{=0  _tag-literal-variant=0  Ref.make<Record>=0  spread{...=0  as-cast=1
+p2-handler-layers.ts     interface=1  TaggedError<{=2  Service<X,{=2  _tag-literal-variant=0  Ref.make<Record>=0  spread{...=0  as-cast=0
+p3-worker-queue.ts       interface=2  TaggedError<{=1  Service<X,{=0  _tag-literal-variant=0  Ref.make<Record>=0  spread{...=0  as-cast=0
+p4-rate-limiter.ts       interface=1  TaggedError<{=0  Service<X,{=0  _tag-literal-variant=0  Ref.make<Record>=1  spread{...=3  as-cast=0
+p5-ledger-service.ts     interface=1  TaggedError<{=1  Service<X,{=1  _tag-literal-variant=4  Ref.make<Record>=1  spread{...=1  as-cast=0

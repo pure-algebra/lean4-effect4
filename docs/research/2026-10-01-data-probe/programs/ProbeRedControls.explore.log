@@ -1,0 +1,18 @@
+R1 record literal: typing term at []
+R1 green pair: built
+R2 field by name: typing term at [1]
+R2 green by position: built
+R4 NotFound{id}: typing errorNotAdmitted at []
+R5 HttpError{status,url}: typing errorNotAdmitted at []
+R5 InsufficientFunds{needed,available}: typing errorNotAdmitted at []
+R4 green tag+text: built
+R6 int answer: admission uninhabited at [table, 0, answer]
+R6 green nat answer: built
+R9 toString: typing term at []
+R10 eq on pairs: typing term at []
+R10 green eq on strings: built
+R11 record cell: typing requestNotSubtype at []
+R11 green nat cell: built
+R12 record carrier: serviceCarrier: signature none
+R16 fiber inside a record answer: admission internalHandle at [table, 0, answer, right]
+R8 sub 10 25 runs to success (nat 0)

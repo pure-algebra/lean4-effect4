@@ -1,0 +1,9 @@
+#ty_private_gate: 4 match(es) in private definitions of Effect4.* read Ty, 4 with no catch-all
+  Effect4.Program.Ty.renderRaw.match_1.splitter	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Ty.casesOn	discr 0	alts 20	catchAll false
+  Effect4.Codegen.Types.ofNormalized._f	Effect4.Codegen.Types	_private.Effect4.Codegen.Types.0.Effect4.Codegen.Types.ofNormalized.match_1	discr 0	alts 20	catchAll false
+  Effect4.Codegen.Types.ofNormalized._unsafe_rec	Effect4.Codegen.Types	_private.Effect4.Codegen.Types.0.Effect4.Codegen.Types.ofNormalized.match_1	discr 0	alts 20	catchAll false
+  Effect4.Codegen.Types.ofNormalized._sunfold	Effect4.Codegen.Types	_private.Effect4.Codegen.Types.0.Effect4.Codegen.Types.ofNormalized.match_1	discr 0	alts 20	catchAll false
+#ty_theorem_census2: 147 authored theorems (private included, generated lemmas excluded) eliminate a Ty directly; 32 induct; 3 are private
+  Effect4.Laws.Program.Admit	Effect4.Program.hasTy_rawSupported_allocation	induct
+  Effect4.Laws.Program.Admit	Effect4.Program.valOfErr_errOf_rawSupported	induct
+  Effect4.Laws.Program.TypeAlgebra	Effect4.Program.Ty.sub_never_core	cases

@@ -1,0 +1,30 @@
+{
+  "//": "Verifier of seat PROGRAMS: verify-pairs-classerr.ts under the seat's compiler options.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [],
+    "paths": {
+      "effect": [
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/index.d.ts"
+      ],
+      "effect/*": [
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/*.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "verify-pairs-classerr.ts"
+  ]
+}

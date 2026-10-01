@@ -1,0 +1,11 @@
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under OCaml5: 2 match(es) read it, 2 with no catch-all — appending a constructor refuses exactly those
+  OCaml5.Eff.tyO	OCaml5.Eff.Emit	OCaml5.Eff.tyO.match_1	discr 0	alts 20	catchAll false
+  OCaml5.Eff.tyV	OCaml5.Eff.Goldens	OCaml5.Eff.tyV.match_1	discr 0	alts 20	catchAll false
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Tools: 3 match(es) read it, 1 with no catch-all — appending a constructor refuses exactly those
+  Tools.ProfileJson.tyJson	Tools.ProfileJson	Tools.ProfileJson.tyJson.match_1	discr 0	alts 20	catchAll false
+  Tools.TyVectors.subMutant	Tools.TyVectors	Tools.TyVectors.subMutant.match_1	discr 0	alts 2	catchAll true
+  Tools.TyVectors.subMutant	Tools.TyVectors	Tools.TyVectors.subMutant.match_1	discr 1	alts 2	catchAll true
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Conform: 3 match(es) read it, 3 with no catch-all — appending a constructor refuses exactly those
+  Conform.Effect4.LcnfMl.tyOcaml	Conform.Effect4.LcnfMl	Conform.Effect4.LcnfMl.tyOcaml.match_1	discr 0	alts 20	catchAll false
+  Conform.Effect4.LcnfMl.tyT	Conform.Effect4.LcnfMl	Conform.Effect4.LcnfMl.tyT.match_1	discr 0	alts 20	catchAll false
+  Conform.Effect4.LcnfSemantics.tyValue	Conform.Effect4.LcnfSemantics	Conform.Effect4.LcnfSemantics.tyValue.match_1	discr 0	alts 20	catchAll false

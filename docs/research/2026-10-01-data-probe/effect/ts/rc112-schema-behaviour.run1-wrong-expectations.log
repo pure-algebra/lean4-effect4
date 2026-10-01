@@ -1,0 +1,24 @@
+1.4.2
+T1 excess key dropped: {"id":1,"name":"a"}  expect={"id":1,"name":"a"}  ok
+T2 output key order: ["id","name"]  expect=["id","name"]  ok
+T3 missing key: {"error":"SchemaError: Missing key\n  at [\"name\"]"}  expect={"error":"SchemaError: Missing key\n  at [\"name\"]"}  ok
+T4 wrong type: {"error":"SchemaError: Expected number\n  at [\"id\"]"}  expect={"error":"SchemaError: Expected number, got \"1\"\n  at [\"id\"]"}  MISMATCH
+T5 Number admits 1.5, -1, NaN, Infinity: [{"ok":1.5},{"ok":-1},{"ok":"#NaN"},{"ok":"#Infinity"}]  expect=[{"ok":1.5},{"ok":-1},{"ok":"#NaN"},{"ok":"#Infinity"}]  ok
+T6 toCodecJson(Number) of NaN, Infinity, 2: ["NaN","Infinity",2]  expect=["NaN","Infinity",2]  ok
+T7 duplicate key, last wins: {"id":2,"name":"a"}  expect={"id":2,"name":"a"}  ok
+T8 anyOf first match strips b: {"a":1}  expect={"a":1}  ok
+T9 tagged union by sentinel: {"_tag":"Withdraw","amount":3}  expect={"_tag":"Withdraw","amount":3}  ok
+T10 decodeUnknownEffect of a pure schema is an Exit: true  expect=true  ok
+T11a decoded TaggedError is an instance: [true,true,"NotFound",7]  expect=[true,true,"NotFound",7]  ok
+T11b encoded TaggedError is the struct: {"_tag":"NotFound","id":7}  expect={"_tag":"NotFound","id":7}  ok
+T11c a plain object is not a NotFound at encode: true  expect=true  ok
+T12 optionalKey vs optional: [{"ok":{}},true,{"ok":{"a":"#undefined"}}]  expect=[{"ok":{}},true,{"ok":{"a":"#undefined"}}]  ok
+T13 Record(String, Number): {"x":1,"y":2}  expect={"x":1,"y":2}  ok
+T14 suspend: {"value":1,"children":[{"value":2,"children":[]}]}  expect={"value":1,"children":[{"value":2,"children":[]}]}  ok
+T15 withDecodingDefaultKey: {"n":5}  expect={"n":5}  ok
+T16a issue tree under errors: all: {"Composite":[{"Pointer":["user"],"issue":{"Composite":[{"Pointer":["id"],"issue":"InvalidType"},{"Pointer":["name"],"issue":"MissingKey"}]}},{"Pointer":["tags"],"issue":{"Composite":[{"Pointer":[0],"issue":"InvalidType"}]}}]}  expect={"Composite":[{"Pointer":["user"],"issue":{"Composite":[{"Pointer":["id"],"issue":"InvalidType"},{"Pointer":["name"],"issue":"MissingKey"}]}},{"Pointer":["tags"],"issue":{"Composite":[{"Pointer":[0],"issue":"InvalidType"}]}}]}  ok
+T16b Standard Schema projection: [["Expected number",["user","id"]],["Missing key",["user","name"]],["Expected string",["tags",0]]]  expect=[["Expected number, got \"x\"",["user","id"]],["Missing key",["user","name"]],["Expected string, got 1",["tags",0]]]  MISMATCH
+T17 Data.TaggedError instance: ["HttpError",503,true,{"status":503,"_tag":"HttpError"}]  expect=["HttpError",503,true,{"status":503,"_tag":"HttpError"}]  ok
+T18 SchemaError tag, message, issue tag: ["SchemaError","Expected number","InvalidType",true]  expect=["SchemaError","Expected number, got \"x\"","InvalidType",true]  MISMATCH
+3 MISMATCH(ES)
+exit=1

@@ -1,0 +1,10 @@
+opaque: DataProbe.Spine.instReprTy.repr_1
+opaque: DataProbe.Spine.instReprFields.repr_1
+opaque: DataProbe.Spine.instReprTy.repr_2
+opaque: DataProbe.Spine.instReprFields.repr_2
+'DataProbe.Spine.Ty.ind' does not depend on any axioms
+'DataProbe.Spine.Ty.key_injective' depends on axioms: [propext]
+'DataProbe.Spine.Ty.toList_insertField' depends on axioms: [propext]
+'DataProbe.Spine.Ty.mem_normalizeFields' depends on axioms: [propext]
+'DataProbe.Spine.Ty.normal_normalize_record' depends on axioms: [propext]
+bash  lake env lean -M6144 -DwarningAsError=true   1.74s user 0.87s system 49% cpu 5.288 total

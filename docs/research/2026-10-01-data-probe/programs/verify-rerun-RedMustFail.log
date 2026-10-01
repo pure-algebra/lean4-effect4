@@ -1,0 +1,12 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/programs/RedMustFail.lean:16:0: error: Expression
+  (Api.Author.build { main := succeed (app "record" [str "id", nat 2]) }).toOption.isSome
+did not evaluate to `true`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/programs/RedMustFail.lean:19:0: error: Expression
+  (Api.Author.build
+        { rows := [Row.host "Ledger.balance" Ty.unit Ty.int],
+          main := Row.call (Row.host "Ledger.balance" Ty.unit Ty.int) unit }).toOption.isSome
+did not evaluate to `true`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/programs/RedMustFail.lean:24:0: error: Expression
+  (Schema.Bridge.ofSchema (Schema.struct [Schema.property "id" (Schema.Bridge.schema Ty.nat)])).isSome
+did not evaluate to `true`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/programs/RedMustFail.lean:28:8: error(lean.unknownIdentifier): Unknown constant `Effect4.Program.Ty.record`

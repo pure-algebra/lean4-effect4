@@ -1,0 +1,11 @@
+TyBillProbe exit=0 seconds=11 finished=02:27:43
+TyBillOutsideProbe exit=0 seconds=20 finished=02:28:03
+TyBillPrivateProbe exit=0 seconds=9 finished=02:28:12
+AlphabetBillProbe exit=0 seconds=27 finished=02:28:39
+SchemaProbe exit=0 seconds=2 finished=02:28:41
+RecordNested exit=0 seconds=4 finished=02:28:45
+RecordSpine exit=0 seconds=2 finished=02:28:47
+explore/E1Instruments exit=1 seconds=1 finished=02:28:48
+explore/E2Eliminator exit=0 seconds=1 finished=02:28:49
+explore/E3Case16Trace exit=1 seconds=4 finished=02:28:53
+DONE

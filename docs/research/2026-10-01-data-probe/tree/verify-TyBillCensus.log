@@ -1,0 +1,31 @@
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Test: 5 match(es) read it, 2 with no catch-all — appending a constructor refuses exactly those
+  Test.Audit.ExhaustiveFixture.catchAllAbsent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllAbsent.match_1	discr 0	alts 20	catchAll false
+  Test.Audit.ExhaustiveFixture.catchAllPresent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllPresent.match_1	discr 0	alts 4	catchAll true
+  Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FitsInv	Test.Counterexamples.Machine.Semantics.ValueMembership	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FitsInv.match_24	discr 0	alts 20	catchAll false
+  Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FlatFits	Test.Counterexamples.Machine.Semantics.ValueMembership	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FlatFits.match_16	discr 0	alts 6	catchAll true
+  Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.HandlesFit	Test.Counterexamples.Machine.Semantics.ValueMembership	Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.HandlesFit.match_10	discr 0	alts 10	catchAll true
+#verify_ty_proof_census: seat census2 = 147; dropped by the "eq_" prefix although not an equation lemma and eliminating Ty directly = 1; authored theorems using a Ty-shaped induct/fun_cases principle = 7, of which 6 are not in census2
+  dropped by the prefix rule:
+    Effect4.Program.Ty.eq_of_sameHead
+  principle users not in census2 (theorem <- principle):
+    Effect4.Program.Ty.infer_widens <- Effect4.Program.Ty.infer.induct_unfolding
+    Effect4.Program.Ty.sub_eq_argsBelow_of_sameHead <- Effect4.Program.Ty.sameHead.fun_cases_unfolding
+    Effect4.Program.Ty.sub_eq_false_of_not_sameHead <- Effect4.Program.Ty.sub.fun_cases_unfolding
+    Effect4.Program.Typed.fits_sub <- Effect4.Program.Ty.sub.induct_unfolding
+    Effect4.Program.cata_admits_extend <- Effect4.Program.cata_ty.induct_unfolding
+    Effect4.Program.cata_admits_sub <- Effect4.Program.Ty.sub.induct_unfolding
+  principle users also in census2:
+    Effect4.Program.Ty.sameHead_trans <- Effect4.Program.Ty.sameHead.fun_cases_unfolding
+#private_gate Effect4.Machine.Err: 0 match(es) in private definitions of Effect4.* read it, 0 with no catch-all
+#private_gate Effect4.Program.Lit: 0 match(es) in private definitions of Effect4.* read it, 0 with no catch-all
+#private_gate Effect4.Program.NativeAtom: 3 match(es) in private definitions of Effect4.* read it, 3 with no catch-all
+  Effect4.Program.NativeAtom.eval.match_3.splitter	Effect4.Laws.Program.Handles.Term	Effect4.Program.NativeAtom.casesOn	discr 0	alts 33	catchAll false
+  Effect4.Program.NativeAtom.eval.match_3.splitter	Effect4.Laws.Program.Typed	Effect4.Program.NativeAtom.casesOn	discr 0	alts 33	catchAll false
+  Effect4.Program.NativeAtom.eval.match_3.splitter	Effect4.Laws.Program.MeaningSound	Effect4.Program.NativeAtom.casesOn	discr 0	alts 33	catchAll false
+#private_gate Effect4.Store.Val: 1 match(es) in private definitions of Effect4.* read it, 1 with no catch-all
+  Effect4.Store.Val.beq.match_1.splitter	Effect4.Store.Carrier.Val	Effect4.Store.Val.casesOn	discr 0	alts 12	catchAll false
+#private_gate Effect4.Program.Ty: 4 match(es) in private definitions of Effect4.* read it, 4 with no catch-all
+  Effect4.Program.Ty.renderRaw.match_1.splitter	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Ty.casesOn	discr 0	alts 20	catchAll false
+  Effect4.Codegen.Types.ofNormalized._f	Effect4.Codegen.Types	_private.Effect4.Codegen.Types.0.Effect4.Codegen.Types.ofNormalized.match_1	discr 0	alts 20	catchAll false
+  Effect4.Codegen.Types.ofNormalized._unsafe_rec	Effect4.Codegen.Types	_private.Effect4.Codegen.Types.0.Effect4.Codegen.Types.ofNormalized.match_1	discr 0	alts 20	catchAll false
+  Effect4.Codegen.Types.ofNormalized._sunfold	Effect4.Codegen.Types	_private.Effect4.Codegen.Types.0.Effect4.Codegen.Types.ofNormalized.match_1	discr 0	alts 20	catchAll false

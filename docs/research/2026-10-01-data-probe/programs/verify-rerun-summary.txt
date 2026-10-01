@@ -1,0 +1,7 @@
+ProbeTodayP2 exit=0 seconds=67
+ProbeRedControls exit=0 seconds=1
+ProbeSpine exit=0 seconds=1
+ProbeRecordK2 exit=0 seconds=1
+RedMustFail exit=1 seconds=0
+ProbeBill exit=0 seconds=34
+done

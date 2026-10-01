@@ -1,0 +1,13 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/tree/explore/E1Instruments.lean:20:18: error: None of the deriving handlers for class `DecidableEq` applied to `Ty`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/tree/explore/E1Instruments.lean:24:2: error: The `induction` tactic does not support the type `E1.C.Ty` because it is a nested inductive type
+
+Hint: Consider using the `cases` tactic instead
+4
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/tree/explore/E1Instruments.lean:87:2: error: The `induction` tactic does not support the type `E1.B.Ty` because it is mutually inductive
+
+Hint: Consider using the `cases` tactic instead
+opaque: E1.B.instReprFields.repr_2
+opaque: E1.B.instReprTy.repr_1
+opaque: E1.B.instReprFields.repr_1
+opaque: E1.B.instReprTy.repr_2
+opaque: E1.C.instReprTy.repr

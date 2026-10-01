@@ -1,0 +1,25 @@
+v4 units outside repos/effect/ refused E-OP-UNKNOWN at a Schema.* head (engine 1): 2888
+by census unit kind: {'typeAlias': 11, 'variable': 2873, 'interface': 4}
+by source shape: {'census kind typeAlias': 11, 'initializer is a decoder/encoder value (Schema.decode*/encode*(...))': 748, 'initializer is a Schema constructor expression (a schema DECLARATION)': 2069, 'initializer is another Schema.* function call (check/brand/optional/...)': 56, 'census kind interface': 4}
+samples of 'other':
+
+samples of census kind typeAlias:
+  alchemy-run-alchemy examples/aws-lambda-httpapi/src/Job.ts: Schema.String.annotate :: 'JobId = S.String.annotate({\n  description: "The ID of the job",\n})'
+  alchemy-run-alchemy examples/aws-lambda-rpc/src/Job.ts: Schema.String.annotate :: 'JobId = S.String.annotate({\n  description: "The ID of the job",\n})'
+  alchemy-run-alchemy examples/aws-lambda/src/Job.ts: Schema.String.annotate :: 'JobId = S.String.annotate({\n  description: "The ID of the job",\n})'
+samples of initializer is a decoder/encoder value (Schema.decode*/encode*(...)):
+  alchemy-run-alchemy examples/aws-lambda-httpapi/src/Job.ts: Schema.decodeEffect :: 'decodeJob = S.decodeEffect(Job)'
+  alchemy-run-alchemy examples/aws-lambda-rpc/src/Job.ts: Schema.decodeEffect :: 'decodeJob = S.decodeEffect(Job)'
+  alchemy-run-alchemy examples/aws-lambda/src/Job.ts: Schema.decodeEffect :: 'decodeJob = S.decodeEffect(Job)'
+samples of initializer is a Schema constructor expression (a schema DECLARATION):
+  alchemy-run-alchemy examples/aws-website-foldkit/src/main.ts: Schema.Struct :: 'Model = S.Struct({})'
+  alchemy-run-alchemy examples/cloudflare-foldkit-ssr/src/main.ts: Schema.Struct :: 'Model = S.Struct({ count: S.Number })'
+  alchemy-run-alchemy examples/cloudflare-foldkit-ssr/src/main.ts: Schema.Struct :: 'Flags = S.Struct({ initialCount: S.Number })'
+samples of initializer is another Schema.* function call (check/brand/optional/...):
+  anomalyco-opencode packages/core/src/v1/config/lsp.ts: Schema.makeFilter :: 'requiresExtensionsForCustomServers = Schema.makeFilter<\n  boolean | Record<string, Schema.Schema.Typ'
+  anomalyco-opencode packages/http-recorder/src/matching.ts: Schema.fromJsonString :: 'JsonValue = Schema.fromJsonString(Schema.Unknown)'
+  anomalyco-opencode packages/httpapi-codegen/src/index.ts: Schema.fromJsonString :: 'Manifest = Schema.fromJsonString(Schema.Array(Schema.String))'
+samples of census kind interface:
+  effect-ts-website apps/web/src/features/playground/services/devtools/schema.ts: Schema.TaggedStruct :: 'ExternalSpan = Schema.TaggedStruct("ExternalSpan", {\n  spanId: Schema.String,\n  traceId: Schema.Stri'
+  effect-ts-website apps/web/src/features/playground/services/devtools/schema.ts: Schema.TaggedStruct :: 'Span: Schema.Codec<Span, SpanEncoded> = Schema.TaggedStruct(\n  "Span",\n  {\n    spanId: Schema.String'
+  typeonce-dev-effect-machine packages/effect-machine/test/machine/SnapshotCodecAdversarial.test.ts: Schema.declare :: 'OpaqueState = Schema.declare<OpaqueState>((input): input is OpaqueState =>\n  typeof input === "objec'

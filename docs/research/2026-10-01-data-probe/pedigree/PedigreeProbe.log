@@ -1,0 +1,5 @@
+'DataProbe.Pedigree.hasTy_prod_never_false' depends on axioms: [propext]
+'DataProbe.Pedigree.di67_no_value_at_prod_never_nat' depends on axioms: [propext]
+'DataProbe.Pedigree.fits_int_empty' depends on axioms: [propext, Quot.sound]
+'DataProbe.Pedigree.fits_prod_never_empty' depends on axioms: [propext, Quot.sound]
+'DataProbe.Pedigree.inhabitance_needs_admission' depends on axioms: [propext, Quot.sound]

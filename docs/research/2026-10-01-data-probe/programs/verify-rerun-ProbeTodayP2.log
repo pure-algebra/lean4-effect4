@@ -1,0 +1,9 @@
+=== printed module: handle("secret", 2) ===
+/**
+
+ */
+
+export const handle: Effect.Effect<readonly [number, string], readonly [string, string]> = Effect.catchIf(Effect.catchIf(Effect.flatMap(Effect.flatMap(AppConfig.get(), (a0) => Effect.suspend(() => not(eq("secret", fst(a0))) ? Effect.fail(pair("Unauthorized", "bad token")) : Effect.flatMap(Effect.flatMap(UserRepo.findById(1), (a1) => optionCase(a1, () => Effect.fail(pair("NotFound", "1")), (a2) => Effect.succeed(a2))), (a1) => Effect.suspend(() => and(not(eq(snd(snd(a1)), "admin")), not(eq(fst(a1), 2))) ? Effect.fail(pair("Unauthorized", "not yours")) : Effect.flatMap(UserRepo.findById(2), (a2) => optionCase(a2, () => Effect.fail(pair("NotFound", "2")), (a3) => Effect.succeed(a3))))))), (a0) => Effect.succeed(pair(200, fst(snd(a0))))), (a0) => tagIs("Unauthorized", a0), (a0) => Effect.succeed(pair(401, snd(a0))), undefined), (a0) => tagIs("NotFound", a0), (a0) => Effect.succeed(pair(404, concat("no user ", snd(a0)))), undefined)
+
+=== sizes: printed characters, canonical program bytes ===
+printed 952 chars; bytes 3936

@@ -1,0 +1,19 @@
+'Probe.Spine.fitsT_defT' depends on axioms: [propext]
+'Probe.Spine.fitsFs_defFs' depends on axioms: [propext]
+'Probe.Spine.defU_list' depends on axioms: [propext]
+'Probe.Spine.fitsU_defU' depends on axioms: [propext]
+Probe.Spine.instReprFs.repr_1._unsafe_rec: def
+Probe.Spine.instReprFs.repr_1: opaque (partial)
+Probe.Spine.instReprFs.repr_2._unsafe_rec: def
+Probe.Spine.instReprFs.repr_2: opaque (partial)
+Probe.Spine.instReprT.repr_1._unsafe_rec: def
+Probe.Spine.instReprT.repr_1.match_1: def
+Probe.Spine.instReprT.repr_1: opaque (partial)
+Probe.Spine.instReprT.repr_2._unsafe_rec: def
+Probe.Spine.instReprT.repr_2.match_1: def
+Probe.Spine.instReprT.repr_2: opaque (partial)
+Probe.Spine.instReprU.repr._f: def
+Probe.Spine.instReprU.repr._sunfold: def
+Probe.Spine.instReprU.repr._unsafe_rec: def
+Probe.Spine.instReprU.repr.match_1: def
+Probe.Spine.instReprU.repr: def
