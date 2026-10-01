@@ -30,8 +30,9 @@ appending a constructor: `lake env lean Test/Audit/TraversalCensus.lean`.
 
 The one assertion here is the inventory's own red control, over
 `Test/Audit/ExhaustiveFixture.lean`: a twenty-arm match with no wildcard must be reported
-`catchAll false`, the same match closed by `| _ =>` must be reported `catchAll true`, and a
-match on `Term` must not be reported at all.
+`catchAll false`, the same match closed by `| _ =>` must be reported `catchAll true`, a
+match on `Term` must not be reported at all, and a private definition must be reported under the
+name it was written with, marked `[private]`.
 -/
 
 /--
@@ -67,9 +68,10 @@ structural	Effect4.Program.Ty.closed
 #traversal_census Effect4.Store.Val
 
 /--
-info: #exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Test.Audit.ExhaustiveFixture: 2 match(es) read it, 1 with no catch-all — appending a constructor refuses exactly those
+info: #exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Test.Audit.ExhaustiveFixture: 3 match(es) read it, 1 with no catch-all — appending a constructor refuses exactly those
   Test.Audit.ExhaustiveFixture.catchAllAbsent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllAbsent.match_1	discr 0	alts 20	catchAll false
   Test.Audit.ExhaustiveFixture.catchAllPresent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllPresent.match_1	discr 0	alts 4	catchAll true
+  Test.Audit.ExhaustiveFixture.privateCatchAll [private]	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.privateCatchAll.match_1	discr 0	alts 2	catchAll true
 -/
 #guard_msgs in
 #exhaustive_gate Effect4.Program.Ty under Test.Audit.ExhaustiveFixture

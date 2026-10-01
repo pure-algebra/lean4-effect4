@@ -94,11 +94,10 @@ example : PropertyKeyKind.census = [.string, .number, .globalSymbol] := by decid
 end PointwiseSpellings
 
 /-!
-Constructor order is contractual for each leaf alphabet; in this module the census listings
-above pin it (`LiteralKind.census = [...]` and its siblings, by `decide`). The compatibility
-snapshot `Test/fixtures/baseline/66ee4657/` that this comment used to name is compared by no
-check since its comparator was deleted at `243ca0dd` (2026-09-19): only the mirror census's
-configuration (`tools/Conform/Effect4/mirrors.json`) names it, and no target runs that census.
+Constructor order is contractual for each leaf alphabet, and the census listings above pin it by
+`decide` (`LiteralKind.census = [...]` and its siblings). No check compares a snapshot of it: the
+baseline directory (`Test/fixtures/baseline/`, the row of that name in `AGENTS.md`) is read by the
+mirror census only (`tools/Conform/Effect4/mirrors.json`), which no make target runs.
 The executable attacks once kept under `Test/Counterexamples/Schema/` were deleted with row 39
 (`d75f5c25`, 2026-10-01); their rows are in `Test/Counterexamples/Archive/REGISTER.md`.
 -/

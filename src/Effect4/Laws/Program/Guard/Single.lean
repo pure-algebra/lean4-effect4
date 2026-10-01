@@ -3,7 +3,8 @@ import Effect4.Laws.Program.Guard.Core
 
 /-! Single-fiber guard equality, internal proof support only.
 Proof graph: singleton GuardState -> Held -> inert command/store/dispatcher steps
--> raw non-cancellation decision -> finite tape-prefix induction.
+-> `Held` as a fold lift (`held_foldLift`: fire, flush, advance) -> raw non-cancellation
+decision -> the tape prefix through the history lift.
 The recorded interrupt cause and deferred-interrupt flag are unrestricted.
 -/
 set_option autoImplicit false
@@ -222,65 +223,6 @@ theorem held_fireStep (p : NativeEff) (table : RowTable) (fuel : Nat) (owner : F
   · exact (held_driveState p table fuel (held_emit h [.ranTask owner task]) (taskCmds task) (quiet_taskCmds task safe)).1
   · exact h
 
-theorem held_fireFold (p : NativeEff) (table : RowTable) (fuel : Nat) (owner : FiberId)
-    (tasks : List NTask) (acc : NativeMachine × Bool)
-    {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
-    (h : Held acc.1 fiber token request)
-    (safe : ∀ task ∈ tasks, (fiber, token) ∉ taskKeys task) :
-    letI := evaluatorFor p table
-    Held (tasks.foldl (fireStep (interpOf p table) fuel owner) acc).1 fiber token request := by
-  letI := evaluatorFor p table
-  induction tasks generalizing acc with
-  | nil => exact h
-  | cons task tasks ih =>
-    exact ih _ (held_fireStep p table fuel owner acc h task (safe task (List.mem_cons_self ..)))
-      (fun task ht => safe task (List.mem_cons_of_mem _ ht))
-
-theorem held_fireState (p : NativeEff) (table : RowTable) (fuel : Nat)
-    {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
-    (h : Held m fiber token request) (owner : FiberId) :
-    letI := evaluatorFor p table
-    Held (fireState (interpOf p table) fuel m owner).1 fiber token request := by
-  letI := evaluatorFor p table
-  unfold fireState
-  cases hf : m.fiber? owner with
-  | none => exact h
-  | some f =>
-    have memf := List.mem_of_find?_eq_some hf
-    have self : m.fiber? f.id = some f := by simpa only [fiber_id_of_lookup hf] using hf
-    have hp : Held (m.update { f with dispatcher := f.dispatcher.drain.2 }) fiber token request := by
-      apply held_update_view h self { f with dispatcher := f.dispatcher.drain.2 } ⟨rfl, rfl, rfl⟩
-      intro key hk
-      have hobs : key ∈ f.observers.flatMap observerKeys := by
-        simpa only [fiberKeys, bucketKeys, Dispatcher.drain, List.flatMap_nil, List.append_nil] using hk
-      exact internalKeys_fiber memf (List.mem_append_left _ hobs)
-    apply held_fireFold p table fuel owner _ _ (held_disarm hp owner)
-    intro task ht hk
-    apply h.key
-    apply internalKeys_fiber memf
-    apply List.mem_append_right
-    obtain ⟨tasks, htasks, ht⟩ := List.mem_flatten.mp ht
-    obtain ⟨bucket, hb, rfl⟩ := List.mem_map.mp htasks
-    exact List.mem_flatMap.mpr ⟨bucket, hb, List.mem_flatMap.mpr ⟨task, ht, hk⟩⟩
-
-theorem held_flushAllState (p : NativeEff) (table : RowTable) (fuel rounds : Nat)
-    {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
-    (h : Held m fiber token request) :
-    letI := evaluatorFor p table
-    Held (flushAllState (interpOf p table) fuel rounds m).1 fiber token request := by
-  letI := evaluatorFor p table
-  induction rounds generalizing m with
-  | zero => exact h
-  | succ rounds ih =>
-    simp only [flushAllState]
-    split
-    · exact h
-    · split
-      · exact h
-      · split
-        · exact ih (held_fireState p table fuel h _)
-        · exact held_fireState p table fuel h _
-
 theorem M1Clock.timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
@@ -337,12 +279,115 @@ theorem clockStep_owed_safe (p : NativeEff) (table : RowTable) {m : NativeMachin
   simp only [internalKeys, List.mem_append]
   exact Or.inl (Or.inl (Or.inl (Or.inl (he ▸ hk))))
 
+/-- `Held`, with a quiet queue and snapshot tasks that never name the guard key, is a fold lift:
+the eight premises the fold lifts read, from the per-command, dispatcher, event and clock lemmas
+above. It is not a decision lift: the interrupt edit unparks the guarded fiber
+(`Test/Program/GuardFoldLift.lean`). -/
+theorem held_foldLift (p : NativeEff) (table : RowTable) (fiber : FiberId) (token : Nat)
+    (request : NativeOp × Val) :
+    letI := evaluatorFor p table
+    Lift.FoldLift Lift.unitOrder (interpOf p table) (fun _ m => Held m fiber token request)
+      (fun _ _ cmds => QuietQueue fiber token cmds)
+      (fun _ _ ts => ∀ t ∈ ts, (fiber, token) ∉ taskKeys t) := by
+  letI := evaluatorFor p table
+  refine ⟨?step, ?nil, ?drain, ?ran, ?task, ?skip, ?clockNone, ?clockSome⟩
+  case step =>
+    intro ts _ m c rest hs hg
+    obtain ⟨hj, hio⟩ := hg
+    obtain ⟨quiet, tasks⟩ := hio hs
+    have next := held_driveStep p table hj c rest (quiet c (List.mem_cons_self ..))
+      (fun c' hc => quiet c' (List.mem_cons_of_mem _ hc))
+    exact ⟨(), trivial, next.1, fun _ => ⟨next.2, tasks⟩⟩
+  case nil => exact fun _ _ t ht => absurd ht List.not_mem_nil
+  case drain =>
+    intro _ m owner f h hf
+    have memf := List.mem_of_find?_eq_some hf
+    have self : m.fiber? f.id = some f := by simpa only [fiber_id_of_lookup hf] using hf
+    have hp : Held (m.update { f with dispatcher := f.dispatcher.drain.2 }) fiber token request := by
+      apply held_update_view h self { f with dispatcher := f.dispatcher.drain.2 } ⟨rfl, rfl, rfl⟩
+      intro key hk
+      have hobs : key ∈ f.observers.flatMap observerKeys := by
+        simpa only [fiberKeys, bucketKeys, Dispatcher.drain, List.flatMap_nil, List.append_nil] using hk
+      exact internalKeys_fiber memf (List.mem_append_left _ hobs)
+    refine ⟨held_disarm hp owner, ?_⟩
+    intro task ht hk
+    apply h.key
+    apply internalKeys_fiber memf
+    apply List.mem_append_right
+    obtain ⟨tasks, htasks, ht⟩ := List.mem_flatten.mp ht
+    obtain ⟨bucket, hb, rfl⟩ := List.mem_map.mp htasks
+    exact List.mem_flatMap.mpr ⟨bucket, hb, List.mem_flatMap.mpr ⟨task, ht, hk⟩⟩
+  case ran => exact fun _ _ owner t h => held_emit h [RunEvent.ranTask owner t]
+  case task =>
+    intro _ _ _ t ts _ _ safe
+    exact ⟨quiet_taskCmds t (safe t (List.mem_cons_self ..)),
+      fun t' ht' => safe t' (List.mem_cons_of_mem _ ht')⟩
+  case skip => exact fun _ _ _ _ safe t' ht' => safe t' (List.mem_cons_of_mem _ ht')
+  case clockNone =>
+    intro _ m millis st h _ hc
+    refine ⟨(), trivial, held_withState h st ?_⟩
+    have hk := clockStep_storeKeys p table m.state millis
+    simpa only [hc] using hk
+  case clockSome =>
+    intro _ m millis owed st h _ hc
+    have hs : Held { m with state := st } fiber token request := by
+      apply held_withState h st
+      have hk := clockStep_storeKeys p table m.state millis
+      simpa only [hc] using hk
+    have safe := clockStep_owed_safe p table h millis owed (by rw [hc])
+    have drained := held_drainOwed hs [owed] (by
+      intro d hd
+      have he : d = owed := List.mem_singleton.mp hd
+      exact he ▸ safe)
+    refine ⟨(), trivial, drained.1, fun _ => ?_⟩
+    intro c hc
+    rcases List.mem_append.mp hc with hc | hc
+    · exact drained.2 c hc
+    · have he : c = .drainDue := List.mem_singleton.mp hc
+      exact he ▸ True.intro
+
+/-- A dispatcher snapshot keeps `Held`: the fold lift (`held_foldLift`) at `fireFold_lift`. -/
+theorem held_fireFold (p : NativeEff) (table : RowTable) (fuel : Nat) (owner : FiberId)
+    (tasks : List NTask) (acc : NativeMachine × Bool)
+    {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
+    (h : Held acc.1 fiber token request)
+    (safe : ∀ task ∈ tasks, (fiber, token) ∉ taskKeys task) :
+    letI := evaluatorFor p table
+    Held (tasks.foldl (fireStep (interpOf p table) fuel owner) acc).1 fiber token request := by
+  letI := evaluatorFor p table
+  obtain ⟨_, _, held⟩ := (held_foldLift p table fiber token request).fireFold_lift fuel owner
+    tasks () acc h (fun _ => safe)
+  exact held
+
+/-- A `fire` keeps `Held`: the fold lift (`held_foldLift`) at `fireState_lift`. -/
+theorem held_fireState (p : NativeEff) (table : RowTable) (fuel : Nat)
+    {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
+    (h : Held m fiber token request) (owner : FiberId) :
+    letI := evaluatorFor p table
+    Held (fireState (interpOf p table) fuel m owner).1 fiber token request := by
+  letI := evaluatorFor p table
+  obtain ⟨_, _, held⟩ := (held_foldLift p table fiber token request).fireState_lift fuel () m
+    owner h
+  exact held
+
+/-- A flush keeps `Held`: the fold lift (`held_foldLift`) at `flushAllState_lift`. -/
+theorem held_flushAllState (p : NativeEff) (table : RowTable) (fuel rounds : Nat)
+    {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
+    (h : Held m fiber token request) :
+    letI := evaluatorFor p table
+    Held (flushAllState (interpOf p table) fuel rounds m).1 fiber token request := by
+  letI := evaluatorFor p table
+  obtain ⟨_, _, held⟩ := (held_foldLift p table fiber token request).flushAllState_lift fuel
+    rounds () m h
+  exact held
+
 theorem M1Clock.held_advanceState (p : NativeEff) (table : RowTable) (fuel : Nat) (millis : ClockMillis) (rounds : Nat)
     {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
     (_h : Held m fiber token request) : ProofGraph.Obligation (
     letI := evaluatorFor p table
     Held (advanceState (interpOf p table) fuel millis rounds m).1 fiber token request) := ⟨⟩
 
+/-- An `advance` keeps `Held`: the fold lift (`held_foldLift`) at `advanceState_lift`. -/
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem held_advanceState (p : NativeEff) (table : RowTable) (fuel : Nat) (millis : ClockMillis) (rounds : Nat)
     {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
@@ -350,40 +395,9 @@ theorem held_advanceState (p : NativeEff) (table : RowTable) (fuel : Nat) (milli
     letI := evaluatorFor p table
     Held (advanceState (interpOf p table) fuel millis rounds m).1 fiber token request := by
   letI := evaluatorFor p table
-  induction rounds generalizing m with
-  | zero => exact h
-  | succ rounds ih =>
-    simp only [advanceState]
-    split
-    · exact h
-    · cases hc : (interpOf p table).clockStep millis m.state with
-      | mk owed stores =>
-        have hs : Held { m with state := stores } fiber token request := by
-          apply held_withState h stores
-          have hk := clockStep_storeKeys p table m.state millis
-          simpa only [hc] using hk
-        cases owed with
-        | none => exact hs
-        | some owed =>
-          dsimp only
-          have safe := clockStep_owed_safe p table h millis owed (by rw [hc])
-          have drained := held_drainOwed hs [owed] (by
-            intro d hd
-            have he : d = owed := List.mem_singleton.mp hd
-            exact he ▸ safe)
-          have driven := held_driveState p table fuel drained.1
-            ((drainOwed { m with state := stores } [owed]).2 ++ [.drainDue]) (by
-              intro c hc
-              rcases List.mem_append.mp hc with hc | hc
-              · exact drained.2 c hc
-              · have he : c = .drainDue := List.mem_singleton.mp hc
-                exact he ▸ True.intro)
-          split
-          · have flushed := held_flushAllState p table fuel fuel driven.1
-            split
-            · exact ih flushed
-            · exact flushed
-          · exact driven.1
+  obtain ⟨_, _, held⟩ := (held_foldLift p table fiber token request).advanceState_lift fuel
+    millis rounds () m h
+  exact held
 
 theorem held_prepareAsyncAnswer (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}

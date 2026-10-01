@@ -1,0 +1,1141 @@
+Effect4.Machine.Lift.DecisionLift :
+  {ν σ : Type u} →
+    {β : Type v} →
+      {ε δ ι α χ : Type u} →
+        {St : Type (max u v)} →
+          [DecidableEq.{u + 1} ε] →
+            [DecidableEq.{u + 1} δ] →
+              [DecidableEq.{u + 1} ι] →
+                [DecidableEq.{u + 1} α] →
+                  {κ φ η : Type (max u v)} →
+                    [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ] →
+                      [Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η] →
+                        {W : Type w} →
+                          (o : Effect4.Laws.Effects.WorldOrder.{w} W) →
+                            (interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ) →
+                              (J : W → Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop) →
+                                (I :
+                                    W →
+                                      Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+                                        List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ) → Prop) →
+                                  (O :
+                                      W →
+                                        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+                                          List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) → Prop) →
+                                    (A :
+                                        W →
+                                          Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+                                            Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α → Prop) →
+                                      Prop
+Effect4.Machine.Lift.DecisionLift.mk :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq.{u + 1} ε]
+    [inst_1 : DecidableEq.{u + 1} δ] [inst_2 : DecidableEq.{u + 1} ι] [inst_3 : DecidableEq.{u + 1} α]
+    {κ φ η : Type (max u v)} [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ]
+    [inst_4 : Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η] {W : Type w}
+    {o : Effect4.Laws.Effects.WorldOrder.{w} W} {interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ}
+    {J : W → Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop}
+    {I :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {O :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {A :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α → Prop}
+    (step :
+      ∀ (ts : List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ)),
+        @Effect4.Machine.Lift.StepKeeps.{u, v, w} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 W o
+          interp (@Effect4.Machine.Lift.Guarded.{u, v, w} ν σ β ε δ ι α χ St κ φ η W J I O ts))
+    (nil :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η),
+        O w m (@List.nil.{max u v} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ)))
+    (evaluate :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (id : Effect4.FiberId),
+        J w m →
+          @Eq.{1} (Option.{0} Effect4.Machine.Stuck)
+              (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Option.none.{0} Effect4.Machine.Stuck) →
+            I w m
+              (@List.cons.{max u v} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)
+                (@Effect4.Machine.Cmd.evaluate.{u, v} ν σ β ε δ ι α κ id)
+                (@List.cons.{max u v} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)
+                  (@Effect4.Machine.Cmd.drainDue.{u, v} ν σ β ε δ ι α κ)
+                  (@List.nil.{max u v} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)))))
+    (drain :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (owner : Effect4.FiberId)
+        (f : Effect4.Machine.RunFiber.{u, v} ν σ β ε δ ι α χ κ φ),
+        J w m →
+          @Eq.{max (u + 1) (v + 1)} (Option.{max v u} (Effect4.Machine.RunFiber.{u, v} ν σ β ε δ ι α χ κ φ))
+              (@Effect4.Machine.RunMachine.fiber?.{u, v} ν σ β ε δ ι α χ St κ φ η m owner)
+              (@Option.some.{max u v} (Effect4.Machine.RunFiber.{u, v} ν σ β ε δ ι α χ κ φ) f) →
+            And
+              (J w
+                (@Effect4.Machine.RunMachine.disarm.{u, v} ν σ β ε δ ι α χ St κ φ η
+                  (@Effect4.Machine.RunMachine.update.{u, v} ν σ β ε δ ι α χ St κ φ η m
+                    (@Effect4.Machine.RunFiber.mk.{u, v} ν σ β ε δ ι α χ κ φ
+                      (@Effect4.Machine.RunFiber.id.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.frame.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.running.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.parked.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.pending.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.finalizing.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.exit.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.currentOpCount.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.maxOpsBeforeYield.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.preventYield.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.yieldOverride.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.observers.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.children.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Prod.snd.{max u v, max u v} (List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ))
+                        (Effect4.Machine.Dispatcher.{u, v} ν σ β ε δ ι α κ)
+                        (@Effect4.Machine.Dispatcher.drain.{u, v} ν σ β ε δ ι α κ
+                          (@Effect4.Machine.RunFiber.dispatcher.{u, v} ν σ β ε δ ι α χ κ φ f)))
+                      (@Effect4.Machine.RunFiber.context.{u, v} ν σ β ε δ ι α χ κ φ f)))
+                  owner))
+              (O w
+                (@Effect4.Machine.RunMachine.disarm.{u, v} ν σ β ε δ ι α χ St κ φ η
+                  (@Effect4.Machine.RunMachine.update.{u, v} ν σ β ε δ ι α χ St κ φ η m
+                    (@Effect4.Machine.RunFiber.mk.{u, v} ν σ β ε δ ι α χ κ φ
+                      (@Effect4.Machine.RunFiber.id.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.frame.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.running.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.parked.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.pending.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.finalizing.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.exit.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.currentOpCount.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.maxOpsBeforeYield.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.preventYield.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.yieldOverride.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.observers.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Effect4.Machine.RunFiber.children.{u, v} ν σ β ε δ ι α χ κ φ f)
+                      (@Prod.snd.{max u v, max u v} (List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ))
+                        (Effect4.Machine.Dispatcher.{u, v} ν σ β ε δ ι α κ)
+                        (@Effect4.Machine.Dispatcher.drain.{u, v} ν σ β ε δ ι α κ
+                          (@Effect4.Machine.RunFiber.dispatcher.{u, v} ν σ β ε δ ι α χ κ φ f)))
+                      (@Effect4.Machine.RunFiber.context.{u, v} ν σ β ε δ ι α χ κ φ f)))
+                  owner)
+                (@Prod.fst.{max u v, max u v} (List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ))
+                  (Effect4.Machine.Dispatcher.{u, v} ν σ β ε δ ι α κ)
+                  (@Effect4.Machine.Dispatcher.drain.{u, v} ν σ β ε δ ι α κ
+                    (@Effect4.Machine.RunFiber.dispatcher.{u, v} ν σ β ε δ ι α χ κ φ f)))))
+    (ran :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (owner : Effect4.FiberId)
+        (t : Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ),
+        J w m →
+          J w
+            (@Effect4.Machine.RunMachine.emit.{u, v} ν σ β ε δ ι α χ St κ φ η m
+              (@List.cons.{max u v} (Effect4.Machine.RunEvent.{u, v} ν σ β ε δ ι α χ κ η)
+                (@Effect4.Machine.RunEvent.ranTask.{u, v} ν σ β ε δ ι α χ κ η owner t)
+                (@List.nil.{max u v} (Effect4.Machine.RunEvent.{u, v} ν σ β ε δ ι α χ κ η)))))
+    (task :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (owner : Effect4.FiberId)
+        (t : Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ)
+        (ts : List.{max u v} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ)),
+        J w m →
+          @Eq.{1} (Option.{0} Effect4.Machine.Stuck)
+              (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Option.none.{0} Effect4.Machine.Stuck) →
+            O w m (@List.cons.{max u v} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) t ts) →
+              And
+                (I w
+                  (@Effect4.Machine.RunMachine.emit.{u, v} ν σ β ε δ ι α χ St κ φ η m
+                    (@List.cons.{max u v} (Effect4.Machine.RunEvent.{u, v} ν σ β ε δ ι α χ κ η)
+                      (@Effect4.Machine.RunEvent.ranTask.{u, v} ν σ β ε δ ι α χ κ η owner t)
+                      (@List.nil.{max u v} (Effect4.Machine.RunEvent.{u, v} ν σ β ε δ ι α χ κ η))))
+                  (@Effect4.Machine.taskCmds.{u, v} ν σ β ε δ ι α κ t))
+                (O w
+                  (@Effect4.Machine.RunMachine.emit.{u, v} ν σ β ε δ ι α χ St κ φ η m
+                    (@List.cons.{max u v} (Effect4.Machine.RunEvent.{u, v} ν σ β ε δ ι α χ κ η)
+                      (@Effect4.Machine.RunEvent.ranTask.{u, v} ν σ β ε δ ι α χ κ η owner t)
+                      (@List.nil.{max u v} (Effect4.Machine.RunEvent.{u, v} ν σ β ε δ ι α χ κ η))))
+                  ts))
+    (skip :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+        (t : Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ)
+        (ts : List.{max u v} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ)),
+        O w m (@List.cons.{max u v} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) t ts) → O w m ts)
+    (yield :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (id : Effect4.FiberId) (v : Bool),
+        J w m →
+          J w
+            (@Effect4.Machine.RunMachine.modify.{u, v} ν σ β ε δ ι α χ St κ φ η m id
+              fun (f : Effect4.Machine.RunFiber.{u, v} ν σ β ε δ ι α χ κ φ) =>
+              @Effect4.Machine.RunFiber.mk.{u, v} ν σ β ε δ ι α χ κ φ
+                (@Effect4.Machine.RunFiber.id.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.frame.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.running.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.parked.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.pending.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.finalizing.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.exit.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.currentOpCount.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.maxOpsBeforeYield.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.preventYield.{u, v} ν σ β ε δ ι α χ κ φ f) (@Option.some.{0} Bool v)
+                (@Effect4.Machine.RunFiber.observers.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.children.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.dispatcher.{u, v} ν σ β ε δ ι α χ κ φ f)
+                (@Effect4.Machine.RunFiber.context.{u, v} ν σ β ε δ ι α χ κ φ f)))
+    (interrupt :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (who : Option.{0} Effect4.FiberId)
+        (extra : Effect4.ReasonAnnotations.{u} α) (target : Effect4.FiberId)
+        (t : Effect4.Machine.RunFiber.{u, v} ν σ β ε δ ι α χ κ φ),
+        J w m →
+          @Eq.{max (u + 1) (v + 1)} (Option.{max v u} (Effect4.Machine.RunFiber.{u, v} ν σ β ε δ ι α χ κ φ))
+              (@Effect4.Machine.RunMachine.fiber?.{u, v} ν σ β ε δ ι α χ St κ φ η m target)
+              (@Option.some.{max u v} (Effect4.Machine.RunFiber.{u, v} ν σ β ε δ ι α χ κ φ) t) →
+            J w
+              (@Effect4.Machine.Lift.interruptEdit.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core interp
+                m who extra target t))
+    (middleware :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η),
+        J w m →
+          J w
+            (@Effect4.Machine.RunMachine.mk.{u, v} ν σ β ε δ ι α χ St κ φ η
+              (@Effect4.Machine.RunMachine.fibers.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Effect4.Machine.RunMachine.races.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Effect4.Machine.RunMachine.nextId.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Effect4.Machine.RunMachine.nextToken.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Effect4.Machine.RunMachine.nextRace.{u, v} ν σ β ε δ ι α χ St κ φ η m) Bool.true
+              (@Effect4.Machine.RunMachine.armed.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Effect4.Machine.RunMachine.state.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Effect4.Machine.RunMachine.trace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Effect4.Machine.RunMachine.forks.{u, v} ν σ β ε δ ι α χ St κ φ η m)))
+    (clockNone :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (millis : Effect4.ClockMillis)
+        (st : St),
+        J w m →
+          @Eq.{1} (Option.{0} Effect4.Machine.Stuck)
+              (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Option.none.{0} Effect4.Machine.Stuck) →
+            @Eq.{max (u + 1) (v + 1)} (Prod.{max u v, max u v} (Option.{max u v} (Effect4.Machine.Owed.{max u v} κ)) St)
+                (@Effect4.Machine.RunInterp.clockStep.{u, v} ν σ β ε δ ι α χ St κ interp millis
+                  (@Effect4.Machine.RunMachine.state.{u, v} ν σ β ε δ ι α χ St κ φ η m))
+                (@Prod.mk.{max u v, max u v} (Option.{max u v} (Effect4.Machine.Owed.{max u v} κ)) St
+                  (@Option.none.{max u v} (Effect4.Machine.Owed.{max u v} κ)) st) →
+              @Exists.{w + 1} W fun (w' : W) =>
+                And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+                  (J w'
+                    (@Effect4.Machine.RunMachine.mk.{u, v} ν σ β ε δ ι α χ St κ φ η
+                      (@Effect4.Machine.RunMachine.fibers.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                      (@Effect4.Machine.RunMachine.races.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                      (@Effect4.Machine.RunMachine.nextId.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                      (@Effect4.Machine.RunMachine.nextToken.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                      (@Effect4.Machine.RunMachine.nextRace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                      (@Effect4.Machine.RunMachine.middlewareInstalled.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                      (@Effect4.Machine.RunMachine.armed.{u, v} ν σ β ε δ ι α χ St κ φ η m) st
+                      (@Effect4.Machine.RunMachine.trace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                      (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                      (@Effect4.Machine.RunMachine.forks.{u, v} ν σ β ε δ ι α χ St κ φ η m))))
+    (clockSome :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (millis : Effect4.ClockMillis)
+        (owed : Effect4.Machine.Owed.{max u v} κ) (st : St),
+        J w m →
+          @Eq.{1} (Option.{0} Effect4.Machine.Stuck)
+              (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Option.none.{0} Effect4.Machine.Stuck) →
+            @Eq.{max (u + 1) (v + 1)} (Prod.{max u v, max u v} (Option.{max u v} (Effect4.Machine.Owed.{max u v} κ)) St)
+                (@Effect4.Machine.RunInterp.clockStep.{u, v} ν σ β ε δ ι α χ St κ interp millis
+                  (@Effect4.Machine.RunMachine.state.{u, v} ν σ β ε δ ι α χ St κ φ η m))
+                (@Prod.mk.{max u v, max u v} (Option.{max u v} (Effect4.Machine.Owed.{max u v} κ)) St
+                  (@Option.some.{max u v} (Effect4.Machine.Owed.{max u v} κ) owed) st) →
+              @Exists.{w + 1} W fun (w' : W) =>
+                And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+                  (And
+                    (J w'
+                      (@Prod.fst.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+                        (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                        (@Effect4.Machine.drainOwed.{u, v} ν σ β ε δ ι α χ St κ φ η
+                          (@Effect4.Machine.RunMachine.mk.{u, v} ν σ β ε δ ι α χ St κ φ η
+                            (@Effect4.Machine.RunMachine.fibers.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                            (@Effect4.Machine.RunMachine.races.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                            (@Effect4.Machine.RunMachine.nextId.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                            (@Effect4.Machine.RunMachine.nextToken.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                            (@Effect4.Machine.RunMachine.nextRace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                            (@Effect4.Machine.RunMachine.middlewareInstalled.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                            (@Effect4.Machine.RunMachine.armed.{u, v} ν σ β ε δ ι α χ St κ φ η m) st
+                            (@Effect4.Machine.RunMachine.trace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                            (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                            (@Effect4.Machine.RunMachine.forks.{u, v} ν σ β ε δ ι α χ St κ φ η m))
+                          (@List.cons.{max u v} (Effect4.Machine.Owed.{max u v} κ) owed
+                            (@List.nil.{max u v} (Effect4.Machine.Owed.{max u v} κ))))))
+                    (@Eq.{1} (Option.{0} Effect4.Machine.Stuck)
+                        (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η
+                          (@Prod.fst.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+                            (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                            (@Effect4.Machine.drainOwed.{u, v} ν σ β ε δ ι α χ St κ φ η
+                              (@Effect4.Machine.RunMachine.mk.{u, v} ν σ β ε δ ι α χ St κ φ η
+                                (@Effect4.Machine.RunMachine.fibers.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.races.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.nextId.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.nextToken.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.nextRace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.middlewareInstalled.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.armed.{u, v} ν σ β ε δ ι α χ St κ φ η m) st
+                                (@Effect4.Machine.RunMachine.trace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.forks.{u, v} ν σ β ε δ ι α χ St κ φ η m))
+                              (@List.cons.{max u v} (Effect4.Machine.Owed.{max u v} κ) owed
+                                (@List.nil.{max u v} (Effect4.Machine.Owed.{max u v} κ))))))
+                        (@Option.none.{0} Effect4.Machine.Stuck) →
+                      I w'
+                        (@Prod.fst.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+                          (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                          (@Effect4.Machine.drainOwed.{u, v} ν σ β ε δ ι α χ St κ φ η
+                            (@Effect4.Machine.RunMachine.mk.{u, v} ν σ β ε δ ι α χ St κ φ η
+                              (@Effect4.Machine.RunMachine.fibers.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                              (@Effect4.Machine.RunMachine.races.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                              (@Effect4.Machine.RunMachine.nextId.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                              (@Effect4.Machine.RunMachine.nextToken.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                              (@Effect4.Machine.RunMachine.nextRace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                              (@Effect4.Machine.RunMachine.middlewareInstalled.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                              (@Effect4.Machine.RunMachine.armed.{u, v} ν σ β ε δ ι α χ St κ φ η m) st
+                              (@Effect4.Machine.RunMachine.trace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                              (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                              (@Effect4.Machine.RunMachine.forks.{u, v} ν σ β ε δ ι α χ St κ φ η m))
+                            (@List.cons.{max u v} (Effect4.Machine.Owed.{max u v} κ) owed
+                              (@List.nil.{max u v} (Effect4.Machine.Owed.{max u v} κ)))))
+                        (@HAppend.hAppend.{max u v, max v u, max u v}
+                          (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                          (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                          (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                          (@instHAppendOfAppend.{max u v} (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                            (@List.instAppend.{max u v} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)))
+                          (@Prod.snd.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+                            (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                            (@Effect4.Machine.drainOwed.{u, v} ν σ β ε δ ι α χ St κ φ η
+                              (@Effect4.Machine.RunMachine.mk.{u, v} ν σ β ε δ ι α χ St κ φ η
+                                (@Effect4.Machine.RunMachine.fibers.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.races.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.nextId.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.nextToken.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.nextRace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.middlewareInstalled.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.armed.{u, v} ν σ β ε δ ι α χ St κ φ η m) st
+                                (@Effect4.Machine.RunMachine.trace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                                (@Effect4.Machine.RunMachine.forks.{u, v} ν σ β ε δ ι α χ St κ φ η m))
+                              (@List.cons.{max u v} (Effect4.Machine.Owed.{max u v} κ) owed
+                                (@List.nil.{max u v} (Effect4.Machine.Owed.{max u v} κ)))))
+                          (@List.cons.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)
+                            (@Effect4.Machine.Cmd.drainDue.{u, v} ν σ β ε δ ι α κ)
+                            (@List.nil.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)))))))
+    (answer :
+      ∀ (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (id : Effect4.FiberId) (token : Nat)
+        (answer : Effect4.Machine.Completion.{u, v} β ε δ ι α),
+        J w m →
+          @Eq.{1} (Option.{0} Effect4.Machine.Stuck)
+              (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+              (@Option.none.{0} Effect4.Machine.Stuck) →
+            A w m (@Effect4.Machine.RunDecision.answerAsync.{u, v} ν σ β ε δ ι α id token answer) →
+              @Exists.{w + 1} W fun (w' : W) =>
+                And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+                  (@Effect4.Machine.Lift.Guarded.{u, v, w} ν σ β ε δ ι α χ St κ φ η W J I O
+                    (@List.nil.{max u v} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ)) w'
+                    (@Prod.fst.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+                      (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                      (@Effect4.Machine.driveStep.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4
+                        interp
+                        (@Effect4.Machine.RunMachine.mk.{u, v} ν σ β ε δ ι α χ St κ φ η
+                          (@Effect4.Machine.RunMachine.fibers.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.races.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.nextId.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.nextToken.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.nextRace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.middlewareInstalled.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.armed.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Prod.fst.{max u v, max u v} St κ
+                            (@Effect4.Machine.prepareAsyncAnswer.{u, v} ν σ β ε δ ι α χ St κ φ η core interp m id token
+                              answer))
+                          (@Effect4.Machine.RunMachine.trace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.forks.{u, v} ν σ β ε δ ι α χ St κ φ η m))
+                        (@Effect4.Machine.Cmd.resume.{u, v} ν σ β ε δ ι α κ id token
+                          (@Prod.snd.{max u v, max u v} St κ
+                            (@Effect4.Machine.prepareAsyncAnswer.{u, v} ν σ β ε δ ι α χ St κ φ η core interp m id token
+                              answer)))
+                        (@List.cons.{max u v} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)
+                          (@Effect4.Machine.Cmd.drainDue.{u, v} ν σ β ε δ ι α κ)
+                          (@List.nil.{max u v} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)))))
+                    (@Prod.snd.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+                      (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                      (@Effect4.Machine.driveStep.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4
+                        interp
+                        (@Effect4.Machine.RunMachine.mk.{u, v} ν σ β ε δ ι α χ St κ φ η
+                          (@Effect4.Machine.RunMachine.fibers.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.races.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.nextId.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.nextToken.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.nextRace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.middlewareInstalled.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.armed.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Prod.fst.{max u v, max u v} St κ
+                            (@Effect4.Machine.prepareAsyncAnswer.{u, v} ν σ β ε δ ι α χ St κ φ η core interp m id token
+                              answer))
+                          (@Effect4.Machine.RunMachine.trace.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+                          (@Effect4.Machine.RunMachine.forks.{u, v} ν σ β ε δ ι α χ St κ φ η m))
+                        (@Effect4.Machine.Cmd.resume.{u, v} ν σ β ε δ ι α κ id token
+                          (@Prod.snd.{max u v, max u v} St κ
+                            (@Effect4.Machine.prepareAsyncAnswer.{u, v} ν σ β ε δ ι α χ St κ φ η core interp m id token
+                              answer)))
+                        (@List.cons.{max u v} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)
+                          (@Effect4.Machine.Cmd.drainDue.{u, v} ν σ β ε δ ι α κ)
+                          (@List.nil.{max u v} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))))))),
+    @Effect4.Machine.Lift.DecisionLift.{u, v, w} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 W o
+      interp J I O A
+Effect4.Machine.Lift.loop_lift :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq.{u + 1} ε]
+    [inst_1 : DecidableEq.{u + 1} δ] [inst_2 : DecidableEq.{u + 1} ι] [inst_3 : DecidableEq.{u + 1} α]
+    {κ φ η : Type (max u v)} [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ]
+    [inst_4 : Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η] {W : Type w}
+    {o : Effect4.Laws.Effects.WorldOrder.{w} W} {interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ}
+    {J : W → Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop}
+    {I :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {O :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {A :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α → Prop}
+    (h :
+      @Effect4.Machine.Lift.DecisionLift.{u, v, w} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 W o
+        interp J I O A)
+    (ts : List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ)) (fuel : Nat) (w : W)
+    (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+    (cmds : List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)) (hj : J w m)
+    (hi :
+      @Eq.{1} (Option.{0} Effect4.Machine.Stuck) (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+          (@Option.none.{0} Effect4.Machine.Stuck) →
+        And (I w m cmds) (O w m ts)),
+    @Exists.{w + 1} W fun (w' : W) =>
+      And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+        (@Effect4.Machine.Lift.Guarded.{u, v, w} ν σ β ε δ ι α χ St κ φ η W J I O ts w'
+          (@Prod.fst.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+            (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+            (@Effect4.Machine.driveState.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 interp
+              fuel m cmds))
+          (@Prod.snd.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+            (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+            (@Effect4.Machine.driveState.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 interp
+              fuel m cmds)))
+Effect4.Machine.Lift.loop_entry :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq.{u + 1} ε]
+    [inst_1 : DecidableEq.{u + 1} δ] [inst_2 : DecidableEq.{u + 1} ι] [inst_3 : DecidableEq.{u + 1} α]
+    {κ φ η : Type (max u v)} [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ]
+    [inst_4 : Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η] {W : Type w}
+    {o : Effect4.Laws.Effects.WorldOrder.{w} W} {interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ}
+    {J : W → Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop}
+    {I :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {O :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {A :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α → Prop}
+    (h :
+      @Effect4.Machine.Lift.DecisionLift.{u, v, w} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 W o
+        interp J I O A)
+    (fuel : Nat) (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+    (cmds : List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)) (hj : J w m)
+    (hi :
+      @Eq.{1} (Option.{0} Effect4.Machine.Stuck) (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+          (@Option.none.{0} Effect4.Machine.Stuck) →
+        I w m cmds),
+    @Exists.{w + 1} W fun (w' : W) =>
+      And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+        (J w'
+          (@Prod.fst.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+            (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+            (@Effect4.Machine.driveState.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 interp
+              fuel m cmds)))
+Effect4.Machine.Lift.fireFold_lift :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq.{u + 1} ε]
+    [inst_1 : DecidableEq.{u + 1} δ] [inst_2 : DecidableEq.{u + 1} ι] [inst_3 : DecidableEq.{u + 1} α]
+    {κ φ η : Type (max u v)} [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ]
+    [inst_4 : Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η] {W : Type w}
+    {o : Effect4.Laws.Effects.WorldOrder.{w} W} {interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ}
+    {J : W → Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop}
+    {I :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {O :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {A :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α → Prop}
+    (h :
+      @Effect4.Machine.Lift.DecisionLift.{u, v, w} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 W o
+        interp J I O A)
+    (fuel : Nat) (owner : Effect4.FiberId) (tasks : List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ))
+    (w : W) (acc : Prod.{max v u, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool),
+    J w (@Prod.fst.{max u v, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool acc) →
+      (@Eq.{1} (Option.{0} Effect4.Machine.Stuck)
+            (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η
+              (@Prod.fst.{max u v, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool acc))
+            (@Option.none.{0} Effect4.Machine.Stuck) →
+          O w (@Prod.fst.{max u v, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool acc) tasks) →
+        @Exists.{w + 1} W fun (w' : W) =>
+          And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+            (J w'
+              (@Prod.fst.{max u v, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool
+                (@List.foldl.{max v u, max v u}
+                  (Prod.{max v u, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool)
+                  (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ)
+                  (@Effect4.Machine.fireStep.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4
+                    interp fuel owner)
+                  acc tasks)))
+Effect4.Machine.Lift.fireState_lift :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq.{u + 1} ε]
+    [inst_1 : DecidableEq.{u + 1} δ] [inst_2 : DecidableEq.{u + 1} ι] [inst_3 : DecidableEq.{u + 1} α]
+    {κ φ η : Type (max u v)} [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ]
+    [inst_4 : Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η] {W : Type w}
+    {o : Effect4.Laws.Effects.WorldOrder.{w} W} {interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ}
+    {J : W → Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop}
+    {I :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {O :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {A :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α → Prop}
+    (h :
+      @Effect4.Machine.Lift.DecisionLift.{u, v, w} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 W o
+        interp J I O A)
+    (fuel : Nat) (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) (owner : Effect4.FiberId)
+    (hj : J w m),
+    @Exists.{w + 1} W fun (w' : W) =>
+      And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+        (J w'
+          (@Prod.fst.{max u v, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool
+            (@Effect4.Machine.fireState.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 interp
+              fuel m owner)))
+Effect4.Machine.Lift.flushAllState_lift :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq.{u + 1} ε]
+    [inst_1 : DecidableEq.{u + 1} δ] [inst_2 : DecidableEq.{u + 1} ι] [inst_3 : DecidableEq.{u + 1} α]
+    {κ φ η : Type (max u v)} [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ]
+    [inst_4 : Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η] {W : Type w}
+    {o : Effect4.Laws.Effects.WorldOrder.{w} W} {interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ}
+    {J : W → Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop}
+    {I :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {O :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {A :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α → Prop}
+    (h :
+      @Effect4.Machine.Lift.DecisionLift.{u, v, w} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 W o
+        interp J I O A)
+    (fuel rounds : Nat) (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η),
+    J w m →
+      @Exists.{w + 1} W fun (w' : W) =>
+        And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+          (J w'
+            (@Prod.fst.{max u v, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool
+              (@Effect4.Machine.flushAllState.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4
+                interp fuel rounds m)))
+Effect4.Machine.Lift.advanceState_lift :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq.{u + 1} ε]
+    [inst_1 : DecidableEq.{u + 1} δ] [inst_2 : DecidableEq.{u + 1} ι] [inst_3 : DecidableEq.{u + 1} α]
+    {κ φ η : Type (max u v)} [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ]
+    [inst_4 : Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η] {W : Type w}
+    {o : Effect4.Laws.Effects.WorldOrder.{w} W} {interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ}
+    {J : W → Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop}
+    {I :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {O :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {A :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α → Prop}
+    (h :
+      @Effect4.Machine.Lift.DecisionLift.{u, v, w} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 W o
+        interp J I O A)
+    (fuel : Nat) (millis : Effect4.ClockMillis) (rounds : Nat) (w : W)
+    (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η),
+    J w m →
+      @Exists.{w + 1} W fun (w' : W) =>
+        And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+          (J w'
+            (@Prod.fst.{max u v, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool
+              (@Effect4.Machine.advanceState.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4
+                interp fuel millis rounds m)))
+Effect4.Machine.Lift.stepDecisionState_lift :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq.{u + 1} ε]
+    [inst_1 : DecidableEq.{u + 1} δ] [inst_2 : DecidableEq.{u + 1} ι] [inst_3 : DecidableEq.{u + 1} α]
+    {κ φ η : Type (max u v)} [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ]
+    [inst_4 : Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η] {W : Type w}
+    {o : Effect4.Laws.Effects.WorldOrder.{w} W} {interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ}
+    {J : W → Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop}
+    {I :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {O :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          List.{max v u} (Effect4.Machine.Task.{u, v} ν σ β ε δ ι α κ) → Prop}
+    {A :
+      W →
+        Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η →
+          Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α → Prop}
+    (h :
+      @Effect4.Machine.Lift.DecisionLift.{u, v, w} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 W o
+        interp J I O A)
+    (fuel : Nat) (w : W) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+    (d : Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α) (hj : J w m) (ha : A w m d),
+    @Exists.{w + 1} W fun (w' : W) =>
+      And (@Effect4.Laws.Effects.WorldOrder.le.{w} W o w w')
+        (J w'
+          (@Prod.fst.{max u v, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool
+            (@Effect4.Machine.stepDecisionState.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4
+              interp fuel m d)))
+Effect4.Machine.Lift.machineFact_stepDecision :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq.{u + 1} ε]
+    [inst_1 : DecidableEq.{u + 1} δ] [inst_2 : DecidableEq.{u + 1} ι] [inst_3 : DecidableEq.{u + 1} α]
+    {κ φ η : Type (max u v)} [core : Effect4.Machine.FiberCore.{u, v} ν β ε δ ι α κ φ]
+    [inst_4 : Effect4.Machine.FiberEvaluator.{u, v} ν σ β ε δ ι α χ St κ φ η]
+    (interp : Effect4.Machine.RunInterp.{u, v} ν σ β ε δ ι α χ St κ)
+    (P : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η → Prop)
+    (step :
+      ∀ (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+        (c : Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)
+        (rest : List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ)),
+        @Eq.{1} (Option.{0} Effect4.Machine.Stuck) (@Effect4.Machine.RunMachine.stuck.{u, v} ν σ β ε δ ι α χ St κ φ η m)
+            (@Option.none.{0} Effect4.Machine.Stuck) →
+          P m →
+            P
+              (@Prod.fst.{max u v, max u v} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+                (List.{max v u} (Effect4.Machine.Cmd.{u, v} ν σ β ε δ ι α κ))
+                (@Effect4.Machine.driveStep.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 interp
+                  m c rest)))
+    (edits : @Effect4.Machine.Lift.MachineEdits.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core interp P)
+    (fuel : Nat) (m : Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η)
+    (d : Effect4.Machine.RunDecision.{u, v} ν σ β ε δ ι α) (hp : P m),
+    P
+      (@Prod.fst.{max u v, 0} (Effect4.Machine.RunMachine.{u, v} ν σ β ε δ ι α χ St κ φ η) Bool
+        (@Effect4.Machine.stepDecisionState.{u, v} ν σ β ε δ ι α χ St inst inst_1 inst_2 inst_3 κ φ η core inst_4 interp
+          fuel m d))
+Effect4.Program.Guard.SingleGuard.held_fireStep :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable) (fuel : Nat) (owner : Effect4.FiberId)
+    (acc : Prod.{0, 0} Effect4.Program.NativeMachine Bool) {fiber : Effect4.FiberId} {token : Nat}
+    {request : Prod.{0, 0} Effect4.Program.NativeOp Effect4.Machine.Val}
+    (h :
+      Effect4.Program.Guard.SingleGuard.Held (@Prod.fst.{0, 0} Effect4.Program.NativeMachine Bool acc) fiber token
+        request)
+    (task : Effect4.Program.Guard.NTask)
+    (safe :
+      Not
+        (@Membership.mem.{0, 0} (Prod.{0, 0} Effect4.FiberId Nat) (List.{0} Effect4.Program.Guard.GuardKey)
+          (@List.instMembership.{0} Effect4.Program.Guard.GuardKey)
+          (@Effect4.Program.Guard.taskKeys
+            (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            task)
+          (@Prod.mk.{0, 0} Effect4.FiberId Nat fiber token))),
+    Effect4.Program.Guard.SingleGuard.Held
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@Effect4.Machine.fireStep.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+          Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel owner acc task))
+      fiber token request
+Effect4.Program.Guard.SingleGuard.held_fireFold :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable) (fuel : Nat) (owner : Effect4.FiberId)
+    (tasks : List.{0} Effect4.Program.Guard.NTask) (acc : Prod.{0, 0} Effect4.Program.NativeMachine Bool)
+    {fiber : Effect4.FiberId} {token : Nat} {request : Prod.{0, 0} Effect4.Program.NativeOp Effect4.Machine.Val}
+    (h :
+      Effect4.Program.Guard.SingleGuard.Held (@Prod.fst.{0, 0} Effect4.Program.NativeMachine Bool acc) fiber token
+        request)
+    (safe :
+      ∀ (task : Effect4.Program.Guard.NTask),
+        @Membership.mem.{0, 0} Effect4.Program.Guard.NTask (List.{0} Effect4.Program.Guard.NTask)
+            (@List.instMembership.{0} Effect4.Program.Guard.NTask) tasks task →
+          Not
+            (@Membership.mem.{0, 0} (Prod.{0, 0} Effect4.FiberId Nat) (List.{0} Effect4.Program.Guard.GuardKey)
+              (@List.instMembership.{0} Effect4.Program.Guard.GuardKey)
+              (@Effect4.Program.Guard.taskKeys
+                (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                  Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                task)
+              (@Prod.mk.{0, 0} Effect4.FiberId Nat fiber token))),
+    Effect4.Program.Guard.SingleGuard.Held
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@List.foldl.{0, 0}
+          (Prod.{0, 0}
+            (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+              Effect4.Machine.Stores
+              (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+            Bool)
+          (Effect4.Machine.Task.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann
+            (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+          (@Effect4.Machine.fireStep.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+            Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+            Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+            (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel owner)
+          acc tasks))
+      fiber token request
+Effect4.Program.Guard.SingleGuard.held_fireState :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable) (fuel : Nat) {m : Effect4.Program.NativeMachine}
+    {fiber : Effect4.FiberId} {token : Nat} {request : Prod.{0, 0} Effect4.Program.NativeOp Effect4.Machine.Val}
+    (h : Effect4.Program.Guard.SingleGuard.Held m fiber token request) (owner : Effect4.FiberId),
+    Effect4.Program.Guard.SingleGuard.Held
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@Effect4.Machine.fireState.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+          Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel m owner))
+      fiber token request
+Effect4.Program.Guard.SingleGuard.held_flushAllState :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable) (fuel rounds : Nat)
+    {m : Effect4.Program.NativeMachine} {fiber : Effect4.FiberId} {token : Nat}
+    {request : Prod.{0, 0} Effect4.Program.NativeOp Effect4.Machine.Val}
+    (h : Effect4.Program.Guard.SingleGuard.Held m fiber token request),
+    Effect4.Program.Guard.SingleGuard.Held
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@Effect4.Machine.flushAllState.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+          Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel rounds m))
+      fiber token request
+Effect4.Program.Guard.SingleGuard.held_advanceState :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable) (fuel : Nat) (millis : Effect4.ClockMillis)
+    (rounds : Nat) {m : Effect4.Program.NativeMachine} {fiber : Effect4.FiberId} {token : Nat}
+    {request : Prod.{0, 0} Effect4.Program.NativeOp Effect4.Machine.Val}
+    (h : Effect4.Program.Guard.SingleGuard.Held m fiber token request),
+    Effect4.Program.Guard.SingleGuard.Held
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@Effect4.Machine.advanceState.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+          Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel millis rounds m))
+      fiber token request
+Effect4.Program.Guard.SingleGuard.held_steppedBy :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable) (fuel : Nat) {m : Effect4.Program.NativeMachine}
+    {fiber : Effect4.FiberId} {token : Nat} {request : Prod.{0, 0} Effect4.Program.NativeOp Effect4.Machine.Val}
+    (h : Effect4.Program.Guard.SingleGuard.Held m fiber token request) (d : Effect4.Program.NativeDecision)
+    (noCancel : Effect4.Program.Guard.SingleGuard.NoCancel d)
+    (otherAnswer : Effect4.Program.Guard.NotKeyAnswer fiber token d),
+    Effect4.Program.Guard.SingleGuard.Held (Effect4.Program.steppedBy p fuel table m d) fiber token request
+Effect4.Program.Guard.OuterDriver.fireStep_preserved :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable)
+    (driver : Effect4.Program.Guard.DriverContract p table) (fuel : Nat) (owner : Effect4.FiberId)
+    (acc : Prod.{0, 0} Effect4.Program.NativeMachine Bool) (task : Effect4.Program.Guard.NTask)
+    (state : Effect4.Program.Guard.GuardState (@Prod.fst.{0, 0} Effect4.Program.NativeMachine Bool acc))
+    (keys :
+      Effect4.Program.Guard.ReservedKeys (@Prod.fst.{0, 0} Effect4.Program.NativeMachine Bool acc)
+        (@Effect4.Program.Guard.taskKeys
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          task))
+    (sites : @Eq.{1} (List.{0} Nat) (Effect4.Program.Guard.taskRaceSites task) (@List.nil.{0} Nat)),
+    Effect4.Program.Guard.OuterDriver.Preserved (@Prod.fst.{0, 0} Effect4.Program.NativeMachine Bool acc)
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@Effect4.Machine.fireStep.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+          Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel owner acc task))
+Effect4.Program.Guard.OuterDriver.fireFold_preserved :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable)
+    (driver : Effect4.Program.Guard.DriverContract p table) (fuel : Nat) (owner : Effect4.FiberId)
+    (tasks : List.{0} Effect4.Program.Guard.NTask) (acc : Prod.{0, 0} Effect4.Program.NativeMachine Bool)
+    (state : Effect4.Program.Guard.GuardState (@Prod.fst.{0, 0} Effect4.Program.NativeMachine Bool acc))
+    (keys :
+      Effect4.Program.Guard.ReservedKeys (@Prod.fst.{0, 0} Effect4.Program.NativeMachine Bool acc)
+        (@List.flatMap.{0, 0}
+          (Effect4.Machine.Task.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann
+            (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+          Effect4.Program.Guard.GuardKey
+          (@Effect4.Program.Guard.taskKeys
+            (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+          tasks))
+    (sites :
+      ∀ (task : Effect4.Program.Guard.NTask),
+        @Membership.mem.{0, 0} Effect4.Program.Guard.NTask (List.{0} Effect4.Program.Guard.NTask)
+            (@List.instMembership.{0} Effect4.Program.Guard.NTask) tasks task →
+          @Eq.{1} (List.{0} Nat) (Effect4.Program.Guard.taskRaceSites task) (@List.nil.{0} Nat)),
+    Effect4.Program.Guard.OuterDriver.Preserved (@Prod.fst.{0, 0} Effect4.Program.NativeMachine Bool acc)
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@List.foldl.{0, 0}
+          (Prod.{0, 0}
+            (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+              Effect4.Machine.Stores
+              (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+              (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+            Bool)
+          (Effect4.Machine.Task.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann
+            (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+          (@Effect4.Machine.fireStep.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+            Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+            Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+            (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel owner)
+          acc tasks))
+Effect4.Program.Guard.OuterDriver.fireState_preserved :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable)
+    (driver : Effect4.Program.Guard.DriverContract p table) (fuel : Nat) (m : Effect4.Program.NativeMachine)
+    (owner : Effect4.FiberId) (state : Effect4.Program.Guard.GuardState m),
+    Effect4.Program.Guard.OuterDriver.Preserved m
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@Effect4.Machine.fireState.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+          Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel m owner))
+Effect4.Program.Guard.OuterDriver.flushAllState_preserved :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable)
+    (driver : Effect4.Program.Guard.DriverContract p table) (fuel rounds : Nat) (m : Effect4.Program.NativeMachine)
+    (state : Effect4.Program.Guard.GuardState m),
+    Effect4.Program.Guard.OuterDriver.Preserved m
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@Effect4.Machine.flushAllState.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+          Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel rounds m))
+Effect4.Program.Guard.OuterDriver.advanceState_preserved :
+  ∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable)
+    (driver : Effect4.Program.Guard.DriverContract p table) (fuel : Nat) (millis : Effect4.ClockMillis) (rounds : Nat)
+    (m : Effect4.Program.NativeMachine) (state : Effect4.Program.Guard.GuardState m),
+    Effect4.Program.Guard.OuterDriver.Preserved m
+      (@Prod.fst.{0, 0}
+        (Effect4.Machine.RunMachine.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+        Bool
+        (@Effect4.Machine.advanceState.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Machine.Stores Effect4.Machine.instDecidableEqErr Effect4.Machine.instDecidableEqDefect
+          Effect4.instDecidableEqFiberId instDecidableEqPUnit.{1}
+          (Effect4.Prim.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (@Effect4.Machine.frameCore.{0, 0} Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.Program.evaluatorFor p table) (Effect4.Program.interpOf p table) fuel millis rounds m))
+theorem Effect4.Program.Guard.SingleGuard.held_fireFold : ∀ (p : Effect4.Program.NativeEff)
+  (table : Effect4.Program.RowTable) (fuel : Nat) (owner : Effect4.FiberId) (tasks : List Effect4.Program.Guard.NTask)
+  (acc : Effect4.Program.NativeMachine × Bool) {fiber : Effect4.FiberId} {token : Nat}
+  {request : Effect4.Program.NativeOp × Effect4.Machine.Val},
+  Effect4.Program.Guard.SingleGuard.Held acc.fst fiber token request →
+    (∀ (task : Effect4.Program.Guard.NTask), task ∈ tasks → ¬(fiber, token) ∈ Effect4.Program.Guard.taskKeys task) →
+      Effect4.Program.Guard.SingleGuard.Held
+        (List.foldl (Effect4.Machine.fireStep (Effect4.Program.interpOf p table) fuel owner) acc tasks).fst fiber token
+        request :=
+fun p table fuel owner tasks acc {fiber} {token} {request} h safe =>
+  Exists.casesOn
+    (Effect4.Machine.Lift.FoldLift.fireFold_lift
+      (Effect4.Program.Guard.SingleGuard.held_foldLift p table fiber token request) fuel owner tasks () acc h fun x =>
+      safe)
+    fun w h => And.casesOn h fun left held => held
+theorem Effect4.Program.Guard.SingleGuard.held_flushAllState : ∀ (p : Effect4.Program.NativeEff)
+  (table : Effect4.Program.RowTable) (fuel rounds : Nat) {m : Effect4.Program.NativeMachine} {fiber : Effect4.FiberId}
+  {token : Nat} {request : Effect4.Program.NativeOp × Effect4.Machine.Val},
+  Effect4.Program.Guard.SingleGuard.Held m fiber token request →
+    Effect4.Program.Guard.SingleGuard.Held
+      (Effect4.Machine.flushAllState (Effect4.Program.interpOf p table) fuel rounds m).fst fiber token request :=
+fun p table fuel rounds {m} {fiber} {token} {request} h =>
+  Exists.casesOn
+    (Effect4.Machine.Lift.FoldLift.flushAllState_lift
+      (Effect4.Program.Guard.SingleGuard.held_foldLift p table fiber token request) fuel rounds () m h)
+    fun w h => And.casesOn h fun left held => held
+theorem Effect4.Program.Guard.SingleGuard.held_advanceState : ∀ (p : Effect4.Program.NativeEff)
+  (table : Effect4.Program.RowTable) (fuel : Nat) (millis : Effect4.ClockMillis) (rounds : Nat)
+  {m : Effect4.Program.NativeMachine} {fiber : Effect4.FiberId} {token : Nat}
+  {request : Effect4.Program.NativeOp × Effect4.Machine.Val},
+  Effect4.Program.Guard.SingleGuard.Held m fiber token request →
+    Effect4.Program.Guard.SingleGuard.Held
+      (Effect4.Machine.advanceState (Effect4.Program.interpOf p table) fuel millis rounds m).fst fiber token request :=
+fun p table fuel millis rounds {m} {fiber} {token} {request} h =>
+  Exists.casesOn
+    (Effect4.Machine.Lift.FoldLift.advanceState_lift
+      (Effect4.Program.Guard.SingleGuard.held_foldLift p table fiber token request) fuel millis rounds () m h)
+    fun w h => And.casesOn h fun left held => held
+theorem Effect4.Program.Guard.OuterDriver.fireFold_preserved : ∀ (p : Effect4.Program.NativeEff)
+  (table : Effect4.Program.RowTable),
+  Effect4.Program.Guard.DriverContract p table →
+    ∀ (fuel : Nat) (owner : Effect4.FiberId) (tasks : List Effect4.Program.Guard.NTask)
+      (acc : Effect4.Program.NativeMachine × Bool),
+      Effect4.Program.Guard.GuardState acc.fst →
+        Effect4.Program.Guard.ReservedKeys acc.fst (List.flatMap Effect4.Program.Guard.taskKeys tasks) →
+          (∀ (task : Effect4.Program.Guard.NTask), task ∈ tasks → Effect4.Program.Guard.taskRaceSites task = []) →
+            Effect4.Program.Guard.OuterDriver.Preserved acc.fst
+              (List.foldl (Effect4.Machine.fireStep (Effect4.Program.interpOf p table) fuel owner) acc tasks).fst :=
+fun p table driver fuel owner tasks acc state keys sites =>
+  Exists.casesOn
+    (Effect4.Machine.Lift.FoldLift.fireFold_lift
+      (Effect4.Program.Guard.OuterDriver.preserved_foldLift p table driver acc.fst) fuel owner tasks () acc
+      (Effect4.Program.Guard.OuterDriver.Preserved.refl state) fun x => ⟨keys, sites⟩)
+    fun w h => And.casesOn h fun left held => held
+theorem Effect4.Program.Guard.OuterDriver.flushAllState_preserved : ∀ (p : Effect4.Program.NativeEff)
+  (table : Effect4.Program.RowTable),
+  Effect4.Program.Guard.DriverContract p table →
+    ∀ (fuel rounds : Nat) (m : Effect4.Program.NativeMachine),
+      Effect4.Program.Guard.GuardState m →
+        Effect4.Program.Guard.OuterDriver.Preserved m
+          (Effect4.Machine.flushAllState (Effect4.Program.interpOf p table) fuel rounds m).fst :=
+fun p table driver fuel rounds m state =>
+  Exists.casesOn
+    (Effect4.Machine.Lift.FoldLift.flushAllState_lift
+      (Effect4.Program.Guard.OuterDriver.preserved_foldLift p table driver m) fuel rounds () m
+      (Effect4.Program.Guard.OuterDriver.Preserved.refl state))
+    fun w h => And.casesOn h fun left held => held
+theorem Effect4.Program.Guard.OuterDriver.advanceState_preserved : ∀ (p : Effect4.Program.NativeEff)
+  (table : Effect4.Program.RowTable),
+  Effect4.Program.Guard.DriverContract p table →
+    ∀ (fuel : Nat) (millis : Effect4.ClockMillis) (rounds : Nat) (m : Effect4.Program.NativeMachine),
+      Effect4.Program.Guard.GuardState m →
+        Effect4.Program.Guard.OuterDriver.Preserved m
+          (Effect4.Machine.advanceState (Effect4.Program.interpOf p table) fuel millis rounds m).fst :=
+fun p table driver fuel millis rounds m state =>
+  Exists.casesOn
+    (Effect4.Machine.Lift.FoldLift.advanceState_lift
+      (Effect4.Program.Guard.OuterDriver.preserved_foldLift p table driver m) fuel millis rounds () m
+      (Effect4.Program.Guard.OuterDriver.Preserved.refl state))
+    fun w h => And.casesOn h fun left held => held
+'Effect4.Machine.Lift.loop_lift' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Lift.loop_entry' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Lift.fireFold_lift' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Lift.fireState_lift' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Lift.flushAllState_lift' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Lift.advanceState_lift' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Lift.stepDecisionState_lift' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.SingleGuard.held_fireFold' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.SingleGuard.held_fireState' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.SingleGuard.held_flushAllState' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.SingleGuard.held_advanceState' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.OuterDriver.fireFold_preserved' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.OuterDriver.fireState_preserved' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.OuterDriver.flushAllState_preserved' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.OuterDriver.advanceState_preserved' depends on axioms: [propext, Quot.sound]
+## exit=0 seconds=1 cmd=LEAN_NUM_THREADS=4 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-landing/seat-G/probes/Statements.lean head=9b02362b dirty=0
