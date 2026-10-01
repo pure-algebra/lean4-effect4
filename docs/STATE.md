@@ -322,6 +322,21 @@ open and no longer refuted). The ledger: 37 open, 447 proved, 484 total. Next fr
 and D3 in parallel and J. Seat H2's row-154 re-pin landed (merged `84bdf454`): the design basis is
 exact at `6b3f2c92`, and the system map's glossary sites are re-pinned there.
 
+**The type-language probe's first result (probe T, 2026-10-01, merged `8036f0b4`; rows 157–164).**
+The data wave can finish `Ty` once only if its single append also carries a structured nominal
+reference, `Ty.app name args` (row 3 revived as row 158): the corpus names Effect module types 1,928
+times across all 15 projects, and the handle spelling cannot carry a record argument, a parameter or
+covariance. The wave's set (one `Val` append, then one `Ty` append, row 162): records with optional
+fields (157), tagged unions of records (130), error payloads printed as `Data.TaggedError` classes
+(120), keyed maps (125), tuples (159), `app` (158), `int` inhabited and a binary64 `number` (121,
+recommended (a)), `null` and `undefined` (160), `bytes` by the owner's choice (161). After it, `Ty` is
+closed: later named types enter as Σ_app declarations through `app`. What full reification still
+lacks is outside the type language: 26,175 of 59,987 corpus units are functions of their inputs
+(DI-21, row 163, the first blocker after the wave), decoding inside a program (row 123) is next, and
+`Schedule`, `Stream`, `Config`, the stateful modules and the host packages have no admitted member.
+The runtime coverage report counts the fiber runtime only: green 132, partial 2, absent 0 of 135 at
+`bff50631`. The other four probes (P, Q, R, S) are running; their notes and T's become the wave's briefs.
+
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
 it ([synthesis](research/2026-10-01-data-probe/synthesis.md), the entry). The design is not one we
