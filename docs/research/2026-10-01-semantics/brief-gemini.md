@@ -31,6 +31,37 @@ from it. Your job is the analysis and the draft; the coordinator verifies and la
   decision: the decisions register (`docs/core/decisions.md`) is the coordinator's; you propose
   rows, you do not rule them.
 
+## The texts to cite, and how
+
+- **TAPL** (Pierce, *Types and Programming Languages*, MIT Press 2002) and **ATTAPL** (Pierce ed.,
+  *Advanced Topics in Types and Programming Languages*, MIT Press 2005) are the base vocabulary.
+  Cite them by chapter, section and page of those editions (`TAPL §13.4, p. 162`), and quote at
+  most a definition's or a lemma's name, never a passage. Neither is vendored in the tree (searched
+  2026-10-01: `vendor/`, `docs/research/`, the fold lab's `library/` and `corpus/`, `~/Dev`); the
+  owner supplies a copy from their own library if a text copy is to be vendored under
+  `docs/research/2026-10-01-semantics/sources/` (with a `SHA256SUMS` line and a liteparse text
+  copy, the way `docs/research/2026-09-05-effects-papers/` keeps its papers); until then the page
+  numbers come from the reader's copy and are marked "reading".
+- **Software Foundations, vol. 2, *Programming Language Foundations*** (Pierce et al., free and
+  permissively licensed, softwarefoundations.cis.upenn.edu) covers the same ground as TAPL's
+  core chapters (STLC, extensions, references, subtyping, records, type systems' metatheory) in a
+  machine-checked form; cite it by chapter name and lemma name (`PLF, References, `preservation``)
+  where a TAPL lemma has its Coq twin, and prefer it for the exact statement of a standard lemma.
+- **Vendored texts the tree already has**, cited by file and printed page or line: de Vilhena's
+  thesis (`docs/research/2026-09-05-effects-papers/text/verification_with_effects.md`; protocols,
+  the effect-handler logic our `TypedProg` reads), Jacobs' *Introduction to Coalgebra*
+  (`.../text/intro_coalgebar_mathematics_state.txt`), Cohen et al. FSCD 2025
+  (`.../text/from_partial_to_monadic_combinatory_algebra_effects.md`), the full-read review
+  `docs/research/2026-09-05-effects-papers-review.md`, the literature marks of
+  `docs/DESIGN-BASIS.md` and the system map's §9 (Ahmed; Ahmed, Dreyer, Rossberg; Xia et al.;
+  Foster et al.; Rendel and Ostermann; McBride; Fokkinga and Meijer), and rc.112's own sources
+  under `vendor/effect-4.0.0-rc.112/src/` (every runtime behaviour by file and line).
+- **Beyond the books**: effect rows and coeffects (ATTAPL ch. 3; the row-117 design), algebraic
+  effects and handlers (de Vilhena; the papers review §1.3), the fiber machine and scopes (rc.112
+  itself; the papers review), exact embeddings (Foster; Rendel–Ostermann), initial algebras and
+  folds (the coherence principle's sources). Where no text covers a construction of ours, say
+  so: that is a finding, not a gap to paper over with a loose citation.
+
 ## Read first, in this order
 
 1. `AGENTS.md` (the operating rules, the vocabulary bullets, the trust ceiling).
