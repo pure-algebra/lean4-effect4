@@ -1,0 +1,28 @@
+# check: q5-tsgo-raw
+# date: 2026-10-01T19:39:17Z
+# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
+# command: /opt/homebrew/bin/tsgo -p q5/tsconfig.raw.json --pretty false
+# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
+q5/meta-raw.ts(2606,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(2785,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(2796,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(2807,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(2818,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(2997,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(3008,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(3019,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(4928,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5084,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5123,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5183,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5357,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5377,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5556,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5567,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5746,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5757,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5768,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5779,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5958,5): error TS1117: An object literal cannot have multiple properties with the same name.
+q5/meta-raw.ts(5969,5): error TS1117: An object literal cannot have multiple properties with the same name.
+# exit=1 seconds=0
