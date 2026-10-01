@@ -358,6 +358,12 @@ theorem refModifySome_post_excludes (w' : W) (cert : StoreCert (.refModifySome �
   rintro ⟨n, h⟩
   cases h
 
+/-- The flip on the real answer: at a cell declared at the native row's type the handler answers
+the old `nat`, which the post admits (`refModify_implements`, `Typed/Adequacy.lean`, for every
+such cell). -/
+theorem refModify_post_admits (w' : W) (n : Nat) (cert : StoreCert (.refModify ⟨0⟩ .incr)) :
+    storePost w' (.refModify ⟨0⟩ .incr) cert (Val.nat n) := ⟨n, rfl⟩
+
 /-- The flip: the current pre, at the native row's declared cell type, refuses the `bool` cell. -/
 theorem refModify_pre_refuses (root : ProgramSource) (cert : StoreCert (.refModify ⟨0⟩ .incr)) :
     ¬ storePre root wb (.refModify ⟨0⟩ .incr) cert := by
@@ -393,6 +399,10 @@ theorem scopeIsClosed_post_excludes_unit (w : W) (cert : StoreCert (.scopeIsClos
     ¬ storePost w (.scopeIsClosed 7) cert Val.unit := by
   rintro ⟨b, h⟩
   cases h
+
+/-- The flip on the real answer: a live scope answers its flag, which the post admits. -/
+theorem scopeIsClosed_post_admits (w : W) (b : Bool) (cert : StoreCert (.scopeIsClosed 7)) :
+    storePost w (.scopeIsClosed 7) cert (Val.bool b) := ⟨b, rfl⟩
 
 /-- The flip: the current pre requires the scope to be live, so at a world whose store holds no
 scope 7 the row is refused and the frontier is never reached. -/
@@ -667,6 +677,76 @@ theorem root_code_refused (w : W) (fresh : w.Γ ⟨1⟩ = none) :
       | fiber _ _ _ _ certA _ nextA =>
         have hp := nextA _ (leHost_refl _) (Val.nat 5) ⟨EffTy.pure .nat, here, trivial⟩
         exact (OldTypedProg.pure_inv hp).1
+
+/-- The loaded root is not inert under the code clause of the typed state as of `bb269fde`
+(local copies of `TerminalFiber`, `TerminalPosition` and `CodeInert`). -/
+def OldTerminalFiber (m : RState) (commands : List RCmd) (id : FiberId) : Prop :=
+  (∃ exit, .finish id exit ∈ commands) ∨ ∃ fiber ∈ m.fibers, fiber.id = id ∧ fiber.exit.isSome = true
+
+def OldTerminalPosition (m : RState) (commands : List RCmd) : Expect → Prop
+  | .root => OldTerminalFiber m commands Api.root
+  | .fiber id => OldTerminalFiber m commands id
+  | .hook _ => False
+
+def OldCodeInert (m : RState) (commands : List RCmd) (position : Expect) : Prop :=
+  m.stuck.isSome = true ∨ OldTerminalPosition m commands position
+
+/-- The typed state's saved position with the code clause over the old judgment. -/
+def OldSavedPosition (root : ProgramSource) (w : W) (m : RState) (commands : List RCmd)
+    (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
+  ∃ tin, (¬ OldCodeInert m commands position → OldTypedProg root w tin saved.current) ∧
+    Contracts.StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
+    Contracts.InterruptProvenance saved
+
+def oldStatePreds (root : ProgramSource) (m : RState) (commands : List RCmd) : Preds W :=
+  { preds root with
+    SavedOk := fun w position saved => ∀ ty, expectOf w position = some ty →
+      OldSavedPosition root w m commands position ty saved }
+
+/-- The load interface of the typed state, with its code clause over the old judgment: world
+validity and the generated whole-state predicate. (The remaining conjuncts of `TypedState` are
+not read by the refutation.) -/
+def OldLoaded (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState) : Prop :=
+  WorldValid rootTy w m ∧ RStateOk (oldStatePreds root m []) w m
+
+theorem load_not_inert (p : NativeEff) (fuel compileFuel : Nat) :
+    ¬ OldCodeInert (loadR p fuel compileFuel) [] .root := by
+  intro h
+  rcases h with hs | hterm
+  · exact Bool.noConfusion hs
+  · rcases hterm with ⟨_, hmem⟩ | ⟨fb, hfb, _, hex⟩
+    · cases hmem
+    · change fb ∈ [_] at hfb
+      rw [List.mem_singleton] at hfb
+      subst hfb
+      exact Bool.noConfusion hex
+
+theorem one_not_loaded : (⟨1⟩ : FiberId) ∉ (loadR awaitProg 5 5).fibers.map (·.id) := by
+  decide
+
+theorem closed_root : ClosedEff rootTy := ⟨rfl, rfl⟩
+
+/-- **Historical: under the old post, M5's load proposition is false for this program** (fuel
+5; `E4-TYPED-CE-010`, the program level): no world loads it with its code clause satisfied. -/
+theorem typedState_load_false :
+    ¬ (Api.typeOf awaitProg [] = some rootTy → ClosedEff rootTy →
+        ∃ w, OldLoaded (awaitProg : ProgramSource) rootTy w (loadR awaitProg 5 5)) := by
+  intro h
+  obtain ⟨w, valid, ok⟩ := h typed_source closed_root
+  have fresh : w.Γ ⟨1⟩ = none := by
+    cases hg : w.Γ ⟨1⟩ with
+    | none => rfl
+    | some t =>
+      exact absurd ((valid.fibers ⟨1⟩).mp (by rw [hg]; rfl)) one_not_loaded
+  have hroot : (loadR awaitProg 5 5).fibers =
+      [RunFiber.make Api.root code true (stores.budgetOf emptyCtx) emptyCtx] := rfl
+  have hmemb : RunFiber.make Api.root code true (stores.budgetOf emptyCtx) emptyCtx ∈
+      (loadR awaitProg 5 5).fibers := by rw [hroot]; exact List.mem_singleton_self _
+  have saved := ((ok.c0 _ hmemb).c0).c0 rootTy valid.root
+  obtain ⟨tin, hcode0, hstack, _⟩ := saved
+  have hcode := hcode0 (load_not_inert awaitProg 5 5)
+  cases hstack
+  exact root_code_refused w fresh hcode
 
 end AwaitLoad
 
@@ -955,6 +1035,12 @@ open Test.Program.ProtocolPosts in
 #print axioms AwaitValue.await_code_typed
 open Test.Program.ProtocolPosts in
 #print axioms AwaitLoad.root_code_refused
+open Test.Program.ProtocolPosts in
+#print axioms AwaitLoad.typedState_load_false
+open Test.Program.ProtocolPosts in
+#print axioms Modify.refModify_post_admits
+open Test.Program.ProtocolPosts in
+#print axioms Frontier.scopeIsClosed_post_admits
 open Test.Program.ProtocolPosts in
 #print axioms CompleteWith.completeWith_old_adequacy_false
 open Test.Program.ProtocolPosts in

@@ -931,6 +931,13 @@ theorem stackAccepts_now {TP : W → EffTy → RProgram → Prop} {Ex : W → Ef
   | nil ty => exact .nil ty
   | cons head _ ih => exact .cons (frameAccepts_now head) ih
 
+/-- The flip of `stackAccepts_not_mono`: the closed judgment transports every stack it accepts to
+every later world, so the good frame accepted at the initial world is accepted at `w1`. -/
+theorem good_stack_transports :
+    StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) w1 tin unitTy
+      [.answer goodNext] :=
+  Contracts.stackAccepts_mono w0_le_w1 (stack_good world)
+
 /-- The refusal also follows from the landed transport: the closed judgment at the initial world
 would transport to `w1`, where even the one-world judgment refuses the frame. -/
 theorem bad_not_kripke_by_transport :
@@ -1089,6 +1096,8 @@ open Test.Program.FramesNotKripke in
 #print axioms stackAccepts_now
 open Test.Program.FramesNotKripke in
 #print axioms bad_not_kripke_by_transport
+open Test.Program.FramesNotKripke in
+#print axioms good_stack_transports
 open Test.Program.FramesNotKripke in
 #print axioms step_loop_good
 open Test.Program.FramesNotKripke in
