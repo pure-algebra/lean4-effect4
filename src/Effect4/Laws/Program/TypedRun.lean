@@ -85,7 +85,7 @@ theorem TypedProgram.run_sound {e : NativeEff} (tp : TypedProgram nativeSignatur
     (hfuel : 2 * Agreement.steps e + 6 ≤ fuel) :
     (Api.run e fuel).outcome = Api.Outcome.finished ∧
       ∃ ex, (Api.run e fuel).exit = some ex ∧
-        ExitOk tp.ty.answer tp.ty.error (Api.run e fuel).stores ex := by
+        ExitHasTy tp.ty.answer tp.ty.error (Api.run e fuel).stores ex := by
   have hty : effTy nativeSignature [] e = some tp.ty := by
     rw [← typeOfProgram_looped nativeSignature e (Looped.of_straight e hs)]
     exact tp.typed
@@ -97,7 +97,7 @@ theorem TypedProgram.run_sound_of_agreement {e : NativeEff}
     (tp : TypedProgram nativeSignature e) (hl : Looped e = true)
     (hagree : Agreement.LoopAgreement e) {k : Nat} {ex : ExitV} {s' : Stores}
     (h : meaningB k e [] Stores.empty = (some ex, s')) :
-    ExitOk tp.ty.answer tp.ty.error s' ex ∧
+    ExitHasTy tp.ty.answer tp.ty.error s' ex ∧
       ∃ bound, ∀ fuel, bound ≤ fuel →
         (Api.run e fuel).outcome = Api.Outcome.finished ∧
           (Api.run e fuel).exit = some ex ∧ (Api.run e fuel).stores = s' := by
@@ -112,7 +112,7 @@ finishes with that exit and those stores at every fuel past a bound. -/
 theorem TypedProgram.run_soundB {e : NativeEff} (tp : TypedProgram nativeSignature e)
     (hl : Looped e = true) {k : Nat} {ex : ExitV} {s' : Stores}
     (h : meaningB k e [] Stores.empty = (some ex, s')) :
-    ExitOk tp.ty.answer tp.ty.error s' ex ∧
+    ExitHasTy tp.ty.answer tp.ty.error s' ex ∧
       ∃ bound, ∀ fuel, bound ≤ fuel →
         (Api.run e fuel).outcome = Api.Outcome.finished ∧
           (Api.run e fuel).exit = some ex ∧ (Api.run e fuel).stores = s' :=

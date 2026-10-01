@@ -114,6 +114,7 @@ import Effect4.Laws.Program.Typed.Contracts
 import Effect4.Laws.Program.Typed.Validity
 import Effect4.Laws.Program.Typed.ForkSource
 import Effect4.Laws.Program.Typed.Admission
+import Effect4.Laws.Program.Typed.ExitConnector
 import Effect4.Laws.Program.Typed.Residual
 import Effect4.Laws.Program.Typed.Stack
 import Effect4.Laws.Program.Typed.Assembly
