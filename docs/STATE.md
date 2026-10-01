@@ -359,7 +359,10 @@ passes missing evidence (row 182 amended; W2 adds evidence validation and three 
 branch confirmed repaired on the check-annotation profile. Seat W1 merged (`cdd62673`): row 128 landed by
 route (b) (`decode_iff`, `ofSchema_exact`, both at `[propext, Quot.sound]`), the defect id repaired
 (`E4-SCHEMA-CE-061`), row 179's one policy at every annotation bag with nine erased keys; S7 holds at
-today's forms.
+today's forms. **The owner's instruction (2026-10-01 evening): nothing new starts; the four
+seats in flight (D2, D4, J2, W2) stop at a coherent place and hand back; then the coordinator's
+documentation and focus pass** (`docs/research/2026-10-01-landing/status-2026-10-01-evening.md`
+holds the read: what landed, where both lines stand, what is in the way, the pass's seven steps).
 
 **The type-language probe's first result (probe T, 2026-10-01, merged `8036f0b4`; rows 157–164).**
 The data wave can finish `Ty` once only if its single append also carries a structured nominal
