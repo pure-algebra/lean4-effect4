@@ -7,7 +7,7 @@ integration-ready: the old fiber field and its comparison runner are removed tog
 Lean and OCaml paths read/write the machine ledger, generation is current, and the required
 OCaml and repository checks pass. The owner authorized the additional prelude/test readers,
 two closure manifests, and explicit ForkRecord type root as recorded below. D's held users and diagnostic move are complete;
-F is also complete; G, H1, and H2 part one follow. H2 excludes only badName and notImplemented;
+F is also complete. G is held by its checked fourth-fixture stop; H1 and H2 part one follow. H2 excludes only badName and notImplemented;
 missingService waits for part two. Nothing has been pushed.
 
 Authority read from the main checkout:
@@ -257,6 +257,40 @@ whitespace diagnostic are retained rather than hand-edited. The historical 37-tr
 run comparison remains finite historical evidence, as addendum 4 permits; it is not a fresh
 comparison at this base. `F/final-paths.json`, `final-source.patch`, the producer diffs, and each
 command/result JSON make this landing reproducible. Nothing has been pushed.
+
+### G — fourth fixture confirmed; owner amendment needed
+
+Base: F commit `d20f3292`. No G source, test, register or generated change is applied.
+Addendum 4 line 89 says: “a fourth in-tree program refused stops G again.” The checked
+`FourthFixtureProbe.lean` selects the actual public `Test.Codegen.TemplatesContract.layerSamples[1]?`
+entry. Its name-7/code-4 service expects nat; the effect body returns unit. The current
+checkLayer accepts it, and G's exact revised effect-leaf equation refuses
+`valueNotSubtype key unit nat` at `[]`. All ten named theorem prints pass at the ceiling
+(`fourth-fixture`, exit 0). The existing fixture tests printing, so this is a measured newly
+refused layer, not a claim that its printer test failed.
+
+**Smallest proposed amendment:** permit that exact sample as the fourth expected refusal;
+retain its shared definitions and printer coverage; add the exact-source negative checker
+control and neighboring nat-valued succeed positive. Correct addendum 3's unchanged-leaf
+census. Every further newly refused in-tree program/layer still stops G. The concrete patch is
+`G/candidate/rendered/PROPOSED-fourth-fixture.patch`, separate from the nine-path authorized
+candidate. Both are unapplied; their Python/application checks pass, but the production Lean
+candidate is uncompiled. Its README and statement diff give the exact implementation and checks.
+
+The bounded additional scan found no further accepted-to-refused whole-program fixture.
+Two source-tied checks distinguish related cases (`projected-boundary`, 13 theorem prints;
+`additional-corpus`, 5; both exit 0, all at the ceiling):
+- Provision's failure-only docs layer remains accepted under docsSig. Its raw native execution
+  supplies no typing signature, and both complete native programs were already refused.
+  A standalone native check of the projected leaf now refuses the undeclared key. This is
+  recorded explicitly, not counted as a newly refused complete program or silently admitted.
+- Generator program 141 at depth 4 was already refused. Its effect leaf now refuses unit at
+  nat at `[0,0]`, before the existing later body failure. G's prescribed corpus comparison
+  must report any changed verdict/diagnostic; this probe claims no new acceptance-bit change.
+
+G is held by the explicit fourth-fixture stop while the owner considers the exact amendment.
+Continue H1, then H2 part one, as the brief's §6 instructs for a stopped item. No decisions row
+or counterexample repair status is changed by this review.
 
 ### H2 — part-one exclusion clarified by the owner
 

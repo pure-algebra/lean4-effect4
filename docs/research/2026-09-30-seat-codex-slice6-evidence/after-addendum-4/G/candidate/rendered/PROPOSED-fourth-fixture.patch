@@ -1,0 +1,44 @@
+diff --git a/Test/Counterexamples/Machine/Semantics/LayerValue.lean b/Test/Counterexamples/Machine/Semantics/LayerValue.lean
+--- a/Test/Counterexamples/Machine/Semantics/LayerValue.lean
++++ b/Test/Counterexamples/Machine/Semantics/LayerValue.lean
+@@ -1,4 +1,5 @@
+ import Effect4.Api
++import Test.Codegen.TemplatesContract
+ import Effect4.Laws.Program.Typing.Sound
+ 
+ /-!
+@@ -132,3 +133,34 @@
+ #print axioms effect_body_refusal_first
+ 
+ end Test.Counterexamples.LayerValue
++
++namespace Test.Counterexamples.LayerValue.TemplateFixture
++open Effect4 Effect4.Machine Effect4.Program
++
++def key : ServiceKey := ⟨⟨7⟩, ⟨4⟩⟩
++def body : NativeEff := .bind (.succeed (.lit .unit)) (.succeed (.var 0))
++
++theorem exact_source_effect :
++    Test.Codegen.TemplatesContract.layerSamples[1]? = some (.effect key body) := rfl
++
++theorem template_effect_leaf_refused :
++    (Test.Codegen.TemplatesContract.layerSamples[1]?).map
++      (Checker.checkLayer Test.Codegen.TemplatesContract.sig []) =
++        some (.error ⟨[], .valueNotSubtype key .unit .nat⟩) := by
++  decide +kernel
++
++/-- The same real key with its neighboring nat-valued leaf remains accepted. -/
++theorem exact_source_succeed :
++    Test.Codegen.TemplatesContract.layerSamples[0]? = some (.succeed key (.nat 1)) := rfl
++
++theorem template_succeed_leaf_accepted :
++    (Test.Codegen.TemplatesContract.layerSamples[0]?).map
++      (Checker.checkLayer Test.Codegen.TemplatesContract.sig []) =
++        some (.ok ⟨Env.Requirement.single key, .never, Env.Requirement.empty⟩) := by
++  decide +kernel
++
++#print axioms exact_source_effect
++#print axioms template_effect_leaf_refused
++#print axioms exact_source_succeed
++#print axioms template_succeed_leaf_accepted
++end Test.Counterexamples.LayerValue.TemplateFixture
