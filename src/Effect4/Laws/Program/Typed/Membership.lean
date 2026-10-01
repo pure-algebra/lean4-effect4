@@ -2703,9 +2703,9 @@ theorem admitColumn_prod_never_nat : admitColumn (.prod .never .nat) = false := 
 theorem admitColumn_except_never_never : admitColumn (.except .never .never) = false := by
   decide +kernel
 
-/-! ## Flat carriers, tag payloads and fiber handles (granted 2026-10-01 for seat D2)
+/-! ## Flat carriers, tag payloads, fiber handles, templates (granted 2026-10-01, seat D2)
 
-Three case analyses on `Ty` that M5's denotation lemma (`Laws/Program/Typed/Denotation.lean`)
+The case analyses on `Ty` that M5's denotation lemma (`Laws/Program/Typed/Denotation.lean`)
 reads and that row 132 keeps in this module. -/
 
 /-- **Membership at a flat carrier is `FlatFits`** (proved): the converse of `flatFits_fits` on
@@ -2788,5 +2788,291 @@ theorem fiberTy_eq_some {t : Ty} {pair : Ty × Ty} (h : fiberTy t = some pair) :
     cases h
     rfl
   | _ => nomatch h
+
+/-- **Membership at a template is membership at each of its instances** (proved): a parameter
+has no member (`Fits` at `var` is `False`), and under `Ty.valueVars` every handle former's
+arguments are closed, which instantiation leaves alone (`Ty.instantiate_of_noVars`). The host-row
+arm of M5's denotation lemma (`perform_arm`, `Typed/Denotation.lean`) reads it: `bitEntry` holds
+a certificate raw-above the row's template columns, so the continuation is typed at the checked
+instance through this lemma, because the template's post has no member at a parameter, not
+because a host answer can meet it there (decisions row 183, proposed). -/
+theorem fits_instantiate (σ : Ty.Subst) (w : World) :
+    ∀ (t : Ty), Ty.valueVars t = true → ∀ v, Fits w v t → Fits w v (Ty.instantiate σ t) := by
+  intro t
+  induction t with
+  | var i => intro _ v h; exact h.elim
+  | option a ih =>
+    intro hv v h
+    change Ty.valueVars a = true at hv
+    show Fits w v (.option (Ty.instantiate σ a))
+    rcases fits_option_inv h with rfl | ⟨x, rfl, hx⟩
+    · trivial
+    · exact ih hv x hx
+  | list a ih =>
+    intro hv v h
+    change Ty.valueVars a = true at hv
+    show Fits w v (.list (Ty.instantiate σ a))
+    obtain ⟨xs, hxs, hall⟩ := (fits_list_iff w v _).mp h
+    exact (fits_list_iff w v _).mpr ⟨xs, hxs, fun x hx => ih hv x (hall x hx)⟩
+  | prod a b iha ihb =>
+    intro hv v h
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hv
+    show Fits w v (.prod (Ty.instantiate σ a) (Ty.instantiate σ b))
+    obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w v _ _).mp h
+    exact (fits_prod_iff w _ _ _).mpr ⟨p, q, rfl, iha ha p hp, ihb hb q hq⟩
+  | except e a ihe iha =>
+    intro hv v h
+    obtain ⟨he, ha⟩ := Bool.and_eq_true_iff.mp hv
+    show Fits w v (.except (Ty.instantiate σ e) (Ty.instantiate σ a))
+    simp only [Fits] at h
+    split at h
+    · exact ihe he _ h
+    · exact iha ha _ h
+    · exact h.elim
+  | exitOf a e iha ihe =>
+    intro hv v h
+    obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hv
+    show Fits w v (.exitOf (Ty.instantiate σ a) (Ty.instantiate σ e))
+    simp only [Fits] at h
+    split at h
+    · exact iha ha _ h
+    · rename_i written
+      split at h
+      · rename_i c hc
+        simp only [Fits, hc]
+        exact ⟨causeFits_map (fun x hx => ihe he x hx) h.1, h.2⟩
+      · exact h.elim
+    · exact h.elim
+  | causeOf e ih =>
+    intro hv v h
+    change Ty.valueVars e = true at hv
+    show Fits w v (.causeOf (Ty.instantiate σ e))
+    simp only [Fits] at h
+    split at h
+    · rename_i c hc
+      simp only [Fits, hc]
+      exact causeFits_map (fun x hx => ih hv x hx) h
+    · exact h.elim
+  | union l r ihl ihr =>
+    intro hv v h
+    obtain ⟨hl, hr⟩ := Bool.and_eq_true_iff.mp hv
+    exact h.imp (ihl hl v) (ihr hr v)
+  | fiberOf a e _ _ =>
+    intro hv v h
+    obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hv
+    show Fits w v (.fiberOf (Ty.instantiate σ a) (Ty.instantiate σ e))
+    rw [Ty.instantiate_of_noVars σ a ha, Ty.instantiate_of_noVars σ e he]
+    exact h
+  | refOf a _ =>
+    intro hv v h
+    show Fits w v (.refOf (Ty.instantiate σ a))
+    rw [Ty.instantiate_of_noVars σ a hv]
+    exact h
+  | deferredOf a e _ _ =>
+    intro hv v h
+    obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hv
+    show Fits w v (.deferredOf (Ty.instantiate σ a) (Ty.instantiate σ e))
+    rw [Ty.instantiate_of_noVars σ a ha, Ty.instantiate_of_noVars σ e he]
+    exact h
+  | never => intro _ v h; exact h
+  | unit => intro _ v h; exact h
+  | nat => intro _ v h; exact h
+  | int => intro _ v h; exact h
+  | string => intro _ v h; exact h
+  | bool => intro _ v h; exact h
+  | handle _ => intro _ v h; exact h
+  | lit _ => intro _ v h; exact h
+  | unknown => intro _ v h; exact h
+
+/-! The two halves of `Ty.valueVarsAlg` ("no parameter", "parameters under value formers") are
+kept by `normalize`, which only regroups a union's members and a product's factors. Each helper
+below is stated for one half `k`, which reads a union or a value former as a conjunction. -/
+
+private theorem valueVarsAlg_ofMembers (k : Bool × Bool → Bool)
+    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
+    (htt : k (true, true) = true) :
+    ∀ (xs : List Ty), (∀ x ∈ xs, k (cata_ty Ty.valueVarsAlg x) = true) →
+      k (cata_ty Ty.valueVarsAlg (Ty.ofMembers xs)) = true
+  | [], _ => htt
+  | [x], h => h x List.mem_cons_self
+  | x :: y :: rest, h => by
+    show k ((cata_ty Ty.valueVarsAlg x).1 && (cata_ty Ty.valueVarsAlg (Ty.ofMembers (y :: rest))).1,
+      (cata_ty Ty.valueVarsAlg x).2 && (cata_ty Ty.valueVarsAlg (Ty.ofMembers (y :: rest))).2) = true
+    rw [hk]
+    exact Bool.and_eq_true_iff.mpr ⟨h x List.mem_cons_self,
+      valueVarsAlg_ofMembers k hk htt (y :: rest) fun z hz => h z (List.mem_cons_of_mem x hz)⟩
+
+private theorem valueVarsAlg_members (k : Bool × Bool → Bool)
+    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b)) {t x : Ty}
+    (hx : x ∈ t.members) (h : k (cata_ty Ty.valueVarsAlg t) = true) :
+    k (cata_ty Ty.valueVarsAlg x) = true := by
+  induction t with
+  | union a b iha ihb =>
+    have h' : k ((cata_ty Ty.valueVarsAlg a).1 && (cata_ty Ty.valueVarsAlg b).1,
+        (cata_ty Ty.valueVarsAlg a).2 && (cata_ty Ty.valueVarsAlg b).2) = true := h
+    rw [hk] at h'
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h'
+    rcases List.mem_append.mp hx with hx | hx
+    · exact iha hx ha
+    · exact ihb hx hb
+  | never => exact absurd hx List.not_mem_nil
+  | _ =>
+    simp only [Ty.members, List.mem_singleton] at hx
+    subst hx
+    exact h
+
+private theorem valueVarsAlg_factors (k : Bool × Bool → Bool)
+    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
+    (htt : k (true, true) = true) {t x : Ty} (hx : x ∈ t.factors)
+    (h : k (cata_ty Ty.valueVarsAlg t) = true) : k (cata_ty Ty.valueVarsAlg x) = true := by
+  unfold Ty.factors at hx
+  split at hx
+  · simp only [List.mem_singleton] at hx
+    subst hx
+    exact htt
+  · exact valueVarsAlg_members k hk hx h
+
+private theorem valueVarsAlg_normalizeRow (k : Bool × Bool → Bool)
+    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
+    (htt : k (true, true) = true) {xs : List Ty}
+    (h : ∀ x ∈ xs, k (cata_ty Ty.valueVarsAlg x) = true) :
+    k (cata_ty Ty.valueVarsAlg (Ty.ofMembers (Ty.normalizeRow xs).elems)) = true :=
+  valueVarsAlg_ofMembers k hk htt _ fun x hx => h x ((Ty.mem_normalizeRow x xs).mp hx).1
+
+private theorem valueVarsAlg_union_normalize (k : Bool × Bool → Bool)
+    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
+    (htt : k (true, true) = true) {a b : Ty} (ha : k (cata_ty Ty.valueVarsAlg a.normalize) = true)
+    (hb : k (cata_ty Ty.valueVarsAlg b.normalize) = true) :
+    k (cata_ty Ty.valueVarsAlg (Ty.normalize (.union a b))) = true :=
+  valueVarsAlg_normalizeRow k hk htt fun _ hx => (List.mem_append.mp hx).elim
+    (fun hx => valueVarsAlg_members k hk hx ha) (fun hx => valueVarsAlg_members k hk hx hb)
+
+private theorem valueVarsAlg_prod_normalize (k : Bool × Bool → Bool)
+    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
+    (htt : k (true, true) = true) {a b : Ty} (ha : k (cata_ty Ty.valueVarsAlg a.normalize) = true)
+    (hb : k (cata_ty Ty.valueVarsAlg b.normalize) = true) :
+    k (cata_ty Ty.valueVarsAlg (Ty.normalize (.prod a b))) = true := by
+  refine valueVarsAlg_normalizeRow k hk htt fun x hx => ?_
+  obtain ⟨y, hy, hx⟩ := List.mem_flatMap.mp hx
+  obtain ⟨z, hz, rfl⟩ := List.mem_map.mp hx
+  show k ((cata_ty Ty.valueVarsAlg y).1 && (cata_ty Ty.valueVarsAlg z).1,
+    (cata_ty Ty.valueVarsAlg y).2 && (cata_ty Ty.valueVarsAlg z).2) = true
+  rw [hk]
+  exact Bool.and_eq_true_iff.mpr
+    ⟨valueVarsAlg_factors k hk htt hy ha, valueVarsAlg_factors k hk htt hz hb⟩
+
+private theorem valueVarsAlg_fst_and (a b : Bool × Bool) :
+    Prod.fst (a.1 && b.1, a.2 && b.2) = (Prod.fst a && Prod.fst b) := rfl
+
+private theorem valueVarsAlg_snd_and (a b : Bool × Bool) :
+    Prod.snd (a.1 && b.1, a.2 && b.2) = (Prod.snd a && Prod.snd b) := rfl
+
+/-- **Normalization keeps parameters under value formers** (proved), with its "no parameter" half:
+the checker's host rows are the table's rows normalized (`Row.normalizeTypes`, `nativeSignature`),
+so the host-row arm reads `fits_instantiate` at a normalized template, whose parameters this
+lemma keeps where the table put them. -/
+theorem valueVars_normalize : ∀ (t : Ty),
+    ((cata_ty Ty.valueVarsAlg t).1 = true → (cata_ty Ty.valueVarsAlg t.normalize).1 = true) ∧
+      (Ty.valueVars t = true → Ty.valueVars t.normalize = true) := by
+  intro t
+  induction t with
+  | union a b iha ihb =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact valueVarsAlg_union_normalize Prod.fst valueVarsAlg_fst_and rfl (iha.1 ha) (ihb.1 hb)
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact valueVarsAlg_union_normalize Prod.snd valueVarsAlg_snd_and rfl (iha.2 ha) (ihb.2 hb)
+  | prod a b iha ihb =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact valueVarsAlg_prod_normalize Prod.fst valueVarsAlg_fst_and rfl (iha.1 ha) (ihb.1 hb)
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact valueVarsAlg_prod_normalize Prod.snd valueVarsAlg_snd_and rfl (iha.2 ha) (ihb.2 hb)
+  | option a ih => exact ih
+  | list a ih => exact ih
+  | causeOf a ih => exact ih
+  | except a b iha ihb =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact Bool.and_eq_true_iff.mpr ⟨iha.2 ha, ihb.2 hb⟩
+  | exitOf a b iha ihb =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact Bool.and_eq_true_iff.mpr ⟨iha.2 ha, ihb.2 hb⟩
+  | fiberOf a b iha ihb =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
+  | refOf a ih => exact ⟨ih.1, ih.1⟩
+  | deferredOf a b iha ihb =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
+    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
+  | var i => exact ⟨id, id⟩
+  | never => exact ⟨id, id⟩
+  | unit => exact ⟨id, id⟩
+  | nat => exact ⟨id, id⟩
+  | int => exact ⟨id, id⟩
+  | string => exact ⟨id, id⟩
+  | bool => exact ⟨id, id⟩
+  | handle _ => exact ⟨id, id⟩
+  | lit _ => exact ⟨id, id⟩
+  | unknown => exact ⟨id, id⟩
+
+private theorem orElse_eq_none_parts {x y : Option Path} (h : (x <|> y) = none) :
+    x = none ∧ y = none := by
+  cases x with
+  | none => exact ⟨rfl, h⟩
+  | some _ => exact nomatch h
+
+/-- **A column with no internal handle former keeps its parameters under value formers**
+(proved): `findInternalHandle` (`Program/Admission.lean`) answers at every `refOf`, `deferredOf`
+and `fiberOf`, the only formers `Ty.valueVars` constrains. A lawful row's answer and error
+columns pass that scan (`rowChecks`, `Laws/Program/Signature.lean`), so the host-row arm of M5's
+denotation lemma reads `fits_instantiate` at them. -/
+theorem valueVars_of_noInternalHandle : ∀ (t : Ty) (pos : Path),
+    findInternalHandle pos t = none → Ty.valueVars t = true := by
+  intro t
+  induction t with
+  | option a ih => exact fun pos h => ih (pos ++ ["inner"]) h
+  | list a ih => exact fun pos h => ih (pos ++ ["inner"]) h
+  | causeOf a ih => exact fun pos h => ih (pos ++ ["error"]) h
+  | prod a b iha ihb =>
+    intro pos h
+    obtain ⟨ha, hb⟩ := orElse_eq_none_parts h
+    exact Bool.and_eq_true_iff.mpr ⟨iha _ ha, ihb _ hb⟩
+  | except a b iha ihb =>
+    intro pos h
+    obtain ⟨ha, hb⟩ := orElse_eq_none_parts h
+    exact Bool.and_eq_true_iff.mpr ⟨iha _ ha, ihb _ hb⟩
+  | exitOf a b iha ihb =>
+    intro pos h
+    obtain ⟨ha, hb⟩ := orElse_eq_none_parts h
+    exact Bool.and_eq_true_iff.mpr ⟨iha _ ha, ihb _ hb⟩
+  | union a b iha ihb =>
+    intro pos h
+    obtain ⟨ha, hb⟩ := orElse_eq_none_parts h
+    exact Bool.and_eq_true_iff.mpr ⟨iha _ ha, ihb _ hb⟩
+  | fiberOf a b _ _ => intro pos h; exact nomatch h
+  | refOf a _ => intro pos h; exact nomatch h
+  | deferredOf a b _ _ => intro pos h; exact nomatch h
+  | var i => intro _ _; rfl
+  | never => intro _ _; rfl
+  | unit => intro _ _; rfl
+  | nat => intro _ _; rfl
+  | int => intro _ _; rfl
+  | string => intro _ _; rfl
+  | bool => intro _ _; rfl
+  | handle _ => intro _ _; rfl
+  | lit _ => intro _ _; rfl
+  | unknown => intro _ _; rfl
 
 end Effect4.Program.Typed
