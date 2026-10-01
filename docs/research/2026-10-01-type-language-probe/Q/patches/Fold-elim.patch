@@ -1,0 +1,397 @@
+--- a/tools/Effect4Gen/Fold.lean	2026-10-01 13:13:05
++++ b/tools/Effect4Gen/Fold.lean	2026-10-01 13:49:27
+@@ -1240,7 +1240,370 @@
+     receipts := receipts ++ [s!"weaken_eq_cata_{label}"]
+   s := s ++ "end\n\n"
+   return (s, receipts)
++
++/-! ## The nested companions: eliminator, equality, `Repr` (`--kind <Type>=elim`)
++
++Lean 4.33.1 gives a nested inductive (a member under a `List`, an `Option` or a product) no
++`induction` ("…because it is a nested inductive type"), no derived `DecidableEq` (the handler
++returns early on a nested type, `Lean/Elab/Deriving/DecEq.lean`: `if indVal.isNested then return
++false`) and only a `partial` derived `Repr` (an `opaque` over an `_unsafe_rec`, which the trust gate
++refuses). The tree wrote the three by hand twice (`Store.Val.ind`, `Val.beq`, `Val.beq_iff`,
++`Val.render`; `Json.ind`, `Json.beq`, `Json.beq_iff`). This emission writes them from the fold's
++own position language, so a third nested family costs a manifest row, not a third hand copy:
++
++* `T.ind`: the single-motive eliminator in membership form, registered
++  `@[induction_eliminator]` so `induction t with | c … ih` keeps its text. One hypothesis per
++  constructor; a member under a container arrives as `∀ x ∈ xs, motive x`, a product's member
++  side projected. Built from `T.rec` as the environment declares it: one motive per auxiliary
++  type, each container constructor's minor premise discharged by a fixed term.
++* `T.beq` and one helper per composite position, structural, a leaf compared by `decide` (never
++  `==`: at `String`/`Nat` the `LawfulBEq` route reaches `Classical.choice`); `T.beq_pos_*_iff` per
++  position; `T.beq_iff` by `induction … using T.ind`; the `DecidableEq` instance is
++  `decidable_of_iff` over it, so the computation and its proof stay apart.
++* `T.repr` and its helpers, structural, printing exactly what the derived `Repr` prints (the
++  constructor's full name, `Format.line`-separated arguments, `Repr.addAppParen`) and a container
++  as the core instance prints it (`List.repr`, `Prod.repr`'s tuple flattening, `Option.repr`).
++
++Refused by name: a parameterised or indexed family, a mutual block, a family with no nested
++position (derive it), a one-parameter structure position (no nested family of the estate has
++one), a field spelled `motive`.
++-/
++
++namespace Elim
++
++def keywords : List String :=
++  ["fun", "match", "with", "at", "by", "do", "from", "have", "show", "if", "then", "else", "let",
++   "in", "open", "where", "deriving", "structure", "inductive", "theorem", "def", "instance",
++   "end", "namespace", "section", "import", "mutual", "for", "unless", "return", "try", "catch",
++   "finally", "break", "continue", "macro", "syntax", "local", "private", "protected", "partial",
++   "unsafe", "variable", "universe", "example", "abbrev", "class", "extends", "forall", "Type",
++   "Prop", "Sort", "this"]
++
++/-- A name as source text, quoted where it would read as a keyword. -/
++def ident (s : String) : String := if keywords.contains s then s!"«{s}»" else s
++
++/-- One constructor: its full name, its short name, and each field's name, position and type. -/
++structure ECtor where
++  full : Name
++  short : String
++  fields : List (String × Pos × String)
++
++/-- The constructors of a one-member family, the fields by their declared names. -/
++def readECtors (root : Name) (members : List Name) : MetaM (List ECtor) := do
++  let iv ← getConstInfoInduct root
++  iv.ctors.mapM fun c => do
++    let ci ← getConstInfoCtor c
++    let fields ← forallBoundedTelescope ci.type (ci.numParams + ci.numFields) fun xs _ => do
++      let mut acc : List (String × Pos × String) := []
++      let mut i := 0
++      for x in xs[ci.numParams:] do
++        let ty ← inferType x
++        let nm ← x.fvarId!.getUserName
++        let nm := if nm.isAnonymous || nm.hasMacroScopes then s!"a{i}" else nm.toString
++        if nm == "motive" then
++          throwError "elim: {c}.{nm} is spelled like the eliminator's motive"
++        let pos ← posOf members (shortName c) nm ty
++        if (match pos with | .record .. => true | _ => false) then
++          throwError "elim: {c}.{nm} sits under a one-parameter structure; this emission reads \
++            `List`, `Option` and products only"
++        acc := acc ++ [(nm, pos, ← srcOf ty)]
++        i := i + 1
++      return acc
++    return { full := c, short := shortName c, fields }
++
++/-- The induction hypothesis a member at position `p` contributes about the value `e`, with `m`
++the motive applied: `none` at a leaf. `d` numbers the bound variables of nested quantifiers. -/
++partial def ihAt (m : String → String) : Pos → String → Nat → Option String
++  | .leaf _, _, _ => none
++  | .direct _, e, _ => some (m e)
++  | .list q, e, d => (ihAt m q s!"x{d}" (d + 1)).map fun b => s!"∀ x{d} ∈ {e}, {b}"
++  | .option q, e, d => (ihAt m q s!"x{d}" (d + 1)).map fun b => s!"∀ x{d} ∈ {e}, {b}"
++  | .prod a b, e, d =>
++    match ihAt m a s!"{e}.1" d, ihAt m b s!"{e}.2" d with
++    | none, none => none
++    | some s, none => some s
++    | none, some t => some t
++    | some s, some t => some s!"({s}) ∧ ({t})"
++  | .record .., _, _ => none
++
++/-- How many induction hypotheses a product's constructor minor receives: one per side that is
++not a leaf. -/
++def prodSides (a b : Pos) : Nat := (if a.isLeaf then 0 else 1) + (if b.isLeaf then 0 else 1)
++
++/-- A constructor pattern or application: `.c a0 a1`, or `.c` with no field. -/
++def ctorApp (c : ECtor) (args : List String) : String :=
++  if args.isEmpty then s!".{ident c.short}"
++  else s!".{ident c.short} " ++ String.intercalate " " args
+ 
++/-- The comparison of two values at a position. -/
++def cmpAt (pfx : String) (p : Pos) (l r : String) : String :=
++  match p with
++  | .leaf _ => s!"decide ({l} = {r})"
++  | .direct _ => s!"{pfx}.beq {l} {r}"
++  | _ => s!"{pfx}.beq_pos_{p.suffix} {l} {r}"
++
++/-- The rewrite that turns one position's comparison into an equality, given the hypothesis
++`ih` about the left value; `none` when the leaf rule `decide_eq_true_eq` does it. -/
++def iffAt (pfx : String) (p : Pos) (ih r : String) : Option String :=
++  match p with
++  | .leaf _ => none
++  | .direct _ => some s!"{ih} {r}"
++  | _ => some s!"{pfx}.beq_pos_{p.suffix}_iff {ih} {r}"
++
++/-- The components of a product's right spine, left to right, and whether the last is a leaf
++(whose own product structure, if any, `reprTuple` flattens as core's instance does). -/
++partial def spine : Pos → List Pos
++  | .prod a b => a :: (match b with | .prod .. => spine b | _ => [b])
++  | p => [p]
++
++def emitElim (root : Name) (pfxIn : Option String) : MetaM String := do
++  let iv ← getConstInfoInduct root
++  unless iv.numParams == 0 && iv.numIndices == 0 do
++    throwError "elim: {root} has parameters or indices; this emission reads a plain family"
++  unless iv.all.length == 1 do
++    throwError "elim: {root} is mutual ({iv.all}); one eliminator per member is not emitted here"
++  let members := iv.all
++  let ctors ← readECtors root members
++  unless ctors.any (fun c => c.fields.any fun f => match f.2.1 with
++      | .leaf _ | .direct _ => false | _ => true) do
++    throwError "elim: {root} has no member under a container; derive `DecidableEq` and `Repr` \
++      and use `induction` as they are"
++  let T := s!"_root_.{root}"
++  -- Declarations are named relative to the file's namespace (the root's prefix): inside a
++  -- `mutual` block a `_root_.`-qualified self-reference is not the function being defined.
++  let pfx := pfxIn.getD (shortName root)
++  let instNs := match pfxIn with
++    | some p => if p.toName.getPrefix.isAnonymous then "" else p.toName.getPrefix.toString ++ "."
++    | none => ""
++  let short := shortName root
++  let srcP : Pos → String := fun p => p.source (fun _ => T) false
++  -- every distinct composite position, children before parents (the fold's own order)
++  let mut comps : List Pos := []
++  for c in ctors do
++    for (_, p, _) in c.fields do
++      for q in p.composites do
++        unless comps.any (·.key == q.key) do comps := comps ++ [q]
++  let mut s := ""
++  -- ## The eliminator
++  let motive : String → String := fun e => s!"motive {e}"
++  s := s ++ s!"/-- The single-motive induction principle of `{root}`, membership form: one\n"
++  s := s ++ "hypothesis per constructor, a member under a container quantified by membership.\n"
++  s := s ++ "Registered as the induction eliminator, so `induction t with` keeps its arms. -/\n"
++  s := s ++ "@[elab_as_elim, induction_eliminator]\n"
++  s := s ++ s!"theorem {pfx}.ind \{motive : {T} → Prop}\n"
++  for c in ctors do
++    let body :=
++      if c.fields.isEmpty then s!"motive {ctorApp c []}"
++      else
++        let binders := String.intercalate " " (c.fields.map fun (n, _, ty) => s!"({ident n} : {ty})")
++        let ihs := c.fields.filterMap fun (n, p, _) =>
++          (ihAt motive p (ident n) 0).map fun h => if p matches .direct _ then h else s!"({h})"
++        let concl := s!"motive ({ctorApp c (c.fields.map fun (n, _, _) => ident n)})"
++        s!"∀ {binders}, " ++ String.join (ihs.map (· ++ " → ")) ++ concl
++    s := s ++ s!"    ({ident c.short} : {body})\n"
++  s := s ++ "    : ∀ t, motive t := fun t =>\n"
++  let recName := root ++ `rec
++  let rv ← getConstInfoRec recName
++  let (motiveArgs, minorArgs) ← forallBoundedTelescope rv.type
++      (rv.numParams + rv.numMotives + rv.numMinors) fun xs _ => do
++    let motives := xs[rv.numParams:rv.numParams + rv.numMotives].toArray
++    let minors := xs[rv.numParams + rv.numMotives:rv.numParams + rv.numMotives + rv.numMinors].toArray
++    -- each motive's auxiliary type, as a position of the family
++    let mut mPos : Array (Option Pos) := #[]
++    let mut margs : List String := []
++    for h : j in [:motives.size] do
++      let mv := motives[j]
++      let nm ← mv.fvarId!.getUserName
++      let dom := (← inferType mv).bindingDomain!
++      if j == 0 then
++        mPos := mPos.push none
++        margs := margs ++ [s!"({nm} := motive)"]
++      else
++        let p ← posOf members "rec" s!"motive {j}" dom
++        let some body := ihAt motive p "e" 0
++          | throwError "elim: the auxiliary type {← srcOf dom} names no member"
++        mPos := mPos.push (some p)
++        margs := margs ++ [s!"({nm} := fun e => {body})"]
++    let mut mins : List String := []
++    for mn in minors do
++      let mty ← inferType mn
++      let txt ← forallTelescope mty fun _ concl => do
++        let some k := motives.findIdx? (· == concl.getAppFn)
++          | throwError "elim: a minor premise of {recName} concludes at no motive"
++        let .const cName _ := concl.appArg!.getAppFn
++          | throwError "elim: a minor premise of {recName} is not at a constructor"
++        if k == 0 then
++          return ident (shortName cName)
++        let p := (mPos[k]!).getD (.leaf "")
++        if cName == ``List.nil || cName == ``Option.none then
++          return "(fun _ hx => nomatch hx)"
++        else if cName == ``List.cons then
++          return "(fun _ _ ihHead ihTail => by\n      intro _ hx\n      cases hx with\n      \
++            | head => exact ihHead\n      | tail _ hx' => exact ihTail _ hx')"
++        else if cName == ``Option.some then
++          return "(fun _ ih _ hx => by\n      cases hx\n      exact ih)"
++        else if cName == ``Prod.mk then
++          match p with
++          | .prod a b =>
++            if prodSides a b == 2 then return "(fun _ _ iha ihb => ⟨iha, ihb⟩)"
++            else return "(fun _ _ ih => ih)"
++          | _ => throwError "elim: a `Prod.mk` minor at a position that is not a product"
++        else
++          throwError "elim: the auxiliary constructor {cName} has no discharge in this emission"
++      mins := mins ++ [txt]
++    return (margs, mins)
++  s := s ++ s!"  {T}.rec " ++ String.intercalate "\n    " motiveArgs ++ "\n"
++  for m in minorArgs do s := s ++ s!"    {m}\n"
++  s := s ++ "    t\n\n"
++  -- ## The equality
++  s := s ++ s!"mutual\n/-- Structural equality on `{root}` as a Boolean; leaves compared by `decide`. -/\n"
++  s := s ++ s!"def {pfx}.beq : {T} → {T} → Bool\n"
++  for c in ctors do
++    let as := (List.range c.fields.length).map fun i => s!"a{i}"
++    let bs := (List.range c.fields.length).map fun i => s!"b{i}"
++    let cmps := (c.fields.zipIdx).map fun ((_, p, _), i) => cmpAt pfx p s!"a{i}" s!"b{i}"
++    let rhs := if cmps.isEmpty then "true" else String.intercalate " && " cmps
++    s := s ++ s!"  | {ctorApp c as}, {ctorApp c bs} => {rhs}\n"
++  if ctors.length > 1 then s := s ++ "  | _, _ => false\n"
++  s := s ++ "termination_by structural a _ => a\n"
++  for p in comps do
++    s := s ++ s!"def {pfx}.beq_pos_{p.suffix} : {srcP p} → {srcP p} → Bool\n"
++    match p with
++    | .list q =>
++      s := s ++ "  | [], [] => true\n"
++      s := s ++ s!"  | x :: xs, y :: ys => {cmpAt pfx q "x" "y"} && {pfx}.beq_pos_{p.suffix} xs ys\n"
++      s := s ++ "  | _, _ => false\n"
++    | .option q =>
++      s := s ++ "  | none, none => true\n"
++      s := s ++ s!"  | some x, some y => {cmpAt pfx q "x" "y"}\n"
++      s := s ++ "  | _, _ => false\n"
++    | .prod a b =>
++      s := s ++ s!"  | (u0, v0), (u1, v1) => {cmpAt pfx a "u0" "u1"} && {cmpAt pfx b "v0" "v1"}\n"
++    | _ => throwError "elim: no comparison for the position {p.key}"
++    s := s ++ "termination_by structural x _ => x\n"
++  s := s ++ "end\n\n"
++  -- the comparison is equality, position by position, children first
++  let beqIff : String → String := fun e => s!"(∀ b, {pfx}.beq {e} b = true ↔ {e} = b)"
++  for p in comps do
++    let h := s!"{pfx}.beq_pos_{p.suffix}"
++    let v := match p with | .list _ => "xs" | _ => "x"
++    let some ih := ihAt beqIff p v 0
++      | throwError "elim: the position {p.key} names no member"
++    s := s ++ s!"theorem {h}_iff \{{v} : {srcP p}} (ih : {ih}) :\n"
++    s := s ++ s!"    ∀ y, {h} {v} y = true ↔ {v} = y := by\n"
++    match p with
++    | .prod a b =>
++      let ihA := if prodSides a b == 2 then "ih.1" else "ih"
++      let ihB := if prodSides a b == 2 then "ih.2" else "ih"
++      let ls := ([h, "Bool.and_eq_true"] ++
++        (if a.isLeaf || b.isLeaf then ["decide_eq_true_eq"] else []) ++
++        (iffAt pfx a ihA "u1").toList ++ (iffAt pfx b ihB "v1").toList ++ ["Prod.mk.injEq"])
++      s := s ++ "  intro y\n  obtain ⟨u0, v0⟩ := x\n  obtain ⟨u1, v1⟩ := y\n"
++      s := s ++ s!"  simp only [{String.intercalate ", " ls}]\n\n"
++    | .list q =>
++      let elemIh := "(ih x List.mem_cons_self)"
++      let elem := (iffAt pfx q elemIh "y").toList
++      let elem := if q.isLeaf then ["decide_eq_true_eq"] else elem
++      let ls := [h, "Bool.and_eq_true"] ++ elem ++
++        ["iht (fun z hz => ih z (List.mem_cons_of_mem x hz)) ys", "List.cons.injEq"]
++      s := s ++ "  induction xs with\n  | nil =>\n    intro y\n    cases y with\n"
++      s := s ++ s!"    | nil => simp only [{h}]\n"
++      s := s ++ s!"    | cons _ _ => simp only [{h}, Bool.false_eq_true, reduceCtorEq]\n"
++      s := s ++ "  | cons x xs iht =>\n    intro y\n    cases y with\n"
++      s := s ++ s!"    | nil => simp only [{h}, Bool.false_eq_true, reduceCtorEq]\n"
++      s := s ++ s!"    | cons y ys =>\n      simp only [{String.intercalate ", " ls}]\n\n"
++    | .option q =>
++      let elem := (iffAt pfx q "(ih x rfl)" "y").toList
++      let elem := if q.isLeaf then ["decide_eq_true_eq"] else elem
++      s := s ++ "  intro y\n  cases x with\n  | none =>\n    cases y with\n"
++      s := s ++ s!"    | none => simp only [{h}]\n"
++      s := s ++ s!"    | some _ => simp only [{h}, Bool.false_eq_true, reduceCtorEq]\n"
++      s := s ++ "  | some x =>\n    cases y with\n"
++      s := s ++ s!"    | none => simp only [{h}, Bool.false_eq_true, reduceCtorEq]\n"
++      s := s ++ s!"    | some y => simp only [{String.intercalate ", " ([h] ++ elem ++ ["Option.some.injEq"])}]\n\n"
++    | _ => throwError "elim: no lemma for the position {p.key}"
++  s := s ++ s!"/-- `beq` decides structural equality. -/\n"
++  s := s ++ s!"theorem {pfx}.beq_iff : ∀ a b : {T}, {pfx}.beq a b = true ↔ a = b := by\n"
++  s := s ++ s!"  intro a\n  induction a using {pfx}.ind with\n"
++  for c in ctors do
++    let names := c.fields.map fun (n, _, _) => ident n
++    let ihNames := (c.fields.zipIdx).filterMap fun ((_, p, _), i) =>
++      if p.isLeaf then none else some s!"ih{i}"
++    let pat := String.intercalate " " ([ident c.short] ++ names ++ ihNames)
++    let mut ls : List String := [s!"{pfx}.beq"]
++    if ctors.length > 1 then ls := ls ++ ["Bool.false_eq_true", "reduceCtorEq"]
++    if c.fields.length ≥ 2 then ls := ls ++ ["Bool.and_eq_true"]
++    if c.fields.any (fun f => f.2.1.isLeaf) then ls := ls ++ ["decide_eq_true_eq"]
++    for ((_, p, _), i) in c.fields.zipIdx do
++      match p with
++      | .leaf _ => pure ()
++      | .direct _ => ls := ls ++ [s!"ih{i}"]
++      | _ => ls := ls ++ [s!"{pfx}.beq_pos_{p.suffix}_iff ih{i}"]
++    if !c.fields.isEmpty then ls := ls ++ [s!"{c.full}.injEq"]
++    s := s ++ s!"  | {pat} =>\n    intro b\n    cases b <;> simp only [{String.intercalate ", " ls}]\n"
++  s := s ++ "\n"
++  s := s ++ s!"/-- Decidable structural equality, by `beq` and its proof. -/\n"
++  s := s ++ s!"instance {instNs}instDecidableEq{short} : DecidableEq {T} := fun a b =>\n"
++  s := s ++ s!"  decidable_of_iff _ ({pfx}.beq_iff a b)\n\n"
++  -- ## Repr
++  let argFmt : Pos → String → String := fun p e =>
++    match p with
++    | .leaf _ => s!"_root_.reprArg {e}"
++    | .direct _ => s!"{pfx}.repr {e} max_prec"
++    | .list _ => s!"(match {e} with | [] => Std.Format.text \"[]\" | _ => Std.Format.bracket \"[\" \
++        (Std.Format.joinSep ({pfx}.repr_items_{p.suffix} {e}) (\",\" ++ Std.Format.line)) \"]\")"
++    | .prod .. => s!"Std.Format.bracket \"(\" (Std.Format.joinSep ({pfx}.repr_tuple_{p.suffix} {e}) \
++        (\",\" ++ Std.Format.line)) \")\""
++    | .option _ => s!"{pfx}.repr_pos_{p.suffix} {e} max_prec"
++    | .record .. => "«record»"
++  let elemFmt : Pos → String → String := fun p e =>
++    match p with
++    | .leaf _ => s!"_root_.repr {e}"
++    | .direct _ => s!"{pfx}.repr {e} 0"
++    | .option _ => s!"{pfx}.repr_pos_{p.suffix} {e} 0"
++    | _ => argFmt p e
++  s := s ++ s!"mutual\n/-- The derived `Repr`'s text, structurally (the derived one is `partial` here). -/\n"
++  s := s ++ s!"def {pfx}.repr : {T} → Nat → Std.Format\n"
++  for c in ctors do
++    let as := (List.range c.fields.length).map fun i => s!"a{i}"
++    let parts := (c.fields.zipIdx).map fun ((_, p, _), i) => argFmt p s!"a{i}"
++    let body := String.join ([s!"Std.Format.text \"{c.full}\""] ++
++      parts.map fun x => s!" ++ Std.Format.line ++ {x}")
++    s := s ++ s!"  | {ctorApp c as}, prec => Repr.addAppParen (Std.Format.group (Std.Format.nest \
++      (if prec >= max_prec then 1 else 2) ({body}))) prec\n"
++  s := s ++ "termination_by structural t _ => t\n"
++  for p in comps do
++    match p with
++    | .list q =>
++      s := s ++ s!"def {pfx}.repr_items_{p.suffix} : {srcP p} → List Std.Format\n"
++      s := s ++ "  | [] => []\n"
++      s := s ++ s!"  | x :: xs => ({elemFmt q "x"}) :: {pfx}.repr_items_{p.suffix} xs\n"
++      s := s ++ "termination_by structural xs => xs\n"
++    | .prod a b =>
++      s := s ++ s!"def {pfx}.repr_tuple_{p.suffix} : {srcP p} → List Std.Format\n"
++      let rest := match b with
++        | .prod .. => s!"{pfx}.repr_tuple_{b.suffix} v"
++        | .leaf _ => "(ReprTuple.reprTuple v []).reverse"
++        | _ => s!"[{elemFmt b "v"}]"
++      s := s ++ s!"  | (u, v) => ({elemFmt a "u"}) :: {rest}\n"
++      s := s ++ "termination_by structural x => x\n"
++    | .option q =>
++      s := s ++ s!"def {pfx}.repr_pos_{p.suffix} : {srcP p} → Nat → Std.Format\n"
++      s := s ++ "  | none, _ => Std.Format.text \"none\"\n"
++      s := s ++ s!"  | some y, prec => Repr.addAppParen (Std.Format.text \"some \" ++ {argFmt q "y"}) prec\n"
++      s := s ++ "termination_by structural x _ => x\n"
++    | _ => throwError "elim: no printer for the position {p.key}"
++  s := s ++ "end\n\n"
++  s := s ++ s!"instance {instNs}instRepr{short} : Repr {T} := ⟨{pfx}.repr⟩\n\n"
++  s := s ++ "/-! ## Receipts -/\n\n"
++  s := s ++ s!"#print axioms {pfx}.ind\n#print axioms {pfx}.beq_iff\n"
++  s := s ++ s!"#print axioms {instNs}instDecidableEq{short}\n#print axioms {instNs}instRepr{short}\n"
++  for p in comps do
++    s := s ++ s!"#print axioms {pfx}.beq_pos_{p.suffix}_iff\n"
++  return s
++
++end Elim
++
+ structure Args where
+   group : String := "Fold"
+   imports : List String := []
+@@ -1281,6 +1644,13 @@
+     | none => `Effect4.Program
+   for t in args.types do
+     let root := t.toName
++    -- `--kind <Type>=elim[:<prefix>]`: the nested companions instead of the fold
++    match args.kinds.find? (fun (ty, k) => ty == t && (k == "elim" || k.startsWith "elim:")) with
++    | some (_, k) =>
++      let pfx := if k.startsWith "elim:" then some (k.drop 5).toString else none
++      blockTexts := blockTexts.push (← Elim.emitElim root pfx)
++      continue
++    | none => pure ()
+     let (_, _, block) ← readBlock root
+     if blockNested block then
+       let (blockText, blockReceipts, aux) ← emitNestedBlock namespaceName root emittedAux
+@@ -1350,7 +1720,8 @@
+     lines := lines.push frontierText
+     allReceipts := allReceipts ++ frontierReceipts
+ 
+-  lines := lines ++ #["/-! ## Receipts -/", ""]
++  if !allReceipts.isEmpty then
++    lines := lines ++ #["/-! ## Receipts -/", ""]
+   for r in allReceipts do
+     lines := lines.push s!"#print axioms {r}"
+   lines := lines ++ #["", "end " ++ namespaceName.toString, ""]
