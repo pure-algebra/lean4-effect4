@@ -1656,7 +1656,6 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_finish
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_launch
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_registrationDone
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_observe
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_exitDone
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_wake
 #proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves

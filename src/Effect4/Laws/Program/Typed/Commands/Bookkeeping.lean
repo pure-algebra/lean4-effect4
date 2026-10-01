@@ -10,10 +10,10 @@ bookkeeping a fiber or the store carries. Each obligation is `StepPreserves`
 every halting arm of the command is shown unreachable from `I` (decisions row 139's census).
 
 Proved here: `trackChild` (no halting arm), `drainDue` (`postTask` on an unknown owner, excluded by
-`MachineLive.dueOwners`), `link` (an unknown scope or target, excluded by `QueueOk.links`). The
-`observe` arms are proved as lemmas (`observe_raceCallback`; the resume, untrack, drop and
-callback arms by the transports below); its countdown arm is the open part of `observe`. Not
-provable as stated (seat D3's receipt, with checked refutations): `exitDone` (an exited fiber whose
+`MachineLive.dueOwners`), `link` (an unknown scope or target, excluded by `QueueOk.links`).
+`observe` is proved in `Commands/Observe.lean` over this module's transports (its race-callback arm,
+`observe_raceCallback`, is here). Not provable as stated (seat D3's receipt, with checked
+refutations, `docs/research/2026-10-01-landing/seat-D3/probes/`): `exitDone` (an exited fiber whose
 current code is a race registration marker keeps `RegistrationState` only through its stack, which
 `exitDone` clears) and `wake` (a batch wake owes a resume to a waiter whose token no clause relates
 to the completion it is owed).
