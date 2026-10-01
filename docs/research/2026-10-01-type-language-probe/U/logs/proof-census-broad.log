@@ -1,0 +1,53 @@
+#verify_ty_proof_census_attributed: authored theorems eliminating Ty directly, auxiliaries attributed = 211 (the seat's name rule on the same set: 210); using a Ty-shaped induct/fun_cases principle = 9; either = 218
+  census2 (recomputed) = 178; counted here and not in census2 = 40:
+    Conform.Effect4.Typing.checkStmts_complete
+    Effect4.Program.Agreement.depthB_straight
+    Effect4.Program.Agreement.localRun_compileB
+    Effect4.Program.Agreement.plainCode_compileEff
+    Effect4.Program.Agreement.steps_le_boundB
+    Effect4.Program.Agreement.straight_of_asExit
+    Effect4.Program.Denote.Looped.of_straight
+    Effect4.Program.Denote.Looped.refSites_nil
+    Effect4.Program.Denote.denoteBWith_badShape
+    Effect4.Program.Denote.denoteB_mono
+    Effect4.Program.Denote.denoteB_straight
+    Effect4.Program.Denote.denoteWith_badShape
+    Effect4.Program.Denote.sound
+    Effect4.Program.Denote.soundB
+    Effect4.Program.Guard.raceSites_compileEff
+    Effect4.Program.Sched.denoteR_straight
+    Effect4.Program.Sched.denote_of_inlineYield
+    Effect4.Program.Sched.inlineYield_eq_headExit
+    Effect4.Program.Ty.OrderProof.sub_normalize_of_sub
+    Effect4.Program.Ty.eq_of_sameHead
+    Effect4.Program.Ty.infer_widens
+    Effect4.Program.Ty.infer_widensSub
+    Effect4.Program.Ty.sub_eq_argsBelow_of_sameHead
+    Effect4.Program.Ty.sub_eq_false_of_not_sameHead
+    Effect4.Program.Typed.FitsAll.instantiate
+    Effect4.Program.Typed.fitsAll_of_pointwise
+    Effect4.Program.Typed.fits_ofMembers
+    Effect4.Program.Typed.fits_sub
+    Effect4.Program.cata_admits_extend
+    Effect4.Program.cata_admits_sub
+    Effect4.Program.cata_id_eff
+    Effect4.Program.check_weaken
+    Effect4.Program.compileEff_keys
+    Effect4.Program.foldM_eq_cata_eff
+    Effect4.Program.foldM_natural_eff
+    Effect4.Program.hom_eq_cata_eff
+    Effect4.Program.weaken_eq_cata_eff
+    Effect4.Store.ProgramGen.EffC.rawEff_toValEff
+    Effect4.Program.Ty.zipAll_antisymm
+    Effect4.Program.Ty.zipAll_trans
+  principle users (theorem <- principle):
+    Effect4.Program.Ty.OrderProof.sub_normalize_of_sub <- Effect4.Program.Ty.sameHead.fun_cases_unfolding
+    Effect4.Program.Ty.infer_widens <- Effect4.Program.Ty.infer.induct_unfolding
+    Effect4.Program.Ty.infer_widensSub <- Effect4.Program.Ty.infer.induct_unfolding
+    Effect4.Program.Ty.sameHead_trans <- Effect4.Program.Ty.sameHead.fun_cases_unfolding
+    Effect4.Program.Ty.sub_eq_argsBelow_of_sameHead <- Effect4.Program.Ty.sameHead.fun_cases_unfolding
+    Effect4.Program.Ty.sub_eq_false_of_not_sameHead <- Effect4.Program.Ty.sub.fun_cases_unfolding
+    Effect4.Program.Typed.fits_sub <- Effect4.Program.Ty.sub.induct_unfolding
+    Effect4.Program.cata_admits_extend <- Effect4.Program.cata_ty.induct_unfolding
+    Effect4.Program.cata_admits_sub <- Effect4.Program.Ty.sub.induct_unfolding
+exit 0

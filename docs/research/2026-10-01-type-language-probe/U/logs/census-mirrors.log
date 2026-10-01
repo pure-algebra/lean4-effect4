@@ -1,0 +1,51 @@
+=== docs/research/2026-10-01-type-language-probe/U/probes/CensusMirrorsToolsProfile.lean
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Tools: 1 definitions take a family value (0 private) — fold 0, generated 0, structural 1 (of which 0 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 0 (of which 0 with a fold beside them), delegates 0, opaque 0; declared folds: []
+  structural	Tools.ProfileJson:21	Tools.ProfileJson.tyJson	(Ty)
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Tools: 1 match(es) read it, 1 with no catch-all — appending a constructor refuses exactly those
+  Tools.ProfileJson.tyJson	Tools.ProfileJson	Tools.ProfileJson.tyJson.match_1	discr 0	alts 20	catchAll false
+exit 0
+=== docs/research/2026-10-01-type-language-probe/U/probes/CensusMirrorsToolsVariances.lean
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Tools: 0 definitions take a family value (0 private) — fold 0, generated 0, structural 0 (of which 0 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 0 (of which 0 with a fold beside them), delegates 0, opaque 0; declared folds: []
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Tools: 0 match(es) read it, 0 with no catch-all — appending a constructor refuses exactly those
+exit 0
+=== docs/research/2026-10-01-type-language-probe/U/probes/CensusMirrorsToolsRowTypes.lean
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Tools: 1 definitions take a family value (0 private) — fold 0, generated 0, structural 1 (of which 0 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 0 (of which 0 with a fold beside them), delegates 0, opaque 0; declared folds: []
+  structural	Tools.ProfileJson:21	Tools.ProfileJson.tyJson	(Ty)
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Tools: 4 match(es) read it, 1 with no catch-all — appending a constructor refuses exactly those
+  Tools.ProfileJson.tyJson	Tools.ProfileJson	Tools.ProfileJson.tyJson.match_1	discr 0	alts 20	catchAll false
+  Tools.RowTypes.request	Tools.RowTypes	Tools.RowTypes.request.match_1	discr 0	alts 3	catchAll true
+  Tools.RowTypes.request	Tools.RowTypes	Tools.RowTypes.request.match_4	discr 0	alts 2	catchAll true
+  Tools.RowTypes.request	Tools.RowTypes	Tools.RowTypes.request.match_7	discr 0	alts 2	catchAll true
+exit 0
+=== docs/research/2026-10-01-type-language-probe/U/probes/CensusMirrorsToolsTyVectors.lean
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Tools: 2 definitions take a family value (0 private) — fold 0, generated 0, structural 1 (of which 0 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 1 (of which 0 with a fold beside them), delegates 0, opaque 0; declared folds: []
+  one-level	Tools.TyVectors:46	Tools.TyVectors.subMutant	(Ty)
+  structural	Tools.ProfileJson:21	Tools.ProfileJson.tyJson	(Ty)
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Tools: 3 match(es) read it, 1 with no catch-all — appending a constructor refuses exactly those
+  Tools.ProfileJson.tyJson	Tools.ProfileJson	Tools.ProfileJson.tyJson.match_1	discr 0	alts 20	catchAll false
+  Tools.TyVectors.subMutant	Tools.TyVectors	Tools.TyVectors.subMutant.match_1	discr 0	alts 2	catchAll true
+  Tools.TyVectors.subMutant	Tools.TyVectors	Tools.TyVectors.subMutant.match_1	discr 1	alts 2	catchAll true
+exit 0
+=== docs/research/2026-10-01-type-language-probe/U/probes/CensusMirrorsConformLcnfMl.lean
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Conform: 3 definitions take a family value (0 private) — fold 0, generated 0, structural 2 (of which 0 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 0 (of which 0 with a fold beside them), delegates 0, opaque 1; declared folds: []
+  opaque	Conform.Effect4.LcnfMl:292	Conform.Effect4.LcnfMl.expectedLine	(Ty)
+  structural	Conform.Effect4.LcnfMl:164	Conform.Effect4.LcnfMl.tyT	(Ty)
+  structural	Conform.Effect4.LcnfMl:269	Conform.Effect4.LcnfMl.tyOcaml	(Ty)
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Conform: 2 match(es) read it, 2 with no catch-all — appending a constructor refuses exactly those
+  Conform.Effect4.LcnfMl.tyOcaml	Conform.Effect4.LcnfMl	Conform.Effect4.LcnfMl.tyOcaml.match_1	discr 0	alts 20	catchAll false
+  Conform.Effect4.LcnfMl.tyT	Conform.Effect4.LcnfMl	Conform.Effect4.LcnfMl.tyT.match_1	discr 0	alts 20	catchAll false
+exit 0
+=== docs/research/2026-10-01-type-language-probe/U/probes/CensusMirrorsConformLcnfSemantics.lean
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Conform: 1 definitions take a family value (0 private) — fold 0, generated 0, structural 1 (of which 0 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 0 (of which 0 with a fold beside them), delegates 0, opaque 0; declared folds: []
+  structural	Conform.Effect4.LcnfSemantics:40	Conform.Effect4.LcnfSemantics.tyValue	(Ty)
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Conform: 1 match(es) read it, 1 with no catch-all — appending a constructor refuses exactly those
+  Conform.Effect4.LcnfSemantics.tyValue	Conform.Effect4.LcnfSemantics	Conform.Effect4.LcnfSemantics.tyValue.match_1	discr 0	alts 20	catchAll false
+exit 0
+=== docs/research/2026-10-01-type-language-probe/U/probes/CensusMirrorsOCaml5.lean (rerun after the import line was split; the first run joined three imports on one line and failed at 4:26)
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under OCaml5: 2 definitions take a family value (0 private) — fold 0, generated 0, structural 2 (of which 0 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 0 (of which 0 with a fold beside them), delegates 0, opaque 0; declared folds: []
+  structural	OCaml5.Eff.Emit:366	OCaml5.Eff.tyO	(Ty)
+  structural	OCaml5.Eff.Goldens:89	OCaml5.Eff.tyV	(Ty)
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under OCaml5: 2 match(es) read it, 2 with no catch-all — appending a constructor refuses exactly those
+  OCaml5.Eff.tyO	OCaml5.Eff.Emit	OCaml5.Eff.tyO.match_1	discr 0	alts 20	catchAll false
+  OCaml5.Eff.tyV	OCaml5.Eff.Goldens	OCaml5.Eff.tyV.match_1	discr 0	alts 20	catchAll false
+exit 0

@@ -1,0 +1,107 @@
+site	name	form	computes	family
+src/Effect4/Codegen/Types.lean:268	Effect4.Codegen.Types.ofNormalized	structural; catchAll false	the TypeScript TypeRef spelling (Option monad)	c
+src/Effect4/Laws/Program/Signature.lean:972	Effect4.Program.flatCarrier	fold; no matcher (a fold or generated)	a flat service carrier (scalar or a non-context handle), at the root only	b3
+src/Effect4/Laws/Program/Template.lean:256	Effect4.Program.Ty.varsOf	structural; catchAll false	template parameters in occurrence order	b
+src/Effect4/Laws/Program/Template.lean:264	Effect4.Program.Ty.templateAdmissible	structural; catchAll false	no parameter under a union head	b
+src/Effect4/Laws/Program/TyView.lean:30	Effect4.Program.Ty.args	generated; catchAll false	children with the variance the order reads them at (variances.json)	b3
+src/Effect4/Laws/Program/TyView.lean:56	Effect4.Program.Ty.sameHead	generated; catchAll true	same constructor and payload (the order's head test)	b3
+src/Effect4/Laws/Program/TyView.lean:80	Effect4.Program.Ty.litRule	generated; catchAll true	the literal-below-string rule	b3
+src/Effect4/Laws/Program/TyView.lean:86	Effect4.Program.Ty.topRule	generated; catchAll true	the unknown-is-top rule	b3
+src/Effect4/Laws/Program/TypeAlgebra.lean:1219	Effect4.Program.Ty.valueVars	fold; no matcher (a fold or generated)	template parameters only under value formers	b
+src/Effect4/Laws/Program/Typed/Membership.lean:2286	Effect4.Program.Typed.handleFree	fold; no matcher (a fold or generated)	no handle former anywhere	b
+src/Effect4/Laws/Program/Typed/Membership.lean:71	Effect4.Program.Typed.FlatFits	one-level; catchAll true	membership at a flat carrier (one level)	b3
+src/Effect4/Laws/Program/Typed/Membership.lean:96	Effect4.Program.Typed.Fits	structural (fold_of connector); catchAll false	the membership judgment (world, value)	a
+src/Effect4/Program/Admission.lean:122	Effect4.Program.findInternalHandle	fold; no matcher (a fold or generated)	path to the first internal handle former	b
+src/Effect4/Program/Admission.lean:35	Effect4.Program.findInt	structural (fold_of connector); catchAll false	path to the first int	b
+src/Effect4/Program/Admission.lean:78	Effect4.Program.inhabited	fold; no matcher (a fold or generated)	the type has a member (DI-67, row 127)	a
+src/Effect4/Program/Checker.lean:104	Effect4.Program.Checker.exitOf?	one-level; catchAll true	prism: the columns of an exit	b3
+src/Effect4/Program/Checker.lean:99	Effect4.Program.Checker.listOf?	one-level; catchAll true	prism: the element type of a list	b3
+src/Effect4/Program/Compile.lean:1368	Effect4.Program.externalValue	one-level; catchAll true	prism on handle (allocate an external), else membership	b3
+src/Effect4/Program/Decision.lean:61	Effect4.Program.Decision.arms	one-level; catchAll true	the branch types a decision binds (option prism, tagged column)	b3
+src/Effect4/Program/Eff.lean:43	Effect4.Program.isTagTy	structural (fold_of connector); catchAll true	a union of strings and string literals	b2
+src/Effect4/Program/Eff.lean:49	Effect4.Program.rawSupportedErrTy	structural (fold_of connector); catchAll false	the error profile Err represents (DI-15, DI-62)	b2
+src/Effect4/Program/Fold.lean:237	Effect4.Program.foldMapAt_ty	generated; catchAll false	the monoid fold with the path threaded	b
+src/Effect4/Program/Fold.lean:282	Effect4.Program.foldMap_ty	generated; catchAll false	the monoid fold	b
+src/Effect4/Program/Fold.lean:446	Effect4.Program.foldM_ty	generated; catchAll false	the monadic fold	a
+src/Effect4/Program/NativeAtom.lean:36	Effect4.Program.causeInputError?	one-level; catchAll true	prism: the error column of a cause or an exit	b3
+src/Effect4/Program/NativeAtom.lean:43	Effect4.Program.NativeAtom.projectProduct	structural (fold_of connector); catchAll true	the selected column of a product or a union of products	b2
+src/Effect4/Program/Ty.lean:119	Effect4.Program.Ty.members	structural (fold_of connector); catchAll false	the union members, flattened	b2
+src/Effect4/Program/Ty.lean:142	Effect4.Program.Ty.key	structural (fold_of connector); catchAll false	the injective structural key (codes = wire tags)	c
+src/Effect4/Program/Ty.lean:190	Effect4.Program.Ty.isNever	one-level (fold_of connector); catchAll false	tag test: never	b3
+src/Effect4/Program/Ty.lean:197	Effect4.Program.Ty.closed	structural; catchAll false	no template parameter	b
+src/Effect4/Program/Ty.lean:402	Effect4.Program.Ty.isMember	one-level (fold_of connector); catchAll false	tag test: neither never nor union	b3
+src/Effect4/Program/Ty.lean:431	Effect4.Program.Ty.sub	wf; catchAll true	the subtype order (two values, well-founded)	e
+src/Effect4/Program/Ty.lean:471	Effect4.Program.Ty.instantiate	structural; catchAll false	substitution of template parameters	a-id
+src/Effect4/Program/Ty.lean:496	Effect4.Program.Ty.infer	structural; catchAll true	bindings a request fixes for a template (two values)	e
+src/Effect4/Program/Ty.lean:563	Effect4.Program.Ty.factors	one-level; catchAll true	members, or [never]	b2
+src/Effect4/Program/Ty.lean:570	Effect4.Program.Ty.isFactor	one-level; catchAll true	tag test: not a union	b3
+src/Effect4/Program/Ty.lean:606	Effect4.Program.Ty.normalize	structural (fold_of connector); catchAll false	the canonical form	a-id
+src/Effect4/Program/Ty.lean:75	Effect4.Program.instReprTy.repr	structural; catchAll false	the derived Repr	c'
+src/Effect4/Program/Ty.lean:772	Effect4.Program.Ty.isTagged	one-level; catchAll true	prism: prod (lit tag) _	b3
+src/Effect4/Program/Ty.lean:785	Effect4.Program.Ty.taggedColumn	one-level; catchAll true	every member a tagged pair or a scalar	b2
+src/Effect4/Program/Ty.lean:797	Effect4.Program.Ty.payloadOf	one-level; catchAll true	prism: the payload of prod (lit tag) p	b3
+src/Effect4/Program/Ty.lean:93	Effect4.Program.Ty.renderRaw	structural (fold_of connector); catchAll false	TypeScript text	c
+src/Effect4/Program/Typed.lean:20	Effect4.Program.Val.hasTy	structural (fold_of connector); catchAll false	Boolean membership (value, allocation table)	a
+src/Effect4/Program/Typing/Rules.lean:183	Effect4.Program.fiberTy	one-level; catchAll true	prism: the columns of a fiber	b3
+src/Effect4/Schema/Bridge.lean:37	Effect4.Schema.Bridge.schema	structural (fold_of connector); catchAll false	rc.112 SchemaRepresentation	c
+src/Effect4/Schema/Codec.lean:151	Effect4.Schema.Codec.encodeRaw	structural (fold_of connector); catchAll true	the JSON encoder (type, value)	a
+src/Effect4/Schema/Codec.lean:179	Effect4.Schema.Codec.decodeRaw	structural (fold_of connector); catchAll true	the JSON decoder (type, json)	a
+src/Effect4/Schema/Codec.lean:24	Effect4.Schema.Codec.layout	structural (fold_of connector); catchAll true	the wire layout (literals as strings)	a-id
+src/Effect4/Schema/Codec.lean:42	Effect4.Schema.Codec.isSupported	structural (fold_of connector); catchAll true	the JSON codec has an arm	b
+src/Effect4/Store/Domain/Derived/Program.lean:1091	Effect4.Store.ProgramGen.TyC.toValTy	generated; catchAll false	the Canonical byte image (generated)	c'
+(gate)	Effect4.Program.methodArgsRow	match with catch-all; Effect4.Program.methodArgsRow.match_1 alts 2	prism on prod (a method row's arguments)	b3
+(gate)	Effect4.Program.Authoring.ServiceDef.receiver	match with catch-all; Effect4.Program.Authoring.ServiceDef.receiver.match_1 alts 2	prism on prod (the receiver)	b3
+(gate)	Effect4.Program.selectRefusal	match with catch-all; Effect4.Program.selectRefusal.match_1 alts 3	dispatch on Decision; the type is passed through	b3
+(gate)	Effect4.Program.Ty.Variance.holds	match with catch-all; Effect4.Program.Ty.Variance.holds.match_1 alts 3, Effect4.Program.Ty.Variance.holds.match_1 alts 3	dispatch on Variance; the types are passed through	b3
+src/Effect4/Program/Ty.lean:755	Effect4.Program.Ty.render	delegates (census.log)	renderRaw after normalize (TypeScript text of the canonical form)	d
+src/Effect4/Schema/Bridge.lean:243	Effect4.Program.Ty.schema	delegates (census.log)	Bridge.schema after normalize	d
+src/Effect4/Codegen/Types.lean:316	Effect4.Codegen.Types.ofTy	delegates (census.log)	ofNormalized after normalize	d
+src/Effect4/Program/Eff.lean:64	Effect4.Program.supportedErrTy	delegates (census.log)	rawSupportedErrTy after normalize	d
+src/Effect4/Program/Ty.lean:763	Effect4.Program.Ty.join	delegates (census.log)	normalize of a union (the canonical join)	d
+src/Effect4/Laws/Program/TypeAlgebra.lean:1066	Effect4.Program.Ty.subN	delegates (census.log)	sub between normal forms (the checker's order)	d
+src/Effect4/Program/Ty.lean:809	Effect4.Program.Ty.Canonical	delegates (census.log)	normalize t = t	d
+src/Effect4/Program/Ty.lean:846	Effect4.Program.CTy.ofRaw	delegates (census.log)	normalize into the canonical subtype	d
+src/Effect4/Schema/Codec.lean:215	Effect4.Schema.Codec.isValue	delegates (census.log)	encodeRaw/decodeRaw at layout of normalize, with membership	d
+src/Effect4/Schema/Codec.lean:229	Effect4.Schema.encode	delegates (census.log)	encodeRaw at layout of normalize, membership and exact recovery checked	d
+src/Effect4/Schema/Codec.lean:238	Effect4.Schema.decode	delegates (census.log)	decodeRaw at layout of normalize, membership checked	d
+src/Effect4/Program/Admission.lean:81	Effect4.Program.admitColumn	delegates (census.log)	normalize = never, or inhabited	d
+src/Effect4/Program/Ty.lean:802	Effect4.Program.Ty.payloadTy	delegates (census.log)	payloadOf over members, normalized	d
+src/Effect4/Program/Ty.lean:778	Effect4.Program.Ty.diffTag	delegates (census.log)	members filtered by isTagged	d
+src/Effect4/Program/Ty.lean:602	Effect4.Program.Ty.productMembers	delegates (census.log)	factors of both sides, paired	d
+src/Effect4/Program/Typing/Rules.lean:109	Effect4.Program.rowTy	delegates (census.log)	instantiate at matchTemplate's bindings, normalized	d
+src/Effect4/Program/Typing/Rules.lean:214	Effect4.Program.catchIfError	delegates (census.log)	join and diffTag of normal forms	d
+src/Effect4/Program/Ty.lean:526	Effect4.Program.Ty.matchTemplate	delegates (census.log)	infer, then sub against instantiate	d
+src/OCaml5/Eff/Emit.lean:366	OCaml5.Eff.tyO	structural, no catch-all (census-mirrors.log)	a Ty value as OCaml constructor syntax (Eff_types.ty)	c'
+src/OCaml5/Eff/Goldens.lean:89	OCaml5.Eff.tyV	structural, no catch-all (census-mirrors.log)	a Ty value as the golden value tree V (.ctor name args)	c'
+tools/Tools/ProfileJson.lean:21	Tools.ProfileJson.tyJson	structural, no catch-all (census-mirrors.log)	a Ty value as tagged JSON {_tag, binder: ...}	c'
+tools/Conform/Effect4/LcnfMl.lean:164	Conform.Effect4.LcnfMl.tyT	structural, no catch-all (census-mirrors.log)	a Ty value in the target evaluator's value domain	c'
+tools/Conform/Effect4/LcnfMl.lean:270	Conform.Effect4.LcnfMl.tyOcaml	structural, no catch-all (census-mirrors.log)	a Ty value as OCaml syntax for the LCNF-cut types (strings not escaped)	c'
+tools/Conform/Effect4/LcnfSemantics.lean:40	Conform.Effect4.LcnfSemantics.tyValue	structural, no catch-all (census-mirrors.log)	a Ty value in the LCNF interpreter's value domain	c'
+tools/Conform/Effect4/LcnfSemantics.lean:63	Conform.Effect4.LcnfSemantics.valueTy?	partial (invisible to the census), if-chain by name	the inverse of tyValue	c'
+tools/Tools/RowTypes.lean:44	Tools.RowTypes.request	one-level, three catch-alls (census-mirrors.log)	a row's request split by its shape (prisms on unit and prod)	b3
+tools/Tools/TyVectors.lean:46	Tools.TyVectors.subMutant	one-level, catch-all (census-mirrors.log)	sub with the refOf arm swapped: the assignability lane's red control	e
+ocaml/engine/e4_program.ml:129-152	E4_program.Make.of_ty	hand OCaml match, 20 arms, count pinned by `assert (... = 20)` (:126)	Eff_types.ty to the engine's A.ty (two generated declarations of one signature)	c'
+ocaml/eff/test/prop_wire.ml:155-171	Prop_wire.rand_ty	hand OCaml generator on the index, `| _ -> Ty_union`	a random Ty for the wire properties: 15 of 20 constructors (no lit, refOf, deferredOf, var, unknown)	c''
+tools/Conform/Effect4/LcnfMl.lean:192-205	Conform.Effect4.LcnfMl.leaves/layer/vectors	hand enumeration	the rung-3 vectors: 13 of 20 constructors by enumeration (Enumerations.log)	c''
+tools/Conform/Effect4/LcnfSemantics.lean:93-110	Conform.Effect4.LcnfSemantics.leaves/layer/vectors	hand enumeration (a second copy)	the rung-2 vectors: the same 13 of 20	c''
+src/OCaml5/Eff/Metadata.lean:52-60	OCaml5.Eff.Metadata.types	hand table, 20 rows	one sample per constructor for the metadata fixtures	c''
+tools/Tools/TyVectors.lean:62-67	Tools.TyVectors.core	hand table	one type per head for the assignability lane (no int, no var, by design)	c''
+tools/Tools/Variances.lean:358-382	Tools.Variances.heads	hand table, 10 rows (refuses a head with no row)	each parametrised head's rc.112 declaration or printer spelling	c
+tools/Effect4Gen/variances.json	variances.json	generated from Variances.heads and rc.112	the variance column read by the TyView group	c
+tools/Effect4Gen/wire-tags.json	wire-tags.json (Ty)	hand data, 20 active tags	the wire tag of each constructor (= declaration index = key code)	c
+tools/Conform/Effect4/cases-policy.json	cases-policy.json (Ty)	seeded pin of compiled case sites, 36 Ty rows (25 cover lists, 5 exhaustive, 6 sites)	what the compiled code does at each case site today	pin
+(Test)	Test.Audit.ExhaustiveFixture.catchAllAbsent	alts 20 catchAll false	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Audit.ExhaustiveFixture.catchAllPresent	alts 4 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Audit.ExhaustiveFixture.privateCatchAll	alts 2 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Audit.TraversalFixture.depth	alts 3 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Audit.TraversalFixture.fuelDepth	alts 4 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Audit.TraversalFixture.fuelWalk	alts 4 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Audit.TraversalFixture.isOption	alts 20 catchAll false	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Audit.TraversalFixture.notUnion	alts 2 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Audit.TraversalFixture.privateDepth	alts 2 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Audit.TraversalFixture.wfPair	alts 4 catchAll true, alts 4 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.Fits	alts 20 catchAll false	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FitsInv	alts 20 catchAll false	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FlatFits	alts 6 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.HandlesFit	alts 10 catchAll true	a planted fixture or a frozen counterexample model	e
+(Test)	Test.Program.InvocationContract.requestFor	alts 4 catchAll true	a planted fixture or a frozen counterexample model	e
