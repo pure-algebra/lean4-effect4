@@ -33,8 +33,8 @@ onward) it does not. Every field law is proved for any key in `P1FieldOrder.lean
 a one-line change.
 
 Production text copied verbatim is marked "copied"; a declaration that gained an arm or a case is
-marked "arm" or "case". Two production proofs used `simp_all`/`try`, which the estate's rule bars
-in a touched proof; their copies are rewritten without them and marked "rewritten".
+marked "arm" or "case". Four production proofs here use `simp_all`/`try`, barred in a touched
+proof; their copies are rewritten without them and marked "rewritten".
 -/
 
 set_option autoImplicit false

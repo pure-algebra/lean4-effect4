@@ -26,4 +26,4 @@
 'ProbeP.Ty.argsBelow_antisymm' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.eq_of_sameHead_nil' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.Normal.canonHead' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=45
+exit=0 seconds=42

@@ -11,4 +11,4 @@
 'ProbeP.Ty.sub_normalize_tuple' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.sub_normalize_app' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.sub_normalize_of_sub' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=16
+exit=0 seconds=15

@@ -8,7 +8,7 @@ Research probe. A copy of the generated `src/Effect4/Laws/Program/TyView.lean` a
 over the copied `ProbeP.Ty`, answering question 3's shape question: what must
 `TyView.sub_eq_args` look like when a head has variable arity?
 
-**Answer (proved below).** `sub_eq_args` keeps its statement exactly. A record's children are
+**Answer (proved below).** `sub_eq_args` keeps its statement, `hleaf` for `hlit`. A record's children are
 its canonical field types, each at variance `co` (readonly properties); its head is the
 canonical list of names with their optional flags, compared by `sameHead`; a map is a
 fixed-arity head `[(inv, key), (co, value)]` and needs nothing new. The one law whose statement

@@ -21,4 +21,4 @@
 'ProbeP.Ty.sub_union_left' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.sub_lit_string' depends on axioms: [propext, Quot.sound]
 'ProbeP.Ty.sub_unknown' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=32
+exit=0 seconds=16

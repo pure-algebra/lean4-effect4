@@ -6,4 +6,4 @@
 'ProbeP.fits_field_split' depends on axioms: [propext, Quot.sound]
 'ProbeP.bytes_order_ambiguous' depends on axioms: [propext]
 'ProbeP.named_tag_disjoint' depends on axioms: [propext]
-exit=0 seconds=11
+exit=0 seconds=4

@@ -20,4 +20,4 @@
 'ProbeP.Codec.decodeC_iff' depends on axioms: [propext, Quot.sound]
 'ProbeP.Codec.codec_not_exact' depends on axioms: [propext, Quot.sound]
 'ProbeP.Codec.repaired_refuses' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=5
+exit=0 seconds=7

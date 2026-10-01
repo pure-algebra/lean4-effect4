@@ -18,4 +18,4 @@
 'ProbeP.optionalNever_fits' depends on axioms: [propext, Quot.sound]
 'ProbeP.emptyMap_fits' depends on axioms: [propext, Quot.sound]
 'ProbeP.raw_fold_disagrees' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=13
+exit=0 seconds=5

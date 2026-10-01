@@ -27,4 +27,4 @@
 'ProbeP.fits_project' depends on axioms: [propext, Quot.sound]
 'ProbeP.named_width_refused' depends on axioms: [propext, Quot.sound]
 'ProbeP.written_order_not_invariant' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=25
+exit=0 seconds=11

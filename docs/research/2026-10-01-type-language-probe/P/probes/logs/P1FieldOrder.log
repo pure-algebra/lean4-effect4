@@ -21,4 +21,4 @@
 'ProbeP.Field.firstRepeated_eq_none_iff' depends on axioms: [propext, Quot.sound]
 'ProbeP.Field.dup_order_matters' does not depend on any axioms
 'ProbeP.Field.canon_names_row' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=1
+exit=0 seconds=2

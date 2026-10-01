@@ -20,4 +20,4 @@
 'ProbeP.record_required_below_optional' depends on axioms: [propext]
 'ProbeP.record_sub_not_complete' depends on axioms: [propext, Quot.sound]
 'ProbeP.generated_int_image_breaks_tower' depends on axioms: [propext]
-exit=0 seconds=3
+exit=0 seconds=6
