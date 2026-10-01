@@ -32,7 +32,8 @@ one-world omission, not a complete pre-amendment model; the original statement i
    in `Contracts`), and gives the one-world judgment at the current world
    (`stackAccepts_now`), so nothing proved over the one-world judgment is lost.
 5. `step_loop_good` (green, current judgment): with a frame typed into `unit` on every success,
-   the same `loop` keeps the typed state at the world that declares the new cell.
+   the same `loop` keeps the typed configuration (row 134's `I`: `good_config` before,
+   `afterGood_config` after) at the world that declares the new cell.
 6. Wrapping does not survive the walk (red): under hooks whose iterator protocol picks its
    input type per world, the one-world hook laws hold (`hookLawsX_old`) and the one-world walk
    types the output (`output_typed_one_world`), but no world-closed typing of the output exists
@@ -370,12 +371,13 @@ theorem code_typed (w : W) :
   simp only [Typed.Fits]
   exact ⟨.nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩
 
-/-- A one-fiber machine whose root's saved frame is typed, with any queue, is a typed state. -/
-theorem typed_of (s : List ScopeFrame) (running : Bool) (commands : List RCmd)
+/-- A one-fiber machine whose root's saved frame is typed is a typed state (row 134's
+`TypedState` reads no queue; the code is `LiveCode`'s or `ReadCode`'s, below). -/
+theorem typed_of (s : List ScopeFrame) (running : Bool)
     (saved : SavedOk (TypedProg (refProg : ProgramSource)) ExitOk
       (frameProtocols (refProg : ProgramSource)) world unitTy (rootFiber s running).frame)
     (trace := (loadR refProg 20 20).trace) :
-    TypedState (refProg : ProgramSource) unitTy world (machineOf s running trace) commands := by
+    TypedState (refProg : ProgramSource) unitTy world (machineOf s running trace) := by
   refine ⟨valid_of s running trace, ⟨?_, ?_, ?_⟩, ?_, scheduler_of s running trace,
     observers_of s running trace, registration_of s running trace⟩
   · intro f hf
@@ -387,7 +389,7 @@ theorem typed_of (s : List ScopeFrame) (running : Bool) (commands : List RCmd)
       change world.Γ Api.root = some ty at declared
       rw [(valid_of s running trace).root] at declared
       cases declared
-      exact savedPosition_of_saved _ _ _ _ _ _ _ saved
+      exact savedPosition_of_saved _ _ _ _ saved
     · intro p hp; cases hp
     · intro v hv; cases hv
     · intro v hv; cases hv
@@ -455,7 +457,7 @@ theorem queue_of (s : List ScopeFrame) (c : RCmd)
     (hc : c = .loop Api.root false ∨ c = .deliver Api.root false)
     (trace := (loadR refProg 20 20).trace) :
     QueueOk (refProg : ProgramSource) world (machineOf s true trace) [c] := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c' hc'
     rw [List.mem_singleton] at hc'
     subst c'
@@ -482,6 +484,10 @@ theorem queue_of (s : List ScopeFrame) (c : RCmd)
     rw [List.mem_singleton] at member
     rcases hc with rfl | rfl <;> cases member
   · intro host yielding race member
+    rw [List.mem_singleton] at member
+    rcases hc with rfl | rfl <;> cases member
+  -- row 139's `links`: vacuous, the queue holds no `link`
+  · intro mode scope target interruptor extra member
     rw [List.mem_singleton] at member
     rcases hc with rfl | rfl <;> cases member
 
@@ -617,12 +623,38 @@ theorem stack_good (w : W) :
 
 abbrev good : RState := machineOf [.answer goodNext] true
 
-theorem good_typed : TypedState (refProg : ProgramSource) unitTy world good [command] :=
-  typed_of _ _ _ ⟨tin, code_typed world, stack_good world,
-    ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+theorem good_saved (w : W) : SavedOk (TypedProg (refProg : ProgramSource)) ExitOk
+    (frameProtocols (refProg : ProgramSource)) w unitTy (rootFiber [.answer goodNext] true).frame :=
+  ⟨tin, code_typed w, stack_good w, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+
+theorem good_typed : TypedState (refProg : ProgramSource) unitTy world good :=
+  typed_of _ _ (good_saved world)
 
 theorem good_queue : QueueOk (refProg : ProgramSource) world good [command] :=
   queue_of _ _ (Or.inl rfl)
+
+/-- The input of the green control in the typed configuration (row 134's `I`): the running
+root's code, which the queued `loop` reads, is typed with its stack (`ReadCode`). Before the
+split this was the code clause of `TypedState … [command]`. -/
+theorem good_config : ConfigTyped (refProg : ProgramSource) unitTy world good [command] := by
+  refine ⟨⟨good_typed, ?_, machineLive_of_quiet _ rfl (fun f hf => ?_) rfl⟩, ?_, good_queue⟩
+  · intro f hf _ idle
+    change f ∈ [rootFiber [.answer goodNext] true] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases idle
+  · change f ∈ [rootFiber [.answer goodNext] true] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    rfl
+  · intro f hf _ _ _ ty declared
+    change f ∈ [rootFiber [.answer goodNext] true] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    change world.Γ Api.root = some ty at declared
+    rw [(valid_of [.answer goodNext] true).root] at declared
+    cases declared
+    exact good_saved world
 
 def afterGood : RState × List RCmd :=
   letI := termEvaluatorFor (refProg : ProgramSource).program
@@ -734,10 +766,21 @@ theorem afterGood_no_requests (id : FiberId) (token : Nat) :
     subst found
     rfl
 
+/-- The root's frame after the allocation, code included, at the world that declares cell 0. -/
+theorem afterGood_saved : ∀ f ∈ afterGood.1.fibers, SavedOk (TypedProg (refProg : ProgramSource))
+    ExitOk (frameProtocols (refProg : ProgramSource)) w1g unitTy f.frame := by
+  intro f hf
+  change f ∈ [_] at hf
+  rw [List.mem_singleton] at hf
+  subst hf
+  exact ⟨tin, TypedProg.pure cell0_ok_w1g, stack_good w1g,
+    ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+
 theorem afterGood_typed :
-    TypedState (refProg : ProgramSource) unitTy w1g afterGood.1 afterGood.2 := by
+    TypedState (refProg : ProgramSource) unitTy w1g afterGood.1 := by
   refine ⟨valid_w1g, ⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro f hf
+    have saved := afterGood_saved f hf
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
     subst hf
@@ -746,8 +789,7 @@ theorem afterGood_typed :
       change w1g.Γ Api.root = some ty at declared
       rw [valid_w1g.root] at declared
       cases declared
-      exact savedPosition_of_saved _ _ _ _ _ _ _ ⟨tin, TypedProg.pure cell0_ok_w1g, stack_good w1g,
-        ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+      exact savedPosition_of_saved _ _ _ _ saved
     · intro p hp; cases hp
     · intro v hv; cases hv
     · intro v hv; cases hv
@@ -838,7 +880,7 @@ theorem afterGood_typed :
 theorem afterGood_queueOk :
     QueueOk (refProg : ProgramSource) w1g afterGood.1 afterGood.2 := by
   rw [afterGood_queue]
-  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c hc
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
     rcases hc with rfl | rfl <;> trivial
@@ -865,14 +907,49 @@ theorem afterGood_queueOk :
   · intro host yielding race member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with h | h <;> cases h
+  -- row 139's `links`: vacuous, the queue holds no `link`
+  · intro mode scope target interruptor extra member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with h | h <;> cases h
+
+/-- The output in the typed configuration (row 134's `I`): the root's code, which the queued
+`deliver` reads, is typed with its stack at the world that declares cell 0. -/
+theorem afterGood_config :
+    ConfigTyped (refProg : ProgramSource) unitTy w1g afterGood.1 afterGood.2 := by
+  refine ⟨⟨afterGood_typed, ?_, machineLive_of_quiet _ rfl (fun f hf => ?_) rfl⟩, ?_,
+    afterGood_queueOk⟩
+  · intro f hf _ _ _ ty declared
+    have saved := afterGood_saved f hf
+    change f ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst hf
+    change w1g.Γ Api.root = some ty at declared
+    rw [valid_w1g.root] at declared
+    cases declared
+    exact saved
+  · change f ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst hf
+    rfl
+  · intro f hf _ _ _ ty declared
+    have saved := afterGood_saved f hf
+    change f ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst hf
+    change w1g.Γ Api.root = some ty at declared
+    rw [valid_w1g.root] at declared
+    cases declared
+    exact saved
 
 /-- **Green control: with a frame typed into `unit` on every success, the same `loop` keeps
-the typed state**, at the world that declares the new cell. So `step_loop_refuted` is the
-frame's doing, not the step's. -/
+the typed configuration** (`good_config` to `afterGood_config`), at the world that declares the
+new cell. So `step_loop_refuted` is the frame's doing, not the step's. Restated over row 134's
+`I` (seat I): the queue-relative `TypedState … afterGood.2` of seat B's statement typed the
+root's current code, which under the split is `ReadCode`'s, so the faithful restatement is
+`ConfigTyped`, which also carries `QueueOk`. -/
 theorem step_loop_good :
-    ∃ w', world.leHost w' ∧ TypedState (refProg : ProgramSource) unitTy w' afterGood.1 afterGood.2 ∧
-      QueueOk (refProg : ProgramSource) w' afterGood.1 afterGood.2 :=
-  ⟨w1g, w0_le_w1g, afterGood_typed, afterGood_queueOk⟩
+    ∃ w', world.leHost w' ∧ ConfigTyped (refProg : ProgramSource) unitTy w' afterGood.1 afterGood.2 :=
+  ⟨w1g, w0_le_w1g, afterGood_config⟩
 
 /-! ## 5. The repair: the closed judgment refuses the bad frame and loses nothing -/
 
@@ -969,7 +1046,9 @@ theorem preds_savedOk_mono (root : ProgramSource) (w w' : W) (e : Expect) (x : R
     | hook name => cases h0
   rw [same] at hty
   cases hty
-  exact Effect4.Program.Typed.savedOk_mono root w w' _ x ord (h _ h0)
+  -- row 134's bundle: the stack and the provenance (the code is `LiveCode`'s and `ReadCode`'s)
+  obtain ⟨tin, stack, provenance⟩ := h _ h0
+  exact ⟨tin, Contracts.stackAccepts_mono ord stack, provenance⟩
 
 /-- The refusal also follows from the landed transport: the closed judgment at the initial world
 would transport to `w1`, where even the one-world judgment refuses the frame. -/
@@ -1133,6 +1212,10 @@ open Test.Program.FramesNotKripke in
 #print axioms good_stack_transports
 open Test.Program.FramesNotKripke in
 #print axioms preds_savedOk_mono
+open Test.Program.FramesNotKripke in
+#print axioms good_config
+open Test.Program.FramesNotKripke in
+#print axioms afterGood_config
 open Test.Program.FramesNotKripke in
 #print axioms step_loop_good
 open Test.Program.FramesNotKripke in
