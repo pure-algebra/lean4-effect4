@@ -63,9 +63,10 @@ theorem joinAll_typed (root : ProgramSource) (w : W) (targets : List FiberId) (a
 def modifyCode (cell : RefKey) (f : FnName) : RProgram :=
   .vis (.inl (.refModify cell f)) fun v => .pure (.success v)
 
-/-- `Ref.modify` answers a `nat`, the row's answer column. -/
+/-- `Ref.modify` answers a `nat`, the row's answer column, on a cell declared at the native
+row's cell type (decisions row 136: the pre names it, so the `nat` post is the handler's). -/
 theorem modify_typed (root : ProgramSource) (w : W) (cell : RefKey) (f : FnName)
-    (declared : ∃ ty, w.Ρ cell = some ty) :
+    (declared : RefDeclared w cell .nat) :
     TypedProg root w (EffTy.pure .nat) (modifyCode cell f) := by
   refine TypedProg.store () declared ?_
   intro w' _ ans hpost

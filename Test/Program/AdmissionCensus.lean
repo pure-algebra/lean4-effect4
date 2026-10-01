@@ -100,16 +100,21 @@ def fiberBearing (op : FiberOp) : Bearing := match op with
 
 def storeBearing (_ : SyncOp) : Bearing := .clear
 
-/-- A realistic answer for each store row, so the walk takes the branch the machine takes: a
-fresh handle for an allocation, a number for a read, `unit` otherwise. -/
+/-- The machine's answer for each store row (decisions row 136: the census walks what the
+store answers, not what a post says), so the walk takes the branch the machine takes: a fresh
+handle for an allocation, a number for a read, a flag for a query, `unit` for `scopeAdd` on an
+open scope, `scopeRemove`, `deferredAwaitCleanup` and the rest. -/
 def storeAnswer : SyncOp → Val
   | .refMake _ => Val.cell ⟨0⟩
+  | .refSet cell _ => Val.cell cell
   | .deferredMake => Val.promise ⟨0⟩
-  | .scopeMake _ | .scopeFork _ _ => Val.scopeHandle 1
+  | .scopeMake _ | .scopeFork _ _ | .memoBuild _ _ => Val.scopeHandle 1
+  | .memoFork _ => Val.memoMap ⟨0⟩
   | .refGet _ | .refGetAndSet _ _ | .refSetAndGet _ _ | .refGetAndUpdate _ _
-  | .refUpdateAndGet _ _ | .refGetAndUpdateSome _ _ | .refUpdateSomeAndGet _ _ | .clockNow => Val.nat 0
-  | .deferredIsDone _ | .deferredCompleteWith _ _ | .deferredInterruptWith _ _
-  | .deferredAwaitCleanup _ _ _ | .scopeAdd _ _ | .scopeRemove _ _ | .scopeIsClosed _ => Val.bool true
+  | .refUpdateAndGet _ _ | .refGetAndUpdateSome _ _ | .refUpdateSomeAndGet _ _
+  | .refModify _ _ | .refModifySome _ _ | .clockNow => Val.nat 0
+  | .deferredIsDone _ | .deferredPoll _ | .deferredCompleteWith _ _ | .deferredInterruptWith _ _
+  | .scopeIsClosed _ => Val.bool true
   | _ => Val.unit
 
 /-- A realistic answer for each fiber row: a fiber handle for a fork, the root's id, an empty

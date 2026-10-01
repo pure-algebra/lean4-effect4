@@ -31,6 +31,8 @@ def StoreCert : SyncOp → Type
   | .deferredMake | .memoBuild _ _ => Ty × Ty
   | _ => PUnit
 
+/-- What each store row demands of its request (decisions row 136 for `refModify`,
+`refModifySome` and the scope rows). -/
 def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert op) : Prop :=
   match op with
   | .refMake initial => cert.closed = true ∧ Fits w initial cert
@@ -39,20 +41,34 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .refGetAndSet cell v => ∃ ty, w.Ρ cell = some ty ∧ Fits w v ty
   | .refSetAndGet cell v => ∃ ty, w.Ρ cell = some ty ∧ Fits w v ty
   | .refUpdate cell _ | .refGetAndUpdate cell _ | .refUpdateAndGet cell _
-  | .refUpdateSome cell _ | .refGetAndUpdateSome cell _ | .refUpdateSomeAndGet cell _
-  | .refModify cell _ | .refModifySome cell _ => ∃ ty, w.Ρ cell = some ty
+  | .refUpdateSome cell _ | .refGetAndUpdateSome cell _ | .refUpdateSomeAndGet cell _ =>
+    ∃ ty, w.Ρ cell = some ty
+  -- the native row's declared cell type (`Ref.Ref<number>`, `HandleFits`'s cell arm): the
+  -- handler answers the cell's old value, which the `nat` post then describes
+  | .refModify cell _ | .refModifySome cell _ => RefDeclared w cell .nat
   | .deferredMake => cert.1.closed = true ∧ cert.2.closed = true
   | .deferredIsDone key | .deferredPoll key | .deferredAwaitCleanup key _ _ => (w.«Π» key).isSome = true
-  | .deferredCompleteWith key _ => (w.«Π» key).isSome = true
+  -- the completion fits the promise's declared columns (`CompletionStrong`'s two arms), so the
+  -- completed cell stays typed; an ill-typed completion leaves no later world over the new store
+  | .deferredCompleteWith key completion => ∃ a e, w.«Π» key = some (a, e) ∧
+      match completion with
+      | .ofExit ex => ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex
+      | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.sub a = true
   | .deferredInterruptWith key _ => (w.«Π» key).isSome = true
   | .clockNow | .sleepCancel _ _ => True
-  | .scopeMake _ | .scopeAdd _ _ | .scopeRemove _ _ | .scopeIsClosed _ | .scopeFork _ _ => True
+  | .scopeMake _ => True
+  -- the named scope is live in the world's store, so the store never steps to a frontier
+  -- (`syncOpStep` answering `none`, which the evaluator answers `unit`; row 139's liveness)
+  | .scopeAdd scope _ | .scopeRemove scope _ | .scopeIsClosed scope | .scopeFork scope _ =>
+    (w.state.scopes.entryAt scope).isSome = true
   | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
   -- the looked-up layer's own checked error type (decision row 90)
   | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
       Checker.checkLayer (nativeSignature root.table) layer l = .ok lt ∧ lt.error = cert
   | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
 
+/-- What each store row's answer satisfies: the store's actual answer (decisions row 136; the
+handler's adequacy is `StoreImplements`, `Typed/Adequacy.lean`). -/
 def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Prop :=
   match op with
   | .refMake _ => ∃ key : RefKey, ans = Val.cell key ∧ w'.Ρ key = some cert
@@ -67,18 +83,25 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .deferredMake => ∃ key : DeferredKey, ans = Val.promise key ∧ w'.«Π» key = some cert
   | .deferredIsDone _ => ∃ b, ans = Val.bool b
   | .deferredPoll _ => ∃ b, ans = Val.bool b
-  | .deferredCompleteWith _ _ | .deferredInterruptWith _ _ | .deferredAwaitCleanup _ _ _ => ∃ b, ans = Val.bool b
+  | .deferredCompleteWith _ _ | .deferredInterruptWith _ _ => ∃ b, ans = Val.bool b
+  | .deferredAwaitCleanup _ _ _ => ans = Val.unit
   | .clockNow => ∃ n, ans = Val.nat n
   | .sleepCancel _ _ => ans = Val.unit
   | .scopeMake _ => ∃ sc, ans = Val.scopeHandle sc
-  | .scopeAdd _ _ | .scopeRemove _ _ => ∃ b, ans = Val.bool b
+  -- an open scope registers and answers `unit`; a closed one answers its closing exit, at
+  -- `Exit<unknown, unknown>` (DI-94's release type), for the caller to run the finalizer now
+  | .scopeAdd _ _ => ans = Val.unit ∨
+      ∃ ex, ans = reifyExitVal ex ∧ FitsExit w' ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex
+  | .scopeRemove _ _ => ans = Val.unit
   | .scopeIsClosed _ => ∃ b, ans = Val.bool b
   | .scopeFork _ _ => ∃ sc, ans = Val.scopeHandle sc
   | .memoFork _ => ∃ id, ans = Val.memoMap id
   | .memoGet _ _ => ans = Val.unit ∨ ∃ cell owner, Val.memoHit? ans = some (cell, owner) ∧
       w'.«Π» cell = some (.handle Ty.contextTarget, cert)
   | .memoBuild _ _ => ∃ sc, ans = Val.scopeHandle sc
-  | .memoComplete _ _ _ | .memoRelease _ _ => ans = Val.unit
+  | .memoComplete _ _ _ => ans = Val.unit
+  -- the last observer's release answers the layer's scope handle, for the caller to close
+  | .memoRelease _ _ => ans = Val.unit ∨ ∃ sc, ans = Val.scopeHandle sc
 
 def Ψ_S (root : ProgramSource) : Protocol World StoreSig where
   Cert := StoreCert
@@ -141,6 +164,8 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .loop p _ => PointTyped root w p cert
   | .refuse _ => False
 
+/-- What each fiber row's answer satisfies: what the machine delivers to the continuation
+(decisions row 136 for the await-by-value, close-scope and close-walk rows). -/
 def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer) : Prop :=
   match op with
   | .getId => ∃ (id : FiberId), ans = Val.nat id.value
@@ -152,12 +177,17 @@ def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer
   | .sync value => ans = value
   | .await target mode => match mode with
     | .joinEffect => ∃ ty, w'.Γ target = some ty ∧ ExitOk w' ty ans
-    | .awaitValue => ∃ ty, w'.Γ target = some ty ∧ Fits w' ans ty.answer
+    -- the encoded exit, the checker's own rule (`Program/Checker.lean:196`) and row 106's token
+    -- rule (`observerDeliveredType`), not the target's answer column
+    | .awaitValue => ∃ ty, w'.Γ target = some ty ∧ Fits w' ans (.exitOf ty.answer ty.error)
   | .fork _ _ _ | .forkIn _ _ _ _ => ∃ id : FiberId, ans = Val.fiber id ∧ w'.Γ id = some cert
   | .forkScoped _ _ _ => ∃ id : FiberId, ans = .success (Val.fiber id) ∧ w'.Γ id = some cert
   | .mask _ _ | .scoped _ | .raceAll _ _ | .raceRegister _ | .async _ _ | .gen _ | .loop _ _ =>
     ExitOk w' cert ans
-  | .unguard ex | .finishFinalizer ex | .closeScope _ ex | .scopeExit _ _ ex | .closeIter _ _ ex => ans = ex
+  | .unguard ex | .finishFinalizer ex | .scopeExit _ _ ex => ans = ex
+  -- `Scope.close` answers `void` and the close walk its merged exit: a success or a clean
+  -- failure, an exit at `⟨unit, never⟩`, never the closing argument
+  | .closeScope _ _ | .closeIter _ _ _ => ExitOk w' (EffTy.pure .unit) ans
   | .guard_ kind => match ans with
     | none => True
     | some ex => kind.hasExitArm ex = true ∧ ExitOk w' cert ex
@@ -227,6 +257,23 @@ theorem store_inv {root : ProgramSource} {w : World} {ty : EffTy} {op : SyncOp} 
       ∀ w', w.leHost w' → ∀ ans, (Ψ_S root).post w' op cert ans → TypedProg root w' ty (k ans) := by
   cases h with
   | store cert pre next => exact ⟨cert, pre, next⟩
+
+/-- The fiber arm's inversion (TY-16): an operation that is none of the four control markers is
+typed by its certificate, its pre, and a continuation for every answer the post admits at every
+later world. -/
+theorem fiber_inv {root : ProgramSource} {w : World} {ty : EffTy} {op : FiberOp}
+    {k : op.answer → RProgram} (h : TypedProg root w ty (.vis (.inr op) k))
+    (notGuard : ∀ kind, op ≠ .guard_ kind) (notUnguard : ∀ ex, op ≠ .unguard ex)
+    (notFinish : ∀ ex, op ≠ .finishFinalizer ex)
+    (notScopeExit : ∀ prev sc ex, op ≠ .scopeExit prev sc ex) :
+    ∃ cert : (Ψ_F root).Cert op, (Ψ_F root).pre w op cert ∧
+      ∀ w', w.leHost w' → ∀ ans, (Ψ_F root).post w' op cert ans → TypedProg root w' ty (k ans) := by
+  cases h with
+  | fiber _ _ _ _ cert pre next => exact ⟨cert, pre, next⟩
+  | guard _ _ _ _ => exact absurd rfl (notGuard _)
+  | unguard _ => exact absurd rfl (notUnguard _)
+  | finishFinalizer _ => exact absurd rfl (notFinish _)
+  | scopeExit _ _ => exact absurd rfl (notScopeExit _ _ _)
 
 /-- A guard's typing is exactly the saved frame's arrow (`Contracts.FrameAccepts.resume`) at
 `mid`, with the body typed at `mid`. -/
@@ -481,22 +528,37 @@ theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
     simp only [storePre] at h ⊢
     exact ⟨h.1, fits_mono ord h.2⟩
   | refGet cell | refUpdate cell _ | refGetAndUpdate cell _ | refUpdateAndGet cell _
-  | refUpdateSome cell _ | refGetAndUpdateSome cell _ | refUpdateSomeAndGet cell _
-  | refModify cell _ | refModifySome cell _ =>
+  | refUpdateSome cell _ | refGetAndUpdateSome cell _ | refUpdateSomeAndGet cell _ =>
     simp only [storePre] at h ⊢
     obtain ⟨ty, hty⟩ := h
     exact ⟨ty, hRho _ _ hty⟩
+  | refModify cell _ | refModifySome cell _ =>
+    simp only [storePre] at h ⊢
+    obtain ⟨ty, hty, equiv⟩ := h
+    exact ⟨ty, hRho _ _ hty, equiv⟩
   | refSet cell v | refGetAndSet cell v | refSetAndGet cell v =>
     simp only [storePre] at h ⊢
     obtain ⟨ty, hty, hv⟩ := h
     exact ⟨ty, hRho _ _ hty, fits_mono ord hv⟩
   | deferredIsDone key | deferredPoll key | deferredAwaitCleanup key _ _
-  | deferredCompleteWith key _ | deferredInterruptWith key _ =>
+  | deferredInterruptWith key _ =>
     simp only [storePre] at h ⊢
     exact isSome_extends hPi h
+  | deferredCompleteWith key completion =>
+    simp only [storePre] at h ⊢
+    obtain ⟨a, e, hkey, typed⟩ := h
+    refine ⟨a, e, hPi _ _ hkey, ?_⟩
+    cases completion with
+    | ofExit ex => exact strongExit_mono _ _ _ _ ord typed
+    | ofRefGet cell =>
+      obtain ⟨t, ht, sub⟩ := typed
+      exact ⟨t, hRho _ _ ht, sub⟩
   | deferredMake | memoBuild _ _ | memoGet _ _ => exact h
-  | clockNow | sleepCancel _ _ | scopeMake _ | scopeAdd _ _ | scopeRemove _ _ | scopeIsClosed _
-  | scopeFork _ _ | memoFork _ | memoComplete _ _ _ | memoRelease _ _ => exact trivial
+  | scopeAdd scope _ | scopeRemove scope _ | scopeIsClosed scope | scopeFork scope _ =>
+    simp only [storePre] at h ⊢
+    exact ord.1.1.2.2.2.1 scope h
+  | clockNow | sleepCancel _ _ | scopeMake _ | memoFork _ | memoComplete _ _ _ | memoRelease _ _ =>
+    exact trivial
 
 theorem asyncPre_mono (root : ProgramSource) (ord : w.leHost w') (register : EffName)
     (cert : EffTy) (h : asyncPre root w register cert) : asyncPre root w' register cert := by

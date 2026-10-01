@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Residual
+import Effect4.Laws.Program.Typed.Adequacy
 import Effect4.Laws.Auto.Obligations
 
 /-!
