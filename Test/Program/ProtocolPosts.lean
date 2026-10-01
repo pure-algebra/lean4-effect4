@@ -1069,3 +1069,14 @@ open Test.Program.ProtocolPosts in
 #print axioms CompleteWith.completeWith_old_adequacy_false
 open Test.Program.ProtocolPosts in
 #print axioms CompleteWith.completeWith_pre_refuses
+
+/-! The six read-modify-write store rows' adequacy, closed by integration seat I2
+(`Typed/Adequacy.lean`). -/
+#print axioms Effect4.Program.Typed.fits_total
+#print axioms Effect4.Program.Typed.fits_partialUpdate
+#print axioms Effect4.Program.Typed.refUpdate_implements
+#print axioms Effect4.Program.Typed.refGetAndUpdate_implements
+#print axioms Effect4.Program.Typed.refUpdateAndGet_implements
+#print axioms Effect4.Program.Typed.refUpdateSome_implements
+#print axioms Effect4.Program.Typed.refGetAndUpdateSome_implements
+#print axioms Effect4.Program.Typed.refUpdateSomeAndGet_implements

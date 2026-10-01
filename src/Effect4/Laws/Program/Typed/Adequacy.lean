@@ -140,6 +140,30 @@ theorem modifySome_nat (f : FnName) (n : Nat) :
     (f.modifySome (.nat n)).1 = .nat n ∧ ∃ m, (f.modifySome (.nat n)).2.getD (.nat n) = .nat m := by
   cases f <;> exact ⟨rfl, _, rfl⟩
 
+/-- A total read-modify-write keeps the cell's value at its declared type: it writes a number for
+a number (`fits_nat_irrel`) and leaves every other value as it is. -/
+theorem fits_total {w : World} (f : FnName) {a : Val} {t : Ty} (h : Fits w a t) :
+    Fits w (f.total a) t := by
+  unfold FnName.total
+  split
+  · exact fits_nat_irrel w _ _ t h
+  · exact fits_nat_irrel w _ _ t h
+  · exact fits_nat_irrel w _ _ t h
+  · exact h
+
+/-- A partial read-modify-write that writes keeps the cell's value at its declared type: it writes
+`0` for a positive number, or the total update. -/
+theorem fits_partialUpdate {w : World} (f : FnName) {a a' : Val} {t : Ty} (h : Fits w a t)
+    (hp : f.partialUpdate a = some a') : Fits w a' t := by
+  unfold FnName.partialUpdate at hp
+  split at hp
+  · cases hp
+  · cases hp
+    exact fits_nat_irrel w _ 0 t h
+  · cases hp
+  · cases hp
+    exact fits_total _ h
+
 /-- A declared cell holds a value: reading it is not a frontier. -/
 theorem cell_readable {w : World} {cell : RefKey} {t : Ty} (store : StoreTyped w)
     (declared : w.Ρ cell = some t) : ∃ a, w.state.refs[cell.index]? = some a :=
@@ -370,12 +394,13 @@ theorem complete_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cel
 
 /-! ## The store rows, one instance each
 
-Twenty-three of the thirty-one rows. The six read-modify-write rows that write `f.total a`
+Twenty-nine of the thirty-one rows. The six read-modify-write rows that write `f.total a`
 (`refUpdate`, `refGetAndUpdate`, `refUpdateAndGet`, `refUpdateSome`, `refGetAndUpdateSome`,
-`refUpdateSomeAndGet`) need `Fits w (nat n) t → Fits w (nat m) t`, one induction over the
-membership fold in `Membership.lean`; `memoGet` and `memoComplete` need a memo-table typing clause
-(every entry's Deferred declared at its layer's context and error types) that no typed-state
-clause states yet. Those eight are declared in `M3bAdequacy`. -/
+`refUpdateSomeAndGet`) read `Fits w (nat n) t → Fits w (nat m) t` (`fits_nat_irrel`, one
+induction over the membership fold in `Membership.lean`) through `fits_total` and
+`fits_partialUpdate`; `memoGet` and `memoComplete` need a memo-table typing clause (every entry's
+Deferred declared at its layer's context and error types) that no typed-state clause states yet.
+Those two are declared in `M3bAdequacy`. -/
 
 theorem scopeRemove_implements (root : ProgramSource) (scope key : Nat) :
     StoreImplements root (.scopeRemove scope key) := by
@@ -459,6 +484,111 @@ theorem refModifySome_implements (root : ProgramSource) (cell : RefKey) (f : FnN
     exact fits_subN w equiv.2 _ trivial
   obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared fits
   exact ⟨_, _, step, _, ord, rfl, store', ⟨n, answer⟩⟩
+
+/-- The six rows that write `f.total a` or `pf.partialUpdate a` (closed by integration seat I2
+with `fits_nat_irrel`): the cell holds a value of its declared type, the update writes one, and
+the answer is the old value, the new value or `unit` as the row says. -/
+theorem refUpdate_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refUpdate cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have step : syncOpStep (.refUpdate cell f) w.state =
+      some ({ w.state with refs := refPoke w.state.refs cell (f.total a) }, Val.unit) := by
+    simp only [syncOpStep, refStep, refPeek, ha, Option.map_some]
+  obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared
+    (fits_total f (store.values cell.index a ha t declared))
+  exact ⟨_, _, step, _, ord, rfl, store', rfl⟩
+
+theorem refGetAndUpdate_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refGetAndUpdate cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have old := store.values cell.index a ha t declared
+  have step : syncOpStep (.refGetAndUpdate cell f) w.state =
+      some ({ w.state with refs := refPoke w.state.refs cell (f.total a) }, a) := by
+    simp only [syncOpStep, refStep, refPeek, ha, Option.map_some]
+  obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared (fits_total f old)
+  exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord old⟩⟩
+
+theorem refUpdateAndGet_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refUpdateAndGet cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have new := fits_total f (store.values cell.index a ha t declared)
+  have step : syncOpStep (.refUpdateAndGet cell f) w.state =
+      some ({ w.state with refs := refPoke w.state.refs cell (f.total a) }, f.total a) := by
+    simp only [syncOpStep, refStep, refPeek, ha, Option.map_some]
+  obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared new
+  exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord new⟩⟩
+
+theorem refUpdateSome_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refUpdateSome cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have old := store.values cell.index a ha t declared
+  cases hp : f.partialUpdate a with
+  | none =>
+    have step : syncOpStep (.refUpdateSome cell f) w.state =
+        some ({ w.state with refs := w.state.refs }, Val.unit) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.map_some]
+    obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
+    exact ⟨_, _, step, _, ord, rfl, store', rfl⟩
+  | some a' =>
+    have step : syncOpStep (.refUpdateSome cell f) w.state =
+        some ({ w.state with refs := refPoke w.state.refs cell a' }, Val.unit) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.map_some]
+    obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared
+      (fits_partialUpdate f old hp)
+    exact ⟨_, _, step, _, ord, rfl, store', rfl⟩
+
+theorem refGetAndUpdateSome_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refGetAndUpdateSome cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have old := store.values cell.index a ha t declared
+  cases hp : f.partialUpdate a with
+  | none =>
+    have step : syncOpStep (.refGetAndUpdateSome cell f) w.state =
+        some ({ w.state with refs := w.state.refs }, a) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.map_some]
+    obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
+    exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord old⟩⟩
+  | some a' =>
+    have step : syncOpStep (.refGetAndUpdateSome cell f) w.state =
+        some ({ w.state with refs := refPoke w.state.refs cell a' }, a) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.map_some]
+    obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared
+      (fits_partialUpdate f old hp)
+    exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord old⟩⟩
+
+theorem refUpdateSomeAndGet_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refUpdateSomeAndGet cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have old := store.values cell.index a ha t declared
+  cases hp : f.partialUpdate a with
+  | none =>
+    have step : syncOpStep (.refUpdateSomeAndGet cell f) w.state =
+        some ({ w.state with refs := w.state.refs }, a) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.bind_some, Option.map_some]
+    obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
+    exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord old⟩⟩
+  | some a' =>
+    have live : cell.index < w.state.refs.length := (List.getElem?_eq_some_iff.mp ha).1
+    have fresh : (refPoke w.state.refs cell a')[cell.index]? = some a' :=
+      List.getElem?_set_self live
+    have step : syncOpStep (.refUpdateSomeAndGet cell f) w.state =
+        some ({ w.state with refs := refPoke w.state.refs cell a' }, a') := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.bind_some, fresh, Option.map_some]
+    have new := fits_partialUpdate f old hp
+    obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared new
+    exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord new⟩⟩
 
 theorem refMake_implements (root : ProgramSource) (initial : Val) :
     StoreImplements root (.refMake initial) := by
@@ -1487,16 +1617,22 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.closeWalk_typed
 #obligation_proved Effect4.Program.Typed.M3bAdequacy.closeScope_installs :=
   @Effect4.Program.Typed.closeScope_installs
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refUpdate_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refGetAndUpdate_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refUpdateAndGet_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refUpdateSome_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refGetAndUpdateSome_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refUpdateSomeAndGet_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refUpdate_implements :=
+  @Effect4.Program.Typed.refUpdate_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refGetAndUpdate_implements :=
+  @Effect4.Program.Typed.refGetAndUpdate_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refUpdateAndGet_implements :=
+  @Effect4.Program.Typed.refUpdateAndGet_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refUpdateSome_implements :=
+  @Effect4.Program.Typed.refUpdateSome_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refGetAndUpdateSome_implements :=
+  @Effect4.Program.Typed.refGetAndUpdateSome_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refUpdateSomeAndGet_implements :=
+  @Effect4.Program.Typed.refUpdateSomeAndGet_implements
 #proof_wanted Effect4.Program.Typed.M3bAdequacy.memoGet_implements
 #proof_wanted Effect4.Program.Typed.M3bAdequacy.memoComplete_implements
 #obligation_proved Effect4.Program.Typed.M3bAdequacy.guard_frame :=
   fun _ _ _ _ _ h => Effect4.Program.Typed.TypedProg.guard_frame h
 #obligation_audit Effect4.Program.Typed.M3bAdequacy
-#typed_state_obligations Effect4.Program.Typed.M3bAdequacy ceiling 8
+#typed_state_obligations Effect4.Program.Typed.M3bAdequacy ceiling 2
   using aesop (rule_sets := [Effect4.TypedState])

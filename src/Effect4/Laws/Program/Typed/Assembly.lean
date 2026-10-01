@@ -319,6 +319,33 @@ theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : Wo
     | openInline _ _ => cases hex
     | openMap _ => cases hex
 
+/-- **TY-08's promise half (proved)**: the coarse promise column (`PromiseTable`, the leaf
+`CompletionOk`) from the strong one (`preds`' `PromiseCell`, the leaf `CompletionStrong`): an
+exit through `completionOk_of_fitsExit`, a reference completion as it stands (both read the cell's
+declaration in `Ty.subN`, row 137). The heap half is `heapTable_of_fits` (`Membership.lean`). -/
+theorem promiseTable_of_strong {w : World}
+    (h : Columns.DeferredStore_cells (fun w key cell => ∀ a e, w.«Π» key = some (a, e) →
+      ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c) w
+      w.state.deferreds.cells) : PromiseTable w := by
+  intro i cell hc types hty c hcomp
+  obtain ⟨a, e⟩ := types
+  have strong := h i cell hc a e hty c hcomp
+  cases c with
+  | ofExit ex => exact completionOk_of_fitsExit strong.1
+  | ofRefGet _ => exact strong
+
+/-- **TY-08 (proved)**: the generated typed state gives the coarse cell columns `WorldValid.cells`
+states, from its strong heap and promise columns. So that field is redundant beside the typed
+state (dropping it from `WorldValid` is owed: every construction of `WorldValid` builds it). -/
+theorem cells_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    (typed : TypedState root rootTy w m) : HeapTable w ∧ PromiseTable w := by
+  obtain ⟨valid, ok, _, _, _, _⟩ := typed
+  refine ⟨heapTable_of_fits fun i v hv ty hty => ?_, promiseTable_of_strong fun i cell hc => ?_⟩
+  · rw [valid.state] at hv
+    exact ok.c2.c1 i v hv ty hty
+  · rw [valid.state] at hc
+    exact ok.c2.c2.c0 i cell hc
+
 /-- **The loop-entry premise holds for this split** (`DecisionLift.evaluate`): `J` gives `I` at
 the fresh queue an evaluate or interrupt decision starts, at every machine, a budget cut
 included. The proofs seat's split keyed on a queued `finish` fails exactly here
