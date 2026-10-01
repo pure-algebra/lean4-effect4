@@ -124,7 +124,12 @@ def FiberCert : FiberOp → Type
 /-- The type an async registration's answer is certified at: a timer's `unit`, a deferred's
 completion at the promise table's columns, a host row's columns from the source's row table.
 A host slot (`FinName.parkThen`'s release) is certified by the host protocol, a correlation the
-state predicate owns; any other registration is not generated code and is refused. -/
+state predicate owns; any other registration is not generated code and is refused.
+
+Decisions row 137 (ratified 2026-10-01), reviewed here: the certificate is chosen by the
+typing derivation, which may take it equal to the declared columns, so these comparisons stay in
+`Ty.sub`; `fits_normalize` bridges a certificate to the checker's normalized type. The same holds
+for `fiberPre`'s `awaitAll` and `raceAll` entries. -/
 def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : EffTy) : Prop :=
   match register with
   | .store (.registerSleep _) => Ty.unit.sub cert.answer = true
@@ -275,8 +280,13 @@ theorem fiber_inv {root : ProgramSource} {w : World} {ty : EffTy} {op : FiberOp}
   | finishFinalizer _ => exact absurd rfl (notFinish _)
   | scopeExit _ _ => exact absurd rfl (notScopeExit _ _ _)
 
-/-- A guard's typing is exactly the saved frame's arrow (`Contracts.FrameAccepts.resume`) at
-`mid`, with the body typed at `mid`. -/
+/-- A guard's typing: the body at the guard's intermediate type `mid`, a run arm for the exits
+the guard row admits at `mid` and a skip arm, both at every later world. With the Kripke-closed
+frame judgment (row 135) this is the arrow of the frame the evaluator saves
+(`saveR`'s `.resume kind`), with the run arm's premise curried: `TypedProg.guard_frame`, stated
+below the hook protocols. Before row 135
+the frame's arms were stated at one world, so the two were not the same arrow, whatever this
+docstring then said. -/
 theorem guard_inv {root : ProgramSource} {w : World} {ty : EffTy} {kind : GuardKind}
     {k : Option ExitV → RProgram} (h : TypedProg root w ty (.vis (.inr (.guard_ kind)) k)) :
     ∃ mid : EffTy, TypedProg root w mid (k none) ∧
@@ -388,6 +398,21 @@ theorem asyncFinalizerProtocol_mono {root : ProgramSource} {w w' : World} (ord :
     {tin tout : EffTy} {name : EffName} (h : (frameProtocols root).asyncFinalizer w tin tout name) :
     (frameProtocols root).asyncFinalizer w' tin tout name :=
   ⟨h.1, fun w'' o => h.2 w'' (leHost_trans _ _ _ ord o)⟩
+
+namespace TypedProg
+
+/-- **A guard's typing is the saved frame's arrow**: the body is typed at `mid`, and the frame
+the evaluator saves (`saveR f kind (fun ex => k (some ex))`, `EvaluateR.lean:147`) is accepted
+from `mid` to the guard's type, at every later world. -/
+theorem guard_frame {root : ProgramSource} {w : World} {ty : EffTy} {kind : GuardKind}
+    {k : Option ExitV → RProgram} (h : TypedProg root w ty (.vis (.inr (.guard_ kind)) k)) :
+    ∃ mid : EffTy, TypedProg root w mid (k none) ∧
+      Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w mid ty
+        (.resume kind fun ex => k (some ex)) := by
+  obtain ⟨mid, body, run, skip⟩ := guard_inv h
+  exact ⟨mid, body, .resume kind _ (fun w' ord ex hex arm => run w' ord ex ⟨arm, hex⟩) skip⟩
+
+end TypedProg
 
 /-! ## Settling Case 1: Polymorphic ref allocation and read on heterogeneous heap -/
 

@@ -1075,8 +1075,9 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
 One goal per row the evaluator answers, beside the eighteen command goals (`M6Ledger`), with the
 two generic rules: the store rows through `syncOpStep` (`StoreImplements`), the fiber rows
 through the frame the evaluator saves and the answers their helpers give. Wave 2 consumes them
-in M6's `loop` and `deliver` arms. Proved here: the two rules, 23 store rows and 39 fiber
-instances; declared: the 8 store rows named above. -/
+in M6's `loop` and `deliver` arms. Proved here: the three generic rules, 23 store rows and 40
+fiber instances (the guard row's through `TypedProg.guard_frame`); declared: the 8 store rows
+named above. -/
 
 namespace M3bAdequacy
 
@@ -1368,6 +1369,15 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
         TypedProg root w (EffTy.pure .unit) (denoteFin fin exit)) →
       closeScopeR scope exit flag st = some (st', code) → TypedProg root w (EffTy.pure .unit) code) := ⟨⟩
 
+/-- The guard row: its typing is the arrow of the frame the evaluator saves
+(`TypedProg.guard_frame`, `Typed/Residual.lean`). -/
+theorem guard_frame (root : ProgramSource) (w : World) (ty : EffTy) (kind : GuardKind)
+    (k : Option ExitV → RProgram) : ProofGraph.Obligation
+    (TypedProg root w ty (.vis (.inr (.guard_ kind)) k) →
+      ∃ mid : EffTy, TypedProg root w mid (k none) ∧
+        FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w mid ty
+          (.resume kind fun ex => k (some ex))) := ⟨⟩
+
 end M3bAdequacy
 
 end Effect4.Program.Typed
@@ -1510,6 +1520,8 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M3bAdequacy.refUpdateSomeAndGet_implements
 #proof_wanted Effect4.Program.Typed.M3bAdequacy.memoGet_implements
 #proof_wanted Effect4.Program.Typed.M3bAdequacy.memoComplete_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.guard_frame :=
+  fun _ _ _ _ _ h => Effect4.Program.Typed.TypedProg.guard_frame h
 #obligation_audit Effect4.Program.Typed.M3bAdequacy
 #typed_state_obligations Effect4.Program.Typed.M3bAdequacy ceiling 8
   using aesop (rule_sets := [Effect4.TypedState])
