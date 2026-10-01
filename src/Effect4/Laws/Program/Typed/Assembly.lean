@@ -1662,17 +1662,14 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_interruptTarget
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_afterInterrupt
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_raceCancel
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_trackChild
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_observe
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_exitDone
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_closeParAwait
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_link
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_drainDue
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_wake
 #proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves
 #proof_wanted Effect4.Program.Typed.M6Ledger.typedState_reachable
-#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 20
-  using aesop (rule_sets := [Effect4.TypedState])
+-- `M6Ledger`'s proved goals and its report are at the foot of the last command module
+-- (`Typed/Commands/*.lean`), which imports this one and sees every proof.
 #proof_wanted Effect4.Program.Typed.M7.exits_typed
 #proof_wanted Effect4.Program.Typed.M7.stores_typed
 #proof_wanted Effect4.Program.Typed.M7.never_halts
