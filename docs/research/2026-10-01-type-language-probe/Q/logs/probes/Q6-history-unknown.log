@@ -1,0 +1,28 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ ./docs/research/2026-10-01-type-language-probe/Q/check-conservativity.sh 0a2cb898\^ 0a2cb898
+# started 2026-10-01T20:32:57Z (LEAN_NUM_THREADS=1)
+conservativity: BASE 0a2cb898^, CAND 0a2cb898
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: PASS: 21 tag families, 3 manifests; appended 1 constructors {'Effect4.Program.Ty': ['unknown']}
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: REFUSE: 1 added and 0 retired between BASE and CAND; 1 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  not named: Effect4.Program.Ty.unknown
+  pre-existing (since the frozen baseline, not named; reported): 3 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var']
+C5 record: git diff --stat over 61 GENERATED_PATHS entries: 15 files changed, 45 insertions(+), 9 deletions(-)
+  ocaml/eff/eff_json.ml                   |  1 +
+  ocaml/eff/eff_layout.ml                 |  4 ++--
+  ocaml/eff/eff_manifest.txt              |  2 +-
+  ocaml/eff/eff_types.ml                  |  6 +++++-
+  ocaml/eff/eff_wire.ml                   |  3 +++
+  ocaml/eff/goldens/coverage-metadata.txt |  1 +
+  ocaml/eff/goldens/metadata.tsv          |  1 +
+  ocaml/eff/program-structure.json        |  2 +-
+  ocaml/engine/e4_program_layout.json     |  2 +-
+  ocaml/goldens/eff/manifest.txt          |  2 +-
+  ocaml/goldens/eff/wire-tags.txt         |  2 +-
+  src/Effect4/Program/Fold.lean           | 22 ++++++++++++++++++++++
+  ts/eff/eff.gen.ts                       |  4 +++-
+  ts/eff/json.gen.ts                      |  1 +
+  ts/eff/wire.gen.ts                      |  1 +
+conservativity: REFUSE (3 of 4 clauses pass)
+# exit=1 seconds=16
