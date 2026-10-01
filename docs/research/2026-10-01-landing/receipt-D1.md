@@ -27,9 +27,10 @@ and needs a closed root row at M5 (`load_presence_needs_closed_row`): landing it
 open M6 goals false, so part two is stopped. Before merging, know the shape changes a branch in
 flight (seat D3's command proofs) may hit: `fitsExit_failure_iff` now ends `∧ ShapeFree c` and
 `fitsExit_of_clean` takes a `ShapeFree c` argument (row 152; one token or one argument per site:
-nine consumer sites outside `Membership.lean` and this seat's own batteries needed one); `PointTyped`, `storePre`'s `memoGet` arm and `CaptureTyped` check a
-node through `Eff.expandIn src.program` (row 153; a proof that unfolds them and compares the check
-with a raw-node lemma needs `Eff.expandIn_eq_self`; every existing control re-checked unchanged);
+nine consumer sites outside `Membership.lean` and this seat's own batteries needed one);
+`PointTyped`, `storePre`'s `memoGet` arm and `CaptureTyped` check a node through `Eff.expandIn
+src.program` (row 153; a proof that unfolds them and compares the check with a raw-node lemma
+needs `Eff.expandIn_eq_self`; every existing control re-checked unchanged);
 `IteratorProtocol.step` and `LoopProtocol.step` take a third argument `rows` (row 117; `fun _ =>
 rfl` at equal or empty rows). The branch merges with `refactor/phase1-phase3` at `52cf49e7` with
 no textual conflict (tested, `git merge-tree`; main changed no Lean file since the base).
@@ -63,7 +64,7 @@ merge`, `checkout`, `reset` or `push` was run; no permission was refused. Two tr
 
 ### Row 152 (a), commit `64df7977`
 
-- **The clause** (`Membership.lean:101` `ShapeFree`, `:132-139` the `exitOf` arm): `Fits w v
+- **The clause** (`Membership.lean:101` `ShapeFree`, `:146-153` the `exitOf` arm): `Fits w v
   (.exitOf a e)` at `Value.exitErr written` with `causeImage.ofVal written = some c` is now
   `CauseFits (fun x => Fits w x e) c ∧ ShapeFree c`, where `ShapeFree c` says no reason of `c`
   dies with `badName` or `notImplemented` (the body of `NoShapeDefect`'s failure arm, so
@@ -168,8 +169,8 @@ runtime change or a shape change the brief does not give it, measured as follows
   change to the frame machine too (the `Effect4` root, so the OCaml face regenerates through
   `make gen-lcnf`, which this seat may not run), and a departure from rc.112's runtime value
   (its declared type is `Effect<void>`, `Scope.ts:567`; the finalizer's declared type is
-  `Effect<unknown>`, `internal/effect.ts:3850`, and the release's `Effect<unknown, never, R2>`,
-  `:3980`): a signed divergence, the owner's to rule, like FR-08's.
+  `Effect<unknown>`, `internal/effect.ts:3849`, and the release's `Effect<unknown, never, R2>`,
+  `:3973`): a signed divergence, the owner's to rule, like FR-08's.
 - **Reading of the brief.** The brief names "the `.release label fails` arm of `denoteFin`"; that
   arm is `FinName.release`, a synthetic finalizer whose success is already `unit`. The value
   receipt B's finding and the row describe is an `acquireRelease` release's, which is the
