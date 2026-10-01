@@ -180,7 +180,7 @@ theorem fiberPre_rows_append (hentry : AsyncEntryRows) {w : Typed.World} {op : F
   | mask flag body => exact bodyTyped_rows_append src src' t' hprog htab h
   | forkScoped child options path => exact pointTyped_rows_append src src' t' hprog htab h
   | fork body options path => exact bodyTyped_rows_append src src' t' hprog htab h
-  | forkIn child options scope path => exact pointTyped_rows_append src src' t' hprog htab h
+  | forkIn child options scope path => exact ⟨pointTyped_rows_append src src' t' hprog htab h.1, h.2⟩
   | gen p => exact pointTyped_rows_append src src' t' hprog htab h
   | loop p name => exact pointTyped_rows_append src src' t' hprog htab h
   | _ => exact h

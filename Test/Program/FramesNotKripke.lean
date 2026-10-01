@@ -83,7 +83,7 @@ theorem w0_le_w1 : world.leHost w1 := by
     · unfold PromiseTypedAt at h
       cases h.1
   exact ⟨⟨⟨fun _ h => h, hst⟩, fun _ _ h => h, fun _ _ h => h, hrho, hcells,
-    fun _ _ _ h => h⟩, fun _ _ h => h⟩
+    fun _ _ _ h => h, rfl⟩, fun _ _ h => h⟩
 
 theorem cell0_ok_w1 : ExitOk w1 tin (.success (Val.cell ⟨0⟩)) := by
   refine ⟨?_, trivial⟩
@@ -684,7 +684,7 @@ theorem w0_le_w1g : world.leHost w1g := by
     · unfold PromiseTypedAt at h
       cases h.1
   exact ⟨⟨⟨fun _ h => h, hst⟩, fun _ _ h => h, fun _ _ h => h, hrho, hcells,
-    fun _ _ _ h => h⟩, fun _ _ h => h⟩
+    fun _ _ _ h => h, rfl⟩, fun _ _ h => h⟩
 
 theorem valid_w1g : WorldValid unitTy w1g afterGood.1 := by
   have v0 := initial_world_valid unitTy refProg 20 20 ⟨rfl, rfl⟩

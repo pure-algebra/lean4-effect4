@@ -90,7 +90,7 @@ theorem restate_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
     exact fun _ _ h => h
   have ord : w.leHost { w with state := st' } := by
     refine ⟨⟨⟨fun _ h => h, le⟩, fun _ _ h => h, fun _ _ h => h, fun _ _ h => h, ⟨?_, ?_⟩,
-      fun _ _ _ h => h⟩, ext⟩
+      fun _ _ _ h => h, rfl⟩, ext⟩
     · intro key ty h
       refine ⟨h.1, fun value hv => ?_⟩
       have hv' : refPeek w.state.refs key = some value := by
@@ -131,20 +131,6 @@ theorem same_world {w : World} {op : SyncOp} {ans : Val} (store : StoreTyped w)
 
 /-! ## Value facts the store rows read -/
 
-/-- Membership at `nat` is exactly the `nat` values (the `.nat` arm of `Fits`). -/
-theorem fits_nat_val {w : World} {v : Val} (h : Fits w v .nat) : ∃ n, v = Val.nat n := by
-  unfold Fits at h
-  split at h
-  · exact ⟨_, rfl⟩
-  · exact h.elim
-
-/-- Membership at `unit` is exactly the `unit` value (the `.unit` arm of `Fits`). -/
-theorem fits_unit_val {w : World} {v : Val} (h : Fits w v .unit) : v = Val.unit := by
-  unfold Fits at h
-  split at h
-  · rfl
-  · exact h.elim
-
 /-- On a `nat` cell, `modify` answers the old value and writes a `nat`. -/
 theorem modify_nat (f : FnName) (n : Nat) :
     (f.modify (.nat n)).1 = .nat n ∧ ∃ m, (f.modify (.nat n)).2 = .nat m := by
@@ -173,7 +159,7 @@ theorem nat_cell {w : World} {cell : RefKey} (store : StoreTyped w) (pre : RefDe
   obtain ⟨a, ha⟩ : ∃ a, w.state.refs[cell.index]? = some a :=
     ⟨_, List.getElem?_eq_getElem live⟩
   have fa : Fits w a t := store.values cell.index a ha t declared
-  obtain ⟨n, rfl⟩ := fits_nat_val (fits_sub w equiv.1 a fa)
+  obtain ⟨n, rfl⟩ := fits_nat_inv (fits_subN w equiv.1 a fa)
   exact ⟨t, n, declared, equiv, ha⟩
 
 /-- A table that covers exactly the indices below `n`, extended by the one key at index `n`,
@@ -243,17 +229,6 @@ theorem complete_cells_length (d : DeferredStore) (cell : DeferredKey)
     · rfl
     · exact List.length_set
 
-/-- The strong exit judgment gives the coarse completion check the world order reads. -/
-theorem completionOk_of_fitsExit {w : World} {a e : Ty} {ex : ExitV}
-    (h : FitsExit w ⟨a, e, Env.Requirement.empty⟩ ex) : CompletionOk w (a, e) (.ofExit ex) := by
-  cases ex with
-  | success v =>
-    rw [fitsExit_success_iff] at h
-    exact fits_hasTy w a v h
-  | failure c =>
-    rw [fitsExit_failure_iff] at h
-    exact causeFits_admits (fun x hx => fits_hasTy w e x hx) c h
-
 /-! ## Moving the world along a ref write and a completion -/
 
 /-- A store step that writes one ref cell with a value its declared type admits moves to the world
@@ -284,7 +259,7 @@ theorem poke_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : 
       exact Or.inr ⟨fun h => other h.symm, hx⟩
   have ord : w.leHost { w with state := st' } := by
     refine ⟨⟨⟨fun _ h => h, le⟩, fun _ _ h => h, fun _ _ h => h, fun _ _ h => h, ⟨?_, ?_⟩,
-      fun _ _ _ h => h⟩, ext⟩
+      fun _ _ _ h => h, rfl⟩, ext⟩
     · intro key ty h
       refine ⟨h.1, fun value hv => ?_⟩
       change st'.refs[key.index]? = some value at hv
@@ -348,7 +323,7 @@ theorem complete_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cel
     exact fun _ _ h => h
   have ord : w.leHost { w with state := st' } := by
     refine ⟨⟨⟨fun _ h => h, le⟩, fun _ _ h => h, fun _ _ h => h, fun _ _ h => h, ⟨?_, ?_⟩,
-      fun _ _ _ h => h⟩, ext⟩
+      fun _ _ _ h => h, rfl⟩, ext⟩
     · intro key ty h
       refine ⟨h.1, fun value hv => ?_⟩
       have hv' : refPeek w.state.refs key = some value := by
@@ -466,7 +441,7 @@ theorem refModify_implements (root : ProgramSource) (cell : RefKey) (f : FnName)
     simp only [syncOpStep, refStep, peek, Option.map_some]
   have fits : Fits w (f.modify (.nat n)).2 t := by
     rw [written]
-    exact fits_sub w equiv.2 _ trivial
+    exact fits_subN w equiv.2 _ trivial
   obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared fits
   exact ⟨_, _, step, _, ord, rfl, store', ⟨n, answer⟩⟩
 
@@ -481,7 +456,7 @@ theorem refModifySome_implements (root : ProgramSource) (cell : RefKey) (f : FnN
     simp only [syncOpStep, refStep, peek, Option.map_some]
   have fits : Fits w ((f.modifySome (.nat n)).2.getD (.nat n)) t := by
     rw [written]
-    exact fits_sub w equiv.2 _ trivial
+    exact fits_subN w equiv.2 _ trivial
   obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared fits
   exact ⟨_, _, step, _, ord, rfl, store', ⟨n, answer⟩⟩
 
@@ -878,7 +853,7 @@ theorem yieldNow_frame {root : ProgramSource} {w : World} {outer : EffTy} {prior
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem interrupt_frame {root : ProgramSource} {w : World} {outer : EffTy} {target : FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.interrupt target)) next)) :
@@ -886,7 +861,7 @@ theorem interrupt_frame {root : ProgramSource} {w : World} {outer : EffTy} {targ
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem interruptAs_frame {root : ProgramSource} {w : World} {outer : EffTy} {target who : FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.interruptAs target who)) next)) :
@@ -894,7 +869,7 @@ theorem interruptAs_frame {root : ProgramSource} {w : World} {outer : EffTy} {ta
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem interruptScoped_frame {root : ProgramSource} {w : World} {outer : EffTy} {target : FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.interruptScoped target)) next)) :
@@ -902,7 +877,7 @@ theorem interruptScoped_frame {root : ProgramSource} {w : World} {outer : EffTy}
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem interruptAll_frame {root : ProgramSource} {w : World} {outer : EffTy} {targets : List FiberId} {who : Option FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.interruptAll targets who)) next)) :
@@ -910,7 +885,7 @@ theorem interruptAll_frame {root : ProgramSource} {w : World} {outer : EffTy} {t
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem cancelRace_frame {root : ProgramSource} {w : World} {outer : EffTy} {race : Nat}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.cancelRace race)) next)) :
@@ -918,7 +893,7 @@ theorem cancelRace_frame {root : ProgramSource} {w : World} {outer : EffTy} {rac
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem awaitNewChildren_frame {root : ProgramSource} {w : World} {outer : EffTy} {snapshot : List FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.awaitNewChildren snapshot)) next)) :
@@ -926,7 +901,7 @@ theorem awaitNewChildren_frame {root : ProgramSource} {w : World} {outer : EffTy
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 /-! The join-all rows: the saved frame accepts the list of exits the certificate names. -/
 

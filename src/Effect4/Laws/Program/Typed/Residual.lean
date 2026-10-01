@@ -53,7 +53,7 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .deferredCompleteWith key completion => ∃ a e, w.«Π» key = some (a, e) ∧
       match completion with
       | .ofExit ex => ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex
-      | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.sub a = true
+      | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ Ty.subN t a = true
   | .deferredInterruptWith key _ => (w.«Π» key).isSome = true
   | .clockNow | .sleepCancel _ _ => True
   | .scopeMake _ => True
@@ -641,7 +641,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | async register _ => exact asyncPre_mono root ord register cert h
   | setContext ctx =>
     simp only [fiberPre] at h ⊢
-    exact servicesFit_map hPi hRho ord.2 h
+    exact servicesFit_map hPi hRho ord.2 (serviceTy_of_le ord.1) h
   | getContext | snapshotChildren => exact h
   | refuse _ | raceRegister _ => exact (h : False).elim
   | interruptAs target _ =>
