@@ -114,8 +114,9 @@ open Effect4.Program Effect4.Schema.Bridge
 #check ofSchema_schema_cty
 
 -- Row 6: what `schema` never writes, `ofSchema` refuses — a check `Ty` cannot carry, a declaration
--- payload that is not `null`, a defect slot that is not the `Defect` declaration, an optional
--- tuple element. Annotations are not read.
+-- payload that is not `null`, a defect slot that is not the `Json` declaration, an optional
+-- tuple element. Annotations are read under row 179's policy: documentation keys erased, every
+-- other key refused (the row-128 controls below).
 #guard Ty.ofSchema (.string none [Schema.Check.named "effect/schema/pattern"]) = none
 #guard Ty.ofSchema (.boolean none [Schema.Check.named "effect/schema/isTrue"]) = none
 #guard Ty.ofSchema (.declaration ⟨"effect/schema/Option", .str "payload"⟩ none [Schema.string] []) = none
@@ -129,6 +130,247 @@ open Effect4.Program Effect4.Schema.Bridge
   = none
 #guard Ty.ofSchema (.declaration ⟨"effect/schema/Option", .null⟩ (some [⟨"title", .str "t"⟩])
   [Schema.string] []) = some (.option .string)
+
+/-! ### Row 128: the reader is exact modulo `N_S` (`Bridge.ofSchema_exact`)
+
+The red controls are stated on `ofSchemaBefore`, the reader as it stood at `74dae8d2` (before row
+128's commit), kept here verbatim as their subject and for nothing else: it read a check by its id,
+read the template parameter's declaration back as a handle, ignored every annotation, and named the
+defect slot `effect/schema/Defect`. Each defect is a theorem about that reader (seat P's controls,
+`docs/research/2026-10-01-type-language-probe/P/probes/P8Schema.lean:164-189`; seat S's `ge5`,
+`groupedInt` and the defect slot, `.../S/probes/K2Copy.lean:994-1000`, `:1754-1759`), a
+`#guard_msgs (error)` fixture in seat S's form, and a green twin on the production reader. -/
+
+/-- The defect slot before row 128's commit (`Schema/Bridge.lean:69-71` at `74dae8d2`). -/
+def isDefectBefore : Representation → Bool
+  | .declaration ⟨"effect/schema/Defect", .null⟩ _ [] [] => true
+  | _ => false
+
+/-- The reader before row 128's commit (`Schema/Bridge.lean:79-135` at `74dae8d2`), verbatim. -/
+def ofSchemaBefore : Representation → Option Ty
+  | .never _ [] => some .never
+  | .unknown _ [] => some .unknown
+  | .void _ [] => some .unit
+  | .number _ checks =>
+    match checks.map checkId with
+    | ["effect/schema/isInt", "effect/schema/isGreaterThanOrEqualTo"] => some .nat
+    | ["effect/schema/isInt"] => some .int
+    | _ => none
+  | .string _ [] => some .string
+  | .boolean _ [] => some .bool
+  | .literal _ [] (.string s) => some (.lit s)
+  | .declaration ⟨id, .null⟩ _ [val] [] =>
+    if id == "effect/schema/Option" then do
+      let t ← ofSchemaBefore val
+      some (.option t)
+    else if id == "effect/schema/Ref" then do
+      let t ← ofSchemaBefore val
+      some (.refOf t)
+    else none
+  | .declaration ⟨id, .null⟩ _ [a, b] [] =>
+    if id == "effect/schema/Result" then do
+      let tv ← ofSchemaBefore a
+      let te ← ofSchemaBefore b
+      some (.except te tv)
+    else if id == "effect/schema/Fiber" then do
+      let tv ← ofSchemaBefore a
+      let te ← ofSchemaBefore b
+      some (.fiberOf tv te)
+    else if id == "effect/schema/Deferred" then do
+      let tv ← ofSchemaBefore a
+      let te ← ofSchemaBefore b
+      some (.deferredOf tv te)
+    else if id == "effect/schema/Cause" && isDefectBefore b then do
+      let te ← ofSchemaBefore a
+      some (.causeOf te)
+    else none
+  | .declaration ⟨id, .null⟩ _ [val, err, defect] [] =>
+    if id == "effect/schema/Exit" && isDefectBefore defect then do
+      let tv ← ofSchemaBefore val
+      let te ← ofSchemaBefore err
+      some (.exitOf tv te)
+    else none
+  | .declaration ⟨id, .null⟩ _ [] [] =>
+    some (.handle id)
+  | .arrays _ [] [] [item] => do
+    let t ← ofSchemaBefore item
+    some (.list t)
+  | .arrays _ [] [⟨false, a, none⟩, ⟨false, b, none⟩] [] => do
+    let ta ← ofSchemaBefore a
+    let tb ← ofSchemaBefore b
+    some (.prod ta tb)
+  | .union _ [] [a, b] .anyOf => do
+    let ta ← ofSchemaBefore a
+    let tb ← ofSchemaBefore b
+    some (.union ta tb)
+  | _ => none
+
+/-- `number` with `isInt` and "≥ 5" (seat P's `numberAtLeast5`, seat S's `ge5`). -/
+def ge5 : Representation := .number none [isIntCheck,
+  Schema.Check.named "effect/schema/isGreaterThanOrEqualTo" (.obj [("minimum", Arch.Json.ofNat 5)])]
+
+/-- A filter group whose own representation is `isInt` (seat S's `groupedInt`). -/
+def groupedInt : Representation := .number none [Schema.Check.group
+  (Schema.Check.named "effect/schema/isGreaterThanOrEqualTo" (.obj [("minimum", Arch.Json.ofNat 5)])) []
+  none (some ⟨"effect/schema/isInt", .null, none⟩)]
+
+/-- `string` with a `parseOptions` annotation (seat P's `stringParseOptions`). -/
+def stringParseOptions : Representation :=
+  .string (some [⟨"parseOptions", .obj [("onExcessProperty", .str "preserve")]⟩]) []
+
+/-- rc.112's own `Exit(Int, String, Defect())` document, its defect slot named `defectId` (probe S,
+`.../S/host/logs/q4-defect.log`: rc.112 writes `effect/schema/Json` there, with `expected`). -/
+def rcExitDoc (defectId : String) : Representation :=
+  .declaration ⟨"effect/schema/Exit", .null⟩ (some [⟨"expected", .str "Exit"⟩])
+    [schema .int, Schema.string,
+     .declaration ⟨defectId, .null⟩ (some [⟨"expected", .str "JSON value"⟩]) [] []] []
+
+/-- RED CONTROL (proved): the reader before the repair read "≥ 5" as `nat`, whose schema is "≥ 0":
+not exact modulo `N_S`. -/
+theorem ofSchema_reads_check_ids :
+    ofSchemaBefore ge5 = some .nat ∧ normS ge5 ≠ normS (schema .nat) := by
+  decide +kernel
+
+/-- RED CONTROL (proved): the reader before the repair read a filter group as `int` by its id. -/
+theorem ofSchema_reads_groupedInt :
+    ofSchemaBefore groupedInt = some .int ∧ normS groupedInt ≠ normS (schema .int) := by
+  decide +kernel
+
+/-- RED CONTROL (proved): a template parameter's schema read back as a handle, and two parameters
+share one schema. -/
+theorem ofSchema_reads_typeParameter :
+    ofSchemaBefore (schema (.var 0)) = some (.handle "effect/schema/TypeParameter") ∧
+      schema (.var 0) = schema (.var 1) := by
+  decide +kernel
+
+/-- RED CONTROL (proved): the reader before the repair read a decoding annotation as if absent. -/
+theorem ofSchema_drops_parseOptions :
+    ofSchemaBefore stringParseOptions = some .string ∧
+      normS stringParseOptions ≠ normS (schema .string) := by
+  decide +kernel
+
+/-- RED CONTROL (proved, `E4-SCHEMA-CE-061`): the reader before the repair refused rc.112's own
+`Exit` document and read the one carrying Lean's invented defect id. -/
+theorem ofSchema_refused_rcExit :
+    ofSchemaBefore (rcExitDoc "effect/schema/Json") = none ∧
+      ofSchemaBefore (rcExitDoc "effect/schema/Defect") = some (.exitOf .int .string) := by
+  decide +kernel
+
+/-- RED (seat S's `red_ge5`): the reader before the repair refuses `number ≥ 5`. -/
+def red_ge5 : Bool := ofSchemaBefore ge5 == none
+/--
+error: Expression
+  red_ge5
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_ge5
+
+/-- RED (seat S's `groupedInt` control): the reader before the repair refuses a filter group. -/
+def red_groupedInt : Bool := ofSchemaBefore groupedInt == none
+/--
+error: Expression
+  red_groupedInt
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_groupedInt
+
+/-- RED (seat S's `red_typeParameter`): the handle named `effect/schema/TypeParameter` round-trips
+through the production pair. It does not (the reader refuses the id by name), which is why the
+retraction `ofSchema_schema` takes `reservedFree`: the unconditional statement on closed types is
+refuted at this type. -/
+def red_typeParameter : Bool :=
+  ofSchema (schema (.handle "effect/schema/TypeParameter")) ==
+    some (.handle "effect/schema/TypeParameter")
+/--
+error: Expression
+  red_typeParameter
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_typeParameter
+
+/-- RED: exactness without the normaliser (the read representation is literally `schema t`). A
+documented node reads, and is not `schema`'s image syntactically, only modulo `N_S`. -/
+def red_exactWithoutNS : Bool :=
+  (ofSchema (.string (some [⟨"title", .str "a name"⟩]) [])).all
+    (fun t => (Representation.string (some [⟨"title", .str "a name"⟩]) []) == schema t)
+/--
+error: Expression
+  red_exactWithoutNS
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_exactWithoutNS
+
+-- Green twins on the production reader: each defect above refused or read as `N_S` says.
+#guard ofSchema ge5 = none
+#guard ofSchema groupedInt = none
+#guard ofSchema (schema (.var 0)) = none
+#guard ofSchema stringParseOptions = none
+#guard ofSchema (.string (some [⟨"title", .str "a name"⟩]) []) = some .string
+#guard ofSchema (.string (some []) []) = some .string
+#guard ofSchema (rcExitDoc "effect/schema/Json") = some (.exitOf .int .string)
+#guard ofSchema (rcExitDoc "effect/schema/Defect") = none
+#guard ofSchema (.declaration ⟨"effect/schema/Cause", .null⟩ none [Schema.string,
+  .declaration ⟨"effect/schema/Json", .null⟩ (some [⟨"parseOptions", .obj []⟩]) [] []] []) = none
+
+-- Row 179 at a check (the coordinator's amendment, Codex 21:16): one policy for nodes and checks.
+/-- A documented `isInt` filter: `title` is documentation, erased by `N_S`'s check arm. -/
+def documentedIsInt : Check :=
+  Schema.Check.named "effect/schema/isInt" .null none (some [⟨"title", .str "documented integer"⟩])
+/-- The same filter with `arbitrary`, which is not documentation under row 179's eight keys. -/
+def arbitraryIsInt : Check :=
+  Schema.Check.named "effect/schema/isInt" .null none (some [⟨"arbitrary", .obj []⟩])
+-- (1) the documented `isInt` read at `int`, and with the nonnegative check at `nat`; exact
+#guard ofSchema (.number none [documentedIsInt]) = some .int
+#guard ofSchema (.number none [documentedIsInt, nonNegativeCheck]) = some .nat
+#guard ofSchema (.number none [isIntCheck, Schema.Check.named "effect/schema/isGreaterThanOrEqualTo"
+  (.obj [("minimum", .number Float64.zero)]) none (some [⟨"expected", .str "≥ 0"⟩])]) = some .nat
+#guard normS (.number none [documentedIsInt]) = schema .int
+-- (2) the same check with a non-documentation key refused (`arbitrary`; `parseOptions`), at either
+-- check; the reader is `Option`-valued, so the refusal carries no path (`["checks[i]"]` is the
+-- located reader's, seat S's `ofSchemaLocated`, not landed here)
+#guard ofSchema (.number none [arbitraryIsInt]) = none
+#guard ofSchema (.number none [arbitraryIsInt, nonNegativeCheck]) = none
+#guard ofSchema (.number none [Schema.Check.named "effect/schema/isInt" .null none
+  (some [⟨"parseOptions", .obj [("disableChecks", .bool true)]⟩])]) = none
+#guard ofSchema (.number none [isIntCheck, Schema.Check.named "effect/schema/isGreaterThanOrEqualTo"
+  (.obj [("minimum", .number Float64.zero)]) none (some [⟨"arbitrary", .obj []⟩])]) = none
+/-- RED: a check carrying a non-documentation key reads as `int`. -/
+def red_arbitraryIsInt : Bool := ofSchema (.number none [arbitraryIsInt]) == some .int
+/--
+error: Expression
+  red_arbitraryIsInt
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_arbitraryIsInt
+-- (3) seat S's `ge5` and `groupedInt` stay refused (above). A consequence recorded, not blessed:
+-- rc.112's own `Schema.Int` persists `arbitrary` on its `isInt` filter (probe S, E9d), so it is
+-- refused until the owner rules on a ninth key (probe S's choice S-A (a)); without it, it reads.
+def rcIntDoc (arbitrary : Bool) : Representation :=
+  .number none [.filter ⟨"effect/schema/isInt", .null, none⟩
+    (some ([⟨"expected", .str "an integer"⟩] ++
+      if arbitrary then [⟨"arbitrary", .obj [("constraint", .obj [("integer", .bool true)])]⟩] else []))
+    false]
+#guard ofSchema (rcIntDoc true) = none
+#guard ofSchema (rcIntDoc false) = some .int
+
+-- One policy at every bag the reader reads, a tuple element's included (row 179).
+#guard ofSchema (.arrays none [] [Schema.element Schema.string
+  (annotations := some [⟨"description", .str "d"⟩]), Schema.element Schema.boolean] []) =
+    some (.prod .string .bool)
+#guard ofSchema (.arrays none [] [Schema.element Schema.string
+  (annotations := some [⟨"parseOptions", .obj []⟩]), Schema.element Schema.boolean] []) = none
+
+#check @ofSchema_exact
+#check @ofSchema_schema
+#print axioms ofSchema_exact
+#print axioms ofSchema_exact'
+#print axioms ofSchema_schema
+#print axioms normS_schema
 
 /-! ## Multi-Tier Cascading CAS -/
 
@@ -252,6 +494,103 @@ example (v : Store.Val) (hv : Program.Val.hasTy v (.lit "User") = true) :
 #check Schema.decode_encode
 #check Schema.hasTy_decode
 #check Schema.encode_sub
+
+/-! ### Row 128: the JSON pair is exact modulo `N_J` (`Schema.decode_iff`)
+
+The red control is row 128's witness (synthesis NS2) on `unionArmBefore`, `decodeRaw`'s union arm
+as it stood at `74dae8d2`, its children read by the production decoder (which is the old one off
+unions): at `union (except nat nat) (exitOf nat nat)` it read `Exit.Success(1)`'s JSON as `Result`'s
+failure `ctor 0 [nat 1]`, which the encoder writes as `Result.Failure(1)`'s JSON (seat P's
+`codec_not_exact`, `docs/research/2026-10-01-type-language-probe/P/probes/P8Codec.lean:1101-1119`;
+seat S's `red_productionExact`). -/
+
+def exactUnion : Ty := .union (.except .nat .nat) (.exitOf .nat .nat)
+def jExitSuccess : Json := .obj [("_tag", .str "Success"), ("value", Arch.Json.ofNat 1)]
+def jResultFailure : Json := .obj [("_tag", .str "Failure"), ("failure", Arch.Json.ofNat 1)]
+
+/-- `decodeRaw`'s union arm before row 128's commit (`Schema/Codec.lean:209-212` at `74dae8d2`). -/
+def unionArmBefore (a b : Ty) (j : Json) : Option Store.Val :=
+  match (Schema.Codec.decodeRaw a j).filter (fun v => Program.Val.hasTy v a) with
+  | some v => some v
+  | none => (Schema.Codec.decodeRaw b j).filter (fun v => Program.Val.hasTy v b)
+
+/-- RED CONTROL (proved): the arm before the repair is not exact. It reads `Exit.Success(1)`'s JSON
+at row 128's union as `ctor 0 [nat 1]`, whose encoding is `Result.Failure(1)`'s JSON: two images of
+one value, not equal modulo `N_J`. -/
+theorem codec_not_exact :
+    unionArmBefore (.except .nat .nat) (.exitOf .nat .nat) jExitSuccess = some (.ctor 0 [.nat 1]) ∧
+      Ty.encode exactUnion (.ctor 0 [.nat 1]) = some jResultFailure ∧
+      Schema.Codec.normJ jResultFailure ≠ Schema.Codec.normJ jExitSuccess := by
+  decide +kernel
+
+/-- The repaired decoder refuses the non-canonical image and keeps the canonical one. -/
+theorem repaired_refuses :
+    Ty.decode exactUnion jExitSuccess = none ∧
+      Ty.decode exactUnion jResultFailure = some (.ctor 0 [.nat 1]) := by
+  decide +kernel
+
+/-- RED (seat S's `red_productionExact`, on the arm it was about): the arm before the repair refuses
+the `Success` image at row 128's union. -/
+def red_productionExact : Bool :=
+  unionArmBefore (.except .nat .nat) (.exitOf .nat .nat) jExitSuccess == none
+/--
+error: Expression
+  red_productionExact
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_productionExact
+
+/-- RED: the production decoder reads the `Success` image at row 128's union (it did before the
+repair). -/
+def red_decodesExitAsResult : Bool :=
+  Ty.decode exactUnion jExitSuccess == some (.ctor 0 [.nat 1])
+/--
+error: Expression
+  red_decodesExitAsResult
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_decodesExitAsResult
+
+/-- RED: exactness without the normaliser (a decoded JSON is literally the encoder's image). The
+decoder reads an object's entries in any order, so only `N_J` makes the pair exact. -/
+def red_exactWithoutNJ : Bool :=
+  Ty.encode (.option .nat) (.some (.nat 7)) ==
+    some (.obj [("value", Arch.Json.ofNat 7), ("_tag", .str "Some")])
+/--
+error: Expression
+  red_exactWithoutNJ
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_exactWithoutNJ
+
+-- `N_J` sorts by key bytes, recursively, and drops nothing: a repeated key survives for `fields?`
+-- to refuse (Codex 21:16: no duplicate is hidden).
+#guard Schema.Codec.normJ (.obj [("value", .null), ("_tag", .str "Some")]) =
+  .obj [("_tag", .str "Some"), ("value", .null)]
+#guard Schema.Codec.normJ (.arr [.obj [("b", .null), ("a", .obj [("d", .null), ("c", .null)])]]) =
+  .arr [.obj [("a", .obj [("c", .null), ("d", .null)]), ("b", .null)]]
+#guard Schema.Codec.normJ (.obj [("b", .null), ("a", .null), ("b", .bool true)]) =
+  .obj [("a", .null), ("b", .null), ("b", .bool true)]
+#guard Ty.decode (.option .unit) (.obj [("value", .null), ("_tag", .str "Some"), ("value", .null)]) = none
+-- every contract case reads its key-sorted image, and its image is a fixed point of `N_J`
+#guard codecCases.all fun (_, t, v, j) =>
+  Ty.decode t (Schema.Codec.normJ j) == some v && Schema.Codec.normJ j == j
+-- S's limitation at `union int (except nat nat)` is not observable here: `int` has no member today
+-- (`Val.hasTy v .int = false`), so a `Result` failure round-trips at that union
+#guard Ty.decode (.union .int (.except .nat .nat)) jResultFailure = some (.ctor 0 [.nat 1])
+#guard Ty.encode (.union .int (.except .nat .nat)) (.ctor 0 [.nat 1]) = some jResultFailure
+
+#check @Schema.decode_iff
+#check @Schema.encode_of_decode
+#check @Schema.decode_of_encode
+#print axioms Schema.decode_iff
+#print axioms Schema.encode_of_decode
+#print axioms Schema.decode_of_encode
+#print axioms Schema.Codec.decodeRaw_exact
+#print axioms Schema.Codec.decodeRaw_normJ
 
 /-! ## Stability of Core Language Constructs & Effect Reification -/
 

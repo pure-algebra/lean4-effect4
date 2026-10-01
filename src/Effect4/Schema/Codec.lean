@@ -8,6 +8,9 @@ The S-3 owner amendment (2026-09-11) admits values that recover exactly, rather 
 claiming every typed natural or overlapping union has an injective JSON image.
 No machine or stored type constructor changes. `encode` and `decode` normalize the
 type at the checked boundary; `Codec.encodeRaw` / `decodeRaw` interpret its wire layout.
+The pair is an exact embedding modulo `Codec.normJ`, the key-order normaliser (decisions row
+128: `Laws/Schema/Codec.lean`, `decode_iff`), once `decodeRaw`'s union arm reads the encoder's
+canonical branch.
 
 The profile is rc.112 `Schema.toCodecJson` (`vendor/effect-4.0.0-rc.112/src/Schema.ts`):
 Option at 9720-9734, Result at 10051-10066, CauseReason at 10418-10439, Cause at
@@ -176,8 +179,13 @@ def encodeRaw : Ty → Val → Option Json
     else if Val.hasTy v b then encodeRaw b v else none
   | _, _ => none
 
-/-- Structural wire decoder. A union tries its original typed branches in order;
-the checked encoder later refuses a value if that order would change its meaning. -/
+/-- Structural wire decoder. A union reads the encoder's canonical branch (decisions row 128):
+its first branch for a value that is a member of it, its second branch only for a value that is
+not, which is `encodeRaw`'s own selection rule. Without the second clause the decoder read
+`{"_tag":"Success","value":1}` at `union (except nat nat) (exitOf nat nat)` as `Result`'s failure
+`ctor 0 [nat 1]`, whose encoding is `{"_tag":"Failure","failure":1}`: two JSON images of one value
+(the red control in `Test/Codegen/SchemaGenerationContract.lean`). With it the pair is exact modulo
+`normJ` (`Laws/Schema/Codec.lean`, `decode_iff`). -/
 def decodeRaw : Ty → Json → Option Val
   | .unit, .null => some .unit
   | .bool, .bool b => some (.bool b)
@@ -209,8 +217,47 @@ def decodeRaw : Ty → Json → Option Val
   | .union a b, j =>
     match (decodeRaw a j).filter (fun v => Val.hasTy v a) with
     | some v => some v
-    | none => (decodeRaw b j).filter (fun v => Val.hasTy v b)
+    | none => (decodeRaw b j).filter (fun v => Val.hasTy v b && !Val.hasTy v a)
   | _, _ => none
+
+/-! ## `N_J`: the key-order normaliser (decisions row 128)
+
+The decoder reads an object's entries without regard to their order (`fields?`), so the JSON
+images of one value differ only in the order of object entries. `normJ` is that quotient as a
+function: every object's entries sorted by their key's UTF-8 bytes, stably (equal keys keep their
+order, and no entry is dropped: a repeated key survives for `fields?` to refuse), recursively;
+arrays element by element; every other node unchanged. Keys are compared as byte lists
+(`String.toUTF8`), never through `String`'s order, which reaches `Classical.choice` on this
+toolchain. -/
+
+/-- A key's UTF-8 bytes, the sort key of `normJ`. -/
+def keyBytes (s : String) : List Nat := s.toUTF8.data.toList.map UInt8.toNat
+
+/-- Insert an entry by its key's bytes; an equal key keeps its place (stable). -/
+def insertE (e : String × Json) : List (String × Json) → List (String × Json)
+  | [] => [e]
+  | f :: fs =>
+    if Ty.ltKey (keyBytes e.1) (keyBytes f.1) = true then e :: f :: fs else f :: insertE e fs
+
+/-- Entries sorted by key bytes (insertion sort, stable). -/
+def sortE (es : List (String × Json)) : List (String × Json) :=
+  es.foldl (fun acc e => insertE e acc) []
+
+mutual
+/-- **`N_J`**: every object's entries sorted by key bytes, recursively; arrays element-wise. -/
+def normJ : Json → Json
+  | .arr js => .arr (normJs js)
+  | .obj es => .obj (sortE (normEs es))
+  | j => j
+/-- `normJ` on every element of an array. -/
+def normJs : List Json → List Json
+  | [] => []
+  | j :: js => normJ j :: normJs js
+/-- `normJ` on every value of an object's entries, keys kept. -/
+def normEs : List (String × Json) → List (String × Json)
+  | [] => []
+  | (k, j) :: es => (k, normJ j) :: normEs es
+end
 
 /-- Executable value admission after type normalization: membership, a JSON image,
 and exact recovery.
