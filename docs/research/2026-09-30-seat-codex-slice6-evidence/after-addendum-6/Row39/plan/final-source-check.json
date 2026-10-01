@@ -1,0 +1,21 @@
+{
+  "base": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+  "source_paths": 59,
+  "base_mismatches": [
+    "Test/All.lean"
+  ],
+  "live_mismatches": [],
+  "raw_printer_definition_prefix_identical": true,
+  "retained_full_module_expected_text_identical": true,
+  "generated_output_paths_in_series": [],
+  "repository_mutations_by_reviewer": false,
+  "source_overrides": [
+    {
+      "path": "Test/All.lean",
+      "commit_sha256": "9dd50812d63f46379cf66126746e21d3327b005bac747a28184a607d02028de3",
+      "working_sha256": "503ecfc4914499821f76bdfc2d154606c192dc15094588c0130c14e88ad35074"
+    }
+  ],
+  "only_H2_overlap": "Test/All.lean; preserved import immediately after TypedControl, no H2 source file copied",
+  "retained_prechange_byte_baseline_unchanged": true
+}

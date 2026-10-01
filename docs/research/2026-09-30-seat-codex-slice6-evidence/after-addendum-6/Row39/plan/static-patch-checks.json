@@ -1,0 +1,22 @@
+[
+  {
+    "stage": "01-effectful-field",
+    "check_exit": 0,
+    "stderr": ""
+  },
+  {
+    "stage": "02-check-accepts-image",
+    "check_exit": 0,
+    "stderr": ""
+  },
+  {
+    "stage": "03-annotations",
+    "check_exit": 0,
+    "stderr": ""
+  },
+  {
+    "stage": "04-of-shape",
+    "check_exit": 0,
+    "stderr": ""
+  }
+]

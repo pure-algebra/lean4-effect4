@@ -1,0 +1,48 @@
+{
+  "stages": [
+    {
+      "stage": "01-effectful-field",
+      "imports_of_deleted_modules": [],
+      "cycles": [],
+      "modified_unreachable_modules": [],
+      "retired_active_identifier_hits": []
+    },
+    {
+      "stage": "02-check-accepts-image",
+      "imports_of_deleted_modules": [],
+      "cycles": [],
+      "modified_unreachable_modules": [],
+      "retired_active_identifier_hits": []
+    },
+    {
+      "stage": "03-annotations",
+      "imports_of_deleted_modules": [],
+      "cycles": [],
+      "modified_unreachable_modules": [],
+      "retired_active_identifier_hits": []
+    },
+    {
+      "stage": "04-of-shape",
+      "imports_of_deleted_modules": [],
+      "cycles": [],
+      "modified_unreachable_modules": [],
+      "retired_active_identifier_hits": [],
+      "schema_modules_in_pure_shape_closure": []
+    }
+  ],
+  "renderer_definition_text": [
+    {
+      "segment": "def identifierKey :",
+      "identical": true
+    },
+    {
+      "segment": "def refKey :",
+      "identical": true
+    },
+    {
+      "segment": "/-! ## The spec: `ShapeDoc.document` -/",
+      "identical": true
+    }
+  ],
+  "claims": "Static source inventory/import/body comparison only; no Lean elaboration or semantic proof"
+}

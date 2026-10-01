@@ -1,0 +1,61 @@
+{
+  "checks": [
+    {
+      "cwd": "/private/tmp/row39-series/register-closure/projected",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "/private/tmp/row39-series/register-closure/01-effectful-field/register.patch"
+      ],
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cwd": "/private/tmp/row39-series/register-closure/projected",
+      "command": [
+        "git",
+        "apply",
+        "/private/tmp/row39-series/register-closure/01-effectful-field/register.patch"
+      ],
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cwd": "/private/tmp/row39-series/register-closure/projected",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "/private/tmp/row39-series/register-closure/02-check-accepts-image/register.patch"
+      ],
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cwd": "/private/tmp/row39-series/register-closure/projected",
+      "command": [
+        "git",
+        "apply",
+        "/private/tmp/row39-series/register-closure/02-check-accepts-image/register.patch"
+      ],
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "/private/tmp/row39-series/register-closure/01-effectful-field/register.patch"
+      ],
+      "exit": 0,
+      "output": ""
+    }
+  ],
+  "verbatim_moved_rows": 21,
+  "retired_live_path_references": [],
+  "new_id_duplicates": 0,
+  "repository_register_bytes_unchanged": true
+}

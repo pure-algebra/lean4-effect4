@@ -1,0 +1,175 @@
+{
+  "base": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+  "source_overrides": [
+    {
+      "path": "Test/All.lean",
+      "commit_sha256": "9dd50812d63f46379cf66126746e21d3327b005bac747a28184a607d02028de3",
+      "working_sha256": "503ecfc4914499821f76bdfc2d154606c192dc15094588c0130c14e88ad35074"
+    }
+  ],
+  "stage": "01-effectful-field",
+  "applied_to_repo": false,
+  "changes": [
+    {
+      "path": "src/Effect4/Schema/EffectfulField.lean",
+      "action": "delete",
+      "old_sha256": "139507c6b4685ecf226e7332a0a4ecc89ee1abbb2a79d1024272cf836e181bb3",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "src/Effect4/Codegen/EffectfulField.lean",
+      "action": "delete",
+      "old_sha256": "6d116f26ae480766d643d0ad9149952a98adbe3270ceb61ee14cf615a2305597",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "Test/Schema/EffectfulFieldContract.lean",
+      "action": "delete",
+      "old_sha256": "3c9bbbfa7f0e460baa121a91ca254578656272dbbd6572eb8c741c8e6ad61d0b",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "Test/Schema/EffectfulFieldPropertiesContract.lean",
+      "action": "delete",
+      "old_sha256": "398f47c54e358df4efd0c7cfe90471ab65f976e02e6dd507cc5bab478fb0b72a",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/EffectfulField.lean",
+      "action": "delete",
+      "old_sha256": "5ca30e43dd44030522ee1088690fd1e0d584abbbad24d921bab42889c7e3b9d2",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/EffectfulFieldProperties.lean",
+      "action": "delete",
+      "old_sha256": "b63832555fde83374317f876db5cb4679f3deaed8569f65063461fdfe8f4d543",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "Test/Codegen/EffectfulFieldContract.lean",
+      "action": "delete",
+      "old_sha256": "999c96af14d4ff6bdae9eec22d8f9368f5e7f6ef971ca233a29b61e188dc6be3",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "Test/Counterexamples/Codegen/EffectfulField.lean",
+      "action": "delete",
+      "old_sha256": "606b4f2914d3a3dde0b8560f6665094359d35daabb7b0176ccf88cadbea6dfc3",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "harness/schema-effectful-field/Generate.lean",
+      "action": "delete",
+      "old_sha256": "a8f1064521c952bf39e409e56c5cf60254ad0dd7e55cfbcf9fed77bc6606e220",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "harness/schema-effectful-field/api.ts",
+      "action": "delete",
+      "old_sha256": "b5a36d48e23d81b660d9e0276760b6ec8b22cf1de2088683dc1613e5872e522f",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "harness/schema-effectful-field/check.mjs",
+      "action": "delete",
+      "old_sha256": "8da7b0dc2483ec5fb96e95165cc623a632c008022b80b3617a3be65ed6a47ef2",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "harness/schema-effectful-field/check.sh",
+      "action": "delete",
+      "old_sha256": "cf30bb5026617a87e4a4ca3b1ee9979e9fc4c916673b357f5622a3621bdb5be5",
+      "new_sha256": null,
+      "mode": "100755"
+    },
+    {
+      "path": "harness/schema-effectful-field/floating.tail.ts",
+      "action": "delete",
+      "old_sha256": "2d6562abe72efc18c208ba51e931e1d794cc8e25af6f41280b03a8f45c0fae78",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "harness/schema-effectful-field/missing-context.tail.ts",
+      "action": "delete",
+      "old_sha256": "aba4ddf6fa4c5ea408c3a01c0a79350089a8d6daed742dd521e8a168a8c8071e",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "harness/schema-effectful-field/missing-error.tail.ts",
+      "action": "delete",
+      "old_sha256": "49b70ece167b2dbfb5369229c05f29734e1eed153fda79e711b069c9315d0aaa",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "harness/schema-effectful-field/positive.tail.ts",
+      "action": "delete",
+      "old_sha256": "9652a150b2001f7120a51433728719a71d5a24ca5af8201739c3ec121baf9f10",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "harness/schema-effectful-field/tsconfig.json",
+      "action": "delete",
+      "old_sha256": "d4e7670a232964762df290a48518e101d369017093725e6f5f8f38a8ee7855b3",
+      "new_sha256": null,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/check-schema-effectful-field.sh",
+      "action": "delete",
+      "old_sha256": "f5e9cb81cfd6950ff6e0d78842c34f7e5e0f7c3c1fbb4d308490e280a4da6f32",
+      "new_sha256": null,
+      "mode": "100755"
+    },
+    {
+      "path": "src/Effect4.lean",
+      "action": "edit",
+      "old_sha256": "c16242e9e801267c350474ea60d97418b0d928e4bdef983e75145cbd6bba7496",
+      "new_sha256": "ef68ec521b2a9042f8aed3063d9f48bebee3d94d827d641706ec1bc73d5550bc",
+      "mode": "100644"
+    },
+    {
+      "path": "Test/All.lean",
+      "action": "edit",
+      "old_sha256": "503ecfc4914499821f76bdfc2d154606c192dc15094588c0130c14e88ad35074",
+      "new_sha256": "5b023bb0ba79f5a30db86fece5e9bb284c2f71c79ecd042ddefa73af3d471a1f",
+      "mode": "100644"
+    },
+    {
+      "path": "Test/Audit/AxiomGate.lean",
+      "action": "edit",
+      "old_sha256": "f2db764bbd1e5b369813d036d1dea37f67b568e403596c4fbb94755279c4ddfa",
+      "new_sha256": "377a7d8fa72b7cf46821e8a1805d5b0a412192689c180164b89bc55adeb04235",
+      "mode": "100644"
+    },
+    {
+      "path": "Makefile",
+      "action": "edit",
+      "old_sha256": "db1b78caaad8a7c537a6221f6c04e7e6f728989629893569ac95a6d460f77a9a",
+      "new_sha256": "7d3806e967c77502332829aa4d8dfdc9448295ce6137a17cf8bf2cf375073138",
+      "mode": "100644"
+    },
+    {
+      "path": ".github/workflows/lean_action_ci.yml",
+      "action": "edit",
+      "old_sha256": "9bb78800cb14e7395a26d61ad12547c25f5a03a179d974afdaa9f189637c929d",
+      "new_sha256": "cc252435bc3f350bf999e92b091d69fce3ddd05824c7b80a4d9c0728fddcdd36",
+      "mode": "100644"
+    }
+  ]
+}

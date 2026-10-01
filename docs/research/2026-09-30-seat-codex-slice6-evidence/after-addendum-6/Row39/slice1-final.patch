@@ -1,0 +1,2433 @@
+diff --git a/.github/workflows/lean_action_ci.yml b/.github/workflows/lean_action_ci.yml
+index 3887d3c5..32e6f701 100644
+--- a/.github/workflows/lean_action_ci.yml
++++ b/.github/workflows/lean_action_ci.yml
+@@ -285,7 +285,7 @@ jobs:
+           node-version: ${{ env.NODE_VERSION }}
+       - name: Install the pinned Schema host profile (TypeScript 7.0.2, the language service)
+         run: npm ci --prefix harness/schema-host --no-audit --no-fund
+-      - name: The Schema slice on the pinned host (generation, the tag and field pins, the two harnesses)
++      - name: The Schema slice on the pinned host (generation, tag pins, and annotation fields)
+         env:
+           EFFECT4_EFFECT_NODE_MODULES: ${{ github.workspace }}/harness/schema-host/node_modules
+         run: make build check-schema-ts check-schema-pins check-schema-host
+diff --git a/Makefile b/Makefile
+index 6dda1a73..1bb01d79 100644
+--- a/Makefile
++++ b/Makefile
+@@ -473,9 +473,8 @@ $(CHK)/schema-pins: $(SCHEMA_PIN) src/Effect4/Schema/Representation.lean scripts
+ 	bash scripts/check-schema-census.sh $(SCHEMA_PIN)
+ 	@mkdir -p $(CHK) && touch $@
+ 
+-$(CHK)/schema-host: $(SCHEMA_SOURCES) $(shell find harness/schema-annotations harness/schema-effectful-field -type f -not -path '*/node_modules/*') scripts/check-schema-annotations.sh scripts/check-schema-effectful-field.sh | build
++$(CHK)/schema-host: $(SCHEMA_SOURCES) $(shell find harness/schema-annotations -type f -not -path '*/node_modules/*') scripts/check-schema-annotations.sh | build
+ 	bash scripts/check-schema-annotations.sh
+-	bash scripts/check-schema-effectful-field.sh
+ 	@mkdir -p $(CHK) && touch $@
+ 
+ # The one tool harness: the exact `Classical.choice` admissions against compiled declarations.
+diff --git a/Test/All.lean b/Test/All.lean
+index 01b80d76..ff2f4ec7 100644
+--- a/Test/All.lean
++++ b/Test/All.lean
+@@ -2,8 +2,6 @@ import Effect4.Laws
+ import Test.Api.FrontierContract
+ import Test.Data.OpticContract
+ import Test.Schema.AnnotationDataPlaneContract
+-import Test.Schema.EffectfulFieldContract
+-import Test.Schema.EffectfulFieldPropertiesContract
+ import Test.Schema.AuthoringContract
+ import Test.Schema.DialectContract
+ import Test.Counterexamples.Codegen.TypeScriptRender
+@@ -14,8 +12,6 @@ import Test.Counterexamples.Schema.NoNullLiteralKind
+ import Test.Counterexamples.Schema.SemanticTagSeparation
+ import Test.Counterexamples.Schema.WireSpellingDrift
+ import Test.Counterexamples.Schema.AnnotationDataPlane
+-import Test.Counterexamples.Schema.EffectfulField
+-import Test.Counterexamples.Schema.EffectfulFieldProperties
+ import Test.Counterexamples.Schema.RecursiveElimination
+ import Test.Counterexamples.Schema.Codec
+ import Test.Schema.RepresentationContract
+@@ -26,8 +22,6 @@ import Test.Machine.Environment.ContextKeyContract
+ import Test.Codegen.ExprContract
+ import Test.Codegen.SchemaGenerationContract
+ import Test.Codegen.SchemaGenerationCoverage
+-import Test.Codegen.EffectfulFieldContract
+-import Test.Counterexamples.Codegen.EffectfulField
+ import Test.Machine.Semantics.CauseExitContract
+ import Test.Counterexamples.Machine.Semantics.CauseExit
+ import Test.Counterexamples.Machine.Semantics.ActionAtRaceAllPremise
+diff --git a/Test/Audit/AxiomGate.lean b/Test/Audit/AxiomGate.lean
+index 73e639a6..d0675620 100644
+--- a/Test/Audit/AxiomGate.lean
++++ b/Test/Audit/AxiomGate.lean
+@@ -152,26 +152,21 @@ Lean's standard character folds carry `Classical.choice` through the proof
+ backing UTF-8 decoding, so anything that traverses a Lean `String` inherits it.
+ That is an implementation fact about rendering, not a semantic admission: every
+ admission and structured-lowering declaration in the same modules stays at the
+-semantic/test ceiling, and this list is what says which is which. The field
+-receipt's statement itself uses the renderer and `String.contains`; it is not a
+-semantic admission theorem. `docs/research/TYPESCRIPT-TARGET-DAG.md` records this
+-implementation boundary.
++semantic/test ceiling, and this list is what says which is which.
++`docs/research/TYPESCRIPT-TARGET-DAG.md` records this implementation boundary.
+ 
+ `#effect4_print_choice_reachers` prints this list and the private one below.
+ Every entry is checked for staleness: a name that no longer reaches
+ `Classical.choice`, or no longer exists, fails the gate.
+ -/
+ private def choiceImplementationDeclarations : List Name :=
+-  -- The raw Schema and annotated-field generators: source text out.
++  -- The raw Schema generator: source text out.
+   [ ``Effect4.Codegen.Schema.jsonSource
+   , ``Effect4.Codegen.Schema.representationSource
+   , ``Effect4.Codegen.Schema.documentSource
+   , ``Effect4.Codegen.Schema.multiDocumentSource
+   , ``Effect4.Codegen.Schema.source?
+   , ``Effect4.Codegen.Schema.generate?
+-  , ``Effect4.Codegen.EffectfulField.source?
+-  , ``Effect4.Codegen.EffectfulField.generate?
+-  , ``Effect4.Codegen.EffectfulField.source_contains_directional_rows
+   -- The codegen crossing to bytes (`docs/research/2026-09-04-codegen-api-design.md` §3.1):
+   -- JSON text folds over `String`s for escaping, and the artefact renderer is one call to
+   -- the pinned package's renderer or to it. `JsonText.number` is deliberately not here: it
+@@ -199,12 +194,10 @@ private def choiceImplementationDeclarations : List Name :=
+ /-- Private rendering helpers are identified by exact owner and original name,
+ never a namespace prefix or Lean's unstable private-name counter. -/
+ private def choiceImplementationPrivateDeclarations : List (Name × Name) :=
+-  [ (`Effect4.Codegen.EffectfulField,
+-      `Effect4.Codegen.EffectfulField.directionalRowsPresent)
+   -- The `E4-CONF-CE-006` witnesses (`constantCase` then `nested`, and the reverse) and the
+   -- residual receipt's env entries, in the module and in its contract battery; each is an
+   -- executable over `fromEnvRecord`, checked by `#guard`, never by a theorem.
+-  , (`Effect4.Program.Config, `Effect4.Program.Config.ce006Late)
++  [ (`Effect4.Program.Config, `Effect4.Program.Config.ce006Late)
+   , (`Effect4.Program.Config, `Effect4.Program.Config.ce006Early)
+   , (`Effect4.Program.Config, `Effect4.Program.Config.entriesOf)
+   , (`Test.Program.ConfigContract, `Test.Program.ConfigContract.ce006Late)
+diff --git a/Test/Codegen/EffectfulFieldContract.lean b/Test/Codegen/EffectfulFieldContract.lean
+deleted file mode 100644
+index 447dcf51..00000000
+--- a/Test/Codegen/EffectfulFieldContract.lean
++++ /dev/null
+@@ -1,66 +0,0 @@
+-import Effect4.Codegen.EffectfulField
+-
+-/-!
+-Frozen public surface for the checked effectful-field TypeScript target.
+--/
+-
+-open TypeScript
+-
+-namespace Test.Codegen.EffectfulFieldContract
+-
+-open Effect4
+-open Effect4.Codegen Effects
+-
+-private def spec : EffectfulFieldSpec where
+-  alphabet := { value := 7 }
+-  readOperation := { value := 11 }
+-  writeOperation := { value := 12 }
+-
+-private def property : PropertySignature :=
+-  Schema.property "email" Schema.string false false
+-    (EffectfulFieldSpec.annotationKey.singleton spec)
+-
+-private def readBinding : EffectfulField.OperationBinding where
+-  alphabet := { value := 7 }
+-  operation := { value := 11 }
+-  serviceName := "UserFieldPolicy"
+-  serviceImport := "./policy.js"
+-  methodName := "readEmail"
+-  errorType := "ReadEmailError"
+-  errorImport := "./model.js"
+-
+-private def writeBinding : EffectfulField.OperationBinding where
+-  alphabet := { value := 7 }
+-  operation := { value := 12 }
+-  serviceName := "UserFieldPolicy"
+-  serviceImport := "./policy.js"
+-  methodName := "writeEmail"
+-  errorType := "WriteEmailError"
+-  errorImport := "./model.js"
+-
+-private def request : EffectfulField.Request where
+-  sourceType := "User"
+-  sourceImport := "./model.js"
+-  property := property
+-  read := readBinding
+-  write := writeBinding
+-
+-#guard EffectfulField.requestReady request
+-
+-#guard match EffectfulField.decl? request with
+-  | some (.effectfulField declaration) =>
+-      declaration.fieldName == "email" &&
+-      declaration.sourceType == "User" &&
+-      declaration.fieldType == "string" &&
+-      declaration.readService == "UserFieldPolicy" &&
+-      declaration.readMethod == "readEmail" &&
+-      declaration.readError == "ReadEmailError" &&
+-      declaration.writeService == "UserFieldPolicy" &&
+-      declaration.writeMethod == "writeEmail" &&
+-      declaration.writeError == "WriteEmailError"
+-  | _ => false
+-
+-example : EffectfulField.generate? request house0 =
+-    EffectfulField.source? request house0 := rfl
+-
+-end Test.Codegen.EffectfulFieldContract
+diff --git a/Test/Counterexamples/Archive/REGISTER.md b/Test/Counterexamples/Archive/REGISTER.md
+index 7e27c158..38bf272a 100644
+--- a/Test/Counterexamples/Archive/REGISTER.md
++++ b/Test/Counterexamples/Archive/REGISTER.md
+@@ -1,8 +1,9 @@
+ # Effect4 counterexample register: the archive
+ 
+-The rows of [`../REGISTER.md`](../REGISTER.md) whose witness no longer lives in
+-this tree, moved here on 2026-09-13 so that the live register lists only what a
+-battery on `main` checks. Stable IDs are never reused, so every ID cited in a
++Rows from [`../REGISTER.md`](../REGISTER.md) whose named witness no longer lives
++in this tree are kept here so that the live register lists what a battery on
++`main` checks. The first split was on 2026-09-13; later retirements have dated
++sections below. Stable IDs are never reused, so every ID cited in a
+ docstring, a contract or a research note still resolves here. Read a row
+ against the source it names: an archived branch (`archive/flow-route`,
+ `archive/ocaml5-avatar`, `archive/char-stdlib`), a `git:<rev>:` path, or the
+@@ -298,6 +299,27 @@ ID is retained here so citations resolve, and the row is not reused.
+ | --- | --- | --- | --- | --- |
+ | `E4-CATCH-CE-001` | REPAIRED | Every admitted Boolean predicate selects the usable rc.112 catchIf overload without assistance | `Test/fixtures/target/catch-if-predicate-bad.ts` and `tools/target/oracle.test.ts`: the pinned compiler rejects the three-argument constant-false predicate with TS2769 after inferring a never handler parameter | `Codegen.Print` emits an explicit fourth `undefined` fallback to select the data-first overload. Exact readers require that absent fallback; foreign readers also accept the three-argument source form. `catch-if-predicate-good.ts` checks both directions of A/E/R without assertions. Stored predicate data is unchanged |
+ 
++## Row 39 retired witnesses: EffectfulField (2026-10-01)
++
++These rows moved with row 39's deletion of their named attack batteries.
++The rows below retain their original text and status; this move is no new
++semantic ruling, repair or claim that all related checks have disappeared.
++Their witness paths are historical and are read at the following immutable
++sources:
++
++- `git:d554cd7194f54c1ed2ffd020b4dc59d573bc1c34:Test/Counterexamples/Schema/EffectfulField.lean`
++- `git:d554cd7194f54c1ed2ffd020b4dc59d573bc1c34:Test/Counterexamples/Schema/EffectfulFieldProperties.lean`
++
++| ID | Status | Attacked statement | Witness / evidence | Forced repair |
++| --- | --- | --- | --- | --- |
++| `E4-SCHEMA-CE-049` | SEEDED | Typed annotation lookup is sufficient for effectful-field admission, so malformed and duplicate raw occurrences may be filtered away | `Test/Counterexamples/Schema/EffectfulField.lean`, one duplicate-valid bag and one malformed-plus-valid bag | derive admission from the exact raw `Annotations.payloadsAt` occurrence list; require one canonical payload and reject every other multiplicity or malformed spelling |
++| `E4-SCHEMA-CE-050` | SEEDED | Equal read and write operation numbers identify an effectful field across alphabets | `Test/Counterexamples/Schema/EffectfulField.lean`, `operations` versus `otherAlphabet` | require alphabet, read-operation, and write-operation identities to agree; attach no service or refusal meaning at this layer |
++| `E4-SCHEMA-CE-051` | SEEDED | Effectful `modify` may transform `Lens.get source` and skip its declared read operation | `Test/Counterexamples/Schema/EffectfulField.lean`, `field.modify` starts at `Op.read` while `staleModify` starts at `Op.write 11` | generate `modify` as effectful read followed by write and local replacement; the source lens value is not the read result |
++| `E4-SCHEMA-CE-052` | SEEDED | Effectful `set` may return the pure lens replacement without performing the declared write | `Test/Counterexamples/Schema/EffectfulField.lean`, root operation of `field.set` versus the pure replacement program | perform the existing signature operation before returning the lens-replaced source and prove the same order through interpretation |
++| `E4-SCHEMA-CE-053` | SEEDED | An effectful-field marker on a representation node marks an object property | `Test/Counterexamples/Schema/EffectfulFieldProperties.lean`, `nodeOnly` versus `propertyOnly` | inspect only the existing `PropertySignatureOf.annotations` bag for direct discovery; node, check, element, and property-type annotations do not mark the property |
++| `E4-SCHEMA-CE-054` | SEEDED | Scanning only the current object's property list inventories effectful fields recursively | `Test/Counterexamples/Schema/EffectfulFieldProperties.lean`, `recursiveWitness` with fourteen exact discoveries through object properties, property types, index positions, arrays, templates, unions, suspend, and both check-schema routes | derive one collector from the existing fold (`cata_representation`; `Representation.fold` until 2026-09-17); preserve the fold's structural preorder and reuse its closed recursion proof graph |
++| `E4-SCHEMA-CE-055` | SEEDED | A map or set is an adequate effectful-field inventory because property names identify occurrences | `Test/Counterexamples/Schema/EffectfulFieldProperties.lean`, the two stored `duplicate` properties retain read-operation identities `21` then `31` | return an ordered list of the existing full property paired with its existing spec; preserve duplicate names, multiplicity, pairing, and authored order |
++
+ ## Historical notes
+ 
+ - 2026-09-08: `E4-TYPED-CE-001` retired (DB-15, the host rows slice, decision 3): strings are machine values on the native route, so the statement it refuted, "a term that types always evaluates", is now the theorem `evalTerm_isSome` without its `noStr` premise; `Term.noStr` and `Terms.noStr` are deleted. The ID is kept. `E4-PROV-CE-004` is reworded: the layer-value refusal is the provision route's `litVal`, not a fact about machine values.
+diff --git a/Test/Counterexamples/Codegen/EffectfulField.lean b/Test/Counterexamples/Codegen/EffectfulField.lean
+deleted file mode 100644
+index af665340..00000000
+--- a/Test/Counterexamples/Codegen/EffectfulField.lean
++++ /dev/null
+@@ -1,75 +0,0 @@
+-import Effect4.Codegen.EffectfulField
+-
+-/-!
+-Executable witnesses for `E4-TARGET-CE-005` through `E4-TARGET-CE-008`.
+--/
+-
+-open TypeScript
+-
+-namespace Test.Counterexamples.Codegen.EffectfulField
+-
+-open Effect4
+-open Effect4.Codegen
+-
+-private def spec : EffectfulFieldSpec where
+-  alphabet := { value := 7 }
+-  readOperation := { value := 11 }
+-  writeOperation := { value := 12 }
+-
+-private def valid : AnnotationEntry := EffectfulFieldSpec.annotationKey.entry spec
+-
+-private def binding (operation : Nat) : EffectfulField.OperationBinding where
+-  alphabet := { value := 7 }
+-  operation := { value := operation }
+-  serviceName := "UserFieldPolicy"
+-  serviceImport := "./policy.js"
+-  methodName := if operation = 11 then "readEmail" else "writeEmail"
+-  errorType := if operation = 11 then "ReadEmailError" else "WriteEmailError"
+-  errorImport := "./model.js"
+-
+-private def requestWith (annotations : Annotations)
+-    (read : EffectfulField.OperationBinding := binding 11) :
+-    EffectfulField.Request where
+-  sourceType := "User"
+-  sourceImport := "./model.js"
+-  property := Schema.property "email" Schema.string false false annotations
+-  read := read
+-  write := binding 12
+-
+-/-! `E4-TARGET-CE-005`: malformed same-name evidence beside one valid marker
+-must not disappear through a typed annotation projection. -/
+-
+-#guard !EffectfulField.requestReady (requestWith
+-  (some [{ key := EffectfulFieldSpec.annotationKey.name, payload := .null }, valid]))
+-
+-#guard !EffectfulField.requestReady (requestWith (some [valid, valid]))
+-
+-/-! `E4-TARGET-CE-006`: local operation equality does not erase alphabet
+-identity. -/
+-
+-private def wrongAlphabet : EffectfulField.OperationBinding :=
+-  { binding 11 with alphabet := { value := 8 } }
+-
+-#guard !EffectfulField.requestReady (requestWith (some [valid]) wrongAlphabet)
+-
+-/-! `E4-TARGET-CE-007`: the rendered API retains directional Effect rows and
+-the rc.112 `Effect.Services` projection. -/
+-
+-example (source : String)
+-    (generated : EffectfulField.source? (requestWith (some [valid])) house0 =
+-      some source) :
+-    source.contains "Effect.Services<ReturnType<typeof email.get>>" = true /\
+-    source.contains "Effect.Services<ReturnType<typeof email.replace>>" = true /\
+-    source.contains "ReadEmailError | WriteEmailError" = true := by
+-  exact EffectfulField.source_contains_directional_rows
+-    "email" "ReadEmailError" "WriteEmailError" generated rfl rfl rfl
+-
+-/-! `E4-TARGET-CE-008`: checked lowering cannot produce the raw declaration
+-escape hatch. -/
+-
+-example {declaration : Decl}
+-    (lowered : EffectfulField.decl? (requestWith (some [valid])) =
+-      some declaration) (text : String) : declaration != .raw text :=
+-  EffectfulField.decl?_never_raw lowered text
+-
+-end Test.Counterexamples.Codegen.EffectfulField
+diff --git a/Test/Counterexamples/REGISTER.md b/Test/Counterexamples/REGISTER.md
+index da7c158e..339dafd7 100644
+--- a/Test/Counterexamples/REGISTER.md
++++ b/Test/Counterexamples/REGISTER.md
+@@ -49,13 +49,6 @@ ID is retained here so citations resolve, and the row is not reused.
+ | `E4-SCHEMA-CE-046` | SEEDED | `decode (encode value) = some value` is sufficient for an exact typed annotation view | `Test/Counterexamples/Schema/AnnotationDataPlane.lean`, `canonicalUnit` decodes every string but re-encodes `"authored-spelling"` as `"canonical"` | require both `decode_encode` and `encode_decode`; prove `entry_of_decodeEntry` so identity modification reconstructs the exact existing `AnnotationEntry` without a second Schema carrier |
+ | `E4-SCHEMA-CE-047` | SEEDED | Traversing only node annotation fields covers the recursive annotation data plane | `Test/Counterexamples/Schema/AnnotationDataPlane.lean`, `nestedRoutes`: the shallow result is `[arrays]`, while the exact nine-label result includes group/filter schemas, nested checks, an element bag and type, and a property bag and type | derive `Representation.annotationBags` and `Check.annotationBags` from the closed two-sorted fold; preserve structural preorder across every recursive route and every annotation-bearing child record |
+ | `E4-SCHEMA-CE-048` | SEEDED | A document annotation traversal may follow resolved or reachable references and skip the rest of the reference table | `Test/Counterexamples/Schema/AnnotationDataPlane.lean`, a root with no references plus three dead entries, including a duplicate key | traverse the root(s), then every `ReferenceEntry.representation` in stored list order; do not resolve keys or filter dead, duplicate, dangling, or unreachable entries in the structural data plane |
+-| `E4-SCHEMA-CE-049` | SEEDED | Typed annotation lookup is sufficient for effectful-field admission, so malformed and duplicate raw occurrences may be filtered away | `Test/Counterexamples/Schema/EffectfulField.lean`, one duplicate-valid bag and one malformed-plus-valid bag | derive admission from the exact raw `Annotations.payloadsAt` occurrence list; require one canonical payload and reject every other multiplicity or malformed spelling |
+-| `E4-SCHEMA-CE-050` | SEEDED | Equal read and write operation numbers identify an effectful field across alphabets | `Test/Counterexamples/Schema/EffectfulField.lean`, `operations` versus `otherAlphabet` | require alphabet, read-operation, and write-operation identities to agree; attach no service or refusal meaning at this layer |
+-| `E4-SCHEMA-CE-051` | SEEDED | Effectful `modify` may transform `Lens.get source` and skip its declared read operation | `Test/Counterexamples/Schema/EffectfulField.lean`, `field.modify` starts at `Op.read` while `staleModify` starts at `Op.write 11` | generate `modify` as effectful read followed by write and local replacement; the source lens value is not the read result |
+-| `E4-SCHEMA-CE-052` | SEEDED | Effectful `set` may return the pure lens replacement without performing the declared write | `Test/Counterexamples/Schema/EffectfulField.lean`, root operation of `field.set` versus the pure replacement program | perform the existing signature operation before returning the lens-replaced source and prove the same order through interpretation |
+-| `E4-SCHEMA-CE-053` | SEEDED | An effectful-field marker on a representation node marks an object property | `Test/Counterexamples/Schema/EffectfulFieldProperties.lean`, `nodeOnly` versus `propertyOnly` | inspect only the existing `PropertySignatureOf.annotations` bag for direct discovery; node, check, element, and property-type annotations do not mark the property |
+-| `E4-SCHEMA-CE-054` | SEEDED | Scanning only the current object's property list inventories effectful fields recursively | `Test/Counterexamples/Schema/EffectfulFieldProperties.lean`, `recursiveWitness` with fourteen exact discoveries through object properties, property types, index positions, arrays, templates, unions, suspend, and both check-schema routes | derive one collector from the existing fold (`cata_representation`; `Representation.fold` until 2026-09-17); preserve the fold's structural preorder and reuse its closed recursion proof graph |
+-| `E4-SCHEMA-CE-055` | SEEDED | A map or set is an adequate effectful-field inventory because property names identify occurrences | `Test/Counterexamples/Schema/EffectfulFieldProperties.lean`, the two stored `duplicate` properties retain read-operation identities `21` then `31` | return an ordered list of the existing full property paired with its existing spec; preserve duplicate names, multiplicity, pairing, and authored order |
+ | `E4-SCHEMA-CE-056` | PINNED | Every typed natural round-trips through binary64 JSON | `Test/Counterexamples/Schema/Codec.lean`, `natural_collision` and `natural_roundTrip_impossible`: 2^53 and 2^53+1 have the same image | owner amendment 2026-09-11: check exact value recovery before accepting an encoding |
+ | `E4-SCHEMA-CE-057` | PINNED | Ordinary subtyping alone guarantees identical JSON encodings | `Test/Counterexamples/Schema/Codec.lean`, `subtype_encoding_impossible`: one constructor is both Result Failure and Exit Success, each a subtype of their union | require a shared JSON layout in addition to subtyping and membership |
+ | `E4-SCHEMA-CE-058` | PINNED | Every value admitted as a list is an ordinary list | `Test/Counterexamples/Schema/Codec.lean`, `snapshot_has_list_bool`, `snapshot_not_list`, and `list_totality_impossible`: empty fiber snapshot is admitted but has a distinct carrier | JSON value admission excludes snapshots; do not flatten away their identity |
+diff --git a/Test/Counterexamples/Schema/EffectfulField.lean b/Test/Counterexamples/Schema/EffectfulField.lean
+deleted file mode 100644
+index da8f4ec7..00000000
+--- a/Test/Counterexamples/Schema/EffectfulField.lean
++++ /dev/null
+@@ -1,107 +0,0 @@
+-/-
+-Retained attacks for `Test/contracts/schema-effectful-field.contract.md`.
+--/
+-
+-import Effect4.Schema.EffectfulField
+-
+-namespace Test.Counterexamples.Schema.EffectfulField
+-
+-open Effect4 Effects
+-
+-private def spec : EffectfulFieldSpec where
+-  alphabet := { value := 7 }
+-  readOperation := { value := 11 }
+-  writeOperation := { value := 12 }
+-
+-private def valid : AnnotationEntry :=
+-  EffectfulFieldSpec.annotationKey.entry spec
+-
+-/-! `E4-SCHEMA-CE-049`: typed filtering must not hide duplicate or malformed
+-raw occurrences. -/
+-
+-example : EffectfulFieldSpec.check (some [valid, valid]) = none := by
+-  rfl
+-
+-example : EffectfulFieldSpec.check
+-    (some
+-      [ { key := EffectfulFieldSpec.annotationKey.name, payload := Json.null }
+-      , valid
+-      ]) = none := by
+-  rfl
+-
+-/-! A tiny closed signature for the generated-program attacks. -/
+-
+-private inductive Op where
+-  | read
+-  | write (value : Nat)
+-deriving DecidableEq
+-
+-private def Sig : Signature where
+-  Op := Op
+-  Answer
+-    | .read => Nat
+-    | .write _ => Unit
+-
+-private def operationId : Op -> OperationId
+-  | .read => { value := 11 }
+-  | .write _ => { value := 12 }
+-
+-private def operations : FieldEffectOps Sig (Nat × Bool) Nat where
+-  alphabet := { value := 7 }
+-  readOperation := { value := 11 }
+-  writeOperation := { value := 12 }
+-  operationId := operationId
+-  read _ := .read
+-  read_answer _ := rfl
+-  write _ value := .write value
+-  read_operation _ := rfl
+-  write_operation _ _ := rfl
+-
+-private def otherAlphabet : FieldEffectOps Sig (Nat × Bool) Nat :=
+-  { operations with alphabet := { value := 8 } }
+-
+-/-! `E4-SCHEMA-CE-050`: matching local operation numbers do not erase the
+-alphabet identity. -/
+-
+-example : spec.Matches operations := by
+-  decide
+-
+-example : not (spec.Matches otherAlphabet) := by
+-  decide
+-
+-private def fstLens : Lens (Nat × Bool) Nat where
+-  get := Prod.fst
+-  replace value source := (value, source.2)
+-
+-private def field : EffectfulField Sig (Nat × Bool) Nat :=
+-  { optic := fstLens, operations := operations }
+-
+-private def rootOperation : Program Sig A -> Option Op
+-  | .pure _ => none
+-  | .vis operation _ => some operation
+-
+-/-! `E4-SCHEMA-CE-051`: modify starts with the effectful read. It cannot use
+-the stale `Lens.get source` value to choose the write. -/
+-
+-example : rootOperation (field.modify (fun value => value + 1) (10, true)) =
+-    some .read := by
+-  rfl
+-
+-private def staleModify (source : Nat × Bool) : Program Sig (Nat × Bool) :=
+-  Program.perform (operations.write source (fstLens.get source + 1)) >>= fun _ =>
+-    Program.pure (fstLens.replace (fstLens.get source + 1) source)
+-
+-example : rootOperation (staleModify (10, true)) = some (.write 11) := by
+-  rfl
+-
+-/-! `E4-SCHEMA-CE-052`: set starts with the write program rather than erasing
+-the effect into a pure lens update. -/
+-
+-example : rootOperation (field.set 13 (10, true)) = some (.write 13) := by
+-  rfl
+-
+-example : rootOperation (Program.pure (fstLens.replace 13 (10, true)) :
+-    Program Sig (Nat × Bool)) = none := by
+-  rfl
+-
+-end Test.Counterexamples.Schema.EffectfulField
+diff --git a/Test/Counterexamples/Schema/EffectfulFieldProperties.lean b/Test/Counterexamples/Schema/EffectfulFieldProperties.lean
+deleted file mode 100644
+index 89346862..00000000
+--- a/Test/Counterexamples/Schema/EffectfulFieldProperties.lean
++++ /dev/null
+@@ -1,138 +0,0 @@
+-import Effect4.Schema.EffectfulField
+-
+-/-!
+-Retained attacks for
+-`Test/contracts/schema-effectful-field-properties.contract.md`.
+--/
+-
+-namespace Test.Counterexamples.Schema.EffectfulFieldProperties
+-
+-open Effect4
+-
+-private def specA : EffectfulFieldSpec := ⟨⟨7⟩, ⟨11⟩, ⟨12⟩⟩
+-private def specB : EffectfulFieldSpec := ⟨⟨7⟩, ⟨21⟩, ⟨22⟩⟩
+-private def specC : EffectfulFieldSpec := ⟨⟨7⟩, ⟨31⟩, ⟨32⟩⟩
+-
+-private def bag (spec : EffectfulFieldSpec) : Annotations :=
+-  EffectfulFieldSpec.annotationKey.singleton spec
+-
+-private def markedProperty (name : String) (type : Representation)
+-    (spec : EffectfulFieldSpec) : PropertySignature :=
+-  { name := .string name
+-    type
+-    isOptional := false
+-    isMutable := true
+-    annotations := bag spec }
+-
+-private def plainProperty (name : String) (type : Representation) : PropertySignature :=
+-  { name := .string name
+-    type
+-    isOptional := false
+-    isMutable := false
+-    annotations := none }
+-
+-private def oneProperty (name : String) (spec : EffectfulFieldSpec) : Representation :=
+-  .objects none [] [markedProperty name (.never none []) spec] []
+-
+-/-! `E4-SCHEMA-CE-053`: node metadata is not key-local property metadata. -/
+-
+-private def nodeOnly : Representation :=
+-  .objects (bag specA) [] [plainProperty "plain" (.string none [])] []
+-
+-private def propertyOnly : Representation :=
+-  .objects none [] [markedProperty "marked" (.string none []) specA] []
+-
+-#guard Representation.effectfulFieldProperties nodeOnly = []
+-#guard (Representation.effectfulFieldProperties propertyOnly).map
+-    (fun discovered => discovered.1.name) = [PropertyKey.string "marked"]
+-
+-/-! `E4-SCHEMA-CE-054`: every hidden recursive route belongs to discovery.
+-The two duplicate-name properties also retain distinct specs for CE-055. -/
+-
+-private def outer : PropertySignature :=
+-  markedProperty "outer" (oneProperty "inner" specB) specA
+-
+-private def duplicateB : PropertySignature :=
+-  markedProperty "duplicate" (.never none []) specB
+-
+-private def duplicateC : PropertySignature :=
+-  markedProperty "duplicate" (.never none []) specC
+-
+-private def recursiveWitness : Representation :=
+-  .declaration ⟨"root", .null⟩ none
+-    [ .objects none [] [outer, duplicateB, duplicateC]
+-        [{ parameter := oneProperty "index-parameter" specA
+-           type := oneProperty "index-type" specB }]
+-    , .arrays none []
+-        [{ isOptional := false
+-           type := oneProperty "element" specA
+-           annotations := none }]
+-        [oneProperty "rest" specB]
+-    , .templateLiteral none [] [oneProperty "template" specC]
+-    , .union none [] [oneProperty "union" specA] .anyOf
+-    , .suspend none [] (oneProperty "thunk" specB)
+-    ]
+-    [ .filter
+-        { id := "filter"
+-          payload := .null
+-          schemas := some [oneProperty "filter-schema" specC] }
+-        none false
+-    , .filterGroup
+-        (some
+-          { id := "group"
+-            payload := .null
+-            schemas := some [oneProperty "group-schema" specA] })
+-        none
+-        [.filter
+-          { id := "nested-filter"
+-            payload := .null
+-            schemas := some [oneProperty "group-check" specB] }
+-          none false]
+-    ]
+-
+-private def summary (representation : Representation) :
+-    List (PropertyKey × Nat) :=
+-  (Representation.effectfulFieldProperties representation).map fun discovered =>
+-    (discovered.1.name, discovered.2.readOperation.value)
+-
+-#guard summary recursiveWitness =
+-  [ (PropertyKey.string "outer", 11)
+-  , (PropertyKey.string "inner", 21)
+-  , (PropertyKey.string "duplicate", 21)
+-  , (PropertyKey.string "duplicate", 31)
+-  , (PropertyKey.string "index-parameter", 11)
+-  , (PropertyKey.string "index-type", 21)
+-  , (PropertyKey.string "element", 11)
+-  , (PropertyKey.string "rest", 21)
+-  , (PropertyKey.string "template", 31)
+-  , (PropertyKey.string "union", 11)
+-  , (PropertyKey.string "thunk", 21)
+-  , (PropertyKey.string "filter-schema", 31)
+-  , (PropertyKey.string "group-schema", 11)
+-  , (PropertyKey.string "group-check", 21)
+-  ]
+-
+-private def shallow : Representation -> List (PropertySignature × EffectfulFieldSpec)
+-  | .objects _ _ properties _ => properties.filterMap fun property =>
+-      property.effectfulFieldSpec.map fun spec => (property, spec)
+-  | _ => []
+-
+-/-- The shallow reading finds nothing: the witness carries no effectful field
+-directly on `recursiveWitness` itself. -/
+-theorem shallow_recursiveWitness : shallow recursiveWitness = [] := by rfl
+-
+-/-- The recursive reading does. This was an `example` closed by `native_decide`
+-until the axiom gate learned to read the source: an `example` leaves no
+-constant, so neither the gate's declaration pass nor `#print axioms` ever saw
+-that it reached `Lean.ofReduceBool`. It is a named theorem closed in the kernel
+-now, and the `#guard` below pins the two occurrences it finds. -/
+-theorem recursiveWitness_effectfulFieldProperties_ne_nil :
+-    Representation.effectfulFieldProperties recursiveWitness != [] := by decide
+-
+-/-! `E4-SCHEMA-CE-055`: duplicates are occurrences, not map entries. -/
+-
+-#guard ((Representation.effectfulFieldProperties recursiveWitness).filter
+-    (fun discovered => discovered.1.name == PropertyKey.string "duplicate")).map
+-      (fun discovered => discovered.2.readOperation.value) = [21, 31]
+-
+-end Test.Counterexamples.Schema.EffectfulFieldProperties
+diff --git a/Test/Schema/EffectfulFieldContract.lean b/Test/Schema/EffectfulFieldContract.lean
+deleted file mode 100644
+index 610f1586..00000000
+--- a/Test/Schema/EffectfulFieldContract.lean
++++ /dev/null
+@@ -1,40 +0,0 @@
+-/-
+-Contract packet: `Test/contracts/schema-effectful-field.contract.md`.
+-
+-Breaker-owned red battery for `SCHEMA-PG-EFFECTFUL-FIELD`. The builder makes
+-this file green without editing it.
+--/
+-
+-import Effect4.Schema.EffectfulField
+-
+-namespace Test.Schema.EffectfulFieldContract
+-
+-open Effect4 Effects
+-
+-universe uOp uAns v
+-
+-variable {signature : Signature.{uOp, uAns}}
+-variable {S A : Type uAns}
+-
+-/-! ## F0 — portable data reuses existing identities and annotation carrier -/
+-
+-#synth DecidableEq EffectfulFieldSpec
+-#synth Repr EffectfulFieldSpec
+-
+-example : EffectfulFieldSpec.annotationKey.name = "effect4/effectful-field" := by
+-  rfl
+-
+-/-! ## F1 — admission sees exact raw same-name occurrences -/
+-
+-example (annotations : Annotations) :
+-    EffectfulFieldSpec.rawOccurrences annotations =
+-      (Annotations.payloadsAt EffectfulFieldSpec.annotationKey.name).collect annotations := by
+-  rfl
+-
+-/-! ## F2 — resolved bridge reuses Signature and Program -/
+-
+-/-! ## F3 — generated programs have exact ordered equations -/
+-
+-/-! ## F4 — interpretation preserves the generated order -/
+-
+-end Test.Schema.EffectfulFieldContract
+diff --git a/Test/Schema/EffectfulFieldPropertiesContract.lean b/Test/Schema/EffectfulFieldPropertiesContract.lean
+deleted file mode 100644
+index 90fd988a..00000000
+--- a/Test/Schema/EffectfulFieldPropertiesContract.lean
++++ /dev/null
+@@ -1,49 +0,0 @@
+-import Effect4.Schema.EffectfulField
+-
+-/-!
+-# Effectful-field property discovery surface
+-
+-Breaker-owned declaration and reduction battery for
+-`Test/contracts/schema-effectful-field-properties.contract.md`.
+--/
+-
+-namespace Test.Schema.EffectfulFieldPropertiesContract
+-
+-open Effect4
+-
+-universe u
+-
+-private def spec : EffectfulFieldSpec where
+-  alphabet := { value := 7 }
+-  readOperation := { value := 11 }
+-  writeOperation := { value := 12 }
+-
+-private def marked : PropertySignatureOf Nat where
+-  name := .string "count"
+-  type := 0
+-  isOptional := false
+-  isMutable := true
+-  annotations := EffectfulFieldSpec.annotationKey.singleton spec
+-
+-private def unmarked : PropertySignatureOf Nat :=
+-  { marked with annotations := none }
+-
+-#guard marked.effectfulFieldSpec = some spec
+-#guard marked.hasEffectfulField = true
+-#guard unmarked.effectfulFieldSpec = none
+-#guard unmarked.hasEffectfulField = false
+-
+-example : EffectfulFieldSpec.RawAdmissible marked.annotations := by
+-  exact ⟨spec, rfl⟩
+-
+-private def schemaProperty : PropertySignature :=
+-  { name := .string "count"
+-    type := .number none []
+-    isOptional := false
+-    isMutable := true
+-    annotations := EffectfulFieldSpec.annotationKey.singleton spec }
+-
+-#guard Representation.effectfulFieldProperties
+-    (.objects none [] [schemaProperty] []) = [(schemaProperty, spec)]
+-
+-end Test.Schema.EffectfulFieldPropertiesContract
+diff --git a/harness/schema-effectful-field/Generate.lean b/harness/schema-effectful-field/Generate.lean
+deleted file mode 100644
+index 0452db7f..00000000
+--- a/harness/schema-effectful-field/Generate.lean
++++ /dev/null
+@@ -1,47 +0,0 @@
+-import Effect4.Codegen.EffectfulField
+-
+-namespace Effect4.Harness.SchemaEffectfulField
+-
+-open Effect4
+-open Effect4.Codegen
+-
+-private def spec : EffectfulFieldSpec :=
+-  { alphabet := ⟨7⟩, readOperation := ⟨11⟩, writeOperation := ⟨12⟩ }
+-
+-private def property : PropertySignature :=
+-  Schema.property "email" Schema.string false false
+-    (EffectfulFieldSpec.annotationKey.singleton spec)
+-
+-private def readBinding : EffectfulField.OperationBinding :=
+-  { alphabet := ⟨7⟩
+-    operation := ⟨11⟩
+-    serviceName := "UserFieldPolicy"
+-    serviceImport := "./policy.ts"
+-    methodName := "readEmail"
+-    errorType := "ReadEmailError"
+-    errorImport := "./model.ts" }
+-
+-private def writeBinding : EffectfulField.OperationBinding :=
+-  { alphabet := ⟨7⟩
+-    operation := ⟨12⟩
+-    serviceName := "UserFieldPolicy"
+-    serviceImport := "./policy.ts"
+-    methodName := "writeEmail"
+-    errorType := "WriteEmailError"
+-    errorImport := "./model.ts" }
+-
+-private def request : EffectfulField.Request :=
+-  { sourceType := "User"
+-    sourceImport := "./model.ts"
+-    property
+-    read := readBinding
+-    write := writeBinding }
+-
+-def generate : IO Unit :=
+-  match EffectfulField.generate? request TypeScript.house0 with
+-  | some source => IO.print source
+-  | none => throw <| IO.userError "effectful-field request was refused"
+-
+-end Effect4.Harness.SchemaEffectfulField
+-
+-def main : IO Unit := Effect4.Harness.SchemaEffectfulField.generate
+diff --git a/harness/schema-effectful-field/api.ts b/harness/schema-effectful-field/api.ts
+deleted file mode 100644
+index 48fd4a5d..00000000
+--- a/harness/schema-effectful-field/api.ts
++++ /dev/null
+@@ -1,48 +0,0 @@
+-import { Context, Effect, Optic } from "effect"
+-
+-interface User {
+-  readonly id: string
+-  readonly email: string
+-}
+-
+-type ReadEmailError = { readonly _tag: "ReadEmailError" }
+-type WriteEmailError = { readonly _tag: "WriteEmailError" }
+-
+-class UserFieldPolicy extends Context.Service<UserFieldPolicy, {
+-  readonly readEmail: (source: User) => Effect.Effect<string, ReadEmailError>
+-  readonly writeEmail: (
+-    source: User,
+-    value: string
+-  ) => Effect.Effect<void, WriteEmailError>
+-}>()("UserFieldPolicy") {}
+-
+-const emailLens = Optic.id<User>().key("email")
+-
+-export const email = {
+-  get: (source: User): Effect.Effect<string, ReadEmailError, UserFieldPolicy> =>
+-    Effect.gen(function*() {
+-      const service = yield* UserFieldPolicy
+-      return yield* service.readEmail(source)
+-    }),
+-
+-  replace: (
+-    value: string,
+-    source: User
+-  ): Effect.Effect<User, WriteEmailError, UserFieldPolicy> =>
+-    Effect.gen(function*() {
+-      const service = yield* UserFieldPolicy
+-      yield* service.writeEmail(source, value)
+-      return emailLens.replace(value, source)
+-    }),
+-
+-  modify: (
+-    f: (value: string) => string,
+-    source: User
+-  ): Effect.Effect<
+-    User,
+-    ReadEmailError | WriteEmailError,
+-    UserFieldPolicy
+-  > => Effect.flatMap(email.get(source), (value) => email.replace(f(value), source))
+-} as const
+-
+-const source: User = { id: "user-1", email: "old@example.test" }
+diff --git a/harness/schema-effectful-field/check.mjs b/harness/schema-effectful-field/check.mjs
+deleted file mode 100644
+index 1ec4fecf..00000000
+--- a/harness/schema-effectful-field/check.mjs
++++ /dev/null
+@@ -1,200 +0,0 @@
+-import { execFileSync, spawnSync } from "node:child_process"
+-import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+-import { join, resolve } from "node:path"
+-import { tmpdir } from "node:os"
+-import { fileURLToPath } from "node:url"
+-
+-const here = resolve(fileURLToPath(new URL(".", import.meta.url)))
+-const repository = resolve(here, "../..")
+-const nodeModules = resolve(
+-  process.env.EFFECT4_EFFECT_NODE_MODULES ??
+-    join(repository, "harness/schema-host/node_modules")
+-)
+-
+-const packageVersion = (name) =>
+-  JSON.parse(readFileSync(join(nodeModules, name, "package.json"), "utf8")).version
+-
+-const exact = {
+-  effect: packageVersion("effect"),
+-  typescript: packageVersion("typescript"),
+-  tsgo: packageVersion("@effect/tsgo")
+-}
+-if (exact.effect !== "4.0.0-rc.112" || exact.typescript !== "7.0.2" ||
+-    exact.tsgo !== "0.38.0") {
+-  throw new Error(`wrong host profile ${JSON.stringify(exact)}`)
+-}
+-
+-const originalCompiler = execFileSync("find", [
+-  nodeModules,
+-  "-path", "*/@typescript/typescript-*/lib/tsc.original",
+-  "-type", "f",
+-  "-print", "-quit"
+-], { encoding: "utf8" }).trim()
+-if (originalCompiler.length === 0) throw new Error("unpatched TypeScript compiler missing")
+-
+-const temporary = mkdtempSync(join(tmpdir(), "effect4-field-"))
+-try {
+-  const api = readFileSync(join(here, "api.ts"), "utf8")
+-  const projects = [
+-    ["positive", "positive.tail.ts", []],
+-    ["floating", "floating.tail.ts", ["floatingEffect"]],
+-    ["missing-error", "missing-error.tail.ts", ["missingEffectError"]],
+-    ["missing-context", "missing-context.tail.ts", ["missingEffectContext"]]
+-  ]
+-
+-  for (const [name, tail, expectedNames] of projects) {
+-    const directory = join(temporary, name)
+-    cpSync(here, directory, { recursive: true })
+-    symlinkSync(nodeModules, join(directory, "node_modules"), "dir")
+-    writeFileSync(
+-      join(directory, "fixture.ts"),
+-      `${api}\n${readFileSync(join(here, tail), "utf8")}`
+-    )
+-
+-    const direct = spawnSync(originalCompiler, ["-p", "tsconfig.json", "--pretty", "false"], {
+-      cwd: directory,
+-      encoding: "utf8"
+-    })
+-    if (direct.status !== 0 || direct.stdout !== "" || direct.stderr !== "") {
+-      throw new Error(`${name}: direct TypeScript rejected fixture\n${direct.stdout}${direct.stderr}`)
+-    }
+-
+-    const result = spawnSync(join(nodeModules, ".bin/effect-tsgo"), [
+-      "diagnostics", "--project", "tsconfig.json", "--format", "json",
+-      "--strict", "--list-files"
+-    ], { cwd: directory, encoding: "utf8" })
+-    const report = JSON.parse(result.stdout)
+-    const names = report.diagnostics.map((entry) => entry.name).sort()
+-    const expected = [...expectedNames].sort()
+-    const exactNames = names.length === expected.length &&
+-      names.every((value, index) => value === expected[index])
+-    const exactFiles = report.summary.filesChecked === 1 &&
+-      report.summary.totalFiles === 1 && report.files.length === 1
+-    const v4 = report.files.every((entry) =>
+-      entry.detectedEffect === "v4" && entry.supportedEffect === "v4")
+-    const expectedExit = expected.length === 0 ? 0 : 1
+-    if (!exactNames || !exactFiles || !v4 || result.status !== expectedExit ||
+-        result.stderr !== "") {
+-      throw new Error(`${name}: unexpected effect-tsgo result ${JSON.stringify({
+-        names, expected, summary: report.summary, status: result.status,
+-        stderr: result.stderr
+-      })}`)
+-    }
+-  }
+-
+-  const generatedDirectory = join(temporary, "lean-generated")
+-  cpSync(here, generatedDirectory, { recursive: true })
+-  symlinkSync(nodeModules, join(generatedDirectory, "node_modules"), "dir")
+-  const generatedApi = execFileSync("lake", [
+-    "env", "lean", "--run", "harness/schema-effectful-field/Generate.lean"
+-  ], { cwd: repository, encoding: "utf8" })
+-  writeFileSync(join(generatedDirectory, "api.ts"), generatedApi)
+-  writeFileSync(join(generatedDirectory, "model.ts"), `
+-export interface User {
+-  readonly id: string
+-  readonly email: string
+-}
+-export type ReadEmailError = { readonly _tag: "ReadEmailError" }
+-export type WriteEmailError = { readonly _tag: "WriteEmailError" }
+-`)
+-  writeFileSync(join(generatedDirectory, "policy.ts"), `
+-import { Context, Effect } from "effect"
+-import type { ReadEmailError, User, WriteEmailError } from "./model.ts"
+-
+-export class UserFieldPolicy extends Context.Service<UserFieldPolicy, {
+-  readonly readEmail: (source: User) => Effect.Effect<string, ReadEmailError>
+-  readonly writeEmail: (
+-    source: User,
+-    value: string
+-  ) => Effect.Effect<void, WriteEmailError>
+-}>()("UserFieldPolicy") {}
+-`)
+-  writeFileSync(join(generatedDirectory, "fixture.ts"), `
+-import { Effect } from "effect"
+-import { email } from "./api.ts"
+-import { UserFieldPolicy } from "./policy.ts"
+-import type { User } from "./model.ts"
+-
+-const events: Array<string> = []
+-const live: UserFieldPolicy["Service"] = {
+-  readEmail: (source) => Effect.sync(() => {
+-    events.push(\`read:\${source.email}\`)
+-    return "fresh@example.test"
+-  }),
+-  writeEmail: (_source, value) => Effect.sync(() => {
+-    events.push(\`write:\${value}\`)
+-  })
+-}
+-const source: User = { id: "user-1", email: "old@example.test" }
+-const changed = await Effect.runPromise(
+-  email.modify((value) => value.toUpperCase(), source).pipe(
+-    Effect.provideService(UserFieldPolicy, live)
+-  )
+-)
+-if (changed.email !== "FRESH@EXAMPLE.TEST") throw new Error(changed.email)
+-if (events.join("|") !==
+-    "read:old@example.test|write:FRESH@EXAMPLE.TEST") {
+-  throw new Error(events.join("|"))
+-}
+-console.log("schema effectful field: Lean-generated source passed")
+-`)
+-
+-  const generatedDirect = spawnSync(originalCompiler, [
+-    "-p", "tsconfig.json", "--pretty", "false"
+-  ], { cwd: generatedDirectory, encoding: "utf8" })
+-  if (generatedDirect.status !== 0 || generatedDirect.stdout !== "" ||
+-      generatedDirect.stderr !== "") {
+-    throw new Error(`Lean-generated TypeScript rejected\n${generatedDirect.stdout}${generatedDirect.stderr}`)
+-  }
+-
+-  const generatedTsgo = spawnSync(join(nodeModules, ".bin/effect-tsgo"), [
+-    "diagnostics", "--project", "tsconfig.json", "--format", "json",
+-    "--strict", "--list-files"
+-  ], { cwd: generatedDirectory, encoding: "utf8" })
+-  const generatedReport = JSON.parse(generatedTsgo.stdout)
+-  const generatedNames = generatedReport.diagnostics.map((entry) => entry.name)
+-  const generatedFixtureReport = generatedReport.files.find((entry) =>
+-    (entry.file ?? entry.path ?? "").endsWith("/fixture.ts"))
+-  if (generatedTsgo.status !== 0 || generatedTsgo.stderr !== "" ||
+-      generatedNames.length !== 0 ||
+-      generatedFixtureReport?.detectedEffect !== "v4" ||
+-      generatedFixtureReport?.supportedEffect !== "v4") {
+-    throw new Error(`Lean-generated effect-tsgo rejection ${JSON.stringify({
+-      status: generatedTsgo.status,
+-      stderr: generatedTsgo.stderr,
+-      names: generatedNames,
+-      fixture: generatedFixtureReport,
+-      files: generatedReport.files
+-    })}`)
+-  }
+-
+-  const generatedRuntime = spawnSync(process.execPath, [
+-    "--experimental-strip-types", "fixture.ts"
+-  ], {
+-    cwd: generatedDirectory,
+-    encoding: "utf8",
+-    env: { ...process.env, NODE_NO_WARNINGS: "1" }
+-  })
+-  if (generatedRuntime.status !== 0 || !generatedRuntime.stdout.includes(
+-      "schema effectful field: Lean-generated source passed")) {
+-    throw new Error(`Lean-generated runtime failed\n${generatedRuntime.stdout}${generatedRuntime.stderr}`)
+-  }
+-
+-  const positive = join(temporary, "positive", "fixture.ts")
+-  const runtime = spawnSync(process.execPath, ["--experimental-strip-types", positive], {
+-    cwd: join(temporary, "positive"),
+-    encoding: "utf8",
+-    env: { ...process.env, NODE_NO_WARNINGS: "1" }
+-  })
+-  if (runtime.status !== 0 || !runtime.stdout.includes(
+-      "schema effectful field: directional types and read/write order passed")) {
+-    throw new Error(`runtime failed\n${runtime.stdout}${runtime.stderr}`)
+-  }
+-
+-  console.log(`schema effectful field: TypeScript ${exact.typescript} passed`)
+-  console.log(`schema effectful field: Effect ${exact.effect} runtime passed`)
+-  console.log(`schema effectful field: effect-tsgo ${exact.tsgo} diagnostics passed`)
+-  console.log("schema effectful field: Lean-generated target passed")
+-} finally {
+-  rmSync(temporary, { recursive: true, force: true })
+-}
+diff --git a/harness/schema-effectful-field/check.sh b/harness/schema-effectful-field/check.sh
+deleted file mode 100755
+index 3488be76..00000000
+--- a/harness/schema-effectful-field/check.sh
++++ /dev/null
+@@ -1,5 +0,0 @@
+-#!/usr/bin/env bash
+-set -euo pipefail
+-
+-here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-node "$here/check.mjs"
+diff --git a/harness/schema-effectful-field/floating.tail.ts b/harness/schema-effectful-field/floating.tail.ts
+deleted file mode 100644
+index 86b8d187..00000000
+--- a/harness/schema-effectful-field/floating.tail.ts
++++ /dev/null
+@@ -1 +0,0 @@
+-email.replace("new@example.test", source)
+diff --git a/harness/schema-effectful-field/missing-context.tail.ts b/harness/schema-effectful-field/missing-context.tail.ts
+deleted file mode 100644
+index 2476ab79..00000000
+--- a/harness/schema-effectful-field/missing-context.tail.ts
++++ /dev/null
+@@ -1,5 +0,0 @@
+-// Ordinary TypeScript sees the erased service. Suppress it so the dedicated
+-// Effect diagnostic is the sole expected signal.
+-// @ts-expect-error
+-export const missingContext: Effect.Effect<User, WriteEmailError> =
+-  email.replace("new@example.test", source)
+diff --git a/harness/schema-effectful-field/missing-error.tail.ts b/harness/schema-effectful-field/missing-error.tail.ts
+deleted file mode 100644
+index 5f967d49..00000000
+--- a/harness/schema-effectful-field/missing-error.tail.ts
++++ /dev/null
+@@ -1,5 +0,0 @@
+-// Ordinary TypeScript sees the erased error. Suppress it so the dedicated
+-// Effect diagnostic is the sole expected signal.
+-// @ts-expect-error
+-export const missingError: Effect.Effect<User, never, UserFieldPolicy> =
+-  email.replace("new@example.test", source)
+diff --git a/harness/schema-effectful-field/positive.tail.ts b/harness/schema-effectful-field/positive.tail.ts
+deleted file mode 100644
+index 3e9d3630..00000000
+--- a/harness/schema-effectful-field/positive.tail.ts
++++ /dev/null
+@@ -1,64 +0,0 @@
+-type Equal<A, B> =
+-  (<T>() => T extends A ? 1 : 2) extends
+-    (<T>() => T extends B ? 1 : 2) ? true : false
+-type Assert<T extends true> = T
+-
+-type _GetSuccess = Assert<Equal<
+-  Effect.Success<ReturnType<typeof email.get>>,
+-  string
+->>
+-type _GetError = Assert<Equal<
+-  Effect.Error<ReturnType<typeof email.get>>,
+-  ReadEmailError
+->>
+-type _GetServices = Assert<Equal<
+-  Effect.Services<ReturnType<typeof email.get>>,
+-  UserFieldPolicy
+->>
+-type _ReplaceSuccess = Assert<Equal<
+-  Effect.Success<ReturnType<typeof email.replace>>,
+-  User
+->>
+-type _ReplaceError = Assert<Equal<
+-  Effect.Error<ReturnType<typeof email.replace>>,
+-  WriteEmailError
+->>
+-type _ReplaceServices = Assert<Equal<
+-  Effect.Services<ReturnType<typeof email.replace>>,
+-  UserFieldPolicy
+->>
+-type _ModifyError = Assert<Equal<
+-  Effect.Error<ReturnType<typeof email.modify>>,
+-  ReadEmailError | WriteEmailError
+->>
+-type _ModifyServices = Assert<Equal<
+-  Effect.Services<ReturnType<typeof email.modify>>,
+-  UserFieldPolicy
+->>
+-
+-const events: Array<string> = []
+-const live: UserFieldPolicy["Service"] = {
+-  readEmail: (value) => Effect.sync(() => {
+-    events.push(`read:${value.email}`)
+-    return "fresh@example.test"
+-  }),
+-  writeEmail: (_source, value) => Effect.sync(() => {
+-    events.push(`write:${value}`)
+-  })
+-}
+-
+-const changed = await Effect.runPromise(
+-  email.modify((value) => value.toUpperCase(), source).pipe(
+-    Effect.provideService(UserFieldPolicy, live)
+-  )
+-)
+-
+-if (changed.email !== "FRESH@EXAMPLE.TEST") {
+-  throw new Error(`effectful field returned ${changed.email}`)
+-}
+-if (events.join("|") !==
+-    "read:old@example.test|write:FRESH@EXAMPLE.TEST") {
+-  throw new Error(`effectful field order was ${events.join("|")}`)
+-}
+-
+-console.log("schema effectful field: directional types and read/write order passed")
+diff --git a/harness/schema-effectful-field/tsconfig.json b/harness/schema-effectful-field/tsconfig.json
+deleted file mode 100644
+index db8fde43..00000000
+--- a/harness/schema-effectful-field/tsconfig.json
++++ /dev/null
+@@ -1,52 +0,0 @@
+-{
+-  "$schema": "./node_modules/@effect/tsgo/schema.json",
+-  "compilerOptions": {
+-    "strict": true,
+-    "target": "ES2022",
+-    "module": "ESNext",
+-    "moduleResolution": "bundler",
+-    "lib": ["ESNext", "DOM"],
+-    "noEmit": true,
+-    "allowImportingTsExtensions": true,
+-    "exactOptionalPropertyTypes": true,
+-    "noUncheckedIndexedAccess": true,
+-    "verbatimModuleSyntax": true,
+-    "plugins": [
+-      {
+-        "name": "@effect/language-service",
+-        "diagnosticSeverity": {
+-          "floatingEffect": "error",
+-          "missingEffectError": "error",
+-          "missingEffectContext": "error",
+-          "schemaSyncInEffect": "error",
+-          "promiseInEffectSuccess": "off",
+-          "lazyPromiseInEffectSync": "off",
+-          "schemaStructWithTag": "off",
+-          "schemaNumber": "off",
+-          "preferTypedSchemaDecoder": "off",
+-          "catchToIgnore": "off",
+-          "asyncFunction": "off",
+-          "cryptoRandomUUID": "off",
+-          "cryptoRandomUUIDInEffect": "off",
+-          "globalConsole": "off",
+-          "globalConsoleInEffect": "off",
+-          "globalDate": "off",
+-          "globalDateInEffect": "off",
+-          "globalFetch": "off",
+-          "globalFetchInEffect": "off",
+-          "globalRandom": "off",
+-          "globalRandomInEffect": "off",
+-          "globalTimers": "off",
+-          "globalTimersInEffect": "off",
+-          "newPromise": "off",
+-          "nodeBuiltinImport": "off",
+-          "preferSchemaOverJson": "off",
+-          "processEnv": "off",
+-          "processEnvInEffect": "off",
+-          "tryCatchInEffectGen": "off"
+-        }
+-      }
+-    ]
+-  },
+-  "files": ["fixture.ts"]
+-}
+diff --git a/scripts/check-schema-effectful-field.sh b/scripts/check-schema-effectful-field.sh
+deleted file mode 100755
+index 5378c3f8..00000000
+--- a/scripts/check-schema-effectful-field.sh
++++ /dev/null
+@@ -1,72 +0,0 @@
+-#!/usr/bin/env bash
+-# usage: EFFECT4_EFFECT_NODE_MODULES=<pinned node_modules> scripts/check-schema-effectful-field.sh
+-#
+-# Target host gate for `Test/contracts/schema-effectful-field-typescript.contract.md`.
+-# It pins the host profile, then runs `harness/schema-effectful-field/check.sh`
+-# end to end: the hand-written positive file, the three named language-service
+-# mutants, and the Lean-generated module under direct TypeScript, effect-tsgo,
+-# and the Effect runtime. Host evidence about one exact profile only.
+-set -euo pipefail
+-
+-project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+-harness_dir="$project_root/harness/schema-effectful-field"
+-node_modules="${EFFECT4_EFFECT_NODE_MODULES:-$project_root/harness/schema-host/node_modules}"
+-
+-if [[ ! -d "$node_modules/effect" ]]; then
+-  echo "schema effectful-field harness: set EFFECT4_EFFECT_NODE_MODULES to the exact pinned node_modules directory" >&2
+-  exit 1
+-fi
+-
+-node_bin="$(command -v node)"
+-effect_version="$($node_bin -p 'require(process.argv[1]).version' "$node_modules/effect/package.json")"
+-typescript_version="$($node_bin -p 'require(process.argv[1]).version' "$node_modules/typescript/package.json")"
+-tsgo_version="$($node_bin -p 'require(process.argv[1]).version' "$node_modules/@effect/tsgo/package.json")"
+-
+-[[ "$effect_version" == "4.0.0-rc.112" ]]
+-[[ "$typescript_version" == "7.0.2" ]]
+-[[ "$tsgo_version" == "0.38.0" ]]
+-
+-host_compiler="$(find "$node_modules" -path '*/@typescript/typescript-*/lib/tsc.original' -type f -print -quit)"
+-if [[ -z "$host_compiler" ]]; then
+-  echo "schema effectful-field harness: unpatched TypeScript compiler not found" >&2
+-  exit 1
+-fi
+-
+-if [[ ! -x "$harness_dir/check.sh" ]]; then
+-  echo "schema effectful-field harness: harness driver is absent or not executable" >&2
+-  exit 1
+-fi
+-
+-temporary_dir="$(mktemp -d)"
+-trap 'rm -rf "$temporary_dir"' EXIT
+-
+-harness_log="$temporary_dir/check.log"
+-cd "$project_root"
+-if ! EFFECT4_EFFECT_NODE_MODULES="$node_modules" "$harness_dir/check.sh" \
+-    >"$harness_log" 2>&1; then
+-  cat "$harness_log" >&2
+-  echo "schema effectful-field harness: host oracle rejected the field API" >&2
+-  exit 1
+-fi
+-
+-# A silent driver is not a pass. Every receipt the harness owes must be present.
+-required_receipts=(
+-  "schema effectful field: TypeScript $typescript_version passed"
+-  "schema effectful field: Effect $effect_version runtime passed"
+-  "schema effectful field: effect-tsgo $tsgo_version diagnostics passed"
+-  "schema effectful field: Lean-generated target passed"
+-)
+-for receipt in "${required_receipts[@]}"; do
+-  if ! grep -Fq -- "$receipt" "$harness_log"; then
+-    cat "$harness_log" >&2
+-    echo "schema effectful-field harness: missing receipt: $receipt" >&2
+-    exit 1
+-  fi
+-done
+-
+-echo "schema effectful-field harness: positive field API typechecked and ran read-before-write"
+-echo "schema effectful-field harness: floatingEffect, missingEffectError, missingEffectContext each reported exactly once"
+-echo "schema effectful-field harness: Lean-generated module matched the hand-written profile"
+-echo "schema effectful-field harness: direct compiler $typescript_version passed"
+-echo "schema effectful-field harness: effect $effect_version ran the generated field API"
+-echo "schema effectful-field harness: language service $tsgo_version passed"
+diff --git a/src/Effect4.lean b/src/Effect4.lean
+index d9cd9ac8..741efe01 100644
+--- a/src/Effect4.lean
++++ b/src/Effect4.lean
+@@ -45,12 +45,11 @@ import Effect4.Machine.Exit
+ -- tables, the `Value.*` spellings, and the generic cause/exit images over the carrier.
+ import Effect4.Machine.Value
+ -- The Schema data plane: the persisted carrier, the annotation data plane, the
+--- checker, the authoring face, and the value, getter, transformation, codec,
++-- checker, the authoring face, and the value, transformation, codec,
+ -- registry and foreign rows.
+ import Effect4.Schema.Payload
+ import Effect4.Schema.Representation
+ import Effect4.Schema.Annotations
+-import Effect4.Schema.EffectfulField
+ import Effect4.Schema.Document
+ import Effect4.Schema.Check
+ import Effect4.Schema.Authoring
+@@ -63,9 +62,8 @@ import Effect4.Machine.Frames
+ -- Fiber ids and the supervision vocabulary the machine speaks.
+ import Effect4.Machine.Fiber
+ import Effect4.Machine.Supervision
+--- The Effect TypeScript target: the Schema and annotated-field generators.
++-- The Effect TypeScript target: the Schema generator.
+ import Effect4.Codegen.Schema
+-import Effect4.Codegen.EffectfulField
+ -- The reference machine (docs/research/2026-09-03-deep-plan.md): one
+ -- program-carrying fiber machine over the rc.112 frames, the stores it drives,
+ -- the service map and the fiber context. Promoted from the
+diff --git a/src/Effect4/Codegen/EffectfulField.lean b/src/Effect4/Codegen/EffectfulField.lean
+deleted file mode 100644
+index ce23f9a8..00000000
+--- a/src/Effect4/Codegen/EffectfulField.lean
++++ /dev/null
+@@ -1,192 +0,0 @@
+-import Effect4.Schema.EffectfulField
+-import Effect4.Codegen.Schema
+-
+-/-!
+-# Checked TypeScript generation for effectful Schema fields
+-
+-This module resolves one admitted property marker to the structured
+-`EffectfulFieldDecl` target node. It never stores host functions and never
+-uses `Decl.raw`.
+--/
+-
+-open TypeScript
+-
+-namespace Effect4.Codegen.EffectfulField
+-
+-open Effect4 Effects
+-
+-/-- Target spellings associated with one retained portable operation. -/
+-structure OperationBinding where
+-  alphabet : AlphabetId
+-  operation : OperationId
+-  serviceName : String
+-  serviceImport : String
+-  methodName : String
+-  errorType : String
+-  errorImport : String
+-
+-/-- Inputs needed to lower one existing annotated Schema property. -/
+-structure Request where
+-  sourceType : String
+-  sourceImport : String
+-  property : PropertySignature
+-  read : OperationBinding
+-  write : OperationBinding
+-
+-private def namesReady (request : Request) (fieldName : String) : Bool :=
+-  [ fieldName
+-  , request.sourceType
+-  , request.read.serviceName
+-  , request.read.methodName
+-  , request.read.errorType
+-  , request.write.serviceName
+-  , request.write.methodName
+-  , request.write.errorType
+-  ].all Schema.targetIdentifier
+-
+-private def importsReady (request : Request) : Bool :=
+-  [ request.sourceImport
+-  , request.read.serviceImport
+-  , request.read.errorImport
+-  , request.write.serviceImport
+-  , request.write.errorImport
+-  ].all fun path => !path.isEmpty
+-
+-private def bindingsMatch (request : Request)
+-    (spec : EffectfulFieldSpec) : Bool :=
+-  decide (request.read.alphabet = spec.alphabet) &&
+-    decide (request.write.alphabet = spec.alphabet) &&
+-    decide (request.read.operation = spec.readOperation) &&
+-    decide (request.write.operation = spec.writeOperation)
+-
+-/-- Decide the first checked target profile: one string-keyed String property,
+-one exact marker, exact operation identities, and legal imported spellings. -/
+-def requestReady (request : Request) : Bool :=
+-  match request.property.name, request.property.type,
+-      EffectfulFieldSpec.check request.property.annotations with
+-  | .string fieldName, .string _ _, some spec =>
+-      namesReady request fieldName && importsReady request &&
+-        bindingsMatch request spec
+-  | _, _, _ => false
+-
+-/-- Logical spelling of checked target admission. -/
+-def RequestReady (request : Request) : Prop :=
+-  requestReady request = true
+-
+-theorem requestReady_iff (request : Request) :
+-    requestReady request = true <-> RequestReady request :=
+-  Iff.rfl
+-
+-private def requestFieldName (request : Request) : String :=
+-  match request.property.name with
+-  | .string name => name
+-  | _ => ""
+-
+-/-- Lower an admitted request to structured target syntax. -/
+-def decl? (request : Request) : Option Decl :=
+-  if requestReady request then
+-    match request.property.name with
+-    | .string fieldName =>
+-        some (.effectfulField
+-          { fieldName
+-            sourceType := request.sourceType
+-            fieldType := "string"
+-            readService := request.read.serviceName
+-            readMethod := request.read.methodName
+-            readError := request.read.errorType
+-            writeService := request.write.serviceName
+-            writeMethod := request.write.methodName
+-            writeError := request.write.errorType })
+-    | _ => none
+-  else none
+-
+-private def distinctBindings (bindings : List (String × String)) :
+-    List (String × String) :=
+-  bindings.eraseDups
+-
+-/-- Assemble the complete Effect v4 target module with deterministic exact
+-import deduplication. -/
+-def module? (request : Request) : Option Module := do
+-  let declaration ← decl? request
+-  let serviceImports := distinctBindings
+-    [ (request.read.serviceName, request.read.serviceImport)
+-    , (request.write.serviceName, request.write.serviceImport) ]
+-  let typeImports := distinctBindings
+-    [ (request.sourceType, request.sourceImport)
+-    , (request.read.errorType, request.read.errorImport)
+-    , (request.write.errorType, request.write.errorImport) ]
+-  pure
+-    { header := ["Generated by Effect4 effectful Schema fields.", "", "Do not edit."]
+-      imports :=
+-        [Import.named ["Effect", "Optic"] "effect"] ++
+-          (serviceImports.map fun binding => Import.named [{ imported := binding.1, localName := binding.1 }] binding.2) ++
+-          (typeImports.map fun binding => Import.types [binding.1] binding.2)
+-      decls := [declaration] }
+-
+-private def directionalRowsPresent (request : Request) (source : String) : Bool :=
+-  source.contains
+-      ("Effect.Services<ReturnType<typeof " ++ requestFieldName request ++ ".get>>") &&
+-    (source.contains
+-        ("Effect.Services<ReturnType<typeof " ++ requestFieldName request ++
+-          ".replace>>") &&
+-      source.contains
+-        (request.read.errorType ++ " | " ++ request.write.errorType))
+-
+-/-- Render only modules whose emitted directional type receipts are present. -/
+-def source? (request : Request) (style : Style) : Option String := do
+-  let target ← module? request
+-  let source := Render.module style target
+-  if directionalRowsPresent request source then some source else none
+-
+-/-- High-level checked generation alias. -/
+-def generate? (request : Request) (style : Style) : Option String :=
+-  source? request style
+-
+-theorem decl?_never_raw {request : Request} {declaration : Decl}
+-    (lowered : decl? request = some declaration) :
+-    ∀ text, declaration != Decl.raw text := by
+-  by_cases ready : requestReady request
+-  · cases keyEq : request.property.name with
+-    | string fieldName =>
+-        simp [decl?, ready, keyEq] at lowered
+-        subst declaration
+-        intro text
+-        rfl
+-    | number value => simp [decl?, ready, keyEq] at lowered
+-    | globalSymbol value => simp [decl?, ready, keyEq] at lowered
+-  · simp [decl?, ready] at lowered
+-
+-/-- Successful rendering exposes the directional service and error rows used
+-by the host and language-service gates. -/
+-theorem source_contains_directional_rows
+-    (fieldName readError writeError : String)
+-    {request : Request} {style : Style} {source : String}
+-    (generated : source? request style = some source)
+-    (fieldName_eq : request.property.name = .string fieldName)
+-    (readError_eq : request.read.errorType = readError)
+-    (writeError_eq : request.write.errorType = writeError) :
+-    source.contains
+-      ("Effect.Services<ReturnType<typeof " ++ fieldName ++ ".get>>") = true /\
+-    source.contains
+-      ("Effect.Services<ReturnType<typeof " ++ fieldName ++
+-        ".replace>>") = true /\
+-    source.contains
+-      (readError ++ " | " ++ writeError) = true := by
+-  unfold source? at generated
+-  cases moduleResult : module? request with
+-  | none => simp [moduleResult] at generated
+-  | some target =>
+-      simp only [moduleResult] at generated
+-      by_cases present : directionalRowsPresent request (Render.module style target)
+-      · simp [present] at generated
+-        cases generated
+-        unfold directionalRowsPresent at present
+-        have requestFieldName_eq : requestFieldName request = fieldName := by
+-          unfold requestFieldName
+-          rw [fieldName_eq]
+-        simp only [Bool.and_eq_true] at present
+-        rw [requestFieldName_eq, readError_eq, writeError_eq] at present
+-        exact present
+-      · simp [present] at generated
+-
+-end Effect4.Codegen.EffectfulField
+diff --git a/src/Effect4/Schema/EffectfulField.lean b/src/Effect4/Schema/EffectfulField.lean
+deleted file mode 100644
+index 6f316061..00000000
+--- a/src/Effect4/Schema/EffectfulField.lean
++++ /dev/null
+@@ -1,960 +0,0 @@
+-import Effect4.Schema.Annotations
+-import Effects.Algebra.Laws
+-import Effects.Flow.Block
+-
+-/-!
+-# Effectful Schema fields
+-
+-This module derives executable field access from the existing Schema
+-annotation data, pure optics, and closed effect signature. The first-order
+-annotation payload remains separate from the resolved functions used to build
+-`Program` values.
+--/
+-
+-namespace Effect4
+-
+-open Effects
+-
+-universe uOp uAns uTarget
+-
+-/-- Portable identity of the operations that implement one annotated field. -/
+-structure EffectfulFieldSpec where
+-  alphabet : AlphabetId
+-  readOperation : OperationId
+-  writeOperation : OperationId
+-deriving DecidableEq, Repr
+-
+-namespace EffectfulFieldSpec
+-
+-/-! The annotation codec is proof-oriented. Decimal rendering, parsing, and
+-raw equality are structural definitions whose reflection laws are proved
+-without importing the runtime's opaque numeric-string theorem or the derived
+-`DecidableEq Json` gate. -/
+-
+-private theorem append_nil_exact {α : Type} (xs : List α) : xs ++ [] = xs := by
+-  induction xs with
+-  | nil => rfl
+-  | cons head tail ih => exact congrArg (List.cons head) ih
+-
+-private theorem append_assoc_exact {α : Type}
+-    (xs ys zs : List α) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) := by
+-  induction xs with
+-  | nil => rfl
+-  | cons head tail ih => exact congrArg (List.cons head) ih
+-
+-private theorem concat_eq_append_singleton_exact {α : Type}
+-    (xs : List α) (x : α) : xs.concat x = xs ++ [x] := by
+-  induction xs with
+-  | nil => rfl
+-  | cons head tail ih => exact congrArg (List.cons head) ih
+-
+-private theorem byteArray_list_roundtrip {bytes : List UInt8} :
+-    bytes.toByteArray.data.toList = bytes := by
+-  rw [List.toByteArray]
+-  suffices ∀ xs acc,
+-      (List.toByteArray.loop xs acc).data.toList = acc.data.toList ++ xs by
+-    simpa using this bytes ByteArray.empty
+-  intro xs acc
+-  fun_induction List.toByteArray.loop xs acc with
+-  | case1 => exact (append_nil_exact _).symm
+-  | case2 head tail acc ih =>
+-      rw [ih]
+-      cases acc with
+-      | mk data =>
+-          cases data with
+-          | mk values =>
+-              change values.concat head ++ tail = values ++ head :: tail
+-              rw [concat_eq_append_singleton_exact]
+-              exact append_assoc_exact _ _ _
+-
+-private inductive Digit where
+-  | zero | one | two | three | four | five | six | seven | eight | nine
+-deriving DecidableEq
+-
+-namespace Digit
+-
+-private def value : Digit → Nat
+-  | zero => 0
+-  | one => 1
+-  | two => 2
+-  | three => 3
+-  | four => 4
+-  | five => 5
+-  | six => 6
+-  | seven => 7
+-  | eight => 8
+-  | nine => 9
+-
+-private def char : Digit → Char
+-  | zero => '0'
+-  | one => '1'
+-  | two => '2'
+-  | three => '3'
+-  | four => '4'
+-  | five => '5'
+-  | six => '6'
+-  | seven => '7'
+-  | eight => '8'
+-  | nine => '9'
+-
+-private def byte : Digit → UInt8
+-  | zero => 48
+-  | one => 49
+-  | two => 50
+-  | three => 51
+-  | four => 52
+-  | five => 53
+-  | six => 54
+-  | seven => 55
+-  | eight => 56
+-  | nine => 57
+-
+-private def ofByte (byte : UInt8) : Option Digit :=
+-  if byte = 48 then some zero else
+-  if byte = 49 then some one else
+-  if byte = 50 then some two else
+-  if byte = 51 then some three else
+-  if byte = 52 then some four else
+-  if byte = 53 then some five else
+-  if byte = 54 then some six else
+-  if byte = 55 then some seven else
+-  if byte = 56 then some eight else
+-  if byte = 57 then some nine else
+-  none
+-
+-private theorem ofByte_byte (digit : Digit) : ofByte digit.byte = some digit := by
+-  cases digit <;> rfl
+-
+-private theorem utf8EncodeChar_char (digit : Digit) :
+-    String.utf8EncodeChar digit.char = [digit.byte] := by
+-  cases digit <;> decide
+-
+-end Digit
+-
+-private def reverseExact {α : Type} : List α → List α
+-  | [] => []
+-  | head :: tail => reverseExact tail ++ [head]
+-
+-private theorem reverse_append_exact {α : Type} (xs ys : List α) :
+-    reverseExact (xs ++ ys) = reverseExact ys ++ reverseExact xs := by
+-  induction xs with
+-  | nil => exact (append_nil_exact _).symm
+-  | cons head tail ih =>
+-      change reverseExact (tail ++ ys) ++ [head] =
+-        reverseExact ys ++ (reverseExact tail ++ [head])
+-      rw [ih]
+-      exact append_assoc_exact _ _ _
+-
+-private theorem reverse_singleton_exact {α : Type} (x : α) :
+-    reverseExact [x] = [x] := rfl
+-
+-private theorem reverse_reverse_exact {α : Type} (xs : List α) :
+-    reverseExact (reverseExact xs) = xs := by
+-  induction xs with
+-  | nil => rfl
+-  | cons head tail ih =>
+-      change reverseExact (reverseExact tail ++ [head]) = head :: tail
+-      rw [reverse_append_exact, reverse_singleton_exact, ih]
+-      rfl
+-
+-private def increment : List Digit → List Digit
+-  | [] => [.one]
+-  | .zero :: tail => .one :: tail
+-  | .one :: tail => .two :: tail
+-  | .two :: tail => .three :: tail
+-  | .three :: tail => .four :: tail
+-  | .four :: tail => .five :: tail
+-  | .five :: tail => .six :: tail
+-  | .six :: tail => .seven :: tail
+-  | .seven :: tail => .eight :: tail
+-  | .eight :: tail => .nine :: tail
+-  | .nine :: tail => .zero :: increment tail
+-
+-private def digitsRev : Nat → List Digit
+-  | 0 => [.zero]
+-  | n + 1 => increment (digitsRev n)
+-
+-private def valueRev : List Digit → Nat
+-  | [] => 0
+-  | digit :: tail => digit.value + 10 * valueRev tail
+-
+-private theorem valueRev_increment (digits : List Digit) :
+-    valueRev (increment digits) = valueRev digits + 1 := by
+-  induction digits with
+-  | nil => rfl
+-  | cons digit tail ih =>
+-      cases digit with
+-      | zero => exact Nat.succ_add 0 (10 * valueRev tail)
+-      | one => exact Nat.succ_add 1 (10 * valueRev tail)
+-      | two => exact Nat.succ_add 2 (10 * valueRev tail)
+-      | three => exact Nat.succ_add 3 (10 * valueRev tail)
+-      | four => exact Nat.succ_add 4 (10 * valueRev tail)
+-      | five => exact Nat.succ_add 5 (10 * valueRev tail)
+-      | six => exact Nat.succ_add 6 (10 * valueRev tail)
+-      | seven => exact Nat.succ_add 7 (10 * valueRev tail)
+-      | eight => exact Nat.succ_add 8 (10 * valueRev tail)
+-      | nine =>
+-          simp only [increment, valueRev, Digit.value, Nat.zero_add]
+-          rw [ih, Nat.mul_succ]
+-          exact (congrArg (fun value => value + 1)
+-            (Nat.add_comm 9 (10 * valueRev tail))).symm
+-
+-private theorem valueRev_digitsRev (n : Nat) : valueRev (digitsRev n) = n := by
+-  induction n with
+-  | zero => rfl
+-  | succ n ih =>
+-      rw [digitsRev, valueRev_increment, ih]
+-
+-private def parseBytes : List UInt8 → Option (List Digit)
+-  | [] => some []
+-  | byte :: bytes => do
+-      let digit ← Digit.ofByte byte
+-      let digits ← parseBytes bytes
+-      pure (digit :: digits)
+-
+-private theorem parseBytes_map_byte (digits : List Digit) :
+-    parseBytes (digits.map Digit.byte) = some digits := by
+-  induction digits with
+-  | nil => rfl
+-  | cons digit tail ih =>
+-      unfold List.map parseBytes
+-      rw [Digit.ofByte_byte, ih]
+-      rfl
+-
+-private theorem utf8Digits_exact (digits : List Digit) :
+-    (digits.map Digit.char).flatMap String.utf8EncodeChar =
+-      digits.map Digit.byte := by
+-  induction digits with
+-  | nil => rfl
+-  | cons digit tail ih =>
+-      change String.utf8EncodeChar digit.char ++
+-          (tail.map Digit.char).flatMap String.utf8EncodeChar =
+-        digit.byte :: tail.map Digit.byte
+-      rw [Digit.utf8EncodeChar_char, ih]
+-      rfl
+-
+-private def decimal (n : Nat) : String :=
+-  String.ofList ((reverseExact (digitsRev n)).map Digit.char)
+-
+-private def parseDecimal (raw : String) : Option Nat := do
+-  let msfDigits ← parseBytes raw.toByteArray.data.toList
+-  pure (valueRev (reverseExact msfDigits))
+-
+-private theorem parseDecimal_decimal (n : Nat) :
+-    parseDecimal (decimal n) = some n := by
+-  unfold parseDecimal decimal String.ofList List.utf8Encode
+-  rw [byteArray_list_roundtrip, utf8Digits_exact, parseBytes_map_byte]
+-  change some (valueRev (reverseExact (reverseExact (digitsRev n)))) = some n
+-  rw [reverse_reverse_exact, valueRev_digitsRev]
+-
+-private def encode (spec : EffectfulFieldSpec) : Json :=
+-  .obj
+-    [ ("alphabet", .str (decimal spec.alphabet.value))
+-    , ("readOperation", .str (decimal spec.readOperation.value))
+-    , ("writeOperation", .str (decimal spec.writeOperation.value))
+-    ]
+-
+-private def jsonString : Json → Option String
+-  | .null => none
+-  | .bool _ => none
+-  | .number _ => none
+-  | .str raw => some raw
+-  | .arr _ => none
+-  | .obj _ => none
+-
+-private def decodePayloads
+-    (alphabetPayload readPayload writePayload : Json) :
+-    Option EffectfulFieldSpec := do
+-  let alphabetString ← jsonString alphabetPayload
+-  let readString ← jsonString readPayload
+-  let writeString ← jsonString writePayload
+-  let alphabet ← parseDecimal alphabetString
+-  let readOperation ← parseDecimal readString
+-  let writeOperation ← parseDecimal writeString
+-  pure
+-    { alphabet := ⟨alphabet⟩
+-      readOperation := ⟨readOperation⟩
+-      writeOperation := ⟨writeOperation⟩ }
+-
+-private def decodeEntries : List (String × Json) → Option EffectfulFieldSpec
+-  | [] => none
+-  | alphabetEntry :: rest =>
+-      match rest with
+-      | [] => none
+-      | readEntry :: rest =>
+-          match rest with
+-          | [] => none
+-          | writeEntry :: rest =>
+-              match rest with
+-              | [] => decodePayloads alphabetEntry.2 readEntry.2 writeEntry.2
+-              | _ :: _ => none
+-
+-private def decodeCandidate : Json → Option EffectfulFieldSpec
+-  | .null => none
+-  | .bool _ => none
+-  | .number _ => none
+-  | .str _ => none
+-  | .arr _ => none
+-  | .obj entries => decodeEntries entries
+-
+-private def natEq : Nat → Nat → Bool
+-  | 0, 0 => true
+-  | 0, _ + 1 => false
+-  | _ + 1, 0 => false
+-  | left + 1, right + 1 => natEq left right
+-
+-private theorem natEq_self (n : Nat) : natEq n n = true := by
+-  induction n with
+-  | zero => rfl
+-  | succ n ih => exact ih
+-
+-private theorem natEq_true {left right : Nat}
+-    (equal : natEq left right = true) : left = right := by
+-  induction left generalizing right with
+-  | zero =>
+-      cases right with
+-      | zero => rfl
+-      | succ _ => cases equal
+-  | succ left ih =>
+-      cases right with
+-      | zero => cases equal
+-      | succ right => exact congrArg Nat.succ (ih equal)
+-
+-private def byteEq (left right : UInt8) : Bool :=
+-  natEq left.toNat right.toNat
+-
+-private theorem byteEq_self (byte : UInt8) : byteEq byte byte = true :=
+-  natEq_self byte.toNat
+-
+-private theorem byteEq_true {left right : UInt8}
+-    (equal : byteEq left right = true) : left = right :=
+-  UInt8.toNat_inj.mp (natEq_true equal)
+-
+-private def byteListEq : List UInt8 → List UInt8 → Bool
+-  | [], [] => true
+-  | [], _ :: _ => false
+-  | _ :: _, [] => false
+-  | left :: lefts, right :: rights =>
+-      match byteEq left right with
+-      | false => false
+-      | true => byteListEq lefts rights
+-
+-private theorem byteListEq_self (bytes : List UInt8) :
+-    byteListEq bytes bytes = true := by
+-  induction bytes with
+-  | nil => rfl
+-  | cons byte bytes ih =>
+-      unfold byteListEq
+-      rw [byteEq_self]
+-      exact ih
+-
+-private theorem byteListEq_true {left right : List UInt8}
+-    (equal : byteListEq left right = true) : left = right := by
+-  induction left generalizing right with
+-  | nil =>
+-      cases right with
+-      | nil => rfl
+-      | cons _ _ => cases equal
+-  | cons left lefts ih =>
+-      cases right with
+-      | nil => cases equal
+-      | cons right rights =>
+-          unfold byteListEq at equal
+-          cases headEq : byteEq left right with
+-          | false =>
+-              rw [headEq] at equal
+-              cases equal
+-          | true =>
+-              rw [headEq] at equal
+-              have sameHead := byteEq_true headEq
+-              have sameTail := ih equal
+-              cases sameHead
+-              cases sameTail
+-              rfl
+-
+-private def stringEq (left right : String) : Bool :=
+-  byteListEq left.toByteArray.data.toList right.toByteArray.data.toList
+-
+-private theorem stringEq_self (value : String) : stringEq value value = true :=
+-  byteListEq_self value.toByteArray.data.toList
+-
+-private theorem array_eq_of_toList_eq {array₁ array₂ : Array UInt8}
+-    (equal : array₁.toList = array₂.toList) : array₁ = array₂ := by
+-  cases array₁ with
+-  | mk left =>
+-      cases array₂ with
+-      | mk right =>
+-          exact congrArg Array.mk equal
+-
+-private theorem byteArray_eq_of_toList_eq {array₁ array₂ : ByteArray}
+-    (equal : array₁.data.toList = array₂.data.toList) : array₁ = array₂ := by
+-  cases array₁ with
+-  | mk left =>
+-      cases array₂ with
+-      | mk right =>
+-          exact congrArg ByteArray.mk (array_eq_of_toList_eq equal)
+-
+-private theorem stringEq_true {left right : String}
+-    (equal : stringEq left right = true) : left = right :=
+-  String.toByteArray_inj.mp (byteArray_eq_of_toList_eq (byteListEq_true equal))
+-
+-private def exactStringEntry
+-    (expectedKey expectedValue : String) (entry : String × Json) : Bool :=
+-  match entry.2 with
+-  | .null => false
+-  | .bool _ => false
+-  | .number _ => false
+-  | .str raw =>
+-      match stringEq entry.1 expectedKey with
+-      | false => false
+-      | true => stringEq raw expectedValue
+-  | .arr _ => false
+-  | .obj _ => false
+-
+-private theorem exactStringEntry_expected (key value : String) :
+-    exactStringEntry key value (key, .str value) = true := by
+-  unfold exactStringEntry
+-  change (match stringEq key key with
+-    | false => false
+-    | true => stringEq value value) = true
+-  rw [stringEq_self]
+-  exact stringEq_self value
+-
+-private theorem exactStringEntry_eq {key value : String}
+-    {entry : String × Json}
+-    (exact : exactStringEntry key value entry = true) :
+-    entry = (key, .str value) := by
+-  cases entry with
+-  | mk actualKey payload =>
+-      cases payload <;> try cases exact
+-      rename_i raw
+-      unfold exactStringEntry at exact
+-      generalize keyEq : stringEq actualKey key = sameKey at exact
+-      cases sameKey with
+-      | false => cases exact
+-      | true =>
+-          have actualKeyEq : actualKey = key := stringEq_true keyEq
+-          have rawEq : raw = value := stringEq_true exact
+-          cases actualKeyEq
+-          cases rawEq
+-          rfl
+-
+-private def exactEntries
+-    (spec : EffectfulFieldSpec) : List (String × Json) → Bool
+-  | [] => false
+-  | alphabetEntry :: rest =>
+-      match rest with
+-      | [] => false
+-      | readEntry :: rest =>
+-          match rest with
+-          | [] => false
+-          | writeEntry :: rest =>
+-              match rest with
+-              | _ :: _ => false
+-              | [] =>
+-                  match exactStringEntry "alphabet"
+-                      (decimal spec.alphabet.value) alphabetEntry with
+-                  | false => false
+-                  | true =>
+-                      match exactStringEntry "readOperation"
+-                          (decimal spec.readOperation.value) readEntry with
+-                      | false => false
+-                      | true => exactStringEntry "writeOperation"
+-                          (decimal spec.writeOperation.value) writeEntry
+-
+-private theorem exactEntries_encode (spec : EffectfulFieldSpec) :
+-    exactEntries spec
+-      [ ("alphabet", .str (decimal spec.alphabet.value))
+-      , ("readOperation", .str (decimal spec.readOperation.value))
+-      , ("writeOperation", .str (decimal spec.writeOperation.value))
+-      ] = true := by
+-  change (match exactStringEntry "alphabet"
+-      (decimal spec.alphabet.value)
+-      ("alphabet", .str (decimal spec.alphabet.value)) with
+-    | false => false
+-    | true =>
+-      match exactStringEntry "readOperation"
+-          (decimal spec.readOperation.value)
+-          ("readOperation", .str (decimal spec.readOperation.value)) with
+-      | false => false
+-      | true => exactStringEntry "writeOperation"
+-          (decimal spec.writeOperation.value)
+-          ("writeOperation", .str (decimal spec.writeOperation.value))) = true
+-  rw [exactStringEntry_expected, exactStringEntry_expected,
+-    exactStringEntry_expected]
+-
+-private theorem exactEntries_eq {spec : EffectfulFieldSpec}
+-    {entries : List (String × Json)}
+-    (exact : exactEntries spec entries = true) :
+-    entries =
+-      [ ("alphabet", .str (decimal spec.alphabet.value))
+-      , ("readOperation", .str (decimal spec.readOperation.value))
+-      , ("writeOperation", .str (decimal spec.writeOperation.value))
+-      ] := by
+-  cases entries with
+-  | nil => cases exact
+-  | cons alphabetEntry rest =>
+-      cases rest with
+-      | nil => cases exact
+-      | cons readEntry rest =>
+-          cases rest with
+-          | nil => cases exact
+-          | cons writeEntry rest =>
+-              cases rest with
+-              | cons extra rest => cases exact
+-              | nil =>
+-                  change (match exactStringEntry "alphabet"
+-                      (decimal spec.alphabet.value) alphabetEntry with
+-                    | false => false
+-                    | true =>
+-                      match exactStringEntry "readOperation"
+-                          (decimal spec.readOperation.value) readEntry with
+-                      | false => false
+-                      | true => exactStringEntry "writeOperation"
+-                          (decimal spec.writeOperation.value) writeEntry) = true at exact
+-                  cases alphabetEq : exactStringEntry "alphabet"
+-                      (decimal spec.alphabet.value) alphabetEntry with
+-                  | false =>
+-                      rw [alphabetEq] at exact
+-                      cases exact
+-                  | true =>
+-                      rw [alphabetEq] at exact
+-                      cases readEq : exactStringEntry "readOperation"
+-                          (decimal spec.readOperation.value) readEntry with
+-                      | false =>
+-                          rw [readEq] at exact
+-                          cases exact
+-                      | true =>
+-                          rw [readEq] at exact
+-                          have alphabetEntryEq := exactStringEntry_eq alphabetEq
+-                          have readEntryEq := exactStringEntry_eq readEq
+-                          have writeEntryEq := exactStringEntry_eq exact
+-                          cases alphabetEntryEq
+-                          cases readEntryEq
+-                          cases writeEntryEq
+-                          rfl
+-
+-private def exactRaw (spec : EffectfulFieldSpec) : Json → Bool
+-  | .null => false
+-  | .bool _ => false
+-  | .number _ => false
+-  | .str _ => false
+-  | .arr _ => false
+-  | .obj entries => exactEntries spec entries
+-
+-private theorem exactRaw_encode (spec : EffectfulFieldSpec) :
+-    exactRaw spec (encode spec) = true :=
+-  exactEntries_encode spec
+-
+-private theorem exactRaw_eq {spec : EffectfulFieldSpec} {raw : Json}
+-    (exact : exactRaw spec raw = true) : encode spec = raw := by
+-  cases raw with
+-  | null => cases exact
+-  | bool _ => cases exact
+-  | number _ => cases exact
+-  | str _ => cases exact
+-  | arr _ => cases exact
+-  | obj entries =>
+-      have entriesEq := exactEntries_eq exact
+-      cases entriesEq
+-      rfl
+-
+-/-- Parse the exact canonical payload. The structural raw gate rejects leading
+-zeroes, reordered fields, duplicates, and extra fields. -/
+-private def decode (raw : Json) : Option EffectfulFieldSpec :=
+-  match decodeCandidate raw with
+-  | some spec =>
+-      match exactRaw spec raw with
+-      | true => some spec
+-      | false => none
+-  | none => none
+-
+-private theorem decodeCandidate_encode (spec : EffectfulFieldSpec) :
+-    decodeCandidate (encode spec) = some spec := by
+-  cases spec with
+-  | mk alphabet readOperation writeOperation =>
+-      cases alphabet with
+-      | mk alphabetValue =>
+-        cases readOperation with
+-        | mk readOperationValue =>
+-          cases writeOperation with
+-          | mk writeOperationValue =>
+-            change (do
+-              let alphabet ← parseDecimal (decimal alphabetValue)
+-              let readOperation ← parseDecimal (decimal readOperationValue)
+-              let writeOperation ← parseDecimal (decimal writeOperationValue)
+-              some (EffectfulFieldSpec.mk ⟨alphabet⟩ ⟨readOperation⟩
+-                ⟨writeOperation⟩)) =
+-              some (EffectfulFieldSpec.mk ⟨alphabetValue⟩ ⟨readOperationValue⟩
+-                ⟨writeOperationValue⟩)
+-            rw [parseDecimal_decimal, parseDecimal_decimal, parseDecimal_decimal]
+-            rfl
+-
+-private theorem decode_encode (spec : EffectfulFieldSpec) :
+-    decode (encode spec) = some spec := by
+-  unfold decode
+-  rw [decodeCandidate_encode]
+-  change (match exactRaw spec (encode spec) with
+-    | true => some spec
+-    | false => none) = some spec
+-  rw [exactRaw_encode]
+-
+-private theorem encode_decode {raw : Json} {spec : EffectfulFieldSpec}
+-    (decoded : decode raw = some spec) : encode spec = raw := by
+-  unfold decode at decoded
+-  cases candidateEq : decodeCandidate raw with
+-  | none =>
+-      rw [candidateEq] at decoded
+-      cases decoded
+-  | some candidate =>
+-      rw [candidateEq] at decoded
+-      change (match exactRaw candidate raw with
+-        | true => some candidate
+-        | false => none) = some spec at decoded
+-      cases exactRawEq : exactRaw candidate raw with
+-      | true =>
+-        rw [exactRawEq] at decoded
+-        have sameSpec : candidate = spec := Option.some.inj decoded
+-        cases sameSpec
+-        exact exactRaw_eq exactRawEq
+-      | false =>
+-        rw [exactRawEq] at decoded
+-        cases decoded
+-
+-/-- The one portable annotation dimension for effectful fields. -/
+-def annotationKey : AnnotationKey EffectfulFieldSpec where
+-  name := "effect4/effectful-field"
+-  encode := encode
+-  decode := decode
+-
+-/-- The effectful-field payload is an exact partial isomorphism with raw JSON. -/
+-theorem annotationKey_lawful : annotationKey.Lawful where
+-  decode_encode := decode_encode
+-  encode_decode _ _ decoded := encode_decode decoded
+-
+-/-- Every raw same-name payload, including malformed and duplicate entries. -/
+-def rawOccurrences (annotations : Annotations) : List Json :=
+-  (Annotations.payloadsAt annotationKey.name).collect annotations
+-
+-/-- Exactly one canonically encoded effectful-field marker exists. -/
+-def RawAdmissible (annotations : Annotations) : Prop :=
+-  ∃ spec, rawOccurrences annotations = [annotationKey.encode spec]
+-
+-/-- Decide the exact raw marker. Typed filtering is deliberately not used. -/
+-def check (annotations : Annotations) : Option EffectfulFieldSpec :=
+-  match rawOccurrences annotations with
+-  | [raw] => annotationKey.decode raw
+-  | _ => none
+-
+-theorem check_eq_some_iff {annotations : Annotations}
+-    {spec : EffectfulFieldSpec} :
+-    check annotations = some spec ↔
+-      rawOccurrences annotations = [annotationKey.encode spec] := by
+-  unfold check
+-  generalize occurrencesEq : rawOccurrences annotations = occurrences
+-  cases occurrences with
+-  | nil => simp
+-  | cons raw rest =>
+-      cases rest with
+-      | nil =>
+-          constructor
+-          · intro decoded
+-            have exactRaw := annotationKey_lawful.encode_decode raw spec decoded
+-            simp [exactRaw]
+-          · intro exactOccurrence
+-            have exactRaw : raw = annotationKey.encode spec := by
+-              simpa using exactOccurrence
+-            subst raw
+-            exact annotationKey_lawful.decode_encode spec
+-      | cons second tail => simp
+-
+-theorem rawAdmissible_iff_exists_check {annotations : Annotations} :
+-    RawAdmissible annotations ↔ ∃ spec, check annotations = some spec := by
+-  constructor
+-  · rintro ⟨spec, admissible⟩
+-    exact ⟨spec, check_eq_some_iff.mpr admissible⟩
+-  · rintro ⟨spec, checked⟩
+-    exact ⟨spec, check_eq_some_iff.mp checked⟩
+-
+-end EffectfulFieldSpec
+-
+-namespace PropertySignatureOf
+-
+-/-- Decode the exact effectful-field marker attached to this property. -/
+-def effectfulFieldSpec (property : PropertySignatureOf A) :
+-    Option EffectfulFieldSpec :=
+-  EffectfulFieldSpec.check property.annotations
+-
+-/-- Decide whether this property carries exactly one canonical marker. -/
+-def hasEffectfulField (property : PropertySignatureOf A) : Bool :=
+-  property.effectfulFieldSpec.isSome
+-
+-theorem hasEffectfulField_eq_true_iff (property : PropertySignatureOf A) :
+-    property.hasEffectfulField = true <->
+-      EffectfulFieldSpec.RawAdmissible property.annotations := by
+-  rw [EffectfulFieldSpec.rawAdmissible_iff_exists_check]
+-  unfold hasEffectfulField effectfulFieldSpec
+-  cases checked : EffectfulFieldSpec.check property.annotations <;>
+-    simp
+-
+-end PropertySignatureOf
+-
+-private abbrev EffectfulFieldPropertyRows :=
+-  List (PropertySignature × EffectfulFieldSpec)
+-
+-private abbrev RepresentationWithEffectfulFields :=
+-  Representation × EffectfulFieldPropertyRows
+-
+-private abbrev CheckWithEffectfulFields :=
+-  Check × EffectfulFieldPropertyRows
+-
+-private def representationRows
+-    (children : List RepresentationWithEffectfulFields) :
+-    EffectfulFieldPropertyRows :=
+-  children.flatMap Prod.snd
+-
+-private def checkRows (children : List CheckWithEffectfulFields) :
+-    EffectfulFieldPropertyRows :=
+-  children.flatMap Prod.snd
+-
+-private def rebuildElement
+-    (element : ElementOf RepresentationWithEffectfulFields) : Element :=
+-  { isOptional := element.isOptional
+-    type := element.type.1
+-    annotations := element.annotations }
+-
+-private def elementRows
+-    (elements : List (ElementOf RepresentationWithEffectfulFields)) :
+-    EffectfulFieldPropertyRows :=
+-  elements.flatMap fun element => element.type.2
+-
+-private def rebuildProperty
+-    (property : PropertySignatureOf RepresentationWithEffectfulFields) :
+-    PropertySignature :=
+-  { name := property.name
+-    type := property.type.1
+-    isOptional := property.isOptional
+-    isMutable := property.isMutable
+-    annotations := property.annotations }
+-
+-private def propertyRows
+-    (properties : List (PropertySignatureOf RepresentationWithEffectfulFields)) :
+-    EffectfulFieldPropertyRows :=
+-  properties.flatMap fun property =>
+-    let original := rebuildProperty property
+-    match original.effectfulFieldSpec with
+-    | some spec => (original, spec) :: property.type.2
+-    | none => property.type.2
+-
+-private def rebuildIndex
+-    (index : IndexSignatureOf RepresentationWithEffectfulFields) : IndexSignature :=
+-  { parameter := index.parameter.1
+-    type := index.type.1 }
+-
+-private def indexRows
+-    (indexes : List (IndexSignatureOf RepresentationWithEffectfulFields)) :
+-    EffectfulFieldPropertyRows :=
+-  indexes.flatMap fun index => index.parameter.2 ++ index.type.2
+-
+-private def rebuildCheckAnnotation
+-    (annotation : CheckRepresentationAnnotationOf RepresentationWithEffectfulFields) :
+-    CheckRepresentationAnnotation :=
+-  { id := annotation.id
+-    payload := annotation.payload
+-    schemas := annotation.schemas.map (List.map Prod.fst) }
+-
+-private def checkAnnotationRows
+-    (annotation : CheckRepresentationAnnotationOf RepresentationWithEffectfulFields) :
+-    EffectfulFieldPropertyRows :=
+-  match annotation.schemas with
+-  | none => []
+-  | some schemas => representationRows schemas
+-
+-/-- The rebuilt carrier beside its rows, at each of the family's two sorts. -/
+-private abbrev effectfulFieldCarrier : RepresentationFam → Type
+-  | .representation => RepresentationWithEffectfulFields
+-  | .check => CheckWithEffectfulFields
+-
+-private def effectfulFieldPropertyAlgebra :
+-    RepresentationAlgebra effectfulFieldCarrier where
+-  representation_declaration := fun representation annotations typeParameters checks =>
+-    ( .declaration representation annotations (typeParameters.map Prod.fst)
+-        (checks.map Prod.fst)
+-    , representationRows typeParameters ++ checkRows checks )
+-  representation_reference := fun key => (.reference key, [])
+-  representation_suspend := fun annotations checks thunk =>
+-    (.suspend annotations (checks.map Prod.fst) thunk.1,
+-      checkRows checks ++ thunk.2)
+-  representation_null := fun annotations checks =>
+-    (.null annotations (checks.map Prod.fst), checkRows checks)
+-  representation_undefined := fun annotations checks =>
+-    (.undefined annotations (checks.map Prod.fst), checkRows checks)
+-  representation_void := fun annotations checks =>
+-    (.void annotations (checks.map Prod.fst), checkRows checks)
+-  representation_never := fun annotations checks =>
+-    (.never annotations (checks.map Prod.fst), checkRows checks)
+-  representation_unknown := fun annotations checks =>
+-    (.unknown annotations (checks.map Prod.fst), checkRows checks)
+-  representation_any := fun annotations checks =>
+-    (.any annotations (checks.map Prod.fst), checkRows checks)
+-  representation_string := fun annotations checks =>
+-    (.string annotations (checks.map Prod.fst), checkRows checks)
+-  representation_number := fun annotations checks =>
+-    (.number annotations (checks.map Prod.fst), checkRows checks)
+-  representation_boolean := fun annotations checks =>
+-    (.boolean annotations (checks.map Prod.fst), checkRows checks)
+-  representation_bigint := fun annotations checks =>
+-    (.bigint annotations (checks.map Prod.fst), checkRows checks)
+-  representation_symbol := fun annotations checks =>
+-    (.symbol annotations (checks.map Prod.fst), checkRows checks)
+-  representation_literal := fun annotations checks value =>
+-    (.literal annotations (checks.map Prod.fst) value, checkRows checks)
+-  representation_uniqueSymbol := fun annotations checks key =>
+-    (.uniqueSymbol annotations (checks.map Prod.fst) key, checkRows checks)
+-  representation_objectKeyword := fun annotations checks =>
+-    (.objectKeyword annotations (checks.map Prod.fst), checkRows checks)
+-  representation_enum := fun annotations checks entries =>
+-    (.enum annotations (checks.map Prod.fst) entries, checkRows checks)
+-  representation_templateLiteral := fun annotations checks parts =>
+-    ( .templateLiteral annotations (checks.map Prod.fst) (parts.map Prod.fst)
+-    , checkRows checks ++ representationRows parts )
+-  representation_arrays := fun annotations checks elements rest =>
+-    ( .arrays annotations (checks.map Prod.fst)
+-        (elements.map rebuildElement) (rest.map Prod.fst)
+-    , checkRows checks ++ elementRows elements ++ representationRows rest )
+-  representation_objects := fun annotations checks properties indexes =>
+-    ( .objects annotations (checks.map Prod.fst)
+-        (properties.map rebuildProperty) (indexes.map rebuildIndex)
+-    , checkRows checks ++ propertyRows properties ++ indexRows indexes )
+-  representation_union := fun annotations checks types mode =>
+-    ( .union annotations (checks.map Prod.fst) (types.map Prod.fst) mode
+-    , checkRows checks ++ representationRows types )
+-  check_filter := fun representation annotations aborted =>
+-    ( .filter (rebuildCheckAnnotation representation) annotations aborted
+-    , checkAnnotationRows representation )
+-  check_filterGroup := fun representation annotations checks =>
+-    let rebuilt := representation.map rebuildCheckAnnotation
+-    let representationRows :=
+-      match representation with
+-      | none => []
+-      | some value => checkAnnotationRows value
+-    (.filterGroup rebuilt annotations (checks.map Prod.fst),
+-      representationRows ++ checkRows checks)
+-
+-/-- Discover every exactly marked property through the existing exhaustive
+-Schema fold (the generated `cata_representation`), retaining structural preorder and
+-duplicate occurrences. -/
+-def Representation.effectfulFieldProperties (representation : Representation) :
+-    List (PropertySignature × EffectfulFieldSpec) :=
+-  (cata_representation effectfulFieldPropertyAlgebra representation).2
+-
+-/-- Resolution of portable operation identities into one existing signature. -/
+-structure FieldEffectOps
+-    (signature : Signature.{uOp, uAns}) (S A : Type uAns) where
+-  alphabet : AlphabetId
+-  readOperation : OperationId
+-  writeOperation : OperationId
+-  operationId : signature.Op → OperationId
+-  read : S → signature.Op
+-  read_answer : ∀ source, signature.Answer (read source) = A
+-  write : S → A → signature.Op
+-  read_operation : ∀ source, operationId (read source) = readOperation
+-  write_operation : ∀ source value,
+-    operationId (write source value) = writeOperation
+-
+-namespace EffectfulFieldSpec
+-
+-/-- Exact identity agreement between portable metadata and resolved operations. -/
+-def Matches (spec : EffectfulFieldSpec)
+-    (operations : FieldEffectOps signature S A) : Prop :=
+-  spec.alphabet = operations.alphabet ∧
+-    spec.readOperation = operations.readOperation ∧
+-    spec.writeOperation = operations.writeOperation
+-
+-instance (spec : EffectfulFieldSpec)
+-    (operations : FieldEffectOps signature S A) :
+-    Decidable (spec.Matches operations) :=
+-  inferInstanceAs (Decidable
+-    (spec.alphabet = operations.alphabet ∧
+-      spec.readOperation = operations.readOperation ∧
+-      spec.writeOperation = operations.writeOperation))
+-
+-end EffectfulFieldSpec
+-
+-/-- A pure field focus paired with resolved operations in an existing effect
+-signature. It is an authoring/proof view, not persisted Schema data. -/
+-structure EffectfulField
+-    (signature : Signature.{uOp, uAns}) (S A : Type uAns) where
+-  optic : Lens S A
+-  operations : FieldEffectOps signature S A
+-
+-namespace EffectfulField
+-
+-/-- Raw annotation evidence and the resolved operation identities agree. -/
+-def Resolvable (annotations : Annotations)
+-    (operations : FieldEffectOps signature S A) : Prop :=
+-  ∃ spec, EffectfulFieldSpec.check annotations = some spec ∧
+-    spec.Matches operations
+-
+-/-- Resolve one exact raw marker into the effectful interface. -/
+-def resolve {signature : Signature.{uOp, uAns}} {S A : Type uAns}
+-    (optic : Lens S A) (operations : FieldEffectOps signature S A)
+-    (annotations : Annotations) : Option (EffectfulField signature S A) :=
+-  match EffectfulFieldSpec.check annotations with
+-  | some spec =>
+-      if spec.Matches operations then some { optic, operations } else none
+-  | none => none
+-
+-theorem resolvable_iff_resolve_isSome
+-    {signature : Signature.{uOp, uAns}} {S A : Type uAns}
+-    {optic : Lens S A} {operations : FieldEffectOps signature S A}
+-    {annotations : Annotations} :
+-    Resolvable annotations operations ↔
+-      (resolve optic operations annotations).isSome = true := by
+-  unfold Resolvable resolve
+-  cases checked : EffectfulFieldSpec.check annotations with
+-  | none => simp
+-  | some spec =>
+-      by_cases matched : spec.Matches operations <;> simp [matched]
+-
+-/-- Read the field through the resolved effect operation. -/
+-def get (field : EffectfulField signature S A) (_source : S) :
+-    Program signature A :=
+-  Program.perform (field.operations.read _source) >>= fun answer =>
+-    Program.pure ((field.operations.read_answer _source).mp answer)
+-
+-/-- Write first, then return the locally updated source. The operation reply
+-is discarded without constraining its answer type to `Unit`. -/
+-def set (field : EffectfulField signature S A) (value : A) (source : S) :
+-    Program signature S :=
+-  Program.perform (field.operations.write source value) >>= fun _ =>
+-    Program.pure (field.optic.replace value source)
+-
+-/-- Read the current effectful value, transform it, and write the result. -/
+-def modify (field : EffectfulField signature S A) (f : A → A) (source : S) :
+-    Program signature S :=
+-  field.get source >>= fun current => field.set (f current) source
+-
+-theorem interpret_set {signature : Signature.{uOp, uAns}}
+-    {S A : Type uAns} {M : Type uAns → Type uTarget}
+-    [Monad M] [LawfulMonad M] (handler : Handler signature M)
+-    (field : EffectfulField signature S A) (value : A) (source : S) :
+-    interpret handler (field.set value source) =
+-      handler.handle (field.operations.write source value) >>= fun _ =>
+-        pure (field.optic.replace value source) := by
+-  rfl
+-
+-theorem interpret_modify {signature : Signature.{uOp, uAns}}
+-    {S A : Type uAns} {M : Type uAns → Type uTarget}
+-    [Monad M] [LawfulMonad M] (handler : Handler signature M)
+-    (field : EffectfulField signature S A) (f : A → A) (source : S) :
+-    interpret handler (field.modify f source) =
+-      handler.handle (field.operations.read source) >>= fun answer =>
+-        let current := (field.operations.read_answer source).mp answer
+-        handler.handle (field.operations.write source (f current)) >>= fun _ =>
+-          pure (field.optic.replace (f current) source) := by
+-  rfl
+-
+-end EffectfulField
+-
+-end Effect4

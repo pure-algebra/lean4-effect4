@@ -1,0 +1,37 @@
+{
+  "stage": "01-effectful-field",
+  "ids": [
+    "E4-SCHEMA-CE-049",
+    "E4-SCHEMA-CE-050",
+    "E4-SCHEMA-CE-051",
+    "E4-SCHEMA-CE-052",
+    "E4-SCHEMA-CE-053",
+    "E4-SCHEMA-CE-054",
+    "E4-SCHEMA-CE-055"
+  ],
+  "count": 7,
+  "source_pins": [
+    {
+      "path": "Test/Counterexamples/Schema/EffectfulField.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "da8f4ec76df770a4d968b8c9e93e86f913b7000f"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/EffectfulFieldProperties.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "89346862309304b74aebc0c898498dae7e0552f4"
+    }
+  ],
+  "changes": [
+    {
+      "path": "Test/Counterexamples/REGISTER.md",
+      "old_sha256": "82e956d44c17a76716b5dda6cb5cc27df9e0757f79cfa519433187112de22d16",
+      "new_sha256": "9c3aa58488b6f96766ceb3373e85748f476eb05d19d39a38ccacf06a818c25c9"
+    },
+    {
+      "path": "Test/Counterexamples/Archive/REGISTER.md",
+      "old_sha256": "d1e096983fba1007faf663fb6ece739411c95d1a0e87dfb1737214bd2e041ec7",
+      "new_sha256": "8481b1262ba0a8d91eff834a05ca15f1b1741fba6f20c753776d5cbeb64ee95e"
+    }
+  ]
+}

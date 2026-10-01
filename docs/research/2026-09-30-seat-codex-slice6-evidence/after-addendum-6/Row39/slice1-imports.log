@@ -1,0 +1,3 @@
+Effect4 library-root gate: 136 API/utility modules, 213 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+Effect4 module and axiom gate: checked 502 modules and 69878 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 25 declaration(s)) additionally allows Classical.choice

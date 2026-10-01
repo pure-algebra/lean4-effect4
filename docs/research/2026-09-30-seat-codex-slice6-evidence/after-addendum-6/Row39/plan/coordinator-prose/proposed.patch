@@ -1,0 +1,59 @@
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -55,10 +55,14 @@
+ 
+ ## Source tree
+ 
+-The schema authoring boundary sits above Program and Schema. `Schema/Image` connects
+-concrete Lean carriers to admitted program values; its proofs are `Laws/Schema/Image`.
+-(`Schema/Transform` and `Schema/Endpoint`, the second authoring plane, were deleted on
+-2026-09-18 under `docs/research/2026-09-17-ontology-and-do-now-probe.md` §3.)
++The retained Schema boundary contains the raw carriers and authoring constructors,
++`Bridge` for the program type arrow, `Codec` for type-directed JSON, and `OfShape`
++for the Store shape arrow. Row 39 retires the separate field-admission judgment,
++program image, annotated-field generator and recursive annotation traversal.
++Pure `Store/Domain/Shape` imports no Schema module; `Store/Domain/Canonical` owns
++`Canonical.document` through `Schema/OfShape`, and Domain/Node/Genesis retain
++schema-node and address construction. (`Schema/Transform` and `Schema/Endpoint`,
++the second authoring plane, were deleted on 2026-09-18 under the ontology note §3.)
+ 
+ | Area | Responsibility |
+ | --- | --- |
+@@ -164,7 +168,7 @@
+ the program pipeline. Callers cross this seam; batteries also test modules
+ at their own boundaries. Program printers answer syntax (`TypeScript.Expr`, `ConstDecl`). The explicit
+ `render` operation crosses to bytes through `Codegen.Artefact.render`; it and
+-text-producing generators such as `Codegen.Schema.generate?` are admitted by
++text-producing functions such as `Codegen.Schema.documentSource` are admitted by
+ exact name in the axiom gate.
+ 
+ Inside the seam the library keeps its faces distinct and relates them by
+diff --git a/docs/GENERATED.md b/docs/GENERATED.md
+--- a/docs/GENERATED.md
++++ b/docs/GENERATED.md
+@@ -87,8 +87,10 @@
+ declaration censuses of the test tree, were retired the same day (stage 2 of the checking
+ refactor): what they froze by hand — constructor order and arity, owned names, receipts —
+ is held by the derived projection guard (`tools/Effect4Gen/Check.lean`), the compatibility
+-snapshot and the axiom gate. The rest of the Schema slice runs on its inputs as
+-`make check-schema-pins` and `check-schema-host`.
++snapshot and the axiom gate. The retained Schema checks run on their inputs as
++`make check-schema-pins` and `check-schema-ts`. Row 39 retires the annotation and
++effectful-field harnesses and their `check-schema-host` gate; the pinned
++`harness/schema-host` installation remains the host used by `schema-ts`.
+ 
+ The **evidence** column is the word, or words, a group's claim carries, ruled 2026-09-09
+ (DI-32): *proved* for a theorem, *reproduced* for a byte comparison against a fresh producer
+diff --git a/tools/Tools/ArchitectureRoles.lean b/tools/Tools/ArchitectureRoles.lean
+--- a/tools/Tools/ArchitectureRoles.lean
++++ b/tools/Tools/ArchitectureRoles.lean
+@@ -69,7 +69,7 @@
+   ⟨"src/Effect4/Program/Authoring", .runtime, 3, "Program/Authoring", "the authoring surface: modules, lifts, rows, forms", true, true⟩,
+   ⟨"src/Effect4/Program/Typing", .runtime, 3, "Program/Typing", "the typing rules the checker and the declarative judgement share", true, true⟩,
+   ⟨"src/Effect4/Program/Packages", .runtime, 3, "Program/Packages", "the two package tables", true, true⟩,
+-  ⟨"src/Effect4/Schema", .runtime, 4, "Schema", "the persisted Schema data plane; `Codec` is the type-directed JSON boundary; `Image` and `Bridge` the arrows in and out", false, true⟩,
++  ⟨"src/Effect4/Schema", .runtime, 4, "Schema", "the persisted Schema data plane; `Codec` is the type-directed JSON boundary; `Bridge` and `OfShape` are the type and shape arrows", false, true⟩,
+   ⟨"src/Effect4/Codegen", .runtime, 5, "Codegen", "the pinned Effect profile: print and read, the template table, forms, bindings, module admission", false, true⟩,
+   ⟨"src/Effect4/Ingest", .runtime, 5, "Ingest", "the ingest taxonomy", false, true⟩,
+   ⟨"src/Effect4/Api", .runtime, 6, "Api", "the application face: author and build, run, the host session and protocol, supervision, inspection", false, true⟩,

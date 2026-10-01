@@ -1,0 +1,238 @@
+{
+  "src/Effect4/Schema/EffectfulField.lean": {
+    "sha256": "139507c6b4685ecf226e7332a0a4ecc89ee1abbb2a79d1024272cf836e181bb3",
+    "mode": "100644"
+  },
+  "src/Effect4/Codegen/EffectfulField.lean": {
+    "sha256": "6d116f26ae480766d643d0ad9149952a98adbe3270ceb61ee14cf615a2305597",
+    "mode": "100644"
+  },
+  "Test/Schema/EffectfulFieldContract.lean": {
+    "sha256": "3c9bbbfa7f0e460baa121a91ca254578656272dbbd6572eb8c741c8e6ad61d0b",
+    "mode": "100644"
+  },
+  "Test/Schema/EffectfulFieldPropertiesContract.lean": {
+    "sha256": "398f47c54e358df4efd0c7cfe90471ab65f976e02e6dd507cc5bab478fb0b72a",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/EffectfulField.lean": {
+    "sha256": "5ca30e43dd44030522ee1088690fd1e0d584abbbad24d921bab42889c7e3b9d2",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/EffectfulFieldProperties.lean": {
+    "sha256": "b63832555fde83374317f876db5cb4679f3deaed8569f65063461fdfe8f4d543",
+    "mode": "100644"
+  },
+  "Test/Codegen/EffectfulFieldContract.lean": {
+    "sha256": "999c96af14d4ff6bdae9eec22d8f9368f5e7f6ef971ca233a29b61e188dc6be3",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Codegen/EffectfulField.lean": {
+    "sha256": "606b4f2914d3a3dde0b8560f6665094359d35daabb7b0176ccf88cadbea6dfc3",
+    "mode": "100644"
+  },
+  "harness/schema-effectful-field/Generate.lean": {
+    "sha256": "a8f1064521c952bf39e409e56c5cf60254ad0dd7e55cfbcf9fed77bc6606e220",
+    "mode": "100644"
+  },
+  "harness/schema-effectful-field/api.ts": {
+    "sha256": "b5a36d48e23d81b660d9e0276760b6ec8b22cf1de2088683dc1613e5872e522f",
+    "mode": "100644"
+  },
+  "harness/schema-effectful-field/check.mjs": {
+    "sha256": "8da7b0dc2483ec5fb96e95165cc623a632c008022b80b3617a3be65ed6a47ef2",
+    "mode": "100644"
+  },
+  "harness/schema-effectful-field/check.sh": {
+    "sha256": "cf30bb5026617a87e4a4ca3b1ee9979e9fc4c916673b357f5622a3621bdb5be5",
+    "mode": "100755"
+  },
+  "harness/schema-effectful-field/floating.tail.ts": {
+    "sha256": "2d6562abe72efc18c208ba51e931e1d794cc8e25af6f41280b03a8f45c0fae78",
+    "mode": "100644"
+  },
+  "harness/schema-effectful-field/missing-context.tail.ts": {
+    "sha256": "aba4ddf6fa4c5ea408c3a01c0a79350089a8d6daed742dd521e8a168a8c8071e",
+    "mode": "100644"
+  },
+  "harness/schema-effectful-field/missing-error.tail.ts": {
+    "sha256": "49b70ece167b2dbfb5369229c05f29734e1eed153fda79e711b069c9315d0aaa",
+    "mode": "100644"
+  },
+  "harness/schema-effectful-field/positive.tail.ts": {
+    "sha256": "9652a150b2001f7120a51433728719a71d5a24ca5af8201739c3ec121baf9f10",
+    "mode": "100644"
+  },
+  "harness/schema-effectful-field/tsconfig.json": {
+    "sha256": "d4e7670a232964762df290a48518e101d369017093725e6f5f8f38a8ee7855b3",
+    "mode": "100644"
+  },
+  "scripts/check-schema-effectful-field.sh": {
+    "sha256": "f5e9cb81cfd6950ff6e0d78842c34f7e5e0f7c3c1fbb4d308490e280a4da6f32",
+    "mode": "100755"
+  },
+  "src/Effect4.lean": {
+    "sha256": "c16242e9e801267c350474ea60d97418b0d928e4bdef983e75145cbd6bba7496",
+    "mode": "100644"
+  },
+  "Test/All.lean": {
+    "sha256": "503ecfc4914499821f76bdfc2d154606c192dc15094588c0130c14e88ad35074",
+    "mode": "100644"
+  },
+  "Test/Audit/AxiomGate.lean": {
+    "sha256": "f2db764bbd1e5b369813d036d1dea37f67b568e403596c4fbb94755279c4ddfa",
+    "mode": "100644"
+  },
+  "Makefile": {
+    "sha256": "db1b78caaad8a7c537a6221f6c04e7e6f728989629893569ac95a6d460f77a9a",
+    "mode": "100644"
+  },
+  ".github/workflows/lean_action_ci.yml": {
+    "sha256": "9bb78800cb14e7395a26d61ad12547c25f5a03a179d974afdaa9f189637c929d",
+    "mode": "100644"
+  },
+  "src/Effect4/Schema/Check.lean": {
+    "sha256": "8a6210c37ae16b5c2b0c76074214ef982f46282b7ac8176d0e46d2ce63d89ece",
+    "mode": "100644"
+  },
+  "src/Effect4/Schema/Accepts.lean": {
+    "sha256": "2ed9ef52b6435a90953c1a374b3f77c73baac70e00f21d6a698211b9474d5ed2",
+    "mode": "100644"
+  },
+  "src/Effect4/Schema/Image.lean": {
+    "sha256": "03d67481025e100a292145db3f133e630177458529900e78016285a797c401cd",
+    "mode": "100644"
+  },
+  "src/Effect4/Laws/Schema/Image.lean": {
+    "sha256": "6de01366fd89599222add99b9a446030204b5c3355efb491ec7d39b4843f1d9d",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/AnnotationDataPlane.lean": {
+    "sha256": "9874b7aeddb8018c0fd9f8c6ec954a57e71b7473c8f6009f23d6ff5e742066b5",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/CensusCoverage.lean": {
+    "sha256": "8c86fd6955fef046ebdaede574eed1dc841109baddeca34430a3ae83dc71727a",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/Codec.lean": {
+    "sha256": "76913c67e0f5afc9f9202629489e3ffe29f21857a0c33b9a29877f6d59e6bcce",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/KindAlphabetSeparation.lean": {
+    "sha256": "61c0f0a5ddbacac9579c396b5882f37e7a00d907328be37f3f58b21c56192dfc",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/NoLocalSymbolPropertyKey.lean": {
+    "sha256": "4fba03ddc470b67ab8fbbdb292c856fe7dec526e80c5055d33e5ddbd55a785b6",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/NoNullLiteralKind.lean": {
+    "sha256": "480d0e0b97f785b11b323004b9b67f608ddd8e55962bd6ef58017e5bede06ada",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/RecursiveElimination.lean": {
+    "sha256": "002ecdba4b4638a2e7fda68a4be7801a593f6864432238651f2b24a50a6b5492",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/SemanticTagSeparation.lean": {
+    "sha256": "34f70bc84e1b2779c972153aa67001cafaff53d8722d923673b7b29a8ce82c6e",
+    "mode": "100644"
+  },
+  "Test/Counterexamples/Schema/WireSpellingDrift.lean": {
+    "sha256": "58bf5fc0960a2f21d9942291a89bf07705097ff75bd3d356165aaae16dbdcbc1",
+    "mode": "100644"
+  },
+  "harness/schema-annotations/EmitFieldAdmissionFixture.lean": {
+    "sha256": "190f81d10bc8bbf440b8040f9a9ac8132c1dcecf5ed74b069287bb6cc7ae4343",
+    "mode": "100644"
+  },
+  "harness/schema-annotations/effect-annotations.ts": {
+    "sha256": "a72926638d6386caf1b1617f2d8cd5f1ea2f623e1c9fba4de531a555843a13ae",
+    "mode": "100644"
+  },
+  "harness/schema-annotations/tsconfig.json": {
+    "sha256": "1eb2b51202e92bbe9140c49395a1e819176dbc370fa74e93547ad1fc5b0a1d02",
+    "mode": "100644"
+  },
+  "scripts/check-schema-annotations.sh": {
+    "sha256": "4cc114d9b3c8361263f8691d2932522abfc83fda071ae3a47d6f52dd3a1f22dc",
+    "mode": "100755"
+  },
+  "src/Effect4/Laws.lean": {
+    "sha256": "f38423e1fc65efa0388bf4da55f6f24cbe7892a5934e93251b8337c600ccf258",
+    "mode": "100644"
+  },
+  "src/Effect4/Schema/Authoring.lean": {
+    "sha256": "21a7abf93c69dec9a2ef543bf7be570ffbdd0b4ce15d446c530bc68469c23a34",
+    "mode": "100644"
+  },
+  "Test/Schema/AuthoringContract.lean": {
+    "sha256": "887d9ab7dcce0f514138623a280bb3a0a33aacecb1391ef69dccdd57348b3e23",
+    "mode": "100644"
+  },
+  "Test/Schema/PayloadContract.lean": {
+    "sha256": "9de20e7d3d8c8827a56c54b6974c95dcfec222f1a4d5c42d94453fa78ee3d241",
+    "mode": "100644"
+  },
+  "src/Effect4/Schema/Payload.lean": {
+    "sha256": "77dc812193a79c389d2a69e4ce3f6a3461c966e6487b273ae673258e4b65d18e",
+    "mode": "100644"
+  },
+  "src/Effect4/Schema/Document.lean": {
+    "sha256": "25a5f09363249ec8e54dd5e5258e243e58434540b33b15af3c09516aa06a53ec",
+    "mode": "100644"
+  },
+  "src/Effect4/Codegen/Schema.lean": {
+    "sha256": "355d08a9510afab21250c6685a71693afa8715c6c544e486fe4df6ecfbc00207",
+    "mode": "100644"
+  },
+  "Test/Codegen/SchemaGenerationContract.lean": {
+    "sha256": "b50d79ee7722472527a3d54b24fbd594da5393f0c10f5be77a3a1a1605982815",
+    "mode": "100644"
+  },
+  "Test/Codegen/SchemaGenerationCoverage.lean": {
+    "sha256": "9a35a5b48cd872792bd9305c3ae42de43a2e3789203ad08431facee25b7dea60",
+    "mode": "100644"
+  },
+  "harness/schema-generation/EmitFixture.lean": {
+    "sha256": "465893bf729ec74c2e84031be9b5ad00931075e2d35db259de7706ea11f5baba",
+    "mode": "100644"
+  },
+  "harness/schema-generation/EmitCoverageFixture.lean": {
+    "sha256": "587dd3a0a9bb69d3593f9126a61713a5e6a431a59682fab1e988774dac0158e4",
+    "mode": "100644"
+  },
+  "src/Effect4/Codegen/Target.lean": {
+    "sha256": "5cb6bdd6386a5024d0588f568e760b8f2d0a6f2125c613b925fcb6c5f7d6cbc0",
+    "mode": "100644"
+  },
+  "src/Effect4/Api.lean": {
+    "sha256": "990752e4a83ef1090897a026b4063c87d5934951d87ee01f2edfcffbb5c154b1",
+    "mode": "100644"
+  },
+  "src/Effect4/Schema/Annotations.lean": {
+    "sha256": "a1e9ce557ad11f8fc0c3aa592e6b71a220c5f3c12da117459185269e305cd98c",
+    "mode": "100644"
+  },
+  "Test/Schema/AnnotationDataPlaneContract.lean": {
+    "sha256": "6b58b29d9acbb5d982879b6254f81f8cd5d102aa359b0e61dab7d9f2346cf2e7",
+    "mode": "100644"
+  },
+  "src/Effect4/Store/Domain/Shape.lean": {
+    "sha256": "a7dc0f51532ae5ada3f8b8f4c9d8f125f3b3e9c0e114780e2eb8b35c350f45dc",
+    "mode": "100644"
+  },
+  "src/Effect4/Schema/OfShape.lean": {
+    "sha256": null,
+    "mode": "100644"
+  },
+  "src/Effect4/Store/Domain/Canonical.lean": {
+    "sha256": "5ff138afcc28cfaf4793cbfdd0fab12c3c2add8c81d35ed5bb29e35f8f4e6aa3",
+    "mode": "100644"
+  },
+  "Test/Schema/DialectContract.lean": {
+    "sha256": "190fce7683743abd983144f2f7e1782242235cb68cd21dc50e35cce40a7312b5",
+    "mode": "100644"
+  }
+}

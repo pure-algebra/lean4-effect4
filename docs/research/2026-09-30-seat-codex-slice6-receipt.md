@@ -201,6 +201,34 @@ No machine runtime, base-membership source, generator or generated-output path b
 
 CE-007 is REPAIRED for the two-defect placement gap; CE-003 retains its base-membership counterexample with an updated repair column. CE-008 is SEEDED from the actual saved-loop witness in the audit, now also in H2PartOne. The full conditional missingService exclusion stays local to that counterexample. Test/All imports the new battery at the TypedControl anchor. The H1 final-source snapshot is corrected to exact committed d554cd71 bytes, with its committed-evidence record; no H1 implementation change is hidden in this commit.
 
+
+### Row 39 — deletion series after H2
+
+H2 landed at `abc7b124`. The main checkout remains at addendum 6 (`ea5b28b5`); no newer
+slice-6 dispatch was found. The four deletion slices follow the ruled order. Necessary
+retained-consumer and build/gate cleanup is included under the owner's continuation instruction;
+no runtime operation, data type, duplicate-key policy or schema-address meaning is added.
+The staged plan, exact path inventories, byte baselines and static checks are retained in
+`after-addendum-6/Row39/plan/`. Coordinator prose is a separate proposed patch, not a second
+implementation or authority edit.
+
+#### Slice 1 — retire the effectful-field layer
+
+Base `abc7b124`; endpoint is the commit containing this paragraph. Deletes the two production
+modules, six batteries and the old effectful-field harness and script. Core/Test imports,
+the obsolete named axiom exceptions and Make/CI inputs are removed at their anchors. The
+annotation harness remains until slice 2. This does not claim all uses of the standalone
+Effects dependency have gone: the surviving semantic algebra modules still use it.
+
+`slice1-hashes` and patch application checks pass. `slice1-source` builds Effect4 and the axiom
+gate (160 jobs). `slice1-imports` elaborates Test/All and passes the actual library-root and
+trust gates: 136 core modules, 213 law-only modules; 502 modules and 69,878 declarations checked,
+with the existing exact rendering exceptions retained. These are import/trust checks, not a
+rerun of every battery source. No generated root consumes the retired effectful-field modules,
+so this slice runs no producer. Retired counterexample rows move with immutable source pins
+into the existing archive; their IDs and original row text remain intact.
+
+
 ## After addendum 5
 
 **The one thing first.** C is merged into `refactor/phase1-phase3` at `bc77e97f`, with
