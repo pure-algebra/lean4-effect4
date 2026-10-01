@@ -322,6 +322,16 @@ open and no longer refuted). The ledger: 37 open, 447 proved, 484 total. Next fr
 and D3 in parallel and J. Seat H2's row-154 re-pin landed (merged `84bdf454`): the design basis is
 exact at `6b3f2c92`, and the system map's glossary sites are re-pinned there.
 
+**Wave 2's first landings (2026-10-01).** Seat J merged (`93360b3a`): rows 24 (every binder the
+authoring surface names is minted), 16 (`Await` a record) and 17 in part (codecs for the reading
+types, a `Refusals` group); seat G's owed items; `check-host-protocol` on tsgo 7; the ingest's parser
+ruled to the native API or oxc (row 168, seat J2). Seat D1 merged (`a3db653c`): rows 152 (membership
+at an exit type excludes shape defects; the close walk typed at the exact post) and 153 (M5 over the
+expansion through the redirect lemma) landed; row 117's side condition landed, its presence clause
+proved not walk-invariant and stopped; row 151 measured and stopped: both need the owner's ruling
+(rows 117 and 151). Probe S merged (`4bb22835`): the Schema side of every form on a copy, the
+readable profile (row 169), the defect-id counterexample (`E4-SCHEMA-CE-061`), row 8's (C) clean.
+
 **The type-language probe's first result (probe T, 2026-10-01, merged `8036f0b4`; rows 157–164).**
 The data wave can finish `Ty` once only if its single append also carries a structured nominal
 reference, `Ty.app name args` (row 3 revived as row 158): the corpus names Effect module types 1,928
