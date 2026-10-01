@@ -1,0 +1,23 @@
+# check: defect-twin-red
+# date: 2026-10-01T22:05:27Z
+# command: bun defect-twin-red.ts logs/lean-docs.ts
+# versions: bun 1.4.2; node v22.23.2; effect "version":"4.0.0-rc.112"
+62 |     }
+63 |   }
+64 |   function resolveReviver(representation, path) {
+65 |     const reviver = reviverMap.get(representation.id);
+66 |     if (reviver === undefined) {
+67 |       throw errorWithPath(`Missing reviver for ${representation.id}`, path);
+                 ^
+error: Missing reviver for effect/schema/Defect
+  at ["representation"]["typeParameters"][2]["representation"]
+      at resolveReviver (/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/internal/schema/fromRepresentation.js:67:13)
+      at reviveDeclaration (/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/internal/schema/fromRepresentation.js:87:21)
+      at map (1:11)
+      at reviveDeclaration (/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/internal/schema/fromRepresentation.js:89:28)
+      at map (1:11)
+      at fromRepresentation (/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/internal/schema/fromRepresentation.js:243:10)
+      at /Users/pooks/Dev/lean4-effect4-seat-W1/docs/research/2026-10-01-data-wave/W1/host/defect-twin-red.ts:7:4
+
+Bun v1.4.2 (macOS arm64)
+# exit=1
