@@ -71,9 +71,15 @@ def TypedState (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) 
       StackAccepts (TypedProg root) StrongExit (frameProtocols root) w tin final f.frame.stack ∧
       InterruptProvenance f.frame
 
-/-- A state some decision tape reaches from the loaded program. -/
+/-- M6's reference runner has no host table, so its tapes contain no host answer.
+Clock advances, dispatcher decisions and interrupts remain in scope (row 95). -/
+def NoHostAnswer : Api.Decision → Prop
+  | .answerAsync _ _ _ => False
+  | _ => True
+
+/-- A state a tape with no host answer reaches from the loaded program. -/
 def RReachable (root : ProgramSource) (fuel : Nat) (m : RState) : Prop :=
-  ∃ tape, m = (replayR root.program fuel tape).machine
+  ∃ tape, (∀ d ∈ tape, NoHostAnswer d) ∧ m = (replayR root.program fuel tape).machine
 
 /-- A host answer is admitted: an answer to a fiber parked at that token fits the token's
 declared type. Answers to anything else run inertly and impose nothing. -/
@@ -221,7 +227,16 @@ theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) 
         (letI := termEvaluatorFor root.program
          stepDecisionState (interpR root.program) fuel m d).1) := ⟨⟩
 
-/-- The capstone: every state an admitted tape reaches from an admitted source is typed. -/
+/-- The capstone obligation: every state a tape with no host answer reaches from a
+checked, closed source is typed. This restriction repairs `E4-SCHED-CE-015` for host answers
+only. The statement remains refuted on programs with no host by `E4-PROV-CE-005`,
+`E4-PROV-CE-006`, `E4-TYPED-CE-004` and `E4-SCHED-CE-016`.
+
+M6 does not yet claim that a run never dies with `badName`, `notImplemented`, or
+`missingService` when nothing is required. Row 107 and brief item H2 require that exclusion
+in the exit judgment read by code, saved stacks, queued results and stored completions;
+a check on finished fibers alone is insufficient (`E4-TYPED-CE-007`). Keep this disclaimer
+until that repair lands, retaining any part that remains open. -/
 theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
     ProofGraph.Obligation (Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
       RReachable root fuel m → ∃ w, TypedState root rootTy w m) := ⟨⟩

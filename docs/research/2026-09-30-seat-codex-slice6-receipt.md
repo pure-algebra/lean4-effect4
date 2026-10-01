@@ -74,7 +74,40 @@ Proposed register row E4-HOST-CE-007 is in the saved patch only; it must not be 
 at the current branch head. No protected authority document was edited.
 
 ## B — answer-free M6 scope
-Pending.
+
+**LANDED after narrow checks.** `NoHostAnswer` excludes only `answerAsync`; `RReachable`
+requires it for every tape member. `AnswerOk` and `decision_preserves` are unchanged, and the
+M6Ledger ceiling remains 20. The capstone docstring retains the four host-free refutations and
+the pending shared-exit-judgment repair. This fixes E4-SCHED-CE-015 for host answers only.
+
+Changes: `src/Effect4/Laws/Program/Typed/Assembly.lean`, `src/Effect4/Laws/Program/Admit.lean`,
+`Test/Program/TypedStack.lean`, `Test/Counterexamples/Machine/Semantics/M6Capstone.lean`,
+`Test/All.lean` at the TrivialPosts anchor, and `Test/Counterexamples/REGISTER.md`.
+Four requested SEEDED rows were added: E4-PROV-CE-005/006, E4-TYPED-CE-004, E4-SCHED-CE-016.
+Their original witnesses remain under the committed pass directory. Proposed decision row 95:
+M6 now counts host-answer-free tapes, with host-free repairs and all 20 proofs still open.
+
+Commands from the slice6 worktree, with evidence under `2026-09-30-seat-codex-slice6-evidence/B/`:
+- `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.Assembly Effect4.Laws.Program.Admit`:
+  exit 0; 366 jobs, ceiling 20 unchanged (`narrow-build.log`).
+- `lake env lean -DwarningAsError=true Test/Counterexamples/Machine/Semantics/M6Capstone.lean`:
+  final exit 0 (`M6Capstone.log`). The first run found a local timer-list proof simplification
+  issue, fixed before the successful rerun (`M6Capstone.failed.log` is historical failure only).
+- `lake env lean -DwarningAsError=true Test/Program/TypedStack.lean`: exit 0 (`TypedStack.log`).
+- `lake env lean -DwarningAsError=true docs/research/2026-09-30-seat-codex-slice6-evidence/B/axioms.lean`:
+  exit 0 (`axioms.log`). The new empty-table law and all eight counterexample/control theorems
+  are within `[propext, Quot.sound]`, with no sorryAx in final output.
+- `git diff --check`: exit 0 for the implementation changes. Stored unified patches in the A
+  evidence naturally contain blank context lines; their whitespace is patch syntax.
+
+The original capstone is refuted against a local copy of old reachability. The bad tape fails
+the new premise. The four-decision clock tape meets it and actually exits successfully with
+unit. These are finite execution controls plus exact statements about those controls; no
+universal M5–M7 proof is claimed. No regeneration is needed for this proof-side item.
+
+Commit ledger: `ca05788c` records A's stopped patch and evidence only, with all paths under
+`docs/research/2026-09-30-seat-codex-slice6-{receipt.md,evidence/A/}`. The B commit follows it.
+
 
 ## C — fork ledger steps 3–5
 Pending.

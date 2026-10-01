@@ -91,7 +91,12 @@ def stateClaim (w : W) : Prop :=
   TypedState (sleeping : ProgramSource) (EffTy.pure .unit) w parked ∧
   RReachable (sleeping : ProgramSource) 20 parked ∧ AnswerOk w parked Api.evaluate
 
-theorem parked_reachable : RReachable (sleeping : ProgramSource) 20 parked := ⟨_, rfl⟩
+theorem parked_reachable : RReachable (sleeping : ProgramSource) 20 parked := by
+  refine ⟨[.evaluate Api.root], ?_, rfl⟩
+  intro d hd
+  simp only [List.mem_singleton] at hd
+  subst d
+  trivial
 
 #print axioms popR_typed
 #print axioms popR_typed_interpR
