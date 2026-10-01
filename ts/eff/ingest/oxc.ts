@@ -625,12 +625,47 @@ class Normalize {
     if ((h === "Cause.fail" || h === "Cause.die") && a.length === 1 || h === "Cause.interrupt" && a.length <= 1) return call(h, a.map(x => this.term(x, env)))
     return reject("E-FAIL-NOT-DOCUMENTED", "cause")
   }
+  /** The tail of the loop image (`iterate` since `37ff9b21`): `Effect.map(W, k)` in the printer's
+   * spelling and in the pipe spellings the foreign styles give every dual call,
+   * `(W).pipe(Effect.map(k))`, `(W).pipe((s) => Effect.map(s, k))`, `pipe(W, Effect.map(k))` and
+   * `Effect.map(k)(W)`; `undefined` for anything else. */
+  loopTail(n: Node): { loop: Node; result: Node } | undefined {
+    const headIs = (x: Node, h: string): boolean => { try { return this.head(x) === h } catch { return false } }
+    const mapping = (segment: Node): Node | undefined => {
+      const x = unwrap(segment)
+      if (x.type === "CallExpression" && !x.optional && list(x, "arguments").length === 1 && headIs(node(x, "callee"), "Effect.map")) return list(x, "arguments")[0]
+      if (x.type !== "ArrowFunctionExpression") return undefined
+      const ps = list(x, "params"), body = unwrap(node(x, "body"))
+      if (ps.length !== 1 || ps[0]!.type !== "Identifier" || body.type !== "CallExpression" || body.optional) return undefined
+      const self = str(ps[0]!, "name"), a = list(body, "arguments")
+      if (a.length !== 2 || !headIs(node(body, "callee"), "Effect.map")) return undefined
+      const first = unwrap(a[0]!)
+      if (first.type !== "Identifier" || first.name !== self) return undefined
+      const mentions = (v: unknown): boolean => Array.isArray(v) ? v.some(mentions) : isNode(v) && (v.type === "Identifier" && v.name === self || Object.values(v).some(mentions))
+      return mentions(a[1]) ? undefined : a[1]
+    }
+    n = unwrap(n)
+    if (n.type !== "CallExpression" || n.optional) return undefined
+    const callee = unwrap(node(n, "callee")), a = list(n, "arguments")
+    if (a.length === 2 && headIs(callee, "Effect.map")) return { loop: a[0]!, result: a[1]! }
+    if (callee.type === "MemberExpression" && !callee.computed && !callee.optional && str(node(callee, "property"), "name") === "pipe" && a.length === 1) {
+      const k = mapping(a[0]!)
+      return k ? { loop: node(callee, "object"), result: k } : undefined
+    }
+    if (callee.type !== "CallExpression" && a.length === 2 && (headIs(callee, "pipe") || headIs(callee, "Function.pipe"))) {
+      const k = mapping(a[1]!)
+      return k ? { loop: a[0]!, result: k } : undefined
+    }
+    if (callee.type === "CallExpression" && !callee.optional && a.length === 1 && list(callee, "arguments").length === 1 && headIs(node(callee, "callee"), "Effect.map")) return { loop: a[0]!, result: list(callee, "arguments")[0]! }
+    return undefined
+  }
   loop(n: Node, env: readonly string[]): Expr {
     const ss = list(n, "body"), decl = ss[0], ret = ss[1]
     if (ss.length !== 2 || decl?.type !== "VariableDeclaration" || decl.kind !== "let" || ret?.type !== "ReturnStatement") return reject("E-LOOP", "suspend block")
     const ds = list(decl, "declarations"), d = ds[0]
     if (ds.length !== 1 || !d || node(d, "id").type !== "Identifier") return reject("E-LOOP", "cursor")
-    const name = str(node(d, "id"), "name"), inner = [...env, name], c = unwrap(node(ret, "argument")), args = list(c, "arguments")
+    const tail = this.loopTail(node(ret, "argument"))
+    const name = str(node(d, "id"), "name"), inner = [...env, name], c = unwrap(tail ? tail.loop : node(ret, "argument")), args = list(c, "arguments")
     if (c.type !== "CallExpression" || this.head(node(c, "callee")) !== "Effect.whileLoop" || args.length !== 1) return reject("E-LOOP", "whileLoop")
     const m = new Map(this.fields(args[0]!, ["while", "body", "step"]))
     const test = this.continuation(m.get("while")!, inner, 0, "term"), body = this.continuation(m.get("body")!, inner, 0)
@@ -639,7 +674,11 @@ class Normalize {
     const assign = node(statement, "expression")
     if (assign.type !== "AssignmentExpression" || assign.operator !== "=" || this.rawHead(node(assign, "left")) !== name) return reject("E-LOOP", "step assignment")
     const s: Expr = { _tag: "arrowBlock", params: [`a${env.length + 1}`], body: [{ _tag: "assign", name: `a${env.length}`, value: this.term(node(assign, "right"), [...inner, str(ps[0]!, "name")]) }] }
-    return call("Effect.suspend", [{ _tag: "arrowBlock", params: [], body: [{ _tag: "letInit", name: `a${env.length}`, value: this.term(node(d, "init"), env) }, { _tag: "ret", value: call("Effect.whileLoop", [{ _tag: "object", fields: [["while", test], ["body", body], ["step", s]] }]) }] }])
+    const whileLoop = call("Effect.whileLoop", [{ _tag: "object", fields: [["while", test], ["body", body], ["step", s]] }])
+    // The image `iterate` prints (the template table's row): the loop's answer mapped to the
+    // result. Without a tail this is the retired whileLoop image, which the fragment reader refuses.
+    const value = tail ? call("Effect.map", [whileLoop, this.continuation(tail.result, env, 0, "term")]) : whileLoop
+    return call("Effect.suspend", [{ _tag: "arrowBlock", params: [], body: [{ _tag: "letInit", name: `a${env.length}`, value: this.term(node(d, "init"), env) }, { _tag: "ret", value }] }])
   }
   lambdaAtom(n: Node): string {
     const ps = list(n, "params")

@@ -152,6 +152,16 @@ function restoreLayer(program: Eff, target: readonly number[], replacement: Laye
 
 class CompilerReader {
   constructor(readonly source: string) {}
+  /** DI-72 (`763187e1`): a bare value (a literal, `undefined`, a binder) or an application of a
+   * name that is no head and no row is no program, and the fragment reader refuses it (`shape`,
+   * `unknownHead`). The oxc engine meets it in its second phase, after the whole unit's walk, so
+   * any refusal of the walk comes first; this reader keeps the walk as it was (the value read as
+   * `fail`) and records the first such position, and `settle` refuses it where the oxc engine
+   * reads the fragment: at a unit's end, at the layer probe, at a referenced layer. Until seat
+   * J2's step 1b this engine lifted these units. */
+  deferred: string | undefined
+  defer(reason: string): void { this.deferred ??= reason }
+  settle(): void { if (this.deferred !== undefined) bad(this.deferred) }
   /** The node's text, `getText` of the TypeScript AST: its tokens without leading trivia. */
   text(x: { readonly start: number; readonly end: number }): string { return this.source.slice(x.start, x.end) }
   unwrap(x: Ex): Ex {
@@ -289,8 +299,9 @@ class CompilerReader {
   }
   eff(x: Ex, env: readonly string[]): Eff {
     x = this.unwrap(x)
+    // DI-72: the three positions `deferred` names; the walk reads them as it did.
     const variable = this.variable(x, env)
-    if (variable !== undefined) return { _tag: "fail", error: { _tag: "var", index: variable } }
+    if (variable !== undefined) { this.defer("shape"); return { _tag: "fail", error: { _tag: "var", index: variable } } }
     if (x.type !== "CallExpression") {
       if (x.type === "Identifier" || x.type === "MemberExpression" && !x.computed) {
         const h = this.name(x)
@@ -298,7 +309,9 @@ class CompilerReader {
         const row = rows.find(r => r.row.spelling === h && r.row.shape === "value")
         if (row) return { _tag: "perform", op: row.op, request: unit }
       }
-      return { _tag: "fail", error: this.term(x, env) }
+      const t = this.term(x, env)
+      if (t._tag === "lit") this.defer("shape")
+      return { _tag: "fail", error: t }
     }
     const h = this.name(x.callee), a = x.arguments
     const arg = (i: number) => this.at(a, i)
@@ -391,7 +404,9 @@ class CompilerReader {
       }
       return { _tag: "perform", op: r.op, request }
     }
-    return { _tag: "fail", error: this.term(x, env) }
+    const application = this.term(x, env)
+    this.defer("unknownHead")
+    return { _tag: "fail", error: application }
   }
   typeNode(t?: TSType | TSTupleElement): Ty {
     if (!t) return { _tag: "unit" }
@@ -411,17 +426,24 @@ class CompilerReader {
     }
     return bad("type node")
   }
+  /** The loop image's tail, `Effect.map(Effect.whileLoop({…}), () => result)`: the loop's call and
+   * the result's thunk. The printed seam reads the printer's spelling only; the foreign reader also
+   * reads the pipe spellings of the same dual call (`ForeignCompilerReader.loopTail`). */
+  loopTail(x: Ex): { readonly loop: Ex; readonly result: Ex } {
+    const mapCall = this.call(x); this.arity(mapCall.arguments, 2)
+    if (this.name(mapCall.callee) !== "Effect.map") return bad("loop map head")
+    return { loop: this.at(mapCall.arguments, 0), result: this.at(mapCall.arguments, 1) }
+  }
   loop(block: FunctionBody, env: readonly string[]): Eff {
     const [init, ret] = block.body
     if (block.body.length !== 2 || !init || init.type !== "VariableDeclaration" || !ret || ret.type !== "ReturnStatement" || !ret.argument) return bad("loop")
     const decl = init.declarations[0]
     if (!decl || init.declarations.length !== 1 || decl.id.type !== "Identifier" || !decl.init) return bad("cursor")
     const cursor = decl.id.name
-    const mapCall = this.call(ret.argument); this.arity(mapCall.arguments, 2)
-    if (this.name(mapCall.callee) !== "Effect.map") return bad("loop map head")
-    const c = this.call(this.at(mapCall.arguments, 0)); this.arity(c.arguments, 1)
+    const tail = this.loopTail(ret.argument)
+    const c = this.call(tail.loop); this.arity(c.arguments, 1)
     if (this.name(c.callee) !== "Effect.whileLoop") return bad("loop head")
-    const resultArrow = this.arrow(this.at(mapCall.arguments, 1), env, 0)
+    const resultArrow = this.arrow(tail.result, env, 0)
     const result = this.term(this.expression(resultArrow.body), resultArrow.env)
     const m = this.fields(this.at(c.arguments, 0)), inner = [...env, cursor]
     if (m.size !== 3) return bad("loop fields")
@@ -429,8 +451,10 @@ class CompilerReader {
     if (step.body.type !== "BlockStatement" || step.body.body.length !== 1) return bad("step")
     const s = step.body.body[0]
     if (!s || s.type !== "ExpressionStatement" || s.expression.type !== "AssignmentExpression" || s.expression.operator !== "=" || this.text(s.expression.left) !== cursor) return bad("step assignment")
+    // An unannotated cursor has no type (`cursorTy: Ty | null`, DI-91, `5185a6cd`); this read
+    // `unit` until seat J2's step 1b, which made every printed loop a different program.
     const annotation = decl.id.typeAnnotation
-    const cursorTy: Ty = annotation ? this.typeNode(annotation.typeAnnotation) : { _tag: "unit" }
+    const cursorTy: Ty | null = annotation ? this.typeNode(annotation.typeAnnotation) : null
     return { _tag: "iterate", cursorTy, initial: this.term(decl.init, env), test: this.term(this.expression(test.body), inner), body: this.eff(this.expression(body.body), inner), step: this.term(s.expression.right, step.env), result }
   }
 
@@ -464,6 +488,7 @@ export function readPrintedSource(source: string, filename = "program.ts"): Eff 
     return a.path.length - b.path.length
   })
   let program = reader.eff(last.type === "ExpressionStatement" ? last.expression : constant(last).value, [])
+  reader.settle()
   for (const d of declarations) program = restoreLayer(program, d.path, d.layer)
   return decodeEff(program)
 }
@@ -931,6 +956,43 @@ class ForeignCompilerReader extends CompilerReader {
     if (!(forms.unaryRefs as readonly string[]).includes(head)) return refuseForeign("E-BIND-SHAPE", "unary reference")
     return this.segment(head, [], first, env)
   }
+  /** The loop image's tail in every spelling the foreign styles give a dual call: `Effect.map(W, k)`,
+   * `(W).pipe(Effect.map(k))`, `(W).pipe((s) => Effect.map(s, k))`, `pipe(W, Effect.map(k))` and
+   * `Effect.map(k)(W)`. Anything else is read as the printed seam reads it (and declined there). */
+  override loopTail(x: Ex): { readonly loop: Ex; readonly result: Ex } {
+    const y = this.unwrap(x)
+    const heads = (e: Ex, h: string): boolean => { try { return this.name(e) === h } catch { return false } }
+    // A pipe segment that maps by `k`: `Effect.map(k)`, or the eta `(s) => Effect.map(s, k)` whose
+    // `k` does not use `s`.
+    const mapping = (segment: Ex): Ex | undefined => {
+      const z = this.unwrap(segment)
+      if (z.type === "CallExpression" && !z.optional && z.arguments.length === 1 && heads(z.callee, "Effect.map")) return z.arguments[0]
+      if (z.type !== "ArrowFunctionExpression" || z.params.length !== 1 || z.body.type === "BlockStatement") return undefined
+      const p0 = z.params[0], s = p0 ? parameterName(p0) : undefined, body = this.unwrap(z.body)
+      if (s === undefined || body.type !== "CallExpression" || body.optional || body.arguments.length !== 2 || !heads(body.callee, "Effect.map")) return undefined
+      const [self, k] = body.arguments
+      if (!self || !k || this.unwrap(self).type !== "Identifier" || this.variable(self, [s]) !== 0) return undefined
+      let uses = false
+      const visit = (n: TreeNode): void => { if (n.type === "Identifier" && n.name === s) uses = true; for (const child of childNodes(n)) visit(child) }
+      visit(k)
+      return uses ? undefined : k
+    }
+    if (y.type === "CallExpression" && !y.optional) {
+      const callee = this.unwrap(y.callee)
+      if (callee.type === "MemberExpression" && !callee.computed && !callee.optional && memberName(callee) === "pipe" && y.arguments.length === 1) {
+        const k = mapping(this.at(y.arguments, 0))
+        if (k) return { loop: callee.object, result: k }
+      }
+      if (callee.type !== "CallExpression" && y.arguments.length === 2 && (heads(callee, "pipe") || heads(callee, "Function.pipe"))) {
+        const k = mapping(this.at(y.arguments, 1))
+        if (k) return { loop: this.at(y.arguments, 0), result: k }
+      }
+      if (callee.type === "CallExpression" && !callee.optional && callee.arguments.length === 1 && y.arguments.length === 1 && heads(callee.callee, "Effect.map")) {
+        return { loop: this.at(y.arguments, 0), result: this.at(callee.arguments, 0) }
+      }
+    }
+    return super.loopTail(x)
+  }
   lambdaAtom(x: Ex): string {
     x = this.unwrap(x)
     const p0 = x.type === "ArrowFunctionExpression" ? x.params[0] : undefined
@@ -994,10 +1056,16 @@ class ForeignCompilerReader extends CompilerReader {
       const sourceName = x.name
       const existing = this.layerDefinitions.findIndex(d => d.sourceName === sourceName)
       if (existing >= 0) return { _tag: "ref", target: [existing] }
-      const previous = this.referenceCut
+      const previous = this.referenceCut, outer = this.deferred
       this.referenceCut = declaration.at
+      this.deferred = undefined
       let layer: LayerTerm
-      try { layer = this.layer(value) }
+      try {
+        layer = this.layer(value)
+        // The oxc engine reads the definition here (`readLayer`), and its refusal is this one.
+        if (this.deferred !== undefined) refuseForeign("E-NODE", "layer")
+        this.deferred = outer
+      }
       catch (e) {
         const code = e instanceof ForeignRefusal ? e.code : e instanceof Decline ? "E-NODE" : undefined
         if (code) return refuseForeign("E-REF-UNBOUND", `${sourceName}: ${code}`)
@@ -1170,10 +1238,12 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
       if (value.type === "CallExpression") {
         try { if (reader.name(value.callee) === "Context.Service") continue } catch { /* The unit receives the refusal below. */ }
       }
-      try { new ForeignCompilerReader(source, bindings, declarations, d.start).layer(value); continue } catch { /* A program or refused declaration remains a unit. */ }
+      try { const probe = new ForeignCompilerReader(source, bindings, declarations, d.start); probe.layer(value); probe.settle(); continue } catch { /* A program or refused declaration remains a unit. */ }
       const unit = { file: filename.replaceAll("\\", "/"), name: d.id.name, span: { start: d.start, end: d.end } }
       try {
-        const eff = reader.finish(reader.eff(value, []))
+        const read = reader.eff(value, [])
+        reader.settle()
+        const eff = reader.finish(read)
         result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
       } catch (e) {
         const failure = e instanceof ForeignRefusal ? e : e instanceof Decline ? new ForeignRefusal("E-NODE", e.message) : undefined
@@ -1191,7 +1261,9 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
     if (forced) { result.push({ kind: "refusal", unit, code: forced, detail: taxonomy.find(t => t.code === forced)!.detail.replace("{value}", forced === "E-TYPE-PARAM" ? "generic unit" : "function") }); return }
     const reader = new ForeignCompilerReader(source, bindings, declarations, start)
     try {
-      const eff = reader.finish(reader.eff(value!, []))
+      const read = reader.eff(value!, [])
+      reader.settle()
+      const eff = reader.finish(read)
       result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
     } catch (e) {
       const r = e instanceof ForeignRefusal ? e : e instanceof Decline ? new ForeignRefusal("E-NODE", e.message) : undefined

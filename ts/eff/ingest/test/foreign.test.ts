@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import { recognizeSource as ck } from "../ck.ts"
 import { recognizeSource as oxc } from "../oxc.ts"
 import { compareVerdicts } from "../gate.ts"
+import { canonJson, sourceEditKey } from "../contract.ts"
 
 for (const recognizeSource of [ck, oxc]) {
 
@@ -159,3 +160,60 @@ for (const recognize of [ck, oxc]) {
     if (v?.kind === "refusal") expect(v.code).toBe("E-ARG-CLOSURE")
   })
 }
+
+// Seat J2, step 1b: the loop image (`iterate`, since 37ff9b21) in the printer's spelling and in the
+// four pipe spellings the foreign styles give its map tail, read alike by both engines, its cursor
+// unannotated (`cursorTy: null`, DI-91). Before step 1b the oxc engine refused all five (E-LOOP or
+// E-SPINE-ESCAPE) and ck declined the four pipe spellings and read the cursor as `unit`.
+const loopBody = 'Effect.whileLoop({ while: () => isZero(a1), body: () => Ref.update(a0, incr), step: (a2) => { a1 = succ(a1) } })'
+const loopTails = [
+  `Effect.map(${loopBody}, () => undefined)`,
+  `(${loopBody}).pipe(Effect.map(() => undefined))`,
+  `pipe(${loopBody}, Effect.map(() => undefined))`,
+  `Effect.map(() => undefined)(${loopBody})`,
+  `(${loopBody}).pipe((_self) => Effect.map(_self, () => undefined))`,
+]
+const loopModule = (tail: string) => `import { Effect, Ref, pipe } from "effect"\nexport const program = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return ${tail}\n}))\n`
+
+test("both engines read the loop image in every spelling of its tail, cursor unannotated", () => {
+  const expected = ck(loopModule(loopTails[0]!), "loop.ts")[0]
+  expect(expected?.kind).toBe("lifted")
+  if (expected?.kind !== "lifted" || expected.eff._tag !== "bind" || expected.eff.rest._tag !== "iterate") throw new Error("expected bind then iterate")
+  expect(expected.eff.rest.cursorTy).toBeNull()
+  for (const tail of loopTails) {
+    const left = ck(loopModule(tail), "loop.ts"), right = oxc(loopModule(tail), "loop.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    // A different spelling moves the unit's span and nothing else.
+    expect(left.map(v => canonJson(sourceEditKey(v)))).toEqual([canonJson(sourceEditKey(expected))])
+  }
+})
+
+test("a loop whose result is not a thunk is refused alike, and a bare whileLoop stays E-LOOP", () => {
+  for (const source of [loopModule(`Effect.map(${loopBody}, (x) => x)`), 'import { Effect } from "effect"\nconst p = Effect.whileLoop({})\n']) {
+    const left = ck(source, "refused-loop.ts"), right = oxc(source, "refused-loop.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    expect(left.map(v => v.kind)).toEqual(["refusal"])
+  }
+  expect(ck('import { Effect } from "effect"\nconst p = Effect.whileLoop({})\n', "e-loop.ts").map(v => v.kind === "refusal" ? v.code : v.kind)).toEqual(["E-LOOP"])
+})
+
+// Seat J2, step 1b: DI-72 (763187e1) in both engines. A bare value (a literal, `undefined`, a
+// binder) or an application of a name that is no head and no row is no program; the ck engine
+// lifted each as `fail(…)` from 2026-09-13 until step 1b, while the fragment reader refused it.
+test("both engines refuse a bare value or an atom application in program position (DI-72)", () => {
+  const header = 'import { Effect } from "effect"\n'
+  for (const [body, detail] of [
+    ["const p = 7", "fragment node: shape"],
+    ['const p = "s"', "fragment node: shape"],
+    ["const p = undefined", "fragment node: shape"],
+    ["const p = Effect.flatMap(Effect.succeed(1), (x) => x)", "fragment node: shape"],
+    ["const p = Effect.gen(function* () { yield* 7; return 1 })", "fragment node: shape"],
+    ["const p = succ(1)", "fragment node: unknownHead"],
+  ] as const) {
+    const left = ck(header + body, "bare.ts"), right = oxc(header + body, "bare.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    expect(left.map(v => v.kind === "refusal" ? `${v.code} ${v.detail}` : v.kind)).toEqual([`E-NODE ${detail}`])
+  }
+  // `Effect.fail(e)` is the failure's spelling, and lifts in both.
+  expect(ck(header + "const p = Effect.fail(7)", "fail.ts").map(v => v.kind)).toEqual(["lifted"])
+})

@@ -81,8 +81,8 @@ export async function roundtrip(paths: readonly string[], options: FidelityOptio
     await commands.write(canonJson({ command, exit: run.status, signal: run.signal }) + "\n")
     writeFileSync(join(dir, "print.log"), run.stdout + run.stderr)
     if (run.status !== 0) throw new Error(`Lean print driver failed: ${run.stderr || run.stdout}`)
-    const producerStamp = readFileSync(rendered + ".cut-from", "utf8").trim()
-    if (!/^cut-from: .* inputs=[a-f0-9]{64}$/.test(producerStamp)) throw new Error("invalid Lean projection stamp")
+    // No `.cut-from` sidecar is read: `bd732113` (2026-09-13) retired them, and `IngestPrint.lean`
+    // writes one JSON line per program and nothing else; the driver's source is in `fidelityPins`.
     const printed = new Map<string, ReturnType<typeof decodePrinted>>()
     for await (const line of lines(rendered)) { const p = decodePrinted(JSON.parse(line)); printed.set(p.wireHex, p) }
     for (const candidate of batch) {
@@ -111,14 +111,14 @@ export async function roundtrip(paths: readonly string[], options: FidelityOptio
       }
       if (!statuses.length) {
         if (requirements) counts.notAttemptedRequirements++; else if (illTyped) counts.notAttemptedIllTyped++
-        await writeRow(candidate, { status: "not-attempted", producerStamp, observations }); continue
+        await writeRow(candidate, { status: "not-attempted", observations }); continue
       }
       counts.attempts++
       const status = statuses.includes("disagree") ? "disagree" : statuses.includes("could-not-run") ? "could-not-run" : "agree"
       if (status === "agree") counts.agreements++
       else if (status === "disagree") counts.disagreements++
       else counts.couldNotRun++
-      await writeRow(candidate, { status, producerStamp, fixture: unitDir.slice(out.length + 1), observations })
+      await writeRow(candidate, { status, fixture: unitDir.slice(out.length + 1), observations })
       if (counts.attempts % 50 === 0) process.stderr.write(`fidelity ${counts.agreements}/${counts.attempts}; ${counts.couldNotRun} could not run\n`)
     }
     batch = []
