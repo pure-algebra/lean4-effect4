@@ -35,10 +35,10 @@ written down and parked until a need arrives.
 | Layer | What it is | Owner | Status |
 | --- | --- | --- | --- |
 | 1. Programs as data | One program representation, `Eff`: a first-order tree with a digest, stored by content, printed and read back. Names are data; no closures, promises or runtime objects in program syntax. | §4 below; `AGENTS.md` vocabulary | exists |
-| 2. Types and certificates | `Ty`/`EffTy` and one checker, a fold that certifies a type or refuses with a located reason; certificates by kernel decision. | `Program/Checker.lean`; `docs/core/traversal-census.md` | proved sound and complete against `HasTy` at every path; `explain = none ↔ wellTyped` |
+| 2. Types and certificates | `Ty`/`EffTy` and one checker, a fold that certifies a type or refuses with a located reason; certificates by kernel decision. | `Program/Checker.lean`; `docs/core/traversal-census.md` | proved sound and complete against `HasTy` at every path; `explain = none ↔ wellTyped`. `HasTy`'s layer rules disagree with the runtime in two places (rows 104–105) |
 | 3. Meaning | One denotation; a reference machine for proofs; the native (frame) machine for execution. | `docs/core/machine-state.md` | proved: meaning soundness; `run_eq_meaning` (straight fragment); `loopAgreement` (looped); `run_eq_ref` (the two machines, **empty host table only**) |
 | 4. Choices as data | Every scheduling, timing and host-answer choice is a decision; a run's journal replays it. | `Run.lean`, `Api/Runner.lean` | proved: `replay_unique`, `journal_replays` |
-| 5. The typed-state guarantee | A checked program never reaches a malformed state, and every fiber finishes at its type. | `docs/core/post-phase-c-synthesis.md`; `Laws/Program/Typed/` | slices 1–5 proved (world, admission, protocols, stack walk, delivery, assembly); M5–M7 open; statement repair (row 95) and value membership (row 96) open |
+| 5. The typed-state guarantee | A checked program never reaches a malformed state, and every fiber finishes at its type. | `docs/core/post-phase-c-synthesis.md`; `Laws/Program/Typed/` | slices 1–5 proved (world, admission, protocols, stack walk, delivery, assembly); M5–M7 open. As stated, M5 and M6 are false even on programs that use no host (four registered counterexamples); the bounded repairs are rows 95–96 and 104–107 |
 | 6. The host boundary | Host services are rows in a table. A program's call parks a fiber; the host answers through one keyed session that checks each reply and prepares it. | `docs/core/host-boundary.md` | exists: session, envelope, admission, preparation. Next: the interim handle rule that closes the live hole (row 97). The full host-services contract is parked until needed |
 | 7. State and storage | The machine's state families, each owned by one of six storage interfaces with laws; facts fixed at creation in append-only ledgers; derived views, such as a handle's declared type, computed from ledgers and the checker. | `docs/core/machine-state.md` §7 | arena laws and `Projects`/`Refines` proved; the fork ledger is next (row 91); the registry and further storage instances are parked (rows 97, 101) |
 | 8. Compilation | Three compilations: a program to the machine's first-order runtime code (`compileEff`); the Lean machine itself to OCaml through Lean's LCNF (OCaml is made only from LCNF); a program to and from Effect TypeScript. Each stage is a named connection with its own evidence. | `docs/core/lcnf-route.md` §8 | printer/reader laws and completeness over the template table proved; the OCaml engine checked by differential runs (finite); number policy mixed; rows 28/29/31 open |
@@ -62,7 +62,16 @@ TypeScript. Every arrow is one of the kinds in §5 with its obligation met, or i
    - host rows may not answer with internal handles (fiber, cell, deferred, scope, context), the
      interim rule of row 97 (`host-boundary.md` §5).
 3. **M5–M7:** the typed-state guarantee, the proof that makes "verified runtime" complete on runs
-   without host answers. Row 99 says what is claimed until the host lane lands.
+   without host answers. Row 99 says what is claimed until the host lane lands. The design pass
+   of 2026-09-30 (`docs/research/2026-09-30-pass/synthesis.md`) found M5's and M6's statements
+   false even on programs that use no host, so four more bounded repairs come first:
+   - a layer's body is built in the environment it was checked in (row 104);
+   - a layer's value must fit its key's type (row 105);
+   - M6's typed state keeps tokens fresh (row 106);
+   - an exit clause, or an explicit disclaimer, for "never goes wrong" (row 107).
+
+   Row 96's judgment also reads liveness from the world's tables. M6 then follows from the
+   proved generic lifts (row 110).
 
 **Next: expand on the proven route.**
 4. **More of Effect, one module at a time, queues first.** Each is modeled in Lean over the
@@ -71,6 +80,10 @@ TypeScript. Every arrow is one of the kinds in §5 with its obligation met, or i
 5. **Ergonomic APIs for running full Effect programs.** These include the checked typed replay over
    the session journal (row 98), and authoring through MCP after LCNF (the owner's order).
 6. **WASM,** through the generated OCaml first rather than a new backend. Not yet checked.
+7. **Numbers to DI-56's profile** (row 108). Today one checked program gives three different
+   answers on Lean, OCaml and TypeScript, and none refuses. The rule: each face equals the exact
+   Lean reference inside its range and refuses outside it. The owner places it, before WASM at
+   the latest.
 
 **Parked until needed** (written down, not scheduled):
 - **The full host-services contract** (`host-boundary.md` §4; row 97's route part, row 100): the

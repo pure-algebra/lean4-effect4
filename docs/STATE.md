@@ -127,9 +127,17 @@ documentation is cut over:
   LCNF, and WASM through the generated OCaml.
 - **Parked until needed:** the full host-services contract.
 
-A five-seat design and probing pass, each seat checked by an adversarial verifier, is writing
-under `research/2026-09-30-pass/`. Its seats are the handle registry, the membership judgment, the
-step lifts, numbers with FloatLib, and the fiber slice.
+**The design pass, finished the same day.** Five seats probed the design, and a verifier attacked
+each one ([synthesis](research/2026-09-30-pass/synthesis.md)).
+- **What holds.** Three building blocks: a fiber's declared type computed from where it was forked,
+  the `Fits` judgment, and the generic step lifts.
+- **What is false.** M5's and M6's statements, even on programs that use no host:
+  - two layer typing gaps let a checked program finish outside its type, through the live API;
+  - the value judgment cannot type `Ref.make(5)`;
+  - M6's queue fact accepts a resume for a token not yet made.
+- **The fixes.** The bounded repairs are rows 104–107, with row 96.
+- **Numbers.** One checked program gives three different answers on Lean, OCaml and TypeScript
+  (row 108).
 
 **Implementation, go-ahead the same day.** Codex holds the near term in its own worktree
 (`/Users/pooks/Dev/lean4-effect4-slice6`, branch `codex/slice6-fixes`) by the
@@ -138,7 +146,14 @@ step lifts, numbers with FloatLib, and the fiber slice.
 - B: M6 counts runs with no host answer (`E4-SCHED-CE-015`);
 - C: the fork ledger's runtime steps.
 
-The lifts (D) and the membership judgment (E) follow as addenda once the pass is checked.
+[Addendum 1](research/2026-09-30-codex-brief-slice6-addendum-1.md) amends A–C after the pass:
+- one test fixture changes on purpose;
+- the failure-arm change is withdrawn;
+- M6's restriction is necessary but not sufficient;
+- the eight silent site defaults go.
+
+Addendum 2 (the lifts, the membership judgment and the new repairs) follows the owner's rulings
+on rows 96 and 104–110.
 
 ## What the owner must decide
 

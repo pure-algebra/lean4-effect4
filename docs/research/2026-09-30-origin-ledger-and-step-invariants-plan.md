@@ -1,7 +1,9 @@
 # Plan: fork records on the machine, and the lifts for facts every step keeps
 
 Status: **proposed; third revision, 2026-09-30. The ledger part is written to be ratified as it
-stands.** Base `be15b062` on `refactor/phase1-phase3`. Nothing is implemented.
+stands.** Amended the same day after the design pass: three internal fork kinds (§3); the
+lifts are proved generically, but the §10 withdrawal of the M6 claim stands (synthesis K1). The
+runtime steps are in Codex's hands (brief and addendum 1). Base `be15b062` on `refactor/phase1-phase3`. Nothing is implemented.
 
 This revision folds in two reviews of the second draft, as the owner asked: the
 [plan review](2026-09-30-origin-plan-review.md) and its
@@ -77,7 +79,10 @@ value. A probe types the fork's body at its recorded site: `string` for a forged
 for an honest one ([path probes](2026-09-30-host-answers-evidence/PathProbes.lean), path B).
 
 Forks the runtime makes without a source point record the empty site: finalizer forks
-(`Machine/Fibers.lean:969`) and races without a source site (`:1864`). If the registry is
+(`Machine/Fibers.lean:969`) and races without a source site (`:1864`). The design pass found a third internal
+kind: a `merge`/`mergeAll` layer build forks through the `fork` arm with the layer's own path
+(`Program/Compile.lean:1453-1455`), so its site names a layer node, not a fork action
+([synthesis](2026-09-30-pass/synthesis.md) K4). If the registry is
 ratified, the record also carries the creating construct's kind, so those fibers have a
 declaration too. This is a proposed refinement of decision 1, not part of the slice as written.
 
