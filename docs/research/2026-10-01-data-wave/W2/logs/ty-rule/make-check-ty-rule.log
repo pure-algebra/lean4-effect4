@@ -1,0 +1,13 @@
+$ cd /Users/pooks/Dev/lean4-effect4-seat-W2
+$ make check-ty-rule
+# started 2026-10-01T23:11:44Z (LEAN_NUM_THREADS=unset)
+python3 scripts/check-ty-rule.py --self-test
+--- control green: exit 0, expected 0 (ok): 0 violation(s)
+--- control deliberate violation: exit 1, expected 1 (ok): 1 violation(s): R1 1
+--- control empty log: exit 2, expected 2 (ok): check-ty-rule: REFUSE (missing evidence): /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp94i_nniz/empty-log.log: the log is empty; no census was read
+--- control compiler error only: exit 2, expected 2 (ok): check-ty-rule: REFUSE (missing evidence): /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp94i_nniz/compiler-error-only.log:1: the log holds a compiler error (error: unknown module prefix Effect4); a failed run is no census
+--- control truncated before the gate: exit 2, expected 2 (ok): check-ty-rule: REFUSE (missing evidence): /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp94i_nniz/truncated-before-the-gate.log: no complete #exhaustive_gate section under Effect4
+--- control rows cut inside the census: exit 2, expected 2 (ok): check-ty-rule: REFUSE (missing evidence): /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp94i_nniz/rows-cut-inside-the-census.log: the #traversal_census section under Effect4 has no completeness footer (a truncated census)
+--- control a census over a partial import set: exit 2, expected 2 (ok): check-ty-rule: REFUSE (missing evidence): /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp94i_nniz/a-census-over-a-partial-import-set.log: the census reads no row of ['Effect4.Laws.Program.TyView', 'Effect4.Laws.Program.Typed.Membership']; it was not run over the whole tree (import Effect4 and Effect4.Laws)
+self-test: 7 of 7 controls as expected
+# exit=0 seconds=1

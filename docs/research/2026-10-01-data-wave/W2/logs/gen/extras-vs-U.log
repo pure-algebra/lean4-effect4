@@ -1,0 +1,16 @@
+$ cd /Users/pooks/Dev/lean4-effect4-seat-W2
+$ diff /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-type-language-probe/U/generated/ProbeU/TyFoldExtras.lean /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/w2/extras/TyExtras.lean
+# started 2026-10-01T23:19:53Z (LEAN_NUM_THREADS=unset)
+4c4
+< --   lake env lean -M 4096 --run tools/Effect4Gen/Fold.lean --extras --group TyFoldExtras --imports Effect4.Program.Fold --out docs/research/2026-10-01-type-language-probe/U/generated/ProbeU/TyFoldExtras.lean --namespace ProbeU Effect4.Program.Ty
+---
+> --   lake env lean -M 4096 --run tools/Effect4Gen/Fold.lean --extras --group TyExtras --imports Effect4.Program.Fold --out /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/w2/extras/TyExtras.lean Effect4.Program.Ty
+9c9
+< namespace ProbeU
+---
+> namespace Effect4.Program
+521c521
+< end ProbeU
+---
+> end Effect4.Program
+# exit=1 seconds=0

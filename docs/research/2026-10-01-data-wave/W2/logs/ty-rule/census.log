@@ -1,0 +1,192 @@
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Effect4: 122 definitions take a family value (3 private) — fold 5, generated 8, structural 22 (of which 15 with a fold beside them, 1 instance implementations), wf 1 (of which 0 with a fold beside them), one-level 14 (of which 2 with a fold beside them), delegates 49, opaque 23; declared folds: [Effect4.Program.cata_ty]
+  delegates	Effect4.Codegen.Types:316	Effect4.Codegen.Types.ofTy	(Ty)	→ [Effect4.Codegen.Types.ofNormalized, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Laws.Program.MeaningSound:322	Effect4.Program.Denote.ExitHasTy	(Ty)	→ [Effect4.Program.causeAdmits, Effect4.Program.Val.hasTy]
+  delegates	Effect4.Laws.Program.TyView:91	Effect4.Program.Ty.argsBelow	(Ty)	→ [Effect4.Program.Ty.args, Effect4.Program.Ty.Variance.holds]
+  delegates	Effect4.Laws.Program.TyView:658	TyViewAcceptance.lhs [private]	(Ty)	→ [Effect4.Program.Ty.sub]
+  delegates	Effect4.Laws.Program.TyView:659	TyViewAcceptance.rhs [private]	(Ty)	→ [Effect4.Program.Ty.sameHead, Effect4.Program.Ty.argsBelow, Effect4.Program.Ty.sub]
+  delegates	Effect4.Laws.Program.TypeAlgebra:1066	Effect4.Program.Ty.subN	(Ty)	→ [Effect4.Program.Ty.normalize, Effect4.Program.Ty.sub]
+  delegates	Effect4.Laws.Program.Typed.Membership:30	Effect4.Program.Typed.Equiv	(Ty)	→ [Effect4.Program.Ty.subN]
+  delegates	Effect4.Laws.Program.Typed.Membership:34	Effect4.Program.Typed.RefDeclared	(Ty)	→ [Effect4.Program.Typed.Equiv]
+  delegates	Effect4.Laws.Program.Typed.Membership:38	Effect4.Program.Typed.PromiseDeclared	(Ty)	→ [Effect4.Program.Typed.Equiv]
+  delegates	Effect4.Laws.Program.Typed.Membership:42	Effect4.Program.Typed.FiberDeclared	(Ty)	→ [Effect4.Program.Ty.subN]
+  delegates	Effect4.Laws.Program.Typed.Membership:180	Effect4.Program.Typed.FitsCause	(Ty)	→ [Effect4.Program.Typed.Fits]
+  delegates	Effect4.Laws.Program.Typed.Scheduler:53	Effect4.Program.Typed.FiberColumnsBelow	(Ty)	→ [Effect4.Program.Ty.subN]
+  delegates	Effect4.Laws.Program.Typed.Scheduler:271	Effect4.Program.Typed.FiberListColumns	(Ty)	→ [Effect4.Program.Typed.FiberColumnsBelow]
+  delegates	Effect4.Laws.Program.Typed.World:73	Effect4.Program.Typed.ValueOk	(Ty)	→ [Effect4.Program.Val.hasTy]
+  delegates	Effect4.Laws.Program.Typed.World:121	Effect4.Program.Typed.HeapTypedAt	(Ty)	→ [Effect4.Program.Typed.ValueOk]
+  delegates	Effect4.Laws.Program.ValueModel:22	Effect4.Program.ValueModel.ofImage	(Ty)	→ [Effect4.Program.Val.hasTy, Effect4.Program.CTy.ofRaw]
+  delegates	Effect4.Program.Admission:81	Effect4.Program.admitColumn	(Ty)	→ [Effect4.Program.inhabited, Effect4.Program.instDecidableEqTy, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Admission:160	Effect4.Program.emptyColumnAt	(Ty)	→ [Effect4.Program.admitColumn]
+  delegates	Effect4.Program.Eff:64	Effect4.Program.supportedErrTy	(Ty)	→ [Effect4.Program.rawSupportedErrTy, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Eff:67	Effect4.Program.admittedErrTy	(Ty)	→ [Effect4.Program.supportedErrTy]
+  delegates	Effect4.Program.ErrorImage:39	Effect4.Program.causeAdmits	(Ty)	→ [Effect4.Program.reasonAdmits]
+  delegates	Effect4.Program.NativeAtom:103	Effect4.Program.NativeAtom.monoApply	(Ty)	→ [Effect4.Program.Ty.sub]
+  delegates	Effect4.Program.Stream:40	Effect4.Program.Stream.table	(Ty)	→ [Effect4.Program.Stream.pullRow]
+  delegates	Effect4.Program.Ty:175	Effect4.Program.Ty.insertMember	(Ty)	→ [Effect4.Program.instDecidableEqTy, Effect4.Program.Ty.key]
+  delegates	Effect4.Program.Ty:321	Effect4.Program.Ty.instDecidableLT [instance]	(Ty)	→ [Effect4.Program.Ty.key]
+  delegates	Effect4.Program.Ty:346	Effect4.Program.Ty.instDecidableLE [instance]	(Ty)	→ [Effect4.Program.Ty.instDecidableLT, Effect4.Program.instDecidableEqTy]
+  delegates	Effect4.Program.Ty:526	Effect4.Program.Ty.matchTemplate	(Ty)	→ [Effect4.Program.Ty.instantiate, Effect4.Program.Ty.infer, Effect4.Program.Ty.sub]
+  delegates	Effect4.Program.Ty:602	Effect4.Program.Ty.productMembers	(Ty)	→ [Effect4.Program.Ty.factors]
+  delegates	Effect4.Program.Ty:755	Effect4.Program.Ty.render	(Ty)	→ [Effect4.Program.Ty.renderRaw, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Ty:758	Effect4.Program.Ty.chunkTarget	(Ty)	→ [Effect4.Program.Ty.render]
+  delegates	Effect4.Program.Ty:761	Effect4.Program.Ty.chunk	(Ty)	→ [Effect4.Program.Ty.chunkTarget]
+  delegates	Effect4.Program.Ty:763	Effect4.Program.Ty.join	(Ty)	→ [Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Ty:778	Effect4.Program.Ty.diffTag	(Ty)	→ [Effect4.Program.Ty.isTagged, Effect4.Program.Ty.members]
+  delegates	Effect4.Program.Ty:802	Effect4.Program.Ty.payloadTy	(Ty)	→ [Effect4.Program.Ty.payloadOf, Effect4.Program.Ty.normalize, Effect4.Program.Ty.members]
+  delegates	Effect4.Program.Ty:809	Effect4.Program.Ty.Canonical	(Ty)	→ [Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Ty:846	Effect4.Program.CTy.ofRaw	(Ty)	→ [Effect4.Program.Ty.Canonical, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Typed:103	Effect4.Program.errAdmits	(Ty)	→ [Effect4.Program.reasonAdmits, Effect4.Program.Val.hasTy]
+  delegates	Effect4.Program.Typed:108	Effect4.Program.hasTyCause	(Ty)	→ [Effect4.Program.causeAdmits, Effect4.Program.Val.hasTy]
+  delegates	Effect4.Program.Typing.Rules:36	Effect4.Program.EffTy.joinAnswer	(Ty)	→ [Effect4.Program.Ty.join]
+  delegates	Effect4.Program.Typing.Rules:109	Effect4.Program.rowTy	(Ty)	→ [Effect4.Program.Ty.instantiate, Effect4.Program.Ty.matchTemplate, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Typing.Rules:214	Effect4.Program.catchIfError	(Ty)	→ [Effect4.Program.Ty.join, Effect4.Program.instDecidableEqTy, Effect4.Program.Ty.normalize, Effect4.Program.Ty.diffTag]
+  delegates	Effect4.Schema.Bridge:243	Effect4.Program.Ty.schema	(Ty)	→ [Effect4.Schema.Bridge.schema, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Schema.Codec:36	Effect4.Schema.Codec.Compatible	(Ty)	→ [Effect4.Schema.Codec.layout]
+  delegates	Effect4.Schema.Codec:40	Effect4.Schema.Codec.instDecidableCompatible [instance]	(Ty)	→ [Effect4.Schema.Codec.layout, Effect4.Program.instDecidableEqTy]
+  delegates	Effect4.Schema.Codec:215	Effect4.Schema.Codec.isValue	(Ty)	→ [Effect4.Schema.Codec.encodeRaw, Effect4.Schema.Codec.decodeRaw, Effect4.Schema.Codec.layout, Effect4.Program.Val.hasTy, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Schema.Codec:229	Effect4.Schema.encode	(Ty)	→ [Effect4.Schema.Codec.encodeRaw, Effect4.Schema.Codec.decodeRaw, Effect4.Schema.Codec.layout, Effect4.Program.Val.hasTy, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Schema.Codec:238	Effect4.Schema.decode	(Ty)	→ [Effect4.Schema.Codec.decodeRaw, Effect4.Schema.Codec.layout, Effect4.Program.Val.hasTy, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Schema.Codec:249	Effect4.Program.Ty.isCodecSupported	(Ty)	→ [Effect4.Schema.Codec.isSupported]
+  delegates	Effect4.Schema.Codec:252	Effect4.Program.Ty.isCodecValue	(Ty)	→ [Effect4.Schema.Codec.isValue]
+  fold	Effect4.Laws.Program.Signature:972	Effect4.Program.flatCarrier	(Ty)	Effect4.Program.flatCarrierAlg
+  fold	Effect4.Laws.Program.TypeAlgebra:1219	Effect4.Program.Ty.valueVars	(Ty)	Effect4.Program.Ty.valueVarsAlg
+  fold	Effect4.Laws.Program.Typed.Membership:2315	Effect4.Program.Typed.handleFree	(Ty)	Effect4.Program.Typed.handleFreeAlg
+  fold	Effect4.Program.Admission:78	Effect4.Program.inhabited	(Ty)	Effect4.Program.inhabitedAlg
+  fold	Effect4.Program.Admission:122	Effect4.Program.findInternalHandle	(Ty)	Effect4.Program.internalHandleScan
+  generated	Effect4.Laws.Program.TyView:30	Effect4.Program.Ty.args	(Ty)
+  generated	Effect4.Laws.Program.TyView:56	Effect4.Program.Ty.sameHead	(Ty)
+  generated	Effect4.Laws.Program.TyView:80	Effect4.Program.Ty.litRule	(Ty)
+  generated	Effect4.Laws.Program.TyView:86	Effect4.Program.Ty.topRule	(Ty)
+  generated	Effect4.Program.Fold:237	Effect4.Program.foldMapAt_ty	(Ty)
+  generated	Effect4.Program.Fold:282	Effect4.Program.foldMap_ty	(Ty)
+  generated	Effect4.Program.Fold:446	Effect4.Program.foldM_ty	(Ty)
+  generated	Effect4.Store.Domain.Derived.Program:1091	Effect4.Store.ProgramGen.TyC.toValTy	(Ty)
+  one-level	Effect4.Laws.Program.Typed.Membership:71	Effect4.Program.Typed.FlatFits	(Ty)
+  one-level	Effect4.Program.Checker:99	Effect4.Program.Checker.listOf?	(Ty)
+  one-level	Effect4.Program.Checker:104	Effect4.Program.Checker.exitOf?	(Ty)
+  one-level	Effect4.Program.Compile:1368	Effect4.Program.externalValue	(Ty)	 hands to [Effect4.Program.Val.hasTy]
+  one-level	Effect4.Program.Decision:61	Effect4.Program.Decision.arms	(Ty)	 hands to [Effect4.Program.Ty.taggedColumn, Effect4.Program.instDecidableEqTy, Effect4.Program.Ty.normalize, Effect4.Program.Ty.diffTag, Effect4.Program.Ty.payloadTy]
+  one-level	Effect4.Program.NativeAtom:36	Effect4.Program.causeInputError?	(Ty)
+  one-level	Effect4.Program.Ty:190	Effect4.Program.Ty.isNever	(Ty)	converted: Effect4.Program.Ty.isNever.alg with Effect4.Program.Ty.isNever.eq_cata
+  one-level	Effect4.Program.Ty:402	Effect4.Program.Ty.isMember	(Ty)	converted: Effect4.Program.Ty.isMember.alg with Effect4.Program.Ty.isMember.eq_cata
+  one-level	Effect4.Program.Ty:563	Effect4.Program.Ty.factors	(Ty)	 hands to [Effect4.Program.Ty.members]
+  one-level	Effect4.Program.Ty:570	Effect4.Program.Ty.isFactor	(Ty)
+  one-level	Effect4.Program.Ty:772	Effect4.Program.Ty.isTagged	(Ty)
+  one-level	Effect4.Program.Ty:785	Effect4.Program.Ty.taggedColumn	(Ty)	 hands to [Effect4.Program.Ty.members]
+  one-level	Effect4.Program.Ty:797	Effect4.Program.Ty.payloadOf	(Ty)
+  one-level	Effect4.Program.Typing.Rules:183	Effect4.Program.fiberTy	(Ty)
+  opaque	Effect4.Laws.Program.TyView:24	Effect4.Program.Ty.Variance.holds	(Ty)
+  opaque	Effect4.Laws.Program.Typed.World:158	Effect4.Program.Typed.World.addRef	(Ty)
+  opaque	Effect4.Program.Authoring:218	Effect4.Program.Authoring.Row.host	(Ty)
+  opaque	Effect4.Program.ErrorImage:25	Effect4.Program.reasonAdmits	(Ty)
+  opaque	Effect4.Program.Fold:79	Effect4.Program.TyHom.f_ty	(Ty)
+  opaque	Effect4.Program.Profile:181	Effect4.Program.HostSpec.Rep	(Ty)
+  opaque	Effect4.Program.Profile:298	Effect4.Program.Profile.Scalar.Rep	(Ty)
+  opaque	Effect4.Program.Profile:498	Effect4.Program.Profile.Resource.Rep	(Ty)
+  opaque	Effect4.Program.Stream:21	Effect4.Program.Stream.pullRow	(Ty)
+  opaque	Effect4.Program.Ty:75	Effect4.Program.instDecidableEqTy [instance]	(Ty)
+  opaque	Effect4.Program.Ty:79	Effect4.Program.Ty.result	(Ty)
+  opaque	Effect4.Program.Ty:83	Effect4.Program.Ty.exit	(Ty)
+  opaque	Effect4.Program.Ty:85	Effect4.Program.Ty.fiber	(Ty)
+  opaque	Effect4.Program.Ty:87	Effect4.Program.Ty.cause	(Ty)
+  opaque	Effect4.Program.Ty:89	Effect4.Program.Ty.array	(Ty)
+  opaque	Effect4.Program.Ty:91	Effect4.Program.Ty.readonlyArray	(Ty)
+  opaque	Effect4.Program.Ty:223	Effect4.Program.Ty.undefinedOr	(Ty)
+  opaque	Effect4.Program.Ty:226	Effect4.Program.Ty.nullOr	(Ty)
+  opaque	Effect4.Program.Ty:227	Effect4.Program.Ty.nullable	(Ty)
+  opaque	Effect4.Program.Ty:237	Effect4.Program.Ty.take	(Ty)
+  opaque	Effect4.Program.Ty:341	Effect4.Program.Ty.Le	(Ty)
+  opaque	Effect4.Program.Typing.Blame:104	Effect4.Program.selectRefusal	(Ty)
+  opaque	Effect4.Program.Typing.Rules:34	Effect4.Program.EffTy.pure	(Ty)
+  structural	Effect4.Codegen.Types:268	Effect4.Codegen.Types.ofNormalized [private]	(Ty)
+  structural	Effect4.Laws.Program.Template:256	Effect4.Program.Ty.varsOf	(Ty)
+  structural	Effect4.Laws.Program.Template:264	Effect4.Program.Ty.templateAdmissible	(Ty)	 hands to [Effect4.Program.Ty.closed]
+  structural	Effect4.Laws.Program.Typed.Membership:106	Effect4.Program.Typed.Fits	(Ty)	converted: Effect4.Program.Typed.Fits.alg with Effect4.Program.Typed.Fits.eq_cata hands to [Effect4.Program.Typed.FiberDeclared, Effect4.Program.Typed.PromiseDeclared, Effect4.Program.Typed.RefDeclared]
+  structural	Effect4.Program.Admission:35	Effect4.Program.findInt	(Ty)	converted: Effect4.Program.findInt.alg with Effect4.Program.findInt.eq_cata
+  structural	Effect4.Program.Eff:43	Effect4.Program.isTagTy	(Ty)	converted: Effect4.Program.isTagTy.alg with Effect4.Program.isTagTy.eq_cata
+  structural	Effect4.Program.Eff:49	Effect4.Program.rawSupportedErrTy	(Ty)	converted: Effect4.Program.rawSupportedErrTy.alg with Effect4.Program.rawSupportedErrTy.eq_cata hands to [Effect4.Program.isTagTy]
+  structural	Effect4.Program.NativeAtom:43	Effect4.Program.NativeAtom.projectProduct	(Ty)	converted: Effect4.Program.NativeAtom.projectProduct.alg with Effect4.Program.NativeAtom.projectProduct.eq_cata hands to [Effect4.Program.Ty.join]
+  structural	Effect4.Program.Ty:75	Effect4.Program.instReprTy.repr [instance]	(Ty)
+  structural	Effect4.Program.Ty:93	Effect4.Program.Ty.renderRaw	(Ty)	converted: Effect4.Program.Ty.renderRaw.alg with Effect4.Program.Ty.renderRaw.eq_cata
+  structural	Effect4.Program.Ty:119	Effect4.Program.Ty.members	(Ty)	converted: Effect4.Program.Ty.members.alg with Effect4.Program.Ty.members.eq_cata
+  structural	Effect4.Program.Ty:142	Effect4.Program.Ty.key	(Ty)	converted: Effect4.Program.Ty.key.alg with Effect4.Program.Ty.key.eq_cata
+  structural	Effect4.Program.Ty:197	Effect4.Program.Ty.closed	(Ty)
+  structural	Effect4.Program.Ty:471	Effect4.Program.Ty.instantiate	(Ty)
+  structural	Effect4.Program.Ty:496	Effect4.Program.Ty.infer	(Ty)	 hands to [Effect4.Program.Ty.sub]
+  structural	Effect4.Program.Ty:606	Effect4.Program.Ty.normalize	(Ty)	converted: Effect4.Program.Ty.normalize.alg with Effect4.Program.Ty.normalize.eq_cata hands to [Effect4.Program.Ty.productMembers, Effect4.Program.Ty.members]
+  structural	Effect4.Program.Typed:20	Effect4.Program.Val.hasTy	(Ty)	converted: Effect4.Program.Val.hasTy.alg with Effect4.Program.Val.hasTy.eq_cata hands to [Effect4.Program.causeAdmits]
+  structural	Effect4.Schema.Bridge:37	Effect4.Schema.Bridge.schema	(Ty)	converted: Effect4.Schema.Bridge.schema.alg with Effect4.Schema.Bridge.schema.eq_cata
+  structural	Effect4.Schema.Codec:24	Effect4.Schema.Codec.layout	(Ty)	converted: Effect4.Schema.Codec.layout.alg with Effect4.Schema.Codec.layout.eq_cata
+  structural	Effect4.Schema.Codec:42	Effect4.Schema.Codec.isSupported	(Ty)	converted: Effect4.Schema.Codec.isSupported.alg with Effect4.Schema.Codec.isSupported.eq_cata
+  structural	Effect4.Schema.Codec:151	Effect4.Schema.Codec.encodeRaw	(Ty)	converted: Effect4.Schema.Codec.encodeRaw.alg with Effect4.Schema.Codec.encodeRaw.eq_cata hands to [Effect4.Program.Val.hasTy]
+  structural	Effect4.Schema.Codec:179	Effect4.Schema.Codec.decodeRaw	(Ty)	converted: Effect4.Schema.Codec.decodeRaw.alg with Effect4.Schema.Codec.decodeRaw.eq_cata hands to [Effect4.Program.Val.hasTy]
+  wf	Effect4.Program.Ty:431	Effect4.Program.Ty.sub	(Ty)	 hands to [Effect4.Program.instDecidableEqTy]
+#traversal_census done: 122 rows; 356 modules under Effect4 scanned
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Effect4: 66 match(es) read it, 28 with no catch-all — appending a constructor refuses exactly those
+  Effect4.Program.methodArgsRow	Effect4.Codegen.PrintLeaf	Effect4.Program.methodArgsRow.match_1	discr 0	alts 2	catchAll true
+  Effect4.Codegen.Types.ofNormalized [private]	Effect4.Codegen.Types	Effect4.Codegen.Types.ofNormalized.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.NativeAtom.projectProduct.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.NativeAtom.projectProduct.match_1	discr 0	alts 4	catchAll true
+  Effect4.Program.Ty.members.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Ty.members.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_40	discr 0	alts 20	catchAll false
+  Effect4.Program.findInt.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.findInt.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.rawSupportedErrTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.rawSupportedErrTy.match_1	discr 0	alts 20	catchAll false
+  Effect4.Schema.Codec.decodeRaw.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Schema.Codec.decodeRaw.match_3	discr 0	alts 13	catchAll true
+  Effect4.Schema.Codec.encodeRaw.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Schema.Codec.encodeRaw.match_1	discr 0	alts 16	catchAll true
+  Effect4.Schema.Codec.layout.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Schema.Codec.layout.match_1	discr 0	alts 8	catchAll true
+  Effect4.Program.Ty.templateAdmissible	Effect4.Laws.Program.Template	Effect4.Program.Ty.templateAdmissible.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.varsOf	Effect4.Laws.Program.Template	Effect4.Program.Ty.varsOf.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.Variance.holds	Effect4.Laws.Program.TyView	Effect4.Program.Ty.Variance.holds.match_1	discr 1	alts 3	catchAll true
+  Effect4.Program.Ty.Variance.holds	Effect4.Laws.Program.TyView	Effect4.Program.Ty.Variance.holds.match_1	discr 2	alts 3	catchAll true
+  Effect4.Program.Ty.args	Effect4.Laws.Program.TyView	Effect4.Program.Ty.args.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.litRule	Effect4.Laws.Program.TyView	Effect4.Program.Ty.litRule.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.litRule	Effect4.Laws.Program.TyView	Effect4.Program.Ty.litRule.match_1	discr 1	alts 2	catchAll true
+  Effect4.Program.Ty.sameHead	Effect4.Laws.Program.TyView	Effect4.Program.Ty.sameHead.match_1	discr 0	alts 20	catchAll true
+  Effect4.Program.Ty.sameHead	Effect4.Laws.Program.TyView	Effect4.Program.Ty.sameHead.match_1	discr 1	alts 20	catchAll true
+  Effect4.Program.Ty.topRule	Effect4.Laws.Program.TyView	Effect4.Program.Ty.topRule.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.topRule	Effect4.Laws.Program.TyView	Effect4.Program.Ty.topRule.match_1	discr 1	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_25	discr 0	alts 20	catchAll false
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_25	discr 0	alts 20	catchAll false
+  Effect4.Program.Typed.FlatFits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_16	discr 0	alts 6	catchAll true
+  Effect4.Program.findInt	Effect4.Program.Admission	Effect4.Program.findInt.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Authoring.ServiceDef.receiver	Effect4.Program.Authoring.Services	Effect4.Program.Authoring.ServiceDef.receiver.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Checker.exitOf?	Effect4.Program.Checker	Effect4.Program.Checker.exitOf?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Checker.listOf?	Effect4.Program.Checker	Effect4.Program.Checker.listOf?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.externalValue	Effect4.Program.Compile	Effect4.Program.externalValue.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Decision.arms	Effect4.Program.Decision	Effect4.Program.Decision.arms.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Decision.arms	Effect4.Program.Decision	Effect4.Program.Decision.arms.match_4	discr 1	alts 3	catchAll true
+  Effect4.Program.isTagTy	Effect4.Program.Eff	Effect4.Program.isTagTy.match_1	discr 0	alts 4	catchAll true
+  Effect4.Program.rawSupportedErrTy	Effect4.Program.Eff	Effect4.Program.rawSupportedErrTy.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.cata_ty	Effect4.Program.Fold	Effect4.Program.cata_ty.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.foldM_ty	Effect4.Program.Fold	Effect4.Program.cata_ty.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.foldMapAt_ty	Effect4.Program.Fold	Effect4.Program.cata_ty.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.foldMap_ty	Effect4.Program.Fold	Effect4.Program.cata_ty.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.NativeAtom.projectProduct	Effect4.Program.NativeAtom	Effect4.Program.NativeAtom.projectProduct.match_1	discr 0	alts 4	catchAll true
+  Effect4.Program.causeInputError?	Effect4.Program.NativeAtom	Effect4.Program.causeInputError?.match_1	discr 0	alts 3	catchAll true
+  Effect4.Program.Ty.closed	Effect4.Program.Ty	Effect4.Program.Ty.closed.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.factors	Effect4.Program.Ty	Effect4.Program.Ty.factors.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.infer	Effect4.Program.Ty	Effect4.Program.Ty.infer.match_3	discr 0	alts 12	catchAll true
+  Effect4.Program.Ty.infer	Effect4.Program.Ty	Effect4.Program.Ty.infer.match_3	discr 1	alts 12	catchAll true
+  Effect4.Program.Ty.instantiate	Effect4.Program.Ty	Effect4.Program.Ty.instantiate.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.isFactor	Effect4.Program.Ty	Effect4.Program.Ty.isFactor.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.isMember	Effect4.Program.Ty	Effect4.Program.Ty.isMember.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.isNever	Effect4.Program.Ty	Effect4.Program.Ty.key.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.isTagged	Effect4.Program.Ty	Effect4.Program.Ty.isTagged.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.key	Effect4.Program.Ty	Effect4.Program.Ty.key.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.members	Effect4.Program.Ty	Effect4.Program.Ty.members.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.normalize	Effect4.Program.Ty	Effect4.Program.Ty.normalize.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.payloadOf	Effect4.Program.Ty	Effect4.Program.Ty.isTagged.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.renderRaw	Effect4.Program.Ty	Effect4.Program.Ty.renderRaw.match_1	discr 0	alts 22	catchAll false
+  Effect4.Program.Ty.sub	Effect4.Program.Ty	Effect4.Program.Ty.sub.match_1	discr 0	alts 15	catchAll true
+  Effect4.Program.Ty.sub	Effect4.Program.Ty	Effect4.Program.Ty.sub.match_1	discr 1	alts 15	catchAll true
+  Effect4.Program.Ty.taggedColumn	Effect4.Program.Ty	Effect4.Program.Ty.taggedColumn.match_1	discr 0	alts 8	catchAll true
+  Effect4.Program.instReprTy.repr	Effect4.Program.Ty	Effect4.Program.instReprTy.repr.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_40	discr 0	alts 20	catchAll false
+  Effect4.Program.selectRefusal	Effect4.Program.Typing.Blame	Effect4.Program.selectRefusal.match_1	discr 1	alts 3	catchAll true
+  Effect4.Program.fiberTy	Effect4.Program.Typing.Rules	Effect4.Program.fiberTy.match_1	discr 0	alts 2	catchAll true
+  Effect4.Schema.Bridge.schema	Effect4.Schema.Bridge	Effect4.Schema.Bridge.schema.match_1	discr 0	alts 20	catchAll false
+  Effect4.Schema.Codec.decodeRaw	Effect4.Schema.Codec	Effect4.Schema.Codec.decodeRaw.match_3	discr 0	alts 13	catchAll true
+  Effect4.Schema.Codec.encodeRaw	Effect4.Schema.Codec	Effect4.Schema.Codec.encodeRaw.match_1	discr 0	alts 16	catchAll true
+  Effect4.Schema.Codec.isSupported	Effect4.Schema.Codec	Effect4.Schema.Codec.isSupported.match_1	discr 0	alts 14	catchAll true
+  Effect4.Schema.Codec.layout	Effect4.Schema.Codec	Effect4.Schema.Codec.layout.match_1	discr 0	alts 8	catchAll true
+  Effect4.Store.ProgramGen.TyC.toValTy	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TyC.toValTy.match_1	discr 0	alts 20	catchAll false
+#exhaustive_gate done: 66 rows; 356 modules under Effect4 scanned
