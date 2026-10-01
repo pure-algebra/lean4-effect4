@@ -2108,4 +2108,489 @@ theorem evalTerms_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = nativ
 termination_by structural ts
 end
 
+/-! ## Inhabitance agrees with membership (decisions row 127; DI-67)
+
+`inhabited` (`Program/Admission.lean`) is a `TyAlgebra` fold; the column check `admitColumn`
+reads it. It agrees with `Fits` on every type (`inhabited_iff_fits`): soundness reads one member
+(`inhabited_of_fits`, and DI-67's own statement over `Val.hasTy`, `inhabited_of_hasTy`);
+completeness builds one world for every handle position at once, each declared at its own fresh
+key (`fits_of_inhabited_fresh`). On the data fragment the witness needs no world
+(`fits_of_inhabited_handleFree`). Closure under the raw order, the checker's order,
+normalization and the join follows from membership's own (`inhabited_sub`, `inhabited_subN`,
+`inhabited_normalize`, `inhabited_join`), so no second induction over the order is written.
+`prod never nat` and `except never never` are canonical, not `never`, and empty
+(E4-TYPED-CE-015): the column check refuses them (`admitColumn_prod_never_nat`,
+`admitColumn_except_never_never`). -/
+
+/-- **Sound against membership (proved).** A type with a member in some world is `inhabited`;
+so refusing an `inhabited t = false` column never refuses a type with a member. -/
+theorem inhabited_of_fits (w : World) : ∀ (t : Ty) (v : Val), Fits w v t → inhabited t = true := by
+  intro t
+  induction t with
+  | never => intro v h; exact h.elim
+  | int => intro v h; exact h.elim
+  | var _ => intro v h; exact h.elim
+  | unit | nat | string | bool | handle | option | list | exitOf | causeOf | fiberOf | lit
+  | refOf | deferredOf | unknown => intro _ _; rfl
+  | prod a b iha ihb =>
+    intro v h
+    simp only [Fits] at h
+    split at h
+    · show (inhabited a && inhabited b) = true
+      rw [iha _ h.1, ihb _ h.2]
+      rfl
+    · exact h.elim
+  | except e a ihe iha =>
+    intro v h
+    simp only [Fits] at h
+    split at h
+    · show (inhabited e || inhabited a) = true
+      rw [ihe _ h]
+      rfl
+    · show (inhabited e || inhabited a) = true
+      rw [iha _ h, Bool.or_true]
+    · exact h.elim
+  | union l r ihl ihr =>
+    intro v h
+    show (inhabited l || inhabited r) = true
+    rcases h with h | h
+    · rw [ihl v h]
+      rfl
+    · rw [ihr v h, Bool.or_true]
+
+/-- **Sound against the coarse judgment (proved)**, DI-67's frozen statement: a type with a
+value under some allocation table is `inhabited`. -/
+theorem inhabited_of_hasTy :
+    ∀ (t : Ty) (v : Val) (alloc : List String), Val.hasTy v t alloc = true → inhabited t = true := by
+  intro t
+  induction t with
+  | never => intro v alloc h; exact Bool.noConfusion h
+  | int => intro v alloc h; exact Bool.noConfusion h
+  | var _ => intro v alloc h; exact Bool.noConfusion h
+  | unit | nat | string | bool | handle | option | list | exitOf | causeOf | fiberOf | lit
+  | refOf | deferredOf | unknown => intro _ _ _; rfl
+  | prod a b iha ihb =>
+    intro v alloc h
+    simp only [Val.hasTy] at h
+    split at h
+    · obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp h
+      show (inhabited a && inhabited b) = true
+      rw [iha _ _ h1, ihb _ _ h2]
+      rfl
+    · exact Bool.noConfusion h
+  | except e a ihe iha =>
+    intro v alloc h
+    simp only [Val.hasTy] at h
+    split at h
+    · show (inhabited e || inhabited a) = true
+      rw [ihe _ _ h]
+      rfl
+    · show (inhabited e || inhabited a) = true
+      rw [iha _ _ h, Bool.or_true]
+    · exact Bool.noConfusion h
+  | union l r ihl ihr =>
+    intro v alloc h
+    simp only [Val.hasTy] at h
+    show (inhabited l || inhabited r) = true
+    rcases Bool.or_eq_true_iff.mp h with h | h
+    · rw [ihl _ _ h]
+      rfl
+    · rw [ihr _ _ h, Bool.or_true]
+
+/-! ### The data fragment: a witness that needs no world -/
+
+/-- No handle, fiber, cell or deferred anywhere in the type: its members name no world entry. -/
+def handleFreeAlg : TyAlgebra (fun _ => Bool) where
+  ty_never := true
+  ty_unit := true
+  ty_nat := true
+  ty_int := true
+  ty_string := true
+  ty_bool := true
+  ty_handle _ := false
+  ty_option a := a
+  ty_list a := a
+  ty_prod a b := a && b
+  ty_except e a := e && a
+  ty_exitOf a e := a && e
+  ty_causeOf e := e
+  ty_fiberOf _ _ := false
+  ty_union l r := l && r
+  ty_lit _ := true
+  ty_refOf _ := false
+  ty_deferredOf _ _ := false
+  ty_var _ := true
+  ty_unknown := true
+
+/-- The data fragment (`handleFreeAlg`). -/
+def handleFree (t : Ty) : Bool := cata_ty handleFreeAlg t
+
+/-- **Complete on the data fragment (proved)**, with one witness for every world. -/
+theorem fits_of_inhabited_handleFree :
+    ∀ t : Ty, handleFree t = true → inhabited t = true → ∃ v : Val, ∀ w : World, Fits w v t := by
+  intro t
+  induction t with
+  | never => intro _ hi; exact Bool.noConfusion hi
+  | int => intro _ hi; exact Bool.noConfusion hi
+  | var _ => intro _ hi; exact Bool.noConfusion hi
+  | handle _ => intro hf _; exact Bool.noConfusion hf
+  | fiberOf _ _ _ _ => intro hf _; exact Bool.noConfusion hf
+  | refOf _ _ => intro hf _; exact Bool.noConfusion hf
+  | deferredOf _ _ _ _ => intro hf _; exact Bool.noConfusion hf
+  | unit => intro _ _; exact ⟨.unit, fun _ => trivial⟩
+  | nat => intro _ _; exact ⟨.nat 0, fun _ => trivial⟩
+  | string => intro _ _; exact ⟨.str "", fun _ => trivial⟩
+  | bool => intro _ _; exact ⟨.bool true, fun _ => trivial⟩
+  | lit s => intro _ _; exact ⟨.str s, fun _ => rfl⟩
+  | option _ _ => intro _ _; exact ⟨.none, fun _ => trivial⟩
+  | unknown => intro _ _; exact ⟨.unit, fun _ => live_of_keys_nil rfl⟩
+  | list a _ =>
+    intro _ _
+    refine ⟨.list [], fun w => ?_⟩
+    intro x hx
+    nomatch hx
+  | exitOf a e _ _ =>
+    intro _ _
+    exact ⟨Val.exitErr ⟨[]⟩, fun w =>
+      (fitsExit_failure_iff w ⟨a, e, Env.Requirement.empty⟩ ⟨[]⟩).mpr (fun _ hr => nomatch hr)⟩
+  | causeOf e _ =>
+    intro _ _
+    refine ⟨Val.exitErr ⟨[]⟩, fun w => ?_⟩
+    have hc : Val.cause? (Val.exitErr ⟨[]⟩) = some ⟨[]⟩ := causeImage.ofVal_toVal ⟨[]⟩
+    simp only [Fits, hc]
+    intro _ hr
+    nomatch hr
+  | prod a b iha ihb =>
+    intro hf hi
+    have hf' : (handleFree a && handleFree b) = true := hf
+    have hi' : (inhabited a && inhabited b) = true := hi
+    obtain ⟨hfa, hfb⟩ := Bool.and_eq_true_iff.mp hf'
+    obtain ⟨hia, hib⟩ := Bool.and_eq_true_iff.mp hi'
+    obtain ⟨va, hva⟩ := iha hfa hia
+    obtain ⟨vb, hvb⟩ := ihb hfb hib
+    exact ⟨.list [va, vb], fun w => fits_pair (hva w) (hvb w)⟩
+  | except e a ihe iha =>
+    intro hf hi
+    have hf' : (handleFree e && handleFree a) = true := hf
+    have hi' : (inhabited e || inhabited a) = true := hi
+    obtain ⟨hfe, hfa⟩ := Bool.and_eq_true_iff.mp hf'
+    rcases Bool.or_eq_true_iff.mp hi' with hie | hia
+    · obtain ⟨ve, hve⟩ := ihe hfe hie
+      exact ⟨.ctor 0 [ve], fun w => hve w⟩
+    · obtain ⟨va, hva⟩ := iha hfa hia
+      exact ⟨.ctor 1 [va], fun w => hva w⟩
+  | union l r ihl ihr =>
+    intro hf hi
+    have hf' : (handleFree l && handleFree r) = true := hf
+    have hi' : (inhabited l || inhabited r) = true := hi
+    obtain ⟨hfl, hfr⟩ := Bool.and_eq_true_iff.mp hf'
+    rcases Bool.or_eq_true_iff.mp hi' with hil | hir
+    · obtain ⟨v, hv⟩ := ihl hfl hil
+      exact ⟨v, fun w => Or.inl (hv w)⟩
+    · obtain ⟨v, hv⟩ := ihr hfr hir
+      exact ⟨v, fun w => Or.inr (hv w)⟩
+
+
+/-! ### Handles: one world for several, by fresh keys -/
+
+/-- Every fiber, deferred and cell key from `n` on is undeclared. -/
+structure FreshFrom (w : World) (n : Nat) : Prop where
+  fiber : ∀ id : FiberId, n ≤ id.value → w.Γ id = none
+  promise : ∀ key : DeferredKey, n ≤ key.index → w.«Π» key = none
+  cell : ∀ key : RefKey, n ≤ key.index → w.Ρ key = none
+
+/-- A later world as membership reads it: `fits_map`'s premises. -/
+structure Grows (w w' : World) : Prop where
+  fiber : TableExtends w.Γ w'.Γ
+  promise : TableExtends w.«Π» w'.«Π»
+  cell : TableExtends w.Ρ w'.Ρ
+  alloc : Extends w.state.externals.allocated w'.state.externals.allocated
+  service : w'.serviceTy = w.serviceTy
+
+theorem Grows.refl (w : World) : Grows w w :=
+  ⟨table_refl _, table_refl _, table_refl _, fun _ _ h => h, rfl⟩
+
+theorem Grows.trans {a b c : World} (hab : Grows a b) (hbc : Grows b c) : Grows a c :=
+  ⟨table_trans _ _ _ hab.fiber hbc.fiber, table_trans _ _ _ hab.promise hbc.promise,
+    table_trans _ _ _ hab.cell hbc.cell, fun i t h => hbc.alloc i t (hab.alloc i t h),
+    hbc.service.trans hab.service⟩
+
+theorem Grows.fits {w w' : World} (h : Grows w w') {t : Ty} {v : Val} (hv : Fits w v t) :
+    Fits w' v t :=
+  fits_map h.fiber h.promise h.cell h.alloc
+    (fun key sty hk => by rw [← h.service]; exact hk) t v hv
+
+/-- Declaring fiber `n` keeps every earlier membership and frees the keys above it. -/
+theorem FreshFrom.addFiber {w : World} {n : Nat} (h : FreshFrom w n) (ty : EffTy) :
+    Grows w (w.addFiber ⟨n⟩ ty) ∧ FreshFrom (w.addFiber ⟨n⟩ ty) (n + 1) := by
+  refine ⟨⟨insert_extends _ _ _ (h.fiber ⟨n⟩ (Nat.le_refl n)), table_refl _, table_refl _,
+    fun _ _ hx => hx, rfl⟩, ⟨fun id hid => ?_, fun key hk => h.promise key (Nat.le_of_succ_le hk),
+    fun key hk => h.cell key (Nat.le_of_succ_le hk)⟩⟩
+  have hne : id ≠ ⟨n⟩ := fun heq => by
+    subst heq
+    exact Nat.not_succ_le_self n hid
+  show tableInsert w.Γ ⟨n⟩ ty id = none
+  rw [insert_other _ _ _ _ hne]
+  exact h.fiber id (Nat.le_of_succ_le hid)
+
+/-- Declaring cell `n`, likewise. -/
+theorem FreshFrom.addRef {w : World} {n : Nat} (h : FreshFrom w n) (ty : Ty) :
+    Grows w (w.addRef w.state ⟨n⟩ ty) ∧ FreshFrom (w.addRef w.state ⟨n⟩ ty) (n + 1) := by
+  refine ⟨⟨table_refl _, table_refl _, insert_extends _ _ _ (h.cell ⟨n⟩ (Nat.le_refl n)),
+    fun _ _ hx => hx, rfl⟩, ⟨fun id hid => h.fiber id (Nat.le_of_succ_le hid),
+    fun key hk => h.promise key (Nat.le_of_succ_le hk), fun key hk => ?_⟩⟩
+  have hne : key ≠ ⟨n⟩ := fun heq => by
+    subst heq
+    exact Nat.not_succ_le_self n hk
+  show tableInsert w.Ρ ⟨n⟩ ty key = none
+  rw [insert_other _ _ _ _ hne]
+  exact h.cell key (Nat.le_of_succ_le hk)
+
+/-- Declaring deferred `n`, likewise. -/
+theorem FreshFrom.addPromise {w : World} {n : Nat} (h : FreshFrom w n) (types : Ty × Ty) :
+    Grows w (w.addPromise w.state ⟨n⟩ types) ∧ FreshFrom (w.addPromise w.state ⟨n⟩ types) (n + 1) := by
+  refine ⟨⟨table_refl _, insert_extends _ _ _ (h.promise ⟨n⟩ (Nat.le_refl n)), table_refl _,
+    fun _ _ hx => hx, rfl⟩, ⟨fun id hid => h.fiber id (Nat.le_of_succ_le hid),
+    fun key hk => ?_, fun key hk => h.cell key (Nat.le_of_succ_le hk)⟩⟩
+  have hne : key ≠ ⟨n⟩ := fun heq => by
+    subst heq
+    exact Nat.not_succ_le_self n hk
+  show tableInsert w.«Π» ⟨n⟩ types key = none
+  rw [insert_other _ _ _ _ hne]
+  exact h.promise key (Nat.le_of_succ_le hk)
+
+/-- An external allocation at the end of the table. -/
+def World.allocExternal (w : World) (target : String) : World :=
+  { w with state := { w.state with externals :=
+      { w.state.externals with allocated := w.state.externals.allocated ++ [target] } } }
+
+theorem FreshFrom.allocExternal {w : World} {n : Nat} (h : FreshFrom w n) (target : String) :
+    Grows w (w.allocExternal target) ∧ FreshFrom (w.allocExternal target) n :=
+  ⟨⟨table_refl _, table_refl _, table_refl _, extends_append _ _, rfl⟩,
+    ⟨h.fiber, h.promise, h.cell⟩⟩
+
+/-- The `handle` former at every target, in a world grown from any world with fresh keys. -/
+theorem fits_handle_fresh (target : String) (w : World) (n : Nat) (hn : FreshFrom w n) :
+    ∃ (w' : World) (n' : Nat) (v : Val), Grows w w' ∧ FreshFrom w' n' ∧
+      Fits w' v (.handle target) := by
+  cases hc : internalHandleTargets.contains target with
+  | false =>
+    have ht : externalHandleTarget target = true := by
+      unfold externalHandleTarget
+      rw [hc]
+      rfl
+    obtain ⟨hg, hf⟩ := hn.allocExternal target
+    exact ⟨_, n, Val.handle HandleKind.external.byte w.state.externals.allocated.length, hg, hf,
+      ht, List.getElem?_concat_length⟩
+  | true =>
+    have hm : target ∈ internalHandleTargets := List.contains_iff_mem.mp hc
+    simp only [internalHandleTargets, List.mem_cons, List.not_mem_nil, or_false] at hm
+    rcases hm with rfl | rfl | rfl | rfl
+    · obtain ⟨hg, hf⟩ := hn.addRef .nat
+      exact ⟨_, n + 1, Val.handle HandleKind.cell.byte n, hg, hf, rfl, .nat, insert_here _ _ _,
+        Ty.subN_refl _, Ty.subN_refl _⟩
+    · obtain ⟨hg, hf⟩ := hn.addPromise (.nat, .nat)
+      exact ⟨_, n + 1, Val.handle HandleKind.promise.byte n, hg, hf, rfl, .nat, .nat,
+        insert_here _ _ _, ⟨Ty.subN_refl _, Ty.subN_refl _⟩, ⟨Ty.subN_refl _, Ty.subN_refl _⟩⟩
+    · exact ⟨w, n, Val.handle HandleKind.scope.byte 0, Grows.refl w, hn,
+        (rfl : Ty.scopeTarget = Ty.scopeTarget)⟩
+    · have hkeys : (Val.context emptyCtx).keys = [] := by decide
+      refine ⟨w, n, Val.context emptyCtx, Grows.refl w, hn, rfl, emptyCtx,
+        ctxImage.ofVal_toVal emptyCtx, ?_, live_of_keys_nil hkeys⟩
+      intro key sv sty hget _
+      have hnone : emptyCtx.services.getV key = none := rfl
+      rw [hnone] at hget
+      cases hget
+
+/-- **One world for several handles (proved).** An `inhabited` type has a member in a world grown
+from any world whose keys are fresh from `n` on: each handle position is declared at its own
+fresh key (`FreshFrom.addFiber`, `addRef`, `addPromise`) or allocated at the end of the external
+table, and a product carries its first column's member into the world the second one grows
+(`Grows.fits`). -/
+theorem fits_of_inhabited_fresh : ∀ (t : Ty), inhabited t = true → ∀ (w : World) (n : Nat),
+    FreshFrom w n → ∃ (w' : World) (n' : Nat) (v : Val), Grows w w' ∧ FreshFrom w' n' ∧ Fits w' v t := by
+  intro t
+  induction t with
+  | never => intro hi; exact Bool.noConfusion hi
+  | int => intro hi; exact Bool.noConfusion hi
+  | var _ => intro hi; exact Bool.noConfusion hi
+  | unit => intro _ w n hn; exact ⟨w, n, .unit, Grows.refl w, hn, trivial⟩
+  | nat => intro _ w n hn; exact ⟨w, n, .nat 0, Grows.refl w, hn, trivial⟩
+  | string => intro _ w n hn; exact ⟨w, n, .str "", Grows.refl w, hn, trivial⟩
+  | bool => intro _ w n hn; exact ⟨w, n, .bool true, Grows.refl w, hn, trivial⟩
+  | lit s => intro _ w n hn; exact ⟨w, n, .str s, Grows.refl w, hn, rfl⟩
+  | option _ _ => intro _ w n hn; exact ⟨w, n, .none, Grows.refl w, hn, trivial⟩
+  | unknown => intro _ w n hn; exact ⟨w, n, .unit, Grows.refl w, hn, live_of_keys_nil rfl⟩
+  | list _ _ =>
+    intro _ w n hn
+    exact ⟨w, n, .list [], Grows.refl w, hn, fun x hx => nomatch hx⟩
+  | exitOf a e _ _ =>
+    intro _ w n hn
+    exact ⟨w, n, Val.exitErr ⟨[]⟩, Grows.refl w, hn,
+      (fitsExit_failure_iff w ⟨a, e, Env.Requirement.empty⟩ ⟨[]⟩).mpr (fun _ hr => nomatch hr)⟩
+  | causeOf e _ =>
+    intro _ w n hn
+    refine ⟨w, n, Val.exitErr ⟨[]⟩, Grows.refl w, hn, ?_⟩
+    have hc : Val.cause? (Val.exitErr ⟨[]⟩) = some ⟨[]⟩ := causeImage.ofVal_toVal ⟨[]⟩
+    simp only [Fits, hc]
+    intro _ hr
+    nomatch hr
+  | handle target => intro _ w n hn; exact fits_handle_fresh target w n hn
+  | fiberOf a e _ _ =>
+    intro _ w n hn
+    obtain ⟨hg, hf⟩ := hn.addFiber ⟨a, e, Env.Requirement.empty⟩
+    exact ⟨_, n + 1, Val.fiber ⟨n⟩, hg, hf, _, insert_here _ _ _, Ty.subN_refl _, Ty.subN_refl _⟩
+  | refOf t _ =>
+    intro _ w n hn
+    obtain ⟨hg, hf⟩ := hn.addRef t
+    exact ⟨_, n + 1, Val.cell ⟨n⟩, hg, hf, t, insert_here _ _ _, Ty.subN_refl _, Ty.subN_refl _⟩
+  | deferredOf a e _ _ =>
+    intro _ w n hn
+    obtain ⟨hg, hf⟩ := hn.addPromise (a, e)
+    exact ⟨_, n + 1, Val.promise ⟨n⟩, hg, hf, a, e, insert_here _ _ _,
+      ⟨Ty.subN_refl _, Ty.subN_refl _⟩, ⟨Ty.subN_refl _, Ty.subN_refl _⟩⟩
+  | prod a b iha ihb =>
+    intro hi w n hn
+    have hi' : (inhabited a && inhabited b) = true := hi
+    obtain ⟨hia, hib⟩ := Bool.and_eq_true_iff.mp hi'
+    obtain ⟨w1, n1, va, hg1, hf1, hva⟩ := iha hia w n hn
+    obtain ⟨w2, n2, vb, hg2, hf2, hvb⟩ := ihb hib w1 n1 hf1
+    exact ⟨w2, n2, .list [va, vb], hg1.trans hg2, hf2, fits_pair (hg2.fits hva) hvb⟩
+  | except e a ihe iha =>
+    intro hi w n hn
+    have hi' : (inhabited e || inhabited a) = true := hi
+    rcases Bool.or_eq_true_iff.mp hi' with hie | hia
+    · obtain ⟨w', n', v, hg, hf, hv⟩ := ihe hie w n hn
+      exact ⟨w', n', .ctor 0 [v], hg, hf, hv⟩
+    · obtain ⟨w', n', v, hg, hf, hv⟩ := iha hia w n hn
+      exact ⟨w', n', .ctor 1 [v], hg, hf, hv⟩
+  | union l r ihl ihr =>
+    intro hi w n hn
+    have hi' : (inhabited l || inhabited r) = true := hi
+    rcases Bool.or_eq_true_iff.mp hi' with hil | hir
+    · obtain ⟨w', n', v, hg, hf, hv⟩ := ihl hil w n hn
+      exact ⟨w', n', v, hg, hf, Or.inl hv⟩
+    · obtain ⟨w', n', v, hg, hf, hv⟩ := ihr hir w n hn
+      exact ⟨w', n', v, hg, hf, Or.inr hv⟩
+
+/-- The initial world declares only the root fiber, so every key from 1 on is fresh. -/
+theorem initialWorld_freshFrom (rootTy : EffTy) : FreshFrom (initialWorld rootTy) 1 := by
+  refine ⟨fun id hid => ?_, fun _ _ => rfl, fun _ _ => rfl⟩
+  have hne : id ≠ Api.root := fun heq => by
+    subst heq
+    exact Nat.lt_irrefl 0 hid
+  show tableInsert (fun _ => none) Api.root rootTy id = none
+  rw [insert_other _ _ _ _ hne]
+
+/-- **Inhabitance agrees with membership (proved)**, on every type: the fold says `true` exactly
+when some world has a member. Row 127's agreement theorem. -/
+theorem inhabited_iff_fits (t : Ty) : inhabited t = true ↔ ∃ (w : World) (v : Val), Fits w v t := by
+  constructor
+  · intro hi
+    obtain ⟨w', _, v, _, _, hv⟩ :=
+      fits_of_inhabited_fresh t hi (initialWorld (EffTy.pure .unit)) 1 (initialWorld_freshFrom _)
+    exact ⟨w', v, hv⟩
+  · rintro ⟨w, v, h⟩
+    exact inhabited_of_fits w t v h
+
+/-- The agreement on the data fragment, with the witness world fixed (probe B's statement). -/
+theorem inhabited_iff_handleFree (t : Ty) (hf : handleFree t = true) :
+    inhabited t = true ↔ ∃ (w : World) (v : Val), Fits w v t := by
+  constructor
+  · intro hi
+    obtain ⟨v, hv⟩ := fits_of_inhabited_handleFree t hf hi
+    exact ⟨initialWorld (EffTy.pure .unit), v, hv _⟩
+  · rintro ⟨w, v, h⟩
+    exact inhabited_of_fits w t v h
+
+/-! ### The handle witnesses -/
+
+/-- A fiber declared at the columns, even `never, never` (a fiber that never completes). -/
+theorem fiber_inhabited (a e : Ty) :
+    Fits (initialWorld ⟨a, e, Env.Requirement.empty⟩) (Val.fiber Api.root) (.fiberOf a e) :=
+  ⟨⟨a, e, Env.Requirement.empty⟩, rfl, Ty.subN_refl _, Ty.subN_refl _⟩
+
+/-- A cell declared at the type. -/
+theorem cell_inhabited (t : Ty) :
+    Fits { initialWorld (EffTy.pure .unit) with Ρ := fun _ => some t } (Val.cell ⟨0⟩) (.refOf t) :=
+  ⟨t, rfl, Ty.subN_refl _, Ty.subN_refl _⟩
+
+/-- A deferred declared at the columns. -/
+theorem promise_inhabited (a e : Ty) :
+    Fits { initialWorld (EffTy.pure .unit) with «Π» := fun _ => some (a, e) } (Val.promise ⟨0⟩)
+      (.deferredOf a e) :=
+  ⟨a, e, rfl, ⟨Ty.subN_refl _, Ty.subN_refl _⟩, ⟨Ty.subN_refl _, Ty.subN_refl _⟩⟩
+
+/-- Every `handle` target has a member in some world: the four internal spellings and an
+external allocation (the types verifier's `handle_inhabited`). -/
+theorem handle_inhabited (target : String) : ∃ (w : World) (v : Val), Fits w v (.handle target) :=
+  (inhabited_iff_fits (.handle target)).mp rfl
+
+/-! ### Closure: the raw order, the checker's order, normalization and the join -/
+
+theorem inhabited_sub {a b : Ty} (hsub : Ty.sub a b = true) (h : inhabited a = true) :
+    inhabited b = true := by
+  obtain ⟨w, v, hv⟩ := (inhabited_iff_fits a).mp h
+  exact inhabited_of_fits w b v (fits_sub w hsub v hv)
+
+theorem inhabited_subN {a b : Ty} (hsub : Ty.subN a b = true) (h : inhabited a = true) :
+    inhabited b = true := by
+  obtain ⟨w, v, hv⟩ := (inhabited_iff_fits a).mp h
+  exact inhabited_of_fits w b v (fits_subN w hsub v hv)
+
+/-- Normalization keeps inhabitance (the checker's types are normal forms). -/
+theorem inhabited_normalize (t : Ty) : inhabited t.normalize = inhabited t := by
+  apply Bool.eq_iff_iff.mpr
+  rw [inhabited_iff_fits, inhabited_iff_fits]
+  constructor
+  · rintro ⟨w, v, h⟩
+    exact ⟨w, v, (fits_normalize w t v).mp h⟩
+  · rintro ⟨w, v, h⟩
+    exact ⟨w, v, (fits_normalize w t v).mpr h⟩
+
+theorem inhabited_join (a b : Ty) : inhabited (Ty.join a b) = (inhabited a || inhabited b) :=
+  inhabited_normalize (.union a b)
+
+/-! ### The column check (rows 127 and 149) -/
+
+/-- **The column check, read through membership (proved).** A column is admitted exactly when it
+is the designed bottom or has a member in some world. -/
+theorem admitColumn_iff (t : Ty) :
+    admitColumn t = true ↔ t.normalize = .never ∨ ∃ (w : World) (v : Val), Fits w v t := by
+  unfold admitColumn
+  rw [Bool.or_eq_true, beq_iff_eq, inhabited_iff_fits]
+
+/-- The column check is invariant under normalization. -/
+theorem admitColumn_normalize (t : Ty) : admitColumn t.normalize = admitColumn t := by
+  unfold admitColumn
+  rw [Ty.normalize_idem, inhabited_normalize]
+
+/-- **E4-TYPED-CE-015, the counterexample (proved):** `prod never nat` has no member in any
+world, and it is canonical, not `never`. -/
+theorem prod_never_nat_empty (w : World) (v : Val) : ¬ Fits w v (.prod .never .nat) :=
+  fun h => absurd (inhabited_of_fits w _ v h) (by decide)
+
+theorem except_never_never_empty (w : World) (v : Val) : ¬ Fits w v (.except .never .never) :=
+  fun h => absurd (inhabited_of_fits w _ v h) (by decide)
+
+/-- And none under any allocation table, in DI-67's own words. -/
+theorem prod_never_nat_no_hasTy (v : Val) (alloc : List String) :
+    Val.hasTy v (.prod .never .nat) alloc = false := by
+  cases h : Val.hasTy v (.prod .never .nat) alloc with
+  | false => rfl
+  | true => exact absurd (inhabited_of_hasTy _ v alloc h) (by decide)
+
+theorem except_never_never_no_hasTy (v : Val) (alloc : List String) :
+    Val.hasTy v (.except .never .never) alloc = false := by
+  cases h : Val.hasTy v (.except .never .never) alloc with
+  | false => rfl
+  | true => exact absurd (inhabited_of_hasTy _ v alloc h) (by decide)
+
+/-- **E4-TYPED-CE-015, the repair at the column (proved):** the column check refuses both. -/
+theorem admitColumn_prod_never_nat : admitColumn (.prod .never .nat) = false := by
+  decide +kernel
+
+theorem admitColumn_except_never_never : admitColumn (.except .never .never) = false := by
+  decide +kernel
+
 end Effect4.Program.Typed

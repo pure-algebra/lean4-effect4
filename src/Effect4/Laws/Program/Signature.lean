@@ -1082,16 +1082,10 @@ structure LawfulSig (app : SigApp) : Prop where
   /-- Every key a row requires has a carrier. -/
   served : ∀ r ∈ app.rows, ∀ k ∈ r.requires, (app.serviceTy k).isSome = true
 
-theorem option_or_eq_none_iff {α : Type} (a b : Option α) :
-    a.or b = none ↔ a = none ∧ b = none := by
-  cases a with
-  | none => exact ⟨fun h => ⟨rfl, h⟩, fun h => h.2⟩
-  | some x => exact ⟨fun h => (nomatch h), fun h => (nomatch h.1)⟩
-
 /-- **The located refusal is complete** (proved): no refusal exactly at a lawful signature. -/
 theorem sigRefusal?_eq_none_iff (app : SigApp) : sigRefusal? app = none ↔ LawfulSig app := by
   unfold sigRefusal?
-  rw [option_or_eq_none_iff, option_or_eq_none_iff, option_or_eq_none_iff, option_or_eq_none_iff,
+  rw [Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff,
     Option.map_eq_none_iff, Option.map_eq_none_iff, Option.map_eq_none_iff,
     Option.map_eq_none_iff, Option.map_eq_none_iff,
     firstIndexed_eq_none_iff, firstDup_eq_none_iff, firstIndexed_eq_none_iff,

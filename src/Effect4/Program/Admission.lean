@@ -45,9 +45,11 @@ def findInt (pos : Path) : Ty → Option Path
 /-- Inhabitance as a fold (decisions row 127; DI-67): `never`, `int` and a template parameter
 have no member; a product needs both columns, a result or a union either; every other former
 has a member at every argument in some world (`none`, `[]`, a failure with no typed reason, the
-empty cause, a declared handle). The laws are `Laws/Program/Typed/Membership.lean`'s
-`inhabited_of_fits` (sound), `fits_of_inhabited_handleFree` (complete on the data fragment) and
-the handle witnesses. -/
+empty cause, a declared handle). The laws are `Laws/Program/Typed/Membership.lean`'s:
+`inhabited_iff_fits` (agreement with `Fits` on every type, one world for every handle position by
+fresh keys), `inhabited_of_hasTy` (sound against DI-67's `Val.hasTy`),
+`fits_of_inhabited_handleFree` (a world-free witness on the data fragment) and the handle
+witnesses. -/
 def inhabitedAlg : TyAlgebra (fun _ => Bool) where
   ty_never := false
   ty_unit := true
@@ -142,6 +144,69 @@ def findIntInProgram (program : NativeEff) : Option Path :=
       | .iterate (some t) _ _ _ _ _ =>
         findInt ("program" :: p.map toString ++ ["cursorTy"]) t
       | _ => none)
+
+/-! ## The column check, located (rows 127 and 149)
+
+`admitColumn` at every column admission reads, each refusal at its position: every supplied row's
+request, answer and error column (`findEmptyColumnInTable`) and the program's inferred answer and
+error (`findEmptyColumnInEffTy`). Its refusal is `emptyColumn at` (row 149); the frozen
+`AdmitRefusal.uninhabited at` stays the `int` scan's. Wiring it into `admitProgram` adds an
+`AdmitRefusal` constructor, an input of the generated runner group, so it waits on the
+coordinator (seat A's receipt has the hunk). -/
+
+/-- The column check at a position: the position when the column is refused (rows 127, 149). -/
+def emptyColumnAt (pos : Path) (t : Ty) : Option Path :=
+  if admitColumn t then none else some pos
+
+/-- The first empty column of the supplied table, by position: every row's request, answer and
+error column (rows 127 and 149). The `int` scan (`findIntInTable`) is a different refusal:
+`list int` has a member and is the scan's to refuse. -/
+def findEmptyColumnInTable (table : RowTable) : Option Path := go 0 table
+where
+  go (index : Nat) : RowTable → Option Path
+    | [] => none
+    | row :: rest =>
+        let pos := ["table", toString index]
+        emptyColumnAt (pos ++ ["request"]) row.request <|>
+          emptyColumnAt (pos ++ ["answer"]) row.answer <|>
+          emptyColumnAt (pos ++ ["error"]) row.error <|> go (index + 1) rest
+
+/-- The program's own columns: the inferred answer and error. -/
+def findEmptyColumnInEffTy (ty : EffTy) : Option Path :=
+  emptyColumnAt ["program", "answer"] ty.answer <|> emptyColumnAt ["program", "error"] ty.error
+
+theorem emptyColumnAt_eq_none_iff (pos : Path) (t : Ty) :
+    emptyColumnAt pos t = none ↔ admitColumn t = true := by
+  unfold emptyColumnAt
+  cases admitColumn t with
+  | true => exact ⟨fun _ => rfl, fun _ => rfl⟩
+  | false => exact ⟨fun h => (nomatch h), fun h => (nomatch h)⟩
+
+theorem findEmptyColumnInTable_go_eq_none_iff :
+    ∀ (rows : RowTable) (index : Nat), findEmptyColumnInTable.go index rows = none ↔
+      ∀ row ∈ rows, admitColumn row.request = true ∧ admitColumn row.answer = true ∧
+        admitColumn row.error = true
+  | [], _ => ⟨fun _ _ hr => (nomatch hr), fun _ => rfl⟩
+  | row :: rest, index => by
+    unfold findEmptyColumnInTable.go
+    simp only [Option.orElse_eq_orElse, Option.orElse_eq_or, Option.or_eq_none_iff,
+      emptyColumnAt_eq_none_iff, findEmptyColumnInTable_go_eq_none_iff rest (index + 1),
+      List.forall_mem_cons]
+    exact ⟨fun ⟨h1, h2, h3, h4⟩ => ⟨⟨h1, h2, h3⟩, h4⟩, fun ⟨⟨h1, h2, h3⟩, h4⟩ => ⟨h1, h2, h3, h4⟩⟩
+
+/-- **The table scan finds nothing exactly when every column is admitted (proved).** -/
+theorem findEmptyColumnInTable_eq_none_iff (table : RowTable) :
+    findEmptyColumnInTable table = none ↔
+      ∀ row ∈ table, admitColumn row.request = true ∧ admitColumn row.answer = true ∧
+        admitColumn row.error = true :=
+  findEmptyColumnInTable_go_eq_none_iff table 0
+
+/-- **The program scan finds nothing exactly when both columns are admitted (proved).** -/
+theorem findEmptyColumnInEffTy_eq_none_iff (ty : EffTy) :
+    findEmptyColumnInEffTy ty = none ↔ admitColumn ty.answer = true ∧ admitColumn ty.error = true := by
+  unfold findEmptyColumnInEffTy
+  simp only [Option.orElse_eq_orElse, Option.orElse_eq_or, Option.or_eq_none_iff,
+    emptyColumnAt_eq_none_iff]
 
 /-! ## The table's lawful check and its located refusal agree (TY-05)
 
