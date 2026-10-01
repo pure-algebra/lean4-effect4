@@ -480,6 +480,19 @@ $(CHK)/tools: $(SELFTEST_SOURCES) | build
 	bash scripts/test-trust-boundaries.sh
 	@mkdir -p $(CHK) && touch $@
 
+# The conservativity check of an alphabet append (DI-47, decisions row 172; seat W2): goldens
+# byte-identical unless the baseline policy names them, tags and manifests append-only, every
+# verdict unchanged, every addition named, the generated diff recorded (C1-C5,
+# scripts/lib/conservativity.py). It judges committed files, so an append's producers and
+# `make corpus` run first. `make check-conservativity` runs its controls (ten mutations of HEAD and
+# six unresolvable revisions); `make check-conservativity BASE=<rev>` also judges the working tree
+# against BASE. Not `--strict` until the owner rules on promoting refOf, deferredOf, var and
+# unknown in the baseline policy (row 172).
+.PHONY: check-conservativity
+check-conservativity: ## the alphabet-append check: its controls; BASE=<rev> also judges the tree
+	bash scripts/check-conservativity.sh --self-test
+	@if [ -n "$(BASE)" ]; then bash scripts/check-conservativity.sh $(BASE); fi
+
 # ---------------------------------------------------------------------------- help
 
 .PHONY: help clean
