@@ -16,6 +16,14 @@ and the coproduct lift are one induction each. The tree's world is the typing ta
 store; its protocols are the store's (`progress`'s hypotheses and conclusion) and the fiber
 alphabet's (`OpOk`/`AnswerOk`). This module imports the pinned `Effects` algebra and nothing
 of `Effect4`: it is a law of the free monad, kept here until the algebra takes it.
+
+Both injections lift typing (`Typed.inl`, `Typed.inr`) and reflect it (`Typed.inl_iff`,
+`Typed.inr_iff`), so an injected program is typed for the sum exactly when it is typed for its
+own side: the generic half of conservativity C4 (model probe, pedigree seat,
+`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`, `inl_iff`/`inr_iff`). Typing
+is monotone in the protocol order (`Protocol.Le`, `Typed.refine`; formal pass, algebra note A5,
+`docs/research/2026-10-01-formal-pass/algebra/note.md`). None of this holds for the concrete
+`TypedProg` by itself: it is its own inductive, and C4 for it is owed.
 -/
 
 set_option autoImplicit false
@@ -103,6 +111,17 @@ theorem Typed.inl {o : WorldOrder W} {T : Signature.{u, v}} {Ψ₁ : Protocol W 
     exact .vis (Ψ := Ψ₁.sum Ψ₂) (op := .inl _) cert hp
       (fun w' hle ans hpost => ih w' hle ans hpost)
 
+/-- A program typed for the right protocol is typed for the sum once injected, the mirror of
+`Typed.inl`: the fiber half's typing lifts to the scheduler's signature with no new arm. -/
+theorem Typed.inr {o : WorldOrder W} {T : Signature.{u, v}} {Ψ₁ : Protocol W S}
+    {Ψ₂ : Protocol W T} {Q : W → A → Prop} {p : Program T A} {w : W}
+    (h : Typed o Ψ₂ w Q p) : Typed o (Ψ₁.sum Ψ₂) w Q p.inr := by
+  induction h with
+  | pure h => exact .pure h
+  | vis cert hp _ ih =>
+    exact .vis (Ψ := Ψ₁.sum Ψ₂) (op := .inr _) cert hp
+      (fun w' hle ans hpost => ih w' hle ans hpost)
+
 /-- Inversion at a left node: the store protocol's demand now, its promise at every later
 world. -/
 theorem Typed.inl_inv {o : WorldOrder W} {T : Signature.{u, v}} {Ψ₁ : Protocol W S}
@@ -130,6 +149,53 @@ theorem Typed.pure_inv {o : WorldOrder W} {Ψ : Protocol W S} {Q : W → A → P
     (h : Typed o Ψ w Q (.pure a)) : Q w a := by
   cases h with
   | pure h => exact h
+
+/-- The left injection is conservative for protocol typing: an injected program is typed for
+the sum exactly when it is typed for the left protocol. The converse of `Typed.inl` is one
+induction through `Typed.inl_inv`. -/
+theorem Typed.inl_iff {o : WorldOrder W} {T : Signature.{u, v}} {Ψ₁ : Protocol W S}
+    {Ψ₂ : Protocol W T} {Q : W → A → Prop} (p : Program S A) (w : W) :
+    Typed o (Ψ₁.sum Ψ₂) w Q p.inl ↔ Typed o Ψ₁ w Q p := by
+  refine ⟨fun h => ?_, Typed.inl⟩
+  induction p generalizing w with
+  | pure a => exact .pure (Typed.pure_inv h)
+  | vis op k ih =>
+    obtain ⟨cert, hpre, hk⟩ := Typed.inl_inv h
+    exact .vis cert hpre (fun w' hle ans hpost => ih ans w' (hk w' hle ans hpost))
+
+/-- The right injection is conservative for protocol typing, the mirror of `Typed.inl_iff`. -/
+theorem Typed.inr_iff {o : WorldOrder W} {T : Signature.{u, v}} {Ψ₁ : Protocol W S}
+    {Ψ₂ : Protocol W T} {Q : W → A → Prop} (p : Program T A) (w : W) :
+    Typed o (Ψ₁.sum Ψ₂) w Q p.inr ↔ Typed o Ψ₂ w Q p := by
+  refine ⟨fun h => ?_, Typed.inr⟩
+  induction p generalizing w with
+  | pure a => exact .pure (Typed.pure_inv h)
+  | vis op k ih =>
+    obtain ⟨cert, hpre, hk⟩ := Typed.inr_inv h
+    exact .vis cert hpre (fun w' hle ans hpost => ih ans w' (hk w' hle ans hpost))
+
+/-- The protocol order, Hazel's (de Vilhena 2022, Definition 2.8, named in
+`docs/research/2026-09-05-effects-papers-review.md` §1.3) in first-order form: `Ψ ≤ Ψ'` is a map
+sending each certificate of `Ψ` to one of `Ψ'`, under which the demand of `Ψ` implies the demand
+of `Ψ'` and the promise of `Ψ'` implies the promise of `Ψ`. `Ψ'` asks no more of the program and
+promises no less to its continuation. Not `Refines`: that name is the machine's forward
+simulation (`Effect4.Machine.Refinement.Refines`). -/
+structure Protocol.Le (Ψ Ψ' : Protocol W S) where
+  cert : ∀ op, Ψ.Cert op → Ψ'.Cert op
+  pre : ∀ w op c, Ψ.pre w op c → Ψ'.pre w op (cert op c)
+  post : ∀ w op c ans, Ψ'.post w op (cert op c) ans → Ψ.post w op c ans
+
+/-- **Monotonicity in the protocol order** (the protocol half of Hazel's `Monotonicity` rule):
+a program typed under `Ψ` is typed under every protocol above it, at the same world and result
+predicate. One induction; the certificate map is applied at every node. -/
+theorem Typed.refine {o : WorldOrder W} {Ψ Ψ' : Protocol W S} (r : Ψ.Le Ψ')
+    {Q : W → A → Prop} {p : Program S A} {w : W}
+    (h : Typed o Ψ w Q p) : Typed o Ψ' w Q p := by
+  induction h with
+  | pure h => exact .pure h
+  | vis cert hp _ ih =>
+    exact .vis (r.cert _ cert) (r.pre _ _ _ hp)
+      (fun w' hle ans hpost => ih w' hle ans (r.post _ _ _ _ hpost))
 
 /-- A unit certificate recovers a certificate-free pre/post contract. -/
 def Protocol.plain (pre : W → S.Op → Prop)

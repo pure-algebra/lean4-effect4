@@ -27,6 +27,8 @@ import Test.Counterexamples.Machine.Semantics.LayerValue
 import Test.Counterexamples.Machine.Semantics.ValueMembership
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
+import Test.Program.ProtocolLaws
+import Test.Program.TypedProgBindRed
 import Test.Program.TypedResidual
 import Test.Program.TypedControl
 import Test.Program.H2PartOne
