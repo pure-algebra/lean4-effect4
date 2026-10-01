@@ -331,8 +331,11 @@ fields (157), tagged unions of records (130), error payloads printed as `Data.Ta
 (120), keyed maps (125), tuples (159), `app` (158), `int` inhabited and a binary64 `number` (121,
 recommended (a)), `null` and `undefined` (160), `bytes` by the owner's choice (161). After it, `Ty` is
 closed: later named types enter as Σ_app declarations through `app`. What full reification still
-lacks is outside the type language: 26,175 of 59,987 corpus units are functions of their inputs
-(DI-21, row 163, the first blocker after the wave), decoding inside a program (row 123) is next, and
+lacks is outside the type language. Probe T's largest count, 26,175 of 59,987 corpus units shaped as
+functions of their inputs, is the ingest lane's statistic about foreign TypeScript, not a product gap:
+the language cut rules no function values (a program's inputs are its environment, its parameterised
+rows are templates), and DI-21 stays deferred until foreign lift is a goal (row 163, ruled by the
+owner). Decoding inside a program (row 123) is next after the wave, and
 `Schedule`, `Stream`, `Config`, the stateful modules and the host packages have no admitted member.
 The runtime coverage report counts the fiber runtime only: green 132, partial 2, absent 0 of 135 at
 `bff50631`. The other four probes (P, Q, R, S) are running; their notes and T's become the wave's briefs.
