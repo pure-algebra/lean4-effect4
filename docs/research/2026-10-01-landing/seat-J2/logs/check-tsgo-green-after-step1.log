@@ -1,0 +1,4 @@
+$ bash docs/research/2026-10-01-landing/seat-J2/check-tsgo-line.sh
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:29:34Z
+PASS check-tsgo: no typescript below 7 under ts/, harness/ or tools/
+exit=0 (0s)

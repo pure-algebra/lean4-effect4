@@ -1,0 +1,4 @@
+$ lake env lean -M4096 --run tools/Drivers/Corpus.lean --styles /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/styles 400 4
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:29:45Z
+styles 21831 files; 21 isolated configurations; 11520 full products; 19 forms at 4 depths; JSON and wire oracles beside every file
+exit=0 (43s)

@@ -3,17 +3,58 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 import { spawnSync } from "node:child_process"
-import ts from "typescript"
 import { Schema } from "effect"
 import { Manifest, Labels, type Generation, type Project } from "./census-contract.ts"
 export const excluded = ["node_modules", ".git", ".lake", "dist", "build", "out", ".next", ".turbo", ".cache", "coverage", ".output", ".svelte-kit", ".vercel"]
 const ObjectSchema = Schema.Record(Schema.String, Schema.Unknown)
 const object = (x: unknown): Record<string, unknown> => Schema.is(ObjectSchema)(x) ? x : {}
 const text = (x: unknown): string | undefined => typeof x === "string" ? x : undefined
+/** A JSON text as TypeScript's `parseConfigFileTextToJson` read the corpus's metadata (the reader
+ * this replaces; decisions row 168): `//` and block comments, a comma before `}` or `]` and a
+ * leading byte-order mark are tolerated, an empty text (or one of comments alone) is `{}`, a root
+ * that is not an object is an error, and everything else is `JSON.parse`'s. Total: it returns the
+ * value or throws. */
+export function parseJsonc(input: string): Record<string, unknown> {
+  const source = input.charCodeAt(0) === 0xfeff ? input.slice(1) : input
+  // Pass 1: comments become one space each, strings are copied with their escapes.
+  let bare = ""
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i]!, next = source[i + 1]
+    if (c === '"') {
+      const start = i
+      for (i++; i < source.length && source[i] !== '"'; i++) if (source[i] === "\\") i++
+      bare += source.slice(start, i + 1)
+    } else if (c === "/" && next === "/") {
+      while (i < source.length && source[i] !== "\n") i++
+      bare += " \n"
+    } else if (c === "/" && next === "*") {
+      const end = source.indexOf("*/", i + 2)
+      if (end < 0) throw new Error("unterminated comment")
+      bare += " "; i = end + 1
+    } else bare += c
+  }
+  // Pass 2: a comma whose next token closes an object or an array is dropped.
+  let out = ""
+  for (let i = 0; i < bare.length; i++) {
+    const c = bare[i]!
+    if (c === '"') {
+      const start = i
+      for (i++; i < bare.length && bare[i] !== '"'; i++) if (bare[i] === "\\") i++
+      out += bare.slice(start, i + 1)
+    } else if (c === ",") {
+      let j = i + 1
+      while (j < bare.length && /\s/.test(bare[j]!)) j++
+      if (bare[j] !== "}" && bare[j] !== "]") out += c
+    } else out += c
+  }
+  if (out.trim() === "") return {}
+  const value: unknown = JSON.parse(out)
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("the root value must be an object")
+  return object(value)
+}
 const json = (path: string) => {
-  const parsed = ts.parseConfigFileTextToJson(path, readFileSync(path, "utf8"))
-  if (parsed.error) throw new Error(`invalid metadata: ${path}`)
-  return object(parsed.config)
+  try { return parseJsonc(readFileSync(path, "utf8")) }
+  catch { throw new Error(`invalid metadata: ${path}`) }
 }
 export function loadCorpus(manifest: string, labels: string, root: string): readonly Project[] {
   const projects = Schema.decodeUnknownSync(Manifest)(json(manifest)).projects

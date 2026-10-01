@@ -1,0 +1,8 @@
+$ bun docs/research/2026-10-01-landing/seat-J2/probes/native-api-probe.mjs
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T20:49:37Z
+bun 1.4.2 FAILED: TypeError: undefined is not an object (evaluating 'stdout._handle.fd')
+    at new SyncRpcChannel (/Users/pooks/Dev/lean4-effect4-seat-J2/ts/eff/node_modules/@typescript/native-preview/dist/api/syncChannel.js:120:34)
+    at new Client (/Users/pooks/Dev/lean4-effect4-seat-J2/ts/eff/node_modules/@typescript/native-preview/dist/api/sync/client.js:29:29)
+    at new API (/Users/pooks/Dev/lean4-effect4-seat-J2/ts/eff/node_modules/@typescript/native-preview/dist/api/sync/api.js:38:27)
+    at /Users/pooks/Dev/lean4-effect4-seat-J2/docs/research/2026-10-01-landing/seat-J2/probes/native-api-probe.mjs:15:13
+exit=143 (138s)

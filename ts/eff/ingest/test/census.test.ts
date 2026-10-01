@@ -2,7 +2,7 @@ import { test, expect } from "bun:test"
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { Generations, versionGeneration } from "../census/corpus.ts"
+import { Generations, parseJsonc, versionGeneration } from "../census/corpus.ts"
 import { add, bucket, headSpelling, pairs } from "../census/tally.ts"
 import { recognize } from "../index.ts"
 import { recognizeSource } from "../ck.ts"
@@ -50,4 +50,19 @@ test("census reuses the parse and a warm cache reads and parses no source", asyn
     for await (const r of recognize([source], options)) warm.push(r)
     expect(reads).toBe(0); expect(warm).toEqual(cold)
   } finally { rmSync(root, { recursive: true }) }
+})
+
+test("census metadata is read as TypeScript's JSON reader read it: comments, trailing commas, a byte-order mark", () => {
+  // Bun's own JSONC reader is the independent oracle for every text both accept.
+  const oracle = (text: string): unknown => (Bun as unknown as { JSONC: { parse(s: string): unknown } }).JSONC.parse(text)
+  for (const text of [
+    '\uFEFF{ // a line comment\n "a": [1, 2,], /* a block */ "s": "x // not a comment", }',
+    '{"q": "a\\"b,}", "n": 1, "e": {}, "l": []}',
+    '{"nested": {"k": [true, false, null,],},}',
+  ]) expect(parseJsonc(text)).toEqual(oracle(text) as Record<string, unknown>)
+  expect(parseJsonc("")).toEqual({})
+  expect(parseJsonc("// only a comment\n")).toEqual({})
+  expect(() => parseJsonc("[1]")).toThrow("root value")
+  expect(() => parseJsonc("{ /* unterminated")).toThrow("unterminated")
+  expect(() => parseJsonc("{'a': 1}")).toThrow()
 })

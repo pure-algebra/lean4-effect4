@@ -1,7 +1,11 @@
 // ESTree engine, independently adapted from foldlab's oxc-engine.mjs at 4005d34f.
 // This engine recognizes syntax on its own parser walk, then uses the existing
 // fragment reader. Derived forms consume the same Lean-owned template fold as CK.
-import { parseSync } from "oxc-parser"
+//
+// This module also owns the ingest's one parse entry (decisions row 168, route (C)):
+// `parseTypeScript` and `childNodes` below are read by this engine, by `ck.ts`, by the census
+// legs and by the fidelity reader. They recognise nothing; each engine keeps its own walk.
+import { parseSync, type Node as TreeNode } from "oxc-parser"
 import { Result } from "effect"
 import { readEff, readLayer, restoreAll, exprOf, childrenOf, type IrNode, type Expr, type TsStmt } from "../read.ts"
 import { decodeEff, type Eff, type ForkOptions, type LayerTerm, type ServiceKey } from "../eff.gen.ts"
@@ -12,6 +16,28 @@ import { withTable } from "../read.ts"
 import { bindText, internServiceKey, isStringList, methodArgs, methodRow, packageByHead, packageTable } from "./package-rows.ts"
 import { foldSql, isRefusal, type Bind, type SqlArg, type SqlPart } from "./sql-fold.ts"
 import { expandForm, effectSlot, fixedEffect, type FormAlgebra, type FormArguments } from "./forms.ts"
+
+/** The ingest's one parse entry (decisions row 168): oxc's TypeScript grammar, module goal.
+ * `byName` reads a `.tsx` file as TSX and every other name as TypeScript (the foreign
+ * recognizers, the fidelity reader); `ts` is the printed-image seam, which is TypeScript
+ * whatever the name. Errors are returned, never thrown; a reader refuses a file with any. */
+export const parseTypeScript = (filename: string, source: string, lang: "byName" | "ts" = "byName") =>
+  parseSync(filename, source, { lang: lang === "byName" && filename.endsWith(".tsx") ? "tsx" : "ts", sourceType: "module" })
+
+const isTreeNode = (v: unknown): v is TreeNode => typeof v === "object" && v !== null && typeof Reflect.get(v, "type") === "string"
+/** A node's children in field order: every field holding a node, or an array of nodes (array
+ * holes skipped), except `parent`. A walk with no knowledge of any node kind, so a reader that
+ * must visit a whole subtree (the eta check, the dependency scan) uses it and keeps its own
+ * recognition. */
+export const childNodes = (n: object): readonly TreeNode[] => {
+  const out: TreeNode[] = []
+  for (const [key, value] of Object.entries(n)) {
+    if (key === "parent") continue
+    if (Array.isArray(value)) { for (const item of value) if (isTreeNode(item)) out.push(item) }
+    else if (isTreeNode(value)) out.push(value)
+  }
+  return out
+}
 
 /** The foreign readers read under the canonical package table (`Packages.table`). */
 const underTable = <A>(body: () => A): A => withTable(packageTable, body)
@@ -808,7 +834,7 @@ const printerOrder = (x: Expr): Expr => {
 /** Explicit printer-image seam selects the emitted expression; unused module declarations
  * are test context only and never enter the public foreign recognizer through this path. */
 export const readPrintedSource = (source: string, filename = "program.ts"): Eff => {
-  const parsed = parseSync(filename, source, { lang: "ts", sourceType: "module" })
+  const parsed = parseTypeScript(filename, source, "ts")
   if (parsed.errors.length) throw new Error("printer parse")
   const program: unknown = parsed.program
   if (!isNode(program)) throw new Error("printer program")
@@ -849,7 +875,7 @@ export const readPrintedSource = (source: string, filename = "program.ts"): Eff 
 
 export function recognizeSource(source: string, filename: string, onParse?: (ok: boolean) => void, onTree?: (tree: unknown) => void): Verdict[] {
   if (!source.includes('from "effect') && !source.includes("from 'effect")) return []
-  const parsed = parseSync(filename, source, { lang: filename.endsWith(".tsx") ? "tsx" : "ts", sourceType: "module" })
+  const parsed = parseTypeScript(filename, source)
   if (parsed.errors.length) { onParse?.(false); return [] }
   const tree: unknown = parsed.program
   onParse?.(true)
