@@ -16,12 +16,13 @@ is its output. `Scope.close` (declared `Effect<void>`, `Scope.ts:567`) answers:
 | `two` | two releases answering `5` and `6` (the walk, `exitAsVoidAll`, `:3826`) | `undefined` (void) |
 | `loneDie` | one release that dies | `Failure Cause([Die("boom")])`: the defect passes through |
 
-`Effect3ScopeCloseProbe.ts` is the comparison: the same rows on Effect 3.21.2, a local install
+`Effect3ScopeCloseProbe.ts` is the comparison: rows `zero`, `inline` and `two` (not `mapOne` or
+`loneDie`) on Effect 3.21.2, a local install
 outside this repository (`/Users/pooks/Dev/effect-jetstream/node_modules/effect`; its
 `dist/esm/internal/fiberRuntime.js`, sha256
 `d378bdfba82626a2a2599cbad950f2f337669d27684b3b12ead14701fc9b6acc`, closes through
 `exitAsVoid` for every finalizer count above zero, `:1885-1904`). Its output,
-`effect3-scope-close.json`, answers `undefined` in every row: Effect 3 voids the lone
+`effect3-scope-close.json`, answers `undefined` in all three: Effect 3 voids the lone
 finalizer's value, Effect 4 dropped that when it added the lone-finalizer fast paths.
 
 The Lean side is `Test/Program/ProtocolPosts.lean`, namespace `CloseScope`: `closeLone` (the

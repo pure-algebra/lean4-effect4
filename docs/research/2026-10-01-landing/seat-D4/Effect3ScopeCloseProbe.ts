@@ -1,7 +1,8 @@
 // The comparison run for U-02 on Effect 3.21.2 (a local install, not pinned in this repository:
 // /Users/pooks/Dev/effect-jetstream/node_modules/effect, read at dist/esm/internal/fiberRuntime.js
 // :1885-1904, whose `close` maps every finalizer count above zero through `exitAsVoid`).
-// Rows as in VendorScopeCloseProbe.ts. Run: bun docs/research/2026-10-01-landing/seat-D4/Effect3ScopeCloseProbe.ts
+// Rows zero, inline and two of VendorScopeCloseProbe.ts (mapOne and loneDie are not run here).
+// Run: bun docs/research/2026-10-01-landing/seat-D4/Effect3ScopeCloseProbe.ts
 import { Effect, Exit, Scope } from "/Users/pooks/Dev/effect-jetstream/node_modules/effect/dist/esm/index.js"
 
 const release = (n: number) => Effect.acquireRelease(Effect.succeed(1), () => Effect.succeed(n))

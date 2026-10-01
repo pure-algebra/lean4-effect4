@@ -562,11 +562,12 @@ theorem failing_release_untyped (root : ProgramSource) (w : W) :
 Receipt B's finding 1 read this shape off the code; proved here. `acquireRelease(succeed 1, (a,
 exit) => succeed 5)` is checked (`acq_checked`): the release may answer any value
 (`Effect<unknown, never, R2>`, `Program/Checker.lean:201-209`; rc.112 `internal/effect.ts:3973`).
-A scope whose lone finalizer is its capture closes to that finalizer's program
-(`closeScopeUnsafeR`, `InterpR.lean:157-163`; rc.112 `internal/effect.ts:3795`), which answers the
-release's value, so it is typed at no type whose answer column is `unit` (`foreign_untyped`): the
-`lone` premise of `closeScope_installs` fails for it, and option (a) of decisions row 151 needs the
-release voided in the term before the scope's typing can type it at `⟨unit, never⟩`. -/
+Before decisions row 151 (a″) a scope whose lone finalizer is its capture closed to that
+finalizer's program (rc.112 `internal/effect.ts:3795`), which answers the release's value, typed
+at no type whose answer column is `unit` (`foreign_untyped`), so `closeScope_installs`' former
+`lone` premise failed for it. Since (a″) `Scope.close` voids the value (`closeScopeR`), the
+finalizer is typed at `⟨unknown, never⟩` (`foreign_typed_unknown`) and its close at
+`⟨unit, never⟩` (`foreign_close_typed`). -/
 
 /-- `acquireRelease(succeed 1, (a, exit) => succeed 5)`. -/
 def acqProg : NativeEff := .acquireRelease (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 5)))

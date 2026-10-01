@@ -1197,7 +1197,7 @@ theorem finalizerTyped_mono (root : ProgramSource) (w w' : World) (fin : FinName
 
 /-- **A lone finalizer's close is typed at `⟨unit, never⟩`** when the finalizer is typed at
 `⟨unknown, never⟩` (rc.112's finalizer type `Effect<unknown>`, `internal/effect.ts:3849`): the
-close runs it, then answers `void` (decisions row 151 (a″), `closeScopeUnsafeR`), so its answer
+close runs it, then answers `void` (decisions row 151 (a″), `closeScopeR`), so its answer
 is irrelevant and its failures are those of a `never` error column (`seq_typed`). -/
 theorem voidedClose_typed (root : ProgramSource) {w : World} {fin : FinName} {exit : ExitV}
     (h : TypedProg root w ⟨.unknown, .never, Env.Requirement.empty⟩ (denoteFin fin exit)) :
