@@ -1,0 +1,35 @@
+{
+  "checked_head": "3b825aa84cde4d0a7919963afe6dc323ebe410dd",
+  "C_merge": "bc77e97fb7b1e2e42374c730ed679a0c5ef6144c",
+  "C_landing_record": "ba9783c3",
+  "D_merge_endpoint": "fa5add2092f05fa476dccdee4722fcd1f1d12d91",
+  "F_commit": "d20f3292",
+  "D_C_common_base": "f05a6acec7f52c91efa717739b9afb87b729e16b",
+  "authority_commit": "a417f89e85ed07c93f87d5b627f4b9d2408518d1",
+  "authority_sha256": "0dcf7362c86bcfd87e60fd3918adce6414ff8acf0d16a191724e7d2b94152c66",
+  "D_source_hashes_match_prior_checks": {
+    "src/Effect4/Laws/Machine/ForkLedgerInvariant.lean": "0c40fbcf342f9bef20e3c38dc1b50363d05224b3205ffff4e3c9dfe98ca9ef0e",
+    "src/Effect4/Laws/Program/Guard/ForkLedger.lean": "2c393501d3af096050cdc98a504605a1c45d70b30bfa67cc74c50298eda8ba05",
+    "Test/Api/TraceOrigin.lean": "f1dbc8925bbbc473b7575e941862499f2fcb8030b223a2955973eae791cbb9ba"
+  },
+  "D_checked_results": {
+    "trace-production-1": 0,
+    "ledger-production-2": 0,
+    "ledger-consumers": 0,
+    "diagnostic-move": 0,
+    "all-production-axioms": 0,
+    "trace-census": 0,
+    "ledger-census": 0,
+    "memo-census": 0,
+    "diagnostic-static": 0
+  },
+  "D_axiom_reports": 175,
+  "main_build_evidence": "Owner reports merged-tree full build, dune build and make check-ocaml clean; not rerun by this seat.",
+  "new_builds": false,
+  "implementation_changes": false,
+  "holds": [
+    "G fourth fixture under addendum4",
+    "H1 checked false requested statement under original brief section6",
+    "H2 ninth-existing-body rule under addendum5"
+  ]
+}

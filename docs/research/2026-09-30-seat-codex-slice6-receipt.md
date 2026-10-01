@@ -2,12 +2,12 @@
 
 ## After addendum 5
 
-**The one thing first.** The audit, A, and all three C steps are complete. C step 5 is
-integration-ready: the old fiber field and its comparison runner are removed together, the
-Lean and OCaml paths read/write the machine ledger, generation is current, and the required
-OCaml and repository checks pass. The owner authorized the additional prelude/test readers,
-two closure manifests, and explicit ForkRecord type root as recorded below. D's held users and diagnostic move are complete;
-F is also complete. G is held by its checked fourth-fixture stop. H1 is also held: the final proposed contract
+**The one thing first.** C is merged into `refactor/phase1-phase3` at `bc77e97f`, with
+rows 91–92 recorded as landed at `ba9783c3`. D is complete through `fa5add20`, the exact
+endpoint for the next D-only merge. F is also complete at `d20f3292`. The old fiber field and
+comparison runner are retired together; the required Lean, OCaml and generation checks pass.
+The additional C readers, closure manifests and ForkRecord type root are authorized as below.
+G is held by its checked fourth-fixture stop. H1 is also held: the final proposed contract
 has a checked delivery counterexample. H2 part one is held by its measured ninth-body stop: the eight authorized repairs pass,
 but two additional existing test-helper statements are false. H2 excludes only badName and notImplemented;
 missingService waits for part two. Nothing has been pushed.
@@ -18,6 +18,34 @@ commit `56da0e1edeefc97ce878afaefe34ca702f86c35f` (hash receipt under
 `2026-09-30-seat-codex-slice6-evidence/after-addendum-5/authority.json`). It is not merged into
 this branch; the coordinator owns that merge. Rows 111–117 are not implementation work here.
 The After-addendum-4 and first receipt sections below are retained as checkpoint history.
+
+### C merge acknowledged; D ready for the next integration
+
+The owner reports C merged at `bc77e97fb7b1e2e42374c730ed679a0c5ef6144c`, with the
+merged tree's full Lean build, dune build and make check-ocaml clean. I verified that merge
+contains `f05a6ace`, that `ba9783c3` records rows 91–92 as landed, and that the merged source,
+tests and OCaml paths match C's endpoint. I did not rerun the coordinator's checks.
+
+The handoff's D-in-progress snapshot predates the existing D landing. D consists of exactly:
+
+- `31e44efc`: native trace agreement and the four AgreesUpdates fields through the existing lifts;
+- `4e9bfce7`: the four general reachable ledger facts;
+- `fa5add2092f05fa476dccdee4722fcd1f1d12d91`: forkedOf/Agrees diagnostic move and final checks.
+
+Merge through **fa5add20** for D only; current branch HEAD also includes F and later research
+receipts. No branch movement or integration merge is performed here. All three D implementation
+file hashes still match the retained final trust inventory. Nine relevant final build/census/static
+results report exit 0, and all 175 authored theorem reports remain at the allowed ceiling.
+TraceFacts.M1Trace is 0 open/3 proved, Api.M1Trace 0 open/15 proved; the row 94 comparison
+is recorded in the D sections below. No remaining D work was identified.
+
+Addendum 5 at `a417f89e85ed07c93f87d5b627f4b9d2408518d1` was read from the main checkout;
+its bytes match the current file. It records the four already-applied owner rulings, including
+the two-defect H2 clause, while preserving the eight-body cap. No action on that file is needed.
+The latest instruction's “same rules” leaves the later checked G/H1/H2 stops in force; it does
+not authorize their proposed amendments. The queue was followed through those independent
+measurements. No source, test, generated or register change is made by this reconciliation.
+`after-addendum-5/C-merge-reconciliation.json` retains the checked commits, hashes and results.
 
 ### H2 — eight library repairs pass; two extra existing statements stop integration
 
