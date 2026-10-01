@@ -45,7 +45,8 @@ theorem bad_not_typed (w : Typed.World) :
   exact (he (EffTy.pure .unit) (by rw [hid]; exact h.1.root)).1
 
 -- The reviewed pre-amendment reachability clause, specialized to this program and reached machine.
--- The typed-state conclusion uses current admission; no accepted theorem is contradicted.
+-- The typed-state conclusion uses current admission; it is `J`'s first clause, so `J` fails at
+-- this machine too. No accepted theorem is contradicted.
 theorem current_m6_capstone_false : ¬ (
     Api.typeOf sleeper [] = some (EffTy.pure .unit) →
     ClosedEff (EffTy.pure .unit) →

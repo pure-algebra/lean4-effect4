@@ -1348,9 +1348,17 @@ namespace M6Ledger
 theorem step_evaluate (root : ProgramSource) (rootTy : EffTy) (id : FiberId) :
     ProofGraph.Obligation (StepPreserves root rootTy (.evaluate id)) := ⟨⟩
 
+/-- Its halting arms (the census in `MachineLive`'s section) need the scope-liveness and
+target-declaration pres on `fiberPre`'s scope- and target-reading rows (seat B); the absent-scope
+callback that refutes `step_deliver` reaches the same walk from `loop`
+(`Laws/Program/EvaluateR.lean:309-319`; reading, not checked here). -/
 theorem step_loop (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.loop id yielding)) := ⟨⟩
 
+/-- Refuted at this commit by `E4-SCHED-CE-020`'s witness under `J`'s `stuck = none`
+(`M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope`): `fiberPre` admits
+`.scopeExit` on an absent scope (`Typed/Residual.lean:132`), so a typed configuration's delivery
+halts. Seat B's scope-liveness pre (row 139) is the repair. -/
 theorem step_deliver (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.deliver id yielding)) := ⟨⟩
 
