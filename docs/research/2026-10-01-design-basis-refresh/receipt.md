@@ -7,16 +7,25 @@ the six fields, and its status is only a link to system map §8. Three sections 
 for word, to a history appendix, and one marked bibliography replaces "Primary sources". Every
 citation, register id, DI number and source mark checks at `dceae006` with 0 failures (tested).
 
-Before merging, know this: the basis's line numbers are at `dceae006`, and on
-`refactor/phase1-phase3` at `e7f9756f` 41 of them point at the wrong line.
-- Seat E's laws moved 38 lines in six files.
-- Seat F's deletion in `Machine/Context.lean` moved 3.
+Before merging, know this: the branch moved while this seat worked, and the basis is exact at
+`dceae006`, not at the tip. At `af3799f9`, the tip when this receipt closed (seat B merged at
+`b9d0d19f` and was recorded at `af3799f9`), 51 cited lines sit elsewhere:
+- 38 moved by seat E's laws;
+- 3 moved by seat F's `Context.lean` deletion;
+- 10 moved by seat B. Two of these changed text: `IteratorProtocol` and `LoopProtocol` are now
+  closed over later worlds.
 
-Each cited text is unchanged; only its line moved. Nothing else fails there (tested), and the merge
-has no conflict (tested).
+DB-16 also describes the state before seat B's repairs, which are now recorded as landed (rows
+135 and 136): its "not settled" clause, its frames and posts paragraphs, and its declared
+`typedProg_mono`, which seat B has since proved. Nothing else fails at the tip (tested), and the
+merge has no textual conflict (tested).
 
-My recommendation: keep `dceae006` as the stated commit, and re-pin once after wave 2, which will
-move the same files again. `check_citations.py --drift <rev>` prints every new line.
+My recommendation: merge as is. Once seat C has merged, do one pass:
+- re-read DB-16 against rows 134–136 as recorded;
+- re-pin every moved line;
+- move the stated commit in the reading guide and the status fields together.
+
+`check_citations.py --drift <rev>` prints every new line.
 
 ## Base and head
 
@@ -27,9 +36,11 @@ move the same files again. `check_citations.py --drift <rev>` prints every new l
   - `240341a8`: the refreshed basis and the citation checker;
   - `1c4fa722`: the basis re-read against the seat F merge, and the checker's checks of ids, DI
     numbers and row shape;
-  - the commit that adds this receipt, which is the head at hand-back. Its hash is in the
-    hand-back message.
-- Head of the work: `1c4fa722`. Nothing was pushed.
+  - `c40b90f7`: this receipt, first version;
+  - the head at hand-back: this receipt brought up to seat B's merge, and the checker reading
+    Unicode names. Its hash is in the hand-back message.
+- The basis is as of `1c4fa722`; the checker and this receipt are as of the head. Nothing was
+  pushed.
 
 ## Every changed path (against `dceae006`)
 
@@ -85,10 +96,10 @@ Each row's pairs, counted by where they are read:
 | DB-13 | Six fields | 10 | 0 | 0 | 0 | 0 | settled |
 | DB-14 | Six fields | 4 | 0 | 0 | 0 | 0 | settled |
 | DB-15 | Records by row 119's ruled design; rows 120–132 by status link; Decision 12 links `host-boundary.md` §7; paths corrected | 5 | 0 | 0 | 0 | 6 | §8 R3 |
-| DB-16 (new) | Typing as a protocol per operation over a world (detail below) | 45 | 0 | 7 | 0 | 20 | §8 R9 (R1, R4) |
+| DB-16 (new) | Typing as a protocol per operation over a world (detail below) | 47 | 0 | 7 | 0 | 20 | §8 R9 (R1, R4) |
 | DB-17 (new) | One requirement row calculus (detail below) | 34 | 0 | 4 | 0 | 0 | §8 R5 |
 
-In total there are 294 pairs: 198 in the tree, 18 in the package, 31 of seat E's, 1 at an earlier
+In total there are 296 pairs: 200 in the tree, 18 in the package, 31 of seat E's, 1 at an earlier
 commit and 46 in probes.
 
 ### The two new rows
@@ -137,15 +148,19 @@ All were run from `/Users/pooks/Dev/lean4-effect4-seat-H`. `C` is
 
 | Command | Exit | Result |
 | --- | --- | --- |
-| `C --self-test` | 0 | Structure control: 3 of 3 seeded defects found. Drift control: one move (`Provision.lean:69 -> 71` at `efcf1ae2`) and one unchanged line. Red control: 16 of 16 seeded defects, 1 obligation listed, 0 failures among the green lines (tested). |
-| `C` (at `dceae006`) | 0 | 490 file citations, 104 commits, 5 digests, 9 tags, 904 identifiers, 294 witness pairs, 1 "witness missing" claim, 77 source marks, 56 register ids (7 registered after `dceae006`, found at `efcf1ae2`), 11 fallback ids, 30 DI numbers, 6 external pins: **0 failures**. 5 witnesses are declared obligations, each called "declared" in the text. History appendix: 1 STALE, `read_print_native`, deleted at `4e28669a` and kept as written. Structure: 17 rows, 0 failures. |
+| `C --self-test` | 0 | Structure control: 3 of 3 seeded defects found. Drift control: one move (`Provision.lean:69 -> 71` at `efcf1ae2`) and one unchanged line. Red control: 17 of 17 seeded defects, 1 obligation listed, 0 failures among the green lines (tested). |
+| `C` (at `dceae006`) | 0 | 490 file citations, 104 commits, 5 digests, 9 tags, 912 identifiers, 296 witness pairs, 1 "witness missing" claim, 77 source marks, 56 register ids (7 registered after `dceae006`, found at `efcf1ae2`), 11 fallback ids, 30 DI numbers, 6 external pins: **0 failures**. 5 witnesses are declared obligations, each called "declared" in the text. History appendix: 1 STALE, `read_print_native`, deleted at `4e28669a` and kept as written. Structure: 17 rows, 0 failures. |
 | `C --base e7f9756f` | 1 | 41 failures, every one a moved line ("name not on the cited line"); nothing else fails (tested). |
 | `C --base efcf1ae2` | 1 | The same 41. |
 | `C --drift a561d604` | 0 | 38 moved, 7 unchanged: seat E's merge alone. |
 | `C --drift efcf1ae2` | 0 | 41 moved, 16 unchanged. |
 | `C --drift e7f9756f` | 0 | 41 moved, 16 unchanged, the same list. |
+| `C --base b9d0d19f` | 1 | 51 failures, every one a moved line; nothing else fails (tested). The pair check misses `Typed.inl` and counts `denoteR_straight` twice. |
+| `C --drift b9d0d19f` | 0 | 51 moved, 17 unchanged; two of the 51 with changed text (seat B). |
+| `C --base af3799f9`, `C --drift af3799f9` | 1, 0 | The same as at `b9d0d19f`: 51 failures, all moved lines, nothing else; 51 moved, 17 unchanged (tested). |
 | `C <the basis at dceae006>` | 1 | The old basis under the final checker: 5 citation failures and 15 structure failures (no old row had the six fields). |
 | `git merge-tree --trivial-merge dceae006 e7f9756f 1c4fa722` | 0 | No path changed on both sides. The two notes both sides add are identical and resolve. 0 conflict markers (tested; this mode writes nothing). |
+| `git merge-tree --trivial-merge dceae006 b9d0d19f c40b90f7`, and the same against `af3799f9` | 0 | The same with this branch at `c40b90f7`: 0 paths changed on both sides, 0 conflict markers (tested). The head's last commit changes only this seat's folder. |
 | `shasum -a 256` | — | Vendored `vendor/effect-4.0.0-rc.112/src/Schema.ts` at `dceae006` is `9358710e…`, DB-09's installed digest. The three toolchain files match the Re-review ruling (tested). |
 
 The 5 citation failures in the old basis were:
@@ -159,21 +174,51 @@ The 5 citation failures in the old basis were:
 There is no axiom output. No Lean file was added or changed and nothing was built, by the brief's
 rule.
 
-### The 41 moved lines (`dceae006` → `e7f9756f`; text identical at the new line)
+### The 51 moved lines (`dceae006` → `b9d0d19f`, the same at `af3799f9`)
 
-| File | Moved | Old → new |
-| --- | --- | --- |
-| `src/Effect4/Laws/Program/DenoteR.lean` | 1 (cited twice) | 1380→1385 |
-| `src/Effect4/Laws/Machine/Approximation.lean` | 7 | 176→185, 184→193, 756→765, 1208→1293, 1237→1322, 1403→1488, 1662→1747 |
-| `src/Effect4/Laws/Api/Runner.lean` | 3 | 81→83, 157→160, 174→177 |
-| `src/Effect4/Laws/Program/Iter.lean` | 4 | 30→32, 34→36, 36→38, 40→42 |
-| `src/Effect4/Laws/Effects/Protocol.lean` | 10 | 30→41, 37→48, 45→56, 57→68, 66→77, 75→86, 83→94, 97→108, 108→130, 119→141 |
-| `src/Effect4/Machine/Context.lean` | 3 | 72→76, 185→120, 188→123 (seat F, `7a12f485`) |
-| `src/Effect4/Program/Provision.lean` | 13 | 69→71, 75→77, 85→87, 97→99, 106→108, 122→128, 137→160, 142→165, 148→171, 168→193, 246→271, 297→322, 606-607→631-632 |
+Every new line holds the cited text unchanged, except the two marked "text changed".
 
-The witness-pair check catches 40 of these. `Typed.inl` at `Protocol.lean:97` still passes it,
-because the short name `inl` stands on line 97 at the tip. Only the drift report, which compares
-text, catches it (tested).
+| File | Moved by | Moved | Old → new |
+| --- | --- | --- | --- |
+| `src/Effect4/Laws/Program/DenoteR.lean` | seat E | 1 (cited twice) | 1380→1385 |
+| `src/Effect4/Laws/Machine/Approximation.lean` | seat E | 7 | 176→185, 184→193, 756→765, 1208→1293, 1237→1322, 1403→1488, 1662→1747 |
+| `src/Effect4/Laws/Api/Runner.lean` | seat E | 3 | 81→83, 157→160, 174→177 |
+| `src/Effect4/Laws/Program/Iter.lean` | seat E | 4 | 30→32, 34→36, 36→38, 40→42 |
+| `src/Effect4/Laws/Effects/Protocol.lean` | seat E | 10 | 30→41, 37→48, 45→56, 57→68, 66→77, 75→86, 83→94, 97→108, 108→130, 119→141 |
+| `src/Effect4/Program/Provision.lean` | seat E | 13 | 69→71, 75→77, 85→87, 97→99, 106→108, 122→128, 137→160, 142→165, 148→171, 168→193, 246→271, 297→322, 606-607→631-632 |
+| `src/Effect4/Machine/Context.lean` | seat F, `7a12f485` | 3 | 72→76, 185→120, 188→123 |
+| `src/Effect4/Laws/Program/Typed/Residual.lean` | seat B | 7 | 83→106, 95→118, 170→205, 186→221, 424→682 (the ledger's declared obligation; seat B's proof is at 647), 268 (`IteratorProtocol`, text changed; now 334), 286 (`LoopProtocol`, text changed; now 352) |
+| `src/Effect4/Laws/Program/Typed/Contracts.lean` | seat B | 3 | 32→43, 51→66, 67→82 |
+
+The witness-pair check catches all but one of these. `Typed.inl` at `Protocol.lean:97` still
+passes it, because the short name `inl` stands on line 97 at the tip. Only the drift report, which
+compares text, catches it (tested).
+
+## Seat B's merge (`b9d0d19f`, recorded at `af3799f9`), read after the work closed
+
+Seat B's merge landed rows 135 and 136's repairs, and `af3799f9` records them:
+- both rows read "Landed 2026-10-01";
+- `E4-TYPED-CE-010`, `-012` and `-013` read REPAIRED;
+- the two close rows are new: rows 151 and 152, with `E4-TYPED-CE-016` and `-017` seeded.
+
+DB-16 was written against the state before, which it states (decisions read at `e7f9756f`). These
+DB-16 texts are stale at the tip:
+- **The Decision field.** "Not settled: the one-world frame judgment (row 135 …), the posts
+  against the handlers (row 136)".
+- **The frames paragraph** (`step_loop_refuted`, the Kripke repair) and **the posts paragraph**
+  ("Eight protocol rows' posts contradict their handlers …").
+- **The witnesses.**
+  - `typedProg_mono` (`Residual.lean:424`, declared) is proved by seat B at `Residual.lean:647`.
+    It closes `M3bWorld.typedProg_mono`, which stays declared at `:682`.
+  - `typedProg_mono_ledger` ("witness missing") is superseded by that theorem.
+  - `IteratorProtocol` and `LoopProtocol` are now indexed by the world (`:334`, `:352`).
+
+Seat B's two red results, `lone_release_outside_post` and `closeSeq_protocol_refused` (receipt B,
+its first paragraph), are now rows 151 and 152, with `E4-TYPED-CE-016` and `-017`. DB-16 should
+link to them, not restate them.
+
+These were read from git objects, without building and without changing the worktree (reading,
+and the tested checks above).
 
 ## What changed after the seat F merge (`efcf1ae2`, then `e7f9756f`)
 
@@ -275,9 +320,10 @@ Line numbers are at `e7f9756f`.
      at the empty table, they need no restatement; TREE-06, model-probe synthesis §3.2 item 8)".
    - **Row 2**. Its status reads "open", yet row 119 rules its stage (b) and supersedes (c). Close
      it into row 119, or say what stays open.
-   - **A proposed "do" row.** "Re-pin the basis's line citations once after wave 2
-     (`check_citations.py --drift <rev>`), moving the reading guide's commit and the seventeen
-     status fields together; until then the stated commit is `dceae006`."
+   - **A proposed "do" row.** "Once seat C has merged, re-read DB-16 against rows 134–136 as
+     recorded, and re-pin the basis's line citations (`check_citations.py --drift <rev>`), moving
+     the reading guide's commit and the seventeen status fields together; until then the stated
+     commit is `dceae006`."
 7. **`docs/DESIGN-ISSUES.md` DI-89.** Record the owner's 2026-09-07 ruling on the identity of
    forms: derived forms are stored expanded (grill agenda §3, call 1). The note is tracked since
    `1efb963e` and `27495d51`. Without it, the identity of forms reads as open (model-probe
@@ -297,7 +343,8 @@ Line numbers are at `e7f9756f`.
 
 ## What remains stale
 
-- **The 41 moved lines** (the table above), until they are re-pinned.
+- **The 51 moved lines** (the table above), until they are re-pinned.
+- **DB-16's texts on rows 135 and 136**, which seat B's landing makes stale (the section above).
 - **The history appendix**, which is kept as written by design: `read_print_native` (gone since
   `4e28669a`) and the proof graph's 2026-09-10 status cells.
 - **Statements read at a stated commit and true there.** These are:
@@ -320,7 +367,9 @@ Line numbers are at `e7f9756f`.
 - **`typedProg_mono_ledger`**: witness missing at `dceae006`. It is proved in the port
   `docs/research/2026-10-01-landing/ports-at-dceae006/HeadTypedProgMono.lean:174`, and row 135
   carries it.
-- **The re-pin decision** (above) and **the eleven proposals** (above).
+- **`typedProg_mono`** is proved at `b9d0d19f` by seat B (`Residual.lean:647`), after this
+  refresh's base.
+- **The re-pin and the DB-16 re-read** (above), and **the eleven proposals** (above).
 
 ## What is bounded
 
@@ -363,7 +412,9 @@ Line numbers are at `e7f9756f`.
   - a bibliography first drafted from memory, rewritten from the notes' marks only;
   - DB-10's doubled line;
   - a wrapped code span;
-  - `FoldLift`, which is not in the tree and is now cited at its probe line.
+  - `FoldLift`, which is not in the tree and is now cited at its probe line;
+  - the checker skipped pairs whose names are not ASCII (`Ψ_S`, `Ψ_F`). It now reads Unicode
+    names, and both pairs hold at `dceae006` (tested).
 - **The coordinator's mid-task inputs:**
   - the formal synthesis;
   - seat E's merge at `a561d604`;

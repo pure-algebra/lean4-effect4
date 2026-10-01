@@ -234,16 +234,18 @@ ALLOW = {
     "named by a ruling, or proved only on a seat branch or in a probe; not in the tree at BASE": [
         "abandon", "emptyColumn", "lower_refines_build", "denoteR_typed", "evalTerm_fits",
         "fits_normalize", "fits_subN"],
-    "prose or notation in code font, not a declaration": ["Psq", "or", "not", "wp", "wlp"],
+    "prose or notation in code font, not a declaration": ["Psq", "or", "not", "wp", "wlp", "Σ",
+                                                           "π"],
     "another runtime's name, cited for its role (Eio, Riot)": ["In_transition", "Delay"],
 }
 ALLOW_SET = {n: why for why, names in ALLOW.items() for n in names}
 
-IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_'.!?₀-₉]*$")
+# Unicode names (`Ψ_S`, `Ψ_F`) are names too: a letter or underscore, then word characters
+IDENT = re.compile(r"^[^\W\d][\w'.!?]*$")
 PATHLINE = re.compile(r"^((?:git:[0-9a-f]+\^?:)?[A-Za-z0-9_./@+-]+?\.(?:lean|md|ts|toml|json|py|sh|tsv|ml|mjs|txt))"
                       r"(?::(\d+)(?:-(\d+))?)?$")
 DIRPATH = re.compile(r"^(?:src|Test|docs|harness|tools|scripts|vendor|ocaml|generated)/[A-Za-z0-9_./-]*/?$")
-NAME = r"[A-Za-z_][A-Za-z0-9_'.!?₀-₉]*"
+NAME = r"[^\W\d][\w'.!?]*"
 PAIR = re.compile(r"`(" + NAME + r")`\s*\(`([^`]+?):(\d+)(?:-(\d+))?`")
 MISSING = re.compile(r"`(" + NAME + r")`[^`\n]{0,40}\(witness missing at `" + BASE + r"`([^)]*)\)")
 PROBE_AT = re.compile(r"`(docs/research/[^`]+?\.lean):(\d+)`")
@@ -282,7 +284,7 @@ def check_ids(text):
 
 def on_line(lines, lo, hi, name):
     short = name.split(".")[-1]
-    rx = r"(?<![A-Za-z0-9_'])" + re.escape(short) + r"(?![A-Za-z0-9_'])"
+    rx = r"(?<![\w'])" + re.escape(short) + r"(?![\w'])"
     return any(re.search(rx, ln) for ln in lines[lo - 1:hi])
 
 
@@ -430,6 +432,7 @@ RED = """
 | `Lean/Expr.lean` | `0000000000000000000000000000000000000000000000000000000000000000` |
 `v9.9.9`
 `E4-NOPE-CE-999` `NOPE-FB-NOTHING` and DI-999
+`Ψ_S` (`src/Effect4/Laws/Program/Typed/Residual.lean:84`)
 - **Sources.** `docs/research/2026-09-07-grill-agenda.md` §3 (untracked); `docs/research/2026-09-05-a4-reader-landing.md` §2 (tracked).
 
 green controls, which must not fail:
@@ -438,15 +441,17 @@ green controls, which must not fail:
 | `Lean/Environment.lean` | `ee364e4788ce0560c87f621eeb3c4c3dfec62e8db4e15e099fd80e6adc533b86` |
 `v4.33.1` `v0.8.0` `Sched.lean:32-39` `docs/research/2026-09-07-lit-papers.md`
 `E4-TYPED-CE-009` (registered after the base) `E4-SCHED-CE-004` `PROV-FB-KEY-FORGERY` DI-62
+`Ψ_S` (`src/Effect4/Laws/Program/Typed/Residual.lean:83`)
 - **Sources.** `docs/research/2026-09-30-model-probe/synthesis.md` §3 (tracked); `docs/research/2026-09-05-reification-effhol.md` (untracked).
 """
-# Expected failures (16): a missing path; a wrong pair line; an unknown name; a line past the
+# Expected failures (17): a missing path; a wrong pair line; an unknown name; a line past the
 # end; the false absence of `run_eq_ref` twice (declared in the tree; names no proving probe);
 # a non-commit; `not_a_probe_theorem` twice (unknown name; not at the cited probe line); a
 # wrong toolchain digest; an unknown tag; two wrong source marks (the grill agenda marked
 # untracked, an untracked note marked tracked); an unknown register id, fallback id and DI
-# number (16). One obligation (`M6Ledger.step_loop`). The green lines must not fail.
-RED_EXPECTED = 16
+# number; a Unicode name on the wrong line (17). One obligation (`M6Ledger.step_loop`). The green
+# lines must not fail.
+RED_EXPECTED = 17
 
 
 FIELDS = ("Decision", "Witnesses", "Refusals", "Sources", "Literature", "Status")
@@ -598,7 +603,8 @@ def main():
             "tag v0.8.0", "path Sched.lean", "line Sched.lean", "path docs/research/2026-09-07-lit-papers.md",
             "source mark docs/research/2026-09-30-model-probe/synthesis.md",
             "source mark docs/research/2026-09-05-reification-effhol.md", "register id E4-TYPED-CE-009",
-            "register id E4-SCHED-CE-004", "fallback id PROV-FB-KEY-FORGERY", "DI-62:"))]
+            "register id E4-SCHED-CE-004", "fallback id PROV-FB-KEY-FORGERY", "DI-62:",
+            "pair Ψ_S @ src/Effect4/Laws/Program/Typed/Residual.lean:83:"))]
         ok = len(fails) == RED_EXPECTED and len(obligations) == 1 and not green and s_ok and d_ok
         print(f"red control: {'as expected' if ok else 'NOT as expected'} ({len(fails)} failures, "
               f"expected {RED_EXPECTED}; {len(obligations)} obligation, expected 1; "
