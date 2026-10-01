@@ -23,6 +23,13 @@ From the constructor declarations of each named family, nothing hand-listed:
   module between the declaration and its functions (decisions rows 119 and 171; probe Q, Q1).
   Refused by name: a parameterised or indexed family, a mutual block, a family with no member
   under a container (derive it), a one-parameter-structure position.
+* **`--extras [--namespace NS]`** (probe U, decisions row 182): instead of the fold, the generic
+  families every table-driven traversal is read through, from the declaration of a plain block —
+  the tags with their names and binders, the payload by sort, `build`/`kids` and the view law, the
+  per-constructor table type, the layer algebra, the head and paired folds with their connectors,
+  fusion and the banana split from uniqueness, the per-layer invariant. Without the flag nothing
+  of it is emitted and every output is today's. Refused by name: a nested block (its layer is
+  `ArgF`'s; the nested extension is owed), a constructor with two payload arguments.
 
 ## The monadic-fold decision (seat W2, 2026-10-01; probe Q, Q3)
 
@@ -207,6 +214,8 @@ structure Arg where
   name : String
   pos : Pos
   tyText : String
+  /-- The binder's name in the constructor's declaration (`inner`, `left`, …). -/
+  binder : String := ""
 
 /-- Today's reading of an argument: the label of the member it is, when it is one. -/
 def Arg.recFam (a : Arg) : Option String :=
@@ -338,7 +347,8 @@ def readBlock (root : Name) : MetaM (Bool × String × List (String × Name × L
         for x in xs[ci.numParams:] do
           let ty ← inferType x
           let pos ← posOf members (shortName c) s!"a{i}" ty
-          acc := acc ++ [({ name := s!"a{i}", pos, tyText := ← srcOf ty } : Arg)]
+          acc := acc ++ [({ name := s!"a{i}", pos, tyText := ← srcOf ty,
+                            binder := (← x.fvarId!.getUserName).toString } : Arg)]
           i := i + 1
         return acc
       rows := rows ++ [({ fam := label, ctor := shortName c,
@@ -1642,6 +1652,273 @@ def emitElim (root : Name) (pfxIn : Option String) : MetaM String := do
 
 end Elim
 
+
+/-! ## The generic fold families of a plain block (probe U)
+
+For a non-nested, non-mutual block (`Ty`), the one-level view and the generic families every
+table-driven traversal is read through: the tags and their names and binders, the payload
+sorts, `build`/`kids` and the view law, the per-constructor table type, the layer algebra, the
+head fold and the paired fold with their connectors, fusion and the banana split from
+uniqueness, and the per-layer invariant. All of it is read off the constructor rows; nothing
+here is hand-listed. A block with a composite position (`record`'s `List (String × Ty)`) or a
+constructor with two payload arguments is refused by name: its layer needs `ArgF`'s positions
+(the `LayerView` emitter's), not one payload and a list of children.
+-/
+
+namespace Extras
+
+/-- A payload sort's constructor name in `<Block>Leaf`. -/
+def leafCtor (tyText : String) : String :=
+  match tyText with
+  | "String" => "str"
+  | "Nat" => "nat"
+  | "Bool" => "bool"
+  | t => lowerFirst (leafHint t)
+
+def joinArgs (xs : List String) : String := String.intercalate " " xs
+
+/-- The fixed helpers, once per file: how `foldMap_*` combines a node with its children. -/
+def helpers : String :=
+  "/-- The children combined the way `foldMap_*` combines them: none, one, or\n" ++
+  "`op c₀ (op c₁ …)`. -/\n" ++
+  "def recCombine {M : Type u} (op : M → M → M) : List M → Option M\n" ++
+  "  | [] => none\n" ++
+  "  | [c] => some c\n" ++
+  "  | c :: rest => (recCombine op rest).map (op c)\n\n" ++
+  "/-- The node's contribution, then its children. -/\n" ++
+  "def nodeThen {M : Type u} (op : M → M → M) (here : M) (kids : List M) : M :=\n" ++
+  "  match recCombine op kids with\n" ++
+  "  | none => here\n" ++
+  "  | some k => op here k\n\n"
+
+def emitExtras (root : Name) : MetaM String := do
+  let (isParam, blockName, block) ← readBlock root
+  if isParam then throwError "extras: {root} takes parameters; the plain-block extras do not"
+  if block.length != 1 then throwError "extras: {root} is mutual; the plain-block extras do not"
+  if blockNested block then
+    throwError "extras: {root} holds a member under a container; its layer is `ArgF`'s \
+(tools/Effect4Gen/LayerView.lean), not one payload and a list of children"
+  let (label, fam, rows) := block.head!
+  let famT := fam.toString
+  let ctorT := s!"{blockName}Ctor"
+  let leafT := s!"{blockName}Leaf"
+  let tableT := s!"{blockName}Table"
+  let algT := s!"{blockName}Algebra"
+  let homT := s!"{blockName}Hom"
+  let famE := s!"{blockName}Fam"
+  let low := lowerFirst blockName
+  let viewCtor := s!"{low}Ctor"
+  let viewLeaf := s!"{low}Leaf"
+  let viewBuild := s!"{low}Build"
+  let viewKids := s!"{low}Kids"
+  -- every constructor: at most one payload argument, which precedes no child
+  for r in rows do
+    let leaves := r.args.filter (·.pos.isLeaf)
+    if leaves.length > 1 then
+      throwError "extras: {r.ctor} has {leaves.length} payload arguments; one is read"
+  let sorts : List String := rows.foldl (fun acc r =>
+    r.args.foldl (fun acc a => if a.pos.isLeaf && !(acc.contains a.tyText) then acc ++ [a.tyText] else acc) acc) []
+  let leafOf (r : CtorRow) : Option Arg := r.args.find? (·.pos.isLeaf)
+  let kidsOf (r : CtorRow) : List Arg := r.args.filter (·.recFam.isSome)
+  let pat (r : CtorRow) : String :=
+    if r.args.isEmpty then s!".{r.ctor}" else s!".{r.ctor} {joinArgs (r.args.map (·.name))}"
+  let wild (r : CtorRow) : String :=
+    if r.args.isEmpty then s!".{r.ctor}" else s!".{r.ctor} {joinArgs (r.args.map fun _ => "_")}"
+  let leafExpr (r : CtorRow) : String :=
+    match leafOf r with
+    | some a => s!"(.{leafCtor a.tyText} {a.name})"
+    | none => ".none"
+  let kidList (r : CtorRow) (f : Arg → String) : String :=
+    "[" ++ String.intercalate ", " ((kidsOf r).map f) ++ "]"
+  let arity (r : CtorRow) : String :=
+    match r.args.length with
+    | 0 => "rfl"
+    | 1 => "fun _ => rfl"
+    | 2 => "fun _ _ => rfl"
+    | n => "fun " ++ joinArgs (List.replicate n "_") ++ " => rfl"
+  let homRfl : String := String.intercalate "\n" (rows.map fun r => s!"      h_{r.field} := {arity r}")
+  let mut s := ""
+  -- the tags
+  s := s ++ s!"/-- The constructor tags of `{famT}`, in declaration order. -/\n"
+  s := s ++ s!"inductive {ctorT} where\n"
+  for r in rows do s := s ++ s!"  | {r.ctor}\n"
+  s := s ++ "deriving DecidableEq, Repr\n\n"
+  s := s ++ s!"/-- Every tag, in declaration order. -/\n"
+  s := s ++ s!"def {ctorT}.all : List {ctorT} :=\n  [" ++
+    String.intercalate ", " (rows.map fun r => s!".{r.ctor}") ++ "]\n\n"
+  s := s ++ s!"/-- The tag of a node: one level, no recursion. -/\n"
+  s := s ++ s!"def {viewCtor} : {famT} → {ctorT}\n"
+  for r in rows do s := s ++ s!"  | {wild r} => .{r.ctor}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The constructor's name, as the declaration spells it. -/\n"
+  s := s ++ s!"def {ctorT}.name : {ctorT} → String\n"
+  for r in rows do s := s ++ s!"  | .{r.ctor} => \"{r.ctor}\"\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The constructor's binder names, in declaration order. -/\n"
+  s := s ++ s!"def {ctorT}.binders : {ctorT} → List String\n"
+  for r in rows do
+    s := s ++ s!"  | .{r.ctor} => [" ++ String.intercalate ", " (r.args.map fun a => s!"\"{a.binder}\"") ++ "]\n"
+  s := s ++ "\n"
+  -- the payload
+  s := s ++ s!"/-- The non-recursive payload of a node, by sort. -/\n"
+  s := s ++ s!"inductive {leafT} where\n  | none\n"
+  for t in sorts do s := s ++ s!"  | {leafCtor t} (v : {t})\n"
+  s := s ++ "deriving DecidableEq, Repr\n\n"
+  s := s ++ s!"/-- The payload of a node: one level, no recursion. -/\n"
+  s := s ++ s!"def {viewLeaf} : {famT} → {leafT}\n"
+  let leafPat (r : CtorRow) : String :=
+    if r.args.isEmpty then s!".{r.ctor}" else
+      s!".{r.ctor} " ++ joinArgs (r.args.map fun a => if a.pos.isLeaf then a.name else "_")
+  for r in rows do s := s ++ s!"  | {leafPat r} => {leafExpr r}\n"
+  s := s ++ "\n"
+  -- build, kids, the view law
+  let first := (rows.find? (·.args.isEmpty)).map (·.ctor)
+  let some dflt := first | throwError "extras: {root} has no nullary constructor for `build`'s refusal"
+  s := s ++ s!"/-- A node from its tag, payload and children; a tag whose payload or arity does not\n"
+  s := s ++ s!"match is `{dflt}`. -/\n"
+  s := s ++ s!"def {viewBuild} : {ctorT} → {leafT} → List {famT} → {famT}\n"
+  for r in rows do
+    let lp := match leafOf r with
+      | some a => s!".{leafCtor a.tyText} {a.name}"
+      | none => ".none"
+    s := s ++ s!"  | .{r.ctor}, {lp}, {kidList r (·.name)} => {pat r}\n"
+  s := s ++ s!"  | _, _, _ => .{dflt}\n\n"
+  s := s ++ s!"/-- The children of a node, in declaration order. -/\n"
+  s := s ++ s!"def {viewKids} : {famT} → List {famT}\n"
+  let kidPat (r : CtorRow) : String :=
+    if r.args.isEmpty then s!".{r.ctor}" else
+      s!".{r.ctor} " ++ joinArgs (r.args.map fun a => if a.recFam.isSome then a.name else "_")
+  for r in rows do s := s ++ s!"  | {kidPat r} => {kidList r (·.name)}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- A node is rebuilt from its view. -/\n"
+  s := s ++ s!"theorem {viewBuild}_view (t : {famT}) : {viewBuild} ({viewCtor} t) ({viewLeaf} t) ({viewKids} t) = t := by\n"
+  s := s ++ "  cases t <;> rfl\n\n"
+  -- the table
+  s := s ++ s!"/-- One row per constructor. -/\n"
+  s := s ++ s!"structure {tableT} (α : Type u) where\n"
+  for r in rows do s := s ++ s!"  {r.ctor} : α\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- A row by tag. -/\n"
+  s := s ++ s!"def {tableT}.get \{α : Type u} (t : {tableT} α) : {ctorT} → α\n"
+  for r in rows do s := s ++ s!"  | .{r.ctor} => t.{r.ctor}\n"
+  s := s ++ "\n"
+  -- the layer algebra
+  s := s ++ s!"/-- A layer function as an algebra: every constructor hands its tag, its payload and its\n"
+  s := s ++ s!"folded children (declaration order) to one function. -/\n"
+  s := s ++ s!"def {algT}.ofLayer \{R : Type u} (layer : {ctorT} → {leafT} → List R → R) :\n"
+  s := s ++ s!"    {algT} (fun _ => R) where\n"
+  for r in rows do
+    let lhs := if r.args.isEmpty then "" else " " ++ joinArgs (r.args.map (·.name))
+    s := s ++ s!"  {r.field}{lhs} := layer .{r.ctor} {leafExpr r} {kidList r (·.name)}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The fold of a layer function, one layer down. -/\n"
+  s := s ++ s!"theorem cata_ofLayer_view \{R : Type u} (layer : {ctorT} → {leafT} → List R → R) (t : {famT}) :\n"
+  s := s ++ s!"    cata_{label} ({algT}.ofLayer layer) t =\n"
+  s := s ++ s!"      layer ({viewCtor} t) ({viewLeaf} t) (({viewKids} t).map (cata_{label} ({algT}.ofLayer layer))) := by\n"
+  s := s ++ "  cases t <;> rfl\n\n"
+  let specs := (rows.filter fun r => !(kidsOf r).isEmpty).map fun r => s!"{famT}.{r.ctor}.sizeOf_spec"
+  s := s ++ s!"/-- A child is smaller. -/\n"
+  s := s ++ s!"theorem sizeOf_{viewKids} \{t k : {famT}} (h : k ∈ {viewKids} t) : sizeOf k < sizeOf t := by\n"
+  s := s ++ s!"  cases t <;> simp only [{viewKids}, List.mem_cons, List.not_mem_nil, or_false] at h <;>\n"
+  s := s ++ "    rcases h with rfl | rfl <;> simp only [" ++ String.intercalate ", " specs ++ "] <;> omega\n\n"
+  s := s ++ s!"/-- **The fold of a layer function keeps every property its layers keep.** -/\n"
+  s := s ++ s!"theorem cata_ofLayer_inv \{R : Type u} (layer : {ctorT} → {leafT} → List R → R) (P : R → Prop)\n"
+  s := s ++ s!"    (h : ∀ c l kids, (∀ k ∈ kids, P k) → P (layer c l kids)) (t : {famT}) :\n"
+  s := s ++ s!"    P (cata_{label} ({algT}.ofLayer layer) t) := by\n"
+  s := s ++ "  rw [cata_ofLayer_view]\n  apply h\n  intro k hk\n"
+  s := s ++ "  obtain ⟨k', hk', rfl⟩ := List.mem_map.mp hk\n"
+  s := s ++ "  exact cata_ofLayer_inv layer P h k'\n"
+  s := s ++ "termination_by sizeOf t\n"
+  s := s ++ s!"decreasing_by exact sizeOf_{viewKids} hk'\n\n"
+  -- the head fold and its connector
+  s := s ++ s!"/-- The monoid fold whose node contribution reads only the node's layer, as an algebra. -/\n"
+  s := s ++ s!"def {algT}.headAlg \{M : Type u} (op : M → M → M) (g : {ctorT} → {leafT} → M) :\n"
+  s := s ++ s!"    {algT} (fun _ => M) :=\n"
+  s := s ++ s!"  {algT}.ofLayer fun c l kids => nodeThen op (g c l) kids\n\n"
+  s := s ++ s!"/-- **Connector, once for every head fold.** -/\n"
+  s := s ++ s!"theorem foldMap_head_eq_cata \{M : Type u} (unit : M) (op : M → M → M)\n"
+  s := s ++ s!"    (g : {ctorT} → {leafT} → M) (t : {famT}) :\n"
+  s := s ++ s!"    foldMap_{label} unit op t (fun s => g ({viewCtor} s) ({viewLeaf} s)) =\n"
+  s := s ++ s!"      cata_{label} ({algT}.headAlg op g) t :=\n"
+  s := s ++ s!"  hom_eq_cata_{label} (alg := {algT}.headAlg op g)\n"
+  s := s ++ s!"    \{ f_{label} := fun s => foldMap_{label} unit op s (fun s => g ({viewCtor} s) ({viewLeaf} s))\n"
+  s := s ++ homRfl ++ " } t\n\n"
+  -- the paired fold and its connector
+  s := s ++ s!"/-- The general monoid fold (its hook reads the whole node) as the paired catamorphism. -/\n"
+  s := s ++ s!"def {algT}.paraAlg \{M : Type u} (op : M → M → M) (f : {famT} → M) :\n"
+  s := s ++ s!"    {algT} (fun _ => {famT} × M) where\n"
+  for r in rows do
+    let lhs := if r.args.isEmpty then "" else " " ++ joinArgs (r.args.map (·.name))
+    let node := if r.args.isEmpty then s!".{r.ctor}" else
+      s!".{r.ctor} " ++ joinArgs (r.args.map fun a => if a.recFam.isSome then s!"{a.name}.1" else a.name)
+    let kids := (kidsOf r).map fun a => s!"{a.name}.2"
+    let rhs := match kids with
+      | [] => s!"f ({node})"
+      | _ => s!"op (f ({node})) ({recComb kids})"
+    s := s ++ s!"  {r.field}{lhs} := ({node}, {rhs})\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **Connector, once for every monoid fold.** -/\n"
+  s := s ++ s!"theorem foldMap_eq_cata \{M : Type u} (unit : M) (op : M → M → M) (f : {famT} → M) (t : {famT}) :\n"
+  s := s ++ s!"    (t, foldMap_{label} unit op t f) = cata_{label} ({algT}.paraAlg op f) t :=\n"
+  s := s ++ s!"  hom_eq_cata_{label} (alg := {algT}.paraAlg op f)\n"
+  s := s ++ s!"    \{ f_{label} := fun s => (s, foldMap_{label} unit op s f)\n"
+  s := s ++ homRfl ++ " } t\n\n"
+  -- fusion
+  s := s ++ s!"/-- An algebra morphism `h` from `alg` to `alg'`, one square per constructor, each\n"
+  s := s ++ s!"defaulting to `rfl`. -/\n"
+  s := s ++ s!"structure {algT}.Commutes \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    (h : R .{label} → S .{label}) (alg : {algT} R) (alg' : {algT} S) : Prop where\n"
+  for r in rows do
+    let binders := joinArgs (r.args.map (·.name))
+    let quant := if r.args.isEmpty then "" else s!"∀ {binders}, "
+    let lhsArgs := if r.args.isEmpty then "" else " " ++ binders
+    let rhsArgs := String.join (r.args.map fun a => if a.recFam.isSome then s!" (h {a.name})" else s!" {a.name}")
+    s := s ++ s!"  {r.field} : {quant}h (alg.{r.field}{lhsArgs}) = alg'.{r.field}{rhsArgs} := by\n    intros; rfl\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **Fusion, from uniqueness.** -/\n"
+  s := s ++ s!"theorem cata_fusion_{label} \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    \{h : R .{label} → S .{label}} \{alg : {algT} R} \{alg' : {algT} S}\n"
+  s := s ++ s!"    (c : {algT}.Commutes h alg alg') (t : {famT}) :\n"
+  s := s ++ s!"    h (cata_{label} alg t) = cata_{label} alg' t :=\n"
+  s := s ++ s!"  hom_eq_cata_{label} (alg := alg')\n"
+  s := s ++ s!"    \{ f_{label} := fun s => h (cata_{label} alg s)\n"
+  let fusionFields := rows.map fun r =>
+    if (kidsOf r).isEmpty then s!"      h_{r.field} := c.{r.field}"
+    else
+      let binders := joinArgs (r.args.map (·.name))
+      let callArgs := joinArgs (r.args.map fun a => if a.recFam.isSome then s!"(cata_{label} alg {a.name})" else a.name)
+      s!"      h_{r.field} := fun {binders} => c.{r.field} {callArgs}"
+  s := s ++ String.intercalate "\n" fusionFields ++ " } t\n\n"
+  -- the banana split
+  s := s ++ s!"/-- Two algebras run side by side. -/\n"
+  s := s ++ s!"def {algT}.prod \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    (a : {algT} R) (b : {algT} S) : {algT} (fun f => R f × S f) where\n"
+  for r in rows do
+    let lhs := if r.args.isEmpty then "" else " " ++ joinArgs (r.args.map (·.name))
+    let side (w : String) (proj : String) : String :=
+      if r.args.isEmpty then s!"{w}.{r.field}" else
+        s!"{w}.{r.field} " ++ joinArgs (r.args.map fun a => if a.recFam.isSome then s!"{a.name}.{proj}" else a.name)
+    s := s ++ s!"  {r.field}{lhs} := ({side "a" "1"}, {side "b" "2"})\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **The banana split, from uniqueness.** -/\n"
+  s := s ++ s!"theorem cata_prod_{label} \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    (a : {algT} R) (b : {algT} S) (t : {famT}) :\n"
+  s := s ++ s!"    cata_{label} ({algT}.prod a b) t = (cata_{label} a t, cata_{label} b t) :=\n"
+  s := s ++ s!"  (hom_eq_cata_{label} (alg := {algT}.prod a b)\n"
+  s := s ++ s!"    \{ f_{label} := fun s => (cata_{label} a s, cata_{label} b s)\n"
+  s := s ++ homRfl ++ " } t).symm\n\n"
+  let _ := homT
+  return s
+def receipts (root : Name) : MetaM (List String) := do
+  let (_, blockName, block) ← readBlock root
+  let (label, _, _) := block.head!
+  let low := lowerFirst blockName
+  return [s!"{low}Build_view", "cata_ofLayer_view", s!"sizeOf_{low}Kids", "cata_ofLayer_inv",
+    "foldMap_head_eq_cata", "foldMap_eq_cata", s!"cata_fusion_{label}", s!"cata_prod_{label}"]
+
+end Extras
+
+
 structure Args where
   group : String := "Fold"
   imports : List String := []
@@ -1650,6 +1927,9 @@ structure Args where
   append : Option String := none
   kinds : List (String × String) := []
   types : List String := []
+  /-- Emit only the generic fold families of each (plain) block, into `ns` (probe U). -/
+  extras : Bool := false
+  ns : Option String := none
 
 partial def parseArgs : List String → Args → Except String Args
   | [], a => .ok a
@@ -1659,6 +1939,8 @@ partial def parseArgs : List String → Args → Except String Args
   | "--out" :: o :: rest, a => parseArgs rest { a with out := some o }
   | "--header-out" :: o :: rest, a => parseArgs rest { a with headerOut := some o }
   | "--append" :: p :: rest, a => parseArgs rest { a with append := some p }
+  | "--extras" :: rest, a => parseArgs rest { a with extras := true }
+  | "--namespace" :: n :: rest, a => parseArgs rest { a with ns := some n }
   | "--kind" :: k :: rest, a =>
     match k.splitOn "=" with
     | [ty, kind] => if ty.isEmpty || kind.isEmpty then .error s!"--kind {k}: expected <Type>=<kind>"
@@ -1669,7 +1951,34 @@ partial def parseArgs : List String → Args → Except String Args
       if rest.isEmpty then .error s!"{t} needs a value" else .error s!"unknown option {t}"
     else parseArgs rest { a with types := a.types ++ [t] }
 
+def runExtras (args : Args) : MetaM (Array String) := do
+  let ns := args.ns.getD "Effect4.Program"
+  let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
+  let head := "lake env lean -M 4096 --run tools/Effect4Gen/Fold.lean --extras --group " ++ args.group
+    ++ " --imports " ++ String.intercalate "," args.imports ++ " --out " ++ outPath
+    ++ (match args.ns with | some n => " --namespace " ++ n | none => "")
+    ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
+    ++ String.join (args.types.map fun t => " " ++ t)
+  let mut lines : Array String := #[
+    "-- GENERATED by tools/Effect4Gen/Fold.lean (--extras) from the Lean environment. Do not edit.",
+    "-- Regenerate:", "--   " ++ head]
+  lines := lines ++ (args.imports.map fun i => s!"import {i}").toArray
+  lines := lines ++ #["", "set_option autoImplicit false", "", "namespace " ++ ns, "",
+    "open Effect4.Program", "", "universe u v w", "", Extras.helpers]
+  let mut receipts : List String := []
+  for t in args.types do
+    lines := lines.push (← Extras.emitExtras t.toName)
+    receipts := receipts ++ (← Extras.receipts t.toName)
+  lines := lines ++ #["/-! ## Receipts -/", ""]
+  for r in receipts do lines := lines.push s!"#print axioms {r}"
+  lines := lines ++ #["", "end " ++ ns, ""]
+  if let some p := args.append then
+    let txt ← IO.FS.readFile p
+    lines := lines ++ (txt.splitOn "\n").toArray.map (·.replace "\r" "")
+  return lines
+
 def run (args : Args) : MetaM (Array String) := do
+  if args.extras then return ← runExtras args
   -- The blocks first: the emitted header depends on whether any of them has a monadic half,
   -- and the namespace is the first carrier's own prefix.
   let mut blockTexts : Array String := #[]
