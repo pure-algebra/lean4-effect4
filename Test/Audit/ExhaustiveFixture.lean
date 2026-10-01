@@ -3,11 +3,13 @@ import Effect4
 /-!
 # The exhaustiveness inventory's fixture
 
-Three definitions whose rows `#exhaustive_gate` must get exactly right, pinned by
+Four definitions whose rows `#exhaustive_gate` must get exactly right, pinned by
 `#guard_msgs` in `Test/Audit/TraversalCensus.lean`. They exist to be read by that command and
 have no other consumer: a `Ty` match with every constructor named and no wildcard must be
 reported with `catchAll false`; the same match closed by `| _ =>` must be reported with
-`catchAll true`; and a match on `Term` must not appear in a `Ty` report at all.
+`catchAll true`; a match on `Term` must not appear in a `Ty` report at all; and a private
+definition must be reported under the name it was written with, marked `[private]`, never in
+the `_private.<module>.0.…` form the environment stores (2026-10-01, seat G).
 -/
 
 namespace Test.Audit.ExhaustiveFixture
@@ -43,6 +45,11 @@ def catchAllPresent : Ty → Nat
   | .unit => 1
   | .prod _ _ => 9
   | _ => 19
+
+/-- Private: a row under the name it was written with, marked `[private]`. -/
+private def privateCatchAll : Ty → Nat
+  | .never => 0
+  | _ => 1
 
 /-- A match on another inductive: a `Ty` report must not name it. -/
 def onTerm : Term → Nat

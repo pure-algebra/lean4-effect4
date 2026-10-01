@@ -34,6 +34,13 @@ assumptions and the discriminant equations, so nothing is guessed. Patterns are 
 `matchMatcherApp? (alsoCasesOn := true)` also recognises a `casesOn` application, whose
 alternatives are one per constructor and never a catch-all — which is the honest answer for it.
 
+## How a row is named
+
+A private definition is a row under the name it was written with, marked `[private]`, as in the
+traversal census: its holder and its matcher print through `writtenName` (Lean's
+`privateToUserName?`, `Lean/PrivateName.lean`), never in the `_private.<module>.0.…` form the
+environment stores, and the rows are ordered by the names they print.
+
 ## What it does not see
 
 Proofs. A `cases t <;> aesop` compiles to `Ty.casesOn` with one alternative per constructor and
@@ -59,7 +66,8 @@ structure Hit where
   discr : Nat
 deriving Inhabited
 
-/-- A `Hit` with the question answered. -/
+/-- A `Hit` with the question answered, named as it prints: `holder` and `matcher` are the names
+they were written with (`writtenName`), and `isPrivate` says the holder is private. -/
 structure Row where
   holder : Name
   mod : Name
@@ -67,6 +75,7 @@ structure Row where
   discr : Nat
   alts : Nat
   catchAll : Bool
+  isPrivate : Bool
 deriving Inhabited, BEq
 
 /-- Strip the annotations `Pattern.toExpr (annotate := true)` puts on a pattern: the
@@ -191,11 +200,13 @@ syntax (name := exhaustiveGate) "#exhaustive_gate " ident (" under " ident)? : c
   for (name, mod, value) in bodiesUnder env scope do
     unless value.getUsedConstants.any eliminators.contains do continue
     hits := hits ++ (← liftTermElabM (matchesOn family name mod 200 value #[]))
+  -- Ordered by the names the rows print. Within a module a written name names one declaration,
+  -- so the copies of one (holder, matcher, discriminant) are still adjacent for the pass below.
   let sorted := hits.qsort fun a b =>
+    let (ah, bh) := ((writtenName a.holder).toString, (writtenName b.holder).toString)
+    let (am, bm) := ((writtenName a.matcher).toString, (writtenName b.matcher).toString)
     a.mod.toString < b.mod.toString ||
-      (a.mod == b.mod && (a.holder.toString < b.holder.toString ||
-        (a.holder == b.holder && (a.matcher.toString < b.matcher.toString ||
-          (a.matcher == b.matcher && a.discr < b.discr)))))
+      (a.mod == b.mod && (ah < bh || (ah == bh && (am < bm || (am == bm && a.discr < b.discr)))))
   -- One row per (holder, matcher, discriminant): a term holds the same application many
   -- times over, and having a catch-all is a property of the matcher, not of the copy. The
   -- question is asked once per surviving row, which is what keeps the walk cheap.
@@ -207,15 +218,17 @@ syntax (name := exhaustiveGate) "#exhaustive_gate " ident (" under " ident)? : c
   let mut distinct : Array Row := #[]
   for h in unique do
     let catchAll ← liftTermElabM (matcherCatchAll h.matcher h.info h.discr)
-    distinct := distinct.push { holder := h.holder, mod := h.mod, matcher := h.matcher,
-                                discr := h.discr, alts := h.info.numAlts, catchAll }
+    distinct := distinct.push { holder := writtenName h.holder, mod := h.mod,
+                                matcher := writtenName h.matcher, discr := h.discr,
+                                alts := h.info.numAlts, catchAll,
+                                isPrivate := isPrivateName h.holder }
   let exposed := distinct.filter (!·.catchAll)
   let mut report := m!"#exhaustive_gate {root} (family {family.toList}) under {scope}: \
     {distinct.size} match(es) read it, {exposed.size} with no catch-all — \
     appending a constructor refuses exactly those"
   for r in distinct do
-    report := report ++ m!"\n  {r.holder}\t{r.mod}\t{r.matcher}\tdiscr {r.discr}\t\
-      alts {r.alts}\tcatchAll {r.catchAll}"
+    report := report ++ m!"\n  {r.holder}{if r.isPrivate then " [private]" else ""}\t{r.mod}\t\
+      {r.matcher}\tdiscr {r.discr}\talts {r.alts}\tcatchAll {r.catchAll}"
   logInfo report
 
 end Effect4.Laws.Auto.Exhaustive
