@@ -57,5 +57,19 @@ def phases : List HostSession.Phase :=
 #guard [Api.Outcome.finished, .frontier, .stuck (.unknownFiber ⟨9⟩)].all fun x =>
   Canonical.decode (α := Api.Outcome) (Canonical.encode x) = some x
 #guard Canonical.decode (α := Command) [] = none
+-- The readings of `Run.observe` (decisions row 17): every fiber status, and an observation
+-- carrying all of its fields, read back exactly and refused with a byte added.
+def statuses : List FiberStatus :=
+  [.child ⟨0⟩, .pinned 2 5, .daemon, .root, .exited (.success (.nat 3)), .exited (.failure failed)]
+def observation : Run.Observation :=
+  { state := .awaitingAsync, outcome := .frontier, exit := some (.success (.nat 1)),
+    awaiting := [(⟨1⟩, 4, .refGet, .nat 2)], pending := [⟨⟨0⟩, 1⟩], retired := [⟨⟨2⟩, 0⟩],
+    applied := 3, reasons := [], fibers := statuses.zipIdx.map fun (s, i) => (⟨i⟩, s) }
+#guard statuses.all fun x => Canonical.decode (α := FiberStatus) (Canonical.encode x) = some x
+#guard statuses.all fun x => Canonical.decode (α := FiberStatus) (Canonical.encode x ++ [0]) = none
+#guard statuses.all fun x => (Canonical.shape FiberStatus).accepts (Canonical.toVal x)
+#guard Canonical.decode (α := Run.Observation) (Canonical.encode observation) = some observation
+#guard Canonical.decode (α := Run.Observation) (Canonical.encode observation ++ [0]) = none
+#guard (Canonical.shape Run.Observation).accepts (Canonical.toVal observation)
 
 end RunnerAcceptance
