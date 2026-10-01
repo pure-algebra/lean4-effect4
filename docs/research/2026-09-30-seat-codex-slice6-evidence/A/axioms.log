@@ -1,0 +1,8 @@
+'Effect4.Program.externalValue_internalFree' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.externalValue_input_handleFree' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.external_failure_internalFree' depends on axioms: [propext]
+'Effect4.Program.admitAnswer_exit_keys' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.external_prepared_answer_internalFree' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.externalValue_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.externalValue_minted' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.prepareExternalAnswer_minted' depends on axioms: [propext, Quot.sound]
