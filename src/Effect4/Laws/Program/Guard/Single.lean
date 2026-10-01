@@ -212,17 +212,6 @@ theorem quiet_taskCmds {fiber : FiberId} {token : Nat} (task : NTask)
     (safe : (fiber, token) ∉ taskKeys task) : QuietQueue fiber token (taskCmds task) := by
   cases task <;> simp_all [taskCmds, QuietQueue, QuietCmd, taskKeys, Ne.symm]
 
-theorem held_fireStep (p : NativeEff) (table : RowTable) (fuel : Nat) (owner : FiberId)
-    (acc : NativeMachine × Bool) {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
-    (h : Held acc.1 fiber token request) (task : NTask) (safe : (fiber, token) ∉ taskKeys task) :
-    letI := evaluatorFor p table
-    Held (fireStep (interpOf p table) fuel owner acc task).1 fiber token request := by
-  letI := evaluatorFor p table
-  unfold fireStep
-  split
-  · exact (held_driveState p table fuel (held_emit h [.ranTask owner task]) (taskCmds task) (quiet_taskCmds task safe)).1
-  · exact h
-
 theorem M1Clock.timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]

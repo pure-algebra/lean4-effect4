@@ -22,6 +22,13 @@ is a `[private]` structural row (private definitions were no rows), `Ty.isFactor
 (its `match` compiles through a sparse `casesOn` named after `Ty.infer`; it was printed `opaque`),
 and `Ty.closed` stays `structural`.
 
+A fold row names its algebra by the name it was written with (2026-10-01, seat G's owed item 4):
+`Codegen.Schema.representation` and `Codegen.Schema.check` fold through the private
+`printAlgebra`, which the census printed as
+`_private.Effect4.Codegen.Schema.0.Effect4.Codegen.Schema.printAlgebra`. The two rows are pinned
+by substring (`whitespace := lax`, so no line number and no tab is part of the pin) against the
+tree's `Representation` census.
+
 Beside it, the exhaustiveness inventory: which matches on a type have no catch-all, and so
 are the definitions a new constructor refuses. It is printed, not asserted, for the same
 reason the census is — `docs/core/decisions.md` row 34 keeps the census an instrument, and the
@@ -60,6 +67,18 @@ structural	Effect4.Program.Ty.closed
 #guard_msgs in
 #traversal_class Effect4.Program.Ty for Effect4.Program.Ty.sub Effect4.Codegen.Types.ofNormalized
   Effect4.Program.Ty.isFactor Effect4.Program.Ty.closed
+
+/--
+Effect4.Codegen.Schema.representation (Representation) Effect4.Codegen.Schema.printAlgebra
+-/
+#guard_msgs (whitespace := lax, substring := true) in
+#traversal_census Effect4.Representation
+
+/--
+Effect4.Codegen.Schema.check (Check) Effect4.Codegen.Schema.printAlgebra
+-/
+#guard_msgs (whitespace := lax, substring := true) in
+#traversal_census Effect4.Representation
 
 #traversal_census Effect4.Program.Eff
 #traversal_census Effect4.Program.Ty
