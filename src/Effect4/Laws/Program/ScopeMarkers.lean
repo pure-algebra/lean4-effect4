@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.EvaluateR
+import Effect4.Laws.Program.Intro.Prepare
 
 /-!
 # Program.ScopeMarkers: the scope law, erasure, and the continuations `denoteR` builds
@@ -11,11 +11,12 @@ encoding of scoped effects (Wu, Schrijvers and Hinze 2014, §9, read in
 `docs/research/2026-09-07-lit-papers.md` Q2), with the pairing guaranteed by construction:
 `guardR` is the only producer of `guard_`.
 
-* `guardR_bind`, the scope law: sequencing after a scope enters the scope's normal branch only
-  after its closing marker, and is the whole of the saved branch. Its red control
-  `guardR_not_algebraic` (`Test/Program/ScopeMarkers.lean`): moving the continuation inside the
-  scope changes the program, so a scope is not an algebraic operation in Plotkin and Power's
-  sense.
+* The scope law is already in the tree as `guardR_bind` (`Laws/Program/Intro/Prepare.lean`, the
+  normal branch's tail named `unguardTail`): sequencing after a scope enters the scope's normal
+  branch only after its closing marker, and is the whole of the saved branch. P5 re-proved it;
+  this module imports it rather than stating it twice. Its red control `guardR_not_algebraic`
+  (`Test/Program/ScopeMarkers.lean`): moving the continuation inside the scope changes the
+  program, so a scope is not an algebraic operation in Plotkin and Power's sense.
 * `eraseControl_guardR_bind`, the erasure law: erasing the markers runs the continuation on every
   exit of the body.
 * `eraseControl_guardR_bind_taken`: the machine does not. An exit the guard's arm does not take
@@ -25,8 +26,10 @@ encoding of scoped effects (Wu, Schrijvers and Hinze 2014, §9, read in
   scope is the body followed by the continuation on the exits the arm takes and nothing on the
   others. The red control `erasure_runs_skipped` shows the premise is needed.
 
-Every continuation `denoteR` places after a guard is of that kind (reading, every `guardR` site
-of `DenoteR.lean`): after an `onSuccess` guard it is `seqR`, which answers each failure with
+Every continuation `denoteR` places after a guard is of that kind (reading, checked by a script
+over the sixty `guardR` occurrences of `DenoteR.lean`, unfolding equations included: 47
+`onSuccess`, 8 `onFailure`, 4 `all`, 1 `onExit`): after an `onSuccess` guard it is `seqR`, which
+answers each failure with
 itself (`seqR_passesSkipped`); after an `onFailure` guard (`catchCause`, `catchIf`, `orDie`, the
 finalizer's cleanup) it answers each success with itself (`passesSkipped_onFailure`); the `all`
 and `onExit` guards skip no exit (`passesSkipped_all`, `passesSkipped_onExit`). This is what
@@ -38,25 +41,6 @@ set_option autoImplicit false
 namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program
-
-/-- **The scope law.** Sequencing after a scope enters the scope's normal branch only after its
-closing marker, and is the whole of the saved branch: the bracket closes before `k` runs. -/
-theorem guardR_bind (kind : GuardKind) (body : RProgram) (k : ExitV → RProgram) :
-    (guardR kind body).bind k =
-      .vis (.inr (.guard_ kind)) (fun
-        | none => body.bind (fun ex => .vis (.inr (.unguard ex)) k)
-        | some ex => k ex) := by
-  unfold guardR
-  show Effects.Program.vis _ _ = Effects.Program.vis _ _
-  congr 1
-  funext o
-  cases o with
-  | none =>
-    show (body.bind fun ex => Effects.Program.vis (Sum.inr (FiberOp.unguard ex))
-      Effects.Program.pure).bind k = _
-    rw [Effects.Program.bind_assoc]
-    rfl
-  | some ex => rfl
 
 /-- **The erasure law.** Erasing the markers of a scope followed by a continuation is the erased
 body followed by the erased continuation, on every exit of the body. -/
