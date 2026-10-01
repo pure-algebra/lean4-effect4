@@ -8,9 +8,15 @@ import Effect4.Program.FoldOf
 handle leaf. A union uses one branch for both shape and declarations; products, results,
 exits and fiber snapshots retain the declarations of their components.
 
-Invariant handles use subtyping in both directions (`Equiv`). The native cell and deferred
-spellings require declarations at `nat` and `(nat, nat)`. `Live` reads the world's declaration
-tables, and `unknown` requires `Live`. These are the D1–D4 rulings of decision row 96.
+A handle arm compares its declaration in the checker's order `Ty.subN` (both sides normalized):
+invariant handles use it in both directions (`Equiv`), the covariant fiber handle in one. That
+is row 96's D1 as amended by row 137: "exactly the declared type" means equal normal forms
+(`Ty.subN_equiv_iff`), so membership is invariant under normalization (`fits_normalize`) and
+closed under the checker's order and its join (`fits_subN`, `fits_join_left`,
+`fits_join_right`); with the raw order it was neither (`E4-TYPED-CE-009`). The native cell and
+deferred spellings require declarations at `nat` and `(nat, nat)`. `Live` reads the world's
+declaration tables, and `unknown` requires `Live`. These are the D1–D4 rulings of decision
+row 96.
 
 The fold and laws belong here, below admission, so they depend on no retired value judgment.
 The runtime admission check remains separate.
@@ -21,8 +27,9 @@ set_option autoImplicit false
 namespace Effect4.Program.Typed
 open Effect4.Machine Effect4.Program.Sched
 
-/-- Invariance as `Ty.sub` reads it: subtyping both ways. -/
-def Equiv (declared t : Ty) : Prop := declared.sub t = true ∧ t.sub declared = true
+/-- Invariance in the checker's order: subtyping both ways after normalizing, which is equality
+of normal forms (`Ty.subN_equiv_iff`). -/
+def Equiv (declared t : Ty) : Prop := Ty.subN declared t = true ∧ Ty.subN t declared = true
 
 /-- A cell declared at a type related to `t` by subtyping in both directions. -/
 def RefDeclared (w : World) (key : RefKey) (t : Ty) : Prop :=
@@ -32,9 +39,10 @@ def RefDeclared (w : World) (key : RefKey) (t : Ty) : Prop :=
 def PromiseDeclared (w : World) (key : DeferredKey) (a e : Ty) : Prop :=
   ∃ a' e', w.«Π» key = some (a', e') ∧ Equiv a' a ∧ Equiv e' e
 
-/-- A fiber declared at a type below `(a, e)`: the fiber handle is covariant. -/
+/-- A fiber declared at a type below `(a, e)` in the checker's order: the fiber handle is
+covariant. -/
 def FiberDeclared (w : World) (id : FiberId) (a e : Ty) : Prop :=
-  ∃ fty, w.Γ id = some fty ∧ fty.answer.sub a = true ∧ fty.error.sub e = true
+  ∃ fty, w.Γ id = some fty ∧ Ty.subN fty.answer a = true ∧ Ty.subN fty.error e = true
 
 /-- Declared liveness: every cell, deferred and fiber handle the value names is declared in the
 world's tables. This is the declaration evidence supplied by allocation postconditions;
@@ -833,7 +841,8 @@ theorem fits_mono {w w' : World} (ordered : w.leHost w') {ty : Ty} {v : Val} (h 
 /-! ## Subsumption: membership respects the checker's subtyping -/
 
 /-- **Fits is closed under `Ty.sub`.** By `fun_induction Ty.sub`, so the cases are `sub`'s own arms
-(as `cata_admits_sub`, `Laws/Program/Admits.lean:36`). The invariant arms use `Ty.sub_trans`. -/
+(as `cata_admits_sub`, `Laws/Program/Admits.lean:36`). The handle arms move the raw step into the
+checker's order (`Ty.sub_le_subN`) and compose there (`Ty.subN_trans`). -/
 theorem fits_sub (w : World) {a b : Ty} (hsub : Ty.sub a b = true) : ∀ v, Fits w v a → Fits w v b := by
   fun_induction Ty.sub a b
   case case1 => intro v h; exact h
@@ -915,7 +924,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : Ty.sub a b = true) : ∀ v, Fits
     simp only [Fits] at h
     split at h
     · obtain ⟨fty, hs, ha, he⟩ := h
-      exact ⟨fty, hs, Ty.sub_trans _ _ _ ha h1, Ty.sub_trans _ _ _ he h2⟩
+      exact ⟨fty, hs, Ty.subN_trans ha (Ty.sub_le_subN h1), Ty.subN_trans he (Ty.sub_le_subN h2)⟩
     · exact h.elim
   case case14 a1 a2 _ _ _ =>
     obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
@@ -923,7 +932,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : Ty.sub a b = true) : ∀ v, Fits
     simp only [Fits] at h
     split at h
     · obtain ⟨t', hs, hl, hr⟩ := h
-      exact ⟨t', hs, Ty.sub_trans _ _ _ hl h1, Ty.sub_trans _ _ _ h2 hr⟩
+      exact ⟨t', hs, Ty.subN_trans hl (Ty.sub_le_subN h1), Ty.subN_trans (Ty.sub_le_subN h2) hr⟩
     · exact h.elim
   case case15 a1 e1 a2 e2 _ _ _ _ _ =>
     obtain ⟨h123, h4⟩ := Bool.and_eq_true_iff.mp hsub
@@ -933,10 +942,256 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : Ty.sub a b = true) : ∀ v, Fits
     simp only [Fits] at h
     split at h
     · obtain ⟨a', e', hs, ⟨ha1, ha2⟩, ⟨he1, he2⟩⟩ := h
-      exact ⟨a', e', hs, ⟨Ty.sub_trans _ _ _ ha1 h1, Ty.sub_trans _ _ _ h2 ha2⟩,
-        ⟨Ty.sub_trans _ _ _ he1 h3, Ty.sub_trans _ _ _ h4 he2⟩⟩
+      exact ⟨a', e', hs,
+        ⟨Ty.subN_trans ha1 (Ty.sub_le_subN h1), Ty.subN_trans (Ty.sub_le_subN h2) ha2⟩,
+        ⟨Ty.subN_trans he1 (Ty.sub_le_subN h3), Ty.subN_trans (Ty.sub_le_subN h4) he2⟩⟩
     · exact h.elim
   case case16 => exact Bool.noConfusion hsub
+
+/-! ## Normalization and the checker's order (decisions row 137)
+
+`Fits` cannot see the spelling of a type, only its normal form: the union and product cases are
+`hasTy_normalize`'s argument with `Prop` in place of `Bool` and `fits_sub` in place of
+`hasTy_sub` (the antichain drops only members raw-below a kept one, and `productMembers`
+distributes membership exactly), and the handle cases read declarations in `Ty.subN`, which is
+blind to normalization on either side. So membership is closed under the checker's order and
+under its join, the two closures every step that joins answers or enters an annotated loop
+needs. -/
+
+theorem exists_mem_singleton_iff (P : Ty → Prop) (t : Ty) : (∃ x ∈ [t], P x) ↔ P t :=
+  ⟨fun ⟨x, hx, hp⟩ => by rw [List.mem_singleton] at hx; subst hx; exact hp,
+    fun hp => ⟨t, List.mem_singleton_self t, hp⟩⟩
+
+/-- Membership in a rebuilt union is membership in one of its listed members. -/
+theorem fits_ofMembers (w : World) (v : Val) :
+    ∀ xs : List Ty, Fits w v (Ty.ofMembers xs) ↔ ∃ t ∈ xs, Fits w v t
+  | [] => ⟨fun h => h.elim, fun ⟨_, hx, _⟩ => nomatch hx⟩
+  | [x] => (exists_mem_singleton_iff (Fits w v) x).symm
+  | x :: y :: ys => by
+    have ih := fits_ofMembers w v (y :: ys)
+    show (Fits w v x ∨ Fits w v (Ty.ofMembers (y :: ys))) ↔ _
+    rw [ih]
+    constructor
+    · rintro (h | ⟨t, ht, hv⟩)
+      · exact ⟨x, List.mem_cons_self .., h⟩
+      · exact ⟨t, List.mem_cons_of_mem x ht, hv⟩
+    · rintro ⟨t, ht, hv⟩
+      rcases List.mem_cons.mp ht with rfl | ht
+      · exact Or.inl hv
+      · exact Or.inr ⟨t, ht, hv⟩
+
+/-- Membership in a type is membership in one of its union members. -/
+theorem fits_members (w : World) (v : Val) (t : Ty) :
+    (∃ x ∈ t.members, Fits w v x) ↔ Fits w v t := by
+  induction t with
+  | never => exact ⟨fun ⟨_, hx, _⟩ => (nomatch hx), fun h => h.elim⟩
+  | union a b iha ihb =>
+    show (∃ x ∈ a.members ++ b.members, Fits w v x) ↔ (Fits w v a ∨ Fits w v b)
+    rw [← iha, ← ihb]
+    constructor
+    · rintro ⟨x, hx, hv⟩
+      rcases List.mem_append.mp hx with hx | hx
+      · exact Or.inl ⟨x, hx, hv⟩
+      · exact Or.inr ⟨x, hx, hv⟩
+    · rintro (⟨x, hx, hv⟩ | ⟨x, hx, hv⟩)
+      · exact ⟨x, List.mem_append_left _ hx, hv⟩
+      · exact ⟨x, List.mem_append_right _ hx, hv⟩
+  | unknown => exact exists_mem_singleton_iff _ _
+  | unit => exact exists_mem_singleton_iff _ _
+  | nat => exact exists_mem_singleton_iff _ _
+  | int => exact exists_mem_singleton_iff _ _
+  | string => exact exists_mem_singleton_iff _ _
+  | bool => exact exists_mem_singleton_iff _ _
+  | handle _ => exact exists_mem_singleton_iff _ _
+  | option _ _ => exact exists_mem_singleton_iff _ _
+  | list _ _ => exact exists_mem_singleton_iff _ _
+  | prod _ _ _ _ => exact exists_mem_singleton_iff _ _
+  | except _ _ _ _ => exact exists_mem_singleton_iff _ _
+  | exitOf _ _ _ _ => exact exists_mem_singleton_iff _ _
+  | causeOf _ _ => exact exists_mem_singleton_iff _ _
+  | fiberOf _ _ _ _ => exact exists_mem_singleton_iff _ _
+  | lit _ => exact exists_mem_singleton_iff _ _
+  | refOf _ _ => exact exists_mem_singleton_iff _ _
+  | deferredOf _ _ _ _ => exact exists_mem_singleton_iff _ _
+  | var _ => exact exists_mem_singleton_iff _ _
+
+/-- Membership in a type is membership in one of its product factors. -/
+theorem fits_factors (w : World) (v : Val) (t : Ty) :
+    (∃ x ∈ t.factors, Fits w v x) ↔ Fits w v t := by
+  cases t with
+  | never => exact exists_mem_singleton_iff _ _
+  | _ => exact fits_members w v _
+
+/-- The antichain keeps a member above every dropped one, so it keeps membership. -/
+theorem fits_normalizeRow (w : World) (v : Val) (xs : List Ty) :
+    (∃ t ∈ (Ty.normalizeRow xs).elems, Fits w v t) ↔ ∃ t ∈ xs, Fits w v t := by
+  constructor
+  · rintro ⟨t, ht, hv⟩
+    exact ⟨t, ((Ty.mem_normalizeRow t xs).mp ht).1, hv⟩
+  · rintro ⟨t, ht, hv⟩
+    have ht' : t ∈ (Effect4.Row.normalize xs).elems := (Effect4.Row.mem_normalize t xs).mpr ht
+    obtain ⟨u, hu, htu⟩ := Effect4.Row.antichain_coverage Ty.sub Ty.sub_refl Ty.sub_trans
+      (Effect4.Row.normalize xs).elems t ht'
+    exact ⟨u, hu, fits_sub w htu v hv⟩
+
+theorem fits_prod_iff (w : World) (v : Val) (a b : Ty) :
+    Fits w v (.prod a b) ↔ ∃ p q, v = .list [p, q] ∧ Fits w p a ∧ Fits w q b := by
+  simp only [Fits]
+  split
+  · rename_i p q
+    exact ⟨fun h => ⟨p, q, rfl, h.1, h.2⟩, fun ⟨p', q', he, h1, h2⟩ => by cases he; exact ⟨h1, h2⟩⟩
+  · rename_i hne
+    exact ⟨fun h => h.elim, fun ⟨p', q', he, _, _⟩ => absurd he (hne p' q')⟩
+
+/-- Distributing a product over its factors keeps membership exactly. -/
+theorem fits_productMembers (w : World) (v : Val) (a b : Ty) :
+    (∃ x ∈ Ty.productMembers a b, Fits w v x) ↔ Fits w v (.prod a b) := by
+  rw [fits_prod_iff]
+  constructor
+  · rintro ⟨z, hz, hv⟩
+    obtain ⟨x, hx, hz2⟩ := List.mem_flatMap.mp hz
+    obtain ⟨y, hy, rfl⟩ := List.mem_map.mp hz2
+    obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w v x y).mp hv
+    exact ⟨p, q, rfl, (fits_factors w p a).mp ⟨x, hx, hp⟩, (fits_factors w q b).mp ⟨y, hy, hq⟩⟩
+  · rintro ⟨p, q, rfl, hp, hq⟩
+    obtain ⟨x, hx, hpx⟩ := (fits_factors w p a).mpr hp
+    obtain ⟨y, hy, hqy⟩ := (fits_factors w q b).mpr hq
+    exact ⟨.prod x y, List.mem_flatMap.mpr ⟨x, hx, List.mem_map.mpr ⟨y, hy, rfl⟩⟩,
+      (fits_prod_iff w _ x y).mpr ⟨p, q, rfl, hpx, hqy⟩⟩
+
+theorem causeFits_iff {m1 m2 : Val → Prop} (h : ∀ x, m1 x ↔ m2 x) (c : CauseV) :
+    CauseFits m1 c ↔ CauseFits m2 c :=
+  ⟨causeFits_map (fun x hx => (h x).mp hx), causeFits_map (fun x hx => (h x).mpr hx)⟩
+
+/-- The fiber arm reads its columns in `Ty.subN`, which normalizing the query does not move. -/
+theorem fiberDeclared_normalize (w : World) (id : FiberId) (a e : Ty) :
+    FiberDeclared w id a.normalize e.normalize ↔ FiberDeclared w id a e := by
+  unfold FiberDeclared
+  simp only [Ty.subN_normalize_right]
+
+/-- Invariance in `Ty.subN` does not see the spelling of the query. -/
+theorem equiv_normalize (declared t : Ty) : Equiv declared t.normalize ↔ Equiv declared t := by
+  unfold Equiv
+  rw [Ty.subN_normalize_right, Ty.subN_normalize_left]
+
+/-- **Membership is invariant under normalization** (row 137; `E4-TYPED-CE-009`'s repair). -/
+theorem fits_normalize (w : World) : ∀ (t : Ty) (v : Val), Fits w v t.normalize ↔ Fits w v t := by
+  intro t
+  induction t with
+  | never => intro v; exact Iff.rfl
+  | unknown => intro v; exact Iff.rfl
+  | unit => intro v; exact Iff.rfl
+  | nat => intro v; exact Iff.rfl
+  | int => intro v; exact Iff.rfl
+  | string => intro v; exact Iff.rfl
+  | bool => intro v; exact Iff.rfl
+  | handle _ => intro v; exact Iff.rfl
+  | lit _ => intro v; exact Iff.rfl
+  | var _ => intro v; exact Iff.rfl
+  | union a b iha ihb =>
+    intro v
+    show Fits w v (Ty.ofMembers (Ty.normalizeRow (a.normalize.members ++ b.normalize.members)).elems) ↔
+      (Fits w v a ∨ Fits w v b)
+    rw [fits_ofMembers, fits_normalizeRow, ← iha, ← ihb, ← fits_members w v a.normalize,
+      ← fits_members w v b.normalize]
+    constructor
+    · rintro ⟨x, hx, hv⟩
+      rcases List.mem_append.mp hx with hx | hx
+      · exact Or.inl ⟨x, hx, hv⟩
+      · exact Or.inr ⟨x, hx, hv⟩
+    · rintro (⟨x, hx, hv⟩ | ⟨x, hx, hv⟩)
+      · exact ⟨x, List.mem_append_left _ hx, hv⟩
+      · exact ⟨x, List.mem_append_right _ hx, hv⟩
+  | prod a b iha ihb =>
+    intro v
+    show Fits w v (Ty.ofMembers (Ty.normalizeRow (Ty.productMembers a.normalize b.normalize)).elems) ↔
+      Fits w v (.prod a b)
+    rw [fits_ofMembers, fits_normalizeRow, fits_productMembers, fits_prod_iff, fits_prod_iff]
+    constructor
+    · rintro ⟨p, q, hv, hp, hq⟩
+      exact ⟨p, q, hv, (iha p).mp hp, (ihb q).mp hq⟩
+    · rintro ⟨p, q, hv, hp, hq⟩
+      exact ⟨p, q, hv, (iha p).mpr hp, (ihb q).mpr hq⟩
+  | option t ih =>
+    intro v
+    show Fits w v (.option t.normalize) ↔ Fits w v (.option t)
+    simp only [Fits]
+    split
+    · exact Iff.rfl
+    · exact ih _
+    · exact Iff.rfl
+  | list t ih =>
+    intro v
+    show Fits w v (.list t.normalize) ↔ Fits w v (.list t)
+    simp only [Fits]
+    split
+    · split
+      · exact forall₂_congr fun id _ => ih (Val.fiber id)
+      · exact Iff.rfl
+    · exact forall₂_congr fun x _ => ih x
+    · exact Iff.rfl
+  | except e a ihe iha =>
+    intro v
+    show Fits w v (.except e.normalize a.normalize) ↔ Fits w v (.except e a)
+    simp only [Fits]
+    split
+    · exact ihe _
+    · exact iha _
+    · exact Iff.rfl
+  | exitOf a e iha ihe =>
+    intro v
+    show Fits w v (.exitOf a.normalize e.normalize) ↔ Fits w v (.exitOf a e)
+    simp only [Fits]
+    split
+    · exact iha _
+    · split
+      · exact causeFits_iff (fun x => ihe x) _
+      · exact Iff.rfl
+    · exact Iff.rfl
+  | causeOf e ih =>
+    intro v
+    show Fits w v (.causeOf e.normalize) ↔ Fits w v (.causeOf e)
+    simp only [Fits]
+    split
+    · exact causeFits_iff (fun x => ih x) _
+    · exact Iff.rfl
+  | fiberOf a e _ _ =>
+    intro v
+    show Fits w v (.fiberOf a.normalize e.normalize) ↔ Fits w v (.fiberOf a e)
+    simp only [Fits]
+    split
+    · exact fiberDeclared_normalize w _ a e
+    · exact Iff.rfl
+  | refOf t _ =>
+    intro v
+    show Fits w v (.refOf t.normalize) ↔ Fits w v (.refOf t)
+    simp only [Fits]
+    split
+    · unfold RefDeclared
+      exact exists_congr fun t' => and_congr_right fun _ => equiv_normalize t' t
+    · exact Iff.rfl
+  | deferredOf a e _ _ =>
+    intro v
+    show Fits w v (.deferredOf a.normalize e.normalize) ↔ Fits w v (.deferredOf a e)
+    simp only [Fits]
+    split
+    · unfold PromiseDeclared
+      exact exists_congr fun a' => exists_congr fun e' => and_congr_right fun _ =>
+        and_congr (equiv_normalize a' a) (equiv_normalize e' e)
+    · exact Iff.rfl
+
+/-- **Membership is closed under the checker's order.** -/
+theorem fits_subN (w : World) {a b : Ty} (h : Ty.subN a b = true) (v : Val) (hv : Fits w v a) :
+    Fits w v b :=
+  (fits_normalize w b v).mp (fits_sub w h v ((fits_normalize w a v).mpr hv))
+
+/-- **Membership is closed under the checker's join**, on the left. -/
+theorem fits_join_left (w : World) (a b : Ty) (v : Val) (h : Fits w v a) : Fits w v (Ty.join a b) :=
+  fits_subN w (Ty.subN_join_left a b) v h
+
+/-- **Membership is closed under the checker's join**, on the right. -/
+theorem fits_join_right (w : World) (a b : Ty) (v : Val) (h : Fits w v b) : Fits w v (Ty.join a b) :=
+  fits_subN w (Ty.subN_join_right a b) v h
 
 
 /-! ## Exit monotonicity and subsumption
@@ -958,6 +1213,18 @@ theorem fitsExit_sub {w : World} {ty ty' : EffTy} (ha : Ty.sub ty.answer ty'.ans
   | failure c =>
     rw [fitsExit_failure_iff] at h ⊢
     exact causeFits_map (fun x hx => fits_sub w he x hx) h
+
+/-- Exit subsumption in the checker's order, column by column. -/
+theorem fitsExit_subN {w : World} {ty ty' : EffTy} (ha : Ty.subN ty.answer ty'.answer = true)
+    (he : Ty.subN ty.error ty'.error = true) {ex : ExitV} (h : FitsExit w ty ex) :
+    FitsExit w ty' ex := by
+  cases ex with
+  | success v =>
+    rw [fitsExit_success_iff] at h ⊢
+    exact fits_subN w ha v h
+  | failure c =>
+    rw [fitsExit_failure_iff] at h ⊢
+    exact causeFits_map (fun x hx => fits_subN w he x hx) h
 
 /-! ## Products and fiber results -/
 
@@ -988,7 +1255,7 @@ theorem await_fits {w w' : World} {id : FiberId} {a e : Ty} {ty : EffTy} {ex : E
   have hs' := ordered.1.2.1 id fty hs
   rw [declared] at hs'
   cases hs'
-  exact fitsExit_sub ha he hex
+  exact fitsExit_subN ha he hex
 
 
 /-! ## The list arm reads one decoded element view

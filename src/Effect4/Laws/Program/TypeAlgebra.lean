@@ -1050,6 +1050,68 @@ theorem join_least (a b c : CTy) (hac : sub a.toRaw c.toRaw = true)
 theorem sub_normalize_of_sub (a b : Ty) (hab : sub a b = true) :
     sub a.normalize b.normalize = true := OrderProof.sub_normalize_of_sub sub_trans a b hab
 
+/-! ### The checker's order (decisions row 137; formal pass TY-01, TY-02)
+
+The checker compares two types after normalizing both (`rowTy`, `HasTy.iterate`,
+`HasTy.provideService`) and joins answers by `join a b = normalize (union a b)`, so the order it
+reads is `subN a b := sub (normalize a) (normalize b)`. It is a preorder (`subN_refl`,
+`subN_trans`) that contains raw `sub` (`sub_le_subN`), and its kernel is exactly equality of
+normal forms (`subN_equiv_iff`): `Ty` modulo mutual `subN` is `CTy`, with `normalize` the
+quotient map (`ofRaw_eq_iff`). Raw mutual subtyping is strictly finer, since raw `sub` never
+distributes a product over a union (`prod (nat | string) unit` is not raw-below its own normal
+form; `E4-TYPED-CE-009`), so a judgment that compares a declaration with a type the checker
+produced reads `subN`. Atom arguments are compared in raw `sub` (`NativeAtom.monoApply`); raw
+`sub` implies `subN`, so that comparison is the stronger one. -/
+
+/-- The order the checker compares and joins in: both sides normalized. -/
+def subN (a b : Ty) : Bool := sub a.normalize b.normalize
+
+theorem subN_refl (a : Ty) : subN a a = true := sub_refl _
+
+theorem subN_trans {a b c : Ty} (hab : subN a b = true) (hbc : subN b c = true) :
+    subN a c = true :=
+  sub_trans _ _ _ hab hbc
+
+/-- The raw order is contained in the checker's (`sub_normalize_of_sub`, one way). -/
+theorem sub_le_subN {a b : Ty} (h : sub a b = true) : subN a b = true :=
+  sub_normalize_of_sub a b h
+
+theorem subN_normalize_left (a b : Ty) : subN a.normalize b = subN a b := by
+  unfold subN
+  rw [normalize_idem]
+
+theorem subN_normalize_right (a b : Ty) : subN a b.normalize = subN a b := by
+  unfold subN
+  rw [normalize_idem]
+
+/-- **The kernel of the checker's order is equality of normal forms.** -/
+theorem subN_equiv_iff (a b : Ty) :
+    (subN a b = true ∧ subN b a = true) ↔ a.normalize = b.normalize := by
+  constructor
+  · rintro ⟨hab, hba⟩
+    exact congrArg Subtype.val (sub_antisymm_canonical (CTy.ofRaw a) (CTy.ofRaw b) hab hba)
+  · intro h
+    unfold subN
+    rw [h]
+    exact ⟨sub_refl _, sub_refl _⟩
+
+/-- The quotient map: `CTy.ofRaw` identifies exactly the `subN`-equivalent types. -/
+theorem ofRaw_eq_iff (a b : Ty) :
+    CTy.ofRaw a = CTy.ofRaw b ↔ (subN a b = true ∧ subN b a = true) := by
+  rw [subN_equiv_iff]
+  exact ⟨fun h => congrArg Subtype.val h, fun h => Subtype.ext h⟩
+
+/-- Each operand is below the join in the checker's order. -/
+theorem subN_join_left (a b : Ty) : subN a (join a b) = true := by
+  unfold subN
+  rw [normalize_join]
+  exact OrderProof.sub_normalize_union_left sub_trans a b
+
+theorem subN_join_right (a b : Ty) : subN b (join a b) = true := by
+  unfold subN
+  rw [normalize_join]
+  exact OrderProof.sub_normalize_union_right sub_trans a b
+
 /-! ### The top absorbs (tooling plan 0.6, decisions row 46)
 
 `never` is the empty union and `join .never t = normalize t` (`join_never`, above); `unknown`
