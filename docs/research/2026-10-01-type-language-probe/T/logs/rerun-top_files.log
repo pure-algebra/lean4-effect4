@@ -1,0 +1,41 @@
+v4 files with Schema.Struct(: 629; occurrences 6349; in files marked generated in their first 400 bytes: 162 (7 files)
+  1365      34119 lines  tim-smart-lalph  repos/effect/packages/ai/openai/src/Generated.ts
+   594      10028 lines  tim-smart-lalph  repos/effect/packages/ai/openrouter/src/Generated.ts
+   460      12600 lines  tim-smart-lalph  repos/effect/packages/ai/anthropic/src/Generated.ts
+   160       8349 lines  tim-smart-lalph  repos/effect/packages/effect/test/schema/Schema.test.ts
+    84 GEN   3763 lines  tim-smart-lalph  repos/effect/packages/effect/src/SchemaRepresentation.ts
+    74        875 lines  tim-smart-lalph  repos/effect/packages/ai/openai/src/OpenAiSchema.ts
+    60        676 lines  anomalyco-opencode  packages/schema/src/v1/session.ts
+    50       1819 lines  tim-smart-lalph  repos/effect/packages/effect/typetest/schema/Schema.tst.ts
+    46 GEN   1578 lines  tim-smart-lalph  repos/effect/packages/ai/anthropic/src/AnthropicTool.ts
+    46        424 lines  kitlangton-ghui  src/services/githubSchemas.ts
+    42        674 lines  anomalyco-opencode  packages/llm/src/protocols/bedrock-converse.ts
+    40        372 lines  dearlordylord-huly-mcp  src/domain/schemas/test-management-plans.ts
+    38        184 lines  dearlordylord-huly-mcp  scripts/effect4-oracle-schema.ts
+    37      12439 lines  tim-smart-lalph  repos/effect/packages/effect/src/Schema.ts
+    34       2989 lines  tim-smart-lalph  repos/effect/packages/effect/test/schema/toCodec.test.ts
+    34       2047 lines  tim-smart-lalph  repos/effect/packages/effect/test/schema/representation/toCodeDocument.test.ts
+    32       1352 lines  tim-smart-lalph  repos/effect/packages/effect/test/Config.test.ts
+    31        346 lines  dearlordylord-huly-mcp  src/domain/schemas/channels.ts
+    30       1264 lines  tim-smart-lalph  repos/effect/packages/effect/test/unstable/ai/Tool.test.ts
+    30        485 lines  dearlordylord-huly-mcp  src/domain/schemas/documents.ts
+    29       2534 lines  tim-smart-lalph  repos/effect/packages/effect/src/unstable/ai/Response.ts
+    28        277 lines  dearlordylord-huly-mcp  src/domain/schemas/notifications.ts
+    27       3426 lines  tim-smart-lalph  repos/effect/packages/effect/test/schema/toJsonSchemaDocument.test.ts
+    27        373 lines  dearlordylord-huly-mcp  src/domain/schemas/planner.ts
+    26        330 lines  dearlordylord-huly-mcp  src/domain/schemas/recruiting-common.ts
+    26       1163 lines  anomalyco-opencode  packages/codemode/test/codemode.test.ts
+    25        328 lines  dearlordylord-huly-mcp  src/domain/schemas/test-management-core.ts
+    25        369 lines  dearlordylord-huly-mcp  src/domain/schemas/drive.ts
+    25        213 lines  anomalyco-opencode  packages/schema/src/session-message.ts
+    25       1022 lines  anomalyco-opencode  packages/llm/src/protocols/openai-responses.ts
+    24        319 lines  typeonce-dev-effect-machine  packages/devtools/src/MachineDocument.ts
+    24        387 lines  dearlordylord-huly-mcp  src/domain/schemas/spaces.ts
+    24        469 lines  dearlordylord-huly-mcp  src/domain/schemas/inventory.ts
+    23        435 lines  dearlordylord-huly-mcp  scripts/api-token-certification-workflow.ts
+    23        506 lines  anomalyco-opencode  packages/llm/src/protocols/openai-chat.ts
+    23        855 lines  anomalyco-opencode  packages/llm/src/protocols/anthropic-messages.ts
+    22        247 lines  dearlordylord-huly-mcp  src/domain/schemas/contact-organizations.ts
+    21       1852 lines  tim-smart-lalph  repos/effect/packages/effect/src/unstable/ai/Tool.ts
+    21        247 lines  dearlordylord-huly-mcp  src/unsupported-node-mcp.ts
+    21        379 lines  anomalyco-opencode  packages/protocol/src/groups/session.ts

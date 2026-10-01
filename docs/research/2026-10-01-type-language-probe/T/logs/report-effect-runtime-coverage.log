@@ -1,0 +1,7 @@
+# command: LEAN_NUM_THREADS=1 scripts/report-effect-runtime-coverage.sh (worktree probe-T at bff50631, 2026-10-01T18:19:43Z), run after check-effect-runtime-census.sh passed
+Effect rc.112 runtime coverage: denominator 135; owned-with-green 8/135;
+green 132, partial 2, absent 0, diverged 1; census 137 rows, 2 excluded
+partial: op.Failure layer.launch-holds-scope
+divergence: checkpoint.exit-failcause-skip; U-01; Test/Counterexamples/Machine/Semantics/InterruptEscape.lean
+produced at bff50631 by scripts/report-effect-runtime-coverage.sh
+exit=0

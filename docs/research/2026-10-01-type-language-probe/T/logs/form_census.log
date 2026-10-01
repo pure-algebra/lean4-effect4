@@ -1,0 +1,3344 @@
+# form census over oxc-parser 0.147.0 trees (syntax only; bun 1.4.2), 2026-10-01T18:57:15.852Z
+## probe: 5 files (0 unreadable, 0 with oxc parse errors), 1 projects, 5 files import effect or @effect/*
+### probe: per file, nonzero categories (T., C., E. only)
+- 2026-09-30-model-probe/programs/ts/p1-http-cache.ts: C.class=2 C.dataTaggedError=2 C.taggedError.nameIsTag=2 C.taggedError.fieldsN=2 T.typeLiteral=2 T.prop=5 T.prop.readonly=5 T.kw.number=3 T.kw.string=5 T.interface=1 E.object=9 E.newError=3 T.union=3 E.durationString=3
+- 2026-09-30-model-probe/programs/ts/p2-handler-layers.ts: E.object=10 E.array=1 T.typeof=1 T.typeof.schemaType=1 C.class=5 C.dataTaggedError=2 C.taggedError.nameIsTag=2 C.taggedError.fieldsN=2 T.typeLiteral=4 T.prop=7 T.prop.readonly=7 T.kw.number=7 T.kw.string=5 C.service=3 T.typeArgs.call=5 T.prop.function=1 T.function=1 T.union=3 E.template=2 E.undefined=1 T.generic.fn=1 T.interface=1 T.moduleTypeRef=1
+- 2026-09-30-model-probe/programs/ts/p3-worker-queue.ts: T.interface=2 T.prop=5 T.prop.readonly=5 T.kw.number=10 T.kw.string=6 C.class=1 C.dataTaggedError=1 C.taggedError.nameIsTag=1 C.taggedError.fieldsN=1 T.typeLiteral=1 T.array.readonly=4 E.array=5 E.template=5 E.object=9 E.durationString=1 T.kw.void=3 T.tuple=1 T.tuple.arity2=1 T.kw.boolean=1 E.undefined=1 T.moduleTypeRef=1 T.moduleTypeRef.generic=1 T.typeArgs.call=3
+- 2026-09-30-model-probe/programs/ts/p4-rate-limiter.ts: T.interface=1 T.prop=3 T.prop.readonly=3 T.kw.number=8 T.tuple=2 T.tuple.arity2=1 T.kw.boolean=1 E.array=4 E.object=5 E.object.spread=3 T.typeArgs.call=1 T.tuple.readonly=1 T.tuple.arity3plus=1
+- 2026-09-30-model-probe/programs/ts/p5-ledger-service.ts: T.union=1 T.union.tagged=1 T.union.discriminated=1 T.typeLiteral=4 T.typeLiteral.tagged=2 T.prop=13 T.prop.readonly=13 T.lit.string=2 T.kw.number=14 T.interface=1 T.kw.string=4 T.array.readonly=4 C.class=2 C.dataTaggedError=1 C.taggedError.nameIsTag=1 C.taggedError.fieldsN=1 T.function=5 T.kw.void=2 C.service=1 T.typeArgs.call=5 T.prop.function=3 T.kw.never=1 E.object=8 E.array=13 T.generic.fn=1 T.tuple=4 T.tuple.readonly=3 T.tuple.arity2=3 E.object.spread=2 T.tuple.arity3plus=1
+### probe: categories
+category	occurrences	files	projects	effectFiles	description
+T.interface	6	5	1	5	interface declaration
+T.typeLiteral	11	4	1	4	object type literal { ... }
+T.typeAlias.object	0	0	0	0	type alias whose right side is an object type literal
+T.prop	33	5	1	5	property signature (a field of an interface or type literal)
+T.prop.optional	0	0	0	0	optional property signature a?: T
+T.prop.readonly	33	5	1	5	readonly property signature
+T.prop.function	4	2	1	2	function-typed field: property typed by a function type, or a method signature
+T.prop.quotedName	0	0	0	0	property signature with a quoted or computed name
+T.indexSignature	0	0	0	0	index signature [k: K]: V
+T.union	7	3	1	3	union type
+T.union.nullish	0	0	0	0	union with an undefined or null member
+T.union.literals	0	0	0	0	union whose members are all literal types
+T.union.tagged	1	1	1	1	union of >= 2 object type literals each with a literal _tag field
+T.union.discriminated	1	1	1	1	union of >= 2 object type literals sharing one literal-typed field (any name)
+T.typeLiteral.tagged	2	1	1	1	object type literal with a literal-typed _tag field
+T.intersection	0	0	0	0	intersection type A & B
+T.intersection.brand	0	0	0	0	intersection with a Brand.Brand reference or a __brand/_brand field
+T.tuple	7	3	1	3	tuple type [A, B]
+T.tuple.readonly	4	2	1	2	readonly tuple type
+T.tuple.rest	0	0	0	0	tuple type with a rest element
+T.tuple.optional	0	0	0	0	tuple type with an optional element
+T.tuple.named	0	0	0	0	tuple type with named members
+T.tuple.arity2	5	3	1	3	tuple type with exactly 2 elements and no rest
+T.tuple.arity3plus	2	2	1	2	tuple type with 3 or more elements and no rest
+T.tuple.arity01	0	0	0	0	tuple type with 0 or 1 elements and no rest
+T.array	0	0	0	0	array type T[]
+T.array.readonly	8	2	1	2	readonly T[] or ReadonlyArray<T>
+T.array.ref	0	0	0	0	Array<T> reference
+T.recordType.stringKey	0	0	0	0	Record<K, V> with K = string (a keyed map)
+T.recordType.literalKeys	0	0	0	0	Record<K, V> with K a literal or a union of literals (a fixed-key record)
+T.recordType.otherKey	0	0	0	0	Record<K, V> with any other key type
+T.recordType.untypedValue	0	0	0	0	Record<K, V> with V = unknown or any (an untyped bag)
+T.kw.number	42	5	1	5	number
+T.kw.string	20	4	1	4	string
+T.kw.boolean	2	2	1	2	boolean
+T.kw.bigint	0	0	0	0	bigint
+T.kw.symbol	0	0	0	0	symbol
+T.kw.uniqueSymbol	0	0	0	0	unique symbol
+T.kw.undefined	0	0	0	0	undefined (type)
+T.kw.null	0	0	0	0	null (type)
+T.kw.void	5	2	1	2	void (type)
+T.kw.never	1	1	1	1	never
+T.kw.unknown	0	0	0	0	unknown
+T.kw.any	0	0	0	0	any
+T.kw.object	0	0	0	0	object
+T.lit.string	2	1	1	1	string literal type
+T.lit.number	0	0	0	0	number literal type (signed included)
+T.lit.boolean	0	0	0	0	true/false literal type
+T.lit.bigint	0	0	0	0	bigint literal type
+T.templateLiteral	0	0	0	0	template literal type `${...}`
+T.function	6	2	1	2	function type (a => b) anywhere in a type
+T.generic.fn	2	2	1	2	function-like declaration or signature with type parameters
+T.generic.type	0	0	0	0	type alias, interface or class with type parameters
+T.typeParam.schema	0	0	0	0	type parameter whose constraint mentions a Schema.* type
+T.param.schema	0	0	0	0	value parameter typed Schema.<...>
+T.typeArgs.call	14	4	1	4	explicit type arguments at a call or new
+T.typeof	1	1	1	1	typeof query in a type
+T.typeof.schemaType	1	1	1	1	typeof X.Type / X.Encoded (a type read off a schema)
+T.keyof	0	0	0	0	keyof
+T.indexedAccess	0	0	0	0	indexed access T[K]
+T.mapped	0	0	0	0	mapped type
+T.conditional	0	0	0	0	conditional type
+T.recursive	0	0	0	0	interface or type alias that mentions its own name
+T.recursive.computed	0	0	0	0	recursive, with a mapped or conditional type in its body (type-level computation)
+T.recursive.viaFunction	0	0	0	0	recursive only through function types or method signatures (not data recursion)
+T.recursive.data	0	0	0	0	recursive data: neither of the two above
+T.enum	0	0	0	0	enum declaration
+T.moduleTypeRef	2	2	1	2	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	1	1	1	1	the same, with type arguments
+C.class	10	4	1	4	class declaration or expression
+C.dataTaggedError	6	4	1	4	extends Data.TaggedError(...)
+C.dataError	0	0	0	0	extends Data.Error
+C.schemaTaggedError	0	0	0	0	extends Schema.TaggedError(Class)<...>
+C.schemaError	0	0	0	0	extends Schema.Error(Class)<...>
+C.schemaClass	0	0	0	0	extends Schema.Class / Schema.TaggedClass
+C.dataClass	0	0	0	0	extends Data.Class / Data.TaggedClass
+C.service	4	2	1	2	extends Context.Service/Tag/Reference, Effect.Service, ServiceMap.*
+C.jsError	0	0	0	0	extends Error (or a JS error class)
+C.other	0	0	0	0	any other class
+C.taggedError.nameIsTag	6	4	1	4	tagged error class (Data or Schema) whose class name equals its tag
+C.taggedError.nameNotTag	0	0	0	0	tagged error class whose class name differs from its tag
+C.taggedError.fields0	0	0	0	0	tagged error class with no fields
+C.taggedError.messageOnly	0	0	0	0	tagged error class whose only field is message
+C.taggedError.fieldsN	6	4	1	4	tagged error class with fields other than message alone
+E.object	41	5	1	5	object literal
+E.object.spread	5	2	1	2	spread inside an object literal
+E.object.computedKey	0	0	0	0	computed property name in an object literal
+E.array	23	4	1	4	array literal
+E.number.fractional	0	0	0	0	numeric literal with a fraction or exponent
+E.number.negative	0	0	0	0	negated numeric literal -n
+E.bigint	0	0	0	0	bigint literal 10n
+E.null	0	0	0	0	null value
+E.undefined	2	2	1	2	undefined value
+E.template	7	2	1	2	template string with substitutions
+E.newDate	0	0	0	0	new Date(...)
+E.dateNow	0	0	0	0	Date.now()
+E.symbol	0	0	0	0	Symbol(...) or Symbol.for(...)
+E.newMap	0	0	0	0	new Map(...)
+E.newSet	0	0	0	0	new Set(...)
+E.jsonParse	0	0	0	0	JSON.parse
+E.jsonStringify	0	0	0	0	JSON.stringify
+E.math	0	0	0	0	Math.<member>
+E.durationString	4	2	1	2	a duration string such as "10 millis"
+E.instanceof	0	0	0	0	instanceof
+E.typeofTest	0	0	0	0	typeof x === / !== ...
+E.await	0	0	0	0	await
+E.async	0	0	0	0	async function
+E.newError	3	1	1	1	new X(...) where X's name ends in Error
+### probe: Effect types as types (R.<Module> any member; R.<Module>.<Type>)
+key	occurrences	files	projects	effectFiles
+R.Effect	17	5	1	5
+R.Effect.Effect	17	5	1	5
+R.Ref	5	2	1	2
+R.Ref.Ref	5	2	1	2
+R.Schema	3	1	1	1
+R.Schema.SchemaError	3	1	1	1
+R.Cause	2	1	1	1
+R.Cause.TimeoutError	2	1	1	1
+R.Deferred	2	1	1	1
+R.Deferred.Deferred	2	1	1	1
+R.Config	1	1	1	1
+R.Config.ConfigError	1	1	1	1
+R.Queue	1	1	1	1
+R.Queue.Dequeue	1	1	1	1
+### probe: tagged error payload field kinds (P.data.<kind>: Data.TaggedError TS field types; P.schema.<kind>: Schema.TaggedError field schemas)
+key	occurrences	files	projects	effectFiles
+P.data.number	5	4	1	4
+P.data.string	4	3	1	3
+### probe: bare type references
+key	occurrences	files	projects	effectFiles
+B.ReadonlyArray	8	2	1	2
+B.Response	4	1	1	1
+B.Promise	1	1	1	1
+### probe: module member accesses in expressions (M.<Module> total)
+key	occurrences	files	projects	effectFiles
+M.Effect	65	5	1	5
+M.Ref	18	3	1	3
+M.Data	6	4	1	4
+M.Layer	5	2	1	2
+M.Schema	5	1	1	1
+M.Context	4	2	1	2
+M.Cache	3	1	1	1
+M.Config	3	1	1	1
+M.Deferred	3	1	1	1
+M.Queue	3	1	1	1
+M.Fiber	2	2	1	2
+M.Schedule	2	1	1	1
+M.SqlClient	1	1	1	1
+### probe: module members (M.<Module>.<member>), occurrences >= 3
+key	occurrences	files	projects	effectFiles
+M.Effect.gen	13	5	1	5
+M.Effect.succeed	7	3	1	3
+M.Data.TaggedError	6	4	1	4
+M.Effect.fail	6	4	1	4
+M.Ref.make	6	3	1	3
+M.Effect.catchTag	5	4	1	4
+M.Effect.flatMap	5	4	1	4
+M.Ref.update	5	3	1	3
+M.Context.Service	4	2	1	2
+M.Ref.get	4	3	1	3
+M.Effect.forEach	3	2	1	2
+M.Layer.effect	3	2	1	2
+M.Ref.modify	3	3	1	3
+### probe: names imported from effect or @effect/* (files, projects)
+name	files	projects
+Effect	5	1
+Data	4	1
+Ref	3	1
+Context	2	1
+Fiber	2	1
+Layer	2	1
+Cache	1	1
+Cause	1	1
+Config	1	1
+Deferred	1	1
+Queue	1	1
+Schedule	1	1
+Schema	1	1
+SqlClient	1	1
+SqliteClient	1	1
+
+## dogfood: 6 files (0 unreadable, 0 with oxc parse errors), 4 projects, 6 files import effect or @effect/*
+### dogfood: per file, nonzero categories (T., C., E. only)
+- 2026-09-15-dogfood-1-evidence/idiomatic_rate_limiter.ts: E.array=2 E.object=1
+- 2026-09-15-dogfood-2-evidence/idiomatic_job_queue.ts: C.class=3 C.dataTaggedError=2 C.taggedError.nameNotTag=2 C.taggedError.messageOnly=2 T.typeLiteral=3 T.prop=3 T.kw.string=2 C.service=1 T.typeArgs.call=1 T.prop.readonly=1 T.prop.function=1 T.function=1 T.kw.number=3 T.union=1 E.durationString=1 E.array=2
+- 2026-09-15-dogfood-3-evidence/idiomatic_session_cache.ts: C.class=5 C.service=5 T.typeArgs.call=5 T.moduleTypeRef=1 T.kw.number=4 T.kw.string=1 E.undefined=2 E.array=3
+- 2026-09-16-dogfood-6-evidence/library-counter.ts: E.object=11
+- 2026-09-16-dogfood-6-evidence/library-quicklook.ts: E.object=17
+- 2026-09-16-dogfood-6-evidence/library-run.ts: T.recordType.stringKey=1 T.recordType.untypedValue=1 T.kw.string=12 T.kw.unknown=1 E.jsonStringify=1 T.typeLiteral=1 T.prop=1 T.prop.readonly=1 T.kw.any=15 T.function=1 T.kw.boolean=1 E.durationString=6 T.array=7 E.array=11 E.undefined=2 E.object=130 T.array.readonly=1 E.template=3 E.object.spread=6 T.union=1 T.union.literals=1 T.lit.string=3 T.typeArgs.call=2 E.newMap=1 T.kw.number=4
+### dogfood: categories
+category	occurrences	files	projects	effectFiles	description
+T.interface	0	0	0	0	interface declaration
+T.typeLiteral	4	2	2	2	object type literal { ... }
+T.typeAlias.object	0	0	0	0	type alias whose right side is an object type literal
+T.prop	4	2	2	2	property signature (a field of an interface or type literal)
+T.prop.optional	0	0	0	0	optional property signature a?: T
+T.prop.readonly	2	2	2	2	readonly property signature
+T.prop.function	1	1	1	1	function-typed field: property typed by a function type, or a method signature
+T.prop.quotedName	0	0	0	0	property signature with a quoted or computed name
+T.indexSignature	0	0	0	0	index signature [k: K]: V
+T.union	2	2	2	2	union type
+T.union.nullish	0	0	0	0	union with an undefined or null member
+T.union.literals	1	1	1	1	union whose members are all literal types
+T.union.tagged	0	0	0	0	union of >= 2 object type literals each with a literal _tag field
+T.union.discriminated	0	0	0	0	union of >= 2 object type literals sharing one literal-typed field (any name)
+T.typeLiteral.tagged	0	0	0	0	object type literal with a literal-typed _tag field
+T.intersection	0	0	0	0	intersection type A & B
+T.intersection.brand	0	0	0	0	intersection with a Brand.Brand reference or a __brand/_brand field
+T.tuple	0	0	0	0	tuple type [A, B]
+T.tuple.readonly	0	0	0	0	readonly tuple type
+T.tuple.rest	0	0	0	0	tuple type with a rest element
+T.tuple.optional	0	0	0	0	tuple type with an optional element
+T.tuple.named	0	0	0	0	tuple type with named members
+T.tuple.arity2	0	0	0	0	tuple type with exactly 2 elements and no rest
+T.tuple.arity3plus	0	0	0	0	tuple type with 3 or more elements and no rest
+T.tuple.arity01	0	0	0	0	tuple type with 0 or 1 elements and no rest
+T.array	7	1	1	1	array type T[]
+T.array.readonly	1	1	1	1	readonly T[] or ReadonlyArray<T>
+T.array.ref	0	0	0	0	Array<T> reference
+T.recordType.stringKey	1	1	1	1	Record<K, V> with K = string (a keyed map)
+T.recordType.literalKeys	0	0	0	0	Record<K, V> with K a literal or a union of literals (a fixed-key record)
+T.recordType.otherKey	0	0	0	0	Record<K, V> with any other key type
+T.recordType.untypedValue	1	1	1	1	Record<K, V> with V = unknown or any (an untyped bag)
+T.kw.number	11	3	3	3	number
+T.kw.string	15	3	3	3	string
+T.kw.boolean	1	1	1	1	boolean
+T.kw.bigint	0	0	0	0	bigint
+T.kw.symbol	0	0	0	0	symbol
+T.kw.uniqueSymbol	0	0	0	0	unique symbol
+T.kw.undefined	0	0	0	0	undefined (type)
+T.kw.null	0	0	0	0	null (type)
+T.kw.void	0	0	0	0	void (type)
+T.kw.never	0	0	0	0	never
+T.kw.unknown	1	1	1	1	unknown
+T.kw.any	15	1	1	1	any
+T.kw.object	0	0	0	0	object
+T.lit.string	3	1	1	1	string literal type
+T.lit.number	0	0	0	0	number literal type (signed included)
+T.lit.boolean	0	0	0	0	true/false literal type
+T.lit.bigint	0	0	0	0	bigint literal type
+T.templateLiteral	0	0	0	0	template literal type `${...}`
+T.function	2	2	2	2	function type (a => b) anywhere in a type
+T.generic.fn	0	0	0	0	function-like declaration or signature with type parameters
+T.generic.type	0	0	0	0	type alias, interface or class with type parameters
+T.typeParam.schema	0	0	0	0	type parameter whose constraint mentions a Schema.* type
+T.param.schema	0	0	0	0	value parameter typed Schema.<...>
+T.typeArgs.call	8	3	3	3	explicit type arguments at a call or new
+T.typeof	0	0	0	0	typeof query in a type
+T.typeof.schemaType	0	0	0	0	typeof X.Type / X.Encoded (a type read off a schema)
+T.keyof	0	0	0	0	keyof
+T.indexedAccess	0	0	0	0	indexed access T[K]
+T.mapped	0	0	0	0	mapped type
+T.conditional	0	0	0	0	conditional type
+T.recursive	0	0	0	0	interface or type alias that mentions its own name
+T.recursive.computed	0	0	0	0	recursive, with a mapped or conditional type in its body (type-level computation)
+T.recursive.viaFunction	0	0	0	0	recursive only through function types or method signatures (not data recursion)
+T.recursive.data	0	0	0	0	recursive data: neither of the two above
+T.enum	0	0	0	0	enum declaration
+T.moduleTypeRef	1	1	1	1	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	0	0	0	0	the same, with type arguments
+C.class	8	2	2	2	class declaration or expression
+C.dataTaggedError	2	1	1	1	extends Data.TaggedError(...)
+C.dataError	0	0	0	0	extends Data.Error
+C.schemaTaggedError	0	0	0	0	extends Schema.TaggedError(Class)<...>
+C.schemaError	0	0	0	0	extends Schema.Error(Class)<...>
+C.schemaClass	0	0	0	0	extends Schema.Class / Schema.TaggedClass
+C.dataClass	0	0	0	0	extends Data.Class / Data.TaggedClass
+C.service	6	2	2	2	extends Context.Service/Tag/Reference, Effect.Service, ServiceMap.*
+C.jsError	0	0	0	0	extends Error (or a JS error class)
+C.other	0	0	0	0	any other class
+C.taggedError.nameIsTag	0	0	0	0	tagged error class (Data or Schema) whose class name equals its tag
+C.taggedError.nameNotTag	2	1	1	1	tagged error class whose class name differs from its tag
+C.taggedError.fields0	0	0	0	0	tagged error class with no fields
+C.taggedError.messageOnly	2	1	1	1	tagged error class whose only field is message
+C.taggedError.fieldsN	0	0	0	0	tagged error class with fields other than message alone
+E.object	159	4	2	4	object literal
+E.object.spread	6	1	1	1	spread inside an object literal
+E.object.computedKey	0	0	0	0	computed property name in an object literal
+E.array	18	4	4	4	array literal
+E.number.fractional	0	0	0	0	numeric literal with a fraction or exponent
+E.number.negative	0	0	0	0	negated numeric literal -n
+E.bigint	0	0	0	0	bigint literal 10n
+E.null	0	0	0	0	null value
+E.undefined	4	2	2	2	undefined value
+E.template	3	1	1	1	template string with substitutions
+E.newDate	0	0	0	0	new Date(...)
+E.dateNow	0	0	0	0	Date.now()
+E.symbol	0	0	0	0	Symbol(...) or Symbol.for(...)
+E.newMap	1	1	1	1	new Map(...)
+E.newSet	0	0	0	0	new Set(...)
+E.jsonParse	0	0	0	0	JSON.parse
+E.jsonStringify	1	1	1	1	JSON.stringify
+E.math	0	0	0	0	Math.<member>
+E.durationString	7	2	2	2	a duration string such as "10 millis"
+E.instanceof	0	0	0	0	instanceof
+E.typeofTest	0	0	0	0	typeof x === / !== ...
+E.await	0	0	0	0	await
+E.async	0	0	0	0	async function
+E.newError	0	0	0	0	new X(...) where X's name ends in Error
+### dogfood: Effect types as types (R.<Module> any member; R.<Module>.<Type>)
+key	occurrences	files	projects	effectFiles
+R.Effect	2	2	2	2
+R.Effect.Effect	2	2	2	2
+R.Ref	2	1	1	1
+R.Ref.Ref	2	1	1	1
+R.Deferred	1	1	1	1
+R.Deferred.Deferred	1	1	1	1
+R.KeyValueStore	1	1	1	1
+R.KeyValueStore.KeyValueStore	1	1	1	1
+### dogfood: tagged error payload field kinds (P.data.<kind>: Data.TaggedError TS field types; P.schema.<kind>: Schema.TaggedError field schemas)
+key	occurrences	files	projects	effectFiles
+P.data.string	2	1	1	1
+### dogfood: bare type references
+key	occurrences	files	projects	effectFiles
+B.ReadonlyArray	1	1	1	1
+B.Record	1	1	1	1
+### dogfood: module member accesses in expressions (M.<Module> total)
+key	occurrences	files	projects	effectFiles
+M.Effect	49	6	4	6
+M.Ref	29	3	3	3
+M.Layer	8	1	1	1
+M.Schema	8	2	1	2
+M.Context	6	2	2	2
+M.Deferred	4	1	1	1
+M.Schedule	4	1	1	1
+M.Data	2	1	1	1
+M.KeyValueStore	2	1	1	1
+M.Option	2	1	1	1
+### dogfood: module members (M.<Module>.<member>), occurrences >= 3
+key	occurrences	files	projects	effectFiles
+M.Effect.gen	19	6	4	6
+M.Ref.get	11	3	3	3
+M.Ref.update	9	3	3	3
+M.Ref.make	8	3	3	3
+M.Schema.Number	8	2	1	2
+M.Effect.sleep	7	2	2	2
+M.Context.Service	5	1	1	1
+M.Effect.scoped	5	2	1	2
+M.Effect.exit	3	1	1	1
+M.Effect.provide	3	1	1	1
+M.Layer.effect	3	1	1	1
+### dogfood: names imported from effect or @effect/* (files, projects)
+name	files	projects
+Effect	6	4
+Ref	3	3
+Context	2	2
+Schema	2	1
+Data	1	1
+Deferred	1	1
+KeyValueStore	1	1
+Layer	1	1
+Option	1	1
+Schedule	1	1
+
+## v4-app: 10905 files (0 unreadable, 0 with oxc parse errors), 15 projects, 10899 files import effect or @effect/*
+### v4-app: categories
+category	occurrences	files	projects	effectFiles	description
+T.interface	10575	5246	13	5246	interface declaration
+T.typeLiteral	11882	2992	15	2991	object type literal { ... }
+T.typeAlias.object	1047	461	15	460	type alias whose right side is an object type literal
+T.prop	54625	3670	15	3669	property signature (a field of an interface or type literal)
+T.prop.optional	16537	2407	14	2407	optional property signature a?: T
+T.prop.readonly	19356	1746	15	1745	readonly property signature
+T.prop.function	3304	694	15	694	function-typed field: property typed by a function type, or a method signature
+T.prop.quotedName	400	62	8	62	property signature with a quoted or computed name
+T.indexSignature	270	181	8	181	index signature [k: K]: V
+T.union	18133	3422	15	3421	union type
+T.union.nullish	11115	2261	15	2260	union with an undefined or null member
+T.union.literals	2353	1328	15	1328	union whose members are all literal types
+T.union.tagged	59	37	8	37	union of >= 2 object type literals each with a literal _tag field
+T.union.discriminated	222	168	11	168	union of >= 2 object type literals sharing one literal-typed field (any name)
+T.typeLiteral.tagged	189	46	8	46	object type literal with a literal-typed _tag field
+T.intersection	1154	554	14	554	intersection type A & B
+T.intersection.brand	1	1	1	1	intersection with a Brand.Brand reference or a __brand/_brand field
+T.tuple	920	282	13	282	tuple type [A, B]
+T.tuple.readonly	239	79	10	79	readonly tuple type
+T.tuple.rest	114	62	8	62	tuple type with a rest element
+T.tuple.optional	12	8	3	8	tuple type with an optional element
+T.tuple.named	99	38	8	38	tuple type with named members
+T.tuple.arity2	275	193	13	193	tuple type with exactly 2 elements and no rest
+T.tuple.arity3plus	33	16	6	16	tuple type with 3 or more elements and no rest
+T.tuple.arity01	498	54	8	54	tuple type with 0 or 1 elements and no rest
+T.array	7295	1830	9	1828	array type T[]
+T.array.readonly	5195	1381	15	1378	readonly T[] or ReadonlyArray<T>
+T.array.ref	1392	449	15	448	Array<T> reference
+T.recordType.stringKey	3919	1301	15	1301	Record<K, V> with K = string (a keyed map)
+T.recordType.literalKeys	5	5	4	5	Record<K, V> with K a literal or a union of literals (a fixed-key record)
+T.recordType.otherKey	272	148	10	148	Record<K, V> with any other key type
+T.recordType.untypedValue	1264	454	13	454	Record<K, V> with V = unknown or any (an untyped bag)
+T.kw.number	6904	1503	15	1503	number
+T.kw.string	52280	3921	15	3917	string
+T.kw.boolean	4206	1400	14	1400	boolean
+T.kw.bigint	19	14	8	14	bigint
+T.kw.symbol	69	25	4	25	symbol
+T.kw.uniqueSymbol	43	13	4	13	unique symbol
+T.kw.undefined	8965	1944	15	1943	undefined (type)
+T.kw.null	2607	712	14	712	null (type)
+T.kw.void	2683	825	15	825	void (type)
+T.kw.never	5014	1810	14	1810	never
+T.kw.unknown	6036	1439	15	1439	unknown
+T.kw.any	3492	418	10	418	any
+T.kw.object	333	133	8	133	object
+T.lit.string	17984	5274	15	5274	string literal type
+T.lit.number	480	120	11	120	number literal type (signed included)
+T.lit.boolean	370	105	11	105	true/false literal type
+T.lit.bigint	0	0	0	0	bigint literal type
+T.templateLiteral	149	79	6	79	template literal type `${...}`
+T.function	10293	4052	15	4052	function type (a => b) anywhere in a type
+T.generic.fn	3504	1609	15	1609	function-like declaration or signature with type parameters
+T.generic.type	1478	315	13	315	type alias, interface or class with type parameters
+T.typeParam.schema	118	43	6	43	type parameter whose constraint mentions a Schema.* type
+T.param.schema	97	56	5	56	value parameter typed Schema.<...>
+T.typeArgs.call	9660	5495	15	5494	explicit type arguments at a call or new
+T.typeof	3955	1192	14	1192	typeof query in a type
+T.typeof.schemaType	378	153	11	153	typeof X.Type / X.Encoded (a type read off a schema)
+T.keyof	371	163	11	163	keyof
+T.indexedAccess	4204	1101	14	1101	indexed access T[K]
+T.mapped	241	105	11	105	mapped type
+T.conditional	975	93	8	93	conditional type
+T.recursive	266	129	10	129	interface or type alias that mentions its own name
+T.recursive.computed	52	17	4	17	recursive, with a mapped or conditional type in its body (type-level computation)
+T.recursive.viaFunction	18	15	6	15	recursive only through function types or method signatures (not data recursion)
+T.recursive.data	196	108	10	108	recursive data: neither of the two above
+T.enum	8	5	3	5	enum declaration
+T.moduleTypeRef	1928	874	15	874	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	1296	637	14	637	the same, with type arguments
+C.class	2574	1141	15	1141	class declaration or expression
+C.dataTaggedError	972	452	9	452	extends Data.TaggedError(...)
+C.dataError	10	4	2	4	extends Data.Error
+C.schemaTaggedError	505	134	9	134	extends Schema.TaggedError(Class)<...>
+C.schemaError	19	15	4	15	extends Schema.Error(Class)<...>
+C.schemaClass	279	71	7	71	extends Schema.Class / Schema.TaggedClass
+C.dataClass	15	8	4	8	extends Data.Class / Data.TaggedClass
+C.service	427	348	13	348	extends Context.Service/Tag/Reference, Effect.Service, ServiceMap.*
+C.jsError	39	32	8	32	extends Error (or a JS error class)
+C.other	308	227	10	227	any other class
+C.taggedError.nameIsTag	1028	437	14	437	tagged error class (Data or Schema) whose class name equals its tag
+C.taggedError.nameNotTag	449	156	4	156	tagged error class whose class name differs from its tag
+C.taggedError.fields0	172	58	6	58	tagged error class with no fields
+C.taggedError.messageOnly	150	113	9	113	tagged error class whose only field is message
+C.taggedError.fieldsN	1155	490	13	490	tagged error class with fields other than message alone
+E.object	78705	7590	15	7585	object literal
+E.object.spread	7293	2151	14	2151	spread inside an object literal
+E.object.computedKey	403	184	11	184	computed property name in an object literal
+E.array	25057	6207	15	6202	array literal
+E.number.fractional	290	86	9	85	numeric literal with a fraction or exponent
+E.number.negative	393	243	12	242	negated numeric literal -n
+E.bigint	13	8	4	8	bigint literal 10n
+E.null	5164	1335	12	1334	null value
+E.undefined	25486	2662	15	2660	undefined value
+E.template	12602	2620	15	2616	template string with substitutions
+E.newDate	836	350	11	350	new Date(...)
+E.dateNow	375	163	9	163	Date.now()
+E.symbol	58	27	7	27	Symbol(...) or Symbol.for(...)
+E.newMap	1036	440	14	439	new Map(...)
+E.newSet	1136	546	14	545	new Set(...)
+E.jsonParse	265	208	12	208	JSON.parse
+E.jsonStringify	1375	616	12	614	JSON.stringify
+E.math	966	291	11	291	Math.<member>
+E.durationString	1001	553	11	553	a duration string such as "10 millis"
+E.instanceof	901	354	12	354	instanceof
+E.typeofTest	2616	914	12	914	typeof x === / !== ...
+E.await	3035	470	12	468	await
+E.async	1764	487	12	485	async function
+E.newError	5131	1527	15	1525	new X(...) where X's name ends in Error
+### v4-app: Effect types as types (R.<Module> any member; R.<Module>.<Type>)
+key	occurrences	files	projects	effectFiles
+R.Effect	14077	4778	15	4778
+R.Effect.Effect	13968	4769	15	4769
+R.Schema	2343	323	10	323
+R.Schema.Schema	2031	263	9	263
+R.Redacted	511	241	7	241
+R.Redacted.Redacted	511	241	7	241
+R.Layer	347	190	12	190
+R.Option	334	95	12	95
+R.Option.Option	327	95	12	95
+R.Stream	318	185	9	185
+R.Layer.Layer	312	178	12	178
+R.Stream.Stream	311	185	9	185
+R.Duration	307	177	9	177
+R.Duration.Input	269	155	8	155
+R.Scope	206	121	11	121
+R.Scope.Scope	183	114	11	114
+R.Schema.Top	148	40	5	40
+R.Types	97	17	5	17
+R.Context	87	50	7	50
+R.Cause	81	34	8	34
+R.Cause.Cause	74	27	8	27
+R.Types.DeepMutable	58	13	1	13
+R.Context.Context	48	26	5	26
+R.Exit	47	26	9	26
+R.Exit.Exit	47	26	9	26
+R.Deferred	45	19	5	19
+R.Deferred.Deferred	45	19	5	19
+R.Schema.Codec	45	18	4	18
+R.Config	43	30	4	30
+R.Effect.Success	41	22	6	22
+R.Duration.Duration	38	24	6	24
+R.Types.Covariant	30	1	1	1
+R.Schema.SchemaError	29	16	6	16
+R.DateTime	26	7	4	7
+R.DateTime.Utc	25	6	4	6
+R.Schema.Constraint	24	23	2	23
+R.Effect.Services	23	8	3	8
+R.Schema.Json	23	7	3	7
+R.Scope.Closeable	23	14	4	14
+R.Effect.Error	22	6	4	6
+R.Context.Service	19	16	3	16
+R.Fiber	19	14	5	14
+R.Fiber.Fiber	19	14	5	14
+R.Config.ConfigError	18	14	4	14
+R.Effect.fn	16	9	4	9
+R.Schema.Decoder	16	5	2	5
+R.Schema.Struct	16	5	1	5
+R.Layer.Services	15	14	3	14
+R.Context.Key	14	7	2	7
+R.Data	13	12	5	12
+R.Data.TaggedEnum	13	12	5	12
+R.Result	13	8	5	8
+R.Result.Result	13	8	5	8
+R.Semaphore	13	12	3	12
+R.Semaphore.Semaphore	13	12	3	12
+R.Sink	13	11	2	11
+R.Sink.Sink	13	11	2	11
+R.Ref	12	8	6	8
+R.Ref.Ref	12	8	6	8
+R.Config.Config	9	7	3	7
+R.Layer.Any	9	1	1	1
+R.PubSub	9	4	3	4
+R.PubSub.PubSub	9	4	3	4
+R.Queue	8	4	3	4
+R.Option.Some	7	2	2	2
+R.Schedule	7	6	3	6
+R.Config.Document	6	5	1	5
+R.Context.ServiceClass	6	4	2	4
+R.Latch	6	3	1	3
+R.Latch.Latch	6	3	1	3
+R.Schedule.Schedule	6	5	2	5
+R.Tracer	6	3	1	3
+R.Cache	5	2	2	2
+R.Cause.Done	5	5	2	5
+R.Chunk	5	5	2	5
+R.Chunk.Chunk	5	5	2	5
+R.Config.Service	5	5	2	5
+R.Layer.Success	5	4	2	4
+R.Queue.Queue	5	2	1	2
+R.Types.UnionToIntersection	5	1	1	1
+R.Cache.Breakpoints	4	1	1	1
+R.Effect.RunOptions	4	2	1	2
+R.Layer.Error	4	3	3	3
+R.MutableHashMap	4	2	1	2
+R.MutableHashMap.MutableHashMap	4	2	1	2
+R.Tracer.AnySpan	4	2	1	2
+R.Config.Entry	3	2	1	2
+R.Queue.Dequeue	3	2	2	2
+R.Stream.Error	3	1	1	1
+R.Brand	2	2	2	2
+R.Effect.EffectIterator	2	2	1	2
+R.FiberSet	2	2	2	2
+R.FiberSet.FiberSet	2	2	2	2
+R.Layer.MemoMap	2	2	2	2
+R.Schema.Annotations	2	2	2	2
+R.Schema.ConstraintDecoder	2	2	1	2
+R.Schema.ConstraintEncoder	2	1	1	1
+R.Schema.Union	2	2	1	2
+R.SchemaIssue	2	2	1	2
+R.Stream.Services	2	1	1	1
+R.Stream.Success	2	1	1	1
+R.Types.Mutable	2	2	2	2
+R.Brand.Brand	1	1	1	1
+R.Brand.Branded	1	1	1	1
+R.Cache.Cache	1	1	1	1
+R.Cause.Reason	1	1	1	1
+R.Cause.UnknownError	1	1	1	1
+R.Config.Interface	1	1	1	1
+R.Config.Wrap	1	1	1	1
+R.DateTime.DateTime	1	1	1	1
+R.Effect.gen	1	1	1	1
+R.HashMap	1	1	1	1
+R.HashMap.HashMap	1	1	1	1
+R.Logger	1	1	1	1
+R.Logger.Options	1	1	1	1
+R.Schedule.InputMetadata	1	1	1	1
+R.Schema.MakeOptions	1	1	1	1
+R.Schema.Opaque	1	1	1	1
+R.Schema.optionalKey	1	1	1	1
+R.SchemaIssue.Issue	1	1	1	1
+R.SchemaIssue.LeafHook	1	1	1	1
+R.ScopedCache	1	1	1	1
+R.ScopedCache.ScopedCache	1	1	1	1
+R.SubscriptionRef	1	1	1	1
+R.SubscriptionRef.SubscriptionRef	1	1	1	1
+R.SynchronizedRef	1	1	1	1
+R.SynchronizedRef.SynchronizedRef	1	1	1	1
+R.Tracer.Span	1	1	1	1
+R.Tracer.SpanKind	1	1	1	1
+R.Types.Contravariant	1	1	1	1
+R.Types.EqualsWith	1	1	1	1
+### v4-app: tagged error payload field kinds (P.data.<kind>: Data.TaggedError TS field types; P.schema.<kind>: Schema.TaggedError field schemas)
+key	occurrences	files	projects	effectFiles
+P.data.string	1020	381	7	381
+P.schema.string	396	98	8	98
+P.schema.other	298	51	2	51
+P.data.union	161	94	5	94
+P.data.unknown	143	109	8	109
+P.schema.optional-or-nullable	86	37	4	37
+P.data.number	80	50	5	50
+P.data.other-reference	48	30	7	30
+P.schema.other-schema	37	20	5	20
+P.schema.number	34	11	4	11
+P.data.array	26	18	3	18
+P.schema.literal	20	16	4	16
+P.data.other	18	17	5	17
+P.schema.array	18	10	3	10
+P.data.error-reference	13	13	4	13
+P.data.boolean	2	2	2	2
+P.schema.unknown	2	2	2	2
+P.data.any	1	1	1	1
+P.schema.boolean	1	1	1	1
+P.schema.record	1	1	1	1
+### v4-app: bare type references
+key	occurrences	files	projects	effectFiles
+B.Record	4196	1398	15	1398
+B.ReadonlyArray	2875	574	14	572
+B.Array	1392	449	15	448
+B.Promise	1176	379	12	379
+B.Omit	872	687	8	687
+B.Date	664	237	7	237
+B.Error	542	92	8	92
+B.Parameters	389	95	8	95
+B.ReturnType	348	196	11	196
+B.Pick	320	232	9	232
+B.Readonly	293	106	11	106
+B.Partial	289	218	10	218
+B.Uint8Array	289	136	10	136
+B.Extract	247	67	9	67
+B.Exclude	221	91	13	91
+B.NonNullable	217	117	8	117
+B.ReadonlyMap	190	85	8	85
+B.Map	147	78	10	78
+B.ReadonlySet	114	62	9	61
+B.URL	93	54	6	54
+B.Request	87	40	7	40
+B.Response	82	43	7	43
+B.Set	82	50	8	50
+B.ArrayBuffer	38	23	5	23
+B.Headers	36	19	6	19
+B.RegExp	35	14	4	14
+B.Iterable	29	22	6	22
+B.Required	22	15	4	15
+B.AsyncIterable	2	2	1	2
+### v4-app: module member accesses in expressions (M.<Module> total)
+key	occurrences	files	projects	effectFiles
+M.Effect	51783	4323	15	4323
+M.Schema	16678	803	13	803
+M.Layer	5082	3746	15	3746
+M.Schedule	2525	570	12	570
+M.Stream	2269	921	11	921
+M.Array	2177	1145	14	1144
+M.Option	1340	401	14	401
+M.Data	1013	477	11	477
+M.Redacted	615	252	8	252
+M.Context	544	405	14	405
+M.Atom	513	52	6	52
+M.Config	425	140	9	140
+M.Flag	421	48	7	48
+M.Number	360	190	11	190
+M.FileSystem	337	163	8	163
+M.Duration	278	118	13	118
+M.Predicate	278	231	5	231
+M.Path	261	133	7	133
+M.HttpApiEndpoint	248	46	5	46
+M.Deferred	236	39	7	39
+M.Command	233	66	7	66
+M.Match	230	16	3	16
+M.Console	203	43	5	43
+M.Cause	202	87	13	87
+M.Result	199	81	10	81
+M.Exit	186	77	12	77
+M.HttpClientRequest	166	47	3	47
+M.Scope	160	62	9	62
+M.Ref	143	31	9	31
+M.Queue	127	32	6	32
+M.DateTime	110	34	5	34
+M.HttpClient	101	59	6	59
+M.ChildProcess	92	56	5	56
+M.Cache	76	23	5	23
+M.HttpApiBuilder	66	48	5	48
+M.Semaphore	62	40	4	40
+M.Clock	58	30	7	30
+M.Fiber	54	36	8	36
+M.ConfigProvider	52	28	3	28
+M.HttpApiGroup	52	45	5	45
+M.SynchronizedRef	51	8	2	8
+M.PubSub	44	7	4	7
+M.Order	39	11	4	11
+M.HttpRouter	38	28	8	28
+M.String	37	30	5	30
+M.HttpApi	34	30	5	30
+M.HttpClientResponse	33	15	3	15
+M.Equal	31	14	4	14
+M.Random	31	13	3	13
+M.Logger	30	18	5	18
+M.MutableHashMap	30	7	2	7
+M.Chunk	29	6	2	6
+M.Model	29	13	2	13
+M.KeyValueStore	26	7	2	7
+M.FiberSet	24	6	3	6
+M.Argument	22	8	4	8
+M.Metric	21	2	2	2
+M.SubscriptionRef	21	5	3	5
+M.Request	18	8	2	8
+M.Encoding	16	11	5	11
+M.Rpc	16	8	5	8
+M.Sink	16	8	3	8
+M.FiberMap	12	3	3	3
+M.Struct	12	6	2	6
+M.HttpServer	11	9	3	9
+M.SchemaIssue	11	7	2	7
+M.HashMap	10	3	3	3
+M.ScopedCache	10	2	2	2
+M.Hash	9	7	3	7
+M.SqlClient	7	1	1	1
+M.RcMap	6	3	2	3
+M.Record	6	5	3	5
+M.RpcGroup	6	6	3	6
+M.FiberHandle	5	2	2	2
+M.Tracer	5	2	2	2
+M.Channel	4	2	2	2
+M.Terminal	4	3	2	3
+M.Function	3	3	2	3
+M.Latch	3	3	3	3
+M.RcRef	3	1	1	1
+M.ServiceMap	3	3	1	3
+M.Brand	2	2	2	2
+M.Workflow	2	2	1	2
+M.Activity	1	1	1	1
+M.Equivalence	1	1	1	1
+M.Persistence	1	1	1	1
+M.Pool	1	1	1	1
+### v4-app: module members (M.<Module>.<member>), occurrences >= 3
+key	occurrences	files	projects	effectFiles
+M.Effect.fn	9392	2219	12	2219
+M.Effect.gen	7563	3088	15	3088
+M.Effect.succeed	5047	1928	13	1928
+M.Effect.catchTag	4320	1259	9	1259
+M.Effect.map	3750	1522	14	1522
+M.Layer.effect	3463	3356	14	3356
+M.Schema.String	3094	517	12	517
+M.Schema.optional	2771	282	12	282
+M.Effect.fail	2725	1070	14	1070
+M.Schema.Struct	2721	456	12	456
+M.Effect.void	2411	1268	15	1268
+M.Array.from	1512	916	10	916
+M.Effect.sync	1351	479	15	479
+M.Effect.flatMap	1306	690	15	690
+M.Stream.runCollect	1100	734	6	734
+M.Data.TaggedError	972	452	9	452
+M.Effect.forEach	967	660	11	660
+M.Effect.retry	938	494	10	494
+M.Effect.mapError	895	328	12	328
+M.Schema.Array	857	291	10	291
+M.Schema.Boolean	766	212	10	212
+M.Effect.runPromise	669	216	10	216
+M.Schedule.recurs	664	372	4	372
+M.Schedule.max	658	369	2	369
+M.Effect.catch	650	341	12	341
+M.Effect.tryPromise	630	293	13	293
+M.Schema.decodeUnknownEffect	618	149	7	149
+M.Effect.orDie	555	226	8	226
+M.Schema.Literal	546	159	7	159
+M.Effect.annotateCurrentSpan	517	231	5	231
+M.Layer.mergeAll	496	234	12	234
+M.Effect.die	491	261	7	261
+M.Effect.provide	490	284	15	284
+M.Schedule.fixed	475	258	3	258
+M.Context.Service	461	373	14	373
+M.Array.isArray	460	246	9	246
+M.Schema.Number	434	130	11	130
+M.Effect.all	425	253	12	253
+M.Effect.fnUntraced	419	165	9	165
+M.Effect.promise	415	224	10	224
+M.Schedule.spaced	372	231	9	231
+M.Effect.asVoid	364	199	12	199
+M.Layer.provide	353	179	13	179
+M.Schema.Literals	341	179	9	179
+M.Schema.TaggedError	317	65	4	65
+M.Redacted.value	312	198	7	198
+M.Schema.brand	311	98	7	98
+M.Schema.Union	284	166	8	166
+M.FileSystem.FileSystem	271	138	7	138
+M.Layer.succeed	263	167	13	167
+M.Effect.logInfo	258	76	8	76
+M.Effect.provideService	258	133	12	133
+M.Effect.withSpan	250	188	9	188
+M.Path.Path	242	129	6	129
+M.Layer.provideMerge	240	92	11	92
+M.Effect.andThen	239	114	12	114
+M.Option.isSome	239	117	12	117
+M.Predicate.hasProperty	238	219	4	219
+M.Atom.make	236	40	6	40
+M.Schedule.exponential	229	170	9	170
+M.Effect.tap	222	127	11	127
+M.Schema.Record	220	102	11	102
+M.Schema.optionalKey	216	50	9	50
+M.Schema.NullOr	210	64	9	64
+M.Effect.tapError	208	112	8	112
+M.Schema.Unknown	205	94	9	94
+M.Effect.suspend	199	123	12	123
+M.Effect.repeat	197	167	7	167
+M.Effect.ignore	196	108	12	108
+M.Stream.filter	195	163	5	163
+M.Schema.check	194	73	4	73
+M.Console.log	192	40	5	40
+M.Schema.decodeUnknownSync	188	99	9	99
+M.Schema.TaggedErrorClass	188	69	6	69
+M.Redacted.make	186	105	5	105
+M.Effect.try	182	133	11	133
+M.Option.getOrUndefined	180	135	7	135
+M.Effect.as	179	116	11	116
+M.Option.isNone	165	102	10	102
+M.Option.none	162	71	11	71
+M.Effect.isEffect	153	97	3	97
+M.Schema.Class	153	63	6	63
+M.Effect.logWarning	152	96	8	96
+M.Effect.catchIf	147	54	6	54
+M.Schema.Finite	141	26	3	26
+M.Option.some	140	63	11	63
+M.Schema.makeFilter	140	56	3	56
+M.Effect.catchCause	139	91	10	91
+M.Effect.orElseSucceed	134	77	6	77
+M.HttpApiEndpoint.get	129	39	5	39
+M.Match.when	126	14	2	14
+M.Schema.TaggedClass	126	11	4	11
+M.Effect.runSync	123	68	9	68
+M.Effect.logError	121	63	8	63
+M.Redacted.isRedacted	117	94	3	94
+M.Number.isFinite	112	75	10	75
+M.Effect.scoped	111	86	11	86
+M.Flag.withDescription	110	25	7	25
+M.Schema.tag	110	22	6	22
+M.Stream.map	110	73	6	73
+M.Schema.NonEmptyString	109	32	7	32
+M.Option.match	108	67	11	67
+M.Effect.sleep	107	75	10	75
+M.Stream.runHead	105	93	2	93
+M.Effect.context	96	80	10	80
+M.Effect.logDebug	93	39	6	39
+M.Config.string	92	49	6	49
+M.Option.fromNullishOr	92	37	10	37
+M.Schema.annotateKey	91	2	1	2
+M.Duration.seconds	89	63	8	63
+M.HttpApiEndpoint.post	88	26	4	26
+M.Command.make	85	49	7	49
+M.Schema.Schema	85	29	1	29
+M.Effect.log	80	42	6	42
+M.ChildProcess.make	79	48	5	48
+M.Effect.forkScoped	79	51	8	51
+M.Effect.ensuring	78	55	10	55
+M.Effect.serviceOption	75	51	3	51
+M.Schema.decodeUnknownOption	73	42	4	42
+M.Effect.acquireRelease	71	55	9	55
+M.Effect.provideContext	71	55	4	55
+M.Deferred.await	69	36	7	36
+M.Effect.addFinalizer	69	58	6	58
+M.Config.withDefault	67	42	7	42
+M.Schema.Int	67	33	7	33
+M.Option.map	65	36	11	36
+M.Atom.keepAlive	64	10	3	10
+M.HttpClient.HttpClient	64	54	6	54
+M.Option.getOrElse	64	50	9	50
+M.Effect.exit	63	30	9	30
+M.Schema.Defect	63	44	7	44
+M.Effect.result	62	32	7	32
+M.Result.isFailure	61	35	7	35
+M.Result.isSuccess	61	38	6	38
+M.Duration.millis	59	45	9	45
+M.Stream.decodeText	59	38	4	38
+M.Exit.isFailure	58	22	8	22
+M.Exit.isSuccess	58	41	9	41
+M.Array.filter	57	22	3	22
+M.Schema.fromJsonString	57	45	7	45
+M.Clock.currentTimeMillis	56	28	6	28
+M.Stream.runForEach	56	43	6	43
+M.Number.isNaN	55	36	7	36
+M.Cause.squash	53	36	7	36
+M.HttpApiBuilder.group	52	45	5	45
+M.HttpApiGroup.make	52	45	5	45
+M.Stream.mapEffect	52	39	4	39
+M.Command.withDescription	50	35	7	35
+M.Config.Service	50	47	1	47
+M.Flag.withDefault	50	20	6	20
+M.Layer.merge	50	40	9	40
+M.Deferred.make	49	31	6	31
+M.Match.exhaustive	49	12	1	12
+M.Match.value	49	12	1	12
+M.Deferred.succeed	48	25	5	25
+M.Number.isInteger	48	34	6	34
+M.Schedule.tap	48	22	1	22
+M.Effect.cached	46	38	5	38
+M.Number.parseInt	46	31	7	31
+M.Effect.annotateLogs	44	21	6	21
+M.Effect.timeout	44	35	7	35
+M.Ref.get	44	26	8	26
+M.Schedule.min	44	41	2	41
+M.Schema.TaggedStruct	44	13	4	13
+M.Atom.set	43	2	1	2
+M.Schema.decodeUnknownResult	43	26	4	26
+M.Schema.isMinLength	42	25	3	25
+M.Scope.close	42	26	5	26
+M.Effect.callback	41	29	5	29
+M.Schema.decodeTo	41	29	4	29
+M.Flag.optional	40	17	6	17
+M.Stream.runDrain	40	27	5	27
+M.Effect.annotateLogsScoped	39	12	1	12
+M.HttpClientRequest.get	39	24	2	24
+M.Queue.offerUnsafe	39	19	5	19
+M.Effect.never	38	29	8	29
+M.Flag.string	38	15	6	15
+M.Ref.make	38	30	9	30
+M.Schema.encodeSync	37	35	7	35
+M.Stream.mkString	37	27	3	27
+M.Effect.timeoutOrElse	36	26	7	26
+M.Number.isSafeInteger	36	24	5	24
+M.Duration.toMillis	35	18	7	18
+M.Exit.void	35	26	6	26
+M.Effect.forkIn	34	20	3	20
+M.Schema.isNonEmpty	34	25	3	25
+M.Scope.Scope	34	32	4	32
+M.Effect.catchReason	33	18	2	18
+M.Schema.annotate	33	10	2	10
+M.Scope.provide	33	25	6	25
+M.Array.fromIterable	32	15	4	15
+M.Config.node	32	32	1	32
+M.DateTime.now	32	17	3	17
+M.Effect.onExit	32	22	9	22
+M.Flag.boolean	32	18	6	18
+M.HttpApi.make	32	29	5	29
+M.Stream.unwrap	32	22	4	22
+M.Array.map	31	24	6	24
+M.Effect.match	31	23	7	23
+M.Number.MAX_SAFE_INTEGER	31	21	8	21
+M.Semaphore.makeUnsafe	31	30	4	30
+M.Effect.tapCause	30	14	4	14
+M.Layer.effectDiscard	30	30	9	30
+M.Layer.unwrap	30	27	6	27
+M.Effect.failCause	29	19	5	19
+M.Effect.option	29	18	8	18
+M.Schema.Any	29	10	4	10
+M.Schema.isGreaterThanOrEqualTo	29	24	5	24
+M.Atom.get	28	4	2	4
+M.Config.redacted	28	24	6	24
+M.Option.flatMap	28	12	6	12
+M.Schema.is	28	25	6	25
+M.Schema.toTaggedUnion	28	22	4	22
+M.Effect.catchTags	27	23	7	23
+M.Ref.update	27	14	6	14
+M.Result.getOrElse	27	15	2	15
+M.Config.map	26	14	5	14
+M.DateTime.toEpochMillis	26	9	3	9
+M.Equal.equals	26	12	3	12
+M.Layer.orDie	26	24	6	24
+M.Schema.isPattern	26	19	5	19
+M.Schema.mutable	26	14	1	14
+M.Stream.empty	26	16	5	16
+M.Stream.take	26	26	3	26
+M.Cause.die	25	6	1	6
+M.Cause.pretty	25	20	6	20
+M.Context.get	25	16	4	16
+M.HttpClientRequest.setHeaders	25	18	2	18
+M.Schema.NumberFromString	25	15	3	15
+M.HttpClientRequest.post	24	16	3	16
+M.Layer.empty	24	17	7	17
+M.Option.filter	24	16	6	16
+M.Config.boolean	23	20	2	20
+M.Effect.runPromiseExit	23	19	5	19
+M.Effect.uninterruptibleMask	23	15	5	15
+M.Schema.isGreaterThan	23	16	3	16
+M.Schema.TaggedUnion	23	12	1	12
+M.Schema.Tuple	23	17	4	17
+M.Cache.get	22	11	4	11
+M.Effect.acquireUseRelease	22	19	6	19
+M.Effect.Effect	22	21	3	21
+M.Random.nextIntBetween	22	8	1	8
+M.Stream.flatMap	22	18	5	18
+M.Atom.family	21	12	4	12
+M.Cause.hasInterruptsOnly	21	14	5	14
+M.Command.withHandler	21	19	4	19
+M.Effect.uninterruptible	21	13	3	13
+M.Fiber.join	21	16	5	16
+M.Scope.makeUnsafe	21	18	3	18
+M.Deferred.fail	20	9	3	9
+M.Ref.set	20	11	5	11
+M.Schema.fieldsAssign	20	9	1	9
+M.String.stripMargin	20	18	1	18
+M.Command.provide	19	11	1	11
+M.Command.withSubcommands	19	16	7	16
+M.Effect.catchDefect	19	14	3	14
+M.Effect.filterOrFail	19	17	3	17
+M.Effect.forkChild	19	12	5	12
+M.Flag.integer	19	11	6	11
+M.HttpClientResponse.schemaBodyJson	19	7	2	7
+M.Schema.isLessThanOrEqualTo	19	14	2	14
+M.Stream.succeed	19	8	3	8
+M.Stream.tap	19	14	5	14
+M.Deferred.doneUnsafe	18	9	5	9
+M.Effect.raceFirst	18	14	6	14
+M.Effect.scope	18	17	3	17
+M.HttpApiEndpoint.delete	18	14	3	14
+M.Layer.succeedContext	18	11	1	11
+M.Option.getOrThrow	18	9	4	9
+M.Schema.encodeUnknownSync	18	10	3	10
+M.Schema.isInt	18	15	3	15
+M.Stream.merge	18	9	4	9
+M.ConfigProvider.layer	17	15	3	15
+M.Effect.timeoutOption	17	10	3	10
+M.Effect.undefined	17	12	1	12
+M.Flag.map	17	7	2	7
+M.Queue.take	17	11	5	11
+M.Schema.Json	17	11	3	11
+M.Stream.concat	17	12	4	12
+M.Stream.splitLines	17	11	3	11
+M.Atom.runtime	16	12	4	12
+M.Cache.Default	16	6	1	6
+M.Cause.findErrorOption	16	13	6	13
+M.Config.all	16	11	6	11
+M.Config.option	16	11	5	11
+M.Effect.forever	16	15	4	15
+M.Effect.forkDetach	16	13	7	13
+M.Logger.layer	16	15	4	15
+M.Schema.decodeEffect	16	13	4	13
+M.Stream.fromIterable	16	15	5	15
+M.Stream.isStream	16	8	2	8
+M.Array.head	15	14	2	14
+M.Effect.interrupt	15	11	5	11
+M.Exit.succeed	15	10	5	10
+M.Fiber.interrupt	15	12	6	12
+M.FileSystem.Service	15	5	1	5
+M.HttpClient.filterStatusOk	15	14	2	14
+M.HttpClientRequest.acceptJson	15	6	1	6
+M.Layer.build	15	14	3	14
+M.Layer.buildWithScope	15	14	3	14
+M.Layer.sync	15	15	6	15
+M.Result.succeed	15	8	7	8
+M.Schema.declare	15	12	4	12
+M.Schema.isStartsWith	15	13	1	13
+M.Schema.Trimmed	15	14	2	14
+M.Semaphore.withPermits	15	14	1	14
+M.SynchronizedRef.get	15	5	2	5
+M.Data.taggedEnum	14	13	6	13
+M.DateTime.formatIso	14	8	3	8
+M.Duration.minutes	14	11	4	11
+M.HttpApiBuilder.layer	14	10	5	10
+M.Number.POSITIVE_INFINITY	14	11	6	11
+M.Rpc.make	14	7	4	7
+M.Schema.isSchema	14	4	2	4
+M.Schema.StructWithRest	14	11	2	11
+M.Semaphore.make	14	12	3	12
+M.Stream.fromArray	14	14	1	14
+M.Stream.make	14	12	2	12
+M.Atom.update	13	4	1	4
+M.Context.Reference	13	12	4	12
+M.Effect.flatten	13	5	3	5
+M.Effect.onError	13	11	4	11
+M.Effect.runFork	13	9	5	9
+M.FileSystem.Default	13	5	1	5
+M.FileSystem.Entry	13	5	1	5
+M.Schema.mutableKey	13	1	1	1
+M.Stream.flattenIterable	13	9	2	9
+M.Cause.hasInterrupts	12	7	4	7
+M.Config.orElse	12	10	5	10
+M.Duration.toSeconds	12	10	3	10
+M.Effect.delay	12	11	6	11
+M.Effect.withFiber	12	8	5	8
+M.Flag.withAlias	12	6	4	6
+M.Order.String	12	5	2	5
+M.Schema.toCodecJson	12	10	4	10
+M.Schema.toType	12	6	4	6
+M.Stream.fromEffect	12	11	2	11
+M.Array.sort	11	6	1	6
+M.Cache.make	11	10	4	10
+M.Context.add	11	6	5	6
+M.Deferred.makeUnsafe	11	8	4	8
+M.Effect.interruptible	11	7	3	7
+M.Flag.file	11	7	3	7
+M.Order.mapInput	11	5	3	5
+M.PubSub.publish	11	3	3	3
+M.PubSub.shutdown	11	4	3	4
+M.Queue.offer	11	6	4	6
+M.Schema.isMaxLength	11	7	2	7
+M.Stream.run	11	6	4	6
+M.Stream.toReadableStream	11	7	1	7
+M.Struct.omit	11	5	1	5
+M.SynchronizedRef.modify	11	4	2	4
+M.SynchronizedRef.modifyEffect	11	6	2	6
+M.Atom.fn	10	6	1	6
+M.Chunk.map	10	3	1	3
+M.Config.schema	10	3	2	3
+M.Data.Error	10	4	2	4
+M.Effect.fromOption	10	8	4	8
+M.Effect.runPromiseWith	10	5	3	5
+M.Effect.service	10	4	2	4
+M.Effect.yieldNow	10	8	3	8
+M.Model.Ref	10	7	1	7
+M.MutableHashMap.set	10	6	2	6
+M.Queue.unbounded	10	9	4	9
+M.Request.make	10	3	1	3
+M.Schema.encodeEffect	10	9	6	9
+M.Schema.ErrorClass	10	9	2	9
+M.Schema.isBetween	10	8	3	8
+M.Schema.Option	10	7	3	7
+M.Scope.fork	10	8	3	8
+M.Stream.callback	10	9	4	9
+M.Atom.fnSync	9	3	1	3
+M.Atom.mapResult	9	1	1	1
+M.Atom.withEquality	9	1	1	1
+M.Cause.isFailReason	9	7	4	7
+M.ConfigProvider.fromEnv	9	7	2	7
+M.Data.TaggedClass	9	2	2	2
+M.DateTime.makeUnsafe	9	6	3	6
+M.DateTime.nowUnsafe	9	5	1	5
+M.Fiber.await	9	7	4	7
+M.Flag.OPENCODE_CONFIG_DIR	9	4	1	4
+M.Layer.buildWithMemoMap	9	8	3	8
+M.Number.parseFloat	9	4	4	4
+M.Result.fail	9	5	5	5
+M.Result.failVoid	9	5	4	5
+M.Result.map	9	4	1	4
+M.Schema.decodeSync	9	5	4	5
+M.Schema.Error	9	6	2	6
+M.Schema.toJsonSchemaDocument	9	8	4	8
+M.Schema.UndefinedOr	9	5	3	5
+M.Scope.addFinalizer	9	9	3	9
+M.Stream.encodeText	9	6	2	6
+M.Stream.fromReadableStream	9	9	4	9
+M.Atom.withLabel	8	4	2	4
+M.Atom.writable	8	5	2	5
+M.Cause.fail	8	6	4	6
+M.ChildProcess.setCwd	8	8	2	8
+M.Duration.nanos	8	6	3	6
+M.Effect.onInterrupt	8	5	2	5
+M.Effect.provideServiceEffect	8	7	3	7
+M.Exit.failCause	8	5	4	5
+M.HttpClientRequest.bearerToken	8	4	2	4
+M.Layer.launch	8	8	4	8
+M.PubSub.unbounded	8	4	3	4
+M.Ref.modify	8	6	2	6
+M.Schema.Null	8	7	2	7
+M.Stream.fail	8	6	3	6
+M.Array.flatten	7	5	2	5
+M.Atom.readable	7	3	2	3
+M.Command.run	7	7	5	7
+M.Config.int	7	2	2	2
+M.Config.number	7	7	3	7
+M.ConfigProvider.fromUnknown	7	6	3	6
+M.Console.error	7	5	2	5
+M.Deferred.failCause	7	4	4	4
+M.Duration.fromInputUnsafe	7	7	6	7
+M.Duration.infinity	7	7	5	7
+M.Effect.runCallback	7	1	1	1
+M.Fiber.getCurrent	7	7	3	7
+M.Flag.OPENCODE_CONFIG	7	2	1	2
+M.HttpApiEndpoint.patch	7	6	2	6
+M.HttpClientRequest.setHeader	7	5	2	5
+M.HttpRouter.middleware	7	7	2	7
+M.HttpRouter.toWebHandler	7	7	3	7
+M.KeyValueStore.KeyValueStore	7	5	2	5
+M.Layer.effectContext	7	7	4	7
+M.Metric.update	7	2	2	2
+M.Metric.withAttributes	7	2	2	2
+M.MutableHashMap.get	7	5	2	5
+M.Option.flatMapNullishOr	7	1	1	1
+M.Option.fromNullOr	7	3	2	3
+M.Option.getOrNull	7	3	3	3
+M.Order.Number	7	4	3	4
+M.Predicate.isUndefined	7	1	1	1
+M.Queue.make	7	6	2	6
+M.Queue.shutdown	7	6	4	6
+M.Request.fields	7	5	1	5
+M.Schedule.jittered	7	7	3	7
+M.Schema.withDecodingDefault	7	7	3	7
+M.SqlClient.SqlClient	7	1	1	1
+M.Stream.catchCause	7	7	2	7
+M.Stream.debounce	7	6	2	6
+M.Stream.fromPubSub	7	5	4	5
+M.Stream.fromQueue	7	7	3	7
+M.Stream.paginate	7	5	4	5
+M.Argument.withDescription	6	6	3	6
+M.Array.append	6	5	2	5
+M.Atom.setIdleTTL	6	4	2	4
+M.Cause.isDieReason	6	6	3	6
+M.Config.succeed	6	5	3	5
+M.Context.make	6	4	4	4
+M.Data.Class	6	6	2	6
+M.Duration.isDuration	6	4	2	4
+M.Flag.directory	6	5	3	5
+M.Flag.OPENCODE_DISABLE_PROJECT_CONFIG	6	5	1	5
+M.HttpClientRequest.schemaBodyJson	6	4	1	4
+M.HttpClientResponse.fromWeb	6	4	2	4
+M.HttpRouter.toHttpEffect	6	6	2	6
+M.KeyValueStore.toSchemaStore	6	3	1	3
+M.Model.ID	6	2	1	2
+M.Predicate.isNumber	6	3	2	3
+M.RpcGroup.make	6	6	3	6
+M.Schedule.both	6	3	2	3
+M.Schedule.modifyDelay	6	6	1	6
+M.Schema.BigInt	6	1	1	1
+M.Schema.Duration	6	4	2	4
+M.Schema.isSchemaError	6	4	2	4
+M.Schema.Natural	6	3	2	3
+M.Schema.Never	6	5	3	5
+M.Schema.RedactedFromValue	6	3	1	3
+M.Schema.Void	6	5	3	5
+M.Scope.make	6	6	3	6
+M.Stream.pipeThroughChannel	6	6	3	6
+M.SubscriptionRef.changes	6	4	3	4
+M.SynchronizedRef.make	6	6	2	6
+M.Argument.string	5	4	3	4
+M.Atom.kvs	5	4	1	4
+M.Cache.invalidate	5	4	2	4
+M.Chunk.toReadonlyArray	5	3	1	3
+M.ConfigProvider.ConfigProvider	5	4	2	4
+M.Context.empty	5	4	1	4
+M.Deferred.done	5	5	3	5
+M.Duration.days	5	5	2	5
+M.Duration.format	5	5	3	5
+M.Duration.isGreaterThan	5	5	1	5
+M.Effect.ignoreCause	5	5	2	5
+M.Effect.matchCauseEffect	5	3	1	3
+M.Effect.matchEffect	5	5	3	5
+M.Effect.withLogSpan	5	1	1	1
+M.Effect.zip	5	4	1	4
+M.FiberSet.make	5	5	3	5
+M.FiberSet.run	5	4	3	4
+M.FileSystem.Event	5	4	1	4
+M.Flag.atLeast	5	3	2	3
+M.Flag.OPENCODE_DB	5	1	1	1
+M.Hash.fast	5	5	1	5
+M.HttpApiEndpoint.put	5	4	2	4
+M.HttpClient.make	5	4	2	4
+M.HttpClient.retryTransient	5	5	2	5
+M.HttpClientRequest.appendUrlParam	5	1	1	1
+M.HttpClientResponse.filterStatusOk	5	4	2	4
+M.HttpRouter.serve	5	5	3	5
+M.HttpServer.layerServices	5	5	2	5
+M.Metric.counter	5	2	2	2
+M.MutableHashMap.empty	5	3	2	3
+M.Number.NaN	5	5	3	5
+M.Option.bind	5	1	1	1
+M.Option.fromUndefinedOr	5	5	3	5
+M.Option.orElse	5	5	4	5
+M.Option.toArray	5	2	1	2
+M.Predicate.isNotUndefined	5	5	2	5
+M.Predicate.isTagged	5	3	1	3
+M.PubSub.publishUnsafe	5	3	2	3
+M.Queue.endUnsafe	5	5	3	5
+M.Queue.failCauseUnsafe	5	2	2	2
+M.Schedule.upTo	5	5	3	5
+M.Schema.decodeUnknownPromise	5	2	2	2
+M.Schema.NonEmptyArray	5	4	3	4
+M.Schema.Redacted	5	3	2	3
+M.Schema.suspend	5	5	3	5
+M.SchemaIssue.InvalidValue	5	5	1	5
+M.Scope.closeUnsafe	5	5	2	5
+M.ScopedCache.get	5	2	2	2
+M.Stream.ensuring	5	5	4	5
+M.Stream.fromAsyncIterable	5	5	4	5
+M.Stream.fromEffectDrain	5	4	2	4
+M.Stream.mergeAll	5	4	2	4
+M.Stream.takeUntil	5	5	2	5
+M.String.fromCharCode	5	5	2	5
+M.SubscriptionRef.get	5	4	3	4
+M.Array.dedupe	4	4	2	4
+M.Array.empty	4	3	3	3
+M.Array.findFirst	4	4	2	4
+M.Atom.getResult	4	1	1	1
+M.Cache.set	4	3	3	3
+M.Cause.hasDies	4	4	3	4
+M.Chunk.filter	4	2	1	2
+M.Command.node	4	4	1	4
+M.Command.withAlias	4	4	1	4
+M.Config.isConfig	4	4	2	4
+M.Config.latest	4	4	1	4
+M.Config.locationLayer	4	4	1	4
+M.ConfigProvider.orElse	4	3	1	3
+M.Context.getReferenceUnsafe	4	2	1	2
+M.DateTime.nowAsDate	4	3	2	3
+M.DateTime.subtract	4	3	1	3
+M.Duration.toNanosUnsafe	4	3	2	3
+M.Effect.bind	4	3	2	3
+M.Effect.cachedInvalidateWithTTL	4	4	2	4
+M.Effect.fromResult	4	3	2	3
+M.Effect.matchCause	4	2	2	2
+M.Effect.raceAll	4	4	2	4
+M.Effect.runForkWith	4	4	3	4
+M.Effect.Success	4	4	2	4
+M.Effect.tapErrorTag	4	2	1	2
+M.Encoding.encodeBase64	4	4	3	4
+M.Encoding.encodeBase64Url	4	4	4	4
+M.FiberMap.remove	4	3	3	3
+M.FiberSet.awaitEmpty	4	4	2	4
+M.FiberSet.join	4	3	2	3
+M.FileSystem.Match	4	2	1	2
+M.Flag.choice	4	4	2	4
+M.Flag.withFallbackConfig	4	1	1	1
+M.HashMap.empty	4	3	3	3
+M.HashMap.set	4	3	3	3
+M.HttpClientRequest.bodyJson	4	2	1	2
+M.HttpClientRequest.bodyJsonUnsafe	4	4	1	4
+M.HttpClientRequest.bodyUrlParams	4	2	1	2
+M.HttpRouter.add	4	4	4	4
+M.HttpRouter.use	4	3	2	3
+M.KeyValueStore.KeyValueStoreError	4	1	1	1
+M.KeyValueStore.prefix	4	4	2	4
+M.Layer.makeMemoMapUnsafe	4	4	2	4
+M.MutableHashMap.remove	4	4	2	4
+M.Order.combine	4	2	1	2
+M.Order.flip	4	2	2	2
+M.Predicate.isFunction	4	3	1	3
+M.Predicate.isString	4	4	2	4
+M.PubSub.subscribe	4	3	3	3
+M.Random.next	4	2	1	2
+M.Random.nextBetween	4	4	2	4
+M.Schema.decodeUnknownExit	4	3	1	3
+M.Sink.drain	4	1	1	1
+M.Sink.isSink	4	1	1	1
+M.Stream.catchTag	4	3	2	3
+M.Stream.die	4	4	2	4
+M.Stream.filterMap	4	3	2	3
+M.Stream.mapAccumEffect	4	4	2	4
+M.Stream.runForEachArray	4	2	2	2
+M.Stream.switchMap	4	3	2	3
+M.String.isNonEmpty	4	3	1	3
+M.SubscriptionRef.make	4	4	3	4
+M.SubscriptionRef.set	4	3	3	3
+M.Argument.file	3	3	1	3
+M.Argument.variadic	3	3	3	3
+M.Array.chunksOf	3	3	1	3
+M.Array.findFirstIndex	3	2	1	2
+M.Array.modify	3	2	1	2
+M.Array.sortWith	3	1	1	1
+M.Atom.map	3	3	1	3
+M.Cause.isInterruptReason	3	2	2	2
+M.ChildProcess.parseFdName	3	1	1	1
+M.Chunk.appendAll	3	2	2	2
+M.Command.Info	3	3	1	3
+M.Command.providers	3	3	1	3
+M.Command.Service	3	3	1	3
+M.Config.mapOrFail	3	2	1	2
+M.ConfigProvider.fromDotEnv	3	2	1	2
+M.Context.getUnsafe	3	3	1	3
+M.Context.ServiceClass	3	3	1	3
+M.DateTime.addDuration	3	3	2	3
+M.Deferred.isDone	3	2	1	2
+M.Duration.fromInput	3	3	2	3
+M.Duration.hours	3	3	1	3
+M.Duration.subtract	3	3	1	3
+M.Effect.currentParentSpan	3	2	1	2
+M.Effect.Do	3	2	1	2
+M.Effect.filter	3	3	1	3
+M.Effect.race	3	3	2	3
+M.Effect.raceAllFirst	3	3	1	3
+M.Effect.retryOrElse	3	2	1	2
+M.Effect.succeedNone	3	2	2	2
+M.Effect.tapDefect	3	3	1	3
+M.Effect.timed	3	2	2	2
+M.Effect.zipWith	3	3	1	3
+M.Encoding.decodeBase64String	3	3	2	3
+M.Equal.byReferenceUnsafe	3	1	1	1
+M.Exit.fail	3	3	3	3
+M.FiberMap.make	3	3	3	3
+M.FiberMap.run	3	3	3	3
+M.FiberSet.clear	3	1	1	1
+M.FileSystem.GrepInput	3	1	1	1
+M.FileSystem.Provider	3	3	1	3
+M.Flag.mapEffect	3	2	2	2
+M.Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT	3	1	1	1
+M.Flag.OPENCODE_PURE	3	2	1	2
+M.Flag.OPENCODE_SERVER_PASSWORD	3	3	1	3
+M.Flag.OPENCODE_WORKSPACE_ID	3	2	1	2
+M.HttpClient.mapRequest	3	2	1	2
+M.HttpClientRequest.make	3	3	1	3
+M.HttpServer.formatAddress	3	3	2	3
+M.HttpServer.HttpServer	3	3	2	3
+M.KeyValueStore.layerFileSystem	3	2	1	2
+M.Layer.fresh	3	3	1	3
+M.Layer.makeMemoMap	3	3	3	3
+M.Logger.consolePretty	3	3	2	3
+M.MutableHashMap.values	3	3	1	3
+M.Option.exists	3	3	3	3
+M.Option.liftNullishOr	3	1	1	1
+M.Path.layer	3	3	2	3
+M.Predicate.isNotNull	3	1	1	1
+M.Queue.end	3	3	2	3
+M.Queue.poll	3	1	1	1
+M.RcMap.get	3	3	2	3
+M.RcMap.make	3	3	2	3
+M.Ref.getAndUpdate	3	3	3	3
+M.Result.fromOption	3	3	2	3
+M.Schema.DateTimeUtc	3	3	3	3
+M.Schema.encodeUnknownEffect	3	3	3	3
+M.Schema.make	3	1	1	1
+M.Schema.SchemaError	3	1	1	1
+M.Schema.UnknownFromJsonString	3	3	1	3
+M.Schema.withDecodingDefaultKey	3	1	1	1
+M.Schema.withDecodingDefaultType	3	2	2	2
+M.ServiceMap.Service	3	3	1	3
+M.Sink.head	3	2	2	2
+M.Stream.drop	3	3	2	3
+M.Stream.fromChannel	3	1	1	1
+M.Stream.mapError	3	3	2	3
+M.Stream.peel	3	2	2	2
+M.Stream.runFold	3	3	2	3
+M.Stream.runFoldEffect	3	3	1	3
+M.Stream.tick	3	3	1	3
+M.Stream.transduce	3	1	1	1
+M.SynchronizedRef.update	3	2	1	2
+M.Terminal.Terminal	3	2	1	2
+M.Tracer.Tracer	3	2	2	2
+### v4-app: names imported from effect or @effect/* (files, projects)
+name	files	projects
+Effect	7354	15
+Layer	3769	15
+Stream	1030	11
+Schema	828	13
+Schedule	571	12
+Data	476	11
+Context	434	14
+Option	413	14
+Redacted	317	8
+Duration	264	13
+Predicate	232	5
+pipe	171	8
+Scope	168	13
+FileSystem	159	8
+Path	154	7
+HttpClient	120	6
+Cause	101	13
+Config	100	8
+HttpServerResponse	99	7
+Result	83	10
+Exit	82	12
+FetchHttpClient	79	7
+HttpServerRequest	78	4
+Array	69	8
+Atom	59	6
+ChildProcess	57	5
+Command	51	7
+HttpClientRequest	51	3
+HttpApiBuilder	48	5
+HttpApiGroup	47	5
+HttpApiEndpoint	46	5
+ChildProcessSpawner	44	5
+OpenApi	44	3
+Console	43	5
+EffectStream	42	1
+Semaphore	40	4
+Deferred	39	7
+PlatformError	39	5
+Fiber	37	8
+DateTime	35	5
+Ref	31	9
+HttpApi	30	5
+Clock	29	6
+HttpRouter	29	8
+ConfigProvider	28	3
+HttpApiSchema	28	4
+Queue	27	6
+Flag	26	7
+HttpClientResponse	25	3
+String	23	4
+useAtomValue	22	4
+HttpApiError	21	2
+identity	21	7
+AsyncResult	19	5
+Logger	19	6
+SchemaGetter	18	4
+useAtomSet	18	3
+AtomRegistry	17	5
+Match	17	3
+Sink	17	3
+Types	17	5
+Arr	16	5
+Prompt	16	3
+HttpApiMiddleware	15	2
+HttpClientError	15	4
+NodeServices	15	6
+Equal	14	4
+HttpBody	14	4
+S	14	2
+ManagedRuntime	13	4
+Random	13	3
+Cache	12	4
+flow	12	4
+NodeRuntime	12	7
+RpcSerialization	12	3
+Encoding	11	5
+hasProperty	11	2
+Headers	11	4
+HttpServer	11	4
+NodeFileSystem	11	3
+Order	11	4
+Rpc	11	4
+Socket	11	3
+ConfigError	10	1
+dual	10	4
+Reactivity	9	4
+RpcGroup	9	3
+SqlError	9	3
+Argument	8	4
+SchemaIssue	8	2
+SynchronizedRef	8	2
+Chunk	7	2
+KeyValueStore	7	2
+MutableHashMap	7	2
+PubSub	7	4
+RpcClient	7	2
+useAtom	7	2
+Etag	6	2
+FiberSet	6	3
+HttpPlatform	6	2
+JsonSchema	6	2
+LanguageModel	6	2
+NodeHttpClient	6	3
+NodePath	6	3
+References	6	3
+RpcServer	6	3
+SchemaAST	6	3
+Struct	6	2
+T	6	1
+Tracer	6	4
+CliError	5	3
+ExitCode	5	2
+FastCheck	5	1
+Graph	5	2
+HttpServerError	5	2
+Latch	5	3
+MinimumLogLevel	5	3
+NodeHttpServer	5	3
+Pipeable	5	2
+ReadonlyArray	5	1
+Record	5	3
+RpcClientError	5	2
+SchemaTransformation	5	3
+Sse	5	2
+Stdio	5	2
+SubscriptionRef	5	3
+Tool	5	3
+BrowserKeyValueStore	4	1
+BunRuntime	4	2
+constVoid	4	2
+Effectable	4	1
+HashMap	4	3
+HttpApiClient	4	1
+HttpEffect	4	2
+HttpMiddleware	4	3
+Iterable	4	3
+LayerMap	4	2
+LogLevel	4	3
+monaco	4	1
+NodeSocket	4	2
+OtlpLogger	4	3
+OtlpSerialization	4	3
+P	4	1
+RegistryContext	4	2
+SqlClient	4	3
+Terminal	4	2
+AiError	3	2
+ChildProcessHandle	3	3
+classifySqliteError	3	1
+Client	3	1
+Connection	3	1
+constTrue	3	2
+D1Client	3	2
+FiberMap	3	3
+Formatter	3	2
+Function	3	1
+NodeChildProcessSpawner	3	1
+OtlpTracer	3	2
+PgClient	3	1
+QuitError	3	1
+RcMap	3	2
+ServiceMap	3	1
+Simplify	3	1
+Sql	3	1
+Statement	3	1
+SystemError	3	1
+Toolkit	3	3
+WebSocketConstructor	3	2
+AST	2	1
+BackingPersistence	2	1
+BackingPersistenceStore	2	1
+BadArgument	2	1
+Brand	2	2
+BunServices	2	2
+BunWorker	2	1
+BunWorkerRunner	2	1
+cast	2	1
+constant	2	1
+CurrentLoggers	2	2
+DevToolsSchema	2	1
+Eff	2	1
+EffectContext	2	1
+EffectHttp	2	1
+Entity	2	1
+FiberHandle	2	2
+Hash	2	2
+HttpApiScalar	2	2
+HttpMethod	2	1
+IdGenerator	2	1
+Inspectable	2	1
+isFunction	2	1
+isHttpClientError	2	1
+isObject	2	1
+isString	2	1
+Json	2	1
+MessageStorage	2	1
+Metric	2	2
+millis	2	1
+MysqlClient	2	1
+OtelTracer	2	1
+OtlpMetrics	2	1
+PersistenceError	2	1
+R	2	1
+Response	2	1
+ScopedCache	2	2
+SingleShotGen	2	1
+Snowflake	2	1
+SqliteClient	2	2
+Stream_	2	1
+TestClock	2	2
+Tuple	2	1
+useAtomMount	2	1
+WorkerError	2	1
+absurd	1	1
+AtomHttpApi	1	1
+AtomRpc	1	1
+BrowserRuntime	1	1
+BunFileSystem	1	1
+BunHttpServer	1	1
+BunStdio	1	1
+catchTag	1	1
+causeResponse	1	1
+Channel	1	1
+Chat	1	1
+CliConfig	1	1
+Clipboard	1	1
+ClusterError	1	1
+ClusterSchema	1	1
+ConsoleModule	1	1
+ConsoleService	1	1
+constFalse	1	1
+Cron	1	1
+Crypto	1	1
+DecodeError	1	1
+defaultTeardown	1	1
+EffectRecord	1	1
+EntityAddress	1	1
+Environment	1	1
+Eq	1	1
+Equivalence	1	1
+ErrorReporter	1	1
+EStream	1	1
+Fn	1	1
+fromSchemaOpenApi3_0	1	1
+fromSchemaOpenApi3_1	1	1
+GlobalFlag	1	1
+Help	1	1
+HttpApiSecurity	1	1
+HttpBodyError	1	1
+HttpRequest	1	1
+HttpResponse	1	1
+HttpServerRespondable	1	1
+HttpStaticServer	1	1
+HttpTraceContext	1	1
+isArray	1	1
+isBoolean	1	1
+isNumber	1	1
+it	1	1
+JsonPointer	1	1
+make	1	1
+makeHandle	1	1
+McpServer	1	1
+Migrator	1	1
+Model	1	1
+Ndjson	1	1
+NodeSdk	1	1
+NodeSink	1	1
+NodeStream	1	1
+NodeWorker	1	1
+NodeWorkerRunner	1	1
+NonEmptyArray	1	1
+NonEmptyReadonlyArray	1	1
+NoSuchElementError	1	1
+Number	1	1
+OpenAiClient	1	1
+OpenAiEmbeddingModel	1	1
+Otlp	1	1
+ParentSpan	1	1
+ParseOption	1	1
+Persistable	1	1
+PersistedCache	1	1
+Persistence	1	1
+pipeArguments	1	1
+PlatformFileSystem	1	1
+Pool	1	1
+ProcessId	1	1
+Prototype	1	1
+RcRef	1	1
+Resource	1	1
+RpcSchema	1	1
+Runtime	1	1
+Schedule_	1	1
+SchemaRepresentation	1	1
+ScopedRef	1	1
+ServeError	1	1
+Sharding	1	1
+SpanEvent	1	1
+SqliteDoClient	1	1
+SqliteMigrator	1	1
+Str	1	1
+SystemErrorTag	1	1
+Take	1	1
+Teardown	1	1
+TestConsole	1	1
+TimeoutError	1	1
+TransportError	1	1
+TxReentrantLock	1	1
+TypeLambda	1	1
+Unify	1	1
+Url	1	1
+UrlParams	1	1
+useAtomRefresh	1	1
+Worker	1	1
+WorkerRunner	1	1
+zero	1	1
+### v4-app: per project (occurrences), selected categories
+project	T.interface	T.typeLiteral	T.prop.optional	T.prop.function	T.indexSignature	T.union.nullish	T.union.tagged	T.intersection	T.tuple.rest	T.templateLiteral	T.kw.bigint	B.Date	T.generic.fn	T.recursive	T.enum	C.dataTaggedError	C.schemaTaggedError	C.schemaClass	C.service	E.number.fractional	E.number.negative	R.Option	R.Stream	R.Queue	R.Layer	R.Schedule	R.Config	C.taggedError.nameNotTag	C.taggedError.fieldsN	C.taggedError.fields0	C.taggedError.messageOnly	P.data.unknown	B.Record	B.ReadonlyMap	T.typeAlias.object	T.union.literals	T.kw.null	T.kw.undefined	R.Duration	R.Redacted	B.Uint8Array	E.number.negative	E.newDate	T.tuple
+alchemy-run-alchemy	8186	6746	13049	1164	248	7126	5	594	62	103	5	93	2143	127	0	698	12	10	83	46	110	11	207	5	167	5	15	315	488	121	101	69	2760	9	395	1514	1000	6345	251	471	186	110	74	266
+anomalyco-opencode	406	1306	959	835	10	615	3	128	6	5	1	9	310	67	4	0	175	113	135	27	118	17	32	0	63	1	19	123	145	13	17	0	528	12	270	165	57	629	7	16	49	118	42	93
+brandhaug-b2b-saas-starter	0	284	150	65	0	199	0	15	0	0	0	3	33	0	0	0	23	0	19	0	9	2	0	0	38	0	0	0	17	0	6	0	18	2	129	37	82	118	1	3	1	9	6	6
+dearlordylord-huly-mcp	223	329	287	125	5	640	22	56	5	1	0	0	157	3	0	4	280	0	10	0	23	46	0	0	23	0	4	0	273	0	11	0	133	84	27	146	77	587	5	15	0	23	1	91
+effect-ts-language-service	114	183	43	144	1	207	1	12	0	0	1	0	99	4	3	34	0	14	83	6	30	30	2	0	17	0	0	1	14	20	0	9	44	0	4	42	5	203	0	0	0	30	8	35
+effect-ts-website	60	137	40	31	1	66	4	5	0	0	4	0	22	1	0	16	5	25	16	108	12	21	1	0	0	0	0	0	21	0	0	10	24	3	2	28	16	50	13	1	6	12	1	5
+jobflow-io-effect-playwright	27	21	15	249	0	5	0	13	0	0	0	4	52	4	0	1	0	0	0	0	0	30	4	0	6	0	0	0	1	0	0	1	1	0	1	3	4	1	2	0	2	0	0	0
+kitlangton-ghui	72	105	40	122	0	184	1	9	1	0	0	25	27	0	0	0	4	1	6	0	2	2	0	0	2	0	0	0	4	0	0	0	61	0	5	41	178	13	0	0	0	2	36	3
+kitlangton-motel	21	120	234	51	0	181	0	3	0	0	2	7	10	0	0	0	2	0	7	6	6	0	0	0	0	0	0	0	0	0	2	0	37	0	25	25	172	12	0	0	1	6	12	5
+kitlangton-tailcode	0	4	0	3	0	4	0	0	0	0	0	0	2	0	0	0	3	0	3	0	1	0	1	0	0	0	0	0	2	0	1	0	2	0	1	3	0	4	0	2	1	1	0	0
+latitude-dev-latitude-llm	1073	1629	1221	226	3	1396	0	74	4	1	1	523	115	4	0	182	0	0	24	80	48	0	0	0	10	0	0	0	166	7	9	51	348	35	153	217	973	465	0	0	38	48	654	15
+mpsuesser-effect-oxlint	10	71	66	8	1	20	0	4	1	0	0	0	20	0	0	0	0	0	0	0	0	47	0	0	1	0	0	0	0	0	0	0	11	0	1	10	1	23	0	0	0	0	0	7
+tim-smart-dfx	27	65	25	58	0	20	0	3	1	4	4	0	66	2	1	2	0	0	19	2	0	23	18	2	10	1	5	0	2	0	0	1	7	4	2	3	2	22	5	3	3	0	1	15
+tim-smart-lalph	1	121	38	23	0	47	2	1	0	0	1	0	32	1	0	12	1	6	14	2	2	31	6	0	5	0	0	0	5	6	2	1	5	0	4	4	8	39	13	0	0	2	1	1
+typeonce-dev-effect-machine	355	761	370	200	1	405	21	237	34	35	0	0	416	53	0	23	0	110	8	13	32	74	47	1	5	0	0	10	17	5	1	1	217	41	28	115	32	454	10	0	2	32	0	378
+
+## v4-test: 3208 files (0 unreadable, 0 with oxc parse errors), 11 projects, 3201 files import effect or @effect/*
+### v4-test: categories
+category	occurrences	files	projects	effectFiles	description
+T.interface	349	237	7	237	interface declaration
+T.typeLiteral	5785	1417	10	1417	object type literal { ... }
+T.typeAlias.object	162	98	6	98	type alias whose right side is an object type literal
+T.prop	12063	1445	10	1445	property signature (a field of an interface or type literal)
+T.prop.optional	4131	667	7	667	optional property signature a?: T
+T.prop.readonly	2539	565	9	565	readonly property signature
+T.prop.function	220	88	7	88	function-typed field: property typed by a function type, or a method signature
+T.prop.quotedName	8	5	3	5	property signature with a quoted or computed name
+T.indexSignature	7	6	3	6	index signature [k: K]: V
+T.union	2205	836	10	835	union type
+T.union.nullish	1424	574	9	574	union with an undefined or null member
+T.union.literals	315	198	9	197	union whose members are all literal types
+T.union.tagged	3	2	1	2	union of >= 2 object type literals each with a literal _tag field
+T.union.discriminated	51	17	4	17	union of >= 2 object type literals sharing one literal-typed field (any name)
+T.typeLiteral.tagged	11	6	2	6	object type literal with a literal-typed _tag field
+T.intersection	90	67	5	67	intersection type A & B
+T.intersection.brand	2	1	1	1	intersection with a Brand.Brand reference or a __brand/_brand field
+T.tuple	171	53	6	53	tuple type [A, B]
+T.tuple.readonly	57	18	5	18	readonly tuple type
+T.tuple.rest	3	2	2	2	tuple type with a rest element
+T.tuple.optional	29	5	1	5	tuple type with an optional element
+T.tuple.named	8	8	3	8	tuple type with named members
+T.tuple.arity2	106	35	5	35	tuple type with exactly 2 elements and no rest
+T.tuple.arity3plus	14	8	4	8	tuple type with 3 or more elements and no rest
+T.tuple.arity01	48	12	3	12	tuple type with 0 or 1 elements and no rest
+T.array	2004	676	4	676	array type T[]
+T.array.readonly	919	321	9	321	readonly T[] or ReadonlyArray<T>
+T.array.ref	1209	307	7	307	Array<T> reference
+T.recordType.stringKey	1322	397	7	397	Record<K, V> with K = string (a keyed map)
+T.recordType.literalKeys	0	0	0	0	Record<K, V> with K a literal or a union of literals (a fixed-key record)
+T.recordType.otherKey	17	15	6	15	Record<K, V> with any other key type
+T.recordType.untypedValue	933	251	7	251	Record<K, V> with V = unknown or any (an untyped bag)
+T.kw.number	2228	761	9	761	number
+T.kw.string	15129	2271	11	2270	string
+T.kw.boolean	1264	573	7	573	boolean
+T.kw.bigint	0	0	0	0	bigint
+T.kw.symbol	4	4	4	4	symbol
+T.kw.uniqueSymbol	0	0	0	0	unique symbol
+T.kw.undefined	915	417	9	417	undefined (type)
+T.kw.null	534	219	6	219	null (type)
+T.kw.void	571	160	8	160	void (type)
+T.kw.never	759	250	10	250	never
+T.kw.unknown	4499	703	9	703	unknown
+T.kw.any	1699	212	6	212	any
+T.kw.object	60	43	5	43	object
+T.lit.string	3056	481	9	480	string literal type
+T.lit.number	141	78	6	78	number literal type (signed included)
+T.lit.boolean	177	30	4	30	true/false literal type
+T.lit.bigint	0	0	0	0	bigint literal type
+T.templateLiteral	19	14	3	14	template literal type `${...}`
+T.function	566	253	7	253	function type (a => b) anywhere in a type
+T.generic.fn	936	521	7	521	function-like declaration or signature with type parameters
+T.generic.type	41	29	5	29	type alias, interface or class with type parameters
+T.typeParam.schema	7	6	3	6	type parameter whose constraint mentions a Schema.* type
+T.param.schema	12	7	2	7	value parameter typed Schema.<...>
+T.typeArgs.call	3862	996	11	996	explicit type arguments at a call or new
+T.typeof	755	280	8	280	typeof query in a type
+T.typeof.schemaType	33	23	5	23	typeof X.Type / X.Encoded (a type read off a schema)
+T.keyof	29	19	3	19	keyof
+T.indexedAccess	2091	324	9	324	indexed access T[K]
+T.mapped	2	2	1	2	mapped type
+T.conditional	55	16	4	16	conditional type
+T.recursive	17	12	3	12	interface or type alias that mentions its own name
+T.recursive.computed	1	1	1	1	recursive, with a mapped or conditional type in its body (type-level computation)
+T.recursive.viaFunction	0	0	0	0	recursive only through function types or method signatures (not data recursion)
+T.recursive.data	16	12	3	12	recursive data: neither of the two above
+T.enum	0	0	0	0	enum declaration
+T.moduleTypeRef	297	172	7	172	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	197	131	7	131	the same, with type arguments
+C.class	1856	1020	8	1020	class declaration or expression
+C.dataTaggedError	586	459	5	459	extends Data.TaggedError(...)
+C.dataError	0	0	0	0	extends Data.Error
+C.schemaTaggedError	10	7	4	7	extends Schema.TaggedError(Class)<...>
+C.schemaError	1	1	1	1	extends Schema.Error(Class)<...>
+C.schemaClass	608	49	2	49	extends Schema.Class / Schema.TaggedClass
+C.dataClass	1	1	1	1	extends Data.Class / Data.TaggedClass
+C.service	96	62	6	62	extends Context.Service/Tag/Reference, Effect.Service, ServiceMap.*
+C.jsError	4	2	2	2	extends Error (or a JS error class)
+C.other	550	502	5	502	any other class
+C.taggedError.nameIsTag	593	464	6	464	tagged error class (Data or Schema) whose class name equals its tag
+C.taggedError.nameNotTag	3	3	2	3	tagged error class whose class name differs from its tag
+C.taggedError.fields0	160	110	4	110	tagged error class with no fields
+C.taggedError.messageOnly	15	15	5	15	tagged error class whose only field is message
+C.taggedError.fieldsN	421	379	4	379	tagged error class with fields other than message alone
+E.object	101593	3180	11	3179	object literal
+E.object.spread	2929	689	8	689	spread inside an object literal
+E.object.computedKey	189	70	7	70	computed property name in an object literal
+E.array	32591	2487	10	2487	array literal
+E.number.fractional	589	159	4	159	numeric literal with a fraction or exponent
+E.number.negative	407	157	7	157	negated numeric literal -n
+E.bigint	7	4	3	4	bigint literal 10n
+E.null	3342	634	9	634	null value
+E.undefined	4439	1040	9	1040	undefined value
+E.template	8265	1669	9	1668	template string with substitutions
+E.newDate	1776	341	6	341	new Date(...)
+E.dateNow	396	150	4	150	Date.now()
+E.symbol	19	13	5	13	Symbol(...) or Symbol.for(...)
+E.newMap	222	103	8	103	new Map(...)
+E.newSet	212	122	7	122	new Set(...)
+E.jsonParse	350	194	8	194	JSON.parse
+E.jsonStringify	1190	413	9	412	JSON.stringify
+E.math	110	63	6	63	Math.<member>
+E.durationString	2920	1192	6	1192	a duration string such as "10 millis"
+E.instanceof	375	253	6	253	instanceof
+E.typeofTest	450	235	5	235	typeof x === / !== ...
+E.await	8360	608	10	608	await
+E.async	5083	624	10	624	async function
+E.newError	2490	1056	10	1056	new X(...) where X's name ends in Error
+### v4-test: Effect types as types (R.<Module> any member; R.<Module>.<Type>)
+key	occurrences	files	projects	effectFiles
+R.Effect	969	525	8	525
+R.Effect.Effect	958	524	8	524
+R.Layer	91	58	6	58
+R.Layer.Layer	91	58	6	58
+R.Redacted	70	52	2	52
+R.Redacted.Redacted	70	52	2	52
+R.Scope	54	24	3	24
+R.Scope.Scope	54	24	3	24
+R.Exit	42	25	5	25
+R.Exit.Exit	42	25	5	25
+R.Schema	38	23	5	23
+R.Option	33	3	2	3
+R.Option.Option	33	3	2	3
+R.Duration	31	22	3	22
+R.Deferred	24	12	3	12
+R.Deferred.Deferred	24	12	3	12
+R.Duration.Input	24	18	3	18
+R.Stream	23	13	3	13
+R.Stream.Stream	22	12	3	12
+R.Cause	19	17	1	17
+R.Cause.Cause	19	17	1	17
+R.Schema.Schema	14	10	3	10
+R.Config	11	10	1	10
+R.Context	9	9	1	9
+R.Context.Context	8	8	1	8
+R.Effect.Success	7	2	1	2
+R.Schema.ConstraintDecoder	7	4	1	4
+R.Duration.Duration	6	3	2	3
+R.Schema.Top	6	5	3	5
+R.Config.ConfigError	5	5	1	5
+R.Ref	5	3	2	3
+R.Ref.Ref	5	3	2	3
+R.Result	5	5	2	5
+R.Result.Result	5	5	2	5
+R.Schema.Codec	4	1	1	1
+R.Schema.Decoder	4	2	1	2
+R.Config.Interface	3	2	1	2
+R.Queue	3	2	1	2
+R.Brand	2	1	1	1
+R.Brand.Brand	2	1	1	1
+R.DateTime	2	1	1	1
+R.DateTime.Utc	2	1	1	1
+R.Effect.Error	2	1	1	1
+R.Effect.Services	2	2	2	2
+R.Queue.Queue	2	1	1	1
+R.Schema.Json	2	1	1	1
+R.Cache	1	1	1	1
+R.Cache.CacheServiceProps	1	1	1	1
+R.Config.Entry	1	1	1	1
+R.Config.Info	1	1	1	1
+R.Config.Service	1	1	1	1
+R.Context.Service	1	1	1	1
+R.Duration.Unit	1	1	1	1
+R.Fiber	1	1	1	1
+R.Fiber.Fiber	1	1	1	1
+R.Latch	1	1	1	1
+R.Latch.Latch	1	1	1	1
+R.Logger	1	1	1	1
+R.Logger.Logger	1	1	1	1
+R.Queue.Dequeue	1	1	1	1
+R.Schema.SchemaError	1	1	1	1
+R.Stream.Success	1	1	1	1
+### v4-test: tagged error payload field kinds (P.data.<kind>: Data.TaggedError TS field types; P.schema.<kind>: Schema.TaggedError field schemas)
+key	occurrences	files	projects	effectFiles
+P.data.string	412	341	4	341
+P.data.number	243	234	2	234
+P.data.union	10	8	1	8
+P.data.unknown	7	7	1	7
+P.schema.string	7	6	4	6
+P.data.array	4	2	1	2
+P.data.boolean	2	2	1	2
+P.data.other	2	2	1	2
+P.data.other-reference	2	1	1	1
+P.schema.other-schema	2	2	1	2
+### v4-test: bare type references
+key	occurrences	files	projects	effectFiles
+B.Record	1339	407	7	407
+B.Array	1209	307	7	307
+B.ReadonlyArray	631	187	8	187
+B.Partial	579	234	7	234
+B.Promise	301	119	6	119
+B.Date	176	66	2	66
+B.Error	168	47	5	47
+B.ReturnType	168	104	6	104
+B.Parameters	105	68	6	68
+B.Uint8Array	81	44	4	44
+B.Omit	73	28	4	28
+B.Response	56	36	5	36
+B.URL	53	39	3	39
+B.NonNullable	43	23	5	23
+B.Request	39	23	4	23
+B.Extract	33	20	4	20
+B.Readonly	33	15	3	15
+B.Pick	23	17	4	17
+B.Map	13	9	4	9
+B.Exclude	12	8	2	8
+B.ReadonlyMap	12	8	2	8
+B.Set	11	8	4	8
+B.ReadonlySet	9	5	3	5
+B.Headers	8	7	2	7
+B.ArrayBuffer	6	5	1	5
+B.Iterable	3	3	3	3
+B.RegExp	2	2	2	2
+### v4-test: module member accesses in expressions (M.<Module> total)
+key	occurrences	files	projects	effectFiles
+M.Effect	57664	3101	11	3101
+M.Schedule	4750	1115	2	1115
+M.Layer	3366	807	9	807
+M.Schema	2224	192	6	192
+M.HttpClient	1257	471	3	471
+M.HttpClientRequest	1214	279	2	279
+M.Array	878	465	7	465
+M.Stream	810	279	3	279
+M.Exit	717	160	6	160
+M.Redacted	648	202	3	202
+M.Data	588	461	5	461
+M.Deferred	580	50	4	50
+M.Result	455	131	7	131
+M.Option	402	73	8	73
+M.Config	373	55	2	55
+M.FileSystem	347	128	3	128
+M.Fiber	324	74	5	74
+M.Duration	308	238	4	238
+M.Cause	302	130	5	130
+M.Path	258	98	3	98
+M.Ref	186	26	7	26
+M.Scope	155	19	4	19
+M.Context	143	83	7	83
+M.ConfigProvider	99	33	3	33
+M.HttpApiEndpoint	95	7	2	7
+M.HttpClientResponse	91	23	3	23
+M.Queue	82	14	3	14
+M.Flag	76	15	1	15
+M.DateTime	69	13	2	13
+M.Command	55	10	3	10
+M.Number	55	34	6	34
+M.Console	43	35	2	35
+M.HttpRouter	39	20	2	20
+M.ChildProcess	30	13	2	13
+M.HttpServer	30	10	2	10
+M.Rpc	30	7	1	7
+M.HttpApiGroup	28	8	2	8
+M.Atom	26	5	3	5
+M.HttpApi	21	9	2	9
+M.Logger	21	8	4	8
+M.Clock	19	8	3	8
+M.HttpApiBuilder	19	9	2	9
+M.Model	12	8	1	8
+M.Semaphore	11	11	1	11
+M.Latch	10	3	3	3
+M.RpcGroup	10	6	1	6
+M.Hash	9	6	1	6
+M.Predicate	7	4	1	4
+M.Sink	7	3	1	3
+M.MutableHashMap	6	2	1	2
+M.String	6	4	2	4
+M.Workflow	3	3	1	3
+M.Cache	2	1	1	1
+M.Random	2	2	2	2
+M.Encoding	1	1	1	1
+M.Equal	1	1	1	1
+M.Metric	1	1	1	1
+M.SchemaIssue	1	1	1	1
+M.SqlClient	1	1	1	1
+### v4-test: module members (M.<Module>.<member>), occurrences >= 3
+key	occurrences	files	projects	effectFiles
+M.Effect.gen	19146	2719	10	2719
+M.Effect.provide	6141	1225	10	1225
+M.Effect.succeed	5014	1444	8	1444
+M.Effect.flatMap	2449	861	6	861
+M.Effect.runPromise	2290	461	8	461
+M.Effect.retry	1925	996	2	996
+M.Effect.fail	1825	1016	8	1016
+M.Effect.flip	1798	492	7	492
+M.Effect.map	1791	823	7	823
+M.Effect.catchTag	1698	831	6	831
+M.Layer.succeed	1649	342	9	342
+M.Effect.sync	1348	431	9	431
+M.Effect.void	1329	667	9	667
+M.Effect.promise	1327	204	5	204
+M.Schedule.recurs	1164	728	2	728
+M.Schedule.max	1157	723	1	723
+M.Effect.provideService	1079	663	6	663
+M.Effect.die	1034	354	8	354
+M.Schedule.exponential	924	652	1	652
+M.Schedule.spaced	792	464	2	464
+M.Layer.mergeAll	776	565	7	565
+M.Effect.orDie	756	454	3	454
+M.Effect.logInfo	671	240	2	240
+M.Schema.TaggedClass	605	48	1	48
+M.Data.TaggedError	586	459	5	459
+M.Schedule.fixed	562	416	1	416
+M.Effect.fn	554	266	4	266
+M.Exit.isFailure	546	132	6	132
+M.HttpClientRequest.get	484	181	2	181
+M.Array.from	472	227	6	227
+M.HttpClient.get	466	286	2	286
+M.Schema.String	459	87	5	87
+M.Effect.repeat	434	289	2	289
+M.Effect.exit	425	129	7	129
+M.Array.isArray	404	267	6	267
+M.HttpClientRequest.post	368	176	2	176
+M.Effect.result	365	139	4	139
+M.Layer.provide	344	116	8	116
+M.FileSystem.FileSystem	341	126	3	126
+M.HttpClient.HttpClient	326	168	3	168
+M.Result.isFailure	312	96	6	96
+M.Redacted.make	306	108	3	108
+M.HttpClient.execute	300	227	2	227
+M.Redacted.value	267	123	2	123
+M.Effect.ignore	265	136	3	136
+M.Path.Path	256	96	3	96
+M.Effect.catch	248	124	3	124
+M.Effect.scoped	247	97	5	97
+M.Schema.Struct	242	64	5	64
+M.Stream.runCollect	239	110	3	110
+M.Duration.seconds	233	215	2	215
+M.Deferred.make	208	49	4	49
+M.Deferred.await	188	49	4	49
+M.Effect.andThen	188	62	6	62
+M.Fiber.join	186	58	5	58
+M.Effect.as	185	121	5	121
+M.Effect.forkChild	185	42	5	42
+M.Effect.forEach	175	114	6	114
+M.Schema.Number	167	50	5	50
+M.Effect.tapError	164	151	1	151
+M.Layer.provideMerge	163	75	4	75
+M.Effect.ensuring	158	113	3	113
+M.Schema.decodeUnknownSync	158	69	5	69
+M.HttpClientRequest.bodyJsonUnsafe	157	70	2	70
+M.Deferred.succeed	155	36	4	36
+M.Effect.runPromiseExit	155	66	6	66
+M.Effect.addFinalizer	150	85	3	85
+M.Effect.logWarning	146	138	1	138
+M.Result.isSuccess	138	54	6	54
+M.Effect.all	135	79	6	79
+M.Schedule.min	130	95	1	95
+M.Effect.forkScoped	127	45	4	45
+M.Effect.acquireRelease	126	73	6	73
+M.Layer.effect	126	83	7	83
+M.Effect.timeout	116	56	3	56
+M.Effect.asVoid	111	62	6	62
+M.Effect.log	110	85	1	85
+M.Exit.isSuccess	109	33	5	33
+M.Effect.tap	106	76	5	76
+M.Effect.tryPromise	104	52	4	52
+M.Fiber.await	101	18	2	18
+M.Effect.yieldNow	100	26	4	26
+M.Schema.decodeUnknownResult	99	17	2	17
+M.Effect.acquireUseRelease	97	51	2	51
+M.Effect.sleep	97	60	3	60
+M.Context.Service	96	62	6	62
+M.Config.use	89	5	1	5
+M.Option.some	87	22	6	22
+M.HttpClient.make	86	20	3	20
+M.Option.none	86	22	7	22
+M.Stream.runForEach	84	77	2	77
+M.HttpClientResponse.fromWeb	82	20	3	20
+M.Option.isSome	82	17	6	17
+M.HttpApiEndpoint.get	78	6	2	6
+M.Effect.catchCause	76	54	2	54
+M.Redacted.isRedacted	75	46	1	46
+M.Ref.get	73	25	7	25
+M.Effect.never	72	34	5	34
+M.Cause.squash	68	32	3	32
+M.Layer.merge	68	38	6	38
+M.Config.Service	63	20	1	20
+M.Stream.filter	62	40	2	40
+M.Stream.take	61	23	3	23
+M.Ref.make	59	21	6	21
+M.Effect.filterOrFail	58	23	1	23
+M.Layer.build	57	17	3	17
+M.Effect.suspend	53	40	3	40
+M.Option.isNone	53	18	8	18
+M.Effect.runSync	52	16	4	16
+M.Schema.decodeUnknownEffect	52	21	5	21
+M.Cause.isFailReason	51	35	3	35
+M.Layer.mock	48	24	1	24
+M.DateTime.makeUnsafe	46	11	2	11
+M.Effect.callback	46	23	2	23
+M.Ref.update	41	19	6	19
+M.Config.node	40	28	1	28
+M.HttpClient.filterStatusOk	40	11	1	11
+M.Option.getOrThrow	40	10	5	10
+M.Stream.fromIterable	40	25	3	25
+M.Effect.try	39	29	4	29
+M.Console.log	37	32	1	32
+M.Schema.Boolean	37	20	5	20
+M.Context.get	36	12	3	12
+M.Effect.timeoutOrElse	36	21	2	21
+M.Fiber.interrupt	36	22	4	22
+M.Effect.option	35	20	1	20
+M.Option.getOrUndefined	34	17	2	17
+M.HttpClientRequest.put	33	22	1	22
+M.Stream.decodeText	33	28	2	28
+M.Cause.hasDies	32	14	5	14
+M.Cause.pretty	32	29	4	29
+M.Exit.void	32	15	3	15
+M.Layer.empty	32	21	4	21
+M.Schema.Unknown	32	21	3	21
+M.Scope.close	32	15	3	15
+M.Scope.provide	32	12	3	12
+M.Scope.Scope	32	4	1	4
+M.Stream.run	32	22	1	22
+M.Cause.isDieReason	31	21	2	21
+M.Effect.mapError	31	16	3	16
+M.Schema.optional	31	12	3	12
+M.Effect.onError	30	18	1	18
+M.HttpClient.post	30	18	2	18
+M.HttpClientRequest.setHeader	30	21	2	21
+M.Queue.local	30	1	1	1
+M.Schema.Array	30	17	5	17
+M.Config.Document	29	10	1	10
+M.Config.string	28	13	2	13
+M.HttpApiGroup.make	28	8	2	8
+M.Scope.make	28	13	3	13
+M.ConfigProvider.ConfigProvider	27	9	2	9
+M.ConfigProvider.fromUnknown	27	21	3	21
+M.HttpClientRequest.bodyText	27	16	1	16
+M.ConfigProvider.layer	26	23	3	23
+M.HttpClientRequest.delete	26	19	2	19
+M.Stream.empty	26	10	3	10
+M.Rpc.make	25	6	1	6
+M.Deferred.doneUnsafe	24	14	2	14
+M.Effect.serviceOption	24	4	1	4
+M.Stream.map	24	19	1	19
+M.Stream.runDrain	24	12	3	12
+M.ChildProcess.make	23	11	2	11
+M.Flag.OPENCODE_EXPERIMENTAL_WORKSPACES	23	6	1	6
+M.Stream.mkString	23	22	1	22
+M.Duration.millis	22	13	3	13
+M.Exit.succeed	21	8	2	8
+M.HttpApi.make	21	9	2	9
+M.Stream.make	21	12	3	12
+M.Effect.match	20	14	4	14
+M.HttpRouter.serve	20	14	1	14
+M.Layer.succeedContext	20	3	2	3
+M.Number.MAX_SAFE_INTEGER	20	14	5	14
+M.Queue.take	20	13	3	13
+M.Schema.optionalKey	20	9	4	9
+M.Clock.currentTimeMillis	19	8	3	8
+M.Effect.logError	19	14	2	14
+M.Layer.effectDiscard	19	17	3	17
+M.Schema.Int	19	8	3	8
+M.Schema.Literal	19	11	4	11
+M.HttpClientRequest.setHeaders	18	11	2	11
+M.Layer.fresh	18	7	2	7
+M.Schema.encodeEffect	18	2	1	2
+M.Schema.fromJsonString	18	16	3	16
+M.HttpClientRequest.toWeb	17	8	1	8
+M.Command.Dev	16	2	1	2
+M.Config.Info	16	10	1	10
+M.Config.withDefault	16	7	2	7
+M.Effect.isEffect	16	7	2	7
+M.Flag.OPENCODE_SERVER_PASSWORD	16	6	1	6
+M.Atom.make	15	3	2	3
+M.Cause.fail	15	4	2	4
+M.HttpApiEndpoint.post	15	5	2	5
+M.Stream.runHead	15	14	2	14
+M.Cause.findErrorOption	14	11	4	11
+M.Effect.catchDefect	14	11	2	11
+M.Effect.fnUntraced	14	11	2	11
+M.Effect.onInterrupt	14	8	3	8
+M.Layer.unwrap	14	13	3	13
+M.Queue.unbounded	14	12	3	12
+M.Schema.NonEmptyString	14	4	1	4
+M.Config.number	13	6	2	6
+M.DateTime.now	13	2	1	2
+M.Effect.catchReason	13	6	1	6
+M.Effect.failCause	13	9	3	9
+M.Flag.OPENCODE_SERVER_USERNAME	13	5	1	5
+M.Schema.NumberFromString	13	9	2	9
+M.Schema.TaggedStruct	13	4	1	4
+M.Schema.TaggedUnion	13	2	1	2
+M.Stream.concat	13	4	2	4
+M.Stream.toReadableStream	13	13	1	13
+M.Config.redacted	12	6	2	6
+M.ConfigProvider.fromEnv	12	10	3	10
+M.Duration.toMillis	12	5	2	5
+M.Effect.orElseSucceed	12	8	3	8
+M.HttpClientRequest.make	12	9	1	9
+M.Schema.encodeSync	12	10	3	10
+M.Cause.hasInterruptsOnly	11	7	3	7
+M.Command.Build	11	5	1	5
+M.Context.empty	11	9	2	9
+M.Duration.minutes	11	9	2	9
+M.HttpApiBuilder.layer	11	9	2	9
+M.HttpClientRequest.setBody	11	9	2	9
+M.Schema.Record	11	8	3	8
+M.Semaphore.makeUnsafe	11	11	1	11
+M.Stream.fail	11	5	3	5
+M.Effect.uninterruptibleMask	10	10	1	10
+M.Latch.make	10	3	3	3
+M.Layer.tap	10	2	1	2
+M.Number.parseInt	10	6	1	6
+M.RpcGroup.make	10	6	1	6
+M.Schema.encodeUnknownEffect	10	3	1	3
+M.Cause.prettyErrors	9	6	1	6
+M.Config.succeed	9	3	1	3
+M.Duration.isGreaterThan	9	8	1	8
+M.Flag.OPENCODE_WORKSPACE_ID	9	2	1	2
+M.HttpClient.mapRequest	9	9	1	9
+M.HttpClientResponse.filterStatusOk	9	3	1	3
+M.HttpServer.HttpServer	9	7	1	7
+M.HttpServer.serveEffect	9	2	1	2
+M.Logger.layer	9	7	4	7
+M.Schedule.modifyDelay	9	8	1	8
+M.Schedule.upTo	9	5	1	5
+M.Schema.Never	9	4	1	4
+M.Schema.toCodecJson	9	5	2	5
+M.Stream.fromEffect	9	7	3	7
+M.DateTime.toEpochMillis	8	2	1	2
+M.Effect.runFork	8	4	2	4
+M.Flag.OPENCODE_DISABLE_MODELS_FETCH	8	2	1	2
+M.HttpApiBuilder.group	8	7	2	7
+M.HttpServer.formatAddress	8	6	1	6
+M.Queue.offer	8	7	2	7
+M.Schema.Any	8	5	2	5
+M.Schema.Union	8	7	3	7
+M.Stream.unwrap	8	7	2	7
+M.Cause.combine	7	3	1	3
+M.Command.providers	7	6	1	6
+M.Effect.timeoutOption	7	5	2	5
+M.Hash.fast	7	5	1	5
+M.HttpClientRequest.patch	7	6	2	6
+M.Model.make	7	4	1	4
+M.Option.match	7	7	3	7
+M.Queue.offerUnsafe	7	4	1	4
+M.Schema.declare	7	4	2	4
+M.Schema.encodeUnknownSync	7	5	3	5
+M.Schema.TaggedErrorClass	7	4	1	4
+M.Stream.orDie	7	6	1	6
+M.Cause.empty	6	3	1	3
+M.Cause.hasInterrupts	6	5	2	5
+M.Command.extractUrl	6	1	1	1
+M.Command.isCommandError	6	2	1	2
+M.Config.Directory	6	5	1	5
+M.Console.Console	6	3	1	3
+M.Duration.fromInputUnsafe	6	3	3	3
+M.Effect.asSome	6	6	1	6
+M.Effect.succeedNone	6	6	1	6
+M.Effect.withSpan	6	5	2	5
+M.Flag.OPENCODE_MODELS_PATH	6	2	1	2
+M.HttpRouter.toWebHandler	6	4	1	4
+M.Layer.isLayer	6	2	1	2
+M.Logger.make	6	5	3	5
+M.MutableHashMap.empty	6	2	1	2
+M.Predicate.hasProperty	6	4	1	4
+M.Ref.set	6	5	3	5
+M.Stream.provide	6	4	1	4
+M.String.fromCharCode	6	4	2	4
+M.ChildProcess.pipeTo	5	1	1	1
+M.Duration.isDuration	5	1	1	1
+M.Effect.interrupt	5	5	4	5
+M.HttpClientRequest.bodyJson	5	3	1	3
+M.Layer.sync	5	5	2	5
+M.Number.isFinite	5	5	4	5
+M.Number.isNaN	5	3	3	3
+M.Number.NaN	5	5	3	5
+M.Result.getOrElse	5	4	1	4
+M.Schema.Json	5	5	3	5
+M.Schema.NullOr	5	4	3	4
+M.Schema.Void	5	5	3	5
+M.Scope.fork	5	1	1	1
+M.Atom.runtime	4	1	1	1
+M.Cause.die	4	3	1	3
+M.Cause.interrupt	4	3	2	3
+M.Command.CommandExecutor	4	1	1	1
+M.Config.all	4	1	1	1
+M.ConfigProvider.orElse	4	4	1	4
+M.Duration.format	4	3	2	3
+M.Effect.matchCauseEffect	4	1	1	1
+M.Effect.service	4	2	2	2
+M.Exit.fail	4	2	1	2
+M.HttpClientRequest.bearerToken	4	1	1	1
+M.HttpClientRequest.bodyUint8Array	4	4	1	4
+M.HttpRouter.add	4	1	1	1
+M.Layer.suspend	4	1	1	1
+M.Model.update	4	4	1	4
+M.Option.getOrElse	4	2	2	2
+M.Option.map	4	3	3	3
+M.Schema.decodeUnknownOption	4	4	2	4
+M.Schema.encodeResult	4	2	1	2
+M.Schema.isPattern	4	2	2	2
+M.Schema.Literals	4	3	3	3
+M.Schema.makeFilter	4	3	2	3
+M.Scope.findVariableUp	4	1	1	1
+M.Sink.drain	4	1	1	1
+M.Stream.encodeText	4	3	2	3
+M.Stream.flatMap	4	3	1	3
+M.Stream.fromReadableStream	4	4	2	4
+M.Stream.isStream	4	1	1	1
+M.Stream.never	4	3	2	3
+M.Stream.range	4	2	1	2
+M.Cause.makeFailReason	3	1	1	1
+M.Deferred.isDone	3	3	2	3
+M.Effect.catchIf	3	3	1	3
+M.Effect.context	3	3	1	3
+M.Effect.logDebug	3	3	1	3
+M.Effect.onExit	3	2	1	2
+M.Effect.scope	3	2	1	2
+M.Effect.zip	3	3	1	3
+M.FileSystem.Service	3	1	1	1
+M.HttpClientRequest.setUrlParam	3	3	2	3
+M.Layer.orDie	3	2	2	2
+M.Logger.CurrentLoggers	3	1	1	1
+M.Number.isInteger	3	3	2	3
+M.Number.isSafeInteger	3	2	2	2
+M.Number.POSITIVE_INFINITY	3	3	2	3
+M.Ref.getAndUpdate	3	2	1	2
+M.Schema.check	3	2	1	2
+M.Schema.Class	3	3	2	3
+M.Schema.decodeTo	3	2	1	2
+M.Schema.decodeUnknownExit	3	1	1	1
+M.Schema.TaggedError	3	3	3	3
+M.Schema.withConstructorDefault	3	1	1	1
+M.Scope.findVariable	3	1	1	1
+M.Scope.isWritten	3	1	1	1
+M.Sink.fold	3	2	1	2
+M.Stream.iterate	3	2	1	2
+M.Stream.provideContext	3	2	1	2
+M.Stream.splitLines	3	2	2	2
+M.Stream.tap	3	3	2	3
+M.Workflow.annotate	3	3	1	3
+### v4-test: names imported from effect or @effect/* (files, projects)
+name	files	projects
+Effect	3107	11
+Schedule	1115	2
+Layer	821	9
+MinimumLogLevel	495	1
+HttpClient	476	3
+Data	461	5
+HttpServerResponse	450	2
+HttpServerRequest	398	2
+HttpClientRequest	284	3
+Stream	280	3
+Duration	254	4
+describe	220	5
+it	218	5
+Redacted	204	3
+Schema	197	6
+Exit	160	6
+Result	131	7
+Cause	130	5
+FileSystem	127	3
+Path	99	3
+Context	85	7
+Option	76	8
+Fiber	74	5
+NodeServices	69	4
+expect	53	3
+Deferred	50	4
+assert	48	4
+HttpClientResponse	48	3
+FetchHttpClient	44	2
+Scope	42	4
+layer	37	3
+Console	35	2
+ConfigProvider	32	3
+Ref	26	7
+TestClock	26	5
+Config	24	2
+HttpBody	23	2
+HttpRouter	20	2
+NodeHttpServer	18	2
+ChildProcess	14	2
+HttpServer	14	2
+DateTime	13	2
+pipe	13	2
+Queue	13	3
+RpcSerialization	12	1
+FastCheck	11	2
+Nano	11	1
+RpcServer	11	1
+Semaphore	11	1
+TypeScriptApi	11	1
+TypeScriptUtils	11	1
+TypeCheckerApi	10	1
+TypeCheckerUtils	10	1
+HttpApi	9	2
+HttpApiBuilder	9	2
+Socket	9	1
+TypeParser	9	1
+Clock	8	3
+HttpApiGroup	8	2
+LanguageServicePluginOptions	8	1
+Logger	8	4
+ChildProcessSpawner	7	2
+HttpApiEndpoint	7	2
+Atom	6	3
+Rpc	6	1
+RpcClient	6	1
+RpcGroup	6	1
+Headers	5	1
+NodeFileSystem	5	1
+AtomRegistry	4	3
+LSP	4	1
+Predicate	4	1
+RpcSchema	4	1
+TestConsole	4	1
+AsyncResult	3	2
+HttpApiClient	3	1
+HttpApiSchema	3	1
+HttpClientError	3	2
+LanguageModel	3	1
+Latch	3	3
+Match	3	1
+OpenApi	3	1
+PlatformError	3	1
+Sink	3	1
+SqlClient	3	2
+test	3	1
+Toolkit	3	1
+Chat	2	1
+collectExportedItems	2	1
+diagnostics	2	1
+Done	2	1
+Etag	2	1
+HttpEffect	2	1
+HttpPlatform	2	1
+layerWebSocketConstructorGlobal	2	1
+ManagedRuntime	2	1
+MutableHashMap	2	1
+PgClient	2	1
+R	2	1
+Random	2	2
+References	2	1
+SchemaGetter	2	1
+SqliteClient	2	1
+Tool	2	1
+afterEach	1	1
+Arr	1	1
+AutoImport	1	1
+beforeEach	1	1
+Brand	1	1
+BunFileSystem	1	1
+cast	1	1
+ChildProcessHandle	1	1
+ClusterError	1	1
+collectLayerInfoByName	1	1
+Command	1	1
+completions	1	1
+ConsoleService	1	1
+diagnosticGroups	1	1
+effectRpcDefinition	1	1
+EffectStream	1	1
+Encoding	1	1
+Equal	1	1
+Graph	1	1
+Hash	1	1
+HttpApiError	1	1
+HttpApiMiddleware	1	1
+HttpServerError	1	1
+Inspectable	1	1
+isSqlError	1	1
+keyStrings	1	1
+LayerGraph	1	1
+MessageStorage	1	1
+Metric	1	1
+NodeHttpServerRequest	1	1
+NodeRuntime	1	1
+Ord	1	1
+Otlp	1	1
+Reactivity	1	1
+refactors	1	1
+renderLayerInfo	1	1
+renderOverview	1	1
+Response	1	1
+RpcClientError	1	1
+RunnerHealth	1	1
+Runners	1	1
+RunnerStorage	1	1
+S	1	1
+SchemaAST	1	1
+SchemaIssue	1	1
+Sharding	1	1
+ShardingConfig	1	1
+Snowflake	1	1
+Sql	1	1
+SqlConnection	1	1
+SqlError	1	1
+Sse	1	1
+### v4-test: per project (occurrences), selected categories
+project	T.interface	T.typeLiteral	T.prop.optional	T.prop.function	T.indexSignature	T.union.nullish	T.union.tagged	T.intersection	T.tuple.rest	T.templateLiteral	T.kw.bigint	B.Date	T.generic.fn	T.recursive	T.enum	C.dataTaggedError	C.schemaTaggedError	C.schemaClass	C.service	E.number.fractional	E.number.negative	R.Option	R.Stream	R.Queue	R.Layer	R.Schedule	R.Config	C.taggedError.nameNotTag	C.taggedError.fieldsN	C.taggedError.fields0	C.taggedError.messageOnly	P.data.unknown	B.Record	B.ReadonlyMap	T.typeAlias.object	T.union.literals	T.kw.null	T.kw.undefined	R.Duration	R.Redacted	B.Uint8Array	E.number.negative	E.newDate	T.tuple
+alchemy-run-alchemy	146	3984	1736	80	4	783	0	22	2	16	0	9	287	0	0	578	1	1	53	198	81	0	12	0	14	0	0	2	416	154	9	7	325	0	41	116	345	446	23	69	56	81	165	102
+anomalyco-opencode	13	521	419	108	0	170	0	20	0	1	0	0	189	3	0	0	7	0	28	120	109	0	9	3	47	0	11	0	3	2	2	0	196	0	80	86	15	158	6	0	19	109	22	11
+brandhaug-b2b-saas-starter	0	42	23	2	0	13	0	0	0	0	0	0	18	0	0	1	0	0	1	0	4	0	0	0	5	0	0	0	1	0	0	0	8	2	20	3	7	6	0	0	0	4	4	3
+dearlordylord-huly-mcp	131	657	1370	13	2	216	0	29	0	0	0	0	203	4	0	0	1	0	0	12	140	0	0	0	12	0	0	1	0	0	1	0	694	0	8	20	39	182	0	1	1	140	0	0
+effect-ts-language-service	4	7	0	0	0	5	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	1	0	0	0	0	0	0	0	0	0	0	9	0	0	3	0	5	0	0	0	1	0	1
+effect-ts-website	0	1	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0
+jobflow-io-effect-playwright	0	2	0	0	0	1	0	0	0	0	0	0	0	0	0	1	0	0	4	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	1	0	0	0	0	0	0
+kitlangton-ghui	4	4	5	0	0	4	0	0	0	0	0	0	4	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	2	3	1	0	0	0	0	24	0
+latitude-dev-latitude-llm	43	505	563	12	0	212	0	17	1	0	0	167	214	0	0	1	0	0	0	259	53	0	0	0	12	0	0	0	0	0	1	0	101	10	9	49	125	92	0	0	5	53	1559	13
+mpsuesser-effect-oxlint	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+typeonce-dev-effect-machine	8	62	15	4	1	20	3	2	0	2	0	0	21	10	0	5	1	607	9	0	19	32	2	0	0	0	0	0	1	3	2	0	6	0	4	35	0	24	2	0	0	19	2	41
+
+## v3-app: 883 files (0 unreadable, 1 with oxc parse errors), 14 projects, 876 files import effect or @effect/*
+### v3-app: categories
+category	occurrences	files	projects	effectFiles	description
+T.interface	459	221	13	220	interface declaration
+T.typeLiteral	782	310	14	310	object type literal { ... }
+T.typeAlias.object	45	28	9	28	type alias whose right side is an object type literal
+T.prop	2695	345	14	344	property signature (a field of an interface or type literal)
+T.prop.optional	532	174	13	173	optional property signature a?: T
+T.prop.readonly	1333	198	12	198	readonly property signature
+T.prop.function	6181	149	12	149	function-typed field: property typed by a function type, or a method signature
+T.prop.quotedName	27	20	5	20	property signature with a quoted or computed name
+T.indexSignature	5	5	4	5	index signature [k: K]: V
+T.union	6761	276	14	275	union type
+T.union.nullish	306	100	12	99	union with an undefined or null member
+T.union.literals	91	55	11	55	union whose members are all literal types
+T.union.tagged	1	1	1	1	union of >= 2 object type literals each with a literal _tag field
+T.union.discriminated	4	4	4	4	union of >= 2 object type literals sharing one literal-typed field (any name)
+T.typeLiteral.tagged	9	4	3	4	object type literal with a literal-typed _tag field
+T.intersection	32	18	9	18	intersection type A & B
+T.intersection.brand	0	0	0	0	intersection with a Brand.Brand reference or a __brand/_brand field
+T.tuple	71	22	7	22	tuple type [A, B]
+T.tuple.readonly	10	7	5	7	readonly tuple type
+T.tuple.rest	4	2	1	2	tuple type with a rest element
+T.tuple.optional	0	0	0	0	tuple type with an optional element
+T.tuple.named	4	3	3	3	tuple type with named members
+T.tuple.arity2	18	11	5	11	tuple type with exactly 2 elements and no rest
+T.tuple.arity3plus	3	3	3	3	tuple type with 3 or more elements and no rest
+T.tuple.arity01	46	10	2	10	tuple type with 0 or 1 elements and no rest
+T.array	765	117	8	115	array type T[]
+T.array.readonly	239	69	11	68	readonly T[] or ReadonlyArray<T>
+T.array.ref	192	69	9	69	Array<T> reference
+T.recordType.stringKey	194	77	11	76	Record<K, V> with K = string (a keyed map)
+T.recordType.literalKeys	0	0	0	0	Record<K, V> with K a literal or a union of literals (a fixed-key record)
+T.recordType.otherKey	14	11	4	11	Record<K, V> with any other key type
+T.recordType.untypedValue	93	35	8	35	Record<K, V> with V = unknown or any (an untyped bag)
+T.kw.number	854	188	14	186	number
+T.kw.string	3135	341	14	336	string
+T.kw.boolean	253	103	12	102	boolean
+T.kw.bigint	16	6	4	6	bigint
+T.kw.symbol	86	85	5	85	symbol
+T.kw.uniqueSymbol	83	82	4	82	unique symbol
+T.kw.undefined	218	67	10	67	undefined (type)
+T.kw.null	95	50	10	49	null (type)
+T.kw.void	390	134	13	132	void (type)
+T.kw.never	444	131	12	131	never
+T.kw.unknown	573	162	13	162	unknown
+T.kw.any	623	108	9	108	any
+T.kw.object	8	5	3	5	object
+T.lit.string	636	172	14	172	string literal type
+T.lit.number	54	20	8	20	number literal type (signed included)
+T.lit.boolean	102	75	6	75	true/false literal type
+T.lit.bigint	0	0	0	0	bigint literal type
+T.templateLiteral	5	3	1	3	template literal type `${...}`
+T.function	732	269	13	268	function type (a => b) anywhere in a type
+T.generic.fn	667	187	13	187	function-like declaration or signature with type parameters
+T.generic.type	119	40	8	40	type alias, interface or class with type parameters
+T.typeParam.schema	3	3	2	3	type parameter whose constraint mentions a Schema.* type
+T.param.schema	57	24	6	24	value parameter typed Schema.<...>
+T.typeArgs.call	978	457	14	457	explicit type arguments at a call or new
+T.typeof	231	88	13	86	typeof query in a type
+T.typeof.schemaType	55	10	4	10	typeof X.Type / X.Encoded (a type read off a schema)
+T.keyof	20	12	5	12	keyof
+T.indexedAccess	223	57	12	55	indexed access T[K]
+T.mapped	8	4	4	4	mapped type
+T.conditional	75	13	4	13	conditional type
+T.recursive	23	14	7	14	interface or type alias that mentions its own name
+T.recursive.computed	10	5	2	5	recursive, with a mapped or conditional type in its body (type-level computation)
+T.recursive.viaFunction	1	1	1	1	recursive only through function types or method signatures (not data recursion)
+T.recursive.data	12	11	6	11	recursive data: neither of the two above
+T.enum	2	2	2	2	enum declaration
+T.moduleTypeRef	1111	136	13	136	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	1042	117	12	117	the same, with type arguments
+C.class	809	390	13	390	class declaration or expression
+C.dataTaggedError	163	53	7	53	extends Data.TaggedError(...)
+C.dataError	9	3	1	3	extends Data.Error
+C.schemaTaggedError	32	13	5	13	extends Schema.TaggedError(Class)<...>
+C.schemaError	0	0	0	0	extends Schema.Error(Class)<...>
+C.schemaClass	99	20	7	20	extends Schema.Class / Schema.TaggedClass
+C.dataClass	13	7	3	7	extends Data.Class / Data.TaggedClass
+C.service	308	199	11	199	extends Context.Service/Tag/Reference, Effect.Service, ServiceMap.*
+C.jsError	10	6	5	6	extends Error (or a JS error class)
+C.other	175	133	9	133	any other class
+C.taggedError.nameIsTag	180	60	9	60	tagged error class (Data or Schema) whose class name equals its tag
+C.taggedError.nameNotTag	15	5	2	5	tagged error class whose class name differs from its tag
+C.taggedError.fields0	26	16	1	16	tagged error class with no fields
+C.taggedError.messageOnly	19	12	7	12	tagged error class whose only field is message
+C.taggedError.fieldsN	150	41	7	41	tagged error class with fields other than message alone
+E.object	5343	606	14	601	object literal
+E.object.spread	411	154	11	154	spread inside an object literal
+E.object.computedKey	54	21	7	21	computed property name in an object literal
+E.array	1383	196	14	191	array literal
+E.number.fractional	55	23	3	23	numeric literal with a fraction or exponent
+E.number.negative	31	24	8	24	negated numeric literal -n
+E.bigint	2	1	1	1	bigint literal 10n
+E.null	424	114	14	113	null value
+E.undefined	524	180	13	180	undefined value
+E.template	1808	237	14	234	template string with substitutions
+E.newDate	79	37	7	37	new Date(...)
+E.dateNow	121	27	8	27	Date.now()
+E.symbol	32	23	5	23	Symbol(...) or Symbol.for(...)
+E.newMap	85	32	8	32	new Map(...)
+E.newSet	48	24	7	24	new Set(...)
+E.jsonParse	57	32	6	31	JSON.parse
+E.jsonStringify	145	63	12	62	JSON.stringify
+E.math	139	46	9	46	Math.<member>
+E.durationString	18	8	6	8	a duration string such as "10 millis"
+E.instanceof	156	66	12	66	instanceof
+E.typeofTest	214	59	11	59	typeof x === / !== ...
+E.await	340	64	10	64	await
+E.async	227	76	10	76	async function
+E.newError	757	153	13	153	new X(...) where X's name ends in Error
+### v3-app: Effect types as types (R.<Module> any member; R.<Module>.<Type>)
+key	occurrences	files	projects	effectFiles
+R.Effect	6452	357	14	357
+R.Effect.Effect	6450	356	14	356
+R.Cause	5862	71	3	71
+R.Cause.TimeoutException	5849	66	1	66
+R.Stream	908	69	6	69
+R.Stream.Stream	908	69	6	69
+R.Schema	178	42	8	42
+R.Schema.Schema	171	41	8	41
+R.Layer	69	37	11	37
+R.Layer.Layer	67	37	11	37
+R.Option	35	17	5	17
+R.Option.Option	35	17	5	17
+R.Scope	35	21	7	21
+R.Scope.Scope	33	20	7	20
+R.Types	27	10	2	10
+R.Context	23	7	4	7
+R.Context.Tag	19	4	3	4
+R.Types.Covariant	17	8	1	8
+R.Array	14	7	2	7
+R.Array.NonEmptyReadonlyArray	14	7	2	7
+R.DateTime	14	2	1	2
+R.DateTime.Utc	12	2	1	2
+R.Schedule	12	3	2	3
+R.Schedule.Schedule	12	3	2	3
+R.Duration	9	7	4	7
+R.Cause.Cause	6	3	2	3
+R.Duration.Duration	6	5	2	5
+R.Ref	6	6	4	6
+R.Ref.Ref	6	6	4	6
+R.Tracer	6	2	1	2
+R.Types.Invariant	6	2	1	2
+R.Config	5	5	1	5
+R.Config.Config	5	5	1	5
+R.HashMap	5	3	1	3
+R.HashMap.HashMap	5	3	1	3
+R.HashSet	5	5	3	5
+R.HashSet.HashSet	5	5	3	5
+R.Queue	5	4	1	4
+R.Queue.Enqueue	5	4	1	4
+R.Record	5	2	1	2
+R.Record.ReadonlyRecord	5	2	1	2
+R.Cause.NoSuchElementException	4	2	1	2
+R.Redacted	4	3	2	3
+R.Redacted.Redacted	4	3	2	3
+R.Schema.Annotable	4	2	1	2
+R.SubscriptionRef	4	2	1	2
+R.SubscriptionRef.SubscriptionRef	4	2	1	2
+R.Tracer.AnySpan	4	2	1	2
+R.Cause.UnknownException	3	2	1	2
+R.Chunk	3	3	1	3
+R.Chunk.Chunk	3	3	1	3
+R.Context.Context	3	3	3	3
+R.Duration.DurationInput	3	2	2	2
+R.Data	2	2	1	2
+R.Data.TaggedEnum	2	2	1	2
+R.DateTime.DateTime	2	1	1	1
+R.Effect.EffectTypeId	2	1	1	1
+R.Layer.MemoMap	2	2	1	2
+R.Mailbox	2	2	1	2
+R.Mailbox.ReadonlyMailbox	2	2	1	2
+R.Schema.optionalWith	2	2	1	2
+R.Scope.CloseableScope	2	2	2	2
+R.Types.Simplify	2	2	1	2
+R.Context.TagClassShape	1	1	1	1
+R.Either	1	1	1	1
+R.Either.Either	1	1	1	1
+R.Exit	1	1	1	1
+R.Exit.Failure	1	1	1	1
+R.PubSub	1	1	1	1
+R.PubSub.PubSub	1	1	1	1
+R.Request	1	1	1	1
+R.Request.Cache	1	1	1	1
+R.Schema.MakeOptions	1	1	1	1
+R.Tracer.ExternalSpan	1	1	1	1
+R.Tracer.Span	1	1	1	1
+R.Types.Contravariant	1	1	1	1
+R.Types.EqualsWith	1	1	1	1
+### v3-app: tagged error payload field kinds (P.data.<kind>: Data.TaggedError TS field types; P.schema.<kind>: Schema.TaggedError field schemas)
+key	occurrences	files	projects	effectFiles
+P.data.string	225	31	6	31
+P.data.unknown	45	22	5	22
+P.schema.string	37	11	5	11
+P.data.number	13	7	2	7
+P.data.other-reference	6	3	2	3
+P.schema.optional-or-nullable	5	1	1	1
+P.data.array	4	3	1	3
+P.schema.defect	3	3	2	3
+P.data.literal	2	1	1	1
+P.data.union	2	2	1	2
+P.schema.number	2	1	1	1
+P.data.other	1	1	1	1
+### v3-app: bare type references
+key	occurrences	files	projects	effectFiles
+B.Record	208	82	11	81
+B.Error	207	54	8	54
+B.Array	192	69	9	69
+B.ReadonlyArray	136	39	7	39
+B.Promise	88	43	10	43
+B.Request	76	8	4	8
+B.Response	68	8	6	8
+B.Partial	62	27	4	27
+B.Exclude	45	10	3	10
+B.Uint8Array	34	13	4	13
+B.Parameters	30	12	7	12
+B.ReturnType	29	15	6	15
+B.Map	23	13	5	13
+B.Omit	17	9	5	9
+B.Headers	14	2	1	2
+B.Pick	13	7	3	7
+B.Set	13	8	6	8
+B.URL	7	3	2	3
+B.Readonly	6	3	3	3
+B.Extract	4	1	1	1
+B.Date	3	2	2	2
+B.NonNullable	3	2	2	2
+B.RegExp	1	1	1	1
+### v3-app: module member accesses in expressions (M.<Module> total)
+key	occurrences	files	projects	effectFiles
+M.Effect	5614	702	14	702
+M.Schema	1194	117	11	117
+M.Layer	936	312	13	312
+M.Console	510	25	4	25
+M.Command	305	27	2	27
+M.Option	247	48	9	48
+M.Context	196	153	12	153
+M.Data	189	66	8	66
+M.Array	165	66	9	66
+M.Stream	144	34	7	34
+M.Ref	137	20	7	20
+M.FileSystem	75	41	6	41
+M.Logger	61	32	6	32
+M.Schedule	56	17	9	17
+M.SubscriptionRef	41	9	1	9
+M.Duration	33	20	8	20
+M.Cause	32	16	8	16
+M.Number	30	17	5	17
+M.DateTime	27	4	2	4
+M.Config	25	13	6	13
+M.String	25	3	1	3
+M.Scope	24	9	5	9
+M.HashMap	21	7	4	7
+M.HttpRouter	21	4	1	4
+M.Record	21	6	2	6
+M.Cache	18	7	1	7
+M.Match	16	2	2	2
+M.Predicate	16	9	3	9
+M.HttpClientRequest	15	5	3	5
+M.Metric	15	2	1	2
+M.Chunk	14	9	6	9
+M.HashSet	13	5	3	5
+M.HttpApiBuilder	13	5	2	5
+M.Exit	12	11	9	11
+M.HttpClient	12	8	4	8
+M.PubSub	11	5	2	5
+M.Either	10	4	3	4
+M.HttpServer	8	5	3	5
+M.Function	7	3	3	3
+M.Queue	7	4	3	4
+M.ConfigProvider	6	3	2	3
+M.Deferred	6	2	2	2
+M.Fiber	6	5	4	5
+M.Order	6	2	2	2
+M.FiberHandle	5	1	1	1
+M.Mailbox	5	3	1	3
+M.Path	5	5	4	5
+M.Redacted	5	4	3	4
+M.Channel	3	2	1	2
+M.Equal	3	2	1	2
+M.Equivalence	3	1	1	1
+M.Request	3	1	1	1
+M.Encoding	2	2	1	2
+M.Hash	2	1	1	1
+M.HttpClientResponse	2	2	1	2
+M.Model	2	1	1	1
+M.Rpc	2	1	1	1
+M.Sink	2	2	1	2
+M.Struct	2	1	1	1
+M.Clock	1	1	1	1
+M.HttpApi	1	1	1	1
+M.HttpApiEndpoint	1	1	1	1
+M.HttpApiGroup	1	1	1	1
+M.Pool	1	1	1	1
+M.Random	1	1	1	1
+M.RpcGroup	1	1	1	1
+M.Tracer	1	1	1	1
+### v3-app: module members (M.<Module>.<member>), occurrences >= 3
+key	occurrences	files	projects	effectFiles
+M.Effect.gen	1139	444	13	444
+M.Effect.succeed	653	205	14	205
+M.Effect.fail	506	110	11	110
+M.Console.log	387	24	3	24
+M.Schema.String	323	78	11	78
+M.Layer.provide	321	92	10	92
+M.Layer.effect	303	104	10	104
+M.Effect.tryPromise	279	94	12	94
+M.Effect.map	260	143	12	143
+M.Effect.sync	248	126	12	126
+M.Effect.flatMap	247	127	12	127
+M.Effect.Service	173	93	5	93
+M.Data.TaggedError	163	53	7	53
+M.Context.Tag	148	120	10	120
+M.Effect.catchAll	141	73	11	73
+M.Effect.provide	120	63	12	63
+M.Console.error	118	12	2	12
+M.Schema.Struct	111	48	8	48
+M.Effect.void	103	53	10	53
+M.Command.make	102	27	2	27
+M.Effect.mapError	100	26	8	26
+M.Command.withDescription	99	24	1	24
+M.Effect.Tag	84	75	4	75
+M.Effect.fn	82	43	7	43
+M.Schema.Number	79	36	7	36
+M.Command.withHandler	77	23	1	23
+M.Effect.acquireRelease	77	71	7	71
+M.Effect.log	74	29	7	29
+M.Layer.scoped	74	73	5	73
+M.Effect.locally	71	66	3	66
+M.Schema.TaggedClass	66	10	3	10
+M.Layer.locallyScoped	63	63	1	63
+M.Schema.Literal	63	18	10	18
+M.Effect.try	61	36	7	36
+M.Effect.catchTag	59	12	8	12
+M.FileSystem.FileSystem	58	35	5	35
+M.Effect.promise	55	28	9	28
+M.Option.none	55	22	7	22
+M.Ref.get	54	14	5	14
+M.Schema.decode	54	10	5	10
+M.Effect.runPromise	52	39	10	39
+M.Array.isArray	49	24	5	24
+M.Schema.Array	45	14	8	14
+M.Effect.either	43	9	5	9
+M.Effect.scoped	43	28	7	28
+M.Layer.succeed	43	37	10	37
+M.Context.GenericTag	42	35	6	35
+M.Effect.all	41	32	10	32
+M.Option.isSome	41	14	6	14
+M.Ref.update	40	10	5	10
+M.Schema.optional	40	9	5	9
+M.Option.some	39	16	5	16
+M.Effect.as	33	17	6	17
+M.Schema.Class	33	11	6	11
+M.Effect.tapError	32	14	7	14
+M.Layer.mergeAll	32	23	8	23
+M.Schema.TaggedError	32	13	5	13
+M.Schema.Union	32	17	7	17
+M.Array.from	30	19	6	19
+M.Array.map	30	12	3	12
+M.Effect.forkScoped	30	19	5	19
+M.Effect.tap	30	25	7	25
+M.Effect.provideService	29	13	7	13
+M.Layer.merge	29	15	7	15
+M.Layer.provideMerge	29	13	5	13
+M.Effect.logError	26	17	8	17
+M.Effect.withSpan	25	11	5	11
+M.Effect.forEach	24	20	9	20
+M.Ref.make	24	16	6	16
+M.Effect.zipRight	23	20	5	20
+M.Logger.pretty	23	23	2	23
+M.Command.withSubcommands	22	19	1	19
+M.Effect.addFinalizer	20	15	6	15
+M.Logger.withMinimumLogLevel	20	20	2	20
+M.Effect.andThen	19	11	4	11
+M.Cache.Default	18	7	1	7
+M.Effect.logInfo	18	11	6	11
+M.Option.getOrUndefined	18	6	3	6
+M.Option.match	18	13	5	13
+M.Schema.optionalWith	18	3	2	3
+M.Option.getOrElse	17	9	6	9
+M.Effect.annotateCurrentSpan	16	13	3	13
+M.Effect.logDebug	16	12	5	12
+M.Schema.decodeUnknownSync	16	5	4	5
+M.Stream.mapEffect	16	11	4	11
+M.Effect.orElseSucceed	15	6	4	6
+M.Option.fromNullable	15	8	3	8
+M.Ref.set	15	9	5	9
+M.Schema.Int	15	8	4	8
+M.Schema.Option	15	6	4	6
+M.Duration.millis	14	12	7	12
+M.Effect.asVoid	14	12	4	12
+M.Effect.fnUntraced	14	12	2	12
+M.Effect.withLogSpan	14	5	2	5
+M.Option.isNone	14	9	4	9
+M.Schedule.recurs	14	6	5	6
+M.Schema.encode	14	8	3	8
+M.Stream.make	14	5	2	5
+M.SubscriptionRef.get	14	8	1	8
+M.Effect.sleep	13	10	5	10
+M.FileSystem.Default	13	5	1	5
+M.Option.map	13	7	4	7
+M.Schema.compose	13	4	3	4
+M.Schema.decodeUnknown	13	8	4	8
+M.Schema.NumberFromString	13	8	3	8
+M.String.uncapitalize	13	2	1	2
+M.Effect.async	12	7	3	7
+M.Effect.filterOrFail	12	6	3	6
+M.Effect.forever	12	11	5	11
+M.Number.isFinite	12	10	3	10
+M.Schema.Unknown	12	7	4	7
+M.Data.TaggedClass	11	7	3	7
+M.DateTime.now	11	3	1	3
+M.Effect.asSome	11	5	2	5
+M.Effect.catchAllCause	11	6	4	6
+M.Effect.orDie	11	11	5	11
+M.Effect.runtime	11	8	3	8
+M.Effect.suspend	11	7	3	7
+M.Schema.Boolean	11	4	4	4
+M.Effect.context	10	6	3	6
+M.Effect.ignoreLogged	10	6	2	6
+M.Effect.logTrace	10	6	4	6
+M.Effect.never	10	6	3	6
+M.Effect.repeat	10	7	4	7
+M.Effect.retry	10	7	6	7
+M.Effect.succeedNone	10	6	2	6
+M.Schema.brand	10	2	2	2
+M.Scope.extend	10	5	3	5
+M.Stream.runForEach	10	6	2	6
+M.SubscriptionRef.update	10	2	1	2
+M.Array.join	9	4	2	4
+M.Data.Error	9	3	1	3
+M.Effect.annotateLogs	9	7	6	7
+M.Effect.orElse	9	9	4	9
+M.Effect.succeedSome	9	7	2	7
+M.Logger.Default	9	4	1	4
+M.Predicate.hasProperty	9	6	3	6
+M.Schedule.exponential	9	7	5	7
+M.Schema.is	9	3	1	3
+M.Schema.NonEmptyString	9	4	3	4
+M.Stream.runDrain	9	7	1	7
+M.SubscriptionRef.make	9	4	1	4
+M.Cause.pretty	8	5	4	5
+M.Chunk.toArray	8	8	5	8
+M.Duration.seconds	8	8	4	8
+M.Effect.bind	8	5	2	5
+M.Effect.ensuring	8	7	4	7
+M.Effect.provideServiceEffect	8	8	4	8
+M.Effect.runSync	8	8	4	8
+M.Effect.tapErrorCause	8	4	3	4
+M.HashMap.get	8	4	1	4
+M.HttpClient.HttpClient	8	7	4	7
+M.Layer.sync	8	6	4	6
+M.Option.flatMap	8	3	2	3
+M.Record.filter	8	3	1	3
+M.Schema.decodeSync	8	4	2	4
+M.Schema.Never	8	5	2	5
+M.Schema.parseNumber	8	1	1	1
+M.Schema.transform	8	4	3	4
+M.Stream.map	8	5	3	5
+M.SubscriptionRef.set	8	4	1	4
+M.Effect.delay	7	7	3	7
+M.Effect.die	7	3	2	3
+M.Effect.Do	7	5	2	5
+M.Effect.flatten	7	4	2	4
+M.Effect.onExit	7	5	3	5
+M.Effect.runFork	7	7	4	7
+M.Effect.timeout	7	4	3	4
+M.Number.parseInt	7	7	2	7
+M.Schema.parseJson	7	5	2	5
+M.Scope.make	7	7	5	7
+M.Stream.runCollect	7	7	3	7
+M.String.replace	7	2	1	2
+M.Config.string	6	5	3	5
+M.DateTime.addDuration	6	3	1	3
+M.Effect.fork	6	5	4	5
+M.Effect.fromNullable	6	3	2	3
+M.Effect.ignore	6	6	3	6
+M.Effect.logFatal	6	5	5	5
+M.Effect.logWarning	6	6	4	6
+M.Effect.runPromiseExit	6	5	5	5
+M.Layer.effectDiscard	6	6	2	6
+M.Layer.scopedDiscard	6	6	2	6
+M.Number.isInteger	6	6	4	6
+M.Schedule.spaced	6	6	5	6
+M.Schema.Record	6	5	3	5
+M.Scope.close	6	6	5	6
+M.Stream.fromIterable	6	6	3	6
+M.Stream.pipeThroughChannel	6	4	2	4
+M.Command.run	5	5	2	5
+M.Config.withDefault	5	4	2	4
+M.DateTime.lessThan	5	3	1	3
+M.Effect.dieMessage	5	4	3	4
+M.Effect.zipLeft	5	3	2	3
+M.Fiber.interrupt	5	4	3	4
+M.HashMap.set	5	4	2	4
+M.HttpRouter.concat	5	2	1	2
+M.HttpRouter.empty	5	3	1	3
+M.HttpRouter.get	5	1	1	1
+M.Layer.unwrapEffect	5	5	3	5
+M.Match.orElse	5	2	2	2
+M.Match.tag	5	1	1	1
+M.Match.value	5	2	2	2
+M.Path.Path	5	5	4	5
+M.Redacted.value	5	4	3	4
+M.Schedule.intersect	5	2	2	2
+M.Schema.Defect	5	3	2	3
+M.Schema.nonEmptyString	5	2	1	2
+M.Schema.positive	5	4	2	4
+M.Schema.TaggedRequest	5	4	1	4
+M.Schema.Void	5	4	1	4
+M.Stream.flatMap	5	5	3	5
+M.Stream.tap	5	3	2	3
+M.Array.filter	4	4	2	4
+M.Cause.isFailType	4	4	1	4
+M.Cause.YieldableError	4	3	1	3
+M.Config.option	4	2	2	2
+M.Console.warn	4	3	1	3
+M.Data.tagged	4	4	1	4
+M.Effect.acquireUseRelease	4	4	3	4
+M.Effect.catchAllDefect	4	4	4	4
+M.Effect.catchTags	4	4	3	4
+M.Effect.forkDaemon	4	4	3	4
+M.Effect.interruptible	4	4	2	4
+M.Effect.partition	4	1	1	1
+M.Effect.serviceOption	4	4	3	4
+M.Effect.tryMapPromise	4	2	1	2
+M.Exit.isFailure	4	3	3	3
+M.Exit.void	4	4	3	4
+M.Function.identity	4	2	2	2
+M.HashMap.empty	4	3	1	3
+M.HttpApiBuilder.group	4	4	2	4
+M.HttpClientRequest.setHeader	4	2	2	2
+M.Layer.launch	4	4	2	4
+M.Mailbox.make	4	3	1	3
+M.Metric.counter	4	1	1	1
+M.Metric.update	4	1	1	1
+M.Queue.unbounded	4	4	3	4
+M.Record.keys	4	2	1	2
+M.Schedule.fixed	4	4	3	4
+M.Schedule.jittered	4	2	2	2
+M.Schedule.map	4	1	1	1
+M.Schedule.whileInput	4	1	1	1
+M.Schema.annotations	4	3	1	3
+M.Schema.Config	4	1	1	1
+M.Schema.DateTimeUtc	4	1	1	1
+M.Schema.Duration	4	2	1	2
+M.Schema.encodeUnknownSync	4	3	2	3
+M.Schema.transformOrFail	4	3	1	3
+M.Stream.empty	4	4	3	4
+M.Stream.fromPubSub	4	4	1	4
+M.Stream.mapAccumEffect	4	2	1	2
+M.Array.fromIterable	3	2	2	2
+M.Array.head	3	3	1	3
+M.Array.intersection	3	2	2	2
+M.Array.replicate	3	3	1	3
+M.Array.sort	3	2	2	2
+M.Channel.toSink	3	2	1	2
+M.Config.integer	3	3	1	3
+M.Effect.catchIf	3	3	2	3
+M.Effect.clockWith	3	2	2	2
+M.Effect.exit	3	3	2	3
+M.Effect.forkIn	3	2	2	2
+M.Effect.let	3	2	2	2
+M.Effect.makeSpan	3	1	1	1
+M.Effect.mapBoth	3	3	2	3
+M.Effect.scope	3	2	2	2
+M.Effect.timeoutFail	3	2	2	2
+M.Effect.zip	3	3	2	3
+M.HashSet.empty	3	3	2	3
+M.HashSet.size	3	2	2	2
+M.HttpServer.serve	3	3	1	3
+M.Layer.empty	3	3	2	3
+M.Metric.tagged	3	1	1	1
+M.Number.isNaN	3	1	1	1
+M.PubSub.sliding	3	2	1	2
+M.Record.toEntries	3	2	2	2
+M.Schedule.compose	3	3	2	3
+M.Schema.encodeSync	3	3	2	3
+M.Schema.HashMap	3	2	1	2
+M.Schema.instanceOf	3	3	2	3
+M.Schema.Tuple	3	2	2	2
+M.Stream.fromAsyncIterable	3	3	2	3
+M.Stream.merge	3	3	2	3
+M.Stream.never	3	2	1	2
+M.Stream.run	3	2	1	2
+M.Stream.StreamTypeId	3	3	2	3
+### v3-app: names imported from effect or @effect/* (files, projects)
+name	files	projects
+Effect	733	14
+Layer	321	13
+Context	156	12
+Schema	144	11
+pipe	93	8
+Stream	90	7
+Cause	85	8
+FiberRef	69	5
+dual	68	2
+Data	66	8
+globalValue	63	1
+Option	55	9
+FileSystem	41	5
+Array	31	4
+NodeRuntime	28	2
+Command	27	2
+Logger	26	5
+Console	25	4
+LogLevel	25	7
+Duration	23	10
+Scope	23	8
+Options	21	2
+Pipeable	20	2
+Ref	19	7
+Schedule	16	9
+HttpServerRequest	14	2
+Config	13	5
+NodeContext	13	5
+Chunk	12	7
+Exit	12	9
+HttpRouter	10	2
+Predicate	10	4
+S	10	1
+Types	10	2
+HttpApp	9	3
+HttpClient	9	4
+identity	9	4
+SubscriptionRef	9	1
+ConfigError	8	3
+Record	8	2
+flow	7	4
+HashMap	7	5
+HashSet	7	3
+HttpServer	7	3
+ManagedRuntime	7	4
+PlatformError	7	2
+Redacted	7	3
+Runtime	7	4
+T	7	1
+Args	6	1
+AST	6	2
+Headers	6	1
+HttpBody	6	3
+HttpClientRequest	6	3
+HttpServerResponse	6	1
+ParseResult	6	4
+Path	6	4
+Prompt	6	3
+Domain	5	1
+FetchHttpClient	5	4
+Fiber	5	4
+HttpApiBuilder	5	2
+Socket	5	2
+Unify	5	1
+DateTime	4	2
+Function	4	3
+NodeSocketServer	4	2
+NodeStream	4	2
+ParseError	4	2
+Queue	4	3
+SocketServer	4	2
+Tracer	4	3
+ConfigProvider	3	2
+Eff	3	1
+Either	3	3
+Error	3	2
+HttpClientResponse	3	2
+HttpMethod	3	2
+HttpMiddleware	3	2
+Mailbox	3	1
+PubSub	3	2
+String	3	1
+BunHttpServer	2	2
+BunRuntime	2	2
+ConfigProviderPathPatch	2	1
+Cookies	2	1
+Deferred	2	2
+Encoding	2	1
+Equal	2	1
+Etag	2	1
+FiberRefs	2	2
+HttpApi	2	1
+HttpApiSchema	2	2
+HttpPlatform	2	1
+Inspectable	2	2
+JSONSchema	2	2
+List	2	2
+Match	2	2
+Metric	2	1
+MetricPair	2	1
+NodeHttpClient	2	2
+NodeHttpServer	2	1
+Order	2	2
+Sink	2	1
+SpanEvent	2	1
+Tuple	2	2
+absurd	1	1
+AiError	1	1
+BunContext	1	1
+Channel	1	1
+ChannelSchema	1	1
+Clock	1	1
+Context_	1	1
+Dequeue	1	1
+DevToolsDomain	1	1
+effect	1	1
+Effect_	1	1
+EffectTracer	1	1
+Equivalence	1	1
+FiberHandle	1	1
+FiberId	1	1
+Fn	1	1
+Hash	1	1
+HttpApiEndpoint	1	1
+HttpApiGroup	1	1
+HttpApiSwagger	1	1
+HttpServerError	1	1
+isRecord	1	1
+isString	1	1
+LanguageModel	1	1
+layer	1	1
+Log	1	1
+LogSpan	1	1
+MetricBoundaries	1	1
+MetricState	1	1
+Model	1	1
+Multipart	1	1
+Mutable	1	1
+NodeFileSystem	1	1
+OpenAiClient	1	1
+OpenAiLanguageModel	1	1
+ParentSpan	1	1
+ParseOption	1	1
+pipeArguments	1	1
+Pool	1	1
+Random	1	1
+RateLimiter	1	1
+Request	1	1
+RequestResolver	1	1
+Resource	1	1
+Rpc	1	1
+RpcClient	1	1
+RpcGroup	1	1
+RuntimeFlags	1	1
+SchemaAST	1	1
+ScopedRef	1	1
+Server	1	1
+SocketError	1	1
+Span	1	1
+STM	1	1
+Str	1	1
+Struct	1	1
+Tag	1	1
+TaggedError	1	1
+TRef	1	1
+### v3-app: per project (occurrences), selected categories
+project	T.interface	T.typeLiteral	T.prop.optional	T.prop.function	T.indexSignature	T.union.nullish	T.union.tagged	T.intersection	T.tuple.rest	T.templateLiteral	T.kw.bigint	B.Date	T.generic.fn	T.recursive	T.enum	C.dataTaggedError	C.schemaTaggedError	C.schemaClass	C.service	E.number.fractional	E.number.negative	R.Option	R.Stream	R.Queue	R.Layer	R.Schedule	R.Config	C.taggedError.nameNotTag	C.taggedError.fieldsN	C.taggedError.fields0	C.taggedError.messageOnly	P.data.unknown	B.Record	B.ReadonlyMap	T.typeAlias.object	T.union.literals	T.kw.null	T.kw.undefined	R.Duration	R.Redacted	B.Uint8Array	E.number.negative	E.newDate	T.tuple
+dearlordylord-huly-mcp	14	19	19	12	0	5	0	2	0	0	0	0	1	0	0	0	0	0	2	0	1	0	0	0	4	0	0	0	0	0	0	0	5	0	0	3	0	5	0	0	0	1	3	0
+dhravya-webpull	1	3	0	0	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	4	0	0	0	0	1	0	0
+effect-ts-language-service	25	97	3	23	0	0	0	4	0	0	1	0	51	0	0	28	5	19	143	13	0	0	2	0	16	0	0	10	6	26	1	4	2	0	4	4	0	0	0	0	0	0	8	2
+effect-ts-vscode-extension	18	25	11	16	0	43	1	0	0	0	8	0	28	1	0	1	0	7	8	0	7	22	1	0	2	0	0	0	0	0	1	0	3	0	0	1	4	40	3	0	0	7	0	3
+embedded-insurance-effect-use	0	33	19	11	0	4	0	1	0	0	0	0	3	0	1	0	0	0	0	0	0	0	0	0	5	0	0	0	0	0	0	0	8	0	9	2	0	4	0	0	0	0	1	1
+ethanniser-effectis	20	22	3	21	0	3	0	1	0	0	0	0	2	1	0	3	1	52	15	0	4	8	34	5	0	4	0	0	2	0	2	2	0	0	1	1	3	1	3	0	21	4	0	5
+floydspace-effect-aws	139	106	84	5859	1	4	0	19	0	0	3	0	217	2	0	0	0	1	64	0	0	1	865	0	15	0	5	0	0	0	0	0	8	0	4	0	1	6	0	0	10	0	0	3
+gvasilei-autoreviewer	2	4	1	7	0	0	0	0	0	0	0	0	4	0	0	0	3	0	5	0	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	2	0	0	0	0
+joelhooks-pdf-brain	51	93	90	75	1	58	0	0	0	0	0	1	9	1	0	0	14	9	9	33	5	0	0	0	2	0	0	0	14	0	0	0	19	0	4	12	20	38	0	0	0	5	7	0
+keanemind-jjk	25	34	17	68	0	68	0	2	0	0	0	0	37	0	0	3	0	0	5	0	4	0	5	0	4	0	0	0	0	0	3	0	5	0	5	10	5	63	0	0	1	4	3	2
+mateokruk-effect-slack	7	14	15	0	1	2	0	0	0	0	0	0	7	0	0	10	9	9	4	0	0	0	0	0	7	8	0	0	16	0	3	5	2	0	0	0	2	0	1	2	0	0	0	0
+mcrovero-effect-nextjs	9	36	18	3	0	10	0	1	0	0	0	0	12	2	0	0	0	0	9	0	0	0	0	0	6	0	0	0	0	0	0	0	3	0	1	1	1	11	0	0	0	0	0	0
+pauljphilp-effectpatterns	101	250	222	73	2	91	0	1	0	0	0	2	32	2	1	112	0	0	44	9	8	2	0	0	7	0	0	0	105	0	7	32	143	0	15	49	54	37	0	0	0	8	56	0
+sukovanej-effect-http	47	46	30	13	0	14	0	1	4	5	4	0	264	14	0	6	0	2	0	0	1	2	1	0	1	0	0	5	4	0	2	2	10	0	2	7	1	13	0	0	2	1	1	55
+

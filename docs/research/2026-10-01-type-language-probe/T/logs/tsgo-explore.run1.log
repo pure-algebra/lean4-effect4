@@ -1,0 +1,3 @@
+# Version 7.0.0-dev.20260629.1 (/opt/homebrew/bin/tsgo); tsgo -p tsconfig.explore.json (explore.ts, kept as explore.run1.ts; the run's one wrong expectation is i1)
+explore.ts(68,14): error TS2322: Type 'false' is not assignable to type 'true'.
+exit=1

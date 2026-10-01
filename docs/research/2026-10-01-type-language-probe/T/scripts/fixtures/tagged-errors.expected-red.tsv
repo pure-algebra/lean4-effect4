@@ -1,0 +1,17 @@
+# RED CONTROL: tagged-errors.expected.tsv with nameNotTag deliberately wrong (0, the fixture has 1); must exit 1
+C.class	4
+C.dataTaggedError	3
+C.schemaTaggedError	1
+C.taggedError.nameIsTag	3
+C.taggedError.nameNotTag	0
+C.taggedError.fields0	1
+C.taggedError.messageOnly	1
+C.taggedError.fieldsN	2
+P.data.string	1
+P.data.number	1
+P.data.unknown	1
+P.data.array	1
+P.schema.number	1
+P.schema.defect	1
+P.schema.optional-or-nullable	1
+T.typeArgs.call	1

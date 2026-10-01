@@ -1,0 +1,39 @@
+admitted heads read from the ingest README: 88
+module  used-members(>=3 occ)  admitted-members  occurrences  admitted-occurrences  share  top refused (occ/files/projects)
+Effect            120   38   51744   28343  54.8%  fn 9392/2219/12, catchTag 4320/1259/9, forEach 967/660/11, retry 938/494/10, mapError 895/328/12, runPromise 669/216/10, tryPromise 630/293/13, orDie 555/226/8, annotateCurrentSpan 517/231/5, all 425/253/12, fnUntraced 419/165/9, promise 415/224/10, logInfo 258/76/8, withSpan 250/188/9, tapError 208/112/8, repeat 197/167/7, ignore 196/108/12, try 182/133/11, isEffect 153/97/3, logWarning 152/96/8
+Layer              20    9    5072    4924  97.1%  unwrap 30/27/6, empty 24/17/7, succeedContext 18/11/1, build 15/14/3, buildWithScope 15/14/3, sync 15/15/6
+Schema             92    0   16637       0   0.0%  String 3094/517/12, optional 2771/282/12, Struct 2721/456/12, Array 857/291/10, Boolean 766/212/10, decodeUnknownEffect 618/149/7
+Schedule           11    0    2514       0   0.0%  recurs 664/372/4, max 658/369/2, fixed 475/258/3, spaced 372/231/9, exponential 229/170/9, tap 48/22/1
+Stream             55    0    2207       0   0.0%  runCollect 1100/734/6, filter 195/163/5, map 110/73/6, runHead 105/93/2, decodeText 59/38/4, runForEach 56/43/6
+Config             18    0     407       0   0.0%  string 92/49/6, withDefault 67/42/7, Service 50/47/1, node 32/32/1, redacted 28/24/6, map 26/14/5
+ConfigProvider      6    0      45       0   0.0%  layer 17/15/3, fromEnv 9/7/2, fromUnknown 7/6/3, ConfigProvider 5/4/2, orElse 4/3/1, fromDotEnv 3/2/1
+Option             21    0    1332       0   0.0%  isSome 239/117/12, getOrUndefined 180/135/7, isNone 165/102/10, none 162/71/11, some 140/63/11, match 108/67/11
+Result              8    0     194       0   0.0%  isFailure 61/35/7, isSuccess 61/38/6, getOrElse 27/15/2, succeed 15/8/7, fail 9/5/5, failVoid 9/5/4
+Exit                6    0     177       0   0.0%  isFailure 58/22/8, isSuccess 58/41/9, void 35/26/6, succeed 15/10/5, failCause 8/5/4, fail 3/3/3
+Cause              11    2     182      33  18.1%  squash 53/36/7, pretty 25/20/6, hasInterruptsOnly 21/14/5, findErrorOption 16/13/6, hasInterrupts 12/7/4, isFailReason 9/7/4
+Data                5    0    1011       0   0.0%  TaggedError 972/452/9, taggedEnum 14/13/6, Error 10/4/2, TaggedClass 9/2/2, Class 6/6/2
+Context             9    1     531     461  86.8%  get 25/16/4, Reference 13/12/4, add 11/6/5, make 6/4/4, empty 5/4/1, getReferenceUnsafe 4/2/1
+Scope               8    2     160      48  30.0%  Scope 34/32/4, provide 33/25/6, makeUnsafe 21/18/3, fork 10/8/3, addFinalizer 9/9/3, closeUnsafe 5/5/2
+Fiber               4    3      52      45  86.5%  getCurrent 7/7/3
+Ref                 6    6     140     140 100.0%  
+Deferred            9    5     230     189  82.2%  doneUnsafe 18/9/5, makeUnsafe 11/8/4, failCause 7/4/4, done 5/5/3
+Queue              10    0     107       0   0.0%  offerUnsafe 39/19/5, take 17/11/5, offer 11/6/4, unbounded 10/9/4, make 7/6/2, shutdown 7/6/4
+PubSub              5    0      39       0   0.0%  publish 11/3/3, shutdown 11/4/3, unbounded 8/4/3, publishUnsafe 5/3/2, subscribe 4/3/3
+Semaphore           3    0      60       0   0.0%  makeUnsafe 31/30/4, withPermits 15/14/1, make 14/12/3
+Cache               5    0      58       0   0.0%  get 22/11/4, Default 16/6/1, make 11/10/4, invalidate 5/4/2, set 4/3/3
+Duration           16    0     265       0   0.0%  seconds 89/63/8, millis 59/45/9, toMillis 35/18/7, minutes 14/11/4, toSeconds 12/10/3, nanos 8/6/3
+DateTime            8    0     101       0   0.0%  now 32/17/3, toEpochMillis 26/9/3, formatIso 14/8/3, makeUnsafe 9/6/3, nowUnsafe 9/5/1, nowAsDate 4/3/2
+Clock               1    0      56       0   0.0%  currentTimeMillis 56/28/6
+Random              3    0      30       0   0.0%  nextIntBetween 22/8/1, next 4/2/1, nextBetween 4/4/2
+Redacted            3    0     615       0   0.0%  value 312/198/7, make 186/105/5, isRedacted 117/94/3
+Logger              2    0      19       0   0.0%  layer 16/15/4, consolePretty 3/3/2
+Metric              3    0      19       0   0.0%  update 7/2/2, withAttributes 7/2/2, counter 5/2/2
+Sink                3    0      11       0   0.0%  drain 4/1/1, isSink 4/1/1, head 3/2/2
+Match               3    0     224       0   0.0%  when 126/14/2, exhaustive 49/12/1, value 49/12/1
+Console             2    0     199       0   0.0%  log 192/40/5, error 7/5/2
+SynchronizedRef     5    0      46       0   0.0%  get 15/5/2, modify 11/4/2, modifyEffect 11/6/2, make 6/6/2, update 3/2/1
+SubscriptionRef     4    0      19       0   0.0%  changes 6/4/3, get 5/4/3, make 4/4/3, set 4/3/3
+FiberSet            5    0      21       0   0.0%  make 5/5/3, run 5/4/3, awaitEmpty 4/4/2, join 4/3/2, clear 3/1/1
+FiberMap            3    0      10       0   0.0%  remove 4/3/3, make 3/3/3, run 3/3/3
+KeyValueStore       5    0      24       0   0.0%  KeyValueStore 7/5/2, toSchemaStore 6/3/1, KeyValueStoreError 4/1/1, prefix 4/4/2, layerFileSystem 3/2/1
+exit=0
