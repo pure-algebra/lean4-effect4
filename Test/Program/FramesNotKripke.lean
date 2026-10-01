@@ -1033,22 +1033,12 @@ theorem good_stack_transports :
 /-- For seat C's ledger (row 87, "monotonicity of every owner predicate of `preds`"): the typed
 state's `SavedOk` owner predicate transports along the host order at a position the world
 already declares; an undeclared position may become declared later, which is why the premise is
-needed. -/
+needed. Proved beside its ledger line (`Effect4.Program.Typed.preds_savedOk_mono`, scope
+`M3bWorld`, `Laws/Program/Typed/Assembly.lean`); this is its use here. -/
 theorem preds_savedOk_mono (root : ProgramSource) (w w' : W) (e : Expect) (x : RSaved)
     (ord : w.leHost w') (declared : (expectOf w e).isSome = true)
-    (h : (preds root).SavedOk w e x) : (preds root).SavedOk w' e x := by
-  intro ty hty
-  obtain ⟨ty0, h0⟩ := Option.isSome_iff_exists.mp declared
-  have same : expectOf w' e = some ty0 := by
-    cases e with
-    | root => exact ord.1.2.1 _ _ h0
-    | fiber id => exact ord.1.2.1 _ _ h0
-    | hook name => cases h0
-  rw [same] at hty
-  cases hty
-  -- row 134's bundle: the stack and the provenance (the code is `LiveCode`'s and `ReadCode`'s)
-  obtain ⟨tin, stack, provenance⟩ := h _ h0
-  exact ⟨tin, Contracts.stackAccepts_mono ord stack, provenance⟩
+    (h : (preds root).SavedOk w e x) : (preds root).SavedOk w' e x :=
+  Effect4.Program.Typed.preds_savedOk_mono root w w' e x ord declared h
 
 /-- The refusal also follows from the landed transport: the closed judgment at the initial world
 would transport to `w1`, where even the one-world judgment refuses the frame. -/

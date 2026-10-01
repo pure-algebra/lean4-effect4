@@ -28,8 +28,6 @@ open Effect4.Program.Typed
 #print DecisionEdits
 #print DenotesTyped
 #print TermFits
-#print StackMono
-#print SavedMono
 #print Reestablishes
 
 #print axioms Effect4.Program.Typed.savedPosition_of_saved
@@ -60,7 +58,7 @@ open Effect4.Program.Typed
 #print axioms Effect4.Program.Typed.machineTyped_load
 #print axioms Effect4.Program.Typed.envTyped_nil
 #print axioms Effect4.Program.Typed.loadsTyped_of_denotesTyped
-#print axioms Effect4.Program.Typed.savedMono_of_stackMono
+#print axioms Effect4.Program.Typed.preds_savedOk_mono
 #print axioms Effect4.Program.Typed.admittedReplay_noHostAnswer
 #print axioms Effect4.Program.Typed.reachable_of_ledger
 #print axioms Effect4.Program.Typed.replayR_nil_machine
@@ -101,6 +99,7 @@ open Effect4.Program.Typed
 #print axioms Effect4.Program.Typed.M6Edits.skip.checked
 #print axioms Effect4.Program.Typed.M6Edits.middleware.checked
 #print axioms Effect4.Program.Typed.M6Edits.reestablish.checked
+#print axioms Effect4.Program.Typed.M3bWorld.preds_savedOk_mono.checked
 
 /-! ## M5's reduction is for a program as loaded
 

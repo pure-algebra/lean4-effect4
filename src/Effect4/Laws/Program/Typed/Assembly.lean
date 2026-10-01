@@ -61,8 +61,9 @@ read no code. A fiber whose current code is a race registration marker is typed 
 The ledger is the one list (decisions row 140): M5 (`M3bAssembly`: `typedState_load`,
 `denoteR_typed`, `evalTerm_fits`), M6 (`M6Ledger`: the eighteen command obligations,
 `decision_preserves`, `typedState_reachable`), the decision edits and the fire snapshot
-(`M6Edits`: `DecisionLift`'s fields other than `step`, and the split's re-establishment), stack
-monotonicity (`M6Stack`, until seat B's `M3bWorld` states it) and M7 (`M7`: a–c and scope-handle
+(`M6Edits`: `DecisionLift`'s fields other than `step`, and the split's re-establishment), world
+monotonicity (`M3bWorld`: seat B's laws in `Typed/Residual.lean`, with the bundle's `SavedOk`
+transport proved and declared here, `preds_savedOk_mono`) and M7 (`M7`: a–c and scope-handle
 validity). The eighteen, `decision_preserves`, `typedState_reachable` and `typedState_load` remain
 obligations. This module proves the adapters between them and the lift, the six bookkeeping
 edits, M5's builder (`machineTyped_load`) and its reduction to `denoteR_typed`
@@ -907,35 +908,32 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
     fun w => denotes w (rootPoint compileFuel) root.program rootTy rfl
       ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil w⟩⟩
 
-/-! ## Stack monotonicity (decisions row 135)
+/-! ## World monotonicity of the bundle's saved positions (decisions rows 87 and 135)
 
-Declared until seat B's Kripke closure lands (`M3bWorld` in `Typed/Residual.lean`). At these
-definitions both are false (`E4-TYPED-CE-012`): `FrameAccepts`'s `run`/`skip` arms and its hook
-premises read the one world the stack is checked at, and the algebra pass's `stackAccepts_not_mono`
-(`docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:248`, proved with
-`FitsExit` for the exit judgment) exhibits an `answer` frame accepted at a world and refused at a
-later one. A step that grows the world (an allocation, a fork) keeps every other fiber's saved
-stack only through them. -/
+Seat B's Kripke closure (row 135) proves the frame, stack, saved-frame and program laws in
+`M3bWorld` (`Typed/Residual.lean`: `stackAccepts_mono`, `savedOk_mono`, `typedProg_mono`). The
+bundle's `SavedOk` owner predicate is the stack and its provenance (row 134), so it transports
+along the host order by `Contracts.stackAccepts_mono`, at a position the world already declares:
+an undeclared position may become declared later, which is why that premise is there (seat B's
+statement, first proved in `Test/Program/FramesNotKripke.lean`). It joins `M3bWorld` in the
+ledger below (row 87: the monotonicity of every owner predicate of `preds` is declared there). -/
 
-def StackMono (root : ProgramSource) : Prop :=
-  ∀ (w w' : World) (tin tout : EffTy) (stack : List ScopeFrame), w.leHost w' →
-    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin tout stack →
-      StackAccepts (TypedProg root) ExitOk (frameProtocols root) w' tin tout stack
-
-def SavedMono (root : ProgramSource) : Prop :=
-  ∀ (w w' : World) (final : EffTy) (saved : RSaved), w.leHost w' →
-    Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final saved →
-      Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w' final saved
-
-/-- The saved half from the stack half and `M3bWorld.typedProg_mono`'s proposition. -/
-theorem savedMono_of_stackMono (root : ProgramSource)
-    (programs : ∀ (w w' : World) (ty : EffTy) (p : RProgram), w.leHost w' →
-      TypedProg root w ty p → TypedProg root w' ty p)
-    (stacks : StackMono root) : SavedMono root := by
-  intro w w' final saved ordered typed
-  obtain ⟨tin, code, stack, provenance⟩ := typed
-  exact ⟨tin, programs w w' tin saved.current ordered code,
-    stacks w w' tin final saved.stack ordered stack, provenance⟩
+/-- **The bundle's `SavedOk` transports along the host order** at a position the world
+declares. -/
+theorem preds_savedOk_mono (root : ProgramSource) (w w' : World) (e : Expect) (x : RSaved)
+    (ord : w.leHost w') (declared : (expectOf w e).isSome = true)
+    (h : (preds root).SavedOk w e x) : (preds root).SavedOk w' e x := by
+  intro ty hty
+  obtain ⟨ty0, h0⟩ := Option.isSome_iff_exists.mp declared
+  have same : expectOf w' e = some ty0 := by
+    cases e with
+    | root => exact ord.1.2.1 _ _ h0
+    | fiber _ => exact ord.1.2.1 _ _ h0
+    | hook _ => cases h0
+  rw [same] at hty
+  cases hty
+  obtain ⟨tin, stack, provenance⟩ := h _ h0
+  exact ⟨tin, Contracts.stackAccepts_mono ord stack, provenance⟩
 
 /-- A tape with no host answer is admitted at every machine it meets. -/
 theorem admittedReplay_noHostAnswer (root : ProgramSource) (J : World → RState → Prop)
@@ -1365,9 +1363,11 @@ theorem step_evaluate (root : ProgramSource) (rootTy : EffTy) (id : FiberId) :
 
 /-- `E4-TYPED-CE-012` refuted it as declared at `dceae006` (one `loop` allocates a cell and no
 world types the result: the saved stack does not transport along world growth,
-`docs/research/2026-10-01-landing/ports-at-dceae006/HeadStepLoop.lean`); the split keeps the
-saved-stack clause at the world, so the refutation is expected to carry (not re-run here); seat
-B's Kripke closure (row 135) is the repair. Its halting arms (the census in `MachineLive`'s
+`docs/research/2026-10-01-landing/ports-at-dceae006/HeadStepLoop.lean`). Repaired by seat B's
+Kripke closure (row 135): the refutation is retained over the one-world judgment
+(`Test/Program/FramesNotKripke.lean`, `step_loop_refuted`), and the same `loop` with a frame typed
+into `unit` keeps `I` at the world that declares the new cell (`step_loop_good`, over this split).
+Its halting arms (the census in `MachineLive`'s
 section) need the scope-liveness and target-declaration pres on `fiberPre`'s scope- and
 target-reading rows (seat B); the absent-scope callback that refutes `step_deliver` reaches the
 same walk from `loop` (`Laws/Program/EvaluateR.lean:309-319`; reading, not checked here). -/
@@ -1514,21 +1514,17 @@ theorem reestablish (root : ProgramSource) (rootTy : EffTy) :
 
 end M6Edits
 
-/-! Stack monotonicity (decisions row 135), declared here until seat B's `M3bWorld` closes it. -/
-namespace M6Stack
-
-theorem stackAccepts_mono (root : ProgramSource) : ProofGraph.Obligation (StackMono root) := ⟨⟩
-theorem savedOk_mono (root : ProgramSource) : ProofGraph.Obligation (SavedMono root) := ⟨⟩
+/-! Row 87: the bundle's owner predicates' world monotonicity joins seat B's `M3bWorld`
+(`Typed/Residual.lean`), whose report runs at the foot of this module, after this goal. -/
+namespace M3bWorld
 
 /-- Row 87's transport for the bundle's `SavedOk` at a position the world declares (seat B's
-ledger line; B proved it against the base's bundle as
-`Test.Program.FramesNotKripke.preds_savedOk_mono`). Here `SavedOk` is the stack and the
-provenance, so it follows from `stackAccepts_mono` once frames are closed under world growth. -/
+ledger line, receipt-B "For seat C" item 2). -/
 theorem preds_savedOk_mono (root : ProgramSource) (w w' : World) (e : Expect) (x : RSaved) :
     ProofGraph.Obligation (w.leHost w' → (expectOf w e).isSome = true →
       (preds root).SavedOk w e x → (preds root).SavedOk w' e x) := ⟨⟩
 
-end M6Stack
+end M3bWorld
 
 end Effect4.Program.Typed
 
@@ -1582,8 +1578,8 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M6Edits.answer
 #typed_state_obligations Effect4.Program.Typed.M6Edits ceiling 6
   using aesop (rule_sets := [Effect4.TypedState])
-#proof_wanted Effect4.Program.Typed.M6Stack.stackAccepts_mono
-#proof_wanted Effect4.Program.Typed.M6Stack.savedOk_mono
-#proof_wanted Effect4.Program.Typed.M6Stack.preds_savedOk_mono
-#typed_state_obligations Effect4.Program.Typed.M6Stack ceiling 3
+#obligation_proved Effect4.Program.Typed.M3bWorld.preds_savedOk_mono :=
+  @Effect4.Program.Typed.preds_savedOk_mono
+#obligation_audit Effect4.Program.Typed.M3bWorld
+#typed_state_obligations Effect4.Program.Typed.M3bWorld ceiling 0
   using aesop (rule_sets := [Effect4.TypedState])

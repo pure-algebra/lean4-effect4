@@ -727,6 +727,5 @@ end Effect4.Program.Typed
   fun _ _ _ _ _ _ ord h => Effect4.Program.Typed.Contracts.stackAccepts_mono ord h
 #obligation_proved Effect4.Program.Typed.M3bWorld.savedOk_mono :=
   @Effect4.Program.Typed.savedOk_mono
-#obligation_audit Effect4.Program.Typed.M3bWorld
-#typed_state_obligations Effect4.Program.Typed.M3bWorld ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])
+-- The scope's audit and report run at the foot of `Typed/Assembly.lean`, after the bundle's
+-- `SavedOk` transport joins it (row 87: `M3bWorld.preds_savedOk_mono`), so it is counted once.
