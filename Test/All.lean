@@ -59,6 +59,7 @@ import Test.Machine.Runtime.FramesContract
 import Test.Counterexamples.Machine.Runtime.Frames
 import Test.Machine.Runtime.LiveStackContract
 import Test.Counterexamples.Machine.Runtime.LiveStack
+import Test.Counterexamples.Machine.Runtime.HostHandleForgery
 import Test.Machine.Runtime.StoresLawsContract
 import Test.Machine.Runtime.CompletionDataContract
 import Test.Machine.Runtime.ApproximationContract

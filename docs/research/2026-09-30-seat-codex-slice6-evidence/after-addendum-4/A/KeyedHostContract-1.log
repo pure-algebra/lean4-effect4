@@ -1,0 +1,5 @@
+@reply_commute : ∀ {program : Api.Program} {table : RowTable} (s : Session program table) (a b : Reply),
+  a.key ≠ b.key →
+    (submit s a).phase = Phase.preflight →
+      (submit s b).phase = Phase.preflight →
+        (submit (submit s a).session b).session = (submit (submit s b).session a).session

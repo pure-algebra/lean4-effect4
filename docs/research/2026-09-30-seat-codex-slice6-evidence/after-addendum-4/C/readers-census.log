@@ -1,0 +1,21 @@
+src/OCaml5/Lcnf/Translate.lean:1218:    let origin := String.intercalate "\n   " (comp.map fun v => ds[v]!.signature)
+Test/Api/ForkLedgerRunner.lean:19:  m.fibers.all fun f => m.originOf f.id = some f.origin
+src/Effect4/Laws/Api/Supervision.lean:649:  have horigin := ForkLedger.spawn_originOf_new interp m parent program options [] hfresh recordsFresh
+src/Effect4/Machine/Fibers.lean:268:  origin : Origin := .root
+src/Effect4/Machine/Fibers.lean:282:    (budget : Nat × Bool) (context : χ) (origin : Origin := .root) : RunFiber ν σ β ε δ ι α χ κ φ where
+src/Effect4/Machine/Fibers.lean:298:  origin := origin
+src/Effect4/Laws/Program/Simulation/Fibers.lean:259:    (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (
+src/Effect4/Laws/Program/Simulation/Fibers.lean:266:    (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
+src/Effect4/Laws/Program/Simulation/Fibers.lean:480:    (origin : Origin := .root) :
+src/Effect4/Laws/Program/Simulation/Fibers.lean:484:    (ctx : Ctx) (origin : Origin) : ProofGraph.Obligation (
+src/Effect4/Laws/Program/Simulation/Fibers.lean:489:    (ctx : Ctx) (origin : Origin) :
+src/Effect4/Laws/Program/Simulation/Fibers.lean:495:    (origin : Origin := .root) : PendingOk (RunFiber.make id c flag budget ctx origin : FRun) := by
+src/Effect4/Laws/Codegen/Bindings.lean:120:  permitted : ∀ binding ∈ ofImports imports, binding.origin ∈ allowed
+src/Effect4/Laws/Codegen/Bindings.lean:140:      TypeScript.targetIdentifier binding.name = true ∧ binding.origin ∈ allowed := by
+src/Effect4/Laws/Machine/Book.lean:174:The old RunFiber.origin field is retained only for the step-3 comparison runner until
+src/Effect4/Laws/Program/Guard/Core.lean:3476:    (_sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (FiberGuardState { m with nextId := m.nextId + 1 }
+src/Effect4/Laws/Program/Guard/Core.lean:3480:    (sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
+src/Effect4/Laws/Machine/Handles.lean:2081:    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
+src/Effect4/Laws/Machine/Handles.lean:2086:    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
+src/Effect4/Codegen/Bindings.lean:45:  origin : Origin
+src/Effect4/Codegen/Bindings.lean:82:    TypeScript.targetIdentifier binding.name && decide (binding.origin ∈ allowed)

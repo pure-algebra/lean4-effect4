@@ -541,14 +541,17 @@ let origin_prelude_check () =
     let program = P.load p42 in
     let machine = I.load program ~fuel:100 in
     let parent = List.assoc 0 (I.fibers machine) in
-    check "Fast creation origin: load marks the root"
-      (match parent.origin with I.Origin_root -> true | _ -> false);
+    check "Fast creation origin: the root has no fork record"
+      (match machine.forks with [] -> true | _ -> false);
     let options = { I.start_immediately = true; daemon = true; mask_mode = I.MaskMode_inherit } in
     let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
       parent.frame.current options [3; 1] in
-    let child = List.assoc child_id (I.fibers spawned) in
+    let _child = List.assoc child_id (I.fibers spawned) in
     check "Fast creation origin: spawn retains parent, daemon and exact site"
-      (match child.origin with I.Origin_forked (0, true, [3; 1]) -> true | _ -> false)
+      (match spawned.forks with
+       | [(record : I.fork_record)] ->
+           record.child = child_id && record.parent = 0 && record.daemon && record.site = [3; 1]
+       | _ -> false)
   in
   let () =
     let module I = Api_engine_ref in
@@ -556,14 +559,17 @@ let origin_prelude_check () =
     let program = P.load p42 in
     let machine = I.load program ~fuel:100 in
     let parent = List.assoc 0 (I.fibers machine) in
-    check "Ref creation origin: load marks the root"
-      (match parent.origin with I.Origin_root -> true | _ -> false);
+    check "Ref creation origin: the root has no fork record"
+      (match machine.forks with [] -> true | _ -> false);
     let options = { I.start_immediately = true; daemon = true; mask_mode = I.MaskMode_inherit } in
     let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
       parent.frame.current options [3; 1] in
-    let child = List.assoc child_id (I.fibers spawned) in
+    let _child = List.assoc child_id (I.fibers spawned) in
     check "Ref creation origin: spawn retains parent, daemon and exact site"
-      (match child.origin with I.Origin_forked (0, true, [3; 1]) -> true | _ -> false)
+      (match spawned.forks with
+       | [(record : I.fork_record)] ->
+           record.child = child_id && record.parent = 0 && record.daemon && record.site = [3; 1]
+       | _ -> false)
   in
   ()
 

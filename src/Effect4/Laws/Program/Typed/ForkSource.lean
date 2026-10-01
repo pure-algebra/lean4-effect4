@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.World
+import Effect4.Laws.Machine.ForkLedger
 import Effect4.Laws.Program.InterpR
 import Effect4.Laws.Auto.Obligations
 
@@ -24,7 +25,8 @@ namespace Effect4.Program.Typed.M2ForkSourceWanted
 open Effect4 Effect4.Machine Effect4.Program.Sched
 
 /-- Fresh source fork: Γ receives the checked body type at the id spawn returns,
-and the new fiber records the same site and source-denoted body. -/
+the appended ledger record has the same site, and the new fiber has the source-denoted body.
+This is an append statement, not a first-match origin lookup on an arbitrary machine. -/
 theorem source_fork_extension (root : NativeEff) (site : Point) (body : NativeEff)
     (env : TyEnv) (ty : EffTy) (w : World) (m : RState) (parent : RFiber)
     (options : Supervision.ForkOptions)
@@ -41,7 +43,8 @@ theorem source_fork_extension (root : NativeEff) (site : Point) (body : NativeEf
      newer.ids = spawned.1.fibers.map (fun f => f.id) ∧
      newer.Γ spawned.2.2 = some ty ∧
      ∃ child, child ∈ spawned.1.fibers ∧ child.id = spawned.2.2 ∧
-       child.origin = .forked parent.id options.daemon site.path ∧
+       spawned.1.forks = m.forks ++
+         [ForkRecord.mk child.id parent.id options.daemon site.path] ∧
        child.frame.current = denoteAt root (site.child 0) ∧
        Node.at_ (.eff root) (site.child 0).path = some (.eff body) ∧
        Checker.check nativeSignature env (site.child 0).path body = .ok ty) := ⟨⟩
@@ -62,7 +65,8 @@ theorem fork_source_extension (root : NativeEff) (site : Point) (body : NativeEf
      newer.ids = spawned.1.fibers.map (fun f => f.id) ∧
      newer.Γ spawned.2.2 = some ty ∧
      ∃ child, child ∈ spawned.1.fibers ∧ child.id = spawned.2.2 ∧
-       child.origin = .forked parent.id options.daemon site.path ∧
+       spawned.1.forks = m.forks ++
+         [ForkRecord.mk child.id parent.id options.daemon site.path] ∧
        child.frame.current = denoteAt root (site.child 0) ∧
        Node.at_ (.eff root) (site.child 0).path = some (.eff body) ∧
        Checker.check nativeSignature env (site.child 0).path body = .ok ty) := by
@@ -79,6 +83,28 @@ theorem fork_source_extension (root : NativeEff) (site : Point) (body : NativeEf
     rfl
   · exact ⟨_, List.mem_append_right _ (List.mem_singleton_self _), rfl, rfl, rfl, bodyAt, bodyTy⟩
 
+/-- The source-addressed allocation also answers the exact new-id origin lookup,
+provided both runtime lookups are fresh. World Γ freshness alone does not supply them.
+Use this beside fork_source_extension, which owns the source/type and append facts. -/
+theorem source_fork_originOf (root : NativeEff) (site : Point) (m : RState) (parent : RFiber)
+    (options : Supervision.ForkOptions)
+    (_fiberFresh : m.fiber? ⟨m.nextId⟩ = none)
+    (_recordFresh : m.forkRecord? ⟨m.nextId⟩ = none) : ProofGraph.Obligation
+    (let spawned := spawn (interpR root) m parent (denoteAt root (site.child 0)) options site.path
+     spawned.1.originOf spawned.2.2 = some (.forked parent.id options.daemon site.path)) := ⟨⟩
+
+@[aesop unsafe 90% apply (rule_sets := [Effect4.TypedState])]
+theorem fork_source_originOf (root : NativeEff) (site : Point) (m : RState) (parent : RFiber)
+    (options : Supervision.ForkOptions)
+    (fiberFresh : m.fiber? ⟨m.nextId⟩ = none)
+    (recordFresh : m.forkRecord? ⟨m.nextId⟩ = none) :
+    (let spawned := spawn (interpR root) m parent (denoteAt root (site.child 0)) options site.path
+     spawned.1.originOf spawned.2.2 = some (.forked parent.id options.daemon site.path)) := by
+  change (spawn (interpR root) m parent (denoteAt root (site.child 0)) options site.path).1.originOf
+    ⟨m.nextId⟩ = some (.forked parent.id options.daemon site.path)
+  exact ForkLedger.spawn_originOf_new (interpR root) m parent (denoteAt root (site.child 0))
+    options site.path fiberFresh recordFresh
+
 attribute [aesop unsafe 90% apply (rule_sets := [Effect4.TypedState])] fork_source_extension
 
 end Effect4.Program.Typed.M2ForkSourceWanted
@@ -86,4 +112,5 @@ end Effect4.Program.Typed.M2ForkSourceWanted
 
 #obligation_proved Effect4.Program.Typed.M2ForkSourceWanted.source_fork_extension := @Effect4.Program.Typed.M2ForkSourceWanted.fork_source_extension
 
+#obligation_proved Effect4.Program.Typed.M2ForkSourceWanted.source_fork_originOf := @Effect4.Program.Typed.M2ForkSourceWanted.fork_source_originOf
 #typed_state_obligations Effect4.Program.Typed.M2ForkSourceWanted ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])

@@ -41,10 +41,10 @@ let sh_stores_empty : stores =
     next_name = 0;
     externals = { answers = []; allocated = []; rejected = None } }
 
-(* Effect4.Machine.RunMachine.empty, src/Effect4/Machine/Fibers.lean:612-622. *)
+(* Effect4.Machine.RunMachine.empty, src/Effect4/Machine/Fibers.lean:681-692, including the empty fork ledger. *)
 let sh_machine_empty state =
   { fibers = F.empty; races = []; next_id = 0; next_token = 0; next_race = 0;
-    middleware_installed = false; armed = []; state; trace = T.empty; stuck = None }
+    middleware_installed = false; armed = []; state; trace = T.empty; stuck = None; forks = [] }
 
 (* A fiber's completion, as the FIBERS carrier's `~exit_of` (lane G3).  The fiber record is
    declared here, inside the functor, and `E4_fibers_view` is a compilation unit beside it, so
@@ -89,35 +89,36 @@ let sh_machine_finished m =
    which is at most once per fiber. *)
 let sh_machine_completed_exits m = F.completed m.fibers
 
-(* Effect4.Machine.RunFiber.make, src/Effect4/Machine/Fibers.lean:271-288, with
+(* Effect4.Machine.RunFiber.make, src/Effect4/Machine/Fibers.lean:279-297, with
    `core.start current interruptible` at the `frameCore` instance (:204) spelled out:
    `Effect4.FrameFiber.start` is `⟨current, [], true, none, false⟩` and `make` overrides
    `interruptible`.  Transcribed rather than called, because the two specialisations of
    `RunFiber.make` were callees of `Api.load` and of `spawn`, which this table deletes, and
    the generic `RunFiber.make` takes the `FiberCore` record — a `@[reducible] instance` that
    the mono phase never emits — as its first argument. *)
-let sh_run_fiber_make id current interruptible (budget : int * bool) context origin =
+let sh_run_fiber_make id current interruptible (budget : int * bool) context =
   { id;
     frame = ({ current; stack = []; interruptible; interrupted_cause = None;
                deferred_interrupt = false } : (_, _, _, _, _, _, _) frame_fiber);
     running = false; parked = Parked_notParked; pending = []; finalizing = None;
     exit_ = None; current_op_count = 0;
     max_ops_before_yield = fst budget; prevent_yield = snd budget; yield_override = None;
-    observers = []; children = []; dispatcher = D.empty; context; origin }
+    observers = []; children = []; dispatcher = D.empty; context }
 
 (* Effect4.Api.load, src/Effect4/Api.lean:255-260:
    `{ (RunMachine.empty Stores.empty) with fibers := [RunFiber.make root (compile …) true
-      (stores.budgetOf emptyCtx) emptyCtx], nextId := 1 }`; the default origin is root.
+      (stores.budgetOf emptyCtx) emptyCtx], nextId := 1 }`; the root has no fork record.
    `compile` (`Program.compile`), `ectx` (`emptyCtx`) and `interp` (`Machine.stores`) are
    generated and come AFTER this prelude, so the row hands them in at the call site; `emit`
    adds the emission-order edge that keeps each of them above its user. *)
 let sh_api_load compile ectx interp program fuel answers =
   let stores = { sh_stores_empty with externals = { answers; allocated = []; rejected = None } } in
   let m = sh_machine_empty stores in
-  let root = sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx Origin_root in
+  let root = sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx in
   { m with fibers = F.add ~exit_of:sh_fiber_exit 0 root F.empty; next_id = 1 }
 
-(* Effect4.Machine.spawn, src/Effect4/Machine/Fibers.lean:924-939.  One row deletes both of
+(* Effect4.Machine.spawn, src/Effect4/Machine/Fibers.lean:948-969: the child and its fork record
+   are appended in the same update. One row deletes both of
    its specialisations (`evaluatePrim.withFiber`'s and `launchEntrant`'s). *)
 let sh_spawn interp m (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program options site =
   let child_id = m.next_id in
@@ -133,11 +134,12 @@ let sh_spawn interp m (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) progra
   in
   let child =
     sh_run_fiber_make child_id program child_interruptible (interp.budget_of parent.context)
-      parent.context (Origin_forked (parent.id, options.daemon, site))
+      parent.context
   in
   let m =
     { m with fibers = F.add ~exit_of:sh_fiber_exit child_id child m.fibers;
-      next_id = m.next_id + 1 }
+      next_id = m.next_id + 1;
+      forks = m.forks @ [({ child = child_id; parent = parent.id; daemon = options.daemon; site } : fork_record)] }
   in
   (sh_machine_emit m [ RunEvent_forked (parent.id, child_id, options.daemon) ],
    (parent, child_id))
@@ -157,11 +159,12 @@ let sh_spawn_generic mk_fiber (core : (_, _, _, _, _, _, _, _) fiber_core) inter
   in
   let child =
     mk_fiber core child_id program child_interruptible (interp.budget_of parent.context)
-      parent.context (Origin_forked (parent.id, options.daemon, site))
+      parent.context
   in
   let m =
     { m with fibers = F.add ~exit_of:sh_fiber_exit child_id child m.fibers;
-      next_id = m.next_id + 1 }
+      next_id = m.next_id + 1;
+      forks = m.forks @ [({ child = child_id; parent = parent.id; daemon = options.daemon; site } : fork_record)] }
   in
   (sh_machine_emit m [ RunEvent_forked (parent.id, child_id, options.daemon) ],
    (parent, child_id))

@@ -1,0 +1,15 @@
+[
+  "Test/Api/SupervisionContract.lean",
+  "src/Effect4/Api/Supervision.lean",
+  "src/Effect4/Laws/Api/Supervision.lean",
+  "src/Effect4/Laws/Machine/Book.lean",
+  "src/Effect4/Laws/Machine/Clauses.lean",
+  "src/Effect4/Laws/Program/Guard/Core.lean",
+  "src/Effect4/Laws/Program/RuntimeR.lean",
+  "src/Effect4/Laws/Program/Simulation/Actions.lean",
+  "src/Effect4/Laws/Program/Simulation/Deliver.lean",
+  "src/Effect4/Laws/Program/Simulation/Drive.lean",
+  "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+  "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+  "src/Effect4/Laws/Program/Typed/ForkSource.lean"
+]

@@ -617,21 +617,23 @@ theorem interruptRecord_parked_applies (interp : RunInterp ν σ β ε δ ι α 
 parent's context and budget, the mask by the options, and the untrack observer unless daemon. -/
 def spawnChild (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
-    (options : Supervision.ForkOptions) (site : List Nat := []) : RunFiber ν σ β ε δ ι α χ :=
+    (options : Supervision.ForkOptions) (_site : List Nat := []) : RunFiber ν σ β ε δ ι α χ :=
   let childInterruptible :=
     match options.maskMode with
     | Supervision.MaskMode.interruptible => true
     | Supervision.MaskMode.uninterruptible => false
     | Supervision.MaskMode.inherit => parent.frame.interruptible
   RunFiber.make ⟨m.nextId⟩ program childInterruptible (interp.budgetOf parent.context) parent.context
-    (.forked parent.id options.daemon site)
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem M1OriginClauses.spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
     spawn interp m parent program options site =
-      ({ m with fibers := m.fibers ++ [spawnChild interp m parent program options site], nextId := m.nextId + 1 }.emit
+      ({ m with
+          fibers := m.fibers ++ [spawnChild interp m parent program options site]
+          nextId := m.nextId + 1
+          forks := m.forks ++ [ForkRecord.mk ⟨m.nextId⟩ parent.id options.daemon site] }.emit
           [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon],
         parent, ⟨m.nextId⟩)) := ⟨⟩
 
@@ -643,7 +645,10 @@ theorem spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat := []) :
     spawn interp m parent program options site =
-      ({ m with fibers := m.fibers ++ [spawnChild interp m parent program options site], nextId := m.nextId + 1 }.emit
+      ({ m with
+          fibers := m.fibers ++ [spawnChild interp m parent program options site]
+          nextId := m.nextId + 1
+          forks := m.forks ++ [ForkRecord.mk ⟨m.nextId⟩ parent.id options.daemon site] }.emit
           [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon],
         parent, ⟨m.nextId⟩) := by aesop
 
@@ -659,10 +664,12 @@ theorem M1OriginClauses.spawnChild_fields (interp : RunInterp ν σ β ε δ ι 
           | Supervision.MaskMode.uninterruptible => false
           | Supervision.MaskMode.inherit => parent.frame.interruptible) ∧
       (spawnChild interp m parent program options site).observers = [] ∧
-      (spawnChild interp m parent program options site).origin = .forked parent.id options.daemon site) := ⟨⟩
+      (spawn interp m parent program options site).1.forks =
+        m.forks ++ [ForkRecord.mk ⟨m.nextId⟩ parent.id options.daemon site]) := ⟨⟩
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The child's identity, context and mask (`:5264-5284`); it carries no observer yet.
+Creation provenance is the appended machine record, independently of the child's mutable fields.
 census: fork.unsafe -/
 @[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem spawnChild_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
@@ -676,7 +683,8 @@ theorem spawnChild_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : R
           | Supervision.MaskMode.uninterruptible => false
           | Supervision.MaskMode.inherit => parent.frame.interruptible) ∧
       (spawnChild interp m parent program options site).observers = [] ∧
-      (spawnChild interp m parent program options site).origin = .forked parent.id options.daemon site := by
+      (spawn interp m parent program options site).1.forks =
+        m.forks ++ [ForkRecord.mk ⟨m.nextId⟩ parent.id options.daemon site] := by
   cases hm : options.maskMode <;>
     aesop (add norm simp [spawnChild, RunFiber.make, hm])
 

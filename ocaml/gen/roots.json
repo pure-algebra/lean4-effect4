@@ -95,7 +95,8 @@
       "cap": 2000,
       "types": [
         "Effect4.Program.RowShape",
-        "Effect4.Machine.Origin"
+        "Effect4.Machine.Origin",
+        "Effect4.Machine.ForkRecord"
       ],
       "roots": [
         "Effect4.Api.run",

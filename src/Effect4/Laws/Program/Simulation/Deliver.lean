@@ -451,7 +451,7 @@ theorem FMeans.withFrameContext {root : NativeEff} {f₁ : FRun} {f₂ : RFiber}
       { f₁ with frame := fr₁, context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent }
       { f₂ with frame := fr₂, context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent } :=
   FMeans.mk' h.id h.parked rfl h.running h.pending h.finalizing h.exit h.opCount rfl rfl
-    h.yieldOverride h.observers h.children h.dispatcher hS h.origin
+    h.yieldOverride h.observers h.children h.dispatcher hS
 
 theorem BMeans.emitL {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (h : BMeans root m₁ m₂)
     (e : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :

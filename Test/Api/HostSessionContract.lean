@@ -21,6 +21,7 @@ def admitted : Api.AdmittedProgram program table where
   lawful := by decide
   runnable := by decide
   intFreeTable := by decide
+  internalFreeTable := by decide
   intFreeProgram := by decide
   intFreeType := by decide
 

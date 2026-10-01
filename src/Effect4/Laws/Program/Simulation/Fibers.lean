@@ -60,11 +60,6 @@ variable {root : NativeEff} {f₁ : FRun} {f₂ : RFiber}
 theorem FMeans.id (h : FMeans root f₁ f₂) : f₁.id = f₂.id := fiberMeans_id h
 theorem FMeans.parked (h : FMeans root f₁ f₂) : f₁.parked = f₂.parked := fiberMeans_parked h
 theorem FMeans.context (h : FMeans root f₁ f₂) : f₁.context = f₂.context := fiberMeans_context h
-theorem M1OriginFibers.FMeans_origin (_h : FMeans root f₁ f₂) : ProofGraph.Obligation (
-    f₁.origin = f₂.origin) := ⟨⟩
-
-@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
-theorem FMeans.origin (h : FMeans root f₁ f₂) : f₁.origin = f₂.origin := fiberMeans_origin h
 theorem FMeans.running (h : FMeans root f₁ f₂) : f₁.running = f₂.running := h.2.1
 theorem FMeans.pending (h : FMeans root f₁ f₂) : f₁.pending = f₂.pending := h.2.2.1
 theorem FMeans.finalizing (h : FMeans root f₁ f₂) : f₁.finalizing = f₂.finalizing := h.2.2.2.1
@@ -107,7 +102,7 @@ theorem M1OriginFibers.FMeans_mk' (_hid : f₁.id = f₂.id) (_hpk : f₁.parked
     (_hyo : f₁.yieldOverride = f₂.yieldOverride) (_hobs : f₁.observers = f₂.observers)
     (_hch : f₁.children = f₂.children)
     (_hdisp : DispatcherMeans (CodeMeans root) f₁.dispatcher f₂.dispatcher)
-    (_hS : Means root f₁.frame f₂.frame) (_horigin : f₁.origin = f₂.origin) : ProofGraph.Obligation (
+    (_hS : Means root f₁.frame f₂.frame) : ProofGraph.Obligation (
     FMeans root f₁ f₂) := ⟨⟩
 
 /-- The relation from its fields. -/
@@ -120,18 +115,18 @@ theorem FMeans.mk' (hid : f₁.id = f₂.id) (hpk : f₁.parked = f₂.parked)
     (hyo : f₁.yieldOverride = f₂.yieldOverride) (hobs : f₁.observers = f₂.observers)
     (hch : f₁.children = f₂.children)
     (hdisp : DispatcherMeans (CodeMeans root) f₁.dispatcher f₂.dispatcher)
-    (hS : Means root f₁.frame f₂.frame) (horigin : f₁.origin = f₂.origin) : FMeans root f₁ f₂ := by
+    (hS : Means root f₁.frame f₂.frame) : FMeans root f₁ f₂ := by
   refine ⟨?_, hrun, hpend, hfin, hex, hoc, hmo, hpy, hyo, hobs, hch, hdisp, hS⟩
   show FiberControl.mk f₁.id f₁.parked (if f₁.exit.isSome then none else some f₁.frame.interruptible)
-      f₁.frame.interruptedCause f₁.frame.deferredInterrupt f₁.context f₁.origin =
+      f₁.frame.interruptedCause f₁.frame.deferredInterrupt f₁.context =
     FiberControl.mk f₂.id f₂.parked (if f₂.exit.isSome then none else some f₂.frame.interruptible)
-      f₂.frame.interruptedCause f₂.frame.deferredInterrupt f₂.context f₂.origin
-  rw [hid, hpk, hctx, hex, hS.1, hS.2.1, hS.2.2.1, horigin]
+      f₂.frame.interruptedCause f₂.frame.deferredInterrupt f₂.context
+  rw [hid, hpk, hctx, hex, hS.1, hS.2.1, hS.2.2.1]
 
 theorem FMeans.withFrame (h : FMeans root f₁ f₂) {fr₁ : FFiber} {fr₂ : RSaved}
     (hS : Means root fr₁ fr₂) : FMeans root { f₁ with frame := fr₁ } { f₂ with frame := fr₂ } :=
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher hS h.origin
+    h.preventYield h.yieldOverride h.observers h.children h.dispatcher hS
 
 theorem FMeans.answer (h : FMeans root f₁ f₂) {c₁ : NCode} {c₂ : RProgram}
     (hc : CodeMeans root c₁ c₂) :
@@ -143,46 +138,46 @@ theorem FMeans.park (h : FMeans root f₁ f₂) (p : Pending EffName Val Err Def
     FMeans root (f₁.park p) (f₂.park p) :=
   FMeans.mk' h.id rfl h.context h.running (by show f₁.pending ++ [p] = f₂.pending ++ [p]; rw [h.pending])
     h.finalizing h.exit h.opCount h.maxOps h.preventYield h.yieldOverride h.observers h.children
-    h.dispatcher h.means h.origin
+    h.dispatcher h.means
 
 theorem FMeans.withContext (h : FMeans root f₁ f₂) (ctx : Ctx) (maxOps : Nat) (prevent : Bool) :
     FMeans root { f₁ with context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent }
       { f₂ with context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent } :=
   FMeans.mk' h.id h.parked rfl h.running h.pending h.finalizing h.exit h.opCount rfl rfl
-    h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
+    h.yieldOverride h.observers h.children h.dispatcher h.means
 
 theorem FMeans.withObservers (h : FMeans root f₁ f₂) (obs : List Observer) :
     FMeans root { f₁ with observers := obs } { f₂ with observers := obs } :=
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride rfl h.children h.dispatcher h.means h.origin
+    h.preventYield h.yieldOverride rfl h.children h.dispatcher h.means
 
 theorem FMeans.withChildren (h : FMeans root f₁ f₂) (ch : List FiberId) :
     FMeans root { f₁ with children := ch } { f₂ with children := ch } :=
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride h.observers rfl h.dispatcher h.means h.origin
+    h.preventYield h.yieldOverride h.observers rfl h.dispatcher h.means
 
 theorem FMeans.withRunning (h : FMeans root f₁ f₂) (b : Bool) :
     FMeans root { f₁ with running := b } { f₂ with running := b } :=
   FMeans.mk' h.id h.parked h.context rfl h.pending h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
+    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
 
 theorem FMeans.started (h : FMeans root f₁ f₂) :
     FMeans root { f₁ with running := true, currentOpCount := 0, parked := .notParked }
       { f₂ with running := true, currentOpCount := 0, parked := .notParked } :=
   FMeans.mk' h.id rfl h.context rfl h.pending h.finalizing h.exit rfl h.maxOps
-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
+    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
 
 theorem FMeans.unparked (h : FMeans root f₁ f₂) :
     FMeans root { f₁ with parked := .notParked, pending := [] }
       { f₂ with parked := .notParked, pending := [] } :=
   FMeans.mk' h.id rfl h.context h.running rfl h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
+    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
 
 theorem FMeans.withPending (h : FMeans root f₁ f₂)
     (l : List (Pending EffName Val Err Defect FiberId Ann)) :
     FMeans root { f₁ with pending := l } { f₂ with pending := l } :=
   FMeans.mk' h.id h.parked h.context h.running rfl h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
+    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
 
 theorem FMeans.withYield (h : FMeans root f₁ f₂) (v : Option Bool) :
     FMeans root { f₁ with yieldOverride := v } { f₂ with yieldOverride := v } :=
@@ -192,7 +187,7 @@ theorem FMeans.counted (h : FMeans root f₁ f₂) :
     FMeans root (Effect4.Machine.countOp f₁) (Effect4.Machine.countOp f₂) :=
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit
     (by show f₁.currentOpCount + 1 = f₂.currentOpCount + 1; rw [h.opCount]) h.maxOps
-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
+    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
 
 theorem FMeans.verdict (h : FMeans root f₁ f₂) :
     Effect4.Machine.yieldVerdict f₁ = Effect4.Machine.yieldVerdict f₂ := by
@@ -258,20 +253,20 @@ theorem FMeans.enqueue (h : FMeans root f₁ f₂) (priority : Nat) {t₁ : FTas
       { f₂ with dispatcher := f₂.dispatcher.enqueue priority t₂ } :=
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
     h.preventYield h.yieldOverride h.observers h.children (dispatcherMeans_enqueue h.dispatcher priority ht)
-    h.means h.origin
+    h.means
 
 theorem M1OriginFibers.fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
-    (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (
-    FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin)) := ⟨⟩
+    (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) : ProofGraph.Obligation (
+    FMeans root (RunFiber.make id c₁ flag budget ctx) (RunFiber.make id c₂ flag budget ctx)) := ⟨⟩
 
 /-- A fresh fiber over related programs. -/
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
-    (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
-    FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin) :=
+    (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
+    FMeans root (RunFiber.make id c₁ flag budget ctx) (RunFiber.make id c₂ flag budget ctx) :=
   FMeans.mk' rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl ⟨ListRel.nil, rfl⟩
-    (means_start root hc flag) rfl
+    (means_start root hc flag)
 
 end Fiber
 
@@ -291,7 +286,16 @@ theorem BMeans.middleware (h : BMeans root m₁ m₂) :
     m₁.middlewareInstalled = m₂.middlewareInstalled := h.2.2.2.2.2.1
 theorem BMeans.armed (h : BMeans root m₁ m₂) : m₁.armed = m₂.armed := h.2.2.2.2.2.2.1
 theorem BMeans.state (h : BMeans root m₁ m₂) : m₁.state = m₂.state := h.2.2.2.2.2.2.2.1
-theorem BMeans.stuck (h : BMeans root m₁ m₂) : m₁.stuck = m₂.stuck := h.2.2.2.2.2.2.2.2
+theorem BMeans.stuck (h : BMeans root m₁ m₂) : m₁.stuck = m₂.stuck := h.2.2.2.2.2.2.2.2.1
+
+theorem M1OriginFibers.BMeans_forks (_h : BMeans root m₁ m₂) :
+    ProofGraph.Obligation (m₁.forks = m₂.forks) := ⟨⟩
+
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+theorem BMeans.forks (h : BMeans root m₁ m₂) : m₁.forks = m₂.forks := BookMeans.forks h
+
+theorem BMeans.originOf (h : BMeans root m₁ m₂) (id : FiberId) :
+    m₁.originOf id = m₂.originOf id := BookMeans.originOf h id
 theorem BMeans.completedExits (h : BMeans root m₁ m₂) : m₁.completedExits = m₂.completedExits :=
   book_completedExits h
 
@@ -299,8 +303,16 @@ theorem BMeans.mk' (hf : ListRel (FMeans root) m₁.fibers m₂.fibers)
     (hr : ListRel (RaceMeans (CodeMeans root)) m₁.races m₂.races) (hid : m₁.nextId = m₂.nextId)
     (htok : m₁.nextToken = m₂.nextToken) (hrace : m₁.nextRace = m₂.nextRace)
     (hmid : m₁.middlewareInstalled = m₂.middlewareInstalled) (harm : m₁.armed = m₂.armed)
-    (hst : m₁.state = m₂.state) (hstuck : m₁.stuck = m₂.stuck) : BMeans root m₁ m₂ :=
-  ⟨hf, hr, hid, htok, hrace, hmid, harm, hst, hstuck⟩
+    (hst : m₁.state = m₂.state) (hstuck : m₁.stuck = m₂.stuck)
+    (hforks : m₁.forks = m₂.forks) : BMeans root m₁ m₂ :=
+  ⟨hf, hr, hid, htok, hrace, hmid, harm, hst, hstuck, hforks⟩
+
+/-- Appending the same creation record keeps the two machine ledgers equal. -/
+theorem BMeans.appendFork (h : BMeans root m₁ m₂) (record : ForkRecord) :
+    BMeans root { m₁ with forks := m₁.forks ++ [record] }
+      { m₂ with forks := m₂.forks ++ [record] } :=
+  BMeans.mk' h.fibers h.races h.nextId h.nextToken h.nextRace h.middleware
+    h.armed h.state h.stuck (congrArg (fun records => records ++ [record]) h.forks)
 
 theorem BMeans.update (h : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber} (hf : FMeans root f₁ f₂) :
     BMeans root (m₁.update f₁) (m₂.update f₂) := book_update h hf
@@ -464,23 +476,21 @@ end Machine
 
 /-! ## The invariant, at the shapes the arms produce -/
 
-theorem M1Origin.pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx)
-    (origin : Origin := .root) :
-    ProofGraph.Obligation (PendingOk (RunFiber.make id c flag budget ctx origin : FRun)) := ⟨⟩
+theorem M1Origin.pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
+    ProofGraph.Obligation (PendingOk (RunFiber.make id c flag budget ctx : FRun)) := ⟨⟩
 
 theorem M1OriginFibers.make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
-    (ctx : Ctx) (origin : Origin) : ProofGraph.Obligation (
-    (RunFiber.make id c flag budget ctx origin : FRun).pending = []) := ⟨⟩
+    (ctx : Ctx) : ProofGraph.Obligation (
+    (RunFiber.make id c flag budget ctx : FRun).pending = []) := ⟨⟩
 
 @[aesop norm simp (rule_sets := [Effect4.Stores])]
 theorem make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
-    (ctx : Ctx) (origin : Origin) :
-    (RunFiber.make id c flag budget ctx origin : FRun).pending = [] := by aesop
+    (ctx : Ctx) :
+    (RunFiber.make id c flag budget ctx : FRun).pending = [] := by aesop
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])] PendingOk
 
-theorem pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx)
-    (origin : Origin := .root) : PendingOk (RunFiber.make id c flag budget ctx origin : FRun) := by
+theorem pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) : PendingOk (RunFiber.make id c flag budget ctx : FRun) := by
   aesop (rule_sets := [Effect4.Stores])
 
 theorem pendingOk_park {f : FRun} (hf : PendingOk f) (p : Pending EffName Val Err Defect FiberId Ann)
@@ -493,6 +503,10 @@ theorem pendingOk_park {f : FRun} (hf : PendingOk f) (p : Pending EffName Val Er
 
 theorem pendingOk_of_fields {f g : FRun} (hf : PendingOk f) (h : g.pending = f.pending) : PendingOk g := by
   intro p hp; rw [h] at hp; exact hf p hp
+
+/-- The existing store/pending invariant does not inspect creation records. -/
+theorem machineOk_forks {m : FMachine} (hok : MachineOk StoresOk m) (records : List ForkRecord) :
+    MachineOk StoresOk { m with forks := records } := hok
 
 theorem machineOk_appendFiber {m : FMachine} (hok : MachineOk StoresOk m) {c : FRun} (hc : PendingOk c)
     (n : Nat) : MachineOk StoresOk { m with fibers := m.fibers ++ [c], nextId := n } := by
@@ -520,4 +534,5 @@ theorem machineOk_mapFibers {m : FMachine} (hok : MachineOk StoresOk m) {g : FRu
 
 end Effect4.Program.Sched
 
+#obligation_proved Effect4.Program.Sched.M1OriginFibers.BMeans_forks := @Effect4.Program.Sched.BMeans.forks
 #typed_state_obligations Effect4.Program.Sched.M1OriginFibers ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

@@ -3421,6 +3421,12 @@ theorem internalKeys_spawnAppend (m : NativeMachine) (child : NFiber)
   change _ ++ (_ ++ fiberKeys child) = _
   rw [keys, List.append_nil]
 
+/-- The guard observes scheduling and code ownership, independently of provenance records. -/
+theorem guardState_forks {m : NativeMachine} (state : GuardState m) (records : List ForkRecord) :
+    GuardState { m with forks := records } := by
+  cases state
+  constructor <;> assumption
+
 theorem guardState_spawnAppend {m : NativeMachine} (state : GuardState m)
     (child : NFiber) (fresh : child.id.value = m.nextId)
     (valid : FiberGuardState { m with nextId := m.nextId + 1 } child)
@@ -3467,13 +3473,13 @@ theorem guardState_spawnAppend {m : NativeMachine} (state : GuardState m)
   · exact ⟨hall _ state.internalCodes.1 valid.tasks, state.internalCodes.2⟩
 
 theorem M1Origin.fiberGuardState_freshChild (m : NativeMachine) (code : NCode)
-    (_sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (FiberGuardState { m with nextId := m.nextId + 1 }
-      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx origin)) := ⟨⟩
+    (_sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) : ProofGraph.Obligation (FiberGuardState { m with nextId := m.nextId + 1 }
+      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx)) := ⟨⟩
 
 theorem fiberGuardState_freshChild (m : NativeMachine) (code : NCode)
-    (sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
+    (sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
     FiberGuardState { m with nextId := m.nextId + 1 }
-      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx origin) := by
+      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx) := by
   constructor
   · exact Nat.lt_succ_self _
   · rfl
@@ -3488,24 +3494,25 @@ theorem fiberGuardState_freshChild (m : NativeMachine) (code : NCode)
 
 abbrev spawnedChild (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions)
-    (site : List Nat := []) : NFiber :=
+    (_site : List Nat := []) : NFiber :=
   RunFiber.make ⟨m.nextId⟩ code
     (match options.maskMode with
     | .interruptible => true
     | .uninterruptible => false
     | .inherit => parent.frame.interruptible)
     ((interpOf p table).budgetOf parent.context) parent.context
-    (.forked parent.id options.daemon site)
 
 theorem M1Origin.spawn_machine (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).1 =
-      (spawnAppend m (spawnedChild p table m parent code options site)).emit
+      ({ (spawnAppend m (spawnedChild p table m parent code options site)) with
+        forks := m.forks ++ [(⟨⟨m.nextId⟩, parent.id, options.daemon, site⟩ : ForkRecord)] }).emit
         [.forked parent.id ⟨m.nextId⟩ options.daemon]) := ⟨⟩
 
 theorem spawn_machine (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
     (spawn (interpOf p table) m parent code options site).1 =
-      (spawnAppend m (spawnedChild p table m parent code options site)).emit
+      ({ (spawnAppend m (spawnedChild p table m parent code options site)) with
+        forks := m.forks ++ [(⟨⟨m.nextId⟩, parent.id, options.daemon, site⟩ : ForkRecord)] }).emit
         [.forked parent.id ⟨m.nextId⟩ options.daemon] := by aesop
 
 theorem M1Origin.requestOf_spawn (p : NativeEff) (table : RowTable) (m : NativeMachine)
@@ -3540,8 +3547,9 @@ theorem guardState_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
     GuardState (spawn (interpOf p table) m parent code options site).1 := by
   rw [spawn_machine (site := site)]
   apply guardState_emit
+  apply guardState_forks
   apply guardState_spawnAppend state _ rfl
-  · exact fiberGuardState_freshChild m code sites _ _ _ (.forked parent.id options.daemon site)
+  · exact fiberGuardState_freshChild m code sites _ _ _
   · rfl
   · rfl
 

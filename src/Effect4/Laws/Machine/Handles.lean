@@ -1844,14 +1844,16 @@ theorem world_update (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) :
   rfl
 
 theorem world_fibers_append (c : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (n : Nat)
-    (ev : List (RunEvent ν σ Val Err Defect FiberId Ann Ctx)) :
-    (({ m with fibers := m.fibers ++ [c], nextId := n } : NM ν σ).emit ev).world =
+    (ev : List (RunEvent ν σ Val Err Defect FiberId Ann Ctx))
+    (forks : List ForkRecord := m.forks) :
+    (({ m with fibers := m.fibers ++ [c], nextId := n, forks := forks } : NM ν σ).emit ev).world =
       ⟨m.fibers.map RunFiber.id ++ [c.id], m.state⟩ := by
   simp only [RunMachine.world, RunMachine.emit, List.map_append, List.map_cons, List.map_nil]
 
 theorem keys_fibers_append (c : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (n : Nat)
-    (ev : List (RunEvent ν σ Val Err Defect FiberId Ann Ctx)) :
-    (({ m with fibers := m.fibers ++ [c], nextId := n } : NM ν σ).emit ev).keys nk sk =
+    (ev : List (RunEvent ν σ Val Err Defect FiberId Ann Ctx))
+    (forks : List ForkRecord := m.forks) :
+    (({ m with fibers := m.fibers ++ [c], nextId := n, forks := forks } : NM ν σ).emit ev).keys nk sk =
       m.fibers.flatMap (RunFiber.keys nk sk) ++ c.keys nk sk ++ m.races.flatMap (Race.keys nk sk) ++
         m.armed.map Handle.fiber ++ m.state.keys := by
   simp only [RunMachine.keys, RunMachine.emit, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
@@ -2076,13 +2078,13 @@ Each helper's receipt: the world grew, and the handles the helper leaves behind 
 machine's, its fiber's, its commands') exist in the world it leaves. -/
 
 theorem M1Origin.make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
-    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
+    (budget : Nat × Bool) (ctx : Ctx) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
       primKeys nk sk program ++ ctx.keys) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
-    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
-    (RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
+    (budget : Nat × Bool) (ctx : Ctx) :
+    (RunFiber.make id program flag budget ctx : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
       primKeys nk sk program ++ ctx.keys := by
   show primKeys nk sk program ++ [] ++ [] ++ [] ++ [] ++ [] ++ [] ++ [] ++ ctx.keys ⊆ _
   simp only [List.append_nil]
@@ -2109,7 +2111,7 @@ theorem spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId 
       Handle.fiber parent.id :: primKeys nk sk program ++ parent.context.keys := by
   unfold spawnChild
   dsimp only
-  refine List.Subset.trans (make_keys_subset nk sk _ _ _ _ _ (.forked parent.id options.daemon site)) ?_
+  refine List.Subset.trans (make_keys_subset nk sk _ _ _ _ _) ?_
   sub_tac
 
 theorem M1Origin.spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
@@ -2138,15 +2140,15 @@ theorem spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx St
     (spawnChild_fields interp m parent program options site).1
   have hle : m.world.le ⟨m.fibers.map RunFiber.id ++ [⟨m.nextId⟩], m.state⟩ :=
     ⟨fun id h => List.mem_append_left _ h, Stores.le_refl _⟩
-  refine ⟨by rw [world_fibers_append, hcid]; exact hle, ?_⟩
+  refine ⟨by rw [world_fibers_append (forks := _), hcid]; exact hle, ?_⟩
   simp only [MintedIn]
-  rw [world_fibers_append, hcid]
+  rw [world_fibers_append (forks := _), hcid]
   have hchild : (Handle.fiber ⟨m.nextId⟩).existsIn ⟨m.fibers.map RunFiber.id ++ [⟨m.nextId⟩], m.state⟩ = true :=
     decide_eq_true (List.mem_append_right _ (List.mem_singleton_self _))
   have hsc := spawnChild_keys_subset nk sk interp m parent program options site
   refine Ok_of_subset ?_ (Ok_cons.mpr ⟨hchild, Ok_append.mpr ⟨Ok_mono hle hm, Ok_of_subset hsc
     (Ok_of_subset (by simp only [RunFiber.keys]; sub_tac) (Ok_mono hle hm))⟩⟩)
-  rw [keys_fibers_append]
+  rw [keys_fibers_append (forks := _)]
   sub_tac
 
 theorem start_minted (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)

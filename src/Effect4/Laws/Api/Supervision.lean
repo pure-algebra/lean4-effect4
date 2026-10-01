@@ -1,5 +1,6 @@
 import Effect4.Api.Supervision
 import Effect4.Laws.Machine.Clauses
+import Effect4.Laws.Machine.ForkLedger
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Program.Size
@@ -308,7 +309,8 @@ theorem M1Origin.spawn_fibers (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (program : κ) (options : Supervision.ForkOptions) : ProofGraph.Obligation (∃ child : RunFiber ν σ β ε δ ι α χ κ φ,
       (spawn interp m parent program options).1.fibers = m.fibers ++ [child] ∧
         child.id = ⟨m.nextId⟩ ∧ child.exit = none ∧ child.observers = [] ∧
-        child.children = [] ∧ child.origin = .forked parent.id options.daemon []) := ⟨⟩
+        child.children = [] ∧ (spawn interp m parent program options).1.forks =
+          m.forks ++ [ForkRecord.mk child.id parent.id options.daemon []]) := ⟨⟩
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem spawn_fibers (interp : RunInterp ν σ β ε δ ι α χ St κ)
@@ -317,7 +319,8 @@ theorem spawn_fibers (interp : RunInterp ν σ β ε δ ι α χ St κ)
     ∃ child : RunFiber ν σ β ε δ ι α χ κ φ,
       (spawn interp m parent program options).1.fibers = m.fibers ++ [child] ∧
         child.id = ⟨m.nextId⟩ ∧ child.exit = none ∧ child.observers = [] ∧
-        child.children = [] ∧ child.origin = .forked parent.id options.daemon [] := by aesop
+        child.children = [] ∧ (spawn interp m parent program options).1.forks =
+          m.forks ++ [ForkRecord.mk child.id parent.id options.daemon []] := by aesop
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem M1Trace.start_forked (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
@@ -572,14 +575,14 @@ theorem M1Origin.status_persists (m m' : Machine) (f f' : Fiber)
     (_exit : f'.exit = f.exit)
     (_track : parentOf m' f'.id = parentOf m f.id)
     (_pin : pinOf f' = pinOf f)
-    (_origin : f'.origin = f.origin) : ProofGraph.Obligation (statusOf m' f' = statusOf m f) := ⟨⟩
+    (_origin : m'.originOf f'.id = m.originOf f.id) : ProofGraph.Obligation (statusOf m' f' = statusOf m f) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem status_persists (m m' : Machine) (f f' : Fiber)
     (exit : f'.exit = f.exit)
     (track : parentOf m' f'.id = parentOf m f.id)
     (pin : pinOf f' = pinOf f)
-    (origin : f'.origin = f.origin) :
+    (origin : m'.originOf f'.id = m.originOf f.id) :
     statusOf m' f' = statusOf m f := by
   unfold statusOf
   aesop
@@ -618,11 +621,11 @@ unheld — which is why a `daemonsQuiet` reading is a reading of a settled machi
 theorem spawn_status_fresh
     (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) (m : Machine)
     (parent : Fiber) (program : NCode) (options : Supervision.ForkOptions)
-    (fresh : NextIdFresh m) (child : Fiber)
+    (fresh : NextIdFresh m) (recordsFresh : m.forkRecord? ⟨m.nextId⟩ = none) (child : Fiber)
     (member : child ∈ (spawn interp m parent program options).1.fibers)
     (id : child.id = ⟨m.nextId⟩) :
     statusOf (spawn interp m parent program options).1 child = FiberStatus.daemon := by
-  obtain ⟨new, hfib, hid, hexit, hobs, hchildren, horigin⟩ :=
+  obtain ⟨new, hfib, hid, hexit, hobs, hchildren, _hforks⟩ :=
     spawn_fibers interp m parent program options
   rw [hfib, List.mem_append] at member
   have hsame : child = new := by
@@ -639,20 +642,27 @@ theorem spawn_status_fresh
     unfold pinOf
     rw [hobs]
     rfl
+  have hfresh : m.fiber? ⟨m.nextId⟩ = none := by
+    apply List.find?_eq_none.mpr
+    intro g hg hit
+    exact (fresh g hg).1 (of_decide_eq_true hit)
+  have horigin := ForkLedger.spawn_originOf_new interp m parent program options [] hfresh recordsFresh
   unfold statusOf
-  rw [hexit, hparent, hpin, horigin]
+  rw [hexit, hparent, hpin, id, horigin]
 
 /-- A spawn changes no existing fiber's status: it appends a fiber with no children, touches
 no other, and retains every existing origin. -/
 theorem spawn_status_other
     (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) (m : Machine)
     (parent : Fiber) (program : NCode) (options : Supervision.ForkOptions)
-    (_fresh : NextIdFresh m) (g : Fiber) (_member : g ∈ m.fibers) :
+    (fresh : NextIdFresh m) (g : Fiber) (member : g ∈ m.fibers) :
     statusOf (spawn interp m parent program options).1 g = statusOf m g := by
   obtain ⟨new, hfib, _, _, _, hchildren, _⟩ := spawn_fibers interp m parent program options
-  refine status_persists m (spawn interp m parent program options).1 g g rfl ?_ rfl rfl
-  unfold parentOf
-  rw [hfib, parentOf_append_same m.fibers new g.id hchildren]
+  refine status_persists m (spawn interp m parent program options).1 g g rfl ?_ rfl ?_
+  · unfold parentOf
+    rw [hfib, parentOf_append_same m.fibers new g.id hchildren]
+  · exact ForkLedger.spawn_originOf_other interp m parent program options [] g.id
+      (Ne.symm (fresh g member).1)
 
 /-! ## (c) `fiberStatuses` and `awaits` agree on which fibers are parked -/
 
@@ -744,11 +754,13 @@ open Effect4 Effect4.Machine Effect4.Program
 
 universe u v
 
-/-- Laws-side projection of the stored id and origin; includes roots and paths. -/
+/-- The ordered fork-ledger projection, including exact source paths. Roots have no
+entry. Root/member origin observations use RunMachine.originOf separately. -/
 def originEntries {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
     {St κ φ η : Type (max u v)} (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
     List (FiberId × Origin) :=
-  m.fibers.map fun f => (f.id, f.origin)
+  m.forks.map fun record =>
+    (record.child, Origin.forked record.parent record.daemon record.site)
 
 namespace M1Origin
 
@@ -801,10 +813,11 @@ theorem forkScoped_none_origins (interp : RunInterp ν σ β ε δ ι α χ St)
 
 end MachineForks
 
-/-- Loaded roots are roots by their stored field, independent of diagnostics. -/
+/-- A load has no fork records and its member root reads as a root, independent of diagnostics. -/
 theorem load_origins (program : NativeEff) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) : ProofGraph.Obligation
-    (originEntries (Api.load program fuel answers) = [(Api.root, Origin.root)]) := ⟨⟩
+    (originEntries (Api.load program fuel answers) = [] ∧
+      (Api.load program fuel answers).originOf Api.root = some .root) := ⟨⟩
 
 /-- One located source fork, its decoded action, and its stamp. Static membership
 is frozen separately with exactly the same parameters and premises.
@@ -989,10 +1002,7 @@ universe u v
 def originForks {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
     {St κ φ η : Type (max u v)} (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
     List (FiberId × FiberId × Bool) :=
-  m.fibers.filterMap fun f =>
-    match f.origin with
-    | .forked parent daemon _ => some (parent, f.id, daemon)
-    | .root => none
+  m.forks.map fun record => (record.parent, record.child, record.daemon)
 
 /-- Diagnostic agreement; deliberately not an invariant of arbitrary records. -/
 def Agrees {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -1025,7 +1035,14 @@ open Effect4 Effect4.Machine Effect4.Program
 
 universe u v
 
-/-! ## Origins, machine half: what each fork records on the fiber it creates -/
+/-! ## Origins, machine half: the record each fork appends to the machine ledger -/
+
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+theorem load_origins (program : NativeEff) (fuel : Nat)
+    (answers : List (Completion Val Err Defect FiberId Ann)) :
+    originEntries (Api.load program fuel answers) = [] ∧
+      (Api.load program fuel answers).originOf Api.root = some .root := by
+  constructor <;> rfl
 
 section OriginFacts
 variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -1046,7 +1063,7 @@ theorem spawn_origins (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (options : Supervision.ForkOptions) (site : List Nat) :
     originEntries (spawn interp m parent program options site).1 =
       originEntries m ++ [(⟨m.nextId⟩, .forked parent.id options.daemon site)] := by
-  aesop (add norm simp [spawn, RunFiber.make, RunMachine.emit, originEntries])
+  aesop (add norm simp [spawn, RunMachine.emit, originEntries])
 
 omit [FiberCore ν β ε δ ι α κ φ] in
 theorem start_origins (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
@@ -1060,7 +1077,7 @@ theorem launchEntrant_origins (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (program : κ) (site : List Nat) :
     originEntries (launchEntrant interp raceId m host program site).1 =
       originEntries m ++ [(⟨m.nextId⟩, .forked host.id true site)] := by
-  aesop (add norm simp [launchEntrant, spawn, RunFiber.make, RunMachine.emit, originEntries])
+  aesop (add norm simp [launchEntrant, spawn, RunMachine.emit, originEntries])
 
 omit [FiberCore ν β ε δ ι α κ φ] in
 /-- Updating the race found under an id leaves that id finding the update. -/
@@ -1282,6 +1299,7 @@ end Effect4.Api
 #obligation_proved Effect4.Api.M1Trace.forkScoped_forked := @Effect4.Api.forkScoped_forked
 #obligation_proved Effect4.Api.M1Trace.forkFinalizers_forked := @Effect4.Api.forkFinalizers_forked
 #obligation_proved Effect4.Api.M1Trace.supervision_static := @Effect4.Api.TraceFacts.supervision_static_flags
+#obligation_proved Effect4.Api.M1Origin.load_origins := @Effect4.Api.load_origins
 #obligation_proved Effect4.Api.M1Origin.supervision_static := @Effect4.Api.supervision_static_origins
 #obligation_proved Effect4.Api.M1Origin.source_fork := @Effect4.Api.source_fork_holds
 #obligation_proved Effect4.Api.M1Origin.race_launch_origins := @Effect4.Api.race_launch_origins_holds

@@ -39,7 +39,7 @@ theorem FMeans.saveAnswer {root : NativeEff} {f₁ : FRun} {f₂ : RFiber} (h : 
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
     h.preventYield h.yieldOverride h.observers h.children h.dispatcher
     ⟨h.interruptible, h.interruptedCause, h.deferred, h.current, StackMeans.answer k hk h.stack,
-      h.maskInv⟩ h.origin
+      h.maskInv⟩
 
 /-! ## The interpreters, beyond the code hooks -/
 
@@ -162,7 +162,7 @@ theorem interruptRecord_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp}
         rw [if_neg hrun, if_neg hrun₂]
         exact ⟨FMeans.mk' ht.id rfl ht.context ht.running rfl ht.finalizing ht.exit ht.opCount
           ht.maxOps ht.preventYield ht.yieldOverride ht.observers ht.children ht.dispatcher
-          ⟨ht.interruptible, rfl, ht.deferred, CodeMeans.failure acc, ht.stack, ht.maskInv⟩ ht.origin, rfl⟩
+          ⟨ht.interruptible, rfl, ht.deferred, CodeMeans.failure acc, ht.stack, ht.maskInv⟩, rfl⟩
     · have hint₂ : ¬ t₂.frame.interruptible = true := by rw [← ht.interruptible]; exact hint
       rw [if_neg hint, if_neg hint₂]
       exact ⟨ht.withFrame ⟨ht.interruptible, rfl, ht.deferred, ht.current, ht.stack, ht.maskInv⟩, rfl⟩
@@ -201,16 +201,22 @@ theorem spawn_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hb : i�
   rw [hm.nextId, hp.context, hb, hp.id]
   cases options.maskMode with
   | interruptible =>
-    exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _) _,
-      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _) _ _, hp, rfl⟩
+    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _)
+      (m₁.forks ++ [ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site])) _,
+      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _) _).appendFork
+        (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
   | uninterruptible =>
-    exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _) _,
-      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _) _ _, hp, rfl⟩
+    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _)
+      (m₁.forks ++ [ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site])) _,
+      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _) _).appendFork
+        (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
   | inherit =>
     dsimp only
     rw [hp.interruptible]
-    exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _) _,
-      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _) _ _, hp, rfl⟩
+    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _)
+      (m₁.forks ++ [ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site])) _,
+      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _) _).appendFork
+        (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
 
 theorem start_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
     (hm : BMeans root m₁ m₂) {p₁ : FRun} {p₂ : RFiber} (hp : FMeans root p₁ p₂) (child : FiberId)
@@ -417,7 +423,7 @@ theorem FMeans.answerEnqueue {root : NativeEff} {f₁ : FRun} {f₂ : RFiber} (h
       { f₂ with frame := { f₂.frame with current := c₂ }, dispatcher := f₂.dispatcher.enqueue priority t₂ } :=
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
     h.preventYield h.yieldOverride h.observers h.children
-    (dispatcherMeans_enqueue h.dispatcher priority ht) (means_answerWith h.means hc) h.origin
+    (dispatcherMeans_enqueue h.dispatcher priority ht) (means_answerWith h.means hc)
 
 /-- A value answered through related answer functions. -/
 theorem iterRel_answer {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
@@ -806,7 +812,7 @@ theorem join_rel (target : FiberId) (mode : Supervision.ObserverMode) :
       · exact pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl
       · exact FMeans.mk' ht.id ht.parked ht.context ht.running ht.pending ht.finalizing rfl ht.opCount
           ht.maxOps ht.preventYield ht.yieldOverride (by rw [ht.observers, hf.id]) ht.children
-          ht.dispatcher ht.means ht.origin
+          ht.dispatcher ht.means
       · rw [hf.id]
         exact means_pushAsyncFinalizer hf.means _
     · rw [hex₁] at hex

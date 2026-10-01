@@ -76,11 +76,23 @@ theorem requestOf_driveStep_launch (p : NativeEff) (table : RowTable)
     letI := evaluatorFor p table
     requestOf (driveStep (interpOf p table) m (.launch raceId) rest).1 fiber token = requestOf m fiber token := by
   letI := evaluatorFor p table
-  simp only [driveStep]
-  repeat' split
-  all_goals
-    aesop (rule_sets := [Effect4.Stores])
-      (add safe 50 (by exact requestOf_launchEntrant p table m raceId _ _ fiber token _))
+  cases hr : m.race? raceId with
+  | none => simp only [driveStep, hr]
+  | some race =>
+    cases hp : race.programs with
+    | nil => simp only [driveStep, hr, hp]
+    | cons program more =>
+      simp only [driveStep, hr, hp]
+      split
+      · rfl
+      · cases hh : m.fiber? race.host with
+        | none => rfl
+        | some host =>
+          change requestOf
+            (launchEntrant (interpOf p table) raceId m host program
+              (race.nextSite.getD [])).1 fiber token = requestOf m fiber token
+          exact requestOf_launchEntrant p table m raceId host program fiber token
+            (race.nextSite.getD [])
 
 theorem reservedKeys_driveStep_launch (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (raceId : Nat) (rest : List NCmd) (keys : List GuardKey)
@@ -99,11 +111,23 @@ theorem interruptedAt_driveStep_launch (p : NativeEff) (table : RowTable)
     letI := evaluatorFor p table
     InterruptedAt (driveStep (interpOf p table) m (.launch raceId) rest).1 fiber := by
   letI := evaluatorFor p table
-  simp only [driveStep]
-  repeat' split
-  all_goals
-    aesop (rule_sets := [Effect4.Stores])
-      (add safe 50 (by exact interruptedAt_launchEntrant p table raceId _ _ interrupted _))
+  cases hr : m.race? raceId with
+  | none => simpa only [driveStep, hr] using interrupted
+  | some race =>
+    cases hp : race.programs with
+    | nil => simpa only [driveStep, hr, hp] using interrupted
+    | cons program more =>
+      simp only [driveStep, hr, hp]
+      split
+      · exact interrupted
+      · cases hh : m.fiber? race.host with
+        | none => exact interrupted
+        | some host =>
+          change InterruptedAt
+            (launchEntrant (interpOf p table) raceId m host program
+              (race.nextSite.getD [])).1 fiber
+          exact interruptedAt_launchEntrant p table raceId host program interrupted
+            (race.nextSite.getD [])
 
 theorem registrationQueue_driveStep_launch (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (raceId : Nat) (rest : List NCmd)

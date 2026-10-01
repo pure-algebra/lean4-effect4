@@ -1,0 +1,387 @@
+--- a/src/Effect4/Machine/Fibers.lean
++++ b/src/Effect4/Machine/Fibers.lean
+@@ -264,8 +264,6 @@
+   children : List FiberId
+   dispatcher : Dispatcher ν σ β ε δ ι α κ
+   context : χ
+-  /-- Set at creation; later tracking and trace changes do not alter provenance. -/
+-  origin : Origin := .root
+ deriving DecidableEq
+ 
+ namespace RunFiber
+@@ -279,7 +277,7 @@
+ /-- `new FiberImpl(context, interruptible)` (`:512-514`) with the modelled fields; the
+ budget fields are read off the context as `setContext` does (`:726-727`). -/
+ def make (id : FiberId) (current : κ) (interruptible : Bool)
+-    (budget : Nat × Bool) (context : χ) (origin : Origin := .root) : RunFiber ν σ β ε δ ι α χ κ φ where
++    (budget : Nat × Bool) (context : χ) : RunFiber ν σ β ε δ ι α χ κ φ where
+   id := id
+   frame := core.start current interruptible
+   running := false
+@@ -295,7 +293,6 @@
+   children := []
+   dispatcher := Dispatcher.empty
+   context := context
+-  origin := origin
+ 
+ /-- Park on `p.token`, remembering what resumes it. -/
+ def park (f : RunFiber ν σ β ε δ ι α χ κ φ) (p : Pending ν β ε δ ι α) :
+@@ -959,7 +956,7 @@
+     | Supervision.MaskMode.uninterruptible => false
+     | Supervision.MaskMode.inherit => core.interruptible parent.frame
+   let child := RunFiber.make childId program childInterruptible
+-    (interp.budgetOf parent.context) parent.context (.forked parent.id options.daemon site)
++    (interp.budgetOf parent.context) parent.context
+   -- tracking (`:5279-5282`) is `Cmd.trackChild`, after the child's immediate run or its
+   -- scheduling (source-repairs §19, D6b); the parent is returned unchanged
+   let m := { m with
+@@ -2214,7 +2211,7 @@
+     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (program : κ) (context : χ) :
+     RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
+   let root : FiberId := ⟨m.nextId⟩
+-  let fiber := RunFiber.make root program true (interp.budgetOf context) context .root
++  let fiber := RunFiber.make root program true (interp.budgetOf context) context
+   let m := { m with fibers := m.fibers ++ [fiber], nextId := m.nextId + 1 }
+   (drive interp fuel m [Cmd.evaluate root, Cmd.drainDue], root)
+ 
+@@ -2224,7 +2221,7 @@
+     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (program : κ) (context : χ)
+     (key : Nat) : RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
+   let root : FiberId := ⟨m.nextId⟩
+-  let fiber := RunFiber.make root program true (interp.budgetOf context) context .root
++  let fiber := RunFiber.make root program true (interp.budgetOf context) context
+   let fiber := { fiber with observers := [Observer.callback key] }
+   let m := { m with fibers := m.fibers ++ [fiber], nextId := m.nextId + 1 }
+   (drive interp fuel m [Cmd.evaluate root, Cmd.drainDue], root)
+--- a/src/Effect4/Laws/Machine/Clauses.lean
++++ b/src/Effect4/Laws/Machine/Clauses.lean
+@@ -617,14 +617,13 @@
+ parent's context and budget, the mask by the options, and the untrack observer unless daemon. -/
+ def spawnChild (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
+-    (options : Supervision.ForkOptions) (site : List Nat := []) : RunFiber ν σ β ε δ ι α χ :=
++    (options : Supervision.ForkOptions) (_site : List Nat := []) : RunFiber ν σ β ε δ ι α χ :=
+   let childInterruptible :=
+     match options.maskMode with
+     | Supervision.MaskMode.interruptible => true
+     | Supervision.MaskMode.uninterruptible => false
+     | Supervision.MaskMode.inherit => parent.frame.interruptible
+   RunFiber.make ⟨m.nextId⟩ program childInterruptible (interp.budgetOf parent.context) parent.context
+-    (.forked parent.id options.daemon site)
+ 
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+ theorem M1OriginClauses.spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+--- a/src/Effect4/Laws/Machine/Handles.lean
++++ b/src/Effect4/Laws/Machine/Handles.lean
+@@ -2078,13 +2078,13 @@
+ machine's, its fiber's, its commands') exist in the world it leaves. -/
+ 
+ theorem M1Origin.make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
+-    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
++    (budget : Nat × Bool) (ctx : Ctx) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
+       primKeys nk sk program ++ ctx.keys) := ⟨⟩
+ 
+ @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+ theorem make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
+-    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
+-    (RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
++    (budget : Nat × Bool) (ctx : Ctx) :
++    (RunFiber.make id program flag budget ctx : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
+       primKeys nk sk program ++ ctx.keys := by
+   show primKeys nk sk program ++ [] ++ [] ++ [] ++ [] ++ [] ++ [] ++ [] ++ ctx.keys ⊆ _
+   simp only [List.append_nil]
+@@ -2111,7 +2111,7 @@
+       Handle.fiber parent.id :: primKeys nk sk program ++ parent.context.keys := by
+   unfold spawnChild
+   dsimp only
+-  refine List.Subset.trans (make_keys_subset nk sk _ _ _ _ _ (.forked parent.id options.daemon site)) ?_
++  refine List.Subset.trans (make_keys_subset nk sk _ _ _ _ _) ?_
+   sub_tac
+ 
+ theorem M1Origin.spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
+--- a/src/Effect4/Laws/Program/Guard/Core.lean
++++ b/src/Effect4/Laws/Program/Guard/Core.lean
+@@ -3473,13 +3473,13 @@
+   · exact ⟨hall _ state.internalCodes.1 valid.tasks, state.internalCodes.2⟩
+ 
+ theorem M1Origin.fiberGuardState_freshChild (m : NativeMachine) (code : NCode)
+-    (_sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (FiberGuardState { m with nextId := m.nextId + 1 }
+-      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx origin)) := ⟨⟩
++    (_sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) : ProofGraph.Obligation (FiberGuardState { m with nextId := m.nextId + 1 }
++      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx)) := ⟨⟩
+ 
+ theorem fiberGuardState_freshChild (m : NativeMachine) (code : NCode)
+-    (sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
++    (sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
+     FiberGuardState { m with nextId := m.nextId + 1 }
+-      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx origin) := by
++      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx) := by
+   constructor
+   · exact Nat.lt_succ_self _
+   · rfl
+@@ -3494,14 +3494,13 @@
+ 
+ abbrev spawnedChild (p : NativeEff) (table : RowTable) (m : NativeMachine)
+     (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions)
+-    (site : List Nat := []) : NFiber :=
++    (_site : List Nat := []) : NFiber :=
+   RunFiber.make ⟨m.nextId⟩ code
+     (match options.maskMode with
+     | .interruptible => true
+     | .uninterruptible => false
+     | .inherit => parent.frame.interruptible)
+     ((interpOf p table).budgetOf parent.context) parent.context
+-    (.forked parent.id options.daemon site)
+ 
+ theorem M1Origin.spawn_machine (p : NativeEff) (table : RowTable) (m : NativeMachine)
+     (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).1 =
+@@ -3550,7 +3549,7 @@
+   apply guardState_emit
+   apply guardState_forks
+   apply guardState_spawnAppend state _ rfl
+-  · exact fiberGuardState_freshChild m code sites _ _ _ (.forked parent.id options.daemon site)
++  · exact fiberGuardState_freshChild m code sites _ _ _
+   · rfl
+   · rfl
+ 
+--- a/src/Effect4/Laws/Program/Simulation/Fibers.lean
++++ b/src/Effect4/Laws/Program/Simulation/Fibers.lean
+@@ -256,15 +256,15 @@
+     h.means
+ 
+ theorem M1OriginFibers.fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
+-    (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (
+-    FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin)) := ⟨⟩
++    (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) : ProofGraph.Obligation (
++    FMeans root (RunFiber.make id c₁ flag budget ctx) (RunFiber.make id c₂ flag budget ctx)) := ⟨⟩
+ 
+ /-- A fresh fiber over related programs. -/
+ 
+ @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+ theorem fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
+-    (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
+-    FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin) :=
++    (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
++    FMeans root (RunFiber.make id c₁ flag budget ctx) (RunFiber.make id c₂ flag budget ctx) :=
+   FMeans.mk' rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl ⟨ListRel.nil, rfl⟩
+     (means_start root hc flag)
+ 
+@@ -476,23 +476,21 @@
+ 
+ /-! ## The invariant, at the shapes the arms produce -/
+ 
+-theorem M1Origin.pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx)
+-    (origin : Origin := .root) :
+-    ProofGraph.Obligation (PendingOk (RunFiber.make id c flag budget ctx origin : FRun)) := ⟨⟩
++theorem M1Origin.pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
++    ProofGraph.Obligation (PendingOk (RunFiber.make id c flag budget ctx : FRun)) := ⟨⟩
+ 
+ theorem M1OriginFibers.make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
+-    (ctx : Ctx) (origin : Origin) : ProofGraph.Obligation (
+-    (RunFiber.make id c flag budget ctx origin : FRun).pending = []) := ⟨⟩
++    (ctx : Ctx) : ProofGraph.Obligation (
++    (RunFiber.make id c flag budget ctx : FRun).pending = []) := ⟨⟩
+ 
+ @[aesop norm simp (rule_sets := [Effect4.Stores])]
+ theorem make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
+-    (ctx : Ctx) (origin : Origin) :
+-    (RunFiber.make id c flag budget ctx origin : FRun).pending = [] := by aesop
++    (ctx : Ctx) :
++    (RunFiber.make id c flag budget ctx : FRun).pending = [] := by aesop
+ 
+ attribute [aesop norm simp (rule_sets := [Effect4.Stores])] PendingOk
+ 
+-theorem pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx)
+-    (origin : Origin := .root) : PendingOk (RunFiber.make id c flag budget ctx origin : FRun) := by
++theorem pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) : PendingOk (RunFiber.make id c flag budget ctx : FRun) := by
+   aesop (rule_sets := [Effect4.Stores])
+ 
+ theorem pendingOk_park {f : FRun} (hf : PendingOk f) (p : Pending EffName Val Err Defect FiberId Ann)
+--- a/src/Effect4/Laws/Program/Simulation/Actions.lean
++++ b/src/Effect4/Laws/Program/Simulation/Actions.lean
+@@ -201,21 +201,21 @@
+   rw [hm.nextId, hp.context, hb, hp.id]
+   cases options.maskMode with
+   | interruptible =>
+-    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _)
++    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _)
+       (m₁.forks ++ [ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site])) _,
+-      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _).appendFork
++      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _) _).appendFork
+         (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
+   | uninterruptible =>
+-    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _)
++    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _)
+       (m₁.forks ++ [ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site])) _,
+-      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _).appendFork
++      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _) _).appendFork
+         (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
+   | inherit =>
+     dsimp only
+     rw [hp.interruptible]
+-    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _)
++    exact ⟨machineOk_emit (machineOk_forks (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _)
+       (m₁.forks ++ [ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site])) _,
+-      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _).appendFork
++      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _) _).appendFork
+         (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
+ 
+ theorem start_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
+--- a/src/Effect4/Laws/Machine/Book.lean
++++ b/src/Effect4/Laws/Machine/Book.lean
+@@ -169,10 +169,9 @@
+     if f.exit.isSome then none else some (c.interruptible f.frame),
+     c.interruptedCause f.frame, c.deferredInterrupt f.frame, f.context⟩
+ 
+-/-! ## The runtime fields and the machine fork ledger
+-
+-The old RunFiber.origin field is retained only for the step-3 comparison runner until
+-step 5 deletes it. It is no longer part of this relation; provenance is the machine ledger.
++/-! ## The fifteen fields of RunFiber and the eleven of RunMachine
++
++Creation provenance is held only in the machine fork ledger.
+ -/
+ 
+ /-- Code-free by equality: `id`, `running`, `parked`, `pending`, `finalizing`, `exit`,
+--- a/Test/All.lean
++++ b/Test/All.lean
+@@ -103,7 +103,6 @@
+ import Test.Api.HostSessionContract
+ import Test.Api.RunnerContract
+ import Test.Api.SupervisionContract
+-import Test.Api.ForkLedgerRunner
+ import Test.Api.KeyedHostContract
+ import Test.Run.RunContract
+ import Test.Program.SchedContract
+--- a/Test/Api/ForkLedgerRunner.lean
++++ /dev/null
+@@ -1,129 +0,0 @@
+-import Test.Program.ExitTypeLane
+-import Effect4.Laws.Machine.ForkLedger
+-
+-/-!
+-Temporary comparison for fork-ledger migration, origin-ledger plan §3. It compares the old
+-fiber field and the new machine reader for every member fiber at initialization and after
+-each raw tape decision. The corpus/tape check is finite evidence at decision boundaries,
+-not a theorem about all reachable machines or every internal command. Retire with the old field.
+--/
+-set_option autoImplicit false
+-set_option maxRecDepth 8192
+-set_option maxHeartbeats 4000000
+-namespace Test.Api.ForkLedgerRunner
+-open Effect4 Effect4.Machine Effect4.Program
+-open Test.Program.TypedCorpus (Entry es key key2)
+-
+-/-- Comparison includes the child identity through the lookup, and the parent, flag and site. -/
+-def same (m : Api.Machine) : Bool :=
+-  m.fibers.all fun f => m.originOf f.id = some f.origin
+-
+-structure Counts where
+-  boundaries : Nat
+-  fibers : Nat
+-  agrees : Bool
+-
+-/-- Exactly the boundary machines of `steppedBy`, including the initial machine. -/
+-def executePrefix (entry : Entry) (m : Api.Machine) : List Api.Decision → Counts
+-  | [] => ⟨1, m.fibers.length, same m⟩
+-  | decision :: rest =>
+-    let after := steppedBy entry.program 4000 entry.table m decision
+-    let tail := executePrefix entry after rest
+-    ⟨tail.boundaries + 1, tail.fibers + m.fibers.length, same m && tail.agrees⟩
+-
+-def u : Term := .lit .unit
+-def unitProgram : NativeEff := .succeed u
+-def opts : Supervision.ForkOptions := ⟨true, false, .inherit⟩
+-def daemon : Supervision.ForkOptions := ⟨true, true, .inherit⟩
+-def ordinary : NativeEff :=
+-  .bind (.withFiber (.fork unitProgram opts)) (.awaitFiber (.var 0) .joinEffect)
+-def explicitScope : NativeEff :=
+-  .bind (.perform (.scopeMake .sequential) u)
+-    (.withFiber (.forkIn unitProgram opts (.var 0)))
+-/-- The parallel-close fixture from RuntimeRContract.parTwo: two original children and
+-both finalizer forks must actually exist before its site check counts as coverage. -/
+-def finalizers : NativeEff :=
+-  .bind (.perform (.scopeMake .parallel) u)
+-    (.bind (.perform .deferredMake u)
+-      (.bind (.withFiber (.forkIn (.perform .deferredAwait (.var 1)) daemon (.var 0)))
+-        (.bind (.withFiber (.forkIn (.perform .deferredAwait (.var 1)) daemon (.var 0)))
+-          (.bind (.exit unitProgram) (.withFiber (.closeScope (.var 0) (.var 4)))))))
+-def race : NativeEff :=
+-  .withFiber (.raceAll (es [.perform .sleep (.lit (.nat 1)), unitProgram]))
+-def multiple : NativeEff :=
+-  .bind (.withFiber (.fork unitProgram opts))
+-    (.bind (.withFiber (.fork unitProgram daemon)) unitProgram)
+-def merge : NativeEff :=
+-  .provideLayer (.merge (.succeed key (.nat 1)) (.succeed key2 (.nat 2))) false (.service key)
+-def mergeAll : NativeEff :=
+-  .provideLayer (.mergeAll (.cons (.succeed key (.nat 1))
+-    (.cons (.succeed key2 (.nat 2)) .nil))) false (.service key)
+-
+-def fixtures : List Entry :=
+-  [⟨"ledger/root", unitProgram, []⟩,
+-   ⟨"ledger/ordinary", ordinary, []⟩,
+-   ⟨"ledger/scoped", .scoped (.withFiber (.forkScoped unitProgram opts)), []⟩,
+-   ⟨"ledger/scoped-without-scope", .withFiber (.forkScoped unitProgram opts), []⟩,
+-   ⟨"ledger/forkIn", explicitScope, []⟩,
+-   ⟨"ledger/race", race, []⟩,
+-   ⟨"ledger/finalizers", finalizers, []⟩,
+-   ⟨"ledger/multiple", multiple, []⟩,
+-   ⟨"ledger/merge", merge, []⟩,
+-   ⟨"ledger/mergeAll", mergeAll, []⟩]
+-
+-def inputs : List Entry := Test.Program.ExitTypeLane.lanePrograms ++ fixtures
+-
+-def result (entry : Entry) (tape : List Api.Decision) : Counts :=
+-  executePrefix entry (Api.load entry.program 4000 Test.Program.ExitTypeLane.hostReplies) tape
+-
+-def finished (p : NativeEff) : Api.Machine :=
+-  (Api.replay p 4000 [Api.evaluate, Api.flush]).machine
+-
+--- Coverage controls pin actual fork creation, not just the presence of fixture names.
+-#guard (finished unitProgram).forks = []
+-#guard (finished ordinary).forks = [⟨⟨1⟩, ⟨0⟩, false, [0, 0]⟩]
+-#guard (finished (.scoped (.withFiber (.forkScoped unitProgram opts)))).forks =
+-  [⟨⟨1⟩, Api.root, true, [0, 0]⟩]
+-#guard (finished (.withFiber (.forkScoped unitProgram opts))).forks = []
+-#guard ((finished (.withFiber (.forkScoped unitProgram opts))).fiber? Api.root).bind (·.exit) =
+-  some (.failure (Cause.die Defect.missingService))
+-#guard (finished explicitScope).forks.length = 1
+-#guard (finished race).forks.length = 2
+-#guard (finished finalizers).forks.length = 4
+-#guard ((finished finalizers).forks.filter fun r => r.site.isEmpty).length = 2
+-#guard (finished multiple).forks.length = 2
+--- Layer builds also close their memo scopes through three source-free finalizer forks.
+-#guard (finished merge).forks.map (·.site) = [[0, 0], [0, 1], [], [], []]
+-#guard (finished mergeAll).forks.map (·.site) = [[0, 0, 0], [0, 0, 1, 0], [], [], []]
+-
+--- Missing fibers and roots remain distinct even when a malformed machine has a stray record.
+-#guard (Api.load unitProgram 40).originOf Api.root = some .root
+-#guard (Api.load unitProgram 40).originOf ⟨7⟩ = none
+-#guard ({ Api.load unitProgram 40 with forks := [⟨⟨7⟩, Api.root, true, [8]⟩] } : Api.Machine).originOf ⟨7⟩ = none
+-
+-/-- Three independent mutations, each applied to a real fork with a nonempty source site. -/
+-def mutate (change : ForkRecord → ForkRecord) : Api.Machine :=
+-  let m := finished ordinary
+-  { m with forks := m.forks.map change }
+-#guard same (finished ordinary)
+-#guard !same (mutate fun r => { r with site := [] })
+-#guard !same (mutate fun r => { r with daemon := !r.daemon })
+-#guard !same (mutate fun r => { r with parent := ⟨r.parent.value + 1⟩ })
+-
+-#eval show IO Unit from do
+-  let mut runs := 0
+-  let mut boundaries := 0
+-  let mut fibers := 0
+-  let mut failures : List String := []
+-  for entry in inputs do
+-    for (name, tape) in Test.Program.ExitTypeLane.tapes do
+-      let r := result entry tape
+-      runs := runs + 1
+-      boundaries := boundaries + r.boundaries
+-      fibers := fibers + r.fibers
+-      unless r.agrees do failures := (entry.name ++ "@" ++ name) :: failures
+-  unless failures.isEmpty do
+-    throw (IO.userError s!"fork ledger: mismatches {failures.take 20}")
+-  IO.println s!"fork ledger: {inputs.length} programs, {runs} runs, {boundaries} decision boundaries, {fibers} member-fiber comparisons, 0 mismatches; all 3 mutants rejected"
+-
+-end Test.Api.ForkLedgerRunner

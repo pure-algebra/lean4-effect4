@@ -20,6 +20,11 @@ def table : RowTable := [row "query" .nat, row "cell" NativeOp.refTy,
 
 def program (i : Nat := 0) : NativeEff := .perform (.external i) (.lit (.nat 1))
 
+-- E4-HOST-CE-007: the retained cell fixture is outside the interim host-reply profile.
+#guard match admitProgram (program 0) table with
+  | .error (.internalHandle ["table", "1", "answer"]) => true
+  | _ => false
+
 def accepted : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 7))
 def wrong : Completion Val Err Defect FiberId Ann := .ofExit (.success (.bool true))
 
@@ -54,7 +59,8 @@ def refusal (p : NativeEff) (tape : List Api.Decision)
   some (.errorType Api.root 0 .never)
 #guard refusal (program 1) [Api.evaluate,
   .answerAsync Api.root 0 (.ofExit (.success (Val.cell ⟨0⟩)))] =
-  some (.deadHandle Api.root 0)
+  -- The handle-free reply rule refuses the shape before the liveness check.
+  some (.answerType Api.root 0 NativeOp.refTy)
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 (.ofRefGet ⟨0⟩)] =
   some (.unknownCell ⟨0⟩)
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 accepted,

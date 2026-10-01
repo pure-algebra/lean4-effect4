@@ -1,0 +1,24 @@
+ocaml/engine/api_engine_inst.ml:82:let fibers (m : machine) : (fiber_id * fiber) list = E4_fibers_view.bindings m.fibers
+ocaml/engine/api_engine_ref.ml:65:let fibers (m : machine) : (fiber_id * fiber) list = E4_fibers_view_list.bindings m.fibers
+ocaml/engine/test/test_engine.ml:537:let origin_prelude_check () =
+ocaml/engine/test/test_engine.ml:544:    check "Fast creation origin: load marks the root"
+ocaml/engine/test/test_engine.ml:545:      (match parent.origin with I.Origin_root -> true | _ -> false);
+ocaml/engine/test/test_engine.ml:547:    let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
+ocaml/engine/test/test_engine.ml:550:    check "Fast creation origin: spawn retains parent, daemon and exact site"
+ocaml/engine/test/test_engine.ml:551:      (match child.origin with I.Origin_forked (0, true, [3; 1]) -> true | _ -> false)
+ocaml/engine/test/test_engine.ml:559:    check "Ref creation origin: load marks the root"
+ocaml/engine/test/test_engine.ml:560:      (match parent.origin with I.Origin_root -> true | _ -> false);
+ocaml/engine/test/test_engine.ml:562:    let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
+ocaml/engine/test/test_engine.ml:565:    check "Ref creation origin: spawn retains parent, daemon and exact site"
+ocaml/engine/test/test_engine.ml:566:      (match child.origin with I.Origin_forked (0, true, [3; 1]) -> true | _ -> false)
+ocaml/engine/test/test_engine.ml:751:  origin_prelude_check ();
+ocaml/engine/externs.txt:88:fn Effect4.Machine.spawn._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1.spec_3 6 sh_spawn
+ocaml/engine/externs.txt:89:fn Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_12.spec_19 6 sh_spawn
+ocaml/engine/externs.txt:90:fn Effect4.Machine.spawn 7 sh_spawn_generic run_fiber_make
+ocaml/engine/tools/api_engine_prelude.ml:99:let sh_run_fiber_make id current interruptible (budget : int * bool) context origin =
+ocaml/engine/tools/api_engine_prelude.ml:106:    observers = []; children = []; dispatcher = D.empty; context; origin }
+ocaml/engine/tools/api_engine_prelude.ml:110:      (stores.budgetOf emptyCtx) emptyCtx], nextId := 1 }`; the default origin is root.
+ocaml/engine/tools/api_engine_prelude.ml:117:  let root = sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx Origin_root in
+ocaml/engine/tools/api_engine_prelude.ml:122:let sh_spawn interp m (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program options site =
+ocaml/engine/tools/api_engine_prelude.ml:135:    sh_run_fiber_make child_id program child_interruptible (interp.budget_of parent.context)
+ocaml/engine/tools/api_engine_prelude.ml:149:let sh_spawn_generic mk_fiber (core : (_, _, _, _, _, _, _, _) fiber_core) interp m

@@ -28,7 +28,7 @@ theorem FMeans.answer' {root : NativeEff} {f₁ : FRun} {f₂ : RFiber} (h : FMe
     {c₂ : RProgram} (hc : CodeMeans root f₁.frame.current c₂) : FMeans root f₁ (answerR f₂ c₂) :=
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
     h.preventYield h.yieldOverride h.observers h.children h.dispatcher
-    ⟨h.interruptible, h.interruptedCause, h.deferred, hc, h.stack, h.maskInv⟩ h.origin
+    ⟨h.interruptible, h.interruptedCause, h.deferred, hc, h.stack, h.maskInv⟩
 
 /-- One iteration's result, the term's current related only once constructed at the
 result's view. -/
@@ -1024,7 +1024,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     refine FMeans.mk' hf'.id hf'.parked rfl hf'.running hf'.pending hf'.finalizing hf'.exit hf'.opCount rfl rfl
       hf'.yieldOverride hf'.observers hf'.children hf'.dispatcher
       ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_, StackMeans.answer k hk hf'.stack,
-        hf'.maskInv⟩ hf'.origin
+        hf'.maskInv⟩
     show CodeMeans root (Prim.onExit (resolve root (p.child 0)) (.scopedExit g₂.context m₂.state.nextName) false)
       (prepareR _ ((guardR (.onExit false) (bodyR (interpRAt root m₂.completedExits) (.at_ (p.child 0)))).bind
         fun ex => .vis (.inr (.scopeExit g₂.context m₂.state.nextName ex)) Effects.Program.pure))

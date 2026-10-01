@@ -158,7 +158,6 @@ structure FiberControl (ε δ ι α χ : Type u) : Type u where
   interruptedCause : Option (Cause ε δ ι α)
   deferredInterrupt : Bool
   context : χ
-  origin : Origin
 
 /-- One function of the `FiberCore` instance. The mask is read only while the fiber is
 live: the finite battery compared it that way when the frame's `finishFrame` still
@@ -168,13 +167,16 @@ def controlOf {κ φ : Type (max u v)} [c : FiberCore ν β ε δ ι α κ φ]
     (f : RunFiber ν σ β ε δ ι α χ κ φ) : FiberControl ε δ ι α χ :=
   ⟨f.id, f.parked,
     if f.exit.isSome then none else some (c.interruptible f.frame),
-    c.interruptedCause f.frame, c.deferredInterrupt f.frame, f.context, f.origin⟩
+    c.interruptedCause f.frame, c.deferredInterrupt f.frame, f.context⟩
 
-/-! ## The sixteen fields of `RunFiber` and the ten of `RunMachine` -/
+/-! ## The fifteen fields of RunFiber and the eleven of RunMachine
+
+Creation provenance is held only in the machine fork ledger.
+-/
 
 /-- Code-free by equality: `id`, `running`, `parked`, `pending`, `finalizing`, `exit`,
 `currentOpCount`, `maxOpsBeforeYield`, `preventYield`, `yieldOverride`, `observers`,
-`children`, `context`, `origin` (fourteen; `Pending` carries a name, never code). Code-carrying:
+`children`, `context` (thirteen; `Pending` carries a name, never code). Code-carrying:
 `dispatcher`, through `Task.resume`. Related by `S`: `frame`, live or exited (the loop may
 re-enter an exited fiber's saved state through a late `loop`/`deliver` command, and the
 exit path only clears it). -/
@@ -189,7 +191,7 @@ def FiberMeans (C : κ₁ → κ₂ → Prop) (S : φ₁ → φ₂ → Prop)
     S f₁.frame f₂.frame
 
 /-- Code-free by equality: `nextId`, `nextToken`, `nextRace`, `middlewareInstalled`,
-`armed`, `state`, `stuck` (seven). Code-carrying: `fibers` and `races`, pairwise. Excluded:
+`armed`, `state`, `stuck`, `forks` (eight). Code-carrying: `fibers` and `races`, pairwise. Excluded:
 `trace` (D3); the two instances need not share the event type. -/
 def BookMeans (C : κ₁ → κ₂ → Prop) (S : φ₁ → φ₂ → Prop)
     (m₁ : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
@@ -198,7 +200,7 @@ def BookMeans (C : κ₁ → κ₂ → Prop) (S : φ₁ → φ₂ → Prop)
     ListRel (RaceMeans C) m₁.races m₂.races ∧
     m₁.nextId = m₂.nextId ∧ m₁.nextToken = m₂.nextToken ∧ m₁.nextRace = m₂.nextRace ∧
     m₁.middlewareInstalled = m₂.middlewareInstalled ∧ m₁.armed = m₂.armed ∧
-    m₁.state = m₂.state ∧ m₁.stuck = m₂.stuck
+    m₁.state = m₂.state ∧ m₁.stuck = m₂.stuck ∧ m₁.forks = m₂.forks
 
 /-! ## The commands: the same shape, code related -/
 
@@ -361,7 +363,12 @@ theorem BookMeans.state (h : BookMeans C S m₁ m₂) : m₁.state = m₂.state 
   h.2.2.2.2.2.2.2.1
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.stuck (h : BookMeans C S m₁ m₂) : m₁.stuck = m₂.stuck :=
-  h.2.2.2.2.2.2.2.2
+  h.2.2.2.2.2.2.2.2.1
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+theorem BookMeans.forks (h : BookMeans C S m₁ m₂) : m₁.forks = m₂.forks :=
+  h.2.2.2.2.2.2.2.2.2
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The trace is not in the book, so `emit` is free on either side, with unrelated event
@@ -375,7 +382,7 @@ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_halt (h : BookMeans C S m₁ m₂) (why : Stuck) :
     BookMeans C S (m₁.halt why) (m₂.halt why) :=
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2.1, h.2.2.2.2.2.2.1,
-    h.2.2.2.2.2.2.2.1, rfl⟩
+    h.2.2.2.2.2.2.2.1, rfl, h.forks⟩
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_disarm (h : BookMeans C S m₁ m₂) (owner : FiberId) :
@@ -424,15 +431,9 @@ theorem fiberMeans_context {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
   congrArg FiberControl.context h.1
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-theorem M1OriginBook.fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
-    {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (_h : FiberMeans C S f₁ f₂) : ProofGraph.Obligation (
-    f₁.origin = f₂.origin) := ⟨⟩
-
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
-theorem fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
-    {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.origin = f₂.origin :=
-  congrArg FiberControl.origin h.1
+/-- Provenance is compared in the machine ledger, independently of fiber updates. -/
+theorem M1OriginBook.bookMeans_forks (_h : BookMeans C S m₁ m₂) :
+    ProofGraph.Obligation (m₁.forks = m₂.forks) := ⟨⟩
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_interruptedCause {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
@@ -547,6 +548,22 @@ theorem book_fiber?_cases (h : BookMeans C S m₁ m₂) (id : FiberId) :
     cases h₂ : m₂.fiber? id with
     | none => rw [h₁, h₂] at hf; exact absurd hf not_false
     | some g => rw [h₁, h₂] at hf; exact Or.inr ⟨f, g, rfl, rfl, hf⟩
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+theorem M1OriginBook.bookMeans_originOf (_h : BookMeans C S m₁ m₂) (id : FiberId) :
+    ProofGraph.Obligation (m₁.originOf id = m₂.originOf id) := ⟨⟩
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The same member lookup and the same first-match ledger give the same origin.
+No claim of ledger freshness or reachable well-formedness is used here. -/
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+theorem BookMeans.originOf (h : BookMeans C S m₁ m₂) (id : FiberId) :
+    m₁.originOf id = m₂.originOf id := by
+  rcases book_fiber?_cases h id with hnone | hsome
+  · rcases hnone with ⟨h₁, h₂⟩
+    simp only [RunMachine.originOf, h₁, h₂]
+  · rcases hsome with ⟨f₁, f₂, h₁, h₂, _⟩
+    simp only [RunMachine.originOf, h₁, h₂, RunMachine.forkRecord?, h.forks]
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem listRel_insert (priority : Nat) {t₁ : Task ν σ β ε δ ι α κ₁} {t₂ : Task ν σ β ε δ ι α κ₂}
@@ -1269,11 +1286,19 @@ theorem bookMeans_obs {m₁ : RunMachine ν σ Val Err Defect FiberId Ann χ Sto
   unfold obs
   rw [bookMeans_exits h, h.state]
 
-/-- The control lists of the finite battery are equal whenever the book holds. -/
+/-- The control lists of the finite battery are equal whenever the book holds.
+Provenance is compared separately through the machine ledger. -/
 theorem bookMeans_controls {m₁ : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ₁ φ₁ η₁}
     {m₂ : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ₂ φ₂ η₂} (h : BookMeans C S m₁ m₂) :
     m₁.fibers.map controlOf = m₂.fibers.map controlOf :=
   ListRel.map h.1 fun _ _ hab => hab.1
+
+/-- Control and the complete fork ledger agree; the exit/store observation above
+is unchanged, and diagnostic traces are still excluded by D3. -/
+theorem bookMeans_controls_forks {m₁ : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ₁ φ₁ η₁}
+    {m₂ : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ₂ φ₂ η₂} (h : BookMeans C S m₁ m₂) :
+    (m₁.fibers.map controlOf, m₁.forks) = (m₂.fibers.map controlOf, m₂.forks) := by
+  rw [bookMeans_controls h, h.forks]
 
 end Observation
 
@@ -1282,4 +1307,6 @@ end Effect4.Machine
 
 #obligation_proved Effect4.Machine.M1Clock.book_advanceState := @Effect4.Machine.book_advanceState
 
+#obligation_proved Effect4.Machine.M1OriginBook.bookMeans_forks := @Effect4.Machine.BookMeans.forks
+#obligation_proved Effect4.Machine.M1OriginBook.bookMeans_originOf := @Effect4.Machine.BookMeans.originOf
 #typed_state_obligations Effect4.Machine.M1OriginBook ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

@@ -156,7 +156,7 @@ theorem load_ok (e : NativeEff) (fuel : Nat) :
 theorem load_rel (e : NativeEff) (fuel : Nat) :
     BMeans e (Api.load e fuel) (loadR e fuel) :=
   BMeans.mk' (ListRel.cons (fmeans_make e Api.root (compile_intro e fuel []) true _ _) ListRel.nil)
-    ListRel.nil rfl rfl rfl rfl rfl rfl rfl
+    ListRel.nil rfl rfl rfl rfl rfl rfl rfl rfl
 
 /-- Every tape replays to related results, at any compile budget and any command budget. -/
 theorem replay_rel (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision)

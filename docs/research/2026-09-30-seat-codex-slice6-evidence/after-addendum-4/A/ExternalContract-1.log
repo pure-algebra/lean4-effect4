@@ -1,0 +1,4 @@
+'Effect4.Program.external_answer_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.external_oracle_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.mintedIn_iff_MintedIn' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.replayCheckedFrom_answersValid' depends on axioms: [propext, Quot.sound]
