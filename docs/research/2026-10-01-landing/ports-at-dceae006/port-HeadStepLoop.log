@@ -1,0 +1,12 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadStepLoop.lean
+# sha256: 5d9149d3703dffda1deb0b901b2b79de5a66a6adbeef1f1dc5d884d25447506c
+# head: dceae006
+# started: 2026-10-01 07:39:18
+'Research.Synthesis.HeadStepLoop.typed' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStepLoop.queue' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStepLoop.result_not_inert' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStepLoop.post_untyped' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStepLoop.step_loop_refuted' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStepLoop.bad_not_kripke_initial' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 2

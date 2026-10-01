@@ -1,0 +1,15 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadCut.lean
+# sha256: 83470e6c71d193fa56f19ed5f4ce3eeb236225b1af4eb560df736dd5da5a449d
+# head: dceae006
+# started: 2026-10-01 07:37:32
+'Research.Synthesis.HeadCut.m6_stuck_none' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadCut.m6_root_running' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadCut.m6_not_inert' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadCut.window_untyped' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadCut.capstone_false_window' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadCut.ledger_jointly_false_window' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadCut.m9_root_inert' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadCut.seat_split_not_decisionLift' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadCut.running_exempt_at_m6' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 1

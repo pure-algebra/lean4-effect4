@@ -1,0 +1,14 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadKripkeWalk.lean
+# sha256: 28f0687b0fdabd09bc5db495754131c3fba42f1ea26844817648bb943de887f3
+# head: dceae006
+# started: 2026-10-01 07:41:54
+'Research.Synthesis.HeadKripkeWalk.hookLawsX' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadKripkeWalk.w0_le_w1' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadKripkeWalk.input_kripke' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadKripkeWalk.walk_output' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadKripkeWalk.walk_typed_one_world' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadKripkeWalk.output_not_kripke' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadKripkeWalk.stackAcceptsK_mono' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadKripkeWalk.stackAcceptsK_now' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 10

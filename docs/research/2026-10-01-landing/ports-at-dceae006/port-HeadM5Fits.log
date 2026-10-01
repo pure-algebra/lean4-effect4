@@ -1,0 +1,10 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadM5Fits.lean
+# sha256: 08d0e5748fb0adc4b4c67d60adeb665c7c25e797e932f40455a2b68ad51cacef
+# head: dceae006
+# started: 2026-10-01 07:35:43
+'Research.Synthesis.HeadM5Fits.load_not_inert' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadM5Fits.m5_false' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadM5Fits.typedState_load_false' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadM5Fits.capstone_false' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 1

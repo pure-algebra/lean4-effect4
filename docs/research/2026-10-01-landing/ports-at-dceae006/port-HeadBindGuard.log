@@ -1,0 +1,12 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadBindGuard.lean
+# sha256: dbcc83176774692638edc6f5802e2774d551225b3791bae5aa7d6b34b4dac4d7
+# head: dceae006
+# started: 2026-10-01 07:42:26
+'Research.Synthesis.HeadBindGuard.p_typed' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadBindGuard.k_typed' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadBindGuard.bind_not_typed' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadBindGuard.guard_bind_not_closed' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadBindGuard.close_typed' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadBindGuard.seq_typed' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 1

@@ -1,0 +1,15 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadStorePostAdequacy.lean
+# sha256: 027c289f514aee30e8854c5be2e38c8a2ec35aece7a6703c61bf8aab97af8ae6
+# head: dceae006
+# started: 2026-10-01 07:39:54
+'Research.Synthesis.HeadStorePostAdequacy.scopeRemove_answer' depends on axioms: [propext]
+'Research.Synthesis.HeadStorePostAdequacy.awaitCleanup_answer' depends on axioms: [propext]
+'Research.Synthesis.HeadStorePostAdequacy.scopeAdd_open_answer' depends on axioms: [propext]
+'Research.Synthesis.HeadStorePostAdequacy.scopeRemove_post_excludes' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStorePostAdequacy.scopeAdd_post_excludes' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStorePostAdequacy.awaitCleanup_post_excludes' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStorePostAdequacy.admitted' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStorePostAdequacy.next_untyped' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadStorePostAdequacy.store_step_leaves_typing' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 1

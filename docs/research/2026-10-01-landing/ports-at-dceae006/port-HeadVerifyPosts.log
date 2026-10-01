@@ -1,0 +1,19 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadVerifyPosts.lean
+# sha256: 48f58c1990c9496f5584f5bf6a08af7c62e3874c307062a4ef201b11c09647a6
+# head: dceae006
+# started: 2026-10-01 07:39:57
+'Research.Synthesis.HeadVerifyPosts.memoRelease_answers_scope' depends on axioms: [propext]
+'Research.Synthesis.HeadVerifyPosts.memoRelease_post_excludes' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadVerifyPosts.memo_admitted' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadVerifyPosts.memo_next_untyped' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadVerifyPosts.refModify_bool_answer' depends on axioms: [propext]
+'Research.Synthesis.HeadVerifyPosts.refModify_pre' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadVerifyPosts.refModify_post_excludes' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadVerifyPosts.adequacy_false_refModify' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadVerifyPosts.closeSeq_done' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadVerifyPosts.closeIter_post_excludes' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadVerifyPosts.scopeIsClosed_unknown' depends on axioms: [propext]
+'Research.Synthesis.HeadVerifyPosts.scopeIsClosed_pre' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadVerifyPosts.scopeIsClosed_post_excludes_unit' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 2

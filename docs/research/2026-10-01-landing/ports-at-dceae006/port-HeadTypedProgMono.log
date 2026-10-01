@@ -1,0 +1,10 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadTypedProgMono.lean
+# sha256: 82f9277b9f55cd6cf111b7d8744314190dce793b8141f1dff47e8352ef6a6572
+# head: dceae006
+# started: 2026-10-01 07:40:58
+'Research.Synthesis.HeadTypedProgMono.storePre_mono' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadTypedProgMono.fiberPre_mono' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadTypedProgMono.typedProg_mono' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadTypedProgMono.typedProg_mono_ledger' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 5

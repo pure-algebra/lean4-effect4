@@ -1,0 +1,11 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadAwaitValuePost.lean
+# sha256: 1fb7928840e1bcb0b2e2fc26b3bd81964b80d6a24197bc537e249dd104d4e7bc
+# head: dceae006
+# started: 2026-10-01 07:39:56
+'Research.Synthesis.HeadAwaitValuePost.target_declared' does not depend on any axioms
+'Research.Synthesis.HeadAwaitValuePost.exitValue_delivers' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadAwaitValuePost.delivered_fits_checked' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadAwaitValuePost.post_excludes_delivered' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadAwaitValuePost.await_code_refused' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 1

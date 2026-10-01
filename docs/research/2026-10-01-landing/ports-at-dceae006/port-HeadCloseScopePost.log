@@ -1,0 +1,9 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadCloseScopePost.lean
+# sha256: 0ab32da0c66db7b3ba3b2b233ea043502714faedf9f48ccbde97012a4f556327
+# head: dceae006
+# started: 2026-10-01 07:39:52
+'Research.Synthesis.HeadCloseScopePost.close_no_finalizer' depends on axioms: [propext]
+'Research.Synthesis.HeadCloseScopePost.post_excludes_answer' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadCloseScopePost.close_code_refused' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 2

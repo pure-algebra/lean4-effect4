@@ -1,0 +1,13 @@
+# probe: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/synthesis-reruns/port/HeadAwaitLoad.lean
+# sha256: 8f0df7987cf48d2b4788ba39152b79838eddfaafb8dea1c95570328cb792947e
+# head: dceae006
+# started: 2026-10-01 07:36:10
+'Research.Synthesis.HeadAwaitLoad.typed_source' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadAwaitLoad.code_eq' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadAwaitLoad.cert_of_bodyTyped' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadAwaitLoad.root_code_refused' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadAwaitLoad.one_not_loaded' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadAwaitLoad.typedState_load_false' depends on axioms: [propext, Quot.sound]
+'Research.Synthesis.HeadAwaitLoad.load_not_inert' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 1
