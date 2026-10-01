@@ -16,6 +16,7 @@ import Effect4.Laws.Machine.Witnesses
 import Effect4.Laws.Program.Denote
 import Effect4.Laws.Program.Iter
 import Effect4.Laws.Program.DenoteB
+import Effect4.Laws.Program.IterLimit
 import Effect4.Laws.Program.Folds.Looped
 import Effect4.Laws.Program.Folds.Denote
 import Effect4.Laws.Machine.Folds.Val

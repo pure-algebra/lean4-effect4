@@ -84,6 +84,7 @@ import Test.Program.LoopSugarContract
 import Test.Program.FragmentCensusContract
 import Test.Program.DenoteContract
 import Test.Program.DenoteBContract
+import Test.Program.IterLimit
 import Test.Program.MeaningSoundContract
 import Test.Program.LoopSoundContract
 import Test.Program.LoopAgreementContract
