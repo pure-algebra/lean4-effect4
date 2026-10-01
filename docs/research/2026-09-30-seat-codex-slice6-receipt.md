@@ -219,7 +219,54 @@ AgreesUpdates, the trace-control move, and M1Trace ceiling reduction remain bloc
 reader-list amendment. `9dddff27` is the guard-replacement commit preceding this memo commit.
 
 ## F — closed layer build environment
-Pending.
+
+**STOPPED under original §6 after successful Lean checks and LCNF generation. No F runtime
+change landed.** The generator changed `ocaml/gen/closure-api_engine.tsv` and
+`ocaml/gen/closure-api_gen.tsv`, outside the four permitted LCNF outputs and eff/wire/cas groups.
+Each manifest has 6 added/5 removed lines: the new `Point.layerBuild` row, changed
+`provideLayerWithK` row and affected declaration hashes. This is actual generated output,
+not a predicted dependency. Exact diff: `F/generated-manifests.diff`.
+
+Smallest amendment: allow these two accompanying closure manifests. Then apply the saved F
+patch, complete the prescribed eff/wire/cas stages, build dune and run `make check-ocaml`,
+including the prepared actual `errLeak` engine check. E4-PROV-CE-005 remains SEEDED at this head.
+The whole developed source/test/generated patch is `F/implementation.patch`, based on
+`e1c6a1fc`; `F/changed-paths.json` lists its paths. Only those own edits were restored after
+saving it. The generated ML outputs are included in the patch, never hand-edited.
+
+The patch closes both native/reference layer build entries via `Point.layerBuild`, preserving
+the program body's environment and the service context. It adjusts the five affected source
+files and adds `LayerEnvironment.lean`, plus an OCaml engine assertion for both Fast and Ref
+carriers. The Test import uses the same reserved runtime slot after LiveStack, because stopped
+A has not installed HostHandleForgery. The OCaml assertion is prepared but has not run.
+
+Evidence under `2026-09-30-seat-codex-slice6-evidence/F/`:
+- Before and after manifests: `LEAN_NUM_THREADS=1 lake env lean -M4096 --run
+  harness/truth/Truth.lean <truth-before/after.json> --tapes harness/truth/tapes`, and the same
+  driver `--corpus <corpus-before/after.json> 400 4`. All four exit 0. Exact paths appear in
+  baseline.log/after.log. `run-comparison.log`: 37 truth fixtures and 400 random depth-4
+  programs; no run or runSync value changed. This is finite evidence only.
+- Narrow source build: Compile, DenoteR, Agreement, Handles.Hooks, Intro.Scope, Intro.Memo,
+  Guard.RaceSites, RuntimeR: exit 0, 356 jobs (`narrow-build.log`).
+- RuntimeRContract, ProvisionContract and LayerSharingContract passed (`tests-build.log`).
+  The first LayerEnvironment version exhausted memory (compiler exit 137). It was repaired
+  to use executable guards for concrete runs and a separate general fiber-exit agreement
+  law, retaining all outcomes and both local settings of the two extra controls.
+- `LEAN_NUM_THREADS=1 make gen-derived gen-lcnf`: exit 0 (`regenerate.log`). Its prerequisite
+  full build passed 721 jobs; LayerEnvironment passed in 1.4 seconds. The module/axiom gate
+  checked 500 modules and 68495 declarations at its declared semantic/test ceiling.
+  All seven new battery theorem axiom prints are within [propext, Quot.sound]. Derived output
+  stayed unchanged; api_gen.ml, api_engine.ml and their two manifests changed.
+- `lake env lean -DwarningAsError=true .../F/axioms.lean`: exit 0; all three Point helper
+  theorems have no axioms (`axioms.log`). Source `git diff --check`: exit 0. Generated
+  api_engine.ml line 9441 has a trailing blank-space line; retained exactly as generated.
+- `bun install --frozen-lockfile` in this worktree's ts/eff: exit 0, 19 packages; lockfile
+  unchanged (`bun-install.log`). No dependency installation touched the main checkout.
+
+Stopped before gen-eff/gen-wire/gen-cas, dune and make check-ocaml. No OCaml runtime result or
+host conformance is claimed. The run comparison does not establish unrestricted equivalence.
+Proposed row 104: source repair verified and preserved, landing held only by the two manifest
+paths plus the remaining target checks. No protected coordinator document changed.
 
 ## G — layer values and provision fixtures
 Pending.
