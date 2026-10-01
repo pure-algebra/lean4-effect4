@@ -347,6 +347,41 @@ residual-program weakening obligation keeps ceiling 1 (from 3). M6 remains 20 op
 E1 is `5e142337`. This commit owns the four cutover modules and receipt/evidence. Existing
 Test callers are migrated in E3; this intermediate commit records the narrow law build only.
 
+### E3: tests and retained falsifiers
+
+The eight named existing test files were checked; seven required edits and AdmissionCensus
+was byte-identical. B's M6Capstone also moves to FitsExit. ValueMembership retains a local
+copy of the old source/control/state predicates, the old load refutation, G1–G6 with their
+new refusals and honest controls, and the equality-invariance G7 refutation. Its production
+controls prove typed loaded states for Ref.make(5) and Ref.make(5).flatMap(Ref.get).
+These are two concrete program controls, not the general M5 obligation.
+
+The old predicate block is byte-identical to its selected pre-E spans (audit and SHA-256 in
+`E/tests/audit.md`); a local World alias resolves imported-name ambiguity without changing it.
+The bridge `live_iff_handlesLive` connects production Live to Reviewed.HandlesLive under
+WorldValid, in Test where the retired model is retained. No old judgment remains needed by
+Membership. The existing heap-extension bank positive and negative controls are retained.
+
+- `LEAN_NUM_THREADS=1 lake build Test.Program.TypedControl Test.Program.TypedResidual
+  Test.Program.TypedStack Test.Program.LoadedAdmission Test.Program.AdmissionCensus
+  Test.Counterexamples.Machine.Semantics.AsyncHookContract
+  Test.Counterexamples.Machine.Semantics.TrivialPosts
+  Test.Counterexamples.Machine.Semantics.M6Capstone
+  Test.Counterexamples.Machine.Semantics.ValueMembership`: final exit 0, 382 jobs
+  (`E/tests-build-2.log`); ValueMembership built in 1.9 seconds.
+- First run (`tests-build.log`) found imported World/Fits name ambiguities and an explicit
+  argument supplied to an implicit List membership lemma. Those elaboration errors and their
+  cascading recovery axioms were fixed before the successful run; they are not proof evidence.
+- Every printed theorem in the successful test log stays within [propext, Quot.sound], with
+  no sorryAx or Classical.choice. The old-load red, six paired controls, G7, liveness bridge,
+  both loaded-state greens and the proof-search controls all pass.
+- Source `git diff --check`: exit 0. No regeneration.
+
+E4-TYPED-CE-004/005/006 are marked REPAIRED with their exact controls and the general-M5 limit.
+Test/All imports ValueMembership immediately after M6Capstone, the reserved semantic slot:
+stopped G has not installed LayerValue, whose future import belongs immediately before it.
+`c1bcfdf6` is E2. This commit owns the changed Test paths, register, receipt and test evidence.
+
 ## H1 — command queue conditions
 Pending.
 
