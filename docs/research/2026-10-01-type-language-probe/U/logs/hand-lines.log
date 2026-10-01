@@ -1,0 +1,28 @@
+family	site	lines
+c	src/Effect4/Program/Ty.lean:95	renderRaw	22
+c	src/Effect4/Schema/Bridge.lean:38	schema	21
+c	src/Effect4/Program/Ty.lean:146	key	21
+b	src/Effect4/Laws/Program/Template.lean:257	varsOf	6
+b	src/Effect4/Program/Ty.lean:200	closed	6
+b	src/Effect4/Laws/Program/Template.lean:268	templateAdmissible	7
+b	src/Effect4/Schema/Codec.lean:51	isSupported	5
+b	src/Effect4/Laws/Program/Typed/Membership.lean:2264	handleFreeAlg	21
+b	src/Effect4/Laws/Program/TypeAlgebra.lean:1197	valueVarsAlg	21
+b	src/Effect4/Program/Admission.lean:36	findInt	11
+b	src/Effect4/Program/Admission.lean:100	internalHandleScan	21
+b2	src/Effect4/Program/Ty.lean:120	members	21
+b2	src/Effect4/Program/Eff.lean:44	isTagTy	4
+b2	src/Effect4/Program/Eff.lean:56	rawSupportedErrTy	7
+b2	src/Effect4/Program/NativeAtom.lean:47	projectProduct	8
+c'	tools/Tools/ProfileJson.lean:21	tyJson	21
+c'	src/OCaml5/Eff/Goldens.lean:89	tyV	21
+c'	src/OCaml5/Eff/Emit.lean:366	tyO	21
+c'	tools/Conform/Effect4/LcnfMl.lean:164	tyT	21
+c'	tools/Conform/Effect4/LcnfMl.lean:270	tyOcaml	21
+c'	tools/Conform/Effect4/LcnfSemantics.lean:40	tyValue	21
+c'	tools/Conform/Effect4/LcnfSemantics.lean:63	valueTy?	25
+c'	ocaml/engine/e4_program.ml:130-154	of_ty	21
+c''	ocaml/eff/test/prop_wire.ml:155-171	rand_ty	17
+Lean traversals: 22 | hand lines: 353 | c 64, b 98, b2 40, c' 151
+OCaml mirrors: 2 | hand lines: 38
+exit 0

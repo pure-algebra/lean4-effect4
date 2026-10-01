@@ -1,0 +1,3 @@
+exit 0
+patched generator, no --extras: identical to the committed Fold.lean below the stamp line
+byte-identical (whole file)

@@ -1,0 +1,12 @@
+'ProbeU.Monoid.varsOf_eq' depends on axioms: [propext]
+'ProbeU.Monoid.varsOf_eq_foldMap' depends on axioms: [propext]
+'ProbeU.Monoid.closed_eq' depends on axioms: [propext]
+'ProbeU.Monoid.isSupported_eq' depends on axioms: [propext]
+'ProbeU.Monoid.handleFreeAlg_eq' depends on axioms: [propext]
+'ProbeU.Monoid.handleFree_eq' depends on axioms: [propext]
+'ProbeU.Monoid.valueVarsAlg_eq' depends on axioms: [propext]
+'ProbeU.Monoid.templateAdmissible_eq' depends on axioms: [propext]
+'ProbeU.Monoid.findInt_eq' depends on axioms: [propext, Quot.sound]
+'ProbeU.Monoid.internalHandleScan_eq' depends on axioms: [propext]
+'ProbeU.Monoid.findInternalHandle_eq' depends on axioms: [propext]
+exit 0

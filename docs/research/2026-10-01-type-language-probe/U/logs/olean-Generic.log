@@ -1,0 +1,3 @@
+'ProbeU.paraAlg_fst' depends on axioms: [propext]
+'ProbeU.paraAlg_snd' depends on axioms: [propext]
+exit 0

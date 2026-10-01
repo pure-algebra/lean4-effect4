@@ -1,0 +1,5 @@
+test_eff: 451 checks, 0 failures
+test_val_frames: 26 checks, 0 failures
+test_lean_wire: 117 checks, 0 failures
+prop_wire: 6250 checks, 0 failures (seed 42)
+rand_ty coverage: 20 of 20 constructors; missing: []

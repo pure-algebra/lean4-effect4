@@ -1,0 +1,55 @@
+154a155,156
+> (* GENERATED from the Ty line of eff_manifest.txt (probe U): every constructor, the
+>    leaves alone at depth 0. *)
+156,171c158,191
+<   match if d <= 0 then ri 7 else ri 15 with
+<   | 0 -> Ty_never
+<   | 1 -> Ty_unit
+<   | 2 -> Ty_nat
+<   | 3 -> Ty_int
+<   | 4 -> Ty_string
+<   | 5 -> Ty_bool
+<   | 6 -> Ty_handle (rand_string ())
+<   | 7 -> Ty_option (rand_ty (d - 1))
+<   | 8 -> Ty_list (rand_ty (d - 1))
+<   | 9 -> Ty_prod (rand_ty (d - 1), rand_ty (d - 1))
+<   | 10 -> Ty_except (rand_ty (d - 1), rand_ty (d - 1))
+<   | 11 -> Ty_exitOf (rand_ty (d - 1), rand_ty (d - 1))
+<   | 12 -> Ty_causeOf (rand_ty (d - 1))
+<   | 13 -> Ty_fiberOf (rand_ty (d - 1), rand_ty (d - 1))
+<   | _ -> Ty_union (rand_ty (d - 1), rand_ty (d - 1))
+---
+>   if d <= 0 then
+>     match ri 10 with
+>     | 0 -> Ty_never
+>     | 1 -> Ty_unit
+>     | 2 -> Ty_nat
+>     | 3 -> Ty_int
+>     | 4 -> Ty_string
+>     | 5 -> Ty_bool
+>     | 6 -> Ty_handle (rand_string ())
+>     | 7 -> Ty_lit (rand_string ())
+>     | 8 -> Ty_var (rand_nat ())
+>     | _ -> Ty_unknown
+>   else
+>     match ri 20 with
+>     | 0 -> Ty_never
+>     | 1 -> Ty_unit
+>     | 2 -> Ty_nat
+>     | 3 -> Ty_int
+>     | 4 -> Ty_string
+>     | 5 -> Ty_bool
+>     | 6 -> Ty_handle (rand_string ())
+>     | 7 -> Ty_option (rand_ty (d - 1))
+>     | 8 -> Ty_list (rand_ty (d - 1))
+>     | 9 -> Ty_prod (rand_ty (d - 1), rand_ty (d - 1))
+>     | 10 -> Ty_except (rand_ty (d - 1), rand_ty (d - 1))
+>     | 11 -> Ty_exitOf (rand_ty (d - 1), rand_ty (d - 1))
+>     | 12 -> Ty_causeOf (rand_ty (d - 1))
+>     | 13 -> Ty_fiberOf (rand_ty (d - 1), rand_ty (d - 1))
+>     | 14 -> Ty_union (rand_ty (d - 1), rand_ty (d - 1))
+>     | 15 -> Ty_lit (rand_string ())
+>     | 16 -> Ty_refOf (rand_ty (d - 1))
+>     | 17 -> Ty_deferredOf (rand_ty (d - 1), rand_ty (d - 1))
+>     | 18 -> Ty_var (rand_nat ())
+>     | _ -> Ty_unknown

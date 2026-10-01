@@ -1,0 +1,32 @@
+== run 1: renderTable (through cata_ty) beside Ty.renderRaw
+uncaught exception: Effect4.Program.TyAlgebra: unsupported parameter R at 0
+exit 0
+== run 2: renderTableS (through cataS, @[specialize]) beside Ty.renderRaw
+uncaught exception: Effect4.Program.TyAlgebra: unsupported parameter R at 0
+exit 0
+== run 3: renderTableI (cataS @[specialize] over an @[inline] layer algebra) beside Ty.renderRaw
+closure: 33 of --cap 400 (367 of headroom); manifest ocaml/gen/closure-render_inline.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[]
+todos (4):
+  String.ofList: extern
+  USize.repr: extern
+  Array.getInternal: extern
+  System.Platform.getNumBits: extern
+types in full: #[Effect4.Program.Ty, ProbeU.TyCtor, ProbeU.TyLeaf, ProbeU.Piece, ProbeU.SchemaSpell, ProbeU.FaceRow, Effect4.Representation, Effect4.Json, Effect4.RepresentationAnnotation, ProbeU.TyTable, Effect4.CheckRepresentationAnnotationOf, Effect4.Check]
+types as abbreviations: #[Effect4.ReferenceKey, Effect4.GlobalSymbolKey, Effect4.Float64]
+types as placeholders: #[Effect4.AnnotationEntry, Effect4.LiteralValue, Effect4.EnumEntry, Effect4.ElementOf, Effect4.PropertySignatureOf, Effect4.IndexSignatureOf, Effect4.UnionMode]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[]
+type-name collisions left unresolved: #[]
+uncaught exception: todos remaining in closure (fatal): #[String.ofList: extern, USize.repr: extern, Array.getInternal: extern, System.Platform.getNumBits: extern]
+== run 4 (control): Ty.renderRaw alone
+closure: 14 of --cap 400 (386 of headroom); manifest ocaml/gen/closure-render_raw.tsv
+todos (4):
+  String.ofList: extern
+  USize.repr: extern
+  Array.getInternal: extern
+  System.Platform.getNumBits: extern
+types in full: #[Effect4.Program.Ty]
+uncaught exception: todos remaining in closure (fatal): #[String.ofList: extern, USize.repr: extern, Array.getInternal: extern, System.Platform.getNumBits: extern]

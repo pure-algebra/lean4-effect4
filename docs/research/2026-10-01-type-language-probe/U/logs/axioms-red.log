@@ -1,0 +1,4 @@
+97 receipts: 49 [propext], 30 (none), 15 [propext, Quot.sound], 3 [propext, Classical.choice, Quot.sound]
+theorems declared in 1 files without a printed receipt: 1
+  scripts/fixtures/axioms-red/Unprinted.lean: probeU_red_fixture_unprinted
+exit 1

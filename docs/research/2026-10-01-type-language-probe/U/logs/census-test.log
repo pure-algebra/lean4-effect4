@@ -1,0 +1,52 @@
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Test: 33 definitions take a family value (2 private) — fold 0, generated 0, structural 6 (of which 0 with a fold beside them, 0 instance implementations), wf 2 (of which 0 with a fold beside them), one-level 6 (of which 0 with a fold beside them), delegates 7, opaque 12; declared folds: []
+  delegates	Test.Audit.TraversalFixture:85	Test.Audit.TraversalFixture.viaDepth	(Ty)	→ [Test.Audit.TraversalFixture.depth]
+  delegates	Test.Counterexamples.Machine.Semantics.FitsOrder:129	Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.RefDeclared	(Ty)	→ [Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.Equiv]
+  delegates	Test.Counterexamples.Machine.Semantics.FitsOrder:132	Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.PromiseDeclared	(Ty)	→ [Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.Equiv]
+  delegates	Test.Counterexamples.Machine.Semantics.ValueMembership:66	Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.StrongValue	(Ty)	→ [Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.HandlesFit]
+  delegates	Test.Counterexamples.Machine.Semantics.ValueMembership:70	Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.StrongCause	(Ty)	→ [Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.StrongValue]
+  delegates	Test.Counterexamples.Machine.Semantics.ValueMembership:613	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.Fits	(Ty)	→ [Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.Equiv, Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FitsInv]
+  delegates	Test.Counterexamples.Machine.Semantics.ValueMembership:616	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FitsEq	(Ty)	→ [Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FitsInv]
+  one-level	Test.Audit.ExhaustiveFixture:19	Test.Audit.ExhaustiveFixture.catchAllAbsent	(Ty)
+  one-level	Test.Audit.ExhaustiveFixture:42	Test.Audit.ExhaustiveFixture.catchAllPresent	(Ty)
+  one-level	Test.Audit.ExhaustiveFixture:49	Test.Audit.ExhaustiveFixture.privateCatchAll [private]	(Ty)
+  one-level	Test.Audit.TraversalFixture:59	Test.Audit.TraversalFixture.notUnion	(Ty)
+  one-level	Test.Audit.TraversalFixture:64	Test.Audit.TraversalFixture.isOption	(Ty)
+  one-level	Test.Counterexamples.Machine.Semantics.ValueMembership:524	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FlatFits	(Ty)
+  opaque	Test.Api.ApiContract:357	Test.Api.IntegerAdmission.row	(Ty)
+  opaque	Test.Api.ExternalContract:11	Test.Api.ExternalContract.row	(Ty)
+  opaque	Test.Audit.TraversalFixture:87	Test.Audit.TraversalFixture.pairUp	(Ty)
+  opaque	Test.Counterexamples.Machine.Semantics.FitsOrder:126	Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.Equiv	(Ty)
+  opaque	Test.Counterexamples.Machine.Semantics.FitsOrder:135	Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.FiberDeclared	(Ty)
+  opaque	Test.Counterexamples.Machine.Semantics.StrongExitDefect:10	Test.Counterexamples.StrongExitDefect.ReviewedStrongCause	(Ty)
+  opaque	Test.Counterexamples.Machine.Semantics.ValueMembership:486	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.Equiv	(Ty)
+  opaque	Test.Counterexamples.Machine.Semantics.ValueMembership:489	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.RefDeclared	(Ty)
+  opaque	Test.Counterexamples.Machine.Semantics.ValueMembership:493	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.PromiseDeclared	(Ty)
+  opaque	Test.Counterexamples.Machine.Semantics.ValueMembership:497	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FiberDeclared	(Ty)
+  opaque	Test.Program.AdmissionColumns:37	Test.Program.AdmissionColumns.row	(Ty)
+  opaque	Test.Program.AdmissionColumns:67	Test.Program.AdmissionColumns.hostRow	(Ty)
+  structural	Test.Audit.TraversalFixture:54	Test.Audit.TraversalFixture.privateDepth [private]	(Ty)
+  structural	Test.Audit.TraversalFixture:71	Test.Audit.TraversalFixture.depth	(Ty)
+  structural	Test.Audit.TraversalFixture:77	Test.Audit.TraversalFixture.fuelDepth	(Ty)
+  structural	Test.Counterexamples.Machine.Semantics.FitsOrder:147	Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.Fits	(Ty)	 hands to [Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.FiberDeclared, Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.PromiseDeclared, Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.RefDeclared]
+  structural	Test.Counterexamples.Machine.Semantics.ValueMembership:42	Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.HandlesFit	(Ty)
+  structural	Test.Counterexamples.Machine.Semantics.ValueMembership:548	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FitsInv	(Ty)	 hands to [Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.PromiseDeclared, Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FiberDeclared, Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.RefDeclared]
+  wf	Test.Audit.TraversalFixture:36	Test.Audit.TraversalFixture.wfPair	(Ty)
+  wf	Test.Audit.TraversalFixture:45	Test.Audit.TraversalFixture.fuelWalk	(Ty)
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Test: 16 match(es) read it, 4 with no catch-all — appending a constructor refuses exactly those
+  Test.Audit.ExhaustiveFixture.catchAllAbsent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllAbsent.match_1	discr 0	alts 20	catchAll false
+  Test.Audit.ExhaustiveFixture.catchAllPresent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllPresent.match_1	discr 0	alts 4	catchAll true
+  Test.Audit.ExhaustiveFixture.privateCatchAll [private]	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.privateCatchAll.match_1	discr 0	alts 2	catchAll true
+  Test.Audit.TraversalFixture.depth	Test.Audit.TraversalFixture	Test.Audit.TraversalFixture.depth.match_1	discr 0	alts 3	catchAll true
+  Test.Audit.TraversalFixture.fuelDepth	Test.Audit.TraversalFixture	Test.Audit.TraversalFixture.fuelWalk.match_1	discr 1	alts 4	catchAll true
+  Test.Audit.TraversalFixture.fuelWalk	Test.Audit.TraversalFixture	Test.Audit.TraversalFixture.fuelWalk.match_1	discr 1	alts 4	catchAll true
+  Test.Audit.TraversalFixture.isOption	Test.Audit.TraversalFixture	Test.Audit.TraversalFixture.isOption.match_1	discr 0	alts 20	catchAll false
+  Test.Audit.TraversalFixture.notUnion	Test.Audit.TraversalFixture	Test.Audit.TraversalFixture.notUnion.match_1	discr 0	alts 2	catchAll true
+  Test.Audit.TraversalFixture.privateDepth [private]	Test.Audit.TraversalFixture	Test.Audit.TraversalFixture.privateDepth.match_1	discr 0	alts 2	catchAll true
+  Test.Audit.TraversalFixture.wfPair	Test.Audit.TraversalFixture	Test.Audit.TraversalFixture.wfPair.match_1	discr 0	alts 4	catchAll true
+  Test.Audit.TraversalFixture.wfPair	Test.Audit.TraversalFixture	Test.Audit.TraversalFixture.wfPair.match_1	discr 1	alts 4	catchAll true
+  Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.Fits	Test.Counterexamples.Machine.Semantics.FitsOrder	Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.Fits.match_40	discr 0	alts 20	catchAll false
+  Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FitsInv	Test.Counterexamples.Machine.Semantics.ValueMembership	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FitsInv.match_24	discr 0	alts 20	catchAll false
+  Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FlatFits	Test.Counterexamples.Machine.Semantics.ValueMembership	Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.FlatFits.match_16	discr 0	alts 6	catchAll true
+  Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.HandlesFit	Test.Counterexamples.Machine.Semantics.ValueMembership	Test.Counterexamples.Machine.Semantics.ValueMembership.Reviewed.HandlesFit.match_10	discr 0	alts 10	catchAll true
+  Test.Program.InvocationContract.requestFor	Test.Program.InvocationContract	Test.Program.InvocationContract.requestFor.match_1	discr 0	alts 4	catchAll true
+exit 0

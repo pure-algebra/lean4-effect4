@@ -1,0 +1,2 @@
+uncaught exception: docs/research/2026-10-01-type-language-probe/U/tables/red-missing-row.json: constructor `unknown` has no row: give it one before generating
+exit 1

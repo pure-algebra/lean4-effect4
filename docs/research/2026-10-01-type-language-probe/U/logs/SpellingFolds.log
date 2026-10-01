@@ -1,0 +1,4 @@
+'ProbeU.Spelling.renderRaw_eq_table' depends on axioms: [propext]
+'ProbeU.Spelling.schema_eq_table' depends on axioms: [propext]
+'ProbeU.Spelling.key_eq_table' depends on axioms: [propext]
+exit 0

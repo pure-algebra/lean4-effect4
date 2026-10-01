@@ -1,0 +1,25 @@
+== Fold.lean.patch (tools/Effect4Gen/Fold.lean -> U/patches/Fold.lean)
+lines added: 292
+lines removed: 1
+base generator lines:     1385
+patched generator lines:     1687
+== new emitters
+     133 docs/research/2026-10-01-type-language-probe/U/patches/TableGen.lean
+     107 docs/research/2026-10-01-type-language-probe/U/scripts/emit-ocaml-ty.py
+     240 total
+== generated outputs
+     522 docs/research/2026-10-01-type-language-probe/U/generated/ProbeU/TyFoldExtras.lean
+      34 docs/research/2026-10-01-type-language-probe/U/generated/ProbeU/FacesTable.lean
+      34 docs/research/2026-10-01-type-language-probe/U/generated/ProbeU/ClassesTable.lean
+     590 total
+== tables (data)
+      35 docs/research/2026-10-01-type-language-probe/U/tables/ty-faces.json
+      34 docs/research/2026-10-01-type-language-probe/U/tables/ty-classes.json
+      69 total
+== the hand-written generic interpreters the tables need (once)
+     140 docs/research/2026-10-01-type-language-probe/U/probes/ProbeU/Faces.lean
+      67 docs/research/2026-10-01-type-language-probe/U/probes/ProbeU/Classes.lean
+      28 docs/research/2026-10-01-type-language-probe/U/probes/ProbeU/ClassRow.lean
+      53 docs/research/2026-10-01-type-language-probe/U/probes/ProbeU/Reflect.lean
+      59 docs/research/2026-10-01-type-language-probe/U/probes/ProbeU/Enum.lean
+     347 total
