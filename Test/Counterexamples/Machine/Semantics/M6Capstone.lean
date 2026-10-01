@@ -1886,7 +1886,7 @@ theorem worker_saved : SavedOk (TypedProg (rootProgram : ProgramSource)) ExitOk
     (frameProtocols (rootProgram : ProgramSource)) world unitTy workerFiber.frame :=
   ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
     .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback
-      (fun ex _ _ => callback_typed world ex) (fun _ typed _ => typed)) (.nil _),
+      (fun w' _ ex _ _ => callback_typed w' ex) (fun _ _ _ typed _ => typed)) (.nil _),
     ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
 
 theorem typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world machine commands := by
