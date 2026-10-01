@@ -50,7 +50,7 @@ theorem close_typed (root : ProgramSource) {w : World} {T : EffTy} {a : RProgram
     exact .guard mid ihBody (fun w' o ex post => ihRun w' o ex post) skip
   | unguard payload => exact .unguard payload
   | finishFinalizer payload => exact .finishFinalizer payload
-  | scopeExit payload _ ih => exact .scopeExit payload (fun w' o ans => ih w' o ans)
+  | scopeExit live payload _ ih => exact .scopeExit live payload (fun w' o ans => ih w' o ans)
 
 /-- **The `seqR` compatibility lemma.** A first program typed at `mid`, a value continuation
 typed at `ty` at every later world on every value that fits `mid`'s answer column, and equal

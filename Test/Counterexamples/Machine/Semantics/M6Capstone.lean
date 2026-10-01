@@ -1734,13 +1734,142 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Progr
 open Effect4.Program.Typed Effect4.Laws.Effects Contracts
 abbrev W := Effect4.Program.Typed.World
 
+/-! ### The judgment before decisions row 156, for the history below
+
+Before row 156 the `scopeExit` constructor of `TypedProg` read no pre, so the worker's callback
+for the absent scope 0 was typed at every world and the controls of this section held. They are
+kept as history over `OldTypedProg`, a local copy of the judgment whose `scopeExit` constructor
+reads no pre (every other constructor the current one), and over H1's and the split's states
+built on it; every other clause is the current one, as `AwaitLoad.OldMachineTyped` keeps it (the
+old omission, not a complete pre-156 model). Under the current judgment the callback needs scope 0
+(`callback_typed`), and the witness's input is not a typed configuration at any world
+(`input_refused`, the repaired red control). Integration seat I2, 2026-10-01. -/
+
+/-- `TypedProg` before row 156: the `scopeExit` constructor reads no pre. -/
+inductive OldTypedProg (root : ProgramSource) : W → EffTy → RProgram → Prop
+  | pure {w : W} {ty : EffTy} {ex : ExitV} (exit : ExitOk w ty ex) :
+      OldTypedProg root w ty (.pure ex)
+  | store {w : W} {ty : EffTy} {op : SyncOp} {k : Val → RProgram}
+      (cert : (Ψ_S root).Cert op) (pre : (Ψ_S root).pre w op cert)
+      (next : ∀ w', w.leHost w' → ∀ ans, (Ψ_S root).post w' op cert ans →
+        OldTypedProg root w' ty (k ans)) :
+      OldTypedProg root w ty (.vis (.inl op) k)
+  | fiber {w : W} {ty : EffTy} {op : FiberOp} {k : op.answer → RProgram}
+      (notGuard : ∀ kind, op ≠ .guard_ kind) (notUnguard : ∀ ex, op ≠ .unguard ex)
+      (notFinish : ∀ ex, op ≠ .finishFinalizer ex)
+      (notScopeExit : ∀ prev sc ex, op ≠ .scopeExit prev sc ex)
+      (cert : (Ψ_F root).Cert op) (pre : (Ψ_F root).pre w op cert)
+      (next : ∀ w', w.leHost w' → ∀ ans, (Ψ_F root).post w' op cert ans →
+        OldTypedProg root w' ty (k ans)) :
+      OldTypedProg root w ty (.vis (.inr op) k)
+  | guard {w : W} {ty : EffTy} {kind : GuardKind} {k : Option ExitV → RProgram}
+      (mid : EffTy) (body : OldTypedProg root w mid (k none))
+      (run : ∀ w', w.leHost w' → ∀ ex, fiberPost w' (.guard_ kind) mid (some ex) →
+        OldTypedProg root w' ty (k (some ex)))
+      (skip : ∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → kind.hasExitArm ex = false →
+        ExitOk w' ty ex) :
+      OldTypedProg root w ty (.vis (.inr (.guard_ kind)) k)
+  | unguard {w : W} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
+      (payload : ExitOk w ty ex) : OldTypedProg root w ty (.vis (.inr (.unguard ex)) k)
+  | finishFinalizer {w : W} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
+      (payload : ExitOk w ty ex) : OldTypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k)
+  | scopeExit {w : W} {ty : EffTy} {prev : Ctx} {sc : Nat} {ex : ExitV} {k : ExitV → RProgram}
+      (payload : ExitOk w ty ex)
+      (next : ∀ w', w.leHost w' → ∀ ans, OldTypedProg root w' ty (k ans)) :
+      OldTypedProg root w ty (.vis (.inr (.scopeExit prev sc ex)) k)
+
+theorem OldTypedProg.pure_inv {root : ProgramSource} {w : W} {ty : EffTy} {ex : ExitV}
+    (h : OldTypedProg root w ty (.pure ex)) : ExitOk w ty ex := by
+  cases h with
+  | pure exit => exact exit
+
+/-- H1's saved position (`H1Shapes.SavedPosition`) over the judgment before row 156. -/
+def OldH1SavedPosition (root : ProgramSource) (w : W) (m : RState) (commands : List RCmd)
+    (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
+  ∃ tin, (¬ H1Shapes.CodeInert m commands position → OldTypedProg root w tin saved.current) ∧
+    StackAccepts (OldTypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
+    InterruptProvenance saved
+
+/-- H1's bundle (`H1Shapes.statePreds`) over the judgment before row 156. -/
+def oldH1StatePreds (root : ProgramSource) (m : RState) (commands : List RCmd) : Preds W :=
+  { preds root with
+    SavedOk := fun w position saved => ∀ ty, expectOf w position = some ty →
+      OldH1SavedPosition root w m commands position ty saved }
+
+/-- H1's typed state (`H1Shapes.TypedState`) over the judgment before row 156. -/
+def OldH1TypedState (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)
+    (commands : List RCmd := []) : Prop :=
+  WorldValid rootTy w m ∧ RStateOk (oldH1StatePreds root m commands) w m ∧
+    ActiveDelivery root w m ∧ SchedulerState m ∧ ObserverState root w m ∧ RegistrationState root w m
+
+theorem oldH1SavedPosition_of_saved (root : ProgramSource) (w : W) (m : RState)
+    (commands : List RCmd) (position : Expect) (final : EffTy) (saved : RSaved)
+    (typed : SavedOk (OldTypedProg root) ExitOk (frameProtocols root) w final saved) :
+    OldH1SavedPosition root w m commands position final saved := by
+  obtain ⟨tin, code, stack, provenance⟩ := typed
+  exact ⟨tin, fun _ => code, stack, provenance⟩
+
+/-- The split's saved position (`SavedPosition`) over the judgment before row 156. -/
+def OldSplitSavedPosition (root : ProgramSource) (w : W) (final : EffTy) (saved : RSaved) : Prop :=
+  ∃ tin, StackAccepts (OldTypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
+    InterruptProvenance saved
+
+/-- The split's bundle (`preds`) over the judgment before row 156. -/
+def oldSplitPreds (root : ProgramSource) : Preds W :=
+  { preds root with
+    SavedOk := fun w e x => ∀ ty, expectOf w e = some ty → OldSplitSavedPosition root w ty x }
+
+/-- The split's `TypedState` over the judgment before row 156. -/
+def OldSplitTypedState (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState) : Prop :=
+  WorldValid rootTy w m ∧ RStateOk (oldSplitPreds root) w m ∧
+    ActiveDelivery root w m ∧ SchedulerState m ∧ ObserverState root w m ∧ RegistrationState root w m
+
+/-- `J`'s code clause (`LiveCode`) over the judgment before row 156. -/
+def OldLiveCode (root : ProgramSource) (w : W) (m : RState) : Prop :=
+  ∀ f ∈ m.fibers, f.exit = none → f.running = false → raceRegistrationR f.frame.current = none →
+    ∀ ty, w.Γ f.id = some ty → SavedOk (OldTypedProg root) ExitOk (frameProtocols root) w ty f.frame
+
+/-- `I`'s code clause (`ReadCode`) over the judgment before row 156. -/
+def OldReadCode (root : ProgramSource) (w : W) (m : RState) (commands : List RCmd) : Prop :=
+  ∀ f ∈ m.fibers, f.running = true → ReadsCode f.id commands →
+    raceRegistrationR f.frame.current = none → ∀ ty, w.Γ f.id = some ty →
+      SavedOk (OldTypedProg root) ExitOk (frameProtocols root) w ty f.frame
+
+/-- `J` (`MachineTyped`) over the judgment before row 156. -/
+structure OldMachineTyped (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState) : Prop where
+  typed : OldSplitTypedState root rootTy w m
+  services : w.serviceTy = root.sig.serviceTy
+  code : OldLiveCode root w m
+  live : MachineLive m
+
+/-- `I` (`ConfigTyped`) over the judgment before row 156. -/
+structure OldConfigTyped (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)
+    (commands : List RCmd) : Prop where
+  machine : OldMachineTyped root rootTy w m
+  code : OldReadCode root w m commands
+  queue : QueueOk root w m commands
+
+/-- The command obligation (`StepPreserves`) over the judgment before row 156. -/
+def OldSplitStepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop :=
+  ∀ w m rest, m.stuck = none → OldConfigTyped root rootTy w m (cmd :: rest) →
+    let r := (letI := termEvaluatorFor root.program
+              driveStep (interpR root.program) m cmd rest)
+    ∃ w', w.leHost w' ∧ OldConfigTyped root rootTy w' r.1 r.2
+
+theorem oldSplitSavedPosition_of_saved {root : ProgramSource} {w : W} {final : EffTy}
+    {saved : RSaved} (typed : SavedOk (OldTypedProg root) ExitOk (frameProtocols root) w final saved) :
+    OldSplitSavedPosition root w final saved := by
+  obtain ⟨tin, _, stack, provenance⟩ := typed
+  exact ⟨tin, stack, provenance⟩
+
 /-- The row-133-only saved-code clause, without the halt amendment, using current H2
-admission and ExitOk for its stack. This retains the old structural omission, not a complete
-pre-H2 admission model; the original checked statement remains in the H1 research evidence. -/
+admission and ExitOk for its stack, over the judgment before row 156. This retains the old
+structural omission, not a complete pre-H2 admission model; the original checked statement
+remains in the H1 research evidence. -/
 def OldSavedPosition (root : ProgramSource) (w : W) (m : RState) (commands : List RCmd)
     (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
-  ∃ tin, (¬ H1Shapes.TerminalPosition m commands position → TypedProg root w tin saved.current) ∧
-    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
+  ∃ tin, (¬ H1Shapes.TerminalPosition m commands position → OldTypedProg root w tin saved.current) ∧
+    StackAccepts (OldTypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
     InterruptProvenance saved
 
 def oldStatePreds (root : ProgramSource) (m : RState) (commands : List RCmd) : Preds W :=
@@ -1761,7 +1890,7 @@ def OldStepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop
 
 theorem oldSaved_of_saved (root : ProgramSource) (w : W) (m : RState)
     (commands : List RCmd) (position : Expect) (final : EffTy) (saved : RSaved)
-    (typed : SavedOk (TypedProg root) ExitOk (frameProtocols root) w final saved) :
+    (typed : SavedOk (OldTypedProg root) ExitOk (frameProtocols root) w final saved) :
     OldSavedPosition root w m commands position final saved := by
   obtain ⟨tin, code, stack, provenance⟩ := typed
   exact ⟨tin, fun _ => code, stack, provenance⟩
@@ -1875,19 +2004,37 @@ theorem registration : RegistrationState (rootProgram : ProgramSource) world mac
   intro f member race marker
   rcases member_cases f member with rfl | rfl <;> cases marker
 
-theorem callback_typed (w : W) (ex : ExitV) :
+/-- Under row 156 the callback's scope-exit marker is typed only where scope 0 is present. -/
+theorem callback_typed (w : W) (live : ScopeLive w 0) (ex : ExitV) :
     TypedProg (rootProgram : ProgramSource) w unitTy (callback ex) :=
+  .scopeExit live ⟨trivial, trivial⟩ (fun _ _ _ => .pure ⟨trivial, trivial⟩)
+
+/-- History: before row 156 the callback was typed at every world. -/
+theorem old_callback_typed (w : W) (ex : ExitV) :
+    OldTypedProg (rootProgram : ProgramSource) w unitTy (callback ex) :=
   .scopeExit ⟨trivial, trivial⟩ (fun _ _ _ => .pure ⟨trivial, trivial⟩)
 
-/-- The worker's frame, code included: a unit value under the scope-exit callback. -/
-theorem worker_saved : SavedOk (TypedProg (rootProgram : ProgramSource)) ExitOk
+/-- The flip of the old `callback_typed` (row 156): at the witness's world, whose store holds no
+scope, the callback is not typed. -/
+theorem callback_refused (ex : ExitV) :
+    ¬ TypedProg (rootProgram : ProgramSource) world unitTy (callback ex) := by
+  intro typed
+  change TypedProg _ world _ (.vis (.inr (.scopeExit emptyCtx 0 (.success .unit))) _) at typed
+  cases typed with
+  | scopeExit live _ _ => exact absurd live (by decide)
+  | fiber _ _ _ notScopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
+
+/-- History: the worker's frame, code included (a unit value under the scope-exit callback), over
+the judgment before row 156. -/
+theorem worker_saved : SavedOk (OldTypedProg (rootProgram : ProgramSource)) ExitOk
     (frameProtocols (rootProgram : ProgramSource)) world unitTy workerFiber.frame :=
-  ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
+  ⟨unitTy, OldTypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
     .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback
-      (fun w' _ ex _ _ => callback_typed w' ex) (fun _ _ _ typed _ => typed)) (.nil _),
+      (fun w' _ ex _ _ => old_callback_typed w' ex) (fun _ _ _ typed _ => typed)) (.nil _),
     ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
 
-theorem typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world machine commands := by
+/-- History: H1's typed state held at the witness's input, over the judgment before row 156. -/
+theorem typed : OldH1TypedState (rootProgram : ProgramSource) unitTy world machine commands := by
   refine ⟨valid, ⟨?_, ?_, ?_⟩, ?_, scheduler, observers, registration⟩
   · intro f member
     rcases member_cases f member with rfl | rfl
@@ -1909,11 +2056,7 @@ theorem typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world m
       · intro ty declared
         change some unitTy = some ty at declared
         cases declared
-        apply H1Shapes.savedPosition_of_saved
-        exact ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
-          .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback
-            (fun w' _ ex _ _ => callback_typed w' ex) (fun _ _ _ typed _ => typed)) (.nil _),
-          ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+        exact oldH1SavedPosition_of_saved _ _ _ _ _ _ _ worker_saved
       · intro p hp; cases hp
       · intro v hv; cases hv
       · intro v hv; cases hv
@@ -1927,6 +2070,8 @@ theorem typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world m
   · intro f member token parked
     rcases member_cases f member with rfl | rfl <;> cases parked
 
+/-- History: the row-133-only state held at the witness's input, over the judgment before row
+156. -/
 theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world machine commands := by
   refine ⟨valid, ⟨?_, ?_, ?_⟩, ?_, scheduler, observers, registration⟩
   · intro f member
@@ -1949,11 +2094,7 @@ theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world mac
       · intro ty declared
         change some unitTy = some ty at declared
         cases declared
-        apply oldSaved_of_saved
-        exact ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
-          .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback
-            (fun w' _ ex _ _ => callback_typed w' ex) (fun _ _ _ typed _ => typed)) (.nil _),
-          ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+        exact oldSaved_of_saved _ _ _ _ _ _ _ worker_saved
       · intro p hp; cases hp
       · intro v hv; cases hv
       · intro v hv; cases hv
@@ -2042,9 +2183,11 @@ theorem output_not_typed (w : W) :
   have saved := ((after.2.1.c0 rootFiber member).c0).c0 unitTy after.1.root
   obtain ⟨tin, code, stack, _⟩ := saved
   cases stack
-  have impossible := TypedProg.pure_inv (code root_not_terminal)
+  have impossible := OldTypedProg.pure_inv (code root_not_terminal)
   exact impossible.1
 
+/-- History: the row-133-only `step_deliver` was false at this witness (before row 156 and the
+split). -/
 theorem step_deliver_false : ¬ OldStepPreserves (rootProgram : ProgramSource) unitTy command := by
   intro step
   obtain ⟨w, _, after, _⟩ := step world machine rest old_typed queue
@@ -2173,6 +2316,47 @@ theorem result_typed (commands : List RCmd) :
   · intro f member token parked
     rcases result_member_cases f member with rfl | rfl <;> cases parked
 
+/-- H1's halted output over the judgment before row 156 (its code is inert, the halted
+worker's stack empty), for the history of `deliver_preserves_this_state`. -/
+theorem old_result_typed (commands : List RCmd) :
+    OldH1TypedState (rootProgram : ProgramSource) unitTy world result.1 commands := by
+  refine ⟨result_valid, ⟨?_, ?_, ?_⟩, ?_, result_scheduler, result_observers, result_registration⟩
+  · intro f member
+    rcases result_member_cases f member with rfl | rfl
+    · refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+      · intro ty declared
+        change some unitTy = some ty at declared
+        cases declared
+        refine ⟨unitTy, ?_, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+        intro live
+        exact False.elim (live (Or.inl (by rw [result_halted]; rfl)))
+      · intro p hp; cases hp
+      · intro v hv; cases hv
+      · intro v hv; cases hv
+      · intro bucket hb; cases hb
+      · intro key value ty lookup
+        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
+        rw [Env.Context.getV_empty] at lookup; cases lookup
+    · refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+      · intro ty declared
+        change some unitTy = some ty at declared
+        cases declared
+        refine ⟨unitTy, ?_, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+        intro live
+        exact False.elim (live (Or.inl (by rw [result_halted]; rfl)))
+      · intro p hp; cases hp
+      · intro v hv; cases hv
+      · intro v hv; cases hv
+      · intro bucket hb; cases hb
+      · intro key value ty lookup
+        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
+        rw [Env.Context.getV_empty] at lookup; cases lookup
+  · intro race member; cases member
+  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+      ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
+  · intro f member token parked
+    rcases result_member_cases f member with rfl | rfl <;> cases parked
+
 theorem result_queue_typed : QueueOk (rootProgram : ProgramSource) world result.1 result.2 := by
   rw [result_queue]
   refine ⟨?_, ?_, ?_, List.nodup_nil, trivial, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
@@ -2189,15 +2373,16 @@ theorem result_queue_typed : QueueOk (rootProgram : ProgramSource) world result.
   · intro mode scope target interruptor extra member; cases member
 
 /-- H1 (historical): the dispatched input and the halted output were both typed under the halt
-extension of row 133; row 139 removes it (`step_deliver_refuted_by_absent_scope`). -/
+extension of row 133 (over the judgment before row 156); row 139 removes it, and row 156 refuses
+the input (`input_refused`). -/
 theorem deliver_preserves_this_state :
     machine.stuck = none ∧
-    H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world machine commands ∧
+    OldH1TypedState (rootProgram : ProgramSource) unitTy world machine commands ∧
     QueueOk (rootProgram : ProgramSource) world machine commands ∧
     ∃ w', world.leHost w' ∧
-      H1Shapes.TypedState (rootProgram : ProgramSource) unitTy w' result.1 result.2 ∧
+      OldH1TypedState (rootProgram : ProgramSource) unitTy w' result.1 result.2 ∧
       QueueOk (rootProgram : ProgramSource) w' result.1 result.2 :=
-  ⟨rfl, typed, queue, world, leHost_refl world, result_typed result.2, result_queue_typed⟩
+  ⟨rfl, typed, queue, world, leHost_refl world, old_result_typed result.2, result_queue_typed⟩
 
 /-- No empty-queue assumption is needed for the actual loop's halt boundary. -/
 theorem halted_loop_retains_any_queue (fuel : Nat) (commands : List RCmd) :
@@ -2296,12 +2481,15 @@ theorem unguarded_step_false :
 #print axioms raw_output_untyped
 #print axioms unguarded_step_false
 
-/-! Rows 134 and 139: the queue-discard witness under the split. The input is a typed
-configuration (the running root's stale slot is continued by its queued `finish`, the running
-worker's code is read by its queued `deliver`); the delivery halts the machine on the absent
-scope 0, and `J` carries `stuck = none`. -/
+/-! Rows 134, 139 and 156: the queue-discard witness under the split. Before row 156 the input
+was a typed configuration (the running root's stale slot is continued by its queued `finish`, the
+running worker's code is read by its queued `deliver`); the delivery halts the machine on the
+absent scope 0, and `J` carries `stuck = none`, so `step_deliver` was refuted
+(`step_deliver_refuted_by_absent_scope`, kept as history over `OldTypedProg`). Under row 156 the
+callback's marker demands scope 0, and the input is no typed configuration (`input_refused`). -/
 
-theorem typedState_input : TypedState (rootProgram : ProgramSource) unitTy world machine := by
+/-- History: the split's generated state at the input, over the judgment before row 156. -/
+theorem typedState_input : OldSplitTypedState (rootProgram : ProgramSource) unitTy world machine := by
   refine ⟨valid, ⟨?_, ?_, ?_⟩, ?_, scheduler, observers, registration⟩
   · intro f member
     rcases member_cases f member with rfl | rfl
@@ -2321,7 +2509,7 @@ theorem typedState_input : TypedState (rootProgram : ProgramSource) unitTy world
       · intro ty declared
         change some unitTy = some ty at declared
         cases declared
-        exact savedPosition_of_saved _ _ _ _ worker_saved
+        exact oldSplitSavedPosition_of_saved worker_saved
       · intro p hp; cases hp
       · intro v hv; cases hv
       · intro v hv; cases hv
@@ -2335,7 +2523,8 @@ theorem typedState_input : TypedState (rootProgram : ProgramSource) unitTy world
   · intro f member token parked
     rcases member_cases f member with rfl | rfl <;> cases parked
 
-theorem config_input : ConfigTyped (rootProgram : ProgramSource) unitTy world machine commands := by
+/-- History: the input was a typed configuration under the judgment before row 156. -/
+theorem config_input : OldConfigTyped (rootProgram : ProgramSource) unitTy world machine commands := by
   refine ⟨⟨typedState_input, rfl, ?_,
     H1TerminalAmendment.quiet_live machine rfl rfl⟩, ?_, queue⟩
   · intro f member _ idle
@@ -2361,25 +2550,68 @@ theorem output_outside (w : W) : ¬ MachineTyped (rootProgram : ProgramSource) u
   rw [result_halted] at running
   cases running
 
-/-- **Red control on the new `step_deliver` (rows 134 and 139).** With `stuck = none` in `J`, the
-worker's typed scope-exit callback for the absent scope 0 refutes `StepPreserves` for this
-`deliver`: `TypedProg` types the callback (`callback_typed`) and the step halts
-(`prepareScopedExitR`, `Laws/Program/EvaluateR.lean:319`). Still red after row 139's hunk on
-`fiberPre` (seat I, 2026-10-01; tested: this file builds with it): `fiberPre`'s `scopeExit` arm
-demands the scope's liveness, but `TypedProg` types the marker through its own `scopeExit`
-constructor, which reads no pre (the `fiber` arm excludes the marker), so `callback_typed` holds
-at every world. The repair is the liveness premise on that constructor; it reaches
-`callback_typed` and every control in this section that types the callback (seat I's receipt). -/
+/-- The halted output is outside `J` over the judgment before row 156 too. -/
+theorem old_output_outside (w : W) :
+    ¬ OldMachineTyped (rootProgram : ProgramSource) unitTy w result.1 := by
+  intro typed
+  have running := typed.live.running
+  rw [result_halted] at running
+  cases running
+
+/-- **History: the red control on `step_deliver` (rows 134 and 139), before row 156.** With
+`stuck = none` in `J`, the worker's typed scope-exit callback for the absent scope 0 refuted
+`StepPreserves` for this `deliver`: the judgment typed the callback (`old_callback_typed`) and the
+step halts (`prepareScopedExitR`, `Laws/Program/EvaluateR.lean:319`). Row 139's `fiberPre` arm did
+not reach it, since `TypedProg` typed the marker through its own `scopeExit` constructor, which
+read no pre; row 156 gives that constructor the scope's presence, and the refutation stands only
+over `OldTypedProg`. -/
 theorem step_deliver_refuted_by_absent_scope :
-    ¬ StepPreserves (rootProgram : ProgramSource) unitTy command := by
+    ¬ OldSplitStepPreserves (rootProgram : ProgramSource) unitTy command := by
   intro step
   obtain ⟨w', _, after⟩ := step world machine rest rfl config_input
-  exact output_outside w' after.machine
+  exact old_output_outside w' after.machine
+
+/-- **The repaired red control (row 156)**: under the current judgment the witness's input is no
+typed configuration at any world. The queued `deliver` reads the running worker's code
+(`ReadCode`), whose saved resume frame must type the callback at the input's world, and the
+callback's scope-exit marker demands scope 0, which the machine's store does not hold
+(`WorldValid.state`). So `M6Ledger.step_deliver` is not refuted by this witness. -/
+theorem input_refused (w : W) :
+    ¬ ConfigTyped (rootProgram : ProgramSource) unitTy w machine commands := by
+  intro config
+  have valid := config.machine.typed.1
+  have workerMember : workerFiber ∈ machine.fibers :=
+    List.mem_cons_of_mem _ (List.mem_singleton_self _)
+  obtain ⟨ty, declared⟩ := Option.isSome_iff_exists.mp
+    ((valid.fibers workerId).mpr (List.mem_map_of_mem workerMember))
+  have reads : ReadsCode workerId commands := ⟨false, Or.inr List.mem_cons_self⟩
+  obtain ⟨tin, code, stack, _⟩ := config.code workerFiber workerMember rfl reads rfl ty declared
+  have exited := TypedProg.pure_inv code
+  cases stack with
+  | cons head _ =>
+    cases head with
+    | resume _ _ run _ =>
+      have marker := run w (leHost_refl w) (.success .unit) exited rfl
+      change TypedProg _ w _ (.vis (.inr (.scopeExit emptyCtx 0 (.success .unit))) _) at marker
+      cases marker with
+      | scopeExit live _ _ =>
+        change (w.state.scopes.entryAt 0).isSome = true at live
+        rw [valid.state] at live
+        exact Bool.noConfusion live
+      | fiber _ _ _ notScopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
 
 #print axioms typedState_input
 #print axioms config_input
 #print axioms output_outside
+#print axioms old_output_outside
 #print axioms step_deliver_refuted_by_absent_scope
+#print axioms input_refused
+#print axioms old_callback_typed
+#print axioms callback_refused
+#print axioms old_result_typed
+#print axioms oldH1SavedPosition_of_saved
+#print axioms oldSplitSavedPosition_of_saved
+#print axioms OldTypedProg.pure_inv
 
 end H1HaltAmendment
 

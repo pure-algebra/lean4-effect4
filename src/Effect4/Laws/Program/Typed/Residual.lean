@@ -241,7 +241,10 @@ which have their own arms. A guard's body is typed at the guard's certified inte
 not take must fit the outer type. `unguard` and `finishFinalizer` carry an exit at the current
 type and type no continuation: the reference machine never resumes one (`evaluateFiberR`
 hands the payload to `deliverR`; `popR`'s answer glue passes it to the next frame).
-`scopeExit` carries its exit and keeps its continuation. -/
+`scopeExit` carries its exit and keeps its continuation, at a world whose store holds the scope it
+exits (`ScopeLive`, decisions row 156: the machine halts on an absent scope,
+`prepareScopedExitR`, so the marker reads the same presence `fiberPre`'s `scopeExit` arm states;
+before row 156 it read no pre, `E4-SCHED-CE-020`). -/
 inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Prop
   | pure {w : World} {ty : EffTy} {ex : ExitV} (exit : ExitOk w ty ex) :
       TypedProg root w ty (.pure ex)
@@ -269,6 +272,7 @@ inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Pr
   | finishFinalizer {w : World} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
       (payload : ExitOk w ty ex) : TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k)
   | scopeExit {w : World} {ty : EffTy} {prev : Ctx} {sc : Nat} {ex : ExitV} {k : ExitV → RProgram}
+      (live : ScopeLive w sc)
       (payload : ExitOk w ty ex)
       (next : ∀ w', w.leHost w' → ∀ ans, TypedProg root w' ty (k ans)) :
       TypedProg root w ty (.vis (.inr (.scopeExit prev sc ex)) k)
@@ -302,7 +306,7 @@ theorem fiber_inv {root : ProgramSource} {w : World} {ty : EffTy} {op : FiberOp}
   | guard _ _ _ _ => exact absurd rfl (notGuard _)
   | unguard _ => exact absurd rfl (notUnguard _)
   | finishFinalizer _ => exact absurd rfl (notFinish _)
-  | scopeExit _ _ => exact absurd rfl (notScopeExit _ _ _)
+  | scopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
 
 /-- A guard's typing: the body at the guard's intermediate type `mid`, a run arm for the exits
 the guard row admits at `mid` and a skip arm, both at every later world. With the Kripke-closed
@@ -695,8 +699,8 @@ theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : R
       (fun w'' ord' ex hfit harm => skip w'' (leHost_trans _ _ _ ord ord') ex hfit harm)
   | unguard payload => exact .unguard (strongExit_mono _ _ _ _ ord payload)
   | finishFinalizer payload => exact .finishFinalizer (strongExit_mono _ _ _ _ ord payload)
-  | scopeExit payload next _ =>
-    exact .scopeExit (strongExit_mono _ _ _ _ ord payload)
+  | scopeExit live payload next _ =>
+    exact .scopeExit (scopeLive_mono ord.1 live) (strongExit_mono _ _ _ _ ord payload)
       (fun w'' ord' ans => next w'' (leHost_trans _ _ _ ord ord') ans)
 
 /-- A saved frame of the typed state transports along the host order. -/
@@ -823,7 +827,7 @@ theorem typedProg_rows_append :
     exact .guard mid ihbody (fun w' hle ex hpost => ihrun w' hle ex hpost) skip
   | unguard payload => exact .unguard payload
   | finishFinalizer payload => exact .finishFinalizer payload
-  | scopeExit payload next ih => exact .scopeExit payload fun w' hle ans => ih w' hle ans
+  | scopeExit live payload next ih => exact .scopeExit live payload fun w' hle ans => ih w' hle ans
 
 end RowsAppend
 

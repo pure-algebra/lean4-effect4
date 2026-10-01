@@ -233,11 +233,9 @@ def ReadCode (root : ProgramSource) (w : World) (m : RState) (commands : List RC
 arm it rules out; with the scope-finalizer drops of `ObserverState` and `QueueOk.observer`, with
 `QueueOk.links` (in `I`) and the target and scope premises on the halting fiber rows (`fiberPre`'s
 `interruptAs`, `runIn`, `forkIn`, `closeScope`, `scopeExit` arms; `raceRegister` refused) they are
-what each command proof needs to show its halting arms unreachable. The scope-exit marker is the
-exception: `TypedProg` types it through its own `scopeExit` constructor, which reads no pre, so
-`fiberPre`'s `scopeExit` arm binds only the generic protocol judgment and
-`M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope` stands until that constructor
-carries the scope's liveness (seat I's receipt). Race-id liveness for the
+what each command proof needs to show its halting arms unreachable. The scope-exit marker is
+typed through `TypedProg`'s own `scopeExit` constructor, which carries the same presence
+(`ScopeLive`, decisions row 156) that `fiberPre`'s `scopeExit` arm states. Race-id liveness for the
 codes that name a race is `RegistrationState` (in `TypedState`): the only race halt is
 `registerRace` on a registration marker (`Machine/Fibers.lean:937-944`), and both code clauses
 leave the marker to it. A fiber handle's liveness is `Fits`'s fiber arm with
@@ -1473,18 +1471,21 @@ Kripke closure (row 135): the refutation is retained over the one-world judgment
 (`Test/Program/FramesNotKripke.lean`, `step_loop_refuted`), and the same `loop` with a frame typed
 into `unit` keeps `I` at the world that declares the new cell (`step_loop_good`, over this split).
 Its halting arms (the census in `MachineLive`'s section) read the target and scope premises
-`fiberPre` carries on the halting rows (row 139); the absent-scope callback that refutes
-`step_deliver` reaches the same walk from `loop` (`Laws/Program/EvaluateR.lean:309-319`; reading,
-not checked here). -/
+`fiberPre` carries on the halting rows (row 139); the absent-scope callback that refuted
+`step_deliver` before row 156 reaches the same walk from `loop` (`Laws/Program/EvaluateR.lean`
+`:309-319`; reading, not checked here), and the `scopeExit` constructor's presence premise (row
+156) now types it only where the scope is present. -/
 theorem step_loop (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.loop id yielding)) := ⟨⟩
 
-/-- Refuted at this commit by `E4-SCHED-CE-020`'s witness under `J`'s `stuck = none`
-(`M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope`): a typed configuration's
-delivery halts on the absent scope 0 (`prepareScopedExitR`). `fiberPre`'s `scopeExit` arm now
-demands the scope's liveness (row 139), but `TypedProg` types the scope-exit marker through its
-own `scopeExit` constructor, which reads no pre, so the refutation stands; the repair is that
-liveness premise on the constructor (seat I's receipt, with the consumers it reaches). -/
+/-- Open. `E4-SCHED-CE-020`'s witness under `J`'s `stuck = none` refuted it before decisions row
+156: a configuration typed by a judgment whose `scopeExit` constructor read no pre delivered into
+a scope-exit marker for the absent scope 0 and halted (`prepareScopedExitR`); that refutation is
+kept as history over a local copy of that judgment
+(`M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope`). Since row 156 the
+constructor carries the scope's presence (`ScopeLive`), and the witness's input is no typed
+configuration at any world (`M6Capstone.H1HaltAmendment.input_refused`), so it no longer refutes
+this obligation. -/
 theorem step_deliver (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.deliver id yielding)) := ⟨⟩
 
