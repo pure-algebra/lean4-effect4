@@ -58,9 +58,10 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .clockNow | .sleepCancel _ _ => True
   | .scopeMake _ => True
   -- the named scope is live in the world's store, so the store never steps to a frontier
-  -- (`syncOpStep` answering `none`, which the evaluator answers `unit`; row 139's liveness)
+  -- (`syncOpStep` answering `none`, which the evaluator answers `unit`; row 139's liveness,
+  -- read through row 156's predicate)
   | .scopeAdd scope _ | .scopeRemove scope _ | .scopeIsClosed scope | .scopeFork scope _ =>
-    (w.state.scopes.entryAt scope).isSome = true
+    ScopeLive w scope
   | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
   -- the looked-up layer's own checked error type (decision row 90)
   | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
@@ -171,23 +172,22 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .awaitNewChildren _ => True
   -- row 139's halting arms (seat C's census): the step halts on an unknown target or an absent
   -- scope (`FiberAction.interruptAs`, `linkScope` from `runIn` and `forkIn`,
-  -- `FiberAction.closeScope`, `prepareScopedExitR`), so the row demands them; a race
-  -- registration marker is `RegistrationState`'s, never typed code
+  -- `FiberAction.closeScope`, `prepareScopedExitR`), so the row demands them, a scope's
+  -- presence as `ScopeLive` (row 156); a race registration marker is `RegistrationState`'s,
+  -- never typed code
   | .interruptAs target _ => (w.Γ target).isSome = true
-  | .runIn target scope =>
-    (w.Γ target).isSome = true ∧ (w.state.scopes.entryAt scope).isSome = true
+  | .runIn target scope => (w.Γ target).isSome = true ∧ ScopeLive w scope
   | .guard_ _ | .unguard _ | .finishFinalizer _ | .construction
   | .foreignRelease _ _ | .closeWalk _ _ _ | .closeIter _ _ _
   | .cancelRace _ | .dropObservers _ | .frontier _ _ => True
-  | .scopeExit _ scope _ | .closeScope scope _ => (w.state.scopes.entryAt scope).isSome = true
+  | .scopeExit _ scope _ | .closeScope scope _ => ScopeLive w scope
   | .raceRegister _ => False
   | .snapshotChildren => cert = .list (.fiberOf .unknown .unknown)
   | .scoped body => PointTyped root w body cert
   | .mask _ body => BodyTyped root w body cert
   | .forkScoped child _ _ => PointTyped root w child cert
   | .fork body _ _ => BodyTyped root w body cert
-  | .forkIn child _ scope _ =>
-    PointTyped root w child cert ∧ (w.state.scopes.entryAt scope).isSome = true
+  | .forkIn child _ scope _ => PointTyped root w child cert ∧ ScopeLive w scope
   | .gen p => PointTyped root w p cert
   | .loop p _ => PointTyped root w p cert
   | .refuse _ => False
@@ -605,7 +605,7 @@ theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
   | deferredMake | memoBuild _ _ | memoGet _ _ => exact h
   | scopeAdd scope _ | scopeRemove scope _ | scopeIsClosed scope | scopeFork scope _ =>
     simp only [storePre] at h ⊢
-    exact ord.1.1.2.2.2.1 scope h
+    exact scopeLive_mono ord.1 h
   | clockNow | sleepCancel _ _ | scopeMake _ | memoFork _ | memoComplete _ _ _ | memoRelease _ _ =>
     exact trivial
 
@@ -632,8 +632,9 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   cases op with
   | fork body _ _ => exact bodyTyped_mono ord h
   | mask _ body => exact bodyTyped_mono ord h
-  -- row 139: scope entries persist along the host order, the fiber table grows
-  | forkIn child _ scope _ => exact ⟨pointTyped_mono ord h.1, ord.1.1.2.2.2.1 scope h.2⟩
+  -- row 139: scope entries persist along the host order (`scopeLive_mono`, row 156), the fiber
+  -- table grows
+  | forkIn child _ scope _ => exact ⟨pointTyped_mono ord h.1, scopeLive_mono ord.1 h.2⟩
   | forkScoped child _ _ => exact pointTyped_mono ord h
   | «scoped» body => exact pointTyped_mono ord h
   | gen p => exact pointTyped_mono ord h
@@ -663,10 +664,10 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
     exact isSome_extends hGamma h
   | runIn target scope =>
     simp only [fiberPre] at h ⊢
-    exact ⟨isSome_extends hGamma h.1, ord.1.1.2.2.2.1 scope h.2⟩
+    exact ⟨isSome_extends hGamma h.1, scopeLive_mono ord.1 h.2⟩
   | scopeExit _ scope _ | closeScope scope _ =>
     simp only [fiberPre] at h ⊢
-    exact ord.1.1.2.2.2.1 scope h
+    exact scopeLive_mono ord.1 h
   | getId | yieldNow _ | ambientScope | sync _ | suspend _ | interrupt _
   | interruptScoped _ | interruptAll _ _ | awaitNewChildren _ | guard_ _ | unguard _
   | finishFinalizer _ | construction | foreignRelease _ _
