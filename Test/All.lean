@@ -27,6 +27,7 @@ import Test.Counterexamples.Machine.Semantics.LayerValue
 import Test.Counterexamples.Machine.Semantics.ValueMembership
 import Test.Counterexamples.Machine.Semantics.FitsOrder
 import Test.Program.TermFits
+import Test.Program.SignatureControls
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.TypedResidual
