@@ -50,12 +50,15 @@ theorem observer_exitValue_typed (root : ProgramSource) (w : World) (ty : EffTy)
   | awaitValue =>
     exact TypedProg.pure (strongExit_success w _ _ (reifyExitVal_fits w ty exit typed.1))
 
-/-- Only the two exit columns are aggregated; requirement transport is H2's separate debt. -/
+/-- Only the two exit columns are aggregated; requirement transport is H2's separate debt.
+Declared columns are compared in the checker's order (decisions row 137). -/
 def FiberColumnsBelow (w : World) (id : FiberId) (answer error : Ty) : Prop :=
-  ∃ ty, w.Γ id = some ty ∧ ty.answer.sub answer = true ∧ ty.error.sub error = true
+  ∃ ty, w.Γ id = some ty ∧ ty.answer.normalize.sub answer.normalize = true ∧
+    ty.error.normalize.sub error.normalize = true
 
 /-- A race's one result declaration owns every buffered value and each unlaunched program.
-Existing live fiber declarations are constrained; missing fibers are not invented. -/
+Existing live fiber declarations are constrained; missing fibers are not invented. Columns are
+compared in the checker's order (decisions row 137). -/
 structure RacePayload (root : ProgramSource) (w : World) (race : RRace)
     (resultTy : EffTy) : Prop where
   token : w.Θ race.host race.token = some resultTy
@@ -64,9 +67,11 @@ structure RacePayload (root : ProgramSource) (w : World) (race : RRace)
   accepted : ∀ exit ∈ race.state.accepted, ExitOk w resultTy exit
   cleanup : ∀ wait ∈ race.state.cleanup, ExitOk w resultTy wait.result
   live : ∀ id ∈ race.state.live, ∀ childTy, w.Γ id = some childTy →
-    childTy.answer.sub resultTy.answer = true ∧ childTy.error.sub resultTy.error = true
+    childTy.answer.normalize.sub resultTy.answer.normalize = true ∧
+      childTy.error.normalize.sub resultTy.error.normalize = true
   programs : ∀ code ∈ race.programs, ∃ childTy, TypedProg root w childTy code ∧
-    childTy.answer.sub resultTy.answer = true ∧ childTy.error.sub resultTy.error = true
+    childTy.answer.normalize.sub resultTy.answer.normalize = true ∧
+      childTy.error.normalize.sub resultTy.error.normalize = true
 
 /-- The finite pending record reached by a countdown observer. Joins also use Pending with
 void metadata, so this predicate is attached only through an actual countdown observer. -/
@@ -95,7 +100,8 @@ def CountdownAt (w : World) (m : RState) (waiter : FiberId) (token : Nat)
     | some pending => ∃ answer error tokenTy,
         CountdownPayload w m waiter pending answer error tokenTy ∧ incoming answer error
 
-/-- A stored observer's source declaration is connected to the destination token. -/
+/-- A stored observer's source declaration is connected to the destination token; a stored
+scope-finalizer drop names a scope the store holds (row 139). -/
 def StoredObserverOk (root : ProgramSource) (w : World) (m : RState)
     (source : FiberId) : Observer → Prop
   | .resumeAwait waiter token mode => ∃ sourceTy,
@@ -106,10 +112,13 @@ def StoredObserverOk (root : ProgramSource) (w : World) (m : RState)
     | none => True
     | some race => ∃ resultTy, RacePayload root w race resultTy ∧
         (source ∈ race.state.live → FiberColumnsBelow w source resultTy.answer resultTy.error)
-  | .untrackChild _ | .dropScopeFinalizer _ _ | .callback _ => True
+  -- `fireObserver` halts on an absent scope (`Machine/Fibers.lean:1668-1671`; row 139)
+  | .dropScopeFinalizer scope _ => (m.state.scopes.entryAt scope).isSome = true
+  | .untrackChild _ | .callback _ => True
 
 /-- A queued observer must type what it can deliver or buffer, including a race callback
-while registration is still active. The three no-payload variants keep their machine guards. -/
+while registration is still active; a scope-finalizer drop names a scope the store holds. The two
+remaining no-payload variants keep their machine guards. -/
 def ObserverCommandOk (root : ProgramSource) (w : World) (m : RState)
     (source : FiberId) (exit : ExitV) : Observer → Prop
   | .resumeAwait waiter token mode => ∃ sourceTy,
@@ -122,7 +131,9 @@ def ObserverCommandOk (root : ProgramSource) (w : World) (m : RState)
     | none => True
     | some race => ∃ resultTy, RacePayload root w race resultTy ∧
         (source ∈ race.state.live → ExitOk w resultTy exit)
-  | .untrackChild _ | .dropScopeFinalizer _ _ | .callback _ => True
+  -- `fireObserver` halts on an absent scope (`Machine/Fibers.lean:1668-1671`; row 139)
+  | .dropScopeFinalizer scope _ => (m.state.scopes.entryAt scope).isSome = true
+  | .untrackChild _ | .callback _ => True
 
 /-- Enrollment may fire an already-exited entrant immediately, so queueing only a typed
 observe command is insufficient. This clause uses the same declared result as RacePayload. -/
@@ -138,6 +149,74 @@ structure ObserverState (root : ProgramSource) (w : World) (m : RState) : Prop w
     (w.Θ fiber.id pending.token).isSome = true
   observers : ∀ fiber ∈ m.fibers, ∀ observer ∈ fiber.observers,
     StoredObserverOk root w m fiber.id observer
+
+/-! ### Transport between machines with the same lookups
+
+The observer correlations read the machine only through `fiber?`, `race?` and the store, but a
+countdown's payload is a structure over the machine, so two machines that agree on those lookups
+need a transport, not a definitional rewrite. -/
+
+theorem countdownAt_congr {w : World} {m m' : RState} {waiter : FiberId} {token : Nat}
+    {incoming : Ty → Ty → Prop} (fibers : ∀ id, m'.fiber? id = m.fiber? id)
+    (h : CountdownAt w m waiter token incoming) : CountdownAt w m' waiter token incoming := by
+  unfold CountdownAt at h ⊢
+  rw [fibers]
+  cases found : m.fiber? waiter with
+  | none => trivial
+  | some fiber =>
+    rw [found] at h
+    dsimp only at h ⊢
+    cases hp : fiber.pending.find? (fun pending => pending.token = token) with
+    | none => trivial
+    | some pending =>
+      rw [hp] at h
+      dsimp only at h
+      obtain ⟨answer, error, tokenTy, payload, incomingOk⟩ := h
+      refine ⟨answer, error, tokenTy, ⟨payload.token, payload.collected, ?_, payload.resume⟩,
+        incomingOk⟩
+      intro id member target lookup
+      rw [fibers] at lookup
+      exact payload.targets id member target lookup
+
+theorem storedObserverOk_congr {root : ProgramSource} {w : World} {m m' : RState}
+    {source : FiberId} (fibers : ∀ id, m'.fiber? id = m.fiber? id)
+    (races : ∀ race, m'.race? race = m.race? race) (state : m'.state = m.state) (o : Observer)
+    (h : StoredObserverOk root w m source o) : StoredObserverOk root w m' source o := by
+  cases o with
+  | resumeAwait waiter token mode => exact h
+  | countdown waiter token => exact countdownAt_congr fibers h
+  | raceCallback raceId =>
+    unfold StoredObserverOk at h ⊢
+    dsimp only at h ⊢
+    rw [races]
+    exact h
+  | dropScopeFinalizer scope key =>
+    unfold StoredObserverOk at h ⊢
+    dsimp only at h ⊢
+    rw [state]
+    exact h
+  | untrackChild parent => trivial
+  | callback key => trivial
+
+theorem observerCommandOk_congr {root : ProgramSource} {w : World} {m m' : RState}
+    {source : FiberId} {exit : ExitV} (fibers : ∀ id, m'.fiber? id = m.fiber? id)
+    (races : ∀ race, m'.race? race = m.race? race) (state : m'.state = m.state) (o : Observer)
+    (h : ObserverCommandOk root w m source exit o) : ObserverCommandOk root w m' source exit o := by
+  cases o with
+  | resumeAwait waiter token mode => exact h
+  | countdown waiter token => exact countdownAt_congr fibers h
+  | raceCallback raceId =>
+    unfold ObserverCommandOk at h ⊢
+    dsimp only at h ⊢
+    rw [races]
+    exact h
+  | dropScopeFinalizer scope key =>
+    unfold ObserverCommandOk at h ⊢
+    dsimp only at h ⊢
+    rw [state]
+    exact h
+  | untrackChild parent => trivial
+  | callback key => trivial
 
 /-- Settled guard state clauses on the shared machine. No reference code-site condition
 is claimed here: frameCodes/internalCodes remain H1-RCODE-SITES. -/

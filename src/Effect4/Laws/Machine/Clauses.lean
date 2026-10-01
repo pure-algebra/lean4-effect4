@@ -824,7 +824,7 @@ theorem linkScope_closed (interp : RunInterp ν σ β ε δ ι α χ St)
         if r.2 then [Cmd.evaluate target] else [])) := by
   simp [linkScope, hclosed, ht]
 
-/-- An unknown scope halts the machine (M7). census: fork.fiber-run-in -/
+/-- An unknown scope halts the machine (S2-M7). census: fork.fiber-run-in -/
 theorem linkScope_unknown (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
     (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α)
@@ -1624,7 +1624,7 @@ theorem withFiber_closeScope (interp : RunInterp ν σ β ε δ ι α χ St)
         yielding, Outcome.continue_, []⟩ := by
   simp [evaluatePrim.withFiber, h]
 
-/-- Closing an unknown scope halts the machine (M7). census: scope.close-sequential -/
+/-- Closing an unknown scope halts the machine (S2-M7). census: scope.close-sequential -/
 theorem withFiber_closeScope_unknown (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (scope : Nat) (exit : Exit β ε δ ι α)

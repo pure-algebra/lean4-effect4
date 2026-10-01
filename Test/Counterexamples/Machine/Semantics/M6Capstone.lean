@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typed.Assembly
 import Effect4.Laws.Machine.Approximation
+import Test.Counterexamples.Machine.Semantics.H1Shapes
 
 /-! E4-SCHED-CE-015: retain the host-answer counterexample against the reviewed reachability
 statement, and a nonvacuous timer control for the answer-free replacement. This host-answer
@@ -44,7 +45,8 @@ theorem bad_not_typed (w : Typed.World) :
   exact (he (EffTy.pure .unit) (by rw [hid]; exact h.1.root)).1
 
 -- The reviewed pre-amendment reachability clause, specialized to this program and reached machine.
--- The typed-state conclusion uses current admission; no accepted theorem is contradicted.
+-- The typed-state conclusion uses current admission; it is `J`'s first clause, so `J` fails at
+-- this machine too. No accepted theorem is contradicted.
 theorem current_m6_capstone_false : ¬ (
     Api.typeOf sleeper [] = some (EffTy.pure .unit) →
     ClosedEff (EffTy.pure .unit) →
@@ -185,12 +187,15 @@ theorem loaded_sleep80_typed :
     ∃ w, TypedState (sleeper : ProgramSource) (EffTy.pure .unit) w (loadR sleeper 80 80) :=
   typed_loaded_at sleeper (EffTy.pure .unit) 80 80 ⟨rfl, rfl⟩ rfl loaded_sleep80_code
 
-/-- Retain the pre-H1 race-table slot; other slots use current H2 admission and ExitOk.
-The state and queue shapes below are the former structural clauses, not a second frozen
-copy of the old admission graph. -/
+/-- Retain the pre-H1 race-table slot and the pre-row-134 unconditional saved-code clause (the
+production `preds` no longer types current code; `J` and `I` do); other slots use current H2
+admission and ExitOk. The state and queue shapes below are the former structural clauses, not a
+second frozen copy of the old admission graph. -/
 def reviewedPreds (root : ProgramSource) : Preds W :=
-  { preds root with RaceOk := fun w _ races => ∀ race ∈ races,
-      (w.Θ race.host race.token).isSome = true }
+  { preds root with
+    SavedOk := fun w e x => ∀ ty, expectOf w e = some ty →
+      Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty x
+    RaceOk := fun w _ races => ∀ race ∈ races, (w.Θ race.host race.token).isSome = true }
 
 def ReviewedTypedState (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState) : Prop :=
   WorldValid rootTy w m ∧ RStateOk (reviewedPreds root) w m ∧ ActiveDelivery root w m
@@ -217,10 +222,10 @@ def ReviewedStepPreservesFresh (root : ProgramSource) (rootTy : EffTy)
       Guard.InternalKeysBelow result.1 ∧ ReviewedQueueOk root w' result.2 ∧
       QueueFresh result.1 result.2
 
-/-- Loaded code is live: there is no halt, queued finish or published exit. -/
+/-- H1 (historical): loaded code is live: there is no halt, queued finish or published exit. -/
 theorem load_code_live (p : NativeEff) (fuel compileFuel : Nat) (position : Expect) :
-    ¬ CodeInert (loadR p fuel compileFuel) [] position := by
-  have noTerminal (id : FiberId) : ¬ TerminalFiber (loadR p fuel compileFuel) [] id := by
+    ¬ H1Shapes.CodeInert (loadR p fuel compileFuel) [] position := by
+  have noTerminal (id : FiberId) : ¬ H1Shapes.TerminalFiber (loadR p fuel compileFuel) [] id := by
     intro terminal
     rcases terminal with ⟨exit, member⟩ | ⟨fiber, member, _, exited⟩
     · cases member
@@ -290,7 +295,8 @@ theorem finished_untyped (w : W) :
   have hs := he ty (by rw [hid]; exact typed.1.root)
   exact hs.1
 
-/-- Halting makes current code inert, never an incorrectly typed published exit. -/
+/-- The exit clause rejects the bad published exit on the halted machine too; row 139 keeps
+halted machines out of `J` altogether (`machineTyped_not_halted`). -/
 theorem halted_bad_exit_rejected (w : W) :
     ¬ TypedState (program : ProgramSource) ty w (finished.halt (.unknownScope 0)) := by
   intro typed
@@ -1113,10 +1119,17 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Progr
 open Effect4.Program.Typed Effect4.Laws.Effects Contracts
 abbrev W := Effect4.Program.Typed.World
 
+/-- The generated bundle with the pre-row-133 unconditional saved-code clause (the production
+`preds` types only the stack and provenance; `J` and `I` type current code). -/
+def oldPreds (root : ProgramSource) : Preds W :=
+  { preds root with
+    SavedOk := fun w e x => ∀ ty, expectOf w e = some ty →
+      SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty x }
+
 /-- The pre-row-133 unconditional current-code clause with current H2 admission.
 The exact earlier whole-state judgment is retained in the original checked H1 evidence. -/
 def OldTypedState (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState) : Prop :=
-  WorldValid rootTy w m ∧ RStateOk (preds root) w m ∧
+  WorldValid rootTy w m ∧ RStateOk (oldPreds root) w m ∧
     ActiveDelivery root w m ∧ SchedulerState m ∧ ObserverState root w m ∧ RegistrationState root w m
 
 def OldStepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop :=
@@ -1271,7 +1284,7 @@ def command : RCmd := .deliver Api.root false
 
 theorem queue : QueueOk (rootProgram : ProgramSource) world machine [command] := by
   refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩, ⟨trivial, trivial⟩,
-    ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+    ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c hc
     rw [List.mem_singleton] at hc
     subst c
@@ -1295,6 +1308,9 @@ theorem queue : QueueOk (rootProgram : ProgramSource) world machine [command] :=
     rw [List.mem_singleton] at member
     cases member
   · intro host yielding race member
+    rw [List.mem_singleton] at member
+    cases member
+  · intro mode scope target interruptor extra member
     rw [List.mem_singleton] at member
     cases member
 
@@ -1339,9 +1355,10 @@ theorem step_deliver_false : ¬ OldStepPreserves (rootProgram : ProgramSource) u
 #print axioms result_exit_none
 #print axioms result_not_typed
 #print axioms step_deliver_false
-/-! Row 133: normal terminal delivery and published-code boundary. Draft refreshed for halt-aware CodeInert; root owns elaboration. -/
+/-! Row 133 under H1 (historical, `H1Shapes`): normal terminal delivery and the published-code
+boundary, as merged at `0c534f06`. -/
 
-theorem typed_queued (commands : List RCmd) : TypedState (rootProgram : ProgramSource) unitTy world machine commands := by
+theorem typed_queued (commands : List RCmd) : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world machine commands := by
   refine ⟨valid, ⟨?_, ?_, ?_⟩, ?_, scheduler, observers, registration⟩
   · intro f hf
     change f ∈ [fiber] at hf
@@ -1352,7 +1369,7 @@ theorem typed_queued (commands : List RCmd) : TypedState (rootProgram : ProgramS
       change world.Γ Api.root = some ty at declared
       rw [valid.root] at declared
       cases declared
-      exact savedPosition_of_saved _ _ _ _ _ _ _ saved_typed
+      exact H1Shapes.savedPosition_of_saved _ _ _ _ _ _ _ saved_typed
     · intro p hp; cases hp
     · intro v hv; cases hv
     · intro v hv; cases hv
@@ -1460,7 +1477,7 @@ theorem result_registration : RegistrationState (rootProgram : ProgramSource) wo
   change none = some id at marker
   cases marker
 
-theorem result_typed : TypedState (rootProgram : ProgramSource) unitTy world result.1 result.2 := by
+theorem result_typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world result.1 result.2 := by
   refine ⟨result_valid, ⟨?_, ?_, ?_⟩, ?_, result_scheduler, result_observers, result_registration⟩
   · intro f hf
     change f ∈ [afterFiber] at hf
@@ -1498,7 +1515,7 @@ theorem result_typed : TypedState (rootProgram : ProgramSource) unitTy world res
 theorem result_queue : QueueOk (rootProgram : ProgramSource) world result.1 result.2 := by
   rw [result_commands]
   refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩, ⟨trivial, trivial⟩,
-    ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+    ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c member
     rw [List.mem_singleton] at member
     subst c
@@ -1528,14 +1545,17 @@ theorem result_queue : QueueOk (rootProgram : ProgramSource) world result.1 resu
   · intro host yielding race member
     rw [List.mem_singleton] at member
     cases member
+  · intro mode scope target interruptor extra member
+    rw [List.mem_singleton] at member
+    cases member
 
 /-- The actual changing-intermediate-type input and the output of its delivery are both
 accepted; this finite positive does not assert any of the eighteen general transition laws. -/
 theorem deliver_preserves_this_state :
-    TypedState (rootProgram : ProgramSource) unitTy world machine [command] ∧
+    H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world machine [command] ∧
     QueueOk (rootProgram : ProgramSource) world machine [command] ∧
     ∃ w', world.leHost w' ∧
-      TypedState (rootProgram : ProgramSource) unitTy w' result.1 result.2 ∧
+      H1Shapes.TypedState (rootProgram : ProgramSource) unitTy w' result.1 result.2 ∧
       QueueOk (rootProgram : ProgramSource) w' result.1 result.2 :=
   ⟨typed_queued [command], queue, world, leHost_refl world, result_typed, result_queue⟩
 
@@ -1551,10 +1571,10 @@ def publishedFiber : RFiber :=
 
 theorem completed_fiber : completed.1.fiber? Api.root = some publishedFiber := rfl
 
-theorem completed_position : TerminalPosition completed.1 completed.2 (.fiber Api.root) :=
+theorem completed_position : H1Shapes.TerminalPosition completed.1 completed.2 (.fiber Api.root) :=
   Or.inr ⟨publishedFiber, List.mem_of_find?_eq_some completed_fiber, rfl, rfl⟩
 
-theorem published_saved_typed : SavedPosition (rootProgram : ProgramSource) world completed.1
+theorem published_saved_typed : H1Shapes.SavedPosition (rootProgram : ProgramSource) world completed.1
     completed.2 (.fiber Api.root) unitTy publishedFiber.frame :=
   ⟨unitTy, (fun live => False.elim (live (Or.inr completed_position))), .nil _,
     ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
@@ -1573,6 +1593,138 @@ theorem published_saved_typed : SavedPosition (rootProgram : ProgramSource) worl
 #print axioms completed_position
 #print axioms published_saved_typed
 
+/-- Row 139's liveness at a machine with the empty context everywhere and no owed resume. -/
+theorem quiet_live (m : RState) (stuck : m.stuck = none)
+    (contexts : ∀ f ∈ m.fibers, f.context = emptyCtx)
+    (due : m.state.deferreds.due = []) : MachineLive m := by
+  refine ⟨stuck, fun f hf scope ambient => ?_, fun o ho => ?_⟩
+  · rw [contexts f hf] at ambient
+    cases ambient
+  · rw [due] at ho
+    cases ho
+
+/-! Row 134: the same terminal delivery under the split. The input's running root is read by the
+queued `deliver` (`ReadCode`); after the step its running root is continued by the queued
+`finish`, so its stale code is inert in `I` while the queue types its exit (`QueueOk.payload`).
+Once published, the exited root's code slot is outside `J`'s code clause. -/
+
+theorem typedState_machine : TypedState (rootProgram : ProgramSource) unitTy world machine := by
+  refine ⟨valid, ⟨?_, ?_, ?_⟩, ?_, scheduler, observers, registration⟩
+  · intro f hf
+    change f ∈ [fiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+    · intro ty declared
+      change world.Γ Api.root = some ty at declared
+      rw [valid.root] at declared
+      cases declared
+      exact savedPosition_of_saved _ _ _ _ saved_typed
+    · intro p hp; cases hp
+    · intro v hv; cases hv
+    · intro v hv; cases hv
+    · intro v hv; cases hv
+    · intro key value ty lookup
+      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
+      rw [Env.Context.getV_empty] at lookup
+      cases lookup
+  · intro race member; cases member
+  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+      ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
+  · intro f hf token hp
+    change f ∈ [fiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases hp
+
+theorem machine_typed : MachineTyped (rootProgram : ProgramSource) unitTy world machine := by
+  refine ⟨typedState_machine, ?_, quiet_live machine rfl (by decide) rfl⟩
+  intro f hf _ idle
+  change f ∈ [fiber] at hf
+  rw [List.mem_singleton] at hf
+  subst f
+  cases idle
+
+theorem config_typed : ConfigTyped (rootProgram : ProgramSource) unitTy world machine [command] := by
+  refine ⟨machine_typed, ?_, queue⟩
+  intro f hf _ _ _ ty declared
+  change f ∈ [fiber] at hf
+  rw [List.mem_singleton] at hf
+  subst f
+  change world.Γ Api.root = some ty at declared
+  rw [valid.root] at declared
+  cases declared
+  exact saved_typed
+
+theorem typedState_result : TypedState (rootProgram : ProgramSource) unitTy world result.1 := by
+  refine ⟨result_valid, ⟨?_, ?_, ?_⟩, ?_, result_scheduler, result_observers, result_registration⟩
+  · intro f hf
+    change f ∈ [afterFiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+    · intro ty declared
+      change world.Γ Api.root = some ty at declared
+      rw [result_valid.root] at declared
+      cases declared
+      exact ⟨unitTy, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+    · intro p hp; cases hp
+    · intro v hv; cases hv
+    · intro v hv; cases hv
+    · intro v hv; cases hv
+    · intro key value ty lookup
+      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
+      rw [Env.Context.getV_empty] at lookup
+      cases lookup
+  · intro race member; cases member
+  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+      ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
+  · intro f hf token hp
+    change f ∈ [afterFiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases hp
+
+/-- The stale `nat 42` slot after the walk is inert in `I`: the root is running and only its
+`finish` is queued. -/
+theorem result_config_typed :
+    ConfigTyped (rootProgram : ProgramSource) unitTy world result.1 result.2 := by
+  refine ⟨⟨typedState_result, ?_, quiet_live result.1 rfl (by decide) rfl⟩, ?_, result_queue⟩
+  · intro f hf _ idle
+    change f ∈ [afterFiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases idle
+  · intro f _ _ reads
+    obtain ⟨yielding, member | member⟩ := reads <;> rw [result_commands] at member <;>
+      rw [List.mem_singleton] at member <;> cases member
+
+/-- **H1's terminal witness under row 134 (positive control).** The delivery that leaves a stale
+code slot keeps `I` at this state: the old refutation (`step_deliver_false`, against the
+unconditional clause) does not reach the split. -/
+theorem deliver_keeps_config :
+    ConfigTyped (rootProgram : ProgramSource) unitTy world machine [command] ∧
+    ∃ w', world.leHost w' ∧ ConfigTyped (rootProgram : ProgramSource) unitTy w' result.1 result.2 :=
+  ⟨config_typed, world, leHost_refl world, result_config_typed⟩
+
+/-- Once published, the exited root's stale code slot is outside `J`'s code clause. -/
+theorem completed_liveCode : LiveCode (rootProgram : ProgramSource) world completed.1 := by
+  intro f hf live
+  have found := List.mem_of_find?_eq_some completed_fiber
+  have members : completed.1.fibers = [publishedFiber] := rfl
+  rw [members, List.mem_singleton] at hf
+  subst f
+  cases live
+
+#print axioms quiet_live
+#print axioms typedState_machine
+#print axioms machine_typed
+#print axioms config_typed
+#print axioms typedState_result
+#print axioms result_config_typed
+#print axioms deliver_keeps_config
+#print axioms completed_liveCode
+
 end H1TerminalAmendment
 
 #print axioms H1TerminalAmendment.no_requests
@@ -1589,7 +1741,7 @@ admission and ExitOk for its stack. This retains the old structural omission, no
 pre-H2 admission model; the original checked statement remains in the H1 research evidence. -/
 def OldSavedPosition (root : ProgramSource) (w : W) (m : RState) (commands : List RCmd)
     (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
-  ∃ tin, (¬ TerminalPosition m commands position → TypedProg root w tin saved.current) ∧
+  ∃ tin, (¬ H1Shapes.TerminalPosition m commands position → TypedProg root w tin saved.current) ∧
     StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
     InterruptProvenance saved
 
@@ -1729,7 +1881,15 @@ theorem callback_typed (w : W) (ex : ExitV) :
     TypedProg (rootProgram : ProgramSource) w unitTy (callback ex) :=
   .scopeExit ⟨trivial, trivial⟩ (fun _ _ _ => .pure ⟨trivial, trivial⟩)
 
-theorem typed : TypedState (rootProgram : ProgramSource) unitTy world machine commands := by
+/-- The worker's frame, code included: a unit value under the scope-exit callback. -/
+theorem worker_saved : SavedOk (TypedProg (rootProgram : ProgramSource)) ExitOk
+    (frameProtocols (rootProgram : ProgramSource)) world unitTy workerFiber.frame :=
+  ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
+    .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback
+      (fun w' _ ex _ _ => callback_typed w' ex) (fun _ _ _ typed _ => typed)) (.nil _),
+    ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+
+theorem typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world machine commands := by
   refine ⟨valid, ⟨?_, ?_, ?_⟩, ?_, scheduler, observers, registration⟩
   · intro f member
     rcases member_cases f member with rfl | rfl
@@ -1751,7 +1911,7 @@ theorem typed : TypedState (rootProgram : ProgramSource) unitTy world machine co
       · intro ty declared
         change some unitTy = some ty at declared
         cases declared
-        apply savedPosition_of_saved
+        apply H1Shapes.savedPosition_of_saved
         exact ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
           .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback
             (fun w' _ ex _ _ => callback_typed w' ex) (fun _ _ _ typed _ => typed)) (.nil _),
@@ -1810,7 +1970,7 @@ theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world mac
     rcases member_cases f member with rfl | rfl <;> cases parked
 
 theorem queue : QueueOk (rootProgram : ProgramSource) world machine commands := by
-  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c member
     change c ∈ [command, .finish Api.root (.success .unit)] at member
     rcases List.mem_cons.mp member with rfl | tail
@@ -1851,6 +2011,11 @@ theorem queue : QueueOk (rootProgram : ProgramSource) world machine commands := 
     rcases List.mem_cons.mp member with h | h
     · cases h
     · rw [List.mem_singleton] at h; cases h
+  · intro mode scope target interruptor extra member
+    change .link mode scope target interruptor extra ∈ [command, .finish Api.root (.success .unit)] at member
+    rcases List.mem_cons.mp member with h | h
+    · cases h
+    · rw [List.mem_singleton] at h; cases h
 
 def result : RState × List RCmd :=
   letI := termEvaluatorFor rootProgram
@@ -1860,7 +2025,7 @@ theorem result_queue : result.2 = [] := rfl
 theorem result_halted : result.1.stuck = some (.unknownScope 0) := rfl
 theorem root_unchanged : result.1.fiber? Api.root = some rootFiber := rfl
 
-theorem root_not_terminal : ¬ TerminalPosition result.1 result.2 (.fiber Api.root) := by
+theorem root_not_terminal : ¬ H1Shapes.TerminalPosition result.1 result.2 (.fiber Api.root) := by
   intro terminal
   rcases terminal with ⟨exit, member⟩ | ⟨fiber, member, id, exited⟩
   · rw [result_queue] at member; cases member
@@ -1970,9 +2135,9 @@ theorem result_registration : RegistrationState (rootProgram : ProgramSource) wo
   rcases result_member_cases f member with rfl | rfl <;> cases marker
 
 
-/-- Halting makes only current code inert; this constructs the full output state judgment. -/
+/-- H1 (historical): halting made only current code inert, so the halted output was typed. -/
 theorem result_typed (commands : List RCmd) :
-    TypedState (rootProgram : ProgramSource) unitTy world result.1 commands := by
+    H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world result.1 commands := by
   refine ⟨result_valid, ⟨?_, ?_, ?_⟩, ?_, result_scheduler, result_observers, result_registration⟩
   · intro f member
     rcases result_member_cases f member with rfl | rfl
@@ -2012,7 +2177,7 @@ theorem result_typed (commands : List RCmd) :
 
 theorem result_queue_typed : QueueOk (rootProgram : ProgramSource) world result.1 result.2 := by
   rw [result_queue]
-  refine ⟨?_, ?_, ?_, List.nodup_nil, trivial, ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, List.nodup_nil, trivial, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c member; cases member
   · intro c member; cases member
   · intro c member; cases member
@@ -2023,14 +2188,16 @@ theorem result_queue_typed : QueueOk (rootProgram : ProgramSource) world result.
   · intro source exit observer member; cases member
   · intro race child member; cases member
   · intro host yielding race member; cases member
+  · intro mode scope target interruptor extra member; cases member
 
-/-- The actual dispatched input and full output judgments, retaining the discarded-queue case. -/
+/-- H1 (historical): the dispatched input and the halted output were both typed under the halt
+extension of row 133; row 139 removes it (`step_deliver_refuted_by_absent_scope`). -/
 theorem deliver_preserves_this_state :
     machine.stuck = none ∧
-    TypedState (rootProgram : ProgramSource) unitTy world machine commands ∧
+    H1Shapes.TypedState (rootProgram : ProgramSource) unitTy world machine commands ∧
     QueueOk (rootProgram : ProgramSource) world machine commands ∧
     ∃ w', world.leHost w' ∧
-      TypedState (rootProgram : ProgramSource) unitTy w' result.1 result.2 ∧
+      H1Shapes.TypedState (rootProgram : ProgramSource) unitTy w' result.1 result.2 ∧
       QueueOk (rootProgram : ProgramSource) w' result.1 result.2 :=
   ⟨rfl, typed, queue, world, leHost_refl world, result_typed result.2, result_queue_typed⟩
 
@@ -2070,7 +2237,7 @@ def rawResult : RState × List RCmd :=
 
 theorem raw_input_queue : QueueOk (rootProgram : ProgramSource) world result.1 [rawCommand] := by
   refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩,
-    ⟨trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_⟩
+    ⟨trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro c member
     rw [List.mem_singleton] at member
     subst c
@@ -2096,11 +2263,14 @@ theorem raw_input_queue : QueueOk (rootProgram : ProgramSource) world result.1 [
   · intro host yielding race member
     rw [List.mem_singleton] at member
     cases member
+  · intro mode scope target interruptor extra member
+    rw [List.mem_singleton] at member
+    cases member
 
 theorem raw_result_commands : rawResult.2 = [.finish Api.root (.success (.nat 42))] := rfl
 
 theorem raw_output_untyped (w' : W) :
-    ¬ (TypedState (rootProgram : ProgramSource) unitTy w' rawResult.1 rawResult.2 ∧
+    ¬ (H1Shapes.TypedState (rootProgram : ProgramSource) unitTy w' rawResult.1 rawResult.2 ∧
        QueueOk (rootProgram : ProgramSource) w' rawResult.1 rawResult.2) := by
   intro output
   have member : .finish Api.root (.success (.nat 42)) ∈ rawResult.2 := by
@@ -2110,13 +2280,13 @@ theorem raw_output_untyped (w' : W) :
   have impossible := payload unitTy output.1.1.root
   exact impossible.1
 
-/-- Deleting just the dispatch guard from the amended contract is still false. -/
+/-- H1 (historical): deleting just the dispatch guard from H1's contract is still false. -/
 theorem unguarded_step_false :
-    ¬ (∀ w m rest, TypedState (rootProgram : ProgramSource) unitTy w m (rawCommand :: rest) →
+    ¬ (∀ w m rest, H1Shapes.TypedState (rootProgram : ProgramSource) unitTy w m (rawCommand :: rest) →
       QueueOk (rootProgram : ProgramSource) w m (rawCommand :: rest) →
       let r := (letI := termEvaluatorFor rootProgram
                 driveStep (interpR rootProgram) m rawCommand rest)
-      ∃ w', w.leHost w' ∧ TypedState (rootProgram : ProgramSource) unitTy w' r.1 r.2 ∧
+      ∃ w', w.leHost w' ∧ H1Shapes.TypedState (rootProgram : ProgramSource) unitTy w' r.1 r.2 ∧
         QueueOk (rootProgram : ProgramSource) w' r.1 r.2) := by
   intro step
   obtain ⟨w', _, typed, queue⟩ := step world result.1 []
@@ -2128,6 +2298,177 @@ theorem unguarded_step_false :
 #print axioms raw_output_untyped
 #print axioms unguarded_step_false
 
+/-! Rows 134 and 139: the queue-discard witness under the split. The input is a typed
+configuration (the running root's stale slot is continued by its queued `finish`, the running
+worker's code is read by its queued `deliver`); the delivery halts the machine on the absent
+scope 0, and `J` carries `stuck = none`. -/
+
+theorem typedState_input : TypedState (rootProgram : ProgramSource) unitTy world machine := by
+  refine ⟨valid, ⟨?_, ?_, ?_⟩, ?_, scheduler, observers, registration⟩
+  · intro f member
+    rcases member_cases f member with rfl | rfl
+    · refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+      · intro ty declared
+        change some unitTy = some ty at declared
+        cases declared
+        exact ⟨unitTy, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+      · intro p hp; cases hp
+      · intro v hv; cases hv
+      · intro v hv; cases hv
+      · intro bucket hb; cases hb
+      · intro key value ty lookup
+        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
+        rw [Env.Context.getV_empty] at lookup; cases lookup
+    · refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+      · intro ty declared
+        change some unitTy = some ty at declared
+        cases declared
+        exact savedPosition_of_saved _ _ _ _ worker_saved
+      · intro p hp; cases hp
+      · intro v hv; cases hv
+      · intro v hv; cases hv
+      · intro bucket hb; cases hb
+      · intro key value ty lookup
+        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
+        rw [Env.Context.getV_empty] at lookup; cases lookup
+  · intro race member; cases member
+  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+      ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
+  · intro f member token parked
+    rcases member_cases f member with rfl | rfl <;> cases parked
+
+theorem config_input : ConfigTyped (rootProgram : ProgramSource) unitTy world machine commands := by
+  refine ⟨⟨typedState_input, ?_,
+    H1TerminalAmendment.quiet_live machine rfl (by decide +kernel) rfl⟩, ?_, queue⟩
+  · intro f member _ idle
+    rcases member_cases f member with rfl | rfl <;> cases idle
+  · intro f member _ reads _ ty declared
+    rcases member_cases f member with rfl | rfl
+    · obtain ⟨yielding, inQueue | inQueue⟩ := reads <;>
+        change _ ∈ [command, .finish Api.root (.success .unit)] at inQueue <;>
+        rcases List.mem_cons.mp inQueue with here | tail
+      · cases here
+      · rw [List.mem_singleton] at tail; cases tail
+      · have unequal : workerId ≠ Api.root := by decide +kernel
+        exact absurd (Cmd.deliver.inj here).1.symm unequal
+      · rw [List.mem_singleton] at tail; cases tail
+    · change some unitTy = some ty at declared
+      cases declared
+      exact worker_saved
+
+/-- The halted output is outside `J`, at every world. -/
+theorem output_outside (w : W) : ¬ MachineTyped (rootProgram : ProgramSource) unitTy w result.1 := by
+  intro typed
+  have running := typed.live.running
+  rw [result_halted] at running
+  cases running
+
+/-- **Red control on the new `step_deliver` (rows 134 and 139).** With `stuck = none` in `J`, the
+worker's typed scope-exit callback for the absent scope 0 refutes `StepPreserves` for this
+`deliver`: `TypedProg` types the callback (`callback_typed`) and the step halts
+(`prepareScopedExitR`, `Laws/Program/EvaluateR.lean:319`). Still red after row 139's hunk on
+`fiberPre` (seat I, 2026-10-01; tested: this file builds with it): `fiberPre`'s `scopeExit` arm
+demands the scope's liveness, but `TypedProg` types the marker through its own `scopeExit`
+constructor, which reads no pre (the `fiber` arm excludes the marker), so `callback_typed` holds
+at every world. The repair is the liveness premise on that constructor; it reaches
+`callback_typed` and every control in this section that types the callback (seat I's receipt). -/
+theorem step_deliver_refuted_by_absent_scope :
+    ¬ StepPreserves (rootProgram : ProgramSource) unitTy command := by
+  intro step
+  obtain ⟨w', _, after⟩ := step world machine rest rfl config_input
+  exact output_outside w' after.machine
+
+#print axioms typedState_input
+#print axioms config_input
+#print axioms output_outside
+#print axioms step_deliver_refuted_by_absent_scope
+
 end H1HaltAmendment
+
+/-! Row 139's liveness clauses, each against the halting arm it rules out: a queued `link` or a
+queued scope-finalizer drop naming a scope the store does not hold halts the machine
+(`linkScope`, `fireObserver`), and the new clause refuses exactly that configuration. -/
+namespace Liveness
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Typed
+abbrev W := Effect4.Program.Typed.World
+
+def program : NativeEff := .succeed (.lit .unit)
+def m0 : RState := loadR program 20 20
+def linkAbsent : RCmd := .link .forkIn 7 Api.root none ReasonAnnotations.empty
+def dropAbsent : RCmd := .observe Api.root (.success .unit) (.dropScopeFinalizer 7 0)
+
+theorem link_absent_halts :
+    (letI := termEvaluatorFor program
+     driveStep (interpR program) m0 linkAbsent []).1.stuck = some (.unknownScope 7) := by
+  decide +kernel
+
+theorem drop_absent_halts :
+    (letI := termEvaluatorFor program
+     driveStep (interpR program) m0 dropAbsent []).1.stuck = some (.unknownScope 7) := by
+  decide +kernel
+
+theorem link_absent_refused (root : ProgramSource) (w : W) : ¬ QueueOk root w m0 [linkAbsent] := by
+  intro queue
+  have live := (queue.links .forkIn 7 Api.root none ReasonAnnotations.empty
+    (List.mem_singleton_self _)).1
+  cases live
+
+theorem drop_absent_refused (root : ProgramSource) (w : W) : ¬ QueueOk root w m0 [dropAbsent] := by
+  intro queue
+  have live := queue.observer Api.root (.success .unit) (.dropScopeFinalizer 7 0)
+    (List.mem_singleton_self _)
+  cases live
+
+#print axioms link_absent_halts
+#print axioms drop_absent_halts
+#print axioms link_absent_refused
+#print axioms drop_absent_refused
+
+/-! Row 139's premises on the halting fiber rows (seat C's hunk on `fiberPre`, landed by seat I):
+typed code names no unknown interrupt target and no absent scope for `runIn`, `forkIn` or
+`Scope.close`, and never performs the race registration marker itself. At the initial world (the
+root alone declared, no scope) each is refused (`close_code_refused_absent` in
+`Test/Program/ProtocolPosts.lean` is the close-scope row's). -/
+
+def startWorld : W := initialWorld (EffTy.pure .unit)
+
+theorem interruptAs_unknown_refused (root : ProgramSource) (k : Val → RProgram) :
+    ¬ TypedProg root startWorld (EffTy.pure .unit) (.vis (.inr (.interruptAs ⟨5⟩ Api.root)) k) := by
+  intro h
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change (startWorld.Γ ⟨5⟩).isSome = true at pre
+  exact Bool.noConfusion pre
+
+theorem runIn_absent_refused (root : ProgramSource) (k : Val → RProgram) :
+    ¬ TypedProg root startWorld (EffTy.pure .unit) (.vis (.inr (.runIn Api.root 7)) k) := by
+  intro h
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have absent : (Stores.empty.scopes.entryAt 7).isSome = true := pre.2
+  exact Bool.noConfusion absent
+
+theorem forkIn_absent_refused (root : ProgramSource) (child : Point)
+    (options : Supervision.ForkOptions) (k : Val → RProgram) :
+    ¬ TypedProg root startWorld (EffTy.pure .unit) (.vis (.inr (.forkIn child options 7 [])) k) := by
+  intro h
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have absent : (Stores.empty.scopes.entryAt 7).isSome = true := pre.2
+  exact Bool.noConfusion absent
+
+theorem raceRegister_refused (root : ProgramSource) (w : W) (ty : EffTy) (race : Nat)
+    (k : ExitV → RProgram) : ¬ TypedProg root w ty (.vis (.inr (.raceRegister race)) k) := by
+  intro h
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  exact pre
+
+#print axioms interruptAs_unknown_refused
+#print axioms runIn_absent_refused
+#print axioms forkIn_absent_refused
+#print axioms raceRegister_refused
+
+end Liveness
 
 end Test.Counterexamples.Machine.Semantics.M6Capstone

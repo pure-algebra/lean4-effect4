@@ -428,6 +428,8 @@ def preds (root : ProgramSource) : Preds World where
   PromiseCell w key cell := ∀ a e, w.«Π» key = some (a, e) →
     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
   CaptureOk w _ c := CaptureTyped root w c
+  -- refused when this judgment was reviewed; decisions row 140 states it in production `preds`
+  ScopeExitOk _ _ _ := True
 
 /-- The typed state: world validity, the generated whole-state predicate over `preds`, and the
 active-delivery correlation: a parked fiber's saved stack expects its token's declared type. -/

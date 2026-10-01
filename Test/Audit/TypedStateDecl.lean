@@ -219,6 +219,7 @@ def readsMetadata : Effect4.Program.Typed.Preds Unit where
   PromiseTable := fun _ _ => True
   CaptureOk := fun _ _ c => c.path = [2] ∧ c.root = 7 ∧ c.env = [] ∧ c.ctx = emptyCtx
   RaceOk := fun _ _ _ => True
+  ScopeExitOk := fun _ _ _ => True
 
 def answer : RProgram := .pure (.success .unit)
 

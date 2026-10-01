@@ -154,17 +154,27 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .raceAll entrants _ => ∀ p ∈ entrants, ∃ ty, PointTyped root w p ty ∧
       ty.answer.sub cert.answer = true ∧ ty.error.sub cert.error = true
   | .async register _ => asyncPre root w register cert
-  | .suspend _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _ | .interruptAll _ _
-  | .runIn _ _ | .awaitNewChildren _ => True
-  | .guard_ _ | .unguard _ | .finishFinalizer _ | .scopeExit _ _ _ | .construction
-  | .closeScope _ _ | .foreignRelease _ _ | .closeWalk _ _ _ | .closeIter _ _ _
-  | .raceRegister _ | .cancelRace _ | .dropObservers _ | .frontier _ _ => True
+  | .suspend _ | .interrupt _ | .interruptScoped _ | .interruptAll _ _
+  | .awaitNewChildren _ => True
+  -- row 139's halting arms (seat C's census): the step halts on an unknown target or an absent
+  -- scope (`FiberAction.interruptAs`, `linkScope` from `runIn` and `forkIn`,
+  -- `FiberAction.closeScope`, `prepareScopedExitR`), so the row demands them; a race
+  -- registration marker is `RegistrationState`'s, never typed code
+  | .interruptAs target _ => (w.Γ target).isSome = true
+  | .runIn target scope =>
+    (w.Γ target).isSome = true ∧ (w.state.scopes.entryAt scope).isSome = true
+  | .guard_ _ | .unguard _ | .finishFinalizer _ | .construction
+  | .foreignRelease _ _ | .closeWalk _ _ _ | .closeIter _ _ _
+  | .cancelRace _ | .dropObservers _ | .frontier _ _ => True
+  | .scopeExit _ scope _ | .closeScope scope _ => (w.state.scopes.entryAt scope).isSome = true
+  | .raceRegister _ => False
   | .snapshotChildren => cert = .list (.fiberOf .unknown .unknown)
   | .scoped body => PointTyped root w body cert
   | .mask _ body => BodyTyped root w body cert
   | .forkScoped child _ _ => PointTyped root w child cert
   | .fork body _ _ => BodyTyped root w body cert
-  | .forkIn child _ _ _ => PointTyped root w child cert
+  | .forkIn child _ scope _ =>
+    PointTyped root w child cert ∧ (w.state.scopes.entryAt scope).isSome = true
   | .gen p => PointTyped root w p cert
   | .loop p _ => PointTyped root w p cert
   | .refuse _ => False
@@ -608,7 +618,8 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   cases op with
   | fork body _ _ => exact bodyTyped_mono ord h
   | mask _ body => exact bodyTyped_mono ord h
-  | forkIn child _ _ _ => exact pointTyped_mono ord h
+  -- row 139: scope entries persist along the host order, the fiber table grows
+  | forkIn child _ scope _ => exact ⟨pointTyped_mono ord h.1, ord.1.1.2.2.2.1 scope h.2⟩
   | forkScoped child _ _ => exact pointTyped_mono ord h
   | «scoped» body => exact pointTyped_mono ord h
   | gen p => exact pointTyped_mono ord h
@@ -632,11 +643,20 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
     simp only [fiberPre] at h ⊢
     exact servicesFit_map hPi hRho ord.2 h
   | getContext | snapshotChildren => exact h
-  | refuse _ => exact (h : False).elim
-  | getId | yieldNow _ | ambientScope | sync _ | suspend _ | interrupt _ | interruptAs _ _
-  | interruptScoped _ | interruptAll _ _ | runIn _ _ | awaitNewChildren _ | guard_ _ | unguard _
-  | finishFinalizer _ | scopeExit _ _ _ | construction | closeScope _ _ | foreignRelease _ _
-  | closeWalk _ _ _ | closeIter _ _ _ | raceRegister _ | cancelRace _ | dropObservers _
+  | refuse _ | raceRegister _ => exact (h : False).elim
+  | interruptAs target _ =>
+    simp only [fiberPre] at h ⊢
+    exact isSome_extends hGamma h
+  | runIn target scope =>
+    simp only [fiberPre] at h ⊢
+    exact ⟨isSome_extends hGamma h.1, ord.1.1.2.2.2.1 scope h.2⟩
+  | scopeExit _ scope _ | closeScope scope _ =>
+    simp only [fiberPre] at h ⊢
+    exact ord.1.1.2.2.2.1 scope h
+  | getId | yieldNow _ | ambientScope | sync _ | suspend _ | interrupt _
+  | interruptScoped _ | interruptAll _ _ | awaitNewChildren _ | guard_ _ | unguard _
+  | finishFinalizer _ | construction | foreignRelease _ _
+  | closeWalk _ _ _ | closeIter _ _ _ | cancelRace _ | dropObservers _
   | frontier _ _ => exact trivial
 
 end Mono
@@ -727,6 +747,5 @@ end Effect4.Program.Typed
   fun _ _ _ _ _ _ ord h => Effect4.Program.Typed.Contracts.stackAccepts_mono ord h
 #obligation_proved Effect4.Program.Typed.M3bWorld.savedOk_mono :=
   @Effect4.Program.Typed.savedOk_mono
-#obligation_audit Effect4.Program.Typed.M3bWorld
-#typed_state_obligations Effect4.Program.Typed.M3bWorld ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])
+-- The scope's audit and report run at the foot of `Typed/Assembly.lean`, after the bundle's
+-- `SavedOk` transport joins it (row 87: `M3bWorld.preds_savedOk_mono`), so it is counted once.
