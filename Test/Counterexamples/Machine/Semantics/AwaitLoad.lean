@@ -69,7 +69,7 @@ theorem cert_of_bodyTyped (w : W) (cert : EffTy) (p : Point) (hpath : p.path = [
     cert = EffTy.pure .nat := by
   cases h with
   | at_ _ _ pt =>
-    obtain ⟨e, env, hnode, hcheck, hen⟩ := pt
+    obtain ⟨e, env, hnode, hcheck, hen, -⟩ := pt
     rw [hpath] at hnode hcheck
     rw [node_body] at hnode
     cases hnode
@@ -223,7 +223,8 @@ theorem fork_typed (w : W) :
   show TypedProg _ w _ (.vis (.inr (.fork (.at_ forkPoint) opts _)) fun x => .pure (.success x))
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) (EffTy.pure .nat)
-    (.at_ _ _ ⟨Eff.succeed (n 1), [], node_body, check_body, envTyped_nil w⟩) ?_
+    (.at_ _ _ ⟨Eff.succeed (n 1), [], node_body, check_body, envTyped_nil w,
+      fun _ h => nomatch h⟩) ?_
   intro w' _ ans post
   obtain ⟨id, rfl, declared⟩ := post
   exact TypedProg.pure ⟨⟨EffTy.pure .nat, declared, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
@@ -287,7 +288,7 @@ theorem code_typed (w : W) : TypedProg (awaitProg : ProgramSource) w rootTy code
 /-- **The flip of `loadsTyped_false`: M5's proposition over `J` holds at this program** (fuel 5,
 the empty row table), through `machineTyped_load`. -/
 theorem loadsTyped : LoadsTyped (awaitProg : ProgramSource) rootTy 5 5 :=
-  fun _ _ closed => ⟨_, machineTyped_load _ rootTy 5 5 closed rfl code_typed⟩
+  fun _ _ closed => ⟨_, machineTyped_load _ rootTy 5 5 closed rfl (code_typed _)⟩
 
 /-- **The flip of `capstone_false`: the capstone's proposition holds at the loaded machine.** -/
 theorem capstone_at_load :

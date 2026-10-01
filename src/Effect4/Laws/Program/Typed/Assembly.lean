@@ -838,17 +838,20 @@ theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} 
       cases ht
 
 /-- A capture's release runs at the point its path's `acquireRelease` checks it at: the
-release child, over the checker's environment extended by the acquired value and the exit. -/
+release child, over the checker's environment extended by the acquired value and the exit, with
+the completed view the release is constructed with (`denoteFin`'s `foreign` arm reads it from the
+`construction` post, whose clause `hview` is; decisions row 175). -/
 theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
     (completed : List (FiberId × ExitV)) (exVal : Val) (h : CaptureTyped root w c)
-    (hex : Fits w exVal (.exitOf .unknown .unknown)) :
+    (hex : Fits w exVal (.exitOf .unknown .unknown))
+    (hview : ∀ q ∈ completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) :
     ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty := by
   obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _⟩ := h
   rw [Eff.expandIn_acquireRelease] at hcheck
   obtain ⟨a', r, hacq', hrel, _, _⟩ := Checker.inv_acquireRelease _ _ _ _ _ t hcheck
   rw [hacq] at hacq'
   cases hacq'
-  refine ⟨r, release, env ++ [a.answer, .exitOf .unknown .unknown], ?_, hrel, ?_⟩
+  refine ⟨r, release, env ++ [a.answer, .exitOf .unknown .unknown], ?_, hrel, ?_, hview⟩
   · show Node.at_ (.eff root.program) (c.path ++ [1]) = some (.eff release)
     rw [Agreement.Node.at_append, hnode]
     rfl
@@ -888,12 +891,27 @@ def ReachableTyped (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RSt
   LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
     ClosedEff rootTy → RReachable root fuel m → ∃ w, MachineTyped root rootTy w m
 
-/-- Row 148 (algebra A3): M5's fundamental property. A checked point denotes, at the node its
-path names, a program typed at the point's certificate, at every world. -/
+/-- Row 148 (algebra A3): M5's fundamental property. For a program whose layer references are
+well formed, a checked point denotes, at the node its path names, a program typed at the point's
+certificate, at every world whose service table is the source's.
+
+The well-formedness premise is decisions row 170 (`E4-TYPED-CE-020`): `PointTyped` reads a node
+through the expansion's rounds (`Eff.expandIn`), which resolve a reference to a reference, while
+the run's `.ref` arm answers `badShapeExit` at such a target (`denoteLayer_ref_succ`), so without
+it the proposition is false at a checked point of a malformed program. The load discharges it
+from the checker's verdict (`layerRefsWF_of_typeOf`); it is a premise here, never a field of
+`ProgramSource`. The worlds are the ones `J` ranges over (decisions row 175, `E4-TYPED-CE-022`):
+the world's service table is the source's, as `MachineTyped.services` states it, since a
+service read answers what the fiber's context holds, which membership reads at the world's
+table (`ServicesFit`), at the type the checker reads off the source's (`Checker.check`'s
+`service` arm); at another table the proposition is false. The point's completed view is typed
+by `PointTyped` itself (row 175, `E4-TYPED-CE-021`). The three witnesses are
+`Test/Program/TypedDenotation.lean`'s. -/
 def DenotesTyped (root : ProgramSource) : Prop :=
-  ∀ (w : World) (p : Point) (e : NativeEff) (ty : EffTy),
-    Node.at_ (.eff root.program) p.path = some (.eff e) → PointTyped root w p ty →
-      TypedProg root w ty (denoteR root.program e p)
+  root.program.layerRefsWF = true →
+    ∀ (w : World), w.serviceTy = root.sig.serviceTy → ∀ (p : Point) (e : NativeEff) (ty : EffTy),
+      Node.at_ (.eff root.program) p.path = some (.eff e) → PointTyped root w p ty →
+        TypedProg root w ty (denoteR root.program e p)
 
 /-- Row 148 (types TY-07): term soundness at `Fits`. A term the checker types evaluates, in an
 environment typed at the same world, to a value that fits its type. Term typing reads only the
@@ -908,7 +926,9 @@ def TermFits (table : RowTable) : Prop :=
 
 The loaded machine has one fiber, not running, whose code is the root's denotation; every other
 clause of `J` is over an empty list or the empty context. So M5 is the root code's typing at
-every world (`machineTyped_load`), and that is `DenotesTyped` at the root point
+the initial world (`machineTyped_load`; decisions row 175: the code is read there only, and at
+every world it is false for a program that reads a service), and that is `DenotesTyped` at the
+root point
 (`loadsTyped_of_denotesTyped`): `typeOfProgram` checks the program, under the source's signature
 (`root.signature`, rows 111–114), after expanding its layer references
 (`Program/Typing.lean:61-64`), `loadR` loads the program as written (`RuntimeR.lean:41-46`), and
@@ -922,12 +942,15 @@ theorem machineLive_of_quiet (m : RState) (stuck : m.stuck = none)
   rw [due] at ho
   cases ho
 
-/-- **M5's builder.** A root whose loaded code is typed at every world, and whose head is not a
-race marker, loads into `J` at the initial world over the source's service table (row 112). -/
+/-- **M5's builder.** A root whose loaded code is typed at the initial world over the source's
+service table (row 112), and whose head is not a race marker, loads into `J` there. The code is
+read at that world only (decisions row 175; before it this premise demanded every world, which is
+false for a program that reads a service, `E4-TYPED-CE-022`). -/
 theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (closed : ClosedEff rootTy)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
-    (code : ∀ w, TypedProg root w rootTy (denoteR root.program root.program (rootPoint compileFuel))) :
+    (code : TypedProg root (initialWorld rootTy root.sig.serviceTy) rootTy
+      (denoteR root.program root.program (rootPoint compileFuel))) :
     MachineTyped root rootTy (initialWorld rootTy root.sig.serviceTy)
       (loadR root.program fuel compileFuel) := by
   have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
@@ -947,7 +970,7 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
       rw [declared] at hty
       cases hty
       exact savedPosition_of_saved root _ rootTy _
-        ⟨rootTy, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+        ⟨rootTy, code, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
     · intro q hq
       cases hq
     · intro v0 h
@@ -976,7 +999,7 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
     change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
     rw [declared] at hty
     cases hty
-    exact ⟨rootTy, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+    exact ⟨rootTy, code, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
 
 /-- **M5's reduction lemma, at the generated typed state** (seat A's
 `ValueMembership.typedStateF_load`, moved here and restated over row 134's split): a root whose
@@ -988,7 +1011,7 @@ theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compil
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
     ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) :=
-  ⟨_, (machineTyped_load root ty fuel compileFuel closed noMarker code).typed⟩
+  ⟨_, (machineTyped_load root ty fuel compileFuel closed noMarker (code _)).typed⟩
 
 /-- The empty environment is typed at every world. -/
 theorem envTyped_nil (w : World) : EnvTyped w [] [] := by
@@ -996,16 +1019,30 @@ theorem envTyped_nil (w : World) : EnvTyped w [] [] := by
   rw [List.getElem?_nil] at h
   cases h
 
+/-- **A checked program's layer references are well formed** (decisions row 170):
+`typeOfProgram` answers only under `layerRefsWF` (`Program/Typing.lean:61-64`), so the load's
+checker premise discharges `DenotesTyped`'s. -/
+theorem layerRefsWF_of_typeOf {Op : Type} {sig : Signature Op} {program : Eff Op} {ty : EffTy}
+    (h : Program.typeOfProgram sig program = some ty) : program.layerRefsWF = true := by
+  unfold Program.typeOfProgram at h
+  split at h
+  · rename_i hc
+    exact ((Bool.and_eq_true _ _).mp hc).1
+  · cases h
+
 /-- **M5 from row 148's fundamental property**, for a loaded head that is not a race marker
 (`InterpR.lean:320`: only a race park builds one). The root point is typed by the checker's
 verdict on the program's expansion (decisions row 153 (b)), so no reference-free premise: before
 row 153 it carried `root.program.refSites [] = []` (`E4-TYPED-CE-019`,
-`Test/Program/LayerRefs.lean`). -/
+`Test/Program/LayerRefs.lean`). The same verdict discharges the property's well-formedness
+premise (row 170, `layerRefsWF_of_typeOf`); the initial world carries the source's service table
+and the root point an empty completed view (row 175). -/
 theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (denotes : DenotesTyped root)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none) :
     LoadsTyped root rootTy fuel compileFuel := by
   intro _ checked closed
+  have wf := layerRefsWF_of_typeOf checked
   have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
     rw [Eff.expandIn_self]
     unfold Program.typeOfProgram at checked
@@ -1013,8 +1050,9 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
     · exact checked
     · cases checked
   exact ⟨_, machineTyped_load root rootTy fuel compileFuel closed noMarker
-    fun w => denotes w (rootPoint compileFuel) root.program rootTy rfl
-      ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil w⟩⟩
+    (denotes wf _ rfl (rootPoint compileFuel) root.program rootTy rfl
+      ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
+        fun _ h => nomatch h⟩)⟩
 
 /-! ## World monotonicity of the bundle's saved positions (decisions rows 87 and 135)
 
@@ -1460,7 +1498,9 @@ theorem typedState_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFue
 
 theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
     (completed : List (FiberId × ExitV)) (exVal : Val) (_h : CaptureTyped root w c)
-    (_hex : Fits w exVal (.exitOf .unknown .unknown)) : ProofGraph.Obligation
+    (_hex : Fits w exVal (.exitOf .unknown .unknown))
+    (_hview : ∀ q ∈ completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) :
+    ProofGraph.Obligation
     (∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty) := ⟨⟩
 
 end M3bAssembly

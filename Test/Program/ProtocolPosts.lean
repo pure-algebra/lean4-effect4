@@ -924,7 +924,7 @@ theorem cert_of_bodyTyped (w : W) (cert : EffTy) (p : Point) (hpath : p.path = [
     cert = EffTy.pure .nat := by
   cases h with
   | at_ _ _ pt =>
-    obtain ⟨e, env, hnode, hcheck, hen⟩ := pt
+    obtain ⟨e, env, hnode, hcheck, hen, -⟩ := pt
     rw [hpath] at hnode hcheck
     rw [node_body] at hnode
     cases hnode

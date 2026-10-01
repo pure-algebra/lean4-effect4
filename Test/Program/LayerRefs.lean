@@ -24,8 +24,10 @@ target is memoized). So the agreement is the redirect, with the typing read thro
 expansion, not an equality of the program's and the expansion's denotations.
 
 `DenotesTyped` is M5's open denotation lemma (`M3bAssembly.denoteR_typed`); `loadsTyped` is
-proved from it, as `loadsTyped_of_denotesTyped` is. The finite facts (`checked`, `wellFormed`,
-`site`, the memo keys) are computed by the kernel.
+proved from it, as `loadsTyped_of_denotesTyped` is. Its premise that the references are well
+formed (decisions row 170) holds here (`wellFormed`), and the reduction discharges it from the
+checker's verdict (`checked`, `layerRefsWF_of_typeOf`). The finite facts (`checked`,
+`wellFormed`, `site`, the memo keys) are computed by the kernel.
 -/
 
 set_option autoImplicit false
@@ -94,7 +96,7 @@ theorem old_root_untyped (w : W) (fuel : Nat) (ty : EffTy) :
 /-- **The flip** (proved): the root point is typed at the checker's type at every world and fuel,
 its node read through the expansion's rounds. -/
 theorem root_typed (w : W) (fuel : Nat) : PointTyped src w (rootPoint fuel) rootTy :=
-  ⟨layerRef, [], rfl, check_expansion, envTyped_nil w⟩
+  ⟨layerRef, [], rfl, check_expansion, envTyped_nil w, fun _ h => nomatch h⟩
 
 /-- The loaded head is not a race marker, at every compile budget. -/
 theorem noMarker (cf : Nat) :
@@ -112,7 +114,8 @@ theorem noMarker (cf : Nat) :
 
 /-- **M5 at the corpus's `layer.ref` program, through the reduction** (proved from M5's open
 denotation lemma `DenotesTyped`): the program loads into `J` at every fuel. Before row 153 the
-reduction's reference-free premise excluded it. -/
+reduction's reference-free premise excluded it; row 170's well-formedness premise is the
+checker's (`layerRefsWF_of_typeOf`). -/
 theorem loadsTyped (denotes : DenotesTyped src) (fuel cf : Nat) : LoadsTyped src rootTy fuel cf :=
   loadsTyped_of_denotesTyped src rootTy fuel cf denotes (noMarker cf)
 
