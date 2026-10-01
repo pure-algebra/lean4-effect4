@@ -349,8 +349,8 @@ Test callers are migrated in E3; this intermediate commit records the narrow law
 
 ### E3: tests and retained falsifiers
 
-The eight named existing test files were checked; seven required edits and AdmissionCensus
-was byte-identical. B's M6Capstone also moves to FitsExit. ValueMembership retains a local
+The seven files named by E and B's M6Capstone were checked; seven required edits and
+AdmissionCensus was byte-identical. M6Capstone also moves to FitsExit. ValueMembership retains a local
 copy of the old source/control/state predicates, the old load refutation, G1–G6 with their
 new refusals and honest controls, and the equality-invariance G7 refutation. Its production
 controls prove typed loaded states for Ref.make(5) and Ref.make(5).flatMap(Ref.get).
@@ -381,6 +381,31 @@ E4-TYPED-CE-004/005/006 are marked REPAIRED with their exact controls and the ge
 Test/All imports ValueMembership immediately after M6Capstone, the reserved semantic slot:
 stopped G has not installed LayerValue, whose future import belongs immediately before it.
 `c1bcfdf6` is E2. This commit owns the changed Test paths, register, receipt and test evidence.
+
+### E4: retirement complete
+
+Removed HandlesLive, ServicesOk, HandlesFit, StrongValue, StrongCause and StrongExit from
+production Admission. No production source mentions those retired judgment names. Their
+reviewed copies and the WorldValid liveness bridge remain in ValueMembership. Two source
+introductory comments (Typed.World and Typed.ForkSource) now use the current vocabulary;
+Assembly no longer lists the repaired liveness obstruction among current M6 refutations.
+The still-open layer, queue and shared-exit limitations remain explicit.
+
+- `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.Assembly` with the same nine
+  Test targets listed in E3: exit 0, 382 jobs (`E/retirement-build.log`). Every printed
+  theorem remains within the ceiling; no recovery or Classical.choice axiom appears.
+- `rg` for the six retired names under `src/Effect4/Laws/Program/Typed`: zero matches.
+  Source `git diff --check`: exit 0. No runtime change or regeneration.
+
+`602ab157` is E3. E4 owns Admission, Assembly and the two comment-only source changes,
+plus receipt/evidence. E is now complete within its dispatched scope: the 37 membership
+laws, fold connection, eight source proof repairs, two checked obligation adapters, test
+migration, three register repairs, and retirement have all been checked. M3bWorld has one
+remaining obligation; M5 initialization and all M6 command proofs remain open.
+
+Proposed row 96: Fits with D1–D4 is the production value judgment; the equality experiment and
+old definitions are Test controls only. The runtime twin and host-reply-to-Fits bridge stay
+parked. The two concrete loaded-state proofs do not claim the general initialization theorem.
 
 ## H1 — command queue conditions
 Pending.

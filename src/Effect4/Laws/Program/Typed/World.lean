@@ -16,7 +16,7 @@ preserves each prior keywise typing judgment; it does not assert either world
 is valid. Consequently reflexivity is stated on every World, including invalid
 ones. Coverage and typing of fresh cells are separate allocation conclusions.
 
-This slice provides column typing only. Nested HandlesFit belongs to M3; no
+This slice provides column typing only. Nested value membership belongs to M3; no
 coarse Val.hasTy check is claimed to establish handle existence or nested type
 agreement. Due entries do not enter PromiseTable and are never typed via Γ.
 ParkHandshake and the due/park contract remain separate M4 obligations.
