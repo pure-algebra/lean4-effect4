@@ -1,0 +1,7 @@
+# check: codex-resolve
+# date: 2026-10-01T18:37:27Z
+# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
+# command: bun run codex/resolve-check.mjs
+# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
+file:///Users/pooks/Dev/lean4-effect4-probe-S/vendor/effect-4.0.0-rc.112/src/Schema.ts file:///Users/pooks/Dev/lean4-effect4-probe-S/vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts
+# exit=0 seconds=0

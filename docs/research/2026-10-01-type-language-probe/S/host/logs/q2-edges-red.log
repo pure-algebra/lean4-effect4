@@ -1,0 +1,107 @@
+# check: q2-edges-red
+# date: 2026-10-01T18:38:57Z
+# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
+# command: bun run q2-edges-red.ts
+# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
+ok   E1a Struct({a,b}) accepts {b,a} :: actual=true
+FAIL E1b output keys in declaration order :: actual=["a","b"] expected=["b","a"]
+ok   E2a Struct({b,a}) property order :: actual=["b","a"]
+ok   E2b Struct({a,b}) property order :: actual=["a","b"]
+ok   E2c the two persisted documents differ (order is content in rc.112) :: actual=false
+REPR struct-ab {"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"Number","checks":[]},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"b"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+ok   E3a default onExcessProperty strips c :: actual={"ok":true,"value":{"a":1,"b":"x"}}
+ok   E3b onExcessProperty: error refuses c :: actual=false
+ok   E3c onExcessProperty: preserve keeps c :: actual={"ok":true,"value":{"c":true,"a":1,"b":"x"}}
+ok   E3d a missing key refuses :: actual=false
+ok   E4a optionalKey: {} accepted :: actual={"ok":true,"value":{}}
+ok   E4b optionalKey: {a: undefined} refused :: actual=false
+ok   E4c optional: {} accepted :: actual={"ok":true,"value":{}}
+ok   E4d optional: {a: undefined} accepted :: actual=true
+ok   E4e optional: the explicit undefined stays an own key of the output :: actual=true
+ok   E4f optionalKey: null refused :: actual=false
+ok   E4g optional: null refused :: actual=false
+REPR optionalKey {"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"Number","checks":[]},"isOptional":true,"isMutable":false}],"indexSignatures":[]},"references":{}}
+REPR optional {"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"Union","checks":[],"types":[{"_tag":"Number","checks":[]},{"_tag":"Undefined","checks":[]}],"mode":"anyOf"},"isOptional":true,"isMutable":false}],"indexSignatures":[]},"references":{}}
+ok   E4h optionalKey persists isOptional=true over Number :: actual="Number"
+ok   E4i optional persists isOptional=true over Union[Number, Undefined] :: actual=["Number","Undefined"]
+ok   E4j toCodecJson(optional) encodes {a: undefined} with the key present :: actual=true
+ok   E4k toCodecJson(optional) writes the explicit undefined as JSON null :: actual="{\"a\":null}"
+ok   E4l toCodecJson(optional) decodes {"a": null} back to an explicit undefined :: actual=[true,"<undefined>"]
+ok   E4m toCodecJson(optionalKey) refuses {"a": null} :: actual=false
+ok   E4n toCodecJson(optionalKey) encodes {} as {} :: actual="{}"
+ok   E4o toCodecJson(optional) encodes {} as {} (absent stays absent) :: actual="{}"
+ok   E5a mutableKey persists isMutable=true :: actual=true
+ok   E5b mutableKey decodes as the plain field :: actual={"ok":true,"value":{"a":1}}
+ok   E5c optionalKey(mutableKey(_)) persists both flags :: actual=[true,true]
+ok   E5d mutableKey(optionalKey(_)) persists the same two flags :: actual=true
+REPR record-string-number {"representation":{"_tag":"Objects","checks":[],"propertySignatures":[],"indexSignatures":[{"parameter":{"_tag":"String","checks":[]},"type":{"_tag":"Number","checks":[]}}]},"references":{}}
+ok   E6a Record persists one index signature, no properties :: actual=[0,1]
+ok   E6b Record output keeps input key order :: actual=["b","a"]
+ok   E6c Record: JSON text with a duplicate key decodes the last occurrence :: actual={"ok":true,"value":{"a":2}}
+ok   E6d Record: integer-like keys come first in ascending numeric order :: actual=["9","10","b"]
+ok   E6e Record: a wrong value type refuses :: actual=false
+ok   E6f Record: onExcessProperty error does not refuse index keys :: actual=true
+REPR record-literals {"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"Number","checks":[]},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"b"},"type":{"_tag":"Number","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+ok   E6g Record(Literals) persists required properties, no index signature :: actual=[["a","b"],0]
+ok   E6h Record(Literals) refuses a missing literal key :: actual=false
+REPR record-number-key {"representation":{"_tag":"Objects","checks":[],"propertySignatures":[],"indexSignatures":[{"parameter":{"_tag":"Number","checks":[]},"type":{"_tag":"String","checks":[]}}]},"references":{}}
+ok   E6i Record(Number, _) accepts a numeric-string key :: actual=true
+ok   E6j Record(Number, _) on a non-numeric key: dropped as an excess key, not decoded :: actual={"ok":true,"value":{}}
+ok   E6k Record(Number, _) under onExcessProperty error still drops the non-numeric key (the excess check runs only without index signatures, SchemaAST.ts:2261) :: actual={"ok":true,"value":{}}
+REPR tagged-union {"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"_tag"},"type":{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"A"}},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"x"},"type":{"_tag":"Number","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"_tag"},"type":{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"B"}},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"y"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]}],"mode":"anyOf"},"references":{}}
+ok   E7a Union([A,B]) selects B by _tag :: actual={"ok":true,"value":{"_tag":"B","y":"s"}}
+ok   E7b Union([A,B]) refuses a mismatched tag/payload :: actual=false
+ok   E7c TaggedStruct persists _tag first, a Literal :: actual=[["_tag","x"],"Literal"]
+ok   E7d toTaggedUnion keeps the union's AST (same persisted document) :: actual=true
+ok   E7e toTaggedUnion adds guards by tag :: actual=[true,false]
+ok   E7f TaggedUnion({A,B}) persists the same document as Union([TaggedStruct...]) :: actual=true
+ok   E7g toTaggedUnion refuses two members with one tag (throws) :: actual=true
+ok   E7g2 a plain Union of two members with one tag is accepted :: actual=true
+ok   E7h anyOf answers the first member that succeeds (strips b) :: actual={"ok":true,"value":{"a":1}}
+ok   E7i oneOf refuses when two members succeed :: actual=false
+ok   E7j Schema.Union(a, b) (variadic) throws; the call shape is Union([a, b]) :: actual=true
+ok   E8a computed ["__proto__"] key is a property :: actual=["__proto__"]
+ok   E8b quoted "__proto__": key sets the prototype, no property :: actual=[]
+ok   E8c Object.fromEntries keeps the property :: actual=["__proto__"]
+ok   E8d computed-key struct decodes an own __proto__ property :: actual=[true,1]
+ok   E8e quoted-key struct accepts {} (the field is gone) :: actual=true
+REPR proto-computed {"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"__proto__"},"type":{"_tag":"Number","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+ok   E8f quoted a-b key :: actual=["a-b"]
+ok   E8g an unquoted a-b key is a SyntaxError :: actual="SyntaxError"
+ok   E8h Unicode keys are properties in written order :: actual=["é","日本","😀"]
+ok   E8i Unicode-keyed struct decodes :: actual=true
+ok   E8j constructor/toString are ordinary properties :: actual=["constructor","toString"]
+ok   E8k constructor/toString struct refuses {} (inherited members are not own keys) :: actual=false
+ok   E8l constructor/toString struct accepts own string values :: actual=true
+ok   E8m Struct({constructor: Unknown}) on {}: is the inherited member read? :: actual={"ok":false,"message":"Missing key"}
+ok   E8n the empty name is a property :: actual=[""]
+ok   E8o the empty-named struct decodes :: actual={"ok":true,"value":{"":1}}
+ok   E8p integer-like names lead in numeric order; "01" is not integer-like :: actual=["9","10","b","01","a"]
+REPR nat-by-name {"representation":{"_tag":"Number","checks":[{"_tag":"Filter","representation":{"id":"effect/schema/isInt","payload":null},"annotations":{"expected":"an integer","arbitrary":{"constraint":{"integer":true}}},"aborted":false},{"_tag":"Filter","representation":{"id":"effect/schema/isGreaterThanOrEqualTo","payload":{"minimum":0}},"annotations":{"expected":"a value greater than or equal to 0"},"aborted":false}]},"references":{}}
+REPR natural {"representation":{"_tag":"Number","checks":[{"_tag":"Filter","representation":{"id":"effect/schema/isInt","payload":null},"annotations":{"expected":"an integer","arbitrary":{"constraint":{"integer":true}}},"aborted":false},{"_tag":"Filter","representation":{"id":"effect/schema/isGreaterThanOrEqualTo","payload":{"minimum":0}},"annotations":{"expected":"a value greater than or equal to 0"},"aborted":false}]},"references":{}}
+REPR int {"representation":{"_tag":"Number","checks":[{"_tag":"Filter","representation":{"id":"effect/schema/isInt","payload":null},"annotations":{"expected":"an integer","arbitrary":{"constraint":{"integer":true}}},"aborted":false}]},"references":{}}
+ok   E9a Number.check(isInt(), isGreaterThanOrEqualTo(0)) persists as Schema.Natural does :: actual=true
+ok   E9b the chained spelling persists the same document :: actual=true
+ok   E9c Number.check(isInt()) persists as Schema.Int does :: actual=true
+ok   E9d the persisted isInt filter carries two annotation keys :: actual={"expected":"an integer","arbitrary":{"constraint":{"integer":true}}}
+ok   E9d2 the persisted isGreaterThanOrEqualTo(0) filter's payload and annotation keys :: actual=[{"id":"effect/schema/isGreaterThanOrEqualTo","payload":{"minimum":0}},["expected"]]
+ok   E9e isInt refuses 2^53 (safe integers only) :: actual=false
+ok   E9f isInt accepts 2^53 - 1 :: actual=true
+ok   E9g Natural accepts -0, keeping the sign :: actual=true
+ok   E9h Int refuses 1.5, NaN, Infinity and "42" :: actual=[false,false,false,false]
+ok   E9i Int accepts -15 :: actual={"ok":true,"value":-15}
+ok   E9j Natural refuses -1 :: actual=false
+ok   E9k plain Number admits NaN and 1.5 :: actual=[true,true]
+ok   E9l toCodecJson(Number) writes NaN as the string "NaN" :: actual="NaN"
+ok   E9m toCodecJson(Int) writes -15 as a number :: actual=-15
+REPR tuple1 {"representation":{"_tag":"Arrays","checks":[],"elements":[{"isOptional":false,"type":{"_tag":"String","checks":[]}}],"rest":[]},"references":{}}
+REPR array {"representation":{"_tag":"Arrays","checks":[],"elements":[],"rest":[{"_tag":"String","checks":[]}]},"references":{}}
+ok   E10a Tuple([String]) persists one element, no rest :: actual=[1,0]
+ok   E10b Array(String) persists no element, one rest :: actual=[0,1]
+ok   E10c the tuple refuses [], the array accepts it :: actual=[false,true]
+REPR literals3 {"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"a"}},{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"b"}},{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"c"}}],"mode":"anyOf"},"references":{}}
+ok   E10d Literals([a,b,c]) persists a flat three-member union of string literals :: actual=[{"type":"string","value":"a"},{"type":"string","value":"b"},{"type":"string","value":"c"}]
+ok   E10e a nested anyOf union persists nested (no flattening) :: actual="Union"
+ok   E10f the nested and flat unions accept the same three literals :: actual=[[true,true],[true,true],[true,true],[false,false]]
+SUMMARY passes=85 failures=1 (red twin: one expectation flipped)
+# exit=1 seconds=0

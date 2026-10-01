@@ -1,0 +1,7 @@
+# check: codex-inference-red
+# date: 2026-10-01T18:37:28Z
+# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
+# command: /opt/homebrew/bin/tsgo -p codex/tsconfig.red.json --pretty false
+# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
+codex/inference-red.ts(6,44): error TS2344: Type 'false' does not satisfy the constraint 'true'.
+# exit=1 seconds=0
