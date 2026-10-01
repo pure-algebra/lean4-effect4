@@ -19,8 +19,8 @@ append, ruled), 165 (ruled); recommended and proceeding with ratification owed: 
 | 0b | Paper: the rows above; the pin of 0a in `lakefile.toml` with `lake update typescript` at commit 8 | coordinator | — | done / at 8 |
 | 1 | Exactness for today's `Ty` (row 128, TY-09): the decoder selects the encoder's canonical branch; `N_J`, `N_S` as functions; `ofSchema` compares whole checks, refuses `TypeParameter`; the two theorems | W1 | P's note (question 5), S's note (question 1) | when P and S land |
 | 2 | Generator extensions for nested families of variable arity: the single-motive eliminator and the equality generated; `TyView` with list children (`record`, `app`, `tuple`); the variance table for a head of variable arity; the monadic-fold decision; **and the generated order laws extended to declared cross-head leaf edges** (`undefined ⊑ unit`, the number tower `nat ⊑ int ⊑ number`): one shared table of the exceptional rules read by the generator beside its six fixed cases, the different-head theorem restated (its conclusion is false only at heads with no declared edge), an accepted cross-head case and its rejected converse as controls (Codex, 19:30: Q's probe modelled no new non-congruence rule, so its green covers the structural family only) | W2 | Q's note **and** P's final cross-head rules | when P and Q land |
-| 3 | The `Val` append (rows 121 (a), 109): the signed and binary64 frames, the store tag, the byte codecs, the `Val` group regenerated once | W3 | Q's note; P's laws | after 2; after D1 merges |
-| 4 | The `Ty` append: `record` (fields with optionality), `map`, `tuple`, `app`, `null`, `undefined`, `number` (and `bytes` if row 161 (a)); every hand arm; the named value clause (row 165) in `Fits`/`Val.hasTy`; canonical-order membership; `normalize`/`Normal`/`key`/`sub` and their laws; `hasTy_normalize`'s cases; `inhabited`'s arms; the generated groups regenerated once in the fixed order; `cases-policy.json`; wire tags; the OCaml mirrors; the conservativity check green; every new constructor refused by name in the codec, Schema and faces until its commit | W4 (laws), W4g (generation, mirrors) | P's note, Q's note | after 2, 3; after D1 merges |
+| 3 | The `Val` append (rows 121 (a), 109): the signed and binary64 frames, the store tag, the byte codecs, the `Val` group regenerated once | W4 (its first step) | Q's note; P's laws | after 2; after D1 merges |
+| 4 | The `Ty` append: `record` (fields with optionality), `map`, `tuple`, `app`, `null`, `undefined`, `number` (and `bytes` if row 161 (a)); every hand arm; the named value clause (row 165) in `Fits`/`Val.hasTy`; canonical-order membership; `normalize`/`Normal`/`key`/`sub` and their laws; `hasTy_normalize`'s cases; `inhabited`'s arms; the generated groups regenerated once in the fixed order; `cases-policy.json`; wire tags; the OCaml mirrors; the conservativity check green; every new constructor refused by name in the codec, Schema and faces until its commit | W4 (one seat: laws, then generation and mirrors) | P's note, Q's note | after 2, 3; after D1 merges |
 | 5 | Schema and JSON arms per form with the laws (objects, optional keys, `Record`, tagged unions with the whole-union check, `Number`/`Int`, `Null`/`Undefined`, tuples, declarations with type parameters); the readable profile's text | W5 | S's note | after 1, 4 |
 | 6 | Term forms (rows 166, 167): `Term.record`, `Term.field`, the map atoms, tuple forms, the tag select `Decision.recordTag`, number-to-text (row 131); contract first (`R/contracts/record-terms.contract.md`), typing lemmas, behaviour laws | W6 | R's note Q1, Q3; P's laws | after 4 |
 | 7 | Error payloads (row 120 as amended): the carrier, `Err`'s image, `FitsCause`, the six handle-freeness lemmas; the face as a `Data.TaggedError` class per payload type | W7 | P's laws; R's Q3 | after 4, 6 |
@@ -67,3 +67,19 @@ parallel, slot in, delete at a good place; the owner's 2026-09-18 rule on gate r
 - **No shortcut on rigor.** Unchanged: `[propext, Quot.sound]` everywhere, no `sorry`/`partial`/
   `unsafe`, every statement kept or refuted with its history, every traversal a fold or generated.
   Speed comes from deleting duplicates and hand tables, not from weakening a judgment.
+
+## Testing during the wave (the owner, 2026-10-01: ratified; avoid testing that reads nothing)
+
+- A seat builds narrowly: the touched modules and their direct importers after each change
+  (`lake build <Module>`; `lake env lean` for a battery), the roots once at its final commit.
+- The coordinator rebuilds main after a merge only where two code seats landed in parallel on
+  overlapping cones (the interaction a seat's own build cannot see); a seat whose base is main's
+  head merges on its own final build and `git merge-tree` alone. Docs merges never build.
+- `make check-gen` runs only in a commit that ran a generator; `dune build` and `make check-ocaml`
+  only in a commit that regenerated an OCaml group; `check-target`/`check-truth` only where the
+  faces changed. `make check-full` once, after commit 10.
+- A control is kept when it is a counterexample row's witness or an acceptance; a test that
+  restates a count or a shape the generator owns is deleted with its generator run.
+- The seats ask for a sweep only when a proof depends on it; nothing else is owed.
+
+The series' commits 3 and 4 are one seat (W4): the `Val` append is its first step.
