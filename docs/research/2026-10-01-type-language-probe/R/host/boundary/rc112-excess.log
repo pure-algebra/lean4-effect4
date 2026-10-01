@@ -1,0 +1,7 @@
+# bun 1.4.2, 2026-10-01T19:06:51Z
+["effect","4.0.0-rc.112","bun","1.4.2"]
+["wider",{"default":"{\"id\":2,\"name\":\"bob\",\"role\":\"member\"}","strict":"refused: Expected no excess property"}]
+["exact",{"default":"{\"id\":2,\"name\":\"bob\",\"role\":\"member\"}","strict":"{\"id\":2,\"name\":\"bob\",\"role\":\"member\"}"}]
+["missing",{"default":"refused: Missing key","strict":"refused: Missing key"}]
+["duplicate (JSON text)",{"default":"{\"id\":3,\"name\":\"bob\",\"role\":\"member\"}","strict":"{\"id\":3,\"name\":\"bob\",\"role\":\"member\"}"}]
+exit=0
