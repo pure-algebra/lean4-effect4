@@ -1,6 +1,6 @@
 admitted heads read from the ingest README: 88
 module  used-members(>=3 occ)  admitted-members  occurrences  admitted-occurrences  share  top refused (occ/files/projects)
-Effect            120   38   51744   28343  54.8%  fn 9392/2219/12, catchTag 4320/1259/9, forEach 967/660/11, retry 938/494/10, mapError 895/328/12, runPromise 669/216/10
+Effect            120   38   51744   28343  54.8%  fn 9392/2219/12, catchTag 4320/1259/9, forEach 967/660/11, retry 938/494/10, mapError 895/328/12, runPromise 669/216/10, tryPromise 630/293/13, orDie 555/226/8, annotateCurrentSpan 517/231/5, all 425/253/12, fnUntraced 419/165/9, promise 415/224/10, logInfo 258/76/8, withSpan 250/188/9, tapError 208/112/8, repeat 197/167/7, ignore 196/108/12, try 182/133/11, isEffect 153/97/3, logWarning 152/96/8
 Layer              20    9    5072    4924  97.1%  unwrap 30/27/6, empty 24/17/7, succeedContext 18/11/1, build 15/14/3, buildWithScope 15/14/3, sync 15/15/6
 Schema             92    0   16637       0   0.0%  String 3094/517/12, optional 2771/282/12, Struct 2721/456/12, Array 857/291/10, Boolean 766/212/10, decodeUnknownEffect 618/149/7
 Schedule           11    0    2514       0   0.0%  recurs 664/372/4, max 658/369/2, fixed 475/258/3, spaced 372/231/9, exponential 229/170/9, tap 48/22/1

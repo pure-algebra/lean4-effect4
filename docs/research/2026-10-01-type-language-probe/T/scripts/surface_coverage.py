@@ -70,7 +70,7 @@ def main():
         adm = [r for r in mine if f"{m}.{r[1]}" in heads]
         occ = sum(r[2] for r in mine)
         aocc = sum(r[2] for r in adm)
-        refused = sorted((r for r in mine if f"{m}.{r[1]}" not in heads), key=lambda r: -r[2])[:6]
+        refused = sorted((r for r in mine if f"{m}.{r[1]}" not in heads), key=lambda r: -r[2])[:(20 if m == "Effect" else 6)]
         top = ", ".join(f"{r[1]} {r[2]}/{r[3]}/{r[4]}" for r in refused)
         print(f"{m:<16} {len(mine):>4} {len(adm):>4} {occ:>7} {aocc:>7} {100 * aocc / occ:5.1f}%  {top}")
 
