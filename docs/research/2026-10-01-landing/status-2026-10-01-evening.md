@@ -113,3 +113,70 @@ Once the four seats hand back and are merged (one roots build per merge, nothing
    status notes in order, so the folder is navigable.
 
 Nothing in this pass changes code or proofs. It is reading and writing, one commit per document.
+
+## 6. The stopping decisions (18:15, after reading each worktree)
+
+| Seat | Where it is | Decision |
+| --- | --- | --- |
+| D2 | groups 1–3 of six committed (`5f8cbe18`); only `Membership.lean` dirty | stop now: commit the Membership additions if they build, receipt, hand back; groups 4–6 and the layer family stay owed with their obstacles |
+| D4 | steps 1–4 all committed (`c0e608e4`), tree clean, the OCaml face regenerated | done: receipt, hand back, no roots build |
+| J2 | steps 1–4 all committed (`e4997e6c`); its roots build running before the receipt | let the build finish, receipt, hand back |
+| W2 | step 1 committed with its receipt (`cbe9a1c8`); step 2's item 4 (the rule checker with evidence validation, the census footer) dirty; U's `Fold.lean` extras possibly half applied | commit item 4 if it builds and its five controls pass; leave a half-applied patch uncommitted and listed; receipt, hand back |
+
+Merge order, one roots build each, nothing else running: J2 (disjoint cone, plus one `open
+scoped` line at the top of files the others touched), D4 (the typed state: `Sources.lean`, the
+`Preds` bundle, `Assembly.lean`'s statements, `InterpR.lean`, `Stores.lean`, the OCaml face), D2
+(`Assembly.lean`'s statements again, `Admission.lean`'s `PointTyped`, `Membership.lean`'s
+additions, the new `Denotation.lean`; the one hand reconciliation is `Assembly.lean` against D4's
+step three), W2 (the generator tools, the scripts, disjoint). Then nothing runs.
+
+## 7. The formalization pass (the owner's plan: Pierce as the spine)
+
+The owner wants the language's semantics categorized and organized formally, against a Pierce
+book, so that the proof infrastructure, the typing and the obligations are solidified and
+bounded, the rest of the language can be implemented against a stable frame, and the
+documentation and the proof graph take their direction from it. The coordinator's reading of
+that, to be done as the documentation pass, no seats, no builds beyond the four merges:
+
+- **The book.** *Types and Programming Languages* (TAPL) as the spine: its chapter list is the
+  checklist of what a typed language must state and prove, and ours maps onto it one judgment
+  per chapter. *Advanced Topics in Types and Programming Languages* (ATTAPL) chapters 3 (effect
+  types) and 8 (logical relations, Ahmed) for the two places TAPL does not reach: the requirement
+  rows and the Kripke-world membership relation.
+- **The document.** One new authority, `docs/core/semantics.md`, owning the judgments and their
+  metatheory by chapter (the system map keeps the goal, the sorts and arrows, the requirements,
+  and points to it; the decisions register keeps the decisions and points to it; no fact owned
+  twice). Its sections, each with the TAPL chapter it instantiates, our names, the theorems
+  with file:line, the ledger scope, and the status: syntax as free objects (`Ty`, `Eff`, `Term`,
+  `Val`; ch. 3's grammars); evaluation as the machine's transition relation and the denotation
+  (ch. 3, 8: `stepR`, `denoteR`, `run_eq_ref`); typing (ch. 8, 9 with the function-type cut of
+  row 163 stated as the cut: `check` sound and complete for `HasTy`; `TypedProg` as the
+  protocol-indexed judgment); progress and preservation (ch. 8: `machineTyped_not_halted`,
+  `StepPreserves`, the lift); simple extensions (ch. 11: unit, tuples (row 159), records (119,
+  165), variants (130), general recursion (`iterate`), lists, `null`/`undefined` (160)); exceptions
+  (ch. 14: `exitOf`, `causeOf`, `catchCause`, the shape defects of row 152); references (ch. 13:
+  `refOf`, `deferredOf`, store typings as worlds, `fits_mono`, `scopeLive_mono`, the row-156
+  presence clause); subtyping (ch. 15–16: `sub`, width/depth/permutation at records (119, 178),
+  the declared leaf edges (177), top `unknown`, bottom `never`, the join of row 73,
+  `sub_trans_core`, `sub_antisymm_normal`); nominal types and variances (ch. 19–20 by analogy:
+  `handle`, `app` with the per-name variance table, row 158); type reconstruction (ch. 22:
+  `Ty.infer`, `var` templates, matching rows 73, 137); polymorphism as prenex templates (ch. 23,
+  with no function values: the cut); effect rows and coeffects (ATTAPL ch. 3: `Requirement`, the
+  closed-row premise of row 117, the per-position clause as a later probe); the membership
+  relation as a Kripke logical relation without an arrow clause (ATTAPL ch. 8: `Fits`, worlds,
+  monotonicity); the boundary as exact embeddings (Foster; Rendel and Ostermann: row 128); folds
+  and the initial algebra (the coherence principle: `cata_ty`, the generated families of row
+  182); concurrency, scopes and the host (beyond the book: the fiber machine, the protocols, the
+  session; the papers review's references).
+- **The bound.** Each chapter's standard lemma list (inversion, canonical forms, weakening,
+  substitution, progress, preservation, monotonicity, transitivity, antisymmetry, decidability)
+  is the closed list of obligations for that part of the language; an obligation not on a
+  chapter's list is a design finding (a new chapter or a new row), never an ad-hoc theorem. The
+  ledger's scopes are renamed or grouped by chapter so `#typed_state_obligations` reads per
+  chapter, and the decisions register's rows are cross-indexed by chapter.
+- **The order of work.** After the four merges: (1) the chapter skeleton with every existing
+  theorem placed (reading only); (2) the obligation lists per chapter with status (from the
+  ledger and the register); (3) the gaps as rows (the ones already known: 176, 181, 183, 134
+  (a)–(e), the per-position coeffect clause; the ones the chapter lists expose); (4) the system
+  map and the register pointed at it, STATE rewritten; (5) only then the next seats, each named
+  by chapter.
