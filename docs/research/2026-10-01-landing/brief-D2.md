@@ -78,3 +78,53 @@ first; base and head; every changed path; per arm the lemma (name, file:line, ax
 contract facts it reads; the ledger before and after (`M3bAssembly`, and `M7` if `m7_of_ledger`
 closed its three lines); the arms left open with the exact obstacle and the checked refutation if
 one was found; the proposed lines for rows 148, 153 and the register.
+
+## Amendments at dispatch (2026-10-01, base `bd5462df`)
+
+The base is main after seats J and D1 and probe S merged (`bd5462df`); the worktree is at it with
+`.lake` cloned. What changed since this brief was written, and the citations as they stand:
+
+- **Citations.** `DenotesTyped` is `Assembly.lean:893`, `TermFits` `:902`, `machineTyped_load`
+  `:921`, `loadsTyped_of_denotesTyped` `:1004`, the `M3bAssembly` namespace `:1450-1466`, its three
+  open lines `#proof_wanted … typedState_load`, `denoteR_typed`, `evalTerm_fits` at `:1654-1656`
+  and `#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 3` at `:1657` (the
+  ceiling drops with each line you close; that one line is yours; D3 edits other ceilings).
+  `denoteR` is `DenoteR.lean:799` and its arms are equation theorems, not raw `denoteRWith` text:
+  `denoteR_zero` … `denoteR_provideService` (`:825-1069`, one per node form), `denoteLayer_succeed`
+  … `denoteLayer_ref_redirect` (`:1103-1199`), `denoteR_straight` (`:1433`); `denoteFin` `:247`,
+  `prepareR` `:59`, `denoteLayerBody` `:695`, `denoteLayerZero` `:743`. Rewrite with the equations;
+  never unfold `denoteRWith` by hand.
+- **`evalTerm_fits` exists.** Seat A's lemma is `Typed/Admission.lean:87` (the `EnvTyped` form) with
+  `evalTerm_fits_native` (`:94`, a native signature over any row table). The ledger line is still
+  open: close it with `#obligation_proved Effect4.Program.Typed.M3bAssembly.evalTerm_fits := @…`
+  only if the statement matches `TermFits table` (`:902`) exactly; if it does not, say precisely
+  where (the statement is the ledger's, never bent to the lemma).
+- **D1's three shape changes** (receipt D1, "The one thing first"): `fitsExit_failure_iff` ends
+  `∧ ShapeFree c` and `fitsExit_of_clean` takes a `ShapeFree c` argument (row 152);
+  `PointTyped`, `storePre`'s `memoGet` arm and `CaptureTyped` check a node through
+  `Eff.expandIn src.program` (row 153; a proof that compares the check with a raw-node lemma needs
+  `Eff.expandIn_eq_self`); `IteratorProtocol.step` and `LoopProtocol.step` take a third argument
+  `rows` (row 117; `fun _ => rfl` at equal or empty rows).
+- **Row 153's owed general fact is your expected obstacle at the `layer.ref` hop.** The expansion
+  holds the same term at a reference site and at its target (`expansion_site_is_target` is the
+  instance at `layer.ref`); `denoteR_typed` at each hop needs the general version, which needs
+  the expansion's rounds to reach a fixed point within `refSites.length + 1` rounds under
+  `layerRefsWF`'s program order (a depth bound over the seven mutual sorts of `expandRound`). Land
+  every other arm first; prove the bound as its own lemma in `Denotation.lean` if it closes in
+  reasonable time, else stop that arm with the exact obstacle and the ledger true.
+- **Rows 151 and 117 await the owner.** Never void `denoteFin`'s `acquireRelease` release (row
+  151): the arm is typed as the tree states it, and if it cannot close that is row 151's measured
+  stop, cited. `LoadsTyped` already carries `ClosedEff rootTy`; `DenotesTyped` is at every world
+  with no row premise: add none. If an arm needs the closed row, it is a finding under row 117,
+  named by arm.
+- **Seat J2 is scoping the authoring syntax in parallel** (`eff …`, `daemon …` become
+  `scoped syntax` in `Effect4.Program.Authoring`). Write no new `eff`/`daemon` blocks in
+  `Test/Program/TypedDenotation.lean`: its controls are theorems over the programs the typed corpus
+  (`Test/Program/TypedCorpus.lean`), `AwaitLoad.lean`, `ScopePresence.lean` and `LayerRefs.lean`
+  already hold. If you must author a program, write it as data (`Eff` constructors), not surface
+  syntax.
+- **The testing rule (ratified, data-wave README "Testing during the wave").** Narrow builds while
+  landing (`lake build Effect4.Laws.Program.Typed.Denotation` and the direct dependents; `lake env
+  lean Test/Program/TypedDenotation.lean`), the roots once before the receipt
+  (`LEAN_NUM_THREADS=4 lake build Effect4.Laws Test.All`), no `make check`, no generator, no
+  `check-full`.
