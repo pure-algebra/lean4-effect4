@@ -213,8 +213,11 @@ def roots : List String := [
   "Conform.Cli.BoundaryControls", "Conform.Cli.Selftest"
 ]
 
-/-- One row of the typed-state proof stack: a slice of the plan (§14) and the modules it
-lands, by module name. A module is drawn solid once its file exists, dashed until then. -/
+/-- One row of the typed-state proof stack: a slice and the modules it lands, by module name,
+in measured import order. A module is drawn solid once its file exists, dashed until then; a
+solid module shows the ledger goals it declares (`Obligation`), proved and open, measured from
+the loaded environment. The milestone's statements live in `Typed/Assembly.lean` (M5
+initialization, M6 one goal per command); the planned modules are where their proofs land. -/
 structure Slice where
   name : String
   what : String
@@ -224,14 +227,16 @@ deriving Repr, Inhabited
 def milestone : List Slice := [
   ⟨"layer 0", "the protocol-typed predicate on the free monad", ["Effect4.Laws.Effects.Protocol"]⟩,
   ⟨"T1", "the checked evidence seam", ["ProofGraph.Proof", "ProofGraph.Search", "ProofGraph.Ledger"]⟩,
-  ⟨"T2", "the census, the source table, the skeleton in place", ["Effect4.Laws.Auto.Positions", "Effect4.Laws.Program.Typed.PositionGate", "Effect4.Laws.Program.Typed.Vocabulary", "Effect4.Laws.Program.Typed.Sources", "Effect4.Laws.Program.Typed.TypedStateDecl", "Effect4.Laws.Program.Typed.State"]⟩,
+  ⟨"T2", "the census, the source table, the skeleton in place", ["Effect4.Laws.Auto.Positions", "Effect4.Laws.Program.Typed.Vocabulary", "Effect4.Laws.Program.Typed.Sources", "Effect4.Laws.Program.Typed.TypedSources", "Effect4.Laws.Program.Typed.TypedStateDecl", "Effect4.Laws.Program.Typed.PositionGate", "Effect4.Laws.Program.Typed.State"]⟩,
   ⟨"T3 · T4", "frames and the ledger", ["Effect4.Laws.Auto.Frames", "Effect4.Laws.Program.Typed.Frames", "Effect4.Laws.Auto.Obligations"]⟩,
-  ⟨"M2", "layer 1: the world, its order, the columns on data", ["Effect4.Laws.Program.Typed.World"]⟩,
+  ⟨"M2", "the world and its order; validity; a fiber's type from its fork site; the saved-frame contracts", ["Effect4.Laws.Program.Typed.World", "Effect4.Laws.Program.Typed.Validity", "Effect4.Laws.Program.Typed.ForkSource", "Effect4.Laws.Program.Typed.Contracts", "Effect4.Laws.Program.Typed.ProtocolObligations"]⟩,
+  ⟨"M3b", "admission: the value judgment Fits, and the admitted source", ["Effect4.Laws.Program.Typed.Membership", "Effect4.Laws.Program.Typed.Admission"]⟩,
   ⟨"M3", "the residual protocol under an answer gate", ["Effect4.Laws.Program.Typed.Residual", "Effect4.Laws.Auto.AnswerGate"]⟩,
-  ⟨"M4", "the unary ladder and the typed stack", ["Effect4.Laws.Machine.Keeps", "Effect4.Laws.Program.Typed.Stack"]⟩,
-  ⟨"M5", "S1: the denotation is typed; the hooks", ["Effect4.Laws.Program.Typed.Denotation", "Effect4.Laws.Program.Typed.Hooks"]⟩,
-  ⟨"M6", "S2 by ledger row", ["Effect4.Laws.Program.Typed.Ledger", "Effect4.Laws.Program.Typed.Step"]⟩,
-  ⟨"M7", "S3: the transfer to the compiled machine's exits", ["Effect4.Laws.Program.Typed.Transfer"]⟩,
+  ⟨"M4", "the unary ladder and the typed stack walk", ["Effect4.Laws.Machine.Keeps", "Effect4.Laws.Program.Typed.Stack"]⟩,
+  ⟨"slice 5", "the typed state assembled; M5 (initialization) and M6 (one goal per command) declared", ["Effect4.Laws.Program.Typed.Assembly"]⟩,
+  ⟨"D · row 110", "the generic lifts through commands, decisions and replay; their first native user", ["Effect4.Laws.Machine.Lift", "Effect4.Laws.Program.Guard.MemoIds"]⟩,
+  ⟨"M6", "the per-command preservation proofs, generic cells first", ["Effect4.Laws.Program.Typed.Step"]⟩,
+  ⟨"M7", "the transfer to the compiled machine's exits", ["Effect4.Laws.Program.Typed.Transfer"]⟩,
   ⟨"P2", "the storage interface the store kernel is restated over", ["Effect4.Laws.Machine.Arena"]⟩
 ]
 

@@ -38,7 +38,7 @@ written down and parked until a need arrives.
 | 2. Types and certificates | `Ty`/`EffTy` and one checker, a fold that certifies a type or refuses with a located reason; certificates by kernel decision. | `Program/Checker.lean`; `docs/core/traversal-census.md` | proved sound and complete against `HasTy` at every path; `explain = none ↔ wellTyped`. `HasTy`'s layer rules disagree with the runtime in two places (rows 104–105) |
 | 3. Meaning | One denotation; a reference machine for proofs; the native (frame) machine for execution. | `docs/core/machine-state.md` | proved: meaning soundness; `run_eq_meaning` (straight fragment); `loopAgreement` (looped); `run_eq_ref` (the two machines, **empty host table only**) |
 | 4. Choices as data | Every scheduling, timing and host-answer choice is a decision; a run's journal replays it. | `Run.lean`, `Api/Runner.lean` | proved: `replay_unique`, `journal_replays` |
-| 5. The typed-state guarantee | A checked program never reaches a malformed state, and every fiber finishes at its type. | `docs/core/post-phase-c-synthesis.md`; `Laws/Program/Typed/` | slices 1–5 proved (world, admission, protocols, stack walk, delivery, assembly); M5–M7 open. As stated, M5 and M6 are false even on programs that use no host (four registered counterexamples); the bounded repairs are rows 95–96 and 104–107 |
+| 5. The typed-state guarantee | A checked program never reaches a malformed state, and every fiber finishes at its type. | `docs/core/post-phase-c-synthesis.md`; `Laws/Program/Typed/` | slices 1–5 proved (world, admission, protocols, stack walk, delivery, assembly); M5–M7 open. As stated, M5 and M6 are false even on programs that use no host (four registered counterexamples); the bounded repairs are rows 95–96 (landed 2026-09-30) and 104–107 (in flight; `docs/STATE.md`) |
 | 6. The host boundary | Host services are rows in a table. A program's call parks a fiber; the host answers through one keyed session that checks each reply and prepares it. | `docs/core/host-boundary.md` | exists: session, envelope, admission, preparation. Next: the interim handle rule that closes the live hole (row 97). The full host-services contract is parked until needed |
 | 7. State and storage | The machine's state families, each owned by one of six storage interfaces with laws; facts fixed at creation in append-only ledgers; derived views, such as a handle's declared type, computed from ledgers and the checker. | `docs/core/machine-state.md` §7 | arena laws and `Projects`/`Refines` proved; the fork ledger is next (row 91); the registry and further storage instances are parked (rows 97, 101) |
 | 8. Compilation | Three compilations: a program to the machine's first-order runtime code (`compileEff`); the Lean machine itself to OCaml through Lean's LCNF (OCaml is made only from LCNF); a program to and from Effect TypeScript. Each stage is a named connection with its own evidence. | `docs/core/lcnf-route.md` §8 | printer/reader laws and completeness over the template table proved; the OCaml engine checked by differential runs (finite); number policy mixed; rows 28/29/31 open |
@@ -57,10 +57,12 @@ TypeScript. Every arrow is one of the kinds in §5 with its obligation met, or i
 1. **Slice 6's last item:** the fork ledger and the trace agreement
    (`docs/research/2026-09-30-origin-ledger-and-step-invariants-plan.md`; rows 91–94).
 2. **Three bounded fixes found on 2026-09-30:**
-   - M6's finish line covers runs with no host answers (row 95);
-   - the proof's value check looks inside pairs, Results and exits (row 96; proof side only);
+   - M6's finish line covers runs with no host answers (row 95; landed 2026-09-30);
+   - the proof's value check looks inside pairs, Results and exits (row 96; proof side only;
+     landed 2026-09-30 as `Fits`);
    - host rows may not answer with internal handles (fiber, cell, deferred, scope, context), the
-     interim rule of row 97 (`host-boundary.md` §5).
+     interim rule of row 97 (`host-boundary.md` §5); Codex's repair is checked and lands with
+     brief addendum 4.
 3. **M5–M7:** the typed-state guarantee, the proof that makes "verified runtime" complete on runs
    without host answers. Row 99 says what is claimed until the host lane lands. The design pass
    of 2026-09-30 (`docs/research/2026-09-30-pass/synthesis.md`) found M5's and M6's statements
@@ -71,8 +73,11 @@ TypeScript. Every arrow is one of the kinds in §5 with its obligation met, or i
    - M6's typed state keeps tokens fresh (row 106);
    - an exit clause, or an explicit disclaimer, for "never goes wrong" (row 107).
 
-   Row 96's judgment also reads liveness from the world's tables. M6 then follows from the
-   proved generic lifts (row 110).
+   Row 96's judgment also reads liveness from the world's tables (landed). The generic lifts are
+   landed (row 110); M6's instances follow once rows 104–107 land. Codex's first receipt
+   (2026-09-30, `docs/STATE.md`): rows 104 and 105 are checked repairs that were held only by
+   generated-file scope, lifted by brief addendum 4; row 106 gained a ruling, a token is typed by
+   what its observer delivers; row 107 is held for the model-probe synthesis.
 
 **Next: expand on the proven route.**
 4. **More of Effect, one module at a time, queues first.** Each is modeled in Lean over the
@@ -118,8 +123,9 @@ different command words give different machines. `journal_replays` reconstructs 
 the journal it keeps. Serialization and resumption need their own contracts.
 
 **Value fits type.** The runtime has one executable check, `Val.hasTy`, and no types in values.
-The proof side has one judgment, `StrongValue`; replacing it with one constructor-complete
-membership judgment over the actual encoding is proposed (row 96, open). Declared types of handles come from
+The proof side has one judgment, `Fits` (`Laws/Program/Typed/Membership.lean`): constructor-complete
+over the actual encoding, shape and handle evidence in one derivation, with its generated fold
+connector; it replaced `StrongValue` on 2026-09-30 (row 96, landed). Declared types of handles come from
 creation evidence and the checker, not from values (row 97). Anything else that checks a value
 against a type is a leak by §6.
 

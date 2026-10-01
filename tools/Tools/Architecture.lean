@@ -47,15 +47,26 @@ structure LeanFile where
   built : Bool
 deriving Inhabited
 
-/-- What a module declares, by kind, auxiliaries excluded. -/
+/-- What a module declares, by kind, auxiliaries excluded. `obligations` counts the goals the
+module declares in the proof ledger (a theorem concluding `ProofGraph.Obligation p`); `proved`
+counts those with a checked proof beside them (`<goal>.checked`, published by
+`#obligation_proved` or by the ceiling command's search). The rest are open. -/
 structure Counts where
   theorems : Nat := 0
   defs : Nat := 0
   inductives : Nat := 0
+  obligations : Nat := 0
+  proved : Nat := 0
 deriving Inhabited
 
 def Counts.add (a b : Counts) : Counts :=
-  ⟨a.theorems + b.theorems, a.defs + b.defs, a.inductives + b.inductives⟩
+  ⟨a.theorems + b.theorems, a.defs + b.defs, a.inductives + b.inductives,
+    a.obligations + b.obligations, a.proved + b.proved⟩
+
+/-- A declared ledger goal: under its binders, the type concludes `ProofGraph.Obligation p`. -/
+def concludesObligation : Expr → Bool
+  | .forallE _ _ body _ => concludesObligation body
+  | e => e.isAppOfArity `ProofGraph.Obligation 1
 
 /-- Newlines, which is what `wc -l` counts. -/
 def countLines (s : String) : Nat :=
@@ -171,7 +182,12 @@ def loadCounts : IO (Std.HashMap Name Counts) := do
       let modName := mods[idx.toNat]!
       let old := acc.getD modName {}
       let new := match ci with
-        | .thmInfo _ => { old with theorems := old.theorems + 1 }
+        | .thmInfo t =>
+          let counted := { old with theorems := old.theorems + 1 }
+          if concludesObligation t.type then
+            let checked := if env.contains (name ++ `checked) then 1 else 0
+            { counted with obligations := counted.obligations + 1, proved := counted.proved + checked }
+          else counted
         | .defnInfo _ | .opaqueInfo _ => { old with defs := old.defs + 1 }
         | .inductInfo _ => { old with inductives := old.inductives + 1 }
         | _ => old
@@ -527,13 +543,14 @@ def pathOfModule (m : String) : IO (String × Bool) := do
   let root := if m.startsWith "Effect4." then "src/" else "tools/"
   return (root ++ rel ++ ".lean", false)
 
-/-- The typed-state proof stack: one row per slice, its modules solid once their source is present. -/
-def renderMilestone : IO String := do
+/-- The typed-state proof stack: one row per slice, its modules solid once their source is
+present; a solid module shows the ledger goals it declares, with how many are proved and open. -/
+def renderMilestone (counts : Std.HashMap Name Counts) : IO String := do
   let rowH := 60
   let labelW := 150
   let width := 1080
   let height := 24 + milestone.length * rowH
-  let mut out := #[s!"<svg viewBox=\"0 0 {width} {height}\" role=\"img\" aria-label=\"The typed-state proof stack by slice, landed modules solid and planned modules dashed\">"]
+  let mut out := #[s!"<svg viewBox=\"0 0 {width} {height}\" role=\"img\" aria-label=\"The typed-state proof stack by slice, landed modules solid with their declared, proved and open obligations, planned modules dashed\">"]
   let mut r := 0
   for s in milestone do
     let y := 14 + r * rowH
@@ -554,7 +571,11 @@ def renderMilestone : IO String := do
       let dir := if m.startsWith "src/Effect4/Laws/" then dropRightStr (dropStr m 17) (name.length + 1)
         else if m.startsWith "tools/" then dropRightStr (dropStr m 6) (name.length + 1) else m
       out := out.push s!"<text x=\"{bx + 8}\" y=\"{y + 17}\" font-size=\"11\" font-weight=\"600\" fill=\"{if landed then "var(--ink)" else "var(--ink-3)"}\">{esc name}</text>"
-      out := out.push s!"<text x=\"{bx + 8}\" y=\"{y + 32}\" font-size=\"9.5\" font-family=\"var(--mono)\" fill=\"var(--ink-3)\">{esc dir}{if landed then "" else " · planned"}</text>"
+      let c := counts.getD (nameOfString mod) {}
+      let ledger := if !landed then " · planned"
+        else if c.obligations == 0 then ""
+        else s!" · {c.obligations} declared · {c.proved} proved · {c.obligations - c.proved} open"
+      out := out.push s!"<text x=\"{bx + 8}\" y=\"{y + 32}\" font-size=\"9.5\" font-family=\"var(--mono)\" fill=\"{if landed && c.obligations > c.proved then "var(--ink-2)" else "var(--ink-3)"}\">{esc dir}{ledger}</text>"
       i := i + 1
     r := r + 1
   out := out.push "</svg>"
@@ -668,7 +689,8 @@ def page (f : Facts) : IO String := do
   let leanLines := linesOf f.leanFiles
   let loaded := (f.leanFiles.filter fun x => f.counts.contains x.module).size
   let thms := (f.countsOf f.leanFiles).theorems
-  let milestoneSvg ← renderMilestone
+  let milestoneSvg ← renderMilestone f.counts
+  let ledger := f.countsOf f.leanFiles
   let head := "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n<title>Effect4 Architecture Map</title>\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap\">\n<style>" ++ css ++ "</style>\n</head>\n<body>\n<!-- " ++ Tools.GeneratedStamp.note "tools/Tools/Architecture.lean (make gen-architecture)" ++ " -->\n<div class=\"wrap\">\n"
   let header := s!"<header><h1>Effect4 Architecture Map</h1><p>The tree as it is: the four Lean roots and the direction their imports run, the estates around them, the typed-state proof stack as it lands, and what the tree says against what the role register declares. Measured by <code>tools/Tools/Architecture.lean</code>; the roles and the layering are declared in <code>tools/Tools/ArchitectureRoles.lean</code>.</p><div class=\"stamp\">{f.leanFiles.size} Lean modules · {fmt leanLines} lines · {loaded} loaded for counts · {fmt thms} theorems · regenerate with <code>make gen-architecture</code></div>" ++
     "<nav><a href=\"#roots\">The roots</a><a href=\"#matrix\">The import matrix</a><a href=\"#against\">Against the direction</a><a href=\"#stack\">The typed-state stack</a><a href=\"#map\">The file map</a><a href=\"#faces\">Faces and generated groups</a><a href=\"#pins\">Pinned references</a><a href=\"#audit\">Audit</a></nav>" ++
@@ -676,7 +698,7 @@ def page (f : Facts) : IO String := do
   let roots := "<section id=\"roots\"><h2>The roots and their direction</h2><p class=\"lede\">Each column is a lake root; each box an area at the height the register declares. Inside a column an import may point at the same height or lower; the runtime imports only itself; the proof graph imports the runtime and <code>ProofGraph</code>; the tool roots import the runtime, the proof graph and lower tools; the batteries import everything. A red count on a box is the number of that area's imports that break one of those rules.</p><figure><div class=\"scroll\">" ++ renderStack f ++ "</div><figcaption>Arrows at the top aggregate the import statements between columns. Counts on the boxes are the area with its detail directories; theorems, definitions and inductives are counted from the loaded environment, auxiliaries excluded.</figcaption></figure></section>"
   let matrix := "<section id=\"matrix\"><h2>The import matrix</h2><p class=\"lede\">Rows import columns. A red cell is an import against the direction; a dot is none. The external columns are the packages the tree imports, by first component.</p><div class=\"scroll\">" ++ renderMatrix f ++ "</div></section>"
   let against := "<section id=\"against\"><h2>Against the direction</h2><p class=\"lede\">Every import statement the register does not allow, by file. An accepted row names the document that accepts it; the rest are the organization questions the map exists to surface.</p><div class=\"scroll\">" ++ renderAgainst f ++ "</div></section>"
-  let stack := "<section id=\"stack\"><h2>The typed-state stack</h2><p class=\"lede\">The milestone's modules by slice of the plan's §14. A box is solid once its file exists and dashed until then, so this figure updates itself as slices land.</p><figure><div class=\"scroll\">" ++ milestoneSvg ++ "</div><figcaption>A solid box is a module whose source is present in the tree; presence is not completion, which the plan's §14 and the obligation ledger record.</figcaption></figure></section>"
+  let stack := s!"<section id=\"stack\"><h2>The typed-state stack</h2><p class=\"lede\">The milestone's modules by slice, in measured import order. A box is solid once its file exists and dashed until then. A solid box carries the goals its module declares in the proof ledger (a theorem concluding <code>Obligation p</code>), how many have a checked proof beside them (<code>#obligation_proved</code>, or the ceiling command's search) and how many are open (<code>#proof_wanted</code>), measured from the loaded environment. Across the loaded modules: {fmt ledger.obligations} declared, {fmt ledger.proved} proved, {fmt (ledger.obligations - ledger.proved)} open.</p><figure><div class=\"scroll\">" ++ milestoneSvg ++ "</div><figcaption>Presence is a file; completion is a proof. The counts come from the ledger, not from the register.</figcaption></figure></section>"
   let map := "<section id=\"map\"><h2>The file map</h2><p class=\"lede\">Every area by column, top of the column first, with its detail directories indented. Files and lines are the area's own; a tag counts its <code>--run</code> drivers and any module without a built olean.</p>" ++
     renderLeanColumn f .runtime ++ renderLeanColumn f .laws ++ renderLeanColumn f .tools ++ renderLeanColumn f .tests ++
     renderEstates f .ocaml ++ renderEstates f .ts ++ renderEstates f .host ++ renderEstates f .docs ++ "</section>"

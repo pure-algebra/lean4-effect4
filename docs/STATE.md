@@ -169,6 +169,21 @@ The owner ruled rows 96, 104–107 and 110 the same day.
 
 The M5–M7 proofs are the next brief. Row 108 (numbers) is open, with the audit's two additions.
 
+**Codex's first receipt, merged (2026-09-30).** The
+[receipt](research/2026-09-30-seat-codex-slice6-receipt.md) at `3c2609f4` landed B, D's
+independent parts and E, each narrowly built with its axiom output at the ceiling; the
+coordinator reran the final build (421 jobs, clean) and merged the branch.
+- **Landed:** M6 counts runs with no host answer (row 95); the generic lifts, the guard driver
+  re-derived through them, and memo-map identifiers proved valid on native reachable states
+  (row 110); `Fits` is the production value judgment and the old judgments are retired (row 96).
+- **Stopped on scope, repairs written and checked:** A (the generated `RunnerDerived` codec), C
+  (one reader outside the checklist; the eight site defaults stay, by addendum 1's fallback), F
+  (two generated closure manifests), G (a third existing fixture flips on purpose). All four are
+  permitted by [addendum 4](research/2026-09-30-codex-brief-slice6-addendum-4.md).
+- **Stopped on design:** H1 found that a token must be typed by what its observer delivers, not
+  by the fiber it waits on (ruled in addendum 4; `E4-SCHED-CE-018`). H2 measured eight proof-body
+  repairs and a false helper; it is held until the model-probe synthesis.
+
 **Real programs, as theory (owner, 2026-09-30).** The owner asked for real, full programs to be
 formalized as requirements of the proof architecture, building on the research already done.
 [The model of a full program](research/2026-09-30-full-program-model-requirements.md) is that
@@ -179,6 +194,22 @@ synthesis, for review.
   the built-in one. Service, cell and data types are closed.
 - **The recommendation.** State the milestone over a signature parameter before proving M5–M7.
   Then later services, cell types and data types add obligations instead of reopening proofs.
+
+**Probed the same night.** Four seats and four adversarial verifiers probed R1–R9
+([synthesis](research/2026-09-30-model-probe/synthesis.md), the entry; seat notes and verifier
+notes beside it). The direction holds; the note as written does not:
+- "lawful Σ" and "Σ ⊆ Σ′" are undefined;
+- "extension is additive" is false as written (six failures, proved or tested) and becomes eight
+  named conservativity conditions;
+- nothing asked what a program *does*, so four requirements are added: library code inherits
+  theorems, resources are released, frontiers name what they await, a run has load inputs;
+- several supports were wrong or superseded (`interpret_pinned` is uniqueness, not extension;
+  `Ψ_S ⊕ Ψ_F` no longer builds the concrete judgment; `build_total` was landed and cut).
+
+The revised list is R1–R13 (synthesis §2) with its pedigree traced (§3) and a plan to refresh
+`DESIGN-BASIS.md` into one basis with sources (§3.3, §4). Thirteen decision rows are proposed
+(§6); six gate the next brief. H2 can go on two conditions (§5.1). The owner decides; the system
+map and the design basis change only after that.
 
 ## What the owner must decide
 
