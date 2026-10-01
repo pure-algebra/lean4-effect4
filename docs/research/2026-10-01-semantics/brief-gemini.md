@@ -56,6 +56,34 @@ from it. Your job is the analysis and the draft; the coordinator verifies and la
   `docs/DESIGN-BASIS.md` and the system map's §9 (Ahmed; Ahmed, Dreyer, Rossberg; Xia et al.;
   Foster et al.; Rendel and Ostermann; McBride; Fokkinga and Meijer), and rc.112's own sources
   under `vendor/effect-4.0.0-rc.112/src/` (every runtime behaviour by file and line).
+- **Cite widely; this is a literature review, not a pigeonhole.** TAPL gives the spine and the
+  vocabulary, but every construction of ours should be tied to the literature that actually
+  gave rise to it or that states it best, and each citation tied to a definition or theorem of
+  ours by file:line. Expected, at least: Harper's *Practical Foundations for Programming
+  Languages* (the judgments-first presentation, structural operational semantics, the
+  type-safety method); Wright and Felleisen (syntactic type soundness, progress and
+  preservation); Plotkin and Pretnar, Bauer and Pretnar, Kammar et al., Leijen's Koka (algebraic
+  effects, handlers, effect rows and row polymorphism; our requirement rows and `Requirement`);
+  Pretnar's tutorial; de Vilhena and Pottier (protocols for effect handlers; our `TypedProg`);
+  Xia et al. (interaction trees; our free-monad programs and `denoteR`); Hancock and Setzer
+  (interaction structures), Kiselyov and Ishii (freer monads), Swierstra (data types à la carte),
+  Johann and Ghani (initial algebras for nested types; our `Ty` as a nested family) for the free
+  objects; Meijer, Fokkinga and Paterson, Gibbons, Hinze (folds, fusion, the banana split; the
+  coherence principle); Ahmed, Dreyer, Rossberg (Kripke logical relations and step-indexing; our
+  `Fits` and worlds, and why we need no steps); Birkedal, Jung et al. (Iris, for the
+  world-indexed invariants by analogy); Milner and Sangiorgi (bisimulation and simulation; our
+  `run_eq_ref` and the simulation relations); Honda, Wadler (session types; our host session and
+  its protocol); Dolan and Mycroft (algebraic subtyping; our join rule and subsumption), Castagna
+  (set-theoretic types; our unions, `unknown`, `never`), Pottier and Rémy, Jones (constraint-based
+  inference, qualified types; our templates and `infer`); Foster et al., Rendel and Ostermann
+  (lenses, invertible syntax; the exact embeddings), McBride (ornaments; why the Schema reader is
+  not one); Jacobs (coalgebra; the machine as a transition system); the TypeScript handbook and
+  rc.112's own documentation for the target's typing rules. Add what the tree's own literature
+  marks name (`docs/DESIGN-BASIS.md`, the system map's §9, the papers review) and anything else
+  you find relevant: cite it, say what of ours it describes, and mark it as the source of a
+  construction, a statement we instantiate, or related work we do not use. End with a
+  bibliography (author, title, venue, year; a DOI or URL where one exists); for each entry the
+  constructions of ours it is cited for.
 - **Beyond the books**: effect rows and coeffects (ATTAPL ch. 3; the row-117 design), algebraic
   effects and handlers (de Vilhena; the papers review §1.3), the fiber machine and scopes (rc.112
   itself; the papers review), exact embeddings (Foster; Rendel–Ostermann), initial algebras and
