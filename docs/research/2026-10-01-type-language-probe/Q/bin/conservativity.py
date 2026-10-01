@@ -16,6 +16,7 @@ judged; the exit code is 0 only when every clause passes (1 on a refusal, 2 on a
                 listed as additions.
   C2 alphabets: tools/Effect4Gen/wire-tags.json: every BASE row (active or retired) keeps its
                 tag; a tag is never given twice; an active row may leave only into `retired`.
+                A key repeated inside one object is refused (both JSON readers keep the last).
                 The generated manifests (ocaml/eff/eff_manifest.txt, ocaml/goldens/eff/
                 manifest.txt, ocaml/goldens/eff/wire-tags.txt): each BASE family line is a
                 prefix of CAND's (names and argument shapes), so an existing constructor is
@@ -118,6 +119,20 @@ def tags_of(side):
     return json.loads(text)['families'] if text else {}
 
 
+def duplicate_keys(text):
+    """Keys given twice inside one JSON object. `json.loads`, like Lean's `Json.parse` under
+    `Tools.WireTags.parse`, keeps the last of a repeated key, so a repeated tag row would load
+    silently (seat Q, Q4: tested on the Lean loader)."""
+    found = []
+    def hook(pairs):
+        keys = [k for k, _ in pairs]
+        found.extend(sorted({k for k in keys if keys.count(k) > 1}))
+        return dict(pairs)
+    if text:
+        json.loads(text, object_pairs_hook=hook)
+    return found
+
+
 def manifest_lines(text):
     """`Family: a b c` or `Lean.Name (oname) inductive: a b(c) …` → {family: [items]}."""
     out = {}
@@ -139,6 +154,8 @@ def manifest_lines(text):
 
 def c2(base, cand, pol):
     problems = []
+    for k in duplicate_keys(cand.read(WIRE_TAGS)):
+        problems.append(f'wire-tags: the key {k!r} is given twice in one object (the loaders keep the last)')
     tb, tc = tags_of(base), tags_of(cand)
     retirements = set(pol.get('constructor_retirements', []))
     for fam, rows in tb.items():

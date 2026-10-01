@@ -1,8 +1,8 @@
 $ cd /Users/pooks/Dev/lean4-effect4-probe-Q
 $ ./docs/research/2026-10-01-type-language-probe/Q/check-conservativity.sh --self-test
-# started 2026-10-01T20:30:14Z (LEAN_NUM_THREADS=1)
+# started 2026-10-01T20:45:57Z (LEAN_NUM_THREADS=1)
 --- control R1 a golden byte vector changes (expect REFUSE)
-conservativity: BASE e36dabc337286e44f434dae92e8fa52ee5e62838, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmpkz8ml82i
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmp23yj64_6
 C1 goldens: REFUSE: 295 byte vectors at BASE; 1 changed, 0 removed, 0 changed or removed by policy name, 0 added
   changed: ocaml/eff/goldens/p42.bin
 C2 alphabets: PASS: 21 tag families, 3 manifests; appended 0 constructors 
@@ -13,7 +13,7 @@ C5 record: (a directory candidate has no git diff)
 conservativity: REFUSE (3 of 4 clauses pass)
 --- control R1 a golden byte vector changes: REFUSE (ok, the clause C1)
 --- control R2 a frozen baseline file changes (expect REFUSE)
-conservativity: BASE e36dabc337286e44f434dae92e8fa52ee5e62838, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmp_05al_du
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmpafi8umqo
 C1 goldens: REFUSE: 295 byte vectors at BASE; 1 changed, 0 removed, 0 changed or removed by policy name, 0 added
   changed: Test/fixtures/baseline/66ee4657/eff_manifest.txt
 C2 alphabets: PASS: 21 tag families, 3 manifests; appended 0 constructors 
@@ -24,7 +24,7 @@ C5 record: (a directory candidate has no git diff)
 conservativity: REFUSE (3 of 4 clauses pass)
 --- control R2 a frozen baseline file changes: REFUSE (ok, the clause C1)
 --- control R3 an existing constructor moves in a generated manifest (expect REFUSE)
-conservativity: BASE e36dabc337286e44f434dae92e8fa52ee5e62838, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmp0r1tx912
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmp49d_e2ja
 C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
 C2 alphabets: REFUSE: 21 tag families, 3 manifests; appended 0 constructors 
   ocaml/goldens/eff/manifest.txt: Ty position 1: BASE 'unit', CAND 'nat'
@@ -35,7 +35,7 @@ C5 record: (a directory candidate has no git diff)
 conservativity: REFUSE (3 of 4 clauses pass)
 --- control R3 an existing constructor moves in a generated manifest: REFUSE (ok, the clause C2)
 --- control R4 an existing constructor is re-typed (expect REFUSE)
-conservativity: BASE e36dabc337286e44f434dae92e8fa52ee5e62838, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmpfl9ochei
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmp5m13s5mg
 C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
 C2 alphabets: REFUSE: 21 tag families, 3 manifests; appended 0 constructors 
   ocaml/eff/eff_manifest.txt: Effect4.Program.Ty position 15: BASE 'lit(string)', CAND 'lit(ty)'
@@ -46,7 +46,7 @@ C5 record: (a directory candidate has no git diff)
 conservativity: REFUSE (3 of 4 clauses pass)
 --- control R4 an existing constructor is re-typed: REFUSE (ok, the clause C2)
 --- control R5 a new constructor reuses a tag (expect REFUSE)
-conservativity: BASE e36dabc337286e44f434dae92e8fa52ee5e62838, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmpolayhptr
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmph0n4fz57
 C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
 C2 alphabets: REFUSE: 21 tag families, 3 manifests; appended 1 constructors {'Effect4.Program.Ty': ['record']}
   wire-tags: Effect4.Program.Ty gives the tags [3] twice
@@ -58,7 +58,7 @@ C5 record: (a directory candidate has no git diff)
 conservativity: REFUSE (3 of 4 clauses pass)
 --- control R5 a new constructor reuses a tag: REFUSE (ok, the clause C2)
 --- control R6 a corpus verdict moves (expect REFUSE)
-conservativity: BASE e36dabc337286e44f434dae92e8fa52ee5e62838, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmpwbeip51g
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmp711_buix
 C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
 C2 alphabets: PASS: 21 tag families, 3 manifests; appended 0 constructors 
 C3 verdicts: REFUSE: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
@@ -69,7 +69,7 @@ C5 record: (a directory candidate has no git diff)
 conservativity: REFUSE (3 of 4 clauses pass)
 --- control R6 a corpus verdict moves: REFUSE (ok, the clause C3)
 --- control R7 a golden program's typing verdict moves (expect REFUSE)
-conservativity: BASE e36dabc337286e44f434dae92e8fa52ee5e62838, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmp2qv744po
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmpdscvpdkz
 C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
 C2 alphabets: PASS: 21 tag families, 3 manifests; appended 0 constructors 
 C3 verdicts: REFUSE: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
@@ -80,7 +80,7 @@ C5 record: (a directory candidate has no git diff)
 conservativity: REFUSE (3 of 4 clauses pass)
 --- control R7 a golden program's typing verdict moves: REFUSE (ok, the clause C3)
 --- control R8 an appended constructor the policy does not name (expect REFUSE)
-conservativity: BASE e36dabc337286e44f434dae92e8fa52ee5e62838, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmp9ena2th3
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmpzv3m87_s
 C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
 C2 alphabets: PASS: 21 tag families, 3 manifests; appended 1 constructors {'Effect4.Program.Ty': ['record']}
 C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
@@ -90,8 +90,19 @@ C4 policy: REFUSE: 1 added and 0 retired between BASE and CAND; 1 not named in T
 C5 record: (a directory candidate has no git diff)
 conservativity: REFUSE (3 of 4 clauses pass)
 --- control R8 an appended constructor the policy does not name: REFUSE (ok, the clause C4)
+--- control R9 a tag row given twice in one object (the loaders keep the last) (expect REFUSE)
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmpqc3yztyq
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: REFUSE: 21 tag families, 3 manifests; appended 1 constructors {'Effect4.Program.Ty': ['record']}
+  wire-tags: the key 'record' is given twice in one object (the loaders keep the last)
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: PASS: 1 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R9 a tag row given twice in one object (the loaders keep the last): REFUSE (ok, the clause C2)
 --- control G1 the wave appended, every addition named, goldens and verdicts untouched (expect PASS)
-conservativity: BASE e36dabc337286e44f434dae92e8fa52ee5e62838, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmppd1py9e0
+conservativity: BASE 1087b8292c24f6f156b07a0cd6e41422eae87672, CAND dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/tmpmvlsiyy7
 C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
 C2 alphabets: PASS: 21 tag families, 3 manifests; appended 8 constructors {'Effect4.Program.Ty': ['record', 'map', 'tuple', 'app', 'null', 'undefined', 'number', 'bytes']}
 C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
@@ -100,5 +111,5 @@ C4 policy: PASS: 8 added and 0 retired between BASE and CAND; 0 not named in Tes
 C5 record: (a directory candidate has no git diff)
 conservativity: PASS (4 of 4 clauses pass)
 --- control G1 the wave appended, every addition named, goldens and verdicts untouched: PASS (ok)
-self-test: 9 of 9 controls as expected
-# exit=0 seconds=112
+self-test: 10 of 10 controls as expected
+# exit=0 seconds=94

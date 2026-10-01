@@ -1,6 +1,6 @@
 $ cd /Users/pooks/Dev/lean4-effect4-probe-Q
 $ ./docs/research/2026-10-01-type-language-probe/Q/check-conservativity.sh 7db30c8a\^ 7db30c8a
-# started 2026-10-01T20:33:13Z (LEAN_NUM_THREADS=1)
+# started 2026-10-01T20:48:24Z (LEAN_NUM_THREADS=1)
 conservativity: BASE 7db30c8a^, CAND 7db30c8a
 C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
 C2 alphabets: PASS: 21 tag families, 3 manifests; appended 3 constructors {'Effect4.Program.Ty': ['refOf', 'deferredOf', 'var']}
@@ -27,4 +27,4 @@ C5 record: git diff --stat over 61 GENERATED_PATHS entries: 15 files changed, 14
   ts/eff/json.gen.ts                      |  3 +++
   ts/eff/wire.gen.ts                      |  3 +++
 conservativity: REFUSE (3 of 4 clauses pass)
-# exit=1 seconds=17
+# exit=1 seconds=44
