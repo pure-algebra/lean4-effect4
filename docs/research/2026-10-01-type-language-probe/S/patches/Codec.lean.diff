@@ -1,5 +1,5 @@
 --- src/Effect4/Schema/Codec.lean	2026-10-01 13:14:44
-+++ docs/research/2026-10-01-type-language-probe/S/patches/Codec.lean.after	2026-10-01 14:19:36
++++ docs/research/2026-10-01-type-language-probe/S/patches/Codec.lean.after	2026-10-01 14:28:23
 @@ -23,6 +23,7 @@
  
  /-- Literal refinements share a wire layout with strings. Union branch types remain
@@ -77,22 +77,25 @@
  def fields? (j : Json) (names : List String) : Option (List Json) := do
    let .obj entries := j | none
    if entries.length != names.length then none
-@@ -148,6 +191,36 @@
+@@ -148,6 +191,39 @@
    | .arr reasons => (reasons.mapM (decodeReason decodeError)).map (fun rs => ⟨rs⟩)
    | _ => none
  
-+/-- A record's slots against its fields' encoders, in canonical order; an absent optional key
-+writes no entry. -/
-+def encodeSlots : List Val → List (String × (Val → Option (Option Json))) →
++/-- A record's entries read from the value (decisions row 165: `ctor 0 [list names, list slots]`):
++each name from the value, checked against the type's, each slot through its field's encoder; an
++absent optional key writes no entry. -/
++def encodeNamed : List Val → List Val → List (String × (Val → Option (Option Json))) →
 +    Option (List (String × Json))
-+  | [], [] => some []
-+  | v :: vs, (n, enc) :: es => do
-+    let o ← enc v
-+    let rest ← encodeSlots vs es
-+    match o with
-+    | some j => some ((n, j) :: rest)
-+    | none => some rest
-+  | _, _ => none
++  | [], [], [] => some []
++  | .str n :: ns, v :: vs, (m, enc) :: es =>
++    if n = m then do
++      let o ← enc v
++      let rest ← encodeNamed ns vs es
++      match o with
++      | some j => some ((n, j) :: rest)
++      | none => some rest
++    else none
++  | _, _, _ => none
 +
 +/-- A field's entry: absent, once, or refused when repeated (the strict field set). -/
 +def lookupOnce (n : String) (entries : List (String × Json)) : Option (Option Json) :=
@@ -114,13 +117,14 @@
  /-- Structural wire encoder. Original type membership is checked at the public boundary
  and at union branch selection. Literal constraints are therefore not duplicated here. -/
  def encodeRaw : Ty → Val → Option Json
-@@ -174,10 +247,41 @@
+@@ -174,11 +250,46 @@
    | .union a b, v =>
      if Val.hasTy v a then encodeRaw a v
      else if Val.hasTy v b then encodeRaw b v else none
 +  | .int, .ctor 0 [.nat n] => some (intJson (.ofNat n))
 +  | .int, .ctor 1 [.nat n] => some (intJson (.negSucc n))
-+  | .record fs, .ctor 0 vs => (encodeSlots vs (canonFields (fieldEncoders fs))).map Json.obj
++  | .record fs, .ctor 0 [.list ns, .list vs] =>
++    (encodeNamed ns vs (canonFields (fieldEncoders fs))).map Json.obj
 +  | .tuple ts, .list vs => (encodeItems ts vs).map Json.arr
 +  | .map .string w, .list entries =>
 +    (entries.mapM (fun (e : Val) =>
@@ -151,49 +155,93 @@
  
 -/-- Structural wire decoder. A union tries its original typed branches in order;
 -the checked encoder later refuses a value if that order would change its meaning. -/
+-def decodeRaw : Ty → Json → Option Val
 +mutual
-+/-- Structural wire decoder. A union tries its original typed branches in order, and a later
-+branch answers only when no earlier branch's membership holds of its value: the encoder's own
-+selection rule, so the decoder selects the canonical branch (decisions row 128). -/
- def decodeRaw : Ty → Json → Option Val
++/-- Structural wire reader, one fold with one parameter: `strict` is the codec (extra, duplicate
++and missing keys refuse); `!strict` is route A's row adapter (decisions row 122: entries the type
++does not name are dropped; a duplicated or missing declared name refuses). A union tries its
++original typed branches in order, and a later branch answers only when no earlier branch's
++membership holds of its value: the encoder's own selection rule, so the reader selects the
++canonical branch (decisions row 128). -/
++def conv (strict : Bool) : Ty → Json → Option Val
    | .unit, .null => some .unit
    | .bool, .bool b => some (.bool b)
-@@ -209,9 +313,59 @@
+   | .nat, j => (nat? j).map Val.nat
+@@ -187,31 +298,88 @@
+     if fields? j ["_tag"] = some [.str "None"] then some .none
+     else do
+       let payload ← payload? j "Some" "value"
+-      (decodeRaw t payload).map Store.Val.some
+-  | .list t, .arr js => (js.mapM (decodeRaw t)).map Val.list
++      (conv strict t payload).map Store.Val.some
++  | .list t, .arr js => (js.mapM (conv strict t)).map Val.list
+   | .prod a b, .arr [jx, jy] => do
+-    let x ← decodeRaw a jx
+-    let y ← decodeRaw b jy
++    let x ← conv strict a jx
++    let y ← conv strict b jy
+     return .list [x, y]
+   | .except e a, j =>
+     if let some p := payload? j "Failure" "failure" then
+-      (decodeRaw e p).map (fun v => .ctor 0 [v])
++      (conv strict e p).map (fun v => .ctor 0 [v])
+     else do
+       let p ← payload? j "Success" "success"
+-      (decodeRaw a p).map (fun v => .ctor 1 [v])
++      (conv strict a p).map (fun v => .ctor 1 [v])
+   | .exitOf a e, j =>
+     if let some p := payload? j "Success" "value" then
+-      (decodeRaw a p).map (fun v => .ctor 0 [v])
++      (conv strict a p).map (fun v => .ctor 0 [v])
+     else do
+       let p ← payload? j "Failure" "cause"
+-      (decodeCause (decodeRaw e) p).map Val.exitErr
+-  | .causeOf e, j => (decodeCause (decodeRaw e) j).map Val.exitErr
++      (decodeCause (conv strict e) p).map Val.exitErr
++  | .causeOf e, j => (decodeCause (conv strict e) j).map Val.exitErr
    | .union a b, j =>
-     match (decodeRaw a j).filter (fun v => Val.hasTy v a) with
+-    match (decodeRaw a j).filter (fun v => Val.hasTy v a) with
++    match (conv strict a j).filter (fun v => Val.hasTy v a) with
      | some v => some v
 -    | none => (decodeRaw b j).filter (fun v => Val.hasTy v b)
-+    | none => (decodeRaw b j).filter (fun v => Val.hasTy v b && !Val.hasTy v a)
++    | none => (conv strict b j).filter (fun v => Val.hasTy v b && !Val.hasTy v a)
 +  | .int, j => (int? j).map Store.IntCanonical.toVal
 +  | .record fs, .obj entries =>
-+    if entries.all (fun e => ((canonFields (fieldDecoders fs)).map (·.1)).contains e.1) then
-+      (decodeSlots entries (canonFields (fieldDecoders fs))).map (fun slots => .ctor 0 slots)
++    if !strict || entries.all (fun e => ((canonFields (fieldDecoders strict fs)).map (·.1)).contains e.1) then
++      (decodeSlots entries (canonFields (fieldDecoders strict fs))).map (fun slots =>
++        .ctor 0 [.list ((canonFields (fieldDecoders strict fs)).map (fun d => .str d.1)), .list slots])
 +    else none
-+  | .tuple ts, .arr js => (decodeItems ts js).map Val.list
++  | .tuple ts, .arr js => (decodeItems strict ts js).map Val.list
 +  | .map .string w, .obj entries =>
 +    if (Ty.firstRepeat entries []).isSome then none
-+    else (entries.mapM (fun e => (decodeRaw w e.2).map (fun v => (e.1, v)))).map
++    else (entries.mapM (fun e => (conv strict w e.2).map (fun v => (e.1, v)))).map
 +      (fun kvs => .list ((canonFields kvs).map (fun kv => .list [.str kv.1, kv.2])))
    | _, _ => none
-+def decodeItems : List Ty → List Json → Option (List Val)
++def decodeItems (strict : Bool) : List Ty → List Json → Option (List Val)
 +  | [], [] => some []
 +  | t :: ts, j :: js => do
-+    let v ← decodeRaw t j
-+    let rest ← decodeItems ts js
++    let v ← conv strict t j
++    let rest ← decodeItems strict ts js
 +    some (v :: rest)
 +  | _, _ => none
 +/-- A record's field decoders: an absent optional key is `none`, a present one `some`. -/
-+def fieldDecoders : List (String × Ty) → List (String × (Option Json → Option Val))
++def fieldDecoders (strict : Bool) : List (String × Ty) → List (String × (Option Json → Option Val))
 +  | [] => []
 +  | (n, t) :: fs =>
 +    (n, match t with
 +      | .optKey u => fun oj =>
 +        match oj with
 +        | none => some .none
-+        | some j => (decodeRaw u j).map Store.Val.some
-+      | t' => fun oj => oj.bind (decodeRaw t')) :: fieldDecoders fs
++        | some j => (conv strict u j).map Store.Val.some
++      | t' => fun oj => oj.bind (conv strict t')) :: fieldDecoders strict fs
 +end
  
++/-- The codec's structural reader. -/
++def decodeRaw (t : Ty) (j : Json) : Option Val := conv true t j
++
++/-- Route A's structural row adapter (decisions row 122). -/
++def adaptRaw (t : Ty) (j : Json) : Option Val := conv false t j
++
 +/-- Insert by key after every entry not greater: a stable sort, repeats keep their order. -/
 +def insJ (p : String × Json) : List (String × Json) → List (String × Json)
 +  | [] => [p]
@@ -219,3 +267,16 @@
  /-- Executable value admission after type normalization: membership, a JSON image,
  and exact recovery.
  This is deliberately stronger than type support and ordinary machine membership. -/
+@@ -240,6 +408,12 @@
+   let t := t.normalize
+   (Codec.decodeRaw (Codec.layout t) j).filter (fun v => Val.hasTy v t)
+ 
++/-- Route A's row adapter at a type (decisions row 122): the codec's fold with undeclared entries
++dropped, then the same membership check. -/
++def adapt (t : Ty) (j : Json) : Option Val :=
++  let t := t.normalize
++  (Codec.adaptRaw (Codec.layout t) j).filter (fun v => Val.hasTy v t)
++
+ end Effect4.Schema
+ 
+ namespace Effect4.Program.Ty

@@ -1,8 +1,46 @@
 # probe: docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
-# date: 2026-10-01T19:27:47Z
+# date: 2026-10-01T19:27:05Z
 # command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
 # toolchain: leanprover/lean4:v4.33.1
-# sha256: d39e0c1d9c29d2d2d92aeec2eee8408e28f7144d56af92b8d3f0b71ffb5bb8c3
+# sha256: 8dbc5bb5d86f292a3646c18096c05f4bed0d151623af007373a14f2ad5706bb2
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:1641:19: error: Application type mismatch: The argument
+  fs
+has type
+  List (String × PTy)
+but is expected to have type
+  Bool
+in the application
+  fieldDecoders fs
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:1644:17: error: unsolved goals
+case cons
+fs : List (String × PTy)
+ih : sorry = List.map (fun x => x.fst) fs
+n : String
+t : PTy
+⊢ List.map (fun x => x.fst) fs = n :: List.map (fun x => x.fst) fs
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:1646:15: error: This simp argument is unused:
+  fieldDecoders
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.map_cons, ih]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:1661:73: error: Application type mismatch: The argument
+  fs
+has type
+  List (String × PTy)
+but is expected to have type
+  Bool
+in the application
+  fieldDecoders fs
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:1661:93: error: Application type mismatch: The argument
+  fs
+has type
+  List (String × PTy)
+but is expected to have type
+  Bool
+in the application
+  fieldDecoders fs
 'SeatS.K2.PTy.ind'' does not depend on any axioms
 'SeatS.K2.nameLt_irrefl' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.nameLt_trans' depends on axioms: [propext, Quot.sound]
@@ -33,7 +71,6 @@
 'SeatS.K2.encodeP_eq_some' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.decodeP_of_encodeP' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.hasTy_decodeP' depends on axioms: [propext, Quot.sound]
-'SeatS.K2.adapt_memberP' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.encodeP_injective' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.encodeP_sub_of_member' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.encodeP_sub' depends on axioms: [propext, Quot.sound]
@@ -43,7 +80,7 @@
 'SeatS.K2.sortedF_iff_names' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.sortedF_transfer' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.fieldEncoders_names' depends on axioms: [propext, Quot.sound]
-'SeatS.K2.fieldDecoders_names' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.fieldDecoders_names' depends on axioms: [sorryAx]
 'SeatS.K2.fieldCheckers_names' depends on axioms: [propext]
-'SeatS.K2.prepared_agrees' depends on axioms: [propext, Quot.sound]
-# exit=0 seconds=9
+'SeatS.K2.prepared_agrees' depends on axioms: [propext, sorryAx, Quot.sound]
+# exit=1 seconds=8

@@ -1,9 +1,17 @@
 --- src/Effect4/Laws/Schema/Codec.lean	2026-10-01 13:14:44
-+++ docs/research/2026-10-01-type-language-probe/S/patches/LawsSchemaCodec.lean.after	2026-10-01 14:07:19
-@@ -95,6 +95,38 @@
++++ docs/research/2026-10-01-type-language-probe/S/patches/LawsSchemaCodec.lean.after	2026-10-01 14:28:23
+@@ -95,6 +95,46 @@
    exact Option.some.inj
      ((decode_of_encode (t := t) hv).symm.trans (decode_of_encode (t := t) hw))
  
++/-- The row adapter answers members (route A's receipt clause; probe R's `adapt_member`). -/
++theorem adapt_member {t : CTy} {j : Json} {v : Val} (h : adapt t.toRaw j = some v) :
++    Val.hasTy v t.toRaw = true := by
++  have hn : t.toRaw.normalize = t.toRaw := t.property
++  unfold adapt at h
++  rw [hn, Option.filter_eq_some_iff] at h
++  exact h.2
++
 +/-- The decoder guarded by the encoder's image modulo `N_J` (the formal pass's TY-09, route 1). -/
 +def decodeExact (t : Ty) (j : Json) : Option Val :=
 +  (decode t j).filter (fun v => decide ((encode t v).map Codec.normalizeJson =

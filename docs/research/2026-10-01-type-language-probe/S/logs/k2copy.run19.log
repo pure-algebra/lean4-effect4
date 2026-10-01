@@ -1,8 +1,8 @@
 # probe: docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
-# date: 2026-10-01T19:27:47Z
+# date: 2026-10-01T19:27:27Z
 # command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
 # toolchain: leanprover/lean4:v4.33.1
-# sha256: d39e0c1d9c29d2d2d92aeec2eee8408e28f7144d56af92b8d3f0b71ffb5bb8c3
+# sha256: b9bcb42a1f084e2597862e2558543122f981a9d081238e14092ae1726a0e7184
 'SeatS.K2.PTy.ind'' does not depend on any axioms
 'SeatS.K2.nameLt_irrefl' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.nameLt_trans' depends on axioms: [propext, Quot.sound]
@@ -33,7 +33,6 @@
 'SeatS.K2.encodeP_eq_some' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.decodeP_of_encodeP' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.hasTy_decodeP' depends on axioms: [propext, Quot.sound]
-'SeatS.K2.adapt_memberP' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.encodeP_injective' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.encodeP_sub_of_member' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.encodeP_sub' depends on axioms: [propext, Quot.sound]

@@ -23,8 +23,10 @@ generated image (`Store/Domain/Canonical.lean:359-368`; stage 5 with row 121). S
 a declaration with type parameters), and the leaves `null`, `undefined`, `number` (binary64, if
 row 121 rules it) and `bytes`.
 
-Value encoding assumed here (seat P owns it): a record is `ctor 0` of its field slots in the
-canonical order by name (row 119); an optional field's slot is `none` (absent) or `some v`;
+Value encoding assumed here (seat P owns it): a record is `ctor 0 [list names, list slots]`, both
+in the canonical order by name (probe R's row 165, recommended over row 119's positional
+`ctor 0 slots`, which this file keeps only as a red control); an optional field's slot is `none`
+(absent) or `some v`;
 a map is a list of `[key, value]` pairs ascending by key, keys distinct; an `int` is `ctor 0 [nat n]`
 (`Int.ofNat n`) or `ctor 1 [nat n]` (`Int.negSucc n`).
 -/
@@ -1147,10 +1149,12 @@ def hasTyP (v : Val) (ty : PTy) (allocated : List String) : Bool :=
     | .ctor 0 [err] => hasTyP err error allocated
     | .ctor 1 [val] => hasTyP val value allocated
     | _ => false
-  -- [arm:record] `ctor 0` of the slots, read in canonical order
+  -- [arm:record] row 165: `ctor 0 [list names, list slots]` in canonical order; names first, exactly
   | .record fs =>
     match v with
-    | .ctor 0 vs => fitPos vs (canonF (fieldCheckers fs allocated))
+    | .ctor 0 [.list ns, .list vs] =>
+      ns == (canonF (fieldCheckers fs allocated)).map (fun p => .str p.1) &&
+        fitPos vs (canonF (fieldCheckers fs allocated))
     | _ => false
   -- [arm:optKey] the slot of an optional field: absent or present
   | .optKey t =>
@@ -1187,6 +1191,13 @@ def itemCheckers : List PTy → List String → List (Val → Bool)
   | [], _ => []
   | t :: ts, al => (fun w => hasTyP w t al) :: itemCheckers ts al
 end
+
+/-- Row 119's positional membership as first written (`ctor 0` of the slots, no names), kept only
+for the red control: row 165 replaces it. -/
+def posRecordFits (v : Val) (fs : List (String × PTy)) : Bool :=
+  match v with
+  | .ctor 0 vs => fitPos vs (canonF (fs.map (fun p => (p.1, fun w => hasTyP w p.2 []))))
+  | _ => false
 
 /-! ## §9 `Schema/Codec.lean`, copied: layout, support, the wire arms -/
 
@@ -1272,17 +1283,21 @@ def int? : Json → Option Int
       | _ => none
   | _ => none
 
+/-- A record's entries read from the value: each name from the value's name list (checked against
+the type's), each slot through its field's encoder; an absent optional key writes no entry. -/
 -- [arm:record]
-def encodeSlots : List Val → List (String × (Val → Option (Option Json))) →
+def encodeNamed : List Val → List Val → List (String × (Val → Option (Option Json))) →
     Option (List (String × Json))
-  | [], [] => some []
-  | v :: vs, (n, enc) :: es => do
-    let o ← enc v
-    let rest ← encodeSlots vs es
-    match o with
-    | some j => some ((n, j) :: rest)
-    | none => some rest
-  | _, _ => none
+  | [], [], [] => some []
+  | .str n :: ns, v :: vs, (m, enc) :: es =>
+    if n = m then do
+      let o ← enc v
+      let rest ← encodeNamed ns vs es
+      match o with
+      | some j => some ((n, j) :: rest)
+      | none => some rest
+    else none
+  | _, _, _ => none
 
 mutual
 /-- The structural encoder: production arms, then `int`, records, optional keys and maps. -/
@@ -1315,7 +1330,8 @@ def encodeRawP : PTy → Val → Option Json
   -- [arm:int]
   | .int, .ctor 1 [.nat n] => some (intJson (.negSucc n))
   -- [arm:record] an object keyed by the field names, canonical order; an absent optional key has no entry
-  | .record fs, .ctor 0 vs => (encodeSlots vs (canonF (fieldEncoders fs))).map Json.obj
+  | .record fs, .ctor 0 [.list ns, .list vs] =>
+    (encodeNamed ns vs (canonF (fieldEncoders fs))).map Json.obj
   -- [arm:tuple] an array of the items, exact arity
   | .tuple ts, .list vs => (encodeItems ts vs).map Json.arr
   -- [arm:map] an object keyed by the map's keys, in the value's (ascending) order
@@ -1367,10 +1383,13 @@ def decodeSlots (entries : List (String × Json)) :
     some (v :: rest)
 
 mutual
-/-- The structural decoder: production arms, the union arm with the canonical-branch check
-(row 128: a later branch answers only when no earlier branch's membership holds of its value,
-the encoder's own selection rule), then `int`, records, optional keys and maps. -/
-def decodeRawP : PTy → Json → Option Val
+/-- The structural reader at a type, one fold with one parameter (probe R's `conv strict`): `strict`
+is the codec (S-3: extra, duplicate and missing keys refuse), `!strict` is route A's row adapter
+(entries the type does not name are dropped; a duplicated or missing declared name refuses).
+Production arms, the union arm with the canonical-branch check (row 128: a later branch answers
+only when no earlier branch's membership holds of its value, the encoder's own selection rule),
+then `int`, records, optional keys, tuples and maps. -/
+def convP (strict : Bool) : PTy → Json → Option Val
   | .unit, .null => some .unit
   | .bool, .bool b => some (.bool b)
   | .nat, j => (Schema.Codec.nat? j).map Val.nat
@@ -1379,55 +1398,57 @@ def decodeRawP : PTy → Json → Option Val
     if Schema.Codec.fields? j ["_tag"] = some [.str "None"] then some .none
     else do
       let payload ← Schema.Codec.payload? j "Some" "value"
-      (decodeRawP t payload).map Store.Val.some
-  | .list t, .arr js => (js.mapM (decodeRawP t)).map Val.list
+      (convP strict t payload).map Store.Val.some
+  | .list t, .arr js => (js.mapM (convP strict t)).map Val.list
   | .prod a b, .arr [jx, jy] => do
-    let x ← decodeRawP a jx
-    let y ← decodeRawP b jy
+    let x ← convP strict a jx
+    let y ← convP strict b jy
     return .list [x, y]
   | .except e a, j =>
     if let some p := Schema.Codec.payload? j "Failure" "failure" then
-      (decodeRawP e p).map (fun v => .ctor 0 [v])
+      (convP strict e p).map (fun v => .ctor 0 [v])
     else do
       let p ← Schema.Codec.payload? j "Success" "success"
-      (decodeRawP a p).map (fun v => .ctor 1 [v])
+      (convP strict a p).map (fun v => .ctor 1 [v])
   | .exitOf a e, j =>
     if let some p := Schema.Codec.payload? j "Success" "value" then
-      (decodeRawP a p).map (fun v => .ctor 0 [v])
+      (convP strict a p).map (fun v => .ctor 0 [v])
     else do
       let p ← Schema.Codec.payload? j "Failure" "cause"
-      (Schema.Codec.decodeCause (decodeRawP e) p).map Val.exitErr
-  | .causeOf e, j => (Schema.Codec.decodeCause (decodeRawP e) j).map Val.exitErr
+      (Schema.Codec.decodeCause (convP strict e) p).map Val.exitErr
+  | .causeOf e, j => (Schema.Codec.decodeCause (convP strict e) j).map Val.exitErr
   -- [change:canonical-branch]
   | .union a b, j =>
-    match (decodeRawP a j).filter (fun v => hasTyP v a []) with
+    match (convP strict a j).filter (fun v => hasTyP v a []) with
     | some v => some v
-    | none => (decodeRawP b j).filter (fun v => hasTyP v b [] && !hasTyP v a [])
+    | none => (convP strict b j).filter (fun v => hasTyP v b [] && !hasTyP v a [])
   -- [arm:int]
   | .int, j => (int? j).map intVal
-  -- [arm:record] the exact field set in any order: no unnamed key, no repeat, every required key
+  -- [arm:record] the exact field set in any order (`strict`: no unnamed key; both: no repeated
+  -- declared key, every required key); the value carries the canonical names (row 165)
   | .record fs, .obj entries =>
-    if entries.all (fun e => ((canonF (fieldDecoders fs)).map (·.1)).contains e.1) then
-      (decodeSlots entries (canonF (fieldDecoders fs))).map (fun slots => .ctor 0 slots)
+    if !strict || entries.all (fun e => ((canonF (fieldDecoders strict fs)).map (·.1)).contains e.1) then
+      (decodeSlots entries (canonF (fieldDecoders strict fs))).map (fun slots =>
+        .ctor 0 [.list ((canonF (fieldDecoders strict fs)).map (fun d => .str d.1)), .list slots])
     else none
   -- [arm:tuple]
-  | .tuple ts, .arr js => (decodeItems ts js).map Val.list
+  | .tuple ts, .arr js => (decodeItems strict ts js).map Val.list
   -- [arm:map] distinct keys, the value's pairs sorted by key
   | .map .string w, .obj entries =>
     if (firstRepeat entries []).isSome then none
-    else (entries.mapM (fun e => (decodeRawP w e.2).map (fun v => (e.1, v)))).map
+    else (entries.mapM (fun e => (convP strict w e.2).map (fun v => (e.1, v)))).map
       (fun kvs => .list ((canonF kvs).map (fun kv => .list [.str kv.1, kv.2])))
   | _, _ => none
 -- [arm:tuple]
-def decodeItems : List PTy → List Json → Option (List Val)
+def decodeItems (strict : Bool) : List PTy → List Json → Option (List Val)
   | [], [] => some []
   | t :: ts, j :: js => do
-    let v ← decodeRawP t j
-    let rest ← decodeItems ts js
+    let v ← convP strict t j
+    let rest ← decodeItems strict ts js
     some (v :: rest)
   | _, _ => none
 -- [arm:record]
-def fieldDecoders : List (String × PTy) → List (String × (Option Json → Option Val))
+def fieldDecoders (strict : Bool) : List (String × PTy) → List (String × (Option Json → Option Val))
   | [] => []
   | (n, t) :: fs =>
     (n, match t with
@@ -1435,10 +1456,16 @@ def fieldDecoders : List (String × PTy) → List (String × (Option Json → Op
       | .optKey u => fun oj =>
         match oj with
         | none => some .none
-        | some j => (decodeRawP u j).map Store.Val.some
+        | some j => (convP strict u j).map Store.Val.some
       -- [arm:record]
-      | t' => fun oj => oj.bind (decodeRawP t')) :: fieldDecoders fs
+      | t' => fun oj => oj.bind (convP strict t')) :: fieldDecoders strict fs
 end
+
+/-- The codec's structural reader. -/
+def decodeRawP (t : PTy) (j : Json) : Option Val := convP true t j
+
+/-- Route A's structural row adapter (row 122; probe R's `Boundary.adapt`). -/
+def adaptRawP (t : PTy) (j : Json) : Option Val := convP false t j
 
 /-- Membership, a JSON image, and exact recovery (production `encode`, without `normalize`:
 the laws below hold at every type, so production's `CTy` statements follow). -/
@@ -1451,6 +1478,11 @@ def encodeP (t : PTy) (v : Val) : Option Json :=
 
 def decodeP (t : PTy) (j : Json) : Option Val :=
   (decodeRawP (layoutP t) j).filter (fun v => hasTyP v t [])
+
+/-- Route A's row adapter at a type (row 122; probe R's `Boundary.adapt`): the codec's fold with
+undeclared entries dropped, then the same membership check. -/
+def adaptP (t : PTy) (j : Json) : Option Val :=
+  (adaptRawP (layoutP t) j).filter (fun v => hasTyP v t [])
 
 /-! ## §10 `Laws/Schema/Codec.lean`, copied (proved) -/
 
@@ -1502,6 +1534,13 @@ theorem decodeP_of_encodeP {t : PTy} {v : Val} {j : Json} (h : encodeP t v = som
 theorem hasTy_decodeP {t : PTy} {j : Json} {v : Val} (h : decodeP t j = some v) :
     hasTyP v t [] = true := by
   unfold decodeP at h
+  rw [Option.filter_eq_some_iff] at h
+  exact h.2
+
+/-- What the session's reply check needs (probe R's `adapt_member`): the adapter answers members. -/
+theorem adapt_memberP {t : PTy} {j : Json} {v : Val} (h : adaptP t j = some v) :
+    hasTyP v t [] = true := by
+  unfold adaptP at h
   rw [Option.filter_eq_some_iff] at h
   exact h.2
 
@@ -1598,8 +1637,8 @@ theorem fieldEncoders_names (fs : List (String × PTy)) :
     obtain ⟨n, t⟩ := p
     simp only [fieldEncoders, List.map_cons, ih]
 
-theorem fieldDecoders_names (fs : List (String × PTy)) :
-    (fieldDecoders fs).map (·.1) = fs.map (·.1) := by
+theorem fieldDecoders_names (strict : Bool) (fs : List (String × PTy)) :
+    (fieldDecoders strict fs).map (·.1) = fs.map (·.1) := by
   induction fs with
   | nil => rfl
   | cons p fs ih =>
@@ -1618,20 +1657,25 @@ theorem fieldCheckers_names (fs : List (String × PTy)) (al : List String) :
 (what `normalize` hands the Schema arms), the codec's and membership's sorts are the identity,
 so an evaluator prepared at the type agrees with the sorting arm on every value. An
 evaluator-agreement fact for the Schema side only; the term-level layout is seat R's. -/
-theorem prepared_agrees (fs : List (String × PTy)) (al : List String) (h : SortedF fs) :
-    canonF (fieldEncoders fs) = fieldEncoders fs ∧ canonF (fieldDecoders fs) = fieldDecoders fs ∧
+theorem prepared_agrees (fs : List (String × PTy)) (al : List String) (strict : Bool)
+    (h : SortedF fs) :
+    canonF (fieldEncoders fs) = fieldEncoders fs ∧
+      canonF (fieldDecoders strict fs) = fieldDecoders strict fs ∧
       canonF (fieldCheckers fs al) = fieldCheckers fs al :=
   ⟨canonF_of_sorted _ (sortedF_transfer _ fs (fieldEncoders_names fs) h),
-   canonF_of_sorted _ (sortedF_transfer _ fs (fieldDecoders_names fs) h),
+   canonF_of_sorted _ (sortedF_transfer _ fs (fieldDecoders_names strict fs) h),
    canonF_of_sorted _ (sortedF_transfer _ fs (fieldCheckers_names fs al) h)⟩
 
 /-! ## §13 The codec per form, and row 128 at the new forms (tested; red controls on production) -/
 
 def jobj (es : List (String × Json)) : Json := .obj es
 def jn (n : Nat) : Json := Arch.Json.ofNat n
+/-- A record value (row 165): its names and its slots, in canonical order. -/
+def rv (fields : List (String × Val)) : Val :=
+  .ctor 0 [.list (fields.map (fun f => .str f.1)), .list (fields.map (·.2))]
 
 -- records: an object keyed by name, the exact field set in any order
-def vAB : Val := .ctor 0 [intVal 1, .str "x"]
+def vAB : Val := rv [("a", intVal 1), ("b", .str "x")]
 #guard encodeP rAB vAB = some (jobj [("a", jn 1), ("b", .str "x")])
 #guard decodeP rAB (jobj [("b", .str "x"), ("a", jn 1)]) = some vAB
 #guard decodeP rAB (jobj [("a", jn 1), ("b", .str "x"), ("c", .bool true)]) = none
@@ -1642,9 +1686,10 @@ def vAB : Val := .ctor 0 [intVal 1, .str "x"]
 #guard NJ (jobj [("b", .str "x"), ("a", jn 1)]) = NJ (jobj [("a", jn 1), ("b", .str "x")])
 #guard decodeExactP rAB (jobj [("b", .str "x"), ("a", jn 1)]) = some vAB
 -- optional keys: absent is `none`; rc.112 `optional`'s `null` for an explicit undefined refuses
-#guard encodeP rOpt (.ctor 0 [.none, .str "x"]) = some (jobj [("b", .str "x")])
-#guard encodeP rOpt (.ctor 0 [.some (intVal 1), .str "x"]) = some (jobj [("a", jn 1), ("b", .str "x")])
-#guard decodeP rOpt (jobj [("b", .str "x")]) = some (.ctor 0 [.none, .str "x"])
+#guard encodeP rOpt (rv [("a", .none), ("b", .str "x")]) = some (jobj [("b", .str "x")])
+#guard encodeP rOpt (rv [("a", .some (intVal 1)), ("b", .str "x")]) =
+  some (jobj [("a", jn 1), ("b", .str "x")])
+#guard decodeP rOpt (jobj [("b", .str "x")]) = some (rv [("a", .none), ("b", .str "x")])
 #guard decodeP rOpt (jobj [("a", .null), ("b", .str "x")]) = none
 -- maps: keys sorted in the value; a repeated key refuses (rc.112's text route keeps the last)
 def vMap : Val := .list [.list [.str "a", intVal 1], .list [.str "b", intVal 2]]
@@ -1654,10 +1699,10 @@ def vMap : Val := .list [.list [.str "a", intVal 1], .list [.str "b", intVal 2]]
 #guard encodeP rMap (.list [.list [.str "b", intVal 2], .list [.str "a", intVal 1]]) = none
 #guard encodeP rMap (.list []) = some (jobj [])
 -- tagged unions: the branch by its `_tag` literal
-def vA : Val := .ctor 0 [.str "A", intVal 1]
+def vA : Val := rv [("_tag", .str "A"), ("x", intVal 1)]
 #guard encodeP rTU vA = some (jobj [("_tag", .str "A"), ("x", jn 1)])
 #guard decodeP rTU (jobj [("x", jn 1), ("_tag", .str "A")]) = some vA
-#guard decodeP rTU (jobj [("_tag", .str "B"), ("y", .str "s")]) = some (.ctor 0 [.str "B", .str "s"])
+#guard decodeP rTU (jobj [("_tag", .str "B"), ("y", .str "s")]) = some (rv [("_tag", .str "B"), ("y", .str "s")])
 #guard decodeP rTU (jobj [("_tag", .str "A"), ("y", .str "s")]) = none
 -- int (stage 5): signed exact binary64; the domain differs from rc.112's `isInt` at both ends
 #guard encodeP .int (intVal (-15)) = some (intJson (-15))
@@ -1674,27 +1719,30 @@ def jSuccess : Json := jobj [("_tag", .str "Success"), ("value", jn 1)]
   some (.ctor 0 [.nat 1])
 #guard decodeP overlapEE jSuccess = none
 #guard decodeP overlapEE jFailure = some (.ctor 0 [.nat 1])
--- (ii) a record and a tagged union share a positional image: one value, two record types
+-- (ii) under row 119's positional clause a record and a tagged union share an image (one value,
+-- two record types: the red control `red_sharedImage`); under row 165 the names tell them apart
 def tagA : PTy := tagged "A" [("x", .nat)]
 def recAB : PTy := .record [("a", .string), ("b", .nat)]
 def vShared : Val := .ctor 0 [.str "A", .nat 1]
-#guard hasTyP vShared tagA [] && hasTyP vShared recAB []
-#guard decodeRawP recAB (jobj [("a", .str "A"), ("b", jn 1)]) = some vShared
-#guard encodeP (.union tagA recAB) vShared = some (jobj [("_tag", .str "A"), ("x", jn 1)])
-#guard decodeP (.union tagA recAB) (jobj [("a", .str "A"), ("b", jn 1)]) = none
-#guard decodeP (.union tagA recAB) (jobj [("_tag", .str "A"), ("x", jn 1)]) = some vShared
--- (iii) a one-field record shares `ctor 0 [v]` with Result's failure and Exit's success
+#guard posRecordFits vShared [("_tag", .lit "A"), ("x", .nat)] && posRecordFits vShared [("a", .string), ("b", .nat)]
+def vNamedA : Val := rv [("_tag", .str "A"), ("x", .nat 1)]
+def vNamedAB : Val := rv [("a", .str "A"), ("b", .nat 1)]
+#guard hasTyP vNamedA tagA [] && !hasTyP vNamedA recAB [] && hasTyP vNamedAB recAB [] && !hasTyP vNamedAB tagA []
+#guard decodeP (.union tagA recAB) (jobj [("a", .str "A"), ("b", jn 1)]) = some vNamedAB
+#guard decodeP (.union tagA recAB) (jobj [("_tag", .str "A"), ("x", jn 1)]) = some vNamedA
+#guard encodeP (.union tagA recAB) vNamedAB = some (jobj [("a", .str "A"), ("b", jn 1)])
+-- (iii) a one-field record no longer shares `ctor 0 [v]` with Result's failure or Exit's success
 def rx : PTy := .record [("x", .nat)]
-#guard hasTyP (.ctor 0 [.nat 1]) rx [] && hasTyP (.ctor 0 [.nat 1]) (.except .nat .nat) []
-  && hasTyP (.ctor 0 [.nat 1]) (.exitOf .nat .nat) []
-#guard decodeP (.union (.except .nat .nat) rx) (jobj [("x", jn 1)]) = none
-#guard decodeP (.union rx (.except .nat .nat)) jFailure = none
+#guard hasTyP (.ctor 0 [.nat 1]) (.except .nat .nat) [] && !hasTyP (.ctor 0 [.nat 1]) rx []
+  && hasTyP (rv [("x", .nat 1)]) rx [] && !hasTyP (rv [("x", .nat 1)]) (.except .nat .nat) []
+#guard decodeP (.union (.except .nat .nat) rx) (jobj [("x", jn 1)]) = some (rv [("x", .nat 1)])
+#guard decodeP (.union rx (.except .nat .nat)) jFailure = some (.ctor 0 [.nat 1])
 -- (iv) `Int`'s generated image overlaps Result's: a Result failure leaves the union's image
 #guard decodeP (.union .int (.except .nat .nat)) jFailure = none
 #guard encodeP (.union .int (.except .nat .nat)) (.ctor 0 [.nat 1]) = some (jn 1)
 -- (v) one JSON image, two values: the encoder refuses the second (S-3's existing clause)
 def recSuccess : PTy := .record [("_tag", .lit "Success"), ("value", .nat)]
-#guard encodeP (.union (.exitOf .nat .nat) recSuccess) (.ctor 0 [.str "Success", .nat 1]) = none
+#guard encodeP (.union (.exitOf .nat .nat) recSuccess) (rv [("_tag", .str "Success"), ("value", .nat 1)]) = none
 #guard encodeP (.union (.exitOf .nat .nat) recSuccess) (.ctor 0 [.nat 1]) = some jSuccess
 -- tuples: an array of the items, exact arity; a list beside a tuple selects by arity
 def vTup : Val := .list [intVal 1, .str "x", .bool true]
@@ -1715,7 +1763,38 @@ def exactOn (t : PTy) (j : Json) : Bool := decodeExactP t j == decodeP t j
   (rMap, jobj [("b", jn 2), ("a", jn 1)]), (rTU, jobj [("x", jn 1), ("_tag", .str "A")]),
   (.int, intJson (-15)), (overlapEE, jFailure),
   (.union tagA recAB, jobj [("_tag", .str "A"), ("x", jn 1)]),
+  (.union tagA recAB, jobj [("a", .str "A"), ("b", jn 1)]),
+  (.union (.except .nat .nat) rx, jobj [("x", jn 1)]),
   (tup3, .arr [jn 1, .str "x", .bool true])].all (fun p => exactOn p.1 p.2)
+
+/-! ## §13b The row adapter beside the codec (route A, row 122): probe R's paired control (tested) -/
+
+def userTy : PTy := .record [("id", .nat), ("name", .string)]
+def wider : Json := jobj [("id", jn 2), ("name", .str "bob"), ("role", .str "member")]
+def bob : Val := rv [("id", .nat 2), ("name", .str "bob")]
+-- the paired control: the adapter strips the undeclared key, the codec refuses it
+#guard adaptP userTy wider = some bob && decodeP userTy wider = none
+-- the adapter is a projection, not exact: the adapted value's encoding has two keys, `wider` three
+#guard encodeP userTy bob = some (jobj [("id", jn 2), ("name", .str "bob")])
+-- both refuse a missing and a duplicated declared key; a duplicated undeclared key: adapter drops, codec refuses
+#guard adaptP userTy (jobj [("id", jn 2)]) = none && decodeP userTy (jobj [("id", jn 2)]) = none
+#guard adaptP userTy (jobj [("id", jn 2), ("id", jn 3), ("name", .str "b")]) = none
+def dupUndeclared : Json := jobj [("id", jn 2), ("name", .str "b"), ("x", .null), ("x", .null)]
+#guard adaptP userTy dupUndeclared = some (rv [("id", .nat 2), ("name", .str "b")]) && decodeP userTy dupUndeclared = none
+-- stripped at depth by the adapter, refused at depth by the codec
+def nestedTy : PTy := .record [("user", userTy)]
+#guard adaptP nestedTy (jobj [("user", wider)]) = some (rv [("user", bob)]) && decodeP nestedTy (jobj [("user", wider)]) = none
+-- probe R's `codec_sub_adapt` on union-free types (tested on the codec's positive inputs above)
+#guard [(rAB, jobj [("b", .str "x"), ("a", jn 1)]), (rOpt, jobj [("b", .str "x")]),
+  (rMap, jobj [("b", jn 2), ("a", jn 1)]), (tup3, .arr [jn 1, .str "x", .bool true]),
+  (userTy, jobj [("name", .str "bob"), ("id", jn 2)])].all (fun p => adaptP p.1 p.2 == decodeP p.1 p.2)
+-- **but not at a union whose earlier branch names a subset of a later one's**: the adapter strips
+-- into the earlier branch (as rc.112's default `anyOf` does, question 2 E7h), the codec answers the
+-- later; `codec_sub_adapt` holds on union-free types and needs a premise at unions
+def subsetUnion : PTy := .union (.record [("a", .nat)]) (.record [("a", .nat), ("b", .nat)])
+def jAB : Json := jobj [("a", jn 1), ("b", jn 2)]
+#guard decodeP subsetUnion jAB = some (rv [("a", .nat 1), ("b", .nat 2)])
+#guard adaptP subsetUnion jAB = some (rv [("a", .nat 1)])
 
 /-! ## §14 Red controls: each claim is false, and `#guard_msgs` asserts its `#guard` fails -/
 /-- RED: today's production decoder is exact at row 128's witness (it decodes the `Success` image). -/
@@ -1728,18 +1807,19 @@ did not evaluate to `true`
 #guard_msgs (error) in
 #guard red_productionExact
 
-/-- RED: the later branch's image cannot decode on its own (it can: only the union check excludes it). -/
-def red_laterBranchAlone : Bool := decodeRawP recAB (jobj [("a", .str "A"), ("b", jn 1)]) == none
+/-- RED: the adapter and the codec agree wherever the codec answers (`codec_sub_adapt` at a union of nested field sets). -/
+def red_codecSubAdaptUnion : Bool := adaptP subsetUnion jAB == decodeP subsetUnion jAB
 /--
 error: Expression
-  red_laterBranchAlone
+  red_codecSubAdaptUnion
 did not evaluate to `true`
 -/
 #guard_msgs (error) in
-#guard red_laterBranchAlone
+#guard red_codecSubAdaptUnion
 
-/-- RED: no value fits two record types (positional values carry no names). -/
-def red_sharedImage : Bool := !(hasTyP vShared tagA [] && hasTyP vShared recAB [])
+/-- RED: under row 119's positional clause no value fits two record types (it does: positional values carry no names; row 165's named values are the repair). -/
+def red_sharedImage : Bool :=
+  !(posRecordFits vShared [("_tag", .lit "A"), ("x", .nat)] && posRecordFits vShared [("a", .string), ("b", .nat)])
 /--
 error: Expression
   red_sharedImage
@@ -1840,6 +1920,7 @@ end SeatS.K2
 #print axioms SeatS.K2.encodeP_eq_some
 #print axioms SeatS.K2.decodeP_of_encodeP
 #print axioms SeatS.K2.hasTy_decodeP
+#print axioms SeatS.K2.adapt_memberP
 #print axioms SeatS.K2.encodeP_injective
 #print axioms SeatS.K2.encodeP_sub_of_member
 #print axioms SeatS.K2.encodeP_sub
