@@ -107,6 +107,7 @@ import Test.Program.RuntimeRContract
 import Test.Program.RuntimeRShapesContract
 import Test.Program.SimulationContract
 import Test.Program.ProvisionContract
+import Test.Program.ProvideRows
 import Test.Program.ConfigContract
 import Test.Api.ApiContract
 import Test.Api.TestClockContract
