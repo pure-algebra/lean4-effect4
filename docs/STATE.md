@@ -297,7 +297,12 @@ for pass I2, ratification owed): the `scopeExit` constructor reads no scope live
 the scope-handle posts carry no presence, so the checked program "make a scope, fork into it" has
 no `TypedProg` derivation and M5's `DenotesTyped` is false there (`E4-TYPED-CE-018`). Pass I2
 (seat A on top of seat I, [brief](research/2026-10-01-landing/brief-I2.md)) runs on `seat/I2` with
-row 156 as its step 10; row 154's re-pin follows I2's merge.
+row 156 as its step 10; row 154's re-pin follows I2's merge. Seat G lands row 150 (`FoldLift`,
+ruled by the coordinator, [brief](research/2026-10-01-landing/brief-G.md)) in parallel on files I2
+never touches. Wave 2 is briefed: D1 (rows 117, 151, 152, 153,
+[brief](research/2026-10-01-landing/brief-D1.md)) and D3 (the eighteen commands, the six edits,
+M6c, `exitHandles_valid`, [brief](research/2026-10-01-landing/brief-D3.md)) in parallel after I2
+merges, then D2 (M5's `denoteR_typed`, [brief](research/2026-10-01-landing/brief-D2.md)) after D1.
 
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
