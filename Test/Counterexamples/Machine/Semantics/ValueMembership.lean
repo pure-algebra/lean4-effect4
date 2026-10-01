@@ -762,6 +762,7 @@ theorem g6_refused : ¬ Fits wBoolCell (Value.cell 0) (.handle NativeOp.refTarge
   rintro ⟨_, t', hs, hsub, _⟩
   rw [wBoolCell_zero] at hs
   cases hs
+  change Ty.sub .bool .nat = true at hsub
   rw [bool_not_sub_nat] at hsub
   exact Bool.noConfusion hsub
 theorem g6_control : Fits wNatCell (Value.cell 0) (.handle NativeOp.refTarget) :=
@@ -816,11 +817,13 @@ theorem fitsEq_not_closed_under_sub :
   cases hs
   cases heq
 
-/-- The `Ty.sub` reading admits the equivalent spelling, where the old judgment refuses it. -/
+/-- The subtyping reading (in the checker's order since row 137) admits the equivalent
+spelling, where the old judgment refuses it. -/
 theorem natCell_equiv_spelling :
     Fits wNatCell (Value.cell 0) (.refOf (.union .nat .nat)) ∧
       ¬ Reviewed.StrongValue wNatCell (.refOf (.union .nat .nat)) (Value.cell 0) :=
-  ⟨⟨.nat, wNatCell_zero, sub_nat_union, sub_union_nat⟩, natCell_old_refused⟩
+  ⟨⟨.nat, wNatCell_zero, Ty.sub_le_subN sub_nat_union, Ty.sub_le_subN sub_union_nat⟩,
+    natCell_old_refused⟩
 
 /-! The old loaded-state claim, with every retired predicate resolved locally. -/
 namespace ReviewedLoad
@@ -853,7 +856,8 @@ theorem refProg_untypable (w : W) (hRho : w.Ρ ⟨0⟩ = none) (hrefs : w.state.
   obtain ⟨cert, _, next⟩ := Reviewed.TypedProg.store_inv h
   have hle : w.leHost (w.addRef w.state ⟨0⟩ cert) := by
     refine ⟨⟨⟨fun _ h => h, Stores.le_refl _⟩, table_refl _, table_refl _,
-      insert_extends _ _ _ hRho, ⟨fun key ty h => ?_, fun key types h => ?_⟩, fun _ => table_refl _⟩,
+      insert_extends _ _ _ hRho, ⟨fun key ty h => ?_, fun key types h => ?_⟩, fun _ => table_refl _,
+      rfl⟩,
       fun _ _ h => h⟩
     · exact ⟨insert_extends _ _ _ hRho key ty h.1, fun value hv => h.2 value hv⟩
     · exact ⟨h.1, fun cell hc comp hcomp =>
@@ -929,8 +933,8 @@ theorem getProg_after (index : Nat) (completed : List (FiberId × ExitV)) :
 /-- `Ref.make(5).flatMap(r => Ref.get(r))` at every world. The guard's body allocates and
 unguards the cell at `Ref.Ref<number>`; the declaration the post names is the fit. The run arm
 reads the cell's declaration from the value's fit (the only link across the guard), carries it
-to the later worlds, and reads the answer through `fits_sub` from the declaration's `Equiv` to
-`nat`. The skip arm is a clean failure. -/
+to the later worlds, and reads the answer through `fits_subN` from the declaration's `Equiv` to
+`nat` (the checker's order, row 137). The skip arm is a clean failure. -/
 theorem getProg_typedF (w : W) :
     TypedProg (getProg : ProgramSource) w (EffTy.pure .nat)
       (denoteR getProg getProg (rootPoint 20)) := by
@@ -964,7 +968,7 @@ theorem getProg_typedF (w : W) :
           change w'''.Ρ ⟨index⟩ = some ty at hty
           rw [hsame] at hty
           cases hty
-          exact TypedProg.pure ⟨fits_sub w''' hsub ans hfit, trivial⟩
+          exact TypedProg.pure ⟨fits_subN w''' hsub ans hfit, trivial⟩
         · exact absurd hv.1 (by decide)
         · exact absurd hv (by decide)
         · exact absurd hv.1 (by decide)
@@ -981,15 +985,17 @@ For a program whose loaded code is typed at every world, the restated typed stat
 initial world: the one fiber's saved state is typed, and every other generated clause is over an
 empty list or the empty context. So `typedState_load`, restated over `Fits`, is true at
 `Ref.make(5)` and at the bind program, the two instances `verify-load.lean` refutes for
-`StrongValue`. (No claim is made for every program.) -/
+`StrongValue`. (No claim is made for every program.) Stated at every budget and source since
+seat A's landing (2026-10-01), so `FitsOrder.prog3_loads_typed` goes through it at budget 100. -/
 
-theorem typedStateF_load (p : NativeEff) (ty : EffTy) (closed : ClosedEff ty)
-    (noMarker : raceRegistrationR (denoteR p p (rootPoint 20)) = none)
-    (code : ∀ w, TypedProg (p : ProgramSource) w ty (denoteR p p (rootPoint 20))) :
-    ∃ w, TypedState (p : ProgramSource) ty w (loadR p 20 20) := by
-  refine ⟨initialWorld ty, initial_world_valid _ p 20 20 closed, ⟨?_, ?_, ?_⟩,
-    ?_, schedulerState_load p 20 20, observerState_load (p : ProgramSource) _ 20 20,
-    registrationState_load (p : ProgramSource) _ 20 20 noMarker⟩
+theorem typedStateF_load (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
+    (closed : ClosedEff ty)
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
+    (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
+    ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) := by
+  refine ⟨initialWorld ty, initial_world_valid _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩,
+    ?_, schedulerState_load root.program fuel compileFuel, observerState_load root _ fuel compileFuel,
+    registrationState_load root _ fuel compileFuel noMarker⟩
   · intro f hf
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
@@ -1029,11 +1035,11 @@ theorem typedStateF_load (p : NativeEff) (ty : EffTy) (closed : ClosedEff ty)
 theorem typedStateF_load_ref :
     ∃ w, TypedState (refProg : ProgramSource) (EffTy.pure (.handle NativeOp.refTarget)) w
       (loadR refProg 20 20) :=
-  typedStateF_load refProg _ ⟨rfl, rfl⟩ rfl refProg_typedF
+  typedStateF_load refProg _ 20 20 ⟨rfl, rfl⟩ rfl refProg_typedF
 
 theorem typedStateF_load_get :
     ∃ w, TypedState (getProg : ProgramSource) (EffTy.pure .nat) w (loadR getProg 20 20) :=
-  typedStateF_load getProg _ ⟨rfl, rfl⟩ rfl getProg_typedF
+  typedStateF_load getProg _ 20 20 ⟨rfl, rfl⟩ rfl getProg_typedF
 
 /-- The existing TypedState bank supplies the heap-extension rule. -/
 theorem search_heap_extends (w : W) (cert : Ty) (hRho : w.Ρ ⟨0⟩ = none) :

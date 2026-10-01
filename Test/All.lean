@@ -29,6 +29,11 @@ import Test.Counterexamples.Machine.Semantics.RawOrderLoad
 import Test.Program.TypedSplit
 import Test.Counterexamples.Machine.Semantics.LayerValue
 import Test.Counterexamples.Machine.Semantics.ValueMembership
+import Test.Counterexamples.Machine.Semantics.FitsOrder
+import Test.Program.TermFits
+import Test.Program.SignatureControls
+import Test.Program.TypedProgRows
+import Test.Program.AdmissionColumns
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.ProtocolLaws

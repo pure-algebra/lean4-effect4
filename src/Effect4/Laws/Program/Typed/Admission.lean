@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Typed.Membership
 import Effect4.Program.Checker
 import Effect4.Laws.Program.Sched
+import Effect4.Laws.Program.Signature
 
 /-!
 # Laws.Program.Typed.Admission — source and control admission for typed programs
@@ -72,13 +73,43 @@ def EnvTyped (w : World) (env : List Ty) (vals : List Val) : Prop :=
   env.length = vals.length ∧
   ∀ (i : Nat) (ty : Ty) (v : Val), env[i]? = some ty → vals[i]? = some v → Fits w v ty
 
-/-- The program the typed state is about, with the host-row table its checker reads. A bare
-program coerces to a source with the empty table. -/
+/-- **Term soundness for membership (TY-07, proved)**, in the environment judgment the typed
+state reads (`PointTyped`): under a signature whose atoms are the native table's (every
+`nativeSignature`, every source signature), a term that types in a typed environment and
+evaluates there evaluates to a value of the term's type. The proof is `evalTerm_fitsAll`
+(`Typed/Membership.lean`) through `fitsAll_of_pointwise`. -/
+theorem evalTerm_fits {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
+    (hconst : sig.constAtom = nativeConstAtom) {w : World} {env : List Ty} {vals : List Val}
+    {t : Term} {ty : Ty} {v : Val} (henv : EnvTyped w env vals)
+    (hty : termTy sig env t = some ty) (hev : evalTerm vals t = some v) : Fits w v ty :=
+  evalTerm_fitsAll sig hatom hconst w t vals env ty v (fitsAll_of_pointwise henv.1 henv.2) hty hev
+
+/-- `evalTerm_fits` at a native signature over any row table. -/
+theorem evalTerm_fits_native (table : RowTable) {w : World} {env : List Ty} {vals : List Val}
+    {t : Term} {ty : Ty} {v : Val} (henv : EnvTyped w env vals)
+    (hty : termTy (nativeSignature table) env t = some ty) (hev : evalTerm vals t = some v) :
+    Fits w v ty :=
+  evalTerm_fits rfl rfl henv hty hev
+
+/-- The program the typed state is about, with its signature (decisions row 111: the host-row
+table and the service declarations, Σ_app) and the evidence that the signature is lawful
+(row 114: M5 and M6 quantify over lawful sources, not over an authoring guard's callers). A
+bare program coerces to a source with the empty signature, which is lawful
+(`SigApp.lawful_empty`). -/
 structure ProgramSource where
   program : NativeEff
   table : RowTable := []
+  services : List (ServiceKey × Ty) := []
+  lawful : LawfulSig ⟨table, services⟩ := by exact SigApp.lawful_empty
 
 instance : Coe NativeEff ProgramSource := ⟨fun program => { program }⟩
+
+/-- The source's part of the signature. -/
+def ProgramSource.sig (src : ProgramSource) : SigApp := ⟨src.table, src.services⟩
+
+/-- The checker's signature over the source's tables; with no service declarations it is
+`nativeSignature src.table` (`SigApp.signature_nil`). -/
+def ProgramSource.signature (src : ProgramSource) : Signature NativeOp := src.sig.signature
 
 /-- D13 source admission at an addressed program node, under the source's row table
 (`E4-SCHED-CE-014`: the empty table refused bodies that perform a host row). -/
@@ -117,5 +148,39 @@ theorem strongExit_of_clean (w : World) (ty : EffTy) (c : CauseV)
 /-- At a `never` error column a fitting failure is clean: no value has type `never`. -/
 theorem cleanExit_of_never (w : World) (ty : EffTy) (c : CauseV) (never : ty.error = .never)
     (h : ExitOk w ty (.failure c)) : cleanExit (.failure c) = true := cleanExit_of_never_fits w ty c never h.1
+
+/-! ## `π` for services (C5) -/
+
+/-- A world read at a signature's service table. -/
+def restrictWorld (app : SigApp) (w : World) : World := { w with serviceTy := app.serviceTy }
+
+/-- A context's services fit at the restriction exactly when they fit at the world, when the
+two tables agree on the context's keys. -/
+theorem servicesFit_restrict (app : SigApp) (w : World) (services : Env.Ctx)
+    (hagree : ∀ key sv, services.getV key = some sv → w.serviceTy key = app.serviceTy key) :
+    ServicesFit (restrictWorld app w) services ↔ ServicesFit w services := by
+  constructor
+  · intro h key sv sty hget hty
+    have hty' : app.serviceTy key = some sty := by
+      rw [← hagree key sv hget]
+      exact hty
+    exact h key sv sty hget hty'
+  · intro h key sv sty hget hty
+    change app.serviceTy key = some sty at hty
+    have hty' : w.serviceTy key = some sty := by
+      rw [hagree key sv hget]
+      exact hty
+    exact h key sv sty hget hty'
+
+/-- Along an extension of the application's signature, membership survives the restriction to
+the smaller table: the restriction reads no carrier the world does not. -/
+theorem fits_restrict {app app' : SigApp} (hext : SigExtends app.signature app'.signature)
+    (w : World) (hw : w.serviceTy = app'.serviceTy) (ty : Ty) (v : Val) (h : Fits w v ty) :
+    Fits (restrictWorld app w) v ty :=
+  @fits_map w (restrictWorld app w) (table_refl _) (table_refl _) (table_refl _) (fun _ _ hx => hx)
+    (fun key sty hk => by
+      change app.serviceTy key = some sty at hk
+      rw [hw]
+      exact hext.service key sty hk) ty v h
 
 end Effect4.Program.Typed

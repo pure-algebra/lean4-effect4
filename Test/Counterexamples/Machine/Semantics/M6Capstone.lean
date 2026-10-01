@@ -786,7 +786,7 @@ theorem emitted_refused (w' : W) (ordered : world.leHost w') :
     TypedProg (program : ProgramSource) w' tokenTy
       (.pure (.success (reifyExitVal (.success .unit)))) at h
   have declared : world.Θ Api.root 0 = some ty := rfl
-  have declared' := ordered.1.2.2.2.2.2 Api.root 0 ty declared
+  have declared' := ordered.1.2.2.2.2.2.1 Api.root 0 ty declared
   have hex := TypedProg.pure_inv (h ty declared')
   exact hex.1
 
