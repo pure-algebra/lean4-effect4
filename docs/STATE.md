@@ -339,6 +339,10 @@ name-set shortcut for union branch separation is refuted at optional fields (`E4
 122 amended) and `DenotesTyped` plausibly lacks the reference-formation premise (row 170, seat D2
 measures first). The owner ratified row 151 (a″) and row 117 as recommended and had the package branch
 and tag pushed (`v0.7.0` at `f5878bf`); seat D4 lands row 151 (a″) and the closed-row premise.
+Probe Q merged (`818c26ff`): the generator work lands alone before the append with byte-identical
+outputs (row 171, seat W2), conservativity as one command (row 172; the promotion of the four stale
+`Ty` constructors is the owner's), the per-constructor tables' cut-over (row 173), two tooling gaps
+(row 174), and no `Val` frame for the numbers (rows 121, 109 amended).
 
 **The type-language probe's first result (probe T, 2026-10-01, merged `8036f0b4`; rows 157–164).**
 The data wave can finish `Ty` once only if its single append also carries a structured nominal
