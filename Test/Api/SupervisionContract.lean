@@ -1,4 +1,4 @@
-import Effect4.Laws.Api.Supervision
+import Test.Api.TraceOrigin
 import Effect4.Program.Profile
 
 /-!
@@ -19,7 +19,7 @@ supervision data has to separate:
   anyway (`internal/effect.ts:5406`).
 
 Every static `#guard` reads `supervision`, every dynamic one reads `fiberStatuses` of the
-machine the run left. The origin stored on each fiber records the parent, daemon flag and
+machine the run left. The fork ledger records the parent, daemon flag and
 source path. The trace remains a diagnostic control beside those state observations.
 -/
 

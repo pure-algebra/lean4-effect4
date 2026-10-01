@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.Guard.ForkLedger
-import Effect4.Laws.Api.TraceOrigin
+import Test.Api.TraceOrigin
 
 namespace Test.Machine.StepInvRulesRed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Api.TraceFacts.Agreement

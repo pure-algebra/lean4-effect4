@@ -6,8 +6,8 @@
 integration-ready: the old fiber field and its comparison runner are removed together, the
 Lean and OCaml paths read/write the machine ledger, generation is current, and the required
 OCaml and repository checks pass. The owner authorized the additional prelude/test readers,
-two closure manifests, and explicit ForkRecord type root as recorded below. D's held users
-follow, then F, G, H1, and H2 part one. H2 excludes only badName and notImplemented;
+two closure manifests, and explicit ForkRecord type root as recorded below. D's held users and diagnostic move are complete;
+F, G, H1, and H2 part one follow. H2 excludes only badName and notImplemented;
 missingService waits for part two. Nothing has been pushed.
 
 Authority read from the main checkout:
@@ -176,6 +176,37 @@ Verification is retained under `after-addendum-4/D/`:
 
 The diagnostic trace move is the remaining D step. The full production trust inventory is
 retained in `D/all-production-axioms.lean` for execution after that move.
+
+### D — diagnostic move complete
+
+Base: `4e9bfce7`. The checked trace agreement and its diagnostic projection now live in
+`Test/Api/TraceOrigin.lean`; the library retains the independent ledger invariant. No library
+module imports Test, and the static import walk finds no missing local import or cycle. All
+Effect4 and Test modules are reachable from their roots. The old production TraceOrigin body
+moves without proposition or proof changes; both bank controls retain their actual diagnostics.
+
+The following 13 obligation/law pairs move from Supervision to Test with their names retained:
+`forkedOf_append`, `spawn_forked`, `start_forked`, `fork_forked`, `forkIn_forked`,
+`forkScoped_forked`, `forkScoped_none_forked`, `launchEntrant_forked`, `forkFinalizers_forked`,
+`action_fork_forked`, `action_forkIn_forked`, `action_forkScoped_forked`, `supervision_static`
+(the last proof is `TraceFacts.supervision_static_flags`). The other four moved declarations
+are `TraceFacts.forkedOf`, `originForks`, `Agrees`, and `load_agrees`: 30 declarations total.
+All four existing explicit proof references and all three new agreement references remain.
+The two status-with-erased-trace obligations remain in the library at ceiling zero.
+
+Verification under `after-addendum-4/D/`:
+- `diagnostic-move`: Supervision, Test TraceOrigin, SupervisionContract, and both omitted-bank
+  controls build, exit 0, 317 jobs. Diagnostic gates report **0 open/3 proved** for
+  TraceFacts.M1Trace and **0 open/15 proved** for Api.M1Trace.
+- `all-production-axioms`: **175** authored theorem reports, all at `[propext, Quot.sound]` or
+  less, including the private helper. The actual final source inventory and hashes are
+  `production-theorem-manifest.json`.
+- `diagnostic-static`: the current source import/ownership walk passes. Its separate OCaml5
+  tool-root list is outside the Effect4/Test roots. `diagnostic-final-review.md` records the
+  independent review. Implementation whitespace checks pass.
+
+D is complete. No M6 instance or reference-machine memo-ID theorem is claimed. C already ran
+the brief's one full `make check`; D uses its narrow checks and requires no generation.
 
 ### H2 — part-one exclusion clarified by the owner
 
