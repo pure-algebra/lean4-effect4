@@ -148,10 +148,23 @@ structure HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
           hooks.loop w tin' tout name cursor'
       | .finish code => TypedProg root w tout code
 
+/-- `TerminalFiber`, `TerminalPosition` and `CodeInert` as of `bb269fde` (H1's halt extension
+included), kept local so this historical copy does not follow later restatements. -/
+def TerminalFiber (m : RState) (commands : List RCmd) (id : FiberId) : Prop :=
+  (∃ exit, .finish id exit ∈ commands) ∨ ∃ fiber ∈ m.fibers, fiber.id = id ∧ fiber.exit.isSome = true
+
+def TerminalPosition (m : RState) (commands : List RCmd) : Expect → Prop
+  | .root => TerminalFiber m commands Api.root
+  | .fiber id => TerminalFiber m commands id
+  | .hook _ => False
+
+def CodeInert (m : RState) (commands : List RCmd) (position : Expect) : Prop :=
+  m.stuck.isSome = true ∨ TerminalPosition m commands position
+
 /-- The typed state's saved position over the one-world stack. -/
 def SavedPosition (root : ProgramSource) (w : W) (m : RState) (commands : List RCmd)
     (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
-  ∃ tin, (¬ CodeInert m commands position → TypedProg root w tin saved.current) ∧
+  ∃ tin, (¬ Old.CodeInert m commands position → TypedProg root w tin saved.current) ∧
     StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
     InterruptProvenance saved
 
@@ -502,7 +515,7 @@ theorem result_only_root : ∀ f ∈ result.1.fibers, f.id = Api.root ∧ f.exit
   subst hf
   exact ⟨rfl, rfl⟩
 
-theorem result_not_inert : ¬ CodeInert result.1 result.2 (.fiber Api.root) := by
+theorem result_not_inert : ¬ Old.CodeInert result.1 result.2 (.fiber Api.root) := by
   intro h
   rcases h with hs | hterm
   · rw [result_stuck] at hs
@@ -524,7 +537,9 @@ theorem post_untyped (w : W) :
     rw [hid]
     exact h.1.root
   obtain ⟨tin', hprog0, hstack, _⟩ := (h.2.1.c0 f hf).c0.c0 _ hroot
-  have hni : ¬ CodeInert result.1 result.2 (.fiber f.id) := by rw [hid]; exact result_not_inert
+  have hni : ¬ Old.CodeInert result.1 result.2 (.fiber f.id) := by
+    rw [hid]
+    exact result_not_inert
   have hprog := hprog0 hni
   rw [hcur] at hprog
   rw [hst] at hstack
@@ -938,6 +953,24 @@ theorem good_stack_transports :
       [.answer goodNext] :=
   Contracts.stackAccepts_mono w0_le_w1 (stack_good world)
 
+/-- For seat C's ledger (row 87, "monotonicity of every owner predicate of `preds`"): the typed
+state's `SavedOk` owner predicate transports along the host order at a position the world
+already declares; an undeclared position may become declared later, which is why the premise is
+needed. -/
+theorem preds_savedOk_mono (root : ProgramSource) (w w' : W) (e : Expect) (x : RSaved)
+    (ord : w.leHost w') (declared : (expectOf w e).isSome = true)
+    (h : (preds root).SavedOk w e x) : (preds root).SavedOk w' e x := by
+  intro ty hty
+  obtain ⟨ty0, h0⟩ := Option.isSome_iff_exists.mp declared
+  have same : expectOf w' e = some ty0 := by
+    cases e with
+    | root => exact ord.1.2.1 _ _ h0
+    | fiber id => exact ord.1.2.1 _ _ h0
+    | hook name => cases h0
+  rw [same] at hty
+  cases hty
+  exact Effect4.Program.Typed.savedOk_mono root w w' _ x ord (h _ h0)
+
 /-- The refusal also follows from the landed transport: the closed judgment at the initial world
 would transport to `w1`, where even the one-world judgment refuses the frame. -/
 theorem bad_not_kripke_by_transport :
@@ -1098,6 +1131,8 @@ open Test.Program.FramesNotKripke in
 #print axioms bad_not_kripke_by_transport
 open Test.Program.FramesNotKripke in
 #print axioms good_stack_transports
+open Test.Program.FramesNotKripke in
+#print axioms preds_savedOk_mono
 open Test.Program.FramesNotKripke in
 #print axioms step_loop_good
 open Test.Program.FramesNotKripke in
