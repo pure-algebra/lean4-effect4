@@ -192,6 +192,8 @@ theorem held_driveStep (p : NativeEff) (table : RowTable) {m : NativeMachine}
     · exact next.2 c hc
     · exact queue c hc
 
+/-- The command loop keeps `Held` and a quiet queue: the generic loop lift
+(`Machine.Lift.driveState_lift_unit`) applied to the per-command fact `held_driveStep`. -/
 theorem held_driveState (p : NativeEff) (table : RowTable) (fuel : Nat)
     {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
     (h : Held m fiber token request) (commands : List NCmd) (quiet : QuietQueue fiber token commands) :
@@ -199,18 +201,11 @@ theorem held_driveState (p : NativeEff) (table : RowTable) (fuel : Nat)
     Held (driveState (interpOf p table) fuel m commands).1 fiber token request ∧
       QuietQueue fiber token (driveState (interpOf p table) fuel m commands).2 := by
   letI := evaluatorFor p table
-  induction fuel generalizing m commands with
-  | zero => exact ⟨h, quiet⟩
-  | succ fuel ih =>
-    cases commands with
-    | nil => exact ⟨h, quiet⟩
-    | cons c rest =>
-      simp only [driveState]
-      split
-      · exact ⟨h, quiet⟩
-      · have step := held_driveStep p table h c rest (quiet c (List.mem_cons_self ..))
-          (fun c hc => quiet c (List.mem_cons_of_mem _ hc))
-        exact ih step.1 _ step.2
+  exact Effect4.Machine.Lift.driveState_lift_unit (interpOf p table)
+    (fun m cmds => Held m fiber token request ∧ QuietQueue fiber token cmds)
+    (fun _ c rest _ hi => held_driveStep p table hi.1 c rest (hi.2 c (List.mem_cons_self ..))
+      (fun c' hc => hi.2 c' (List.mem_cons_of_mem _ hc)))
+    fuel m commands ⟨h, quiet⟩
 
 theorem quiet_taskCmds {fiber : FiberId} {token : Nat} (task : NTask)
     (safe : (fiber, token) ∉ taskKeys task) : QuietQueue fiber token (taskCmds task) := by
@@ -469,18 +464,19 @@ theorem noCancel_iff (d : NativeDecision) :
     NoCancel d ↔ ∀ who annotations target, d ≠ .interruptFrom who annotations target := by
   cases d <;> simp [NoCancel]
 
-/-- Prefix entries retain their independent command budgets and raw decisions. -/
+/-- Prefix entries retain their independent command budgets and raw decisions: the history
+lift (`Machine.Lift.foldl_lift`) applied to `held_steppedBy`. -/
 theorem held_executePrefix (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
     (h : Held m fiber token request) (history : Prefix)
     (safe : ∀ entry ∈ history, NoCancel entry.2 ∧ NotKeyAnswer fiber token entry.2) :
     Held (executePrefix p table m history) fiber token request := by
-  induction history generalizing m with
-  | nil => exact h
-  | cons entry history ih =>
-    have head := safe entry (List.mem_cons_self ..)
-    exact ih (held_steppedBy p table entry.1 h entry.2 head.1 head.2)
-      (fun entry he => safe entry (List.mem_cons_of_mem _ he))
+  obtain ⟨_, _, held⟩ := Lift.foldl_lift Lift.unitOrder (fun _ m => Held m fiber token request)
+    (fun _ _ entry => NoCancel entry.2 ∧ NotKeyAnswer fiber token entry.2)
+    (fun m s => steppedBy p s.1 table m s.2)
+    (fun _ m entry hj ha => ⟨(), trivial, held_steppedBy p table entry.1 hj entry.2 ha.1 ha.2⟩)
+    history () m h (Lift.admitted_of_forall _ _ _ history (fun entry he _ _ _ => safe entry he) m)
+  exact held
 
 theorem requestOf_singleton_executePrefix (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {f : NFiber} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}

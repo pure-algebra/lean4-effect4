@@ -292,4 +292,4 @@ end Effect4.Program.Sched
 #obligation_proved Effect4.Program.Sched.M1PendingOrigin.forkIn_pendingOk := fun i m f y hf program options scope site a ha => @Effect4.Program.Sched.forkIn_pendingOk i m f y hf program options scope a ha site
 #obligation_proved Effect4.Program.Sched.M1PendingOrigin.forkScoped_pendingOk := fun i m f y hf program options site a ha => @Effect4.Program.Sched.forkScoped_pendingOk i m f y hf program options a ha site
 
-#typed_state_obligations Effect4.Program.Sched.M1PendingOrigin ceiling 3 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Program.Sched.M1PendingOrigin ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

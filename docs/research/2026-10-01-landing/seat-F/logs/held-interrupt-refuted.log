@@ -1,0 +1,4 @@
+'SeatF.HeldInterrupt.held_parked' depends on axioms: [propext, Quot.sound]
+'SeatF.HeldInterrupt.edit_unparks' depends on axioms: [propext, Quot.sound]
+'SeatF.HeldInterrupt.interrupt_field_false' depends on axioms: [propext, Quot.sound]
+## exit=0 seconds=1 cmd=lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-landing/seat-F/probes/HeldInterruptRefuted.lean

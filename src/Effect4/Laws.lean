@@ -143,5 +143,5 @@ separate build targets. `import Effect4` never reaches this root.
 
 #typed_state_obligations Effect4.Machine.M1.DeferredWanted ceiling 0
   using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel, Effect4.Fibers]) (add safe forward [Effect4.Machine.Refinement.factors_trans])
-#typed_state_obligations Effect4.Machine.M1Clock ceiling 1
+#typed_state_obligations Effect4.Machine.M1Clock ceiling 0
   using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel, Effect4.Fibers])

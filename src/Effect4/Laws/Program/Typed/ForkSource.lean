@@ -113,4 +113,4 @@ end Effect4.Program.Typed.M2ForkSourceWanted
 #obligation_proved Effect4.Program.Typed.M2ForkSourceWanted.source_fork_extension := @Effect4.Program.Typed.M2ForkSourceWanted.fork_source_extension
 
 #obligation_proved Effect4.Program.Typed.M2ForkSourceWanted.source_fork_originOf := @Effect4.Program.Typed.M2ForkSourceWanted.fork_source_originOf
-#typed_state_obligations Effect4.Program.Typed.M2ForkSourceWanted ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])
+#typed_state_obligations Effect4.Program.Typed.M2ForkSourceWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])
