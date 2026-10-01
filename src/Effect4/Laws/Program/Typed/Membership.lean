@@ -78,9 +78,10 @@ def FlatFits (w : World) (v : Val) : Ty → Prop
     match v with | .handle kind index => HandleFits w kind index target | _ => False
   | _ => False
 
-/-- A context's services fit their keys' static types. -/
+/-- A context's services fit their keys' static types, read off the world's static service
+table (shape A, decisions row 112). -/
 def ServicesFit (w : World) (services : Env.Ctx) : Prop :=
-  ∀ key sv sty, services.getV key = some sv → nativeServiceTy key = some sty →
+  ∀ key sv sty, services.getV key = some sv → w.serviceTy key = some sty →
     FlatFits w sv sty
 
 /-- Every typed failure of a cause has an image satisfying `member`; defects and interruptions
@@ -726,17 +727,22 @@ theorem flatFits_map {v : Val} {t : Ty} (h : FlatFits w1 v t) : FlatFits w2 v t 
 
 include halloc in
 omit hΓ in
-theorem servicesFit_map {services : Env.Ctx} (h : ServicesFit w1 services) :
-    ServicesFit w2 services :=
-  fun key sv sty hget hty => flatFits_map hPi hRho halloc (h key sv sty hget hty)
+/-- A context's services fit in a later world when every carrier the later world reads was the
+earlier world's (the lookup agreement of decisions row 112; the world order gives it as an
+equality of the two tables). -/
+theorem servicesFit_map {services : Env.Ctx}
+    (hsvc : ∀ key sty, w2.serviceTy key = some sty → w1.serviceTy key = some sty)
+    (h : ServicesFit w1 services) : ServicesFit w2 services :=
+  fun key sv sty hget hty => flatFits_map hPi hRho halloc (h key sv sty hget (hsvc key sty hty))
 
 end Map
 
 /-- Membership moves to a world whose declaration tables and allocation spellings extend
-the old ones. -/
+the old ones and whose service table agrees on every key it types. -/
 theorem fits_map {w1 w2 : World}
     (hΓ : TableExtends w1.Γ w2.Γ) (hPi : TableExtends w1.«Π» w2.«Π») (hRho : TableExtends w1.Ρ w2.Ρ)
-    (halloc : Extends w1.state.externals.allocated w2.state.externals.allocated) :
+    (halloc : Extends w1.state.externals.allocated w2.state.externals.allocated)
+    (hsvc : ∀ key sty, w2.serviceTy key = some sty → w1.serviceTy key = some sty) :
     ∀ (ty : Ty) (v : Val), Fits w1 v ty → Fits w2 v ty := by
   intro ty
   induction ty with
@@ -753,7 +759,7 @@ theorem fits_map {w1 w2 : World}
     · exact handleFits_map hPi hRho halloc h
     · obtain ⟨ht, ctx, hctx, hs, hl⟩ := h
       simp only [Fits]
-      exact ⟨ht, ctx, hctx, servicesFit_map hPi hRho halloc hs, live_map hΓ hPi hRho hl⟩
+      exact ⟨ht, ctx, hctx, servicesFit_map hPi hRho halloc hsvc hs, live_map hΓ hPi hRho hl⟩
   | option a ih =>
     intro v h
     simp only [Fits] at h
@@ -833,10 +839,15 @@ theorem fits_map {w1 w2 : World}
   | var _ => intro v h; exact h.elim
   | unknown => intro v h; exact live_map hΓ hPi hRho h
 
+/-- The world order fixes the service table, so a later world's lookups are the earlier one's. -/
+theorem serviceTy_of_le {w w' : World} (ordered : w.le w') :
+    ∀ key sty, w'.serviceTy key = some sty → w.serviceTy key = some sty :=
+  fun _ _ h => le_serviceTy ordered ▸ h
+
 /-- Membership is monotone under the host world order. -/
 theorem fits_mono {w w' : World} (ordered : w.leHost w') {ty : Ty} {v : Val} (h : Fits w v ty) :
     Fits w' v ty :=
-  fits_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 ty v h
+  fits_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 (serviceTy_of_le ordered.1) ty v h
 
 /-! ## Subsumption: membership respects the checker's subtyping -/
 

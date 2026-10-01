@@ -109,6 +109,7 @@ theorem natKey_ty : nativeServiceTy natKey = some .nat := by decide +kernel
 /-- The input must actually decode as a context; the old implication
 was vacuous at malformed values and admitted badName. -/
 theorem lookup_typed (w : W) (ty : EffTy) (answer : ty.answer = .nat) (v : Val)
+    (hkey : w.serviceTy natKey = some .nat)
     (isContext : ∃ ctx, Val.context? v = some ctx)
     (typed : ∀ ctx, Val.context? v = some ctx → ServicesFit w ctx.services) :
     TypedProg readService w ty (serviceLookupR natKey v) := by
@@ -116,7 +117,7 @@ theorem lookup_typed (w : W) (ty : EffTy) (answer : ty.answer = .nat) (v : Val)
   simp only [serviceLookupR, hctx]
   split
   · rename_i sv hget
-    have hfit := flatFits_fits (typed ctx hctx natKey sv .nat hget natKey_ty)
+    have hfit := flatFits_fits (typed ctx hctx natKey sv .nat hget hkey)
     refine TypedProg.pure (strongExit_success w ty sv ?_)
     rw [answer]
     exact hfit
@@ -137,19 +138,20 @@ theorem context_of_fits (w : W) (v : Val) (typed : Fits w v (.handle Ty.contextT
   · obtain ⟨_, ctx, hctx, services, _⟩ := typed
     exact ⟨ctx, hctx, services⟩
 
-theorem service_admitted (w : W) (ty : EffTy) (answer : ty.answer = .nat) :
+theorem service_admitted (w : W) (ty : EffTy) (answer : ty.answer = .nat)
+    (hkey : w.serviceTy natKey = some .nat) :
     TypedProg readService w ty (denoteR readService readService (rootPoint 20)) := by
   refine TypedProg.guard (EffTy.pure (.handle Ty.contextTarget)) ?_ ?_ ?_
   · refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) (Ty.handle Ty.contextTarget) rfl ?_
     intro w' _ ans hpost
     exact TypedProg.unguard (strongExit_success w' _ ans hpost)
-  · intro w' _ ex hpost
+  · intro w' hle ex hpost
     cases ex with
     | failure c => exact Bool.noConfusion hpost.1
     | success v =>
       obtain ⟨ctx, hctx, services⟩ := context_of_fits w' v hpost.2.1
-      apply lookup_typed w' ty answer v ⟨ctx, hctx⟩
+      apply lookup_typed w' ty answer v (by rw [le_serviceTy hle.1]; exact hkey) ⟨ctx, hctx⟩
       intro ctx' hctx'
       rw [hctx] at hctx'
       cases hctx'
@@ -158,6 +160,12 @@ theorem service_admitted (w : W) (ty : EffTy) (answer : ty.answer = .nat) :
     cases ex with
     | success v => exact Bool.noConfusion miss
     | failure c => exact strongExit_of_clean w' ty c (cleanExit_of_never_fits w' _ c rfl hex.1) hex.2
+
+/-- At a world whose service table is the built-in one (every world's default; shape A), the
+key's carrier is the type code's. -/
+theorem service_admitted_initial (rootTy ty : EffTy) (answer : ty.answer = .nat) :
+    TypedProg readService (initialWorld rootTy) ty (denoteR readService readService (rootPoint 20)) :=
+  service_admitted _ ty answer natKey_ty
 
 /-- A memo hit's await is typed at the layer's context: the lookup certifies the layer's own
 checked error type, and the hit's deferred is declared at the context handle and that error. -/
@@ -196,6 +204,7 @@ theorem memoAwait_typed (w : W) (m : MemoMapId) :
 #print axioms race_admitted
 #print axioms generator_admitted
 #print axioms service_admitted
+#print axioms service_admitted_initial
 #print axioms lookup_typed
 #print axioms memoAwait_typed
 end Test.Program.LoadedAdmission

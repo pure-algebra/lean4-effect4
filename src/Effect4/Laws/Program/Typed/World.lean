@@ -55,6 +55,11 @@ structure World extends Effect4.Machine.World where
   Ρ : HeapTableTy
   /-- Ghost resume types, indexed by fiber and its fresh token. -/
   Θ : FiberId → Nat → Option EffTy
+  /-- The static service table (shape A, decisions row 112): the carrier each service key is
+  typed at, read by `ServicesFit`. The world order fixes it (`World.le`), and the typed state
+  ties it to the source's signature. The default is the built-in table, the one every world
+  read before the field existed. -/
+  serviceTy : ServiceKey → Option Ty := nativeServiceTy
 
 /-- Existing keys retain their declarations; unused keys are unconstrained. -/
 def TableExtends {K A : Type} (old newer : K → Option A) : Prop :=
@@ -133,7 +138,8 @@ def World.le (w newer : World) : Prop :=
   Effect4.Machine.World.le w.toWorld newer.toWorld ∧
   TableExtends w.Γ newer.Γ ∧ TableExtends w.«Π» newer.«Π» ∧
   TableExtends w.Ρ newer.Ρ ∧ CellCompatible w newer ∧
-  ∀ id, TableExtends (w.Θ id) (newer.Θ id)
+  (∀ id, TableExtends (w.Θ id) (newer.Θ id)) ∧
+  newer.serviceTy = w.serviceTy
 
 /-- Ghost updates used by the four allocation contracts. -/
 def World.addFiber (w : World) (id : FiberId) (ty : EffTy) : World :=
@@ -394,7 +400,7 @@ theorem insert_other {K A : Type} [DecidableEq K] (table : K → Option A) (key 
 
 theorem order_refl (w : World) : w.le w :=
   ⟨Effect4.Machine.World.le_refl _, table_refl _, table_refl _, table_refl _,
-    ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _⟩
+    ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _, rfl⟩
 
 theorem order_trans (a b c : World) : a.le b → b.le c → a.le c :=
   fun hab hbc =>
@@ -404,7 +410,12 @@ theorem order_trans (a b c : World) : a.le b → b.le c → a.le c :=
      table_trans _ _ _ hab.2.2.2.1 hbc.2.2.2.1,
      ⟨fun key ty h => hbc.2.2.2.2.1.1 key ty (hab.2.2.2.2.1.1 key ty h),
       fun key types h => hbc.2.2.2.2.1.2 key types (hab.2.2.2.2.1.2 key types h)⟩,
-     fun id => table_trans _ _ _ (hab.2.2.2.2.2 id) (hbc.2.2.2.2.2 id)⟩
+     fun id => table_trans _ _ _ (hab.2.2.2.2.2.1 id) (hbc.2.2.2.2.2.1 id),
+     hbc.2.2.2.2.2.2.trans hab.2.2.2.2.2.2⟩
+
+/-- The world order fixes the static service table (shape A, decisions row 112). -/
+theorem le_serviceTy {w newer : World} (ordered : w.le newer) : newer.serviceTy = w.serviceTy :=
+  ordered.2.2.2.2.2.2
 
 theorem protocol_order : ∃ order : Effect4.Laws.Effects.WorldOrder World, order.le = World.le :=
   ⟨⟨World.le, order_refl, fun h₁ h₂ => order_trans _ _ _ h₁ h₂⟩, rfl⟩
@@ -413,7 +424,7 @@ theorem park_extension (w : World) (id : FiberId) (token : Nat) (ty : EffTy)
     (fresh : w.Θ id token = none) :
     w.le (w.addToken id token ty) ∧ (w.addToken id token ty).Θ id token = some ty := by
   refine ⟨⟨Effect4.Machine.World.le_refl _, table_refl _, table_refl _, table_refl _,
-    ⟨fun _ _ h => h, fun _ _ h => h⟩, ?_⟩, ?_⟩
+    ⟨fun _ _ h => h, fun _ _ h => h⟩, ?_, rfl⟩, ?_⟩
   · intro target
     by_cases same : target = id
     · subst target
@@ -526,7 +537,7 @@ theorem fork_extension (w : World) (id : FiberId) (ty : EffTy) (fresh : w.Γ id 
       (PromiseCoverage w → PromiseCoverage (w.addFiber id ty)) :=
   ⟨⟨⟨fun _ h => List.mem_append_left _ h, Stores.le_refl _⟩,
      insert_extends _ _ _ fresh, table_refl _, table_refl _,
-     ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _⟩,
+     ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _, rfl⟩,
    insert_here _ _ _, fun h => h, fun h => h, fun h => h, fun h => h⟩
 
 theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key : RefKey)
@@ -546,7 +557,7 @@ theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (
   have hΡ : ∀ q, (w.addRef { w.state with refs := w.state.refs ++ [value] } ⟨w.state.refs.length⟩ ty).Ρ q =
       tableInsert w.Ρ ⟨w.state.refs.length⟩ ty q := fun _ => rfl
   refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, table_refl _, insert_extends _ _ _ fresh,
-    ⟨?_, ?_⟩, fun _ => table_refl _⟩,
+    ⟨?_, ?_⟩, fun _ => table_refl _, rfl⟩,
     ?_, ?_, ?_, ?_, ?_⟩
   · intro key' ty' hty'
     obtain ⟨hk, hv⟩ := hty'
@@ -634,7 +645,7 @@ theorem promise_extension (w : World) (types : Ty × Ty) (state : Stores)
     rw [hstate, hext]
     exact h
   refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, insert_extends _ _ _ fresh, table_refl _,
-    ⟨?_, ?_⟩, fun _ => table_refl _⟩,
+    ⟨?_, ?_⟩, fun _ => table_refl _, rfl⟩,
     ?_, ?_, ?_, ?_, ?_⟩
   · intro key' ty' hty'
     obtain ⟨hk, hv⟩ := hty'

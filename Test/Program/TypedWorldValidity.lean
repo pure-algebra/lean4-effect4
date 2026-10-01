@@ -17,7 +17,7 @@ def emptyTables (s : Stores) : TWorld :=
 /-- Without prior declarations, cell compatibility imposes no constraint on new contents. -/
 theorem emptyTables_order (s t : Stores) (h : s.le t) :
     (emptyTables s).le (emptyTables t) := by
-  refine ⟨⟨?_, h⟩, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_⟩
+  refine ⟨⟨?_, h⟩, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, rfl⟩
   · intro id hid
     cases hid
   · intro key value hlookup

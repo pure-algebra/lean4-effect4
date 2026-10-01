@@ -291,7 +291,7 @@ theorem wrong_target_type :
 theorem token_replacement_refused :
     ¬ declared.le (declared.addToken ⟨4⟩ 7 (EffTy.pure .bool)) := by
   intro h
-  have bad := h.2.2.2.2.2 ⟨4⟩ 7 (EffTy.pure .nat) rfl
+  have bad := h.2.2.2.2.2.1 ⟨4⟩ 7 (EffTy.pure .nat) rfl
   change some (EffTy.pure .bool) = some (EffTy.pure .nat) at bad
   cases bad
 

@@ -854,7 +854,8 @@ theorem refProg_untypable (w : W) (hRho : w.Ρ ⟨0⟩ = none) (hrefs : w.state.
   obtain ⟨cert, _, next⟩ := Reviewed.TypedProg.store_inv h
   have hle : w.leHost (w.addRef w.state ⟨0⟩ cert) := by
     refine ⟨⟨⟨fun _ h => h, Stores.le_refl _⟩, table_refl _, table_refl _,
-      insert_extends _ _ _ hRho, ⟨fun key ty h => ?_, fun key types h => ?_⟩, fun _ => table_refl _⟩,
+      insert_extends _ _ _ hRho, ⟨fun key ty h => ?_, fun key types h => ?_⟩, fun _ => table_refl _,
+      rfl⟩,
       fun _ _ h => h⟩
     · exact ⟨insert_extends _ _ _ hRho key ty h.1, fun value hv => h.2 value hv⟩
     · exact ⟨h.1, fun cell hc comp hcomp =>
