@@ -10,6 +10,8 @@ import Effect4.Api.Runner
   the phases concatenated. Journals under concatenation act on runners, which is what lets a
   holder stop at any row and another instance take the rest.
 * `replay_nil`, `replay_cons`: the unfolding.
+* `behaviour_unique`: `behaviour` is the only map that unfolds along `step`, the uniqueness
+  half of finality for the runner's Mealy machine.
 -/
 
 set_option autoImplicit false
@@ -105,8 +107,9 @@ Three structures follow from it, and nothing else about a holder needs proving.
 2. **`replay` is the only such map.** Journals are the free monoid on commands, so a
    homomorphism is fixed by what it does on single rows: `replay_unique`.
 3. **Behaviour.** `behaviour p` is what a runner can be observed to do, the phases of every
-   journal. It unfolds along `step` (`behaviour_cons`), which makes it the map into the final
-   Mealy machine; two instances that agree on it are the same runner to every holder.
+   journal. It unfolds along `step` (`behaviour_cons`) and is the only map that does
+   (`behaviour_unique`), which makes it the map into the final Mealy machine; two instances
+   that agree on it are the same runner to every holder.
 
 One law joins the refusal to the algebra: a refused row is the unit. It can be dropped from a
 journal without changing the runner reached or any later phase (`replay_skip_refused`,
@@ -173,6 +176,20 @@ theorem behaviour_nil (p : Runner) : behaviour p [] = [] := rfl
 /-- Behaviour unfolds along `step`: the first phase, then the behaviour of the next runner. -/
 theorem behaviour_cons (p : Runner) (c : Command) (rest : List Command) :
     behaviour p (c :: rest) = (step p c).2 :: behaviour (step p c).1 rest := rfl
+
+/-- **`behaviour` is the only map that unfolds along `step`**: any map satisfying
+`behaviour_nil` and `behaviour_cons` is `behaviour`, the uniqueness half of finality for the
+runner's Mealy machine (formal pass, algebra note A7, probe `P3TapeAction.lean`). It concerns
+the session runner, row 27 of the coherence census (`docs/core/coherence-principle.md`, §2:
+`replay`/`replayPlay`, `behaviour`), not that census's row 38: run observations still have no
+finality law (equal observations, equal runs), and this theorem does not supply one. Decisions
+row 38 (`explain` onto the fold) is unrelated. -/
+theorem behaviour_unique (h : Runner → List Command → List HostSession.Phase)
+    (hnil : ∀ p, h p [] = [])
+    (hcons : ∀ p c rest, h p (c :: rest) = (step p c).2 :: h (step p c).1 rest) :
+    ∀ (journal : List Command) (p : Runner), h p journal = behaviour p journal
+  | [], p => by rw [hnil, behaviour_nil]
+  | c :: rest, p => by rw [hcons, behaviour_cons, behaviour_unique h hnil hcons rest]
 
 /-- A refused row is the unit of the action: dropping it reaches the same runner. -/
 theorem replay_skip_refused (p : Runner) (c : Command) (rest : List Command)

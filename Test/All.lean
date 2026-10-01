@@ -54,6 +54,7 @@ import Test.Counterexamples.Machine.Runtime.LayerEnvironment
 import Test.Machine.Runtime.StoresLawsContract
 import Test.Machine.Runtime.CompletionDataContract
 import Test.Machine.Runtime.ApproximationContract
+import Test.Machine.Runtime.TapeAction
 import Test.Machine.Runtime.BehaviourContract
 import Test.Machine.Runtime.CompletionContract
 import Test.Machine.Runtime.HandlesContract
@@ -93,6 +94,7 @@ import Test.Program.HostSpecContract
 import Test.Program.HostBoundaryContract
 import Test.Api.HostSessionContract
 import Test.Api.RunnerContract
+import Test.Api.RunnerFinality
 import Test.Api.SupervisionContract
 import Test.Api.KeyedHostContract
 import Test.Run.RunContract
