@@ -140,6 +140,29 @@ theorem mem_canon {α : Type} {x : String × α} {fs : List (String × α)} (h :
   · exact h
   · exact absurd h List.not_mem_nil
 
+theorem insertField_ne_nil {α : Type} (p : String × α) (l : List (String × α)) :
+    insertField p l ≠ [] := by
+  cases l with
+  | nil => exact List.cons_ne_nil p []
+  | cons q qs =>
+    unfold insertField
+    split
+    · exact List.cons_ne_nil _ _
+    · split
+      · exact List.cons_ne_nil _ _
+      · exact List.cons_ne_nil _ _
+
+theorem foldl_insertField_ne_nil {α : Type} :
+    ∀ (fs acc : List (String × α)), acc ≠ [] → fs.foldl (fun acc p => insertField p acc) acc ≠ []
+  | [], _, h => h
+  | f :: fs, acc, _ => foldl_insertField_ne_nil fs (insertField f acc) (insertField_ne_nil f acc)
+
+/-- Only the empty record has no canonical field. -/
+theorem canon_eq_nil {α : Type} {fs : List (String × α)} (h : canon fs = []) : fs = [] := by
+  cases fs with
+  | nil => rfl
+  | cons f fs => exact absurd h (foldl_insertField_ne_nil fs (insertField f []) (insertField_ne_nil f []))
+
 /-- A field's type is smaller than its record: the measure `sub`'s record arm decreases by. -/
 theorem sizeOf_snd_lt_of_mem {x : String × Ty} {fs : List (String × Ty)} (h : x ∈ fs) :
     sizeOf x.2 < sizeOf fs := by
@@ -288,6 +311,7 @@ end Ty
 end ProbeQ
 
 #print axioms ProbeQ.Ty.mem_canon
+#print axioms ProbeQ.Ty.canon_eq_nil
 #print axioms ProbeQ.Ty.sizeOf_lt_of_mem_zip_canon
 #print axioms ProbeQ.Ty.members_isMember
 #print axioms ProbeQ.Ty.members_atom

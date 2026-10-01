@@ -1,0 +1,35 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M6144 -R docs/research/2026-10-01-type-language-probe/Q/probes docs/research/2026-10-01-type-language-probe/Q/probes/Q2/ViewLaws.lean
+# started 2026-10-01T19:15:59Z (LEAN_NUM_THREADS=1)
+sub_eq_args : ∀ (a b : Ty),
+  a.isMember = true →
+    b.isMember = true → a.litRule b = false → a.topRule b = false → a.sub b = (a.sameHead b && argsBelow sub a b)
+sub_args_record : ∀ (fs gs : List (String × Ty)),
+  (record fs).sameHead (record gs) = true → (record fs).sub (record gs) = argsBelow sub (record fs) (record gs)
+@eq_of_sameHead : ∀ {a b : Ty},
+  a.sameHead b = true →
+    List.map Prod.snd a.args = List.map Prod.snd b.args → a.headCanon = true → b.headCanon = true → a = b
+@argsBelow_antisymm : ∀ {r : Ty → Ty → Bool} {a b : Ty},
+  a.sameHead b = true →
+    (∀ (x : Ty),
+        x ∈ List.map Prod.snd a.args → ∀ (y : Ty), y ∈ List.map Prod.snd b.args → r x y = true → r y x = true → x = y) →
+      argsBelow r a b = true → argsBelow r b a = true → a.headCanon = true → b.headCanon = true → a = b
+args : Ty → List (Variance × Ty)
+'ProbeQ.Ty.sub_eq_args' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.sub_eq_false_of_not_sameHead' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.sub_eq_argsBelow_of_sameHead' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.sub_args_record' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.eq_of_sameHead' depends on axioms: [propext]
+'ProbeQ.Ty.eq_of_sameHead_nil' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.argsBelow_antisymm' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.argsBelow_trans' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.argsBelow_refl' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.args_congr' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.sameHead_refl' depends on axioms: [propext]
+'ProbeQ.Ty.sameHead_symm' depends on axioms: [propext]
+'ProbeQ.Ty.sameHead_trans' depends on axioms: [propext]
+'ProbeQ.Ty.sizeOf_args' depends on axioms: [propext, Quot.sound]
+'ProbeQ.Ty.headCanon_of_args_nil' depends on axioms: [propext]
+'ProbeQ.Ty.eq_of_fields_record' depends on axioms: [propext]
+'eq_of_sameHead_needs_canon' depends on axioms: [propext]
+# exit=0 seconds=1

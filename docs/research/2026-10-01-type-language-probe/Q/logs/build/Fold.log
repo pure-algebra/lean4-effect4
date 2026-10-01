@@ -1,6 +1,6 @@
 $ cd /Users/pooks/Dev/lean4-effect4-probe-Q
 $ docs/research/2026-10-01-type-language-probe/Q/bin/olean.sh docs/research/2026-10-01-type-language-probe/Q/generated docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQ/Fold.lean
-# started 2026-10-01T18:53:40Z (LEAN_NUM_THREADS=1)
+# started 2026-10-01T19:05:11Z (LEAN_NUM_THREADS=1)
 'ProbeQ.cata_pos_prod_string_ty_eq' depends on axioms: [propext]
 'ProbeQ.cata_pos_list_prod_string_ty_eq' depends on axioms: [propext]
 'ProbeQ.cata_ty_never' does not depend on any axioms

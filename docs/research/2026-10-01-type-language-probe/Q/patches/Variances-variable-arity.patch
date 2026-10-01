@@ -1,0 +1,41 @@
+--- a/tools/Tools/Variances.lean
++++ b/tools/Tools/Variances.lean
+@@ -361,6 +361,10 @@
+ inductive Source where
+   | rc112 («module» : String) (name : String)
+   | printer (spelling : String) (variance : List Variance) (note : String)
++  /-- A head of variable arity (`record (fields : List (String × Ty))`): one variance read at
++  every child, whatever their number. Its row carries `"arity": "each"`, so the view generator
++  applies the one word to every field instead of checking a fixed count. -/
++  | printerEach (spelling : String) (variance : Variance) (note : String)
+ 
+ /-- The one hand list: every parametrised `Ty` constructor and what it spells. A head with no
+ entry is refused (`headRows`), so a new parametrised constructor must be given its declaration
+@@ -385,7 +389,14 @@
+        distribution on the left and choice on the right, so `Ty.sameHead` answers `false` on it \
+        and the arm never reaches the variance-wise comparison."),
+     ("refOf", .rc112 "Ref" "Ref"),
+-    ("deferredOf", .rc112 "Deferred" "Deferred") ]
++    ("deferredOf", .rc112 "Deferred" "Deferred"),
++    ("record", .printerEach "{ readonly a: A; … }" .co
++      "TypeScript's own object type literal, every property `readonly` (row 119's printed form); \
++       a readonly property is compared covariantly. Variable arity: the one word is every field's."),
++    ("map", .printer "ReadonlyMap<K, V>" [.inv, .co]
++      "Row 125 as seat P's brief states it: the key exact, the value covariant. Not read off \
++       rc.112: `HashMap` declares `<out Key, out Value>` (HashMap.ts:50), which would make the key \
++       covariant; the printed spelling decides which (seat R).") ]
+ 
+ /-! ## The red controls -/
+ 
+@@ -473,6 +484,11 @@
+         [("head", Json.str head), ("source", Json.str "printer"),
+          ("spelling", Json.str spelling), ("note", Json.str note),
+          ("variance", Json.arr (vs.map (fun v => Json.str v.text)).toArray)]]
++    | .printerEach spelling v note =>
++      out := out ++ [Json.mkObj
++        [("head", Json.str head), ("source", Json.str "printer"),
++         ("spelling", Json.str spelling), ("note", Json.str note), ("arity", Json.str "each"),
++         ("variance", Json.arr #[Json.str v.text])]]
+   return .ok out
+ 
+ def read (readModule : String → IO String) : IO Read := do
