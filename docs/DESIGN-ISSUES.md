@@ -52,18 +52,19 @@ delivery receipts, not a **ruled** label, establish implementation completion.
 
 The category column names a layer of `docs/DESIGN-MAP.md`; the Codex seat's independent
 classification cuts across the layers by the *kind of obligation* a question carries, and a
-single change usually carries several (a host row touches K2's type, K3's index, K4's
-spelling, K1's transition and K5's evidence). Both cuts are kept: the layer for orientation
-and file ownership, the kind for reasoning about change.
+single change usually carries several (a host row touches O2's type, O3's index, O4's
+spelling, O1's transition and O5's evidence). Both cuts are kept: the layer for orientation
+and file ownership, the kind for reasoning about change. The kinds are labelled O1–O6 (they were
+K1–K6 until 2026-10-01), so that K1–K5 means only the arrow kinds of `docs/core/system-map.md` §5.
 
 | kind | the question it owns | rows whose primary home it is |
 | --- | --- | --- |
-| K1 meaning and observations | which executions are allowed, under which environment and decisions, and what counts as the same result | DI-04, DI-07, DI-10, DI-11, DI-17, DI-23, DI-31, DI-57, DI-58, DI-68, DI-69 |
-| K2 static semantics and admission | which programs and values are admitted, and what their typing promises | DI-00, DI-09, DI-12, DI-15, DI-20, DI-26, DI-28, DI-35, DI-38, DI-53, DI-54, DI-61, DI-62, DI-63, DI-67 |
-| K3 representation, identity and evolution | which distinctions are content, which are implementation choices, which old objects keep their identity | DI-01, DI-02, DI-03, DI-05, DI-06, DI-14, DI-22, DI-25, DI-41, DI-43, DI-46, DI-47, DI-56, DI-64, DI-71 |
-| K4 language interfaces and translation | which source forms can be printed, read or lifted, and what survives each translation | DI-19, DI-21, DI-24, DI-27, DI-29, DI-37, DI-39, DI-48, DI-49, DI-55, DI-59 |
-| K5 reproducible production and evidence | whether outputs come from the stated inputs, and what claim an actual check established | DI-13, DI-32, DI-33, DI-34, DI-40, DI-42, DI-44, DI-45, DI-52, DI-60 |
-| K6 modularity and decision ownership | which interface hides a change, and where the decision lives | DI-08, DI-16, DI-18, DI-30, DI-36, DI-50, DI-51, DI-70 |
+| O1 meaning and observations | which executions are allowed, under which environment and decisions, and what counts as the same result | DI-04, DI-07, DI-10, DI-11, DI-17, DI-23, DI-31, DI-57, DI-58, DI-68, DI-69 |
+| O2 static semantics and admission | which programs and values are admitted, and what their typing promises | DI-00, DI-09, DI-12, DI-15, DI-20, DI-26, DI-28, DI-35, DI-38, DI-53, DI-54, DI-61, DI-62, DI-63, DI-67 |
+| O3 representation, identity and evolution | which distinctions are content, which are implementation choices, which old objects keep their identity | DI-01, DI-02, DI-03, DI-05, DI-06, DI-14, DI-22, DI-25, DI-41, DI-43, DI-46, DI-47, DI-56, DI-64, DI-71 |
+| O4 language interfaces and translation | which source forms can be printed, read or lifted, and what survives each translation | DI-19, DI-21, DI-24, DI-27, DI-29, DI-37, DI-39, DI-48, DI-49, DI-55, DI-59 |
+| O5 reproducible production and evidence | whether outputs come from the stated inputs, and what claim an actual check established | DI-13, DI-32, DI-33, DI-34, DI-40, DI-42, DI-44, DI-45, DI-52, DI-60 |
+| O6 modularity and decision ownership | which interface hides a change, and where the decision lives | DI-08, DI-16, DI-18, DI-30, DI-36, DI-50, DI-51, DI-70 |
 
 ## The register
 
