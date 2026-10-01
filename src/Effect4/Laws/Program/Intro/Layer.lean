@@ -267,14 +267,15 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
         (fun q => denoteR root b q) (fun q => inlineYield b q) i p)) := by
   have hw : ∀ j, (p.child j).weight < n := fun j =>
     Nat.lt_of_lt_of_le (weight_child_lt p j hpos) hp
-  have hl := at_child_of h 0
+  have hl : Node.at_ (.eff root) p.layerBuild.path = some (.layer l) :=
+    at_child_of h 0
   have hb := at_child_of h 1
   have hbuild : ∀ (m : MemoMapId) (scope : Nat),
-      CodeMeans root (resolveLayer root (p.child 0) m scope)
-        (denoteLayer root l (p.child 0) m scope) := by
+      CodeMeans root (resolveLayer root p.layerBuild m scope)
+        (denoteLayer root l p.layerBuild m scope) := by
     intro m scope
     rw [resolveLayer_of_at root hl]
-    exact layer_intro root n hres l (p.child 0) m scope (hw 0) hl
+    exact layer_intro root n hres l p.layerBuild m scope (hw 0) hl
   unfold provideLayerR
   rw [prepareR_guardR_bind, guardR_bind]
   refine CodeMeans.onSuccess _ _ _ (prepareR completed (storeR (.scopeMake .sequential))) _
@@ -305,7 +306,7 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
             (CodeMeans.actGetContext _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
           intro completed'' w
           show CodeMeans root
-            (Program.contAOf root (.buildWithScopeFromContext (p.child 0) scope) w) _
+            (Program.contAOf root (.buildWithScopeFromContext p.layerBuild scope) w) _
           rw [contAOf_buildWithScopeFromContext]
           unfold buildWithScopeK
           simp only [seqR]
@@ -317,7 +318,7 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
               (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
             intro completed''' u
             simp only [seqR]
-            exact withMemoMapThen_intro root (p.child 0) scope _ (fun m => hbuild m scope)
+            exact withMemoMapThen_intro root p.layerBuild scope _ (fun m => hbuild m scope)
               completed''' u
           | none => exact codeMeans_badShape root
         · -- `local`: a private map, then the build
@@ -327,7 +328,7 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
             (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
           intro completed'' w
           simp only [seqR]
-          exact withMemoMapThen_intro root (p.child 0) scope _ (fun m => hbuild m scope)
+          exact withMemoMapThen_intro root p.layerBuild scope _ (fun m => hbuild m scope)
             completed'' w
       · intro completed'' built
         show CodeMeans root (Program.contAOf root (.provideLayerBody p) built) _

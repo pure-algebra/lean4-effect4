@@ -166,7 +166,7 @@ theorem currentMemoMapOf_keys {c : Env.Ctx} {m : MemoMapId} (h : currentMemoMapO
 
 theorem provideLayerWithK_keys (root : NativeEff) (p : Point) (scope : Nat) :
     nativeKeys (provideLayerWithK root p scope) ⊆ Handle.scope scope :: p.keys := by
-  unfold provideLayerWithK
+  unfold provideLayerWithK Point.layerBuild
   split
   · split <;> sub_tac
   · exact List.nil_subset _

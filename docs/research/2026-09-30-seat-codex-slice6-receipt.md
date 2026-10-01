@@ -7,7 +7,7 @@ integration-ready: the old fiber field and its comparison runner are removed tog
 Lean and OCaml paths read/write the machine ledger, generation is current, and the required
 OCaml and repository checks pass. The owner authorized the additional prelude/test readers,
 two closure manifests, and explicit ForkRecord type root as recorded below. D's held users and diagnostic move are complete;
-F, G, H1, and H2 part one follow. H2 excludes only badName and notImplemented;
+F is also complete; G, H1, and H2 part one follow. H2 excludes only badName and notImplemented;
 missingService waits for part two. Nothing has been pushed.
 
 Authority read from the main checkout:
@@ -207,6 +207,56 @@ Verification under `after-addendum-4/D/`:
 
 D is complete. No M6 instance or reference-machine memo-ID theorem is claimed. C already ran
 the brief's one full `make check`; D uses its narrow checks and requires no generation.
+
+### F — complete, including the generated engine
+
+Base: `fa5add2092f05fa476dccdee4722fcd1f1d12d91`. The source repair closes the lexical
+environment of the layer build while retaining the enclosing program body's environment and
+the dynamic service context. Both native and reference entries use the same named point.
+The independent source review is `after-addendum-4/F/source-review.md`.
+
+The first narrow source build passed 356 jobs. The focused tests passed 350 jobs, including
+all four repaired examples, both settings of the outer-body and service-context controls,
+and their native/reference observations. All seven battery theorem prints and three helper
+prints stay at the permitted ceiling. The first prescribed generation sequence passed; its
+prerequisite build passed 728 jobs and the module/axiom gate (507 modules, 69,694 declarations).
+Derived outputs were unchanged. Only the two API ML outputs and their two allowed closure
+manifests changed.
+
+The actual OCaml build then failed in the new helper: an ordinary `[]` had been stored into
+`Point.env`, whose engine representation is `E.t`. The producer's existing carrier rewrite
+supports `take`, but literal empty construction has no carrier provenance. The failing
+producer diff and compiler output are retained as `F/first-generated.patch` and `F/dune.log`.
+
+The repair stays inside the authorized helper: `p.env.take 0` is definitionally `[]`.
+`F/probes/Slice6Probe/LayerBuildEnvironment.lean` proves the exact record-reset equality by
+`rfl`, with no axioms (`env-probe`). The real extractor emits `E.take env 0`, using the existing
+`E.t#take` operation with no carrier-to-list conversion (`env-extraction`), and that generated
+probe compiles with the existing effect4 OCaml switch (`env-ocaml`). The extractor's automatic
+probe manifest was moved unchanged beside its research output; no extra production manifest
+is retained. No external-function row, prelude change, type root, or generator change is needed.
+The original helper's three local equalities still have their exact statements and `rfl` proofs.
+
+The final `-2` series passes: the 356-job source build, 350-job focused test build, all ten
+named axiom prints, and derived → LCNF → eff → wire → cas. The generator prerequisite again
+passes all 728 jobs and the 507-module/69,694-declaration trust gate. Derived outputs remain
+unchanged. The four generated diffs are exactly `api_gen.ml`, `api_engine.ml` and their two
+allowed closure manifests; both manifests name `Point.layerBuild`. The engine helper calls
+`E.take env 0`. The prelude, extern table, roots recipe, and C's two other manifests are unchanged.
+
+`opam exec --switch=effect4 -- dune build` passes (`dune-2`). The actual engine test passes all
+**82 checks** (`engine-test-2`), printing **`layer environment Fast: failure [fail(text x)]`**
+and **`layer environment Ref: failure [fail(text x)]`**. `make check-ocaml` passes
+(`check-ocaml-2`): **472 programs, 2,960 tapes, 65,712 positions, 131,424 projection
+comparisons, zero divergences, zero profile-refused tapes, zero raised tapes**. The seam and
+current-prelude checks pass. These runtime measurements are finite; no M5/M6 proof is claimed.
+
+`E4-PROV-CE-005` is marked REPAIRED in this commit after those checks. Source/test whitespace
+checks pass. The generator emits whitespace on some blank lines; its bytes and the raw
+whitespace diagnostic are retained rather than hand-edited. The historical 37-truth/400-depth-four
+run comparison remains finite historical evidence, as addendum 4 permits; it is not a fresh
+comparison at this base. `F/final-paths.json`, `final-source.patch`, the producer diffs, and each
+command/result JSON make this landing reproducible. Nothing has been pushed.
 
 ### H2 — part-one exclusion clarified by the owner
 

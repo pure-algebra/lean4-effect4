@@ -1,0 +1,436 @@
+--- a/Test/All.lean
++++ b/Test/All.lean
+@@ -60,6 +60,7 @@
+ import Test.Machine.Runtime.LiveStackContract
+ import Test.Counterexamples.Machine.Runtime.LiveStack
+ import Test.Counterexamples.Machine.Runtime.HostHandleForgery
++import Test.Counterexamples.Machine.Runtime.LayerEnvironment
+ import Test.Machine.Runtime.StoresLawsContract
+ import Test.Machine.Runtime.CompletionDataContract
+ import Test.Machine.Runtime.ApproximationContract
+--- /dev/null
++++ b/Test/Counterexamples/Machine/Runtime/LayerEnvironment.lean
+@@ -0,0 +1,186 @@
++import Effect4.Laws.Program.RuntimeR
++
++/-!
++E4-PROV-CE-005: a layer's effect body starts in the empty lexical environment
++used by its checker. The former runtime entry inherited the enclosing binders,
++so a locally bound variable could read an unrelated outer value instead.
++
++These are finite runs at budget 200 with an empty table and no host answers.
++Concrete executions are finite `#guard` checks. The theorem below transports
++every fiber exit through the existing native/reference agreement at that boundary. The layer body is closed, while the program under the layer
++retains its enclosing binders and the layer retains its service context.
++Sources: the retained registry LayerGap/verify-Gaps probes and LayerControls.
++-/
++
++set_option autoImplicit false
++set_option maxRecDepth 8192
++
++namespace Test.Counterexamples.Runtime.LayerEnvironment
++open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
++
++abbrev E := Eff NativeOp
++
++def n (i : Nat) : Term := .lit (.nat i)
++def s (x : String) : Term := .lit (.str x)
++def key : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
++def dependency : ServiceKey := ⟨⟨5⟩, ⟨4⟩⟩
++def tape : List Api.Decision := [Api.evaluate, Api.flush]
++
++/-- The layer's own level zero is the string, despite the enclosing number. -/
++def errLeak : E :=
++  .bind (.succeed (n 9))
++    (.scoped (.provideLayer (.effect key (.bind (.succeed (s "x")) (.fail (.var 0)))) false
++      (.service key)))
++
++/-- The same layer without an enclosing binder. -/
++def errLeakControl : E :=
++  .scoped (.provideLayer (.effect key (.bind (.succeed (s "x")) (.fail (.var 0)))) false
++    (.service key))
++
++/-- The fork inside the layer is checked with its string at level zero. -/
++def forkLeak : E :=
++  .bind (.succeed (n 9))
++    (.scoped (.provideLayer
++      (.effect key (.bind (.succeed (s "x"))
++        (.bind (.withFiber (.fork (.succeed (.var 0)) ⟨true, false, .inherit⟩))
++          (.bind (.awaitFiber (.var 1) .joinEffect) (.succeed (n 1))))))
++      false (.service key)))
++
++/-- Discarding the layer result does not change its lexical environment. -/
++def discardLeak : E :=
++  .bind (.succeed (n 9))
++    (.scoped (.provideLayer (.effectDiscard (.bind (.succeed (s "x")) (.fail (.var 0)))) false
++      (.succeed (.lit .unit))))
++
++/-- Reading the layer's own number makes successor return two. -/
++def crash1 : E :=
++  .bind (.succeed (s "s"))
++    (.scoped (.provideLayer
++      (.effect key (.bind (.succeed (n 1))
++        (.succeed (.app "succ" (.cons (.var 0) .nil)))))
++      false (.service key)))
++
++/-- A closed successful layer remains a control. -/
++def valueControl : E :=
++  .scoped (.provideLayer (.effect key (.succeed (n 5))) false (.service key))
++
++/-- Resetting the layer entry must leave the program body's enclosing binder intact. -/
++def bodyRetainsOuter (localBuild : Bool) : E :=
++  .bind (.succeed (.lit (.bool false)))
++    (.provideLayer (.effect key (.succeed (n 1))) localBuild
++      (.bind (.service key) (.succeed (.var 0))))
++
++/-- The lexical reset must retain the service context needed to build the layer. -/
++def serviceContextRetained (localBuild : Bool) : E :=
++  .provideService dependency (n 5)
++    (.provideLayer (.effect key (.service dependency)) localBuild (.service key))
++
++def firstFail (ex : Option ExitV) : Option Val :=
++  ex.bind fun e => match e with
++    | .failure c => firstErrorValue? c
++    | .success _ => none
++
++/-- Fixture check: the successful payload, or every typed failure with no other reasons,
++fits the checked columns. This is not a general exit-admission judgment. -/
++def rootFits (p : E) : Option Bool :=
++  (Api.typeOf p []).bind fun ty =>
++    let r := Api.replay p 200 tape
++    r.exit.map fun ex => match ex with
++      | .success v => Val.hasTy v ty.answer r.machine.state.externals.allocated
++      | .failure c =>
++          causeAdmits (fun v t => Val.hasTy v t r.machine.state.externals.allocated) ty.error c &&
++            c.reasons.all (fun reason => reason.tag == .fail)
++
++theorem key_service_nat : (nativeSignature []).serviceTy key = some .nat := by
++  decide +kernel
++
++theorem errLeak_checked :
++    Api.typeOf errLeak [] = some ⟨.nat, .string, Env.Requirement.empty⟩ := by
++  decide +kernel
++
++theorem forkLeak_checked :
++    Api.typeOf forkLeak [] = some (EffTy.pure .nat) := by
++  decide +kernel
++
++theorem forkLeak_handle :
++    (Checker.checkAction (nativeSignature []) [.string] [] (.fork (.succeed (.var 0) : E)
++      ⟨true, false, .inherit⟩)).toOption.map (·.answer) = some (.fiberOf .string .never) := by
++  decide +kernel
++
++theorem discardLeak_checked :
++    Api.typeOf discardLeak [] = some ⟨.unit, .string, Env.Requirement.empty⟩ := by
++  decide +kernel
++
++theorem crash1_checked : Api.typeOf crash1 [] = some (EffTy.pure .nat) := by
++  decide +kernel
++
++#guard [errLeak, forkLeak, discardLeak, crash1, errLeakControl, valueControl].all fun p =>
++  (admitProgram p []).toOption.isSome
++
++/-- Native and reference fiber exits agree at the empty table and without host answers.
++Concrete outcomes below are executable checks, not kernel reductions of whole runs. -/
++theorem fiber_exit_agreement (program : NativeEff) (fuel : Nat)
++    (decisions : List Api.Decision) (id : FiberId) :
++    ((Api.replay program fuel decisions).machine.fiber? id).bind RunFiber.exit =
++      ((replayR program fuel decisions).machine.fiber? id).bind RunFiber.exit := by
++  rw [replay_machine]
++  exact BMeans.exitOf (ReplayRel.machine (replay_rel program fuel fuel decisions)) id
++
++-- The former outer number is replaced by the layer's declared string failure.
++#guard firstFail (Api.replay errLeak 200 tape).exit = some (.str "x")
++#guard firstFail (((replayR errLeak 200 tape).machine.fiber? Api.root).bind RunFiber.exit) =
++  some (.str "x")
++
++-- The child returns a string, as declared by forkLeak_handle.
++#guard ((Api.replay forkLeak 200 tape).machine.fiber? ⟨1⟩).bind RunFiber.exit =
++  some (.success (.str "x"))
++#guard ((replayR forkLeak 200 tape).machine.fiber? ⟨1⟩).bind RunFiber.exit =
++  some (.success (.str "x"))
++
++#guard firstFail (Api.replay discardLeak 200 tape).exit = some (.str "x")
++#guard firstFail (((replayR discardLeak 200 tape).machine.fiber? Api.root).bind RunFiber.exit) =
++  some (.str "x")
++
++#guard (Api.replay crash1 200 tape).exit = some (.success (.nat 2))
++#guard ((replayR crash1 200 tape).machine.fiber? Api.root).bind RunFiber.exit =
++  some (.success (.nat 2))
++
++#guard [errLeak, forkLeak, discardLeak, crash1].all (fun p => rootFits p == some true)
++
++-- Closed layer controls retain their original outcomes and checked payload types.
++#guard firstFail (Api.replay errLeakControl 200 tape).exit = some (.str "x")
++#guard firstFail (((replayR errLeakControl 200 tape).machine.fiber? Api.root).bind RunFiber.exit) =
++  some (.str "x")
++#guard (Api.replay valueControl 200 tape).exit = some (.success (.nat 5))
++#guard ((replayR valueControl 200 tape).machine.fiber? Api.root).bind RunFiber.exit =
++  some (.success (.nat 5))
++#guard rootFits errLeakControl = some true
++#guard rootFits valueControl = some true
++
++#guard Api.wellTyped (bodyRetainsOuter false)
++#guard Api.wellTyped (bodyRetainsOuter true)
++#guard Api.wellTyped (serviceContextRetained false)
++#guard Api.wellTyped (serviceContextRetained true)
++
++#guard (Api.replay (bodyRetainsOuter false) 200 tape).exit = some (.success (.bool false))
++#guard (Api.replay (bodyRetainsOuter true) 200 tape).exit = some (.success (.bool false))
++#guard ((replayR (bodyRetainsOuter false) 200 tape).machine.fiber? Api.root).bind RunFiber.exit =
++  some (.success (.bool false))
++#guard ((replayR (bodyRetainsOuter true) 200 tape).machine.fiber? Api.root).bind RunFiber.exit =
++  some (.success (.bool false))
++#guard (Api.replay (serviceContextRetained false) 200 tape).exit = some (.success (.nat 5))
++#guard (Api.replay (serviceContextRetained true) 200 tape).exit = some (.success (.nat 5))
++#guard ((replayR (serviceContextRetained false) 200 tape).machine.fiber? Api.root).bind RunFiber.exit =
++  some (.success (.nat 5))
++#guard ((replayR (serviceContextRetained true) 200 tape).machine.fiber? Api.root).bind RunFiber.exit =
++  some (.success (.nat 5))
++
++#print axioms key_service_nat
++#print axioms errLeak_checked
++#print axioms forkLeak_checked
++#print axioms forkLeak_handle
++#print axioms discardLeak_checked
++#print axioms crash1_checked
++#print axioms fiber_exit_agreement
++
++end Test.Counterexamples.Runtime.LayerEnvironment
+--- a/ocaml/engine/test/test_engine.ml
++++ b/ocaml/engine/test/test_engine.ml
+@@ -21,6 +21,8 @@
+      4  `replay_steps` yields |tape| + 1 machines and its last equals `replay`'s.
+      5  The two `failwith` rows of the generated prelude (`sh_dispatcher_mk`,
+         `sh_memo_map_mk`, api_engine.ml's PRELUDE) never fire on the corpus: counted.
++     6  E4-PROV-CE-005: a layer body binds its own string, even under an outer number
++        binder; both generated-engine carriers must fail with that string.
+ 
+    And it measures W1 (`Api.run pFork` at fuel 100) and W2 (the chain of `refMake` at
+    n = 100 / 300 / 1000) on both instances -- the first numbers of the substitution.  A
+@@ -742,6 +744,28 @@
+          En_ref.trace_length En_ref.refs)
+     [ 50; 100; 300; 500; 1000 ]
+ 
++(* E4-PROV-CE-005: the layer's lexical environment starts closed, matching its checker. *)
++let layer_environment_check () =
++  let key = {
++    E.service_key_name = { E.service_name_value = 4 };
++    service_key_service = { E.service_type_code_value = 4 };
++  } in
++  let program =
++    E.Eff_bind (E.Eff_succeed (E.Term_lit (E.Lit_nat 9)),
++      E.Eff_scoped (E.Eff_provideLayer (
++        E.Layer_term_effect (key,
++          E.Eff_bind (E.Eff_succeed (E.Term_lit (E.Lit_str "x")),
++            E.Eff_fail (E.Term_var 0))),
++        false, E.Eff_service key)))
++  in
++  let expected = Some "failure [fail(text x)]" in
++  let fast = En_fast.root_exit (En_fast.run program ~fuel:200) in
++  let reference = En_ref.root_exit (En_ref.run program ~fuel:200) in
++  Printf.printf "layer environment Fast: %s\n" (Option.value fast ~default:"frontier");
++  Printf.printf "layer environment Ref: %s\n" (Option.value reference ~default:"frontier");
++  check "layer environment Fast uses the body binding" (fast = expected);
++  check "layer environment Ref uses the body binding" (reference = expected)
++
+ (* ================================================================ main *)
+ 
+ let () =
+@@ -755,6 +779,7 @@
+   replay_steps_check ();
+   clock_profile_check ();
+   origin_prelude_check ();
++  layer_environment_check ();
+   print_endline "";
+   print_endline "== 5. the two failwith rows of the generated prelude ==";
+   check
+--- a/src/Effect4/Laws/Program/Agreement.lean
++++ b/src/Effect4/Laws/Program/Agreement.lean
+@@ -1238,13 +1238,13 @@
+         (Prim.onSuccess
+           (if isLocal then
+             Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
+-              (.withMemoMapThen (p.child 0) scope)
++              (.withMemoMapThen p.layerBuild scope)
+           else
+             Prim.onSuccess (Prim.withFiber EffThunk.getCtx)
+-              (.buildWithScopeFromContext (p.child 0) scope))
++              (.buildWithScopeFromContext p.layerBuild scope))
+           (.provideLayerBody p))
+         (.scopeClose scope) false := by
+-  simp [provideLayerWithK, h]
++  simp only [provideLayerWithK, h]
+ 
+ /-- The body under `provideContext(built)` (`internal/layer.ts:20`).
+ census: layer.provide-effect-scope -/
+--- a/src/Effect4/Laws/Program/DenoteR.lean
++++ b/src/Effect4/Laws/Program/DenoteR.lean
+@@ -521,7 +521,8 @@
+ layer built into it (`buildAt`, the layer's `denoteLayer`) — off the fiber context's memo map,
+ or a private one when `local` — the body (`bodyAt`, its `denoteR`; `bodyExit` its
+ `inlineYield`) under `provideContext(built)`, the scope closed with the exit. The three
+-programs are passed in so that this stays outside the mutual block. -/
++programs are passed in so that this stays outside the mutual block. The build uses the
++layer's closed lexical environment; the body retains the enclosing environment. -/
+ def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt : Point → RProgram)
+     (bodyExit : Point → Option ExitV) (isLocal : Bool) (p : Point) : RProgram :=
+   (guardR .onSuccess (storeR (.scopeMake .sequential))).bind (seqR fun v =>
+@@ -532,7 +533,7 @@
+           (if isLocal then
+             (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun w =>
+               match Val.memoMap? w with
+-              | some id => buildWithMemoMapR (fun m => buildAt (p.child 0) m scope) id
++              | some id => buildWithMemoMapR (fun m => buildAt p.layerBuild m scope) id
+               | none => .pure badShapeExit)
+           else
+             (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun w =>
+@@ -541,7 +542,7 @@
+                 (guardR .onSuccess (storeR (.memoFork (currentMemoMapOf ctx.services)))).bind
+                   (seqR fun u =>
+                     match Val.memoMap? u with
+-                    | some id => buildWithMemoMapR (fun m => buildAt (p.child 0) m scope) id
++                    | some id => buildWithMemoMapR (fun m => buildAt p.layerBuild m scope) id
+                     | none => .pure badShapeExit)
+               | none => .pure badShapeExit))).bind (seqR fun built =>
+           match Env.decode built with
+@@ -667,7 +668,8 @@
+   -- the join. `Effect.provide(self, layer)`: `Prim.suspend (body p)`, the counted step
+   -- (`scopedWith`, `internal/effect.ts:3966`), then the scope made, the layer built into it
+   -- (`buildWithScope` off the context's memo map, or a private map when `local`), the body
+-  -- under `provideContext(built)` (`internal/layer.ts:15-21`), the scope closed with the exit
++  -- under `provideContext(built)` (`internal/layer.ts:15-21`), the scope closed with the exit.
++  -- `provideLayerR` closes only the build point; the body still uses the enclosing point.
+   | .provideLayer layer isLocal body, p => suspendR p (constructR fun completed =>
+       provideLayerR (fun q m s => recL layer q m s) (fun q => rec body q)
+         (fun q => inlineYield body q) isLocal { p with completed })
+@@ -1044,8 +1046,8 @@
+   | succ f => budget hf; try rfl
+ 
+ -- the join's three constructors. The layer's build and the body are the term's own at their
+--- points: `provideLayerR` applies them at the children of the counted point, whose fuel is
+--- the budget the block passes, so the equation holds after unfolding the protocol.
++-- points: `provideLayerR` applies the layer at its closed build point and the body at child 1.
++-- Both spend the counted point's child budget, so the equation holds after unfolding the protocol.
+ theorem denoteR_provideLayer (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff) (h : p.fuel ≠ 0) :
+     denoteR root (.provideLayer l i b) p =
+       suspendR p (constructR fun completed =>
+@@ -1054,9 +1056,8 @@
+   cases hf : p.fuel with
+   | zero => exact (h hf).elim
+   | succ f =>
+-    simp only [denoteR, denoteLayer, hf, Point.child_fuel, Nat.add_sub_cancel, denoteRWith,
+-      denoteEffBody, provideLayerR]
+-    try rfl
++    simp only [denoteR, denoteLayer, hf, Point.child_fuel, Point.layerBuild_fuel,
++      Nat.add_sub_cancel, denoteRWith, denoteEffBody, provideLayerR]
+ 
+ theorem denoteR_service (key : ServiceKey) (h : p.fuel ≠ 0) :
+     denoteR root (.service key) p =
+--- a/src/Effect4/Laws/Program/Handles/Layer.lean
++++ b/src/Effect4/Laws/Program/Handles/Layer.lean
+@@ -166,7 +166,7 @@
+ 
+ theorem provideLayerWithK_keys (root : NativeEff) (p : Point) (scope : Nat) :
+     nativeKeys (provideLayerWithK root p scope) ⊆ Handle.scope scope :: p.keys := by
+-  unfold provideLayerWithK
++  unfold provideLayerWithK Point.layerBuild
+   split
+   · split <;> sub_tac
+   · exact List.nil_subset _
+--- a/src/Effect4/Laws/Program/Intro/Layer.lean
++++ b/src/Effect4/Laws/Program/Intro/Layer.lean
+@@ -267,14 +267,15 @@
+         (fun q => denoteR root b q) (fun q => inlineYield b q) i p)) := by
+   have hw : ∀ j, (p.child j).weight < n := fun j =>
+     Nat.lt_of_lt_of_le (weight_child_lt p j hpos) hp
+-  have hl := at_child_of h 0
++  have hl : Node.at_ (.eff root) p.layerBuild.path = some (.layer l) :=
++    at_child_of h 0
+   have hb := at_child_of h 1
+   have hbuild : ∀ (m : MemoMapId) (scope : Nat),
+-      CodeMeans root (resolveLayer root (p.child 0) m scope)
+-        (denoteLayer root l (p.child 0) m scope) := by
++      CodeMeans root (resolveLayer root p.layerBuild m scope)
++        (denoteLayer root l p.layerBuild m scope) := by
+     intro m scope
+     rw [resolveLayer_of_at root hl]
+-    exact layer_intro root n hres l (p.child 0) m scope (hw 0) hl
++    exact layer_intro root n hres l p.layerBuild m scope (hw 0) hl
+   unfold provideLayerR
+   rw [prepareR_guardR_bind, guardR_bind]
+   refine CodeMeans.onSuccess _ _ _ (prepareR completed (storeR (.scopeMake .sequential))) _
+@@ -305,7 +306,7 @@
+             (CodeMeans.actGetContext _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
+           intro completed'' w
+           show CodeMeans root
+-            (Program.contAOf root (.buildWithScopeFromContext (p.child 0) scope) w) _
++            (Program.contAOf root (.buildWithScopeFromContext p.layerBuild scope) w) _
+           rw [contAOf_buildWithScopeFromContext]
+           unfold buildWithScopeK
+           simp only [seqR]
+@@ -317,7 +318,7 @@
+               (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+             intro completed''' u
+             simp only [seqR]
+-            exact withMemoMapThen_intro root (p.child 0) scope _ (fun m => hbuild m scope)
++            exact withMemoMapThen_intro root p.layerBuild scope _ (fun m => hbuild m scope)
+               completed''' u
+           | none => exact codeMeans_badShape root
+         · -- `local`: a private map, then the build
+@@ -327,7 +328,7 @@
+             (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+           intro completed'' w
+           simp only [seqR]
+-          exact withMemoMapThen_intro root (p.child 0) scope _ (fun m => hbuild m scope)
++          exact withMemoMapThen_intro root p.layerBuild scope _ (fun m => hbuild m scope)
+             completed'' w
+       · intro completed'' built
+         show CodeMeans root (Program.contAOf root (.provideLayerBody p) built) _
+--- a/src/Effect4/Program/Compile.lean
++++ b/src/Effect4/Program/Compile.lean
+@@ -78,6 +78,21 @@
+ /-- The point of the child at index `i`, same environment, one fuel down. -/
+ def child (p : Point) (i : Nat) : Point :=
+   { p with path := p.path ++ [i], fuel := p.fuel - 1 }
++
++/-- The layer child starts in the empty lexical environment used by `checkLayer` and
++`LayerHasTy.effect`. The caller's body point, dynamic services and completed-fiber view
++retain their own environments and views. -/
++def layerBuild (p : Point) : Point :=
++  { p.child 0 with env := [] }
++
++/-- A layer build has the lexical environment of its checking judgment. -/
++theorem layerBuild_env (p : Point) : p.layerBuild.env = [] := rfl
++
++/-- Closing the environment keeps the layer child's source address. -/
++theorem layerBuild_path (p : Point) : p.layerBuild.path = p.path ++ [0] := rfl
++
++/-- A layer build spends the same fuel as the original child step. -/
++theorem layerBuild_fuel (p : Point) : p.layerBuild.fuel = p.fuel - 1 := rfl
+ 
+ /-- The point a capture stores, at a completed-exit view: `Capture` (`Machine/Stores.lean`) is
+ `Point` minus that view plus the context, and this is the isomorphism's one direction. -/
+@@ -763,7 +778,8 @@
+ `*K` functions, `Machine/Layer.lean`). -/
+ 
+ /-- `scopedWith`'s scope is made, the handle in hand (`internal/layer.ts:15-21`): the node's
+-`local` flag decides the build; the scope closes with the exit (`internal/effect.ts:3967`). -/
++`local` flag decides the build; the scope closes with the exit (`internal/effect.ts:3967`).
++Both build entries use the layer's closed lexical environment; the body retains `p`. -/
+ def provideLayerWithK (root : NativeEff) (p : Point) (scope : Nat) : NCode :=
+   match Node.at_ (Node.eff root) p.path with
+   | some (Node.eff (.provideLayer _ isLocal _)) =>
+@@ -771,10 +787,10 @@
+       (Prim.onSuccess
+         (if isLocal then
+           Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
+-            (EffName.withMemoMapThen (p.child 0) scope)
++            (EffName.withMemoMapThen p.layerBuild scope)
+         else
+           Prim.onSuccess (Prim.withFiber EffThunk.getCtx)
+-            (EffName.buildWithScopeFromContext (p.child 0) scope))
++            (EffName.buildWithScopeFromContext p.layerBuild scope))
+         (EffName.provideLayerBody p))
+       (EffName.scopeClose scope) false
+   | _ => badShape

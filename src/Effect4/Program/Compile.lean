@@ -79,6 +79,22 @@ namespace Point
 def child (p : Point) (i : Nat) : Point :=
   { p with path := p.path ++ [i], fuel := p.fuel - 1 }
 
+/-- The layer child starts in the empty lexical environment used by `checkLayer` and
+`LayerHasTy.effect`. The caller's body point, dynamic services and completed-fiber view
+retain their own environments and views. -/
+def layerBuild (p : Point) : Point :=
+  -- Taking zero is the empty list and uses the engine's existing environment operation.
+  { p.child 0 with env := p.env.take 0 }
+
+/-- A layer build has the lexical environment of its checking judgment. -/
+theorem layerBuild_env (p : Point) : p.layerBuild.env = [] := rfl
+
+/-- Closing the environment keeps the layer child's source address. -/
+theorem layerBuild_path (p : Point) : p.layerBuild.path = p.path ++ [0] := rfl
+
+/-- A layer build spends the same fuel as the original child step. -/
+theorem layerBuild_fuel (p : Point) : p.layerBuild.fuel = p.fuel - 1 := rfl
+
 /-- The point a capture stores, at a completed-exit view: `Capture` (`Machine/Stores.lean`) is
 `Point` minus that view plus the context, and this is the isomorphism's one direction. -/
 def ofCapture (c : Capture) (completed : List (FiberId × ExitV) := []) : Point :=
@@ -763,7 +779,8 @@ Each is a function of the value, so that a theorem about it case-splits on a rea
 `*K` functions, `Machine/Layer.lean`). -/
 
 /-- `scopedWith`'s scope is made, the handle in hand (`internal/layer.ts:15-21`): the node's
-`local` flag decides the build; the scope closes with the exit (`internal/effect.ts:3967`). -/
+`local` flag decides the build; the scope closes with the exit (`internal/effect.ts:3967`).
+Both build entries use the layer's closed lexical environment; the body retains `p`. -/
 def provideLayerWithK (root : NativeEff) (p : Point) (scope : Nat) : NCode :=
   match Node.at_ (Node.eff root) p.path with
   | some (Node.eff (.provideLayer _ isLocal _)) =>
@@ -771,10 +788,10 @@ def provideLayerWithK (root : NativeEff) (p : Point) (scope : Nat) : NCode :=
       (Prim.onSuccess
         (if isLocal then
           Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
-            (EffName.withMemoMapThen (p.child 0) scope)
+            (EffName.withMemoMapThen p.layerBuild scope)
         else
           Prim.onSuccess (Prim.withFiber EffThunk.getCtx)
-            (EffName.buildWithScopeFromContext (p.child 0) scope))
+            (EffName.buildWithScopeFromContext p.layerBuild scope))
         (EffName.provideLayerBody p))
       (EffName.scopeClose scope) false
   | _ => badShape
