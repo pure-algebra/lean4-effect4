@@ -2,8 +2,8 @@ import Effect4.Laws.Program.Typed.Assembly
 import Effect4.Laws.Machine.Approximation
 
 /-! E4-SCHED-CE-015: retain the host-answer counterexample against the reviewed reachability
-statement, and a nonvacuous timer control for the answer-free replacement. This does not
-repair the host-free counterexamples or prove the M6 obligations. -/
+statement, and a nonvacuous timer control for the answer-free replacement. This host-answer
+witness does not prove the general M6 obligations; later sections retain other amended-clause controls. -/
 set_option autoImplicit false
 set_option maxRecDepth 8192
 set_option maxHeartbeats 2000000
@@ -14,7 +14,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Progr
 def ReviewedRReachable (root : ProgramSource) (fuel : Nat) (m : RState) : Prop :=
   ∃ tape, m = (replayR root.program fuel tape).machine
 
--- The existing M6 reachability definition accepts arbitrary async answers.
+-- The reviewed pre-amendment reachability definition accepts arbitrary async answers.
 def sleeper : NativeEff := .perform .sleep (.lit (.nat 1))
 def badTape : List Api.Decision :=
   [Api.evaluate, .answerAsync Api.root 0 (.ofExit (.success (.nat 42)))]
@@ -43,8 +43,8 @@ theorem bad_not_typed (w : Typed.World) :
   apply bad_exit_not_typed w
   exact (he (EffTy.pure .unit) (by rw [hid]; exact h.1.root)).1
 
--- The exact current capstone, specialized to this program and reached machine.
--- This refutes an open target; no accepted theorem is contradicted.
+-- The reviewed pre-amendment reachability clause, specialized to this program and reached machine.
+-- The typed-state conclusion uses current admission; no accepted theorem is contradicted.
 theorem current_m6_capstone_false : ¬ (
     Api.typeOf sleeper [] = some (EffTy.pure .unit) →
     ClosedEff (EffTy.pure .unit) →

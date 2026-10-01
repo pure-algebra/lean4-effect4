@@ -2,10 +2,14 @@
 
 ## After addendum 6
 
-**The one thing first.** D and F are merged at `9ad8a7c0`. Addendum 6 at `ea5b28b5`
-lifts the three recorded stops. Work resumes in order G, H1, H2 part one, then row 39 only
-after H2 lands and if no newer brief supersedes it. This section records the current status;
-earlier sections remain checkpoint history. Nothing is pushed.
+**The one thing first.** The authorized queue is complete on `codex/slice6-fixes`: G at
+`57c93ba4`, H1 at `d554cd71`, H2 part one at `abc7b124`, and row 39's four source slices
+through `8cdc931b`. The ordered producer chain, required full Lean build and trust gate,
+OCaml checks, Schema host checks and retained byte comparisons all pass. Generation changes
+no committed output bytes. The final verification commit contains this closeout and two
+comment-only corrections identified by independent review. The detailed source-slice paragraphs
+below retain their checkpoint status; “Final verification and closeout” records the completed
+checks. M5/M6 proofs, H1-RCODE-SITES and H2 part two remain open as dispatched. Nothing is pushed.
 
 Authority was read from the main checkout; its path/hash and starting HEAD `c42f4a46` are
 retained in `after-addendum-6/authority.json`. No integration merge or coordinator-register
@@ -55,13 +59,13 @@ Independent source review found no additional issue. Nothing is pushed.
 The owner subsequently directed: “dont stop work.. resolve the issues consistent with previous
 decisions in as rigorous and comprehensive a way as possible”. The checked counterexamples
 remain evidence, but the earlier proposal-only stop is superseded for necessary, consistent
-repairs. The queued-finish gap is being resolved using the tree's existing dispatch boundary:
+repairs. The queued-finish gap is resolved using the tree's existing dispatch boundary:
 `Machine.Lift.StepKeeps` already requires `m.stuck = none`, matching `driveState`. H1 retains all
 stored-data, stack and provenance clauses; only current code becomes inert after a global halt.
-No runtime behavior changes. Additional H1/H2 adaptations will be named and measured rather
+No runtime behavior changes. Additional H1/H2 adaptations are named and measured rather
 than silently exempted from the earlier inventory. Coordinator-owned decisions remain untouched.
 
-### H1 — resolved and landed in the commit containing this section
+### H1 — resolved and landed at `d554cd71`
 
 Base `57c93ba4`. The queued/published-finish clause repairs the original terminal witness;
 its 28 printed facts pass. A new checked two-fiber witness showed why that clause alone fails:
@@ -103,15 +107,15 @@ their error placeholders is proof evidence. M3bWorld/M3bAssembly/M6 ceilings rem
 
 Changed implementation paths: Guard/Core, Guard/RegistrationQueue, new Typed/Scheduler,
 Typed/Assembly, M6Capstone and ValueMembership; register, receipt and evidence accompany them.
-No generated producer or runtime change. The next item is H2 part one, including the newly
+No generated producer or runtime change. At this checkpoint the next item was H2 part one, including the newly
 measured consequences of H1 under the owner's continuation instruction. Nothing is pushed.
 
 
-### H2 part one — landed in the commit containing this section
+### H2 part one — landed at `abc7b124`
 
 **The shared typed-exit judgment now excludes `badName` and `notImplemented`, including failures buffered by a race. The fresh H1 base required nine existing source-body repairs, rather than the earlier eight. This strengthens the admission contract; it does not prove that every machine run avoids those defects.** The M6 ledger remains at 20 open, 0 proved, ceiling 20. `missingService` remains admitted, including at an empty requirement row; part two has not landed.
 
-Base: `d554cd7194f54c1ed2ffd020b4dc59d573bc1c34` (committed H1). The commit containing this section is the H2 endpoint. Final proof evidence is `H2/final-axioms.log`, with 273 reports at `[propext, Quot.sound]` or less. No push.
+Base: `d554cd7194f54c1ed2ffd020b4dc59d573bc1c34` (committed H1). `abc7b124` is the H2 endpoint. Final proof evidence is `H2/final-axioms.log`, with 273 reports at `[propext, Quot.sound]` or less. No push.
 
 The input snapshot was read by explicit `git show` paths from that commit. It contains the five affected source modules, unchanged Membership and Guard prerequisites, the eight existing test inputs, and the specifically needed root/register/historical-probe files. No research directory was copied. Relative to the earlier checked H1 overlay, the final commit changed only an explanatory Assembly comment; the H2 measurements use the final committed bytes and retained hashes.
 
@@ -178,7 +182,7 @@ The successful source and dependent builds report `M6Ledger: 20 open, 0 proved, 
 
 #### Closed source and test paths
 
-The implementation changes exactly these five existing source files and nine test files, one of the latter new. This list excludes separately recorded receipt/evidence and register bookkeeping paths.
+The implementation changes exactly these five existing source files, nine battery files (one new), and the Test/All import anchor. This list excludes separately recorded receipt/evidence and register bookkeeping paths.
 
 ```text
 src/Effect4/Laws/Program/Typed/Admission.lean
@@ -195,6 +199,7 @@ Test/Counterexamples/Machine/Semantics/ValueMembership.lean
 Test/Counterexamples/Machine/Semantics/M6Capstone.lean
 Test/Program/LoadedAdmission.lean
 Test/Program/H2PartOne.lean
+Test/All.lean
 ```
 
 No machine runtime, base-membership source, generator or generated-output path belongs to this H2 implementation change. The latest user instruction authorizes resolving additional issues; the ninth source repair and H1 test consequences are measured and named rather than silently exempted from the earlier inventory.
@@ -214,7 +219,7 @@ implementation or authority edit.
 
 #### Slice 1 — retire the effectful-field layer
 
-Base `abc7b124`; endpoint is the commit containing this paragraph. Deletes the two production
+Base `abc7b124`; endpoint `f0591f36`. Deletes the two production
 modules, six batteries and the old effectful-field harness and script. Core/Test imports,
 the obsolete named axiom exceptions and Make/CI inputs are removed at their anchors. The
 annotation harness remains until slice 2. This does not claim all uses of the standalone
@@ -232,8 +237,8 @@ into the existing archive; their IDs and original row text remain intact.
 
 #### Slice 2 — retire Check, Accepts, Image and schemaOf
 
-Base `f0591f36`; this commit is a source checkpoint, with the final row39 generator chain
-explicitly pending. Deletes the ruled modules, predicate conveniences, retired batteries and
+Base `f0591f36`; endpoint `d75f5c25` was a source checkpoint, with the final row39 generator
+chain pending until the closeout below. Deletes the ruled modules, predicate conveniences, retired batteries and
 annotation harness. The old “called by nothing” premise was false: Codegen.Schema's
 `documentReady` called field admission. The entire obsolete convenience-admission chain is
 therefore deleted rather than weakened or moved to a second checker. Both fixed fixture
@@ -260,8 +265,8 @@ generated diff will be checked before this deletion series is declared complete.
 
 #### Slice 3 — trim annotations to the retained carrier and keys
 
-Base `d75f5c25`; this commit is the third source checkpoint, with final generation still
-pending. The key/carrier, entry/singleton/append and local node optional remain. Recursive
+Base `d75f5c25`; endpoint `3d5ea883` was the third source checkpoint, with final generation
+pending until the closeout below. The key/carrier, entry/singleton/append and local node optional remain. Recursive
 editing APIs and four now-dead Document/MultiDocument wrappers are deleted. Codegen.Schema
 imports the retained Fold explicitly. The node optional's law keeps its statement and uses
 constructor cases instead of the former silent fallback; the independent review checks the
@@ -273,8 +278,8 @@ output is hand-edited and no duplicate-key behavior is introduced.
 
 #### Slice 4 — move the renderer downstream
 
-Base `3d5ea883`; this commit is the final source checkpoint, with the producer chain and
-final comparisons still pending. `Schema/OfShape.lean` owns the one unchanged Store renderer,
+Base `3d5ea883`; endpoint `8cdc931b` was the final source checkpoint, with the producer chain
+and final comparisons pending until the closeout below. `Schema/OfShape.lean` owns the one unchanged Store renderer,
 the identifier/ref keys and ShapeDoc.document. Pure Shape no longer imports Schema.
 Canonical.document stays in Domain/Canonical; schema-node and address construction stay in
 Domain/Node and Genesis. No carrier, canonical encoder, public renderer name or runtime
@@ -288,6 +293,54 @@ key laws at the ceiling. Row 8's duplicate/conflicting-key behavior is deliberat
 addendum 6 dispatches deletion and relocation only; changing raw documents or their addresses
 would be an additional semantic amendment, not a deletion. The final CAS byte comparison
 will check the preserved observation. Coordinator prose changes remain in the separate proposal.
+
+
+#### Final verification and closeout
+
+Source endpoints are `f0591f36`, `d75f5c25`, `3d5ea883`, `8cdc931b`, in the ruled order.
+The final verification commit follows that last source checkpoint; it includes this receipt,
+retained commands/results and two comment-only corrections in Typed/Assembly and M6Capstone.
+Independent reviewers found that those comments still called repaired historical clauses
+current refutations. The corrections name the historical clauses and retain the open M5/M6
+obligations. No declaration, statement or proof changes in this last correction; its inspected
+diff, before/after hashes and active-token comparison are retained as `final-comment-review.json`
+and `final-comment-corrections.patch`.
+
+All commands run in the assigned worktree with `LEAN_NUM_THREADS=1`. Exact argv, working
+locations, exit codes, elapsed times and raw logs are in `after-addendum-6/Row39/`; the eleven
+final successful commands and remaining obligations are indexed in `final-summary.json`.
+
+| Check | Result and scope |
+| --- | --- |
+| `make gen-derived`, `make gen-lcnf`, `make gen-eff`, `make gen-wire`, `make gen-cas`, in that order | All exit 0. Each requested producer ran. No tracked generated-file difference, including the closure manifests and CAS bytes. No generated output was hand-edited. |
+| Required `lake build` prerequisite | Pass, 711 jobs. The final run after the comment corrections also passes the library-root and trust gates: 134 API/utility modules, 212 law-only modules; 490 modules and 69,066 declarations checked. Semantic/test axioms remain at `[propext, Quot.sound]`; the existing exact 15-module/23-declaration rendering boundary additionally allows `Classical.choice`. |
+| `lake build Effect4.Laws.Program.Typed.Assembly Test.Counterexamples.Machine.Semantics.M6Capstone` | Pass after the comment corrections. The M6 ledger remains 20 open, 0 proved, ceiling 20. |
+| `opam exec --switch=effect4 -- dune build` in `ocaml`, then `make check-ocaml` at the root | Both pass. The prescribed eff/gen/clock/engine test targets and engine generation check pass. The regenerated 408-program corpus index is unchanged. These are the existing bounded backend checks, not a new compiler-correctness theorem. |
+| `make check-cases` | Pass. Raw log and `final-cases-report.json` retained. |
+| `bash scripts/check-schema-typescript-generation.sh` | Pass. All three fixture files still equal fresh Lean generation; TypeScript 7.0.2, language service 0.38.0 and Effect rc.112 checks pass. The runtime observations cover 22 representations/two checks and two roots sharing one reference. |
+| `final-validator/validate.py --repo . --bundle .../Row39/plan` | All six checks pass: eight retained byte artifacts; 61 planned source/register paths; 21 verbatim archived rows and retained mixed witnesses; no new duplicate-ID multiplicities; no live imports of deleted modules; pure Shape's local dependency closure reaches no Schema module. |
+
+The byte baseline is independently pinned to immutable `d554cd71` blobs, not refreshed from
+the new output. It includes the three TypeScript fixtures, CAS manifest/cases and the genesis,
+schema and entry hex files. Five deliberate in-memory mutations fail the independent validator;
+its parser and live controls pass. These are static and finite observations, not general
+Schema exactness or semantic-equivalence theorems. The retained host tests do not recreate the
+retired general field/name/collision admission API.
+
+The register check preserves four pre-existing duplicate IDs across live and archived attacks
+(TYPED-003, SCHED-004, PROV-005, PROV-006); it makes no global uniqueness claim and performs no
+silent historical renumbering. All newly retired evidence keeps its source pins and original
+row text. The exact initial scope review records 86 non-research paths across the seven source
+commits and no changes to coordinator-owned authorities. Its only requested corrections are
+the comments described above.
+
+The queue is ready for coordinator integration. No merge/rebase or push was performed, and
+`docs/core/decisions.md`, the main checkout and other coordinator authorities are untouched.
+The proposal for coordinator prose remains in the evidence plan; it is not a second owner of
+those facts. M5 initialization, M6's eighteen command proofs plus decision/reachability,
+H1-RCODE-SITES, row 117's missingService contract, and row 8's duplicate/conflicting-key policy
+remain outside this completed dispatch. The strengthened judgments and checked counterexamples
+do not claim universal machine safety.
 
 
 ## After addendum 5

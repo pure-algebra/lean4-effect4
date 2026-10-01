@@ -337,9 +337,10 @@ theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) 
 
 /-- The capstone obligation: every state a tape with no host answer reaches from a
 checked, closed source is typed. This restriction repairs `E4-SCHED-CE-015` for host answers
-only. The statement remains refuted on programs with no host by `E4-PROV-CE-005`,
-`E4-PROV-CE-006` and `E4-SCHED-CE-016`. The table-based Fits judgment repairs the
-liveness obstruction E4-TYPED-CE-004; the general M5 initialization proof is still open.
+only. The historical host-free obstructions `E4-PROV-CE-005`, `E4-PROV-CE-006` and
+`E4-SCHED-CE-016` have their local repairs in F, G and H1; their retained falsifiers use
+the reviewed pre-amendment clauses. The table-based Fits judgment repairs the liveness
+obstruction E4-TYPED-CE-004; the general M5 initialization proof is still open.
 
 `ExitOk` excludes `badName` and `notImplemented` at typed code, saved-stack, queued-result
 and stored-completion exit positions (`E4-TYPED-CE-007`). The initialization, transition and

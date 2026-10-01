@@ -1,0 +1,77 @@
+{
+  "ok": true,
+  "controls": [
+    {
+      "control": "live_worktree_positive",
+      "ok": true,
+      "head": "8cdc931b0192b2808c4e9c301752704eeff0c91a"
+    },
+    {
+      "control": "pinned_hex_byte_change",
+      "ok": true,
+      "expected_failed_checks": [
+        "prechange_artifact_bytes"
+      ],
+      "observed_failed_checks": [
+        "prechange_artifact_bytes"
+      ],
+      "mutation": "in-memory only"
+    },
+    {
+      "control": "unexpected_final_source_change",
+      "ok": true,
+      "expected_failed_checks": [
+        "final_source_hashes"
+      ],
+      "observed_failed_checks": [
+        "final_source_hashes"
+      ],
+      "mutation": "in-memory only"
+    },
+    {
+      "control": "retired_row_missing",
+      "ok": true,
+      "expected_failed_checks": [
+        "retired_registered_witnesses"
+      ],
+      "observed_failed_checks": [
+        "final_source_hashes",
+        "retired_registered_witnesses"
+      ],
+      "mutation": "in-memory only"
+    },
+    {
+      "control": "duplicate_retired_id",
+      "ok": true,
+      "expected_failed_checks": [
+        "retired_registered_witnesses",
+        "no_new_duplicate_id_multiplicity"
+      ],
+      "observed_failed_checks": [
+        "final_source_hashes",
+        "retired_registered_witnesses",
+        "no_new_duplicate_id_multiplicity"
+      ],
+      "mutation": "in-memory only"
+    },
+    {
+      "control": "stale_import_into_pure_shape_closure",
+      "ok": true,
+      "expected_failed_checks": [
+        "no_imports_of_deleted_modules",
+        "pure_shape_schema_free_closure"
+      ],
+      "observed_failed_checks": [
+        "no_imports_of_deleted_modules",
+        "pure_shape_schema_free_closure"
+      ],
+      "mutation": "in-memory only"
+    },
+    {
+      "control": "comments_strings_and_multimodule_imports",
+      "ok": true
+    }
+  ],
+  "repository_written": false,
+  "compiler_or_generator_run": false
+}
