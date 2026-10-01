@@ -1,0 +1,4 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M 4096 --run docs/research/2026-10-01-type-language-probe/Q/tools/Effect4Gen/View-ns.lean --group TyView --imports ProbeQMap.Fold\,Effect4.Laws.Auto.RuleSets\,Effect4.Machine.Alphabets --variances docs/research/2026-10-01-type-language-probe/Q/generated/variances-map-only.json --out docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQMap/TyView-ns.lean ProbeQMap.Ty
+# started 2026-10-01T19:04:16Z (LEAN_NUM_THREADS=1)
+# exit=0 seconds=5

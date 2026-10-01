@@ -1,0 +1,210 @@
+--- a/tools/Tools/Variances.lean
++++ b/tools/Tools/Variances.lean
+@@ -361,6 +361,14 @@
+ inductive Source where
+   | rc112 («module» : String) (name : String)
+   | printer (spelling : String) (variance : List Variance) (note : String)
++  /-- A head of variable arity (`record (fields : List (String × Ty))`): one variance read at
++  every child, whatever their number. Its row carries `"arity": "each"`, so the view generator
++  applies the one word to every field instead of checking a fixed count. -/
++  | printerEach (spelling : String) (variance : Variance) (note : String)
++  /-- A reference to a declaration by name with a list of arguments (`app (name) (args)`): each
++  argument's variance is the named declaration's own, read from `declarations` by
++  `Module.Name`, invariant where nothing is declared. Its row carries `"arity": "byName"`. -/
++  | byName (note : String)
+ 
+ /-- The one hand list: every parametrised `Ty` constructor and what it spells. A head with no
+ entry is refused (`headRows`), so a new parametrised constructor must be given its declaration
+@@ -386,6 +394,49 @@
+        and the arm never reaches the variance-wise comparison."),
+     ("refOf", .rc112 "Ref" "Ref"),
+     ("deferredOf", .rc112 "Deferred" "Deferred") ]
++
++/-! ## The order's exceptional rules
++
++`sub`'s rules beside its congruences, in one list, so the view generator and the core read the
++same rows: the five structural cases in the order `sub`'s arms take them, then the declared leaf
++edges (a cross-head pair a leaf of `Ty` is below). An edge names a pattern on each side, both
++leaves (no `Ty` child), the heads distinct; the edges must be transitively closed, which the view
++proves (`edgeRule_trans`) and this driver checks. The wave's edges are the census's (T §2.3):
++`undefined ⊑ unit` (row 160) and the number tower `nat ⊑ int ⊑ number` (rows 121, 109; seat P's
++question 3); `lit ⊑ string` is today's literal rule, now a row. -/
++
++/-- One rule: a structural case of `sub`, or a leaf edge `left ⊑ right` (patterns on `Ty`). -/
++inductive Rule where
++  | refl | never | unionLeft | unionRight | top
++  | edge (name left right : String)
++
++/-- The one hand list of the order's rules (seat Q's probe of the wave). -/
++def rules : List Rule :=
++  [] -- commit 2: the mechanism only; the rows land with the append (commit 4)
++
++def ruleJson : Rule → Json
++  | .refl => Json.mkObj [("rule", Json.str "refl")]
++  | .never => Json.mkObj [("rule", Json.str "never")]
++  | .unionLeft => Json.mkObj [("rule", Json.str "unionLeft")]
++  | .unionRight => Json.mkObj [("rule", Json.str "unionRight")]
++  | .top => Json.mkObj [("rule", Json.str "top")]
++  | .edge n l r => Json.mkObj [("rule", Json.str "edge"), ("name", Json.str n),
++      ("left", Json.str l), ("right", Json.str r)]
++
++/-- The edges' head names (the pattern's constructor), for the closure check. -/
++def headOf (pat : String) : String :=
++  ((pat.drop 1).toString.splitOn " ").headD ""
++
++/-- The edges are transitively closed: `a ⊑ b` and `b ⊑ c` declare `a ⊑ c`. -/
++def closureGaps : List String := Id.run do
++  let es := rules.filterMap fun r => match r with
++    | .edge _ l rt => some (headOf l, headOf rt)
++    | _ => none
++  let mut gaps : List String := []
++  for (a, b) in es do
++    for (b', c) in es do
++      if b == b' && !es.contains (a, c) then gaps := gaps ++ [s!"{a} ⊑ {b} ⊑ {c} lacks {a} ⊑ {c}"]
++  return gaps
+ 
+ /-! ## The red controls -/
+ 
+@@ -473,6 +524,15 @@
+         [("head", Json.str head), ("source", Json.str "printer"),
+          ("spelling", Json.str spelling), ("note", Json.str note),
+          ("variance", Json.arr (vs.map (fun v => Json.str v.text)).toArray)]]
++    | .byName note =>
++      out := out ++ [Json.mkObj
++        [("head", Json.str head), ("source", Json.str "declarations"), ("note", Json.str note),
++         ("arity", Json.str "byName"), ("variance", Json.arr #[])]]
++    | .printerEach spelling v note =>
++      out := out ++ [Json.mkObj
++        [("head", Json.str head), ("source", Json.str "printer"),
++         ("spelling", Json.str spelling), ("note", Json.str note), ("arity", Json.str "each"),
++         ("variance", Json.arr #[Json.str v.text])]]
+   return .ok out
+ 
+ def read (readModule : String → IO String) : IO Read := do
+@@ -580,14 +640,104 @@
+         [{String.intercalate ", " (vs.map (·.text))}] but rc.112 declares \
+         [{String.intercalate ", " (expected.map (·.text))}]")
+     IO.println s!"  control {m}.{n} = [{String.intercalate ", " (vs.map (·.text))}]"
++
++/-- The declared variances as a core Lean module (`--lean-out`, `--lean-namespace`): the
++`Variance` the order reads, its two readings, and the table of every declaration read here by
++`Module.Name`, so a `sub` arm over a nominal reference reads variance as data, not as an arm
++written by hand. A parameter with no modifier (`none`) reads invariant, the conservative
++direction. Declared under `<ns>.Ty` so the names the view's consumers use (`Ty.Variance`,
++`Ty.Variance.holds`) do not move. -/
++def leanModule (r : Read) (ns : String) (imports : List String := []) : String := Id.run do
++  let word : Variance → String := fun v => match v with
++    | .co => ".co" | .contra => ".contra" | _ => ".inv"
++  let mut rows : List String := []
++  let mut seen : List String := []
++  for (d, ps, _) in r.resolved do
++    if ps.isEmpty then continue
++    let key := s!"{d.«module»}.{d.name}"
++    if seen.contains key then continue
++    seen := seen ++ [key]
++    rows := rows ++ [s!"  | \"{key}\" => [" ++ String.intercalate ", " (ps.map fun p => word p.variance) ++ "]"]
++  let lines : List String :=
++    [ "-- GENERATED by tools/Tools/Variances.lean from the vendored Effect sources; do not edit" ] ++
++    imports.map (fun i => s!"import {i}") ++
++    [ "",
++      "/-!",
++      "# The declared variance of rc.112's generic declarations, as data the core reads",
++      "",
++      s!"Read off `{root}` ({version}) by the variance driver, beside `variances.json`. A",
++      "reference to a declaration (`app name args`) is ordered argument by argument at the",
++      "declared variance, so `sub` reads this table rather than an arm per declaration.",
++      "-/",
++      "",
++      s!"namespace {ns}.Ty",
++      "",
++      "/-- How a relation reads a type argument: rc.112's declaration-site modifier. -/",
++      "inductive Variance where",
++      "  | co",
++      "  | contra",
++      "  | inv",
++      "deriving DecidableEq, Repr",
++      "",
++      "/-- A Boolean relation lifted through a variance. -/",
++      "def Variance.holds {α : Type} (r : α → α → Bool) : Variance → α → α → Bool",
++      "  | .co,     x, y => r x y",
++      "  | .contra, x, y => r y x",
++      "  | .inv,    x, y => r x y && r y x",
++      "",
++      "/-- The same reading with both directions already computed: what a well-founded `sub` calls,",
++      "since it cannot pass itself to `holds` unapplied. -/",
++      "def Variance.select : Variance → Bool → Bool → Bool",
++      "  | .co, xy, _ => xy",
++      "  | .contra, _, yx => yx",
++      "  | .inv, xy, yx => xy && yx",
++      "",
++      "theorem Variance.holds_eq_select {α : Type} (r : α → α → Bool) (v : Variance) (x y : α) :",
++      "    v.holds r x y = v.select (r x y) (r y x) := by",
++      "  cases v <;> rfl",
++      "",
++      "/-- Every generic declaration of the vendored sources, by `Module.Name`, with the variance of",
++      "each parameter; `[]` for a name not declared there. -/",
++      "def declaredVariance : String → List Variance" ] ++ rows ++
++    [ "  | _ => []",
++      "",
++      "/-- Argument `i` of a reference to `name`: its declared variance, invariant where none is",
++      "declared. -/",
++      "def argVariance (name : String) (i : Nat) : Variance := ((declaredVariance name)[i]?).getD .inv",
++      "" ] ++
++    (if imports.isEmpty then [] else
++    [ "/-- The order's leaf edges, one arm per row of the rule table (`variances.json`'s `rules`):",
++      "what `sub` answers at two members with different heads. A new edge is a row. -/",
++      "def edgeRule : Ty → Ty → Bool" ] ++
++    (rules.filterMap fun r => match r with
++      | .edge n l rt => some s!"  | {l}, {rt} => true  -- {n}"
++      | _ => none) ++
++    [ "  | _, _ => false", "" ]) ++
++    [
++      s!"end {ns}.Ty",
++      "" ]
++  return String.intercalate "\n" lines
+ 
+ end Tools.Variances
+ 
+ open Tools.Variances in
+ def main (argv : List String) : IO Unit := do
++  -- the JSON path first; `--lean-out FILE --lean-namespace NS` also writes the core module
++  let leanOut := match argv.dropWhile (· != "--lean-out") with
++    | _ :: p :: _ => some p
++    | _ => none
++  let leanNs := match argv.dropWhile (· != "--lean-namespace") with
++    | _ :: n :: _ => n
++    | _ => "Effect4.Program"
++  let leanImports := match argv.dropWhile (· != "--lean-import") with
++    | _ :: i :: _ => [i]
++    | _ => []
+   let out := argv.head?.getD defaultOut
+   let r ← read fun m => IO.FS.readFile ⟨s!"{root}/{m}.ts"⟩
+   checkRedControls r
++  unless closureGaps.isEmpty do
++    throw (IO.userError s!"variances: the order's edges are not transitively closed: \
++      {String.intercalate "; " closureGaps}")
+   -- the head map's own variance, resolved, so a head that names a missing declaration is fatal
+   let headRows ← match headJson r with
+     | .error e => throw (IO.userError s!"variances: {e}")
+@@ -600,7 +750,7 @@
+                 else ps.map fun p => { p with modifiers := "inferred" })
+       (constituentJson parts)
+   let withVariance := r.decls.filter (·.hasVariance)
+-  let doc := Json.mkObj
++  let doc := Json.mkObj (
+     [("format", Json.str "effect4-variances-v1"),
+      ("comment", Json.arr #[
+        Json.str "GENERATED by tools/Tools/Variances.lean from the vendored Effect sources.",
+@@ -620,7 +770,11 @@
+        [("declarations", Json.num r.decls.length),
+         ("withVariance", Json.num withVariance.length)]),
+      ("heads", Json.arr headRows.toArray),
+-     ("declarations", Json.arr declRows.toArray)]
++     ("declarations", Json.arr declRows.toArray)] ++
++     (if rules.isEmpty then [] else [("rules", Json.arr (rules.map ruleJson).toArray)]))
+   IO.FS.writeFile ⟨out⟩ (doc.pretty 100 ++ "\n")
++  if let some p := leanOut then
++    IO.FS.writeFile ⟨p⟩ (leanModule r leanNs leanImports)
++    IO.println s!"variances: the core module -> {p}"
+   IO.println s!"variances: {r.decls.length} declarations \
+     ({withVariance.length} declaring in/out) from {modules.length} modules -> {out}"

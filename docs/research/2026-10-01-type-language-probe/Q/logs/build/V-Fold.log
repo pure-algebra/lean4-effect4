@@ -1,0 +1,23 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ ./docs/research/2026-10-01-type-language-probe/Q/bin/olean.sh docs/research/2026-10-01-type-language-probe/Q/generated docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQV/Fold.lean
+# started 2026-10-01T20:38:19Z (LEAN_NUM_THREADS=1)
+'ProbeQV.cata_pos_list_val_eq' depends on axioms: [propext]
+'ProbeQV.cata_val_unit' does not depend on any axioms
+'ProbeQV.cata_val_bool' does not depend on any axioms
+'ProbeQV.cata_val_nat' does not depend on any axioms
+'ProbeQV.cata_val_str' does not depend on any axioms
+'ProbeQV.cata_val_bytes' does not depend on any axioms
+'ProbeQV.cata_val_list' depends on axioms: [propext]
+'ProbeQV.cata_val_pair' does not depend on any axioms
+'ProbeQV.cata_val_none' does not depend on any axioms
+'ProbeQV.cata_val_some' does not depend on any axioms
+'ProbeQV.cata_val_ctor' depends on axioms: [propext]
+'ProbeQV.cata_val_ref' does not depend on any axioms
+'ProbeQV.cata_val_handle' does not depend on any axioms
+'ProbeQV.cata_val_int' does not depend on any axioms
+'ProbeQV.cata_val_float' does not depend on any axioms
+'ProbeQV.hom_eq_cata_val' depends on axioms: [propext]
+'ProbeQV.hom_pos_list_val' depends on axioms: [propext]
+'ProbeQV.cata_id_val' depends on axioms: [propext]
+'ProbeQV.cata_id_pos_list_val' depends on axioms: [propext]
+# exit=0 seconds=1

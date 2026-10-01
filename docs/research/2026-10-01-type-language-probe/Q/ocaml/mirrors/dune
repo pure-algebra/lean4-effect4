@@ -1,0 +1,13 @@
+; Seat Q, question 5: copies of the two OCaml mirrors of Ty (`of_ty`, ocaml/engine/e4_program.ml:137;
+; `rand_ty`, ocaml/eff/test/prop_wire.ml:155) with the wave's arms, type-checked against the wave's
+; `ty` (wave_types.ml: the LCNF-lowered type of ProbeQW.Ty, copied from Q/generated/lcnf/patched).
+(library
+ (name wave_types)
+ (modules wave_types)
+ (flags
+  (:standard -warn-error -a)))
+
+(executable
+ (name mirrors_check)
+ (modules of_ty_copy rand_ty_copy mirrors_check)
+ (libraries wave_types))

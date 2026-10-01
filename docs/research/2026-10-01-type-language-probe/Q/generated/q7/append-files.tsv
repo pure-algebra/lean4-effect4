@@ -1,0 +1,71 @@
+# Seat Q, question 7: every file of the last Ty append (0a2cb898, `unknown`) and of the one before it
+# (7db30c8a, refOf/deferredOf/var), by area, and whether it recurs in the wave's Ty append (T's commit 4).
+# commit	path	area	how	recurs
+0a2cb898	docs/DESIGN-ISSUES.md	docs	register	docs
+0a2cb898	docs/core/decisions.md	docs	register	docs
+0a2cb898	docs/core/language-cut.md	docs	history	no
+0a2cb898	src/Effect4/Program/Ty.lean	core	hand, forced	yes
+0a2cb898	src/Effect4/Program/Typed.lean	core	hand, forced	yes
+0a2cb898	src/Effect4/Program/Checker.lean	core	hand, review	yes
+0a2cb898	src/Effect4/Program/Derived.lean	core	hand then; generated since (Store/Domain/Derived/Program.lean)	no
+0a2cb898	src/Effect4/Program/Eff.lean	core	hand, review	yes
+0a2cb898	src/Effect4/Program/Admission.lean	core	hand, review	yes
+0a2cb898	src/Effect4/Program/Typing/Blame.lean	core	hand, review	yes
+0a2cb898	src/Effect4/Codegen/Diagnostics.lean	core	hand, review	yes
+0a2cb898	src/Effect4/Codegen/Types.lean	core	hand, forced	yes
+0a2cb898	src/Effect4/Schema/Bridge.lean	core	hand, forced	yes
+0a2cb898	src/Effect4/Schema/Codec.lean	core	hand, review	yes
+0a2cb898	src/Effect4/Laws/Program/TypeAlgebra.lean	laws	hand, forced	yes
+0a2cb898	src/Effect4/Laws/Program/Typed.lean	laws	hand then; moved since (Laws/Program/Typed/Membership.lean)	no
+0a2cb898	src/Effect4/Laws/Program/Typing/CheckInversion.lean	laws	hand, forced	yes
+0a2cb898	src/Effect4/Laws/Program/Typing/CheckSound.lean	laws	hand, forced	yes
+0a2cb898	src/Effect4/Laws/Program/Typing/HasTy.lean	laws	hand, forced	yes
+0a2cb898	src/Effect4/Program/Fold.lean	generated	derived (Fold)	yes
+0a2cb898	src/OCaml5/Eff/Emit.lean	mirror	hand (tyO)	yes
+0a2cb898	src/OCaml5/Eff/Goldens.lean	mirror	hand (tyV)	yes
+0a2cb898	src/OCaml5/Eff/Metadata.lean	mirror	hand list (types)	yes
+0a2cb898	tools/Conform/Effect4/LcnfMl.lean	mirror	hand (tyT, tyOcaml)	yes
+0a2cb898	tools/Conform/Effect4/LcnfSemantics.lean	mirror	hand (tyValue, valueTy?)	yes
+0a2cb898	tools/Tools/ProfileJson.lean	mirror	hand (tyJson)	yes
+0a2cb898	tools/Effect4Gen/wire-tags.json	table	hand authority	yes
+0a2cb898	tools/Conform/Effect4/cases-policy.json	table	re-seedable	yes
+0a2cb898	ocaml/eff/eff_json.ml	generated	eff	yes
+0a2cb898	ocaml/eff/eff_layout.ml	generated	eff	yes
+0a2cb898	ocaml/eff/eff_manifest.txt	generated	eff	yes
+0a2cb898	ocaml/eff/eff_types.ml	generated	eff	yes
+0a2cb898	ocaml/eff/eff_wire.ml	generated	eff	yes
+0a2cb898	ocaml/eff/goldens/coverage-metadata.txt	generated	eff	yes
+0a2cb898	ocaml/eff/goldens/metadata.tsv	generated	eff	yes
+0a2cb898	ocaml/eff/program-structure.json	generated	eff	yes
+0a2cb898	ocaml/engine/e4_program_layout.json	generated	eff	yes
+0a2cb898	ocaml/goldens/eff/manifest.txt	generated	wire	yes
+0a2cb898	ocaml/goldens/eff/wire-tags.txt	generated	wire	yes
+0a2cb898	ocaml/engine/e4_program.ml	mirror	hand (of_ty, count)	yes
+0a2cb898	ts/eff/eff.gen.ts	generated	ts	yes
+0a2cb898	ts/eff/json.gen.ts	generated	ts	yes
+0a2cb898	ts/eff/wire.gen.ts	generated	ts	yes
+0a2cb898	Test/Counterexamples/Schema/Codec.lean	test	hand, the codec's refusal by name	yes
+since	src/Effect4/Laws/Program/TyView.lean	generated	derived (TyView)	yes
+since	src/Effect4/Store/Domain/Derived/Program.lean	generated	derived (Program: TyC)	yes
+since	tools/Effect4Gen/variances.json	generated	variances	yes
+since	ocaml/gen/api_gen.ml	generated	lcnf	yes
+since	ocaml/gen/closure-api_gen.tsv	generated	lcnf	yes
+since	ocaml/engine/api_engine.ml	generated	lcnf	yes
+since	ocaml/gen/closure-api_engine.tsv	generated	lcnf	yes
+since	ocaml/engine/e4_program_layout.ml	generated	eff	yes
+since	src/Effect4/Laws/Program/Typed/Membership.lean	laws	hand, forced (FlatFits; the membership exemption)	yes
+since	src/Effect4/Laws/Program/Template.lean	laws	hand, forced	yes
+since	src/Effect4/Laws/Program/Admits.lean	laws	hand (per-head admission)	yes
+since	tools/Tools/Variances.lean	table	hand head map (+ the rules table)	yes
+since	tools/Effect4Gen/guards/tyview.lean	test	guard examples (the edge vocabulary)	yes
+since	Test/Program/TyViewContract.lean	test	the edge vocabulary	yes
+since	Test/Counterexamples/Machine/Semantics/ValueMembership.lean	test	hand, forced (two full matches)	yes
+since	Test/Audit/TraversalFixture.lean	test	fixture, forced	yes
+since	Test/Audit/ExhaustiveFixture.lean	test	pin, forced (20 arms)	yes
+since	Test/Audit/TraversalCensus.lean	test	pin (alts 20)	yes
+since	tools/Tools/TyVectors.lean	test	LCNF rung vectors per head	yes
+wave	src/Effect4/Program/TyCore.lean	core	the declaration moved out of Ty.lean (Q1)	new
+wave	src/Effect4/Program/TyEq.lean	generated	derived (TyEq, elim kind)	new
+wave	src/Effect4/Program/TyVariance.lean	generated	variances (core module: Variance, declaredVariance, argVariance, edgeRule)	new
+wave	Test/fixtures/baseline/66ee4657-supplement-v1.policy.json	table	the policy names the additions (C4)	new
+wave	ocaml/eff/test/prop_wire.ml	mirror	hand (rand_ty: 13 arms, leaves first) or generated eff_rand.ml	new

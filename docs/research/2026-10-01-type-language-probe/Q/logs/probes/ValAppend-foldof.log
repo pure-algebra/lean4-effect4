@@ -1,0 +1,42 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ ./docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true docs/research/2026-10-01-type-language-probe/Q/probes/ValAppend/FoldOfVal.lean
+# started 2026-10-01T20:39:22Z (LEAN_NUM_THREADS=1)
+fold_of: ProbeQV.Val.render.eq_cata : ∀ (a : Val), a.render = cata_val Val.render.alg a
+fold_of: ProbeQV.Val.renderList.eq_cata : ∀ (a : List Val),
+  Val.renderList a = List.foldr (fun r rrest => r :: rrest) [] (cata_pos_list_val Val.render.alg a)
+fold_of: ProbeQV.Val.render.alg : ValAlgebra fun fam => ValFam.rec String fam
+fold_of: ProbeQV.Val.encode.eq_cata : ∀ (a : Val), a.encode = cata_val Val.encode.alg a
+fold_of: ProbeQV.Val.encodeList.eq_cata : ∀ (a : List Val),
+  Val.encodeList a = List.foldr (fun r rrest => r ++ rrest) [] (cata_pos_list_val Val.encode.alg a)
+fold_of: ProbeQV.Val.encode.alg : ValAlgebra fun fam => ValFam.rec Effect4.Store.Bytes fam
+fold_of: ProbeQV.Val.tag.eq_cata : ∀ (a : Val), a.tag = cata_val Val.tag.alg a
+fold_of: ProbeQV.Val.tag.alg : ValAlgebra fun fam => ValFam.rec UInt8 fam
+fold_of: ProbeQV.Val.handles.eq_cata : ∀ (a : Val), a.handles = cata_val Val.handles.alg a
+fold_of: ProbeQV.Val.handlesList.eq_cata : ∀ (a : List Val),
+  Val.handlesList a = List.foldr (fun r rrest => r ++ rrest) [] (cata_pos_list_val Val.handles.alg a)
+fold_of: ProbeQV.Val.handles.alg : ValAlgebra fun fam => ValFam.rec (List (UInt8 × Nat)) fam
+fold_of: ProbeQV.Val.beq.eq_cata : ∀ (a a_1 : Val), a.beq a_1 = cata_val Val.beq.alg a a_1
+fold_of: ProbeQV.Val.beqList.eq_cata : ∀ (a a_1 : List Val),
+  Val.beqList a a_1 =
+    List.foldr (fun r rrest a => decodeBody._sparseCasesOn_1 a (fun head tail => r head && rrest tail) fun h => false)
+      (fun a => decodeBody._sparseCasesOn_2 a true fun h => false) (cata_pos_list_val Val.beq.alg a) a_1
+fold_of: ProbeQV.Val.beq.alg : ValAlgebra fun fam => ValFam.rec (Val → Bool) fam
+fold_of: ProbeQV.Val.WF.eq_cata : ∀ (a : Val), a.WF = (cata_val Val.WF.alg a).snd
+fold_of: ProbeQV.Val.WFList.eq_cata : ∀ (a : List Val),
+  Val.WFList a = List.foldr (fun r rrest => r.snd ∧ rrest) True (cata_pos_list_val Val.WF.alg a)
+fold_of (paramorphism: the carrier pairs the value): ProbeQV.Val.WF.alg : ValAlgebra fun fam =>
+  ValFam.rec (Val × Prop) fam
+fold_of: ProbeQV.Val.wf.eq_cata : ∀ (a : Val), a.wf = (cata_val Val.wf.alg a).snd
+fold_of: ProbeQV.Val.wfList.eq_cata : ∀ (a : List Val),
+  Val.wfList a = List.foldr (fun r rrest => r.snd && rrest) true (cata_pos_list_val Val.wf.alg a)
+fold_of (paramorphism: the carrier pairs the value): ProbeQV.Val.wf.alg : ValAlgebra fun fam =>
+  ValFam.rec (Val × Bool) fam
+fold_of: ProbeQV.Val.payload.eq_cata : ∀ (a : Val), a.payload = (cata_val Val.payload.alg a).snd
+fold_of (paramorphism: the carrier pairs the value): ProbeQV.Val.payload.alg : ValAlgebra fun fam =>
+  ValFam.rec (Val × Effect4.Store.Bytes) fam
+'ProbeQV.Val.encode.hom' does not depend on any axioms
+'ProbeQV.Val.WF.hom' depends on axioms: [propext, Quot.sound]
+'ProbeQV.Val.payload.hom' depends on axioms: [propext, Quot.sound]
+'ProbeQV.Val.beq.hom' depends on axioms: [propext, Quot.sound]
+ProbeQV.Val.encode.alg : ProbeQV.ValAlgebra fun fam => ProbeQV.ValFam.rec Effect4.Store.Bytes fam
+# exit=0 seconds=2

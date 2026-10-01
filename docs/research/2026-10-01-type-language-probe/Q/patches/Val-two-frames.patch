@@ -1,0 +1,294 @@
+--- a/src/Effect4/Store/Carrier/Val.lean
++++ b/src/Effect4/Store/Carrier/Val.lean
+@@ -70,10 +70,15 @@
+ def ref : UInt8 := 11
+ /-- A live handle: the kind byte, then the allocation index as `nat` digits. -/
+ def handle : UInt8 := 12
++/-- seat Q: a signed integer: the sign byte (0 for `ofNat`, 1 for `negSucc`), then the digits. -/
++def int : UInt8 := 13
++/-- seat Q: an IEEE 754 binary64 datum: its bit pattern, eight bytes big-endian. -/
++def float : UInt8 := 14
+ 
+ /-- The finite frame alphabet; current explicit bytes remain the wire authority. -/
+ inductive Code where
+   | bool | nat | string | list | pair | none | some | bytes | unit | ctor | ref | handle
++  | int | float -- seat Q
+   deriving DecidableEq, Repr
+ 
+ def Code.byte : Code → UInt8
+@@ -89,6 +94,8 @@
+   | .ctor => Tag.ctor
+   | .ref => Tag.ref
+   | .handle => Tag.handle
++  | .int => Tag.int -- seat Q
++  | .float => Tag.float -- seat Q
+ 
+ def Code.spelling : Code → String
+   | .bool => "bool"
+@@ -103,9 +110,11 @@
+   | .ctor => "ctor"
+   | .ref => "ref"
+   | .handle => "handle"
++  | .int => "int" -- seat Q
++  | .float => "float" -- seat Q
+ 
+ def codes : List Code := [.bool, .nat, .string, .list, .pair, .none, .some,
+-  .bytes, .unit, .ctor, .ref, .handle]
++  .bytes, .unit, .ctor, .ref, .handle, .int, .float] -- seat Q: the last two
+ 
+ theorem mem_codes (code : Code) : code ∈ codes := by cases code <;> decide
+ 
+@@ -164,6 +173,10 @@
+   /-- A live handle into a running machine's stores: the kind byte, then the allocation
+   index. Not content: no shape accepts it and no node carries it. -/
+   | handle (kind : UInt8) (key : Nat)
++  /-- seat Q: a signed integer. -/
++  | int (i : Int)
++  /-- seat Q: a binary64 datum, its bit pattern. -/
++  | float (bits : UInt64)
+ deriving Inhabited
+ 
+ namespace Val
+@@ -190,6 +203,8 @@
+   | .ctor i args => s!"(Val.ctor {i} [{", ".intercalate (renderList args)}])"
+   | .ref k d => s!"(Val.ref {k} {d})"
+   | .handle k n => s!"(Val.handle {k} {n})"
++  | .int i => s!"(Val.int {i})" -- seat Q
++  | .float b => s!"(Val.float {b})" -- seat Q
+ def renderList : List Val → List String
+   | [] => []
+   | x :: xs => render x :: renderList xs
+@@ -212,6 +227,9 @@
+   | .ctor i args => framed Tag.ctor (framed Tag.nat (natBytes i) ++ encodeList args)
+   | .ref k d => framed Tag.ref (k :: d)
+   | .handle k n => framed Tag.handle (k :: natBytes n)
++  | .int (.ofNat n) => framed Tag.int (0 :: natBytes n) -- seat Q
++  | .int (.negSucc n) => framed Tag.int (1 :: natBytes n) -- seat Q
++  | .float b => framed Tag.float (be64 b.toNat) -- seat Q
+ /-- The frames of a list of values, back to back. -/
+ def encodeList : List Val → Bytes
+   | [] => []
+@@ -242,6 +260,8 @@
+   | .ctor _ _ => Tag.ctor
+   | .ref _ _ => Tag.ref
+   | .handle _ _ => Tag.handle
++  | .int _ => Tag.int -- seat Q
++  | .float _ => Tag.float -- seat Q
+ 
+ /-- The payload of a value's frame. -/
+ def payload : Val → Bytes
+@@ -257,10 +277,15 @@
+   | .ctor i args => framed Tag.nat (natBytes i) ++ encodeList args
+   | .ref k d => k :: d
+   | .handle k n => k :: natBytes n
++  | .int (.ofNat n) => 0 :: natBytes n -- seat Q
++  | .int (.negSucc n) => 1 :: natBytes n -- seat Q
++  | .float b => be64 b.toNat -- seat Q
+ 
+ /-- Every encoding is one frame: its tag, its payload. -/
+ theorem encode_eq (v : Val) : encode v = framed v.tag v.payload := by
+-  cases v <;> rfl
++  cases v with
++  | int i => cases i <;> rfl -- seat Q
++  | _ => rfl
+ 
+ /-- The single-motive induction principle for the nested inductive, in the membership form
+ `Data/Json.lean:304-339` gives `Json`: one hypothesis per constructor, the children of a `list`
+@@ -274,10 +299,11 @@
+     (pair : ∀ a b, motive a → motive b → motive (.pair a b))
+     (none : motive .none) (some : ∀ a, motive a → motive (.some a))
+     (ctor : ∀ i args, (∀ x ∈ args, motive x) → motive (.ctor i args))
+-    (ref : ∀ k d, motive (.ref k d)) (handle : ∀ k n, motive (.handle k n)) : ∀ v, motive v :=
++    (ref : ∀ k d, motive (.ref k d)) (handle : ∀ k n, motive (.handle k n))
++    (int : ∀ i, motive (.int i)) (float : ∀ b, motive (.float b)) : ∀ v, motive v := -- seat Q
+   fun v =>
+     Val.rec (motive_1 := motive) (motive_2 := fun xs => ∀ x ∈ xs, motive x)
+-      unit bool nat str bytes list pair none some ctor ref handle
++      unit bool nat str bytes list pair none some ctor ref handle int float -- seat Q
+       (by intro _ h; cases h)
+       (fun _ _ ihHead ihTail => by
+         intro _ hmem
+@@ -341,6 +367,9 @@
+       WFList args
+   | .ref k d => (k :: d).length < 2 ^ 64
+   | .handle k n => (k :: natBytes n).length < 2 ^ 64
++  | .int (.ofNat n) => (0 :: natBytes n).length < 2 ^ 64 -- seat Q
++  | .int (.negSucc n) => (1 :: natBytes n).length < 2 ^ 64 -- seat Q
++  | .float _ => True -- seat Q
+ /-- `WF` at every member. -/
+ def WFList : List Val → Prop
+   | [] => True
+@@ -364,6 +393,9 @@
+       decide ((framed Tag.nat (natBytes i) ++ encodeList args).length < 2 ^ 64) && wfList args
+   | .ref k d => decide ((k :: d).length < 2 ^ 64)
+   | .handle k n => decide ((k :: natBytes n).length < 2 ^ 64)
++  | .int (.ofNat n) => decide ((0 :: natBytes n).length < 2 ^ 64) -- seat Q
++  | .int (.negSucc n) => decide ((1 :: natBytes n).length < 2 ^ 64) -- seat Q
++  | .float _ => true -- seat Q
+ /-- `wf` at every member. -/
+ def wfList : List Val → Bool
+   | [] => true
+@@ -381,6 +413,7 @@
+     simp [wf, WF, wfList_iff xs]
+   case ctor i args =>
+     simp [wf, WF, wfList_iff args, and_assoc]
++  case int i => cases i <;> simp [wf, WF] -- seat Q
+   all_goals simp [wf, WF]
+ termination_by structural v
+ theorem wfList_iff (xs : List Val) : wfList xs = true ↔ WFList xs := by
+@@ -422,6 +455,11 @@
+   | ctor i args => exact h.2.1
+   | ref k d => exact h
+   | handle k n => exact h
++  | int i => cases i <;> exact h -- seat Q
++  | float b => -- seat Q
++    show (be64 b.toNat).length < 2 ^ 64
++    rw [length_be64]
++    decide
+ 
+ /-- Well-formedness reaches every child. -/
+ theorem WF_child {v c : Val} (hv : WF v) (hc : c ∈ v.children) : WF c := by
+@@ -669,6 +707,16 @@
+     match payload with
+     | k :: digits => if digits.head? = some 0 then none else some (.handle k (natOfDigits digits))
+     | [] => none
++  else if tag = Tag.int then -- seat Q
++    match payload with
++    | s :: digits =>
++      if digits.head? = some 0 then none
++      else if s = 0 then some (.int (.ofNat (natOfDigits digits)))
++      else if s = 1 then some (.int (.negSucc (natOfDigits digits)))
++      else none
++    | [] => none
++  else if tag = Tag.float then -- seat Q
++    (if payload.length = 8 then some (.float (UInt64.ofNat (natOfDigits payload))) else none)
+   else none
+ 
+ /-! The dispatch, one equation per tag: the tag comparisons are closed terms, so each is `rfl`,
+@@ -737,6 +785,22 @@
+           if digits.head? = some 0 then none else some (.handle k (natOfDigits digits))
+         | [] => none) := rfl
+ 
++/-- seat Q -/
++theorem decodeBody_int :
++    decodeBody dec Tag.int payload =
++      (match payload with
++        | s :: digits =>
++          if digits.head? = some 0 then none
++          else if s = 0 then some (.int (.ofNat (natOfDigits digits)))
++          else if s = 1 then some (.int (.negSucc (natOfDigits digits)))
++          else none
++        | [] => none) := rfl
++
++/-- seat Q -/
++theorem decodeBody_float :
++    decodeBody dec Tag.float payload =
++      (if payload.length = 8 then some (.float (UInt64.ofNat (natOfDigits payload))) else none) := rfl
++
+ end dispatch
+ 
+ theorem decodeBody_encode (dec : Bytes → Option (Val × Bytes)) (v : Val) (hwf : v.WF)
+@@ -804,16 +868,39 @@
+     show (if (natBytes n).head? = some 0 then none else some (Val.handle k (natOfDigits (natBytes n))))
+       = some (.handle k n)
+     rw [if_neg (natBytes_head n), natOfDigits_natBytes]
++  | int i => -- seat Q
++    cases i with
++    | ofNat n =>
++      show decodeBody dec Tag.int (0 :: natBytes n) = some (.int (.ofNat n))
++      rw [decodeBody_int]
++      show (if (natBytes n).head? = some 0 then none
++        else if (0 : UInt8) = 0 then some (Val.int (.ofNat (natOfDigits (natBytes n))))
++        else if (0 : UInt8) = 1 then some (Val.int (.negSucc (natOfDigits (natBytes n)))) else none)
++        = some (.int (.ofNat n))
++      rw [if_neg (natBytes_head n), if_pos rfl, natOfDigits_natBytes]
++    | negSucc n =>
++      show decodeBody dec Tag.int (1 :: natBytes n) = some (.int (.negSucc n))
++      rw [decodeBody_int]
++      show (if (natBytes n).head? = some 0 then none
++        else if (1 : UInt8) = 0 then some (Val.int (.ofNat (natOfDigits (natBytes n))))
++        else if (1 : UInt8) = 1 then some (Val.int (.negSucc (natOfDigits (natBytes n)))) else none)
++        = some (.int (.negSucc n))
++      rw [if_neg (natBytes_head n), if_neg (by decide), if_pos rfl, natOfDigits_natBytes]
++  | float b => -- seat Q
++    show decodeBody dec Tag.float (be64 b.toNat) = some (.float b)
++    rw [decodeBody_float, if_pos (length_be64 _), natOfDigits_be64, Nat.mod_eq_of_lt b.toNat_lt,
++      UInt64.ofNat_toNat]
+ 
+ /-- Any other tag byte is refused. -/
+ theorem decodeBody_unknown (dec : Bytes → Option (Val × Bytes)) (tag : UInt8) (payload : Bytes)
+     (h1 : tag ≠ Tag.unit) (h2 : tag ≠ Tag.bool) (h3 : tag ≠ Tag.nat) (h4 : tag ≠ Tag.string)
+     (h5 : tag ≠ Tag.bytes) (h6 : tag ≠ Tag.list) (h7 : tag ≠ Tag.pair) (h8 : tag ≠ Tag.none)
+-    (h9 : tag ≠ Tag.some) (h10 : tag ≠ Tag.ctor) (h11 : tag ≠ Tag.ref) (h12 : tag ≠ Tag.handle) :
++    (h9 : tag ≠ Tag.some) (h10 : tag ≠ Tag.ctor) (h11 : tag ≠ Tag.ref) (h12 : tag ≠ Tag.handle)
++    (h13 : tag ≠ Tag.int) (h14 : tag ≠ Tag.float) : -- seat Q
+     decodeBody dec tag payload = none := by
+   unfold decodeBody
+   rw [if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8,
+-    if_neg h9, if_neg h10, if_neg h11, if_neg h12]
++    if_neg h9, if_neg h10, if_neg h11, if_neg h12, if_neg h13, if_neg h14] -- seat Q
+ 
+ theorem decodeBody_exact (dec : Bytes → Option (Val × Bytes))
+     (hdec : ∀ b v r, dec b = some (v, r) → b = Val.encode v ++ r ∧ v.WF)
+@@ -972,7 +1059,51 @@
+           rw [hdigits]
+           exact hlen
+     · exact nomatch h
+-  rw [decodeBody_unknown dec tag payload h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12] at h
++  by_cases h13 : tag = Tag.int -- seat Q
++  · rw [h13, decodeBody_int] at h
++    split at h
++    · next s digits =>
++      split at h
++      · exact nomatch h
++      · next hhead =>
++        have hdigits : natBytes (natOfDigits digits) = digits := natBytes_natOfDigits digits hhead
++        split at h
++        · next hs =>
++          injection h with h
++          subst h hs
++          refine ⟨h13, ?_, ?_⟩
++          · show 0 :: digits = 0 :: natBytes (natOfDigits digits)
++            rw [hdigits]
++          · show (0 :: natBytes (natOfDigits digits)).length < 2 ^ 64
++            rw [hdigits]
++            exact hlen
++        · split at h
++          · next hs =>
++            injection h with h
++            subst h hs
++            refine ⟨h13, ?_, ?_⟩
++            · show 1 :: digits = 1 :: natBytes (natOfDigits digits)
++              rw [hdigits]
++            · show (1 :: natBytes (natOfDigits digits)).length < 2 ^ 64
++              rw [hdigits]
++              exact hlen
++          · exact nomatch h
++    · exact nomatch h
++  by_cases h14 : tag = Tag.float -- seat Q
++  · rw [h14, decodeBody_float] at h
++    split at h
++    · next h8 =>
++      injection h with h
++      subst h
++      have hlt : natOfDigits payload < 2 ^ 64 := by
++        have := natOfDigits_lt payload
++        rw [h8] at this
++        exact this
++      refine ⟨h14, ?_, trivial⟩
++      show payload = be64 (UInt64.ofNat (natOfDigits payload)).toNat
++      rw [UInt64.toNat_ofNat_of_lt' hlt, be64_natOfDigits payload h8]
++    · exact nomatch h
++  rw [decodeBody_unknown dec tag payload h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14] at h
+   exact nomatch h
+ 
+ /-! ## The knot: fuel -/
+@@ -1122,6 +1253,8 @@
+   | .ctor i a, .ctor j b => decide (i = j) && beqList a b
+   | .ref k d, .ref k' d' => decide (k = k') && decide (d = d')
+   | .handle k n, .handle k' n' => decide (k = k') && decide (n = n')
++  | .int a, .int b => decide (a = b) -- seat Q
++  | .float a, .float b => decide (a = b) -- seat Q
+   | _, _ => false
+ def beqList : List Val → List Val → Bool
+   | [], [] => true

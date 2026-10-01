@@ -1,0 +1,29 @@
+$ git grep -nwE "foldMapAt_ty|TyMAlgebra|foldM_ty|foldM_eq_cata_ty|foldM_id_ty|foldM_natural_ty|foldMap_ty" -- src Test tools ":!src/Effect4/Program/Fold.lean"
+exit=1
+$ git grep -nE "TyAlgebra\.(toM|id)|\.toSeq|MonadMorphism" -- src Test tools ":!src/Effect4/Program/Fold.lean"
+Test/Program/SignatureSum.lean:22:theorem id_isMonadMorphism {S : Signature.{uS, uAns}} {T : Signature.{uT, uAns}} :
+Test/Program/SignatureSum.lean:23:    IsMonadMorphism (Signature.sum S T) (M := Program (Signature.sum S T)) (fun p => p) where
+Test/Program/SignatureSum.lean:33:  ((sum_is_coproduct _ _ inl_isMonadMorphism inr_isMonadMorphism).2.2.2 (fun q => q)
+Test/Program/SignatureSum.lean:34:    id_isMonadMorphism (fun _ => rfl) (fun _ => rfl) p).symm
+src/Effect4/Laws/Effects/Sum.lean:15:(`inl_isMonadMorphism`, `inr_isMonadMorphism`).
+src/Effect4/Laws/Effects/Sum.lean:79:theorem inl_isMonadMorphism :
+src/Effect4/Laws/Effects/Sum.lean:80:    IsMonadMorphism S (M := Program (Signature.sum S T)) (fun p => Program.inl p) where
+src/Effect4/Laws/Effects/Sum.lean:85:theorem inr_isMonadMorphism :
+src/Effect4/Laws/Effects/Sum.lean:86:    IsMonadMorphism T (M := Program (Signature.sum S T)) (fun p => Program.inr p) where
+src/Effect4/Laws/Effects/Sum.lean:105:    (hf : IsMonadMorphism S f) (hg : IsMonadMorphism T g) :
+src/Effect4/Laws/Effects/Sum.lean:106:    IsMonadMorphism (Signature.sum S T) (copair f g) ∧
+src/Effect4/Laws/Effects/Sum.lean:110:        IsMonadMorphism (Signature.sum S T) h →
+src/Effect4/Laws/Effects/Sum.lean:114:  refine ⟨interpret_isMonadMorphism _, ?_, ?_, ?_⟩
+src/Effect4/Laws/Effects/Sum.lean:118:    exact (interpret_of_isMonadMorphism f hf p).symm
+src/Effect4/Laws/Effects/Sum.lean:122:    exact (interpret_of_isMonadMorphism g hg p).symm
+src/Effect4/Laws/Effects/Sum.lean:124:    rw [interpret_of_isMonadMorphism h hh p]
+tools/Effect4Gen/Fold.lean:524:  s := s ++ s!"def {malgType}.toSeq {opArg}\{M : Type u → Type v} [Monad M]\n"
+tools/Effect4Gen/Fold.lean:573:    s := s ++ s!"    foldM_{label} alg node = cata_{label} alg.toSeq node := by\n"
+tools/Effect4Gen/Fold.lean:581:        ([s!"foldM_{label}", s!"cata_{label}", s!"{malgType}.toSeq"] ++ ihs)
+tools/Effect4Gen/Fold.lean:588:  -- `foldM_eq_cata_*`'s; what is left is `(alg.toM).toSeq = alg`, which is `rfl`.
+tools/Effect4Gen/Fold.lean:600:    s := s ++ s!"    [Monad M] [Monad N] \{R : {famType} → Type u} (φ : MonadMorphism M N)\n"
+tools/Effect4Gen/Fold.lean:1334:      "structure MonadMorphism (M : Type u → Type v) (N : Type u → Type w)",
+tools/Effect4Gen/guards/fold.lean:220:#guard cata_ty TyAlgebra.id (Ty.list Ty.unit) == Ty.list Ty.unit
+exit=0
+$ git grep -nwE "foldMapAt_eff|foldM_eff|foldMap_eff|foldMapAt_term|foldM_term|foldMap_term" -- src Test tools ":!src/Effect4/Program/Fold.lean" | wc -l
+      26

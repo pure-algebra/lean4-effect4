@@ -1,0 +1,8 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ ./docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true docs/research/2026-10-01-type-language-probe/Q/probes/Q5/LowerVectors.lean
+# started 2026-10-01T20:11:55Z (LEAN_NUM_THREADS=1)
+canonRecord: a,z,é / 3,2,1
+canonFields: a:string:true,b:nat:false
+canonRecordVal: ctor 0 [["x", "y"], [2, 1]]
+sub: true false true false true false true true false false true true false false false
+# exit=0 seconds=1

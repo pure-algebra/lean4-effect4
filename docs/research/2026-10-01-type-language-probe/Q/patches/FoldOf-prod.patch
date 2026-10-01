@@ -1,0 +1,59 @@
+--- a/src/Effect4/Program/FoldOf.lean
++++ b/src/Effect4/Program/FoldOf.lean
+@@ -328,6 +328,8 @@
+ first projection out of the paired carrier, and the hom's function at each member. -/
+ structure Positions where
+   members : Array Name
++  /-- The family's namespace: the fold generator's `prodMapSnd`/`prodMapFst`/`prodMapBoth`. -/
++  ns : Name
+   memberTy : Nat → Expr
+   /-- `Prod.fst : M × R → M` at member `j`. -/
+   fstFn : Nat → Expr
+@@ -346,6 +348,20 @@
+         throwError "fold_of: {t} is not the member at the family's parameters"
+       return atMember j
+     unless t.isApp do throwError "fold_of: no functor map through the position {t}"
++    -- a product: the generated map of the side(s) naming a member, the other side's type given
++    -- (core's `Prod.map` takes two functions and is not a one-parameter wrapper's map)
++    if t.isAppOfArity ``Prod 2 then
++      let a := t.appFn!.appArg!
++      let b := t.appArg!
++      let names := fun (s : Expr) => P.members.any fun mem => (s.find? (·.isConstOf mem)).isSome
++      match names a, names b with
++      | false, true =>
++        return ← mkAppOptM (P.ns ++ `prodMapSnd) #[some a, none, none, some (← mapThrough P atMember fuel b)]
++      | true, false =>
++        return ← mkAppOptM (P.ns ++ `prodMapFst) #[none, some b, none, some (← mapThrough P atMember fuel a)]
++      | true, true =>
++        return ← mkAppM (P.ns ++ `prodMapBoth) #[← mapThrough P atMember fuel a, ← mapThrough P atMember fuel b]
++      | false, false => throwError "fold_of: the product {t} names no member"
+     let inner ← mapThrough P atMember fuel t.appArg!
+     if t.isAppOfArity ``List 1 then return ← mkAppM ``List.map #[inner]
+     if t.isAppOfArity ``Option 1 then return ← mkAppM ``Option.map #[inner]
+@@ -366,6 +382,17 @@
+       let lhs := mkApp (P.fstFn j) (mkApp (P.fv j) x)
+       return ← mkExpectedTypeHint (← mkEqRefl x) (← mkEq lhs x)
+     unless t.isApp do throwError "fold_of: no functor map through the position {t}"
++    if t.isAppOfArity ``Prod 2 then
++      let a := t.appFn!.appArg!
++      let b := t.appArg!
++      let names := fun (s : Expr) => P.members.any fun mem => (s.find? (·.isConstOf mem)).isSome
++      let lhs := mkApp (← mapThrough P P.fstFn (fuel + 1) t) (mkApp (← mapThrough P P.fv (fuel + 1) t) x)
++      let side := fun (proj : Name) (s : Expr) => do
++        let xs ← mkAppM proj #[x]
++        let goal ← mkEq (← mkAppM proj #[lhs]) xs
++        if names s then mkExpectedTypeHint (← identThrough P fuel s xs) goal
++        else mkExpectedTypeHint (← mkEqRefl xs) goal
++      return ← mkAppM ``Prod.ext #[← side ``Prod.fst a, ← side ``Prod.snd b]
+     let inner := t.appArg!
+     let h ← mapThrough P P.fstFn fuel inner
+     let g ← mapThrough P P.fv fuel inner
+@@ -641,7 +668,7 @@
+       -- the positions: a container child's value is read back from its paired results through
+       -- the position's functor map
+       let P : Positions :=
+-        { members := fam.members, memberTy
++        { members := fam.members, ns, memberTy
+           fstFn := fun j => mkAppN (mkConst ``Prod.fst [Level.zero, level]) #[memberTy j, results[j]!]
+           fv := fun j => fns[j]! }
+       let mut fields : Array Expr := #[]

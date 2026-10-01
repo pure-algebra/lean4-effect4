@@ -1,0 +1,17 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ lake env lean -DwarningAsError=true -M4096 --run docs/research/2026-10-01-type-language-probe/Q/tools/Tools/Variances.lean docs/research/2026-10-01-type-language-probe/Q/generated/variances-wave.json --lean-out docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQW/TyVariance.lean --lean-namespace ProbeQW --lean-import ProbeQW.TyCore
+# started 2026-10-01T19:40:37Z (LEAN_NUM_THREADS=1)
+  control Ref.Ref = [inv]
+  control Fiber.Fiber = [co, co]
+  control Layer.Layer = [contra, co, co]
+  control Context.Context = [contra]
+  control Deferred.Deferred = [inv, inv]
+  control Cause.Cause = [co]
+  control Effect.Effect = [co, co, co]
+  control Queue.Queue = [inv, inv]
+  control PubSub.PubSub = [inv]
+  control Exit.Exit = [co, co]
+  control Option.Option = [co]
+variances: the core module -> docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQW/TyVariance.lean
+variances: 61 declarations (22 declaring in/out) from 12 modules -> docs/research/2026-10-01-type-language-probe/Q/generated/variances-wave.json
+# exit=0 seconds=2

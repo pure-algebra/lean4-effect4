@@ -1,0 +1,5 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ lake env lean -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Fold.lean --group Fold --imports Effect4.Program.Eff\,Effect4.Program.Ty --out docs/research/2026-10-01-type-language-probe/Q/generated/today/Program/Fold.lean --append tools/Effect4Gen/guards/fold.lean --header-out src/Effect4/Program/Fold.lean Effect4.Program.Ty Effect4.Program.Term Effect4.Program.CauseTerm Effect4.Program.Eff
+# started 2026-10-01T18:53:14Z (LEAN_NUM_THREADS=1)
+# exit=0 seconds=5
+REPRODUCED: byte-identical

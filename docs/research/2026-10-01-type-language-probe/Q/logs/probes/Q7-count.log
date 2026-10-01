@@ -1,0 +1,23 @@
+0a2cb898 files: 44
+  core: 11
+  docs: 3
+  generated: 15
+  laws: 5
+  mirror: 7
+  table: 2
+  test: 1
+0a2cb898 files that recur in the wave append: 39 (+ docs registers 2 )
+files born since 0a2cb898 that restate or pin the alphabet and recur: 19
+  generated: 8
+  laws: 3
+  table: 1
+  test: 7
+wave-only files of the append commit: 5
+the wave append (T commit 4), files measured: 63 + 2 docs
+  core: 11
+  generated: 25
+  laws: 7
+  mirror: 8
+  table: 4
+  test: 8
+  of which generated: 25 ; hand (core, laws, mirrors, tables, tests): 38
