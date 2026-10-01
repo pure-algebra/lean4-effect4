@@ -1,0 +1,13 @@
+# hand-counted from recursion-records.ts (seat T); id<TAB>expected count
+T.recursive	4
+T.recursive.computed	1
+T.recursive.viaFunction	1
+T.recursive.data	2
+T.recordType.stringKey	2
+T.recordType.literalKeys	1
+T.recordType.otherKey	1
+T.recordType.untypedValue	1
+T.tuple	3
+T.tuple.arity2	1
+T.tuple.arity3plus	1
+T.tuple.arity01	1

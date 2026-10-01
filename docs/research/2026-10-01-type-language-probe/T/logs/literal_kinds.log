@@ -1,0 +1,8 @@
+kind occurrences files projects
+Literals:string         903    153   9
+Literal:string          416    132   6
+Literal:boolean          77     37   3
+Literal:number           27     12   4
+Literal:other            27     17   4
+Literals:other           26      7   1
+exit=0

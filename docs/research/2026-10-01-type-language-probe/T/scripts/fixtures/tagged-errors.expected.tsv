@@ -1,0 +1,17 @@
+# hand-counted from tagged-errors.ts (seat T); id<TAB>expected count
+C.class	4
+C.dataTaggedError	3
+C.schemaTaggedError	1
+C.taggedError.nameIsTag	3
+C.taggedError.nameNotTag	1
+C.taggedError.fields0	1
+C.taggedError.messageOnly	1
+C.taggedError.fieldsN	2
+P.data.string	1
+P.data.number	1
+P.data.unknown	1
+P.data.array	1
+P.schema.number	1
+P.schema.defect	1
+P.schema.optional-or-nullable	1
+T.typeArgs.call	1
