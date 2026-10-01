@@ -1,0 +1,16 @@
+instDecidableEqUnionMode
+instReprUnionMode
+instInhabitedUnionMode
+instDecidableEqCheckTag
+instReprCheckTag
+instInhabitedCheckTag
+instDecidableEqLiteralKind
+instReprLiteralKind
+instInhabitedLiteralKind
+instDecidableEqEnumValueKind
+instReprEnumValueKind
+instInhabitedEnumValueKind
+instDecidableEqPropertyKeyKind
+instReprPropertyKeyKind
+instInhabitedPropertyKeyKind
+## exit=0 seconds=1 cmd=LEAN_NUM_THREADS=4 lake env lean -DwarningAsError=true Test/Schema/SubAlphabetContract.lean head=9b9d2bea dirty=4
