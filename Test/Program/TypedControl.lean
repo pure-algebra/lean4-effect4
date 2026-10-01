@@ -90,9 +90,9 @@ theorem sleep_stack_accepted (w : W) :
     Contracts.StackAccepts (TypedProg sleeping) ExitOk (frameProtocols sleeping) w
       (EffTy.pure .unit) (EffTy.pure .unit) sleepStack := by
   rw [sleep_stack_exact]
-  refine .cons (.asyncFinalizer _ ⟨rfl, fun cause typed _ => ?_⟩)
-    (.cons (.answer _ fun _ hex => TypedProg.pure hex) (.nil _))
-  exact cancel_typed w cause (cleanExit_of_never_fits w _ cause rfl typed.1) typed.2
+  refine .cons (.asyncFinalizer _ fun _ _ => ⟨rfl, fun w'' _ cause typed _ => ?_⟩)
+    (.cons (.answer _ fun _ _ _ hex => TypedProg.pure hex) (.nil _))
+  exact cancel_typed w'' cause (cleanExit_of_never_fits w'' _ cause rfl typed.1) typed.2
 
 /-! ## Positive: guards whose intermediate type differs from the outer type -/
 

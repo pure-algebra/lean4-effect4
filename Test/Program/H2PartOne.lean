@@ -292,7 +292,8 @@ theorem loop_admitted (src : ProgramSource) (w : W) :
       [.loop name .unit] := by
   apply StackAccepts.cons (middle := outer)
   · apply FrameAccepts.loop
-    exact LoopProtocol.step (tin := inner) (tout := outer) rfl (fun _ h => False.elim h)
+    intro w' _
+    exact LoopProtocol.step (tin := inner) (tout := outer) rfl (fun _ _ _ h => False.elim h)
   · exact StackAccepts.nil outer
 
 theorem input_ok (w : W) : FullExitOk w inner (.failure missing) :=

@@ -1235,7 +1235,7 @@ theorem saved_typed : SavedOk (TypedProg (rootProgram : ProgramSource)) ExitOk
     (frameProtocols (rootProgram : ProgramSource)) world unitTy fiber.frame :=
   ⟨natTy, TypedProg.pure (ty := natTy) ⟨trivial, trivial⟩,
     .cons (.answer (tin := natTy) (tout := unitTy) answer
-      (fun _ _ => TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩)) (.nil unitTy),
+      (fun _ _ _ _ => TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩)) (.nil unitTy),
     ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
 
 theorem typed : OldTypedState (rootProgram : ProgramSource) unitTy world machine := by
@@ -1753,8 +1753,8 @@ theorem typed : TypedState (rootProgram : ProgramSource) unitTy world machine co
         cases declared
         apply savedPosition_of_saved
         exact ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
-          .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback (fun ex _ _ => callback_typed world ex)
-            (fun _ typed _ => typed)) (.nil _),
+          .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback
+            (fun w' _ ex _ _ => callback_typed w' ex) (fun _ _ _ typed _ => typed)) (.nil _),
           ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
       · intro p hp; cases hp
       · intro v hv; cases hv
@@ -1793,8 +1793,8 @@ theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world mac
         cases declared
         apply oldSaved_of_saved
         exact ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
-          .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback (fun ex _ _ => callback_typed world ex)
-            (fun _ typed _ => typed)) (.nil _),
+          .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback
+            (fun w' _ ex _ _ => callback_typed w' ex) (fun _ _ _ typed _ => typed)) (.nil _),
           ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
       · intro p hp; cases hp
       · intro v hv; cases hv

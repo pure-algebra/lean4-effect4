@@ -4,28 +4,40 @@ import Effect4.Laws.Machine.StoresLaws
 /-!
 # Test.Program.FramesNotKripke — saved frames typed at one world (`E4-TYPED-CE-012`)
 
-The saved-stack judgment (`Contracts.FrameAccepts`, `StackAccepts`) types a frame's
-continuation only on exits that fit at the one world the stack is checked at. A step that
-allocates moves the typed state to a later world, and an exit that names the new handle then
-reaches a continuation nobody typed. Formal pass 2026-10-01: seat ALGEBRA's `P2KripkeTyping.lean`
-(the judgment), its verifier's `verify-StepLoop.lean` (the step) and `verify-WrapWalk.lean`
-(wrapping), ported to the merged tree (`docs/research/2026-10-01-landing/ports-at-dceae006/`).
+The saved-stack judgment typed a frame's continuation only on exits that fit at the one world
+the stack was checked at. A step that allocates moves the typed state to a later world, and an
+exit that names the new handle then reaches a continuation nobody typed. Formal pass
+2026-10-01: seat ALGEBRA's `P2KripkeTyping.lean` (the judgment), its verifier's
+`verify-StepLoop.lean` (the step) and `verify-WrapWalk.lean` (wrapping), ported to the merged
+tree (`docs/research/2026-10-01-landing/ports-at-dceae006/`). Repaired by decisions row 135:
+`Contracts.FrameAccepts` and the hook protocols are closed under later worlds.
 
-1. `stackAccepts_not_mono` (red): the frame `.answer badNext`, whose continuation answers `"x"`
-   on every success, is accepted at the initial world (no success fits `refOf nat` there) and
-   refused at the later world `w1` that declares cell 0 at `nat`.
-2. `step_loop_refuted` (red): the loaded `Ref.make(5)` with that frame under the running root
-   is a typed state with `[loop root]` queued; one `loop` allocates cell 0 and no world types the
-   result, so the declared `M6Ledger.step_loop` proposition is false.
-3. `evaluate_keeps` (control): `evaluate` allocates nothing; on the same idle machine it keeps the
-   typed state at the same world. The breaking command is `loop`.
-4. `step_loop_good` (green): with a frame typed into `unit` on every success, the same `loop`
-   keeps the typed state at the world that declares the new cell. The failure is the frame's.
-5. `bad_not_kripke_initial` (control): the Kripke-closed judgment (seat ALGEBRA's
-   `FrameAcceptsK`, local here) refuses the bad frame already at the initial world.
-6. `output_not_kripke` (red): wrapping the hook premises at the frame does not survive the
-   walk. Under hooks whose iterator protocol picks its input type per world, the one-world walk
-   types its output, and no world-closed typing of the output exists.
+The refutations are historical controls over `Old`, a local copy of the one-world frame
+clauses (`FrameAccepts`, `StackAccepts`, `SavedOk`, `HookLaws`) and of the typed state's two
+saved-stack clauses built on them. Everything else in `Old.TypedState` is the current
+judgment (H1's scheduler and observer facts, H2's `ExitOk`, `CodeInert`): this retains the
+one-world omission, not a complete pre-amendment model; the original statement is checked at
+`eb3ab9a9` and in the research ports.
+
+1. `stackAccepts_not_mono` (historical): the frame `.answer badNext`, whose continuation
+   answers `"x"` on every success, is accepted at the initial world (no success fits
+   `refOf nat` there) and refused at the later world `w1` that declares cell 0 at `nat`.
+2. `step_loop_refuted` (historical): the loaded `Ref.make(5)` with that frame under the running
+   root is an `Old` typed state with `[loop root]` queued; one `loop` allocates cell 0 and no
+   world types the result.
+3. `evaluate_keeps` (historical control): `evaluate` allocates nothing; on the same idle
+   machine it keeps the `Old` typed state at the same world. The breaking command is `loop`.
+4. The repair: the closed judgment refuses the bad frame at the initial world
+   (`bad_not_kripke_initial`), transports along the host order (`stackAccepts_mono`, landed
+   in `Contracts`), and gives the one-world judgment at the current world
+   (`stackAccepts_now`), so nothing proved over the one-world judgment is lost.
+5. `step_loop_good` (green, current judgment): with a frame typed into `unit` on every success,
+   the same `loop` keeps the typed state at the world that declares the new cell.
+6. Wrapping does not survive the walk (red): under hooks whose iterator protocol picks its
+   input type per world, the one-world hook laws hold (`hookLawsX_old`) and the one-world walk
+   types the output (`output_typed_one_world`), but no world-closed typing of the output exists
+   (`output_not_kripke`), and the current `HookLaws`, which hand a resumed protocol back at
+   every later world, refuse these hooks (`hookLawsX_refused`).
 -/
 
 set_option autoImplicit false
@@ -79,13 +91,102 @@ theorem cell0_ok_w1 : ExitOk w1 tin (.success (Val.cell ⟨0⟩)) := by
   simp only [Typed.Fits]
   exact ⟨.nat, by simp only [w1, if_pos], Ty.sub_refl _, Ty.sub_refl _⟩
 
-/-! ## 1. The judgment is not world-monotone -/
+/-! ## The one-world judgment, kept local -/
+
+namespace Old
+
+section
+variable (TypedProg : W → EffTy → RProgram → Prop) (Exits : W → EffTy → ExitV → Prop)
+  (hooks : FrameProtocols)
+
+/-- `Contracts.FrameAccepts` before row 135: every clause read at the one world `w`. -/
+inductive FrameAccepts (w : W) : EffTy → EffTy → ScopeFrame → Prop
+  | resume {tin tout : EffTy} (kind : GuardKind) (next : ExitV → RProgram)
+      (run : ∀ ex, Exits w tin ex → kind.hasExitArm ex = true → TypedProg w tout (next ex))
+      (skip : ∀ ex, Exits w tin ex → kind.hasExitArm ex = false → Exits w tout ex) :
+      FrameAccepts w tin tout (.resume kind next)
+  | answer {tin tout : EffTy} (next : ExitV → RProgram)
+      (run : ∀ ex, Exits w tin ex → TypedProg w tout (next ex)) :
+      FrameAccepts w tin tout (.answer next)
+  | restoreMask (ty : EffTy) (flag : Bool) : FrameAccepts w ty ty (.restoreMask flag)
+  | asyncFinalizer {tin tout : EffTy} (name : EffName)
+      (protocol : hooks.asyncFinalizer w tin tout name) :
+      FrameAccepts w tin tout (.asyncFinalizer name)
+  | finalizerMask (ty : EffTy) (flag : Bool) : FrameAccepts w ty ty (.finalizerMask flag)
+  | iter {tin tout : EffTy} (name : EffName) (protocol : hooks.iterator w tin tout name) :
+      FrameAccepts w tin tout (.iter name)
+  | loop {tin tout : EffTy} (name : EffName) (cursor : Val)
+      (protocol : hooks.loop w tin tout name cursor) : FrameAccepts w tin tout (.loop name cursor)
+
+inductive StackAccepts (w : W) : EffTy → EffTy → List ScopeFrame → Prop
+  | nil (ty : EffTy) : StackAccepts w ty ty []
+  | cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
+      (head : FrameAccepts TypedProg Exits hooks w tin middle frame)
+      (tail : StackAccepts w middle tout rest) : StackAccepts w tin tout (frame :: rest)
+
+def SavedOk (w : W) (final : EffTy) (x : RSaved) : Prop :=
+  ∃ tin, TypedProg w tin x.current ∧ StackAccepts TypedProg Exits hooks w tin final x.stack ∧
+    InterruptProvenance x
+
+end
+
+/-- The one-world hook laws: a resumed protocol at the one world only. -/
+structure HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols) : Prop where
+  asyncFinalizer : ∀ w tin tout name, hooks.asyncFinalizer w tin tout name →
+    tin = tout ∧ ∀ cause, ExitOk w tin (.failure cause) → cause.hasInterrupts = true →
+      TypedProg root w tout (interp.cancelThenFail name cause)
+  iterator : ∀ w tin tout name, hooks.iterator w tin tout name →
+    tin.error = tout.error ∧ ∀ v, Fits w v tin.answer →
+      match (interp.iterNext name v).2 with
+      | .done result => ExitOk w tout (.success result)
+      | .halt cause => ExitOk w tout (.failure cause)
+      | .resume code name' => ∃ tin', TypedProg root w tin' code ∧ hooks.iterator w tin' tout name'
+  loop : ∀ w tin tout name cursor, hooks.loop w tin tout name cursor →
+    tin.error = tout.error ∧ ∀ v, Fits w v tin.answer →
+      match interp.loopResume name cursor v with
+      | .continue cursor' body => ∃ tin', TypedProg root w tin' body ∧
+          hooks.loop w tin' tout name cursor'
+      | .finish code => TypedProg root w tout code
+
+/-- The typed state's saved position over the one-world stack. -/
+def SavedPosition (root : ProgramSource) (w : W) (m : RState) (commands : List RCmd)
+    (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
+  ∃ tin, (¬ CodeInert m commands position → TypedProg root w tin saved.current) ∧
+    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
+    InterruptProvenance saved
+
+def statePreds (root : ProgramSource) (m : RState) (commands : List RCmd) : Preds W :=
+  { preds root with
+    SavedOk := fun w position saved => ∀ ty, expectOf w position = some ty →
+      SavedPosition root w m commands position ty saved }
+
+def ActiveDelivery (root : ProgramSource) (w : W) (m : RState) : Prop :=
+  ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token →
+    ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
+      StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final f.frame.stack ∧
+      InterruptProvenance f.frame
+
+def TypedState (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)
+    (commands : List RCmd := []) : Prop :=
+  WorldValid rootTy w m ∧ RStateOk (statePreds root m commands) w m ∧
+    ActiveDelivery root w m ∧ SchedulerState m ∧ ObserverState root w m ∧ RegistrationState root w m
+
+def StepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop :=
+  ∀ w m rest, m.stuck = none → TypedState root rootTy w m (cmd :: rest) →
+    QueueOk root w m (cmd :: rest) →
+    let r := (letI := termEvaluatorFor root.program
+              driveStep (interpR root.program) m cmd rest)
+    ∃ w', w.leHost w' ∧ TypedState root rootTy w' r.1 r.2 ∧ QueueOk root w' r.1 r.2
+
+end Old
+
+/-! ## 1. The one-world judgment is not world-monotone -/
 
 /-- At the initial world no cell is declared, so no success fits `refOf nat` and the bad frame
 is accepted vacuously; its failure arm passes the failure on. -/
 theorem stack_ok :
-    StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) world tin unitTy
-      [.answer badNext] := by
+    Old.StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) world
+      tin unitTy [.answer badNext] := by
   refine .cons (.answer badNext fun ex hex => ?_) (.nil unitTy)
   cases ex with
   | success v =>
@@ -105,8 +206,8 @@ theorem stack_ok :
     exact hf
 
 theorem bad_refused_at_w1 :
-    ¬ StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) w1 tin unitTy
-      [.answer badNext] := by
+    ¬ Old.StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) w1 tin
+      unitTy [.answer badNext] := by
   intro h
   cases h with
   | cons head tail =>
@@ -118,11 +219,13 @@ theorem bad_refused_at_w1 :
       change Typed.Fits w1 (Val.str "x") .unit at hp
       simp only [Typed.Fits] at hp
 
-/-- **World weakening fails for the saved-stack judgment** (`E4-TYPED-CE-012`, the judgment). -/
+/-- **World weakening fails for the one-world saved-stack judgment** (`E4-TYPED-CE-012`, the
+judgment; historical). -/
 theorem stackAccepts_not_mono :
     ∃ (w w' : W) (a b : EffTy) (s : List ScopeFrame), w.leHost w' ∧
-      StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) w a b s ∧
-      ¬ StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) w' a b s :=
+      Old.StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) w a b s ∧
+      ¬ Old.StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg)
+        w' a b s :=
   ⟨world, w1, tin, unitTy, [.answer badNext], w0_le_w1, stack_ok, bad_refused_at_w1⟩
 
 /-! ## 2. The step: one allocating `loop` leaves a machine no world types -/
@@ -289,14 +392,50 @@ theorem typed_of (s : List ScopeFrame) (running : Bool) (commands : List RCmd)
     subst f
     cases hp
 
-theorem saved_typed (running : Bool) : SavedOk (TypedProg (refProg : ProgramSource)) ExitOk
+/-- The same over the one-world judgment. -/
+theorem old_typed_of (s : List ScopeFrame) (running : Bool) (commands : List RCmd)
+    (saved : Old.SavedOk (TypedProg (refProg : ProgramSource)) ExitOk
+      (frameProtocols (refProg : ProgramSource)) world unitTy (rootFiber s running).frame)
+    (trace := (loadR refProg 20 20).trace) :
+    Old.TypedState (refProg : ProgramSource) unitTy world (machineOf s running trace) commands := by
+  refine ⟨valid_of s running trace, ⟨?_, ?_, ?_⟩, ?_, scheduler_of s running trace,
+    observers_of s running trace, registration_of s running trace⟩
+  · intro f hf
+    change f ∈ [rootFiber s running] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+    · intro ty declared
+      change world.Γ Api.root = some ty at declared
+      rw [(valid_of s running trace).root] at declared
+      cases declared
+      obtain ⟨tin, code, stack, provenance⟩ := saved
+      exact ⟨tin, fun _ => code, stack, provenance⟩
+    · intro p hp; cases hp
+    · intro v hv; cases hv
+    · intro v hv; cases hv
+    · intro v hv; cases hv
+    · intro key value ty lookup
+      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
+      rw [Env.Context.getV_empty] at lookup
+      cases lookup
+  · intro race member; cases member
+  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+      ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
+  · intro f hf token hp
+    change f ∈ [rootFiber s running] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases hp
+
+theorem saved_typed (running : Bool) : Old.SavedOk (TypedProg (refProg : ProgramSource)) ExitOk
     (frameProtocols (refProg : ProgramSource)) world unitTy (rootFiber [.answer badNext] running).frame :=
   ⟨tin, code_typed world, stack_ok, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
 
 def command : RCmd := .loop Api.root false
 
-theorem typed : TypedState (refProg : ProgramSource) unitTy world machine [command] :=
-  typed_of _ _ _ (saved_typed true)
+theorem typed : Old.TypedState (refProg : ProgramSource) unitTy world machine [command] :=
+  old_typed_of _ _ _ (saved_typed true)
 
 /-- A queue of one `loop` (or `deliver`) of the running root is admitted. -/
 theorem queue_of (s : List ScopeFrame) (c : RCmd)
@@ -376,9 +515,9 @@ theorem result_not_inert : ¬ CodeInert result.1 result.2 (.fiber Api.root) := b
     · rw [(result_only_root fb hfb).2] at hex
       exact Bool.noConfusion hex
 
-/-- **No world types the machine after the allocating `loop`.** -/
+/-- **No world types the machine after the allocating `loop`** (one-world judgment). -/
 theorem post_untyped (w : W) :
-    ¬ TypedState (refProg : ProgramSource) unitTy w result.1 result.2 := by
+    ¬ Old.TypedState (refProg : ProgramSource) unitTy w result.1 result.2 := by
   intro h
   obtain ⟨f, hf, hid, _, hcur, hst⟩ := result_fiber
   have hroot : expectOf w (.fiber f.id) = some unitTy := by
@@ -400,10 +539,10 @@ theorem post_untyped (w : W) :
       change Typed.Fits w (Val.str "x") .unit at hp
       simp only [Typed.Fits] at hp
 
-/-- **The declared `M6Ledger.step_loop` proposition is false at this instance**
-(`E4-TYPED-CE-012`, the step). -/
+/-- **The declared `M6Ledger.step_loop` proposition, over the one-world judgment, is false at
+this instance** (`E4-TYPED-CE-012`, the step; historical). -/
 theorem step_loop_refuted :
-    ¬ StepPreserves (refProg : ProgramSource) unitTy (.loop Api.root false) := by
+    ¬ Old.StepPreserves (refProg : ProgramSource) unitTy (.loop Api.root false) := by
   intro h
   obtain ⟨w', _, ht, _⟩ := h world machine [] stuck_none typed queue
   exact post_untyped w' ht
@@ -415,8 +554,8 @@ abbrev idle : RState := machineOf [.answer badNext] false
 
 def evaluateCmd : RCmd := .evaluate Api.root
 
-theorem idle_typed : TypedState (refProg : ProgramSource) unitTy world idle [evaluateCmd] :=
-  typed_of _ _ _ (saved_typed false)
+theorem idle_typed : Old.TypedState (refProg : ProgramSource) unitTy world idle [evaluateCmd] :=
+  old_typed_of _ _ _ (saved_typed false)
 
 def afterEval : RState × List RCmd :=
   letI := termEvaluatorFor (refProg : ProgramSource).program
@@ -429,20 +568,21 @@ theorem afterEval_queue : afterEval.2 = [.loop Api.root false] := rfl
 theorem afterEval_machine : afterEval.1 = machineOf [.answer badNext] true afterEval.1.trace := rfl
 
 theorem afterEval_typed :
-    TypedState (refProg : ProgramSource) unitTy world afterEval.1 afterEval.2 := by
+    Old.TypedState (refProg : ProgramSource) unitTy world afterEval.1 afterEval.2 := by
   rw [afterEval_queue, afterEval_machine]
-  exact typed_of _ _ _ (saved_typed true) _
+  exact old_typed_of _ _ _ (saved_typed true) _
 
 theorem afterEval_queueOk :
     QueueOk (refProg : ProgramSource) world afterEval.1 afterEval.2 := by
   rw [afterEval_queue, afterEval_machine]
   exact queue_of _ _ (Or.inl rfl) _
 
-/-- **Control: on the same bad machine, `evaluate` keeps the typed state, at the same world.**
-The allocation is `loop`'s (`EvaluateR.lean:297-305`), so ALG-01's example command
-(`step_evaluate`) was the wrong one. -/
+/-- **Control: on the same bad machine, `evaluate` keeps the one-world typed state, at the same
+world.** The allocation is `loop`'s (`EvaluateR.lean:297-305`), so ALG-01's example command
+(`step_evaluate`) was the wrong one (historical). -/
 theorem evaluate_keeps :
-    ∃ w', world.leHost w' ∧ TypedState (refProg : ProgramSource) unitTy w' afterEval.1 afterEval.2 ∧
+    ∃ w', world.leHost w' ∧
+      Old.TypedState (refProg : ProgramSource) unitTy w' afterEval.1 afterEval.2 ∧
       QueueOk (refProg : ProgramSource) w' afterEval.1 afterEval.2 :=
   ⟨world, leHost_refl world, afterEval_typed, afterEval_queueOk⟩
 
@@ -451,7 +591,7 @@ theorem evaluate_keeps :
 theorem stack_good (w : W) :
     StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) w tin unitTy
       [.answer goodNext] := by
-  refine .cons (.answer goodNext fun ex hex => ?_) (.nil unitTy)
+  refine .cons (.answer goodNext fun _ _ ex hex => ?_) (.nil unitTy)
   cases ex with
   | success v => exact .pure ⟨trivial, trivial⟩
   | failure c =>
@@ -719,50 +859,12 @@ theorem step_loop_good :
       QueueOk (refProg : ProgramSource) w' afterGood.1 afterGood.2 :=
   ⟨w1g, w0_le_w1g, afterGood_typed, afterGood_queueOk⟩
 
-/-! ## 5. The Kripke-closed judgment refuses the bad frame; wrapping does not survive the walk
-
-`FrameAcceptsK`/`StackAcceptsK` are seat ALGEBRA's P2 definitions (local copies): every
-world-reading clause of a frame quantified over later worlds. -/
-
-section Kripke
-
-variable (TP : W → EffTy → RProgram → Prop) (Ex : W → EffTy → ExitV → Prop)
-  (hooks : FrameProtocols)
-
-inductive FrameAcceptsK (w : W) : EffTy → EffTy → ScopeFrame → Prop
-  | resume {tin tout : EffTy} (kind : GuardKind) (next : ExitV → RProgram)
-      (run : ∀ w', w.leHost w' → ∀ ex, Ex w' tin ex → kind.hasExitArm ex = true →
-        TP w' tout (next ex))
-      (skip : ∀ w', w.leHost w' → ∀ ex, Ex w' tin ex → kind.hasExitArm ex = false →
-        Ex w' tout ex) :
-      FrameAcceptsK w tin tout (.resume kind next)
-  | answer {tin tout : EffTy} (next : ExitV → RProgram)
-      (run : ∀ w', w.leHost w' → ∀ ex, Ex w' tin ex → TP w' tout (next ex)) :
-      FrameAcceptsK w tin tout (.answer next)
-  | restoreMask (ty : EffTy) (flag : Bool) : FrameAcceptsK w ty ty (.restoreMask flag)
-  | asyncFinalizer {tin tout : EffTy} (name : EffName)
-      (protocol : ∀ w', w.leHost w' → hooks.asyncFinalizer w' tin tout name) :
-      FrameAcceptsK w tin tout (.asyncFinalizer name)
-  | finalizerMask (ty : EffTy) (flag : Bool) : FrameAcceptsK w ty ty (.finalizerMask flag)
-  | iter {tin tout : EffTy} (name : EffName)
-      (protocol : ∀ w', w.leHost w' → hooks.iterator w' tin tout name) :
-      FrameAcceptsK w tin tout (.iter name)
-  | loop {tin tout : EffTy} (name : EffName) (cursor : Val)
-      (protocol : ∀ w', w.leHost w' → hooks.loop w' tin tout name cursor) :
-      FrameAcceptsK w tin tout (.loop name cursor)
-
-inductive StackAcceptsK (w : W) : EffTy → EffTy → List ScopeFrame → Prop
-  | nil (ty : EffTy) : StackAcceptsK w ty ty []
-  | cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
-      (head : FrameAcceptsK TP Ex hooks w tin middle frame)
-      (tail : StackAcceptsK w middle tout rest) : StackAcceptsK w tin tout (frame :: rest)
-
-end Kripke
+/-! ## 5. The repair: the closed judgment refuses the bad frame and loses nothing -/
 
 /-- **Control: the Kripke-closed judgment refuses the counterexample's frame at the initial
-world**, so a typed state built on it excludes the bad machine from the start. -/
+world**, so the typed state built on it excludes the bad machine from the start. -/
 theorem bad_not_kripke_initial :
-    ¬ StackAcceptsK (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg)
+    ¬ StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg)
       world tin unitTy [.answer badNext] := by
   intro h
   cases h with
@@ -775,12 +877,74 @@ theorem bad_not_kripke_initial :
       change Typed.Fits w1 (Val.str "x") .unit at hp
       simp only [Typed.Fits] at hp
 
+-- Red fixture: the one-world acceptance script (`stack_ok`'s, verbatim) against the closed
+-- judgment. The answer clause now begins with a later world, so the script's split on the exit
+-- has nothing to split; the repair is in force where the bad frame was admitted.
+/--
+error: Invalid alternative name `success`: Expected `mk`
+---
+error: Invalid alternative name `failure`: Expected `mk`
+---
+error: Alternative `mk` has not been provided
+-/
+#guard_msgs (error) in
+example :
+    StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg) world tin unitTy
+      [.answer badNext] := by
+  refine .cons (.answer badNext fun ex hex => ?_) (.nil unitTy)
+  cases ex with
+  | success v =>
+    exfalso
+    have hf := hex.1
+    rw [fitsExit_success_iff] at hf
+    change Typed.Fits world v (.refOf .nat) at hf
+    simp only [Typed.Fits] at hf
+    split at hf
+    · obtain ⟨t', ht, _⟩ := hf
+      cases ht
+    · exact hf
+  | failure c =>
+    refine .pure ⟨?_, hex.2⟩
+    have hf := hex.1
+    rw [fitsExit_failure_iff] at hf ⊢
+    exact hf
+
+/-- The closed judgment gives the one-world judgment at the current world: every frame clause
+read at `w` by reflexivity. Nothing proved over the one-world judgment is lost. -/
+theorem frameAccepts_now {TP : W → EffTy → RProgram → Prop} {Ex : W → EffTy → ExitV → Prop}
+    {hooks : FrameProtocols} {w : W} {a b : EffTy} {f : ScopeFrame}
+    (h : FrameAccepts TP Ex hooks w a b f) : Old.FrameAccepts TP Ex hooks w a b f := by
+  cases h with
+  | resume kind next run skip =>
+    exact .resume kind next (run w (leHost_refl w)) (skip w (leHost_refl w))
+  | answer next run => exact .answer next (run w (leHost_refl w))
+  | restoreMask flag => exact .restoreMask _ flag
+  | asyncFinalizer name protocol => exact .asyncFinalizer name (protocol w (leHost_refl w))
+  | finalizerMask flag => exact .finalizerMask _ flag
+  | iter name protocol => exact .iter name (protocol w (leHost_refl w))
+  | loop name cursor protocol => exact .loop name cursor (protocol w (leHost_refl w))
+
+theorem stackAccepts_now {TP : W → EffTy → RProgram → Prop} {Ex : W → EffTy → ExitV → Prop}
+    {hooks : FrameProtocols} {w : W} {a b : EffTy} {s : List ScopeFrame}
+    (h : StackAccepts TP Ex hooks w a b s) : Old.StackAccepts TP Ex hooks w a b s := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons (frameAccepts_now head) ih
+
+/-- The refusal also follows from the landed transport: the closed judgment at the initial world
+would transport to `w1`, where even the one-world judgment refuses the frame. -/
+theorem bad_not_kripke_by_transport :
+    ¬ StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg)
+      world tin unitTy [.answer badNext] :=
+  fun h => bad_refused_at_w1 (stackAccepts_now (Contracts.stackAccepts_mono w0_le_w1 h))
+
 /-! ### Wrapping the hook premises at the frame does not survive the walk
 
-Verifier's `verify-WrapWalk.lean`: an interpreter and hooks satisfying `HookLaws`, whose iterator
-protocol for `n2` reads the world (`midOf`). The input stack `[.iter n1]` is accepted in the
-wrapped form; today's one-world walk types the output `[.iter n2]`; the output has no wrapped
-typing, because `n2`'s input type is `A` at the initial world and `B` once cell 0 is declared. -/
+Verifier's `verify-WrapWalk.lean`: an interpreter whose generator `n1` resumes under `n2`, and
+hooks whose iterator protocol for `n2` reads the world (`midOf`). These hooks meet the one-world
+hook laws, and the one-world walk types its output; the output `[.iter n2]` has no closed typing,
+because `n2`'s input type is `A` at the initial world and `B` once cell 0 is declared. So the
+protocols are closed in their own definitions, and the current `HookLaws` refuse these hooks. -/
 
 abbrev A : EffTy := EffTy.pure .unit
 abbrev B : EffTy := EffTy.pure (.union .unit .unit)
@@ -822,8 +986,8 @@ theorem unit_fits_mid (w : W) : ExitOk w (midOf w) (.success Val.unit) := by
     change Typed.Fits w Val.unit (.union .unit .unit)
     exact Or.inl trivial
 
-/-- The one-world `HookLaws` holds for this interpreter and these hooks. -/
-theorem hookLawsX : HookLaws (refProg : ProgramSource) interpX hooksX where
+/-- The one-world hook laws hold for this interpreter and these hooks. -/
+theorem hookLawsX_old : Old.HookLaws (refProg : ProgramSource) interpX hooksX where
   asyncFinalizer _ _ _ _ h := h.elim
   iterator w tin tout name h := by
     cases name with
@@ -847,13 +1011,25 @@ theorem mid_w1 : midOf w1 = B := by
   unfold midOf
   rw [show w1.Ρ ⟨0⟩ = some .nat by simp only [w1, if_pos]]
 
+/-- **The current `HookLaws` refuse these hooks**: a resumed protocol must hold at every later
+world with one intermediate type, and `n2`'s is `A` at the initial world and `B` at `w1`. -/
+theorem hookLawsX_refused : ¬ HookLaws (refProg : ProgramSource) interpX hooksX := by
+  intro laws
+  obtain ⟨_, step⟩ := laws.iterator world A T n1 ⟨rfl, rfl⟩
+  obtain ⟨tin', _, tail⟩ := step Val.unit trivial
+  have h0 : tin' = midOf world ∧ T = T := tail world (leHost_refl world)
+  have h1 : tin' = midOf w1 ∧ T = T := tail w1 w0_le_w1
+  rw [mid_w0] at h0
+  rw [mid_w1, h0.1] at h1
+  cases h1.1
+
 def frame0 : RSaved :=
   { current := .pure (.success Val.unit), stack := [.iter n1], interruptible := true,
     interruptedCause := none, deferredInterrupt := false }
 
-/-- The input frame is accepted in the wrapped form: `n1`'s protocol does not read the world. -/
+/-- The input frame is accepted in the closed form: `n1`'s protocol does not read the world. -/
 theorem input_kripke :
-    StackAcceptsK (TypedProg (refProg : ProgramSource)) ExitOk hooksX world A T [.iter n1] :=
+    StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk hooksX world A T [.iter n1] :=
   .cons (.iter n1 (fun _ _ => ⟨rfl, rfl⟩)) (.nil T)
 
 theorem input_exit : ExitOk world A (.success Val.unit) :=
@@ -864,19 +1040,20 @@ theorem walk_output :
     popR interpX (.success Val.unit) [.iter n1] frame0 =
       ({ frame0 with current := .pure (.success Val.unit), stack := [.iter n2] }, none) := rfl
 
-/-- Today's one-world walk lemma types the output (contrast). -/
-theorem walk_typed_one_world :
-    WalkTyped (refProg : ProgramSource) hooksX world T
-      (popR interpX (.success Val.unit) [.iter n1] frame0) :=
-  popR_typed (refProg : ProgramSource) interpX hooksX hookLawsX world [.iter n1] A T _ frame0
-    (.cons (.iter n1 ⟨rfl, rfl⟩) (.nil T)) input_exit ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩
+/-- The one-world judgment types the walk's output at the initial world (what the one-world
+walk concluded, `eb3ab9a9`'s `walk_typed_one_world`). -/
+theorem output_typed_one_world :
+    Old.SavedOk (TypedProg (refProg : ProgramSource)) ExitOk hooksX world T
+      (popR interpX (.success Val.unit) [.iter n1] frame0).1 := by
+  rw [walk_output]
+  exact ⟨midOf world, TypedProg.pure (unit_fits_mid world),
+    .cons (.iter n2 ⟨rfl, rfl⟩) (.nil T), ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
 
-/-- **Red control: the walk's output has no wrapped typing.** Whatever intermediate type the
-resumed code is given, `n2`'s frame would need it to be `midOf w'` at every later world, which is
-`A` at the initial world and `B` at `w1`. So the hook protocols must be closed under later worlds
-in their own definitions, and `HookLaws` must hand back a protocol with one intermediate type. -/
+/-- **Red control: the walk's output has no closed typing under these hooks.** Whatever
+intermediate type the resumed code is given, `n2`'s frame would need it to be `midOf w'` at
+every later world, which is `A` at the initial world and `B` at `w1`. -/
 theorem output_not_kripke :
-    ¬ ∃ tin', StackAcceptsK (TypedProg (refProg : ProgramSource)) ExitOk hooksX world tin' T
+    ¬ ∃ tin', StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk hooksX world tin' T
       [.iter n2] := by
   rintro ⟨tin', h⟩
   cases h with
@@ -905,12 +1082,20 @@ open Test.Program.FramesNotKripke in
 open Test.Program.FramesNotKripke in
 #print axioms evaluate_keeps
 open Test.Program.FramesNotKripke in
-#print axioms step_loop_good
-open Test.Program.FramesNotKripke in
 #print axioms bad_not_kripke_initial
 open Test.Program.FramesNotKripke in
-#print axioms hookLawsX
+#print axioms frameAccepts_now
 open Test.Program.FramesNotKripke in
-#print axioms walk_typed_one_world
+#print axioms stackAccepts_now
+open Test.Program.FramesNotKripke in
+#print axioms bad_not_kripke_by_transport
+open Test.Program.FramesNotKripke in
+#print axioms step_loop_good
+open Test.Program.FramesNotKripke in
+#print axioms hookLawsX_old
+open Test.Program.FramesNotKripke in
+#print axioms hookLawsX_refused
+open Test.Program.FramesNotKripke in
+#print axioms output_typed_one_world
 open Test.Program.FramesNotKripke in
 #print axioms output_not_kripke
