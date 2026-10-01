@@ -153,7 +153,9 @@ def closeWalkR (strategy : FinalizerStrategy) (order : List FinName) (ex : ExitV
 /-- Unsafe close shares its state snapshot with the native frame adapter and
 distinguishes no returned effect from a successful returned effect
 (`internal/effect.ts:3782-3797`). A single finalizer is returned directly; two or more are
-the generator walk (§20). The closer's mask is inherited at the daemons' fork. -/
+the generator walk (§20). The closer's mask is inherited at the daemons' fork. The `scoped`
+region's exit reads this close as rc.112's `scoped` does (`:3945`); `Scope.close` voids the lone
+finalizer's value (`closeScopeR`, decisions row 151 (a″)). -/
 def closeScopeUnsafeR (scope : Nat) (ex : ExitV) (_interruptible : Bool)
     (state : Stores) : Option (Stores × Option RProgram) := do
   let (state, strategy, order) ← scopeCloseSnapshot scope ex state
@@ -162,11 +164,22 @@ def closeScopeUnsafeR (scope : Nat) (ex : ExitV) (_interruptible : Bool)
     | [fin] => some (denoteFin fin ex)
     | _ => some (closeWalkR strategy order ex))
 
-/-- `Scope.close(scope, exit)` (`:3775-3776`): the unsafe close's program, or void. -/
-def closeScopeR (scope : Nat) (ex : ExitV) (interruptible : Bool)
-    (state : Stores) : Option (Stores × RProgram) :=
-  (closeScopeUnsafeR scope ex interruptible state).map fun r =>
-    (r.1, r.2.getD (.pure (.success .unit)))
+/-- `Scope.close(scope, exit)` (`:3775-3776`): `scopeCloseUnsafe(...) ?? void_`, read off the
+unsafe close's snapshot as `Stores.storesCloseScope` reads it — void for no finalizer, the walk for
+two or more.
+A lone finalizer runs and the close then answers `void` (the term's `OnSuccess` with a constant
+continuation; a failure, defect or interrupt of the finalizer passes through `seqR`): rc.112
+declares `Scope.close` at `Effect<void>` (`Scope.ts:567`) but passes on the lone finalizer's
+effect as `scopeCloseUnsafe` returns it (`:3788-3789`, `:3794-3795`), so the value its type
+promises away is voided here, a signed divergence (decisions row 151 (a″); `U-02` in
+`docs/UPSTREAM-BACKLOG.md`). -/
+def closeScopeR (scope : Nat) (ex : ExitV) (_interruptible : Bool)
+    (state : Stores) : Option (Stores × RProgram) := do
+  let (state, strategy, order) ← scopeCloseSnapshot scope ex state
+  return (state, match order with
+    | [] => .pure (.success .unit)
+    | [fin] => (guardR .onSuccess (denoteFin fin ex)).bind (seqR fun _ => .pure (.success .unit))
+    | _ => closeWalkR strategy order ex)
 
 /-- The layer at a point of the root, built (the join): `denoteLayer` of the node there. -/
 def layerBuildR (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) : RProgram :=

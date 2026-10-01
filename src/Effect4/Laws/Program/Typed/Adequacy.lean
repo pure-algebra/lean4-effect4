@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Residual
+import Effect4.Laws.Program.Typed.Seq
 import Effect4.Laws.Machine.StoresLaws
 
 /-!
@@ -1174,15 +1175,26 @@ theorem closeWalk_typed (root : ProgramSource) (w : World) (strategy : Finalizer
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) () trivial (fun _ _ ans post => TypedProg.pure post)
 
+/-- **A lone finalizer's close is typed at `⟨unit, never⟩`** when the finalizer is typed at
+`⟨unknown, never⟩` (rc.112's finalizer type `Effect<unknown>`, `internal/effect.ts:3849`): the
+close runs it, then answers `void` (decisions row 151 (a″), `closeScopeUnsafeR`), so its answer
+is irrelevant and its failures are those of a `never` error column (`seq_typed`). -/
+theorem voidedClose_typed (root : ProgramSource) {w : World} {fin : FinName} {exit : ExitV}
+    (h : TypedProg root w ⟨.unknown, .never, Env.Requirement.empty⟩ (denoteFin fin exit)) :
+    TypedProg root w (EffTy.pure .unit)
+      ((guardR .onSuccess (denoteFin fin exit)).bind (seqR fun _ => .pure (.success .unit))) :=
+  seq_typed root h (fun _ _ _ _ => TypedProg.pure ⟨trivial, trivial⟩) rfl
+
 /-- **`Scope.close`'s installed program is typed at `⟨unit, never⟩`** when the scope's lone
-finalizer, if it has exactly one, is. -/
+finalizer, if it has exactly one, is typed at `⟨unknown, never⟩`: the close voids its answer
+(`voidedClose_typed`), so any answer does. -/
 theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV)
     (flag : Bool) (st st' : Stores) (code : RProgram)
     (lone : ∀ state strategy fin, scopeCloseSnapshot scope exit st = some (state, strategy, [fin]) →
-      TypedProg root w (EffTy.pure .unit) (denoteFin fin exit))
+      TypedProg root w ⟨.unknown, .never, Env.Requirement.empty⟩ (denoteFin fin exit))
     (h : closeScopeR scope exit flag st = some (st', code)) :
     TypedProg root w (EffTy.pure .unit) code := by
-  unfold closeScopeR closeScopeUnsafeR at h
+  unfold closeScopeR at h
   cases hs : scopeCloseSnapshot scope exit st with
   | none =>
     rw [hs] at h
@@ -1194,7 +1206,7 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
     obtain ⟨_, rfl⟩ := h
     match order, hs with
     | [], _ => exact TypedProg.pure ⟨trivial, trivial⟩
-    | [fin], hs => exact lone state strategy fin hs
+    | [fin], hs => exact voidedClose_typed root (lone state strategy fin hs)
     | _ :: _ :: _, _ => exact closeWalk_typed root w strategy _ exit
 
 /-! ## The ledger: the handler side of decisions row 136
@@ -1493,7 +1505,7 @@ theorem closeWalk_typed (root : ProgramSource) (w : World) (strategy : Finalizer
 theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV) (flag : Bool)
     (st st' : Stores) (code : RProgram) : ProofGraph.Obligation
     ((∀ state strategy fin, scopeCloseSnapshot scope exit st = some (state, strategy, [fin]) →
-        TypedProg root w (EffTy.pure .unit) (denoteFin fin exit)) →
+        TypedProg root w ⟨.unknown, .never, Env.Requirement.empty⟩ (denoteFin fin exit)) →
       closeScopeR scope exit flag st = some (st', code) → TypedProg root w (EffTy.pure .unit) code) := ⟨⟩
 
 /-- The guard row: its typing is the arrow of the frame the evaluator saves

@@ -499,7 +499,12 @@ def isFailedSeven : Option (Stores × RProgram) → Bool
   | some (_, .pure (.failure c)) => c == Cause.fail (.tag 7)
   | _ => false
 
-theorem lone_release_answer : isFailedSeven (closeScopeR 0 failed true releaseStore) = true := by
+/-- Since decisions row 151 (a″) the close runs the lone finalizer and then answers `void`
+(`closeScopeR`), and a failure passes through the void: the close's code, its control markers
+erased (`eraseControl`), is the release's failure. -/
+theorem lone_release_answer :
+    isFailedSeven ((closeScopeR 0 failed true releaseStore).map fun r => (r.1, eraseControl r.2)) =
+      true := by
   decide +kernel
 
 theorem lone_release_outside_post (w' : W) (cert : FiberCert (.closeScope 0 failed)) :
@@ -596,8 +601,9 @@ theorem foreign_untyped (w : W) (ex : ExitV) (ty : EffTy) (unit : ty.answer = .u
 
 Decisions row 151's acceptance keeps these positive under every option: the close installs a
 program typed at the close-scope row's `⟨unit, never⟩` (`closeScope_installs`,
-`Typed/Adequacy.lean`) with no finalizer (`void`), with one finalizer whose program is typed
-there (a `release` that succeeds), and with two (the walk, `closeWalk_typed`). -/
+`Typed/Adequacy.lean`) with no finalizer (`void`), with one finalizer whose program is typed at
+`⟨unknown, never⟩` (a `release` that succeeds; the close voids its answer, row 151 (a″)), and
+with two (the walk, `closeWalk_typed`). -/
 
 /-- One `release` finalizer that succeeds, registered on the open scope 0. -/
 def okReleaseStore : Stores :=
@@ -637,7 +643,7 @@ theorem close_one_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RP
     TypedProg root w (EffTy.pure .unit) code :=
   closeScope_installs root w 0 failed true _ st' code (fun _ _ fin hs => by
     cases lone_of_order one_order hs
-    exact TypedProg.pure ⟨trivial, trivial⟩) h
+    exact TypedProg.pure ⟨live_of_keys_nil rfl, trivial⟩) h
 
 theorem close_two_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RProgram)
     (h : closeScopeR 0 failed true twoReleaseStore = some (st', code)) :
@@ -646,6 +652,39 @@ theorem close_two_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RP
     have two := two_order
     rw [hs] at two
     exact Nat.noConfusion (Nat.succ.inj (Option.some.inj two))) h
+
+/-! ### A lone finalizer answering a value closes to `unit` (decisions row 151 (a″))
+
+rc.112 answers the lone release's `5` here: `Scope.close` is declared `Effect<void>`
+(`Scope.ts:567`) but passes on the lone finalizer's effect (`internal/effect.ts:3775-3776`,
+`:3788-3789`, `:3794-3795`); the pinned source's run is row `inline` of
+`docs/research/2026-10-01-landing/seat-D4/vendor-scope-close.json` (the signed divergence
+`U-02`, `docs/UPSTREAM-BACKLOG.md`). Both machines answer `unit`, the type the checker gives the
+program. -/
+
+/-- `scoped(acquireRelease(succeed 1, (a, exit) => succeed 5) >> Scope.close(scope, exit(void)))`,
+the ambient scope read back through the `Scope` service: the release is the scope's one
+finalizer when it closes. -/
+def closeLone : NativeEff :=
+  .scoped
+    (.bind (.acquireRelease (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 5))))
+      (.bind (.service nativeScopeKey)
+        (.bind (.exit (.succeed (.lit .unit)))
+          (.withFiber (.closeScope (.var 1) (.var 2))))))
+
+def machineOf : RReplay → RState
+  | .finished m | .frontier _ m | .stuck _ m => m
+
+/-- The root's exit on the term machine and on the frame machine. -/
+def termExit (p : NativeEff) (tape : List Api.Decision) : Option ExitV :=
+  ((machineOf (replayR p 200 tape)).fiber? Api.root).bind RunFiber.exit
+def frameExit (p : NativeEff) (tape : List Api.Decision) : Option ExitV :=
+  (Api.replay p 200 tape).exit
+
+#guard Program.typeOfProgram (closeLone : ProgramSource).signature closeLone ==
+  some ⟨.unit, .never, .empty⟩
+#guard frameExit closeLone [Api.evaluate, Api.flush] == some (.success .unit)
+#guard termExit closeLone [Api.evaluate, Api.flush] == some (.success .unit)
 
 end CloseScope
 

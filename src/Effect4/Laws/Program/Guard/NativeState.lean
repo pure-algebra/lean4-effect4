@@ -284,16 +284,14 @@ theorem closeScope_state (p : NativeEff) (table : RowTable) (completed)
     (h : (interpAt p completed table).closeScope scope exit mask fiber m.state = some (stores, code)) :
     StateStep m {m with state := stores} := by
   change Option.map _ (storesCloseScope scope exit mask m.state) = _ at h
-  unfold storesCloseScope at h
-  cases hu : storesCloseScopeUnsafe scope exit mask m.state with
-  | none => simp only [hu, Option.map_none] at h; cases h
-  | some result =>
-    rcases result with ⟨after, prog⟩
-    simp only [hu, Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, _⟩ := h
-    obtain ⟨keys, codes⟩ := closeScopeUnsafe_state scope exit mask hu
-    apply StateStep.store state after
-    · rw [keys]; exact fun _ h => h
+  -- `Scope.close` writes the unsafe close's state (`storesCloseScope_unsafe`)
+  obtain ⟨⟨after, prog⟩, hr, hrp⟩ := Option.map_eq_some_iff.mp h
+  simp only [Prod.mk.injEq] at hrp
+  obtain ⟨rfl, _⟩ := hrp
+  obtain ⟨program, hu⟩ := storesCloseScope_unsafe hr
+  obtain ⟨keys, codes⟩ := closeScopeUnsafe_state scope exit mask hu
+  apply StateStep.store state after
+  · rw [keys]; exact fun _ h => h
 
 theorem M1Origin.StateStep.spawn (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (_state : GuardState m) (f : NFiber) (code : NCode)

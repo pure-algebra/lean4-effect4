@@ -1913,7 +1913,9 @@ returned directly; two or more are `scopeCloseFinalizers` (`:3806-3827`, §20): 
 `fnUntraced` suspend whose body is the counted `Iterator` walk (`ProgName.closeWalk`). The
 closer's mask is what the parallel walk's daemons inherit at their fork, so it is not part of
 the program. `Effect4.Scope.closeState` runs first: the state is written before any finalizer
-program is built (`:3784`). -/
+program is built (`:3784`). The `scoped` region's exit reads this close as rc.112's `scoped`
+does (`:3945`), its `OnExit` discarding the lone finalizer's value; `Scope.close` voids it
+(`storesCloseScope`, decisions row 151 (a″)). -/
 def storesCloseScopeUnsafe (scope : Nat) (exit : ExitV) (_closerInterruptible : Bool)
     (state : Stores) : Option (Stores × Option Program) := do
   let (state, strategy, order) ← scopeCloseSnapshot scope exit state
@@ -1923,13 +1925,39 @@ def storesCloseScopeUnsafe (scope : Nat) (exit : ExitV) (_closerInterruptible : 
     | _ => some (Prim.suspend (Thunk.body (ProgName.closeWalk strategy order exit))))
 
 /-- `Scope.close(scope, exit)` (`internal/effect.ts:3775-3776`): `scopeCloseUnsafe(...) ??
-void_` — the unsafe close's program, or void when it returns none (an empty or already
-closed scope). `none` is an unknown scope key, which the machine turns into
-`Stuck.unknownScope` — a live frontier, never a cause (S2-M7). -/
-def storesCloseScope (scope : Nat) (exit : ExitV) (closerInterruptible : Bool)
-    (state : Stores) : Option (Stores × Program) :=
-  (storesCloseScopeUnsafe scope exit closerInterruptible state).map fun r =>
-    (r.1, r.2.getD (Prim.success Val.unit))
+void_`, read off the unsafe close's snapshot — void for an empty or already closed scope, the walk
+for two or more finalizers, which answers `void` itself (`exitAsVoidAll`, `:3826`). `none` is an
+unknown scope key, which the machine turns into `Stuck.unknownScope` — a live frontier, never a
+cause (S2-M7). A lone finalizer runs and the close then answers `void`
+(`Prim.onSuccessConst`; a failure, defect or interrupt of the finalizer passes through): rc.112
+declares `Scope.close` at `Effect<void>` (`Scope.ts:567`) but passes on the lone finalizer's
+effect as `scopeCloseUnsafe` returns it (`:3788-3789`, `:3794-3795`), so the value its type
+promises away is voided here, a signed divergence (decisions row 151 (a″); `U-02` in
+`docs/UPSTREAM-BACKLOG.md`). The unsafe close itself stays rc.112's, for the `scoped` exit. -/
+def storesCloseScope (scope : Nat) (exit : ExitV) (_closerInterruptible : Bool)
+    (state : Stores) : Option (Stores × Program) := do
+  let (state, strategy, order) ← scopeCloseSnapshot scope exit state
+  return (state, match order with
+    | [] => Prim.success Val.unit
+    | [fin] => Prim.onSuccessConst (finProgram fin exit) (Prim.success Val.unit)
+    | _ => Prim.suspend (Thunk.body (ProgName.closeWalk strategy order exit)))
+
+/-- `Scope.close` writes the unsafe close's state: the two read one snapshot. -/
+theorem storesCloseScope_unsafe {scope : Nat} {exit : ExitV} {flag : Bool} {state s' : Stores}
+    {code : Program} (h : storesCloseScope scope exit flag state = some (s', code)) :
+    ∃ program, storesCloseScopeUnsafe scope exit flag state = some (s', program) := by
+  unfold storesCloseScope at h
+  unfold storesCloseScopeUnsafe
+  cases hs : scopeCloseSnapshot scope exit state with
+  | none =>
+    rw [hs] at h
+    cases h
+  | some snapshot =>
+    obtain ⟨st, strategy, order⟩ := snapshot
+    rw [hs] at h
+    simp only at h
+    obtain ⟨rfl, _⟩ := h
+    exact ⟨_, rfl⟩
 
 /-! ## The store steps under `Prim.sync` -/
 
@@ -2435,14 +2463,16 @@ theorem storesCloseScope_state_first (scope : Nat) (exit : ExitV) (state : Store
     (storesCloseScope scope exit false state).map Prod.fst =
       some { state with scopes := state.scopes.closeState scope exit } := by
   have _ := hopen
-  constructor <;> simp [storesCloseScope, storesCloseScopeUnsafe, scopeCloseSnapshot, h]
+  constructor <;> simp only [storesCloseScope, scopeCloseSnapshot, h, Option.pure_def,
+    Option.bind_eq_bind, Option.bind_some, Option.map_some]
 
 /-- S2-M7: an unknown scope key is a frontier, not a cause — the hook answers `none` and the
 machine halts with `Stuck.unknownScope`. -/
 theorem storesCloseScope_unknown (scope : Nat) (exit : ExitV) (masked : Bool) (state : Stores)
     (h : state.scopes.entryAt scope = none) :
     storesCloseScope scope exit masked state = none := by
-  simp [storesCloseScope, storesCloseScopeUnsafe, scopeCloseSnapshot, h]
+  simp only [storesCloseScope, scopeCloseSnapshot, h, Option.pure_def, Option.bind_eq_bind,
+    Option.bind_none]
 
 /-- `scope.fork-linkage`: the linked names *are* `scopeClose(child, exit)` on the parent side
 and `scopeRemoveFinalizerUnsafe(parent, key)` on the child side, under one shared key — the

@@ -518,19 +518,20 @@ theorem raceSites_closeScope (scope : Nat) (exit : ExitV) (mask : Bool)
     (h : storesCloseScope scope exit mask state = some (after, code)) :
     raceSites (embed code) = [] := by
   unfold storesCloseScope at h
-  cases hs : storesCloseScopeUnsafe scope exit mask state with
-  | none => simp [hs] at h
-  | some pair =>
-    rcases pair with ⟨s, program⟩
-    cases program with
-    | none =>
-      simp only [hs, Option.map_some, Option.getD_none, Option.some.injEq, Prod.mk.injEq] at h
-      rcases h with ⟨_, rfl⟩
+  obtain ⟨⟨s, strategy, order⟩, _, h⟩ := Option.bind_eq_some_iff.mp h
+  change some _ = some (after, code) at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨_, rfl⟩ := h
+  cases order with
+  | nil => rfl
+  | cons fin rest =>
+    cases rest with
+    | nil =>
+      -- the lone finalizer, voided (decisions row 151 (a″)): its own sites and `unit`'s none
+      show raceSites (embed (finProgram fin exit)) ++ raceSites (Prim.success Val.unit) = []
+      rw [raceSites_finProgram]
       rfl
-    | some c =>
-      simp only [hs, Option.map_some, Option.getD_some, Option.some.injEq, Prod.mk.injEq] at h
-      rcases h with ⟨_, rfl⟩
-      exact raceSites_closeScopeUnsafe scope exit mask state s (some c) hs c rfl
+    | cons fin' rest => rfl
 
 theorem stepFrame_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (hf : FrameCodeOwned m f) :
