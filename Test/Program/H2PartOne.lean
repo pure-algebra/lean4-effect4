@@ -424,4 +424,126 @@ theorem output_bad (w : W) : ¬ FullExitOk w outer (.failure missing) := by
 #print axioms output_bad
 end MissingServiceTransport
 
+/-! ## Row 117's presence clause, measured (seat D1, 2026-10-01)
+
+The formal pass's G5 proposes a presence clause in `SavedOk`'s current-code typing,
+`Provides ctx ty.requires`. Stated here over local copies (`Provides`, `SavedOkPresent`), it is
+not landed in `src/`, for two reasons proved below. The walk installs code at a frame's output
+type, not at the current code's, so presence at the current code alone is not re-established
+by it (`presence_not_walked`: a saved frame meeting the clause pops to one that does not, while
+the presence-free walk theorem still types it, `walked_typed`); a clause that holds per position
+needs the stack to carry each position's context. And the loaded root runs in the empty context
+(`loadR`), so at the load the clause asks the root row to be empty, which the checker does not
+(`load_presence_needs_closed_row`): M5 would gain that premise. -/
+namespace PresenceMeasure
+open Effect4.Program.Typed.Contracts
+
+/-- Presence: every key of the row is bound in the context. -/
+def Provides (ctx : Ctx) (r : Env.Requirement) : Prop :=
+  ∀ key, key ∈ r → (ctx.services.getV key).isSome = true
+
+/-- `SavedOk` with G5's presence clause at its current code. -/
+def SavedOkPresent (root : ProgramSource) (w : W) (final : EffTy) (ctx : Ctx) (x : RSaved) :
+    Prop :=
+  ∃ tin, TypedProg root w tin x.current ∧ Provides ctx tin.requires ∧
+    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final x.stack ∧
+    InterruptProvenance x
+
+/-- A row that requires the scope service. -/
+def keyTy : EffTy := ⟨.unit, .never, Env.Requirement.single nativeScopeKey⟩
+
+/-- An answer continuation the walk installs (it is neither a bare exit nor a closing marker). -/
+def next : ExitV → RProgram := fun _ => .vis (.inr (.sync Val.unit)) fun v => .pure (.success v)
+
+/-- Current code at the empty row, one answer frame up to `keyTy`. -/
+def x0 : RSaved := ⟨.pure (.success Val.unit), [.answer next], true, none, false⟩
+
+theorem next_typed (root : ProgramSource) (w : W) (ex : ExitV) :
+    TypedProg root w keyTy (next ex) :=
+  TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () trivial fun _ _ ans post => by
+      change ans = Val.unit at post
+      subst post
+      exact TypedProg.pure ⟨trivial, trivial⟩
+
+theorem empty_provides (ctx : Ctx) : Provides ctx Env.Requirement.empty :=
+  fun key h => absurd h (Row.not_mem_empty key)
+
+theorem emptyCtx_lacks_scope : ¬ Provides emptyCtx keyTy.requires := by
+  intro h
+  have bound := h nativeScopeKey ((Row.mem_singleton _ _).mpr rfl)
+  change ((Env.Context.empty : Env.Ctx).getV nativeScopeKey).isSome = true at bound
+  rw [Env.Context.getV_empty] at bound
+  exact Bool.noConfusion bound
+
+/-- The input meets the presence clause in the empty context: its current code needs nothing. -/
+theorem input_present (root : ProgramSource) (w : W) :
+    SavedOkPresent root w keyTy emptyCtx x0 :=
+  ⟨EffTy.pure .unit, TypedProg.pure ⟨trivial, trivial⟩, empty_provides emptyCtx,
+    .cons (.answer next fun w' _ ex _ => next_typed root w' ex) (.nil keyTy),
+    ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+
+/-- The walk at a success installs the answer frame's continuation, with nothing left on the
+stack. -/
+theorem walk_installs (interp : RInterp) :
+    popR interp (.success Val.unit) x0.stack x0 =
+      ({ x0 with stack := [], current := next (.success Val.unit) }, none) := rfl
+
+/-- **Presence at the current code is not walked** (proved): the frame `x0` meets the clause in
+the empty context, and the frame the walk leaves does not, since its code sits at the answer
+frame's output row, which requires the scope service. -/
+theorem presence_not_walked (root : ProgramSource) (w : W) :
+    SavedOkPresent root w keyTy emptyCtx x0 ∧
+      ¬ SavedOkPresent root w keyTy emptyCtx
+        (popR (interpR root.program) (.success Val.unit) x0.stack x0).1 := by
+  refine ⟨input_present root w, ?_⟩
+  rw [walk_installs]
+  rintro ⟨tin, _, present, stack, _⟩
+  cases stack
+  exact emptyCtx_lacks_scope present
+
+/-- The presence-free walk theorem still types the same output (`popR_typed_interpR`). -/
+theorem walked_typed (root : ProgramSource) (w : W) :
+    WalkTyped root (frameProtocols root) w keyTy
+      (popR (interpR root.program) (.success Val.unit) x0.stack x0) :=
+  popR_typed_interpR root w x0.stack (EffTy.pure .unit) keyTy (.success Val.unit) x0
+    (.cons (.answer next fun w' _ ex _ => next_typed root w' ex) (.nil keyTy))
+    ⟨trivial, trivial⟩ ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩
+
+/-- A checked program whose row is not empty: `acquireRelease` outside `scoped` requires the
+scope service. -/
+def openProg : NativeEff := .acquireRelease (.succeed (.lit .unit)) (.succeed (.lit .unit))
+
+theorem openProg_checked :
+    Program.typeOfProgram (openProg : ProgramSource).signature openProg = some keyTy := by
+  decide +kernel
+
+/-- **At the load the clause needs a closed row** (proved): the loaded root's context is the empty
+one (`loadR`), which does not provide the row the checker gives `openProg`. -/
+theorem load_presence_needs_closed_row (fuel compileFuel : Nat) :
+    (∀ f ∈ (loadR openProg fuel compileFuel).fibers, f.context = emptyCtx) ∧
+      ¬ Provides emptyCtx keyTy.requires := by
+  refine ⟨fun f hf => ?_, emptyCtx_lacks_scope⟩
+  change f ∈ [_] at hf
+  rw [List.mem_singleton] at hf
+  subst hf
+  rfl
+
+end PresenceMeasure
+
+open PresenceMeasure in
+#print axioms next_typed
+open PresenceMeasure in
+#print axioms input_present
+open PresenceMeasure in
+#print axioms walk_installs
+open PresenceMeasure in
+#print axioms presence_not_walked
+open PresenceMeasure in
+#print axioms walked_typed
+open PresenceMeasure in
+#print axioms openProg_checked
+open PresenceMeasure in
+#print axioms load_presence_needs_closed_row
+
 end Test.Program.H2PartOne
