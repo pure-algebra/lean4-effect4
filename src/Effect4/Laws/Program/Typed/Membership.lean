@@ -1310,4 +1310,791 @@ theorem fits_list_iff (w : World) (v : Val) (a : Ty) :
       · rw [hnone, Option.map_none] at hxs
         cases hxs
 
+
+/-! ## The coarse heap reading from the strong one (TY-08)
+
+`WorldValid.cells` types stored cells with the coarse check (`ValueOk`, `CompletionOk`), and the
+typed state's generated predicates type them with `Fits` (`preds.HeapCell`, `preds.PromiseCell`,
+`Typed/Assembly.lean`). The coarse reading follows from the strong one by `fits_hasTy`, so it can
+be derived where the strong one holds. -/
+
+/-- **The coarse heap column from the strong one (proved).** -/
+theorem heapTable_of_fits {w : World}
+    (h : Columns.Stores_refs (fun w key v => ∀ ty, w.Ρ key = some ty → Fits w v ty) w
+      w.state.refs) : HeapTable w :=
+  fun i v hv ty hty => fits_hasTy w ty v (h i v hv ty hty)
+
+/-- **The coarse completion judgment from strong exit membership (proved).** The reference arm
+needs nothing: since row 137 both judgments read a cell's declaration in `Ty.subN`. -/
+theorem completionOk_of_fitsExit {w : World} {a e : Ty} {req : Env.Requirement} {ex : ExitV}
+    (h : FitsExit w ⟨a, e, req⟩ ex) : CompletionOk w (a, e) (.ofExit ex) := by
+  cases ex with
+  | success v => exact fits_hasTy w a v ((fitsExit_success_iff w _ v).mp h)
+  | failure c =>
+    exact causeFits_admits (fun x hx => fits_hasTy w e x hx) c ((fitsExit_failure_iff w _ c).mp h)
+
+/-! ## Term soundness (TY-07)
+
+`evalTerm_hasTy` (`Laws/Program/Typed.lean`) is the coarse check's term law. This section is the
+same law for membership: a term that types and evaluates over values fitting their types
+evaluates to a value that fits the term's type (`evalTerm_fitsAll`; the `EnvTyped` form the
+ledger names is `Typed/Admission.lean`'s `evalTerm_fits`). The atom table is discharged once per
+scheme, as there (`atomFits`). Two things differ. The polymorphic schemes widen their bindings in
+the order itself (`Ty.WidensSub`, `fits_instantiate_widens`), because membership reads
+declarations at handles where the coarse check reads kinds. And `fst`/`snd` over a union of
+products answer at `Ty.join`, which the checker's join closure covers (`projectProduct_fits`). -/
+
+/-! ### Inversions at the scalar and value formers -/
+
+theorem fits_unit_inv {w : World} {v : Val} (h : Fits w v .unit) : v = Val.unit := by
+  simp only [Fits] at h
+  split at h
+  · rfl
+  · exact h.elim
+
+theorem fits_nat_inv {w : World} {v : Val} (h : Fits w v .nat) : ∃ n, v = Val.nat n := by
+  simp only [Fits] at h
+  split at h
+  · exact ⟨_, rfl⟩
+  · exact h.elim
+
+theorem fits_bool_inv {w : World} {v : Val} (h : Fits w v .bool) : ∃ b, v = Val.bool b := by
+  simp only [Fits] at h
+  split at h
+  · exact ⟨_, rfl⟩
+  · exact h.elim
+
+theorem fits_string_inv {w : World} {v : Val} (h : Fits w v .string) : ∃ s, v = Val.str s := by
+  simp only [Fits] at h
+  split at h
+  · exact ⟨_, rfl⟩
+  · exact h.elim
+
+theorem fits_option_inv {w : World} {v : Val} {a : Ty} (h : Fits w v (.option a)) :
+    v = Store.Val.none ∨ ∃ x, v = Store.Val.some x ∧ Fits w x a := by
+  simp only [Fits] at h
+  split at h
+  · exact Or.inl rfl
+  · rename_i x
+    exact Or.inr ⟨x, rfl, h⟩
+  · exact h.elim
+
+/-! ### Values fitting an argument list -/
+
+/-- Values fitting a list of types, position by position: an atom's arguments. -/
+inductive FitsAll (w : World) : List Val → List Ty → Prop
+  | nil : FitsAll w [] []
+  | cons {v : Val} {t : Ty} {vs : List Val} {ts : List Ty} :
+      Fits w v t → FitsAll w vs ts → FitsAll w (v :: vs) (t :: ts)
+
+namespace FitsAll
+
+variable {w : World}
+
+theorem get? {vs : List Val} {tys : List Ty} (h : FitsAll w vs tys) {i : Nat} {v : Val} {t : Ty}
+    (hv : vs[i]? = some v) (ht : tys[i]? = some t) : Fits w v t := by
+  induction h generalizing i with
+  | nil => cases hv
+  | cons hvt _ ih =>
+    cases i with
+    | zero =>
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at hv ht
+      subst hv
+      subst ht
+      exact hvt
+    | succ i =>
+      simp only [List.getElem?_cons_succ] at hv ht
+      exact ih hv ht
+
+theorem nil_inv {vs : List Val} (h : FitsAll w vs []) : vs = [] := by
+  cases h
+  rfl
+
+theorem singleton_inv {vs : List Val} {t : Ty} (h : FitsAll w vs [t]) :
+    ∃ v, vs = [v] ∧ Fits w v t := by
+  cases h with
+  | cons hv hrest =>
+    cases hrest
+    exact ⟨_, rfl, hv⟩
+
+theorem pair_inv {vs : List Val} {a b : Ty} (h : FitsAll w vs [a, b]) :
+    ∃ x y, vs = [x, y] ∧ Fits w x a ∧ Fits w y b := by
+  cases h with
+  | cons hx hrest =>
+    cases hrest with
+    | cons hy hrest' =>
+      cases hrest'
+      exact ⟨_, _, rfl, hx, hy⟩
+
+theorem triple_inv {vs : List Val} {a b c : Ty} (h : FitsAll w vs [a, b, c]) :
+    ∃ x y z, vs = [x, y, z] ∧ Fits w x a ∧ Fits w y b ∧ Fits w z c := by
+  cases h with
+  | cons hx hrest =>
+    cases hrest with
+    | cons hy hrest' =>
+      cases hrest' with
+      | cons hz hrest'' =>
+        cases hrest''
+        exact ⟨_, _, _, rfl, hx, hy, hz⟩
+
+/-- Pointwise subsumption: the fixed-signature guard (`NativeAtom.monoApply`). -/
+theorem sub {vs : List Val} {tys params : List Ty} (h : FitsAll w vs tys)
+    (hlen : tys.length = params.length)
+    (hall : (tys.zip params).all (fun (a, e) => a.sub e) = true) : FitsAll w vs params := by
+  induction h generalizing params with
+  | nil =>
+    cases params with
+    | nil => exact .nil
+    | cons _ _ => exact absurd hlen (by simp only [List.length_cons, List.length_nil]; exact nofun)
+  | cons hv _ ih =>
+    cases params with
+    | nil => exact absurd hlen (by simp only [List.length_cons, List.length_nil]; exact nofun)
+    | cons p ps =>
+      simp only [List.zip_cons_cons, List.all_cons, Bool.and_eq_true] at hall
+      simp only [List.length_cons, Nat.add_right_cancel_iff] at hlen
+      exact .cons (fits_sub w hall.1 _ hv) (ih hlen hall.2)
+
+/-- Values each below one type: the variadic guard. -/
+theorem all_sub {vs : List Val} {tys : List Ty} (h : FitsAll w vs tys) {t : Ty}
+    (hall : tys.all (·.sub t) = true) : ∀ v ∈ vs, Fits w v t := by
+  induction h with
+  | nil => intro v hv; cases hv
+  | cons hv _ ih =>
+    simp only [List.all_cons, Bool.and_eq_true] at hall
+    obtain ⟨hsub, hrest⟩ := hall
+    intro x hx
+    cases hx with
+    | head => exact fits_sub w hsub _ hv
+    | tail _ hx => exact ih hrest x hx
+
+end FitsAll
+
+/-- An environment judged pointwise is an argument-list judgment (the bridge from `EnvTyped`). -/
+theorem fitsAll_of_pointwise {w : World} :
+    ∀ {tys : List Ty} {vs : List Val}, tys.length = vs.length →
+      (∀ (i : Nat) (ty : Ty) (v : Val), tys[i]? = some ty → vs[i]? = some v → Fits w v ty) →
+      FitsAll w vs tys
+  | [], [], _, _ => .nil
+  | [], _ :: _, hlen, _ => absurd hlen (by simp only [List.length_cons, List.length_nil]; exact nofun)
+  | _ :: _, [], hlen, _ => absurd hlen (by simp only [List.length_cons, List.length_nil]; exact nofun)
+  | t :: ts, v :: vs, hlen, h =>
+    .cons (h 0 t v rfl rfl)
+      (fitsAll_of_pointwise (by simpa only [List.length_cons, Nat.add_right_cancel_iff] using hlen)
+        (fun i ty x hty hx => h (i + 1) ty x hty hx))
+
+/-! ### Templates: membership is monotone in the bindings -/
+
+/-- Membership moves along a widening of the bindings on a template whose parameters sit under
+value formers only (`Ty.valueVars`): a parameter's binding moves up in raw `sub`, which
+`fits_sub` carries, and every handle former's arguments are closed, so instantiation leaves
+them alone (`Ty.instantiate_of_noVars`). -/
+theorem fits_instantiate_widens {σ σ' : Ty.Subst} (hw : Ty.WidensSub σ σ') (w : World) :
+    ∀ (t : Ty), Ty.valueVars t = true →
+      ∀ v, Fits w v (Ty.instantiate σ t) → Fits w v (Ty.instantiate σ' t) := by
+  intro t
+  induction t with
+  | var i =>
+    intro _ v h
+    change Fits w v ((σ.lookup i).getD .never) at h
+    show Fits w v ((σ'.lookup i).getD .never)
+    cases hi : σ.lookup i with
+    | none =>
+      rw [hi] at h
+      exact h.elim
+    | some u =>
+      rw [hi] at h
+      obtain ⟨u', hi', hsub⟩ := hw i u hi
+      rw [hi']
+      exact fits_sub w hsub v h
+  | option a ih =>
+    intro hv v h
+    change Ty.valueVars a = true at hv
+    change Fits w v (.option (Ty.instantiate σ a)) at h
+    show Fits w v (.option (Ty.instantiate σ' a))
+    rcases fits_option_inv h with rfl | ⟨x, rfl, hx⟩
+    · trivial
+    · exact ih hv x hx
+  | list a ih =>
+    intro hv v h
+    change Ty.valueVars a = true at hv
+    change Fits w v (.list (Ty.instantiate σ a)) at h
+    show Fits w v (.list (Ty.instantiate σ' a))
+    obtain ⟨xs, hxs, hall⟩ := (fits_list_iff w v _).mp h
+    exact (fits_list_iff w v _).mpr ⟨xs, hxs, fun x hx => ih hv x (hall x hx)⟩
+  | prod a b iha ihb =>
+    intro hv v h
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hv
+    change Fits w v (.prod (Ty.instantiate σ a) (Ty.instantiate σ b)) at h
+    show Fits w v (.prod (Ty.instantiate σ' a) (Ty.instantiate σ' b))
+    obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w v _ _).mp h
+    exact (fits_prod_iff w _ _ _).mpr ⟨p, q, rfl, iha ha p hp, ihb hb q hq⟩
+  | except e a ihe iha =>
+    intro hv v h
+    obtain ⟨he, ha⟩ := Bool.and_eq_true_iff.mp hv
+    change Fits w v (.except (Ty.instantiate σ e) (Ty.instantiate σ a)) at h
+    show Fits w v (.except (Ty.instantiate σ' e) (Ty.instantiate σ' a))
+    simp only [Fits] at h
+    split at h
+    · exact ihe he _ h
+    · exact iha ha _ h
+    · exact h.elim
+  | exitOf a e iha ihe =>
+    intro hv v h
+    obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hv
+    change Fits w v (.exitOf (Ty.instantiate σ a) (Ty.instantiate σ e)) at h
+    show Fits w v (.exitOf (Ty.instantiate σ' a) (Ty.instantiate σ' e))
+    simp only [Fits] at h
+    split at h
+    · exact iha ha _ h
+    · rename_i written
+      split at h
+      · rename_i c hc
+        simp only [Fits, hc]
+        exact causeFits_map (fun x hx => ihe he x hx) h
+      · exact h.elim
+    · exact h.elim
+  | causeOf e ih =>
+    intro hv v h
+    change Ty.valueVars e = true at hv
+    change Fits w v (.causeOf (Ty.instantiate σ e)) at h
+    show Fits w v (.causeOf (Ty.instantiate σ' e))
+    simp only [Fits] at h
+    split at h
+    · rename_i c hc
+      simp only [Fits, hc]
+      exact causeFits_map (fun x hx => ih hv x hx) h
+    · exact h.elim
+  | union l r ihl ihr =>
+    intro hv v h
+    obtain ⟨hl, hr⟩ := Bool.and_eq_true_iff.mp hv
+    exact h.imp (ihl hl v) (ihr hr v)
+  | fiberOf a e _ _ =>
+    intro hv v h
+    obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hv
+    change Fits w v (.fiberOf (Ty.instantiate σ a) (Ty.instantiate σ e)) at h
+    show Fits w v (.fiberOf (Ty.instantiate σ' a) (Ty.instantiate σ' e))
+    rw [Ty.instantiate_of_noVars σ a ha, Ty.instantiate_of_noVars σ e he] at h
+    rw [Ty.instantiate_of_noVars σ' a ha, Ty.instantiate_of_noVars σ' e he]
+    exact h
+  | refOf a _ =>
+    intro hv v h
+    change Fits w v (.refOf (Ty.instantiate σ a)) at h
+    show Fits w v (.refOf (Ty.instantiate σ' a))
+    rw [Ty.instantiate_of_noVars σ a hv] at h
+    rw [Ty.instantiate_of_noVars σ' a hv]
+    exact h
+  | deferredOf a e _ _ =>
+    intro hv v h
+    obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hv
+    change Fits w v (.deferredOf (Ty.instantiate σ a) (Ty.instantiate σ e)) at h
+    show Fits w v (.deferredOf (Ty.instantiate σ' a) (Ty.instantiate σ' e))
+    rw [Ty.instantiate_of_noVars σ a ha, Ty.instantiate_of_noVars σ e he] at h
+    rw [Ty.instantiate_of_noVars σ' a ha, Ty.instantiate_of_noVars σ' e he]
+    exact h
+  | never => intro _ v h; exact h
+  | unit => intro _ v h; exact h
+  | nat => intro _ v h; exact h
+  | int => intro _ v h; exact h
+  | string => intro _ v h; exact h
+  | bool => intro _ v h; exact h
+  | handle _ => intro _ v h; exact h
+  | lit _ => intro _ v h; exact h
+  | unknown => intro _ v h; exact h
+
+/-- A list match puts every argument at its parameter's instance under the bindings of the
+LAST step (the coarse `Fits.instantiate`'s twin): each guard holds at its own step
+(`Ty.matchTemplate_sound`), and the later steps only widen (`Ty.matchTemplateArgs_widensSub`). -/
+theorem FitsAll.instantiate {w : World} {join : Bool} :
+    ∀ {σ₀ σ : Ty.Subst} {ps : List Ty}, (∀ p ∈ ps, Ty.valueVars p = true) →
+      ∀ {vs : List Val} {tys : List Ty}, Ty.matchTemplateArgs σ₀ ps tys join = some σ →
+        FitsAll w vs tys → FitsAll w vs (ps.map (Ty.instantiate σ))
+  | _, _, [], _, _, [], _, .nil => .nil
+  | _, _, [], _, _, _ :: _, hmatch, _ => nomatch hmatch
+  | _, _, _ :: _, _, _, [], hmatch, _ => nomatch hmatch
+  | σ₀, σ, p :: ps, hps, _, r :: rs, hmatch, .cons hv hfit => by
+    simp only [Ty.matchTemplateArgs, Option.bind_eq_some_iff] at hmatch
+    obtain ⟨σ₁, h₁, hrest⟩ := hmatch
+    exact .cons
+      (fits_instantiate_widens (Ty.matchTemplateArgs_widensSub hrest) w p
+        (hps p List.mem_cons_self) _ (fits_sub w (Ty.matchTemplate_sound σ₀ p r σ₁ h₁) _ hv))
+      (FitsAll.instantiate (fun q hq => hps q (List.mem_cons_of_mem p hq)) hrest hfit)
+
+/-! ### Atom soundness, once per scheme -/
+
+/-- The per-atom obligation for membership: at any argument types the atom accepts, values
+fitting those types that evaluate evaluate to a value fitting the answer type. -/
+def AtomFits (a : NativeAtom) : Prop :=
+  ∀ (w : World) (tys : List Ty) (ty : Ty) (vs : List Val) (v : Val),
+    a.typeOf tys = some ty → FitsAll w vs tys → NativeAtom.eval a vs = some v → Fits w v ty
+
+theorem atomFits_of_mono {a : NativeAtom} {params : List Ty} {answer : Ty}
+    (hs : (NativeAtom.spec a).scheme = .mono params answer)
+    (hev : ∀ (w : World) (vs : List Val) (v : Val), FitsAll w vs params →
+      NativeAtom.eval a vs = some v → Fits w v answer) : AtomFits a := by
+  intro w tys ty vs v hty hfit hv
+  simp only [NativeAtom.typeOf, hs, NativeAtom.Scheme.apply, NativeAtom.monoApply] at hty
+  split at hty
+  · next hguard =>
+    cases hty
+    exact hev w vs v (hfit.sub hguard.1 hguard.2) hv
+  · exact nomatch hty
+
+theorem atomFits_of_variadic {a : NativeAtom} {param answer : Ty}
+    (hs : (NativeAtom.spec a).scheme = .variadic param answer)
+    (hev : ∀ (w : World) (vs : List Val) (v : Val), (∀ x ∈ vs, Fits w x param) →
+      NativeAtom.eval a vs = some v → Fits w v answer) : AtomFits a := by
+  intro w tys ty vs v hty hfit hv
+  simp only [NativeAtom.typeOf, hs, NativeAtom.Scheme.apply] at hty
+  split at hty
+  · next hall =>
+    cases hty
+    exact hev w vs v (hfit.all_sub hall) hv
+  · exact nomatch hty
+
+theorem atomFits_of_custom {a : NativeAtom} {tag : NativeAtom.CustomScheme}
+    (hs : (NativeAtom.spec a).scheme = .custom tag)
+    (hev : ∀ (w : World) (tys : List Ty) (ty : Ty) (vs : List Val) (v : Val),
+      tag.apply tys = some ty → FitsAll w vs tys → NativeAtom.eval a vs = some v → Fits w v ty) :
+    AtomFits a := by
+  intro w tys ty vs v hty hfit hv
+  simp only [NativeAtom.typeOf, hs, NativeAtom.Scheme.apply] at hty
+  exact hev w tys ty vs v hty hfit hv
+
+theorem atomFits_of_poly {a : NativeAtom} {params : List Ty} {answer : Ty} {join : Bool}
+    (hs : (NativeAtom.spec a).scheme = .poly params answer join)
+    (hvv : ∀ p ∈ params, Ty.valueVars p = true)
+    (hev : ∀ (w : World) (σ : Ty.Subst) (vs : List Val) (v : Val),
+      FitsAll w vs (params.map (Ty.instantiate σ)) → NativeAtom.eval a vs = some v →
+        Fits w v (Ty.instantiate σ answer)) : AtomFits a := by
+  intro w tys ty vs v hty hfit hv
+  simp only [NativeAtom.typeOf, hs, NativeAtom.Scheme.apply] at hty
+  obtain ⟨σ, hmatch, rfl⟩ := Option.map_eq_some_iff.mp hty
+  exact hev w σ vs v (FitsAll.instantiate hvv hmatch hfit) hv
+
+theorem atomFits_of_alts {a : NativeAtom} {alts : List (List Ty × Ty)}
+    (hs : (NativeAtom.spec a).scheme = .alts alts)
+    (hev : ∀ params answer, (params, answer) ∈ alts → ∀ (w : World) (vs : List Val) (v : Val),
+      FitsAll w vs params → NativeAtom.eval a vs = some v → Fits w v answer) : AtomFits a := by
+  intro w tys ty vs v hty hfit hv
+  simp only [NativeAtom.typeOf, hs, NativeAtom.Scheme.apply] at hty
+  obtain ⟨params, answer, hmem, heq⟩ := NativeAtom.findSome?_monoApply hty
+  simp only [NativeAtom.monoApply] at heq
+  split at heq
+  · next hguard =>
+    cases heq
+    exact hev _ _ hmem w vs v (hfit.sub hguard.1 hguard.2) hv
+  · exact nomatch heq
+
+/-- A monomorphic atom of one of the evaluation shapes: its scalar answer is in the answer's
+frame, which is membership at a scalar type. -/
+theorem atomFits_of_shape {a : NativeAtom} (s : NativeAtom.Shape)
+    (hs : (NativeAtom.spec a).scheme = .mono s.params s.answer) (hev : s.holds a) : AtomFits a := by
+  refine atomFits_of_mono hs ?_
+  intro w vs v hfit hv
+  cases s with
+  | nat1 | natTest =>
+    obtain ⟨x, rfl, hx⟩ := hfit.singleton_inv
+    obtain ⟨m, rfl⟩ := fits_nat_inv hx
+    obtain ⟨_, he⟩ := hev m
+    rw [he] at hv
+    cases hv
+    trivial
+  | bool1 =>
+    obtain ⟨x, rfl, hx⟩ := hfit.singleton_inv
+    obtain ⟨b, rfl⟩ := fits_bool_inv hx
+    obtain ⟨_, he⟩ := hev b
+    rw [he] at hv
+    cases hv
+    trivial
+  | nat2 | natRel =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨m, rfl⟩ := fits_nat_inv hx
+    obtain ⟨k, rfl⟩ := fits_nat_inv hy
+    obtain ⟨_, he⟩ := hev m k
+    rw [he] at hv
+    cases hv
+    trivial
+  | bool2 =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨p, rfl⟩ := fits_bool_inv hx
+    obtain ⟨q, rfl⟩ := fits_bool_inv hy
+    obtain ⟨_, he⟩ := hev p q
+    rw [he] at hv
+    cases hv
+    trivial
+  | strTest =>
+    obtain ⟨x, y, rfl, hx, _⟩ := hfit.pair_inv
+    obtain ⟨t, rfl⟩ := fits_string_inv hx
+    obtain ⟨_, he⟩ := hev t y
+    rw [he] at hv
+    cases hv
+    trivial
+  | str2 =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨s, rfl⟩ := fits_string_inv hx
+    obtain ⟨t, rfl⟩ := fits_string_inv hy
+    obtain ⟨_, he⟩ := hev s t
+    rw [he] at hv
+    cases hv
+    trivial
+
+/-! ### The projection and cause atoms -/
+
+/-- Projecting a typed product, or a union of them, keeps membership: a direct product's
+column fits its component, and a union's projections fit the join of the arms' projections. -/
+theorem projectProduct_fits (w : World) (second : Bool) :
+    ∀ (input output : Ty) (v r : Val), NativeAtom.projectProduct second input = some output →
+      Fits w v input → NativeAtom.eval (if second then .snd else .fst) [v] = some r →
+        Fits w r output := by
+  intro input
+  induction input with
+  | never => intro output v r _ hv; exact hv.elim
+  | prod a b _ _ =>
+    intro output v r hproject hv hr
+    simp only [NativeAtom.projectProduct] at hproject
+    cases hproject
+    obtain ⟨x, y, rfl, hx, hy⟩ := (fits_prod_iff w v a b).mp hv
+    cases second
+    · change NativeAtom.eval .fst [Val.list [x, y]] = some r at hr
+      cases hr
+      exact hx
+    · change NativeAtom.eval .snd [Val.list [x, y]] = some r at hr
+      cases hr
+      exact hy
+  | union a b iha ihb =>
+    intro output v r hproject hv hr
+    cases hleft : NativeAtom.projectProduct second a with
+    | none => simp only [NativeAtom.projectProduct, hleft, Option.bind_eq_bind, Option.bind_none,
+        reduceCtorEq] at hproject
+    | some left =>
+      cases hright : NativeAtom.projectProduct second b with
+      | none => simp only [NativeAtom.projectProduct, hleft, hright,
+          Option.bind_eq_bind, Option.bind_some, Option.bind_none, reduceCtorEq] at hproject
+      | some right =>
+        simp only [NativeAtom.projectProduct, hleft, hright, Option.bind_eq_bind,
+          Option.bind_some] at hproject
+        cases hproject
+        rcases hv with ha | hb
+        · exact fits_join_left w left right r (iha left v r hleft ha hr)
+        · exact fits_join_right w left right r (ihb right v r hright hb hr)
+  | _ => intro output v r hproject; simp only [NativeAtom.projectProduct, reduceCtorEq] at hproject
+
+/-- A tag query answers a Boolean. -/
+theorem queryTag_bool {tag : ReasonTag} {value answer : Val} (h : queryTag tag value = some answer) :
+    ∃ b, answer = Val.bool b := by
+  unfold queryTag at h
+  obtain ⟨_, _, rfl⟩ := Option.map_eq_some_iff.mp h
+  exact ⟨_, rfl⟩
+
+/-- The reasons a cause-query input carries, each `Fail` with a payload in the error column. -/
+theorem fits_queryReasons (w : World) (value : Val) (input error : Ty)
+    (hinput : causeInputError? input = some error) (hfit : Fits w value input) :
+    ∃ reasons, queryReasons? value = some reasons ∧
+      CauseFits (fun x => Fits w x error) ⟨reasons⟩ := by
+  unfold causeInputError? at hinput
+  split at hinput
+  · cases hinput
+    change (match Val.cause? value with
+      | some c => CauseFits (fun x => Fits w x error) c
+      | none => False) at hfit
+    cases hc : Val.cause? value with
+    | none => rw [hc] at hfit; exact hfit.elim
+    | some cause =>
+      rw [hc] at hfit
+      have hv := Val.cause?_exact hc
+      subst value
+      refine ⟨cause.reasons, ?_, hfit⟩
+      change (Val.cause? (Val.exitErr cause)).map Cause.reasons = _
+      rw [Val.cause?_exitErr]
+      rfl
+  · cases hinput
+    simp only [Fits] at hfit
+    split at hfit
+    · exact ⟨[], rfl, fun _ hr => nomatch hr⟩
+    · next written =>
+      cases hc : causeImage.ofVal written with
+      | none => rw [hc] at hfit; exact hfit.elim
+      | some cause =>
+        rw [hc] at hfit
+        refine ⟨cause.reasons, ?_, hfit⟩
+        change (causeImage.ofVal written).map Cause.reasons = _
+        rw [hc]
+        rfl
+    · exact hfit.elim
+  all_goals cases hinput
+
+/-- The first `Fail` payload of reasons whose failures fit the error column fits it. -/
+theorem fits_firstErrorValue {w : World} {error : Ty} {reasons : List (Reason Err Defect FiberId Ann)}
+    (hc : CauseFits (fun x => Fits w x error) ⟨reasons⟩) {x : Val}
+    (hx : (reasons.findSome? Reason.error?).bind valOfErr = some x) : Fits w x error := by
+  obtain ⟨selected, hselected, hvalue⟩ := Option.bind_eq_some_iff.mp hx
+  obtain ⟨reason, hmem, hreason⟩ := List.exists_of_findSome?_eq_some hselected
+  have hr := hc reason hmem
+  cases reason with
+  | fail actual annotations =>
+    simp only [Reason.error?, Option.some.injEq] at hreason
+    cases hreason
+    obtain ⟨v, hv, hfit⟩ := hr
+    rw [hvalue] at hv
+    cases hv
+    exact hfit
+  | die defect annotations => cases hreason
+  | interrupt fiber annotations => cases hreason
+
+/-- The error query answers an option of the input's error column. -/
+theorem queryError_fits (w : World) (value answer : Val) (input error : Ty)
+    (hinput : causeInputError? input = some error) (hfit : Fits w value input)
+    (h : queryError value = some answer) : Fits w answer (.option error) := by
+  obtain ⟨reasons, hquery, hcause⟩ := fits_queryReasons w value input error hinput hfit
+  unfold queryError at h
+  rw [hquery] at h
+  have h' := Option.some.inj h
+  subst h'
+  split
+  · trivial
+  · next extracted hfound => exact fits_firstErrorValue hcause hfound
+
+/-! ### Every atom -/
+
+/-- **Every atom keeps membership.** One line where a shape carries the argument; a short block
+where the evaluation reads its argument's own frame (a projection, a cause query, an option, a
+list); every polymorphic template's parameters sit under value formers (`decide`). -/
+theorem atomFits (a : NativeAtom) : AtomFits a := by
+  cases a with
+  | succ => exact atomFits_of_shape .nat1 rfl (fun _ => ⟨_, rfl⟩)
+  | pred => exact atomFits_of_shape .nat1 rfl (fun _ => ⟨_, rfl⟩)
+  | isZero => exact atomFits_of_shape .natTest rfl (fun _ => ⟨_, rfl⟩)
+  | boolNot => exact atomFits_of_shape .bool1 rfl (fun _ => ⟨_, rfl⟩)
+  | add => exact atomFits_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | lt => exact atomFits_of_shape .natRel rfl (fun _ _ => ⟨_, rfl⟩)
+  | boolOr => exact atomFits_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | boolAnd => exact atomFits_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | tagIs => exact atomFits_of_shape .strTest rfl (fun _ _ => ⟨_, rfl⟩)
+  | mul => exact atomFits_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | natSub => exact atomFits_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | natDiv => exact atomFits_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | natMod => exact atomFits_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | strConcat => exact atomFits_of_shape .str2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | strings =>
+    refine atomFits_of_variadic rfl ?_
+    intro w vs v hall hv
+    have hstr : ∀ x ∈ vs, ∃ s, x = Val.str s := fun x hx => fits_string_inv (hall x hx)
+    change stringsAtom vs = some v at hv
+    unfold stringsAtom at hv
+    split at hv
+    · cases hv
+      exact (fits_list_iff w _ _).mpr ⟨vs, rfl, hall⟩
+    · exact nomatch hv
+  | eq =>
+    refine atomFits_of_alts rfl ?_
+    intro params answer hmem w vs v hfit hv
+    simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hmem
+    obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
+    · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨m, rfl⟩ := fits_nat_inv hx
+      obtain ⟨n, rfl⟩ := fits_nat_inv hy
+      cases hv
+      trivial
+    · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨s, rfl⟩ := fits_string_inv hx
+      obtain ⟨t, rfl⟩ := fits_string_inv hy
+      cases hv
+      trivial
+  | pair =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    cases hv
+    exact ⟨hx, hy⟩
+  | fst =>
+    refine atomFits_of_custom rfl ?_
+    intro w tys ty vs v hty hfit hv
+    simp only [NativeAtom.CustomScheme.apply, NativeAtom.projectRule] at hty
+    split at hty
+    · obtain ⟨x, rfl, hx⟩ := hfit.singleton_inv
+      exact projectProduct_fits w false _ _ x v hty hx hv
+    all_goals exact nomatch hty
+  | snd =>
+    refine atomFits_of_custom rfl ?_
+    intro w tys ty vs v hty hfit hv
+    simp only [NativeAtom.CustomScheme.apply, NativeAtom.projectRule] at hty
+    split at hty
+    · obtain ⟨x, rfl, hx⟩ := hfit.singleton_inv
+      exact projectProduct_fits w true _ _ x v hty hx hv
+    all_goals exact nomatch hty
+  | causeIsFail | causeIsDie | causeIsInterrupt =>
+    refine atomFits_of_custom rfl ?_
+    intro w tys ty vs v hty hfit hv
+    simp only [NativeAtom.CustomScheme.apply, NativeAtom.causeTestRule] at hty
+    split at hty
+    · obtain ⟨error, _, hanswer⟩ := Option.map_eq_some_iff.mp hty
+      cases hanswer
+      obtain ⟨x, rfl, _⟩ := hfit.singleton_inv
+      obtain ⟨b, rfl⟩ := queryTag_bool hv
+      trivial
+    all_goals exact nomatch hty
+  | causeError =>
+    refine atomFits_of_custom rfl ?_
+    intro w tys ty vs v hty hfit hv
+    simp only [NativeAtom.CustomScheme.apply, NativeAtom.causeErrorRule] at hty
+    split at hty
+    · obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
+      cases hanswer
+      obtain ⟨x, rfl, hx⟩ := hfit.singleton_inv
+      exact queryError_fits w x v _ error hdomain hx hv
+    all_goals exact nomatch hty
+  | isSome =>
+    refine atomFits_of_mono rfl ?_
+    intro w vs v hfit hv
+    obtain ⟨x, rfl, hx⟩ := hfit.singleton_inv
+    rcases fits_option_inv hx with rfl | ⟨y, rfl, _⟩
+    · cases hv
+      trivial
+    · cases hv
+      trivial
+  | getOrElse =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    rcases fits_option_inv hx with rfl | ⟨z, rfl, hz⟩
+    · cases hv
+      exact hy
+    · cases hv
+      exact hz
+  | ite =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨c, x, y, rfl, hc, hx, hy⟩ := hfit.triple_inv
+    obtain ⟨b, rfl⟩ := fits_bool_inv hc
+    cases hv
+    cases b
+    · exact hy
+    · exact hx
+  | optSome =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨x, rfl, hx⟩ := hfit.singleton_inv
+    cases hv
+    exact hx
+  | optNone =>
+    refine atomFits_of_mono rfl fun w vs v hfit hv => ?_
+    cases hfit.nil_inv
+    cases hv
+    trivial
+  | listNil =>
+    refine atomFits_of_mono rfl fun w vs v hfit hv => ?_
+    cases hfit.nil_inv
+    cases hv
+    exact (fits_list_iff w _ _).mpr ⟨[], rfl, fun _ hx => nomatch hx⟩
+  | listCons =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨x, xs, rfl, hx, hxs⟩ := hfit.pair_inv
+    obtain ⟨elems, hl, helems⟩ := (fits_list_iff w xs _).mp hxs
+    simp only [NativeAtom.eval, hl, Option.map_some, Option.some.injEq] at hv
+    subst hv
+    refine (fits_list_iff w _ _).mpr ⟨x :: elems, rfl, fun y hy => ?_⟩
+    rcases List.mem_cons.mp hy with rfl | hy
+    · exact hx
+    · exact helems y hy
+  | listGet =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨xs, i, rfl, hxs, hi⟩ := hfit.pair_inv
+    obtain ⟨n, rfl⟩ := fits_nat_inv hi
+    obtain ⟨elems, hl, helems⟩ := (fits_list_iff w xs _).mp hxs
+    cases hn : elems[n]? with
+    | none =>
+      simp only [NativeAtom.eval, hl, hn, Option.map_some, Option.some.injEq] at hv
+      subst hv
+      trivial
+    | some e =>
+      simp only [NativeAtom.eval, hl, hn, Option.map_some, Option.some.injEq] at hv
+      subst hv
+      exact helems e (List.mem_of_getElem? hn)
+  | listLength =>
+    refine atomFits_of_mono rfl fun w vs v hfit hv => ?_
+    obtain ⟨xs, rfl, hxs⟩ := hfit.singleton_inv
+    obtain ⟨elems, hl, _⟩ := (fits_list_iff w xs _).mp hxs
+    simp only [NativeAtom.eval, hl, Option.map_some, Option.some.injEq] at hv
+    subst hv
+    trivial
+  | listAppend =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨xs, ys, rfl, hxs, hys⟩ := hfit.pair_inv
+    obtain ⟨front, hf, hfront⟩ := (fits_list_iff w xs _).mp hxs
+    obtain ⟨back, hb, hback⟩ := (fits_list_iff w ys _).mp hys
+    simp only [NativeAtom.eval, hf, hb, Option.bind_some, Option.map_some, Option.some.injEq] at hv
+    subst hv
+    exact (fits_list_iff w _ _).mpr ⟨front ++ back, rfl,
+      fun y hy => (List.mem_append.mp hy).elim (hfront y) (hback y)⟩
+
+/-! ### Terms -/
+
+/-- A literal's value fits its argument type under either const flag: a `str s` fits `lit s`
+as it fits `string`. -/
+theorem fits_lit (w : World) (const : Bool) (l : Lit) (v : Val) (h : l.toVal = some v) :
+    Fits w v (litArgTy const l) := by
+  cases l with
+  | str s =>
+    cases Option.some.inj h
+    cases const
+    · trivial
+    · rfl
+  | unit => cases Option.some.inj h; trivial
+  | nat n => cases Option.some.inj h; trivial
+  | bool b => cases Option.some.inj h; trivial
+
+mutual
+/-- **Term soundness for membership (TY-07, proved).** Under a signature whose atoms are the
+native table's, a term that types and evaluates over values fitting their types evaluates to a
+value that fits the term's type: the environment's fit at a variable, `fits_lit` at a literal,
+`atomFits` at an application over the fitted argument values. -/
+theorem evalTerm_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = nativeAtomTy)
+    (hconst : sig.constAtom = nativeConstAtom) (w : World) (t : Term) (env : List Val)
+    (tys : List Ty) (ty : Ty) (v : Val) (hfit : FitsAll w env tys)
+    (hty : termTy sig tys t = some ty) (hev : evalTerm env t = some v) : Fits w v ty := by
+  cases t with
+  | var i => exact hfit.get? hev hty
+  | lit l =>
+    have hty' : some (litArgTy false l) = some ty := hty
+    cases hty'
+    exact fits_lit w false l v hev
+  | app atom args =>
+    have hty' : (argsTy sig tys (sig.constAtom atom) args).bind (sig.atomOf atom) = some ty := hty
+    obtain ⟨tl, hts, hatomTy⟩ := Option.bind_eq_some_iff.mp hty'
+    rw [hatom] at hatomTy
+    have hev' : (evalTerms env args).bind (nativeAtom atom) = some v := hev
+    obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp hev'
+    unfold nativeAtomTy at hatomTy
+    obtain ⟨named, hname, hty2⟩ := Option.bind_eq_some_iff.mp hatomTy
+    simp only [nativeAtom, hname, Option.bind_some] at hv
+    exact atomFits named w tl ty vs v hty2
+      (evalTerms_fitsAll sig hatom hconst w args env tys (sig.constAtom atom) tl vs hfit hts hvs) hv
+termination_by structural t
+
+/-- The list form: the values of typed arguments fit their argument types. -/
+theorem evalTerms_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = nativeAtomTy)
+    (hconst : sig.constAtom = nativeConstAtom) (w : World) (ts : Terms) (env : List Val)
+    (tys : List Ty) (const : Bool) (tl : List Ty) (vs : List Val) (hfit : FitsAll w env tys)
+    (hty : argsTy sig tys const ts = some tl) (hev : evalTerms env ts = some vs) :
+    FitsAll w vs tl := by
+  cases ts with
+  | nil =>
+    have hty' : some ([] : List Ty) = some tl := hty
+    have hev' : some ([] : List Val) = some vs := hev
+    cases hty'
+    cases hev'
+    exact .nil
+  | cons head tail =>
+    rw [argsTy_cons] at hty
+    obtain ⟨t1, ht1, hty'⟩ := Option.bind_eq_some_iff.mp hty
+    obtain ⟨rest, hrest, hcons⟩ := Option.bind_eq_some_iff.mp hty'
+    cases hcons
+    have hev2 : ((evalTerm env head).bind fun v =>
+        (evalTerms env tail).bind fun rest => some (v :: rest)) = some vs := hev
+    obtain ⟨v1, hv1, hev'⟩ := Option.bind_eq_some_iff.mp hev2
+    obtain ⟨vrest, hvrest, hvcons⟩ := Option.bind_eq_some_iff.mp hev'
+    cases hvcons
+    refine .cons ?_ (evalTerms_fitsAll sig hatom hconst w tail env tys const rest vrest hfit hrest hvrest)
+    rcases argTy_cases _ _ _ head t1 ht1 with ⟨value, rfl, rfl⟩ | ht1'
+    · exact fits_lit w const value v1 hv1
+    · exact evalTerm_fitsAll sig hatom hconst w head env tys t1 v1 hfit ht1' hv1
+termination_by structural ts
+end
+
 end Effect4.Program.Typed

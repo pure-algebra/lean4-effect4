@@ -72,6 +72,24 @@ def EnvTyped (w : World) (env : List Ty) (vals : List Val) : Prop :=
   env.length = vals.length ∧
   ∀ (i : Nat) (ty : Ty) (v : Val), env[i]? = some ty → vals[i]? = some v → Fits w v ty
 
+/-- **Term soundness for membership (TY-07, proved)**, in the environment judgment the typed
+state reads (`PointTyped`): under a signature whose atoms are the native table's (every
+`nativeSignature`, every source signature), a term that types in a typed environment and
+evaluates there evaluates to a value of the term's type. The proof is `evalTerm_fitsAll`
+(`Typed/Membership.lean`) through `fitsAll_of_pointwise`. -/
+theorem evalTerm_fits {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
+    (hconst : sig.constAtom = nativeConstAtom) {w : World} {env : List Ty} {vals : List Val}
+    {t : Term} {ty : Ty} {v : Val} (henv : EnvTyped w env vals)
+    (hty : termTy sig env t = some ty) (hev : evalTerm vals t = some v) : Fits w v ty :=
+  evalTerm_fitsAll sig hatom hconst w t vals env ty v (fitsAll_of_pointwise henv.1 henv.2) hty hev
+
+/-- `evalTerm_fits` at a native signature over any row table. -/
+theorem evalTerm_fits_native (table : RowTable) {w : World} {env : List Ty} {vals : List Val}
+    {t : Term} {ty : Ty} {v : Val} (henv : EnvTyped w env vals)
+    (hty : termTy (nativeSignature table) env t = some ty) (hev : evalTerm vals t = some v) :
+    Fits w v ty :=
+  evalTerm_fits rfl rfl henv hty hev
+
 /-- The program the typed state is about, with the host-row table its checker reads. A bare
 program coerces to a source with the empty table. -/
 structure ProgramSource where
