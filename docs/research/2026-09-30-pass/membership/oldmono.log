@@ -1,0 +1,2 @@
+'Research.Pass.Membership.OldMono.strongValue_mono' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.OldMono.strongExit_mono' depends on axioms: [propext, Quot.sound]

@@ -1,0 +1,11 @@
+rc.112 exit: success
+  js    [1,[false,[2305843009213694000,[0,904]]]]
+  exact ["1",[false,["2305843009213693952",["0","904"]]]]
+a0 9007199254740992 a2 2305843009213693952 a3 4611686018427387904 a4 4611686018427387904
+safe? [ false, false, false, false ]
+literal 9007199254740995 reads as 9007199254740996
+JSON.parse("9007199254740995") is 9007199254740996
+JSON.parse("9007199254740994") is 9007199254740994
+eq(add(M,2), succ(M)) = true  lt(succ M, succ(succ M)) = false
+div/mod on safe inputs: 1016384 cases, div differs 0, mod differs 0
+div above 2^53 (on the held double): 100000 cases, differs 163

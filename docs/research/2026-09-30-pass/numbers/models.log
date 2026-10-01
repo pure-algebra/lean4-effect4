@@ -1,0 +1,49 @@
+wrote 20000 vectors
+div vectors 4000, model floor differs from exact floor 183
+wrote 4000 truncation vectors (red control)
+wrote 3000 exact vectors (red control)
+wrote 30000 OCaml vectors
+'Research.Pass.Numbers.Models.roundNat_of_le' does not depend on any axioms
+'Research.Pass.Numbers.Models.jsAdd_exact' does not depend on any axioms
+'Research.Pass.Numbers.Models.jsMul_exact' does not depend on any axioms
+'Research.Pass.Numbers.Models.jsSub_exact' depends on axioms: [propext]
+'Research.Pass.Numbers.Models.jsMod_exact' depends on axioms: [propext]
+'Research.Pass.Numbers.Models.jsLt_exact' does not depend on any axioms
+'Research.Pass.Numbers.Models.roundNat_ge' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.roundNat_safe_iff' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.maxInt_eq' does not depend on any axioms
+'Research.Pass.Numbers.Models.wrap_of_range' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlAdd_exact' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlAdd_wraps' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlSub_exact' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlDiv_exact' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlMod_exact' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlLt_exact' depends on axioms: [propext]
+'Research.Pass.Numbers.Models.mlMul_exact' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlMul_saturates' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlAdd_postcheck_blind' does not depend on any axioms
+'Research.Pass.Numbers.Models.mlAddChecked_exact' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlAddChecked_complete' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.guardOpt_nat' depends on axioms: [propext]
+'Research.Pass.Numbers.Models.guardOpt_ok_iff' depends on axioms: [propext]
+'Research.Pass.Numbers.Models.mul_check_iff' depends on axioms: [propext]
+'Research.Pass.Numbers.Models.evalIn_ok_iff' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlAdd_under_check' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.mlMul_under_check' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.jsAdd_checked' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.jsMul_checked' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.atom_sim' depends on axioms: [propext]
+'Research.Pass.Numbers.Models.Face.sim' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.ocaml_agrees' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.typescript_agrees' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.jsDivExact_exact' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.typescriptExactDiv_agrees' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.ts_add' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.ts_sub' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.ts_mul' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.ts_mod' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.ts_lt' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.atom_toVal' depends on axioms: [propext]
+'Research.Pass.Numbers.Models.exact_eval_toVal' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.ocaml_matches_machine' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Numbers.Models.typescriptExactDiv_matches_machine' depends on axioms: [propext, Quot.sound]

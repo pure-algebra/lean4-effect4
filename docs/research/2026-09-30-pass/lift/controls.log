@@ -1,0 +1,7 @@
+'Research.Pass.Lift.Controls.guardQueue_refuses_live_answer' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Lift.Controls.bad_reachable' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Lift.Controls.bad_has_bad_exit' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Lift.Controls.bad_not_typed' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Lift.Controls.current_capstone_false' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Lift.Controls.badTape_applies_answer' does not depend on any axioms
+exit=0

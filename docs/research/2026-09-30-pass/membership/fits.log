@@ -1,0 +1,24 @@
+fold_of: Research.Pass.Membership.FitsInv.eq_cata : ∀ (w : W) (inv : Inv) (v : Val) (a : Ty),
+  FitsInv w inv v a = (cata_ty (FitsInv.alg w inv) a).snd v
+fold_of (paramorphism: the carrier pairs the value): Research.Pass.Membership.FitsInv.alg : W →
+  Inv → TyAlgebra fun fam => TyFam.rec (Ty × (Val → Prop)) fam
+'Research.Pass.Membership.causeFits_admits' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fits_hasTy' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fits_live' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.live_iff_handlesLive' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fitsInv_map' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fits_mono' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fitsEq_fits' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fits_sub' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fitsEq_handlesFit' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fitsEq_strongValue' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fitsExit_mono' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fitsExit_sub' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fits_pair' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fits_fst' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.await_fits' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.fits_list_iff' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.search_heap_extends' does not depend on any axioms
+'Research.Pass.Membership.search_fiberDeclared_mono' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.search_fits_mono' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Membership.search_fork_value' depends on axioms: [propext, Quot.sound]

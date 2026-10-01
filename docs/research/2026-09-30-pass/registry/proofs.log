@@ -1,0 +1,18 @@
+'Research.Pass.Registry.Proofs.ok_of_bind' does not depend on any axioms
+'Research.Pass.Registry.Proofs.isSome_of_ok' does not depend on any axioms
+'Research.Pass.Registry.Proofs.expect_ok' does not depend on any axioms
+'Research.Pass.Registry.Proofs.term_ok' depends on axioms: [propext]
+'Research.Pass.Registry.Proofs.throw_not_some' does not depend on any axioms
+'Research.Pass.Registry.Proofs.stmts_after_ret' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.stepEnv_checks' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.envAlong_checks' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.staticEnv_checks' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.fork_handle' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.declared_fork' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.declared_forkIn' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.declared_forkScoped' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.declared_race' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.declared_layer' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.declared_finalizer' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.check_of_typeOfProgram' depends on axioms: [propext, Quot.sound]
+'Research.Pass.Registry.Proofs.api_fork_handle' depends on axioms: [propext, Quot.sound]

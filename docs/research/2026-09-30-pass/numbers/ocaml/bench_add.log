@@ -1,0 +1,4 @@
+additions per loop: 100000000 (median of 5 runs, ns per addition)
+  raw      0.80   raw, add only      0.27
+  checked  1.07   checked, add only  1.07
+  zarith   1.61   zarith, add only   1.07

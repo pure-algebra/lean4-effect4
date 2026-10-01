@@ -1,0 +1,235 @@
+# 1. Direct mentions (type or value), per judgment
+StrongValue: 39 declarations
+  Effect4.Laws.Program.Typed.Admission (6): strongExit_success, strongExit_of_clean, EnvTyped, cleanExit_of_never, StrongExit, StrongCause
+  Test.Program.TypedResidual (3): TypedResidual.finishFinalizer_inversion_rejects_unadmitted, TypedResidual.test_strongValue_bool, TypedResidual.unguard_inversion_rejects_unadmitted
+  Effect4.Laws.Program.Typed.Stack (5): strongExit_failure_of_error, popR_typed, HookLaws.loop, HookLaws.iterator, hookLaws_interpR
+  Effect4.Laws.Program.Typed.Residual (8): strongExit_bool, settling_fork, strongValue_bool_true, settling_ref_allocation, storePost, M3bWorld.strongValue_mono, fiberPost, storePre
+  Test.Program.TypedControl (6): TypedControl.strongExit_unit, TypedControl.leakyGuard_rejected, TypedControl.natErr_fits, TypedControl.strongExit_nat, TypedControl.unguard_payload_rejected, TypedControl.natCatch_typed
+  Test.Program.TypedStack (2): TypedStack.wrong_middle, TypedStack.catch_accepted
+  Effect4.Laws.Program.Typed.Assembly (4): capture_lookup, M3bAssembly.capture_lookup, preds, envTyped_append
+  Test.Counterexamples.Machine.Semantics.AsyncHookContract (2): Test.Counterexamples.AsyncHookContract.control_cancellation_cannot_type, Test.Counterexamples.AsyncHookContract.does_not_fit
+  Test.Program.LoadedAdmission (2): LoadedAdmission.env0, LoadedAdmission.service_admitted
+  Test.Counterexamples.Machine.Semantics.TrivialPosts (1): Test.Counterexamples.TrivialPosts.hostBody_admitted
+HandlesFit: 16 declarations
+  Effect4.Laws.Program.Typed.Admission (2): strongExit_success, StrongValue
+  Test.Program.TypedResidual (4): TypedResidual.finishFinalizer_inversion_rejects_unadmitted, TypedResidual.forged_cell_not_fit, TypedResidual.forged_fiber_not_fit, TypedResidual.unguard_inversion_rejects_unadmitted
+  Effect4.Laws.Program.Typed.Residual (3): strongExit_bool, settling_fork, strongValue_bool_true
+  Test.Program.TypedControl (3): TypedControl.strongExit_unit, TypedControl.natErr_fits, TypedControl.strongExit_nat
+  Test.Program.LoadedAdmission (3): LoadedAdmission.lookup_typed, LoadedAdmission.fork_admitted, LoadedAdmission.service_admitted
+  Test.Counterexamples.Machine.Semantics.TrivialPosts (1): Test.Counterexamples.TrivialPosts.modify_typed
+ValueOk: 38 declarations
+  Effect4.Laws.Program.Typed.Admission (3): strongExit_success, StrongValue, ServicesOk
+  Test.Program.TypedResidual (2): TypedResidual.finishFinalizer_inversion_rejects_unadmitted, TypedResidual.unguard_inversion_rejects_unadmitted
+  Test.Program.TypedWorldValidity (8): TypedWorldValidity.appended_spelling_admitted, TypedWorldValidity.valueOk_lookup_transport, TypedWorldValidity.coarse_open_type_false_positive, TypedWorldValidity.old_spelling_admitted, TypedWorldValidity.old_nat_typed, TypedWorldValidity.emptyTables_order, TypedWorldValidity.coarse_nested_false_positive, TypedWorldValidity.renamed_spelling_refused
+  Effect4.Laws.Program.Typed.World (11): refMake_extension, promise_extension, HeapTypedAt, heapNat_iff, HeapCell, CompletionOk, heap_good, WorldWanted.refMake_extension, heap_coverage_iff, heap_bad, world_order_refuses
+  Effect4.Laws.Program.Typed.Residual (3): strongExit_bool, settling_fork, strongValue_bool_true
+  Test.Program.TypedControl (3): TypedControl.strongExit_unit, TypedControl.natErr_fits, TypedControl.strongExit_nat
+  Effect4.Laws.Program.Typed.Validity (4): value_transport, M2Validity.value_transport, valueOk_mono, M2Validity.valueOk_mono
+  Test.Program.LoadedAdmission (3): LoadedAdmission.lookup_typed, LoadedAdmission.fork_admitted, LoadedAdmission.service_admitted
+  Test.Counterexamples.Machine.Semantics.TrivialPosts (1): Test.Counterexamples.TrivialPosts.modify_typed
+StrongExit: 56 declarations
+  Effect4.Laws.Program.Typed.Admission (3): strongExit_success, strongExit_of_clean, cleanExit_of_never
+  Test.Program.TypedResidual (3): TypedResidual.finishFinalizer_inversion_rejects_unadmitted, TypedResidual.unguard_inversion_rejects_unadmitted, TypedResidual.test_strongExit_bool
+  Effect4.Laws.Program.Typed.Stack (14): strongExit_failure_of_error, popR_typed, walk_saved, M4Stack.popR_typed, walk_done, HookLaws.iterator, hookLaws_interpR, deliver_active, saveAnswerR_typed, M4Stack.deliver_active, WalkTyped, M4Stack.saveAnswerR_typed, HookLaws.asyncFinalizer, popR_typed_interpR
+  Effect4.Laws.Program.Typed.Assembly (3): TypedState, CompletionStrong, preds
+  Effect4.Laws.Program.Typed.Residual (11): TypedProg.store_inv, strongExit_bool, unguard_payload_inv, fiberPost, frameProtocols, M3aAdmissionObligations.unguard_payload_inv, TypedProg.pure_inv, M3bWorld.strongExit_mono, TypedProg.guard_inv, finishFinalizer_payload_inv, M3aAdmissionObligations.finishFinalizer_payload_inv
+  Test.Program.TypedControl (9): TypedControl.cancel_typed, TypedControl.strongExit_unit, TypedControl.leakyGuard_rejected, TypedControl.natToBool_typed, TypedControl.guard_rejects_wrong_arm, TypedControl.sleep_stack_accepted, TypedControl.natErr_fits, TypedControl.strongExit_nat, TypedControl.natCatch_typed
+  Test.Program.TypedStack (2): TypedStack.wrong_middle, TypedStack.catch_accepted
+  Test.Counterexamples.Machine.Semantics.AsyncHookContract (9): Test.Counterexamples.AsyncHookContract.sleep_stack_rejected, Test.Counterexamples.AsyncHookContract.ReviewedSleepStack, Test.Counterexamples.AsyncHookContract.clean_cancellation_cannot_type, Test.Counterexamples.AsyncHookContract.ReviewedTypedProg, Test.Counterexamples.AsyncHookContract.control_cancellation_cannot_type, Test.Counterexamples.AsyncHookContract.cancellation_exit, Test.Counterexamples.AsyncHookContract.reviewed_unguard_payload_inv, Test.Counterexamples.AsyncHookContract.does_not_fit, Test.Counterexamples.AsyncHookContract.clean_input_fits
+  Test.Counterexamples.Machine.Semantics.TrivialPosts (1): Test.Counterexamples.TrivialPosts.joinsFiber_typed
+  Test.Program.LoadedAdmission (1): LoadedAdmission.service_admitted
+StrongCause: 21 declarations
+  Effect4.Laws.Program.Typed.Admission (4): strongExit_success, strongExit_of_clean, cleanExit_of_never, StrongExit
+  Test.Program.TypedResidual (2): TypedResidual.finishFinalizer_inversion_rejects_unadmitted, TypedResidual.unguard_inversion_rejects_unadmitted
+  Effect4.Laws.Program.Typed.Stack (2): strongExit_failure_of_error, popR_typed
+  Effect4.Laws.Program.Typed.Residual (2): strongExit_bool, settling_fork
+  Test.Program.TypedControl (6): TypedControl.strongExit_unit, TypedControl.leakyGuard_rejected, TypedControl.natErr_fits, TypedControl.strongExit_nat, TypedControl.unguard_payload_rejected, TypedControl.natCatch_typed
+  Test.Program.TypedStack (2): TypedStack.wrong_middle, TypedStack.catch_accepted
+  Test.Counterexamples.Machine.Semantics.AsyncHookContract (2): Test.Counterexamples.AsyncHookContract.control_cancellation_cannot_type, Test.Counterexamples.AsyncHookContract.does_not_fit
+  Test.Program.LoadedAdmission (1): LoadedAdmission.service_admitted
+HandlesLive: 16 declarations
+  Effect4.Laws.Program.Typed.Admission (3): strongExit_success, StrongValue, ServicesOk
+  Test.Program.TypedResidual (3): TypedResidual.finishFinalizer_inversion_rejects_unadmitted, TypedResidual.forged_cell_not_live, TypedResidual.unguard_inversion_rejects_unadmitted
+  Effect4.Laws.Program.Typed.Residual (3): strongExit_bool, settling_fork, strongValue_bool_true
+  Test.Program.TypedControl (3): TypedControl.strongExit_unit, TypedControl.natErr_fits, TypedControl.strongExit_nat
+  Test.Program.LoadedAdmission (3): LoadedAdmission.lookup_typed, LoadedAdmission.fork_admitted, LoadedAdmission.service_admitted
+  Test.Counterexamples.Machine.Semantics.TrivialPosts (1): Test.Counterexamples.TrivialPosts.modify_typed
+ServicesOk: 5 declarations
+  Test.Program.LoadedAdmission (1): LoadedAdmission.lookup_typed
+  Effect4.Laws.Program.Typed.Assembly (3): CaptureTyped, capture_lookup, preds
+  Effect4.Laws.Program.Typed.Residual (1): fiberPre
+# 2. Migration set: declarations naming the strong judgments or their closure
+## Effect4.Laws.Program.Typed.Admission
+  BodyTyped : inductive : redefine [walk]
+  EnvTyped : def : redefine [walk]
+  HandlesFit : def : redefine [walk]
+  HandlesLive : def : redefine [walk]
+  PointTyped : def : redefine [walk]
+  ServicesOk : def : redefine [walk]
+  StrongCause : def : redefine [walk]
+  StrongExit : def : redefine [walk]
+  StrongValue : def : redefine [walk]
+  cleanExit_of_never : theorem : restate
+  strongExit_of_clean : theorem : restate [walk]
+  strongExit_success : theorem : restate
+## Effect4.Laws.Program.Typed.Assembly
+  AnswerOk : def : redefine
+  CaptureTyped : def : redefine
+  CompletionStrong : def : redefine
+  M3bAssembly.capture_lookup : theorem : restate
+  M3bAssembly.typedState_load : theorem : restate
+  M6Ledger.decision_preserves : theorem : restate
+  M6Ledger.step_afterInterrupt : theorem : restate
+  M6Ledger.step_closeParAwait : theorem : restate
+  M6Ledger.step_deliver : theorem : restate
+  M6Ledger.step_drainDue : theorem : restate
+  M6Ledger.step_enrollRace : theorem : restate
+  M6Ledger.step_evaluate : theorem : restate
+  M6Ledger.step_exitDone : theorem : restate
+  M6Ledger.step_finish : theorem : restate
+  M6Ledger.step_interruptTarget : theorem : restate
+  M6Ledger.step_launch : theorem : restate
+  M6Ledger.step_link : theorem : restate
+  M6Ledger.step_loop : theorem : restate
+  M6Ledger.step_observe : theorem : restate
+  M6Ledger.step_raceCancel : theorem : restate
+  M6Ledger.step_registrationDone : theorem : restate
+  M6Ledger.step_resume : theorem : restate
+  M6Ledger.step_trackChild : theorem : restate
+  M6Ledger.step_wake : theorem : restate
+  M6Ledger.typedState_reachable : theorem : restate
+  QueueOk : def : redefine
+  StepPreserves : def : redefine
+  TypedState : def : redefine
+  capture_lookup : theorem : restate
+  envTyped_append : theorem : restate
+  preds : def : redefine
+## Effect4.Laws.Program.Typed.Residual
+  IteratorAnswer : inductive : redefine [walk]
+  IteratorProtocol : inductive : redefine [walk]
+  LoopAnswer : inductive : redefine [walk]
+  LoopProtocol : inductive : redefine [walk]
+  M3aAdmissionObligations.finishFinalizer_payload_inv : theorem : restate
+  M3aAdmissionObligations.unguard_payload_inv : theorem : restate
+  M3aResidualObligations.settling_fork : theorem : restate
+  M3aResidualObligations.settling_mask : theorem : restate
+  M3aResidualObligations.settling_ref_allocation : theorem : restate
+  M3bWorld.strongExit_mono : theorem : restate
+  M3bWorld.strongValue_mono : theorem : restate
+  M3bWorld.typedProg_mono : theorem : restate
+  TypedProg : inductive : redefine [walk]
+  TypedProg.guard_inv : theorem : restate
+  TypedProg.pure_inv : theorem : restate [walk]
+  TypedProg.store_inv : theorem : restate
+  fiberPost : def : redefine [walk]
+  fiberPre : def : redefine [walk]
+  finishFinalizer_payload_inv : theorem : restate
+  frameProtocols : def : redefine [walk]
+  settling_fork : theorem : restate
+  settling_mask : theorem : restate
+  settling_ref_allocation : theorem : restate
+  storePost : def : redefine [walk]
+  storePre : def : redefine [walk]
+  strongExit_bool : theorem : restate
+  strongValue_bool_true : theorem : restate
+  unguard_payload_inv : theorem : restate [walk]
+  Ψ_F : def : redefine [walk]
+  Ψ_S : def : redefine [walk]
+## Effect4.Laws.Program.Typed.Stack
+  HookLaws : inductive : redefine [walk]
+  HookLaws.asyncFinalizer : theorem : restate [walk]
+  HookLaws.iterator : theorem : restate [walk]
+  HookLaws.loop : theorem : restate [walk]
+  M4Stack.deliver_active : theorem : restate
+  M4Stack.popR_typed : theorem : restate
+  M4Stack.saveAnswerR_typed : theorem : restate
+  M5Hooks.hookLaws_interpR : theorem : restate
+  WalkTyped : def : redefine [walk]
+  deliver_active : theorem : restate [walk]
+  hookLaws_interpR : theorem : restate [walk]
+  popR_typed : theorem : restate [walk]
+  popR_typed_interpR : theorem : restate [walk]
+  saveAnswerR_typed : theorem : restate [walk]
+  strongExit_failure_of_error : theorem : restate [walk]
+  walk_done : theorem : restate
+  walk_saved : theorem : restate [walk]
+## Test.Counterexamples.Machine.Semantics.AsyncHookContract
+  Test.Counterexamples.AsyncHookContract.ReviewedAsync : def : redefine
+  Test.Counterexamples.AsyncHookContract.ReviewedControlAdmitted : inductive : redefine
+  Test.Counterexamples.AsyncHookContract.ReviewedSleepStack : def : redefine
+  Test.Counterexamples.AsyncHookContract.ReviewedTypedProg : def : redefine
+  Test.Counterexamples.AsyncHookContract.ReviewedΨ_F : def : redefine
+  Test.Counterexamples.AsyncHookContract.cancellation_cannot_type : theorem : restate
+  Test.Counterexamples.AsyncHookContract.cancellation_exit : theorem : restate
+  Test.Counterexamples.AsyncHookContract.clean_cancellation_cannot_type : theorem : restate
+  Test.Counterexamples.AsyncHookContract.clean_cancellation_still_rejected : theorem : restate
+  Test.Counterexamples.AsyncHookContract.clean_input_fits : theorem : restate
+  Test.Counterexamples.AsyncHookContract.control_cancellation_cannot_type : theorem : restate
+  Test.Counterexamples.AsyncHookContract.does_not_fit : theorem : restate
+  Test.Counterexamples.AsyncHookContract.frozen_hook_rejects_unit : theorem : restate
+  Test.Counterexamples.AsyncHookContract.guard_admits_wrong_arm : theorem : restate
+  Test.Counterexamples.AsyncHookContract.reviewedFiberPost : def : redefine
+  Test.Counterexamples.AsyncHookContract.reviewed_unguard_payload_inv : theorem : restate
+  Test.Counterexamples.AsyncHookContract.sleep_stack_rejected : theorem : restate
+  Test.Counterexamples.AsyncHookContract.store_rejects_wrong_answer : theorem : restate
+## Test.Counterexamples.Machine.Semantics.TrivialPosts
+  Test.Counterexamples.TrivialPosts.frontier_typed : theorem : restate
+  Test.Counterexamples.TrivialPosts.hostBody_admitted : theorem : restate
+  Test.Counterexamples.TrivialPosts.joinAll_typed : theorem : restate
+  Test.Counterexamples.TrivialPosts.joinsFiber_typed : theorem : restate
+  Test.Counterexamples.TrivialPosts.modify_typed : theorem : restate
+  Test.Counterexamples.TrivialPosts.sleep_code_typed : theorem : restate
+## Test.Program.AdmissionCensus
+  AdmissionCensus.fiberPostTrivial_sound : theorem : restate
+## Test.Program.LoadedAdmission
+  LoadedAdmission.env0 : theorem : restate
+  LoadedAdmission.fork_admitted : theorem : restate
+  LoadedAdmission.generator_admitted : theorem : restate
+  LoadedAdmission.lookup_typed : theorem : restate
+  LoadedAdmission.memoAwait_typed : theorem : restate
+  LoadedAdmission.race_admitted : theorem : restate
+  LoadedAdmission.scoped_admitted : theorem : restate
+  LoadedAdmission.service_admitted : theorem : restate
+  LoadedAdmission.sleep_admitted : theorem : restate
+## Test.Program.TypedControl
+  TypedControl.cancel_interrupt_typed : theorem : restate
+  TypedControl.cancel_typed : theorem : restate
+  TypedControl.guard_rejects_wrong_arm : theorem : restate
+  TypedControl.leakyGuard_rejected : theorem : restate
+  TypedControl.natCatch_typed : theorem : restate
+  TypedControl.natErr_fits : theorem : restate
+  TypedControl.natToBool_typed : theorem : restate
+  TypedControl.sleep_stack_accepted : theorem : restate
+  TypedControl.strongExit_nat : theorem : restate
+  TypedControl.strongExit_unit : theorem : restate
+  TypedControl.unguard_payload_rejected : theorem : restate
+## Test.Program.TypedResidual
+  TypedResidual.finishFinalizer_inversion_rejects_unadmitted : theorem : restate
+  TypedResidual.forged_cell_not_fit : theorem : restate
+  TypedResidual.forged_cell_not_live : theorem : restate
+  TypedResidual.forged_fiber_not_fit : theorem : restate
+  TypedResidual.test_settling_fork : theorem : restate
+  TypedResidual.test_settling_mask : theorem : restate
+  TypedResidual.test_settling_ref_allocation : theorem : restate
+  TypedResidual.test_strongExit_bool : theorem : restate
+  TypedResidual.test_strongValue_bool : theorem : restate
+  TypedResidual.unguard_inversion_rejects_unadmitted : theorem : restate
+## Test.Program.TypedStack
+  TypedStack.catch_accepted : theorem : restate
+  TypedStack.catch_walk : theorem : restate
+  TypedStack.preempted_walk : theorem : restate
+  TypedStack.stateClaim : def : redefine
+  TypedStack.wrong_middle : theorem : restate
+migration set: 150 (redefine 37, restate 113, re-prove 0); closure 157 constants
+walk set (the slice-5 walk and delivery depend on): 36: BodyTyped, EnvTyped, HandlesFit, HandlesLive, PointTyped, ServicesOk, StrongCause, StrongExit, StrongValue, strongExit_of_clean, IteratorAnswer, IteratorProtocol, LoopAnswer, LoopProtocol, TypedProg, TypedProg.pure_inv, fiberPost, fiberPre, frameProtocols, storePost, storePre, unguard_payload_inv, Ψ_F, Ψ_S, HookLaws, HookLaws.asyncFinalizer, HookLaws.iterator, HookLaws.loop, WalkTyped, deliver_active, hookLaws_interpR, popR_typed, popR_typed_interpR, saveAnswerR_typed, strongExit_failure_of_error, walk_saved
+# 3. Declarations reaching only the shape check ValueOk (unchanged by the migration): 129
+  Effect4.Laws.Program.Typed.World: 49
+  Effect4.Laws.Program.Typed.Validity: 48
+  Test.Program.TypedWorldValidity: 18
+  Test.Counterexamples.Machine.Semantics.InterruptEscape: 2
+  Test.Program.TypedResidual: 1
+  Effect4.Laws.Program.Typed.ForkSource: 2
+  Test.Counterexamples.Machine.Semantics.InterruptDelivery: 4
+  Test.Audit.TypedStateDecl: 1
+  Test.Counterexamples.Machine.Semantics.StrongExitDefect: 2
+  Effect4.Laws.Program.Typed.Residual: 2

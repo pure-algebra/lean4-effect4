@@ -1,0 +1,19 @@
+runs: 34336; fibers: 70080
+  Research.Pass.Registry.DeclaredCheck.FiberClass.root: fibers 34336, declared 34336, exited 31892, coarse fits 31892, deep fits 31892, exits holding a fiber handle 1263
+  Research.Pass.Registry.DeclaredCheck.FiberClass.sourceFork: fibers 16144, declared 16144, exited 15876, coarse fits 15876, deep fits 15876, exits holding a fiber handle 442
+  Research.Pass.Registry.DeclaredCheck.FiberClass.raceEntrant: fibers 12774, declared 12774, exited 12158, coarse fits 12158, deep fits 12158, exits holding a fiber handle 402
+  Research.Pass.Registry.DeclaredCheck.FiberClass.layerBuild: fibers 2626, declared 2626, exited 2626, coarse fits 2626, deep fits 2626, exits holding a fiber handle 0
+  Research.Pass.Registry.DeclaredCheck.FiberClass.finalizer: fibers 4200, declared 4200, exited 4200, coarse fits 4200, deep fits 4200, exits holding a fiber handle 0
+  Research.Pass.Registry.DeclaredCheck.FiberClass.unrecognized: fibers 0, declared 0, exited 0, coarse fits 0, deep fits 0, exits holding a fiber handle 0
+violations: 0 []
+control rootForAll: 13193 violations, e.g. [forkValue/succeed@quiet#fiber1:Research.Pass.Registry.DeclaredCheck.FiberClass.sourceFork, forkValue/succeed@timers#fiber1:Research.Pass.Registry.DeclaredCheck.FiberClass.sourceFork, forkValue/succeed@interrupt#fiber1:Research.Pass.Registry.DeclaredCheck.FiberClass.sourceFork]
+control emptyEnv: 348 violations, e.g. [id/deferredAwait.fork@quiet#fiber1:Research.Pass.Registry.DeclaredCheck.FiberClass.sourceFork, id/deferredAwait.fork@timers#fiber1:Research.Pass.Registry.DeclaredCheck.FiberClass.sourceFork, id/deferredAwait.fork@interrupt#fiber1:Research.Pass.Registry.DeclaredCheck.FiberClass.sourceFork]
+control finalizerNever: 4200 violations, e.g. [id/layer.effectDiscard@quiet#fiber3:Research.Pass.Registry.DeclaredCheck.FiberClass.finalizer, id/layer.effectDiscard@quiet#fiber4:Research.Pass.Registry.DeclaredCheck.FiberClass.finalizer, id/layer.effectDiscard@quiet#fiber5:Research.Pass.Registry.DeclaredCheck.FiberClass.finalizer]
+control layerAsContext: 2626 violations, e.g. [id/layer.effectDiscard@quiet#fiber1:Research.Pass.Registry.DeclaredCheck.FiberClass.layerBuild, id/layer.effectDiscard@quiet#fiber2:Research.Pass.Registry.DeclaredCheck.FiberClass.layerBuild, id/layer.effectDiscard@timers#fiber1:Research.Pass.Registry.DeclaredCheck.FiberClass.layerBuild]
+deep controls over 2107 handle-holding exits: no registry fails 2107, registry read at the next id fails 2095, the registry itself fails 0
+fixtures Research.Pass.Registry.DeclaredCheck.FiberClass.root: fibers 72, exited 72, fit 72
+fixtures Research.Pass.Registry.DeclaredCheck.FiberClass.sourceFork: fibers 72, exited 72, fit 68
+fixtures Research.Pass.Registry.DeclaredCheck.FiberClass.raceEntrant: fibers 0, exited 0, fit 0
+fixtures Research.Pass.Registry.DeclaredCheck.FiberClass.layerBuild: fibers 24, exited 24, fit 24
+fixtures Research.Pass.Registry.DeclaredCheck.FiberClass.finalizer: fibers 36, exited 36, fit 36
+fixtures Research.Pass.Registry.DeclaredCheck.FiberClass.unrecognized: fibers 0, exited 0, fit 0

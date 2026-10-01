@@ -1,0 +1,58 @@
+translated 4, missing #[], todos #[]
+let lcnf_utf8_bytes s =
+  List.init (String.length s) (fun i -> Char.code (String.get s i))
+
+let lcnf_utf8_length s =
+  String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
+
+
+
+(* LCNF mono: Research.Pass.Numbers.Lower.plainAdd (a : Nat) (b : Nat) : Nat *)
+
+let research_pass_numbers_lower_plain_add (a : int) (b : int) : int =
+  let _x_1 = a + b in
+  _x_1
+
+
+
+(* LCNF mono: Research.Pass.Numbers.Lower.postAdd (bound : Nat) (a : Nat) (b : Nat) : Option Nat *)
+
+let research_pass_numbers_lower_post_add (bound : int) (a : int) (b : int) : int option =
+  let s = a + b in
+  let _x_1 = s <= bound in
+  if _x_1 then (let _x_3 = Some s in
+    _x_3) else (let _x_2 = None in
+    _x_2)
+
+
+
+(* LCNF mono: Research.Pass.Numbers.Lower.preAdd (bound : Nat) (a : Nat) (b : Nat) : Option Nat *)
+
+let research_pass_numbers_lower_pre_add (bound : int) (a : int) (b : int) : int option =
+  let _x_1 = max 0 (bound - b) in
+  let _x_2 = a <= _x_1 in
+  if _x_2 then (let _x_4 = a + b in
+    let _x_5 = Some _x_4 in
+    _x_5) else (let _x_3 = None in
+    _x_3)
+
+
+
+(* LCNF mono: Research.Pass.Numbers.Lower.preMul (bound : Nat) (a : Nat) (b : Nat) : Option Nat *)
+
+let research_pass_numbers_lower_pre_mul (bound : int) (a : int) (b : int) : int option =
+  let _jp_1 = fun () -> let _x_2 = let _mula = a in
+  let _mulb = b in
+  if _mula = 0 then 0 else if _mulb > max_int / _mula then max_int else _mula * _mulb in
+  let _x_3 = Some _x_2 in
+  _x_3 in
+  let _x_4 = 0 in
+  let _x_5 = b = _x_4 in
+  if _x_5 then _jp_1 () else (let _x_6 = if b = 0 then 0 else bound / b in
+    let _x_7 = a <= _x_6 in
+    if _x_7 then _jp_1 () else (let _x_8 = None in
+      _x_8))
+
+
+
+

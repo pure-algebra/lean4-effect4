@@ -1,0 +1,100 @@
+33,37c33
+<     FitsExit w ty (.success v) := by
+<   refine ⟨h.1, fun v' heq => ?_, fun _ heq => nomatch heq⟩
+<   injection heq with heq
+<   subst heq
+<   exact h
+---
+>     FitsExit w ty (.success v) := h
+47,63c43,49
+<   refine ⟨?_, (fun _ heq => nomatch heq), fun c' heq => ?_⟩
+<   · change causeAdmits _ ty.error c = true
+<     unfold causeAdmits
+<     rw [List.all_eq_true]
+<     intro r hr
+<     have hne := hall r hr
+<     cases r with
+<     | fail e ann => exact absurd rfl hne
+<     | die _ _ => rfl
+<     | interrupt _ _ => rfl
+<   · cases heq
+<     intro r hr
+<     have hne := hall r hr
+<     cases r with
+<     | fail e ann => exact absurd rfl hne
+<     | die _ _ => trivial
+<     | interrupt _ _ => trivial
+---
+>   rw [fitsExit_failure_iff]
+>   intro r hr
+>   have hne := hall r hr
+>   cases r with
+>   | fail e ann => exact absurd rfl hne
+>   | die _ _ => trivial
+>   | interrupt _ _ => trivial
+68,70c54
+<   have hadm : causeAdmits (fun value ty => Val.hasTy value ty w.state.externals.allocated)
+<       ty.error c = true := h.1
+<   rw [never] at hadm
+---
+>   rw [fitsExit_failure_iff, never] at h
+74c58
+<   have hr' := List.all_eq_true.mp hadm r hr
+---
+>   have hr' := h r hr
+77,79c61,62
+<     cases hval : valOfErr e with
+<     | none => simp only [reasonAdmits, hval] at hr'; cases hr'
+<     | some v => simp only [reasonAdmits, hval] at hr'; cases hr'
+---
+>     obtain ⟨v, _, hv⟩ := hr'
+>     exact False.elim hv
+335,337c318
+< theorem strongValue_bool_trueF (w : W) : StrongValueF w .bool (Val.bool true) := by
+<   refine ⟨rfl, trivial, fun h mem => ?_⟩
+<   cases mem
+---
+> theorem strongValue_bool_trueF (w : W) : StrongValueF w .bool (Val.bool true) := trivial
+340,344c321
+<     FitsExit w (EffTy.pure .bool) (.success v) := by
+<   refine ⟨hv.1, fun v' heq => ?_, fun _ heq => nomatch heq⟩
+<   injection heq with heq
+<   subst heq
+<   exact hv
+---
+>     FitsExit w (EffTy.pure .bool) (.success v) := hv
+371,383c348
+<   refine TypedProgF.pure ⟨rfl, fun v' heq => ?_, fun _ heq => nomatch heq⟩
+<   injection heq with heq
+<   subst heq
+<   refine ⟨rfl, fun id' mem => ?_, fun h mem => ?_⟩
+<   · simp only [Val.keys, Handle.ofCode_fiber, Option.toList, List.mem_singleton] at mem
+<     injection mem with eq_id
+<     subst eq_id
+<     exact ⟨cert, hid, Ty.sub_refl _, Ty.sub_refl _⟩
+<   · simp only [Val.keys, Handle.ofCode_fiber, Option.toList, List.mem_singleton] at mem
+<     subst h
+<     dsimp only [handleLive]
+<     rw [hid]
+<     rfl
+---
+>   exact TypedProgF.pure ⟨cert, hid, Ty.sub_refl _, Ty.sub_refl _⟩
+423,428c388,390
+<   refine ⟨?_, (fun _ heq => nomatch heq), fun c' heq => ?_⟩
+<   · change causeAdmits _ tout.error c = true
+<     rw [← herr]
+<     exact h.1
+<   · rw [← herr]
+<     exact h.2.2 c' heq
+---
+>   rw [fitsExit_failure_iff] at h ⊢
+>   rw [← herr]
+>   exact h
+597c559
+<         have h := step v (hex.2.1 v rfl)
+---
+>         have h := step v hex
+620c582
+<         have h := step v (hex.2.1 v rfl)
+---
+>         have h := step v hex

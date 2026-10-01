@@ -1,0 +1,18 @@
+== faces program (Faces.program, 2324 bytes) ==
+bytes 2324
+Fast outcome=finished root_exit=success list[2,list[true,list[-2305843009213693949,list[5,903]]]]
+Fast generated Api.run outcome=finished
+Ref  outcome=finished root_exit=success list[2,list[true,list[-2305843009213693949,list[5,903]]]]
+Ref  generated Api.run outcome=finished
+max_int=4611686018427387903 int_size=63
+a0=9007199254740993 a1=2 a2=2305843009213693952 a3=-4611686018427387899 a4=4611686018427387903
+lt(a3,1)=true div(a3,2)=-2305843009213693949 sub(sub(a3,a2),a2)=5 mod(a4,1000)=903
+exit 0
+== literal62 (Faces.literal62, succeed(2^62)) ==
+bytes 73
+Fast decode refused
+Ref  decode refused
+max_int=4611686018427387903 int_size=63
+a0=9007199254740993 a1=2 a2=2305843009213693952 a3=-4611686018427387899 a4=4611686018427387903
+lt(a3,1)=true div(a3,2)=-2305843009213693949 sub(sub(a3,a2),a2)=5 mod(a4,1000)=903
+exit 0
