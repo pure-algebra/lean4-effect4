@@ -152,8 +152,14 @@ each one ([synthesis](research/2026-09-30-pass/synthesis.md)).
 - M6's restriction is necessary but not sufficient;
 - the eight silent site defaults go.
 
-Addendum 2 (the lifts, the membership judgment and the new repairs) follows the owner's rulings
-on rows 96 and 104–110.
+The owner ruled rows 96, 104–107 and 110 the same day.
+[Addendum 2](research/2026-09-30-codex-brief-slice6-addendum-2.md) gives Codex, after A–C:
+- D: the generic lifts and slice 6's last proofs, the trace agreement among them;
+- F and G: the two layer bugs;
+- E: the `Fits` judgment;
+- H: fresh tokens and the exit clause in M6's statement.
+
+The M5–M7 proofs are the next brief. Row 108 (numbers) is open.
 
 ## What the owner must decide
 

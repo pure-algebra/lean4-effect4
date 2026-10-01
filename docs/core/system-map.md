@@ -64,7 +64,8 @@ TypeScript. Every arrow is one of the kinds in §5 with its obligation met, or i
 3. **M5–M7:** the typed-state guarantee, the proof that makes "verified runtime" complete on runs
    without host answers. Row 99 says what is claimed until the host lane lands. The design pass
    of 2026-09-30 (`docs/research/2026-09-30-pass/synthesis.md`) found M5's and M6's statements
-   false even on programs that use no host, so four more bounded repairs come first:
+   false even on programs that use no host, so four more bounded repairs come first (ruled
+   2026-09-30, with Codex by brief addendum 2):
    - a layer's body is built in the environment it was checked in (row 104);
    - a layer's value must fit its key's type (row 105);
    - M6's typed state keeps tokens fresh (row 106);
