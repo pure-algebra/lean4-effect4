@@ -285,6 +285,35 @@ theorem machineTyped_not_halted (root : ProgramSource) (rootTy : EffTy) (w : Wor
   have running : (m.halt why).stuck = none := typed.live.running
   cases running
 
+/-- **`J` types the store the store rows read** (seat B's `StoreTyped`, `Typed/Adequacy.lean`;
+receipt-B "For seat C" item 3): the declarations cover exactly the allocated cells and promises
+(`WorldValid.heap`, `.promises` over `WorldValid.state`), every stored value fits its cell's
+declared type (the generated `HeapCell` column), and every closing exit a scope holds fits
+`Exit<unknown, unknown>` (the un-refused `ScopeExitOk` row, row 140). It reads only `J`'s
+`TypedState`; `storeStep_typed` consumes it in wave 2's `loop` arm. -/
+theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} (typed : MachineTyped root rootTy w m) : StoreTyped w := by
+  obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _⟩ := typed
+  refine ⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_, fun e he ex hex => ?_⟩
+  · rw [valid.state]
+    exact valid.heap key
+  · rw [valid.state]
+    exact valid.promises key
+  · rw [valid.state] at hv
+    exact ok.c2.c1 i v hv ty hty
+  · rw [valid.state] at he
+    have entry : ScopeStateOk (preds root) w Expect.root e.scope.state := (ok.c2.c3.c0 e he).c0.c0
+    change e.scope.state.closingExit? = some ex at hex
+    generalize e.scope.state = state at entry hex
+    cases state with
+    | closed exit =>
+      cases hex
+      exact entry
+    | empty => cases hex
+    | openEmpty => cases hex
+    | openInline _ _ => cases hex
+    | openMap _ => cases hex
+
 /-- **The loop-entry premise holds for this split** (`DecisionLift.evaluate`): `J` gives `I` at
 the fresh queue an evaluate or interrupt decision starts, at every machine, a budget cut
 included. The proofs seat's split keyed on a queued `finish` fails exactly here
