@@ -136,3 +136,13 @@ first; base and head; every changed path; per step what was measured before, wha
 controls that flipped (with the red control reproduced), the exact commands and exit codes; the
 divergence record's location; the ledger before and after; what is owed with the exact obstacle;
 the proposed lines for rows 151, 117, 140 and the register (`E4-TYPED-CE-016` REPAIRED).
+
+## Amendment (2026-10-01, step one as landed on `seat/D4`, `1ba84f74`)
+
+Step 1's site is the public close, not the unsafe close: `closeScopeR` (`InterpR.lean`) and
+`storesCloseScope` (`Machine/Stores.lean`) void the lone finalizer's successful value at their
+`[fin]` branch, because scoped exits consume the unsafe close directly (`EvaluateR.lean:309-324`)
+and their operation counts must not change. `Scope.close` is the operation rc.112 declares at
+`void`, so this is the row's intent; row 151 records the landed site. The docstring at
+`Typed/Adequacy.lean:1180` names `closeScopeR`; the Effect 3 comparison names the three rows it
+measured.
