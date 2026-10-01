@@ -32,6 +32,9 @@ The cases and what each one holds (the evidence words of the seat's receipt):
   variances-module      tested: the variances producer's core module (`--lean-out`) compiles
   wave-view             tested: the wave fixture (variable-arity heads and the four-edge table) compiles
   wave-controls         proved: `nat ⊑ number` accepted, its converse rejected, through the restated laws
+  lcnf-zipidx           tested (host: the effect4 opam switch): a root reaching `List.zipIdx` lowers to
+                        OCaml that ocamlopt builds (the `Array.mk` row) and that answers what Lean
+                        answers; a redirected run writes its closure manifest beside its output
 """
 import argparse
 import json
@@ -291,6 +294,31 @@ def wave_controls(cx):
             raise CaseFailed(f'WaveOrder: no axiom receipt for {name}')
 
 
+def lcnf_zipidx(cx):
+    cx.compile(FIXTURES / 'GenFix/Lower/ZipIdx.lean')
+    out = cx.build / 'lcnf'
+    out.mkdir(parents=True, exist_ok=True)
+    gen = out / 'zipidx_gen.ml'
+    stray = ROOT / 'ocaml/gen/closure-zipidx_gen.tsv'
+    cx.tool('src/OCaml5/Tools/LcnfGen.lean', ['--out', str(gen), '--import', 'GenFix.Lower.ZipIdx',
+                                              '--cap', '200', 'GenFix.Lower.indexed', 'GenFix.Lower.positionsOfA'])
+    if not (out / 'closure-zipidx_gen.tsv').is_file():
+        raise CaseFailed('LcnfGen: the closure manifest of a redirected run is not beside its output')
+    if stray.exists():
+        raise CaseFailed(f'LcnfGen: a redirected run wrote {stray.relative_to(ROOT)} into the tree')
+    if '{ to_list' in gen.read_text():
+        raise CaseFailed('LcnfGen: `Array.mk l` still renders as a record `{ to_list = l }`')
+    for name in ['dune-project', 'dune', 'zipidx_check.ml']:
+        shutil.copy(FIXTURES / 'ocaml/zipidx' / name, out / name)
+    r = cx.run(['opam', 'exec', '--switch=effect4', '--', 'dune', 'build', '--root', str(out),
+                '--build-dir', str(cx.build / 'dune')])
+    if r.returncode != 0:
+        raise CaseFailed(f'dune build: exit {r.returncode}:\n{(r.stdout + r.stderr)[-3000:]}')
+    got = cx.run([str(cx.build / 'dune/default/zipidx_check.exe')]).stdout
+    if got != '6\nx 0\n_ 1\n':
+        raise CaseFailed(f'the lowered code answers {got!r}; Lean answers 6, [(x, 0), (_, 1)]')
+
+
 CASES = [
     ('elim-refuses-plain', elim_refuses_plain),
     ('elim-refuses-param', elim_refuses_param),
@@ -305,6 +333,7 @@ CASES = [
     ('variances-module', variances_module),
     ('wave-view', wave_view),
     ('wave-controls', wave_controls),
+    ('lcnf-zipidx', lcnf_zipidx),
 ]
 
 

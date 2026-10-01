@@ -59,6 +59,33 @@ open Lean Meta in
     throwError "the projection guard refused a generated file; regenerate it with \
       lake env lean -M4096 --run tools/Effect4Gen/Driver.lean rather than editing it"
 
+/-! ## A key given twice in one object (decisions row 174)
+
+`Json.parse` keeps the last of a repeated key, so a tag row written twice
+(`"record": 21, "record": 20`) would load as one row and no name check would see it. The loader
+scans the text first and refuses the repetition by name (`Tools.WireTags.repeatedKeys`); the
+conservativity check's Python reader refuses it too (control R9 of
+`scripts/lib/conservativity.py`). Red: a family whose active object repeats a key; the second
+guard's rows name `a` twice across `active` and `retired`, which the loader's name check refuses
+as before; green: one key in two different objects, which is no repetition. -/
+
+#guard match Tools.WireTags.parse
+    "{\"format\": \"effect4-wire-tags-v1\", \"families\": {\"T\": {\"active\": {\"a\": 0, \"b\": 1, \"a\": 2}, \"retired\": {}}}}" with
+  | .error e => e == "wire tags: the key(s) [a] are given twice in one object (Json.parse keeps the last)"
+  | .ok _ => false
+
+#guard match Tools.WireTags.parse
+    "{\"format\": \"effect4-wire-tags-v1\", \"families\": {\"T\": {\"active\": {\"a\": 0, \"b\": 1}, \"retired\": {\"a\": 2}}}}" with
+  | .error _ => true
+  | .ok _ => false
+
+#guard match Tools.WireTags.parse
+    "{\"format\": \"effect4-wire-tags-v1\", \"families\": {\"T\": {\"active\": {\"a\": 0, \"b\": 1}, \"retired\": {}}, \"U\": {\"active\": {\"a\": 0}, \"retired\": {}}}}" with
+  | .ok a => a.families.length == 2
+  | .error _ => false
+
+#guard Tools.WireTags.repeatedKeys "{\"x\": \"a \\\" b\", \"y\": [{\"x\": 1}, {\"x\": 2}], \"x\": 3}" == ["x"]
+
 /-! ## Axiom receipts -/
 
 #print axioms derivedFiles

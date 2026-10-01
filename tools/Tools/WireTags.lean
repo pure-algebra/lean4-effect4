@@ -14,7 +14,9 @@ order does not move a tag, and the runtime layout checks keep reading the declar
 
 The loader refuses, by name, a file that breaks a rule: an unknown format or key, a tag or a
 name given twice inside one family, a listed structure, an active name that is not a declared
-constructor, a declared constructor with no active row, a retired name that is still declared.
+constructor, a declared constructor with no active row, a retired name that is still declared,
+and a key given twice inside one JSON object (decisions row 174: `Json.parse` keeps the last of a
+repeated key, so `"record": 21, "record": 20` would load as one row; the text is scanned first).
 A family that is not listed carries its declaration positions and has no retired tag.
 -/
 
@@ -56,8 +58,53 @@ private def readRows (family where_ : String) (j : Json) : Except String (List (
     | .ok tag => pure (name, tag)
     | .error _ => throw s!"wire tags: {family}.{where_}.{name} is not a natural number"
 
+/-- One open bracket of the scan: an object with the keys read so far and whether a key comes
+next, or an array. -/
+private structure Frame where
+  isObject : Bool
+  keys : List String := []
+  expectKey : Bool := true
+
+/-- A string literal's raw text up to its closing quote (escapes kept as written), and the rest. -/
+private def readString : List Char → String → String × List Char
+  | [], acc => (acc, [])
+  | '\\' :: c :: rest, acc => readString rest (acc.push '\\' |>.push c)
+  | '"' :: rest, acc => (acc, rest)
+  | c :: rest, acc => readString rest (acc.push c)
+
+/-- The scan's walk: brackets push and pop frames, a string in key position of an object is a
+key, a comma in an object makes the next string a key. The fuel is the text's length. -/
+private def scanKeys : Nat → List Char → List Frame → List String → List String
+  | 0, _, _, found => found
+  | _, [], _, found => found
+  | fuel + 1, c :: rest, stack, found =>
+    match c, stack with
+    | '{', _ => scanKeys fuel rest ({ isObject := true } :: stack) found
+    | '[', _ => scanKeys fuel rest ({ isObject := false } :: stack) found
+    | '}', _ :: up => scanKeys fuel rest up found
+    | ']', _ :: up => scanKeys fuel rest up found
+    | ',', top :: up =>
+      scanKeys fuel rest ((if top.isObject then { top with expectKey := true } else top) :: up) found
+    | '"', top :: up =>
+      let (s, after) := readString rest ""
+      if top.isObject && top.expectKey then
+        let found := if top.keys.contains s && !found.contains s then found ++ [s] else found
+        scanKeys fuel after ({ top with keys := s :: top.keys, expectKey := false } :: up) found
+      else scanKeys fuel after (top :: up) found
+    | '"', [] => scanKeys fuel (readString rest "").2 [] found
+    | _, _ => scanKeys fuel rest stack found
+
+/-- The keys given twice inside one JSON object anywhere in the text, in order of first
+repetition. -/
+def repeatedKeys (text : String) : List String :=
+  scanKeys (text.length + 1) text.toList [] []
+
 /-- Parse the file's text and check the rules that need no environment. -/
 def parse (text : String) : Except String Assignment := do
+  match repeatedKeys text with
+  | [] => pure ()
+  | keys => throw s!"wire tags: the key(s) {keys} are given twice in one object \
+      (Json.parse keeps the last)"
   let json ← (Json.parse text).mapError fun e => s!"wire tags: {e}"
   let top ← match json with
     | .obj kvs => pure kvs
