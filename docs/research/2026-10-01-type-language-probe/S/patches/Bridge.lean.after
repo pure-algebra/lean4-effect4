@@ -66,6 +66,22 @@ def schema : Ty → Representation
   | .optKey inner => schema inner
   -- a map: one index signature (rc.112 `Schema.Record(K, V)`)
   | .map key value => .objects none [] [] [{ parameter := schema key, type := schema value }]
+  -- a tuple of any arity but two (`prod` at two): plain elements, no rest
+  | .tuple items => .arrays none [] (schemaElems items) []
+  -- a nominal reference: a declaration with type parameters
+  | .app name args => .declaration ⟨name, .null⟩ none (schemaList args) []
+  | .null => .null none []
+  | .undefined => .undefined none []
+  -- binary64 (row 121)
+  | .number => .number none []
+  -- rc.112 `Schema.Uint8Array` (`Schema.ts:13605-13621`)
+  | .bytes => .declaration ⟨"effect/schema/Uint8Array", .null⟩ none [] []
+def schemaElems : List Ty → List Element
+  | [] => []
+  | t :: ts => { isOptional := false, type := schema t, annotations := none } :: schemaElems ts
+def schemaList : List Ty → List Representation
+  | [] => []
+  | t :: ts => schema t :: schemaList ts
 /-- A record's properties; an optional key is `Schema.optionalKey`, the flag over its type. -/
 def schemaProps : List (String × Ty) → List PropertySignature
   | [] => []
@@ -136,6 +152,13 @@ def nonNegC : Check → Bool
     z.bits == 0 && annOk a
   | _ => false
 
+/-- The declaration ids the reader maps to other constructors: an `app` may not take one, and
+`bytes` takes `Uint8Array` from `handle` as the `var` repair takes `TypeParameter`. -/
+def reservedId (id : String) : Bool :=
+  ["effect/schema/Option", "effect/schema/Ref", "effect/schema/Result", "effect/schema/Fiber",
+   "effect/schema/Deferred", "effect/schema/Cause", "effect/schema/Exit",
+   "effect/schema/TypeParameter", "effect/schema/Uint8Array"].contains id
+
 mutual
 /-- Reconstitutes a first-order `Ty` from an rc.112 `SchemaRepresentation` (decisions rows 6,
 128), refusing with a path and a reason: exactly the nodes `schema` mints, modulo `N_S`, and an
@@ -153,46 +176,17 @@ def ofSchemaLocated : Representation → Read Ty
     if isIntC c then
       if nonNegC d then .ok .nat else refuse ["checks[1]"] "a check Ty cannot represent"
     else refuse ["checks[0]"] "a check Ty cannot represent"
-  | .number _ [] => refuse [] "plain Schema.Number (binary64) has no Ty (rows 109, 121)"
+  | .number a [] => do checkAnn [] a; .ok .number
   | .string a [] => do checkAnn [] a; .ok .string
   | .boolean a [] => do checkAnn [] a; .ok .bool
   | .literal a [] (.string s) => do checkAnn [] a; .ok (.lit s)
-  | .declaration ⟨id, .null⟩ a [val] [] => do
+  | .declaration ⟨id, .null⟩ a params [] => do
     checkAnn [] a
-    if id = "effect/schema/Option" then
-      (under "typeParameters[0]" (ofSchemaLocated val)).map .option
-    else if id = "effect/schema/Ref" then
-      (under "typeParameters[0]" (ofSchemaLocated val)).map .refOf
-    else refuse [] ("declaration '" ++ id ++ "' with one parameter has no Ty")
-  | .declaration ⟨id, .null⟩ a [x, y] [] => do
-    checkAnn [] a
-    if id = "effect/schema/Result" then do
-      let tv ← under "typeParameters[0]" (ofSchemaLocated x)
-      let te ← under "typeParameters[1]" (ofSchemaLocated y)
-      .ok (.except te tv)
-    else if id = "effect/schema/Fiber" then do
-      let tv ← under "typeParameters[0]" (ofSchemaLocated x)
-      let te ← under "typeParameters[1]" (ofSchemaLocated y)
-      .ok (.fiberOf tv te)
-    else if id = "effect/schema/Deferred" then do
-      let tv ← under "typeParameters[0]" (ofSchemaLocated x)
-      let te ← under "typeParameters[1]" (ofSchemaLocated y)
-      .ok (.deferredOf tv te)
-    else if id = "effect/schema/Cause" && isDefect y then
-      (under "typeParameters[0]" (ofSchemaLocated x)).map .causeOf
-    else refuse [] ("declaration '" ++ id ++ "' with two parameters has no Ty")
-  | .declaration ⟨id, .null⟩ a [v, e, d] [] => do
-    checkAnn [] a
-    if id = "effect/schema/Exit" && isDefect d then do
-      let tv ← under "typeParameters[0]" (ofSchemaLocated v)
-      let te ← under "typeParameters[1]" (ofSchemaLocated e)
-      .ok (.exitOf tv te)
-    else refuse [] ("declaration '" ++ id ++ "' with three parameters has no Ty")
-  | .declaration ⟨id, .null⟩ a [] [] => do
-    checkAnn [] a
-    if id = "effect/schema/TypeParameter" then
-      refuse [] "a row template's parameter is not a program type (row 128)"
-    else .ok (.handle id)
+    if reservedId id then readReserved id params
+    else
+      match params with
+      | [] => .ok (.handle id)
+      | _ => (readArgs 0 params).map (.app id)
   | .arrays a [] [] [item] => do
     checkAnn [] a
     (under "rest[0]" (ofSchemaLocated item)).map .list
@@ -203,6 +197,10 @@ def ofSchemaLocated : Representation → Read Ty
     let tx ← under "elements[0]" (ofSchemaLocated x)
     let ty ← under "elements[1]" (ofSchemaLocated y)
     .ok (.prod tx ty)
+  | .arrays a [] els [] => do
+    checkAnn [] a
+    (readElems 0 els).map .tuple
+  | .null a [] => do checkAnn [] a; .ok .null
   | .union a [] (m :: m' :: ms) .anyOf => do
     checkAnn [] a
     readMembers 0 (m :: m' :: ms)
@@ -220,9 +218,61 @@ def ofSchemaLocated : Representation → Read Ty
       "a map is keyed by Schema.String only (row 125)"
   | .objects _ [] _ _ =>
     refuse ["indexSignatures"] "index signatures beside properties (StructWithRest) have no Ty"
-  | .undefined _ _ =>
-    refuse [] "undefined has no Ty value: Schema.optional and UndefinedOr are refused; write Schema.optionalKey"
+  | .undefined a [] => do checkAnn [] a; .ok .undefined
   | _ => refuse [] "a node Ty cannot represent"
+/-- The production declaration arms, by arity, for the reserved ids. -/
+def readReserved (id : String) : List Representation → Read Ty
+  | [] =>
+    if id = "effect/schema/TypeParameter" then
+      refuse [] "a row template's parameter is not a program type (row 128)"
+    else if id = "effect/schema/Uint8Array" then .ok .bytes
+    else .ok (.handle id)
+  | [val] =>
+    if id = "effect/schema/Option" then
+      (under "typeParameters[0]" (ofSchemaLocated val)).map .option
+    else if id = "effect/schema/Ref" then
+      (under "typeParameters[0]" (ofSchemaLocated val)).map .refOf
+    else refuse [] ("declaration '" ++ id ++ "' with one parameter has no Ty")
+  | [x, y] =>
+    if id = "effect/schema/Result" then do
+      let tv ← under "typeParameters[0]" (ofSchemaLocated x)
+      let te ← under "typeParameters[1]" (ofSchemaLocated y)
+      .ok (.except te tv)
+    else if id = "effect/schema/Fiber" then do
+      let tv ← under "typeParameters[0]" (ofSchemaLocated x)
+      let te ← under "typeParameters[1]" (ofSchemaLocated y)
+      .ok (.fiberOf tv te)
+    else if id = "effect/schema/Deferred" then do
+      let tv ← under "typeParameters[0]" (ofSchemaLocated x)
+      let te ← under "typeParameters[1]" (ofSchemaLocated y)
+      .ok (.deferredOf tv te)
+    else if id = "effect/schema/Cause" && isDefect y then
+      (under "typeParameters[0]" (ofSchemaLocated x)).map .causeOf
+    else refuse [] ("declaration '" ++ id ++ "' with two parameters has no Ty")
+  | [v, e, d] =>
+    if id = "effect/schema/Exit" && isDefect d then do
+      let tv ← under "typeParameters[0]" (ofSchemaLocated v)
+      let te ← under "typeParameters[1]" (ofSchemaLocated e)
+      .ok (.exitOf tv te)
+    else refuse [] ("declaration '" ++ id ++ "' with three parameters has no Ty")
+  | _ => refuse [] ("the reserved declaration '" ++ id ++ "' at this arity has no Ty")
+/-- A tuple's elements: plain, documentation annotations only. -/
+def readElems (i : Nat) : List Element → Read (List Ty)
+  | [] => .ok []
+  | ⟨false, t, a⟩ :: es => do
+    checkAnn ["elements[" ++ toString i ++ "]"] a
+    let tt ← under ("elements[" ++ toString i ++ "]") (ofSchemaLocated t)
+    let rest ← readElems (i + 1) es
+    .ok (tt :: rest)
+  | ⟨true, _, _⟩ :: _ =>
+    refuse ["elements[" ++ toString i ++ "]"] "an optional tuple element has no Ty"
+/-- A nominal reference's arguments. -/
+def readArgs (i : Nat) : List Representation → Read (List Ty)
+  | [] => .ok []
+  | r :: rs => do
+    let t ← under ("typeParameters[" ++ toString i ++ "]") (ofSchemaLocated r)
+    let rest ← readArgs (i + 1) rs
+    .ok (t :: rest)
 /-- An n-ary `anyOf` union's members, right-nested. -/
 def readMembers (i : Nat) : List Representation → Read Ty
   | [] => refuse [] "an empty union"
@@ -254,7 +304,9 @@ record field's type only; a map is keyed by `string`; the handle named `TypePara
 template parameter's image (the `var` repair takes the name). Formation guarantees it. -/
 def Ty.schemaWf : Ty → Bool
   | .optKey _ => false
-  | .handle s => !(s = "effect/schema/TypeParameter")
+  | .handle s => !(s = "effect/schema/TypeParameter") && !(s = "effect/schema/Uint8Array")
+  | .tuple ts => !(ts.length = 2) && Ty.schemaWfList ts
+  | .app n ts => !ts.isEmpty && !reservedId n && Ty.schemaWfList ts
   | .record fs => (Ty.firstRepeat fs []).isNone && Ty.schemaWfFields fs
   | .map .string v => Ty.schemaWf v
   | .map _ _ => false
@@ -265,6 +317,9 @@ def Ty.schemaWf : Ty → Bool
 def Ty.schemaWfFields : List (String × Ty) → Bool
   | [] => true
   | (_, t) :: fs => (match t with | .optKey u => Ty.schemaWf u | t' => Ty.schemaWf t') && Ty.schemaWfFields fs
+def Ty.schemaWfList : List Ty → Bool
+  | [] => true
+  | t :: ts => Ty.schemaWf t && Ty.schemaWfList ts
 end
 
 /-- The retraction's motive: at `t`, and, at an optional key, at the type it modifies. -/
@@ -308,8 +363,43 @@ theorem readProps_schemaProps (fs : List (String × Ty))
       simp only [schemaProps]
       exact readProps_cons_plain n _ fs fs (ihp.1 hw.1) (ihs hw.2)
 
-/-- Q5 Retraction Theorem, every form: on a closed type the Schema arms can read, the located
-read answers the type the writer wrote. -/
+theorem rOption : reservedId "effect/schema/Option" = true := rfl
+theorem rRef : reservedId "effect/schema/Ref" = true := rfl
+theorem rResult : reservedId "effect/schema/Result" = true := rfl
+theorem rFiber : reservedId "effect/schema/Fiber" = true := rfl
+theorem rDeferred : reservedId "effect/schema/Deferred" = true := rfl
+theorem rCause : reservedId "effect/schema/Cause" = true := rfl
+theorem rExit : reservedId "effect/schema/Exit" = true := rfl
+theorem rUint8 : reservedId "effect/schema/Uint8Array" = true := rfl
+
+theorem readElems_schemaElems (ts : List Ty) (ih : ∀ t ∈ ts, RetractMotive t)
+    (hc : Ty.closedList ts = true) (hw : Ty.schemaWfList ts = true) (i : Nat) :
+    readElems i (schemaElems ts) = .ok ts := by
+  induction ts generalizing i with
+  | nil => rfl
+  | cons t ts ihl =>
+    simp only [Ty.closedList, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWfList, Bool.and_eq_true] at hw
+    have h1 := (ih t List.mem_cons_self hc.1).1 hw.1
+    have h2 := ihl (fun u hu => ih u (List.mem_cons_of_mem _ hu)) hc.2 hw.2 (i + 1)
+    simp only [schemaElems, readElems, checkAnn, under, h1, h2]
+    rfl
+
+theorem readArgs_schemaList (ts : List Ty) (ih : ∀ t ∈ ts, RetractMotive t)
+    (hc : Ty.closedList ts = true) (hw : Ty.schemaWfList ts = true) (i : Nat) :
+    readArgs i (schemaList ts) = .ok ts := by
+  induction ts generalizing i with
+  | nil => rfl
+  | cons t ts ihl =>
+    simp only [Ty.closedList, Bool.and_eq_true] at hc
+    simp only [Ty.schemaWfList, Bool.and_eq_true] at hw
+    have h1 := (ih t List.mem_cons_self hc.1).1 hw.1
+    have h2 := ihl (fun u hu => ih u (List.mem_cons_of_mem _ hu)) hc.2 hw.2 (i + 1)
+    simp only [schemaList, readArgs, under, h1, h2]
+    rfl
+
+/-- **The retraction at every form** (K2's second law, the copy's `ofSchema_schema`): on a closed,
+well-formed type the located reader answers the type the writer wrote. -/
 theorem retract (t : Ty) : RetractMotive t := by
   induction t with
   | never => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
@@ -320,17 +410,21 @@ theorem retract (t : Ty) : RetractMotive t := by
   | bool => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
   | lit s => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
   | unknown => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | null => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | undefined => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | number => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | bytes => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
   | var i => exact fun hc => absurd hc Bool.false_ne_true
   | handle s =>
     refine fun _ => ⟨fun hw => ?_, fun _ h => nomatch h⟩
-    have hs : ¬ s = "effect/schema/TypeParameter" := by
-      simp only [Ty.schemaWf, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not] at hw
-      exact hw
-    simp only [schema, ofSchemaLocated, checkAnn, hs, ↓reduceIte]
-    rfl
+    simp only [Ty.schemaWf, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+      decide_eq_false_iff_not] at hw
+    cases hr : reservedId s with
+    | true => simp only [schema, ofSchemaLocated, checkAnn, hr, ↓reduceIte, readReserved, hw.1, hw.2]; rfl
+    | false => simp only [schema, ofSchemaLocated, checkAnn, hr, Bool.false_eq_true, ↓reduceIte]; rfl
   | option t ih =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
-    simp only [schema, ofSchemaLocated, checkAnn, (ih hc).1 hw]
+    simp only [schema, ofSchemaLocated, checkAnn, rOption, ↓reduceIte, readReserved, (ih hc).1 hw]
     rfl
   | list t ih =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
@@ -338,11 +432,11 @@ theorem retract (t : Ty) : RetractMotive t := by
     rfl
   | refOf t ih =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
-    simp only [schema, ofSchemaLocated, checkAnn, (ih hc).1 hw]
+    simp only [schema, ofSchemaLocated, checkAnn, rRef, ↓reduceIte, readReserved, (ih hc).1 hw]
     rfl
   | causeOf t ih =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
-    simp only [schema, ofSchemaLocated, checkAnn, (ih hc).1 hw]
+    simp only [schema, ofSchemaLocated, checkAnn, rCause, ↓reduceIte, readReserved, (ih hc).1 hw]
     rfl
   | prod a b iha ihb =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
@@ -355,25 +449,29 @@ theorem retract (t : Ty) : RetractMotive t := by
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
     simp only [Ty.closed, Bool.and_eq_true] at hc
     simp only [Ty.schemaWf, Bool.and_eq_true] at hw
-    simp only [schema, ofSchemaLocated, checkAnn, (ihe hc.1).1 hw.1, (iha hc.2).1 hw.2]
+    simp only [schema, ofSchemaLocated, checkAnn, rResult, ↓reduceIte, readReserved,
+      (ihe hc.1).1 hw.1, (iha hc.2).1 hw.2]
     rfl
   | exitOf a e iha ihe =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
     simp only [Ty.closed, Bool.and_eq_true] at hc
     simp only [Ty.schemaWf, Bool.and_eq_true] at hw
-    simp only [schema, ofSchemaLocated, checkAnn, (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
+    simp only [schema, ofSchemaLocated, checkAnn, rExit, ↓reduceIte, readReserved,
+      (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
     rfl
   | fiberOf a e iha ihe =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
     simp only [Ty.closed, Bool.and_eq_true] at hc
     simp only [Ty.schemaWf, Bool.and_eq_true] at hw
-    simp only [schema, ofSchemaLocated, checkAnn, (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
+    simp only [schema, ofSchemaLocated, checkAnn, rFiber, ↓reduceIte, readReserved,
+      (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
     rfl
   | deferredOf a e iha ihe =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
     simp only [Ty.closed, Bool.and_eq_true] at hc
     simp only [Ty.schemaWf, Bool.and_eq_true] at hw
-    simp only [schema, ofSchemaLocated, checkAnn, (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
+    simp only [schema, ofSchemaLocated, checkAnn, rDeferred, ↓reduceIte, readReserved,
+      (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
     rfl
   | union a b iha ihb =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
@@ -401,6 +499,33 @@ theorem retract (t : Ty) : RetractMotive t := by
       simp only [schema, Schema.string, ofSchemaLocated, checkAnn, under, (ihv hc.2).1 hw]
       rfl
     | _ => simp only [Ty.schemaWf, Bool.false_eq_true] at hw
+  | tuple ts ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+      decide_eq_false_iff_not] at hw
+    have hr := readElems_schemaElems ts ih hc hw.2 0
+    rcases ts with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩
+    · rfl
+    · simp only [schemaElems] at hr
+      simp only [schema, schemaElems, ofSchemaLocated, checkAnn, hr]
+      rfl
+    · exact absurd rfl hw.1
+    · simp only [schemaElems] at hr
+      simp only [schema, schemaElems, ofSchemaLocated, checkAnn, hr]
+      rfl
+  | app n ts ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [Ty.closed] at hc
+    simp only [Ty.schemaWf, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at hw
+    have hr := readArgs_schemaList ts ih hc hw.2 0
+    rcases ts with _ | ⟨a, rest⟩
+    · simp only [List.isEmpty_nil] at hw
+      exact absurd hw.1.1 (by decide)
+    · simp only [schemaList] at hr
+      simp only [schema, schemaList, ofSchemaLocated, checkAnn, hw.1.2, Bool.false_eq_true, ↓reduceIte,
+        hr]
+      rfl
 
 /-- The retraction (decisions row 6), every form: the located read, then the unlocated one. -/
 theorem ofSchemaLocated_schema (t : Ty) (h : t.closed = true) (hw : t.schemaWf = true) :

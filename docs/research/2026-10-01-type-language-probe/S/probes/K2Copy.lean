@@ -17,7 +17,11 @@ constructors in their order, then `record (fields : List (String × PTy))` (row 
 text), then `optKey (inner : PTy)` (stage 4's field modifier, legal only as a record field's
 type: the record constructor's text stays row 119's), then `map (key value : PTy)` (row 125).
 Tagged unions are unions of records (stage 2: no constructor). `int` is inhabited by `Int`'s
-generated image (`Store/Domain/Canonical.lean:359-368`; stage 5 with row 121).
+generated image (`Store/Domain/Canonical.lean:359-368`; stage 5 with row 121). Seat T's census
+(merged at main `8036f0b4`, its §2.1) adds, with its constructor texts: `tuple (items : List PTy)`
+(normalized to `prod` at arity 2), `app (name : String) (args : List PTy)` (a nominal reference:
+a declaration with type parameters), and the leaves `null`, `undefined`, `number` (binary64, if
+row 121 rules it) and `bytes`.
 
 Value encoding assumed here (seat P owns it): a record is `ctor 0` of its field slots in the
 canonical order by name (row 119); an optional field's slot is `none` (absent) or `some v`;
@@ -60,6 +64,18 @@ inductive PTy where
   | optKey (inner : PTy)
   -- [arm:map]
   | map (key value : PTy)
+  -- [arm:tuple]
+  | tuple (items : List PTy)
+  -- [arm:app]
+  | app (name : String) (args : List PTy)
+  -- [arm:null]
+  | null
+  -- [arm:undefined]
+  | undefined
+  -- [arm:number]
+  | number
+  -- [arm:bytes]
+  | bytes
 
 instance : Inhabited PTy := ⟨.never⟩
 
@@ -79,12 +95,23 @@ theorem PTy.ind' {motive : PTy → Prop}
     (var : ∀ i, motive (.var i)) (unknown : motive .unknown)
     (record : ∀ fs, (∀ p ∈ fs, motive p.2) → motive (.record fs))
     (optKey : ∀ t, motive t → motive (.optKey t))
-    (map : ∀ k v, motive k → motive v → motive (.map k v)) : ∀ t, motive t :=
+    (map : ∀ k v, motive k → motive v → motive (.map k v))
+    (tuple : ∀ ts, (∀ t ∈ ts, motive t) → motive (.tuple ts))
+    (app : ∀ n ts, (∀ t ∈ ts, motive t) → motive (.app n ts))
+    (null : motive .null) (undefined : motive .undefined) (number : motive .number)
+    (bytes : motive .bytes) : ∀ t, motive t :=
   fun t =>
     PTy.rec (motive_1 := motive) (motive_2 := fun fs => ∀ p ∈ fs, motive p.2)
-      (motive_3 := fun p => motive p.2)
+      (motive_3 := fun ts => ∀ t ∈ ts, motive t) (motive_4 := fun p => motive p.2)
       never unit nat int string bool handle option list prod except exitOf causeOf fiberOf
-      union lit refOf deferredOf var unknown record optKey map
+      union lit refOf deferredOf var unknown record optKey map tuple app null undefined
+      number bytes
+      (by intro _ hmem; cases hmem)
+      (fun _ _ ihHead ihTail => by
+        intro _ hmem
+        cases hmem with
+        | head => exact ihHead
+        | tail _ hmem' => exact ihTail _ hmem')
       (by intro _ hmem; cases hmem)
       (fun _ _ ihHead ihTail => by
         intro _ hmem
@@ -98,7 +125,8 @@ mutual
 /-- A computational equality for the guards (seat Q generates the real one with its iff). -/
 def PTy.beq : PTy → PTy → Bool
   | .never, .never | .unit, .unit | .nat, .nat | .int, .int | .string, .string
-  | .bool, .bool | .unknown, .unknown => true
+  | .bool, .bool | .unknown, .unknown | .null, .null | .undefined, .undefined
+  | .number, .number | .bytes, .bytes => true
   | .handle a, .handle b | .lit a, .lit b => a == b
   | .var i, .var j => i == j
   | .option a, .option b | .list a, .list b | .causeOf a, .causeOf b
@@ -107,6 +135,12 @@ def PTy.beq : PTy → PTy → Bool
   | .fiberOf a b, .fiberOf c d | .union a b, .union c d | .deferredOf a b, .deferredOf c d
   | .map a b, .map c d => PTy.beq a c && PTy.beq b d
   | .record fs, .record gs => PTy.beqFields fs gs
+  | .tuple xs, .tuple ys => PTy.beqList xs ys
+  | .app n xs, .app m ys => n == m && PTy.beqList xs ys
+  | _, _ => false
+def PTy.beqList : List PTy → List PTy → Bool
+  | [], [] => true
+  | t :: ts, u :: us => PTy.beq t u && PTy.beqList ts us
   | _, _ => false
 def PTy.beqFields : List (String × PTy) → List (String × PTy) → Bool
   | [], [] => true
@@ -224,20 +258,33 @@ theorem canonF_map {α β : Type} (f : α → β) (xs : List (String × α)) :
 mutual
 def PTy.closed : PTy → Bool
   | .var _ => false
-  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ => true
+  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
+  | .null | .undefined | .number | .bytes => true
   | .option t | .list t | .causeOf t | .refOf t | .optKey t => PTy.closed t
   | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b
   | .map a b => PTy.closed a && PTy.closed b
   | .record fs => PTy.closedFields fs
+  | .tuple ts | .app _ ts => PTy.closedList ts
 def PTy.closedFields : List (String × PTy) → Bool
   | [] => true
   | (_, t) :: fs => PTy.closed t && PTy.closedFields fs
+def PTy.closedList : List PTy → Bool
+  | [] => true
+  | t :: ts => PTy.closed t && PTy.closedList ts
 end
 
 /-- Distinct field names, by the first repeat (`repeatedField at`). -/
 def firstRepeat {α : Type} : List (String × α) → List String → Option String
   | [], _ => none
   | (n, _) :: fs, seen => if seen.contains n then some n else firstRepeat fs (n :: seen)
+
+/-- The declaration ids the reader maps to other constructors: an `app` may not take one, and
+`bytes` takes `Uint8Array` from `handle` as the `var` repair takes `TypeParameter`. -/
+-- [arm:app]
+def reservedId (id : String) : Bool :=
+  ["effect/schema/Option", "effect/schema/Ref", "effect/schema/Result", "effect/schema/Fiber",
+   "effect/schema/Deferred", "effect/schema/Cause", "effect/schema/Exit",
+   "effect/schema/TypeParameter", "effect/schema/Uint8Array"].contains id
 
 mutual
 /-- The formation rules the Schema arms rely on: a record's names are distinct; an optional key
@@ -246,7 +293,11 @@ is a record field's type and nothing else; a map is keyed by `string` (an index 
 def PTy.wf : PTy → Bool
   | .optKey _ => false
   -- the `var` repair (row 128) costs one handle name: `TypeParameter` is the template's image
-  | .handle s => !(s = "effect/schema/TypeParameter")
+  | .handle s => !(s = "effect/schema/TypeParameter") && !(s = "effect/schema/Uint8Array")
+  -- [arm:tuple] arity two is `prod` (seat T's normal form)
+  | .tuple ts => !(ts.length = 2) && PTy.wfList ts
+  -- [arm:app] `app t []` is `handle t` (seat T's normal form)
+  | .app n ts => !ts.isEmpty && !reservedId n && PTy.wfList ts
   | .record fs => (firstRepeat fs []).isNone && PTy.wfFields fs
   | .map .string v => PTy.wf v
   | .map _ _ => false
@@ -257,6 +308,9 @@ def PTy.wf : PTy → Bool
 def PTy.wfFields : List (String × PTy) → Bool
   | [] => true
   | (_, t) :: fs => (match t with | .optKey u => PTy.wf u | t' => PTy.wf t') && PTy.wfFields fs
+def PTy.wfList : List PTy → Bool
+  | [] => true
+  | t :: ts => PTy.wf t && PTy.wfList ts
 end
 
 /-! ## §4 `Schema/Bridge.lean`, copied: `schema` and the located `ofSchema` -/
@@ -296,6 +350,26 @@ def schema : PTy → Representation
   | .optKey inner => schema inner
   -- [arm:map] `Schema.Record(K, V)`: no property, one index signature
   | .map key value => .objects none [] [] [{ parameter := schema key, type := schema value }]
+  -- [arm:tuple] `Schema.Tuple([…])`: plain elements, no rest
+  | .tuple items => .arrays none [] (schemaElems items) []
+  -- [arm:app] a declaration with type parameters (`Schema/Representation.lean:704`)
+  | .app name args => .declaration ⟨name, .null⟩ none (schemaList args) []
+  -- [arm:null]
+  | .null => .null none []
+  -- [arm:undefined]
+  | .undefined => .undefined none []
+  -- [arm:number] plain `Schema.Number`
+  | .number => .number none []
+  -- [arm:bytes] rc.112 `Schema.Uint8Array` (`Schema.ts:13605-13621`)
+  | .bytes => .declaration ⟨"effect/schema/Uint8Array", .null⟩ none [] []
+-- [arm:tuple]
+def schemaElems : List PTy → List Element
+  | [] => []
+  | t :: ts => { isOptional := false, type := schema t, annotations := none } :: schemaElems ts
+-- [arm:app]
+def schemaList : List PTy → List Representation
+  | [] => []
+  | t :: ts => schema t :: schemaList ts
 -- [arm:record]
 def schemaProps : List (String × PTy) → List PropertySignature
   -- [arm:record]
@@ -389,48 +463,20 @@ def ofSchemaL : Representation → Read PTy
     if isIntC c then
       if nonNegC d then .ok .nat else refuse ["checks[1]"] "a check Ty cannot represent"
     else refuse ["checks[0]"] "a check Ty cannot represent"
-  -- [change:whole-check]
-  | .number _ [] => refuse [] "plain Schema.Number (binary64) has no Ty (rows 109, 121)"
+  -- [arm:number] plain `Schema.Number` (binary64, if row 121 rules it; refused by name until then)
+  | .number a [] => do checkAnn [] a; .ok .number
   | .string a [] => do checkAnn [] a; .ok .string
   | .boolean a [] => do checkAnn [] a; .ok .bool
   | .literal a [] (.string s) => do checkAnn [] a; .ok (.lit s)
-  | .declaration ⟨id, .null⟩ a [val] [] => do
+  -- [change:declarations] a reserved id reads as its constructor; any other id is a nominal reference
+  | .declaration ⟨id, .null⟩ a params [] => do
     checkAnn [] a
-    if id = "effect/schema/Option" then
-      (under "typeParameters[0]" (ofSchemaL val)).map .option
-    else if id = "effect/schema/Ref" then
-      (under "typeParameters[0]" (ofSchemaL val)).map .refOf
-    else refuse [] ("declaration '" ++ id ++ "' with one parameter has no Ty")
-  | .declaration ⟨id, .null⟩ a [x, y] [] => do
-    checkAnn [] a
-    if id = "effect/schema/Result" then do
-      let tv ← under "typeParameters[0]" (ofSchemaL x)
-      let te ← under "typeParameters[1]" (ofSchemaL y)
-      .ok (.except te tv)
-    else if id = "effect/schema/Fiber" then do
-      let tv ← under "typeParameters[0]" (ofSchemaL x)
-      let te ← under "typeParameters[1]" (ofSchemaL y)
-      .ok (.fiberOf tv te)
-    else if id = "effect/schema/Deferred" then do
-      let tv ← under "typeParameters[0]" (ofSchemaL x)
-      let te ← under "typeParameters[1]" (ofSchemaL y)
-      .ok (.deferredOf tv te)
-    else if id = "effect/schema/Cause" && Effect4.Schema.Bridge.isDefect y then
-      (under "typeParameters[0]" (ofSchemaL x)).map .causeOf
-    else refuse [] ("declaration '" ++ id ++ "' with two parameters has no Ty")
-  | .declaration ⟨id, .null⟩ a [v, e, d] [] => do
-    checkAnn [] a
-    if id = "effect/schema/Exit" && Effect4.Schema.Bridge.isDefect d then do
-      let tv ← under "typeParameters[0]" (ofSchemaL v)
-      let te ← under "typeParameters[1]" (ofSchemaL e)
-      .ok (.exitOf tv te)
-    else refuse [] ("declaration '" ++ id ++ "' with three parameters has no Ty")
-  -- [change:var] row 128's `var` repair: the template parameter is not a program type
-  | .declaration ⟨id, .null⟩ a [] [] => do
-    checkAnn [] a
-    if id = "effect/schema/TypeParameter" then
-      refuse [] "a row template's parameter is not a program type (row 128)"
-    else .ok (.handle id)
+    if reservedId id then readReserved id params
+    else
+      match params with
+      | [] => .ok (.handle id)
+      -- [arm:app]
+      | _ => (readArgs 0 params).map (.app id)
   | .arrays a [] [] [item] => do
     checkAnn [] a
     (under "rest[0]" (ofSchemaL item)).map .list
@@ -441,6 +487,12 @@ def ofSchemaL : Representation → Read PTy
     let tx ← under "elements[0]" (ofSchemaL x)
     let ty ← under "elements[1]" (ofSchemaL y)
     .ok (.prod tx ty)
+  -- [arm:tuple] any other arity, plain elements, no rest
+  | .arrays a [] els [] => do
+    checkAnn [] a
+    (readElems 0 els).map .tuple
+  -- [arm:null]
+  | .null a [] => do checkAnn [] a; .ok .null
   -- [change:n-ary-union] an rc.112 union of two or more members, right-nested
   | .union a [] (m :: m' :: ms) .anyOf => do
     checkAnn [] a
@@ -462,9 +514,64 @@ def ofSchemaL : Representation → Read PTy
       "a map is keyed by Schema.String only (row 125)"
   -- [arm:record]
   | .objects _ [] _ _ => refuse ["indexSignatures"] "index signatures beside properties (StructWithRest) have no Ty"
-  -- [arm:optKey] rc.112's `Schema.optional` writes `Union[A, Undefined]`: no Ty value is `undefined`
-  | .undefined _ _ => refuse [] "undefined has no Ty value: Schema.optional and UndefinedOr are refused; write Schema.optionalKey"
+  -- [arm:undefined] (with it, rc.112's `Schema.optional(A)`, `Union[A, Undefined]`, reads)
+  | .undefined a [] => do checkAnn [] a; .ok .undefined
   | _ => refuse [] "a node Ty cannot represent"
+-- [change:declarations] the production declaration arms, by arity, for the reserved ids
+def readReserved (id : String) : List Representation → Read PTy
+  | [] =>
+    -- [change:var] row 128's `var` repair: the template parameter is not a program type
+    if id = "effect/schema/TypeParameter" then
+      refuse [] "a row template's parameter is not a program type (row 128)"
+    -- [arm:bytes]
+    else if id = "effect/schema/Uint8Array" then .ok .bytes
+    else .ok (.handle id)
+  | [val] =>
+    if id = "effect/schema/Option" then
+      (under "typeParameters[0]" (ofSchemaL val)).map .option
+    else if id = "effect/schema/Ref" then
+      (under "typeParameters[0]" (ofSchemaL val)).map .refOf
+    else refuse [] ("declaration '" ++ id ++ "' with one parameter has no Ty")
+  | [x, y] =>
+    if id = "effect/schema/Result" then do
+      let tv ← under "typeParameters[0]" (ofSchemaL x)
+      let te ← under "typeParameters[1]" (ofSchemaL y)
+      .ok (.except te tv)
+    else if id = "effect/schema/Fiber" then do
+      let tv ← under "typeParameters[0]" (ofSchemaL x)
+      let te ← under "typeParameters[1]" (ofSchemaL y)
+      .ok (.fiberOf tv te)
+    else if id = "effect/schema/Deferred" then do
+      let tv ← under "typeParameters[0]" (ofSchemaL x)
+      let te ← under "typeParameters[1]" (ofSchemaL y)
+      .ok (.deferredOf tv te)
+    else if id = "effect/schema/Cause" && Effect4.Schema.Bridge.isDefect y then
+      (under "typeParameters[0]" (ofSchemaL x)).map .causeOf
+    else refuse [] ("declaration '" ++ id ++ "' with two parameters has no Ty")
+  | [v, e, d] =>
+    if id = "effect/schema/Exit" && Effect4.Schema.Bridge.isDefect d then do
+      let tv ← under "typeParameters[0]" (ofSchemaL v)
+      let te ← under "typeParameters[1]" (ofSchemaL e)
+      .ok (.exitOf tv te)
+    else refuse [] ("declaration '" ++ id ++ "' with three parameters has no Ty")
+  | _ => refuse [] ("the reserved declaration '" ++ id ++ "' at this arity has no Ty")
+-- [arm:tuple]
+def readElems (i : Nat) : List Element → Read (List PTy)
+  | [] => .ok []
+  | ⟨false, t, a⟩ :: es => do
+    checkAnn ["elements[" ++ toString i ++ "]"] a
+    let tt ← under ("elements[" ++ toString i ++ "]") (ofSchemaL t)
+    let rest ← readElems (i + 1) es
+    .ok (tt :: rest)
+  | ⟨true, _, _⟩ :: _ =>
+    refuse ["elements[" ++ toString i ++ "]"] "an optional tuple element has no Ty"
+-- [arm:app]
+def readArgs (i : Nat) : List Representation → Read (List PTy)
+  | [] => .ok []
+  | r :: rs => do
+    let t ← under ("typeParameters[" ++ toString i ++ "]") (ofSchemaL r)
+    let rest ← readArgs (i + 1) rs
+    .ok (t :: rest)
 -- [change:n-ary-union]
 def readMembers (i : Nat) : List Representation → Read PTy
   | [] => refuse [] "an empty union"
@@ -531,6 +638,41 @@ theorem readProps_schemaProps (fs : List (String × PTy))
       simp only [schemaProps]
       exact readProps_cons_plain n _ fs fs (ihp.1 hw.1) (ihs hw.2)
 
+theorem rOption : reservedId "effect/schema/Option" = true := rfl
+theorem rRef : reservedId "effect/schema/Ref" = true := rfl
+theorem rResult : reservedId "effect/schema/Result" = true := rfl
+theorem rFiber : reservedId "effect/schema/Fiber" = true := rfl
+theorem rDeferred : reservedId "effect/schema/Deferred" = true := rfl
+theorem rCause : reservedId "effect/schema/Cause" = true := rfl
+theorem rExit : reservedId "effect/schema/Exit" = true := rfl
+theorem rUint8 : reservedId "effect/schema/Uint8Array" = true := rfl
+
+theorem readElems_schemaElems (ts : List PTy) (ih : ∀ t ∈ ts, RetractMotive t)
+    (hc : PTy.closedList ts = true) (hw : PTy.wfList ts = true) (i : Nat) :
+    readElems i (schemaElems ts) = .ok ts := by
+  induction ts generalizing i with
+  | nil => rfl
+  | cons t ts ihl =>
+    simp only [PTy.closedList, Bool.and_eq_true] at hc
+    simp only [PTy.wfList, Bool.and_eq_true] at hw
+    have h1 := (ih t List.mem_cons_self hc.1).1 hw.1
+    have h2 := ihl (fun u hu => ih u (List.mem_cons_of_mem _ hu)) hc.2 hw.2 (i + 1)
+    simp only [schemaElems, readElems, checkAnn, under, h1, h2]
+    rfl
+
+theorem readArgs_schemaList (ts : List PTy) (ih : ∀ t ∈ ts, RetractMotive t)
+    (hc : PTy.closedList ts = true) (hw : PTy.wfList ts = true) (i : Nat) :
+    readArgs i (schemaList ts) = .ok ts := by
+  induction ts generalizing i with
+  | nil => rfl
+  | cons t ts ihl =>
+    simp only [PTy.closedList, Bool.and_eq_true] at hc
+    simp only [PTy.wfList, Bool.and_eq_true] at hw
+    have h1 := (ih t List.mem_cons_self hc.1).1 hw.1
+    have h2 := ihl (fun u hu => ih u (List.mem_cons_of_mem _ hu)) hc.2 hw.2 (i + 1)
+    simp only [schemaList, readArgs, under, h1, h2]
+    rfl
+
 /-- **The retraction at every form** (K2's second law, the copy's `ofSchema_schema`): on a closed,
 well-formed type the located reader answers the type the writer wrote. -/
 theorem retract (t : PTy) : RetractMotive t := by
@@ -543,17 +685,21 @@ theorem retract (t : PTy) : RetractMotive t := by
   | bool => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
   | lit s => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
   | unknown => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | null => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | undefined => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | number => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
+  | bytes => exact fun _ => ⟨fun _ => rfl, fun _ h => nomatch h⟩
   | var i => exact fun hc => absurd hc Bool.false_ne_true
   | handle s =>
     refine fun _ => ⟨fun hw => ?_, fun _ h => nomatch h⟩
-    have hs : ¬ s = "effect/schema/TypeParameter" := by
-      simp only [PTy.wf, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not] at hw
-      exact hw
-    simp only [schema, ofSchemaL, checkAnn, hs, ↓reduceIte]
-    rfl
+    simp only [PTy.wf, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+      decide_eq_false_iff_not] at hw
+    cases hr : reservedId s with
+    | true => simp only [schema, ofSchemaL, checkAnn, hr, ↓reduceIte, readReserved, hw.1, hw.2]; rfl
+    | false => simp only [schema, ofSchemaL, checkAnn, hr, Bool.false_eq_true, ↓reduceIte]; rfl
   | option t ih =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
-    simp only [schema, ofSchemaL, checkAnn, (ih hc).1 hw]
+    simp only [schema, ofSchemaL, checkAnn, rOption, ↓reduceIte, readReserved, (ih hc).1 hw]
     rfl
   | list t ih =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
@@ -561,11 +707,11 @@ theorem retract (t : PTy) : RetractMotive t := by
     rfl
   | refOf t ih =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
-    simp only [schema, ofSchemaL, checkAnn, (ih hc).1 hw]
+    simp only [schema, ofSchemaL, checkAnn, rRef, ↓reduceIte, readReserved, (ih hc).1 hw]
     rfl
   | causeOf t ih =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
-    simp only [schema, ofSchemaL, checkAnn, (ih hc).1 hw]
+    simp only [schema, ofSchemaL, checkAnn, rCause, ↓reduceIte, readReserved, (ih hc).1 hw]
     rfl
   | prod a b iha ihb =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
@@ -578,25 +724,29 @@ theorem retract (t : PTy) : RetractMotive t := by
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
     simp only [PTy.closed, Bool.and_eq_true] at hc
     simp only [PTy.wf, Bool.and_eq_true] at hw
-    simp only [schema, ofSchemaL, checkAnn, (ihe hc.1).1 hw.1, (iha hc.2).1 hw.2]
+    simp only [schema, ofSchemaL, checkAnn, rResult, ↓reduceIte, readReserved,
+      (ihe hc.1).1 hw.1, (iha hc.2).1 hw.2]
     rfl
   | exitOf a e iha ihe =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
     simp only [PTy.closed, Bool.and_eq_true] at hc
     simp only [PTy.wf, Bool.and_eq_true] at hw
-    simp only [schema, ofSchemaL, checkAnn, (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
+    simp only [schema, ofSchemaL, checkAnn, rExit, ↓reduceIte, readReserved,
+      (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
     rfl
   | fiberOf a e iha ihe =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
     simp only [PTy.closed, Bool.and_eq_true] at hc
     simp only [PTy.wf, Bool.and_eq_true] at hw
-    simp only [schema, ofSchemaL, checkAnn, (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
+    simp only [schema, ofSchemaL, checkAnn, rFiber, ↓reduceIte, readReserved,
+      (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
     rfl
   | deferredOf a e iha ihe =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
     simp only [PTy.closed, Bool.and_eq_true] at hc
     simp only [PTy.wf, Bool.and_eq_true] at hw
-    simp only [schema, ofSchemaL, checkAnn, (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
+    simp only [schema, ofSchemaL, checkAnn, rDeferred, ↓reduceIte, readReserved,
+      (iha hc.1).1 hw.1, (ihe hc.2).1 hw.2]
     rfl
   | union a b iha ihb =>
     refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
@@ -624,6 +774,33 @@ theorem retract (t : PTy) : RetractMotive t := by
       simp only [schema, Schema.string, ofSchemaL, checkAnn, under, (ihv hc.2).1 hw]
       rfl
     | _ => simp only [PTy.wf, Bool.false_eq_true] at hw
+  | tuple ts ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [PTy.closed] at hc
+    simp only [PTy.wf, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+      decide_eq_false_iff_not] at hw
+    have hr := readElems_schemaElems ts ih hc hw.2 0
+    rcases ts with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩
+    · rfl
+    · simp only [schemaElems] at hr
+      simp only [schema, schemaElems, ofSchemaL, checkAnn, hr]
+      rfl
+    · exact absurd rfl hw.1
+    · simp only [schemaElems] at hr
+      simp only [schema, schemaElems, ofSchemaL, checkAnn, hr]
+      rfl
+  | app n ts ih =>
+    refine fun hc => ⟨fun hw => ?_, fun _ h => nomatch h⟩
+    simp only [PTy.closed] at hc
+    simp only [PTy.wf, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at hw
+    have hr := readArgs_schemaList ts ih hc hw.2 0
+    rcases ts with _ | ⟨a, rest⟩
+    · simp only [List.isEmpty_nil] at hw
+      exact absurd hw.1.1 (by decide)
+    · simp only [schemaList] at hr
+      simp only [schema, schemaList, ofSchemaL, checkAnn, hw.1.2, Bool.false_eq_true, ↓reduceIte,
+        hr]
+      rfl
 
 theorem ofSchemaL_schema (t : PTy) (hc : t.closed = true) (hw : t.wf = true) :
     ofSchemaL (schema t) = .ok t :=
@@ -771,7 +948,7 @@ def rAB : PTy := .record [("a", .int), ("b", .string)]
   [prop "a" Schema.string (ann := some [⟨"title", .str "A"⟩])] []) (.record [("a", .string)])
 #guard refusedAt (.objects none [] [prop "a" Schema.string (ann := some [⟨"parseOptions", .obj []⟩])] [])
   ["a", "annotations"]
-#guard refusedAt (.objects none [] [prop "user" (.objects none [] [prop "age" Schema.number] [])] [])
+#guard refusedAt (.objects none [] [prop "user" (.objects none [] [prop "age" Schema.bigint] [])] [])
   ["user", "age"]
 #guard refusedAt (.objects none [] [prop "a" Schema.string] [{ parameter := Schema.string, type := rcInt }])
   ["indexSignatures"]
@@ -780,11 +957,12 @@ def numKeyProp : PropertySignature :=
     annotations := none }
 #guard refusedAt (.objects none [] [numKeyProp] []) []
 #guard readsAs (.objects none [] [] []) (.record [])
--- optional keys: `optionalKey` reads; `optional` (`Union[A, Undefined]`) refuses at the `Undefined`
+-- optional keys: `optionalKey` reads; `optional` (`Union[A, Undefined]`) reads once the `undefined`
+-- leaf lands (seat T's N4), as the three-state slot `optKey (union A undefined)`
 def rOpt : PTy := .record [("a", .optKey .int), ("b", .string)]
 #guard readsAs (schema rOpt) rOpt
-#guard refusedAt (.objects none [] [prop "a" (.union none [] [rcInt, Schema.undefined] .anyOf) (opt := true)] [])
-  ["a", "types[1]"]
+#guard readsAs (.objects none [] [prop "a" (.union none [] [rcInt, Schema.undefined] .anyOf) (opt := true)] [])
+  (.record [("a", .optKey (.union .int .undefined))])
 -- maps: one index signature over `Schema.String`
 def rMap : PTy := .map .string .int
 #guard readsAs (schema rMap) rMap
@@ -808,7 +986,7 @@ def lit3 : PTy := .union (.lit "a") (.union (.lit "b") (.lit "c"))
 #guard readsAs rcInt .int
 #guard readsAs rcNat .nat
 #guard readsAs (schema .nat) .nat
-#guard refusedAt (.number none []) []
+#guard readsAs (.number none []) .number        -- binary64, if row 121 rules it (refused by name until then)
 def ge5 : Representation := .number none [Effect4.Schema.Bridge.isIntCheck,
   .filter ⟨"effect/schema/isGreaterThanOrEqualTo", .obj [("minimum", Arch.Json.ofNat 5)], none⟩ none false]
 #guard Effect4.Schema.Bridge.ofSchema ge5 = some .nat       -- RED CONTROL: today "≥ 5" reads as nat (PED-05)
@@ -825,8 +1003,24 @@ def groupedInt : Representation := .number none [Schema.Check.group
 #guard Effect4.Schema.Bridge.ofSchema (Effect4.Schema.Bridge.schema (.var 0)) =
   some (.handle "effect/schema/TypeParameter")             -- RED CONTROL
 #guard refusedAt (schema (.var 0)) []
+-- seat T's forms: tuples (arity two is `prod`), nominal references, the leaves
+def tup3 : PTy := .tuple [.int, .string, .bool]
+#guard readsAs (schema tup3) tup3
+#guard readsAs (schema (.tuple [])) (.tuple [])
+#guard readsAs (schema (.tuple [.int])) (.tuple [.int])
+#guard readsAs (schema (.tuple [.int, .string])) (.prod .int .string)     -- the normal form
+#guard refusedAt (.arrays none [] [⟨true, Schema.string, none⟩] []) ["elements[0]"]
+def stream : PTy := .app "Stream.Stream" [.int, .never, .never]
+#guard readsAs (schema stream) stream
+#guard readsAs (schema (.app "Duration.Duration" [])) (.handle "Duration.Duration")  -- the normal form
+#guard readsAs (schema (.app "effect/schema/Option" [.int])) (.option .int)         -- a reserved id
+#guard refusedAt (.declaration ⟨"Queue.Dequeue", .null⟩ none [Schema.bigint] []) ["typeParameters[0]"]
+#guard readsAs (schema .null) .null && readsAs (schema .undefined) .undefined
+#guard readsAs (schema .number) .number && readsAs (schema .bytes) .bytes
+#guard readsAs (schema (.handle "effect/schema/Uint8Array")) .bytes                 -- `bytes` takes the name
 -- the guard never fires on these inputs: the unguarded reader is exact on them (tested)
 #guard [schema rAB, schema rOpt, schema rMap, schema rTU, flat3, rcInt, rcNat, ge5, groupedInt,
+  schema tup3, schema stream, schema .bytes, schema (.tuple []),
   .objects none [] [prop "b" Schema.string, prop "a" rcInt] [],
   .objects (some [⟨"identifier", .str "User"⟩]) [] [prop "a" Schema.string] []].all exactAgrees
 
@@ -856,6 +1050,12 @@ def reasonAdmitsP (member : Val → PTy → Bool) (ty : PTy) :
 
 def causeAdmitsP (member : Val → PTy → Bool) (ty : PTy) (c : CauseV) : Bool :=
   c.reasons.all (reasonAdmitsP member ty)
+
+/-- A tuple's items against their checkers, in order; lengths equal. -/
+def fitList : List Val → List (Val → Bool) → Bool
+  | [], [] => true
+  | v :: vs, c :: cs => c v && fitList vs cs
+  | _, _ => false
 
 /-- Positional fit: each slot against its field's checker, in order; lengths equal. -/
 def fitPos : List Val → List (String × (Val → Bool)) → Bool
@@ -958,6 +1158,17 @@ def hasTyP (v : Val) (ty : PTy) (allocated : List String) : Bool :=
     | .none => true
     | .some x => hasTyP x t allocated
     | _ => false
+  -- [arm:tuple] `Val.list` of the items, exact arity, pointwise (as `prod` at arity two)
+  | .tuple ts =>
+    match v with
+    | .list vs => fitList vs (itemCheckers ts allocated)
+    | _ => false
+  -- [arm:app] a nominal reference is opaque (like `handle`; its value judgment is seat P's)
+  | .app _ _ => false
+  -- [arm:null] the value images of `null`, `undefined` and binary64 `number` are owed (P, row 121)
+  | .null | .undefined | .number => false
+  -- [arm:bytes] the existing `Val.bytes` frame
+  | .bytes => match v with | .bytes _ => true | _ => false
   -- [arm:map] `[key, value]` pairs, keys strings ascending
   | .map k w =>
     match v with
@@ -971,6 +1182,10 @@ def hasTyP (v : Val) (ty : PTy) (allocated : List String) : Bool :=
 def fieldCheckers : List (String × PTy) → List String → List (String × (Val → Bool))
   | [], _ => []
   | (n, t) :: fs, al => (n, fun w => hasTyP w t al) :: fieldCheckers fs al
+-- [arm:tuple]
+def itemCheckers : List PTy → List String → List (Val → Bool)
+  | [], _ => []
+  | t :: ts, al => (fun w => hasTyP w t al) :: itemCheckers ts al
 end
 
 /-! ## §9 `Schema/Codec.lean`, copied: layout, support, the wire arms -/
@@ -990,7 +1205,13 @@ def layoutP : PTy → PTy
   | .optKey t => .optKey (layoutP t)
   -- [arm:map]
   | .map k v => .map (layoutP k) (layoutP v)
+  -- [arm:tuple]
+  | .tuple ts => .tuple (layoutList ts)
   | t => t
+-- [arm:tuple]
+def layoutList : List PTy → List PTy
+  | [] => []
+  | t :: ts => layoutP t :: layoutList ts
 -- [arm:record]
 def layoutFields : List (String × PTy) → List (String × PTy)
   | [] => []
@@ -1010,7 +1231,14 @@ def isSupportedP : PTy → Bool
   | .optKey t => isSupportedP t
   -- [arm:map]
   | .map .string v => isSupportedP v
+  -- [arm:tuple]
+  | .tuple ts => supportedList ts
+  -- [arm:app] [arm:null] [arm:undefined] [arm:number] [arm:bytes] refused by name: each obstacle in the note
   | _ => false
+-- [arm:tuple]
+def supportedList : List PTy → Bool
+  | [] => true
+  | t :: ts => isSupportedP t && supportedList ts
 -- [arm:record]
 def supportedFields : List (String × PTy) → Bool
   | [] => true
@@ -1088,12 +1316,22 @@ def encodeRawP : PTy → Val → Option Json
   | .int, .ctor 1 [.nat n] => some (intJson (.negSucc n))
   -- [arm:record] an object keyed by the field names, canonical order; an absent optional key has no entry
   | .record fs, .ctor 0 vs => (encodeSlots vs (canonF (fieldEncoders fs))).map Json.obj
+  -- [arm:tuple] an array of the items, exact arity
+  | .tuple ts, .list vs => (encodeItems ts vs).map Json.arr
   -- [arm:map] an object keyed by the map's keys, in the value's (ascending) order
   | .map .string w, .list entries =>
     (entries.mapM (fun (e : Val) =>
       match e with
       | .list [.str k, x] => (encodeRawP w x).map (fun j => (k, j))
       | _ => none)).map Json.obj
+  | _, _ => none
+-- [arm:tuple]
+def encodeItems : List PTy → List Val → Option (List Json)
+  | [], [] => some []
+  | t :: ts, v :: vs => do
+    let j ← encodeRawP t v
+    let rest ← encodeItems ts vs
+    some (j :: rest)
   | _, _ => none
 -- [arm:record]
 def fieldEncoders : List (String × PTy) → List (String × (Val → Option (Option Json)))
@@ -1172,11 +1410,21 @@ def decodeRawP : PTy → Json → Option Val
     if entries.all (fun e => ((canonF (fieldDecoders fs)).map (·.1)).contains e.1) then
       (decodeSlots entries (canonF (fieldDecoders fs))).map (fun slots => .ctor 0 slots)
     else none
+  -- [arm:tuple]
+  | .tuple ts, .arr js => (decodeItems ts js).map Val.list
   -- [arm:map] distinct keys, the value's pairs sorted by key
   | .map .string w, .obj entries =>
     if (firstRepeat entries []).isSome then none
     else (entries.mapM (fun e => (decodeRawP w e.2).map (fun v => (e.1, v)))).map
       (fun kvs => .list ((canonF kvs).map (fun kv => .list [.str kv.1, kv.2])))
+  | _, _ => none
+-- [arm:tuple]
+def decodeItems : List PTy → List Json → Option (List Val)
+  | [], [] => some []
+  | t :: ts, j :: js => do
+    let v ← decodeRawP t j
+    let rest ← decodeItems ts js
+    some (v :: rest)
   | _, _ => none
 -- [arm:record]
 def fieldDecoders : List (String × PTy) → List (String × (Option Json → Option Val))
@@ -1448,13 +1696,26 @@ def rx : PTy := .record [("x", .nat)]
 def recSuccess : PTy := .record [("_tag", .lit "Success"), ("value", .nat)]
 #guard encodeP (.union (.exitOf .nat .nat) recSuccess) (.ctor 0 [.str "Success", .nat 1]) = none
 #guard encodeP (.union (.exitOf .nat .nat) recSuccess) (.ctor 0 [.nat 1]) = some jSuccess
+-- tuples: an array of the items, exact arity; a list beside a tuple selects by arity
+def vTup : Val := .list [intVal 1, .str "x", .bool true]
+#guard encodeP tup3 vTup = some (.arr [jn 1, .str "x", .bool true])
+#guard decodeP tup3 (.arr [jn 1, .str "x", .bool true]) = some vTup
+#guard decodeP tup3 (.arr [jn 1, .str "x"]) = none
+#guard decodeP (.union (.tuple [.int, .int, .int]) (.list .int)) (.arr [jn 1, jn 2]) =
+  some (.list [intVal 1, intVal 2])
+#guard decodeP (.union (.list .int) (.tuple [.int, .int, .int])) (.arr [jn 1, jn 2, jn 3]) =
+  some (.list [intVal 1, intVal 2, intVal 3])
+-- the codec refuses `app`, `null`, `undefined`, `number`, `bytes` by name (`isSupported`): owed
+#guard [stream, .null, .undefined, .number, .bytes].all (fun t => !isSupportedP t)
+#guard encodeP .bytes (.bytes [1, 2]) = none
 -- on every positive input above, the guarded decoder equals the unguarded one (tested): the
 -- canonical-branch check and the strict field set already make these reads exact
 def exactOn (t : PTy) (j : Json) : Bool := decodeExactP t j == decodeP t j
 #guard [(rAB, jobj [("b", .str "x"), ("a", jn 1)]), (rOpt, jobj [("b", .str "x")]),
   (rMap, jobj [("b", jn 2), ("a", jn 1)]), (rTU, jobj [("x", jn 1), ("_tag", .str "A")]),
   (.int, intJson (-15)), (overlapEE, jFailure),
-  (.union tagA recAB, jobj [("_tag", .str "A"), ("x", jn 1)])].all (fun p => exactOn p.1 p.2)
+  (.union tagA recAB, jobj [("_tag", .str "A"), ("x", jn 1)]),
+  (tup3, .arr [jn 1, .str "x", .bool true])].all (fun p => exactOn p.1 p.2)
 
 /-! ## §14 Red controls: each claim is false, and `#guard_msgs` asserts its `#guard` fails -/
 /-- RED: today's production decoder is exact at row 128's witness (it decodes the `Success` image). -/
@@ -1561,6 +1822,16 @@ end SeatS.K2
 #print axioms SeatS.K2.readProps_cons_plain
 #print axioms SeatS.K2.readProps_cons_opt
 #print axioms SeatS.K2.readProps_schemaProps
+#print axioms SeatS.K2.rOption
+#print axioms SeatS.K2.rRef
+#print axioms SeatS.K2.rResult
+#print axioms SeatS.K2.rFiber
+#print axioms SeatS.K2.rDeferred
+#print axioms SeatS.K2.rCause
+#print axioms SeatS.K2.rExit
+#print axioms SeatS.K2.rUint8
+#print axioms SeatS.K2.readElems_schemaElems
+#print axioms SeatS.K2.readArgs_schemaList
 #print axioms SeatS.K2.retract
 #print axioms SeatS.K2.ofSchemaL_schema
 #print axioms SeatS.K2.ofSchemaExact_exact

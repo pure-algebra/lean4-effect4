@@ -1,8 +1,8 @@
 # probe: docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
-# date: 2026-10-01T19:18:32Z
+# date: 2026-10-01T19:17:48Z
 # command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
 # toolchain: leanprover/lean4:v4.33.1
-# sha256: 0fa9f0244dfb36295401f4eba1230a0d3757efbc62f2e896fc6dea6be6b23bf2
+# sha256: 94cb23d411322f8e5531fd2686fd0ef61834735130955c85947ed43282eef2e7
 'SeatS.K2.PTy.ind'' does not depend on any axioms
 'SeatS.K2.nameLt_irrefl' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.nameLt_trans' depends on axioms: [propext, Quot.sound]
@@ -15,16 +15,6 @@
 'SeatS.K2.readProps_cons_plain' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.readProps_cons_opt' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.readProps_schemaProps' depends on axioms: [propext, Quot.sound]
-'SeatS.K2.rOption' does not depend on any axioms
-'SeatS.K2.rRef' does not depend on any axioms
-'SeatS.K2.rResult' does not depend on any axioms
-'SeatS.K2.rFiber' does not depend on any axioms
-'SeatS.K2.rDeferred' does not depend on any axioms
-'SeatS.K2.rCause' does not depend on any axioms
-'SeatS.K2.rExit' does not depend on any axioms
-'SeatS.K2.rUint8' does not depend on any axioms
-'SeatS.K2.readElems_schemaElems' depends on axioms: [propext, Quot.sound]
-'SeatS.K2.readArgs_schemaList' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.retract' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.ofSchemaL_schema' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.ofSchemaExact_exact' depends on axioms: [propext, Quot.sound]
@@ -45,4 +35,4 @@
 'SeatS.K2.fieldDecoders_names' depends on axioms: [propext, Quot.sound]
 'SeatS.K2.fieldCheckers_names' depends on axioms: [propext]
 'SeatS.K2.prepared_agrees' depends on axioms: [propext, Quot.sound]
-# exit=0 seconds=7
+# exit=0 seconds=6

@@ -1,5 +1,5 @@
 --- src/Effect4/Schema/Codec.lean	2026-10-01 13:14:44
-+++ docs/research/2026-10-01-type-language-probe/S/patches/Codec.lean.after	2026-10-01 14:07:19
++++ docs/research/2026-10-01-type-language-probe/S/patches/Codec.lean.after	2026-10-01 14:19:36
 @@ -23,6 +23,7 @@
  
  /-- Literal refinements share a wire layout with strings. Union branch types remain
@@ -8,14 +8,18 @@
  def layout : Ty → Ty
    | .lit _ => .string
    | .option t => .option (layout t)
-@@ -31,7 +32,14 @@
+@@ -31,7 +32,18 @@
    | .except e a => .except (layout e) (layout a)
    | .exitOf a e => .exitOf (layout a) (layout e)
    | .causeOf e => .causeOf (layout e)
 +  | .record fs => .record (layoutFields fs)
 +  | .optKey t => .optKey (layout t)
 +  | .map k v => .map (layout k) (layout v)
++  | .tuple ts => .tuple (layoutList ts)
    | t => t
++def layoutList : List Ty → List Ty
++  | [] => []
++  | t :: ts => layout t :: layoutList ts
 +def layoutFields : List (String × Ty) → List (String × Ty)
 +  | [] => []
 +  | (n, t) :: fs => (n, layout t) :: layoutFields fs
@@ -23,7 +27,7 @@
  
  /-- A conservative structural certificate: both types use the same wire interpreter.
  Together with `Ty.sub`, this permits literal widening through composite types. -/
-@@ -48,11 +56,20 @@
+@@ -48,11 +60,25 @@
  appended constructor is unsupported until it is given an arm in all three. Handles (`handle`,
  `fiberOf`, `refOf`, `deferredOf`), `int`, a template parameter (`var`) and the top (`unknown`)
  are the negative class today. -/
@@ -36,7 +40,12 @@
 +  | .record fs => supportedFields fs
 +  | .optKey t => isSupported t
 +  | .map .string v => isSupported v
++  | .tuple ts => supportedList ts
++  -- `app` (a host reviver), `null`/`undefined`/`number` (value images owed), `bytes` (base64 owed)
    | _ => false
++def supportedList : List Ty → Bool
++  | [] => true
++  | t :: ts => isSupported t && supportedList ts
 +def supportedFields : List (String × Ty) → Bool
 +  | [] => true
 +  | (_, t) :: fs => isSupported t && supportedFields fs
@@ -44,7 +53,7 @@
  
  /-- Decode only exact, nonnegative, integral binary64 data in the image of `ofNat`.
  The reconstruction check rejects fractional values, negative zero and non-finite data. -/
-@@ -73,6 +90,23 @@
+@@ -73,6 +99,23 @@
  
  /-- Exact field set, independent of object entry order. Duplicate, missing and extra
  fields refuse. Every caller supplies distinct expected names. -/
@@ -68,7 +77,7 @@
  def fields? (j : Json) (names : List String) : Option (List Json) := do
    let .obj entries := j | none
    if entries.length != names.length then none
-@@ -148,6 +182,36 @@
+@@ -148,6 +191,36 @@
    | .arr reasons => (reasons.mapM (decodeReason decodeError)).map (fun rs => ⟨rs⟩)
    | _ => none
  
@@ -105,19 +114,28 @@
  /-- Structural wire encoder. Original type membership is checked at the public boundary
  and at union branch selection. Literal constraints are therefore not duplicated here. -/
  def encodeRaw : Ty → Val → Option Json
-@@ -174,10 +238,32 @@
+@@ -174,10 +247,41 @@
    | .union a b, v =>
      if Val.hasTy v a then encodeRaw a v
      else if Val.hasTy v b then encodeRaw b v else none
 +  | .int, .ctor 0 [.nat n] => some (intJson (.ofNat n))
 +  | .int, .ctor 1 [.nat n] => some (intJson (.negSucc n))
 +  | .record fs, .ctor 0 vs => (encodeSlots vs (canonFields (fieldEncoders fs))).map Json.obj
++  | .tuple ts, .list vs => (encodeItems ts vs).map Json.arr
 +  | .map .string w, .list entries =>
 +    (entries.mapM (fun (e : Val) =>
 +      match e with
 +      | .list [.str k, x] => (encodeRaw w x).map (fun j => (k, j))
 +      | _ => none)).map Json.obj
    | _, _ => none
++/-- A tuple's items, exact arity. -/
++def encodeItems : List Ty → List Val → Option (List Json)
++  | [], [] => some []
++  | t :: ts, v :: vs => do
++    let j ← encodeRaw t v
++    let rest ← encodeItems ts vs
++    some (j :: rest)
++  | _, _ => none
 +/-- A record's field encoders: an optional key's `none` is no entry, `some x` its value. -/
 +def fieldEncoders : List (String × Ty) → List (String × (Val → Option (Option Json)))
 +  | [] => []
@@ -140,7 +158,7 @@
  def decodeRaw : Ty → Json → Option Val
    | .unit, .null => some .unit
    | .bool, .bool b => some (.bool b)
-@@ -209,9 +295,51 @@
+@@ -209,9 +313,59 @@
    | .union a b, j =>
      match (decodeRaw a j).filter (fun v => Val.hasTy v a) with
      | some v => some v
@@ -151,11 +169,19 @@
 +    if entries.all (fun e => ((canonFields (fieldDecoders fs)).map (·.1)).contains e.1) then
 +      (decodeSlots entries (canonFields (fieldDecoders fs))).map (fun slots => .ctor 0 slots)
 +    else none
++  | .tuple ts, .arr js => (decodeItems ts js).map Val.list
 +  | .map .string w, .obj entries =>
 +    if (Ty.firstRepeat entries []).isSome then none
 +    else (entries.mapM (fun e => (decodeRaw w e.2).map (fun v => (e.1, v)))).map
 +      (fun kvs => .list ((canonFields kvs).map (fun kv => .list [.str kv.1, kv.2])))
    | _, _ => none
++def decodeItems : List Ty → List Json → Option (List Val)
++  | [], [] => some []
++  | t :: ts, j :: js => do
++    let v ← decodeRaw t j
++    let rest ← decodeItems ts js
++    some (v :: rest)
++  | _, _ => none
 +/-- A record's field decoders: an absent optional key is `none`, a present one `some`. -/
 +def fieldDecoders : List (String × Ty) → List (String × (Option Json → Option Val))
 +  | [] => []
