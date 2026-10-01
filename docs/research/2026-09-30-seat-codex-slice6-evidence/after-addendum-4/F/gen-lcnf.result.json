@@ -1,0 +1,12 @@
+{
+  "command": [
+    "make",
+    "gen-lcnf"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  },
+  "exit": 0,
+  "elapsed_seconds": 31.84
+}

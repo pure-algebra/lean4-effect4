@@ -1,0 +1,50 @@
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:23:84: error: unexpected identifier; expected '}'
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:53:8: error: declaration uses `sorry`
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:121:53: error: Application type mismatch: The argument
+  trivial
+has type
+  True
+but is expected to have type
+  FitsExit world ?m.42 (Exit.success Val.unit)
+in the application
+  TypedProg.pure trivial
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:122:17: error: Missing cases:
+_
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:122:39: error: Missing cases:
+_
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:189:0: error: Not a definitional equality: the left-hand side
+  RunMachine.fiber? result.fst Api.root
+is not definitionally equal to the right-hand side
+  some afterFiber
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:189:69: error: Type mismatch
+  rfl
+has type
+  ?m.18 = ?m.18
+but is expected to have type
+  RunMachine.fiber? result.fst Api.root = some afterFiber
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:190:0: error: Not a definitional equality: the left-hand side
+  result.snd
+is not definitionally equal to the right-hand side
+  [Cmd.finish Api.root (Exit.success Val.unit)]
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:190:76: error: Type mismatch
+  rfl
+has type
+  ?m.21 = ?m.21
+but is expected to have type
+  result.snd = [Cmd.finish Api.root (Exit.success Val.unit)]
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H1/TerminalSavedWitness.candidate.lean:195:0: error: cannot evaluate code because 'H1TerminalSavedWitness.fiber' uses 'sorry' and/or contains errors
+'H1TerminalSavedWitness.valid' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.scheduler' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.observers' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.registration' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.saved_typed' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.typed' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.queue' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.result_fiber' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.result_commands' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.result_exit_none' depends on axioms: [propext, sorryAx]
+'H1TerminalSavedWitness.result_not_typed' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.step_deliver_false' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.no_requests' depends on axioms: [propext, sorryAx, Quot.sound]
+'H1TerminalSavedWitness.result_current' depends on axioms: [propext, sorryAx]
+'H1TerminalSavedWitness.result_stack' depends on axioms: [propext, sorryAx]

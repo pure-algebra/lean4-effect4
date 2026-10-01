@@ -1,0 +1,219 @@
+diff --git a/src/Effect4/Laws/Program/Guard/Core.lean b/src/Effect4/Laws/Program/Guard/Core.lean
+index 86de3dc5..10c4edde 100644
+--- a/src/Effect4/Laws/Program/Guard/Core.lean
++++ b/src/Effect4/Laws/Program/Guard/Core.lean
+@@ -178,7 +178,7 @@ def wakeKeys {α : Type} (w : WakeList α) : List GuardKey :=
+   w.waiters.map (fun a => (a.fiber, a.token)) ++
+     w.batch.toList.flatMap (fun b => b.map fun a => (a.fiber, a.token))
+ 
+-def taskKeys : Task EffName EffThunk Val Err Defect FiberId Ann → List GuardKey
++def taskKeys {Code : Type} : Task EffName EffThunk Val Err Defect FiberId Ann Code → List GuardKey
+   | .resume fiber token _ => [(fiber, token)]
+   | _ => []
+ 
+@@ -188,7 +188,9 @@ def observerKeys : Observer → List GuardKey
+   | _ => []
+ 
+ /-- Internal sources of resumes; the race callbacks are covered by their race's key. -/
+-def internalKeys (m : NativeMachine) : List GuardKey :=
++def internalKeys {Code Saved Event : Type}
++    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores Code Saved Event) :
++    List GuardKey :=
+   wakeKeys m.state.timers.wake ++
+     m.state.deferreds.cells.flatMap (fun c => wakeKeys c.wake) ++
+     m.state.deferreds.due.map (fun d => (d.waiter, d.token)) ++
+@@ -201,7 +203,8 @@ def RequestsOwned (m : NativeMachine) : Prop :=
+   ∀ fiber token request, requestOf m fiber token = some request →
+     (fiber, token) ∉ internalKeys m
+ 
+-def InternalKeysBelow (m : NativeMachine) : Prop :=
++def InternalKeysBelow {Code Saved Event : Type}
++    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores Code Saved Event) : Prop :=
+   ∀ k ∈ internalKeys m, k.2 < m.nextToken
+ 
+ theorem internalKeys_load (p : NativeEff) (compileFuel : Nat)
+@@ -821,10 +824,12 @@ theorem syncOpStep_storeKeys {state after : Stores} {op : SyncOp} {value : Val}
+ abbrev NTask := Task EffName EffThunk Val Err Defect FiberId Ann
+ abbrev NBucket := Bucket EffName EffThunk Val Err Defect FiberId Ann
+ 
+-def bucketKeys (buckets : List NBucket) : List GuardKey :=
++def bucketKeys {Code : Type}
++    (buckets : List (Bucket EffName EffThunk Val Err Defect FiberId Ann Code)) : List GuardKey :=
+   buckets.flatMap fun b => b.tasks.flatMap taskKeys
+ 
+-def fiberKeys (fiber : NFiber) : List GuardKey :=
++def fiberKeys {Code Saved : Type}
++    (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx Code Saved) : List GuardKey :=
+   fiber.observers.flatMap observerKeys ++ bucketKeys fiber.dispatcher.buckets
+ 
+ theorem internalKeys_fiber {m : NativeMachine} {f : NFiber} (hf : f ∈ m.fibers) :
+@@ -937,7 +942,7 @@ theorem wakeList_storeKeys (state : Stores) (key : WakeKey) (phase : WakePhase)
+     | exact List.Subset.refl _
+     | exact storeKeys_mono (List.Subset.refl _) (deferredKeys_wakeBatch_subset _ _)
+ 
+-def commandKeys : NCmd → List GuardKey
++def commandKeys {Code : Type} : Cmd EffName EffThunk Val Err Defect FiberId Ann Code → List GuardKey
+   | .resume fiber token _ => [(fiber, token)]
+   | .observe _ _ observer => observerKeys observer
+   | _ => []
+@@ -1110,7 +1115,8 @@ premise: the pending obligation is to establish them from `Reachable`. -/
+ def RequestsBelow (m : NativeMachine) : Prop :=
+   ∀ fiber token request, requestOf m fiber token = some request → token < m.nextToken
+ 
+-def PendingShape (f : NFiber) : Prop :=
++def PendingShape {Code Saved : Type}
++    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx Code Saved) : Prop :=
+   match f.parked with
+   | .notParked => f.pending = []
+   | .withGuard token => ∃ pending, f.pending = [pending] ∧ pending.token = token
+@@ -1149,10 +1155,14 @@ structure ReservedKeys (m : NativeMachine) (keys : List GuardKey) : Prop where
+   below : ∀ key ∈ keys, key.2 < m.nextToken
+   disjoint : ∀ fiber token request, requestOf m fiber token = some request → (fiber, token) ∉ keys
+ 
+-def ActiveAt (m : NativeMachine) (fiber : FiberId) : Prop :=
++def ActiveAt {Code Saved Event : Type}
++    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores Code Saved Event)
++    (fiber : FiberId) : Prop :=
+   ∃ f, m.fiber? fiber = some f ∧ f.running = true ∧ f.parked = .notParked
+ 
+-def commandOwner (m : NativeMachine) : NCmd → Option FiberId
++def commandOwner {Code Saved Event : Type}
++    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores Code Saved Event) :
++    Cmd EffName EffThunk Val Err Defect FiberId Ann Code → Option FiberId
+   | .loop fiber _ | .deliver fiber _ | .finish fiber _ => some fiber
+   | .afterInterrupt fiber _ _ | .closeParAwait fiber _ _ | .raceCancel _ fiber _ _ _ => some fiber
+   | .registrationDone raceId _ => (m.race? raceId).map Race.host
+diff --git a/src/Effect4/Laws/Program/Guard/RegistrationQueue.lean b/src/Effect4/Laws/Program/Guard/RegistrationQueue.lean
+index 917c363f..9ebc8459 100644
+--- a/src/Effect4/Laws/Program/Guard/RegistrationQueue.lean
++++ b/src/Effect4/Laws/Program/Guard/RegistrationQueue.lean
+@@ -7,12 +7,14 @@ namespace Effect4.Program.Guard.RegistrationQueue
+ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Guard
+ 
+ /-- Race registration work is followed by the command that returns to its host. -/
+-def RegistrationTail (command : NCmd) (rest : List NCmd) : Prop :=
++def RegistrationTail {Code : Type}
++    (command : Cmd EffName EffThunk Val Err Defect FiberId Ann Code)
++    (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann Code)) : Prop :=
+   match command with
+   | .launch race | .enrollRace race _ => ∃ yielding, .registrationDone race yielding ∈ rest
+   | _ => True
+ 
+-def RegistrationQueue : List NCmd → Prop
++def RegistrationQueue {Code : Type} : List (Cmd EffName EffThunk Val Err Defect FiberId Ann Code) → Prop
+   | [] => True
+   | command :: rest => RegistrationTail command rest ∧ RegistrationQueue rest
+ 
+diff --git a/src/Effect4/Laws/Program/Typed/Assembly.lean b/src/Effect4/Laws/Program/Typed/Assembly.lean
+index f991cff0..353f1950 100644
+--- a/src/Effect4/Laws/Program/Typed/Assembly.lean
++++ b/src/Effect4/Laws/Program/Typed/Assembly.lean
+@@ -1,5 +1,6 @@
+ import Effect4.Laws.Program.Typed.Stack
+ import Effect4.Laws.Program.Typed.State
++import Effect4.Laws.Program.Typed.Scheduler
+ import Effect4.Laws.Program.Agreement
+ import Effect4.Laws.Program.Typing.CheckInversion
+ 
+@@ -13,10 +14,11 @@ generated whole-state predicate, and the active-delivery correlation), reachabil
+ after slice 5 prove: initialization (`typedState_load`, M5) and the transition ledger, one
+ preservation obligation per command constructor (M6). `capture_lookup` is proved here.
+ 
+-Two limits of the generated bundle are recorded rather than papered over: `PendingOk` receives
+-the enclosing position, not the fiber, so it can only say every pending token is declared for
+-some fiber; `RaceOk` says each race's host is parked at a declared token, and the race's result
+-type is the host's declared token type through `ResumeOk` on the resume it enqueues.
++H1 adds the settled scheduler guards and observer-to-token payload connections. `PendingOk`
++still receives no enclosing fiber, so `ObserverState.pendingOwner` supplies that correlation.
++`RaceOk` owns every buffered race payload and finite unlaunched program. The reference code-site
++scan remains explicitly OPEN (H1-RCODE-SITES); no continuation-wide approximation is claimed.
++All eighteen command-preservation declarations remain obligations.
+ -/
+ 
+ set_option autoImplicit false
+@@ -54,7 +56,7 @@ def preds (root : ProgramSource) : Preds World where
+   exit w e ex := ∀ ty, expectOf w e = some ty → FitsExit w ty ex
+   ResumeOk w _ target token code := Contracts.ResumeOk (TypedProg root) w target token code
+   ServiceOk w _ ctx := ServicesFit w ctx.services
+-  RaceOk w _ races := ∀ r ∈ races, (w.Θ r.host r.token).isSome = true
++  RaceOk w _ races := ∀ r ∈ races, ∃ resultTy, RacePayload root w r resultTy
+   PromiseTable w s := ∀ o ∈ s.deferreds.due, ∀ ty, w.Θ o.waiter o.token = some ty →
+     CompletionStrong w ty o.code
+   HeapCell w key v := ∀ ty, w.Ρ key = some ty → Fits w v ty
+@@ -62,15 +64,31 @@ def preds (root : ProgramSource) : Preds World where
+     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
+   CaptureOk w _ c := CaptureTyped root w c
+ 
+-/-- The typed state: world validity, the generated whole-state predicate over `preds`, and the
+-active-delivery correlation: a parked fiber's saved stack expects its token's declared type. -/
+-def TypedState (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) : Prop :=
+-  WorldValid rootTy w m ∧ RStateOk (preds root) w m ∧
++/-- The active park and saved stack agree on what the declared token delivers. -/
++def ActiveDelivery (root : ProgramSource) (w : World) (m : RState) : Prop :=
+   ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token →
+     ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
+       StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final f.frame.stack ∧
+       InterruptProvenance f.frame
+ 
++/-- World validity, every generated typed position, active delivery, the settled native guard
++conditions, and the exact observer/pending correlations. Internal key bounds live here so every
++StepPreserves input/output carries them; arbitrary queues are still admitted by their own fact.
++H1-RCODE-SITES is an explicit remaining condition, not an established invariant. -/
++def TypedState (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) : Prop :=
++  WorldValid rootTy w m ∧ RStateOk (preds root) w m ∧
++    ActiveDelivery root w m ∧ SchedulerState m ∧ ObserverState root w m ∧ RegistrationState root w m
++
++/-- PendingOk supplies a declaration; WorldValid bounds all declarations. -/
++theorem pending_below (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
++    (typed : TypedState root rootTy w m) (f : RFiber) (hf : f ∈ m.fibers)
++    (p : Pending EffName Val Err Defect FiberId Ann) (hp : p ∈ f.pending) :
++    p.token < m.nextToken := by
++  obtain ⟨id, declared⟩ := (typed.2.1.c0 f hf).c1 p hp
++  cases h : w.Θ id p.token with
++  | none => rw [h] at declared; cases declared
++  | some tokenTy => exact typed.1.tokenBound id p.token tokenTy h
++
+ /-- M6's reference runner has no host table, so its tapes contain no host answer.
+ Clock advances, dispatcher decisions and interrupts remain in scope (row 95). -/
+ def NoHostAnswer : Api.Decision → Prop
+@@ -89,18 +107,33 @@ def AnswerOk (w : World) (m : RState) : Api.Decision → Prop
+       ∃ ty, w.Θ target token = some ty ∧ CompletionStrong w ty answer
+   | _ => True
+ 
+-/-- The queued commands carry typed resumes. -/
+-def QueueOk (root : ProgramSource) (w : World) (cmds : List RCmd) : Prop :=
+-  ∀ c ∈ cmds, match c with
+-    | .resume target token code => Contracts.ResumeOk (TypedProg root) w target token code
+-    | _ => True
++/-- Every queued command's generated content judgment, scheduler authority and keys, plus
++observer and enrollment payload correlation. H1-RCODE-SITES remains OPEN for resume code:
++there is intentionally no field claiming an unimplemented recursive reference scan. The direct
++forbidden afterInterrupt race form is recorded separately and exactly. -/
++structure QueueOk (root : ProgramSource) (w : World) (m : RState)
++    (commands : List RCmd) : Prop where
++  payload : ∀ command ∈ commands, RCmdOk (preds root) w command
++  authority : ∀ command ∈ commands, CommandAuthorityR m command
++  delivery : ∀ command ∈ commands, CommandDeliveryOk root w m command
++  owners : (commands.filterMap (Guard.commandOwner m)).Nodup
++  registration : Guard.RegistrationQueue.RegistrationQueue commands
++  keys : ReservedKeysR m (commands.flatMap Guard.commandKeys)
++  observer : ∀ source exit observer, .observe source exit observer ∈ commands →
++    ObserverCommandOk root w m source exit observer
++  enroll : ∀ race child, .enrollRace race child ∈ commands → EnrollRaceOk root w m race child
++  noRaceAfterInterrupt : ∀ host yielding race,
++    .afterInterrupt host yielding (.race race) ∉ commands
++
++theorem QueueOk.fresh {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
++    (queue : QueueOk root w m commands) : QueueFresh m commands := queue.keys.below
+ 
+ /-- One command keeps the typed state and the queue typed, at some later world. -/
+ def StepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop :=
+-  ∀ w m rest, TypedState root rootTy w m → QueueOk root w (cmd :: rest) →
++  ∀ w m rest, TypedState root rootTy w m → QueueOk root w m (cmd :: rest) →
+     let r := (letI := termEvaluatorFor root.program
+               driveStep (interpR root.program) m cmd rest)
+-    ∃ w', w.leHost w' ∧ TypedState root rootTy w' r.1 ∧ QueueOk root w' r.2
++    ∃ w', w.leHost w' ∧ TypedState root rootTy w' r.1 ∧ QueueOk root w' r.1 r.2
+ 
+ /-! ## The capture lookup -/
+ 

@@ -1,0 +1,14 @@
+{
+  "command": [
+    "lake",
+    "env",
+    "lean",
+    "-M4096",
+    "-DwarningAsError=true",
+    "docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/RepairedControls.lean"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  }
+}

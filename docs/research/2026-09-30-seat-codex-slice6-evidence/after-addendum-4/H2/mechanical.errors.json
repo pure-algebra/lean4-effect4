@@ -1,0 +1,354 @@
+{
+  "probe": "PartOne",
+  "note": "Diagnostic regions only: distinguish primary failures, propagation, harness artifacts, and necessary body repairs.",
+  "distinct_primary_error_theorem_regions": [
+    "Effect4.Program.Typed.cleanExit_of_never",
+    "Effect4.Program.Typed.popR_typed",
+    "Effect4.Program.Typed.settling_fork",
+    "Effect4.Program.Typed.strongExit_bool",
+    "Effect4.Program.Typed.strongExit_failure_of_error",
+    "Effect4.Program.Typed.strongExit_mono",
+    "Effect4.Program.Typed.strongExit_of_clean",
+    "Effect4.Program.Typed.strongExit_success"
+  ],
+  "distinct_primary_error_theorem_region_count": 8,
+  "non_theorem_primary_errors": [],
+  "diagnostics": [
+    {
+      "line": 82,
+      "column": 32,
+      "severity": "error",
+      "message": "Type mismatch\n  h\nhas type\n  Typed.Fits w v ty.answer\nbut is expected to have type\n  ExitOk w ty (Exit.success v)",
+      "source": {
+        "harness_line": 82,
+        "module": "Admission",
+        "source_line": 71,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Admission.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.strongExit_success",
+        "harness_declaration": "Research.Slice6.H2PartOne.strongExit_success",
+        "module": "Admission",
+        "source_module": "Effect4.Laws.Program.Typed.Admission",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Admission.lean",
+        "source_start": 70,
+        "harness_start": 81,
+        "source_end": 75,
+        "harness_end": 86
+      }
+    },
+    {
+      "line": 93,
+      "column": 6,
+      "severity": "error",
+      "message": "Tactic `rewrite` failed: Did not find an occurrence of the pattern\n  FitsExit ?w ?ty (Exit.failure ?c)\nin the target expression\n  ExitOk w ty (Exit.failure c)\n\nw : World\nty : EffTy\nc : CauseV\nh : cleanExit (Exit.failure c) = true\nshape : NoShapeDefect ty (Exit.failure c)\nhall : \u2200 (r : Reason Err Defect FiberId Ann), r \u2208 c.reasons \u2192 r.tag \u2260 ReasonTag.fail\n\u22a2 ExitOk w ty (Exit.failure c)",
+      "source": {
+        "harness_line": 93,
+        "module": "Admission",
+        "source_line": 82,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Admission.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.strongExit_of_clean",
+        "harness_declaration": "Research.Slice6.H2PartOne.strongExit_of_clean",
+        "module": "Admission",
+        "source_module": "Effect4.Laws.Program.Typed.Admission",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Admission.lean",
+        "source_start": 76,
+        "harness_start": 87,
+        "source_end": 90,
+        "harness_end": 101
+      }
+    },
+    {
+      "line": 104,
+      "column": 6,
+      "severity": "error",
+      "message": "Tactic `rewrite` failed: Did not find an occurrence of the pattern\n  FitsExit ?w ?ty (Exit.failure ?c)\nin the target expression\n  ExitOk w ty (Exit.failure c)\n\nw : World\nty : EffTy\nc : CauseV\nnever : ty.error = Ty.never\nh : ExitOk w ty (Exit.failure c)\n\u22a2 cleanExit (Exit.failure c) = true",
+      "source": {
+        "harness_line": 104,
+        "module": "Admission",
+        "source_line": 93,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Admission.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.cleanExit_of_never",
+        "harness_declaration": "Research.Slice6.H2PartOne.cleanExit_of_never",
+        "module": "Admission",
+        "source_module": "Effect4.Laws.Program.Typed.Admission",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Admission.lean",
+        "source_start": 91,
+        "harness_start": 102,
+        "source_end": 104,
+        "harness_end": 115
+      }
+    },
+    {
+      "line": 437,
+      "column": 48,
+      "severity": "error",
+      "message": "Type mismatch\n  hv\nhas type\n  Typed.Fits w v Ty.bool\nbut is expected to have type\n  ExitOk w (EffTy.pure Ty.bool) (Exit.success v)",
+      "source": {
+        "harness_line": 437,
+        "module": "Residual",
+        "source_line": 322,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Residual.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.strongExit_bool",
+        "harness_declaration": "Research.Slice6.H2PartOne.strongExit_bool",
+        "module": "Residual",
+        "source_module": "Effect4.Laws.Program.Typed.Residual",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Residual.lean",
+        "source_start": 321,
+        "harness_start": 436,
+        "source_end": 323,
+        "harness_end": 438
+      }
+    },
+    {
+      "line": 475,
+      "column": 24,
+      "severity": "error",
+      "message": "Application type mismatch: The argument\n  cert\nhas type\n  EffTy\nof sort `Type` but is expected to have type\n  FitsExit w' (EffTy.pure (cert.answer.fiberOf cert.error)) (Exit.success (Val.fiber id))\nof sort `Prop` in the application\n  And.intro cert",
+      "source": {
+        "harness_line": 475,
+        "module": "Residual",
+        "source_line": 360,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Residual.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.settling_fork",
+        "harness_declaration": "Research.Slice6.H2PartOne.settling_fork",
+        "module": "Residual",
+        "source_module": "Effect4.Laws.Program.Typed.Residual",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Residual.lean",
+        "source_start": 352,
+        "harness_start": 467,
+        "source_end": 361,
+        "harness_end": 476
+      }
+    },
+    {
+      "line": 475,
+      "column": 23,
+      "severity": "error",
+      "message": "Insufficient number of fields for `\u27e8...\u27e9` constructor: Constructor `True.intro` does not have explicit fields, but 3 were provided",
+      "source": {
+        "harness_line": 475,
+        "module": "Residual",
+        "source_line": 360,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Residual.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.settling_fork",
+        "harness_declaration": "Research.Slice6.H2PartOne.settling_fork",
+        "module": "Residual",
+        "source_module": "Effect4.Laws.Program.Typed.Residual",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Residual.lean",
+        "source_start": 352,
+        "harness_start": 467,
+        "source_end": 361,
+        "harness_end": 476
+      }
+    },
+    {
+      "line": 529,
+      "column": 41,
+      "severity": "error",
+      "message": "Application type mismatch: The argument\n  h\nhas type\n  ExitOk w ty ex\nbut is expected to have type\n  FitsExit w ?m.5 ?m.6\nin the application\n  fitsExit_mono ordered h",
+      "source": {
+        "harness_line": 529,
+        "module": "Residual",
+        "source_line": 414,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Residual.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.strongExit_mono",
+        "harness_declaration": "Research.Slice6.H2PartOne.strongExit_mono",
+        "module": "Residual",
+        "source_module": "Effect4.Laws.Program.Typed.Residual",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Residual.lean",
+        "source_start": 412,
+        "harness_start": 527,
+        "source_end": 417,
+        "harness_end": 532
+      }
+    },
+    {
+      "line": 634,
+      "column": 6,
+      "severity": "error",
+      "message": "Tactic `rewrite` failed: Did not find an occurrence of the pattern\n  FitsExit ?w ?ty (Exit.failure ?c)\nin the target expression\n  ExitOk w tin (Exit.failure c)\n\nw : World\ntin tout : EffTy\nc : CauseV\nherr : tin.error = tout.error\nh : ExitOk w tin (Exit.failure c)\n\u22a2 ExitOk w tout (Exit.failure c)",
+      "source": {
+        "harness_line": 634,
+        "module": "Stack",
+        "source_line": 89,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.strongExit_failure_of_error",
+        "harness_declaration": "Research.Slice6.H2PartOne.strongExit_failure_of_error",
+        "module": "Stack",
+        "source_module": "Effect4.Laws.Program.Typed.Stack",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean",
+        "source_start": 87,
+        "harness_start": 632,
+        "source_end": 92,
+        "harness_end": 637
+      }
+    },
+    {
+      "line": 680,
+      "column": 47,
+      "severity": "error",
+      "message": "Application type mismatch: The argument\n  strongExit_of_clean w ?m.447 c (recorded_clean hp rfl)\nhas type\n  NoShapeDefect ?m.447 (Exit.failure c) \u2192 ExitOk w ?m.447 (Exit.failure c)\nbut is expected to have type\n  ExitOk w ?m.445 (Exit.failure c)\nin the application\n  TypedProg.pure (strongExit_of_clean w ?m.447 c (recorded_clean hp rfl))",
+      "source": {
+        "harness_line": 680,
+        "module": "Stack",
+        "source_line": 135,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.popR_typed",
+        "harness_declaration": "Research.Slice6.H2PartOne.popR_typed",
+        "module": "Stack",
+        "source_module": "Effect4.Laws.Program.Typed.Stack",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean",
+        "source_start": 105,
+        "harness_start": 650,
+        "source_end": 299,
+        "harness_end": 844
+      }
+    },
+    {
+      "line": 698,
+      "column": 47,
+      "severity": "error",
+      "message": "Application type mismatch: The argument\n  strongExit_of_clean w ?m.684 c (recorded_clean hp rfl)\nhas type\n  NoShapeDefect ?m.684 (Exit.failure c) \u2192 ExitOk w ?m.684 (Exit.failure c)\nbut is expected to have type\n  ExitOk w ?m.682 (Exit.failure c)\nin the application\n  TypedProg.pure (strongExit_of_clean w ?m.684 c (recorded_clean hp rfl))",
+      "source": {
+        "harness_line": 698,
+        "module": "Stack",
+        "source_line": 153,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.popR_typed",
+        "harness_declaration": "Research.Slice6.H2PartOne.popR_typed",
+        "module": "Stack",
+        "source_module": "Effect4.Laws.Program.Typed.Stack",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean",
+        "source_start": 105,
+        "harness_start": 650,
+        "source_end": 299,
+        "harness_end": 844
+      }
+    },
+    {
+      "line": 710,
+      "column": 8,
+      "severity": "error",
+      "message": "Type mismatch\n  strongExit_of_clean w ty (Cause.sanitize cause x\u271d) (sanitize_clean_exit hp cause h)\nhas type\n  NoShapeDefect ty (Exit.failure (Cause.sanitize cause x\u271d)) \u2192 ExitOk w ty (Exit.failure (Cause.sanitize cause x\u271d))\nbut is expected to have type\n  ExitOk w ty (Exit.failure (Cause.sanitize cause x\u271d))",
+      "source": {
+        "harness_line": 710,
+        "module": "Stack",
+        "source_line": 165,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.popR_typed",
+        "harness_declaration": "Research.Slice6.H2PartOne.popR_typed",
+        "module": "Stack",
+        "source_module": "Effect4.Laws.Program.Typed.Stack",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean",
+        "source_start": 105,
+        "harness_start": 650,
+        "source_end": 299,
+        "harness_end": 844
+      }
+    },
+    {
+      "line": 795,
+      "column": 45,
+      "severity": "error",
+      "message": "Application type mismatch: The argument\n  strongExit_of_clean w ?m.2233\n    { current := current, stack := stack, interruptible := true, interruptedCause := some val\u271d,\n        deferredInterrupt := deferred }.pendingCause\n    (pendingCause_clean { recorded := hp.recorded, deferred := hp.deferred })\nhas type\n  NoShapeDefect ?m.2233\n      (Exit.failure\n        { current := current, stack := stack, interruptible := true, interruptedCause := some val\u271d,\n            deferredInterrupt := deferred }.pendingCause) \u2192\n    ExitOk w ?m.2233\n      (Exit.failure\n        { current := current, stack := stack, interruptible := true, interruptedCause := some val\u271d,\n            deferredInterrupt := deferred }.pendingCause)\nbut is expected to have type\n  ExitOk w ?m.2231\n    (Exit.failure\n      { current := current, stack := rest, interruptible := true, interruptedCause := some val\u271d,\n          deferredInterrupt := deferred }.pendingCause)\nin the application\n  TypedProg.pure\n    (strongExit_of_clean w ?m.2233\n      { current := current, stack := stack, interruptible := true, interruptedCause := some val\u271d,\n          deferredInterrupt := deferred }.pendingCause\n      (pendingCause_clean { recorded := hp.recorded, deferred := hp.deferred }))",
+      "source": {
+        "harness_line": 795,
+        "module": "Stack",
+        "source_line": 250,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.popR_typed",
+        "harness_declaration": "Research.Slice6.H2PartOne.popR_typed",
+        "module": "Stack",
+        "source_module": "Effect4.Laws.Program.Typed.Stack",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean",
+        "source_start": 105,
+        "harness_start": 650,
+        "source_end": 299,
+        "harness_end": 844
+      }
+    },
+    {
+      "line": 805,
+      "column": 25,
+      "severity": "error",
+      "message": "Application type mismatch: The argument\n  hex\nhas type\n  ExitOk w tin (Exit.success v)\nbut is expected to have type\n  Typed.Fits w v tin.answer\nin the application\n  step v hex",
+      "source": {
+        "harness_line": 805,
+        "module": "Stack",
+        "source_line": 260,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.popR_typed",
+        "harness_declaration": "Research.Slice6.H2PartOne.popR_typed",
+        "module": "Stack",
+        "source_module": "Effect4.Laws.Program.Typed.Stack",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean",
+        "source_start": 105,
+        "harness_start": 650,
+        "source_end": 299,
+        "harness_end": 844
+      }
+    },
+    {
+      "line": 828,
+      "column": 25,
+      "severity": "error",
+      "message": "Application type mismatch: The argument\n  hex\nhas type\n  ExitOk w tin (Exit.success v)\nbut is expected to have type\n  Typed.Fits w v tin.answer\nin the application\n  step v hex",
+      "source": {
+        "harness_line": 828,
+        "module": "Stack",
+        "source_line": 283,
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean"
+      },
+      "declaration": {
+        "kind": "theorem",
+        "original_declaration": "Effect4.Program.Typed.popR_typed",
+        "harness_declaration": "Research.Slice6.H2PartOne.popR_typed",
+        "module": "Stack",
+        "source_module": "Effect4.Laws.Program.Typed.Stack",
+        "input_path": "/private/tmp/h2-part-one-candidate/src/Effect4/Laws/Program/Typed/Stack.lean",
+        "source_start": 105,
+        "harness_start": 650,
+        "source_end": 299,
+        "harness_end": 844
+      }
+    }
+  ]
+}

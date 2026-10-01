@@ -1,0 +1,5 @@
+Current CE016:
+| `E4-SCHED-CE-016` | SEEDED 2026-09-30 | M6's queue fact types every queued resume | `docs/research/2026-09-30-pass/lift/verify-decision.lean` and `lift/verify-steppreserves.lean`: `load_and_fire_inconsistent`, `load_and_five_inconsistent` | A resume for a token not yet allocated passes the old queue fact, conditionally refuting the transition statement given M5 at perform sleep 1. H1 proposed payload and per-command guard conditions, but stopped on the observer-to-token counterexample. See the slice6 receipt. |
+
+CE017: absent
+CE018: absent

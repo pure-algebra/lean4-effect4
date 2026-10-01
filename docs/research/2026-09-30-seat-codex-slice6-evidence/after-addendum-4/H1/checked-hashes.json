@@ -1,0 +1,6 @@
+{
+  "src/Effect4/Laws/Program/Guard/Core.lean": "b2387b7f244cccc6cfb0f98dde54f5831a49b2dc58cf42490e29685a053dcddf",
+  "src/Effect4/Laws/Program/Guard/RegistrationQueue.lean": "5dbe7972f3198e4eeb39fe251a22feb94c7d3a93b0de84948a8f6acab56bea0e",
+  "src/Effect4/Laws/Program/Typed/Assembly.lean": "41d3ad68ba922add94cd4cd4e2c360cb6df6e04231093b25795443c2740ffe7c",
+  "src/Effect4/Laws/Program/Typed/Scheduler.lean": "a8ddc467df781486b1b8cfc3651a2a7c24c53b8104b8680b6a5fa1505af36403"
+}

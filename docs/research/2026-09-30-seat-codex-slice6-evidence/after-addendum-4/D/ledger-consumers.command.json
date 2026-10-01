@@ -1,0 +1,12 @@
+{
+  "command": [
+    "lake",
+    "build",
+    "Effect4.Laws.Program.Guard",
+    "Test.Machine.StepInvRulesRed"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  }
+}

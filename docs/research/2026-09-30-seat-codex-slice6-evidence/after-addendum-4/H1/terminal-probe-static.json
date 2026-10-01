@@ -1,0 +1,41 @@
+{
+  "status": "STATIC ONLY",
+  "sha256": {
+    "/private/tmp/h1-candidate/src/Effect4/Laws/Program/Typed/Assembly.lean": "41d3ad68ba922add94cd4cd4e2c360cb6df6e04231093b25795443c2740ffe7c",
+    "/private/tmp/h1-candidate/src/Effect4/Laws/Program/Typed/Scheduler.lean": "a8ddc467df781486b1b8cfc3651a2a7c24c53b8104b8680b6a5fa1505af36403",
+    "/private/tmp/H1TerminalSavedWitness.candidate.lean": "98a58c04ce66306bfc95797678224014a91a53477b4e08f67203d1ccb3521404"
+  },
+  "queue_fields": [
+    "payload",
+    "authority",
+    "delivery",
+    "owners",
+    "registration",
+    "keys",
+    "observer",
+    "enroll",
+    "noRaceAfterInterrupt"
+  ],
+  "witness_theorems": [
+    "valid",
+    "no_requests",
+    "scheduler",
+    "observers",
+    "registration",
+    "saved_typed",
+    "typed",
+    "queue",
+    "result_fiber",
+    "result_commands",
+    "result_current",
+    "result_stack",
+    "result_exit_none",
+    "result_not_typed",
+    "step_deliver_false"
+  ],
+  "missing_axiom_prints": [
+    "no_requests",
+    "result_current",
+    "result_stack"
+  ]
+}

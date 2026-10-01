@@ -1238,13 +1238,13 @@ theorem provideLayerWithK_at (p : Point) (scope : Nat) (l : LayerTerm NativeOp) 
         (Prim.onSuccess
           (if isLocal then
             Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
-              (.withMemoMapThen (p.child 0) scope)
+              (.withMemoMapThen p.layerBuild scope)
           else
             Prim.onSuccess (Prim.withFiber EffThunk.getCtx)
-              (.buildWithScopeFromContext (p.child 0) scope))
+              (.buildWithScopeFromContext p.layerBuild scope))
           (.provideLayerBody p))
         (.scopeClose scope) false := by
-  simp [provideLayerWithK, h]
+  simp only [provideLayerWithK, h]
 
 /-- The body under `provideContext(built)` (`internal/layer.ts:20`).
 census: layer.provide-effect-scope -/

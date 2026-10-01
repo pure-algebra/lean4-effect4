@@ -1,0 +1,14 @@
+{
+  "command": [
+    "opam",
+    "exec",
+    "--switch=effect4",
+    "--",
+    "dune",
+    "build"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6/ocaml",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  }
+}

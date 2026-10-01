@@ -1,0 +1,13 @@
+{
+  "command": [
+    "lake",
+    "build",
+    "Test.Machine.StepInvRulesRed",
+    "Test.Api.SupervisionContract",
+    "Effect4.Laws.Auto.Census"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  }
+}

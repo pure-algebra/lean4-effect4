@@ -1,0 +1,322 @@
+diff --git a/Test/All.lean b/Test/All.lean
+--- a/Test/All.lean
++++ b/Test/All.lean
+@@ -38,6 +38,7 @@
+ import Test.Counterexamples.Machine.Semantics.AsyncHookContract
+ import Test.Counterexamples.Machine.Semantics.TrivialPosts
+ import Test.Counterexamples.Machine.Semantics.M6Capstone
++import Test.Counterexamples.Machine.Semantics.LayerValue
+ import Test.Counterexamples.Machine.Semantics.ValueMembership
+ import Test.Program.TypedWorldValidity
+ import Test.Program.ProtocolCertificates
+diff --git a/Test/Counterexamples/Machine/Semantics/LayerValue.lean b/Test/Counterexamples/Machine/Semantics/LayerValue.lean
+new file mode 100644
+--- /dev/null
++++ b/Test/Counterexamples/Machine/Semantics/LayerValue.lean
+@@ -0,0 +1,134 @@
++import Effect4.Api
++import Effect4.Laws.Program.Typing.Sound
++
++/-!
++E4-PROV-CE-006: a layer leaf must supply a value below its key's declared service type.
++The two former leaf rules are retained locally as `Reviewed.LayerHasTy`. Their carrier
++claim is refuted by the same Boolean-at-nat and string-at-nat leaves. The current checker
++refuses the original gap programs at their layer paths and keeps matching values.
++These are finite admission controls, not runtime or whole-machine preservation theorems.
++-/
++
++set_option autoImplicit false
++set_option maxRecDepth 8192
++
++namespace Test.Counterexamples.LayerValue
++open Effect4 Effect4.Machine Effect4.Program
++open Conform.Effect4.Typing (HasTy)
++
++abbrev E := NativeEff
++
++def key : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
++def unknownKey : ServiceKey := ⟨⟨40⟩, ⟨40⟩⟩
++def n (i : Nat) : Term := .lit (.nat i)
++def s (x : String) : Term := .lit (.str x)
++def succOf (t : Term) : Term := .app "succ" (.cons t .nil)
++
++def valueLeak : E :=
++  .scoped (.provideLayer (.effect key (.succeed (s "x"))) false (.service key))
++def succeedLeak : E := .provideLayer (.succeed key (.bool true)) false (.service key)
++def crash2 : E :=
++  .bind (.provideLayer (.succeed key (.bool true)) false (.service key))
++    (.succeed (succOf (.var 0)))
++def valueControl : E :=
++  .scoped (.provideLayer (.effect key (.succeed (n 5))) false (.service key))
++def untypedSucceed : E :=
++  .provideLayer (.succeed unknownKey (.nat 5)) false (.succeed (.lit .unit))
++def untypedEffect : E :=
++  .provideLayer (.effect unknownKey (.succeed (n 5))) false (.succeed (.lit .unit))
++
++namespace Reviewed
++/-- Exactly the two pre-G leaf constructors; other layer constructors are not needed for
++this counterexample. Body typing uses the unchanged succeed rule at the empty environment. -/
++inductive LayerHasTy (sig : Signature NativeOp) : LayerTerm NativeOp → LayerTy → Prop
++  | succeed {key : ServiceKey} {value : Lit} {v : Env.Val} :
++      litVal value = some v →
++      LayerHasTy sig (.succeed key value)
++        ⟨Env.Requirement.single key, .never, Env.Requirement.empty⟩
++  | effect {key : ServiceKey} {body : NativeEff} {t : EffTy} :
++      HasTy sig [] body t →
++      LayerHasTy sig (.effect key body)
++        ⟨Env.Requirement.single key, t.error, bodyRequires sig t⟩
++end Reviewed
++
++def leafTy : LayerTy := ⟨Env.Requirement.single key, .never, Env.Requirement.empty⟩
++
++theorem key_service_nat : (nativeSignature []).serviceTy key = some .nat := by
++  decide +kernel
++
++theorem old_succeed_admitted :
++    Reviewed.LayerHasTy (nativeSignature []) (.succeed key (.bool true)) leafTy :=
++  .succeed rfl
++
++theorem old_effect_admitted :
++    Reviewed.LayerHasTy (nativeSignature []) (.effect key (.succeed (s "x"))) leafTy :=
++  .effect (.succeed rfl)
++
++/-- The old succeed rule cannot justify the declared nat carrier. -/
++theorem old_succeed_carrier_claim_false : ¬ (
++    Reviewed.LayerHasTy (nativeSignature []) (.succeed key (.bool true)) leafTy →
++    Ty.sub (Lit.ty (.bool true)).normalize Ty.nat.normalize = true) := by
++  intro h
++  exact Bool.noConfusion (h old_succeed_admitted)
++
++/-- The old effect rule has the same gap for its successful answer. -/
++theorem old_effect_carrier_claim_false : ¬ (
++    Reviewed.LayerHasTy (nativeSignature []) (.effect key (.succeed (s "x"))) leafTy →
++    Ty.sub Ty.string.normalize Ty.nat.normalize = true) := by
++  intro h
++  exact Bool.noConfusion (h old_effect_admitted)
++
++theorem valueLeak_refused : Api.typeOf valueLeak [] = none := by decide +kernel
++theorem valueLeak_location : Api.explain valueLeak [] =
++    some ⟨[0, 0], .valueNotSubtype key .string .nat⟩ := by decide +kernel
++
++theorem succeedLeak_refused : Api.typeOf succeedLeak [] = none := by decide +kernel
++theorem succeedLeak_location : Api.explain succeedLeak [] =
++    some ⟨[0], .valueNotSubtype key .bool .nat⟩ := by decide +kernel
++
++theorem crash2_refused : Api.typeOf crash2 [] = none := by decide +kernel
++theorem crash2_location : Api.explain crash2 [] =
++    some ⟨[0, 0], .valueNotSubtype key .bool .nat⟩ := by decide +kernel
++
++theorem untypedSucceed_refused : Api.typeOf untypedSucceed [] = none := by decide +kernel
++theorem untypedSucceed_location : Api.explain untypedSucceed [] =
++    some ⟨[0], .serviceUnknown unknownKey⟩ := by decide +kernel
++
++theorem untypedEffect_refused : Api.typeOf untypedEffect [] = none := by decide +kernel
++theorem untypedEffect_location : Api.explain untypedEffect [] =
++    some ⟨[0], .serviceUnknown unknownKey⟩ := by decide +kernel
++
++theorem valueControl_checked : Api.typeOf valueControl [] = some (EffTy.pure .nat) := by
++  decide +kernel
++
++/-- Literal-alphabet refusal remains first, including at an unknown key. -/
++theorem literal_refusal_first :
++    Checker.checkLayer (nativeSignature []) [] (.succeed unknownKey (.str "x")) =
++      .error ⟨[], .literalOutsideAlphabet (.str "x")⟩ := by decide +kernel
++
++/-- Existing effect-body refusal remains before the key lookup. -/
++theorem effect_body_refusal_first :
++    Checker.checkLayer (nativeSignature []) [] (.effect unknownKey (.succeed (.var 0))) =
++      .error ⟨[0], .term (.var 0)⟩ := by
++  decide +kernel
++
++#print axioms key_service_nat
++#print axioms old_succeed_admitted
++#print axioms old_effect_admitted
++#print axioms old_succeed_carrier_claim_false
++#print axioms old_effect_carrier_claim_false
++#print axioms valueLeak_refused
++#print axioms valueLeak_location
++#print axioms succeedLeak_refused
++#print axioms succeedLeak_location
++#print axioms crash2_refused
++#print axioms crash2_location
++#print axioms untypedSucceed_refused
++#print axioms untypedSucceed_location
++#print axioms untypedEffect_refused
++#print axioms untypedEffect_location
++#print axioms valueControl_checked
++#print axioms literal_refusal_first
++#print axioms effect_body_refusal_first
++
++end Test.Counterexamples.LayerValue
+diff --git a/Test/Program/AuthorContract.lean b/Test/Program/AuthorContract.lean
+--- a/Test/Program/AuthorContract.lean
++++ b/Test/Program/AuthorContract.lean
+@@ -264,8 +264,8 @@
+ -- what `Layer.succeed` cannot take: a string is outside the value alphabet its literal
+ -- argument is admitted at, so a string-valued service is the layer whose body answers it.
+ #guard Program.layerTy (nativeSignature) (.succeed Counter.key (.str "x")) = none
+-#guard (Effect4.Api.checkLayer (Layer.value Counter.key (str "x"))).toOption.map
+-    (fun l => l.provides) = some [Counter.key]
++#guard (Effect4.Api.checkLayer (Layer.value Counter.key (str "x"))).map
++    (fun _ => ()) = .error (.typing ⟨[], .valueNotSubtype Counter.key .string .nat⟩)
+ #guard elaborateLayer (Layer.empty : LayerSrc NativeOp)
+   = .ok (.effectDiscard (.succeed (.lit .unit)))
+ #guard (Effect4.Api.checkLayer (Layer.empty : LayerSrc NativeOp)).toOption.map
+diff --git a/Test/Program/ProvisionContract.lean b/Test/Program/ProvisionContract.lean
+--- a/Test/Program/ProvisionContract.lean
++++ b/Test/Program/ProvisionContract.lean
+@@ -94,14 +94,16 @@
+ #guard (docsLayer siblingMistake).map buildSucceeds = some false
+ #guard (docsLayer deploymentLayer).map buildSucceeds = some true
+ 
+--- `E4-PROV-CE-002`, the typing half: one signature.
++-- `E4-PROV-CE-002`, the typing half: two admitted layers with one signature.
++#guard (layerTy docsSig leftWins).isSome
++#guard (layerTy docsSig rightWins).isSome
+ #guard layerTy docsSig leftWins = layerTy docsSig rightWins
+ 
+ -- `E4-PROV-CE-002`, the run half: two contexts, through the specification and the machine.
+-#guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 2))
+-#guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 1))
+-#guard (docsLayer leftWins).map buildServices = some [(10, 2), (3, 0)]
+-#guard (docsLayer rightWins).map buildServices = some [(10, 1), (3, 0)]
++#guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbBinding) = some (some (.nat 2))
++#guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbBinding) = some (some (.nat 1))
++#guard (docsLayer leftWins).map buildServices = some [(20, 2), (3, 0)]
++#guard (docsLayer rightWins).map buildServices = some [(20, 1), (3, 0)]
+ 
+ -- `E4-PROV-CE-003`: typed with `E := never`; the machine half (`orDie` builds, and turns a
+ -- leaf's failure into a defect) is the `#guard` pair in `Provision.lean`.
+diff --git a/src/Effect4/Laws/Program/Typing/CheckInversion.lean b/src/Effect4/Laws/Program/Typing/CheckInversion.lean
+--- a/src/Effect4/Laws/Program/Typing/CheckInversion.lean
++++ b/src/Effect4/Laws/Program/Typing/CheckInversion.lean
+@@ -407,13 +407,15 @@
+ 
+ theorem inv_layer_succeed (sig : Signature Op) (p : List Nat) (key : ServiceKey) (value : Lit) :
+     ∀ l, checkLayer sig p (.succeed key value : LayerTerm Op) = .ok l →
+-      ∃ v, litVal value = some v ∧
++      ∃ v ty, litVal value = some v ∧ sig.serviceTy key = some ty ∧
++        Ty.sub (Lit.ty value).normalize ty.normalize = true ∧
+         l = ⟨Requirement.single key, .never, Requirement.empty⟩ := by
+   aesop (rule_sets := [Effect4.Checker])
+ 
+ theorem inv_layer_effect (sig : Signature Op) (p : List Nat) (key : ServiceKey) (body : Eff Op) :
+     ∀ l, checkLayer sig p (.effect key body) = .ok l →
+-      ∃ t, check sig [] (p ++ [0]) body = .ok t ∧
++      ∃ t ty, check sig [] (p ++ [0]) body = .ok t ∧ sig.serviceTy key = some ty ∧
++        Ty.sub t.answer.normalize ty.normalize = true ∧
+         l = ⟨Requirement.single key, t.error, bodyRequires sig t⟩ := by
+   aesop (rule_sets := [Effect4.Checker])
+ 
+diff --git a/src/Effect4/Laws/Program/Typing/CheckSound.lean b/src/Effect4/Laws/Program/Typing/CheckSound.lean
+--- a/src/Effect4/Laws/Program/Typing/CheckSound.lean
++++ b/src/Effect4/Laws/Program/Typing/CheckSound.lean
+@@ -288,12 +288,12 @@
+   cases layer with
+   | succeed key value =>
+     intro p s h
+-    obtain ⟨v, hv, rfl⟩ := inv_layer_succeed sig p key value s h
+-    exact .succeed hv
++    obtain ⟨_, _, hv, hkey, hsub, rfl⟩ := inv_layer_succeed sig p key value s h
++    exact .succeed hv hkey hsub
+   | effect key body =>
+     intro p s h
+-    obtain ⟨t, ht, rfl⟩ := inv_layer_effect sig p key body s h
+-    exact .effect (check_sound sig body [] _ t ht)
++    obtain ⟨t, _, ht, hkey, hsub, rfl⟩ := inv_layer_effect sig p key body s h
++    exact .effect (check_sound sig body [] _ t ht) hkey hsub
+   | effectDiscard body =>
+     intro p s h
+     obtain ⟨t, ht, rfl⟩ := inv_layer_effectDiscard sig p body s h
+diff --git a/src/Effect4/Laws/Program/Typing/HasTy.lean b/src/Effect4/Laws/Program/Typing/HasTy.lean
+--- a/src/Effect4/Laws/Program/Typing/HasTy.lean
++++ b/src/Effect4/Laws/Program/Typing/HasTy.lean
+@@ -413,16 +413,20 @@
+ (`Typing.lean:290-314`) — except `LayerTerm.ref`, which has none. -/
+ inductive LayerHasTy (sig : Signature Op) : LayerTerm Op → LayerTy → Prop
+   /-- `Layer.succeed(key, value)` (`Layer.ts:1074`): a service from a value already in hand.
+-  The premise is that the literal is in the machine's value alphabet — a string is not
+-  (`PROV-FB-STRING-VALUE`) — and the value's *type* plays no part. -/
+-  | succeed {key : ServiceKey} {value : Lit} {v : _root_.Effect4.Machine.Env.Val} :
++  The literal is in the machine's value alphabet — a string is not
++  (`PROV-FB-STRING-VALUE`) — and its type is below the key's declared service type. -/
++  | succeed {key : ServiceKey} {value : Lit} {v : _root_.Effect4.Machine.Env.Val} {ty : Ty} :
+       litVal value = some v →
++      sig.serviceTy key = some ty →
++      Ty.sub (Lit.ty value).normalize ty.normalize = true →
+       LayerHasTy sig (.succeed key value) ⟨Requirement.single key, .never, Requirement.empty⟩
+   /-- `Layer.effect(key, body)` (`Layer.ts:1427`): the layer provides its key with the body's
+   error, and requires the body's **scope-free** row — the layer's own scope answers the body's
+-  `Scope` requirement (`:1438`, `bodyRequires`). -/
+-  | effect {key : ServiceKey} {body : Eff Op} {t : EffTy} :
++  `Scope` requirement (`:1438`, `bodyRequires`). Its answer is below the key's service type. -/
++  | effect {key : ServiceKey} {body : Eff Op} {t : EffTy} {ty : Ty} :
+       HasTy sig [] body t →
++      sig.serviceTy key = some ty →
++      Ty.sub t.answer.normalize ty.normalize = true →
+       LayerHasTy sig (.effect key body) ⟨Requirement.single key, t.error, bodyRequires sig t⟩
+   /-- `Layer.effectDiscard(body)` (`Layer.ts:1512`): construction work that provides nothing. -/
+   | effectDiscard {body : Eff Op} {t : EffTy} :
+diff --git a/src/Effect4/Program/Checker.lean b/src/Effect4/Program/Checker.lean
+--- a/src/Effect4/Program/Checker.lean
++++ b/src/Effect4/Program/Checker.lean
+@@ -227,10 +227,16 @@
+   def checkLayer (sig : Signature Op) (p : List Nat) : LayerTerm Op → Except TypeRefusal LayerTy
+     | .succeed key value => do
+       let _ ← expect ⟨p, .literalOutsideAlphabet value⟩ (litVal value)
+-      pure ⟨Requirement.single key, .never, Requirement.empty⟩
++      let ty ← expect ⟨p, .serviceUnknown key⟩ (sig.serviceTy key)
++      if Ty.sub (Lit.ty value).normalize ty.normalize then
++        pure ⟨Requirement.single key, .never, Requirement.empty⟩
++      else throw ⟨p, .valueNotSubtype key (Lit.ty value) ty⟩
+     | .effect key body => do
+       let t ← check sig [] (p ++ [0]) body
+-      pure ⟨Requirement.single key, t.error, bodyRequires sig t⟩
++      let ty ← expect ⟨p, .serviceUnknown key⟩ (sig.serviceTy key)
++      if Ty.sub t.answer.normalize ty.normalize then
++        pure ⟨Requirement.single key, t.error, bodyRequires sig t⟩
++      else throw ⟨p, .valueNotSubtype key t.answer ty⟩
+     | .effectDiscard body => do
+       let t ← check sig [] (p ++ [0]) body
+       pure ⟨Requirement.empty, t.error, bodyRequires sig t⟩
+diff --git a/src/Effect4/Program/Provision.lean b/src/Effect4/Program/Provision.lean
+--- a/src/Effect4/Program/Provision.lean
++++ b/src/Effect4/Program/Provision.lean
+@@ -34,10 +34,9 @@
+   theorem that its requirement row is empty exactly when the layer closes the program.
+ * **`build`, the specification of provisioning**, structural over the combinators with the
+   leaves supplied as a `LeafSem` hook (the trusted-boundary position `ServiceUniverse` and
+-  `RunInterp` already occupy), and `build_total`: *a well-typed layer builds under every
+-  context that satisfies its requirement row, and what it builds satisfies its output row*.
+-  That sentence is what "the `R` channel guarantees the wiring" means, and it is proved once
+-  over the algebra, for every leaf semantics that is honest about its own leaves.
++  `RunInterp` already occupy). The proved laws concern the requirement and context algebra,
++  including when a layer signature closes an application's requirements. The connection from
++  a well-typed layer to its built context is checked by the finite witnesses below.
+ * **The machine half, on the compile route.** `Effect.provide(self, layer)` is a program
+   (`Eff.provideLayer`), so the witnesses are runs: `buildServices`, `buildSucceeds` and
+   `provideThenService` run native programs through `runSyncExit` at `interpOf` and pin, by
+@@ -604,14 +603,16 @@
+ 
+ /-! ### Order is invisible to the type and visible to the run (CE 5, lifted to layers) -/
+ 
+-def leftWins : LayerTerm DocsOp := .merge (.succeed dbKey (.nat 1)) (.succeed dbKey (.nat 2))
+-def rightWins : LayerTerm DocsOp := .merge (.succeed dbKey (.nat 2)) (.succeed dbKey (.nat 1))
+-
++def leftWins : LayerTerm DocsOp := .merge (.succeed dbBinding (.nat 1)) (.succeed dbBinding (.nat 2))
++def rightWins : LayerTerm DocsOp := .merge (.succeed dbBinding (.nat 2)) (.succeed dbBinding (.nat 1))
++
++#guard (layerTy docsSig leftWins).isSome
++#guard (layerTy docsSig rightWins).isSome
+ #guard layerTy docsSig leftWins = layerTy docsSig rightWins
+-#guard (docsLayer leftWins).map buildServices = some [(10, 2), (3, 0)]
+-#guard (docsLayer rightWins).map buildServices = some [(10, 1), (3, 0)]
+-#guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 2))
+-#guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 1))
++#guard (docsLayer leftWins).map buildServices = some [(20, 2), (3, 0)]
++#guard (docsLayer rightWins).map buildServices = some [(20, 1), (3, 0)]
++#guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbBinding) = some (some (.nat 2))
++#guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbBinding) = some (some (.nat 1))
+ 
+ /-! ### Configuration: the two scheduler references are satisfied by the empty context -/
+ 

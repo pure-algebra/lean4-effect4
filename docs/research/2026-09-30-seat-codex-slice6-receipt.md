@@ -2,12 +2,14 @@
 
 ## After addendum 5
 
-**The one thing first.** The audit, A, and all three C steps are complete. C step 5 is
-integration-ready: the old fiber field and its comparison runner are removed together, the
-Lean and OCaml paths read/write the machine ledger, generation is current, and the required
-OCaml and repository checks pass. The owner authorized the additional prelude/test readers,
-two closure manifests, and explicit ForkRecord type root as recorded below. D's held users
-follow, then F, G, H1, and H2 part one. H2 excludes only badName and notImplemented;
+**The one thing first.** C is merged into `refactor/phase1-phase3` at `bc77e97f`, with
+rows 91–92 recorded as landed at `ba9783c3`. D is complete through `fa5add20`, the exact
+endpoint for the next D-only merge. F is also complete at `d20f3292`. The old fiber field and
+comparison runner are retired together; the required Lean, OCaml and generation checks pass.
+The additional C readers, closure manifests and ForkRecord type root are authorized as below.
+G is held by its checked fourth-fixture stop. H1 is also held: the final proposed contract
+has a checked delivery counterexample. H2 part one is held by its measured ninth-body stop: the eight authorized repairs pass,
+but two additional existing test-helper statements are false. H2 excludes only badName and notImplemented;
 missingService waits for part two. Nothing has been pushed.
 
 Authority read from the main checkout:
@@ -16,6 +18,98 @@ commit `56da0e1edeefc97ce878afaefe34ca702f86c35f` (hash receipt under
 `2026-09-30-seat-codex-slice6-evidence/after-addendum-5/authority.json`). It is not merged into
 this branch; the coordinator owns that merge. Rows 111–117 are not implementation work here.
 The After-addendum-4 and first receipt sections below are retained as checkpoint history.
+
+### C merge acknowledged; D ready for the next integration
+
+The owner reports C merged at `bc77e97fb7b1e2e42374c730ed679a0c5ef6144c`, with the
+merged tree's full Lean build, dune build and make check-ocaml clean. I verified that merge
+contains `f05a6ace`, that `ba9783c3` records rows 91–92 as landed, and that the merged source,
+tests and OCaml paths match C's endpoint. I did not rerun the coordinator's checks.
+
+The handoff's D-in-progress snapshot predates the existing D landing. D consists of exactly:
+
+- `31e44efc`: native trace agreement and the four AgreesUpdates fields through the existing lifts;
+- `4e9bfce7`: the four general reachable ledger facts;
+- `fa5add2092f05fa476dccdee4722fcd1f1d12d91`: forkedOf/Agrees diagnostic move and final checks.
+
+Merge through **fa5add20** for D only; current branch HEAD also includes F and later research
+receipts. No branch movement or integration merge is performed here. All three D implementation
+file hashes still match the retained final trust inventory. Nine relevant final build/census/static
+results report exit 0, and all 175 authored theorem reports remain at the allowed ceiling.
+TraceFacts.M1Trace is 0 open/3 proved, Api.M1Trace 0 open/15 proved; the row 94 comparison
+is recorded in the D sections below. No remaining D work was identified.
+
+Addendum 5 at `a417f89e85ed07c93f87d5b627f4b9d2408518d1` was read from the main checkout;
+its bytes match the current file. It records the four already-applied owner rulings, including
+the two-defect H2 clause, while preserving the eight-body cap. No action on that file is needed.
+The latest instruction's “same rules” leaves the later checked G/H1/H2 stops in force; it does
+not authorize their proposed amendments. The queue was followed through those independent
+measurements. No source, test, generated or register change is made by this reconciliation.
+`after-addendum-5/C-merge-reconciliation.json` retains the checked commits, hashes and results.
+
+### H2 — eight library repairs pass; two extra existing statements stop integration
+
+Base: `80f5fbe7a99371d0ec04216ff621176f5dc72ce7`, with H1's temporary candidate restored.
+The fresh four-module baseline passes. The mechanical pass attributes primary errors to exactly
+Admission's strongExit_success, strongExit_of_clean, cleanExit_of_never; Residual's
+strongExit_bool, settling_fork, strongExit_mono; and Stack's strongExit_failure_of_error,
+popR_typed. After exactly those eight body repairs and seven local helpers, the copied-module
+harness passes and all fifteen axiom prints stay at `[propext, Quot.sound]` or less.
+
+The actual existing `Test.Program.TypedControl.cancel_typed` and
+`Test.Program.LoadedAdmission.lookup_typed` then fail under the repaired judgment. Source maps
+and compiler attribution are in `H2/existing-tests.errors.json`. Checked semantic counterexamples
+show that these are statement defects, not merely conjunction adaptations: clean cancellation
+permits die badName; lookup's conditional service premise admits an undecodable unit input,
+whose result is badName. Their exact old statements are refuted at the ceiling.
+
+Thus **ten is a measured lower bound, not a complete migration count**. Addendum 5's ninth-body
+rule stops H2; no H2 production, test or register change is applied. Both additional helpers
+remain unrepaired. Proposed statement amendments are explicit shape exclusion for cancel_typed
+and an actual decoded-context witness for lookup_typed. Their direct users and other test
+adaptations need a separately bounded, freshly measured migration; test bodies are not exempt.
+The separate uncompiled patch is retained as a proposal only.
+`H2/proposed-amendment.md` names a bounded follow-up: 25 proposed existing test bodies across
+eight files, the two precise premise changes, and new local adapters/controls. Only two of
+those bodies are currently measured failures; 25 is not a claimed compiler failure count.
+The input hashes match live source. Any failure outside that proposed inventory still stops H2.
+
+The thirteen positive/negative control theorems pass, including unchanged base FitsExit,
+forbidden badName/notImplemented at current code, ordinary user die, and missingService at both
+empty/nonempty requirements. The earlier field-only strengthened_output_false control and its
+eight companion facts also pass. `H2/status.md`, command/result JSON, raw logs, source maps,
+per-body manifest and prepared patch retain exact evidence. The probe namespaces are copied
+declarations, not production import/obligation integration. Production M3bWorld/M3bAssembly/M6
+ceilings remain 1/1/20; no open obligation is claimed discharged. Part two remains held.
+
+### H1 — checked delivery stop
+
+Base: `19baddc5`. The four final candidate modules compile (`H1/contract-modules`, 379 jobs).
+They include all six TypedState conjuncts and nine QueueOk fields, with registration and
+observer-delivery conditions. M3bWorld remains 1 open/2 proved, M3bAssembly 1 open/1 proved,
+and M6Ledger 20 open/0 proved. The new command proofs remain open as required.
+
+`H1/TerminalSavedWitness.candidate.lean` refutes the actual proposed `StepPreserves` for
+`deliver`. A typed root has current code returning Nat 42 and one typed answer continuation
+returning unit. Delivery removes the continuation and queues finish(unit), but retains current
+Nat 42 with an empty saved stack and exit=none. Every valid output world still declares the
+root at unit, so the output cannot satisfy TypedState. The pending finish value is correct;
+the saved code at the intermediate boundary is the mismatch. This is an arbitrary-typed-state
+counterexample, not evidence of a reachable program failure.
+
+`terminal-witness-2` passes with all fifteen authored theorem prints at `[propext, Quot.sound]`
+or less, including the positive state/queue premises, exact result equations and final
+refutation. The first failed syntax/type-inference draft is retained. `checked-hashes.json`
+pins the applied source bytes. `candidate-status.md` records reproduction and interpretation.
+The candidate is preserved; all four temporary source edits are restored. No H1 implementation,
+register repair claim, runtime change or test migration is landed.
+
+**Smallest required amendment:** settle the relation between terminal delivery and saved-code
+typing, including the boundary before finish sets the exit field. An exited-fiber-only exception
+is insufficient; a changing intermediate type is already legal. The evaluator/state contract
+needs an owner ruling before freezing the new M6 target. Do not silently add reachability,
+weaken the legitimate saved-frame contract or assume an entire transition. Original brief §6
+requires this item stop on a checked counterexample; continue independent H2 measurement.
 
 ### C — additional OCaml reader, stop lifted by the owner
 
@@ -110,6 +204,187 @@ Verification, one Lean process at a time, `LEAN_NUM_THREADS=1`:
 exit and elapsed time; earlier generation uses `C/run.py` with command/result text files.
 These execution comparisons are finite evidence. D still owes the general reachable ledger
 facts and trace agreement; C does not claim them from the runner or backend differential.
+
+### D — trace user and named bank
+
+Base: C step 5, `f05a6acec7f52c91efa717739b9afb87b729e16b`. This commit supplies the
+native trace-agreement user. The ledger user and diagnostic module move follow separately.
+The already landed generic lifts, guard re-derivation and memo-ID user are unchanged.
+
+The observation is the ordered list of parent/child/daemon triples in the fork events and
+ledger. Source paths are absent from the events. Agreement does not establish semantic
+correctness of the recorded parent or flag. Emission requires an explicit no-fork condition;
+spawn appends the same triple on both sides. All eighteen native commands and all eight
+outside-loop edits feed the existing loop/decision/history lifts. The final theorems have
+no per-command, admission or typed-state premise. The four AgreesUpdates fields hold for
+any input machine satisfying agreement. There is no reference-machine or M6 instance.
+
+Verification is under `after-addendum-4/D/`, via `check.py` command/result JSON:
+- The trace candidate passes (`trace-3`), with 69 theorem dependency reports at the ceiling.
+  The first two failed drafts are retained; repairs only add required type annotations,
+  exact intermediate states, and the explicit safe emission rule to the named bank.
+- Production `lake build Effect4.Laws.Api.TraceOrigin`: exit 0, 312 jobs
+  (`trace-production-1`). `TraceFacts.M1Trace` is now **0 open, 3 proved**, ceiling **2 → 0**.
+- All 72 authored production theorem declarations print at `[propext, Quot.sound]` or less
+  (`trace-production-axioms`). This includes the bank positive and original obligations.
+- The omitted-bank fixture first failed as intended; its exact diagnostic is now captured
+  under `#guard_msgs (error)`. The fixture and direct Supervision consumer build pass
+  (`trace-bank-red`, `trace-tests`, 315 jobs). The named-bank positive uses the exact same
+  proposition.
+- Row 94 measurement (`trace-census`): plain aesop closes **23/76** inspected statements,
+  and aesop with StepInv closes **20/76**, within the census's default per-goal budget.
+  The denominator includes generated projections. This is not a claim that enabling the bank
+  improves every statement. The targeted emit positive requires it; native case analysis and
+  history-wrapper selection remain written by hand. No statement generator is introduced.
+- Source/test whitespace and forbidden-tactic scans pass. No generator was required.
+
+The independently checked ledger draft has 77 theorem dependency reports: 27 require no axioms
+and 50 use only the permitted ceiling. It remains a checked draft until the next production
+commit; this trace commit does not claim its integration.
+
+### D — reachable ledger facts
+
+Base: `31e44efc6d695bf8d8c35df2df90b5bf300de924`. The generic ledger invariant and its
+native user now establish unique fiber IDs, unique recorded child IDs, bounds below the next
+fresh ID, and existence of every recorded child. These facts pass through all eighteen native
+commands, all eight external edits, and the existing history lift. They require no per-command
+preservation premise, admission premise, or typed-state premise. They do not establish the
+semantic correctness of recorded parents, daemon flags, or sites. No M6 instance is supplied.
+
+Verification is retained under `after-addendum-4/D/`:
+- `ledger-production-2`: the two production modules build. The first draft failed only on an
+  unqualified `NFiber` in the bank positive; the corrected binder is `Guard.NFiber`.
+- `ledger-trust-2`: all 76 authored theorem declarations, including the private list helper,
+  use at most `[propext, Quot.sound]`. The first audit script used the reserved local name
+  `matches`; renaming that script variable to `candidates` fixed the script, not a theorem.
+- `ledger-consumers`: the Guard root and `Test.Machine.StepInvRulesRed` build, exit 0. The
+  second omitted-bank fixture retains the actual failing aesop diagnostic, and the production
+  positive proves the identical update proposition with StepInv enabled.
+- Row 94 census: generic ledger plain aesop **16/51**, StepInv **0/51**; native ledger
+  **2/29** and **3/29**; existing memo user **7/46** in both modes. These are statement-only
+  census results within its per-goal budget, not a claim that a larger bank improves all
+  statements. Together with the trace user's **23/76** and **20/76**, they supply the requested
+  comparison across all three users. The targeted bank controls pass; command cases and lift
+  selection remain explicit. No statement generator or memo proof rewrite is introduced.
+- `git diff --check -- src Test` and the forbidden-tactic scan pass. No generation is needed.
+
+The diagnostic trace move is the remaining D step. The full production trust inventory is
+retained in `D/all-production-axioms.lean` for execution after that move.
+
+### D — diagnostic move complete
+
+Base: `4e9bfce7`. The checked trace agreement and its diagnostic projection now live in
+`Test/Api/TraceOrigin.lean`; the library retains the independent ledger invariant. No library
+module imports Test, and the static import walk finds no missing local import or cycle. All
+Effect4 and Test modules are reachable from their roots. The old production TraceOrigin body
+moves without proposition or proof changes; both bank controls retain their actual diagnostics.
+
+The following 13 obligation/law pairs move from Supervision to Test with their names retained:
+`forkedOf_append`, `spawn_forked`, `start_forked`, `fork_forked`, `forkIn_forked`,
+`forkScoped_forked`, `forkScoped_none_forked`, `launchEntrant_forked`, `forkFinalizers_forked`,
+`action_fork_forked`, `action_forkIn_forked`, `action_forkScoped_forked`, `supervision_static`
+(the last proof is `TraceFacts.supervision_static_flags`). The other four moved declarations
+are `TraceFacts.forkedOf`, `originForks`, `Agrees`, and `load_agrees`: 30 declarations total.
+All four existing explicit proof references and all three new agreement references remain.
+The two status-with-erased-trace obligations remain in the library at ceiling zero.
+
+Verification under `after-addendum-4/D/`:
+- `diagnostic-move`: Supervision, Test TraceOrigin, SupervisionContract, and both omitted-bank
+  controls build, exit 0, 317 jobs. Diagnostic gates report **0 open/3 proved** for
+  TraceFacts.M1Trace and **0 open/15 proved** for Api.M1Trace.
+- `all-production-axioms`: **175** authored theorem reports, all at `[propext, Quot.sound]` or
+  less, including the private helper. The actual final source inventory and hashes are
+  `production-theorem-manifest.json`.
+- `diagnostic-static`: the current source import/ownership walk passes. Its separate OCaml5
+  tool-root list is outside the Effect4/Test roots. `diagnostic-final-review.md` records the
+  independent review. Implementation whitespace checks pass.
+
+D is complete. No M6 instance or reference-machine memo-ID theorem is claimed. C already ran
+the brief's one full `make check`; D uses its narrow checks and requires no generation.
+
+### F — complete, including the generated engine
+
+Base: `fa5add2092f05fa476dccdee4722fcd1f1d12d91`. The source repair closes the lexical
+environment of the layer build while retaining the enclosing program body's environment and
+the dynamic service context. Both native and reference entries use the same named point.
+The independent source review is `after-addendum-4/F/source-review.md`.
+
+The first narrow source build passed 356 jobs. The focused tests passed 350 jobs, including
+all four repaired examples, both settings of the outer-body and service-context controls,
+and their native/reference observations. All seven battery theorem prints and three helper
+prints stay at the permitted ceiling. The first prescribed generation sequence passed; its
+prerequisite build passed 728 jobs and the module/axiom gate (507 modules, 69,694 declarations).
+Derived outputs were unchanged. Only the two API ML outputs and their two allowed closure
+manifests changed.
+
+The actual OCaml build then failed in the new helper: an ordinary `[]` had been stored into
+`Point.env`, whose engine representation is `E.t`. The producer's existing carrier rewrite
+supports `take`, but literal empty construction has no carrier provenance. The failing
+producer diff and compiler output are retained as `F/first-generated.patch` and `F/dune.log`.
+
+The repair stays inside the authorized helper: `p.env.take 0` is definitionally `[]`.
+`F/probes/Slice6Probe/LayerBuildEnvironment.lean` proves the exact record-reset equality by
+`rfl`, with no axioms (`env-probe`). The real extractor emits `E.take env 0`, using the existing
+`E.t#take` operation with no carrier-to-list conversion (`env-extraction`), and that generated
+probe compiles with the existing effect4 OCaml switch (`env-ocaml`). The extractor's automatic
+probe manifest was moved unchanged beside its research output; no extra production manifest
+is retained. No external-function row, prelude change, type root, or generator change is needed.
+The original helper's three local equalities still have their exact statements and `rfl` proofs.
+
+The final `-2` series passes: the 356-job source build, 350-job focused test build, all ten
+named axiom prints, and derived → LCNF → eff → wire → cas. The generator prerequisite again
+passes all 728 jobs and the 507-module/69,694-declaration trust gate. Derived outputs remain
+unchanged. The four generated diffs are exactly `api_gen.ml`, `api_engine.ml` and their two
+allowed closure manifests; both manifests name `Point.layerBuild`. The engine helper calls
+`E.take env 0`. The prelude, extern table, roots recipe, and C's two other manifests are unchanged.
+
+`opam exec --switch=effect4 -- dune build` passes (`dune-2`). The actual engine test passes all
+**82 checks** (`engine-test-2`), printing **`layer environment Fast: failure [fail(text x)]`**
+and **`layer environment Ref: failure [fail(text x)]`**. `make check-ocaml` passes
+(`check-ocaml-2`): **472 programs, 2,960 tapes, 65,712 positions, 131,424 projection
+comparisons, zero divergences, zero profile-refused tapes, zero raised tapes**. The seam and
+current-prelude checks pass. These runtime measurements are finite; no M5/M6 proof is claimed.
+
+`E4-PROV-CE-005` is marked REPAIRED in this commit after those checks. Source/test whitespace
+checks pass. The generator emits whitespace on some blank lines; its bytes and the raw
+whitespace diagnostic are retained rather than hand-edited. The historical 37-truth/400-depth-four
+run comparison remains finite historical evidence, as addendum 4 permits; it is not a fresh
+comparison at this base. `F/final-paths.json`, `final-source.patch`, the producer diffs, and each
+command/result JSON make this landing reproducible. Nothing has been pushed.
+
+### G — fourth fixture confirmed; owner amendment needed
+
+Base: F commit `d20f3292`. No G source, test, register or generated change is applied.
+Addendum 4 line 89 says: “a fourth in-tree program refused stops G again.” The checked
+`FourthFixtureProbe.lean` selects the actual public `Test.Codegen.TemplatesContract.layerSamples[1]?`
+entry. Its name-7/code-4 service expects nat; the effect body returns unit. The current
+checkLayer accepts it, and G's exact revised effect-leaf equation refuses
+`valueNotSubtype key unit nat` at `[]`. All ten named theorem prints pass at the ceiling
+(`fourth-fixture`, exit 0). The existing fixture tests printing, so this is a measured newly
+refused layer, not a claim that its printer test failed.
+
+**Smallest proposed amendment:** permit that exact sample as the fourth expected refusal;
+retain its shared definitions and printer coverage; add the exact-source negative checker
+control and neighboring nat-valued succeed positive. Correct addendum 3's unchanged-leaf
+census. Every further newly refused in-tree program/layer still stops G. The concrete patch is
+`G/candidate/rendered/PROPOSED-fourth-fixture.patch`, separate from the nine-path authorized
+candidate. Both are unapplied; their Python/application checks pass, but the production Lean
+candidate is uncompiled. Its README and statement diff give the exact implementation and checks.
+
+The bounded additional scan found no further accepted-to-refused whole-program fixture.
+Two source-tied checks distinguish related cases (`projected-boundary`, 13 theorem prints;
+`additional-corpus`, 5; both exit 0, all at the ceiling):
+- Provision's failure-only docs layer remains accepted under docsSig. Its raw native execution
+  supplies no typing signature, and both complete native programs were already refused.
+  A standalone native check of the projected leaf now refuses the undeclared key. This is
+  recorded explicitly, not counted as a newly refused complete program or silently admitted.
+- Generator program 141 at depth 4 was already refused. Its effect leaf now refuses unit at
+  nat at `[0,0]`, before the existing later body failure. G's prescribed corpus comparison
+  must report any changed verdict/diagnostic; this probe claims no new acceptance-bit change.
+
+G is held by the explicit fourth-fixture stop while the owner considers the exact amendment.
+Continue H1, then H2 part one, as the brief's §6 instructs for a stopped item. No decisions row
+or counterexample repair status is changed by this review.
 
 ### H2 — part-one exclusion clarified by the owner
 

@@ -21,6 +21,8 @@
      4  `replay_steps` yields |tape| + 1 machines and its last equals `replay`'s.
      5  The two `failwith` rows of the generated prelude (`sh_dispatcher_mk`,
         `sh_memo_map_mk`, api_engine.ml's PRELUDE) never fire on the corpus: counted.
+     6  E4-PROV-CE-005: a layer body binds its own string, even under an outer number
+        binder; both generated-engine carriers must fail with that string.
 
    And it measures W1 (`Api.run pFork` at fuel 100) and W2 (the chain of `refMake` at
    n = 100 / 300 / 1000) on both instances -- the first numbers of the substitution.  A
@@ -742,6 +744,28 @@ let bench () =
          En_ref.trace_length En_ref.refs)
     [ 50; 100; 300; 500; 1000 ]
 
+(* E4-PROV-CE-005: the layer's lexical environment starts closed, matching its checker. *)
+let layer_environment_check () =
+  let key = {
+    E.service_key_name = { E.service_name_value = 4 };
+    service_key_service = { E.service_type_code_value = 4 };
+  } in
+  let program =
+    E.Eff_bind (E.Eff_succeed (E.Term_lit (E.Lit_nat 9)),
+      E.Eff_scoped (E.Eff_provideLayer (
+        E.Layer_term_effect (key,
+          E.Eff_bind (E.Eff_succeed (E.Term_lit (E.Lit_str "x")),
+            E.Eff_fail (E.Term_var 0))),
+        false, E.Eff_service key)))
+  in
+  let expected = Some "failure [fail(text x)]" in
+  let fast = En_fast.root_exit (En_fast.run program ~fuel:200) in
+  let reference = En_ref.root_exit (En_ref.run program ~fuel:200) in
+  Printf.printf "layer environment Fast: %s\n" (Option.value fast ~default:"frontier");
+  Printf.printf "layer environment Ref: %s\n" (Option.value reference ~default:"frontier");
+  check "layer environment Fast uses the body binding" (fast = expected);
+  check "layer environment Ref uses the body binding" (reference = expected)
+
 (* ================================================================ main *)
 
 let () =
@@ -755,6 +779,7 @@ let () =
   replay_steps_check ();
   clock_profile_check ();
   origin_prelude_check ();
+  layer_environment_check ();
   print_endline "";
   print_endline "== 5. the two failwith rows of the generated prelude ==";
   check

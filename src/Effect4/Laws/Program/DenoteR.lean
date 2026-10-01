@@ -521,7 +521,8 @@ def inlineYield : NativeEff → Point → Option ExitV
 layer built into it (`buildAt`, the layer's `denoteLayer`) — off the fiber context's memo map,
 or a private one when `local` — the body (`bodyAt`, its `denoteR`; `bodyExit` its
 `inlineYield`) under `provideContext(built)`, the scope closed with the exit. The three
-programs are passed in so that this stays outside the mutual block. -/
+programs are passed in so that this stays outside the mutual block. The build uses the
+layer's closed lexical environment; the body retains the enclosing environment. -/
 def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt : Point → RProgram)
     (bodyExit : Point → Option ExitV) (isLocal : Bool) (p : Point) : RProgram :=
   (guardR .onSuccess (storeR (.scopeMake .sequential))).bind (seqR fun v =>
@@ -532,7 +533,7 @@ def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt :
           (if isLocal then
             (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun w =>
               match Val.memoMap? w with
-              | some id => buildWithMemoMapR (fun m => buildAt (p.child 0) m scope) id
+              | some id => buildWithMemoMapR (fun m => buildAt p.layerBuild m scope) id
               | none => .pure badShapeExit)
           else
             (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun w =>
@@ -541,7 +542,7 @@ def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt :
                 (guardR .onSuccess (storeR (.memoFork (currentMemoMapOf ctx.services)))).bind
                   (seqR fun u =>
                     match Val.memoMap? u with
-                    | some id => buildWithMemoMapR (fun m => buildAt (p.child 0) m scope) id
+                    | some id => buildWithMemoMapR (fun m => buildAt p.layerBuild m scope) id
                     | none => .pure badShapeExit)
               | none => .pure badShapeExit))).bind (seqR fun built =>
           match Env.decode built with
@@ -667,7 +668,8 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
   -- the join. `Effect.provide(self, layer)`: `Prim.suspend (body p)`, the counted step
   -- (`scopedWith`, `internal/effect.ts:3966`), then the scope made, the layer built into it
   -- (`buildWithScope` off the context's memo map, or a private map when `local`), the body
-  -- under `provideContext(built)` (`internal/layer.ts:15-21`), the scope closed with the exit
+  -- under `provideContext(built)` (`internal/layer.ts:15-21`), the scope closed with the exit.
+  -- `provideLayerR` closes only the build point; the body still uses the enclosing point.
   | .provideLayer layer isLocal body, p => suspendR p (constructR fun completed =>
       provideLayerR (fun q m s => recL layer q m s) (fun q => rec body q)
         (fun q => inlineYield body q) isLocal { p with completed })
@@ -1044,8 +1046,8 @@ theorem denoteR_acquireRelease (a r : NativeEff) (h : p.fuel ≠ 0) :
   | succ f => budget hf; try rfl
 
 -- the join's three constructors. The layer's build and the body are the term's own at their
--- points: `provideLayerR` applies them at the children of the counted point, whose fuel is
--- the budget the block passes, so the equation holds after unfolding the protocol.
+-- points: `provideLayerR` applies the layer at its closed build point and the body at child 1.
+-- Both spend the counted point's child budget, so the equation holds after unfolding the protocol.
 theorem denoteR_provideLayer (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff) (h : p.fuel ≠ 0) :
     denoteR root (.provideLayer l i b) p =
       suspendR p (constructR fun completed =>
@@ -1054,9 +1056,8 @@ theorem denoteR_provideLayer (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff)
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f =>
-    simp only [denoteR, denoteLayer, hf, Point.child_fuel, Nat.add_sub_cancel, denoteRWith,
-      denoteEffBody, provideLayerR]
-    try rfl
+    simp only [denoteR, denoteLayer, hf, Point.child_fuel, Point.layerBuild_fuel,
+      Nat.add_sub_cancel, denoteRWith, denoteEffBody, provideLayerR]
 
 theorem denoteR_service (key : ServiceKey) (h : p.fuel ≠ 0) :
     denoteR root (.service key) p =

@@ -1,0 +1,28 @@
+{
+  "command": [
+    "env",
+    "LEAN_PATH=/Users/pooks/Dev/lean4-effect4-slice6/docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/F/probes",
+    "lake",
+    "env",
+    "lean",
+    "-DwarningAsError=true",
+    "-M4096",
+    "--run",
+    "src/OCaml5/Tools/LcnfGen.lean",
+    "--out",
+    "docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/F/probes/layer-build-env.ml",
+    "--import",
+    "Slice6Probe.LayerBuildEnvironment",
+    "--cap",
+    "2000",
+    "--externs",
+    "docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/F/probes/env-externs.txt",
+    "Slice6Probe.LayerBuildEnvironment.viaTake"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  },
+  "exit": 0,
+  "elapsed_seconds": 2.61
+}

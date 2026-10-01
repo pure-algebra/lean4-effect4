@@ -4,6 +4,7 @@ import Effect4.Laws.Program.Guard.Continuation
 import Effect4.Laws.Program.Guard.Single
 import Effect4.Laws.Program.Guard.Decision
 import Effect4.Laws.Program.Guard.MemoIds
+import Effect4.Laws.Program.Guard.ForkLedger
 
 /-! Guard-key ownership and preservation through machine commands.
 The proof components track stored keys, active command owners, and interruption
