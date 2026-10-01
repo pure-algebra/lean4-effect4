@@ -261,8 +261,8 @@ worktrees, briefed per file ownership (A values and the signature; B frames, pos
 C the assembled state, M7 and the ledger; E the algebra laws; F the instrument, registers and
 imports; H the DESIGN-BASIS refresh), then wave 2 (row 117's contract, the adequacy instances,
 M5, the eighteen commands, M6c, M7) and wave 3 (data stage 1, the renames, the glossary). The
-owner-level choices are proceeding on the coordinator's recommendation with ratification owed
-(plan §1). Four rulings the owner gave Codex directly on 2026-10-01 are
+owner ratified rows 134, 137, 138 and 149 as recommended on 2026-10-01; the other owner-level
+choices proceed on the coordinator's recommendation (plan §1). Four rulings the owner gave Codex directly on 2026-10-01 are
 recorded in addendum 5's amendments and rows 91 and 107: part one's clause excludes `badName` and
 `notImplemented` only (the addendum had stated the full clause, which part two holds); the engine
 prelude and the engine tests join C's checklist; two more closure manifests and the `ForkRecord`

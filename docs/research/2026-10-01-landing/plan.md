@@ -70,7 +70,7 @@ decisions' order section, coherence, GENERATED, AGENTS), the contract packets th
 falsifiers, the untracked rulings, the `Effects` import in the core root, the Guard hand
 inductions, the twelve slack ceilings, the literature names.
 
-## 1. Owner-level choices (the coordinator proceeds on the recommendation; ratification owed)
+## 1. Owner-level choices (ratified 2026-10-01 for O1 (row 137), O2 (row 138), O4 (row 134) and row 149, "as recommended"; the rest proceed on the recommendation)
 
 | # | Choice | Recommendation, and why |
 | --- | --- | --- |
