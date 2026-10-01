@@ -916,6 +916,18 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
     subst hf
     rfl
 
+/-- **M5's reduction lemma, at the generated typed state** (seat A's
+`ValueMembership.typedStateF_load`, moved here and restated over row 134's split): a root whose
+loaded code is typed at every world, with no race marker at its head, loads into `TypedState` at
+the initial world. It is `J`'s first component (`machineTyped_load`), so the argument is written
+once; the battery keeps a one-line use. -/
+theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
+    (closed : ClosedEff ty)
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
+    (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
+    ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) :=
+  ⟨_, (machineTyped_load root ty fuel compileFuel closed noMarker code).typed⟩
+
 /-- The empty environment is typed at every world. -/
 theorem envTyped_nil (w : World) : EnvTyped w [] [] := by
   refine ⟨rfl, fun i ty v h _ => ?_⟩
@@ -1471,11 +1483,18 @@ theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) 
 checked, closed source is in `J` (`reachable_of_ledger` derives it from `typedState_load` and
 `decision_preserves`). The host-answer restriction repairs `E4-SCHED-CE-015`.
 
-Live refutation at this commit: `E4-TYPED-CE-009` (`Fits` compares declared types in the raw
-order while the checker normalizes, so M5 is false for a checked program; seat A, row 137),
-proved against these statements, M5's and this capstone's at the loaded machine, which the empty
-tape reaches (`rreachable_load`): `Test/Counterexamples/Machine/Semantics/RawOrderLoad.lean`,
-`loadsTyped_false` and `capstone_false`. `E4-TYPED-CE-010` (the await-by-value post read the
+`E4-TYPED-CE-009` (`Fits` compared declared types in the raw order while the checker
+normalizes, so M5 was false for a checked program) is repaired by row 137 (seat A):
+`Test/Counterexamples/Machine/Semantics/FitsOrder.lean` proves M5's proposition and this
+capstone's at that program's loaded machine, which the empty tape reaches (`rreachable_load`;
+`loadsTyped`, `capstone_at_load`), and keeps the refutations over the raw leaf
+(`Reviewed.m5_false`, `Reviewed.loadsTyped_false`, `Reviewed.capstone_false`; seat C's
+restatement over `J`, `RawOrderLoad.lean`, is history under the same hypothesis).
+`E4-TYPED-CE-018` (the posts that answer a scope handle carry no presence, so an allocation's
+continuation must be typed at an absent scope; registered from Codex's second-eyes review,
+`docs/research/2026-10-01-landing/codex-second-eyes/ScopeAllocationPost.lean`) refutes
+`DenotesTyped` at a checked allocate-then-fork program and is open under decisions row 156.
+`E4-TYPED-CE-010` (the await-by-value post read the
 target's answer column, so M5 was false for the typed corpus's `awaitFiber.value`) is repaired by
 row 136's post: `Test/Counterexamples/Machine/Semantics/AwaitLoad.lean` proves M5's proposition
 and this capstone's at that program's loaded machine (`loadsTyped`, `capstone_at_load`) and keeps

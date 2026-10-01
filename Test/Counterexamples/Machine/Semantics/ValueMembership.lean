@@ -986,51 +986,16 @@ initial world: the one fiber's saved state is typed, and every other generated c
 empty list or the empty context. So `typedState_load`, restated over `Fits`, is true at
 `Ref.make(5)` and at the bind program, the two instances `verify-load.lean` refutes for
 `StrongValue`. (No claim is made for every program.) Stated at every budget and source since
-seat A's landing (2026-10-01), so `FitsOrder.prog3_loads_typed` goes through it at budget 100. -/
+seat A's landing (2026-10-01). Since seat I2 (2026-10-01) the argument lives once in
+`Laws/Program/Typed/Assembly.lean` (`typedState_load_of_code`, the generated part of
+`machineTyped_load` over row 134's split), and this battery keeps a one-line use. -/
 
 theorem typedStateF_load (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
     (closed : ClosedEff ty)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
-    ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) := by
-  refine ⟨initialWorld ty, initial_world_valid _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩,
-    ?_, schedulerState_load root.program fuel compileFuel, observerState_load root _ fuel compileFuel,
-    registrationState_load root _ fuel compileFuel noMarker⟩
-  · intro f hf
-    change f ∈ [_] at hf
-    rw [List.mem_singleton] at hf
-    subst hf
-    refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
-    · intro ty' hty
-      have h0 : tableInsert (fun _ : FiberId => (none : Option EffTy)) Api.root ty Api.root =
-          some ty := insert_here _ _ _
-      change tableInsert (fun _ : FiberId => (none : Option EffTy)) Api.root ty Api.root =
-        some ty' at hty
-      rw [h0] at hty
-      cases hty
-      apply savedPosition_of_saved
-      exact ⟨ty, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
-    · intro q hq
-      cases hq
-    · intro v0 h
-      cases h
-    · intro v0 h
-      cases h
-    · intro v0 hv
-      cases hv
-    · intro key sv sty hget
-      change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
-      rw [Env.Context.getV_empty] at hget
-      cases hget
-  · intro r hr
-    cases hr
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
-      ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
-  · intro f hf token hq
-    change f ∈ [_] at hf
-    rw [List.mem_singleton] at hf
-    subst hf
-    cases hq
+    ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) :=
+  typedState_load_of_code root ty fuel compileFuel closed noMarker code
 
 theorem typedStateF_load_ref :
     ∃ w, TypedState (refProg : ProgramSource) (EffTy.pure (.handle NativeOp.refTarget)) w

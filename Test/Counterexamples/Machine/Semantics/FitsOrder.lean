@@ -1,7 +1,7 @@
 import Effect4.Laws.Program.Typed.Assembly
 import Effect4.Program.Admission
 import Effect4.Laws.Program.Typing.Sound
-import Test.Counterexamples.Machine.Semantics.ValueMembership
+import Test.Counterexamples.Machine.Semantics.H1Shapes
 
 /-!
 # E4-TYPED-CE-009: `Fits` compared declared types in the raw order, the checker in the normalized one
@@ -26,16 +26,19 @@ handle at that canonical form (`m5_forces_leaf`, proved over the production judg
   `Reviewed.typedState_load_false`, `Reviewed.capstone_false`), and the old judgment failed its
   three closure laws (`Reviewed.not_fits_fiber_normal`, `Reviewed.not_fits_cell_raw`,
   `Reviewed.not_fits_join`). These were proved against the production judgment at `bb269fde`
-  (this battery's first commit) and are restated here over the copies.
+  (this battery's first commit) and are restated here over the copies; since seat I2 they read
+  M5's and the capstone's propositions over row 134's split (`J = MachineTyped`, `LoadsTyped`,
+  `ReachableTyped`), the statements seat C's `RawOrderLoad.lean` refuted before row 137 merged.
 * **The repair** (row 137, `Laws/Program/Typed/Membership.lean`): the arms compare in `Ty.subN`.
   The three laws now hold of the production judgment (`fits_fiber_normal`, `fits_cell_raw`,
   `fits_join`), the leaf holds (`leaf_holds`), and the old reading of the leaf is refuted
   (`rawLeaf_false`).
 * **Red controls** (`#guard_msgs (error)`): the old refutation proofs no longer close against the
   production judgment.
-* **M5's first positive control**: the same program loads into a typed state
+* **M5's first positive control**: the same program loads into `J`
   (`prog3_loads_typed`, through the loaded code's derivation `prog3_typedF` and
-  `ValueMembership.typedStateF_load`, which reduces M5 to the loaded code).
+  `machineTyped_load`, which reduces M5 to the loaded code); M5's and the capstone's
+  propositions hold there (`loadsTyped`, `capstone_at_load`).
 
 Sources: `docs/research/2026-10-01-formal-pass/types/M5CounterProbe.lean` and
 `TypesOrderProbe.lean` (types seat), `verify-CapstoneProbe.lean` and `verify-AmendedFitsProbe.lean`
@@ -278,25 +281,12 @@ example : ¬ Typed.Fits w0 (Val.fiber Api.root) (.fiberOf T.normalize .never) :=
 
 /-! ## M5 at this program -/
 
-/-- An ordinary fiber operation's typing inverts to its certificate, precondition and
-continuation (TY-16; kept local here, `Residual.lean` is seat B's). -/
-theorem fiber_inv {w : Typed.World} {ty : EffTy} {op : FiberOp} {k : op.answer → RProgram}
-    (h : TypedProg src w ty (.vis (.inr op) k))
-    (hg : ∀ kind, op ≠ .guard_ kind) (hu : ∀ ex, op ≠ .unguard ex)
-    (hf : ∀ ex, op ≠ .finishFinalizer ex) (hs : ∀ prev sc ex, op ≠ .scopeExit prev sc ex) :
-    ∃ cert : (Ψ_F src).Cert op, (Ψ_F src).pre w op cert ∧
-      ∀ w', w.leHost w' → ∀ ans, (Ψ_F src).post w' op cert ans → TypedProg src w' ty (k ans) := by
-  cases h with
-  | fiber _ _ _ _ cert pre next => exact ⟨cert, pre, next⟩
-  | guard _ _ _ _ => exact absurd rfl (hg _)
-  | unguard _ => exact absurd rfl (hu _)
-  | finishFinalizer _ => exact absurd rfl (hf _)
-  | scopeExit _ _ => exact absurd rfl (hs _ _ _)
-
-/-- The loaded root is not inert (no halt, no queued finish, no published exit), so H1's
-conditional current-code clause applies to it. -/
+/-- **Historical (H1's clause, before row 134).** The loaded root was not inert (no halt, no
+queued finish, no published exit), so H1's conditional current-code clause applied to it. Under
+the split, `J`'s `LiveCode` reads the loaded root's code at the three premises `rfl` gives
+(not exited, not running, no race marker). -/
 theorem load_not_inert (p : NativeEff) (fuel compileFuel : Nat) :
-    ¬ CodeInert (loadR p fuel compileFuel) [] .root := by
+    ¬ H1Shapes.CodeInert (loadR p fuel compileFuel) [] .root := by
   intro h
   rcases h with hs | hterm
   · exact Bool.noConfusion hs
@@ -311,18 +301,17 @@ theorem load_not_inert (p : NativeEff) (fuel compileFuel : Nat) :
 machine yields a world declaring fiber 1 at the child's raw certificate whose successful exit
 with that handle fits the root's canonical type: the root's code opens a guard over the fork, the
 fork's certificate is the checker's type of the child, and the select's arm returns the handle. -/
-theorem m5_forces_leaf (typed : ∃ w, TypedState src rootTy3 w (loadR prog3 100 100)) :
+theorem m5_forces_leaf (typed : ∃ w, MachineTyped src rootTy3 w (loadR prog3 100 100)) :
     ∃ w : Typed.World, w.Γ ⟨1⟩ = some certT ∧ FitsExit w rootTy3 (.success (Val.fiber ⟨1⟩)) := by
-  obtain ⟨w, hvalid, hok, -⟩ := typed
-  have hfib := hok.c0 _ (List.mem_singleton_self _)
-  have hsaved := hfib.c0.c0 rootTy3 hvalid.root
-  obtain ⟨tin, hcode0, hstack, -⟩ := hsaved
-  have hcode := hcode0 (load_not_inert prog3 100 100)
+  obtain ⟨w, typed⟩ := typed
+  have hvalid := typed.typed.1
+  obtain ⟨tin, hcode, hstack, -⟩ :=
+    typed.code _ (List.mem_singleton_self _) rfl rfl rfl rootTy3 hvalid.root
   change Contracts.StackAccepts (TypedProg src) ExitOk (frameProtocols src) w tin rootTy3 [] at hstack
   cases hstack
   obtain ⟨mid, hbody, hrun, -⟩ := TypedProg.guard_inv hcode
-  obtain ⟨cert, hpre, hnext⟩ := fiber_inv hbody (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  obtain ⟨cert, hpre, hnext⟩ := TypedProg.fiber_inv hbody (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   have hpre' : BodyTyped src w (.at_ ((((rootPoint 100).child 0).child 0).child 0)) cert := hpre
   cases hpre' with
   | at_ p ty hpt =>
@@ -353,13 +342,13 @@ theorem m5_forces_leaf (typed : ∃ w, TypedState src rootTy3 w (loadR prog3 100
     have hb := hnext _ hle (Val.fiber ⟨1⟩) ⟨⟨1⟩, rfl, hΓ1⟩
     have hpay := unguard_payload_inv src _ mid _ _ hb
     have hr := hrun _ hle (.success (Val.fiber ⟨1⟩)) ⟨rfl, hpay⟩
-    obtain ⟨_, _, hnext2⟩ := fiber_inv hr (fun _ h => nomatch h) (fun _ h => nomatch h)
+    obtain ⟨_, _, hnext2⟩ := TypedProg.fiber_inv hr (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
     have hc := hnext2 _ (leHost_refl _) [] (fun _ hp => nomatch hp)
-    obtain ⟨_, _, hnext3⟩ := fiber_inv hc (fun _ h => nomatch h) (fun _ h => nomatch h)
+    obtain ⟨_, _, hnext3⟩ := TypedProg.fiber_inv hc (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
     have hs := hnext3 _ (leHost_refl _) Val.unit trivial
-    obtain ⟨_, _, hnext4⟩ := fiber_inv hs (fun _ h => nomatch h) (fun _ h => nomatch h)
+    obtain ⟨_, _, hnext4⟩ := TypedProg.fiber_inv hs (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
     have hleaf := hnext4 _ (leHost_refl _) [] (fun _ hp => nomatch hp)
     exact ⟨_, hΓ1, (TypedProg.pure_inv hleaf).1⟩
@@ -394,54 +383,40 @@ theorem leaf_false (w : Typed.World) (id : FiberId) (hΓ : w.Γ id = some certT)
   exact Bool.noConfusion ha'
 
 /-- **Historical: M5 was false here (proved).** Under the raw fiber arm no world typed the loaded
-state (proved against the production judgment at `bb269fde`, battery commit 1). -/
-theorem m5_false (raw : RawLeaf) : ¬ ∃ w, TypedState src rootTy3 w (loadR prog3 100 100) := by
+machine (proved against the production judgment at `bb269fde`, battery commit 1, and by seat C's
+`RawOrderLoad.m5_false` over `J` before row 137 merged). -/
+theorem m5_false (raw : RawLeaf) : ¬ ∃ w, MachineTyped src rootTy3 w (loadR prog3 100 100) := by
   intro typed
   obtain ⟨w, hΓ1, hexit⟩ := m5_forces_leaf typed
   exact leaf_false w ⟨1⟩ hΓ1 (raw w ⟨1⟩ hexit)
 
+/-- **Historical: M5's proposition was false at this program (proved).** -/
+theorem loadsTyped_false (raw : RawLeaf) : ¬ LoadsTyped src rootTy3 100 100 :=
+  fun h => m5_false raw (h rfl prog3_typed rootTy3_closed)
+
 /-- **Historical: M5's obligation was false (proved).** -/
 theorem typedState_load_false (raw : RawLeaf) :
     ¬ (∀ (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat),
-        Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-        ∃ w, TypedState root rootTy w (loadR root.program fuel compileFuel)) :=
-  fun h => m5_false raw (h src rootTy3 100 100 prog3_typed rootTy3_closed)
+        LoadsTyped root rootTy fuel compileFuel) :=
+  fun h => loadsTyped_false raw (h src rootTy3 100 100)
 
 end Reviewed
 
-/-! ## M6's capstone, through the empty tape -/
-
-/-- Replaying the empty tape leaves the loaded machine as it is. -/
-theorem replayR_nil_machine (p : NativeEff) (fuel : Nat) :
-    (replayR p fuel []).machine = loadR p fuel fuel := by
-  unfold replayR replayEval
-  split
-  · rfl
-  · split
-    · rfl
-    · rfl
-
-/-- The loaded machine is reachable by the empty tape, which has no host answer. -/
-theorem rreachable_load (root : ProgramSource) (fuel : Nat) :
-    RReachable root fuel (loadR root.program fuel fuel) :=
-  ⟨[], (fun _ h => nomatch h), (replayR_nil_machine root.program fuel).symm⟩
+/-! ## M6's capstone, through the empty tape (`rreachable_load`, `Typed/Assembly.lean`) -/
 
 /-- The capstone's statement contains M5's at equal budgets. -/
 theorem capstone_implies_load
     (cap : ∀ (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState),
-        Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-        RReachable root fuel m → ∃ w, TypedState root rootTy w m)
-    (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
-    (h1 : Api.typeOf root.program root.table = some rootTy) (h2 : ClosedEff rootTy) :
-    ∃ w, TypedState root rootTy w (loadR root.program fuel fuel) :=
-  cap root rootTy fuel _ h1 h2 (rreachable_load root fuel)
+        ReachableTyped root rootTy fuel m)
+    (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) :
+    LoadsTyped root rootTy fuel fuel :=
+  fun lawful h1 h2 => cap root rootTy fuel _ lawful h1 h2 (rreachable_load root fuel)
 
 /-- **Historical: M6's capstone was false (proved)**, at this program and the empty tape. -/
 theorem Reviewed.capstone_false (raw : RawLeaf) :
     ¬ (∀ (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState),
-        Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-        RReachable root fuel m → ∃ w, TypedState root rootTy w m) :=
-  fun cap => Reviewed.m5_false raw (capstone_implies_load cap src rootTy3 100 prog3_typed rootTy3_closed)
+        ReachableTyped root rootTy fuel m) :=
+  fun cap => Reviewed.loadsTyped_false raw (capstone_implies_load cap src rootTy3 100)
 
 -- Red control: the old leaf refutation no longer closes against the production judgment.
 /--
@@ -465,10 +440,10 @@ example (w : Typed.World) (id : FiberId) (hΓ : w.Γ id = some certT) :
   rw [T_not_sub] at ha'
   exact Bool.noConfusion ha'
 
-/-! ## M5's first positive control: the program loads into a typed state (row 137)
+/-! ## M5's first positive control: the program loads into `J` (row 137)
 
-`ValueMembership.typedStateF_load` (now at every budget and source) reduces M5 at a source to
-"the loaded code is typed at every world" (every other generated clause is over an empty list or
+`machineTyped_load` (`Typed/Assembly.lean`, M5's builder over row 134's split) reduces M5 at a
+source to "the loaded code is typed at every world" (every other clause is over an empty list or
 the empty context at load). The derivation `prog3_typedF` follows the loaded code: the guard the bind opens, the
 fork (its certificate the checker's type of the child, by `check_complete`), the `unguard` of
 the handle at the guard's type, then the select's construction, checkpoint and construction, and
@@ -520,9 +495,18 @@ theorem prog3_typedF (w : Typed.World) :
     | failure c => exact strongExit_of_clean w' _ c (cleanExit_of_never w' midTy c rfl hex) hex.2
 
 /-- **M5's first positive control (proved).** The TY-01 program, which refuted M5 and the
-capstone under the raw arms, loads into a typed state under row 137. -/
-theorem prog3_loads_typed : ∃ w, TypedState src rootTy3 w (loadR prog3 100 100) :=
-  ValueMembership.typedStateF_load src rootTy3 100 100 rootTy3_closed rfl prog3_typedF
+capstone under the raw arms, loads into `J` under row 137. -/
+theorem prog3_loads_typed : ∃ w, MachineTyped src rootTy3 w (loadR prog3 100 100) :=
+  ⟨_, machineTyped_load src rootTy3 100 100 rootTy3_closed rfl prog3_typedF⟩
+
+/-- **The flip of `Reviewed.loadsTyped_false`: M5's proposition holds at this program.** -/
+theorem loadsTyped : LoadsTyped src rootTy3 100 100 :=
+  fun _ _ closed => ⟨_, machineTyped_load src rootTy3 100 100 closed rfl prog3_typedF⟩
+
+/-- **The flip of `Reviewed.capstone_false` at this program: the capstone's proposition holds at
+the loaded machine**, which the empty tape reaches. -/
+theorem capstone_at_load : ReachableTyped src rootTy3 100 (loadR prog3 100 100) :=
+  fun lawful checked closed _ => loadsTyped lawful checked closed
 
 /-- And its leaf, read off the typed load. -/
 theorem prog3_leaf : ∃ w : Typed.World, w.Γ ⟨1⟩ = some certT ∧
@@ -545,24 +529,26 @@ theorem prog3_leaf : ∃ w : Typed.World, w.Γ ⟨1⟩ = some certT ∧
 #print axioms fits_fiber_normal
 #print axioms fits_cell_raw
 #print axioms fits_join
-#print axioms fiber_inv
 #print axioms load_not_inert
 #print axioms m5_forces_leaf
 #print axioms leaf_holds
 #print axioms rawLeaf_false
 #print axioms Reviewed.leaf_false
 #print axioms Reviewed.m5_false
+#print axioms Reviewed.loadsTyped_false
 #print axioms Reviewed.typedState_load_false
-#print axioms replayR_nil_machine
-#print axioms rreachable_load
 #print axioms capstone_implies_load
 #print axioms Reviewed.capstone_false
 #print axioms child_check
 #print axioms fiber_subN_root
 #print axioms prog3_typedF
-#print axioms ValueMembership.typedStateF_load
 #print axioms prog3_loads_typed
+#print axioms loadsTyped
+#print axioms capstone_at_load
 #print axioms prog3_leaf
+#print axioms Effect4.Program.Typed.machineTyped_load
+#print axioms Effect4.Program.Typed.typedState_load_of_code
+#print axioms Effect4.Program.Typed.rreachable_load
 
 /-! The repair's own theorems (`Laws/Program/TypeAlgebra.lean`, `Laws/Program/Typed/Membership.lean`). -/
 #print axioms Effect4.Program.Ty.subN_refl
