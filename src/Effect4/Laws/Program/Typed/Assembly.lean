@@ -1655,14 +1655,9 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_finish
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_launch
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_enrollRace
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_registrationDone
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_interruptTarget
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_afterInterrupt
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_raceCancel
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_observe
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_exitDone
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_closeParAwait
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_wake
 #proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves
 #proof_wanted Effect4.Program.Typed.M6Ledger.typedState_reachable

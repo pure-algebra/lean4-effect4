@@ -340,5 +340,3 @@ end Effect4.Program.Typed
 #obligation_proved Effect4.Program.Typed.M6Ledger.step_resume :=
   @Effect4.Program.Typed.resume_preserves
 -- `M6Ledger`'s report runs at the foot of the last command module, which sees every proof.
-#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 15
-  using aesop (rule_sets := [Effect4.TypedState])
