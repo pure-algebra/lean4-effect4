@@ -22,8 +22,9 @@ a `dune` build), **reading** (read in code, not run), **assumed** (not checked).
 change every producer still writes today's files: the derived groups regenerated in place with the
 extras-merged fold generator, then `git diff --exit-code` over the Makefile's 62 generated paths,
 exit 0, none untracked (reproduced; step 1's whole chain is below). `git merge-tree` is clean
-against main's `f4881f74` (no file changed on both sides) and against the line's head `68ddb9ed`
-(J2 merged; the Makefile changed on both sides and merges clean). Step 2 stopped at the owner's
+against main's `f4881f74` (no file changed on both sides), against `68ddb9ed` (J2 merged; the
+Makefile changed on both sides) and against the line's newest head `8506ee05` (D4 merged; the
+Makefile and `tools/Tools/Variances.lean` changed on both sides). Step 2 stopped at the owner's
 word: item 4 (the rule checker, which validates its evidence first, and the census's completeness
 footer) landed, its log check confirmed by Codex at 23:16, but its `--tree` wrapper still passes
 a failed or missing producer run (Codex 23:16, reported after the stop; owed); item 1 is half done
@@ -321,6 +322,18 @@ each. Each also has its own:
   build at the merge. (d) The rule checker's baseline moves (above), and its
   `GENERATED_MODULES` names U's planned modules (`Effect4.Program.TyEq`, `TyFoldExtras`,
   `TyTables`), which W4 keeps or edits when the generated modules land.
+- **Against the line's newest head `8506ee05`** (D4's merge, after `3a31867b` "Main green after
+  J2"): the tree `73e26e23`, no conflict (tested). Two files changed on both sides: the Makefile
+  (also `3a31867b`'s install rule) and `tools/Tools/Variances.lean`, where the line rewrote one
+  docstring paragraph (the cross-check now names oxc) and this branch added the arity words and
+  the core variance module; both merge clean. Two interactions to run after the merge: D4 changed
+  `Laws/Program/Typed/Membership.lean` (+17), which invokes `fold_of` and so elaborates against this
+  branch's `FoldOf.lean` (assumed until the roots build); and D4 re-cut the LCNF face
+  (`ocaml/engine/api_engine.ml`, `ocaml/gen/api_gen.ml` and their two closure manifests) with the
+  base's translator, while this branch adds the translator's `Array.mk` row and the manifest-path
+  rule. `make check-gen` does not reach the `lcnf` group, so `make gen-lcnf` and the drift over the
+  four artefacts and their manifests, on the merged tree, are what establish those bytes (step 1
+  reproduced them at the base; on D4's code it is assumed).
 - This branch touches none of the files the brief reserves for D2, D3, D4, J2 and W1 (the
   Makefile's shared lines included), so no order among the seats is forced by it.
 
