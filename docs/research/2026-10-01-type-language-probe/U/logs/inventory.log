@@ -1,0 +1,13 @@
+106 rows written to /Users/pooks/Dev/lean4-effect4-probe-U/docs/research/2026-10-01-type-language-probe/U/inventory.tsv
+  family a: 6
+  family a-id: 3
+  family b: 10
+  family b2: 6
+  family b3: 22
+  family c: 7
+  family c': 10
+  family c'': 5
+  family d: 18
+  family e: 18
+  family pin: 1
+exit 0

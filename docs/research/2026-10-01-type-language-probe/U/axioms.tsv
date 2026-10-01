@@ -1,0 +1,98 @@
+theorem	axioms	log
+ProbeU.Key.keyLeaf_inj	[propext]	KeyInjective.log
+ProbeU.Key.keyNode_eq	[propext]	KeyInjective.log
+ProbeU.Key.key_eq_table'	[propext]	KeyInjective.log
+ProbeU.Key.key_injective'	[propext, Quot.sound]	KeyInjective.log
+ProbeU.Key.key_injective_of_table	[propext, Quot.sound]	KeyInjective.log
+ProbeU.Key.key_view	[propext]	KeyInjective.log
+ProbeU.Key.prefixed_inj	[propext, Quot.sound]	KeyInjective.log
+ProbeU.Key.shape_str_leaf	(none)	KeyInjective.log
+ProbeU.Key.tail_split	[propext]	KeyInjective.log
+ProbeU.Key.tyFaces_codes	(none)	KeyInjective.log
+ProbeU.Key.tyKids_length	(none)	KeyInjective.log
+ProbeU.Key.tyLeaf_sort	(none)	KeyInjective.log
+ProbeU.Key.utf8_injective	[propext]	KeyInjective.log
+ProbeU.Laws.allHeads_mono	[propext, Quot.sound]	Laws.log
+ProbeU.Laws.closed_eq_isEmpty	[propext]	Laws.log
+ProbeU.Laws.codec_le_handleFree	(none)	Laws.log
+ProbeU.Laws.handleFreeAlg_eq'	[propext]	Laws.log
+ProbeU.Laws.handleFree_of_isSupported	[propext, Quot.sound]	Laws.log
+ProbeU.Laws.hasTy_eq	[propext, Quot.sound]	Laws.log
+ProbeU.Laws.hasTy_eq_cata	[propext, Quot.sound]	Laws.log
+ProbeU.Laws.hasTy_normalize'	[propext, Quot.sound]	Laws.log
+ProbeU.Laws.isEmpty_append	(none)	Laws.log
+ProbeU.Laws.isEmpty_commutes	[propext]	Laws.log
+ProbeU.Laws.isSupported_eq'	[propext]	Laws.log
+ProbeU.Laws.nodeThen_and	[propext]	Laws.log
+ProbeU.Laws.normalize_commutes	[propext, Quot.sound]	Laws.log
+ProbeU.Laws.prod_ofLayer	(none)	Laws.log
+ProbeU.Laws.recCombine_and_some	[propext]	Laws.log
+ProbeU.Laws.templateAdmissible_of_closed'	[propext, Quot.sound]	Laws.log
+ProbeU.Laws.templateAdmissible_pair	[propext]	Laws.log
+ProbeU.Laws.varsOf_eq_nil_of_closed'	[propext]	Laws.log
+ProbeU.Laws.varsUnder_of_closed	[propext, Quot.sound]	Laws.log
+ProbeU.Monoid.closed_eq	[propext]	MonoidFolds.log
+ProbeU.Monoid.findInt_eq	[propext, Quot.sound]	MonoidFolds.log
+ProbeU.Monoid.findInternalHandle_eq	[propext]	MonoidFolds.log
+ProbeU.Monoid.handleFreeAlg_eq	[propext]	MonoidFolds.log
+ProbeU.Monoid.handleFree_eq	[propext]	MonoidFolds.log
+ProbeU.Monoid.internalHandleScan_eq	[propext]	MonoidFolds.log
+ProbeU.Monoid.isSupported_eq	[propext]	MonoidFolds.log
+ProbeU.Monoid.templateAdmissible_eq	[propext]	MonoidFolds.log
+ProbeU.Monoid.valueVarsAlg_eq	[propext]	MonoidFolds.log
+ProbeU.Monoid.varsOf_eq	[propext]	MonoidFolds.log
+ProbeU.Monoid.varsOf_eq_foldMap	[propext]	MonoidFolds.log
+ProbeU.Reflections.tyJson_eq	[propext, Classical.choice, Quot.sound]	Reflections.log
+ProbeU.Reflections.tyO_eq	[propext, Classical.choice, Quot.sound]	Reflections.log
+ProbeU.Reflections.tyV_eq	[propext]	Reflections.log
+ProbeU.ReflectionsMl.tyT_eq	[propext, Classical.choice, Quot.sound]	ReflectionsLcnfMl.log
+ProbeU.ReflectionsSemantics.tyValue_eq	[propext]	ReflectionsLcnfSemantics.log
+ProbeU.Spelling.key_eq_table	[propext]	SpellingFolds.log
+ProbeU.Spelling.renderRaw_eq_table	[propext]	SpellingFolds.log
+ProbeU.Spelling.schema_eq_table	[propext]	SpellingFolds.log
+ProbeU.Spine.isTagTy_eq	[propext]	UnionSpine.log
+ProbeU.Spine.members_eq	[propext]	UnionSpine.log
+ProbeU.Spine.projectProduct_eq	[propext, Quot.sound]	UnionSpine.log
+ProbeU.Spine.rawSupportedErrTy_eq	[propext]	UnionSpine.log
+ProbeU.cataS_eq	[propext]	olean-Lowering.log
+ProbeU.cata_fusion_ty	[propext]	olean-TyFoldExtras.log
+ProbeU.cata_id_pos_list_prod_string_recordty	[propext]	gen-record.log
+ProbeU.cata_id_pos_prod_string_recordty	[propext]	gen-record.log
+ProbeU.cata_id_recordty	[propext]	gen-record.log
+ProbeU.cata_ofLayer_inv	[propext, Quot.sound]	Laws.log
+ProbeU.cata_ofLayer_view	(none)	Laws.log
+ProbeU.cata_pos_list_prod_string_recordty_eq	[propext]	olean-RecordFold.log
+ProbeU.cata_pos_prod_string_recordty_eq	[propext]	olean-RecordFold.log
+ProbeU.cata_prod_ty	[propext]	olean-TyFoldExtras.log
+ProbeU.cata_recordty_bool	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_causeOf	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_deferredOf	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_except	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_exitOf	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_fiberOf	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_handle	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_int	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_list	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_lit	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_nat	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_never	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_option	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_prod	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_record	[propext]	olean-RecordFold.log
+ProbeU.cata_recordty_refOf	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_string	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_union	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_unit	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_unknown	(none)	olean-RecordFold.log
+ProbeU.cata_recordty_var	(none)	olean-RecordFold.log
+ProbeU.foldMap_eq_cata	[propext]	olean-TyFoldExtras.log
+ProbeU.foldMap_head_eq_cata	[propext]	olean-TyFoldExtras.log
+ProbeU.hom_eq_cata_recordty	[propext]	olean-RecordFold.log
+ProbeU.hom_pos_list_prod_string_recordty	[propext]	gen-record.log
+ProbeU.hom_pos_prod_string_recordty	[propext]	gen-record.log
+ProbeU.paraAlg_fst	[propext]	olean-Generic.log
+ProbeU.paraAlg_snd	[propext]	olean-Generic.log
+ProbeU.prodMapSnd_mk	(none)	RecordFoldReceipts.log
+ProbeU.reflectAlg	(none)	Reflections.log
+ProbeU.sizeOf_tyKids	[propext, Quot.sound]	Laws.log
+ProbeU.tyBuild_view	[propext]	olean-TyFoldExtras.log

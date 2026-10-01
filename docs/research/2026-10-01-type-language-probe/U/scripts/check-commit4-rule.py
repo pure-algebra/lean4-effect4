@@ -17,8 +17,11 @@ two `under OCaml5`, `under Tools`, `under Conform`):
       emitted from the signature.
 
 Exempt by name (each with its reason in the note, §6.2): the derived `Repr` instance until the
-generator emits it for the nested `Ty`; nothing else. Prints every violation and exits 1 when
-there is one; on today's tree it is the red baseline (the distance from the rule).
+generator emits it for the nested `Ty`; and two pass-through matchers, where a `match` on another
+type carries the `Ty` as a discriminant bound to a variable in every arm, so the gate lists it
+although nothing is cased (`selectRefusal.match_1`, `Decision.arms.match_4`; the instrument does
+not say whether every arm binds the discriminant, so these are named). Prints every violation and
+exits 1 when there is one; on today's tree it is the red baseline (the distance from the rule).
 """
 import sys
 
@@ -29,6 +32,8 @@ GENERATED_MODULES = {
 }
 ALLOWED_MODULES = {'Effect4.Laws.Program.Typed.Membership'}
 EXEMPT = {'Effect4.Program.instReprTy.repr'}
+# Pass-through matchers: the `Ty` discriminant is a variable in every arm (no case analysis).
+PASS_THROUGH = {'Effect4.Program.selectRefusal.match_1', 'Effect4.Program.Decision.arms.match_4'}
 
 def parse(path):
     census, gate, mode = [], [], None
@@ -60,7 +65,7 @@ def main():
         if cls == 'one-level' and mod not in GENERATED_MODULES:
             v.append(f'R2 one-level  {name} ({mod})')
     for name, mod, matcher, ca in gate:
-        if name.endswith('.hom') or name in EXEMPT or mod in ALLOWED_MODULES or mod in GENERATED_MODULES:
+        if name.endswith('.hom') or name in EXEMPT or matcher in PASS_THROUGH or mod in ALLOWED_MODULES or mod in GENERATED_MODULES:
             continue
         v.append(f'R3 {ca:14} {name} ({mod}, {matcher})')
     seen = set()

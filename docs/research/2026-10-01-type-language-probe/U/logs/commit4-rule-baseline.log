@@ -42,7 +42,6 @@ R3 catchAll true  Effect4.Program.Checker.exitOf? (Effect4.Program.Checker, Effe
 R3 catchAll true  Effect4.Program.Checker.listOf? (Effect4.Program.Checker, Effect4.Program.Checker.listOf?.match_1)
 R3 catchAll true  Effect4.Program.externalValue (Effect4.Program.Compile, Effect4.Program.externalValue.match_1)
 R3 catchAll true  Effect4.Program.Decision.arms (Effect4.Program.Decision, Effect4.Program.Decision.arms.match_1)
-R3 catchAll true  Effect4.Program.Decision.arms (Effect4.Program.Decision, Effect4.Program.Decision.arms.match_4)
 R3 catchAll true  Effect4.Program.isTagTy (Effect4.Program.Eff, Effect4.Program.isTagTy.match_1)
 R3 catchAll false Effect4.Program.rawSupportedErrTy (Effect4.Program.Eff, Effect4.Program.rawSupportedErrTy.match_1)
 R3 catchAll true  Effect4.Program.NativeAtom.projectProduct (Effect4.Program.NativeAtom, Effect4.Program.NativeAtom.projectProduct.match_1)
@@ -65,7 +64,6 @@ R3 catchAll true  Effect4.Program.Ty.sub (Effect4.Program.Ty, Effect4.Program.Ty
 R3 catchAll true  Effect4.Program.Ty.sub (Effect4.Program.Ty, Effect4.Program.Ty.sub.match_1)
 R3 catchAll true  Effect4.Program.Ty.taggedColumn (Effect4.Program.Ty, Effect4.Program.Ty.taggedColumn.match_1)
 R3 catchAll false Effect4.Program.Val.hasTy (Effect4.Program.Typed, Effect4.Program.Val.hasTy.match_40)
-R3 catchAll true  Effect4.Program.selectRefusal (Effect4.Program.Typing.Blame, Effect4.Program.selectRefusal.match_1)
 R3 catchAll true  Effect4.Program.fiberTy (Effect4.Program.Typing.Rules, Effect4.Program.fiberTy.match_1)
 R3 catchAll false Effect4.Schema.Bridge.schema (Effect4.Schema.Bridge, Effect4.Schema.Bridge.schema.match_1)
 R3 catchAll true  Effect4.Schema.Codec.decodeRaw (Effect4.Schema.Codec, Effect4.Schema.Codec.decodeRaw.match_3)
@@ -78,5 +76,5 @@ R4 structural Conform.Effect4.LcnfMl.tyOcaml (Conform.Effect4.LcnfMl)
 R4 structural Conform.Effect4.LcnfSemantics.tyValue (Conform.Effect4.LcnfSemantics)
 R4 structural OCaml5.Eff.tyO (OCaml5.Eff.Emit)
 R4 structural OCaml5.Eff.tyV (OCaml5.Eff.Goldens)
-80 violation(s): R1 21, R2 13, R3 40, R4 6
+78 violation(s): R1 21, R2 13, R3 38, R4 6
 exit 1

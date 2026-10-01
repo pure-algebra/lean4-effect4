@@ -2,7 +2,11 @@
 'ProbeU.Key.tyKids_length' does not depend on any axioms
 'ProbeU.Key.shape_str_leaf' does not depend on any axioms
 'ProbeU.Key.keyLeaf_inj' depends on axioms: [propext]
+'ProbeU.Key.utf8_injective' depends on axioms: [propext]
 'ProbeU.Key.prefixed_inj' depends on axioms: [propext, Quot.sound]
+'ProbeU.Key.tail_split' depends on axioms: [propext]
+'ProbeU.Key.keyNode_eq' depends on axioms: [propext]
+'ProbeU.Key.key_view' depends on axioms: [propext]
 'ProbeU.Key.key_injective_of_table' depends on axioms: [propext, Quot.sound]
 'ProbeU.Key.key_eq_table'' depends on axioms: [propext]
 'ProbeU.Key.tyFaces_codes' does not depend on any axioms

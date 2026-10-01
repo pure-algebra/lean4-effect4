@@ -116,6 +116,14 @@ theorem projectProduct_eq (second : Bool) (t : Ty) :
       h_ty_deferredOf := fun _ _ => rfl, h_ty_var := fun _ => rfl
       h_ty_unknown := rfl } t)
 
+-- The spine fold is structural, not `members` read by a monoid: `isTagTy`'s bottom (`false`)
+-- is not the unit of `&&`, so at a raw union holding `never` it answers what `members.all`
+-- would not (tested). Normal forms never put `never` under a union, and `supportedErrTy`
+-- normalizes first, so no caller meets the difference.
+#guard isTagTy (.union .never .string) == false
+#guard (Ty.members (.union .never .string)).all tagAtom == true
+#guard isTagTy (Ty.normalize (.union .never .string)) == true
+
 #guard Ty.members (.union .nat (.union .never (.lit "a"))) == [.nat, .lit "a"]
 #guard spineFold [] (· ++ ·) (fun a => [a]) (.union .nat (.union .never (.lit "a"))) == [.nat, .lit "a"]
 

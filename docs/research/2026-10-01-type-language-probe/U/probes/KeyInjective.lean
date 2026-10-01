@@ -184,7 +184,11 @@ end ProbeU.Key
 #print axioms ProbeU.Key.tyKids_length
 #print axioms ProbeU.Key.shape_str_leaf
 #print axioms ProbeU.Key.keyLeaf_inj
+#print axioms ProbeU.Key.utf8_injective
 #print axioms ProbeU.Key.prefixed_inj
+#print axioms ProbeU.Key.tail_split
+#print axioms ProbeU.Key.keyNode_eq
+#print axioms ProbeU.Key.key_view
 #print axioms ProbeU.Key.key_injective_of_table
 #print axioms ProbeU.Key.key_eq_table'
 #print axioms ProbeU.Key.tyFaces_codes

@@ -18,7 +18,7 @@ fi
 log olean-TyFoldExtras "$U/run-lean.sh" olean-gen "$U/generated/ProbeU/TyFoldExtras.lean"
 # The two tables: JSON data, emitted by the table emitter (a missing or extra row is refused).
 log gen-tables sh -c "cd '$ROOT' && LEAN_NUM_THREADS=1 lake env lean --run $R/patches/TableGen.lean faces $R/tables/ty-faces.json $R/generated/ProbeU/FacesTable.lean && LEAN_NUM_THREADS=1 lake env lean --run $R/patches/TableGen.lean classes $R/tables/ty-classes.json $R/generated/ProbeU/ClassesTable.lean"
-for spec in olean:Generic olean:Faces olean-gen:FacesTable olean:ClassRow olean-gen:ClassesTable olean:Classes olean:Reflect olean:Enum olean:Lowering olean:RecordTy; do
+for spec in olean:Generic olean:Faces olean-gen:FacesTable olean:ClassRow olean-gen:ClassesTable olean:Classes olean:Reflect olean:Enum olean:Lowering olean:RecordTy olean-gen:RecordFold; do
   mode=${spec%%:*}; m=${spec#*:}
   if [ "$mode" = olean ]; then f="$U/probes/ProbeU/$m.lean"; else f="$U/generated/ProbeU/$m.lean"; fi
   log "olean-$m" "$U/run-lean.sh" "$mode" "$f"
@@ -27,7 +27,8 @@ done
 log gen-tables-red-missing sh -c "cd '$ROOT' && LEAN_NUM_THREADS=1 lake env lean --run $R/patches/TableGen.lean faces $R/tables/red-missing-row.json $R/scratch/red.lean"
 log gen-tables-red-extra sh -c "cd '$ROOT' && LEAN_NUM_THREADS=1 lake env lean --run $R/patches/TableGen.lean classes $R/tables/red-extra-row.json $R/scratch/red.lean"
 for p in SpellingFolds MonoidFolds UnionSpine Reflections ReflectionsLcnfMl ReflectionsLcnfSemantics \
-         EnumerationsSemantics EnumerationsMl EnumerationsTables EnumerationsTyVectors Laws KeyInjective; do
+         EnumerationsSemantics EnumerationsMl EnumerationsTables EnumerationsTyVectors Laws KeyInjective \
+         RecordFoldReceipts; do
   log "$p" "$U/run-lean.sh" check "$U/probes/$p.lean"
 done
 exit 0

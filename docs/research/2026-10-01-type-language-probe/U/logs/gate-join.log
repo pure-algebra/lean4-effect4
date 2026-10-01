@@ -1,0 +1,6 @@
+gate rows 66: no catch-all 28, catch-all 38
+fold_of .hom rows 9 | generated-module rows 14 | hand rows 43
+hand definitions 40 | with a match with no catch-all (compile-forced) 17 | with catch-alls only (review) 23
+compile-forced: ofNormalized, templateAdmissible, varsOf, Fits, findInt, rawSupportedErrTy, closed, instantiate, isMember, isNever, key, members, normalize, renderRaw, repr, hasTy, schema
+review: methodArgsRow, FlatFits, receiver, exitOf?, listOf?, externalValue, arms, isTagTy, projectProduct, causeInputError?, factors, infer, isFactor, isTagged, payloadOf, sub, taggedColumn, selectRefusal, fiberTy, decodeRaw, encodeRaw, isSupported, layout
+exit 0

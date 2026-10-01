@@ -15,14 +15,16 @@ Three shapes, each on the tree's own definitions:
    per constructor that `normalize` overrides — two (`prod`, `union`) — and nothing for the
    eighteen it rebuilds, which the `Commutes` record's `rfl` defaults discharge. Today the law is
    an induction with eight named helper theorems (`hasTy_normalize_never`, `_union`, `_prod`,
-   `_option`, `_list`, `_except`, `_exitOf`, `_causeOf`, `TypeAlgebra.lean:214-320`): every
+   `_option`, `_list`, `_except`, `_exitOf`, `_causeOf`, `TypeAlgebra.lean:212-320`): every
    constructor `normalize` rebuilds costs a congruence lemma; under fusion it costs nothing.
 2. **An invariant of a table-driven fold, once per layer shape** (`cata_ofLayer_inv`): a
-   property every layer preserves holds of the fold. `templateAdmissible_of_closed`
-   (`Laws/Program/Template.lean:281`) and its `valueVars` twin are one proof by cases on the
-   *number of children* (four cases), whatever the number of constructors.
+   property every layer keeps holds of the fold. `templateAdmissible_of_closed`
+   (`Laws/Program/Template.lean:276`) is one proof by cases on the *number of children* (four
+   cases), whatever the number of constructors, and the same proof at the `valueFormer` column
+   gives the law for `valueVars` (no parameter implies parameters only under value formers),
+   which the tree does not state.
 3. **A monoid homomorphism after a monoid fold** (fusion again): `closed t = (varsOf t).isEmpty`,
-   so `varsOf_eq_nil_of_closed` (`Template.lean:285`) is one line.
+   so `varsOf_eq_nil_of_closed` (`Template.lean:280`) is one line.
 
 Every theorem carries `#print axioms`.
 -/

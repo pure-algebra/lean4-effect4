@@ -1,0 +1,30 @@
+'ProbeU.cata_pos_prod_string_recordty_eq' depends on axioms: [propext]
+'ProbeU.cata_pos_list_prod_string_recordty_eq' depends on axioms: [propext]
+'ProbeU.cata_recordty_never' does not depend on any axioms
+'ProbeU.cata_recordty_unit' does not depend on any axioms
+'ProbeU.cata_recordty_nat' does not depend on any axioms
+'ProbeU.cata_recordty_int' does not depend on any axioms
+'ProbeU.cata_recordty_string' does not depend on any axioms
+'ProbeU.cata_recordty_bool' does not depend on any axioms
+'ProbeU.cata_recordty_handle' does not depend on any axioms
+'ProbeU.cata_recordty_option' does not depend on any axioms
+'ProbeU.cata_recordty_list' does not depend on any axioms
+'ProbeU.cata_recordty_prod' does not depend on any axioms
+'ProbeU.cata_recordty_except' does not depend on any axioms
+'ProbeU.cata_recordty_exitOf' does not depend on any axioms
+'ProbeU.cata_recordty_causeOf' does not depend on any axioms
+'ProbeU.cata_recordty_fiberOf' does not depend on any axioms
+'ProbeU.cata_recordty_union' does not depend on any axioms
+'ProbeU.cata_recordty_lit' does not depend on any axioms
+'ProbeU.cata_recordty_refOf' does not depend on any axioms
+'ProbeU.cata_recordty_deferredOf' does not depend on any axioms
+'ProbeU.cata_recordty_var' does not depend on any axioms
+'ProbeU.cata_recordty_unknown' does not depend on any axioms
+'ProbeU.cata_recordty_record' depends on axioms: [propext]
+'ProbeU.hom_eq_cata_recordty' depends on axioms: [propext]
+'ProbeU.hom_pos_prod_string_recordty' depends on axioms: [propext]
+'ProbeU.hom_pos_list_prod_string_recordty' depends on axioms: [propext]
+'ProbeU.cata_id_recordty' depends on axioms: [propext]
+'ProbeU.cata_id_pos_prod_string_recordty' depends on axioms: [propext]
+'ProbeU.cata_id_pos_list_prod_string_recordty' depends on axioms: [propext]
+exit 0

@@ -8,3 +8,4 @@
 #exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Effect4: synthetic GREEN fixture
   Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_25	discr 0	alts 20	catchAll false
   Effect4.Program.Ty.sameHead	Effect4.Laws.Program.TyView	Effect4.Program.Ty.sameHead.match_1	discr 0	alts 20	catchAll true
+  Effect4.Program.selectRefusal	Effect4.Program.Typing.Blame	Effect4.Program.selectRefusal.match_1	discr 1	alts 3	catchAll true
