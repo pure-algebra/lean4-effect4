@@ -40,7 +40,16 @@ branch somewhere inside it).
 - **For W4's append**: `normS_schema` and `ofSchema_schema` have one arm per `Ty` constructor and
   `reservedFreeAlg` one field per constructor, so each gains one as `schema` and `TyAlgebra` do;
   `decodeRaw_normJ` and `decodeRaw_exact` end in a wildcard arm, so a constructor with no codec arm
-  costs them nothing.
+  costs them nothing. Under row 182 (ruled on main after this base, read at `f1231fe9`):
+  `reservedFree` is a predicate over handle targets, so it is a generic fold over the signature once
+  W2's machinery lands (today a hand `TyAlgebra` literal, the only one this seat adds), and
+  `normS_schema` becomes one fusion statement when `Bridge.schema` is generated from the face table
+  (D-U2).
+- **Main moved** since this base (`74dae8d2` → `f1231fe9` at the time of writing): no commit touches
+  this seat's cone (`git diff --stat 74dae8d2 f1231fe9` over `src/Effect4/Schema`,
+  `src/Effect4/Laws/Schema`, the battery, `Laws/Program/Folds`, `Program/FoldOf.lean`,
+  `Program/Fold.lean`, `Program/Ty.lean`, `Program/Typed.lean`: empty), and
+  `git merge-tree --write-tree f1231fe9 seat/W1` merges without conflict (exit 0; tested).
 
 ## The two exactness theorems (proved)
 
