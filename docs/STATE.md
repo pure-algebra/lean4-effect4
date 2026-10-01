@@ -354,7 +354,9 @@ false PASS (row 172 amended, W2) and the check-annotation profile mismatch (row 
 registered-handle-bytes premise of M7 is row 180. Probe U merged (`b5501b82`): every `Ty` traversal is an
 algebra of one fold over two per-constructor tables or the signature (row 182, ruled with D-U1 (a), D-U2
 JSON, D-U3 the clause as written); the machinery lands in commit 2 (W2, amendment 4), the rule's gate at
-commit 4 (W4); three latent findings seeded (`E4-FACE-CE-001`–`003`).
+commit 4 (W4); three latent findings seeded (`E4-FACE-CE-001`–`003`). Codex's 22:16 review folded: U's rule checker
+passes missing evidence (row 182 amended; W2 adds evidence validation and three controls); W1's
+branch confirmed repaired on the check-annotation profile.
 
 **The type-language probe's first result (probe T, 2026-10-01, merged `8036f0b4`; rows 157–164).**
 The data wave can finish `Ty` once only if its single append also carries a structured nominal

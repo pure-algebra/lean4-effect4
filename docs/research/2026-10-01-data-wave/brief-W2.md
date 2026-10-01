@@ -106,3 +106,12 @@ Acceptance: the generated modules compile; U's 24 agreement theorems hold agains
 view on today's `Ty` (a battery at the `Test/All.lean` anchor, `#print axioms`); the two red
 tables refused by name; every producer still writes today's bytes. If step 2 cannot finish, land
 step 1 and the conservativity script, write the receipt, hand back.
+
+## Amendment 5 (2026-10-01, Codex 22:16, verified): the rule checker validates its evidence
+
+Row 182 is amended (sent to the seat by message): `scripts/check-ty-rule.py` establishes that it
+looked before it says "no violations": both sections with their headers and the census's
+completeness footer (added to the instrument), every expected module present, no `error:` line;
+an empty, truncated or error-carrying log refuses with exit 2 and a named message. Self-test:
+the green fixture, the deliberate violation, and Codex's three missing-evidence controls (empty,
+compiler-error-only, truncated), from the Makefile rule, not wired into `check`.

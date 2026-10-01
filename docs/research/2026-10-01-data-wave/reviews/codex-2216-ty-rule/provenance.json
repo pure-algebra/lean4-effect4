@@ -1,0 +1,7 @@
+{
+  "revision": "f1231fe9bf97c906191231f16e9bf8aeb1df3a19",
+  "source": "docs/research/2026-10-01-type-language-probe/U/scripts/check-commit4-rule.py",
+  "fixture": "docs/research/2026-10-01-type-language-probe/U/scripts/fixtures/census-green.log",
+  "sha256": "48142cf9aa8ef18a6c494c828be38bd483181ea61a72b452b4aa5b02948ddd15",
+  "scope": "Python checker only; no Lean/compiler/build or repository changes"
+}
