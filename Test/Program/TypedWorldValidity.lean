@@ -147,7 +147,7 @@ theorem unbounded_tokens_refused :
 
 /-- A reference completion may pass the coarse declaration check yet name no live cell. -/
 theorem dangling_completion_shape : CompletionOk ghostHeap (.nat, .never) (.ofRefGet ⟨9⟩) :=
-  ⟨.nat, rfl, Ty.sub_refl .nat⟩
+  ⟨.nat, rfl, Ty.subN_refl .nat⟩
 
 theorem valid_completion_cannot_dangle (w : TWorld) (m : RState)
     (valid : WorldValid rootTy w m) (key : RefKey) (missing : m.state.refs.length ≤ key.index) :

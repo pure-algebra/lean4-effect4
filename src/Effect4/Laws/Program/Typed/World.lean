@@ -70,15 +70,16 @@ def ValueOk (w : World) (ty : Ty) (value : Val) : Prop :=
   Val.hasTy value ty w.state.externals.allocated = true
 
 /-- Completion typing has no heap-existence premise. The reference arm reads Ρ
-and requires its value type to fit the promise's answer column. It cannot fail
-with a typed error; the promise error column imposes no additional restriction. -/
+and requires its value type to be below the promise's answer column in the checker's order
+(`Ty.subN`, decisions row 137). It cannot fail with a typed error; the promise error column
+imposes no additional restriction. -/
 def CompletionOk (w : World) (types : Ty × Ty) :
     Completion Val Err Defect FiberId Ann → Prop
   | .ofExit (.success value) => ValueOk w types.1 value
   | .ofExit (.failure cause) =>
     causeAdmits (fun value ty => Val.hasTy value ty w.state.externals.allocated)
       types.2 cause = true
-  | .ofRefGet cell => ∃ ty, w.Ρ cell = some ty ∧ ty.sub types.1 = true
+  | .ofRefGet cell => ∃ ty, w.Ρ cell = some ty ∧ Ty.subN ty types.1 = true
 
 /-- The exit observation at an effect type: `CompletionOk` at the type's answer and error
 columns. Interruption and defects are admitted by the cause judgment at every error type. -/
@@ -190,7 +191,7 @@ theorem promise_typed_at_mono (w newer : World) (key : DeferredKey) (types : Ty 
 theorem ref_completion_inv (w : World) (cell : RefKey) (types : Ty × Ty) :
     ProofGraph.Obligation
     (CompletionOk w types (.ofRefGet cell) ↔
-      ∃ ty, w.Ρ cell = some ty ∧ ty.sub types.1 = true) := ⟨⟩
+      ∃ ty, w.Ρ cell = some ty ∧ Ty.subN ty types.1 = true) := ⟨⟩
 
 /-- The columns plus coverage recover exactly the keywise judgments used by
 the order. This is the seam between generated leaves and handler premises. -/
@@ -437,7 +438,7 @@ theorem promise_typed_at_mono (w newer : World) (key : DeferredKey) (types : Ty 
   fun hle h => hle.2.2.2.2.1.2 key types h
 
 theorem ref_completion_inv (w : World) (cell : RefKey) (types : Ty × Ty) :
-    CompletionOk w types (.ofRefGet cell) ↔ ∃ ty, w.Ρ cell = some ty ∧ ty.sub types.1 = true :=
+    CompletionOk w types (.ofRefGet cell) ↔ ∃ ty, w.Ρ cell = some ty ∧ Ty.subN ty types.1 = true :=
   Iff.rfl
 
 theorem heap_coverage_iff (w : World) :
