@@ -1,29 +1,6 @@
---- src/Effect4/Store/Carrier/Val.lean	2026-10-01 13:13:05
-+++ docs/research/2026-10-01-type-language-probe/Q/probe/ProbeQV/Val.lean	2026-10-01 15:37:17
-@@ -1,5 +1,10 @@
- import Effect4.Store.Carrier.Utf8
- 
-+-- Seat Q probe (2026-10-01): a copy of `src/Effect4/Store/Carrier/Val.lean` at `bff50631`, in the
-+-- namespace `ProbeQV`, with the data wave's two frames appended (T's commit 3): `int` (tag 13: a
-+-- sign byte, then the magnitude's digits) and `float` (tag 14: the binary64 bit pattern, eight
-+-- bytes big-endian). Every change is marked `seat Q`; nothing else differs from the tree.
-+
- /-!
- # Store.Val
- 
-@@ -44,8 +49,10 @@
- 
- set_option autoImplicit false
- 
--namespace Effect4.Store
-+open Effect4.Store
- 
-+namespace ProbeQV
-+
- /-! ## Frames and tags -/
- 
- /-- One frame: the tag, the payload length, the payload (`Canonical.lean:55-57`). -/
-@@ -70,10 +77,15 @@
+--- a/src/Effect4/Store/Carrier/Val.lean
++++ b/src/Effect4/Store/Carrier/Val.lean
+@@ -70,10 +70,15 @@
  def ref : UInt8 := 11
  /-- A live handle: the kind byte, then the allocation index as `nat` digits. -/
  def handle : UInt8 := 12
@@ -39,7 +16,7 @@
    deriving DecidableEq, Repr
  
  def Code.byte : Code → UInt8
-@@ -89,6 +101,8 @@
+@@ -89,6 +94,8 @@
    | .ctor => Tag.ctor
    | .ref => Tag.ref
    | .handle => Tag.handle
@@ -48,7 +25,7 @@
  
  def Code.spelling : Code → String
    | .bool => "bool"
-@@ -103,9 +117,11 @@
+@@ -103,9 +110,11 @@
    | .ctor => "ctor"
    | .ref => "ref"
    | .handle => "handle"
@@ -61,7 +38,7 @@
  
  theorem mem_codes (code : Code) : code ∈ codes := by cases code <;> decide
  
-@@ -164,6 +180,10 @@
+@@ -164,6 +173,10 @@
    /-- A live handle into a running machine's stores: the kind byte, then the allocation
    index. Not content: no shape accepts it and no node carries it. -/
    | handle (kind : UInt8) (key : Nat)
@@ -72,7 +49,7 @@
  deriving Inhabited
  
  namespace Val
-@@ -190,6 +210,8 @@
+@@ -190,6 +203,8 @@
    | .ctor i args => s!"(Val.ctor {i} [{", ".intercalate (renderList args)}])"
    | .ref k d => s!"(Val.ref {k} {d})"
    | .handle k n => s!"(Val.handle {k} {n})"
@@ -81,7 +58,7 @@
  def renderList : List Val → List String
    | [] => []
    | x :: xs => render x :: renderList xs
-@@ -212,6 +234,9 @@
+@@ -212,6 +227,9 @@
    | .ctor i args => framed Tag.ctor (framed Tag.nat (natBytes i) ++ encodeList args)
    | .ref k d => framed Tag.ref (k :: d)
    | .handle k n => framed Tag.handle (k :: natBytes n)
@@ -91,7 +68,7 @@
  /-- The frames of a list of values, back to back. -/
  def encodeList : List Val → Bytes
    | [] => []
-@@ -242,6 +267,8 @@
+@@ -242,6 +260,8 @@
    | .ctor _ _ => Tag.ctor
    | .ref _ _ => Tag.ref
    | .handle _ _ => Tag.handle
@@ -100,7 +77,7 @@
  
  /-- The payload of a value's frame. -/
  def payload : Val → Bytes
-@@ -257,10 +284,15 @@
+@@ -257,10 +277,15 @@
    | .ctor i args => framed Tag.nat (natBytes i) ++ encodeList args
    | .ref k d => k :: d
    | .handle k n => k :: natBytes n
@@ -117,7 +94,7 @@
  
  /-- The single-motive induction principle for the nested inductive, in the membership form
  `Data/Json.lean:304-339` gives `Json`: one hypothesis per constructor, the children of a `list`
-@@ -274,10 +306,11 @@
+@@ -274,10 +299,11 @@
      (pair : ∀ a b, motive a → motive b → motive (.pair a b))
      (none : motive .none) (some : ∀ a, motive a → motive (.some a))
      (ctor : ∀ i args, (∀ x ∈ args, motive x) → motive (.ctor i args))
@@ -131,7 +108,7 @@
        (by intro _ h; cases h)
        (fun _ _ ihHead ihTail => by
          intro _ hmem
-@@ -341,6 +374,9 @@
+@@ -341,6 +367,9 @@
        WFList args
    | .ref k d => (k :: d).length < 2 ^ 64
    | .handle k n => (k :: natBytes n).length < 2 ^ 64
@@ -141,7 +118,7 @@
  /-- `WF` at every member. -/
  def WFList : List Val → Prop
    | [] => True
-@@ -364,6 +400,9 @@
+@@ -364,6 +393,9 @@
        decide ((framed Tag.nat (natBytes i) ++ encodeList args).length < 2 ^ 64) && wfList args
    | .ref k d => decide ((k :: d).length < 2 ^ 64)
    | .handle k n => decide ((k :: natBytes n).length < 2 ^ 64)
@@ -151,7 +128,7 @@
  /-- `wf` at every member. -/
  def wfList : List Val → Bool
    | [] => true
-@@ -381,6 +420,7 @@
+@@ -381,6 +413,7 @@
      simp [wf, WF, wfList_iff xs]
    case ctor i args =>
      simp [wf, WF, wfList_iff args, and_assoc]
@@ -159,7 +136,7 @@
    all_goals simp [wf, WF]
  termination_by structural v
  theorem wfList_iff (xs : List Val) : wfList xs = true ↔ WFList xs := by
-@@ -422,6 +462,11 @@
+@@ -422,6 +455,11 @@
    | ctor i args => exact h.2.1
    | ref k d => exact h
    | handle k n => exact h
@@ -171,7 +148,7 @@
  
  /-- Well-formedness reaches every child. -/
  theorem WF_child {v c : Val} (hv : WF v) (hc : c ∈ v.children) : WF c := by
-@@ -669,6 +714,16 @@
+@@ -669,6 +707,16 @@
      match payload with
      | k :: digits => if digits.head? = some 0 then none else some (.handle k (natOfDigits digits))
      | [] => none
@@ -188,11 +165,10 @@
    else none
  
  /-! The dispatch, one equation per tag: the tag comparisons are closed terms, so each is `rfl`,
-@@ -736,6 +791,22 @@
-         | k :: digits =>
+@@ -737,6 +785,22 @@
            if digits.head? = some 0 then none else some (.handle k (natOfDigits digits))
          | [] => none) := rfl
-+
+ 
 +/-- seat Q -/
 +theorem decodeBody_int :
 +    decodeBody dec Tag.int payload =
@@ -208,10 +184,11 @@
 +theorem decodeBody_float :
 +    decodeBody dec Tag.float payload =
 +      (if payload.length = 8 then some (.float (UInt64.ofNat (natOfDigits payload))) else none) := rfl
- 
++
  end dispatch
  
-@@ -804,16 +875,39 @@
+ theorem decodeBody_encode (dec : Bytes → Option (Val × Bytes)) (v : Val) (hwf : v.WF)
+@@ -804,16 +868,39 @@
      show (if (natBytes n).head? = some 0 then none else some (Val.handle k (natOfDigits (natBytes n))))
        = some (.handle k n)
      rw [if_neg (natBytes_head n), natOfDigits_natBytes]
@@ -253,7 +230,7 @@
  
  theorem decodeBody_exact (dec : Bytes → Option (Val × Bytes))
      (hdec : ∀ b v r, dec b = some (v, r) → b = Val.encode v ++ r ∧ v.WF)
-@@ -972,7 +1066,51 @@
+@@ -972,7 +1059,51 @@
            rw [hdigits]
            exact hlen
      · exact nomatch h
@@ -306,7 +283,7 @@
    exact nomatch h
  
  /-! ## The knot: fuel -/
-@@ -1122,6 +1260,8 @@
+@@ -1122,6 +1253,8 @@
    | .ctor i a, .ctor j b => decide (i = j) && beqList a b
    | .ref k d, .ref k' d' => decide (k = k') && decide (d = d')
    | .handle k n, .handle k' n' => decide (k = k') && decide (n = n')
@@ -315,9 +292,3 @@
    | _, _ => false
  def beqList : List Val → List Val → Bool
    | [], [] => true
-@@ -1232,4 +1372,4 @@
- 
- /-! ## Receipts -/
- 
--end Effect4.Store
-+end ProbeQV

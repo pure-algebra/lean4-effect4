@@ -1,5 +1,5 @@
---- src/OCaml5/Lcnf/Translate.lean	2026-10-01 13:13:05
-+++ docs/research/2026-10-01-type-language-probe/Q/tools/QLcnf/Translate.lean	2026-10-01 15:10:51
+--- a/src/OCaml5/Lcnf/Translate.lean
++++ b/src/OCaml5/Lcnf/Translate.lean
 @@ -610,6 +610,10 @@
            else useAsList s!"{ci.name}.{fn}" c e
        rel := rel ++ [e]

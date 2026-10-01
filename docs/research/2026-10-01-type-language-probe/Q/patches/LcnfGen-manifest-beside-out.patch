@@ -1,14 +1,5 @@
---- src/OCaml5/Tools/LcnfGen.lean	2026-10-01 13:13:05
-+++ docs/research/2026-10-01-type-language-probe/Q/tools/QLcnf/LcnfGen.lean	2026-10-01 15:10:51
-@@ -7,7 +7,7 @@
- import OCaml5.Lcnf.Dump
- import OCaml5.Lcnf.Externs
- import OCaml5.Lcnf.Types
--import OCaml5.Lcnf.Translate
-+import QLcnf.Translate
- 
- /-!
- # LcnfGen — Lean definitions to an OCaml module, through the mono-phase LCNF
+--- a/src/OCaml5/Tools/LcnfGen.lean
++++ b/src/OCaml5/Tools/LcnfGen.lean
 @@ -179,7 +179,8 @@
      let env ← getEnv
      let monoIndex := Conform.Lcnf.persistedMonoIndex env

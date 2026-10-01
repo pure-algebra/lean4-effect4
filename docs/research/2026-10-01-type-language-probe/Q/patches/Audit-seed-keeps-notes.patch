@@ -1,5 +1,5 @@
---- tools/Conform/Cli/Audit.lean	2026-10-01 13:13:05
-+++ docs/research/2026-10-01-type-language-probe/Q/tools/QConform/Audit.lean	2026-10-01 15:41:51
+--- a/tools/Conform/Cli/Audit.lean
++++ b/tools/Conform/Cli/Audit.lean
 @@ -155,6 +155,20 @@
    required : Array CheckId := #[]
    pins : List Pin := []
