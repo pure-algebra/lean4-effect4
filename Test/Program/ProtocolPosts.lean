@@ -709,7 +709,7 @@ theorem closeSeq_protocol (root : ProgramSource) (ex : ExitV) :
       IteratorProtocol root w (EffTy.pure (.exitOf .unit .never)) (EffTy.pure .unit)
         (.store (.closeSeq remaining ex captured))
   | [], captured, w, hcap, _ => by
-    refine .step rfl fun w' _ v hv => ?_
+    refine .step rfl (fun _ => rfl) fun w' _ v hv => ?_
     have hcap' := capturedOk_append hcap hv
     show IteratorAnswer root w' (EffTy.pure .unit) (closeDone (captured ++ reasonsOfVal v))
     generalize captured ++ reasonsOfVal v = all at hcap'
@@ -719,7 +719,7 @@ theorem closeSeq_protocol (root : ProgramSource) (ex : ExitV) :
       exact .halt ⟨r :: rest⟩
         ⟨fitsExit_of_clean w' _ _ hcap'.1 hcap'.2, hcap'.2⟩
   | fin :: rest, captured, w, hcap, hfins => by
-    refine .step rfl fun w' hw' v hv => ?_
+    refine .step rfl (fun _ => rfl) fun w' hw' v hv => ?_
     have hcap' := capturedOk_append hcap hv
     show IteratorAnswer root w' (EffTy.pure .unit)
       (.resume (exitR (denoteFin fin ex)) (.store (.closeSeq rest ex (captured ++ reasonsOfVal v))))

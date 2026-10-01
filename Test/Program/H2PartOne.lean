@@ -295,7 +295,16 @@ end RaceFailureBuffers
 The local FullExitOk additionally refuses missingService at an empty requirement row.
 The accepted loop stack returns that failure unchanged across different requirement rows.
 This is a saved-frame witness, not a reachable-run claim or a refutation of base FitsExit;
-part one's live ExitOk deliberately admits missingService at both rows. -/
+part one's live ExitOk deliberately admits missingService at both rows.
+
+Decisions row 117's side condition (seat D1, 2026-10-01): the iterator and loop protocols keep
+the requirement row from emptying (`LoopProtocol.step`'s `rows`, the condition under which part
+two transports along the frame, `exitOk2_transport` in the formal pass's G5), so the witness's
+stack is refused (`loop_refused`); `old_loop_admitted` keeps it as history over a local copy of
+the protocol without the condition (`OldLoopProtocol`), and a loop frame that keeps the row is
+still accepted (`loop_kept_admitted`). Part two itself (`FullExitOk` as the live exit judgment)
+is not landed: it needs the presence clause per position, which the walk does not carry (seat
+D1's receipt). -/
 namespace MissingServiceTransport
 open Effect4.Program.Typed.Contracts
 
@@ -318,15 +327,71 @@ def missing : CauseV := Cause.die .missingService
 def name : EffName := .abort
 def saved : RSaved := ⟨.pure (.success .unit), [], false, none, false⟩
 
-/-- The answer-never loop meets the actual frame protocol, whose continuation is vacuous. -/
-theorem loop_admitted (src : ProgramSource) (w : W) :
-    StackAccepts (TypedProg src) FullExitOk (frameProtocols src) w inner outer
+/-! History: the loop protocol before decisions row 117's side condition, a local copy of
+`LoopProtocol` without its `rows` field (every other clause the current one). -/
+mutual
+  inductive OldLoopProtocol (root : ProgramSource) : W → EffTy → EffTy → EffName → Val → Prop
+    | step {w : W} {tin tout : EffTy} {name : EffName} {cursor : Val}
+        (errors : tin.error = tout.error)
+        (next : ∀ w', w.leHost w' → ∀ v, Typed.Fits w' v tin.answer →
+          OldLoopAnswer root w' tout name ((interpR root.program).loopResume name cursor v)) :
+        OldLoopProtocol root w tin tout name cursor
+  inductive OldLoopAnswer (root : ProgramSource) :
+      W → EffTy → EffName → LoopNext Val RProgram → Prop
+    | continue {w : W} {tout : EffTy} {name : EffName} (cursor : Val) (body : RProgram)
+        (tin : EffTy) (typed : TypedProg root w tin body)
+        (tail : OldLoopProtocol root w tin tout name cursor) :
+        OldLoopAnswer root w tout name (.continue cursor body)
+    | finish {w : W} {tout : EffTy} {name : EffName} (code : RProgram)
+        (typed : TypedProg root w tout code) :
+        OldLoopAnswer root w tout name (.finish code)
+end
+
+/-- History: the hook arrows with the old loop protocol. -/
+def oldFrameProtocols (root : ProgramSource) : FrameProtocols :=
+  { frameProtocols root with loop := OldLoopProtocol root }
+
+/-- History (red against the current protocol): the answer-never loop met the old frame
+protocol, whose continuation is vacuous, from a row requiring the scope service to an empty
+one. -/
+theorem old_loop_admitted (src : ProgramSource) (w : W) :
+    StackAccepts (TypedProg src) FullExitOk (oldFrameProtocols src) w inner outer
       [.loop name .unit] := by
   apply StackAccepts.cons (middle := outer)
   · apply FrameAccepts.loop
     intro w' _
-    exact LoopProtocol.step (tin := inner) (tout := outer) rfl (fun _ _ _ h => False.elim h)
+    exact OldLoopProtocol.step (tin := inner) (tout := outer) rfl (fun _ _ _ h => False.elim h)
   · exact StackAccepts.nil outer
+
+/-- **The flip** (decisions row 117's side condition, proved): the loop frame's protocol keeps
+the requirement row from emptying, and `inner` requires the scope service while `outer` requires
+nothing, so the witness's stack is refused, under every exit judgment. -/
+theorem loop_refused (src : ProgramSource) (w : W)
+    (Ex : W → EffTy → ExitV → Prop) :
+    ¬ StackAccepts (TypedProg src) Ex (frameProtocols src) w inner outer [.loop name .unit] := by
+  intro h
+  cases h with
+  | cons head tail =>
+    cases tail
+    cases head with
+    | loop _ _ protocol =>
+      cases protocol w (leHost_refl w) with
+      | step _ rows _ => exact absurd (rows rfl) (by decide)
+
+/-- A loop that keeps its requirement row. -/
+def innerKept : EffTy := ⟨.unit, .never, Env.Requirement.single nativeScopeKey⟩
+
+/-- **Positive control** (proved): a loop frame that does not empty the row is accepted, here
+from `inner` to `innerKept`, both requiring the scope service. -/
+theorem loop_kept_admitted (src : ProgramSource) (w : W) :
+    StackAccepts (TypedProg src) FullExitOk (frameProtocols src) w inner innerKept
+      [.loop name .unit] := by
+  apply StackAccepts.cons (middle := innerKept)
+  · apply FrameAccepts.loop
+    intro w' _
+    exact LoopProtocol.step (tin := inner) (tout := innerKept) rfl
+      (fun h => absurd h (by decide)) (fun _ _ _ h => False.elim h)
+  · exact StackAccepts.nil innerKept
 
 theorem input_ok (w : W) : FullExitOk w inner (.failure missing) :=
   ⟨fitsExit_of_clean w inner missing rfl
@@ -350,7 +415,9 @@ theorem output_bad (w : W) : ¬ FullExitOk w outer (.failure missing) := by
   change true = false at excluded
   exact Bool.noConfusion excluded
 
-#print axioms loop_admitted
+#print axioms old_loop_admitted
+#print axioms loop_refused
+#print axioms loop_kept_admitted
 #print axioms input_ok
 #print axioms provenance
 #print axioms output_eq
