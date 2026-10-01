@@ -141,15 +141,26 @@ def World.le (w newer : World) : Prop :=
   (∀ id, TableExtends (w.Θ id) (newer.Θ id)) ∧
   newer.serviceTy = w.serviceTy
 
+/-- **Scope presence at a store** (decisions rows 139 and 156): the store holds an entry for
+scope `sc`, open or closed (`ScopeStore.entryAt`). The one name for the fact wherever it is read
+at a machine's store: `QueueOk.links` and the observer clauses' scope-finalizer drops
+(`Typed/Scheduler.lean`) read it at `m.state`, and the world-level `ScopeLive` below is this
+predicate at `w.state`; `WorldValid.state` moves a proof between the two. -/
+def _root_.Effect4.Machine.Stores.ScopeLive (s : Stores) (sc : Nat) : Prop :=
+  (s.scopes.entryAt sc).isSome = true
+
+instance (s : Stores) (sc : Nat) : Decidable (s.ScopeLive sc) :=
+  inferInstanceAs (Decidable ((s.scopes.entryAt sc).isSome = true))
+
 /-- **Scope presence** (decisions row 156): the world's store holds an entry for scope `sc`, open
-or closed. One predicate, read by name wherever a scope's presence is demanded or supplied: the
-scope arm of `HandleFits`, the posts that answer a scope handle, the scope-reading arms of the
-store and fiber protocols, and `TypedProg`'s `scopeExit` constructor. It persists along the world
-order (`scopeLive_mono`). -/
-def ScopeLive (w : World) (sc : Nat) : Prop := (w.state.scopes.entryAt sc).isSome = true
+or closed: the store-level `Stores.ScopeLive` at `w.state`. One predicate, read by name wherever a
+scope's presence is demanded or supplied: the scope arm of `HandleFits`, the posts that answer a
+scope handle, the scope-reading arms of the store and fiber protocols, and `TypedProg`'s
+`scopeExit` constructor. It persists along the world order (`scopeLive_mono`). -/
+def ScopeLive (w : World) (sc : Nat) : Prop := w.state.ScopeLive sc
 
 instance (w : World) (sc : Nat) : Decidable (ScopeLive w sc) :=
-  inferInstanceAs (Decidable ((w.state.scopes.entryAt sc).isSome = true))
+  inferInstanceAs (Decidable (w.state.ScopeLive sc))
 
 /-- Ghost updates used by the four allocation contracts. -/
 def World.addFiber (w : World) (id : FiberId) (ty : EffTy) : World :=

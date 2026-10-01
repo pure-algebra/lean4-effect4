@@ -1,0 +1,5 @@
+'Effect4.Program.Typed.SeatD3.MarkerStack.exitDone_config' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.SeatD3.MarkerStack.exitDone_false' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.SeatD3.MarkerStack.finish_config' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.SeatD3.MarkerStack.finish_false' depends on axioms: [propext, Quot.sound]
+exit 0

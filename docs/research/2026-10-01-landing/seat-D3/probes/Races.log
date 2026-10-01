@@ -1,0 +1,5 @@
+'Effect4.Program.Typed.SeatD3.Races.Registration.config_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.SeatD3.Races.Registration.registrationDone_false' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.SeatD3.Races.Launch.config_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.SeatD3.Races.Launch.launch_false' depends on axioms: [propext, Quot.sound]
+exit 0

@@ -195,11 +195,12 @@ structure QueueOk (root : ProgramSource) (w : World) (m : RState)
   enroll : ∀ race child, .enrollRace race child ∈ commands → EnrollRaceOk root w m race child
   noRaceAfterInterrupt : ∀ host yielding race,
     .afterInterrupt host yielding (.race race) ∉ commands
-  /-- A queued `link` names a scope the store holds and an existing target: `linkScope` halts
-  otherwise (`Machine/Fibers.lean:1005-1036`). Row 139's typed scope on a queued link. -/
+  /-- A queued `link` names a scope the store holds (`Stores.ScopeLive`, row 156's predicate at
+  the machine's store) and an existing target: `linkScope` halts otherwise
+  (`Machine/Fibers.lean:1005-1036`). Row 139's typed scope on a queued link. -/
   links : ∀ mode scope target interruptor extra,
     .link mode scope target interruptor extra ∈ commands →
-      (m.state.scopes.entryAt scope).isSome = true ∧ (m.fiber? target).isSome = true
+      m.state.ScopeLive scope ∧ (m.fiber? target).isSome = true
 
 theorem QueueOk.fresh {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
     (queue : QueueOk root w m commands) : QueueFresh m commands := queue.keys.below
@@ -1656,28 +1657,17 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M3bAssembly.evalTerm_fits
 #typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 3
   using aesop (rule_sets := [Effect4.TypedState])
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_evaluate
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_finish
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_resume
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_launch
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_enrollRace
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_registrationDone
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_interruptTarget
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_afterInterrupt
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_raceCancel
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_trackChild
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_observe
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_exitDone
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_closeParAwait
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_link
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_drainDue
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_wake
 #proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves
 #proof_wanted Effect4.Program.Typed.M6Ledger.typedState_reachable
-#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 20
-  using aesop (rule_sets := [Effect4.TypedState])
+-- `M6Ledger`'s proved goals and its report are at the foot of the last command module
+-- (`Typed/Commands/*.lean`), which imports this one and sees every proof.
 #proof_wanted Effect4.Program.Typed.M7.exits_typed
 #proof_wanted Effect4.Program.Typed.M7.stores_typed
 #proof_wanted Effect4.Program.Typed.M7.never_halts
@@ -1691,14 +1681,8 @@ end Effect4.Program.Typed
 #obligation_proved Effect4.Program.Typed.M6Edits.skip := @Effect4.Program.Typed.edit_skip
 #obligation_proved Effect4.Program.Typed.M6Edits.middleware := @Effect4.Program.Typed.edit_middleware
 #obligation_proved Effect4.Program.Typed.M6Edits.reestablish := @Effect4.Program.Typed.reestablishes
-#proof_wanted Effect4.Program.Typed.M6Edits.drain
-#proof_wanted Effect4.Program.Typed.M6Edits.yield
-#proof_wanted Effect4.Program.Typed.M6Edits.interrupt
-#proof_wanted Effect4.Program.Typed.M6Edits.clockNone
 #proof_wanted Effect4.Program.Typed.M6Edits.clockSome
-#proof_wanted Effect4.Program.Typed.M6Edits.answer
-#typed_state_obligations Effect4.Program.Typed.M6Edits ceiling 6
-  using aesop (rule_sets := [Effect4.TypedState])
+-- `M6Edits`' report is at `Typed/Edits.lean`'s foot, which imports this module and proves five goals.
 #obligation_proved Effect4.Program.Typed.M3bWorld.preds_savedOk_mono :=
   @Effect4.Program.Typed.preds_savedOk_mono
 #obligation_audit Effect4.Program.Typed.M3bWorld
