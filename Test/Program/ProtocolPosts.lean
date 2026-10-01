@@ -515,6 +515,61 @@ theorem release_registration_admitted (root : ProgramSource) (w : W)
   rw [store]
   decide +kernel
 
+/-! ### `Scope.close` with zero, one and several finalizers (positive controls)
+
+Decisions row 151's acceptance keeps these positive under every option: the close installs a
+program typed at the close-scope row's `⟨unit, never⟩` (`closeScope_installs`,
+`Typed/Adequacy.lean`) with no finalizer (`void`), with one finalizer whose program is typed
+there (a `release` that succeeds), and with two (the walk, `closeWalk_typed`). -/
+
+/-- One `release` finalizer that succeeds, registered on the open scope 0. -/
+def okReleaseStore : Stores :=
+  ((syncOpStep (.scopeAdd 0 (.release 7 false)) StoreUnit.oneScope).map (·.1)).getD Stores.empty
+
+/-- A second one on top. -/
+def twoReleaseStore : Stores :=
+  ((syncOpStep (.scopeAdd 0 (.release 8 false)) okReleaseStore).map (·.1)).getD Stores.empty
+
+theorem zero_order : (scopeCloseSnapshot 0 failed StoreUnit.oneScope).map (·.2.2) = some [] := by
+  decide +kernel
+
+theorem one_order :
+    (scopeCloseSnapshot 0 failed okReleaseStore).map (·.2.2) = some [.release 7 false] := by
+  decide +kernel
+
+theorem two_order :
+    ((scopeCloseSnapshot 0 failed twoReleaseStore).map (·.2.2)).map List.length = some 2 := by
+  decide +kernel
+
+/-- A lone-finalizer snapshot names the order's one finalizer. -/
+theorem lone_of_order {st : Stores} {order : List FinName}
+    (horder : (scopeCloseSnapshot 0 failed st).map (·.2.2) = some order)
+    {state : Stores} {strategy : FinalizerStrategy} {fin : FinName}
+    (hs : scopeCloseSnapshot 0 failed st = some (state, strategy, [fin])) : order = [fin] := by
+  rw [hs] at horder
+  exact (Option.some.inj horder).symm
+
+theorem close_zero_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RProgram)
+    (h : closeScopeR 0 failed true StoreUnit.oneScope = some (st', code)) :
+    TypedProg root w (EffTy.pure .unit) code :=
+  closeScope_installs root w 0 failed true _ st' code
+    (fun _ _ _ hs => nomatch lone_of_order zero_order hs) h
+
+theorem close_one_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RProgram)
+    (h : closeScopeR 0 failed true okReleaseStore = some (st', code)) :
+    TypedProg root w (EffTy.pure .unit) code :=
+  closeScope_installs root w 0 failed true _ st' code (fun _ _ fin hs => by
+    cases lone_of_order one_order hs
+    exact TypedProg.pure ⟨trivial, trivial⟩) h
+
+theorem close_two_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RProgram)
+    (h : closeScopeR 0 failed true twoReleaseStore = some (st', code)) :
+    TypedProg root w (EffTy.pure .unit) code :=
+  closeScope_installs root w 0 failed true _ st' code (fun _ _ _ hs => by
+    have two := two_order
+    rw [hs] at two
+    exact Nat.noConfusion (Nat.succ.inj (Option.some.inj two))) h
+
 end CloseScope
 
 /-! ## The close walk answers its own merged exit -/
@@ -1187,6 +1242,12 @@ open Test.Program.ProtocolPosts in
 #print axioms CloseScope.lone_release_outside_post
 open Test.Program.ProtocolPosts in
 #print axioms CloseScope.release_registration_admitted
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.close_zero_typed
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.close_one_typed
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.close_two_typed
 open Test.Program.ProtocolPosts in
 #print axioms CloseIter.closeSeq_done
 open Test.Program.ProtocolPosts in
