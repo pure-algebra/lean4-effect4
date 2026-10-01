@@ -6,6 +6,7 @@ import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.Typing.CheckInversion
 import Effect4.Laws.Program.Typing.Sound
 import Effect4.Laws.Program.ReferenceTyping
+import Effect4.Laws.Program.Typed.Denotation
 
 /-!
 # Laws.Program.Typed.Assembly — the typed state of the reference machine, split at the cut
@@ -815,28 +816,6 @@ theorem queueOk_emit {root : ProgramSource} {w : World} {m : RState} {commands :
 
 /-! ## The capture lookup -/
 
-theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} {v : Val}
-    (h : EnvTyped w env vals) (hv : Fits w v ty) : EnvTyped w (env ++ [ty]) (vals ++ [v]) := by
-  refine ⟨by simp only [List.length_append, h.1, List.length_singleton], fun i t x ht hx => ?_⟩
-  by_cases hi : i < env.length
-  · rw [List.getElem?_append_left hi] at ht
-    rw [List.getElem?_append_left (h.1 ▸ hi)] at hx
-    exact h.2 i t x ht hx
-  · have hge : env.length ≤ i := Nat.le_of_not_lt hi
-    rw [List.getElem?_append_right hge] at ht
-    rw [List.getElem?_append_right (h.1 ▸ hge)] at hx
-    rw [← h.1] at hx
-    cases hk : i - env.length with
-    | zero =>
-      rw [hk] at ht hx
-      simp only [List.getElem?_cons_zero, Option.some.injEq] at ht hx
-      subst ht hx
-      exact hv
-    | succ k =>
-      rw [hk] at ht
-      simp only [List.getElem?_cons_succ, List.getElem?_nil] at ht
-      cases ht
-
 /-- A capture's release runs at the point its path's `acquireRelease` checks it at: the
 release child, over the checker's environment extended by the acquired value and the exit, with
 the completed view the release is constructed with (`denoteFin`'s `foreign` arm reads it from the
@@ -1012,12 +991,6 @@ theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compil
     (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
     ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) :=
   ⟨_, (machineTyped_load root ty fuel compileFuel closed noMarker (code _)).typed⟩
-
-/-- The empty environment is typed at every world. -/
-theorem envTyped_nil (w : World) : EnvTyped w [] [] := by
-  refine ⟨rfl, fun i ty v h _ => ?_⟩
-  rw [List.getElem?_nil] at h
-  cases h
 
 /-- **A checked program's layer references are well formed** (decisions row 170):
 `typeOfProgram` answers only under `layerRefsWF` (`Program/Typing.lean:61-64`), so the load's

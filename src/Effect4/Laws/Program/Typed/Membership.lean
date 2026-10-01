@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typed.Validity
 import Effect4.Program.FoldOf
+import Effect4.Laws.Program.Signature
 
 /-!
 # Value membership in a typed world
@@ -2701,5 +2702,78 @@ theorem admitColumn_prod_never_nat : admitColumn (.prod .never .nat) = false := 
 
 theorem admitColumn_except_never_never : admitColumn (.except .never .never) = false := by
   decide +kernel
+
+/-! ## Membership at a flat carrier and at a tag payload (granted 2026-10-01 for seat D2)
+
+Two case analyses on `Ty` that M5's denotation lemma (`Laws/Program/Typed/Denotation.lean`)
+reads and that row 132 keeps in this module. -/
+
+/-- **Membership at a flat carrier is `FlatFits`** (proved): the converse of `flatFits_fits` on
+the carriers `flatCarrier` admits (`Laws/Program/Signature.lean`: the scalars and every handle
+but the context). `provideService`'s denotation sets a context binding the provided value under
+its key, and the `setContext` row demands `ServicesFit` (`Typed/Residual.lean`'s `fiberPre`),
+which reads the key's carrier through `FlatFits`; the checker gives the value's membership at
+that carrier, and a lawful signature's carriers are flat (`LawfulSig.services`). -/
+theorem fits_flatFits {w : World} {v : Val} {t : Ty} (hflat : flatCarrier t = true)
+    (h : Fits w v t) : FlatFits w v t := by
+  cases t with
+  | unit => exact h
+  | nat => exact h
+  | string => exact h
+  | bool => exact h
+  | handle target =>
+    have hne : target ≠ Ty.contextTarget := bne_iff_ne.mp hflat
+    cases v with
+    | handle kind index => exact h
+    | _ => exact absurd h.1 hne
+  | _ => exact Bool.noConfusion hflat
+
+/-- **A tag hit's payload fits the payload type** (proved): the membership form of
+`Ty.payload_hasTy` (`Laws/Program/Decision.lean`). A `select` on a tag decision binds the hit's
+payload at `payloadTy` (`Decision.arms`), so the chosen arm's point is typed only if the payload
+fits there: the two-cell list fits only a member tagged with the hit's tag, whose payload type is
+one of the payloads `payloadTy` joins. -/
+theorem fits_tagPayload {w : World} {c : Ty} {v p : Val} {tag : String} {P : Ty}
+    (hc : Ty.taggedColumn c = true) (hv : Fits w v c)
+    (hp : Val.tagPayload? tag v = some p) (hP : Ty.payloadTy tag c = some P) : Fits w p P := by
+  obtain rfl : v = Val.list [Val.str tag, p] := by
+    unfold Val.tagPayload? at hp
+    split at hp
+    · rename_i t x
+      split at hp
+      · rename_i h
+        simp only [Option.some.injEq] at hp
+        subst hp
+        simp only [beq_iff_eq] at h
+        subst h
+        rfl
+      · exact nomatch hp
+    · exact nomatch hp
+  obtain ⟨m, hm, hvm⟩ := (fits_members w _ c).mpr hv
+  have hcm := List.all_eq_true.mp hc m hm
+  obtain ⟨q, hmq, hq⟩ : ∃ q, Ty.payloadOf tag m = some q ∧ Fits w p q := by
+    cases m with
+    | prod a b =>
+      cases a with
+      | lit t =>
+        obtain ⟨x, y, hxy, hx, hy⟩ := (fits_prod_iff w _ _ b).mp hvm
+        simp only [Store.Val.list.injEq, List.cons.injEq, and_true] at hxy
+        obtain ⟨rfl, rfl⟩ := hxy
+        have ht : tag = t := hx
+        subst ht
+        exact ⟨b, if_pos rfl, hy⟩
+      | _ => exact Bool.noConfusion hcm
+    | unit | nat | int | string | bool | lit _ => exact hvm.elim
+    | _ => exact Bool.noConfusion hcm
+  have hmem : q ∈ c.members.filterMap (Ty.payloadOf tag) := List.mem_filterMap.mpr ⟨m, hm, hmq⟩
+  unfold Ty.payloadTy at hP
+  split at hP
+  · rename_i hnil
+    rw [hnil] at hmem
+    exact absurd hmem List.not_mem_nil
+  · simp only [Option.some.injEq] at hP
+    subst hP
+    rw [fits_normalize, fits_ofMembers]
+    exact ⟨q, hmem, hq⟩
 
 end Effect4.Program.Typed
