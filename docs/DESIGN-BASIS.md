@@ -38,18 +38,19 @@ check behind it is the trust gate's, at `[propext, Quot.sound]` (the refresh ran
 **Tested** is a finite check, **reading** a reading of code or notes, **assumed** not checked.
 "Proved" is never said of a paper.
 
-Paths and commits. Tree paths are from the repository root, with lines at `dceae006` (no file
-under `src/`, `Test/`, `tools/` or `harness/` changed between `dceae006` and `0d93749f`).
-`Effects/…` is the pinned `effects` package (`lakefile.toml:126-131`: tag `v0.8.0`, `a4ee7a14`). A
-bare `Name.ts:n` is under `vendor/effect-4.0.0-rc.112/src/`. `git:<rev>:<path>` is a path at the
-commit named: earlier history, or `a561d604`, the merge of the laws seat E landed after
-`dceae006`, which this file cites from the tree rather than from their probes. Decisions rows are
-cited as `docs/core/decisions.md` holds them at `a561d604` (rows 134–149 were written after
-`dceae006`; rows 134, 137, 138 and 149 were ruled on 2026-10-01). Research notes are under
-`docs/research/`; a note is
-*tracked* when it is tracked on `refactor/phase1-phase3` at `0d93749f` (the formal pass since
-`c5ec3efd`, the landing plan since `bb269fde`, its ports since `1c6f9c92`) or by this refresh (the
-eight notes force-added at `1efb963e`).
+Paths and commits. Tree paths are from the repository root, with lines at `dceae006`; a cited line
+in a file that changed since may have moved, and this refresh's checker prints where its text sits
+at a later commit (`check_citations.py --drift <rev>`, in
+`docs/research/2026-10-01-design-basis-refresh/`). `Effects/…` is the pinned `effects` package
+(`lakefile.toml:126-131`: tag `v0.8.0`, `a4ee7a14`). A bare `Name.ts:n` is under
+`vendor/effect-4.0.0-rc.112/src/`. `git:<rev>:<path>` is a path at the commit named: earlier
+history, or `a561d604`, the merge of the laws seat E landed after `dceae006`, which this file cites
+from the tree rather than from their probes. Decisions rows are cited as `docs/core/decisions.md`
+holds them at `e7f9756f` (rows 134–150 were written after `dceae006`; the owner ratified rows 134,
+137, 138 and 149 on 2026-10-01). Research notes are under `docs/research/`; a note is *tracked* when
+it is tracked on `refactor/phase1-phase3` at `efcf1ae2` (the formal pass since `c5ec3efd`, the
+landing plan since `bb269fde`, its ports since `1c6f9c92`, eighteen notes the authority documents
+cite since `27495d51`) or by this refresh (the eight notes force-added at `1efb963e`).
 
 ## Re-review ruling
 
@@ -627,7 +628,8 @@ on those fragments (the algebra verifier's ALG-10).
   (`git:a561d604:src/Effect4/Laws/Program/ScopeMarkers.lean:47`); tested, the red control
   `guardR_not_algebraic` (`git:a561d604:Test/Program/ScopeMarkers.lean:26`).
 - **Refusals.** `E4-SCHED-CE-001` (the summed handler is not a semantics of the fiber operations),
-  `E4-SCHED-CE-004` (archived: raw bind terms lose the cleanup boundary); DI-07, DI-12, DI-57.
+  the archive's `E4-SCHED-CE-004` (`Test/Counterexamples/Archive/REGISTER.md`: raw bind terms lose
+  the cleanup boundary; the register's row with that id is another statement); DI-07, DI-12, DI-57.
 - **Sources.** `docs/research/2026-09-16-core-goals-and-end-state.md` §8 (tracked);
   `docs/research/2026-09-05-runtime-semantics-core-math.md` §5–§7 (tracked);
   `docs/research/2026-09-07-lit-papers.md` Q2, §0 item 1 (tracked);
@@ -681,9 +683,11 @@ EffHOL, not a proof of Effect4's instance.
   not select it. EffHOL's modality is classified as a weakest liberal precondition (`wlp`); a
   judgment is called `wp` only with `wp ↔ wlp ∧ total` proved for the chosen semantics, where
   `total` never treats fuel as partiality (DB-04).
-- **Witnesses** (re-read at `dceae006`). None on `Eff`: no weakest-precondition calculus exists in
-  the tree at `dceae006` (reading: no `wp`/`wlp` declaration under `src/Effect4`). The archived
-  route's receipt: `wp_iff_wlp_and_total` (`git:c407ab7:Effect4/Semantics/Logic.lean:89`).
+- **Witnesses** (re-read at `dceae006`). None on `Eff`: the tree declares no weakest-precondition
+  calculus over `Eff` at `dceae006` (tested, `git grep`: no `wp` or `wlp` declaration under
+  `src/Effect4`; the `wp` some proofs unfold is Lean core's `Std.Do`, over `Except` and `Option`).
+  The archived route's receipt: `wp_iff_wlp_and_total`
+  (`git:c407ab7:Effect4/Semantics/Logic.lean:89`).
 - **Refusals.** DI-10 (no general bind law until a neutral-stack shape is chosen; the logic inherits
   it).
 - **Sources.** `docs/research/2026-09-05-reification-effhol.md` (untracked; its "What the paper
@@ -931,7 +935,6 @@ optional interaction-tree comparison. Borrowed code, if any, must retain its
 license and exact source provenance.
 
 PolyFun's `FreeM` is still a higher-order proof representation. It cannot
-PolyFun's `FreeM` is still a higher-order proof representation. It cannot
 replace the first-order checked `Eff` (DB-02; the 2026-08-31 text said `Flow`), so adopting the
 dependency would not remove the reification boundary.
 
@@ -995,11 +998,12 @@ declarations in the checker's order since row 137 was ruled); DB-16 owns that de
   `admitProgram_certificate` (`src/Effect4/Laws/Run.lean:218`).
 - **Refusals.** `E4-HANDLE-CE-001`, `E4-HOST-CE-007` (row 97's interim rule, repaired);
   `E4-TYPED-CE-015` (DI-67's emptiness gap: `prod never nat` and `except never never` are admitted
-  though empty) is allocated and not in the register at `dceae006`; DI-61, DI-62, DI-67, DI-92.
+  though empty), allocated by the landing plan §2, not in the register at `dceae006`, in it since
+  `66aa97d7`; DI-61, DI-62, DI-67, DI-92.
   Decisions rows 97 (interim rule landed), 127 (ruled: register, then repair) and 149 (ruled: the
   frozen `uninhabited` stays for the `int` scan, the emptiness check is `emptyColumn`); status:
   those rows.
-- **Sources.** `docs/research/2026-09-08-build-path.md` §3 (untracked; the 2026-09-07 plan);
+- **Sources.** `docs/research/2026-09-08-build-path.md` §3 (tracked; the 2026-09-07 plan);
   `docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-11 row (tracked);
   `docs/research/2026-10-01-data-probe/synthesis.md` §5 row 127 (tracked);
   `docs/research/2026-10-01-formal-pass/synthesis.md` §4.4 (tracked).
@@ -1052,7 +1056,7 @@ order and does not enclose it (`src/Effect4/Program/Refs.lean`, `layerRefsWF`); 
 every
 target into a `const L_<path>` (`printModule`) so the host sees one object. Grill call 10
 (keep the memo store) stays settled by build order-independence
-(`docs/research/2026-09-08-build-path.md` §2 (untracked working note)). Inserting under one
+(`docs/research/2026-09-08-build-path.md` §2 (working note)). Inserting under one
 path leaves every other path's entry untouched (`MemoWorld.find?_append_other_key`,
 `LAYER-FB-LAYER-IDENTITY`); a forged path is the refusal row.
 
@@ -1086,10 +1090,11 @@ DB-17's; the service table's place in the world and its lawful declarations are 
   `Test/Counterexamples/Machine/Runtime/LayerEnvironment.lean` and
   `Test/Counterexamples/Machine/Semantics/LayerValue.lean` (rows 104 and 105's retained falsifiers);
   the truth harness's `pProvideTwice` and `pDiamond` (`harness/truth/Truth.lean`).
-- **Refusals.** `E4-PROV-CE-005` and `E4-PROV-CE-006` (repaired 2026-10-01),
+- **Refusals.** `E4-PROV-CE-005` and `E4-PROV-CE-006` in `Test/Counterexamples/REGISTER.md`
+  (repaired 2026-10-01; the archive's rows with those ids are other statements),
   `LAYER-FB-LAYER-IDENTITY`; DI-71. Decisions rows 104 and 105 (ruled, landed); status: those rows.
-- **Sources.** `docs/research/2026-09-08-build-path.md` §2 (untracked);
-  `docs/research/2026-09-08-host-rows-slice.md` (untracked);
+- **Sources.** `docs/research/2026-09-08-build-path.md` §2 (tracked);
+  `docs/research/2026-09-08-host-rows-slice.md` (tracked);
   `docs/research/2026-09-30-pass/synthesis.md` §6 slices 1–2 (tracked).
 - **Literature.** None.
 - **Status.** See system map §8, R5; witnesses re-read at `dceae006`.
@@ -1164,7 +1169,7 @@ this list.
 ### DB-14 — one logical clock, a duration decision, staged fires
 
 Adopted 2026-09-08 (the timer, A4: the three commits of
-`docs/research/2026-09-08-timer-dispatch.md` (untracked working note)).
+`docs/research/2026-09-08-timer-dispatch.md` (working note)).
 
 Physical time is not modelled and never will be (DB-04 forbids fuel as time; wall-clock, drift,
 the browser's floor and `setTimeout`'s ceiling are host facts). Logical time is one store on
@@ -1181,7 +1186,7 @@ never a timestamp — and the machine runs the staged loop (`advanceState`): fir
 sleep (`RunInterp.clockStep`, the one new interpreter field), resume it, flush the
 dispatchers, repeat, then set the clock to the end. A sleep a woken fiber registers that is
 due by the end fires in the same advance (finding 4 of
-`docs/research/2026-09-04-timer-semantics-and-proofs.md` (untracked working note)). A fired sleep resumes inline
+`docs/research/2026-09-04-timer-semantics-and-proofs.md` (working note)). A fired sleep resumes inline
 (`WakeMode.now`, as a Deferred's completion does); the latch-posted spelling rc.112 uses there
 is Latch's to land. Two rows reach the store: `sleep d` with `0 < d < ∞` registers
 (`Name.registerSleep`, cancel `Name.cancelSleep` = `clearTimeout`), and `clockNow` reads
@@ -1222,8 +1227,8 @@ elsewhere as not worth a second structure; a keyed carrier is a later, measured 
 - **Refusals.** `TIMER-FB-SET-TIME`, `TIMER-FB-KEPT-CANCEL`, `TIMER-FB-INFINITE` (fallback ids, in
   the text above); DI-56. Decisions row 83 (open: custom clocks and the seeded random profile);
   status: that row.
-- **Sources.** `docs/research/2026-09-08-timer-dispatch.md` (untracked);
-  `docs/research/2026-09-04-timer-semantics-and-proofs.md` finding 4 (untracked);
+- **Sources.** `docs/research/2026-09-08-timer-dispatch.md` (tracked);
+  `docs/research/2026-09-04-timer-semantics-and-proofs.md` finding 4 (tracked);
   `docs/research/2026-09-20-skeleton-first-receipt.md` (tracked).
 - **Literature.** None; rc.112's `TestClock` and `ClockImpl` are sources, cited above.
 - **Status.** Settled; witnesses re-read at `dceae006`.
@@ -1231,7 +1236,7 @@ elsewhere as not worth a second structure; a keyed carrier is a later, measured 
 ### DB-15 — strings are machine values; host records and errors cross as strings; records are type-language growth
 
 Adopted 2026-09-08 (the host rows slice, decision 3 of
-`docs/research/2026-09-08-host-rows-slice.md` §7 (untracked working note); step 1 of its
+`docs/research/2026-09-08-host-rows-slice.md` §7 (working note); step 1 of its
 dispatch).
 
 A `str` literal is a machine value on the native route: `Lit.toVal (.str s) = some (.str s)`
@@ -1351,15 +1356,15 @@ records only) lands after the M5–M7 milestone by default (row 119).
 The other data rows of 2026-10-01, by number; each row's content and status are the register's
 (`docs/core/decisions.md`), and none is restated here: row 120, error payloads (DI-62 amended):
 proposed; row 121, `int` and numbers: proposed, with row 108; row 122, Decision 12 and the boundary
-decode route: ruled (its write-up belongs to `docs/core/host-boundary.md`); row 123, the in-program
-schema operation: proposed in principle; row 124, recursive types: open; row 125, keyed
-collections: open; row 126, equality at records: proposed; row 127, DI-67's admission gap: ruled
-(its counterexample is `E4-TYPED-CE-015`); row 128, the two embeddings called exact: ruled
-(retractions until their exactness theorems land); row 129, register and text repairs: open
-(coordinator); row 130, `catchTag`'s residual: proposed, with variants; row 131, a number-to-text
-atom: proposed; row 132, `Ty` case analysis kept in `Laws/Program/Typed/Membership.lean`: proposed
-for the M5–M7 brief. Row 149 (ruled) names the two admission refusals; row 2's stage (b) is ruled
-by row 119.
+decode route: ruled, and written into `docs/core/host-boundary.md` §7 at `0eea3cd0`, which owns it
+(this row links there and copies nothing); row 123, the in-program schema operation: proposed in
+principle; row 124, recursive types: open; row 125, keyed collections: open; row 126, equality at
+records: proposed; row 127, DI-67's admission gap: ruled (its counterexample is `E4-TYPED-CE-015`);
+row 128, the two embeddings called exact: ruled (retractions until their exactness theorems land);
+row 129, register and text repairs: open (coordinator); row 130, `catchTag`'s residual: proposed,
+with variants; row 131, a number-to-text atom: proposed; row 132, `Ty` case analysis kept in
+`Laws/Program/Typed/Membership.lean`: proposed for the M5–M7 brief. Row 149 (ruled) names the two
+admission refusals; row 2's stage (b) is ruled by row 119.
 
 - **Decision.** Strings are machine values; a host row's records and errors cross as strings and
   string pairs, with the pair made at the row adapter; a program's failure payload is restricted to
@@ -1380,10 +1385,11 @@ by row 119.
   verifier); in the synthesis's own model, `hasTy_normalize`
   (`docs/research/2026-10-01-data-probe/synthesis.md:1143`) and its red control
   `written_order_not_invariant` (`docs/research/2026-10-01-data-probe/synthesis.md:1174`).
-- **Refusals.** `E4-TYPED-CE-001` (retired), `E4-TYPED-CE-002`; `E4-TYPED-CE-015` allocated (not in
-  the register at `dceae006`); `TYPED-FB-INT`, `ORDIE-FB-TAGGED`, `PROV-FB-STRING-VALUE` (fallback
-  ids, in the text above); DI-15, DI-35, DI-56, DI-59, DI-62, DI-67.
-- **Sources.** `docs/research/2026-09-08-host-rows-slice.md` §7 (untracked);
+- **Refusals.** `E4-TYPED-CE-001` (retired), `E4-TYPED-CE-002`; `E4-TYPED-CE-015` (not in the
+  register at `dceae006`; in it since `66aa97d7`); `TYPED-FB-INT`, `ORDIE-FB-TAGGED`,
+  `PROV-FB-STRING-VALUE` (fallback ids, in the text above); DI-15, DI-35, DI-56, DI-59, DI-62,
+  DI-67.
+- **Sources.** `docs/research/2026-09-08-host-rows-slice.md` §7 (tracked);
   `docs/research/2026-10-01-data-probe/synthesis.md` §1, §3.1–§3.2, §5 rows 119–132, §6.4 (tracked);
   `docs/research/2026-10-01-formal-pass/synthesis.md` §4.4 (tracked);
   `docs/research/2026-10-01-formal-pass/types/note.md` §2.6, §4.5 (tracked).
@@ -1546,7 +1552,8 @@ row.
   `order_widening_loses_typing`
   (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:215`) (the model probe's
   pedigree seat); `typedProg_mono_ledger` (witness missing at `dceae006`; proved in
-  `docs/research/2026-10-01-landing/ports-at-dceae006/HeadTypedProgMono.lean:174`; row 135 carries it, in place of the `#proof_wanted`); `stackAccepts_not_mono`
+  `docs/research/2026-10-01-landing/ports-at-dceae006/HeadTypedProgMono.lean:174`; row 135 carries
+  it, in place of the `#proof_wanted`); `stackAccepts_not_mono`
   (`docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:248`) (the algebra seat,
   at `ea5b28b5`); `step_loop_refuted`
   (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadStepLoop.lean:306`), `stackAcceptsK_mono`
@@ -1578,20 +1585,23 @@ row.
   `typedProg_not_bind_closed` (`git:a561d604:Test/Program/TypedProgBindRed.lean:32`),
   `bind_not_typed` (`git:a561d604:Test/Program/TypedProgBindRed.lean:106`), `guard_bind_not_closed`
   (`git:a561d604:Test/Program/TypedProgBindRed.lean:120`).
-- **Refusals.** In the register at `dceae006`: `E4-TYPED-CE-003`, `E4-TYPED-CE-004`,
-  `E4-TYPED-CE-005`, `E4-TYPED-CE-006`, `E4-TYPED-CE-007`, `E4-TYPED-CE-008`, `E4-SCHED-CE-010`,
-  `E4-SCHED-CE-011`, `E4-SCHED-CE-012`, `E4-SCHED-CE-013`, `E4-SCHED-CE-014`, `E4-SCHED-CE-016`,
-  `E4-SCHED-CE-017`, `E4-SCHED-CE-018`, `E4-SCHED-CE-019`, `E4-SCHED-CE-020`. Allocated in the
-  landing plan §2 and not in the register at `dceae006` (seat F registers them, citing the ports):
-  `E4-TYPED-CE-009` to `E4-TYPED-CE-014`. DI-10 (a bind law waits for its neutral-stack shape).
-  Decisions rows: ruled 44, 45, 48, 96, 106, 107, 134, 137, 138; proposed 87, 117, 135, 136, 139,
-  140, 148 (each proceeding); status: those rows.
+- **Refusals.** In the register (`Test/Counterexamples/REGISTER.md`) at `dceae006`:
+  `E4-TYPED-CE-003`, `E4-TYPED-CE-004`, `E4-TYPED-CE-005`, `E4-TYPED-CE-006`, `E4-TYPED-CE-007`,
+  `E4-TYPED-CE-008`, `E4-SCHED-CE-010`, `E4-SCHED-CE-011`, `E4-SCHED-CE-012`, `E4-SCHED-CE-013`,
+  `E4-SCHED-CE-014`, `E4-SCHED-CE-016`, `E4-SCHED-CE-017`, `E4-SCHED-CE-018`, `E4-SCHED-CE-019`,
+  `E4-SCHED-CE-020`. Allocated in the landing plan §2, not in the register at `dceae006`, and in it
+  since `66aa97d7` (citing the ports): `E4-TYPED-CE-009` to `E4-TYPED-CE-014`. DI-10 (a bind law
+  waits for its neutral-stack shape). Decisions rows: ruled 44, 45, 48, 96, 106, 107, 134, 137, 138;
+  proposed 87, 117, 135, 136, 139, 140, 148 (each proceeding) and 150 (a narrower lift for the six
+  fold-level guard inductions, `DecisionLift` unchanged: `FoldLift`
+  (`docs/research/2026-10-01-landing/seat-F/probes/FoldLiftRoute.lean:45`), the six proved over it
+  in seat F's probe; recommended for wave 3); status: those rows.
 - **Sources.** `docs/research/2026-09-20-m1-kickoff-confidence-and-design-representations.md` §2–§4
   (tracked; its §3 mapping of `Typed.mono` is corrected below);
   `docs/research/2026-09-18-typed-state-composed-graph.md` §4 (tracked);
   `docs/research/2026-09-23-foundations-slice5-contract-ruling.md` (tracked);
-  `docs/research/2026-09-21-foundations-review-and-theoretical-analysis.md` §4 (tracked; its §2.4
-  and §4.3 claims are corrected: model-probe synthesis §3.2 items 2–3);
+  `docs/research/2026-09-21-foundations-review-and-theoretical-analysis.md` §4 (tracked; its §2.4,
+  §4.3 and §7.2 item 5 are corrected by the model probe's synthesis §3.2 items 2–3);
   `docs/research/2026-09-05-effects-papers-review.md` §1.3, A3, G8 (tracked);
   `docs/research/2026-09-30-pass/membership/note.md` §2 (tracked);
   `docs/research/2026-09-30-model-probe/synthesis.md` §3.1 levels 0–2, §3.2 items 1–3 (tracked);
@@ -1710,9 +1720,11 @@ capability question the calculus records and does not decide (`PROV-FB-KEY-FORGE
   (`git:a561d604:src/Effect4/Laws/Program/Provision.lean:32`), `provide_provide`
   (`git:a561d604:src/Effect4/Laws/Program/Provision.lean:45`); tested, the red control
   `provide_not_assoc` (`git:a561d604:Test/Program/ProvideRows.lean:45`).
-- **Refusals.** `E4-PROV-CE-001`, `E4-PROV-CE-002`, `E4-PROV-CE-003`, `E4-PROV-CE-004`,
-  `E4-PROV-CE-005` and `E4-PROV-CE-006` (repaired), `E4-PROV-CE-007` (archived: a name table must
-  skip the machine's four reserved keys), `E4-TYPED-CE-008` (row 117's red control);
+- **Refusals.** In `Test/Counterexamples/REGISTER.md`: `E4-PROV-CE-001`, `E4-PROV-CE-002`,
+  `E4-PROV-CE-003`, `E4-PROV-CE-004`, `E4-PROV-CE-005` and `E4-PROV-CE-006` (repaired; the archive's
+  rows with those two ids are other statements), `E4-TYPED-CE-008` (row 117's red control); in
+  `Test/Counterexamples/Archive/REGISTER.md`: `E4-PROV-CE-007` (a name table must skip the
+  machine's four reserved keys);
   `PROV-FB-KEY-FORGERY`, `PROV-FB-STRING-VALUE` (fallback ids); DI-20, DI-24, DI-28, DI-63.
   Decisions rows: ruled 51, 90, 104, 105, 112, 113, 114; proposed 117, 118, 147; status: those rows.
 - **Sources.** `docs/research/2026-09-04-provision-algebra.md` §§1–3, §6, §7, §10 (tracked);
