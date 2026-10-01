@@ -55,3 +55,13 @@ Receipt `receipt-W5.md`: the arms and laws per form; the profile's controls; the
   ruled. May split out as seat SF (S §7.3) after W5.
 - **Row 8's (C):** `dedupeRefs` and the checked entry points (`S/probes/RefDedupe.lean`), the seven
   consumers moved to `Except`, the three laws; the three fixtures stay byte-identical.
+
+## Amendment (2026-10-01, Codex's 20:16 review, verified)
+
+Row 122's union premise is semantic: no earlier branch's adapter accepts a later branch's exact
+image. The sufficient case this seat may use is distinct required literal tags. The name-set
+shortcut S §7.2 proposed (no branch's name set included in a later one) is refuted at optional
+fields (`E4-SCHEMA-CE-062`: `{a, b?}` then `{a, c?}`, input `{a:1,c:2}`); do not restate it. A
+record-branch separation check, if you land one, reads required against optional fields and the
+value constraints, and comes with the theorem connecting it to non-shadowing; rc.112's branch
+selection is never changed silently.
