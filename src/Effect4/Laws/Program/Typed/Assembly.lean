@@ -193,11 +193,12 @@ structure QueueOk (root : ProgramSource) (w : World) (m : RState)
   enroll : ∀ race child, .enrollRace race child ∈ commands → EnrollRaceOk root w m race child
   noRaceAfterInterrupt : ∀ host yielding race,
     .afterInterrupt host yielding (.race race) ∉ commands
-  /-- A queued `link` names a scope the store holds and an existing target: `linkScope` halts
-  otherwise (`Machine/Fibers.lean:1005-1036`). Row 139's typed scope on a queued link. -/
+  /-- A queued `link` names a scope the store holds (`Stores.ScopeLive`, row 156's predicate at
+  the machine's store) and an existing target: `linkScope` halts otherwise
+  (`Machine/Fibers.lean:1005-1036`). Row 139's typed scope on a queued link. -/
   links : ∀ mode scope target interruptor extra,
     .link mode scope target interruptor extra ∈ commands →
-      (m.state.scopes.entryAt scope).isSome = true ∧ (m.fiber? target).isSome = true
+      m.state.ScopeLive scope ∧ (m.fiber? target).isSome = true
 
 theorem QueueOk.fresh {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
     (queue : QueueOk root w m commands) : QueueFresh m commands := queue.keys.below
