@@ -226,11 +226,15 @@ as amended. Recorded: rows 111–118, row 107 and row 21;
 [addendum 5](research/2026-09-30-codex-brief-slice6-addendum-5.md) to Codex. Meanwhile Codex
 landed A (`90df5d21`) and C (`be6631ab`, `e5cc184b`, `f05a6ace`) on its branch, merged at
 `bc77e97f` with the audit; then D (`fa5add20`) and F (`d20f3292`, row 104, `E4-PROV-CE-005`
-repaired), merged at `9ad8a7c0`. G, H1 and H2 part one each stopped on a checked counterexample
-and wait on a ruling: G's fourth refused fixture (`TemplatesContract.layerSamples[1]`); H1's
-terminal-delivery witness (after delivery the fiber's code slot still holds the delivered value
-while `finish` is queued); H2's two existing test statements that are false under the repaired
-judgment (`cancel_typed`, `lookup_typed`). Four rulings the owner gave Codex directly on 2026-10-01 are
+repaired), merged at `9ad8a7c0`. G, H1 and H2 part one each stopped on a checked counterexample;
+the owner ruled all three on 2026-10-01 ("ratify as accepted"), recorded in
+[addendum 6](research/2026-09-30-codex-brief-slice6-addendum-6.md) and rows 105, 107 and 133:
+G's fourth refused fixture (`TemplatesContract.layerSamples[1]`) is expected; a fiber with a
+queued `finish` is typed by that finish and its code slot is inert (H1); H2's two false test
+statements (`cancel_typed`, `lookup_typed`) are amended and the bounded migration authorized.
+The same ruling accepted the data probe's rows 119, 122, 127 and 128; rows 120–121, 123–126 and
+129–132 are open with their recommendations. A formalization pass (four seats, four verifiers,
+one synthesis; `docs/research/2026-10-01-formal-pass/`) runs before the remaining landings. Four rulings the owner gave Codex directly on 2026-10-01 are
 recorded in addendum 5's amendments and rows 91 and 107: part one's clause excludes `badName` and
 `notImplemented` only (the addendum had stated the full clause, which part two holds); the engine
 prelude and the engine tests join C's checklist; two more closure manifests and the `ForkRecord`
