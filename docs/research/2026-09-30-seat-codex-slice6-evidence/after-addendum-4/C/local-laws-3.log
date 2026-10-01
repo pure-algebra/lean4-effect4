@@ -1,0 +1,25 @@
+✔ [16/63] Built Effect4.Machine.Fibers (3.0s)
+✖ [186/186] Building Effect4.Laws.Machine.ForkLedger (2.5s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4-slice6/src/Effect4/Laws/Machine/ForkLedger.lean -o /Users/pooks/Dev/lean4-effect4-slice6/.lake/build/lib/lean/Effect4/Laws/Machine/ForkLedger.olean -i /Users/pooks/Dev/lean4-effect4-slice6/.lake/build/lib/lean/Effect4/Laws/Machine/ForkLedger.ilean -c /Users/pooks/Dev/lean4-effect4-slice6/.lake/build/ir/Effect4/Laws/Machine/ForkLedger.c --setup /Users/pooks/Dev/lean4-effect4-slice6/.lake/build/ir/Effect4/Laws/Machine/ForkLedger.setup.json --json
+error: src/Effect4/Laws/Machine/ForkLedger.lean:25:34: unsolved goals
+α : Type u_1
+p : α → Bool
+xs : List α
+x : α
+hx : p x = false
+⊢ (match false with
+    | true => some x
+    | false => List.find? p []) =
+    none
+error: src/Effect4/Laws/Machine/ForkLedger.lean:68:22: Invalid `⟨...⟩` notation: The expected type of this term could not be determined
+error: src/Effect4/Laws/Machine/ForkLedger.lean:69:21: Invalid field notation: Type of
+  record
+is not known; cannot resolve field `child`
+
+Hint: Consider replacing the field projection `.child` with a call to the function `ForkRecord.child`.
+error: src/Effect4/Laws/Machine/ForkLedger.lean:69:36: Invalid `⟨...⟩` notation: The expected type of this term could not be determined
+error: src/Effect4/Laws/Machine/ForkLedger.lean:74:22: Invalid `⟨...⟩` notation: The expected type of this term could not be determined
+error: Lean exited with code 1
+Some required targets logged failures:
+- Effect4.Laws.Machine.ForkLedger
+error: build failed

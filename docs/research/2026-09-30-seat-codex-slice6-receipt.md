@@ -3,9 +3,10 @@
 ## After addendum 4
 
 **The one thing first.** The model-probe audit is committed at
-`2d27419eab723f265e718a0f7a82708f560c04a2`. Item A now passes every check required by its
-amendment and lands with this receipt update. C (and D's held users), F, G and H1 are next in
-that order. H2 and proposed D1–D6 remain held for the coordinator. Nothing has been pushed.
+`2d27419eab723f265e718a0f7a82708f560c04a2`. Item A landed at `90df5d21a4d33ad9d5330e090ea102024a318d66`. C step 3 now passes its
+local laws and finite comparison. **C is not integration-ready:** the old origin field remains,
+readers have not moved, and the engine has not been regenerated. C steps 4–5 and D's held users,
+then F, G and H1, remain in that order. H2 and proposed D1–D6 remain held for the coordinator. Nothing has been pushed.
 
 Continuation base: `f437b066` (the tracked audit brief), then audit commit `2d27419e`.
 Branch/worktree: `codex/slice6-fixes`, `/Users/pooks/Dev/lean4-effect4-slice6`.
@@ -53,6 +54,48 @@ time, exit status and log. The host/session controls and OCaml differential are 
 they do not establish the parked runtime-to-Fits bridge. The general reply laws are separately
 axiom-checked. `E4-HOST-CE-007` is REPAIRED by this landing. Row 97's authority update remains
 the coordinator's. No protected authority document changed.
+
+### C — step 3, ledger beside the old field
+
+Base: `90df5d21a4d33ad9d5330e090ea102024a318d66`. The step-3 commit contains the ledger,
+its reader, local append/lookup laws, the comparison runner and this receipt. `spawn` writes one
+record beside the existing child append and event emission. Roots have no record. `originOf`
+first tests fiber membership; a missing fiber has no origin, while a member without a record is
+root. The old field remains the independent comparison value. The eight site defaults remain;
+the 37 callers required by the fallback are listed in the original C section below.
+
+The source changes are `Machine/Fibers.lean`, new `Laws/Machine/ForkLedger.lean`,
+`Laws/Machine/Clauses.lean`, `Laws/Machine/Handles.lean`, and the new-law import in
+`Laws/Api/Supervision.lean`. The test changes are `Test/Api/ForkLedgerRunner.lean` and its
+`Test/All.lean` import. The Handles helper changes only generalize exact record updates over the
+new, unobserved ledger field; no additional origin reader or fork writer was found.
+
+Evidence: `2026-09-30-seat-codex-slice6-evidence/after-addendum-4/C/`. `run.py` retains exact
+argv, worktree, result and output for each command, with `LEAN_NUM_THREADS=1`.
+
+- `lake build Effect4.Laws.Machine.ForkLedger Test.Api.ForkLedgerRunner
+  Effect4.Laws.Api.Supervision`: exit 0 (`beside-build-final`, 320 jobs).
+- `lake env lean -DwarningAsError=true Test/Api/ForkLedgerRunner.lean`: exit 0
+  (`runner-final`). **8,594 programs, 34,376 runs, 189,068 decision boundaries, 348,162 member
+  fiber comparisons, zero mismatches.** All three ledger-only mutants were rejected: dropped
+  site, flipped daemon flag, changed parent. The old field stays unchanged in each control.
+- Required root, ordinary/scoped/explicit-scope, missing-scope, race, finalizer, multiple-fork
+  and merge fixtures pass. Exact merge records include two layer-build forks followed by three
+  cleanup forks. `MergeSites.lean`/`merge-sites.log` retain the finite diagnostic that corrected
+  the first fixture expectation.
+- `lake env lean -DwarningAsError=true
+  docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/C/local-axioms.lean`:
+  exit 0. All nine public ledger laws and the changed `spawn_eq` are at `[propext, Quot.sound]`
+  or less (`local-axioms.log`). Append equality is unconditional; lookup of the new child has
+  the explicit freshness premises. Bounds imply the record's fresh lookup. These are general
+  laws, separate from the finite runner. Whole-run uniqueness, bounds and correspondence remain
+  D's held work; this checkpoint does not claim them.
+- `git diff --check`: exit 0 before commit. Earlier failed drafts and builds are retained as
+  development history: record layout/type annotations, old exact-record proof rewrites, and
+  the two incomplete merge fixture expectations were repaired before the final runs.
+
+No generator, OCaml check, full battery or `make check` was run for this beside checkpoint;
+step 5 owns those checks. The comparison runner must retire in the same commit as the old field.
 
 ## First receipt — historical status before addendum 4
 

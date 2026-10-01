@@ -1,5 +1,6 @@
 import Effect4.Api.Supervision
 import Effect4.Laws.Machine.Clauses
+import Effect4.Laws.Machine.ForkLedger
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Program.Size

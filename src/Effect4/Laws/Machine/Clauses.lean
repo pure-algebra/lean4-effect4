@@ -631,7 +631,10 @@ theorem M1OriginClauses.spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St)
     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
     spawn interp m parent program options site =
-      ({ m with fibers := m.fibers ++ [spawnChild interp m parent program options site], nextId := m.nextId + 1 }.emit
+      ({ m with
+          fibers := m.fibers ++ [spawnChild interp m parent program options site]
+          nextId := m.nextId + 1
+          forks := m.forks ++ [ForkRecord.mk ⟨m.nextId⟩ parent.id options.daemon site] }.emit
           [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon],
         parent, ⟨m.nextId⟩)) := ⟨⟩
 
@@ -643,7 +646,10 @@ theorem spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat := []) :
     spawn interp m parent program options site =
-      ({ m with fibers := m.fibers ++ [spawnChild interp m parent program options site], nextId := m.nextId + 1 }.emit
+      ({ m with
+          fibers := m.fibers ++ [spawnChild interp m parent program options site]
+          nextId := m.nextId + 1
+          forks := m.forks ++ [ForkRecord.mk ⟨m.nextId⟩ parent.id options.daemon site] }.emit
           [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon],
         parent, ⟨m.nextId⟩) := by aesop
 

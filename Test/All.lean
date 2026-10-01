@@ -103,6 +103,7 @@ import Test.Program.HostBoundaryContract
 import Test.Api.HostSessionContract
 import Test.Api.RunnerContract
 import Test.Api.SupervisionContract
+import Test.Api.ForkLedgerRunner
 import Test.Api.KeyedHostContract
 import Test.Run.RunContract
 import Test.Program.SchedContract
