@@ -910,8 +910,8 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
 /-! ## Stack monotonicity (decisions row 135)
 
 Declared until seat B's Kripke closure lands (`M3bWorld` in `Typed/Residual.lean`). At these
-definitions both are false: `FrameAccepts`'s `run`/`skip` arms and its hook premises read the one
-world the stack is checked at, and the algebra pass's `stackAccepts_not_mono`
+definitions both are false (`E4-TYPED-CE-012`): `FrameAccepts`'s `run`/`skip` arms and its hook
+premises read the one world the stack is checked at, and the algebra pass's `stackAccepts_not_mono`
 (`docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:248`, proved with
 `FitsExit` for the exit judgment) exhibits an `answer` frame accepted at a world and refused at a
 later one. A step that grows the world (an allocation, a fork) keeps every other fiber's saved
@@ -1348,10 +1348,14 @@ namespace M6Ledger
 theorem step_evaluate (root : ProgramSource) (rootTy : EffTy) (id : FiberId) :
     ProofGraph.Obligation (StepPreserves root rootTy (.evaluate id)) := ⟨⟩
 
-/-- Its halting arms (the census in `MachineLive`'s section) need the scope-liveness and
-target-declaration pres on `fiberPre`'s scope- and target-reading rows (seat B); the absent-scope
-callback that refutes `step_deliver` reaches the same walk from `loop`
-(`Laws/Program/EvaluateR.lean:309-319`; reading, not checked here). -/
+/-- `E4-TYPED-CE-012` refuted it as declared at `dceae006` (one `loop` allocates a cell and no
+world types the result: the saved stack does not transport along world growth,
+`docs/research/2026-10-01-landing/ports-at-dceae006/HeadStepLoop.lean`); the split keeps the
+saved-stack clause at the world, so the refutation is expected to carry (not re-run here); seat
+B's Kripke closure (row 135) is the repair. Its halting arms (the census in `MachineLive`'s
+section) need the scope-liveness and target-declaration pres on `fiberPre`'s scope- and
+target-reading rows (seat B); the absent-scope callback that refutes `step_deliver` reaches the
+same walk from `loop` (`Laws/Program/EvaluateR.lean:309-319`; reading, not checked here). -/
 theorem step_loop (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.loop id yielding)) := ⟨⟩
 
@@ -1420,8 +1424,9 @@ checked, closed source is in `J` (`reachable_of_ledger` derives it from `typedSt
 Live refutations at this commit: `E4-TYPED-CE-009` (`Fits` compares declared types in the raw
 order while the checker normalizes, so M5 is false for a checked program; seat A, row 137) and
 `E4-TYPED-CE-010` (the await-by-value post reads the target's answer column, so M5 is false for
-the typed corpus's `awaitFiber.value`; seat B, row 136); either falsifies the capstone at the
-loaded machine. `E4-TYPED-CE-011` (the saved-code clause read at a budget cut) refuted the
+the typed corpus's `awaitFiber.value`; seat B, row 136; restated against `J` in
+`Test/Counterexamples/Machine/Semantics/AwaitLoad.lean`, `loadsTyped_false`); either falsifies the
+capstone at the loaded machine. `E4-TYPED-CE-011` (the saved-code clause read at a budget cut) refuted the
 statement over the typed state before row 134 and is repaired by the split
 (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), as is `E4-TYPED-CE-014` (a halted
 machine typed) by `J`'s `stuck = none`.
