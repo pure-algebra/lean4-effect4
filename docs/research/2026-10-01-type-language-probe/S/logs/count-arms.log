@@ -1,0 +1,13 @@
+arm:int	20
+arm:map	27
+arm:optKey	23
+arm:record	77
+change:N_S	33
+change:annotations	13
+change:canonical-branch	4
+change:exact	6
+change:located	5
+change:n-ary-union	10
+change:var	5
+change:whole-check	16
+total	239

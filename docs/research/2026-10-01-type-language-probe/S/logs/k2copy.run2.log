@@ -1,0 +1,6 @@
+# probe: docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# date: 2026-10-01T18:51:33Z
+# command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# toolchain: leanprover/lean4:v4.33.1
+# sha256: ec3d99da1d2ce8389be060a1a9e6657c91382034b07298951c38280b87043004
+# exit=0 seconds=2

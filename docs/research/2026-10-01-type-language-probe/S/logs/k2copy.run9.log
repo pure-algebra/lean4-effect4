@@ -1,0 +1,38 @@
+# probe: docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# date: 2026-10-01T19:00:33Z
+# command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean
+# toolchain: leanprover/lean4:v4.33.1
+# sha256: a797eb97695515d1c632561cba46f1f03291903a5dc0be04faafb37b55e40d49
+/Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/probes/K2Copy.lean:1080:8: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.list` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `AdmitsExtend.list`
+  [apply] `AdmitsNormalize.list`
+  [apply] `AdmitsSub.list`
+  [apply] `Ty.list`
+  [apply] `Store.Image.list`
+  [apply] `Store.Tag.list`
+  [apply] `Val.list`
+  [apply] `PTy.list`
+  [apply] `Ty.Normal.list`
+  [apply] `Store.Tag.Code.list`
+  [apply] `Std.Iterators.Types.ListIterator.list`
+  [apply] `Std.Slice.Internal.ListSliceData.list`
+  [apply] `Ty.Normal.below.list`
+'SeatS.K2.PTy.ind'' does not depend on any axioms
+'SeatS.K2.canonF_of_sorted' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.canonF_map' depends on axioms: [propext]
+'SeatS.K2.ofSchemaL_schema' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.ofSchemaExact_exact' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.ofSchemaExact_le' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.ofSchemaExact_schema' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.encodeP_eq_some' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.K2.decodeP_of_encodeP' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.K2.hasTy_decodeP' depends on axioms: [propext, Quot.sound]
+'SeatS.K2.encodeP_injective' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.K2.encodeP_sub_of_member' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.K2.encodeP_sub' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.K2.decodeExactP_exact' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.K2.decodeExactP_retract' depends on axioms: [propext, sorryAx, Quot.sound]
+'SeatS.K2.decodeExactP_le' depends on axioms: [propext, sorryAx, Quot.sound]
+# exit=1 seconds=5
