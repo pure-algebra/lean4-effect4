@@ -1,0 +1,9 @@
+'ProbeU.tyBuild_view' depends on axioms: [propext]
+'ProbeU.cata_ofLayer_view' does not depend on any axioms
+'ProbeU.sizeOf_tyKids' depends on axioms: [propext, Quot.sound]
+'ProbeU.cata_ofLayer_inv' depends on axioms: [propext, Quot.sound]
+'ProbeU.foldMap_head_eq_cata' depends on axioms: [propext]
+'ProbeU.foldMap_eq_cata' depends on axioms: [propext]
+'ProbeU.cata_fusion_ty' depends on axioms: [propext]
+'ProbeU.cata_prod_ty' depends on axioms: [propext]
+exit 0

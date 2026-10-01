@@ -1,0 +1,3 @@
+'ProbeU.ReflectionsMl.tyT_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Conform.Effect4.LcnfMl.tyT' depends on axioms: [propext, Classical.choice, Quot.sound]
+exit 0

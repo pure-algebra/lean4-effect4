@@ -17,11 +17,6 @@ namespace ProbeU
 
 open Effect4.Program
 
-/-- Every tag, in declaration order (emitted beside `TyCtor`). -/
-def TyCtor.all : List TyCtor :=
-  [.never, .unit, .nat, .int, .string, .bool, .handle, .option, .list, .prod, .except, .exitOf,
-   .causeOf, .fiberOf, .union, .lit, .refOf, .deferredOf, .var, .unknown]
-
 /-- A sample payload for each sort (the seed of the unfold). -/
 def sampleLeaf : TyCtor → TyLeaf
   | .handle => .str "Host.Resource"

@@ -1,8 +1,3 @@
-'ProbeU.tyBuild_view' depends on axioms: [propext]
-'ProbeU.foldMap_head_eq_cata' depends on axioms: [propext]
-'ProbeU.foldMap_eq_cata' depends on axioms: [propext]
-'ProbeU.cata_fusion_ty' depends on axioms: [propext]
-'ProbeU.cata_prod_ty' depends on axioms: [propext]
 'ProbeU.paraAlg_fst' depends on axioms: [propext]
 'ProbeU.paraAlg_snd' depends on axioms: [propext]
 exit 0

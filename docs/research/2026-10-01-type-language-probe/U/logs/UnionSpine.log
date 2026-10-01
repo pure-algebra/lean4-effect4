@@ -1,0 +1,5 @@
+'ProbeU.Spine.members_eq' depends on axioms: [propext]
+'ProbeU.Spine.isTagTy_eq' depends on axioms: [propext]
+'ProbeU.Spine.rawSupportedErrTy_eq' depends on axioms: [propext]
+'ProbeU.Spine.projectProduct_eq' depends on axioms: [propext, Quot.sound]
+exit 0

@@ -1,0 +1,10 @@
+'ProbeU.Reflections.tyJson_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+'ProbeU.Reflections.tyV_eq' depends on axioms: [propext]
+'ProbeU.Reflections.tyO_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Tools.ProfileJson.tyJson' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Tools.ProfileJson.tagged' depends on axioms: [propext, Classical.choice, Quot.sound]
+'OCaml5.Eff.tyO' depends on axioms: [propext, Classical.choice, Quot.sound]
+'OCaml5.Eff.ostr' depends on axioms: [propext, Classical.choice, Quot.sound]
+'OCaml5.Eff.tyV' does not depend on any axioms
+'ProbeU.reflectAlg' does not depend on any axioms
+exit 0
