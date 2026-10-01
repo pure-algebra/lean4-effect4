@@ -17,8 +17,9 @@ payload position. Current code is typed by two hand clauses keyed on the fiber's
 the queue, because whether a fiber's code is read again depends on them, not on the saved frame:
 
 * `MachineTyped` (`J`, machine-only and cut-tolerant): world validity, the generated predicate
-  with the correlations (`TypedState`), the code of every fiber that has not exited and is not
-  running (`LiveCode`), and `stuck = none` with the liveness clauses of row 139 (`MachineLive`).
+  with the correlations (`TypedState`), the world's service table tied to the source's (row 112),
+  the code of every fiber that has not exited and is not running (`LiveCode`), and
+  `stuck = none` with the liveness clauses of row 139 (`MachineLive`).
   A budget cut drops the residue (`Machine/Fibers.lean:2080`, `:2139-2140`) and leaves a running
   fiber whose code no queued command will read: `J` does not type it (`E4-TYPED-CE-011`,
   `Test/Counterexamples/Machine/Semantics/StaleCode.lean`).
@@ -261,6 +262,10 @@ carries, a budget cut included. -/
 structure MachineTyped (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) :
     Prop where
   typed : TypedState root rootTy w m
+  /-- The world's static service table is the source's (decisions row 112, shape A): the world
+  order fixes the table (`le_serviceTy`), so the tie holds along every run once it holds at the
+  load (`initialWorld rootTy root.sig.serviceTy`), and `ServicesFit` reads the source's carriers. -/
+  services : w.serviceTy = root.sig.serviceTy
   code : LiveCode root w m
   live : MachineLive m
 
@@ -293,7 +298,7 @@ declared type (the generated `HeapCell` column), and every closing exit a scope 
 `TypedState`; `storeStep_typed` consumes it in wave 2's `loop` arm. -/
 theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} (typed : MachineTyped root rootTy w m) : StoreTyped w := by
-  obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _⟩ := typed
+  obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _, _⟩ := typed
   refine ⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_, fun e he ex hex => ?_⟩
   · rw [valid.state]
     exact valid.heap key
@@ -660,7 +665,7 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     (nextId : m'.nextId = m.nextId) (nextToken : m'.nextToken = m.nextToken)
     (nextRace : m'.nextRace = m.nextRace) (stuck : m'.stuck = m.stuck)
     (typed : MachineTyped root rootTy w m) : MachineTyped root rootTy w m' := by
-  obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, code, live⟩ := typed
+  obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, services, code, live⟩ := typed
   have member : ∀ f, f ∈ m'.fibers → f ∈ m.fibers := fun f hf => by rw [← fibers]; exact hf
   have raceMember : ∀ r, r ∈ m'.races → r ∈ m.races := fun r hr => by rw [← races]; exact hr
   have lookup : ∀ id, m'.fiber? id = m.fiber? id := fun id => by
@@ -680,7 +685,7 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     fun f hf token parked => deliv f (member f hf) token parked, ?_,
     ⟨fun f hf => obsv.pendingOwner f (member f hf), fun f hf o ho =>
       storedObserverOk_congr lookup raceLookup state o (obsv.observers f (member f hf) o ho)⟩,
-    fun f hf raceId marker => ?_⟩, fun f hf => code f (member f hf), ?_⟩
+    fun f hf raceId marker => ?_⟩, services, fun f hf => code f (member f hf), ?_⟩
   · exact
       { ids := by rw [fibers]; exact valid.ids
         fibers := fun id => by rw [fibers]; exact valid.fibers id
@@ -795,12 +800,14 @@ theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
 
 Named once, so the ledger's declarations and the connectors below read the same statement. -/
 
-/-- Rows 111–116: the source's Σ_app is lawful. Today this is the program-plane row-table check
-`Table.lawful` (unique keys, no built-in collision, no dropped trailing names). Seat A's evidence
-field on `ProgramSource` (row 114) supplies the service-table clauses (rows 112–114) and replaces
-this body; the statements keep this premise's name, and `w.serviceTy` (row 112, shape A) joins
-`MachineTyped` as the static world component tied to the source when seat A's field lands. -/
-def LawfulSource (root : ProgramSource) : Prop := Table.lawful root.table = true
+/-- Rows 111–116: the source's Σ_app is lawful, the proposition seat A's evidence field on
+`ProgramSource` carries (`ProgramSource.lawful`, row 114), so every source has it
+(`root.lawful`) and M5 and M6 quantify over lawful sources. It contains the program-plane
+row-table check this premise read before (`Table.lawful`: unique keys, no built-in collision, no
+dropped trailing names; `LawfulSig.tableLawful`) and adds the service-table clauses (rows
+112–114). The statements keep this premise's name; `w.serviceTy` is tied to the source in
+`MachineTyped` (row 112). -/
+def LawfulSource (root : ProgramSource) : Prop := LawfulSig root.sig
 
 /-- M5's proposition: a lawful, checked, closed source loads into `J`. -/
 def LoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
@@ -858,18 +865,19 @@ theorem machineLive_of_quiet (m : RState) (stuck : m.stuck = none)
     cases ho
 
 /-- **M5's builder.** A root whose loaded code is typed at every world, and whose head is not a
-race marker, loads into `J` at the initial world. -/
+race marker, loads into `J` at the initial world over the source's service table (row 112). -/
 theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (closed : ClosedEff rootTy)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : ∀ w, TypedProg root w rootTy (denoteR root.program root.program (rootPoint compileFuel))) :
-    MachineTyped root rootTy (initialWorld rootTy) (loadR root.program fuel compileFuel) := by
-  have declared : (initialWorld rootTy).Γ Api.root = some rootTy :=
+    MachineTyped root rootTy (initialWorld rootTy root.sig.serviceTy)
+      (loadR root.program fuel compileFuel) := by
+  have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
     insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
-  refine ⟨⟨initial_world_valid _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩, ?_,
+  refine ⟨⟨initial_world_valid_at _ _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩, ?_,
     schedulerState_load root.program fuel compileFuel,
     observerState_load root _ fuel compileFuel,
-    registrationState_load root _ fuel compileFuel noMarker⟩, ?_,
+    registrationState_load root _ fuel compileFuel noMarker⟩, rfl, ?_,
     machineLive_of_quiet _ rfl (fun f hf => ?_) rfl⟩
   · intro f hf
     change f ∈ [_] at hf
@@ -877,7 +885,7 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
     subst hf
     refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
     · intro ty hty
-      change (initialWorld rootTy).Γ Api.root = some ty at hty
+      change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
       rw [declared] at hty
       cases hty
       exact savedPosition_of_saved root _ rootTy _
@@ -907,7 +915,7 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
     subst hf
-    change (initialWorld rootTy).Γ Api.root = some ty at hty
+    change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
     rw [declared] at hty
     cases hty
     exact ⟨rootTy, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
@@ -949,7 +957,7 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
     unfold Program.typeOfProgram at checked
     rw [expanded, formed, refFree] at checked
     exact checked
-  exact ⟨initialWorld rootTy, machineTyped_load root rootTy fuel compileFuel closed noMarker
+  exact ⟨_, machineTyped_load root rootTy fuel compileFuel closed noMarker
     fun w => denotes w (rootPoint compileFuel) root.program rootTy rfl
       ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil w⟩⟩
 

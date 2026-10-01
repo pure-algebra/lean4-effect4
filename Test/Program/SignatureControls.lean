@@ -269,6 +269,7 @@ theorem rowA_lawful : LawfulSig (SigApp.mk [rowA] []) := (admitSig_ok_iff _).mp 
 #print axioms Effect4.Program.firstDup_eq_none_iff
 #print axioms Effect4.Program.sigRefusal?_eq_none_iff
 #print axioms Effect4.Program.admitSig_ok_iff
+#print axioms Effect4.Program.LawfulSig.tableLawful
 #print axioms Effect4.Program.SigApp.lawful_empty
 #print axioms Effect4.Program.lawful_append
 

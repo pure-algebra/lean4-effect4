@@ -715,7 +715,7 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
       promiseClosed := old.promiseClosed
       tokenClosed := old.tokenClosed
       root := old.root }
-  refine ⟨⟨valid, ⟨fun f hf => ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩, ?_,
+  refine ⟨⟨valid, ⟨fun f hf => ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩, rfl, ?_,
     ⟨q.stuck, fun f hf scope ambient => ?_, fun o ho => ?_⟩⟩
   · have fact := facts f hf
     refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩

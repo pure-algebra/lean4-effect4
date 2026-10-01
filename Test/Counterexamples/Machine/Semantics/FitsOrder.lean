@@ -392,7 +392,7 @@ theorem m5_false (raw : RawLeaf) : ¬ ∃ w, MachineTyped src rootTy3 w (loadR p
 
 /-- **Historical: M5's proposition was false at this program (proved).** -/
 theorem loadsTyped_false (raw : RawLeaf) : ¬ LoadsTyped src rootTy3 100 100 :=
-  fun h => m5_false raw (h rfl prog3_typed rootTy3_closed)
+  fun h => m5_false raw (h src.lawful prog3_typed rootTy3_closed)
 
 /-- **Historical: M5's obligation was false (proved).** -/
 theorem typedState_load_false (raw : RawLeaf) :

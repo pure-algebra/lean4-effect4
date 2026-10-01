@@ -1118,6 +1118,21 @@ theorem admitSig_ok_iff (app : SigApp) : admitSig app = .ok () ↔ LawfulSig app
 instance (app : SigApp) : Decidable (LawfulSig app) :=
   decidable_of_iff _ (sigRefusal?_eq_none_iff app)
 
+/-- **A lawful signature's rows meet the program-plane table check** (proved): distinct row keys
+are `Table.lawful`'s uniqueness clause, and each row's local checks contain its built-in-collision
+and value-row clauses. So the typed state's `LawfulSource`, which reads this structure, contains
+the `Table.lawful` premise it read before seat A's field (integration seat I2). -/
+theorem LawfulSig.tableLawful {app : SigApp} (h : LawfulSig app) : Table.lawful app.rows = true := by
+  have collision : ∀ r ∈ app.rows,
+      (!(NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey r)) = true :=
+    fun r hr => h.rows r hr _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+  have trailing : ∀ r ∈ app.rows, (!(r.shape == .value) || r.trailing.isEmpty) = true :=
+    fun r hr => h.rows r hr _
+      (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)))
+  unfold Table.lawful
+  simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true]
+  exact ⟨⟨List.pairwise_map.mpr h.rowsDistinct, collision⟩, trailing⟩
+
 /-- The empty signature is lawful: what every source with no rows and no declarations carries. -/
 theorem SigApp.lawful_empty : LawfulSig (SigApp.mk [] []) :=
   ⟨fun _ h => (nomatch h), List.Pairwise.nil, fun _ h => (nomatch h), List.Pairwise.nil,

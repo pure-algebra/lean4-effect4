@@ -39,7 +39,8 @@ theorem loadsTyped_false (raw : RawLeaf) : ¬ LoadsTyped src rootTy3 100 100 :=
 
 /-- **Historical: the capstone restated over `J` was false here**, at the loaded machine. -/
 theorem capstone_false (raw : RawLeaf) : ¬ ReachableTyped src rootTy3 100 (loadR prog3 100 100) :=
-  fun cap => m5_false raw (cap rfl FitsOrder.prog3_typed FitsOrder.rootTy3_closed (rreachable_load src 100))
+  fun cap => m5_false raw
+    (cap src.lawful FitsOrder.prog3_typed FitsOrder.rootTy3_closed (rreachable_load src 100))
 
 end Test.Counterexamples.Machine.Semantics.RawOrderLoad
 

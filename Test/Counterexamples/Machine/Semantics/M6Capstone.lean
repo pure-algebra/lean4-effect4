@@ -1638,7 +1638,7 @@ theorem typedState_machine : TypedState (rootProgram : ProgramSource) unitTy wor
     cases hp
 
 theorem machine_typed : MachineTyped (rootProgram : ProgramSource) unitTy world machine := by
-  refine ⟨typedState_machine, ?_, quiet_live machine rfl (by decide) rfl⟩
+  refine ⟨typedState_machine, rfl, ?_, quiet_live machine rfl (by decide) rfl⟩
   intro f hf _ idle
   change f ∈ [fiber] at hf
   rw [List.mem_singleton] at hf
@@ -1689,7 +1689,7 @@ theorem typedState_result : TypedState (rootProgram : ProgramSource) unitTy worl
 `finish` is queued. -/
 theorem result_config_typed :
     ConfigTyped (rootProgram : ProgramSource) unitTy world result.1 result.2 := by
-  refine ⟨⟨typedState_result, ?_, quiet_live result.1 rfl (by decide) rfl⟩, ?_, result_queue⟩
+  refine ⟨⟨typedState_result, rfl, ?_, quiet_live result.1 rfl (by decide) rfl⟩, ?_, result_queue⟩
   · intro f hf _ idle
     change f ∈ [afterFiber] at hf
     rw [List.mem_singleton] at hf
@@ -2338,7 +2338,7 @@ theorem typedState_input : TypedState (rootProgram : ProgramSource) unitTy world
     rcases member_cases f member with rfl | rfl <;> cases parked
 
 theorem config_input : ConfigTyped (rootProgram : ProgramSource) unitTy world machine commands := by
-  refine ⟨⟨typedState_input, ?_,
+  refine ⟨⟨typedState_input, rfl, ?_,
     H1TerminalAmendment.quiet_live machine rfl (by decide +kernel) rfl⟩, ?_, queue⟩
   · intro f member _ idle
     rcases member_cases f member with rfl | rfl <;> cases idle

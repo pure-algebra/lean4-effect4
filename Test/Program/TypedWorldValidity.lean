@@ -199,4 +199,5 @@ theorem mixed_allocation_preserves_old_and_new :
 #print axioms Effect4.Program.Typed.park_extension
 #print axioms Effect4.Program.Typed.completion_transport
 #print axioms Effect4.Program.Typed.initial_world_valid
+#print axioms Effect4.Program.Typed.initial_world_valid_at
 end Test.Program.TypedWorldValidity
