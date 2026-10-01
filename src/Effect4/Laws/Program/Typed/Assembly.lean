@@ -73,10 +73,11 @@ def expectOf (w : World) : Expect → Option EffTy
   | .hook _ => none
 
 /-- A completion at an effect type: an exit strongly, a reference completion through the
-heap table. -/
+heap table. The declared cell type is compared in the checker's order (decisions row 137:
+`sub (normalize a) (normalize b)`, `Program/Checker.lean:222`; seat A's `Ty.subN` names it). -/
 def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberId Ann → Prop
   | .ofExit ex => ExitOk w ty ex
-  | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.sub ty.answer = true
+  | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.normalize.sub ty.answer.normalize = true
 
 /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
 under an environment its values fit, extended by the acquired value, and its context's
