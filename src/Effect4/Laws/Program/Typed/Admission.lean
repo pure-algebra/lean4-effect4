@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.Typed.Validity
+import Effect4.Laws.Program.Typed.Membership
 import Effect4.Program.Checker
 import Effect4.Laws.Program.Sched
 
@@ -117,12 +117,6 @@ theorem strongExit_success (w : World) (ty : EffTy) (v : Val) (h : StrongValue w
   injection heq with heq
   subst heq
   exact h
-
-/-- An exit whose failure carries no `Fail` reason: interruptions and defects only. Every
-success is clean. The sanitized exit at a preempted skip is clean (`Cause.sanitize_clean`). -/
-def cleanExit : ExitV → Bool
-  | .success _ => true
-  | .failure c => c.reasons.all fun r => r.tag != .fail
 
 /-- A clean failure fits every effect type at every world: the error column constrains
 `Fail` reasons only. -/

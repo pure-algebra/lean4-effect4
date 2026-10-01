@@ -297,7 +297,30 @@ Proposed row 105: include the third fixture in the bounded change list. No prote
 changed; `8065fd64` is the preceding F stop/evidence commit.
 
 ## E — Fits membership
-Pending.
+
+### E1: the new module beside the old judgments
+
+Membership is constructor-complete for the actual value encoding, with Equiv invariance,
+native cell/deferred spellings at nat, table-based liveness, and declared liveness at unknown.
+`fold_of Effect4.Program.Typed.Fits` targets the recursive judgment itself and generates the
+algebra, homomorphism and equality connector. `cleanExit` moved unchanged from Admission;
+Admission imports Membership, making the new file reachable without a root-import edit.
+The old judgments and all their callers remain in place at this first commit.
+
+- `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.Membership`: exit 0, 360 jobs;
+  new module itself built in 1.0 second (`E/membership-build.log`). Dependencies rebuilt
+  after restoring F's stopped runtime change.
+- `LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true
+  docs/research/2026-09-30-seat-codex-slice6-evidence/E/membership-axioms.lean`: exit 0;
+  all 37 named laws plus Fits.alg, Fits.hom and Fits.eq_cata within [propext, Quot.sound].
+- `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.Admission
+  Effect4.Laws.Program.Typed.Residual Effect4.Laws.Program.Typed.Stack
+  Effect4.Laws.Program.Typed.Assembly`: exit 0, 366 jobs (`E/coexistence-build.log`).
+  Existing M3bWorld ceiling 3 and M6 ceiling 20 unchanged at this stage.
+- Source `git diff --check`: exit 0. No runtime or generated-output change.
+
+Changed files for E1: Membership.lean, Admission.lean and this receipt/evidence.
+The preceding stop commit is `1d8ef8e1`. Cutover, test migration and retirement follow below.
 
 ## H1 — command queue conditions
 Pending.
