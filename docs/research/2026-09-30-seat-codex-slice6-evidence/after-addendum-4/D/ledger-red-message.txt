@@ -1,0 +1,6 @@
+error: Tactic `aesop` failed, made no progress
+Initial goal:
+  m : NativeMachine
+  f : Guard.NFiber
+  h : ForkLedger.Invariant.Ok m
+  ⊢ ForkLedger.Invariant.Ok (RunMachine.update m f)

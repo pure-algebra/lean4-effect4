@@ -1,0 +1,77 @@
+'Effect4.Machine.ForkLedger.Invariant.ViewOk.of_view' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ViewOk.fresh_ids' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ViewOk.fresh_children' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ViewOk.spawn' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.ViewOk.root' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.of_view' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.fiber_ids_unique' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.record_children_unique' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.fiber_below' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.record_below' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.record_corresponds' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.fresh' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.fresh_fiber_lookup' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.empty_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.update_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.emit_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.updateRace_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.halt_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.arm_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.disarm_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.state_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.middleware_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.modify_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.mapFibers_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.postTask_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.start_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.drainOwed_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.spawn_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.launchEntrant_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.forkFinalizers_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.settle_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.interruptEdit_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.edits' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.stepDecision_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.ok_update_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.ok_emit_iff' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ok_modify_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.ok_updateRace_iff' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ok_arm_iff' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ok_disarm_iff' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ok_halt_iff' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ok_state_iff' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ok_token_iff' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ok_state_token_iff' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.ok_middleware_iff' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.appendRoot_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.load_ok' depends on axioms: [propext]
+'Effect4.Machine.ForkLedger.Invariant.Native.countdown_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.countdown_result_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.linkScope_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.interruptEach_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.interruptEach_result_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.beginRace_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.Native.registerRace_ok' does not depend on any axioms
+'Effect4.Machine.ForkLedger.Invariant.Native.stepFrame_ok' depends on axioms: [propext]
+'Effect4.Machine.ForkLedger.Invariant.Native.finalizerOr_ok' depends on axioms: [propext]
+'Effect4.Machine.ForkLedger.Invariant.Native.withFiber_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.evaluatePrim_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.enterScoped_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.exitScoped_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.evaluateNative_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.iteration_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.exitFiber_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.fireObserver_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.driveStep_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.steppedBy_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.drive_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.runFork_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.runCallback_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.reachable_ok' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.reachable_unique' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.reachable_bounded' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.reachable_corresponding' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.reachable_fresh' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.ForkLedger.Invariant.Native.update_with_bank' depends on axioms: [propext, Quot.sound]
+'_private.Effect4.Laws.Machine.ForkLedgerInvariant.0.Effect4.Machine.ForkLedger.Invariant.ViewOk.nodup_snoc' depends on axioms: [propext,
+ Quot.sound]

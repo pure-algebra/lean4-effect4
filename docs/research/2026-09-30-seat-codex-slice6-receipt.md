@@ -148,6 +148,35 @@ The independently checked ledger draft has 77 theorem dependency reports: 27 req
 and 50 use only the permitted ceiling. It remains a checked draft until the next production
 commit; this trace commit does not claim its integration.
 
+### D — reachable ledger facts
+
+Base: `31e44efc6d695bf8d8c35df2df90b5bf300de924`. The generic ledger invariant and its
+native user now establish unique fiber IDs, unique recorded child IDs, bounds below the next
+fresh ID, and existence of every recorded child. These facts pass through all eighteen native
+commands, all eight external edits, and the existing history lift. They require no per-command
+preservation premise, admission premise, or typed-state premise. They do not establish the
+semantic correctness of recorded parents, daemon flags, or sites. No M6 instance is supplied.
+
+Verification is retained under `after-addendum-4/D/`:
+- `ledger-production-2`: the two production modules build. The first draft failed only on an
+  unqualified `NFiber` in the bank positive; the corrected binder is `Guard.NFiber`.
+- `ledger-trust-2`: all 76 authored theorem declarations, including the private list helper,
+  use at most `[propext, Quot.sound]`. The first audit script used the reserved local name
+  `matches`; renaming that script variable to `candidates` fixed the script, not a theorem.
+- `ledger-consumers`: the Guard root and `Test.Machine.StepInvRulesRed` build, exit 0. The
+  second omitted-bank fixture retains the actual failing aesop diagnostic, and the production
+  positive proves the identical update proposition with StepInv enabled.
+- Row 94 census: generic ledger plain aesop **16/51**, StepInv **0/51**; native ledger
+  **2/29** and **3/29**; existing memo user **7/46** in both modes. These are statement-only
+  census results within its per-goal budget, not a claim that a larger bank improves all
+  statements. Together with the trace user's **23/76** and **20/76**, they supply the requested
+  comparison across all three users. The targeted bank controls pass; command cases and lift
+  selection remain explicit. No statement generator or memo proof rewrite is introduced.
+- `git diff --check -- src Test` and the forbidden-tactic scan pass. No generation is needed.
+
+The diagnostic trace move is the remaining D step. The full production trust inventory is
+retained in `D/all-production-axioms.lean` for execution after that move.
+
 ### H2 — part-one exclusion clarified by the owner
 
 Addendum 5's “The judgment” requires `NoShapeDefect ty ex` to exclude `missingService` when
