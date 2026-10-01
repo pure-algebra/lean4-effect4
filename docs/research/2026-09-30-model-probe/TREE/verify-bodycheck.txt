@@ -1,0 +1,4 @@
+raw 59 18 comment-stripped 59 15
+statement hits lost by stripping comments: []
+body hits lost by stripping comments: [('Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean', 67, 'restore_then_skip'), ('Test/Program/TypedResidual.lean', 35, 'test_settling_mask'), ('Test/Program/TypedResidual.lean', 52, 'forged_cell_not_live')]
+new body hits after stripping: []

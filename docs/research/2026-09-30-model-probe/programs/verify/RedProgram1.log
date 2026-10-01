@@ -1,0 +1,7 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/programs/verify/RedProgram1.lean:205:0: error: Expression
+  decide
+    (Option.map (fun r => (r.httpCalls, r.retired, r.retiredPending)) (runLive ok503thenBody) = some (3, 0, [false]))
+did not evaluate to `true`
+real 0.82
+user 0.48
+sys 0.34

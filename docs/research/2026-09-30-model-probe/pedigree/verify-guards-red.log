@@ -1,0 +1,7 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/pedigree/VerifyGuardsRed.lean:24:0: error: Expression
+  decide (Api.Author.disagreeingService (withSvc freshSvc) [] = none)
+did not evaluate to `true`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/pedigree/VerifyGuardsRed.lean:37:0: error: Expression
+  decide ((elaborateModule m0).toOption = (elaborateModule mLater).toOption)
+did not evaluate to `true`
+exit=1

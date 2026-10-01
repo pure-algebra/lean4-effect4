@@ -1,0 +1,32 @@
+'Research.Pedigree.inl_reflect' does not depend on any axioms
+'Research.Pedigree.inl_iff' does not depend on any axioms
+'Research.Pedigree.inr_lift' does not depend on any axioms
+'Research.Pedigree.inr_reflect' does not depend on any axioms
+'Research.Pedigree.inr_iff' does not depend on any axioms
+'Research.Pedigree.typed_pull_of_typed' does not depend on any axioms
+'Research.Pedigree.typed_of_typed_pull' does not depend on any axioms
+'Research.Pedigree.natEq_le_natLe' does not depend on any axioms
+'Research.Pedigree.rich_typed' does not depend on any axioms
+'Research.Pedigree.old_untyped' does not depend on any axioms
+'Research.Pedigree.reflection_needs_back' does not depend on any axioms
+'Research.Pedigree.typed_antitone' does not depend on any axioms
+'Research.Pedigree.discrete_typed' does not depend on any axioms
+'Research.Pedigree.order_widening_loses_typing' does not depend on any axioms
+'Research.Pedigree.old_typed' does not depend on any axioms
+'Research.Pedigree.richer_untyped' does not depend on any axioms
+'Research.Pedigree.post_refinement_needed' does not depend on any axioms
+'Research.Pedigree.along_bind' depends on axioms: [Quot.sound]
+'Research.Pedigree.interpret_along' depends on axioms: [propext, Quot.sound]
+'Research.Pedigree.typed_along' does not depend on any axioms
+'Research.Pedigree.along_inl' depends on axioms: [Quot.sound]
+'Effect4.Laws.Effects.Typed.inl' does not depend on any axioms
+'Effect4.Laws.Effects.Typed.inl_inv' does not depend on any axioms
+'Effect4.Laws.Effects.Typed.inr_inv' does not depend on any axioms
+'Effect4.Laws.Effects.Typed.mono' does not depend on any axioms
+'Effects.interpret_inl' depends on axioms: [propext, Quot.sound]
+'Effects.interpret_inr' depends on axioms: [propext, Quot.sound]
+'Effects.Program.inl_injective' depends on axioms: [propext, Quot.sound]
+'Effects.Program.inl_bind' depends on axioms: [Quot.sound]
+'Effects.interpret_pinned' depends on axioms: [propext, Quot.sound]
+bash $S lake env lean -M6144 -DwarningAsError=true $D/Conservativity.lean  0.31s user 0.22s system 99% cpu 0.524 total
+exit=0

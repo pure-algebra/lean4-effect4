@@ -1,0 +1,12 @@
+'Research.PedigreeVerify.pull_of' does not depend on any axioms
+'Research.PedigreeVerify.of_pull' does not depend on any axioms
+'Research.PedigreeVerify.inl_reflect'' does not depend on any axioms
+'Research.PedigreeVerify.c4_iff' does not depend on any axioms
+'Research.PedigreeVerify.flip_not_mono' does not depend on any axioms
+'Research.PedigreeVerify.old_typed_at_false' does not depend on any axioms
+'Research.PedigreeVerify.pulled_untyped' does not depend on any axioms
+'Research.PedigreeVerify.mono_needed' does not depend on any axioms
+'Research.PedigreeVerify.free_typed' does not depend on any axioms
+'Research.PedigreeVerify.never_untyped' does not depend on any axioms
+'Research.PedigreeVerify.pre_refinement_needed' does not depend on any axioms
+exit=0

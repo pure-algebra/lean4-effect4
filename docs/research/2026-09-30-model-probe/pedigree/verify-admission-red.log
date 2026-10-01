@@ -1,0 +1,4 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/pedigree/VerifyAdmissionRed.lean:33:0: error: Expression
+  decide (LawfulTable appendedDeferred = true → admitted callZero appendedDeferred = true)
+did not evaluate to `true`
+exit=1

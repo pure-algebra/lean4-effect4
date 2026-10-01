@@ -1,0 +1,6 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/pedigree/VerifyServiceFaceRed.lean:28:0: error: Expression
+  decide
+    ((printedOld.bind fun ds => (readModule extended nativeSpell (List.map TypeScript.Decl.const ds)).toOption) =
+      some oldProg)
+did not evaluate to `true`
+exit=1

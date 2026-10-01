@@ -1,0 +1,21 @@
+names: ['ServicesOk', 'HandlesFit', 'StrongValue', 'StrongCause', 'StrongExit', 'EnvTyped', 'CompletionStrong']
+declarations whose statement mentions a name: 59
+  Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean: 5  does_not_fit@28, cancellation_exit@60, ReviewedControlAdmitted@103, reviewed_unguard_payload_inv@133, clean_input_fits@166
+  Test/Counterexamples/Machine/Semantics/StrongExitDefect.lean: 3  ReviewedStrongCause@10, ReviewedStrongExit@15, bad_shape_still_admitted@23
+  Test/Program/LoadedAdmission.lean: 2  env0@25, lookup_typed@118
+  Test/Program/TypedControl.lean: 4  strongExit_unit@24, strongExit_nat@30, natErr_fits@42, sleep_stack_accepted@83
+  Test/Program/TypedResidual.lean: 4  test_strongValue_bool@41, test_strongExit_bool@45, forged_cell_not_fit@62, forged_fiber_not_fit@73
+  Test/Program/TypedStack.lean: 2  catch_accepted@27, wrong_middle@71
+  src/Effect4/Laws/Program/Typed/Admission.lean: 10  ServicesOk@32, HandlesFit@39, StrongValue@61, StrongCause@65, StrongExit@72, EnvTyped@78, BodyTyped@99, strongExit_success@114, strongExit_of_clean@129, cleanExit_of_never@153
+  src/Effect4/Laws/Program/Typed/Assembly.lean: 4  CompletionStrong@35, envTyped_append@101, capture_lookup@125, capture_lookup@152
+  src/Effect4/Laws/Program/Typed/Residual.lean: 14  TypedProg@186, pure_inv@219, guard_inv@233, unguard_payload_inv@247, finishFinalizer_payload_inv@254, IteratorProtocol@268, IteratorAnswer@274, LoopProtocol@286, strongValue_bool_true@319, strongExit_bool@323, unguard_payload_inv@392, finishFinalizer_payload_inv@395, strongValue_mono@424, strongExit_mono@427
+  src/Effect4/Laws/Program/Typed/Stack.lean: 11  HookLaws@21, strongExit_failure_of_error@87, walk_saved@96, walk_done@102, popR_typed@108, popR_typed_interpR@331, saveAnswerR_typed@342, deliver_active@361, popR_typed@387, saveAnswerR_typed@394, deliver_active@402
+declarations mentioning a name only in the proof/body: 18
+  Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean: 3  ReviewedSleepStack@80, ReviewedTypedProg@142, clean_cancellation_cannot_type@153
+  Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean: 1  restore_then_skip@67
+  Test/Program/LoadedAdmission.lean: 1  service_admitted@135
+  Test/Program/TypedResidual.lean: 2  test_settling_mask@35, forged_cell_not_live@52
+  src/Effect4/Laws/Program/Typed/Admission.lean: 1  PointTyped@92
+  src/Effect4/Laws/Program/Typed/Assembly.lean: 4  CaptureTyped@42, preds@50, TypedState@67, AnswerOk@80
+  src/Effect4/Laws/Program/Typed/Residual.lean: 5  storePre@34, storePost@56, fiberPre@116, fiberPost@144, frameProtocols@304
+  src/Effect4/Laws/Program/Typed/Stack.lean: 1  WalkTyped@39
