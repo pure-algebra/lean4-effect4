@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Typed.Assembly
 import Effect4.Program.Admission
 import Effect4.Laws.Program.Typing.Sound
+import Test.Counterexamples.Machine.Semantics.ValueMembership
 
 /-!
 # E4-TYPED-CE-009: `Fits` compared declared types in the raw order, the checker in the normalized one
@@ -34,7 +35,7 @@ handle at that canonical form (`m5_forces_leaf`, proved over the production judg
   production judgment.
 * **M5's first positive control**: the same program loads into a typed state
   (`prog3_loads_typed`, through the loaded code's derivation `prog3_typedF` and
-  `typedState_load_of_code`, which reduces M5 to the loaded code at every budget).
+  `ValueMembership.typedStateF_load`, which reduces M5 to the loaded code).
 
 Sources: `docs/research/2026-10-01-formal-pass/types/M5CounterProbe.lean` and
 `TypesOrderProbe.lean` (types seat), `verify-CapstoneProbe.lean` and `verify-AmendedFitsProbe.lean`
@@ -466,10 +467,9 @@ example (w : Typed.World) (id : FiberId) (hΓ : w.Γ id = some certT) :
 
 /-! ## M5's first positive control: the program loads into a typed state (row 137)
 
-`ValueMembership.typedStateF_load` reduces M5 at a source to "the loaded code is typed at every
-world" (every other generated clause is over an empty list or the empty context at load). Its
-statement is pinned to budget 20; `typedState_load_of_code` is the same argument at every budget
-and source. The derivation `prog3_typedF` follows the loaded code: the guard the bind opens, the
+`ValueMembership.typedStateF_load` (now at every budget and source) reduces M5 at a source to
+"the loaded code is typed at every world" (every other generated clause is over an empty list or
+the empty context at load). The derivation `prog3_typedF` follows the loaded code: the guard the bind opens, the
 fork (its certificate the checker's type of the child, by `check_complete`), the `unguard` of
 the handle at the guard's type, then the select's construction, checkpoint and construction, and
 the arm's exit, which fits the root's canonical type through `fits_subN`. -/
@@ -519,57 +519,10 @@ theorem prog3_typedF (w : Typed.World) :
     | success v => exact Bool.noConfusion miss
     | failure c => exact strongExit_of_clean w' _ c (cleanExit_of_never w' midTy c rfl hex) hex.2
 
-/-- **M5 reduces to the loaded code** (`ValueMembership.typedStateF_load` at every budget and
-source): if the loaded code is typed at every world, the loaded state is typed at the initial
-world. -/
-theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
-    (closed : ClosedEff ty)
-    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
-    (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
-    ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) := by
-  refine ⟨initialWorld ty, initial_world_valid _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩,
-    ?_, schedulerState_load root.program fuel compileFuel, observerState_load root _ fuel compileFuel,
-    registrationState_load root _ fuel compileFuel noMarker⟩
-  · intro f hf
-    change f ∈ [_] at hf
-    rw [List.mem_singleton] at hf
-    subst hf
-    refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
-    · intro ty' hty
-      have h0 : tableInsert (fun _ : FiberId => (none : Option EffTy)) Api.root ty Api.root =
-          some ty := insert_here _ _ _
-      change tableInsert (fun _ : FiberId => (none : Option EffTy)) Api.root ty Api.root =
-        some ty' at hty
-      rw [h0] at hty
-      cases hty
-      apply savedPosition_of_saved
-      exact ⟨ty, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
-    · intro q hq
-      cases hq
-    · intro v0 h
-      cases h
-    · intro v0 h
-      cases h
-    · intro v0 hv
-      cases hv
-    · intro key sv sty hget
-      change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
-      rw [Env.Context.getV_empty] at hget
-      cases hget
-  · intro r hr
-    cases hr
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
-      ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
-  · intro f hf token hq
-    change f ∈ [_] at hf
-    rw [List.mem_singleton] at hf
-    subst hf
-    cases hq
-
 /-- **M5's first positive control (proved).** The TY-01 program, which refuted M5 and the
 capstone under the raw arms, loads into a typed state under row 137. -/
 theorem prog3_loads_typed : ∃ w, TypedState src rootTy3 w (loadR prog3 100 100) :=
-  typedState_load_of_code src rootTy3 100 100 rootTy3_closed rfl prog3_typedF
+  ValueMembership.typedStateF_load src rootTy3 100 100 rootTy3_closed rfl prog3_typedF
 
 /-- And its leaf, read off the typed load. -/
 theorem prog3_leaf : ∃ w : Typed.World, w.Γ ⟨1⟩ = some certT ∧
@@ -607,7 +560,7 @@ theorem prog3_leaf : ∃ w : Typed.World, w.Γ ⟨1⟩ = some certT ∧
 #print axioms child_check
 #print axioms fiber_subN_root
 #print axioms prog3_typedF
-#print axioms typedState_load_of_code
+#print axioms ValueMembership.typedStateF_load
 #print axioms prog3_loads_typed
 #print axioms prog3_leaf
 

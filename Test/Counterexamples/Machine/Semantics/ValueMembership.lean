@@ -982,15 +982,17 @@ For a program whose loaded code is typed at every world, the restated typed stat
 initial world: the one fiber's saved state is typed, and every other generated clause is over an
 empty list or the empty context. So `typedState_load`, restated over `Fits`, is true at
 `Ref.make(5)` and at the bind program, the two instances `verify-load.lean` refutes for
-`StrongValue`. (No claim is made for every program.) -/
+`StrongValue`. (No claim is made for every program.) Stated at every budget and source since
+seat A's landing (2026-10-01), so `FitsOrder.prog3_loads_typed` goes through it at budget 100. -/
 
-theorem typedStateF_load (p : NativeEff) (ty : EffTy) (closed : ClosedEff ty)
-    (noMarker : raceRegistrationR (denoteR p p (rootPoint 20)) = none)
-    (code : ∀ w, TypedProg (p : ProgramSource) w ty (denoteR p p (rootPoint 20))) :
-    ∃ w, TypedState (p : ProgramSource) ty w (loadR p 20 20) := by
-  refine ⟨initialWorld ty, initial_world_valid _ p 20 20 closed, ⟨?_, ?_, ?_⟩,
-    ?_, schedulerState_load p 20 20, observerState_load (p : ProgramSource) _ 20 20,
-    registrationState_load (p : ProgramSource) _ 20 20 noMarker⟩
+theorem typedStateF_load (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
+    (closed : ClosedEff ty)
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
+    (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
+    ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) := by
+  refine ⟨initialWorld ty, initial_world_valid _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩,
+    ?_, schedulerState_load root.program fuel compileFuel, observerState_load root _ fuel compileFuel,
+    registrationState_load root _ fuel compileFuel noMarker⟩
   · intro f hf
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
@@ -1030,11 +1032,11 @@ theorem typedStateF_load (p : NativeEff) (ty : EffTy) (closed : ClosedEff ty)
 theorem typedStateF_load_ref :
     ∃ w, TypedState (refProg : ProgramSource) (EffTy.pure (.handle NativeOp.refTarget)) w
       (loadR refProg 20 20) :=
-  typedStateF_load refProg _ ⟨rfl, rfl⟩ rfl refProg_typedF
+  typedStateF_load refProg _ 20 20 ⟨rfl, rfl⟩ rfl refProg_typedF
 
 theorem typedStateF_load_get :
     ∃ w, TypedState (getProg : ProgramSource) (EffTy.pure .nat) w (loadR getProg 20 20) :=
-  typedStateF_load getProg _ ⟨rfl, rfl⟩ rfl getProg_typedF
+  typedStateF_load getProg _ 20 20 ⟨rfl, rfl⟩ rfl getProg_typedF
 
 /-- The existing TypedState bank supplies the heap-extension rule. -/
 theorem search_heap_extends (w : W) (cert : Ty) (hRho : w.Ρ ⟨0⟩ = none) :
