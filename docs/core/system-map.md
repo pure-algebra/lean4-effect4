@@ -148,7 +148,7 @@ Each syntax sort has one owner, and its signature is data the generator reads.
 | Sort | The one representation | Signature as data | Maps out |
 | --- | --- | --- | --- |
 | program | `Eff` (`Program/Eff.lean`) | `binders.json` → `LayerView` | `cataFam`, unique by `hom_eq_cata_eff` |
-| type | `Ty` (`Program/Ty.lean`, 20 constructors) | its generated family description | `cata_ty` (`Program/Fold.lean`) |
+| type | `Ty` (`Program/Ty.lean`, 20 constructors); types up to `≡N` (equal normal forms) are the checker's types, `Ty/≡N ≅ CTy`, ordered by `Ty.subN` (row 137) | its generated family description | `cata_ty` (`Program/Fold.lean`) |
 | term | `Term` (`Machine/Term.lean`) | generated | `cata_term` |
 | value | `Store.Val` | its inductive; `Kind`/`Shape` classify it | `cata_val`; `Canonical` gives exact embeddings |
 | schema carrier | `Representation` | its inductive | embeddings from `Ty` (row 6) |
@@ -301,5 +301,6 @@ link here and copy nothing (row 142).
 | `Session` (`Api/HostSession.lean:84`) | a protocol automaton with capability ledgers (call ids, tokens) | by name | `advance_step` (`Laws/Run.lean:791`) | `open_total` (`:230`) is a totality fact, not a K4 law |
 | `HasTy` (`Laws/Program/Typing/HasTy.lean:64`) | the declarative typing judgment; the checker is its sound and complete decision procedure | by name (TAPL ch. 16; Dunfield and Krishnaswami 2021) | `check_sound`, `check_complete`, `hasTy_unique` | its namespace `Conform.Effect4.Typing` is a tool root's (legacy) |
 | `Straight`, `Looped` (`Program/Fragment.lean:22`; `Laws/Program/DenoteB.lean:125`) | fragments named by exclusion: a simulation's domain | — | `Straight.eq_cata`, `Looped.eq_cata` | — |
+| `ScopeLive` (`Laws/Program/Typed/World.lean`, row 156, pass I2) | the presence predicate of a world-indexed (Kripke) invariant: a proposition on the world monotone along its order, here by scope persistence | standard (possible-worlds models; by name) | `scopeLive_mono`; read by name by `HandleFits`' scope arm, the five scope-handle posts, the protocols' scope arms and `TypedProg.scopeExit` | one name for scope presence at the world (Codex's second-eyes review and seat I's refutation, `E4-TYPED-CE-018`, `E4-SCHED-CE-020`); the machine-store spelling at three clauses is owed one definition (seat D3) |
 | K1–K5 (system map §5) | catamorphism; lawful prism; an equal-observation statement (adequacy, semantic preservation) proved through a simulation relation; a sound and complete decision procedure with a located refusal; a free monoid action | by name (as above; Plotkin 1977 for adequacy) | as in §2's last row | `docs/DESIGN-ISSUES.md`'s K1–K6 are obligation kinds: rename them O1–O6 |
 | "Schema and program" (`AGENTS.md` vocabulary) | data descriptions as objects, programs as arrows, graded by error and requirement columns | by name (Power and Robinson 1997; Levy, Power, Thielecke 2003; Katsumata 2014) | — | an analogy (system map §6: "a proposed organization"); no carrier holds a refused foreign name (data probe NS0) |

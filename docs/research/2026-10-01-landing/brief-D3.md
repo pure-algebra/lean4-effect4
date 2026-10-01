@@ -92,3 +92,25 @@ worked around. Evidence words on every claim.
 first; base and head; every changed path; per command the theorem (name, file:line, axioms, the
 halting arms and the clause that excludes each); the ledger before and after; the commands left
 open with the exact obstacle; the proposed lines for rows 134, 139, 140 and the register.
+
+## Amendments (2026-10-01, after pass I2)
+
+- **Base:** main after I2's merge (`c898ad04`) and its record; the coordinator names the commit at
+  dispatch. Read receipt I2 (`receipt-I2.md`, "The one thing first") before the Assembly
+  definitions: `TypedProg.scopeExit` takes `live : ScopeLive w sc` first; `StoreTyped` has a
+  `memo` field; `HandleFits`' scope arm reads `ScopeLive`; `handleFits_map`, `flatFits_map`,
+  `servicesFit_map`, `fits_map` take `hscope` before `hsvc`; the five scope-handle posts read
+  `Fits w' ans Ty.scope`; `MachineLive` lost `ambientScopes` (now the theorem `ambientScope_live`
+  from `J`); `MachineTyped` has `services`; `initialWorld` takes the service table;
+  `AdmitRefusal` has `emptyColumn`. The ledger at the base: 37 open, 447 proved, 484 total.
+- **Step 0, before step 1: one name for scope presence at the machine's store** (ruled by the
+  coordinator on row 156). Pass I2 landed `ScopeLive w sc` at the world (`World.lean`). Three
+  clauses still spell the same fact at the machine's store, `(m.state.scopes.entryAt scope).isSome
+  = true`: `QueueOk.links` (`Assembly.lean:200`) and the observer clauses' scope-finalizer drop
+  arms (`Scheduler.lean:113`, `:132`). Give the store-level fact one definition (in the store
+  module that owns `scopes.entryAt`, or `World.lean` if the store module must not grow), make
+  `ScopeLive w sc` that definition at `w.state` (by definition, or by a proved equation if its body
+  must stay for I2's consumers), and read it at the three clauses; `WorldValid.state` is the
+  bridge where a proof moves between `m` and `w`. A few lines; narrow build of `Assembly`,
+  `Scheduler` and their direct importers; the `M6Capstone` controls that construct `QueueOk` by
+  hand follow. Its own commit.

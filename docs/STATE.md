@@ -313,6 +313,14 @@ p2 harness), S (the Schema arms and a readable profile), T (the completeness cen
 become the data-wave briefs (synthesis §7's commit series extended), dispatched after wave 2 by
 default (row 119).
 
+**Pass I2 merged (2026-10-01, `c898ad04`).** Seat A integrated on seat I's union: rows 111–116,
+127, 137 and 149 landed, `E4-TYPED-CE-009` and `-015` repaired, runner admission refuses empty
+columns with the runner group regenerated in the fixed order, `dune build` and `make check-ocaml`
+green; and row 156 landed (`ScopeLive`, one predicate for scope presence at the world;
+`E4-TYPED-CE-018` repaired by the `forkAfterMake` and `makeThenClose` controls; `step_deliver`
+open and no longer refuted). The ledger: 37 open, 447 proved, 484 total. Next from this base: D1
+and D3 in parallel, J, and seat H's row-154 re-pin.
+
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
 it ([synthesis](research/2026-10-01-data-probe/synthesis.md), the entry). The design is not one we

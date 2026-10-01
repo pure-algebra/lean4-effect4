@@ -153,6 +153,12 @@ its arrows; anything else is a leak.
   or its input (the output must be byte-identical or committed), `dune build` (only via
   `opam exec --switch=effect4`) after the OCaml estate.
 - On Windows the shell is PowerShell; the bash gate scripts run through WSL.
+- TypeScript is checked by one compiler, tsgo 7 (the pinned `@typescript/native-preview`,
+  7.0.0-dev.20260629.1, in `ts/eff` and `harness/truth`; `typescript@7.0.2` patched by `effect-tsgo` in
+  `harness/schema-host`), the oracle of `check-target`, `check-truth` and the corpus lane (owner, 2026-09-18,
+  restated 2026-10-01). `tsc` and `typescript@5.x` are never run, in a gate, a probe or a review; a
+  TypeScript result names its compiler and version. The ingest recognizer's `typescript@5.9.2` import
+  and `scripts/check-host-protocol.py`'s `tsc` are the two lanes still to move (seat J).
 - A proof graph is mandatory only for admission or refusal, judgments or
   denotations, interpreters or handlers, reification or generated-code
   relations, nontrivial composition or recursive invariants, and external

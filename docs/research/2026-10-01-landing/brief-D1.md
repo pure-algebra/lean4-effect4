@@ -89,3 +89,16 @@ first; base and head; every changed path; per row the statements and proofs (nam
 axioms), the controls that flipped and the examples that stayed positive (by name); the measured
 cost of row 117's clause; what is owed with the exact obstacle; the proposed lines for rows 117,
 151, 152, 153 and the register cells (`E4-TYPED-CE-008`, `-016`, `-017`, `-019`).
+
+## Amendments (2026-10-01, after pass I2)
+
+- **Base:** main after I2's merge (`c898ad04`) and its record; the coordinator names the commit at
+  dispatch. Read receipt I2 ("The one thing first") before `Residual.lean`, `Membership.lean` and
+  `Contracts.lean`: `TypedProg.scopeExit` takes `live : ScopeLive w sc` first (row 117's restored
+  context at `scopeExit` sits beside it); `HandleFits`' scope arm reads `ScopeLive`; the `*_map`
+  lemmas take `hscope` before `hsvc`; the five scope-handle posts read `Fits w' ans Ty.scope`
+  (row 151's and 152's arms are the close rows' posts, untouched by I2); `StoreTyped` has a
+  `memo` field; `MachineTyped` has `services`; seat A's `Fits` compares declared handle types in
+  `Ty.subN` (row 137), so row 152's exclusion clause is written at the `exitOf` arm of that
+  `Fits`. Seat D3 runs in parallel with a step 0 that renames the machine-store spelling of scope
+  presence in `Assembly.lean:200` and `Scheduler.lean:113`, `:132`: never touch those lines.

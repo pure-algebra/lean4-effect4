@@ -150,8 +150,8 @@ no other value-type check is added. Every `Ty` constructor has its clause:
 | `fiberOf` | an existing fiber whose declaration is a subtype of the answer and error |
 | `union` | at least one complete branch, under §4.3's agreement rule |
 | `lit` | the exact string literal |
-| `refOf` | an existing cell with exactly the declared type, not the type of its current contents |
-| `deferredOf` | an existing deferred with exactly the declared answer and error |
+| `refOf` | an existing cell with the declared type up to equal normal forms (row 137), not the type of its current contents |
+| `deferredOf` | an existing deferred with the declared answer and error up to equal normal forms (row 137) |
 | `var` | refused: templates are instantiated before admission |
 | `unknown` | ordinary data plus capability validation |
 
