@@ -156,6 +156,20 @@ structure Acc where
   pins : List Pin := []
   inputs : List Input := []
 
+/-- seat Q (2026-10-01): a re-seeded policy keeps the old policy's notes, by family and function
+name, and its top-level note, so regenerating the policy from the code loses no decision text. -/
+def keepNotes (old new : Conform.Lcnf.CasesPolicy) : Conform.Lcnf.CasesPolicy :=
+  { new with
+    note := old.note <|> new.note
+    families := new.families.map fun fam =>
+      match old.families.find? (·.name == fam.name) with
+      | none => fam
+      | some ofam =>
+        { fam with functions := fam.functions.map fun r =>
+            match ofam.functions.find? (·.name == r.name) with
+            | some o => { r with note := o.note <|> r.note }
+            | none => r } }
+
 def run (args : Args) (cfg : Config) : CoreM (Report × Option Json) := do
   let mut acc : Acc := {}
   acc := { acc with
@@ -180,7 +194,7 @@ def run (args : Args) (cfg : Config) : CoreM (Report × Option Json) := do
       inputs := acc.inputs ++ [← inputOf "casesPolicy" file] }
     if let some p := args.dumpScan then writeJson p scan.toJson
     if let some p := args.seedPolicy then
-      writeJson p (Conform.Lcnf.CasesPolicy.toJson (Conform.Lcnf.seed scan))
+      writeJson p (Conform.Lcnf.CasesPolicy.toJson (keepNotes policy (Conform.Lcnf.seed scan)))
   -- A3 --------------------------------------------------------------------------------------
   match cfg.mirrors with
   | none => pure ()

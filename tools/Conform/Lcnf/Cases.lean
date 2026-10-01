@@ -531,8 +531,11 @@ def load (file : System.FilePath) : IO CasesPolicy := Policy.load file read
 audits. -/
 def familyNames (p : CasesPolicy) : Array Name := p.families.map (·.name)
 
+/-- The policy as JSON, the top-level `note` included (seat W2, decisions row 173: a re-seeded
+policy keeps its notes, the row notes through `keepNotes` in `Cli/Audit.lean` and this one here,
+so regenerating the policy from the code loses no decision text). -/
 def toJson (p : CasesPolicy) : Json :=
-  Json.mkObj
+  Json.mkObj <| (match p.note with | some n => [("note", Json.str n)] | none => []) ++
     [ ("families", Json.arr (p.families.map fun f =>
         Json.mkObj
           [ ("name", Json.str f.name.toString)

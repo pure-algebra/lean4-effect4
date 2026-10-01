@@ -266,29 +266,6 @@ def parseArgs : List String → Args → Args
 The `.ml` this writes holds the same `Ml.Decl` list the differential reads, so `ocaml`'s
 answer and the target evaluator's answer are answers about the *same* syntax tree. Primitive implementations are supplied by the production backend. -/
 
-/-- The vectors, as OCaml source, through the translator's own constructor names. -/
-def tyOcaml : Ty → String
-  | .never => tyCtor "never"
-  | .unit => tyCtor "unit"
-  | .nat => tyCtor "nat"
-  | .int => tyCtor "int"
-  | .string => tyCtor "string"
-  | .bool => tyCtor "bool"
-  | .handle t => tyCtor "handle" ++ " (\"" ++ t ++ "\")"
-  | .option i => tyCtor "option" ++ " (" ++ tyOcaml i ++ ")"
-  | .list i => tyCtor "list" ++ " (" ++ tyOcaml i ++ ")"
-  | .causeOf e => tyCtor "causeOf" ++ " (" ++ tyOcaml e ++ ")"
-  | .prod l r => tyCtor "prod" ++ " (" ++ tyOcaml l ++ ", " ++ tyOcaml r ++ ")"
-  | .except e v => tyCtor "except" ++ " (" ++ tyOcaml e ++ ", " ++ tyOcaml v ++ ")"
-  | .exitOf v e => tyCtor "exitOf" ++ " (" ++ tyOcaml v ++ ", " ++ tyOcaml e ++ ")"
-  | .fiberOf v e => tyCtor "fiberOf" ++ " (" ++ tyOcaml v ++ ", " ++ tyOcaml e ++ ")"
-  | .union l r => tyCtor "union" ++ " (" ++ tyOcaml l ++ ", " ++ tyOcaml r ++ ")"
-  | .lit s => tyCtor "lit" ++ " (\"" ++ s ++ "\")"
-  | .refOf v => tyCtor "refOf" ++ " (" ++ tyOcaml v ++ ")"
-  | .deferredOf v e => tyCtor "deferredOf" ++ " (" ++ tyOcaml v ++ ", " ++ tyOcaml e ++ ")"
-  | .var i => tyCtor "var" ++ " (" ++ toString i ++ ")"
-  | .unknown => tyCtor "unknown"
-
 /-- The six observations the three sides compare, per vector: `render`, `key`, `isNever`,
 `render (join t t)`, `render (ofMembers (members t))`, `length (members t)`. All six print
 without a hand-written `ty` printer, so the OCaml driver needs nothing beyond the closure. -/
@@ -298,7 +275,10 @@ def expectedLine (t : Ty) : String :=
     , (Ty.join t t).render, (Ty.ofMembers t.members).render, toString t.members.length ]
 
 def driverSource : String :=
-  let vecs := ";\n  ".intercalate (vectors.map fun t => "(" ++ tyOcaml t ++ ")")
+  -- a vector as OCaml source is its target value's own rendering through the translator's
+  -- constructor names; the hand printer `tyOcaml` that stood beside `tyT` is deleted (seat W2,
+  -- decisions row 173: it printed the same OCaml up to a space before each parenthesis)
+  let vecs := ";\n  ".intercalate (vectors.map fun t => "(" ++ (tyT t).render ++ ")")
   "\n(* --- driver appended by Conform.Effect4.LcnfMl --- *)\n" ++
   "let vectors = [\n  " ++ vecs ++ "\n]\n" ++
   "let show_ints l = String.concat \" \" (List.map string_of_int l)\n" ++
