@@ -10,7 +10,7 @@ OLEAN="${PROBE_P_OLEAN:-/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0
 mkdir -p "$OLEAN" "$HERE/logs"
 LAYERS=("$@")
 if [ ${#LAYERS[@]} -eq 0 ]; then
-  LAYERS=(P1FieldOrder P2Ty P3View P4Algebra P5Fits P6Inhabited P7Tagged P8Codec P8Schema)
+  LAYERS=(P1FieldOrder P2Ty P3View P4Algebra P4Check P5Fits P6Inhabited P7Tagged P8Codec P8Schema)
 fi
 cd "$ROOT"
 for L in "${LAYERS[@]}"; do

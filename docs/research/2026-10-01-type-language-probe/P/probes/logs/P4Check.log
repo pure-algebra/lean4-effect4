@@ -1,0 +1,12 @@
+'ProbeP.hasTy_record' depends on axioms: [propext]
+'ProbeP.fieldsHasTy_mono' depends on axioms: [propext]
+'ProbeP.hasTy_sub' depends on axioms: [propext, Quot.sound]
+'ProbeP.hasTy_members' depends on axioms: [propext]
+'ProbeP.hasTy_normalizeRow' depends on axioms: [propext, Quot.sound]
+'ProbeP.hasTy_productMembers' depends on axioms: [propext, Quot.sound]
+'ProbeP.hasTy_normalize_record' depends on axioms: [propext, Quot.sound]
+'ProbeP.hasTy_normalize' depends on axioms: [propext, Quot.sound]
+'ProbeP.hasTy_join_left' depends on axioms: [propext, Quot.sound]
+'ProbeP.hasTy_join_right' depends on axioms: [propext, Quot.sound]
+'ProbeP.record_sub_not_complete' depends on axioms: [propext, Quot.sound]
+exit=0 seconds=3
