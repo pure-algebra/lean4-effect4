@@ -1,0 +1,56 @@
+# merge-time install, simulated in a scratch directory (bun 1.4.2; nothing TypeScript run): the base lock installed, then the seat/J2 package.json and lock copied over it
+## base lock: bun install --frozen-lockfile (bun 1.4.2)
+bun install v1.4.2 (744846f84)
+
++ @types/bun@1.4.1
++ @typescript/native-preview@7.0.0-dev.20260629.1
++ typescript@5.9.2
++ @effect/sql-sqlite-bun@4.0.0-rc.112
++ effect@4.0.0-rc.112
++ oxc-parser@0.147.0
+
+19 packages installed [1245.00ms]
+exit=0
+typescript present: 5.9.2
+## the new lock (seat/J2), same node_modules: bun install --frozen-lockfile
+bun install v1.4.2 (744846f84)
+
+Checked 18 installs across 48 packages (no changes) [8.00ms]
+exit=0
+typescript present: yes
+@effect
+@msgpackr-extract
+@oxc-parser
+@oxc-project
+@types
+@typescript
+bun-types
+detect-libc
+effect
+fast-check
+msgpackr
+msgpackr-extract
+node-gyp-build-optional-packages
+oxc-parser
+pure-rand
+typescript
+undici-types
+## the new lock, plain bun install (no --frozen-lockfile), same node_modules
+bun install v1.4.2 (744846f84)
+
+Checked 18 installs across 48 packages (no changes) [35.00ms]
+exit=0
+typescript present: yes
+## rm -rf node_modules, then bun install --frozen-lockfile
+bun install v1.4.2 (744846f84)
+
++ @types/bun@1.4.1
++ @typescript/native-preview@7.0.0-dev.20260629.1
++ @effect/sql-sqlite-bun@4.0.0-rc.112
++ effect@4.0.0-rc.112
++ oxc-parser@0.147.0
+
+18 packages installed [1017.00ms]
+exit=0
+typescript present: no
+native-preview: 7.0.0-dev.20260629.1
