@@ -95,8 +95,8 @@ services are typed. -/
 def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
   ∃ (acquire release : NativeEff) (env : List Ty) (t a : EffTy),
     Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
-    Checker.check (nativeSignature root.table) env c.path (.acquireRelease acquire release) = .ok t ∧
-    Checker.check (nativeSignature root.table) env (c.path ++ [0]) acquire = .ok a ∧
+    Checker.check root.signature env c.path (.acquireRelease acquire release) = .ok t ∧
+    Checker.check root.signature env (c.path ++ [0]) acquire = .ok a ∧
     EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
 
 /-- The saved stack and its provenance at a position: the stack composes from some intermediate
@@ -811,8 +811,8 @@ def LawfulSource (root : ProgramSource) : Prop := LawfulSig root.sig
 
 /-- M5's proposition: a lawful, checked, closed source loads into `J`. -/
 def LoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
-  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-    ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel)
+  LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
+    ClosedEff rootTy → ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel)
 
 /-- M6b's proposition: one tape decision keeps `J` when its host answer, if any, is admitted. -/
 def DecisionKeeps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.Decision) :
@@ -825,8 +825,8 @@ def DecisionKeeps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.
 /-- M6c's proposition: every machine an answer-free tape reaches from a lawful, checked, closed
 source is in `J`. -/
 def ReachableTyped (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
-  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-    RReachable root fuel m → ∃ w, MachineTyped root rootTy w m
+  LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
+    ClosedEff rootTy → RReachable root fuel m → ∃ w, MachineTyped root rootTy w m
 
 /-- Row 148 (algebra A3): M5's fundamental property. A checked point denotes, at the node its
 path names, a program typed at the point's certificate, at every world. -/
@@ -849,9 +849,10 @@ def TermFits (table : RowTable) : Prop :=
 The loaded machine has one fiber, not running, whose code is the root's denotation; every other
 clause of `J` is over an empty list or the empty context. So M5 is the root code's typing at
 every world (`machineTyped_load`), and that is `DenotesTyped` at the root point when the checked
-program is the loaded one (`loadsTyped_of_denotesTyped`): `Api.typeOf` checks the program after
-expanding its layer references (`Program/Typing.lean:61-64`) while `loadR` loads the program as
-written (`RuntimeR.lean:41-46`), so the reduction is for a program with no reference sites. -/
+program is the loaded one (`loadsTyped_of_denotesTyped`): `typeOfProgram` checks the program,
+under the source's signature (`root.signature`, rows 111–114), after expanding its layer
+references (`Program/Typing.lean:61-64`) while `loadR` loads the program as written
+(`RuntimeR.lean:41-46`), so the reduction is for a program with no reference sites. -/
 
 /-- `MachineLive` holds on a running machine whose fibers carry the empty context and whose
 store owes nothing. -/
@@ -952,8 +953,7 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
   have expanded : root.program.expandRefs = root.program :=
     expandRefs_eq_self_of_refSites_nil root.program refFree
   have formed : root.program.layerRefsWF = true := layerRefsWF_of_refSites_nil root.program refFree
-  have typed : effTy (nativeSignature root.table) [] root.program = some rootTy := by
-    change Program.typeOfProgram (nativeSignature root.table) root.program = some rootTy at checked
+  have typed : effTy root.signature [] root.program = some rootTy := by
     unfold Program.typeOfProgram at checked
     rw [expanded, formed, refFree] at checked
     exact checked
@@ -1241,7 +1241,7 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
     Prop where
   lawful : LawfulSource root
   emptyTable : root.table = []
-  checked : Api.typeOf root.program root.table = some rootTy
+  checked : Program.typeOfProgram root.signature root.program = some rootTy
   closed : ClosedEff rootTy
   answerFree : ∀ d ∈ tape, NoHostAnswer d
 
@@ -1282,8 +1282,8 @@ takes this as its validity premise. It does not follow from `J` while the scope 
 and `Live` admits scope and memo handles unchecked; with seat A's scope arm and those arms it is a
 consequence of `J`, otherwise the native guard's handle facts transport through R4's bridge. -/
 def ExitHandlesValid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
-  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-    RReachable root fuel m →
+  LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
+    ClosedEff rootTy → RReachable root fuel m →
       ∀ f ∈ m.fibers, ∀ v, f.exit = some (.success v) → Val.validIn m.state v = true
 
 /-- `J` on a reference machine types its observation: the exits and the stores. -/

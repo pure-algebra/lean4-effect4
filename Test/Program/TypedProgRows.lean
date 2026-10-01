@@ -124,7 +124,17 @@ section Transport
 
 variable (src src' : ProgramSource) (t' : RowTable)
   (hprog : src'.program = src.program) (htab : src'.table = src.table ++ t')
-include hprog htab
+  (hsvc : src'.services = src.services)
+include hprog htab hsvc
+
+omit hprog in
+/-- The longer source's signature extends the shorter one's: an appended row table under the
+same service declarations (`SigApp.rows_append`). The checked points and the memo layer read the
+source's signature since the joint switch (integration seat I2, step 5). -/
+theorem signature_rows_append : SigExtends src.signature src'.signature := by
+  show SigExtends src.sig.signature (SigApp.mk src'.table src'.services).signature
+  rw [htab, hsvc]
+  exact SigApp.rows_append src.sig t'
 
 theorem pointTyped_rows_append {w : Typed.World} {point : Point} {ty : EffTy}
     (h : PointTyped src w point ty) : PointTyped src' w point ty := by
@@ -132,21 +142,20 @@ theorem pointTyped_rows_append {w : Typed.World} {point : Point} {ty : EffTy}
   refine ⟨e, env, ?_, ?_, henv⟩
   · rw [hprog]
     exact hat
-  · rw [htab]
-    exact check_ext (rows_append src.table t') hcheck
+  · exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
 
 theorem bodyTyped_rows_append {w : Typed.World} {body : Body} {ty : EffTy}
     (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
   cases h with
-  | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hp)
+  | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
   | fin name ex ty hex => exact .fin name ex ty hex
   | raceCleanup race => exact .raceCleanup race
   | acquireIn p ctx ty hp =>
-    exact .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hp)
+    exact .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
   | release p prev ty hp =>
-    exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hp)
+    exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
   | layerBuild p m scope ty hp =>
-    exact .layerBuild p m scope ty (pointTyped_rows_append src src' t' hprog htab hp)
+    exact .layerBuild p m scope ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
 
 theorem storePre_rows_append {w : Typed.World} {op : SyncOp} {cert : StoreCert op}
     (h : storePre src w op cert) : storePre src' w op cert := by
@@ -156,11 +165,10 @@ theorem storePre_rows_append {w : Typed.World} {op : SyncOp} {cert : StoreCert o
     refine ⟨l, lt, ?_, ?_, herr⟩
     · rw [hprog]
       exact hat
-    · rw [htab]
-      exact checkLayer_ext (rows_append src.table t') hcheck
+    · exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
   | _ => exact h
 
-omit hprog in
+omit hprog hsvc in
 theorem asyncPre_rows_append (hentry : AsyncEntryRows) {w : Typed.World} {register : EffName}
     {cert : EffTy} (h : asyncPre src w register cert) : asyncPre src' w register cert := by
   cases register with
@@ -174,15 +182,15 @@ theorem fiberPre_rows_append (hentry : AsyncEntryRows) {w : Typed.World} {op : F
   | raceAll entrants race =>
     intro p hp
     obtain ⟨ty, hpt, ha, he⟩ := h p hp
-    exact ⟨ty, pointTyped_rows_append src src' t' hprog htab hpt, ha, he⟩
+    exact ⟨ty, pointTyped_rows_append src src' t' hprog htab hsvc hpt, ha, he⟩
   | async register token => exact asyncPre_rows_append src src' t' htab hentry h
-  | «scoped» body => exact pointTyped_rows_append src src' t' hprog htab h
-  | mask flag body => exact bodyTyped_rows_append src src' t' hprog htab h
-  | forkScoped child options path => exact pointTyped_rows_append src src' t' hprog htab h
-  | fork body options path => exact bodyTyped_rows_append src src' t' hprog htab h
-  | forkIn child options scope path => exact ⟨pointTyped_rows_append src src' t' hprog htab h.1, h.2⟩
-  | gen p => exact pointTyped_rows_append src src' t' hprog htab h
-  | loop p name => exact pointTyped_rows_append src src' t' hprog htab h
+  | «scoped» body => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | mask flag body => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
+  | forkScoped child options path => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | fork body options path => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
+  | forkIn child options scope path => exact ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, h.2⟩
+  | gen p => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | loop p name => exact pointTyped_rows_append src src' t' hprog htab hsvc h
   | _ => exact h
 
 /-- **TY-12's positive control (proved, under the entry's transport).** With row 116's entry,
@@ -195,11 +203,11 @@ theorem typedProg_rows_append (hentry : AsyncEntryRows) :
   induction h with
   | pure exit => exact .pure exit
   | store cert pre next ih =>
-    exact .store cert (storePre_rows_append src src' t' hprog htab pre)
+    exact .store cert (storePre_rows_append src src' t' hprog htab hsvc pre)
       fun w' hle ans hpost => ih w' hle ans hpost
   | fiber notGuard notUnguard notFinish notScopeExit cert pre next ih =>
     exact .fiber notGuard notUnguard notFinish notScopeExit cert
-      (fiberPre_rows_append src src' t' hprog htab hentry pre)
+      (fiberPre_rows_append src src' t' hprog htab hsvc hentry pre)
       fun w' hle ans hpost => ih w' hle ans hpost
   | guard mid body run skip ihbody ihrun =>
     exact .guard mid ihbody (fun w' hle ex hpost => ihrun w' hle ex hpost) skip
@@ -214,6 +222,7 @@ end Transport
 #print axioms typedProg_not_table_monotone_of
 #print axioms typedProg_not_table_monotone
 #print axioms bitEntry_rows_append
+#print axioms signature_rows_append
 #print axioms pointTyped_rows_append
 #print axioms bodyTyped_rows_append
 #print axioms storePre_rows_append

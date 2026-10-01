@@ -111,12 +111,14 @@ def ProgramSource.sig (src : ProgramSource) : SigApp := ⟨src.table, src.servic
 `nativeSignature src.table` (`SigApp.signature_nil`). -/
 def ProgramSource.signature (src : ProgramSource) : Signature NativeOp := src.sig.signature
 
-/-- D13 source admission at an addressed program node, under the source's row table
-(`E4-SCHED-CE-014`: the empty table refused bodies that perform a host row). -/
+/-- D13 source admission at an addressed program node, under the source's signature: its row
+table (`E4-SCHED-CE-014`: the empty table refused bodies that perform a host row) and its service
+declarations (rows 111–114; `src.signature` is `nativeSignature src.table` for a source with no
+declarations, `SigApp.signature_nil`). -/
 def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : Prop :=
   ∃ (e : NativeEff) (env : List Ty),
     Node.at_ (.eff src.program) point.path = some (.eff e) ∧
-    Checker.check (nativeSignature src.table) env point.path e = .ok ty ∧
+    Checker.check src.signature env point.path e = .ok ty ∧
     EnvTyped w env point.env
 
 /-- Admitted bodies covering all six `Body` constructors. -/

@@ -64,7 +64,7 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
   -- the looked-up layer's own checked error type (decision row 90)
   | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer (nativeSignature root.table) layer l = .ok lt ∧ lt.error = cert
+      Checker.checkLayer root.signature layer l = .ok lt ∧ lt.error = cert
   | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
 
 /-- What each store row's answer satisfies: the store's actual answer (decisions row 136; the
@@ -136,8 +136,8 @@ def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : Eff
   | .registerAwait cell | .store (.registerAwait cell) =>
     ∃ a e, w.«Π» cell = some (a, e) ∧ a.sub cert.answer = true ∧ e.sub cert.error = true
   | .external op _ =>
-    ((nativeSignature root.table).rowOf op).answer.sub cert.answer = true ∧
-      ((nativeSignature root.table).rowOf op).error.sub cert.error = true
+    (root.signature.rowOf op).answer.sub cert.answer = true ∧
+      (root.signature.rowOf op).error.sub cert.error = true
   | .store (.externalRegister _) => True
   | _ => False
 
