@@ -160,11 +160,10 @@ its arrows; anything else is a leak.
   7.0.0-dev.20260629.1, in `ts/eff` and `harness/truth`; `typescript@7.0.2` patched by `effect-tsgo` in
   `harness/schema-host`), the oracle of `check-target`, `check-truth` and the corpus lane (owner, 2026-09-18,
   restated 2026-10-01). `tsc` and `typescript@5.x` are never run, in a gate, a probe or a review; a
-  TypeScript result names its compiler and version. `scripts/check-host-protocol.py` runs tsgo (seat J, 2026-10-01). The
-  ingest recognizer's `typescript@5.9.2` is imported as a parser only; TypeScript 7's API lacks seven of
-  its parser functions (receipt J, step 7), so its walk moves to the native API (`typescript/unstable/ast`,
-  `unstable/sync`) or to `oxc-parser` where the ingest already uses it (decisions row 168, seat J2), and
-  `make check-tsgo` joins `check` with that landing.
+  TypeScript result names its compiler and version. `scripts/check-host-protocol.py` runs tsgo (seat J, 2026-10-01). The ingest parses with `oxc-parser` (one entry, `ts/eff/ingest/oxc.ts`) and `check-styles.ts`
+  asks tsgo's own API (`unstable/sync`, under node) for the oracle's grammar (decisions row 168, seat
+  J2); no `typescript` below 7 is installed under `ts/`, `harness/` or `tools/`, and `make check-tsgo`,
+  part of `make check`, refuses one.
 - A proof graph is mandatory only for admission or refusal, judgments or
   denotations, interpreters or handlers, reification or generated-code
   relations, nontrivial composition or recursive invariants, and external

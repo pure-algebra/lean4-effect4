@@ -85,7 +85,7 @@ Ordered by how much they distort what an agent sees.
    `iterate`/`select` (D §8.1). The owner ruled `gen` stays (2026-09-17). The consequence to
    confirm is decision D-I: the reader's image and the author's image differ by one constructor
    family that no author can write.
-10. **The daemon words.** `daemonFork` / `daemonForkIn` with the `daemon p [in s]` syntax; no word
+10. **The daemon words.** `daemonFork` / `daemonForkIn` with the `daemon p [in s]` syntax (scoped: written where `Effect4.Program.Authoring` is open, as `eff` is); no word
     for `forkScoped` (the ambient scope); the daemons seat's D4 asks for `fork` / `daemon p in s`
     / `detach p`, with no author-written flag at a pin. Decision D-G, small.
 11. **A transcribed literal.** `raceEntrantOptions = ⟨true, true, .interruptible⟩` copies

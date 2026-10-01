@@ -10,7 +10,7 @@ name: Lean Action CI
 # carried the outputs the check jobs need. The action is used for the toolchain only.
 #
 # Two pinned TypeScript installs, each with its consumers: ts/eff (effect rc.112, the
-# sqlite driver, TypeScript 5.9.2) for the truth harness, the type oracle, the schema
+# sqlite driver, tsgo 7 as `@typescript/native-preview`, oxc-parser) for the truth harness, the type oracle, the schema
 # codec, the reader and the ingest; harness/schema-host (TypeScript 7.0.2 with the
 # language service) only for the Schema harnesses, selected through
 # EFFECT4_EFFECT_NODE_MODULES in the jobs that run them and nowhere else.
