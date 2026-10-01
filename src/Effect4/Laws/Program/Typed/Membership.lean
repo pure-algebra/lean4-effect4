@@ -1460,6 +1460,23 @@ theorem fits_option_inv {w : World} {v : Val} {a : Ty} (h : Fits w v (.option a)
     exact Or.inr ⟨x, rfl, h⟩
   · exact h.elim
 
+/-- A member of the context handle type is a context whose services fit: no handle kind takes
+the context target (the context read's answer, `getContext_answers`, read back; decisions row 151
+(a″): a foreign finalizer restores the context it read). -/
+theorem fits_context_inv {w : World} {v : Val} (h : Fits w v (.handle Ty.contextTarget)) :
+    ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services := by
+  simp only [Fits] at h
+  split at h
+  · simp only [HandleFits] at h
+    split at h
+    · exact absurd h.1 (by decide)
+    · exact absurd h.1 (by decide)
+    · exact absurd h.1 (by decide)
+    · exact absurd h.1 (by decide)
+    · exact h.elim
+  · obtain ⟨_, ctx, hctx, services, _⟩ := h
+    exact ⟨ctx, hctx, services⟩
+
 /-- Membership of a number does not read the number: the `nat` arm is the only one a number
 reaches, a union passes it to a branch, and `unknown` reads no keys (one induction over the
 judgment; the store rows that overwrite a `nat` cell read it). -/

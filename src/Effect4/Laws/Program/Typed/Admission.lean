@@ -132,6 +132,20 @@ def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : 
     Checker.check src.signature env point.path (Eff.expandIn src.program e) = .ok ty ∧
     EnvTyped w env point.env
 
+/-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
+under an environment its values fit, extended by the acquired value, and its context's
+services are typed. The checker reads the node through the expansion's rounds, as `PointTyped`
+does (decisions row 153 (b)). Here since decisions row 151 (a″): the scope registration's pre
+reads it (`FinalizerAdmitted`, `Typed/Residual.lean`), as the generated bundle's `CaptureOk` does
+(`preds`, `Typed/Assembly.lean`). -/
+def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
+  ∃ (acquire release : NativeEff) (env : List Ty) (t a : EffTy),
+    Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
+    Checker.check root.signature env c.path
+      (Eff.expandIn root.program (.acquireRelease acquire release)) = .ok t ∧
+    Checker.check root.signature env (c.path ++ [0]) (Eff.expandIn root.program acquire) = .ok a ∧
+    EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
+
 /-- Admitted bodies covering all six `Body` constructors. -/
 inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
   | at_ (p : Point) (ty : EffTy) (h : PointTyped src w p ty) :

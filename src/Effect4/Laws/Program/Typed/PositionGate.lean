@@ -32,6 +32,7 @@ def kindLabel : Source → String
   | .owner _ => "owner"
   | .refused _ => "refused"
   | .nested _ => "nested"
+  | .each _ => "each"
 
 syntax (name := positionGate) "#position_gate " ident+ : command
 
@@ -57,8 +58,8 @@ syntax (name := positionGate) "#position_gate " ident+ : command
     let coverage ← Effect4.Laws.Auto.TypedSources.ownerCoverage rows roots edges seen
     let missing := keys.filter fun k =>
       !rowKeys.contains k && (!coverage.covered.contains k || coverage.active.contains k)
-    -- a row names a position, or an edge (`nested`, `custom`, `journal`, `refused` on a field
-    -- that reaches a structure)
+    -- a row names a position, or an edge (`nested`, `custom`, `each`, `journal`, `refused` on a
+    -- field that reaches a structure)
     let stale := rows.filter (fun (k, _) => !keys.contains k && !edgeKeys.contains k && !coverage.ownerKeys.contains k) |>.map (·.1)
     let dup := rowKeys.filter fun k => (rowKeys.filter (· == k)).length > 1
     let mut byKind : Array (String × Nat) := #[]

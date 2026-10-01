@@ -89,18 +89,6 @@ def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberI
   | .ofExit ex => ExitOk w ty ex
   | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ Ty.subN t ty.answer = true
 
-/-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
-under an environment its values fit, extended by the acquired value, and its context's
-services are typed. The checker reads the node through the expansion's rounds, as `PointTyped`
-does (decisions row 153 (b)). -/
-def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
-  ∃ (acquire release : NativeEff) (env : List Ty) (t a : EffTy),
-    Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
-    Checker.check root.signature env c.path
-      (Eff.expandIn root.program (.acquireRelease acquire release)) = .ok t ∧
-    Checker.check root.signature env (c.path ++ [0]) (Eff.expandIn root.program acquire) = .ok a ∧
-    EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
-
 /-- The saved stack and its provenance at a position: the stack composes from some intermediate
 type to the position's declared type, and recorded causes are interrupts. Current code is not part
 of it: `LiveCode` and `ReadCode` type it where it is read. -/
@@ -111,7 +99,9 @@ def SavedPosition (root : ProgramSource) (w : World) (final : EffTy) (saved : RS
 /-- The generated bundle, instantiated with the strong judgments once. It depends on neither the
 machine nor the queue, so a step that leaves a field alone leaves its clause alone. A closed
 scope's exit fits DI-94's release type `Exit<unknown, unknown>` (decisions row 140): its values
-are live, `Fits`' `unknown` arm. -/
+are live, `Fits`' `unknown` arm. Every finalizer an open scope holds is typed at rc.112's
+finalizer type `⟨unknown, never⟩` at every closing exit of that type (decisions row 151 (a″),
+`FinalizerTyped`; the registration pre admits it, `finalizerTyped_of_admitted`). -/
 def preds (root : ProgramSource) : Preds World where
   SavedOk w e x := ∀ ty, expectOf w e = some ty → SavedPosition root w ty x
   PendingOk w _ ps := ∀ p ∈ ps, ∃ id, (w.Θ id p.token).isSome = true
@@ -124,6 +114,7 @@ def preds (root : ProgramSource) : Preds World where
   HeapCell w key v := ∀ ty, w.Ρ key = some ty → Fits w v ty
   PromiseCell w key cell := ∀ a e, w.«Π» key = some (a, e) →
     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
+  FinalizerOk w _ fin := FinalizerTyped root w fin
   CaptureOk w _ c := CaptureTyped root w c
   ScopeExitOk w _ ex := Fits w (reifyExitVal ex) (.exitOf .unknown .unknown)
 
@@ -352,6 +343,40 @@ theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : Wo
     | openMap _ => cases hex
   · rw [valid.state]
     exact valid.wf.2.2.1
+
+/-- **The generated scope clause types every finalizer the scope holds** (decisions row 151
+(a″)): it states the bundle's `FinalizerOk` at the inline slot and at each entry of the map, and a
+scope's close order is its registrations, backwards (`Effect4.Scope.closeOrder_eq`). -/
+theorem scopeFinalizers_typed {root : ProgramSource} {w : World} {e : Expect} {sc : ScopeV}
+    (h : ScopeStateOk (preds root) w e sc.state) :
+    ∀ fin ∈ sc.closeOrder, FinalizerTyped root w fin := by
+  intro fin hfin
+  rw [Effect4.Scope.closeOrder_eq, List.mem_reverse] at hfin
+  obtain ⟨⟨key, fin'⟩, hmem, hfin'⟩ := List.mem_map.mp hfin
+  subst hfin'
+  rw [Effect4.Scope.finalizers_eq] at hmem
+  generalize sc.state = state at h hmem
+  cases state with
+  | openInline k f =>
+    rw [ScopeState.entries_openInline, List.mem_singleton] at hmem
+    cases hmem
+    exact h.1
+  | openMap entries =>
+    rw [ScopeState.entries_openMap] at hmem
+    exact h.1 (key, fin') hmem
+  | empty => cases hmem
+  | openEmpty => cases hmem
+  | closed _ => cases hmem
+
+/-- **`J` types every finalizer a scope of the world's store holds** (decisions row 151 (a″)), the
+store typing `closeScope_installs` reads at a close. -/
+theorem finalizers_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} (typed : MachineTyped root rootTy w m) :
+    ∀ entry ∈ w.state.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin := by
+  obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _, _⟩ := typed
+  intro entry he
+  rw [valid.state] at he
+  exact scopeFinalizers_typed (ok.c2.c3.c0 entry he).c0.c0
 
 /-- **TY-08's promise half (proved)**: the coarse promise column (`PromiseTable`, the leaf
 `CompletionOk`) from the strong one (`preds`' `PromiseCell`, the leaf `CompletionStrong`): an
@@ -837,24 +862,173 @@ theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} 
       simp only [List.getElem?_cons_succ, List.getElem?_nil] at ht
       cases ht
 
-/-- A capture's release runs at the point its path's `acquireRelease` checks it at: the
-release child, over the checker's environment extended by the acquired value and the exit. -/
-theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
+/-- A capture's release runs at the point its path's `acquireRelease` checks it at — the
+release child, over the checker's environment extended by the acquired value and the exit — at a
+type whose error column normalizes to `never`: the checker's `acquireRelease` rule refuses a
+release that can fail (`Program/Checker.lean:201-209`; rc.112's release is
+`Effect<unknown, never, R2>`, `internal/effect.ts:3973`). -/
+theorem capture_release (root : ProgramSource) (w : World) (c : Capture)
     (completed : List (FiberId × ExitV)) (exVal : Val) (h : CaptureTyped root w c)
     (hex : Fits w exVal (.exitOf .unknown .unknown)) :
-    ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty := by
+    ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty ∧
+      rty.error.normalize = .never := by
   obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _⟩ := h
   rw [Eff.expandIn_acquireRelease] at hcheck
-  obtain ⟨a', r, hacq', hrel, _, _⟩ := Checker.inv_acquireRelease _ _ _ _ _ t hcheck
+  obtain ⟨a', r, hacq', hrel, hnever, _⟩ := Checker.inv_acquireRelease _ _ _ _ _ t hcheck
   rw [hacq] at hacq'
   cases hacq'
-  refine ⟨r, release, env ++ [a.answer, .exitOf .unknown .unknown], ?_, hrel, ?_⟩
+  refine ⟨r, ⟨release, env ++ [a.answer, .exitOf .unknown .unknown], ?_, hrel, ?_⟩, hnever⟩
   · show Node.at_ (.eff root.program) (c.path ++ [1]) = some (.eff release)
     rw [Agreement.Node.at_append, hnode]
     rfl
   · show EnvTyped w (env ++ [a.answer, .exitOf .unknown .unknown]) (c.env ++ [exVal])
     have := envTyped_append henv hex
     simpa only [List.append_assoc, List.singleton_append] using this
+
+/-- A capture's release runs at the point its path's `acquireRelease` checks it at: the
+release child, over the checker's environment extended by the acquired value and the exit. -/
+theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
+    (completed : List (FiberId × ExitV)) (exVal : Val) (h : CaptureTyped root w c)
+    (hex : Fits w exVal (.exitOf .unknown .unknown)) :
+    ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty :=
+  (capture_release root w c completed exVal h hex).imp fun _ typed => typed.1
+
+/-! ## Registered finalizers: from the registration pre to the scope store's typing
+
+Decisions row 151 (a″). The registration pre reads a finalizer's admission by name
+(`FinalizerAdmitted`, `Typed/Residual.lean`: the pre is a premise of the program judgment, so it
+cannot mention it); the scope store's typing states the program's typing (`FinalizerTyped`,
+`Typed/Adequacy.lean`). The bridge is one theorem per finalizer name: the synthetic finalizers by
+their programs, the foreign one by its capture's typing. -/
+
+/-- The void answer at rc.112's finalizer type. -/
+theorem exitOk_unit_finalizer (w : World) :
+    ExitOk w ⟨.unknown, .never, Env.Requirement.empty⟩ (.success .unit) :=
+  ⟨(fitsExit_success_iff w _ _).mpr (live_of_keys_nil rfl), trivial⟩
+
+/-- An exit at a type whose error column normalizes to `never` is an exit at the finalizer type
+`⟨unknown, never⟩`: the answer column is below `unknown`, the error column below `never`. -/
+theorem exitOk_finalizer {w : World} {ty : EffTy} (herr : ty.error.normalize = .never)
+    {ex : ExitV} (h : ExitOk w ty ex) : ExitOk w ⟨.unknown, .never, Env.Requirement.empty⟩ ex := by
+  have hans : Ty.subN ty.answer .unknown = true := Ty.sub_unknown ty.answer.normalize
+  have herr' : Ty.subN ty.error .never = true := by
+    show Ty.sub ty.error.normalize Ty.never.normalize = true
+    rw [herr]
+    exact Ty.sub_refl _
+  exact ⟨fitsExit_subN (ty := ty) (ty' := ⟨.unknown, .never, Env.Requirement.empty⟩) hans herr' h.1,
+    h.2⟩
+
+/-- **The registration pre gives the scope store's typing** (decisions row 151 (a″)): a finalizer
+the registration admits is typed at rc.112's finalizer type `⟨unknown, never⟩` at every later
+world and every closing exit that fits `Exit<unknown, unknown>`. The synthetic finalizers by
+their programs (a scope they close or detach is present, scope persistence keeping it so); a
+foreign one by its capture's typing: the counted suspend, the context read and restore under
+their guards, the construction query, and the masked release at the point the checker types it
+(`capture_release`), its answer below `unknown` and its error column `never`. -/
+theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : FinName)
+    (h : FinalizerAdmitted root w fin) : FinalizerTyped root w fin := by
+  intro w' ord ex hex
+  cases fin with
+  | interruptFiber fiber skipSelf =>
+    cases skipSelf with
+    | true =>
+      refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) () trivial fun w'' _ ans post => ?_
+      subst post
+      exact TypedProg.pure (exitOk_unit_finalizer w'')
+    | false =>
+      refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) () trivial fun w'' _ ans post => ?_
+      subst post
+      exact TypedProg.pure (exitOk_unit_finalizer w'')
+  | closeChildScope scope =>
+    exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) () (scopeLive_mono ord.1 h)
+      fun _ _ _ post => TypedProg.pure (exitOk_finalizer rfl post)
+  | detachFromParent parent key =>
+    refine TypedProg.store () (scopeLive_mono ord.1 h) fun w'' _ ans post => ?_
+    subst post
+    exact TypedProg.pure (exitOk_unit_finalizer w'')
+  | release label fails =>
+    subst h
+    exact TypedProg.pure (exitOk_unit_finalizer w')
+  | parkThen slot =>
+    exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) (⟨.unknown, .never, Env.Requirement.empty⟩ : EffTy) trivial
+      fun _ _ _ post => TypedProg.pure post
+  | awaitNewChildren snapshot =>
+    refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) () trivial fun w'' _ ans post => ?_
+    subst post
+    exact TypedProg.pure (exitOk_unit_finalizer w'')
+  | closeChildOnFailure scope =>
+    cases ex with
+    | success _ => exact TypedProg.pure (exitOk_unit_finalizer w')
+    | failure cause =>
+      exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) () (scopeLive_mono ord.1 h)
+        fun _ _ _ post => TypedProg.pure (exitOk_finalizer rfl post)
+  | memoDone layer memoMap =>
+    refine TypedProg.store () trivial fun w'' _ ans post => ?_
+    subst post
+    exact TypedProg.pure (exitOk_unit_finalizer w'')
+  | memoEntry layer memoMap =>
+    -- `observers--` answers `unit` or the layer scope's handle, present (`memoRelease`'s post),
+    -- carried through the guard at `unit | Scope`; the last observer closes that scope
+    refine seq_typed root (mid := ⟨.union .unit Ty.scope, .never, Env.Requirement.empty⟩) ?_ ?_ rfl
+    · refine TypedProg.store () trivial fun w'' _ ans post => TypedProg.pure ⟨?_, trivial⟩
+      show Fits w'' ans .unit ∨ Fits w'' ans Ty.scope
+      rcases post with unit | scope
+      · subst unit
+        exact Or.inl trivial
+      · exact Or.inr scope
+    · intro w'' _ v hv
+      rcases hv with unit | scope
+      · rw [fits_unit_inv unit]
+        exact TypedProg.pure (exitOk_unit_finalizer w'')
+      · obtain ⟨sc, rfl, live⟩ := fits_scope_inv scope
+        exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
+          (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () live
+          fun _ _ _ post => TypedProg.pure (exitOk_finalizer rfl post)
+  | foreign c =>
+    have hc : CaptureTyped root w' c := finalizerAdmitted_mono root ord (.foreign c) h
+    -- the counted suspend before the release
+    refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) () trivial fun w1 o1 _ _ => ?_
+    -- the context read, under its guard
+    refine seq_typed root (mid := ⟨.handle Ty.contextTarget, .never, Env.Requirement.empty⟩) ?_ ?_ rfl
+    · exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) (.handle Ty.contextTarget) rfl
+        fun _ _ _ post => TypedProg.pure ⟨post, trivial⟩
+    · intro w2 o2 v hv
+      obtain ⟨previous, hprev, _⟩ := fits_context_inv hv
+      have o12 : w'.leHost w2 := leHost_trans _ _ _ o1 o2
+      obtain ⟨_, _, _, _, _, _, _, _, _, hsvc⟩ := finalizerAdmitted_mono root o12 (.foreign c) hc
+      show TypedProg root w2 _ (match Val.context? v with
+        | some previous =>
+          (guardR .onSuccess (fiberValR (.setContext c.ctx) rfl)).bind (seqR fun _ =>
+            constructR fun completed =>
+              .vis (.inr (.mask false
+                (.release ((Point.ofCapture c completed).childWith 1 (reifyExitVal ex)) previous)))
+                Effects.Program.pure)
+        | none => .pure badShapeExit)
+      rw [hprev]
+      -- the captured context set, under its guard
+      refine seq_typed root (mid := EffTy.pure .unit) ?_ ?_ rfl
+      · refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+          (fun _ _ _ h => nomatch h) () hsvc fun w3 _ ans post => ?_
+        subst post
+        exact TypedProg.pure ⟨trivial, trivial⟩
+      · intro w3 o3 _ _
+        -- the construction query, then the masked release
+        refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+          (fun _ _ _ h => nomatch h) () trivial fun w4 o4 completed _ => ?_
+        have o14 : w'.leHost w4 := leHost_trans _ _ _ o12 (leHost_trans _ _ _ o3 o4)
+        obtain ⟨rty, hpt, hnever⟩ := capture_release root w4 c completed (reifyExitVal ex)
+          (finalizerAdmitted_mono root o14 (.foreign c) hc) (fitsExit_mono o14 hex)
+        exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+          (fun _ _ _ h => nomatch h) rty (.release _ _ rty hpt)
+          fun _ _ _ post => TypedProg.pure (exitOk_finalizer hnever post)
 
 /-! ## The milestone propositions
 

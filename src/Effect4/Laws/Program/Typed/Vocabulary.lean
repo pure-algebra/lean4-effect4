@@ -54,6 +54,11 @@ inductive Source
   | refused (reason : String)
   /-- On a containment edge: the child's `Ok` at this expectation instead of the parent's. -/
   | nested (e : Expected)
+  /-- On a containment edge with one child type: a hand predicate at the child's type, stated at
+  each child the field holds (through the edge's wrappers) beside the child's own clause. It
+  covers nothing (decisions row 151 (a″): every finalizer a scope holds is typed, and a foreign
+  finalizer's capture keeps its own clause). -/
+  | each (pred : String)
 deriving Repr, BEq, Inhabited
 
 /-- One row: a census field key (`Owner.field`), structure name or constructor name,

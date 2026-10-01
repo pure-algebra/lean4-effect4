@@ -205,6 +205,55 @@ def missing : List Row := [("Test.TypedStateDecl.SharedOwner.Wrapped", .owner "W
 #typed_state Test.TypedStateDecl.SharedOwner.Wrapped using sources
 end Test.TypedStateDecl.SharedOwner
 
+/-! Decisions row 151 (a″): an `each` row states a hand predicate at each child a field holds,
+beside the child's own clause. It covers nothing, so the child's positions keep their sources; it
+refuses a field with two child types and a direct position. -/
+
+namespace Test.TypedStateDecl.Each
+inductive Expect | root
+structure Child where
+  payload : Effect4.Store.Val
+structure Parent where
+  one : Child
+  many : List (Nat × Child)
+def sources : List Row := [
+  ("Test.TypedStateDecl.Each.Child.payload", .value .inherited),
+  ("Test.TypedStateDecl.Each.Parent.one", .each "Typed"),
+  ("Test.TypedStateDecl.Each.Parent.many", .each "Typed")]
+#typed_state Test.TypedStateDecl.Each.Parent using sources
+-- the hand predicate, then the child's own clause, at the field and at each entry of the list
+example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent) (h : ParentOk P w e x) :
+    P.Typed w e x.one ∧ ChildOk P w e x.one ∧ (∀ v ∈ x.many, P.Typed w e v.2) ∧
+      ∀ v ∈ x.many, ChildOk P w e v.2 := ⟨h.c0, h.c1, h.c2, h.c3⟩
+end Test.TypedStateDecl.Each
+
+namespace Test.TypedStateDecl.EachTwoChildren
+inductive Expect | root
+structure A where
+  payload : Effect4.Store.Val
+structure B where
+  payload : Effect4.Store.Val
+structure Parent where
+  both : A × B
+def sources : List Row := [
+  ("Test.TypedStateDecl.EachTwoChildren.A.payload", .value .inherited),
+  ("Test.TypedStateDecl.EachTwoChildren.B.payload", .value .inherited),
+  ("Test.TypedStateDecl.EachTwoChildren.Parent.both", .each "Typed")]
+/-- error: typed state: an each source at Test.TypedStateDecl.EachTwoChildren.Parent.both needs exactly one child edge -/
+#guard_msgs in
+#typed_state Test.TypedStateDecl.EachTwoChildren.Parent using sources
+end Test.TypedStateDecl.EachTwoChildren
+
+namespace Test.TypedStateDecl.EachPosition
+inductive Expect | root
+structure Parent where
+  payload : Effect4.Store.Val
+def sources : List Row := [("Test.TypedStateDecl.EachPosition.Parent.payload", .each "Typed")]
+/-- error: typed state: unsupported source at Test.TypedStateDecl.EachPosition.Parent.payload -/
+#guard_msgs in
+#typed_state Test.TypedStateDecl.EachPosition.Parent using sources
+end Test.TypedStateDecl.EachPosition
+
 namespace Test.TypedStateDecl.ActualOwners
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
 
@@ -220,6 +269,7 @@ def readsMetadata : Effect4.Program.Typed.Preds Unit where
   CaptureOk := fun _ _ c => c.path = [2] ∧ c.root = 7 ∧ c.env = [] ∧ c.ctx = emptyCtx
   RaceOk := fun _ _ _ => True
   ScopeExitOk := fun _ _ _ => True
+  FinalizerOk := fun _ _ _ => True
 
 def answer : RProgram := .pure (.success .unit)
 

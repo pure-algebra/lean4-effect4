@@ -427,6 +427,8 @@ def preds (root : ProgramSource) : Preds World where
   HeapCell w key v := ∀ ty, w.Ρ key = some ty → StrongValue w ty v
   PromiseCell w key cell := ∀ a e, w.«Π» key = some (a, e) →
     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
+  -- absent when this judgment was reviewed; decisions row 151 (a″) states it in production `preds`
+  FinalizerOk _ _ _ := True
   CaptureOk w _ c := CaptureTyped root w c
   -- refused when this judgment was reviewed; decisions row 140 states it in production `preds`
   ScopeExitOk _ _ _ := True

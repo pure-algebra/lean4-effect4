@@ -419,7 +419,9 @@ theorem scopeRemove_implements (root : ProgramSource) (scope key : Nat) :
 theorem scopeAdd_implements (root : ProgramSource) (scope : Nat) (fin : FinName) :
     StoreImplements root (.scopeAdd scope fin) := by
   intro w cert store pre
-  change (w.state.scopes.entryAt scope).isSome = true at pre
+  -- the finalizer's admission (decisions row 151 (a″)) is the scope store's typing, not the
+  -- store's: the handler needs the scope's presence only
+  replace pre : (w.state.scopes.entryAt scope).isSome = true := pre.1
   cases hentry : w.state.scopes.entryAt scope with
   | none =>
     rw [hentry] at pre
@@ -1175,6 +1177,24 @@ theorem closeWalk_typed (root : ProgramSource) (w : World) (strategy : Finalizer
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) () trivial (fun _ _ ans post => TypedProg.pure post)
 
+/-- **A registered finalizer is typed** (decisions row 151 (a″)): at every later world and every
+closing exit that fits rc.112's release parameter type `Exit<unknown, unknown>`
+(`internal/effect.ts:3973`; DI-94, the type the closed-scope row gives a scope's closing exit,
+`ScopeExitOk`), its program is typed at `⟨unknown, never⟩`, rc.112's finalizer type
+`Effect<unknown>` (`:3849`). The exit premise is what the close needs and no more: a foreign
+finalizer's release reads its exit at that type (`capture_lookup`), so it has no typing at an exit
+outside it. The generated bundle's `FinalizerOk` is this (`preds`, `Typed/Assembly.lean`), read at
+every finalizer a scope holds (`Typed/Sources.lean`'s `each` rows). -/
+def FinalizerTyped (root : ProgramSource) (w : World) (fin : FinName) : Prop :=
+  ∀ w', w.leHost w' → ∀ ex, FitsExit w' ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex →
+    TypedProg root w' ⟨.unknown, .never, Env.Requirement.empty⟩ (denoteFin fin ex)
+
+/-- The finalizer typing transports along the host order (row 87's monotonicity of the bundle's
+owner predicates, for its `FinalizerOk`). -/
+theorem finalizerTyped_mono (root : ProgramSource) (w w' : World) (fin : FinName)
+    (ord : w.leHost w') (h : FinalizerTyped root w fin) : FinalizerTyped root w' fin :=
+  fun w'' o => h w'' (leHost_trans _ _ _ ord o)
+
 /-- **A lone finalizer's close is typed at `⟨unit, never⟩`** when the finalizer is typed at
 `⟨unknown, never⟩` (rc.112's finalizer type `Effect<unknown>`, `internal/effect.ts:3849`): the
 close runs it, then answers `void` (decisions row 151 (a″), `closeScopeUnsafeR`), so its answer
@@ -1185,13 +1205,31 @@ theorem voidedClose_typed (root : ProgramSource) {w : World} {fin : FinName} {ex
       ((guardR .onSuccess (denoteFin fin exit)).bind (seqR fun _ => .pure (.success .unit))) :=
   seq_typed root h (fun _ _ _ _ => TypedProg.pure ⟨trivial, trivial⟩) rfl
 
-/-- **`Scope.close`'s installed program is typed at `⟨unit, never⟩`** when the scope's lone
-finalizer, if it has exactly one, is typed at `⟨unknown, never⟩`: the close voids its answer
-(`voidedClose_typed`), so any answer does. -/
+/-- A lone-finalizer snapshot reads the finalizer off a scope the store holds. -/
+theorem lone_of_snapshot {scope : Nat} {exit : ExitV} {st state : Stores}
+    {strategy : FinalizerStrategy} {fin : FinName}
+    (hs : scopeCloseSnapshot scope exit st = some (state, strategy, [fin])) :
+    ∃ entry ∈ st.scopes.entries, fin ∈ entry.scope.closeOrder := by
+  unfold scopeCloseSnapshot at hs
+  obtain ⟨entry, hentry, hs⟩ := Option.bind_eq_some_iff.mp hs
+  change some _ = some (state, strategy, [fin]) at hs
+  simp only [Option.some.injEq, Prod.mk.injEq] at hs
+  refine ⟨entry, List.mem_of_find?_eq_some hentry, ?_⟩
+  rw [hs.2.2]
+  exact List.mem_singleton_self fin
+
+/-- **`Scope.close`'s installed program is typed at `⟨unit, never⟩`** at every close (decisions
+rows 136 and 151 (a″)): void for no finalizer, the walk for two or more (`closeWalk_typed`), and a
+lone finalizer voided (`voidedClose_typed`), typed by the scope store's typing (`fins`, what the
+generated bundle's `FinalizerOk` states at every finalizer a scope holds) at the closing exit. The
+one premise beside the store's typing is the closing exit's fit at `Exit<unknown, unknown>`: the
+lone finalizer's typing reads it, as the closed-scope row reads the closing exit (`ScopeExitOk`);
+the close-scope row's pre does not give it yet (decisions row proposed by seat D4,
+`closeScope_pre_admits_unfit_exit`). -/
 theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV)
     (flag : Bool) (st st' : Stores) (code : RProgram)
-    (lone : ∀ state strategy fin, scopeCloseSnapshot scope exit st = some (state, strategy, [fin]) →
-      TypedProg root w ⟨.unknown, .never, Env.Requirement.empty⟩ (denoteFin fin exit))
+    (fins : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin)
+    (exitFits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit)
     (h : closeScopeR scope exit flag st = some (st', code)) :
     TypedProg root w (EffTy.pure .unit) code := by
   unfold closeScopeR at h
@@ -1206,7 +1244,9 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
     obtain ⟨_, rfl⟩ := h
     match order, hs with
     | [], _ => exact TypedProg.pure ⟨trivial, trivial⟩
-    | [fin], hs => exact voidedClose_typed root (lone state strategy fin hs)
+    | [fin], hs =>
+      obtain ⟨entry, hentry, hfin⟩ := lone_of_snapshot hs
+      exact voidedClose_typed root (fins entry hentry fin hfin w (leHost_refl w) exit exitFits)
     | _ :: _ :: _, _ => exact closeWalk_typed root w strategy _ exit
 
 /-! ## The ledger: the handler side of decisions row 136
@@ -1504,8 +1544,8 @@ theorem closeWalk_typed (root : ProgramSource) (w : World) (strategy : Finalizer
 
 theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV) (flag : Bool)
     (st st' : Stores) (code : RProgram) : ProofGraph.Obligation
-    ((∀ state strategy fin, scopeCloseSnapshot scope exit st = some (state, strategy, [fin]) →
-        TypedProg root w ⟨.unknown, .never, Env.Requirement.empty⟩ (denoteFin fin exit)) →
+    ((∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin) →
+      FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit →
       closeScopeR scope exit flag st = some (st', code) → TypedProg root w (EffTy.pure .unit) code) := ⟨⟩
 
 /-- The guard row: its typing is the arrow of the frame the evaluator saves
@@ -1518,6 +1558,17 @@ theorem guard_frame (root : ProgramSource) (w : World) (ty : EffTy) (kind : Guar
           (.resume kind fun ex => k (some ex))) := ⟨⟩
 
 end M3bAdequacy
+
+/-! Row 87: the bundle's `FinalizerOk` (decisions row 151 (a″)) transports along the host order,
+beside `M3bWorld`'s other laws (`Typed/Residual.lean`, `Typed/Assembly.lean`, whose foot runs the
+scope's report). -/
+namespace M3bWorld
+
+theorem finalizerTyped_mono (root : ProgramSource) (w w' : World) (fin : FinName) :
+    ProofGraph.Obligation (w.leHost w' → FinalizerTyped root w fin → FinalizerTyped root w' fin) :=
+  ⟨⟩
+
+end M3bWorld
 
 end Effect4.Program.Typed
 
@@ -1667,6 +1718,8 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M3bAdequacy.memoComplete_implements
 #obligation_proved Effect4.Program.Typed.M3bAdequacy.guard_frame :=
   fun _ _ _ _ _ h => Effect4.Program.Typed.TypedProg.guard_frame h
+#obligation_proved Effect4.Program.Typed.M3bWorld.finalizerTyped_mono :=
+  @Effect4.Program.Typed.finalizerTyped_mono
 #obligation_audit Effect4.Program.Typed.M3bAdequacy
 #typed_state_obligations Effect4.Program.Typed.M3bAdequacy ceiling 2
   using aesop (rule_sets := [Effect4.TypedState])
