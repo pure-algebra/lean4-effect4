@@ -1,0 +1,73 @@
+--- src/Effect4/Laws/Program/Typed/Assembly.lean
++++ candidate/Assembly.lean
+@@ -33,7 +33,7 @@
+ /-- A completion at an effect type: an exit strongly, a reference completion through the
+ heap table. -/
+ def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberId Ann → Prop
+-  | .ofExit ex => StrongExit w ty ex
++  | .ofExit ex => FitsExit w ty ex
+   | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.sub ty.answer = true
+ 
+ /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
+@@ -44,20 +44,20 @@
+     Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
+     Checker.check (nativeSignature root.table) env c.path (.acquireRelease acquire release) = .ok t ∧
+     Checker.check (nativeSignature root.table) env (c.path ++ [0]) acquire = .ok a ∧
+-    EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesOk w c.ctx.services
++    EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
+ 
+ /-- The generated bundle, instantiated with the strong judgments. -/
+ def preds (root : ProgramSource) : Preds World where
+   SavedOk w e x := ∀ ty, expectOf w e = some ty →
+-    Contracts.SavedOk (TypedProg root) StrongExit (frameProtocols root) w ty x
++    Contracts.SavedOk (TypedProg root) FitsExit (frameProtocols root) w ty x
+   PendingOk w _ ps := ∀ p ∈ ps, ∃ id, (w.Θ id p.token).isSome = true
+-  exit w e ex := ∀ ty, expectOf w e = some ty → StrongExit w ty ex
++  exit w e ex := ∀ ty, expectOf w e = some ty → FitsExit w ty ex
+   ResumeOk w _ target token code := Contracts.ResumeOk (TypedProg root) w target token code
+-  ServiceOk w _ ctx := ServicesOk w ctx.services
++  ServiceOk w _ ctx := ServicesFit w ctx.services
+   RaceOk w _ races := ∀ r ∈ races, (w.Θ r.host r.token).isSome = true
+   PromiseTable w s := ∀ o ∈ s.deferreds.due, ∀ ty, w.Θ o.waiter o.token = some ty →
+     CompletionStrong w ty o.code
+-  HeapCell w key v := ∀ ty, w.Ρ key = some ty → StrongValue w ty v
++  HeapCell w key v := ∀ ty, w.Ρ key = some ty → Fits w v ty
+   PromiseCell w key cell := ∀ a e, w.«Π» key = some (a, e) →
+     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
+   CaptureOk w _ c := CaptureTyped root w c
+@@ -68,7 +68,7 @@
+   WorldValid rootTy w m ∧ RStateOk (preds root) w m ∧
+   ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token →
+     ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
+-      StackAccepts (TypedProg root) StrongExit (frameProtocols root) w tin final f.frame.stack ∧
++      StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final f.frame.stack ∧
+       InterruptProvenance f.frame
+ 
+ /-- M6's reference runner has no host table, so its tapes contain no host answer.
+@@ -105,7 +105,7 @@
+ /-! ## The capture lookup -/
+ 
+ theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} {v : Val}
+-    (h : EnvTyped w env vals) (hv : StrongValue w ty v) : EnvTyped w (env ++ [ty]) (vals ++ [v]) := by
++    (h : EnvTyped w env vals) (hv : Fits w v ty) : EnvTyped w (env ++ [ty]) (vals ++ [v]) := by
+   refine ⟨by simp only [List.length_append, h.1, List.length_singleton], fun i t x ht hx => ?_⟩
+   by_cases hi : i < env.length
+   · rw [List.getElem?_append_left hi] at ht
+@@ -130,7 +130,7 @@
+ release child, over the checker's environment extended by the acquired value and the exit. -/
+ theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
+     (completed : List (FiberId × ExitV)) (exVal : Val) (h : CaptureTyped root w c)
+-    (hex : StrongValue w (.exitOf .unknown .unknown) exVal) :
++    (hex : Fits w exVal (.exitOf .unknown .unknown)) :
+     ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty := by
+   obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _⟩ := h
+   obtain ⟨a', r, hacq', hrel, _, _⟩ := Checker.inv_acquireRelease _ _ _ _ _ t hcheck
+@@ -157,7 +157,7 @@
+ 
+ theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
+     (completed : List (FiberId × ExitV)) (exVal : Val) (_h : CaptureTyped root w c)
+-    (_hex : StrongValue w (.exitOf .unknown .unknown) exVal) : ProofGraph.Obligation
++    (_hex : Fits w exVal (.exitOf .unknown .unknown)) : ProofGraph.Obligation
+     (∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty) := ⟨⟩
+ 
+ end M3bAssembly

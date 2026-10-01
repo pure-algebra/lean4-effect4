@@ -1,0 +1,6 @@
+'Effect4.Program.Guard.guard_invariant' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.guard_reserved' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.guard_interrupted' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.guard_request' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.driverContract_of_lift' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.driverContract' depends on axioms: [propext, Quot.sound]

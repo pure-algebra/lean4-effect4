@@ -1,0 +1,46 @@
+'Effect4.Program.Guard.MemoIds.of_view' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.syncState' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.prepareAnswer' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.registerAsync' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.dueResumes' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.wakeList' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.clockStep' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.scopeLinkFiber' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.dropFinalizer' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.closeScopeUnsafe' depends on axioms: [propext]
+'Effect4.Program.Guard.MemoIds.closeScope' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.syncStateAt' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.registerAsyncAt' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.closeScopeAt' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.emit_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.update_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.updateRace_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.arm_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.halt_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.modify_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.postTask_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.start_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.countdown_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.countdown_result' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.forkFinalizers_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.interruptEach_state' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.stepFrame_state' depends on axioms: [propext]
+'Effect4.Program.Guard.MemoIds.finalizerOr_state' depends on axioms: [propext]
+'Effect4.Program.Guard.MemoIds.registerRace_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.settle_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.exitFiber_state' depends on axioms: [propext]
+'Effect4.Program.Guard.MemoIds.drainOwed_state' does not depend on any axioms
+'Effect4.Program.Guard.MemoIds.linkScope' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.linkScopeBase' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.withFiber' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.registerAsync_result' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.evaluatePrim' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.enterScoped' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.exitScoped' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.evaluateNative' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.iteration' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.fireObserver' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.driveStep' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.MemoIds.edits' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.steppedBy_memoIdsOk' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.reachable_memoIdsOk' depends on axioms: [propext, Quot.sound]

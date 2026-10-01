@@ -1,0 +1,759 @@
+diff --git a/Test/All.lean b/Test/All.lean
+index f0af6c05..3b715fa8 100644
+--- a/Test/All.lean
++++ b/Test/All.lean
+@@ -57,6 +57,7 @@ import Test.Machine.Runtime.FramesContract
+ import Test.Counterexamples.Machine.Runtime.Frames
+ import Test.Machine.Runtime.LiveStackContract
+ import Test.Counterexamples.Machine.Runtime.LiveStack
++import Test.Counterexamples.Machine.Runtime.HostHandleForgery
+ import Test.Machine.Runtime.StoresLawsContract
+ import Test.Machine.Runtime.CompletionDataContract
+ import Test.Machine.Runtime.ApproximationContract
+diff --git a/Test/Api/ExternalContract.lean b/Test/Api/ExternalContract.lean
+index af5a0d1c..bbaa246d 100644
+--- a/Test/Api/ExternalContract.lean
++++ b/Test/Api/ExternalContract.lean
+@@ -20,6 +20,11 @@ def table : RowTable := [row "query" .nat, row "cell" NativeOp.refTy,
+ 
+ def program (i : Nat := 0) : NativeEff := .perform (.external i) (.lit (.nat 1))
+ 
++-- E4-HOST-CE-007: the retained cell fixture is outside the interim host-reply profile.
++#guard match admitProgram (program 0) table with
++  | .error (.internalHandle ["table", "1", "answer"]) => true
++  | _ => false
++
+ def accepted : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 7))
+ def wrong : Completion Val Err Defect FiberId Ann := .ofExit (.success (.bool true))
+ 
+@@ -54,7 +59,8 @@ def refusal (p : NativeEff) (tape : List Api.Decision)
+   some (.errorType Api.root 0 .never)
+ #guard refusal (program 1) [Api.evaluate,
+   .answerAsync Api.root 0 (.ofExit (.success (Val.cell ⟨0⟩)))] =
+-  some (.deadHandle Api.root 0)
++  -- The handle-free reply rule refuses the shape before the liveness check.
++  some (.answerType Api.root 0 NativeOp.refTy)
+ #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 (.ofRefGet ⟨0⟩)] =
+   some (.unknownCell ⟨0⟩)
+ #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 accepted,
+diff --git a/Test/Api/HostSessionContract.lean b/Test/Api/HostSessionContract.lean
+index fed66827..e415edaf 100644
+--- a/Test/Api/HostSessionContract.lean
++++ b/Test/Api/HostSessionContract.lean
+@@ -21,6 +21,7 @@ def admitted : Api.AdmittedProgram program table where
+   lawful := by decide
+   runnable := by decide
+   intFreeTable := by decide
++  internalFreeTable := by decide
+   intFreeProgram := by decide
+   intFreeType := by decide
+ 
+diff --git a/Test/Api/KeyedHostContract.lean b/Test/Api/KeyedHostContract.lean
+index 8e260cce..740ec9fd 100644
+--- a/Test/Api/KeyedHostContract.lean
++++ b/Test/Api/KeyedHostContract.lean
+@@ -23,6 +23,7 @@ def initial : Session program table where
+     lawful := by decide
+     runnable := by decide
+     intFreeTable := by decide
++    internalFreeTable := by decide
+     intFreeProgram := by decide
+     intFreeType := by decide }
+   header := ⟨version, "multi", "keyed-v3", table⟩
+diff --git a/Test/Counterexamples/REGISTER.md b/Test/Counterexamples/REGISTER.md
+index 0e723afe..1058655d 100644
+--- a/Test/Counterexamples/REGISTER.md
++++ b/Test/Counterexamples/REGISTER.md
+@@ -192,3 +192,5 @@ packet without deleting the stable row.
+ | `E4-HOST-CE-006` | SEEDED | An unkeyed oracle answer queue identifies concurrent calls | `Test/Api/KeyedHostContract.lean`, `program`: reversed queue gives second child 2; keyed replies give it 3 | v2 records carry fiber/token keys and exact call claims; legacy queues retain their single-fiber limitation |
+ | `E4-RESID-CE-001` | PINNED | The tag residual of a `catchIf` whose test is `tagIs tag` is a preservation claim on every cause: a missed cause admitted at the body's column is admitted at `diffTag tag` of it | `Test/Program/CatchIfContract.lean`, `secondMiss` (the two-`Fail` miss retains the whole cause, `Api.run … = failure mixedValue`) and `twoFailTag` (the cause `[Fail ["B","x"], Fail ["A","m"]]` under a catch of `"A"` misses on its first `Fail`, is re-raised whole, and `causeAdmits` refuses it at `diffTag "A"`); the first-`Fail` rule is DI-09 | The adequacy statement carries the premise `SingleFail cause` (`Effect4.Program.SingleFail`, `Laws/Program/Residual.lean`, `catchIf_miss_admits`); the residual is a fidelity claim to rc.112's printed type (DI-17, amended 2026-09-11); `caughtErrorValue?` is unchanged |
+ | `E4-RESID-CE-002` | PINNED | `supportedErrTy e → supportedErrTy (diffTag tag e)` on every raw `e` | `Test/Program/TypeAlgebraContract.lean`: `e = union (prod never string) (prod (lit "X") string)` normalizes to `prod (lit "X") string` (supported); `diffTag "X" e = prod never string` is not | The law is stated on canonical columns (`supportedErrTy_diffTag` takes `Ty.Canonical e`), which is the only shape the checker cuts (`catchIfError` cuts `b.error.normalize`) |
++
++| `E4-HOST-CE-007` | REPAIRED 2026-09-30 | A certified host session can safely return an internal handle based only on kind and existence | `Test/Counterexamples/Machine/Runtime/HostHandleForgery.lean`; original live forgery in `docs/research/2026-09-30-host-answers-evidence/Probe.lean` retained at brief base `74b526d4`: checked number program returns a string | Admission scans raw host answer/error types and refuses internal handles with a path; non-allocation replies must be handle-free, including at `unknown`; fresh external allocation remains admitted. Closed error images already contain no handles. |
+diff --git a/Test/Run/RunContract.lean b/Test/Run/RunContract.lean
+index 955c826c..77ba201a 100644
+--- a/Test/Run/RunContract.lean
++++ b/Test/Run/RunContract.lean
+@@ -100,6 +100,7 @@ def pairAdmitted : Api.AdmittedProgram pairProgram Test.Api.HostSessionContract.
+   lawful := by decide
+   runnable := by decide
+   intFreeTable := by decide
++  internalFreeTable := by decide
+   intFreeProgram := by decide
+   intFreeType := by decide
+ 
+diff --git a/src/Effect4/Laws/Program/Admit.lean b/src/Effect4/Laws/Program/Admit.lean
+index e6c9acf0..0a9f4d4c 100644
+--- a/src/Effect4/Laws/Program/Admit.lean
++++ b/src/Effect4/Laws/Program/Admit.lean
+@@ -104,6 +104,42 @@ theorem externalValue_typed (ty : Ty) (allocated allocated' : List String) (valu
+       exact (Bool.and_eq_true_iff.mp ha).1
+     · cases h
+ 
++/-- Every accepted conversion either keeps a handle-free value and the allocation table,
++or constructs exactly the external handle at the old table's next index. -/
++theorem externalValue_internalFree (ty : Ty) (allocated allocated' : List String)
++    (value result : Val)
++    (h : externalValue ty allocated value = some (allocated', result)) :
++    (allocated' = allocated ∧ result = value ∧ result.handles = []) ∨
++      ∃ target, ty = .handle target ∧ externalHandleTarget target = true ∧
++        value = .nat allocated.length ∧ allocated' = allocated ++ [target] ∧
++        result = Value.external allocated.length := by
++  unfold externalValue at h
++  split at h
++  · rename_i target index
++    split at h
++    · rename_i ha
++      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
++      obtain ⟨ht, hi⟩ := Bool.and_eq_true_iff.mp ha
++      have hi : index = allocated.length := beq_iff_eq.mp hi
++      subst index
++      exact Or.inr ⟨target, rfl, ht, rfl, rfl, rfl⟩
++    · cases h
++  · split at h
++    · rename_i ha
++      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
++      exact Or.inl ⟨rfl, rfl, List.isEmpty_iff.mp (Bool.and_eq_true_iff.mp ha).2⟩
++    · cases h
++
++/-- The host supplies handle-free data even when conversion allocates: that arm takes the
++next scalar index, not a host-created handle. -/
++theorem externalValue_input_handleFree (ty : Ty) (allocated allocated' : List String)
++    (value result : Val)
++    (h : externalValue ty allocated value = some (allocated', result)) : value.handles = [] := by
++  rcases externalValue_internalFree ty allocated allocated' value result h with
++    ⟨_, rfl, free⟩ | ⟨_, _, _, rfl, _, _⟩
++  · exact free
++  · rfl
++
+ /-- Admission returns a conversion whose actual output, including a freshly minted
+ handle, inhabits the parked row's answer type. -/
+ theorem external_answer_typed (table : RowTable) (m : NativeMachine)
+@@ -308,6 +344,30 @@ theorem valOfErr_keys (e : Err) (v : Val) (h : valOfErr e = some v) : v.keys = [
+   | tagged t m => cases Option.some.inj h; rfl
+   | text s => cases Option.some.inj h; rfl
+ 
++/-- Closed failure images contain no handles, including every decoded typed-failure
++payload. This holds before admission, so neither host failure arm needs a new check. -/
++theorem external_failure_internalFree (cause : CauseV) :
++    (causeImage.toVal cause).handles = [] ∧
++      ∀ error annotations, .fail error annotations ∈ cause.reasons →
++        ∀ value, valOfErr error = some value → value.keys = [] := by
++  exact ⟨causeImage_handleFree cause, fun error _ _ value h => valOfErr_keys error value h⟩
++
++/-- An admitted host exit contributes no existing handle. Fresh external allocation occurs
++only when preparing a success; reference-read completions are separate effect requests. -/
++theorem admitAnswer_exit_keys (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)
++    (exit : ExitV) (h : admitAnswer row m fiber token (.ofExit exit) = none) :
++    (Completion.ofExit exit : Completion Val Err Defect FiberId Ann).keys = [] := by
++  cases exit with
++  | failure cause => rfl
++  | success value =>
++    cases hv : externalValue row.answer m.state.externals.allocated value with
++    | none => simp only [admitAnswer, hv, Option.isNone_none, if_true] at h; cases h
++    | some converted =>
++      obtain ⟨allocated, result⟩ := converted
++      have free := externalValue_input_handleFree row.answer m.state.externals.allocated
++        allocated value result hv
++      simp only [Completion.keys, exitKeys, Val.keys_eq_handles, free, List.filterMap_nil]
++
+ /-- Row DI-62. Converting a well-typed supported error gives an admitted failure reason. -/
+ theorem errAdmits_errOf (ty : Ty) (v : Val) (allocated : List String)
+     (a : ReasonAnnotations Ann)
+@@ -458,6 +518,38 @@ theorem external_prepared_answer_typed (program : NativeEff) (table : RowTable)
+       hf, hp, if_true, interpOf, prepareExternalAnswer, hne, hc, hrow, hv]
+   exact ht
+ 
++/-- The actual prepared success contains no internal handle: it is handle-free, or exactly
++the new external handle, with its target appended at that index in the returned table. -/
++theorem external_prepared_answer_internalFree (program : NativeEff) (table : RowTable)
++    (m : NativeMachine) (fiber : FiberId) (token : Nat) (value : Val)
++    (hs : m.stuck = none)
++    (ha : admit table m (.answerAsync fiber token (.ofExit (.success value))) = none) :
++    ∃ result,
++      (prepareAsyncAnswer (interpOf program table) m fiber token (.ofExit (.success value))).2 =
++        .success result ∧
++      (result.handles = [] ∨ ∃ target,
++        result = Value.external m.state.externals.allocated.length ∧
++        (prepareAsyncAnswer (interpOf program table) m fiber token
++          (.ofExit (.success value))).1.externals.allocated =
++            m.state.externals.allocated ++ [target]) := by
++  obtain ⟨i, request, row, allocated, result, hreq, hrow, hv, _⟩ :=
++    external_answer_typed table m fiber token value ha
++  obtain ⟨f, controller, cancel, hf, hp, hc⟩ := requestOf_current m fiber token _ _ hreq
++  have hne : table.isEmpty = false := by
++    cases table with
++    | nil => simp only [externalRow, List.getElem?_nil] at hrow; cases hrow
++    | cons row rest => rfl
++  have prepared : prepareAsyncAnswer (interpOf program table) m fiber token
++      (.ofExit (.success value)) =
++        ({ m.state with externals := { m.state.externals with allocated } }, .success result) := by
++    simp only [prepareAsyncAnswer, hs, Option.isSome_none, Bool.false_eq_true, if_false,
++      hf, hp, if_true, interpOf, prepareExternalAnswer, hne, hc, hrow, hv]
++  refine ⟨result, congrArg Prod.snd prepared, ?_⟩
++  rcases externalValue_internalFree row.answer m.state.externals.allocated allocated value result hv with
++    ⟨_, _, free⟩ | ⟨target, _, _, _, halloc, hresult⟩
++  · exact Or.inl free
++  · exact Or.inr ⟨target, hresult, by rw [prepared]; exact halloc⟩
++
+ /-- Every accepted completion names only handles present before the answer. -/
+ theorem admitAnswer_minted (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)
+     (answer : Completion Val Err Defect FiberId Ann)
+diff --git a/src/Effect4/Laws/Program/CheckedTyping.lean b/src/Effect4/Laws/Program/CheckedTyping.lean
+index 8510977e..90af4bbd 100644
+--- a/src/Effect4/Laws/Program/CheckedTyping.lean
++++ b/src/Effect4/Laws/Program/CheckedTyping.lean
+@@ -112,29 +112,33 @@ Its typing component is the same shared certificate used by other boundaries. -/
+ theorem admitProgram_eq_ok {program : NativeEff} {table : RowTable}
+     (admitted : AdmittedProgram program table) :
+     admitProgram program table = .ok admitted := by
+-  have tableFree := admitted.intFreeTable
+-  have programFree := admitted.intFreeProgram
+-  have typeFree := admitted.intFreeType
+-  have lawful := admitted.lawful
+-  have runnable := admitted.runnable
+-  have checked := checkTypedProgram_eq_some admitted.toTypedProgram
+   unfold admitProgram
+   split
+-  · simp_all
++  · rename_i found hfound
++    rw [admitted.intFreeTable] at hfound
++    contradiction
+   · split
+-    · simp_all
++    · rename_i found hfound
++      rw [admitted.internalFreeTable] at hfound
++      contradiction
+     · split
+-      · simp_all
+-      · rename_i typing htyping
+-        have same : typing = admitted.toTypedProgram :=
+-          Option.some.inj (htyping.symm.trans checked)
+-        subst same
++      · rename_i found hfound
++        rw [admitted.intFreeProgram] at hfound
++        contradiction
++      · rw [checkTypedProgram_eq_some admitted.toTypedProgram]
++        dsimp only
+         split
+-        · simp_all
+-        · simp only [lawful, dite_true]
+-          split
+-          · simp_all
+-          · cases admitted
+-            rfl
++        · rename_i found hfound
++          rw [admitted.intFreeType] at hfound
++          contradiction
++        · split
++          · split
++            · rename_i why hwhy
++              rw [admitted.runnable] at hwhy
++              contradiction
++            · cases admitted
++              rfl
++          · rename_i unlawful
++            exact False.elim (unlawful admitted.lawful)
+ 
+ end Effect4.Program
+diff --git a/src/Effect4/Laws/Program/Handles/Hooks.lean b/src/Effect4/Laws/Program/Handles/Hooks.lean
+index 35a69539..8f1308af 100644
+--- a/src/Effect4/Laws/Program/Handles/Hooks.lean
++++ b/src/Effect4/Laws/Program/Handles/Hooks.lean
+@@ -522,35 +522,37 @@ theorem externalAdmits_keys (table : RowTable) (i : Nat)
+   | ofRefGet cell =>
+     cases hr : externalRow table i <;> simp only [externalAdmits, hr, Bool.false_eq_true] at h
+ 
+-/-- A converted reply grows only the external allocation list; every returned handle
+-is either an already valid input or the fresh index just appended. -/
++/-- A converted reply grows only the external allocation list. Its value is handle-free
++or exactly the fresh external handle; existing store handles remain valid. -/
+ theorem externalValue_minted (ty : Ty) (s : Stores) (ids : List FiberId)
+     (value result : Val) (allocated : List String)
+     (hc : externalValue ty s.externals.allocated value = some (allocated, result))
+     (hok : Ok ⟨ids, s⟩ (value.keys ++ s.keys)) :
+     let next := { s with externals := { s.externals with allocated } }
+     s.le next ∧ Ok ⟨ids, next⟩ (next.keys ++ result.keys) := by
+-  unfold externalValue at hc
+-  split at hc
+-  · rename_i target index
+-    split at hc
+-    · rename_i ha
+-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
+-      simp only [Bool.and_eq_true, beq_iff_eq] at ha
+-      obtain ⟨_, rfl⟩ := ha
+-      have hle : s.le { s with externals := { s.externals with
+-          allocated := s.externals.allocated ++ [target] } } :=
+-        ⟨Nat.le_refl _, Nat.le_refl _, (fun _ h => h), Nat.le_refl _,
+-          (fun _ h => h), by simp⟩
+-      refine ⟨hle, Ok_append.mpr ⟨?_, ?_⟩⟩
+-      · exact Ok_mono (World.le_of_state hle) (Ok_append.mp hok).2
+-      · simp [Val.keys_eq_handles, Store.Val.handles, Handle.ofCode, HandleKind.ofByte?,
+-          Ok, Handle.existsIn]
+-    · cases hc
+-  · split at hc
+-    · obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
+-      exact ⟨Stores.le_refl _, Ok_append.mpr ⟨(Ok_append.mp hok).2, (Ok_append.mp hok).1⟩⟩
+-    · cases hc
++  rcases externalValue_internalFree ty s.externals.allocated allocated value result hc with
++    ⟨rfl, rfl, free⟩ | ⟨target, _, _, rfl, rfl, rfl⟩
++  · have keys : result.keys = [] := by
++      rw [Val.keys_eq_handles, free]
++      rfl
++    change s.le s ∧ Ok ⟨ids, s⟩ (s.keys ++ result.keys)
++    rw [keys, List.append_nil]
++    exact ⟨Stores.le_refl _, (Ok_append.mp hok).2⟩
++  · have hle : s.le { s with externals := { s.externals with
++        allocated := s.externals.allocated ++ [target] } } :=
++      ⟨Nat.le_refl _, Nat.le_refl _, (fun _ h => h), Nat.le_refl _,
++        (fun _ h => h), by
++          simpa only [List.length_append, List.length_singleton] using
++            Nat.le_succ s.externals.allocated.length⟩
++    refine ⟨hle, Ok_append.mpr ⟨?_, ?_⟩⟩
++    · exact Ok_mono (World.le_of_state hle) (Ok_append.mp hok).2
++    · change Ok _ [Handle.external s.externals.allocated.length]
++      refine Ok_cons.mpr ⟨?_, Ok_nil _⟩
++      change decide (s.externals.allocated.length <
++        (s.externals.allocated ++ [target]).length) = true
++      apply decide_eq_true
++      simpa only [List.length_append, List.length_singleton] using
++        Nat.lt_succ_self s.externals.allocated.length
+ 
+ /-- The stateful answer hook meets the generic handle contract for every current
+ code and table, including refused and nonexternal inputs. -/
+diff --git a/src/Effect4/Laws/Run.lean b/src/Effect4/Laws/Run.lean
+index 5097672b..4c5b27d6 100644
+--- a/src/Effect4/Laws/Run.lean
++++ b/src/Effect4/Laws/Run.lean
+@@ -206,8 +206,8 @@ theorem drive_eq_play {σ : Type} (r : Reactor σ) (rounds : Nat) (s : Run) (st
+ type is a proof, and the type is the one the checker computes, so two certificates agree. -/
+ theorem admitted_unique (program : Api.Program) (table : RowTable)
+     (a b : AdmittedProgram program table) : a = b := by
+-  obtain ⟨⟨tya, ha⟩, _, _, _, _, _⟩ := a
+-  obtain ⟨⟨tyb, hb⟩, _, _, _, _, _⟩ := b
++  obtain ⟨⟨tya, ha⟩, _, _, _, _, _, _⟩ := a
++  obtain ⟨⟨tyb, hb⟩, _, _, _, _, _, _⟩ := b
+   have hty : tya = tyb := Option.some.inj (ha.symm.trans hb)
+   subst hty
+   rfl
+@@ -218,7 +218,7 @@ needs and the tree did not have. -/
+ theorem admitProgram_certificate (program : Api.Program) (table : RowTable)
+     (c : AdmittedProgram program table) : admitProgram program table = .ok c := by
+   aesop (add norm unfold [admitProgram, checkTypedProgram])
+-    (add norm simp [c.intFreeTable, c.intFreeProgram, c.typed, c.intFreeType, c.lawful,
++    (add norm simp [c.intFreeTable, c.internalFreeTable, c.intFreeProgram, c.typed, c.intFreeType, c.lawful,
+       c.runnable]) (add safe apply admitted_unique)
+ 
+ /-- **O-1.** Opening cannot refuse. With a `Built` in hand the checked `start` of
+diff --git a/src/Effect4/Program/Admission.lean b/src/Effect4/Program/Admission.lean
+index 4dc065cc..68116021 100644
+--- a/src/Effect4/Program/Admission.lean
++++ b/src/Effect4/Program/Admission.lean
+@@ -1,6 +1,7 @@
+ import Effect4.Program.Table
+ import Effect4.Program.CheckedTyping
+ import Effect4.Program.Native
++import Effect4.Program.Typed
+ import Effect4.Program.Fragment
+ import Effect4.Program.Fold
+ 
+@@ -12,8 +13,9 @@ A program is admitted to run when:
+ 2. It is well-typed against the supplied row table (`Program.typeOf program table = some ty`).
+ 3. The table meets the three program-plane lawfulness conditions (`Table.lawful table = true`).
+ 4. Every row can be registered by the runner (`checkTable table = none`).
++5. Host answer and error types contain no internal handle kind (row 97 interim).
+ 
+-All four requirements are verified by `admitProgram`, producing a certified `AdmittedProgram`
++All five requirements are verified by `admitProgram`, producing a certified `AdmittedProgram`
+ whose fields witness each check. If admission fails, an exact `AdmitRefusal` reports the failure.
+ Admission depends strictly on the program plane and never imports codegen.
+ 
+@@ -51,6 +53,44 @@ where
+           findInt (pos ++ ["answer"]) row.answer <|>
+           findInt (pos ++ ["error"]) row.error <|> go (index + 1) rest
+ 
++/-- Locate internal handle types with the generated type fold. Raw syntax is inspected
++before normalization, including every nested answer and error column. -/
++def internalHandleScan : TyAlgebra (fun _ => Path → Option Path) where
++  ty_never := fun _ => none
++  ty_unit := fun _ => none
++  ty_nat := fun _ => none
++  ty_int := fun _ => none
++  ty_string := fun _ => none
++  ty_bool := fun _ => none
++  ty_handle target := fun pos => if internalHandleTargets.contains target then some pos else none
++  ty_option inner := fun pos => inner (pos ++ ["inner"])
++  ty_list inner := fun pos => inner (pos ++ ["inner"])
++  ty_prod left right := fun pos => left (pos ++ ["left"]) <|> right (pos ++ ["right"])
++  ty_except error value := fun pos => error (pos ++ ["error"]) <|> value (pos ++ ["value"])
++  ty_exitOf value error := fun pos => value (pos ++ ["value"]) <|> error (pos ++ ["error"])
++  ty_causeOf error := fun pos => error (pos ++ ["error"])
++  ty_fiberOf _ _ := some
++  ty_union left right := fun pos => left (pos ++ ["left"]) <|> right (pos ++ ["right"])
++  ty_lit _ := fun _ => none
++  ty_refOf _ := some
++  ty_deferredOf _ _ := some
++  ty_var _ := fun _ => none
++  ty_unknown := fun _ => none
++
++def findInternalHandle (pos : Path) (ty : Ty) : Option Path :=
++  cata_ty internalHandleScan ty pos
++
++/-- Requests may pass internal handles outward. Host answer and error columns cannot
++introduce them until their declaration registry is available (row 97 interim). -/
++def findInternalHandleInTable (table : RowTable) : Option Path := go 0 table
++where
++  go (index : Nat) : RowTable → Option Path
++    | [] => none
++    | row :: rest =>
++        let pos := ["table", toString index]
++        findInternalHandle (pos ++ ["answer"]) row.answer <|>
++          findInternalHandle (pos ++ ["error"]) row.error <|> go (index + 1) rest
++
+ /-- The inferred answer and error are the program's explicit type columns. -/
+ def findIntInEffTy (ty : EffTy) : Option Path :=
+   findInt ["program", "answer"] ty.answer <|> findInt ["program", "error"] ty.error
+@@ -81,16 +121,19 @@ inductive AdmitRefusal
+   /-- A raw table, the program tree or the inferred program type mentions the reserved
+   integer constructor. -/
+   | uninhabited («at» : Path)
++  /-- A host answer or error type mentions a reserved internal handle kind. -/
++  | internalHandle («at» : Path)
+ deriving DecidableEq, Repr
+ 
+ /-- A program admitted to run against a table: its type, the execution checks, and
+-the successful integer scans. The fields are proofs, so an `AdmittedProgram` cannot be forged by
++the successful integer and internal-handle scans. The fields are proofs, so an `AdmittedProgram` cannot be forged by
+ building the structure with the wrong table — the table and the program are its indices. -/
+ structure AdmittedProgram (program : NativeEff) (table : RowTable)
+     extends TypedProgram (nativeSignature table) program where
+   lawful : Table.lawful table = true
+   runnable : checkTable table = none
+   intFreeTable : findIntInTable table = none
++  internalFreeTable : findInternalHandleInTable table = none
+   intFreeProgram : findIntInProgram program = none
+   intFreeType : findIntInEffTy ty = none
+ 
+@@ -102,6 +145,9 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
+   match htable : findIntInTable table with
+   | some pos => .error (.uninhabited pos)
+   | none =>
++    match hinternal : findInternalHandleInTable table with
++    | some pos => .error (.internalHandle pos)
++    | none =>
+     match hprogram : findIntInProgram program with
+     | some pos => .error (.uninhabited pos)
+     | none =>
+@@ -114,7 +160,7 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
+         if hlawful : Table.lawful table = true then
+           match hrunnable : checkTable table with
+           | some why => .error (.table why)
+-          | none => .ok ⟨typing, hlawful, hrunnable, htable, hprogram, htype⟩
++          | none => .ok ⟨typing, hlawful, hrunnable, htable, hinternal, hprogram, htype⟩
+         else
+           match Table.checkLawful table with
+           | some (.duplicateKey k) => .error (.duplicateKey k)
+@@ -173,42 +219,95 @@ theorem admitProgram_table_int (program : NativeEff) (table : RowTable) (pos : P
+     (h : findIntInTable table = some pos) :
+     admitProgram program table = .error (.uninhabited pos) := by
+   unfold admitProgram
+-  split <;> simp_all
++  split
++  · rename_i found hfound
++    have same : found = pos := Option.some.inj (hfound.symm.trans h)
++    cases same
++    rfl
++  · rename_i hnone
++    rw [h] at hnone
++    contradiction
++
++/-- A reserved host handle type is refused immediately after the integer table scan. -/
++theorem admitProgram_table_internal (program : NativeEff) (table : RowTable) (pos : Path)
++    (hTable : findIntInTable table = none) (h : findInternalHandleInTable table = some pos) :
++    admitProgram program table = .error (.internalHandle pos) := by
++  unfold admitProgram
++  split
++  · rename_i found hfound
++    rw [hTable] at hfound
++    contradiction
++  · split
++    · rename_i found hfound
++      have same : found = pos := Option.some.inj (hfound.symm.trans h)
++      cases same
++      rfl
++    · rename_i hnone
++      rw [h] at hnone
++      contradiction
+ 
+-/-- Integer syntax stated inside the program tree is refused with its exact path, after the
+-table scan succeeds (DI-92). -/
++/-- Integer syntax stated inside the program tree is refused after both table scans. -/
+ theorem admitProgram_program_int (program : NativeEff) (table : RowTable) (pos : Path)
+-    (hTable : findIntInTable table = none) (h : findIntInProgram program = some pos) :
++    (hTable : findIntInTable table = none) (hInternal : findInternalHandleInTable table = none)
++    (h : findIntInProgram program = some pos) :
+     admitProgram program table = .error (.uninhabited pos) := by
+   unfold admitProgram
+   split
+-  · simp_all
+-  · split <;> simp_all
++  · rename_i found hfound
++    rw [hTable] at hfound
++    contradiction
++  · split
++    · rename_i found hfound
++      rw [hInternal] at hfound
++      contradiction
++    · split
++      · rename_i found hfound
++        have same : found = pos := Option.some.inj (hfound.symm.trans h)
++        cases same
++        rfl
++      · rename_i hnone
++        rw [h] at hnone
++        contradiction
+ 
+-/-- An inferred integer occurrence is refused after the table and the tree scans succeed. -/
++/-- An inferred integer occurrence is refused after the table and tree scans succeed. -/
+ theorem admitProgram_type_int (program : NativeEff) (table : RowTable) (ty : EffTy) (pos : Path)
+-    (hTable : findIntInTable table = none) (hProgram : findIntInProgram program = none)
++    (hTable : findIntInTable table = none) (hInternal : findInternalHandleInTable table = none)
++    (hProgram : findIntInProgram program = none)
+     (hTy : typeOfProgram (nativeSignature table) program = some ty)
+     (hInt : findIntInEffTy ty = some pos) :
+     admitProgram program table = .error (.uninhabited pos) := by
+   unfold admitProgram
+   split
+-  · simp_all
++  · rename_i found hfound
++    rw [hTable] at hfound
++    contradiction
+   · split
+-    · simp_all
++    · rename_i found hfound
++      rw [hInternal] at hfound
++      contradiction
+     · split
+-      · rename_i hnone
+-        unfold checkTypedProgram at hnone
+-        split at hnone <;> simp_all
+-      · rename_i typing _
+-        have heq : typing.ty = ty := Option.some.inj (typing.typed.symm.trans hTy)
++      · rename_i found hfound
++        rw [hProgram] at hfound
++        contradiction
++      · have hChecked : checkTypedProgram (nativeSignature table) program = some ⟨ty, hTy⟩ := by
++          unfold checkTypedProgram
++          split
++          · rename_i hnone
++            rw [hTy] at hnone
++            contradiction
++          · rename_i inferred hinferred
++            have same : inferred = ty := Option.some.inj (hinferred.symm.trans hTy)
++            cases same
++            rfl
++        rw [hChecked]
++        dsimp only
+         split
+-        · rename_i pos' hpos'
+-          rw [heq] at hpos'
+-          have hpos : pos' = pos := by injection (hpos'.symm.trans hInt)
+-          rw [hpos]
++        · rename_i found hfound
++          have same : found = pos := Option.some.inj (hfound.symm.trans hInt)
++          cases same
++          rfl
+         · rename_i hnone
+-          rw [heq, hInt] at hnone
++          rw [hInt] at hnone
+           contradiction
+ 
+ end Effect4.Program
+diff --git a/src/Effect4/Program/Compile.lean b/src/Effect4/Program/Compile.lean
+index 9428a7ef..3f811d82 100644
+--- a/src/Effect4/Program/Compile.lean
++++ b/src/Effect4/Program/Compile.lean
+@@ -1350,7 +1350,7 @@ def externalRow (table : RowTable) (i : Nat) : Option Row := do
+ 
+ /-- A host gives the next scalar allocation index for an external handle. The
+ machine writes the target spelling and constructs the handle. Other values retain
+-their shape; a host-supplied external handle is never an allocation request. -/
++their shape and carry no handles; a host-supplied handle is never an allocation request. -/
+ def externalValue (ty : Ty) (allocated : List String) (value : Val) :
+     Option (List String × Val) :=
+   match ty, value with
+@@ -1360,7 +1360,7 @@ def externalValue (ty : Ty) (allocated : List String) (value : Val) :
+     else none
+   | _, _ =>
+     if Val.hasTy value ty allocated &&
+-        !(Store.Val.handles value).any (fun h => h.1 == HandleKind.external.byte) then
++        (Store.Val.handles value).isEmpty then
+       some (allocated, value)
+     else none
+ 
+diff --git a/Test/Counterexamples/Machine/Runtime/HostHandleForgery.lean b/Test/Counterexamples/Machine/Runtime/HostHandleForgery.lean
+new file mode 100644
+index 00000000..45b219db
+--- /dev/null
++++ b/Test/Counterexamples/Machine/Runtime/HostHandleForgery.lean
+@@ -0,0 +1,160 @@
++import Effect4.Api.HostSession
++import Effect4.Program.Profile
++import Effect4.Program.Stream
++import Effect4.Program.Packages.SqliteBun
++import Effect4.Program.Packages.KeyValueStoreMemory
++import TestSupport.AcquireHandle
++
++/-!
++E4-HOST-CE-007: a host cannot return an internal handle through a declared handle type or
++through `unknown`. The original live-session forgery is retained from
++`docs/research/2026-09-30-host-answers-evidence/Probe.lean` at `be15b062`: a checked `nat`
++program used a host-returned fiber to finish with `"wrong"`. Its table now fails admission.
++The `unknown` variant below reaches a real bound call before its reply is refused.
++
++All checks here are finite execution controls, not a general host guarantee. Error values
++cannot contain handles in this alphabet; the failure image laws cover that side.
++-/
++set_option autoImplicit false
++set_option maxRecDepth 8192
++set_option maxHeartbeats 4000000
++
++namespace Test.Counterexamples.Machine.Runtime.HostHandleForgery
++open Effect4 Effect4.Machine Effect4.Program
++open Effect4.Api.HostSession
++
++def fiberRow : Row where
++  name := "returnFiber"
++  spelling := "Host.returnFiber"
++  kind := .async
++  registration := .external
++  request := .unit
++  answer := .fiberOf .nat .never
++  error := .never
++  cite := "E4-HOST-CE-007"
++
++def fiberTable : RowTable := [fiberRow]
++def opts : Supervision.ForkOptions := ⟨true, true, .interruptible⟩
++
++/-- The original forgery: the host claims a number fiber and names the string fiber. -/
++def program : Api.Program :=
++  .bind (.withFiber (.fork (.succeed (.lit (.str "wrong"))) opts))
++    (.bind (.perform (.external 0) (.lit .unit)) (.awaitFiber (.var 1) .joinEffect))
++
++def fiberHeader : Header := ⟨version, "forgery", "forgery-v1", fiberTable⟩
++
++#guard Api.typeOf program fiberTable = some (EffTy.pure .nat)
++#guard findInternalHandleInTable fiberTable = some ["table", "0", "answer"]
++#guard match admitProgram program fiberTable with
++  | .error (.internalHandle ["table", "0", "answer"]) => true
++  | _ => false
++#guard match start program fiberTable "forgery-v1" fiberHeader 1000 with
++  | .error (.program (.internalHandle ["table", "0", "answer"])) => true
++  | _ => false
++
++/-- Pin every internal constructor and the reserved spellings at table admission. -/
++def internalTypes : List Ty :=
++  [.fiberOf .nat .never, .refOf .nat, .deferredOf .nat .never,
++   NativeOp.refTy, NativeOp.deferredTy, .scope, .context]
++#guard internalTypes.all fun ty =>
++  findInternalHandleInTable [{ fiberRow with answer := ty }] = some ["table", "0", "answer"]
++#guard internalTypes.all fun ty =>
++  findInternalHandleInTable [{ fiberRow with answer := .unit, error := ty }] =
++    some ["table", "0", "error"]
++
++/-- Each recursive value shape must expose its nested handle; each path is independent data. -/
++def nestedTypes : List (Ty × Path) :=
++  [(.option (.refOf .nat), ["inner"]),
++   (.list (.refOf .nat), ["inner"]),
++   (.causeOf (.refOf .nat), ["error"]),
++   (.prod (.refOf .nat) .unit, ["left"]),
++   (.prod .unit (.refOf .nat), ["right"]),
++   (.union (.refOf .nat) .unit, ["left"]),
++   (.union .unit (.refOf .nat), ["right"]),
++   (.except (.refOf .nat) .unit, ["error"]),
++   (.except .unit (.refOf .nat), ["value"]),
++   (.exitOf (.refOf .nat) .never, ["value"]),
++   (.exitOf .unit (.refOf .nat), ["error"])]
++#guard nestedTypes.all fun (ty, path) =>
++  findInternalHandleInTable [{ fiberRow with answer := ty }] =
++    some (["table", "0", "answer"] ++ path)
++-- Request types are outside this reply rule; a later row's answer is still scanned.
++#guard findInternalHandleInTable
++  [{ fiberRow with request := .fiberOf .nat .never, answer := .unit }] = none
++#guard findInternalHandleInTable
++  [{ fiberRow with answer := .unit }, fiberRow] = some ["table", "1", "answer"]
++
++/-- An unknown answer is admitted, so value admission must still reject the live handle. -/
++def unknownTable : RowTable := [{ fiberRow with answer := .unknown }]
++def unknownProgram : Api.Program :=
++  .bind (.withFiber (.fork (.succeed (.lit (.str "wrong"))) opts))
++    (.perform (.external 0) (.lit .unit))
++def unknownHeader : Header := ⟨version, "unknown", "unknown-v1", unknownTable⟩
++def unknownCall : Call := ⟨version, "unknown", unknownTable, 0, Api.root, .external 0, .unit⟩
++def forged : Reply :=
++  ⟨version, "unknown", 0, ⟨Api.root, 0⟩, .ofExit (.success (Value.fiber 1))⟩
++def honest : Reply := { forged with completion := .ofExit (.success (.nat 7)) }
++
++def unknownParked : Option (Session unknownProgram unknownTable) :=
++  match start unknownProgram unknownTable "unknown-v1" unknownHeader 1000 with
++  | .error _ => none
++  | .ok initial => some (advance initial 1000 Api.evaluate).session
++
++def unknownBound : Option (Session unknownProgram unknownTable) :=
++  unknownParked.map fun parked => (bindCall parked unknownCall 0).session
++
++#guard (admitProgram unknownProgram unknownTable).toOption.isSome
++#guard unknownParked.isSome
++#guard unknownParked.any fun parked =>
++  (bindCall parked unknownCall 0).phase = .bound
++#guard unknownBound.any fun bound =>
++  ((bound.machine.fiber? ⟨1⟩).bind (·.exit)) = some (.success (.str "wrong"))
++#guard Val.hasTy (Value.fiber 1) .unknown
++#guard unknownBound.any fun bound => preflight bound forged = .error .envelope
++#guard unknownBound.any fun bound => (submit bound forged).phase = .refused .envelope
++#guard unknownBound.any fun bound =>
++  let refused := (submit bound forged).session
++  refused.machine.state = bound.machine.state ∧
++  refused.pending = bound.pending ∧ refused.applied = bound.applied ∧
++  refused.consumed = bound.consumed ∧
++  requestOf refused.machine Api.root 0 = some (.external 0, .unit)
++-- The same live call accepts an ordinary value and finishes with it.
++#guard unknownBound.any fun bound => (submit bound honest).phase = .preflight
++#guard unknownBound.any fun bound =>
++  let finished := (applyReply (submit bound honest).session honest.key 1000).session
++  (finished.machine.fiber? Api.root).bind (·.exit) = some (.success (.nat 7)) ∧
++    finished.applied = 1
++
++/-- The fifteen real package/profile rows retain their existing reply profile. -/
++def inTreeRows : RowTable :=
++  Packages.sqliteBun ++ Packages.keyValueStoreMemory ++ Stream.table "Stream.Probe" .nat .never ++
++    [Profile.Scalar.waitRow, Profile.Resource.acquireRow, Profile.Resource.useRow,
++     Profile.Resource.releaseRow]
++#guard inTreeRows.length = 15
++#guard findInternalHandleInTable inTreeRows = none
++
++/-- A fresh external allocation still passes the certified session and records the handle. -/
++def allocationTable : RowTable := Test.Api.AcquireHandleContract.table
++def allocationProgram : Api.Program := .perform (.external 0) (.lit .unit)
++def allocationHeader : Header := ⟨version, "allocation", "allocation-v1", allocationTable⟩
++def allocationCall : Call :=
++  ⟨version, "allocation", allocationTable, 0, Api.root, .external 0, .unit⟩
++def allocationReply : Reply :=
++  ⟨version, "allocation", 0, ⟨Api.root, 0⟩, .ofExit (.success (.nat 0))⟩
++
++def allocationBound : Option (Session allocationProgram allocationTable) :=
++  match start allocationProgram allocationTable "allocation-v1" allocationHeader 1000 with
++  | .error _ => none
++  | .ok initial =>
++    some (bindCall (advance initial 1000 Api.evaluate).session allocationCall 0).session
++
++#guard allocationBound.isSome
++#guard allocationBound.any fun bound =>
++  bound.machine.state.externals.allocated = [] ∧ (submit bound allocationReply).phase = .preflight
++#guard allocationBound.any fun bound =>
++  let finished := (applyReply (submit bound allocationReply).session allocationReply.key 1000).session
++  finished.machine.state.externals.allocated = [Test.Api.AcquireHandleContract.resource] ∧
++    (finished.machine.fiber? Api.root).bind (·.exit) = some (.success (Value.external 0)) ∧
++    finished.applied = 1
++
++end Test.Counterexamples.Machine.Runtime.HostHandleForgery

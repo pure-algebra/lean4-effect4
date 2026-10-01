@@ -13,7 +13,7 @@ this is the actual site; this law does not claim every reachable Origin is one o
 those source forms. Internal forks with no source Point are outside this law.
 The explicit source-body type is used to extend Γ at the actual newly allocated
 id. Env typing is deliberately not claimed here: FitsIn would check only coarse
-handles; M3 must supply HandlesFit/the typed residual program premise.
+handles; M3 must supply value membership/the typed residual program premise.
 
 This fixes the absence of a source connection in the generic fork_extension
 statement without claiming the M3 world-quantified fork protocol or reachable

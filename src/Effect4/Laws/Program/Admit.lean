@@ -78,6 +78,17 @@ theorem admitted_row (table : RowTable) (m : NativeMachine) (fiber : FiberId) (t
   split at h <;> try cases h
   exact ⟨_, _, _, by assumption, by assumption, h⟩
 
+/-- With no host table, every host answer is refused, whatever the parked machine holds.
+This is the runtime boundary behind M6's no-host-answer scope (row 95, `E4-SCHED-CE-015`). -/
+theorem emptyTable_refuses_every_answer (m : NativeMachine) (fiber : FiberId) (token : Nat)
+    (answer : Completion Val Err Defect FiberId Ann) :
+    admit [] m (.answerAsync fiber token answer) ≠ none := by
+  intro accepted
+  obtain ⟨i, _, _, _, hrow, _⟩ := admitted_row [] m fiber token answer accepted
+  have absent : externalRow [] i = none := rfl
+  rw [absent] at hrow
+  cases hrow
+
 /-- A successful conversion returns a value with the declared type in the resulting
 allocation table. The input scalar index is not itself claimed to have a handle type. -/
 theorem externalValue_typed (ty : Ty) (allocated allocated' : List String) (value result : Val)

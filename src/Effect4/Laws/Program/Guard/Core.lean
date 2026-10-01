@@ -1,4 +1,5 @@
 import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Machine.Lift
 import Effect4.Api
 import Effect4.Laws.Program.Guard.RaceSites
 import Effect4.Laws.Auto.Frames
@@ -46,6 +47,72 @@ theorem reachable_step {p : NativeEff} {table : RowTable} {compileFuel : Nat}
   obtain ⟨history, rfl⟩ := h
   refine ⟨history ++ [(fuel, d)], ?_⟩
   simp only [executePrefix, List.foldl_append, List.foldl_cons, List.foldl_nil]
+
+/-! ## Lifting a fact through a decision history -/
+
+section History
+
+universe u v w
+variable {W : Type w} {M : Type u} {X : Type v}
+
+/-- Every history step is admitted at the state it actually meets, for every world that
+satisfies the invariant at that state. -/
+def Admitted (J : W → M → Prop) (A : W → M → X → Prop) (step : M → X → M) :
+    M → List X → Prop
+  | _, [] => True
+  | m, x :: xs => (∀ w, J w m → A w m x) ∧ Admitted J A step (step m x) xs
+
+/-- A fact kept by every admitted step holds after the whole folded history, at a later
+world. This is the history form of the machine lift. -/
+theorem foldl_lift (o : Effect4.Laws.Effects.WorldOrder W) (J : W → M → Prop)
+    (A : W → M → X → Prop) (step : M → X → M)
+    (pres : ∀ w m x, J w m → A w m x → ∃ w', o.le w w' ∧ J w' (step m x)) :
+    ∀ (xs : List X) (w : W) (m : M), J w m → Admitted J A step m xs →
+      ∃ w', o.le w w' ∧ J w' (xs.foldl step m)
+  | [], w, _, hj, _ => ⟨w, o.refl w, hj⟩
+  | x :: xs, w, m, hj, ⟨hx, hxs⟩ => by
+    obtain ⟨w₁, le₁, hj₁⟩ := pres w m x hj (hx w hj)
+    obtain ⟨w₂, le₂, hj₂⟩ := foldl_lift o J A step pres xs w₁ (step m x) hj₁ hxs
+    exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
+
+/-- When admission imposes no condition, every history is admitted. -/
+theorem admitted_true (J : W → M → Prop) (step : M → X → M) :
+    ∀ (xs : List X) (m : M), Admitted J (fun _ _ _ => True) step m xs
+  | [], _ => trivial
+  | _ :: xs, _ => ⟨fun _ _ => trivial, admitted_true J step xs _⟩
+
+/-- An invariant of the loaded native machine that every admitted decision keeps holds
+after every admitted prefix. The admission premise follows the prefix's actual states. -/
+theorem reachable_lift (p : NativeEff) (table : RowTable) (compileFuel : Nat)
+    (answers : List (Completion Val Err Defect FiberId Ann))
+    (o : Effect4.Laws.Effects.WorldOrder W) (J : W → NativeMachine → Prop)
+    (A : W → NativeMachine → Nat × NativeDecision → Prop)
+    (load : ∃ w, J w (Api.load p compileFuel answers))
+    (pres : ∀ w m fuel d, J w m → A w m (fuel, d) →
+      ∃ w', o.le w w' ∧ J w' (steppedBy p fuel table m d))
+    (history : Prefix)
+    (adm : Admitted J A (fun m s => steppedBy p s.1 table m s.2)
+      (Api.load p compileFuel answers) history) :
+    ∃ w, J w (executePrefix p table (Api.load p compileFuel answers) history) := by
+  obtain ⟨w₀, h₀⟩ := load
+  obtain ⟨w, _, hw⟩ := foldl_lift o J A (fun m s => steppedBy p s.1 table m s.2)
+    (fun w m s hj ha => pres w m s.1 s.2 hj ha) history w₀ _ h₀ adm
+  exact ⟨w, hw⟩
+
+/-- A fact about the machine alone, kept by every decision, holds at every reachable
+native machine. No decision admission premise is added to `Reachable`. -/
+theorem reachable_lift_pure (p : NativeEff) (table : RowTable) (compileFuel : Nat)
+    (answers : List (Completion Val Err Defect FiberId Ann)) (J : NativeMachine → Prop)
+    (load : J (Api.load p compileFuel answers))
+    (pres : ∀ m fuel d, J m → J (steppedBy p fuel table m d)) (m : NativeMachine)
+    (reachable : Reachable p table compileFuel answers m) : J m := by
+  obtain ⟨history, rfl⟩ := reachable
+  obtain ⟨_, hw⟩ := reachable_lift p table compileFuel answers Lift.unitOrder (fun _ m => J m)
+    (fun _ _ _ => True) ⟨(), load⟩ (fun _ m fuel d hj _ => ⟨(), trivial, pres m fuel d hj⟩)
+    history (admitted_true _ _ history _)
+  exact hw
+
+end History
 
 def Interrupted (f : NFiber) : Prop :=
   f.interruptPending = true ∨ f.exit.isSome = true

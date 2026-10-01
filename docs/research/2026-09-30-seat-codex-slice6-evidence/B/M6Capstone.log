@@ -1,0 +1,8 @@
+'Test.Counterexamples.Machine.Semantics.M6Capstone.bad_reachable' depends on axioms: [propext, Quot.sound]
+'Test.Counterexamples.Machine.Semantics.M6Capstone.bad_exit_not_typed' depends on axioms: [propext, Quot.sound]
+'Test.Counterexamples.Machine.Semantics.M6Capstone.bad_has_bad_exit' depends on axioms: [propext, Quot.sound]
+'Test.Counterexamples.Machine.Semantics.M6Capstone.bad_not_typed' depends on axioms: [propext, Quot.sound]
+'Test.Counterexamples.Machine.Semantics.M6Capstone.current_m6_capstone_false' depends on axioms: [propext, Quot.sound]
+'Test.Counterexamples.Machine.Semantics.M6Capstone.badTape_rejected' depends on axioms: [propext]
+'Test.Counterexamples.Machine.Semantics.M6Capstone.timerTape_answerFree' depends on axioms: [propext]
+'Test.Counterexamples.Machine.Semantics.M6Capstone.timed_reachable' depends on axioms: [propext, Quot.sound]

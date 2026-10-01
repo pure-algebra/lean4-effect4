@@ -33,7 +33,7 @@ def expectOf (w : World) : Expect → Option EffTy
 /-- A completion at an effect type: an exit strongly, a reference completion through the
 heap table. -/
 def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberId Ann → Prop
-  | .ofExit ex => StrongExit w ty ex
+  | .ofExit ex => FitsExit w ty ex
   | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.sub ty.answer = true
 
 /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
@@ -44,20 +44,20 @@ def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
     Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
     Checker.check (nativeSignature root.table) env c.path (.acquireRelease acquire release) = .ok t ∧
     Checker.check (nativeSignature root.table) env (c.path ++ [0]) acquire = .ok a ∧
-    EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesOk w c.ctx.services
+    EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
 
 /-- The generated bundle, instantiated with the strong judgments. -/
 def preds (root : ProgramSource) : Preds World where
   SavedOk w e x := ∀ ty, expectOf w e = some ty →
-    Contracts.SavedOk (TypedProg root) StrongExit (frameProtocols root) w ty x
+    Contracts.SavedOk (TypedProg root) FitsExit (frameProtocols root) w ty x
   PendingOk w _ ps := ∀ p ∈ ps, ∃ id, (w.Θ id p.token).isSome = true
-  exit w e ex := ∀ ty, expectOf w e = some ty → StrongExit w ty ex
+  exit w e ex := ∀ ty, expectOf w e = some ty → FitsExit w ty ex
   ResumeOk w _ target token code := Contracts.ResumeOk (TypedProg root) w target token code
-  ServiceOk w _ ctx := ServicesOk w ctx.services
+  ServiceOk w _ ctx := ServicesFit w ctx.services
   RaceOk w _ races := ∀ r ∈ races, (w.Θ r.host r.token).isSome = true
   PromiseTable w s := ∀ o ∈ s.deferreds.due, ∀ ty, w.Θ o.waiter o.token = some ty →
     CompletionStrong w ty o.code
-  HeapCell w key v := ∀ ty, w.Ρ key = some ty → StrongValue w ty v
+  HeapCell w key v := ∀ ty, w.Ρ key = some ty → Fits w v ty
   PromiseCell w key cell := ∀ a e, w.«Π» key = some (a, e) →
     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
   CaptureOk w _ c := CaptureTyped root w c
@@ -68,12 +68,18 @@ def TypedState (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) 
   WorldValid rootTy w m ∧ RStateOk (preds root) w m ∧
   ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token →
     ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
-      StackAccepts (TypedProg root) StrongExit (frameProtocols root) w tin final f.frame.stack ∧
+      StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final f.frame.stack ∧
       InterruptProvenance f.frame
 
-/-- A state some decision tape reaches from the loaded program. -/
+/-- M6's reference runner has no host table, so its tapes contain no host answer.
+Clock advances, dispatcher decisions and interrupts remain in scope (row 95). -/
+def NoHostAnswer : Api.Decision → Prop
+  | .answerAsync _ _ _ => False
+  | _ => True
+
+/-- A state a tape with no host answer reaches from the loaded program. -/
 def RReachable (root : ProgramSource) (fuel : Nat) (m : RState) : Prop :=
-  ∃ tape, m = (replayR root.program fuel tape).machine
+  ∃ tape, (∀ d ∈ tape, NoHostAnswer d) ∧ m = (replayR root.program fuel tape).machine
 
 /-- A host answer is admitted: an answer to a fiber parked at that token fits the token's
 declared type. Answers to anything else run inertly and impose nothing. -/
@@ -99,7 +105,7 @@ def StepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop :=
 /-! ## The capture lookup -/
 
 theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} {v : Val}
-    (h : EnvTyped w env vals) (hv : StrongValue w ty v) : EnvTyped w (env ++ [ty]) (vals ++ [v]) := by
+    (h : EnvTyped w env vals) (hv : Fits w v ty) : EnvTyped w (env ++ [ty]) (vals ++ [v]) := by
   refine ⟨by simp only [List.length_append, h.1, List.length_singleton], fun i t x ht hx => ?_⟩
   by_cases hi : i < env.length
   · rw [List.getElem?_append_left hi] at ht
@@ -124,7 +130,7 @@ theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} 
 release child, over the checker's environment extended by the acquired value and the exit. -/
 theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
     (completed : List (FiberId × ExitV)) (exVal : Val) (h : CaptureTyped root w c)
-    (hex : StrongValue w (.exitOf .unknown .unknown) exVal) :
+    (hex : Fits w exVal (.exitOf .unknown .unknown)) :
     ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty := by
   obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _⟩ := h
   obtain ⟨a', r, hacq', hrel, _, _⟩ := Checker.inv_acquireRelease _ _ _ _ _ t hcheck
@@ -151,7 +157,7 @@ theorem typedState_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFue
 
 theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
     (completed : List (FiberId × ExitV)) (exVal : Val) (_h : CaptureTyped root w c)
-    (_hex : StrongValue w (.exitOf .unknown .unknown) exVal) : ProofGraph.Obligation
+    (_hex : Fits w exVal (.exitOf .unknown .unknown)) : ProofGraph.Obligation
     (∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty) := ⟨⟩
 
 end M3bAssembly
@@ -221,7 +227,17 @@ theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) 
         (letI := termEvaluatorFor root.program
          stepDecisionState (interpR root.program) fuel m d).1) := ⟨⟩
 
-/-- The capstone: every state an admitted tape reaches from an admitted source is typed. -/
+/-- The capstone obligation: every state a tape with no host answer reaches from a
+checked, closed source is typed. This restriction repairs `E4-SCHED-CE-015` for host answers
+only. The statement remains refuted on programs with no host by `E4-PROV-CE-005`,
+`E4-PROV-CE-006` and `E4-SCHED-CE-016`. The table-based Fits judgment repairs the
+liveness obstruction E4-TYPED-CE-004; the general M5 initialization proof is still open.
+
+M6 does not yet claim that a run never dies with `badName`, `notImplemented`, or
+`missingService` when nothing is required. Row 107 and brief item H2 require that exclusion
+in the exit judgment read by code, saved stacks, queued results and stored completions;
+a check on finished fibers alone is insufficient (`E4-TYPED-CE-007`). Keep this disclaimer
+until that repair lands, retaining any part that remains open. -/
 theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
     ProofGraph.Obligation (Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
       RReachable root fuel m → ∃ w, TypedState root rootTy w m) := ⟨⟩

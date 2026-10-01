@@ -1,0 +1,40 @@
+diff --git a/src/Effect4/Api/RunnerDerived.lean b/docs/research/2026-09-30-seat-codex-slice6-evidence/A/RunnerDerived.candidate.lean
+index 2e81f78d..c1d5f6ce 100644
+--- a/src/Effect4/Api/RunnerDerived.lean
++++ b/docs/research/2026-09-30-seat-codex-slice6-evidence/A/RunnerDerived.candidate.lean
+@@ -773,7 +773,8 @@ def shapeDoc : ShapeDoc :=
+       ("valueRowTrailing", 3, [
+         ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
+       ("table", 4, [("why", (shape _root_.Effect4.Program.TableRefusal).root)]),
+-      ("uninhabited", 5, [("at", (shape (@_root_.List (_root_.String))).root)])],
++      ("uninhabited", 5, [("at", (shape (@_root_.List (_root_.String))).root)]),
++      ("internalHandle", 6, [("at", (shape (@_root_.List (_root_.String))).root)])],
+    (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).defs ++
+      (shape _root_.Effect4.Program.TableRefusal).defs ++
+      (shape (@_root_.List (_root_.String))).defs⟩
+@@ -785,6 +786,7 @@ def toVal : _root_.Effect4.Program.AdmitRefusal → Val
+   | .valueRowTrailing a0 => .ctor 3 [Canonical.toVal a0]
+   | .table a0 => .ctor 4 [Canonical.toVal a0]
+   | .uninhabited a0 => .ctor 5 [Canonical.toVal a0]
++  | .internalHandle a0 => .ctor 6 [Canonical.toVal a0]
+ 
+ def ofVal : Val → Option (_root_.Effect4.Program.AdmitRefusal)
+   | .ctor 0 [] => some .illTyped
+@@ -793,6 +795,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.AdmitRefusal)
+   | .ctor 3 [v0] => (Canonical.ofVal (α := (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))) v0).map .valueRowTrailing
+   | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.TableRefusal) v0).map .table
+   | .ctor 5 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .uninhabited
++  | .ctor 6 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .internalHandle
+   | _ => none
+ 
+ set_option linter.unusedSimpArgs false in
+@@ -847,6 +850,9 @@ theorem fits (a : _root_.Effect4.Program.AdmitRefusal) : shapeDoc.accepts (toVal
+   | «uninhabited» a0 =>
+     exact accepts_sum _ _ _ 5 "uninhabited" _ _ rfl
+       (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
++  | «internalHandle» a0 =>
++    exact accepts_sum _ _ _ 6 "internalHandle" _ _ rfl
++      (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
+ 
+ instance instCanonical : Canonical (_root_.Effect4.Program.AdmitRefusal) :=
+   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
