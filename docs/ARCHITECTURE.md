@@ -55,10 +55,14 @@ for validation above the canonical expression reader.
 
 ## Source tree
 
-The schema authoring boundary sits above Program and Schema. `Schema/Image` connects
-concrete Lean carriers to admitted program values; its proofs are `Laws/Schema/Image`.
-(`Schema/Transform` and `Schema/Endpoint`, the second authoring plane, were deleted on
-2026-09-18 under `docs/research/2026-09-17-ontology-and-do-now-probe.md` §3.)
+The retained Schema boundary contains the raw carriers and authoring constructors,
+`Bridge` for the program type arrow, `Codec` for type-directed JSON, and `OfShape`
+for the Store shape arrow. Row 39 retires the separate field-admission judgment,
+program image, annotated-field generator and recursive annotation traversal.
+Pure `Store/Domain/Shape` imports no Schema module; `Store/Domain/Canonical` owns
+`Canonical.document` through `Schema/OfShape`, and Domain/Node/Genesis retain
+schema-node and address construction. (`Schema/Transform` and `Schema/Endpoint`,
+the second authoring plane, were deleted on 2026-09-18 under the ontology note §3.)
 
 | Area | Responsibility |
 | --- | --- |
@@ -164,7 +168,7 @@ beside it, the avatar (the same machine as OCaml 5 effect handlers) with the dae
 the program pipeline. Callers cross this seam; batteries also test modules
 at their own boundaries. Program printers answer syntax (`TypeScript.Expr`, `ConstDecl`). The explicit
 `render` operation crosses to bytes through `Codegen.Artefact.render`; it and
-text-producing generators such as `Codegen.Schema.generate?` are admitted by
+text-producing functions such as `Codegen.Schema.documentSource` are admitted by
 exact name in the axiom gate.
 
 Inside the seam the library keeps its faces distinct and relates them by

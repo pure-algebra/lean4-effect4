@@ -24,9 +24,10 @@ residual, chosen values), and `make check-corpus`, the 400 generated programs of
 (`truth/corpus-known-differences.md`). The generated corpus adds breadth over constructs the
 hand corpus never runs; it does not replace the hand programs.
 
-`schema-annotations/` and `schema-effectful-field/` are `make check-schema-host` and
-`schema-generation/` is `make check-schema-ts`, both in the full tier and the nightly CI
-lane, on the Schema sources and the harness directories as inputs.
+`schema-generation/` is `make check-schema-ts`, in the full tier and the nightly CI lane, on
+the Schema sources and the harness directory as inputs. (`schema-annotations/` and
+`schema-effectful-field/`, the `check-schema-host` gate, were deleted on 2026-10-01 under
+decisions row 39; their last revision is `git:d554cd71:harness/`.)
 
 `schema-generation/` contains the first complete bridge fixture. Run
 `scripts/check-schema-typescript-generation.sh`; it regenerates the fixture
@@ -39,40 +40,6 @@ The same command also generates a second document containing one
 field-admissible representative for each of the 22 representation tags and
 both check constructors. Its bytes are compared against Lean generation, and the runtime receipt
 checks that Effect revives the exact canonical tag order.
-
-`schema-annotations/` exercises annotations as a typed data plane over an
-existing Schema. Run `scripts/check-schema-annotations.sh`; it checks
-higher-order annotation combinators, decoded-side, encoded-side, and key-side
-metadata, last-check resolution, persisted raw representation data, the
-unpatched TypeScript compiler, and strict Effect language-service diagnostics.
-The custom dimensions use `effect/Schema` module augmentation, so TypeScript
-checks their payloads without changing Schema's runtime carrier.
-
-`schema-effectful-field/` lowers a `PropertySignature` whose annotation bag
-carries an `EffectfulFieldSpec` into a TypeScript optic whose read and write
-cross an Effect service. Run `scripts/check-schema-effectful-field.sh`,
-which is being added by a sibling agent in this sweep; it drives
-`harness/schema-effectful-field/check.sh`, and that runs `check.mjs`. The pin
-is asserted in `check.mjs`: `effect` 4.0.0-rc.112, `typescript` 7.0.2, and
-`@effect/tsgo` 0.38.0, read from `EFFECT4_EFFECT_NODE_MODULES` or the
-neighboring Foldlab installation, plus the unpatched `tsc.original` found in
-that tree. `tsconfig.json` is strict with `exactOptionalPropertyTypes`,
-`noUncheckedIndexedAccess`, and `verbatimModuleSyntax`, and raises
-`floatingEffect`, `missingEffectError`, `missingEffectContext`, and
-`schemaSyncInEffect` to errors.
-
-A pass means four separate projects behave exactly as named: `positive.tail.ts`
-draws no diagnostic, and `floating.tail.ts`, `missing-error.tail.ts`, and
-`missing-context.tail.ts` each draw exactly the one diagnostic they are named
-for, with one file checked and Effect v4 detected in every case; then `api.ts`
-is regenerated from `harness/schema-effectful-field/Generate.lean` and executed
-against a live `UserFieldPolicy`, and the observed read/write event order is
-compared with the Lean receipt. It does not close the target edge: the frozen
-contract is `Test/contracts/schema-effectful-field-typescript.contract.md`, and
-`E4-TYPE-SCHEMA-EFFECTFUL-FIELD-SPEC` stays open pending that join (the port
-manifest that tracked it was archived on 2026-09-04 with the Foldlab vendor and
-is no longer in this tree). Nothing here holds for another service, another diagnostic,
-or another Effect version.
 
 `trace/` and `effect-v4-family/` were archived to branch `archive/flow-route`
 on 2026-09-04 with the Flow route they served, together with their gates

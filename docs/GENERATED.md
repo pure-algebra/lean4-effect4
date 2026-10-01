@@ -87,8 +87,10 @@ stamp on 2026-09-08). The Lean module it projected, and the three other hand-fro
 declaration censuses of the test tree, were retired the same day (stage 2 of the checking
 refactor): what they froze by hand — constructor order and arity, owned names, receipts —
 is held by the derived projection guard (`tools/Effect4Gen/Check.lean`), the compatibility
-snapshot and the axiom gate. The rest of the Schema slice runs on its inputs as
-`make check-schema-pins` and `check-schema-host`.
+snapshot and the axiom gate. The retained Schema checks run on their inputs as
+`make check-schema-pins` and `check-schema-ts`. Row 39 retires the annotation and
+effectful-field harnesses and their `check-schema-host` gate; the pinned
+`harness/schema-host` installation remains the host used by `schema-ts`.
 
 The **evidence** column is the word, or words, a group's claim carries, ruled 2026-09-09
 (DI-32): *proved* for a theorem, *reproduced* for a byte comparison against a fresh producer

@@ -24,4 +24,6 @@ its implementation is on and the revision. A retired packet describes something 
 not contain, so it states no live claim; it is kept because counterexample ids are never reused
 and `Test/Counterexamples/REGISTER.md` still cites the packet that owed each row. The thirteen
 `surface-*.contract.md` packets are retired: the Surface library was removed from `main` in
-`ac07384` and is archived on branch `archive/surface` at `70b1571`.
+`ac07384` and is archived on branch `archive/surface` at `70b1571`. The three `schema-effectful-field*.contract.md`
+packets are retired: decisions row 39 deleted their fences on 2026-10-01, and the last revision
+holding them is `d554cd71` on this branch.

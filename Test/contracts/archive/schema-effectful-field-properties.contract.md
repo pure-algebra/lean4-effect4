@@ -1,5 +1,12 @@
 # Schema effectful-field property discovery contract
 
+Retired 2026-10-01: decisions row 39 (the Schema wipe) deleted its production fence; the last
+revision holding `src/Effect4/Schema/EffectfulField.lean`,
+`Test/Schema/EffectfulFieldPropertiesContract.lean` and
+`Test/Counterexamples/Schema/EffectfulFieldProperties.lean` is `git:d554cd71` on this branch.
+Retained for the counterexample rows this packet names, now in
+`Test/Counterexamples/Archive/REGISTER.md`.
+
 Status: **FROZEN / RED**.
 
 Production fence: additive declarations in

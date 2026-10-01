@@ -71,7 +71,7 @@ Ordered by how much they distort what an agent sees.
    `k.name` without `k.service`), emitting duplicate reference keys naming no carrier (D §7.1).
    **Replacement:** key `k{name}_{service}` as the printer already spells it, and file the
    carrier's schema — which means `effDocument` takes the signature. No decision.
-7. **D12 has no consumer.** `Api.schemaOf` has zero call sites; the printer emits no
+7. **D12 has no consumer.** `Api.schemaOf` had zero call sites (deleted 2026-10-01 under row 39; `EffTy.document` is the publisher); the printer emits no
    `Effect.Effect<A,E,R>` annotation for any program with a requirement (`Print.lean:70-79`
    answers `none`); no gate decodes an exit under its own schema (D §7.5). **Replacement:**
    decision D-D — the S-5 truth-lane gate first (the only consumer that can fail), then the

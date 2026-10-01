@@ -234,7 +234,15 @@ queued `finish` is typed by that finish and its code slot is inert (H1); H2's tw
 statements (`cancel_typed`, `lookup_typed`) are amended and the bounded migration authorized.
 The same ruling accepted the data probe's rows 119, 122, 127 and 128; rows 120–121, 123–126 and
 129–132 are open with their recommendations. A formalization pass (four seats, four verifiers,
-one synthesis; `docs/research/2026-10-01-formal-pass/`) runs before the remaining landings. Four rulings the owner gave Codex directly on 2026-10-01 are
+one synthesis; `docs/research/2026-10-01-formal-pass/`) runs before the remaining landings.
+Codex then landed all three with row 39 (G `57c93ba4`, H1 `d554cd71`, H2 part one `abc7b124`,
+row 39's four deletion slices `f0591f36`–`8cdc931b`, verification `bd142695`), merged at
+`0c534f06` after the full build and gates, the producer chain (byte-identical), dune,
+`check-ocaml`, `check-cases` and schema-ts passed in its worktree and the build was rerun in
+main. H1 carries one extension Codex made under the owner's "resolve the issues" instruction
+(row 133: current code is also inert on a halted machine, and `StepPreserves` takes the dispatch
+premise `m.stuck = none`, as `Lift.StepKeeps` does), which awaits the owner's explicit
+ratification. The M6 ledger stands at 20 open, 0 proved. Four rulings the owner gave Codex directly on 2026-10-01 are
 recorded in addendum 5's amendments and rows 91 and 107: part one's clause excludes `badName` and
 `notImplemented` only (the addendum had stated the full clause, which part two holds); the engine
 prelude and the engine tests join C's checklist; two more closure manifests and the `ForkRecord`
@@ -531,9 +539,9 @@ decisions 34/40 still close the fusion/conversion campaign. No open semantic cho
    fragments landed (census §7.5–§7.10); the thirteen exemptions — the compiler's five, the
    reference evaluator's five, `valCode`, `ofSchema`, the derived instance — stay as they are and
    are tracked in census §7.4. No census gate, no fusion, no conversion for uniformity's sake.
-2. **Row 39** (ruled): `EffectfulField` first, then `Check`/`Accepts`/`Image`/`schemaOf`, the
-   `Annotations` trim, the `render` move. Then the simple rows still open: 8 (in the move), 23 as
-   a delete, 24, 17, 16.
+2. **Row 39** (landed 2026-10-01, merged `0c534f06`): `EffectfulField` first, then
+   `Check`/`Accepts`/`Image`/`schemaOf`, the `Annotations` trim, the `render` move, all done.
+   Then the simple rows still open: 8 (now in `Schema/OfShape.lean`), 23 as a delete, 24, 17, 16.
 3. **The Schema layer** re-cut (`docs/research/2026-09-17-ontology-and-do-now-probe.md` §3): the five files that carry the two real claims
    stay; the rest is converted where it is a fold or an embedding and deleted where it is
    neither; `Store.render` leaves `Shape.lean` first.
@@ -544,9 +552,9 @@ Scout G (third-party Lean tooling for this work) is out: `docs/research/2026-09-
 
 ## Owner decisions open
 
-Row 39 (the Schema wipe) and row 41 (the typed-state invariant on the reference machine, the
-core milestone, no shortcuts; design `docs/research/2026-09-18-typed-state-plan.md`, scouted, §6) are
-ruled (2026-09-18); rows 34 and 40 are ruled out. HandlesFit with Val.hasTy unchanged and
+Row 39 (the Schema wipe) landed on 2026-10-01; row 41 (the typed-state invariant on the reference
+machine, the core milestone, no shortcuts; design `docs/research/2026-09-18-typed-state-plan.md`,
+scouted, §6) is ruled (2026-09-18); rows 34 and 40 are ruled out. HandlesFit with Val.hasTy unchanged and
 per-cell Ref/Deferred typing, including memo cells, were approved on 2026-09-19 (rows 44–45).
 The release rule is implemented (DI-94/row 47), and layer 0 exists in `Laws/Effects/Protocol.lean`;
 its future upstream publication remains separate. Storage, observation, transactions and future
@@ -561,7 +569,7 @@ and M2. Open, in the order `decisions.md`'s last section
 gives: group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2, 7, 10, 11; then 1
 with 3, and 19–22. Row 5 has the restatement `docs/research/2026-09-17-ontology-and-do-now-probe.md` §2 gives.
 
-## What row 39 does (for the owner, 2026-09-18)
+## What row 39 did (for the owner, 2026-09-18; landed 2026-10-01)
 
 - *Trim `Annotations.lean` to the carrier*: of its 1,193 lines the estate uses `AnnotationKey` (a
   typed key: a name and the codec of its payload, two laws), the two keys `identifierKey` and
@@ -578,6 +586,8 @@ with 3, and 19–22. Row 5 has the restatement `docs/research/2026-09-17-ontolog
   other way. It moves to `Schema/OfShape.lean` beside `Bridge` (the arrow out of `Ty`); Store
   becomes a leaf (`Val`, `Shape`, the byte codec, `ShapeDoc.print`); row 8's key dedupe lands in
   the move.
+- *Landed* as four deletion slices (`f0591f36`, `d75f5c25`, `3d5ea883`, `8cdc931b`), deletion
+  only: row 8's key dedupe did not land in the move and stays open in `Schema/OfShape.lean`.
 
 ## Process
 

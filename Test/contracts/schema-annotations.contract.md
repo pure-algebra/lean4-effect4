@@ -1,6 +1,10 @@
 # Schema annotation data-plane and optic contract
 
-Status: **Pass-B FROZEN; implementation REQUIRED-BLOCKED**. The production
+Status: **Pass-B FROZEN; implementation REQUIRED-BLOCKED**. Trimmed 2026-10-01 under
+decisions row 39: the recursive annotation traversal and the four `Document` annotation wrappers
+were deleted (last revision `git:d554cd71:src/Effect4/Schema/Annotations.lean`); `AnnotationKey`,
+the two keys, `Representation.nodeAnnotations` with its law, `Data/Optic.lean` and the two
+document traversals remain live. The production
 fences are `src/Effect4/Data/Optic.lean`, `src/Effect4/Schema/Annotations.lean`, and an
 additive document-traversal section in `src/Effect4/Schema/Document.lean`.
 The breaker-owned batteries are `Test/Data/OpticContract.lean` and

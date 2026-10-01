@@ -127,7 +127,7 @@ be, so `Transform`'s category laws can only be stated at the meaning (§2 row 25
 | 21 | program bytes `Wire.encodeProgram`/`decodeProgram` | K2 | ✔ `decode_encode` + `decode_exact` |
 | 22 | `Schema.encode`/`decode` (JSON, `Schema/Codec.lean:224`) | K2 | **✘ (c) absent**: nothing says `decode t j = some v → encode t v = some j` |
 | 23 | `Ty.schema`/`Ty.ofSchema` (`Bridge.lean:38`, `:63`) | K2 | **✘ (c) absent and false**: `.never ann checks` reads as `.never` for any annotations and checks; a declaration with a payload reads as `.handle` and reprints without it |
-| 24 | `ShapeDoc.document` (`Shape.lean:468`), `effDocument` (`Bridge.lean:162`), `Row.document`, `Api.schemaOf` | K2 | **✘ no reader at all**, hence no law; `Api.schemaOf` (`Api.lean:138`) has zero call sites — the `RunnerBytes.schemaOf` of the same name (`:89`) is a different function, used twice in `Test/` |
+| 24 | `ShapeDoc.document` (`Shape.lean:468`), `effDocument` (`Bridge.lean:162`), `Row.document`, `Api.schemaOf` | K2 | **✘ no reader at all**, hence no law; `Api.schemaOf` (`Api.lean:138`) has zero call sites — the `RunnerBytes.schemaOf` of the same name (`:89`) is a different function, used twice in `Test/`; `Api.schemaOf` deleted 2026-10-01 under row 39 |
 | 25 | `Transform.id`/`andThen`/`dimap` (`Schema/Transform.lean:39-77`; deleted 2026-09-18) | composition | **✘ no identity, no associativity**; only `andThen_typed` (the signature) |
 | 26 | `SchemaTransform.check` (`Transform.lean:92`; deleted 2026-09-18) | K4 | **✘ no completeness**: a refusal is not tied to ill-typedness |
 | 27 | `replay`/`replayPlay`, `behaviour` | K5 | ✔ `replay_unique`, `replay_append`, `replay_skip_refused` |
@@ -218,7 +218,7 @@ these, named". Five lines; the adversarial review already asked for it.
 
 **C6 — the boundary square with a consumer.** Every recorded corpus exit decodes under the schema its
 program published. This is D-D's S-5 gate, the only formulation of D12 that can fail; without it
-`Api.schemaOf` stays a projection nobody reads.
+a published schema stays a projection nobody reads (`Api.schemaOf` was deleted on 2026-10-01 under row 39).
 
 **C7 — the code square, gated with rule coverage.** Keep the rungs' differential and add the
 obligation the mutants nearly state: every translator rule has a mutant that turns the differential
@@ -516,7 +516,7 @@ and the partial simulation, *no* to a full CompCert-shaped proof: six mutants fo
 plus a 50-row table is an under-covered control.
 
 **F-11 — Two things the theory says should not exist.** (a) **`Api.schemaOf` as it stands**
-(`Api.lean:138`) — a projection with no reader, no law, zero call sites: give it C6's consumer or delete it, because a
+(`Api.lean:138`; deleted 2026-10-01 under row 39) — a projection with no reader, no law, zero call sites: give it C6's consumer or delete it, because a
 published schema nobody decodes under is a claim, not a boundary. (b) **`TsGen`'s environment read**
 — the one generator whose output cannot be re-derived from a committed table. Replace it with a fold
 from the signature table: a metaprogram whose input is not data has no idempotence obligation a gate

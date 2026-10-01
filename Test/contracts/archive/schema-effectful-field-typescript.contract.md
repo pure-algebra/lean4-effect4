@@ -1,5 +1,10 @@
 # Effectful-field TypeScript target contract
 
+Retired 2026-10-01: decisions row 39 (the Schema wipe) deleted its production fence; the last
+revision holding `src/Effect4/Codegen/EffectfulField.lean`, `Test/Codegen/EffectfulFieldContract.lean`
+and `harness/schema-effectful-field/` is `git:d554cd71` on this branch. Retained for the
+counterexample rows this packet names, now in `Test/Counterexamples/Archive/REGISTER.md`.
+
 Status: **Pass-B FROZEN; implementation RED**.
 
 Production fence: `src/Effect4/Codegen/EffectfulField.lean`, the exact
