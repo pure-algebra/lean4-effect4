@@ -269,7 +269,32 @@ Proposed row 104: source repair verified and preserved, landing held only by the
 paths plus the remaining target checks. No protected coordinator document changed.
 
 ## G — layer values and provision fixtures
-Pending.
+
+**STOPPED under addendum 2's G rule, with addendum 3's two exceptions applied.** A third
+in-tree fixture changes: `Test/Program/AuthorContract.lean:267–268` expects
+`Api.checkLayer (Layer.value Counter.key (str "x"))` to succeed. Counter is declared at nat;
+this authored expression elaborates to an effect leaf returning a string. It is distinct
+from leftWins/rightWins and from the reported gap programs.
+
+`G/AuthorContractProbe.lean` imports the actual test module, proves that exact elaboration,
+its present acceptance, and its rejection by G's revised effect-leaf equation as
+`valueNotSubtype Counter.key string nat` at `[]`. The body check remains the original checker
+at empty environment/path `[0]`; that body has no layer. The probe also pins why replacing
+this with a synthetic string succeed leaf would be inaccurate: that leaf is already refused
+by literalOutsideAlphabet. This is a checked change to one concrete program, not a scan claim.
+
+Command: `LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true
+ docs/research/2026-09-30-seat-codex-slice6-evidence/G/AuthorContractProbe.lean`.
+Exit 0; all eleven axiom prints are within [propext, Quot.sound] (`G/probe.log`).
+No checker, judgment, fixture or register edit was installed, and no corpus regeneration was
+run. E4-PROV-CE-006 remains SEEDED.
+
+Smallest amendment: add this one AuthorContract guard to G's fixture exceptions and expect
+its located valueNotSubtype refusal. Preserve the nearby positive string-carrier Greeting
+fixture at lines 290–292. Then implement the already specified checker/judgment changes,
+move leftWins/rightWins, run the named laws/tests and regenerate the corpus index.
+Proposed row 105: include the third fixture in the bounded change list. No protected document
+changed; `8065fd64` is the preceding F stop/evidence commit.
 
 ## E — Fits membership
 Pending.
