@@ -108,8 +108,8 @@ import Effect4.Program.Profile
 import Effect4.Program.HostBoundary
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
 -- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,
--- `App` (`Effect.provide`), the build specification with its totality theorem, and the
--- compile-route runs of the docs deployment.
+-- `App` (`Effect.provide`), the build specification (its totality theorem was cut at
+-- `b08f3b58`; restoring it is owed under R5), and the compile-route runs of the docs deployment.
 import Effect4.Program.Provision
 -- Configuration as an algebra: rc.112's `ConfigProvider` in its `makeSource`/`makeOrElse`
 -- normal form (a fallback monoid under a path-transformation action), the `Config` reader with

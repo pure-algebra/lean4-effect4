@@ -16,6 +16,8 @@ import Effect4.Laws.Machine.Witnesses
 import Effect4.Laws.Program.Denote
 import Effect4.Laws.Program.Iter
 import Effect4.Laws.Program.DenoteB
+import Effect4.Laws.Program.IterLimit
+import Effect4.Laws.Program.StoreComodel
 import Effect4.Laws.Program.Folds.Looped
 import Effect4.Laws.Program.Folds.Denote
 import Effect4.Laws.Machine.Folds.Val
@@ -30,9 +32,11 @@ import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.DenoteR
 import Effect4.Laws.Program.InterpR
 import Effect4.Laws.Program.EvaluateR
+import Effect4.Laws.Program.ScopeMarkers
 import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.ScopedTyping
 import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Program.Provision
 import Effect4.Laws.Program.Template
 import Effect4.Laws.Program.Residual
 import Effect4.Laws.Program.Decision
@@ -88,6 +92,7 @@ import Effect4.Laws.Program.Typed.TypedStateDecl
 import Effect4.Laws.Auto.Frames
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Effects.Protocol
+import Effect4.Laws.Effects.Sum
 import Effect4.Laws.Program.Typed.ProtocolObligations
 import Effect4.Laws.Program.Typed.Vocabulary
 import Effect4.Laws.Program.Typed.TypedSources
@@ -115,6 +120,7 @@ import Effect4.Laws.Program.Typed.Validity
 import Effect4.Laws.Program.Typed.ForkSource
 import Effect4.Laws.Program.Typed.Admission
 import Effect4.Laws.Program.Typed.Residual
+import Effect4.Laws.Program.Typed.Seq
 import Effect4.Laws.Program.Typed.Stack
 import Effect4.Laws.Program.Typed.Assembly
 import Effect4.Laws.Auto.AnswerGate

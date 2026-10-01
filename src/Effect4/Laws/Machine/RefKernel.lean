@@ -103,6 +103,38 @@ theorem syncOpStep_eq_refStepOf {o : SyncOp} {cell : RefKey} {k : RefKernel}
   rw [← refStep_eq_refStepOf hk s.refs]
   cases o <;> cases hk <;> rfl
 
+/-! ### Write and read at an allocated cell, and at one the store never allocated
+
+The store step of the two primitive state rows, the co-operations of the store comodel whose
+state laws `Laws/Program/StoreComodel.lean` proves (formal pass, algebra note A9). A cell the
+heap holds is allocated: the heap only grows. -/
+
+/-- On an allocated cell, `refSet` writes the value and answers the cell. -/
+theorem syncOpStep_refSet_allocated {s : Stores} {c : RefKey} (h : c.index < s.refs.length)
+    (v : Val) :
+    syncOpStep (.refSet c v) s = some ({ s with refs := s.refs.set c.index v }, Val.cell c) := by
+  have hp : refPeek s.refs c = some (s.refs[c.index]'h) := List.getElem?_eq_getElem h
+  show (refStep (.refSet c v) s.refs).map (fun step => ({ s with refs := step.2 }, step.1)) = _
+  simp only [refStep, hp, Option.map_some, refPoke]
+
+/-- On an allocated cell, `refGet` answers what the cell holds and leaves the stores. -/
+theorem syncOpStep_refGet_allocated {s : Stores} {c : RefKey} (h : c.index < s.refs.length) :
+    syncOpStep (.refGet c) s = some (s, s.refs[c.index]'h) := by
+  have hp : refPeek s.refs c = some (s.refs[c.index]'h) := List.getElem?_eq_getElem h
+  show (refStep (.refGet c) s.refs).map (fun step => ({ s with refs := step.2 }, step.1)) = _
+  simp only [refStep, hp, Option.map_some]
+
+/-- On a cell the store never allocated, neither `refSet` nor `refGet` steps: the store handler's
+fallback answers for both (`E4-DEN-CE-002`). -/
+theorem syncOpStep_ref_unallocated {s : Stores} {c : RefKey} (h : ¬ c.index < s.refs.length)
+    (v : Val) : syncOpStep (.refSet c v) s = none ∧ syncOpStep (.refGet c) s = none := by
+  have hp : refPeek s.refs c = none := List.getElem?_eq_none (Nat.le_of_not_lt h)
+  constructor
+  · show (refStep (.refSet c v) s.refs).map (fun step => ({ s with refs := step.2 }, step.1)) = _
+    simp only [refStep, hp, Option.map_none]
+  · show (refStep (.refGet c) s.refs).map (fun step => ({ s with refs := step.2 }, step.1)) = _
+    simp only [refStep, hp, Option.map_none]
+
 /-! ## One proof for every kernel row -/
 
 /-- What the write-back leaves has the heap's length. -/

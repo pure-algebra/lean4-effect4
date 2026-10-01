@@ -27,6 +27,9 @@ import Test.Counterexamples.Machine.Semantics.LayerValue
 import Test.Counterexamples.Machine.Semantics.ValueMembership
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
+import Test.Program.ProtocolLaws
+import Test.Program.TypedProgBindRed
+import Test.Program.SignatureSum
 import Test.Program.TypedResidual
 import Test.Program.TypedControl
 import Test.Program.H2PartOne
@@ -51,6 +54,7 @@ import Test.Counterexamples.Machine.Runtime.LayerEnvironment
 import Test.Machine.Runtime.StoresLawsContract
 import Test.Machine.Runtime.CompletionDataContract
 import Test.Machine.Runtime.ApproximationContract
+import Test.Machine.Runtime.TapeAction
 import Test.Machine.Runtime.BehaviourContract
 import Test.Machine.Runtime.CompletionContract
 import Test.Machine.Runtime.HandlesContract
@@ -80,6 +84,8 @@ import Test.Program.LoopSugarContract
 import Test.Program.FragmentCensusContract
 import Test.Program.DenoteContract
 import Test.Program.DenoteBContract
+import Test.Program.IterLimit
+import Test.Program.StoreComodel
 import Test.Program.MeaningSoundContract
 import Test.Program.LoopSoundContract
 import Test.Program.LoopAgreementContract
@@ -90,15 +96,18 @@ import Test.Program.HostSpecContract
 import Test.Program.HostBoundaryContract
 import Test.Api.HostSessionContract
 import Test.Api.RunnerContract
+import Test.Api.RunnerFinality
 import Test.Api.SupervisionContract
 import Test.Api.KeyedHostContract
 import Test.Run.RunContract
 import Test.Program.SchedContract
 import Test.Program.DenoteRContract
+import Test.Program.ScopeMarkers
 import Test.Program.RuntimeRContract
 import Test.Program.RuntimeRShapesContract
 import Test.Program.SimulationContract
 import Test.Program.ProvisionContract
+import Test.Program.ProvideRows
 import Test.Program.ConfigContract
 import Test.Api.ApiContract
 import Test.Api.TestClockContract

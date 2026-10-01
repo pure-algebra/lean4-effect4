@@ -1376,7 +1376,12 @@ theorem fuel_ne_zero_of_depth {e : NativeEff} {p : Point} (hp : Agreement.depth 
   omega
 
 /-- After erasing the control markers and checkpoints, the straight fragment is the
-store denotation whenever the compile budget covers its depth. -/
+store denotation whenever the compile budget covers its depth. Erasure runs a guard's
+continuation on every exit, the machine only on the exits the guard's arm takes, so reading the
+erased elaboration as the one-fiber meaning rests on every continuation `denoteR` places after a
+guard passing the skipped exits through (`PassesSkipped`, `eraseControl_guardR_bind_taken`,
+`Laws/Program/ScopeMarkers.lean`; that `denoteR` builds only such continuations is a reading of
+its `guardR` sites, not a theorem). -/
 theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
     Straight e = true → Agreement.depth e ≤ p.fuel →
     eraseControl (denoteR root e p) = Effects.Program.inl (denote e p.env)

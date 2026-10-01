@@ -36,7 +36,9 @@ What this module adds to the tree, and what it deliberately reuses:
   leaves supplied as a `LeafSem` hook (the trusted-boundary position `ServiceUniverse` and
   `RunInterp` already occupy). The proved laws concern the requirement and context algebra,
   including when a layer signature closes an application's requirements. The connection from
-  a well-typed layer to its built context is checked by the finite witnesses below.
+  a well-typed layer to its built context is checked by the finite witnesses below. `build`'s
+  totality theorem (`build_total`) was cut as unused at `b08f3b58`; restoring it is owed under
+  R5 (`docs/core/system-map.md`).
 * **The machine half, on the compile route.** `Effect.provide(self, layer)` is a program
   (`Eff.provideLayer`), so the witnesses are runs: `buildServices`, `buildSucceeds` and
   `provideThenService` run native programs through `runSyncExit` at `interpOf` and pin, by
@@ -116,9 +118,13 @@ theorem covers_of_provide_closed (s t : LayerTy) (h : (s.provide t).Closed) (key
 
 /-- **Provide is associative up to `provideMerge`**, on the rows: providing two dependencies
 one after the other is providing their `provideMerge` at once. This is the algebraic content
-of "wire the dependencies in any grouping"; the error column is `Ty.join`, whose
-associativity is an owed row of the type language, so the statement is over `out` and
-`requires`. -/
+of "wire the dependencies in any grouping". The statement is over `out` and `requires` because
+the error column is `Ty.join`, whose associativity (`Ty.join_assoc`) is a law of the proof
+graph (`Laws/Program/TypeAlgebra.lean`), which this core module does not import; the whole
+layer type, error column included, is `provide_provide` (`Laws/Program/Provision.lean`). Plain
+associativity of `provide` fails on the rows (`provide_not_assoc`,
+`Test/Program/ProvideRows.lean`): a nested `provide` hides the inner dependency's outputs from
+the outer dependent. -/
 theorem provide_provide_rows (l d₁ d₂ : LayerTy) :
     ((l.provide d₁).provide d₂).out = (l.provide (d₁.provideMerge d₂)).out ∧
       ((l.provide d₁).provide d₂).requires = (l.provide (d₁.provideMerge d₂)).requires := by
@@ -129,6 +135,23 @@ theorem provide_provide_rows (l d₁ d₂ : LayerTy) :
   by_cases hL : a ∈ l.requires <;> by_cases hO₁ : a ∈ d₁.out <;> by_cases hO₂ : a ∈ d₂.out <;>
     by_cases hR₁ : a ∈ d₁.requires <;> by_cases hR₂ : a ∈ d₂.requires <;>
     simp [hL, hO₁, hO₂, hR₁, hR₂]
+
+/-- **`provideMerge` is associative on the rows**: wiring three layers with `provideMerge` in
+either grouping gives the same outputs and the same requirement row, so a `provideMerge` chain
+regroups freely where a `provide` chain does not (formal pass, algebra verification ALG-16). The
+whole layer type is `provideMerge_assoc` (`Laws/Program/Provision.lean`). -/
+theorem provideMerge_assoc_rows (l d₁ d₂ : LayerTy) :
+    ((l.provideMerge d₁).provideMerge d₂).out = (l.provideMerge (d₁.provideMerge d₂)).out ∧
+      ((l.provideMerge d₁).provideMerge d₂).requires =
+        (l.provideMerge (d₁.provideMerge d₂)).requires := by
+  refine ⟨Row.union_assoc _ _ _, ?_⟩
+  apply Row.eq_of_mem_iff
+  intro a
+  simp only [LayerTy.provideMerge, Row.mem_union, Row.mem_diff, not_or]
+  by_cases hL : a ∈ l.requires <;> by_cases hO₁ : a ∈ d₁.out <;> by_cases hO₂ : a ∈ d₂.out <;>
+    by_cases hR₁ : a ∈ d₁.requires <;> by_cases hR₂ : a ∈ d₂.requires <;>
+    simp only [hL, hO₁, hO₂, hR₁, hR₂, and_true, not_true, not_false_eq_true, and_false,
+      or_true, or_false]
 
 /-- `merge` is commutative on the rows. What is *not* commutative is the built context
 (`src/Effect4/Machine/Context.lean`, counterexample CE 5: `merge` is right-biased), and the
@@ -159,10 +182,12 @@ theorem provide_requires_antitone_out (s t t' : LayerTy) (hout : Row.Subset t.ou
 
 end LayerTy
 
-/-! ## The adjunction between contexts and requirement rows
+/-! ## Satisfaction is inclusion into `keysRow`
 
 `Satisfies` is inclusion into `keysRow`: a context satisfies exactly the subrows of its own
-key row. This is the whole content of "what a context can provide", and it is what turns
+key row. There is one monotone map here (`keysRow`), not a pair of adjoint ones, so this is a
+representability statement, not an adjunction (formal pass, algebra note A11). This is the
+whole content of "what a context can provide", and it is what turns
 the eleven context laws into laws of the provision algebra. -/
 
 theorem satisfies_iff_subset_keysRow (ctx : Ctx) (r : Requirement) :
@@ -216,8 +241,8 @@ theorem satisfies_single_addV (key : ServiceKey) (v : Effect4.Machine.Env.Val) :
 `LayerTerm` is a member of the program family since the join (`Program/Eff.lean`: a layer is
 a subterm of the program that provides it, and its build runs at its point), and `layerTy`,
 `bodyRequires`, `litVal` and `WellTypedLayer` type it beside `typeOf` (`Program/Typing.lean`).
-This module keeps the algebra's laws, the specification `build` and its totality, and the
-docs deployment the laws are shown on. -/
+This module keeps the algebra's laws, the specification `build` (its totality is owed; see
+the header), and the docs deployment the laws are shown on. -/
 
 /-! ## `App` — `Effect.provide(program, layer)` (`internal/layer.ts:8-22`) -/
 

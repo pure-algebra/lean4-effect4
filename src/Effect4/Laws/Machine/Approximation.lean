@@ -50,6 +50,15 @@ What is proved:
   `leastSufficient` with `replay_colimit`: the fuel it finds is sufficient, every smaller
   fuel is not, the result does not move once one sufficient fuel is under the bound
   (`leastSufficient_bound_mono`, `replay_colimit_eq_of_sufficient`).
+* **The tape acts on machines.** `replayEval_append`: replaying `a ++ b` is replaying `a`,
+  then `b` from the machine `a` reached (`ReplayResult.thenReplay`), unless the prefix ended
+  at a fuel frontier, which absorbs the suffix (`replayEval_append_fuel`,
+  `replayEval_append_machine`); a stuck machine stays stuck under any tape
+  (`replayEval_of_stuck`). This is the machine-level form of the journal action
+  (`replay_append`, `Laws/Api/Runner.lean`), and the chain along a tape's prefixes that
+  DB-03's "compatible finite prefixes" reads (formal pass, algebra note A7, probe
+  `P3TapeAction.lean`). Fuel exhaustion is not a tape frontier: the naive law, which would
+  replay the suffix from a fuel frontier, fails (`Test/Machine/Runtime/TapeAction.lean`).
 
 What is deliberately not said, each named so it is a refusal and not an omission:
 
@@ -866,6 +875,82 @@ theorem replayEval_single_machine (interp : RunInterp ν σ β ε δ ι α χ St
   rw [stepDecision_eq_state]
   simp only [replayEval, hs]
   (repeat' split) <;> rfl
+
+/-! ## The tape acts on machines
+
+Formal pass, algebra note A7 (`docs/research/2026-10-01-formal-pass/algebra/note.md` §2.5;
+probe `P3TapeAction.lean`, confirmed as ALG-07): the decision tape is a monoid acting on
+machines, with a fuel frontier absorbing. -/
+
+/-- Continue a replay result with a suffix: a fuel frontier inside the prefix absorbs the
+suffix; every other result hands its machine on, a tape frontier included. -/
+def ReplayResult.thenReplay (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (b : List (RunDecision ν σ β ε δ ι α)) :
+    ReplayResult ν σ β ε δ ι α χ St κ φ η → ReplayResult ν σ β ε δ ι α χ St κ φ η
+  | .frontier .fuel m => .frontier .fuel m
+  | .frontier .tape m => replayEval interp fuel b m
+  | .finished m => replayEval interp fuel b m
+  | .stuck _ m => replayEval interp fuel b m
+
+/-- A stuck machine stays stuck under any tape. -/
+theorem replayEval_of_stuck (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) {why : Stuck} (hs : m.stuck = some why) :
+    ∀ b : List (RunDecision ν σ β ε δ ι α), replayEval interp fuel b m = .stuck why m
+  | [] => by simp only [replayEval, hs]
+  | _ :: _ => by simp only [replayEval, hs]
+
+/-- **The tape acts on machines.** Replaying `a ++ b` is replaying `a`, then `b` from the
+machine `a` reached, unless the prefix ran out of fuel, which is absorbing. -/
+theorem replayEval_append (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) :
+    ∀ (a b : List (RunDecision ν σ β ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St κ φ η),
+      replayEval interp fuel (a ++ b) m =
+        ReplayResult.thenReplay interp fuel b (replayEval interp fuel a m)
+  | [], b, m => by
+    cases hs : m.stuck with
+    | some why =>
+      rw [List.nil_append, replayEval_of_stuck interp fuel m hs b]
+      simp only [replayEval, hs, ReplayResult.thenReplay]
+      exact (replayEval_of_stuck interp fuel m hs b).symm
+    | none =>
+      rw [List.nil_append]
+      by_cases hf : m.finished = true
+      · simp only [replayEval, hs, hf, ↓reduceIte, ReplayResult.thenReplay]
+      · simp only [replayEval, hs, hf, Bool.false_eq_true, ↓reduceIte, ReplayResult.thenReplay]
+  | d :: a, b, m => by
+    cases hs : m.stuck with
+    | some why =>
+      rw [List.cons_append]
+      simp only [replayEval, hs, ReplayResult.thenReplay]
+      exact (replayEval_of_stuck interp fuel m hs b).symm
+    | none =>
+      rw [List.cons_append]
+      by_cases hr : (stepDecisionState interp fuel m d).2 = true
+      · simp only [replayEval, hs, hr, ↓reduceIte]
+        exact replayEval_append interp fuel a b _
+      · simp only [replayEval, hs, hr, Bool.false_eq_true, ↓reduceIte, ReplayResult.thenReplay]
+
+/-- Fuel exhaustion inside a prefix decides every extension of it. -/
+theorem replayEval_append_fuel (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (a b : List (RunDecision ν σ β ε δ ι α)) (m m' : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (h : replayEval interp fuel a m = .frontier .fuel m') :
+    replayEval interp fuel (a ++ b) m = .frontier .fuel m' := by
+  rw [replayEval_append, h]
+  rfl
+
+/-- Off a fuel frontier, the suffix runs from the machine the prefix reached. -/
+theorem replayEval_append_machine (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (a b : List (RunDecision ν σ β ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (h : ∀ m', replayEval interp fuel a m ≠ .frontier .fuel m') :
+    replayEval interp fuel (a ++ b) m =
+      replayEval interp fuel b (replayEval interp fuel a m).machine := by
+  rw [replayEval_append]
+  cases hr : replayEval interp fuel a m with
+  | frontier why m' =>
+    cases why with
+    | fuel => exact absurd hr (h m')
+    | tape => rfl
+  | finished m' => rfl
+  | stuck why m' => rfl
 
 /-! ## The receipts: what a decision ran, and whether its fuel sufficed
 
