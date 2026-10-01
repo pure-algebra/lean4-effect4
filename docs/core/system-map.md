@@ -1,8 +1,9 @@
 # The system map: what Effect4 is for, how it works, how it is organized
 
 The authority for the frame: the goal, the layers and their owners, the sorts with their one
-representation each, the kinds of arrow between them and what each owes. Written 2026-09-30 at
-`be15b062`. It replaces the former `docs/core/ontology.md`, whose formal frame (its §5) is carried here and
+representation each, the kinds of arrow between them and what each owes; since 2026-10-01 also what
+a full program is (§1.1) and the requirements it must satisfy, with their status (§8). Written
+2026-09-30 at `be15b062`. It replaces the former `docs/core/ontology.md`, whose formal frame (its §5) is carried here and
 whose dated 2026-09-17 sections are kept as history in
 `docs/research/2026-09-17-ontology-and-do-now-probe.md`.
 
@@ -29,6 +30,39 @@ written down with its decisions row.
 **Scope discipline (owner, 2026-09-30).** The route above stands. A finding is fixed as a bounded
 repair that keeps the verified claims true, not by redefining the route. A large contract is
 written down and parked until a need arrives.
+
+### 1.1 What a full program is (2026-10-01)
+
+A full program is a closed term over a signature `Σ = Σ_core ⊕ Σ_app`, run against a lawful host
+specification `H`, with its load inputs, under one root. What a program must satisfy is §8; this
+paragraph says what the words mean. Sources: the model probe
+(`docs/research/2026-09-30-model-probe/synthesis.md` §2.1) as Codex's audit amended it
+(`docs/research/2026-09-30-codex-review-model-probe/audit.md` §2), and decisions rows 111–118.
+
+- **`Σ_core` is the closed inductives the language owns:** the `Eff` and `Ty` constructors, the
+  built-in `NativeOp` rows, `SyncOp`, `FiberOp`, `NativeAtom`, `Err`, `Defect`, `HandleKind`. It
+  grows only by constructor appends under DI-47's compatibility gate over the retained baseline
+  (`Test/fixtures/baseline/`, rows 56 and 61): a finite gate and a discipline, not a theorem.
+- **`Σ_app` is data an application supplies:** the row table and the service table (row 111).
+  Later, and only if admitted, nominal data declarations (row 2; DB-15) and code entries (row 82).
+  "Lawful" is one decidable check with a located refusal, whose evidence travels with the program
+  source so that every milestone statement quantifies over lawful sources (row 114). Service
+  carriers are keyed by service code (row 113).
+- **Not in `Σ`:** cells, which the world types at allocation (row 44; the generic rows are core
+  template rows, rows 42–43), and structural records and variants, which are growth of the type
+  language (DB-15's amendment, row 2).
+- **Extension is conservative only under named obligations** (C1–C8, row 111): declared appends
+  with fresh, unreserved names, never an insertion or an override. A published program and a
+  session are pinned to their complete assembled table (row 115: no `Package.install` order
+  appends on the assembled table; `HostSession.start` refuses another table). The host-row
+  protocol entry carries the row's domain bit so that typing is monotone in the table (row 116).
+- **`H` is the tree's own `HostSpec`,** lawful by `LawfulHostSpec` (`Program/Profile.lean`); the
+  empty relation is "no host". The lane is parked (rows 95–101) except the interim handle rule
+  (row 97). M6's premise is a predicate on tapes (row 95), not a host relation, so the lane brings
+  its own obligations when it unparks (`host-boundary.md` §4.5).
+- **A run has load inputs** (the environment snapshot and the seed; the clock is a tape decision,
+  DB-14) **and one root.** Host-started roots are refused by name; the recorded-entry route for a
+  server-shaped program is written down in `host-boundary.md` and parked.
 
 ## 2. The layers
 
@@ -181,3 +215,27 @@ of §5, which keeps the generated sugar inside the proofs.
 - Runtime coverage is quoted only from `scripts/report-effect-runtime-coverage.sh`.
 - A refusal is located. A gap is written down with its row, never hidden behind a `True`.
 - Probes and receipts live in `docs/research/` as evidence; the authority documents cite them.
+
+## 8. What a full program must satisfy: the requirements (2026-10-01)
+
+Each requirement is a theorem shape over the open signature of §1.1, not a capability. **Status
+lives in this table only**; a basis row or a note that needs it links here. The shapes and their
+pedigree are in the model probe's synthesis (§2.2, §3.1) as Codex's audit amended them (§1–§6);
+the detail of each lives with the owner named. Status words are the document's: proved, exists,
+open.
+
+| Requirement | Shape, in one line | Status at `56da0e1e` | Owner of the detail; rows |
+| --- | --- | --- | --- |
+| R1 the signature is a parameter | `AdmittedSig Σ` with `admitSig_ok_iff`; every milestone statement takes it | typing proved over any signature (`check_sound`, `check_complete`); admission, the typed state (13 places) and the faces (22 lines) pinned to the built-in signature; meaning, loop and run soundness carry over by corollary (proved) | this map §1.1; rows 21, 111, 114, 118; the Σ_app slice of the M5–M7 brief, after G |
+| R2 extension is conservative | C1 syntax, C2 meaning, C3 checker, C4 protocol typing, C5 world, C6 local lawfulness, C7 representation, C8 forms, over DI-47's relation on Σ_app | C1 proved for binary injections; C2 proved for the generic handler, host rows operational until DI-69; C3's monotone half proved (`R2Probe.lean`), reflection open; C4 proved for the generic judgment, open for `TypedProg`; C5 red controls proved; C6 open; C7 conditional on rows 105 and 115; C8 open per form | DB-01 (the obligations); rows 111, 115, 116; DI-47, DI-69, DI-22, DI-64 |
+| R3 data | the type language closed under records and variants through the `Ty`/`Fields` spine; each constructor brings its `Fits` clause, embeddings, folds, assignability and inhabitance | refused by DB-15 as written (records, `json`, `int`, `Err.value`); open as one DB-15 amendment; recursive types untracked | DB-15; row 2; DI-62, DI-67; post-Phase C §11.2 W1 |
+| R4 state | the world types every cell at any type; rows as templates; a function row takes a binder term | the world ruled and defined (row 44), its order laws proved; steps 3–5 open; the native spellings read as cells at `nat` (row 96 D2) | `machine-state.md`; rows 42–45, 55, 96 |
+| R5 services | the service table in Σ_app, read by the typed state as a static world component; a layer's value fits its key; requirement rows grade programs; code-valued services through R7 with a capture law | open: row 105 landing (G); rows 112–114 ruled; owed `build_total`'s restoration, `lower_refines_build`, reference keys and Config, minted keys, context validation at any runtime bridge | `machine-state.md` §5; the provision algebra; DB-12; rows 51, 82, 90, 104, 105, 112–114 |
+| R6 the host | `H : HostSpec` with `LawfulHostSpec`; receipt and application theorems and their converse; DI-57's table-aware reference relation; DI-69; a world extension meeting C5; a retirement edge; per-row cancellation; one root | open, parked by the owner (2026-09-30); the interim handle rule landed on Codex's branch (row 97) | `host-boundary.md` §§4.2, 4.5, 4.6; rows 95–101; DI-57, DI-58, DI-65, DI-69 |
+| R7 retained behaviour | `resolve_typed`: a resolved code entry is typed at its reference's type, with capture layout fixed at resolution and identity by allocation or structure | open | `machine-state.md` §5; row 82; the stateful catalogue §5 Q4 |
+| R8 runs and faces as named connections | inside a profile a face's observation equals the reference's up to one identity bijection; outside it the face refuses, intermediate values included; the profile is data (row 79) | printer and reader laws and the fragment simulations proved; typed lowering open; numbers open (row 108); K2 holds on the readable domain, which excludes annotated loops (DI-91) | `lcnf-route.md` §8; this map §5; rows 79, 98, 101, 108; DI-49, DI-56, DI-81 |
+| R9 never goes wrong | `ExitOk w ty ex := FitsExit w ty ex ∧ NoShapeDefect ty ex` at every typed position; `NoShapeDefect` reads the core `Defect` alphabet and `ty.requires` only | ruled (row 107); part one in flight (brief addendum 5); part two open (row 117: a saved frame transports `missingService` across a change in the requirement row); "never halts" is M7's corollary (row 52) | `Laws/Program/Typed/`; rows 52, 107, 117; `E4-TYPED-CE-007`, proposed `E4-TYPED-CE-008` |
+| R10 library code inherits theorems | a composed module's law is `Agrees profile module expansion` (row 79); each form owes a typing lemma, one behaviour law, lexical well-scoping, reader admission, a readable expansion (C8) and a stable identity; a composite owes post-Phase C §11.4's contract by a stuttering route | ruled (DI-89, row 79), undelivered: no form has a behaviour law; none of DI-89's named forms exists; DI-39's six rows not landed | `machine-state.md` §5, §7; DI-89, DI-11, DI-39; row 79 |
+| R11 resources are released | at most once per registration, counted by identity; exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (the closed bit is set before cleanup runs); state retained at frontiers | one close proved (`ScopeMachine.runState_complete` and siblings); the whole run open; a scope a finished run leaves open is an observation (rc.112 does the same) | `machine-state.md` §7; DB-07; DI-65; `host-boundary.md` §4.2 |
+| R12 frontiers name what they await | `Deadlocked` requires nothing armed; stability stated over the allowed internal decisions with a named progress observation, not as a whole-machine fixed point; liveness under `FairTape` with row-specific enabling; divergence by compatible prefixes (DB-03) | open; armed dispatcher work is invisible to the frontier today (`awaitDecision_iff`); INV-TAPE-1 and INV-TAPE-2 not yet in a tracked file | `machine-state.md` §7; `Laws/Api/Frontier.lean`; DB-03 |
+| R13 a run's inputs are data | a congruence law: equal recorded program, signature, profile, budgets, tape and load inputs give equal replay observations; supplied values fit the admitted load requirements | designed (the 2026-09-10 Config route B), not implemented; restates M5's `typedState_load` when Config lands | `host-boundary.md` (the header); `Program/Config.lean`; rows 51, 83 |

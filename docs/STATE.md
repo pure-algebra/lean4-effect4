@@ -222,8 +222,13 @@ fixed point for deadlock; load inputs as a congruence law). The owner ruled: H2 
 as amended. Recorded: rows 111–118, row 107 and row 21;
 [addendum 5](research/2026-09-30-codex-brief-slice6-addendum-5.md) to Codex. Meanwhile Codex
 landed A (`90df5d21`) and C's steps 3–4 (`be6631ab`, `e5cc184b`) on its branch; C's step 5 is in
-progress, and the merge follows it. The system map's "what a full program is" and the design-basis
-refresh come next, with R11–R13 restated as the audit says.
+progress, and the merge follows it. The same day the system map gained §1.1, what a full program
+is, and §8, the requirements R1–R13 with their status, the one place status lives; R10–R13 are
+stated as the audit corrected them. The design-basis refresh is briefed as a docs-only seat
+([brief](research/2026-10-01-design-basis-refresh-brief.md)): one row shape, two new rows (DB-16
+typing as a protocol over a world, DB-17 the requirement row calculus), three stale sections
+retired to history, one bibliography, the eight ruling-bearing notes force-added. Dispatch is the
+owner's call.
 
 ## What the owner must decide
 
