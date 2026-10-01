@@ -89,6 +89,24 @@ private theorem rounds_fix : ∀ (e : NativeEff), Eff.expandRound orig e = e →
     rw [he]
     exact rounds_fix e he xs
 
+/-- The rounds on a race's spine (`Effs`), entrant by entrant. -/
+private abbrev effsRounds (xs : List Nat) (es : Effs NativeOp) : Effs NativeOp :=
+  xs.foldl (fun acc _ => Effs.expandRound orig acc) es
+
+private theorem rounds_raceAll : ∀ (xs : List Nat) (es : Effs NativeOp),
+    rounds orig xs (.withFiber (.raceAll es)) = .withFiber (.raceAll (effsRounds orig xs es))
+  | [], _ => rfl
+  | _ :: xs, es => rounds_raceAll xs (Effs.expandRound orig es)
+
+private theorem effsRounds_nil : ∀ (xs : List Nat), effsRounds orig xs .nil = .nil
+  | [] => rfl
+  | _ :: xs => effsRounds_nil xs
+
+private theorem effsRounds_cons : ∀ (xs : List Nat) (h : NativeEff) (t : Effs NativeOp),
+    effsRounds orig xs (.cons h t) = .cons (rounds orig xs h) (effsRounds orig xs t)
+  | [], _, _ => rfl
+  | _ :: xs, h, t => effsRounds_cons xs (Eff.expandRound orig h) (Effs.expandRound orig t)
+
 end Rounds
 
 variable (root : NativeEff)
@@ -171,6 +189,14 @@ theorem Eff.expandIn_of_round (e : NativeEff) (h : Eff.expandRound (Node.eff roo
     Eff.expandIn root e = e :=
   rounds_fix _ e h _
 
+/-- A race's expansion is the race of its spine's rounds (private: the spine's rounds are no
+definition of the tree; `raceAll_arm` reads them entrant by entrant). -/
+private theorem Eff.expandIn_raceAll (es : Effs NativeOp) :
+    Eff.expandIn root (.withFiber (.raceAll es)) =
+      .withFiber (.raceAll
+        (effsRounds (Node.eff root) (List.range ((root.refSites []).length + 1)) es)) :=
+  rounds_raceAll _ _ es
+
 end Effect4.Program
 
 namespace Effect4.Program.Typed
@@ -212,9 +238,9 @@ theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} 
       cases ht
 
 /-- The node at a child's path is the node's child there (`Agreement.Node.at_append`). -/
-theorem node_at_child {root : NativeEff} {path : List Nat} {e : NativeEff} {i : Nat}
-    {c : Node NativeOp} (hat : Node.at_ (.eff root) path = some (.eff e))
-    (hc : (Node.eff e).child i = some c) : Node.at_ (.eff root) (path ++ [i]) = some c := by
+theorem node_at_child {root : NativeEff} {path : List Nat} {n : Node NativeOp} {i : Nat}
+    {c : Node NativeOp} (hat : Node.at_ (.eff root) path = some n)
+    (hc : n.child i = some c) : Node.at_ (.eff root) (path ++ [i]) = some c := by
   rw [Agreement.Node.at_append, hat]
   exact hc
 
@@ -1377,5 +1403,760 @@ theorem catchIf_arm {test : Term} {b h : NativeEff} (hfuel : p.fuel = f + 1)
     exact .pure ⟨(fitsExit_failure_iff _ _ _).mpr ⟨hmiss, hc''.2⟩, hc''.2⟩
 
 end CatchIfArm
+
+/-! ## Arms: the fiber rows
+
+`awaitFiber` and the sixteen fiber actions (`withFiber`). An action's node is resolved by
+`actionAt` (`Program/Compile.lean`), which reads the action's terms at the point; every branch it
+refuses is excluded by term progress at the checker's types, since the refusal's pre is `False`
+(`fiberPre`). A fiber handle's type is read through `fiberTy_eq_some` (`Typed/Membership.lean`,
+row 132), a value at it through `fiber_of_fits`, and a list of fibers as `actionAt` decodes one
+(`fibers_of_fits`). The rows whose entries compare in raw `Ty.sub` (`awaitAll`, `awaitAllFailFast`,
+`raceAll`; decisions row 137) are met at a raw union of the declared columns, which lies below the
+checker's columns in its order (`unionFold_subN`). -/
+
+/-! ### Fiber handles, views and raw unions -/
+
+/-- A member of a fiber handle type is a fiber handle declared below its columns (the `fiberOf`
+arm of `Fits`). -/
+theorem fiber_of_fits {w : World} {x : Val} {a e : Ty} (h : Fits w x (.fiberOf a e)) :
+    ∃ index, x = Value.fiber index ∧ FiberDeclared w ⟨index⟩ a e := by
+  simp only [Fits] at h
+  split at h
+  · rename_i index
+    exact ⟨index, rfl, h⟩
+  · exact h.elim
+
+/-- A completed exit the view answers to a join (`Point.awaitExit`): the view's entry for the
+target. -/
+theorem awaitExit_join {p : Point} {id : FiberId} {exit : ExitV}
+    (h : p.awaitExit id .joinEffect = some exit) :
+    ∃ entry ∈ p.completed, entry.1 = id ∧ exit = entry.2 := by
+  unfold Point.awaitExit at h
+  obtain ⟨entry, hfind, hmap⟩ := Option.map_eq_some_iff.mp h
+  have hp := List.find?_some hfind
+  simp only [decide_eq_true_eq] at hp
+  exact ⟨entry, List.mem_of_find?_eq_some hfind, hp, hmap.symm⟩
+
+/-- A completed exit the view answers to an await by value: the view's entry for the target,
+reified. -/
+theorem awaitExit_value {p : Point} {id : FiberId} {exit : ExitV}
+    (h : p.awaitExit id .awaitValue = some exit) :
+    ∃ entry ∈ p.completed, entry.1 = id ∧ exit = .success (reifyExitVal entry.2) := by
+  unfold Point.awaitExit at h
+  obtain ⟨entry, hfind, hmap⟩ := Option.map_eq_some_iff.mp h
+  have hp := List.find?_some hfind
+  simp only [decide_eq_true_eq] at hp
+  exact ⟨entry, List.mem_of_find?_eq_some hfind, hp, hmap.symm⟩
+
+/-- The view's entry for a fiber whose handle fits `(a, e)` fits `(a, e)`: the entry is typed at
+the fiber's declared type (`PointTyped`'s view, row 175), which is below the handle's columns. -/
+theorem view_exitOk {w : World} {completed : List (FiberId × ExitV)} {index : Nat} {a e : Ty}
+    {entry : FiberId × ExitV}
+    (hview : ∀ q ∈ completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2)
+    (hmem : entry ∈ completed) (hid : entry.1 = ⟨index⟩) (hdecl : FiberDeclared w ⟨index⟩ a e)
+    (req : Env.Requirement) : ExitOk w ⟨a, e, req⟩ entry.2 := by
+  obtain ⟨fty, hΓ, hex⟩ := hview entry hmem
+  obtain ⟨fty', hΓ', ha, he⟩ := hdecl
+  rw [hid, hΓ'] at hΓ
+  cases hΓ
+  exact exitOk_widen ha he hex
+
+/-- The checker's order on exit types is the order on their columns. -/
+theorem subN_exitOf {a e a' e' : Ty} (ha : Ty.subN a a' = true) (he : Ty.subN e e' = true) :
+    Ty.subN (.exitOf a e) (.exitOf a' e') = true := by
+  unfold Ty.subN at ha he
+  show Ty.sub (.exitOf a.normalize e.normalize) (.exitOf a'.normalize e'.normalize) = true
+  rw [Ty.sub_args_exitOf]
+  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+    List.all_nil, Bool.and_true, ha, he]
+
+/-- The checker's order on lists of exits is the order on the exits' columns. -/
+theorem subN_listExitOf {a e a' e' : Ty} (ha : Ty.subN a a' = true) (he : Ty.subN e e' = true) :
+    Ty.subN (.list (.exitOf a e)) (.list (.exitOf a' e')) = true := by
+  have hx := subN_exitOf ha he
+  unfold Ty.subN at hx
+  show Ty.sub (.list (Ty.exitOf a e).normalize) (.list (Ty.exitOf a' e').normalize) = true
+  rw [Ty.sub_args_list]
+  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+    List.all_nil, Bool.and_true, hx]
+
+/-- Raw `sub` places each operand below a union of it: a union's members are its operands'
+(`Ty.members`), and raw `sub` reads members (`Ty.OrderProof.sub_iff_members`). -/
+theorem sub_union_self_left (a b : Ty) : Ty.sub a (.union a b) = true :=
+  (Ty.OrderProof.sub_iff_members Ty.sub_trans a _).mpr fun x hx =>
+    ⟨x, List.mem_append_left _ hx, Ty.sub_refl x⟩
+
+theorem sub_union_self_right (a b : Ty) : Ty.sub b (.union a b) = true :=
+  (Ty.OrderProof.sub_iff_members Ty.sub_trans b _).mpr fun x hx =>
+    ⟨x, List.mem_append_right _ hx, Ty.sub_refl x⟩
+
+/-- A raw union is below every bound of its operands in the checker's order
+(`Ty.OrderProof.sub_normalize_union_le`). -/
+theorem subN_union_le {a b c : Ty} (hac : Ty.subN a c = true) (hbc : Ty.subN b c = true) :
+    Ty.subN (.union a b) c = true :=
+  Ty.OrderProof.sub_normalize_union_le Ty.sub_trans a b c.normalize hac hbc
+
+/-- Every column of a list is raw-below the raw union of the list's columns. -/
+theorem sub_unionFold {α : Type} (f : α → Ty) :
+    ∀ (xs : List α) (x : α), x ∈ xs →
+      Ty.sub (f x) (xs.foldr (fun y acc => Ty.union (f y) acc) .never) = true
+  | [], _, hx => nomatch hx
+  | y :: ys, x, hx => by
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact sub_union_self_left _ _
+    · exact Ty.sub_trans _ _ _ (sub_unionFold f ys x hx) (sub_union_self_right _ _)
+
+/-- The raw union of a list's columns is below every bound of the columns in the checker's
+order. -/
+theorem unionFold_subN {α : Type} (f : α → Ty) (c : Ty) :
+    ∀ (xs : List α), (∀ x ∈ xs, Ty.subN (f x) c = true) →
+      Ty.subN (xs.foldr (fun y acc => Ty.union (f y) acc) .never) c = true
+  | [], _ => subN_never c
+  | y :: ys, h => subN_union_le (h y List.mem_cons_self)
+      (unionFold_subN f c ys fun x hx => h x (List.mem_cons_of_mem y hx))
+
+/-- **The await-all certificate** (proved): for targets whose handles fit `(a, e)`, the raw unions
+of their declared columns meet the rows' raw entries (`fiberPre`'s `awaitAll` and
+`awaitAllFailFast` arms) and lie below `(a, e)` in the checker's order. -/
+theorem awaitAllCert {w : World} {ids : List FiberId} {a e : Ty}
+    (hdecl : ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf a e)) :
+    ∃ A E, (∀ t ∈ ids, ∃ fty, w.Γ t = some fty ∧ fty.answer.sub A = true ∧
+        fty.error.sub E = true) ∧ Ty.subN A a = true ∧ Ty.subN E e = true := by
+  have hcol : ∀ t ∈ ids, ∃ fty, w.Γ t = some fty ∧ Ty.subN fty.answer a = true ∧
+      Ty.subN fty.error e = true := fun t ht => hdecl t ht
+  refine ⟨ids.foldr (fun y acc => Ty.union (((w.Γ y).map EffTy.answer).getD .never) acc) .never,
+    ids.foldr (fun y acc => Ty.union (((w.Γ y).map EffTy.error).getD .never) acc) .never,
+    fun t ht => ?_, unionFold_subN _ _ ids fun t ht => ?_, unionFold_subN _ _ ids fun t ht => ?_⟩
+  · obtain ⟨fty, hΓ, -, -⟩ := hcol t ht
+    have ha := sub_unionFold (fun y => ((w.Γ y).map EffTy.answer).getD .never) ids t ht
+    have he := sub_unionFold (fun y => ((w.Γ y).map EffTy.error).getD .never) ids t ht
+    simp only [hΓ, Option.map_some, Option.getD_some] at ha he
+    exact ⟨fty, hΓ, ha, he⟩
+  · obtain ⟨fty, hΓ, ha, -⟩ := hcol t ht
+    simp only [hΓ, Option.map_some, Option.getD_some]
+    exact ha
+  · obtain ⟨fty, hΓ, -, he⟩ := hcol t ht
+    simp only [hΓ, Option.map_some, Option.getD_some]
+    exact he
+
+/-- A list of fiber handles read element by element: each handle answers its fiber. -/
+theorem mapM_fibers {w : World} {a e : Ty} {g : Val → Option FiberId}
+    (hg : ∀ index, g (Value.fiber index) = some ⟨index⟩) :
+    ∀ (xs : List Val), (∀ x ∈ xs, Fits w x (.fiberOf a e)) →
+      ∃ ids, xs.mapM g = some ids ∧ ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf a e)
+  | [], _ => ⟨[], rfl, fun _ h => nomatch h⟩
+  | x :: xs, h => by
+    obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits (h x List.mem_cons_self)
+    obtain ⟨ids, hids, hfits⟩ := mapM_fibers hg xs fun y hy => h y (List.mem_cons_of_mem _ hy)
+    refine ⟨⟨index⟩ :: ids, ?_, fun id hid => ?_⟩
+    · simp only [List.mapM_cons, hg, hids]
+      rfl
+    · rcases List.mem_cons.mp hid with rfl | hid
+      · exact hdecl
+      · exact hfits id hid
+
+/-- A list of fiber handles read element by element, at the reader's answer. -/
+theorem mapM_fibers_eq {w : World} {a e : Ty} {g : Val → Option FiberId} {xs : List Val}
+    {res : Option (List FiberId)} (heq : xs.mapM g = res)
+    (hg : ∀ index, g (Value.fiber index) = some ⟨index⟩)
+    (hall : ∀ x ∈ xs, Fits w x (.fiberOf a e)) :
+    ∃ ids, res = some ids ∧ ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf a e) := by
+  obtain ⟨ids, hids, hfits⟩ := mapM_fibers hg xs hall
+  exact ⟨ids, heq.symm.trans hids, hfits⟩
+
+/-- **A value at a list of fiber handles** (proved): a list whose elements fit, or a snapshot whose
+handles the handle image reads back, each declared (the two shapes `Fits`' list arm reads,
+`fits_list_iff`). `actionAt` decodes a list of fibers by these two shapes (its `handles`,
+`Program/Compile.lean`). -/
+theorem fibers_of_fits {w : World} {v : Val} {a e : Ty} (h : Fits w v (.list (.fiberOf a e))) :
+    (∃ xs, v = .list xs ∧ ∀ x ∈ xs, Fits w x (.fiberOf a e)) ∨
+      ∃ hs ids, v = Value.fiberSnapshot hs ∧
+        (Store.Image.list Value.fiberHandle).ofVal hs = some ids ∧
+          ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf a e) := by
+  obtain ⟨xs, hxs, hall⟩ := (fits_list_iff w v _).mp h
+  rcases Val.asList?_exact hxs with rfl | rfl
+  · exact .inl ⟨xs, rfl, hall⟩
+  · obtain ⟨ids, hsnap, hmap⟩ := Option.map_eq_some_iff.mp hxs
+    refine .inr ⟨.list xs, ids, rfl, hsnap, fun id hid => hall _ ?_⟩
+    rw [← hmap]
+    exact List.mem_map_of_mem hid
+
+/-- A row answering `unit` continued by its answer is typed at `pure unit`. -/
+theorem unitAnswer_typed (root : ProgramSource) {w : World} {ans : Val} (h : ans = Val.unit) :
+    TypedProg root w (EffTy.pure .unit) (.pure (.success ans)) := by
+  subst h
+  exact .pure (strongExit_success w _ _ trivial)
+
+/-- The ambient scope's read, typed at the scope type (`fiberPost`'s `ambientScope` arm). -/
+theorem ambientScope_typed (root : ProgramSource) (w : World) :
+    TypedProg root w (EffTy.pure Ty.scope) (fiberValR .ambientScope rfl) :=
+  TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () trivial
+    (fun w' _ ans post => .pure (strongExit_success w' _ ans post))
+
+/-- A value at an exit type decodes as an exit (`exitOfVal`, the exit image read back). -/
+theorem exitOfVal_of_fits {w : World} {v : Val} {a e : Ty} (h : Fits w v (.exitOf a e)) :
+    ∃ ex, exitOfVal v = some ex := by
+  simp only [Fits] at h
+  split at h
+  · rename_i x
+    exact ⟨_, exitOfVal_exitOk x⟩
+  · rename_i written
+    split at h
+    · rename_i c hc
+      refine ⟨.failure c, ?_⟩
+      rw [causeImage.ofVal_exact hc]
+      exact exitOfVal_exitErr c
+    · exact h.elim
+  · exact h.elim
+
+/-- The checked entrants of a race: each entrant's point is typed at its own checked type, raw
+below the raw unions of the entrants' columns, which lie below the race's checked columns in
+the checker's order. Private: the spine's rounds (`effsRounds`) are no definition of the tree. -/
+private theorem raceEntrants_typed {root : ProgramSource} {w : World} {env : List Ty} :
+    ∀ (es : Effs NativeOp) (q : Point) (T : EffTy),
+      Node.at_ (.eff root.program) q.path = some (.effs es) →
+      Checker.checkEffs root.signature env q.path
+          (effsRounds (Node.eff root.program)
+            (List.range ((root.program.refSites []).length + 1)) es) = .ok T →
+      EnvTyped w env q.env →
+      (∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2) →
+      ∃ A E, (∀ r ∈ entrantPoints es q, ∃ ty, PointTyped root w r ty ∧
+          ty.answer.sub A = true ∧ ty.error.sub E = true) ∧
+        Ty.subN A T.answer = true ∧ Ty.subN E T.error = true
+  | .nil, _, T, _, hc, _, _ => by
+    rw [effsRounds_nil] at hc
+    have hT := Checker.inv_effs_nil _ _ _ _ hc
+    subst hT
+    exact ⟨.never, .never, fun r hr => absurd hr List.not_mem_nil, subN_never _, subN_never _⟩
+  | .cons h t, q, T, hat, hc, henv, hview => by
+    rw [effsRounds_cons] at hc
+    obtain ⟨H, R, hch, hct, rfl⟩ := Checker.inv_effs_cons _ _ _ _ _ _ hc
+    obtain ⟨A, E, hrest, hA, hE⟩ :=
+      raceEntrants_typed t (q.child 1) R (node_at_child hat rfl) hct henv hview
+    refine ⟨.union H.answer A, .union H.error E, fun r hr => ?_,
+      subN_union_le (Ty.subN_join_left _ _) (Ty.subN_trans hA (Ty.subN_join_right _ _)),
+      subN_union_le (Ty.subN_join_left _ _) (Ty.subN_trans hE (Ty.subN_join_right _ _))⟩
+    simp only [entrantPoints, List.mem_cons] at hr
+    rcases hr with rfl | hr
+    · exact ⟨H, ⟨h, env, node_at_child hat rfl, hch, henv, hview⟩, sub_union_self_left _ _,
+        sub_union_self_left _ _⟩
+    · obtain ⟨ty, hpt, ha, he⟩ := hrest r hr
+      exact ⟨ty, hpt, Ty.sub_trans _ _ _ ha (sub_union_self_right _ _),
+        Ty.sub_trans _ _ _ he (sub_union_self_right _ _)⟩
+
+section FiberArms
+
+variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy}
+
+/-- **`awaitFiber`**: the target is a fiber handle (`fiberTy_eq_some`, term progress); a completed
+target answers from the view, which is typed at its declared type (row 175); a running one is the
+await row, whose post answers at the declared type, below the handle's columns
+(`await_fits`; by value, `subN_exitOf`). -/
+theorem awaitFiber_arm {t : Term} {mode : Supervision.ObserverMode} (hfuel : p.fuel ≠ 0)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.awaitFiber t mode)))
+    (hpt : PointTyped root w p ty) :
+    TypedProg root w ty (denoteR root.program (.awaitFiber t mode) p) := by
+  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  rw [denoteR_awaitFiber _ _ _ hfuel]
+  cases mode with
+  | joinEffect =>
+    obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_join _ _ _ _ _ hcheck
+    rw [fiberTy_eq_some hfib] at hty
+    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+    obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
+    rw [hv]
+    show TypedProg root w _ (match p.awaitExit ⟨index⟩ .joinEffect with
+      | some exit => .pure exit
+      | none => .vis (.inr (.await ⟨index⟩ .joinEffect)) Effects.Program.pure)
+    cases hawait : p.awaitExit ⟨index⟩ .joinEffect with
+    | some exit =>
+      obtain ⟨entry, hmem, hid, rfl⟩ := awaitExit_join hawait
+      exact .pure (view_exitOk hview hmem hid hdecl _)
+    | none =>
+      refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) () ?_ (fun w' o ans post => ?_)
+      · obtain ⟨fty, hΓ, -, -⟩ := hdecl
+        show (w.Γ ⟨index⟩).isSome = true
+        rw [hΓ]
+        rfl
+      · obtain ⟨fty', hΓ', hex⟩ := post
+        exact .pure ⟨await_fits hfit o hΓ' hex.1 _, hex.2⟩
+  | awaitValue =>
+    obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_await _ _ _ _ _ hcheck
+    rw [fiberTy_eq_some hfib] at hty
+    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+    obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
+    rw [hv]
+    show TypedProg root w _ (match p.awaitExit ⟨index⟩ .awaitValue with
+      | some exit => .pure exit
+      | none => .vis (.inr (.await ⟨index⟩ .awaitValue)) fun v => .pure (.success v))
+    cases hawait : p.awaitExit ⟨index⟩ .awaitValue with
+    | some exit =>
+      obtain ⟨entry, hmem, hid, rfl⟩ := awaitExit_value hawait
+      exact .pure (strongExit_success w _ _ (view_exitOk hview hmem hid hdecl .empty).1)
+    | none =>
+      obtain ⟨fty, hΓ, ha, he⟩ := hdecl
+      refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) () ?_ (fun w' o ans post => ?_)
+      · show (w.Γ ⟨index⟩).isSome = true
+        rw [hΓ]
+        rfl
+      · obtain ⟨fty', hΓ', hans⟩ := post
+        rw [o.1.2.1 _ _ hΓ] at hΓ'
+        cases hΓ'
+        exact .pure (strongExit_success w' _ _ (fits_subN w' (subN_exitOf ha he) ans hans))
+
+/-- **`fork`**: the body's point is typed at its checked type (the row's pre is the body's
+typing); the post's fiber is declared at that type, so its handle fits the fiber type. -/
+theorem fork_arm {b : NativeEff} {options : Supervision.ForkOptions}
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.fork b options))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  rw [Eff.expandIn_fork] at hcheck
+  obtain ⟨q, hcq, rfl⟩ :=
+    Checker.inv_action_fork _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  have hact : actionAt root.program p = some (WithFiberAction.fork
+      (resolve root.program ((p.child 0).child 0)) options (p.child 0).path) := by
+    unfold actionAt
+    rw [hat]
+  rw [denoteAction_of _ _ hact]
+  have hbody : PointTyped root w ((p.child 0).child 0) q :=
+    ⟨b, env, node_at_child (node_at_child hat rfl) rfl, hcq, henv, hview⟩
+  refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) q (BodyTyped.at_ _ _ hbody) (fun w' _ ans post => ?_)
+  obtain ⟨id, rfl, hΓ⟩ := post
+  exact .pure (strongExit_success w' _ _ ⟨q, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩)
+
+/-- **`forkIn`**: as `fork`, the scope term a present scope's handle (`fits_scope_inv`). -/
+theorem forkIn_arm {b : NativeEff} {options : Supervision.ForkOptions} {scope : Term}
+    (hat : Node.at_ (.eff root.program) p.path =
+      some (.eff (.withFiber (.forkIn b options scope))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  rw [Eff.expandIn_forkIn] at hcheck
+  obtain ⟨q, hcq, hscope, rfl⟩ :=
+    Checker.inv_action_forkIn _ _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hscope
+  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hfit
+  have hact : actionAt root.program p = some (WithFiberAction.forkIn
+      (resolve root.program ((p.child 0).child 0)) options sc (p.child 0).path) := by
+    unfold actionAt
+    rw [hat]
+    simp only []
+    rw [hv]
+    rfl
+  rw [denoteAction_of _ _ hact]
+  have hbody : PointTyped root w ((p.child 0).child 0) q :=
+    ⟨b, env, node_at_child (node_at_child hat rfl) rfl, hcq, henv, hview⟩
+  refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) q ⟨hbody, hlive⟩ (fun w' _ ans post => ?_)
+  obtain ⟨id, rfl, hΓ⟩ := post
+  exact .pure (strongExit_success w' _ _ ⟨q, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩)
+
+/-- **`forkScoped`**: the ambient scope's read (`seqGuard_typed`), then `forkIn` on the handle it
+answers, a present scope's (`fits_scope_inv`). -/
+theorem forkScoped_arm {b : NativeEff} {options : Supervision.ForkOptions}
+    (hat : Node.at_ (.eff root.program) p.path =
+      some (.eff (.withFiber (.forkScoped b options))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  rw [Eff.expandIn_forkScoped] at hcheck
+  obtain ⟨q, hcq, rfl⟩ :=
+    Checker.inv_action_forkScoped _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  have hact : actionAt root.program p = some WithFiberAction.ambientScope := by
+    unfold actionAt
+    rw [hat]
+  rw [denoteAction_of _ _ hact]
+  have hbody : PointTyped root w ((p.child 0).child 0) q :=
+    ⟨b, env, node_at_child (node_at_child hat rfl) rfl, hcq, henv, hview⟩
+  simp only [denoteFiberAction]
+  rw [hat]
+  simp only []
+  refine seqGuard_typed root (ambientScope_typed root w) (subN_never _) (fun w' o v hv => ?_)
+  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hv
+  show TypedProg root w' _ (.vis (.inr (.forkIn ((p.child 0).child 0) options sc (p.child 0).path))
+    fun v => .pure (.success v))
+  refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) q ⟨pointTyped_mono o hbody, hlive⟩ (fun w'' _ ans post => ?_)
+  obtain ⟨id, rfl, hΓ⟩ := post
+  exact .pure (strongExit_success w'' _ _ ⟨q, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩)
+
+/-- **`runIn`**: a declared fiber and a present scope (the row's pre), answering `unit`. -/
+theorem runIn_arm {target scope : Term}
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.runIn target scope))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨handle, pair, hty, hfib, hscope, rfl⟩ :=
+    Checker.inv_action_runIn _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  rw [fiberTy_eq_some hfib] at hty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  obtain ⟨index, rfl, fty, hΓ, -, -⟩ := fiber_of_fits hfit
+  obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv hscope
+  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hufit
+  have hact : actionAt root.program p = some (WithFiberAction.runIn ⟨index⟩ sc) := by
+    unfold actionAt
+    rw [hat]
+    simp only []
+    rw [hv, hu]
+    rfl
+  rw [denoteAction_of _ _ hact]
+  refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () ⟨?_, hlive⟩ (fun w' _ ans post => unitAnswer_typed root post)
+  show (w.Γ ⟨index⟩).isSome = true
+  rw [hΓ]
+  rfl
+
+/-- **`interrupt`**: the target a fiber handle; the row answers `unit`. -/
+theorem interrupt_arm {target : Term}
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.interrupt target))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨handle, pair, hty, hfib, rfl⟩ :=
+    Checker.inv_action_interrupt _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  rw [fiberTy_eq_some hfib] at hty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  obtain ⟨index, rfl, -⟩ := fiber_of_fits hfit
+  have hact : actionAt root.program p = some (WithFiberAction.interrupt ⟨index⟩) := by
+    unfold actionAt
+    rw [hat]
+    simp only []
+    rw [hv]
+    rfl
+  rw [denoteAction_of _ _ hact]
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => unitAnswer_typed root post)
+
+/-- **`interruptScoped`**: as `interrupt`. -/
+theorem interruptScoped_arm {target : Term}
+    (hat : Node.at_ (.eff root.program) p.path =
+      some (.eff (.withFiber (.interruptScoped target))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨handle, pair, hty, hfib, rfl⟩ :=
+    Checker.inv_action_interruptScoped _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  rw [fiberTy_eq_some hfib] at hty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  obtain ⟨index, rfl, -⟩ := fiber_of_fits hfit
+  have hact : actionAt root.program p = some (WithFiberAction.interruptScoped ⟨index⟩) := by
+    unfold actionAt
+    rw [hat]
+    simp only []
+    rw [hv]
+    rfl
+  rw [denoteAction_of _ _ hact]
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => unitAnswer_typed root post)
+
+/-- **`interruptAll`**: the targets a list of fiber handles (`fibers_of_fits`), the interruptor a
+number; the row answers `unit`. -/
+theorem interruptAll_arm {targets : Term} {who : Option Term}
+    (hat : Node.at_ (.eff root.program) p.path =
+      some (.eff (.withFiber (.interruptAll targets who))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  have hc := Checker.inv_withFiber _ _ _ _ _ hcheck
+  cases who with
+  | none =>
+    obtain ⟨inner, pair, hts, hfib, rfl⟩ := Checker.inv_action_interruptAll_self _ _ _ _ _ hc
+    rw [fiberTy_eq_some hfib] at hts
+    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+    obtain ⟨ids, hact⟩ : ∃ ids, actionAt root.program p =
+        some (WithFiberAction.interruptAll ids none) := by
+      unfold actionAt
+      rw [hat]
+      simp only []
+      rw [hv, Option.bind_some]
+      rcases fibers_of_fits hfit with ⟨xs, rfl, hall⟩ | ⟨hs, ids, rfl, hofv, -⟩
+      · simp only [Val.tuple?, Option.bind_some]
+        split
+        · next ids _ => exact ⟨ids, rfl⟩
+        · next heq =>
+          obtain ⟨ids, hids, -⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
+          exact nomatch hids
+      · simp only [hofv]
+        exact ⟨ids, rfl⟩
+    rw [denoteAction_of _ _ hact]
+    exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => unitAnswer_typed root post)
+  | some who =>
+    obtain ⟨inner, pair, hts, hfib, hwho, rfl⟩ := Checker.inv_action_interruptAll_by _ _ _ _ _ _ hc
+    rw [fiberTy_eq_some hfib] at hts
+    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+    obtain ⟨n, hn, hnfit⟩ := evalTerm_progress_env henv hwho
+    obtain ⟨m, rfl⟩ := fits_nat_inv hnfit
+    obtain ⟨ids, hact⟩ : ∃ ids, actionAt root.program p =
+        some (WithFiberAction.interruptAll ids (some ⟨m⟩)) := by
+      unfold actionAt
+      rw [hat]
+      simp only []
+      rw [hv, Option.bind_some, hn]
+      rcases fibers_of_fits hfit with ⟨xs, rfl, hall⟩ | ⟨hs, ids, rfl, hofv, -⟩
+      · simp only [Val.tuple?, Option.bind_some]
+        split
+        · next ids _ => exact ⟨ids, rfl⟩
+        · next heq =>
+          obtain ⟨ids, hids, -⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
+          exact nomatch hids
+      · simp only [hofv]
+        exact ⟨ids, rfl⟩
+    rw [denoteAction_of _ _ hact]
+    exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => unitAnswer_typed root post)
+
+/-- **`awaitAll`**: the targets a list of declared fibers (`fibers_of_fits`); the row is met at the
+raw unions of their declared columns (`awaitAllCert`), whose answer is below the checked list of
+exits. -/
+theorem awaitAll_arm {targets : Term}
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.awaitAll targets))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨inner, pair, hts, hfib, rfl⟩ :=
+    Checker.inv_action_awaitAll _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  rw [fiberTy_eq_some hfib] at hts
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+  obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
+      some (WithFiberAction.awaitAll ids) ∧
+        ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf pair.1 pair.2) := by
+    unfold actionAt
+    rw [hat]
+    simp only []
+    rw [hv, Option.bind_some]
+    rcases fibers_of_fits hfit with ⟨xs, rfl, hall⟩ | ⟨hs, ids, rfl, hofv, hall⟩
+    · simp only [Val.tuple?, Option.bind_some]
+      split
+      · next ids heq =>
+        obtain ⟨ids', hids', hfits⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
+        cases hids'
+        exact ⟨ids, rfl, hfits⟩
+      · next heq =>
+        obtain ⟨ids, hids, -⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
+        exact nomatch hids
+    · simp only [hofv]
+      exact ⟨ids, rfl, hall⟩
+  rw [denoteAction_of _ _ hact]
+  obtain ⟨A, E, hpre, hA, hE⟩ := awaitAllCert hdecl
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) (.list (.exitOf A E)) ⟨A, E, rfl, hpre⟩
+    (fun w' _ ans post =>
+      .pure (strongExit_success w' _ ans (fits_subN w' (subN_listExitOf hA hE) ans post)))
+
+/-- **`awaitAllFailFast`**: as `awaitAll`. -/
+theorem awaitAllFailFast_arm {targets : Term}
+    (hat : Node.at_ (.eff root.program) p.path =
+      some (.eff (.withFiber (.awaitAllFailFast targets))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨inner, pair, hts, hfib, rfl⟩ :=
+    Checker.inv_action_awaitAllFailFast _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  rw [fiberTy_eq_some hfib] at hts
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+  obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
+      some (WithFiberAction.awaitAllFailFast ids) ∧
+        ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf pair.1 pair.2) := by
+    unfold actionAt
+    rw [hat]
+    simp only []
+    rw [hv, Option.bind_some]
+    rcases fibers_of_fits hfit with ⟨xs, rfl, hall⟩ | ⟨hs, ids, rfl, hofv, hall⟩
+    · simp only [Val.tuple?, Option.bind_some]
+      split
+      · next ids heq =>
+        obtain ⟨ids', hids', hfits⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
+        cases hids'
+        exact ⟨ids, rfl, hfits⟩
+      · next heq =>
+        obtain ⟨ids, hids, -⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
+        exact nomatch hids
+    · simp only [hofv]
+      exact ⟨ids, rfl, hall⟩
+  rw [denoteAction_of _ _ hact]
+  obtain ⟨A, E, hpre, hA, hE⟩ := awaitAllCert hdecl
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) (.list (.exitOf A E)) ⟨A, E, rfl, hpre⟩
+    (fun w' _ ans post =>
+      .pure (strongExit_success w' _ ans (fits_subN w' (subN_listExitOf hA hE) ans post)))
+
+/-- **`snapshotChildren`**: the row answers at its certificate, the checked type. -/
+theorem snapshotChildren_arm
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber .snapshotChildren)))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  have hty := Checker.inv_action_snapshotChildren _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  subst hty
+  have hact : actionAt root.program p = some WithFiberAction.snapshotChildren := by
+    unfold actionAt
+    rw [hat]
+  rw [denoteAction_of _ _ hact]
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) (.list (.fiberOf .unknown .unknown)) rfl
+    (fun w' _ ans post => .pure (strongExit_success w' _ ans post))
+
+/-- **`awaitNewChildren`**: the snapshot a list of fiber handles (below the snapshot type in raw
+`sub`, `fits_sub`); the row answers `unit`. -/
+theorem awaitNewChildren_arm {snapshot : Term}
+    (hat : Node.at_ (.eff root.program) p.path =
+      some (.eff (.withFiber (.awaitNewChildren snapshot))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨s, hs, hsub, rfl⟩ :=
+    Checker.inv_action_awaitNewChildren _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hs
+  have hfit' : Fits w v (.list (.fiberOf .unknown .unknown)) :=
+    fits_sub w hsub v ((fits_normalize w s v).mpr hfit)
+  obtain ⟨ids, hact⟩ : ∃ ids, actionAt root.program p =
+      some (WithFiberAction.awaitNewChildren ids) := by
+    unfold actionAt
+    rw [hat]
+    simp only []
+    rw [hv, Option.bind_some]
+    rcases fibers_of_fits hfit' with ⟨xs, rfl, hall⟩ | ⟨hs, ids, rfl, hofv, -⟩
+    · simp only [Val.tuple?, Option.bind_some]
+      split
+      · next ids _ => exact ⟨ids, rfl⟩
+      · next heq =>
+        obtain ⟨ids, hids, -⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
+        exact nomatch hids
+    · simp only [hofv]
+      exact ⟨ids, rfl⟩
+  rw [denoteAction_of _ _ hact]
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => unitAnswer_typed root post)
+
+/-- **`raceAll`**: every entrant's point is typed (the row's pre, `raceEntrants_typed`), at the raw
+unions of the entrants' columns; the race's exit fits them, so the checked join. -/
+theorem raceAll_arm {es : Effs NativeOp}
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.raceAll es))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  rw [Eff.expandIn_raceAll] at hcheck
+  have hc := Checker.inv_action_raceAll _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  obtain ⟨A, E, hpre, hA, hE⟩ := raceEntrants_typed es ((p.child 0).child 0) ty
+    (node_at_child (node_at_child hat rfl) rfl) hc henv hview
+  obtain ⟨ents, hact⟩ : ∃ ents, actionAt root.program p =
+      some (WithFiberAction.raceAll ents (some ((p.child 0).child 0).path)) := by
+    unfold actionAt
+    rw [hat]
+    exact ⟨_, rfl⟩
+  rw [denoteAction_of _ _ hact]
+  have hrace : racePoints root.program p = entrantPoints es ((p.child 0).child 0) := by
+    unfold racePoints
+    rw [hat]
+  show TypedProg root w ty (.vis (.inr (.raceAll (racePoints root.program p)
+    (some ((p.child 0).child 0).path))) Effects.Program.pure)
+  rw [hrace]
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) ⟨A, E, ty.requires⟩ hpre
+    (fun w' _ ans post => .pure (exitOk_widen hA hE post))
+
+/-- **`setContext`**: the context term a context whose services fit (`fits_context_inv`), the
+row's pre; it answers `unit`. -/
+theorem setContext_arm {context : Term}
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.setContext context))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨hc, rfl⟩ :=
+    Checker.inv_action_setContext _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hc
+  obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hfit
+  have hact : actionAt root.program p = some (WithFiberAction.setContext ctx) := by
+    unfold actionAt
+    rw [hat]
+    simp only []
+    rw [hv, Option.bind_some, hctx]
+  rw [denoteAction_of _ _ hact]
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () hsvc (fun w' _ ans post => unitAnswer_typed root post)
+
+/-- **`getContext`**: the context read at the context type (`getContext_typed`). -/
+theorem getContext_arm
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber .getContext)))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  have hty := Checker.inv_action_getContext _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  subst hty
+  have hact : actionAt root.program p = some WithFiberAction.getContext := by
+    unfold actionAt
+    rw [hat]
+  rw [denoteAction_of _ _ hact]
+  exact getContext_typed root w
+
+/-- **`getId`**: the fiber's id, a number. -/
+theorem getId_arm
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber .getId)))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  have hty := Checker.inv_action_getId _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  subst hty
+  have hact : actionAt root.program p = some WithFiberAction.getId := by
+    unfold actionAt
+    rw [hat]
+  rw [denoteAction_of _ _ hact]
+  refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => ?_)
+  obtain ⟨id, rfl⟩ := post
+  exact .pure (strongExit_success w' _ _ trivial)
+
+/-- **`closeScope`**: a present scope (the row's pre) and an exit value that decodes
+(`exitOfVal_of_fits`); the close answers an exit at `pure unit`. -/
+theorem closeScope_arm {scope exit : Term}
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.closeScope scope exit))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨pair, hs, hex, rfl⟩ :=
+    Checker.inv_action_closeScope _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv hs
+  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hufit
+  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hex
+  obtain ⟨ex, hexv⟩ := exitOfVal_of_fits hvfit
+  have hact : actionAt root.program p = some (WithFiberAction.closeScope sc ex) := by
+    unfold actionAt
+    rw [hat]
+    simp only []
+    rw [hu, hv, Option.bind_some, hexv]
+    rfl
+  rw [denoteAction_of _ _ hact]
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () hlive (fun _ _ _ post => .pure post)
+
+/-- **`withFiber`**: the sixteen actions, each by its arm. -/
+theorem withFiber_arm {a : ActionTerm NativeOp} (hfuel : p.fuel ≠ 0)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber a)))
+    (hpt : PointTyped root w p ty) :
+    TypedProg root w ty (denoteR root.program (.withFiber a) p) := by
+  rw [denoteR_withFiber _ _ _ hfuel]
+  cases a with
+  | fork b options => exact fork_arm hat hpt
+  | forkIn b options scope => exact forkIn_arm hat hpt
+  | forkScoped b options => exact forkScoped_arm hat hpt
+  | runIn target scope => exact runIn_arm hat hpt
+  | interrupt target => exact interrupt_arm hat hpt
+  | interruptScoped target => exact interruptScoped_arm hat hpt
+  | interruptAll targets who => exact interruptAll_arm hat hpt
+  | awaitAll targets => exact awaitAll_arm hat hpt
+  | awaitAllFailFast targets => exact awaitAllFailFast_arm hat hpt
+  | snapshotChildren => exact snapshotChildren_arm hat hpt
+  | awaitNewChildren snapshot => exact awaitNewChildren_arm hat hpt
+  | raceAll es => exact raceAll_arm hat hpt
+  | setContext context => exact setContext_arm hat hpt
+  | getContext => exact getContext_arm hat hpt
+  | getId => exact getId_arm hat hpt
+  | closeScope scope exit => exact closeScope_arm hat hpt
+
+end FiberArms
 
 end Effect4.Program.Typed
