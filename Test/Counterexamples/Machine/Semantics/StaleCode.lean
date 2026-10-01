@@ -826,6 +826,30 @@ theorem evaluate_entry_m6 :
     ConfigTyped (prog : ProgramSource) ty (rootWorld m6) m6 [Cmd.evaluate Api.root, Cmd.drainDue] :=
   evaluate_entry _ _ _ _ _ machineTyped_m6
 
+/-! ## M7 at probe A's program (positive)
+
+The frame machine's replay of the same tape (`Api.replay`) is in the book with the reference
+replay (`replay_rel`), so `J` at the reference machine types the frame machine's observation:
+M7a's and M7c's conclusions at the cut and on the finished run. -/
+
+-- Term mode, through lemmas stated for a variable program: unifying projections of a concrete
+-- replay made the elaborator evaluate it (killed at 5.7 GB; the probe authors' trap).
+theorem m7_exits_at_cut : ExitsFit ty (rootWorld m6) (obs (Api.replay prog 6 tape).machine) :=
+  Eq.mpr (congrArg (ExitsFit ty (rootWorld m6)) (run_eq_ref prog 6 tape).2)
+    (obsTyped_of_machineTyped machineTyped_m6).1
+
+theorem m7_exits_finished : ExitsFit ty (rootWorld m9) (obs (Api.replay prog 9 tape).machine) :=
+  Eq.mpr (congrArg (ExitsFit ty (rootWorld m9)) (run_eq_ref prog 9 tape).2)
+    (obsTyped_of_machineTyped machineTyped_m9).1
+
+theorem m7_no_halt_at_cut : (Api.replay prog 6 tape).machine.stuck = none :=
+  (replay_stuck_eq prog 6 tape).trans machineTyped_m6.live.running
+
+/-- R4's bridge at the cut: the reference machine is in the book with a native reachable one. -/
+theorem cut_native_reachable :
+    ∃ m₁, Guard.Reachable prog [] 6 [] m₁ ∧ BMeans prog m₁ m6 :=
+  replayR_bmeans_reachable prog 6 tape
+
 /-! ## Row 139 beside probe C
 
 The generated part with its correlations still tolerates a halt: `TypedState` reads no `stuck`,
@@ -926,6 +950,10 @@ open Test.Counterexamples.Machine.Semantics.StaleCode
 #print axioms machineTyped_m9
 #print axioms capstone_window_holds
 #print axioms evaluate_entry_m6
+#print axioms m7_exits_at_cut
+#print axioms m7_exits_finished
+#print axioms m7_no_halt_at_cut
+#print axioms cut_native_reachable
 #print axioms typedState_halt
 #print axioms machineTyped_not_halted_here
 #print axioms halting_result_outside

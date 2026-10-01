@@ -674,6 +674,164 @@ theorem reachable_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (admittedReplay_noHostAnswer root (MachineTyped root rootTy) fuel tape free _)
   exact ⟨w, typed⟩
 
+/-! ## M7: the frame machine's observation is typed (decisions row 138)
+
+M7 transfers `J` from the term reference to the frame machine that runs `compileEff`'s first-order
+code (`Api.replay`) along `run_eq_ref`'s relation (`replay_rel`, `BMeans`): every exit the
+observation `obs` records fits its fiber's declared type (M7a), the stores fit (M7b), and the run
+never halts (M7c). The fragment is `run_eq_ref`'s: the empty host table, the empty oracle,
+answer-free tapes, every command budget, the compile budget equal to it. M7 is about the frame
+machine, not "the compiled machine": the OCaml engine (the LCNF route) is outside it until
+decisions row 28 is ruled, and nothing here is verified lowering or host safety.
+
+**R1's exception** (decisions row 138, ruled 2026-10-01; system map §8): M7 holds over the service
+half of Σ_app with the row table fixed empty. The table-aware agreement (DI-57's host-free part:
+external registration, evaluator selection) belongs to R6, after M7
+(`Test/contracts/machine-scheduler-core.contract.md`, "Table-aware agreement (DI-57)").
+
+The route is proved here (`m7_of_ledger`): from `typedState_load` and `decision_preserves`,
+through `replayEval_lift`, to `J` on the reference replay, then across `BMeans`
+(`bookMeans_obs`, `BookMeans.stuck`). M7a–c stay open while M5 and M6 are. -/
+
+/-- The M7 fragment: a lawful source at the empty host table, checked and closed, and a tape with
+no host answer. -/
+structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.Decision) :
+    Prop where
+  lawful : LawfulSource root
+  emptyTable : root.table = []
+  checked : Api.typeOf root.program root.table = some rootTy
+  closed : ClosedEff rootTy
+  answerFree : ∀ d ∈ tape, NoHostAnswer d
+
+/-- M7a's conclusion on an observation: the root is declared at the program's type, the world's
+store is the observed one, and every recorded exit fits its fiber's declared type. -/
+def ExitsFit (rootTy : EffTy) (w : World) (o : Obs) : Prop :=
+  w.Γ Api.root = some rootTy ∧ w.state = o.stores ∧
+    ∀ id ex, (id, some ex) ∈ o.exits → ∃ ty, w.Γ id = some ty ∧ ExitOk w ty ex
+
+/-- M7b's conclusion: the observed stores fit at a world that describes them exactly. -/
+def StoresFit (root : ProgramSource) (w : World) (s : Stores) : Prop :=
+  w.state = s ∧ s.WF ∧ (∀ key, (w.Ρ key).isSome = true ↔ key.index < s.refs.length) ∧
+    (∀ key, (w.«Π» key).isSome = true ↔ key.index < s.deferreds.cells.length) ∧
+    StoresOk (preds root) w Expect.root s
+
+/-- M7a's proposition. -/
+def M7Exits (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
+    Prop :=
+  M7Fragment root rootTy tape →
+    ∃ w, ExitsFit rootTy w (obs (Api.replay root.program fuel tape).machine)
+
+/-- M7b's proposition. -/
+def M7Stores (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
+    Prop :=
+  M7Fragment root rootTy tape →
+    ∃ w, StoresFit root w (obs (Api.replay root.program fuel tape).machine).stores
+
+/-- M7c's proposition: the frame machine never halts on the fragment. -/
+def M7NoHalt (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
+    Prop :=
+  M7Fragment root rootTy tape → (Api.replay root.program fuel tape).machine.stuck = none
+
+/-- `J` on a reference machine types its observation: the exits and the stores. -/
+theorem obsTyped_of_machineTyped {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    (typed : MachineTyped root rootTy w m) :
+    ExitsFit rootTy w (obs m) ∧ StoresFit root w (obs m).stores := by
+  obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _⟩ := typed
+  refine ⟨⟨valid.root, valid.state, fun id ex member => ?_⟩,
+    valid.state, valid.wf, valid.heap, valid.promises, ok.c2⟩
+  obtain ⟨f, hf, same⟩ := List.mem_map.mp member
+  obtain ⟨hid, hex⟩ := Prod.mk.inj same
+  obtain ⟨ty, declared⟩ := Option.isSome_iff_exists.mp
+    ((valid.fibers f.id).mpr (List.mem_map_of_mem hf))
+  refine ⟨ty, hid ▸ declared, (ok.c0 f hf).c3 ex hex ty declared⟩
+
+/-- The frame machine's replay halts exactly when the term reference's replay of the same tape
+does: `run_eq_ref`'s relation equates `stuck` (`BookMeans.stuck`). -/
+theorem replay_stuck_eq (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
+    (Api.replay e fuel tape).machine.stuck = (replayR e fuel tape).machine.stuck := by
+  rw [replay_machine]
+  exact (ReplayRel.machine (replay_rel e fuel fuel tape)).stuck
+
+/-- **M7's route from the capstone.** `J` on the reference replay of every answer-free tape gives
+M7a–c on the frame machine's replay of the same tape. -/
+theorem m7_of_capstone (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
+    (tape : List Api.Decision) (capstone : ∀ m, ReachableTyped root rootTy fuel m) :
+    M7Exits root rootTy fuel tape ∧ M7Stores root rootTy fuel tape ∧
+      M7NoHalt root rootTy fuel tape := by
+  have transfer : M7Fragment root rootTy tape → ∃ w,
+      MachineTyped root rootTy w (replayR root.program fuel tape).machine ∧
+      obs (Api.replay root.program fuel tape).machine = obs (replayR root.program fuel tape).machine ∧
+      (Api.replay root.program fuel tape).machine.stuck =
+        (replayR root.program fuel tape).machine.stuck := by
+    intro fragment
+    obtain ⟨w, typed⟩ := capstone _ fragment.lawful fragment.checked fragment.closed
+      ⟨tape, fragment.answerFree, rfl⟩
+    have related := ReplayRel.machine (replay_rel root.program fuel fuel tape)
+    refine ⟨w, typed, ?_, replay_stuck_eq root.program fuel tape⟩
+    rw [replay_machine]
+    exact bookMeans_obs related
+  refine ⟨fun fragment => ?_, fun fragment => ?_, fun fragment => ?_⟩
+  · obtain ⟨w, typed, sameObs, _⟩ := transfer fragment
+    rw [sameObs]
+    exact ⟨w, (obsTyped_of_machineTyped typed).1⟩
+  · obtain ⟨w, typed, sameObs, _⟩ := transfer fragment
+    rw [sameObs]
+    exact ⟨w, (obsTyped_of_machineTyped typed).2⟩
+  · obtain ⟨_, typed, _, sameStuck⟩ := transfer fragment
+    rw [sameStuck]
+    exact typed.live.running
+
+/-- **M7 from the ledger** (decisions row 138's route): `typedState_load` and
+`decision_preserves` at one source and budget give M7a–c at every answer-free tape. -/
+theorem m7_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
+    (tape : List Api.Decision) (load : LoadsTyped root rootTy fuel fuel)
+    (decisions : ∀ d, DecisionKeeps root rootTy fuel d) :
+    M7Exits root rootTy fuel tape ∧ M7Stores root rootTy fuel tape ∧
+      M7NoHalt root rootTy fuel tape :=
+  m7_of_capstone root rootTy fuel tape (reachable_of_ledger root rootTy fuel load decisions)
+
+/-! ## R4: the reference replay is in the book with a native reachable machine
+
+`Guard.Reachable` (`Laws/Program/Guard/Core.lean:41-44`) is the native machine's reachability:
+per-decision budgets, continuing past frontiers. `RReachable` is the reference's: one budget,
+stopping at the first frontier. The replay stops at a prefix of its tape, so its native machine
+is a `Guard.Reachable` fold at constant budget, and `replay_rel` relates it to the reference
+machine by `BMeans`, which equates every code-free field (`Laws/Machine/Book.lean:193-203`):
+code-free guard facts transport to the reference for free (decisions row 140). -/
+
+/-- `replayEval` stops at a prefix of its tape: its machine is the fold of the decisions it
+applied, every one at the replay's command budget. -/
+theorem replayEval_machine_prefix (e : NativeEff) (fuel : Nat) :
+    ∀ (tape : List Api.Decision) (m : NativeMachine), ∃ k,
+      (letI := evaluatorFor e
+       (replayEval (interpOf e) fuel tape m).machine) =
+        (tape.take k).foldl (fun m d => steppedBy e fuel [] m d) m
+  | [], m => ⟨0, by
+      letI := evaluatorFor e
+      exact Machine.Lift.replayEval_nil_machine (interpOf e) fuel m⟩
+  | d :: tape, m => by
+    letI := evaluatorFor e
+    simp only [replayEval]
+    split
+    · exact ⟨0, rfl⟩
+    · split
+      · obtain ⟨k, prefixFold⟩ :=
+          replayEval_machine_prefix e fuel tape (stepDecisionState (interpOf e) fuel m d).1
+        exact ⟨k + 1, prefixFold⟩
+      · exact ⟨1, rfl⟩
+
+/-- **R4's bridge.** Every machine the reference replay reaches at the empty table is related by
+`BMeans` to a `Guard.Reachable` native machine: the frame machine's replay of the same tape. -/
+theorem replayR_bmeans_reachable (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
+    ∃ m₁, Guard.Reachable e [] fuel [] m₁ ∧ BMeans e m₁ (replayR e fuel tape).machine := by
+  letI := evaluatorFor e
+  obtain ⟨k, prefixFold⟩ := replayEval_machine_prefix e fuel tape (Api.load e fuel)
+  refine ⟨(Api.replay e fuel tape).machine, ⟨(tape.take k).map fun d => (fuel, d), ?_⟩, ?_⟩
+  · rw [replay_machine, prefixFold]
+    simp only [Guard.executePrefix, List.foldl_map]
+  · rw [replay_machine]
+    exact ReplayRel.machine (replay_rel e fuel fuel tape)
+
 /-! ## Declared obligations
 
 `typedState_load` (M5: initialization from an admitted source). The transition ledger (M6): one
@@ -776,6 +934,25 @@ theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat
 
 end M6Ledger
 
+/-! M7 (decisions row 138, ruled 2026-10-01): at the empty host table, on answer-free tapes, with
+observation `obs`, the frame machine's run is typed. `m7_of_ledger` derives all three from
+`typedState_load` and `decision_preserves`. -/
+namespace M7
+
+/-- M7a: every exit the observation records fits its fiber's declared type. -/
+theorem exits_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
+    ProofGraph.Obligation (M7Exits root rootTy fuel tape) := ⟨⟩
+
+/-- M7b: the observed stores fit at a world that describes them. -/
+theorem stores_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
+    ProofGraph.Obligation (M7Stores root rootTy fuel tape) := ⟨⟩
+
+/-- M7c: the frame machine never halts on the fragment (row 139's `stuck = none` in `J`). -/
+theorem never_halts (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
+    ProofGraph.Obligation (M7NoHalt root rootTy fuel tape) := ⟨⟩
+
+end M7
+
 end Effect4.Program.Typed
 
 #obligation_proved Effect4.Program.Typed.M3bAssembly.capture_lookup :=
@@ -804,4 +981,9 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves
 #proof_wanted Effect4.Program.Typed.M6Ledger.typedState_reachable
 #typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 20
+  using aesop (rule_sets := [Effect4.TypedState])
+#proof_wanted Effect4.Program.Typed.M7.exits_typed
+#proof_wanted Effect4.Program.Typed.M7.stores_typed
+#proof_wanted Effect4.Program.Typed.M7.never_halts
+#typed_state_obligations Effect4.Program.Typed.M7 ceiling 3
   using aesop (rule_sets := [Effect4.TypedState])
