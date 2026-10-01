@@ -208,8 +208,22 @@ notes beside it). The direction holds; the note as written does not:
 
 The revised list is R1–R13 (synthesis §2) with its pedigree traced (§3) and a plan to refresh
 `DESIGN-BASIS.md` into one basis with sources (§3.3, §4). Thirteen decision rows are proposed
-(§6); six gate the next brief. H2 can go on two conditions (§5.1). The owner decides; the system
-map and the design basis change only after that.
+(§6); six gate the next brief. H2 can go on two conditions (§5.1).
+
+**Codex's audit of that plan, and the rulings (2026-10-01).** Codex reviewed the synthesis
+read-only ([audit](research/2026-09-30-codex-review-model-probe/audit.md); its four load-bearing
+probes rerun clean in the main checkout). It upholds the direction and refutes two things with
+checked counterexamples: H2's part two (a saved loop frame carries `die missingService` from a
+scope-requiring type to one requiring nothing; row 117) and D5 as written (no `Package.install`
+order appends on the assembled table; row 115). It also corrects the Σ_app slice's count (27
+existing sites, lawfulness on the source) and the shapes of R10–R13 (lexical well-scoping; a
+completed-cleanup receipt, since the closed bit is set before cleanup runs; no whole-machine
+fixed point for deadlock; load inputs as a congruence law). The owner ruled: H2 part one go, D1–D6
+as amended. Recorded: rows 111–118, row 107 and row 21;
+[addendum 5](research/2026-09-30-codex-brief-slice6-addendum-5.md) to Codex. Meanwhile Codex
+landed A (`90df5d21`) and C's steps 3–4 (`be6631ab`, `e5cc184b`) on its branch; C's step 5 is in
+progress, and the merge follows it. The system map's "what a full program is" and the design-basis
+refresh come next, with R11–R13 restated as the audit says.
 
 ## What the owner must decide
 
