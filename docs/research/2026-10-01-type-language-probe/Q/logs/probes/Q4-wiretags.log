@@ -1,0 +1,12 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ ./docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true docs/research/2026-10-01-type-language-probe/Q/probes/Q4/WireTagsProbe.lean
+# started 2026-10-01T20:02:52Z (LEAN_NUM_THREADS=1)
+Except.ok [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+Except.error "wire tags: Effect4.Program.Ty gives the tags [20] twice"
+Except.ok [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21]
+Except.ok "{\"a\":2}"
+Except.error "wire tags: Effect4.Program.Ty.tuple is declared but has no active tag"
+Except.error "wire tags: Effect4.Program.Ty.map is active but not a declared constructor"
+Except.ok [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22]
+Except.error "wire tags: F gives the tags [3] twice"
+# exit=0 seconds=2
