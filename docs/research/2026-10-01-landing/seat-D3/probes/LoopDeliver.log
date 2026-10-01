@@ -1,0 +1,4 @@
+'Effect4.Program.Typed.SeatD3.LoopDeliver.config_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.SeatD3.LoopDeliver.loop_false' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.SeatD3.LoopDeliver.deliver_false' depends on axioms: [propext, Quot.sound]
+exit 0
