@@ -57,6 +57,16 @@ typing), `step_wake` (F3), `step_exitDone` and `step_finish` (F4), `step_registr
 the old statement in the probes (keep them compiling as history under the seat folder); the
 register rows `E4-TYPED-CE-024`–`029` become REPAIRED (propose the lines).
 
+## Step 2b: the field census (row 181, S8)
+
+Beside the five clauses, the instrument that would have found them first: a census command
+beside `#typed_state` (or a sibling of `#traversal_census`) that lists every field of `RState`,
+`Stores`, `SchedulerState`, the queue, `Point` and `World` with the row of `Typed/Sources.lean`
+(or the statement premise) that types it, and refuses a field with neither a row nor a named
+exemption with its reason; run at the foot of `Typed/State.lean` like the other censuses, green
+the day the five clauses land, every exemption listed by name in the receipt. System map §10.3's
+S8 reads its output; propose its status line.
+
 ## Step 3: M6b, M6c, row 180
 
 `M6Ledger.decision_preserves` by `decisionKeeps_of_steps`, `typedState_reachable` by
