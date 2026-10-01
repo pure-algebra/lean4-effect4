@@ -1,0 +1,73 @@
+| production declaration | today (bff50631) | lines | on the copy | lines | change |
+| --- | --- | --- | --- | --- | --- |
+| `Ty` (constructors) | Ty.lean:37 | 39 | P2Ty.lean:48 | 40 | +1 |
+| `Ty.key` | Ty.lean:146 | 21 | P2Ty.lean:143 | 29 | +8 |
+| `Ty.renderRaw` | Ty.lean:95 | 23 | P2Ty.lean:610 | 32 | +9 |
+| `Ty.members` | Ty.lean:120 | 21 | P2Ty.lean:457 | 29 | +8 |
+| `Ty.closed` | Ty.lean:200 | 6 | P2Ty.lean:548 | 9 | +3 |
+| `Ty.isMember` | Ty.lean:403 | 6 | P2Ty.lean:503 | 7 | +1 |
+| `Ty.sub` | Ty.lean:437 | 20 | P2Ty.lean:737 | 38 | +18 |
+| `Ty.instantiate` | Ty.lean:474 | 21 | P2Ty.lean:570 | 29 | +8 |
+| `Ty.normalize` | Ty.lean:607 | 22 | P2Ty.lean:830 | 32 | +10 |
+| `Ty.Normal` | Ty.lean:631 | 25 | P2Ty.lean:904 | 34 | +9 |
+| `normal_normalize` | Ty.lean:677 | 38 | P2Ty.lean:967 | 86 | +48 |
+| `sub_union_right` | Ty.lean:816 | 9 | P2Ty.lean:1167 | 11 | +2 |
+| `sub_lit_string` | Ty.lean:831 | 5 | P2Ty.lean:1185 | 3 | -2 |
+| `sub_unknown` | Ty.lean:767 | 4 | P2Ty.lean:1190 | 13 | +9 |
+| `TyView.args` (gen.) | TyView.lean:34 | 21 | P3View.lean:49 | 29 | +8 |
+| `TyView.sameHead` (gen.) | TyView.lean:57 | 22 | P3View.lean:80 | 29 | +7 |
+| `TyView.litRule` → the table (gen.) | TyView.lean:82 | 3 | P2Ty.lean:693 | 5 | +2 |
+| `sameHead_trans` (gen.) | TyView.lean:158 | 3 | P3View.lean:136 | 3 | +0 |
+| `eq_of_sameHead` (gen.) | TyView.lean:174 | 3 | P3View.lean:185 | 36 | +33 |
+| `sub_eq_false_of_not_sameHead` (gen.) | TyView.lean:275 | 13 | P3View.lean:401 | 21 | +8 |
+| `sub_eq_argsBelow_of_sameHead` (gen.) | TyView.lean:291 | 36 | P3View.lean:424 | 44 | +8 |
+| `sub_eq_args` (gen.) | TyView.lean:333 | 8 | P3View.lean:472 | 8 | +0 |
+| `argsBelow_antisymm` (gen.) | TyView.lean:493 | 7 | P3View.lean:626 | 7 | +0 |
+| `sub_trans_core` | TypeAlgebra.lean:40 | 75 | P4Algebra.lean:44 | 74 | -1 |
+| `sub_antisymm_normal` | TypeAlgebra.lean:618 | 86 | P4Algebra.lean:286 | 87 | +1 |
+| `sub_normalize_of_sub` | TypeAlgebra.lean:883 | 146 | P4Algebra.lean:592 | 202 | +56 |
+| `normal_args` | TypeAlgebra.lean:600 | 17 | P4Algebra.lean:242 | 32 | +15 |
+| `normal_members` | TypeAlgebra.lean:546 | 7 | P4Algebra.lean:197 | 14 | +7 |
+| `sub_member_right_iff` | TypeAlgebra.lean:508 | 16 | P4Algebra.lean:156 | 17 | +1 |
+| `hasTy_normalize` | TypeAlgebra.lean:309 | 12 | P4Check.lean:758 | 59 | +47 |
+| `Val.hasTy` | Typed.lean:34 | 68 | P4Check.lean:148 | 76 | +8 |
+| `cata_admits_sub` / copy's `hasTy_sub` | Admits.lean:36 | 62 | P4Check.lean:467 | 143 | +81 |
+| `Fits` | Membership.lean:87 | 62 | P5Fits.lean:145 | 75 | +13 |
+| `fits_hasTy` | Membership.lean:269 | 151 | P5Fits.lean:390 | 188 | +37 |
+| `fits_live` | Membership.lean:520 | 127 | P5Fits.lean:746 | 178 | +51 |
+| `fits_map` | Membership.lean:729 | 98 | P5Fits.lean:1042 | 134 | +36 |
+| `fits_sub` | Membership.lean:837 | 103 | P5Fits.lean:1232 | 157 | +54 |
+| `isTagged` | Ty.lean:774 | 3 | P7Tagged.lean:109 | 4 | +1 |
+| `payloadOf` | Ty.lean:798 | 3 | P7Tagged.lean:172 | 4 | +1 |
+| `decodeRaw` → `decodeRawC` | Codec.lean:181 | 33 | P8Codec.lean:408 | 34 | +1 |
+| `ofSchema` → `ofSchemaC` | Bridge.lean:79 | 57 | P8Schema.lean:89 | 72 | +15 |
+| `ofSchema_schema` → `ofSchemaC_schema` | Bridge.lean:140 | 62 | P8Schema.lean:337 | 69 | +7 |
+| `hasTy_normalize` with its named cases | 10 decl. in TypeAlgebra.lean | 94 | 5 decl. in P4Check.lean | 109 | +15 |
+| the leaf rule and its laws (gen.) | 4 decl. in TyView.lean | 20 | 20 decl. in P3View.lean | 119 | +99 |
+
+| what | positional (commit) | lines | named (head) | lines | change |
+| --- | --- | --- | --- | --- | --- |
+| check: the record read | P4Check.lean:72 | 4 | P4Check.lean:85 | 7 | +3 |
+| check: its monotonicity | P4Check.lean:215 | 20 | P4Check.lean:387 | 34 | +14 |
+| check: `hasTy_record` | P4Check.lean:198 | 4 | P4Check.lean:263 | 5 | +1 |
+| check: `hasTy_normalize_record` | P4Check.lean:460 | 19 | P4Check.lean:709 | 17 | -2 |
+| check: `record_sub_not_complete` | P4Check.lean:571 | 21 | P4Check.lean:980 | 24 | +3 |
+| Fits: the record predicate | P5Fits.lean:115 | 4 | P5Fits.lean:122 | 7 | +3 |
+| Fits: the optional slot | P5Fits.lean:105 | 8 | P5Fits.lean:122 | 7 | -1 |
+| Fits: `fits_record_inv` | P5Fits.lean:224 | 9 | P5Fits.lean:258 | 10 | +1 |
+| Fits: read implies check | P5Fits.lean:247 | 19 | P5Fits.lean:283 | 37 | +18 |
+| Fits: liveness | P5Fits.lean:570 | 18 | P5Fits.lean:701 | 31 | +13 |
+| Fits: growth / monotonicity | P5Fits.lean:800 | 32 | P5Fits.lean:999 | 29 | -3 |
+| Fits: `fits_normalize_record` | P5Fits.lean:1194 | 21 | P5Fits.lean:1492 | 19 | -2 |
+| projection: the function | P5Fits.lean:1414 | 6 | P5Fits.lean:1768 | 8 | +2 |
+| projection: field lookup | P5Fits.lean:1388 | 3 | P5Fits.lean:1742 | 3 | +0 |
+| projection: lookup law | P5Fits.lean:1456 | 15 | P5Fits.lean:1800 | 32 | +17 |
+| projection: required present | P5Fits.lean:1472 | 12 | P5Fits.lean:1834 | 38 | +26 |
+| projection: assembled value fits | P5Fits.lean:1485 | 5 | P5Fits.lean:1890 | 26 | +21 |
+| projection: absent optional skipped | P5Fits.lean:1485 | 5 | P5Fits.lean:1874 | 14 | +9 |
+| projection: `fits_project` | P5Fits.lean:1506 | 48 | P5Fits.lean:1932 | 62 | +14 |
+| inhabitance: sound step | P6Inhabited.lean:70 | 14 | P6Inhabited.lean:92 | 28 | +14 |
+| inhabitance: fresh-world step | P6Inhabited.lean:251 | 22 | P6Inhabited.lean:309 | 36 | +14 |
+| tag: the tag in the value | P7Tagged.lean:69 | 32 | P7Tagged.lean:48 | 39 | +7 |
+| tag: the discriminant-first slot | P7Tagged.lean:48 | 13 | — | 0 | -13 |
+| tag: disjointness | P7Tagged.lean:103 | 9 | P7Tagged.lean:89 | 16 | +7 |

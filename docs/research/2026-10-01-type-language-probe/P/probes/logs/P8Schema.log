@@ -1,0 +1,9 @@
+'ProbeP.SchemaExact.ofSchema_reads_check_ids' depends on axioms: [propext, Quot.sound]
+'ProbeP.SchemaExact.ofSchema_reads_typeParameter' depends on axioms: [propext, Quot.sound]
+'ProbeP.SchemaExact.ofSchema_drops_parseOptions' depends on axioms: [propext, Quot.sound]
+'ProbeP.SchemaExact.ofSchemaC_refuses' depends on axioms: [propext, Quot.sound]
+'ProbeP.SchemaExact.normS_schema' depends on axioms: [propext]
+'ProbeP.SchemaExact.ofSchemaC_schema' depends on axioms: [propext, Quot.sound]
+'ProbeP.SchemaExact.ofSchemaC_exact' depends on axioms: [propext, Quot.sound]
+'ProbeP.SchemaExact.ofSchemaC_exact'' depends on axioms: [propext, Quot.sound]
+exit=0 seconds=7

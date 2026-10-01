@@ -1,0 +1,24 @@
+'ProbeP.Field.bytesKey_injective' depends on axioms: [propext]
+'ProbeP.Field.tagFirstKey_injective' depends on axioms: [propext]
+'ProbeP.Field.ltKey_irrefl' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.ltKey_trans' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.ltKey_asymm' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.ltKey_total' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.insertBy_ascending' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.canonBy_ascending' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.canonBy_names_nodup' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.canonBy_map' does not depend on any axioms
+'ProbeP.Field.canonBy_of_ascending' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.canonBy_idem' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.mem_canonBy' depends on axioms: [propext]
+'ProbeP.Field.firstOf_canonBy' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.mem_canonBy_iff' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.ascending_ext' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.canonBy_perm' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.mem_names_canonBy' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.canonBy_eq_nil_iff' does not depend on any axioms
+'ProbeP.Field.sizeOf_canonBy_le' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.firstRepeated_eq_none_iff' depends on axioms: [propext, Quot.sound]
+'ProbeP.Field.dup_order_matters' does not depend on any axioms
+'ProbeP.Field.canon_names_row' depends on axioms: [propext, Quot.sound]
+exit=0 seconds=2
