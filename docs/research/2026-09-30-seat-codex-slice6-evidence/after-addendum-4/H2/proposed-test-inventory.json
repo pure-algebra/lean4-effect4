@@ -1,0 +1,49 @@
+{
+  "status": "proposed, uncompiled and unapplied",
+  "count": 25,
+  "files": {
+    "Test/Program/TypedResidual.lean": [
+      "unguard_inversion_rejects_unadmitted",
+      "finishFinalizer_inversion_rejects_unadmitted"
+    ],
+    "Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean": [
+      "cancellation_exit",
+      "sleep_stack_rejected"
+    ],
+    "Test/Counterexamples/Machine/Semantics/TrivialPosts.lean": [
+      "joinAll_typed",
+      "modify_typed",
+      "joinsFiber_typed"
+    ],
+    "Test/Program/TypedControl.lean": [
+      "cancel_typed",
+      "cancel_interrupt_typed",
+      "sleep_stack_accepted",
+      "natCatch_typed",
+      "natToBool_typed",
+      "leakyGuard_rejected",
+      "unguard_payload_rejected"
+    ],
+    "Test/Program/TypedStack.lean": [
+      "catch_accepted",
+      "catch_walk",
+      "preempted_walk",
+      "wrong_middle"
+    ],
+    "Test/Counterexamples/Machine/Semantics/ValueMembership.lean": [
+      "refProg_typedF",
+      "getProg_typedF"
+    ],
+    "Test/Counterexamples/Machine/Semantics/M6Capstone.lean": [
+      "bad_not_typed"
+    ],
+    "Test/Program/LoadedAdmission.lean": [
+      "fork_admitted",
+      "lookup_typed",
+      "service_admitted",
+      "memoAwait_typed"
+    ]
+  },
+  "input_hashes_match_live": true,
+  "measured_extra_failures": 2
+}

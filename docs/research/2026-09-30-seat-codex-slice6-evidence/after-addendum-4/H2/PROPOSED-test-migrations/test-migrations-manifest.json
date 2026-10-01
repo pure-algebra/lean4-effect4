@@ -1,0 +1,51 @@
+{
+  "lean_run": false,
+  "scope": "PROPOSED ONLY. No existing test body is exempted from the strict cap. Fresh compiler attribution comes first.",
+  "files": {
+    "Test/Program/TypedResidual.lean": {
+      "input_sha256": "7fed93229cdd93abbd39d64a258b5f538dc719a2d88b1cc4a709d18447e848ed",
+      "candidate_sha256": "56f4b79205605099e00e4c50dd8b4bb8df9f24a4c7a15770816d0f8fa5eecbad",
+      "note": "Two existing refusal proofs project base membership from the strengthened inversion result."
+    },
+    "Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean": {
+      "input_sha256": "c563000d4437004cd71e46aa0e0788efc507276f47aa8214a7043c25a3b6f6a1",
+      "candidate_sha256": "99ac6e6406a5db812095059d0e79b2959624cdccea5a3d31c8634e8f92c0642a",
+      "note": "Preserve ReviewedControlAdmitted/ReviewedTypedProg and historical base FitsExit unchanged; adapt only landed inversion consumers in cancellation_exit/sleep_stack_rejected."
+    },
+    "Test/Counterexamples/Machine/Semantics/TrivialPosts.lean": {
+      "input_sha256": "7a22eb008a38d6069645915233c8922b17d1d6814fd016292259db6b7cf198e4",
+      "candidate_sha256": "ecf30e8f0bfdb0041e87b8b2b548ba92603a2a9d2fd71eec7060b5e9f50379ef",
+      "note": "joinAll_typed/modify_typed add vacuous success exclusion; joinsFiber_typed supplies finite interrupt exclusion. Pass-through protocol posts now already carry ExitOk."
+    },
+    "Test/Program/TypedControl.lean": {
+      "input_sha256": "83719aa47ee07cf530fbbdf9994f62b42a2567747eca33a3abbca46c3a158a5e",
+      "candidate_sha256": "975bad42803c02bd66d2f9e16af57a6a2738942139fad7cdad1cd212b80f7d1c",
+      "note": "PROPOSED SIGNATURE AMENDMENT: cancel_typed needs explicit NoShapeDefect premise (independent diagnostic provided). Keep old base helper semantics; introduce new test adapters and project base results in refusals."
+    },
+    "Test/Program/TypedStack.lean": {
+      "input_sha256": "9ef58bd4615b2aee9188feca134a3f33f8c4cd72effbd7a0f807e34b6935c68e",
+      "candidate_sha256": "b3b99ec8c2357180461be50aee43cccf4dc7600a27afab4795706d4079379362",
+      "note": "Use ExitOk stack contract and finite success/Fail adapters; keep wrong-middle counterexample with first projection of skip output."
+    },
+    "Test/Counterexamples/Machine/Semantics/ValueMembership.lean": {
+      "input_sha256": "f88d6ce28e2ec1cfab48bfc1ae96b99c44480c47b3227c197b03f55842da1df4",
+      "candidate_sha256": "0319a198c067922356b71232ee1f5333dcab3fbafba7724cdc711ada4e6364d7",
+      "note": "Only new production refProg_typedF/getProg_typedF controls migrate. Reviewed, ExactSpelling, ReviewedLoad historical definitions/proofs stay byte-identical."
+    },
+    "Test/Counterexamples/Machine/Semantics/M6Capstone.lean": {
+      "input_sha256": "e9a5a3527013c8c54d4ec4604ca1b9fe5b3fd363db3393d0b5ebce3a9a6a49b7",
+      "candidate_sha256": "ae9023a16c14cd5854e7e27a64152f0f3cd96299325f1d7eef6c3b334917a920",
+      "note": "Refusal of the forged host answer still uses the identical base membership contradiction, projected from ExitOk."
+    },
+    "Test/Program/LoadedAdmission.lean": {
+      "input_sha256": "b43e7f4511e7f3cb2707d90ce3877551867c9ab510e513ce9240f5069721fbd8",
+      "candidate_sha256": "0a57c83d986d860edaae5bffe078d0f870bc6d929d21b772bc41c4cdbe66eb95",
+      "note": "PROPOSED SIGNATURE AMENDMENT: lookup_typed requires actual context witness. Old signature has independent counterexample. service_admitted supplies it from its existing Fits premise, via new finite context_of_fits helper."
+    },
+    "Test/Program/H2PartOne.lean": {
+      "input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_sha256": "17bec5edbf06678dfb5ac531a4f1094a65e3c884e0b581570398da3dbcec41b2",
+      "note": "New control battery only; historical field-only red and exact old-signature refutations remain separate diagnostic artifacts."
+    }
+  }
+}

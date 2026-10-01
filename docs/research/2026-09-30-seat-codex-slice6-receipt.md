@@ -8,7 +8,8 @@ Lean and OCaml paths read/write the machine ledger, generation is current, and t
 OCaml and repository checks pass. The owner authorized the additional prelude/test readers,
 two closure manifests, and explicit ForkRecord type root as recorded below. D's held users and diagnostic move are complete;
 F is also complete. G is held by its checked fourth-fixture stop. H1 is also held: the final proposed contract
-has a checked delivery counterexample. H2 part one follows independently. H2 excludes only badName and notImplemented;
+has a checked delivery counterexample. H2 part one is held by its measured ninth-body stop: the eight authorized repairs pass,
+but two additional existing test-helper statements are false. H2 excludes only badName and notImplemented;
 missingService waits for part two. Nothing has been pushed.
 
 Authority read from the main checkout:
@@ -17,6 +18,41 @@ commit `56da0e1edeefc97ce878afaefe34ca702f86c35f` (hash receipt under
 `2026-09-30-seat-codex-slice6-evidence/after-addendum-5/authority.json`). It is not merged into
 this branch; the coordinator owns that merge. Rows 111–117 are not implementation work here.
 The After-addendum-4 and first receipt sections below are retained as checkpoint history.
+
+### H2 — eight library repairs pass; two extra existing statements stop integration
+
+Base: `80f5fbe7a99371d0ec04216ff621176f5dc72ce7`, with H1's temporary candidate restored.
+The fresh four-module baseline passes. The mechanical pass attributes primary errors to exactly
+Admission's strongExit_success, strongExit_of_clean, cleanExit_of_never; Residual's
+strongExit_bool, settling_fork, strongExit_mono; and Stack's strongExit_failure_of_error,
+popR_typed. After exactly those eight body repairs and seven local helpers, the copied-module
+harness passes and all fifteen axiom prints stay at `[propext, Quot.sound]` or less.
+
+The actual existing `Test.Program.TypedControl.cancel_typed` and
+`Test.Program.LoadedAdmission.lookup_typed` then fail under the repaired judgment. Source maps
+and compiler attribution are in `H2/existing-tests.errors.json`. Checked semantic counterexamples
+show that these are statement defects, not merely conjunction adaptations: clean cancellation
+permits die badName; lookup's conditional service premise admits an undecodable unit input,
+whose result is badName. Their exact old statements are refuted at the ceiling.
+
+Thus **ten is a measured lower bound, not a complete migration count**. Addendum 5's ninth-body
+rule stops H2; no H2 production, test or register change is applied. Both additional helpers
+remain unrepaired. Proposed statement amendments are explicit shape exclusion for cancel_typed
+and an actual decoded-context witness for lookup_typed. Their direct users and other test
+adaptations need a separately bounded, freshly measured migration; test bodies are not exempt.
+The separate uncompiled patch is retained as a proposal only.
+`H2/proposed-amendment.md` names a bounded follow-up: 25 proposed existing test bodies across
+eight files, the two precise premise changes, and new local adapters/controls. Only two of
+those bodies are currently measured failures; 25 is not a claimed compiler failure count.
+The input hashes match live source. Any failure outside that proposed inventory still stops H2.
+
+The thirteen positive/negative control theorems pass, including unchanged base FitsExit,
+forbidden badName/notImplemented at current code, ordinary user die, and missingService at both
+empty/nonempty requirements. The earlier field-only strengthened_output_false control and its
+eight companion facts also pass. `H2/status.md`, command/result JSON, raw logs, source maps,
+per-body manifest and prepared patch retain exact evidence. The probe namespaces are copied
+declarations, not production import/obligation integration. Production M3bWorld/M3bAssembly/M6
+ceilings remain 1/1/20; no open obligation is claimed discharged. Part two remains held.
 
 ### H1 — checked delivery stop
 

@@ -1,0 +1,57 @@
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/ExistingTestsFirstPass.lean:1283:55: error: Application type mismatch: The argument
+  fitsExit_unit w'
+has type
+  FitsExit w' (EffTy.pure Ty.unit) (Exit.success Val.unit)
+but is expected to have type
+  H2Repaired.ExitOk w' (EffTy.pure Ty.unit) (Exit.success Val.unit)
+in the application
+  H2Repaired.TypedProg.unguard (fitsExit_unit w')
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/ExistingTestsFirstPass.lean:1286:67: error: Application type mismatch: The argument
+  fitsExit_of_clean w' ?m.97 cause clean
+has type
+  FitsExit w' ?m.97 (Exit.failure cause)
+but is expected to have type
+  H2Repaired.ExitOk w' (EffTy.pure Ty.unit) (Exit.failure cause)
+in the application
+  H2Repaired.TypedProg.pure (fitsExit_of_clean w' ?m.97 cause clean)
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/ExistingTestsFirstPass.lean:1301:55: error: Application type mismatch: The argument
+  fitsExit_success w ty sv ?m.95
+has type
+  FitsExit w ty (Exit.success sv)
+but is expected to have type
+  H2Repaired.ExitOk w ty (Exit.success sv)
+in the application
+  H2Repaired.TypedProg.pure (fitsExit_success w ty sv ?m.95)
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/ExistingTestsFirstPass.lean:1302:10: error: No goals to be solved
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/ExistingTestsFirstPass.lean:1304:54: error: Application type mismatch: The argument
+  fitsExit_of_clean w ty ?m.100 ?m.103
+has type
+  FitsExit w ty (Exit.failure ?m.100)
+but is expected to have type
+  H2Repaired.ExitOk w ty (Exit.failure (Cause.die Defect.missingService))
+in the application
+  H2Repaired.TypedProg.pure (fitsExit_of_clean w ty ?m.100 ?m.103)
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/ExistingTestsFirstPass.lean:1304:80: error: Application type mismatch: The argument
+  rfl
+has type
+  ?m.102 = ?m.102
+but is expected to have type
+  cleanExit (Exit.failure ?m.100) = true
+in the application
+  fitsExit_of_clean w ty ?m.100 rfl
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/ExistingTestsFirstPass.lean:1305:52: error: Application type mismatch: The argument
+  fitsExit_of_clean w ty ?m.108 ?m.111
+has type
+  FitsExit w ty (Exit.failure ?m.108)
+but is expected to have type
+  H2Repaired.ExitOk w ty badShapeExit
+in the application
+  H2Repaired.TypedProg.pure (fitsExit_of_clean w ty ?m.108 ?m.111)
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/ExistingTestsFirstPass.lean:1305:78: error: Application type mismatch: The argument
+  rfl
+has type
+  ?m.110 = ?m.110
+but is expected to have type
+  cleanExit (Exit.failure ?m.108) = true
+in the application
+  fitsExit_of_clean w ty ?m.108 rfl

@@ -1,0 +1,42 @@
+{
+  "files": {
+    "src/Effect4/Laws/Program/Typed/Admission.lean": {
+      "before_sha256": "0f437beae4538aa7ea57973a010a4d8148ad1ca44102a87612b32ff97eac38a0",
+      "after_sha256": "3172f34b3cb337e71d4aecd0f699f65237964ff8996fc57a7c75f1e7c08d02fc"
+    },
+    "src/Effect4/Laws/Program/Typed/Residual.lean": {
+      "before_sha256": "d233dc0b5f4f22c5a6cb17a25a3a15398158d377cefca754850a2790997b2ef4",
+      "after_sha256": "98e405c1b190dd19c4b0b7daf7c570fc30fb08c5df7e574051e53904a619cbc9"
+    },
+    "src/Effect4/Laws/Program/Typed/Stack.lean": {
+      "before_sha256": "dc88cf42d832d3bc832a1307cf54b8be2d7b09525fc6c9c5cff664025369a9f1",
+      "after_sha256": "8eb0521044628897c6393bc94a2d7a1a6235be569b426f0971a8067353002772"
+    },
+    "src/Effect4/Laws/Program/Typed/Assembly.lean": {
+      "before_sha256": "6d7d5d52bdfda6726c2edeb471bee43b01e8fb59d93ee9aadf468f4a152b1000",
+      "after_sha256": "551072a541598a251fa3aa032f614d798ac28eb1390856dc435987201736ea80"
+    }
+  },
+  "new_helpers": [
+    "noShapeDefect_of_interrupts",
+    "noShapeDefect_stripFail",
+    "noShapeDefect_combine",
+    "noShapeDefect_sanitize",
+    "recorded_noShapeDefect",
+    "pendingCause_noShapeDefect",
+    "sanitize_noShapeDefect"
+  ],
+  "authorized_existing_bodies": [
+    "Effect4.Program.Typed.cleanExit_of_never",
+    "Effect4.Program.Typed.popR_typed",
+    "Effect4.Program.Typed.settling_fork",
+    "Effect4.Program.Typed.strongExit_bool",
+    "Effect4.Program.Typed.strongExit_failure_of_error",
+    "Effect4.Program.Typed.strongExit_mono",
+    "Effect4.Program.Typed.strongExit_of_clean",
+    "Effect4.Program.Typed.strongExit_success"
+  ],
+  "membership_sha256": "8799b82d6bd8f0dd157c1269772b0523c237a9047b9107cad2abcce9fcae9d77",
+  "validation": "git apply --check only; no Lean executed by this script",
+  "source_root": "/Users/pooks/Dev/lean4-effect4-slice6"
+}

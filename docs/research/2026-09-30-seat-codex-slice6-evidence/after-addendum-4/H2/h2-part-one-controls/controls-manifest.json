@@ -1,0 +1,14 @@
+{
+  "repaired_harness_sha256": "d781e2443532dc8662e1b3415338f9ee8c78aaaaa09a64dc1914282d3f31338a",
+  "baseline_harness_sha256": "1cc6721cb3d108364b004b55cd208c340dd925dedeb43ba69fd6d523a4a7205c",
+  "historical_probe_path": "/Users/pooks/Dev/lean4-effect4-slice6/docs/research/2026-09-30-side-audit/probes/BadDefectCurrent.lean",
+  "historical_probe_sha256": "248bea200ed833f27c70ef63f40e57640ffae0001c34dd51f9334a6ac99b4ed1",
+  "field_only_changes": [
+    "imports hoisted",
+    "namespace renamed",
+    "StrongExit -> unchanged FitsExit (E baseline)",
+    "candidate-owned baseline names fully qualified"
+  ],
+  "lean_run": false,
+  "note": "The original full badDefect clause is frozen locally only in field-only historical control. Production part one ignores missingService."
+}
