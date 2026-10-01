@@ -90,9 +90,9 @@ theorem sleep_stack_accepted (w : W) :
     Contracts.StackAccepts (TypedProg sleeping) ExitOk (frameProtocols sleeping) w
       (EffTy.pure .unit) (EffTy.pure .unit) sleepStack := by
   rw [sleep_stack_exact]
-  refine .cons (.asyncFinalizer _ ⟨rfl, fun cause typed _ => ?_⟩)
-    (.cons (.answer _ fun _ hex => TypedProg.pure hex) (.nil _))
-  exact cancel_typed w cause (cleanExit_of_never_fits w _ cause rfl typed.1) typed.2
+  refine .cons (.asyncFinalizer _ fun _ _ => ⟨rfl, fun w'' _ cause typed _ => ?_⟩)
+    (.cons (.answer _ fun _ _ _ hex => TypedProg.pure hex) (.nil _))
+  exact cancel_typed w'' cause (cleanExit_of_never_fits w'' _ cause rfl typed.1) typed.2
 
 /-! ## Positive: guards whose intermediate type differs from the outer type -/
 
@@ -119,6 +119,23 @@ theorem natCatch_typed (root : NativeEff) (w : W) :
     cases ex with
     | success v => exact hex
     | failure c => exact Bool.noConfusion miss
+
+/-- The continuation a guard node carries. -/
+def guardK : RProgram → Option ExitV → RProgram
+  | .vis (.inr (.guard_ _)) k => k
+  | _ => fun _ => .pure (.success .unit)
+
+theorem natCatch_eq : natCatch = .vis (.inr (.guard_ .onFailure)) (guardK natCatch) := rfl
+
+/-- The frame the evaluator saves for that catch's guard is accepted from the guard's middle type
+to `nat`, at every later world (`TypedProg.guard_frame`, row 135). -/
+theorem natCatch_frame (root : NativeEff) (w : W) :
+    ∃ mid : EffTy, TypedProg root w mid (guardK natCatch none) ∧
+      Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w mid (EffTy.pure .nat)
+        (.resume .onFailure fun ex => guardK natCatch (some ex)) := by
+  have h := natCatch_typed root w
+  rw [natCatch_eq] at h
+  exact TypedProg.guard_frame h
 
 /-- An `onSuccess` guard that turns a Nat into a Bool: the miss arm passes a clean failure. -/
 def natToBool : RProgram :=
@@ -168,6 +185,7 @@ theorem unguard_payload_rejected (root : NativeEff) (w : W) (k : ExitV → RProg
 #print axioms cancel_interrupt_typed
 #print axioms sleep_stack_accepted
 #print axioms natCatch_typed
+#print axioms natCatch_frame
 #print axioms natToBool_typed
 #print axioms guard_rejects_wrong_arm
 #print axioms leakyGuard_rejected

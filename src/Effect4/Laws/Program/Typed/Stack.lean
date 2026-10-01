@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Residual
+import Effect4.Laws.Program.Typed.Adequacy
 import Effect4.Laws.Auto.Obligations
 
 /-!
@@ -11,6 +12,11 @@ final type. Its only premises are `HookLaws` (the three named hooks) and `Interr
 (recorded causes are interrupts); there is no run premise. A preempted catch passes the sanitized
 cause (`U-01`), which carries no `Fail`. Its original typed exit and recorded-interrupt
 provenance separately supply the part-one defect exclusion.
+
+The stacks are Kripke-closed (decisions row 135, `Contracts.FrameAccepts`): the walk reads each
+frame's clauses at the current world, and every stack it hands back, including a frame it
+re-pushes after an iterator or loop resume, holds at every later world. `HookLaws` therefore
+returns a resumed protocol at every later world with one intermediate type.
 -/
 
 set_option autoImplicit false
@@ -18,7 +24,9 @@ namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 open Effect4.Laws.Effects Contracts
 
-/-- Exactly the facts `popR`'s three named-hook arms need about an interpreter. -/
+/-- Exactly the facts `popR`'s three named-hook arms need about an interpreter. A resume's
+protocol is handed back at every later world with one intermediate type, so the frame the walk
+re-pushes is Kripke-closed (row 135; `output_not_kripke` refutes a per-world choice). -/
 structure HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols) : Prop where
   asyncFinalizer : ∀ w tin tout name, hooks.asyncFinalizer w tin tout name →
     tin = tout ∧ ∀ cause, ExitOk w tin (.failure cause) → cause.hasInterrupts = true →
@@ -28,12 +36,13 @@ structure HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
       match (interp.iterNext name v).2 with
       | .done result => ExitOk w tout (.success result)
       | .halt cause => ExitOk w tout (.failure cause)
-      | .resume code name' => ∃ tin', TypedProg root w tin' code ∧ hooks.iterator w tin' tout name'
+      | .resume code name' => ∃ tin', TypedProg root w tin' code ∧
+          ∀ w', w.leHost w' → hooks.iterator w' tin' tout name'
   loop : ∀ w tin tout name cursor, hooks.loop w tin tout name cursor →
     tin.error = tout.error ∧ ∀ v, Fits w v tin.answer →
       match interp.loopResume name cursor v with
       | .continue cursor' body => ∃ tin', TypedProg root w tin' body ∧
-          hooks.loop w tin' tout name cursor'
+          ∀ w', w.leHost w' → hooks.loop w' tin' tout name cursor'
       | .finish code => TypedProg root w tout code
 
 /-- The two outcomes of the walk, at the saved stack's final type. -/
@@ -199,53 +208,53 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
         cases ex with
         | success v =>
           simp only [popR]
-          exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+          exact walk_saved _ (run w (leHost_refl w) _ hex rfl) tail (hp' _ _ _)
         | failure c =>
           simp only [popR]
-          cases ic <;> exact ih _ _ _ _ tail (skip _ hex rfl) (hp' _ _ _)
+          cases ic <;> exact ih _ _ _ _ tail (skip w (leHost_refl w) _ hex rfl) (hp' _ _ _)
       | onFailure =>
         cases ex with
         | success v =>
           simp only [popR]
-          exact ih _ _ _ _ tail (skip _ hex rfl) (hp' _ _ _)
+          exact ih _ _ _ _ tail (skip w (leHost_refl w) _ hex rfl) (hp' _ _ _)
         | failure c =>
           simp only [popR]
           cases i <;> cases ic
-          · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
-          · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
-          · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+          · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) tail (hp' _ _ _)
+          · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) tail (hp' _ _ _)
+          · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) tail (hp' _ _ _)
           · exact ih _ _ _ _ tail (preempt _ c _ hex.2 rfl) (hp' _ _ _)
       | all =>
         cases ex with
         | success v =>
           simp only [popR]
-          exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+          exact walk_saved _ (run w (leHost_refl w) _ hex rfl) tail (hp' _ _ _)
         | failure c =>
           simp only [popR]
           cases i <;> cases ic
-          · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
-          · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
-          · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+          · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) tail (hp' _ _ _)
+          · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) tail (hp' _ _ _)
+          · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) tail (hp' _ _ _)
           · exact ih _ _ _ _ tail (preempt _ c _ hex.2 rfl) (hp' _ _ _)
       | onExit b =>
         cases b with
         | false =>
           cases ex <;> simp only [popR] <;>
-            exact walk_saved _ (run _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
+            exact walk_saved _ (run w (leHost_refl w) _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
         | true =>
           cases ex with
           | success v =>
             simp only [popR]
-            exact walk_saved _ (run _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
+            exact walk_saved _ (run w (leHost_refl w) _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
           | failure c =>
             simp only [popR]
             cases i <;> cases ic
-            · exact walk_saved _ (run _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
-            · exact walk_saved _ (run _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
-            · exact walk_saved _ (run _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
+            · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
+            · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
+            · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
             · exact ih _ _ _ _ tail (preempt _ c _ hex.2 rfl) (hp' _ _ _)
     | answer next run =>
-      have hrun := run ex hex
+      have hrun := run w (leHost_refl w) ex hex
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       simp only [popR]
       split
@@ -257,7 +266,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
         exact ih _ _ _ _ tail (unguard_payload_inv _ _ _ _ _ hrun) ⟨hp.recorded, hp.deferred⟩
       · exact walk_saved _ hrun tail ⟨hp.recorded, hp.deferred⟩
     | asyncFinalizer name protocol =>
-      obtain ⟨same, cancel⟩ := laws.asyncFinalizer w _ _ name protocol
+      obtain ⟨same, cancel⟩ := laws.asyncFinalizer w _ _ name (protocol w (leHost_refl w))
       subst same
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       cases ex with
@@ -282,7 +291,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
           (pendingCause_noShapeDefect _ ⟨hp.recorded, hp.deferred⟩)))
             tail ⟨hp.recorded, hp.deferred⟩
     | iter name protocol =>
-      obtain ⟨errors, step⟩ := laws.iterator w _ _ name protocol
+      obtain ⟨errors, step⟩ := laws.iterator w _ _ name (protocol w (leHost_refl w))
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       cases ex with
       | failure c =>
@@ -305,7 +314,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
           simp only [popR, hs]
           exact walk_saved _ typed (.cons (.iter _ next) tail) ⟨hp.recorded, hp.deferred⟩
     | loop name cursor protocol =>
-      obtain ⟨errors, step⟩ := laws.loop w _ _ name cursor protocol
+      obtain ⟨errors, step⟩ := laws.loop w _ _ name cursor (protocol w (leHost_refl w))
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       cases ex with
       | failure c =>
@@ -328,32 +337,36 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
 
 /-- The concrete hook contracts are exactly what the walk needs of `interpR` (the M5 hook
 obligation of the slice 5 brief, closed here because the repaired protocols state them
-directly). -/
+directly). Each protocol reads its step at the current world; a resumed tail holds at every
+later world because the protocols are closed in their own definitions
+(`iteratorProtocol_mono`, `loopProtocol_mono`). -/
 theorem hookLaws_interpR (root : ProgramSource) :
     HookLaws root (interpR root.program) (frameProtocols root) where
-  asyncFinalizer _ _ _ _ h := h
+  asyncFinalizer w _ _ _ h := ⟨h.1, h.2 w (leHost_refl w)⟩
   iterator w tin tout name h := by
     cases h with
     | step errors next =>
       refine ⟨errors, fun v hv => ?_⟩
-      have answer := next v hv
+      have answer := next w (leHost_refl w) v hv
       revert answer
       generalize ((interpR root.program).iterNext name v).2 = s
       intro answer
       cases answer with
       | done result typed => exact typed
       | halt cause typed => exact typed
-      | resume code name' tin' typed tail => exact ⟨tin', typed, tail⟩
+      | resume code name' tin' typed tail =>
+        exact ⟨tin', typed, fun _ ord => iteratorProtocol_mono ord tail⟩
   loop w tin tout name cursor h := by
     cases h with
     | step errors next =>
       refine ⟨errors, fun v hv => ?_⟩
-      have answer := next v hv
+      have answer := next w (leHost_refl w) v hv
       revert answer
       generalize (interpR root.program).loopResume name cursor v = s
       intro answer
       cases answer with
-      | «continue» cursor' body tin' typed tail => exact ⟨tin', typed, tail⟩
+      | «continue» cursor' body tin' typed tail =>
+        exact ⟨tin', typed, fun _ ord => loopProtocol_mono ord tail⟩
       | finish code typed => exact typed
 
 /-- The walk on the reference interpreter needs no hook premise. -/
@@ -367,11 +380,12 @@ theorem popR_typed_interpR (root : ProgramSource) (w : World) (stack : List Scop
 /-! ## Saving and delivering -/
 
 /-- Installing an operation's code below its answer adapter keeps the saved state typed: the
-adapter and the old stack meet at `middle`, the code has the operation's own type `tin`. -/
+adapter and the old stack meet at `middle`, the code has the operation's own type `tin`. The
+adapter is typed at every later world, as `TypedProg`'s own continuations are (row 135). -/
 theorem saveAnswerR_typed (root : ProgramSource) (hooks : FrameProtocols) (w : World)
     (tin middle final : EffTy) (f : RFiber) (next : ExitV → RProgram) (code : RProgram)
     (hcode : TypedProg root w tin code)
-    (hnext : ∀ ex, ExitOk w tin ex → TypedProg root w middle (next ex))
+    (hnext : ∀ w', w.leHost w' → ∀ ex, ExitOk w' tin ex → TypedProg root w' middle (next ex))
     (hstack : StackAccepts (TypedProg root) ExitOk hooks w middle final f.frame.stack)
     (hp : InterruptProvenance f.frame) :
     SavedOk (TypedProg root) ExitOk hooks w final (answerR (saveAnswerR f next) code).frame :=
@@ -423,7 +437,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
 theorem saveAnswerR_typed (root : ProgramSource) (hooks : FrameProtocols) (w : World)
     (tin middle final : EffTy) (f : RFiber) (next : ExitV → RProgram) (code : RProgram)
     (_hcode : TypedProg root w tin code)
-    (_hnext : ∀ ex, ExitOk w tin ex → TypedProg root w middle (next ex))
+    (_hnext : ∀ w', w.leHost w' → ∀ ex, ExitOk w' tin ex → TypedProg root w' middle (next ex))
     (_hstack : StackAccepts (TypedProg root) ExitOk hooks w middle final f.frame.stack)
     (_hp : InterruptProvenance f.frame) : ProofGraph.Obligation
     (SavedOk (TypedProg root) ExitOk hooks w final (answerR (saveAnswerR f next) code).frame) := ⟨⟩

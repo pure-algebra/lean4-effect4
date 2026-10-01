@@ -27,8 +27,8 @@ def catchFrame : ScopeFrame := .resume .onFailure fun _ => .pure (.success (.nat
 theorem catch_accepted (root : ProgramSource) (w : W) :
     StackAccepts (TypedProg root) ExitOk (frameProtocols root) w natNat (EffTy.pure .nat)
       [catchFrame] := by
-  refine .cons (.resume _ _ (fun _ _ _ => TypedProg.pure (exitOk_nat w _ 0 rfl)) ?_) (.nil _)
-  intro ex hex miss
+  refine .cons (.resume _ _ (fun w' _ _ _ _ => TypedProg.pure (exitOk_nat w' _ 0 rfl)) ?_) (.nil _)
+  intro _ _ ex hex miss
   cases ex with
   | success v => exact hex
   | failure c => exact Bool.noConfusion miss
@@ -78,9 +78,30 @@ theorem wrong_middle (root : ProgramSource) (w : W) :
     cases head with
     | resume kind next run skip =>
       have failed := (fitsExit_failure_iff w (EffTy.pure .nat) (natErr 7)).mp
-        (skip (.failure (natErr 7)) (natErr_exitOk w _ 7 rfl) rfl).1
+        (skip w (leHost_refl w) (.failure (natErr 7)) (natErr_exitOk w _ 7 rfl) rfl).1
       obtain ⟨v, _, hv⟩ := failed (.fail (.tag 7) .empty) (List.mem_singleton_self _)
       exact hv
+
+/-! ### A changing middle type
+
+Moved from `Contracts.Example` (`src/`, plan item T3): a finite relation used solely to witness
+the interface's changing middle type. Nat → Bool → Unit uses two answer frames, with a middle
+distinct from both ends. A kernel-checked interface example, not an evaluator theorem. -/
+
+def middlePrograms (_w : W) (ty : EffTy) (code : RProgram) : Prop :=
+  (ty = EffTy.pure .bool ∧ code = .pure (.success (.bool true))) ∨
+  (ty = EffTy.pure .unit ∧ code = .pure (.success .unit))
+
+theorem changing_middle (Exits : W → EffTy → ExitV → Prop) (w : W) (hooks : FrameProtocols) :
+    StackAccepts middlePrograms Exits hooks w (EffTy.pure .nat) (EffTy.pure .unit)
+      [.answer (fun _ => .pure (.success (.bool true))),
+       .answer (fun _ => .pure (.success .unit))] :=
+  .cons (.answer _ (fun _ _ _ _ => Or.inl ⟨rfl, rfl⟩))
+    (.cons (.answer _ (fun _ _ _ _ => Or.inr ⟨rfl, rfl⟩)) (.nil _))
+
+theorem middle_differs : EffTy.pure .bool ≠ EffTy.pure .nat ∧
+    EffTy.pure .bool ≠ EffTy.pure .unit := by
+  constructor <;> intro h <;> cases h
 
 /-- A resume at a stale token leaves a real parked machine and its queue as they were. -/
 def parked : RState := (replayR sleeping 20 [.evaluate Api.root]).machine
@@ -112,6 +133,8 @@ theorem parked_reachable : RReachable (sleeping : ProgramSource) 20 parked := by
 #print axioms preempted_walk
 #print axioms wrong_middle
 #print axioms stale_is_inert
+#print axioms changing_middle
+#print axioms middle_differs
 #print axioms Effect4.Machine.RunMachine.fiber?_update_other
 #print axioms Effect4.Machine.RunMachine.fiber?_update_self
 end Test.Program.TypedStack
