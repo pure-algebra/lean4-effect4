@@ -242,7 +242,26 @@ row 39's four deletion slices `f0591f36`–`8cdc931b`, verification `bd142695`),
 main. H1 carries one extension Codex made under the owner's "resolve the issues" instruction
 (row 133: current code is also inert on a halted machine, and `StepPreserves` takes the dispatch
 premise `m.stuck = none`, as `Lift.StepKeeps` does), which awaits the owner's explicit
-ratification. The M6 ledger stands at 20 open, 0 proved. Four rulings the owner gave Codex directly on 2026-10-01 are
+ratification. The M6 ledger stands at 20 open, 0 proved.
+
+**The formal pass and the landing (2026-10-01).** Four seats (algebra, proofs, types, organization)
+and four verifiers probed the plan at `ea5b28b5` (`docs/research/2026-10-01-formal-pass/`; the
+synthesis is `synthesis.md`). Four declared M5–M6 obligations are false, proved on checked
+host-free programs, each repaired by a statement change and no runtime change: `Fits` compares
+declared handle types in the raw order while the checker uses the normalized one (row 137);
+eight protocol posts contradict their handlers (row 136); saved frames and hook protocols are
+typed at one world (row 135); the capstone and `decision_preserves` read the typed state at a
+budget cut (row 134). The rest is rigor (M7 undeclared, row 138; halting-freedom and liveness,
+row 139; the ledger as the one list, row 140; the Σ_app slice; inhabitance) and tidiness (the
+names, the census instrument, the registers; rows 141–148). The owner's instruction: resolve
+every finding and work to full completion, no shortcuts, no gaps. The landing plan is
+[`2026-10-01-landing/plan.md`](research/2026-10-01-landing/plan.md): Opus seats in their own
+worktrees, briefed per file ownership (A values and the signature; B frames, posts and the walk;
+C the assembled state, M7 and the ledger; E the algebra laws; F the instrument, registers and
+imports; H the DESIGN-BASIS refresh), then wave 2 (row 117's contract, the adequacy instances,
+M5, the eighteen commands, M6c, M7) and wave 3 (data stage 1, the renames, the glossary). The
+owner-level choices are proceeding on the coordinator's recommendation with ratification owed
+(plan §1). Four rulings the owner gave Codex directly on 2026-10-01 are
 recorded in addendum 5's amendments and rows 91 and 107: part one's clause excludes `badName` and
 `notImplemented` only (the addendum had stated the full clause, which part two holds); the engine
 prelude and the engine tests join C's checklist; two more closure manifests and the `ForkRecord`
