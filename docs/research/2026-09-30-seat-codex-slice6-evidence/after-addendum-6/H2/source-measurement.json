@@ -1,0 +1,267 @@
+{
+  "source_head": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+  "measurements_run_by": "root in serialized lane; this agent only reads retained logs/maps",
+  "stages": [
+    {
+      "stage": "baseline",
+      "exit": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/stages/mechanical/baseline/probes/Baseline.lean"
+      ],
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "harness_sha256": "45163651f12a95983b372a3e6ce1ace90853a19c9ac916c6697f44a6aa638484",
+      "diagnostics": [],
+      "distinct_bodies": []
+    },
+    {
+      "stage": "mechanical",
+      "exit": 1,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/stages/mechanical/probes/PartOne.lean"
+      ],
+      "log_sha256": "4e9ff063f7aed515ca9625fb95f6efdb5cadd6537bdda06cb36131a75f8efc76",
+      "harness_sha256": "1f292db910473b713db05b77413e9f518da6f01c3ac1d312eb7432a6dc467274",
+      "diagnostics": [
+        {
+          "harness_line": 82,
+          "column": 32,
+          "kind": "error",
+          "message": "Type mismatch",
+          "declaration": "Effect4.Program.Typed.strongExit_success",
+          "source_module": "Effect4.Laws.Program.Typed.Admission",
+          "source_line": 71
+        },
+        {
+          "harness_line": 93,
+          "column": 6,
+          "kind": "error",
+          "message": "Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+          "declaration": "Effect4.Program.Typed.strongExit_of_clean",
+          "source_module": "Effect4.Laws.Program.Typed.Admission",
+          "source_line": 82
+        },
+        {
+          "harness_line": 104,
+          "column": 6,
+          "kind": "error",
+          "message": "Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+          "declaration": "Effect4.Program.Typed.cleanExit_of_never",
+          "source_module": "Effect4.Laws.Program.Typed.Admission",
+          "source_line": 93
+        },
+        {
+          "harness_line": 437,
+          "column": 48,
+          "kind": "error",
+          "message": "Type mismatch",
+          "declaration": "Effect4.Program.Typed.strongExit_bool",
+          "source_module": "Effect4.Laws.Program.Typed.Residual",
+          "source_line": 322
+        },
+        {
+          "harness_line": 475,
+          "column": 24,
+          "kind": "error",
+          "message": "Application type mismatch: The argument",
+          "declaration": "Effect4.Program.Typed.settling_fork",
+          "source_module": "Effect4.Laws.Program.Typed.Residual",
+          "source_line": 360
+        },
+        {
+          "harness_line": 475,
+          "column": 23,
+          "kind": "error",
+          "message": "Insufficient number of fields for `\u27e8...\u27e9` constructor: Constructor `True.intro` does not have explicit fields, but 3 were provided",
+          "declaration": "Effect4.Program.Typed.settling_fork",
+          "source_module": "Effect4.Laws.Program.Typed.Residual",
+          "source_line": 360
+        },
+        {
+          "harness_line": 529,
+          "column": 41,
+          "kind": "error",
+          "message": "Application type mismatch: The argument",
+          "declaration": "Effect4.Program.Typed.strongExit_mono",
+          "source_module": "Effect4.Laws.Program.Typed.Residual",
+          "source_line": 414
+        },
+        {
+          "harness_line": 634,
+          "column": 6,
+          "kind": "error",
+          "message": "Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+          "declaration": "Effect4.Program.Typed.strongExit_failure_of_error",
+          "source_module": "Effect4.Laws.Program.Typed.Stack",
+          "source_line": 89
+        },
+        {
+          "harness_line": 680,
+          "column": 47,
+          "kind": "error",
+          "message": "Application type mismatch: The argument",
+          "declaration": "Effect4.Program.Typed.popR_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Stack",
+          "source_line": 135
+        },
+        {
+          "harness_line": 698,
+          "column": 47,
+          "kind": "error",
+          "message": "Application type mismatch: The argument",
+          "declaration": "Effect4.Program.Typed.popR_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Stack",
+          "source_line": 153
+        },
+        {
+          "harness_line": 710,
+          "column": 8,
+          "kind": "error",
+          "message": "Type mismatch",
+          "declaration": "Effect4.Program.Typed.popR_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Stack",
+          "source_line": 165
+        },
+        {
+          "harness_line": 795,
+          "column": 45,
+          "kind": "error",
+          "message": "Application type mismatch: The argument",
+          "declaration": "Effect4.Program.Typed.popR_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Stack",
+          "source_line": 250
+        },
+        {
+          "harness_line": 805,
+          "column": 25,
+          "kind": "error",
+          "message": "Application type mismatch: The argument",
+          "declaration": "Effect4.Program.Typed.popR_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Stack",
+          "source_line": 260
+        },
+        {
+          "harness_line": 828,
+          "column": 25,
+          "kind": "error",
+          "message": "Application type mismatch: The argument",
+          "declaration": "Effect4.Program.Typed.popR_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Stack",
+          "source_line": 283
+        },
+        {
+          "harness_line": 1017,
+          "column": 68,
+          "kind": "error",
+          "message": "Application type mismatch: The argument",
+          "declaration": "Effect4.Program.Typed.observer_exitValue_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Scheduler",
+          "source_line": 50
+        }
+      ],
+      "distinct_bodies": [
+        "Effect4.Program.Typed.cleanExit_of_never",
+        "Effect4.Program.Typed.observer_exitValue_typed",
+        "Effect4.Program.Typed.popR_typed",
+        "Effect4.Program.Typed.settling_fork",
+        "Effect4.Program.Typed.strongExit_bool",
+        "Effect4.Program.Typed.strongExit_failure_of_error",
+        "Effect4.Program.Typed.strongExit_mono",
+        "Effect4.Program.Typed.strongExit_of_clean",
+        "Effect4.Program.Typed.strongExit_success"
+      ]
+    },
+    {
+      "stage": "eight-only",
+      "exit": 1,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/stages/eight-only/probes/EightOnly.lean"
+      ],
+      "log_sha256": "8cc9a1b809a43d7d7cc3c58b49bfc08ac6c9d005bbd831e14ce9aee7be962a11",
+      "harness_sha256": "27a5f28aa5c36c9fc653885462757d0cafffa1e07664ad89786cebd8d0725fdd",
+      "diagnostics": [
+        {
+          "harness_line": 1064,
+          "column": 68,
+          "kind": "error",
+          "message": "Application type mismatch: The argument",
+          "declaration": "Effect4.Program.Typed.observer_exitValue_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Scheduler",
+          "source_line": 50
+        }
+      ],
+      "distinct_bodies": [
+        "Effect4.Program.Typed.observer_exitValue_typed"
+      ]
+    },
+    {
+      "stage": "repaired",
+      "exit": 1,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/stages/repaired/probes/Repaired.lean"
+      ],
+      "log_sha256": "019a7d7768df3da7fff5f0d8da0c6a33eb85f3fadb1b1d9bcba572919f0fca4c",
+      "harness_sha256": "e2f6a46dfa45efec9d15834bd5ae07b20c6ade17f30c2c4595c4c7f5ba66d1c8",
+      "diagnostics": [
+        {
+          "harness_line": 1065,
+          "column": 18,
+          "kind": "error",
+          "message": "Type mismatch",
+          "declaration": "Effect4.Program.Typed.observer_exitValue_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Scheduler",
+          "source_line": 50
+        },
+        {
+          "harness_line": 1066,
+          "column": 6,
+          "kind": "error",
+          "message": "unexpected token '('; expected command",
+          "declaration": "Effect4.Program.Typed.observer_exitValue_typed",
+          "source_module": "Effect4.Laws.Program.Typed.Scheduler",
+          "source_line": 51
+        }
+      ],
+      "distinct_bodies": [
+        "Effect4.Program.Typed.observer_exitValue_typed"
+      ]
+    },
+    {
+      "stage": "repaired-2",
+      "exit": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/stages/repaired/probes/Repaired.lean"
+      ],
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "harness_sha256": "a09738b96acfcd148f881a71b1c4c9018d49658b177cf08456a0a175145f6568",
+      "diagnostics": [],
+      "distinct_bodies": []
+    }
+  ],
+  "confirmed_existing_source_body_count": 9,
+  "new_helper_count": 7,
+  "source_positions": 72,
+  "Scheduler_actual_exit_positions": 11,
+  "initial_repaired_issue": "Lean layout error in the ninth body; root corrected branch formatting only. Preserved first draft and log. No new semantic obligation.",
+  "corrected_repaired_bytes_match_root_stage": true,
+  "test_measurement": "not yet available; 43 test candidate adaptations remain proposed until root compiles unchanged tests."
+}

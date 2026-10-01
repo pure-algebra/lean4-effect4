@@ -1,0 +1,18 @@
+{
+  "Test/All.lean": "503ecfc4914499821f76bdfc2d154606c192dc15094588c0130c14e88ad35074",
+  "Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean": "99ac6e6406a5db812095059d0e79b2959624cdccea5a3d31c8634e8f92c0642a",
+  "Test/Counterexamples/Machine/Semantics/M6Capstone.lean": "48397eb504b2d449e9b7d3825482d65e0d30c1600c218d28293719fbca50f512",
+  "Test/Counterexamples/Machine/Semantics/TrivialPosts.lean": "ecf30e8f0bfdb0041e87b8b2b548ba92603a2a9d2fd71eec7060b5e9f50379ef",
+  "Test/Counterexamples/Machine/Semantics/ValueMembership.lean": "5d5eb09ac99999a03fc9f52b371150b1095aa45679715df897cc03d96e0bd254",
+  "Test/Counterexamples/REGISTER.md": "82e956d44c17a76716b5dda6cb5cc27df9e0757f79cfa519433187112de22d16",
+  "Test/Program/LoadedAdmission.lean": "2a3defff85a60e817acdcf26f15bf63981850610a38b836cc854b30208af470a",
+  "Test/Program/TypedControl.lean": "975bad42803c02bd66d2f9e16af57a6a2738942139fad7cdad1cd212b80f7d1c",
+  "Test/Program/TypedResidual.lean": "56f4b79205605099e00e4c50dd8b4bb8df9f24a4c7a15770816d0f8fa5eecbad",
+  "Test/Program/TypedStack.lean": "b3b99ec8c2357180461be50aee43cccf4dc7600a27afab4795706d4079379362",
+  "src/Effect4/Laws/Program/Typed/Admission.lean": "3172f34b3cb337e71d4aecd0f699f65237964ff8996fc57a7c75f1e7c08d02fc",
+  "src/Effect4/Laws/Program/Typed/Assembly.lean": "46d6cac983f4027926c53a04e9a079bd96717cecfb7ac3f02959c5ce60b3bebe",
+  "src/Effect4/Laws/Program/Typed/Residual.lean": "98e405c1b190dd19c4b0b7daf7c570fc30fb08c5df7e574051e53904a619cbc9",
+  "src/Effect4/Laws/Program/Typed/Scheduler.lean": "f66bcd56e35a361e71c5888d826a7fe9fc1269a8af966d4f461c11704bf8028c",
+  "src/Effect4/Laws/Program/Typed/Stack.lean": "8eb0521044628897c6393bc94a2d7a1a6235be569b426f0971a8067353002772",
+  "Test/Program/H2PartOne.lean": "45abd1929e941953950edd7b4144fc4605976069486d3ed8dc2a5632a3401759"
+}

@@ -1,0 +1,13 @@
+[
+  "src/Effect4/Program/Checker.lean",
+  "src/Effect4/Laws/Program/Typing/HasTy.lean",
+  "src/Effect4/Laws/Program/Typing/CheckInversion.lean",
+  "src/Effect4/Laws/Program/Typing/CheckSound.lean",
+  "src/Effect4/Program/Provision.lean",
+  "Test/Program/ProvisionContract.lean",
+  "Test/Program/AuthorContract.lean",
+  "Test/Counterexamples/Machine/Semantics/LayerValue.lean",
+  "Test/All.lean",
+  "Test/Counterexamples/REGISTER.md",
+  "generated/corpus-index.tsv"
+]

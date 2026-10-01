@@ -1,0 +1,14 @@
+{
+  "command": [
+    "lake",
+    "build",
+    "Effect4.Laws.Program.Guard.RegistrationQueue",
+    "Effect4.Laws.Program.Typed.Assembly"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  },
+  "exit": 0,
+  "elapsed_seconds": 106.9
+}

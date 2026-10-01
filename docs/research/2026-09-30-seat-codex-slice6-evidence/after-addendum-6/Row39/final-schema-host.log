@@ -1,0 +1,9 @@
+schema-generation-runtime: ok
+schema-generation-coverage: 22 representations, 2 checks
+schema-generation-multi: 2 roots, 1 shared reference
+schema TypeScript harness: fixture bytes match Lean generation
+schema TypeScript harness: 22-constructor corpus bytes match Lean generation
+schema TypeScript harness: two-root multi-document bytes match Lean generation
+schema TypeScript harness: direct compiler 7.0.2 passed
+schema TypeScript harness: effect 4.0.0-rc.112 revived the document and the two-root multi-document
+schema TypeScript harness: language service 0.38.0 passed

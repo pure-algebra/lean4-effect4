@@ -1,0 +1,71 @@
+{
+  "status": "uncompiled",
+  "input": "/private/tmp/h2-after-h1-d554cd71/source/mechanical",
+  "existing_bodies": [
+    {
+      "module": "Admission",
+      "declaration": "Effect4.Program.Typed.strongExit_success",
+      "mechanical_start_line": 70,
+      "before_sha256": "a058a5a933315877af09ab5bed777bfbeb426811cad2c2df72807a43c13e7426",
+      "after_sha256": "b191631a09e5b152aad9fa4a25c6c35feb6398fe8ea810e3a60ac456d7b4e4ae"
+    },
+    {
+      "module": "Admission",
+      "declaration": "Effect4.Program.Typed.strongExit_of_clean",
+      "mechanical_start_line": 76,
+      "before_sha256": "5f7c7aa69eee4c5eaf581b74c267dbbf247252730b0eb4da050f0cdb5813d8ff",
+      "after_sha256": "1b70a47176ef70398fe0e876a01055216808ef534bb3ec66d04cf209b9962f85"
+    },
+    {
+      "module": "Admission",
+      "declaration": "Effect4.Program.Typed.cleanExit_of_never",
+      "mechanical_start_line": 91,
+      "before_sha256": "bb5d325a5ce13f5d250e237a40147af263198ca979e446d6f167f2fec867a0ab",
+      "after_sha256": "3da91da5298502a9b66f3a685db2b9c6a35290addae8aeeedaa96a508f860053"
+    },
+    {
+      "module": "Residual",
+      "declaration": "Effect4.Program.Typed.strongExit_bool",
+      "mechanical_start_line": 321,
+      "before_sha256": "2c2bb8d1a998b6ec130f69eaf0e9b4d8a37ac4adabf2c5075c5a1965d579b70c",
+      "after_sha256": "7f12ee5dcb902b24fe1a8e031bd0c7e13fb88429efa02ac0afa3dcf22731d786"
+    },
+    {
+      "module": "Residual",
+      "declaration": "Effect4.Program.Typed.settling_fork",
+      "mechanical_start_line": 352,
+      "before_sha256": "50ee61c6fa0d292313bfab0776d3a986a69981d7fe2a307119f130f2cf5a8f77",
+      "after_sha256": "42b2a103e664b9beb7b294365950b50f61b5650c421cb4e6fd320bbfba622a49"
+    },
+    {
+      "module": "Residual",
+      "declaration": "Effect4.Program.Typed.strongExit_mono",
+      "mechanical_start_line": 412,
+      "before_sha256": "e360a7f3fa16292f3dc2c7a552fbc5de3ce3008e70c4b395cf5ccb42a9defdb1",
+      "after_sha256": "a0511f36f3641199ca554398e6829d1aa0a57a2398a3c0490c57fbadc1eda2a6"
+    },
+    {
+      "module": "Stack",
+      "declaration": "Effect4.Program.Typed.strongExit_failure_of_error",
+      "mechanical_start_line": 87,
+      "before_sha256": "ffc81a7f2e48f737ed4cc9e183629e11fae3708b1bcd073276a16ff1e288b392",
+      "after_sha256": "a23ca9ecd6476ccc05a971cf262b9bab1b396675efdc50b819c9f5bdab17eac2"
+    },
+    {
+      "module": "Stack",
+      "declaration": "Effect4.Program.Typed.popR_typed",
+      "mechanical_start_line": 105,
+      "before_sha256": "5274e399b22aee2abdd108a26faa9cdf4bb35daeaba92a0c76d43472f1c541ca",
+      "after_sha256": "9916777a7571994706e276eb6c8dee97ecb444065951db7680aa5368bb475efc"
+    }
+  ],
+  "new_helpers": [
+    "noShapeDefect_of_interrupts",
+    "noShapeDefect_stripFail",
+    "noShapeDefect_combine",
+    "noShapeDefect_sanitize",
+    "recorded_noShapeDefect",
+    "pendingCause_noShapeDefect",
+    "sanitize_noShapeDefect"
+  ]
+}

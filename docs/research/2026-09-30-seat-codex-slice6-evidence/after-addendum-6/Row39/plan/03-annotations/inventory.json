@@ -1,0 +1,42 @@
+{
+  "base": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+  "source_overrides": [
+    {
+      "path": "Test/All.lean",
+      "commit_sha256": "9dd50812d63f46379cf66126746e21d3327b005bac747a28184a607d02028de3",
+      "working_sha256": "503ecfc4914499821f76bdfc2d154606c192dc15094588c0130c14e88ad35074"
+    }
+  ],
+  "stage": "03-annotations",
+  "applied_to_repo": false,
+  "changes": [
+    {
+      "path": "src/Effect4/Schema/Document.lean",
+      "action": "edit",
+      "old_sha256": "fc1d51af0f79b6c7c5373997d5e91ff3b8a41feb07ef7c4ae464b9377325f050",
+      "new_sha256": "64464dbaff579af1bca915d0c75982aaec7416b5af68cbb314e16fbb2cb0e1d9",
+      "mode": "100644"
+    },
+    {
+      "path": "src/Effect4/Codegen/Schema.lean",
+      "action": "edit",
+      "old_sha256": "07213aab4b90135c2bf70a67a6234986c3fa90d5a73352171bef89ec9a11cf4f",
+      "new_sha256": "246ef447dc58cb3f4a18aad920738db565bfbd3f66bfea028fac768a207fc319",
+      "mode": "100644"
+    },
+    {
+      "path": "src/Effect4/Schema/Annotations.lean",
+      "action": "edit",
+      "old_sha256": "a1e9ce557ad11f8fc0c3aa592e6b71a220c5f3c12da117459185269e305cd98c",
+      "new_sha256": "7725aeff8f8e6ddd3b3e4a0bbe3514c6874c8dbba1698346807dffdc3863f789",
+      "mode": "100644"
+    },
+    {
+      "path": "Test/Schema/AnnotationDataPlaneContract.lean",
+      "action": "edit",
+      "old_sha256": "6b58b29d9acbb5d982879b6254f81f8cd5d102aa359b0e61dab7d9f2346cf2e7",
+      "new_sha256": "bea8baf39c77942babffd138934ef6edfd4eb78a81a1b860e8f0e7737203c823",
+      "mode": "100644"
+    }
+  ]
+}

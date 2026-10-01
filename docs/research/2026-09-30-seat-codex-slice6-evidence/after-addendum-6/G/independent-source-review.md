@@ -1,0 +1,3 @@
+# G independent source review
+
+Read-only review by the rulings seat found no concrete scope or fixture defect. The checker preserves literal/body-first refusal precedence and adds only declared service lookup and normalized answer subtyping. The two leaf rules and inversion conclusions match those checks. The moved CE002 pair uses declared nat dbBinding with explicit isSome controls before the equality. The fourth negative and neighboring positive read the actual public TemplatesContract list entries, and shared definitions/printer guards are untouched. Provision's unsupported build_total header claim is removed. This review ran no Lean; root's recorded checks supply compilation and trust evidence.

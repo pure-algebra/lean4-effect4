@@ -1,0 +1,26 @@
+[
+  {
+    "path": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "checked_source_sha256": "b2387b7f244cccc6cfb0f98dde54f5831a49b2dc58cf42490e29685a053dcddf",
+    "candidate_sha256": "b2387b7f244cccc6cfb0f98dde54f5831a49b2dc58cf42490e29685a053dcddf",
+    "live_sha256": "d63ffd7e9c264966b223bfc739af0f95f94cb603cc70960ccbc4ca4980411486"
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Guard/RegistrationQueue.lean",
+    "checked_source_sha256": "5dbe7972f3198e4eeb39fe251a22feb94c7d3a93b0de84948a8f6acab56bea0e",
+    "candidate_sha256": "5dbe7972f3198e4eeb39fe251a22feb94c7d3a93b0de84948a8f6acab56bea0e",
+    "live_sha256": "7fa2cfcb4d7b93c9c680f0032394c59fc701968bce83f7978df9bf7c83a2e8f0"
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+    "checked_source_sha256": "a8ddc467df781486b1b8cfc3651a2a7c24c53b8104b8680b6a5fa1505af36403",
+    "candidate_sha256": "a8ddc467df781486b1b8cfc3651a2a7c24c53b8104b8680b6a5fa1505af36403",
+    "live_sha256": null
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+    "checked_source_sha256": "2fb4f5bd9f8da897414bc13aa2ce2facb98d54382df973b9f7f068e31ffe2816",
+    "candidate_sha256": "5deb14bcf42e14ff424c36235fb7734944f52dee12c11906da6672947521e3b4",
+    "live_sha256": "6d7d5d52bdfda6726c2edeb471bee43b01e8fb59d93ee9aadf468f4a152b1000"
+  }
+]

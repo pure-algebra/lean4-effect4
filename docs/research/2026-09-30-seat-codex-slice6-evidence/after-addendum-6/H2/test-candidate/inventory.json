@@ -1,0 +1,508 @@
+{
+  "status": "UNCOMPILED: candidate adaptations, not measured failures",
+  "source_manifest": "/private/tmp/h2-after-h1-d554cd71/snapshot-manifest.json",
+  "files": {
+    "Test/Program/TypedResidual.lean": {
+      "input_sha256": "7fed93229cdd93abbd39d64a258b5f538dc719a2d88b1cc4a709d18447e848ed",
+      "candidate_sha256": "56f4b79205605099e00e4c50dd8b4bb8df9f24a4c7a15770816d0f8fa5eecbad"
+    },
+    "Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean": {
+      "input_sha256": "c563000d4437004cd71e46aa0e0788efc507276f47aa8214a7043c25a3b6f6a1",
+      "candidate_sha256": "99ac6e6406a5db812095059d0e79b2959624cdccea5a3d31c8634e8f92c0642a"
+    },
+    "Test/Counterexamples/Machine/Semantics/TrivialPosts.lean": {
+      "input_sha256": "7a22eb008a38d6069645915233c8922b17d1d6814fd016292259db6b7cf198e4",
+      "candidate_sha256": "ecf30e8f0bfdb0041e87b8b2b548ba92603a2a9d2fd71eec7060b5e9f50379ef"
+    },
+    "Test/Program/TypedControl.lean": {
+      "input_sha256": "83719aa47ee07cf530fbbdf9994f62b42a2567747eca33a3abbca46c3a158a5e",
+      "candidate_sha256": "975bad42803c02bd66d2f9e16af57a6a2738942139fad7cdad1cd212b80f7d1c"
+    },
+    "Test/Program/TypedStack.lean": {
+      "input_sha256": "9ef58bd4615b2aee9188feca134a3f33f8c4cd72effbd7a0f807e34b6935c68e",
+      "candidate_sha256": "b3b99ec8c2357180461be50aee43cccf4dc7600a27afab4795706d4079379362"
+    },
+    "Test/Counterexamples/Machine/Semantics/ValueMembership.lean": {
+      "input_sha256": "37b5c7c4eab71ff9a530b9e3a5c10acd5f7e6653fe86214c7fd1b38c0b45799d",
+      "candidate_sha256": "5d5eb09ac99999a03fc9f52b371150b1095aa45679715df897cc03d96e0bd254"
+    },
+    "Test/Counterexamples/Machine/Semantics/M6Capstone.lean": {
+      "input_sha256": "11628e73a90976e0ec64b9d3cf55c7035e701e14f62ad2f6fbca4c61c5fe3873",
+      "candidate_sha256": "48397eb504b2d449e9b7d3825482d65e0d30c1600c218d28293719fbca50f512"
+    },
+    "Test/Program/LoadedAdmission.lean": {
+      "input_sha256": "b43e7f4511e7f3cb2707d90ce3877551867c9ab510e513ce9240f5069721fbd8",
+      "candidate_sha256": "0a57c83d986d860edaae5bffe078d0f870bc6d929d21b772bc41c4cdbe66eb95"
+    },
+    "Test/Program/H2PartOne.lean": {
+      "input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_sha256": "17bec5edbf06678dfb5ac531a4f1094a65e3c884e0b581570398da3dbcec41b2"
+    }
+  },
+  "original25_existing_body_count": 25,
+  "additional_H1_existing_body_count": 18,
+  "additional_H1_existing_bodies": [
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.loaded_code",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 105,
+      "candidate_line": 106
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.finished_untyped",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 282,
+      "candidate_line": 284
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.halted_bad_exit_rejected",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 292,
+      "candidate_line": 294
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.bad_generated_command_rejected",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 320,
+      "candidate_line": 322
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.join_delivery_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 360,
+      "candidate_line": 362
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.await_delivery_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 365,
+      "candidate_line": 367
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.OldObserve.loaded_code",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 636,
+      "candidate_line": 640
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.OldObserve.command_payload",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 737,
+      "candidate_line": 741
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.OldObserve.emitted_refused",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 772,
+      "candidate_line": 776
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.EarlyStep.mEnd_not_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 896,
+      "candidate_line": 900
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.EarlyDecision.mFired_not_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1015,
+      "candidate_line": 1019
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1TerminalAmendment.saved_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1229,
+      "candidate_line": 1234
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1TerminalAmendment.result_not_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1310,
+      "candidate_line": 1315
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.callback_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1721,
+      "candidate_line": 1728
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1725,
+      "candidate_line": 1732
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.old_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1765,
+      "candidate_line": 1772
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.output_not_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1868,
+      "candidate_line": 1875
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.raw_output_untyped",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 2095,
+      "candidate_line": 2102
+    }
+  ],
+  "all_existing_body_migrations": [
+    {
+      "declaration": "Test.Program.TypedResidual.unguard_inversion_rejects_unadmitted",
+      "path": "Test/Program/TypedResidual.lean",
+      "source_line": 76,
+      "candidate_line": 76
+    },
+    {
+      "declaration": "Test.Program.TypedResidual.finishFinalizer_inversion_rejects_unadmitted",
+      "path": "Test/Program/TypedResidual.lean",
+      "source_line": 86,
+      "candidate_line": 86
+    },
+    {
+      "declaration": "Test.Counterexamples.AsyncHookContract.cancellation_exit",
+      "path": "Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean",
+      "source_line": 63,
+      "candidate_line": 63
+    },
+    {
+      "declaration": "Test.Counterexamples.AsyncHookContract.sleep_stack_rejected",
+      "path": "Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean",
+      "source_line": 87,
+      "candidate_line": 87
+    },
+    {
+      "declaration": "Test.Counterexamples.TrivialPosts.joinAll_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/TrivialPosts.lean",
+      "source_line": 53,
+      "candidate_line": 54
+    },
+    {
+      "declaration": "Test.Counterexamples.TrivialPosts.modify_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/TrivialPosts.lean",
+      "source_line": 66,
+      "candidate_line": 67
+    },
+    {
+      "declaration": "Test.Counterexamples.TrivialPosts.joinsFiber_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/TrivialPosts.lean",
+      "source_line": 90,
+      "candidate_line": 91
+    },
+    {
+      "declaration": "Test.Program.TypedControl.cancel_typed",
+      "path": "Test/Program/TypedControl.lean",
+      "source_line": 48,
+      "candidate_line": 66
+    },
+    {
+      "declaration": "Test.Program.TypedControl.cancel_interrupt_typed",
+      "path": "Test/Program/TypedControl.lean",
+      "source_line": 63,
+      "candidate_line": 82
+    },
+    {
+      "declaration": "Test.Program.TypedControl.sleep_stack_accepted",
+      "path": "Test/Program/TypedControl.lean",
+      "source_line": 70,
+      "candidate_line": 89
+    },
+    {
+      "declaration": "Test.Program.TypedControl.natCatch_typed",
+      "path": "Test/Program/TypedControl.lean",
+      "source_line": 87,
+      "candidate_line": 106
+    },
+    {
+      "declaration": "Test.Program.TypedControl.natToBool_typed",
+      "path": "Test/Program/TypedControl.lean",
+      "source_line": 108,
+      "candidate_line": 127
+    },
+    {
+      "declaration": "Test.Program.TypedControl.leakyGuard_rejected",
+      "path": "Test/Program/TypedControl.lean",
+      "source_line": 133,
+      "candidate_line": 152
+    },
+    {
+      "declaration": "Test.Program.TypedControl.unguard_payload_rejected",
+      "path": "Test/Program/TypedControl.lean",
+      "source_line": 144,
+      "candidate_line": 163
+    },
+    {
+      "declaration": "Test.Program.TypedStack.catch_accepted",
+      "path": "Test/Program/TypedStack.lean",
+      "source_line": 27,
+      "candidate_line": 27
+    },
+    {
+      "declaration": "Test.Program.TypedStack.catch_walk",
+      "path": "Test/Program/TypedStack.lean",
+      "source_line": 43,
+      "candidate_line": 43
+    },
+    {
+      "declaration": "Test.Program.TypedStack.preempted_walk",
+      "path": "Test/Program/TypedStack.lean",
+      "source_line": 61,
+      "candidate_line": 61
+    },
+    {
+      "declaration": "Test.Program.TypedStack.wrong_middle",
+      "path": "Test/Program/TypedStack.lean",
+      "source_line": 71,
+      "candidate_line": 71
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.ValueMembership.refProg_typedF",
+      "path": "Test/Counterexamples/Machine/Semantics/ValueMembership.lean",
+      "source_line": 913,
+      "candidate_line": 913
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.ValueMembership.getProg_typedF",
+      "path": "Test/Counterexamples/Machine/Semantics/ValueMembership.lean",
+      "source_line": 932,
+      "candidate_line": 932
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.bad_not_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 37,
+      "candidate_line": 37
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.loaded_code",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 105,
+      "candidate_line": 106
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.finished_untyped",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 282,
+      "candidate_line": 284
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.halted_bad_exit_rejected",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 292,
+      "candidate_line": 294
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.bad_generated_command_rejected",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 320,
+      "candidate_line": 322
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.join_delivery_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 360,
+      "candidate_line": 362
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1.await_delivery_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 365,
+      "candidate_line": 367
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.OldObserve.loaded_code",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 636,
+      "candidate_line": 640
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.OldObserve.command_payload",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 737,
+      "candidate_line": 741
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.OldObserve.emitted_refused",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 772,
+      "candidate_line": 776
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.EarlyStep.mEnd_not_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 896,
+      "candidate_line": 900
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.EarlyDecision.mFired_not_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1015,
+      "candidate_line": 1019
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1TerminalAmendment.saved_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1229,
+      "candidate_line": 1234
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1TerminalAmendment.result_not_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1310,
+      "candidate_line": 1315
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.callback_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1721,
+      "candidate_line": 1728
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1725,
+      "candidate_line": 1732
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.old_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1765,
+      "candidate_line": 1772
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.output_not_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 1868,
+      "candidate_line": 1875
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.raw_output_untyped",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "source_line": 2095,
+      "candidate_line": 2102
+    },
+    {
+      "declaration": "Test.Program.LoadedAdmission.fork_admitted",
+      "path": "Test/Program/LoadedAdmission.lean",
+      "source_line": 47,
+      "candidate_line": 48
+    },
+    {
+      "declaration": "Test.Program.LoadedAdmission.lookup_typed",
+      "path": "Test/Program/LoadedAdmission.lean",
+      "source_line": 109,
+      "candidate_line": 111
+    },
+    {
+      "declaration": "Test.Program.LoadedAdmission.service_admitted",
+      "path": "Test/Program/LoadedAdmission.lean",
+      "source_line": 124,
+      "candidate_line": 141
+    },
+    {
+      "declaration": "Test.Program.LoadedAdmission.memoAwait_typed",
+      "path": "Test/Program/LoadedAdmission.lean",
+      "source_line": 164,
+      "candidate_line": 177
+    }
+  ],
+  "all_existing_test_statement_changes": [
+    {
+      "declaration": "Test.Program.TypedControl.cancel_typed",
+      "path": "Test/Program/TypedControl.lean",
+      "before": "theorem cancel_typed (w : W) (cause : CauseV) (clean : cleanExit (.failure cause) = true) :\n    TypedProg sleeping w (EffTy.pure .unit) ((interpR sleeping).cancelThenFail sleepCancel cause)",
+      "after": "theorem cancel_typed (w : W) (cause : CauseV) (clean : cleanExit (.failure cause) = true)\n    (shape : NoShapeDefect (EffTy.pure .unit) (.failure cause)) :\n    TypedProg sleeping w (EffTy.pure .unit) ((interpR sleeping).cancelThenFail sleepCancel cause)"
+    },
+    {
+      "declaration": "Test.Program.TypedControl.sleep_stack_accepted",
+      "path": "Test/Program/TypedControl.lean",
+      "before": "theorem sleep_stack_accepted (w : W) :\n    Contracts.StackAccepts (TypedProg sleeping) FitsExit (frameProtocols sleeping) w\n      (EffTy.pure .unit) (EffTy.pure .unit) sleepStack",
+      "after": "theorem sleep_stack_accepted (w : W) :\n    Contracts.StackAccepts (TypedProg sleeping) ExitOk (frameProtocols sleeping) w\n      (EffTy.pure .unit) (EffTy.pure .unit) sleepStack"
+    },
+    {
+      "declaration": "Test.Program.TypedStack.catch_accepted",
+      "path": "Test/Program/TypedStack.lean",
+      "before": "theorem catch_accepted (root : ProgramSource) (w : W) :\n    StackAccepts (TypedProg root) FitsExit (frameProtocols root) w natNat (EffTy.pure .nat)\n      [catchFrame]",
+      "after": "theorem catch_accepted (root : ProgramSource) (w : W) :\n    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w natNat (EffTy.pure .nat)\n      [catchFrame]"
+    },
+    {
+      "declaration": "Test.Program.TypedStack.wrong_middle",
+      "path": "Test/Program/TypedStack.lean",
+      "before": "theorem wrong_middle (root : ProgramSource) (w : W) :\n    \u00ac StackAccepts (TypedProg root) FitsExit (frameProtocols root) w natNat (EffTy.pure .nat)\n      [passFrame]",
+      "after": "theorem wrong_middle (root : ProgramSource) (w : W) :\n    \u00ac StackAccepts (TypedProg root) ExitOk (frameProtocols root) w natNat (EffTy.pure .nat)\n      [passFrame]"
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1TerminalAmendment.saved_typed",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "before": "theorem saved_typed : SavedOk (TypedProg (rootProgram : ProgramSource)) FitsExit\n    (frameProtocols (rootProgram : ProgramSource)) world unitTy fiber.frame",
+      "after": "theorem saved_typed : SavedOk (TypedProg (rootProgram : ProgramSource)) ExitOk\n    (frameProtocols (rootProgram : ProgramSource)) world unitTy fiber.frame"
+    },
+    {
+      "declaration": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.oldSaved_of_saved",
+      "path": "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+      "before": "theorem oldSaved_of_saved (root : ProgramSource) (w : W) (m : RState)\n    (commands : List RCmd) (position : Expect) (final : EffTy) (saved : RSaved)\n    (typed : SavedOk (TypedProg root) FitsExit (frameProtocols root) w final saved) :\n    OldSavedPosition root w m commands position final saved",
+      "after": "theorem oldSaved_of_saved (root : ProgramSource) (w : W) (m : RState)\n    (commands : List RCmd) (position : Expect) (final : EffTy) (saved : RSaved)\n    (typed : SavedOk (TypedProg root) ExitOk (frameProtocols root) w final saved) :\n    OldSavedPosition root w m commands position final saved"
+    },
+    {
+      "declaration": "Test.Program.LoadedAdmission.lookup_typed",
+      "path": "Test/Program/LoadedAdmission.lean",
+      "before": "theorem lookup_typed (w : W) (ty : EffTy) (answer : ty.answer = .nat) (v : Val)\n    (typed : \u2200 ctx, Val.context? v = some ctx \u2192 ServicesFit w ctx.services) :\n    TypedProg readService w ty (serviceLookupR natKey v)",
+      "after": "theorem lookup_typed (w : W) (ty : EffTy) (answer : ty.answer = .nat) (v : Val)\n    (isContext : \u2203 ctx, Val.context? v = some ctx)\n    (typed : \u2200 ctx, Val.context? v = some ctx \u2192 ServicesFit w ctx.services) :\n    TypedProg readService w ty (serviceLookupR natKey v)"
+    }
+  ],
+  "statement_only_H1_helper": "Test.Counterexamples.Machine.Semantics.M6Capstone.H1HaltAmendment.oldSaved_of_saved",
+  "explicit_H1_definition_change": "H1HaltAmendment.OldSavedPosition uses ExitOk in its stack relation; documented re-instantiation of the old code clause with current admission",
+  "new_adapters": [
+    {
+      "declaration": "Test.Program.TypedControl.natErr_exitOk",
+      "path": "Test/Program/TypedControl.lean"
+    },
+    {
+      "declaration": "Test.Program.TypedControl.exitOk_nat",
+      "path": "Test/Program/TypedControl.lean"
+    },
+    {
+      "declaration": "Test.Program.TypedControl.natErr_shape",
+      "path": "Test/Program/TypedControl.lean"
+    },
+    {
+      "declaration": "Test.Program.TypedControl.exitOk_unit",
+      "path": "Test/Program/TypedControl.lean"
+    },
+    {
+      "declaration": "Test.Program.LoadedAdmission.context_of_fits",
+      "path": "Test/Program/LoadedAdmission.lean"
+    }
+  ],
+  "new_controls": [
+    "Test.Program.H2PartOne.base_badName_still_fits",
+    "Test.Program.H2PartOne.clean_still_allows_badName",
+    "Test.Program.H2PartOne.badName_refused",
+    "Test.Program.H2PartOne.notImplemented_refused",
+    "Test.Program.H2PartOne.bad_current_code_refused",
+    "Test.Program.H2PartOne.notImplemented_current_code_refused",
+    "Test.Program.H2PartOne.ordinary_die_shape",
+    "Test.Program.H2PartOne.user_die_admitted",
+    "Test.Program.H2PartOne.user_current_code_admitted",
+    "Test.Program.H2PartOne.missingService_admitted_at_any_type",
+    "Test.Program.H2PartOne.missingService_empty_admitted",
+    "Test.Program.H2PartOne.missingService_nonempty_admitted",
+    "Test.Program.H2PartOne.missingService_current_code_admitted",
+    "Test.Program.H2PartOne.interrupt_admitted"
+  ],
+  "axiom_print_count": 63,
+  "unchanged_predicted_green_bodies": [
+    "H1TerminalAmendment.result_queue",
+    "H1HaltAmendment.queue",
+    "H1HaltAmendment.result_queue_typed"
+  ],
+  "reason_green_bodies_unchanged": "They use tactic trivial, which supports And.intro recursively in Lean4.33.1 Init/Tactics:1496; explicit term trivial needs adaptation instead.",
+  "apply_check": "passed against temporary pinned d554cd71 snapshot",
+  "lean_run": false,
+  "repository_writes": false
+}

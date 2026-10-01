@@ -1,0 +1,18 @@
+[
+  "Test/All.lean",
+  "Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean",
+  "Test/Counterexamples/Machine/Semantics/M6Capstone.lean",
+  "Test/Counterexamples/Machine/Semantics/TrivialPosts.lean",
+  "Test/Counterexamples/Machine/Semantics/ValueMembership.lean",
+  "Test/Counterexamples/REGISTER.md",
+  "Test/Program/LoadedAdmission.lean",
+  "Test/Program/TypedControl.lean",
+  "Test/Program/TypedResidual.lean",
+  "Test/Program/TypedStack.lean",
+  "src/Effect4/Laws/Program/Typed/Admission.lean",
+  "src/Effect4/Laws/Program/Typed/Assembly.lean",
+  "src/Effect4/Laws/Program/Typed/Residual.lean",
+  "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+  "src/Effect4/Laws/Program/Typed/Stack.lean",
+  "Test/Program/H2PartOne.lean"
+]

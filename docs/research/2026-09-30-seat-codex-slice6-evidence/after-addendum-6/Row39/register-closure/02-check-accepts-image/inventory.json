@@ -1,0 +1,74 @@
+{
+  "stage": "02-check-accepts-image",
+  "ids": [
+    "E4-SCHEMA-CE-018",
+    "E4-SCHEMA-CE-019",
+    "E4-SCHEMA-CE-020",
+    "E4-SCHEMA-CE-021",
+    "E4-SCHEMA-CE-022",
+    "E4-SCHEMA-CE-043",
+    "E4-SCHEMA-CE-044",
+    "E4-SCHEMA-CE-045",
+    "E4-SCHEMA-CE-046",
+    "E4-SCHEMA-CE-047",
+    "E4-SCHEMA-CE-048",
+    "E4-SCHEMA-CE-056",
+    "E4-SCHEMA-CE-057",
+    "E4-SCHEMA-CE-058"
+  ],
+  "count": 14,
+  "source_pins": [
+    {
+      "path": "Test/Counterexamples/Schema/AnnotationDataPlane.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "c3ba4a5e3eab4926a093af767f66218c361fb4fb"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/CensusCoverage.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "69c7f73547941ac3b0d3406e3e38a14577e4c4c6"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/Codec.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "5a2bb23f80e348cb5022e4d7e242e0f41fbc4877"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/KindAlphabetSeparation.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "73eacc23861745a591186001c5b2c1796c7ed579"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/NoLocalSymbolPropertyKey.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "b849176ad975de29a226ebd56b39a0fb67c40c16"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/NoNullLiteralKind.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "bbaf41d9eede1d7d94a0eea01a20ba19bc4e2008"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/RecursiveElimination.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "9d95b6f9becccd8a4b815cc5313bf4e8d38a7225"
+    },
+    {
+      "path": "Test/Counterexamples/Schema/WireSpellingDrift.lean",
+      "revision": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+      "blob": "1901840483c78698a77e0235ddd66a20d094b1c2"
+    }
+  ],
+  "changes": [
+    {
+      "path": "Test/Counterexamples/REGISTER.md",
+      "old_sha256": "9c3aa58488b6f96766ceb3373e85748f476eb05d19d39a38ccacf06a818c25c9",
+      "new_sha256": "040aa494a2468cfa528428b9981d634c56dd0a1f49e2689dd3455e0067a3330b"
+    },
+    {
+      "path": "Test/Counterexamples/Archive/REGISTER.md",
+      "old_sha256": "8481b1262ba0a8d91eff834a05ca15f1b1741fba6f20c753776d5cbeb64ee95e",
+      "new_sha256": "39ee2a75e4b1161f055bdcdd3f3b6efdd756e6ee4aaa1fb28d43361125d08bf6"
+    }
+  ]
+}

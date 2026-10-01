@@ -1,0 +1,391 @@
+diff --git a/Test/Schema/DialectContract.lean b/Test/Schema/DialectContract.lean
+index 4f5fdd32..561d67fb 100644
+--- a/Test/Schema/DialectContract.lean
++++ b/Test/Schema/DialectContract.lean
+@@ -1,5 +1,5 @@
+ import Effect4.Schema.Bridge
+-import Effect4.Store.Domain.Shape
++import Effect4.Schema.OfShape
+ 
+ /-!
+ # Dialect contract — the store's shapes against the program's types, through the schema
+diff --git a/src/Effect4/Api.lean b/src/Effect4/Api.lean
+index 49d3e156..6adecb94 100644
+--- a/src/Effect4/Api.lean
++++ b/src/Effect4/Api.lean
+@@ -16,6 +16,7 @@ import Effect4.Codegen.Schema
+ import Effect4.Codegen.Target
+ import Effect4.Store.Domain.Cascade
+ import Effect4.Schema.Bridge
++import Effect4.Schema.OfShape
+ import Effect4.Schema.Codec
+ 
+ /-!
+diff --git a/src/Effect4/Codegen/Schema.lean b/src/Effect4/Codegen/Schema.lean
+index f343e3e7..7f8509e1 100644
+--- a/src/Effect4/Codegen/Schema.lean
++++ b/src/Effect4/Codegen/Schema.lean
+@@ -1,4 +1,5 @@
+ import Effect4.Schema.Authoring
++import Effect4.Schema.OfShape
+ import Effect4.Schema.Fold
+ import TypeScript
+ 
+diff --git a/src/Effect4/Store/Domain/Canonical.lean b/src/Effect4/Store/Domain/Canonical.lean
+index a8b86354..80e0b183 100644
+--- a/src/Effect4/Store/Domain/Canonical.lean
++++ b/src/Effect4/Store/Domain/Canonical.lean
+@@ -1,4 +1,5 @@
+ import Effect4.Store.Domain.Shape
++import Effect4.Schema.OfShape
+ import Effect4.Store.Carrier.Image
+ 
+ /-!
+@@ -104,7 +105,8 @@ def digest (a : α) : Digest := sha256 (encode a)
+ a collision, and is never assumed. -/
+ theorem digest_congr {a b : α} (h : a = b) : digest a = digest b := congrArg digest h
+ 
+-/-- The spec of a carrier's shape. -/
++/-- The raw schema document of a carrier's shape, owned here in Store Domain
++and rendered by the downstream Schema.OfShape arrow. -/
+ def document (α : Type) [Canonical α] : Effect4.Document := (shape α).document
+ 
+ /-- The JSON of a carrier, read off its shape. -/
+diff --git a/src/Effect4/Store/Domain/Shape.lean b/src/Effect4/Store/Domain/Shape.lean
+index 30d2b3fb..1f671d12 100644
+--- a/src/Effect4/Store/Domain/Shape.lean
++++ b/src/Effect4/Store/Domain/Shape.lean
+@@ -1,4 +1,3 @@
+-import Effect4.Schema.Authoring
+ import Effect4.Data.JsonNumber
+ import Effect4.Store.Carrier.Kind
+ import Effect4.Store.Carrier.Digest
+@@ -6,52 +5,33 @@ import Effect4.Store.Carrier.Digest
+ /-!
+ # Store.Shape
+ 
+-Owner: the shape language a canonical carrier describes itself in, the checker that says a
+-value tree fits a shape, and the two derivations the shape drives: the spec `Document` and the
+-JSON printer.
+-
+-The alphabet is the facts note's Q5: `unit | bool | nat | string | bytes | digest | list |
+-option | pair | struct name fields | sum name cases | ref kind | anyRef | named n`, and a
+-`ShapeDoc {root, defs}` maps onto `Document {representation, references}`. One description,
+-several derivations: `ShapeDoc.accepts` is the `fits` checker of the class, `ShapeDoc.document`
+-the spec (the Q5 rendering table, fixed under version byte 0), `ShapeDoc.print` the printer
+-(the same table read the other way; hex lowercase, one printer).
+-
+-A `sum` names each case's wire tag, the number a value of the case carries. The tags come from
+-the one assignment `tools/Effect4Gen/wire-tags.json`; they are not declaration positions, and
+-they may be sparse, since a retired constructor keeps its tag out of use for good. `caseAt`
+-finds a case by its tag, and `ShapeDoc.wellTagged` refuses a repeated tag.
+-
+-`accepts` is structural on the value (`acceptsAt : Val → Shape → Bool`), so the fuel is the
+-value's own size. A `named n` shape is resolved through `defs`: `candidates` lists every
+-binding of `n`, and a value fits `named n` when it fits one of them. For a document with unique
+-names — every document the generator writes — that is the one binding; the reason the checker
+-is stated over all of them is `acceptsIn_mono`: acceptance survives appending definitions on
+-either side, which is what lets `Canonical (α × β)` prove `fits` with the two components'
+-tables appended, without a uniqueness side condition the class has no place for. A definition
+-whose body is itself `named` is one step away and accepts nothing.
+-
+-The rendering table, `render`: `unit ↦ null`; `bool`, `string` as is; `nat ↦ number ∘
+-Check.int`; `bytes`, `digest ↦ string` with the hex pattern check; `list ↦ array`; `option s ↦
+-anyOf [s, null]`; `pair ↦ tuple`; `struct ↦ struct` in declaration order, never sorted,
+-annotated `identifier`; an all-nullary `sum ↦ anyOf` of string literals; any other `sum ↦
+-variant` (`_tag`); `ref kind ↦ string` with the hex check and the typed `ref = kind`
+-annotation; `anyRef ↦ struct [kind, address]`; `named ↦ reference`. A definition entry whose
+-shape is not already a named struct or sum is annotated with its key as `identifier`, so a
+-fixed-width scalar (`{root := named "UInt64", defs := [("UInt64", nat)]}`) renders as a
+-`number` with an identifier, as Q5 asks. The two annotation keys are restated here with the
+-shape of `git:70b1571:src/Effect4/Surface/Annotate.lean` (`identifierKey`) and `:345-351`
+-(`markKey`), because that module sits above the store. The printer's number rule,
+-`Json.ofNat` over `binary64OfNat`, is `Effect4.Arch.JsonNumber`'s (`src/Effect4/Data/JsonNumber.lean`,
+-namespace `Effect4.Arch`), the one JSON-number rule every printer of the tree reads.
++Owner: the pure shape language a canonical carrier describes itself in, the checker
++that says a value tree fits a shape, and the JSON printer. The downstream
++`Effect4.Schema.OfShape` module owns the schema rendering arrow; this foundation
++imports no Schema module. Store Domain remains above Schema.
++
++A `ShapeDoc {root, defs}` owns the description used by `ShapeDoc.accepts` and
++`ShapeDoc.print`. The schema document is derived downstream from that same data.
++A `sum` names each case's wire tag, assigned by `tools/Effect4Gen/wire-tags.json`;
++tags are not declaration positions, may be sparse, and are checked for repeats
++by `ShapeDoc.wellTagged`.
++
++`accepts` is structural on the value. A `named n` shape is resolved through
++`defs`: `candidates` lists every binding of `n`, and a value fits when it fits
++one candidate. This permits `acceptsIn_mono` and the product Canonical instance's
++appended tables without a uniqueness field in the class. A definition whose
++body is itself `named` is one step away and accepts nothing.
++
++The printer uses lowercase hex and the JSON-number rule `Json.ofNat` over
++`binary64OfNat`, owned by `Effect4.Arch.JsonNumber` in Data/JsonNumber. The distinct
++`Shape.render : Shape → String` below supplies the structural Repr only.
+ -/
+ 
+ set_option autoImplicit false
+ 
+ namespace Effect4.Store
+ 
+-open Effect4 (Json Float64 Representation Document AnnotationKey Annotations ReferenceEntry
+-  PropertySignature)
++open Effect4 (Json Float64)
+ open Effect4.Arch (Json.ofNat)
+ 
+ /-! ## The alphabet -/
+@@ -379,96 +359,6 @@ theorem acceptsIn_of_not_named (defs : List (String × Shape)) (s : Shape) (v :
+   rw [candidates_of_not_named defs s h]
+   simp
+ 
+-/-! ## The annotation keys -/
+-
+-/-- rc.112's `identifier`: the shape of `Surface/Annotate.lean:73-91`, restated. -/
+-def identifierKey : AnnotationKey String where
+-  name := "identifier"
+-  encode := Json.str
+-  decode := fun raw => match raw with
+-    | .str value => some value
+-    | _ => none
+-
+-theorem identifierKey_lawful : identifierKey.Lawful := by
+-  constructor
+-  · intro value; rfl
+-  · intro raw value decoded
+-    cases raw <;> simp [identifierKey] at decoded ⊢
+-    exact decoded.symm
+-
+-/-- The `ref = kind` key: which kind a reference must resolve at, as the kind's name. -/
+-def refKey : AnnotationKey Kind where
+-  name := "effect4/ref"
+-  encode := fun k => Json.str k.name
+-  decode := fun raw => match raw with
+-    | .str value => Kind.ofName? value
+-    | _ => none
+-
+-theorem refKey_lawful : refKey.Lawful := by
+-  constructor
+-  · intro k
+-    exact Kind.ofName?_name k
+-  · intro raw k decoded
+-    cases raw <;> simp [refKey] at decoded ⊢
+-    exact Kind.name_ofName? decoded
+-
+-/-! ## The spec: `ShapeDoc.document` -/
+-
+-/-- The pattern of a byte string in lowercase hex. -/
+-def hexPattern : String := "^([0-9a-f]{2})*$"
+-
+-/-- The pattern of a thirty-two-byte digest in lowercase hex. -/
+-def digestPattern : String := "^[0-9a-f]{64}$"
+-
+-mutual
+-/-- The Q5 rendering table. -/
+-def render : Shape → Representation
+-  | .unit => Schema.null
+-  | .bool => Schema.boolean
+-  | .nat => .number none [Schema.Check.int]
+-  | .string => Schema.string
+-  | .bytes => .string none [Schema.Check.pattern hexPattern]
+-  | .digest => .string none [Schema.Check.pattern digestPattern]
+-  | .list item => Schema.array (render item)
+-  | .option item => Schema.anyOf (render item) [Schema.null]
+-  | .pair f s => Schema.tuple [Schema.element (render f), Schema.element (render s)]
+-  | .struct name fields => .objects (identifierKey.singleton name) [] (renderFields fields) []
+-  | .sum name cases =>
+-    if allNullary cases then
+-      .union (identifierKey.singleton name) [] (cases.map fun c => Schema.literalString c.1) .anyOf
+-    else .union (identifierKey.singleton name) [] (renderCases cases) .anyOf
+-  | .ref k => .string (refKey.singleton k) [Schema.Check.pattern digestPattern]
+-  | .anyRef =>
+-    Schema.struct
+-      [ Schema.property "kind" Schema.string
+-      , Schema.property "address" (.string none [Schema.Check.pattern digestPattern]) ]
+-  | .named n => Schema.reference n
+-/-- The properties of a struct, in declaration order. -/
+-def renderFields : List (String × Shape) → List PropertySignature
+-  | [] => []
+-  | (n, s) :: fields => Schema.property n (render s) :: renderFields fields
+-/-- The tagged structs of a sum with arguments, in declaration order. -/
+-def renderCases : List (String × Nat × List (String × Shape)) → List Representation
+-  | [] => []
+-  | (n, _, fields) :: cases => Schema.tagged n (renderFields fields) :: renderCases cases
+-end
+-
+-/-- Give a rendered definition its key as `identifier`, unless it carries one already (a named
+-struct or sum does). -/
+-def renderDef (name : String) (s : Shape) : Representation :=
+-  match s with
+-  | .struct _ _ => render s
+-  | .sum _ _ => render s
+-  | _ =>
+-    match Representation.nodeAnnotations.preview (render s) with
+-    | some bag => Representation.nodeAnnotations.replace (identifierKey.append name bag) (render s)
+-    | none => render s
+-
+-/-- The spec of a shape document: the root rendered, the table as the references. -/
+-def ShapeDoc.document (doc : ShapeDoc) : Document :=
+-  { representation := render doc.root
+-    references := doc.defs.map fun d => ⟨d.1, renderDef d.1 d.2⟩ }
+-
+ /-! ## The printer: `ShapeDoc.print` -/
+ 
+ /-- The lowercase hex string of a byte string. -/
+@@ -575,9 +465,6 @@ def sparseDoc : ShapeDoc :=
+ #guard (ShapeDoc.mk (.option .nat) []).accepts (.some (.nat 3)) = true
+ #guard (ShapeDoc.mk (.option .nat) []).accepts (.some (.bool true)) = false
+ #guard (ShapeDoc.mk (.named "X") [("X", .named "Y"), ("Y", .nat)]).accepts (.nat 1) = false
+-#guard entryDoc.document.references.length = 1
+-#guard (entryDoc.document.representation).tag = .objects
+-#guard (render (.sum "ExportKind" [("const", 0, []), ("function", 1, [])])).tag = .union
+ #guard entryDoc.wellTagged = true
+ #guard sparseDoc.wellTagged = true
+ #guard sparseDoc.accepts (.ctor 2 [.ctor 0 []]) = true
+@@ -596,7 +483,6 @@ def sparseDoc : ShapeDoc :=
+ #guard (ShapeDoc.mk (.named "Bad") [("Bad", .sum "Bad" [("a", 3, []), ("b", 3, [])])]).wellTagged
+   = false
+ #guard (ShapeDoc.mk (.list (.sum "Bad" [("a", 1, []), ("b", 1, [])])) []).wellTagged = false
+-#guard (render .nat).tag = .number
+ 
+ /-! ## Receipts -/
+ 
+--- /dev/null
++++ b/src/Effect4/Schema/OfShape.lean
+@@ -0,0 +1,137 @@
++import Effect4.Store.Domain.Shape
++import Effect4.Schema.Authoring
++
++/-!
++# Schema.OfShape
++
++Owner: the existing Q5 arrow from Store.Shape to persisted Schema representation,
++and from ShapeDoc to its raw Document. The rendering table and reference order are
++unchanged by this relocation. The raw document remains total: row 8's duplicate-key
++refusal is a separate open behavior change, not a property of this arrow.
++
++Canonical.document stays owned by Store.Domain.Canonical; schema-node and address
++construction stay in Store.Domain.Node/Genesis, above Schema. They consume this one
++rendering implementation. Domain schema bytes keep their version-0 behavior.
++-/
++
++set_option autoImplicit false
++
++namespace Effect4.Store
++
++open Effect4 (Json Float64 Representation Document AnnotationKey Annotations ReferenceEntry
++  PropertySignature)
++
++/-! ## The annotation keys -/
++
++/-- rc.112's `identifier`: the shape of `Surface/Annotate.lean:73-91`, restated. -/
++def identifierKey : AnnotationKey String where
++  name := "identifier"
++  encode := Json.str
++  decode := fun raw => match raw with
++    | .str value => some value
++    | _ => none
++
++theorem identifierKey_lawful : identifierKey.Lawful := by
++  constructor
++  · intro value; rfl
++  · intro raw value decoded
++    cases raw with
++    | str rawValue =>
++        change some rawValue = some value at decoded
++        change Json.str value = Json.str rawValue
++        exact congrArg Json.str (Option.some.inj decoded).symm
++    | null => exact nomatch decoded
++    | bool _ => exact nomatch decoded
++    | number _ => exact nomatch decoded
++    | arr _ => exact nomatch decoded
++    | obj _ => exact nomatch decoded
++
++/-- The `ref = kind` key: which kind a reference must resolve at, as the kind's name. -/
++def refKey : AnnotationKey Kind where
++  name := "effect4/ref"
++  encode := fun k => Json.str k.name
++  decode := fun raw => match raw with
++    | .str value => Kind.ofName? value
++    | _ => none
++
++theorem refKey_lawful : refKey.Lawful := by
++  constructor
++  · intro k
++    exact Kind.ofName?_name k
++  · intro raw k decoded
++    cases raw with
++    | str value =>
++        change Kind.ofName? value = some k at decoded
++        change Json.str k.name = Json.str value
++        exact congrArg Json.str (Kind.name_ofName? decoded)
++    | null => exact nomatch decoded
++    | bool _ => exact nomatch decoded
++    | number _ => exact nomatch decoded
++    | arr _ => exact nomatch decoded
++    | obj _ => exact nomatch decoded
++
++/-! ## The spec: `ShapeDoc.document` -/
++
++/-- The pattern of a byte string in lowercase hex. -/
++def hexPattern : String := "^([0-9a-f]{2})*$"
++
++/-- The pattern of a thirty-two-byte digest in lowercase hex. -/
++def digestPattern : String := "^[0-9a-f]{64}$"
++
++mutual
++/-- The Q5 rendering table. -/
++def render : Shape → Representation
++  | .unit => Schema.null
++  | .bool => Schema.boolean
++  | .nat => .number none [Schema.Check.int]
++  | .string => Schema.string
++  | .bytes => .string none [Schema.Check.pattern hexPattern]
++  | .digest => .string none [Schema.Check.pattern digestPattern]
++  | .list item => Schema.array (render item)
++  | .option item => Schema.anyOf (render item) [Schema.null]
++  | .pair f s => Schema.tuple [Schema.element (render f), Schema.element (render s)]
++  | .struct name fields => .objects (identifierKey.singleton name) [] (renderFields fields) []
++  | .sum name cases =>
++    if allNullary cases then
++      .union (identifierKey.singleton name) [] (cases.map fun c => Schema.literalString c.1) .anyOf
++    else .union (identifierKey.singleton name) [] (renderCases cases) .anyOf
++  | .ref k => .string (refKey.singleton k) [Schema.Check.pattern digestPattern]
++  | .anyRef =>
++    Schema.struct
++      [ Schema.property "kind" Schema.string
++      , Schema.property "address" (.string none [Schema.Check.pattern digestPattern]) ]
++  | .named n => Schema.reference n
++/-- The properties of a struct, in declaration order. -/
++def renderFields : List (String × Shape) → List PropertySignature
++  | [] => []
++  | (n, s) :: fields => Schema.property n (render s) :: renderFields fields
++/-- The tagged structs of a sum with arguments, in declaration order. -/
++def renderCases : List (String × Nat × List (String × Shape)) → List Representation
++  | [] => []
++  | (n, _, fields) :: cases => Schema.tagged n (renderFields fields) :: renderCases cases
++end
++
++/-- Give a rendered definition its key as `identifier`, unless it carries one already (a named
++struct or sum does). -/
++def renderDef (name : String) (s : Shape) : Representation :=
++  match s with
++  | .struct _ _ => render s
++  | .sum _ _ => render s
++  | _ =>
++    match Representation.nodeAnnotations.preview (render s) with
++    | some bag => Representation.nodeAnnotations.replace (identifierKey.append name bag) (render s)
++    | none => render s
++
++/-- The spec of a shape document: the root rendered, the table as the references. -/
++def ShapeDoc.document (doc : ShapeDoc) : Document :=
++  { representation := render doc.root
++    references := doc.defs.map fun d => ⟨d.1, renderDef d.1 d.2⟩ }
++
++/-! Existing finite rendering receipts, moved with their owner. -/
++
++#guard entryDoc.document.references.length = 1
++#guard (entryDoc.document.representation).tag = .objects
++#guard (render (.sum "ExportKind" [("const", 0, []), ("function", 1, [])])).tag = .union
++#guard (render .nat).tag = .number
++
++end Effect4.Store

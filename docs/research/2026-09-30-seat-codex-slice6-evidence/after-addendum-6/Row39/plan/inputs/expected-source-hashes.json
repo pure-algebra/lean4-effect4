@@ -1,0 +1,10 @@
+{
+  "src/Effect4/Codegen/Schema.lean": "355d08a9510afab21250c6685a71693afa8715c6c544e486fe4df6ecfbc00207",
+  "Test/Codegen/SchemaGenerationContract.lean": "b50d79ee7722472527a3d54b24fbd594da5393f0c10f5be77a3a1a1605982815",
+  "Test/Codegen/SchemaGenerationCoverage.lean": "9a35a5b48cd872792bd9305c3ae42de43a2e3789203ad08431facee25b7dea60",
+  "harness/schema-generation/EmitFixture.lean": "465893bf729ec74c2e84031be9b5ad00931075e2d35db259de7706ea11f5baba",
+  "harness/schema-generation/EmitCoverageFixture.lean": "587dd3a0a9bb69d3593f9126a61713a5e6a431a59682fab1e988774dac0158e4",
+  "src/Effect4/Codegen/Target.lean": "5cb6bdd6386a5024d0588f568e760b8f2d0a6f2125c613b925fcb6c5f7d6cbc0",
+  "src/Effect4/Schema/Annotations.lean": "a1e9ce557ad11f8fc0c3aa592e6b71a220c5f3c12da117459185269e305cd98c",
+  "Test/Schema/AnnotationDataPlaneContract.lean": "6b58b29d9acbb5d982879b6254f81f8cd5d102aa359b0e61dab7d9f2346cf2e7"
+}

@@ -1,0 +1,155 @@
+{
+  "derived_groups": [
+    {
+      "group": "Json",
+      "imports": [
+        "Effect4.Store.Domain.Canonical"
+      ],
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    },
+    {
+      "group": "Schema",
+      "imports": [
+        "Effect4.Store.Domain.Derived.Json"
+      ],
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    },
+    {
+      "group": "Program",
+      "imports": [
+        "Effect4.Program.Native",
+        "Effect4.Store.Domain.Canonical",
+        "Effect4.Store.Domain.RowCanonical"
+      ],
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    },
+    {
+      "group": "Pin",
+      "imports": [
+        "Effect4.Store.Domain.Pin",
+        "Effect4.Store.Domain.Node"
+      ],
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    },
+    {
+      "group": "Api",
+      "imports": [
+        "Effect4.Api.Frontier",
+        "Effect4.Store.Domain.Canonical",
+        "Effect4.Store.Domain.Clock"
+      ],
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    },
+    {
+      "group": "Value",
+      "imports": [
+        "Effect4.Store.Domain.Canonical"
+      ],
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    },
+    {
+      "group": "Runner",
+      "imports": [
+        "Effect4.Api.Runner",
+        "Effect4.Store.Domain.Derived.Value",
+        "Effect4.Store.Domain.AnnotationsCanonical",
+        "Effect4.Store.Domain.Clock",
+        "Effect4.Store.Domain.Derived.Program",
+        "Effect4.Api.Derived"
+      ],
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check",
+        "Effect4.Schema.Image"
+      ]
+    },
+    {
+      "group": "TyView",
+      "imports": [
+        "Effect4.Laws.Program.Folds.Ty",
+        "Effect4.Laws.Auto.RuleSets"
+      ],
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    }
+  ],
+  "lcnf_explicit_imports": [
+    {
+      "out": "ocaml/gen/fibers_gen.ml",
+      "explicit_imports": [],
+      "deleted_modules_in_explicit_old_import_closure": [],
+      "declared_deleted_schema_roots": []
+    },
+    {
+      "out": "ocaml/gen/machine_gen.ml",
+      "explicit_imports": [],
+      "deleted_modules_in_explicit_old_import_closure": [],
+      "declared_deleted_schema_roots": []
+    },
+    {
+      "out": "ocaml/gen/api_gen.ml",
+      "explicit_imports": [
+        "Effect4.Api"
+      ],
+      "deleted_modules_in_explicit_old_import_closure": [
+        "Effect4.Schema.Check",
+        "Effect4.Schema.Image"
+      ],
+      "declared_deleted_schema_roots": []
+    },
+    {
+      "out": "ocaml/engine/api_engine.ml",
+      "explicit_imports": [
+        "Effect4.Api"
+      ],
+      "deleted_modules_in_explicit_old_import_closure": [
+        "Effect4.Schema.Check",
+        "Effect4.Schema.Image"
+      ],
+      "declared_deleted_schema_roots": []
+    }
+  ],
+  "other_producers": [
+    {
+      "module": "OCaml5.Tools.EffGen",
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    },
+    {
+      "module": "OCaml5.Tools.EffWire",
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    },
+    {
+      "module": "OCaml5.Tools.CasGoldens",
+      "deleted_modules_in_old_import_closure": [
+        "Effect4.Schema.Check"
+      ]
+    }
+  ],
+  "manifest_or_guard_patch_needed_for_same_names_topology": false,
+  "actual_producer_inputs_edited": [
+    "harness/schema-generation/EmitFixture.lean",
+    "harness/schema-generation/EmitCoverageFixture.lean"
+  ],
+  "notes": [
+    "SchemaFold is retained; Codegen.Schema imports it explicitly in slice 3.",
+    "Schema/Pin generated guard sources need no edits because moved declaration names remain identical.",
+    "Canonical imports OfShape explicitly, preserving Schema manifest visibility through Derived.Json.",
+    "ArchitectureRoles prose is separate coordinator-owned proposal; architecture report is not generated here."
+  ]
+}

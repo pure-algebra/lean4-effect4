@@ -1,0 +1,9 @@
+{
+  "src/Effect4/Laws/Program/Guard/Core.lean": "b2387b7f244cccc6cfb0f98dde54f5831a49b2dc58cf42490e29685a053dcddf",
+  "src/Effect4/Laws/Program/Guard/RegistrationQueue.lean": "5dbe7972f3198e4eeb39fe251a22feb94c7d3a93b0de84948a8f6acab56bea0e",
+  "src/Effect4/Laws/Program/Typed/Assembly.lean": "d094d2e702c160c835391fb21fc06b4c8604b55a37d0b4fcd5a50013b9a9ad2c",
+  "src/Effect4/Laws/Program/Typed/Scheduler.lean": "a8ddc467df781486b1b8cfc3651a2a7c24c53b8104b8680b6a5fa1505af36403",
+  "Test/Counterexamples/Machine/Semantics/M6Capstone.lean": "11628e73a90976e0ec64b9d3cf55c7035e701e14f62ad2f6fbca4c61c5fe3873",
+  "Test/Counterexamples/Machine/Semantics/ValueMembership.lean": "37b5c7c4eab71ff9a530b9e3a5c10acd5f7e6653fe86214c7fd1b38c0b45799d",
+  "Test/Counterexamples/REGISTER.md": "d06c41f5a447d2c13a62ebf9587a3bb5e854482b23b173e6773068bafd206538"
+}

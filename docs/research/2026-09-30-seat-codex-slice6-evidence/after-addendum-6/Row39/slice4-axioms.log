@@ -1,0 +1,3 @@
+'Effect4.Store.identifierKey_lawful' depends on axioms: [propext]
+'Effect4.Store.refKey_lawful' depends on axioms: [propext]
+'Effect4.Representation.nodeAnnotations_lawful' does not depend on any axioms

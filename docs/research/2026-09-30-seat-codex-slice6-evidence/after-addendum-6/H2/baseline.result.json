@@ -1,0 +1,15 @@
+{
+  "command": [
+    "lake",
+    "env",
+    "lean",
+    "-DwarningAsError=true",
+    "docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/stages/mechanical/baseline/probes/Baseline.lean"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4-slice6",
+  "env": {
+    "LEAN_NUM_THREADS": "1"
+  },
+  "exit": 0,
+  "elapsed_seconds": 3.54
+}

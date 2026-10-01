@@ -1,0 +1,22 @@
+'Effect4.Program.Typed.pending_below' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.QueueOk.fresh' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.reifyExitVal_fits' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.observerDeliveredExit_fits' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.observer_exitValue_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.observerCommand_resume_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.requestOfR_load_none' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.schedulerState_load' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.registrationState_load' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.observerState_load' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.M6Ledger.step_evaluate (root : Effect4.Program.Typed.ProgramSource)
+  (rootTy : Effect4.Program.EffTy) (id : Effect4.FiberId) :
+  ProofGraph.Obligation (Effect4.Program.Typed.StepPreserves root rootTy (Effect4.Machine.Cmd.evaluate id))
+Effect4.Program.Typed.M6Ledger.step_observe (root : Effect4.Program.Typed.ProgramSource)
+  (rootTy : Effect4.Program.EffTy) (fiber : Effect4.FiberId) (exit : Effect4.Machine.ExitV)
+  (observer : Effect4.Machine.Observer) :
+  ProofGraph.Obligation
+    (Effect4.Program.Typed.StepPreserves root rootTy (Effect4.Machine.Cmd.observe fiber exit observer))
+Effect4.Program.Typed.M6Ledger.step_wake (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)
+  (list : Effect4.Machine.WakeKey) (phase : Effect4.Machine.WakePhase) :
+  ProofGraph.Obligation (Effect4.Program.Typed.StepPreserves root rootTy (Effect4.Machine.Cmd.wake list phase))
+'Effect4.Program.Typed.savedPosition_of_saved' depends on axioms: [propext, Quot.sound]
