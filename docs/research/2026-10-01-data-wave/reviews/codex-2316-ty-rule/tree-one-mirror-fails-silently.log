@@ -1,0 +1,3 @@
+check-ty-rule: the tree's census in /private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/tree-one-mirror-fails-silently/census.log and /private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/tree-one-mirror-fails-silently/census-mirrors.log
+evidence: 7 census rows and 3 gate rows under Effect4, 6 mirror census rows over 1 log(s)
+0 violation(s)

@@ -1,0 +1,18 @@
+{
+  "revision": "d1e76a19a085d310ae41df3f62750f359424f8ec",
+  "source_repo": "/Users/pooks/Dev/lean4-effect4-seat-W2",
+  "files_sha256": {
+    "scripts/check-ty-rule.py": "8ca74823f121f687c2ff75466502929aa9b7619859823462a752bd1379cbaa63",
+    "Test/fixtures/ty-rule/Census.lean": "cc49b7c5199c3ff26a0ff87e81ced72379cafe1a2c4867157b6b6c01c850e5d4",
+    "Test/fixtures/ty-rule/CensusMirrorsConformLcnfMl.lean": "01ecf4ddf3321535017f278789db0f1b5ebdc1d672d9ae0ef0ab458d0608284a",
+    "Test/fixtures/ty-rule/CensusMirrorsConformLcnfSemantics.lean": "c1513419d6b4239721dfe81c0d981af1834b25d6a0452a92f866a37512031a9c",
+    "Test/fixtures/ty-rule/CensusMirrorsOCaml5.lean": "7a65dbe1aa02968c2f346fdc6b3925975c3c4a74c5fbe366a14051ad14b32af7",
+    "Test/fixtures/ty-rule/CensusMirrorsToolsProfileJson.lean": "72f273e731a31fd50e74e23375f9026344f84e5ac2128c2d12a8eea39d581eb7",
+    "Test/fixtures/ty-rule/CensusMirrorsToolsRowTypes.lean": "70352225a761798634f3619ff3fd2622af3aa8b8bdec3d73e8334926188e204f",
+    "Test/fixtures/ty-rule/CensusMirrorsToolsTyVectors.lean": "70464fc91d4d7db9bb8b4e7acb9f0860b583c7864cf3c54d52fc42e44745b2ec",
+    "Test/fixtures/ty-rule/CensusMirrorsToolsVariances.lean": "de01b3646f7c310efdce8d2ec5a82dbdb437544eb37114013cf20ecb9cf8d350",
+    "Test/fixtures/ty-rule/census-green.log": "bf4a4676bae117253336bea50840bfcb5d4fb15c311928e5ebc73bb0b3ceaf79"
+  },
+  "time": "2026-10-01T23:18:50.596873+00:00",
+  "scope": "Unmodified Python checker in isolated temp directory; real log controls plus a fake lake command for exit-status fault injection; no Lean, lake, generators, builds, or active repository writes"
+}

@@ -1,0 +1,138 @@
+[
+  {
+    "name": "green",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/green.input.log"
+    ],
+    "expected_exit": 0,
+    "actual_exit": 0,
+    "seconds": 0.049
+  },
+  {
+    "name": "deliberate-violation",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/deliberate-violation.input.log"
+    ],
+    "expected_exit": 1,
+    "actual_exit": 1,
+    "seconds": 0.043
+  },
+  {
+    "name": "empty",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/empty.input.log"
+    ],
+    "expected_exit": 2,
+    "actual_exit": 2,
+    "seconds": 0.041
+  },
+  {
+    "name": "compiler-error-only",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/compiler-error-only.input.log"
+    ],
+    "expected_exit": 2,
+    "actual_exit": 2,
+    "seconds": 0.047
+  },
+  {
+    "name": "missing-gate-section",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/missing-gate-section.input.log"
+    ],
+    "expected_exit": 2,
+    "actual_exit": 2,
+    "seconds": 0.05
+  },
+  {
+    "name": "self-test",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "--self-test"
+    ],
+    "expected_exit": 0,
+    "actual_exit": 0,
+    "seconds": 0.468
+  },
+  {
+    "name": "tree-ok",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "--tree",
+      "--logs",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/tree-ok"
+    ],
+    "expected_exit": 0,
+    "actual_exit": 0,
+    "seconds": 0.628,
+    "fake_lake_mode": "ok"
+  },
+  {
+    "name": "tree-main-fails-after-output",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "--tree",
+      "--logs",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/tree-main-fails-after-output"
+    ],
+    "expected_exit": 2,
+    "actual_exit": 0,
+    "seconds": 0.411,
+    "fake_lake_mode": "main-fails-after-output"
+  },
+  {
+    "name": "tree-one-mirror-fails-silently",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "--tree",
+      "--logs",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/tree-one-mirror-fails-silently"
+    ],
+    "expected_exit": 2,
+    "actual_exit": 0,
+    "seconds": 0.35,
+    "fake_lake_mode": "one-mirror-fails-silently"
+  },
+  {
+    "name": "tree-missing-one-mirror-fixture",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "--tree",
+      "--logs",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/tree-missing-one-mirror-fixture"
+    ],
+    "expected_exit": 2,
+    "actual_exit": 0,
+    "fake_lake_mode": "ok",
+    "omitted_fixture": "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/Test/fixtures/ty-rule/CensusMirrorsToolsVariances.lean"
+  },
+  {
+    "name": "tree-restored-mirror-fixture",
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/scripts/check-ty-rule.py",
+      "--tree",
+      "--logs",
+      "/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/tree-restored-mirror-fixture"
+    ],
+    "expected_exit": 0,
+    "actual_exit": 0,
+    "fake_lake_mode": "ok",
+    "omitted_fixture": null
+  }
+]
