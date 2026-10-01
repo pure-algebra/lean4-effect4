@@ -7024,9 +7024,9 @@ let scope_close_snapshot (scope : int) (exit_ : (val_, err, defect, int, unit) e
 
 
 
-(* LCNF mono: Effect4.Machine.storesCloseScopeUnsafe._redArg (scope : Nat) (exit : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (state : Effect4.Machine.Stores) : Option (Prod Effect4.Machine.Stores (Option (Effect4.Prim Effect4.Machine.Name Effect4.Machine.Thunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) *)
+(* LCNF mono: Effect4.Machine.storesCloseScope._redArg (scope : Nat) (exit : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (state : Effect4.Machine.Stores) : Option (Prod Effect4.Machine.Stores (Effect4.Prim Effect4.Machine.Name Effect4.Machine.Thunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) *)
 
-let stores_close_scope_unsafe (scope : int) (exit_ : (val_, err, defect, int, unit) exit_) (state : stores) : (stores * (name, thunk, val_, err, defect, int, unit) prim option) option =
+let stores_close_scope (scope : int) (exit_ : (val_, err, defect, int, unit) exit_) (state : stores) : (stores * (name, thunk, val_, err, defect, int, unit) prim) option =
   let _x_1 = scope_close_snapshot scope exit_ state in
   match _x_1 with
     | None -> (let _x_2 = None in
@@ -7037,37 +7037,19 @@ let stores_close_scope_unsafe (scope : int) (exit_ : (val_, err, defect, int, un
           _x_9 in
           match snd_5 with
             | fst_10, snd_11 -> (match snd_11 with
-                | [] -> (let _x_12 = None in
-                  _jp_6 _x_12)
-                | head_13 :: tail_14 -> (match tail_14 with
-                    | [] -> (let _x_15 = fin_program head_13 exit_ in
-                      let _x_16 = Some _x_15 in
-                      _jp_6 _x_16)
-                    | _ -> (let _x_17 = ProgName_closeWalk (fst_10, snd_11, exit_) in
-                      let _x_18 = Thunk_body _x_17 in
-                      let _x_19 = Prim_suspend _x_18 in
-                      let _x_20 = Some _x_19 in
-                      _jp_6 _x_20)))))
-
-
-
-(* LCNF mono: Effect4.Machine.storesCloseScope._redArg (scope : Nat) (exit : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (state : Effect4.Machine.Stores) : Option (Prod Effect4.Machine.Stores (Effect4.Prim Effect4.Machine.Name Effect4.Machine.Thunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) *)
-
-let stores_close_scope (scope : int) (exit_ : (val_, err, defect, int, unit) exit_) (state : stores) : (stores * (name, thunk, val_, err, defect, int, unit) prim) option =
-  let _x_1 = stores_close_scope_unsafe scope exit_ state in
-  match _x_1 with
-    | None -> (let _x_2 = None in
-      _x_2)
-    | Some val__3 -> (match val__3 with
-        | fst_1, snd_1 -> (match snd_1 with
-            | None -> (let _x_4 = Val_unit in
-              let _x_5 = Prim_success _x_4 in
-              let _x_6 = fst_1, _x_5 in
-              let _x_7 = Some _x_6 in
-              _x_7)
-            | Some val__8 -> (let _x_9 = fst_1, val__8 in
-              let _x_10 = Some _x_9 in
-              _x_10)))
+                | [] -> (let _x_12 = Val_unit in
+                  let _x_13 = Prim_success _x_12 in
+                  _jp_6 _x_13)
+                | head_14 :: tail_15 -> (match tail_15 with
+                    | [] -> (let _x_16 = fin_program head_14 exit_ in
+                      let _x_17 = Val_unit in
+                      let _x_18 = Prim_success _x_17 in
+                      let _x_19 = Prim_onSuccessConst (_x_16, _x_18) in
+                      _jp_6 _x_19)
+                    | _ -> (let _x_20 = ProgName_closeWalk (fst_10, snd_11, exit_) in
+                      let _x_21 = Thunk_body _x_20 in
+                      let _x_22 = Prim_suspend _x_21 in
+                      _jp_6 _x_22)))))
 
 
 
@@ -14823,6 +14805,33 @@ let rec list_map_tr_loop_at_program_exit_scoped_spec_1 (_x_1 : int) (a_2 : (eff_
       let _x_8 = _x_7 :: a_3 in
       let _x_9 = list_map_tr_loop_at_program_exit_scoped_spec_1 _x_1 tail_6 _x_8 in
       _x_9)
+
+
+
+(* LCNF mono: Effect4.Machine.storesCloseScopeUnsafe._redArg (scope : Nat) (exit : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (state : Effect4.Machine.Stores) : Option (Prod Effect4.Machine.Stores (Option (Effect4.Prim Effect4.Machine.Name Effect4.Machine.Thunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) *)
+
+let stores_close_scope_unsafe (scope : int) (exit_ : (val_, err, defect, int, unit) exit_) (state : stores) : (stores * (name, thunk, val_, err, defect, int, unit) prim option) option =
+  let _x_1 = scope_close_snapshot scope exit_ state in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (match val__3 with
+        | fst_4, snd_5 -> (let _jp_6 = fun _y_7 -> let _x_8 = fst_4, _y_7 in
+          let _x_9 = Some _x_8 in
+          _x_9 in
+          match snd_5 with
+            | fst_10, snd_11 -> (match snd_11 with
+                | [] -> (let _x_12 = None in
+                  _jp_6 _x_12)
+                | head_13 :: tail_14 -> (match tail_14 with
+                    | [] -> (let _x_15 = fin_program head_13 exit_ in
+                      let _x_16 = Some _x_15 in
+                      _jp_6 _x_16)
+                    | _ -> (let _x_17 = ProgName_closeWalk (fst_10, snd_11, exit_) in
+                      let _x_18 = Thunk_body _x_17 in
+                      let _x_19 = Prim_suspend _x_18 in
+                      let _x_20 = Some _x_19 in
+                      _jp_6 _x_20)))))
 
 
 

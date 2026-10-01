@@ -31,7 +31,14 @@ protocol cannot carry shape-defect exclusion through reified exits). Decisions r
 2026-10-01) repairs the last: membership at an exit type reads `ShapeFree`, so a reified
 `badName` failure no longer fits (`badName_refused`), the refutation is history over the old
 `exitOf` arm (`old_closeSeq_protocol_refused`), and the walk types at the exact post for clean
-finalizers (`closeSeq_protocol`, `closeSeq_protocol_typed`).
+finalizers (`closeSeq_protocol`, `closeSeq_protocol_typed`). Decisions row 151 (a″) (seat D4,
+2026-10-01) repairs the second: `Scope.close` voids a lone finalizer's value on both machines (the
+signed divergence `U-02`; `closeLone` answers `unit`), every finalizer a scope holds is typed at
+`⟨unknown, never⟩` by the scope store's typing, the registration pre refuses the failing release
+(`release_registration_refused`, the base's admission history over `OldScopeAddPre`), and the
+close of a lone typed finalizer is typed at the post (`close_one_typed`, `foreign_close_typed`).
+One finding of that landing is open: the close-scope row's pre admits a closing exit the
+closed-scope row refuses (`closeScope_pre_admits_unfit_exit`).
 -/
 
 set_option autoImplicit false
@@ -487,9 +494,12 @@ theorem close_code_typed_live (root : ProgramSource) :
       (EffTy.pure .unit) closeCode :=
   close_code_typed root _ (by decide +kernel)
 
-/-- Red control (found landing row 136): a scope's lone finalizer is the close's program, so a
-scope holding one `release` finalizer that fails answers a typed failure, outside the close-scope
-post. The current `scopeAdd` pre (scope liveness) admits registering it. -/
+/-- Red control (found landing row 136; history since decisions row 151 (a″)): a scope's lone
+finalizer is the close's program, so a scope holding one `release` finalizer that fails answers a
+typed failure, outside the close-scope post (`lone_release_outside_post`). The base's `scopeAdd`
+pre (scope liveness) admitted registering it (`old_release_registration_admitted`); the pre now
+refuses it (`release_registration_refused`) and the scope store's typing refuses it
+(`failing_release_untyped`), so no typed state holds it. -/
 def releaseStore : Stores :=
   ((syncOpStep (.scopeAdd 0 (.release 7 true)) StoreUnit.oneScope).map (·.1)).getD Stores.empty
 
@@ -499,7 +509,12 @@ def isFailedSeven : Option (Stores × RProgram) → Bool
   | some (_, .pure (.failure c)) => c == Cause.fail (.tag 7)
   | _ => false
 
-theorem lone_release_answer : isFailedSeven (closeScopeR 0 failed true releaseStore) = true := by
+/-- Since decisions row 151 (a″) the close runs the lone finalizer and then answers `void`
+(`closeScopeR`), and a failure passes through the void: the close's code, its control markers
+erased (`eraseControl`), is the release's failure. -/
+theorem lone_release_answer :
+    isFailedSeven ((closeScopeR 0 failed true releaseStore).map fun r => (r.1, eraseControl r.2)) =
+      true := by
   decide +kernel
 
 theorem lone_release_outside_post (w' : W) (cert : FiberCert (.closeScope 0 failed)) :
@@ -508,23 +523,51 @@ theorem lone_release_outside_post (w' : W) (cert : FiberCert (.closeScope 0 fail
   have clean := cleanExit_of_never_fits w' (EffTy.pure .unit) (Cause.fail (.tag 7)) rfl h.1
   exact Bool.noConfusion clean
 
-theorem release_registration_admitted (root : ProgramSource) (w : W)
-    (store : w.state = StoreUnit.oneScope) (cert : StoreCert (.scopeAdd 0 (.release 7 true))) :
-    storePre root w (.scopeAdd 0 (.release 7 true)) cert := by
+/-- The registration pre before decisions row 151 (a″), kept local: the scope's presence alone
+(rows 139 and 156). -/
+def OldScopeAddPre (w : W) (scope : Nat) : Prop := ScopeLive w scope
+
+/-- History (the base's `release_registration_admitted`): the old pre admitted registering the
+failing release on the open scope. The same script against the current pre is pinned failing at
+the foot of this file. -/
+theorem old_release_registration_admitted (w : W) (store : w.state = StoreUnit.oneScope) :
+    OldScopeAddPre w 0 := by
   change (w.state.scopes.entryAt 0).isSome = true
   rw [store]
   decide +kernel
+
+/-- **The flip** (decisions row 151 (a″)): the registration pre refuses the failing release, whose
+program answers a `Fail` that no `never` error column admits (`FinalizerAdmitted`'s `release`
+arm). -/
+theorem release_registration_refused (root : ProgramSource) (w : W)
+    (cert : StoreCert (.scopeAdd 0 (.release 7 true))) :
+    ¬ storePre root w (.scopeAdd 0 (.release 7 true)) cert := by
+  intro h
+  exact Bool.noConfusion h.2
+
+/-- **Red** (decisions row 151 (a″)): the scope store's typing refuses the failing release: at the
+closing exit `void`, which fits `Exit<unknown, unknown>`, its program answers `Fail 7`, which no
+`never` error column admits. -/
+theorem failing_release_untyped (root : ProgramSource) (w : W) :
+    ¬ FinalizerTyped root w (.release 7 true) := by
+  intro h
+  have typed := h w (leHost_refl w) (.success .unit)
+    ((fitsExit_success_iff w _ _).mpr (live_of_keys_nil rfl))
+  have clean := cleanExit_of_never_fits w ⟨.unknown, .never, Env.Requirement.empty⟩
+    (Cause.fail (.tag 7)) rfl (TypedProg.pure_inv typed).1
+  exact Bool.noConfusion clean
 
 /-! ### The second refused shape: a lone `acquireRelease` release that answers a value
 
 Receipt B's finding 1 read this shape off the code; proved here. `acquireRelease(succeed 1, (a,
 exit) => succeed 5)` is checked (`acq_checked`): the release may answer any value
 (`Effect<unknown, never, R2>`, `Program/Checker.lean:201-209`; rc.112 `internal/effect.ts:3973`).
-A scope whose lone finalizer is its capture closes to that finalizer's program
-(`closeScopeUnsafeR`, `InterpR.lean:157-163`; rc.112 `internal/effect.ts:3795`), which answers the
-release's value, so it is typed at no type whose answer column is `unit` (`foreign_untyped`): the
-`lone` premise of `closeScope_installs` fails for it, and option (a) of decisions row 151 needs the
-release voided in the term before the scope's typing can type it at `⟨unit, never⟩`. -/
+Before decisions row 151 (a″) a scope whose lone finalizer is its capture closed to that
+finalizer's program (rc.112 `internal/effect.ts:3795`), which answers the release's value, typed
+at no type whose answer column is `unit` (`foreign_untyped`), so `closeScope_installs`' former
+`lone` premise failed for it. Since (a″) `Scope.close` voids the value (`closeScopeR`), the
+finalizer is typed at `⟨unknown, never⟩` (`foreign_typed_unknown`) and its close at
+`⟨unit, never⟩` (`foreign_close_typed`). -/
 
 /-- `acquireRelease(succeed 1, (a, exit) => succeed 5)`. -/
 def acqProg : NativeEff := .acquireRelease (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 5)))
@@ -592,12 +635,37 @@ theorem foreign_untyped (w : W) (ex : ExitV) (ty : EffTy) (unit : ty.answer = .u
     rw [fitsExit_success_iff, unit] at hfit
     exact hfit
 
+/-- The capture is typed (`CaptureTyped`): the `acquireRelease` at the root checks under the empty
+environment, its acquire at `nat`, the acquired `1` fits it, and the empty context's services fit. -/
+theorem acq_capture_typed (w : W) : CaptureTyped (acqProg : ProgramSource) w acqCapture := by
+  refine ⟨.succeed (.lit (.nat 1)), .succeed (.lit (.nat 5)), [],
+    ⟨.nat, .never, Env.Requirement.single nativeScopeKey⟩, EffTy.pure .nat, rfl, ?_, rfl, ?_, ?_⟩
+  · decide +kernel
+  · refine ⟨rfl, fun i ty v hi hv => ?_⟩
+    cases i with
+    | zero =>
+      cases hi
+      cases hv
+      trivial
+    | succ k => cases hi
+  · intro key sv sty hget _
+    change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
+    rw [Env.Context.getV_empty] at hget
+    cases hget
+
+/-- **Positive, the finalizer's own program** (decisions row 151 (a″)): the same capture's program
+is typed at rc.112's finalizer type `⟨unknown, never⟩`, at every world and every closing exit
+that fits `Exit<unknown, unknown>` (`finalizerTyped_of_admitted`): `5` is below `unknown`. -/
+theorem foreign_typed_unknown (w : W) : FinalizerTyped (acqProg : ProgramSource) w (.foreign acqCapture) :=
+  finalizerTyped_of_admitted _ w _ (acq_capture_typed w)
+
 /-! ### `Scope.close` with zero, one and several finalizers (positive controls)
 
 Decisions row 151's acceptance keeps these positive under every option: the close installs a
 program typed at the close-scope row's `⟨unit, never⟩` (`closeScope_installs`,
-`Typed/Adequacy.lean`) with no finalizer (`void`), with one finalizer whose program is typed
-there (a `release` that succeeds), and with two (the walk, `closeWalk_typed`). -/
+`Typed/Adequacy.lean`) with no finalizer (`void`), with one finalizer whose program is typed at
+`⟨unknown, never⟩` (a `release` that succeeds; the close voids its answer, row 151 (a″)), and
+with two (the walk, `closeWalk_typed`). -/
 
 /-- One `release` finalizer that succeeds, registered on the open scope 0. -/
 def okReleaseStore : Stores :=
@@ -626,26 +694,147 @@ theorem lone_of_order {st : Stores} {order : List FinName}
   rw [hs] at horder
   exact (Option.some.inj horder).symm
 
+/-- The closing exit `failed` fits `Exit<unknown, unknown>` at every world: its one reason is a
+`Fail` of a live error value, and it carries no shape defect. -/
+theorem failed_fits (w : W) : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ failed := by
+  refine (fitsExit_failure_iff w _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩
+  · cases hr with
+    | head => exact ⟨_, rfl, live_of_keys_nil rfl⟩
+    | tail _ h => cases h
+  · cases hr with
+    | head => trivial
+    | tail _ h => cases h
+
+/-- The stores' finalizers, read off by the kernel: none on the open scope, one succeeding
+`release`, two. -/
+theorem zero_fins : ∀ entry ∈ StoreUnit.oneScope.scopes.entries, entry.scope.closeOrder = [] := by
+  decide +kernel
+
+theorem one_fins : ∀ entry ∈ okReleaseStore.scopes.entries, ∀ fin ∈ entry.scope.closeOrder,
+    fin = .release 7 false := by
+  decide +kernel
+
+theorem two_fins : ∀ entry ∈ twoReleaseStore.scopes.entries, ∀ fin ∈ entry.scope.closeOrder,
+    fin = .release 7 false ∨ fin = .release 8 false := by
+  decide +kernel
+
+/-- Positive controls under row 151 (a″): the close-scope row's post `⟨unit, never⟩` at zero, one
+and two finalizers, the store's typing given by the registration pre's admission
+(`finalizerTyped_of_admitted`: a succeeding `release` is admitted), the closing exit by
+`failed_fits`. -/
 theorem close_zero_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RProgram)
     (h : closeScopeR 0 failed true StoreUnit.oneScope = some (st', code)) :
     TypedProg root w (EffTy.pure .unit) code :=
   closeScope_installs root w 0 failed true _ st' code
-    (fun _ _ _ hs => nomatch lone_of_order zero_order hs) h
+    (fun entry he fin hfin => by
+      rw [zero_fins entry he] at hfin
+      cases hfin)
+    (failed_fits w) h
 
 theorem close_one_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RProgram)
     (h : closeScopeR 0 failed true okReleaseStore = some (st', code)) :
     TypedProg root w (EffTy.pure .unit) code :=
-  closeScope_installs root w 0 failed true _ st' code (fun _ _ fin hs => by
-    cases lone_of_order one_order hs
-    exact TypedProg.pure ⟨trivial, trivial⟩) h
+  closeScope_installs root w 0 failed true _ st' code
+    (fun entry he fin hfin => by
+      rw [one_fins entry he fin hfin]
+      exact finalizerTyped_of_admitted root w _ rfl)
+    (failed_fits w) h
 
 theorem close_two_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RProgram)
     (h : closeScopeR 0 failed true twoReleaseStore = some (st', code)) :
     TypedProg root w (EffTy.pure .unit) code :=
-  closeScope_installs root w 0 failed true _ st' code (fun _ _ _ hs => by
-    have two := two_order
-    rw [hs] at two
-    exact Nat.noConfusion (Nat.succ.inj (Option.some.inj two))) h
+  closeScope_installs root w 0 failed true _ st' code
+    (fun entry he fin hfin => by
+      rcases two_fins entry he fin hfin with rfl | rfl
+      · exact finalizerTyped_of_admitted root w _ rfl
+      · exact finalizerTyped_of_admitted root w _ rfl)
+    (failed_fits w) h
+
+/-! ### The closing corollary for the value-answering capture (decisions row 151 (a″))
+
+`foreign_untyped` stands: the capture's own program answers `5`, typed at no type whose answer
+column is `unit`. The close of a scope whose lone finalizer it is voids that value, so the
+installed program is typed at the close-scope row's `⟨unit, never⟩`. -/
+
+/-- The capture registered on the open scope 0 by the store's own registration step. -/
+def foreignStore : Stores :=
+  ((syncOpStep (.scopeAdd 0 (.foreign acqCapture)) StoreUnit.oneScope).map (·.1)).getD Stores.empty
+
+theorem foreign_fins : ∀ entry ∈ foreignStore.scopes.entries, ∀ fin ∈ entry.scope.closeOrder,
+    fin = .foreign acqCapture := by
+  decide +kernel
+
+/-- **The corollary** (positive): the voided close of the scope holding the `5`-answering capture
+is typed at `⟨unit, never⟩`. -/
+theorem foreign_close_typed (w : W) (st' : Stores) (code : RProgram)
+    (h : closeScopeR 0 failed true foreignStore = some (st', code)) :
+    TypedProg (acqProg : ProgramSource) w (EffTy.pure .unit) code :=
+  closeScope_installs _ w 0 failed true _ st' code
+    (fun entry he fin hfin => by
+      rw [foreign_fins entry he fin hfin]
+      exact foreign_typed_unknown w)
+    (failed_fits w) h
+
+/-! ### The close-scope row's pre and the closing exit (found landing row 151 (a″))
+
+`fiberPre`'s `closeScope` arm reads the scope's presence only (`Typed/Residual.lean`), so code
+closing a present scope with a reified `badName` failure is typed, while the scope store's typing
+types a closed scope's exit at `Exit<unknown, unknown>` (`ScopeExitOk`, decisions row 140), which
+refuses it (row 152's `ShapeFree`): `FiberAction.closeScope` writes `closed badClose` and no later
+world types the store. The same fit is `closeScope_installs`' one premise beside the store's
+typing (a lone foreign finalizer's release reads the exit at that type). A decisions row is
+proposed: the arm demands `FitsExit w ⟨unknown, unknown⟩ ex` (seat D4's receipt). -/
+
+def badClose : ExitV := .failure (Cause.die .badName)
+
+/-- The world over the store holding the open scope 0. -/
+def oneScopeWorld : W := { initialWorld (EffTy.pure .unit) with state := StoreUnit.oneScope }
+
+theorem oneScope_live : ScopeLive oneScopeWorld 0 := by
+  decide +kernel
+
+/-- **Red**: at a world whose store holds the open scope 0, the code closing it with `badClose`
+is typed, and the closed-scope clause refuses `badClose` at every world. -/
+theorem closeScope_pre_admits_unfit_exit (root : ProgramSource) :
+    TypedProg root oneScopeWorld (EffTy.pure .unit)
+        (.vis (.inr (.closeScope 0 badClose)) Effects.Program.pure) ∧
+      ∀ (w : W) (e : Expect), ¬ (preds root).ScopeExitOk w e badClose :=
+  ⟨TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) () oneScope_live (fun _ _ _ post => TypedProg.pure post),
+    fun w _ => Test.Program.H2PartOne.base_badName_refused w ⟨.unknown, .unknown, Env.Requirement.empty⟩⟩
+
+/-! ### A lone finalizer answering a value closes to `unit` (decisions row 151 (a″))
+
+rc.112 answers the lone release's `5` here: `Scope.close` is declared `Effect<void>`
+(`Scope.ts:567`) but passes on the lone finalizer's effect (`internal/effect.ts:3775-3776`,
+`:3788-3789`, `:3794-3795`); the pinned source's run is row `inline` of
+`docs/research/2026-10-01-landing/seat-D4/vendor-scope-close.json` (the signed divergence
+`U-02`, `docs/UPSTREAM-BACKLOG.md`). Both machines answer `unit`, the type the checker gives the
+program. -/
+
+/-- `scoped(acquireRelease(succeed 1, (a, exit) => succeed 5) >> Scope.close(scope, exit(void)))`,
+the ambient scope read back through the `Scope` service: the release is the scope's one
+finalizer when it closes. -/
+def closeLone : NativeEff :=
+  .scoped
+    (.bind (.acquireRelease (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 5))))
+      (.bind (.service nativeScopeKey)
+        (.bind (.exit (.succeed (.lit .unit)))
+          (.withFiber (.closeScope (.var 1) (.var 2))))))
+
+def machineOf : RReplay → RState
+  | .finished m | .frontier _ m | .stuck _ m => m
+
+/-- The root's exit on the term machine and on the frame machine. -/
+def termExit (p : NativeEff) (tape : List Api.Decision) : Option ExitV :=
+  ((machineOf (replayR p 200 tape)).fiber? Api.root).bind RunFiber.exit
+def frameExit (p : NativeEff) (tape : List Api.Decision) : Option ExitV :=
+  (Api.replay p 200 tape).exit
+
+#guard Program.typeOfProgram (closeLone : ProgramSource).signature closeLone ==
+  some ⟨.unit, .never, .empty⟩
+#guard frameExit closeLone [Api.evaluate, Api.flush] == some (.success .unit)
+#guard termExit closeLone [Api.evaluate, Api.flush] == some (.success .unit)
 
 end CloseScope
 
@@ -1242,6 +1431,20 @@ example (root : ProgramSource) (cert : StoreCert (.deferredCompleteWith ⟨0⟩ 
     storePre root CompleteWith.wp (.deferredCompleteWith ⟨0⟩ CompleteWith.badCompletion) cert := rfl
 
 /--
+error: 'change' tactic failed, pattern
+  (w.state.scopes.entryAt 0).isSome = true
+is not definitionally equal to target
+  storePre root w (SyncOp.scopeAdd 0 (FinName.release 7 true)) cert
+-/
+#guard_msgs (error) in
+example (root : ProgramSource) (w : W) (store : w.state = StoreUnit.oneScope)
+    (cert : StoreCert (.scopeAdd 0 (.release 7 true))) :
+    storePre root w (.scopeAdd 0 (.release 7 true)) cert := by
+  change (w.state.scopes.entryAt 0).isSome = true
+  rw [store]
+  decide +kernel
+
+/--
 error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
 
 w : W
@@ -1318,7 +1521,31 @@ open Test.Program.ProtocolPosts in
 open Test.Program.ProtocolPosts in
 #print axioms CloseScope.lone_release_outside_post
 open Test.Program.ProtocolPosts in
-#print axioms CloseScope.release_registration_admitted
+#print axioms CloseScope.old_release_registration_admitted
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.release_registration_refused
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.failing_release_untyped
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.acq_capture_typed
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.foreign_typed_unknown
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.failed_fits
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.zero_fins
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.one_fins
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.two_fins
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.foreign_fins
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.foreign_close_typed
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.oneScope_live
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.closeScope_pre_admits_unfit_exit
 open Test.Program.ProtocolPosts in
 #print axioms CloseScope.acq_checked
 open Test.Program.ProtocolPosts in

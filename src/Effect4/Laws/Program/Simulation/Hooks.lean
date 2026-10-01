@@ -379,6 +379,24 @@ theorem closePar_zip (root : NativeEff) (ex : ExitV) : ∀ (order : List FinName
     · exact denoteFin_means root fin ex
     · exact closePar_zip root ex rest x hx
 
+/-- The walk of two or more finalizers (§20), related: the frame's counted suspend of the walk's
+body and the term's `closeWalk` operation, each continuing with the iterator entry (sequential)
+or the parallel close (parallel). -/
+theorem closeWalk_means (root : NativeEff) (strategy : FinalizerStrategy) (order : List FinName)
+    (ex : ExitV) :
+    CodeMeans root (embed (Prim.suspend (Thunk.body (ProgName.closeWalk strategy order ex))))
+      (closeWalkR strategy order ex) := by
+  show CodeMeans root (Prim.suspend (EffThunk.store (Thunk.body (ProgName.closeWalk strategy order ex))))
+    (closeWalkR strategy order ex)
+  refine CodeMeans.closeWalk strategy _ ex _ fun completed => ?_
+  show CodeMeans root (embed (progOf (ProgName.closeWalk strategy order ex)))
+    (.vis (.inr (.closeIter strategy order ex)) Effects.Program.pure)
+  cases strategy with
+  | sequential => exact CodeMeans.closeIterSeq _ ex _ delivers_pure
+  | parallel =>
+    exact CodeMeans.actClosePar _ _ _ ex _ rfl (by simp only [List.length_map])
+      (closePar_zip root ex _) delivers_pure
+
 /-- The unsafe close: the same state, no program or related programs. -/
 theorem closeScopeUnsafe_means (root : NativeEff) (scope : Nat) (ex : ExitV) (flag : Bool)
     (s : Stores) :
@@ -396,51 +414,43 @@ theorem closeScopeUnsafe_means (root : NativeEff) (scope : Nat) (ex : ExitV) (fl
     | cons fin rest =>
       cases rest with
       | nil => exact denoteFin_means root fin ex
-      | cons fin' rest' =>
-        show CodeMeans root (Prim.suspend (EffThunk.store (Thunk.body (ProgName.closeWalk strategy _ ex))))
-          (closeWalkR strategy _ ex)
-        refine CodeMeans.closeWalk strategy _ ex _ fun completed => ?_
-        show CodeMeans root (embed (progOf (ProgName.closeWalk strategy _ ex)))
-          (.vis (.inr (.closeIter strategy _ ex)) Effects.Program.pure)
-        cases strategy with
-        | sequential => exact CodeMeans.closeIterSeq _ ex _ delivers_pure
-        | parallel =>
-          exact CodeMeans.actClosePar _ _ _ ex _ rfl (by simp [List.length_map])
-            (closePar_zip root ex _) delivers_pure
+      | cons fin' rest' => exact closeWalk_means root strategy _ ex
 
-/-- `Scope.close`: the unsafe close's program, or the void success, related. -/
+/-- A lone finalizer's close, voided on both sides (decisions row 151 (a″)): the frame's
+`OnSuccess` with the constant `void` continuation and the term's guard over the finalizer with
+the `seqR` continuation answering `unit` carry the same work, the finalizer's own programs
+related by `denoteFin_means`. -/
+theorem voidedFin_means (root : NativeEff) (fin : FinName) (ex : ExitV) :
+    CodeMeans root (embed (Prim.onSuccessConst (finProgram fin ex) (Prim.success Val.unit)))
+      ((guardR .onSuccess (denoteFin fin ex)).bind (seqR fun _ => .pure (.success .unit))) := by
+  show CodeMeans root (Prim.onSuccessConst (embed (finProgram fin ex)) (Prim.success Val.unit)) _
+  rw [guardR_bind]
+  refine CodeMeans.onSuccessConst _ _ _ _ _ (denoteFin_means root fin ex) ?_ rfl (fun _ => rfl)
+  intro completed v
+  rw [show seqR (fun _ => Effects.Program.pure (Exit.success Val.unit)) (Exit.success v) =
+    Effects.Program.pure (Exit.success Val.unit) from rfl, prepareR_pure]
+  exact CodeMeans.success _
+
+/-- `Scope.close`: void for no finalizer, the lone finalizer voided on both sides (decisions row
+151 (a″), `voidedFin_means`), the walk of two or more; the same state, related programs. -/
 theorem closeScope_means (root : NativeEff) (scope : Nat) (ex : ExitV) (flag : Bool) (id : FiberId)
     (s : Stores) :
     OptRel (fun (a : Stores × NCode) (b : Stores × RProgram) => a.1 = b.1 ∧ CodeMeans root a.2 b.2)
       ((interpOf root).closeScope scope ex flag id s) ((interpR root).closeScope scope ex flag id s) := by
-  have h := closeScopeUnsafe_means root scope ex flag s
   show OptRel _ ((storesCloseScope scope ex flag s).map fun r => (r.1, embed r.2))
     (closeScopeR scope ex flag s)
   unfold storesCloseScope closeScopeR
-  revert h
-  cases storesCloseScopeUnsafe scope ex flag s with
-  | none =>
-    cases closeScopeUnsafeR scope ex flag s with
-    | none => intro _; exact True.intro
-    | some _ => intro h; exact absurd h not_false
-  | some a =>
-    cases closeScopeUnsafeR scope ex flag s with
-    | none => intro h; exact absurd h not_false
-    | some b =>
-      intro h
-      obtain ⟨a₁, a₂⟩ := a
-      obtain ⟨b₁, b₂⟩ := b
-      obtain ⟨h₁, h₂⟩ := h
-      refine ⟨h₁, ?_⟩
-      cases a₂ with
-      | none =>
-        cases b₂ with
-        | none => exact CodeMeans.success _
-        | some _ => exact absurd h₂ not_false
-      | some p =>
-        cases b₂ with
-        | none => exact absurd h₂ not_false
-        | some q => exact h₂
+  cases hs : scopeCloseSnapshot scope ex s with
+  | none => exact True.intro
+  | some r =>
+    obtain ⟨st, strategy, order⟩ := r
+    refine ⟨rfl, ?_⟩
+    cases order with
+    | nil => exact CodeMeans.success _
+    | cons fin rest =>
+      cases rest with
+      | nil => exact voidedFin_means root fin ex
+      | cons fin' rest' => exact closeWalk_means root strategy _ ex
 
 /-! ## The generator walks: `runStmts` at the frame, `walkR` at the term -/
 

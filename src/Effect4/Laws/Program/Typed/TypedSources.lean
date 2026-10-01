@@ -63,6 +63,7 @@ private def decodeSource (e : Expr) : MetaM Source := do
   | .const ``Source.owner _ => return .owner (← decodeString args[0]!)
   | .const ``Source.refused _ => return .refused (← decodeString args[0]!)
   | .const ``Source.nested _ => return .nested (← decodeExpected args[0]!)
+  | .const ``Source.each _ => return .each (← decodeString args[0]!)
   | _ => throwError "typed sources: not a source: {e}"
 
 /-- The rows of a `List Row` expression, reduced one cell at a time; bounded by a length. -/

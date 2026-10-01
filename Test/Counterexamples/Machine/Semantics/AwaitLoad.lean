@@ -287,12 +287,12 @@ theorem code_typed (w : W) : TypedProg (awaitProg : ProgramSource) w rootTy code
 /-- **The flip of `loadsTyped_false`: M5's proposition over `J` holds at this program** (fuel 5,
 the empty row table), through `machineTyped_load`. -/
 theorem loadsTyped : LoadsTyped (awaitProg : ProgramSource) rootTy 5 5 :=
-  fun _ _ closed => ⟨_, machineTyped_load _ rootTy 5 5 closed rfl code_typed⟩
+  fun _ _ closed _ => ⟨_, machineTyped_load _ rootTy 5 5 closed rfl code_typed⟩
 
 /-- **The flip of `capstone_false`: the capstone's proposition holds at the loaded machine.** -/
 theorem capstone_at_load :
     ReachableTyped (awaitProg : ProgramSource) rootTy 5 (loadR awaitProg 5 5) :=
-  fun lawful checked closed _ => loadsTyped lawful checked closed
+  fun lawful checked closed row _ => loadsTyped lawful checked closed row
 
 end Test.Counterexamples.Machine.Semantics.AwaitLoad
 

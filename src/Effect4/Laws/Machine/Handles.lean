@@ -6436,6 +6436,41 @@ theorem storesCloseScopeUnsafe_keys (scope : Nat) (exit : ExitV) (flag : Bool)
         programKeys, primKeys, Thunk.keys, ProgName.keys]
       exact List.Subset.refl _
 
+/-- The voided lone-finalizer close (decisions row 151 (a″)) carries the finalizer's handles and
+no other: its constant continuation answers `unit`. -/
+theorem programKeys_voided (fin : FinName) (exit : ExitV) :
+    programKeys (Prim.onSuccessConst (finProgram fin exit) (Prim.success Val.unit)) =
+      programKeys (finProgram fin exit) :=
+  List.append_nil _
+
+/-- `Scope.close`'s code — void, the lone finalizer voided (decisions row 151 (a″)), or the
+generator walk (§20) — retains only its exit and the captured scope finalizers. -/
+theorem storesCloseScope_keys (scope : Nat) (exit : ExitV) (flag : Bool)
+    (s s' : Stores) (code : Program)
+    (h : storesCloseScope scope exit flag s = some (s', code)) :
+    s.le s' ∧ programKeys code ++ s'.keys ⊆ exitKeys exit ++ s.keys := by
+  unfold storesCloseScope at h
+  obtain ⟨⟨state, strategy, order⟩, hsnapshot, h⟩ := Option.bind_eq_some_iff.mp h
+  change some _ = some (s', code) at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hle, hstate, horder⟩ := scopeCloseSnapshot_keys scope exit s state strategy order hsnapshot
+  refine ⟨hle, List.append_subset.mpr ⟨?_,
+    List.Subset.trans hstate (List.append_subset.mpr
+      ⟨List.subset_append_right _ _, List.subset_append_left _ _⟩)⟩⟩
+  refine List.Subset.trans ?_ (List.append_subset.mpr
+    ⟨List.Subset.trans horder (List.subset_append_right _ _), List.subset_append_left _ _⟩)
+  cases order with
+  | nil => exact List.nil_subset _
+  | cons fin rest =>
+    cases rest with
+    | nil =>
+      simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil, programKeys_voided]
+        using finProgram_keys fin exit
+    | cons next rest =>
+      simp only [programKeys, primKeys, Thunk.keys, ProgName.keys]
+      exact List.Subset.refl _
+
 theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
   contA n v := contAOf_keys n v
   contE n c := contEOf_keys n c
@@ -6639,26 +6674,12 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       refine Ok_of_subset ?_ hok'
       sub_tac using (ScopeStore.removeFinalizer_keys s.scopes scope key)
   closeScope scope exit flag closer s s' p ids h hok := by
-    simp only [stores, storesCloseScope] at h
-    obtain ⟨r, hr, hrp⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hrp
-    obtain ⟨rfl, rfl⟩ := hrp
-    obtain ⟨hle, hkeys⟩ := storesCloseScopeUnsafe_keys scope exit flag s r.1 r.2 hr
+    simp only [stores] at h
+    obtain ⟨hle, hkeys⟩ := storesCloseScope_keys scope exit flag s s' p h
     refine ⟨hle, ?_⟩
     have hok' := Ok_mono (World.le_of_state hle) hok
     refine Ok_of_subset ?_ hok'
-    cases hp : r.2 with
-    | none =>
-      rw [hp] at hkeys
-      simp only [Option.toList_none, List.flatMap_nil, List.nil_append] at hkeys
-      simp only [Option.getD_none]
-      exact List.Subset.trans (List.append_subset.mpr ⟨List.nil_subset _, hkeys⟩)
-        (List.subset_cons_of_subset _ (List.Subset.refl _))
-    | some q =>
-      rw [hp] at hkeys
-      simp only [Option.toList_some, List.flatMap_cons, List.flatMap_nil, List.append_nil] at hkeys
-      simp only [Option.getD_some]
-      exact List.Subset.trans hkeys (List.subset_cons_of_subset _ (List.Subset.refl _))
+    exact List.Subset.trans hkeys (List.subset_cons_of_subset _ (List.Subset.refl _))
   emptyContext := rfl
   contextValue ctx := by simp only [stores, Val.keys_context]; exact List.Subset.refl _
   exitValue e mode := by

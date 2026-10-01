@@ -31,6 +31,21 @@ def StoreCert : SyncOp → Type
   | .deferredMake | .memoBuild _ _ => Ty × Ty
   | _ => PUnit
 
+/-- **A finalizer the scope registration admits** (decisions row 151 (a″)): what makes its program
+typed at rc.112's finalizer type `⟨unknown, never⟩` (`internal/effect.ts:3849`) at every later
+world, read by name, since the pre cannot mention the program judgment it is a premise of. A
+foreign finalizer's capture is typed (`CaptureTyped`: what the checker gives an
+`acquireRelease`, whose release is declared `Effect<unknown, never, R2>`, `:3973`); a `release`
+does not fail (a failing one answers a typed failure, which no `never` error column admits); a
+finalizer that closes or detaches a scope names a present one. Every other name is typed by its
+program alone. The bridge to the typing is `finalizerTyped_of_admitted` (`Typed/Assembly.lean`). -/
+def FinalizerAdmitted (root : ProgramSource) (w : World) : FinName → Prop
+  | .foreign c => CaptureTyped root w c
+  | .release _ fails => fails = false
+  | .closeChildScope scope | .closeChildOnFailure scope => ScopeLive w scope
+  | .detachFromParent parent _ => ScopeLive w parent
+  | .interruptFiber _ _ | .awaitNewChildren _ | .parkThen _ | .memoEntry _ _ | .memoDone _ _ => True
+
 /-- What each store row demands of its request (decisions row 136 for `refModify`,
 `refModifySome` and the scope rows). -/
 def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert op) : Prop :=
@@ -59,9 +74,10 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .scopeMake _ => True
   -- the named scope is live in the world's store, so the store never steps to a frontier
   -- (`syncOpStep` answering `none`, which the evaluator answers `unit`; row 139's liveness,
-  -- read through row 156's predicate)
-  | .scopeAdd scope _ | .scopeRemove scope _ | .scopeIsClosed scope | .scopeFork scope _ =>
-    ScopeLive w scope
+  -- read through row 156's predicate); a registered finalizer is admitted (decisions row 151
+  -- (a″)), so the scope store's typing types it at `⟨unknown, never⟩`
+  | .scopeAdd scope fin => ScopeLive w scope ∧ FinalizerAdmitted root w fin
+  | .scopeRemove scope _ | .scopeIsClosed scope | .scopeFork scope _ => ScopeLive w scope
   | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
   -- the looked-up layer's own checked error type (decision row 90), read through the
   -- expansion's rounds as `PointTyped` reads a node (decisions row 153 (b))
@@ -583,6 +599,22 @@ theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty 
   | release p prev ty h => exact .release p prev ty (pointTyped_mono ord h)
   | layerBuild p m scope ty h => exact .layerBuild p m scope ty (pointTyped_mono ord h)
 
+/-- A finalizer's admission is upward closed (decisions row 151 (a″)): a capture's
+environment and services by membership's transport, a scope's presence by scope persistence. -/
+theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin : FinName)
+    (h : FinalizerAdmitted root w fin) : FinalizerAdmitted root w' fin := by
+  have hPi : TableExtends w.«Π» w'.«Π» := ord.1.2.2.1
+  have hRho : TableExtends w.Ρ w'.Ρ := ord.1.2.2.2.1
+  cases fin with
+  | foreign c =>
+    obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, hsvc⟩ := h
+    exact ⟨acquire, release, env, t, a, hnode, hcheck, hacq, envTyped_mono ord henv,
+      servicesFit_map hPi hRho ord.2 (fun _ hs => scopeLive_mono ord.1 hs) (serviceTy_of_le ord.1)
+        hsvc⟩
+  | release _ _ => exact h
+  | closeChildScope _ | closeChildOnFailure _ | detachFromParent _ _ => exact scopeLive_mono ord.1 h
+  | interruptFiber _ _ | awaitNewChildren _ | parkThen _ | memoEntry _ _ | memoDone _ _ => trivial
+
 /-- Every store row's demand is upward closed (all 31 rows). -/
 theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
     (cert : StoreCert op) (h : storePre root w op cert) : storePre root w' op cert := by
@@ -619,7 +651,8 @@ theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
       obtain ⟨t, ht, sub⟩ := typed
       exact ⟨t, hRho _ _ ht, sub⟩
   | deferredMake | memoBuild _ _ | memoGet _ _ => exact h
-  | scopeAdd scope _ | scopeRemove scope _ | scopeIsClosed scope | scopeFork scope _ =>
+  | scopeAdd scope fin => exact ⟨scopeLive_mono ord.1 h.1, finalizerAdmitted_mono root ord fin h.2⟩
+  | scopeRemove scope _ | scopeIsClosed scope | scopeFork scope _ =>
     simp only [storePre] at h ⊢
     exact scopeLive_mono ord.1 h
   | clockNow | sleepCancel _ _ | scopeMake _ | memoFork _ | memoComplete _ _ _ | memoRelease _ _ =>
@@ -784,6 +817,19 @@ theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
   | layerBuild p m scope ty hp =>
     exact .layerBuild p m scope ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
 
+/-- A capture typed under the shorter source is typed under the longer one: its node is the
+same program's, and the checker's verdicts extend along an appended row table. -/
+theorem captureTyped_rows_append {w : World} {c : Capture}
+    (h : CaptureTyped src w c) : CaptureTyped src' w c := by
+  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, services⟩ := h
+  refine ⟨acquire, release, env, t, a, ?_, ?_, ?_, henv, services⟩
+  · rw [hprog]
+    exact hnode
+  · rw [hprog]
+    exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
+  · rw [hprog]
+    exact check_ext (signature_rows_append src src' t' htab hsvc) hacq
+
 theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     (h : storePre src w op cert) : storePre src' w op cert := by
   cases op with
@@ -794,6 +840,11 @@ theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
       exact hat
     · rw [hprog]
       exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+  | scopeAdd scope fin =>
+    refine ⟨h.1, ?_⟩
+    cases fin with
+    | foreign c => exact captureTyped_rows_append src src' t' hprog htab hsvc h.2
+    | _ => exact h.2
   | _ => exact h
 
 omit hprog hsvc in

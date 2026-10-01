@@ -1,0 +1,30 @@
+{
+  "scope": "pinned rc.112 source run end to end with bun; Scope.close is declared Effect<void> (Scope.ts:567)",
+  "rows": [
+    {
+      "name": "zero",
+      "tag": "Success",
+      "value": "undefined"
+    },
+    {
+      "name": "inline",
+      "tag": "Success",
+      "value": 5
+    },
+    {
+      "name": "mapOne",
+      "tag": "Success",
+      "value": 5
+    },
+    {
+      "name": "two",
+      "tag": "Success",
+      "value": "undefined"
+    },
+    {
+      "name": "loneDie",
+      "tag": "Failure",
+      "cause": "Cause([Die(\"boom\")])"
+    }
+  ]
+}

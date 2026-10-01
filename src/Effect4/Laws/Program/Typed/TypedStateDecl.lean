@@ -226,7 +226,7 @@ private def hasPositions (rows : List Row) (ps : Array Positions.Position) (edge
     for e in edges do
       if e.parent == owner then
         match rows.find? (·.1 == s!"{e.parent}.{e.field}") with
-        | some (_, .custom _) | some (_, .column _ (some _)) => return true
+        | some (_, .custom _) | some (_, .column _ (some _)) | some (_, .each _) => return true
         | some (_, .journal) | some (_, .refused _) => pure ()
         | _ => if ← hasPositions rows ps edges columnOwners fuel e.child (owner :: seen) then return true
     return false
@@ -403,6 +403,18 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
                 clauses := clauses.push (← throughWraps p.wraps term 0 fun value =>
                   `(P.$(mkIdent (Name.mkSimple kind)):ident w $ex $value))
               em := { em with accounted := em.accounted.push key }
+          -- an `each` row: its hand predicate at each child the field holds, beside the child's
+          -- own clause (it owns nothing, so the walk below still runs)
+          if let some (.each pred) := src? then
+            let edge ← match es.toList with
+              | [edge] => pure edge
+              | _ => throwError "typed state: an each source at {key} needs exactly one child edge"
+            let some childTy ← headOfChild edge.child 64 fty
+              | throwError "typed state: no child type at {key}"
+            em ← addPred em pred #[childTy]
+            clauses := clauses.push (← throughWraps edge.wraps term 0 fun value =>
+              `(P.$(mkIdent (Name.mkSimple pred)):ident w e $value))
+            em := { em with accounted := em.accounted.push key }
           for edge in es do
             if ← hasPositions rows ps edges columnOwners 64 edge.child [] then
               let ex ← match src? with
@@ -508,7 +520,7 @@ syntax (name := typedState) "#typed_state " ident+ " using " ident (" columns " 
       let key := s!"{e.parent}.{e.field}"
       match rows.find? (·.1 == key) with
       | some (_, .custom _) | some (_, .nested _) | some (_, .refused _)
-      | some (_, .column _ (some _)) =>
+      | some (_, .column _ (some _)) | some (_, .each _) =>
         unless em.accounted.contains key do
           throwError "typed state: {key} has a source but no clause was emitted"
       | _ => pure ()

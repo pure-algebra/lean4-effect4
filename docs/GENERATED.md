@@ -48,7 +48,10 @@ constructs the skeleton inside `Laws/Program/Typed/State.lean` from its roots an
 `Typed/Frames.lean`. Lake owns the dependencies and rebuilds both with the input changes.
 `make gen-typed-state` and `make check-typed-state` run the same focused build and controls;
 the normal Laws/Test roots include them. A `Source.owner` row receives the entire structure
-or every constructor argument. Its descendants are covered; a redundant row is refused.
+or every constructor argument. Its descendants are covered; a redundant row is refused. A
+`Source.each` row on a containment edge with one child type states a hand predicate at each child
+the field holds, beside the child's own clause, and covers nothing (decisions row 151 (a″): the
+scope store's registered finalizers).
 A shared nested type still needs rows where another path reaches it outside that owner.
 `TypedSources.lean` supplies the same ownership accounting to the source gate and the emitter.
 Whole-owner frame rules require a new premise for every field update. The old

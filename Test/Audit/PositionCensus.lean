@@ -29,7 +29,7 @@ open Effect4.Laws.Auto.Positions
 
 /-! ## The totality gate -/
 
-/-- info: 85 positions from 4 roots, 86 source rows
+/-- info: 85 positions from 4 roots, 88 source rows
   11	owner
   9	custom
   5	exit

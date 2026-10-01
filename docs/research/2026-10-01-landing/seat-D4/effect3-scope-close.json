@@ -1,0 +1,20 @@
+{
+  "scope": "Effect 3.21.2 (local install, comparison only)",
+  "rows": [
+    {
+      "name": "zero",
+      "tag": "Success",
+      "value": "undefined"
+    },
+    {
+      "name": "inline",
+      "tag": "Success",
+      "value": "undefined"
+    },
+    {
+      "name": "two",
+      "tag": "Success",
+      "value": "undefined"
+    }
+  ]
+}

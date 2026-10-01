@@ -182,7 +182,7 @@ Effect4.Machine.finProgram	fin_program	false	39	0	0	0	4	13	0	0	0	0	39	0	0	0	0	0	
 Effect4.Machine.ScopeStore.status	scope_store_status	false	4	0	0	0	2	2	0	0	0	0	4	0	0	0	0	0	0	0	0	2	4	0	3	0	1	0	13587973608528675412
 Effect4.Machine.ScopeStore.addFinalizer	scope_store_add_finalizer	false	8	0	0	0	3	2	0	0	0	0	8	0	0	0	0	0	0	0	0	8	14	0	4	0	1	0	1355476604413656845
 Effect4.Machine.ScopeStore.removeFinalizer	scope_store_remove_finalizer	false	4	0	0	0	2	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	8	0	3	0	1	0	10133633725205480817
-Effect4.Machine.storesCloseScope._redArg	stores_close_scope	false	8	0	0	0	3	3	0	0	0	0	8	0	0	0	0	0	0	0	0	14	10	0	5	0	1	0	7069527067913427647
+Effect4.Machine.storesCloseScope._redArg	stores_close_scope	false	13	0	1	3	5	2	0	0	0	0	13	0	0	0	0	0	0	0	0	32	20	0	7	1	1	0	1491734848211592359
 Effect4.Machine.causeImage	cause_image	false	5	0	0	0	0	1	0	0	0	0	5	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	8011377342251308461
 Effect4.Exit.restoreAfterFinalizer._at_.Effect4.Machine.contEOf.spec_0._redArg	exit__restore_after_finalizer_at_cont_eof_spec_0	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	5	3	0	2	0	1	0	8461391928508696264
 Effect4.Machine.TimerStore.clockStep._redArg	timer_store_clock_step	false	8	0	1	2	6	2	0	0	0	0	8	0	0	0	0	0	0	0	0	6	18	0	8	0	1	0	10856470555043559087
@@ -307,7 +307,7 @@ Effect4.Machine.syncOpStep._lam_1	sync_op_step__lam_1	false	2	0	0	0	1	1	0	0	0	0	
 Effect4.Machine.WakeList.register._redArg	wake_list_register	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	4	11	0	1	0	1	0	15423574983730355961
 Effect4.Scope.addExit._at_.Effect4.Machine.ScopeStore.addFinalizer.spec_0._redArg	scope_add_exit_at_scope_store_add_finalizer_spec_0	false	6	0	0	0	1	2	0	0	0	0	5	1	0	0	0	0	0	0	0	8	10	0	2	0	1	0	17590838872075173101
 Effect4.Scope.removeUnsafe._at_.Effect4.Machine.ScopeStore.removeFinalizer.spec_0._redArg	scope_remove_unsafe_at_scope_store_remove_finalizer_spec_0	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	7	4	0	1	0	1	0	17467623458711433245
-Effect4.Machine.storesCloseScopeUnsafe._redArg	stores_close_scope_unsafe	false	11	0	1	3	5	2	0	0	0	0	11	0	0	0	0	0	0	0	0	14	18	0	7	1	1	0	312252404442827136
+Effect4.Machine.scopeCloseSnapshot	scope_close_snapshot	false	8	0	0	0	4	2	0	0	0	0	8	0	0	0	0	0	0	0	0	6	18	0	5	0	1	0	16621681091917058629
 Effect4.Machine.Err.image	err_image	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	3	2	0	0	0	1	0	9601324832038609831
 Effect4.Machine.Defect.image	defect_image	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	3	2	0	0	0	1	0	17773277850345736829
 Effect4.Machine.Value.fiberIdentity	value_fiber_identity	false	6	0	0	0	0	1	0	1	0	0	5	0	1	0	0	0	0	0	0	0	5	0	0	0	1	0	2586554797438833217
@@ -392,7 +392,8 @@ _private.Effect4.Machine.Scope.0.Effect4.Scope.addState._at_.Effect4.Scope.addUn
 Effect4.ScopeState.isClosed._redArg	scope_state_is_closed	false	4	0	0	0	1	4	0	0	0	0	4	0	0	0	0	0	0	0	0	0	0	0	3	1	1	0	3664959745732171792
 Effect4.Machine.MemoWorld.lookup	memo_world_lookup	true	12	0	0	0	5	5	0	2	0	0	10	0	2	0	0	0	0	0	0	6	16	0	9	0	1	0	14333005150852015977
 _private.Effect4.Machine.Scope.0.Effect4.Scope.removeState._at_.Effect4.Scope.removeUnsafe._at_.Effect4.Machine.ScopeStore.removeFinalizer.spec_0.spec_0._redArg	scope_remove_state_at_scope_remove_unsafe_at_scope_store_remove_finalizer_spec_0_spec_0	false	4	0	0	0	2	5	0	0	0	0	4	0	0	0	0	0	0	0	0	14	5	0	5	1	1	0	9193989045507992231
-Effect4.Machine.scopeCloseSnapshot	scope_close_snapshot	false	8	0	0	0	4	2	0	0	0	0	8	0	0	0	0	0	0	0	0	6	18	0	5	0	1	0	16621681091917058629
+Effect4.Machine.ScopeStore.closeState	scope_store_close_state	false	4	0	0	0	2	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	8	0	3	0	1	0	18127294822257314243
+Effect4.Scope.closeOrder._redArg	scope_close_order	false	4	0	0	0	0	1	0	0	0	0	4	0	0	0	0	0	0	0	0	1	4	0	0	0	1	0	3886211676469319235
 Effect4.Machine.Err.image._lam_0	err_image__lam_0	false	20	0	0	0	1	4	0	4	0	0	16	0	4	0	0	0	0	0	0	8	20	0	4	0	1	0	17772231803195327672
 Effect4.Machine.ofErr	of_err	false	30	0	0	0	17	18	0	4	0	0	26	0	4	0	0	0	0	0	0	18	16	0	21	13	1	0	13917041935574356409
 Effect4.Machine.Defect.image._lam_0	defect_image__lam_0	false	23	0	0	0	2	6	0	6	0	0	16	1	6	0	0	0	0	0	0	8	18	0	7	0	1	0	18135890211472818280
@@ -473,8 +474,9 @@ List.filterTR.loop._at_.Effect4.Machine.WakeList.cancel.spec_0._redArg	list_filt
 Effect4.Scope.tableInsert._at_._private.Effect4.Machine.Scope.0.Effect4.Scope.addState._at_.Effect4.Scope.addUnsafe._at_.Effect4.Scope.addExit._at_.Effect4.Machine.ScopeStore.addFinalizer.spec_0.spec_0.spec_1.spec_2._redArg	scope_table_insert_at__private_effect4_machine_scope_0_effect4_scope_add_state_at_scope_add_unsafe_at_scope_add_exit_at_scope_store_add_finalizer_spec_0_spec_0_spec_1_spec_2	false	7	0	0	0	1	2	0	0	0	0	7	0	0	0	0	0	0	0	0	5	12	0	2	0	1	0	6068756688321179068
 List.find?._at_.Effect4.Machine.MemoWorld.mapAt.spec_0	list_find_opt_at_memo_world_map_at_spec_0	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	5	0	5	0	1	0	1917057242559643728
 Effect4.Scope.tableRemove._at_._private.Effect4.Machine.Scope.0.Effect4.Scope.removeState._at_.Effect4.Scope.removeUnsafe._at_.Effect4.Machine.ScopeStore.removeFinalizer.spec_0.spec_0.spec_1._redArg	scope_table_remove_at__private_effect4_machine_scope_0_effect4_scope_remove_state_at_scope_remove_unsafe_at_scope_store_remove_finalizer_spec_0_spec_0_spec_1	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	3	0	0	0	1	0	7154553009239751373
-Effect4.Machine.ScopeStore.closeState	scope_store_close_state	false	4	0	0	0	2	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	8	0	3	0	1	0	18127294822257314243
-Effect4.Scope.closeOrder._redArg	scope_close_order	false	4	0	0	0	0	1	0	0	0	0	4	0	0	0	0	0	0	0	0	1	4	0	0	0	1	0	3886211676469319235
+Effect4.Scope.closeState._redArg	scope_close_state	false	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	14	4	0	3	0	1	0	16473096227366124619
+Effect4.Scope.finalizers._redArg	scope_finalizers	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	1	0	1	0	1	0	10535491996878046716
+List.mapTR.loop._at_.Effect4.Scope.closeOrder.spec_0._redArg	list_map_tr_loop_at_scope_close_order_spec_0	true	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	5	0	3	0	1	0	6944759494043640446
 Effect4.Store.Image.nat._lam_0	store_image_nat__lam_0	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	1	0	0	0	1	0	12175892713762954
 Effect4.Store.Image.ofNat	store_image_of_nat	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	2	1	0	1	1	1	0	10559044151171139227
 Effect4.Store.Image.ctor1._redArg._lam_0	store_image_ctor1__red_arg__lam_0	false	4	0	0	0	1	1	0	0	0	0	3	1	0	0	0	0	0	0	0	2	5	0	1	0	1	0	3757210842780120201
@@ -534,9 +536,7 @@ List.any._at_.Effect4.Machine.WakeList.pending.spec_0._redArg	list_any_at_wake_l
 List.any._at_.Effect4.Scope.tableInsert._at_._private.Effect4.Machine.Scope.0.Effect4.Scope.addState._at_.Effect4.Scope.addUnsafe._at_.Effect4.Scope.addExit._at_.Effect4.Machine.ScopeStore.addFinalizer.spec_0.spec_0.spec_1.spec_2.spec_3._redArg	list_any_at_scope_table_insert_at__private_effect4_machine_scope_0_effect4_scope_add_state_at_scope_add_unsafe_at_scope_add_exit_at_scope_store_add_finalizer_spec_0_spec_0_spec_1_spec_2_spec_3	true	3	0	0	0	3	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	5	0	1	0	17056475779697346580
 List.mapTR.loop._at_.Effect4.Scope.tableInsert._at_._private.Effect4.Machine.Scope.0.Effect4.Scope.addState._at_.Effect4.Scope.addUnsafe._at_.Effect4.Scope.addExit._at_.Effect4.Machine.ScopeStore.addFinalizer.spec_0.spec_0.spec_1.spec_2.spec_4._redArg	list_map_tr_loop_at_scope_table_insert_at__private_effect4_machine_scope_0_effect4_scope_add_state_at_scope_add_unsafe_at_scope_add_exit_at_scope_store_add_finalizer_spec_0_spec_0_spec_1_spec_2_spec_4	true	5	0	1	2	3	2	0	0	0	0	5	0	0	0	0	0	0	0	0	3	13	0	5	0	1	0	18187560047596751945
 List.filterTR.loop._at_.Effect4.Scope.tableRemove._at_._private.Effect4.Machine.Scope.0.Effect4.Scope.removeState._at_.Effect4.Scope.removeUnsafe._at_.Effect4.Machine.ScopeStore.removeFinalizer.spec_0.spec_0.spec_1.spec_2._redArg	list_filter_tr_loop_at_scope_table_remove_at__private_effect4_machine_scope_0_effect4_scope_remove_state_at_scope_remove_unsafe_at_scope_store_remove_finalizer_spec_0_spec_0_spec_1_spec_2	true	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	5	0	1	0	14651439081562184825
-Effect4.Scope.closeState._redArg	scope_close_state	false	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	14	4	0	3	0	1	0	16473096227366124619
-Effect4.Scope.finalizers._redArg	scope_finalizers	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	1	0	1	0	1	0	10535491996878046716
-List.mapTR.loop._at_.Effect4.Scope.closeOrder.spec_0._redArg	list_map_tr_loop_at_scope_close_order_spec_0	true	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	5	0	3	0	1	0	6944759494043640446
+Effect4.ScopeState.entries._redArg	scope_state_entries	false	5	0	0	0	1	4	0	0	0	0	5	0	0	0	0	0	0	0	0	6	4	0	3	1	1	0	14214040616183070383
 Effect4.Machine.Value.annotations._redArg	value_annotations	false	9	0	0	0	0	1	0	1	0	0	8	0	1	0	0	0	0	0	0	0	9	0	0	0	1	0	9542743580282034123
 Effect4.Store.Image.option._redArg	store_image_option	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	5	4	0	0	0	1	0	11814931051240193455
 Effect4.Machine.instDecidableEqWaiter.decEq._redArg	inst_decidable_eq_waiter_dec_eq	false	4	0	0	0	5	4	0	0	0	0	3	1	0	0	0	0	0	0	0	0	8	0	8	0	1	0	15156846769008962392
@@ -569,6 +569,7 @@ Effect4.Machine.countdownPark._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Pro
 Effect4.FrameFiber.getCont._at_.Effect4.Program.exitScoped.spec_0._redArg	frame_fiber_get_cont_at_program_exit_scoped_spec_0	false	11	0	1	2	3	2	0	0	0	0	11	0	0	0	0	0	0	0	0	38	27	0	5	0	1	0	7160688537206105189
 List.mapTR.loop._at_.Effect4.Program.exitScoped.spec_1	list_map_tr_loop_at_program_exit_scoped_spec_1	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	11	8	0	2	0	1	0	11624316689068403097
 Effect4.FramePop.deliveredExit._redArg	frame_pop_delivered_exit	false	1	0	0	0	3	3	0	0	0	0	1	0	0	0	0	0	0	0	0	5	1	0	5	0	1	0	18408975761640578989
+Effect4.Machine.storesCloseScopeUnsafe._redArg	stores_close_scope_unsafe	false	11	0	1	3	5	2	0	0	0	0	11	0	0	0	0	0	0	0	0	14	18	0	7	1	1	0	312252404442827136
 Effect4.Machine.finalizerCode._redArg	finalizer_code	false	4	0	1	2	3	1	0	0	0	0	2	2	0	0	0	0	0	0	0	14	8	0	4	0	1	0	15764448396312432208
 Effect4.Machine.RunFiber.publish._at_.Effect4.Machine.exitFiber.exitStore._at_.Effect4.Machine.exitFiber._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_10.spec_15.spec_18._redArg	run_fiber_publish_at_exit_fiber_exit_store_at_exit_fiber_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_10_spec_15_spec_18	false	7	0	0	0	2	1	0	0	0	0	7	0	0	0	0	0	0	0	0	20	21	0	2	0	1	0	3943048828012119493
 List.mapTR.loop._at_.Effect4.Machine.exitFiber.exitStore._at_.Effect4.Machine.exitFiber._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_10.spec_15.spec_19._redArg	list_map_tr_loop_at_exit_fiber_exit_store_at_exit_fiber_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_10_spec_15_spec_19	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	9	10	0	2	0	1	0	10186810198002441875
@@ -579,7 +580,6 @@ Effect4.Reason.tag._redArg	reason_tag	false	3	0	0	0	1	3	0	0	0	0	3	0	0	0	0	0	0	0	
 Effect4.instDecidableEqReasonTag	inst_decidable_eq_reason_tag	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	2715974501176864896
 Effect4.Machine.instDecidableEqErr.decEq	inst_decidable_eq_err_dec_eq	false	9	0	0	0	9	15	0	0	0	0	9	0	0	0	0	0	0	0	0	0	8	0	19	4	1	0	17898446099841267611
 Effect4.Machine.instDecidableEqDefect.decEq	inst_decidable_eq_defect_dec_eq	false	20	0	0	0	9	22	0	0	0	0	20	0	0	0	0	0	0	0	0	0	4	0	24	6	1	0	14394598196627816407
-Effect4.ScopeState.entries._redArg	scope_state_entries	false	5	0	0	0	1	4	0	0	0	0	5	0	0	0	0	0	0	0	0	6	4	0	3	1	1	0	14214040616183070383
 Effect4.Machine.Value.annotations._redArg._lam_0	value_annotations__red_arg__lam_0	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	18241801881844248474
 Effect4.Machine.Value.annotations._redArg._lam_1	value_annotations__red_arg__lam_1	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	10388562444617680250
 Effect4.Store.Image.string	store_image_string	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	3	2	0	0	0	1	0	7633446746595136565

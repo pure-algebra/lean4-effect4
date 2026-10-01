@@ -437,14 +437,11 @@ theorem storesOk_closeScope {root : NativeEff} {c : List (FiberId × ExitV)} {sc
     {flag : Bool} {id : FiberId} {s s' : Stores} {p : NCode} (hs : StoresOk s)
     (h : (interpAt root c).closeScope scope ex flag id s = some (s', p)) : StoresOk s' := by
   have h' : ((storesCloseScope scope ex flag s).map fun r => (r.1, embed r.2)) = some (s', p) := h
-  unfold storesCloseScope at h'
-  cases hu : storesCloseScopeUnsafe scope ex flag s with
-  | none => rw [hu] at h'; cases h'
-  | some r =>
-    obtain ⟨st, prog⟩ := r
-    rw [hu] at h'
-    have hst : st = s' := (Prod.mk.inj (Option.some.inj h')).1
-    exact hst ▸ storesOk_closeScopeUnsafe hs hu
+  -- `Scope.close` writes the unsafe close's state (`storesCloseScope_unsafe`)
+  obtain ⟨⟨st, prog⟩, hr, hrp⟩ := Option.map_eq_some_iff.mp h'
+  obtain ⟨program, hu⟩ := storesCloseScope_unsafe hr
+  have hst : st = s' := (Prod.mk.inj hrp).1
+  exact hst ▸ storesOk_closeScopeUnsafe hs hu
 
 theorem ambientScope_eq (root : NativeEff) (c : List (FiberId × ExitV)) {f₁ : FRun} {f₂ : RFiber}
     (hf : FMeans root f₁ f₂) :

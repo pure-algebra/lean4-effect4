@@ -127,14 +127,12 @@ theorem closeScope (p : NativeEff) (table : RowTable) (scope : Nat) (exit : Exit
     (step : (interpOf p table).closeScope scope exit mask closer s = some (t, code)) :
     t.MemoIdsOk := by
   change Option.map _ (storesCloseScope scope exit mask s) = _ at step
-  unfold storesCloseScope at step
-  cases he : storesCloseScopeUnsafe scope exit mask s with
-  | none => simp only [he, Option.map_none] at step; cases step
-  | some result =>
-    rcases result with ⟨after, program⟩
-    simp only [he, Option.map_some, Option.some.injEq, Prod.mk.injEq] at step
-    obtain ⟨rfl, _⟩ := step
-    exact closeScopeUnsafe scope exit mask hs he
+  -- `Scope.close` writes the unsafe close's state (`storesCloseScope_unsafe`)
+  obtain ⟨⟨after, prog⟩, hr, hrp⟩ := Option.map_eq_some_iff.mp step
+  simp only [Prod.mk.injEq] at hrp
+  obtain ⟨rfl, _⟩ := hrp
+  obtain ⟨program, he⟩ := storesCloseScope_unsafe hr
+  exact closeScopeUnsafe scope exit mask hs he
 
 theorem syncStateAt (p : NativeEff) (table : RowTable) (completed : List (FiberId × ExitV))
     (thunk : EffThunk) {s t : Stores} {value : Val} (hs : s.MemoIdsOk)

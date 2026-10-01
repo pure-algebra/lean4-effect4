@@ -11,7 +11,8 @@ what the invariant states there (`Typed/Vocabulary.lean`). The totality gate ref
 position without a field or owner row and a row outside the census, so adding a field to any state structure
 fails the build until it is sourced here. Edge rows name a field that reaches a structure: the
 expectation a child is typed at (`nested`), a predicate over the whole field (`custom`), a
-subtree that is the journal, a subtree that is named debt. The gate reads this list as an
+predicate at each child the field holds beside the child's own clause (`each`), a subtree that is
+the journal, a subtree that is named debt. The gate reads this list as an
 expression (`Laws/Program/Typed/TypedSources.lean`), so it stays plain data.
 -/
 
@@ -52,6 +53,11 @@ def stateSources : List Row := [
   ("Effect4.Machine.Completion.ofExit.exit", .column "PromiseTable"),
   -- a closed scope's exit, at DI-94's release type `Exit<unknown, unknown>` (decisions row 140)
   ("Effect4.ScopeState.closed.exit", .custom "ScopeExitOk"),
+  -- every finalizer an open scope holds, typed at rc.112's finalizer type `Effect<unknown>`
+  -- (`internal/effect.ts:3849`, `⟨unknown, never⟩`), beside its name's own clause (a foreign
+  -- finalizer's capture): decisions row 151 (a″), the inline slot and the map's entries
+  ("Effect4.ScopeState.openInline.finalizer", .each "FinalizerOk"),
+  ("Effect4.ScopeState.openMap.entries", .each "FinalizerOk"),
   -- the journal
   ("Effect4.Machine.RunEvent.finalizerProgram.finalizer", .journal),
   ("Effect4.Machine.RunEvent.resumedWith.answer", .journal),
