@@ -7,7 +7,8 @@ stop relayed by the coordinator (no new steps: finish the item in progress, comm
 item as far as it builds and name it, run the byte-identity check, hand back), with the
 coordinator's sharpening of it. Rules: `README.md` here, `2026-10-01-landing/plan.md` §4,
 `AGENTS.md`. Worktree `/Users/pooks/Dev/lean4-effect4-seat-W2`, branch `seat/W2`, base
-`74dae8d2`; head: the commit that adds this receipt, whose parent is `21249189`.
+`74dae8d2`; head: the branch's tip, the commit that last changed this receipt (the code's last
+commit is `21249189`).
 
 Evidence words: **proved** (a kernel theorem compiled here, `#print axioms` at or below
 `[propext, Quot.sound]`), **reproduced** (a byte comparison against a fresh producer run),
