@@ -319,7 +319,8 @@ columns with the runner group regenerated in the fixed order, `dune build` and `
 green; and row 156 landed (`ScopeLive`, one predicate for scope presence at the world;
 `E4-TYPED-CE-018` repaired by the `forkAfterMake` and `makeThenClose` controls; `step_deliver`
 open and no longer refuted). The ledger: 37 open, 447 proved, 484 total. Next from this base: D1
-and D3 in parallel, J, and seat H's row-154 re-pin.
+and D3 in parallel and J. Seat H2's row-154 re-pin landed (merged `84bdf454`): the design basis is
+exact at `6b3f2c92`, and the system map's glossary sites are re-pinned there.
 
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
