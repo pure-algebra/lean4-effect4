@@ -1,18 +1,49 @@
 import Effect4.Laws.Program.Typed.Assembly
 
 /-! H2 part-one controls for shared exit exclusion and buffered race failures.
-Base value membership remains unchanged; badName and notImplemented are refused at typed
-exit boundaries, while ordinary defects, interruptions, and missingService remain admitted.
-Historical predicates below retain negative evidence and are not current admission rules. -/
+badName and notImplemented are refused at typed exit boundaries, while ordinary defects,
+interruptions, and missingService remain admitted. Since decisions row 152 the exclusion is also
+part of membership at an exit type (`Fits`' `exitOf` arm reads `ShapeFree`), so base exit
+membership refuses them too; the earlier base judgment is kept below as history over a local
+copy of its `exitOf` arm (`oldExitFits`). Historical predicates below retain negative evidence
+and are not current admission rules. -/
 set_option autoImplicit false
 namespace Test.Program.H2PartOne
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 open Effect4.Program.Typed
 abbrev W := Effect4.Program.Typed.World
 
-/-- The base membership judgment remains deliberately unchanged. -/
-theorem base_badName_still_fits (w : W) (ty : EffTy) :
-    FitsExit w ty (.failure (Cause.die .badName)) := fitsExit_of_clean w ty _ rfl
+/-- History: membership at `Exit<a, e>` before decisions row 152, a local copy of `Fits`' old
+`exitOf` arm (the components read the current `Fits`): the encoded cause's failures fit the
+error column, and nothing else is asked of it. -/
+def oldExitFits (w : W) (v : Val) (a e : Ty) : Prop :=
+  match v with
+  | Val.exitOk x => Fits w x a
+  | Value.exitErr written =>
+    match causeImage.ofVal written with
+    | some c => CauseFits (fun x => Fits w x e) c
+    | none => False
+  | _ => False
+
+/-- History (red against the current judgment): the old base membership admitted a reified
+`die badName` at every exit type. -/
+theorem old_base_badName_fits (w : W) (ty : EffTy) :
+    oldExitFits w (reifyExitVal (.failure (Cause.die .badName))) ty.answer ty.error := by
+  show (match causeImage.ofVal (causeImage.toVal (Cause.die .badName)) with
+    | some c => CauseFits (fun x => Fits w x ty.error) c
+    | none => False)
+  rw [Store.Image.ofVal_toVal]
+  exact fitsCause_of_clean w ty.error _ rfl
+
+/-- The flip (decisions row 152): base exit membership refuses `die badName` at every type. -/
+theorem base_badName_refused (w : W) (ty : EffTy) :
+    ¬ FitsExit w ty (.failure (Cause.die .badName)) := fun h =>
+  (fitsExit_failure_shape h (.die .badName .empty) (List.mem_singleton_self _)).1 rfl
+
+/-- The flip for `notImplemented`. -/
+theorem base_notImplemented_refused (w : W) (ty : EffTy) :
+    ¬ FitsExit w ty (.failure (Cause.die .notImplemented)) := fun h =>
+  (fitsExit_failure_shape h (.die .notImplemented .empty) (List.mem_singleton_self _)).2 rfl
 
 theorem clean_still_allows_badName :
     cleanExit (.failure (Cause.die .badName)) = true := rfl
@@ -72,7 +103,9 @@ theorem missingService_current_code_admitted (root : ProgramSource) (w : W) (ty 
     TypedProg root w ty (.pure (.failure (Cause.die .missingService))) :=
   TypedProg.pure (missingService_admitted_at_any_type w ty)
 
-#print axioms base_badName_still_fits
+#print axioms old_base_badName_fits
+#print axioms base_badName_refused
+#print axioms base_notImplemented_refused
 #print axioms clean_still_allows_badName
 #print axioms badName_refused
 #print axioms notImplemented_refused
@@ -149,8 +182,7 @@ structure OldRacePayload (root : ProgramSource) (w : W) (r : Effect4.Program.Typ
 theorem old_admitted (cause : CauseV) (clean : cleanExit (.failure cause) = true) :
     OldRacePayload (program : ProgramSource) world (race cause) unitTy := by
   refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · exact (fitsExit_failure_iff world unitTy cause).mp
-      (fitsExit_of_clean world unitTy cause clean)
+  · exact fitsCause_of_clean world unitTy.error cause clean
   · intro pair member; cases member
   · intro exit member; cases member
   · intro wait member; cases member
@@ -195,7 +227,7 @@ theorem new_admitted (cause : CauseV) (typed : ExitOk world unitTy (.failure cau
 theorem user_die_admitted (value : Nat) :
     RacePayload (program : ProgramSource) world (race (Cause.die (.user value))) unitTy := by
   apply new_admitted
-  refine ⟨fitsExit_of_clean world unitTy _ rfl, ?_⟩
+  apply strongExit_of_clean world unitTy _ rfl
   intro reason member
   simp only [Cause.die_reasons, List.mem_singleton] at member
   subst reason
@@ -204,7 +236,7 @@ theorem user_die_admitted (value : Nat) :
 theorem interrupt_admitted :
     RacePayload (program : ProgramSource) world (race (Cause.interrupt none)) unitTy := by
   apply new_admitted
-  refine ⟨fitsExit_of_clean world unitTy _ rfl, ?_⟩
+  apply strongExit_of_clean world unitTy _ rfl
   intro reason member
   change reason ∈ [.interrupt none .empty] at member
   rw [List.mem_singleton] at member
@@ -214,7 +246,7 @@ theorem interrupt_admitted :
 theorem missingService_admitted :
     RacePayload (program : ProgramSource) world (race (Cause.die .missingService)) unitTy := by
   apply new_admitted
-  refine ⟨fitsExit_of_clean world unitTy _ rfl, ?_⟩
+  apply strongExit_of_clean world unitTy _ rfl
   intro reason member
   simp only [Cause.die_reasons, List.mem_singleton] at member
   subst reason
@@ -231,7 +263,7 @@ theorem raceComplete_packages_buffer (cause : CauseV) :
   rw [List.append_nil]
 
 theorem last_empty_failure_typed : ExitOk world unitTy (.failure Cause.empty) :=
-  ⟨fitsExit_of_clean world unitTy _ rfl, fun _ member => nomatch member⟩
+  strongExit_of_clean world unitTy _ rfl (fun _ member => nomatch member)
 
 theorem raceComplete_publishes_badName :
     (Supervision.raceComplete (race (Cause.die .badName)).state child
@@ -297,7 +329,8 @@ theorem loop_admitted (src : ProgramSource) (w : W) :
   · exact StackAccepts.nil outer
 
 theorem input_ok (w : W) : FullExitOk w inner (.failure missing) :=
-  ⟨fitsExit_of_clean w inner missing rfl, rfl⟩
+  ⟨fitsExit_of_clean w inner missing rfl
+    (ordinary_die_shape inner .missingService (fun h => nomatch h) (fun h => nomatch h)), rfl⟩
 
 theorem provenance : InterruptProvenance saved := by
   constructor

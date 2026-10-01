@@ -80,10 +80,12 @@ def staleFail : RProgram → Bool
   | .pure (.failure c) => c.reasons.any (fun r => r.tag == ReasonTag.fail)
   | _ => false
 
-/-- An exit that is a failure with no `Fail` reason; `none` is vacuously fine. -/
+/-- An exit that is a failure carrying interruptions only, so no `Fail` reason and no defect;
+`none` is vacuously fine. (Before decisions row 152 this read `cleanExit`; a clean exit may die
+with a shape defect, which membership at an exit type now refuses.) -/
 def exitFailClean : Option ExitV → Bool
   | none => true
-  | some (.failure c) => cleanExit (.failure c)
+  | some (.failure c) => c.reasons.all fun r => r.tag == .interrupt
   | some (.success _) => false
 
 abbrev RR := ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit
@@ -402,7 +404,11 @@ theorem exitsTyped_of (m : RState) (w : W)
   rw [hex] at hc
   cases ex with
   | success v => exact Bool.noConfusion hc
-  | failure c => exact fitsExit_of_clean w t c hc
+  | failure c =>
+    have interrupts : ∀ r ∈ c.reasons, r.tag = .interrupt := fun r hr =>
+      beq_iff_eq.mp (List.all_eq_true.mp hc r hr)
+    exact fitsExit_of_clean w t c (cleanExit_of_interrupts c interrupts)
+      (noShapeDefect_of_interrupts t c interrupts)
 
 theorem exitsTyped6 : ExitsTyped (initialWorld ty) m6 := exitsTyped_of m6 _ only_root6
 theorem exitsTyped7 : ExitsTyped (initialWorld ty) m7 := exitsTyped_of m7 _ only_root7
@@ -733,8 +739,8 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
       cases hv
     · intro ex hex t _
       obtain ⟨c, rfl, interrupts⟩ := fact.exitClean ex hex
-      exact ⟨fitsExit_of_clean _ t c (cleanExit_of_interrupts c interrupts),
-        noShapeDefect_of_interrupts t c interrupts⟩
+      exact ⟨fitsExit_of_clean _ t c (cleanExit_of_interrupts c interrupts)
+        (noShapeDefect_of_interrupts t c interrupts), noShapeDefect_of_interrupts t c interrupts⟩
     · intro b hb
       rw [fact.buckets] at hb
       cases hb

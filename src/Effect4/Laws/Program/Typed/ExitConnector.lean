@@ -49,7 +49,7 @@ theorem exitHasTy_of_fitsExit (w : Typed.World) (ty : EffTy) (s : Stores) (ex : 
     rw [halloc] at hs
     exact ⟨hs, hvalid v rfl⟩
   | failure c =>
-    have hc : FitsCause w ty.error c := (fitsExit_failure_iff w ty c).mp h
+    have hc : FitsCause w ty.error c := fitsExit_failure_cause h
     exact causeFits_admits (fun x hx => by
       have hs := fits_hasTy w ty.error x hx
       rw [halloc] at hs

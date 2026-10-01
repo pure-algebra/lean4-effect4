@@ -30,16 +30,21 @@ theorem fitsExit_nat (w : W) (ty : EffTy) (n : Nat) (answer : ty.answer = .nat) 
   rw [answer]
   trivial
 
-/-- A Nat failure fits a Nat error column. -/
+/-- A Nat failure fits a Nat error column (and is shape-free, decisions row 152). -/
 theorem natErr_fits (w : W) (ty : EffTy) (n : Nat) (error : ty.error = .nat) :
     FitsExit w ty (.failure (natErr n)) := by
   rw [fitsExit_failure_iff]
-  intro r hr
-  simp only [natErr, List.mem_singleton] at hr
-  subst hr
-  refine ⟨.nat n, rfl, ?_⟩
-  rw [error]
-  trivial
+  refine ⟨?_, ?_⟩
+  · intro r hr
+    simp only [natErr, List.mem_singleton] at hr
+    subst hr
+    refine ⟨.nat n, rfl, ?_⟩
+    rw [error]
+    trivial
+  · intro r hr
+    simp only [natErr, List.mem_singleton] at hr
+    subst hr
+    trivial
 
 /-- Test adapters retain the old base membership helpers above. -/
 theorem exitOk_unit (w : W) : ExitOk w (EffTy.pure .unit) (.success .unit) :=
@@ -171,8 +176,7 @@ theorem leakyGuard_rejected (root : NativeEff) (w : W) :
   intro h
   obtain ⟨mid, body, _, skip⟩ := TypedProg.guard_inv h
   have inner := unguard_payload_inv root w mid _ _ body
-  have failed := (fitsExit_failure_iff w (EffTy.pure .nat) (natErr 7)).mp
-    (skip w (leHost_refl w) _ inner rfl).1
+  have failed := fitsExit_failure_cause (skip w (leHost_refl w) _ inner rfl).1
   obtain ⟨v, _, hv⟩ := failed (.fail (.tag 7) .empty) (List.mem_singleton_self _)
   exact hv
 

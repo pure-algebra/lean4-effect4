@@ -77,7 +77,7 @@ theorem wrong_middle (root : ProgramSource) (w : W) :
     cases tail
     cases head with
     | resume kind next run skip =>
-      have failed := (fitsExit_failure_iff w (EffTy.pure .nat) (natErr 7)).mp
+      have failed := fitsExit_failure_cause
         (skip w (leHost_refl w) (.failure (natErr 7)) (natErr_exitOk w _ 7 rfl) rfl).1
       obtain ⟨v, _, hv⟩ := failed (.fail (.tag 7) .empty) (List.mem_singleton_self _)
       exact hv

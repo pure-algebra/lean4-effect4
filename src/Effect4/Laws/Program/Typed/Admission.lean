@@ -31,6 +31,11 @@ def NoShapeDefect (_ty : EffTy) : ExitV → Prop
 def ExitOk (w : World) (ty : EffTy) (ex : ExitV) : Prop :=
   FitsExit w ty ex ∧ NoShapeDefect ty ex
 
+/-- Part one's exclusion on a failure is `ShapeFree` on its cause, the predicate membership at an
+exit type reads (decisions row 152). -/
+theorem noShapeDefect_failure_iff (ty : EffTy) (c : CauseV) :
+    NoShapeDefect ty (.failure c) ↔ ShapeFree c := Iff.rfl
+
 /-- Part one: an interrupt reason carries neither excluded defect. -/
 theorem noShapeDefect_of_interrupts (ty : EffTy) (cause : CauseV)
     (interrupts : ∀ reason ∈ cause.reasons, reason.tag = .interrupt) :
@@ -145,7 +150,7 @@ constrains only `Fail` reasons. The strengthened exit judgment separately requir
 explicit defect-exclusion premise: `cleanExit` alone admits `badName` and `notImplemented`. -/
 theorem strongExit_of_clean (w : World) (ty : EffTy) (c : CauseV)
     (h : cleanExit (.failure c) = true) (shape : NoShapeDefect ty (.failure c)) :
-    ExitOk w ty (.failure c) := ⟨fitsExit_of_clean w ty c h, shape⟩
+    ExitOk w ty (.failure c) := ⟨fitsExit_of_clean w ty c h shape, shape⟩
 
 /-- At a `never` error column a fitting failure is clean: no value has type `never`. -/
 theorem cleanExit_of_never (w : World) (ty : EffTy) (c : CauseV) (never : ty.error = .never)
