@@ -158,3 +158,23 @@ worktree. Read research notes from the main checkout by absolute path; cite `fil
 stated commit. The receipt: the one thing first; base and head; changed files; exact commands and
 results; axiom output; open obligations; what is bounded; proposed rows and lines for the
 coordinator's files.
+
+## 5. How progress is judged (added 2026-10-01, on Codex's observation)
+
+Laws landing is not the measure. Each seat's receipt reports three things, and the coordinator
+reads them before merging:
+1. **Which repeated proofs disappeared.** The hand inductions removed (Guard M1–M2), the duplicate
+   judgments retired (`Denote.ExitOk`, the one-world walk replaced rather than copied), the per-row
+   arguments replaced by one instance of a generic theorem. A landing that adds a lemma nothing
+   consumes is recorded as owed consumption, not as progress.
+2. **Which program-to-execution connection closed.** The generic handler-adequacy theorem is proved
+   (not only declared) by seat B, instantiated at least for the store rows whose posts it fixes,
+   and consumed by wave 2's `loop`/`deliver` arms; M5's denotation lemma and the eighteen command
+   proofs are the connections that count, and the ledger's open count per scope is the number.
+3. **What the eventual claim is.** M7 covers the frame machine at the empty host table on
+   answer-free tapes with observation `obs` (row 138, R1's exception); the OCaml engine stays
+   outside it until row 28 is ruled; nothing landed here becomes "verified lowering" or general
+   host safety, and every receipt says so where it states M7.
+
+The synthesis's corrections to the briefs (§4.5 of `docs/research/2026-10-01-formal-pass/synthesis.md`)
+were sent to every seat and recorded on rows 134, 136, 137, 143 and 149 before any merge.
