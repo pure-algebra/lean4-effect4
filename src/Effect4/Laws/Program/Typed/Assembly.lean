@@ -1676,14 +1676,8 @@ end Effect4.Program.Typed
 #obligation_proved Effect4.Program.Typed.M6Edits.skip := @Effect4.Program.Typed.edit_skip
 #obligation_proved Effect4.Program.Typed.M6Edits.middleware := @Effect4.Program.Typed.edit_middleware
 #obligation_proved Effect4.Program.Typed.M6Edits.reestablish := @Effect4.Program.Typed.reestablishes
-#proof_wanted Effect4.Program.Typed.M6Edits.drain
-#proof_wanted Effect4.Program.Typed.M6Edits.yield
-#proof_wanted Effect4.Program.Typed.M6Edits.interrupt
-#proof_wanted Effect4.Program.Typed.M6Edits.clockNone
 #proof_wanted Effect4.Program.Typed.M6Edits.clockSome
-#proof_wanted Effect4.Program.Typed.M6Edits.answer
-#typed_state_obligations Effect4.Program.Typed.M6Edits ceiling 6
-  using aesop (rule_sets := [Effect4.TypedState])
+-- `M6Edits`' report is at `Typed/Edits.lean`'s foot, which imports this module and proves five goals.
 #obligation_proved Effect4.Program.Typed.M3bWorld.preds_savedOk_mono :=
   @Effect4.Program.Typed.preds_savedOk_mono
 #obligation_audit Effect4.Program.Typed.M3bWorld

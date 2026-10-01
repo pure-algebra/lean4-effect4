@@ -206,16 +206,21 @@ theorem pendingWeaker_filter (l : List RPending) (t0 : Nat) :
       · rw [decide_eq_false hx]
         exact ih hp
 
-/-- **`resume` keeps `I`** at the same world: the fiber parked on the token is unparked with the
-answer code the queue types at the token's declaration (`ResumeOk`), over the stack its park typed
-there (`ActiveDelivery`). -/
-theorem resume_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (token : Nat)
-    (answer : RProgram) : StepPreserves root rootTy (.resume id token answer) := by
-  intro w m rest _ typed
-  refine ⟨w, leHost_refl w, ?_⟩
-  have tail := configTyped_tail typed
-  have payload : Contracts.ResumeOk (TypedProg root) w id token answer :=
-    typed.queue.payload _ List.mem_cons_self
+/-- **The `resume` step from a typed rest and an answer typed when it lands**: the fiber parked on
+the token is unparked with the answer code typed at the token's declaration (`ResumeOk`, needed
+only when the fiber is parked there), over the stack its park typed there (`ActiveDelivery`).
+`resume_preserves` takes the answer's typing from the queue's payload; the answer edit
+(`Edits.lean`) from the decision's admission, which types a parked fiber's answer only. -/
+theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} (tail : ConfigTyped root rootTy w m rest) {id : FiberId} {token : Nat}
+    {answer : RProgram}
+    (payload : (∃ f, m.fiber? id = some f ∧ f.parked = .withGuard token) →
+      Contracts.ResumeOk (TypedProg root) w id token answer) :
+    ConfigTyped root rootTy w
+      (letI := termEvaluatorFor root.program
+       driveStep (interpR root.program) m (.resume id token answer) rest).1
+      (letI := termEvaluatorFor root.program
+       driveStep (interpR root.program) m (.resume id token answer) rest).2 := by
   simp only [driveStep]
   cases hfound : m.fiber? id with
   | none => exact tail
@@ -231,7 +236,7 @@ theorem resume_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
         have tid : t.id = id := rfiber?_id hfound
         have hf : m.fiber? t.id = some t := by rw [tid]; exact hfound
         have hmem : t ∈ m.fibers := rfiber?_mem hf
-        have old := typed.machine.fiber hmem
+        have old := tail.machine.fiber hmem
         have idle : t.running = false := old.parkedIdle (by rw [hp]; exact fun h => nomatch h)
         have live : t.exit = none := by
           cases hx : t.exit with
@@ -243,7 +248,7 @@ theorem resume_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
         obtain ⟨tin, final, declaredToken, declaredFinal, stackOk, prov⟩ :=
           old.delivery parkedToken hp
         have answerTyped : TypedProg root w tin answer :=
-          payload tin (by rw [← tid]; exact declaredToken)
+          payload ⟨t, hfound, hp⟩ tin (by rw [← tid]; exact declaredToken)
         have shape : ∃ p0, t.pending = [p0] ∧ p0.token = parkedToken := by
           have s := old.pendingShape
           unfold Guard.PendingShape at s
@@ -332,6 +337,14 @@ theorem resume_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
         exact configTyped_cons_evaluate (configTyped_emit edited _) id
       · rw [if_neg same]
         exact tail
+
+/-- **`resume` keeps `I`** at the same world (no halting arm): `resume_step` with the answer typed
+by the queue's payload. -/
+theorem resume_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (token : Nat)
+    (answer : RProgram) : StepPreserves root rootTy (.resume id token answer) := by
+  intro w m rest _ typed
+  exact ⟨w, leHost_refl w,
+    resume_step (configTyped_tail typed) fun _ => typed.queue.payload _ List.mem_cons_self⟩
 
 end Effect4.Program.Typed
 
