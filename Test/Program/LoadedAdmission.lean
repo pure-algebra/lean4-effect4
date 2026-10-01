@@ -1,4 +1,5 @@
 import Test.Counterexamples.Machine.Semantics.TrivialPosts
+import Test.Program.H2PartOne
 
 /-!
 # Test.Program.LoadedAdmission — the census's second phase, seeded
@@ -51,7 +52,7 @@ theorem fork_admitted (w : W) :
     (BodyTyped.at_ _ _ ⟨one, [], rfl, by decide +kernel, env0 w⟩) ?_
   intro w' _ ans hpost
   obtain ⟨id, rfl, hid⟩ := hpost
-  exact TypedProg.pure ⟨_, hid, Ty.sub_refl _, Ty.sub_refl _⟩
+  exact TypedProg.pure ⟨⟨_, hid, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
 
 theorem scoped_admitted (w : W) :
     TypedProg scopedOne w (EffTy.pure .nat) (denoteR scopedOne scopedOne (rootPoint 20)) :=
@@ -105,21 +106,36 @@ def readService : NativeEff := .service natKey
 
 theorem natKey_ty : nativeServiceTy natKey = some .nat := by decide +kernel
 
-/-- The lookup is typed at the key's type for every context whose services are typed. -/
+/-- The input must actually decode as a context; the old implication
+was vacuous at malformed values and admitted badName. -/
 theorem lookup_typed (w : W) (ty : EffTy) (answer : ty.answer = .nat) (v : Val)
+    (isContext : ∃ ctx, Val.context? v = some ctx)
     (typed : ∀ ctx, Val.context? v = some ctx → ServicesFit w ctx.services) :
     TypedProg readService w ty (serviceLookupR natKey v) := by
-  unfold serviceLookupR
+  obtain ⟨ctx, hctx⟩ := isContext
+  simp only [serviceLookupR, hctx]
   split
-  · rename_i ctx hctx
-    split
-    · rename_i sv hget
-      have hfit := flatFits_fits (typed ctx hctx natKey sv .nat hget natKey_ty)
-      refine TypedProg.pure (fitsExit_success w ty sv ?_)
-      rw [answer]
-      exact hfit
-    · exact TypedProg.pure (fitsExit_of_clean w ty _ rfl)
-  · exact TypedProg.pure (fitsExit_of_clean w ty _ rfl)
+  · rename_i sv hget
+    have hfit := flatFits_fits (typed ctx hctx natKey sv .nat hget natKey_ty)
+    refine TypedProg.pure (strongExit_success w ty sv ?_)
+    rw [answer]
+    exact hfit
+  · exact TypedProg.pure (Test.Program.H2PartOne.missingService_admitted_at_any_type w ty)
+
+/-- The existing context fit supplies the finite decoder witness needed by the amended test. -/
+theorem context_of_fits (w : W) (v : Val) (typed : Fits w v (.handle Ty.contextTarget)) :
+    ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services := by
+  simp only [Effect4.Program.Typed.Fits] at typed
+  split at typed
+  · simp only [HandleFits] at typed
+    split at typed
+    · exact absurd typed.1 (by decide)
+    · exact absurd typed.1 (by decide)
+    · exact absurd typed (by decide)
+    · exact absurd typed.1 (by decide)
+    · exact typed.elim
+  · obtain ⟨_, ctx, hctx, services, _⟩ := typed
+    exact ⟨ctx, hctx, services⟩
 
 theorem service_admitted (w : W) (ty : EffTy) (answer : ty.answer = .nat) :
     TypedProg readService w ty (denoteR readService readService (rootPoint 20)) := by
@@ -127,25 +143,21 @@ theorem service_admitted (w : W) (ty : EffTy) (answer : ty.answer = .nat) :
   · refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) (Ty.handle Ty.contextTarget) rfl ?_
     intro w' _ ans hpost
-    exact TypedProg.unguard (fitsExit_success w' _ ans hpost)
+    exact TypedProg.unguard (strongExit_success w' _ ans hpost)
   · intro w' _ ex hpost
     cases ex with
     | failure c => exact Bool.noConfusion hpost.1
     | success v =>
-      have hv : Fits w' v (.handle Ty.contextTarget) := hpost.2
-      apply lookup_typed w' ty answer v
-      intro ctx hctx
-      simp only [Effect4.Program.Typed.Fits] at hv
-      split at hv
-      · exact nomatch hctx
-      · obtain ⟨_, ctx', hctx', services, _⟩ := hv
-        rw [hctx] at hctx'
-        cases hctx'
-        exact services
+      obtain ⟨ctx, hctx, services⟩ := context_of_fits w' v hpost.2.1
+      apply lookup_typed w' ty answer v ⟨ctx, hctx⟩
+      intro ctx' hctx'
+      rw [hctx] at hctx'
+      cases hctx'
+      exact services
   · intro w' _ ex hex miss
     cases ex with
     | success v => exact Bool.noConfusion miss
-    | failure c => exact fitsExit_of_clean w' ty c (cleanExit_of_never_fits w' _ c rfl hex)
+    | failure c => exact strongExit_of_clean w' ty c (cleanExit_of_never_fits w' _ c rfl hex.1) hex.2
 
 /-- A memo hit's await is typed at the layer's context: the lookup certifies the layer's own
 checked error type, and the hit's deferred is declared at the context handle and that error. -/
@@ -176,7 +188,7 @@ theorem memoAwait_typed (w : W) (m : MemoMapId) :
       exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
         (fun _ _ _ h => nomatch h) (EffTy.pure (.handle Ty.contextTarget))
         ⟨_, _, hPi, Ty.sub_refl _, Ty.sub_refl _⟩ (fun _ _ _ hpost => TypedProg.pure hpost)
-  · exact TypedProg.pure (fitsExit_of_clean w' _ _ rfl)
+  · exact TypedProg.pure (Test.Program.H2PartOne.interrupt_admitted w' _ none)
 
 #print axioms sleep_admitted
 #print axioms fork_admitted

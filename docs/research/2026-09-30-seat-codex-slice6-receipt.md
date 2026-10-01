@@ -107,6 +107,100 @@ No generated producer or runtime change. The next item is H2 part one, including
 measured consequences of H1 under the owner's continuation instruction. Nothing is pushed.
 
 
+### H2 part one — landed in the commit containing this section
+
+**The shared typed-exit judgment now excludes `badName` and `notImplemented`, including failures buffered by a race. The fresh H1 base required nine existing source-body repairs, rather than the earlier eight. This strengthens the admission contract; it does not prove that every machine run avoids those defects.** The M6 ledger remains at 20 open, 0 proved, ceiling 20. `missingService` remains admitted, including at an empty requirement row; part two has not landed.
+
+Base: `d554cd7194f54c1ed2ffd020b4dc59d573bc1c34` (committed H1). The commit containing this section is the H2 endpoint. Final proof evidence is `H2/final-axioms.log`, with 273 reports at `[propext, Quot.sound]` or less. No push.
+
+The input snapshot was read by explicit `git show` paths from that commit. It contains the five affected source modules, unchanged Membership and Guard prerequisites, the eight existing test inputs, and the specifically needed root/register/historical-probe files. No research directory was copied. Relative to the earlier checked H1 overlay, the final commit changed only an explanatory Assembly comment; the H2 measurements use the final committed bytes and retained hashes.
+
+#### Contract and placement
+
+`NoShapeDefect ty ex` retains its type-and-exit interface but excludes only the two named defects. `ExitOk w ty ex` combines base `FitsExit` membership with that exclusion. `Membership.lean`, `Fits`, `FitsExit`, and `FitsCause` are unchanged. Successful values retain their existing membership judgment. The two Scheduler value-embedding helpers, `reifyExitVal_fits` and `observerDeliveredExit_fits`, remain base membership lemmas.
+
+The mechanical candidate strengthens 72 source occurrences across Admission, Residual, Stack, Scheduler and Assembly. Scheduler contributes eleven: ten former `FitsExit` positions and the buffered failure-cause field in `RacePayload`. That last field now checks the failure exit made from the stored reasons. The finite `raceComplete` control demonstrates why the field matters: an admitted empty final-child failure can cause settlement to publish previously buffered forbidden reasons. This is a finite payload/settlement observation, not a claim of world validity, machine reachability or transition preservation.
+
+`strongExit_of_clean` requires an explicit exclusion premise: a clean cause alone still admits both forbidden defects in base membership. The stack repairs obtain exclusion from the original typed exit and recorded-interruption provenance. Seven new local source helpers cover interruption-only causes, stripping failures, combining and sanitizing causes, and the recorded/pending interruption cases. H1's halt-aware current-code condition, saved-stack condition, dispatch premise and conditional lifting adapters are retained; their existing proof bodies require no repair.
+
+#### Measured source consequences
+
+Each fresh harness contains all five affected modules, including Scheduler. Root ran the following sequence in the assigned worktree with `LEAN_NUM_THREADS=1`; each probe used `lake env lean -DwarningAsError=true` and its retained path under `after-addendum-6/H2/`.
+
+| Measurement | Result | Attribution |
+| --- | --- | --- |
+| `baseline` | Exit 0 | Exact committed H1 statements and bodies. |
+| `mechanical` | Exit 1 | 15 diagnostics in nine existing theorem bodies. |
+| `eight-only` | Exit 1 | Only `observer_exitValue_typed` remains. |
+| `repaired` first draft | Exit 1 | Branch-layout error in that same observer adapter; retained with the original draft. |
+| `repaired-2` | Exit 0 | Corrected branch layout; no additional body or statement amendment. |
+
+The nine changed existing source bodies are:
+
+- Admission: `strongExit_success`, `strongExit_of_clean`, `cleanExit_of_never`.
+- Residual: `strongExit_bool`, `settling_fork`, `strongExit_mono`.
+- Stack: `strongExit_failure_of_error`, `popR_typed`.
+- Scheduler: `observer_exitValue_typed`.
+
+The Scheduler adapter projects base membership for reification and supplies the successful-exit exclusion. The buffered-cause strengthening adds no further source-body failure. The final repaired Scheduler and harness were compared byte-for-byte with root's measured copies. Diagnostics, source-line maps, hashes and exact commands are retained separately from successful proof evidence.
+
+#### Measured test consequences
+
+The final patch changes 43 existing test bodies: the original 25 plus eighteen from H1. It changes seven existing theorem statements, adds five test adapters and adds 32 control theorems in `Test.Program.H2PartOne` (fourteen part-one controls, thirteen race-buffer controls, and five retained part-two frame facts).
+
+The three unchanged-test measurements contain 76 diagnostics in 43 distinct existing bodies. **The 43 observed bodies and the 43 changed bodies are different sets.** Forty-one overlap. The two additional observed callers, `H1TerminalAmendment.typed` and `H1TerminalAmendment.typed_queued`, need no body edit: changing the called `saved_typed` statement from the base exit relation to `ExitOk` resolves their diagnostics. Conversely, two changed bodies have no initial diagnostic: `cancel_interrupt_typed` gains the argument required by the amended `cancel_typed` statement, and `wrong_middle` follows its explicitly written stack relation from `FitsExit` to `ExitOk`.
+
+| Unchanged-test measurement | Diagnostics | Distinct existing bodies |
+| --- | --- | --- |
+| `unchanged-tests` | 40 | 30 |
+| `unchanged-dependent-tests` | 16 | 6 |
+| `unchanged-dependent-tests-2` | 20 | 7 |
+
+Import-blocked files were measured only after their dependencies were repaired; missing imports are not counted as invented body failures. The first complete candidate build found a proof-simplification issue in the already counted `lookup_typed` body. Its correction introduces no further existing-body repair. Failed-elaboration axiom prints containing `sorryAx` are retained only as diagnostics and establish no proof or trust result.
+
+The two substantive helper amendments remain explicit. `cancel_typed` requires exclusion of the two forbidden defects in the supplied cause. `lookup_typed` requires that its input actually decodes as a context; the former implication was vacuous at malformed values. These premises do not promise absence of `missingService`. The other statement changes move the named saved-stack fixtures to the shared exit judgment.
+
+The H1 falsifiers retain the earlier queue and current-code structural clauses **instantiated with current H2 admission**. They are not labeled as unchanged copies of the complete pre-H2 judgment. Exact original H1 statements and source hashes remain in the already checked research artifacts. The independently frozen `ValueMembership.Reviewed`, `ExactSpelling` and `ReviewedLoad` sections remain byte-identical. The separate field-only H2 falsifier retains its copied historical baseline; it is not silently restated over current admission. Race-buffer controls label their historical intermediate predicate and limit their conclusion to its specific missing exclusion.
+
+#### Validation
+
+All commands below ran in `/Users/pooks/Dev/lean4-effect4-slice6` with `LEAN_NUM_THREADS=1`; exact argv, logs, results and timings are retained under `docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/`.
+
+- `source-1`: `lake build Effect4.Laws.Program.Typed.Assembly` — exit 0, 379 jobs.
+- `tests-2`: `lake build Test.Program.TypedResidual Test.Counterexamples.Machine.Semantics.AsyncHookContract Test.Counterexamples.Machine.Semantics.TrivialPosts Test.Program.TypedControl Test.Program.TypedStack Test.Counterexamples.Machine.Semantics.ValueMembership Test.Counterexamples.Machine.Semantics.M6Capstone Test.Program.LoadedAdmission Test.Program.H2PartOne` — exit 0, 392 jobs.
+- `direct-dependents`: `lake build Effect4.Laws Test.Program.AdmissionCensus` — exit 0, 540 jobs. The census reports 1,349 programs reaching 48 protocol rows, with zero consumed `True` posts. This is the named admission census, not a new whole-machine theorem or runtime-coverage claim.
+- `race-buffer-controls-3`: `lake env lean -DwarningAsError=true docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/RaceFailureBuffers.lean` — exit 0. Earlier failed drafts remain retained.
+- `retained-field-only`: `lake env lean -DwarningAsError=true docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/RetainedFieldOnlyRed.lean` — exit 0.
+- `final-controls` passes with the five additional saved-frame facts; `final-axioms` reports 273 declarations at `[propext, Quot.sound]` or less. The exact command is in its `.command.json`; `trust-summary.json` lists every name and axiom set.
+- `make check-cases` passes (`cases.log`); the source/test diff has no whitespace errors. No producer is required: this changes judgments and their batteries only.
+
+The successful source and dependent builds report `M6Ledger: 20 open, 0 proved, 20 total; ceiling 20`. No ceiling is lowered and no initialization, transition or reachability proof is claimed. No M5/M6 machine proof or H2 part-two service/frame contract is added. Missing-service exclusion, operation/frame premises and their proof obligations remain separate work.
+
+#### Closed source and test paths
+
+The implementation changes exactly these five existing source files and nine test files, one of the latter new. This list excludes separately recorded receipt/evidence and register bookkeeping paths.
+
+```text
+src/Effect4/Laws/Program/Typed/Admission.lean
+src/Effect4/Laws/Program/Typed/Residual.lean
+src/Effect4/Laws/Program/Typed/Stack.lean
+src/Effect4/Laws/Program/Typed/Scheduler.lean
+src/Effect4/Laws/Program/Typed/Assembly.lean
+Test/Program/TypedResidual.lean
+Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean
+Test/Counterexamples/Machine/Semantics/TrivialPosts.lean
+Test/Program/TypedControl.lean
+Test/Program/TypedStack.lean
+Test/Counterexamples/Machine/Semantics/ValueMembership.lean
+Test/Counterexamples/Machine/Semantics/M6Capstone.lean
+Test/Program/LoadedAdmission.lean
+Test/Program/H2PartOne.lean
+```
+
+No machine runtime, base-membership source, generator or generated-output path belongs to this H2 implementation change. The latest user instruction authorizes resolving additional issues; the ninth source repair and H1 test consequences are measured and named rather than silently exempted from the earlier inventory.
+
+CE-007 is REPAIRED for the two-defect placement gap; CE-003 retains its base-membership counterexample with an updated repair column. CE-008 is SEEDED from the actual saved-loop witness in the audit, now also in H2PartOne. The full conditional missingService exclusion stays local to that counterexample. Test/All imports the new battery at the TypedControl anchor. The H1 final-source snapshot is corrected to exact committed d554cd71 bytes, with its committed-evidence record; no H1 implementation change is hidden in this commit.
+
 ## After addendum 5
 
 **The one thing first.** C is merged into `refactor/phase1-phase3` at `bc77e97f`, with

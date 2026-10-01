@@ -1,0 +1,41 @@
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/RaceFailureBuffers.lean:134:15: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.failure` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `failure`
+  [apply] `ReaderT.failure`
+  [apply] `StateT.failure`
+  [apply] `Exit.failure`
+  [apply] `Prim.failure`
+  [apply] `Lean.TraceResult.failure`
+  [apply] `FiberCore.failure`
+  [apply] `Lean.PrettyPrinter.Delaborator.failure`
+  [apply] `Lean.Server.ServerRequestResponse.failure`
+  [apply] `CodeMeans.failure`
+  [apply] `CodeMeans.below.failure`
+docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/RaceFailureBuffers.lean:134:55: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.failure` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `failure`
+  [apply] `ReaderT.failure`
+  [apply] `StateT.failure`
+  [apply] `Exit.failure`
+  [apply] `Prim.failure`
+  [apply] `Lean.TraceResult.failure`
+  [apply] `FiberCore.failure`
+  [apply] `Lean.PrettyPrinter.Delaborator.failure`
+  [apply] `Lean.Server.ServerRequestResponse.failure`
+  [apply] `CodeMeans.failure`
+  [apply] `CodeMeans.below.failure`
+'H2RaceFailureBuffers.old_admitted' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.old_badName_admitted' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.old_notImplemented_admitted' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.new_badName_refused' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.new_notImplemented_refused' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.new_admitted' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.user_die_admitted' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.interrupt_admitted' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.missingService_admitted' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.raceComplete_packages_buffer' depends on axioms: [propext, sorryAx, Quot.sound]
+'H2RaceFailureBuffers.last_empty_failure_typed' depends on axioms: [propext, Quot.sound]
+'H2RaceFailureBuffers.raceComplete_publishes_badName' depends on axioms: [propext, sorryAx, Quot.sound]
+'H2RaceFailureBuffers.raceComplete_publishes_notImplemented' depends on axioms: [propext, sorryAx, Quot.sound]

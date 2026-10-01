@@ -44,6 +44,7 @@ import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.TypedResidual
 import Test.Program.TypedControl
+import Test.Program.H2PartOne
 import Test.Program.TypedCorpus
 import Test.Program.ExitTypeLane
 import Test.Program.AdmissionCensus

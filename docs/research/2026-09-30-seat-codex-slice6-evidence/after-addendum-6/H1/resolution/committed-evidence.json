@@ -1,0 +1,4 @@
+{
+  "commit": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+  "note": "Final source hash/patch reconstructed from committed bytes; corrects register row spacing in precommit snapshot. No implementation change."
+}

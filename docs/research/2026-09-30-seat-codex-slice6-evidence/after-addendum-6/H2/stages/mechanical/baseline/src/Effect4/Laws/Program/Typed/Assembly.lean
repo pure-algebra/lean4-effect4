@@ -1,0 +1,383 @@
+import Effect4.Laws.Program.Typed.Stack
+import Effect4.Laws.Machine.Lift
+import Effect4.Laws.Program.Typed.State
+import Effect4.Laws.Program.Typed.Scheduler
+import Effect4.Laws.Program.Agreement
+import Effect4.Laws.Program.Typing.CheckInversion
+
+/-!
+# Laws.Program.Typed.Assembly — the typed state of the reference machine
+
+Slice 5's assembly (§3.5 of the brief, as amended): the generated predicate bundle `Preds`
+instantiated with the strong judgments (`preds`), the typed state (`TypedState`: validity, the
+generated whole-state predicate, and the active-delivery correlation), reachability
+(`RReachable`), admitted host answers (`AnswerOk`), and the declared obligations the milestones
+after slice 5 prove: initialization (`typedState_load`, M5) and the transition ledger, one
+preservation obligation per command constructor (M6). `capture_lookup` is proved here.
+
+H1 adds the settled scheduler guards and observer-to-token payload connections. `PendingOk`
+still receives no enclosing fiber, so `ObserverState.pendingOwner` supplies that correlation.
+`RaceOk` owns every buffered race payload and finite unlaunched program. The reference code-site
+scan remains explicitly OPEN (H1-RCODE-SITES); no continuation-wide approximation is claimed.
+All eighteen command-preservation declarations remain obligations.
+-/
+
+set_option autoImplicit false
+namespace Effect4.Program.Typed
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+open Effect4.Laws.Effects Contracts
+
+/-- The type a position is expected at: the root's and each fiber's declared type (D7). -/
+def expectOf (w : World) : Expect → Option EffTy
+  | .root => w.Γ Api.root
+  | .fiber id => w.Γ id
+  | .hook _ => none
+
+/-- A completion at an effect type: an exit strongly, a reference completion through the
+heap table. -/
+def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberId Ann → Prop
+  | .ofExit ex => FitsExit w ty ex
+  | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.sub ty.answer = true
+
+/-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
+under an environment its values fit, extended by the acquired value, and its context's
+services are typed. -/
+def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
+  ∃ (acquire release : NativeEff) (env : List Ty) (t a : EffTy),
+    Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
+    Checker.check (nativeSignature root.table) env c.path (.acquireRelease acquire release) = .ok t ∧
+    Checker.check (nativeSignature root.table) env (c.path ++ [0]) acquire = .ok a ∧
+    EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
+
+/-- The generated bundle, instantiated with the strong judgments. -/
+def preds (root : ProgramSource) : Preds World where
+  SavedOk w e x := ∀ ty, expectOf w e = some ty →
+    Contracts.SavedOk (TypedProg root) FitsExit (frameProtocols root) w ty x
+  PendingOk w _ ps := ∀ p ∈ ps, ∃ id, (w.Θ id p.token).isSome = true
+  exit w e ex := ∀ ty, expectOf w e = some ty → FitsExit w ty ex
+  ResumeOk w _ target token code := Contracts.ResumeOk (TypedProg root) w target token code
+  ServiceOk w _ ctx := ServicesFit w ctx.services
+  RaceOk w _ races := ∀ r ∈ races, ∃ resultTy, RacePayload root w r resultTy
+  PromiseTable w s := ∀ o ∈ s.deferreds.due, ∀ ty, w.Θ o.waiter o.token = some ty →
+    CompletionStrong w ty o.code
+  HeapCell w key v := ∀ ty, w.Ρ key = some ty → Fits w v ty
+  PromiseCell w key cell := ∀ a e, w.«Π» key = some (a, e) →
+    ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
+  CaptureOk w _ c := CaptureTyped root w c
+
+/-- A terminal fiber delivers the exit carried by its queued finish, or the exit already
+published on that fiber. This finite boundary does not assert that an arbitrary queue is inert. -/
+def TerminalFiber (m : RState) (commands : List RCmd) (id : FiberId) : Prop :=
+  (∃ exit, .finish id exit ∈ commands) ∨
+    ∃ fiber ∈ m.fibers, fiber.id = id ∧ fiber.exit.isSome = true
+
+/-- The generated saved position retains its identity while its current code becomes inert. -/
+def TerminalPosition (m : RState) (commands : List RCmd) : Expect → Prop
+  | .root => TerminalFiber m commands Api.root
+  | .fiber id => TerminalFiber m commands id
+  | .hook _ => False
+
+/-- Current code is inert after a machine halt, while its finish is queued, or after its exit
+has been published. Halting does not require an empty queue: some native halt paths retain it.
+The executable command loop checks halt before dispatch; raw `driveStep` requires its explicit
+not-halted premise in `StepPreserves`. -/
+def CodeInert (m : RState) (commands : List RCmd) (position : Expect) : Prop :=
+  m.stuck.isSome = true ∨ TerminalPosition m commands position
+
+/-- Only the current-code premise is conditional. The stack still composes to the declared
+fiber type, and interrupt provenance is required even when current code is inert. -/
+def SavedPosition (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd)
+    (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
+  ∃ tin, (¬ CodeInert m commands position → TypedProg root w tin saved.current) ∧
+    StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final saved.stack ∧
+    InterruptProvenance saved
+
+/-- All generated data clauses are unchanged. Only saved current code is conditional on
+`CodeInert`; queued exit typing is still the unchanged `preds.exit` in `RCmdOk`. -/
+def statePreds (root : ProgramSource) (m : RState) (commands : List RCmd) : Preds World :=
+  { preds root with
+    SavedOk := fun w position saved => ∀ ty, expectOf w position = some ty →
+      SavedPosition root w m commands position ty saved }
+
+/-- A fully typed saved frame also satisfies the conditional current-code clause. -/
+theorem savedPosition_of_saved (root : ProgramSource) (w : World) (m : RState)
+    (commands : List RCmd) (position : Expect) (final : EffTy) (saved : RSaved)
+    (typed : Contracts.SavedOk (TypedProg root) FitsExit (frameProtocols root) w final saved) :
+    SavedPosition root w m commands position final saved := by
+  obtain ⟨tin, code, stack, provenance⟩ := typed
+  exact ⟨tin, fun _ => code, stack, provenance⟩
+
+/-- The active park and saved stack agree on what the declared token delivers. -/
+def ActiveDelivery (root : ProgramSource) (w : World) (m : RState) : Prop :=
+  ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token →
+    ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
+      StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final f.frame.stack ∧
+      InterruptProvenance f.frame
+
+/-- World validity, every generated typed position, active delivery, the settled native guard
+conditions, and the exact observer/pending correlations. Internal key bounds live here so every
+StepPreserves input/output carries them. Its explicit queue controls the saved current-code
+clause; the empty queue remains the initialization and completed-run interface. Arbitrary queues
+are still admitted by their own fact, including generated typing for every carried finish.
+H1-RCODE-SITES is an explicit remaining condition, not an established invariant. -/
+def TypedState (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
+    (commands : List RCmd := []) : Prop :=
+  WorldValid rootTy w m ∧ RStateOk (statePreds root m commands) w m ∧
+    ActiveDelivery root w m ∧ SchedulerState m ∧ ObserverState root w m ∧ RegistrationState root w m
+
+/-- PendingOk supplies a declaration; WorldValid bounds all declarations. -/
+theorem pending_below (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
+    (commands : List RCmd) (typed : TypedState root rootTy w m commands) (f : RFiber) (hf : f ∈ m.fibers)
+    (p : Pending EffName Val Err Defect FiberId Ann) (hp : p ∈ f.pending) :
+    p.token < m.nextToken := by
+  obtain ⟨id, declared⟩ := (typed.2.1.c0 f hf).c1 p hp
+  cases h : w.Θ id p.token with
+  | none => rw [h] at declared; cases declared
+  | some tokenTy => exact typed.1.tokenBound id p.token tokenTy h
+
+/-- M6's reference runner has no host table, so its tapes contain no host answer.
+Clock advances, dispatcher decisions and interrupts remain in scope (row 95). -/
+def NoHostAnswer : Api.Decision → Prop
+  | .answerAsync _ _ _ => False
+  | _ => True
+
+/-- A state a tape with no host answer reaches from the loaded program. -/
+def RReachable (root : ProgramSource) (fuel : Nat) (m : RState) : Prop :=
+  ∃ tape, (∀ d ∈ tape, NoHostAnswer d) ∧ m = (replayR root.program fuel tape).machine
+
+/-- A host answer is admitted: an answer to a fiber parked at that token fits the token's
+declared type. Answers to anything else run inertly and impose nothing. -/
+def AnswerOk (w : World) (m : RState) : Api.Decision → Prop
+  | .answerAsync target token answer =>
+    (∃ f, m.fiber? target = some f ∧ f.parked = .withGuard token) →
+      ∃ ty, w.Θ target token = some ty ∧ CompletionStrong w ty answer
+  | _ => True
+
+/-- Every queued command's generated content judgment, scheduler authority and keys, plus
+observer and enrollment payload correlation. H1-RCODE-SITES remains OPEN for resume code:
+there is intentionally no field claiming an unimplemented recursive reference scan. The direct
+forbidden afterInterrupt race form is recorded separately and exactly. -/
+structure QueueOk (root : ProgramSource) (w : World) (m : RState)
+    (commands : List RCmd) : Prop where
+  payload : ∀ command ∈ commands, RCmdOk (preds root) w command
+  authority : ∀ command ∈ commands, CommandAuthorityR m command
+  delivery : ∀ command ∈ commands, CommandDeliveryOk root w m command
+  owners : (commands.filterMap (Guard.commandOwner m)).Nodup
+  registration : Guard.RegistrationQueue.RegistrationQueue commands
+  keys : ReservedKeysR m (commands.flatMap Guard.commandKeys)
+  observer : ∀ source exit observer, .observe source exit observer ∈ commands →
+    ObserverCommandOk root w m source exit observer
+  enroll : ∀ race child, .enrollRace race child ∈ commands → EnrollRaceOk root w m race child
+  noRaceAfterInterrupt : ∀ host yielding race,
+    .afterInterrupt host yielding (.race race) ∉ commands
+
+theorem QueueOk.fresh {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
+    (queue : QueueOk root w m commands) : QueueFresh m commands := queue.keys.below
+
+/-- One dispatched command keeps the typed state and queue typed at some later world.
+The exact `m.stuck = none` dispatch premise is shared with `Machine.Lift.StepKeeps` and
+`driveState`; it does not assert reachability or constrain the pending suffix. -/
+def StepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop :=
+  ∀ w m rest, m.stuck = none → TypedState root rootTy w m (cmd :: rest) →
+    QueueOk root w m (cmd :: rest) →
+    let r := (letI := termEvaluatorFor root.program
+              driveStep (interpR root.program) m cmd rest)
+    ∃ w', w.leHost w' ∧ TypedState root rootTy w' r.1 r.2 ∧ QueueOk root w' r.1 r.2
+
+/-- The eighteen command facts, once proved, provide exactly the existing generic loop
+premise. This adapter proves no individual command fact and requires no reachability premise. -/
+theorem stepKeeps_of_stepPreserves (root : ProgramSource) (rootTy : EffTy)
+    (steps : ∀ command, StepPreserves root rootTy command) :
+    letI := termEvaluatorFor root.program
+    Machine.Lift.StepKeeps hostOrder (interpR root.program)
+      (fun w m commands => TypedState root rootTy w m commands ∧ QueueOk root w m commands) := by
+  letI := termEvaluatorFor root.program
+  intro w m command rest running typed
+  exact steps command w m rest running typed.1 typed.2
+
+/-- Conditional assembly lift through the actual command loop, including its halt boundary.
+All eighteen `StepPreserves` facts remain hypotheses, not discharged obligations. -/
+theorem driveState_typed_of_stepPreserves (root : ProgramSource) (rootTy : EffTy)
+    (steps : ∀ command, StepPreserves root rootTy command)
+    (fuel : Nat) (w : World) (m : RState) (commands : List RCmd)
+    (typed : TypedState root rootTy w m commands) (queue : QueueOk root w m commands) :
+    letI := termEvaluatorFor root.program
+    let result := driveState (interpR root.program) fuel m commands
+    ∃ w', w.leHost w' ∧ TypedState root rootTy w' result.1 result.2 ∧
+      QueueOk root w' result.1 result.2 := by
+  letI := termEvaluatorFor root.program
+  exact Machine.Lift.driveState_lift hostOrder (interpR root.program)
+    (fun w m commands => TypedState root rootTy w m commands ∧ QueueOk root w m commands)
+    (stepKeeps_of_stepPreserves root rootTy steps) fuel w m commands ⟨typed, queue⟩
+
+/-! ## The capture lookup -/
+
+theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} {v : Val}
+    (h : EnvTyped w env vals) (hv : Fits w v ty) : EnvTyped w (env ++ [ty]) (vals ++ [v]) := by
+  refine ⟨by simp only [List.length_append, h.1, List.length_singleton], fun i t x ht hx => ?_⟩
+  by_cases hi : i < env.length
+  · rw [List.getElem?_append_left hi] at ht
+    rw [List.getElem?_append_left (h.1 ▸ hi)] at hx
+    exact h.2 i t x ht hx
+  · have hge : env.length ≤ i := Nat.le_of_not_lt hi
+    rw [List.getElem?_append_right hge] at ht
+    rw [List.getElem?_append_right (h.1 ▸ hge)] at hx
+    rw [← h.1] at hx
+    cases hk : i - env.length with
+    | zero =>
+      rw [hk] at ht hx
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at ht hx
+      subst ht hx
+      exact hv
+    | succ k =>
+      rw [hk] at ht
+      simp only [List.getElem?_cons_succ, List.getElem?_nil] at ht
+      cases ht
+
+/-- A capture's release runs at the point its path's `acquireRelease` checks it at: the
+release child, over the checker's environment extended by the acquired value and the exit. -/
+theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
+    (completed : List (FiberId × ExitV)) (exVal : Val) (h : CaptureTyped root w c)
+    (hex : Fits w exVal (.exitOf .unknown .unknown)) :
+    ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty := by
+  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _⟩ := h
+  obtain ⟨a', r, hacq', hrel, _, _⟩ := Checker.inv_acquireRelease _ _ _ _ _ t hcheck
+  rw [hacq] at hacq'
+  cases hacq'
+  refine ⟨r, release, env ++ [a.answer, .exitOf .unknown .unknown], ?_, hrel, ?_⟩
+  · show Node.at_ (.eff root.program) (c.path ++ [1]) = some (.eff release)
+    rw [Agreement.Node.at_append, hnode]
+    rfl
+  · show EnvTyped w (env ++ [a.answer, .exitOf .unknown .unknown]) (c.env ++ [exVal])
+    have := envTyped_append henv hex
+    simpa only [List.append_assoc, List.singleton_append] using this
+
+/-! ## Declared obligations
+
+`typedState_load` (M5: initialization from an admitted source). The transition ledger (M6): one
+preservation obligation per command constructor, one for a tape decision under admitted host
+answers, and the capstone that every reachable state is typed. Declared, not proved. -/
+namespace M3bAssembly
+
+theorem typedState_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) :
+    ProofGraph.Obligation (Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
+      ∃ w, TypedState root rootTy w (loadR root.program fuel compileFuel)) := ⟨⟩
+
+theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
+    (completed : List (FiberId × ExitV)) (exVal : Val) (_h : CaptureTyped root w c)
+    (_hex : Fits w exVal (.exitOf .unknown .unknown)) : ProofGraph.Obligation
+    (∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty) := ⟨⟩
+
+end M3bAssembly
+
+namespace M6Ledger
+
+theorem step_evaluate (root : ProgramSource) (rootTy : EffTy) (id : FiberId) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.evaluate id)) := ⟨⟩
+
+theorem step_loop (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.loop id yielding)) := ⟨⟩
+
+theorem step_deliver (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.deliver id yielding)) := ⟨⟩
+
+theorem step_finish (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (exit : ExitV) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.finish id exit)) := ⟨⟩
+
+theorem step_resume (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (token : Nat) (code : RProgram) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.resume id token code)) := ⟨⟩
+
+theorem step_launch (root : ProgramSource) (rootTy : EffTy) (race : Nat) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.launch race)) := ⟨⟩
+
+theorem step_enrollRace (root : ProgramSource) (rootTy : EffTy) (race : Nat) (child : FiberId) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.enrollRace race child)) := ⟨⟩
+
+theorem step_registrationDone (root : ProgramSource) (rootTy : EffTy) (race : Nat) (yielding : Bool) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.registrationDone race yielding)) := ⟨⟩
+
+theorem step_interruptTarget (root : ProgramSource) (rootTy : EffTy) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.interruptTarget target who extra)) := ⟨⟩
+
+theorem step_afterInterrupt (root : ProgramSource) (rootTy : EffTy) (host : FiberId) (yielding : Bool) (kind : ParkKind) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.afterInterrupt host yielding kind)) := ⟨⟩
+
+theorem step_raceCancel (root : ProgramSource) (rootTy : EffTy) (race : Nat) (host : FiberId)
+    (yielding : Bool) (remaining visited : List FiberId) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.raceCancel race host yielding remaining visited)) := ⟨⟩
+
+theorem step_trackChild (root : ProgramSource) (rootTy : EffTy) (parent child : FiberId) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.trackChild parent child)) := ⟨⟩
+
+theorem step_observe (root : ProgramSource) (rootTy : EffTy) (fiber : FiberId) (exit : ExitV) (observer : Observer) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.observe fiber exit observer)) := ⟨⟩
+
+theorem step_exitDone (root : ProgramSource) (rootTy : EffTy) (fiber : FiberId) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.exitDone fiber)) := ⟨⟩
+
+theorem step_closeParAwait (root : ProgramSource) (rootTy : EffTy) (host : FiberId) (yielding : Bool) (fibers : List FiberId) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.closeParAwait host yielding fibers)) := ⟨⟩
+
+theorem step_link (root : ProgramSource) (rootTy : EffTy) (mode : Supervision.ScopeMode) (scope : Nat)
+    (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.link mode scope target interruptor extra)) := ⟨⟩
+
+theorem step_drainDue (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (StepPreserves root rootTy .drainDue) := ⟨⟩
+
+theorem step_wake (root : ProgramSource) (rootTy : EffTy) (list : WakeKey) (phase : WakePhase) :
+    ProofGraph.Obligation (StepPreserves root rootTy (.wake list phase)) := ⟨⟩
+
+/-- A tape decision keeps the typed state when its host answer, if any, is admitted. -/
+theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.Decision) :
+    ProofGraph.Obligation (∀ w m, TypedState root rootTy w m → AnswerOk w m d →
+      ∃ w', w.leHost w' ∧ TypedState root rootTy w'
+        (letI := termEvaluatorFor root.program
+         stepDecisionState (interpR root.program) fuel m d).1) := ⟨⟩
+
+/-- The capstone obligation: every state a tape with no host answer reaches from a
+checked, closed source is typed. This restriction repairs `E4-SCHED-CE-015` for host answers
+only. The statement remains refuted on programs with no host by `E4-PROV-CE-005`,
+`E4-PROV-CE-006` and `E4-SCHED-CE-016`. The table-based Fits judgment repairs the
+liveness obstruction E4-TYPED-CE-004; the general M5 initialization proof is still open.
+
+M6 does not yet claim that a run never dies with `badName`, `notImplemented`, or
+`missingService` when nothing is required. Row 107 and brief item H2 require that exclusion
+in the exit judgment read by code, saved stacks, queued results and stored completions;
+a check on finished fibers alone is insufficient (`E4-TYPED-CE-007`). Keep this disclaimer
+until that repair lands, retaining any part that remains open. -/
+theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
+    ProofGraph.Obligation (Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
+      RReachable root fuel m → ∃ w, TypedState root rootTy w m) := ⟨⟩
+
+end M6Ledger
+
+end Effect4.Program.Typed
+
+#obligation_proved Effect4.Program.Typed.M3bAssembly.capture_lookup :=
+  @Effect4.Program.Typed.capture_lookup
+#proof_wanted Effect4.Program.Typed.M3bAssembly.typedState_load
+#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 1
+  using aesop (rule_sets := [Effect4.TypedState])
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_evaluate
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_finish
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_resume
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_launch
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_enrollRace
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_registrationDone
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_interruptTarget
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_afterInterrupt
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_raceCancel
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_trackChild
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_observe
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_exitDone
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_closeParAwait
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_link
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_drainDue
+#proof_wanted Effect4.Program.Typed.M6Ledger.step_wake
+#proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves
+#proof_wanted Effect4.Program.Typed.M6Ledger.typedState_reachable
+#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 20
+  using aesop (rule_sets := [Effect4.TypedState])

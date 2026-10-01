@@ -1,0 +1,72 @@
+--- a/Test/Program/H2PartOne.lean
++++ b/Test/Program/H2PartOne.lean
+@@ -258,4 +258,69 @@
+ #print axioms raceComplete_publishes_notImplemented
+ end RaceFailureBuffers
+ 
++
++/-! E4-TYPED-CE-008: retained part-two saved-frame witness from the model-probe audit.
++The local FullExitOk additionally refuses missingService at an empty requirement row.
++The accepted loop stack returns that failure unchanged across different requirement rows.
++This is a saved-frame witness, not a reachable-run claim or a refutation of base FitsExit;
++part one's live ExitOk deliberately admits missingService at both rows. -/
++namespace MissingServiceTransport
++open Effect4.Program.Typed.Contracts
++
++/-- The proposed full exclusion, retained here only to expose its transport obligation. -/
++def fullForbidden (ty : EffTy) : Reason Err Defect FiberId Ann → Bool
++  | .die defect _ => defect == .badName || defect == .notImplemented ||
++      (defect == .missingService && ty.requires == Env.Requirement.empty)
++  | _ => false
++
++def FullNoShapeDefect (ty : EffTy) : ExitV → Prop
++  | .success _ => True
++  | .failure cause => cause.reasons.any (fullForbidden ty) = false
++
++def FullExitOk (w : W) (ty : EffTy) (ex : ExitV) : Prop :=
++  FitsExit w ty ex ∧ FullNoShapeDefect ty ex
++
++def inner : EffTy := ⟨.never, .never, Env.Requirement.single nativeScopeKey⟩
++def outer : EffTy := EffTy.pure .unit
++def missing : CauseV := Cause.die .missingService
++def name : EffName := .abort
++def saved : RSaved := ⟨.pure (.success .unit), [], false, none, false⟩
++
++/-- The answer-never loop meets the actual frame protocol, whose continuation is vacuous. -/
++theorem loop_admitted (src : ProgramSource) (w : W) :
++    StackAccepts (TypedProg src) FullExitOk (frameProtocols src) w inner outer
++      [.loop name .unit] := by
++  apply StackAccepts.cons (middle := outer)
++  · apply FrameAccepts.loop
++    exact LoopProtocol.step (tin := inner) (tout := outer) rfl (fun _ h => False.elim h)
++  · exact StackAccepts.nil outer
++
++theorem input_ok (w : W) : FullExitOk w inner (.failure missing) :=
++  ⟨fitsExit_of_clean w inner missing rfl, rfl⟩
++
++theorem provenance : InterruptProvenance saved := by
++  constructor
++  · intro c h
++    cases h
++  · intro h
++    cases h
++
++/-- The actual stack walk passes the failure through the loop without changing it. -/
++theorem output_eq (interp : RInterp) :
++    (popR interp (.failure missing) [.loop name .unit] saved).2 =
++      some (.failure missing) := rfl
++
++theorem output_bad (w : W) : ¬ FullExitOk w outer (.failure missing) := by
++  intro typed
++  have excluded := typed.2
++  change true = false at excluded
++  exact Bool.noConfusion excluded
++
++#print axioms loop_admitted
++#print axioms input_ok
++#print axioms provenance
++#print axioms output_eq
++#print axioms output_bad
++end MissingServiceTransport
++
+ end Test.Program.H2PartOne

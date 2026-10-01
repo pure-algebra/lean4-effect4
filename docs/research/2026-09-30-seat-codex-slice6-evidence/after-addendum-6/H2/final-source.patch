@@ -1,0 +1,1791 @@
+diff --git a/Test/All.lean b/Test/All.lean
+index bbd30b7a..01b80d76 100644
+--- a/Test/All.lean
++++ b/Test/All.lean
+@@ -44,6 +44,7 @@ import Test.Program.TypedWorldValidity
+ import Test.Program.ProtocolCertificates
+ import Test.Program.TypedResidual
+ import Test.Program.TypedControl
++import Test.Program.H2PartOne
+ import Test.Program.TypedCorpus
+ import Test.Program.ExitTypeLane
+ import Test.Program.AdmissionCensus
+diff --git a/Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean b/Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean
+index da17e850..121f7b84 100644
+--- a/Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean
++++ b/Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean
+@@ -65,9 +65,9 @@ theorem cancellation_exit (root : NativeEff) (w : W) (ty : EffTy) (cause : Cause
+     FitsExit w ty (.failure cause) := by
+   obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv h
+   obtain ⟨_, _, next⟩ := TypedProg.store_inv body
+-  have unit : FitsExit w mid (.success .unit) :=
++  have unit : ExitOk w mid (.success .unit) :=
+     unguard_payload_inv root w mid _ _ (next w (leHost_refl w) .unit rfl)
+-  exact TypedProg.pure_inv (run w (leHost_refl w) (.success .unit) ⟨rfl, unit⟩)
++  exact (TypedProg.pure_inv (run w (leHost_refl w) (.success .unit) ⟨rfl, unit⟩)).1
+ 
+ theorem cancellation_cannot_type (root : NativeEff) (w : W) :
+     ¬ TypedProg root w (EffTy.pure .unit)
+@@ -87,7 +87,7 @@ def ReviewedSleepStack (w : W) : Prop :=
+ theorem sleep_stack_rejected (w : W) : ¬ ReviewedSleepStack w := by
+   rintro ⟨tin, middle, hook, answer⟩
+   have ex := cancellation_exit sleeping w middle poisonedCause (hook.2 poisonedCause rfl)
+-  exact does_not_fit w (TypedProg.pure_inv (answer (.failure poisonedCause) ex))
++  exact does_not_fit w (TypedProg.pure_inv (answer (.failure poisonedCause) ex)).1
+ 
+ /-! ## CE-011 and CE-012 against the M3a judgment -/
+ 
+diff --git a/Test/Counterexamples/Machine/Semantics/M6Capstone.lean b/Test/Counterexamples/Machine/Semantics/M6Capstone.lean
+index 1cd15e63..351ccb4c 100644
+--- a/Test/Counterexamples/Machine/Semantics/M6Capstone.lean
++++ b/Test/Counterexamples/Machine/Semantics/M6Capstone.lean
+@@ -39,11 +39,9 @@ theorem bad_not_typed (w : Typed.World) :
+   intro h
+   obtain ⟨f, hf, hid, hex⟩ := bad_has_bad_exit
+   have he := (h.2.1.c0 f hf).c3 _ hex
+-  change ∀ ty, w.Γ f.id = some ty → FitsExit w ty (.success (.nat 42)) at he
++  change ∀ ty, w.Γ f.id = some ty → ExitOk w ty (.success (.nat 42)) at he
+   apply bad_exit_not_typed w
+-  apply he (EffTy.pure .unit)
+-  rw [hid]
+-  exact h.1.root
++  exact (he (EffTy.pure .unit) (by rw [hid]; exact h.1.root)).1
+ 
+ -- The exact current capstone, specialized to this program and reached machine.
+ -- This refutes an open target; no accepted theorem is contradicted.
+@@ -84,7 +82,10 @@ theorem timed_reachable : RReachable (sleeper : ProgramSource) 80 timed :=
+ #print axioms badTape_rejected
+ #print axioms timerTape_answerFree
+ #print axioms timed_reachable
+-/-! H1: precise historical falsifiers and controls for the strengthened statements. -/
++/-! H1: earlier queue and current-code clauses, instantiated with current H2 admission.
++These witnesses refute the former structural clauses even with the two-defect exclusion.
++They do not freeze the complete pre-H2 judgment. The exact original checked statements
++and source hashes remain in the H1 research evidence beside the slice6 receipt. -/
+ namespace H1
+ open Effect4.Program.Denote
+ 
+@@ -105,7 +106,7 @@ def finished : RState :=
+ theorem loaded_code (w : W) : TypedProg (program : ProgramSource) w ty
+     (denoteR program program (rootPoint 20)) := by
+   change TypedProg (program : ProgramSource) w ty (.pure (.success .unit))
+-  exact TypedProg.pure trivial
++  exact TypedProg.pure ⟨trivial, trivial⟩
+ 
+ -- This local builder checks every clause; it does not assume initialization.
+ theorem typed_loaded_at (p : NativeEff) (resultTy : EffTy) (fuel compileFuel : Nat)
+@@ -184,8 +185,9 @@ theorem loaded_sleep80_typed :
+     ∃ w, TypedState (sleeper : ProgramSource) (EffTy.pure .unit) w (loadR sleeper 80 80) :=
+   typed_loaded_at sleeper (EffTy.pure .unit) 80 80 ⟨rfl, rfl⟩ rfl loaded_sleep80_code
+ 
+-/-- Freeze the pre-H1 state and queue clauses after E's Fits migration. These are historical
+-statements solely for falsifiers, with the old race slot explicitly retained. -/
++/-- Retain the pre-H1 race-table slot; other slots use current H2 admission and ExitOk.
++The state and queue shapes below are the former structural clauses, not a second frozen
++copy of the old admission graph. -/
+ def reviewedPreds (root : ProgramSource) : Preds W :=
+   { preds root with RaceOk := fun w _ races => ∀ race ∈ races,
+       (w.Θ race.host race.token).isSome = true }
+@@ -284,9 +286,9 @@ theorem finished_untyped (w : W) :
+   intro typed
+   obtain ⟨f, hf, hid, hex⟩ := bad_finished
+   have he := (typed.2.1.c0 f hf).c3 _ hex
+-  change ∀ resultTy, w.Γ f.id = some resultTy → FitsExit w resultTy (.success (.nat 42)) at he
++  change ∀ resultTy, w.Γ f.id = some resultTy → ExitOk w resultTy (.success (.nat 42)) at he
+   have hs := he ty (by rw [hid]; exact typed.1.root)
+-  exact hs
++  exact hs.1
+ 
+ /-- Halting makes current code inert, never an incorrectly typed published exit. -/
+ theorem halted_bad_exit_rejected (w : W) :
+@@ -294,8 +296,8 @@ theorem halted_bad_exit_rejected (w : W) :
+   intro typed
+   obtain ⟨f, member, id, exit⟩ := bad_finished
+   have value := (typed.2.1.c0 f member).c3 _ exit
+-  change ∀ resultTy, w.Γ f.id = some resultTy → FitsExit w resultTy (.success (.nat 42)) at value
+-  exact value ty (by rw [id]; exact typed.1.root)
++  change ∀ resultTy, w.Γ f.id = some resultTy → ExitOk w resultTy (.success (.nat 42)) at value
++  exact (value ty (by rw [id]; exact typed.1.root)).1
+ 
+ #print axioms load_code_live
+ #print axioms reviewed_loaded_at
+@@ -320,7 +322,7 @@ theorem proposed_step_finish_false :
+ theorem bad_generated_command_rejected (w : W) (valid : WorldValid ty w m0) :
+     ¬ RCmdOk (preds (program : ProgramSource)) w badFinish := by
+   intro payload
+-  exact payload ty valid.root
++  exact (payload ty valid.root).1
+ 
+ theorem bad_finish_rejected (w : W) (valid : WorldValid ty w m0) :
+     ¬ QueueOk (program : ProgramSource) w m0 [badFinish] := by
+@@ -360,12 +362,12 @@ theorem bad_observe_rejected :
+ theorem join_delivery_typed (w : W) :
+     TypedProg (program : ProgramSource) w ty
+       ((interpR program).exitValue (.success .unit) .joinEffect) :=
+-  observer_exitValue_typed (program : ProgramSource) w ty (.success .unit) .joinEffect trivial
++  observer_exitValue_typed (program : ProgramSource) w ty (.success .unit) .joinEffect ⟨trivial, trivial⟩
+ 
+ theorem await_delivery_typed (w : W) :
+     TypedProg (program : ProgramSource) w (EffTy.pure (.exitOf .unit .never))
+       ((interpR program).exitValue (.success .unit) .awaitValue) :=
+-  observer_exitValue_typed (program : ProgramSource) w ty (.success .unit) .awaitValue trivial
++  observer_exitValue_typed (program : ProgramSource) w ty (.success .unit) .awaitValue ⟨trivial, trivial⟩
+ 
+ #print axioms loaded_typed
+ #print axioms loaded_sleep_typed
+@@ -534,8 +536,10 @@ theorem afterInterrupt_unit_stack_green :
+ 
+ end H1
+ 
+-/-! Frozen addendum-3 observer falsifier. The free noRace parameter belongs only to this
+-historical statement; the repaired production predicate does not pretend it is an exact scan. -/
++/-! The former addendum-3 observer queue structure, instantiated with current H2 admission.
++The free noRace parameter belongs only to this retained structural claim; the repaired
++production predicate does not pretend it is an exact scan. The exact pre-H2 statement remains
++in the original checked H1 evidence. -/
+ namespace OldObserve
+ abbrev W := Effect4.Program.Typed.World
+ 
+@@ -636,7 +640,7 @@ def result : RState × List RCmd :=
+ theorem loaded_code (w : W) : TypedProg (program : ProgramSource) w ty
+     (denoteR program program (rootPoint 20)) := by
+   change TypedProg (program : ProgramSource) w ty (.pure (.success .unit))
+-  exact TypedProg.pure trivial
++  exact TypedProg.pure ⟨trivial, trivial⟩
+ 
+ theorem valid : WorldValid ty world machine := by
+   have old := initial_world_valid ty program 20 20 ⟨rfl, rfl⟩
+@@ -735,7 +739,7 @@ theorem no_requests (fiber : FiberId) (token : Nat) : requestOfR machine fiber t
+     rfl
+ 
+ theorem command_payload : RCmdOk (H1.reviewedPreds (program : ProgramSource)) world command := by
+-  change ∀ outTy, world.Γ Api.root = some outTy → FitsExit world outTy (.success .unit)
++  change ∀ outTy, world.Γ Api.root = some outTy → ExitOk world outTy (.success .unit)
+   intro outTy h
+   have hroot : world.Γ Api.root = some ty := valid.root
+   rw [hroot] at h
+@@ -778,8 +782,7 @@ theorem emitted_refused (w' : W) (ordered : world.leHost w') :
+   have declared : world.Θ Api.root 0 = some ty := rfl
+   have declared' := ordered.1.2.2.2.2.2 Api.root 0 ty declared
+   have hex := TypedProg.pure_inv (h ty declared')
+-  change False at hex
+-  exact hex
++  exact hex.1
+ 
+ theorem result_queue_refused (noRace : RProgram → Prop) (w' : W) (ordered : world.leHost w') :
+     ¬ ReviewedQueueOk noRace (program : ProgramSource) w' result.1 result.2 := by
+@@ -810,8 +813,9 @@ theorem proposed_step_observe_false (noRace : RProgram → Prop) :
+ 
+ end OldObserve
+ 
+-/-! The exact early-queue and dispatcher falsifiers, under the retired statements.
+-Their initialization assumptions are discharged by the budget-80 sleep green. -/
++/-! Early-queue and dispatcher falsifiers under the former structural clauses, using current
++H2 admission. Their initialization assumptions are discharged by the budget-80 sleep green.
++The original checked pre-H2 statements remain in the H1 research evidence. -/
+ namespace EarlyStep
+ 
+ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Typed
+@@ -898,9 +902,9 @@ theorem mEnd_not_typed (w : Typed.World) :
+   intro h
+   obtain ⟨f, hf, hid, hex⟩ := mEnd_bad_exit
+   have he := (h.2.1.c0 f hf).c3 _ hex
+-  change ∀ ty, w.Γ f.id = some ty → FitsExit w ty (.success (.nat 42)) at he
++  change ∀ ty, w.Γ f.id = some ty → ExitOk w ty (.success (.nat 42)) at he
+   have hs := he (EffTy.pure .unit) (by rw [hid]; exact h.1.root)
+-  exact hs
++  exact hs.1
+ 
+ /-- The early queue is typed in every world that types the loaded machine: the world can declare
+ no token below `nextToken = 0` (`WorldValid.tokenBound`), so `ResumeOk` is vacuous. -/
+@@ -1017,9 +1021,9 @@ theorem mFired_not_typed (w : Typed.World) :
+   intro h
+   obtain ⟨f, hf, hid, hex⟩ := mFired_bad_exit
+   have he := (h.2.1.c0 f hf).c3 _ hex
+-  change ∀ ty, w.Γ f.id = some ty → FitsExit w ty (.success (.nat 42)) at he
++  change ∀ ty, w.Γ f.id = some ty → ExitOk w ty (.success (.nat 42)) at he
+   have hs := he (EffTy.pure .unit) (by rw [hid]; exact h.1.root)
+-  exact hs
++  exact hs.1
+ 
+ /-- The crafted dispatcher is typed in every world that types the loaded machine: its start task
+ imposes nothing, and its resume's token is undeclared there (`WorldValid.tokenBound`, `nextToken
+@@ -1109,7 +1113,8 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Progr
+ open Effect4.Program.Typed Effect4.Laws.Effects Contracts
+ abbrev W := Effect4.Program.Typed.World
+ 
+-/-- The checked pre-row-133 H1 state; intentionally independent of the amended current-code clause. -/
++/-- The pre-row-133 unconditional current-code clause with current H2 admission.
++The exact earlier whole-state judgment is retained in the original checked H1 evidence. -/
+ def OldTypedState (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState) : Prop :=
+   WorldValid rootTy w m ∧ RStateOk (preds root) w m ∧
+     ActiveDelivery root w m ∧ SchedulerState m ∧ ObserverState root w m ∧ RegistrationState root w m
+@@ -1226,11 +1231,11 @@ theorem registration : RegistrationState (rootProgram : ProgramSource) world mac
+   change none = some id at marker
+   cases marker
+ 
+-theorem saved_typed : SavedOk (TypedProg (rootProgram : ProgramSource)) FitsExit
++theorem saved_typed : SavedOk (TypedProg (rootProgram : ProgramSource)) ExitOk
+     (frameProtocols (rootProgram : ProgramSource)) world unitTy fiber.frame :=
+-  ⟨natTy, TypedProg.pure (ty := natTy) trivial,
++  ⟨natTy, TypedProg.pure (ty := natTy) ⟨trivial, trivial⟩,
+     .cons (.answer (tin := natTy) (tout := unitTy) answer
+-      (fun _ _ => TypedProg.pure (ty := unitTy) trivial)) (.nil unitTy),
++      (fun _ _ => TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩)) (.nil unitTy),
+     ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+ 
+ theorem typed : OldTypedState (rootProgram : ProgramSource) unitTy world machine := by
+@@ -1315,7 +1320,7 @@ theorem result_not_typed (w' : W) :
+   obtain ⟨tin, code, stack, _⟩ := saved
+   cases stack
+   have impossible := TypedProg.pure_inv code
+-  exact impossible
++  exact impossible.1
+ 
+ theorem step_deliver_false : ¬ OldStepPreserves (rootProgram : ProgramSource) unitTy command := by
+   intro step
+@@ -1579,11 +1584,13 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Progr
+ open Effect4.Program.Typed Effect4.Laws.Effects Contracts
+ abbrev W := Effect4.Program.Typed.World
+ 
+-/-- Historical row-133-only saved code requirement, before the machine halt amendment. -/
++/-- The row-133-only saved-code clause, without the halt amendment, using current H2
++admission and ExitOk for its stack. This retains the old structural omission, not a complete
++pre-H2 admission model; the original checked statement remains in the H1 research evidence. -/
+ def OldSavedPosition (root : ProgramSource) (w : W) (m : RState) (commands : List RCmd)
+     (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
+   ∃ tin, (¬ TerminalPosition m commands position → TypedProg root w tin saved.current) ∧
+-    StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final saved.stack ∧
++    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
+     InterruptProvenance saved
+ 
+ def oldStatePreds (root : ProgramSource) (m : RState) (commands : List RCmd) : Preds W :=
+@@ -1604,7 +1611,7 @@ def OldStepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop
+ 
+ theorem oldSaved_of_saved (root : ProgramSource) (w : W) (m : RState)
+     (commands : List RCmd) (position : Expect) (final : EffTy) (saved : RSaved)
+-    (typed : SavedOk (TypedProg root) FitsExit (frameProtocols root) w final saved) :
++    (typed : SavedOk (TypedProg root) ExitOk (frameProtocols root) w final saved) :
+     OldSavedPosition root w m commands position final saved := by
+   obtain ⟨tin, code, stack, provenance⟩ := typed
+   exact ⟨tin, fun _ => code, stack, provenance⟩
+@@ -1720,7 +1727,7 @@ theorem registration : RegistrationState (rootProgram : ProgramSource) world mac
+ 
+ theorem callback_typed (w : W) (ex : ExitV) :
+     TypedProg (rootProgram : ProgramSource) w unitTy (callback ex) :=
+-  .scopeExit trivial (fun _ _ _ => .pure trivial)
++  .scopeExit ⟨trivial, trivial⟩ (fun _ _ _ => .pure ⟨trivial, trivial⟩)
+ 
+ theorem typed : TypedState (rootProgram : ProgramSource) unitTy world machine commands := by
+   refine ⟨valid, ⟨?_, ?_, ?_⟩, ?_, scheduler, observers, registration⟩
+@@ -1745,7 +1752,7 @@ theorem typed : TypedState (rootProgram : ProgramSource) unitTy world machine co
+         change some unitTy = some ty at declared
+         cases declared
+         apply savedPosition_of_saved
+-        exact ⟨unitTy, TypedProg.pure (ty := unitTy) trivial,
++        exact ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
+           .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback (fun ex _ _ => callback_typed world ex)
+             (fun _ typed _ => typed)) (.nil _),
+           ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+@@ -1785,7 +1792,7 @@ theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world mac
+         change some unitTy = some ty at declared
+         cases declared
+         apply oldSaved_of_saved
+-        exact ⟨unitTy, TypedProg.pure (ty := unitTy) trivial,
++        exact ⟨unitTy, TypedProg.pure (ty := unitTy) ⟨trivial, trivial⟩,
+           .cons (.resume (tin := unitTy) (tout := unitTy) .onSuccess callback (fun ex _ _ => callback_typed world ex)
+             (fun _ typed _ => typed)) (.nil _),
+           ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+@@ -1873,7 +1880,7 @@ theorem output_not_typed (w : W) :
+   obtain ⟨tin, code, stack, _⟩ := saved
+   cases stack
+   have impossible := TypedProg.pure_inv (code root_not_terminal)
+-  exact impossible
++  exact impossible.1
+ 
+ theorem step_deliver_false : ¬ OldStepPreserves (rootProgram : ProgramSource) unitTy command := by
+   intro step
+@@ -2101,7 +2108,7 @@ theorem raw_output_untyped (w' : W) :
+     exact List.mem_singleton_self _
+   have payload := output.2.payload _ member
+   have impossible := payload unitTy output.1.1.root
+-  exact impossible
++  exact impossible.1
+ 
+ /-- Deleting just the dispatch guard from the amended contract is still false. -/
+ theorem unguarded_step_false :
+diff --git a/Test/Counterexamples/Machine/Semantics/TrivialPosts.lean b/Test/Counterexamples/Machine/Semantics/TrivialPosts.lean
+index 8660de9e..e2a7e5c9 100644
+--- a/Test/Counterexamples/Machine/Semantics/TrivialPosts.lean
++++ b/Test/Counterexamples/Machine/Semantics/TrivialPosts.lean
+@@ -1,4 +1,5 @@
+ import Effect4.Laws.Program.Typed.Residual
++import Test.Program.H2PartOne
+ import Test.Api.ExternalContract
+ /-!
+ E4-SCHED-CE-013 and E4-SCHED-CE-014, repaired (typed-state admission audit §6, 2026-09-23).
+@@ -56,7 +57,7 @@ theorem joinAll_typed (root : ProgramSource) (w : W) (targets : List FiberId) (a
+     TypedProg root w (EffTy.pure (.list (.exitOf a e))) (joinAll targets) :=
+   TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+     (fun _ _ _ h => nomatch h) (Ty.list (.exitOf a e)) ⟨a, e, rfl, declared⟩
+-    (fun w' _ ans hpost => TypedProg.pure (fitsExit_success w' _ ans hpost))
++    (fun w' _ ans hpost => TypedProg.pure (strongExit_success w' _ ans hpost))
+ 
+ /-- A performed store operation, in the shape `denoteR`'s `.perform` arm emits for a sync row. -/
+ def modifyCode (cell : RefKey) (f : FnName) : RProgram :=
+@@ -69,7 +70,7 @@ theorem modify_typed (root : ProgramSource) (w : W) (cell : RefKey) (f : FnName)
+   refine TypedProg.store () declared ?_
+   intro w' _ ans hpost
+   obtain ⟨n, rfl⟩ := hpost
+-  exact TypedProg.pure trivial
++  exact TypedProg.pure ⟨trivial, trivial⟩
+ 
+ /-- The fuel frontier is never answered, so its continuation owes nothing. -/
+ theorem frontier_typed (root : ProgramSource) (w : W) (ty : EffTy) (reason : PendingReason)
+@@ -94,7 +95,7 @@ theorem joinsFiber_typed (root : ProgramSource) (w : W) (target : FiberId) (ty :
+     (fun _ _ _ h => nomatch h) () trivial ?_
+   intro w' hle ans hpost
+   cases hfind : ans.find? (·.1 == target) with
+-  | none => exact TypedProg.pure (fitsExit_of_clean w' ty _ rfl)
++  | none => exact TypedProg.pure (Test.Program.H2PartOne.interrupt_admitted w' ty none)
+   | some entry =>
+     obtain ⟨id, ex⟩ := entry
+     have mem := List.mem_of_find?_eq_some hfind
+diff --git a/Test/Counterexamples/Machine/Semantics/ValueMembership.lean b/Test/Counterexamples/Machine/Semantics/ValueMembership.lean
+index 067667fc..689c6121 100644
+--- a/Test/Counterexamples/Machine/Semantics/ValueMembership.lean
++++ b/Test/Counterexamples/Machine/Semantics/ValueMembership.lean
+@@ -916,7 +916,7 @@ theorem refProg_typedF (w : W) :
+   refine TypedProg.store (cert := Ty.nat) ⟨rfl, trivial⟩ ?_
+   intro w' _ ans hpost
+   obtain ⟨key, rfl, hs⟩ := hpost
+-  exact TypedProg.pure ⟨rfl, .nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩
++  exact TypedProg.pure ⟨⟨rfl, .nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
+ 
+ /-- The continuation after the guard, for a cell: the read. -/
+ theorem getProg_after (index : Nat) (completed : List (FiberId × ExitV)) :
+@@ -936,12 +936,12 @@ theorem getProg_typedF (w : W) :
+   · refine TypedProg.store (cert := Ty.nat) ⟨rfl, trivial⟩ ?_
+     intro w' _ ans hpost
+     obtain ⟨key, rfl, hs⟩ := hpost
+-    exact TypedProg.unguard ⟨rfl, .nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩
++    exact TypedProg.unguard ⟨⟨rfl, .nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
+   · intro w' _ ex hpost
+     cases ex with
+     | failure c => exact Bool.noConfusion hpost.1
+     | success v =>
+-      have hv : Fits w' v (.handle NativeOp.refTarget) := hpost.2
++      have hv : Fits w' v (.handle NativeOp.refTarget) := hpost.2.1
+       simp only [Effect4.Program.Typed.Fits] at hv
+       split at hv
+       · rename_i kind index
+@@ -962,7 +962,7 @@ theorem getProg_typedF (w : W) :
+           change w'''.Ρ ⟨index⟩ = some ty at hty
+           rw [hsame] at hty
+           cases hty
+-          exact TypedProg.pure (fits_sub w''' hsub ans hfit)
++          exact TypedProg.pure ⟨fits_sub w''' hsub ans hfit, trivial⟩
+         · exact absurd hv.1 (by decide)
+         · exact absurd hv (by decide)
+         · exact absurd hv.1 (by decide)
+@@ -971,7 +971,7 @@ theorem getProg_typedF (w : W) :
+   · intro w' _ ex hex miss
+     cases ex with
+     | success v => exact Bool.noConfusion miss
+-    | failure c => exact fitsExit_of_clean w' _ c (cleanExit_of_never_fits w' _ c rfl hex)
++    | failure c => exact strongExit_of_clean w' _ c (cleanExit_of_never_fits w' _ c rfl hex.1) hex.2
+ 
+ /-! ## New: the M5 instance itself holds under the proposed judgment
+ 
+diff --git a/Test/Counterexamples/REGISTER.md b/Test/Counterexamples/REGISTER.md
+index 5e36f0a8..da7c158e 100644
+--- a/Test/Counterexamples/REGISTER.md
++++ b/Test/Counterexamples/REGISTER.md
+@@ -21,7 +21,7 @@ ID is retained here so citations resolve, and the row is not reused.
+ | --- | --- | --- | --- | --- |
+ | `E4-SCHED-CE-006` | SEEDED | The proposed delivery correlation and an exception on the entry mask justify typed catch skipping | `Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean`: `masked_satisfies_reviewed_correlation`, `masked_has_provenance`, `restore_then_skip`, `proposed_entry_mask_exception_false` | account for mask changes during the stack walk; U-01 sanitizes the preempted catch, and `restore_then_skip` now checks that exit. The original-failure typing refutation remains unchanged; a boolean at entry cannot classify the walk |
+ | `E4-SCHED-CE-007` | SEEDED | A deferred interrupt intercepts ordinary failing delivery before a catch can be skipped | `Test/Counterexamples/Machine/Semantics/InterruptDelivery.lean`: `deferred_satisfies_reviewed_correlation`, `delivery_does_not_intercept_failure` | respect `deliverR`'s success-only interception; the updated equation returns the U-01 sanitized failure from the catch skip, not from `deferredInterrupt` |
+-| `E4-TYPED-CE-003` | SEEDED | Checking Fail payloads in StrongCause excludes badShapeExit | `Test/Counterexamples/Machine/Semantics/StrongExitDefect.lean`: `bad_shape_still_admitted`, for every stronger value predicate | keep ordinary defects admitted by exit typing and prove absence of badShape production from admitted source/control separately |
++| `E4-TYPED-CE-003` | SEEDED | Checking Fail payloads in StrongCause excludes badShapeExit | `Test/Counterexamples/Machine/Semantics/StrongExitDefect.lean`: `bad_shape_still_admitted`, for every stronger value predicate | Fail-payload membership still does not reject Die reasons. H2 part one adds shared `ExitOk = FitsExit ∧ NoShapeDefect`, excluding only badName and notImplemented at typed exit boundaries; base Fits/FitsExit stay unchanged. `Test/Program/H2PartOne.lean`: `base_badName_still_fits`, `badName_refused`, `notImplemented_refused`, `user_die_admitted`. MissingService is held under E4-TYPED-CE-008; general M5/M6 proofs remain open. |
+ | `E4-SCHED-CE-008` | SEEDED | Every reachable fiber exit fits its checked effect type; rc.112 preserves the error column across a skipped catch | `Test/Counterexamples/Machine/Semantics/InterruptEscape.lean`: the original `Fail 42` and bad-shape contagion are retained in history; `escaped_no_longer` and the poisoned contagion guards now check the exact annotated root interrupt on both Lean walks. Quiet controls and both original typing theorems remain. The truth harness runs the printed escape program against rc.112, which still returns `Fail 42`. | signed U-01 divergence: at a preempted catch skip, pass `Cause.combine (Cause.stripFail cause) ic`; implemented at `5f33fe3c47725bf9ff9c6632d90bea50d7a442b6`; receipt: `docs/research/2026-09-21-foundations-divergence-receipt.md`. No run premise is added by this repair; the typed-state proof is slice 5 work |
+ | `E4-SCHED-CE-009` | SEEDED | The interruption divergence needs no change to a compiled exit consumer | `Test/Counterexamples/Machine/Semantics/InterruptCarrier.lean`, original counterexample at `18373ad39ef28b9f8c6fd2440067c2827dbd0fde`: a current-code-only carrier cannot change the returned exit. Current regressions check `finished_uses_carried_exit`, `masked_catch_returns_sanitized` and `remasked_handler_receives_sanitized`; the current-code-only negative controls remain | owner approved the explicit `FramePop.carriedCause` and the three consumers (`resumeCause`, `finalizerOr`, `exitScoped`) on 2026-09-21. The unchanged runtime agreement observation and receipt cover the amendment |
+ | `E4-SCHED-CE-010` | REPAIRED | Slice 5’s async-finalizer clause admits an ordinary typed sleep stack | `Test/Counterexamples/Machine/Semantics/AsyncHookContract.lean`: `sleep_stack_exact`, `sleep_stack_rejected`, `frozen_hook_rejects_unit` (the old clause kept local as `ReviewedAsync`, refuted against the landed judgment); original witness at `2a00ce296a17dbef84197d8b8d84e8dbec0884ee` | the async clause requires an incoming `StrongExit` before typing the cancellation (`frameProtocols root`, ruling `docs/research/2026-09-23-foundations-slice5-contract-ruling.md`); `Test/Program/TypedControl.lean`: `sleep_stack_accepted`, `cancel_interrupt_typed` |
+@@ -199,6 +199,8 @@ packet without deleting the stable row.
+ | `E4-TYPED-CE-004` | REPAIRED 2026-09-30 | M5 loads every checked program into a typed state under the old value judgment | `Test/Counterexamples/Machine/Semantics/ValueMembership.lean`: `ReviewedLoad.typedState_load_false`, `typedStateF_load_ref`, `typedStateF_load_get` | Fits reads liveness from world declarations. The original ref-allocation refutation is retained locally; allocation and allocation/get loaded-state controls now type. The general M5 proof remains open. |
+ | `E4-TYPED-CE-005` | REPAIRED 2026-09-30 | The old strong judgment aligns every nested handle with its declared type | `Test/Counterexamples/Machine/Semantics/ValueMembership.lean`: `g1_old`–`g6_old`, `g1_refused`–`g6_refused`, and matching controls | Constructor-complete Fits rejects wrong handles in products, Result, successful exits, union branches, snapshots and native cell spellings. The old judgment remains only in the reviewed test model. |
+ | `E4-TYPED-CE-006` | REPAIRED 2026-09-30 | Exact-spelling invariant membership is closed under subtyping | `Test/Counterexamples/Machine/Semantics/ValueMembership.lean`: `fitsEq_not_closed_under_sub`, `natCell_equiv_spelling` | D1 uses subtyping both ways (Equiv), with fits_sub proved; the equality-based experimental judgment and its refutation remain local to Test. |
++| `E4-TYPED-CE-007` | REPAIRED 2026-10-01 | A clause on finished fibers alone keeps shape defects out of typed states | Historical field-only probe: `docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/H2/h2-part-one-controls/FieldOnlyRed.lean`, `Research.Slice6.H2FieldOnlyRed.strengthened_input`, `strengthened_output_false`, `firstStep_queue`, `produced_queue_refused`. Current controls: `Test/Program/H2PartOne.lean`, `bad_current_code_refused`, `notImplemented_current_code_refused`, `RaceFailureBuffers.new_badName_refused`, `new_notImplemented_refused`, and ordinary-die/interrupt controls. | Shared ExitOk excludes badName and notImplemented throughout typed exit positions, including current code and buffered race failures. The historical field-only predicate and its refutation remain exact research evidence; base FitsExit is unchanged. This repairs the placement gap, not the open M5/M6 preservation proofs. |
++| `E4-TYPED-CE-008` | SEEDED 2026-10-01 | The existing frame contracts transport the proposed full missingService exclusion across requirement rows | `Test/Program/H2PartOne.lean`: `MissingServiceTransport.loop_admitted`, `input_ok`, `provenance`, `output_eq`, `output_bad`; original audit: `docs/research/2026-09-30-codex-review-model-probe/probes/SavedFrameTransport.lean`, namespace `AuditH2`. | A never-answer loop accepts the failure at a nonempty requirement row and returns it unchanged at an empty row, where local FullExitOk refuses it. Amend the frame/operation contracts with scoped/provision controls before adopting this part-two exclusion (row 117). This is a saved-frame witness, not a reached-run claim; part one still admits missingService. |
+ | `E4-SCHED-CE-016` | REPAIRED 2026-10-01 | M6's queue fact types every queued resume | Original `docs/research/2026-09-30-pass/lift/verify-decision.lean` and `lift/verify-steppreserves.lean`; retained in `Test/Counterexamples/Machine/Semantics/M6Capstone.lean`: `EarlyStep.old_steps_false`, `EarlyDecision.old_fire_false`, `H1.loaded_sleep80_typed`, `EarlyStep.early_queue_rejected`, `EarlyDecision.early_dispatcher_rejected` | Internal keys in TypedState and queued resume keys in QueueOk must be below nextToken; keys are also disjoint from active external requests. The exact early queue and dispatcher are refused. The loaded sleep control discharges the old falsifiers' initialization premise; the eighteen command proofs remain open. |
+ | `E4-SCHED-CE-017` | REPAIRED 2026-10-01 | M6's queue fact types every queued command | `docs/research/2026-09-30-side-audit/probes/TokenFinish.lean`; retained in `Test/Counterexamples/Machine/Semantics/M6Capstone.lean`: `H1.loaded_typed`, `H1.step_finish_false`, `H1.proposed_step_finish_false`, `H1.bad_finish_rejected` | QueueOk applies generated RCmdOk to every command and adds scheduler authority, unique owners and reserved keys. The unit-typed root's finish with success 42 fails the new queue fact. The exact reference code-site scan and all eighteen command proofs remain open. |
+ | `E4-SCHED-CE-018` | REPAIRED 2026-10-01; SEEDED 2026-09-30 | A token is typed by what its observer delivers | Seed: `docs/research/2026-09-30-seat-codex-slice6-evidence/H1/ObserveGap.candidate.lean`; retained in `Test/Counterexamples/Machine/Semantics/M6Capstone.lean`: `OldObserve.proposed_step_observe_false`, `H1.bad_observe_rejected`, `H1.join_delivery_typed`, `H1.await_delivery_typed` | Stored and queued observers connect the source exit to the declared delivered type: joinEffect delivers the source exit, awaitValue delivers its encoded Exit value. The actual interpreter hook has the matching local typing lemma. Countdown and race buffers have finite payload clauses; registration, hook certification and the eighteen command proofs remain open. |
+diff --git a/Test/Program/LoadedAdmission.lean b/Test/Program/LoadedAdmission.lean
+index 4fc097e6..b2c1ac1f 100644
+--- a/Test/Program/LoadedAdmission.lean
++++ b/Test/Program/LoadedAdmission.lean
+@@ -1,4 +1,5 @@
+ import Test.Counterexamples.Machine.Semantics.TrivialPosts
++import Test.Program.H2PartOne
+ 
+ /-!
+ # Test.Program.LoadedAdmission — the census's second phase, seeded
+@@ -51,7 +52,7 @@ theorem fork_admitted (w : W) :
+     (BodyTyped.at_ _ _ ⟨one, [], rfl, by decide +kernel, env0 w⟩) ?_
+   intro w' _ ans hpost
+   obtain ⟨id, rfl, hid⟩ := hpost
+-  exact TypedProg.pure ⟨_, hid, Ty.sub_refl _, Ty.sub_refl _⟩
++  exact TypedProg.pure ⟨⟨_, hid, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
+ 
+ theorem scoped_admitted (w : W) :
+     TypedProg scopedOne w (EffTy.pure .nat) (denoteR scopedOne scopedOne (rootPoint 20)) :=
+@@ -105,21 +106,36 @@ def readService : NativeEff := .service natKey
+ 
+ theorem natKey_ty : nativeServiceTy natKey = some .nat := by decide +kernel
+ 
+-/-- The lookup is typed at the key's type for every context whose services are typed. -/
++/-- The input must actually decode as a context; the old implication
++was vacuous at malformed values and admitted badName. -/
+ theorem lookup_typed (w : W) (ty : EffTy) (answer : ty.answer = .nat) (v : Val)
++    (isContext : ∃ ctx, Val.context? v = some ctx)
+     (typed : ∀ ctx, Val.context? v = some ctx → ServicesFit w ctx.services) :
+     TypedProg readService w ty (serviceLookupR natKey v) := by
+-  unfold serviceLookupR
++  obtain ⟨ctx, hctx⟩ := isContext
++  simp only [serviceLookupR, hctx]
+   split
+-  · rename_i ctx hctx
+-    split
+-    · rename_i sv hget
+-      have hfit := flatFits_fits (typed ctx hctx natKey sv .nat hget natKey_ty)
+-      refine TypedProg.pure (fitsExit_success w ty sv ?_)
+-      rw [answer]
+-      exact hfit
+-    · exact TypedProg.pure (fitsExit_of_clean w ty _ rfl)
+-  · exact TypedProg.pure (fitsExit_of_clean w ty _ rfl)
++  · rename_i sv hget
++    have hfit := flatFits_fits (typed ctx hctx natKey sv .nat hget natKey_ty)
++    refine TypedProg.pure (strongExit_success w ty sv ?_)
++    rw [answer]
++    exact hfit
++  · exact TypedProg.pure (Test.Program.H2PartOne.missingService_admitted_at_any_type w ty)
++
++/-- The existing context fit supplies the finite decoder witness needed by the amended test. -/
++theorem context_of_fits (w : W) (v : Val) (typed : Fits w v (.handle Ty.contextTarget)) :
++    ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services := by
++  simp only [Effect4.Program.Typed.Fits] at typed
++  split at typed
++  · simp only [HandleFits] at typed
++    split at typed
++    · exact absurd typed.1 (by decide)
++    · exact absurd typed.1 (by decide)
++    · exact absurd typed (by decide)
++    · exact absurd typed.1 (by decide)
++    · exact typed.elim
++  · obtain ⟨_, ctx, hctx, services, _⟩ := typed
++    exact ⟨ctx, hctx, services⟩
+ 
+ theorem service_admitted (w : W) (ty : EffTy) (answer : ty.answer = .nat) :
+     TypedProg readService w ty (denoteR readService readService (rootPoint 20)) := by
+@@ -127,25 +143,21 @@ theorem service_admitted (w : W) (ty : EffTy) (answer : ty.answer = .nat) :
+   · refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+       (fun _ _ _ h => nomatch h) (Ty.handle Ty.contextTarget) rfl ?_
+     intro w' _ ans hpost
+-    exact TypedProg.unguard (fitsExit_success w' _ ans hpost)
++    exact TypedProg.unguard (strongExit_success w' _ ans hpost)
+   · intro w' _ ex hpost
+     cases ex with
+     | failure c => exact Bool.noConfusion hpost.1
+     | success v =>
+-      have hv : Fits w' v (.handle Ty.contextTarget) := hpost.2
+-      apply lookup_typed w' ty answer v
+-      intro ctx hctx
+-      simp only [Effect4.Program.Typed.Fits] at hv
+-      split at hv
+-      · exact nomatch hctx
+-      · obtain ⟨_, ctx', hctx', services, _⟩ := hv
+-        rw [hctx] at hctx'
+-        cases hctx'
+-        exact services
++      obtain ⟨ctx, hctx, services⟩ := context_of_fits w' v hpost.2.1
++      apply lookup_typed w' ty answer v ⟨ctx, hctx⟩
++      intro ctx' hctx'
++      rw [hctx] at hctx'
++      cases hctx'
++      exact services
+   · intro w' _ ex hex miss
+     cases ex with
+     | success v => exact Bool.noConfusion miss
+-    | failure c => exact fitsExit_of_clean w' ty c (cleanExit_of_never_fits w' _ c rfl hex)
++    | failure c => exact strongExit_of_clean w' ty c (cleanExit_of_never_fits w' _ c rfl hex.1) hex.2
+ 
+ /-- A memo hit's await is typed at the layer's context: the lookup certifies the layer's own
+ checked error type, and the hit's deferred is declared at the context handle and that error. -/
+@@ -176,7 +188,7 @@ theorem memoAwait_typed (w : W) (m : MemoMapId) :
+       exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+         (fun _ _ _ h => nomatch h) (EffTy.pure (.handle Ty.contextTarget))
+         ⟨_, _, hPi, Ty.sub_refl _, Ty.sub_refl _⟩ (fun _ _ _ hpost => TypedProg.pure hpost)
+-  · exact TypedProg.pure (fitsExit_of_clean w' _ _ rfl)
++  · exact TypedProg.pure (Test.Program.H2PartOne.interrupt_admitted w' _ none)
+ 
+ #print axioms sleep_admitted
+ #print axioms fork_admitted
+diff --git a/Test/Program/TypedControl.lean b/Test/Program/TypedControl.lean
+index e8806cf7..3e680612 100644
+--- a/Test/Program/TypedControl.lean
++++ b/Test/Program/TypedControl.lean
+@@ -1,4 +1,5 @@
+ import Test.Counterexamples.Machine.Semantics.AsyncHookContract
++import Test.Program.H2PartOne
+ 
+ /-!
+ # Test.Program.TypedControl — the slice 5 contract ruling's controls
+@@ -40,22 +41,40 @@ theorem natErr_fits (w : W) (ty : EffTy) (n : Nat) (error : ty.error = .nat) :
+   rw [error]
+   trivial
+ 
++/-- Test adapters retain the old base membership helpers above. -/
++theorem exitOk_unit (w : W) : ExitOk w (EffTy.pure .unit) (.success .unit) :=
++  ⟨fitsExit_unit w, trivial⟩
++
++theorem exitOk_nat (w : W) (ty : EffTy) (n : Nat) (answer : ty.answer = .nat) :
++    ExitOk w ty (.success (.nat n)) := ⟨fitsExit_nat w ty n answer, trivial⟩
++
++theorem natErr_shape (ty : EffTy) (n : Nat) : NoShapeDefect ty (.failure (natErr n)) := by
++  intro reason member
++  simp only [natErr, List.mem_singleton] at member
++  subst member
++  trivial
++
++theorem natErr_exitOk (w : W) (ty : EffTy) (n : Nat) (error : ty.error = .nat) :
++    ExitOk w ty (.failure (natErr n)) := ⟨natErr_fits w ty n error, natErr_shape ty n⟩
++
+ /-! ## Positive: the generated sleep cancellation and the reachable stack -/
+ 
+-/-- The generated cancellation is typed at `unit`/`never` for every clean cause: the store
++/-- The generated cancellation is typed at `unit`/`never` for a clean cause with explicit
++shape exclusion. Cleanliness alone admits excluded defects. The store
+ arm consults `sleepCancel`'s Unit post (CE-012), and the guard's success arm is the only arm
+ the post admits (CE-011). -/
+-theorem cancel_typed (w : W) (cause : CauseV) (clean : cleanExit (.failure cause) = true) :
++theorem cancel_typed (w : W) (cause : CauseV) (clean : cleanExit (.failure cause) = true)
++    (shape : NoShapeDefect (EffTy.pure .unit) (.failure cause)) :
+     TypedProg sleeping w (EffTy.pure .unit) ((interpR sleeping).cancelThenFail sleepCancel cause) := by
+   refine TypedProg.guard (EffTy.pure .unit) ?_ ?_ ?_
+   · refine TypedProg.store () trivial ?_
+     intro w' _ ans hpost
+     have unit : ans = Val.unit := hpost
+     subst unit
+-    exact TypedProg.unguard (fitsExit_unit w')
++    exact TypedProg.unguard (exitOk_unit w')
+   · intro w' _ ex hpost
+     cases ex with
+-    | success v => exact TypedProg.pure (fitsExit_of_clean w' _ cause clean)
++    | success v => exact TypedProg.pure (strongExit_of_clean w' _ cause clean shape)
+     | failure c => exact Bool.noConfusion hpost.1
+   · intro w' _ ex hex _
+     exact hex
+@@ -63,17 +82,17 @@ theorem cancel_typed (w : W) (cause : CauseV) (clean : cleanExit (.failure cause
+ theorem cancel_interrupt_typed (w : W) :
+     TypedProg sleeping w (EffTy.pure .unit)
+       ((interpR sleeping).cancelThenFail sleepCancel (Cause.interrupt (some Api.root))) :=
+-  cancel_typed w _ rfl
++  cancel_typed w _ rfl (Test.Program.H2PartOne.interrupt_admitted w _ (some Api.root)).2
+ 
+ /-- The exact stack a checker-typed `sleep(1)` parks on is accepted under the landed contracts
+ (the repaired counterpart of `sleep_stack_rejected`). -/
+ theorem sleep_stack_accepted (w : W) :
+-    Contracts.StackAccepts (TypedProg sleeping) FitsExit (frameProtocols sleeping) w
++    Contracts.StackAccepts (TypedProg sleeping) ExitOk (frameProtocols sleeping) w
+       (EffTy.pure .unit) (EffTy.pure .unit) sleepStack := by
+   rw [sleep_stack_exact]
+   refine .cons (.asyncFinalizer _ ⟨rfl, fun cause typed _ => ?_⟩)
+     (.cons (.answer _ fun _ hex => TypedProg.pure hex) (.nil _))
+-  exact cancel_typed w cause (cleanExit_of_never_fits w _ cause rfl typed)
++  exact cancel_typed w cause (cleanExit_of_never_fits w _ cause rfl typed.1) typed.2
+ 
+ /-! ## Positive: guards whose intermediate type differs from the outer type -/
+ 
+@@ -87,7 +106,7 @@ def natCatch : RProgram :=
+ theorem natCatch_typed (root : NativeEff) (w : W) :
+     TypedProg root w (EffTy.pure .nat) natCatch := by
+   refine TypedProg.guard { EffTy.pure .nat with error := .nat } ?_ ?_ ?_
+-  · exact TypedProg.unguard (natErr_fits w _ 7 rfl)
++  · exact TypedProg.unguard (natErr_exitOk w _ 7 rfl)
+   · intro w' _ ex hpost
+     cases ex with
+     | success v => exact Bool.noConfusion hpost.1
+@@ -95,7 +114,7 @@ theorem natCatch_typed (root : NativeEff) (w : W) :
+       refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+         (fun _ _ _ h => nomatch h) () trivial ?_
+       intro w'' _ _ _
+-      exact TypedProg.pure (fitsExit_nat w'' _ 0 rfl)
++      exact TypedProg.pure (exitOk_nat w'' _ 0 rfl)
+   · intro w' _ ex hex miss
+     cases ex with
+     | success v => exact hex
+@@ -108,15 +127,15 @@ def natToBool : RProgram :=
+ theorem natToBool_typed (root : NativeEff) (w : W) :
+     TypedProg root w (EffTy.pure .bool) natToBool := by
+   refine TypedProg.guard (EffTy.pure .nat) ?_ ?_ ?_
+-  · exact TypedProg.unguard (fitsExit_nat w _ 1 rfl)
++  · exact TypedProg.unguard (exitOk_nat w _ 1 rfl)
+   · intro w' _ ex hpost
+     cases ex with
+-    | success v => exact TypedProg.pure trivial
++    | success v => exact TypedProg.pure ⟨trivial, trivial⟩
+     | failure c => exact Bool.noConfusion hpost.1
+   · intro w' _ ex hex miss
+     cases ex with
+     | success v => exact Bool.noConfusion miss
+-    | failure c => exact fitsExit_of_clean w' _ c (cleanExit_of_never_fits w' _ c rfl hex)
++    | failure c => exact strongExit_of_clean w' _ c (cleanExit_of_never_fits w' _ c rfl hex.1) hex.2
+ 
+ /-! ## Negative controls -/
+ 
+@@ -136,14 +155,14 @@ theorem leakyGuard_rejected (root : NativeEff) (w : W) :
+   obtain ⟨mid, body, _, skip⟩ := TypedProg.guard_inv h
+   have inner := unguard_payload_inv root w mid _ _ body
+   have failed := (fitsExit_failure_iff w (EffTy.pure .nat) (natErr 7)).mp
+-    (skip w (leHost_refl w) _ inner rfl)
++    (skip w (leHost_refl w) _ inner rfl).1
+   obtain ⟨v, _, hv⟩ := failed (.fail (.tag 7) .empty) (List.mem_singleton_self _)
+   exact hv
+ 
+ /-- A top-level `unguard` payload outside the current type is refused. -/
+ theorem unguard_payload_rejected (root : NativeEff) (w : W) (k : ExitV → RProgram) :
+     ¬ TypedProg root w (EffTy.pure .unit) (.vis (.inr (.unguard (.success (.nat 1)))) k) :=
+-  fun h => unguard_payload_inv root w _ _ k h
++  fun h => (unguard_payload_inv root w _ _ k h).1
+ 
+ #print axioms cancel_typed
+ #print axioms cancel_interrupt_typed
+diff --git a/Test/Program/TypedResidual.lean b/Test/Program/TypedResidual.lean
+index 2e391b83..d3242ee4 100644
+--- a/Test/Program/TypedResidual.lean
++++ b/Test/Program/TypedResidual.lean
+@@ -80,7 +80,7 @@ theorem unguard_inversion_rejects_unadmitted (root : NativeEff) (w : World) (ex
+     (hnone : w.Ρ ⟨0⟩ = none) : False := by
+   have hstrong := unguard_payload_inv root w (EffTy.pure (Ty.refOf .bool)) ex k hadmit
+   rw [hex] at hstrong
+-  exact forged_cell_not_fit w hnone hstrong
++  exact forged_cell_not_fit w hnone hstrong.1
+ 
+ /-- Negative control: `finishFinalizer` payload inversion rejects unadmitted payloads. -/
+ theorem finishFinalizer_inversion_rejects_unadmitted (root : NativeEff) (w : World) (ex : ExitV)
+@@ -90,7 +90,7 @@ theorem finishFinalizer_inversion_rejects_unadmitted (root : NativeEff) (w : Wor
+     (hnone : w.Ρ ⟨0⟩ = none) : False := by
+   have hstrong := finishFinalizer_payload_inv root w (EffTy.pure (Ty.refOf .bool)) ex k hadmit
+   rw [hex] at hstrong
+-  exact forged_cell_not_fit w hnone hstrong
++  exact forged_cell_not_fit w hnone hstrong.1
+ 
+ #print axioms test_settling_ref_allocation
+ #print axioms test_settling_ref_preserves_nat
+diff --git a/Test/Program/TypedStack.lean b/Test/Program/TypedStack.lean
+index f95a5d6a..908cc223 100644
+--- a/Test/Program/TypedStack.lean
++++ b/Test/Program/TypedStack.lean
+@@ -15,7 +15,7 @@ set_option autoImplicit false
+ namespace Test.Program.TypedStack
+ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+ open Effect4.Program.Typed Effect4.Program.Typed.Contracts
+-open Test.Program.TypedControl (natErr natErr_fits fitsExit_nat)
++open Test.Program.TypedControl (natErr natErr_exitOk exitOk_nat)
+ abbrev W := Effect4.Program.Typed.World
+ 
+ def sleeping : NativeEff := .perform .sleep (.lit (.nat 1))
+@@ -25,9 +25,9 @@ def natNat : EffTy := { EffTy.pure .nat with error := .nat }
+ def catchFrame : ScopeFrame := .resume .onFailure fun _ => .pure (.success (.nat 0))
+ 
+ theorem catch_accepted (root : ProgramSource) (w : W) :
+-    StackAccepts (TypedProg root) FitsExit (frameProtocols root) w natNat (EffTy.pure .nat)
++    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w natNat (EffTy.pure .nat)
+       [catchFrame] := by
+-  refine .cons (.resume _ _ (fun _ _ _ => TypedProg.pure (fitsExit_nat w _ 0 rfl)) ?_) (.nil _)
++  refine .cons (.resume _ _ (fun _ _ _ => TypedProg.pure (exitOk_nat w _ 0 rfl)) ?_) (.nil _)
+   intro ex hex miss
+   cases ex with
+   | success v => exact hex
+@@ -43,7 +43,7 @@ theorem quiet_provenance : InterruptProvenance quiet := ⟨(fun _ h => nomatch h
+ theorem catch_walk (w : W) :
+     WalkTyped (sleeping : ProgramSource) (frameProtocols sleeping) w (EffTy.pure .nat)
+       (popR (interpR sleeping) (.failure (natErr 7)) [catchFrame] quiet) :=
+-  popR_typed_interpR sleeping w _ _ _ _ _ (catch_accepted _ w) (natErr_fits w _ 7 rfl) quiet_provenance
++  popR_typed_interpR sleeping w _ _ _ _ _ (catch_accepted _ w) (natErr_exitOk w _ 7 rfl) quiet_provenance
+ 
+ /-- The same catch with a recorded interrupt: preempted, the walk passes the sanitized cause. -/
+ def preempted : RSaved := { quiet with interruptedCause := some (Cause.interrupt none) }
+@@ -61,7 +61,7 @@ theorem preempted_provenance : InterruptProvenance preempted := by
+ theorem preempted_walk (w : W) :
+     WalkTyped (sleeping : ProgramSource) (frameProtocols sleeping) w (EffTy.pure .nat)
+       (popR (interpR sleeping) (.failure (natErr 7)) [catchFrame] preempted) :=
+-  popR_typed_interpR sleeping w _ _ _ _ _ (catch_accepted _ w) (natErr_fits w _ 7 rfl)
++  popR_typed_interpR sleeping w _ _ _ _ _ (catch_accepted _ w) (natErr_exitOk w _ 7 rfl)
+     preempted_provenance
+ 
+ /-- A pass-through frame from `nat`/`nat` to `nat`/`never` is refused: its miss would pass a
+@@ -69,7 +69,7 @@ Nat failure out. -/
+ def passFrame : ScopeFrame := .resume .onSuccess fun ex => .pure ex
+ 
+ theorem wrong_middle (root : ProgramSource) (w : W) :
+-    ¬ StackAccepts (TypedProg root) FitsExit (frameProtocols root) w natNat (EffTy.pure .nat)
++    ¬ StackAccepts (TypedProg root) ExitOk (frameProtocols root) w natNat (EffTy.pure .nat)
+       [passFrame] := by
+   intro h
+   cases h with
+@@ -78,7 +78,7 @@ theorem wrong_middle (root : ProgramSource) (w : W) :
+     cases head with
+     | resume kind next run skip =>
+       have failed := (fitsExit_failure_iff w (EffTy.pure .nat) (natErr 7)).mp
+-        (skip (.failure (natErr 7)) (natErr_fits w _ 7 rfl) rfl)
++        (skip (.failure (natErr 7)) (natErr_exitOk w _ 7 rfl) rfl).1
+       obtain ⟨v, _, hv⟩ := failed (.fail (.tag 7) .empty) (List.mem_singleton_self _)
+       exact hv
+ 
+diff --git a/src/Effect4/Laws/Program/Typed/Admission.lean b/src/Effect4/Laws/Program/Typed/Admission.lean
+index e5b9749a..62877a7d 100644
+--- a/src/Effect4/Laws/Program/Typed/Admission.lean
++++ b/src/Effect4/Laws/Program/Typed/Admission.lean
+@@ -6,8 +6,9 @@ import Effect4.Laws.Program.Sched
+ # Laws.Program.Typed.Admission — source and control admission for typed programs
+ 
+ D13 source admission (checking paths and environments against the checker) before protocol
+-contracts, using the value membership judgments from `Typed/Membership.lean`; the clean-exit
+-lemmas type interrupt-only and defect-only failures at every effect type. Control admission (FR-09) is an
++contracts, using the value membership judgments from `Typed/Membership.lean`. The shared exit
++judgment also excludes `badName` and `notImplemented`; clean failures require that explicit
++exclusion premise. `missingService` remains admitted in part one. Control admission (FR-09) is an
+ arm of the one program judgment `TypedProg` in `Typed/Residual.lean` (ruling 2026-09-23).
+ -/
+ 
+@@ -17,6 +18,55 @@ namespace Effect4.Program.Typed
+ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+ open Effect4.Laws.Effects
+ 
++/-- Part one excludes only `badName` and `notImplemented`. The type argument is retained
++for the shared exit interface; `missingService` remains admitted pending part two. -/
++def NoShapeDefect (_ty : EffTy) : ExitV → Prop
++  | .success _ => True
++  | .failure cause => ∀ reason ∈ cause.reasons, match reason with
++    | .die defect _ => defect ≠ .badName ∧ defect ≠ .notImplemented
++    | _ => True
++
++/-- Base membership and the part-one defect exclusion at every typed exit position. -/
++def ExitOk (w : World) (ty : EffTy) (ex : ExitV) : Prop :=
++  FitsExit w ty ex ∧ NoShapeDefect ty ex
++
++/-- Part one: an interrupt reason carries neither excluded defect. -/
++theorem noShapeDefect_of_interrupts (ty : EffTy) (cause : CauseV)
++    (interrupts : ∀ reason ∈ cause.reasons, reason.tag = .interrupt) :
++    NoShapeDefect ty (.failure cause) := by
++  intro reason member
++  have tag := interrupts reason member
++  cases reason with
++  | fail _ _ => trivial
++  | die _ _ => cases tag
++  | interrupt _ _ => trivial
++
++/-- Removing Fail reasons does not introduce a shape defect. -/
++theorem noShapeDefect_stripFail (ty : EffTy) (cause : CauseV)
++    (shape : NoShapeDefect ty (.failure cause)) :
++    NoShapeDefect ty (.failure cause.stripFail) := by
++  intro reason member
++  exact shape reason ((Cause.mem_stripFail reason cause).mp member).1
++
++/-- Combine contains only reasons from its two inputs. -/
++theorem noShapeDefect_combine (ty : EffTy) (left right : CauseV)
++    (leftShape : NoShapeDefect ty (.failure left))
++    (rightShape : NoShapeDefect ty (.failure right)) :
++    NoShapeDefect ty (.failure (Cause.combine left right)) := by
++  intro reason member
++  rcases (Cause.mem_combine reason left right).mp member with fromLeft | fromRight
++  · exact leftShape reason fromLeft
++  · exact rightShape reason fromRight
++
++/-- Sanitization strips Fail reasons and combines the remaining original reasons with
++recorded interruption reasons; exclusion is required of both inputs. -/
++theorem noShapeDefect_sanitize (ty : EffTy) (cause interrupted : CauseV)
++    (shape : NoShapeDefect ty (.failure cause))
++    (interruptShape : NoShapeDefect ty (.failure interrupted)) :
++    NoShapeDefect ty (.failure (Cause.sanitize cause interrupted)) :=
++  noShapeDefect_combine ty cause.stripFail interrupted
++    (noShapeDefect_stripFail ty cause shape) interruptShape
++
+ /-- An evaluation environment typed pointwise at the corresponding static types. -/
+ def EnvTyped (w : World) (env : List Ty) (vals : List Val) : Prop :=
+   env.length = vals.length ∧
+@@ -42,7 +92,7 @@ def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) :
+ inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
+   | at_ (p : Point) (ty : EffTy) (h : PointTyped src w p ty) :
+       BodyTyped src w (.at_ p) ty
+-  | fin (name : FinName) (ex : ExitV) (ty : EffTy) (hex : FitsExit w ty ex) :
++  | fin (name : FinName) (ex : ExitV) (ty : EffTy) (hex : ExitOk w ty ex) :
+       BodyTyped src w (.fin name ex) ty
+   | raceCleanup (race : Nat) :
+       BodyTyped src w (.raceCleanup race) (EffTy.pure .unit)
+@@ -53,38 +103,19 @@ inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
+   | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (ty : EffTy) (h : PointTyped src w p ty) :
+       BodyTyped src w (.layerBuild p m scope) ty
+ 
+-/-- Membership at the answer column gives membership of the successful exit. -/
++/-- Membership at the answer column gives the successful exit; its defect exclusion is vacuous. -/
+ theorem strongExit_success (w : World) (ty : EffTy) (v : Val) (h : Fits w v ty.answer) :
+-    FitsExit w ty (.success v) := h
++    ExitOk w ty (.success v) := ⟨h, trivial⟩
+ 
+-/-- A clean failure fits every effect type at every world: the error column constrains
+-`Fail` reasons only. -/
++/-- A clean failure has base membership at every effect type because the error column
++constrains only `Fail` reasons. The strengthened exit judgment separately requires the
++explicit defect-exclusion premise: `cleanExit` alone admits `badName` and `notImplemented`. -/
+ theorem strongExit_of_clean (w : World) (ty : EffTy) (c : CauseV)
+-    (h : cleanExit (.failure c) = true) : FitsExit w ty (.failure c) := by
+-  have hall : ∀ r ∈ c.reasons, r.tag ≠ .fail := by
+-    intro r hr
+-    exact bne_iff_ne.mp (List.all_eq_true.mp h r hr)
+-  rw [fitsExit_failure_iff]
+-  intro r hr
+-  have hne := hall r hr
+-  cases r with
+-  | fail e ann => exact absurd rfl hne
+-  | die _ _ => trivial
+-  | interrupt _ _ => trivial
++    (h : cleanExit (.failure c) = true) (shape : NoShapeDefect ty (.failure c)) :
++    ExitOk w ty (.failure c) := ⟨fitsExit_of_clean w ty c h, shape⟩
+ 
+ /-- At a `never` error column a fitting failure is clean: no value has type `never`. -/
+ theorem cleanExit_of_never (w : World) (ty : EffTy) (c : CauseV) (never : ty.error = .never)
+-    (h : FitsExit w ty (.failure c)) : cleanExit (.failure c) = true := by
+-  rw [fitsExit_failure_iff, never] at h
+-  unfold cleanExit
+-  rw [List.all_eq_true]
+-  intro r hr
+-  have hr' := h r hr
+-  cases r with
+-  | fail e ann =>
+-    obtain ⟨v, _, hv⟩ := hr'
+-    exact False.elim hv
+-  | die _ _ => rfl
+-  | interrupt _ _ => rfl
++    (h : ExitOk w ty (.failure c)) : cleanExit (.failure c) = true := cleanExit_of_never_fits w ty c never h.1
+ 
+ end Effect4.Program.Typed
+diff --git a/src/Effect4/Laws/Program/Typed/Assembly.lean b/src/Effect4/Laws/Program/Typed/Assembly.lean
+index 92889fe4..666c033e 100644
+--- a/src/Effect4/Laws/Program/Typed/Assembly.lean
++++ b/src/Effect4/Laws/Program/Typed/Assembly.lean
+@@ -36,7 +36,7 @@ def expectOf (w : World) : Expect → Option EffTy
+ /-- A completion at an effect type: an exit strongly, a reference completion through the
+ heap table. -/
+ def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberId Ann → Prop
+-  | .ofExit ex => FitsExit w ty ex
++  | .ofExit ex => ExitOk w ty ex
+   | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.sub ty.answer = true
+ 
+ /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
+@@ -52,9 +52,9 @@ def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
+ /-- The generated bundle, instantiated with the strong judgments. -/
+ def preds (root : ProgramSource) : Preds World where
+   SavedOk w e x := ∀ ty, expectOf w e = some ty →
+-    Contracts.SavedOk (TypedProg root) FitsExit (frameProtocols root) w ty x
++    Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty x
+   PendingOk w _ ps := ∀ p ∈ ps, ∃ id, (w.Θ id p.token).isSome = true
+-  exit w e ex := ∀ ty, expectOf w e = some ty → FitsExit w ty ex
++  exit w e ex := ∀ ty, expectOf w e = some ty → ExitOk w ty ex
+   ResumeOk w _ target token code := Contracts.ResumeOk (TypedProg root) w target token code
+   ServiceOk w _ ctx := ServicesFit w ctx.services
+   RaceOk w _ races := ∀ r ∈ races, ∃ resultTy, RacePayload root w r resultTy
+@@ -89,7 +89,7 @@ fiber type, and interrupt provenance is required even when current code is inert
+ def SavedPosition (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd)
+     (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
+   ∃ tin, (¬ CodeInert m commands position → TypedProg root w tin saved.current) ∧
+-    StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final saved.stack ∧
++    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
+     InterruptProvenance saved
+ 
+ /-- All generated data clauses are unchanged. Only saved current code is conditional on
+@@ -102,7 +102,7 @@ def statePreds (root : ProgramSource) (m : RState) (commands : List RCmd) : Pred
+ /-- A fully typed saved frame also satisfies the conditional current-code clause. -/
+ theorem savedPosition_of_saved (root : ProgramSource) (w : World) (m : RState)
+     (commands : List RCmd) (position : Expect) (final : EffTy) (saved : RSaved)
+-    (typed : Contracts.SavedOk (TypedProg root) FitsExit (frameProtocols root) w final saved) :
++    (typed : Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final saved) :
+     SavedPosition root w m commands position final saved := by
+   obtain ⟨tin, code, stack, provenance⟩ := typed
+   exact ⟨tin, fun _ => code, stack, provenance⟩
+@@ -111,7 +111,7 @@ theorem savedPosition_of_saved (root : ProgramSource) (w : World) (m : RState)
+ def ActiveDelivery (root : ProgramSource) (w : World) (m : RState) : Prop :=
+   ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token →
+     ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
+-      StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final f.frame.stack ∧
++      StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final f.frame.stack ∧
+       InterruptProvenance f.frame
+ 
+ /-- World validity, every generated typed position, active delivery, the settled native guard
+@@ -341,11 +341,11 @@ only. The statement remains refuted on programs with no host by `E4-PROV-CE-005`
+ `E4-PROV-CE-006` and `E4-SCHED-CE-016`. The table-based Fits judgment repairs the
+ liveness obstruction E4-TYPED-CE-004; the general M5 initialization proof is still open.
+ 
+-M6 does not yet claim that a run never dies with `badName`, `notImplemented`, or
+-`missingService` when nothing is required. Row 107 and brief item H2 require that exclusion
+-in the exit judgment read by code, saved stacks, queued results and stored completions;
+-a check on finished fibers alone is insufficient (`E4-TYPED-CE-007`). Keep this disclaimer
+-until that repair lands, retaining any part that remains open. -/
++`ExitOk` excludes `badName` and `notImplemented` at typed code, saved-stack, queued-result
++and stored-completion exit positions (`E4-TYPED-CE-007`). The initialization, transition and
++reachability proofs remain open, so this judgment alone does not establish their absence
++from every run. `missingService` remains admitted at every requirement row in H2 part one;
++its exclusion requires the held frame-and-operation contract amendment (row 117). -/
+ theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
+     ProofGraph.Obligation (Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
+       RReachable root fuel m → ∃ w, TypedState root rootTy w m) := ⟨⟩
+diff --git a/src/Effect4/Laws/Program/Typed/Residual.lean b/src/Effect4/Laws/Program/Typed/Residual.lean
+index 2a44af8e..7ae2b576 100644
+--- a/src/Effect4/Laws/Program/Typed/Residual.lean
++++ b/src/Effect4/Laws/Program/Typed/Residual.lean
+@@ -151,20 +151,20 @@ def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer
+   | .ambientScope => ∃ sc, ans = Val.scopeHandle sc
+   | .sync value => ans = value
+   | .await target mode => match mode with
+-    | .joinEffect => ∃ ty, w'.Γ target = some ty ∧ FitsExit w' ty ans
++    | .joinEffect => ∃ ty, w'.Γ target = some ty ∧ ExitOk w' ty ans
+     | .awaitValue => ∃ ty, w'.Γ target = some ty ∧ Fits w' ans ty.answer
+   | .fork _ _ _ | .forkIn _ _ _ _ => ∃ id : FiberId, ans = Val.fiber id ∧ w'.Γ id = some cert
+   | .forkScoped _ _ _ => ∃ id : FiberId, ans = .success (Val.fiber id) ∧ w'.Γ id = some cert
+   | .mask _ _ | .scoped _ | .raceAll _ _ | .raceRegister _ | .async _ _ | .gen _ | .loop _ _ =>
+-    FitsExit w' cert ans
++    ExitOk w' cert ans
+   | .unguard ex | .finishFinalizer ex | .closeScope _ ex | .scopeExit _ _ ex | .closeIter _ _ ex => ans = ex
+   | .guard_ kind => match ans with
+     | none => True
+-    | some ex => kind.hasExitArm ex = true ∧ FitsExit w' cert ex
++    | some ex => kind.hasExitArm ex = true ∧ ExitOk w' cert ex
+   -- a live frontier is never answered (fuel exhaustion is not an exit)
+   | .frontier _ _ => False
+   -- the completed exits a callback reads, each at its fiber's declared type
+-  | .construction => ∀ p ∈ ans, ∃ ty, w'.Γ p.1 = some ty ∧ FitsExit w' ty p.2
++  | .construction => ∀ p ∈ ans, ∃ ty, w'.Γ p.1 = some ty ∧ ExitOk w' ty p.2
+   | .suspend _ | .refuse _ => True
+ 
+ def Ψ_F (root : ProgramSource) : Protocol World FiberSig where
+@@ -184,7 +184,7 @@ type and type no continuation: the reference machine never resumes one (`evaluat
+ hands the payload to `deliverR`; `popR`'s answer glue passes it to the next frame).
+ `scopeExit` carries its exit and keeps its continuation. -/
+ inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Prop
+-  | pure {w : World} {ty : EffTy} {ex : ExitV} (exit : FitsExit w ty ex) :
++  | pure {w : World} {ty : EffTy} {ex : ExitV} (exit : ExitOk w ty ex) :
+       TypedProg root w ty (.pure ex)
+   | store {w : World} {ty : EffTy} {op : SyncOp} {k : Val → RProgram}
+       (cert : (Ψ_S root).Cert op) (pre : (Ψ_S root).pre w op cert)
+@@ -202,22 +202,22 @@ inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Pr
+       (mid : EffTy) (body : TypedProg root w mid (k none))
+       (run : ∀ w', w.leHost w' → ∀ ex, fiberPost w' (.guard_ kind) mid (some ex) →
+         TypedProg root w' ty (k (some ex)))
+-      (skip : ∀ w', w.leHost w' → ∀ ex, FitsExit w' mid ex → kind.hasExitArm ex = false →
+-        FitsExit w' ty ex) :
++      (skip : ∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → kind.hasExitArm ex = false →
++        ExitOk w' ty ex) :
+       TypedProg root w ty (.vis (.inr (.guard_ kind)) k)
+   | unguard {w : World} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
+-      (payload : FitsExit w ty ex) : TypedProg root w ty (.vis (.inr (.unguard ex)) k)
++      (payload : ExitOk w ty ex) : TypedProg root w ty (.vis (.inr (.unguard ex)) k)
+   | finishFinalizer {w : World} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
+-      (payload : FitsExit w ty ex) : TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k)
++      (payload : ExitOk w ty ex) : TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k)
+   | scopeExit {w : World} {ty : EffTy} {prev : Ctx} {sc : Nat} {ex : ExitV} {k : ExitV → RProgram}
+-      (payload : FitsExit w ty ex)
++      (payload : ExitOk w ty ex)
+       (next : ∀ w', w.leHost w' → ∀ ans, TypedProg root w' ty (k ans)) :
+       TypedProg root w ty (.vis (.inr (.scopeExit prev sc ex)) k)
+ 
+ namespace TypedProg
+ 
+ theorem pure_inv {root : ProgramSource} {w : World} {ty : EffTy} {ex : ExitV}
+-    (h : TypedProg root w ty (.pure ex)) : FitsExit w ty ex := by
++    (h : TypedProg root w ty (.pure ex)) : ExitOk w ty ex := by
+   cases h with
+   | pure exit => exact exit
+ 
+@@ -235,8 +235,8 @@ theorem guard_inv {root : ProgramSource} {w : World} {ty : EffTy} {kind : GuardK
+     ∃ mid : EffTy, TypedProg root w mid (k none) ∧
+       (∀ w', w.leHost w' → ∀ ex, fiberPost w' (.guard_ kind) mid (some ex) →
+         TypedProg root w' ty (k (some ex))) ∧
+-      (∀ w', w.leHost w' → ∀ ex, FitsExit w' mid ex → kind.hasExitArm ex = false →
+-        FitsExit w' ty ex) := by
++      (∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → kind.hasExitArm ex = false →
++        ExitOk w' ty ex) := by
+   cases h with
+   | fiber notGuard _ _ _ _ _ _ => exact absurd rfl (notGuard kind)
+   | guard mid body run skip => exact ⟨mid, body, run, skip⟩
+@@ -246,14 +246,14 @@ end TypedProg
+ /-- FR-09's marker payload inversion: a typed `unguard` carries an exit at the current type. -/
+ theorem unguard_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV)
+     (k : ExitV → RProgram) (h : TypedProg root w ty (.vis (.inr (.unguard ex)) k)) :
+-    FitsExit w ty ex := by
++    ExitOk w ty ex := by
+   cases h with
+   | fiber _ notUnguard _ _ _ _ _ => exact absurd rfl (notUnguard ex)
+   | unguard payload => exact payload
+ 
+ theorem finishFinalizer_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV)
+     (k : ExitV → RProgram) (h : TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k)) :
+-    FitsExit w ty ex := by
++    ExitOk w ty ex := by
+   cases h with
+   | fiber _ _ notFinish _ _ _ _ => exact absurd rfl (notFinish ex)
+   | finishFinalizer payload => exact payload
+@@ -273,9 +273,9 @@ mutual
+         IteratorProtocol root w tin tout name
+   inductive IteratorAnswer (root : ProgramSource) (w : World) :
+       EffTy → IterStep EffName EffThunk Val Err Defect FiberId Ann RProgram → Prop
+-    | done {tout : EffTy} (result : Val) (typed : FitsExit w tout (.success result)) :
++    | done {tout : EffTy} (result : Val) (typed : ExitOk w tout (.success result)) :
+         IteratorAnswer root w tout (.done result)
+-    | halt {tout : EffTy} (cause : CauseV) (typed : FitsExit w tout (.failure cause)) :
++    | halt {tout : EffTy} (cause : CauseV) (typed : ExitOk w tout (.failure cause)) :
+         IteratorAnswer root w tout (.halt cause)
+     | resume {tout : EffTy} (code : RProgram) (name : EffName) (tin : EffTy)
+         (typed : TypedProg root w tin code) (tail : IteratorProtocol root w tin tout name) :
+@@ -302,7 +302,7 @@ end
+ types the cancellation only for an incoming failure that is itself typed at the frame's
+ type, the evidence `popR` holds at that arm (`E4-SCHED-CE-010`). -/
+ def frameProtocols (root : ProgramSource) : Contracts.FrameProtocols where
+-  asyncFinalizer w tin tout name := tin = tout ∧ ∀ cause, FitsExit w tin (.failure cause) →
++  asyncFinalizer w tin tout name := tin = tout ∧ ∀ cause, ExitOk w tin (.failure cause) →
+     cause.hasInterrupts = true → TypedProg root w tout ((interpR root.program).cancelThenFail name cause)
+   iterator := IteratorProtocol root
+   loop := LoopProtocol root
+@@ -319,7 +319,7 @@ def refAllocGetProg : RProgram :=
+ theorem strongValue_bool_true (w : World) : Fits w (Val.bool true) .bool := trivial
+ 
+ theorem strongExit_bool (w : World) (v : Val) (hv : Fits w v .bool) :
+-    FitsExit w (EffTy.pure .bool) (.success v) := hv
++    ExitOk w (EffTy.pure .bool) (.success v) := strongExit_success w (EffTy.pure .bool) v hv
+ 
+ theorem settling_ref_allocation (root : ProgramSource) (w : World) (_h0 : HeapTypedAt w ⟨0⟩ .nat) :
+     TypedProg root w (EffTy.pure .bool) refAllocGetProg := by
+@@ -357,7 +357,7 @@ theorem settling_fork (root : ProgramSource) (w : World) (child : Body) (cert :
+   intro w' _ ans hpost
+   dsimp only [Ψ_F, fiberPost] at hpost
+   rcases hpost with ⟨id, rfl, hid⟩
+-  exact TypedProg.pure ⟨cert, hid, Ty.sub_refl _, Ty.sub_refl _⟩
++  exact TypedProg.pure ⟨⟨cert, hid, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
+ 
+ theorem settling_mask (root : ProgramSource) (w : World) (flag : Bool) (body : Body) (cert : EffTy)
+     (hbody : BodyTyped root w body cert) :
+@@ -372,10 +372,10 @@ theorem settling_mask (root : ProgramSource) (w : World) (flag : Bool) (body : B
+ namespace M3aAdmissionObligations
+ 
+ theorem unguard_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
+-    ProofGraph.Obligation (TypedProg root w ty (.vis (.inr (.unguard ex)) k) → FitsExit w ty ex) := ⟨⟩
++    ProofGraph.Obligation (TypedProg root w ty (.vis (.inr (.unguard ex)) k) → ExitOk w ty ex) := ⟨⟩
+ 
+ theorem finishFinalizer_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
+-    ProofGraph.Obligation (TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k) → FitsExit w ty ex) := ⟨⟩
++    ProofGraph.Obligation (TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k) → ExitOk w ty ex) := ⟨⟩
+ 
+ end M3aAdmissionObligations
+ 
+@@ -410,8 +410,8 @@ theorem strongValue_mono (w w' : World) (ty : Ty) (v : Val) :
+ 
+ /-- Exit membership persists along the host-world order, with the ledger's binder order. -/
+ theorem strongExit_mono (w w' : World) (ty : EffTy) (ex : ExitV) :
+-    w.leHost w' → FitsExit w ty ex → FitsExit w' ty ex :=
+-  fun ordered h => fitsExit_mono ordered h
++    w.leHost w' → ExitOk w ty ex → ExitOk w' ty ex :=
++  fun ordered h => ⟨fitsExit_mono ordered h.1, h.2⟩
+ 
+ namespace M3bWorld
+ 
+@@ -419,7 +419,7 @@ theorem strongValue_mono (w w' : World) (ty : Ty) (v : Val) :
+     ProofGraph.Obligation (w.leHost w' → Fits w v ty → Fits w' v ty) := ⟨⟩
+ 
+ theorem strongExit_mono (w w' : World) (ty : EffTy) (ex : ExitV) :
+-    ProofGraph.Obligation (w.leHost w' → FitsExit w ty ex → FitsExit w' ty ex) := ⟨⟩
++    ProofGraph.Obligation (w.leHost w' → ExitOk w ty ex → ExitOk w' ty ex) := ⟨⟩
+ 
+ theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : RProgram) :
+     ProofGraph.Obligation (w.leHost w' → TypedProg root w ty p → TypedProg root w' ty p) := ⟨⟩
+diff --git a/src/Effect4/Laws/Program/Typed/Scheduler.lean b/src/Effect4/Laws/Program/Typed/Scheduler.lean
+index 0a93bc29..9bb85454 100644
+--- a/src/Effect4/Laws/Program/Typed/Scheduler.lean
++++ b/src/Effect4/Laws/Program/Typed/Scheduler.lean
+@@ -42,12 +42,13 @@ theorem observerDeliveredExit_fits (w : World) (ty : EffTy) (exit : ExitV)
+ 
+ /-- The actual interpreter hook constructs the result just typed above. -/
+ theorem observer_exitValue_typed (root : ProgramSource) (w : World) (ty : EffTy)
+-    (exit : ExitV) (mode : Supervision.ObserverMode) (typed : FitsExit w ty exit) :
++    (exit : ExitV) (mode : Supervision.ObserverMode) (typed : ExitOk w ty exit) :
+     TypedProg root w (observerDeliveredType mode ty)
+       ((interpR root.program).exitValue exit mode) := by
+   cases mode with
+   | joinEffect => exact TypedProg.pure typed
+-  | awaitValue => exact TypedProg.pure (reifyExitVal_fits w ty exit typed)
++  | awaitValue =>
++    exact TypedProg.pure (strongExit_success w _ _ (reifyExitVal_fits w ty exit typed.1))
+ 
+ /-- Only the two exit columns are aggregated; requirement transport is H2's separate debt. -/
+ def FiberColumnsBelow (w : World) (id : FiberId) (answer error : Ty) : Prop :=
+@@ -58,10 +59,10 @@ Existing live fiber declarations are constrained; missing fibers are not invente
+ structure RacePayload (root : ProgramSource) (w : World) (race : RRace)
+     (resultTy : EffTy) : Prop where
+   token : w.Θ race.host race.token = some resultTy
+-  failures : FitsCause w resultTy.error ⟨race.state.failures⟩
++  failures : ExitOk w resultTy (.failure ⟨race.state.failures⟩)
+   winner : ∀ pair ∈ race.state.winner, Fits w pair.2 resultTy.answer
+-  accepted : ∀ exit ∈ race.state.accepted, FitsExit w resultTy exit
+-  cleanup : ∀ wait ∈ race.state.cleanup, FitsExit w resultTy wait.result
++  accepted : ∀ exit ∈ race.state.accepted, ExitOk w resultTy exit
++  cleanup : ∀ wait ∈ race.state.cleanup, ExitOk w resultTy wait.result
+   live : ∀ id ∈ race.state.live, ∀ childTy, w.Γ id = some childTy →
+     childTy.answer.sub resultTy.answer = true ∧ childTy.error.sub resultTy.error = true
+   programs : ∀ code ∈ race.programs, ∃ childTy, TypedProg root w childTy code ∧
+@@ -73,14 +74,14 @@ structure CountdownPayload (w : World) (m : RState) (waiter : FiberId)
+     (pending : RPending) (answer error : Ty) (tokenTy : EffTy) : Prop where
+   token : w.Θ waiter pending.token = some tokenTy
+   collected : ∀ exit ∈ pending.collected,
+-    FitsExit w ⟨answer, error, Env.Requirement.empty⟩ exit
++    ExitOk w ⟨answer, error, Env.Requirement.empty⟩ exit
+   targets : ∀ id ∈ pending.waitingOn.toList ++ pending.remaining,
+     ∀ fiber, m.fiber? id = some fiber → FiberColumnsBelow w fiber.id answer error
+   resume : match pending.resumeWith with
+     | .exitsValue => tokenTy = EffTy.pure (.list (.exitOf answer error))
+     | .void => tokenTy = EffTy.pure .unit
+-    | .continueWith (.restore saved) => FitsExit w tokenTy saved
+-    | .continueWith _ => FitsExit w tokenTy outsideExit
++    | .continueWith (.restore saved) => ExitOk w tokenTy saved
++    | .continueWith _ => ExitOk w tokenTy outsideExit
+ 
+ /-- Follow exactly fireObserver's waiter and pending lookups. Missing lookups are inert.
+ The supplied condition shares the aggregate witnesses with all buffered values. -/
+@@ -113,14 +114,14 @@ def ObserverCommandOk (root : ProgramSource) (w : World) (m : RState)
+     (source : FiberId) (exit : ExitV) : Observer → Prop
+   | .resumeAwait waiter token mode => ∃ sourceTy,
+       w.Γ source = some sourceTy ∧
+-      w.Θ waiter token = some (observerDeliveredType mode sourceTy) ∧ FitsExit w sourceTy exit
++      w.Θ waiter token = some (observerDeliveredType mode sourceTy) ∧ ExitOk w sourceTy exit
+   | .countdown waiter token => CountdownAt w m waiter token
+-      (fun answer error => FitsExit w ⟨answer, error, Env.Requirement.empty⟩ exit)
++      (fun answer error => ExitOk w ⟨answer, error, Env.Requirement.empty⟩ exit)
+   | .raceCallback raceId =>
+     match m.race? raceId with
+     | none => True
+     | some race => ∃ resultTy, RacePayload root w race resultTy ∧
+-        (source ∈ race.state.live → FitsExit w resultTy exit)
++        (source ∈ race.state.live → ExitOk w resultTy exit)
+   | .untrackChild _ | .dropScopeFinalizer _ _ | .callback _ => True
+ 
+ /-- Enrollment may fire an already-exited entrant immediately, so queueing only a typed
+@@ -168,7 +169,7 @@ def raceRegistrationR : RProgram → Option Nat
+ certified the current administrative operation. This names a local delivery boundary. -/
+ def StackReply (root : ProgramSource) (w : World) (fiber : RFiber) (replyTy : EffTy) : Prop :=
+   ∃ final, w.Γ fiber.id = some final ∧
+-    Contracts.StackAccepts (TypedProg root) FitsExit (frameProtocols root) w replyTy final
++    Contracts.StackAccepts (TypedProg root) ExitOk (frameProtocols root) w replyTy final
+       fiber.frame.stack ∧ Contracts.InterruptProvenance fiber.frame
+ 
+ /-- The direct registration marker owns a real race on this fiber, and the race token's
+diff --git a/src/Effect4/Laws/Program/Typed/Stack.lean b/src/Effect4/Laws/Program/Typed/Stack.lean
+index a50121c3..aa6b443a 100644
+--- a/src/Effect4/Laws/Program/Typed/Stack.lean
++++ b/src/Effect4/Laws/Program/Typed/Stack.lean
+@@ -9,7 +9,8 @@ protocol repair of 2026-09-24. `popR_typed`: delivering a typed exit to a typed
+ installs typed code over a typed remaining stack, or completes with an exit typed at the stack's
+ final type. Its only premises are `HookLaws` (the three named hooks) and `InterruptProvenance`
+ (recorded causes are interrupts); there is no run premise. A preempted catch passes the sanitized
+-cause (`U-01`), which carries no `Fail` and so fits every type.
++cause (`U-01`), which carries no `Fail`. Its original typed exit and recorded-interrupt
++provenance separately supply the part-one defect exclusion.
+ -/
+ 
+ set_option autoImplicit false
+@@ -20,13 +21,13 @@ open Effect4.Laws.Effects Contracts
+ /-- Exactly the facts `popR`'s three named-hook arms need about an interpreter. -/
+ structure HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols) : Prop where
+   asyncFinalizer : ∀ w tin tout name, hooks.asyncFinalizer w tin tout name →
+-    tin = tout ∧ ∀ cause, FitsExit w tin (.failure cause) → cause.hasInterrupts = true →
++    tin = tout ∧ ∀ cause, ExitOk w tin (.failure cause) → cause.hasInterrupts = true →
+       TypedProg root w tout (interp.cancelThenFail name cause)
+   iterator : ∀ w tin tout name, hooks.iterator w tin tout name →
+     tin.error = tout.error ∧ ∀ v, Fits w v tin.answer →
+       match (interp.iterNext name v).2 with
+-      | .done result => FitsExit w tout (.success result)
+-      | .halt cause => FitsExit w tout (.failure cause)
++      | .done result => ExitOk w tout (.success result)
++      | .halt cause => ExitOk w tout (.failure cause)
+       | .resume code name' => ∃ tin', TypedProg root w tin' code ∧ hooks.iterator w tin' tout name'
+   loop : ∀ w tin tout name cursor, hooks.loop w tin tout name cursor →
+     tin.error = tout.error ∧ ∀ v, Fits w v tin.answer →
+@@ -38,8 +39,8 @@ structure HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+ /-- The two outcomes of the walk, at the saved stack's final type. -/
+ def WalkTyped (root : ProgramSource) (hooks : FrameProtocols) (w : World) (tout : EffTy) :
+     RSaved × Option ExitV → Prop
+-  | (frame, none) => SavedOk (TypedProg root) FitsExit hooks w tout frame
+-  | (_, some ex) => FitsExit w tout ex
++  | (frame, none) => SavedOk (TypedProg root) ExitOk hooks w tout frame
++  | (_, some ex) => ExitOk w tout ex
+ 
+ /-! ## Clean exits along the walk -/
+ 
+@@ -83,21 +84,48 @@ theorem sanitize_clean_exit {x : RSaved} (hp : InterruptProvenance x) (cause : C
+   intro r hr
+   exact bne_iff_ne.mpr (Cause.sanitize_clean cause ic hne r hr)
+ 
+-/-- A failure depends only on the error column. -/
++/-- A recorded cause has only interrupt reasons, so it meets part one's exclusion. -/
++theorem recorded_noShapeDefect (ty : EffTy) {x : RSaved} (hp : InterruptProvenance x)
++    {cause : CauseV} (recorded : x.interruptedCause = some cause) :
++    NoShapeDefect ty (.failure cause) :=
++  noShapeDefect_of_interrupts ty cause (hp.recorded cause recorded)
++
++/-- The injected pending cause is recorded interruption or the empty cause. -/
++theorem pendingCause_noShapeDefect (ty : EffTy) {x : RSaved} (hp : InterruptProvenance x) :
++    NoShapeDefect ty (.failure x.pendingCause) := by
++  cases recorded : x.interruptedCause with
++  | some cause =>
++    have pending : x.pendingCause = cause := by
++      simp only [RSaved.pendingCause, recorded, Option.getD_some]
++    rw [pending]
++    exact recorded_noShapeDefect ty hp recorded
++  | none =>
++    have pending : x.pendingCause = Cause.empty := by
++      simp only [RSaved.pendingCause, recorded, Option.getD_none]
++    rw [pending]
++    exact noShapeDefect_of_interrupts ty Cause.empty (fun _ member => nomatch member)
++
++/-- Preemption keeps exclusion only when the original cause has it; provenance supplies
++exclusion of the recorded cause. No requirement-row transport is claimed in part one. -/
++theorem sanitize_noShapeDefect (ty : EffTy) {x : RSaved} (hp : InterruptProvenance x)
++    (cause : CauseV) {interrupted : CauseV} (recorded : x.interruptedCause = some interrupted)
++    (shape : NoShapeDefect ty (.failure cause)) :
++    NoShapeDefect ty (.failure (Cause.sanitize cause interrupted)) :=
++  noShapeDefect_sanitize ty cause interrupted shape (recorded_noShapeDefect ty hp recorded)
++
++/-- In part one, failure membership depends on the error column and the exclusion
++is independent of all type columns. -/
+ theorem strongExit_failure_of_error {w : World} {tin tout : EffTy} {c : CauseV}
+-    (herr : tin.error = tout.error) (h : FitsExit w tin (.failure c)) : FitsExit w tout (.failure c) := by
+-  rw [fitsExit_failure_iff] at h ⊢
+-  rw [← herr]
+-  exact h
++    (herr : tin.error = tout.error) (h : ExitOk w tin (.failure c)) : ExitOk w tout (.failure c) := ⟨fitsExit_failure_of_error herr h.1, h.2⟩
+ 
+ theorem walk_saved {root : ProgramSource} {hooks : FrameProtocols} {w : World} {tout : EffTy}
+     {x : RSaved} (tin : EffTy) (code : TypedProg root w tin x.current)
+-    (stack : StackAccepts (TypedProg root) FitsExit hooks w tin tout x.stack)
++    (stack : StackAccepts (TypedProg root) ExitOk hooks w tin tout x.stack)
+     (hp : InterruptProvenance x) : WalkTyped root hooks w tout (x, none) :=
+   ⟨tin, code, stack, hp⟩
+ 
+ theorem walk_done {root : ProgramSource} {hooks : FrameProtocols} {w : World} {tout : EffTy}
+-    {x : RSaved} {ex : ExitV} (h : FitsExit w tout ex) : WalkTyped root hooks w tout (x, some ex) :=
++    {x : RSaved} {ex : ExitV} (h : ExitOk w tout ex) : WalkTyped root hooks w tout (x, some ex) :=
+   h
+ 
+ /-! ## The walk -/
+@@ -105,8 +133,8 @@ theorem walk_done {root : ProgramSource} {hooks : FrameProtocols} {w : World} {t
+ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
+     (laws : HookLaws root interp hooks) (w : World) :
+     ∀ (stack : List ScopeFrame) (tin tout : EffTy) (ex : ExitV) (frame : RSaved),
+-      StackAccepts (TypedProg root) FitsExit hooks w tin tout stack →
+-      FitsExit w tin ex → InterruptProvenance frame →
++      StackAccepts (TypedProg root) ExitOk hooks w tin tout stack →
++      ExitOk w tin ex → InterruptProvenance frame →
+       WalkTyped root hooks w tout (popR interp ex stack frame) := by
+   intro stack
+   induction stack with
+@@ -132,7 +160,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+           cases ex with
+           | success v =>
+             simp only [popR, Bool.not_false, Bool.and_self, ↓reduceIte]
+-            exact walk_saved _ (TypedProg.pure (strongExit_of_clean w _ c (recorded_clean hp rfl)))
++            exact walk_saved _ (TypedProg.pure (strongExit_of_clean w _ c (recorded_clean hp rfl) (recorded_noShapeDefect _ hp rfl)))
+               tail ⟨hp.recorded, hp.deferred⟩
+           | failure c' =>
+             simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
+@@ -150,7 +178,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+           cases ex with
+           | success v =>
+             simp only [popR, Bool.not_false, Bool.and_self, ↓reduceIte]
+-            exact walk_saved _ (TypedProg.pure (strongExit_of_clean w _ c (recorded_clean hp rfl)))
++            exact walk_saved _ (TypedProg.pure (strongExit_of_clean w _ c (recorded_clean hp rfl) (recorded_noShapeDefect _ hp rfl)))
+               tail ⟨hp.recorded, hp.deferred⟩
+           | failure c' =>
+             simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
+@@ -159,10 +187,13 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+       obtain ⟨current, stack, i, ic, deferred⟩ := frame
+       have hp' : ∀ (c : RProgram) (s : List ScopeFrame) (b : Bool),
+           InterruptProvenance ⟨c, s, b, ic, deferred⟩ := fun _ _ _ => ⟨hp.recorded, hp.deferred⟩
+-      -- the preempted skip passes the sanitized cause, clean by provenance
+-      have preempt : ∀ (ty : EffTy) (cause ic' : CauseV), ic = some ic' →
+-          FitsExit w ty (.failure (Cause.sanitize cause ic')) := fun ty cause _ h =>
++      -- Provenance makes the recorded cause clean; the original cause must also
++      -- satisfy exclusion, supplied by the incoming typed exit.
++      have preempt : ∀ (ty : EffTy) (cause ic' : CauseV),
++          NoShapeDefect ty (.failure cause) → ic = some ic' →
++          ExitOk w ty (.failure (Cause.sanitize cause ic')) := fun ty cause _ shape h =>
+         strongExit_of_clean w ty _ (sanitize_clean_exit hp cause h)
++          (sanitize_noShapeDefect ty hp cause h shape)
+       cases kind with
+       | onSuccess =>
+         cases ex with
+@@ -183,7 +214,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+           · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+           · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+           · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+-          · exact ih _ _ _ _ tail (preempt _ c _ rfl) (hp' _ _ _)
++          · exact ih _ _ _ _ tail (preempt _ c _ hex.2 rfl) (hp' _ _ _)
+       | all =>
+         cases ex with
+         | success v =>
+@@ -195,7 +226,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+           · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+           · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+           · exact walk_saved _ (run _ hex rfl) tail (hp' _ _ _)
+-          · exact ih _ _ _ _ tail (preempt _ c _ rfl) (hp' _ _ _)
++          · exact ih _ _ _ _ tail (preempt _ c _ hex.2 rfl) (hp' _ _ _)
+       | onExit b =>
+         cases b with
+         | false =>
+@@ -212,7 +243,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+             · exact walk_saved _ (run _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
+             · exact walk_saved _ (run _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
+             · exact walk_saved _ (run _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
+-            · exact ih _ _ _ _ tail (preempt _ c _ rfl) (hp' _ _ _)
++            · exact ih _ _ _ _ tail (preempt _ c _ hex.2 rfl) (hp' _ _ _)
+     | answer next run =>
+       have hrun := run ex hex
+       obtain ⟨current, stack, i, ic, deferred⟩ := frame
+@@ -247,7 +278,8 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+         · exact ih _ _ _ _ tail hex ⟨hp.recorded, hp.deferred⟩
+         · exact ih _ _ _ _ tail hex ⟨hp.recorded, hp.deferred⟩
+         · exact ih _ _ _ _ tail hex ⟨hp.recorded, hp.deferred⟩
+-        · exact walk_saved _ (TypedProg.pure (strongExit_of_clean w _ _ (pendingCause_clean ⟨hp.recorded, hp.deferred⟩)))
++        · exact walk_saved _ (TypedProg.pure (strongExit_of_clean w _ _ (pendingCause_clean ⟨hp.recorded, hp.deferred⟩)
++          (pendingCause_noShapeDefect _ ⟨hp.recorded, hp.deferred⟩)))
+             tail ⟨hp.recorded, hp.deferred⟩
+     | iter name protocol =>
+       obtain ⟨errors, step⟩ := laws.iterator w _ _ name protocol
+@@ -257,7 +289,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+         simp only [popR]
+         exact ih _ _ _ _ tail (strongExit_failure_of_error errors hex) ⟨hp.recorded, hp.deferred⟩
+       | success v =>
+-        have h := step v hex
++        have h := step v hex.1
+         cases hs : (interp.iterNext name v).2 with
+         | done result =>
+           rw [hs] at h
+@@ -280,7 +312,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
+         simp only [popR]
+         exact ih _ _ _ _ tail (strongExit_failure_of_error errors hex) ⟨hp.recorded, hp.deferred⟩
+       | success v =>
+-        have h := step v hex
++        have h := step v hex.1
+         cases hs : interp.loopResume name cursor v with
+         | «continue» cursor' body =>
+           rw [hs] at h
+@@ -327,8 +359,8 @@ theorem hookLaws_interpR (root : ProgramSource) :
+ /-- The walk on the reference interpreter needs no hook premise. -/
+ theorem popR_typed_interpR (root : ProgramSource) (w : World) (stack : List ScopeFrame)
+     (tin tout : EffTy) (ex : ExitV) (frame : RSaved)
+-    (hstack : StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin tout stack)
+-    (hex : FitsExit w tin ex) (hp : InterruptProvenance frame) :
++    (hstack : StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin tout stack)
++    (hex : ExitOk w tin ex) (hp : InterruptProvenance frame) :
+     WalkTyped root (frameProtocols root) w tout (popR (interpR root.program) ex stack frame) :=
+   popR_typed root _ _ (hookLaws_interpR root) w stack tin tout ex frame hstack hex hp
+ 
+@@ -339,10 +371,10 @@ adapter and the old stack meet at `middle`, the code has the operation's own typ
+ theorem saveAnswerR_typed (root : ProgramSource) (hooks : FrameProtocols) (w : World)
+     (tin middle final : EffTy) (f : RFiber) (next : ExitV → RProgram) (code : RProgram)
+     (hcode : TypedProg root w tin code)
+-    (hnext : ∀ ex, FitsExit w tin ex → TypedProg root w middle (next ex))
+-    (hstack : StackAccepts (TypedProg root) FitsExit hooks w middle final f.frame.stack)
++    (hnext : ∀ ex, ExitOk w tin ex → TypedProg root w middle (next ex))
++    (hstack : StackAccepts (TypedProg root) ExitOk hooks w middle final f.frame.stack)
+     (hp : InterruptProvenance f.frame) :
+-    SavedOk (TypedProg root) FitsExit hooks w final (answerR (saveAnswerR f next) code).frame :=
++    SavedOk (TypedProg root) ExitOk hooks w final (answerR (saveAnswerR f next) code).frame :=
+   ⟨tin, hcode, .cons (.answer next hnext) hstack, ⟨hp.recorded, hp.deferred⟩⟩
+ 
+ /-- The fiber a matching resume leaves: unparked, the token's pending entries dropped, the
+@@ -359,12 +391,12 @@ theorem deliver_active (root : ProgramSource) (interp : RInterp) (hooks : FrameP
+     (w : World) (tin final : EffTy) (m : RState) (f : RFiber) (token : Nat) (code : RProgram)
+     (rest : List RCmd) (found : m.fiber? f.id = some f) (parked : f.parked = .withGuard token)
+     (declared : w.Θ f.id token = some tin) (typed : ResumeOk (TypedProg root) w f.id token code)
+-    (hstack : StackAccepts (TypedProg root) FitsExit hooks w tin final f.frame.stack)
++    (hstack : StackAccepts (TypedProg root) ExitOk hooks w tin final f.frame.stack)
+     (hp : InterruptProvenance f.frame) :
+     (letI := termEvaluatorFor root.program
+      driveStep interp m (.resume f.id token code) rest) =
+       ((m.update (resumed f token code)).emit [.resumedWith f.id token code], .evaluate f.id :: rest) ∧
+-    SavedOk (TypedProg root) FitsExit hooks w final (resumed f token code).frame := by
++    SavedOk (TypedProg root) ExitOk hooks w final (resumed f token code).frame := by
+   refine ⟨?_, tin, typed tin declared, hstack, ⟨hp.recorded, hp.deferred⟩⟩
+   simp only [driveStep, found, parked, ↓reduceIte]
+   rfl
+@@ -384,28 +416,28 @@ namespace M4Stack
+ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
+     (_laws : HookLaws root interp hooks) (w : World) : ProofGraph.Obligation
+     (∀ (stack : List ScopeFrame) (tin tout : EffTy) (ex : ExitV) (frame : RSaved),
+-      StackAccepts (TypedProg root) FitsExit hooks w tin tout stack →
+-      FitsExit w tin ex → InterruptProvenance frame →
++      StackAccepts (TypedProg root) ExitOk hooks w tin tout stack →
++      ExitOk w tin ex → InterruptProvenance frame →
+       WalkTyped root hooks w tout (popR interp ex stack frame)) := ⟨⟩
+ 
+ theorem saveAnswerR_typed (root : ProgramSource) (hooks : FrameProtocols) (w : World)
+     (tin middle final : EffTy) (f : RFiber) (next : ExitV → RProgram) (code : RProgram)
+     (_hcode : TypedProg root w tin code)
+-    (_hnext : ∀ ex, FitsExit w tin ex → TypedProg root w middle (next ex))
+-    (_hstack : StackAccepts (TypedProg root) FitsExit hooks w middle final f.frame.stack)
++    (_hnext : ∀ ex, ExitOk w tin ex → TypedProg root w middle (next ex))
++    (_hstack : StackAccepts (TypedProg root) ExitOk hooks w middle final f.frame.stack)
+     (_hp : InterruptProvenance f.frame) : ProofGraph.Obligation
+-    (SavedOk (TypedProg root) FitsExit hooks w final (answerR (saveAnswerR f next) code).frame) := ⟨⟩
++    (SavedOk (TypedProg root) ExitOk hooks w final (answerR (saveAnswerR f next) code).frame) := ⟨⟩
+ 
+ theorem deliver_active (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
+     (w : World) (tin final : EffTy) (m : RState) (f : RFiber) (token : Nat) (code : RProgram)
+     (rest : List RCmd) (_found : m.fiber? f.id = some f) (_parked : f.parked = .withGuard token)
+     (_declared : w.Θ f.id token = some tin) (_typed : ResumeOk (TypedProg root) w f.id token code)
+-    (_hstack : StackAccepts (TypedProg root) FitsExit hooks w tin final f.frame.stack)
++    (_hstack : StackAccepts (TypedProg root) ExitOk hooks w tin final f.frame.stack)
+     (_hp : InterruptProvenance f.frame) : ProofGraph.Obligation
+     ((letI := termEvaluatorFor root.program
+       driveStep interp m (.resume f.id token code) rest) =
+         ((m.update (resumed f token code)).emit [.resumedWith f.id token code], .evaluate f.id :: rest) ∧
+-      SavedOk (TypedProg root) FitsExit hooks w final (resumed f token code).frame) := ⟨⟩
++      SavedOk (TypedProg root) ExitOk hooks w final (resumed f token code).frame) := ⟨⟩
+ 
+ theorem deliver_stale (root : ProgramSource) (interp : RInterp) (m : RState) (f : RFiber)
+     (parkedToken token : Nat) (code : RProgram) (rest : List RCmd)
+--- /dev/null
++++ b/Test/Program/H2PartOne.lean
+@@ -0,0 +1,326 @@
++import Effect4.Laws.Program.Typed.Assembly
++
++/-! H2 part-one controls for shared exit exclusion and buffered race failures.
++Base value membership remains unchanged; badName and notImplemented are refused at typed
++exit boundaries, while ordinary defects, interruptions, and missingService remain admitted.
++Historical predicates below retain negative evidence and are not current admission rules. -/
++set_option autoImplicit false
++namespace Test.Program.H2PartOne
++open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
++open Effect4.Program.Typed
++abbrev W := Effect4.Program.Typed.World
++
++/-- The base membership judgment remains deliberately unchanged. -/
++theorem base_badName_still_fits (w : W) (ty : EffTy) :
++    FitsExit w ty (.failure (Cause.die .badName)) := fitsExit_of_clean w ty _ rfl
++
++theorem clean_still_allows_badName :
++    cleanExit (.failure (Cause.die .badName)) = true := rfl
++
++theorem badName_refused (w : W) (ty : EffTy) :
++    ¬ ExitOk w ty (.failure (Cause.die .badName)) := by
++  intro typed
++  have excluded := typed.2 (.die .badName .empty) (List.mem_singleton_self _)
++  exact excluded.1 rfl
++
++theorem notImplemented_refused (w : W) (ty : EffTy) :
++    ¬ ExitOk w ty (.failure (Cause.die .notImplemented)) := by
++  intro typed
++  have excluded := typed.2 (.die .notImplemented .empty) (List.mem_singleton_self _)
++  exact excluded.2 rfl
++
++theorem bad_current_code_refused (root : ProgramSource) (w : W) (ty : EffTy) :
++    ¬ TypedProg root w ty (.pure (.failure (Cause.die .badName))) :=
++  fun typed => badName_refused w ty (TypedProg.pure_inv typed)
++
++theorem notImplemented_current_code_refused (root : ProgramSource) (w : W) (ty : EffTy) :
++    ¬ TypedProg root w ty (.pure (.failure (Cause.die .notImplemented))) :=
++  fun typed => notImplemented_refused w ty (TypedProg.pure_inv typed)
++
++/-- The defect clause is finite and independent of requirement rows in part one. -/
++theorem ordinary_die_shape (ty : EffTy) (defect : Defect)
++    (notBadName : defect ≠ .badName) (implemented : defect ≠ .notImplemented) :
++    NoShapeDefect ty (.failure (Cause.die defect)) := by
++  intro reason member
++  simp only [Cause.die_reasons, List.mem_singleton] at member
++  subst member
++  exact ⟨notBadName, implemented⟩
++
++theorem user_die_admitted (w : W) (ty : EffTy) (payload : Nat) :
++    ExitOk w ty (.failure (Cause.die (.user payload))) :=
++  strongExit_of_clean w ty _ rfl
++    (ordinary_die_shape ty (.user payload) (by intro h; cases h) (by intro h; cases h))
++
++theorem user_current_code_admitted (root : ProgramSource) (w : W) (ty : EffTy) (payload : Nat) :
++    TypedProg root w ty (.pure (.failure (Cause.die (.user payload)))) :=
++  TypedProg.pure (user_die_admitted w ty payload)
++
++theorem missingService_admitted_at_any_type (w : W) (ty : EffTy) :
++    ExitOk w ty (.failure (Cause.die .missingService)) :=
++  strongExit_of_clean w ty _ rfl
++    (ordinary_die_shape ty .missingService (by intro h; cases h) (by intro h; cases h))
++
++theorem missingService_empty_admitted (w : W) :
++    ExitOk w (EffTy.pure .unit) (.failure (Cause.die .missingService)) :=
++  missingService_admitted_at_any_type w _
++
++theorem missingService_nonempty_admitted (w : W) :
++    ExitOk w ⟨.unit, .never, Env.Requirement.single nativeScopeKey⟩
++      (.failure (Cause.die .missingService)) := missingService_admitted_at_any_type w _
++
++theorem missingService_current_code_admitted (root : ProgramSource) (w : W) (ty : EffTy) :
++    TypedProg root w ty (.pure (.failure (Cause.die .missingService))) :=
++  TypedProg.pure (missingService_admitted_at_any_type w ty)
++
++#print axioms base_badName_still_fits
++#print axioms clean_still_allows_badName
++#print axioms badName_refused
++#print axioms notImplemented_refused
++#print axioms bad_current_code_refused
++#print axioms notImplemented_current_code_refused
++#print axioms ordinary_die_shape
++#print axioms user_die_admitted
++#print axioms user_current_code_admitted
++#print axioms missingService_admitted_at_any_type
++#print axioms missingService_empty_admitted
++#print axioms missingService_nonempty_admitted
++#print axioms missingService_current_code_admitted
++
++theorem interrupt_admitted (w : W) (ty : EffTy) (who : Option FiberId) :
++    ExitOk w ty (.failure (Cause.interrupt who)) := by
++  apply strongExit_of_clean w ty _ rfl
++  apply noShapeDefect_of_interrupts
++  intro reason member
++  simp only [Cause.interrupt_reasons, List.mem_singleton] at member
++  subst member
++  rfl
++
++#print axioms interrupt_admitted
++
++/-! Race failure-buffer controls. The whole historical payload predicate isolates the missing
++exclusion; the current predicate refuses both forbidden buffers. The actual raceComplete
++equality shows why checking only the incoming callback is insufficient. These finite payload
++examples make no WorldValid, machine-reachability, or full transition claim. -/
++namespace RaceFailureBuffers
++
++def unitTy : EffTy := EffTy.pure .unit
++def program : NativeEff := .succeed (.lit .unit)
++def child : FiberId := ⟨1⟩
++def world : W :=
++  { initialWorld unitTy with
++    Γ := fun _ => some unitTy
++    Θ := fun _ _ => some unitTy }
++
++def race (cause : CauseV) : Effect4.Program.Typed.RRace where
++  id := 0
++  host := Api.root
++  token := 0
++  state := {
++    unstarted := []
++    starting := none
++    live := [child]
++    remaining := 1
++    failures := cause.reasons
++    winner := none
++    accepted := none
++    cleanupNeeded := false
++    requests := []
++    cleanup := none
++    cleanupRequested := false }
++  settled := false
++  programs := []
++  registering := false
++
++/-- Historical intermediate H2 contract: the failure buffer still used base membership,
++while accepted and cleanup exits already required ExitOk. It is retained only as negative
++evidence; current race admission uses RacePayload. -/
++structure OldRacePayload (root : ProgramSource) (w : W) (r : Effect4.Program.Typed.RRace)
++    (resultTy : EffTy) : Prop where
++  token : w.Θ r.host r.token = some resultTy
++  failures : FitsCause w resultTy.error ⟨r.state.failures⟩
++  winner : ∀ pair ∈ r.state.winner, Fits w pair.2 resultTy.answer
++  accepted : ∀ exit ∈ r.state.accepted, ExitOk w resultTy exit
++  cleanup : ∀ wait ∈ r.state.cleanup, ExitOk w resultTy wait.result
++  live : ∀ id ∈ r.state.live, ∀ childTy, w.Γ id = some childTy →
++    childTy.answer.sub resultTy.answer = true ∧ childTy.error.sub resultTy.error = true
++  programs : ∀ code ∈ r.programs, ∃ childTy, TypedProg root w childTy code ∧
++    childTy.answer.sub resultTy.answer = true ∧ childTy.error.sub resultTy.error = true
++
++theorem old_admitted (cause : CauseV) (clean : cleanExit (.failure cause) = true) :
++    OldRacePayload (program : ProgramSource) world (race cause) unitTy := by
++  refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
++  · exact (fitsExit_failure_iff world unitTy cause).mp
++      (fitsExit_of_clean world unitTy cause clean)
++  · intro pair member; cases member
++  · intro exit member; cases member
++  · intro wait member; cases member
++  · intro id member childTy declared
++    change some unitTy = some childTy at declared
++    cases declared
++    exact ⟨Ty.sub_refl _, Ty.sub_refl _⟩
++  · intro code member; cases member
++
++theorem old_badName_admitted :
++    OldRacePayload (program : ProgramSource) world (race (Cause.die .badName)) unitTy :=
++  old_admitted _ rfl
++
++theorem old_notImplemented_admitted :
++    OldRacePayload (program : ProgramSource) world (race (Cause.die .notImplemented)) unitTy :=
++  old_admitted _ rfl
++
++theorem new_badName_refused :
++    ¬ RacePayload (program : ProgramSource) world (race (Cause.die .badName)) unitTy := by
++  intro typed
++  have excluded := typed.failures.2 (.die .badName .empty) (List.mem_singleton_self _)
++  exact excluded.1 rfl
++
++theorem new_notImplemented_refused :
++    ¬ RacePayload (program : ProgramSource) world (race (Cause.die .notImplemented)) unitTy := by
++  intro typed
++  have excluded := typed.failures.2 (.die .notImplemented .empty) (List.mem_singleton_self _)
++  exact excluded.2 rfl
++
++theorem new_admitted (cause : CauseV) (typed : ExitOk world unitTy (.failure cause)) :
++    RacePayload (program : ProgramSource) world (race cause) unitTy := by
++  refine ⟨rfl, typed, ?_, ?_, ?_, ?_, ?_⟩
++  · intro pair member; cases member
++  · intro exit member; cases member
++  · intro wait member; cases member
++  · intro id member childTy declared
++    change some unitTy = some childTy at declared
++    cases declared
++    exact ⟨Ty.sub_refl _, Ty.sub_refl _⟩
++  · intro code member; cases member
++
++theorem user_die_admitted (value : Nat) :
++    RacePayload (program : ProgramSource) world (race (Cause.die (.user value))) unitTy := by
++  apply new_admitted
++  refine ⟨fitsExit_of_clean world unitTy _ rfl, ?_⟩
++  intro reason member
++  simp only [Cause.die_reasons, List.mem_singleton] at member
++  subst reason
++  exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
++
++theorem interrupt_admitted :
++    RacePayload (program : ProgramSource) world (race (Cause.interrupt none)) unitTy := by
++  apply new_admitted
++  refine ⟨fitsExit_of_clean world unitTy _ rfl, ?_⟩
++  intro reason member
++  change reason ∈ [.interrupt none .empty] at member
++  rw [List.mem_singleton] at member
++  subst reason
++  trivial
++
++theorem missingService_admitted :
++    RacePayload (program : ProgramSource) world (race (Cause.die .missingService)) unitTy := by
++  apply new_admitted
++  refine ⟨fitsExit_of_clean world unitTy _ rfl, ?_⟩
++  intro reason member
++  simp only [Cause.die_reasons, List.mem_singleton] at member
++  subst reason
++  exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
++
++/-- The final child can contribute an empty, admitted cause; settlement still publishes all
++previously buffered reasons. Thus checking only the new callback exit cannot close the hole. -/
++theorem raceComplete_packages_buffer (cause : CauseV) :
++    (Supervision.raceComplete (race cause).state child (.failure Cause.empty)).accepted =
++      some (.failure cause) := by
++  rw [Supervision.raceComplete_failure_last (race cause).state child Cause.empty
++    (List.mem_singleton_self _) rfl (Nat.le_refl 1)]
++  change (some (.failure ⟨cause.reasons ++ []⟩) : Option ExitV) = some (.failure cause)
++  rw [List.append_nil]
++
++theorem last_empty_failure_typed : ExitOk world unitTy (.failure Cause.empty) :=
++  ⟨fitsExit_of_clean world unitTy _ rfl, fun _ member => nomatch member⟩
++
++theorem raceComplete_publishes_badName :
++    (Supervision.raceComplete (race (Cause.die .badName)).state child
++      (.failure Cause.empty)).accepted = some (.failure (Cause.die .badName)) :=
++  raceComplete_packages_buffer _
++
++theorem raceComplete_publishes_notImplemented :
++    (Supervision.raceComplete (race (Cause.die .notImplemented)).state child
++      (.failure Cause.empty)).accepted = some (.failure (Cause.die .notImplemented)) :=
++  raceComplete_packages_buffer _
++
++#print axioms old_admitted
++#print axioms old_badName_admitted
++#print axioms old_notImplemented_admitted
++#print axioms new_badName_refused
++#print axioms new_notImplemented_refused
++#print axioms new_admitted
++#print axioms user_die_admitted
++#print axioms interrupt_admitted
++#print axioms missingService_admitted
++#print axioms raceComplete_packages_buffer
++#print axioms last_empty_failure_typed
++#print axioms raceComplete_publishes_badName
++#print axioms raceComplete_publishes_notImplemented
++end RaceFailureBuffers
++
++
++/-! E4-TYPED-CE-008: retained part-two saved-frame witness from the model-probe audit.
++The local FullExitOk additionally refuses missingService at an empty requirement row.
++The accepted loop stack returns that failure unchanged across different requirement rows.
++This is a saved-frame witness, not a reachable-run claim or a refutation of base FitsExit;
++part one's live ExitOk deliberately admits missingService at both rows. -/
++namespace MissingServiceTransport
++open Effect4.Program.Typed.Contracts
++
++/-- The proposed full exclusion, retained here only to expose its transport obligation. -/
++def fullForbidden (ty : EffTy) : Reason Err Defect FiberId Ann → Bool
++  | .die defect _ => defect == .badName || defect == .notImplemented ||
++      (defect == .missingService && ty.requires == Env.Requirement.empty)
++  | _ => false
++
++def FullNoShapeDefect (ty : EffTy) : ExitV → Prop
++  | .success _ => True
++  | .failure cause => cause.reasons.any (fullForbidden ty) = false
++
++def FullExitOk (w : W) (ty : EffTy) (ex : ExitV) : Prop :=
++  FitsExit w ty ex ∧ FullNoShapeDefect ty ex
++
++def inner : EffTy := ⟨.never, .never, Env.Requirement.single nativeScopeKey⟩
++def outer : EffTy := EffTy.pure .unit
++def missing : CauseV := Cause.die .missingService
++def name : EffName := .abort
++def saved : RSaved := ⟨.pure (.success .unit), [], false, none, false⟩
++
++/-- The answer-never loop meets the actual frame protocol, whose continuation is vacuous. -/
++theorem loop_admitted (src : ProgramSource) (w : W) :
++    StackAccepts (TypedProg src) FullExitOk (frameProtocols src) w inner outer
++      [.loop name .unit] := by
++  apply StackAccepts.cons (middle := outer)
++  · apply FrameAccepts.loop
++    exact LoopProtocol.step (tin := inner) (tout := outer) rfl (fun _ h => False.elim h)
++  · exact StackAccepts.nil outer
++
++theorem input_ok (w : W) : FullExitOk w inner (.failure missing) :=
++  ⟨fitsExit_of_clean w inner missing rfl, rfl⟩
++
++theorem provenance : InterruptProvenance saved := by
++  constructor
++  · intro c h
++    cases h
++  · intro h
++    cases h
++
++/-- The actual stack walk passes the failure through the loop without changing it. -/
++theorem output_eq (interp : RInterp) :
++    (popR interp (.failure missing) [.loop name .unit] saved).2 =
++      some (.failure missing) := rfl
++
++theorem output_bad (w : W) : ¬ FullExitOk w outer (.failure missing) := by
++  intro typed
++  have excluded := typed.2
++  change true = false at excluded
++  exact Bool.noConfusion excluded
++
++#print axioms loop_admitted
++#print axioms input_ok
++#print axioms provenance
++#print axioms output_eq
++#print axioms output_bad
++end MissingServiceTransport
++
++end Test.Program.H2PartOne

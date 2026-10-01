@@ -1,0 +1,35 @@
+{
+  "source": "/private/tmp/h2-after-h1-d554cd71/snapshot",
+  "source_head": "d554cd7194f54c1ed2ffd020b4dc59d573bc1c34",
+  "provisional_H1": false,
+  "files": {
+    "src/Effect4/Laws/Program/Typed/Admission.lean": {
+      "before_sha256": "0f437beae4538aa7ea57973a010a4d8148ad1ca44102a87612b32ff97eac38a0",
+      "after_sha256": "3172f34b3cb337e71d4aecd0f699f65237964ff8996fc57a7c75f1e7c08d02fc"
+    },
+    "src/Effect4/Laws/Program/Typed/Residual.lean": {
+      "before_sha256": "d233dc0b5f4f22c5a6cb17a25a3a15398158d377cefca754850a2790997b2ef4",
+      "after_sha256": "98e405c1b190dd19c4b0b7daf7c570fc30fb08c5df7e574051e53904a619cbc9"
+    },
+    "src/Effect4/Laws/Program/Typed/Stack.lean": {
+      "before_sha256": "dc88cf42d832d3bc832a1307cf54b8be2d7b09525fc6c9c5cff664025369a9f1",
+      "after_sha256": "8eb0521044628897c6393bc94a2d7a1a6235be569b426f0971a8067353002772"
+    },
+    "src/Effect4/Laws/Program/Typed/Scheduler.lean": {
+      "before_sha256": "a8ddc467df781486b1b8cfc3651a2a7c24c53b8104b8680b6a5fa1505af36403",
+      "after_sha256": "87dee3f124016eb0c2da158157de22b770f5afc89b2d7e9ff9725374d6e571b3"
+    },
+    "src/Effect4/Laws/Program/Typed/Assembly.lean": {
+      "before_sha256": "d094d2e702c160c835391fb21fc06b4c8604b55a37d0b4fcd5a50013b9a9ad2c",
+      "after_sha256": "46d6cac983f4027926c53a04e9a079bd96717cecfb7ac3f02959c5ce60b3bebe"
+    }
+  },
+  "existing_body_repairs": {
+    "addendum6_library": 8,
+    "H1_observer_adapter": 1
+  },
+  "new_helpers": 7,
+  "lean_run": false,
+  "repository_writes": false,
+  "note": "New H1 test migration remains a separate fresh inventory. No compiler failures claimed measured."
+}

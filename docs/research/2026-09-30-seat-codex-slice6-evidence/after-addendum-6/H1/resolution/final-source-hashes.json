@@ -5,5 +5,5 @@
   "src/Effect4/Laws/Program/Typed/Scheduler.lean": "a8ddc467df781486b1b8cfc3651a2a7c24c53b8104b8680b6a5fa1505af36403",
   "Test/Counterexamples/Machine/Semantics/M6Capstone.lean": "11628e73a90976e0ec64b9d3cf55c7035e701e14f62ad2f6fbca4c61c5fe3873",
   "Test/Counterexamples/Machine/Semantics/ValueMembership.lean": "37b5c7c4eab71ff9a530b9e3a5c10acd5f7e6653fe86214c7fd1b38c0b45799d",
-  "Test/Counterexamples/REGISTER.md": "8be8d3cca436b3aaeb51ddca505b7b2d32817e3b327e6018c32010a4ece9b958"
+  "Test/Counterexamples/REGISTER.md": "d06c41f5a447d2c13a62ebf9587a3bb5e854482b23b173e6773068bafd206538"
 }
