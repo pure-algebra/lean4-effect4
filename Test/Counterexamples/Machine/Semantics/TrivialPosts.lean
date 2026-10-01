@@ -115,13 +115,20 @@ def checks (r : Except TypeRefusal EffTy) : Bool := match r with | .ok _ => true
 #guard checks (Checker.check (nativeSignature Test.Api.ExternalContract.table) [] [] hostBody)
 #guard !checks (Checker.check (nativeSignature []) [] [] hostBody)
 
-/-- The repair: source admission reads the source's own table. -/
+/-- The repair: source admission reads the source's own table. The source carries a lawful
+signature (row 114), so it is the battery's first row alone: the full table declares a cell
+handle in a host answer, which row 97 refuses. -/
+def hostTable : RowTable := [Test.Api.ExternalContract.row "query" .nat]
+
+theorem hostTable_lawful : LawfulSig ⟨hostTable, []⟩ := by decide +kernel
+
 theorem hostBody_checks :
-    Checker.check (nativeSignature Test.Api.ExternalContract.table) [] [] hostBody =
-      .ok (EffTy.pure .nat) := by decide +kernel
+    Checker.check (nativeSignature hostTable) [] [] hostBody = .ok (EffTy.pure .nat) := by
+  decide +kernel
 
 theorem hostBody_admitted (w : W) :
-    PointTyped ⟨hostBody, Test.Api.ExternalContract.table⟩ w (rootPoint 20) (EffTy.pure .nat) :=
+    PointTyped { program := hostBody, table := hostTable, lawful := hostTable_lawful } w
+      (rootPoint 20) (EffTy.pure .nat) :=
   ⟨hostBody, [], rfl, hostBody_checks, rfl, fun _ _ _ h => nomatch h⟩
 
 #print axioms sleep_code_typed
@@ -129,5 +136,6 @@ theorem hostBody_admitted (w : W) :
 #print axioms modify_typed
 #print axioms frontier_typed
 #print axioms joinsFiber_typed
+#print axioms hostTable_lawful
 #print axioms hostBody_admitted
 end Test.Counterexamples.TrivialPosts

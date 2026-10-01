@@ -42,6 +42,43 @@ def findInt (pos : Path) : Ty → Option Path
   | .refOf a => findInt (pos ++ ["value"]) a
   | .never | .unknown | .unit | .nat | .string | .bool | .handle _ | .lit _ | .var _ => none
 
+/-- Inhabitance as a fold (decisions row 127; DI-67): `never`, `int` and a template parameter
+have no member; a product needs both columns, a result or a union either; every other former
+has a member at every argument in some world (`none`, `[]`, a failure with no typed reason, the
+empty cause, a declared handle). The laws are `Laws/Program/Typed/Membership.lean`'s
+`inhabited_of_fits` (sound), `fits_of_inhabited_handleFree` (complete on the data fragment) and
+the handle witnesses. -/
+def inhabitedAlg : TyAlgebra (fun _ => Bool) where
+  ty_never := false
+  ty_unit := true
+  ty_nat := true
+  ty_int := false
+  ty_string := true
+  ty_bool := true
+  ty_handle _ := true
+  ty_option _ := true
+  ty_list _ := true
+  ty_prod a b := a && b
+  ty_except e a := e || a
+  ty_exitOf _ _ := true
+  ty_causeOf _ := true
+  ty_fiberOf _ _ := true
+  ty_union l r := l || r
+  ty_lit _ := true
+  ty_refOf _ := true
+  ty_deferredOf _ _ := true
+  ty_var _ := false
+  ty_unknown := true
+
+/-- Whether a type has a member (`inhabitedAlg`). -/
+def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
+
+/-- A column admission accepts (row 127): the designed bottom, canonical `never`, or a type with
+a member. `prod never nat` and `except never never` are canonical, not `never`, and empty, so
+they are refused; `list int` has a member and is the `int` scan's to refuse (DB-15), not this
+check's. -/
+def admitColumn (t : Ty) : Bool := t.normalize == .never || inhabited t
+
 /-- Scan every supplied row before normalization can discard any syntax. -/
 def findIntInTable (table : RowTable) : Option Path := go 0 table
 where

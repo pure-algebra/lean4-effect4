@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Signature
+import Effect4.Laws.Program.Typed.Admission
 import Effect4.Program.Authoring.Services
 
 /-!
@@ -156,6 +157,44 @@ theorem reflection_needs_sigProgram :
   rw [h callB, callB_refused_short] at hl
   cases hl
 
+/-! ## Lawful signatures: each clause refuses with its own located reason -/
+
+-- tested: the empty signature and one lawful row are admitted
+#guard admitSig (SigApp.mk [] []) = .ok ()
+#guard admitSig (SigApp.mk [rowA] []) = .ok ()
+#guard admitSig (SigApp.mk [] [(greetKey, .string)]) = .ok ()
+
+/-- A declaration at the memo map's reserved name (row 114). -/
+def memoKey : ServiceKey := ⟨⟨3⟩, ⟨3⟩⟩
+
+/-- A row whose request is the empty product DI-67 admitted (row 127). -/
+def emptyRequestRow : Row := { rowA with request := .prod .never .nat }
+
+/-- A row that answers a cell handle (row 97). -/
+def cellRow : Row := { rowA with answer := NativeOp.refTy }
+
+-- tested: each clause refuses, located
+#guard admitSig (SigApp.mk [] [(memoKey, .nat)]) = .error (.service 0 .reservedName)
+#guard admitSig (SigApp.mk [] [(greetKey, .option .nat)]) = .error (.service 0 .nonFlatCarrier)
+#guard admitSig (SigApp.mk [] [(natKey, .bool)]) = .error (.service 0 .conflictsBuiltin)
+#guard admitSig (SigApp.mk [] [(keyA, .string), (keyB, .string)]) = .error (.duplicateCode ⟨12⟩)
+#guard admitSig (SigApp.mk [emptyRequestRow] []) = .error (.row 0 (.emptyColumn "request"))
+#guard admitSig (SigApp.mk [cellRow] []) = .error (.row 0 (.internalHandle "answer"))
+#guard admitSig (SigApp.mk [rowA, rowA] []) = .error (.duplicateRow ("A.a", []))
+
+/-- **Red control (proved).** One code declared twice is not lawful (row 113), whatever the
+carriers. -/
+theorem one_code_twice_not_lawful : ¬ LawfulSig (SigApp.mk [] [(keyA, .string), (keyB, .string)]) := by
+  decide +kernel
+
+/-- **Red control (proved, row 127).** A host row whose request is `prod never nat` is not
+lawful: `E4-TYPED-CE-015` at a table column. -/
+theorem empty_request_not_lawful : ¬ LawfulSig (SigApp.mk [emptyRequestRow] []) := by
+  decide +kernel
+
+/-- A lawful signature is what `admitSig` admits (both directions, `admitSig_ok_iff`). -/
+theorem rowA_lawful : LawfulSig (SigApp.mk [rowA] []) := (admitSig_ok_iff _).mp (by decide +kernel)
+
 #print axioms prepend_not_extends
 #print axioms append_keeps_call
 #print axioms natKey_ty
@@ -171,6 +210,9 @@ theorem reflection_needs_sigProgram :
 #print axioms callB_refused_short
 #print axioms callB_typed_long
 #print axioms reflection_needs_sigProgram
+#print axioms one_code_twice_not_lawful
+#print axioms empty_request_not_lawful
+#print axioms rowA_lawful
 
 /-! The step's own theorems: shape A (`World.lean`, `Membership.lean`) and the signature. -/
 #print axioms Effect4.Program.Typed.order_refl
@@ -222,5 +264,13 @@ theorem reflection_needs_sigProgram :
 #print axioms Effect4.Program.check_alg_agreeOn
 #print axioms Effect4.Program.check_restrict
 #print axioms Effect4.Program.effTy_restrict
+#print axioms Effect4.Program.firstFailing_eq_none_iff
+#print axioms Effect4.Program.firstIndexed_eq_none_iff
+#print axioms Effect4.Program.firstDup_eq_none_iff
+#print axioms Effect4.Program.option_or_eq_none_iff
+#print axioms Effect4.Program.sigRefusal?_eq_none_iff
+#print axioms Effect4.Program.admitSig_ok_iff
+#print axioms Effect4.Program.SigApp.lawful_empty
+#print axioms Effect4.Program.lawful_append
 
 end Test.Program.SignatureControls

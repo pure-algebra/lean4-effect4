@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Typing.Sound
-import Effect4.Laws.Program.Typed.Admission
 import Effect4.Laws.Program.Folds.Checker
+import Effect4.Laws.Program.Template
+import Effect4.Program.Admission
 
 /-!
 # Laws.Program.Signature — Σ_app: the signature as data, its extension and its lawfulness
@@ -884,44 +885,272 @@ theorem effTy_restrict {Op : Type} {s s' : Signature Op} (h : SigExtends s s') {
   unfold effTy
   rw [check_restrict h hp]
 
-/-! ## `π` for services (C5) -/
+/-! ## Lawful signatures (rows 97, 113, 114, 127; TY-05)
 
-namespace Typed
+`LawfulSig` gathers the conditions an application's signature must meet behind one located
+refusal (`admitSig`) and proves the two agree (`admitSig_ok_iff`). Its shape is C6's
+(the synthesis §2.2, as Codex's audit amends it): every row and every declaration meets its own
+conditions, the rows and the declarations are pairwise compatible, and every key a row requires
+has a carrier (the third clause shape, which points from rows to services and is monotone under
+append). So `LawfulSig (Σ ++ ε)` splits into the parts and the cross terms by
+`List.forall_mem_append` and `List.pairwise_append` (`lawful_append`). -/
 
-open Effect4.Machine
+/-- A row's local conditions, with the reason each one gives when it fails. -/
+inductive RowReason
+  /-- `checkTable`: the runner registers only external rows. -/
+  | notExternal
+  /-- `checkTable`: only asynchronous rows. -/
+  | notAsync
+  /-- `Table.lawful`: the row's key collides with a built-in operation's. -/
+  | builtinCollision
+  /-- `Table.lawful`: a value row has trailing names. -/
+  | valueRowTrailing
+  /-- DB-15: the column mentions the reserved integer type. -/
+  | intType (column : String)
+  /-- Row 97: the answer or error column mentions an internal handle kind. -/
+  | internalHandle (column : String)
+  /-- Row 127: the column is empty and is not `never`. -/
+  | emptyColumn (column : String)
+  /-- Row 42: a template parameter sits under a union in the column. -/
+  | templateNotAdmissible (column : String)
+  /-- Row 42: the answer or error names a parameter the request does not bind. -/
+  | notWellScoped
+deriving DecidableEq, Repr
 
-/-- A world read at a signature's service table. -/
-def restrictWorld (app : SigApp) (w : World) : World := { w with serviceTy := app.serviceTy }
+/-- A row's local checks, in the order a refusal names the first failing one. -/
+def rowChecks (r : Row) : List (Bool × RowReason) :=
+  [(r.registration == .external, .notExternal),
+   (r.kind == .async, .notAsync),
+   (!(NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey r), .builtinCollision),
+   (!(r.shape == .value) || r.trailing.isEmpty, .valueRowTrailing),
+   ((findInt [] r.request).isNone, .intType "request"),
+   ((findInt [] r.answer).isNone, .intType "answer"),
+   ((findInt [] r.error).isNone, .intType "error"),
+   ((findInternalHandle [] r.answer).isNone, .internalHandle "answer"),
+   ((findInternalHandle [] r.error).isNone, .internalHandle "error"),
+   (admitColumn r.request, .emptyColumn "request"),
+   (admitColumn r.answer, .emptyColumn "answer"),
+   (admitColumn r.error, .emptyColumn "error"),
+   (r.request.templateAdmissible, .templateNotAdmissible "request"),
+   (r.answer.templateAdmissible, .templateNotAdmissible "answer"),
+   (r.error.templateAdmissible, .templateNotAdmissible "error"),
+   (r.wellScoped, .notWellScoped)]
 
-/-- A context's services fit at the restriction exactly when they fit at the world, when the
-two tables agree on the context's keys. -/
-theorem servicesFit_restrict (app : SigApp) (w : World) (services : Env.Ctx)
-    (hagree : ∀ key sv, services.getV key = some sv → w.serviceTy key = app.serviceTy key) :
-    ServicesFit (restrictWorld app w) services ↔ ServicesFit w services := by
+/-- A declaration's local conditions (row 114), with their reasons. -/
+inductive ServiceReason
+  /-- The key's name is one the machine reserves (`Env.firstFreeName`). -/
+  | reservedName
+  /-- The carrier is not flat (`unit`, `nat`, `bool`, `string`, a non-context handle). -/
+  | nonFlatCarrier
+  /-- The built-in table gives the key's code another carrier. -/
+  | conflictsBuiltin
+deriving DecidableEq, Repr
+
+/-- The flat carriers, as a fold: the scalars and every handle but the context. -/
+def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
+  ty_never := false
+  ty_unit := true
+  ty_nat := true
+  ty_int := false
+  ty_string := true
+  ty_bool := true
+  ty_handle target := target != Ty.contextTarget
+  ty_option _ := false
+  ty_list _ := false
+  ty_prod _ _ := false
+  ty_except _ _ := false
+  ty_exitOf _ _ := false
+  ty_causeOf _ := false
+  ty_fiberOf _ _ := false
+  ty_union _ _ := false
+  ty_lit _ := false
+  ty_refOf _ := false
+  ty_deferredOf _ _ := false
+  ty_var _ := false
+  ty_unknown := false
+
+/-- A flat carrier (row 114; row 118 owns structured carriers). -/
+def flatCarrier (t : Ty) : Bool := cata_ty flatCarrierAlg t
+
+/-- A declaration's local checks, in order. -/
+def serviceChecks (e : ServiceKey × Ty) : List (Bool × ServiceReason) :=
+  [(decide (Effect4.Machine.Env.firstFreeName ≤ e.1.name.value), .reservedName),
+   (flatCarrier e.2, .nonFlatCarrier),
+   ((SigApp.builtinCodeTy e.1.service).all (· == e.2), .conflictsBuiltin)]
+
+/-- The first failing check's reason. -/
+def firstFailing {β : Type} (checks : List (Bool × β)) : Option β :=
+  (checks.find? fun c => !c.1).map Prod.snd
+
+theorem firstFailing_eq_none_iff {β : Type} (checks : List (Bool × β)) :
+    firstFailing checks = none ↔ ∀ c ∈ checks, c.1 = true := by
+  unfold firstFailing
+  rw [Option.map_eq_none_iff, List.find?_eq_none]
   constructor
-  · intro h key sv sty hget hty
-    have hty' : app.serviceTy key = some sty := by
-      rw [← hagree key sv hget]
-      exact hty
-    exact h key sv sty hget hty'
-  · intro h key sv sty hget hty
-    change app.serviceTy key = some sty at hty
-    have hty' : w.serviceTy key = some sty := by
-      rw [hagree key sv hget]
-      exact hty
-    exact h key sv sty hget hty'
+  · intro h c hc
+    have := h c hc
+    cases hc1 : c.1
+    · rw [hc1] at this
+      exact absurd rfl this
+    · rfl
+  · intro h c hc hbad
+    rw [h c hc] at hbad
+    cases hbad
 
-/-- Along an extension of the application's signature, membership survives the restriction to
-the smaller table: the restriction reads no carrier the world does not. -/
-theorem fits_restrict {app app' : SigApp} (hext : SigExtends app.signature app'.signature)
-    (w : World) (hw : w.serviceTy = app'.serviceTy) (ty : Ty) (v : Val) (h : Fits w v ty) :
-    Fits (restrictWorld app w) v ty :=
-  @fits_map w (restrictWorld app w) (table_refl _) (table_refl _) (table_refl _) (fun _ _ hx => hx)
-    (fun key sty hk => by
-      change app.serviceTy key = some sty at hk
-      rw [hw]
-      exact hext.service key sty hk) ty v h
+/-- The first position of a list whose element a check refuses, with the refusal. -/
+def firstIndexed {α β : Type} (f : α → Option β) : Nat → List α → Option (Nat × β)
+  | _, [] => none
+  | i, x :: xs =>
+    match f x with
+    | some b => some (i, b)
+    | none => firstIndexed f (i + 1) xs
 
-end Typed
+theorem firstIndexed_eq_none_iff {α β : Type} (f : α → Option β) :
+    ∀ (i : Nat) (xs : List α), firstIndexed f i xs = none ↔ ∀ x ∈ xs, f x = none
+  | _, [] => ⟨fun _ _ hx => (nomatch hx), fun _ => rfl⟩
+  | i, x :: xs => by
+    unfold firstIndexed
+    cases hx : f x with
+    | some b =>
+      refine ⟨fun h => (nomatch h), fun h => ?_⟩
+      rw [h x List.mem_cons_self] at hx
+      cases hx
+    | none =>
+      rw [firstIndexed_eq_none_iff f (i + 1) xs]
+      constructor
+      · intro h y hy
+        rcases List.mem_cons.mp hy with rfl | hy
+        · exact hx
+        · exact h y hy
+      · intro h y hy
+        exact h y (List.mem_cons_of_mem x hy)
 
+/-- The first repeated element of a list. -/
+def firstDup {α : Type} [DecidableEq α] : List α → Option α
+  | [] => none
+  | x :: xs => if x ∈ xs then some x else firstDup xs
+
+theorem firstDup_eq_none_iff {α : Type} [DecidableEq α] :
+    ∀ xs : List α, firstDup xs = none ↔ xs.Nodup
+  | [] => ⟨fun _ => List.nodup_nil, fun _ => rfl⟩
+  | x :: xs => by
+    unfold firstDup
+    rw [List.nodup_cons]
+    by_cases hx : x ∈ xs
+    · rw [if_pos hx]
+      exact ⟨fun h => (nomatch h), fun h => absurd hx h.1⟩
+    · rw [if_neg hx, firstDup_eq_none_iff xs]
+      exact ⟨fun h => ⟨hx, h⟩, fun h => h.2⟩
+
+/-- Why a signature is not lawful, located: a row by its position, a declaration by its
+position, a repeated row key or service code, a required key with no carrier. -/
+inductive SigRefusal
+  | row (index : Nat) (reason : RowReason)
+  | duplicateRow (key : String × List String)
+  | service (index : Nat) (reason : ServiceReason)
+  | duplicateCode (code : ServiceTypeCode)
+  | unservedKey (row : Nat) (key : ServiceKey)
+deriving DecidableEq, Repr
+
+/-- The first refusal, in the order rows, row keys, declarations, codes, required keys. -/
+def sigRefusal? (app : SigApp) : Option SigRefusal :=
+  ((firstIndexed (fun r => firstFailing (rowChecks r)) 0 app.rows).map
+      fun found => .row found.1 found.2).or <|
+  ((firstDup (app.rows.map rowKey)).map .duplicateRow).or <|
+  ((firstIndexed (fun e => firstFailing (serviceChecks e)) 0 app.services).map
+      fun found => .service found.1 found.2).or <|
+  ((firstDup (app.services.map (·.1.service))).map .duplicateCode).or <|
+  (firstIndexed (fun r => r.requires.find? fun k => !(app.serviceTy k).isSome) 0 app.rows).map
+      fun found => .unservedKey found.1 found.2
+
+/-- **Admit a signature**: a located refusal, or `ok`. -/
+def admitSig (app : SigApp) : Except SigRefusal Unit :=
+  match sigRefusal? app with
+  | some why => .error why
+  | none => .ok ()
+
+/-- **The lawful signatures** (rows 97, 113, 114, 127; C6's shape). -/
+structure LawfulSig (app : SigApp) : Prop where
+  /-- Every row meets its local conditions. -/
+  rows : ∀ r ∈ app.rows, ∀ c ∈ rowChecks r, c.1 = true
+  /-- No two rows share a key. -/
+  rowsDistinct : app.rows.Pairwise fun r r' => rowKey r ≠ rowKey r'
+  /-- Every declaration meets its local conditions. -/
+  services : ∀ e ∈ app.services, ∀ c ∈ serviceChecks e, c.1 = true
+  /-- No two declarations share a code (row 113). -/
+  codesDistinct : app.services.Pairwise fun e e' => e.1.service ≠ e'.1.service
+  /-- Every key a row requires has a carrier. -/
+  served : ∀ r ∈ app.rows, ∀ k ∈ r.requires, (app.serviceTy k).isSome = true
+
+theorem option_or_eq_none_iff {α : Type} (a b : Option α) :
+    a.or b = none ↔ a = none ∧ b = none := by
+  cases a with
+  | none => exact ⟨fun h => ⟨rfl, h⟩, fun h => h.2⟩
+  | some x => exact ⟨fun h => (nomatch h), fun h => (nomatch h.1)⟩
+
+/-- **The located refusal is complete** (proved): no refusal exactly at a lawful signature. -/
+theorem sigRefusal?_eq_none_iff (app : SigApp) : sigRefusal? app = none ↔ LawfulSig app := by
+  unfold sigRefusal?
+  rw [option_or_eq_none_iff, option_or_eq_none_iff, option_or_eq_none_iff, option_or_eq_none_iff,
+    Option.map_eq_none_iff, Option.map_eq_none_iff, Option.map_eq_none_iff,
+    Option.map_eq_none_iff, Option.map_eq_none_iff,
+    firstIndexed_eq_none_iff, firstDup_eq_none_iff, firstIndexed_eq_none_iff,
+    firstDup_eq_none_iff, firstIndexed_eq_none_iff]
+  constructor
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved⟩
+    refine ⟨fun r hr => (firstFailing_eq_none_iff _).mp (hrows r hr), List.pairwise_map.mp hkeys,
+      fun e he => (firstFailing_eq_none_iff _).mp (hsvc e he), List.pairwise_map.mp hcodes, ?_⟩
+    intro r hr k hk
+    have hk' := List.find?_eq_none.mp (hserved r hr) k hk
+    cases hks : (app.serviceTy k).isSome
+    · rw [hks] at hk'
+      exact absurd rfl hk'
+    · rfl
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved⟩
+    refine ⟨fun r hr => (firstFailing_eq_none_iff _).mpr (hrows r hr), List.pairwise_map.mpr hkeys,
+      fun e he => (firstFailing_eq_none_iff _).mpr (hsvc e he), List.pairwise_map.mpr hcodes,
+      fun r hr => List.find?_eq_none.mpr fun k hk hbad => ?_⟩
+    rw [hserved r hr k hk] at hbad
+    cases hbad
+
+/-- **`admitSig_ok_iff`** (proved): the executable check admits exactly the lawful signatures. -/
+theorem admitSig_ok_iff (app : SigApp) : admitSig app = .ok () ↔ LawfulSig app := by
+  rw [← sigRefusal?_eq_none_iff]
+  unfold admitSig
+  cases sigRefusal? app with
+  | some why => exact ⟨fun hok => (nomatch hok), fun hn => (nomatch hn)⟩
+  | none => exact ⟨fun _ => rfl, fun _ => rfl⟩
+
+instance (app : SigApp) : Decidable (LawfulSig app) :=
+  decidable_of_iff _ (sigRefusal?_eq_none_iff app)
+
+/-- The empty signature is lawful: what every source with no rows and no declarations carries. -/
+theorem SigApp.lawful_empty : LawfulSig (SigApp.mk [] []) :=
+  ⟨fun _ h => (nomatch h), List.Pairwise.nil, fun _ h => (nomatch h), List.Pairwise.nil,
+    fun _ h => (nomatch h)⟩
+
+/-- **C6 (proved)**: an appended signature is lawful exactly when each part's local clauses
+hold, each part's pairwise clauses hold, the cross terms hold, and the whole serves every
+required key: `List.forall_mem_append` and `List.pairwise_append`. -/
+theorem lawful_append (app : SigApp) (rows' : RowTable) (services' : List (ServiceKey × Ty)) :
+    LawfulSig (SigApp.mk (app.rows ++ rows') (app.services ++ services')) ↔
+      ((∀ r ∈ app.rows, ∀ c ∈ rowChecks r, c.1 = true) ∧
+        (∀ r ∈ rows', ∀ c ∈ rowChecks r, c.1 = true)) ∧
+      (app.rows.Pairwise (fun r r' => rowKey r ≠ rowKey r') ∧
+        rows'.Pairwise (fun r r' => rowKey r ≠ rowKey r') ∧
+        ∀ r ∈ app.rows, ∀ r' ∈ rows', rowKey r ≠ rowKey r') ∧
+      ((∀ e ∈ app.services, ∀ c ∈ serviceChecks e, c.1 = true) ∧
+        (∀ e ∈ services', ∀ c ∈ serviceChecks e, c.1 = true)) ∧
+      (app.services.Pairwise (fun e e' => e.1.service ≠ e'.1.service) ∧
+        services'.Pairwise (fun e e' => e.1.service ≠ e'.1.service) ∧
+        ∀ e ∈ app.services, ∀ e' ∈ services', e.1.service ≠ e'.1.service) ∧
+      (∀ r ∈ app.rows ++ rows', ∀ k ∈ r.requires,
+        ((SigApp.mk (app.rows ++ rows') (app.services ++ services')).serviceTy k).isSome = true) := by
+  constructor
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved⟩
+    exact ⟨List.forall_mem_append.mp hrows, List.pairwise_append.mp hkeys,
+      List.forall_mem_append.mp hsvc, List.pairwise_append.mp hcodes, hserved⟩
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved⟩
+    exact ⟨List.forall_mem_append.mpr hrows, List.pairwise_append.mpr hkeys,
+      List.forall_mem_append.mpr hsvc, List.pairwise_append.mpr hcodes, hserved⟩
 end Effect4.Program
