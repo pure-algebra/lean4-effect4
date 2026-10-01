@@ -32,6 +32,9 @@ handle at that canonical form (`m5_forces_leaf`, proved over the production judg
   (`rawLeaf_false`).
 * **Red controls** (`#guard_msgs (error)`): the old refutation proofs no longer close against the
   production judgment.
+* **M5's first positive control**: the same program loads into a typed state
+  (`prog3_loads_typed`, through the loaded code's derivation `prog3_typedF` and
+  `typedState_load_of_code`, which reduces M5 to the loaded code at every budget).
 
 Sources: `docs/research/2026-10-01-formal-pass/types/M5CounterProbe.lean` and
 `TypesOrderProbe.lean` (types seat), `verify-CapstoneProbe.lean` and `verify-AmendedFitsProbe.lean`
@@ -461,6 +464,118 @@ example (w : Typed.World) (id : FiberId) (hΓ : w.Γ id = some certT) :
   rw [T_not_sub] at ha'
   exact Bool.noConfusion ha'
 
+/-! ## M5's first positive control: the program loads into a typed state (row 137)
+
+`ValueMembership.typedStateF_load` reduces M5 at a source to "the loaded code is typed at every
+world" (every other generated clause is over an empty list or the empty context at load). Its
+statement is pinned to budget 20; `typedState_load_of_code` is the same argument at every budget
+and source. The derivation `prog3_typedF` follows the loaded code: the guard the bind opens, the
+fork (its certificate the checker's type of the child, by `check_complete`), the `unguard` of
+the handle at the guard's type, then the select's construction, checkpoint and construction, and
+the arm's exit, which fits the root's canonical type through `fits_subN`. -/
+
+/-- The guard's intermediate type: the fork's raw answer. -/
+def midTy : EffTy := ⟨.fiberOf T .never, .never, Requirement.empty⟩
+
+theorem child_check : Checker.check (nativeSignature []) [] [0, 0, 0] child = .ok certT :=
+  Conform.Effect4.Typing.check_complete _ _ _ _
+    (Conform.Effect4.Typing.effTy_sound _ _ _ _ child_cert) _
+
+/-- The fork's answer type is below the root's canonical answer in the checker's order. -/
+theorem fiber_subN_root : Ty.subN (.fiberOf T .never) rootTy3.answer = true := by
+  refine ((Ty.subN_equiv_iff _ _).mpr ?_).1
+  show Ty.fiberOf T.normalize Ty.never = Ty.fiberOf T.normalize.normalize Ty.never
+  rw [Ty.normalize_idem]
+
+/-- **The loaded code is typed at every world (proved).** -/
+theorem prog3_typedF (w : Typed.World) :
+    TypedProg src w rootTy3 (denoteR prog3 prog3 (rootPoint 100)) := by
+  refine TypedProg.guard midTy ?_ ?_ ?_
+  · refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) certT
+      (BodyTyped.at_ _ _ ⟨child, [], child_at, child_check, ⟨rfl, fun _ _ _ h => nomatch h⟩⟩) ?_
+    intro w' _ ans hpost
+    obtain ⟨id, rfl, hid⟩ := hpost
+    exact TypedProg.unguard ⟨⟨certT, hid, Ty.subN_refl _, Ty.subN_refl _⟩, trivial⟩
+  · intro w' _ ex hpost
+    cases ex with
+    | failure c => exact Bool.noConfusion hpost.1
+    | success v =>
+      have hv : Typed.Fits w' v (.fiberOf T .never) := hpost.2.1
+      refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial ?_
+      intro w2 hle2 _ _
+      refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial ?_
+      intro w3 hle3 _ _
+      refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial ?_
+      intro w4 hle4 _ _
+      have hv4 : Typed.Fits w4 v (.fiberOf T .never) :=
+        fits_mono (leHost_trans _ _ _ (leHost_trans _ _ _ hle2 hle3) hle4) hv
+      exact TypedProg.pure ⟨fits_subN w4 fiber_subN_root v hv4, trivial⟩
+  · intro w' _ ex hex miss
+    cases ex with
+    | success v => exact Bool.noConfusion miss
+    | failure c => exact strongExit_of_clean w' _ c (cleanExit_of_never w' midTy c rfl hex) hex.2
+
+/-- **M5 reduces to the loaded code** (`ValueMembership.typedStateF_load` at every budget and
+source): if the loaded code is typed at every world, the loaded state is typed at the initial
+world. -/
+theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
+    (closed : ClosedEff ty)
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
+    (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
+    ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) := by
+  refine ⟨initialWorld ty, initial_world_valid _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩,
+    ?_, schedulerState_load root.program fuel compileFuel, observerState_load root _ fuel compileFuel,
+    registrationState_load root _ fuel compileFuel noMarker⟩
+  · intro f hf
+    change f ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst hf
+    refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+    · intro ty' hty
+      have h0 : tableInsert (fun _ : FiberId => (none : Option EffTy)) Api.root ty Api.root =
+          some ty := insert_here _ _ _
+      change tableInsert (fun _ : FiberId => (none : Option EffTy)) Api.root ty Api.root =
+        some ty' at hty
+      rw [h0] at hty
+      cases hty
+      apply savedPosition_of_saved
+      exact ⟨ty, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+    · intro q hq
+      cases hq
+    · intro v0 h
+      cases h
+    · intro v0 h
+      cases h
+    · intro v0 hv
+      cases hv
+    · intro key sv sty hget
+      change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
+      rw [Env.Context.getV_empty] at hget
+      cases hget
+  · intro r hr
+    cases hr
+  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+      ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
+  · intro f hf token hq
+    change f ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst hf
+    cases hq
+
+/-- **M5's first positive control (proved).** The TY-01 program, which refuted M5 and the
+capstone under the raw arms, loads into a typed state under row 137. -/
+theorem prog3_loads_typed : ∃ w, TypedState src rootTy3 w (loadR prog3 100 100) :=
+  typedState_load_of_code src rootTy3 100 100 rootTy3_closed rfl prog3_typedF
+
+/-- And its leaf, read off the typed load. -/
+theorem prog3_leaf : ∃ w : Typed.World, w.Γ ⟨1⟩ = some certT ∧
+    FitsExit w rootTy3 (.success (Val.fiber ⟨1⟩)) :=
+  m5_forces_leaf prog3_loads_typed
+
 #print axioms prog3_typed
 #print axioms rootTy3_closed
 #print axioms child_cert
@@ -489,6 +604,12 @@ example (w : Typed.World) (id : FiberId) (hΓ : w.Γ id = some certT) :
 #print axioms rreachable_load
 #print axioms capstone_implies_load
 #print axioms Reviewed.capstone_false
+#print axioms child_check
+#print axioms fiber_subN_root
+#print axioms prog3_typedF
+#print axioms typedState_load_of_code
+#print axioms prog3_loads_typed
+#print axioms prog3_leaf
 
 /-! The repair's own theorems (`Laws/Program/TypeAlgebra.lean`, `Laws/Program/Typed/Membership.lean`). -/
 #print axioms Effect4.Program.Ty.subN_refl
