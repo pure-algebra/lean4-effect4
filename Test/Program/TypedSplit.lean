@@ -107,15 +107,17 @@ open Effect4.Program.Typed
 #print axioms Effect4.Program.Typed.M6Edits.reestablish.checked
 #print axioms Effect4.Program.Typed.M3bWorld.preds_savedOk_mono.checked
 
-/-! ## M5's reduction is for a program as loaded
+/-! ## M5's reduction and the program as loaded
 
-`loadsTyped_of_denotesTyped` reduces M5 to `denoteR_typed` for a program with no layer-reference
-sites. The typed corpus's `layer.ref` program (`Test/Program/TypedCorpus.lean:76`) shows why the
-premise is there: `Api.typeOf` certifies the program's expansion (`Program/Typing.lean:61-64`),
-the checker refuses the program as written at its reference (`Program/Checker.lean:259`), and
-`loadR` loads the program as written, its reference resolved at run time by redirect
-(`Laws/Program/DenoteR.lean:733-737`). So `PointTyped` fails at its root point and
-`denoteR_typed` says nothing about its loaded code. -/
+The typed corpus's `layer.ref` program (`Test/Program/TypedCorpus.lean:76`): `Api.typeOf`
+certifies the program's expansion (`Program/Typing.lean:61-64`), the checker refuses the program
+as written at its reference (`Program/Checker.lean:259`), and `loadR` loads the program as
+written, its reference resolved at run time by redirect (`Laws/Program/DenoteR.lean`, the `.ref`
+arm). Before decisions row 153 `PointTyped` checked the node as written, so it failed at this
+program's root point and `loadsTyped_of_denotesTyped` carried a reference-free premise. Since row
+153 a node is checked through the expansion's rounds and the reduction has no such premise:
+`Test/Program/LayerRefs.lean` (`E4-TYPED-CE-019`). The guards below are unchanged facts about the
+program. -/
 
 namespace Test.Program.TypedSplit
 open Effect4 Effect4.Program Effect4.Machine

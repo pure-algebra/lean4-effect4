@@ -91,12 +91,14 @@ def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberI
 
 /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
 under an environment its values fit, extended by the acquired value, and its context's
-services are typed. -/
+services are typed. The checker reads the node through the expansion's rounds, as `PointTyped`
+does (decisions row 153 (b)). -/
 def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
   ∃ (acquire release : NativeEff) (env : List Ty) (t a : EffTy),
     Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
-    Checker.check root.signature env c.path (.acquireRelease acquire release) = .ok t ∧
-    Checker.check root.signature env (c.path ++ [0]) acquire = .ok a ∧
+    Checker.check root.signature env c.path
+      (Eff.expandIn root.program (.acquireRelease acquire release)) = .ok t ∧
+    Checker.check root.signature env (c.path ++ [0]) (Eff.expandIn root.program acquire) = .ok a ∧
     EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
 
 /-- The saved stack and its provenance at a position: the stack composes from some intermediate
@@ -842,6 +844,7 @@ theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
     (hex : Fits w exVal (.exitOf .unknown .unknown)) :
     ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty := by
   obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _⟩ := h
+  rw [Eff.expandIn_acquireRelease] at hcheck
   obtain ⟨a', r, hacq', hrel, _, _⟩ := Checker.inv_acquireRelease _ _ _ _ _ t hcheck
   rw [hacq] at hacq'
   cases hacq'
@@ -905,11 +908,12 @@ def TermFits (table : RowTable) : Prop :=
 
 The loaded machine has one fiber, not running, whose code is the root's denotation; every other
 clause of `J` is over an empty list or the empty context. So M5 is the root code's typing at
-every world (`machineTyped_load`), and that is `DenotesTyped` at the root point when the checked
-program is the loaded one (`loadsTyped_of_denotesTyped`): `typeOfProgram` checks the program,
-under the source's signature (`root.signature`, rows 111–114), after expanding its layer
-references (`Program/Typing.lean:61-64`) while `loadR` loads the program as written
-(`RuntimeR.lean:41-46`), so the reduction is for a program with no reference sites. -/
+every world (`machineTyped_load`), and that is `DenotesTyped` at the root point
+(`loadsTyped_of_denotesTyped`): `typeOfProgram` checks the program, under the source's signature
+(`root.signature`, rows 111–114), after expanding its layer references
+(`Program/Typing.lean:61-64`), `loadR` loads the program as written (`RuntimeR.lean:41-46`), and
+the root point's typing reads the loaded node through the expansion's rounds (`PointTyped`,
+decisions row 153 (b)), so the reduction holds for a program with references too. -/
 
 /-- `MachineLive` holds on a running machine whose store owes nothing. -/
 theorem machineLive_of_quiet (m : RState) (stuck : m.stuck = none)
@@ -992,20 +996,22 @@ theorem envTyped_nil (w : World) : EnvTyped w [] [] := by
   rw [List.getElem?_nil] at h
   cases h
 
-/-- **M5 from row 148's fundamental property**, for a program with no layer-reference sites and
-a loaded head that is not a race marker (`InterpR.lean:320`: only a race park builds one). -/
+/-- **M5 from row 148's fundamental property**, for a loaded head that is not a race marker
+(`InterpR.lean:320`: only a race park builds one). The root point is typed by the checker's
+verdict on the program's expansion (decisions row 153 (b)), so no reference-free premise: before
+row 153 it carried `root.program.refSites [] = []` (`E4-TYPED-CE-019`,
+`Test/Program/LayerRefs.lean`). -/
 theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
-    (denotes : DenotesTyped root) (refFree : root.program.refSites [] = [])
+    (denotes : DenotesTyped root)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none) :
     LoadsTyped root rootTy fuel compileFuel := by
   intro _ checked closed
-  have expanded : root.program.expandRefs = root.program :=
-    expandRefs_eq_self_of_refSites_nil root.program refFree
-  have formed : root.program.layerRefsWF = true := layerRefsWF_of_refSites_nil root.program refFree
-  have typed : effTy root.signature [] root.program = some rootTy := by
+  have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
+    rw [Eff.expandIn_self]
     unfold Program.typeOfProgram at checked
-    rw [expanded, formed, refFree] at checked
-    exact checked
+    split at checked
+    · exact checked
+    · cases checked
   exact ⟨_, machineTyped_load root rootTy fuel compileFuel closed noMarker
     fun w => denotes w (rootPoint compileFuel) root.program rootTy rfl
       ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil w⟩⟩

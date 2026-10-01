@@ -1188,6 +1188,54 @@ theorem denoteLayer_ref_succ (target : List Nat) (q : Point) (m : MemoMapId) (sc
   simp only [denoteLayer, hf, Point.redirect_fuel, Nat.add_sub_cancel, denoteLayerWith,
     denoteLayerBody]; try rfl
 
+/-- **The redirect agreement** (decisions row 153 (b)): under well-formed references
+(`Eff.layerRefsWF`), the build of a reference site at a point with fuel is the build, at the
+redirected point (`Point.redirect`, the target's path one fuel down), of the reference's
+expansion, which is its target's term (`LayerTerm.expandRound`, `Program/Refs.lean`): a
+well-formed target names a layer that is not itself a reference, so the hop lands on that term
+(the `.ref` arm of `denoteLayerWith`). The program runs as written; the checker reads its
+expansion (`typeOfProgram`, `Program/Typing.lean:61-64`), and the typed state checks a point's
+node through the same rounds (`PointTyped`, `Typed/Admission.lean`). -/
+theorem denoteLayer_ref_redirect (hwf : root.layerRefsWF = true) {site target : List Nat}
+    (hsite : (site, target) ∈ root.refSites []) (q : Point) (m : MemoMapId) (scope : Nat)
+    {k : Nat} (hf : q.fuel = k + 1) :
+    denoteLayer root (.ref target) q m scope =
+      denoteLayer root (LayerTerm.expandRound (Node.eff root) (.ref target)) (q.redirect target)
+        m scope := by
+  have hall := List.all_eq_true.mp hwf (site, target) hsite
+  rw [Bool.and_eq_true] at hall
+  have hlayer := hall.2
+  rw [denoteLayer_ref_succ root target q m scope hf]
+  cases hl : (Node.eff root).layerAt target with
+  | none =>
+    rw [hl] at hlayer
+    exact Bool.noConfusion hlayer
+  | some l =>
+    rw [hl] at hlayer
+    have hat : Node.at_ (Node.eff root) target = some (Node.layer l) := by
+      unfold Node.layerAt at hl
+      split at hl
+      · rename_i l' hat
+        cases hl
+        exact hat
+      · cases hl
+    have hexp : LayerTerm.expandRound (Node.eff root) (.ref target) = l := by
+      show ((Node.eff root).layerAt target).getD (.ref target) = l
+      rw [hl]
+      rfl
+    rw [hat, hexp]
+    cases l with
+    | ref t => exact Bool.noConfusion hlayer
+    | succeed _ _ => rfl
+    | fresh _ => rfl
+    | orDie _ => rfl
+    | effect _ _ => rfl
+    | effectDiscard _ => rfl
+    | provide _ _ => rfl
+    | provideMerge _ _ => rfl
+    | merge _ _ => rfl
+    | mergeAll _ => rfl
+
 end denoteLayerEqs
 
 /-- Only the two immediate exit constructors; all other heads require a machine step. -/

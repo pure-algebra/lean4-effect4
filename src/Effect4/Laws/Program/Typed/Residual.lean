@@ -63,9 +63,11 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .scopeAdd scope _ | .scopeRemove scope _ | .scopeIsClosed scope | .scopeFork scope _ =>
     ScopeLive w scope
   | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
-  -- the looked-up layer's own checked error type (decision row 90)
+  -- the looked-up layer's own checked error type (decision row 90), read through the
+  -- expansion's rounds as `PointTyped` reads a node (decisions row 153 (b))
   | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer root.signature layer l = .ok lt ∧ lt.error = cert
+      Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+      lt.error = cert
   | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
 
 /-- What each store row's answer satisfies: the store's actual answer (decisions row 136; the
@@ -766,7 +768,8 @@ theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
   refine ⟨e, env, ?_, ?_, henv⟩
   · rw [hprog]
     exact hat
-  · exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
+  · rw [hprog]
+    exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
 
 theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
@@ -789,7 +792,8 @@ theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     refine ⟨l, lt, ?_, ?_, herr⟩
     · rw [hprog]
       exact hat
-    · exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+    · rw [hprog]
+      exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
   | _ => exact h
 
 omit hprog hsvc in

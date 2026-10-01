@@ -2,6 +2,7 @@ import Effect4.Laws.Program.Typed.Membership
 import Effect4.Program.Checker
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.Signature
+import Effect4.Laws.Program.ReferenceTyping
 
 /-!
 # Laws.Program.Typed.Admission — source and control admission for typed programs
@@ -119,11 +120,16 @@ def ProgramSource.signature (src : ProgramSource) : Signature NativeOp := src.si
 /-- D13 source admission at an addressed program node, under the source's signature: its row
 table (`E4-SCHED-CE-014`: the empty table refused bodies that perform a host row) and its service
 declarations (rows 111–114; `src.signature` is `nativeSignature src.table` for a source with no
-declarations, `SigApp.signature_nil`). -/
+declarations, `SigApp.signature_nil`). The node is the program's as written, the one the run
+denotes; the checker reads it through the rounds of the program's expansion (`Eff.expandIn`,
+decisions row 153 (b)): the checker refuses a layer reference (`Program/Checker.lean:259`) and
+certifies a program with references as its expansion (`typeOfProgram`), while the run hops from a
+reference to its target (`denoteLayer_ref_redirect`). For a reference-free node the expansion is
+the node itself (`Eff.expandIn_eq_self`). -/
 def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : Prop :=
   ∃ (e : NativeEff) (env : List Ty),
     Node.at_ (.eff src.program) point.path = some (.eff e) ∧
-    Checker.check src.signature env point.path e = .ok ty ∧
+    Checker.check src.signature env point.path (Eff.expandIn src.program e) = .ok ty ∧
     EnvTyped w env point.env
 
 /-- Admitted bodies covering all six `Body` constructors. -/
