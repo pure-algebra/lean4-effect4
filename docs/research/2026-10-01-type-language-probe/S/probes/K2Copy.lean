@@ -1026,6 +1026,43 @@ def stream : PTy := .app "Stream.Stream" [.int, .never, .never]
   .objects none [] [prop "b" Schema.string, prop "a" rcInt] [],
   .objects (some [⟨"identifier", .str "User"⟩]) [] [prop "a" Schema.string] []].all exactAgrees
 
+/-! ### The level of the exactness statement: `N_S` needs no property sort at the bridge (tested)
+
+The copy's `schema` writes a record's fields in the type's own order and its reader keeps the
+written order (the bridge level: `Bridge.schema`, `Bridge.ofSchema`, raw types), so `N_S` above
+needs no property sort and a permuted struct reads and writes back permuted. The public writer
+`Ty.schema` normalizes first (`Bridge.lean:243-244`) and writes the canonical order whatever the
+document's, while rc.112 persists declaration order (question 2 E1–E2): an exactness statement
+against the public writer would need `N_Sp` below (`nsAlg` with a stable, non-deduplicating sort in
+the `objects` arm), and a union-member reordering as well, which rc.112's ordered `anyOf` can
+observe (question 2 E7). So the statement belongs at the bridge level. -/
+
+def propSortKey (p : PropertySignature) : String :=
+  match p.name with
+  | .string n => n
+  | _ => ""
+
+/-- Stable insertion by the field order; no dedupe (a normaliser never drops a property). -/
+def insProp (p : PropertySignature) : List PropertySignature → List PropertySignature
+  | [] => [p]
+  | q :: qs => if nameLt (propSortKey p) (propSortKey q) then p :: q :: qs else q :: insProp p qs
+
+def sortProps (ps : List PropertySignature) : List PropertySignature :=
+  ps.foldl (fun acc p => insProp p acc) []
+
+def nsSortedAlg : RepresentationAlgebra RepresentationSelfCarrier :=
+  { nsAlg with
+    representation_objects := fun _ cs ps is =>
+      .objects none cs (sortProps (ps.map fun p => { p with annotations := none })) is }
+
+def N_Sp (r : Representation) : Representation := cata_representation nsSortedAlg r
+
+/-- rc.112's `Struct({ b, a })`, persisted in declaration order. -/
+def permutedBA : Representation := .objects none [] [prop "b" Schema.string, prop "a" rcInt] []
+#guard N_Sp (schema rAB) = N_Sp permutedBA
+#guard sortProps [prop "b" Schema.string, prop "a" Schema.string, prop "a" Schema.boolean] =
+  [prop "a" Schema.string, prop "a" Schema.boolean, prop "b" Schema.string]   -- stable, nothing dropped
+
 /-- The store's shapes through the new reader: the `Test/Schema/DialectContract.lean` rows that
 re-pin when records land (tested). A store struct carries `identifier` (allowlisted) and its
 `nat` renders as `isInt` alone, so it reads as a record of `int`; a one-case sum is a
@@ -1867,6 +1904,17 @@ did not evaluate to `true`
 -/
 #guard_msgs (error) in
 #guard red_flatWithoutNS
+
+/-- RED: the bridge-level `N_S` (no property sort) identifies a permuted struct with the canonical
+writing (it does not: a statement against the normalizing writer would need `N_Sp`). -/
+def red_unsortedNS : Bool := N_S (schema rAB) == N_S permutedBA
+/--
+error: Expression
+  red_unsortedNS
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_unsortedNS
 
 /-- RED: the strict codec admits rc.112 `optional`'s `null` for an explicit undefined. -/
 def red_optionalNull : Bool := (decodeP rOpt (jobj [("a", .null), ("b", .str "x")])).isSome
