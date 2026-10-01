@@ -147,10 +147,12 @@ def daemonForkIn {Op : Type} (body : Src Op) (scope : TermSrc) : Src Op :=
   withFiber (Action.forkIn body daemonOptions scope)
 
 /-- `daemon body` and `daemon body in scope`: the two detaching forks, with the word that
-detaches them at the call site. -/
-syntax (name := daemonFork_) "daemon " term (" in " term)? : term
+detaches them at the call site. Scoped to this namespace (decisions row 17, seat J2): the word is
+a keyword only where `Effect4.Program.Authoring` is open, so an importer of the surface keeps the
+field `daemon := …` of `Supervision.ForkOptions` (`Test/Program/AuthoringScope.lean`). -/
+scoped syntax (name := daemonFork_) "daemon " term (" in " term)? : term
 
-macro_rules
+scoped macro_rules
   | `(daemon $body:term) => `(daemonFork $body)
   | `(daemon $body:term in $scope:term) => `(daemonForkIn $body $scope)
 

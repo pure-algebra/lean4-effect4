@@ -112,6 +112,29 @@ def document (α : Type) [Canonical α] : Effect4.Document := (shape α).documen
 /-- The JSON of a carrier, read off its shape. -/
 def print (a : α) : Effect4.Json := (shape α).print (toVal a)
 
+/-- The name of a carrier's constructor, read off its shape (decisions row 17): the case a sum's
+value carries, found by its wire tag (`caseAt`), which is the name `ShapeDoc.print` writes (the
+`_tag` field, or the string an all-nullary sum prints as); a structure's name; and the empty
+string for a value whose shape names no constructor (a primitive, or a tag no case carries). One
+definition for every canonical sum, where a hand-written `head` per sum (`TypeReason.head`) would
+be one each; the generated groups' guards hold it against both. -/
+def head (a : α) : String :=
+  match toVal a with
+  | .ctor i _ =>
+    match headShape (shape α).defs (shape α).root with
+    | .sum _ cases => ((caseAt i cases).map (·.1)).getD ""
+    | .struct name _ => name
+    | _ => ""
+  | _ => ""
+
+/-- The constructor names a carrier's shape declares, in declaration order: a sum's cases, a
+structure's one name, none for a primitive. -/
+def heads (α : Type) [Canonical α] : List String :=
+  match headShape (shape α).defs (shape α).root with
+  | .sum _ cases => cases.map (·.1)
+  | .struct name _ => [name]
+  | _ => []
+
 end Canonical
 
 /-! ## Helpers the instances share -/

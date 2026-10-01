@@ -111,8 +111,10 @@ def unnestElems : List (TSyntax `doElem) → List (TSyntax `doElem)
       [elem]
   | elems => elems
 
-/-- `eff { ... }` or `eff do ...` authoring block for `Src Op` programs. -/
-syntax (name := effDo) "eff " doSeq : term
+/-- `eff { ... }` or `eff do ...` authoring block for `Src Op` programs. Scoped to this namespace
+(decisions row 17, seat J2): `eff` is a keyword only where `Effect4.Program.Authoring` is open
+(`open scoped Effect4.Program.Authoring` outside it), never by import alone. -/
+scoped syntax (name := effDo) "eff " doSeq : term
 
 /-- Expands a list of `doElem` into an authored `Src Op` program. -/
 def expandDoElems : List (TSyntax `doElem) → MacroM (TSyntax `term)
@@ -170,7 +172,7 @@ def expandDoElems : List (TSyntax `doElem) → MacroM (TSyntax `term)
       `(andThen $e $restTerm)
     | _ => Macro.throwErrorAt elem "unsupported statement in eff block"
 
-macro_rules
+scoped macro_rules
   | `(eff $seq:doSeq) => expandDoElems (unnestElems (getDoSeqElems seq))
 
 end Effect4.Program.Authoring

@@ -95,6 +95,7 @@ import Test.Program.TypedContract
 import Test.Program.WeakenContract
 import Test.Program.AuthoringContract
 import Test.Program.AuthorContract
+import Test.Program.AuthoringScope
 import Test.Program.LoopSugarContract
 import Test.Program.FragmentCensusContract
 import Test.Program.DenoteContract

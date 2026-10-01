@@ -1,0 +1,3 @@
+$ lake env lean <scratch>/DaemonKeywordLeak.lean
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T22:22:05Z
+exit=0 (1s)
