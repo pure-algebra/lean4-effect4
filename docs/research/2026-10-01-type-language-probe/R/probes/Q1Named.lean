@@ -617,6 +617,33 @@ theorem union_values_distinct :
 #guard getField "name" (mkRecord (canon [("role", .str "member"), ("id", .nat 2), ("name", .str "bob")])) == some (.str "bob")
 #guard getField "email" (mkRecord (canon [("id", .nat 2), ("name", .str "bob")])) == none
 
+/-! ## 7. Under this clause the atom is sound, but its label is an argument
+
+The printer spells `recordGet(r, "b")` as `r.b` only when the label is a literal of the term:
+a variable typed at the literal type `"b"` (the literal rule keeps it under a const-generic atom)
+types the same application and leaves the printer no label to write. A `Term.field` carries the
+label as data, so every well-typed projection has its member image. -/
+
+def sigGet : Sig :=
+  { atomOf := fun a tys => if a = "recordGet" then recordGetRule tys else none,
+    constAtom := fun a => decide (a = "recordGet") }
+
+/-- `recordGet(a0, a1)`, the label a variable. -/
+def getByVar : Term := .app "recordGet" (.cons (.var 0) (.cons (.var 1) .nil))
+
+/-- The label a member-access image needs: present only as a literal argument. -/
+def memberLabel? : Term → Option String
+  | .app "recordGet" (.cons _ (.cons (.lit (.str n)) .nil)) => some n
+  | .field _ n => some n
+  | _ => none
+
+-- well typed, with `a1 : "b"` …
+#guard (argTy sigGet [.record [("a", .nat), ("b", .string)], .lit "b"] false getByVar).isSome
+-- … and no label to print; the literal spelling and the constructor have one
+#guard (memberLabel? getByVar).isNone
+#guard memberLabel? (.app "recordGet" (.cons (.var 0) (.cons (.lit (.str "b")) .nil))) == some "b"
+#guard memberLabel? (.field (.var 0) "b") == some "b"
+
 end SeatR.Named
 
 #print axioms SeatR.Named.canon_map
