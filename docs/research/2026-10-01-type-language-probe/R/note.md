@@ -5,8 +5,9 @@ Type-language probe, 2026-10-01. Worktree `/Users/pooks/Dev/lean4-effect4-probe-
 
 ## The one thing
 
-**Row 119's positional value clause makes record projection type-directed, and nothing that
-builds, reads or runs a program has the type.** Proved on models: no atom and no untyped evaluator
+**Row 119's positional value clause makes record projection type-directed, and only the checker
+sees types: the evaluator, the authoring surface and both readers are type-blind, and the checker
+produces no terms.** Proved on models: no atom and no untyped evaluator
 can project a positional record soundly, with or without an index argument (the literal rule types
 every number `nat`; `NativeAtom.eval` sees values only), so the stored term must carry a checked
 position; the printed `t.name` drops that position, so no type-blind reader can invert the printer;
@@ -95,7 +96,7 @@ not refusable by an atom, and adding the index does not rescue it.
 | no evaluator makes `recordGet(r, "b")` sound (positional values) | `recordGet_unsound` | `Q1Positional.lean` | `[propext]` |
 | nor `recordGet(r, "b", i)` | `recordGetAt_unsound` | same | `[propext]` |
 | the literal rule erases the index | `index_blind` | same | `[propext]` |
-| no untyped evaluator makes a name-only `field t name` sound | `NameOnly.unsound` | same | `[propext]` |
+| no untyped evaluator makes a name-only `field t name` sound (progress and preservation, as `NativeAtom.Sound` states it for atoms) | `NameOnly.unsound` | same | `[propext]` |
 | route (b) with a checked position: progress and preservation | `sound`, `soundArgs` | same | `[propext, Quot.sound]` |
 | the tree's `TermFits` shape (preservation only) | `termFits` | same | `[propext, Quot.sound]` |
 | construction is sound: canonical permutation of values fits canonical fields | `align` (through `canon_map`, `mem_canon`) | same | `[propext, Quot.sound]` |
