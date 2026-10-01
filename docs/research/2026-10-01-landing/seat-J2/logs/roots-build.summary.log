@@ -1,0 +1,11 @@
+# summary of the roots build at head e4997e6c: LEAN_NUM_THREADS=4 lake build Effect4.Laws Test.All (command, the new battery's line, the census lines naming this seat's definitions, the two gates, the verdict)
+$ lake build Effect4.Laws Test.All
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T23:01:32Z
+6271:✔ [584/745] Built Test.Program.AuthoringScope (977ms)
+12305:  Effect4.Store.Canonical.head	Effect4.Store.Domain.Canonical	Effect4.Store.Canonical.head.match_4	discr 0	alts 2	catchAll true
+info: Test/All.lean:171:0: Effect4 library-root gate: 135 API/utility modules, 221 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:171:0: Effect4 module and axiom gate: checked 527 modules and 72803 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+Build completed successfully (745 jobs).
+exit=0 (612s)
+# warnings in the log: 0

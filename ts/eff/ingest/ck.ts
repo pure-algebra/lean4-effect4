@@ -1,13 +1,74 @@
-// Compiler API engine, retargeted from foldlab experiments/lift-harness/src/lift.ts
-// at 4005d34f. Syntax recognition is independent of read.ts and the oxc engine;
-// derived forms consume the shared Lean-owned template fold.
-import ts from "typescript"
+// Compiler-reading engine, retargeted from foldlab experiments/lift-harness/src/lift.ts at
+// 4005d34f. Syntax recognition is independent of read.ts and the oxc engine's walk; derived
+// forms consume the shared Lean-owned template fold.
+//
+// The tree (decisions row 168, route (C), seat J2): this engine walked `typescript@5.9.2`'s
+// `createSourceFile` tree. tsgo 7 is the one TypeScript compiler, its API serves source files to
+// node only, and this engine runs in bun workers, so it reads the ingest's one parse entry
+// (`parseTypeScript`, oxc-parser 0.147.0) and keeps its own walk. Every rule below is the rule it
+// had, read off the ESTree the way the TypeScript AST held the same source:
+// - a statement under `export`/`export default` is the declaration, exported, whose first token
+//   is the wrapper's (`Top`); `export default <expression>` is the export assignment;
+// - `unwrap` strips parentheses, and a `ChainExpression` wrapper, which TypeScript does not
+//   have: its chain elements carry `optional` where TypeScript carried `questionDotToken`;
+// - TypeScript's `NodeFlags.Const` is `const` and `await using`; a parameter is named when its
+//   pattern is an identifier with or without a default or a rest marker; an array hole is
+//   TypeScript's `OmittedExpression`; `a = b` is an `AssignmentExpression`;
+// - `pos` (a declaration's place for the forward-reference cut) is `start`: both orders agree,
+//   because no token lies inside another node's leading trivia.
+// What the change costs (receipt J2): both engines now read one parse, so the gate tests two
+// walks over one tree, not two parsers.
+import type { ArrayExpression, Class, Directive, Expression, ExportDefaultDeclarationKind, Function as FunctionNode, FunctionBody, Node as TreeNode, NumericLiteral, ParamPattern, PrivateFieldExpression, Program, SpreadElement, Statement, StaticMemberExpression, StringLiteral, TemplateElement, TSInterfaceDeclaration, TSTupleElement, TSType, VariableDeclaration } from "oxc-parser"
+import { childNodes, parseTypeScript } from "./oxc.ts"
 import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
 import { rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 
 class Decline extends Error {}
 const bad = (reason: string): never => { throw new Decline(reason) }
 const unit: Term = { _tag: "lit", value: { _tag: "unit" } }
+
+/** An array hole (`[a, , b]`): TypeScript's `OmittedExpression`, a position no rule admits. */
+interface Hole { readonly type: "Hole"; readonly start: number; readonly end: number }
+const hole: Hole = { type: "Hole", start: -1, end: -1 }
+/** An expression position: an expression, a spread argument or an array hole. */
+type Ex = Expression | SpreadElement | Hole
+const elementsOf = (a: ArrayExpression): readonly Ex[] => a.elements.map(e => e ?? hole)
+const isTrue = (x: Ex): boolean => x.type === "Literal" && x.value === true
+const isFalse = (x: Ex): boolean => x.type === "Literal" && x.value === false
+const isNull = (x: Ex): boolean => x.type === "Literal" && x.value === null && !("regex" in x)
+const isNumeric = (x: Ex): x is NumericLiteral => x.type === "Literal" && typeof x.value === "number"
+const isString = (x: Ex): x is StringLiteral => x.type === "Literal" && typeof x.value === "string"
+/** TypeScript's `NodeFlags.Const`: `const`, and `await using` (whose flags are `Const | Using`). */
+const constLike = (d: VariableDeclaration): boolean => d.kind === "const" || d.kind === "await using"
+/** TypeScript's `isIdentifier(parameter.name)`: an identifier pattern, with or without a default
+ * (`x = 1`) or a rest marker (`...x`). */
+const parameterName = (p: ParamPattern): string | undefined => {
+  if (p.type === "TSParameterProperty") return parameterName(p.parameter)
+  const name = p.type === "AssignmentPattern" ? p.left : p.type === "RestElement" ? p.argument : p
+  return name.type === "Identifier" ? name.name : undefined
+}
+/** A non-computed member's name as TypeScript spells it: a private name keeps its `#`. */
+const memberName = (m: StaticMemberExpression | PrivateFieldExpression): string => m.property.type === "PrivateIdentifier" ? "#" + m.property.name : m.property.name
+/** A template part's text as TypeScript cooks it. TypeScript keeps an invalid escape of a tagged
+ * template raw inside the cooked text; oxc reports no cooked text then, so the raw text stands in. */
+const templateText = (q: TemplateElement): string => q.value.cooked ?? q.value.raw
+
+/** A top-level statement as the TypeScript AST holds it: a declaration under `export` or
+ * `export default` is the declaration itself, exported, whose first token (`getStart`) is the
+ * wrapper's or a decorator's; everything else is itself. */
+interface Top { readonly node: Directive | Statement; readonly first: number; readonly exported: boolean }
+const isDefaultDeclaration = (d: ExportDefaultDeclarationKind): d is FunctionNode | Class | TSInterfaceDeclaration =>
+  d.type === "FunctionDeclaration" || d.type === "TSDeclareFunction" || d.type === "ClassDeclaration" || d.type === "TSInterfaceDeclaration"
+const firstToken = (wrapper: { readonly start: number }, d: Statement): number => {
+  const decorators: unknown = Reflect.get(d, "decorators")
+  const starts = Array.isArray(decorators) ? decorators.map(x => Number(Reflect.get(x, "start"))) : []
+  return Math.min(wrapper.start, d.start, ...starts)
+}
+const topLevel = (program: Program): readonly Top[] => program.body.map((s): Top => {
+  if (s.type === "ExportNamedDeclaration" && s.declaration) return { node: s.declaration, first: firstToken(s, s.declaration), exported: true }
+  if (s.type === "ExportDefaultDeclaration" && isDefaultDeclaration(s.declaration)) return { node: s.declaration, first: firstToken(s, s.declaration), exported: true }
+  return { node: s, first: s.start, exported: false }
+})
 
 // Printed identifiers encode paths in canonical decimal. Never parse a rounded Nat.
 const layerPath = (name: string): readonly number[] => {
@@ -90,65 +151,77 @@ function restoreLayer(program: Eff, target: readonly number[], replacement: Laye
 }
 
 class CompilerReader {
-  constructor(readonly file: ts.SourceFile) {}
-  unwrap(x: ts.Expression): ts.Expression {
-    while (ts.isParenthesizedExpression(x)) x = x.expression
+  constructor(readonly source: string) {}
+  /** DI-72 (`763187e1`): a bare value (a literal, `undefined`, a binder) or an application of a
+   * name that is no head and no row is no program, and the fragment reader refuses it (`shape`,
+   * `unknownHead`). The oxc engine meets it in its second phase, after the whole unit's walk, so
+   * any refusal of the walk comes first; this reader keeps the walk as it was (the value read as
+   * `fail`) and records the first such position, and `settle` refuses it where the oxc engine
+   * reads the fragment: at a unit's end, at the layer probe, at a referenced layer. Until seat
+   * J2's step 1b this engine lifted these units. */
+  deferred: string | undefined
+  defer(reason: string): void { this.deferred ??= reason }
+  settle(): void { if (this.deferred !== undefined) bad(this.deferred) }
+  /** The node's text, `getText` of the TypeScript AST: its tokens without leading trivia. */
+  text(x: { readonly start: number; readonly end: number }): string { return this.source.slice(x.start, x.end) }
+  unwrap(x: Ex): Ex {
+    while (x.type === "ParenthesizedExpression" || x.type === "ChainExpression") x = x.expression
     return x
   }
-  name(x: ts.Expression): string {
+  name(x: Ex): string {
     x = this.unwrap(x)
-    if (ts.isIdentifier(x)) return x.text
-    if (ts.isPropertyAccessExpression(x) && !x.questionDotToken) return `${this.name(x.expression)}.${x.name.text}`
+    if (x.type === "Identifier") return x.name
+    if (x.type === "MemberExpression" && !x.computed && !x.optional) return `${this.name(x.object)}.${memberName(x)}`
     return bad("head")
   }
-  call(x: ts.Expression): ts.CallExpression {
+  call(x: Ex) {
     x = this.unwrap(x)
-    return ts.isCallExpression(x) && !x.questionDotToken ? x : bad("call")
+    return x.type === "CallExpression" && !x.optional ? x : bad("call")
   }
-  arity(args: readonly ts.Expression[], n: number): void { if (args.length !== n) bad("arity") }
-  at(args: readonly ts.Expression[], i: number): ts.Expression { return args[i] ?? bad("argument") }
-  variable(x: ts.Expression, env: readonly string[]): number | undefined {
+  arity(args: readonly Ex[], n: number): void { if (args.length !== n) bad("arity") }
+  at(args: readonly Ex[], i: number): Ex { return args[i] ?? bad("argument") }
+  variable(x: Ex, env: readonly string[]): number | undefined {
     x = this.unwrap(x)
-    const i = ts.isIdentifier(x) ? env.lastIndexOf(x.text) : -1
+    const i = x.type === "Identifier" ? env.lastIndexOf(x.name) : -1
     return i < 0 ? undefined : i
   }
-  literal(x: ts.Expression): Lit {
+  literal(x: Ex): Lit {
     x = this.unwrap(x)
-    if (x.kind === ts.SyntaxKind.TrueKeyword) return { _tag: "bool", value: true }
-    if (x.kind === ts.SyntaxKind.FalseKeyword) return { _tag: "bool", value: false }
-    if (ts.isIdentifier(x) && x.text === "undefined") return { _tag: "unit" }
-    if (ts.isNumericLiteral(x) && Number.isSafeInteger(Number(x.text))) return { _tag: "nat", value: Number(x.text) }
-    if (ts.isStringLiteral(x)) return { _tag: "str", value: x.text }
+    if (isTrue(x)) return { _tag: "bool", value: true }
+    if (isFalse(x)) return { _tag: "bool", value: false }
+    if (x.type === "Identifier" && x.name === "undefined") return { _tag: "unit" }
+    if (isNumeric(x) && Number.isSafeInteger(x.value)) return { _tag: "nat", value: x.value }
+    if (isString(x)) return { _tag: "str", value: x.value }
     return bad("literal")
   }
-  term(x: ts.Expression, env: readonly string[]): Term {
+  term(x: Ex, env: readonly string[]): Term {
     x = this.unwrap(x)
     const i = this.variable(x, env)
     if (i !== undefined) return { _tag: "var", index: i }
-    if (ts.isCallExpression(x)) return { _tag: "app", atom: this.name(x.expression), args: x.arguments.map(a => this.term(a, env)) }
+    if (x.type === "CallExpression") return { _tag: "app", atom: this.name(x.callee), args: x.arguments.map(a => this.term(a, env)) }
     return { _tag: "lit", value: this.literal(x) }
   }
-  arrow(x: ts.Expression, env: readonly string[], count: number): { body: ts.ConciseBody; env: readonly string[] } {
+  arrow(x: Ex, env: readonly string[], count: number): { body: FunctionBody | Expression; env: readonly string[] } {
     x = this.unwrap(x)
-    if (!ts.isArrowFunction(x) || x.parameters.length !== count) return bad("closure")
-    const names = x.parameters.map(p => ts.isIdentifier(p.name) ? p.name.text : bad("parameter"))
+    if (x.type !== "ArrowFunctionExpression" || x.params.length !== count) return bad("closure")
+    const names = x.params.map(p => parameterName(p) ?? bad("parameter"))
     return { body: x.body, env: [...env, ...names] }
   }
-  expression(x: ts.ConciseBody): ts.Expression { return ts.isBlock(x) ? bad("block") : x }
-  fields(x: ts.Expression): Map<string, ts.Expression> {
+  expression(x: FunctionBody | Expression): Expression { return x.type === "BlockStatement" ? bad("block") : x }
+  fields(x: Ex): Map<string, Ex> {
     x = this.unwrap(x)
-    if (!ts.isObjectLiteralExpression(x)) return bad("object")
-    const out = new Map<string, ts.Expression>()
+    if (x.type !== "ObjectExpression") return bad("object")
+    const out = new Map<string, Ex>()
     for (const p of x.properties) {
-      if (!ts.isPropertyAssignment(p) || !ts.isIdentifier(p.name) || out.has(p.name.text)) return bad("property")
-      out.set(p.name.text, p.initializer)
+      if (p.type !== "Property" || p.kind !== "init" || p.method || p.shorthand || p.computed || p.key.type !== "Identifier" || out.has(p.key.name)) return bad("property")
+      out.set(p.key.name, p.value)
     }
     return out
   }
-  field(m: Map<string, ts.Expression>, k: string): ts.Expression { return m.get(k) ?? bad(`field ${k}`) }
-  key(x: ts.Expression): ServiceKey {
+  field(m: Map<string, Ex>, k: string): Ex { return m.get(k) ?? bad(`field ${k}`) }
+  key(x: Ex): ServiceKey {
     const c = this.call(x)
-    if (this.name(c.expression) !== "Context.Service" || c.arguments.length !== 1) return bad("key")
+    if (this.name(c.callee) !== "Context.Service" || c.arguments.length !== 1) return bad("key")
     const v = this.literal(this.at(c.arguments, 0))
     if (v._tag !== "str") return bad("key name")
     const m = /^k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)$/.exec(v.value)
@@ -156,8 +229,8 @@ class CompilerReader {
     const name = Number(m[1]), service = Number(m[2])
     return { name: { value: name }, service: { value: service } }
   }
-  cause(x: ts.Expression, env: readonly string[]): CauseTerm {
-    const c = this.call(x), h = this.name(c.expression), a = c.arguments
+  cause(x: Ex, env: readonly string[]): CauseTerm {
+    const c = this.call(x), h = this.name(c.callee), a = c.arguments
     if (h === "Cause.fail" || h === "Cause.die") {
       this.arity(a, 1); const t = this.term(this.at(a, 0), env)
       return h === "Cause.fail" ? { _tag: "fail", error: t } : { _tag: "die", defect: t }
@@ -166,27 +239,27 @@ class CompilerReader {
     if (h === "Cause.combine") { this.arity(a, 2); return { _tag: "both", left: this.cause(this.at(a, 0), env), right: this.cause(this.at(a, 1), env) } }
     return bad("cause")
   }
-  options(x: ts.Expression, daemon: boolean): ForkOptions {
+  options(x: Ex, daemon: boolean): ForkOptions {
     const m = this.fields(x), s = this.literal(this.field(m, "startImmediately")), u = this.literal(this.field(m, "uninterruptible"))
     if (m.size !== 2 || s._tag !== "bool") return bad("fork options")
     const maskMode = u._tag === "bool" ? (u.value ? "uninterruptible" : "interruptible") : u._tag === "str" && u.value === "inherit" ? "inherit" : bad("mask")
     return { startImmediately: s.value, daemon, maskMode }
   }
-  layer(x: ts.Expression): LayerTerm {
+  layer(x: Ex): LayerTerm {
     x = this.unwrap(x)
-    if (ts.isIdentifier(x)) return { _tag: "ref", target: layerPath(x.text) }
+    if (x.type === "Identifier") return { _tag: "ref", target: layerPath(x.name) }
     const c = this.call(x)
-    const callee = this.unwrap(c.expression)
-    if (ts.isPropertyAccessExpression(callee) && callee.name.text === "pipe") {
+    const callee = this.unwrap(c.callee)
+    if (callee.type === "MemberExpression" && !callee.computed && memberName(callee) === "pipe") {
       this.arity(c.arguments, 1)
-      const segment = this.call(this.at(c.arguments, 0)), h = this.name(segment.expression)
+      const segment = this.call(this.at(c.arguments, 0)), h = this.name(segment.callee)
       this.arity(segment.arguments, 1)
-      const self = this.layer(callee.expression), that = this.layer(this.at(segment.arguments, 0))
+      const self = this.layer(callee.object), that = this.layer(this.at(segment.arguments, 0))
       if (h === "Layer.provide") return { _tag: "provide", self, that }
       if (h === "Layer.provideMerge") return { _tag: "provideMerge", self, that }
       return bad("layer pipe")
     }
-    const h = this.name(c.expression), a = c.arguments
+    const h = this.name(c.callee), a = c.arguments
     switch (h) {
       case "Layer.succeed": this.arity(a, 2); return { _tag: "succeed", key: this.key(this.at(a, 0)), value: this.literal(this.at(a, 1)) }
       case "Layer.effect": this.arity(a, 2); return { _tag: "effect", key: this.key(this.at(a, 0)), body: this.eff(this.at(a, 1), []) }
@@ -198,45 +271,49 @@ class CompilerReader {
       default: return bad("layer")
     }
   }
-  stmts(input: readonly ts.Statement[], initial: readonly string[]): readonly Stmt[] {
+  stmts(input: readonly (Directive | Statement)[], initial: readonly string[]): readonly Stmt[] {
     let env = [...initial]
     const out: Stmt[] = []
     for (const s of input) {
-      if (ts.isVariableStatement(s) && s.declarationList.flags & ts.NodeFlags.Const) {
-        const d = s.declarationList.declarations[0]
-        if (s.declarationList.declarations.length !== 1 || !d || !ts.isIdentifier(d.name) || !d.initializer) return bad("binding")
-        const y = this.unwrap(d.initializer)
-        if (!ts.isYieldExpression(y) || !y.asteriskToken || !y.expression) return bad("yield binding")
-        out.push({ _tag: "bindYield", effect: this.eff(y.expression, env) }); env.push(d.name.text)
-      } else if (ts.isExpressionStatement(s)) {
+      if (s.type === "VariableDeclaration" && constLike(s)) {
+        const d = s.declarations[0]
+        if (s.declarations.length !== 1 || !d || d.id.type !== "Identifier" || !d.init) return bad("binding")
+        const y = this.unwrap(d.init)
+        if (y.type !== "YieldExpression" || !y.delegate || !y.argument) return bad("yield binding")
+        out.push({ _tag: "bindYield", effect: this.eff(y.argument, env) }); env.push(d.id.name)
+      } else if (s.type === "ExpressionStatement") {
         const y = this.unwrap(s.expression)
-        if (!ts.isYieldExpression(y) || !y.asteriskToken || !y.expression) return bad("yield statement")
-        out.push({ _tag: "yieldDiscard", effect: this.eff(y.expression, env) })
-      } else if (ts.isReturnStatement(s) && s.expression) out.push({ _tag: "ret", value: this.term(s.expression, env) })
-      else if (ts.isBreakStatement(s) && !s.label) out.push({ _tag: "breakLoop" })
-      else if (ts.isIfStatement(s)) {
-        if (!ts.isBlock(s.thenStatement) || (s.elseStatement && !ts.isBlock(s.elseStatement))) return bad("if body")
-        out.push({ _tag: "ifElse", test: this.term(s.expression, env), thenB: this.stmts(s.thenStatement.statements, env), elseB: s.elseStatement ? this.stmts(s.elseStatement.statements, env) : [] })
-      } else if (ts.isWhileStatement(s) && this.unwrap(s.expression).kind === ts.SyntaxKind.TrueKeyword && ts.isBlock(s.statement)) {
-        out.push({ _tag: "whileTrue", body: this.stmts(s.statement.statements, env) })
+        if (y.type !== "YieldExpression" || !y.delegate || !y.argument) return bad("yield statement")
+        out.push({ _tag: "yieldDiscard", effect: this.eff(y.argument, env) })
+      } else if (s.type === "ReturnStatement" && s.argument) out.push({ _tag: "ret", value: this.term(s.argument, env) })
+      else if (s.type === "BreakStatement" && !s.label) out.push({ _tag: "breakLoop" })
+      else if (s.type === "IfStatement") {
+        const thenS = s.consequent, elseS = s.alternate
+        if (thenS.type !== "BlockStatement" || (elseS && elseS.type !== "BlockStatement")) return bad("if body")
+        out.push({ _tag: "ifElse", test: this.term(s.test, env), thenB: this.stmts(thenS.body, env), elseB: elseS && elseS.type === "BlockStatement" ? this.stmts(elseS.body, env) : [] })
+      } else if (s.type === "WhileStatement" && isTrue(this.unwrap(s.test)) && s.body.type === "BlockStatement") {
+        out.push({ _tag: "whileTrue", body: this.stmts(s.body.body, env) })
       } else return bad("statement")
     }
     return out
   }
-  eff(x: ts.Expression, env: readonly string[]): Eff {
+  eff(x: Ex, env: readonly string[]): Eff {
     x = this.unwrap(x)
+    // DI-72: the three positions `deferred` names; the walk reads them as it did.
     const variable = this.variable(x, env)
-    if (variable !== undefined) return { _tag: "fail", error: { _tag: "var", index: variable } }
-    if (!ts.isCallExpression(x)) {
-      if (ts.isIdentifier(x) || ts.isPropertyAccessExpression(x)) {
+    if (variable !== undefined) { this.defer("shape"); return { _tag: "fail", error: { _tag: "var", index: variable } } }
+    if (x.type !== "CallExpression") {
+      if (x.type === "Identifier" || x.type === "MemberExpression" && !x.computed) {
         const h = this.name(x)
         if (h === "Effect.fiberId") return { _tag: "withFiber", action: { _tag: "getId" } }
         const row = rows.find(r => r.row.spelling === h && r.row.shape === "value")
         if (row) return { _tag: "perform", op: row.op, request: unit }
       }
-      return { _tag: "fail", error: this.term(x, env) }
+      const t = this.term(x, env)
+      if (t._tag === "lit") this.defer("shape")
+      return { _tag: "fail", error: t }
     }
-    const h = this.name(x.expression), a = x.arguments
+    const h = this.name(x.callee), a = x.arguments
     const arg = (i: number) => this.at(a, i)
     const e = (i: number) => this.eff(arg(i), env)
     const t = (i: number) => this.term(arg(i), env)
@@ -248,9 +325,9 @@ class CompilerReader {
       case "Effect.sync": { this.arity(a, 1); const fn = this.arrow(arg(0), env, 0); return { _tag: "sync", thunk: this.term(this.expression(fn.body), fn.env) } }
       case "Effect.suspend": {
         this.arity(a, 1); const fn = this.arrow(arg(0), env, 0)
-        if (ts.isBlock(fn.body)) return this.loop(fn.body, env)
+        if (fn.body.type === "BlockStatement") return this.loop(fn.body, env)
         const b = this.unwrap(fn.body)
-        if (ts.isConditionalExpression(b)) return { _tag: "select", scrutinee: this.term(b.condition, env), decision: { _tag: "bool" }, arm0: this.eff(b.whenTrue, env), arm1: this.eff(b.whenFalse, env) }
+        if (b.type === "ConditionalExpression") return { _tag: "select", scrutinee: this.term(b.test, env), decision: { _tag: "bool" }, arm0: this.eff(b.consequent, env), arm1: this.eff(b.alternate, env) }
         return { _tag: "suspend", body: this.eff(b, env) }
       }
       case "Effect.flatMap": this.arity(a, 2); return { _tag: "bind", first: e(0), rest: k(1) }
@@ -260,15 +337,15 @@ class CompilerReader {
         this.arity(a, 4)
         const predicate = this.arrow(arg(1), env, 1)
         const value = this.unwrap(this.expression(predicate.body))
-        if (this.name(arg(3)) !== "undefined" || value.kind === ts.SyntaxKind.TrueKeyword) return bad("noncanonical catchIf")
+        if (this.name(arg(3)) !== "undefined" || isTrue(value)) return bad("noncanonical catchIf")
         return { _tag: "catchIf", test: this.term(value, predicate.env), body: e(0), handler: k(2) }
       }
       case "Effect.onExit": this.arity(a, 2); return { _tag: "onExit", body: e(0), finalizer: k(1) }
       case "Effect.acquireRelease": this.arity(a, 2); return { _tag: "acquireRelease", acquire: e(0), release: k(1, 2) }
       case "Effect.gen": {
         this.arity(a, 1); const fn = this.unwrap(arg(0))
-        if (!ts.isFunctionExpression(fn) || !fn.asteriskToken || fn.parameters.length) return bad("generator")
-        return { _tag: "gen", body: this.stmts(fn.body.statements, env) }
+        if (fn.type !== "FunctionExpression" || !fn.generator || fn.params.length || !fn.body) return bad("generator")
+        return { _tag: "gen", body: this.stmts(fn.body.body, env) }
       }
       case "Effect.matchCauseEffect": {
         this.arity(a, 2); const m = this.fields(arg(1)); if (m.size !== 2) return bad("match fields")
@@ -296,96 +373,109 @@ class CompilerReader {
       case "Fiber.awaitAll": this.arity(a, 1); return { _tag: "withFiber", action: { _tag: "awaitAll", targets: t(0) } }
       case "Effect.context": this.arity(a, 0); return { _tag: "withFiber", action: { _tag: "getContext" } }
       case "Scope.close": this.arity(a, 2); return { _tag: "withFiber", action: { _tag: "closeScope", scope: t(0), exit: t(1) } }
-      case "Effect.raceAll": { this.arity(a, 1); const list = this.unwrap(arg(0)); if (!ts.isArrayLiteralExpression(list)) return bad("entrants"); return { _tag: "withFiber", action: { _tag: "raceAll", entrants: list.elements.map(y => this.eff(y, env)) } } }
+      case "Effect.raceAll": { this.arity(a, 1); const list = this.unwrap(arg(0)); if (list.type !== "ArrayExpression") return bad("entrants"); return { _tag: "withFiber", action: { _tag: "raceAll", entrants: elementsOf(list).map(y => this.eff(y, env)) } } }
       case "Effect.withFiber": {
         this.arity(a, 1); const fn = this.arrow(arg(0), env, 0)
-        if (!ts.isBlock(fn.body) || fn.body.statements.length !== 2) return bad("runIn callback")
-        const [link, ret] = fn.body.statements
-        if (!link || !ts.isExpressionStatement(link) || !ret || !ts.isReturnStatement(ret) || !ret.expression || this.name(ret.expression) !== "Effect.void") return bad("runIn body")
+        if (fn.body.type !== "BlockStatement" || fn.body.body.length !== 2) return bad("runIn callback")
+        const [link, ret] = fn.body.body
+        if (!link || link.type !== "ExpressionStatement" || !ret || ret.type !== "ReturnStatement" || !ret.argument || this.name(ret.argument) !== "Effect.void") return bad("runIn body")
         const c = this.call(link.expression); this.arity(c.arguments, 2)
-        if (this.name(c.expression) !== "Fiber.runIn") return bad("runIn head")
+        if (this.name(c.callee) !== "Fiber.runIn") return bad("runIn head")
         return { _tag: "withFiber", action: { _tag: "runIn", target: this.term(this.at(c.arguments, 0), env), scope: this.term(this.at(c.arguments, 1), env) } }
       }
     }
-    const trailingName = (z: ts.Expression): string | undefined => { z = this.unwrap(z); return ts.isStringLiteral(z) ? JSON.stringify(z.text) : ts.isIdentifier(z) ? z.text : undefined }
+    const trailingName = (z: Ex): string | undefined => { z = this.unwrap(z); return isString(z) ? JSON.stringify(z.value) : z.type === "Identifier" ? z.name : undefined }
     for (const r of rows.filter(r => r.row.spelling === h && r.row.shape !== "value")) {
       const count = r.row.shape === "tupleCall" ? 2 : r.row.request._tag === "unit" ? 0 : 1
       if (a.length !== count + r.row.trailing.length || !r.row.trailing.every((v, i) => trailingName(arg(count + i)) === v)) continue
-      const types = x.typeArguments?.map(n => n.getText(this.file)) ?? []
+      const types = x.typeArguments?.params.map(n => this.text(n)) ?? []
       if (types.join(",") !== r.row.typeArgs.join(",")) continue
       let request = unit
       if (count === 1) request = t(0)
       if (count === 2) {
         const left = t(0), right = t(1)
         const x0 = this.unwrap(arg(0)), x1 = this.unwrap(arg(1))
-        let saved: ts.Expression | undefined
-        if (ts.isCallExpression(x0) && ts.isCallExpression(x1) && this.name(x0.expression) === "fst" && this.name(x1.expression) === "snd" && x0.arguments.length === 1 && x1.arguments.length === 1) {
+        let saved: Ex | undefined
+        if (x0.type === "CallExpression" && x1.type === "CallExpression" && this.name(x0.callee) === "fst" && this.name(x1.callee) === "snd" && x0.arguments.length === 1 && x1.arguments.length === 1) {
           const p = this.unwrap(this.at(x0.arguments, 0)), q = this.unwrap(this.at(x1.arguments, 0))
-          if (ts.isIdentifier(p) && ts.isIdentifier(q) && p.text === q.text) saved = p
+          if (p.type === "Identifier" && q.type === "Identifier" && p.name === q.name) saved = p
         }
         request = saved ? this.term(saved, env) : { _tag: "app", atom: "pair", args: [left, right] }
       }
       return { _tag: "perform", op: r.op, request }
     }
-    return { _tag: "fail", error: this.term(x, env) }
+    const application = this.term(x, env)
+    this.defer("unknownHead")
+    return { _tag: "fail", error: application }
   }
-  typeNode(t?: ts.TypeNode): Ty {
+  typeNode(t?: TSType | TSTupleElement): Ty {
     if (!t) return { _tag: "unit" }
-    if (t.kind === ts.SyntaxKind.NumberKeyword) return { _tag: "nat" }
-    if (t.kind === ts.SyntaxKind.BooleanKeyword) return { _tag: "bool" }
-    if (t.kind === ts.SyntaxKind.StringKeyword) return { _tag: "string" }
-    if (t.kind === ts.SyntaxKind.VoidKeyword || t.kind === ts.SyntaxKind.UndefinedKeyword) return { _tag: "unit" }
-    if (t.kind === ts.SyntaxKind.NeverKeyword) return { _tag: "never" }
-    if (ts.isTypeReferenceNode(t)) {
-      const name = t.typeName.getText(this.file)
-      if (name === "Option.Option" && t.typeArguments?.length === 1) return { _tag: "option", inner: this.typeNode(t.typeArguments[0]) }
-      if (name === "ReadonlyArray" && t.typeArguments?.length === 1) return { _tag: "list", inner: this.typeNode(t.typeArguments[0]) }
+    if (t.type === "TSNumberKeyword") return { _tag: "nat" }
+    if (t.type === "TSBooleanKeyword") return { _tag: "bool" }
+    if (t.type === "TSStringKeyword") return { _tag: "string" }
+    if (t.type === "TSVoidKeyword" || t.type === "TSUndefinedKeyword") return { _tag: "unit" }
+    if (t.type === "TSNeverKeyword") return { _tag: "never" }
+    if (t.type === "TSTypeReference") {
+      const name = this.text(t.typeName), args = t.typeArguments?.params
+      if (name === "Option.Option" && args?.length === 1) return { _tag: "option", inner: this.typeNode(args[0]) }
+      if (name === "ReadonlyArray" && args?.length === 1) return { _tag: "list", inner: this.typeNode(args[0]) }
       return { _tag: "handle", target: name }
     }
-    if (ts.isTupleTypeNode(t) && t.elements.length === 2) {
-      return { _tag: "prod", left: this.typeNode(t.elements[0] as ts.TypeNode), right: this.typeNode(t.elements[1] as ts.TypeNode) }
+    if (t.type === "TSTupleType" && t.elementTypes.length === 2) {
+      return { _tag: "prod", left: this.typeNode(t.elementTypes[0]), right: this.typeNode(t.elementTypes[1]) }
     }
     return bad("type node")
   }
-  loop(block: ts.Block, env: readonly string[]): Eff {
-    const [init, ret] = block.statements
-    if (block.statements.length !== 2 || !init || !ts.isVariableStatement(init) || !ret || !ts.isReturnStatement(ret) || !ret.expression) return bad("loop")
-    const decl = init.declarationList.declarations[0]
-    if (!decl || init.declarationList.declarations.length !== 1 || !ts.isIdentifier(decl.name) || !decl.initializer) return bad("cursor")
-    const mapCall = this.call(ret.expression); this.arity(mapCall.arguments, 2)
-    if (this.name(mapCall.expression) !== "Effect.map") return bad("loop map head")
-    const c = this.call(this.at(mapCall.arguments, 0)); this.arity(c.arguments, 1)
-    if (this.name(c.expression) !== "Effect.whileLoop") return bad("loop head")
-    const resultArrow = this.arrow(this.at(mapCall.arguments, 1), env, 0)
+  /** The loop image's tail, `Effect.map(Effect.whileLoop({…}), () => result)`: the loop's call and
+   * the result's thunk. The printed seam reads the printer's spelling only; the foreign reader also
+   * reads the pipe spellings of the same dual call (`ForeignCompilerReader.loopTail`). */
+  loopTail(x: Ex): { readonly loop: Ex; readonly result: Ex } {
+    const mapCall = this.call(x); this.arity(mapCall.arguments, 2)
+    if (this.name(mapCall.callee) !== "Effect.map") return bad("loop map head")
+    return { loop: this.at(mapCall.arguments, 0), result: this.at(mapCall.arguments, 1) }
+  }
+  loop(block: FunctionBody, env: readonly string[]): Eff {
+    const [init, ret] = block.body
+    if (block.body.length !== 2 || !init || init.type !== "VariableDeclaration" || !ret || ret.type !== "ReturnStatement" || !ret.argument) return bad("loop")
+    const decl = init.declarations[0]
+    if (!decl || init.declarations.length !== 1 || decl.id.type !== "Identifier" || !decl.init) return bad("cursor")
+    const cursor = decl.id.name
+    const tail = this.loopTail(ret.argument)
+    const c = this.call(tail.loop); this.arity(c.arguments, 1)
+    if (this.name(c.callee) !== "Effect.whileLoop") return bad("loop head")
+    const resultArrow = this.arrow(tail.result, env, 0)
     const result = this.term(this.expression(resultArrow.body), resultArrow.env)
-    const m = this.fields(this.at(c.arguments, 0)), inner = [...env, decl.name.text]
+    const m = this.fields(this.at(c.arguments, 0)), inner = [...env, cursor]
     if (m.size !== 3) return bad("loop fields")
     const test = this.arrow(this.field(m, "while"), inner, 0), body = this.arrow(this.field(m, "body"), inner, 0), step = this.arrow(this.field(m, "step"), inner, 1)
-    if (!ts.isBlock(step.body) || step.body.statements.length !== 1) return bad("step")
-    const s = step.body.statements[0]
-    if (!s || !ts.isExpressionStatement(s) || !ts.isBinaryExpression(s.expression) || s.expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken || s.expression.left.getText(this.file) !== decl.name.text) return bad("step assignment")
-    const cursorTy: Ty = decl.type ? this.typeNode(decl.type) : { _tag: "unit" }
-    return { _tag: "iterate", cursorTy, initial: this.term(decl.initializer, env), test: this.term(this.expression(test.body), inner), body: this.eff(this.expression(body.body), inner), step: this.term(s.expression.right, step.env), result }
+    if (step.body.type !== "BlockStatement" || step.body.body.length !== 1) return bad("step")
+    const s = step.body.body[0]
+    if (!s || s.type !== "ExpressionStatement" || s.expression.type !== "AssignmentExpression" || s.expression.operator !== "=" || this.text(s.expression.left) !== cursor) return bad("step assignment")
+    // An unannotated cursor has no type (`cursorTy: Ty | null`, DI-91, `5185a6cd`); this read
+    // `unit` until seat J2's step 1b, which made every printed loop a different program.
+    const annotation = decl.id.typeAnnotation
+    const cursorTy: Ty | null = annotation ? this.typeNode(annotation.typeAnnotation) : null
+    return { _tag: "iterate", cursorTy, initial: this.term(decl.init, env), test: this.term(this.expression(test.body), inner), body: this.eff(this.expression(body.body), inner), step: this.term(s.expression.right, step.env), result }
   }
 
 }
 
 /** Explicit printer-image test seam. Never called by foreign recognition. */
 export function readPrintedSource(source: string, filename = "program.ts"): Eff {
-  const file = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS)
-  if ((file as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }).parseDiagnostics.length) return bad("parse")
+  const parsed = parseTypeScript(filename, source, "ts")
+  if (parsed.errors.length) return bad("parse")
   // Keep the existing test-context projection, adding only named layer declarations.
-  const statements = file.statements.filter(s => ts.isExpressionStatement(s) || ts.isVariableStatement(s) &&
-    (s.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) || s.declarationList.declarations.some(d => ts.isIdentifier(d.name) && d.name.text.startsWith("L_"))))
+  const statements = topLevel(parsed.program).filter(({ node: s, exported }) => s.type === "ExpressionStatement" || s.type === "VariableDeclaration" &&
+    (exported || s.declarations.some(d => d.id.type === "Identifier" && d.id.name.startsWith("L_")))).map(t => t.node)
   const last = statements.at(-1)
   if (!last) return bad("program")
-  const constant = (s: ts.Statement): { name: string; value: ts.Expression } => {
-    if (!ts.isVariableStatement(s) || !(s.declarationList.flags & ts.NodeFlags.Const) || s.declarationList.declarations.length !== 1) return bad("program statement")
-    const d = s.declarationList.declarations[0]!
-    if (!ts.isIdentifier(d.name) || !d.initializer) return bad("program initializer")
-    return { name: d.name.text, value: d.initializer }
+  const constant = (s: Directive | Statement): { name: string; value: Ex } => {
+    if (s.type !== "VariableDeclaration" || !constLike(s) || s.declarations.length !== 1) return bad("program statement")
+    const d = s.declarations[0]!
+    if (d.id.type !== "Identifier" || !d.init) return bad("program initializer")
+    return { name: d.id.name, value: d.init }
   }
-  const reader = new CompilerReader(file)
+  const reader = new CompilerReader(source)
   const declarations = statements.slice(0, -1).map(s => {
     const d = constant(s)
     return { path: layerPath(d.name), layer: reader.layer(d.value) }
@@ -397,7 +487,8 @@ export function readPrintedSource(source: string, filename = "program.ts"): Eff 
     }
     return a.path.length - b.path.length
   })
-  let program = reader.eff(ts.isExpressionStatement(last) ? last.expression : constant(last).value, [])
+  let program = reader.eff(last.type === "ExpressionStatement" ? last.expression : constant(last).value, [])
+  reader.settle()
   for (const d of declarations) program = restoreLayer(program, d.path, d.layer)
   return decodeEff(program)
 }
@@ -443,12 +534,72 @@ const lowerForm = (name: string, depth: number, args: FormArguments<Eff, Term, S
   return result.ok ? result.value : refuseForeign("E-NODE", `form lowering: ${result.error}`)
 }
 
+/** TypeScript's `collect` over a destructured declaration's name: a binding element whose name is
+ * an identifier contributes it and stops; any other node is walked through its children in
+ * `forEachChild`'s order (a computed key, the nested pattern, then the default), so a binding
+ * element nested anywhere in it contributes too. ESTree has no binding element: an object pattern's
+ * property, an array pattern's element and a rest element play its part; and a pattern binds only
+ * in a binding position (a parameter, a declarator, a catch clause), never as an assignment target,
+ * which TypeScript reads as an object or array literal. */
+function bindingNames(pattern: object, push: (name: string) => void): void {
+  type Any = { readonly type: string; readonly [k: string]: unknown }
+  const isAny = (v: unknown): v is Any => typeof v === "object" && v !== null && typeof Reflect.get(v, "type") === "string"
+  const field = (n: Any, k: string): Any | undefined => { const v = n[k]; return isAny(v) ? v : undefined }
+  const element = (target: Any, key: Any | undefined): void => {
+    let name = target, init: Any | undefined
+    if (name.type === "AssignmentPattern") { init = field(name, "right"); name = field(name, "left") ?? name }
+    if (name.type === "RestElement") name = field(name, "argument") ?? name
+    if (name.type === "Identifier" && typeof name.name === "string") { push(name.name); return }
+    if (key) scan(key)
+    patternOf(name)
+    if (init) scan(init)
+  }
+  const patternOf = (p: Any): void => {
+    if (p.type === "ObjectPattern" && Array.isArray(p.properties)) {
+      for (const prop of p.properties) {
+        if (!isAny(prop)) continue
+        const value = field(prop, "value")
+        if (prop.type === "RestElement") element(prop, undefined)
+        else if (value) element(value, prop.computed === true ? field(prop, "key") : undefined)
+      }
+    } else if (p.type === "ArrayPattern" && Array.isArray(p.elements)) {
+      for (const el of p.elements) if (isAny(el)) element(el, undefined)
+    } else scan(p)
+  }
+  // A parameter (or a declarator, or a catch clause) is not a binding element: its name
+  // contributes only when it is a pattern. Decorators first, then the name, its type, its default.
+  const parameter = (p: Any): void => {
+    if (p.type === "TSParameterProperty") { for (const d of childNodes(p)) if (isAny(d) && d.type === "Decorator") scan(d); const inner = field(p, "parameter"); if (inner) parameter(inner); return }
+    if (p.type === "AssignmentPattern") { const left = field(p, "left"), right = field(p, "right"); if (left) parameter(left); if (right) scan(right); return }
+    if (p.type === "ObjectPattern" || p.type === "ArrayPattern" || p.type === "RestElement") {
+      for (const d of childNodes(p)) if (isAny(d) && d.type === "Decorator") scan(d)
+      const name = p.type === "RestElement" ? field(p, "argument") : p
+      if (name && (name.type === "ObjectPattern" || name.type === "ArrayPattern")) patternOf(name)
+      else if (name && name !== p) parameter(name)
+      const annotation = field(p, "typeAnnotation")
+      if (annotation) scan(annotation)
+      return
+    }
+    scan(p)
+  }
+  const scan = (n: Any): void => {
+    const params = Array.isArray(n.params) && n.type !== "TSTypeParameterDeclaration" && n.type !== "TSTypeParameterInstantiation" ? n.params.filter(isAny) : []
+    const bound = n.type === "VariableDeclarator" ? field(n, "id") : n.type === "CatchClause" ? field(n, "param") : undefined
+    for (const child of childNodes(n)) {
+      if (!isAny(child)) continue
+      if (params.includes(child) || child === bound) parameter(child)
+      else scan(child)
+    }
+  }
+  if (isAny(pattern)) patternOf(pattern)
+}
+
 class ForeignCompilerReader extends CompilerReader {
   readonly keys: Key[] = []
   readonly layers: LayerBinding[] = []
   private readonly layerDefinitions: { sourceName: string; value: LayerTerm }[] = []
   private referenceCut: number | undefined
-  constructor(file: ts.SourceFile, readonly bindings: Map<string, string>, readonly declarations: Map<string, { at: number; value: ts.Expression; constant?: boolean }>, readonly current: number) { super(file) }
+  constructor(source: string, readonly bindings: Map<string, string>, readonly declarations: Map<string, { at: number; value: Ex; constant?: boolean }>, readonly current: number) { super(source) }
   finish(program: Eff): Eff {
     if (this.layerDefinitions.length === 0) return decodeEff(program)
     const targets = new Map<number, readonly number[]>()
@@ -477,11 +628,11 @@ class ForeignCompilerReader extends CompilerReader {
       return { name: { value: entry.ordinal }, service: key.service }
     }, true))
   }
-  override name(x: ts.Expression): string {
-    const rawName = (e: ts.Expression): string => {
+  override name(x: Ex): string {
+    const rawName = (e: Ex): string => {
       e = this.unwrap(e)
-      if (ts.isIdentifier(e)) return e.text
-      if (ts.isPropertyAccessExpression(e) && !e.questionDotToken) return rawName(e.expression) + "." + e.name.text
+      if (e.type === "Identifier") return e.name
+      if (e.type === "MemberExpression" && !e.computed && !e.optional) return rawName(e.object) + "." + memberName(e)
       return refuseForeign("E-SPINE-ESCAPE", "member")
     }
     const raw = rawName(x), [root, ...tail] = raw.split(".")
@@ -493,62 +644,62 @@ class ForeignCompilerReader extends CompilerReader {
     if (raw === "undefined" || atoms.has(raw) || forms.lambdas.some(l => l.atom === raw)) return raw
     return refuseForeign("E-OP-RECEIVER", raw)
   }
-  override literal(x: ts.Expression): Lit {
+  override literal(x: Ex): Lit {
     const y = this.unwrap(x)
-    if (ts.isNewExpression(y)) return refuseForeign("E-NODE-SHAPE", "new")
-    if (ts.isAwaitExpression(y)) return refuseForeign("E-NODE-SHAPE", "await")
-    if (ts.isYieldExpression(y)) return refuseForeign("E-YIELD-POSITION", "expression")
-    if (ts.isTemplateExpression(y) || ts.isNoSubstitutionTemplateLiteral(y)) return refuseForeign("E-NODE-SHAPE", "template")
-    if (ts.isNumericLiteral(y) && (!/^(0|[1-9][0-9]*)$/.test(y.getText(this.file)) || !Number.isSafeInteger(Number(y.text)))) return refuseForeign("E-ARG-DYNAMIC", "number")
-    if (ts.isStringLiteral(y) && y.getText(this.file).slice(1, -1) !== JSON.stringify(y.text).slice(1, -1)) return refuseForeign("E-ARG-DYNAMIC", "string")
+    if (y.type === "NewExpression") return refuseForeign("E-NODE-SHAPE", "new")
+    if (y.type === "AwaitExpression") return refuseForeign("E-NODE-SHAPE", "await")
+    if (y.type === "YieldExpression") return refuseForeign("E-YIELD-POSITION", "expression")
+    if (y.type === "TemplateLiteral") return refuseForeign("E-NODE-SHAPE", "template")
+    if (isNumeric(y) && (!/^(0|[1-9][0-9]*)$/.test(this.text(y)) || !Number.isSafeInteger(y.value))) return refuseForeign("E-ARG-DYNAMIC", "number")
+    if (isString(y) && this.text(y).slice(1, -1) !== JSON.stringify(y.value).slice(1, -1)) return refuseForeign("E-ARG-DYNAMIC", "string")
     try { return super.literal(y) } catch (e) { if (e instanceof Decline) return refuseForeign("E-ARG-DYNAMIC", "literal"); throw e }
   }
-  override term(x: ts.Expression, env: readonly string[]): Term {
+  override term(x: Ex, env: readonly string[]): Term {
     const y = this.unwrap(x)
-    if (ts.isIdentifier(y) && y.text !== "undefined" && this.variable(y, env) === undefined) return refuseForeign("E-REF-UNBOUND", y.text)
-    if (ts.isCallExpression(y)) {
-      if (this.variable(y.expression, env) !== undefined) return refuseForeign("E-ANSWER-HIGHER-ORDER", super.name(y.expression))
-      if (!atoms.has(this.name(y.expression))) return refuseForeign("E-ARG-DYNAMIC", "term")
+    if (y.type === "Identifier" && y.name !== "undefined" && this.variable(y, env) === undefined) return refuseForeign("E-REF-UNBOUND", y.name)
+    if (y.type === "CallExpression") {
+      if (this.variable(y.callee, env) !== undefined) return refuseForeign("E-ANSWER-HIGHER-ORDER", super.name(y.callee))
+      if (!atoms.has(this.name(y.callee))) return refuseForeign("E-ARG-DYNAMIC", "term")
     }
     return super.term(y, env)
   }
-  override arrow(x: ts.Expression, env: readonly string[], count: number): { body: ts.ConciseBody; env: readonly string[] } {
+  override arrow(x: Ex, env: readonly string[], count: number): { body: FunctionBody | Expression; env: readonly string[] } {
     const a = this.unwrap(x)
-    if (!ts.isArrowFunction(a)) return refuseForeign("E-ARG-CLOSURE", "continuation")
-    if (a.parameters.length !== count || a.parameters.some(p => !ts.isIdentifier(p.name))) return refuseForeign("E-BIND-SHAPE", "parameters")
+    if (a.type !== "ArrowFunctionExpression") return refuseForeign("E-ARG-CLOSURE", "continuation")
+    if (a.params.length !== count || a.params.some(p => parameterName(p) === undefined)) return refuseForeign("E-BIND-SHAPE", "parameters")
     return super.arrow(a, env, count)
   }
-  override stmts(input: readonly ts.Statement[], initial: readonly string[]): readonly Stmt[] {
+  override stmts(input: readonly (Directive | Statement)[], initial: readonly string[]): readonly Stmt[] {
     const out: Stmt[] = [], env = [...initial]
     for (const s of input) {
-      if (ts.isForStatement(s) || ts.isForOfStatement(s) || ts.isForInStatement(s)) return refuseForeign("E-STMT-SHAPE", "for")
-      if (ts.isTryStatement(s)) return refuseForeign("E-STMT-SHAPE", "try")
-      if (ts.isVariableStatement(s) && !(s.declarationList.flags & ts.NodeFlags.Const)) return refuseForeign("E-STMT-SHAPE", "let")
-      if (ts.isReturnStatement(s)) {
-        if (!s.expression) return refuseForeign("E-RETURN-SHAPE", "term")
-        if (ts.isYieldExpression(this.unwrap(s.expression))) return refuseForeign("E-YIELD-POSITION", "return")
-        try { out.push({ _tag: "ret", value: this.term(s.expression, env) }) }
+      if (s.type === "ForStatement" || s.type === "ForOfStatement" || s.type === "ForInStatement") return refuseForeign("E-STMT-SHAPE", "for")
+      if (s.type === "TryStatement") return refuseForeign("E-STMT-SHAPE", "try")
+      if (s.type === "VariableDeclaration" && !constLike(s)) return refuseForeign("E-STMT-SHAPE", "let")
+      if (s.type === "ReturnStatement") {
+        if (!s.argument) return refuseForeign("E-RETURN-SHAPE", "term")
+        if (this.unwrap(s.argument).type === "YieldExpression") return refuseForeign("E-YIELD-POSITION", "return")
+        try { out.push({ _tag: "ret", value: this.term(s.argument, env) }) }
         catch (e) { if (e instanceof ForeignRefusal && e.code === "E-ANSWER-HIGHER-ORDER") throw e; return refuseForeign("E-RETURN-SHAPE", "term") }
         continue
       }
       const rows = super.stmts([s], env)
       out.push(...rows)
-      if (ts.isVariableStatement(s)) { const d = s.declarationList.declarations[0]; if (d && ts.isIdentifier(d.name)) env.push(d.name.text) }
+      if (s.type === "VariableDeclaration") { const d = s.declarations[0]; if (d && d.id.type === "Identifier") env.push(d.id.name) }
     }
     return out
   }
-  declaration(id: ts.Identifier): ts.Expression {
-    if (this.bindings.has(id.text)) return refuseForeign("E-IMPORT-OPAQUE", id.text)
-    const d = this.declarations.get(id.text)
-    if (!d) return refuseForeign("E-REF-UNBOUND", id.text)
-    if (d.at >= (this.referenceCut ?? this.current)) return refuseForeign("E-REF-FORWARD", id.text)
+  declaration(id: { readonly name: string }): Ex {
+    if (this.bindings.has(id.name)) return refuseForeign("E-IMPORT-OPAQUE", id.name)
+    const d = this.declarations.get(id.name)
+    if (!d) return refuseForeign("E-REF-UNBOUND", id.name)
+    if (d.at >= (this.referenceCut ?? this.current)) return refuseForeign("E-REF-FORWARD", id.name)
     return d.value
   }
   /** A package key (spec §5.9, host rows step 5): a member head that resolves through an
    * `effect` import to a package's service, `SqlClient.SqlClient`; never a local declaration. */
-  packageOf(x: ts.Expression): Package | undefined {
+  packageOf(x: Ex): Package | undefined {
     x = this.unwrap(x)
-    if (!ts.isPropertyAccessExpression(x) || x.questionDotToken) return undefined
+    if (x.type !== "MemberExpression" || x.computed || x.optional) return undefined
     let head: string
     try { head = this.name(x) } catch { return undefined }
     return packageByHead.get(head)
@@ -562,10 +713,10 @@ class ForeignCompilerReader extends CompilerReader {
   /** A method on a binder (`sql.unsafe(text, params)`, `store.get(k)`): a `method` row of the
    * canonical package table, its request `pair(receiver, args)` (Lean `addReceiver`); a member
    * the table does not carry is `E-OP-UNKNOWN` (decision 13: `withTransaction`). */
-  methodCall(receiver: number, spelling: string, x: ts.CallExpression, env: readonly string[]): Eff {
+  methodCall(receiver: number, spelling: string, x: { readonly arguments: readonly Ex[]; readonly typeArguments?: { readonly params: readonly TSType[] } | null }, env: readonly string[]): Eff {
     const found = methodRow(spelling)
     if (!found) return refuseForeign("E-OP-UNKNOWN", spelling)
-    const types = x.typeArguments?.map(n => n.getText(this.file)) ?? []
+    const types = x.typeArguments?.params.map(n => this.text(n)) ?? []
     if (types.join(",") !== found.row.typeArgs.join(",")) return refuseForeign("E-OP-UNKNOWN", spelling)
     const { count, types: tys } = methodArgs(found.row)
     // rc.112's `unsafe(sql, params?)`: an omitted trailing parameter list is the empty list.
@@ -579,15 +730,15 @@ class ForeignCompilerReader extends CompilerReader {
   }
   /** A bind-parameter list is an array literal of bind literals, carried as JSON text through
    * `strings` (DB-15); anything else there, and every other position, is a term. */
-  rowArgument(x: ts.Expression, ty: Ty, env: readonly string[]): Term {
+  rowArgument(x: Ex, ty: Ty, env: readonly string[]): Term {
     const y = this.unwrap(x)
-    if (isStringList(ty) && ts.isArrayLiteralExpression(y)) {
+    if (isStringList(ty) && y.type === "ArrayExpression") {
       const texts: string[] = []
-      for (const e of y.elements) {
+      for (const e of elementsOf(y)) {
         const z = this.unwrap(e)
-        const value = ts.isStringLiteral(z) ? z.text : ts.isNumericLiteral(z) ? Number(z.text)
-          : z.kind === ts.SyntaxKind.TrueKeyword ? true : z.kind === ts.SyntaxKind.FalseKeyword ? false
-          : z.kind === ts.SyntaxKind.NullKeyword ? null : undefined
+        const value = isString(z) ? z.value : isNumeric(z) ? z.value
+          : isTrue(z) ? true : isFalse(z) ? false
+          : isNull(z) ? null : undefined
         const text = value === undefined ? undefined : bindText(value)
         if (text === undefined) return refuseForeign("E-ARG-DYNAMIC", "bind")
         texts.push(text)
@@ -600,7 +751,7 @@ class ForeignCompilerReader extends CompilerReader {
    * fold under the sqlite dialect into the `unsafe` row, `pair(receiver, pair(text, strings(params)))`.
    * The fold itself is `sql-fold.ts`, shared with the other engine; this reads the tree into its
    * part language. A generic tag `sql<Row>\`…\`` is the same form. */
-  sqlTemplate(receiver: number, tag: string, x: ts.TaggedTemplateExpression, env: readonly string[]): Eff {
+  sqlTemplate(receiver: number, tag: string, x: { readonly quasi: { readonly quasis: readonly TemplateElement[]; readonly expressions: readonly Expression[] } }, env: readonly string[]): Eff {
     const folded = foldSql(this.sqlParts(x, tag, env))
     if (isRefusal(folded)) return refuseForeign(folded.code, folded.detail)
     const found = methodRow("unsafe")
@@ -609,66 +760,67 @@ class ForeignCompilerReader extends CompilerReader {
     const request: Term = { _tag: "app", atom: "pair", args: [{ _tag: "var", index: receiver }, { _tag: "app", atom: "pair", args: [text, stringsTerm(folded.params)] }] }
     return { _tag: "perform", op: { _tag: "external", index: found.index }, request }
   }
-  sqlParts(x: ts.TaggedTemplateExpression, tag: string, env: readonly string[]): SqlPart & { kind: "template" } {
-    const t = x.template
-    if (ts.isNoSubstitutionTemplateLiteral(t)) return { kind: "template", quasis: [t.text], parts: [] }
-    return { kind: "template", quasis: [t.head.text, ...t.templateSpans.map(s => s.literal.text)], parts: t.templateSpans.map(s => this.sqlPart(s.expression, tag, env)) }
+  sqlParts(x: { readonly quasi: { readonly quasis: readonly TemplateElement[]; readonly expressions: readonly Expression[] } }, tag: string, env: readonly string[]): SqlPart & { kind: "template" } {
+    const t = x.quasi
+    return { kind: "template", quasis: t.quasis.map(templateText), parts: t.expressions.map(e => this.sqlPart(e, tag, env)) }
   }
-  sqlBind(y: ts.Expression): Bind | undefined {
-    if (ts.isStringLiteral(y)) return y.text
-    if (ts.isNumericLiteral(y)) return /^(0|[1-9][0-9]*)$/.test(y.getText(this.file)) && Number.isSafeInteger(Number(y.text)) ? Number(y.text) : undefined
-    if (y.kind === ts.SyntaxKind.TrueKeyword) return true
-    if (y.kind === ts.SyntaxKind.FalseKeyword) return false
-    if (y.kind === ts.SyntaxKind.NullKeyword) return null
+  sqlBind(y: Ex): Bind | undefined {
+    if (isString(y)) return y.value
+    if (isNumeric(y)) return /^(0|[1-9][0-9]*)$/.test(this.text(y)) && Number.isSafeInteger(y.value) ? y.value : undefined
+    if (isTrue(y)) return true
+    if (isFalse(y)) return false
+    if (isNull(y)) return null
     return undefined
   }
-  sqlPart(e: ts.Expression, tag: string, env: readonly string[]): SqlPart {
+  sqlPart(e: Ex, tag: string, env: readonly string[]): SqlPart {
     const y = this.unwrap(e)
     const value = this.sqlBind(y)
     if (value !== undefined) return { kind: "bind", value }
-    if (ts.isTaggedTemplateExpression(y)) {
+    if (y.type === "TaggedTemplateExpression") {
       const inner = this.unwrap(y.tag)
-      return ts.isIdentifier(inner) && inner.text === tag ? this.sqlParts(y, tag, env) : { kind: "dynamic", detail: "bind" }
+      return inner.type === "Identifier" && inner.name === tag ? this.sqlParts(y, tag, env) : { kind: "dynamic", detail: "bind" }
     }
-    if (ts.isCallExpression(y)) {
-      const callee = this.unwrap(y.expression)
-      if (ts.isPropertyAccessExpression(callee) && callee.name.text === "returning" && y.arguments.length === 1) {
-        return { kind: "returning", base: this.sqlPart(callee.expression, tag, env), value: this.sqlPart(this.at(y.arguments, 0), tag, env) }
+    if (y.type === "CallExpression") {
+      const callee = this.unwrap(y.callee)
+      if (callee.type === "MemberExpression" && !callee.computed && memberName(callee) === "returning" && y.arguments.length === 1) {
+        return { kind: "returning", base: this.sqlPart(callee.object, tag, env), value: this.sqlPart(this.at(y.arguments, 0), tag, env) }
       }
-      if (ts.isIdentifier(callee) && callee.text === tag) return { kind: "helper", name: "ident", args: y.arguments.map(a => this.sqlArg(a, tag, env)) }
-      if (ts.isPropertyAccessExpression(callee)) {
-        const object = this.unwrap(callee.expression)
-        if (ts.isIdentifier(object) && object.text === tag) return { kind: "helper", name: callee.name.text, args: y.arguments.map(a => this.sqlArg(a, tag, env)) }
+      if (callee.type === "Identifier" && callee.name === tag) return { kind: "helper", name: "ident", args: y.arguments.map(a => this.sqlArg(a, tag, env)) }
+      if (callee.type === "MemberExpression" && !callee.computed) {
+        const object = this.unwrap(callee.object)
+        if (object.type === "Identifier" && object.name === tag) return { kind: "helper", name: memberName(callee), args: y.arguments.map(a => this.sqlArg(a, tag, env)) }
       }
     }
     return { kind: "dynamic", detail: "bind" }
   }
-  sqlArg(a: ts.Expression, tag: string, env: readonly string[]): SqlArg {
+  sqlArg(a: Ex, tag: string, env: readonly string[]): SqlArg {
     const y = this.unwrap(a)
-    if (ts.isArrayLiteralExpression(y)) return { kind: "list", items: y.elements.map(el => this.sqlArg(el, tag, env)) }
-    if (ts.isObjectLiteralExpression(y)) {
+    if (y.type === "ArrayExpression") return { kind: "list", items: elementsOf(y).map(el => this.sqlArg(el, tag, env)) }
+    if (y.type === "ObjectExpression") {
       const fields: (readonly [string, SqlPart])[] = []
       for (const p of y.properties) {
-        if (!ts.isPropertyAssignment(p)) return { kind: "dynamic", detail: "record key" }
-        const key = ts.isIdentifier(p.name) || ts.isStringLiteral(p.name) || ts.isNumericLiteral(p.name) ? p.name.text : undefined
+        if (p.type !== "Property" || p.kind !== "init" || p.method || p.shorthand) return { kind: "dynamic", detail: "record key" }
+        const k = p.key
+        const key = p.computed ? undefined : k.type === "Identifier" ? k.name : k.type === "PrivateIdentifier" ? undefined : isString(k) ? k.value : isNumeric(k) ? String(k.value) : undefined
         if (key === undefined) return { kind: "dynamic", detail: "record key" }
-        fields.push([key, this.sqlPart(p.initializer, tag, env)])
+        fields.push([key, this.sqlPart(p.value, tag, env)])
       }
       return { kind: "record", fields }
     }
     return this.sqlPart(a, tag, env)
   }
-  override key(x: ts.Expression): ServiceKey {
+  override key(x: Ex): ServiceKey {
     x = this.unwrap(x)
     const pkg = this.packageOf(x)
     if (pkg) return this.packageKey(pkg)
-    if (ts.isIdentifier(x)) x = this.declaration(x)
+    if (x.type === "Identifier") x = this.declaration(x)
     const c = this.call(x)
-    const inner = this.unwrap(c.expression)
-    const factory = ts.isCallExpression(inner) ? inner : c
-    if (this.name(factory.expression) !== "Context.Service") return refuseForeign("E-OP-UNKNOWN", "key")
+    const inner = this.unwrap(c.callee)
+    const factory = inner.type === "CallExpression" ? inner : c
+    if (this.name(factory.callee) !== "Context.Service") return refuseForeign("E-OP-UNKNOWN", "key")
     this.arity(c.arguments, 1)
-    const shape = factory.typeArguments?.at(-1)?.getText(this.file) ?? ""
+    const last = factory.typeArguments?.params.at(-1)
+    const shape = last ? this.text(last) : ""
     const [root, ...tail] = shape.split("."), binding = this.bindings.get(root!)
     if (binding === "opaque") return refuseForeign("E-IMPORT-OPAQUE", shape)
     const resolved = binding === undefined ? shape : [binding, ...tail].filter(Boolean).join(".")
@@ -682,9 +834,9 @@ class ForeignCompilerReader extends CompilerReader {
     const entry = interned.key
     return { name: { value: entry.ordinal }, service: { value: service } }
   }
-  segment(head: string, args: readonly ts.Expression[], first: Eff, env: readonly string[]): Eff {
+  segment(head: string, args: readonly Ex[], first: Eff, env: readonly string[]): Eff {
     const at = (i: number) => this.at(args, i)
-    const cont = (x: ts.Expression, count = 1): Eff => {
+    const cont = (x: Ex, count = 1): Eff => {
       const a = this.arrow(x, env, count)
       return this.eff(this.expression(a.body), a.env)
     }
@@ -709,13 +861,13 @@ class ForeignCompilerReader extends CompilerReader {
       this.arity(args, 1)
       const x = this.unwrap(at(0))
       const base = head === "Effect.tap" ? "tap" : "andThen"
-      if (ts.isArrowFunction(x) && x.parameters.length) {
+      if (x.type === "ArrowFunctionExpression" && x.params.length) {
         const a = this.arrow(x, env, 1)
         return lowerForm(`${base}Continuation`, env.length, { effects: [fixedEffect(first),
           effectSlot(a.env, env.length, inner => this.eff(this.expression(a.body), inner))] })
       }
-      const name = base === "andThen" && ts.isArrowFunction(x) ? "andThenThunk" : `${base}Effect`
-      const body = ts.isArrowFunction(x) ? this.expression(x.body) : x
+      const name = base === "andThen" && x.type === "ArrowFunctionExpression" ? "andThenThunk" : `${base}Effect`
+      const body = x.type === "ArrowFunctionExpression" ? this.expression(x.body) : x
       return lowerForm(name, env.length, { effects: [fixedEffect(first),
         effectSlot(env, env.length, inner => this.eff(body, inner))] })
     }
@@ -756,7 +908,7 @@ class ForeignCompilerReader extends CompilerReader {
     if (head === "Effect.provideService") { this.arity(args, 2); const key = this.key(at(0)); return { _tag: "provideService", body: first, key, value: { _tag: "lit", value: this.provided(key, at(1)) } } }
     if (head === "Effect.provide") {
       if (args.length < 1 || args.length > 2) return refuseForeign("E-BIND-SHAPE", "arity")
-      if (ts.isArrayLiteralExpression(this.unwrap(at(0)))) return refuseForeign("E-OP-UNKNOWN", "Layer.mergeAll")
+      if (this.unwrap(at(0)).type === "ArrayExpression") return refuseForeign("E-OP-UNKNOWN", "Layer.mergeAll")
       const layer = this.layer(at(0))
       let isLocal = false
       if (args.length === 2) { const m = this.fields(at(1)), l = this.literal(this.field(m, "local")); if (m.size !== 1 || l._tag !== "bool" || !l.value) return refuseForeign("E-BIND-SHAPE", "provide options"); isLocal = true }
@@ -774,60 +926,102 @@ class ForeignCompilerReader extends CompilerReader {
     if (!knownHeads.has(head)) return refuseForeign("E-OP-UNKNOWN", head)
     return refuseForeign("E-BIND-SHAPE", "pipe segment")
   }
-  pipeSegment(x: ts.Expression, first: Eff, env: readonly string[]): Eff {
+  pipeSegment(x: Ex, first: Eff, env: readonly string[]): Eff {
     x = this.unwrap(x)
-    if (ts.isArrowFunction(x)) {
-      if (x.parameters.length !== 1 || !ts.isIdentifier(x.parameters[0]!.name) || ts.isBlock(x.body)) return refuseForeign("E-BIND-SHAPE", "eta")
-      const name = x.parameters[0]!.name.text, body = this.call(x.body), callee = this.unwrap(body.expression)
-      if (ts.isPropertyAccessExpression(callee) && callee.name.text === "pipe" && ts.isIdentifier(this.unwrap(callee.expression)) && super.name(callee.expression) === name) {
+    if (x.type === "ArrowFunctionExpression") {
+      const p0 = x.params[0], name = p0 ? parameterName(p0) : undefined
+      if (x.params.length !== 1 || name === undefined || x.body.type === "BlockStatement") return refuseForeign("E-BIND-SHAPE", "eta")
+      const body = this.call(x.body), callee = this.unwrap(body.callee)
+      if (callee.type === "MemberExpression" && !callee.computed && memberName(callee) === "pipe" && this.unwrap(callee.object).type === "Identifier" && super.name(callee.object) === name) {
         let out = first
         for (const seg of body.arguments) out = this.pipeSegment(seg, out, env)
         return out
       }
       const args = body.arguments
-      if (!args[0] || !ts.isIdentifier(this.unwrap(args[0])) || super.name(args[0]) !== name) return refuseForeign("E-BIND-SHAPE", "eta")
+      if (!args[0] || this.unwrap(args[0]).type !== "Identifier" || super.name(args[0]) !== name) return refuseForeign("E-BIND-SHAPE", "eta")
       let duplicate = false
-      const visit = (n: ts.Node) => {
-        if ((ts.isArrowFunction(n) || ts.isFunctionExpression(n)) && n.parameters.some(p => ts.isIdentifier(p.name) && p.name.text === name)) return
-        if (ts.isIdentifier(n) && n.text === name) duplicate = true
-        ts.forEachChild(n, visit)
+      // TypeScript's `forEachChild` walk: a function whose own parameters rebind the name is not
+      // searched; every identifier node elsewhere (a property name included) is a use.
+      const visit = (n: TreeNode): void => {
+        if ((n.type === "ArrowFunctionExpression" || n.type === "FunctionExpression") && n.params.some(p => parameterName(p) === name)) return
+        if (n.type === "Identifier" && n.name === name) duplicate = true
+        for (const child of childNodes(n)) visit(child)
       }
       args.slice(1).forEach(visit)
       if (duplicate) return refuseForeign("E-BIND-SHAPE", "eta reuse")
       return this.segment(this.name(callee), args.slice(1), first, env)
     }
-    if (ts.isCallExpression(x)) return this.segment(this.name(x.expression), x.arguments, first, env)
+    if (x.type === "CallExpression") return this.segment(this.name(x.callee), x.arguments, first, env)
     const head = this.name(x)
     if (!(forms.unaryRefs as readonly string[]).includes(head)) return refuseForeign("E-BIND-SHAPE", "unary reference")
     return this.segment(head, [], first, env)
   }
-  lambdaAtom(x: ts.Expression): string {
+  /** The loop image's tail in every spelling the foreign styles give a dual call: `Effect.map(W, k)`,
+   * `(W).pipe(Effect.map(k))`, `(W).pipe((s) => Effect.map(s, k))`, `pipe(W, Effect.map(k))` and
+   * `Effect.map(k)(W)`. Anything else is read as the printed seam reads it (and declined there). */
+  override loopTail(x: Ex): { readonly loop: Ex; readonly result: Ex } {
+    const y = this.unwrap(x)
+    const heads = (e: Ex, h: string): boolean => { try { return this.name(e) === h } catch { return false } }
+    // A pipe segment that maps by `k`: `Effect.map(k)`, or the eta `(s) => Effect.map(s, k)` whose
+    // `k` does not use `s`.
+    const mapping = (segment: Ex): Ex | undefined => {
+      const z = this.unwrap(segment)
+      if (z.type === "CallExpression" && !z.optional && z.arguments.length === 1 && heads(z.callee, "Effect.map")) return z.arguments[0]
+      if (z.type !== "ArrowFunctionExpression" || z.params.length !== 1 || z.body.type === "BlockStatement") return undefined
+      const p0 = z.params[0], s = p0 ? parameterName(p0) : undefined, body = this.unwrap(z.body)
+      if (s === undefined || body.type !== "CallExpression" || body.optional || body.arguments.length !== 2 || !heads(body.callee, "Effect.map")) return undefined
+      const [self, k] = body.arguments
+      if (!self || !k || this.unwrap(self).type !== "Identifier" || this.variable(self, [s]) !== 0) return undefined
+      let uses = false
+      const visit = (n: TreeNode): void => { if (n.type === "Identifier" && n.name === s) uses = true; for (const child of childNodes(n)) visit(child) }
+      visit(k)
+      return uses ? undefined : k
+    }
+    if (y.type === "CallExpression" && !y.optional) {
+      const callee = this.unwrap(y.callee)
+      if (callee.type === "MemberExpression" && !callee.computed && !callee.optional && memberName(callee) === "pipe" && y.arguments.length === 1) {
+        const k = mapping(this.at(y.arguments, 0))
+        if (k) return { loop: callee.object, result: k }
+      }
+      if (callee.type !== "CallExpression" && y.arguments.length === 2 && (heads(callee, "pipe") || heads(callee, "Function.pipe"))) {
+        const k = mapping(this.at(y.arguments, 1))
+        if (k) return { loop: this.at(y.arguments, 0), result: k }
+      }
+      if (callee.type === "CallExpression" && !callee.optional && callee.arguments.length === 1 && y.arguments.length === 1 && heads(callee.callee, "Effect.map")) {
+        return { loop: this.at(y.arguments, 0), result: this.at(callee.arguments, 0) }
+      }
+    }
+    return super.loopTail(x)
+  }
+  lambdaAtom(x: Ex): string {
     x = this.unwrap(x)
-    if (!ts.isArrowFunction(x) || x.parameters.length !== 1 || !ts.isIdentifier(x.parameters[0]!.name) || ts.isBlock(x.body)) return refuseForeign("E-ARG-CLOSURE", "lambda atom")
-    const name = x.parameters[0]!.name.text, b = this.unwrap(x.body)
-    const param = (e: ts.Expression) => { e = this.unwrap(e); return ts.isIdentifier(e) && e.text === name }
-    const number = (e: ts.Expression, n: number) => { const v = this.literal(e); return v._tag === "nat" && v.value === n }
-    const option = (e: ts.Expression, head: string, n?: number) => {
+    const p0 = x.type === "ArrowFunctionExpression" ? x.params[0] : undefined
+    const name = p0 ? parameterName(p0) : undefined
+    if (x.type !== "ArrowFunctionExpression" || x.params.length !== 1 || name === undefined || x.body.type === "BlockStatement") return refuseForeign("E-ARG-CLOSURE", "lambda atom")
+    const b = this.unwrap(x.body)
+    const param = (e: Ex) => { e = this.unwrap(e); return e.type === "Identifier" && e.name === name }
+    const number = (e: Ex, n: number) => { const v = this.literal(e); return v._tag === "nat" && v.value === n }
+    const option = (e: Ex, head: string, n?: number) => {
       e = this.unwrap(e)
-      if (!ts.isCallExpression(e) || this.name(e.expression) !== head) return false
+      if (e.type !== "CallExpression" || this.name(e.callee) !== head) return false
       return n === undefined ? e.arguments.length === 0 : e.arguments.length === 1 && number(this.at(e.arguments, 0), n)
     }
-    if (ts.isBinaryExpression(b) && param(b.left)) {
-      if (b.operatorToken.kind === ts.SyntaxKind.PlusToken && number(b.right, 1)) return "incr"
-      if (b.operatorToken.kind === ts.SyntaxKind.AsteriskToken && number(b.right, 2)) return "double"
+    if (b.type === "BinaryExpression" && b.left.type !== "PrivateIdentifier" && param(b.left)) {
+      if (b.operator === "+" && number(b.right, 1)) return "incr"
+      if (b.operator === "*" && number(b.right, 2)) return "double"
     }
     if (option(b, "Option.none")) return "noChange"
-    if (ts.isConditionalExpression(b)) {
-      const test = this.unwrap(b.condition)
-      if (ts.isBinaryExpression(test) && test.operatorToken.kind === ts.SyntaxKind.GreaterThanToken && param(test.left) && number(test.right, 0) && option(b.whenTrue, "Option.some", 0) && option(b.whenFalse, "Option.none")) return "zeroWhenPositive"
+    if (b.type === "ConditionalExpression") {
+      const test = this.unwrap(b.test)
+      if (test.type === "BinaryExpression" && test.operator === ">" && param(test.left) && number(test.right, 0) && option(b.consequent, "Option.some", 0) && option(b.alternate, "Option.none")) return "zeroWhenPositive"
     }
     return refuseForeign("E-ARG-CLOSURE", "lambda atom")
   }
-  duration(x: ts.Expression): number {
+  duration(x: Ex): number {
     x = this.unwrap(x)
     let numerator: bigint, denominator = 1n, factor = 1n, divisor = 1n
-    if (ts.isCallExpression(x)) {
-      const h = this.name(x.expression)
+    if (x.type === "CallExpression") {
+      const h = this.name(x.callee)
       const scale: Record<string, bigint> = { "Duration.millis": 1n, "Duration.seconds": 1000n, "Duration.minutes": 60000n, "Duration.hours": 3600000n, "Duration.days": 86400000n, "Duration.weeks": 604800000n }
       if (!scale[h] || x.arguments.length !== 1) return refuseForeign("E-ARG-DYNAMIC", "duration")
       const n = this.literal(this.at(x.arguments, 0)); if (n._tag !== "nat") return refuseForeign("E-ARG-DYNAMIC", "duration")
@@ -848,92 +1042,99 @@ class ForeignCompilerReader extends CompilerReader {
     if (top % bottom || top / bottom >= 9007199254740992n) return refuseForeign("E-ARG-DYNAMIC", "duration")
     return Number(top / bottom)
   }
-  provided(key: ServiceKey, x: ts.Expression): Lit {
+  provided(key: ServiceKey, x: Ex): Lit {
     const value = this.literal(x), expected = serviceTypeFor(key)?.ty._tag
     const actual = value._tag === "str" ? "string" : value._tag
     if (actual !== expected) return refuseForeign("E-ARG-DYNAMIC", "service literal shape")
     return value
   }
-  override layer(x: ts.Expression): LayerTerm {
+  override layer(x: Ex): LayerTerm {
     x = this.unwrap(x)
-    if (ts.isIdentifier(x)) {
-      const value = this.declaration(x), declaration = this.declarations.get(x.text)!
-      if (!declaration.constant) return refuseForeign("E-REF-UNBOUND", x.text)
-      const existing = this.layerDefinitions.findIndex(d => d.sourceName === x.text)
+    if (x.type === "Identifier") {
+      const value = this.declaration(x), declaration = this.declarations.get(x.name)!
+      if (!declaration.constant) return refuseForeign("E-REF-UNBOUND", x.name)
+      const sourceName = x.name
+      const existing = this.layerDefinitions.findIndex(d => d.sourceName === sourceName)
       if (existing >= 0) return { _tag: "ref", target: [existing] }
-      const previous = this.referenceCut
+      const previous = this.referenceCut, outer = this.deferred
       this.referenceCut = declaration.at
+      this.deferred = undefined
       let layer: LayerTerm
-      try { layer = this.layer(value) }
+      try {
+        layer = this.layer(value)
+        // The oxc engine reads the definition here (`readLayer`), and its refusal is this one.
+        if (this.deferred !== undefined) refuseForeign("E-NODE", "layer")
+        this.deferred = outer
+      }
       catch (e) {
         const code = e instanceof ForeignRefusal ? e.code : e instanceof Decline ? "E-NODE" : undefined
-        if (code) return refuseForeign("E-REF-UNBOUND", `${x.text}: ${code}`)
+        if (code) return refuseForeign("E-REF-UNBOUND", `${sourceName}: ${code}`)
         throw e
       } finally { this.referenceCut = previous }
       const index = this.layerDefinitions.length
-      this.layerDefinitions.push({ sourceName: x.text, value: layer })
+      this.layerDefinitions.push({ sourceName, value: layer })
       return { _tag: "ref", target: [index] }
     }
-    const c = this.call(x), callee = this.unwrap(c.expression)
-    if (ts.isPropertyAccessExpression(callee) && callee.name.text === "pipe") return super.layer(x)
-    if (this.name(c.expression) === "Layer.succeed") {
+    const c = this.call(x), callee = this.unwrap(c.callee)
+    if (callee.type === "MemberExpression" && !callee.computed && memberName(callee) === "pipe") return super.layer(x)
+    if (this.name(c.callee) === "Layer.succeed") {
       this.arity(c.arguments, 2)
       const key = this.key(this.at(c.arguments, 0))
       return { _tag: "succeed", key, value: this.provided(key, this.at(c.arguments, 1)) }
     }
     return super.layer(x)
   }
-  override eff(x: ts.Expression, env: readonly string[]): Eff {
+  override eff(x: Ex, env: readonly string[]): Eff {
     x = this.unwrap(x)
-    if (ts.isArrowFunction(x) || ts.isFunctionExpression(x)) return refuseForeign(x.typeParameters?.length ? "E-TYPE-PARAM" : "E-PARAM-SHAPE", x.typeParameters?.length ? "generic unit" : "function")
-    if (ts.isConditionalExpression(x)) return refuseForeign("E-BRANCH", "conditional")
-    if (ts.isAsExpression(x) || ts.isSatisfiesExpression(x) || ts.isTypeAssertionExpression(x) || ts.isNonNullExpression(x)) return refuseForeign("E-SPINE-ESCAPE", "assertion")
+    if (x.type === "ArrowFunctionExpression" || x.type === "FunctionExpression") return refuseForeign(x.typeParameters?.params.length ? "E-TYPE-PARAM" : "E-PARAM-SHAPE", x.typeParameters?.params.length ? "generic unit" : "function")
+    if (x.type === "ConditionalExpression") return refuseForeign("E-BRANCH", "conditional")
+    if (x.type === "TSAsExpression" || x.type === "TSSatisfiesExpression" || x.type === "TSTypeAssertion" || x.type === "TSNonNullExpression") return refuseForeign("E-SPINE-ESCAPE", "assertion")
     if (this.variable(x, env) !== undefined) return super.eff(x, env)
     // A package key in program position (`yield* SqlClient.SqlClient`) is its service; a
     // property of a binder (`sql.reserve`) is a head the table does not carry.
-    if (!ts.isCallExpression(x)) {
+    if (x.type !== "CallExpression") {
       const pkg = this.packageOf(x)
       if (pkg) return lowerForm("yieldKey", env.length, { effects: [], keys: [this.packageKey(pkg)] })
-      if (ts.isPropertyAccessExpression(x) && this.variable(x.expression, env) !== undefined) return refuseForeign("E-OP-UNKNOWN", x.name.text)
+      if (x.type === "MemberExpression" && !x.computed && this.variable(x.object, env) !== undefined) return refuseForeign("E-OP-UNKNOWN", memberName(x))
     }
     // `sql\`…\`` on a client binder is the derived form; a tag bound to an import refuses with
     // that import's code (drizzle's `sql` is `E-IMPORT-OPAQUE`), any other tag is unresolved.
-    if (ts.isTaggedTemplateExpression(x)) {
+    if (x.type === "TaggedTemplateExpression") {
       const tag = this.unwrap(x.tag)
       const receiver = this.variable(tag, env)
-      if (receiver !== undefined && ts.isIdentifier(tag)) return this.sqlTemplate(receiver, tag.text, x, env)
+      if (receiver !== undefined && tag.type === "Identifier") return this.sqlTemplate(receiver, tag.name, x, env)
       this.name(tag)
-      return refuseForeign("E-OP-RECEIVER", ts.isIdentifier(tag) ? tag.text : "template tag")
+      return refuseForeign("E-OP-RECEIVER", tag.type === "Identifier" ? tag.name : "template tag")
     }
-    if (ts.isIdentifier(x) && this.variable(x, env) === undefined && x.text !== "undefined" && !this.bindings.has(x.text)) {
+    if (x.type === "Identifier" && this.variable(x, env) === undefined && x.name !== "undefined" && !this.bindings.has(x.name)) {
       const decl = this.unwrap(this.declaration(x))
-      if (ts.isCallExpression(decl) && this.name(ts.isCallExpression(this.unwrap(decl.expression)) ? this.call(decl.expression).expression : decl.expression) === "Context.Service") return lowerForm("yieldKey", env.length, { effects: [], keys: [this.key(x)] })
+      if (decl.type === "CallExpression" && this.name(this.unwrap(decl.callee).type === "CallExpression" ? this.call(decl.callee).callee : decl.callee) === "Context.Service") return lowerForm("yieldKey", env.length, { effects: [], keys: [this.key(x)] })
       const previous = this.referenceCut
-      this.referenceCut = this.declarations.get(x.text)!.at
+      this.referenceCut = this.declarations.get(x.name)!.at
       try { return this.eff(decl, env) }
-      catch (e) { if (e instanceof ForeignRefusal) return refuseForeign("E-REF-UNBOUND", `${x.text}: ${e.code}`); throw e }
+      catch (e) { if (e instanceof ForeignRefusal) return refuseForeign("E-REF-UNBOUND", `${x.name}: ${e.code}`); throw e }
       finally { this.referenceCut = previous }
     }
-    if (ts.isCallExpression(x)) {
-      const callee = this.unwrap(x.expression)
-      if (x.questionDotToken || (ts.isPropertyAccessExpression(callee) && callee.questionDotToken)) return refuseForeign("E-SPINE-ESCAPE", "optional")
-      if (x.arguments.some(ts.isSpreadElement)) return refuseForeign("E-SPINE-ESCAPE", "spread")
-      if (ts.isPropertyAccessExpression(callee) && callee.name.text === "pipe") {
-        let first = this.eff(callee.expression, env)
+    if (x.type === "CallExpression") {
+      const callee = this.unwrap(x.callee)
+      if (x.optional || (callee.type === "MemberExpression" && !callee.computed && callee.optional)) return refuseForeign("E-SPINE-ESCAPE", "optional")
+      if (x.arguments.some(a => a.type === "SpreadElement")) return refuseForeign("E-SPINE-ESCAPE", "spread")
+      if (callee.type === "MemberExpression" && !callee.computed && memberName(callee) === "pipe") {
+        let first = this.eff(callee.object, env)
         for (const segment of x.arguments) first = this.pipeSegment(segment, first, env)
         return first
       }
       // A member call on a binder is a method row (or an unknown head); a receiver that is
       // not a binder falls through to head resolution, which refuses it `E-OP-RECEIVER`.
-      if (ts.isPropertyAccessExpression(callee)) {
-        const receiver = this.variable(callee.expression, env)
-        if (receiver !== undefined) return this.methodCall(receiver, callee.name.text, x, env)
+      if (callee.type === "MemberExpression" && !callee.computed) {
+        const receiver = this.variable(callee.object, env)
+        if (receiver !== undefined) return this.methodCall(receiver, memberName(callee), x, env)
       }
-      if (ts.isCallExpression(callee)) {
+      if (callee.type === "CallExpression") {
         this.arity(x.arguments, 1)
-        return this.segment(this.name(callee.expression), callee.arguments, this.eff(this.at(x.arguments, 0), env), env)
+        return this.segment(this.name(callee.callee), callee.arguments, this.eff(this.at(x.arguments, 0), env), env)
       }
-      const h = this.name(x.expression)
+      const h = this.name(x.callee)
       if (h === "Effect.fn" || h === "Effect.fnUntraced") return refuseForeign("E-PARAM-SHAPE", "function")
       if (["Effect.catchTag", "Effect.catchTags", "Effect.mapError", "Effect.match", "Effect.orElseSucceed"].includes(h)) return refuseForeign("E-HANDLER", h)
       if (["Effect.promise", "Effect.tryPromise", "Effect.try", "Effect.callback"].includes(h)) return refuseForeign("E-ARG-CLOSURE", h)
@@ -951,10 +1152,10 @@ class ForeignCompilerReader extends CompilerReader {
       if (h === "Effect.acquireRelease") {
         this.arity(x.arguments, 2)
         const release = this.unwrap(this.at(x.arguments, 1))
-        if (!ts.isArrowFunction(release) || release.parameters.length < 1 || release.parameters.length > 2) return refuseForeign("E-ARG-CLOSURE", "release")
-        const fn = this.arrow(release, env, release.parameters.length)
+        if (release.type !== "ArrowFunctionExpression" || release.params.length < 1 || release.params.length > 2) return refuseForeign("E-ARG-CLOSURE", "release")
+        const fn = this.arrow(release, env, release.params.length)
         const acquire = this.eff(this.at(x.arguments, 0), env)
-        if (release.parameters.length === 1) return lowerForm("releaseOne", env.length,
+        if (release.params.length === 1) return lowerForm("releaseOne", env.length,
           { effects: [fixedEffect(acquire), effectSlot(fn.env, env.length,
             inner => this.eff(this.expression(fn.body), inner))] })
         return { _tag: "acquireRelease", acquire, release: this.eff(this.expression(fn.body), fn.env) }
@@ -976,11 +1177,11 @@ class ForeignCompilerReader extends CompilerReader {
         const body = this.eff(this.at(x.arguments, 0), env), key = this.key(this.at(x.arguments, 1)), value = this.provided(key, this.at(x.arguments, 2))
         return { _tag: "provideService", body, key, value: { _tag: "lit", value } }
       }
-      if (x.arguments.some(a => ts.isArrowFunction(this.unwrap(a))) && rows.some(r => r.row.spelling === h)) {
+      if (x.arguments.some(a => this.unwrap(a).type === "ArrowFunctionExpression") && rows.some(r => r.row.spelling === h)) {
         for (const r of rows.filter(r => r.row.spelling === h)) {
           const count = r.row.shape === "tupleCall" ? 2 : r.row.request._tag === "unit" ? 0 : 1
           if (x.arguments.length !== count + r.row.trailing.length) continue
-          const trailing = x.arguments.slice(count).map(a => ts.isArrowFunction(this.unwrap(a)) ? this.lambdaAtom(a) : this.name(a))
+          const trailing = x.arguments.slice(count).map(a => this.unwrap(a).type === "ArrowFunctionExpression" ? this.lambdaAtom(a) : this.name(a))
           if (!r.row.trailing.every((name, i) => trailing[i] === name)) continue
           const request = count === 0 ? unit : count === 1 ? this.term(this.at(x.arguments, 0), env) : { _tag: "app" as const, atom: "pair", args: [this.term(this.at(x.arguments, 0), env), this.term(this.at(x.arguments, 1), env)] }
           return { _tag: "perform", op: r.op, request }
@@ -989,7 +1190,7 @@ class ForeignCompilerReader extends CompilerReader {
       }
       if (!knownHeads.has(h) && !atoms.has(h)) return refuseForeign("E-OP-UNKNOWN", h)
     }
-    if (!ts.isCallExpression(x) && (ts.isIdentifier(x) || ts.isPropertyAccessExpression(x))) {
+    if (x.type !== "CallExpression" && (x.type === "Identifier" || x.type === "MemberExpression" && !x.computed)) {
       const h = this.name(x)
       if (h === "Effect.void" || h === "Effect.yieldNow") return lowerForm(h.slice("Effect.".length), env.length, { effects: [] })
     }
@@ -998,50 +1199,51 @@ class ForeignCompilerReader extends CompilerReader {
 }
 
 /** Strict foreign admission. The printer-image entrypoint is never a fallback. */
-export function recognizeSource(source: string, filename: string, onParse?: (ok: boolean) => void, onTree?: (tree: ts.SourceFile) => void): Verdict[] {
+export function recognizeSource(source: string, filename: string, onParse?: (ok: boolean) => void, onTree?: (tree: Program) => void): Verdict[] {
   if (!source.includes('from "effect') && !source.includes("from 'effect")) return []
-  const file = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, false, filename.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
-  if ((file as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }).parseDiagnostics.length) { onParse?.(false); return [] }
+  const parsed = parseTypeScript(filename, source)
+  if (parsed.errors.length) { onParse?.(false); return [] }
   onParse?.(true)
+  const file = parsed.program
   onTree?.(file)
+  const statements = topLevel(file)
   const bindings = new Map<string, string>()
-  const declarations = new Map<string, { at: number; value: ts.Expression; constant?: boolean }>()
-  for (const s of file.statements) {
-    if (ts.isImportDeclaration(s) && ts.isStringLiteral(s.moduleSpecifier) && !s.importClause?.isTypeOnly) {
-      const mod = s.moduleSpecifier.text, cl = s.importClause
+  const declarations = new Map<string, { at: number; value: Ex; constant?: boolean }>()
+  for (const { node: s } of statements) {
+    if (s.type === "ImportDeclaration" && s.importKind !== "type") {
+      const mod = s.source.value
       const base = mod === "effect" ? "" : mod.startsWith("effect/") ? mod.slice(7) : "opaque"
-      if (cl?.name) bindings.set(cl.name.text, "opaque")
-      const n = cl?.namedBindings
-      if (n && ts.isNamespaceImport(n)) bindings.set(n.name.text, base === "" && n.name.text === "Effect" ? "Effect" : base)
-      if (n && ts.isNamedImports(n)) for (const i of n.elements) if (!i.isTypeOnly) bindings.set(i.name.text, base === "opaque" ? base : [base, (i.propertyName ?? i.name).text].filter(Boolean).join("."))
+      for (const i of s.specifiers) {
+        if (i.type === "ImportDefaultSpecifier") bindings.set(i.local.name, "opaque")
+        else if (i.type === "ImportNamespaceSpecifier") bindings.set(i.local.name, base === "" && i.local.name === "Effect" ? "Effect" : base)
+        else if (i.importKind !== "type") bindings.set(i.local.name, base === "opaque" ? base : [base, i.imported.type === "Identifier" ? i.imported.name : i.imported.value].filter(Boolean).join("."))
+      }
     }
-    if (ts.isClassDeclaration(s) && s.name) {
-      const base = s.heritageClauses?.find(h => h.token === ts.SyntaxKind.ExtendsKeyword)?.types[0]?.expression
-      if (base) declarations.set(s.name.text, { at: s.pos, value: base })
-    }
-    if (ts.isVariableStatement(s)) for (const d of s.declarationList.declarations) if (ts.isIdentifier(d.name) && d.initializer) declarations.set(d.name.text, { at: d.pos, value: d.initializer, constant: Boolean(s.declarationList.flags & ts.NodeFlags.Const) })
+    if (s.type === "ClassDeclaration" && s.id && s.superClass) declarations.set(s.id.name, { at: s.start, value: s.superClass })
+    if (s.type === "VariableDeclaration") for (const d of s.declarations) if (d.id.type === "Identifier" && d.init) declarations.set(d.id.name, { at: d.start, value: d.init, constant: constLike(s) })
   }
   const result: Verdict[] = []
-  for (const s of file.statements) {
-    if (!ts.isVariableStatement(s) || !(s.declarationList.flags & ts.NodeFlags.Const)) continue
-    for (const d of s.declarationList.declarations) {
-      if (!ts.isIdentifier(d.name)) {
+  for (const { node: s } of statements) {
+    if (s.type !== "VariableDeclaration" || !constLike(s)) continue
+    for (const d of s.declarations) {
+      if (d.id.type !== "Identifier") {
         const names: string[] = []
-        const collect = (n: ts.Node) => { if (ts.isBindingElement(n) && ts.isIdentifier(n.name)) names.push(n.name.text); else ts.forEachChild(n, collect) }
-        collect(d.name)
-        for (const name of names) result.push({ kind: "refusal", unit: { file: filename, name, span: { start: d.getStart(file), end: d.end } }, code: "E-PROGRAM", detail: "program shape: destructured unit" })
+        bindingNames(d.id, name => names.push(name))
+        for (const name of names) result.push({ kind: "refusal", unit: { file: filename, name, span: { start: d.start, end: d.end } }, code: "E-PROGRAM", detail: "program shape: destructured unit" })
         continue
       }
-      if (!d.initializer) continue
-      const reader = new ForeignCompilerReader(file, bindings, declarations, d.pos)
-      const value = reader.unwrap(d.initializer)
-      if (ts.isCallExpression(value)) {
-        try { if (reader.name(value.expression) === "Context.Service") continue } catch { /* The unit receives the refusal below. */ }
+      if (!d.init) continue
+      const reader = new ForeignCompilerReader(source, bindings, declarations, d.start)
+      const value = reader.unwrap(d.init)
+      if (value.type === "CallExpression") {
+        try { if (reader.name(value.callee) === "Context.Service") continue } catch { /* The unit receives the refusal below. */ }
       }
-      try { new ForeignCompilerReader(file, bindings, declarations, d.pos).layer(value); continue } catch { /* A program or refused declaration remains a unit. */ }
-      const unit = { file: filename.replaceAll("\\", "/"), name: d.name.text, span: { start: d.getStart(file), end: d.end } }
+      try { const probe = new ForeignCompilerReader(source, bindings, declarations, d.start); probe.layer(value); probe.settle(); continue } catch { /* A program or refused declaration remains a unit. */ }
+      const unit = { file: filename.replaceAll("\\", "/"), name: d.id.name, span: { start: d.start, end: d.end } }
       try {
-        const eff = reader.finish(reader.eff(value, []))
+        const read = reader.eff(value, [])
+        reader.settle()
+        const eff = reader.finish(read)
         result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
       } catch (e) {
         const failure = e instanceof ForeignRefusal ? e : e instanceof Decline ? new ForeignRefusal("E-NODE", e.message) : undefined
@@ -1054,12 +1256,14 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
   // I3's additional roots. Their names are stable under trivia and unused declarations.
   let entryIndex = 0
   const entries = new Set(["Effect.runPromise", "Effect.runSync", "Effect.runFork", "Effect.runPromiseExit", "Effect.runSyncExit", "Effect.runCallback"])
-  const extra = (name: string, value: ts.Expression | undefined, start: number, end: number, forced?: RefusalCode) => {
+  const extra = (name: string, value: Ex | undefined, start: number, end: number, forced?: RefusalCode) => {
     const unit = { file: filename.replaceAll("\\", "/"), name, span: { start, end } }
     if (forced) { result.push({ kind: "refusal", unit, code: forced, detail: taxonomy.find(t => t.code === forced)!.detail.replace("{value}", forced === "E-TYPE-PARAM" ? "generic unit" : "function") }); return }
-    const reader = new ForeignCompilerReader(file, bindings, declarations, start)
+    const reader = new ForeignCompilerReader(source, bindings, declarations, start)
     try {
-      const eff = reader.finish(reader.eff(value!, []))
+      const read = reader.eff(value!, [])
+      reader.settle()
+      const eff = reader.finish(read)
       result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
     } catch (e) {
       const r = e instanceof ForeignRefusal ? e : e instanceof Decline ? new ForeignRefusal("E-NODE", e.message) : undefined
@@ -1067,33 +1271,38 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
       result.push({ kind: "refusal", unit, code: r.code, detail: taxonomy.find(t => t.code === r.code)!.detail.replace("{value}", r.value) })
     }
   }
-  const entryCall = (x: ts.Expression) => {
-    x = new CompilerReader(file).unwrap(x)
-    if (!ts.isCallExpression(x)) return
+  const entryCall = (x: Ex) => {
+    x = new CompilerReader(source).unwrap(x)
+    if (x.type !== "CallExpression") return
     let name: string
-    try { name = new ForeignCompilerReader(file, bindings, declarations, x.pos).name(x.expression) } catch { return }
+    try { name = new ForeignCompilerReader(source, bindings, declarations, x.start).name(x.callee) } catch { return }
     if (!entries.has(name)) return
-    for (const a of x.arguments) extra(`${name}#${entryIndex++}`, a, a.getStart(file), a.end)
+    for (const a of x.arguments) extra(`${name}#${entryIndex++}`, a, a.start, a.end)
   }
-  for (const s of file.statements) {
-    if (ts.isExportAssignment(s) && !s.isExportEquals) extra("default", s.expression, s.expression.getStart(file), s.expression.end)
-    else if (ts.isExpressionStatement(s)) entryCall(s.expression)
-    else if (ts.isFunctionDeclaration(s)) {
-      if (s.name?.text === "main" && s.body) {
-        for (const st of s.body.statements) {
-          if (ts.isExpressionStatement(st)) entryCall(ts.isAwaitExpression(st.expression) ? st.expression.expression : st.expression)
-          if (ts.isReturnStatement(st) && st.expression) entryCall(ts.isAwaitExpression(st.expression) ? st.expression.expression : st.expression)
+  for (const { node: s, first } of statements) {
+    if (s.type === "ExportDefaultDeclaration") {
+      // `export default <expression>`, TypeScript's export assignment (a declaration under
+      // `export default` is the declaration itself: `topLevel`).
+      const d = s.declaration
+      if (!isDefaultDeclaration(d)) extra("default", d, d.start, d.end)
+    }
+    else if (s.type === "ExpressionStatement") entryCall(s.expression)
+    else if (s.type === "FunctionDeclaration" || s.type === "TSDeclareFunction") {
+      if (s.id?.name === "main" && s.body) {
+        for (const st of s.body.body) {
+          if (st.type === "ExpressionStatement") entryCall(st.expression.type === "AwaitExpression" ? st.expression.argument : st.expression)
+          if (st.type === "ReturnStatement" && st.argument) entryCall(st.argument.type === "AwaitExpression" ? st.argument.argument : st.argument)
         }
       }
-      extra(s.name?.text ?? "default", undefined, s.name?.getStart(file) ?? s.getStart(file), s.end, s.typeParameters?.length ? "E-TYPE-PARAM" : "E-PARAM-SHAPE")
-    } else if (ts.isClassDeclaration(s)) {
-      const base = s.heritageClauses?.find(h => h.token === ts.SyntaxKind.ExtendsKeyword)?.types[0]?.expression
+      extra(s.id?.name ?? "default", undefined, s.id?.start ?? first, s.end, s.typeParameters?.params.length ? "E-TYPE-PARAM" : "E-PARAM-SHAPE")
+    } else if (s.type === "ClassDeclaration") {
+      const base = s.superClass
       let service = false
       if (base) try {
-        const reader = new ForeignCompilerReader(file, bindings, declarations, s.end), c = reader.call(base), inner = reader.unwrap(c.expression)
-        service = reader.name(ts.isCallExpression(inner) ? inner.expression : c.expression) === "Context.Service"
+        const reader = new ForeignCompilerReader(source, bindings, declarations, s.end), c = reader.call(base), inner = reader.unwrap(c.callee)
+        service = reader.name(inner.type === "CallExpression" ? inner.callee : c.callee) === "Context.Service"
       } catch { /* A different class is a parameterized unit. */ }
-      if (!service) extra(s.name?.text ?? "default", undefined, s.name?.getStart(file) ?? s.getStart(file), s.end, s.typeParameters?.length ? "E-TYPE-PARAM" : "E-PARAM-SHAPE")
+      if (!service) extra(s.id?.name ?? "default", undefined, s.id?.start ?? first, s.end, s.typeParameters?.params.length ? "E-TYPE-PARAM" : "E-PARAM-SHAPE")
     }
   }
   result.sort((a, b) => a.unit.span.start - b.unit.span.start)

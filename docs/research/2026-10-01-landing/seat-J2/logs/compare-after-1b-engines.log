@@ -1,0 +1,27 @@
+== printed: ck vs oxc (1b)
+files 408; identical 408; different 0
+  of the different: 0 are loop programs, 0 are not
+== inclusion: ck vs oxc (1b)
+files 408; identical 408; different 0
+  of the different: 0 are loop programs, 0 are not
+== meta-printed: ck vs oxc (1b)
+files 408; identical 408; different 0
+  of the different: 0 are loop programs, 0 are not
+== foreign: ck vs oxc (1b)
+files 22986; identical 22986; different 0
+  of the different: 0 are loop programs, 0 are not
+== meta-foreign: ck vs oxc (1b)
+files 22986; identical 22986; different 0
+  of the different: 0 are loop programs, 0 are not
+== fixtures-refusals: ck vs oxc (1b)
+files 22; identical 22; different 0
+  of the different: 0 are loop programs, 0 are not
+== fixtures-witnesses: ck vs oxc (1b)
+files 2; identical 2; different 0
+  of the different: 0 are loop programs, 0 are not
+== meta-refusals: ck vs oxc (1b)
+files 22; identical 22; different 0
+  of the different: 0 are loop programs, 0 are not
+== meta-witnesses: ck vs oxc (1b)
+files 2; identical 2; different 0
+  of the different: 0 are loop programs, 0 are not

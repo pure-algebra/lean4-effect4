@@ -1,0 +1,4 @@
+$ lake build Effect4 OCaml5.Tools.LcnfGen OCaml5.Tools.EffGen OCaml5.Tools.EffWire OCaml5.Tools.CasGoldens Drivers.TsGen
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T22:55:09Z
+Build completed successfully (187 jobs).
+exit=0 (14s)

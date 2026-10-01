@@ -1,0 +1,4 @@
+$ bun /Users/pooks/Dev/lean4-effect4-seat-J2/docs/research/2026-10-01-landing/seat-J2/probes/engine-verdicts.ts oxc foreign <scratch>/foreign-base <scratch>/verdicts-1b/oxc-foreign.jsonl
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:55:10Z
+oxc foreign <scratch>/foreign-base: 22986 files; parsed: true x22986; oracle: true x22986; verdicts: 22986
+exit=0 (35s)

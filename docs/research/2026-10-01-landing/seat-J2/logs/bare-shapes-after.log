@@ -1,0 +1,28 @@
+$ bun docs/research/2026-10-01-landing/seat-J2/probes/bare-shapes.ts
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T22:05:30Z
+same nat              ck ["p=E-NODE:fragment node: shape"] | oxc ["p=E-NODE:fragment node: shape"]
+same str              ck ["p=E-NODE:fragment node: shape"] | oxc ["p=E-NODE:fragment node: shape"]
+same bool             ck ["p=E-NODE:fragment node: shape"] | oxc ["p=E-NODE:fragment node: shape"]
+same undef            ck ["p=E-NODE:fragment node: shape"] | oxc ["p=E-NODE:fragment node: shape"]
+same binderBody       ck ["p=E-NODE:fragment node: shape"] | oxc ["p=E-NODE:fragment node: shape"]
+same binderYield      ck ["p=E-NODE:fragment node: shape"] | oxc ["p=E-NODE:fragment node: shape"]
+same yieldLit         ck ["p=E-NODE:fragment node: shape"] | oxc ["p=E-NODE:fragment node: shape"]
+same atomApp          ck ["p=E-NODE:fragment node: unknownHead"] | oxc ["p=E-NODE:fragment node: unknownHead"]
+same atomAppBody      ck ["p=E-NODE:fragment node: unknownHead"] | oxc ["p=E-NODE:fragment node: unknownHead"]
+same nul              ck ["p=E-ARG-DYNAMIC:dynamic argument: literal"] | oxc ["p=E-ARG-DYNAMIC:dynamic argument: literal"]
+same noncanon         ck ["p=E-ARG-DYNAMIC:dynamic argument: number"] | oxc ["p=E-ARG-DYNAMIC:dynamic argument: number"]
+same unknownCall      ck ["p=E-OP-UNKNOWN:unknown head: Effect.foo"] | oxc ["p=E-OP-UNKNOWN:unknown head: Effect.foo"]
+same retryBare        ck ["p=E-OP-UNKNOWN:unknown head: Effect.retry"] | oxc ["p=E-OP-UNKNOWN:unknown head: Effect.retry"]
+same bareThenUnknown  ck ["p=E-OP-UNKNOWN:unknown head: Effect.retry"] | oxc ["p=E-OP-UNKNOWN:unknown head: Effect.retry"]
+same unknownThenBare  ck ["p=E-OP-UNKNOWN:unknown head: Effect.retry"] | oxc ["p=E-OP-UNKNOWN:unknown head: Effect.retry"]
+same layerBare        ck ["L=E-NODE:fragment node: program fragment","p=E-REF-UNBOUND:unbound reference: L: E-NODE"] | oxc ["L=E-NODE:fragment node: program fragment","p=E-REF-UNBOUND:unbound reference: L: E-NODE"]
+same layerBareDirect  ck ["L=E-NODE:fragment node: program fragment"] | oxc ["L=E-NODE:fragment node: program fragment"]
+same declBare         ck ["q=E-NODE:fragment node: shape","p=E-NODE:fragment node: shape"] | oxc ["q=E-NODE:fragment node: shape","p=E-NODE:fragment node: shape"]
+same entryBare        ck ["Effect.runPromise#0=E-NODE:fragment node: shape"] | oxc ["Effect.runPromise#0=E-NODE:fragment node: shape"]
+same defaultBare      ck ["default=E-NODE:fragment node: shape"] | oxc ["default=E-NODE:fragment node: shape"]
+same failLit          ck ["p=lifted"] | oxc ["p=lifted"]
+DIFF neg              ck ["p=E-ARG-DYNAMIC:dynamic argument: literal"] | oxc ["p=E-SPINE-ESCAPE:spine escape: UnaryExpression"]
+DIFF unknownMember    ck ["p=E-ARG-DYNAMIC:dynamic argument: literal"] | oxc ["p=E-NODE:fragment node: unknownIdent"]
+DIFF never            ck ["p=E-ARG-DYNAMIC:dynamic argument: literal"] | oxc ["p=E-NODE:fragment node: unknownIdent"]
+24 cases, 3 differ
+exit=0 (0s)

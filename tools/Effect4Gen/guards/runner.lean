@@ -80,5 +80,42 @@ def observation : Run.Observation :=
 #guard Canonical.decode (α := Run.Observation) (Canonical.encode observation) = some observation
 #guard Canonical.decode (α := Run.Observation) (Canonical.encode observation ++ [0]) = none
 #guard (Canonical.shape Run.Observation).accepts (Canonical.toVal observation)
+-- `Canonical.head` (decisions row 17, seat J2): the constructor's name read off the shape is the
+-- name `ShapeDoc.print` writes, for every value of the group's thirteen sums.
+def errs : List Effect4.Machine.Err := [.boom, .tag 7, .tagged "NotFound" "no row", .text "x"]
+def defects : List Effect4.Machine.Defect := [.notImplemented, .asyncFiber, .badName, .missingService, .user 3, .error .boom]
+def exits : List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Unit) :=
+  [.success (.nat 3), .failure failed]
+def completions : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Unit) :=
+  [.ofExit (.success (.nat 3)), .ofRefGet ⟨4⟩]
+def stucks : List Effect4.Machine.Stuck := [.unknownFiber ⟨9⟩, .unknownScope 2, .unknownRace 1]
+def states : List HostProtocol.State := [.idle, .awaitingAsync, .parked, .terminated]
+def outcomes : List Api.Outcome := [.finished, .frontier, .stuck (.unknownFiber ⟨9⟩)]
+open RefusalsAcceptance (printedHead) in
+#guard errs.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard defects.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard failed.reasons.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard exits.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard completions.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard decisions.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard refusals.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard phases.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard commands.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard states.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard stucks.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard outcomes.all fun x => Canonical.head x == printedHead (Canonical.print x)
+open RefusalsAcceptance (printedHead) in
+#guard statuses.all fun x => Canonical.head x == printedHead (Canonical.print x)
 
 end RunnerAcceptance

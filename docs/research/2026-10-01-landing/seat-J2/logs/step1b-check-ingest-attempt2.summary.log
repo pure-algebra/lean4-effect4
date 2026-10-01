@@ -1,0 +1,16 @@
+# summary of step1b-check-ingest-2.log (12577 lines)
+## commands
+lake build
+lake build Drivers.Corpus
+## errors and warnings
+(none)
+## gates
+info: Test/All.lean:170:0: Effect4 library-root gate: 135 API/utility modules, 221 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:170:0: Effect4 module and axiom gate: checked 526 modules and 72741 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+## built (not replayed)
+(none)
+## tail
+Bun v1.4.2 (macOS arm64)
+make: *** [.lake/check/ingest] Error 1
+exit=2 (517s)

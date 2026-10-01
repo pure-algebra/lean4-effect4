@@ -125,9 +125,9 @@
       ]
     },
     {
-      "Note": "The refusals an agent can be shown, as content (decisions row 17): the scope reader's, the checker's, the authoring call's, the printer's and the reader's (seven of the eight of the row's source, scout C 3.3), with admission's and the table's, which the Runner group carried before. Placed before Runner, which imports it. The build refusal is not here: it is declared in Effect4.Api.Author, whose import brings the authoring syntax (the `daemon` and `eff` keywords) into every module that imports Runner. The host session's refusal stays in Runner: the generator names a type's section by its last name, and Authoring.Refusal is here.",
+      "Note": "The refusals an agent can be shown, as content (decisions row 17): the scope reader's, the checker's, the authoring call's, the printer's, the reader's and the build's (the eight of the row's source, scout C 3.3), with admission's and the table's, which the Runner group carried before. Placed before Runner, which imports it. The build refusal is declared in Effect4.Api.Author; importing it brings no keyword since the authoring syntax is scoped (seat J2). The host session's refusal stays in Runner: the generator names a type's section by its last name, and Authoring.Refusal is here.",
       "Name": "Refusals",
-      "Imports": "Effect4.Api,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program",
+      "Imports": "Effect4.Api,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author",
       "Out": "src\\Effect4\\Api\\RefusalsDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\refusals.lean",
       "Kinds": [],
@@ -140,7 +140,8 @@
         "Effect4.Program.TypeRefusal",
         "Effect4.Api.AuthorRefusal",
         "Effect4.Program.PrintRefusal",
-        "Effect4.Program.ReadRefusal"
+        "Effect4.Program.ReadRefusal",
+        "Effect4.Api.BuildRefusal"
       ]
     },
     {

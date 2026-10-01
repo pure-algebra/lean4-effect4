@@ -42,7 +42,7 @@ numbers, so its domain is wider than this host representation.
 | `forms.gen.ts` | `tools/Tools/TsGen.lean` | 19 relative expansion templates, argument classes, host citations, dual arities and four unambiguous lambda shapes; `takeAndBump` stays named; stamped at import |
 | `wire.gen.ts` | `tools/Tools/TsGen.lean` | one canonical byte writer per family, including `encodeProgram`; explicit work stack, exact natural-number checks and strict Unicode strings |
 | `check.ts` | hand | the corpus differential against Lean's JSON and wire (below) |
-| `check-styles.ts` | hand | construction checks over all indexed foreign sources with TypeScript and oxc, recycling parser children after 128 files |
+| `check-styles.ts` | hand | construction checks over all indexed foreign sources with tsgo 7's API (one node child: the oracle's grammar, decisions row 168) and oxc (bun children recycled after 128 files) |
 | `test/read.test.ts` | hand | the pinned cases |
 
 No row type is written by hand: `Row`, `Ty`, `NativeOp` are families like any other, and the
@@ -95,6 +95,9 @@ letting `TextEncoder` replace them.
 
 ## Pins
 
-`effect@4.0.0-rc.112`, `oxc-parser@0.147.0`, `typescript@5.9.2` (`package.json`, exact).
+`effect@4.0.0-rc.112`, `oxc-parser@0.147.0`, `@typescript/native-preview@7.0.0-dev.20260629.1`
+(`package.json`, exact). tsgo 7 is the one TypeScript compiler; no `typescript` package is
+installed (decisions row 168): the ingest parses with oxc, and the construction check asks tsgo's
+API.
 The profile address in `profile.gen.ts` names the Effect and lean4-typescript revisions the
 bytes were printed under; a program printed under another profile refuses at the head.

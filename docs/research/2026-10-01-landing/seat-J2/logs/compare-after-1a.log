@@ -1,0 +1,69 @@
+== printed: oxc-after vs oxc-base
+files 408; identical 408; different 0
+  of the different: 0 are loop programs, 0 are not
+== printed: ck-after vs oxc-base
+files 408; identical 363; different 45
+  of the different: 45 are loop programs, 0 are not
+  x45
+    left  {"oracle": true}
+    right {"oracle": false}
+== inclusion: oxc-after vs oxc-base
+files 408; identical 408; different 0
+  of the different: 0 are loop programs, 0 are not
+== inclusion: ck-after vs oxc-base
+files 408; identical 365; different 43
+  of the different: 43 are loop programs, 0 are not
+  x34
+    left  {"class": "refused E-LOOP", "parsed": true, "verdicts": ["refusal:E-LOOP:loop shape: whileLoop"]}
+    right {"class": "mismatch", "parsed": true, "verdicts": ["lifted"]}
+  x8
+    left  {"class": "refused E-LOOP", "parsed": true, "verdicts": ["refusal:E-LOOP:loop shape: whileLoop"]}
+    right {"class": "refused E-FAIL-NOT-DOCUMENTED", "parsed": true, "verdicts": ["refusal:E-FAIL-NOT-DOCUMENTED:failure payload: literal required"]}
+  x1
+    left  {"class": "refused E-LOOP", "parsed": true, "verdicts": ["refusal:E-LOOP:loop shape: whileLoop"]}
+    right {"class": "refused E-ARG-DYNAMIC", "parsed": true, "verdicts": ["refusal:E-ARG-DYNAMIC:dynamic argument: literal"]}
+== meta-printed: oxc-after vs oxc-base
+files 408; identical 408; different 0
+  of the different: 0 are loop programs, 0 are not
+== meta-printed: ck-after vs oxc-base
+files 408; identical 408; different 0
+  of the different: 0 are loop programs, 0 are not
+== foreign: oxc-after vs oxc-base
+files 22986; identical 22986; different 0
+  of the different: 0 are loop programs, 0 are not
+== foreign: ck-after vs oxc-base
+files 22986; identical 22041; different 945
+  of the different: 945 are loop programs, 0 are not
+  x765
+    left  {"oracle": false, "parsed": true, "verdicts": ["refusal:E-LOOP:loop shape: whileLoop"]}
+    right {"oracle": false, "parsed": true, "verdicts": ["lifted"]}
+  x135
+    left  {"oracle": false, "parsed": true, "verdicts": ["refusal:E-SPINE-ESCAPE:spine escape: CallExpression"]}
+    right {"oracle": false, "parsed": true, "verdicts": ["refusal:E-NODE:fragment node: arity"]}
+  x45
+    left  {"oracle": false, "parsed": true, "verdicts": ["refusal:E-LOOP:loop shape: whileLoop"]}
+    right {"oracle": false, "parsed": true, "verdicts": ["refusal:E-NODE:fragment node: loop map head"]}
+== fixtures-refusals: oxc-after vs oxc-base
+files 22; identical 22; different 0
+  of the different: 0 are loop programs, 0 are not
+== fixtures-refusals: ck-after vs oxc-base
+files 22; identical 22; different 0
+  of the different: 0 are loop programs, 0 are not
+== fixtures-witnesses: oxc-after vs oxc-base
+files 2; identical 2; different 0
+  of the different: 0 are loop programs, 0 are not
+== fixtures-witnesses: ck-after vs oxc-base
+files 2; identical 2; different 0
+  of the different: 0 are loop programs, 0 are not
+== meta-refusals: oxc-after vs oxc-base
+files 22; identical 22; different 0
+  of the different: 0 are loop programs, 0 are not
+== meta-refusals: ck-after vs oxc-base
+files 22; identical 22; different 0
+  of the different: 0 are loop programs, 0 are not
+== meta-witnesses: oxc-after vs oxc-base
+files 2; identical 2; different 0
+  of the different: 0 are loop programs, 0 are not
+== meta-witnesses: ck-after vs oxc-base
+files 2; identical 2; different 0
+  of the different: 0 are loop programs, 0 are not

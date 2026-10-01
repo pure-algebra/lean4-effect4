@@ -1,0 +1,8 @@
+# summary: LEAN_NUM_THREADS=1 python3 scripts/generate.py --only wire (command lines and verdict; after each run git status of ocaml/, ts/ and harness/ was empty: byte-identical)
+$ python3 scripts/generate.py --only wire
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T22:57:41Z
++ lake build OCaml5.Tools.EffWire
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/EffWire.lean <scratch>/ocaml/goldens/eff
+wrote 8 goldens and manifest.txt to <scratch>/ocaml/goldens/eff
+PASS generate: requested producers ran in dependency order
+exit=0 (6s)

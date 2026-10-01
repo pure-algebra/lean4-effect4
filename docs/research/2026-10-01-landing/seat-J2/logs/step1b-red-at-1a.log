@@ -1,0 +1,38 @@
+bun test v1.4.2 (744846f84)
+
+ingest/test/foreign.test.ts:
+177 | 
+178 | test("both engines read the loop image in every spelling of its tail, cursor unannotated", () => {
+179 |   const expected = ck(loopModule(loopTails[0]!), "loop.ts")[0]
+180 |   expect(expected?.kind).toBe("lifted")
+181 |   if (expected?.kind !== "lifted" || expected.eff._tag !== "bind" || expected.eff.rest._tag !== "iterate") throw new Error("expected bind then iterate")
+182 |   expect(expected.eff.rest.cursorTy).toBeNull()
+                                           ^
+error: expect(received).toBeNull()
+
+Received: {
+  _tag: "unit",
+}
+
+      at <anonymous> (<scratch>/eff-1a/ingest/test/foreign.test.ts:182:38)
+(fail) both engines read the loop image in every spelling of its tail, cursor unannotated [1.33ms]
+189 | })
+190 | 
+191 | test("a loop whose result is not a thunk is refused alike, and a bare whileLoop stays E-LOOP", () => {
+192 |   for (const source of [loopModule(`Effect.map(${loopBody}, (x) => x)`), 'import { Effect } from "effect"\nconst p = Effect.whileLoop({})\n']) {
+193 |     const left = ck(source, "refused-loop.ts"), right = oxc(source, "refused-loop.ts")
+194 |     expect(compareVerdicts(left, right).status).toBe("agree")
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: "agree"
+Received: "disagree"
+
+      at <anonymous> (<scratch>/eff-1a/ingest/test/foreign.test.ts:194:49)
+(fail) a loop whose result is not a thunk is refused alike, and a bare whileLoop stays E-LOOP [0.64ms]
+
+ 24 pass
+ 2 fail
+ 86 expect() calls
+Ran 26 tests across 1 file. [151.00ms]
+exit=1

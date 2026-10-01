@@ -267,11 +267,11 @@ doctor: ## the tools and installs every tier needs, with their versions
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
-  host-protocol census schema-ts schema-pins tools corpus
+  host-protocol census schema-ts schema-pins tools corpus tsgo
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
 FORCE:
 
-check: build check-roots check-gen ## after every change: the build with its axiom audit, the fresh root elaboration, the generated-file drift
+check: build check-roots check-gen check-tsgo ## after every change: the build with its axiom audit, the fresh root elaboration, the generated-file drift, no TypeScript below 7
 check-full: check check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
@@ -308,6 +308,17 @@ $(CHK)/inventory: FORCE
 $(CHK)/roots: $(CHK)/inventory lakefile.toml lean-toolchain | build
 	$(LAKE) env lean -DwarningAsError=true Test/All.lean
 	@echo 'PASS library-roots: fresh module, root-closure and axiom audit'
+	@mkdir -p $(CHK) && touch $@
+
+# One TypeScript compiler, tsgo 7 (AGENTS.md; decisions rows 57 and 168): no `typescript` package below
+# 7 is installed under ts/, harness/ or tools/. The recipe is receipt J's line (step 7 (iii)); the
+# marker is keyed on what it reads, the install directories (a directory's time moves when a package
+# is added to or removed from it) and the manifests and locks that fill them.
+check-tsgo: ## no node_modules/typescript below 7 under ts/, harness/ or tools/ (tsgo 7 is the one compiler)
+TSGO_INPUTS := $(wildcard ts/*/node_modules harness/*/node_modules tools/*/node_modules) \
+  $(wildcard ts/*/package.json ts/*/bun.lock harness/*/package.json harness/*/package-lock.json harness/*/bun.lock tools/*/package.json)
+$(CHK)/tsgo: $(TSGO_INPUTS)
+	@$(PY) -c 'import json,pathlib,sys; v=lambda p: json.loads(p.read_text())["version"]; bad=[p.as_posix()+": "+v(p) for r in ("ts","harness","tools") for p in sorted(pathlib.Path(r).rglob("node_modules/typescript/package.json")) if int(v(p).split(".")[0]) < 7]; print("\n".join(["FAIL check-tsgo: typescript below 7 (tsgo 7 is the one compiler):"]+bad) if bad else "PASS check-tsgo: no typescript below 7 under ts/, harness/ or tools/"); sys.exit(1 if bad else 0)'
 	@mkdir -p $(CHK) && touch $@
 
 CONFORM_SOURCES := $(shell find tools/Conform -name '*.lean' -o -name '*.json') scripts/check-conform.py scripts/lib/conform_report.py
@@ -448,11 +459,13 @@ $(CHK)/ingest-smoke: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES)
 	$(BUN) ts/eff/ingest/check-corpus.ts printed $(abspath $(CORPUS))
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/Drivers/ForeignCorpus.lean tools/Drivers/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh
+# The fidelity step observes modules through harness/truth/run-truth.ts, which resolves `effect`
+# through the truth link; a fresh worktree has none (order-only, like every other consumer).
+$(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/Drivers/ForeignCorpus.lean tools/Drivers/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh | harness/truth/node_modules
 	bash scripts/check-ingest.sh
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/host-protocol: $(CORE) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py
+$(CHK)/host-protocol: $(CORE) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
 	$(PY) scripts/check-host-protocol.py
 	@mkdir -p $(CHK) && touch $@
 
@@ -488,7 +501,7 @@ help: ## this list
 	@echo
 	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
 	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts, corpus,'
-	@echo '                     schema-pins, tools'
+	@echo '                     schema-pins, tools, tsgo'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
 	@echo '                     truth, host-protocol, schema-ts, census'

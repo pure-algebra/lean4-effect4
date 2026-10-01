@@ -1,0 +1,4 @@
+$ bash -c cd ts/eff && bun run typecheck
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:50:53Z
+$ tsgo --noEmit -p tsconfig.json
+exit=0 (2s)

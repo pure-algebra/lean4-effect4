@@ -129,9 +129,10 @@ The declared layers and rows stay: a layer body calls the module's rows like any
 def Env.closed (env : Env) : Env := { env with names := [] }
 
 /-- A binder name the surface mints for itself in this scope: the reserved prefix, the stem
-that says which convenience minted it, and the level it will be bound at. Only one binder
-sits at a level, so two mints in one scope are two names, and no name an author wrote can be
-bound in a mint's place, because `var` refuses the reserved prefix. -/
+that says which convenience minted it, and the level of the construct that binds it; two binders
+of one construct differ by stem. Only one binder sits at a level, so two mints in one scope are
+two names, and no name an author wrote can be bound in a mint's place, because `var` refuses the
+reserved prefix. -/
 def Env.mint (env : Env) (stem : String) : String :=
   reservedPrefix ++ stem ++ toString env.names.length
 

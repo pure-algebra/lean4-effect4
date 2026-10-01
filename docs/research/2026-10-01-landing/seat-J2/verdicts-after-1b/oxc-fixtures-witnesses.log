@@ -1,0 +1,4 @@
+$ bun /Users/pooks/Dev/lean4-effect4-seat-J2/docs/research/2026-10-01-landing/seat-J2/probes/engine-verdicts.ts oxc fixtures /Users/pooks/Dev/lean4-effect4-seat-J2/ts/eff/ingest/fixtures/witnesses <scratch>/verdicts-1b/oxc-fixtures-witnesses.jsonl
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:57:10Z
+oxc fixtures /Users/pooks/Dev/lean4-effect4-seat-J2/ts/eff/ingest/fixtures/witnesses: 2 files; parsed: true x2; verdicts: 2
+exit=0 (0s)

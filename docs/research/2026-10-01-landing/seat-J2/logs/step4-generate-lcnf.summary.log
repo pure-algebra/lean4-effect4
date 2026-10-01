@@ -1,0 +1,24 @@
+# summary: LEAN_NUM_THREADS=1 python3 scripts/generate.py --only lcnf (command lines, the LCNF checks, what each cut wrote, verdict); then git status of ocaml/ after the run (empty: byte-identical)
+$ python3 scripts/generate.py --only lcnf
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T22:55:39Z
++ lake build Effect4
++ lake build OCaml5.Tools.LcnfGen
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --out ocaml/gen/fibers_gen.ml --cap 400 --types Effect4.Machine.Task Effect4.Machine.Dispatcher.empty Effect4.Machine.Dispatcher.insert Effect4.Machine.Dispatc
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+wrote ocaml/gen/fibers_gen.ml and ocaml/gen/closure-fibers_gen.tsv
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --out ocaml/gen/machine_gen.ml --cap 60 --types Effect4.Machine.Task Effect4.Machine.Dispatcher.insert Effect4.Machine.Dispatcher.enqueue Effect4.Machine.Dispa
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+wrote ocaml/gen/machine_gen.ml and ocaml/gen/closure-machine_gen.tsv
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --out ocaml/gen/api_gen.ml --import Effect4.Api --cap 2000 --types Effect4.Program.RowShape Effect4.Api.run Effect4.Api.replay
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+wrote ocaml/gen/api_gen.ml and ocaml/gen/closure-api_gen.tsv
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --out ocaml/engine/api_engine.ml --import Effect4.Api --cap 2000 --types Effect4.Program.RowShape,Effect4.Machine.Origin,Effect4.Machine.ForkRecord --externs o
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+wrote ocaml/engine/api_engine.ml and ocaml/gen/closure-api_engine.tsv
+PASS generate: requested producers ran in dependency order
+exit=0 (81s)
+# git status --porcelain -- ocaml/ :

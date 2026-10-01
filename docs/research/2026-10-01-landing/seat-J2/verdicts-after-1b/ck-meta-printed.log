@@ -1,0 +1,4 @@
+$ bun /Users/pooks/Dev/lean4-effect4-seat-J2/docs/research/2026-10-01-landing/seat-J2/probes/engine-verdicts.ts ck meta-printed /Users/pooks/Dev/lean4-effect4-seat-J2/.lake/corpus <scratch>/verdicts-1b/ck-meta-printed.jsonl
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:52:26Z
+ck meta-printed /Users/pooks/Dev/lean4-effect4-seat-J2/.lake/corpus: 408 files; stable: true x408
+exit=0 (1s)

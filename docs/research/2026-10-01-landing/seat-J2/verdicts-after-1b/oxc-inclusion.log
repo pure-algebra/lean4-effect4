@@ -1,0 +1,4 @@
+$ bun /Users/pooks/Dev/lean4-effect4-seat-J2/docs/research/2026-10-01-landing/seat-J2/probes/engine-verdicts.ts oxc inclusion /Users/pooks/Dev/lean4-effect4-seat-J2/.lake/corpus <scratch>/verdicts-1b/oxc-inclusion.jsonl
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:55:09Z
+oxc inclusion /Users/pooks/Dev/lean4-effect4-seat-J2/.lake/corpus: 408 files; parsed: true x408; class: included x323, refused E-ARG-DYNAMIC x21, refused E-FAIL-NOT-DOCUMENTED x61, refused E-REF-UNBOUND x3
+exit=0 (0s)

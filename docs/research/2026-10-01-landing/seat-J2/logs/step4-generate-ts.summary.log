@@ -1,0 +1,8 @@
+# summary: LEAN_NUM_THREADS=1 python3 scripts/generate.py --only ts (command lines and verdict; after each run git status of ocaml/, ts/ and harness/ was empty: byte-identical)
+$ python3 scripts/generate.py --only ts
+# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T22:58:03Z
++ lake build Drivers.TsGen
++ lake env lean -DwarningAsError=true -M4096 --run tools/Drivers/TsGen.lean <scratch>/ts/eff
+wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts, templates.gen.ts under <scratch>/ts/eff
+PASS generate: requested producers ran in dependency order
+exit=0 (16s)

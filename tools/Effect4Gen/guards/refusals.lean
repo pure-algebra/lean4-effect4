@@ -35,6 +35,36 @@ def reads : List ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",
    .negative (-3), .unsupportedStmt, .annotation "lambda parameter"]
 
+/-- The two ways a module's build is refused that no authored source meets: admission's, and a
+service declared at another carrier than its signature's. -/
+def buildsOnly : List BuildRefusal :=
+  admissions.map .admission ++
+    [.serviceCarrier ⟨⟨3⟩, ⟨7⟩⟩ .nat (some .string), .serviceCarrier ⟨⟨4⟩, ⟨1⟩⟩ .unit none]
+
+/-- Every way a module's build is refused (`Api.build`), the eighth of the row's refusals: the
+scope reader's, the checker's, and the two of `buildsOnly`. -/
+def builds : List BuildRefusal := scopes.map .scope ++ typings.map .typing ++ buildsOnly
+
+/-- Every constructor of the checker's reason, in declaration order. -/
+def reasons : List TypeReason :=
+  [.term (.var 3), .cause (.fail (.lit (.nat 1))), .errorNotAdmitted .nat, .outsideDomain "Db.get",
+   .requestNotSubtype "Db.get" .string .nat, .predicateNotBool .nat,
+   .notSelectable (.tag "Some") (.option .nat), .stepNotCursor .string .nat,
+   .initialNotCursor .bool .nat, .releaseFails .string, .notFiber .unit, .scopeExpected .nat,
+   .natExpected .string, .listOfFibersExpected .nat, .contextExpected .unit,
+   .snapshotExpected .bool, .exitExpected .string, .serviceUnknown ⟨⟨3⟩, ⟨7⟩⟩,
+   .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat, .layerReference [0, 1], .referencesIllFormed,
+   .mergeAllEmpty, .returnNotLast, .breakOutsideLoop, .literalOutsideAlphabet (.str "x")]
+
+/-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
+all-nullary sum prints as; the empty string for anything else. -/
+def printedHead : Effect4.Json → String
+  | .str s => s
+  | .obj entries => match entries.lookup "_tag" with
+    | some (.str s) => s
+    | _ => ""
+  | _ => ""
+
 #guard tables.all fun x => Canonical.decode (α := TableRefusal) (Canonical.encode x) = some x
 #guard admissions.all fun x => Canonical.decode (α := AdmitRefusal) (Canonical.encode x) = some x
 #guard scopes.all fun x => Canonical.decode (α := Authoring.Refusal) (Canonical.encode x) = some x
@@ -58,5 +88,34 @@ def reads : List ReadRefusal :=
 #guard (reads.map Canonical.encode).eraseDups.length = reads.length
 -- An authoring refusal and a read refusal are different content: neither reads as the other.
 #guard authors.all fun x => Canonical.decode (α := ReadRefusal) (Canonical.encode x) = none
+-- The build refusal (seat J2): read back exactly, refused with a byte added or removed, fitting
+-- its shape, and distinct as bytes exactly when distinct.
+#guard builds.all fun x => Canonical.decode (α := BuildRefusal) (Canonical.encode x) = some x
+#guard builds.all fun x => Canonical.decode (α := BuildRefusal) (Canonical.encode x ++ [0]) = none
+#guard builds.all fun x => Canonical.decode (α := BuildRefusal) (Canonical.encode x).dropLast = none
+#guard builds.all fun x => (Canonical.shape BuildRefusal).accepts (Canonical.toVal x)
+#guard (builds.map Canonical.encode).eraseDups.length = builds.length
+-- A build refused at a name or a type is the author refusal of the same case, byte for byte: the
+-- bytes hold a case's position and its content, never the type's name (the shape document names
+-- the type; a node's address adds the version, kind and spec). The cases only a build meets are
+-- no author refusal.
+#guard scopes.all fun r => Canonical.encode (BuildRefusal.scope r) = Canonical.encode (AuthorRefusal.scope r)
+#guard typings.all fun r => Canonical.encode (BuildRefusal.typing r) = Canonical.encode (AuthorRefusal.typing r)
+#guard buildsOnly.all fun x => Canonical.decode (α := AuthorRefusal) (Canonical.encode x) = none
+-- `Canonical.head` (decisions row 17): the constructor's name read off the shape agrees with the
+-- hand-written `TypeReason.head` on every constructor (the list is every case, in order) ...
+#guard reasons.map TypeReason.head == Canonical.heads TypeReason
+#guard reasons.all fun x => Canonical.head x == x.head
+-- ... and with the name `ShapeDoc.print` writes, for every value of the group's eight sums.
+#guard tables.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard admissions.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard (scopes.map (·.reason)).all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard reasons.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard authors.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard prints.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard reads.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard builds.all fun x => Canonical.head x == printedHead (Canonical.print x)
+-- A structure's head is its name, which its printed object does not carry.
+#guard typings.all fun x => Canonical.head x == "TypeRefusal" && printedHead (Canonical.print x) == ""
 
 end RefusalsAcceptance
