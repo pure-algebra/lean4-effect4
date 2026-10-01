@@ -1,0 +1,13 @@
+'Effect4.Machine.Env.Context.ext_keysRow' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Env.Context.satisfies_empty' depends on axioms: [propext]
+'Effect4.Machine.Env.Context.satisfies_single' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Env.Context.satisfies_union' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Env.Context.satisfies_weaken' does not depend on any axioms
+'Effect4.Machine.Env.ContextUpdate.apply_provide_get?' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Env.ContextUpdate.apply_provideService_getV' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Env.ContextUpdate.apply_provide_wins' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Env.ContextUpdate.apply_provide_keeps' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Env.ContextUpdate.apply_provideService_shadows' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Env.ContextUpdate.apply_provideService_other' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Env.nat_ne_bool' does not depend on any axioms
+## exit=0 seconds=0 cmd=lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-landing/seat-F/probes/ContextAxioms.lean

@@ -1,44 +1,49 @@
 import Effect4.Machine.ContextMap
 import Effect4.Machine.Fibers
 import Effect4.Data.Row
-import Effects.Algebra.Program
 
 /-!
-# Deep spike S5, part 1: the Context carrier (M4a, M4b) and the machine's `χ`
+# Machine.Context — requirement rows, satisfaction, and the context updates `withFiber` names
 
-Status: design spike, 2026-09-03. Module `Deep.Context` of the non-default `Deep` library
-(`lakefile.toml`, `srcDir = "workshop"`); built with `lake build Deep.Context`. Plan:
-`docs/research/2026-09-03-deep-plan.md` row S5, rows M4a/M4b of §2 as split by
-`docs/research/2026-09-03-deep-plan-review.md` findings 6 and 7. Order:
-`docs/research/ENVIRONMENT-DAG.md` L1 (`Context/Requirement`, `Context/Service`) then L2
-(`Context/Environment`). Report: `docs/research/2026-09-03-spike-s5-context-layer.md`.
+The service map — `Context U`, its operations and laws, the machine's constant universe `ValU`,
+`Ctx := Context ValU`, the reserved keys, the hooks the fiber machine reads off a context
+(`ambientScope`, `budgetOf`) and the spine codec — is `Machine/ContextMap.lean`. This module adds
+what reads the map against a requirement row: `Requirement`, an alias of the one row carrier
+`Row ServiceKey`; `Context.keysRow` and `Context.Satisfies` with their laws (the adjunction
+`satisfies_iff_subset_keysRow` is `Program/Provision.lean`'s); `ContextUpdate`, the three context
+updates rc.112's callers of `updateContext` name; the open edge `ENV-KEY-INTERP`, named as
+`UniverseAgreement`; and the eight counterexample classes. It is a module of the core root
+`Effect4`, read by `Program/Typing/Rules.lean` and `Laws/Machine/ContextValue.lean`.
 
-Reused, never re-declared: `Effect4.ServiceKey`, `ServiceUniverse`, `ServiceKey.Carrier`,
-`ServiceKey.transport`, `ServiceUniverse.exists_carrier_collision` (`src/Effect4/Machine/Key.lean`),
-`Effect4.Row` (`src/Effect4/Data/Row.lean`), `Effects.Program` (`.lake/packages/effects`).
+**History.** It began as deep spike S5 (2026-09-03, `Deep.Context` of the non-default `Deep`
+library then; `docs/research/2026-09-03-deep-plan.md` row S5); its map half moved to
+`Machine/ContextMap.lean` at the join (`docs/research/2026-09-07-join-dispatch.md`, cut L9). The
+spike's model of service-reading programs over `Effects.Program` (`serviceSig`, `ServiceProgram`,
+`UsesOnly` and its five laws, `Context.interpret` with handler agreement and total
+interpretation, and one counterexample that interpreted a request) had no reader outside itself
+and was the core root's one import of the `Effects` package. It was deleted on 2026-10-01
+(landing seat F; the text is at `git:dceae006:src/Effect4/Machine/Context.lean`), and the core
+root's import closure reaches no `Effects` module since.
 
-**Source.** rc.112's `Context.ts` and `Result.ts` are not in the vendored tree
-(`vendor/effect-4.0.0-rc.112/src/` has neither). The `Context` model below is read off its
-*uses* in `internal/effect.ts` and `Layer.ts` and off the census summaries: `Context.empty()`
-(`internal/effect.ts:627`), `Context.add(ctx, key, value)` (`:2136`, `:2232`, `:3942`),
-`Context.merge(self, that)` right-biased (`:2197`, `provideContext` is
-`updateContext(self, Context.merge(context))`), `Context.getUnsafe` throwing on a missing key
-(`:2134`, `Layer.ts:807`), `Context.getOrUndefined` (`Layer.ts:586`), `Context.Reference` with a
-`defaultValue` read through `fiber.getRef` (`:715-727`, `Scheduler.ts:269-298`), and
-`Context.mergeAll` (`Layer.ts:1600`). Insertion order is the JavaScript `Map` order the host
-keeps; only `mergeAll`'s fold observes it. Where the model chooses (the `Map.set` position of an
-existing key; identity versus data equality in `updateContext`'s `prevContext === nextContext`,
-`:2090`), the docstring says so.
+**Source.** The `Context` model was read off rc.112's *uses* in `internal/effect.ts` and
+`Layer.ts` before `Context.ts` was vendored (`98dcd20a`, 2026-09-04; it is
+`vendor/effect-4.0.0-rc.112/src/Context.ts` now), and the citations stay at those uses:
+`Context.empty()` (`internal/effect.ts:627`), `Context.add(ctx, key, value)` (`:2136`, `:2232`,
+`:3942`), `Context.merge(self, that)` right-biased (`:2197`, `provideContext` is
+`updateContext(self, Context.merge(context))`; `Context.ts:1745`: the service from `that`
+overrides), `Context.getUnsafe` throwing on a missing key (`:2134`, `Layer.ts:807`),
+`Context.getOrUndefined` (`Layer.ts:586`), `Context.Reference` with a `defaultValue` read through
+`fiber.getRef` (`:715-727`, `Scheduler.ts:269-298`), and `Context.mergeAll` (`Layer.ts:1600`).
+Insertion order is the JavaScript `Map` order the host keeps; only `mergeAll`'s fold observes it.
+Where the model chooses (the `Map.set` position of an existing key; identity versus data equality
+in `updateContext`'s `prevContext === nextContext`, `:2090`), the docstring says so.
 
-**Two levels.** Everything up to `Context.interpret_agree` is generic in a supplied
-`ServiceUniverse U`, as `docs/research/ENVIRONMENT-DAG.md` requires. The machine instantiation is at
-`ValU`, the constant universe whose every carrier is the one first-order value alphabet `Val` —
-which is exactly the `exists_carrier_collision` witness, so type identity recovers nothing here
-by construction. `Ctx := Context ValU` is the `χ` of `Deep.Fibers`; `ambientScope`, `budgetOf`,
-`encode` are the values of `RunInterp.ambientScope`, `budgetOf`, `contextValue`, and
-`Context.empty` is `emptyContext`. The one instantiation of the machine's alphabets `ν σ St`
-over this `χ` is `Deep.Layer` (S2's `Deep.Stores` alphabets are closed inductives and cannot be
-extended from outside; the landing merges them).
+**Two levels.** `Requirement`, `keysRow`, `Satisfies` and their laws are generic in a supplied
+`ServiceUniverse U`, as `docs/research/ENVIRONMENT-DAG.md` requires. `ContextUpdate` and the
+counterexamples are at the machine's instantiation `ValU`, the constant universe whose every
+carrier is the one first-order value alphabet `Val` — exactly the `exists_carrier_collision`
+witness, so type identity recovers nothing here by construction. The machine's context
+(`Machine/Stores.lean`, `Ctx`) carries one such map as its `services`.
 
 The error channel is `Cause`/`Exit` everywhere; a missing service is a *defect*
 (`Context.getUnsafe` throws, `runLoop` catches at `:670-674` and re-enters with `exitDie`), never
@@ -50,8 +55,7 @@ a typed error and never a hidden default.
 `Value.scope`/`Value.memoMap`/`Value.promise`/`Value.fiber`, an exit is `Value.exitOk`/
 `Value.exitErr`, a memo hit's two-field answer is the carrier's `pair`. The `Env.Val`
 namespace keeps the old spellings as patterns, the way `Machine/Stores.lean` spells
-`Machine.Val`'s (`docs/research/2026-09-07-u1-cutover-dispatch.md`, U1b; the Layer machine's
-own sites follow in the join, `docs/research/2026-09-07-join-dispatch.md`).
+`Machine.Val`'s (`docs/research/2026-09-07-u1-cutover-dispatch.md`, U1b).
 -/
 
 set_option autoImplicit false
@@ -90,92 +94,23 @@ end Requirement
 /-! ## M4a — `Context/Service` (L1, fence F-SVC)
 
 The edge `Context/Key → Context/Service` carries the interpretation triple `ServiceUniverse`,
-`ServiceKey.Carrier`, `ServiceKey.transport` (`docs/research/ENVIRONMENT-DAG.md` edge table). A service is
-a key bound to a value of its carrier under a *supplied* universe: first-order at the key, with
-the universe in the trusted-boundary position `Effect4.FlowAlphabet` occupies. -/
-
-/-- The service-access signature: one operation per key, rc.112's `Effect.service(tag)` /
-`Context.Tag` as an effect (`internal/effect.ts:2069-2070`: `withFiber(fiber =>
-fromOption(Context.getOption(fiber.context, service)))`), whose answer is the key's carrier.
-`PLAN.md`, environment / Service: "Prefer a derived `ServiceSignature U` and `request = Program.perform` over a
-duplicate service program." -/
-abbrev serviceSig (U : ServiceUniverse.{u}) : Effects.Signature.{0, u} where
-  Op := ServiceKey
-  Answer := fun key => ServiceKey.Carrier U key
-
-/-- A program over the service-access signature: the reused `Effects.Program`. -/
-abbrev ServiceProgram (U : ServiceUniverse.{u}) (A : Type u) : Type u :=
-  Effects.Program (serviceSig U) A
-
-/-- `Program.UsesOnly r p`: every operation `p` can perform, along every answer, names a key of
-`r`. A predicate over the well-founded tree, not a computed row: `PLAN.md`, environment / Service, forbids claiming a
-finite `Program.requirements` for higher-order continuations. -/
-inductive UsesOnly {U : ServiceUniverse.{u}} {A : Type u} (r : Requirement) :
-    ServiceProgram U A → Prop
-  /-- A finished program uses nothing. -/
-  | pure (value : A) : UsesOnly r (.pure value)
-  /-- A visit uses its key and whatever every continuation uses. -/
-  | vis (key : ServiceKey) (next : ServiceKey.Carrier U key → ServiceProgram U A)
-      (hkey : key ∈ r) (hnext : ∀ answer, UsesOnly r (next answer)) : UsesOnly r (.vis key next)
-
-section UsesOnlyLaws
-
-variable {U : ServiceUniverse.{u}} {A B : Type u}
-
-/-- Law 1 (pure): `pure` uses only the empty row, hence only any row. -/
-theorem usesOnly_pure (r : Requirement) (value : A) :
-    UsesOnly (U := U) r (Effects.Program.pure value) :=
-  UsesOnly.pure value
-
-/-- Law 2 (visit): a visit whose key is in the row and whose continuations use only the row uses
-only the row. -/
-theorem usesOnly_visit (r : Requirement) (key : ServiceKey)
-    (next : ServiceKey.Carrier U key → ServiceProgram U A) (hkey : key ∈ r)
-    (hnext : ∀ answer, UsesOnly r (next answer)) :
-    UsesOnly r (Effects.Program.vis key next) :=
-  UsesOnly.vis key next hkey hnext
-
-/-- Law 3 (perform): `Program.perform key` uses only a row containing `key`. -/
-theorem usesOnly_perform (r : Requirement) (key : ServiceKey) (hkey : key ∈ r) :
-    UsesOnly r (Effects.Program.perform (S := serviceSig U) key) :=
-  UsesOnly.vis key Effects.Program.pure hkey (fun answer => UsesOnly.pure answer)
-
-/-- Law 5 (weakening): a program that uses only `r` uses only any superset row. -/
-theorem usesOnly_weaken {r s : Requirement} {p : ServiceProgram U A}
-    (hp : UsesOnly r p) (hrs : Row.Subset r s) : UsesOnly s p := by
-  induction hp with
-  | pure value => exact UsesOnly.pure value
-  | vis key next hkey _ ih => exact UsesOnly.vis key next (hrs key hkey) ih
-
-/-- Law 4 (bind by union): sequencing a program using only `r` with continuations using only `s`
-uses only `r ∪ s`. -/
-theorem usesOnly_bind_union {r s : Requirement} {p : ServiceProgram U A}
-    {f : A → ServiceProgram U B} (hp : UsesOnly r p) (hf : ∀ value, UsesOnly s (f value)) :
-    UsesOnly (Requirement.union r s) (Effects.Program.bind p f) := by
-  induction hp with
-  | pure value =>
-    show UsesOnly (Requirement.union r s) (f value)
-    exact usesOnly_weaken (hf value) (Row.subset_union_right r s)
-  | vis key next hkey _ ih =>
-    show UsesOnly (Requirement.union r s)
-      (Effects.Program.vis key (fun answer => Effects.Program.bind (next answer) f))
-    exact UsesOnly.vis key _ ((Row.mem_union key r s).mpr (Or.inl hkey)) ih
-
-end UsesOnlyLaws
+`ServiceKey.Carrier`, `ServiceKey.transport` (`docs/research/ENVIRONMENT-DAG.md` edge table); a
+service, a key bound to a value of its carrier under a supplied universe, is `Service` in
+`Machine/ContextMap.lean`. -/
 
 /-- **`ENV-KEY-INTERP`, the open edge.** Every typing statement about a service value is relative
 to a supplied universe, and nothing forces two callers to agree on one. `UniverseAgreement U V r`
-is what agreement on a row *would* be; no declaration of this module, and none of `Deep.Layer`,
-proves an instance of it or consumes one. It is named so the edge stays visible, not to close it
+is what agreement on a row *would* be; no declaration of the tree proves an instance of it or
+consumes one. It is named so the edge stays visible, not to close it
 (`docs/research/ENVIRONMENT-DAG.md:23-25`, `src/Effect4/Machine/Key.lean:35-38`). -/
 def UniverseAgreement (U V : ServiceUniverse.{u}) (r : Requirement) : Prop :=
   ∀ key : ServiceKey, key ∈ r → ServiceKey.Carrier U key = ServiceKey.Carrier V key
 
-/-! ## M4b — `Context/Environment`: the rows and the programs over the map
+/-! ## M4b — `Context/Environment`: the requirement rows over the map
 
 The map, its operations and its laws are `Machine/ContextMap.lean` (moved in the join,
 dependency cut L9; the names keep this namespace). What stays here reads the requirement
-rows or runs a service program. -/
+rows. -/
 
 namespace Context
 
@@ -188,18 +123,14 @@ def keysRow (self : Context U) : Requirement := Row.normalize self.keys
 def Satisfies (self : Context U) (r : Requirement) : Prop :=
   ∀ key : ServiceKey, key ∈ r → (self.get? key).isSome = true
 
-/-- The interpretation of a service program under an environment: every `vis key` is answered
-by `get?`; a missing key stops the run with `none` — the frontier `Context.getUnsafe` throws at.
-Total on `UsesOnly` programs under a satisfying environment (`interpret_total`). -/
-def interpret (self : Context U) {A : Type u} : ServiceProgram U A → Option A
-  | .pure value => some value
-  | .vis key next => (self.get? key).bind fun value => interpret self (next value)
-
 /-! ### `ENV-PG-CONTEXT`: the eleven laws of `PLAN.md`, environment / Context
 
 "pointwise extensionality, lookup at the same and distinct keys, merge associativity and
 identities, shadowing, satisfaction for empty/singleton/union, weakening, handler agreement, and
-total interpretation for `UsesOnly` programs under a satisfying environment." -/
+total interpretation for `UsesOnly` programs under a satisfying environment." Lookup, merge and
+shadowing are `Machine/ContextMap.lean`'s; extensionality, satisfaction and weakening are here.
+Handler agreement and total interpretation (laws 11a and 11b) were stated over the
+`Effects.Program` service model and were deleted with it on 2026-10-01 (module header). -/
 
 /-- Law 1 (extensionality). Two environments with the same lookups answer the same requirement
 row and the same value at every key. Insertion order is *not* recovered — `Equiv` is exactly what
@@ -245,37 +176,6 @@ theorem satisfies_union (self : Context U) (r s : Requirement) :
 theorem satisfies_weaken (self : Context U) {r s : Requirement} (h : self.Satisfies s)
     (hrs : Row.Subset r s) : self.Satisfies r :=
   fun key hk => h key (hrs key hk)
-
-/-- Law 11a (handler agreement): environments agreeing on `r` interpret a program using only
-`r` identically. -/
-theorem interpret_agree {A : Type u} {r : Requirement} {p : ServiceProgram U A}
-    (hp : UsesOnly r p) (a b : Context U) (h : ∀ key, key ∈ r → a.get? key = b.get? key) :
-    a.interpret p = b.interpret p := by
-  induction hp with
-  | pure value => rfl
-  | vis key next hkey _ ih =>
-    show (a.get? key).bind (fun value => a.interpret (next value)) =
-      (b.get? key).bind (fun value => b.interpret (next value))
-    rw [h key hkey]
-    cases b.get? key with
-    | none => rfl
-    | some value => exact ih value
-
-/-- Law 11b (total interpretation): a program using only `r` never meets a missing lookup under
-an environment satisfying `r`. -/
-theorem interpret_total {A : Type u} {r : Requirement} {p : ServiceProgram U A}
-    (hp : UsesOnly r p) (self : Context U) (hsat : self.Satisfies r) :
-    (self.interpret p).isSome = true := by
-  induction hp with
-  | pure value => rfl
-  | vis key next hkey _ ih =>
-    have hs := hsat key hkey
-    show ((self.get? key).bind fun value => self.interpret (next value)).isSome = true
-    cases hv : self.get? key with
-    | none =>
-      rw [hv] at hs
-      exact Bool.noConfusion hs
-    | some value => exact ih value
 
 end Context
 
@@ -401,13 +301,8 @@ theorem nat_ne_bool : (Nat : Type) ≠ Bool := by
 example : ¬ UniverseAgreement ⟨fun _ => Nat⟩ ⟨fun _ => Bool⟩ (Requirement.single scopeKey) :=
   fun h => nat_ne_bool (h scopeKey ((Row.mem_singleton scopeKey scopeKey).mpr rfl))
 
-/-- CE 4 (missing lookups): the empty environment answers nothing, and interpreting a request
-under it stops — no default is invented. -/
+/-- CE 4 (missing lookups): the empty environment answers nothing — no default is invented. -/
 example : (Context.empty : Ctx).getV scopeKey = none := rfl
-
-example :
-    (Context.empty : Ctx).interpret (Effects.Program.perform (S := serviceSig ValU) scopeKey) =
-      none := rfl
 
 /-- CE 5 (right-biased noncommutativity): `merge` is not commutative; the right operand wins. -/
 example :
