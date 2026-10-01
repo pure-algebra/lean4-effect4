@@ -1,0 +1,6 @@
+# probe: docs/research/2026-10-01-type-language-probe/S/rev5/UnionImageProbe.lean
+# date: 2026-10-01T18:46:15Z
+# command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/rev5/UnionImageProbe.lean
+# toolchain: leanprover/lean4:v4.33.1
+# sha256: d5f5ef2f04b14bd198f4c077447955793839e6a16b05f83a69fdfa0b95836199
+# exit=0 seconds=2

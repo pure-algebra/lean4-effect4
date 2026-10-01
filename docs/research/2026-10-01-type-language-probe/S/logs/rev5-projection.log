@@ -1,0 +1,11 @@
+# probe: docs/research/2026-10-01-type-language-probe/S/rev5/ConstructiveProjectionProbe.lean
+# date: 2026-10-01T18:46:13Z
+# command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/rev5/ConstructiveProjectionProbe.lean
+# toolchain: leanprover/lean4:v4.33.1
+# sha256: c92a4b6f842b19de0864181a32d9b2338aeb70a7e2249e09439e697bbcb5724b
+'ConstructiveProjection.stringLt' does not depend on any axioms
+'ConstructiveProjection.typeCheck' depends on axioms: [propext]
+'ConstructiveProjection.eval' depends on axioms: [propext]
+'ConstructiveProjection.insertSorted_mapPayload' does not depend on any axioms
+'ConstructiveProjection.sortFields_mapPayload' depends on axioms: [propext]
+# exit=0 seconds=2
