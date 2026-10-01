@@ -99,7 +99,9 @@ connectors and the observation erasure (`40e3bfa3`), the memo write-back deletio
 The last, the trace agreement, is to hold by construction: the fork record moves from the fiber to
 an append-only list on the machine that only `spawn` writes. The plan,
 [`origin ledger and step invariants`](research/2026-09-30-origin-ledger-and-step-invariants-plan.md),
-is reviewed three times and its decisions are rows 91–94.
+is reviewed three times and its decisions are rows 91–94. The ledger landed on 2026-10-01 (Codex
+item C, merged at `bc77e97f`): every reader moved, the old field and the comparison runner retired
+together, the engine regenerated. The trace agreement through it is D's next item.
 
 **Foundation completion (2026-09-30).** The same reviews, and a probe of the external-reply lane,
 found three things:
@@ -221,8 +223,8 @@ completed-cleanup receipt, since the closed bit is set before cleanup runs; no w
 fixed point for deadlock; load inputs as a congruence law). The owner ruled: H2 part one go, D1–D6
 as amended. Recorded: rows 111–118, row 107 and row 21;
 [addendum 5](research/2026-09-30-codex-brief-slice6-addendum-5.md) to Codex. Meanwhile Codex
-landed A (`90df5d21`) and C's steps 3–4 (`be6631ab`, `e5cc184b`) on its branch; C's step 5 is in
-progress, and the merge follows it. Four rulings the owner gave Codex directly on 2026-10-01 are
+landed A (`90df5d21`) and C (`be6631ab`, `e5cc184b`, `f05a6ace`) on its branch, merged at
+`bc77e97f` with the audit. Four rulings the owner gave Codex directly on 2026-10-01 are
 recorded in addendum 5's amendments and rows 91 and 107: part one's clause excludes `badName` and
 `notImplemented` only (the addendum had stated the full clause, which part two holds); the engine
 prelude and the engine tests join C's checklist; two more closure manifests and the `ForkRecord`
@@ -240,8 +242,8 @@ Decision row 90 is ruled and landed (2026-09-24): contexts are typed by their ke
 service types, which is what the checker uses (the recommendation's per-fiber premise was wrong
 and is corrected in the register). Slice 5 landed the same day ([landing record](research/2026-09-24-foundations-slice5-landing.md)):
 the stack walk is proved type-preserving with no run premise, delivery and the hook laws are proved,
-the typed state is assembled, and the transition ledger is declared per command. Slice 6 is in
-progress in the coordinator session. The open choices from 2026-09-30 are decisions rows 91–101 (the fork ledger 91–94; the host boundary and its connections 95–101); rows 102–103 (the documentation homes) are ruled. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
+the typed state is assembled, and the transition ledger is declared per command. Slice 6's fork
+ledger landed on 2026-10-01 (rows 91–92). The open choices from 2026-09-30 are rows 93–94 (the trace agreement and its automation) and the host boundary and its connections (rows 95–101); rows 102–103 (the documentation homes) are ruled. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
 found that the program judgment refused most programs the checker admits; the census and the
 dynamic lane landed on your ruling (8,584 typed programs, 34,336 runs, no exit outside its
 checked type), and the [protocol repair](research/2026-09-24-typed-state-protocol-repair.md)

@@ -74,7 +74,7 @@ paragraph says what the words mean. Sources: the model probe
 | 4. Choices as data | Every scheduling, timing and host-answer choice is a decision; a run's journal replays it. | `Run.lean`, `Api/Runner.lean` | proved: `replay_unique`, `journal_replays` |
 | 5. The typed-state guarantee | A checked program never reaches a malformed state, and every fiber finishes at its type. | `docs/core/post-phase-c-synthesis.md`; `Laws/Program/Typed/` | slices 1–5 proved (world, admission, protocols, stack walk, delivery, assembly); M5–M7 open. As stated, M5 and M6 are false even on programs that use no host (four registered counterexamples); the bounded repairs are rows 95–96 (landed 2026-09-30) and 104–107 (in flight; `docs/STATE.md`) |
 | 6. The host boundary | Host services are rows in a table. A program's call parks a fiber; the host answers through one keyed session that checks each reply and prepares it. | `docs/core/host-boundary.md` | exists: session, envelope, admission, preparation. Next: the interim handle rule that closes the live hole (row 97). The full host-services contract is parked until needed |
-| 7. State and storage | The machine's state families, each owned by one of six storage interfaces with laws; facts fixed at creation in append-only ledgers; derived views, such as a handle's declared type, computed from ledgers and the checker. | `docs/core/machine-state.md` §7 | arena laws and `Projects`/`Refines` proved; the fork ledger is next (row 91); the registry and further storage instances are parked (rows 97, 101) |
+| 7. State and storage | The machine's state families, each owned by one of six storage interfaces with laws; facts fixed at creation in append-only ledgers; derived views, such as a handle's declared type, computed from ledgers and the checker. | `docs/core/machine-state.md` §7 | arena laws and `Projects`/`Refines` proved; the fork ledger landed 2026-10-01 (row 91; `Laws/Machine/ForkLedger.lean`, written by `spawn` only, the old per-fiber field gone); the trace agreement through it is next (row 93); the registry and further storage instances are parked (rows 97, 101) |
 | 8. Compilation | Three compilations: a program to the machine's first-order runtime code (`compileEff`); the Lean machine itself to OCaml through Lean's LCNF (OCaml is made only from LCNF); a program to and from Effect TypeScript. Each stage is a named connection with its own evidence. | `docs/core/lcnf-route.md` §8 | printer/reader laws and completeness over the template table proved; the OCaml engine checked by differential runs (finite); number policy mixed; rows 28/29/31 open |
 | 9. Faithfulness to Effect | The pinned vendor source, the runtime census and its coverage report, the truth harness against real Effect runs, signed divergences (`U-01`). | `docs/RUNTIME-COVERAGE.md`, `docs/UPSTREAM-BACKLOG.md` | exists; coverage is quoted only from the report |
 | 10. Authoring and use | A named authoring surface elaborated once into `Eff`; a certificate-first API; the MCP face after LCNF, by the owner's order. | `docs/core/api-surface.md` | exists in part; ergonomic run APIs and MCP authoring are the next expansion |
@@ -88,8 +88,9 @@ TypeScript. Every arrow is one of the kinds in §5 with its obligation met, or i
 ## 3. Where it is going (the owner's route, 2026-09-30)
 
 **Now: finish the foundation, small.**
-1. **Slice 6's last item:** the fork ledger and the trace agreement
-   (`docs/research/2026-09-30-origin-ledger-and-step-invariants-plan.md`; rows 91–94).
+1. **Slice 6's last item:** the fork ledger, landed 2026-10-01 (rows 91–92), and the trace
+   agreement through it, next (rows 93–94; D's held users)
+   (`docs/research/2026-09-30-origin-ledger-and-step-invariants-plan.md`).
 2. **Three bounded fixes found on 2026-09-30:**
    - M6's finish line covers runs with no host answers (row 95; landed 2026-09-30);
    - the proof's value check looks inside pairs, Results and exits (row 96; proof side only;
