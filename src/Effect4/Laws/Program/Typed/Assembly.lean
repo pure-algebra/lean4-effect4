@@ -1517,6 +1517,14 @@ namespace M6Stack
 theorem stackAccepts_mono (root : ProgramSource) : ProofGraph.Obligation (StackMono root) := ⟨⟩
 theorem savedOk_mono (root : ProgramSource) : ProofGraph.Obligation (SavedMono root) := ⟨⟩
 
+/-- Row 87's transport for the bundle's `SavedOk` at a position the world declares (seat B's
+ledger line; B proved it against the base's bundle as
+`Test.Program.FramesNotKripke.preds_savedOk_mono`). Here `SavedOk` is the stack and the
+provenance, so it follows from `stackAccepts_mono` once frames are closed under world growth. -/
+theorem preds_savedOk_mono (root : ProgramSource) (w w' : World) (e : Expect) (x : RSaved) :
+    ProofGraph.Obligation (w.leHost w' → (expectOf w e).isSome = true →
+      (preds root).SavedOk w e x → (preds root).SavedOk w' e x) := ⟨⟩
+
 end M6Stack
 
 end Effect4.Program.Typed
@@ -1573,5 +1581,6 @@ end Effect4.Program.Typed
   using aesop (rule_sets := [Effect4.TypedState])
 #proof_wanted Effect4.Program.Typed.M6Stack.stackAccepts_mono
 #proof_wanted Effect4.Program.Typed.M6Stack.savedOk_mono
-#typed_state_obligations Effect4.Program.Typed.M6Stack ceiling 2
+#proof_wanted Effect4.Program.Typed.M6Stack.preds_savedOk_mono
+#typed_state_obligations Effect4.Program.Typed.M6Stack ceiling 3
   using aesop (rule_sets := [Effect4.TypedState])
