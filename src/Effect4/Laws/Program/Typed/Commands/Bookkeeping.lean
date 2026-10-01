@@ -2513,7 +2513,7 @@ side; this proof then takes the first half (`((fitsExit_failure_iff w ty c).mp h
 caller changes. -/
 theorem failureFits_cause {w : World} {ty : EffTy} {c : CauseV} (h : FitsExit w ty (.failure c)) :
     FitsCause w ty.error c :=
-  (fitsExit_failure_iff w ty c).mp h
+  ((fitsExit_failure_iff w ty c).mp h).1
 
 /-- A failed exit's membership from its error-column half and part one's exclusion: this seat's
 one construction through `fitsExit_failure_iff`. Under row 152 the proof passes the exclusion
@@ -2521,7 +2521,7 @@ too (`.mpr ⟨h, _shape⟩`, `NoShapeDefect`'s failure arm being `ShapeFree` by 
 caller changes. -/
 theorem failureFits_of_cause {w : World} {ty : EffTy} {c : CauseV} (h : FitsCause w ty.error c)
     (_shape : NoShapeDefect ty (.failure c)) : FitsExit w ty (.failure c) :=
-  (fitsExit_failure_iff w ty c).mpr h
+  (fitsExit_failure_iff w ty c).mpr ⟨h, _shape⟩
 
 /-- A failure built from two typed failures' reasons is typed. -/
 theorem exitOk_failure_append {w : World} {ty : EffTy} {a b : List (Reason Err Defect FiberId Ann)}
