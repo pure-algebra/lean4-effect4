@@ -270,6 +270,26 @@ and `slice3-axioms` reports the retained law at `[propext, Quot.sound]` or less.
 output is hand-edited and no duplicate-key behavior is introduced.
 
 
+
+#### Slice 4 — move the renderer downstream
+
+Base `3d5ea883`; this commit is the final source checkpoint, with the producer chain and
+final comparisons still pending. `Schema/OfShape.lean` owns the one unchanged Store renderer,
+the identifier/ref keys and ShapeDoc.document. Pure Shape no longer imports Schema.
+Canonical.document stays in Domain/Canonical; schema-node and address construction stay in
+Domain/Node and Genesis. No carrier, canonical encoder, public renderer name or runtime
+behavior changes. Four existing guards move beside their owner; the two key laws retain their
+statements with explicit Json cases. Independent source comparisons confirm the retained
+operational definitions and key definitions are identical.
+
+`slice4-source` passes the twelve named source/test/producer targets (127 jobs), including
+NodeContract's existing exact genesis and entry-address guards. `slice4-axioms` confirms both
+key laws at the ceiling. Row 8's duplicate/conflicting-key behavior is deliberately unchanged:
+addendum 6 dispatches deletion and relocation only; changing raw documents or their addresses
+would be an additional semantic amendment, not a deletion. The final CAS byte comparison
+will check the preserved observation. Coordinator prose changes remain in the separate proposal.
+
+
 ## After addendum 5
 
 **The one thing first.** C is merged into `refactor/phase1-phase3` at `bc77e97f`, with

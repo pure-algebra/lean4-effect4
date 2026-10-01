@@ -16,6 +16,7 @@ import Effect4.Codegen.Schema
 import Effect4.Codegen.Target
 import Effect4.Store.Domain.Cascade
 import Effect4.Schema.Bridge
+import Effect4.Schema.OfShape
 import Effect4.Schema.Codec
 
 /-!

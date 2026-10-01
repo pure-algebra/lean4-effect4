@@ -1,5 +1,5 @@
 import Effect4.Schema.Bridge
-import Effect4.Store.Domain.Shape
+import Effect4.Schema.OfShape
 
 /-!
 # Dialect contract — the store's shapes against the program's types, through the schema

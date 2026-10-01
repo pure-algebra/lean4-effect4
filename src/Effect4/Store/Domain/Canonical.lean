@@ -1,4 +1,5 @@
 import Effect4.Store.Domain.Shape
+import Effect4.Schema.OfShape
 import Effect4.Store.Carrier.Image
 
 /-!
@@ -104,7 +105,8 @@ def digest (a : α) : Digest := sha256 (encode a)
 a collision, and is never assumed. -/
 theorem digest_congr {a b : α} (h : a = b) : digest a = digest b := congrArg digest h
 
-/-- The spec of a carrier's shape. -/
+/-- The raw schema document of a carrier's shape, owned here in Store Domain
+and rendered by the downstream Schema.OfShape arrow. -/
 def document (α : Type) [Canonical α] : Effect4.Document := (shape α).document
 
 /-- The JSON of a carrier, read off its shape. -/

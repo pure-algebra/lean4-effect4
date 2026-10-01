@@ -1,4 +1,5 @@
 import Effect4.Schema.Authoring
+import Effect4.Schema.OfShape
 import Effect4.Schema.Fold
 import TypeScript
 
