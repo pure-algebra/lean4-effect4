@@ -213,12 +213,26 @@ Neither route supplies a self-application theorem.
 The TypeScript face prints `nat` as a JavaScript number, exact only up to 2^53. The profile's
 `natBound` (`Program/Profile.lean:90`, DI-56) bounds requests and answers, not intermediate values.
 
-So the three faces agree only on a bounded range, and the policy for intermediate values is not
-yet stated. The choice is between an exact representation on the native face and a bounded
-profile with checked intermediate arithmetic. The numbers seat of the 2026-09-30 pass
-(`docs/research/2026-09-30-pass/numbers/`) is assessing that choice, and what the verified
-floating-point library FloatLib (arXiv 2609.19352) offers. Floating point does not make natural
-numbers exact; its place is modeling Effect's JavaScript `number` behavior.
+So the three faces agree only on a bounded range, and none refuses outside it. The numbers seat
+of the 2026-09-30 pass (`docs/research/2026-09-30-pass/numbers/`) ran one checked program with
+small literals on all three and got three different answers. DI-56's ruling stands: inside its
+profile each face equals the exact Lean reference, and outside it the face refuses, intermediate
+values included. The implementation plan is decisions row 108 (open; the owner places it, before
+WASM at the latest).
+- **The refusal is written once in Lean**, with the bound as data, so that OCaml and WASM
+  inherit it.
+- **Checked TypeScript atoms.**
+- **Exact native naturals only if a native use needs them.**
+
+The side audit (`docs/research/2026-09-30-side-audit/`) adds two requirements:
+- **The arithmetic boundary includes the store functions and the values stored in cells**
+  (`incr`, `double`, `takeAndBump`, reached through Ref updates), not only the term atoms.
+- **A refusal is kept outside the program's result,** so that a `catchCause` or `exit` cannot hide
+  it. The clock boundary (`harness/truth/session/clock.ts`) already works this way.
+
+Floating point does not make natural numbers exact. FloatLib (arXiv 2609.19352) is a source of
+methods, not a dependency (row 109): a proved equation for every compiler substitution, and fast
+paths that carry their proof.
 
 Rows 28, 29 and 31 remain open: full proof or a fragment-and-rule strategy, the common target and
 legalization design, and TypeScript read-back ordering.

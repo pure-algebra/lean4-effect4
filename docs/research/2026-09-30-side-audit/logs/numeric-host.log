@@ -1,0 +1,7 @@
+red: uncaught profile defect {"_id":"Exit","_tag":"Failure","cause":{"_id":"Cause","failures":[{"_tag":"Die","defect":{"category":"outsideProfile","_tag":"ProfileRefusal"}}]}}
+catchCause hides profile refusal {"_id":"Exit","_tag":"Success","value":7}
+exit then discard hides profile refusal {"_id":"Exit","_tag":"Success","value":7}
+Ref updates bypass atoms and return safe bool {"_id":"Exit","_tag":"Success","value":true}
+exact Ref comparison false
+exact printer Ref expression {"_id":"Exit","_tag":"Success","value":true}
+exact printer catchCause expression with T1 add {"_id":"Exit","_tag":"Success","value":7}

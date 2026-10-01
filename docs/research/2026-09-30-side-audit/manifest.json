@@ -1,0 +1,28 @@
+{
+  "reviewStart": "bbdbb7acb6cf0881e43ad47500b0809ef9dd71f0",
+  "reviewedHead": "0f16828aba1d6d811701286b204c79218f73fb3b",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "sourceSha256": {
+    "src/Effect4/Laws/Program/Typed/Assembly.lean": "3d1d2ac3fef84d888cc32d2dafc1abfeb42f819fe044d018ff6a4d7cec438bb1",
+    "src/Effect4/Laws/Program/Typed/Sources.lean": "9b889e21d2549722797f29bb19cc5fad9a2cb872922444a5451ab14255ad7ced",
+    "src/Effect4/Laws/Program/Typed/Validity.lean": "95938d367ba789666b139a72371fe396f222f1fd100d1bb5369a6824eff39995",
+    "src/Effect4/Laws/Program/Typed/Residual.lean": "016a157c0f9995223c3be38f33ed9c2c55c6e940d0e3f99696f87e519fec4673",
+    "src/Effect4/Machine/Fibers.lean": "93729b2c2e391422305164ccc7cb7c788e7b58c786e37bd56d096ca6d2c42b69",
+    "src/Effect4/Program/Provision.lean": "2d852f35431aaa78b8ecf581ae9c1375c04a7b9d95b260ab4d180a452e605d2a",
+    "Test/Program/ProvisionContract.lean": "4e7e860f57250a6ddfba3e47212b397cf689cb9f571854511db2e164ff6dbfde",
+    "src/Effect4/Program/Checker.lean": "9e9d9fac718cd97e5ffa82cf0293427162ce38684099b9f7b166a15609ba4751",
+    "src/Effect4/Machine/Stores.lean": "14910f1c27626f3ddd66bf5d98b1e74a526f8671df3966149d24503c9845cdc4",
+    "src/Effect4/Program/Typed.lean": "de510c59c9fb211d9d59c687aeaefe7bd0fe8970ff1427e1579402fba0b9a625",
+    "harness/truth/prelude.ts": "9d0ee3d164cb7095f7df03d101d4af2dab5bc4d275bbb108b134db140eddf6f5",
+    "harness/truth/session/clock.ts": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01",
+    "docs/research/2026-09-30-codex-brief-slice6-addendum-2.md": "b6373e3647fcc071c4396277f3ff2e2b0fc51be0a05b373c1cc620ffcb52e7a0",
+    "docs/research/2026-09-30-pass/membership/Fits.lean": "3f326695d4039756beb952abb3947579c4fb5dd1330e4958cbc551a6134e4cf5",
+    "docs/research/2026-09-30-pass/lift/verify.md": "18722dcabf230dab365d999aa38bdf9caa7bec22b7947b11b80fb74a809f983d",
+    "docs/research/2026-09-30-pass/synthesis.md": "a7da26661d3e036513821b5ed67d471a82b8b37fa2bce6cc2a71c9829cf31a88"
+  },
+  "notes": [
+    "HEAD advanced through documentation changes only during audit.",
+    "Standalone Lean runs use an isolated APFS clone of existing compiled libraries. No lake, builds, generators, commits or external messages.",
+    "ContextBridge copies research membership definitions through FitsExit verbatim; it tests a proposed unqualified bridge, not the admitted host profile."
+  ]
+}

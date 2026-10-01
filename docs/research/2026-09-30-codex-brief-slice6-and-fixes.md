@@ -1,6 +1,6 @@
 # Brief for Codex: slice 6 and the three bounded fixes
 
-**Amended by [addendum 1](2026-09-30-codex-brief-slice6-addendum-1.md)** (items A–C, after the design pass) **and extended by [addendum 2](2026-09-30-codex-brief-slice6-addendum-2.md)** (items D–H, the owner's rulings). Read all three; the later document wins where they differ.
+**Amended by [addendum 1](2026-09-30-codex-brief-slice6-addendum-1.md)** (items A–C, after the design pass) **and extended by [addendum 2](2026-09-30-codex-brief-slice6-addendum-2.md)** (items D–H, the owner's rulings) **and [addendum 3](2026-09-30-codex-brief-slice6-addendum-3.md)** (G and H after Codex's side audit). Read all four; the later document wins where they differ.
 
 Repo `lean4-effect4`, Lean `v4.33.1`. **Worktree `/Users/pooks/Dev/lean4-effect4-slice6`, branch
 `codex/slice6-fixes`**, made by the coordinator from `refactor/phase1-phase3` at the commit that

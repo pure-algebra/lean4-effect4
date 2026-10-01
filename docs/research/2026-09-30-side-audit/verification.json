@@ -1,0 +1,73 @@
+{
+  "libraries": "isolated compiled-library snapshot",
+  "results": [
+    {
+      "file": "BadDefectCurrent.lean",
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/visualizations/2026/10/01/01a0f4f6-17d1-7860-a620-1505f12298c0/effect4-side-audit/probes/BadDefectCurrent.lean"
+      ],
+      "exit": 0
+    },
+    {
+      "file": "ContextBridge.lean",
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/visualizations/2026/10/01/01a0f4f6-17d1-7860-a620-1505f12298c0/effect4-side-audit/probes/ContextBridge.lean"
+      ],
+      "exit": 0
+    },
+    {
+      "file": "LayerControls.lean",
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/visualizations/2026/10/01/01a0f4f6-17d1-7860-a620-1505f12298c0/effect4-side-audit/probes/LayerControls.lean"
+      ],
+      "exit": 0
+    },
+    {
+      "file": "ProvisionProbe.lean",
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/visualizations/2026/10/01/01a0f4f6-17d1-7860-a620-1505f12298c0/effect4-side-audit/probes/ProvisionProbe.lean"
+      ],
+      "exit": 0
+    },
+    {
+      "file": "RefUpdates.lean",
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/visualizations/2026/10/01/01a0f4f6-17d1-7860-a620-1505f12298c0/effect4-side-audit/probes/RefUpdates.lean"
+      ],
+      "exit": 0
+    },
+    {
+      "file": "TokenFinish.lean",
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/visualizations/2026/10/01/01a0f4f6-17d1-7860-a620-1505f12298c0/effect4-side-audit/probes/TokenFinish.lean"
+      ],
+      "exit": 0
+    },
+    {
+      "file": "refusal-probe.ts",
+      "command": [
+        "bun",
+        "/Users/pooks/.codex/visualizations/2026/10/01/01a0f4f6-17d1-7860-a620-1505f12298c0/effect4-side-audit/probes/refusal-probe.ts"
+      ],
+      "exit": 0
+    }
+  ]
+}

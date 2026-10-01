@@ -159,7 +159,15 @@ The owner ruled rows 96, 104–107 and 110 the same day.
 - E: the `Fits` judgment;
 - H: fresh tokens and the exit clause in M6's statement.
 
-The M5–M7 proofs are the next brief. Row 108 (numbers) is open.
+[Addendum 3](research/2026-09-30-codex-brief-slice6-addendum-3.md) follows Codex's
+[side audit](research/2026-09-30-side-audit/audit.md); its probes were rerun clean.
+- G moves two provision fixtures.
+- H splits in two:
+  - H1: M6's queue fact types every queued command and carries the guard's per-command
+    conditions;
+  - H2: "never goes wrong" lives in the exit judgment that every typed position reads.
+
+The M5–M7 proofs are the next brief. Row 108 (numbers) is open, with the audit's two additions.
 
 ## What the owner must decide
 

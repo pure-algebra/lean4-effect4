@@ -1,0 +1,20 @@
+{
+  "audit.md": "e4cf6db80adf19408d7edff3c4731f8c4f19f5340190e303cf444dd65596e06a",
+  "logs/BadDefectCurrent.log": "a64d748fde241160560abc79ed3471f35559ef5b5071c3508ff4ad9f14c28cd3",
+  "logs/ContextBridge.log": "46c5cbc47b56d2f65bd5f199bf327d3339c57adfa1dc2fce833bf53eb0934586",
+  "logs/LayerControls.log": "0ea6b7a1680fcbeca2c6ff4a41abe48aa8be29ff7bd4985c595111ba5ce80b1e",
+  "logs/ProvisionProbe.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "logs/RefUpdates.log": "ca8fb687df8fde75e6c1dac46a712934186ff567138a9d1a2865967befc7ecd5",
+  "logs/TokenFinish.log": "28ce8da97d37c0ba07c2edbd66c0c3f43fd8f015bda5b33ef5321cf783ad6e69",
+  "logs/numeric-host.log": "4c37a95b2a892d5cb75a4daef9cbbb115ebb0db0e0f74186e29db1904db9e437",
+  "manifest.json": "a0574b497e4b0f55ae85edbe3977f4a5cc42f5137fbee799c3567c3ce784a160",
+  "probes/BadDefectCurrent.lean": "248bea200ed833f27c70ef63f40e57640ffae0001c34dd51f9334a6ac99b4ed1",
+  "probes/ContextBridge.lean": "1d8879a7b41c286b942fb293aa01aa2548c637561079515456855ec7bd6a6822",
+  "probes/LayerControls.lean": "558f0a33291077d92feeb0945100ea7b13290b54dfbcd1926124dede31a799ee",
+  "probes/ProvisionProbe.lean": "8c4272f1d34b60871871984d5fe7a5e40f33ad80400ed7a68f5118da1584f235",
+  "probes/RefUpdates.lean": "8d7cf720afd3ac2422331cf4c3fceebb49cc494c149c9bb18e6e2d6905808864",
+  "probes/TokenFinish.lean": "971000b2ebf0bfa6dbd8ea31494741b906cab386c92841ef9e9bd24387f8c4e1",
+  "probes/refusal-probe.ts": "62934305540ac7264b25ee4db112d92ec6afeb5c1726f0f7a8ee065711b7032f",
+  "verification.json": "f04701e8749f8d95efcabd82d877f4e07180c76ac82c6c48eba81372b01b493e",
+  "verify.py": "32df4676d32fe4d68228b3a6f0ad99c5f637944adf32437b3a8a55dfb33aa4d4"
+}
