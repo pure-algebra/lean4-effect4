@@ -1,0 +1,6 @@
+# bun 1.4.2, oxc-parser 0.147.0; bun scripts/form_census.ts check scripts/fixtures/module-types.ts scripts/fixtures/module-types.expected.tsv
+ok   T.moduleTypeRef expected 3 got 3
+ok   T.moduleTypeRef.generic expected 2 got 2
+ok   R.Option.Option expected 1 got 1
+ALL OK
+exit=0

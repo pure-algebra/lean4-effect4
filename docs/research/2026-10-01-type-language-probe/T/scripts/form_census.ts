@@ -95,6 +95,8 @@ const CATEGORIES: ReadonlyArray<readonly [string, string]> = [
   ["T.recursive.viaFunction", "recursive only through function types or method signatures (not data recursion)"],
   ["T.recursive.data", "recursive data: neither of the two above"],
   ["T.enum", "enum declaration"],
+  ["T.moduleTypeRef", "type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)"],
+  ["T.moduleTypeRef.generic", "the same, with type arguments"],
   // classes
   ["C.class", "class declaration or expression"],
   ["C.dataTaggedError", "extends Data.TaggedError(...)"],
@@ -148,6 +150,17 @@ const EFFECT_TYPE_MODULES = [
   "SynchronizedRef", "TxRef", "Cache", "Pool", "KeyValueStore", "FiberMap", "FiberSet", "FiberHandle",
   "RcMap", "RcRef", "ScopedCache", "BigDecimal", "Encoding", "Trie", "MutableHashMap", "MutableRef",
   "ServiceMap", "SchemaIssue", "Types", "Record", "Array", "Struct", "Predicate", "Match",
+]
+/** Effect modules whose types `Ty` spells today only as a rendered handle string or not at all (no constructor):
+ * every `M.T` reference to one of them counts as `T.moduleTypeRef`. Option, Result, Exit, Cause, Fiber, Ref and
+ * Deferred have constructors; Effect, Schema, Types, Data, Brand, Equal, Predicate, Match, Struct, Array, Record
+ * are not data or service types and are left out. */
+const NONCTOR_MODULES = [
+  "Stream", "Layer", "Duration", "Redacted", "Scope", "Context", "Config", "DateTime", "Queue", "PubSub", "Schedule",
+  "Sink", "Channel", "Semaphore", "Latch", "Cache", "ScopedCache", "Chunk", "HashMap", "HashSet", "Mailbox", "Pool",
+  "Tracer", "Logger", "Metric", "Request", "SubscriptionRef", "SynchronizedRef", "TxRef", "FiberSet", "FiberMap",
+  "FiberHandle", "RcMap", "RcRef", "KeyValueStore", "MutableHashMap", "MutableRef", "BigDecimal", "Clock", "Random",
+  "ServiceMap", "Trie",
 ]
 /** Bare (unqualified) type names counted as references. */
 const BARE_TYPES = [
@@ -448,6 +461,10 @@ export function countText(path: string, text: string): {
       case "TSTypeReference": {
         const name = entityText(n.typeName)
         const parts = name.split(".")
+        if (parts.length >= 2 && NONCTOR_MODULES.includes(parts[0]!)) {
+          bump(c, "T.moduleTypeRef")
+          if ((n.typeArguments?.params ?? []).length > 0) bump(c, "T.moduleTypeRef.generic")
+        }
         if (parts.length >= 2 && EFFECT_TYPE_MODULES.includes(parts[0]!)) {
           bump(c, "R." + parts[0])
           bump(c, "R." + parts.slice(0, 2).join("."))

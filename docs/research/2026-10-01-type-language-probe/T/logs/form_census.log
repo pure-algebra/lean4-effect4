@@ -1,9 +1,9 @@
-# form census over oxc-parser 0.147.0 trees (syntax only; bun 1.4.2), 2026-10-01T18:44:14.619Z
+# form census over oxc-parser 0.147.0 trees (syntax only; bun 1.4.2), 2026-10-01T18:57:15.852Z
 ## probe: 5 files (0 unreadable, 0 with oxc parse errors), 1 projects, 5 files import effect or @effect/*
 ### probe: per file, nonzero categories (T., C., E. only)
 - 2026-09-30-model-probe/programs/ts/p1-http-cache.ts: C.class=2 C.dataTaggedError=2 C.taggedError.nameIsTag=2 C.taggedError.fieldsN=2 T.typeLiteral=2 T.prop=5 T.prop.readonly=5 T.kw.number=3 T.kw.string=5 T.interface=1 E.object=9 E.newError=3 T.union=3 E.durationString=3
-- 2026-09-30-model-probe/programs/ts/p2-handler-layers.ts: E.object=10 E.array=1 T.typeof=1 T.typeof.schemaType=1 C.class=5 C.dataTaggedError=2 C.taggedError.nameIsTag=2 C.taggedError.fieldsN=2 T.typeLiteral=4 T.prop=7 T.prop.readonly=7 T.kw.number=7 T.kw.string=5 C.service=3 T.typeArgs.call=5 T.prop.function=1 T.function=1 T.union=3 E.template=2 E.undefined=1 T.generic.fn=1 T.interface=1
-- 2026-09-30-model-probe/programs/ts/p3-worker-queue.ts: T.interface=2 T.prop=5 T.prop.readonly=5 T.kw.number=10 T.kw.string=6 C.class=1 C.dataTaggedError=1 C.taggedError.nameIsTag=1 C.taggedError.fieldsN=1 T.typeLiteral=1 T.array.readonly=4 E.array=5 E.template=5 E.object=9 E.durationString=1 T.kw.void=3 T.tuple=1 T.tuple.arity2=1 T.kw.boolean=1 E.undefined=1 T.typeArgs.call=3
+- 2026-09-30-model-probe/programs/ts/p2-handler-layers.ts: E.object=10 E.array=1 T.typeof=1 T.typeof.schemaType=1 C.class=5 C.dataTaggedError=2 C.taggedError.nameIsTag=2 C.taggedError.fieldsN=2 T.typeLiteral=4 T.prop=7 T.prop.readonly=7 T.kw.number=7 T.kw.string=5 C.service=3 T.typeArgs.call=5 T.prop.function=1 T.function=1 T.union=3 E.template=2 E.undefined=1 T.generic.fn=1 T.interface=1 T.moduleTypeRef=1
+- 2026-09-30-model-probe/programs/ts/p3-worker-queue.ts: T.interface=2 T.prop=5 T.prop.readonly=5 T.kw.number=10 T.kw.string=6 C.class=1 C.dataTaggedError=1 C.taggedError.nameIsTag=1 C.taggedError.fieldsN=1 T.typeLiteral=1 T.array.readonly=4 E.array=5 E.template=5 E.object=9 E.durationString=1 T.kw.void=3 T.tuple=1 T.tuple.arity2=1 T.kw.boolean=1 E.undefined=1 T.moduleTypeRef=1 T.moduleTypeRef.generic=1 T.typeArgs.call=3
 - 2026-09-30-model-probe/programs/ts/p4-rate-limiter.ts: T.interface=1 T.prop=3 T.prop.readonly=3 T.kw.number=8 T.tuple=2 T.tuple.arity2=1 T.kw.boolean=1 E.array=4 E.object=5 E.object.spread=3 T.typeArgs.call=1 T.tuple.readonly=1 T.tuple.arity3plus=1
 - 2026-09-30-model-probe/programs/ts/p5-ledger-service.ts: T.union=1 T.union.tagged=1 T.union.discriminated=1 T.typeLiteral=4 T.typeLiteral.tagged=2 T.prop=13 T.prop.readonly=13 T.lit.string=2 T.kw.number=14 T.interface=1 T.kw.string=4 T.array.readonly=4 C.class=2 C.dataTaggedError=1 C.taggedError.nameIsTag=1 C.taggedError.fieldsN=1 T.function=5 T.kw.void=2 C.service=1 T.typeArgs.call=5 T.prop.function=3 T.kw.never=1 E.object=8 E.array=13 T.generic.fn=1 T.tuple=4 T.tuple.readonly=3 T.tuple.arity2=3 E.object.spread=2 T.tuple.arity3plus=1
 ### probe: categories
@@ -75,6 +75,8 @@ T.recursive.computed	0	0	0	0	recursive, with a mapped or conditional type in its
 T.recursive.viaFunction	0	0	0	0	recursive only through function types or method signatures (not data recursion)
 T.recursive.data	0	0	0	0	recursive data: neither of the two above
 T.enum	0	0	0	0	enum declaration
+T.moduleTypeRef	2	2	1	2	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	1	1	1	1	the same, with type arguments
 C.class	10	4	1	4	class declaration or expression
 C.dataTaggedError	6	4	1	4	extends Data.TaggedError(...)
 C.dataError	0	0	0	0	extends Data.Error
@@ -191,7 +193,7 @@ SqliteClient	1	1
 ### dogfood: per file, nonzero categories (T., C., E. only)
 - 2026-09-15-dogfood-1-evidence/idiomatic_rate_limiter.ts: E.array=2 E.object=1
 - 2026-09-15-dogfood-2-evidence/idiomatic_job_queue.ts: C.class=3 C.dataTaggedError=2 C.taggedError.nameNotTag=2 C.taggedError.messageOnly=2 T.typeLiteral=3 T.prop=3 T.kw.string=2 C.service=1 T.typeArgs.call=1 T.prop.readonly=1 T.prop.function=1 T.function=1 T.kw.number=3 T.union=1 E.durationString=1 E.array=2
-- 2026-09-15-dogfood-3-evidence/idiomatic_session_cache.ts: C.class=5 C.service=5 T.typeArgs.call=5 T.kw.number=4 T.kw.string=1 E.undefined=2 E.array=3
+- 2026-09-15-dogfood-3-evidence/idiomatic_session_cache.ts: C.class=5 C.service=5 T.typeArgs.call=5 T.moduleTypeRef=1 T.kw.number=4 T.kw.string=1 E.undefined=2 E.array=3
 - 2026-09-16-dogfood-6-evidence/library-counter.ts: E.object=11
 - 2026-09-16-dogfood-6-evidence/library-quicklook.ts: E.object=17
 - 2026-09-16-dogfood-6-evidence/library-run.ts: T.recordType.stringKey=1 T.recordType.untypedValue=1 T.kw.string=12 T.kw.unknown=1 E.jsonStringify=1 T.typeLiteral=1 T.prop=1 T.prop.readonly=1 T.kw.any=15 T.function=1 T.kw.boolean=1 E.durationString=6 T.array=7 E.array=11 E.undefined=2 E.object=130 T.array.readonly=1 E.template=3 E.object.spread=6 T.union=1 T.union.literals=1 T.lit.string=3 T.typeArgs.call=2 E.newMap=1 T.kw.number=4
@@ -264,6 +266,8 @@ T.recursive.computed	0	0	0	0	recursive, with a mapped or conditional type in its
 T.recursive.viaFunction	0	0	0	0	recursive only through function types or method signatures (not data recursion)
 T.recursive.data	0	0	0	0	recursive data: neither of the two above
 T.enum	0	0	0	0	enum declaration
+T.moduleTypeRef	1	1	1	1	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	0	0	0	0	the same, with type arguments
 C.class	8	2	2	2	class declaration or expression
 C.dataTaggedError	2	1	1	1	extends Data.TaggedError(...)
 C.dataError	0	0	0	0	extends Data.Error
@@ -428,6 +432,8 @@ T.recursive.computed	52	17	4	17	recursive, with a mapped or conditional type in 
 T.recursive.viaFunction	18	15	6	15	recursive only through function types or method signatures (not data recursion)
 T.recursive.data	196	108	10	108	recursive data: neither of the two above
 T.enum	8	5	3	5	enum declaration
+T.moduleTypeRef	1928	874	15	874	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	1296	637	14	637	the same, with type arguments
 C.class	2574	1141	15	1141	class declaration or expression
 C.dataTaggedError	972	452	9	452	extends Data.TaggedError(...)
 C.dataError	10	4	2	4	extends Data.Error
@@ -1826,6 +1832,8 @@ T.recursive.computed	1	1	1	1	recursive, with a mapped or conditional type in its
 T.recursive.viaFunction	0	0	0	0	recursive only through function types or method signatures (not data recursion)
 T.recursive.data	16	12	3	12	recursive data: neither of the two above
 T.enum	0	0	0	0	enum declaration
+T.moduleTypeRef	297	172	7	172	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	197	131	7	131	the same, with type arguments
 C.class	1856	1020	8	1020	class declaration or expression
 C.dataTaggedError	586	459	5	459	extends Data.TaggedError(...)
 C.dataError	0	0	0	0	extends Data.Error
@@ -2633,6 +2641,8 @@ T.recursive.computed	10	5	2	5	recursive, with a mapped or conditional type in it
 T.recursive.viaFunction	1	1	1	1	recursive only through function types or method signatures (not data recursion)
 T.recursive.data	12	11	6	11	recursive data: neither of the two above
 T.enum	2	2	2	2	enum declaration
+T.moduleTypeRef	1111	136	13	136	type reference M.T to an Effect module type with no Ty constructor (NONCTOR_MODULES)
+T.moduleTypeRef.generic	1042	117	12	117	the same, with type arguments
 C.class	809	390	13	390	class declaration or expression
 C.dataTaggedError	163	53	7	53	extends Data.TaggedError(...)
 C.dataError	9	3	1	3	extends Data.Error
