@@ -17,7 +17,7 @@ def emptyTables (s : Stores) : TWorld :=
 /-- Without prior declarations, cell compatibility imposes no constraint on new contents. -/
 theorem emptyTables_order (s t : Stores) (h : s.le t) :
     (emptyTables s).le (emptyTables t) := by
-  refine ⟨⟨?_, h⟩, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_⟩
+  refine ⟨⟨?_, h⟩, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, rfl⟩
   · intro id hid
     cases hid
   · intro key value hlookup
@@ -147,7 +147,7 @@ theorem unbounded_tokens_refused :
 
 /-- A reference completion may pass the coarse declaration check yet name no live cell. -/
 theorem dangling_completion_shape : CompletionOk ghostHeap (.nat, .never) (.ofRefGet ⟨9⟩) :=
-  ⟨.nat, rfl, Ty.sub_refl .nat⟩
+  ⟨.nat, rfl, Ty.subN_refl .nat⟩
 
 theorem valid_completion_cannot_dangle (w : TWorld) (m : RState)
     (valid : WorldValid rootTy w m) (key : RefKey) (missing : m.state.refs.length ≤ key.index) :
@@ -199,4 +199,5 @@ theorem mixed_allocation_preserves_old_and_new :
 #print axioms Effect4.Program.Typed.park_extension
 #print axioms Effect4.Program.Typed.completion_transport
 #print axioms Effect4.Program.Typed.initial_world_valid
+#print axioms Effect4.Program.Typed.initial_world_valid_at
 end Test.Program.TypedWorldValidity

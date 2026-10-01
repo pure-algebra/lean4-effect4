@@ -329,8 +329,10 @@ theorem sub_not_complete :
     case none => rfl
     case some x => exact hv
     all_goals exact Bool.noConfusion hv
-  -- `decide` cannot do this: `Ty.sub` is a well-founded recursion and the kernel does not
-  -- reduce it. The view's own lemmas do, and each step is one of the order's rules
+  -- Plain `decide` gets stuck here: `Ty.sub` is a well-founded recursion, which the
+  -- elaborator's reduction does not unfold. The kernel does reduce it, so `decide +kernel`
+  -- closes this fact (TY-15, tested); the proof keeps the view's own lemmas so each step is
+  -- one of the order's rules
   · have hsn : Ty.sub .string .nat = false :=
       Ty.sub_eq_false_of_not_sameHead .string .nat rfl rfl rfl rfl rfl
     have hns : Ty.sub .nat .string = false :=

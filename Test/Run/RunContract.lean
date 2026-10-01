@@ -103,6 +103,8 @@ def pairAdmitted : Api.AdmittedProgram pairProgram Test.Api.HostSessionContract.
   internalFreeTable := by decide
   intFreeProgram := by decide
   intFreeType := by decide
+  columnsTable := by decide +kernel
+  columnsType := by decide +kernel
 
 def pairUp : Api.Built :=
   { table := Test.Api.HostSessionContract.table

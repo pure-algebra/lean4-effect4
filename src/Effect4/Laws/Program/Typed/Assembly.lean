@@ -17,8 +17,9 @@ payload position. Current code is typed by two hand clauses keyed on the fiber's
 the queue, because whether a fiber's code is read again depends on them, not on the saved frame:
 
 * `MachineTyped` (`J`, machine-only and cut-tolerant): world validity, the generated predicate
-  with the correlations (`TypedState`), the code of every fiber that has not exited and is not
-  running (`LiveCode`), and `stuck = none` with the liveness clauses of row 139 (`MachineLive`).
+  with the correlations (`TypedState`), the world's service table tied to the source's (row 112),
+  the code of every fiber that has not exited and is not running (`LiveCode`), and
+  `stuck = none` with the liveness clauses of row 139 (`MachineLive`).
   A budget cut drops the residue (`Machine/Fibers.lean:2080`, `:2139-2140`) and leaves a running
   fiber whose code no queued command will read: `J` does not type it (`E4-TYPED-CE-011`,
   `Test/Counterexamples/Machine/Semantics/StaleCode.lean`).
@@ -82,11 +83,11 @@ def expectOf (w : World) : Expect → Option EffTy
   | .hook _ => none
 
 /-- A completion at an effect type: an exit strongly, a reference completion through the
-heap table. The declared cell type is compared in the checker's order (decisions row 137:
-`sub (normalize a) (normalize b)`, `Program/Checker.lean:222`; seat A's `Ty.subN` names it). -/
+heap table. The declared cell type is compared in the checker's order (decisions row 137,
+`Ty.subN`, as `CompletionOk.ofRefGet` and `storePre`'s `deferredCompleteWith` arm read it). -/
 def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberId Ann → Prop
   | .ofExit ex => ExitOk w ty ex
-  | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.normalize.sub ty.answer.normalize = true
+  | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ Ty.subN t ty.answer = true
 
 /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
 under an environment its values fit, extended by the acquired value, and its context's
@@ -94,8 +95,8 @@ services are typed. -/
 def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
   ∃ (acquire release : NativeEff) (env : List Ty) (t a : EffTy),
     Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
-    Checker.check (nativeSignature root.table) env c.path (.acquireRelease acquire release) = .ok t ∧
-    Checker.check (nativeSignature root.table) env (c.path ++ [0]) acquire = .ok a ∧
+    Checker.check root.signature env c.path (.acquireRelease acquire release) = .ok t ∧
+    Checker.check root.signature env (c.path ++ [0]) acquire = .ok a ∧
     EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
 
 /-- The saved stack and its provenance at a position: the stack composes from some intermediate
@@ -232,24 +233,19 @@ def ReadCode (root : ProgramSource) (w : World) (m : RState) (commands : List RC
 arm it rules out; with the scope-finalizer drops of `ObserverState` and `QueueOk.observer`, with
 `QueueOk.links` (in `I`) and the target and scope premises on the halting fiber rows (`fiberPre`'s
 `interruptAs`, `runIn`, `forkIn`, `closeScope`, `scopeExit` arms; `raceRegister` refused) they are
-what each command proof needs to show its halting arms unreachable. The scope-exit marker is the
-exception: `TypedProg` types it through its own `scopeExit` constructor, which reads no pre, so
-`fiberPre`'s `scopeExit` arm binds only the generic protocol judgment and
-`M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope` stands until that constructor
-carries the scope's liveness (seat I's receipt). Race-id liveness for the
+what each command proof needs to show its halting arms unreachable. The scope-exit marker is
+typed through `TypedProg`'s own `scopeExit` constructor, which carries the same presence
+(`ScopeLive`, decisions row 156) that `fiberPre`'s `scopeExit` arm states. Race-id liveness for the
 codes that name a race is `RegistrationState` (in `TypedState`): the only race halt is
 `registerRace` on a registration marker (`Machine/Fibers.lean:937-944`), and both code clauses
 leave the marker to it. A fiber handle's liveness is `Fits`'s fiber arm with
-`WorldValid.fibers`. -/
+`WorldValid.fibers`; a fiber context's ambient scope is present by membership (`forkScoped` links
+the child into it, `:1474-1489`, `linkScope` `:1005-1036`): `ambientScope_live`, from `J`'s typed
+state, which replaced this structure's stand-in field `ambientScopes` at decisions row 156. -/
 structure MachineLive (m : RState) : Prop where
   /-- The machine has not halted (`E4-TYPED-CE-014`): every halting arm of a command is an
   obligation of that command's preservation proof. -/
   running : m.stuck = none
-  /-- `forkScoped` links the child into the context's ambient scope (`:1474-1489`; `linkScope`,
-  `:1005-1036`). The scope arm of `HandleFits` reading the scope store (seat A) makes
-  `ServiceOk` carry this for every typed context; until it lands the clause is stated here. -/
-  ambientScopes : ∀ f ∈ m.fibers, ∀ scope, Ctx.ambientScope f.context = some scope →
-    (m.state.scopes.entryAt scope).isSome = true
   /-- `drainOwed` posts a scheduled resume on its owner's dispatcher and halts on an absent owner
   (`postTask`, `:709-716`). Today's stores owe only `now` resumes (`DeferredStore.due`,
   `Machine/Stores.lean:1090`), so this holds vacuously on reachable machines. -/
@@ -261,6 +257,10 @@ carries, a budget cut included. -/
 structure MachineTyped (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) :
     Prop where
   typed : TypedState root rootTy w m
+  /-- The world's static service table is the source's (decisions row 112, shape A): the world
+  order fixes the table (`le_serviceTy`), so the tie holds along every run once it holds at the
+  load (`initialWorld rootTy root.sig.serviceTy`), and `ServicesFit` reads the source's carriers. -/
+  services : w.serviceTy = root.sig.serviceTy
   code : LiveCode root w m
   live : MachineLive m
 
@@ -278,6 +278,40 @@ theorem machineTyped_of_configTyped {root : ProgramSource} {rootTy : EffTy} {w :
     {m : RState} {commands : List RCmd} (typed : ConfigTyped root rootTy w m commands) :
     MachineTyped root rootTy w m := typed.machine
 
+/-- **Every fiber's ambient scope is present** (decisions rows 139 and 156), from `J`: the
+fiber context's services fit their keys' carriers (`preds`' `ServiceOk`), the world's service
+table is the source's (row 112), which types the reserved `Scope` key at `Ty.scope`, and a scope
+handle's membership reads its scope's presence (row 156). With `WorldValid.state` it is the
+machine's store: `forkScoped`'s link never halts on the ambient scope (`Machine/Fibers.lean`
+`:1474-1489`, `linkScope` `:1005-1036`). It replaced `MachineLive`'s stand-in field. -/
+theorem ambientScope_live {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    (typed : MachineTyped root rootTy w m) {f : RFiber} (hf : f ∈ m.fibers) {scope : Nat}
+    (ambient : Ctx.ambientScope f.context = some scope) : ScopeLive w scope := by
+  obtain ⟨⟨_, ok, _, _, _, _⟩, services, _, _⟩ := typed
+  have fit : ServicesFit w f.context.services := (ok.c0 f hf).c5
+  have bound : f.context.services.getV Env.scopeKey = some (Val.scopeHandle scope) := by
+    change Env.scopeOfVal (f.context.services.getV Env.scopeKey) = some scope at ambient
+    unfold Env.scopeOfVal at ambient
+    split at ambient
+    · rename_i sc hsc
+      cases ambient
+      exact hsc
+    · cases ambient
+  have carrier : w.serviceTy Env.scopeKey = some Ty.scope := by
+    rw [services]
+    rfl
+  exact (fit Env.scopeKey _ _ bound carrier).2
+
+/-- **The ambient-scope read answers inside its post at `J`** (decisions row 156): the machine
+answers `.ambientScope` with the fiber context's ambient scope (`FiberAction.ambientScope`,
+`Machine/Fibers.lean:1491-1498`), which `J` holds present (`ambientScope_live`), so the handle
+fits `Ty.scope` (`ambientScope_answers`). -/
+theorem ambientScope_answers_of_typed {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} (typed : MachineTyped root rootTy w m) {f : RFiber} (hf : f ∈ m.fibers)
+    {scope : Nat} (ambient : Ctx.ambientScope f.context = some scope) :
+    fiberPost w .ambientScope () ((interpR root.program).scopeValue scope) :=
+  ambientScope_answers root w scope (ambientScope_live typed hf ambient)
+
 /-- A halted machine is outside `J` (row 139; probe C's `typedState_halt`, read at `J`). -/
 theorem machineTyped_not_halted (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
     (why : Stuck) : ¬ MachineTyped root rootTy w (m.halt why) := by
@@ -289,12 +323,13 @@ theorem machineTyped_not_halted (root : ProgramSource) (rootTy : EffTy) (w : Wor
 receipt-B "For seat C" item 3): the declarations cover exactly the allocated cells and promises
 (`WorldValid.heap`, `.promises` over `WorldValid.state`), every stored value fits its cell's
 declared type (the generated `HeapCell` column), and every closing exit a scope holds fits
-`Exit<unknown, unknown>` (the un-refused `ScopeExitOk` row, row 140). It reads only `J`'s
-`TypedState`; `storeStep_typed` consumes it in wave 2's `loop` arm. -/
+`Exit<unknown, unknown>` (the un-refused `ScopeExitOk` row, row 140), and every memo entry's
+allocations exist (`WorldValid.wf`'s memo clause, which `memoRelease`'s post reads, row 156). It
+reads only `J`'s `TypedState`; `storeStep_typed` consumes it in wave 2's `loop` arm. -/
 theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} (typed : MachineTyped root rootTy w m) : StoreTyped w := by
-  obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _⟩ := typed
-  refine ⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_, fun e he ex hex => ?_⟩
+  obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _, _⟩ := typed
+  refine ⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_, fun e he ex hex => ?_, ?_⟩
   · rw [valid.state]
     exact valid.heap key
   · rw [valid.state]
@@ -313,6 +348,35 @@ theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : Wo
     | openEmpty => cases hex
     | openInline _ _ => cases hex
     | openMap _ => cases hex
+  · rw [valid.state]
+    exact valid.wf.2.2.1
+
+/-- **TY-08's promise half (proved)**: the coarse promise column (`PromiseTable`, the leaf
+`CompletionOk`) from the strong one (`preds`' `PromiseCell`, the leaf `CompletionStrong`): an
+exit through `completionOk_of_fitsExit`, a reference completion as it stands (both read the cell's
+declaration in `Ty.subN`, row 137). The heap half is `heapTable_of_fits` (`Membership.lean`). -/
+theorem promiseTable_of_strong {w : World}
+    (h : Columns.DeferredStore_cells (fun w key cell => ∀ a e, w.«Π» key = some (a, e) →
+      ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c) w
+      w.state.deferreds.cells) : PromiseTable w := by
+  intro i cell hc types hty c hcomp
+  obtain ⟨a, e⟩ := types
+  have strong := h i cell hc a e hty c hcomp
+  cases c with
+  | ofExit ex => exact completionOk_of_fitsExit strong.1
+  | ofRefGet _ => exact strong
+
+/-- **TY-08 (proved)**: the generated typed state gives the coarse cell columns `WorldValid.cells`
+states, from its strong heap and promise columns. So that field is redundant beside the typed
+state (dropping it from `WorldValid` is owed: every construction of `WorldValid` builds it). -/
+theorem cells_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    (typed : TypedState root rootTy w m) : HeapTable w ∧ PromiseTable w := by
+  obtain ⟨valid, ok, _, _, _, _⟩ := typed
+  refine ⟨heapTable_of_fits fun i v hv ty hty => ?_, promiseTable_of_strong fun i cell hc => ?_⟩
+  · rw [valid.state] at hv
+    exact ok.c2.c1 i v hv ty hty
+  · rw [valid.state] at hc
+    exact ok.c2.c2.c0 i cell hc
 
 /-- **The loop-entry premise holds for this split** (`DecisionLift.evaluate`): `J` gives `I` at
 the fresh queue an evaluate or interrupt decision starts, at every machine, a budget cut
@@ -660,7 +724,7 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     (nextId : m'.nextId = m.nextId) (nextToken : m'.nextToken = m.nextToken)
     (nextRace : m'.nextRace = m.nextRace) (stuck : m'.stuck = m.stuck)
     (typed : MachineTyped root rootTy w m) : MachineTyped root rootTy w m' := by
-  obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, code, live⟩ := typed
+  obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, services, code, live⟩ := typed
   have member : ∀ f, f ∈ m'.fibers → f ∈ m.fibers := fun f hf => by rw [← fibers]; exact hf
   have raceMember : ∀ r, r ∈ m'.races → r ∈ m.races := fun r hr => by rw [← races]; exact hr
   have lookup : ∀ id, m'.fiber? id = m.fiber? id := fun id => by
@@ -680,7 +744,7 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     fun f hf token parked => deliv f (member f hf) token parked, ?_,
     ⟨fun f hf => obsv.pendingOwner f (member f hf), fun f hf o ho =>
       storedObserverOk_congr lookup raceLookup state o (obsv.observers f (member f hf) o ho)⟩,
-    fun f hf raceId marker => ?_⟩, fun f hf => code f (member f hf), ?_⟩
+    fun f hf raceId marker => ?_⟩, services, fun f hf => code f (member f hf), ?_⟩
   · exact
       { ids := by rw [fibers]; exact valid.ids
         fibers := fun id => by rw [fibers]; exact valid.fibers id
@@ -730,12 +794,10 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
         deferredCause := fun f hf => sched.deferredCause f (member f hf) }
   · obtain ⟨race, resultTy, found, host, token, reply⟩ := reg f (member f hf) raceId marker
     exact ⟨race, resultTy, (raceLookup raceId).trans found, host, token, reply⟩
-  · refine ⟨stuck.trans live.running, fun f hf scope ambient => ?_, fun o ho owner priority mode => ?_⟩
-    · rw [state]
-      exact live.ambientScopes f (member f hf) scope ambient
-    · rw [state] at ho
-      rw [lookup]
-      exact live.dueOwners o ho owner priority mode
+  · refine ⟨stuck.trans live.running, fun o ho owner priority mode => ?_⟩
+    rw [state] at ho
+    rw [lookup]
+    exact live.dueOwners o ho owner priority mode
 
 /-- The queue facts survive a trace edit: an `emit` changes no lookup, counter or store. -/
 theorem queueOk_emit {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
@@ -795,17 +857,19 @@ theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
 
 Named once, so the ledger's declarations and the connectors below read the same statement. -/
 
-/-- Rows 111–116: the source's Σ_app is lawful. Today this is the program-plane row-table check
-`Table.lawful` (unique keys, no built-in collision, no dropped trailing names). Seat A's evidence
-field on `ProgramSource` (row 114) supplies the service-table clauses (rows 112–114) and replaces
-this body; the statements keep this premise's name, and `w.serviceTy` (row 112, shape A) joins
-`MachineTyped` as the static world component tied to the source when seat A's field lands. -/
-def LawfulSource (root : ProgramSource) : Prop := Table.lawful root.table = true
+/-- Rows 111–116: the source's Σ_app is lawful, the proposition seat A's evidence field on
+`ProgramSource` carries (`ProgramSource.lawful`, row 114), so every source has it
+(`root.lawful`) and M5 and M6 quantify over lawful sources. It contains the program-plane
+row-table check this premise read before (`Table.lawful`: unique keys, no built-in collision, no
+dropped trailing names; `LawfulSig.tableLawful`) and adds the service-table clauses (rows
+112–114). The statements keep this premise's name; `w.serviceTy` is tied to the source in
+`MachineTyped` (row 112). -/
+def LawfulSource (root : ProgramSource) : Prop := LawfulSig root.sig
 
 /-- M5's proposition: a lawful, checked, closed source loads into `J`. -/
 def LoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
-  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-    ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel)
+  LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
+    ClosedEff rootTy → ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel)
 
 /-- M6b's proposition: one tape decision keeps `J` when its host answer, if any, is admitted. -/
 def DecisionKeeps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.Decision) :
@@ -818,8 +882,8 @@ def DecisionKeeps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.
 /-- M6c's proposition: every machine an answer-free tape reaches from a lawful, checked, closed
 source is in `J`. -/
 def ReachableTyped (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
-  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-    RReachable root fuel m → ∃ w, MachineTyped root rootTy w m
+  LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
+    ClosedEff rootTy → RReachable root fuel m → ∃ w, MachineTyped root rootTy w m
 
 /-- Row 148 (algebra A3): M5's fundamental property. A checked point denotes, at the node its
 path names, a program typed at the point's certificate, at every world. -/
@@ -842,42 +906,40 @@ def TermFits (table : RowTable) : Prop :=
 The loaded machine has one fiber, not running, whose code is the root's denotation; every other
 clause of `J` is over an empty list or the empty context. So M5 is the root code's typing at
 every world (`machineTyped_load`), and that is `DenotesTyped` at the root point when the checked
-program is the loaded one (`loadsTyped_of_denotesTyped`): `Api.typeOf` checks the program after
-expanding its layer references (`Program/Typing.lean:61-64`) while `loadR` loads the program as
-written (`RuntimeR.lean:41-46`), so the reduction is for a program with no reference sites. -/
+program is the loaded one (`loadsTyped_of_denotesTyped`): `typeOfProgram` checks the program,
+under the source's signature (`root.signature`, rows 111–114), after expanding its layer
+references (`Program/Typing.lean:61-64`) while `loadR` loads the program as written
+(`RuntimeR.lean:41-46`), so the reduction is for a program with no reference sites. -/
 
-/-- `MachineLive` holds on a running machine whose fibers carry the empty context and whose
-store owes nothing. -/
+/-- `MachineLive` holds on a running machine whose store owes nothing. -/
 theorem machineLive_of_quiet (m : RState) (stuck : m.stuck = none)
-    (contexts : ∀ f ∈ m.fibers, f.context = emptyCtx) (due : m.state.deferreds.due = []) :
-    MachineLive m := by
-  refine ⟨stuck, fun f hf scope ambient => ?_, fun o ho => ?_⟩
-  · rw [contexts f hf] at ambient
-    cases ambient
-  · rw [due] at ho
-    cases ho
+    (due : m.state.deferreds.due = []) : MachineLive m := by
+  refine ⟨stuck, fun o ho => ?_⟩
+  rw [due] at ho
+  cases ho
 
 /-- **M5's builder.** A root whose loaded code is typed at every world, and whose head is not a
-race marker, loads into `J` at the initial world. -/
+race marker, loads into `J` at the initial world over the source's service table (row 112). -/
 theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (closed : ClosedEff rootTy)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : ∀ w, TypedProg root w rootTy (denoteR root.program root.program (rootPoint compileFuel))) :
-    MachineTyped root rootTy (initialWorld rootTy) (loadR root.program fuel compileFuel) := by
-  have declared : (initialWorld rootTy).Γ Api.root = some rootTy :=
+    MachineTyped root rootTy (initialWorld rootTy root.sig.serviceTy)
+      (loadR root.program fuel compileFuel) := by
+  have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
     insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
-  refine ⟨⟨initial_world_valid _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩, ?_,
+  refine ⟨⟨initial_world_valid_at _ _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩, ?_,
     schedulerState_load root.program fuel compileFuel,
     observerState_load root _ fuel compileFuel,
-    registrationState_load root _ fuel compileFuel noMarker⟩, ?_,
-    machineLive_of_quiet _ rfl (fun f hf => ?_) rfl⟩
+    registrationState_load root _ fuel compileFuel noMarker⟩, rfl, ?_,
+    machineLive_of_quiet _ rfl rfl⟩
   · intro f hf
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
     subst hf
     refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
     · intro ty hty
-      change (initialWorld rootTy).Γ Api.root = some ty at hty
+      change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
       rw [declared] at hty
       cases hty
       exact savedPosition_of_saved root _ rootTy _
@@ -907,14 +969,22 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
     subst hf
-    change (initialWorld rootTy).Γ Api.root = some ty at hty
+    change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
     rw [declared] at hty
     cases hty
     exact ⟨rootTy, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
-  · change f ∈ [_] at hf
-    rw [List.mem_singleton] at hf
-    subst hf
-    rfl
+
+/-- **M5's reduction lemma, at the generated typed state** (seat A's
+`ValueMembership.typedStateF_load`, moved here and restated over row 134's split): a root whose
+loaded code is typed at every world, with no race marker at its head, loads into `TypedState` at
+the initial world. It is `J`'s first component (`machineTyped_load`), so the argument is written
+once; the battery keeps a one-line use. -/
+theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
+    (closed : ClosedEff ty)
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
+    (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
+    ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) :=
+  ⟨_, (machineTyped_load root ty fuel compileFuel closed noMarker code).typed⟩
 
 /-- The empty environment is typed at every world. -/
 theorem envTyped_nil (w : World) : EnvTyped w [] [] := by
@@ -932,12 +1002,11 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
   have expanded : root.program.expandRefs = root.program :=
     expandRefs_eq_self_of_refSites_nil root.program refFree
   have formed : root.program.layerRefsWF = true := layerRefsWF_of_refSites_nil root.program refFree
-  have typed : effTy (nativeSignature root.table) [] root.program = some rootTy := by
-    change Program.typeOfProgram (nativeSignature root.table) root.program = some rootTy at checked
+  have typed : effTy root.signature [] root.program = some rootTy := by
     unfold Program.typeOfProgram at checked
     rw [expanded, formed, refFree] at checked
     exact checked
-  exact ⟨initialWorld rootTy, machineTyped_load root rootTy fuel compileFuel closed noMarker
+  exact ⟨_, machineTyped_load root rootTy fuel compileFuel closed noMarker
     fun w => denotes w (rootPoint compileFuel) root.program rootTy rfl
       ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil w⟩⟩
 
@@ -1221,7 +1290,7 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
     Prop where
   lawful : LawfulSource root
   emptyTable : root.table = []
-  checked : Api.typeOf root.program root.table = some rootTy
+  checked : Program.typeOfProgram root.signature root.program = some rootTy
   closed : ClosedEff rootTy
   answerFree : ∀ d ∈ tape, NoHostAnswer d
 
@@ -1257,13 +1326,14 @@ def M7NoHalt (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List A
 /-- Organization M4 (decisions row 139): every recorded exit's success value names only handles
 its machine's stores hold, on every reachable machine. The exit connector from `FitsExit` to the
 meaning layer's exit judgment (`organization/verify-ExitOkConnector.lean`, `exitOk_of_fitsExit`)
-takes this as its validity premise. It does not follow from `J` while the scope arm of
-`HandleFits` checks only the spelling (`organization/verify-ExitOkConnector.lean`'s `redA_scope`)
-and `Live` admits scope and memo handles unchecked; with seat A's scope arm and those arms it is a
+takes this as its validity premise. The scope arm of `HandleFits` reads the scope's presence
+since decisions row 156 (the formal pass's `redA_scope` dangling handle no longer fits:
+`Test/Program/ExitConnector.lean`, `dangling_scope_refused`), but `Live` still admits scope and
+memo handles unchecked at `unknown`, so it does not yet follow from `J`; with those arms it is a
 consequence of `J`, otherwise the native guard's handle facts transport through R4's bridge. -/
 def ExitHandlesValid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
-  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-    RReachable root fuel m →
+  LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
+    ClosedEff rootTy → RReachable root fuel m →
       ∀ f ∈ m.fibers, ∀ v, f.exit = some (.success v) → Val.validIn m.state v = true
 
 /-- `J` on a reference machine types its observation: the exits and the stores. -/
@@ -1401,18 +1471,21 @@ Kripke closure (row 135): the refutation is retained over the one-world judgment
 (`Test/Program/FramesNotKripke.lean`, `step_loop_refuted`), and the same `loop` with a frame typed
 into `unit` keeps `I` at the world that declares the new cell (`step_loop_good`, over this split).
 Its halting arms (the census in `MachineLive`'s section) read the target and scope premises
-`fiberPre` carries on the halting rows (row 139); the absent-scope callback that refutes
-`step_deliver` reaches the same walk from `loop` (`Laws/Program/EvaluateR.lean:309-319`; reading,
-not checked here). -/
+`fiberPre` carries on the halting rows (row 139); the absent-scope callback that refuted
+`step_deliver` before row 156 reaches the same walk from `loop` (`Laws/Program/EvaluateR.lean`
+`:309-319`; reading, not checked here), and the `scopeExit` constructor's presence premise (row
+156) now types it only where the scope is present. -/
 theorem step_loop (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.loop id yielding)) := ⟨⟩
 
-/-- Refuted at this commit by `E4-SCHED-CE-020`'s witness under `J`'s `stuck = none`
-(`M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope`): a typed configuration's
-delivery halts on the absent scope 0 (`prepareScopedExitR`). `fiberPre`'s `scopeExit` arm now
-demands the scope's liveness (row 139), but `TypedProg` types the scope-exit marker through its
-own `scopeExit` constructor, which reads no pre, so the refutation stands; the repair is that
-liveness premise on the constructor (seat I's receipt, with the consumers it reaches). -/
+/-- Open. `E4-SCHED-CE-020`'s witness under `J`'s `stuck = none` refuted it before decisions row
+156: a configuration typed by a judgment whose `scopeExit` constructor read no pre delivered into
+a scope-exit marker for the absent scope 0 and halted (`prepareScopedExitR`); that refutation is
+kept as history over a local copy of that judgment
+(`M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope`). Since row 156 the
+constructor carries the scope's presence (`ScopeLive`), and the witness's input is no typed
+configuration at any world (`M6Capstone.H1HaltAmendment.input_refused`), so it no longer refutes
+this obligation. -/
 theorem step_deliver (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.deliver id yielding)) := ⟨⟩
 
@@ -1471,11 +1544,18 @@ theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) 
 checked, closed source is in `J` (`reachable_of_ledger` derives it from `typedState_load` and
 `decision_preserves`). The host-answer restriction repairs `E4-SCHED-CE-015`.
 
-Live refutation at this commit: `E4-TYPED-CE-009` (`Fits` compares declared types in the raw
-order while the checker normalizes, so M5 is false for a checked program; seat A, row 137),
-proved against these statements, M5's and this capstone's at the loaded machine, which the empty
-tape reaches (`rreachable_load`): `Test/Counterexamples/Machine/Semantics/RawOrderLoad.lean`,
-`loadsTyped_false` and `capstone_false`. `E4-TYPED-CE-010` (the await-by-value post read the
+`E4-TYPED-CE-009` (`Fits` compared declared types in the raw order while the checker
+normalizes, so M5 was false for a checked program) is repaired by row 137 (seat A):
+`Test/Counterexamples/Machine/Semantics/FitsOrder.lean` proves M5's proposition and this
+capstone's at that program's loaded machine, which the empty tape reaches (`rreachable_load`;
+`loadsTyped`, `capstone_at_load`), and keeps the refutations over the raw leaf
+(`Reviewed.m5_false`, `Reviewed.loadsTyped_false`, `Reviewed.capstone_false`; seat C's
+restatement over `J`, `RawOrderLoad.lean`, is history under the same hypothesis).
+`E4-TYPED-CE-018` (the posts that answer a scope handle carry no presence, so an allocation's
+continuation must be typed at an absent scope; registered from Codex's second-eyes review,
+`docs/research/2026-10-01-landing/codex-second-eyes/ScopeAllocationPost.lean`) refutes
+`DenotesTyped` at a checked allocate-then-fork program and is open under decisions row 156.
+`E4-TYPED-CE-010` (the await-by-value post read the
 target's answer column, so M5 was false for the typed corpus's `awaitFiber.value`) is repaired by
 row 136's post: `Test/Counterexamples/Machine/Semantics/AwaitLoad.lean` proves M5's proposition
 and this capstone's at that program's loaded machine (`loadsTyped`, `capstone_at_load`) and keeps

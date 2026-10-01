@@ -53,18 +53,19 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .deferredCompleteWith key completion => ∃ a e, w.«Π» key = some (a, e) ∧
       match completion with
       | .ofExit ex => ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex
-      | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.sub a = true
+      | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ Ty.subN t a = true
   | .deferredInterruptWith key _ => (w.«Π» key).isSome = true
   | .clockNow | .sleepCancel _ _ => True
   | .scopeMake _ => True
   -- the named scope is live in the world's store, so the store never steps to a frontier
-  -- (`syncOpStep` answering `none`, which the evaluator answers `unit`; row 139's liveness)
+  -- (`syncOpStep` answering `none`, which the evaluator answers `unit`; row 139's liveness,
+  -- read through row 156's predicate)
   | .scopeAdd scope _ | .scopeRemove scope _ | .scopeIsClosed scope | .scopeFork scope _ =>
-    (w.state.scopes.entryAt scope).isSome = true
+    ScopeLive w scope
   | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
   -- the looked-up layer's own checked error type (decision row 90)
   | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer (nativeSignature root.table) layer l = .ok lt ∧ lt.error = cert
+      Checker.checkLayer root.signature layer l = .ok lt ∧ lt.error = cert
   | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
 
 /-- What each store row's answer satisfies: the store's actual answer (decisions row 136; the
@@ -87,21 +88,24 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .deferredAwaitCleanup _ _ _ => ans = Val.unit
   | .clockNow => ∃ n, ans = Val.nat n
   | .sleepCancel _ _ => ans = Val.unit
-  | .scopeMake _ => ∃ sc, ans = Val.scopeHandle sc
+  -- a scope-answering row answers a present scope's handle (decisions row 156): the step
+  -- installs or holds the entry, and `Fits` at `Ty.scope` reads presence (`fits_scope_inv`)
+  | .scopeMake _ => Fits w' ans Ty.scope
   -- an open scope registers and answers `unit`; a closed one answers its closing exit, at
   -- `Exit<unknown, unknown>` (DI-94's release type), for the caller to run the finalizer now
   | .scopeAdd _ _ => ans = Val.unit ∨
       ∃ ex, ans = reifyExitVal ex ∧ FitsExit w' ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex
   | .scopeRemove _ _ => ans = Val.unit
   | .scopeIsClosed _ => ∃ b, ans = Val.bool b
-  | .scopeFork _ _ => ∃ sc, ans = Val.scopeHandle sc
+  | .scopeFork _ _ => Fits w' ans Ty.scope
   | .memoFork _ => ∃ id, ans = Val.memoMap id
   | .memoGet _ _ => ans = Val.unit ∨ ∃ cell owner, Val.memoHit? ans = some (cell, owner) ∧
       w'.«Π» cell = some (.handle Ty.contextTarget, cert)
-  | .memoBuild _ _ => ∃ sc, ans = Val.scopeHandle sc
+  | .memoBuild _ _ => Fits w' ans Ty.scope
   | .memoComplete _ _ _ => ans = Val.unit
-  -- the last observer's release answers the layer's scope handle, for the caller to close
-  | .memoRelease _ _ => ans = Val.unit ∨ ∃ sc, ans = Val.scopeHandle sc
+  -- the last observer's release answers the layer's scope handle, for the caller to close; the
+  -- layer scope is present (`Stores.MemoValid`, which `StoreTyped` carries)
+  | .memoRelease _ _ => ans = Val.unit ∨ Fits w' ans Ty.scope
 
 def Ψ_S (root : ProgramSource) : Protocol World StoreSig where
   Cert := StoreCert
@@ -121,8 +125,20 @@ def FiberCert : FiberOp → Type
   | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren | .getContext => Ty
   | _ => PUnit
 
+/-- **Row 116's host-row entry**: the operation is in the source signature's domain, and the
+row's columns are below the certificate. Outside the table the row is the placeholder, whose
+`never` columns are below every certificate, so without the bit the entry held at every
+certificate at a short table and constrained at a longer one
+(`Test/Program/TypedProgRows.lean`, `typedProg_not_table_monotone_of`); with it `TypedProg` is
+monotone along an appended table (`typedProg_rows_append`). -/
+def bitEntry (root : ProgramSource) (op : NativeOp) (cert : EffTy) : Prop :=
+  root.signature.dom op = true ∧
+    (root.signature.rowOf op).answer.sub cert.answer = true ∧
+    (root.signature.rowOf op).error.sub cert.error = true
+
 /-- The type an async registration's answer is certified at: a timer's `unit`, a deferred's
-completion at the promise table's columns, a host row's columns from the source's row table.
+completion at the promise table's columns, a host row's columns from the source's row table
+when the row is in its domain (`bitEntry`, row 116).
 A host slot (`FinName.parkThen`'s release) is certified by the host protocol, a correlation the
 state predicate owns; any other registration is not generated code and is refused.
 
@@ -135,9 +151,7 @@ def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : Eff
   | .store (.registerSleep _) => Ty.unit.sub cert.answer = true
   | .registerAwait cell | .store (.registerAwait cell) =>
     ∃ a e, w.«Π» cell = some (a, e) ∧ a.sub cert.answer = true ∧ e.sub cert.error = true
-  | .external op _ =>
-    ((nativeSignature root.table).rowOf op).answer.sub cert.answer = true ∧
-      ((nativeSignature root.table).rowOf op).error.sub cert.error = true
+  | .external op _ => bitEntry root op cert
   | .store (.externalRegister _) => True
   | _ => False
 
@@ -158,23 +172,22 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .awaitNewChildren _ => True
   -- row 139's halting arms (seat C's census): the step halts on an unknown target or an absent
   -- scope (`FiberAction.interruptAs`, `linkScope` from `runIn` and `forkIn`,
-  -- `FiberAction.closeScope`, `prepareScopedExitR`), so the row demands them; a race
-  -- registration marker is `RegistrationState`'s, never typed code
+  -- `FiberAction.closeScope`, `prepareScopedExitR`), so the row demands them, a scope's
+  -- presence as `ScopeLive` (row 156); a race registration marker is `RegistrationState`'s,
+  -- never typed code
   | .interruptAs target _ => (w.Γ target).isSome = true
-  | .runIn target scope =>
-    (w.Γ target).isSome = true ∧ (w.state.scopes.entryAt scope).isSome = true
+  | .runIn target scope => (w.Γ target).isSome = true ∧ ScopeLive w scope
   | .guard_ _ | .unguard _ | .finishFinalizer _ | .construction
   | .foreignRelease _ _ | .closeWalk _ _ _ | .closeIter _ _ _
   | .cancelRace _ | .dropObservers _ | .frontier _ _ => True
-  | .scopeExit _ scope _ | .closeScope scope _ => (w.state.scopes.entryAt scope).isSome = true
+  | .scopeExit _ scope _ | .closeScope scope _ => ScopeLive w scope
   | .raceRegister _ => False
   | .snapshotChildren => cert = .list (.fiberOf .unknown .unknown)
   | .scoped body => PointTyped root w body cert
   | .mask _ body => BodyTyped root w body cert
   | .forkScoped child _ _ => PointTyped root w child cert
   | .fork body _ _ => BodyTyped root w body cert
-  | .forkIn child _ scope _ =>
-    PointTyped root w child cert ∧ (w.state.scopes.entryAt scope).isSome = true
+  | .forkIn child _ scope _ => PointTyped root w child cert ∧ ScopeLive w scope
   | .gen p => PointTyped root w p cert
   | .loop p _ => PointTyped root w p cert
   | .refuse _ => False
@@ -188,7 +201,8 @@ def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer
   | .setContext _ | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _
   | .interruptAll _ _ | .runIn _ _ | .cancelRace _ | .dropObservers _
   | .foreignRelease _ _ | .closeWalk _ _ _ | .awaitNewChildren _ => ans = Val.unit
-  | .ambientScope => ∃ sc, ans = Val.scopeHandle sc
+  -- the context's ambient scope, present by `J` (`ambientScope_live`, decisions row 156)
+  | .ambientScope => Fits w' ans Ty.scope
   | .sync value => ans = value
   | .await target mode => match mode with
     | .joinEffect => ∃ ty, w'.Γ target = some ty ∧ ExitOk w' ty ans
@@ -227,7 +241,10 @@ which have their own arms. A guard's body is typed at the guard's certified inte
 not take must fit the outer type. `unguard` and `finishFinalizer` carry an exit at the current
 type and type no continuation: the reference machine never resumes one (`evaluateFiberR`
 hands the payload to `deliverR`; `popR`'s answer glue passes it to the next frame).
-`scopeExit` carries its exit and keeps its continuation. -/
+`scopeExit` carries its exit and keeps its continuation, at a world whose store holds the scope it
+exits (`ScopeLive`, decisions row 156: the machine halts on an absent scope,
+`prepareScopedExitR`, so the marker reads the same presence `fiberPre`'s `scopeExit` arm states;
+before row 156 it read no pre, `E4-SCHED-CE-020`). -/
 inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Prop
   | pure {w : World} {ty : EffTy} {ex : ExitV} (exit : ExitOk w ty ex) :
       TypedProg root w ty (.pure ex)
@@ -255,6 +272,7 @@ inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Pr
   | finishFinalizer {w : World} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
       (payload : ExitOk w ty ex) : TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k)
   | scopeExit {w : World} {ty : EffTy} {prev : Ctx} {sc : Nat} {ex : ExitV} {k : ExitV → RProgram}
+      (live : ScopeLive w sc)
       (payload : ExitOk w ty ex)
       (next : ∀ w', w.leHost w' → ∀ ans, TypedProg root w' ty (k ans)) :
       TypedProg root w ty (.vis (.inr (.scopeExit prev sc ex)) k)
@@ -288,7 +306,7 @@ theorem fiber_inv {root : ProgramSource} {w : World} {ty : EffTy} {op : FiberOp}
   | guard _ _ _ _ => exact absurd rfl (notGuard _)
   | unguard _ => exact absurd rfl (notUnguard _)
   | finishFinalizer _ => exact absurd rfl (notFinish _)
-  | scopeExit _ _ => exact absurd rfl (notScopeExit _ _ _)
+  | scopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
 
 /-- A guard's typing: the body at the guard's intermediate type `mid`, a run arm for the exits
 the guard row admits at `mid` and a skip arm, both at every later world. With the Kripke-closed
@@ -591,7 +609,7 @@ theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
   | deferredMake | memoBuild _ _ | memoGet _ _ => exact h
   | scopeAdd scope _ | scopeRemove scope _ | scopeIsClosed scope | scopeFork scope _ =>
     simp only [storePre] at h ⊢
-    exact ord.1.1.2.2.2.1 scope h
+    exact scopeLive_mono ord.1 h
   | clockNow | sleepCancel _ _ | scopeMake _ | memoFork _ | memoComplete _ _ _ | memoRelease _ _ =>
     exact trivial
 
@@ -618,8 +636,9 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   cases op with
   | fork body _ _ => exact bodyTyped_mono ord h
   | mask _ body => exact bodyTyped_mono ord h
-  -- row 139: scope entries persist along the host order, the fiber table grows
-  | forkIn child _ scope _ => exact ⟨pointTyped_mono ord h.1, ord.1.1.2.2.2.1 scope h.2⟩
+  -- row 139: scope entries persist along the host order (`scopeLive_mono`, row 156), the fiber
+  -- table grows
+  | forkIn child _ scope _ => exact ⟨pointTyped_mono ord h.1, scopeLive_mono ord.1 h.2⟩
   | forkScoped child _ _ => exact pointTyped_mono ord h
   | «scoped» body => exact pointTyped_mono ord h
   | gen p => exact pointTyped_mono ord h
@@ -641,7 +660,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | async register _ => exact asyncPre_mono root ord register cert h
   | setContext ctx =>
     simp only [fiberPre] at h ⊢
-    exact servicesFit_map hPi hRho ord.2 h
+    exact servicesFit_map hPi hRho ord.2 (fun _ hs => scopeLive_mono ord.1 hs) (serviceTy_of_le ord.1) h
   | getContext | snapshotChildren => exact h
   | refuse _ | raceRegister _ => exact (h : False).elim
   | interruptAs target _ =>
@@ -649,10 +668,10 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
     exact isSome_extends hGamma h
   | runIn target scope =>
     simp only [fiberPre] at h ⊢
-    exact ⟨isSome_extends hGamma h.1, ord.1.1.2.2.2.1 scope h.2⟩
+    exact ⟨isSome_extends hGamma h.1, scopeLive_mono ord.1 h.2⟩
   | scopeExit _ scope _ | closeScope scope _ =>
     simp only [fiberPre] at h ⊢
-    exact ord.1.1.2.2.2.1 scope h
+    exact scopeLive_mono ord.1 h
   | getId | yieldNow _ | ambientScope | sync _ | suspend _ | interrupt _
   | interruptScoped _ | interruptAll _ _ | awaitNewChildren _ | guard_ _ | unguard _
   | finishFinalizer _ | construction | foreignRelease _ _
@@ -680,8 +699,8 @@ theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : R
       (fun w'' ord' ex hfit harm => skip w'' (leHost_trans _ _ _ ord ord') ex hfit harm)
   | unguard payload => exact .unguard (strongExit_mono _ _ _ _ ord payload)
   | finishFinalizer payload => exact .finishFinalizer (strongExit_mono _ _ _ _ ord payload)
-  | scopeExit payload next _ =>
-    exact .scopeExit (strongExit_mono _ _ _ _ ord payload)
+  | scopeExit live payload next _ =>
+    exact .scopeExit (scopeLive_mono ord.1 live) (strongExit_mono _ _ _ _ ord payload)
       (fun w'' ord' ans => next w'' (leHost_trans _ _ _ ord ord') ans)
 
 /-- A saved frame of the typed state transports along the host order. -/
@@ -690,6 +709,127 @@ theorem savedOk_mono (root : ProgramSource) (w w' : World) (final : EffTy) (x : 
     (h : Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final x) :
     Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w' final x :=
   Contracts.savedOk_mono (fun {w w'} {ty} {p} o hp => typedProg_mono root w w' ty p o hp) ord h
+
+/-! ## `TypedProg` along an appended row table (decisions rows 115, 116; TY-12)
+
+An appended row extends the source's signature under the same service declarations
+(`SigApp.rows_append`), so every precondition that reads the source transports along it: the
+checked points (`check_ext`), the memo layer (`checkLayer_ext`) and the host-row entry, whose
+domain bit puts the operation in the shorter table's domain, where the longer table's row is the
+same (`bitEntry_rows_append`). No postcondition reads the source. So `TypedProg` is monotone along
+an appended table (`typedProg_rows_append`), beside its monotonicity along the world order
+(`typedProg_mono`). Without the bit it is not (`Test/Program/TypedProgRows.lean`,
+`typedProg_not_table_monotone_of`). Moved from that battery (seat A), where it was proved under
+the entry's transport as a hypothesis; the bit makes it hold outright. -/
+
+/-- **Row 116's entry transports along an appended table** (proved): the bit puts the operation in
+the shorter domain, where the longer table's row is the same. -/
+theorem bitEntry_rows_append (src src' : ProgramSource) (t' : RowTable)
+    (htab : src'.table = src.table ++ t') (op : NativeOp) (cert : EffTy)
+    (h : bitEntry src op cert) : bitEntry src' op cert := by
+  obtain ⟨hdom, ha, he⟩ := h
+  have hrow := (rows_append src.table t').row op hdom
+  show (nativeSignature src'.table).dom op = true ∧
+    ((nativeSignature src'.table).rowOf op).answer.sub cert.answer = true ∧
+    ((nativeSignature src'.table).rowOf op).error.sub cert.error = true
+  rw [htab, hrow.2]
+  exact ⟨hrow.1, ha, he⟩
+
+section RowsAppend
+
+variable (src src' : ProgramSource) (t' : RowTable)
+  (hprog : src'.program = src.program) (htab : src'.table = src.table ++ t')
+  (hsvc : src'.services = src.services)
+include hprog htab hsvc
+
+omit hprog in
+/-- The longer source's signature extends the shorter one's: an appended row table under the
+same service declarations. -/
+theorem signature_rows_append : SigExtends src.signature src'.signature := by
+  show SigExtends src.sig.signature (SigApp.mk src'.table src'.services).signature
+  rw [htab, hsvc]
+  exact SigApp.rows_append src.sig t'
+
+theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
+    (h : PointTyped src w point ty) : PointTyped src' w point ty := by
+  obtain ⟨e, env, hat, hcheck, henv⟩ := h
+  refine ⟨e, env, ?_, ?_, henv⟩
+  · rw [hprog]
+    exact hat
+  · exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
+
+theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
+    (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
+  cases h with
+  | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | fin name ex ty hex => exact .fin name ex ty hex
+  | raceCleanup race => exact .raceCleanup race
+  | acquireIn p ctx ty hp =>
+    exact .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | release p prev ty hp =>
+    exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | layerBuild p m scope ty hp =>
+    exact .layerBuild p m scope ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+
+theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
+    (h : storePre src w op cert) : storePre src' w op cert := by
+  cases op with
+  | memoGet layer m =>
+    obtain ⟨l, lt, hat, hcheck, herr⟩ := h
+    refine ⟨l, lt, ?_, ?_, herr⟩
+    · rw [hprog]
+      exact hat
+    · exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+  | _ => exact h
+
+omit hprog hsvc in
+theorem asyncPre_rows_append {w : World} {register : EffName} {cert : EffTy}
+    (h : asyncPre src w register cert) : asyncPre src' w register cert := by
+  cases register with
+  | external op req => exact bitEntry_rows_append src src' t' htab op cert h
+  | store name => cases name <;> exact h
+  | _ => exact h
+
+theorem fiberPre_rows_append {w : World} {op : FiberOp} {cert : FiberCert op}
+    (h : fiberPre src w op cert) : fiberPre src' w op cert := by
+  cases op with
+  | raceAll entrants race =>
+    intro p hp
+    obtain ⟨ty, hpt, ha, he⟩ := h p hp
+    exact ⟨ty, pointTyped_rows_append src src' t' hprog htab hsvc hpt, ha, he⟩
+  | async register token => exact asyncPre_rows_append src src' t' htab h
+  | «scoped» body => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | mask flag body => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
+  | forkScoped child options path => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | fork body options path => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
+  | forkIn child options scope path =>
+    exact ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, h.2⟩
+  | gen p => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | loop p name => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | _ => exact h
+
+/-- **`TypedProg` is monotone along an appended row table** (TY-12's positive control, proved;
+rows 115, 116): the same program typed under the shorter source is typed under the longer one, at
+every world and type. -/
+theorem typedProg_rows_append :
+    ∀ {w : World} {ty : EffTy} {p : RProgram}, TypedProg src w ty p → TypedProg src' w ty p := by
+  intro w ty p h
+  induction h with
+  | pure exit => exact .pure exit
+  | store cert pre next ih =>
+    exact .store cert (storePre_rows_append src src' t' hprog htab hsvc pre)
+      fun w' hle ans hpost => ih w' hle ans hpost
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre next ih =>
+    exact .fiber notGuard notUnguard notFinish notScopeExit cert
+      (fiberPre_rows_append src src' t' hprog htab hsvc pre)
+      fun w' hle ans hpost => ih w' hle ans hpost
+  | guard mid body run skip ihbody ihrun =>
+    exact .guard mid ihbody (fun w' hle ex hpost => ihrun w' hle ex hpost) skip
+  | unguard payload => exact .unguard payload
+  | finishFinalizer payload => exact .finishFinalizer payload
+  | scopeExit live payload next ih => exact .scopeExit live payload fun w' hle ans => ih w' hle ans
+
+end RowsAppend
 
 namespace M3bWorld
 

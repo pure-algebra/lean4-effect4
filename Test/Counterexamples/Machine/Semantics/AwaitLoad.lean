@@ -103,6 +103,7 @@ def OldLiveCode (root : ProgramSource) (w : W) (m : RState) : Prop :=
 structure OldMachineTyped (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState) :
     Prop where
   typed : TypedState root rootTy w m
+  services : w.serviceTy = root.sig.serviceTy
   code : OldLiveCode root w m
   live : MachineLive m
 
@@ -121,7 +122,7 @@ M5's proposition at this program, fuel 5, the empty row table, with `J`'s code c
 old judgment. -/
 theorem loadsTyped_false : ¬ OldLoadsTyped (awaitProg : ProgramSource) rootTy 5 5 := by
   intro h
-  obtain ⟨w, typed⟩ := h rfl typed_source closed_root
+  obtain ⟨w, typed⟩ := h (awaitProg : ProgramSource).lawful typed_source closed_root
   have valid := typed.typed.1
   have fresh : w.Γ ⟨1⟩ = none := by
     cases hg : w.Γ ⟨1⟩ with
@@ -143,7 +144,7 @@ loaded machine, which the empty tape reaches. -/
 theorem capstone_false :
     ¬ OldReachableTyped (awaitProg : ProgramSource) rootTy 5 (loadR awaitProg 5 5) :=
   fun cap => by
-    obtain ⟨w, typed⟩ := cap rfl typed_source closed_root
+    obtain ⟨w, typed⟩ := cap (awaitProg : ProgramSource).lawful typed_source closed_root
       (rreachable_load (awaitProg : ProgramSource) 5)
     exact loadsTyped_false (fun _ _ _ => ⟨w, typed⟩)
 
@@ -267,8 +268,11 @@ theorem await_typed (w : W) (x : Val) (hx : Typed.Fits w x (.fiberOf .nat .never
       obtain ⟨ty, declared, fits⟩ := post'
       rw [(leHost_trans _ _ _ ord ord').1.2.1 _ _ hfty] at declared
       cases declared
-      exact TypedProg.pure (strongExit_success w'' rootTy ans
-        (fits_sub w'' (sub_exitOf_mono _ _ _ _ ha he) ans fits))
+      -- row 137: the declaration compares in the checker's order, so the columns are read
+      -- normalized (`normalize` keeps `exitOf`) and the answer moves by `fits_subN`
+      have below : Ty.subN (.exitOf fty.answer fty.error) rootTy.answer = true :=
+        sub_exitOf_mono _ _ _ _ ha he
+      exact TypedProg.pure (strongExit_success w'' rootTy ans (fits_subN w'' below ans fits))
 
 /-- **The loaded root is typed at its checked type at every world** (the current judgment). -/
 theorem code_typed (w : W) : TypedProg (awaitProg : ProgramSource) w rootTy code := by
@@ -283,7 +287,7 @@ theorem code_typed (w : W) : TypedProg (awaitProg : ProgramSource) w rootTy code
 /-- **The flip of `loadsTyped_false`: M5's proposition over `J` holds at this program** (fuel 5,
 the empty row table), through `machineTyped_load`. -/
 theorem loadsTyped : LoadsTyped (awaitProg : ProgramSource) rootTy 5 5 :=
-  fun _ _ closed => ⟨initialWorld rootTy, machineTyped_load _ rootTy 5 5 closed rfl code_typed⟩
+  fun _ _ closed => ⟨_, machineTyped_load _ rootTy 5 5 closed rfl code_typed⟩
 
 /-- **The flip of `capstone_false`: the capstone's proposition holds at the loaded machine.** -/
 theorem capstone_at_load :

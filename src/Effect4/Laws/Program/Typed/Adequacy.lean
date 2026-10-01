@@ -31,15 +31,18 @@ open Contracts
 
 /-- The store half of the typed state that the store rows read and keep: the world's
 declarations cover exactly the allocated cells and promises (`WorldValid.heap`, `.promises`),
-every stored value fits its cell's declared type (the generated `HeapCell` column), and every
+every stored value fits its cell's declared type (the generated `HeapCell` column), every
 closing exit a scope holds fits `Exit<unknown, unknown>` (DI-94's release type: the
-`ScopeState.closed.exit` source row, which seat C un-refuses). -/
+`ScopeState.closed.exit` source row, which seat C un-refuses), and every memo entry's Deferred
+and layer scope exist (`Stores.MemoValid`, the memo clause of `WorldValid.wf`), which
+`memoRelease`'s post reads when it answers the layer scope (decisions row 156). -/
 structure StoreTyped (w : World) : Prop where
   heap : ∀ key, (w.Ρ key).isSome = true ↔ key.index < w.state.refs.length
   promises : ∀ key, (w.«Π» key).isSome = true ↔ key.index < w.state.deferreds.cells.length
   values : ∀ (i : Nat) (v : Val), w.state.refs[i]? = some v → ∀ ty, w.Ρ ⟨i⟩ = some ty → Fits w v ty
   scopeExits : ∀ e ∈ w.state.scopes.entries, ∀ ex, e.scope.closingExit? = some ex →
     FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex
+  memo : w.state.MemoValid
 
 /-- **The store handler fulfils row `op`** (the 2026-09-05 review's `Implements`): at a world
 whose store is typed, a request the row's pre admits steps (no frontier), and its answer lies in
@@ -90,7 +93,7 @@ theorem restate_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
     exact fun _ _ h => h
   have ord : w.leHost { w with state := st' } := by
     refine ⟨⟨⟨fun _ h => h, le⟩, fun _ _ h => h, fun _ _ h => h, fun _ _ h => h, ⟨?_, ?_⟩,
-      fun _ _ _ h => h⟩, ext⟩
+      fun _ _ _ h => h, rfl⟩, ext⟩
     · intro key ty h
       refine ⟨h.1, fun value hv => ?_⟩
       have hv' : refPeek w.state.refs key = some value := by
@@ -104,7 +107,7 @@ theorem restate_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
       rw [same] at hcomp
       exact completion_transport w { w with state := st' } types (fun _ _ h => h) ext completion
         (h.2 c hc0 completion hcomp)
-  refine ⟨ord, ⟨?_, ?_, ?_, ?_⟩⟩
+  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_⟩⟩
   · intro key
     change (w.Ρ key).isSome = true ↔ key.index < st'.refs.length
     rw [refs]
@@ -120,6 +123,7 @@ theorem restate_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
   · intro e he ex hex
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit op w.state st' ans step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
+  · exact syncOpStep_memoValid _ _ _ _ store.memo step
 
 /-- A step that keeps the whole store answers at the same world. -/
 theorem same_world {w : World} {op : SyncOp} {ans : Val} (store : StoreTyped w)
@@ -131,20 +135,6 @@ theorem same_world {w : World} {op : SyncOp} {ans : Val} (store : StoreTyped w)
 
 /-! ## Value facts the store rows read -/
 
-/-- Membership at `nat` is exactly the `nat` values (the `.nat` arm of `Fits`). -/
-theorem fits_nat_val {w : World} {v : Val} (h : Fits w v .nat) : ∃ n, v = Val.nat n := by
-  unfold Fits at h
-  split at h
-  · exact ⟨_, rfl⟩
-  · exact h.elim
-
-/-- Membership at `unit` is exactly the `unit` value (the `.unit` arm of `Fits`). -/
-theorem fits_unit_val {w : World} {v : Val} (h : Fits w v .unit) : v = Val.unit := by
-  unfold Fits at h
-  split at h
-  · rfl
-  · exact h.elim
-
 /-- On a `nat` cell, `modify` answers the old value and writes a `nat`. -/
 theorem modify_nat (f : FnName) (n : Nat) :
     (f.modify (.nat n)).1 = .nat n ∧ ∃ m, (f.modify (.nat n)).2 = .nat m := by
@@ -153,6 +143,30 @@ theorem modify_nat (f : FnName) (n : Nat) :
 theorem modifySome_nat (f : FnName) (n : Nat) :
     (f.modifySome (.nat n)).1 = .nat n ∧ ∃ m, (f.modifySome (.nat n)).2.getD (.nat n) = .nat m := by
   cases f <;> exact ⟨rfl, _, rfl⟩
+
+/-- A total read-modify-write keeps the cell's value at its declared type: it writes a number for
+a number (`fits_nat_irrel`) and leaves every other value as it is. -/
+theorem fits_total {w : World} (f : FnName) {a : Val} {t : Ty} (h : Fits w a t) :
+    Fits w (f.total a) t := by
+  unfold FnName.total
+  split
+  · exact fits_nat_irrel w _ _ t h
+  · exact fits_nat_irrel w _ _ t h
+  · exact fits_nat_irrel w _ _ t h
+  · exact h
+
+/-- A partial read-modify-write that writes keeps the cell's value at its declared type: it writes
+`0` for a positive number, or the total update. -/
+theorem fits_partialUpdate {w : World} (f : FnName) {a a' : Val} {t : Ty} (h : Fits w a t)
+    (hp : f.partialUpdate a = some a') : Fits w a' t := by
+  unfold FnName.partialUpdate at hp
+  split at hp
+  · cases hp
+  · cases hp
+    exact fits_nat_irrel w _ 0 t h
+  · cases hp
+  · cases hp
+    exact fits_total _ h
 
 /-- A declared cell holds a value: reading it is not a frontier. -/
 theorem cell_readable {w : World} {cell : RefKey} {t : Ty} (store : StoreTyped w)
@@ -173,7 +187,7 @@ theorem nat_cell {w : World} {cell : RefKey} (store : StoreTyped w) (pre : RefDe
   obtain ⟨a, ha⟩ : ∃ a, w.state.refs[cell.index]? = some a :=
     ⟨_, List.getElem?_eq_getElem live⟩
   have fa : Fits w a t := store.values cell.index a ha t declared
-  obtain ⟨n, rfl⟩ := fits_nat_val (fits_sub w equiv.1 a fa)
+  obtain ⟨n, rfl⟩ := fits_nat_inv (fits_subN w equiv.1 a fa)
   exact ⟨t, n, declared, equiv, ha⟩
 
 /-- A table that covers exactly the indices below `n`, extended by the one key at index `n`,
@@ -243,17 +257,6 @@ theorem complete_cells_length (d : DeferredStore) (cell : DeferredKey)
     · rfl
     · exact List.length_set
 
-/-- The strong exit judgment gives the coarse completion check the world order reads. -/
-theorem completionOk_of_fitsExit {w : World} {a e : Ty} {ex : ExitV}
-    (h : FitsExit w ⟨a, e, Env.Requirement.empty⟩ ex) : CompletionOk w (a, e) (.ofExit ex) := by
-  cases ex with
-  | success v =>
-    rw [fitsExit_success_iff] at h
-    exact fits_hasTy w a v h
-  | failure c =>
-    rw [fitsExit_failure_iff] at h
-    exact causeFits_admits (fun x hx => fits_hasTy w e x hx) c h
-
 /-! ## Moving the world along a ref write and a completion -/
 
 /-- A store step that writes one ref cell with a value its declared type admits moves to the world
@@ -284,7 +287,7 @@ theorem poke_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : 
       exact Or.inr ⟨fun h => other h.symm, hx⟩
   have ord : w.leHost { w with state := st' } := by
     refine ⟨⟨⟨fun _ h => h, le⟩, fun _ _ h => h, fun _ _ h => h, fun _ _ h => h, ⟨?_, ?_⟩,
-      fun _ _ _ h => h⟩, ext⟩
+      fun _ _ _ h => h, rfl⟩, ext⟩
     · intro key ty h
       refine ⟨h.1, fun value hv => ?_⟩
       change st'.refs[key.index]? = some value at hv
@@ -307,7 +310,7 @@ theorem poke_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : 
       rw [deferreds] at hc
       exact completion_transport w { w with state := st' } types (fun _ _ h => h) ext completion
         (h.2 c hc completion hcomp)
-  refine ⟨ord, ⟨?_, ?_, ?_, ?_⟩⟩
+  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_⟩⟩
   · intro key
     change (w.Ρ key).isSome = true ↔ key.index < st'.refs.length
     rw [refs]
@@ -332,6 +335,7 @@ theorem poke_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : 
   · intro e he ex hex
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit op w.state st' ans step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
+  · exact syncOpStep_memoValid _ _ _ _ store.memo step
 
 /-- A store step that completes one promise with a completion its declared columns admit moves to
 the world over the new store: later in the host order, and typed. -/
@@ -348,7 +352,7 @@ theorem complete_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cel
     exact fun _ _ h => h
   have ord : w.leHost { w with state := st' } := by
     refine ⟨⟨⟨fun _ h => h, le⟩, fun _ _ h => h, fun _ _ h => h, fun _ _ h => h, ⟨?_, ?_⟩,
-      fun _ _ _ h => h⟩, ext⟩
+      fun _ _ _ h => h, rfl⟩, ext⟩
     · intro key ty h
       refine ⟨h.1, fun value hv => ?_⟩
       have hv' : refPeek w.state.refs key = some value := by
@@ -376,7 +380,7 @@ theorem complete_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cel
         rw [hkey] at h
         exact completion_transport w { w with state := st' } types (fun _ _ h => h) ext effect
           (typed types h.1)
-  refine ⟨ord, ⟨?_, ?_, ?_, ?_⟩⟩
+  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_⟩⟩
   · intro key
     change (w.Ρ key).isSome = true ↔ key.index < st'.refs.length
     rw [refs]
@@ -392,15 +396,17 @@ theorem complete_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cel
   · intro e he ex hex
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit op w.state st' ans step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
+  · exact syncOpStep_memoValid _ _ _ _ store.memo step
 
 /-! ## The store rows, one instance each
 
-Twenty-three of the thirty-one rows. The six read-modify-write rows that write `f.total a`
+Twenty-nine of the thirty-one rows. The six read-modify-write rows that write `f.total a`
 (`refUpdate`, `refGetAndUpdate`, `refUpdateAndGet`, `refUpdateSome`, `refGetAndUpdateSome`,
-`refUpdateSomeAndGet`) need `Fits w (nat n) t → Fits w (nat m) t`, one induction over the
-membership fold in `Membership.lean`; `memoGet` and `memoComplete` need a memo-table typing clause
-(every entry's Deferred declared at its layer's context and error types) that no typed-state
-clause states yet. Those eight are declared in `M3bAdequacy`. -/
+`refUpdateSomeAndGet`) read `Fits w (nat n) t → Fits w (nat m) t` (`fits_nat_irrel`, one
+induction over the membership fold in `Membership.lean`) through `fits_total` and
+`fits_partialUpdate`; `memoGet` and `memoComplete` need a memo-table typing clause (every entry's
+Deferred declared at its layer's context and error types) that no typed-state clause states yet.
+Those two are declared in `M3bAdequacy`. -/
 
 theorem scopeRemove_implements (root : ProgramSource) (scope key : Nat) :
     StoreImplements root (.scopeRemove scope key) := by
@@ -451,7 +457,9 @@ theorem memoRelease_implements (root : ProgramSource) (layer : LayerId) (memoMap
     by_cases hobs : entry.observers ≤ 1
     · have step := syncOpStep_memoRelease_last _ _ _ hentry hobs
       obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
-      exact ⟨_, _, step, _, ord, rfl, store', Or.inr ⟨_, rfl⟩⟩
+      obtain ⟨m, hm, _, hmem⟩ := MemoWorld.entryAt_mem hentry
+      exact ⟨_, _, step, _, ord, rfl, store',
+        Or.inr (fits_scopeHandle _ _ (store.memo m hm _ hmem).2)⟩
     · have step := syncOpStep_memoRelease_dec _ _ _ hentry hobs
       obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
       exact ⟨_, _, step, _, ord, rfl, store', Or.inl rfl⟩
@@ -466,7 +474,7 @@ theorem refModify_implements (root : ProgramSource) (cell : RefKey) (f : FnName)
     simp only [syncOpStep, refStep, peek, Option.map_some]
   have fits : Fits w (f.modify (.nat n)).2 t := by
     rw [written]
-    exact fits_sub w equiv.2 _ trivial
+    exact fits_subN w equiv.2 _ trivial
   obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared fits
   exact ⟨_, _, step, _, ord, rfl, store', ⟨n, answer⟩⟩
 
@@ -481,9 +489,114 @@ theorem refModifySome_implements (root : ProgramSource) (cell : RefKey) (f : FnN
     simp only [syncOpStep, refStep, peek, Option.map_some]
   have fits : Fits w ((f.modifySome (.nat n)).2.getD (.nat n)) t := by
     rw [written]
-    exact fits_sub w equiv.2 _ trivial
+    exact fits_subN w equiv.2 _ trivial
   obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared fits
   exact ⟨_, _, step, _, ord, rfl, store', ⟨n, answer⟩⟩
+
+/-- The six rows that write `f.total a` or `pf.partialUpdate a` (closed by integration seat I2
+with `fits_nat_irrel`): the cell holds a value of its declared type, the update writes one, and
+the answer is the old value, the new value or `unit` as the row says. -/
+theorem refUpdate_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refUpdate cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have step : syncOpStep (.refUpdate cell f) w.state =
+      some ({ w.state with refs := refPoke w.state.refs cell (f.total a) }, Val.unit) := by
+    simp only [syncOpStep, refStep, refPeek, ha, Option.map_some]
+  obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared
+    (fits_total f (store.values cell.index a ha t declared))
+  exact ⟨_, _, step, _, ord, rfl, store', rfl⟩
+
+theorem refGetAndUpdate_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refGetAndUpdate cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have old := store.values cell.index a ha t declared
+  have step : syncOpStep (.refGetAndUpdate cell f) w.state =
+      some ({ w.state with refs := refPoke w.state.refs cell (f.total a) }, a) := by
+    simp only [syncOpStep, refStep, refPeek, ha, Option.map_some]
+  obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared (fits_total f old)
+  exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord old⟩⟩
+
+theorem refUpdateAndGet_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refUpdateAndGet cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have new := fits_total f (store.values cell.index a ha t declared)
+  have step : syncOpStep (.refUpdateAndGet cell f) w.state =
+      some ({ w.state with refs := refPoke w.state.refs cell (f.total a) }, f.total a) := by
+    simp only [syncOpStep, refStep, refPeek, ha, Option.map_some]
+  obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared new
+  exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord new⟩⟩
+
+theorem refUpdateSome_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refUpdateSome cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have old := store.values cell.index a ha t declared
+  cases hp : f.partialUpdate a with
+  | none =>
+    have step : syncOpStep (.refUpdateSome cell f) w.state =
+        some ({ w.state with refs := w.state.refs }, Val.unit) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.map_some]
+    obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
+    exact ⟨_, _, step, _, ord, rfl, store', rfl⟩
+  | some a' =>
+    have step : syncOpStep (.refUpdateSome cell f) w.state =
+        some ({ w.state with refs := refPoke w.state.refs cell a' }, Val.unit) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.map_some]
+    obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared
+      (fits_partialUpdate f old hp)
+    exact ⟨_, _, step, _, ord, rfl, store', rfl⟩
+
+theorem refGetAndUpdateSome_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refGetAndUpdateSome cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have old := store.values cell.index a ha t declared
+  cases hp : f.partialUpdate a with
+  | none =>
+    have step : syncOpStep (.refGetAndUpdateSome cell f) w.state =
+        some ({ w.state with refs := w.state.refs }, a) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.map_some]
+    obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
+    exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord old⟩⟩
+  | some a' =>
+    have step : syncOpStep (.refGetAndUpdateSome cell f) w.state =
+        some ({ w.state with refs := refPoke w.state.refs cell a' }, a) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.map_some]
+    obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared
+      (fits_partialUpdate f old hp)
+    exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord old⟩⟩
+
+theorem refUpdateSomeAndGet_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
+    StoreImplements root (.refUpdateSomeAndGet cell f) := by
+  intro w _ store pre
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have old := store.values cell.index a ha t declared
+  cases hp : f.partialUpdate a with
+  | none =>
+    have step : syncOpStep (.refUpdateSomeAndGet cell f) w.state =
+        some ({ w.state with refs := w.state.refs }, a) := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.bind_some, Option.map_some]
+    obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
+    exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord old⟩⟩
+  | some a' =>
+    have live : cell.index < w.state.refs.length := (List.getElem?_eq_some_iff.mp ha).1
+    have fresh : (refPoke w.state.refs cell a')[cell.index]? = some a' :=
+      List.getElem?_set_self live
+    have step : syncOpStep (.refUpdateSomeAndGet cell f) w.state =
+        some ({ w.state with refs := refPoke w.state.refs cell a' }, a') := by
+      simp only [syncOpStep, refStep, refPeek, ha, hp, Option.bind_some, fresh, Option.map_some]
+    have new := fits_partialUpdate f old hp
+    obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared new
+    exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord new⟩⟩
 
 theorem refMake_implements (root : ProgramSource) (initial : Val) :
     StoreImplements root (.refMake initial) := by
@@ -500,7 +613,7 @@ theorem refMake_implements (root : ProgramSource) (initial : Val) :
   obtain ⟨le, _⟩ := refMake_extension w initial cert _ _ step fresh (fits_hasTy w cert initial fits)
   have ord : w.leHost (w.addRef { w.state with refs := w.state.refs ++ [initial] }
       ⟨w.state.refs.length⟩ cert) := ⟨le, fun _ _ h => h⟩
-  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
+  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
   · change ∀ k, (tableInsert w.Ρ ⟨w.state.refs.length⟩ cert k).isSome = true ↔
       k.index < (w.state.refs ++ [initial]).length
     rw [List.length_append, List.length_singleton]
@@ -533,6 +646,7 @@ theorem refMake_implements (root : ProgramSource) (initial : Val) :
   · intro e he ex hex
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit _ w.state _ _ step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
+  · exact syncOpStep_memoValid _ _ _ _ store.memo step
 
 theorem refGet_implements (root : ProgramSource) (cell : RefKey) :
     StoreImplements root (.refGet cell) := by
@@ -591,7 +705,7 @@ theorem deferredMake_implements (root : ProgramSource) : StoreImplements root .d
   obtain ⟨le, _⟩ := deferredMake_extension w cert _ _ step fresh
   have ord : w.leHost (w.addPromise { w.state with deferreds := w.state.deferreds.make.2 }
       w.state.deferreds.make.1 cert) := ⟨le, fun _ _ h => h⟩
-  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
+  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
   · exact store.heap
   · change ∀ k, (tableInsert w.«Π» w.state.deferreds.make.1 cert k).isSome = true ↔
       k.index < w.state.deferreds.make.2.cells.length
@@ -605,6 +719,7 @@ theorem deferredMake_implements (root : ProgramSource) : StoreImplements root .d
   · intro e he ex hex
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit _ w.state _ _ step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
+  · exact syncOpStep_memoValid _ _ _ _ store.memo step
 
 theorem deferredIsDone_implements (root : ProgramSource) (key : DeferredKey) :
     StoreImplements root (.deferredIsDone key) := by
@@ -659,12 +774,15 @@ theorem sleepCancel_implements (root : ProgramSource) (waiter : FiberId) (token 
     (fun _ c' h => ⟨c', h, rfl⟩) rfl
   exact ⟨_, _, rfl, _, ord, rfl, store', rfl⟩
 
+/-- The allocation installs the scope it answers (`ScopeStore.entryAt_make_self`), so the
+handle fits `Ty.scope` at the answer world (decisions row 156). -/
 theorem scopeMake_implements (root : ProgramSource) (strategy : FinalizerStrategy) :
     StoreImplements root (.scopeMake strategy) := by
   intro w _ store _
-  obtain ⟨ord, store'⟩ := restate_world (op := .scopeMake strategy) store rfl rfl rfl
-    (fun _ c' h => ⟨c', h, rfl⟩) rfl
-  exact ⟨_, _, rfl, _, ord, rfl, store', ⟨_, rfl⟩⟩
+  have step := syncOpStep_scopeMake w.state strategy
+  obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
+  exact ⟨_, _, step, _, ord, rfl, store',
+    fits_scopeHandle _ _ (ScopeStore.entryAt_make_self _ _ _)⟩
 
 theorem scopeIsClosed_implements (root : ProgramSource) (scope : Nat) :
     StoreImplements root (.scopeIsClosed scope) := by
@@ -695,7 +813,8 @@ theorem scopeFork_implements (root : ProgramSource) (parent : Nat) (strategy : F
         nextName := w.state.nextName + 2 }, Val.scopeHandle w.state.nextName) := by
       simp only [syncOpStep, hentry]
     obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
-    exact ⟨_, _, step, _, ord, rfl, store', ⟨_, rfl⟩⟩
+    exact ⟨_, _, step, _, ord, rfl, store',
+      fits_scopeHandle _ _ (ScopeStore.entryAt_forkChild_child _ _ _ _ _ hentry)⟩
 
 theorem memoFork_implements (root : ProgramSource) (parent : Option MemoMapId) :
     StoreImplements root (.memoFork parent) := by
@@ -716,7 +835,8 @@ theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap :
       exact absurd this (Nat.lt_irrefl _)
   have step := syncOpStep_memoBuild w.state layer memoMap
   obtain ⟨le, _⟩ := memoBuild_extension w cert _ layer memoMap _ step fresh
-  refine ⟨_, _, step, _, ⟨le, fun _ _ h => h⟩, rfl, ⟨?_, ?_, ?_, ?_⟩, ⟨_, rfl⟩⟩
+  refine ⟨_, _, step, _, ⟨le, fun _ _ h => h⟩, rfl, ⟨?_, ?_, ?_, ?_, ?_⟩,
+    fits_scopeHandle _ _ (ScopeStore.entryAt_make_self _ _ _)⟩
   · exact store.heap
   · change ∀ k, (tableInsert w.«Π» w.state.deferreds.make.1 cert k).isSome = true ↔
       k.index < w.state.deferreds.make.2.cells.length
@@ -730,6 +850,7 @@ theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap :
   · intro e he ex hex
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit _ w.state _ _ step e he ex hex
     exact fitsExit_mono ⟨le, fun _ _ h => h⟩ (store.scopeExits e₀ he₀ ex hex₀)
+  · exact syncOpStep_memoValid _ _ _ _ store.memo step
 
 /-! ## The fiber rows
 
@@ -878,7 +999,7 @@ theorem yieldNow_frame {root : ProgramSource} {w : World} {outer : EffTy} {prior
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem interrupt_frame {root : ProgramSource} {w : World} {outer : EffTy} {target : FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.interrupt target)) next)) :
@@ -886,7 +1007,7 @@ theorem interrupt_frame {root : ProgramSource} {w : World} {outer : EffTy} {targ
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem interruptAs_frame {root : ProgramSource} {w : World} {outer : EffTy} {target who : FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.interruptAs target who)) next)) :
@@ -894,7 +1015,7 @@ theorem interruptAs_frame {root : ProgramSource} {w : World} {outer : EffTy} {ta
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem interruptScoped_frame {root : ProgramSource} {w : World} {outer : EffTy} {target : FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.interruptScoped target)) next)) :
@@ -902,7 +1023,7 @@ theorem interruptScoped_frame {root : ProgramSource} {w : World} {outer : EffTy}
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem interruptAll_frame {root : ProgramSource} {w : World} {outer : EffTy} {targets : List FiberId} {who : Option FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.interruptAll targets who)) next)) :
@@ -910,7 +1031,7 @@ theorem interruptAll_frame {root : ProgramSource} {w : World} {outer : EffTy} {t
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem cancelRace_frame {root : ProgramSource} {w : World} {outer : EffTy} {race : Nat}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.cancelRace race)) next)) :
@@ -918,7 +1039,7 @@ theorem cancelRace_frame {root : ProgramSource} {w : World} {outer : EffTy} {rac
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 theorem awaitNewChildren_frame {root : ProgramSource} {w : World} {outer : EffTy} {snapshot : List FiberId}
     {next : Val → RProgram} (h : TypedProg root w outer (.vis (.inr (.awaitNewChildren snapshot)) next)) :
@@ -926,7 +1047,7 @@ theorem awaitNewChildren_frame {root : ProgramSource} {w : World} {outer : EffTy
       (.answer (seqR next)) := by
   obtain ⟨_, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_val hv) typed
+  exact seqFrame_typed rfl (fun _ _ v hv => fits_unit_inv hv) typed
 
 /-! The join-all rows: the saved frame accepts the list of exits the certificate names. -/
 
@@ -970,8 +1091,14 @@ theorem getId_answers (root : ProgramSource) (w : World) (id : FiberId) :
 
 theorem sync_answers (w : World) (v : Val) : fiberPost w (.sync v) () v := rfl
 
-theorem ambientScope_answers (root : ProgramSource) (w : World) (scope : Nat) :
-    fiberPost w .ambientScope () ((interpR root.program).scopeValue scope) := ⟨scope, rfl⟩
+/-- The ambient-scope read answers the context's scope handle (`FiberAction.ambientScope`,
+`Machine/Fibers.lean:1491-1498`); it lies in the post when the scope is present, which `J`
+supplies for every fiber's context (`ambientScope_live`, `ambientScope_answers_of_typed` in
+`Assembly.lean`; decisions row 156). -/
+theorem ambientScope_answers (root : ProgramSource) (w : World) (scope : Nat)
+    (live : ScopeLive w scope) :
+    fiberPost w .ambientScope () ((interpR root.program).scopeValue scope) :=
+  fits_scopeHandle w scope live
 
 theorem setContext_answers (root : ProgramSource) (w : World) (ctx : Ctx) :
     fiberPost w (.setContext ctx) () (interpR root.program).voidValue := rfl
@@ -1075,9 +1202,9 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
 One goal per row the evaluator answers, beside the eighteen command goals (`M6Ledger`), with the
 two generic rules: the store rows through `syncOpStep` (`StoreImplements`), the fiber rows
 through the frame the evaluator saves and the answers their helpers give. Wave 2 consumes them
-in M6's `loop` and `deliver` arms. Proved here: the three generic rules, 23 store rows and 40
-fiber instances (the guard row's through `TypedProg.guard_frame`); declared: the 8 store rows
-named above. -/
+in M6's `loop` and `deliver` arms. Proved here: the three generic rules, 29 store rows and 40
+fiber instances (the guard row's through `TypedProg.guard_frame`); declared: the 2 store rows
+named above (`memoGet`, `memoComplete`). -/
 
 namespace M3bAdequacy
 
@@ -1316,7 +1443,7 @@ theorem sync_answers (w : World) (v : Val) : ProofGraph.Obligation
     (fiberPost w (.sync v) () v) := ⟨⟩
 
 theorem ambientScope_answers (root : ProgramSource) (w : World) (scope : Nat) : ProofGraph.Obligation
-    (fiberPost w .ambientScope () ((interpR root.program).scopeValue scope)) := ⟨⟩
+    (ScopeLive w scope → fiberPost w .ambientScope () ((interpR root.program).scopeValue scope)) := ⟨⟩
 
 theorem setContext_answers (root : ProgramSource) (w : World) (ctx : Ctx) : ProofGraph.Obligation
     (fiberPost w (.setContext ctx) () (interpR root.program).voidValue) := ⟨⟩
@@ -1512,16 +1639,22 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.closeWalk_typed
 #obligation_proved Effect4.Program.Typed.M3bAdequacy.closeScope_installs :=
   @Effect4.Program.Typed.closeScope_installs
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refUpdate_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refGetAndUpdate_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refUpdateAndGet_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refUpdateSome_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refGetAndUpdateSome_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.refUpdateSomeAndGet_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refUpdate_implements :=
+  @Effect4.Program.Typed.refUpdate_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refGetAndUpdate_implements :=
+  @Effect4.Program.Typed.refGetAndUpdate_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refUpdateAndGet_implements :=
+  @Effect4.Program.Typed.refUpdateAndGet_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refUpdateSome_implements :=
+  @Effect4.Program.Typed.refUpdateSome_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refGetAndUpdateSome_implements :=
+  @Effect4.Program.Typed.refGetAndUpdateSome_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.refUpdateSomeAndGet_implements :=
+  @Effect4.Program.Typed.refUpdateSomeAndGet_implements
 #proof_wanted Effect4.Program.Typed.M3bAdequacy.memoGet_implements
 #proof_wanted Effect4.Program.Typed.M3bAdequacy.memoComplete_implements
 #obligation_proved Effect4.Program.Typed.M3bAdequacy.guard_frame :=
   fun _ _ _ _ _ h => Effect4.Program.Typed.TypedProg.guard_frame h
 #obligation_audit Effect4.Program.Typed.M3bAdequacy
-#typed_state_obligations Effect4.Program.Typed.M3bAdequacy ceiling 8
+#typed_state_obligations Effect4.Program.Typed.M3bAdequacy ceiling 2
   using aesop (rule_sets := [Effect4.TypedState])

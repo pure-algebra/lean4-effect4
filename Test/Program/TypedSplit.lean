@@ -36,6 +36,10 @@ open Effect4.Program.Typed
 #print axioms Effect4.Program.Typed.machineTyped_of_configTyped
 #print axioms Effect4.Program.Typed.machineTyped_not_halted
 #print axioms Effect4.Program.Typed.storeTyped_of_typedState
+#print axioms Effect4.Program.Typed.ambientScope_live
+#print axioms Effect4.Program.Typed.ambientScope_answers_of_typed
+#print axioms Effect4.Program.Typed.promiseTable_of_strong
+#print axioms Effect4.Program.Typed.cells_of_typedState
 #print axioms Effect4.Program.Typed.evaluate_entry
 #print axioms Effect4.Program.Typed.stepKeeps_of_stepPreserves
 #print axioms Effect4.Program.Typed.driveState_typed_of_stepPreserves
@@ -57,6 +61,7 @@ open Effect4.Program.Typed
 #print axioms Effect4.Program.Typed.capture_lookup
 #print axioms Effect4.Program.Typed.machineLive_of_quiet
 #print axioms Effect4.Program.Typed.machineTyped_load
+#print axioms Effect4.Program.Typed.typedState_load_of_code
 #print axioms Effect4.Program.Typed.envTyped_nil
 #print axioms Effect4.Program.Typed.loadsTyped_of_denotesTyped
 #print axioms Effect4.Program.Typed.preds_savedOk_mono

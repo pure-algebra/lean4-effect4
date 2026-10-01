@@ -51,14 +51,13 @@ theorem observer_exitValue_typed (root : ProgramSource) (w : World) (ty : EffTy)
     exact TypedProg.pure (strongExit_success w _ _ (reifyExitVal_fits w ty exit typed.1))
 
 /-- Only the two exit columns are aggregated; requirement transport is H2's separate debt.
-Declared columns are compared in the checker's order (decisions row 137). -/
+Declared columns are compared in the checker's order (decisions row 137, `Ty.subN`). -/
 def FiberColumnsBelow (w : World) (id : FiberId) (answer error : Ty) : Prop :=
-  ∃ ty, w.Γ id = some ty ∧ ty.answer.normalize.sub answer.normalize = true ∧
-    ty.error.normalize.sub error.normalize = true
+  ∃ ty, w.Γ id = some ty ∧ Ty.subN ty.answer answer = true ∧ Ty.subN ty.error error = true
 
 /-- A race's one result declaration owns every buffered value and each unlaunched program.
 Existing live fiber declarations are constrained; missing fibers are not invented. Columns are
-compared in the checker's order (decisions row 137). -/
+compared in the checker's order (decisions row 137, `Ty.subN`). -/
 structure RacePayload (root : ProgramSource) (w : World) (race : RRace)
     (resultTy : EffTy) : Prop where
   token : w.Θ race.host race.token = some resultTy
@@ -67,11 +66,9 @@ structure RacePayload (root : ProgramSource) (w : World) (race : RRace)
   accepted : ∀ exit ∈ race.state.accepted, ExitOk w resultTy exit
   cleanup : ∀ wait ∈ race.state.cleanup, ExitOk w resultTy wait.result
   live : ∀ id ∈ race.state.live, ∀ childTy, w.Γ id = some childTy →
-    childTy.answer.normalize.sub resultTy.answer.normalize = true ∧
-      childTy.error.normalize.sub resultTy.error.normalize = true
+    Ty.subN childTy.answer resultTy.answer = true ∧ Ty.subN childTy.error resultTy.error = true
   programs : ∀ code ∈ race.programs, ∃ childTy, TypedProg root w childTy code ∧
-    childTy.answer.normalize.sub resultTy.answer.normalize = true ∧
-      childTy.error.normalize.sub resultTy.error.normalize = true
+    Ty.subN childTy.answer resultTy.answer = true ∧ Ty.subN childTy.error resultTy.error = true
 
 /-- The finite pending record reached by a countdown observer. Joins also use Pending with
 void metadata, so this predicate is attached only through an actual countdown observer. -/

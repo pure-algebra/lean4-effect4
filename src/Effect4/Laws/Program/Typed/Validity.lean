@@ -38,10 +38,14 @@ enough. This strengthens the existing order without asserting global validity. -
 def World.leHost (w newer : World) : Prop :=
   w.le newer ∧ Extends w.state.externals.allocated newer.state.externals.allocated
 
-def initialWorld (rootTy : EffTy) : World :=
+/-- The world a loaded program starts at: the root declared at its type, empty tables, the
+empty store, and the source's static service table (decisions row 112: `machineTyped_load` passes
+`root.sig.serviceTy`; the default is the built-in table, which is the source's for every source
+with no service declarations, `SigApp.serviceTy_nil`). -/
+def initialWorld (rootTy : EffTy) (serviceTy : ServiceKey → Option Ty := nativeServiceTy) : World :=
   { ids := [Api.root], state := Stores.empty,
     Γ := tableInsert (fun _ => none) Api.root rootTy,
-    «Π» := fun _ => none, Ρ := fun _ => none, Θ := fun _ _ => none }
+    «Π» := fun _ => none, Ρ := fun _ => none, Θ := fun _ _ => none, serviceTy := serviceTy }
 
 namespace M2Validity
 theorem valid_refMake_fresh (rootTy : EffTy) (w : World) (m : RState) :
@@ -159,8 +163,11 @@ theorem exitFits_mono (w newer : World) (ty : EffTy) (ex : ExitV) (ordered : w.l
     ExitFits w ty ex → ExitFits newer ty ex :=
   completionOk_mono w newer (ty.answer, ty.error) (.ofExit ex) ordered
 
-theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat)
-    (closed : ClosedEff rootTy) : WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel) := by
+/-- The initial world is valid for the loaded machine, at every static service table (validity
+reads no service table). -/
+theorem initial_world_valid_at (rootTy : EffTy) (serviceTy : ServiceKey → Option Ty) (e : NativeEff)
+    (fuel compileFuel : Nat) (closed : ClosedEff rootTy) :
+    WorldValid rootTy (initialWorld rootTy serviceTy) (loadR e fuel compileFuel) := by
   constructor
   · rfl
   · intro id
@@ -207,6 +214,10 @@ theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel :
   · intro id token ty h
     cases h
   · exact insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
+
+theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat)
+    (closed : ClosedEff rootTy) : WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel) :=
+  initial_world_valid_at rootTy nativeServiceTy e fuel compileFuel closed
 
 end Effect4.Program.Typed
 

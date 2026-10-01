@@ -24,6 +24,8 @@ def admitted : Api.AdmittedProgram program table where
   internalFreeTable := by decide
   intFreeProgram := by decide
   intFreeType := by decide
+  columnsTable := by decide +kernel
+  columnsType := by decide +kernel
 
 def initial : Session program table := { admitted, header, machine := Api.load program 100 }
 def parked : Session program table := (advance initial 100 Api.evaluate).session

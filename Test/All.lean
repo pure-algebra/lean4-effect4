@@ -26,9 +26,15 @@ import Test.Counterexamples.Machine.Semantics.M6Capstone
 import Test.Counterexamples.Machine.Semantics.StaleCode
 import Test.Counterexamples.Machine.Semantics.AwaitLoad
 import Test.Counterexamples.Machine.Semantics.RawOrderLoad
+import Test.Counterexamples.Machine.Semantics.ScopePresence
 import Test.Program.TypedSplit
 import Test.Counterexamples.Machine.Semantics.LayerValue
 import Test.Counterexamples.Machine.Semantics.ValueMembership
+import Test.Counterexamples.Machine.Semantics.FitsOrder
+import Test.Program.TermFits
+import Test.Program.SignatureControls
+import Test.Program.TypedProgRows
+import Test.Program.AdmissionColumns
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.ProtocolLaws

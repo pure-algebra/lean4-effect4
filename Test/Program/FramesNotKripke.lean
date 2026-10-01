@@ -83,7 +83,7 @@ theorem w0_le_w1 : world.leHost w1 := by
     · unfold PromiseTypedAt at h
       cases h.1
   exact ⟨⟨⟨fun _ h => h, hst⟩, fun _ _ h => h, fun _ _ h => h, hrho, hcells,
-    fun _ _ _ h => h⟩, fun _ _ h => h⟩
+    fun _ _ _ h => h, rfl⟩, fun _ _ h => h⟩
 
 theorem cell0_ok_w1 : ExitOk w1 tin (.success (Val.cell ⟨0⟩)) := by
   refine ⟨?_, trivial⟩
@@ -637,16 +637,12 @@ theorem good_queue : QueueOk (refProg : ProgramSource) world good [command] :=
 root's code, which the queued `loop` reads, is typed with its stack (`ReadCode`). Before the
 split this was the code clause of `TypedState … [command]`. -/
 theorem good_config : ConfigTyped (refProg : ProgramSource) unitTy world good [command] := by
-  refine ⟨⟨good_typed, ?_, machineLive_of_quiet _ rfl (fun f hf => ?_) rfl⟩, ?_, good_queue⟩
+  refine ⟨⟨good_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl⟩, ?_, good_queue⟩
   · intro f hf _ idle
     change f ∈ [rootFiber [.answer goodNext] true] at hf
     rw [List.mem_singleton] at hf
     subst f
     cases idle
-  · change f ∈ [rootFiber [.answer goodNext] true] at hf
-    rw [List.mem_singleton] at hf
-    subst f
-    rfl
   · intro f hf _ _ _ ty declared
     change f ∈ [rootFiber [.answer goodNext] true] at hf
     rw [List.mem_singleton] at hf
@@ -684,7 +680,7 @@ theorem w0_le_w1g : world.leHost w1g := by
     · unfold PromiseTypedAt at h
       cases h.1
   exact ⟨⟨⟨fun _ h => h, hst⟩, fun _ _ h => h, fun _ _ h => h, hrho, hcells,
-    fun _ _ _ h => h⟩, fun _ _ h => h⟩
+    fun _ _ _ h => h, rfl⟩, fun _ _ h => h⟩
 
 theorem valid_w1g : WorldValid unitTy w1g afterGood.1 := by
   have v0 := initial_world_valid unitTy refProg 20 20 ⟨rfl, rfl⟩
@@ -916,7 +912,7 @@ theorem afterGood_queueOk :
 `deliver` reads, is typed with its stack at the world that declares cell 0. -/
 theorem afterGood_config :
     ConfigTyped (refProg : ProgramSource) unitTy w1g afterGood.1 afterGood.2 := by
-  refine ⟨⟨afterGood_typed, ?_, machineLive_of_quiet _ rfl (fun f hf => ?_) rfl⟩, ?_,
+  refine ⟨⟨afterGood_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl⟩, ?_,
     afterGood_queueOk⟩
   · intro f hf _ _ _ ty declared
     have saved := afterGood_saved f hf
@@ -927,10 +923,6 @@ theorem afterGood_config :
     rw [valid_w1g.root] at declared
     cases declared
     exact saved
-  · change f ∈ [_] at hf
-    rw [List.mem_singleton] at hf
-    subst hf
-    rfl
   · intro f hf _ _ _ ty declared
     have saved := afterGood_saved f hf
     change f ∈ [_] at hf

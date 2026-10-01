@@ -131,14 +131,30 @@ theorem admitProgram_eq_ok {program : NativeEff} {table : RowTable}
         · rename_i found hfound
           rw [admitted.intFreeType] at hfound
           contradiction
-        · split
+        · have hlawful := (Table.checkLawful_eq_none_iff table).mpr admitted.lawful
+          split
+          · rename_i hfound
+            rw [hlawful] at hfound
+            contradiction
+          · rename_i hfound
+            rw [hlawful] at hfound
+            contradiction
+          · rename_i hfound
+            rw [hlawful] at hfound
+            contradiction
           · split
             · rename_i why hwhy
               rw [admitted.runnable] at hwhy
               contradiction
-            · cases admitted
-              rfl
-          · rename_i unlawful
-            exact False.elim (unlawful admitted.lawful)
+            · split
+              · rename_i pos hpos
+                rw [admitted.columnsTable] at hpos
+                contradiction
+              · split
+                · rename_i pos hpos
+                  rw [admitted.columnsType] at hpos
+                  contradiction
+                · cases admitted
+                  rfl
 
 end Effect4.Program

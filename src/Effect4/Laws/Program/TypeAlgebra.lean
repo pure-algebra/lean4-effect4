@@ -1050,6 +1050,181 @@ theorem join_least (a b c : CTy) (hac : sub a.toRaw c.toRaw = true)
 theorem sub_normalize_of_sub (a b : Ty) (hab : sub a b = true) :
     sub a.normalize b.normalize = true := OrderProof.sub_normalize_of_sub sub_trans a b hab
 
+/-! ### The checker's order (decisions row 137; formal pass TY-01, TY-02)
+
+The checker compares two types after normalizing both (`rowTy`, `HasTy.iterate`,
+`HasTy.provideService`) and joins answers by `join a b = normalize (union a b)`, so the order it
+reads is `subN a b := sub (normalize a) (normalize b)`. It is a preorder (`subN_refl`,
+`subN_trans`) that contains raw `sub` (`sub_le_subN`), and its kernel is exactly equality of
+normal forms (`subN_equiv_iff`): `Ty` modulo mutual `subN` is `CTy`, with `normalize` the
+quotient map (`ofRaw_eq_iff`). Raw mutual subtyping is strictly finer, since raw `sub` never
+distributes a product over a union (`prod (nat | string) unit` is not raw-below its own normal
+form; `E4-TYPED-CE-009`), so a judgment that compares a declaration with a type the checker
+produced reads `subN`. Atom arguments are compared in raw `sub` (`NativeAtom.monoApply`); raw
+`sub` implies `subN`, so that comparison is the stronger one. -/
+
+/-- The order the checker compares and joins in: both sides normalized. -/
+def subN (a b : Ty) : Bool := sub a.normalize b.normalize
+
+theorem subN_refl (a : Ty) : subN a a = true := sub_refl _
+
+theorem subN_trans {a b c : Ty} (hab : subN a b = true) (hbc : subN b c = true) :
+    subN a c = true :=
+  sub_trans _ _ _ hab hbc
+
+/-- The raw order is contained in the checker's (`sub_normalize_of_sub`, one way). -/
+theorem sub_le_subN {a b : Ty} (h : sub a b = true) : subN a b = true :=
+  sub_normalize_of_sub a b h
+
+theorem subN_normalize_left (a b : Ty) : subN a.normalize b = subN a b := by
+  unfold subN
+  rw [normalize_idem]
+
+theorem subN_normalize_right (a b : Ty) : subN a b.normalize = subN a b := by
+  unfold subN
+  rw [normalize_idem]
+
+/-- **The kernel of the checker's order is equality of normal forms.** -/
+theorem subN_equiv_iff (a b : Ty) :
+    (subN a b = true ∧ subN b a = true) ↔ a.normalize = b.normalize := by
+  constructor
+  · rintro ⟨hab, hba⟩
+    exact congrArg Subtype.val (sub_antisymm_canonical (CTy.ofRaw a) (CTy.ofRaw b) hab hba)
+  · intro h
+    unfold subN
+    rw [h]
+    exact ⟨sub_refl _, sub_refl _⟩
+
+/-- The quotient map: `CTy.ofRaw` identifies exactly the `subN`-equivalent types. -/
+theorem ofRaw_eq_iff (a b : Ty) :
+    CTy.ofRaw a = CTy.ofRaw b ↔ (subN a b = true ∧ subN b a = true) := by
+  rw [subN_equiv_iff]
+  exact ⟨fun h => congrArg Subtype.val h, fun h => Subtype.ext h⟩
+
+/-- Each operand is below the join in the checker's order. -/
+theorem subN_join_left (a b : Ty) : subN a (join a b) = true := by
+  unfold subN
+  rw [normalize_join]
+  exact OrderProof.sub_normalize_union_left sub_trans a b
+
+theorem subN_join_right (a b : Ty) : subN b (join a b) = true := by
+  unfold subN
+  rw [normalize_join]
+  exact OrderProof.sub_normalize_union_right sub_trans a b
+
+/-! ### Widening in the raw order (TY-07's template step)
+
+`Laws/Program/Template.lean`'s `Widens` reads the bindings through the coarse membership check,
+which is blind at handles. Membership in the typed state is not, so the template step of term
+soundness reads the widening in the order itself: inference moves every binding up in raw `sub`
+(`infer_widensSub`, `infer_widens`'s case list), and membership follows on templates whose
+parameters sit under value formers only (`valueVars`; `fits_instantiate_widens`,
+`Laws/Program/Typed/Membership.lean`). -/
+
+/-- `σ'` binds every parameter `σ` binds, at a type above it in the raw order. -/
+def WidensSub (σ σ' : Subst) : Prop :=
+  ∀ j u, σ.lookup j = some u → ∃ u', σ'.lookup j = some u' ∧ sub u u' = true
+
+theorem WidensSub.refl (σ : Subst) : WidensSub σ σ := fun _ u h => ⟨u, h, sub_refl u⟩
+
+theorem WidensSub.trans {σ₁ σ₂ σ₃ : Subst} (h₁ : WidensSub σ₁ σ₂) (h₂ : WidensSub σ₂ σ₃) :
+    WidensSub σ₁ σ₃ := by
+  intro j u hj
+  obtain ⟨u₂, hj₂, hs₂⟩ := h₁ j u hj
+  obtain ⟨u₃, hj₃, hs₃⟩ := h₂ j u₂ hj₂
+  exact ⟨u₃, hj₃, sub_trans _ _ _ hs₂ hs₃⟩
+
+/-- Inference only widens, in the raw order: a new binding was unbound, a joined one moves up. -/
+theorem infer_widensSub (σ : Subst) (t r : Ty) (join : Bool) : WidensSub σ (infer σ t r join) := by
+  fun_induction infer σ t r join
+  case case1 σ i r hnone =>
+    intro j u hj
+    refine ⟨u, ?_, sub_refl u⟩
+    rw [List.lookup_append, hj, Option.some_or]
+  case case2 σ i r bound hbound hjoin =>
+    intro j u hj
+    rw [List.lookup_cons]
+    cases hji : j == i with
+    | true =>
+      have : j = i := beq_iff_eq.mp hji
+      subst this
+      rw [hbound] at hj
+      cases hj
+      exact ⟨r, rfl, (Bool.and_eq_true_iff.mp hjoin).2⟩
+    | false => exact ⟨u, hj, sub_refl u⟩
+  case case3 => exact WidensSub.refl _
+  case case4 ih => exact ih
+  case case5 ih => exact ih
+  case case6 ih => exact ih
+  case case7 ih => exact ih
+  case case8 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case9 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case10 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case11 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case12 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case13 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case14 => exact WidensSub.refl _
+
+/-- A match widens its seed in the raw order. -/
+theorem matchTemplate_widensSub {join : Bool} {σ σ' : Subst} {t r : Ty}
+    (h : matchTemplate σ t r join = some σ') : WidensSub σ σ' := by
+  dsimp only [matchTemplate] at h
+  split at h
+  · cases h
+    exact infer_widensSub σ t r join
+  · exact nomatch h
+
+/-- A list match widens its seed in the raw order, step by step. -/
+theorem matchTemplateArgs_widensSub {join : Bool} {σ σ' : Subst} {ps rs : List Ty}
+    (h : matchTemplateArgs σ ps rs join = some σ') : WidensSub σ σ' := by
+  induction ps generalizing rs σ with
+  | nil =>
+    cases rs with
+    | nil => cases h; exact WidensSub.refl _
+    | cons _ _ => exact nomatch h
+  | cons p ps ih =>
+    cases rs with
+    | nil => exact nomatch h
+    | cons r rs =>
+      simp only [matchTemplateArgs, Option.bind_eq_some_iff] at h
+      obtain ⟨σ₁, h₁, hrest⟩ := h
+      exact (matchTemplate_widensSub h₁).trans (ih hrest)
+
+/-- Template parameters occur only under the value formers (`option`, `list`, `prod`,
+`except`, `exitOf`, `causeOf`, `union`); every handle former's arguments are closed. The first
+component is "no parameter at all", carried so a handle former can ask for it. Every `poly`
+atom template is of this kind (`NativeAtom.fitsSound`). -/
+def valueVarsAlg : TyAlgebra (fun _ => Bool × Bool) where
+  ty_never := (true, true)
+  ty_unit := (true, true)
+  ty_nat := (true, true)
+  ty_int := (true, true)
+  ty_string := (true, true)
+  ty_bool := (true, true)
+  ty_handle _ := (true, true)
+  ty_option a := a
+  ty_list a := a
+  ty_prod a b := (a.1 && b.1, a.2 && b.2)
+  ty_except a b := (a.1 && b.1, a.2 && b.2)
+  ty_exitOf a b := (a.1 && b.1, a.2 && b.2)
+  ty_causeOf a := a
+  ty_fiberOf a b := (a.1 && b.1, a.1 && b.1)
+  ty_union a b := (a.1 && b.1, a.2 && b.2)
+  ty_lit _ := (true, true)
+  ty_refOf a := (a.1, a.1)
+  ty_deferredOf a b := (a.1 && b.1, a.1 && b.1)
+  ty_var _ := (false, true)
+  ty_unknown := (true, true)
+
+/-- Parameters only under value formers (`valueVarsAlg`). -/
+def valueVars (t : Ty) : Bool := (cata_ty valueVarsAlg t).2
+
+/-- A template with no parameter is its own instance. -/
+theorem instantiate_of_noVars (σ : Subst) :
+    ∀ t : Ty, (cata_ty valueVarsAlg t).1 = true → instantiate σ t = t := by
+  intro t
+  induction t <;> aesop (add norm simp [cata_ty, valueVarsAlg, instantiate])
+
 /-! ### The top absorbs (tooling plan 0.6, decisions row 46)
 
 `never` is the empty union and `join .never t = normalize t` (`join_never`, above); `unknown`
