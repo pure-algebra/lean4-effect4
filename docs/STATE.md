@@ -337,7 +337,8 @@ are owed. Seats D2 (M5's denotation lemma, brief-D2 with its amendments) and J2 
 into `check`, seat J's owed items, brief-J2) dispatched from `bd5462df`. Codex's 20:16 review folded: the
 name-set shortcut for union branch separation is refuted at optional fields (`E4-SCHEMA-CE-062`, row
 122 amended) and `DenotesTyped` plausibly lacks the reference-formation premise (row 170, seat D2
-measures first).
+measures first). The owner ratified row 151 (a″) and row 117 as recommended and had the package branch
+and tag pushed (`v0.7.0` at `f5878bf`); seat D4 lands row 151 (a″) and the closed-row premise.
 
 **The type-language probe's first result (probe T, 2026-10-01, merged `8036f0b4`; rows 157–164).**
 The data wave can finish `Ty` once only if its single append also carries a structured nominal
