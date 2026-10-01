@@ -1,0 +1,11 @@
+'SeatF.FoldLift.ofDecisionLift' depends on axioms: [propext, Quot.sound]
+'SeatF.FoldLift.fold_advanceState' depends on axioms: [propext, Quot.sound]
+'SeatF.FoldLift.held_foldLift' depends on axioms: [propext, Quot.sound]
+'SeatF.FoldLift.preserved_foldLift' depends on axioms: [propext, Quot.sound]
+'SeatF.FoldLift.held_fireFold'' depends on axioms: [propext, Quot.sound]
+'SeatF.FoldLift.held_flushAllState'' depends on axioms: [propext, Quot.sound]
+'SeatF.FoldLift.held_advanceState'' depends on axioms: [propext, Quot.sound]
+'SeatF.FoldLift.fireFold_preserved'' depends on axioms: [propext, Quot.sound]
+'SeatF.FoldLift.flushAllState_preserved'' depends on axioms: [propext, Quot.sound]
+'SeatF.FoldLift.advanceState_preserved'' depends on axioms: [propext, Quot.sound]
+## exit=0 seconds=1 cmd=lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-landing/seat-F/probes/FoldLiftRoute.lean
