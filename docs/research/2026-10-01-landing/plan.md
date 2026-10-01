@@ -189,3 +189,9 @@ were sent to every seat and recorded on rows 134, 136, 137, 143 and 149 before a
   `codex-second-eyes/`: the checked program "make a scope, fork into it" has no `TypedProg`
   derivation). Acceptance: that program and "make a scope, close it" typed as positive controls.
   Wave 2's list is unchanged otherwise; row 154's re-pin follows I2's merge.
+
+- 2026-10-01, the owner: "start the data wave as the probes land". The wave
+  (`docs/research/2026-10-01-data-wave/README.md`: the commit series 0–10 with its seats) runs in
+  parallel with wave 2; its `Ty` append (commit 4) is sequenced after D1 merges (both touch
+  `Membership.lean`); briefs are cut from the probe notes as they land (T and R in; P, Q, S to come);
+  W0 (the lean4-typescript bump, row 164) starts first, in the package's own repository.

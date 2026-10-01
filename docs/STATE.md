@@ -343,8 +343,9 @@ positional record values make projection type-directed while every evaluator and
 type-blind, and one positional value fits two branches of a union of records; it recommends values
 that carry their canonical names in the existing frames (row 165 (a), the owner's ruling owed), two
 `Term` constructors for construction and projection (166), and the field-name domain with computed
-keys for `__proto__` (167). Probes P, Q and S are running with that shape in hand; their notes and
-T's and R's become the wave's briefs.
+keys for `__proto__` (167). Probes P, Q and S are running with that shape in hand. **The data wave started 2026-10-01** on
+the owner's instruction, in parallel with wave 2 ([the series and its seats](research/2026-10-01-data-wave/README.md));
+its `Ty` append follows D1's merge; seat W0 (the lean4-typescript bump, row 164) is first.
 
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
