@@ -217,9 +217,10 @@ field of the certificate, so none of them can fail. This is the fact `HostSessio
 needs and the tree did not have. -/
 theorem admitProgram_certificate (program : Api.Program) (table : RowTable)
     (c : AdmittedProgram program table) : admitProgram program table = .ok c := by
+  have hlawful : Table.checkLawful table = none := (Table.checkLawful_eq_none_iff table).mpr c.lawful
   aesop (add norm unfold [admitProgram, checkTypedProgram])
-    (add norm simp [c.intFreeTable, c.internalFreeTable, c.intFreeProgram, c.typed, c.intFreeType, c.lawful,
-      c.runnable]) (add safe apply admitted_unique)
+    (add norm simp [c.intFreeTable, c.internalFreeTable, c.intFreeProgram, c.typed, c.intFreeType,
+      hlawful, c.runnable]) (add safe apply admitted_unique)
 
 /-- **O-1.** Opening cannot refuse. With a `Built` in hand the checked `start` of
 `HostSession` returns exactly the session `Run.open` builds: its five identity refusals are

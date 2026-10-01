@@ -29,6 +29,7 @@ import Test.Counterexamples.Machine.Semantics.FitsOrder
 import Test.Program.TermFits
 import Test.Program.SignatureControls
 import Test.Program.TypedProgRows
+import Test.Program.AdmissionColumns
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.TypedResidual

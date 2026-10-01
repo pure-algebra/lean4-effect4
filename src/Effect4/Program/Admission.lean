@@ -143,6 +143,92 @@ def findIntInProgram (program : NativeEff) : Option Path :=
         findInt ("program" :: p.map toString ++ ["cursorTy"]) t
       | _ => none)
 
+/-! ## The table's lawful check and its located refusal agree (TY-05)
+
+`Table.lawful` (a Boolean) and `Table.checkLawful` (the located refusal) are two definitions of
+one condition (`Program/Table.lean`). `Table.checkLawful_eq_none_iff` ties them, so admission takes
+its refusal from `checkLawful` alone and the certificate's `lawful` field from the theorem: no key
+is invented for a failure the located check does not explain (the former fallback,
+`duplicateKey ("", [])`, was unreachable, and is gone). -/
+
+/-- `findDup` finds a repeated key exactly when the keys repeat. -/
+theorem Table.findDup_eq_none_iff :
+    ∀ keys : List (String × List String), Table.checkLawful.findDup keys = none ↔ keys.Nodup
+  | [] => ⟨fun _ => List.nodup_nil, fun _ => rfl⟩
+  | k :: rest => by
+    unfold Table.checkLawful.findDup
+    rw [List.nodup_cons]
+    by_cases hk : rest.contains k = true
+    · rw [if_pos hk]
+      exact ⟨fun h => (nomatch h), fun h => absurd (List.contains_iff_mem.mp hk) h.1⟩
+    · rw [if_neg hk, Table.findDup_eq_none_iff rest]
+      exact ⟨fun h => ⟨fun hm => hk (List.contains_iff_mem.mpr hm), h⟩, fun h => h.2⟩
+
+/-- The three conditions `Table.lawful` decides, as a proposition. -/
+theorem Table.lawful_eq_true_iff (table : RowTable) :
+    Table.lawful table = true ↔
+      (table.map rowKey).Nodup ∧
+      (∀ row ∈ table,
+        (NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey row) = false) ∧
+      (∀ row ∈ table, (!decide (row.shape = .value) || row.trailing.isEmpty) = true) := by
+  unfold Table.lawful
+  rw [Bool.and_eq_true, Bool.and_eq_true, decide_eq_true_iff, List.all_eq_true, List.all_eq_true]
+  constructor
+  · rintro ⟨⟨hnd, hcol⟩, htr⟩
+    refine ⟨hnd, fun row hr => ?_, htr⟩
+    have h := hcol row hr
+    cases hc : (NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey row)
+    · rfl
+    · simp only [hc, Bool.not_true, Bool.false_eq_true] at h
+  · rintro ⟨hnd, hcol, htr⟩
+    refine ⟨⟨hnd, fun row hr => ?_⟩, htr⟩
+    simp only [hcol row hr, Bool.not_false]
+
+/-- **The located refusal is complete** (TY-05, proved): `checkLawful` refuses exactly the tables
+`lawful` refuses. -/
+theorem Table.checkLawful_eq_none_iff (table : RowTable) :
+    Table.checkLawful table = none ↔ Table.lawful table = true := by
+  rw [Table.lawful_eq_true_iff, ← Table.findDup_eq_none_iff]
+  simp only [Table.checkLawful]
+  cases h1 : Table.checkLawful.findDup (table.map rowKey) with
+  | some k => exact ⟨fun h => (nomatch h), fun h => (nomatch h.1)⟩
+  | none =>
+    cases h2 : table.find? (fun r =>
+        (NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey r)) with
+    | some row =>
+      refine ⟨fun h => (nomatch h), fun h => ?_⟩
+      have hmem := List.mem_of_find?_eq_some h2
+      have hp := List.find?_some h2
+      rw [h.2.1 row hmem] at hp
+      cases hp
+    | none =>
+      cases h3 : table.find? (fun r => decide (r.shape = .value) && !r.trailing.isEmpty) with
+      | some row =>
+        refine ⟨fun h => (nomatch h), fun h => ?_⟩
+        have hmem := List.mem_of_find?_eq_some h3
+        have hp := List.find?_some h3
+        have ht := h.2.2 row hmem
+        cases hs : decide (row.shape = .value) <;> cases he : row.trailing.isEmpty <;>
+          simp only [hs, he, Bool.not_false, Bool.not_true, Bool.or_false,
+            Bool.and_false, Bool.and_true, Bool.false_eq_true] at hp ht
+      | none =>
+        refine ⟨fun _ => ⟨rfl, fun row hr => ?_, fun row hr => ?_⟩, fun _ => rfl⟩
+        · have := List.find?_eq_none.mp h2 row hr
+          cases hc : (NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey row)
+          · rfl
+          · exact absurd hc this
+        · have := List.find?_eq_none.mp h3 row hr
+          cases hs : decide (row.shape = .value) <;> cases he : row.trailing.isEmpty <;>
+            simp only [hs, he, Bool.not_false, Bool.not_true, Bool.or_false, Bool.or_true,
+              Bool.and_false, Bool.and_true, not_true_eq_false] at this ⊢
+
+/-- TY-05's statement: a table `lawful` refuses, `checkLawful` locates. -/
+theorem Table.checkLawful_of_not_lawful (table : RowTable) (h : Table.lawful table = false) :
+    Table.checkLawful table ≠ none := by
+  intro hnone
+  rw [(Table.checkLawful_eq_none_iff table).mp hnone] at h
+  cases h
+
 /-- Admission refusals, reporting the exact failure reason. -/
 inductive AdmitRefusal
   /-- `Program.typeOf` answered `none` against this table. -/
@@ -194,16 +280,15 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
       match htype : findIntInEffTy typing.ty with
       | some pos => .error (.uninhabited pos)
       | none =>
-        if hlawful : Table.lawful table = true then
+        match hlawful : Table.checkLawful table with
+        | some (.duplicateKey k) => .error (.duplicateKey k)
+        | some (.builtinCollision k) => .error (.builtinCollision k)
+        | some (.valueRowTrailing k) => .error (.valueRowTrailing k)
+        | none =>
           match hrunnable : checkTable table with
           | some why => .error (.table why)
-          | none => .ok ⟨typing, hlawful, hrunnable, htable, hinternal, hprogram, htype⟩
-        else
-          match Table.checkLawful table with
-          | some (.duplicateKey k) => .error (.duplicateKey k)
-          | some (.builtinCollision k) => .error (.builtinCollision k)
-          | some (.valueRowTrailing k) => .error (.valueRowTrailing k)
-          | none => .error (.duplicateKey ("", []))
+          | none => .ok ⟨typing, (Table.checkLawful_eq_none_iff table).mp hlawful, hrunnable, htable,
+              hinternal, hprogram, htype⟩
 
 /-- Failure of ordinary admission, or a program outside the proved straight fragment.
 Outside-fragment refusal does not mean that the program is ill-typed. -/
