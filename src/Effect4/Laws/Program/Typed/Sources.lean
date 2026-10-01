@@ -50,8 +50,8 @@ def stateSources : List Row := [
   ("Effect4.Machine.DeferredCell.completion", .column "PromiseTable"),
   ("Effect4.Machine.Owed.code", .column "PromiseTable"),
   ("Effect4.Machine.Completion.ofExit.exit", .column "PromiseTable"),
-  ("Effect4.ScopeState.closed.exit",
-    .refused "DI-94 fixes the release type at Exit<unknown, unknown>; connecting stored scope exits to the invariant remains open"),
+  -- a closed scope's exit, at DI-94's release type `Exit<unknown, unknown>` (decisions row 140)
+  ("Effect4.ScopeState.closed.exit", .custom "ScopeExitOk"),
   -- the journal
   ("Effect4.Machine.RunEvent.finalizerProgram.finalizer", .journal),
   ("Effect4.Machine.RunEvent.resumedWith.answer", .journal),

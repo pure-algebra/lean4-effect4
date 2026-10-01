@@ -150,6 +150,74 @@ structure ObserverState (root : ProgramSource) (w : World) (m : RState) : Prop w
   observers : ∀ fiber ∈ m.fibers, ∀ observer ∈ fiber.observers,
     StoredObserverOk root w m fiber.id observer
 
+/-! ### Transport between machines with the same lookups
+
+The observer correlations read the machine only through `fiber?`, `race?` and the store, but a
+countdown's payload is a structure over the machine, so two machines that agree on those lookups
+need a transport, not a definitional rewrite. -/
+
+theorem countdownAt_congr {w : World} {m m' : RState} {waiter : FiberId} {token : Nat}
+    {incoming : Ty → Ty → Prop} (fibers : ∀ id, m'.fiber? id = m.fiber? id)
+    (h : CountdownAt w m waiter token incoming) : CountdownAt w m' waiter token incoming := by
+  unfold CountdownAt at h ⊢
+  rw [fibers]
+  cases found : m.fiber? waiter with
+  | none => trivial
+  | some fiber =>
+    rw [found] at h
+    dsimp only at h ⊢
+    cases hp : fiber.pending.find? (fun pending => pending.token = token) with
+    | none => trivial
+    | some pending =>
+      rw [hp] at h
+      dsimp only at h
+      obtain ⟨answer, error, tokenTy, payload, incomingOk⟩ := h
+      refine ⟨answer, error, tokenTy, ⟨payload.token, payload.collected, ?_, payload.resume⟩,
+        incomingOk⟩
+      intro id member target lookup
+      rw [fibers] at lookup
+      exact payload.targets id member target lookup
+
+theorem storedObserverOk_congr {root : ProgramSource} {w : World} {m m' : RState}
+    {source : FiberId} (fibers : ∀ id, m'.fiber? id = m.fiber? id)
+    (races : ∀ race, m'.race? race = m.race? race) (state : m'.state = m.state) (o : Observer)
+    (h : StoredObserverOk root w m source o) : StoredObserverOk root w m' source o := by
+  cases o with
+  | resumeAwait waiter token mode => exact h
+  | countdown waiter token => exact countdownAt_congr fibers h
+  | raceCallback raceId =>
+    unfold StoredObserverOk at h ⊢
+    dsimp only at h ⊢
+    rw [races]
+    exact h
+  | dropScopeFinalizer scope key =>
+    unfold StoredObserverOk at h ⊢
+    dsimp only at h ⊢
+    rw [state]
+    exact h
+  | untrackChild parent => trivial
+  | callback key => trivial
+
+theorem observerCommandOk_congr {root : ProgramSource} {w : World} {m m' : RState}
+    {source : FiberId} {exit : ExitV} (fibers : ∀ id, m'.fiber? id = m.fiber? id)
+    (races : ∀ race, m'.race? race = m.race? race) (state : m'.state = m.state) (o : Observer)
+    (h : ObserverCommandOk root w m source exit o) : ObserverCommandOk root w m' source exit o := by
+  cases o with
+  | resumeAwait waiter token mode => exact h
+  | countdown waiter token => exact countdownAt_congr fibers h
+  | raceCallback raceId =>
+    unfold ObserverCommandOk at h ⊢
+    dsimp only at h ⊢
+    rw [races]
+    exact h
+  | dropScopeFinalizer scope key =>
+    unfold ObserverCommandOk at h ⊢
+    dsimp only at h ⊢
+    rw [state]
+    exact h
+  | untrackChild parent => trivial
+  | callback key => trivial
+
 /-- Settled guard state clauses on the shared machine. No reference code-site condition
 is claimed here: frameCodes/internalCodes remain H1-RCODE-SITES. -/
 structure SchedulerState (m : RState) : Prop where

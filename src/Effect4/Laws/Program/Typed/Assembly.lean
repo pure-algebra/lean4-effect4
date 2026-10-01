@@ -4,6 +4,8 @@ import Effect4.Laws.Program.Typed.State
 import Effect4.Laws.Program.Typed.Scheduler
 import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.Typing.CheckInversion
+import Effect4.Laws.Program.Typing.Sound
+import Effect4.Laws.Program.ReferenceTyping
 
 /-!
 # Laws.Program.Typed.Assembly — the typed state of the reference machine, split at the cut
@@ -56,9 +58,15 @@ read no code. A fiber whose current code is a race registration marker is typed 
 `RegistrationState`, not by `TypedProg`: `beginRace` alone installs the marker
 (`Laws/Program/InterpR.lean:320`), so both code clauses skip it.
 
-All eighteen command-preservation declarations, `decision_preserves`, `typedState_reachable` and
-`typedState_load` (M5) remain obligations. This module proves the adapters between them and the
-lift, never a command case.
+The ledger is the one list (decisions row 140): M5 (`M3bAssembly`: `typedState_load`,
+`denoteR_typed`, `evalTerm_fits`), M6 (`M6Ledger`: the eighteen command obligations,
+`decision_preserves`, `typedState_reachable`), the decision edits and the fire snapshot
+(`M6Edits`: `DecisionLift`'s fields other than `step`, and the split's re-establishment), stack
+monotonicity (`M6Stack`, until seat B's `M3bWorld` states it) and M7 (`M7`: a–c and scope-handle
+validity). The eighteen, `decision_preserves`, `typedState_reachable` and `typedState_load` remain
+obligations. This module proves the adapters between them and the lift, the six bookkeeping
+edits, M5's builder (`machineTyped_load`) and its reduction to `denoteR_typed`
+(`loadsTyped_of_denotesTyped`), never a command case.
 -/
 
 set_option autoImplicit false
@@ -97,7 +105,9 @@ def SavedPosition (root : ProgramSource) (w : World) (final : EffTy) (saved : RS
     InterruptProvenance saved
 
 /-- The generated bundle, instantiated with the strong judgments once. It depends on neither the
-machine nor the queue, so a step that leaves a field alone leaves its clause alone. -/
+machine nor the queue, so a step that leaves a field alone leaves its clause alone. A closed
+scope's exit fits DI-94's release type `Exit<unknown, unknown>` (decisions row 140): its values
+are live, `Fits`' `unknown` arm. -/
 def preds (root : ProgramSource) : Preds World where
   SavedOk w e x := ∀ ty, expectOf w e = some ty → SavedPosition root w ty x
   PendingOk w _ ps := ∀ p ∈ ps, ∃ id, (w.Θ id p.token).isSome = true
@@ -111,6 +121,7 @@ def preds (root : ProgramSource) : Preds World where
   PromiseCell w key cell := ∀ a e, w.«Π» key = some (a, e) →
     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
   CaptureOk w _ c := CaptureTyped root w c
+  ScopeExitOk w _ ex := Fits w (reifyExitVal ex) (.exitOf .unknown .unknown)
 
 /-- A fully typed saved frame, code included, gives its saved position. -/
 theorem savedPosition_of_saved (root : ProgramSource) (w : World) (final : EffTy) (saved : RSaved)
@@ -604,6 +615,106 @@ theorem guarded_stepKeeps_of_stepPreserves (root : ProgramSource) (rootTy : EffT
   · rw [after.machine.live.running] at halted
     cases halted
 
+/-! ## `J` and the queue facts move between machines with the same view
+
+`J` reads a machine only through its fibers, races, store, the three counters and `stuck`; a
+decision's trace, latch and arming edits change none of them. One congruence lemma carries `J`
+across every such edit, instead of a rebuild per edit. -/
+
+theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {m m' : RState}
+    (fibers : m'.fibers = m.fibers) (races : m'.races = m.races) (state : m'.state = m.state)
+    (nextId : m'.nextId = m.nextId) (nextToken : m'.nextToken = m.nextToken)
+    (nextRace : m'.nextRace = m.nextRace) (stuck : m'.stuck = m.stuck)
+    (typed : MachineTyped root rootTy w m) : MachineTyped root rootTy w m' := by
+  obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, code, live⟩ := typed
+  have member : ∀ f, f ∈ m'.fibers → f ∈ m.fibers := fun f hf => by rw [← fibers]; exact hf
+  have raceMember : ∀ r, r ∈ m'.races → r ∈ m.races := fun r hr => by rw [← races]; exact hr
+  have lookup : ∀ id, m'.fiber? id = m.fiber? id := fun id => by
+    unfold RunMachine.fiber?
+    rw [fibers]
+  have raceLookup : ∀ r, m'.race? r = m.race? r := fun r => by
+    unfold RunMachine.race?
+    rw [races]
+  have requests : ∀ fiber token, requestOfR m' fiber token = requestOfR m fiber token :=
+    fun fiber token => by
+      unfold requestOfR
+      rw [lookup]
+  have keys : Guard.internalKeys m' = Guard.internalKeys m := by
+    unfold Guard.internalKeys
+    rw [state, races, fibers]
+  refine ⟨⟨?_, ⟨fun f hf => ok.c0 f (member f hf), ?_, ?_⟩,
+    fun f hf token parked => deliv f (member f hf) token parked, ?_,
+    ⟨fun f hf => obsv.pendingOwner f (member f hf), fun f hf o ho =>
+      storedObserverOk_congr lookup raceLookup state o (obsv.observers f (member f hf) o ho)⟩,
+    fun f hf raceId marker => ?_⟩, fun f hf => code f (member f hf), ?_⟩
+  · exact
+      { ids := by rw [fibers]; exact valid.ids
+        fibers := fun id => by rw [fibers]; exact valid.fibers id
+        heap := fun key => by rw [state]; exact valid.heap key
+        promises := fun key => by rw [state]; exact valid.promises key
+        tokens := fun f hf token parked => valid.tokens f (member f hf) token parked
+        tokenBound := fun id token ty h => by rw [nextToken]; exact valid.tokenBound id token ty h
+        tokenTargets := valid.tokenTargets
+        state := by rw [state]; exact valid.state
+        wf := by rw [state]; exact valid.wf
+        cells := valid.cells
+        fiberClosed := valid.fiberClosed
+        heapClosed := valid.heapClosed
+        promiseClosed := valid.promiseClosed
+        tokenClosed := valid.tokenClosed
+        root := valid.root }
+  · rw [races]
+    exact ok.c1
+  · rw [state]
+    exact ok.c2
+  · exact
+      { fiberIds := by rw [fibers]; exact sched.fiberIds
+        fibersBelow := fun f hf => by rw [nextId]; exact sched.fibersBelow f (member f hf)
+        raceIds := by rw [races]; exact sched.raceIds
+        racesBelow := fun r hr => by rw [nextRace]; exact sched.racesBelow r (raceMember r hr)
+        raceHosts := fun r hr => by
+          obtain ⟨f, found⟩ := sched.raceHosts r (raceMember r hr)
+          exact ⟨f, (lookup r.host).trans found⟩
+        keysBelow := fun key hk => by
+          rw [keys] at hk
+          rw [nextToken]
+          exact sched.keysBelow key hk
+        requestsBelow := fun fiber token request hr => by
+          rw [requests] at hr
+          rw [nextToken]
+          exact sched.requestsBelow fiber token request hr
+        requestsOwned := fun fiber token request hr => by
+          rw [requests] at hr
+          rw [keys]
+          exact sched.requestsOwned fiber token request hr
+        pendingShape := fun f hf => sched.pendingShape f (member f hf)
+        parkedIdle := fun f hf => sched.parkedIdle f (member f hf)
+        parkedBelow := fun f hf token parked => by
+          rw [nextToken]
+          exact sched.parkedBelow f (member f hf) token parked
+        exited := fun f hf => sched.exited f (member f hf)
+        deferredCause := fun f hf => sched.deferredCause f (member f hf) }
+  · obtain ⟨race, resultTy, found, host, token, reply⟩ := reg f (member f hf) raceId marker
+    exact ⟨race, resultTy, (raceLookup raceId).trans found, host, token, reply⟩
+  · refine ⟨stuck.trans live.running, fun f hf scope ambient => ?_, fun o ho owner priority mode => ?_⟩
+    · rw [state]
+      exact live.ambientScopes f (member f hf) scope ambient
+    · rw [state] at ho
+      rw [lookup]
+      exact live.dueOwners o ho owner priority mode
+
+/-- The queue facts survive a trace edit: an `emit` changes no lookup, counter or store. -/
+theorem queueOk_emit {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
+    (events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram Unit))
+    (queue : QueueOk root w m commands) : QueueOk root w (m.emit events) commands :=
+  { payload := queue.payload, authority := queue.authority, delivery := queue.delivery,
+    owners := queue.owners, registration := queue.registration,
+    keys := ⟨queue.keys.below, queue.keys.disjoint⟩,
+    observer := fun source exit o ho => observerCommandOk_congr (m := m) (m' := m.emit events)
+      (fun _ => rfl) (fun _ => rfl) rfl o (queue.observer source exit o ho),
+    enroll := queue.enroll, noRaceAfterInterrupt := queue.noRaceAfterInterrupt,
+    links := queue.links }
+
 /-! ## The capture lookup -/
 
 theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} {v : Val}
@@ -676,6 +787,156 @@ def ReachableTyped (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RSt
   LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
     RReachable root fuel m → ∃ w, MachineTyped root rootTy w m
 
+/-- Row 148 (algebra A3): M5's fundamental property. A checked point denotes, at the node its
+path names, a program typed at the point's certificate, at every world. -/
+def DenotesTyped (root : ProgramSource) : Prop :=
+  ∀ (w : World) (p : Point) (e : NativeEff) (ty : EffTy),
+    Node.at_ (.eff root.program) p.path = some (.eff e) → PointTyped root w p ty →
+      TypedProg root w ty (denoteR root.program e p)
+
+/-- Row 148 (types TY-07): term soundness at `Fits`. A term the checker types evaluates, in an
+environment typed at the same world, to a value that fits its type. Term typing reads only the
+signature's atoms, so the statement is at any row table; seat A proves it beside
+`evalTerm_hasTy` (`Laws/Program/Typed.lean`). -/
+def TermFits (table : RowTable) : Prop :=
+  ∀ (w : World) (env : List Ty) (vals : List Val) (t : Term) (ty : Ty) (v : Val),
+    termTy (nativeSignature table) env t = some ty → EnvTyped w env vals →
+      evalTerm vals t = some v → Fits w v ty
+
+/-! ## M5 from the fundamental property
+
+The loaded machine has one fiber, not running, whose code is the root's denotation; every other
+clause of `J` is over an empty list or the empty context. So M5 is the root code's typing at
+every world (`machineTyped_load`), and that is `DenotesTyped` at the root point when the checked
+program is the loaded one (`loadsTyped_of_denotesTyped`): `Api.typeOf` checks the program after
+expanding its layer references (`Program/Typing.lean:61-64`) while `loadR` loads the program as
+written (`RuntimeR.lean:41-46`), so the reduction is for a program with no reference sites. -/
+
+/-- `MachineLive` holds on a running machine whose fibers carry the empty context and whose
+store owes nothing. -/
+theorem machineLive_of_quiet (m : RState) (stuck : m.stuck = none)
+    (contexts : ∀ f ∈ m.fibers, f.context = emptyCtx) (due : m.state.deferreds.due = []) :
+    MachineLive m := by
+  refine ⟨stuck, fun f hf scope ambient => ?_, fun o ho => ?_⟩
+  · rw [contexts f hf] at ambient
+    cases ambient
+  · rw [due] at ho
+    cases ho
+
+/-- **M5's builder.** A root whose loaded code is typed at every world, and whose head is not a
+race marker, loads into `J` at the initial world. -/
+theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
+    (closed : ClosedEff rootTy)
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
+    (code : ∀ w, TypedProg root w rootTy (denoteR root.program root.program (rootPoint compileFuel))) :
+    MachineTyped root rootTy (initialWorld rootTy) (loadR root.program fuel compileFuel) := by
+  have declared : (initialWorld rootTy).Γ Api.root = some rootTy :=
+    insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
+  refine ⟨⟨initial_world_valid _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩, ?_,
+    schedulerState_load root.program fuel compileFuel,
+    observerState_load root _ fuel compileFuel,
+    registrationState_load root _ fuel compileFuel noMarker⟩, ?_,
+    machineLive_of_quiet _ rfl (fun f hf => ?_) rfl⟩
+  · intro f hf
+    change f ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst hf
+    refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+    · intro ty hty
+      change (initialWorld rootTy).Γ Api.root = some ty at hty
+      rw [declared] at hty
+      cases hty
+      exact savedPosition_of_saved root _ rootTy _
+        ⟨rootTy, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+    · intro q hq
+      cases hq
+    · intro v0 h
+      cases h
+    · intro v0 h
+      cases h
+    · intro v0 hv
+      cases hv
+    · intro key sv sty hget
+      change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
+      rw [Env.Context.getV_empty] at hget
+      cases hget
+  · intro race hr
+    cases hr
+  · exact ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+      ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
+  · intro f hf token hq
+    change f ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst hf
+    cases hq
+  · intro f hf _ _ _ ty hty
+    change f ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst hf
+    change (initialWorld rootTy).Γ Api.root = some ty at hty
+    rw [declared] at hty
+    cases hty
+    exact ⟨rootTy, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+  · change f ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst hf
+    rfl
+
+/-- The empty environment is typed at every world. -/
+theorem envTyped_nil (w : World) : EnvTyped w [] [] := by
+  refine ⟨rfl, fun i ty v h _ => ?_⟩
+  rw [List.getElem?_nil] at h
+  cases h
+
+/-- **M5 from row 148's fundamental property**, for a program with no layer-reference sites and
+a loaded head that is not a race marker (`InterpR.lean:320`: only a race park builds one). -/
+theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
+    (denotes : DenotesTyped root) (refFree : root.program.refSites [] = [])
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none) :
+    LoadsTyped root rootTy fuel compileFuel := by
+  intro _ checked closed
+  have expanded : root.program.expandRefs = root.program :=
+    expandRefs_eq_self_of_refSites_nil root.program refFree
+  have formed : root.program.layerRefsWF = true := layerRefsWF_of_refSites_nil root.program refFree
+  have typed : effTy (nativeSignature root.table) [] root.program = some rootTy := by
+    change Program.typeOfProgram (nativeSignature root.table) root.program = some rootTy at checked
+    unfold Program.typeOfProgram at checked
+    rw [expanded, formed, refFree] at checked
+    exact checked
+  exact ⟨initialWorld rootTy, machineTyped_load root rootTy fuel compileFuel closed noMarker
+    fun w => denotes w (rootPoint compileFuel) root.program rootTy rfl
+      ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil w⟩⟩
+
+/-! ## Stack monotonicity (decisions row 135)
+
+Declared until seat B's Kripke closure lands (`M3bWorld` in `Typed/Residual.lean`). At these
+definitions both are false: `FrameAccepts`'s `run`/`skip` arms and its hook premises read the one
+world the stack is checked at, and the algebra pass's `stackAccepts_not_mono`
+(`docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:248`, proved with
+`FitsExit` for the exit judgment) exhibits an `answer` frame accepted at a world and refused at a
+later one. A step that grows the world (an allocation, a fork) keeps every other fiber's saved
+stack only through them. -/
+
+def StackMono (root : ProgramSource) : Prop :=
+  ∀ (w w' : World) (tin tout : EffTy) (stack : List ScopeFrame), w.leHost w' →
+    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin tout stack →
+      StackAccepts (TypedProg root) ExitOk (frameProtocols root) w' tin tout stack
+
+def SavedMono (root : ProgramSource) : Prop :=
+  ∀ (w w' : World) (final : EffTy) (saved : RSaved), w.leHost w' →
+    Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final saved →
+      Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w' final saved
+
+/-- The saved half from the stack half and `M3bWorld.typedProg_mono`'s proposition. -/
+theorem savedMono_of_stackMono (root : ProgramSource)
+    (programs : ∀ (w w' : World) (ty : EffTy) (p : RProgram), w.leHost w' →
+      TypedProg root w ty p → TypedProg root w' ty p)
+    (stacks : StackMono root) : SavedMono root := by
+  intro w w' final saved ordered typed
+  obtain ⟨tin, code, stack, provenance⟩ := typed
+  exact ⟨tin, programs w w' tin saved.current ordered code,
+    stacks w w' tin final saved.stack ordered stack, provenance⟩
+
 /-- A tape with no host answer is admitted at every machine it meets. -/
 theorem admittedReplay_noHostAnswer (root : ProgramSource) (J : World → RState → Prop)
     (fuel : Nat) :
@@ -711,6 +972,183 @@ theorem reachable_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (loadR root.program fuel fuel) loaded
     (admittedReplay_noHostAnswer root (MachineTyped root rootTy) fuel tape free _)
   exact ⟨w, typed⟩
+
+/-! ## The decision edits and the fire snapshot (decisions row 140; R3)
+
+`DecisionLift`'s thirteen fields (`Laws/Machine/Lift.lean:308-355`) at `J`, `I`, `O` and the
+admission `AnswerOk`: `step` is the eighteen command obligations
+(`guarded_stepKeeps_of_stepPreserves`); the other twelve are the edits a decision makes outside the
+command loop and the snapshot's bookkeeping, the lift seat's `M6Edits`
+(`docs/research/2026-09-30-pass/lift/Lift.lean:849-871`) restated over the split. Six are proved
+here (`edit_nil`, `edit_evaluate`, `edit_ran`, `edit_task`, `edit_skip`, `edit_middleware`); six
+are declared (`drain`, `yield`, `interrupt`, the two clock steps, `answer`).
+`decisionLift_of_ledger` assembles the lift and `decisionKeeps_of_ledger` gives
+`decision_preserves`'s proposition by `stepDecisionState_lift`. -/
+
+/-- The empty residue is a typed queue. -/
+theorem queueOk_nil (root : ProgramSource) (w : World) (m : RState) : QueueOk root w m [] :=
+  { payload := fun _ h => (nomatch h), authority := fun _ h => (nomatch h),
+    delivery := fun _ h => (nomatch h), owners := List.nodup_nil, registration := trivial,
+    keys := ⟨fun _ h => (nomatch h), fun _ _ _ _ h => (nomatch h)⟩,
+    observer := fun _ _ _ h => (nomatch h), enroll := fun _ _ h => (nomatch h),
+    noRaceAfterInterrupt := fun _ _ _ h => (nomatch h), links := fun _ _ _ _ _ h => (nomatch h) }
+
+/-- A task's commands read no code. -/
+theorem not_readsCode_taskCmds (t : RTask) (id : FiberId) : ¬ ReadsCode id (taskCmds t) := by
+  rintro ⟨yielding, member | member⟩ <;> cases t <;>
+    simp only [taskCmds, List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
+
+def EditNil (root : ProgramSource) : Prop := ∀ w m, SnapshotTyped root w m []
+
+def EditEvaluate (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w m id, MachineTyped root rootTy w m → m.stuck = none →
+    ConfigTyped root rootTy w m [Cmd.evaluate id, Cmd.drainDue]
+
+def EditDrain (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w (m : RState) owner (f : RFiber), MachineTyped root rootTy w m → m.fiber? owner = some f →
+    MachineTyped root rootTy w
+        ((m.update { f with dispatcher := (f.dispatcher.drain).2 }).disarm owner) ∧
+      SnapshotTyped root w ((m.update { f with dispatcher := (f.dispatcher.drain).2 }).disarm owner)
+        (f.dispatcher.drain).1
+
+def EditRan (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w (m : RState) owner (t : RTask), MachineTyped root rootTy w m →
+    MachineTyped root rootTy w (m.emit [RunEvent.ranTask owner t])
+
+def EditTask (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w (m : RState) owner (t : RTask) ts, MachineTyped root rootTy w m → m.stuck = none →
+    SnapshotTyped root w m (t :: ts) →
+      ConfigTyped root rootTy w (m.emit [RunEvent.ranTask owner t]) (taskCmds t) ∧
+        SnapshotTyped root w (m.emit [RunEvent.ranTask owner t]) ts
+
+def EditSkip (root : ProgramSource) : Prop :=
+  ∀ w (m : RState) (t : RTask) ts, SnapshotTyped root w m (t :: ts) → SnapshotTyped root w m ts
+
+def EditYield (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w (m : RState) id (v : Bool), MachineTyped root rootTy w m →
+    MachineTyped root rootTy w (m.modify id fun f => { f with yieldOverride := some v })
+
+def EditInterrupt (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w (m : RState) who extra target (t : RFiber), MachineTyped root rootTy w m →
+    m.fiber? target = some t →
+      MachineTyped root rootTy w
+        (letI := termEvaluatorFor root.program
+         Machine.Lift.interruptEdit (interpR root.program) m who extra target t)
+
+def EditMiddleware (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w (m : RState), MachineTyped root rootTy w m →
+    MachineTyped root rootTy w { m with middlewareInstalled := true }
+
+def EditClockNone (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w (m : RState) millis st, MachineTyped root rootTy w m → m.stuck = none →
+    (interpR root.program).clockStep millis m.state = (none, st) →
+      ∃ w', w.leHost w' ∧ MachineTyped root rootTy w' { m with state := st }
+
+def EditClockSome (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w (m : RState) millis owed st, MachineTyped root rootTy w m → m.stuck = none →
+    (interpR root.program).clockStep millis m.state = (some owed, st) →
+      ∃ w', w.leHost w' ∧ MachineTyped root rootTy w' (drainOwed { m with state := st } [owed]).1 ∧
+        ((drainOwed { m with state := st } [owed]).1.stuck = none →
+          ConfigTyped root rootTy w' (drainOwed { m with state := st } [owed]).1
+            ((drainOwed { m with state := st } [owed]).2 ++ [Cmd.drainDue]))
+
+def EditAnswer (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  ∀ w (m : RState) id token answer, MachineTyped root rootTy w m → m.stuck = none →
+    AnswerOk w m (.answerAsync id token answer) →
+      ∃ w', w.leHost w' ∧
+        (letI := termEvaluatorFor root.program
+         Machine.Lift.Guarded (MachineTyped root rootTy) (ConfigTyped root rootTy)
+           (SnapshotTyped root) [] w'
+           (driveStep (interpR root.program)
+             { m with state := (prepareAsyncAnswer (interpR root.program) m id token answer).1 }
+             (.resume id token (prepareAsyncAnswer (interpR root.program) m id token answer).2)
+             [Cmd.drainDue]).1
+           (driveStep (interpR root.program)
+             { m with state := (prepareAsyncAnswer (interpR root.program) m id token answer).1 }
+             (.resume id token (prepareAsyncAnswer (interpR root.program) m id token answer).2)
+             [Cmd.drainDue]).2)
+
+/-- The six edits with real content: a store or fiber edit outside the command loop. -/
+structure DecisionEdits (root : ProgramSource) (rootTy : EffTy) : Prop where
+  drain : EditDrain root rootTy
+  yield : EditYield root rootTy
+  interrupt : EditInterrupt root rootTy
+  clockNone : EditClockNone root rootTy
+  clockSome : EditClockSome root rootTy
+  answer : EditAnswer root rootTy
+
+theorem edit_nil (root : ProgramSource) : EditNil root := fun w m => queueOk_nil root w m
+
+theorem edit_evaluate (root : ProgramSource) (rootTy : EffTy) : EditEvaluate root rootTy :=
+  fun w m id typed _ => evaluate_entry root rootTy w m id typed
+
+theorem edit_ran (root : ProgramSource) (rootTy : EffTy) : EditRan root rootTy :=
+  fun _ m owner t typed => machineTyped_congr (m := m) (m' := m.emit [RunEvent.ranTask owner t])
+    rfl rfl rfl rfl rfl rfl rfl typed
+
+theorem edit_middleware (root : ProgramSource) (rootTy : EffTy) : EditMiddleware root rootTy :=
+  fun _ m typed => machineTyped_congr (m := m) (m' := { m with middlewareInstalled := true })
+    rfl rfl rfl rfl rfl rfl rfl typed
+
+theorem edit_skip (root : ProgramSource) : EditSkip root := by
+  intro w m t ts snapshot
+  unfold SnapshotTyped at snapshot
+  rw [List.flatMap_cons] at snapshot
+  exact (queueOk_append_tasks (commands := taskCmds t) (tasks := ts) |>.mp snapshot).2
+
+theorem edit_task (root : ProgramSource) (rootTy : EffTy) : EditTask root rootTy := by
+  intro w m owner t ts typed _ snapshot
+  unfold SnapshotTyped at snapshot
+  rw [List.flatMap_cons] at snapshot
+  obtain ⟨queue, rest⟩ := queueOk_append_tasks (commands := taskCmds t) (tasks := ts) |>.mp snapshot
+  exact ⟨⟨edit_ran root rootTy w m owner t typed,
+      fun f _ _ reads => absurd reads (not_readsCode_taskCmds t f.id), queueOk_emit _ queue⟩,
+    queueOk_emit _ rest⟩
+
+/-- **The decision lift from the ledger.** The eighteen command facts and the six declared edits
+give `DecisionLift` at `J`, `I`, `O` and `AnswerOk`; the other six fields are proved here. -/
+theorem decisionLift_of_ledger (root : ProgramSource) (rootTy : EffTy)
+    (steps : ∀ command, StepPreserves root rootTy command) (edits : DecisionEdits root rootTy) :
+    letI := termEvaluatorFor root.program
+    Machine.Lift.DecisionLift hostOrder (interpR root.program) (MachineTyped root rootTy)
+      (ConfigTyped root rootTy) (SnapshotTyped root) (fun w m d => AnswerOk w m d) :=
+  letI := termEvaluatorFor root.program
+  { step := guarded_stepKeeps_of_stepPreserves root rootTy steps
+    nil := edit_nil root
+    evaluate := edit_evaluate root rootTy
+    drain := edits.drain
+    ran := edit_ran root rootTy
+    task := edit_task root rootTy
+    skip := edit_skip root
+    yield := edits.yield
+    interrupt := edits.interrupt
+    middleware := edit_middleware root rootTy
+    clockNone := edits.clockNone
+    clockSome := edits.clockSome
+    answer := edits.answer }
+
+/-- **M6b from the eighteen command facts and the six edits**, by `stepDecisionState_lift`. -/
+theorem decisionKeeps_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
+    (d : Api.Decision) (steps : ∀ command, StepPreserves root rootTy command)
+    (edits : DecisionEdits root rootTy) : DecisionKeeps root rootTy fuel d := by
+  intro w m typed admitted
+  letI := termEvaluatorFor root.program
+  exact Machine.Lift.stepDecisionState_lift (decisionLift_of_ledger root rootTy steps edits) fuel
+    w m d typed admitted
+
+/-- The split's re-establishment (decisions row 140): `J` after each command from `I` before it.
+`I` contains `J`, so it is the command facts' projection. -/
+def Reestablishes (root : ProgramSource) (rootTy : EffTy) : Prop :=
+  (∀ command, StepPreserves root rootTy command) →
+    ∀ command w m rest, m.stuck = none → ConfigTyped root rootTy w m (command :: rest) →
+      ∃ w', w.leHost w' ∧ MachineTyped root rootTy w'
+        (letI := termEvaluatorFor root.program
+         driveStep (interpR root.program) m command rest).1
+
+theorem reestablishes (root : ProgramSource) (rootTy : EffTy) : Reestablishes root rootTy := by
+  intro steps command w m rest running typed
+  obtain ⟨w', ordered, after⟩ := steps command w m rest running typed
+  exact ⟨w', ordered, after.machine⟩
 
 /-! ## M7: the frame machine's observation is typed (decisions row 138)
 
@@ -889,6 +1327,12 @@ preservation obligation per command constructor, one for a tape decision under a
 answers, and the capstone that every reachable state is typed. Declared, not proved. -/
 namespace M3bAssembly
 
+/-- Row 148: the fundamental property (algebra A3); wave 2 proves it with `seq_typed`. -/
+theorem denoteR_typed (root : ProgramSource) : ProofGraph.Obligation (DenotesTyped root) := ⟨⟩
+
+/-- Row 148: term soundness at `Fits` (types TY-07); seat A proves it. -/
+theorem evalTerm_fits (table : RowTable) : ProofGraph.Obligation (TermFits table) := ⟨⟩
+
 theorem typedState_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) :
     ProofGraph.Obligation (LoadsTyped root rootTy fuel compileFuel) := ⟨⟩
 
@@ -1008,12 +1452,52 @@ theorem exitHandles_valid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (
 
 end M7
 
+/-! The decision edits and the fire snapshot (decisions row 140, R3): `DecisionLift`'s fields
+other than `step`, over `J`, `I` and `O`, and the split's re-establishment. -/
+namespace M6Edits
+
+theorem nil (root : ProgramSource) : ProofGraph.Obligation (EditNil root) := ⟨⟩
+theorem evaluate (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (EditEvaluate root rootTy) := ⟨⟩
+theorem drain (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (EditDrain root rootTy) := ⟨⟩
+theorem ran (root : ProgramSource) (rootTy : EffTy) : ProofGraph.Obligation (EditRan root rootTy) := ⟨⟩
+theorem task (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (EditTask root rootTy) := ⟨⟩
+theorem skip (root : ProgramSource) : ProofGraph.Obligation (EditSkip root) := ⟨⟩
+theorem yield (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (EditYield root rootTy) := ⟨⟩
+theorem interrupt (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (EditInterrupt root rootTy) := ⟨⟩
+theorem middleware (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (EditMiddleware root rootTy) := ⟨⟩
+theorem clockNone (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (EditClockNone root rootTy) := ⟨⟩
+theorem clockSome (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (EditClockSome root rootTy) := ⟨⟩
+theorem answer (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (EditAnswer root rootTy) := ⟨⟩
+theorem reestablish (root : ProgramSource) (rootTy : EffTy) :
+    ProofGraph.Obligation (Reestablishes root rootTy) := ⟨⟩
+
+end M6Edits
+
+/-! Stack monotonicity (decisions row 135), declared here until seat B's `M3bWorld` closes it. -/
+namespace M6Stack
+
+theorem stackAccepts_mono (root : ProgramSource) : ProofGraph.Obligation (StackMono root) := ⟨⟩
+theorem savedOk_mono (root : ProgramSource) : ProofGraph.Obligation (SavedMono root) := ⟨⟩
+
+end M6Stack
+
 end Effect4.Program.Typed
 
 #obligation_proved Effect4.Program.Typed.M3bAssembly.capture_lookup :=
   @Effect4.Program.Typed.capture_lookup
 #proof_wanted Effect4.Program.Typed.M3bAssembly.typedState_load
-#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 1
+#proof_wanted Effect4.Program.Typed.M3bAssembly.denoteR_typed
+#proof_wanted Effect4.Program.Typed.M3bAssembly.evalTerm_fits
+#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 3
   using aesop (rule_sets := [Effect4.TypedState])
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_evaluate
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
@@ -1042,4 +1526,23 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M7.never_halts
 #proof_wanted Effect4.Program.Typed.M7.exitHandles_valid
 #typed_state_obligations Effect4.Program.Typed.M7 ceiling 4
+  using aesop (rule_sets := [Effect4.TypedState])
+#obligation_proved Effect4.Program.Typed.M6Edits.nil := @Effect4.Program.Typed.edit_nil
+#obligation_proved Effect4.Program.Typed.M6Edits.evaluate := @Effect4.Program.Typed.edit_evaluate
+#obligation_proved Effect4.Program.Typed.M6Edits.ran := @Effect4.Program.Typed.edit_ran
+#obligation_proved Effect4.Program.Typed.M6Edits.task := @Effect4.Program.Typed.edit_task
+#obligation_proved Effect4.Program.Typed.M6Edits.skip := @Effect4.Program.Typed.edit_skip
+#obligation_proved Effect4.Program.Typed.M6Edits.middleware := @Effect4.Program.Typed.edit_middleware
+#obligation_proved Effect4.Program.Typed.M6Edits.reestablish := @Effect4.Program.Typed.reestablishes
+#proof_wanted Effect4.Program.Typed.M6Edits.drain
+#proof_wanted Effect4.Program.Typed.M6Edits.yield
+#proof_wanted Effect4.Program.Typed.M6Edits.interrupt
+#proof_wanted Effect4.Program.Typed.M6Edits.clockNone
+#proof_wanted Effect4.Program.Typed.M6Edits.clockSome
+#proof_wanted Effect4.Program.Typed.M6Edits.answer
+#typed_state_obligations Effect4.Program.Typed.M6Edits ceiling 6
+  using aesop (rule_sets := [Effect4.TypedState])
+#proof_wanted Effect4.Program.Typed.M6Stack.stackAccepts_mono
+#proof_wanted Effect4.Program.Typed.M6Stack.savedOk_mono
+#typed_state_obligations Effect4.Program.Typed.M6Stack ceiling 2
   using aesop (rule_sets := [Effect4.TypedState])

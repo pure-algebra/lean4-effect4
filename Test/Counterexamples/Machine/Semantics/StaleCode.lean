@@ -464,7 +464,7 @@ theorem scopeStateOk_tr (x : Effect4.ScopeState Nat FinName Val Err Defect Fiber
   | openEmpty => trivial
   | openInline key finalizer => exact finNameOk_tr finalizer h
   | openMap entries => exact fun v hv => finNameOk_tr v.2 (h v hv)
-  | closed exit => trivial
+  | closed exit => exact h
 
 theorem storesOk_tr (x : Stores) (h : StoresOk (H1Shapes.statePreds root m q) w e x) :
     StoresOk (H1Shapes.statePreds root m' q') w e x :=
