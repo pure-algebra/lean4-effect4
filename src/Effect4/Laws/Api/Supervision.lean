@@ -401,7 +401,7 @@ theorem spawn_status_other
 
 /-- Every outstanding host call names a parked fiber of the machine, at its own token. -/
 theorem awaits_parked (m : Machine) (a : Await) (member : a ∈ Program.awaits m) :
-    ∃ f ∈ m.fibers, f.id = a.1 ∧ f.parked = Parked.withGuard a.2.1 := by
+    ∃ f ∈ m.fibers, f.id = a.fiber ∧ f.parked = Parked.withGuard a.token := by
   unfold Program.awaits at member
   rw [List.mem_filterMap] at member
   obtain ⟨f, hf, hmatch⟩ := member
@@ -436,10 +436,10 @@ theorem parked_status_live (m : Machine) (unparked : exitedUnparked m = true) (f
 `fiberStatuses` is live: `awaits` and `fiberStatuses` never disagree about a parked fiber. -/
 theorem awaits_live (m : Machine) (unparked : exitedUnparked m = true) (a : Await)
     (member : a ∈ Program.awaits m) :
-    ∃ f ∈ m.fibers, f.id = a.1 ∧ (a.1, statusOf m f) ∈ fiberStatuses m ∧
+    ∃ f ∈ m.fibers, f.id = a.fiber ∧ (a.fiber, statusOf m f) ∈ fiberStatuses m ∧
       (statusOf m f).live = true := by
   obtain ⟨f, hf, hid, hparked⟩ := awaits_parked m a member
-  have live := parked_status_live m unparked f hf a.2.1 hparked
+  have live := parked_status_live m unparked f hf a.token hparked
   unfold fiberStatuses
   aesop
 

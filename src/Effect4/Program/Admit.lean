@@ -34,12 +34,21 @@ def requestOf (m : NativeMachine) (fiber : FiberId) (token : Nat) : Option (Nati
   | .async (.external op request) _ _ => some (op, request)
   | _ => none
 
-abbrev Await := FiberId × Nat × NativeOp × Val
+/-- One call the machine is waiting on: the parked fiber, the guard token it parked on, the row
+it called and the request it evaluated. A record, so the most-read field of a run's response
+crosses a boundary with its field names (decisions row 16); its codec is generated
+(`Api/RunnerDerived.lean`, the `Runner` group). -/
+structure Await where
+  fiber : FiberId
+  token : Nat
+  op : NativeOp
+  request : Val
+deriving DecidableEq
 
 def awaits (m : NativeMachine) : List Await :=
   m.fibers.filterMap fun f =>
     match f.parked with
-    | .withGuard token => (requestOf m f.id token).map fun (op, req) => (f.id, token, op, req)
+    | .withGuard token => (requestOf m f.id token).map fun (op, req) => ⟨f.id, token, op, req⟩
     | .notParked => none
 
 /-- Operational refusals, separate from program failures and live frontiers. -/

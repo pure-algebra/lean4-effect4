@@ -11,8 +11,8 @@
 --    Effect4.Api.HostSession.Header Effect4.Api.HostSession.Call Effect4.Api.HostSession.Reply \
 --    Effect4.Api.HostSession.Refusal Effect4.Api.HostSession.Phase Effect4.Api.Runner.Command \
 --    Effect4.Api.HostProtocol.State Effect4.Machine.Stuck Effect4.Api.Outcome \
---    Effect4.Api.FiberStatus Effect4.Run.Observation
--- Carriers read from: Effect4.Machine.Completion, Effect4.Machine.Alphabets, Effect4.Machine.Cause, Effect4.Machine.Exit, Effect4.Machine.Fibers, Effect4.Api.HostSession, Effect4.Api.Runner, Effect4.Api.HostProtocol, Effect4.Api, Effect4.Api.Supervision, Effect4.Run
+--    Effect4.Program.Await Effect4.Api.FiberStatus Effect4.Run.Observation
+-- Carriers read from: Effect4.Machine.Completion, Effect4.Machine.Alphabets, Effect4.Machine.Cause, Effect4.Machine.Exit, Effect4.Machine.Fibers, Effect4.Api.HostSession, Effect4.Api.Runner, Effect4.Api.HostProtocol, Effect4.Api, Effect4.Program.Admit, Effect4.Api.Supervision, Effect4.Run
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/runner.lean
 import Effect4.Api.Runner
 import Effect4.Store.Domain.Derived.Value
@@ -1451,6 +1451,82 @@ instance instCanonical : Canonical (_root_.Effect4.Api.Outcome) :=
 
 end OutcomeC
 
+namespace AwaitC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.struct "Await" [("fiber", (shape _root_.Effect4.FiberId).root),
+     ("token", (shape _root_.Nat).root), ("op", (shape _root_.Effect4.Program.NativeOp).root),
+     ("request", (shape _root_.Effect4.Store.Val).root)],
+   (shape _root_.Effect4.FiberId).defs ++ (shape _root_.Nat).defs ++
+     (shape _root_.Effect4.Program.NativeOp).defs ++ (shape _root_.Effect4.Store.Val).defs⟩
+
+def toVal : _root_.Effect4.Program.Await → Val
+  | .mk a0 a1 a2 a3 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2,
+      Canonical.toVal a3]
+
+def ofVal : Val → Option (_root_.Effect4.Program.Await)
+  | .ctor 0 [v0, v1, v2, v3] =>
+    match Canonical.ofVal (α := _root_.Effect4.FiberId) v0, Canonical.ofVal (α := _root_.Nat) v1,
+        Canonical.ofVal (α := _root_.Effect4.Program.NativeOp) v2,
+        Canonical.ofVal (α := _root_.Effect4.Store.Val) v3 with
+    | some a0, some a1, some a2, some a3 => some ⟨a0, a1, a2, a3⟩
+    | _, _, _, _ => none
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Program.Await) : ofVal (toVal a) = some a := by
+  obtain ⟨a0, a1, a2, a3⟩ := a
+  simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Await} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · next v0 v1 v2 v3 =>
+    split at h
+    · next b0 b1 b2 b3 h0 h1 h2 h3 =>
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2,
+        Canonical.ofVal_exact h3]
+    · exact nomatch h
+  · exact nomatch h
+
+theorem lift_FiberId (x : _root_.Effect4.FiberId) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.FiberId).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_Nat (x : _root_.Nat) :
+    acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_NativeOp (x : _root_.Effect4.Program.NativeOp) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.NativeOp).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_Val (x : _root_.Effect4.Store.Val) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Store.Val).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Program.Await) : shapeDoc.accepts (toVal a) = true := by
+  obtain ⟨a0, a1, a2, a3⟩ := a
+  apply accepts_struct
+  exact
+    (acceptsFields_cons _ _ _ _ _ _ (lift_FiberId a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a1)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_NativeOp a2)
+          (acceptsFields_cons _ _ _ _ _ _ (lift_Val a3) (acceptsFields_nil _)))))
+
+instance instCanonical : Canonical (_root_.Effect4.Program.Await) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end AwaitC
+
 namespace FiberStatusC
 
 def shapeDoc : ShapeDoc :=
@@ -1730,13 +1806,22 @@ def phases : List HostSession.Phase :=
 #guard [Api.Outcome.finished, .frontier, .stuck (.unknownFiber ⟨9⟩)].all fun x =>
   Canonical.decode (α := Api.Outcome) (Canonical.encode x) = some x
 #guard Canonical.decode (α := Command) [] = none
+-- A call the machine waits on crosses as a record with its field names (decisions row 16),
+-- read back exactly and refused with a byte added.
+def awaitCall : Program.Await := ⟨⟨1⟩, 4, .external 0, .nat 2⟩
+#guard Canonical.decode (α := Program.Await) (Canonical.encode awaitCall) = some awaitCall
+#guard Canonical.decode (α := Program.Await) (Canonical.encode awaitCall ++ [0]) = none
+#guard (Canonical.shape Program.Await).accepts (Canonical.toVal awaitCall)
+#guard match (Canonical.shape Program.Await).root with
+  | .struct "Await" fields => fields.map (·.1) == ["fiber", "token", "op", "request"]
+  | _ => false
 -- The readings of `Run.observe` (decisions row 17): every fiber status, and an observation
 -- carrying all of its fields, read back exactly and refused with a byte added.
 def statuses : List FiberStatus :=
   [.child ⟨0⟩, .pinned 2 5, .daemon, .root, .exited (.success (.nat 3)), .exited (.failure failed)]
 def observation : Run.Observation :=
   { state := .awaitingAsync, outcome := .frontier, exit := some (.success (.nat 1)),
-    awaiting := [(⟨1⟩, 4, .refGet, .nat 2)], pending := [⟨⟨0⟩, 1⟩], retired := [⟨⟨2⟩, 0⟩],
+    awaiting := [awaitCall], pending := [⟨⟨0⟩, 1⟩], retired := [⟨⟨2⟩, 0⟩],
     applied := 3, reasons := [], fibers := statuses.zipIdx.map fun (s, i) => (⟨i⟩, s) }
 #guard statuses.all fun x => Canonical.decode (α := FiberStatus) (Canonical.encode x) = some x
 #guard statuses.all fun x => Canonical.decode (α := FiberStatus) (Canonical.encode x ++ [0]) = none
@@ -1834,6 +1919,11 @@ end RunnerAcceptance
 #print axioms RunnerGen.OutcomeC.ofVal_exact
 #print axioms RunnerGen.OutcomeC.fits
 #print axioms RunnerGen.OutcomeC.instCanonical
+#print axioms RunnerGen.AwaitC.toVal
+#print axioms RunnerGen.AwaitC.ofVal_toVal
+#print axioms RunnerGen.AwaitC.ofVal_exact
+#print axioms RunnerGen.AwaitC.fits
+#print axioms RunnerGen.AwaitC.instCanonical
 #print axioms RunnerGen.FiberStatusC.toVal
 #print axioms RunnerGen.FiberStatusC.ofVal_toVal
 #print axioms RunnerGen.FiberStatusC.ofVal_exact

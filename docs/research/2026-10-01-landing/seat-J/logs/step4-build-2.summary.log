@@ -1,0 +1,27 @@
+# summary of step4-build-2.log (12198 lines)
+## commands
+## errors and warnings
+(none)
+## gates
+info: Test/All.lean:169:0: Effect4 library-root gate: 135 API/utility modules, 221 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:169:0: Effect4 module and axiom gate: checked 525 modules and 72539 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+## built (not replayed)
+ℹ [573/604] Built Test.Api.ExternalContract (1.7s)
+ℹ [594/605] Built Test.Counterexamples.Machine.Semantics.TrivialPosts (3.3s)
+ℹ [598/608] Built Effect4.Laws.Run (5.3s)
+ℹ [601/608] Built Test.Api.ApiContract (2.6s)
+ℹ [602/609] Built Test.Run.RunContract (2.7s)
+ℹ [643/652] Built Test.Program.AdmissionColumns (1.7s)
+ℹ [653/659] Built Effect4.Laws (4.8s)
+✔ [655/660] Built Test.Program.TypedCorpus (3.3s)
+ℹ [656/661] Built Test.Program.AdmissionCensus (2.6s)
+ℹ [657/661] Built Test.Program.ExitTypeLane (20s)
+ℹ [658/677] Built Test.Program.LoadedAdmission (2.7s)
+ℹ [744/747] Built Test.Audit.TraversalCensus (88s)
+ℹ [745/747] Built Test.All (67s)
+✔ [746/747] Built Test (2.4s)
+## tail
+✔ [746/747] Built Test (2.4s)
+Build completed successfully (747 jobs).
+LEAN_NUM_THREADS=2 lake build  185.81s user 20.89s system 121% cpu 2:50.69 total

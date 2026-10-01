@@ -31,7 +31,7 @@ def hasRunnable (m : NativeMachine) : Bool :=
   m.fibers.any fun f => f.exit.isNone && f.parked == .notParked
 
 def hostReasons (m : NativeMachine) : List FrontierReason :=
-  (Program.awaits m).map fun (fiber, token, _, _) => .awaitHost ⟨fiber, token⟩
+  (Program.awaits m).map fun a => .awaitHost ⟨a.fiber, a.token⟩
 
 def timerReasons (m : NativeMachine) : List FrontierReason :=
   m.state.timers.wake.waiters.map fun w => .awaitTimer w.fiber w.payload

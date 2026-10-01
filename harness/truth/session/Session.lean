@@ -130,9 +130,9 @@ def consume {p : Api.Program} {rows : RowTable} (s : Session p rows) (rootRuntim
     if fiber ≠ 0 || (← natField j "runtimeFiber") ≠ rootRuntime then throw "outside serial root fiber"
     let row ← natField j "row"
     let request ← decodeRequest session s.header.profile (← field j "request")
-    let some current := (outstanding s).find? (fun x => x.1 = ⟨fiber⟩)
+    let some current := (outstanding s).find? (fun x => x.fiber = ⟨fiber⟩)
       | throw "no outstanding call for recorded fiber"
-    pure (bindCall s ⟨version, session, s.header.table, callId, ⟨fiber⟩, .external row, request⟩ current.2.1)
+    pure (bindCall s ⟨version, session, s.header.table, callId, ⟨fiber⟩, .external row, request⟩ current.token)
   | "reply" =>
     keys j ["kind", "version", "session", "callId", "completion"]
     let completion ← decodeAnswer (← field j "completion")
@@ -188,7 +188,7 @@ def receipt {p : Api.Program} {rows : RowTable} (r : Walk p rows) : J :=
     ("applied", toJson r.session.applied), ("pending", .bool (!(pendingReplies r.session).isEmpty)),
     ("outcome", outcomeJson run.outcome), ("exit", (run.exit.map exitJson).getD .null),
     ("remaining", toJson r.remaining.length), ("allocated", toJson r.session.machine.state.externals.allocated), ("oracleAnswers", toJson r.session.machine.state.externals.answers.length),
-    ("awaits", .arr ((outstanding r.session).map fun (fiber, token, op, req) => Json.mkObj [
+    ("awaits", .arr ((outstanding r.session).map fun ⟨fiber, token, op, req⟩ => Json.mkObj [
       ("fiber", toJson fiber.value), ("token", toJson token),
       ("row", match op with | .external i => toJson i | _ => .null),
       ("request", match req with | .nat n => toJson n | _ => .null)]).toArray)]

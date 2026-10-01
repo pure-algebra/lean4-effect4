@@ -273,8 +273,8 @@ and with no slot waiting for a completion. A call already recorded is the driver
 by key, not to answer again. -/
 def freshCall (s : Run) : Option Await :=
   s.outstanding.find? fun await =>
-    !(s.session.active.any fun bound => bound.key == ⟨await.1, await.2.1⟩) &&
-      !(s.session.pending.any fun slot => slot.key == ⟨await.1, await.2.1⟩)
+    !(s.session.active.any fun bound => bound.key == ⟨await.fiber, await.token⟩) &&
+      !(s.session.pending.any fun slot => slot.key == ⟨await.fiber, await.token⟩)
 
 /-- Answer every call the session has no record of, flush, and repeat, keeping the rows.
 
@@ -288,13 +288,13 @@ def driveFrom {σ : Type} (r : Reactor σ) : Nat → Run → σ → Run × List 
   | rounds + 1, s, st =>
     match freshCall s with
     | some await =>
-      match s.rowOf await.2.2.1 with
+      match s.rowOf await.op with
       | none => (s, [], st)
       | some row =>
-        match r row await.2.2.2 st with
+        match r row await.request st with
         | none => (s, [], st)
         | some (c, next) =>
-          let rows := Rows.answer s ⟨await.1, await.2.1⟩ c
+          let rows := Rows.answer s ⟨await.fiber, await.token⟩ c
           let after := driveFrom r rounds (s.play rows) next
           (after.1, rows ++ after.2.1, after.2.2)
     | none =>
