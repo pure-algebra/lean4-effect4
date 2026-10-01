@@ -1,0 +1,3 @@
+closure of Effect4: 2472 modules; 0 of the `Effects` package: []
+  importing an `Effects` module directly: []
+## exit=0 seconds=2 cmd=lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-landing/seat-F/probes/CoreClosureCore.lean

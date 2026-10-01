@@ -14,7 +14,9 @@ over `pair key value` entries) with its exactness, so the map is an `Image` of t
 (`contextImage`). Imports only the key and value foundations: `Machine/Stores.lean` holds one
 inside the fiber context without inheriting `Effects.Algebra.Program`. `Machine/Context.lean`
 imports this module — every name keeps its namespace, so its readers are unchanged — and adds
-the requirement rows, the service programs, the alphabets and the counterexamples.
+the requirement rows, satisfaction, the context updates and the counterexamples (its model of
+service programs over `Effects.Algebra.Program` was deleted on 2026-10-01, so no module of the core
+root imports the `Effects` package).
 -/
 
 set_option autoImplicit false

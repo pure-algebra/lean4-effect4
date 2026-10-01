@@ -164,11 +164,11 @@ the type, and the stores are inside the invariant whether the run finished or no
 structure SoundB (pw pd : Effects.Program StoreSig (Option ExitV)) (s : Stores)
     (answer error : Ty) : Prop where
   independent : runP pw s = runP pd s
-  exit : ∀ ex, (runP pd s).1 = some ex → ExitOk answer error (runP pd s).2 ex
+  exit : ∀ ex, (runP pd s).1 = some ex → ExitHasTy answer error (runP pd s).2 ex
   stores : StoreOk s (runP pd s).2
 
 theorem SoundB.pure {s : Stores} {answer error : Ty} (hwf : s.WF) (hheap : Stores.HeapNat s)
-    (ex : ExitV) (hex : ExitOk answer error s ex) :
+    (ex : ExitV) (hex : ExitHasTy answer error s ex) :
     SoundB (Pure.pure (some ex)) (Pure.pure (some ex)) s answer error :=
   ⟨rfl, fun ex' h => by cases h; exact hex, ⟨Stores.le_refl s, hwf, hheap⟩⟩
 
@@ -230,7 +230,7 @@ theorem iter_soundB {fw fd : Val → Effects.Program StoreSig (Option ExitV ⊕ 
     (hinv : ∀ c s, Inv c s → s.WF ∧ Stores.HeapNat s)
     (hstep : ∀ c s, Inv c s → runP (fw c) s = runP (fd c) s ∧
       StoreOk s (runP (fd c) s).2 ∧
-      (∀ ex, (runP (fd c) s).1 = .inl (some ex) → ExitOk answer error (runP (fd c) s).2 ex) ∧
+      (∀ ex, (runP (fd c) s).1 = .inl (some ex) → ExitHasTy answer error (runP (fd c) s).2 ex) ∧
       (∀ c', (runP (fd c) s).1 = .inr c' → Inv c' (runP (fd c) s).2)) :
     ∀ (k : Nat) (c : Val) (s : Stores), Inv c s →
       SoundB (Option.join <$> iter fw k c) (Option.join <$> iter fd k c) s answer error
@@ -534,7 +534,7 @@ theorem meaningB_never_wrong (bad : ExitV) (k : Nat) (e : NativeEff) (t : EffTy)
 /-- **A finished budgeted run has the program's type.** -/
 theorem meaningB_typed (k : Nat) (e : NativeEff) (t : EffTy) (hl : Looped e = true)
     (hty : effTy nativeSignature [] e = some t) {ex : ExitV} {s' : Stores}
-    (h : meaningB k e [] Stores.empty = (some ex, s')) : ExitOk t.answer t.error s' ex := by
+    (h : meaningB k e [] Stores.empty = (some ex, s')) : ExitHasTy t.answer t.error s' ex := by
   have hs := (soundB badShapeExit k e [] [] Stores.empty t hl hty TypedAt.empty).exit ex
     (by show (meaningB k e [] Stores.empty).1 = some ex; rw [h])
   have : (runP (denoteB k e []) Stores.empty).2 = s' := by

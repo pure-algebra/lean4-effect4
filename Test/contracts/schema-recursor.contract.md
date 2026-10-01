@@ -13,8 +13,9 @@
 > statement pins nothing the generator's own file does not. Its behavioural share moved to
 > `tools/Effect4Gen/guards/schemafold.lean`, appended verbatim into the generated module.
 > The retained executable attack `Test/Counterexamples/Schema/RecursiveElimination.lean`
-> was ported to the generated names and is still the falsifier for
-> `E4-SCHEMA-CE-043`. **Owner decision owed:** the freeze receipt below names the SHA-256
+> was ported to the generated names and was the falsifier for `E4-SCHEMA-CE-043` until row 39
+> deleted it (`d75f5c25`, 2026-10-01; its last text is `git:f0591f36:Test/Counterexamples/Schema/RecursiveElimination.lean`); the
+> row is in `Test/Counterexamples/Archive/REGISTER.md`. **Owner decision owed:** the freeze receipt below names the SHA-256
 > of a file that no longer exists; either re-freeze this packet against the generated
 > module or mark it superseded.
 
@@ -23,7 +24,7 @@ fence is the `SC-REP-03-RECURSOR` addition to
 `src/Effect4/Schema/Fold.lean` (amended: it was the `SC-REP-03-RECURSOR` addition to
 `src/Effect4/Schema/Representation.lean` until 2026-09-17). The retained executable
 attack is
-`Test/Counterexamples/Schema/RecursiveElimination.lean`. A builder must
+`git:f0591f36:Test/Counterexamples/Schema/RecursiveElimination.lean` (deleted under row 39). A builder must
 make it green without editing this packet or the attack.
 
 This packet closes only the general nondependent-elimination share of
@@ -210,6 +211,9 @@ breaking arbitrary algebras.
 
 ## Counterexample `E4-SCHEMA-CE-043`
 
+Both `E4-SCHEMA-CE-043` (since row 39, 2026-10-01) and `E4-SCHEMA-CE-033` (since the split of
+2026-09-13) are rows of `Test/Counterexamples/Archive/REGISTER.md`.
+
 The false design claim is:
 
 > Traversing direct `Representation` children and `FilterGroup.checks` is a
@@ -306,7 +310,7 @@ The current production fence has no fold declarations. The breaker command is:
 
 ```text
 lake env lean -DmaxErrors=10000 --json \
-  Test/Counterexamples/Schema/RecursiveElimination.lean
+  git:f0591f36:Test/Counterexamples/Schema/RecursiveElimination.lean
 ```
 
 (Amended 2026-09-17: the battery command was

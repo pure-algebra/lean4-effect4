@@ -29,8 +29,8 @@ The three tiers are:
   against a fresh run;
 - **vendored input**: copied from an identified source, with provenance recorded.
 
-`make gen` runs every stale group in the producers' dependency order: **variances, derived,
-lcnf, eff, wire, cas, ts, readme, truth, host-protocol, schema-ts, census**. Each group's
+`make gen` runs every stale group in the producers' dependency order, which is the Makefile's
+`GEN_GROUPS` (the architecture map reads that list; this file does not restate it). Each group's
 marker depends on the previous one, so a regenerated upstream group re-cuts everything
 downstream of it. lcnf is the exception, and it is deliberate: it sits in the order between
 derived and eff, because eff cuts the engine's layout mirror from the api_engine.ml lcnf
@@ -67,7 +67,8 @@ set still requires the typing-world instantiation; frame premises are not that p
 
 | Group | Producer (`make gen-<group>`) | Inputs | Consumers | Check | Evidence (DI-32) |
 | --- | --- | --- | --- | --- | --- |
-| derived | `tools/Effect4Gen/Driver.lean` runs `Main.lean` / `Fold.lean` / `LayerView.lean` per manifest group: `Json`, `Schema`, `Program`, `Pin`, `Api`, `Fold`, `SchemaFold`, `LayerView` | `tools/Effect4Gen/manifest.json`, the guards, the imports named per group | the Effect4 library (`Store/Derived/*.lean`, `Store/Domain/Derived/Program.lean`, `Store/Domain/PinDerived.lean`, `Api/Derived.lean`, `Program/Fold.lean`, `Schema/Fold.lean`, `Program/LayerView.lean`) | `make check-gen`; `lake build Test` for shapes | reproduced; tested |
+| variances | `tools/Tools/Variances.lean` (`scripts/generate.py --only variances`): declaration-site variance read off the vendored rc.112 sources | the vendored `vendor/effect-4.0.0-rc.112/src` modules the file pins, the driver's head list | `tools/Effect4Gen/variances.json`, an input of `derived` (the TyView group reads it) | `make check-gen` (in `HERMETIC_GROUPS` and `GENERATED_PATHS`) | reproduced |
+| derived | `tools/Effect4Gen/Driver.lean` runs every group of `tools/Effect4Gen/manifest.json` through the group's tool (`Main.lean` unless the group names another) | `tools/Effect4Gen/manifest.json`, the guards, the imports named per group, `variances.json`, `wire-tags.json` | the file each manifest group's `Out` names: Lean modules of the Effect4 library (the Makefile's `DERIVED_OUT`) and `harness/truth/prelude-atoms.gen.ts` | `make check-gen`; `lake build Test` for shapes | reproduced; tested |
 | eff | `src/OCaml5/Tools/EffGen.lean`, then `scripts/generate-engine-structure.py` | `Effect4.Program.Native`, `OCaml5.Eff.*` | `ocaml/eff/eff_{types,wire,json,native,layout}.ml`, `eff_manifest.txt`, `program-structure.json`, the 48-program goldens under `ocaml/eff/goldens/`, `ocaml/engine/e4_program_layout.{ml,json}` | `make check-gen`; `make check-ocaml` (the goldens decode, re-encode and print in OCaml; the `.ty` goldens and `corpus.txt` are Lean's typing verdicts, held by the drift check alone since the OCaml checker was retired on 2026-09-13) | reproduced; tested |
 | wire | `src/OCaml5/Tools/EffWire.lean` | `Effect4.Program.Wire` and its corpus | `ocaml/goldens/eff/*.hex`, `manifest.txt`, `same-programs.txt` | `make check-gen`; `make check-ocaml` (`test_lean_wire`) | reproduced; tested |
 | cas | `src/OCaml5/Tools/CasGoldens.lean` | the store word, genesis and machine stores | `ocaml/engine/cas/goldens/` (119 files) | `make check-gen`; `make check-ocaml` (`engine-tests`) | reproduced; tested |
@@ -86,8 +87,7 @@ inside itself and refused to run once any of them changed (the owner had deferre
 stamp on 2026-09-08). The Lean module it projected, and the three other hand-frozen
 declaration censuses of the test tree, were retired the same day (stage 2 of the checking
 refactor): what they froze by hand — constructor order and arity, owned names, receipts —
-is held by the derived projection guard (`tools/Effect4Gen/Check.lean`), the compatibility
-snapshot and the axiom gate. The retained Schema checks run on their inputs as
+is held by the derived projection guard (`tools/Effect4Gen/Check.lean`) and the axiom gate. The retained Schema checks run on their inputs as
 `make check-schema-pins` and `check-schema-ts`. Row 39 retires the annotation and
 effectful-field harnesses and their `check-schema-host` gate; the pinned
 `harness/schema-host` installation remains the host used by `schema-ts`.
@@ -99,6 +99,16 @@ run, *tested* for a finite checker or host run over named inputs. The former fou
 bytes), has no carrier since the labels went; every committed group is *reproduced*.
 
 ## Build artifacts that are not committed
+
+**Promoted projections.** Five committed tables are not cut by `make gen`; each has its own
+producer, and a check reads it. `generated/corpus-index.tsv` (`make corpus`, below);
+`generated/row-types.tsv` (`tools/Tools/RowTypes.lean`, run by hand: `lake env lean -M4096 --run
+tools/Tools/RowTypes.lean generated/row-types.tsv`; `make check-target` refuses a stale one with
+`--check`); `generated/assignability.tsv` (`make gen-assignability`) and
+`generated/row-citations.tsv` (`make gen-row-citations`), both promoted from `make check-target`'s
+lanes; `generated/tsdiag-agreement.tsv` (`make gen-tsdiag`, read by `make check-tsdiag`). The
+first four are in `GENERATED_PATHS`, so `make check-gen` refuses a hand edit to them; the fifth
+is not, and `check-tsdiag` alone holds it.
 
 **The printed corpus.** `make corpus` runs `tools/Drivers/Corpus.lean` into `.lake/corpus`:
 400 programs of Lean's seeded generator (`Test/Program/Gen.lean`) and the wire corpus, each

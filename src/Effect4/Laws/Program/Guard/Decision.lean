@@ -63,13 +63,15 @@ theorem requestOrInterrupted_steppedBy (p : NativeEff) (table : RowTable) (fuel 
       exact (Effect4.Program.Guard.OuterDriver.advanceState_preserved p table
         (driverContract p table) fuel millis fuel m state).request fiber token request hr
 
+/-- The history lift (`Machine.Lift.foldl_lift`) applied to `guardState_steppedBy`. -/
 theorem guardState_executePrefix (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (history : Prefix) (state : GuardState m) :
     GuardState (executePrefix p table m history) := by
-  induction history generalizing m with
-  | nil => exact state
-  | cons entry history ih =>
-    exact ih _ (guardState_steppedBy p table entry.1 m entry.2 state)
+  obtain ⟨_, _, held⟩ := Lift.foldl_lift Lift.unitOrder (fun _ m => GuardState m)
+    (fun _ _ _ => True) (fun m s => steppedBy p s.1 table m s.2)
+    (fun _ m entry hj _ => ⟨(), trivial, guardState_steppedBy p table entry.1 m entry.2 hj⟩)
+    history () m state (Lift.admitted_true _ _ history m)
+  exact held
 
 theorem guardState_reachable (p : NativeEff) (table : RowTable) (compileFuel : Nat)
  (answers : List (Completion Val Err Defect FiberId Ann))

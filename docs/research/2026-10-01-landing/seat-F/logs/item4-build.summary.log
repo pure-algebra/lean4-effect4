@@ -1,0 +1,5 @@
+✔ [535/537] Built Test.Program.LoopSoundContract (2.7s)
+✔ [536/537] Built Test.Program.LoopAgreementContract (3.6s)
+ℹ [537/537] Built Effect4.Laws (11s)
+Build completed successfully (537 jobs).
+## exit=0 seconds=46 cmd=lake build Effect4.Laws.Program.MeaningSound Effect4.Laws.Program.LoopSound Effect4.Laws.Program.TypedRun Effect4.Laws.Program.Typed.ExitConnector Effect4.Laws.Program.Folds.Denote Effect4.Laws.Program.Agreement.Loop Effect4.Laws Test.Program.MeaningSoundContract Test.Program.LoopSoundContract Test.Program.LoopAgreementContract Test.Program.ExitConnector

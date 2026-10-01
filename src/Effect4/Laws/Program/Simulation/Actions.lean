@@ -830,5 +830,5 @@ end Effect4.Program.Sched
 #obligation_proved Effect4.Program.Sched.M1Origin.forkIn_rel := @Effect4.Program.Sched.forkIn_rel
 #obligation_proved Effect4.Program.Sched.M1Origin.raceAll_rel := @Effect4.Program.Sched.raceAll_rel
 
-#typed_state_obligations Effect4.Program.Sched.M1Actions ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
-#typed_state_obligations Effect4.Program.Sched.M1Origin ceiling 7 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Program.Sched.M1Actions ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Program.Sched.M1Origin ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

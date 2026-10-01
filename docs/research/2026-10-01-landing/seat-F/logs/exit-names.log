@@ -1,0 +1,20 @@
+Effect4.Program.Denote.ExitHasTy: exists true; 34 declarations mention it, in 5 modules: [Effect4.Laws.Program.MeaningSound 15,
+ Test.Program.ExitConnector 4,
+ Effect4.Laws.Program.Typed.ExitConnector 1,
+ Effect4.Laws.Program.TypedRun 3,
+ Effect4.Laws.Program.LoopSound 11]
+Effect4.Program.Denote.ExitOk: exists false; 0 declarations mention it, in 0 modules: []
+Effect4.Program.Typed.ExitOk: exists true; 94 declarations mention it, in 5 modules: [Effect4.Laws.Program.Typed.Admission 7,
+ Effect4.Laws.Program.Typed.Assembly 5,
+ Effect4.Laws.Program.Typed.Stack 21,
+ Effect4.Laws.Program.Typed.Residual 43,
+ Effect4.Laws.Program.Typed.Scheduler 18]
+'Effect4.Program.Typed.exitHasTy_of_fitsExit' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.ExitHasTy.widen' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.ExitHasTy.later' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.meaning_typed' depends on axioms: [propext, Quot.sound]
+'Test.Program.ExitConnector.redA_scope' depends on axioms: [propext, Quot.sound]
+'Test.Program.ExitConnector.redB_external' depends on axioms: [propext, Quot.sound]
+'Test.Program.ExitConnector.validity_needed' depends on axioms: [propext, Quot.sound]
+'Test.Program.ExitConnector.allocation_needed' depends on axioms: [propext, Quot.sound]
+## exit=0 seconds=20 cmd=lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-landing/seat-F/probes/ExitNames.lean

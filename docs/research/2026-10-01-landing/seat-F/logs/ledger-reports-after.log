@@ -1,0 +1,16 @@
+reports: 79 (74 in src, 5 elsewhere)
+distinct scopes in src: 66
+src reports with ceiling > open: 0; slack slots: 0
+src reports with open > 0:
+  src/Effect4/Laws/Program/Typed/Residual.lean:456  Effect4.Program.Typed.M3bWorld  open 1 proved 2 ceiling 1
+  src/Effect4/Laws/Program/Typed/Assembly.lean:361  Effect4.Program.Typed.M3bAssembly  open 1 proved 1 ceiling 1
+  src/Effect4/Laws/Program/Typed/Assembly.lean:383  Effect4.Program.Typed.M6Ledger  open 20 proved 0 ceiling 20
+  src/Effect4/Laws/Program/Guard/Handshake.lean:30  Effect4.Program.Guard.M4Handshake  open 1 proved 0 ceiling 1
+  src/Effect4/Laws/Program/Guard/TraceOrigin.lean:27  Effect4.Api.TraceFacts.M1Trace  open 2 proved 1 ceiling 2
+  src/Effect4/Laws/Api/TraceOrigin.lean:27  Effect4.Api.TraceFacts.M1Trace  open 2 proved 1 ceiling 2
+non-src reports:
+  Test/Api/TraceOrigin.lean:924  Effect4.Api.TraceFacts.M1Trace  open 0 proved 3 total 3 ceiling 0
+  Test/Api/TraceOrigin.lean:931  Effect4.Api.M1Trace  open 0 proved 15 total 15 ceiling 0
+  Test/Audit/IndexedColumnActual.lean:34  Test.IndexedColumnActual  open 0 proved 4 total 4 ceiling 4
+  Test/Audit/IndexedColumns.lean:160  Test.IndexedColumnDraft  open 1 proved 7 total 8 ceiling 8
+  Test/Machine/Runtime/ArenaContract.lean:40  Effect4.Machine.ArenaRed.Obligations  open 0 proved 2 total 2 ceiling 0

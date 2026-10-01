@@ -1034,4 +1034,4 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
 
 end Effect4.Program.Sched
 
-#typed_state_obligations Effect4.Program.Sched.M1Evaluate ceiling 2 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Sched.M1Evaluate ceiling 0 using aesop (rule_sets := [Effect4.Stores])

@@ -659,6 +659,53 @@ theorem replayEval_lift (o : WorldOrder W) (J : W → RunMachine ν σ β ε δ 
 
 end Replay
 
+/-! ## A fact through a folded history
+
+The history form of the lifts above, for any state type and step: a fact every admitted step
+keeps holds after the whole fold, at a later world. The guard's prefix replay
+(`executePrefix`, `Laws/Program/Guard/Core.lean`) is its user. Moved here from
+`Laws/Program/Guard/Core.lean` on 2026-10-01, beside the other lifts. -/
+
+section History
+
+variable {W : Type w} {M : Type u} {X : Type v}
+
+/-- Every history step is admitted at the state it actually meets, for every world that
+satisfies the invariant at that state. -/
+def Admitted (J : W → M → Prop) (A : W → M → X → Prop) (step : M → X → M) :
+    M → List X → Prop
+  | _, [] => True
+  | m, x :: xs => (∀ w, J w m → A w m x) ∧ Admitted J A step (step m x) xs
+
+/-- A fact kept by every admitted step holds after the whole folded history, at a later
+world. This is the history form of the machine lift. -/
+theorem foldl_lift (o : WorldOrder W) (J : W → M → Prop)
+    (A : W → M → X → Prop) (step : M → X → M)
+    (pres : ∀ w m x, J w m → A w m x → ∃ w', o.le w w' ∧ J w' (step m x)) :
+    ∀ (xs : List X) (w : W) (m : M), J w m → Admitted J A step m xs →
+      ∃ w', o.le w w' ∧ J w' (xs.foldl step m)
+  | [], w, _, hj, _ => ⟨w, o.refl w, hj⟩
+  | x :: xs, w, m, hj, ⟨hx, hxs⟩ => by
+    obtain ⟨w₁, le₁, hj₁⟩ := pres w m x hj (hx w hj)
+    obtain ⟨w₂, le₂, hj₂⟩ := foldl_lift o J A step pres xs w₁ (step m x) hj₁ hxs
+    exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
+
+/-- A history whose every step is admitted at every state the invariant holds of is admitted
+along the run it makes. -/
+theorem admitted_of_forall (J : W → M → Prop) (A : W → M → X → Prop) (step : M → X → M) :
+    ∀ (xs : List X), (∀ x ∈ xs, ∀ w m, J w m → A w m x) → ∀ m, Admitted J A step m xs
+  | [], _, _ => trivial
+  | x :: xs, h, m =>
+    ⟨fun w hj => h x (List.mem_cons_self ..) w m hj,
+      admitted_of_forall J A step xs (fun y hy => h y (List.mem_cons_of_mem _ hy)) (step m x)⟩
+
+/-- When admission imposes no condition, every history is admitted. -/
+theorem admitted_true (J : W → M → Prop) (step : M → X → M) (xs : List X) (m : M) :
+    Admitted J (fun _ _ _ => True) step m xs :=
+  admitted_of_forall J (fun _ _ _ => True) step xs (fun _ _ _ _ _ => trivial) m
+
+end History
+
 /-! ## Facts about the machine alone -/
 
 section MachineFact

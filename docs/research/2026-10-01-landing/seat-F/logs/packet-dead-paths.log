@@ -1,0 +1,26 @@
+dead path citations in live packets (not git:-pinned): 25
+Test/contracts/cause-exit.contract.md:644	test/fixtures/trust-gate/known-red.txt
+Test/contracts/data-row.contract.md:259	test/fixtures/trust-gate/known-red.txt
+Test/contracts/data-row.contract.md:269	scripts/test-trust-gate.sh
+Test/contracts/environment-context-key.contract.md:516	test/fixtures/trust-gate/known-red.txt
+Test/contracts/environment-context-key.contract.md:517	scripts/test-trust-gate.sh
+Test/contracts/environment-context-key.contract.md:525	scripts/test-trust-gate.sh
+Test/contracts/faces.contract.md:28	src/Effect4/Program/Wire.lean
+Test/contracts/faces.contract.md:31	scripts/check-ocaml.sh
+Test/contracts/faces.contract.md:284	harness/truth/corpus-results.ts
+Test/contracts/frames.contract.md:915	test/fixtures/trust-gate/known-red.txt
+Test/contracts/schema-annotations.contract.md:12	Test/Counterexamples/Schema/AnnotationDataPlane.lean
+Test/contracts/schema-annotations.contract.md:280	Test/Counterexamples/Schema/AnnotationDataPlane.lean
+Test/contracts/schema-annotations.contract.md:306	Test/Counterexamples/Schema/AnnotationDataPlane.lean
+Test/contracts/schema-codec.contract.md:10	Test/Counterexamples/Schema/Codec.lean
+Test/contracts/schema-payload.contract.md:22	src/Effect4/Schema/Check.lean
+Test/contracts/schema-payload.contract.md:89	scripts/check-schema-fields.sh
+Test/contracts/schema-payload.contract.md:180	scripts/check-schema-fields.sh
+Test/contracts/schema-payload.contract.md:404	scripts/check-schema-fields.sh
+Test/contracts/schema-payload.contract.md:1203	scripts/test-trust-gate.sh
+Test/contracts/schema-recursor.contract.md:15	Test/Counterexamples/Schema/RecursiveElimination.lean
+Test/contracts/schema-recursor.contract.md:26	Test/Counterexamples/Schema/RecursiveElimination.lean
+Test/contracts/schema-recursor.contract.md:309	Test/Counterexamples/Schema/RecursiveElimination.lean
+Test/contracts/scope-restoration.contract.md:197	src/internal/effect.ts
+Test/contracts/scope-restoration.contract.md:199	src/internal/core.ts
+Test/contracts/scope.contract.md:729	test/fixtures/trust-gate/known-red.txt

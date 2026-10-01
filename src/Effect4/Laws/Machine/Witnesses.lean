@@ -1485,4 +1485,4 @@ alone) — the receipt `docs/RUNTIME-COVERAGE.md:52-55` requires of a witness. T
 
 end Effect4.Machine.Witnesses
 
-#typed_state_obligations Effect4.Machine.Witnesses.M1Witnesses ceiling 1 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.Witnesses.M1Witnesses ceiling 0 using aesop (rule_sets := [Effect4.Stores])

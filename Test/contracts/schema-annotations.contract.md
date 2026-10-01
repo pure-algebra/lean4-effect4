@@ -9,7 +9,7 @@ fences are `src/Effect4/Data/Optic.lean`, `src/Effect4/Schema/Annotations.lean`,
 additive document-traversal section in `src/Effect4/Schema/Document.lean`.
 The breaker-owned batteries are `Test/Data/OpticContract.lean` and
 `Test/Schema/AnnotationDataPlaneContract.lean`; the retained attacks
-are in `Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+are in `git:f0591f36:Test/Counterexamples/Schema/AnnotationDataPlane.lean` (deleted under row 39 at `d75f5c25`).
 
 This packet exposes the existing annotation data as composable views. It does
 not add a second Schema carrier, resolve document references, assign
@@ -277,7 +277,7 @@ The breaker ran, from the project root:
 ```text
 lake env lean -DmaxErrors=10000 --json Test/Data/OpticContract.lean
 lake env lean -DmaxErrors=10000 --json Test/Schema/AnnotationDataPlaneContract.lean
-lake env lean -DmaxErrors=10000 --json Test/Counterexamples/Schema/AnnotationDataPlane.lean
+lake env lean -DmaxErrors=10000 --json git:f0591f36:Test/Counterexamples/Schema/AnnotationDataPlane.lean
 ```
 
 All three exited 1 against the production state at freeze time. The first optic battery emitted 69

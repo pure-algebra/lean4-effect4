@@ -650,4 +650,4 @@ end Effect4.Program.Sched
 
 #obligation_proved Effect4.Program.Sched.M1Deliver.storesOk_closeScopeUnsafe := @Effect4.Program.Sched.storesOk_closeScopeUnsafe
 
-#typed_state_obligations Effect4.Program.Sched.M1Deliver ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Program.Sched.M1Deliver ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

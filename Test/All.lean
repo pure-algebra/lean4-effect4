@@ -33,6 +33,7 @@ import Test.Program.SignatureSum
 import Test.Program.TypedResidual
 import Test.Program.TypedControl
 import Test.Program.H2PartOne
+import Test.Program.ExitConnector
 import Test.Program.TypedCorpus
 import Test.Program.ExitTypeLane
 import Test.Program.AdmissionCensus
@@ -125,6 +126,7 @@ import Test.Audit.RuntimeCoverage
 import Test.Audit.ClockLowering
 import Test.Audit.AxiomGate
 import Test.Audit.ExhaustiveFixture
+import Test.Audit.TraversalFixture
 import Test.Audit.TraversalCensus
 import Test.Audit.PositionCensus
 import Test.Audit.PositionAnalysis

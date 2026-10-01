@@ -1,0 +1,11 @@
+'Effect4.Machine.Lift.foldl_lift' does not depend on any axioms
+'Effect4.Machine.Lift.admitted_of_forall' does not depend on any axioms
+'Effect4.Machine.Lift.admitted_true' does not depend on any axioms
+'Effect4.Program.Guard.reachable_lift' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.reachable_lift_pure' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.SingleGuard.held_driveState' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.SingleGuard.held_executePrefix' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.guardState_executePrefix' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.guardState_reachable' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Guard.SingleGuard.requestOf_singleton_takePrefix' depends on axioms: [propext, Quot.sound]
+## exit=0 seconds=2 cmd=lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-landing/seat-F/probes/GuardAxioms.lean

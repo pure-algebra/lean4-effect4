@@ -1,0 +1,1240 @@
+info: Test/Audit/TraversalCensus.lean:63:0: #traversal_census Effect4.Program.Eff (family [Effect4.Program.Eff,
+ Effect4.Program.Stmt,
+ Effect4.Program.Stmts,
+ Effect4.Program.Effs,
+ Effect4.Program.ActionTerm,
+ Effect4.Program.LayerTerm,
+ Effect4.Program.LayerTerms]) under Effect4: 348 definitions take a family value (5 private) — fold 22, generated 42, structural 33 (of which 25 with a fold beside them, 0 instance implementations), wf 4 (of which 0 with a fold beside them), one-level 28 (of which 0 with a fold beside them), delegates 173, opaque 46; declared folds: [Effect4.Program.cata_layer,
+ Effect4.Program.cata_frontier_eff,
+ Effect4.Program.cata_stmts,
+ Effect4.Program.cataFam,
+ Effect4.Program.cata_frontier_action,
+ Effect4.Program.cata_stmt,
+ Effect4.Program.cata_eff,
+ Effect4.Program.cata_effs,
+ Effect4.Program.cata_action,
+ Effect4.Program.cata_frontier_stmts,
+ Effect4.Program.cata_layers,
+ Effect4.Program.cata_frontier_stmt,
+ Effect4.Program.cata_frontier_effs]
+  delegates	Effect4.Api:94	Effect4.Api.typeOf	(Eff)	→ [Effect4.Program.typeOfProgram]
+  delegates	Effect4.Api:99	Effect4.Api.checkTyping	(Eff)	→ [Effect4.Program.checkTypedProgram]
+  delegates	Effect4.Api:105	Effect4.Api.wellTyped	(Eff)	→ [Effect4.Api.typeOf]
+  delegates	Effect4.Api:108	Effect4.Api.explain	(Eff)	→ [Effect4.Program.Eff.refSites, Effect4.Program.Eff.layerRefsWF, Effect4.Program.Eff.expandRefs, Effect4.Program.explain]
+  delegates	Effect4.Api:119	Effect4.Api.blame	(Eff)	→ [Effect4.Api.explain]
+  delegates	Effect4.Api:136	Effect4.Api.print	(Eff)	→ [Effect4.Program.print]
+  delegates	Effect4.Api:155	Effect4.Api.readable	(Eff)	→ [Effect4.Program.readable]
+  delegates	Effect4.Api:162	Effect4.Api.roundTrip	(Eff)	→ [Effect4.Program.roundTrip]
+  delegates	Effect4.Api:169	Effect4.Api.bytesOf	(Eff)	→ [Effect4.Program.Wire.encodeProgram]
+  delegates	Effect4.Api:177	Effect4.Api.printDecl	(Eff)	→ [Effect4.Program.TypedProgram.ty, Effect4.Api.checkTyping, Effect4.Api.print]
+  delegates	Effect4.Api:184	Effect4.Api.printModule	(Eff)	→ [Effect4.Codegen.emitModule, Effect4.Codegen.ModuleEmission.module]
+  delegates	Effect4.Api:192	Effect4.Api.emitModule	(Eff)	→ [Effect4.Codegen.emitModule]
+  delegates	Effect4.Api:238	Effect4.Api.compile	(Eff)	→ [Effect4.Program.compile]
+  delegates	Effect4.Api:249	Effect4.Api.load	(Eff)	→ [Effect4.Api.compile]
+  delegates	Effect4.Api:274	Effect4.Api.replay	(Eff)	→ [Effect4.Program.interpOf, Effect4.Api.load, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Api:291	Effect4.Api.Tape.Complete	(Eff)	→ [Effect4.Api.replay]
+  delegates	Effect4.Api:307	Effect4.Api.run	(Eff)	→ [Effect4.Api.replay]
+  delegates	Effect4.Api:316	Effect4.Api.runSync	(Eff)	→ [Effect4.Api.compile, Effect4.Program.interpOf, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Api:348	Effect4.Api.replayChecked	(Eff)	→ [Effect4.Program.replayCheckedFrom, Effect4.Api.load]
+  delegates	Effect4.Api:361	Effect4.Api.replaySteps	(Eff)	→ [Effect4.Program.replayStepsFrom, Effect4.Api.load]
+  delegates	Effect4.Api:404	Effect4.Api.imageCertificate	(Eff)	→ [Effect4.Api.readable]
+  delegates	Effect4.Api:413	Effect4.Api.runAdmitted	(Eff)	→ [Effect4.Program.TypedProgram.ty, Effect4.Api.run, Effect4.Program.AdmittedProgram.toTypedProgram]
+  delegates	Effect4.Api:421	Effect4.Api.replayAdmitted	(Eff)	→ [Effect4.Api.replay, Effect4.Program.TypedProgram.ty, Effect4.Program.AdmittedProgram.toTypedProgram]
+  delegates	Effect4.Api:443	Effect4.Api.check	(Eff)	→ [Effect4.Program.typeOfProgram, Effect4.Api.wellTyped, Effect4.Api.explain]
+  delegates	Effect4.Api.HostSession:127	Effect4.Api.HostSession.start	(Eff)	→ [Effect4.Api.load, Effect4.Program.admitProgram]
+  delegates	Effect4.Api.HostSession:140	Effect4.Api.HostSession.outstanding	(Eff)	→ [Effect4.Api.HostSession.Session.machine]
+  delegates	Effect4.Api.HostSession:143	Effect4.Api.HostSession.bindCall	(Eff)	→ [Effect4.Api.HostSession.Session.nextCall, Effect4.Api.HostSession.Session.machine, Effect4.Api.HostSession.Session.applied, Effect4.Api.HostSession.Session.pending, Effect4.Api.HostSession.Session.retired, Effect4.Api.HostSession.Session.consumed, Effect4.Api.HostSession.Session.admitted, Effect4.Api.HostSession.Session.active, Effect4.Api.HostSession.Session.header]
+  delegates	Effect4.Api.HostSession:160	Effect4.Api.HostSession.preflight	(Eff)	→ [Effect4.Api.HostSession.Session.machine, Effect4.Api.HostSession.Session.active, Effect4.Api.HostSession.Session.header]
+  delegates	Effect4.Api.HostSession:175	Effect4.Api.HostSession.pendingReplies	(Eff)	→ [Effect4.Api.HostSession.Session.pending]
+  delegates	Effect4.Api.HostSession:179	Effect4.Api.HostSession.submit	(Eff)	→ [Effect4.Api.HostSession.Session.nextCall, Effect4.Api.HostSession.Session.machine, Effect4.Api.HostSession.Session.applied, Effect4.Api.HostSession.Session.pending, Effect4.Api.HostSession.Session.retired, Effect4.Api.HostSession.Session.consumed, Effect4.Api.HostSession.Session.admitted, Effect4.Api.HostSession.preflight, Effect4.Api.HostSession.Session.active, Effect4.Api.HostSession.Session.header]
+  delegates	Effect4.Api.HostSession:191	Effect4.Api.HostSession.retire	(Eff)	→ [Effect4.Api.HostSession.Session.nextCall, Effect4.Api.HostSession.Session.machine, Effect4.Api.HostSession.Session.applied, Effect4.Api.HostSession.Session.pending, Effect4.Api.HostSession.Session.retired, Effect4.Api.HostSession.Session.consumed, Effect4.Api.HostSession.Session.admitted, Effect4.Api.HostSession.Session.active, Effect4.Api.HostSession.Session.header]
+  delegates	Effect4.Api.HostSession:201	Effect4.Api.HostSession.applyReply	(Eff)	→ [Effect4.Api.HostSession.Session.nextCall, Effect4.Api.HostSession.Session.machine, Effect4.Api.HostSession.Session.applied, Effect4.Api.HostSession.Session.pending, Effect4.Api.HostSession.Session.retired, Effect4.Program.steppedBy, Effect4.Api.HostSession.Session.consumed, Effect4.Api.HostSession.Session.admitted, Effect4.Api.HostSession.preflight, Effect4.Api.HostSession.retire, Effect4.Api.HostSession.Session.active, Effect4.Api.HostSession.Session.header]
+  delegates	Effect4.Api.HostSession:227	Effect4.Api.HostSession.applyPending	(Eff)	→ [Effect4.Api.HostSession.applyReply, Effect4.Api.HostSession.pendingReplies]
+  delegates	Effect4.Api.HostSession:237	Effect4.Api.HostSession.advance	(Eff)	→ [Effect4.Api.HostSession.Session.nextCall, Effect4.Program.interpOf, Effect4.Api.HostSession.Session.machine, Effect4.Api.HostSession.Session.applied, Effect4.Api.HostSession.Session.pending, Effect4.Api.HostSession.Session.retired, Effect4.Api.HostSession.Session.consumed, Effect4.Api.HostSession.Session.admitted, Effect4.Api.HostSession.retire, Effect4.Api.HostSession.Session.active, Effect4.Api.HostSession.Session.header, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Api.HostSession:252	Effect4.Api.HostSession.inspect	(Eff)	→ [Effect4.Program.interpOf, Effect4.Api.HostSession.Session.machine, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Api.Runner:55	Effect4.Api.Runner.load	(Eff)	→ [Effect4.Api.HostSession.start]
+  delegates	Effect4.Api.TestClock:41	Effect4.Api.TestClock.run	(Eff)	→ [Effect4.Api.replay]
+  delegates	Effect4.Api.TestClock:55	Effect4.Api.TestClock.synthesize	(Eff)	→ [Effect4.Api.TestClock.sleepDeadlines]
+  delegates	Effect4.Api.TestClock:59	Effect4.Api.TestClock.runSequential	(Eff)	→ [Effect4.Api.TestClock.sleepDeadlines, Effect4.Api.TestClock.run]
+  delegates	Effect4.Api.TestClock:86	Effect4.Api.TestClock.runDilated	(Eff)	→ [Effect4.Api.TestClock.dilateTime, Effect4.Api.TestClock.runSequential]
+  delegates	Effect4.Codegen.Checked:38	Effect4.Codegen.ModuleEmission.module	(Eff)	→ [Effect4.Codegen.ModuleEmission.declarations]
+  delegates	Effect4.Codegen.Checked:43	Effect4.Codegen.emitTypedModule	(Eff)	→ [Effect4.Program.TypedProgram.ty, Effect4.Program.printEntry]
+  delegates	Effect4.Codegen.Checked:52	Effect4.Codegen.emitModule	(Eff)	→ [Effect4.Program.checkTypedProgram, Effect4.Codegen.emitTypedModule]
+  delegates	Effect4.Codegen.Forms:56	Effect4.Codegen.Forms.insert	(Eff)	→ [Effect4.Program.Eff.weaken]
+  delegates	Effect4.Codegen.Print:34	Effect4.Program.print	(Eff)	→ [Effect4.Codegen.Templates.printT]
+  delegates	Effect4.Codegen.Print:40	Effect4.Program.printLayer	(LayerTerm)	→ [Effect4.Codegen.Templates.printLayerT]
+  delegates	Effect4.Codegen.Print:135	Effect4.Program.printModule	(Eff)	→ [Effect4.Program.printLayer, Effect4.Program.print, Effect4.Program.Eff.hoistAll]
+  delegates	Effect4.Codegen.Print:158	Effect4.Program.printEntry	(Eff)	→ [Effect4.Program.printModule]
+  delegates	Effect4.Codegen.Read:779	Effect4.Program.roundTrip	(Eff)	→ [Effect4.Program.print]
+  delegates	Effect4.Codegen.Read:787	Effect4.Program.readable	(Eff)	→ [Effect4.Program.instDecidableEqEff, Effect4.Program.roundTrip]
+  delegates	Effect4.Codegen.Read:805	Effect4.Program.ReadsBack	(Eff)	→ [Effect4.Program.print]
+  delegates	Effect4.Codegen.Read:811	Effect4.Program.LayerTerm.ReadsBack	(LayerTerm)	→ [Effect4.Program.printLayer]
+  delegates	Effect4.Laws.Program.Agreement:65	Effect4.Program.Agreement.primOf	(Eff)	→ [Effect4.Program.interpAt]
+  delegates	Effect4.Laws.Program.Agreement:94	Effect4.Program.Agreement.resumeOf	(Eff)	→ [Effect4.Program.Agreement.primOf]
+  delegates	Effect4.Laws.Program.Agreement:108	Effect4.Program.Agreement.exitFrom	(Eff)	→ [Effect4.Program.interpAt, Effect4.Program.Agreement.resumeOf]
+  delegates	Effect4.Laws.Program.Agreement:136	Effect4.Program.Agreement.localStep	(Eff)	→ [Effect4.Program.Agreement.exitFrom, Effect4.Program.syncValueAt, Effect4.Program.Agreement.primOf]
+  delegates	Effect4.Laws.Program.Agreement:182	Effect4.Program.Agreement.localRun	(Eff)	→ [Effect4.Program.Agreement.localStep]
+  delegates	Effect4.Laws.Program.Agreement:1494	Effect4.Program.Agreement.Reaches	(Eff)	→ [Effect4.Program.Agreement.localRun]
+  delegates	Effect4.Laws.Program.Agreement.Machine:799	Effect4.Program.Agreement.exitedAt	(Eff)	→ [Effect4.Program.interpOf]
+  delegates	Effect4.Laws.Program.Agreement.Machine:813	Effect4.Program.Agreement.Mexit	(Eff)	→ [Effect4.Program.Agreement.exitedAt]
+  delegates	Effect4.Laws.Program.Agreement.Machine:1600	Effect4.Program.Agreement.Owes	(Eff)	→ [Effect4.Program.interpOf, Effect4.Program.Agreement.localRun, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Laws.Program.Denote:129	Effect4.Program.Denote.meaning	(Eff)	→ [Effect4.Program.Denote.denote]
+  delegates	Effect4.Laws.Program.DenoteB:201	Effect4.Program.Denote.leafB	(Eff)	→ [Effect4.Program.Denote.Straight, Effect4.Program.Denote.denote]
+  delegates	Effect4.Laws.Program.DenoteB:240	Effect4.Program.Denote.meaningB	(Eff)	→ [Effect4.Program.Denote.denoteB]
+  delegates	Effect4.Laws.Program.DenoteR:214	Effect4.Program.Sched.denoteAction	(Eff)	→ [Effect4.Program.Sched.denoteFiberAction, Effect4.Program.actionAt]
+  delegates	Effect4.Laws.Program.DenoteR:783	Effect4.Program.Sched.denoteRWith	(Eff)	→ [Effect4.Program.Sched.denoteLayerBody, Effect4.Program.Sched.denoteEffBody, Effect4.Program.Sched.denoteLayerZero]
+  delegates	Effect4.Laws.Program.DenoteR:789	Effect4.Program.Sched.denoteLayerWith	(Eff)	→ [Effect4.Program.Sched.denoteLayerBody, Effect4.Program.Sched.denoteEffBody, Effect4.Program.Sched.denoteLayerZero]
+  delegates	Effect4.Laws.Program.DenoteR:798	Effect4.Program.Sched.denoteR	(Eff)	→ [Effect4.Program.Sched.denoteRWith]
+  delegates	Effect4.Laws.Program.DenoteR:801	Effect4.Program.Sched.denoteLayer	(Eff)	→ [Effect4.Program.Sched.denoteLayerWith]
+  delegates	Effect4.Laws.Program.EvaluateR:345	Effect4.Program.Sched.termEvaluatorFor	(Eff)	→ [Effect4.Program.Sched.interpRAt]
+  delegates	Effect4.Laws.Program.Guard.Core:28	Effect4.Program.Guard.executePrefix	(Eff)	→ [Effect4.Program.steppedBy]
+  delegates	Effect4.Laws.Program.Guard.Core:32	Effect4.Program.Guard.Reachable	(Eff)	→ [Effect4.Api.load, Effect4.Program.Guard.executePrefix]
+  delegates	Effect4.Laws.Program.Guard.Core:1149	Effect4.Program.Guard.CommandAuthority	(Eff)	→ [Effect4.Program.interpOf]
+  delegates	Effect4.Laws.Program.Guard.Core:3483	Effect4.Program.Guard.spawnedChild	(Eff)	→ [Effect4.Program.interpOf]
+  delegates	Effect4.Laws.Program.Guard.Finish:41	Effect4.Program.Guard.Finish.childExitFiber	(Eff)	→ [Effect4.Program.interpOf]
+  delegates	Effect4.Laws.Program.Guard.LocalDecision:66	Effect4.Program.Guard.LocalDecision.interruptBeforeLoop	(Eff)	→ [Effect4.Program.interpOf]
+  delegates	Effect4.Laws.Program.Handles.Evaluation:297	Effect4.Program.AnswersValid	(Eff)	→ [Effect4.Program.interpOf, Effect4.Api.load, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Laws.Program.Handles.Evaluation:305	Effect4.Program.instDecidableAnswersValid [instance]	(Eff)	→ [Effect4.Program.interpOf, Effect4.Api.load, Effect4.Program.AnswersValid, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Laws.Program.Hoisting:22	Effect4.Program.undoStep [private]	(Eff)	→ [Effect4.Program.Node.replaceLayerAt]
+  delegates	Effect4.Laws.Program.Hoisting:26	Effect4.Program.undoHistory [private]	(Eff)	→ [Effect4.Program.undoStep]
+  delegates	Effect4.Laws.Program.InterpR:99	Effect4.Program.Sched.denoteAt	(Eff)	→ [Effect4.Program.Sched.denoteR]
+  delegates	Effect4.Laws.Program.InterpR:171	Effect4.Program.Sched.layerBuildR	(Eff)	→ [Effect4.Program.Sched.denoteLayer]
+  delegates	Effect4.Laws.Program.InterpR:177	Effect4.Program.Sched.denoteBody	(Eff)	→ [Effect4.Program.Sched.layerBuildR, Effect4.Program.Sched.denoteAt]
+  delegates	Effect4.Laws.Program.InterpR:255	Effect4.Program.Sched.loopFinishRAt	(Eff)	→ [Effect4.Program.loopResultAt]
+  delegates	Effect4.Laws.Program.InterpR:265	Effect4.Program.Sched.loopNextRAt	(Eff)	→ [Effect4.Program.Sched.denoteAt, Effect4.Program.loopAt, Effect4.Program.Sched.loopFinishRAt]
+  delegates	Effect4.Laws.Program.InterpR:276	Effect4.Program.Sched.loopResumeRAt	(Eff)	→ [Effect4.Program.loopAt, Effect4.Program.Sched.loopNextRAt]
+  delegates	Effect4.Laws.Program.InterpR:285	Effect4.Program.Sched.interpR	(Eff)	→ [Effect4.Program.Sched.layerBuildR, Effect4.Program.interpOf, Effect4.Program.Sched.loopResumeRAt, Effect4.Program.Sched.denoteAt, Effect4.Program.Sched.loopNextRAt, Effect4.Program.Sched.walkR]
+  delegates	Effect4.Laws.Program.InterpR:383	Effect4.Program.Sched.interpRAt	(Eff)	→ [Effect4.Program.Sched.loopResumeRAt, Effect4.Program.Sched.denoteAt, Effect4.Program.Sched.loopNextRAt, Effect4.Program.Sched.interpR, Effect4.Program.Sched.walkR]
+  delegates	Effect4.Laws.Program.LoopAgreement:26	Effect4.Program.Agreement.LoopAgreement	(Eff)	→ [Effect4.Api.run, Effect4.Program.Denote.meaningB]
+  delegates	Effect4.Laws.Program.MeaningSound:341	Effect4.Program.Denote.Sound	(Eff)	→ [Effect4.Program.Denote.denoteWith, Effect4.Program.Denote.denote]
+  delegates	Effect4.Laws.Program.Means:77	Effect4.Program.Sched.finalizerCodeAt	(Eff)	→ [Effect4.Program.interpAt]
+  delegates	Effect4.Laws.Program.RuntimeR:40	Effect4.Program.Sched.loadR	(Eff)	→ [Effect4.Program.Sched.denoteR]
+  delegates	Effect4.Laws.Program.RuntimeR:50	Effect4.Program.Sched.replayR	(Eff)	→ [Effect4.Program.Sched.loadR, Effect4.Program.Sched.termEvaluatorFor, Effect4.Program.Sched.interpR]
+  delegates	Effect4.Laws.Program.RuntimeR:56	Effect4.Program.Sched.SufficientR	(Eff)	→ [Effect4.Program.Sched.termEvaluatorFor, Effect4.Program.Sched.interpR]
+  delegates	Effect4.Laws.Program.RuntimeR:62	Effect4.Program.Sched.BehR	(Eff)	→ [Effect4.Program.Sched.SufficientR, Effect4.Program.Sched.termEvaluatorFor, Effect4.Program.Sched.interpR]
+  delegates	Effect4.Laws.Program.Simulation.Actions:26	Effect4.Program.Sched.AnswerRel	(Eff)	→ [Effect4.Program.Sched.FMeans]
+  delegates	Effect4.Laws.Program.Simulation.Actions:172	Effect4.Program.Sched.TripleRel	(Eff)	→ [Effect4.Program.Sched.FMeans, Effect4.Program.Sched.BMeans]
+  delegates	Effect4.Laws.Program.Simulation.Actions:177	Effect4.Program.Sched.CmdsRel	(Eff)	→ [Effect4.Program.Sched.CMeans, Effect4.Program.Sched.BMeans]
+  delegates	Effect4.Laws.Program.Simulation.Deliver:121	Effect4.Program.Sched.scopedExitAt	(Eff)	→ [Effect4.Program.interpAt]
+  delegates	Effect4.Laws.Program.Simulation.Fibers:33	Effect4.Program.Sched.FMeans	(Eff)	→ [Effect4.Program.Sched.Means]
+  delegates	Effect4.Laws.Program.Simulation.Fibers:37	Effect4.Program.Sched.BMeans	(Eff)	→ [Effect4.Program.Sched.Means]
+  delegates	Effect4.Laws.Program.Typing.Check:23	Effect4.Program.checkTyping	(Eff)	→ [Effect4.Program.effTy]
+  delegates	Effect4.Laws.Program.Typing.Check:42	Effect4.Program.assessTyping	(Eff)	→ [Effect4.Program.checkTyping]
+  delegates	Effect4.Laws.Run:742	Effect4.Run.replayFrom	(Eff)	→ [Effect4.Program.interpOf, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Laws.Run:748	Effect4.Run.enoughFor	(Eff)	→ [Effect4.Program.interpOf, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Program.Admission:140	Effect4.Program.admitProgram	(Eff)	→ [Effect4.Program.checkTypedProgram, Effect4.Program.TypedProgram.ty, Effect4.Program.findIntInProgram]
+  delegates	Effect4.Program.Admission:185	Effect4.Program.admitStraightProgram	(Eff)	→ [Effect4.Program.Denote.Straight, Effect4.Program.admitProgram]
+  delegates	Effect4.Program.Admit:105	Effect4.Program.replayCheckedFrom	(Eff)	→ [Effect4.Program.interpOf, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Program.Admit:129	Effect4.Program.replayStepsFrom	(Eff)	→ [Effect4.Program.interpOf, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Program.Admit:245	Effect4.Program.steppedBy	(Eff)	→ [Effect4.Program.interpOf, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Program.Admit:253	Effect4.Program.AcceptedOnce	(Eff)	→ [Effect4.Program.steppedBy]
+  delegates	Effect4.Program.Authoring:340	Effect4.Program.Authoring.placeholderSites [private]	(Eff)	→ [Effect4.Program.Eff.refSites]
+  delegates	Effect4.Program.Authoring:348	Effect4.Program.Authoring.placeRounds [private]	(Eff)	→ [Effect4.Program.Node.replaceLayerAt, Effect4.Program.Authoring.placeholderSites]
+  delegates	Effect4.Program.Authoring:363	Effect4.Program.Authoring.pointAtPlaced [private]	(Eff)	→ [Effect4.Program.Node.replaceLayerAt, Effect4.Program.Authoring.placeholderSites]
+  delegates	Effect4.Program.CheckedTyping:23	Effect4.Program.checkTypedProgram	(Eff)	→ [Effect4.Program.typeOfProgram]
+  delegates	Effect4.Program.Checker:422	Effect4.Program.explain	(Eff)	→ [Effect4.Program.Checker.check]
+  delegates	Effect4.Program.Checker:428	Effect4.Program.blame	(Eff)	→ [Effect4.Program.explain]
+  delegates	Effect4.Program.Compile:657	Effect4.Program.resolve	(Eff)	→ [Effect4.Program.compileEff]
+  delegates	Effect4.Program.Compile:694	Effect4.Program.resolveLayer	(Eff)	→ [Effect4.Program.resolveLayer.resolveLayerTerm]
+  delegates	Effect4.Program.Compile:767	Effect4.Program.regionCode	(Eff)	→ [Effect4.Program.resolveLayer, Effect4.Program.resolve]
+  delegates	Effect4.Program.Compile:799	Effect4.Program.provideLayerBodyK	(Eff)	→ [Effect4.Program.resolve]
+  delegates	Effect4.Program.Compile:809	Effect4.Program.updateThenK	(Eff)	→ [Effect4.Program.regionCode]
+  delegates	Effect4.Program.Compile:903	Effect4.Program.blockEnv	(Eff)	→ [Effect4.Program.blockAt, Effect4.Program.localBinds]
+  delegates	Effect4.Program.Compile:1076	Effect4.Program.contAOf	(Eff)	→ [Effect4.Program.innerLayerAt, Effect4.Program.provideLayerWithK, Effect4.Program.resolveLayer, Effect4.Program.provideLayerBodyK, Effect4.Program.constructionAt, Effect4.Program.updateThenK, Effect4.Program.mergeAllCount, Effect4.Program.regionCode, Effect4.Program.resolve]
+  delegates	Effect4.Program.Compile:1328	Effect4.Program.loopFinishAt	(Eff)	→ [Effect4.Program.loopResultAt]
+  delegates	Effect4.Program.Compile:1339	Effect4.Program.loopNextAt	(Eff)	→ [Effect4.Program.loopAt, Effect4.Program.loopFinishAt, Effect4.Program.resolve]
+  delegates	Effect4.Program.Compile:1351	Effect4.Program.loopResumeAt	(Eff)	→ [Effect4.Program.loopAt, Effect4.Program.loopNextAt]
+  delegates	Effect4.Program.Compile:1412	Effect4.Program.interpOf	(Eff)	→ [Effect4.Program.contEOf, Effect4.Program.loopResumeAt, Effect4.Program.syncValueAt, Effect4.Program.forkScopedAt, Effect4.Program.resolveLayer, Effect4.Program.actionAt, Effect4.Program.loopNextAt, Effect4.Program.contAOf, Effect4.Program.suspendBodyAt, Effect4.Program.runStmts, Effect4.Program.resolve]
+  delegates	Effect4.Program.Compile:1567	Effect4.Program.interpAt	(Eff)	→ [Effect4.Program.contEOf, Effect4.Program.loopResumeAt, Effect4.Program.interpOf, Effect4.Program.loopNextAt, Effect4.Program.contAOf, Effect4.Program.suspendBodyAt, Effect4.Program.runStmts, Effect4.Program.resolve]
+  delegates	Effect4.Program.Compile:1602	Effect4.Program.enterScoped	(Eff)	→ [Effect4.Program.resolve]
+  delegates	Effect4.Program.Compile:1620	Effect4.Program.exitScoped	(Eff)	→ [Effect4.Program.interpAt]
+  delegates	Effect4.Program.Compile:1670	Effect4.Program.evaluatorFor	(Eff)	→ [Effect4.Program.evaluateNative]
+  delegates	Effect4.Program.Compile:1682	Effect4.Program.compile	(Eff)	→ [Effect4.Program.compileEff]
+  delegates	Effect4.Program.Fold:3445	FoldAcceptance.foldMono	(Eff)	→ [FoldAcceptance.EffMonoAlgebra.onLayer, Effect4.Program.foldMap_eff, FoldAcceptance.EffMonoAlgebra.onAction, FoldAcceptance.EffMonoAlgebra.onStmt, FoldAcceptance.EffMonoAlgebra.onEff]
+  delegates	Effect4.Program.Fold:3465	FoldAcceptance.subtermCount	(Eff)	→ [Effect4.Program.foldMap_eff]
+  delegates	Effect4.Program.Fold:3597	FoldAcceptance.countNodes	(Eff)	→ [Effect4.Program.foldM_eff]
+  delegates	Effect4.Program.Provision:391	Effect4.Program.Provision.runNative	(Eff)	→ [Effect4.Program.interpOf, Effect4.Program.compile, Effect4.Program.evaluatorFor]
+  delegates	Effect4.Program.Provision:408	Effect4.Program.Provision.buildServices	(LayerTerm)	→ [Effect4.Program.Provision.runNative]
+  delegates	Effect4.Program.Provision:415	Effect4.Program.Provision.buildSucceeds	(LayerTerm)	→ [Effect4.Program.Provision.runNative]
+  delegates	Effect4.Program.Provision:421	Effect4.Program.Provision.provideThenService	(LayerTerm)	→ [Effect4.Program.Provision.runNative]
+  delegates	Effect4.Program.Provision:426	Effect4.Program.Provision.specKeys	(LayerTerm)	→ [Effect4.Program.Provision.build]
+  delegates	Effect4.Program.Refs:107	Effect4.Program.Eff.refSites	(Eff)	→ [Effect4.Program.foldMapAt_eff, Effect4.Program.LayerTerm.refSite]
+  delegates	Effect4.Program.Refs:112	Effect4.Program.Stmts.refSites	(Stmts)	→ [Effect4.Program.foldMapAt_stmts, Effect4.Program.LayerTerm.refSite]
+  delegates	Effect4.Program.Refs:114	Effect4.Program.Stmt.refSites	(Stmt)	→ [Effect4.Program.LayerTerm.refSite, Effect4.Program.foldMapAt_stmt]
+  delegates	Effect4.Program.Refs:116	Effect4.Program.Effs.refSites	(Effs)	→ [Effect4.Program.LayerTerm.refSite, Effect4.Program.foldMapAt_effs]
+  delegates	Effect4.Program.Refs:118	Effect4.Program.ActionTerm.refSites	(ActionTerm)	→ [Effect4.Program.LayerTerm.refSite, Effect4.Program.foldMapAt_action]
+  delegates	Effect4.Program.Refs:120	Effect4.Program.LayerTerm.refSites	(LayerTerm)	→ [Effect4.Program.foldMapAt_layer, Effect4.Program.LayerTerm.refSite]
+  delegates	Effect4.Program.Refs:122	Effect4.Program.LayerTerms.refSites	(LayerTerms)	→ [Effect4.Program.LayerTerm.refSite, Effect4.Program.foldMapAt_layers]
+  delegates	Effect4.Program.Refs:162	Effect4.Program.Eff.layerPaths	(Eff)	→ [Effect4.Program.foldMapAt_eff]
+  delegates	Effect4.Program.Refs:166	Effect4.Program.Stmts.layerPaths	(Stmts)	→ [Effect4.Program.foldMapAt_stmts]
+  delegates	Effect4.Program.Refs:168	Effect4.Program.Stmt.layerPaths	(Stmt)	→ [Effect4.Program.foldMapAt_stmt]
+  delegates	Effect4.Program.Refs:170	Effect4.Program.Effs.layerPaths	(Effs)	→ [Effect4.Program.foldMapAt_effs]
+  delegates	Effect4.Program.Refs:172	Effect4.Program.ActionTerm.layerPaths	(ActionTerm)	→ [Effect4.Program.foldMapAt_action]
+  delegates	Effect4.Program.Refs:174	Effect4.Program.LayerTerm.layerPaths	(LayerTerm)	→ [Effect4.Program.foldMapAt_layer]
+  delegates	Effect4.Program.Refs:176	Effect4.Program.LayerTerms.layerPaths	(LayerTerms)	→ [Effect4.Program.foldMapAt_layers]
+  delegates	Effect4.Program.Refs:180	Effect4.Program.Eff.expandRefs	(Eff)	→ [Effect4.Program.Eff.expandRound, Effect4.Program.Eff.refSites]
+  delegates	Effect4.Program.Refs:188	Effect4.Program.Eff.refTargets	(Eff)	→ [Effect4.Program.Eff.refSites]
+  delegates	Effect4.Program.Refs:192	Effect4.Program.Eff.hoistAll	(Eff)	→ [Effect4.Program.Eff.refTargets, Effect4.Program.Node.replaceLayerAt]
+  delegates	Effect4.Program.Refs:205	Effect4.Program.Eff.restoreAll	(Eff)	→ [Effect4.Program.Node.replaceLayerAt]
+  delegates	Effect4.Program.Typing:27	Effect4.Program.effTy	(Eff)	→ [Effect4.Program.Checker.check]
+  delegates	Effect4.Program.Typing:31	Effect4.Program.layerTy	(LayerTerm)	→ [Effect4.Program.Checker.checkLayer]
+  delegates	Effect4.Program.Typing:35	Effect4.Program.layersTy	(LayerTerms)	→ [Effect4.Program.Checker.checkLayers]
+  delegates	Effect4.Program.Typing:40	Effect4.Program.stmtsTy	(Stmts)	→ [Effect4.Program.Checker.checkStmts]
+  delegates	Effect4.Program.Typing:44	Effect4.Program.effsTy	(Effs)	→ [Effect4.Program.Checker.checkEffs]
+  delegates	Effect4.Program.Typing:48	Effect4.Program.actionTy	(ActionTerm)	→ [Effect4.Program.Checker.checkAction]
+  delegates	Effect4.Program.Typing:52	Effect4.Program.typeOf	(Eff)	→ [Effect4.Program.effTy]
+  delegates	Effect4.Program.Typing:56	Effect4.Program.typeOfProgram	(Eff)	→ [Effect4.Program.Eff.refSites, Effect4.Program.Eff.layerRefsWF, Effect4.Program.Eff.expandRefs, Effect4.Program.typeOf]
+  delegates	Effect4.Program.Typing:66	Effect4.Program.WellTypedLayer	(LayerTerm)	→ [Effect4.Program.layerTy]
+  delegates	Effect4.Program.Typing:70	Effect4.Program.instDecidableWellTypedLayer [instance]	(LayerTerm)	→ [Effect4.Program.layerTy, Effect4.Program.WellTypedLayer]
+  delegates	Effect4.Program.Typing:73	Effect4.Program.WellTyped	(Eff)	→ [Effect4.Program.typeOf]
+  delegates	Effect4.Program.Typing:76	Effect4.Program.instDecidableWellTyped [instance]	(Eff)	→ [Effect4.Program.WellTyped, Effect4.Program.typeOf]
+  delegates	Effect4.Store.Domain.Derived.Program:2725	Effect4.Store.ProgramAcceptance.genHex	(Eff)	→ [Effect4.Store.ProgramGen.EffC.toValEff]
+  delegates	Effect4.Store.Domain.ProgramWire:65	Effect4.Program.Wire.hexOf	(Eff)	→ [Effect4.Program.Wire.encodeProgram]
+  fold	Effect4.Api.Supervision:143	Effect4.Api.supervision	(Eff)	Effect4.Api.superAlg …
+  fold	Effect4.Api.TestClock:73	Effect4.Api.TestClock.fastForward	(Eff)	Effect4.Api.TestClock.fastForwardAlgebra
+  fold	Effect4.Api.TestClock:83	Effect4.Api.TestClock.dilateTime	(Eff)	Effect4.Api.TestClock.dilateAlgebra …
+  fold	Effect4.Codegen.Templates:437	Effect4.Codegen.Templates.printT	(Eff)	Effect4.Codegen.Templates.printAlg …
+  fold	Effect4.Codegen.Templates:441	Effect4.Codegen.Templates.printLayerT	(LayerTerm)	Effect4.Codegen.Templates.printAlg …
+  fold	Effect4.Laws.Api.ModuleReadable:31	Effect4.Program.moduleReadable	(Eff)	Effect4.Program.readableAlg …; hands to [Effect4.Program.Eff.hoistAll, Effect4.Program.Readable]
+  fold	Effect4.Laws.Codegen.ReadPrint:429	Effect4.Program.Readable	(Eff)	Effect4.Program.readableAlg …
+  fold	Effect4.Program.Refs:134	Effect4.Program.Eff.expandRound	(Eff)	Effect4.Program.expandAlgebra …
+  fold	Effect4.Program.Refs:137	Effect4.Program.Stmts.expandRound	(Stmts)	Effect4.Program.expandAlgebra …
+  fold	Effect4.Program.Refs:139	Effect4.Program.Stmt.expandRound	(Stmt)	Effect4.Program.expandAlgebra …
+  fold	Effect4.Program.Refs:141	Effect4.Program.Effs.expandRound	(Effs)	Effect4.Program.expandAlgebra …
+  fold	Effect4.Program.Refs:143	Effect4.Program.ActionTerm.expandRound	(ActionTerm)	Effect4.Program.expandAlgebra …
+  fold	Effect4.Program.Refs:145	Effect4.Program.LayerTerm.expandRound	(LayerTerm)	Effect4.Program.expandAlgebra …
+  fold	Effect4.Program.Refs:147	Effect4.Program.LayerTerms.expandRound	(LayerTerms)	Effect4.Program.expandAlgebra …
+  fold	Effect4.Program.Scoped:85	Effect4.Program.Eff.scopedAt	(Eff)	Effect4.Program.scopedAlgebra …
+  fold	Effect4.Program.Scoped:88	Effect4.Program.Stmt.scopedAt	(Stmt)	Effect4.Program.scopedAlgebra …
+  fold	Effect4.Program.Scoped:89	Effect4.Program.Stmt.bindsNext	(Stmt)	Effect4.Program.scopedAlgebra …
+  fold	Effect4.Program.Scoped:92	Effect4.Program.Stmts.scopedAt	(Stmts)	Effect4.Program.scopedAlgebra …
+  fold	Effect4.Program.Scoped:93	Effect4.Program.Effs.scopedAt	(Effs)	Effect4.Program.scopedAlgebra …
+  fold	Effect4.Program.Scoped:94	Effect4.Program.ActionTerm.scopedAt	(ActionTerm)	Effect4.Program.scopedAlgebra …
+  fold	Effect4.Program.Scoped:95	Effect4.Program.LayerTerm.scoped	(LayerTerm)	Effect4.Program.scopedAlgebra …
+  fold	Effect4.Program.Scoped:97	Effect4.Program.LayerTerms.scoped	(LayerTerms)	Effect4.Program.scopedAlgebra …
+  generated	Effect4.Program.Fold:1734	Effect4.Program.foldMapAt_eff	(Eff)
+  generated	Effect4.Program.Fold:1788	Effect4.Program.foldMapAt_stmt	(Stmt)
+  generated	Effect4.Program.Fold:1804	Effect4.Program.foldMapAt_stmts	(Stmts)
+  generated	Effect4.Program.Fold:1812	Effect4.Program.foldMapAt_effs	(Effs)
+  generated	Effect4.Program.Fold:1820	Effect4.Program.foldMapAt_action	(ActionTerm)
+  generated	Effect4.Program.Fold:1856	Effect4.Program.foldMapAt_layer	(LayerTerm)
+  generated	Effect4.Program.Fold:1880	Effect4.Program.foldMapAt_layers	(LayerTerms)
+  generated	Effect4.Program.Fold:1891	Effect4.Program.foldMap_eff	(Eff)
+  generated	Effect4.Program.Fold:1945	Effect4.Program.foldMap_stmt	(Stmt)
+  generated	Effect4.Program.Fold:1961	Effect4.Program.foldMap_stmts	(Stmts)
+  generated	Effect4.Program.Fold:1969	Effect4.Program.foldMap_effs	(Effs)
+  generated	Effect4.Program.Fold:1977	Effect4.Program.foldMap_action	(ActionTerm)
+  generated	Effect4.Program.Fold:2013	Effect4.Program.foldMap_layer	(LayerTerm)
+  generated	Effect4.Program.Fold:2037	Effect4.Program.foldMap_layers	(LayerTerms)
+  generated	Effect4.Program.Fold:2401	Effect4.Program.foldM_eff	(Eff)
+  generated	Effect4.Program.Fold:2473	Effect4.Program.foldM_stmt	(Stmt)
+  generated	Effect4.Program.Fold:2492	Effect4.Program.foldM_stmts	(Stmts)
+  generated	Effect4.Program.Fold:2501	Effect4.Program.foldM_effs	(Effs)
+  generated	Effect4.Program.Fold:2510	Effect4.Program.foldM_action	(ActionTerm)
+  generated	Effect4.Program.Fold:2538	Effect4.Program.foldM_layer	(LayerTerm)
+  generated	Effect4.Program.Fold:2571	Effect4.Program.foldM_layers	(LayerTerms)
+  generated	Effect4.Program.Fold:3164	Effect4.Program.Eff.weaken	(Eff)
+  generated	Effect4.Program.Fold:3190	Effect4.Program.Stmt.weaken	(Stmt)
+  generated	Effect4.Program.Fold:3197	Effect4.Program.Stmts.weaken	(Stmts)
+  generated	Effect4.Program.Fold:3200	Effect4.Program.Effs.weaken	(Effs)
+  generated	Effect4.Program.Fold:3203	Effect4.Program.ActionTerm.weaken	(ActionTerm)
+  generated	Effect4.Program.Fold:3449	FoldAcceptance.operations	(Eff)	 hands to [Effect4.Program.foldMap_eff]
+  generated	Effect4.Program.Fold:3454	FoldAcceptance.serviceKeys	(Eff)	 hands to [Effect4.Program.foldMap_eff]
+  generated	Effect4.Program.LayerView:496	Effect4.Program.view_eff	(Eff)
+  generated	Effect4.Program.LayerView:528	Effect4.Program.view_stmt	(Stmt)
+  generated	Effect4.Program.LayerView:541	Effect4.Program.view_stmts	(Stmts)
+  generated	Effect4.Program.LayerView:550	Effect4.Program.view_effs	(Effs)
+  generated	Effect4.Program.LayerView:559	Effect4.Program.view_action	(ActionTerm)
+  generated	Effect4.Program.LayerView:582	Effect4.Program.view_layer	(LayerTerm)
+  generated	Effect4.Program.LayerView:599	Effect4.Program.view_layers	(LayerTerms)
+  generated	Effect4.Store.Domain.Derived.Program:1440	Effect4.Store.ProgramGen.EffC.toValEff	(Eff)
+  generated	Effect4.Store.Domain.Derived.Program:1468	Effect4.Store.ProgramGen.EffC.toValStmt	(Stmt)
+  generated	Effect4.Store.Domain.Derived.Program:1475	Effect4.Store.ProgramGen.EffC.toValStmts	(Stmts)
+  generated	Effect4.Store.Domain.Derived.Program:1478	Effect4.Store.ProgramGen.EffC.toValEffs	(Effs)
+  generated	Effect4.Store.Domain.Derived.Program:1481	Effect4.Store.ProgramGen.EffC.toValActionTerm	(ActionTerm)
+  generated	Effect4.Store.Domain.Derived.Program:1498	Effect4.Store.ProgramGen.EffC.toValLayerTerm	(LayerTerm)
+  generated	Effect4.Store.Domain.Derived.Program:1509	Effect4.Store.ProgramGen.EffC.toValLayerTerms	(LayerTerms)
+  one-level	Effect4.Api.TestClock:48	Effect4.Api.TestClock.sleepDeadlines	(Eff)	 hands to [Effect4.Program.foldMap_eff]
+  one-level	Effect4.Codegen.Read:305	Effect4.Program.addReceiver	(Eff)
+  one-level	Effect4.Laws.Program.DenoteB:195	Effect4.Program.Denote.composite	(Eff)
+  one-level	Effect4.Laws.Program.DenoteR:163	Effect4.Program.Sched.racePoints	(Eff)	 hands to [Effect4.Program.Sched.entrantPoints]
+  one-level	Effect4.Laws.Program.DenoteR:168	Effect4.Program.Sched.denoteFiberAction	(Eff)	 hands to [Effect4.Program.Sched.racePoints]
+  one-level	Effect4.Laws.Program.DenoteR:569	Effect4.Program.LayerTerm.isRef	(LayerTerm)
+  one-level	Effect4.Laws.Program.DenoteR:577	Effect4.Program.Sched.denoteEffBody	(Eff)	 hands to [Effect4.Program.Sched.denoteAction, Effect4.Program.Sched.inlineYield]
+  one-level	Effect4.Laws.Program.DenoteR:685	Effect4.Program.Sched.denoteLayerBody	(Eff)	 hands to [Effect4.Program.LayerTerms.length, Effect4.Program.LayerTerm.isRef]
+  one-level	Effect4.Laws.Program.Intro.AcquireRelease:18	Effect4.Program.Sched.forkScoped?	(ActionTerm)
+  one-level	Effect4.Program.Admission:98	Effect4.Program.findIntInProgram	(Eff)	 hands to [Effect4.Program.foldMapAt_eff]
+  one-level	Effect4.Program.Compile:709	Effect4.Program.resolveLayer.resolveLayerTerm	(Eff)	 hands to [Effect4.Program.compileLayer]
+  one-level	Effect4.Program.Compile:720	Effect4.Program.mergeAllCount	(Eff)	 hands to [Effect4.Program.LayerTerms.length]
+  one-level	Effect4.Program.Compile:726	Effect4.Program.innerLayerAt	(Eff)	 hands to [Effect4.Program.compileLayer, Effect4.Program.resolveLayer]
+  one-level	Effect4.Program.Compile:752	Effect4.Program.constructionAt	(Eff)
+  one-level	Effect4.Program.Compile:781	Effect4.Program.provideLayerWithK	(Eff)
+  one-level	Effect4.Program.Compile:910	Effect4.Program.blockExit	(Eff)	 hands to [Effect4.Program.blockEnv]
+  one-level	Effect4.Program.Compile:987	Effect4.Program.actionAt	(Eff)	 hands to [Effect4.Program.actionAt.entrants, Effect4.Program.resolve]
+  one-level	Effect4.Program.Compile:1066	Effect4.Program.forkScopedAt	(Eff)	 hands to [Effect4.Program.resolve]
+  one-level	Effect4.Program.Compile:1228	Effect4.Program.contEOf	(Eff)	 hands to [Effect4.Program.resolve]
+  one-level	Effect4.Program.Compile:1255	Effect4.Program.syncValueAt	(Eff)
+  one-level	Effect4.Program.Compile:1263	Effect4.Program.Eff.suspendDecided	(Eff)
+  one-level	Effect4.Program.Compile:1274	Effect4.Program.suspendBodyAt	(Eff)	 hands to [Effect4.Program.compileEff, Effect4.Program.resolve]
+  one-level	Effect4.Program.Compile:1316	Effect4.Program.loopAt	(Eff)
+  one-level	Effect4.Program.Compile:1322	Effect4.Program.loopResultAt	(Eff)
+  one-level	Effect4.Program.Compile:1654	Effect4.Program.evaluateNative	(Eff)	 hands to [Effect4.Program.interpAt, Effect4.Program.enterScoped, Effect4.Program.exitScoped]
+  one-level	Effect4.Program.Provision:560	Effect4.Program.Provision.docsBody	(Eff)
+  one-level	Effect4.Program.Refs:102	Effect4.Program.LayerTerm.refSite	(LayerTerm)
+  one-level	Effect4.Program.Refs:151	Effect4.Program.Eff.layerRefsWF	(Eff)	 hands to [Effect4.Program.Eff.refSites]
+  opaque	Effect4.Api.HostSession:85	Effect4.Api.HostSession.Session.admitted	(Eff)
+  opaque	Effect4.Api.HostSession:86	Effect4.Api.HostSession.Session.header	(Eff)
+  opaque	Effect4.Api.HostSession:87	Effect4.Api.HostSession.Session.machine	(Eff)
+  opaque	Effect4.Api.HostSession:88	Effect4.Api.HostSession.Session.nextCall	(Eff)
+  opaque	Effect4.Api.HostSession:89	Effect4.Api.HostSession.Session.applied	(Eff)
+  opaque	Effect4.Api.HostSession:90	Effect4.Api.HostSession.Session.active	(Eff)
+  opaque	Effect4.Api.HostSession:91	Effect4.Api.HostSession.Session.pending	(Eff)
+  opaque	Effect4.Api.HostSession:92	Effect4.Api.HostSession.Session.consumed	(Eff)
+  opaque	Effect4.Api.HostSession:93	Effect4.Api.HostSession.Session.retired	(Eff)
+  opaque	Effect4.Api.HostSession:124	Effect4.Api.HostSession.Result.phase	(Eff)
+  opaque	Effect4.Api.HostSession:125	Effect4.Api.HostSession.Result.session	(Eff)
+  opaque	Effect4.Codegen.Checked:33	Effect4.Codegen.ModuleEmission.typing	(Eff)
+  opaque	Effect4.Codegen.Checked:34	Effect4.Codegen.ModuleEmission.declarations	(Eff)
+  opaque	Effect4.Codegen.Forms:182	Effect4.Codegen.Forms.close	(Eff)
+  opaque	Effect4.Laws.Program.Guard.Driver:20	Effect4.Program.Guard.guardI	(Eff)
+  opaque	Effect4.Laws.Program.Means:420	Effect4.Program.Sched.Means	(Eff)
+  opaque	Effect4.Laws.Program.Simulation.Fibers:41	Effect4.Program.Sched.CMeans	(Eff)
+  opaque	Effect4.Laws.Program.Typing.Check:39	Effect4.Program.TypingAssessment.typing	(Eff)
+  opaque	Effect4.Laws.Program.Typing.Check:40	Effect4.Program.TypingAssessment.remaining	(Eff)
+  opaque	Effect4.Program.Admission:131	Effect4.Program.AdmittedProgram.toTypedProgram	(Eff)
+  opaque	Effect4.Program.Admission:182	Effect4.Program.AdmittedStraightProgram.admitted	(Eff)
+  opaque	Effect4.Program.CheckedTyping:20	Effect4.Program.TypedProgram.ty	(Eff)
+  opaque	Effect4.Program.Compile:896	Effect4.Program.blockAt	(Eff)
+  opaque	Effect4.Program.Eff:419	Effect4.Program.instDecidableEqEff [instance]	(Eff)
+  opaque	Effect4.Program.Eff:419	Effect4.Program.instDecidableEqEffs [instance]	(Effs)
+  opaque	Effect4.Program.Eff:419	Effect4.Program.instDecidableEqActionTerm [instance]	(ActionTerm)
+  opaque	Effect4.Program.Eff:419	Effect4.Program.instDecidableEqStmts [instance]	(Stmts)
+  opaque	Effect4.Program.Eff:419	Effect4.Program.instDecidableEqLayerTerms [instance]	(LayerTerms)
+  opaque	Effect4.Program.Eff:419	Effect4.Program.instDecidableEqStmt [instance]	(Stmt)
+  opaque	Effect4.Program.Eff:419	Effect4.Program.instDecidableEqLayerTerm [instance]	(LayerTerm)
+  opaque	Effect4.Program.Fold:1198	Effect4.Program.EffHom.f_eff	(Eff)
+  opaque	Effect4.Program.Fold:1199	Effect4.Program.EffHom.f_stmt	(Stmt)
+  opaque	Effect4.Program.Fold:1200	Effect4.Program.EffHom.f_stmts	(Stmts)
+  opaque	Effect4.Program.Fold:1201	Effect4.Program.EffHom.f_effs	(Effs)
+  opaque	Effect4.Program.Fold:1202	Effect4.Program.EffHom.f_action	(ActionTerm)
+  opaque	Effect4.Program.Fold:1203	Effect4.Program.EffHom.f_layer	(LayerTerm)
+  opaque	Effect4.Program.Fold:1204	Effect4.Program.EffHom.f_layers	(LayerTerms)
+  opaque	Effect4.Program.Fold:2988	Effect4.Program.EffFrontierAlgebra.eff_provideLayer	(LayerTerm)
+  opaque	Effect4.Program.Fold:3440	FoldAcceptance.EffMonoAlgebra.onEff	(Eff)
+  opaque	Effect4.Program.Fold:3441	FoldAcceptance.EffMonoAlgebra.onStmt	(Stmt)
+  opaque	Effect4.Program.Fold:3442	FoldAcceptance.EffMonoAlgebra.onAction	(ActionTerm)
+  opaque	Effect4.Program.Fold:3443	FoldAcceptance.EffMonoAlgebra.onLayer	(LayerTerm)
+  opaque	Effect4.Program.Provision:289	Effect4.Program.Provision.LeafSem.effect	(Eff)
+  opaque	Effect4.Program.Provision:291	Effect4.Program.Provision.LeafSem.discard	(Eff)
+  opaque	Effect4.Program.Refs:54	Effect4.Program.Node.replaceLayerAt	(LayerTerm)
+  opaque	Effect4.Store.Domain.ProgramWire:43	Effect4.Program.Wire.encodeProgram	(Eff)
+  structural	Effect4.Laws.Program.Agreement:33	Effect4.Program.Agreement.depth	(Eff)	converted: Effect4.Program.Agreement.depth.alg with Effect4.Program.Agreement.depth.eq_cata
+  structural	Effect4.Laws.Program.Agreement:44	Effect4.Program.Agreement.steps	(Eff)	converted: Effect4.Program.Agreement.steps.alg with Effect4.Program.Agreement.steps.eq_cata
+  structural	Effect4.Laws.Program.Agreement.Loop:231	Effect4.Program.Agreement.depthB	(Eff)	converted: Effect4.Program.Agreement.depthB.alg with Effect4.Program.Agreement.depthB.eq_cata
+  structural	Effect4.Laws.Program.Agreement.Loop:272	Effect4.Program.Agreement.boundB	(Eff)	converted: Effect4.Program.Agreement.boundB.alg with Effect4.Program.Agreement.boundB.eq_cata hands to [Effect4.Program.Agreement.steps]
+  structural	Effect4.Laws.Program.Denote:64	Effect4.Program.Denote.denote	(Eff)	converted: Effect4.Program.Denote.denote.alg with Effect4.Program.Denote.denote.eq_cata
+  structural	Effect4.Laws.Program.DenoteB:121	Effect4.Program.Denote.Looped	(Eff)	converted: Effect4.Program.Denote.Looped.alg with Effect4.Program.Denote.Looped.eq_cata
+  structural	Effect4.Laws.Program.DenoteB:206	Effect4.Program.Denote.denoteB	(Eff)	converted: Effect4.Program.Denote.denoteB.alg with Effect4.Program.Denote.denoteB.eq_cata hands to [Effect4.Program.Denote.leafB]
+  structural	Effect4.Laws.Program.DenoteR:158	Effect4.Program.Sched.entrantPoints	(Effs)
+  structural	Effect4.Laws.Program.DenoteR:488	Effect4.Program.Sched.inlineYield	(Eff)
+  structural	Effect4.Laws.Program.DenoteR:739	Effect4.Program.Sched.denoteLayerZero	(Eff)	 hands to [Effect4.Program.LayerTerms.length, Effect4.Program.LayerTerm.isRef]
+  structural	Effect4.Laws.Program.LoopSound:52	Effect4.Program.Denote.denoteBWith	(Eff)	converted: Effect4.Program.Denote.denoteBWith.alg with Effect4.Program.Denote.denoteBWith.eq_cata hands to [Effect4.Program.Denote.Straight, Effect4.Program.Denote.denoteWith]
+  structural	Effect4.Laws.Program.MeaningSound:44	Effect4.Program.Denote.denoteWith	(Eff)	converted: Effect4.Program.Denote.denoteWith.alg with Effect4.Program.Denote.denoteWith.eq_cata
+  structural	Effect4.Program.Checker:115	Effect4.Program.Checker.check	(Eff)	converted: Effect4.Program.Checker.check.alg with Effect4.Program.Checker.check.eq_cata
+  structural	Effect4.Program.Checker:226	Effect4.Program.Checker.checkLayer	(LayerTerm)	converted: Effect4.Program.Checker.checkLayer.alg with Effect4.Program.Checker.checkLayer.eq_cata
+  structural	Effect4.Program.Checker:265	Effect4.Program.Checker.checkLayers	(LayerTerms)	converted: Effect4.Program.Checker.checkLayers.alg with Effect4.Program.Checker.checkLayers.eq_cata
+  structural	Effect4.Program.Checker:274	Effect4.Program.Checker.checkStmt	(Stmt)	converted: Effect4.Program.Checker.checkStmt.alg with Effect4.Program.Checker.checkStmt.eq_cata
+  structural	Effect4.Program.Checker:296	Effect4.Program.Checker.checkStmts	(Stmts)	converted: Effect4.Program.Checker.checkStmts.alg with Effect4.Program.Checker.checkStmts.eq_cata
+  structural	Effect4.Program.Checker:316	Effect4.Program.Checker.checkEffs	(Effs)	converted: Effect4.Program.Checker.checkEffs.alg with Effect4.Program.Checker.checkEffs.eq_cata
+  structural	Effect4.Program.Checker:324	Effect4.Program.Checker.checkAction	(ActionTerm)	converted: Effect4.Program.Checker.checkAction.alg with Effect4.Program.Checker.checkAction.eq_cata
+  structural	Effect4.Program.Compile:563	Effect4.Program.compileEff	(Eff)
+  structural	Effect4.Program.Compile:671	Effect4.Program.compileLayer	(LayerTerm)
+  structural	Effect4.Program.Compile:876	Effect4.Program.localBinds	(Stmts)
+  structural	Effect4.Program.Compile:925	Effect4.Program.loopExit	(Eff)	 hands to [Effect4.Program.blockEnv]
+  structural	Effect4.Program.Compile:1062	Effect4.Program.actionAt.entrants	(Effs)	 hands to [Effect4.Program.compileEff]
+  structural	Effect4.Program.Eff:421	Effect4.Program.LayerTerms.toList	(LayerTerms)	converted: Effect4.Program.LayerTerms.toList.alg with Effect4.Program.LayerTerms.toList.eq_cata
+  structural	Effect4.Program.Eff:425	Effect4.Program.LayerTerms.length	(LayerTerms)	converted: Effect4.Program.LayerTerms.length.alg with Effect4.Program.LayerTerms.length.eq_cata
+  structural	Effect4.Program.Eff:433	Effect4.Program.Stmts.toList	(Stmts)	converted: Effect4.Program.Stmts.toList.alg with Effect4.Program.Stmts.toList.eq_cata
+  structural	Effect4.Program.Eff:437	Effect4.Program.Effs.toList	(Effs)	converted: Effect4.Program.Effs.toList.alg with Effect4.Program.Effs.toList.eq_cata
+  structural	Effect4.Program.Fragment:18	Effect4.Program.Denote.Straight	(Eff)	converted: Effect4.Program.Denote.Straight.alg with Effect4.Program.Denote.Straight.eq_cata
+  structural	Effect4.Program.Provision:294	Effect4.Program.Provision.build	(LayerTerm)	converted: Effect4.Program.Provision.build.alg with Effect4.Program.Provision.build.eq_cata hands to [Effect4.Program.Provision.LeafSem.effect, Effect4.Program.Provision.LeafSem.discard]
+  structural	Effect4.Program.Provision:317	Effect4.Program.Provision.buildAll	(LayerTerms)	converted: Effect4.Program.Provision.buildAll.alg with Effect4.Program.Provision.buildAll.eq_cata hands to [Effect4.Program.Provision.LeafSem.effect, Effect4.Program.Provision.LeafSem.discard]
+  structural	Effect4.Program.Provision:573	Effect4.Program.Provision.docsLayer	(LayerTerm)	converted: Effect4.Program.Provision.docsLayer.alg with Effect4.Program.Provision.docsLayer.eq_cata hands to [Effect4.Program.Provision.docsBody]
+  structural	Effect4.Program.Provision:586	Effect4.Program.Provision.docsLayers	(LayerTerms)	converted: Effect4.Program.Provision.docsLayers.alg with Effect4.Program.Provision.docsLayers.eq_cata hands to [Effect4.Program.Provision.docsBody]
+  wf	Effect4.Laws.Program.InterpR:206	Effect4.Program.Sched.walkR	(Eff)	 hands to [Effect4.Program.loopExit, Effect4.Program.blockExit, Effect4.Program.Sched.inlineYield, Effect4.Program.blockAt, Effect4.Program.Sched.denoteR]
+  wf	Effect4.Laws.Program.InterpR:245	Effect4.Program.Sched.walkR.yieldOf	(Eff)	 hands to [Effect4.Program.loopExit, Effect4.Program.blockExit, Effect4.Program.Sched.inlineYield, Effect4.Program.blockAt, Effect4.Program.Sched.denoteR]
+  wf	Effect4.Program.Compile:941	Effect4.Program.runStmts	(Eff)	 hands to [Effect4.Program.loopExit, Effect4.Program.blockExit, Effect4.Program.compileEff, Effect4.Program.blockAt]
+  wf	Effect4.Program.Compile:976	Effect4.Program.runStmts.yieldOf	(Eff)	 hands to [Effect4.Program.loopExit, Effect4.Program.blockExit, Effect4.Program.compileEff, Effect4.Program.blockAt]
+info: Test/Audit/TraversalCensus.lean:64:0: #traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Effect4: 115 definitions take a family value (3 private) — fold 1, generated 8, structural 22 (of which 15 with a fold beside them, 1 instance implementations), wf 1 (of which 0 with a fold beside them), one-level 14 (of which 2 with a fold beside them), delegates 46, opaque 23; declared folds: [Effect4.Program.cata_ty]
+  delegates	Effect4.Codegen.Types:316	Effect4.Codegen.Types.ofTy	(Ty)	→ [Effect4.Codegen.Types.ofNormalized, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Laws.Program.MeaningSound:322	Effect4.Program.Denote.ExitHasTy	(Ty)	→ [Effect4.Program.causeAdmits, Effect4.Program.Val.hasTy]
+  delegates	Effect4.Laws.Program.TyView:91	Effect4.Program.Ty.argsBelow	(Ty)	→ [Effect4.Program.Ty.args, Effect4.Program.Ty.Variance.holds]
+  delegates	Effect4.Laws.Program.TyView:658	TyViewAcceptance.lhs [private]	(Ty)	→ [Effect4.Program.Ty.sub]
+  delegates	Effect4.Laws.Program.TyView:659	TyViewAcceptance.rhs [private]	(Ty)	→ [Effect4.Program.Ty.sameHead, Effect4.Program.Ty.argsBelow, Effect4.Program.Ty.sub]
+  delegates	Effect4.Laws.Program.Typed.Membership:24	Effect4.Program.Typed.Equiv	(Ty)	→ [Effect4.Program.Ty.sub]
+  delegates	Effect4.Laws.Program.Typed.Membership:27	Effect4.Program.Typed.RefDeclared	(Ty)	→ [Effect4.Program.Typed.Equiv]
+  delegates	Effect4.Laws.Program.Typed.Membership:31	Effect4.Program.Typed.PromiseDeclared	(Ty)	→ [Effect4.Program.Typed.Equiv]
+  delegates	Effect4.Laws.Program.Typed.Membership:35	Effect4.Program.Typed.FiberDeclared	(Ty)	→ [Effect4.Program.Ty.sub]
+  delegates	Effect4.Laws.Program.Typed.Membership:155	Effect4.Program.Typed.FitsCause	(Ty)	→ [Effect4.Program.Typed.Fits]
+  delegates	Effect4.Laws.Program.Typed.Scheduler:53	Effect4.Program.Typed.FiberColumnsBelow	(Ty)	→ [Effect4.Program.Ty.sub]
+  delegates	Effect4.Laws.Program.Typed.Scheduler:195	Effect4.Program.Typed.FiberListColumns	(Ty)	→ [Effect4.Program.Typed.FiberColumnsBelow]
+  delegates	Effect4.Laws.Program.Typed.World:68	Effect4.Program.Typed.ValueOk	(Ty)	→ [Effect4.Program.Val.hasTy]
+  delegates	Effect4.Laws.Program.Typed.World:115	Effect4.Program.Typed.HeapTypedAt	(Ty)	→ [Effect4.Program.Typed.ValueOk]
+  delegates	Effect4.Laws.Program.ValueModel:22	Effect4.Program.ValueModel.ofImage	(Ty)	→ [Effect4.Program.Val.hasTy, Effect4.Program.CTy.ofRaw]
+  delegates	Effect4.Program.Eff:64	Effect4.Program.supportedErrTy	(Ty)	→ [Effect4.Program.rawSupportedErrTy, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Eff:67	Effect4.Program.admittedErrTy	(Ty)	→ [Effect4.Program.supportedErrTy]
+  delegates	Effect4.Program.ErrorImage:39	Effect4.Program.causeAdmits	(Ty)	→ [Effect4.Program.reasonAdmits]
+  delegates	Effect4.Program.NativeAtom:103	Effect4.Program.NativeAtom.monoApply	(Ty)	→ [Effect4.Program.Ty.sub]
+  delegates	Effect4.Program.Stream:40	Effect4.Program.Stream.table	(Ty)	→ [Effect4.Program.Stream.pullRow]
+  delegates	Effect4.Program.Ty:175	Effect4.Program.Ty.insertMember	(Ty)	→ [Effect4.Program.instDecidableEqTy, Effect4.Program.Ty.key]
+  delegates	Effect4.Program.Ty:321	Effect4.Program.Ty.instDecidableLT [instance]	(Ty)	→ [Effect4.Program.Ty.key]
+  delegates	Effect4.Program.Ty:346	Effect4.Program.Ty.instDecidableLE [instance]	(Ty)	→ [Effect4.Program.Ty.instDecidableLT, Effect4.Program.instDecidableEqTy]
+  delegates	Effect4.Program.Ty:526	Effect4.Program.Ty.matchTemplate	(Ty)	→ [Effect4.Program.Ty.instantiate, Effect4.Program.Ty.infer, Effect4.Program.Ty.sub]
+  delegates	Effect4.Program.Ty:602	Effect4.Program.Ty.productMembers	(Ty)	→ [Effect4.Program.Ty.factors]
+  delegates	Effect4.Program.Ty:755	Effect4.Program.Ty.render	(Ty)	→ [Effect4.Program.Ty.renderRaw, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Ty:758	Effect4.Program.Ty.chunkTarget	(Ty)	→ [Effect4.Program.Ty.render]
+  delegates	Effect4.Program.Ty:761	Effect4.Program.Ty.chunk	(Ty)	→ [Effect4.Program.Ty.chunkTarget]
+  delegates	Effect4.Program.Ty:763	Effect4.Program.Ty.join	(Ty)	→ [Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Ty:778	Effect4.Program.Ty.diffTag	(Ty)	→ [Effect4.Program.Ty.isTagged, Effect4.Program.Ty.members]
+  delegates	Effect4.Program.Ty:802	Effect4.Program.Ty.payloadTy	(Ty)	→ [Effect4.Program.Ty.payloadOf, Effect4.Program.Ty.normalize, Effect4.Program.Ty.members]
+  delegates	Effect4.Program.Ty:809	Effect4.Program.Ty.Canonical	(Ty)	→ [Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Ty:846	Effect4.Program.CTy.ofRaw	(Ty)	→ [Effect4.Program.Ty.Canonical, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Typed:103	Effect4.Program.errAdmits	(Ty)	→ [Effect4.Program.reasonAdmits, Effect4.Program.Val.hasTy]
+  delegates	Effect4.Program.Typed:108	Effect4.Program.hasTyCause	(Ty)	→ [Effect4.Program.causeAdmits, Effect4.Program.Val.hasTy]
+  delegates	Effect4.Program.Typing.Rules:36	Effect4.Program.EffTy.joinAnswer	(Ty)	→ [Effect4.Program.Ty.join]
+  delegates	Effect4.Program.Typing.Rules:109	Effect4.Program.rowTy	(Ty)	→ [Effect4.Program.Ty.instantiate, Effect4.Program.Ty.matchTemplate, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Program.Typing.Rules:214	Effect4.Program.catchIfError	(Ty)	→ [Effect4.Program.Ty.join, Effect4.Program.instDecidableEqTy, Effect4.Program.Ty.normalize, Effect4.Program.Ty.diffTag]
+  delegates	Effect4.Schema.Bridge:233	Effect4.Program.Ty.schema	(Ty)	→ [Effect4.Schema.Bridge.schema, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Schema.Codec:36	Effect4.Schema.Codec.Compatible	(Ty)	→ [Effect4.Schema.Codec.layout]
+  delegates	Effect4.Schema.Codec:40	Effect4.Schema.Codec.instDecidableCompatible [instance]	(Ty)	→ [Effect4.Schema.Codec.layout, Effect4.Program.instDecidableEqTy]
+  delegates	Effect4.Schema.Codec:215	Effect4.Schema.Codec.isValue	(Ty)	→ [Effect4.Schema.Codec.encodeRaw, Effect4.Schema.Codec.decodeRaw, Effect4.Schema.Codec.layout, Effect4.Program.Val.hasTy, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Schema.Codec:229	Effect4.Schema.encode	(Ty)	→ [Effect4.Schema.Codec.encodeRaw, Effect4.Schema.Codec.decodeRaw, Effect4.Schema.Codec.layout, Effect4.Program.Val.hasTy, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Schema.Codec:238	Effect4.Schema.decode	(Ty)	→ [Effect4.Schema.Codec.decodeRaw, Effect4.Schema.Codec.layout, Effect4.Program.Val.hasTy, Effect4.Program.Ty.normalize]
+  delegates	Effect4.Schema.Codec:249	Effect4.Program.Ty.isCodecSupported	(Ty)	→ [Effect4.Schema.Codec.isSupported]
+  delegates	Effect4.Schema.Codec:252	Effect4.Program.Ty.isCodecValue	(Ty)	→ [Effect4.Schema.Codec.isValue]
+  fold	Effect4.Program.Admission:80	Effect4.Program.findInternalHandle	(Ty)	Effect4.Program.internalHandleScan
+  generated	Effect4.Laws.Program.TyView:30	Effect4.Program.Ty.args	(Ty)
+  generated	Effect4.Laws.Program.TyView:56	Effect4.Program.Ty.sameHead	(Ty)
+  generated	Effect4.Laws.Program.TyView:80	Effect4.Program.Ty.litRule	(Ty)
+  generated	Effect4.Laws.Program.TyView:86	Effect4.Program.Ty.topRule	(Ty)
+  generated	Effect4.Program.Fold:237	Effect4.Program.foldMapAt_ty	(Ty)
+  generated	Effect4.Program.Fold:282	Effect4.Program.foldMap_ty	(Ty)
+  generated	Effect4.Program.Fold:446	Effect4.Program.foldM_ty	(Ty)
+  generated	Effect4.Store.Domain.Derived.Program:1091	Effect4.Store.ProgramGen.TyC.toValTy	(Ty)
+  one-level	Effect4.Laws.Program.Typed.Membership:61	Effect4.Program.Typed.FlatFits	(Ty)
+  one-level	Effect4.Program.Checker:99	Effect4.Program.Checker.listOf?	(Ty)
+  one-level	Effect4.Program.Checker:104	Effect4.Program.Checker.exitOf?	(Ty)
+  one-level	Effect4.Program.Compile:1368	Effect4.Program.externalValue	(Ty)	 hands to [Effect4.Program.Val.hasTy]
+  one-level	Effect4.Program.Decision:61	Effect4.Program.Decision.arms	(Ty)	 hands to [Effect4.Program.Ty.taggedColumn, Effect4.Program.instDecidableEqTy, Effect4.Program.Ty.normalize, Effect4.Program.Ty.diffTag, Effect4.Program.Ty.payloadTy]
+  one-level	Effect4.Program.NativeAtom:36	Effect4.Program.causeInputError?	(Ty)
+  one-level	Effect4.Program.Ty:190	Effect4.Program.Ty.isNever	(Ty)	converted: Effect4.Program.Ty.isNever.alg with Effect4.Program.Ty.isNever.eq_cata
+  one-level	Effect4.Program.Ty:402	Effect4.Program.Ty.isMember	(Ty)	converted: Effect4.Program.Ty.isMember.alg with Effect4.Program.Ty.isMember.eq_cata
+  one-level	Effect4.Program.Ty:563	Effect4.Program.Ty.factors	(Ty)	 hands to [Effect4.Program.Ty.members]
+  one-level	Effect4.Program.Ty:570	Effect4.Program.Ty.isFactor	(Ty)
+  one-level	Effect4.Program.Ty:772	Effect4.Program.Ty.isTagged	(Ty)
+  one-level	Effect4.Program.Ty:785	Effect4.Program.Ty.taggedColumn	(Ty)	 hands to [Effect4.Program.Ty.members]
+  one-level	Effect4.Program.Ty:797	Effect4.Program.Ty.payloadOf	(Ty)
+  one-level	Effect4.Program.Typing.Rules:183	Effect4.Program.fiberTy	(Ty)
+  opaque	Effect4.Laws.Program.TyView:24	Effect4.Program.Ty.Variance.holds	(Ty)
+  opaque	Effect4.Laws.Program.Typed.World:141	Effect4.Program.Typed.World.addRef	(Ty)
+  opaque	Effect4.Program.Authoring:218	Effect4.Program.Authoring.Row.host	(Ty)
+  opaque	Effect4.Program.ErrorImage:25	Effect4.Program.reasonAdmits	(Ty)
+  opaque	Effect4.Program.Fold:79	Effect4.Program.TyHom.f_ty	(Ty)
+  opaque	Effect4.Program.Profile:181	Effect4.Program.HostSpec.Rep	(Ty)
+  opaque	Effect4.Program.Profile:298	Effect4.Program.Profile.Scalar.Rep	(Ty)
+  opaque	Effect4.Program.Profile:498	Effect4.Program.Profile.Resource.Rep	(Ty)
+  opaque	Effect4.Program.Stream:21	Effect4.Program.Stream.pullRow	(Ty)
+  opaque	Effect4.Program.Ty:75	Effect4.Program.instDecidableEqTy [instance]	(Ty)
+  opaque	Effect4.Program.Ty:79	Effect4.Program.Ty.result	(Ty)
+  opaque	Effect4.Program.Ty:83	Effect4.Program.Ty.exit	(Ty)
+  opaque	Effect4.Program.Ty:85	Effect4.Program.Ty.fiber	(Ty)
+  opaque	Effect4.Program.Ty:87	Effect4.Program.Ty.cause	(Ty)
+  opaque	Effect4.Program.Ty:89	Effect4.Program.Ty.array	(Ty)
+  opaque	Effect4.Program.Ty:91	Effect4.Program.Ty.readonlyArray	(Ty)
+  opaque	Effect4.Program.Ty:223	Effect4.Program.Ty.undefinedOr	(Ty)
+  opaque	Effect4.Program.Ty:226	Effect4.Program.Ty.nullOr	(Ty)
+  opaque	Effect4.Program.Ty:227	Effect4.Program.Ty.nullable	(Ty)
+  opaque	Effect4.Program.Ty:237	Effect4.Program.Ty.take	(Ty)
+  opaque	Effect4.Program.Ty:341	Effect4.Program.Ty.Le	(Ty)
+  opaque	Effect4.Program.Typing.Blame:104	Effect4.Program.selectRefusal	(Ty)
+  opaque	Effect4.Program.Typing.Rules:34	Effect4.Program.EffTy.pure	(Ty)
+  structural	Effect4.Codegen.Types:268	Effect4.Codegen.Types.ofNormalized [private]	(Ty)
+  structural	Effect4.Laws.Program.Template:256	Effect4.Program.Ty.varsOf	(Ty)
+  structural	Effect4.Laws.Program.Template:264	Effect4.Program.Ty.templateAdmissible	(Ty)	 hands to [Effect4.Program.Ty.closed]
+  structural	Effect4.Laws.Program.Typed.Membership:85	Effect4.Program.Typed.Fits	(Ty)	converted: Effect4.Program.Typed.Fits.alg with Effect4.Program.Typed.Fits.eq_cata hands to [Effect4.Program.Typed.FiberDeclared, Effect4.Program.Typed.PromiseDeclared, Effect4.Program.Typed.RefDeclared]
+  structural	Effect4.Program.Admission:32	Effect4.Program.findInt	(Ty)	converted: Effect4.Program.findInt.alg with Effect4.Program.findInt.eq_cata
+  structural	Effect4.Program.Eff:43	Effect4.Program.isTagTy	(Ty)	converted: Effect4.Program.isTagTy.alg with Effect4.Program.isTagTy.eq_cata
+  structural	Effect4.Program.Eff:49	Effect4.Program.rawSupportedErrTy	(Ty)	converted: Effect4.Program.rawSupportedErrTy.alg with Effect4.Program.rawSupportedErrTy.eq_cata hands to [Effect4.Program.isTagTy]
+  structural	Effect4.Program.NativeAtom:43	Effect4.Program.NativeAtom.projectProduct	(Ty)	converted: Effect4.Program.NativeAtom.projectProduct.alg with Effect4.Program.NativeAtom.projectProduct.eq_cata hands to [Effect4.Program.Ty.join]
+  structural	Effect4.Program.Ty:75	Effect4.Program.instReprTy.repr [instance]	(Ty)
+  structural	Effect4.Program.Ty:93	Effect4.Program.Ty.renderRaw	(Ty)	converted: Effect4.Program.Ty.renderRaw.alg with Effect4.Program.Ty.renderRaw.eq_cata
+  structural	Effect4.Program.Ty:119	Effect4.Program.Ty.members	(Ty)	converted: Effect4.Program.Ty.members.alg with Effect4.Program.Ty.members.eq_cata
+  structural	Effect4.Program.Ty:142	Effect4.Program.Ty.key	(Ty)	converted: Effect4.Program.Ty.key.alg with Effect4.Program.Ty.key.eq_cata
+  structural	Effect4.Program.Ty:197	Effect4.Program.Ty.closed	(Ty)
+  structural	Effect4.Program.Ty:471	Effect4.Program.Ty.instantiate	(Ty)
+  structural	Effect4.Program.Ty:496	Effect4.Program.Ty.infer	(Ty)	 hands to [Effect4.Program.Ty.sub]
+  structural	Effect4.Program.Ty:606	Effect4.Program.Ty.normalize	(Ty)	converted: Effect4.Program.Ty.normalize.alg with Effect4.Program.Ty.normalize.eq_cata hands to [Effect4.Program.Ty.productMembers, Effect4.Program.Ty.members]
+  structural	Effect4.Program.Typed:20	Effect4.Program.Val.hasTy	(Ty)	converted: Effect4.Program.Val.hasTy.alg with Effect4.Program.Val.hasTy.eq_cata hands to [Effect4.Program.causeAdmits]
+  structural	Effect4.Schema.Bridge:37	Effect4.Schema.Bridge.schema	(Ty)	converted: Effect4.Schema.Bridge.schema.alg with Effect4.Schema.Bridge.schema.eq_cata
+  structural	Effect4.Schema.Codec:24	Effect4.Schema.Codec.layout	(Ty)	converted: Effect4.Schema.Codec.layout.alg with Effect4.Schema.Codec.layout.eq_cata
+  structural	Effect4.Schema.Codec:42	Effect4.Schema.Codec.isSupported	(Ty)	converted: Effect4.Schema.Codec.isSupported.alg with Effect4.Schema.Codec.isSupported.eq_cata
+  structural	Effect4.Schema.Codec:151	Effect4.Schema.Codec.encodeRaw	(Ty)	converted: Effect4.Schema.Codec.encodeRaw.alg with Effect4.Schema.Codec.encodeRaw.eq_cata hands to [Effect4.Program.Val.hasTy]
+  structural	Effect4.Schema.Codec:179	Effect4.Schema.Codec.decodeRaw	(Ty)	converted: Effect4.Schema.Codec.decodeRaw.alg with Effect4.Schema.Codec.decodeRaw.eq_cata hands to [Effect4.Program.Val.hasTy]
+  wf	Effect4.Program.Ty:431	Effect4.Program.Ty.sub	(Ty)	 hands to [Effect4.Program.instDecidableEqTy]
+info: Test/Audit/TraversalCensus.lean:65:0: #traversal_census Effect4.Program.Term (family [Effect4.Program.Term,
+ Effect4.Program.Terms]) under Effect4: 116 definitions take a family value (0 private) — fold 0, generated 8, structural 12 (of which 12 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 4 (of which 1 with a fold beside them), delegates 18, opaque 74; declared folds: [Effect4.Program.cata_terms,
+ Effect4.Program.cata_term]
+  delegates	Effect4.Codegen.PrintLeaf:204	Effect4.Program.printTupleArgs	(Term)	→ [Effect4.Program.pairArgs?, Effect4.Program.printTerm]
+  delegates	Effect4.Codegen.PrintLeaf:247	Effect4.Program.printMethodArgs	(Term)	→ [Effect4.Program.printTupleArgs, Effect4.Program.printTerm]
+  delegates	Effect4.Codegen.PrintLeaf:253	Effect4.Program.printMethod	(Term)	→ [Effect4.Program.printMethodArgs, Effect4.Program.printTerm]
+  delegates	Effect4.Codegen.PrintLeaf:260	Effect4.Program.printRow	(Term)	→ [Effect4.Program.printTupleArgs, Effect4.Program.printMethod, Effect4.Program.pairArgs?, Effect4.Program.printTerm]
+  delegates	Effect4.Codegen.Read:305	Effect4.Program.addReceiver	(Term)	→ [Effect4.Program.rowAnswer]
+  delegates	Effect4.Codegen.Read:869	Effect4.Program.requestReadable	(Term)	→ [Effect4.Program.instDecidableEqTerm, Effect4.Program.pairArgs?, Effect4.Program.Term.scoped, Effect4.Program.tupleRequestReadable]
+  delegates	Effect4.Laws.Program.DenoteB:103	Effect4.Program.Denote.iterateStep	(Term)	→ [Effect4.Program.evalTerm]
+  delegates	Effect4.Laws.Program.DenoteR:221	Effect4.Program.Sched.denoteAsync	(Term)	→ [Effect4.Program.evalTerm]
+  delegates	Effect4.Laws.Program.DenoteR:231	Effect4.Program.Sched.denoteForeign	(Term)	→ [Effect4.Program.evalTerm]
+  delegates	Effect4.Laws.Program.DenoteR:237	Effect4.Program.Sched.denoteSleep	(Term)	→ [Effect4.Program.evalTerm]
+  delegates	Effect4.Laws.Program.DenoteR:466	Effect4.Program.Sched.denoteAsyncRoute	(Term)	→ [Effect4.Program.Sched.denoteAsync, Effect4.Program.Sched.denoteSleep, Effect4.Program.Sched.denoteForeign]
+  delegates	Effect4.Laws.Program.DenoteR:476	Effect4.Program.Sched.inlineAsyncYield	(Term)	→ [Effect4.Program.evalTerm]
+  delegates	Effect4.Laws.Program.LoopSound:28	Effect4.Program.Denote.iterateStepWith	(Term)	→ [Effect4.Program.evalTerm]
+  delegates	Effect4.Program.Checker:95	Effect4.Program.Checker.term?	(Term)	→ [Effect4.Program.termTy]
+  delegates	Effect4.Program.Compile:529	Effect4.Program.asyncRoute	(Term)	→ [Effect4.Program.evalTerm]
+  delegates	Effect4.Program.Compile:1222	Effect4.Program.caughtErrorValue?	(Term)	→ [Effect4.Program.evalTerm]
+  delegates	Effect4.Program.Typing.Rules:104	Effect4.Program.termTy	(Term)	→ [Effect4.Program.argTy]
+  delegates	Effect4.Program.Typing.Rules:214	Effect4.Program.catchIfError	(Term)	→ [Effect4.Program.tagTest?, Effect4.Program.instDecidableEqTerm]
+  generated	Effect4.Program.Fold:695	Effect4.Program.foldMapAt_term	(Term)
+  generated	Effect4.Program.Fold:705	Effect4.Program.foldMapAt_terms	(Terms)
+  generated	Effect4.Program.Fold:716	Effect4.Program.foldMap_term	(Term)
+  generated	Effect4.Program.Fold:726	Effect4.Program.foldMap_terms	(Terms)
+  generated	Effect4.Program.Fold:775	Effect4.Program.foldM_term	(Term)
+  generated	Effect4.Program.Fold:784	Effect4.Program.foldM_terms	(Terms)
+  generated	Effect4.Store.Domain.Derived.Program:650	Effect4.Store.ProgramGen.TermC.toValTerm	(Term)
+  generated	Effect4.Store.Domain.Derived.Program:654	Effect4.Store.ProgramGen.TermC.toValTerms	(Terms)
+  one-level	Effect4.Codegen.PrintLeaf:185	Effect4.Program.pairArgs?	(Term)
+  one-level	Effect4.Codegen.Read:835	Effect4.Program.noRow	(Terms)	converted: Effect4.Program.noRow.alg with Effect4.Program.noRow.eq_cata hands to [Effect4.Program.Terms.names?]
+  one-level	Effect4.Codegen.Read:847	Effect4.Program.tupleRequestReadable	(Term)	 hands to [Effect4.Program.pairArgs?, Effect4.Program.printTerm, Effect4.Program.Term.scoped]
+  one-level	Effect4.Program.Typing.Rules:202	Effect4.Program.tagTest?	(Term)
+  opaque	Effect4.Codegen.Read:217	Effect4.Program.rowAnswer	(Term)
+  opaque	Effect4.Machine.Term:109	Effect4.Program.instDecidableEqTerms [instance]	(Terms)
+  opaque	Effect4.Machine.Term:109	Effect4.Program.instDecidableEqTerm [instance]	(Term)
+  opaque	Effect4.Program.Fold:626	Effect4.Program.TermHom.f_term	(Term)
+  opaque	Effect4.Program.Fold:627	Effect4.Program.TermHom.f_terms	(Terms)
+  opaque	Effect4.Program.Fold:861	Effect4.Program.CauseTermAlgebra.cause_fail	(Term)
+  opaque	Effect4.Program.Fold:862	Effect4.Program.CauseTermAlgebra.cause_die	(Term)
+  opaque	Effect4.Program.Fold:949	Effect4.Program.CauseTermMAlgebra.cause_fail	(Term)
+  opaque	Effect4.Program.Fold:950	Effect4.Program.CauseTermMAlgebra.cause_die	(Term)
+  opaque	Effect4.Program.Fold:1039	Effect4.Program.EffAlgebra.eff_succeed	(Term)
+  opaque	Effect4.Program.Fold:1040	Effect4.Program.EffAlgebra.eff_fail	(Term)
+  opaque	Effect4.Program.Fold:1042	Effect4.Program.EffAlgebra.eff_sync	(Term)
+  opaque	Effect4.Program.Fold:1044	Effect4.Program.EffAlgebra.eff_perform	(Term)
+  opaque	Effect4.Program.Fold:1054	Effect4.Program.EffAlgebra.eff_awaitFiber	(Term)
+  opaque	Effect4.Program.Fold:1060	Effect4.Program.EffAlgebra.eff_provideService	(Term)
+  opaque	Effect4.Program.Fold:1061	Effect4.Program.EffAlgebra.eff_catchIf	(Term)
+  opaque	Effect4.Program.Fold:1062	Effect4.Program.EffAlgebra.eff_select	(Term)
+  opaque	Effect4.Program.Fold:1063	Effect4.Program.EffAlgebra.eff_iterate	(Term)
+  opaque	Effect4.Program.Fold:1066	Effect4.Program.EffAlgebra.stmt_ret	(Term)
+  opaque	Effect4.Program.Fold:1067	Effect4.Program.EffAlgebra.stmt_ifElse	(Term)
+  opaque	Effect4.Program.Fold:1075	Effect4.Program.EffAlgebra.action_forkIn	(Term)
+  opaque	Effect4.Program.Fold:1077	Effect4.Program.EffAlgebra.action_runIn	(Term)
+  opaque	Effect4.Program.Fold:1078	Effect4.Program.EffAlgebra.action_interrupt	(Term)
+  opaque	Effect4.Program.Fold:1079	Effect4.Program.EffAlgebra.action_interruptScoped	(Term)
+  opaque	Effect4.Program.Fold:1080	Effect4.Program.EffAlgebra.action_interruptAll	(Term)
+  opaque	Effect4.Program.Fold:1081	Effect4.Program.EffAlgebra.action_awaitAll	(Term)
+  opaque	Effect4.Program.Fold:1082	Effect4.Program.EffAlgebra.action_awaitAllFailFast	(Term)
+  opaque	Effect4.Program.Fold:1084	Effect4.Program.EffAlgebra.action_awaitNewChildren	(Term)
+  opaque	Effect4.Program.Fold:1086	Effect4.Program.EffAlgebra.action_setContext	(Term)
+  opaque	Effect4.Program.Fold:1089	Effect4.Program.EffAlgebra.action_closeScope	(Term)
+  opaque	Effect4.Program.Fold:2048	Effect4.Program.EffMAlgebra.eff_succeed	(Term)
+  opaque	Effect4.Program.Fold:2049	Effect4.Program.EffMAlgebra.eff_fail	(Term)
+  opaque	Effect4.Program.Fold:2051	Effect4.Program.EffMAlgebra.eff_sync	(Term)
+  opaque	Effect4.Program.Fold:2053	Effect4.Program.EffMAlgebra.eff_perform	(Term)
+  opaque	Effect4.Program.Fold:2063	Effect4.Program.EffMAlgebra.eff_awaitFiber	(Term)
+  opaque	Effect4.Program.Fold:2069	Effect4.Program.EffMAlgebra.eff_provideService	(Term)
+  opaque	Effect4.Program.Fold:2070	Effect4.Program.EffMAlgebra.eff_catchIf	(Term)
+  opaque	Effect4.Program.Fold:2071	Effect4.Program.EffMAlgebra.eff_select	(Term)
+  opaque	Effect4.Program.Fold:2072	Effect4.Program.EffMAlgebra.eff_iterate	(Term)
+  opaque	Effect4.Program.Fold:2075	Effect4.Program.EffMAlgebra.stmt_ret	(Term)
+  opaque	Effect4.Program.Fold:2076	Effect4.Program.EffMAlgebra.stmt_ifElse	(Term)
+  opaque	Effect4.Program.Fold:2084	Effect4.Program.EffMAlgebra.action_forkIn	(Term)
+  opaque	Effect4.Program.Fold:2086	Effect4.Program.EffMAlgebra.action_runIn	(Term)
+  opaque	Effect4.Program.Fold:2087	Effect4.Program.EffMAlgebra.action_interrupt	(Term)
+  opaque	Effect4.Program.Fold:2088	Effect4.Program.EffMAlgebra.action_interruptScoped	(Term)
+  opaque	Effect4.Program.Fold:2089	Effect4.Program.EffMAlgebra.action_interruptAll	(Term)
+  opaque	Effect4.Program.Fold:2090	Effect4.Program.EffMAlgebra.action_awaitAll	(Term)
+  opaque	Effect4.Program.Fold:2091	Effect4.Program.EffMAlgebra.action_awaitAllFailFast	(Term)
+  opaque	Effect4.Program.Fold:2093	Effect4.Program.EffMAlgebra.action_awaitNewChildren	(Term)
+  opaque	Effect4.Program.Fold:2095	Effect4.Program.EffMAlgebra.action_setContext	(Term)
+  opaque	Effect4.Program.Fold:2098	Effect4.Program.EffMAlgebra.action_closeScope	(Term)
+  opaque	Effect4.Program.Fold:2969	Effect4.Program.EffFrontierAlgebra.eff_succeed	(Term)
+  opaque	Effect4.Program.Fold:2970	Effect4.Program.EffFrontierAlgebra.eff_fail	(Term)
+  opaque	Effect4.Program.Fold:2972	Effect4.Program.EffFrontierAlgebra.eff_sync	(Term)
+  opaque	Effect4.Program.Fold:2974	Effect4.Program.EffFrontierAlgebra.eff_perform	(Term)
+  opaque	Effect4.Program.Fold:2984	Effect4.Program.EffFrontierAlgebra.eff_awaitFiber	(Term)
+  opaque	Effect4.Program.Fold:2990	Effect4.Program.EffFrontierAlgebra.eff_provideService	(Term)
+  opaque	Effect4.Program.Fold:2991	Effect4.Program.EffFrontierAlgebra.eff_catchIf	(Term)
+  opaque	Effect4.Program.Fold:2992	Effect4.Program.EffFrontierAlgebra.eff_select	(Term)
+  opaque	Effect4.Program.Fold:2993	Effect4.Program.EffFrontierAlgebra.eff_iterate	(Term)
+  opaque	Effect4.Program.Fold:2996	Effect4.Program.EffFrontierAlgebra.stmt_ret	(Term)
+  opaque	Effect4.Program.Fold:2997	Effect4.Program.EffFrontierAlgebra.stmt_ifElse	(Term)
+  opaque	Effect4.Program.Fold:3005	Effect4.Program.EffFrontierAlgebra.action_forkIn	(Term)
+  opaque	Effect4.Program.Fold:3007	Effect4.Program.EffFrontierAlgebra.action_runIn	(Term)
+  opaque	Effect4.Program.Fold:3008	Effect4.Program.EffFrontierAlgebra.action_interrupt	(Term)
+  opaque	Effect4.Program.Fold:3009	Effect4.Program.EffFrontierAlgebra.action_interruptScoped	(Term)
+  opaque	Effect4.Program.Fold:3010	Effect4.Program.EffFrontierAlgebra.action_interruptAll	(Term)
+  opaque	Effect4.Program.Fold:3011	Effect4.Program.EffFrontierAlgebra.action_awaitAll	(Term)
+  opaque	Effect4.Program.Fold:3012	Effect4.Program.EffFrontierAlgebra.action_awaitAllFailFast	(Term)
+  opaque	Effect4.Program.Fold:3014	Effect4.Program.EffFrontierAlgebra.action_awaitNewChildren	(Term)
+  opaque	Effect4.Program.Fold:3016	Effect4.Program.EffFrontierAlgebra.action_setContext	(Term)
+  opaque	Effect4.Program.Fold:3019	Effect4.Program.EffFrontierAlgebra.action_closeScope	(Term)
+  opaque	Effect4.Program.Fold:3507	FoldAcceptance.EffTraversal.atSucceed	(Term)
+  opaque	Effect4.Program.Fold:3508	FoldAcceptance.EffTraversal.atPerform	(Term)
+  structural	Effect4.Codegen.PrintLeaf:163	Effect4.Program.printTerm	(Term)	converted: Effect4.Program.printTerm.alg with Effect4.Program.printTerm.eq_cata
+  structural	Effect4.Codegen.PrintLeaf:170	Effect4.Program.printTerms	(Terms)	converted: Effect4.Program.printTerms.alg with Effect4.Program.printTerms.eq_cata
+  structural	Effect4.Codegen.Read:827	Effect4.Program.Terms.names?	(Terms)	converted: Effect4.Program.Terms.names?.alg with Effect4.Program.Terms.names?.eq_cata
+  structural	Effect4.Machine.Term:111	Effect4.Program.Terms.toList	(Terms)	converted: Effect4.Program.Terms.toList.alg with Effect4.Program.Terms.toList.eq_cata
+  structural	Effect4.Machine.Term:118	Effect4.Program.Term.scoped	(Term)	converted: Effect4.Program.Term.scoped.alg with Effect4.Program.Term.scoped.eq_cata
+  structural	Effect4.Machine.Term:123	Effect4.Program.Terms.scoped	(Terms)	converted: Effect4.Program.Terms.scoped.alg with Effect4.Program.Terms.scoped.eq_cata
+  structural	Effect4.Machine.Term:425	Effect4.Program.evalTerm	(Term)	converted: Effect4.Program.evalTerm.alg with Effect4.Program.evalTerm.eq_cata
+  structural	Effect4.Machine.Term:432	Effect4.Program.evalTerms	(Terms)	converted: Effect4.Program.evalTerms.alg with Effect4.Program.evalTerms.eq_cata
+  structural	Effect4.Program.Eff:453	Effect4.Program.Term.weaken	(Term)	converted: Effect4.Program.Term.weaken.alg with Effect4.Program.Term.weaken.eq_cata
+  structural	Effect4.Program.Eff:458	Effect4.Program.Terms.weaken	(Terms)	converted: Effect4.Program.Terms.weaken.alg with Effect4.Program.Terms.weaken.eq_cata
+  structural	Effect4.Program.Typing.Rules:84	Effect4.Program.argTy	(Term)	converted: Effect4.Program.argTy.alg with Effect4.Program.argTy.eq_cata
+  structural	Effect4.Program.Typing.Rules:95	Effect4.Program.argsTy	(Terms)	converted: Effect4.Program.argsTy.alg with Effect4.Program.argsTy.eq_cata
+info: Test/Audit/TraversalCensus.lean:66:0: #traversal_census Effect4.Representation (family [Effect4.Representation,
+ Effect4.Check]) under Effect4: 33 definitions take a family value (2 private) — fold 2, generated 4, structural 1 (of which 0 with a fold beside them, 0 instance implementations), wf 2 (of which 0 with a fold beside them), one-level 5 (of which 4 with a fold beside them), delegates 8, opaque 11; declared folds: [Effect4.cata_pos_list_elementOf_representation,
+ Effect4.cata_pos_option_list_representation,
+ Effect4.cata_representation,
+ Effect4.cata_check,
+ Effect4.cata_pos_indexSignatureOf_representation,
+ Effect4.cata_pos_list_representation,
+ Effect4.cata_pos_list_check,
+ Effect4.cata_pos_option_checkRepresentationAnnotationOf_representation,
+ Effect4.cata_pos_list_indexSignatureOf_representation,
+ Effect4.cata_pos_propertySignatureOf_representation,
+ Effect4.cata_pos_list_propertySignatureOf_representation,
+ SchemaFoldAcceptance.cataHom,
+ Effect4.cata_pos_checkRepresentationAnnotationOf_representation,
+ Effect4.cata_pos_elementOf_representation]
+  delegates	Effect4.Api:575	Effect4.Api.schemaRepresentation	(Representation)	→ [Effect4.Codegen.Schema.representation]
+  delegates	Effect4.Codegen.Schema:328	Effect4.Codegen.Schema.representationSource	(Representation)	→ [Effect4.Codegen.Schema.representation]
+  delegates	Effect4.Schema.Authoring:158	Effect4.Schema.withCheck	(Representation)	→ [Effect4.Schema.withChecks?]
+  delegates	Effect4.Schema.Bridge:237	Effect4.Program.Ty.ofSchema	(Representation)	→ [Effect4.Schema.Bridge.ofSchema]
+  delegates	Effect4.Schema.Fold:1042	SchemaFoldAcceptance.representationNodes	(Representation)	→ [Effect4.foldMap_representation]
+  delegates	Effect4.Schema.Fold:1045	SchemaFoldAcceptance.checkNodes	(Representation)	→ [Effect4.foldMap_representation]
+  delegates	Effect4.Schema.Representation:1062	Effect4.instDecidableEqRepresentation [instance]	(Representation)	→ [Effect4.Representation.beq]
+  delegates	Effect4.Schema.Representation:1066	Effect4.instDecidableEqCheck [instance]	(Check)	→ [Effect4.Check.beq]
+  fold	Effect4.Codegen.Schema:302	Effect4.Codegen.Schema.representation	(Representation)	_private.Effect4.Codegen.Schema.0.Effect4.Codegen.Schema.printAlgebra
+  fold	Effect4.Codegen.Schema:305	Effect4.Codegen.Schema.check	(Check)	_private.Effect4.Codegen.Schema.0.Effect4.Codegen.Schema.printAlgebra
+  generated	Effect4.Schema.Fold:802	Effect4.foldMap_representation	(Representation)
+  generated	Effect4.Schema.Fold:850	Effect4.foldMap_check	(Check)
+  generated	Effect4.Store.Domain.Derived.Schema:701	Effect4.Store.SchemaGen.RepresentationC.toValRepresentation	(Representation)
+  generated	Effect4.Store.Domain.Derived.Schema:730	Effect4.Store.SchemaGen.RepresentationC.toValCheck	(Check)
+  one-level	Effect4.Schema.Authoring:125	Effect4.Schema.withChecks?	(Representation)	converted: Effect4.Schema.withChecks?.alg with Effect4.Schema.withChecks?.eq_cata
+  one-level	Effect4.Schema.Bridge:61	Effect4.Schema.Bridge.checkId	(Check)	converted: Effect4.Schema.Bridge.checkId.alg with Effect4.Schema.Bridge.checkId.eq_cata
+  one-level	Effect4.Schema.Bridge:67	Effect4.Schema.Bridge.isDefect	(Representation)
+  one-level	Effect4.Schema.Representation:1089	Effect4.Representation.tag	(Representation)	converted: Effect4.Representation.tag.alg with Effect4.Representation.tag.eq_cata
+  one-level	Effect4.Schema.Representation:1114	Effect4.Check.tag	(Check)	converted: Effect4.Check.tag.alg with Effect4.Check.tag.eq_cata
+  opaque	Effect4.Schema.Authoring:23	Effect4.Schema.Check.group	(Check)
+  opaque	Effect4.Schema.Authoring:73	Effect4.Schema.array	(Representation)
+  opaque	Effect4.Schema.Authoring:83	Effect4.Schema.element	(Representation)
+  opaque	Effect4.Schema.Authoring:87	Effect4.Schema.property	(Representation)
+  opaque	Effect4.Schema.Authoring:92	Effect4.Schema.index	(Representation)
+  opaque	Effect4.Schema.Authoring:99	Effect4.Schema.anyOf	(Representation)
+  opaque	Effect4.Schema.Authoring:112	Effect4.Schema.oneOf	(Representation)
+  opaque	Effect4.Schema.Authoring:117	Effect4.Schema.suspend	(Representation)
+  opaque	Effect4.Schema.Authoring:119	Effect4.Schema.document	(Representation)
+  opaque	Effect4.Schema.Fold:441	Effect4.RepresentationHom.f_representation	(Representation)
+  opaque	Effect4.Schema.Fold:442	Effect4.RepresentationHom.f_check	(Check)
+  structural	Effect4.Schema.Bridge:73	Effect4.Schema.Bridge.ofSchema	(Representation)	 hands to [Effect4.Schema.Bridge.isDefect, Effect4.Schema.Bridge.checkId]
+  wf	Effect4.Schema.Representation:811	Effect4.Representation.beq [private]	(Representation)
+  wf	Effect4.Schema.Representation:921	Effect4.Check.beq [private]	(Check)
+info: Test/Audit/TraversalCensus.lean:67:0: #traversal_census Effect4.Store.Val (family [Effect4.Store.Val]) under Effect4: 243 definitions take a family value (0 private) — fold 0, generated 85, structural 18 (of which 17 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 64 (of which 2 with a fold beside them), delegates 49, opaque 27; declared folds: [Effect4.Store.cata_val,
+ Effect4.Store.cata_pos_list_val]
+  delegates	Effect4.Laws.Machine.Witnesses:115	Effect4.Machine.Witnesses.causeCode	(Val)	→ [Effect4.Store.Image.ofVal]
+  delegates	Effect4.Laws.Machine.Witnesses:119	Effect4.Machine.Witnesses.snapshotCode	(Val)	→ [Effect4.Store.Image.ofVal]
+  delegates	Effect4.Laws.Program.DenoteR:317	Effect4.Program.Sched.bindServiceR	(Val)	→ [Effect4.Machine.Env.Context.addV]
+  delegates	Effect4.Laws.Program.DenoteR:324	Effect4.Program.Sched.addCurrentMemoMapR	(Val)	→ [Effect4.Machine.Env.decode, Effect4.Machine.Env.Context.addV]
+  delegates	Effect4.Laws.Program.DenoteR:330	Effect4.Program.Sched.combineWithR	(Val)	→ [Effect4.Machine.Env.decode]
+  delegates	Effect4.Laws.Program.DenoteR:339	Effect4.Program.Sched.mergeContextsR	(Val)	→ [Effect4.Machine.reasonsOfVal, Effect4.Program.contextsOf]
+  delegates	Effect4.Laws.Program.DenoteR:348	Effect4.Program.Sched.serviceLookupR	(Val)	→ [Effect4.Machine.Val.context?]
+  delegates	Effect4.Laws.Program.InterpR:136	Effect4.Program.Sched.closeSeqStepR	(Val)	→ [Effect4.Machine.reasonsOfVal]
+  delegates	Effect4.Laws.Program.InterpR:276	Effect4.Program.Sched.loopResumeRAt	(Val)	→ [Effect4.Program.Sched.loopNextRAt]
+  delegates	Effect4.Laws.Program.Typed.Membership:39	Effect4.Program.Typed.Live	(Val)	→ [Effect4.Machine.Val.keys]
+  delegates	Effect4.Laws.Program.Typed.Residual:56	Effect4.Program.Typed.storePost	(Val)	→ [Effect4.Machine.Val.memoHit?, Effect4.Program.Typed.Fits]
+  delegates	Effect4.Laws.Program.Typed.World:68	Effect4.Program.Typed.ValueOk	(Val)	→ [Effect4.Program.Val.hasTy]
+  delegates	Effect4.Laws.Program.Typed.World:88	Effect4.Program.Typed.HeapCell	(Val)	→ [Effect4.Program.Typed.ValueOk]
+  delegates	Effect4.Machine.ContextMap:593	Effect4.Machine.Env.instDecidableEqCarrierValU [instance]	(Val)	→ [Effect4.Store.Val.instDecidableEq]
+  delegates	Effect4.Machine.ContextMap:736	Effect4.Machine.Env.decode	(Val)	→ [Effect4.Machine.Env.spine]
+  delegates	Effect4.Machine.Stores:108	Effect4.Machine.Ctx.provide	(Val)	→ [Effect4.Machine.Env.Context.addV]
+  delegates	Effect4.Machine.Stores:225	Effect4.Machine.Val.context?	(Val)	→ [Effect4.Store.Image.ofVal]
+  delegates	Effect4.Machine.Stores:870	Effect4.Machine.FnName.modifySome	(Val)	→ [Effect4.Machine.FnName.modify]
+  delegates	Effect4.Machine.Stores:1797	Effect4.Machine.closeSeqStep	(Val)	→ [Effect4.Machine.reasonsOfVal]
+  delegates	Effect4.Machine.Term:55	Effect4.Program.queryTag	(Val)	→ [Effect4.Program.queryReasons?]
+  delegates	Effect4.Machine.Term:59	Effect4.Program.queryError	(Val)	→ [Effect4.Program.queryReasons?]
+  delegates	Effect4.Program.Admit:25	Effect4.Program.mintedIn	(Val)	→ [Effect4.Store.Val.handles]
+  delegates	Effect4.Program.Compile:457	Effect4.Program.exitOfVal	(Val)	→ [Effect4.Store.Image.ofVal]
+  delegates	Effect4.Program.Compile:519	Effect4.Program.mergeContextsK	(Val)	→ [Effect4.Machine.reasonsOfVal, Effect4.Program.contextsOf]
+  delegates	Effect4.Program.Compile:799	Effect4.Program.provideLayerBodyK	(Val)	→ [Effect4.Machine.Env.decode]
+  delegates	Effect4.Program.Compile:809	Effect4.Program.updateThenK	(Val)	→ [Effect4.Machine.Val.context?]
+  delegates	Effect4.Program.Compile:822	Effect4.Program.buildWithScopeK	(Val)	→ [Effect4.Machine.Val.context?]
+  delegates	Effect4.Program.Compile:830	Effect4.Program.addCurrentMemoMapK	(Val)	→ [Effect4.Machine.Env.decode, Effect4.Machine.Env.Context.addV]
+  delegates	Effect4.Program.Compile:836	Effect4.Program.provideThenK	(Val)	→ [Effect4.Machine.Env.decode]
+  delegates	Effect4.Program.Compile:847	Effect4.Program.combineWithK	(Val)	→ [Effect4.Machine.Env.decode]
+  delegates	Effect4.Program.Compile:857	Effect4.Program.bindServiceK	(Val)	→ [Effect4.Machine.Env.Context.addV]
+  delegates	Effect4.Program.Compile:864	Effect4.Program.serviceLookupK	(Val)	→ [Effect4.Machine.Val.context?]
+  delegates	Effect4.Program.Compile:1351	Effect4.Program.loopResumeAt	(Val)	→ [Effect4.Program.loopNextAt]
+  delegates	Effect4.Program.HostBoundary:66	Effect4.Program.Profile.Scalar.poll	(Val)	→ [Effect4.Program.Profile.Scalar.checkRequest, Effect4.Program.Profile.Scalar.step?]
+  delegates	Effect4.Program.HostBoundary:88	Effect4.Program.Profile.Resource.poll	(Val)	→ [Effect4.Program.Profile.Resource.step?, Effect4.Program.Profile.Resource.checkRequest]
+  delegates	Effect4.Program.Profile:332	Effect4.Program.Profile.Scalar.step?	(Val)	→ [Effect4.Program.Profile.Scalar.after, Effect4.Program.Profile.Scalar.outcome?]
+  delegates	Effect4.Program.Profile:569	Effect4.Program.Profile.Resource.step?	(Val)	→ [Effect4.Program.Profile.Resource.after, Effect4.Program.Profile.Resource.outcome?]
+  delegates	Effect4.Program.Profile:644	Effect4.Program.Profile.Resource.rollbackStep?	(Val)	→ [Effect4.Program.Profile.Resource.after, Effect4.Program.Profile.Resource.outcome?]
+  delegates	Effect4.Program.Typed:108	Effect4.Program.hasTyCause	(Val)	→ [Effect4.Program.Val.hasTy, Effect4.Machine.Val.cause?]
+  delegates	Effect4.Schema.Codec:215	Effect4.Schema.Codec.isValue	(Val)	→ [Effect4.Schema.Codec.encodeRaw, Effect4.Program.Val.hasTy, Effect4.Store.Val.instDecidableEq]
+  delegates	Effect4.Schema.Codec:229	Effect4.Schema.encode	(Val)	→ [Effect4.Schema.Codec.encodeRaw, Effect4.Program.Val.hasTy, Effect4.Store.Val.instDecidableEq]
+  delegates	Effect4.Schema.Codec:252	Effect4.Program.Ty.isCodecValue	(Val)	→ [Effect4.Schema.Codec.isValue]
+  delegates	Effect4.Store.Carrier.Val:393	Effect4.Store.Val.decWF [instance]	(Val)	→ [Effect4.Store.Val.WF, Effect4.Store.Val.wf]
+  delegates	Effect4.Store.Carrier.Val:1076	Effect4.Store.Val.encode?	(Val)	→ [Effect4.Store.Val.wf, Effect4.Store.Val.encode]
+  delegates	Effect4.Store.Carrier.Val:1154	Effect4.Store.Val.instDecidableEq [instance]	(Val)	→ [Effect4.Store.Val.beq]
+  delegates	Effect4.Store.Domain.Canonical:262	Effect4.Store.guarded	(Val)	→ [Effect4.Store.Val.instDecidableEq]
+  delegates	Effect4.Store.Domain.Shape:173	Effect4.Store.acceptsIn	(Val)	→ [Effect4.Store.acceptsAt]
+  delegates	Effect4.Store.Domain.Shape:177	Effect4.Store.ShapeDoc.accepts	(Val)	→ [Effect4.Store.acceptsIn]
+  delegates	Effect4.Store.Domain.Shape:428	Effect4.Store.ShapeDoc.print	(Val)	→ [Effect4.Store.printIn]
+  generated	Effect4.Api.Derived:38	Effect4.Store.ApiGen.FiberIdC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.Derived:92	Effect4.Store.ApiGen.KeyC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.Derived:154	Effect4.Store.ApiGen.ExhaustionC.ofVal	(Val)
+  generated	Effect4.Api.Derived:211	Effect4.Store.ApiGen.FrontierReasonC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:49	Effect4.Store.RunnerGen.RefKeyC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:110	Effect4.Store.RunnerGen.ErrC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:197	Effect4.Store.RunnerGen.DefectC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:277	Effect4.Store.RunnerGen.ReasonC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:373	Effect4.Store.RunnerGen.CauseC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:433	Effect4.Store.RunnerGen.ExitC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:496	Effect4.Store.RunnerGen.CompletionC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:581	Effect4.Store.RunnerGen.RunDecisionC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:720	Effect4.Store.RunnerGen.TableRefusalC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:791	Effect4.Store.RunnerGen.AdmitRefusalC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:878	Effect4.Store.RunnerGen.HeaderC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:955	Effect4.Store.RunnerGen.CallC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:1049	Effect4.Store.RunnerGen.ReplyC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:1155	Effect4.Store.RunnerGen.RefusalC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:1261	Effect4.Store.RunnerGen.PhaseC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:1338	Effect4.Store.RunnerGen.CommandC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:1439	Effect4.Store.RunnerGen.StateC.ofVal	(Val)
+  generated	Effect4.Api.RunnerDerived:1496	Effect4.Store.RunnerGen.StuckC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Api.RunnerDerived:1562	Effect4.Store.RunnerGen.OutcomeC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Carrier.Fold:259	Effect4.Store.foldMap_val	(Val)
+  generated	Effect4.Store.Domain.Derived.Json:35	Effect4.Store.JsonGen.Float64C.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Json:120	Effect4.Store.JsonGen.JsonC.rawJson	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Json:149	Effect4.Store.JsonGen.JsonC.rawP1	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:50	Effect4.Store.ProgramGen.LitC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:127	Effect4.Store.ProgramGen.FnNameC.ofVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Program:185	Effect4.Store.ProgramGen.FinalizerStrategyC.ofVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Program:236	Effect4.Store.ProgramGen.MaskModeC.ofVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Program:288	Effect4.Store.ProgramGen.ObserverModeC.ofVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Program:339	Effect4.Store.ProgramGen.DecisionC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:440	Effect4.Store.ProgramGen.NativeOpC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:576	Effect4.Store.ProgramGen.ForkOptionsC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:663	Effect4.Store.ProgramGen.TermC.rawTerm	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:677	Effect4.Store.ProgramGen.TermC.rawTerms	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:804	Effect4.Store.ProgramGen.CauseTermC.rawCauseTerm	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:900	Effect4.Store.ProgramGen.ServiceNameC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:953	Effect4.Store.ProgramGen.ServiceTypeCodeC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:1007	Effect4.Store.ProgramGen.ServiceKeyC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:1118	Effect4.Store.ProgramGen.TyC.rawTy	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:1518	Effect4.Store.ProgramGen.EffC.rawEff	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:1628	Effect4.Store.ProgramGen.EffC.rawStmt	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:1651	Effect4.Store.ProgramGen.EffC.rawStmts	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:1658	Effect4.Store.ProgramGen.EffC.rawEffs	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:1665	Effect4.Store.ProgramGen.EffC.rawActionTerm	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:1727	Effect4.Store.ProgramGen.EffC.rawLayerTerm	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:1771	Effect4.Store.ProgramGen.EffC.rawLayerTerms	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:2360	Effect4.Store.ProgramGen.RowKindC.ofVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Program:2416	Effect4.Store.ProgramGen.RowShapeC.ofVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Program:2471	Effect4.Store.ProgramGen.RegistrationC.ofVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Program:2534	Effect4.Store.ProgramGen.RowC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Program:2644	Effect4.Store.ProgramGen.EffTyC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:38	Effect4.Store.SchemaGen.ReferenceKeyC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:91	Effect4.Store.SchemaGen.GlobalSymbolKeyC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:145	Effect4.Store.SchemaGen.AnnotationEntryC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:212	Effect4.Store.SchemaGen.LiteralValueC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:288	Effect4.Store.SchemaGen.EnumValueC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:346	Effect4.Store.SchemaGen.EnumEntryC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:411	Effect4.Store.SchemaGen.PropertyKeyC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:478	Effect4.Store.SchemaGen.RepresentationAnnotationC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:540	Effect4.Store.SchemaGen.UnionModeC.ofVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Schema:775	Effect4.Store.SchemaGen.RepresentationC.rawRepresentation	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:907	Effect4.Store.SchemaGen.RepresentationC.rawCheck	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:921	Effect4.Store.SchemaGen.RepresentationC.rawCheckRepresentationAnnotationOf	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:929	Effect4.Store.SchemaGen.RepresentationC.rawElementOf	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:936	Effect4.Store.SchemaGen.RepresentationC.rawPropertySignatureOf	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:945	Effect4.Store.SchemaGen.RepresentationC.rawIndexSignatureOf	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:982	Effect4.Store.SchemaGen.RepresentationC.rawO5	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:995	Effect4.Store.SchemaGen.RepresentationC.rawO7	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:1558	Effect4.Store.SchemaGen.ReferenceEntryC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:1620	Effect4.Store.SchemaGen.DocumentC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Schema:1684	Effect4.Store.SchemaGen.MultiDocumentC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Value:53	Effect4.Store.ValueGen.ValC.toValVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Value:75	Effect4.Store.ValueGen.ValC.rawVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Value:306	Effect4.Store.ValueGen.KindC.ofVal	(Val)
+  generated	Effect4.Store.Domain.Derived.Value:445	Effect4.Store.ValueGen.ShapeC.rawShape	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Value:482	Effect4.Store.ValueGen.ShapeC.rawP0	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Value:494	Effect4.Store.ValueGen.ShapeC.rawP2	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Value:500	Effect4.Store.ValueGen.ShapeC.rawP3	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.Derived.Value:716	Effect4.Store.ValueGen.ShapeDocC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.PinDerived:39	Effect4.Store.PinGen.PinRoleC.ofVal	(Val)
+  generated	Effect4.Store.Domain.PinDerived:95	Effect4.Store.PinGen.PinC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  generated	Effect4.Store.Domain.PinDerived:189	Effect4.Store.PinGen.TreeC.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal]
+  one-level	Effect4.Laws.Machine.StoresValue:50	Effect4.Machine.Handle.ofStore	(Val)
+  one-level	Effect4.Laws.Program.DenoteB:103	Effect4.Program.Denote.iterateStep	(Val)
+  one-level	Effect4.Laws.Program.InterpR:265	Effect4.Program.Sched.loopNextRAt	(Val)	 hands to [Effect4.Program.Point.childWith, Effect4.Program.Sched.loopFinishRAt]
+  one-level	Effect4.Laws.Program.LoopSound:28	Effect4.Program.Denote.iterateStepWith	(Val)
+  one-level	Effect4.Laws.Program.Typed.Membership:61	Effect4.Program.Typed.FlatFits	(Val)
+  one-level	Effect4.Laws.Program.Typed.Residual:312	Effect4.Program.Typed.refAllocCont	(Val)
+  one-level	Effect4.Machine.Alphabets:100	Effect4.Machine.ofErr	(Val)
+  one-level	Effect4.Machine.Alphabets:127	Effect4.Machine.ofDefect	(Val)	 hands to [Effect4.Machine.ofErr]
+  one-level	Effect4.Machine.Alphabets:224	Effect4.Machine.Val.fiber?	(Val)
+  one-level	Effect4.Machine.Alphabets:229	Effect4.Machine.Val.scope?	(Val)
+  one-level	Effect4.Machine.Alphabets:233	Effect4.Machine.Val.snapshot?	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Machine.Alphabets:237	Effect4.Machine.Val.asList?	(Val)	 hands to [Effect4.Machine.Val.snapshot?]
+  one-level	Effect4.Machine.Alphabets:245	Effect4.Machine.Val.cause?	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Machine.Alphabets:280	Effect4.Machine.Val.memoMap?	(Val)
+  one-level	Effect4.Machine.Alphabets:300	Effect4.Machine.Val.memoHit?	(Val)
+  one-level	Effect4.Machine.ContextMap:687	Effect4.Machine.Env.natOfVal	(Val)
+  one-level	Effect4.Machine.ContextMap:692	Effect4.Machine.Env.boolOfVal	(Val)
+  one-level	Effect4.Machine.ContextMap:710	Effect4.Machine.Env.ofEntry	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Machine.ContextMap:731	Effect4.Machine.Env.spine	(Val)
+  one-level	Effect4.Machine.Stores:181	Effect4.Machine.ofCtx	(Val)	 hands to [Effect4.Machine.Env.decode]
+  one-level	Effect4.Machine.Stores:851	Effect4.Machine.FnName.total	(Val)
+  one-level	Effect4.Machine.Stores:858	Effect4.Machine.FnName.partialUpdate	(Val)	 hands to [Effect4.Machine.FnName.total]
+  one-level	Effect4.Machine.Stores:865	Effect4.Machine.FnName.modify	(Val)	 hands to [Effect4.Machine.FnName.total]
+  one-level	Effect4.Machine.Stores:2037	Effect4.Machine.contAOf	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Machine.Term:24	Effect4.Program.errOf	(Val)
+  one-level	Effect4.Machine.Term:50	Effect4.Program.queryReasons?	(Val)	 hands to [Effect4.Machine.Val.cause?]
+  one-level	Effect4.Machine.Term:71	Effect4.Program.Val.tuple?	(Val)
+  one-level	Effect4.Machine.Term:359	Effect4.Program.NativeAtom.tagHit	(Val)
+  one-level	Effect4.Machine.Value:127	Effect4.Machine.HandleKind.ofHandle	(Val)
+  one-level	Effect4.Machine.Value:269	Effect4.Machine.Value.ofReason	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Machine.Value:374	Effect4.Machine.Value.ofExit	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Program.Compile:514	Effect4.Program.contextsOf	(Val)
+  one-level	Effect4.Program.Compile:1076	Effect4.Program.contAOf	(Val)	 hands to [Effect4.Program.mergeContextsK, Effect4.Program.Point.capture, Effect4.Machine.contAOf, Effect4.Program.provideThenK, Effect4.Program.serviceLookupK, Effect4.Program.provideLayerBodyK, Effect4.Program.Point.childWith, Effect4.Machine.Val.context?, Effect4.Program.combineWithK, Effect4.Program.buildWithScopeK, Effect4.Program.bindServiceK, Effect4.Program.updateThenK, Effect4.Program.addCurrentMemoMapK, Effect4.Store.Val.instDecidableEq, Effect4.Program.exitOfVal]
+  one-level	Effect4.Program.Compile:1339	Effect4.Program.loopNextAt	(Val)	 hands to [Effect4.Program.Point.childWith, Effect4.Program.loopFinishAt]
+  one-level	Effect4.Program.Compile:1368	Effect4.Program.externalValue	(Val)	 hands to [Effect4.Store.Val.handles, Effect4.Program.Val.hasTy]
+  one-level	Effect4.Program.Decision:28	Effect4.Program.Val.tagPayload?	(Val)
+  one-level	Effect4.Program.Decision:48	Effect4.Program.Decision.decide	(Val)	 hands to [Effect4.Program.Val.tagPayload?]
+  one-level	Effect4.Program.HostBoundary:56	Effect4.Program.Profile.Scalar.checkRequest	(Val)
+  one-level	Effect4.Program.HostBoundary:76	Effect4.Program.Profile.Resource.checkRequest	(Val)	 hands to [Effect4.Store.Val.instDecidableEq]
+  one-level	Effect4.Program.Native:228	Effect4.Program.NativeOp.syncOpOf	(Val)
+  one-level	Effect4.Program.Native:256	Effect4.Program.NativeOp.awaitCellOf	(Val)
+  one-level	Effect4.Program.Native:261	Effect4.Program.NativeOp.sleepMillisOf	(Val)
+  one-level	Effect4.Program.Profile:319	Effect4.Program.Profile.Scalar.outcome?	(Val)
+  one-level	Effect4.Program.Profile:524	Effect4.Program.Profile.Resource.after	(Val)
+  one-level	Effect4.Program.Profile:540	Effect4.Program.Profile.Resource.outcome?	(Val)
+  one-level	Effect4.Program.Stream:43	Effect4.Program.Stream.chunk?	(Val)
+  one-level	Effect4.Store.Carrier.Image:115	Effect4.Store.Image.ofUnit	(Val)
+  one-level	Effect4.Store.Carrier.Image:131	Effect4.Store.Image.ofBool	(Val)
+  one-level	Effect4.Store.Carrier.Image:167	Effect4.Store.Image.ofString	(Val)
+  one-level	Effect4.Store.Carrier.Image:246	Effect4.Store.Image.ofOption	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Store.Carrier.Image:278	Effect4.Store.Image.ofPair	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Store.Carrier.Image:316	Effect4.Store.Image.ofList	(Val)
+  one-level	Effect4.Store.Carrier.Image:364	Effect4.Store.Image.ofCtor1	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Store.Carrier.Image:387	Effect4.Store.Image.ofCtor2	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Store.Carrier.Image:424	Effect4.Store.Image.ofCtor3	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Store.Carrier.Image.Containers:8	Effect4.Store.Image.ofSum	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Store.Carrier.Image.Containers:46	Effect4.Store.Image.ofTuple2	(Val)	 hands to [Effect4.Store.Image.ofVal]
+  one-level	Effect4.Store.Carrier.Val:231	Effect4.Store.Val.tag	(Val)	converted: Effect4.Store.Val.tag.alg with Effect4.Store.Val.tag.eq_cata
+  one-level	Effect4.Store.Carrier.Val:246	Effect4.Store.Val.payload	(Val)	converted: Effect4.Store.Val.payload.alg with Effect4.Store.Val.payload.eq_cata hands to [Effect4.Store.Val.encode]
+  one-level	Effect4.Store.Carrier.Val:289	Effect4.Store.Val.children	(Val)
+  one-level	Effect4.Store.Domain.Canonical:365	Effect4.Store.IntCanonical.ofVal	(Val)
+  one-level	Effect4.Store.Domain.Clock:18	Effect4.Store.ClockCanonical.ofVal	(Val)
+  one-level	Effect4.Store.Domain.Traits:54	Effect4.Store.Annotation.prevOfVal	(Val)
+  one-level	Effect4.Store.Domain.Traits:97	Effect4.Store.Annotation.ofVal	(Val)	 hands to [Effect4.Store.Canonical.ofVal, Effect4.Store.Annotation.prevOfVal]
+  opaque	Effect4.Laws.Program.EvaluateR:156	Effect4.Program.Sched.answerWith	(Val)
+  opaque	Effect4.Laws.Program.InterpR:255	Effect4.Program.Sched.loopFinishRAt	(Val)
+  opaque	Effect4.Laws.Program.Typed.Contracts:20	Effect4.Program.Typed.Contracts.FrameProtocols.loop	(Val)
+  opaque	Effect4.Laws.Program.Typed.State:26	Effect4.Program.Typed.Preds.HeapCell	(Val)
+  opaque	Effect4.Machine.ContextMap:633	Effect4.Machine.Env.Context.addV	(Val)
+  opaque	Effect4.Machine.ContextMap:706	Effect4.Machine.Env.entryStore	(Val)
+  opaque	Effect4.Machine.Stores:847	Effect4.Machine.refPoke	(Val)
+  opaque	Effect4.Machine.Value:198	Effect4.Machine.Value.exitOk	(Val)
+  opaque	Effect4.Machine.Value:200	Effect4.Machine.Value.exitErr	(Val)
+  opaque	Effect4.Machine.Value:202	Effect4.Machine.Value.resultFailure	(Val)
+  opaque	Effect4.Machine.Value:204	Effect4.Machine.Value.resultSuccess	(Val)
+  opaque	Effect4.Machine.Value:209	Effect4.Machine.Value.fiberContext	(Val)
+  opaque	Effect4.Machine.Value:213	Effect4.Machine.Value.fiberSnapshot	(Val)
+  opaque	Effect4.Program.Compile:103	Effect4.Program.Point.capture	(Val)
+  opaque	Effect4.Program.Compile:109	Effect4.Program.Point.childWith	(Val)
+  opaque	Effect4.Program.Compile:113	Effect4.Program.Point.childWith2	(Val)
+  opaque	Effect4.Program.Compile:1328	Effect4.Program.loopFinishAt	(Val)
+  opaque	Effect4.Program.Profile:181	Effect4.Program.HostSpec.Rep	(Val)
+  opaque	Effect4.Program.Profile:185	Effect4.Program.HostSpec.Work	(Val)
+  opaque	Effect4.Program.Profile:190	Effect4.Program.HostSpec.RowStep	(Val)
+  opaque	Effect4.Program.Profile:298	Effect4.Program.Profile.Scalar.Rep	(Val)
+  opaque	Effect4.Program.Profile:316	Effect4.Program.Profile.Scalar.after	(Val)
+  opaque	Effect4.Program.Profile:498	Effect4.Program.Profile.Resource.Rep	(Val)
+  opaque	Effect4.Run:137	Effect4.Api.HostSession.Call.claim	(Val)
+  opaque	Effect4.Store.Carrier.Fold:127	Effect4.Store.ValHom.f_val	(Val)
+  opaque	Effect4.Store.Carrier.Image:43	Effect4.Store.Image.ofVal	(Val)
+  opaque	Effect4.Store.Domain.Canonical:39	Effect4.Store.Canonical.ofVal	(Val)
+  structural	Effect4.Laws.Machine.Handles:120	Effect4.Machine.Val.keys	(Val)	converted: Effect4.Machine.Val.keys.alg with Effect4.Machine.Val.keys.eq_cata
+  structural	Effect4.Laws.Machine.StoresLaws:81	Effect4.Machine.Val.validIn	(Val)	converted: Effect4.Machine.Val.validIn.alg with Effect4.Machine.Val.validIn.eq_cata
+  structural	Effect4.Laws.Machine.Witnesses:126	Effect4.Machine.Witnesses.valCode	(Val)	 hands to [Effect4.Machine.Witnesses.causeCode, Effect4.Machine.Witnesses.snapshotCode]
+  structural	Effect4.Laws.Program.Typed.Membership:85	Effect4.Program.Typed.Fits	(Val)	converted: Effect4.Program.Typed.Fits.alg with Effect4.Program.Typed.Fits.eq_cata hands to [Effect4.Machine.Val.snapshot?, Effect4.Program.Typed.Live, Effect4.Machine.Val.context?, Effect4.Store.Image.ofVal, Effect4.Machine.Val.cause?]
+  structural	Effect4.Machine.Stores:1649	Effect4.Machine.reasonsOfVal	(Val)	converted: Effect4.Machine.reasonsOfVal.alg with Effect4.Machine.reasonsOfVal.eq_cata hands to [Effect4.Store.Image.ofVal]
+  structural	Effect4.Program.ConfigValue:37	Effect4.Program.Config.Val.ofStore	(Val)	converted: Effect4.Program.Config.Val.ofStore.alg with Effect4.Program.Config.Val.ofStore.eq_cata
+  structural	Effect4.Program.Typed:20	Effect4.Program.Val.hasTy	(Val)	converted: Effect4.Program.Val.hasTy.alg with Effect4.Program.Val.hasTy.eq_cata hands to [Effect4.Machine.Val.snapshot?, Effect4.Machine.Val.context?, Effect4.Store.Image.ofVal, Effect4.Machine.Val.cause?]
+  structural	Effect4.Schema.Codec:151	Effect4.Schema.Codec.encodeRaw	(Val)	converted: Effect4.Schema.Codec.encodeRaw.alg with Effect4.Schema.Codec.encodeRaw.eq_cata hands to [Effect4.Program.Val.hasTy, Effect4.Store.Image.ofVal, Effect4.Machine.Val.cause?]
+  structural	Effect4.Store.Carrier.Val:179	Effect4.Store.Val.render	(Val)	converted: Effect4.Store.Val.render.alg with Effect4.Store.Val.render.eq_cata
+  structural	Effect4.Store.Carrier.Val:201	Effect4.Store.Val.encode	(Val)	converted: Effect4.Store.Val.encode.alg with Effect4.Store.Val.encode.eq_cata
+  structural	Effect4.Store.Carrier.Val:298	Effect4.Store.Val.handles	(Val)	converted: Effect4.Store.Val.handles.alg with Effect4.Store.Val.handles.eq_cata
+  structural	Effect4.Store.Carrier.Val:328	Effect4.Store.Val.WF	(Val)	converted: Effect4.Store.Val.WF.alg with Effect4.Store.Val.WF.eq_cata hands to [Effect4.Store.Val.encode]
+  structural	Effect4.Store.Carrier.Val:351	Effect4.Store.Val.wf	(Val)	converted: Effect4.Store.Val.wf.alg with Effect4.Store.Val.wf.eq_cata hands to [Effect4.Store.Val.encode]
+  structural	Effect4.Store.Carrier.Val:1112	Effect4.Store.Val.beq	(Val)	converted: Effect4.Store.Val.beq.alg with Effect4.Store.Val.beq.eq_cata
+  structural	Effect4.Store.Domain.Node:239	Effect4.Store.Val.refs	(Val)	converted: Effect4.Store.Val.refs.alg with Effect4.Store.Val.refs.eq_cata
+  structural	Effect4.Store.Domain.Node:258	Effect4.Store.Val.malformedRef	(Val)	converted: Effect4.Store.Val.malformedRef.alg with Effect4.Store.Val.malformedRef.eq_cata
+  structural	Effect4.Store.Domain.Shape:139	Effect4.Store.acceptsAt	(Val)	converted: Effect4.Store.acceptsAt.alg with Effect4.Store.acceptsAt.eq_cata
+  structural	Effect4.Store.Domain.Shape:380	Effect4.Store.printIn	(Val)	converted: Effect4.Store.printIn.alg with Effect4.Store.printIn.eq_cata
+info: Test/Audit/TraversalCensus.lean:77:0: #exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Effect4: 66 match(es) read it, 28 with no catch-all — appending a constructor refuses exactly those
+  Effect4.Program.methodArgsRow	Effect4.Codegen.PrintLeaf	Effect4.Program.methodArgsRow.match_1	discr 0	alts 2	catchAll true
+  _private.Effect4.Codegen.Types.0.Effect4.Codegen.Types.ofNormalized	Effect4.Codegen.Types	_private.Effect4.Codegen.Types.0.Effect4.Codegen.Types.ofNormalized.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.NativeAtom.projectProduct.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.NativeAtom.projectProduct.match_1	discr 0	alts 4	catchAll true
+  Effect4.Program.Ty.members.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Ty.members.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_40	discr 0	alts 20	catchAll false
+  Effect4.Program.findInt.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.findInt.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.rawSupportedErrTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.rawSupportedErrTy.match_1	discr 0	alts 20	catchAll false
+  Effect4.Schema.Codec.decodeRaw.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Schema.Codec.decodeRaw.match_3	discr 0	alts 13	catchAll true
+  Effect4.Schema.Codec.encodeRaw.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Schema.Codec.encodeRaw.match_1	discr 0	alts 16	catchAll true
+  Effect4.Schema.Codec.layout.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Schema.Codec.layout.match_1	discr 0	alts 8	catchAll true
+  Effect4.Program.Ty.templateAdmissible	Effect4.Laws.Program.Template	Effect4.Program.Ty.templateAdmissible.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.varsOf	Effect4.Laws.Program.Template	Effect4.Program.Ty.varsOf.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.Variance.holds	Effect4.Laws.Program.TyView	Effect4.Program.Ty.Variance.holds.match_1	discr 1	alts 3	catchAll true
+  Effect4.Program.Ty.Variance.holds	Effect4.Laws.Program.TyView	Effect4.Program.Ty.Variance.holds.match_1	discr 2	alts 3	catchAll true
+  Effect4.Program.Ty.args	Effect4.Laws.Program.TyView	Effect4.Program.Ty.args.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.litRule	Effect4.Laws.Program.TyView	Effect4.Program.Ty.litRule.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.litRule	Effect4.Laws.Program.TyView	Effect4.Program.Ty.litRule.match_1	discr 1	alts 2	catchAll true
+  Effect4.Program.Ty.sameHead	Effect4.Laws.Program.TyView	Effect4.Program.Ty.sameHead.match_1	discr 0	alts 20	catchAll true
+  Effect4.Program.Ty.sameHead	Effect4.Laws.Program.TyView	Effect4.Program.Ty.sameHead.match_1	discr 1	alts 20	catchAll true
+  Effect4.Program.Ty.topRule	Effect4.Laws.Program.TyView	Effect4.Program.Ty.topRule.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.topRule	Effect4.Laws.Program.TyView	Effect4.Program.Ty.topRule.match_1	discr 1	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_25	discr 0	alts 20	catchAll false
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_25	discr 0	alts 20	catchAll false
+  Effect4.Program.Typed.FlatFits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_16	discr 0	alts 6	catchAll true
+  Effect4.Program.findInt	Effect4.Program.Admission	Effect4.Program.findInt.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Authoring.ServiceDef.receiver	Effect4.Program.Authoring.Services	Effect4.Program.Authoring.ServiceDef.receiver.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Checker.exitOf?	Effect4.Program.Checker	Effect4.Program.Checker.exitOf?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Checker.listOf?	Effect4.Program.Checker	Effect4.Program.Checker.listOf?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.externalValue	Effect4.Program.Compile	Effect4.Program.externalValue.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Decision.arms	Effect4.Program.Decision	Effect4.Program.Decision.arms.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Decision.arms	Effect4.Program.Decision	Effect4.Program.Decision.arms.match_4	discr 1	alts 3	catchAll true
+  Effect4.Program.isTagTy	Effect4.Program.Eff	Effect4.Program.isTagTy.match_1	discr 0	alts 4	catchAll true
+  Effect4.Program.rawSupportedErrTy	Effect4.Program.Eff	Effect4.Program.rawSupportedErrTy.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.cata_ty	Effect4.Program.Fold	Effect4.Program.cata_ty.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.foldM_ty	Effect4.Program.Fold	Effect4.Program.cata_ty.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.foldMapAt_ty	Effect4.Program.Fold	Effect4.Program.cata_ty.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.foldMap_ty	Effect4.Program.Fold	Effect4.Program.cata_ty.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.NativeAtom.projectProduct	Effect4.Program.NativeAtom	Effect4.Program.NativeAtom.projectProduct.match_1	discr 0	alts 4	catchAll true
+  Effect4.Program.causeInputError?	Effect4.Program.NativeAtom	Effect4.Program.causeInputError?.match_1	discr 0	alts 3	catchAll true
+  Effect4.Program.Ty.closed	Effect4.Program.Ty	Effect4.Program.Ty.closed.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.factors	Effect4.Program.Ty	Effect4.Program.Ty.factors.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.infer	Effect4.Program.Ty	Effect4.Program.Ty.infer.match_3	discr 0	alts 12	catchAll true
+  Effect4.Program.Ty.infer	Effect4.Program.Ty	Effect4.Program.Ty.infer.match_3	discr 1	alts 12	catchAll true
+  Effect4.Program.Ty.instantiate	Effect4.Program.Ty	Effect4.Program.Ty.instantiate.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.isFactor	Effect4.Program.Ty	Effect4.Program.Ty.isFactor.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.isMember	Effect4.Program.Ty	Effect4.Program.Ty.isMember.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.isNever	Effect4.Program.Ty	Effect4.Program.Ty.key.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.isTagged	Effect4.Program.Ty	Effect4.Program.Ty.isTagged.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.key	Effect4.Program.Ty	Effect4.Program.Ty.key.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.members	Effect4.Program.Ty	Effect4.Program.Ty.members.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.normalize	Effect4.Program.Ty	Effect4.Program.Ty.normalize.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.payloadOf	Effect4.Program.Ty	Effect4.Program.Ty.isTagged.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Ty.renderRaw	Effect4.Program.Ty	Effect4.Program.Ty.renderRaw.match_1	discr 0	alts 22	catchAll false
+  Effect4.Program.Ty.sub	Effect4.Program.Ty	Effect4.Program.Ty.sub.match_1	discr 0	alts 15	catchAll true
+  Effect4.Program.Ty.sub	Effect4.Program.Ty	Effect4.Program.Ty.sub.match_1	discr 1	alts 15	catchAll true
+  Effect4.Program.Ty.taggedColumn	Effect4.Program.Ty	Effect4.Program.Ty.taggedColumn.match_1	discr 0	alts 8	catchAll true
+  Effect4.Program.instReprTy.repr	Effect4.Program.Ty	Effect4.Program.instReprTy.repr.match_1	discr 0	alts 20	catchAll false
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_40	discr 0	alts 20	catchAll false
+  Effect4.Program.selectRefusal	Effect4.Program.Typing.Blame	Effect4.Program.selectRefusal.match_1	discr 1	alts 3	catchAll true
+  Effect4.Program.fiberTy	Effect4.Program.Typing.Rules	Effect4.Program.fiberTy.match_1	discr 0	alts 2	catchAll true
+  Effect4.Schema.Bridge.schema	Effect4.Schema.Bridge	Effect4.Schema.Bridge.schema.match_1	discr 0	alts 20	catchAll false
+  Effect4.Schema.Codec.decodeRaw	Effect4.Schema.Codec	Effect4.Schema.Codec.decodeRaw.match_3	discr 0	alts 13	catchAll true
+  Effect4.Schema.Codec.encodeRaw	Effect4.Schema.Codec	Effect4.Schema.Codec.encodeRaw.match_1	discr 0	alts 16	catchAll true
+  Effect4.Schema.Codec.isSupported	Effect4.Schema.Codec	Effect4.Schema.Codec.isSupported.match_1	discr 0	alts 14	catchAll true
+  Effect4.Schema.Codec.layout	Effect4.Schema.Codec	Effect4.Schema.Codec.layout.match_1	discr 0	alts 8	catchAll true
+  Effect4.Store.ProgramGen.TyC.toValTy	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TyC.toValTy.match_1	discr 0	alts 20	catchAll false
+info: Test/Audit/TraversalCensus.lean:78:0: #exhaustive_gate Effect4.Program.Term (family [Effect4.Program.Term,
+ Effect4.Program.Terms]) under Effect4: 34 match(es) read it, 29 with no catch-all — appending a constructor refuses exactly those
+  Effect4.Api.TestClock.dilateAlgebra	Effect4.Api.TestClock	Effect4.Api.TestClock.dilateAlgebra.match_1	discr 1	alts 2	catchAll true
+  Effect4.Program.pairArgs?	Effect4.Codegen.PrintLeaf	Effect4.Program.pairArgs?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.printTerm	Effect4.Codegen.PrintLeaf	Effect4.Program.printTerm.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.printTerms	Effect4.Codegen.PrintLeaf	Effect4.Program.printTerms.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.Terms.names?	Effect4.Codegen.Read	Effect4.Program.Terms.names?.match_1	discr 0	alts 4	catchAll false
+  Effect4.Program.noRow	Effect4.Codegen.Read	Effect4.Program.noRow.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.readLiteral	Effect4.Codegen.Read	Effect4.Program.readLiteral.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.tupleRequestReadable	Effect4.Codegen.Read	Effect4.Program.tupleRequestReadable.match_1	discr 0	alts 3	catchAll true
+  Effect4.Program.Terms.names?.hom	Effect4.Laws.Program.Folds.Term	Effect4.Program.Terms.names?.match_1	discr 0	alts 4	catchAll false
+  Effect4.Program.Terms.toList.hom	Effect4.Laws.Program.Folds.Term	Effect4.Program.Terms.toList.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.argTy.hom	Effect4.Laws.Program.Folds.Term	Effect4.Program.argTy.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.argTy.hom	Effect4.Laws.Program.Folds.Term	Effect4.Program.argsTy.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.noRow.alg	Effect4.Laws.Program.Folds.Term	Effect4.Program.noRow.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.noRow.hom	Effect4.Laws.Program.Folds.Term	Effect4.Program.noRow.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.Term.scoped	Effect4.Machine.Term	Effect4.Program.Term.scoped.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.Terms.scoped	Effect4.Machine.Term	Effect4.Program.Terms.toList.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.Terms.toList	Effect4.Machine.Term	Effect4.Program.Terms.toList.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.evalTerm	Effect4.Machine.Term	Effect4.Program.Term.scoped.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.evalTerms	Effect4.Machine.Term	Effect4.Program.Terms.toList.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.Term.weaken	Effect4.Program.Eff	Effect4.Program.Term.weaken.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.Terms.weaken	Effect4.Program.Eff	Effect4.Program.Terms.weaken.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.cata_term	Effect4.Program.Fold	Effect4.Program.cata_term.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.cata_terms	Effect4.Program.Fold	Effect4.Program.cata_terms.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.foldM_term	Effect4.Program.Fold	Effect4.Program.cata_term.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.foldM_terms	Effect4.Program.Fold	Effect4.Program.cata_terms.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.foldMapAt_term	Effect4.Program.Fold	Effect4.Program.cata_term.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.foldMapAt_terms	Effect4.Program.Fold	Effect4.Program.cata_terms.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.foldMap_term	Effect4.Program.Fold	Effect4.Program.cata_term.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.foldMap_terms	Effect4.Program.Fold	Effect4.Program.cata_terms.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.argTy	Effect4.Program.Typing.Rules	Effect4.Program.argTy.match_1	discr 0	alts 3	catchAll false
+  Effect4.Program.argsTy	Effect4.Program.Typing.Rules	Effect4.Program.argsTy.match_1	discr 0	alts 2	catchAll false
+  Effect4.Program.tagTest?	Effect4.Program.Typing.Rules	Effect4.Program.tagTest?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.ProgramGen.TermC.toValTerm	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TermC.toValTerm.match_1	discr 0	alts 3	catchAll false
+  Effect4.Store.ProgramGen.TermC.toValTerms	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TermC.toValTerms.match_1	discr 0	alts 2	catchAll false
+info: Test/Audit/TraversalCensus.lean:79:0: #exhaustive_gate Effect4.Store.Val (family [Effect4.Store.Val]) under Effect4: 241 match(es) read it, 16 with no catch-all — appending a constructor refuses exactly those
+  Effect4.Store.ApiGen.ExhaustionC.ofVal	Effect4.Api.Derived	Effect4.Store.ApiGen.ExhaustionC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.ApiGen.FiberIdC.ofVal	Effect4.Api.Derived	Effect4.Store.ApiGen.FiberIdC.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.ApiGen.FrontierReasonC.ofVal	Effect4.Api.Derived	Effect4.Store.ApiGen.FrontierReasonC.ofVal.match_3	discr 0	alts 6	catchAll true
+  Effect4.Store.ApiGen.KeyC.ofVal	Effect4.Api.Derived	Effect4.Store.ApiGen.KeyC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.RunnerGen.AdmitRefusalC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.AdmitRefusalC.ofVal.match_1	discr 0	alts 8	catchAll true
+  Effect4.Store.RunnerGen.CallC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.CallC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.RunnerGen.CauseC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.RefKeyC.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.RunnerGen.CommandC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.CommandC.ofVal.match_3	discr 0	alts 5	catchAll true
+  Effect4.Store.RunnerGen.CompletionC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.ExitC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.RunnerGen.DefectC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.DefectC.ofVal.match_1	discr 0	alts 7	catchAll true
+  Effect4.Store.RunnerGen.ErrC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.ErrC.ofVal.match_3	discr 0	alts 5	catchAll true
+  Effect4.Store.RunnerGen.ExitC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.ExitC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.RunnerGen.HeaderC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.HeaderC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.RunnerGen.OutcomeC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.OutcomeC.ofVal.match_1	discr 0	alts 4	catchAll true
+  Effect4.Store.RunnerGen.PhaseC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.PhaseC.ofVal.match_1	discr 0	alts 7	catchAll true
+  Effect4.Store.RunnerGen.ReasonC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.ReasonC.ofVal.match_7	discr 0	alts 4	catchAll true
+  Effect4.Store.RunnerGen.RefKeyC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.RefKeyC.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.RunnerGen.RefusalC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.RefusalC.ofVal.match_1	discr 0	alts 17	catchAll true
+  Effect4.Store.RunnerGen.ReplyC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.ReplyC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.RunnerGen.RunDecisionC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.RunDecisionC.ofVal.match_7	discr 0	alts 9	catchAll true
+  Effect4.Store.RunnerGen.StateC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.StateC.ofVal.match_1	discr 0	alts 5	catchAll true
+  Effect4.Store.RunnerGen.StuckC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.StuckC.ofVal.match_1	discr 0	alts 4	catchAll true
+  Effect4.Store.RunnerGen.TableRefusalC.ofVal	Effect4.Api.RunnerDerived	Effect4.Store.RunnerGen.ExitC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Machine.reasonsOfVal.hom	Effect4.Laws.Machine.Folds.Stores	Effect4.Machine.reasonsOfVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Machine.Val.keys.hom	Effect4.Laws.Machine.Folds.Val	Effect4.Machine.Val.keys.match_1	discr 0	alts 6	catchAll true
+  Effect4.Machine.Val.validIn.hom	Effect4.Laws.Machine.Folds.Val	Effect4.Machine.Val.validIn.match_1	discr 0	alts 6	catchAll true
+  Effect4.Machine.Val.keys	Effect4.Laws.Machine.Handles	Effect4.Machine.Val.keys.match_1	discr 0	alts 6	catchAll true
+  Effect4.Machine.Val.validIn	Effect4.Laws.Machine.StoresLaws	Effect4.Machine.Val.validIn.match_1	discr 0	alts 6	catchAll true
+  Effect4.Machine.Handle.ofStore	Effect4.Laws.Machine.StoresValue	Effect4.Machine.Handle.ofStore.match_1	discr 0	alts 2	catchAll true
+  Effect4.Machine.Witnesses.valCode	Effect4.Laws.Machine.Witnesses	Effect4.Machine.Witnesses.valCode.match_1	discr 0	alts 13	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_10	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_13	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_20	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_23	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_27	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_32	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_37	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_4	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.alg	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_7	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_10	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_13	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_20	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_23	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_27	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_32	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_37	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_4	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Program.Val.hasTy.match_7	discr 0	alts 2	catchAll true
+  Effect4.Schema.Codec.encodeRaw.hom	Effect4.Laws.Program.Folds.Ty	Effect4.Schema.Codec.encodeRaw.match_1	discr 1	alts 16	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_1	discr 0	alts 3	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_11	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_14	discr 0	alts 3	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_19	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_21	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_23	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_6	discr 0	alts 3	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_10	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_13	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_4	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_7	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_1	discr 0	alts 3	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_11	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_14	discr 0	alts 3	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_19	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_21	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_23	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_6	discr 0	alts 3	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_10	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_13	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_4	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.alg	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_7	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_1	discr 0	alts 3	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_11	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_14	discr 0	alts 3	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_19	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_21	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_23	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_6	discr 0	alts 3	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_10	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_13	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_4	discr 0	alts 2	catchAll true
+  Effect4.Program.Typed.Fits.hom	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.FlatFits.match_7	discr 0	alts 2	catchAll true
+  Effect4.Store.Val.WF.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.beq.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.beq.match_1	discr 0	alts 13	catchAll true
+  Effect4.Store.Val.beq.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.beq.match_1	discr 1	alts 13	catchAll true
+  Effect4.Store.Val.encode.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.handles.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.handles.match_1	discr 0	alts 6	catchAll true
+  Effect4.Store.Val.malformedRef.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.refs.match_1	discr 0	alts 6	catchAll true
+  Effect4.Store.Val.payload.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.refs.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.refs.match_1	discr 0	alts 6	catchAll true
+  Effect4.Store.Val.render.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.wf.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.acceptsAt.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.acceptsAt.match_3	discr 0	alts 15	catchAll true
+  Effect4.Store.printIn.hom	Effect4.Laws.Store.Folds.Val	Effect4.Store.printIn.match_12	discr 1	alts 12	catchAll false
+  Effect4.Machine.Val.asList?	Effect4.Machine.Alphabets	Effect4.Machine.Val.asList?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Machine.Val.cause?	Effect4.Machine.Alphabets	Effect4.Machine.Val.cause?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Machine.Val.snapshot?	Effect4.Machine.Alphabets	Effect4.Machine.Val.snapshot?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Machine.ofDefect	Effect4.Machine.Alphabets	Effect4.Machine.ofDefect.match_1	discr 0	alts 7	catchAll true
+  Effect4.Machine.ofErr	Effect4.Machine.Alphabets	Effect4.Machine.ofErr.match_1	discr 0	alts 5	catchAll true
+  Effect4.Machine.Env.ofEntry	Effect4.Machine.ContextMap	Effect4.Machine.Env.ofEntry.match_1	discr 0	alts 2	catchAll true
+  Effect4.Machine.Env.spine	Effect4.Machine.ContextMap	Effect4.Machine.Env.spine.match_1	discr 0	alts 2	catchAll true
+  Effect4.Machine.contAOf	Effect4.Machine.Stores	Effect4.Machine.contAOf.match_3	discr 1	alts 20	catchAll true
+  Effect4.Machine.ofCtx	Effect4.Machine.Stores	Effect4.Machine.ofCtx.match_1	discr 0	alts 2	catchAll true
+  Effect4.Machine.reasonsOfVal	Effect4.Machine.Stores	Effect4.Machine.reasonsOfVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Program.NativeAtom.tagHit	Effect4.Machine.Term	Effect4.Program.NativeAtom.tagHit.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.tuple?	Effect4.Machine.Term	Effect4.Program.Val.tuple?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.errOf	Effect4.Machine.Term	Effect4.Program.errOf.match_1	discr 0	alts 4	catchAll true
+  Effect4.Program.queryReasons?	Effect4.Machine.Term	Effect4.Program.queryReasons?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Machine.HandleKind.ofHandle	Effect4.Machine.Value	Effect4.Machine.HandleKind.ofHandle.match_1	discr 0	alts 2	catchAll true
+  Effect4.Machine.Value.ofExit	Effect4.Machine.Value	Effect4.Machine.Value.ofExit.match_1	discr 0	alts 3	catchAll true
+  Effect4.Machine.Value.ofReason	Effect4.Machine.Value	Effect4.Machine.Value.ofReason.match_6	discr 0	alts 4	catchAll true
+  Effect4.Program.actionAt	Effect4.Program.Compile	Effect4.Program.actionAt.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.actionAt	Effect4.Program.Compile	Effect4.Program.actionAt.match_3	discr 0	alts 2	catchAll true
+  Effect4.Program.contextsOf	Effect4.Program.Compile	Effect4.Program.contextsOf.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Config.Val.ofStore	Effect4.Program.ConfigValue	Effect4.Program.Config.Val.ofStore.match_4	discr 0	alts 7	catchAll true
+  Effect4.Program.Decision.decide	Effect4.Program.Decision	Effect4.Program.Decision.decide.match_3	discr 1	alts 6	catchAll true
+  Effect4.Program.Val.tagPayload?	Effect4.Program.Decision	Effect4.Program.Val.tagPayload?.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.NativeOp.syncOpOf	Effect4.Program.Native	Effect4.Program.NativeOp.syncOpOf.match_1	discr 1	alts 21	catchAll true
+  Effect4.Program.Stream.chunk?	Effect4.Program.Stream	Effect4.Program.Stream.chunk?.match_1	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_1	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_10	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_13	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_20	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_23	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_27	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_32	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_37	discr 0	alts 3	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_4	discr 0	alts 2	catchAll true
+  Effect4.Program.Val.hasTy	Effect4.Program.Typed	Effect4.Program.Val.hasTy.match_7	discr 0	alts 2	catchAll true
+  Effect4.Schema.Codec.encodeRaw	Effect4.Schema.Codec	Effect4.Schema.Codec.encodeRaw.match_1	discr 1	alts 16	catchAll true
+  Effect4.Store.cata_val	Effect4.Store.Carrier.Fold	Effect4.Store.cata_val.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.foldMap_val	Effect4.Store.Carrier.Fold	Effect4.Store.cata_val.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Image.ofBool	Effect4.Store.Carrier.Image	Effect4.Store.Image.ofBool.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.Image.ofCtor1	Effect4.Store.Carrier.Image	Effect4.Store.Image.ofCtor1.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.Image.ofCtor2	Effect4.Store.Carrier.Image	Effect4.Store.Image.ofCtor2.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.Image.ofCtor3	Effect4.Store.Carrier.Image	Effect4.Store.Image.ofCtor3.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.Image.ofList	Effect4.Store.Carrier.Image	Effect4.Store.Image.ofList.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.Image.ofOption	Effect4.Store.Carrier.Image	Effect4.Store.Image.ofOption.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.Image.ofPair	Effect4.Store.Carrier.Image	Effect4.Store.Image.ofPair.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.Image.ofString	Effect4.Store.Carrier.Image	Effect4.Store.Image.ofString.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.Image.ofUnit	Effect4.Store.Carrier.Image	Effect4.Store.Image.ofUnit.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.Image.ofSum	Effect4.Store.Carrier.Image.Containers	Effect4.Store.Image.ofSum.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.Image.ofTuple2	Effect4.Store.Carrier.Image.Containers	Effect4.Store.Image.ofTuple2.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.Val.WF	Effect4.Store.Carrier.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.beq	Effect4.Store.Carrier.Val	Effect4.Store.Val.beq.match_1	discr 0	alts 13	catchAll true
+  Effect4.Store.Val.beq	Effect4.Store.Carrier.Val	Effect4.Store.Val.beq.match_1	discr 1	alts 13	catchAll true
+  Effect4.Store.Val.children	Effect4.Store.Carrier.Val	Effect4.Store.Val.children.match_1	discr 0	alts 5	catchAll true
+  Effect4.Store.Val.encode	Effect4.Store.Carrier.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.handles	Effect4.Store.Carrier.Val	Effect4.Store.Val.handles.match_1	discr 0	alts 6	catchAll true
+  Effect4.Store.Val.payload	Effect4.Store.Carrier.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.render	Effect4.Store.Carrier.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.tag	Effect4.Store.Carrier.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.wf	Effect4.Store.Carrier.Val	Effect4.Store.Val.render.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.IntCanonical.ofVal	Effect4.Store.Domain.Canonical	Effect4.Store.IntCanonical.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.instCanonicalBool	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalBool.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalBytes	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalDigest.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalDigest	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalDigest.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalList	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalList.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalNat	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalNat.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalOption	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalOption.match_3	discr 0	alts 3	catchAll true
+  Effect4.Store.instCanonicalProd	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalProd.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalString	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalString.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalUInt64	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalNat.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalUInt8	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalNat.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalUnit	Effect4.Store.Domain.Canonical	Effect4.Store.instCanonicalUnit.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.ClockCanonical.ofVal	Effect4.Store.Domain.Clock	Effect4.Store.ClockCanonical.ofVal.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.JsonGen.Float64C.ofVal	Effect4.Store.Domain.Derived.Json	Effect4.Store.JsonGen.Float64C.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.JsonGen.JsonC.rawJson	Effect4.Store.Domain.Derived.Json	Effect4.Store.JsonGen.JsonC.rawJson.match_11	discr 0	alts 7	catchAll true
+  Effect4.Store.JsonGen.JsonC.rawP1	Effect4.Store.Domain.Derived.Json	Effect4.Store.JsonGen.JsonC.rawP1.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.ProgramGen.CauseTermC.rawCauseTerm	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.CauseTermC.rawCauseTerm.match_7	discr 0	alts 5	catchAll true
+  Effect4.Store.ProgramGen.DecisionC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.DecisionC.ofVal.match_1	discr 0	alts 4	catchAll true
+  Effect4.Store.ProgramGen.EffC.rawActionTerm	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.EffC.rawActionTerm.match_11	discr 0	alts 17	catchAll true
+  Effect4.Store.ProgramGen.EffC.rawEff	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.EffC.rawEff.match_29	discr 0	alts 26	catchAll true
+  Effect4.Store.ProgramGen.EffC.rawEffs	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TermC.rawTerms.match_3	discr 0	alts 3	catchAll true
+  Effect4.Store.ProgramGen.EffC.rawLayerTerm	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.EffC.rawLayerTerm.match_13	discr 0	alts 11	catchAll true
+  Effect4.Store.ProgramGen.EffC.rawLayerTerms	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TermC.rawTerms.match_3	discr 0	alts 3	catchAll true
+  Effect4.Store.ProgramGen.EffC.rawStmt	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.EffC.rawStmt.match_3	discr 0	alts 7	catchAll true
+  Effect4.Store.ProgramGen.EffC.rawStmts	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TermC.rawTerms.match_3	discr 0	alts 3	catchAll true
+  Effect4.Store.ProgramGen.EffTyC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.ForkOptionsC.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.ProgramGen.FinalizerStrategyC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.FinalizerStrategyC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.ProgramGen.FnNameC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.FnNameC.ofVal.match_1	discr 0	alts 6	catchAll true
+  Effect4.Store.ProgramGen.ForkOptionsC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.ForkOptionsC.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.ProgramGen.LitC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.LitC.ofVal.match_1	discr 0	alts 5	catchAll true
+  Effect4.Store.ProgramGen.MaskModeC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.MaskModeC.ofVal.match_1	discr 0	alts 4	catchAll true
+  Effect4.Store.ProgramGen.NativeOpC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.NativeOpC.ofVal.match_1	discr 0	alts 24	catchAll true
+  Effect4.Store.ProgramGen.ObserverModeC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.FinalizerStrategyC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.ProgramGen.RegistrationC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.FinalizerStrategyC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.ProgramGen.RowC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.RowC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.ProgramGen.RowKindC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.MaskModeC.ofVal.match_1	discr 0	alts 4	catchAll true
+  Effect4.Store.ProgramGen.RowShapeC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.RowShapeC.ofVal.match_1	discr 0	alts 5	catchAll true
+  Effect4.Store.ProgramGen.ServiceKeyC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.ServiceKeyC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.ProgramGen.ServiceNameC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.ServiceNameC.ofVal.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.ProgramGen.ServiceTypeCodeC.ofVal	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.ServiceNameC.ofVal.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.ProgramGen.TermC.rawTerm	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TermC.rawTerm.match_7	discr 0	alts 4	catchAll true
+  Effect4.Store.ProgramGen.TermC.rawTerms	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TermC.rawTerms.match_3	discr 0	alts 3	catchAll true
+  Effect4.Store.ProgramGen.TyC.rawTy	Effect4.Store.Domain.Derived.Program	Effect4.Store.ProgramGen.TyC.rawTy.match_7	discr 0	alts 21	catchAll true
+  Effect4.Store.SchemaGen.AnnotationEntryC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.AnnotationEntryC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.DocumentC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.AnnotationEntryC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.EnumEntryC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.AnnotationEntryC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.EnumValueC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.EnumValueC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.SchemaGen.GlobalSymbolKeyC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.ReferenceKeyC.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.LiteralValueC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.LiteralValueC.ofVal.match_1	discr 0	alts 5	catchAll true
+  Effect4.Store.SchemaGen.MultiDocumentC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.AnnotationEntryC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.PropertyKeyC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.PropertyKeyC.ofVal.match_1	discr 0	alts 4	catchAll true
+  Effect4.Store.SchemaGen.ReferenceEntryC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.AnnotationEntryC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.ReferenceKeyC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.ReferenceKeyC.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.RepresentationAnnotationC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.AnnotationEntryC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.RepresentationC.rawCheck	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.RepresentationC.rawCheck.match_5	discr 0	alts 3	catchAll true
+  Effect4.Store.SchemaGen.RepresentationC.rawCheckRepresentationAnnotationOf	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.RepresentationC.rawCheckRepresentationAnnotationOf.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.RepresentationC.rawElementOf	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.RepresentationC.rawCheckRepresentationAnnotationOf.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.RepresentationC.rawIndexSignatureOf	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.AnnotationEntryC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.RepresentationC.rawO5	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.RepresentationC.rawO5.match_3	discr 0	alts 3	catchAll true
+  Effect4.Store.SchemaGen.RepresentationC.rawO7	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.RepresentationC.rawO7.match_3	discr 0	alts 3	catchAll true
+  Effect4.Store.SchemaGen.RepresentationC.rawPropertySignatureOf	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.RepresentationC.rawPropertySignatureOf.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.SchemaGen.RepresentationC.rawRepresentation	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.RepresentationC.rawRepresentation.match_23	discr 0	alts 23	catchAll true
+  Effect4.Store.SchemaGen.UnionModeC.ofVal	Effect4.Store.Domain.Derived.Schema	Effect4.Store.SchemaGen.UnionModeC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.ValueGen.KindC.ofVal	Effect4.Store.Domain.Derived.Value	Effect4.Store.ValueGen.KindC.ofVal.match_1	discr 0	alts 16	catchAll true
+  Effect4.Store.ValueGen.ShapeC.rawP0	Effect4.Store.Domain.Derived.Value	Effect4.Store.ValueGen.ShapeC.rawP0.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.ValueGen.ShapeC.rawP2	Effect4.Store.Domain.Derived.Value	Effect4.Store.ValueGen.ShapeC.rawP2.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.ValueGen.ShapeC.rawP3	Effect4.Store.Domain.Derived.Value	Effect4.Store.ValueGen.ShapeC.rawP0.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.ValueGen.ShapeC.rawShape	Effect4.Store.Domain.Derived.Value	Effect4.Store.ValueGen.ShapeC.rawShape.match_11	discr 0	alts 15	catchAll true
+  Effect4.Store.ValueGen.ShapeDocC.ofVal	Effect4.Store.Domain.Derived.Value	Effect4.Store.ValueGen.ShapeDocC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.ValueGen.ValC.rawVal	Effect4.Store.Domain.Derived.Value	Effect4.Store.ValueGen.ValC.rawVal.match_22	discr 0	alts 13	catchAll true
+  Effect4.Store.ValueGen.ValC.toValVal	Effect4.Store.Domain.Derived.Value	Effect4.Store.ValueGen.ValC.toValVal.match_1	discr 0	alts 12	catchAll false
+  Effect4.Store.Val.malformedRef	Effect4.Store.Domain.Node	Effect4.Store.Val.refs.match_1	discr 0	alts 6	catchAll true
+  Effect4.Store.Val.refs	Effect4.Store.Domain.Node	Effect4.Store.Val.refs.match_1	discr 0	alts 6	catchAll true
+  Effect4.Store.instCanonicalAnyRef	Effect4.Store.Domain.Node	Effect4.Store.instCanonicalRef.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.instCanonicalRef	Effect4.Store.Domain.Node	Effect4.Store.instCanonicalRef.match_1	discr 0	alts 2	catchAll true
+  Effect4.Store.PinGen.PinC.ofVal	Effect4.Store.Domain.PinDerived	Effect4.Store.PinGen.PinC.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.PinGen.PinRoleC.ofVal	Effect4.Store.Domain.PinDerived	Effect4.Store.PinGen.PinRoleC.ofVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.PinGen.TreeC.ofVal	Effect4.Store.Domain.PinDerived	Effect4.Store.PinGen.TreeC.ofVal.match_3	discr 0	alts 2	catchAll true
+  Effect4.Store.acceptsAt	Effect4.Store.Domain.Shape	Effect4.Store.acceptsAt.match_3	discr 0	alts 15	catchAll true
+  Effect4.Store.printIn	Effect4.Store.Domain.Shape	Effect4.Store.printIn.match_12	discr 1	alts 12	catchAll false
+  Effect4.Store.Annotation.ofVal	Effect4.Store.Domain.Traits	Effect4.Store.Annotation.ofVal.match_4	discr 0	alts 2	catchAll true
+  Effect4.Store.Annotation.prevOfVal	Effect4.Store.Domain.Traits	Effect4.Store.Annotation.prevOfVal.match_1	discr 0	alts 3	catchAll true
+  Effect4.Store.Node.prevOf	Effect4.Store.Domain.Traits	Effect4.Store.Node.prevOf.match_1	discr 0	alts 2	catchAll true

@@ -6747,6 +6747,6 @@ end Effect4.Machine
 #obligation_proved Effect4.Machine.M1.Handles.setCell_keys_of_subset := @Effect4.Machine.DeferredStore.setCell_keys_of_subset
 #obligation_proved Effect4.Machine.M1.Handles.setCell_appendDue_keys := @Effect4.Machine.DeferredStore.setCell_appendDue_keys
 
-#typed_state_obligations Effect4.Machine.M1.Handles ceiling 5 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Machine.M1.Handles ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
 #typed_state_obligations Effect4.Machine.M1.DeferredWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
-#typed_state_obligations Effect4.Machine.M1Origin ceiling 4 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Machine.M1Origin ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

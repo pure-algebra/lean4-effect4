@@ -17,7 +17,7 @@ through `run_eq_meaning`.
   wrong-shape exit as a parameter (`denoteWith_badShape`). A typed program's run does not
   depend on that parameter (`meaning_never_wrong`): no arm that answers it is reached. An exit
   predicate could not say this, because a program may legitimately die.
-* **The exit has the type** (`meaning_typed`, `ExitOk`): a success is a valid value of the
+* **The exit has the type** (`meaning_typed`, `ExitHasTy`): a success is a valid value of the
   answer type, and every typed failure of a cause is inside the error type. Defects and
   interruptions are outside the error type by construction.
 * **The invariant a run keeps** (`TypedAt`): the environment fits its types, every value in it
@@ -320,8 +320,11 @@ theorem TypedAt.later {tys : TyEnv} {env : List Val} {s s' : Stores} (h : TypedA
   heap := hheap
 
 /-- An exit has a program's type: a success is a valid value of the answer type, and every
-typed failure of a cause is inside the error type. -/
-def ExitOk (answer error : Ty) (s : Stores) : ExitV → Prop
+typed failure of a cause is inside the error type. Named `ExitOk` until 2026-10-01; renamed so
+that `ExitOk` names one judgment, the typed state's `Typed.ExitOk` (`FitsExit ∧ NoShapeDefect`,
+`Typed/Admission.lean`), landing plan O5. The typed state's `FitsExit` reaches this judgment
+through `Typed.exitHasTy_of_fitsExit` (`Typed/ExitConnector.lean`) under two premises. -/
+def ExitHasTy (answer error : Ty) (s : Stores) : ExitV → Prop
   | .success v => Val.hasTy v answer = true ∧ v.validIn s = true
   | .failure c => causeAdmits (fun w ty => Val.hasTy w ty) error c = true
 
@@ -330,7 +333,7 @@ without: they run alike, the exit has the type, and the store half of the invari
 structure SoundP (pw pd : Effects.Program StoreSig ExitV) (s : Stores) (answer error : Ty) :
     Prop where
   independent : runP pw s = runP pd s
-  exit : ExitOk answer error (runP pd s).2 (runP pd s).1
+  exit : ExitHasTy answer error (runP pd s).2 (runP pd s).1
   le : s.le (runP pd s).2
   wf : (runP pd s).2.WF
   heap : Stores.HeapNat (runP pd s).2
@@ -342,7 +345,7 @@ abbrev Sound (bad : ExitV) (e : NativeEff) (env : List Val) (s : Stores) (t : Ef
 
 /-- A pure exit on both sides is sound when the exit has the type. -/
 theorem SoundP.pure {s : Stores} {answer error : Ty} (hwf : s.WF) (hheap : Stores.HeapNat s)
-    (ex : ExitV) (hex : ExitOk answer error s ex) :
+    (ex : ExitV) (hex : ExitHasTy answer error s ex) :
     SoundP (Pure.pure ex) (Pure.pure ex) s answer error :=
   ⟨rfl, hex, Stores.le_refl s, hwf, hheap⟩
 
@@ -364,16 +367,16 @@ theorem causeAdmits_of_forall {f g : Val → Ty → Bool} {ty ty' : Ty}
   | die _ _ => rfl
   | interrupt _ _ => rfl
 
-theorem ExitOk.widen {a a' e e' : Ty} {s : Stores} {ex : ExitV}
+theorem ExitHasTy.widen {a a' e e' : Ty} {s : Stores} {ex : ExitV}
     (ha : ∀ v, Val.hasTy v a = true → Val.hasTy v a' = true)
     (he : ∀ v, Val.hasTy v e = true → Val.hasTy v e' = true)
-    (h : ExitOk a e s ex) : ExitOk a' e' s ex := by
+    (h : ExitHasTy a e s ex) : ExitHasTy a' e' s ex := by
   cases ex with
   | success v => exact ⟨ha v h.1, h.2⟩
   | failure c => exact causeAdmits_of_forall he c h
 
-theorem ExitOk.later {a e : Ty} {s s' : Stores} {ex : ExitV} (hle : s.le s')
-    (h : ExitOk a e s ex) : ExitOk a e s' ex := by
+theorem ExitHasTy.later {a e : Ty} {s s' : Stores} {ex : ExitV} (hle : s.le s')
+    (h : ExitHasTy a e s ex) : ExitHasTy a e s' ex := by
   cases ex with
   | success v => exact ⟨h.1, Val.validIn_mono hle v h.2⟩
   | failure c => exact h
@@ -404,14 +407,14 @@ theorem SoundP.bind {pw pd : Effects.Program StoreSig ExitV} {s : Stores} {a e a
 
 theorem exitOk_fail {ty : Ty} {s : Stores} {x : Val} (hs : supportedErrTy ty = true)
     (hx : Val.hasTy x ty = true) (answer : Ty) :
-    ExitOk answer ty s (Exit.failure (Cause.fail (errOf x))) := by
+    ExitHasTy answer ty s (Exit.failure (Cause.fail (errOf x))) := by
   show causeAdmits _ ty (Cause.fail (errOf x)) = true
   unfold causeAdmits Cause.fail
   rw [List.all_cons, List.all_nil, Bool.and_true]
   exact errAdmits_errOf ty x [] _ hs hx
 
 /-- A reified exit has the exit type of its program, and is valid where the exit is. -/
-theorem reify_ok {a e : Ty} {s : Stores} {ex : ExitV} (h : ExitOk a e s ex) :
+theorem reify_ok {a e : Ty} {s : Stores} {ex : ExitV} (h : ExitHasTy a e s ex) :
     Val.hasTy (reifyExitVal ex) (.exitOf a e) = true ∧ (reifyExitVal ex).validIn s = true := by
   cases ex with
   | success v =>
@@ -497,8 +500,8 @@ theorem causeAdmits_combine {f : Val → Ty → Bool} {ty : Ty} {c d : CauseV}
 
 /-- The exit a finalizer leaves: the body's exit, or the finalizer's failure, or both. -/
 theorem restore_ok {a e ef af : Ty} {s : Stores} {ex fex : ExitV}
-    (hex : ExitOk a e s ex) (hfex : ExitOk af ef s fex) :
-    ExitOk a (e.join ef) s (Exit.restoreAfterFinalizer ex (finVoid fex)) := by
+    (hex : ExitHasTy a e s ex) (hfex : ExitHasTy af ef s fex) :
+    ExitHasTy a (e.join ef) s (Exit.restoreAfterFinalizer ex (finVoid fex)) := by
   cases ex with
   | success v =>
     cases fex with
@@ -738,7 +741,7 @@ theorem TypedAt.empty : TypedAt [] [] Stores.empty :=
 valid value of the answer type or a cause inside the error type. -/
 theorem meaning_typed (e : NativeEff) (t : EffTy) (hs : Straight e = true)
     (hty : effTy nativeSignature [] e = some t) :
-    ExitOk t.answer t.error (meaning e [] Stores.empty).2 (meaning e [] Stores.empty).1 :=
+    ExitHasTy t.answer t.error (meaning e [] Stores.empty).2 (meaning e [] Stores.empty).1 :=
   (sound badShapeExit e [] [] Stores.empty t hs hty TypedAt.empty).exit
 
 /-- **A typed straight program does not go wrong.** Whatever exit the wrong-shape arms are
@@ -763,7 +766,7 @@ theorem run_typed (e : NativeEff) (t : EffTy) (fuel : Nat) (hs : Straight e = tr
     (hd : depth e ≤ fuel) (hfuel : 2 * steps e + 6 ≤ fuel) :
     (Api.run e fuel).outcome = Api.Outcome.finished ∧
       ∃ ex, (Api.run e fuel).exit = some ex ∧
-        ExitOk t.answer t.error (Api.run e fuel).stores ex := by
+        ExitHasTy t.answer t.error (Api.run e fuel).stores ex := by
   obtain ⟨hout, hexit, hstores⟩ := run_eq_meaning e fuel hs hd hfuel
   refine ⟨hout, _, hexit, ?_⟩
   rw [hstores]

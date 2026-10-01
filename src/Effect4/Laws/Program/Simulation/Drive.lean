@@ -1144,4 +1144,4 @@ end Effect4.Program.Sched
 #obligation_proved Effect4.Program.Sched.M1Drive.dropFinalizer_ok := @Effect4.Program.Sched.dropFinalizer_ok
 
 #typed_state_obligations Effect4.Program.Sched.M1Clock ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
-#typed_state_obligations Effect4.Program.Sched.M1Drive ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Program.Sched.M1Drive ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

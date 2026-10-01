@@ -26,9 +26,9 @@ tokenized, then parsed, every audited file to catch a trust token inside an
 `example`, which leaves no constant; the owner retired it together with the
 proof-shape ceiling (deep-dive review §11). What that pass caught is a
 declaration this command sees, except a `sorry` or `native_decide` inside an
-`example`, which is a warning the build shows; `-DwarningAsError=true` would make
-it an error once the tree's 237 warnings (unused `simp` arguments, mostly) are
-cleared.
+`example`, which is a warning; since the owner's ruling of 2026-09-19 every library
+of `lakefile.toml` builds with `-DwarningAsError=true`, so that warning fails the
+build where the `example` is written.
 
 ## The policy on `example`
 

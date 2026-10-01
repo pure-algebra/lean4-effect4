@@ -116,4 +116,4 @@ theorem obs_replace_trace {ν σ χ κ φ η : Type}
 end Effect4.Machine.M1Trace
 -- END M1 PHASE B Machine.Behaviour
 
-#typed_state_obligations Effect4.Machine.M1Trace ceiling 1 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1Trace ceiling 0 using aesop (rule_sets := [Effect4.Stores])

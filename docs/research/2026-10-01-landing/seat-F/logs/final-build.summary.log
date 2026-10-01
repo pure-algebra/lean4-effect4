@@ -1,0 +1,5 @@
+info: Test/All.lean:147:0: Effect4 library-root gate: 134 API/utility modules, 213 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:147:0: Effect4 module and axiom gate: checked 493 modules and 69146 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+Build completed successfully (710 jobs).
+## exit=0 seconds=283 cmd=lake build Effect4.Laws Test.All
