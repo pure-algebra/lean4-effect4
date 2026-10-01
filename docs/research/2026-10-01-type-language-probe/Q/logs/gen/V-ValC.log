@@ -1,0 +1,4 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ ./docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Main.lean --group ProbeValC --imports ProbeQV.Val\,Effect4.Store.Domain.Canonical --out docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQV/ValC.lean ProbeQV.Val
+# started 2026-10-01T20:38:20Z (LEAN_NUM_THREADS=1)
+# exit=0 seconds=3

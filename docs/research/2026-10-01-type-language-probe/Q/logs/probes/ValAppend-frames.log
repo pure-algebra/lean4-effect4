@@ -1,0 +1,9 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ ./docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true docs/research/2026-10-01-type-language-probe/Q/probes/ValAppend/Frames.lean
+# started 2026-10-01T20:37:42Z (LEAN_NUM_THREADS=1)
+'ProbeQV.Val.decode_encode' depends on axioms: [propext, Quot.sound]
+'ProbeQV.Val.decode_exact' depends on axioms: [propext, Quot.sound]
+'ProbeQV.Val.encode_injective' depends on axioms: [propext, Quot.sound]
+'ProbeQV.Val.beq_iff' depends on axioms: [propext]
+'ProbeQV.Val.ind' does not depend on any axioms
+# exit=0 seconds=1
