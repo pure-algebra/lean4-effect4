@@ -1,0 +1,9 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ docs/research/2026-10-01-type-language-probe/Q/bin/olean.sh docs/research/2026-10-01-type-language-probe/Q/generated docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQNum/Fold.lean
+# started 2026-10-01T19:31:15Z (LEAN_NUM_THREADS=1)
+'ProbeQNum.hom_eq_cata_ty' depends on axioms: [propext]
+'ProbeQNum.cata_id_ty' does not depend on any axioms
+'ProbeQNum.foldM_eq_cata_ty' depends on axioms: [propext, Quot.sound]
+'ProbeQNum.foldM_id_ty' depends on axioms: [propext, Quot.sound]
+'ProbeQNum.foldM_natural_ty' depends on axioms: [propext, Quot.sound]
+# exit=0 seconds=2

@@ -1,0 +1,64 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ docs/research/2026-10-01-type-language-probe/Q/bin/olean.sh docs/research/2026-10-01-type-language-probe/Q/generated docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQNum/TyView.lean
+# started 2026-10-01T19:31:34Z (LEAN_NUM_THREADS=1)
+/Users/pooks/Dev/lean4-effect4-probe-Q/docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQNum/TyView.lean:287:17: error: Tactic `rfl` failed: The left-hand side
+  true
+is not definitionally equal to the right-hand side
+  false
+
+h✝ : ¬nat = number
+ha : nat.isMember = true
+hb : number.isMember = true
+hlit : nat.litRule number = false
+htop : nat.topRule number = false
+hh : nat.sameHead number = false
+⊢ true = false
+/Users/pooks/Dev/lean4-effect4-probe-Q/docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQNum/TyView.lean:279:53: error: unsolved goals
+case case17
+a b : Ty
+ha : a.isMember = true
+hb : b.isMember = true
+hlit : a.litRule b = false
+htop : a.topRule b = false
+hh :
+  (match a, b with
+    | never, never => true
+    | unit, unit => true
+    | nat, nat => true
+    | int, int => true
+    | string, string => true
+    | bool, bool => true
+    | handle target1, handle target2 => decide (target1 = target2)
+    | inner.option, inner_1.option => true
+    | inner.list, inner_1.list => true
+    | left.prod right, left_1.prod right_1 => true
+    | left.except right, left_1.except right_1 => true
+    | left.exitOf right, left_1.exitOf right_1 => true
+    | inner.causeOf, inner_1.causeOf => true
+    | left.fiberOf right, left_1.fiberOf right_1 => true
+    | lit target1, lit target2 => decide (target1 = target2)
+    | inner.refOf, inner_1.refOf => true
+    | left.deferredOf right, left_1.deferredOf right_1 => true
+    | var index1, var index2 => decide (index1 = index2)
+    | unknown, unknown => true
+    | number, number => true
+    | x, x_1 => false) =
+    false
+x✝¹⁴ : a = never → False
+x✝¹³ : ∀ (a1 a2 : Ty), a = a1.union a2 → False
+x✝¹² : ∀ (b1 b2 : Ty), b = b1.union b2 → False
+x✝¹¹ : b = unknown → False
+h✝ : ¬a = b
+x✝¹⁰ : ∀ (value : String), a = lit value → b = string → False
+x✝⁹ : ∀ (a_1 b_1 : Ty), a = a_1.option → b = b_1.option → False
+x✝⁸ : ∀ (a_1 b_1 : Ty), a = a_1.list → b = b_1.list → False
+x✝⁷ : ∀ (a1 a2 b1 b2 : Ty), a = a1.prod a2 → b = b1.prod b2 → False
+x✝⁶ : ∀ (e1 a1 e2 a2 : Ty), a = e1.except a1 → b = e2.except a2 → False
+x✝⁵ : ∀ (a1 e1 a2 e2 : Ty), a = a1.exitOf e1 → b = a2.exitOf e2 → False
+x✝⁴ : ∀ (e1 e2 : Ty), a = e1.causeOf → b = e2.causeOf → False
+x✝³ : ∀ (a1 e1 a2 e2 : Ty), a = a1.fiberOf e1 → b = a2.fiberOf e2 → False
+x✝² : ∀ (a1 a2 : Ty), a = a1.refOf → b = a2.refOf → False
+x✝¹ : ∀ (a1 e1 a2 e2 : Ty), a = a1.deferredOf e1 → b = a2.deferredOf e2 → False
+x✝ : a = nat → b = number → False
+⊢ false = false
+# exit=1 seconds=15
