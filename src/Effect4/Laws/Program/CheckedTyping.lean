@@ -146,7 +146,15 @@ theorem admitProgram_eq_ok {program : NativeEff} {table : RowTable}
             · rename_i why hwhy
               rw [admitted.runnable] at hwhy
               contradiction
-            · cases admitted
-              rfl
+            · split
+              · rename_i pos hpos
+                rw [admitted.columnsTable] at hpos
+                contradiction
+              · split
+                · rename_i pos hpos
+                  rw [admitted.columnsType] at hpos
+                  contradiction
+                · cases admitted
+                  rfl
 
 end Effect4.Program

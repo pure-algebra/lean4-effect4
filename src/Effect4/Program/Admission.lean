@@ -14,8 +14,11 @@ A program is admitted to run when:
 3. The table meets the three program-plane lawfulness conditions (`Table.lawful table = true`).
 4. Every row can be registered by the runner (`checkTable table = none`).
 5. Host answer and error types contain no internal handle kind (row 97 interim).
+6. Every request, answer and error column of the table, and the program's answer and error
+   columns, are inhabited or `never` (`admitColumn`, rows 127 and 149; refused as
+   `emptyColumn at`).
 
-All five requirements are verified by `admitProgram`, producing a certified `AdmittedProgram`
+All six requirements are verified by `admitProgram`, producing a certified `AdmittedProgram`
 whose fields witness each check. If admission fails, an exact `AdmitRefusal` reports the failure.
 Admission depends strictly on the program plane and never imports codegen.
 
@@ -150,9 +153,9 @@ def findIntInProgram (program : NativeEff) : Option Path :=
 `admitColumn` at every column admission reads, each refusal at its position: every supplied row's
 request, answer and error column (`findEmptyColumnInTable`) and the program's inferred answer and
 error (`findEmptyColumnInEffTy`). Its refusal is `emptyColumn at` (row 149); the frozen
-`AdmitRefusal.uninhabited at` stays the `int` scan's. Wiring it into `admitProgram` adds an
-`AdmitRefusal` constructor, an input of the generated runner group, so it waits on the
-coordinator (seat A's receipt has the hunk). -/
+`AdmitRefusal.uninhabited at` stays the `int` scan's. `admitProgram` runs it last, after the
+runner's registration check (decision D-A1 (a), integration seat I2), so every earlier refusal
+keeps its statement. -/
 
 /-- The column check at a position: the position when the column is refused (rows 127, 149). -/
 def emptyColumnAt (pos : Path) (t : Ty) : Option Path :=
@@ -311,10 +314,13 @@ inductive AdmitRefusal
   | uninhabited («at» : Path)
   /-- A host answer or error type mentions a reserved internal handle kind. -/
   | internalHandle («at» : Path)
+  /-- A request, answer or error column of the table, or the program's answer or error
+  column, is empty and is not `never` (rows 127, 149). -/
+  | emptyColumn («at» : Path)
 deriving DecidableEq, Repr
 
 /-- A program admitted to run against a table: its type, the execution checks, and
-the successful integer and internal-handle scans. The fields are proofs, so an `AdmittedProgram` cannot be forged by
+the successful integer, internal-handle and column scans. The fields are proofs, so an `AdmittedProgram` cannot be forged by
 building the structure with the wrong table — the table and the program are its indices. -/
 structure AdmittedProgram (program : NativeEff) (table : RowTable)
     extends TypedProgram (nativeSignature table) program where
@@ -324,10 +330,13 @@ structure AdmittedProgram (program : NativeEff) (table : RowTable)
   internalFreeTable : findInternalHandleInTable table = none
   intFreeProgram : findIntInProgram program = none
   intFreeType : findIntInEffTy ty = none
+  columnsTable : findEmptyColumnInTable table = none
+  columnsType : findEmptyColumnInEffTy ty = none
 
 /-- Decide admission by scanning raw table types, taking the one typing certificate
 (`checkTypedProgram`, shared with code generation), scanning its columns, then checking
-names and registrations. Each certificate field records the exact check that admitted it. -/
+names and registrations, and last the column check (rows 127, 149). Each certificate field
+records the exact check that admitted it. -/
 def admitProgram (program : NativeEff) (table : RowTable := []) :
     Except AdmitRefusal (AdmittedProgram program table) :=
   match htable : findIntInTable table with
@@ -352,8 +361,14 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
         | none =>
           match hrunnable : checkTable table with
           | some why => .error (.table why)
-          | none => .ok ⟨typing, (Table.checkLawful_eq_none_iff table).mp hlawful, hrunnable, htable,
-              hinternal, hprogram, htype⟩
+          | none =>
+            match hcolumns : findEmptyColumnInTable table with
+            | some pos => .error (.emptyColumn pos)
+            | none =>
+              match hcolType : findEmptyColumnInEffTy typing.ty with
+              | some pos => .error (.emptyColumn pos)
+              | none => .ok ⟨typing, (Table.checkLawful_eq_none_iff table).mp hlawful, hrunnable,
+                  htable, hinternal, hprogram, htype, hcolumns, hcolType⟩
 
 /-- Failure of ordinary admission, or a program outside the proved straight fragment.
 Outside-fragment refusal does not mean that the program is ill-typed. -/

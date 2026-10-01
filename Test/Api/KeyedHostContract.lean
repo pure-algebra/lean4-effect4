@@ -25,7 +25,9 @@ def initial : Session program table where
     intFreeTable := by decide
     internalFreeTable := by decide
     intFreeProgram := by decide
-    intFreeType := by decide }
+    intFreeType := by decide
+    columnsTable := by decide +kernel
+    columnsType := by decide +kernel }
   header := ⟨version, "multi", "keyed-v3", table⟩
   machine := Api.load program 1000
 

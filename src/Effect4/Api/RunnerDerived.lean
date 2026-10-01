@@ -774,7 +774,8 @@ def shapeDoc : ShapeDoc :=
         ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
       ("table", 4, [("why", (shape _root_.Effect4.Program.TableRefusal).root)]),
       ("uninhabited", 5, [("at", (shape (@_root_.List (_root_.String))).root)]),
-      ("internalHandle", 6, [("at", (shape (@_root_.List (_root_.String))).root)])],
+      ("internalHandle", 6, [("at", (shape (@_root_.List (_root_.String))).root)]),
+      ("emptyColumn", 7, [("at", (shape (@_root_.List (_root_.String))).root)])],
    (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).defs ++
      (shape _root_.Effect4.Program.TableRefusal).defs ++
      (shape (@_root_.List (_root_.String))).defs⟩
@@ -787,6 +788,7 @@ def toVal : _root_.Effect4.Program.AdmitRefusal → Val
   | .table a0 => .ctor 4 [Canonical.toVal a0]
   | .uninhabited a0 => .ctor 5 [Canonical.toVal a0]
   | .internalHandle a0 => .ctor 6 [Canonical.toVal a0]
+  | .emptyColumn a0 => .ctor 7 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.AdmitRefusal)
   | .ctor 0 [] => some .illTyped
@@ -796,6 +798,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.AdmitRefusal)
   | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.TableRefusal) v0).map .table
   | .ctor 5 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .uninhabited
   | .ctor 6 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .internalHandle
+  | .ctor 7 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .emptyColumn
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -852,6 +855,9 @@ theorem fits (a : _root_.Effect4.Program.AdmitRefusal) : shapeDoc.accepts (toVal
       (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
   | «internalHandle» a0 =>
     exact accepts_sum _ _ _ 6 "internalHandle" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
+  | «emptyColumn» a0 =>
+    exact accepts_sum _ _ _ 7 "emptyColumn" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.AdmitRefusal) :=

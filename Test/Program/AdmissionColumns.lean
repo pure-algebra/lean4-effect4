@@ -18,9 +18,10 @@ on every type (`inhabited_iff_fits`, `Laws/Program/Typed/Membership.lean`); the 
 (`admitColumn_iff`). The located scans (`findEmptyColumnInTable`, `findEmptyColumnInEffTy`,
 `Program/Admission.lean`) name each refused column's position; the signature check refuses a row
 with an empty column (`RowReason.emptyColumn`, `Laws/Program/Signature.lean`). Runner admission
-(`admitProgram`) does not call the scans yet: its refusal needs an `AdmitRefusal` constructor, an
-input of the generated runner group, and the brief runs no generator. The tripwire below fails
-when that wiring lands.
+(`admitProgram`) calls the scans last, after the registration check, and refuses as
+`AdmitRefusal.emptyColumn at` (decision D-A1 (a), integration seat I2, with the generated runner
+group regenerated); the refusal `#guard`s below replace seat A's tripwire, which pinned the old
+acceptance.
 
 Red controls: a pair naming one cell twice fits `prod (refOf nat) (refOf string)` in no world
 (`shared_key_not_fits`, proved), which is why completeness declares each handle position at its
@@ -71,6 +72,14 @@ def hostRow (request answer : Ty) : Row :=
 /-- The data probe's program: one host call. -/
 def pHostNat : NativeEff := .perform (.external 0) (.lit (.nat 1))
 
+/-- A program whose answer column is `prod never nat`: the pair of a failed bind's value and a
+number. -/
+def pNeverPair : NativeEff :=
+  .bind (.fail (.lit (.nat 1))) (.succeed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 1)) .nil))))
+
+-- tested: the checker types it at `prod never nat`, the column admission refuses
+#guard (Api.typeOf pNeverPair).map (·.answer) == some (.prod .never .nat)
+
 -- tested: the scans locate CE-015's columns (a host-row answer, a host-row request, a program
 -- answer), and leave the designed bottom and inhabited columns alone
 #guard findEmptyColumnInTable [hostRow .nat (.except .never .never)] = some ["table", "0", "answer"]
@@ -90,10 +99,21 @@ def pHostNat : NativeEff := .perform (.external 0) (.lit (.nat 1))
   .error (.row 0 (.emptyColumn "answer"))
 #guard admitSig (SigApp.mk [hostRow (.prod .never .nat) .nat] []) =
   .error (.row 0 (.emptyColumn "request"))
--- tested (the tripwire): runner admission still admits CE-015's host table until the wiring in
--- seat A's receipt lands; this guard fails then and is deleted with it
+-- tested: runner admission refuses CE-015's columns, each at its position, after every other
+-- check has passed (a host-row answer, a host-row request, a program answer), and still admits
+-- the inhabited table
 #guard (match admitProgram pHostNat [hostRow .nat (.except .never .never)] with
-  | .ok _ => true | .error _ => false)
+  | .error (.emptyColumn pos) => pos == ["table", "0", "answer"]
+  | _ => false)
+#guard (match admitProgram (.succeed (.lit (.nat 0))) [hostRow (.prod .never .nat) .nat] with
+  | .error (.emptyColumn pos) => pos == ["table", "0", "request"]
+  | _ => false)
+#guard (match admitProgram pNeverPair [] with
+  | .error (.emptyColumn pos) => pos == ["program", "answer"]
+  | _ => false)
+#guard (match admitProgram pHostNat [hostRow .nat .nat] with
+  | .ok _ => true
+  | .error _ => false)
 
 /-- The located scan refuses the CE-015 table (proved). -/
 theorem ce015_table_refused :
