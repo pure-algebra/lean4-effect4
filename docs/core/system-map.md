@@ -41,7 +41,7 @@ paragraph says what the words mean. Sources: the model probe
 
 - **`Σ_core` is the closed inductives the language owns:** the `Eff` and `Ty` constructors, the
   built-in `NativeOp` rows, `SyncOp`, `FiberOp`, `NativeAtom`, `Err`, `Defect`, `HandleKind`. It
-  grows only by constructor appends under DI-47's compatibility gate over the retained baseline
+  grows only by constructor appends under DI-47's finite gate over the retained baseline (read by the mirror census's configuration; no comparator has run since `243ca0dd`)
   (`Test/fixtures/baseline/`, rows 56 and 61): a finite gate and a discipline, not a theorem.
 - **`Σ_app` is data an application supplies:** the row table and the service table (row 111).
   Later, and only if admitted, nominal data declarations (row 2; DB-15) and code entries (row 82).
@@ -69,6 +69,8 @@ paragraph says what the words mean. Sources: the model probe
   `nativeSignature` (`Program/Native.lean`) builds from `Σ`'s tables for the checker.
 
 ## 2. The layers
+
+Status here is the layer's; the requirements' status is §8's, the one owner (row 142).
 
 | Layer | What it is | Owner | Status |
 | --- | --- | --- | --- |
@@ -180,8 +182,9 @@ against a type is a leak by §6.
 | K4 located refusal | `Src → Except Refusal F` | the refusal is located and complete: `explain = none ↔ wellTyped` (a sound and complete decision procedure for the declarative judgment) | `explain_none_iff`; `admitProgram_certificate` and `admitted_unique` (`Laws/Run.lean`). `elaborate_scoped` (the elaboration's fact; the tactic `authoring_scoped` is its user) and `open_total` (a totality fact) are facts about K4 arrows' outputs, not K4 laws |
 | K5 monoid action | `List Command × S → S` | `replay_unique`, `journal_replays` | both |
 
-A hand traversal that is not a fold is an exemption listed by name by `#traversal_census`
-(`docs/core/traversal-census.md`). Two folds agree when their algebras do; no pairwise agreement
+A hand traversal that is not a fold is an exemption listed by name by `#traversal_census`, whose
+instrument (`Laws/Auto/Traversals.lean`) and document (`docs/core/traversal-census.md`) are the
+census's one owner (row 142; the coherence principle is the dated record of 2026-09-17). Two folds agree when their algebras do; no pairwise agreement
 proof is written. A read without exactness is a widening, not an embedding. A simulation is never
 called "equivalent" without its observation.
 
@@ -272,7 +275,7 @@ link here and copy nothing (row 142).
 | `Fits` (`Laws/Program/Typed/Membership.lean:87`) | the world-indexed value interpretation `V⟦τ⟧(W)` of a Kripke model for first-order references; a store typing | by name (TAPL §13.4; Ahmed 2004; Ahmed, Dreyer, Rossberg 2009) | `Fits.eq_cata`, `fits_mono`, `fits_sub`, `fits_hasTy` (type erasure to `Val.hasTy`), `fits_live` | "logical relation" is loose (no arrow clause); no step indexing because worlds hold syntactic types read as declarations; `Effect4.Program.Fits` (`Laws/Program/Typed.lean:309`) is a different judgment (an environment fits pointwise): rename it `EnvFits` |
 | `World` (`Laws/Program/Typed/World.lean:52`) | a Kripke world, here a store typing: Γ fibers, Π deferreds, Ρ cells, Θ tokens, ordered by extension | read (de Vilhena §4.3, Jacobs Prop. 6.2.4, papers review A3) | `World.le` order laws; `Typed.mono` (`Laws/Effects/Protocol.lean:57`) | `Typed.World` extends `Machine.World` (`Laws/Machine/Handles.lean:868`): a parent and its extension, not two names for one thing; row 141 renames the parent `HandleWorld` in wave 3, and the glossary states the extension either way |
 | `TypedProg` (`Typed/Residual.lean:186`) | protocol-typed weakest precondition on free-monad programs at a world | read (de Vilhena Def. 2.2, 2.4–2.8, papers review §1.3; Xia et al. §3.2, §7, lit-papers Q7, Q10) | `guard_inv`; `typedProg_mono` (probe; R5) | its own inductive since slice 5, sharing the protocol shape of the generic `Typed`, not an instance of it; not closed under bind |
-| `ExitOk`, `NoShapeDefect` (`Typed/Admission.lean:30`, `:23`) | exit typing with the "does not go wrong" clause over the closed `Defect` alphabet | by name (Milner 1978) | part one landed (`abc7b124`); part two is row 117 | the meaning-level `Denote.ExitOk` (`Laws/Program/MeaningSound.lean:324`) is a second judgment, renamed `Denote.ExitHasTy` by row 141; the connector holds under two premises (proved) |
+| `ExitOk`, `NoShapeDefect` (`Typed/Admission.lean:30`, `:23`) | exit typing with the "does not go wrong" clause over the closed `Defect` alphabet | by name (Milner 1978) | part one landed (`abc7b124`); part two is row 117 | the meaning-level judgment is `Denote.ExitHasTy` (renamed from `Denote.ExitOk` on 2026-10-01, row 141, seat F); the connector `Typed.exitHasTy_of_fitsExit` (`Laws/Program/Typed/ExitConnector.lean`) holds under two premises, each necessary (`Test/Program/ExitConnector.lean`) |
 | `FrameAccepts`, `StackAccepts`, `SavedOk` (`Typed/Contracts.lean:32`, `:51`, `:67`) | the typing of a K-machine state `k ▷ e`; stacks are the free category on frame typings | by name (Harper, PFPL ch. 28) | `popR_typed` (`Typed/Stack.lean:133`); `stackAccepts_append`, `_split` (probe) | typed at one world today; Kripke closure owed (F3) |
 | `TypedState` (`Typed/Assembly.lean:123`) | configuration typing: the invariant of a type-safety proof by initiation, consecution and transfer | by name (Wright and Felleisen 1994) | owed: M5, M6's 20 goals, M7 | not upward closed (exact support); "Kripke" applies to `Fits`, `TypedProg` and the amended stacks only |
 | `CodeInert` (`Typed/Assembly.lean:84`) | a position is typed by what it will deliver: code is inert on a halted machine, with a queued `finish`, or a published exit | — (row 133) | `m9_root_inert` (probe) | row 134 replaces the halt disjunct by the split keyed on `running`: a running fiber is typed by its queued continuing command, or inert if there is none (`running_exempt_at_m6`, probe) |

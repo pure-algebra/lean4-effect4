@@ -381,7 +381,7 @@ and focused proofs; add tools or repeat broad checks only when they serve concre
   complete against `HasTy` at every path, `explain = none ↔ effTy.isSome` and weakening as
   corollaries of one `Except`-valued fold (`CheckSound.lean`, `Typing/Agreement.lean`), the
   two hand inductions that proved them deleted.
-- Measured (`#traversal_census`, `docs/core/traversal-census.md`): 78 hand traversals of the
+- Measured (`#traversal_census`, `docs/core/traversal-census.md`) on 2026-09-18: 78 hand traversals of the
   five free objects (`Eff` 28, `Ty` 17, `Term` 11, `Representation` 5, `Val` 17), down from
   93 once the hand blame walk, the hand checker and the hand term block were deleted. The
   converter `fold_of` (`Program/FoldOf.lean`, five shapes) has given 65 of them a fold and a kernel-checked
@@ -390,8 +390,10 @@ and focused proofs; add tools or repeat broad checks only when they serve concre
   the root by definition (`Program/Typing.lean`), `explain` its refusal, and the typing proof
   graph is stated for it at every path (`Laws/Program/Typing/CheckSound.lean`; census §7.5,
   §7.7, §7.8); the term typer is the fold `argTy`, `termTy` its projection at `false` (§7.6,
-  §7.9). The thirteen without are the ruled exemptions, `valCode`/`ofSchema`, and a derived
-  instance (§7.4).
+  §7.9). The thirteen without were the ruled exemptions, `valCode`/`ofSchema`, and a derived
+  instance (§7.4). On 2026-10-01 the instrument was repaired to read a definition's own code
+  (row 143): at `dceae006` it counts 84 hand traversals, 60 with a fold and connector, 24
+  without, each named in census §7.4 (§7.11 has the before/after table).
 
 ## The documents (read these; the rest is history)
 
@@ -536,9 +538,9 @@ decisions 34/40 still close the fusion/conversion campaign. No open semantic cho
    Still open from the plan: 1.11a span pinning, 4.4, 4.8/4.9 and Q4–Q6 with seat I's survey;
    from Tier 3: 3.2, 3.3, 3.4, 3.7. L2–L7 resume after Tier 3.
 1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
-   fragments landed (census §7.5–§7.10); the thirteen exemptions — the compiler's five, the
-   reference evaluator's five, `valCode`, `ofSchema`, the derived instance — stay as they are and
-   are tracked in census §7.4. No census gate, no fusion, no conversion for uniformity's sake.
+   fragments landed (census §7.5–§7.10); the exemptions (thirteen on 2026-09-18; twenty-four
+   at `dceae006` under the repaired instrument, row 143) stay as they are and are tracked in
+   census §7.4. No census gate, no fusion, no conversion for uniformity's sake.
 2. **Row 39** (landed 2026-10-01, merged `0c534f06`): `EffectfulField` first, then
    `Check`/`Accepts`/`Image`/`schemaOf`, the `Annotations` trim, the `render` move, all done.
    Then the simple rows still open: 8 (now in `Schema/OfShape.lean`), 23 as a delete, 24, 17, 16.

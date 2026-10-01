@@ -1,5 +1,10 @@
 # The traversal census — how every definition reads each free object (2026-09-17)
 
+> **Record of 2026-09-17/18, with its §1 counting rule and §7.11 restated on 2026-10-01 (row 143).**
+> Current status: the census at HEAD (`lake build Test.Audit.TraversalCensus` prints it; §7.11 holds
+> the latest measured table) and `docs/core/system-map.md` §5; this document and the instrument
+> `Laws/Auto/Traversals.lean` are the census's one owner (row 142).
+
 Owner: "do the census; we're smarter now, we can use Lean's metaprogramming to do these
 refactors fast if we know what we're shooting for. Lack of a consumer isn't the metric;
 coherence of the algebra is — modelled on the universal initial algebra. Build in parallel, a
