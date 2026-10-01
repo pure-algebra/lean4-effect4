@@ -1436,13 +1436,16 @@ theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) 
 checked, closed source is in `J` (`reachable_of_ledger` derives it from `typedState_load` and
 `decision_preserves`). The host-answer restriction repairs `E4-SCHED-CE-015`.
 
-Live refutations at this commit: `E4-TYPED-CE-009` (`Fits` compares declared types in the raw
-order while the checker normalizes, so M5 is false for a checked program; seat A, row 137) and
-`E4-TYPED-CE-010` (the await-by-value post reads the target's answer column, so M5 is false for
-the typed corpus's `awaitFiber.value`; seat B, row 136). Both are proved against these statements,
-M5's and this capstone's at the loaded machine, which the empty tape reaches (`rreachable_load`):
-`Test/Counterexamples/Machine/Semantics/RawOrderLoad.lean` and `AwaitLoad.lean`, `loadsTyped_false`
-and `capstone_false`. `E4-TYPED-CE-011` (the saved-code clause read at a budget cut) refuted the
+Live refutation at this commit: `E4-TYPED-CE-009` (`Fits` compares declared types in the raw
+order while the checker normalizes, so M5 is false for a checked program; seat A, row 137),
+proved against these statements, M5's and this capstone's at the loaded machine, which the empty
+tape reaches (`rreachable_load`): `Test/Counterexamples/Machine/Semantics/RawOrderLoad.lean`,
+`loadsTyped_false` and `capstone_false`. `E4-TYPED-CE-010` (the await-by-value post read the
+target's answer column, so M5 was false for the typed corpus's `awaitFiber.value`) is repaired by
+row 136's post: `Test/Counterexamples/Machine/Semantics/AwaitLoad.lean` proves M5's proposition
+and this capstone's at that program's loaded machine (`loadsTyped`, `capstone_at_load`) and keeps
+the refutation over the old post (`loadsTyped_false`, `capstone_false`, over `OldMachineTyped`).
+`E4-TYPED-CE-011` (the saved-code clause read at a budget cut) refuted the
 statement over the typed state before row 134 and is repaired by the split
 (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), as is `E4-TYPED-CE-014` (a halted
 machine typed) by `J`'s `stuck = none`.
