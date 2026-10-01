@@ -123,6 +123,7 @@ import Effect4.Laws.Program.Typed.ExitConnector
 import Effect4.Laws.Program.Typed.Residual
 import Effect4.Laws.Program.Typed.Seq
 import Effect4.Laws.Program.Typed.Commands.Bookkeeping
+import Effect4.Laws.Program.Typed.Commands.Finish
 import Effect4.Laws.Program.Typed.Stack
 import Effect4.Laws.Program.Typed.Assembly
 import Effect4.Laws.Program.Signature

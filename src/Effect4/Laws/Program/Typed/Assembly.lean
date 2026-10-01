@@ -1651,11 +1651,9 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M3bAssembly.evalTerm_fits
 #typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 3
   using aesop (rule_sets := [Effect4.TypedState])
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_evaluate
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_finish
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_resume
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_launch
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_enrollRace
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_registrationDone

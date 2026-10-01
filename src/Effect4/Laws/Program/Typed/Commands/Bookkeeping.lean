@@ -2992,6 +2992,4 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.drainDue_preserves
 #obligation_proved Effect4.Program.Typed.M6Ledger.step_link :=
   @Effect4.Program.Typed.link_preserves
--- The scope's report runs at the foot of the last command module, which sees every proof.
-#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 17
-  using aesop (rule_sets := [Effect4.TypedState])
+-- `M6Ledger`'s report runs at the foot of the last command module, which sees every proof.
