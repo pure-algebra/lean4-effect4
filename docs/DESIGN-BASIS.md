@@ -2135,4 +2135,3 @@ the only evidence for that is the truth harness's bounded differential, which is
 and not a bisimulation. `docs/DESIGN-MAP.md` grades the same material with the four evidence
 words and `docs/RUNTIME-COVERAGE.md` owns the coverage number; a claim quoted from here should
 agree with both.
-

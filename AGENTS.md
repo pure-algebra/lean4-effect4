@@ -12,7 +12,7 @@ full, then open only the authority documents named for the current task.
 | `docs/core/` | the current authorities: `system-map.md` (the goal, what a full program is, the layers and their owners, the sorts and arrow kinds, the requirements R1–R13 and their status: the frame and the vocabulary's definitions), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `coherence-principle.md`, `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md`, `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land), `post-phase-c-synthesis.md` (the foundations review and coverage planning, its §11); `language-cut.md` is history |
 | `docs/ARCHITECTURE.md` | the source tree, module boundaries, dependency direction, the API seam |
 | `docs/GENERATED.md` | the generated groups: producers (`make gen-<group>`), inputs, consumers and checks |
-| `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-15), their status and sources |
+| `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-17): decision, rationale, witnesses, refusals, sources and literature marks; status only by link to the system map's §8 |
 | `docs/DESIGN-ISSUES.md` | the open design questions (DI-nn): status, what each would force to be redone, the milestone to decide by; a ruling is made only when written into a tracked file |
 | `docs/DESIGN-MAP.md` | the earlier five-layer map, cited by section from code; superseded in substance by `docs/core/system-map.md` |
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |

@@ -57,7 +57,7 @@ handle(kind, key)`. Handles carry a kind byte and no type (DI-17, row 44).
 `Err := boom | tag (code : Nat) | tagged (tag message : String) | text (message : String)`
 (`Machine/Alphabets.lean`, since L1 of the push; this section first read the S5 spike's stale copy in
 `Machine/Context.lean`, which said `boom | tag` and had no consumer — deleted at L1). `Err.value (v : Val)`
-is **refused** by the basis (`DESIGN-BASIS.md:640`).
+is **refused** by the basis (DB-15, *The admissible error image*).
 
 | gap | kind | cost | fix |
 | --- | --- | --- | --- |

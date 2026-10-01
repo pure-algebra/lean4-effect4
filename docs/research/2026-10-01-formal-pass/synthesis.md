@@ -145,6 +145,10 @@ satisfies on live cells (proved here).
 
 ## 2. The formal account of Effect4
 
+> Note added 2026-10-01 by the coordinator (seat H's receipt): `guardR_bind` was in the tree before this
+> pass (`src/Effect4/Laws/Program/Intro/Prepare.lean:44`); P5 re-proved it. The table below keeps its
+> attribution to P5; the basis and system map §9 cite the tree.
+
 One row per object. "In tree" laws are read in the tree (the trust gate audits them; this seat did
 not run the gate). "This pass" laws were compiled by this seat at `dceae006` (rerun or ported; the
 receipt names the file). Severity: **fundamental** (a declared statement is false, or a misnaming

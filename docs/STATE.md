@@ -278,8 +278,11 @@ is, and §8, the requirements R1–R13 with their status, the one place status l
 stated as the audit corrected them. The design-basis refresh is briefed as a docs-only seat
 ([brief](research/2026-10-01-design-basis-refresh-brief.md)): one row shape, two new rows (DB-16
 typing as a protocol over a world, DB-17 the requirement row calculus), three stale sections
-retired to history, one bibliography, the eight ruling-bearing notes force-added. Dispatch is the
-owner's call.
+retired to history, one bibliography, the eight ruling-bearing notes force-added. Landed on
+`seat/H` and merged (`c72f27e9`, receipt
+[`2026-10-01-design-basis-refresh/receipt.md`](research/2026-10-01-design-basis-refresh/receipt.md)):
+DB-01 … DB-17 in one row shape, status by link to §8, every citation checked at `dceae006` by the
+seat's script; the re-pin after seat C's split is row 154.
 
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
