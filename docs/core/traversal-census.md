@@ -646,3 +646,21 @@ that changes the next steps, all at zero install:
    the generator's emitters.
 
 Dead or blocked at 4.33: lean-egg, LeanInk, QpfTypes, loogle, CanonicalLean, Paperproof, alloy.
+
+### 7.12 The families of `Ty` (probe U, 2026-10-01)
+
+At `630e6c37` the census reads 122 takers of `Ty` (fold 5, generated 8, structural 22, wf 1,
+one-level 14) and the gate 66 matches (43 of them in 40 hand definitions, 23 of which have
+catch-alls only). Probe U places every row in one of ten families
+(`docs/research/2026-10-01-type-language-probe/U/inventory.tsv`) and proves 21 of the hand
+traversals equal to a generic fold over the emitted view, and `Val.hasTy` equal to the fold of
+its own algebra: the spelling folds are a face table read by one interpreter per face; the
+classifiers, four generic folds reading the columns of a classifier table or, for the two located
+searches, a hit predicate; the union-spine folds, one fold at four atoms; the mirrors, one
+reflection at five carriers. The rule for a constructor append is "no hand case analysis on `Ty`
+outside the generated folds and `Laws/Program/Typed/Membership.lean`", checked by
+`scripts/check-ty-rule.py` (U's `check-commit4-rule.py`, landed by seat W2) over this instrument's
+output (R1–R4); its distance at `630e6c37` is 78 rows (R1 21, R2 13, R3 38, R4 6), the gate on at
+the wave's commit 4. The named exemptions for `Ty` are `Fits` and `FlatFits` (the typed state's
+module), the derived `Repr` and `DecidableEq` until generated, the two pass-through matchers
+(`selectRefusal`, `Decision.arms`' outer match), and the `Test` fixtures and counterexample models.

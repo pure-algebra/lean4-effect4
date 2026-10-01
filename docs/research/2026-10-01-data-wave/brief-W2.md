@@ -89,3 +89,20 @@ fails on a git execution error, keeps an absent historical file distinct from an
 revision, and its self-test gains invalid-base, invalid-candidate and invalid-both, each also
 under `--strict`, all refusing with exit 1, beside the ten controls. Codex's fixture evidence:
 `reviews/codex-2046-conservativity/`.
+
+## Amendment 4 (2026-10-01, probe U merged at `b5501b82`): the generated families (sent by message)
+
+Row 182 is ruled (D-U1 (a), D-U2 JSON, D-U3 the clause as written). Step 2, after Q's patches:
+(1) the fold generator's `--extras` emission (`U/patches/Fold.lean`, +303/−1; byte-identical
+without the flag) merged with Q's `Fold-elim.patch` on the same file, extended to nested blocks
+with `ArgF` positions (U §3.5; measure the 150 to 200 lines U assumed), the prisms beside the
+view; (2) the table emitter (`U/patches/TableGen.lean`) and the two tables `ty-faces`,
+`ty-classes` as JSON (the face table's Schema column as `Representation` values); (3) D-U1 (a)'s
+expansion with the `eq_cata` connector per expanded definition on the LCNF cut; (4) U's rule
+checker landed as `scripts/check-ty-rule.py` with its two pass-through exemptions and the 78-row
+baseline printed, not wired into `check` (the gate is commit 4's); (5) the mirrors `of_ty` and
+`rand_ty` emitted if `dune build` and `make check-ocaml` stay green, else left to W4 and said.
+Acceptance: the generated modules compile; U's 24 agreement theorems hold against the generated
+view on today's `Ty` (a battery at the `Test/All.lean` anchor, `#print axioms`); the two red
+tables refused by name; every producer still writes today's bytes. If step 2 cannot finish, land
+step 1 and the conservativity script, write the receipt, hand back.

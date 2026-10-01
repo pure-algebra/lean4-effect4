@@ -70,3 +70,15 @@ regeneration recipe: wire tags 20–27, the head rows and the `rules` data rows,
 first in the manifest, then the producers one at a time with `LEAN_NUM_THREADS=1`, `make corpus`,
 the policy re-seeded, `make check-cases`, `scripts/check-conservativity.sh <base>`; stop if C1,
 C2 or C3 refuses.
+
+## Amendment 2 (2026-10-01, probe U merged at `b5501b82`): the rule as the commit's acceptance
+
+Row 182: the rule of probe U §6.1, "no hand case analysis on `Ty` outside the generated folds and
+`Membership.lean`", is commit 4's acceptance: `scripts/check-ty-rule.py` (landed by W2) over the
+census and the gate logs reports zero violations; each new constructor lands as one field in each
+of the eight algebra literals and one row in each table (`ty-faces`, `ty-classes`); the mirrors
+and enumerations are emitted (`rand_ty`, the conform vectors and the metadata samples reach every
+constructor, by `missing (enumTy …) = []`); the three latent findings `E4-FACE-CE-001`–`003`
+(`renderRaw`'s unescaped literal, the 15-of-20 enumerations, `isTagTy`'s bottom case) are
+repaired by the table and the emitted enumerations, each with its red control kept. The 78 hand
+matches U lists (§6.2, with reasons) are the ones you retire; the named exemptions stay.

@@ -610,3 +610,18 @@ asked where to *go*; there is nowhere to go, and the vocabulary is what makes th
 5. **"Codecs as partial isomorphisms (`encode ∘ decode ⊆ id`)" is not what the tree proves.**
    `Laws/Schema/Codec.lean` proves `decode ∘ encode = id` on the admitted domain and nothing in the
    other direction; the `⊆ id` half is row 22's missing obligation, not an existing law.
+
+**Probe U (2026-10-01), for `Ty`.** C1 can be met in full for the type sort: every traversal of
+`Ty` is an algebra of `cata_ty`, with the hand exemptions traversal census §7.12 names. The
+semantic ones (`Val.hasTy`, `Fits`, `inhabited`, the codec's encode and decode) and the
+transformers (`normalize`, `instantiate`, `layout`) are `TyAlgebra` literals; the spelling,
+classifier, union-spine, reflection and enumeration traversals are one generic fold each over a
+per-constructor table (`ty-faces`, `ty-classes`) or over the signature alone, emitted with the
+one-level view from the declaration. Two traversals agree when their algebras do
+(`hom_eq_cata_ty`; 24 agreement theorems over 22 of the tree's own definitions). C2's fusion
+needs no generation of its own: fusion and the banana split are corollaries of uniqueness,
+emitted with an algebra-morphism record whose fields default to `rfl`, so a law through a
+transformer states only the transformer's overridden squares. A mirror is the same algebra
+emitted (EffGen, TsGen, Effect4Gen) or lowered (LCNF), never kept by hand; the LCNF route takes
+the table expanded by the generator beside its `eq_cata` connector (decisions row 182, D-U1 (a)),
+because the translator refuses a type-family parameter.
