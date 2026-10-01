@@ -1,13 +1,16 @@
 # S-3 type-directed JSON boundary
 
 Owner-approved contract, 2026-09-11. The owner selected exact value admission and
-layout-compatible subtype agreement after E4-SCHEMA-CE-056 through 059, and selected
+layout-compatible subtype agreement after E4-SCHEMA-CE-056 through 059 (056 to 058 are rows of
+`Test/Counterexamples/Archive/REGISTER.md` since row 39 retired their battery on 2026-10-01;
+059 is live), and selected
 the pinned rc.112 Schema JSON formats over the original proposal's Result/Cause shapes.
 
 Implementation: `src/Effect4/Schema/Codec.lean`.
 Laws: `src/Effect4/Laws/Schema/Codec.lean`.
 Battery: `Test/Codegen/SchemaGenerationContract.lean`.
-Retained falsifiers: `Test/Counterexamples/Schema/Codec.lean`.
+Retained falsifiers: `git:f0591f36:Test/Counterexamples/Schema/Codec.lean` (deleted under row 39 at `d75f5c25`; its rows are in the archive
+register).
 
 ## Boundary
 

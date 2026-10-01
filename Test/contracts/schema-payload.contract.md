@@ -19,7 +19,7 @@ src/Effect4/Data/Json.lean              Float64, Json                       (new
 src/Effect4/Schema/Payload.lean         scalar and parameterized records    (new)
 src/Effect4/Schema/Representation.lean  Representation / Check carrier      (extend)
 src/Effect4/Schema/Document.lean        Document, MultiDocument, toMulti    (open)
-src/Effect4/Schema/Check.lean           persisted field admission           (open)
+git:f0591f36:src/Effect4/Schema/Check.lean  persisted field admission  (open; deleted under row 39 at d75f5c25)
 ```
 
 The chain must import downward (`Check` -> `Document` -> `Representation` ->
@@ -86,7 +86,7 @@ names them:
 | `SC-REP-01` | the Lean declaration half; the persisted-field snapshot half is the ruling's, re-verified here line by line |
 | `SC-REP-03` | the payload half — decidable structural equality on `Representation`, `Check`, `Json`, `Float64`. The recursor half is **not** claimed; see D5 |
 | `SC-REP-04` | persisted/decode-side field admission, its Boolean companion, exact constructor equations, and their agreement; no issue or refusal carrier is implied |
-| `SC-REP-FIELD-PIN` | referenced, not advanced. `scripts/check-schema-fields.sh` minted it; this packet deliberately supplies no Lean cross-check, see (c) |
+| `SC-REP-FIELD-PIN` | referenced, not advanced. `git:da92dba3:scripts/check-schema-fields.sh` minted it; this packet deliberately supplies no Lean cross-check, see (c) |
 
 No new `SC-REP-*` identifier is minted. Payload/alphabet agreement belongs to
 the existing `SC-REP-01` declaration and `SC-REP-03` structural-elimination
@@ -177,7 +177,7 @@ Three limits bind every citation below.
    owed: nothing in this repository runs them, and no Lean declaration is
    joined to them.
 
-`scripts/check-schema-fields.sh` independently extracts the persisted field
+`git:da92dba3:scripts/check-schema-fields.sh` independently extracts the persisted field
 spellings from the same pinned file and compares them to a frozen table. Its
 own header records that it is a single-route lexical extraction with no
 Lean-side carrier to cross-check against. This packet declares the Lean carrier
@@ -401,7 +401,7 @@ function to this fence breaks the battery, which is the signal to move it to
 its real owner rather than let it accrete here.
 
 Until that owner exists, `SC-REP-FIELD-PIN` — the obligation
-`scripts/check-schema-fields.sh` reports on — remains a **single-route
+`git:da92dba3:scripts/check-schema-fields.sh` reports on — remains a **single-route
 lexical extraction**. The census gate's two-route cross-check has no analogue
 for fields yet, and this packet does not supply one. `E4-SCHEMA-CE-039` records
 the deferral so it cannot be lost.
@@ -1200,7 +1200,7 @@ After implementation, acceptance additionally requires:
 ```text
 lake env lean Test/Schema/PayloadContract.lean
 lake clean && lake build
-scripts/test-trust-gate.sh
+git:3cb5805e:scripts/test-trust-gate.sh
 git:c407ab7:scripts/check-vendor-foldlab.sh
 # the field-spelling pin script: retired 2026-09-13 (a lexical extraction against a table copied inside the script)
 # the payload-surface gate and its reaction test: retired 2026-09-13, see the amendment below

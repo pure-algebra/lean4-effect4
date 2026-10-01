@@ -256,7 +256,7 @@ same run.
 
 While the battery is red,
 `Effect4Test.Data.RowContract` is listed in
-`test/fixtures/trust-gate/known-red.txt`. The trust gate removes exactly that
+`git:60b7d0da:Test/fixtures/trust-gate/known-red.txt`. The trust gate removes exactly that
 module in its throwaway control tree and rejects a stale entry once the
 implementation turns green.
 
@@ -266,7 +266,7 @@ After implementation, acceptance requires all of:
 lake env lean Test/Data/RowContract.lean
 lake clean && lake build
 git:c407ab7:scripts/test-data-row-contract-reactions.sh
-scripts/test-trust-gate.sh
+git:3cb5805e:scripts/test-trust-gate.sh
 ```
 
 plus the exported-theorem axiom report, independent assurance, and the

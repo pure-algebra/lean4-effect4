@@ -726,7 +726,7 @@ both exit nonzero with *only* unknown-identifier and unknown-constant
 diagnostics for the fenced `Effect4.Scope*`, `Effect4.ScopeState*`, and
 `Effect4.FinalizerStrategy*` names. A parse error, an import error, or a
 failure in the battery's own helper code is not a clean red result. Both red
-modules are declared in `test/fixtures/trust-gate/known-red.txt`, which is
+modules are declared in `git:60b7d0da:Test/fixtures/trust-gate/known-red.txt`, which is
 self-checking in both directions: they must be removed the moment they go
 green.
 

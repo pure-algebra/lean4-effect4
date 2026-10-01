@@ -513,8 +513,8 @@ lake env lean Test/Machine/Environment/ContextKeyContract.lean
 It must fail only because the frozen declarations do not yet exist: every
 diagnostic is `error(lean.unknownIdentifier)` naming one of the twenty-five
 frozen names. While that is true, `Effect4Test.Environment.ContextKeyContract`
-is listed in `test/fixtures/trust-gate/known-red.txt` so
-`scripts/test-trust-gate.sh` can excise it and still exercise its planted
+is listed in `git:60b7d0da:Test/fixtures/trust-gate/known-red.txt` so
+`git:3cb5805e:scripts/test-trust-gate.sh` can excise it and still exercise its planted
 declarations against a green tree.
 
 After implementation, acceptance additionally requires:
@@ -522,7 +522,7 @@ After implementation, acceptance additionally requires:
 ```text
 lake env lean Test/Machine/Environment/ContextKeyContract.lean
 lake clean && lake build
-scripts/test-trust-gate.sh
+git:3cb5805e:scripts/test-trust-gate.sh
 ```
 
 and the removal of the `known-red.txt` entry, which the gate itself demands: a

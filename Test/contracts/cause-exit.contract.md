@@ -641,7 +641,7 @@ lake env lean Test/Machine/Semantics/CauseExitContract.lean
 both exit nonzero with *only* unknown-identifier and unknown-constant
 diagnostics for the fenced `Effect4.*` names. A parse error, an import error,
 or a failure in the battery's own helper code is not a clean red result. Both
-red modules are declared in `test/fixtures/trust-gate/known-red.txt`, which is
+red modules are declared in `git:60b7d0da:Test/fixtures/trust-gate/known-red.txt`, which is
 self-checking in both directions: they must be removed the moment they go
 green.
 
