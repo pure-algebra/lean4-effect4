@@ -1,0 +1,6 @@
+Probe: a scratch copy of src/Effect4/Api/RefusalsDerived.lean as the first derived run wrote it,
+with line 1120 (the failing guard) replaced by these lines; run with `lake env lean -M 4096` (exit 0).
+
+#eval (builds.zipIdx.filterMap fun (x, k) => (Canonical.decode (α := AuthorRefusal) (Canonical.encode x)).map fun a => (k, a == (match x with | .scope r => some (AuthorRefusal.scope r) | .typing r => some (.typing r) | _ => none).getD a, match x with | .scope _ => "scope" | .typing _ => "typing" | .admission _ => "admission" | .serviceCarrier .. => "serviceCarrier"))
+#eval builds.length
+#eval (builds.filter fun x => match x with | .scope _ | .typing _ => false | _ => true).all fun x => Canonical.decode (α := AuthorRefusal) (Canonical.encode x) = none
