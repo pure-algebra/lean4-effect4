@@ -1,0 +1,14 @@
+# summary of step6-build.log (12196 lines)
+## commands
+## errors and warnings
+(none)
+## gates
+info: Test/All.lean:169:0: Effect4 library-root gate: 135 API/utility modules, 221 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:169:0: Effect4 module and axiom gate: checked 525 modules and 72539 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+## built (not replayed)
+(none)
+## tail
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+Build completed successfully (743 jobs).
+LEAN_NUM_THREADS=2 lake build Effect4.Laws Test.All  0.21s user 0.21s system 61% cpu 0.691 total

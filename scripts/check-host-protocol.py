@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Fresh T-09/T-12 projection, typed host execution, checked replay, and mutation gate.
-Every run regenerates small fixtures.
+Every run regenerates small fixtures. The generated host programs and the adapter sources are
+type-checked by tsgo 7 (the pinned `@typescript/native-preview`, run under node as `check-target`
+runs it); `tsc` and `typescript@5.x` are never run (AGENTS.md, owner 2026-09-18 and 2026-10-01).
 """
 from pathlib import Path
 import json
@@ -13,6 +15,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 SESSION = ROOT / 'harness/truth/session'
 MODULES = ROOT / 'ts/eff/node_modules'
+TSGO = MODULES / '@typescript/native-preview/bin/tsgo'
 
 def run(*args, output=None, timeout=180):
     if output:
@@ -29,6 +32,10 @@ def main():
     bun = shutil.which('bun')
     if not bun or json.loads((MODULES / 'effect/package.json').read_text())['version'] != '4.0.0-rc.112':
         raise SystemExit('FAIL host-protocol: Bun and the pinned rc.112 installation are required')
+    # `bin/tsgo` is a node launcher of the native compiler; check-target runs it the same way.
+    node = shutil.which('node')
+    if not node or not TSGO.exists():
+        raise SystemExit('FAIL host-protocol: node and the pinned @typescript/native-preview (tsgo) are required')
     for module in ['Test.Api.HostSessionContract', 'Test.Api.KeyedHostContract']:
         run('lake', 'build', module)
     work_root = SESSION / '.work'
@@ -49,7 +56,7 @@ def main():
                   'include': [str(host / '*.ts'), str(SESSION / '*.ts')],
                   'compilerOptions': {'types': ['bun'], 'typeRoots': [str(MODULES / '@types')]}}
         (work / 'tsconfig.json').write_text(json.dumps(config))
-        run(bun, str(MODULES / 'typescript/bin/tsc'), '--pretty', 'false', '--noEmit', '-p', str(work / 'tsconfig.json'))
+        run(node, str(TSGO), '--pretty', 'false', '--noEmit', '-p', str(work / 'tsconfig.json'))
         run(bun, 'test', str(SESSION / 'keyed-protocol.test.ts'), str(SESSION / 'protocol.test.ts'), str(SESSION / 'resource.test.ts'), str(SESSION / 'clock.test.ts'))
         lean('harness/truth/session/Keyed.lean', 'batch', host / 'cases.json', output=work / 'lean.json')
         run(bun, str(SESSION / 'prepare-keyed-controls.ts'), str(host))
