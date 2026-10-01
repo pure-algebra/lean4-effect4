@@ -180,3 +180,44 @@ that, to be done as the documentation pass, no seats, no builds beyond the four 
   (a)–(e), the per-position coeffect clause; the ones the chapter lists expose); (4) the system
   map and the register pointed at it, STATE rewritten; (5) only then the next seats, each named
   by chapter.
+
+## 7b. The analysis as data in the architecture (the owner's addition, 18:30)
+
+The owner wants the Pierce-style analysis tagged into the architecture itself, so the
+architecture map, which is measured and never drawn (row 143's rule for tracking artifacts),
+turns into mechanically derived documentation that explains the language by chapter, and so the
+same data generates what a reader looks at. The mechanism, as the first step of the pass:
+
+1. **Tags in the environment.** A Lean attribute, `@[chapter "tapl-13-references"]` (one
+   registration per declaration, in `Laws/Auto/`, beside `#auto_census` and the obligation
+   commands), on the judgments, the theorems and the declared obligations; and one data file,
+   `tools/architecture/chapters.json`, naming every chapter: its id, its title and book chapter,
+   the standard lemma list it demands (inversion, canonical forms, weakening, substitution,
+   progress, preservation, monotonicity, transitivity, antisymmetry, decidability, as the
+   chapter has them), the ledger scopes it groups, the decisions rows it cross-indexes, the areas
+   of the tree it covers. A `#chapter_census` command prints, from the environment, every tagged
+   declaration per chapter with its axioms, every obligation of the chapter's scopes
+   (declared, proved, open), and every theorem of the Laws graph tagged by no chapter: the
+   unplaced count is the coverage number, and it goes to zero or the remainder is named.
+2. **The map reads it.** `make gen-architecture` gains a section, "The language by chapter":
+   per chapter the judgments, the theorem count and its axiom ceiling, the obligations declared
+   / proved / open, the decisions rows, the modules, and the chapter's lemma list with each
+   lemma's status (present by name, open as a declared goal, or absent: a finding). The HTML is
+   the one place to look.
+3. **The document's tables are generated.** `docs/core/semantics.md` holds the prose by chapter
+   (what the judgment says, what the chapter demands, what our cut is) and its tables are a
+   generated group (`make gen-semantics`, registered in `docs/GENERATED.md` with its producer
+   order), emitted from the same census, so a status in the document is never hand-maintained.
+4. **The decisions register cross-indexed.** Every row gains its chapter tag (a column, written
+   once from `chapters.json`'s row lists), so the register can be read by chapter and the owner's
+   pending rulings can be grouped by chapter in the one table.
+5. **Codex's organization pass.** After the skeleton exists (steps 1–3 with today's theorems
+   placed), a brief for Codex's deep dive (`brief-codex-organization.md`): review the chapter
+   mapping against the book (misplaced judgments, missing lemmas on a chapter's list, chapters
+   we claim that we do not have, the cut stated where it bites), the obligation lists against the
+   ledger, and the register's cross-index; produce one note with findings and proposed rows;
+   touch no tracked file. The coordinator writes what it finds, as with its reviews today.
+
+The bound this gives: the set of obligations is the union of the chapter lemma lists, printed
+by the census from the environment, so "what remains to prove" is a number per chapter on the
+map, and a theorem that fits no chapter is visible as unplaced the day it lands.
