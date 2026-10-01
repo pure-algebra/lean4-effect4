@@ -1,0 +1,4 @@
+'exitOk_of_fitsExit' depends on axioms: [propext, Quot.sound]
+'redA_scope' depends on axioms: [propext, Quot.sound]
+'redB_external' depends on axioms: [propext, Quot.sound]
+## exit=0 seconds=1 probe=/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/organization/verify-ExitOkConnector.lean

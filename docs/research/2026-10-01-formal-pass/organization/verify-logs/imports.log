@@ -1,0 +1,9 @@
+src/Effect4 modules (incl. Effect4.lean): 350
+unreached from Effect4 or Effect4.Laws: []
+Effect4 reaches Laws modules: []
+Test modules: 157; unreached from Test.All: []
+core-root modules importing the Effects package directly: ['Effect4.Machine.Context', 'Effect4.Schema.EffectfulField']
+   Effect4.Machine.Context ['Effects.Algebra.Program']
+   Effect4.Schema.EffectfulField ['Effects.Algebra.Laws', 'Effects.Flow.Block']
+Laws-only modules importing Effects directly: 4 ['Effect4.Laws.Effects.Protocol', 'Effect4.Laws.Program.Denote', 'Effect4.Laws.Program.Iter', 'Effect4.Laws.Program.Sched']
+external (non-tracked) modules reached from Effect4: ['Effects', 'Hash', 'Init', 'Lean', 'Std', 'TypeScript']

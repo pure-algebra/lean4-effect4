@@ -1,0 +1,18 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyScout5.lean
+# sha256: 9fef93c6c5854361e6462a1fc0fe88c92449ac6ac6e14cbf04b3163499e7b9a9
+# head: ea5b28b5
+# started: 2026-10-01 06:51:42
+"guard onSuccess"
+some "fork at_ path=[0, 0, 0] env=0 completed=0"
+some "construction"
+some "fiber-other"
+none
+true
+true
+some "await-value target=1"
+some "pure"
+none
+# exit: 0
+# wall seconds (including lock wait): 2
+#         2.34 real         0.98 user         1.32 sys
+#           1601585152  maximum resident set size

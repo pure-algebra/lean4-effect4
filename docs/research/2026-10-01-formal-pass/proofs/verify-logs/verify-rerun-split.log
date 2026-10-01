@@ -1,0 +1,21 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifySplit.lean
+# sha256: 74483e0aec521cc4ff4ed8aab8cdca547628638088da8911d53b14b46462624f
+# head: ea5b28b5
+# started: 2026-10-01 06:57:22
+'FormalPass.Proofs.Verify.Split.m6_stuck_none' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.m6_root_running' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.m6_only_root' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.stale_not_savedOk' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.seat_split_not_decisionLift' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.running_clause_vacuous_at_m6' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.budget7_is_fuel_frontier' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.budget7_not_finished' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.finished9' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.m9_root_stale' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.untyped9' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.capstone_false_finished9' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Split.worldValid_not_upward_closed' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 3
+#         2.87 real         0.90 user         1.14 sys
+#           1676558336  maximum resident set size

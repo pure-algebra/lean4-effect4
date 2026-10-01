@@ -1,0 +1,17 @@
+'Research.TypesSeat.Inhabit.inhabited_of_fits' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.inhabited_of_hasTy' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.fits_of_inhabited_handleFree' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.inhabited_iff_handleFree' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.fiber_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.cell_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.promise_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.inhabited_sub' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.prod_never_nat_canonical' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.except_never_never_canonical' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.prod_never_nat_empty' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.except_never_never_empty' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.prod_never_nat_no_hasTy' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.admit_refuses_prod_never_nat' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.admit_refuses_except_never_never' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   1.04s user 1.84s system 2% cpu 1:49.27 total
+exit=0

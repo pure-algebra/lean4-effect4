@@ -1,0 +1,11 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/verify-CapstoneProbe.lean:95:2: error: 'change' tactic failed, pattern
+  Contracts.StackAccepts (TypedProg src) FitsExit (frameProtocols src) w tin rootTy3 []
+is not definitionally equal to target
+  Contracts.StackAccepts (TypedProg src) ExitOk (frameProtocols src) w tin rootTy3
+    (RunFiber.make Api.root (denoteR prog3 prog3 (rootPoint 100)) true
+          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx).frame.stack
+'Research.TypesVerify.Capstone.m5_false' depends on axioms: [propext, sorryAx, Quot.sound]
+'Research.TypesVerify.Capstone.replayR_nil_machine' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Capstone.rreachable_load' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Capstone.capstone_implies_load' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Capstone.capstone_false' depends on axioms: [propext, sorryAx, Quot.sound]

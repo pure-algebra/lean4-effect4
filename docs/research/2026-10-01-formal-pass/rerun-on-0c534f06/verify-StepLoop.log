@@ -1,0 +1,717 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:81:6: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.success ?v)
+in the target expression
+  ExitOk w' tin (Exit.success (Val.cell key))
+
+w : TW
+w' : Typed.World
+a✝ : World.leHost w w'
+key : RefKey
+hs : w'.Ρ key = some Ty.nat
+⊢ ExitOk w' tin (Exit.success (Val.cell key))
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:102:8: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.failure ?c)
+in the target expression
+  ExitOk w0 unitTy (Exit.failure c)
+
+case failure
+c : Cause Err Defect FiberId Ann
+hex : FitsCause w0 tin.error c
+⊢ ExitOk w0 unitTy (Exit.failure c)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:120:18: error: Application type mismatch: The argument
+  code_typed w0
+has type
+  TypedProg { program := refProg } w0 tin (denoteR refProg refProg (rootPoint 20))
+but is expected to have type
+  ¬CodeInert mBad []
+        (Expect.fiber
+          (withStack [ScopeFrame.answer badNext]
+              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx)).id) →
+    TypedProg { program := refProg } w0 tin
+      (withStack [ScopeFrame.answer badNext]
+            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx)).frame.current
+in the application
+  And.intro (code_typed w0)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:120:33: error: Application type mismatch: The argument
+  stack_ok
+has type
+  StackAccepts (TypedProg { program := refProg }) FitsExit (frameProtocols { program := refProg }) w0 tin unitTy
+    [ScopeFrame.answer badNext]
+but is expected to have type
+  StackAccepts (TypedProg { program := refProg }) ExitOk (frameProtocols { program := refProg }) w0 tin unitTy
+    (withStack [ScopeFrame.answer badNext]
+          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx)).frame.stack
+in the application
+  And.intro stack_ok
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:137:10: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
+
+case refine_4
+⊢ ActiveDelivery { program := refProg } w0 mBad ∧
+    SchedulerState mBad ∧
+      ObserverState { program := refProg } w0 mBad ∧ RegistrationState { program := refProg } w0 mBad
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:162:33: error: Application type mismatch: The argument
+  hprog
+has type
+  ¬CodeInert afterLoop.fst [] (Expect.fiber f.id) →
+    TypedProg { program := refProg } w tin' (Effects.Program.pure (Exit.success (Val.cell { index := 0 })))
+but is expected to have type
+  TypedProg ?m.117 ?m.118 ?m.119 (Effects.Program.pure ?m.120)
+in the application
+  TypedProg.pure_inv hprog
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:153:95: error: unsolved goals
+w : TW
+h : TypedState { program := refProg } unitTy w afterLoop.fst
+f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram RSaved
+hf : f ∈ afterLoop.fst.fibers
+hid : f.id = Api.root
+hcur : f.frame.current = Effects.Program.pure (Exit.success (Val.cell { index := 0 }))
+hst : f.frame.stack = [ScopeFrame.answer badNext]
+hroot : expectOf w (Expect.fiber f.id) = some unitTy
+tin' : EffTy
+hprog :
+  ¬CodeInert afterLoop.fst [] (Expect.fiber f.id) →
+    TypedProg { program := refProg } w tin' (Effects.Program.pure (Exit.success (Val.cell { index := 0 })))
+hstack :
+  StackAccepts (TypedProg { program := refProg }) ExitOk (frameProtocols { program := refProg }) w tin' unitTy
+    [ScopeFrame.answer badNext]
+right✝ : InterruptProvenance f.frame
+⊢ False
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:177:40: error: Application type mismatch: The argument
+  typed_mBad
+has type
+  TypedState { program := refProg } unitTy w0 mBad
+but is expected to have type
+  mBad.stuck = none
+in the application
+  h w0 mBad [] typed_mBad
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:178:10: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
+
+h : StepPreserves { program := refProg } unitTy (Cmd.loop Api.root false)
+⊢ TypedState { program := refProg } unitTy w0 mBad [Cmd.loop Api.root false]
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:177:9: error: Tactic `rcases` failed: `x✝ : QueueOk { program := refProg } w0 mBad [Cmd.loop Api.root false] →
+  have r := driveStep (interpR { program := refProg }.program) mBad (Cmd.loop Api.root false) [];
+  ∃ w',
+    World.leHost w0 w' ∧
+      TypedState { program := refProg } unitTy w' r.fst r.snd ∧
+        QueueOk { program := refProg } w' r.fst r.snd` is not an inductive datatype
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:245:18: error: Application type mismatch: The argument
+  code_typed w0
+has type
+  TypedProg { program := refProg } w0 tin (denoteR refProg refProg (rootPoint 20))
+but is expected to have type
+  ¬CodeInert afterEval.fst []
+        (Expect.fiber
+          ((fun g =>
+                if
+                    g.id =
+                      {
+                          id :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).id,
+                          frame :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).frame,
+                          running := true,
+                          parked :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).parked,
+                          pending :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).pending,
+                          finalizing :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).finalizing,
+                          exit :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).exit,
+                          currentOpCount := 0,
+                          maxOpsBeforeYield :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).maxOpsBeforeYield,
+                          preventYield :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).preventYield,
+                          yieldOverride :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).yieldOverride,
+                          observers :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).observers,
+                          children :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).children,
+                          dispatcher :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).dispatcher,
+                          context :=
+                            (withStack [ScopeFrame.answer badNext]
+                                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                  emptyCtx)).context }.id then
+                  {
+                    id :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).id,
+                    frame :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).frame,
+                    running := true,
+                    parked :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).parked,
+                    pending :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).pending,
+                    finalizing :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).finalizing,
+                    exit :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).exit,
+                    currentOpCount := 0,
+                    maxOpsBeforeYield :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).maxOpsBeforeYield,
+                    preventYield :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).preventYield,
+                    yieldOverride :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).yieldOverride,
+                    observers :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).observers,
+                    children :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).children,
+                    dispatcher :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).dispatcher,
+                    context :=
+                      (withStack [ScopeFrame.answer badNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                            emptyCtx)).context }
+                else g)
+              (withStack [ScopeFrame.answer badNext]
+                (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx))).id) →
+    TypedProg { program := refProg } w0 tin
+      ((fun g =>
+              if
+                  g.id =
+                    {
+                        id :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).id,
+                        frame :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).frame,
+                        running := true,
+                        parked :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).parked,
+                        pending :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).pending,
+                        finalizing :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).finalizing,
+                        exit :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).exit,
+                        currentOpCount := 0,
+                        maxOpsBeforeYield :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).maxOpsBeforeYield,
+                        preventYield :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).preventYield,
+                        yieldOverride :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).yieldOverride,
+                        observers :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).observers,
+                        children :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).children,
+                        dispatcher :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).dispatcher,
+                        context :=
+                          (withStack [ScopeFrame.answer badNext]
+                              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                                emptyCtx)).context }.id then
+                {
+                  id :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx)).id,
+                  frame :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).frame,
+                  running := true,
+                  parked :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).parked,
+                  pending :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).pending,
+                  finalizing :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).finalizing,
+                  exit :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).exit,
+                  currentOpCount := 0,
+                  maxOpsBeforeYield :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).maxOpsBeforeYield,
+                  preventYield :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).preventYield,
+                  yieldOverride :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).yieldOverride,
+                  observers :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).observers,
+                  children :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).children,
+                  dispatcher :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).dispatcher,
+                  context :=
+                    (withStack [ScopeFrame.answer badNext]
+                        (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                          emptyCtx)).context }
+              else g)
+            (withStack [ScopeFrame.answer badNext]
+              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                emptyCtx))).frame.current
+in the application
+  And.intro (code_typed w0)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:245:33: error: Application type mismatch: The argument
+  stack_ok
+has type
+  StackAccepts (TypedProg { program := refProg }) FitsExit (frameProtocols { program := refProg }) w0 tin unitTy
+    [ScopeFrame.answer badNext]
+but is expected to have type
+  StackAccepts (TypedProg { program := refProg }) ExitOk (frameProtocols { program := refProg }) w0 tin unitTy
+    ((fun g =>
+            if
+                g.id =
+                  {
+                      id :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).id,
+                      frame :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).frame,
+                      running := true,
+                      parked :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).parked,
+                      pending :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).pending,
+                      finalizing :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).finalizing,
+                      exit :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).exit,
+                      currentOpCount := 0,
+                      maxOpsBeforeYield :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).maxOpsBeforeYield,
+                      preventYield :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).preventYield,
+                      yieldOverride :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).yieldOverride,
+                      observers :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).observers,
+                      children :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).children,
+                      dispatcher :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).dispatcher,
+                      context :=
+                        (withStack [ScopeFrame.answer badNext]
+                            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                              emptyCtx)).context }.id then
+              {
+                id :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx)).id,
+                frame :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).frame,
+                running := true,
+                parked :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).parked,
+                pending :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).pending,
+                finalizing :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).finalizing,
+                exit :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx)).exit,
+                currentOpCount := 0,
+                maxOpsBeforeYield :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).maxOpsBeforeYield,
+                preventYield :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).preventYield,
+                yieldOverride :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).yieldOverride,
+                observers :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).observers,
+                children :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).children,
+                dispatcher :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).dispatcher,
+                context :=
+                  (withStack [ScopeFrame.answer badNext]
+                      (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                        (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+                        emptyCtx)).context }
+            else g)
+          (withStack [ScopeFrame.answer badNext]
+            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx))).frame.stack
+in the application
+  And.intro stack_ok
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:262:10: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
+
+case refine_4
+⊢ ActiveDelivery { program := refProg } w0 afterEval.fst ∧
+    SchedulerState afterEval.fst ∧
+      ObserverState { program := refProg } w0 afterEval.fst ∧ RegistrationState { program := refProg } w0 afterEval.fst
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:273:43: error: Application type mismatch: The argument
+  afterEval.snd
+has type
+  List RCmd
+but is expected to have type
+  RState
+in the application
+  QueueOk { program := refProg } w' afterEval.snd
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:358:10: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.success ?v)
+in the target expression
+  ExitOk w1 unitTy (Exit.success (Val.str "x"))
+
+case cons.nil.answer
+run :
+  ∀ (w' : Typed.World),
+    World.leHost w0 w' → ∀ (ex : ExitV), FitsExit w' tin ex → TypedProg { program := refProg } w' unitTy (badNext ex)
+hp : ExitOk w1 unitTy (Exit.success (Val.str "x"))
+⊢ False
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:377:8: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.success ?v)
+in the target expression
+  ExitOk w unitTy (Exit.success Val.unit)
+
+case success
+w : TW
+v : Val
+hex : FitsExit w tin (Exit.success v)
+⊢ ExitOk w unitTy (Exit.success Val.unit)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:381:8: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.failure ?c)
+in the target expression
+  ExitOk w unitTy (Exit.failure c)
+
+case failure
+w : TW
+c : Cause Err Defect FiberId Ann
+hex : FitsCause w tin.error c
+⊢ ExitOk w unitTy (Exit.failure c)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:392:10: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.success ?v)
+in the target expression
+  ExitOk w' unitTy (Exit.success Val.unit)
+
+case success
+w : TW
+w' : Typed.World
+x✝ : World.leHost w w'
+v : Val
+hex : FitsExit w' tin (Exit.success v)
+⊢ ExitOk w' unitTy (Exit.success Val.unit)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:396:10: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.failure ?c)
+in the target expression
+  ExitOk w' unitTy (Exit.failure c)
+
+case failure
+w : TW
+w' : Typed.World
+x✝ : World.leHost w w'
+c : Cause Err Defect FiberId Ann
+hex : FitsCause w' tin.error c
+⊢ ExitOk w' unitTy (Exit.failure c)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:413:18: error: Application type mismatch: The argument
+  code_typed w0
+has type
+  TypedProg { program := refProg } w0 tin (denoteR refProg refProg (rootPoint 20))
+but is expected to have type
+  ¬CodeInert mGood []
+        (Expect.fiber
+          (withStack [ScopeFrame.answer goodNext]
+              (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx)).id) →
+    TypedProg { program := refProg } w0 tin
+      (withStack [ScopeFrame.answer goodNext]
+            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx)).frame.current
+in the application
+  And.intro (code_typed w0)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:413:33: error: Application type mismatch: The argument
+  stack_good w0
+has type
+  StackAccepts (TypedProg { program := refProg }) FitsExit (frameProtocols { program := refProg }) w0 tin unitTy
+    [ScopeFrame.answer goodNext]
+but is expected to have type
+  StackAccepts (TypedProg { program := refProg }) ExitOk (frameProtocols { program := refProg }) w0 tin unitTy
+    (withStack [ScopeFrame.answer goodNext]
+          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx)).frame.stack
+in the application
+  And.intro (stack_good w0)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:430:10: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
+
+case refine_4
+⊢ ActiveDelivery { program := refProg } w0 mGood ∧
+    SchedulerState mGood ∧
+      ObserverState { program := refProg } w0 mGood ∧ RegistrationState { program := refProg } w0 mGood
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:544:33: error: Application type mismatch: The argument
+  cell0_fits_w1g
+has type
+  FitsExit w1g tin (Exit.success (Val.cell { index := 0 }))
+but is expected to have type
+  ExitOk ?m.143 ?m.144 ?m.145
+in the application
+  TypedProg.pure cell0_fits_w1g
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:544:49: error: Application type mismatch: The argument
+  stack_good w1g
+has type
+  StackAccepts (TypedProg { program := refProg }) FitsExit (frameProtocols { program := refProg }) w1g tin unitTy
+    [ScopeFrame.answer goodNext]
+but is expected to have type
+  StackAccepts (TypedProg { program := refProg }) ExitOk (frameProtocols { program := refProg }) w1g tin unitTy
+    ((fun g =>
+            if
+                g.id =
+                  (iteration (interpR { program := refProg }.program) mGood
+                        (withStack [ScopeFrame.answer goodNext]
+                          (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                            (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx))
+                        false).fiber.id then
+              (iteration (interpR { program := refProg }.program) mGood
+                  (withStack [ScopeFrame.answer goodNext]
+                    (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+                      (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx))
+                  false).fiber
+            else g)
+          (withStack [ScopeFrame.answer goodNext]
+            (RunFiber.make Api.root (denoteR refProg refProg (rootPoint 20)) true
+              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx))).frame.stack
+in the application
+  And.intro (stack_good w1g)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:573:10: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
+
+case refine_4
+⊢ ActiveDelivery { program := refProg } w1g afterGood.fst ∧
+    SchedulerState afterGood.fst ∧
+      ObserverState { program := refProg } w1g afterGood.fst ∧
+        RegistrationState { program := refProg } w1g afterGood.fst
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:584:43: error: Application type mismatch: The argument
+  afterGood.snd
+has type
+  List RCmd
+but is expected to have type
+  RState
+in the application
+  QueueOk { program := refProg } w' afterGood.snd
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/verify-StepLoop.lean:586:10: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
+
+⊢ sorry
+'FormalPass.AlgebraVerify.StepLoop.valid_mBad' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.code_typed' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.stack_ok' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.typed_mBad' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.post_fiber' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.post_untyped' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.step_loop_refuted' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.valid_of_skeleton' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.typed_afterEval' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.evaluate_keeps' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.w0_le_w1' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.bad_not_kripke_initial' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.stack_good_kripke' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.typed_mGood' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.valid_w1g' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.typed_afterGood' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.AlgebraVerify.StepLoop.step_loop_good' depends on axioms: [propext, sorryAx, Quot.sound]

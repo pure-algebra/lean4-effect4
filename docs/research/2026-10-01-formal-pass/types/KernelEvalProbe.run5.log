@@ -1,0 +1,26 @@
+structure Effect4.Program.Typed.RSavedOk {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Sched.RSaved) : Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.RSavedOk.c0 : P.SavedOk w e x
+constructor:
+  Effect4.Program.Typed.RSavedOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect} {x : Sched.RSaved}
+    (c0 : P.SavedOk w e x) : RSavedOk P w e x
+structure Effect4.Program.Sched.RSaved : Type
+number of parameters: 0
+fields:
+  Effect4.Program.Sched.RSaved.current : Sched.RProgram
+  Effect4.Program.Sched.RSaved.stack : List Sched.ScopeFrame
+  Effect4.Program.Sched.RSaved.interruptible : Bool
+  Effect4.Program.Sched.RSaved.interruptedCause : Option Machine.CauseV
+  Effect4.Program.Sched.RSaved.deferredInterrupt : Bool
+constructor:
+  Effect4.Program.Sched.RSaved.mk (current : Sched.RProgram) (stack : List Sched.ScopeFrame) (interruptible : Bool)
+    (interruptedCause : Option Machine.CauseV) (deferredInterrupt : Bool) : Sched.RSaved
+def Effect4.Program.Sched.GuardKind.hasExitArm : Sched.GuardKind → Machine.ExitV → Bool :=
+fun kind ex =>
+  match kind, ex with
+  | Sched.GuardKind.onSuccess, Exit.failure cause => false
+  | Sched.GuardKind.onFailure, Exit.success value => false
+  | x, x_1 => true
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/KernelEvalProbe.lean:11:59: error(lean.unknownIdentifier): Unknown identifier `Val.fiber`
+exit=1

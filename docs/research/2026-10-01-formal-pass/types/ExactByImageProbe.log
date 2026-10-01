@@ -1,0 +1,11 @@
+'Research.TypesSeat.Exact.readExact_le' depends on axioms: [propext]
+'Research.TypesSeat.Exact.readExact_exact' depends on axioms: [propext]
+'Research.TypesSeat.Exact.readExact_retract' depends on axioms: [propext]
+'Research.TypesSeat.Exact.readExact_iff' depends on axioms: [propext]
+'Research.TypesSeat.Exact.decodeExact_retract' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Exact.decodeExact_exact' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Exact.decodeExact_sound' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Exact.ofSchemaExact_retract' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Exact.ofSchemaExact_exact' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.68s user 1.18s system 1% cpu 1:54.11 total
+exit=0

@@ -1,0 +1,5 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/KernelEvalProbe.lean:13:7: error(lean.unknownIdentifier): Unknown constant `RStateOk`
+'k1' depends on axioms: [propext, Quot.sound]
+'k2' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.49s user 0.93s system 92% cpu 1.543 total
+exit=1

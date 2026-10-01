@@ -1,0 +1,8 @@
+'Research.TypesVerify.Handle.ref_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Handle.deferred_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Handle.scope_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Handle.context_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Handle.external_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Handle.handle_inhabited' depends on axioms: [propext, Quot.sound]
+bash $S lake env lean -M6144 -DwarningAsError=true   0.59s user 1.09s system 63% cpu 2.655 total
+exit=0

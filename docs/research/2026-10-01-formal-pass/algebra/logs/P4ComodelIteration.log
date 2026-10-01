@@ -1,0 +1,13 @@
+'FormalPass.Algebra.P4.put_get' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P4.get_get' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P4.put_put' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P4.put_get_dead_fails' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P4.conv_fixpoint' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P4.conv_least' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P4.conv_unique' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P4.budget_not_fixpoint' does not depend on any axioms
+'FormalPass.Algebra.P4.runP_op' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P4.syncOp_refSet_live' depends on axioms: [propext]
+'FormalPass.Algebra.P4.syncOp_refGet_live' depends on axioms: [propext]
+'FormalPass.Algebra.P4.syncOp_ref_dead' depends on axioms: [propext]
+'FormalPass.Algebra.P4.iter_finished_succ' depends on axioms: [propext, Quot.sound]

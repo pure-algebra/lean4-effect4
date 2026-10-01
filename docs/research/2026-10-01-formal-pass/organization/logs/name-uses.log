@@ -1,0 +1,10 @@
+red control (fits_hasTy mentions Typed.Fits): true
+Effect4.Program.Fits: 46 declarations in 4 modules
+Effect4.Program.Typed.Fits: 142 declarations in 12 modules
+Effect4.Machine.World: 108 declarations in 5 modules
+Effect4.Program.Typed.World: 539 declarations in 23 modules
+Effect4.Program.Ty.Canonical: 28 declarations in 8 modules
+Effect4.Store.Canonical: 188 declarations in 16 modules
+Effect4.Api.Typed: 29 declarations in 3 modules
+Effect4.Laws.Effects.Typed: 48 declarations in 4 modules
+Effect4.Program.Denote.ExitOk: 27 declarations in 3 modules

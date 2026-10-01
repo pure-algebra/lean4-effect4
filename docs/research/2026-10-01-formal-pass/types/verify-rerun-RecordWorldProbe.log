@@ -1,0 +1,8 @@
+'RecWorld.raw_fits_declared' depends on axioms: [propext]
+'RecWorld.raw_not_invariant' depends on axioms: [propext]
+'RecWorld.amended_fits_normal' depends on axioms: [propext]
+'RecWorld.normalize_idem' depends on axioms: [propext, Quot.sound]
+'RecWorld.fitsN_normalize' depends on axioms: [propext, Quot.sound]
+'RecWorld.fitsN_mono' depends on axioms: [propext]
+bash $S lake env lean -M6144 -DwarningAsError=true $D/$p.lean  0.71s user 0.29s system 153% cpu 0.650 total
+exit=0

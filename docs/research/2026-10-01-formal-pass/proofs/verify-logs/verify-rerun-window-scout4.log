@@ -1,0 +1,9 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/probes/WindowScout4.lean
+# sha256: 7576b6aa1bd3031b8c3a3bb23ec40f9383dbdb00453841ca773453f71c19573a
+# head: ea5b28b5
+# started: 2026-10-01 06:28:39
+["resume 0", "evaluate", "loop", "loop", "loop", "loop", "stop residue=[finish, drainDue]"]
+# exit: 0
+# wall seconds (including lock wait): 2
+#         1.48 real         0.57 user         0.91 sys
+#           1607876608  maximum resident set size

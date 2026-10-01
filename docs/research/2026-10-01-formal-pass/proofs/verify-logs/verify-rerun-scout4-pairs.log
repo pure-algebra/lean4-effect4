@@ -1,0 +1,9 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyScout4Pairs.lean
+# sha256: 639f92060dbd423f195a70feddc478dcc4de8de4d835d48c551dd04008fb689c
+# head: ea5b28b5
+# started: 2026-10-01 07:07:36
+(645511, 11230, 0, [])
+# exit: 0
+# wall seconds (including lock wait): 119
+#       119.08 real       116.71 user         2.00 sys
+#           1612857344  maximum resident set size

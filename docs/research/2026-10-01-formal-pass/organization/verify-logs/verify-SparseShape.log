@@ -1,0 +1,42 @@
+Effect4.Program.Ty.closed: direct-recursor [Effect4.Program.Ty.brecOn]; self-reference through helpers false
+Effect4.Program.Ty.sub: direct-recursor []; self-reference through helpers false
+Effect4.Program.Ty.isFactor: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Ty.isFactor.match_1: case constants [Effect4.Program.Ty.infer._sparseCasesOn_13]
+Effect4.Program.Ty.isTagged: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Ty.isTagged.match_1: case constants [Effect4.Program.Ty.infer._sparseCasesOn_8, Effect4.Program.Ty.isTagged._sparseCasesOn_1]
+Effect4.Program.Ty.payloadOf: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Ty.isTagged.match_1: case constants [Effect4.Program.Ty.infer._sparseCasesOn_8, Effect4.Program.Ty.isTagged._sparseCasesOn_1]
+Effect4.Program.Ty.factors: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Ty.factors.match_1: case constants [Effect4.Program.Ty.factors._sparseCasesOn_1]
+Effect4.Program.Ty.taggedColumn: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Ty.taggedColumn.match_1: case constants [Effect4.Program.Ty.taggedColumn._sparseCasesOn_1, Effect4.Program.Ty.isTagged._sparseCasesOn_1]
+Effect4.Program.Ty.litRule: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Ty.litRule.match_1: case constants [Effect4.Program.Ty.sameHead._sparseCasesOn_16, Effect4.Program.Ty.sameHead._sparseCasesOn_6]
+Effect4.Program.Ty.sameHead: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Ty.sameHead.match_1: case constants [Effect4.Program.Ty.sameHead._sparseCasesOn_1, Effect4.Program.Ty.sameHead._sparseCasesOn_2, Effect4.Program.Ty.sameHead._sparseCasesOn_3, Effect4.Program.Ty.sameHead._sparseCasesOn_4, Effect4.Program.Ty.sameHead._sparseCasesOn_5, Effect4.Program.Ty.sameHead._sparseCasesOn_6, Effect4.Program.Ty.sameHead._sparseCasesOn_7, Effect4.Program.Ty.sameHead._sparseCasesOn_8, Effect4.Program.Ty.sameHead._sparseCasesOn_9, Effect4.Program.Ty.sameHead._sparseCasesOn_10, Effect4.Program.Ty.sameHead._sparseCasesOn_11, Effect4.Program.Ty.sameHead._sparseCasesOn_12, Effect4.Program.Ty.sameHead._sparseCasesOn_13, Effect4.Program.Ty.sameHead._sparseCasesOn_14, Effect4.Program.Ty.sameHead._sparseCasesOn_15, Effect4.Program.Ty.sameHead._sparseCasesOn_16, Effect4.Program.Ty.sameHead._sparseCasesOn_17, Effect4.Program.Ty.sameHead._sparseCasesOn_18, Effect4.Program.Ty.sameHead._sparseCasesOn_19, Effect4.Program.Ty.sameHead._sparseCasesOn_20]
+Effect4.Program.Ty.topRule: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Ty.topRule.match_1: case constants [Effect4.Program.Ty.sameHead._sparseCasesOn_20]
+Effect4.Program.Typed.FlatFits: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Typed.FlatFits.match_16: case constants [Effect4.Program.Typed.FlatFits._sparseCasesOn_16]
+    matcher Effect4.Program.Typed.FlatFits.match_1: case constants [Effect4.Program.Typed.FlatFits._sparseCasesOn_1]
+    matcher Effect4.Program.Typed.FlatFits.match_4: case constants [Effect4.Program.Typed.FlatFits._sparseCasesOn_4]
+    matcher Effect4.Program.Typed.FlatFits.match_7: case constants [Effect4.Program.Typed.FlatFits._sparseCasesOn_7]
+    matcher Effect4.Program.Typed.FlatFits.match_10: case constants [Effect4.Program.Typed.FlatFits._sparseCasesOn_10]
+    matcher Effect4.Program.Typed.FlatFits.match_13: case constants [Effect4.Program.Typed.FlatFits._sparseCasesOn_13]
+Effect4.Program.Checker.exitOf?: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Checker.exitOf?.match_1: case constants [Effect4.Program.Checker.exitOf?._sparseCasesOn_1]
+Effect4.Program.Checker.listOf?: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Checker.listOf?.match_1: case constants [Effect4.Program.Checker.listOf?._sparseCasesOn_1]
+Effect4.Program.causeInputError?: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.causeInputError?.match_1: case constants [Effect4.Program.causeInputError?._sparseCasesOn_1]
+Effect4.Program.fiberTy: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.fiberTy.match_1: case constants [Effect4.Program.fiberTy._sparseCasesOn_1]
+Effect4.Program.externalValue: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.externalValue.match_1: case constants [Effect4.Program.externalValue._sparseCasesOn_1, Effect4.Program.causeOf._sparseCasesOn_2]
+Effect4.Program.Decision.arms: direct-recursor []; self-reference through helpers false
+    matcher Effect4.Program.Decision.arms.match_4: case constants [Effect4.Program.Decision.casesOn]
+    matcher Effect4.Program.Decision.arms.match_1: case constants [Effect4.Program.Decision.arms._sparseCasesOn_1]
+Effect4.Codegen.Types.ofTy: direct-recursor []; self-reference through helpers false
+Effect4.Schema.Codec.isSupported: direct-recursor [Effect4.Program.Ty.brecOn]; self-reference through helpers false
+Effect4.Program.isTagTy: direct-recursor [Effect4.Program.Ty.brecOn]; self-reference through helpers false
+## exit=0 seconds=2 probe=/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/organization/verify-SparseShape.lean

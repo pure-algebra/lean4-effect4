@@ -1,0 +1,13 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/probes/AwaitValuePost.lean
+# sha256: fa6fc402ea976f7dfad889aa523a47da85ce2a77b8cc00dce02a7a3040104505
+# head: ea5b28b5
+# started: 2026-10-01 06:28:35
+'FormalPass.Proofs.AwaitValuePost.target_declared' does not depend on any axioms
+'FormalPass.Proofs.AwaitValuePost.exitValue_delivers' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.AwaitValuePost.delivered_fits_checked' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.AwaitValuePost.post_excludes_delivered' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.AwaitValuePost.await_code_refused' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 1
+#         1.49 real         0.53 user         0.96 sys
+#           1595686912  maximum resident set size

@@ -1,0 +1,13 @@
+verify-CensusDeep exit=1 seconds=2
+verify-CensusDeep exit=0 seconds=11
+verify-SparseShape exit=0 seconds=2
+verify-CensusPrivate exit=1 seconds=1
+verify-CensusPrivate exit=0 seconds=24
+verify-CensusConsistency exit=0 seconds=12
+verify-ExitOkConnector exit=1 seconds=3
+verify-ExitOkConnector exit=1 seconds=2
+verify-ExitOkConnector exit=1 seconds=1
+verify-ExitOkConnector exit=0 seconds=1
+verify-TyCasesDeep exit=1 seconds=5
+verify-TyCasesDeep exit=0 seconds=7
+verify-ExitOkOverload exit=0 seconds=18

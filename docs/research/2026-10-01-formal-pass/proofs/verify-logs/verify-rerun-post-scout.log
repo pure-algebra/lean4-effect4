@@ -1,0 +1,14 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/probes/PostScout.lean
+# sha256: 4c451c610a756b36e6f6e08b6947a1b3373a54491ab401fc58d26bf6efa2167f
+# head: ea5b28b5
+# started: 2026-10-01 06:28:38
+["refMake: other (Val.handle 2 1)", "refGet: nat", "refSet: other (Val.handle 2 0)", "refGetAndSet: nat",
+  "refSetAndGet: nat", "refUpdate: unit", "refGetAndUpdate: nat", "refUpdateAndGet: nat", "refUpdateSome: unit",
+  "refModify: nat", "deferredMake: other (Val.handle 3 1)", "deferredIsDone: bool", "deferredPoll: bool",
+  "deferredCompleteWith: bool", "deferredAwaitCleanup: unit", "clockNow: nat", "sleepCancel: unit",
+  "scopeMake: other (Val.handle 4 1)", "scopeAdd: unit", "scopeRemove: unit", "scopeIsClosed: bool",
+  "scopeFork: other (Val.handle 4 1)"]
+# exit: 0
+# wall seconds (including lock wait): 1
+#         1.46 real         0.52 user         0.92 sys
+#           1594195968  maximum resident set size

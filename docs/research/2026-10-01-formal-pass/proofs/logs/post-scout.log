@@ -1,0 +1,6 @@
+["refMake: other (Val.handle 2 1)", "refGet: nat", "refSet: other (Val.handle 2 0)", "refGetAndSet: nat",
+  "refSetAndGet: nat", "refUpdate: unit", "refGetAndUpdate: nat", "refUpdateAndGet: nat", "refUpdateSome: unit",
+  "refModify: nat", "deferredMake: other (Val.handle 3 1)", "deferredIsDone: bool", "deferredPoll: bool",
+  "deferredCompleteWith: bool", "deferredAwaitCleanup: unit", "clockNow: nat", "sleepCancel: unit",
+  "scopeMake: other (Val.handle 4 1)", "scopeAdd: unit", "scopeRemove: unit", "scopeIsClosed: bool",
+  "scopeFork: other (Val.handle 4 1)"]

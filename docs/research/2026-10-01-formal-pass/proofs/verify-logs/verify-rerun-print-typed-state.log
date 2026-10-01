@@ -1,0 +1,164 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/probes/PrintTypedState.lean
+# sha256: 309496eda093936543be336dcbb5ffa1fc2104df935c77d5281374908aff8331
+# head: ea5b28b5
+# started: 2026-10-01 07:10:25
+structure Effect4.Program.Typed.Preds (W : Type) : Type
+number of parameters: 1
+fields:
+  Effect4.Program.Typed.Preds.SavedOk : W → Expect → Effect4.Program.Sched.RSaved → Prop
+  Effect4.Program.Typed.Preds.PendingOk : W →
+      Expect →
+        List
+            (Effect4.Machine.Pending Effect4.Program.EffName Effect4.Machine.Val Effect4.Machine.Err
+              Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann) →
+          Prop
+  Effect4.Program.Typed.Preds.exit : W →
+      Expect →
+        Effect4.Exit Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+            Effect4.Machine.Ann →
+          Prop
+  Effect4.Program.Typed.Preds.ResumeOk : W → Expect → Effect4.FiberId → Nat → Effect4.Program.Sched.RProgram → Prop
+  Effect4.Program.Typed.Preds.ServiceOk : W → Expect → Effect4.Machine.Ctx → Prop
+  Effect4.Program.Typed.Preds.RaceOk : W →
+      Expect →
+        List
+            (Effect4.Machine.Race Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann
+              Effect4.Program.Sched.RProgram) →
+          Prop
+  Effect4.Program.Typed.Preds.PromiseTable : W → Effect4.Machine.Stores → Prop
+  Effect4.Program.Typed.Preds.HeapCell : W → Effect4.Machine.RefKey → Effect4.Machine.Val → Prop
+  Effect4.Program.Typed.Preds.PromiseCell : W → Effect4.Machine.DeferredKey → Effect4.Machine.DeferredCell → Prop
+  Effect4.Program.Typed.Preds.CaptureOk : W → Expect → Effect4.Machine.Capture → Prop
+constructor:
+  Effect4.Program.Typed.Preds.mk {W : Type} (SavedOk : W → Expect → Effect4.Program.Sched.RSaved → Prop)
+    (PendingOk :
+      W →
+        Expect →
+          List
+              (Effect4.Machine.Pending Effect4.Program.EffName Effect4.Machine.Val Effect4.Machine.Err
+                Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann) →
+            Prop)
+    (exit :
+      W →
+        Expect →
+          Effect4.Exit Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+              Effect4.Machine.Ann →
+            Prop)
+    (ResumeOk : W → Expect → Effect4.FiberId → Nat → Effect4.Program.Sched.RProgram → Prop)
+    (ServiceOk : W → Expect → Effect4.Machine.Ctx → Prop)
+    (RaceOk :
+      W →
+        Expect →
+          List
+              (Effect4.Machine.Race Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann
+                Effect4.Program.Sched.RProgram) →
+            Prop)
+    (PromiseTable : W → Effect4.Machine.Stores → Prop)
+    (HeapCell : W → Effect4.Machine.RefKey → Effect4.Machine.Val → Prop)
+    (PromiseCell : W → Effect4.Machine.DeferredKey → Effect4.Machine.DeferredCell → Prop)
+    (CaptureOk : W → Expect → Effect4.Machine.Capture → Prop) : Preds W
+@[reducible] def Effect4.Program.Typed.RStateOk : {W : Type} → Preds W → W → Effect4.Program.Sched.RState → Prop :=
+fun {W} P w x => RunMachineOk P w Expect.root x
+structure Effect4.Program.Typed.RunMachineOk {W : Type} (P : Preds W) (w : W) (e : Expect)
+  (x :
+    Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+      Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx Effect4.Machine.Stores
+      Effect4.Program.Sched.RProgram Effect4.Program.Sched.RSaved Unit) :
+  Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.RunMachineOk.c0 : ∀
+      (v0 :
+        Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+          Effect4.Program.Sched.RProgram Effect4.Program.Sched.RSaved),
+      v0 ∈ x.fibers → RunFiberOk P w e v0
+  Effect4.Program.Typed.RunMachineOk.c1 : P.RaceOk w e x.races
+  Effect4.Program.Typed.RunMachineOk.c2 : StoresOk P w e x.state
+constructor:
+  Effect4.Program.Typed.RunMachineOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect}
+    {x :
+      Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+        Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+        Effect4.Machine.Stores Effect4.Program.Sched.RProgram Effect4.Program.Sched.RSaved Unit}
+    (c0 :
+      ∀
+        (v0 :
+          Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+            Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
+            Effect4.Program.Sched.RProgram Effect4.Program.Sched.RSaved),
+        v0 ∈ x.fibers → RunFiberOk P w e v0)
+    (c1 : P.RaceOk w e x.races) (c2 : StoresOk P w e x.state) : RunMachineOk P w e x
+structure Effect4.Program.Typed.RunFiberOk {W : Type} (P : Preds W) (w : W) (e : Expect)
+  (x :
+    Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+      Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx Effect4.Program.Sched.RProgram
+      Effect4.Program.Sched.RSaved) :
+  Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.RunFiberOk.c0 : RSavedOk P w (Expect.fiber x.id) x.frame
+  Effect4.Program.Typed.RunFiberOk.c1 : P.PendingOk w e x.pending
+  Effect4.Program.Typed.RunFiberOk.c2 : ∀
+      (v0 :
+        Effect4.Exit Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+          Effect4.Machine.Ann),
+      x.finalizing = some v0 → P.exit w (Expect.fiber x.id) v0
+  Effect4.Program.Typed.RunFiberOk.c3 : ∀
+      (v0 :
+        Effect4.Exit Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+          Effect4.Machine.Ann),
+      x.exit = some v0 → P.exit w (Expect.fiber x.id) v0
+  Effect4.Program.Typed.RunFiberOk.c4 : DispatcherOk P w e x.dispatcher
+  Effect4.Program.Typed.RunFiberOk.c5 : P.ServiceOk w e x.context
+constructor:
+  Effect4.Program.Typed.RunFiberOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect}
+    {x :
+      Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+        Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx Effect4.Program.Sched.RProgram
+        Effect4.Program.Sched.RSaved}
+    (c0 : RSavedOk P w (Expect.fiber x.id) x.frame) (c1 : P.PendingOk w e x.pending)
+    (c2 :
+      ∀
+        (v0 :
+          Effect4.Exit Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+            Effect4.Machine.Ann),
+        x.finalizing = some v0 → P.exit w (Expect.fiber x.id) v0)
+    (c3 :
+      ∀
+        (v0 :
+          Effect4.Exit Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+            Effect4.Machine.Ann),
+        x.exit = some v0 → P.exit w (Expect.fiber x.id) v0)
+    (c4 : DispatcherOk P w e x.dispatcher) (c5 : P.ServiceOk w e x.context) : RunFiberOk P w e x
+structure Effect4.Program.Typed.RSavedOk {W : Type} (P : Preds W) (w : W) (e : Expect)
+  (x : Effect4.Program.Sched.RSaved) : Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.RSavedOk.c0 : P.SavedOk w e x
+constructor:
+  Effect4.Program.Typed.RSavedOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect} {x : Effect4.Program.Sched.RSaved}
+    (c0 : P.SavedOk w e x) : RSavedOk P w e x
+structure Effect4.Program.Typed.StoresOk {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Effect4.Machine.Stores) :
+  Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.StoresOk.c0 : P.PromiseTable w x
+  Effect4.Program.Typed.StoresOk.c1 : Columns.Stores_refs P.HeapCell w x.refs
+  Effect4.Program.Typed.StoresOk.c2 : DeferredStoreOk P w e x.deferreds
+  Effect4.Program.Typed.StoresOk.c3 : ScopeStoreOk P w e x.scopes
+  Effect4.Program.Typed.StoresOk.c4 : ∀ (v0 : Effect4.Machine.MemoMap), v0 ∈ x.memo → MemoMapOk P w e v0
+  Effect4.Program.Typed.StoresOk.c5 : True
+constructor:
+  Effect4.Program.Typed.StoresOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect} {x : Effect4.Machine.Stores}
+    (c0 : P.PromiseTable w x) (c1 : Columns.Stores_refs P.HeapCell w x.refs) (c2 : DeferredStoreOk P w e x.deferreds)
+    (c3 : ScopeStoreOk P w e x.scopes) (c4 : ∀ (v0 : Effect4.Machine.MemoMap), v0 ∈ x.memo → MemoMapOk P w e v0)
+    (c5 : True) : StoresOk P w e x
+@[reducible] def Effect4.Program.Typed.RCmdOk : {W : Type} → Preds W → W → Effect4.Program.Sched.RCmd → Prop :=
+fun {W} P w x => CmdOk P w Expect.root x
+# exit: 0
+# wall seconds (including lock wait): 2
+#         2.59 real         0.52 user         1.00 sys
+#           1578680320  maximum resident set size

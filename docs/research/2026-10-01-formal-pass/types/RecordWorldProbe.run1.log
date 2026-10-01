@@ -1,0 +1,9 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/RecordWorldProbe.lean:84:87: error: unexpected token 'mutual'; expected '#guard_msgs', 'abbrev', 'add_decl_doc', 'axiom', 'binder_predicate', 'builtin_cbv_simproc', 'builtin_cbv_simproc_decl', 'builtin_dsimproc', 'builtin_dsimproc_decl', 'builtin_grind_propagator', 'builtin_initialize', 'builtin_simproc', 'builtin_simproc_decl', 'cbv_simproc', 'cbv_simproc_decl', 'class', 'coinductive', 'declare_simp_like_tactic', 'declare_syntax_cat', 'def', 'dsimproc', 'dsimproc_decl', 'elab', 'elab_rules', 'example', 'grind_propagator', 'inductive', 'infix', 'infixl', 'infixr', 'initialize', 'instance', 'macro', 'macro_rules', 'notation', 'opaque', 'postfix', 'prefix', 'recommended_spelling', 'register_error_explanation', 'register_tactic_tag', 'register_try?_tactic', 'simproc', 'simproc_decl', 'structure', 'syntax', 'tactic_extension', 'theorem' or 'unif_hint'
+'RecWorld.raw_fits_declared' depends on axioms: [propext]
+'RecWorld.raw_not_invariant' depends on axioms: [propext]
+'RecWorld.amended_fits_normal' depends on axioms: [propext]
+'RecWorld.normalize_idem' depends on axioms: [propext, Quot.sound]
+'RecWorld.fitsN_normalize' depends on axioms: [propext, Quot.sound]
+'RecWorld.fitsN_mono' depends on axioms: [propext]
+bash  lake env lean -M6144 -DwarningAsError=true   0.64s user 0.23s system 144% cpu 0.605 total
+exit=1

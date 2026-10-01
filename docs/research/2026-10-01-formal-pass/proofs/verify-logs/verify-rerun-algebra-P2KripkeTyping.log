@@ -1,0 +1,24 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean
+# sha256: 8ac3ae1568800c4485b144d73d1a68489cefa345d72bfdb7e0144a72cbb2cf37
+# head: ea5b28b5
+# started: 2026-10-01 06:28:41
+'FormalPass.Algebra.P2.storePre_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.fiberPre_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.typedProg_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.stackAccepts_not_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.stackAcceptsK_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.stackAcceptsK_now' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.bad_not_kripke' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.envTyped_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.pointTyped_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.bodyTyped_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.asyncPre_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.w0_le_w1' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.bad_accepted_at_w0' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.bad_refused_at_w1' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.frameAcceptsK_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.frameAcceptsK_now' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 2
+#         1.64 real         1.12 user         0.96 sys
+#           1630748672  maximum resident set size

@@ -1,0 +1,17 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/probes/StorePostAdequacy.lean
+# sha256: 84e87a532fa928a7b1471b280e51718f253af83f6663b3994a885db657833c6e
+# head: ea5b28b5
+# started: 2026-10-01 06:28:33
+'FormalPass.Proofs.StorePostAdequacy.scopeRemove_answer' depends on axioms: [propext]
+'FormalPass.Proofs.StorePostAdequacy.awaitCleanup_answer' depends on axioms: [propext]
+'FormalPass.Proofs.StorePostAdequacy.scopeAdd_open_answer' depends on axioms: [propext]
+'FormalPass.Proofs.StorePostAdequacy.scopeRemove_post_excludes' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StorePostAdequacy.scopeAdd_post_excludes' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StorePostAdequacy.awaitCleanup_post_excludes' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StorePostAdequacy.admitted' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StorePostAdequacy.next_untyped' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StorePostAdequacy.store_step_leaves_typing' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 2
+#         1.44 real         0.53 user         0.92 sys
+#           1594245120  maximum resident set size

@@ -1,0 +1,5 @@
+[(0, "frontier tape"), (1, "frontier tape"), (2, "frontier tape"), (3, "frontier tape"), (4, "frontier fuel"),
+  (5, "frontier fuel")]
+[]
+some (false, 0)
+["mode now? true", "after drain cmds=[resume 0, drainDue]", "residue=[finish fail fail?=false, drainDue] armed=0"]

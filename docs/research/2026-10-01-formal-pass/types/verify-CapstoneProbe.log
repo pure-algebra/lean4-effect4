@@ -1,0 +1,7 @@
+'Research.TypesVerify.Capstone.m5_false' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Capstone.replayR_nil_machine' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Capstone.rreachable_load' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Capstone.capstone_implies_load' depends on axioms: [propext, Quot.sound]
+'Research.TypesVerify.Capstone.capstone_false' depends on axioms: [propext, Quot.sound]
+bash $S lake env lean -M6144 -DwarningAsError=true   0.73s user 0.98s system 106% cpu 1.613 total
+exit=0

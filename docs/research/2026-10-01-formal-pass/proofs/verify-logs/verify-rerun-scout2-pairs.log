@@ -1,0 +1,18 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyScout2Pairs.lean
+# sha256: 952714892fefc775b84ea66cd6a89f136c3ac29607ba0e8f202c7ac7914f315b
+# head: ea5b28b5
+# started: 2026-10-01 07:06:51
+{ runs := 167832,
+  settled := 51064,
+  settledRunning := 0,
+  fuelRunning := 111864,
+  fuelRuns := 116768,
+  finished := 44649,
+  finishedStale := 24749,
+  examples := ["finished-stale acquire.acquire/clockNow k=4000", "finished-stale acquire.acquire/clockNow k=4000",
+               "finished-stale acquire.acquire/clockNow k=4000", "finished-stale acquire.acquire/clockNow k=4000",
+               "finished-stale acquire.maskedSleepThen/clockNow k=4000"] }
+# exit: 0
+# wall seconds (including lock wait): 31
+#        30.27 real        27.77 user         1.25 sys
+#           1617379328  maximum resident set size

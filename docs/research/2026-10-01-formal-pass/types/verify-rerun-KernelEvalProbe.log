@@ -1,0 +1,14 @@
+@[reducible] def Effect4.Program.Typed.RStateOk : {W : Type} → Preds W → W → Sched.RState → Prop :=
+fun {W} P w x => RunMachineOk P w Expect.root x
+structure Effect4.Program.Typed.RSavedOk {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Sched.RSaved) : Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.RSavedOk.c0 : P.SavedOk w e x
+constructor:
+  Effect4.Program.Typed.RSavedOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect} {x : Sched.RSaved}
+    (c0 : P.SavedOk w e x) : RSavedOk P w e x
+'k1' depends on axioms: [propext, Quot.sound]
+'k2' depends on axioms: [propext, Quot.sound]
+'k3' depends on axioms: [propext]
+bash $S lake env lean -M6144 -DwarningAsError=true $D/$p.lean  0.56s user 1.14s system 94% cpu 1.796 total
+exit=0

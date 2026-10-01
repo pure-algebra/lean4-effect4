@@ -1,0 +1,11 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/probes/CloseScopePost.lean
+# sha256: 364d1ef526b6f9ae2fc4d504745990504faffb25629b7a98f0d34780150e3e2e
+# head: ea5b28b5
+# started: 2026-10-01 06:28:36
+'FormalPass.Proofs.CloseScopePost.close_no_finalizer' depends on axioms: [propext]
+'FormalPass.Proofs.CloseScopePost.post_excludes_answer' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.CloseScopePost.close_code_refused' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 2
+#         1.50 real         0.53 user         0.95 sys
+#           1597538304  maximum resident set size

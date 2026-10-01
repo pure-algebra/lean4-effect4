@@ -1,0 +1,10 @@
+'FormalPass.Proofs.FrameCategory.stackAccepts_append' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.stackAccepts_split' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.stackAccepts_id' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.stackAccepts_push' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.exitOk1_transport' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.FrameCategory.forbidden2_mono' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.exitOk2_transport' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.FrameCategory.exitOk2_transport_refuted' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.FrameCategory.requirement_condition_fails' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.61s user 0.93s system 104% cpu 1.474 total

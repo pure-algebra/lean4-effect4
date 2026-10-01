@@ -1,0 +1,34 @@
+HEAD ea5b28b5
+src/Effect4 (all .lean)                   350 files  151622 lines
+src/Effect4/Laws                          212 files   83683 lines
+src/Effect4 core (non-Laws)               137 files   67776 lines
+core Program                               42 files   17004 lines
+core Machine                               17 files   15351 lines
+core Store                                 26 files   14334 lines
+core Codegen                               18 files    6615 lines
+core Schema                                12 files    7462 lines
+core Api                                   12 files    3892 lines
+core Data                                   8 files    2614 lines
+core Ingest                                 1 files     153 lines
+Laws/Program                              152 files   53084 lines
+Laws/Machine                               25 files   20414 lines
+Laws/Codegen                               10 files    5266 lines
+Laws/Auto                                   9 files    1447 lines
+Laws/Api                                    9 files    2046 lines
+Laws/Store                                  2 files      69 lines
+Laws/Schema                                 2 files     136 lines
+Laws/Effects                                1 files     167 lines
+Laws/Program/Guard                         38 files   14674 lines
+Laws/Program/Typed                         17 files    4644 lines
+Laws/Program/Intro                         14 files    2323 lines
+Laws/Program/Folds                          9 files     222 lines
+Laws/Program/Simulation                     8 files    6324 lines
+Laws/Program/Typing                         7 files    2024 lines
+Laws/Program/Handles                        6 files    2578 lines
+Laws/Program/Authoring                      6 files    1076 lines
+Laws/Program/Agreement                      3 files    2941 lines
+Laws/Program top-level files               44 files   16278 lines
+Test (all .lean)                          157 files   31420 lines
+tools (all .lean)                          90 files   21406 lines
+generated/                                  7 files    1695 lines
+src/OCaml5                                 22 files    9038 lines

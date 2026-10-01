@@ -1,0 +1,17 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/probes/FrameCategory.lean
+# sha256: 1f4962e85ef0e6b49ab7b42e976180c09ccb4980cc4319918876e8677ab9160e
+# head: ea5b28b5
+# started: 2026-10-01 06:28:30
+'FormalPass.Proofs.FrameCategory.stackAccepts_append' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.stackAccepts_split' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.stackAccepts_id' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.stackAccepts_push' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.exitOk1_transport' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.FrameCategory.forbidden2_mono' depends on axioms: [propext]
+'FormalPass.Proofs.FrameCategory.exitOk2_transport' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.FrameCategory.exitOk2_transport_refuted' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.FrameCategory.requirement_condition_fails' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 2
+#         1.51 real         0.58 user         0.93 sys
+#           1601814528  maximum resident set size

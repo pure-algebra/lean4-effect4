@@ -1,0 +1,4 @@
+red control (Typed.Fits is a hit): true
+Effect4.Laws.Program.Typed: 3 — [Effect4.Program.NativeAtom.projectProduct_typed, _private.Effect4.Laws.Program.Typed.0.Effect4.Program.NativeAtom.projectProduct.match_1.eq_4, _private.Effect4.Laws.Program.Typed.0.Effect4.Program.NativeAtom.projectProduct.match_1.splitter._sparseCasesOn_4]
+Effect4.Laws.Program.Typed.Membership: 50 — [Effect4.Program.Typed.Fits, Effect4.Program.Typed.Fits._f, Effect4.Program.Typed.Fits._sunfold, Effect4.Program.Typed.Fits._unsafe_rec, Effect4.Program.Typed.Fits.eq_10, Effect4.Program.Typed.Fits.eq_12, Effect4.Program.Typed.Fits.eq_15, Effect4.Program.Typed.Fits.eq_18]
+## exit=0 seconds=2 probe=/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/organization/probes/TyCasesInTyped.lean

@@ -1,0 +1,5 @@
+'FormalPass.Proofs.AwaitValuePost.target_declared' does not depend on any axioms
+'FormalPass.Proofs.AwaitValuePost.exitValue_delivers' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.AwaitValuePost.delivered_fits_checked' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.AwaitValuePost.post_excludes_delivered' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.AwaitValuePost.await_code_refused' depends on axioms: [propext, Quot.sound]

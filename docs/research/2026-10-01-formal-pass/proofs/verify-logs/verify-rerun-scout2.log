@@ -1,0 +1,25 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyScout2.lean
+# sha256: 229b26ba8ebd5fe04c9e4617f0edf23f1ad056f53b2fb8ddd51403ac09d4f7a2
+# head: ea5b28b5
+# started: 2026-10-01 06:45:32
+{ runs := 31920,
+  settled := 13078,
+  settledRunning := 0,
+  fuelRunning := 17189,
+  fuelRuns := 18842,
+  finished := 12560,
+  finishedStale := 4052,
+  examples := ["finished-stale service/clockNow k=4000", "finished-stale service/clockNow k=25",
+               "finished-stale service/clockNow k=4000", "finished-stale service/clockNow k=25",
+               "finished-stale service/clockNow k=4000"] }
+["refModify incr @bool: bool", "refModifySome incr @bool: bool", "refGetAndUpdateSome @bool: bool",
+  "refUpdateSomeAndGet @bool: bool"]
+["memoRelease (one observer): other (Val.handle 4 1)", "memoComplete: unit",
+  "memoGet: other (Val.pair (Val.handle 3 0) (Val.handle 5 0))"]
+true
+true
+"guard"
+# exit: 0
+# wall seconds (including lock wait): 7
+#         7.40 real         5.98 user         1.21 sys
+#           1624506368  maximum resident set size

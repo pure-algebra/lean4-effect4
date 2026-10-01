@@ -1,0 +1,28 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/probes/StaleCode.lean:183:38: error: Application type mismatch: The argument
+  code
+has type
+  ¬CodeInert m [] (Expect.fiber f.id) → TypedProg { program := prog } w ty (Effects.Program.pure (Exit.failure c))
+but is expected to have type
+  TypedProg ?m.385 ?m.386 ?m.387 (Effects.Program.pure ?m.388)
+in the application
+  TypedProg.pure_inv code
+'FormalPass.Proofs.StaleCode.typed_source' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.reach6' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.reach7' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.window6' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.finished7' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.finished7m' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.only_root6' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.only_root7' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.residue6_shape' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.residue6_machine' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.untyped_of_stale' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Proofs.StaleCode.window_untyped' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Proofs.StaleCode.finished_untyped' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Proofs.StaleCode.capstone_false_finished' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Proofs.StaleCode.capstone_false_window' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Proofs.StaleCode.admitted_noAnswer' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.ledger_jointly_false_window' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Proofs.StaleCode.ledger_jointly_false_finished' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Proofs.StaleCode.exitsTyped6' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.StaleCode.exitsTyped7' depends on axioms: [propext, Quot.sound]

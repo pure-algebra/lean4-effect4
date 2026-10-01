@@ -1,0 +1,17 @@
+Exit codes observed for the bisection runs of probe A (probes/bisect/*.lean), each compiled through
+the lock with `lake env lean -M6144 -DwarningAsError=true`. 137 = killed (memory). Recorded from
+the session's console; the per-run logs hold only the `time` line.
+
+T1   (typed_source by elaborator decide)            1   decide did not reduce Api.typeOf
+T2   (typed_source by rfl' + window6 by decide)       137
+T3   (typed_source by rfl')                           0
+T4   (window6 by decide +kernel)                      0   [propext, Quot.sound]
+T5   (reachability block)                             0
+T6   (machine facts at budgets 6 and 7)               137
+T6b  (classify at budget 7, advance 100000)           137
+T6b1 (classify at budget 7, advance 1)                137
+T6a1 (finished7, advance 1)                           0
+T6d  (only_root6)                                     0
+T7   (residue block)                                  0
+T8   (m7.finished ∧ m7.stuck = none)                  0
+StaleCode.lean (final, classify replaced by finished7m)  0   17 theorems at [propext, Quot.sound]

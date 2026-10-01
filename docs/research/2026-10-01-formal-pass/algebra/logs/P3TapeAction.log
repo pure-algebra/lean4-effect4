@@ -1,0 +1,5 @@
+'FormalPass.Algebra.P3.replayEval_append' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P3.replayEval_append_fuel' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P3.replayEval_append_machine' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P3.behaviour_unique' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P3.replayEval_of_stuck' depends on axioms: [propext, Quot.sound]

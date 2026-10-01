@@ -1,0 +1,8 @@
+'FormalPass.Algebra.P2.storePre_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.fiberPre_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.typedProg_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.stackAccepts_not_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.stackAcceptsK_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.stackAcceptsK_now' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.bad_not_kripke' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   1.16s user 1.07s system 80% cpu 2.775 total

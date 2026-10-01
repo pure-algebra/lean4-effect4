@@ -1,0 +1,8 @@
+'Research.TypesSeat.M5.prog3_typed' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.rootTy3_closed' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.child_cert' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.leaf_false' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.fiber_inv' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.m5_false' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.70s user 0.95s system 105% cpu 1.555 total
+exit=0

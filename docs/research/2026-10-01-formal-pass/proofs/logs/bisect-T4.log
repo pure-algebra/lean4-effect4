@@ -1,0 +1,2 @@
+'FormalPass.Proofs.StaleCode.window6' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.57s user 1.00s system 20% cpu 7.597 total

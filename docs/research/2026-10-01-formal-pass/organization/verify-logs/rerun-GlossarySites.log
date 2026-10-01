@@ -1,0 +1,68 @@
+Eff (1): inductive Effect4.Program.Eff @ Effect4.Program.Eff:264
+cataFam (1): def Effect4.Program.cataFam @ Effect4.Program.LayerView:413
+hom_eq_cata_eff (1): theorem Effect4.Program.hom_eq_cata_eff @ Effect4.Program.Fold:1270
+Signature (1): inductive Effect4.Program.Signature @ Effect4.Program.Typing.Rules:47
+Ty (1): inductive Effect4.Program.Ty @ Effect4.Program.Ty:37
+Fits (2): def Effect4.Program.Typed.Fits @ Effect4.Laws.Program.Typed.Membership:85; inductive Effect4.Program.Fits @ Effect4.Laws.Program.Typed:306
+FitsExit (1): def Effect4.Program.Typed.FitsExit @ Effect4.Laws.Program.Typed.Membership:150
+FitsCause (1): def Effect4.Program.Typed.FitsCause @ Effect4.Laws.Program.Typed.Membership:155
+World (2): inductive Effect4.Machine.World @ Effect4.Laws.Machine.Handles:867; inductive Effect4.Program.Typed.World @ Effect4.Laws.Program.Typed.World:52
+TypedProg (1): inductive Effect4.Program.Typed.TypedProg @ Effect4.Laws.Program.Typed.Residual:177
+TypedState (1): def Effect4.Program.Typed.TypedState @ Effect4.Laws.Program.Typed.Assembly:65
+RReachable (1): def Effect4.Program.Typed.RReachable @ Effect4.Laws.Program.Typed.Assembly:80
+denote (1): def Effect4.Program.Denote.denote @ Effect4.Laws.Program.Denote:64
+denoteR (1): def Effect4.Program.Sched.denoteR @ Effect4.Laws.Program.DenoteR:798
+denoteB (1): def Effect4.Program.Denote.denoteB @ Effect4.Laws.Program.DenoteB:206
+iter (1): def Effect4.Program.Denote.iter @ Effect4.Laws.Program.Iter:28
+Beh (1): def Effect4.Machine.Beh @ Effect4.Laws.Machine.Behaviour:72
+Obs (1): inductive Effect4.Machine.Obs @ Effect4.Laws.Machine.Behaviour:29
+FairTape (1): def Effect4.Machine.Scheduling.FairTape @ Effect4.Laws.Machine.Scheduling:429
+replay (4): def Effect4.Api.Runner.replay @ Effect4.Api.Runner:74; def Effect4.Api.Typed.replay @ Effect4.Api:470; def Effect4.Api.replay @ Effect4.Api:278; def Effect4.Machine.Witnesses.replay @ Effect4.Laws.Machine.Witnesses:44
+replayR (1): def Effect4.Program.Sched.replayR @ Effect4.Laws.Program.RuntimeR:50
+replay_unique (1): theorem Effect4.Api.Runner.replay_unique @ Effect4.Laws.Api.Runner:155
+journal_replays (1): theorem Effect4.Run.journal_replays @ Effect4.Laws.Run:181
+RunMachine (1): inductive Effect4.Machine.RunMachine @ Effect4.Machine.Fibers:435
+Cmd (1): inductive Effect4.Machine.Cmd @ Effect4.Machine.Fibers:727
+Command (1): inductive Effect4.Api.Runner.Command @ Effect4.Api.Runner:34
+Projects (1): inductive Effect4.Machine.Refinement.Projects @ Effect4.Laws.Machine.Refinement:18
+Refines (1): inductive Effect4.Machine.Refinement.Refines @ Effect4.Laws.Machine.Refinement:29
+Canonical (2): def Effect4.Program.Ty.Canonical @ Effect4.Program.Ty:809; inductive Effect4.Store.Canonical @ Effect4.Store.Domain.Canonical:31
+printT (1): def Effect4.Codegen.Templates.printT @ Effect4.Codegen.Templates:437
+read (5): def Effect4.Api.read @ Effect4.Api:144; def Effect4.Codegen.EffectfulField.Request.read @ Effect4.Codegen.EffectfulField:33; def Effect4.FieldEffectOps.read @ Effect4.Schema.EffectfulField:858; def Effect4.Program.Var.read @ Effect4.Codegen.Read:103; theorem Effect4.Codegen.ModuleReading.read @ Effect4.Codegen.Admit:106
+read_print (1): theorem Effect4.Program.read_print @ Effect4.Laws.Codegen.ReadPrint:1904
+read_exact (2): theorem Effect4.Program.Var.read_exact @ Effect4.Codegen.Read:1113; theorem Effect4.Program.read_exact @ Effect4.Laws.Codegen.Read:887
+Representation (1): inductive Effect4.Representation @ Effect4.Schema.Representation:681
+RowTable (1): def Effect4.Program.RowTable @ Effect4.Program.Native:82
+Row (5): def Effect4.Program.Typed.Row @ Effect4.Laws.Program.Typed.Vocabulary:59; inductive Effect4.Codegen.Templates.Row @ Effect4.Codegen.Templates:85; inductive Effect4.Laws.Auto.Exhaustive.Row @ Effect4.Laws.Auto.Exhaustive:62; inductive Effect4.Program.Row @ Effect4.Program.Eff:192; inductive Effect4.Row @ Effect4.Data.Row:29
+HostSpec (1): inductive Effect4.Program.HostSpec @ Effect4.Program.Profile:176
+LawfulHostSpec (1): inductive Effect4.Program.LawfulHostSpec @ Effect4.Program.Profile:196
+HostSession (0): 
+Session (1): inductive Effect4.Api.HostSession.Session @ Effect4.Api.HostSession:84
+ForkRecord (1): inductive Effect4.Machine.ForkRecord @ Effect4.Machine.Fibers:233
+ExitOk (1): def Effect4.Program.Denote.ExitOk @ Effect4.Laws.Program.MeaningSound:322
+NoShapeDefect (0): 
+LayerTerm (1): inductive Effect4.Program.LayerTerm @ Effect4.Program.Eff:374
+build (3): def Effect4.Api.Author.build @ Effect4.Api.Author:52; def Effect4.Program.Provision.build @ Effect4.Program.Provision:295; def Effect4.Program.build @ Effect4.Program.LayerView:276
+Typed (2): inductive Effect4.Api.Typed @ Effect4.Api:442; inductive Effect4.Laws.Effects.Typed @ Effect4.Laws.Effects.Protocol:44
+StepKeeps (1): def Effect4.Machine.Lift.StepKeeps @ Effect4.Laws.Machine.Lift:46
+DecisionLift (1): inductive Effect4.Machine.Lift.DecisionLift @ Effect4.Laws.Machine.Lift:302
+BookMeans (1): def Effect4.Machine.BookMeans @ Effect4.Laws.Machine.Book:193
+GuardState (1): inductive Effect4.Program.Guard.GuardState @ Effect4.Laws.Program.Guard.Core:1127
+Reachable (1): def Effect4.Program.Guard.Reachable @ Effect4.Laws.Program.Guard.Core:32
+Arena (1): inductive Effect4.Machine.Arena @ Effect4.Laws.Machine.Arena:11
+Image (1): inductive Effect4.Store.Image @ Effect4.Store.Carrier.Image:38
+ProgramSource (1): inductive Effect4.Program.Typed.ProgramSource @ Effect4.Laws.Program.Typed.Admission:25
+AdmittedProgram (1): inductive Effect4.Program.AdmittedProgram @ Effect4.Program.Admission:128
+TypedProgram (1): inductive Effect4.Program.TypedProgram @ Effect4.Program.CheckedTyping:17
+HasTy (0): 
+check (7): def Effect4.Api.check @ Effect4.Api:447; def Effect4.Codegen.Schema.check @ Effect4.Codegen.Schema:301; def Effect4.Codegen.SourceBindings.check @ Effect4.Codegen.SourceBindings:287; def Effect4.EffectfulFieldSpec.check @ Effect4.Schema.EffectfulField:643; def Effect4.Program.Checker.check @ Effect4.Program.Checker:115; def Effect4.Schema.check @ Effect4.Schema.Authoring:56; def ProofGraph.check @ ProofGraph.Ledger:57
+explain (2): def Effect4.Api.explain @ Effect4.Api:107; def Effect4.Program.explain @ Effect4.Program.Checker:416
+Straight (1): def Effect4.Program.Denote.Straight @ Effect4.Program.Fragment:18
+Looped (1): def Effect4.Program.Denote.Looped @ Effect4.Laws.Program.DenoteB:121
+run_eq_meaning (1): theorem Effect4.Program.Agreement.run_eq_meaning @ Effect4.Laws.Program.Agreement.Machine:1918
+run_eq_ref (1): theorem Effect4.Program.Sched.run_eq_ref @ Effect4.Laws.Program.RuntimeR:197
+loopAgreement (1): theorem Effect4.Program.Agreement.loopAgreement @ Effect4.Laws.Program.Agreement.Loop:834
+Obligation (1): inductive ProofGraph.Obligation @ ProofGraph.Ledger:12
+WorldOrder (1): inductive Effect4.Laws.Effects.WorldOrder @ Effect4.Laws.Effects.Protocol:29
+Agrees (1): def Effect4.Program.Authoring.ServiceDef.Agrees @ Effect4.Program.Authoring.Services:73
+## exit=0 seconds=13 probe=/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/organization/probes/GlossarySites.lean

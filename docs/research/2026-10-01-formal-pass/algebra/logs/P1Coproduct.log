@@ -1,0 +1,7 @@
+'FormalPass.Algebra.P1.interpret_inl_restrict' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P1.interpret_inr_restrict' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P1.inl_isMonadMorphism' depends on axioms: [Quot.sound]
+'FormalPass.Algebra.P1.sum_is_coproduct' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P1.sum_not_tensor' does not depend on any axioms
+'FormalPass.Algebra.P1.eq_sum_restrict' depends on axioms: [Quot.sound]
+'FormalPass.Algebra.P1.inr_isMonadMorphism' depends on axioms: [Quot.sound]

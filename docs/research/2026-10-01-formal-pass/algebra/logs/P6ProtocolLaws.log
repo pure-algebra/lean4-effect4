@@ -1,0 +1,3 @@
+'FormalPass.Algebra.P6.Typed.inr' does not depend on any axioms
+'FormalPass.Algebra.P6.Typed.refine' does not depend on any axioms
+'FormalPass.Algebra.P6.typedProg_not_bind_closed' depends on axioms: [propext, Quot.sound]

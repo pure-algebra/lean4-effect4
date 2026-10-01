@@ -1,0 +1,76 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:52:67: error: Application type mismatch: The argument
+  hex
+has type
+  ExitOk w ty ex
+but is expected to have type
+  FitsExit w ?m.102 ?m.103
+in the application
+  fitsExit_mono ord hex
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:147:35: error: Application type mismatch: The argument
+  exit
+has type
+  ExitOk w✝ ty✝ ex✝
+but is expected to have type
+  FitsExit w✝ ?m.36 ?m.37
+in the application
+  fitsExit_mono ord exit
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:163:38: error: Application type mismatch: The argument
+  payload
+has type
+  ExitOk w✝ ty✝ ex✝
+but is expected to have type
+  FitsExit w✝ ?m.124 ?m.125
+in the application
+  fitsExit_mono ord payload
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:166:46: error: Application type mismatch: The argument
+  payload
+has type
+  ExitOk w✝ ty✝ ex✝
+but is expected to have type
+  FitsExit w✝ ?m.140 ?m.141
+in the application
+  fitsExit_mono ord payload
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:169:40: error: Application type mismatch: The argument
+  payload
+has type
+  ExitOk w✝ ty✝ ex✝
+but is expected to have type
+  FitsExit w✝ ?m.158 ?m.159
+in the application
+  fitsExit_mono ord payload
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:225:8: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.failure ?c)
+in the target expression
+  ExitOk w0 tout (Exit.failure c)
+
+case failure
+root : ProgramSource
+c : Cause Err Defect FiberId Ann
+hex : FitsCause w0 tin.error c
+⊢ ExitOk w0 tout (Exit.failure c)
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:243:10: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.success ?v)
+in the target expression
+  ExitOk w1 tout (Exit.success (Val.str "x"))
+
+case cons.nil.answer
+root : ProgramSource
+run : ∀ (ex : ExitV), FitsExit w1 tin ex → TypedProg root w1 tout (badNext ex)
+hp : ExitOk w1 tout (Exit.success (Val.str "x"))
+⊢ False
+'FormalPass.Algebra.P2.storePre_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.fiberPre_mono' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Algebra.P2.typedProg_mono' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Algebra.P2.stackAccepts_not_mono' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Algebra.P2.stackAcceptsK_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.stackAcceptsK_now' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.bad_not_kripke' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Algebra.P2.envTyped_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.pointTyped_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.bodyTyped_mono' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Algebra.P2.asyncPre_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.w0_le_w1' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.bad_accepted_at_w0' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Algebra.P2.bad_refused_at_w1' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Algebra.P2.frameAcceptsK_mono' depends on axioms: [propext, Quot.sound]
+'FormalPass.Algebra.P2.frameAcceptsK_now' depends on axioms: [propext, Quot.sound]

@@ -1,0 +1,66 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:101:15: error: Ambiguous term
+  Fits
+Possible interpretations:
+  Typed.Fits : Typed.World → Val → Ty → Prop
+  
+  Program.Fits : List Val → TyEnv → Prop
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:101:4: error: `simp` made no progress
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:109:15: error: Ambiguous term
+  Fits
+Possible interpretations:
+  Typed.Fits : Typed.World → Val → Ty → Prop
+  
+  Program.Fits : List Val → TyEnv → Prop
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:109:4: error: `simp` made no progress
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:130:49: error: Expected type must not contain free variables
+  ¬Val.hasTy v Ty.never alloc = true
+
+Hint: Use the `+revert` option to automatically clean up and revert free variables
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:131:47: error: Expected type must not contain free variables
+  ¬Val.hasTy v Ty.int alloc = true
+
+Hint: Use the `+revert` option to automatically clean up and revert free variables
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:171:45: error: Expected type must not contain free variables
+  ¬inhabited (Ty.var index✝) = true
+
+Hint: Use the `+revert` option to automatically clean up and revert free variables
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:172:48: error: Expected type must not contain free variables
+  ¬handleFree (Ty.handle target✝) = true
+
+Hint: Use the `+revert` option to automatically clean up and revert free variables
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:173:55: error: Expected type must not contain free variables
+  ¬handleFree (value✝.fiberOf error✝) = true
+
+Hint: Use the `+revert` option to automatically clean up and revert free variables
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:174:49: error: Expected type must not contain free variables
+  ¬handleFree value✝.refOf = true
+
+Hint: Use the `+revert` option to automatically clean up and revert free variables
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:175:58: error: Expected type must not contain free variables
+  ¬handleFree (value✝.deferredOf error✝) = true
+
+Hint: Use the `+revert` option to automatically clean up and revert free variables
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:196:15: error: Ambiguous term
+  Fits
+Possible interpretations:
+  Typed.Fits : Typed.World → Val → Ty → Prop
+  
+  Program.Fits : List Val → TyEnv → Prop
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/InhabitedProbe.lean:196:4: error: `simp` made no progress
+'Research.TypesSeat.Inhabit.inhabited_of_fits' depends on axioms: [propext, sorryAx, Quot.sound]
+'Research.TypesSeat.Inhabit.inhabited_of_hasTy' depends on axioms: [propext, sorryAx, Quot.sound]
+'Research.TypesSeat.Inhabit.fits_of_inhabited_handleFree' depends on axioms: [propext, sorryAx, Quot.sound]
+'Research.TypesSeat.Inhabit.inhabited_iff_handleFree' depends on axioms: [propext, sorryAx, Quot.sound]
+'Research.TypesSeat.Inhabit.fiber_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.cell_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.promise_inhabited' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.inhabited_sub' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.prod_never_nat_canonical' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.except_never_never_canonical' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.prod_never_nat_empty' depends on axioms: [propext, sorryAx, Quot.sound]
+'Research.TypesSeat.Inhabit.except_never_never_empty' depends on axioms: [propext, sorryAx, Quot.sound]
+'Research.TypesSeat.Inhabit.prod_never_nat_no_hasTy' depends on axioms: [propext, sorryAx, Quot.sound]
+'Research.TypesSeat.Inhabit.admit_refuses_prod_never_nat' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.Inhabit.admit_refuses_except_never_never' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.79s user 1.03s system 4% cpu 40.868 total
+exit=1

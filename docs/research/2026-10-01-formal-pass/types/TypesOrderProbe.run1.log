@@ -1,0 +1,33 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/TypesOrderProbe.lean:185:9: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+  
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/TypesOrderProbe.lean:188:13: error: declaration uses `sorry`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/TypesOrderProbe.lean:187:8: error: declaration uses `sorry`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/TypesOrderProbe.lean:196:8: error: declaration uses `sorry`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/TypesOrderProbe.lean:214:9: error: Ambiguous term
+  World
+Possible interpretations:
+  Typed.World : Type
+  
+  Machine.World : Type
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/TypesOrderProbe.lean:221:8: error: declaration uses `sorry`
+'Research.TypesSeat.subN_trans' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.sub_le_subN' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.subN_equiv_iff' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.ofRaw_eq_iff' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.sub_u_factor_false' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.T_not_sub_normal' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.T_subN_equiv' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.normal_sub_T' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.fits_fiber_raw' does not depend on any axioms
+'Research.TypesSeat.not_fits_fiber_normal' depends on axioms: [sorryAx]
+'Research.TypesSeat.fiber_types_equiv' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.fits_cell_normal' does not depend on any axioms
+'Research.TypesSeat.not_fits_cell_raw' depends on axioms: [sorryAx]
+'Research.TypesSeat.cell_types_equiv' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.hasTy_invariant' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.67s user 0.97s system 106% cpu 1.532 total
+exit=1

@@ -1,0 +1,5 @@
+red controls: Typed.Fits hit true; Ty.isFactor hit true
+Effect4.Laws.Program.Typed: 8 hits, 1 person-written — [Effect4.Program.NativeAtom.projectProduct_typed]
+Effect4.Laws.Program.Typed.Admission: 3 hits, 1 person-written — [Effect4.Program.Typed.ProgramSource.mk.sizeOf_spec]
+Effect4.Laws.Program.Typed.Membership: 64 hits, 9 person-written — [Effect4.Program.Typed.Fits, Effect4.Program.Typed.Fits.eq_def, Effect4.Program.Typed.Fits.hom, Effect4.Program.Typed.FlatFits, Effect4.Program.Typed.fits_hasTy, Effect4.Program.Typed.fits_live, Effect4.Program.Typed.fits_map, Effect4.Program.Typed.flatFits_fits, Effect4.Program.Typed.flatFits_map]
+## exit=0 seconds=7 probe=/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/organization/verify-TyCasesDeep.lean

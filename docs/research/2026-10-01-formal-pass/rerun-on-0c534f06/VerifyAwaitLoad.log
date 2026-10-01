@@ -1,0 +1,40 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyAwaitLoad.lean:90:27: error: Type mismatch
+  payload
+has type
+  ExitOk (World.addFiber w { value := 1 } (EffTy.pure Ty.nat)) mid (Exit.success (Val.fiber { value := 1 }))
+but is expected to have type
+  FitsExit (World.addFiber w { value := 1 } (EffTy.pure Ty.nat)) mid (Exit.success (Val.fiber { value := 1 }))
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyAwaitLoad.lean:92:58: error: Application type mismatch: The argument
+  payload
+has type
+  FitsExit (World.addFiber w { value := 1 } (EffTy.pure Ty.nat)) mid (Exit.success (Val.fiber { value := 1 }))
+but is expected to have type
+  ExitOk (World.addFiber w { value := 1 } (EffTy.pure Ty.nat)) mid (Exit.success (Val.fiber { value := 1 }))
+in the application
+  ⟨rfl, payload⟩
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyAwaitLoad.lean:100:8: error: Type mismatch
+  fits
+has type
+  ExitOk (World.addFiber w { value := 1 } (EffTy.pure Ty.nat)) rootTy (Exit.success (Val.nat 5))
+but is expected to have type
+  False
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyAwaitLoad.lean:125:34: error: Application type mismatch: The argument
+  hcode
+has type
+  ¬CodeInert (loadR awaitProg 5) []
+        (Expect.fiber
+          (RunFiber.make Api.root code true
+              (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx).id) →
+    TypedProg { program := awaitProg } w rootTy
+      (RunFiber.make Api.root code true (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx)
+            emptyCtx).frame.current
+but is expected to have type
+  TypedProg { program := awaitProg } w rootTy code
+in the application
+  root_code_refused w fresh hcode
+'FormalPass.Proofs.Verify.AwaitLoad.typed_source' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.code_eq' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.cert_of_bodyTyped' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.root_code_refused' depends on axioms: [propext, sorryAx, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.one_not_loaded' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.typedState_load_false' depends on axioms: [propext, sorryAx, Quot.sound]

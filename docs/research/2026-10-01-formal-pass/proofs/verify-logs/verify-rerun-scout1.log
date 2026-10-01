@@ -1,0 +1,62 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyScout1.lean
+# sha256: 8fc4674650f868178ab45cc7b55e44af84327d30c223819fc015abbfc4b8cdc8
+# head: ea5b28b5
+# started: 2026-10-01 07:10:57
+[(0,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-fuel", [(0, false, false, true)]),
+      (2, "frontier-fuel", [(0, false, false, true)]), (3, "frontier-fuel", [(0, false, false, true)]),
+      (4, "frontier-fuel", [(0, false, false, true)]), (5, "frontier-fuel", [(0, false, false, true)])]),
+  (1,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-fuel", [(0, true, false, true)]),
+      (2, "frontier-fuel", [(0, true, false, true)]), (3, "frontier-fuel", [(0, true, false, true)]),
+      (4, "frontier-fuel", [(0, true, false, true)]), (5, "frontier-fuel", [(0, true, false, true)])]),
+  (2,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-fuel", [(0, true, false, true)]),
+      (2, "frontier-fuel", [(0, true, false, true)]), (3, "frontier-fuel", [(0, true, false, true)]),
+      (4, "frontier-fuel", [(0, true, false, true)]), (5, "frontier-fuel", [(0, true, false, true)])]),
+  (3,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-fuel", [(0, true, false, true)]),
+      (2, "frontier-fuel", [(0, true, false, true)]), (3, "frontier-fuel", [(0, true, false, true)]),
+      (4, "frontier-fuel", [(0, true, false, true)]), (5, "frontier-fuel", [(0, true, false, true)])]),
+  (4,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-fuel", [(0, true, false, true)]),
+      (2, "frontier-fuel", [(0, true, false, true)]), (3, "frontier-fuel", [(0, true, false, true)]),
+      (4, "frontier-fuel", [(0, true, false, true)]), (5, "frontier-fuel", [(0, true, false, true)])]),
+  (5,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-fuel", [(0, false, false, false)]),
+      (2, "frontier-fuel", [(0, false, false, false)]), (3, "frontier-fuel", [(0, false, false, false)]),
+      (4, "frontier-fuel", [(0, false, false, false)]), (5, "frontier-fuel", [(0, false, false, false)])]),
+  (6,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-tape", [(0, false, false, false)]),
+      (2, "frontier-tape", [(0, false, false, false)]), (3, "frontier-tape", [(0, false, false, false)]),
+      (4, "frontier-fuel", [(0, true, false, true)]), (5, "frontier-fuel", [(0, true, false, true)])]),
+  (7,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-tape", [(0, false, false, false)]),
+      (2, "frontier-tape", [(0, false, false, false)]), (3, "frontier-tape", [(0, false, false, false)]),
+      (4, "frontier-fuel", [(0, false, true, true)]), (5, "frontier-fuel", [(0, false, true, true)])]),
+  (8,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-tape", [(0, false, false, false)]),
+      (2, "frontier-tape", [(0, false, false, false)]), (3, "frontier-tape", [(0, false, false, false)]),
+      (4, "frontier-fuel", [(0, false, true, true)]), (5, "frontier-fuel", [(0, false, true, true)])]),
+  (9,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-tape", [(0, false, false, false)]),
+      (2, "frontier-tape", [(0, false, false, false)]), (3, "frontier-tape", [(0, false, false, false)]),
+      (4, "finished", [(0, false, true, true)]), (5, "finished", [(0, false, true, true)])]),
+  (10,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-tape", [(0, false, false, false)]),
+      (2, "frontier-tape", [(0, false, false, false)]), (3, "frontier-tape", [(0, false, false, false)]),
+      (4, "finished", [(0, false, true, true)]), (5, "finished", [(0, false, true, true)])]),
+  (11,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-tape", [(0, false, false, false)]),
+      (2, "frontier-tape", [(0, false, false, false)]), (3, "frontier-tape", [(0, false, false, false)]),
+      (4, "finished", [(0, false, true, true)]), (5, "finished", [(0, false, true, true)])]),
+  (12,
+    [(0, "frontier-tape", [(0, false, false, true)]), (1, "frontier-tape", [(0, false, false, false)]),
+      (2, "frontier-tape", [(0, false, false, false)]), (3, "frontier-tape", [(0, false, false, false)]),
+      (4, "finished", [(0, false, true, true)]), (5, "finished", [(0, false, true, true)])])]
+true
+"guard"
+# exit: 0
+# wall seconds (including lock wait): 2
+#         2.50 real         0.62 user         1.02 sys
+#           1602256896  maximum resident set size

@@ -1,0 +1,12 @@
+#wf_blind_spot Effect4.Program.Eff: 6 well-founded takers
+Effect4.Program.Compile	Effect4.Program.runStmts.yieldOf	direct-fix=false	helpers=[Effect4.Program.runStmts.yieldOf._mutual]
+Effect4.Program.Admit	Effect4.Program.replayCheckedFrom	direct-fix=false	helpers=[Effect4.Program.replayCheckedFrom._unary]
+Effect4.Program.Compile	Effect4.Program.runStmts	direct-fix=false	helpers=[Effect4.Program.runStmts.yieldOf._mutual]
+Effect4.Laws.Program.InterpR	Effect4.Program.Sched.walkR.yieldOf	direct-fix=false	helpers=[Effect4.Program.Sched.walkR.yieldOf._mutual]
+Effect4.Program.Admit	Effect4.Program.replayStepsFrom	direct-fix=false	helpers=[Effect4.Program.replayStepsFrom._unary]
+Effect4.Laws.Program.InterpR	Effect4.Program.Sched.walkR	direct-fix=false	helpers=[Effect4.Program.Sched.walkR.yieldOf._mutual]
+#wf_blind_spot Effect4.Program.Ty: 1 well-founded takers
+Effect4.Program.Ty	Effect4.Program.Ty.sub	direct-fix=false	helpers=[Effect4.Program.Ty.sub._unary]
+#wf_blind_spot Effect4.Program.Term: 0 well-founded takers
+#wf_blind_spot Effect4.Representation: 0 well-founded takers
+#wf_blind_spot Effect4.Store.Val: 0 well-founded takers

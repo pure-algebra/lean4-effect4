@@ -1,0 +1,38 @@
+@[reducible] def Effect4.Program.Typed.RStateOk : {W : Type} → Preds W → W → Sched.RState → Prop :=
+fun {W} P w x => RunMachineOk P w Expect.root x
+structure Effect4.Program.Typed.Preds (W : Type) : Type
+number of parameters: 1
+fields:
+  Effect4.Program.Typed.Preds.SavedOk : W → Expect → Sched.RSaved → Prop
+  Effect4.Program.Typed.Preds.PendingOk : W →
+      Expect → List (Machine.Pending EffName Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann) → Prop
+  Effect4.Program.Typed.Preds.exit : W → Expect → Exit Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann → Prop
+  Effect4.Program.Typed.Preds.ResumeOk : W → Expect → FiberId → Nat → Sched.RProgram → Prop
+  Effect4.Program.Typed.Preds.ServiceOk : W → Expect → Machine.Ctx → Prop
+  Effect4.Program.Typed.Preds.RaceOk : W →
+      Expect →
+        List (Machine.Race EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Sched.RProgram) →
+          Prop
+  Effect4.Program.Typed.Preds.PromiseTable : W → Machine.Stores → Prop
+  Effect4.Program.Typed.Preds.HeapCell : W → Machine.RefKey → Machine.Val → Prop
+  Effect4.Program.Typed.Preds.PromiseCell : W → Machine.DeferredKey → Machine.DeferredCell → Prop
+  Effect4.Program.Typed.Preds.CaptureOk : W → Expect → Machine.Capture → Prop
+constructor:
+  Effect4.Program.Typed.Preds.mk {W : Type} (SavedOk : W → Expect → Sched.RSaved → Prop)
+    (PendingOk :
+      W → Expect → List (Machine.Pending EffName Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann) → Prop)
+    (exit : W → Expect → Exit Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann → Prop)
+    (ResumeOk : W → Expect → FiberId → Nat → Sched.RProgram → Prop) (ServiceOk : W → Expect → Machine.Ctx → Prop)
+    (RaceOk :
+      W →
+        Expect →
+          List
+              (Machine.Race EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann
+                Sched.RProgram) →
+            Prop)
+    (PromiseTable : W → Machine.Stores → Prop) (HeapCell : W → Machine.RefKey → Machine.Val → Prop)
+    (PromiseCell : W → Machine.DeferredKey → Machine.DeferredCell → Prop)
+    (CaptureOk : W → Expect → Machine.Capture → Prop) : Preds W
+'k1' depends on axioms: [propext, Quot.sound]
+'k2' depends on axioms: [propext, Quot.sound]
+exit=0

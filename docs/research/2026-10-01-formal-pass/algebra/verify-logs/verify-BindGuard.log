@@ -1,0 +1,6 @@
+'FormalPass.AlgebraVerify.BindGuard.p_typed' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.BindGuard.k_typed' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.BindGuard.bind_not_typed' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.BindGuard.guard_bind_not_closed' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.BindGuard.close_typed' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.BindGuard.seq_typed' depends on axioms: [propext, Quot.sound]

@@ -1,0 +1,11 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/M5CounterProbe.lean:122:15: error(lean.unknownIdentifier): Unknown identifier `HasTy`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/M5CounterProbe.lean:123:6: error(lean.unknownIdentifier): Unknown identifier `Conform.Effect4.Typing.check_sound`
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/M5CounterProbe.lean:125:17: error(lean.unknownIdentifier): Unknown identifier `Conform.Effect4.Typing.effTy_complete`
+'Research.TypesSeat.M5.prog3_typed' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.rootTy3_closed' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.child_cert' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.leaf_false' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.fiber_inv' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.m5_false' depends on axioms: [propext, sorryAx, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.69s user 0.95s system 89% cpu 1.827 total
+exit=1

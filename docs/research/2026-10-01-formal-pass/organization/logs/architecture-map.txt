@@ -1,0 +1,2699 @@
+Effect4 Architecture Map
+Effect4 Architecture Map
+The tree as it is: the four Lean roots and the direction their imports run, the estates around them, the typed-state proof stack as it lands, and what the tree says against what the role register declares. Measured by
+tools/Tools/Architecture.lean
+; the roles and the layering are declared in
+tools/Tools/ArchitectureRoles.lean
+.
+601 Lean modules · 212,309 lines · 525 loaded for counts · 10,248 theorems · regenerate with
+make gen-architecture
+The roots
+The import matrix
+Against the direction
+The typed-state stack
+The file map
+Faces and generated groups
+Pinned references
+Audit
+runtime
+proofs
+tools
+batteries
+planned, not yet a file
+imports against the declared direction
+The roots and their direction
+Each column is a lake root; each box an area at the height the register declares. Inside a column an import may point at the same height or lower; the runtime imports only itself; the proof graph imports the runtime and
+ProofGraph
+; the tool roots import the runtime, the proof graph and lower tools; the batteries import everything. A red count on a box is the number of that area's imports that break one of those rules.
+runtime · src/Effect4
+67,939 lines
+Data
+Data
+8 files · 2,614 lines
+158 thm · 101 def · 10 ind
+Store/Carrier
+Store/Carrier
+8 files · 3,568 lines
+200 thm · 194 def · 8 ind
+Machine
+Machine
+17 files · 15,351 lines
+733 thm · 1,374 def · 98 ind
+Program
+Program
+42 files · 17,004 lines
+529 thm · 1,935 def · 105 ind
+Store/Domain
+Store/Domain
+18 files · 10,766 lines
+494 thm · 668 def · 24 ind
+Schema
+Schema
+12 files · 7,462 lines
+263 thm · 489 def · 32 ind
+Codegen
+Codegen
+18 files · 6,615 lines
+148 thm · 752 def · 43 ind
+Ingest
+Ingest
+1 files · 153 lines
+5 thm · 60 def · 3 ind
+Api
+Api
+12 files · 3,892 lines
+129 thm · 492 def · 32 ind
+Run
+Run.lean
+1 files · 351 lines
+0 thm · 53 def · 2 ind
+Effect4
+Effect4.lean
+1 files · 163 lines
+0 thm · 0 def · 0 ind
+proofs · src/Effect4/Laws
+83,683 lines
+Laws/Effects
+Laws/Effects
+1 files · 167 lines
+10 thm · 7 def · 4 ind
+Laws/Auto
+Laws/Auto
+9 files · 1,447 lines
+21 thm · 150 def · 10 ind
+Laws/Store
+Laws/Store
+2 files · 69 lines
+2 thm · 26 def · 0 ind
+Laws/Machine
+Laws/Machine
+25 files · 20,414 lines
+1,492 thm · 349 def · 15 ind
+Laws/Program
+Laws/Program
+152 files · 53,084 lines
+3,696 thm · 794 def · 91 ind
+Laws/Schema
+Laws/Schema
+2 files · 136 lines
+13 thm · 0 def · 0 ind
+Laws/Codegen
+Laws/Codegen
+10 files · 5,266 lines
+281 thm · 64 def · 5 ind
+Laws/Api
+Laws/Api
+9 files · 2,046 lines
+177 thm · 14 def · 0 ind
+Laws/Run
+Laws/Run.lean
+1 files · 906 lines
+70 thm · 5 def · 1 ind
+Effect4.Laws
+Laws.lean
+1 files · 148 lines
+5 thm · 0 def · 0 ind
+tools · tools/ and src/OCaml5
+29,267 lines
+ProofGraph
+tools/ProofGraph
+3 files · 312 lines
+0 thm · 24 def · 6 ind
+Conform
+tools/Conform
+23 files · 7,671 lines
+62 thm · 1,309 def · 99 ind
+Tools
+tools/Tools
+10 files · 2,290 lines
+0 thm · 47 def · 2 ind
+TestSupport
+tools/TestSupport
+2 files · 168 lines
+7 thm · 36 def · 2 ind
+OCaml5
+src/OCaml5
+23 files · 9,066 lines
+29 thm · 1,053 def · 47 ind
+Drivers
+tools/Drivers
+5 files · 1,647 lines
+0 thm · 37 def · 1 ind
+Conform/Effect4
+tools/Conform/Effect4
+10 files · 1,709 lines
+1 thm · 24 def · 1 ind
+Conform/Cli
+tools/Conform/Cli
+5 files · 435 lines
+2 thm · 14 def · 2 ind
+Effect4Gen
+tools/Effect4Gen
+11 files · 5,854 lines
+0 thm · 26 def · 2 ind
+conform-red
+tools/conform-red
+2 files · 115 lines
+0 thm · 0 def · 0 ind
+batteries · Test/
+31,420 lines
+Test
+Test
+157 files · 31,420 lines
+1,721 thm · 2,322 def · 127 ind
+imports runtime: 126
+imports laws 3 · runtime 38
+imports tools 10 · laws 128 · runtime 139
+Arrows at the top aggregate the import statements between columns. Counts on the boxes are the area with its detail directories; theorems, definitions and inductives are counted from the loaded environment, auxiliaries excluded.
+The import matrix
+Rows import columns. A red cell is an import against the direction; a dot is none. The external columns are the packages the tree imports, by first component.
+imports ↓ from →
+Effect4.lean
+Run.lean
+Api
+Codegen
+Ingest
+Schema
+Store/Domain
+Program
+Machine
+Store/Carrier
+Data
+Laws.lean
+Laws/Api
+Laws/Run.lean
+Laws/Codegen
+Laws/Schema
+Laws/Program
+Laws/Machine
+Laws/Auto
+Laws/Store
+Laws/Effects
+tools/conform-red
+tools/Conform/Cli
+tools/Effect4Gen
+tools/Conform/Effect4
+tools/Drivers
+src/OCaml5
+tools/TestSupport
+tools/Tools
+tools/Conform
+tools/ProofGraph
+Test
+Aesop
+Batteries
+Effects
+Hash
+Lean
+TypeScript
+Effect4.lean
+·
+1
+8
+11
+1
+8
+15
+24
+13
+8
+6
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+2
+·
+Run.lean
+·
+·
+4
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+2
+·
+Api
+·
+·
+·
+7
+·
+3
+8
+10
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+24
+·
+Codegen
+·
+·
+·
+·
+·
+2
+·
+9
+·
+2
+2
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+36
+9
+Ingest
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+3
+·
+Schema
+·
+·
+·
+·
+·
+·
+·
+4
+·
+1
+3
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+2
+·
+25
+·
+Store/Domain
+·
+·
+·
+·
+·
+1
+·
+1
+1
+4
+3
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+36
+·
+Program
+·
+·
+·
+·
+·
+·
+·
+·
+9
+2
+2
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+85
+·
+Machine
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+3
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+·
+37
+·
+Store/Carrier
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+16
+·
+Data
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+21
+·
+Laws.lean
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+9
+1
+6
+2
+84
+20
+9
+2
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+2
+·
+Laws/Api
+·
+·
+7
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+6
+·
+2
+3
+3
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+18
+·
+Laws/Run.lean
+·
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+3
+·
+·
+·
+1
+·
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+2
+·
+Laws/Codegen
+·
+·
+·
+8
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+6
+·
+2
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+20
+·
+Laws/Schema
+·
+·
+·
+·
+·
+2
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+4
+·
+Laws/Program
+·
+·
+11
+4
+·
+6
+·
+57
+1
+1
+·
+·
+·
+·
+·
+·
+·
+18
+34
+·
+3
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+·
+3
+·
+307
+·
+Laws/Machine
+·
+·
+·
+·
+·
+·
+1
+2
+15
+2
+·
+·
+·
+·
+·
+·
+·
+·
+13
+·
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+50
+·
+Laws/Auto
+·
+·
+·
+·
+·
+·
+·
+·
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+3
+·
+2
+·
+·
+·
+20
+·
+Laws/Store
+·
+·
+·
+·
+·
+·
+3
+2
+·
+2
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+5
+·
+Laws/Effects
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+·
+2
+·
+tools/conform-red
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+2
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+4
+·
+tools/Conform/Cli
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+2
+·
+·
+·
+·
+12
+·
+·
+·
+·
+·
+·
+11
+·
+tools/Effect4Gen
+·
+·
+·
+1
+·
+·
+·
+2
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+12
+·
+·
+·
+·
+·
+·
+·
+33
+·
+tools/Conform/Effect4
+2
+·
+·
+·
+·
+·
+·
+2
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+5
+·
+·
+7
+·
+·
+·
+·
+·
+·
+20
+·
+tools/Drivers
+·
+·
+·
+5
+1
+·
+2
+2
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+6
+·
+3
+·
+·
+2
+·
+·
+·
+·
+11
+2
+src/OCaml5
+·
+·
+·
+·
+·
+·
+5
+2
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+8
+3
+·
+·
+·
+·
+·
+·
+57
+·
+tools/TestSupport
+·
+·
+·
+·
+·
+·
+2
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+4
+·
+tools/Tools
+·
+·
+1
+·
+·
+·
+·
+7
+·
+1
+·
+·
+·
+·
+·
+·
+1
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+·
+1
+·
+·
+·
+·
+·
+·
+27
+·
+tools/Conform
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+·
+·
+·
+·
+·
+65
+·
+tools/ProofGraph
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+1
+·
+·
+8
+·
+Test
+3
+·
+25
+18
+1
+22
+17
+26
+19
+3
+5
+2
+9
+1
+3
+1
+74
+26
+12
+·
+·
+·
+·
+1
+·
+·
+2
+4
+·
+·
+3
+·
+·
+·
+3
+·
+322
+4
+Against the direction
+Every import statement the register does not allow, by file. An accepted row names the document that accepts it; the rest are the organization questions the map exists to surface.
+importing file
+imports
+from → to
+standing
+tools/Drivers/Corpus.lean
+Test.Program.Gen
+tools/Drivers → Test
+accepted
+the corpus generator is the input of
+Tools.Corpus
+(ARCHITECTURE.md, the Tools row)
+tools/Drivers/ForeignCorpus.lean
+Test.Program.Gen
+tools/Drivers → Test
+accepted
+the corpus generator is the input of
+Tools.Corpus
+(ARCHITECTURE.md, the Tools row)
+The typed-state stack
+The milestone's modules by slice, in measured import order. A box is solid once its file exists and dashed until then. A solid box carries the goals its module declares in the proof ledger (a theorem concluding
+Obligation p
+), how many have a checked proof beside them (
+#obligation_proved
+, or the ceiling command's search) and how many are open (
+#proof_wanted
+), measured from the loaded environment. Across the loaded modules: 403 declared, 370 proved, 33 open.
+layer 0
+the protocol-typed predicate on the free monad
+Protocol.lean
+Effects
+T1
+the checked evidence seam
+Proof.lean
+ProofGraph
+Search.lean
+ProofGraph
+Ledger.lean
+ProofGraph
+T2
+the census, the source table, the skeleton in place
+Positions.lean
+Auto
+Vocabulary.lean
+Program/Typed
+Sources.lean
+Program/Typed
+TypedSources.lean
+Program/Typed
+TypedStateDecl.lean
+Program/Typed
+PositionGate.lean
+Program/Typed
+State.lean
+Program/Typed
+T3 · T4
+frames and the ledger
+Frames.lean
+Auto
+Frames.lean
+Program/Typed
+Obligations.lean
+Auto
+M2
+the world and its order; validity; a fiber's type from its fork site; the saved-frame contracts
+World.lean
+Program/Typed · 25 declared · 25 proved · 0 open
+Validity.lean
+Program/Typed · 15 declared · 15 proved · 0 open
+ForkSource.lean
+Program/Typed · 2 declared · 2 proved · 0 open
+Contracts.lean
+Program/Typed
+ProtocolObligations.lean
+Program/Typed · 8 declared · 8 proved · 0 open
+M3b
+admission: the value judgment Fits, and the admitted source
+Membership.lean
+Program/Typed
+Admission.lean
+Program/Typed
+M3
+the residual protocol under an answer gate
+Residual.lean
+Program/Typed · 9 declared · 8 proved · 1 open
+AnswerGate.lean
+Auto
+M4
+the unary ladder and the typed stack walk
+Keeps.lean
+Machine
+Stack.lean
+Program/Typed · 5 declared · 5 proved · 0 open
+slice 5
+the typed state assembled; M5 (initialization) and M6 (one goal per command) declared
+Assembly.lean
+Program/Typed · 22 declared · 1 proved · 21 open
+D · row 110
+the generic lifts through commands, decisions and replay; their first native user
+Lift.lean
+Machine
+MemoIds.lean
+Program/Guard
+M6
+the per-command preservation proofs, generic cells first
+Step.lean
+Program/Typed · planned
+M7
+the transfer to the compiled machine's exits
+Transfer.lean
+Program/Typed · planned
+P2
+the storage interface the store kernel is restated over
+Arena.lean
+Machine · 13 declared · 13 proved · 0 open
+Presence is a file; completion is a proof. The counts come from the ledger, not from the register.
+The file map
+Every area by column, top of the column first, with its detail directories indented. Files and lines are the area's own; a tag counts its
+--run
+drivers and any module without a built olean.
+The runtime root · lake library Effect4
+area
+path
+files
+lines
+thm
+def
+ind
+role
+Effect4
+src/Effect4.lean
+1
+163
+0
+0
+0
+the root: the face and the functional utilities; never Laws
+Run
+src/Effect4/Run.lean
+1
+351
+0
+53
+2
+the run API over
+Api
+: commands, the journal, replay
+Api
+src/Effect4/Api
+12
+3,892
+129
+492
+32
+the application face: author and build, run, the host session and protocol, supervision, inspection
+Codegen
+1 driver
+src/Effect4/Codegen
+18
+6,615
+148
+752
+43
+the pinned Effect profile: print and read, the template table, forms, bindings, module admission
+Ingest
+src/Effect4/Ingest
+1
+153
+5
+60
+3
+the ingest taxonomy
+Schema
+src/Effect4/Schema
+12
+7,462
+263
+489
+32
+the persisted Schema data plane;
+Codec
+is the type-directed JSON boundary;
+Image
+and
+Bridge
+the arrows in and out
+Store/Domain
+src/Effect4/Store/Domain
+14
+4,665
+209
+399
+24
+canonical documents, nodes, persistence, and program wire projections above Schema
+Store/Domain/Derived
+src/Effect4/Store/Domain/Derived
+4
+6,101
+285
+269
+0
+generated
+Canonical
+instances (the derived group)
+Program
+src/Effect4/Program
+29
+14,616
+496
+1,616
+90
+Eff
+,
+Ty
+, the checker, the native rows and atoms,
+compile
+, provision and config
+Program/Authoring
+src/Effect4/Program/Authoring
+6
+1,413
+1
+214
+8
+the authoring surface: modules, lifts, rows, forms
+Program/Packages
+src/Effect4/Program/Packages
+3
+185
+0
+17
+1
+the two package tables
+Program/Typing
+src/Effect4/Program/Typing
+4
+790
+32
+88
+6
+the typing rules the checker and the declarative judgement share
+Machine
+src/Effect4/Machine
+17
+15,351
+733
+1,374
+98
+Cause
+and
+Exit
+, the frame alphabet, the scope machine, the fiber machine (
+RunMachine
+,
+replayEval
+), the stores, the wake protocol, the logical clock
+Store/Carrier
+src/Effect4/Store/Carrier
+8
+3,568
+200
+194
+8
+value trees, their byte codec, images, digests and folds below Machine
+Data
+src/Effect4/Data
+8
+2,614
+158
+101
+10
+requirement rows, JSON, lawful optics, ASCII
+The proof graph · lake library Effect4Laws
+area
+path
+files
+lines
+thm
+def
+ind
+role
+Effect4.Laws
+src/Effect4/Laws.lean
+1
+148
+5
+0
+0
+the root of the proof graph
+Laws/Api
+src/Effect4/Laws/Api
+9
+2,046
+177
+14
+0
+the runner, host session, supervision, frontier and fuel laws
+Laws/Run
+src/Effect4/Laws/Run.lean
+1
+906
+70
+5
+1
+the run API's laws:
+journal_replays
+,
+replay_unique
+,
+drive_eq_play
+Laws/Codegen
+src/Effect4/Laws/Codegen
+10
+5,266
+281
+64
+5
+printer and reader laws over the template table; module admission and checked production
+Laws/Schema
+src/Effect4/Laws/Schema
+2
+136
+13
+0
+0
+the Schema boundary's laws
+Laws/Program
+src/Effect4/Laws/Program
+38
+12,751
+718
+280
+19
+typing soundness, meaning, the reference scheduler and evaluator, replay agreement, simulation, guards, authoring, the typed state
+Laws/Program/Agreement
+src/Effect4/Laws/Program/Agreement
+4
+4,882
+327
+44
+1
+run_eq_meaning
+and its kin
+Laws/Program/Authoring
+src/Effect4/Laws/Program/Authoring
+7
+1,319
+138
+2
+5
+the authoring surface's laws
+Laws/Program/Folds
+src/Effect4/Laws/Program/Folds
+9
+222
+0
+90
+0
+fold connectors for the denotations
+Laws/Program/Guard
+src/Effect4/Laws/Program/Guard
+39
+14,687
+1,226
+109
+13
+the guard family's laws
+Laws/Program/Handles
+src/Effect4/Laws/Program/Handles
+7
+2,622
+100
+11
+0
+handle validity across the alphabet
+Laws/Program/Intro
+src/Effect4/Laws/Program/Intro
+15
+2,433
+106
+3
+0
+the introduction laws by path
+Laws/Program/Simulation
+src/Effect4/Laws/Program/Simulation
+8
+6,324
+513
+29
+7
+the compiled machine paired with the reference, step by step
+Laws/Program/Typed
+src/Effect4/Laws/Program/Typed
+18
+5,820
+443
+205
+37
+the typed-state invariant: the vocabulary, the source table, the skeleton, the frames
+Laws/Program/Typing
+src/Effect4/Laws/Program/Typing
+7
+2,024
+125
+21
+9
+the checker sound and complete against
+HasTy
+; inversion
+Laws/Machine
+src/Effect4/Laws/Machine
+23
+20,374
+1,492
+343
+15
+store and frame invariants, the store kernel,
+Book
+and
+BMeans
+, observations, approximation and scheduling laws
+Laws/Machine/Folds
+src/Effect4/Laws/Machine/Folds
+2
+40
+0
+6
+0
+fold connectors for machine stores
+Laws/Auto
+src/Effect4/Laws/Auto
+9
+1,447
+21
+150
+10
+the instruments: the censuses, the position gate,
+#typed_state
+,
+#frame_rules
+, the obligation ledger, the aesop banks
+Laws/Store
+src/Effect4/Laws/Store
+1
+29
+2
+0
+0
+the store's laws
+Laws/Store/Folds
+src/Effect4/Laws/Store/Folds
+1
+40
+0
+26
+0
+fold connectors for store values
+Laws/Effects
+src/Effect4/Laws/Effects
+1
+167
+10
+7
+4
+layer 0 of the typed-state invariant: the protocol-typed predicate on the free monad; imports the pinned
+Effects
+only
+The tool roots · ProofGraph, Conform, Tools, OCaml5, Effect4Gen
+area
+path
+files
+lines
+thm
+def
+ind
+role
+conform-red
+2 not built
+tools/conform-red
+2
+115
+0
+0
+0
+negative probes for Conform, deliberately red, in no root
+Conform/Cli
+3 drivers
+tools/Conform/Cli
+5
+435
+2
+14
+2
+the
+--run
+drivers over the generic core and the Effect4 adapters
+Effect4Gen
+11 drivers
+8 not built
+tools/Effect4Gen
+11
+5,854
+0
+26
+2
+the deriving generator (
+Canonical
+, folds, views, rows, atoms, forms) and its projection guard;
+guards/
+holds the fragments appended to generated files, not modules
+Conform/Effect4
+5 drivers
+tools/Conform/Effect4
+10
+1,709
+1
+24
+1
+the Effect4 adapters: profiles, fixtures, the LCNF and layout worlds, the native target
+Drivers
+3 drivers
+tools/Drivers
+5
+1,647
+0
+37
+1
+Effect4 drivers that consume the OCaml5 projection
+OCaml5
+src/OCaml5
+1
+28
+0
+0
+0
+the Lean half of the OCaml estate: the
+Eff
+closed world and emitters, the LCNF → OCaml backend, the OCaml language model, the drivers
+OCaml5/Eff
+src/OCaml5/Eff
+4
+1,244
+3
+219
+6
+the closed world, the emitters, the goldens
+OCaml5/Lcnf
+src/OCaml5/Lcnf
+8
+3,045
+0
+271
+13
+the LCNF → OCaml translator, its types, externs and naming
+OCaml5/Ml
+src/OCaml5/Ml
+5
+3,608
+26
+563
+28
+the OCaml syntax the backend prints through, its renderer, profile and checker
+OCaml5/Tools
+5 drivers
+src/OCaml5/Tools
+5
+1,141
+0
+0
+0
+the
+--run
+cuts: the engine, the
+Eff
+library, the wire goldens, the store goldens
+TestSupport
+tools/TestSupport
+2
+168
+7
+36
+2
+shared immutable fixtures consumed by tooling and batteries; no runtime imports
+Tools
+5 drivers
+tools/Tools
+10
+2,290
+0
+47
+2
+shared descriptions, stamps, inventory and neutral tool utilities
+Conform
+tools/Conform
+0
+0
+0
+0
+0
+generic conformance: source descriptions, reports and evidence, obligations, the LCNF walkers and semantics, layouts, models, the
+Std.Do
+pilot
+Conform/Core
+tools/Conform/Core
+5
+553
+6
+191
+11
+reports, evidence, obligations, policy, the proof shim
+Conform/Layout
+tools/Conform/Layout
+7
+2,468
+26
+391
+28
+layout coherence: build, check, reflect, native
+Conform/Lcnf
+tools/Conform/Lcnf
+6
+3,391
+22
+553
+42
+the mono-LCNF walkers, rules, validity and semantics
+Conform/Manifest
+tools/Conform/Manifest
+2
+735
+1
+75
+6
+manifest readers and the mirror
+Conform/Model
+tools/Conform/Model
+1
+195
+0
+31
+5
+model builders
+Conform/Source
+tools/Conform/Source
+1
+129
+1
+55
+6
+the generic source description
+Conform/Spec
+tools/Conform/Spec
+1
+200
+6
+13
+1
+the specification reflection pilot
+ProofGraph
+tools/ProofGraph
+3
+312
+0
+24
+6
+checked theorem references, rolled-back search, published theorems, the obligation join; below Laws and Conform
+The batteries and gates · lake library Test
+area
+path
+files
+lines
+thm
+def
+ind
+role
+Test
+Test
+1
+158
+0
+0
+0
+Test/All.lean
+is the green battery and the gate's root; the areas mirror the runtime's
+Test/Api
+Test/Api
+11
+2,450
+124
+133
+1
+the face's batteries
+Test/Audit
+Test/Audit
+16
+3,150
+91
+191
+89
+the axiom gate, the runtime coverage join, the censuses, the proof-graph and ledger controls
+Test/Codegen
+Test/Codegen
+10
+2,532
+4
+47
+0
+printer, reader and module batteries
+Test/Counterexamples
+Test/Counterexamples
+29
+4,999
+215
+449
+22
+the durable attacks, by stable ID
+Test/Data
+Test/Data
+3
+350
+2
+9
+1
+rows, JSON and optics
+Test/Ingest
+Test/Ingest
+1
+16
+0
+0
+0
+the taxonomy
+Test/Machine
+Test/Machine
+19
+4,676
+38
+274
+3
+the machine's batteries and the runtime contracts
+Test/Program
+Test/Program
+51
+9,733
+1,238
+1,172
+9
+the program batteries, the generator, the red controls
+Test/Run
+Test/Run
+1
+179
+0
+10
+0
+the run API
+Test/Schema
+Test/Schema
+8
+1,898
+0
+5
+0
+the Schema plane
+Test/Store
+Test/Store
+7
+1,279
+9
+32
+2
+the store and its derived instances
+Test/contracts
+Test/contracts
+0
+0
+0
+0
+0
+the packets: what each area promises, as prose
+Test/fixtures
+Test/fixtures
+0
+0
+0
+0
+0
+the sample trees and the trust-boundary fixture; its
+.lean
+files are fixtures, not modules
+The OCaml estate · ocaml/
+area
+path
+files
+lines
+by extension
+role
+ocaml/gen
+ocaml/gen
+12
+24,463
+ml 4 (22,420) · tsv 4 (1,572) · md 1 (348) · json 1 (123) · (none) 2
+the visible machine, cut from LCNF by
+OCaml5.Tools.LcnfGen
+ocaml/engine
+ocaml/engine
+280
+55,518
+ml 103 (47,678) · mli 48 (6,935) · txt 3 (439) · sh 2 (306) · hex 117 (117)
+the host engine under the generated machine: the store carriers and their property tests, the dispatcher, the log, the API functor
+ocaml/eff
+ocaml/eff
+186
+4,667
+ml 13 (4,158) · txt 4 (226) · md 1 (182) · json 54 (54) · tsv 1 (32)
+Eff
+as an OCaml library: types, wire, JSON, native rows, layout, cut by
+OCaml5.Tools.EffGen
+ocaml/goldens
+ocaml/goldens
+11
+61
+txt 3 (53) · hex 8 (8)
+the wire goldens the OCaml reader is held to
+ocaml/tools
+ocaml/tools
+1
+31
+sh 1 (31)
+the engine's own tools
+The TypeScript face · ts/eff and the tsgo oracle
+area
+path
+files
+lines
+by extension
+role
+ts/eff
+ts/eff
+98
+9,477
+ts 86 (8,976) · md 2 (324) · json 6 (157) · ml 1 (20) · lock 1
+the
+Eff
+IR as a TypeScript library:
+read.ts
+by hand, the nodes, JSON, profile, forms and wire generated;
+ingest/
+the foreign recognizers
+tools/target
+tools/target
+16
+1,763
+ts 14 (1,649) · md 1 (108) · json 1 (6)
+the tsgo oracle: assignability, rows and atoms against the exports, the profile
+Host gates, scripts and promoted results
+area
+path
+files
+lines
+by extension
+role
+harness
+harness
+668
+67,458
+json 18 (54,739) · ts 621 (9,048) · lean 12 (2,445) · tsv 2 (802) · md 5 (419)
+the host gates: the truth differential (Lean against rc.112), the Schema host, tsdiag, the generation fixtures
+scripts
+scripts
+31
+2,743
+py 9 (1,390) · sh 10 (1,353) · pyc 12
+the check and generate scripts the Makefile runs
+generated
+generated
+7
+1,695
+tsv 6 (1,664) · md 1 (31)
+the promoted TSVs: the corpus index, assignability, row citations, tsdiag, the runtime census, the proof shape
+The authorities and the record
+area
+path
+files
+lines
+by extension
+role
+docs/core
+docs/core
+11
+3,542
+md 10 (3,542) · html 1
+the authorities: the system map, the host boundary, coherence, the census, decisions, the language cut, the API surface, the LCNF route, the machine's state
+STATE
+docs/STATE.md
+1
+588
+md 1 (588)
+one page: what is true at HEAD, what is next, what the owner must decide
+ARCHITECTURE
+docs/ARCHITECTURE.md
+1
+288
+md 1 (288)
+the tree and its dependency direction, in prose
+GENERATED
+docs/GENERATED.md
+1
+166
+md 1 (166)
+every generated group: producer, inputs, consumers, check, evidence
+DESIGN-ISSUES
+docs/DESIGN-ISSUES.md
+1
+260
+md 1 (260)
+the DI register; a ruling exists only when written here
+AGENTS
+AGENTS.md
+1
+170
+md 1 (170)
+the operating rules and the vocabulary
+docs/research
+docs/research
+—
+—
+not walked
+history, not authority, and not walked (two gigabytes of evidence trees); the notes that matter are force-added
+docs/design
+docs/design
+10
+1,108
+md 3 (1,062) · txt 1 (46) · svg 5 · html 1
+the design language notes
+Faces and generated groups
+How a Lean definition becomes an OCaml or TypeScript face: the groups of
+docs/GENERATED.md
+, read from that table so the two cannot disagree.
+group
+producer
+consumers
+check
+evidence
+derived
+tools/Effect4Gen/Driver.lean
+runs
+Main.lean
+/
+Fold.lean
+/
+LayerView.lean
+per manifest group:
+Json
+,
+Schema
+,
+Program
+,
+Pin
+,
+Api
+,
+Fold
+,
+SchemaFold
+,
+LayerView
+the Effect4 library (
+Store/Derived/*.lean
+,
+Store/Domain/Derived/Program.lean
+,
+Store/Domain/PinDerived.lean
+,
+Api/Derived.lean
+,
+Program/Fold.lean
+,
+Schema/Fold.lean
+,
+Program/LayerView.lean
+)
+make check-gen
+;
+lake build Test
+for shapes
+reproduced; tested
+eff
+src/OCaml5/Tools/EffGen.lean
+, then
+scripts/generate-engine-structure.py
+ocaml/eff/eff_{types,wire,json,native,layout}.ml
+,
+eff_manifest.txt
+,
+program-structure.json
+, the 48-program goldens under
+ocaml/eff/goldens/
+,
+ocaml/engine/e4_program_layout.{ml,json}
+make check-gen
+;
+make check-ocaml
+(the goldens decode, re-encode and print in OCaml; the
+.ty
+goldens and
+corpus.txt
+are Lean's typing verdicts, held by the drift check alone since the OCaml checker was retired on 2026-09-13)
+reproduced; tested
+wire
+src/OCaml5/Tools/EffWire.lean
+ocaml/goldens/eff/*.hex
+,
+manifest.txt
+,
+same-programs.txt
+make check-gen
+;
+make check-ocaml
+(
+test_lean_wire
+)
+reproduced; tested
+cas
+src/OCaml5/Tools/CasGoldens.lean
+ocaml/engine/cas/goldens/
+(119 files)
+make check-gen
+;
+make check-ocaml
+(
+engine-tests
+)
+reproduced; tested
+ts
+tools/Drivers/TsGen.lean
+(
+scripts/generate.py --only ts
+)
+ts/eff/{eff,json,wire,profile,taxonomy,forms,packages,templates}.gen.ts
+make check-gen
+;
+make check-ts-reader
+reproduced; tested
+readme
+bun ts/eff/ingest/render-readme.ts
+(a host producer; writes in place)
+ts/eff/ingest/README.md
+make check-gen
+; the renderer's own
+--check
+inside
+make check-ingest-smoke
+reproduced
+lcnf
+src/OCaml5/Tools/LcnfGen.lean
+; each output's header carries its exact command
+ocaml/gen/{fibers_gen,machine_gen,api_gen}.ml
+,
+ocaml/engine/api_engine.ml
+make check-gen
+holds these four against a hand edit only — the lcnf group is not in
+HERMETIC_GROUPS
+, so
+check-gen
+diffs them without re-cutting them and a *stale* output is invisible to it. What re-cuts them is the
+check-ocaml
+CI job, which runs
+make gen-lcnf
+and refuses a difference from the committed files, and the nightly
+check-gen-full
+.
+make check-ocaml
+(
+api_check
+, the engine seam in
+gen-check.sh
+) compiles and runs what is committed
+reproduced; tested
+truth
+harness/truth/Truth.lean
+writes the corpus from the committed tapes;
+harness/truth/run-truth.ts
+runs rc.112, prints the modules, re-records the tapes, writes the result
+harness/truth/corpus.json
+,
+generated/*.ts
+,
+result.{json,md}
+,
+tapes/*.jsonl
+make check-truth
+(a fresh run must equal the committed artefacts; the printed modules type-check first, DI-49)
+reproduced (corpus, tapes); tested (the host run)
+host-protocol
+tools/Tools/HostProtocol.lean
+(the
+gen-host-protocol
+recipe)
+harness/truth/session/protocol.gen.ts
+,
+tape.schema.json
+make check-host-protocol
+reproduced; tested
+schema-ts
+harness/schema-generation/Emit{Fixture,CoverageFixture,MultiFixture}.lean
+, stdout redirected
+the three
+.generated.ts
+beside them
+make check-schema-ts
+reproduced; tested
+census
+scripts/generate-effect-runtime-census.sh
+(stdout)
+generated/effect-runtime-census.tsv
+, joined by
+Test/Audit/RuntimeCoverage.lean
+make check-census
+reproduced; proved where a row's witness theorem is joined
+architecture
+tools/Tools/Architecture.lean
+(
+make gen-architecture
+)
+docs/core/architecture-map.html
+make check-architecture
+on demand; not in
+make check
+: the map is a report and changes whenever the tree does
+reproduced
+Pinned references
+The packages
+lakefile.toml
+requires, at their exact revisions, and the vendored behavioral reference.
+package
+source
+revision
+effects
+https://github.com/pure-algebra/lean4-effects
+a4ee7a14248ee5976039b73039319efa87834986
+typescript
+https://github.com/pure-algebra/lean4-typescript
+6afc9b841603796c16b266c0b8b92ded37a9445c
+hash
+https://github.com/pure-algebra/lean4-hash
+c906b15dc3e94ebac0c10056270fbb345a1d2b6e
+aesop
+https://github.com/leanprover-community/aesop
+3448c0bcc5ce01b2d1546e483ec3620e32df3d0e
+effect rc.112
+vendor/effect-4.0.0-rc.112
+the behavioral reference every citation points into
+Audit
+What the tree says about itself at this measurement. None of it fails a build; all of it is a question for the next slice.
+Imports against the direction:
+0, and 2 accepted by a document. Every one is listed above.
+Area pairs that import each other:
+0.
+Modules with no built olean, drivers aside:
+2.
+tools/conform-red/Probe2Neg.lean
+,
+tools/conform-red/RulesNeg.lean
+The twelve largest modules
+module
+lines
+thm
+def
+area
+src/Effect4/Laws/Machine/Handles.lean
+6,752
+416
+85
+Laws/Machine
+src/Effect4/Laws/Program/Guard/Core.lean
+3,849
+357
+36
+Laws/Program/Guard
+src/Effect4/Machine/Frames.lean
+3,755
+218
+128
+Machine
+src/Effect4/Program/Fold.lean
+3,643
+159
+399
+Program
+src/Effect4/Store/Domain/Derived/Program.lean
+2,998
+127
+126
+Store/Domain/Derived
+src/Effect4/Machine/Stores.lean
+2,632
+118
+300
+Machine
+src/Effect4/Machine/Fibers.lean
+2,267
+1
+384
+Machine
+src/Effect4/Laws/Machine/StoresLaws.lean
+2,239
+101
+15
+Laws/Machine
+src/Effect4/Laws/Machine/Clauses.lean
+2,123
+186
+3
+Laws/Machine
+src/Effect4/Codegen/Read.lean
+2,068
+87
+86
+Codegen
+src/Effect4/Laws/Program/Agreement/Machine.lean
+1,943
+110
+21
+Laws/Program/Agreement
+src/Effect4/Laws/Program/Agreement.lean
+1,941
+194
+19
+Laws/Program/Agreement
+Generated by
+tools/Tools/Architecture.lean
+from the tree: import headers through
+Lean.Elab.parseImports
+, declaration counts from the loaded roots, sizes by file walk, the groups from
+docs/GENERATED.md
+, the pins from
+lakefile.toml
+. The role register
+tools/Tools/ArchitectureRoles.lean
+is the one hand input and is checked for totality on every run. No commit or date is embedded; the map changes when the tree does.

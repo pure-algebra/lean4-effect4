@@ -1,0 +1,1 @@
+bash  lake env lean -M6144 -DwarningAsError=true   0.55s user 0.97s system 78% cpu 1.925 total

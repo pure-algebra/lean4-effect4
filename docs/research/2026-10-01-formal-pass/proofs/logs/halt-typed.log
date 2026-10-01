@@ -1,0 +1,5 @@
+'FormalPass.Proofs.HaltTyped.typedState_halt' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.HaltTyped.queueOk_nil' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.HaltTyped.halting_result_typed' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.HaltTyped.typed_not_imply_running' depends on axioms: [propext, Quot.sound]
+bash  lake env lean -M6144 -DwarningAsError=true   0.52s user 0.94s system 99% cpu 1.473 total

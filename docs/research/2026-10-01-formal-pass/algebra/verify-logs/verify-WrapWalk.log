@@ -1,0 +1,6 @@
+'FormalPass.AlgebraVerify.WrapWalk.hookLawsX' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.WrapWalk.w0_le_w1' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.WrapWalk.input_kripke' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.WrapWalk.walk_output' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.WrapWalk.walk_typed_one_world' depends on axioms: [propext, Quot.sound]
+'FormalPass.AlgebraVerify.WrapWalk.output_not_kripke' depends on axioms: [propext, Quot.sound]

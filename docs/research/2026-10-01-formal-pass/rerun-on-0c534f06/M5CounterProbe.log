@@ -1,0 +1,13 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/types/M5CounterProbe.lean:105:2: error: 'change' tactic failed, pattern
+  Contracts.StackAccepts (TypedProg src) FitsExit (frameProtocols src) w tin rootTy3 []
+is not definitionally equal to target
+  Contracts.StackAccepts (TypedProg src) ExitOk (frameProtocols src) w tin rootTy3
+    (RunFiber.make Api.root (denoteR prog3 prog3 (rootPoint 100)) true
+          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) emptyCtx) emptyCtx).frame.stack
+'Research.TypesSeat.M5.prog3_typed' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.rootTy3_closed' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.child_cert' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.leaf_false' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.fiber_inv' depends on axioms: [propext, Quot.sound]
+'Research.TypesSeat.M5.m5_false' depends on axioms: [propext, sorryAx, Quot.sound]
+'Research.TypesSeat.M5.typedState_load_false' depends on axioms: [propext, sorryAx, Quot.sound]

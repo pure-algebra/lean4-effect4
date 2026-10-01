@@ -1,0 +1,14 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyAwaitLoad.lean
+# sha256: 7f9902a84a3173ef23cc37d3316fa8f89b9d049c6e6ce467740853f48f3fc685
+# head: ea5b28b5
+# started: 2026-10-01 06:53:47
+'FormalPass.Proofs.Verify.AwaitLoad.typed_source' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.code_eq' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.cert_of_bodyTyped' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.root_code_refused' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.one_not_loaded' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.AwaitLoad.typedState_load_false' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 2
+#         1.66 real         0.70 user         0.97 sys
+#           1616117760  maximum resident set size

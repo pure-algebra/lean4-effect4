@@ -1,0 +1,12 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/probes/HaltTyped.lean
+# sha256: 95b793c8280a0175bc5ad8b6cd528a7f3053236dad6796f100a2285bf3dcd2a5
+# head: ea5b28b5
+# started: 2026-10-01 06:28:32
+'FormalPass.Proofs.HaltTyped.typedState_halt' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.HaltTyped.queueOk_nil' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.HaltTyped.halting_result_typed' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.HaltTyped.typed_not_imply_running' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 1
+#         1.45 real         0.51 user         0.93 sys
+#           1587937280  maximum resident set size

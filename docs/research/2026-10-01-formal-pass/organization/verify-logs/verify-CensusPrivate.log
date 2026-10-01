@@ -1,0 +1,9 @@
+#census_private Effect4.Program.Ty: 1 private person-written takers that destruct the family (1 recursive)
+RECURSIVE(structural)	Effect4.Codegen.Types	Effect4.Codegen.Types.ofNormalized
+#census_private Effect4.Program.Eff: 0 private person-written takers that destruct the family (0 recursive)
+#census_private Effect4.Program.Term: 0 private person-written takers that destruct the family (0 recursive)
+#census_private Effect4.Representation: 2 private person-written takers that destruct the family (2 recursive)
+RECURSIVE(wf)	Effect4.Schema.Representation	Effect4.Check.beq
+RECURSIVE(wf)	Effect4.Schema.Representation	Effect4.Representation.beq
+#census_private Effect4.Store.Val: 0 private person-written takers that destruct the family (0 recursive)
+## exit=0 seconds=24 probe=/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/organization/verify-CensusPrivate.lean

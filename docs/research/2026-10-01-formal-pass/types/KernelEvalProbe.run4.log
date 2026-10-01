@@ -1,0 +1,66 @@
+structure Effect4.Program.Typed.RunFiberOk {W : Type} (P : Preds W) (w : W) (e : Expect)
+  (x :
+    Machine.RunFiber EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Machine.Ctx
+      Sched.RProgram Sched.RSaved) :
+  Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.RunFiberOk.c0 : RSavedOk P w (Expect.fiber x.id) x.frame
+  Effect4.Program.Typed.RunFiberOk.c1 : P.PendingOk w e x.pending
+  Effect4.Program.Typed.RunFiberOk.c2 : ∀ (v0 : Exit Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann),
+      x.finalizing = some v0 → P.exit w (Expect.fiber x.id) v0
+  Effect4.Program.Typed.RunFiberOk.c3 : ∀ (v0 : Exit Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann),
+      x.exit = some v0 → P.exit w (Expect.fiber x.id) v0
+  Effect4.Program.Typed.RunFiberOk.c4 : DispatcherOk P w e x.dispatcher
+  Effect4.Program.Typed.RunFiberOk.c5 : P.ServiceOk w e x.context
+constructor:
+  Effect4.Program.Typed.RunFiberOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect}
+    {x :
+      Machine.RunFiber EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Machine.Ctx
+        Sched.RProgram Sched.RSaved}
+    (c0 : RSavedOk P w (Expect.fiber x.id) x.frame) (c1 : P.PendingOk w e x.pending)
+    (c2 :
+      ∀ (v0 : Exit Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann),
+        x.finalizing = some v0 → P.exit w (Expect.fiber x.id) v0)
+    (c3 :
+      ∀ (v0 : Exit Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann),
+        x.exit = some v0 → P.exit w (Expect.fiber x.id) v0)
+    (c4 : DispatcherOk P w e x.dispatcher) (c5 : P.ServiceOk w e x.context) : RunFiberOk P w e x
+def Effect4.Machine.RunFiber.make.{u, v} : {ν σ : Type u} →
+  {β : Type v} →
+    {ε δ ι α χ : Type u} →
+      {κ φ : Type (max u v)} →
+        [core : Machine.FiberCore ν β ε δ ι α κ φ] →
+          FiberId → κ → Bool → Nat × Bool → χ → Machine.RunFiber ν σ β ε δ ι α χ κ φ :=
+fun {ν σ} {β} {ε δ ι α χ} {κ φ} [Machine.FiberCore ν β ε δ ι α κ φ] id current interruptible budget context =>
+  { id := id, frame := Machine.FiberCore.start ν β ε δ ι α current interruptible, running := false,
+    parked := Machine.Parked.notParked, pending := [], finalizing := none, exit := none, currentOpCount := 0,
+    maxOpsBeforeYield := budget.fst, preventYield := budget.snd, yieldOverride := none, observers := [], children := [],
+    dispatcher := Machine.Dispatcher.empty, context := context }
+structure Effect4.Machine.RunFiber.{u, v} (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
+  (κ : Type (max u v) := Prim ν σ β ε δ ι α) (φ : Type (max u v) := FrameFiber ν σ β ε δ ι α) : Type (max u v)
+number of parameters: 10
+fields:
+  Effect4.Machine.RunFiber.id : FiberId
+  Effect4.Machine.RunFiber.frame : φ
+  Effect4.Machine.RunFiber.running : Bool
+  Effect4.Machine.RunFiber.parked : Machine.Parked
+  Effect4.Machine.RunFiber.pending : List (Machine.Pending ν β ε δ ι α)
+  Effect4.Machine.RunFiber.finalizing : Option (Exit β ε δ ι α)
+  Effect4.Machine.RunFiber.exit : Option (Exit β ε δ ι α)
+  Effect4.Machine.RunFiber.currentOpCount : Nat
+  Effect4.Machine.RunFiber.maxOpsBeforeYield : Nat
+  Effect4.Machine.RunFiber.preventYield : Bool
+  Effect4.Machine.RunFiber.yieldOverride : Option Bool
+  Effect4.Machine.RunFiber.observers : List Machine.Observer
+  Effect4.Machine.RunFiber.children : List FiberId
+  Effect4.Machine.RunFiber.dispatcher : Machine.Dispatcher ν σ β ε δ ι α κ
+  Effect4.Machine.RunFiber.context : χ
+constructor:
+  Effect4.Machine.RunFiber.mk.{u, v} {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+    {κ : optParam (Type (max u v)) (Prim ν σ β ε δ ι α)} {φ : optParam (Type (max u v)) (FrameFiber ν σ β ε δ ι α)}
+    (id : FiberId) (frame : φ) (running : Bool) (parked : Machine.Parked) (pending : List (Machine.Pending ν β ε δ ι α))
+    (finalizing exit : Option (Exit β ε δ ι α)) (currentOpCount maxOpsBeforeYield : Nat) (preventYield : Bool)
+    (yieldOverride : Option Bool) (observers : List Machine.Observer) (children : List FiberId)
+    (dispatcher : Machine.Dispatcher ν σ β ε δ ι α κ) (context : χ) : Machine.RunFiber ν σ β ε δ ι α χ κ φ
+exit=0

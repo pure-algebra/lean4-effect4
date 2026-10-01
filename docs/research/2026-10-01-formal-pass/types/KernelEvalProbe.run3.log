@@ -1,0 +1,30 @@
+structure Effect4.Program.Typed.RunMachineOk {W : Type} (P : Preds W) (w : W) (e : Expect)
+  (x :
+    Machine.RunMachine EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Machine.Ctx
+      Machine.Stores Sched.RProgram Sched.RSaved Unit) :
+  Prop
+number of parameters: 5
+fields:
+  Effect4.Program.Typed.RunMachineOk.c0 : ∀
+      (v0 :
+        Machine.RunFiber EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Machine.Ctx
+          Sched.RProgram Sched.RSaved),
+      v0 ∈ x.fibers → RunFiberOk P w e v0
+  Effect4.Program.Typed.RunMachineOk.c1 : P.RaceOk w e x.races
+  Effect4.Program.Typed.RunMachineOk.c2 : StoresOk P w e x.state
+constructor:
+  Effect4.Program.Typed.RunMachineOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect}
+    {x :
+      Machine.RunMachine EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Machine.Ctx
+        Machine.Stores Sched.RProgram Sched.RSaved Unit}
+    (c0 :
+      ∀
+        (v0 :
+          Machine.RunFiber EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Machine.Ctx
+            Sched.RProgram Sched.RSaved),
+        v0 ∈ x.fibers → RunFiberOk P w e v0)
+    (c1 : P.RaceOk w e x.races) (c2 : StoresOk P w e x.state) : RunMachineOk P w e x
+@[reducible] def Effect4.Program.Sched.RState : Type :=
+Machine.RunMachine EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Machine.Ctx
+  Machine.Stores Sched.RProgram Sched.RSaved Unit
+exit=0

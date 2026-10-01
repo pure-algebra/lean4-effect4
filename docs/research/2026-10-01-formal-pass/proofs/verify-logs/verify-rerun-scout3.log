@@ -1,0 +1,14 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyScout3.lean
+# sha256: 8230888bb52f2999a960fbe9d880535af2fe0b13827fdf391e91ac20190c3ee2
+# head: ea5b28b5
+# started: 2026-10-01 07:04:52
+(5180, [3394, 5, 0, 1781, 0], 0, [])
+(["maskedSleepThen/fail@interrupt", "maskedSleepThen/failCause.fail@interrupt",
+    "maskedSleepThen/failCause.interrupt@interrupt", "maskedSleepThen/failCause.die@interrupt",
+    "maskedSleepThen/failCause.both@interrupt"],
+  [("unguard", 84), ("finishFinalizer", 1697)])
+(1781, 0)
+# exit: 0
+# wall seconds (including lock wait): 6
+#         6.34 real         5.31 user         0.98 sys
+#           1623293952  maximum resident set size

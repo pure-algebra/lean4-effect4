@@ -1,0 +1,21 @@
+# probe: /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifyPosts.lean
+# sha256: c9fa4241ae48c597fc89efd8e949496e1122c1ceffea7d754d889edbb8e458a8
+# head: ea5b28b5
+# started: 2026-10-01 06:59:28
+'FormalPass.Proofs.Verify.Posts.memoRelease_answers_scope' depends on axioms: [propext]
+'FormalPass.Proofs.Verify.Posts.memoRelease_post_excludes' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Posts.memo_admitted' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Posts.memo_next_untyped' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Posts.refModify_bool_answer' depends on axioms: [propext]
+'FormalPass.Proofs.Verify.Posts.refModify_pre' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Posts.refModify_post_excludes' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Posts.adequacy_false_refModify' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Posts.closeSeq_done' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Posts.closeIter_post_excludes' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Posts.scopeIsClosed_unknown' depends on axioms: [propext]
+'FormalPass.Proofs.Verify.Posts.scopeIsClosed_pre' depends on axioms: [propext, Quot.sound]
+'FormalPass.Proofs.Verify.Posts.scopeIsClosed_post_excludes_unit' depends on axioms: [propext, Quot.sound]
+# exit: 0
+# wall seconds (including lock wait): 2
+#         2.52 real         0.61 user         1.03 sys
+#           1600602112  maximum resident set size
