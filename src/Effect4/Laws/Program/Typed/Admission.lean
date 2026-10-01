@@ -2,6 +2,7 @@ import Effect4.Laws.Program.Typed.Membership
 import Effect4.Program.Checker
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.Signature
+import Effect4.Laws.Program.ReferenceTyping
 
 /-!
 # Laws.Program.Typed.Admission — source and control admission for typed programs
@@ -30,6 +31,11 @@ def NoShapeDefect (_ty : EffTy) : ExitV → Prop
 /-- Base membership and the part-one defect exclusion at every typed exit position. -/
 def ExitOk (w : World) (ty : EffTy) (ex : ExitV) : Prop :=
   FitsExit w ty ex ∧ NoShapeDefect ty ex
+
+/-- Part one's exclusion on a failure is `ShapeFree` on its cause, the predicate membership at an
+exit type reads (decisions row 152). -/
+theorem noShapeDefect_failure_iff (ty : EffTy) (c : CauseV) :
+    NoShapeDefect ty (.failure c) ↔ ShapeFree c := Iff.rfl
 
 /-- Part one: an interrupt reason carries neither excluded defect. -/
 theorem noShapeDefect_of_interrupts (ty : EffTy) (cause : CauseV)
@@ -114,11 +120,16 @@ def ProgramSource.signature (src : ProgramSource) : Signature NativeOp := src.si
 /-- D13 source admission at an addressed program node, under the source's signature: its row
 table (`E4-SCHED-CE-014`: the empty table refused bodies that perform a host row) and its service
 declarations (rows 111–114; `src.signature` is `nativeSignature src.table` for a source with no
-declarations, `SigApp.signature_nil`). -/
+declarations, `SigApp.signature_nil`). The node is the program's as written, the one the run
+denotes; the checker reads it through the rounds of the program's expansion (`Eff.expandIn`,
+decisions row 153 (b)): the checker refuses a layer reference (`Program/Checker.lean:259`) and
+certifies a program with references as its expansion (`typeOfProgram`), while the run hops from a
+reference to its target (`denoteLayer_ref_redirect`). For a reference-free node the expansion is
+the node itself (`Eff.expandIn_eq_self`). -/
 def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : Prop :=
   ∃ (e : NativeEff) (env : List Ty),
     Node.at_ (.eff src.program) point.path = some (.eff e) ∧
-    Checker.check src.signature env point.path e = .ok ty ∧
+    Checker.check src.signature env point.path (Eff.expandIn src.program e) = .ok ty ∧
     EnvTyped w env point.env
 
 /-- Admitted bodies covering all six `Body` constructors. -/
@@ -145,7 +156,7 @@ constrains only `Fail` reasons. The strengthened exit judgment separately requir
 explicit defect-exclusion premise: `cleanExit` alone admits `badName` and `notImplemented`. -/
 theorem strongExit_of_clean (w : World) (ty : EffTy) (c : CauseV)
     (h : cleanExit (.failure c) = true) (shape : NoShapeDefect ty (.failure c)) :
-    ExitOk w ty (.failure c) := ⟨fitsExit_of_clean w ty c h, shape⟩
+    ExitOk w ty (.failure c) := ⟨fitsExit_of_clean w ty c h shape, shape⟩
 
 /-- At a `never` error column a fitting failure is clean: no value has type `never`. -/
 theorem cleanExit_of_never (w : World) (ty : EffTy) (c : CauseV) (never : ty.error = .never)

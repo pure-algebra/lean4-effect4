@@ -63,9 +63,11 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .scopeAdd scope _ | .scopeRemove scope _ | .scopeIsClosed scope | .scopeFork scope _ =>
     ScopeLive w scope
   | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
-  -- the looked-up layer's own checked error type (decision row 90)
+  -- the looked-up layer's own checked error type (decision row 90), read through the
+  -- expansion's rounds as `PointTyped` reads a node (decisions row 153 (b))
   | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer root.signature layer l = .ok lt ∧ lt.error = cert
+      Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+      lt.error = cert
   | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
 
 /-- What each store row's answer satisfies: the store's actual answer (decisions row 136; the
@@ -357,11 +359,20 @@ answer's world. So a protocol holds at every later world with one intermediate t
 the resumed frame. Wrapping a one-world protocol at the frame is not enough: the pushed
 protocol could then pick its intermediate type per world (`output_not_kripke`,
 `Test/Program/FramesNotKripke.lean`). The world is an index, not a parameter, since a step's
-answer lives at a later world. -/
+answer lives at a later world.
+
+An iterator or loop frame discharges no service, and the walk passes a failure through it by
+the error columns alone (`errors`, `Typed/Stack.lean`'s `popR_typed`), so a step also keeps the
+requirement row from emptying (`rows`, decisions row 117 and the formal pass's G5: the side
+condition of `exitOk2_transport`, under which an exit judgment that refuses `missingService` at
+an empty row transports along the frame). Without it a loop frame at an answer no value fits
+carried `die missingService` from a row requiring the scope service to an empty one
+(`E4-TYPED-CE-008`, `Test/Program/H2PartOne.lean`, `MissingServiceTransport`). -/
 mutual
   inductive IteratorProtocol (root : ProgramSource) : World → EffTy → EffTy → EffName → Prop
     | step {w : World} {tin tout : EffTy} {name : EffName}
         (errors : tin.error = tout.error)
+        (rows : tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty)
         (next : ∀ w', w.leHost w' → ∀ v, Fits w' v tin.answer →
           IteratorAnswer root w' tout ((interpR root.program).iterNext name v).2) :
         IteratorProtocol root w tin tout name
@@ -380,6 +391,7 @@ mutual
   inductive LoopProtocol (root : ProgramSource) : World → EffTy → EffTy → EffName → Val → Prop
     | step {w : World} {tin tout : EffTy} {name : EffName} {cursor : Val}
         (errors : tin.error = tout.error)
+        (rows : tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty)
         (next : ∀ w', w.leHost w' → ∀ v, Fits w' v tin.answer →
           LoopAnswer root w' tout name ((interpR root.program).loopResume name cursor v)) :
         LoopProtocol root w tin tout name cursor
@@ -410,16 +422,16 @@ theorem iteratorProtocol_mono {root : ProgramSource} {w w' : World} (ord : w.leH
     {tin tout : EffTy} {name : EffName} (h : IteratorProtocol root w tin tout name) :
     IteratorProtocol root w' tin tout name := by
   cases h with
-  | step errors next =>
-    exact .step errors (fun w'' o v hv => next w'' (leHost_trans _ _ _ ord o) v hv)
+  | step errors rows next =>
+    exact .step errors rows (fun w'' o v hv => next w'' (leHost_trans _ _ _ ord o) v hv)
 
 /-- A loop protocol holds at every later world, with the same intermediate type. -/
 theorem loopProtocol_mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
     {tin tout : EffTy} {name : EffName} {cursor : Val} (h : LoopProtocol root w tin tout name cursor) :
     LoopProtocol root w' tin tout name cursor := by
   cases h with
-  | step errors next =>
-    exact .step errors (fun w'' o v hv => next w'' (leHost_trans _ _ _ ord o) v hv)
+  | step errors rows next =>
+    exact .step errors rows (fun w'' o v hv => next w'' (leHost_trans _ _ _ ord o) v hv)
 
 /-- The async finalizer's clause holds at every later world. -/
 theorem asyncFinalizerProtocol_mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
@@ -756,7 +768,8 @@ theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
   refine ⟨e, env, ?_, ?_, henv⟩
   · rw [hprog]
     exact hat
-  · exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
+  · rw [hprog]
+    exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
 
 theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
@@ -779,7 +792,8 @@ theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     refine ⟨l, lt, ?_, ?_, herr⟩
     · rw [hprog]
       exact hat
-    · exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+    · rw [hprog]
+      exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
   | _ => exact h
 
 omit hprog hsvc in

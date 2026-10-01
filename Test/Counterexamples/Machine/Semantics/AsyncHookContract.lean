@@ -27,7 +27,7 @@ def poisonedCause : CauseV := ⟨[.fail (.tag 42) .empty, .interrupt (some Api.r
 
 theorem does_not_fit (w : W) : ¬ FitsExit w (EffTy.pure .unit) (.failure poisonedCause) := by
   intro h
-  have failed := (fitsExit_failure_iff w (EffTy.pure .unit) poisonedCause).mp h
+  have failed := fitsExit_failure_cause h
   obtain ⟨v, _, hv⟩ := failed (.fail (.tag 42) .empty) List.mem_cons_self
   exact hv
 
@@ -168,7 +168,10 @@ theorem clean_cancellation_cannot_type (root : NativeEff) (w : W) (name : EffNam
 /-- A recorded interrupt is a valid input at the intended Unit/never type. -/
 theorem clean_input_fits (w : W) :
     FitsExit w (EffTy.pure .unit) (.failure (Cause.interrupt (some Api.root))) :=
-  fitsExit_of_clean w _ _ rfl
+  fitsExit_of_clean w _ _ rfl (noShapeDefect_of_interrupts (EffTy.pure .unit) _ fun r hr => by
+    simp only [Cause.interrupt_reasons, List.mem_singleton] at hr
+    subst hr
+    rfl)
 
 /-- Adding only the incoming-exit premise could not repair the M3a guard row. -/
 theorem clean_cancellation_still_rejected (root : NativeEff) (w : W) (name : EffName) :

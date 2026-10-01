@@ -345,7 +345,7 @@ theorem hookLaws_interpR (root : ProgramSource) :
   asyncFinalizer w _ _ _ h := ⟨h.1, h.2 w (leHost_refl w)⟩
   iterator w tin tout name h := by
     cases h with
-    | step errors next =>
+    | step errors _ next =>
       refine ⟨errors, fun v hv => ?_⟩
       have answer := next w (leHost_refl w) v hv
       revert answer
@@ -358,7 +358,7 @@ theorem hookLaws_interpR (root : ProgramSource) :
         exact ⟨tin', typed, fun _ ord => iteratorProtocol_mono ord tail⟩
   loop w tin tout name cursor h := by
     cases h with
-    | step errors next =>
+    | step errors _ next =>
       refine ⟨errors, fun v hv => ?_⟩
       have answer := next w (leHost_refl w) v hv
       revert answer

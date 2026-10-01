@@ -93,8 +93,22 @@ def CauseFits (member : Val → Prop) (c : CauseV) : Prop :=
   | .fail e _ => ∃ v, valOfErr e = some v ∧ member v
   | .die _ _ | .interrupt _ _ => True
 
+/-- No reason of a cause dies with a shape defect: `badName` or `notImplemented`, the defects a
+checked program never produces (decisions row 107, H2 part one; `NoShapeDefect`'s failure arm,
+`Typed/Admission.lean`, is this predicate, `noShapeDefect_failure_iff`). Membership at an exit
+type reads it (decisions row 152), so an exit carried as a value keeps the exclusion its typed
+position had. -/
+def ShapeFree (c : CauseV) : Prop :=
+  ∀ r ∈ c.reasons, match r with
+  | .die defect _ => defect ≠ .badName ∧ defect ≠ .notImplemented
+  | _ => True
+
 /-- **The membership judgment.** The arms and value shapes are `Val.hasTy`'s, one for one; the
-handle leaves read the world's declaration tables; `unknown` requires declared liveness. -/
+handle leaves read the world's declaration tables; `unknown` requires declared liveness. At an
+exit type the encoded cause is also shape-free (`ShapeFree`, decisions row 152): a reified exit
+fits `Exit<A, E>` exactly when the exit has `ExitOk`'s base membership and part one's exclusion,
+so the close walk, which passes each finalizer's exit on as a value, keeps the exclusion
+(`Test/Program/ProtocolPosts.lean`, `CloseIter`). -/
 def Fits (w : World) (v : Val) : Ty → Prop
   | .never => False
   | .unit => match v with | .unit => True | _ => False
@@ -134,7 +148,7 @@ def Fits (w : World) (v : Val) : Ty → Prop
     | Val.exitOk x => Fits w x a
     | Value.exitErr written =>
       match causeImage.ofVal written with
-      | some c => CauseFits (fun x => Fits w x e) c
+      | some c => CauseFits (fun x => Fits w x e) c ∧ ShapeFree c
       | none => False
     | _ => False
   | .causeOf e =>
@@ -173,11 +187,22 @@ abbrev FitsCause (w : World) (errTy : Ty) (c : CauseV) : Prop :=
 theorem fitsExit_success_iff (w : World) (ty : EffTy) (v : Val) :
     FitsExit w ty (.success v) ↔ Fits w v ty.answer := Iff.rfl
 
-/-- A failed exit fits exactly when its cause fits the error column. -/
+/-- A failed exit fits exactly when its cause fits the error column and is shape-free (decisions
+row 152; before it, the cause half alone). -/
 theorem fitsExit_failure_iff (w : World) (ty : EffTy) (c : CauseV) :
-    FitsExit w ty (.failure c) ↔ FitsCause w ty.error c := by
+    FitsExit w ty (.failure c) ↔ FitsCause w ty.error c ∧ ShapeFree c := by
   unfold FitsExit
   simp only [reifyExitVal, Fits, Store.Image.ofVal_toVal]
+
+/-- A failed exit's membership gives its cause's at the error column. -/
+theorem fitsExit_failure_cause {w : World} {ty : EffTy} {c : CauseV}
+    (h : FitsExit w ty (.failure c)) : FitsCause w ty.error c :=
+  ((fitsExit_failure_iff w ty c).mp h).1
+
+/-- A failed exit's membership gives part one's exclusion on its cause (decisions row 152). -/
+theorem fitsExit_failure_shape {w : World} {ty : EffTy} {c : CauseV}
+    (h : FitsExit w ty (.failure c)) : ShapeFree c :=
+  ((fitsExit_failure_iff w ty c).mp h).2
 
 /-- An exit whose failure carries no `Fail` reason: interruptions and defects only. Every
 success is clean. The sanitized exit at a preempted skip is clean (`Cause.sanitize_clean`). -/
@@ -189,28 +214,32 @@ def cleanExit : ExitV → Bool
 theorem fitsExit_success (w : World) (ty : EffTy) (v : Val) (h : Fits w v ty.answer) :
     FitsExit w ty (.success v) := h
 
-/-- A clean failure fits every effect type: only `Fail` reasons use the error column. -/
-theorem fitsExit_of_clean (w : World) (ty : EffTy) (c : CauseV)
-    (h : cleanExit (.failure c) = true) : FitsExit w ty (.failure c) := by
-  have hall : ∀ r ∈ c.reasons, r.tag ≠ .fail := by
-    intro r hr
-    exact bne_iff_ne.mp (List.all_eq_true.mp h r hr)
-  rw [fitsExit_failure_iff]
+/-- A clean cause fits every error column: only `Fail` reasons use it. -/
+theorem fitsCause_of_clean (w : World) (errTy : Ty) (c : CauseV)
+    (h : cleanExit (.failure c) = true) : FitsCause w errTy c := by
   intro r hr
-  have hne := hall r hr
+  have hne : r.tag ≠ .fail := bne_iff_ne.mp (List.all_eq_true.mp h r hr)
   cases r with
   | fail e ann => exact absurd rfl hne
   | die _ _ => trivial
   | interrupt _ _ => trivial
 
+/-- A clean, shape-free failure fits every effect type: only `Fail` reasons use the error column.
+Cleanliness alone admits `badName` and `notImplemented` (decisions row 152: the premise `shape`
+is new; before it a clean `die badName` fit every exit type). -/
+theorem fitsExit_of_clean (w : World) (ty : EffTy) (c : CauseV)
+    (h : cleanExit (.failure c) = true) (shape : ShapeFree c) : FitsExit w ty (.failure c) :=
+  (fitsExit_failure_iff w ty c).mpr ⟨fitsCause_of_clean w ty.error c h, shape⟩
+
 /-- At a `never` error column a failed exit is clean: no value fits `never`. -/
 theorem cleanExit_of_never_fits (w : World) (ty : EffTy) (c : CauseV) (never : ty.error = .never)
     (h : FitsExit w ty (.failure c)) : cleanExit (.failure c) = true := by
-  rw [fitsExit_failure_iff, never] at h
+  have hc := fitsExit_failure_cause h
+  rw [never] at hc
   unfold cleanExit
   rw [List.all_eq_true]
   intro r hr
-  have hr' := h r hr
+  have hr' := hc r hr
   cases r with
   | fail e ann =>
     obtain ⟨v, _, hv⟩ := hr'
@@ -385,7 +414,7 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
       split at h
       · rename_i c hc
         simp only [Val.hasTy, hc]
-        exact causeFits_admits (fun x hx => ihe x hx) c h
+        exact causeFits_admits (fun x hx => ihe x hx) c h.1
       · exact h.elim
     · exact h.elim
   | causeOf e ih =>
@@ -811,7 +840,7 @@ theorem fits_map {w1 w2 : World}
       split at h
       · rename_i c hc
         simp only [Fits, hc]
-        exact causeFits_map (fun x hx => ihe x hx) h
+        exact ⟨causeFits_map (fun x hx => ihe x hx) h.1, h.2⟩
       · exact h.elim
     · exact h.elim
   | causeOf e ih =>
@@ -955,7 +984,7 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : Ty.sub a b = true) : ∀ v, Fits
       split at h
       · rename_i c hc
         simp only [Fits, hc]
-        exact causeFits_map (fun x hx => ihe h2 x hx) h
+        exact ⟨causeFits_map (fun x hx => ihe h2 x hx) h.1, h.2⟩
       · exact h.elim
     · exact h.elim
   case case12 e1 e2 _ ih =>
@@ -1193,7 +1222,7 @@ theorem fits_normalize (w : World) : ∀ (t : Ty) (v : Val), Fits w v t.normaliz
     split
     · exact iha _
     · split
-      · exact causeFits_iff (fun x => ihe x) _
+      · exact and_congr_left' (causeFits_iff (fun x => ihe x) _)
       · exact Iff.rfl
     · exact Iff.rfl
   | causeOf e ih =>
@@ -1260,7 +1289,7 @@ theorem fitsExit_sub {w : World} {ty ty' : EffTy} (ha : Ty.sub ty.answer ty'.ans
     exact fits_sub w ha v h
   | failure c =>
     rw [fitsExit_failure_iff] at h ⊢
-    exact causeFits_map (fun x hx => fits_sub w he x hx) h
+    exact ⟨causeFits_map (fun x hx => fits_sub w he x hx) h.1, h.2⟩
 
 /-- Exit subsumption in the checker's order, column by column. -/
 theorem fitsExit_subN {w : World} {ty ty' : EffTy} (ha : Ty.subN ty.answer ty'.answer = true)
@@ -1272,7 +1301,7 @@ theorem fitsExit_subN {w : World} {ty ty' : EffTy} (ha : Ty.subN ty.answer ty'.a
     exact fits_subN w ha v h
   | failure c =>
     rw [fitsExit_failure_iff] at h ⊢
-    exact causeFits_map (fun x hx => fits_subN w he x hx) h
+    exact ⟨causeFits_map (fun x hx => fits_subN w he x hx) h.1, h.2⟩
 
 /-! ## Products and fiber results -/
 
@@ -1379,7 +1408,7 @@ theorem completionOk_of_fitsExit {w : World} {a e : Ty} {req : Env.Requirement} 
   cases ex with
   | success v => exact fits_hasTy w a v ((fitsExit_success_iff w _ v).mp h)
   | failure c =>
-    exact causeFits_admits (fun x hx => fits_hasTy w e x hx) c ((fitsExit_failure_iff w _ c).mp h)
+    exact causeFits_admits (fun x hx => fits_hasTy w e x hx) c (fitsExit_failure_cause h)
 
 /-! ## Term soundness (TY-07)
 
@@ -1622,7 +1651,7 @@ theorem fits_instantiate_widens {σ σ' : Ty.Subst} (hw : Ty.WidensSub σ σ') (
       split at h
       · rename_i c hc
         simp only [Fits, hc]
-        exact causeFits_map (fun x hx => ihe he x hx) h
+        exact ⟨causeFits_map (fun x hx => ihe he x hx) h.1, h.2⟩
       · exact h.elim
     · exact h.elim
   | causeOf e ih =>
@@ -1888,7 +1917,7 @@ theorem fits_queryReasons (w : World) (value : Val) (input error : Ty)
       | none => rw [hc] at hfit; exact hfit.elim
       | some cause =>
         rw [hc] at hfit
-        refine ⟨cause.reasons, ?_, hfit⟩
+        refine ⟨cause.reasons, ?_, hfit.1⟩
         change (causeImage.ofVal written).map Cause.reasons = _
         rw [hc]
         rfl
@@ -2313,7 +2342,8 @@ theorem fits_of_inhabited_handleFree :
   | exitOf a e _ _ =>
     intro _ _
     exact ⟨Val.exitErr ⟨[]⟩, fun w =>
-      (fitsExit_failure_iff w ⟨a, e, Env.Requirement.empty⟩ ⟨[]⟩).mpr (fun _ hr => nomatch hr)⟩
+      (fitsExit_failure_iff w ⟨a, e, Env.Requirement.empty⟩ ⟨[]⟩).mpr
+        ⟨(fun _ hr => nomatch hr), (fun _ hr => nomatch hr)⟩⟩
   | causeOf e _ =>
     intro _ _
     refine ⟨Val.exitErr ⟨[]⟩, fun w => ?_⟩
@@ -2505,7 +2535,8 @@ theorem fits_of_inhabited_fresh : ∀ (t : Ty), inhabited t = true → ∀ (w : 
   | exitOf a e _ _ =>
     intro _ w n hn
     exact ⟨w, n, Val.exitErr ⟨[]⟩, Grows.refl w, hn,
-      (fitsExit_failure_iff w ⟨a, e, Env.Requirement.empty⟩ ⟨[]⟩).mpr (fun _ hr => nomatch hr)⟩
+      (fitsExit_failure_iff w ⟨a, e, Env.Requirement.empty⟩ ⟨[]⟩).mpr
+        ⟨(fun _ hr => nomatch hr), (fun _ hr => nomatch hr)⟩⟩
   | causeOf e _ =>
     intro _ w n hn
     refine ⟨w, n, Val.exitErr ⟨[]⟩, Grows.refl w, hn, ?_⟩
