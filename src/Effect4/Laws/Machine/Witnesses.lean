@@ -57,7 +57,7 @@ def replayArm (state : Stores) (program : ProgName) (tape : List D) : Nat :=
   | ReplayResult.frontier _ _ => 1
   | ReplayResult.stuck _ _ => 2
 
-/-- Why the machine halted, if it did (M7; S3's stuck marker). -/
+/-- Why the machine halted, if it did (S2-M7; S3's stuck marker). -/
 def stuckOf (m : M) : Option Stuck := m.stuck
 
 /-- The exit of fiber `id`, if it has one. -/
@@ -1056,10 +1056,10 @@ theorem w12_awaitAll_input_order :
       parkedOf w12InputOrderParked 0 = some (Parked.withGuard 0) :=
   by aesop
 
-/-! ## W13 — an unknown scope key halts the machine (M7)
+/-! ## W13 — an unknown scope key halts the machine (S2-M7)
 
 `AGENTS.md`: an unanswered choice is a live frontier, never a typed error, cause or refusal.
-Before M7 the store had to answer a defect. -/
+Before S2-M7 the store had to answer a defect. -/
 
 /-- Closing a scope no allocation minted. -/
 def w13UnknownScope : M :=

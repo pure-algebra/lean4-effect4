@@ -31,14 +31,12 @@ open Effect4.Laws.Auto.Positions
 
 /-- info: 85 positions from 4 roots, 86 source rows
   11	owner
-  8	custom
+  9	custom
   5	exit
   3	column
-  1	refused
   6	journal
   51	hook
-  refused	Effect4.Machine.Stores.externals	external rows are the table-aware slice (DI-57); the reference parks them forever
-  refused	Effect4.ScopeState.closed.exit	DI-94 fixes the release type at Exit<unknown, unknown>; connecting stored scope exits to the invariant remains open -/
+  refused	Effect4.Machine.Stores.externals	external rows are the table-aware slice (DI-57); the reference parks them forever -/
 #guard_msgs in
 open Effect4.Laws.Auto.PositionGate in
 #position_gate Effect4.Program.Sched.RState Effect4.Program.Sched.RCmd

@@ -637,7 +637,7 @@ theorem syncOpStep_scopeAdd (s : Stores) (scope : Nat) (fin : FinName) :
             Val.unit) :=
   by aesop
 
-/-- Unknown scope: the step is a frontier (M7). -/
+/-- Unknown scope: the step is a frontier (S2-M7). -/
 theorem syncOpStep_scopeAdd_none (s : Stores) (scope : Nat) (fin : FinName)
     (h : s.scopes.entryAt scope = none) : syncOpStep (SyncOp.scopeAdd scope fin) s = none := by
   rw [syncOpStep_scopeAdd, h]
