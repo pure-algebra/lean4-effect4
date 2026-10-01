@@ -229,6 +229,10 @@ syntax (name := exhaustiveGate) "#exhaustive_gate " ident (" under " ident)? : c
   for r in distinct do
     report := report ++ m!"\n  {r.holder}{if r.isPrivate then " [private]" else ""}\t{r.mod}\t\
       {r.matcher}\tdiscr {r.discr}\talts {r.alts}\tcatchAll {r.catchAll}"
+  -- the completeness footer (decisions row 182 amended), as `#traversal_census` prints one
+  let scanned := (env.header.moduleNames.filter (scope.isPrefixOf ·)).size
+  report := report ++ m!"\n#exhaustive_gate done: {distinct.size} rows; {scanned} modules under \
+    {scope} scanned"
   logInfo report
 
 end Effect4.Laws.Auto.Exhaustive
