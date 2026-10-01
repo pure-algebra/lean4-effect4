@@ -179,6 +179,24 @@ theorem clockStep_owed_facts (p : NativeEff) (table : RowTable) (m : NativeMachi
     rw [facts.1]
     rfl
 
+/-- The resume a clock step owes, queued on the clock-stepped machine, is a guard queue: its key
+is reserved there and its code has no race site. Read by `preserved_foldLift`'s `clockSome` and by
+`advanceTick_preserved`. -/
+theorem clockStep_owed_guardQueue (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (millis : ClockMillis) (owed : Owed NCode) (state : GuardState m)
+    (clock : ((interpOf p table).clockStep millis m.state).1 = some owed) :
+    GuardQueue p table { m with state := ((interpOf p table).clockStep millis m.state).2 }
+      (taskCmds (.resume owed.waiter owed.token owed.code)) := by
+  have facts := clockStep_owed_facts p table m millis owed clock
+  have changed := clockStep_preserved p table m millis state
+  have oldKeys : ReservedKeys m (taskKeys (.resume owed.waiter owed.token owed.code)) := by
+    apply reservedKeys_subset (reservedKeys_internal m state)
+    intro key hk
+    have eq := List.mem_singleton.mp hk
+    exact eq ▸ facts.1
+  exact taskCmds_guardQueue p table _ (.resume owed.waiter owed.token owed.code)
+    (changed.reserved _ oldKeys) facts.2.1
+
 /-- `Preserved` from a start machine is a fold lift, with the driver's queue facts and reserved,
 race-free snapshot tasks: its command premise is the `DriverContract` at fuel 1
 (`Lift.driveState_one`), its edits the dispatcher, event and clock lemmas above. -/
@@ -236,14 +254,8 @@ theorem preserved_foldLift (p : NativeEff) (table : RowTable) (driver : DriverCo
     intro _ m millis owed st hj _ hc
     have facts := clockStep_owed_facts p table m millis owed (by rw [hc])
     have changed := clockStep_preserved p table m millis hj.state
-    rw [hc] at changed
-    have oldKeys : ReservedKeys m (taskKeys (.resume owed.waiter owed.token owed.code)) := by
-      apply reservedKeys_subset (reservedKeys_internal m hj.state)
-      intro key hk
-      have eq := List.mem_singleton.mp hk
-      exact eq ▸ facts.1
-    have queue := taskCmds_guardQueue p table _ (.resume owed.waiter owed.token owed.code)
-      (changed.reserved _ oldKeys) facts.2.1
+    have queue := clockStep_owed_guardQueue p table m millis owed hj.state (by rw [hc])
+    rw [hc] at changed queue
     refine ⟨(), trivial, ?_, fun _ => ?_⟩
     · simpa only [drainOwed, facts.2.2] using hj.trans changed
     · simpa only [drainOwed, facts.2.2, List.append_nil, taskCmds, List.cons_append,
@@ -304,14 +316,8 @@ theorem advanceTick_preserved (p : NativeEff) (table : RowTable) (driver : Drive
   letI := evaluatorFor p table
   have facts := clockStep_owed_facts p table m millis owed clock
   have changed := clockStep_preserved p table m millis state
-  have oldKeys : ReservedKeys m (taskKeys (.resume owed.waiter owed.token owed.code)) := by
-    apply reservedKeys_subset (reservedKeys_internal m state)
-    intro key hk
-    have eq := List.mem_singleton.mp hk
-    exact eq ▸ facts.1
   have run := Preserved.drive p table driver fuel _ _ changed.state
-    (taskCmds_guardQueue p table _ (.resume owed.waiter owed.token owed.code)
-      (changed.reserved _ oldKeys) facts.2.1)
+    (clockStep_owed_guardQueue p table m millis owed state clock)
     (taskCmds_registration (.resume owed.waiter owed.token owed.code))
   simpa only [drainOwed, facts.2.2, List.append_nil, taskCmds,
     List.cons_append, List.nil_append] using changed.trans run
