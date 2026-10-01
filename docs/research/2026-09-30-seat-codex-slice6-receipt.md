@@ -165,6 +165,28 @@ not yet available.
 Prior commit ledger: `eca77d6a` is item B; `4369c629` is the C stop receipt and census only.
 
 
+### D guard re-derivation
+
+The four driveState inductions in `Guard/Driver.lean` are deleted. Each contract field now
+instantiates `driveState_lift_unit` at its invariant, using the existing per-command facts;
+`driverContract` calls `driverContract_of_lift`. Its public statement is unchanged.
+
+- `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.Driver
+  Effect4.Laws.Program.Guard.Decision Effect4.Laws.Api.Guard`: exit 0, 344 jobs (`D/guard-build.log`).
+- `lake env lean -DwarningAsError=true docs/research/2026-09-30-seat-codex-slice6-evidence/D/guard-axioms.lean`:
+  exit 0; all six contract/helper theorems within `[propext, Quot.sound]` (`guard-axioms.log`).
+- Same lean command for `D/dependencies.lean`: exit 0 (`dependencies.log`). Both the replacement
+  and public contract reach the new lift and the per-command fact (4 positive controls), and
+  reach none of the four removed inductions (8 negative controls). The removed names are also
+  absent from the compiled environment. This finite meta-level walk includes types and
+  `value? (allowOpaque := true)` theorem bodies; its first version spent its bound on duplicate
+  queued names, corrected by deduplicating at enqueue. The successful run exhausted no bound.
+- `git diff --check` for source changes: exit 0. No regeneration needed.
+
+Proof-search note for row 94: this replacement composes explicit existing per-command proofs;
+no new search bank or four separate induction proofs were required. It establishes only the
+same guard contract. `75ee115c` is the preceding generic-lift commit.
+
 ## F — closed layer build environment
 Pending.
 

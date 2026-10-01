@@ -1,0 +1,12 @@
+PASS positive: Effect4.Program.Guard.driverContract_of_lift reaches Effect4.Machine.Lift.driveState_lift
+PASS positive: Effect4.Program.Guard.driverContract_of_lift reaches Effect4.Program.Guard.driveStep_invariants
+PASS absent: Effect4.Program.Guard.driverContract_of_lift does not reach Effect4.Program.Guard.driveState_invariants
+PASS absent: Effect4.Program.Guard.driverContract_of_lift does not reach Effect4.Program.Guard.reservedKeys_driveState
+PASS absent: Effect4.Program.Guard.driverContract_of_lift does not reach Effect4.Program.Guard.interruptedAt_driveState
+PASS absent: Effect4.Program.Guard.driverContract_of_lift does not reach Effect4.Program.Guard.requestOrInterrupted_driveState
+PASS positive: Effect4.Program.Guard.driverContract reaches Effect4.Machine.Lift.driveState_lift
+PASS positive: Effect4.Program.Guard.driverContract reaches Effect4.Program.Guard.driveStep_invariants
+PASS absent: Effect4.Program.Guard.driverContract does not reach Effect4.Program.Guard.driveState_invariants
+PASS absent: Effect4.Program.Guard.driverContract does not reach Effect4.Program.Guard.reservedKeys_driveState
+PASS absent: Effect4.Program.Guard.driverContract does not reach Effect4.Program.Guard.interruptedAt_driveState
+PASS absent: Effect4.Program.Guard.driverContract does not reach Effect4.Program.Guard.requestOrInterrupted_driveState
