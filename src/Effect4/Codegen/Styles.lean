@@ -107,9 +107,15 @@ mutual
     | .arr xs => mentionsList name xs
     | .generator ss | .arrowBlock _ ss _ => mentionsStmts name ss
     | .cond a b c => mentions name a || mentions name b || mentions name c
+    | .index x k => mentions name x || mentions name k
+    | .new f xs => mentions name f || mentionsList name xs
+    | .objectWith _ es => mentionsEntries name es
     | _ => false
   def mentionsList (name : String) : List TypeScript.Expr → Bool
     | [] => false | x :: xs => mentions name x || mentionsList name xs
+  def mentionsEntries (name : String) : List TypeScript.ObjectEntry → Bool
+    | [] => false
+    | .property _ x :: es | .spread x :: es => mentions name x || mentionsEntries name es
   def mentionsFields (name : String) : List (String × TypeScript.Expr) → Bool
     | [] => false | (_, x) :: xs => mentions name x || mentionsFields name xs
   def mentionsStmts (name : String) : List TypeScript.Stmt → Bool

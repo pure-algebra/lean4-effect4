@@ -113,6 +113,14 @@ def labelValid : Option String → Bool
   | none => true
   | some name => binderName name
 
+/-- A plain property name is written verbatim, so it needs an identifier spelling; a
+quoted or computed name is string data, and a spread has no name (lean4-typescript 0.7.0,
+`Expr.objectWith`). -/
+def entryNameValid : KeyForm → ObjectEntry → Bool
+  | .plain, .property name _ => identifierBytes name.toUTF8.data.toList
+  | .quoted, .property _ _ | .computed, .property _ _ => true
+  | _, .spread _ => true
+
 mutual
   def typeUses (env : List Binding) : TypeRef → Analysis
     | .name names args =>
@@ -134,9 +142,9 @@ mutual
     | head :: rest => (typeUses env head).append (typesUses env rest)
   termination_by structural ts => ts
 
-  def fieldsUses (env : List Binding) : List (String × Bool × TypeRef) → Analysis
+  def fieldsUses (env : List Binding) : List TypeRef.Field → Analysis
     | [] => empty
-    | (_, _, type) :: rest => (typeUses env type).append (fieldsUses env rest)
+    | field :: rest => (typeUses env field.type).append (fieldsUses env rest)
   termination_by structural fs => fs
 
   def typeParamsUses (env : List Binding) : List (String × TypeRef) → Analysis
@@ -181,11 +189,21 @@ mutual
       ((parametersUses env params).append ((optionalTypeUses env type).append
         (stmtsUses (blockEnv (parameterEnv env params) body) (parameterNames params) body))).require
           (parametersValid params)
+    | .index target key => (exprUses env target).append (exprUses env key)
+    | .new callee args => (exprUses env callee).append (exprsUses env args)
+    | .objectWith keys entries =>
+      (entriesUses env entries).require (entries.all (entryNameValid keys))
   termination_by structural e => e
 
   def exprsUses (env : List Binding) : List Expr → Analysis
     | [] => empty
     | head :: rest => (exprUses env head).append (exprsUses env rest)
+  termination_by structural es => es
+
+  def entriesUses (env : List Binding) : List ObjectEntry → Analysis
+    | [] => empty
+    | .property _ value :: rest | .spread value :: rest =>
+      (exprUses env value).append (entriesUses env rest)
   termination_by structural es => es
 
   def objectUses (env : List Binding) : List (String × Expr) → Analysis

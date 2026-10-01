@@ -63,6 +63,15 @@ treat property names as data rather than target identifiers.
 Statements are `constYield` and `ret`; declarations are `const`, `prog`, and
 `raw`; imports are `all`, `named`, and `types`.
 
+Revision 0.7.0 (pinned 2026-10-01 at `f5878bf879bd5712db964c2cd12802748c707605`, seat W0's
+receipt in the package worktree) adds three expression constructors: `index` (element access
+with an expression key, `t["a-b"]`, `t[2]`, `m[k]`), `new` (a constructor call), and
+`objectWith` (an object literal with one `KeyForm` for every key, `plain | quoted | computed`,
+over `ObjectEntry`s, `property | spread`; every key of a literal with a computed key is
+computed). The binding analysis collects both halves of `index`, treats `new` as `call`, and
+requires identifier bytes only of a `plain` property name; the style pass's `mentions` reads
+inside all three.
+
 The printer retains these equations:
 
 - string escaping belongs to the printer and covers the selected quote,
@@ -85,6 +94,9 @@ The printer retains these equations:
 The dependency revision in `lakefile.toml` owns the current target carrier.
 `TypeScript.TypeRef` stores qualified names and generic arguments, string literals,
 tuples, unions, object fields and function types. It has no raw-text alternative.
+Since 0.7.0 an object field is the record `TypeRef.Field` (`name`, `readonly`, `optional`
+with default `false`, `type`), rendered `readonly a?: T` when optional, in place of the
+triple `(name, readonly, type)`.
 `Parameter` retains its optional annotation; arrows retain result annotations;
 initialized and definite locals retain declared types. Imports retain imported and
 local names and both type-only markers; declarations retain export presence.

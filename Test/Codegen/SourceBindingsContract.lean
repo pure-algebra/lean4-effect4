@@ -104,9 +104,10 @@ example : resolve (ofImports [.named [⟨"Effect", "FX", false⟩] "effect"]) "F
 
 -- Every nested structural type contributes its references; field names are data.
 def nestedType (leaf : String) : TypeRef :=
-  .object [("field", true, .name ["ReadonlyArray"] [
-    .tuple [.name [leaf] [], .union [.literal "a", .name ["number"] []]] true]),
-    ("method", false, .function [("input", .name [leaf] [])] (.name [leaf] []))]
+  .object [{ name := "field", readonly := true, type := .name ["ReadonlyArray"] [
+    .tuple [.name [leaf] [], .union [.literal "a", .name ["number"] []]] true] },
+    { name := "method", readonly := false,
+      type := .function [("input", .name [leaf] [])] (.name [leaf] []) }]
 #guard check allowed (source [boxImport] (.int 1) (some (nestedType "Box")))
 #guard !check allowed (source [boxImport] (.int 1) (some (nestedType "Missing")))
 #guard !check allowed (source [] (.int 1) (some

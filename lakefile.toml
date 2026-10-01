@@ -135,7 +135,7 @@ rev = "a4ee7a14248ee5976039b73039319efa87834986"
 [[require]]
 name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"
-rev = "6afc9b841603796c16b266c0b8b92ded37a9445c"
+rev = "f5878bf879bd5712db964c2cd12802748c707605"
 
 # Proved SHA-256 for content addresses (src/Effect4/Store/Carrier/Digest.lean): exact commit of
 # pure-algebra/lean4-hash main. Its SHA-256 family is audited at zero declarations
