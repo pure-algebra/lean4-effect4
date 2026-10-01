@@ -297,9 +297,10 @@ first (decisions row 128)."
 
 ## Base, head, changed files
 
-- **Base** `74dae8d2`. **Code commit** `03403dc8`. **Head**: the commit that adds this receipt and
-  the host twin (its parent is `03403dc8`; `git log -1` on `seat/W1`). Nothing pushed; no merge,
-  checkout or reset run.
+- **Base** `74dae8d2`. **Code commit** `03403dc8`. The receipt and the host twin landed in
+  `a2cfb3d6`; the commits after it touch this receipt only. **Head**: the last commit on `seat/W1`
+  (`git log -1`), always a receipt commit. Nothing pushed; no merge, checkout or reset run
+  (`git merge-tree` only, which writes no ref).
 - **Changed by `03403dc8`** (`git diff --numstat 74dae8d2 03403dc8`): `src/Effect4/Schema/Codec.lean`
   +50/−3, `src/Effect4/Laws/Schema/Codec.lean` +1017/−15, `src/Effect4/Schema/Bridge.lean` +517/−117,
   `Test/Codegen/SchemaGenerationContract.lean` +341/−2. No root import, no lakefile, no generated
