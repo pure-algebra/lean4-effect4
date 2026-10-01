@@ -121,8 +121,20 @@ def FiberCert : FiberOp → Type
   | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren | .getContext => Ty
   | _ => PUnit
 
+/-- **Row 116's host-row entry**: the operation is in the source signature's domain, and the
+row's columns are below the certificate. Outside the table the row is the placeholder, whose
+`never` columns are below every certificate, so without the bit the entry held at every
+certificate at a short table and constrained at a longer one
+(`Test/Program/TypedProgRows.lean`, `typedProg_not_table_monotone_of`); with it `TypedProg` is
+monotone along an appended table (`typedProg_rows_append`). -/
+def bitEntry (root : ProgramSource) (op : NativeOp) (cert : EffTy) : Prop :=
+  root.signature.dom op = true ∧
+    (root.signature.rowOf op).answer.sub cert.answer = true ∧
+    (root.signature.rowOf op).error.sub cert.error = true
+
 /-- The type an async registration's answer is certified at: a timer's `unit`, a deferred's
-completion at the promise table's columns, a host row's columns from the source's row table.
+completion at the promise table's columns, a host row's columns from the source's row table
+when the row is in its domain (`bitEntry`, row 116).
 A host slot (`FinName.parkThen`'s release) is certified by the host protocol, a correlation the
 state predicate owns; any other registration is not generated code and is refused.
 
@@ -135,9 +147,7 @@ def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : Eff
   | .store (.registerSleep _) => Ty.unit.sub cert.answer = true
   | .registerAwait cell | .store (.registerAwait cell) =>
     ∃ a e, w.«Π» cell = some (a, e) ∧ a.sub cert.answer = true ∧ e.sub cert.error = true
-  | .external op _ =>
-    (root.signature.rowOf op).answer.sub cert.answer = true ∧
-      (root.signature.rowOf op).error.sub cert.error = true
+  | .external op _ => bitEntry root op cert
   | .store (.externalRegister _) => True
   | _ => False
 
@@ -690,6 +700,127 @@ theorem savedOk_mono (root : ProgramSource) (w w' : World) (final : EffTy) (x : 
     (h : Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final x) :
     Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w' final x :=
   Contracts.savedOk_mono (fun {w w'} {ty} {p} o hp => typedProg_mono root w w' ty p o hp) ord h
+
+/-! ## `TypedProg` along an appended row table (decisions rows 115, 116; TY-12)
+
+An appended row extends the source's signature under the same service declarations
+(`SigApp.rows_append`), so every precondition that reads the source transports along it: the
+checked points (`check_ext`), the memo layer (`checkLayer_ext`) and the host-row entry, whose
+domain bit puts the operation in the shorter table's domain, where the longer table's row is the
+same (`bitEntry_rows_append`). No postcondition reads the source. So `TypedProg` is monotone along
+an appended table (`typedProg_rows_append`), beside its monotonicity along the world order
+(`typedProg_mono`). Without the bit it is not (`Test/Program/TypedProgRows.lean`,
+`typedProg_not_table_monotone_of`). Moved from that battery (seat A), where it was proved under
+the entry's transport as a hypothesis; the bit makes it hold outright. -/
+
+/-- **Row 116's entry transports along an appended table** (proved): the bit puts the operation in
+the shorter domain, where the longer table's row is the same. -/
+theorem bitEntry_rows_append (src src' : ProgramSource) (t' : RowTable)
+    (htab : src'.table = src.table ++ t') (op : NativeOp) (cert : EffTy)
+    (h : bitEntry src op cert) : bitEntry src' op cert := by
+  obtain ⟨hdom, ha, he⟩ := h
+  have hrow := (rows_append src.table t').row op hdom
+  show (nativeSignature src'.table).dom op = true ∧
+    ((nativeSignature src'.table).rowOf op).answer.sub cert.answer = true ∧
+    ((nativeSignature src'.table).rowOf op).error.sub cert.error = true
+  rw [htab, hrow.2]
+  exact ⟨hrow.1, ha, he⟩
+
+section RowsAppend
+
+variable (src src' : ProgramSource) (t' : RowTable)
+  (hprog : src'.program = src.program) (htab : src'.table = src.table ++ t')
+  (hsvc : src'.services = src.services)
+include hprog htab hsvc
+
+omit hprog in
+/-- The longer source's signature extends the shorter one's: an appended row table under the
+same service declarations. -/
+theorem signature_rows_append : SigExtends src.signature src'.signature := by
+  show SigExtends src.sig.signature (SigApp.mk src'.table src'.services).signature
+  rw [htab, hsvc]
+  exact SigApp.rows_append src.sig t'
+
+theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
+    (h : PointTyped src w point ty) : PointTyped src' w point ty := by
+  obtain ⟨e, env, hat, hcheck, henv⟩ := h
+  refine ⟨e, env, ?_, ?_, henv⟩
+  · rw [hprog]
+    exact hat
+  · exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
+
+theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
+    (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
+  cases h with
+  | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | fin name ex ty hex => exact .fin name ex ty hex
+  | raceCleanup race => exact .raceCleanup race
+  | acquireIn p ctx ty hp =>
+    exact .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | release p prev ty hp =>
+    exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | layerBuild p m scope ty hp =>
+    exact .layerBuild p m scope ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+
+theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
+    (h : storePre src w op cert) : storePre src' w op cert := by
+  cases op with
+  | memoGet layer m =>
+    obtain ⟨l, lt, hat, hcheck, herr⟩ := h
+    refine ⟨l, lt, ?_, ?_, herr⟩
+    · rw [hprog]
+      exact hat
+    · exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+  | _ => exact h
+
+omit hprog hsvc in
+theorem asyncPre_rows_append {w : World} {register : EffName} {cert : EffTy}
+    (h : asyncPre src w register cert) : asyncPre src' w register cert := by
+  cases register with
+  | external op req => exact bitEntry_rows_append src src' t' htab op cert h
+  | store name => cases name <;> exact h
+  | _ => exact h
+
+theorem fiberPre_rows_append {w : World} {op : FiberOp} {cert : FiberCert op}
+    (h : fiberPre src w op cert) : fiberPre src' w op cert := by
+  cases op with
+  | raceAll entrants race =>
+    intro p hp
+    obtain ⟨ty, hpt, ha, he⟩ := h p hp
+    exact ⟨ty, pointTyped_rows_append src src' t' hprog htab hsvc hpt, ha, he⟩
+  | async register token => exact asyncPre_rows_append src src' t' htab h
+  | «scoped» body => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | mask flag body => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
+  | forkScoped child options path => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | fork body options path => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
+  | forkIn child options scope path =>
+    exact ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, h.2⟩
+  | gen p => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | loop p name => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | _ => exact h
+
+/-- **`TypedProg` is monotone along an appended row table** (TY-12's positive control, proved;
+rows 115, 116): the same program typed under the shorter source is typed under the longer one, at
+every world and type. -/
+theorem typedProg_rows_append :
+    ∀ {w : World} {ty : EffTy} {p : RProgram}, TypedProg src w ty p → TypedProg src' w ty p := by
+  intro w ty p h
+  induction h with
+  | pure exit => exact .pure exit
+  | store cert pre next ih =>
+    exact .store cert (storePre_rows_append src src' t' hprog htab hsvc pre)
+      fun w' hle ans hpost => ih w' hle ans hpost
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre next ih =>
+    exact .fiber notGuard notUnguard notFinish notScopeExit cert
+      (fiberPre_rows_append src src' t' hprog htab hsvc pre)
+      fun w' hle ans hpost => ih w' hle ans hpost
+  | guard mid body run skip ihbody ihrun =>
+    exact .guard mid ihbody (fun w' hle ex hpost => ihrun w' hle ex hpost) skip
+  | unguard payload => exact .unguard payload
+  | finishFinalizer payload => exact .finishFinalizer payload
+  | scopeExit payload next ih => exact .scopeExit payload fun w' hle ans => ih w' hle ans
+
+end RowsAppend
 
 namespace M3bWorld
 

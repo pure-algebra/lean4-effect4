@@ -4,18 +4,19 @@ import Effect4.Laws.Program.Signature
 /-!
 # Row 116: the host-row entry's domain bit, and `TypedProg` monotone in the table (TY-12)
 
-`asyncPre`'s external arm (`Laws/Program/Typed/Residual.lean`) reads the row
-`(nativeSignature root.table).rowOf op` without its domain bit. Outside the table that row is the
-placeholder, whose columns are `never`, which is below every certificate: the entry holds at
-every certificate at a short table and constrains at a longer one, so `TypedProg` is not
+Before row 116 landed, `asyncPre`'s external arm (`Laws/Program/Typed/Residual.lean`) read the row
+`(nativeSignature root.table).rowOf op` without its domain bit (`AsyncRowOnly`). Outside the table
+that row is the placeholder, whose columns are `never`, which is below every certificate: the entry
+held at every certificate at a short table and constrained at a longer one, so `TypedProg` was not
 monotone in the table (the TREE verifier's `typedProg_not_table_monotone`, restated here as
-`typedProg_not_table_monotone_of` over the entry as it reads today, `AsyncRowOnly`). Row 116
-requires the bit (`AsyncDomainBit`); with it, `TypedProg` is monotone along an appended table
-(`typedProg_rows_append`, the positive control TY-12 asks for).
+`typedProg_not_table_monotone_of` over that entry, kept as history).
 
-Both are stated against an explicit hypothesis about the entry, because the entry is seat B's to
-amend: `asyncRowOnly_now` holds at this commit and is the tripwire the bit flips (seat B
-replaces it with `asyncDomainBit_now`, `docs/research/2026-10-01-landing/receipt-A.md`).
+Row 116 (integration seat I2, step 6): the arm is `bitEntry`, the bit then the columns
+(`asyncDomainBit_now`; the old reading is refuted, `asyncRowOnly_false`, and the tripwire's proof
+is pinned failing below). Its transport along an appended table (`bitEntry_rows_append`) proves
+the hypothesis seat A's positive control took (`asyncEntryRows`), and `TypedProg` is monotone
+along an appended table outright (`typedProg_rows_append`, moved to `Residual.lean` beside
+`typedProg_mono`); at the red control's own sources the flip is `typedProg_table_monotone`.
 -/
 
 set_option autoImplicit false
@@ -29,19 +30,20 @@ def AsyncDomainBit : Prop :=
   ∀ (root : ProgramSource) (w : Typed.World) (op : NativeOp) (req : Val) (cert : EffTy),
     asyncPre root w (.external op req) cert → (nativeSignature root.table).dom op = true
 
-/-- The entry as it reads at this commit: the row's columns below the certificate, and nothing
-about the domain. -/
+/-- **Row 116 holds (proved).** The external arm is `bitEntry`, whose first clause is the bit
+(`root.signature`'s domain is `nativeSignature root.table`'s). It replaces the tripwire
+`asyncRowOnly_now`. -/
+theorem asyncDomainBit_now : AsyncDomainBit := fun _ _ _ _ _ h => h.1
+
+/-- The entry as it read before row 116 landed: the row's columns below the certificate, and
+nothing about the domain (history). -/
 def AsyncRowOnly : Prop :=
   ∀ (root : ProgramSource) (w : Typed.World) (op : NativeOp) (req : Val) (cert : EffTy),
     asyncPre root w (.external op req) cert ↔
       (((nativeSignature root.table).rowOf op).answer.sub cert.answer = true ∧
         ((nativeSignature root.table).rowOf op).error.sub cert.error = true)
 
-/-- **Tripwire (proved at this commit).** The entry reads no domain bit. Row 116's amendment
-(seat B) makes this false; it is then replaced by `AsyncDomainBit`'s proof. -/
-theorem asyncRowOnly_now : AsyncRowOnly := fun _ _ _ _ _ => Iff.rfl
-
-/-! ## The red control -/
+/-! ## The red control (history) and its flip -/
 
 /-- A host row answering a string. -/
 def rowB : Effect4.Program.Row :=
@@ -60,10 +62,12 @@ theorem rowB_lawful : LawfulSig ⟨[] ++ [rowB], []⟩ := by decide +kernel
 def srcLong (p : NativeEff) : ProgramSource :=
   { program := p, table := [] ++ [rowB], lawful := rowB_lawful }
 
-/-- **Red control (proved).** Over the entry as it reads today, `TypedProg` is not monotone along
-an appended table: the call is typed at `nat` under the empty table (index 0 is the placeholder,
-whose `never` columns are below every certificate) and refused under `[rowB]` (whatever the
-certificate, it is above `string`, so the continuation must accept a string exit at `nat`). -/
+/-- **Historical red control (proved).** Over the entry as it read before row 116, `TypedProg` was
+not monotone along an appended table: the call is typed at `nat` under the empty table (index 0
+is the placeholder, whose `never` columns are below every certificate) and refused under
+`[rowB]` (whatever the certificate, it is above `string`, so the continuation must accept a
+string exit at `nat`). Its unconditional instance, `typedProg_not_table_monotone` at the tripwire,
+is false since row 116 (`typedProg_table_monotone`). -/
 theorem typedProg_not_table_monotone_of (hold : AsyncRowOnly) :
     ¬ ∀ (p : NativeEff) (w : Typed.World) (ty : EffTy) (prog : RProgram),
         TypedProg (srcShort p) w ty prog → TypedProg (srcLong p) w ty prog := by
@@ -85,18 +89,38 @@ theorem typedProg_not_table_monotone_of (hold : AsyncRowOnly) :
     have hex := TypedProg.pure_inv hk
     exact hex.1
 
-/-- The red control at this commit. -/
-theorem typedProg_not_table_monotone :
-    ¬ ∀ (p : NativeEff) (w : Typed.World) (ty : EffTy) (prog : RProgram),
-        TypedProg (srcShort p) w ty prog → TypedProg (srcLong p) w ty prog :=
-  typedProg_not_table_monotone_of asyncRowOnly_now
+/-- **The old reading is refuted (proved).** At the empty table host row 0 is outside the domain,
+so the entry refuses it at every certificate, while the old reading admitted it at `nat`. -/
+theorem asyncRowOnly_false : ¬ AsyncRowOnly := by
+  intro hold
+  have entry := (hold (srcShort (.succeed (.lit .unit))) (initialWorld (EffTy.pure .unit))
+    (.external 0) Val.unit (EffTy.pure .nat)).mpr
+      ⟨Ty.OrderProof.sub_never _, Ty.OrderProof.sub_never _⟩
+  have hdom : (nativeSignature []).dom (.external 0) = true := entry.1
+  exact absurd hdom (by decide)
 
-/-! ## The positive control: with the bit, `TypedProg` is monotone in the table
+-- Red control: the tripwire's proof no longer elaborates against the entry with the bit.
+/--
+error: Type mismatch
+  Iff.rfl
+has type
+  ?m.6 ↔ ?m.6
+but is expected to have type
+  asyncPre x✝⁴ x✝³ (EffName.external x✝² x✝¹) x✝ ↔
+    ((nativeSignature x✝⁴.table).rowOf x✝²).answer.sub x✝.answer = true ∧
+      ((nativeSignature x✝⁴.table).rowOf x✝²).error.sub x✝.error = true
+-/
+#guard_msgs (error) in
+example : AsyncRowOnly := fun _ _ _ _ _ => Iff.rfl
 
-`AsyncEntryRows` is what the induction needs of the external entry: it transports along an
-appended table. Row 116's entry has that property whatever else it reads (`bitEntry_rows_append`:
-the bit puts the operation in the shorter domain, where the longer table's row is the same,
-`rows_append`), and the entry as it reads today does not (`typedProg_not_table_monotone`). -/
+/-- **The flip of the red control (proved).** With the bit, `TypedProg` is monotone from the
+short source to the long one, at every program, world and type (`typedProg_rows_append`). -/
+theorem typedProg_table_monotone :
+    ∀ (p : NativeEff) (w : Typed.World) (ty : EffTy) (prog : RProgram),
+      TypedProg (srcShort p) w ty prog → TypedProg (srcLong p) w ty prog :=
+  fun p _ _ _ h => typedProg_rows_append (srcShort p) (srcLong p) [rowB] rfl rfl rfl h
+
+/-! ## The entry's transport, the hypothesis seat A's positive control took -/
 
 /-- The external entry transports along an appended table. -/
 def AsyncEntryRows : Prop :=
@@ -104,130 +128,23 @@ def AsyncEntryRows : Prop :=
     ∀ (w : Typed.World) (op : NativeOp) (req : Val) (cert : EffTy),
       asyncPre src w (.external op req) cert → asyncPre src' w (.external op req) cert
 
-/-- Row 116's entry, as ruled: the domain bit, then the row's columns below the certificate. -/
-def bitEntry (root : ProgramSource) (op : NativeOp) (cert : EffTy) : Prop :=
-  (nativeSignature root.table).dom op = true ∧
-    ((nativeSignature root.table).rowOf op).answer.sub cert.answer = true ∧
-    ((nativeSignature root.table).rowOf op).error.sub cert.error = true
+/-- **It holds (proved), from `bitEntry_rows_append`.** -/
+theorem asyncEntryRows : AsyncEntryRows :=
+  fun src src' t' htab _ op _ cert h => bitEntry_rows_append src src' t' htab op cert h
 
-/-- **Row 116's entry transports (proved).** -/
-theorem bitEntry_rows_append (src src' : ProgramSource) (t' : RowTable)
-    (htab : src'.table = src.table ++ t') (op : NativeOp) (cert : EffTy)
-    (h : bitEntry src op cert) : bitEntry src' op cert := by
-  obtain ⟨hdom, ha, he⟩ := h
-  have hrow := (rows_append src.table t').row op hdom
-  unfold bitEntry
-  rw [htab, hrow.2]
-  exact ⟨hrow.1, ha, he⟩
-
-section Transport
-
-variable (src src' : ProgramSource) (t' : RowTable)
-  (hprog : src'.program = src.program) (htab : src'.table = src.table ++ t')
-  (hsvc : src'.services = src.services)
-include hprog htab hsvc
-
-omit hprog in
-/-- The longer source's signature extends the shorter one's: an appended row table under the
-same service declarations (`SigApp.rows_append`). The checked points and the memo layer read the
-source's signature since the joint switch (integration seat I2, step 5). -/
-theorem signature_rows_append : SigExtends src.signature src'.signature := by
-  show SigExtends src.sig.signature (SigApp.mk src'.table src'.services).signature
-  rw [htab, hsvc]
-  exact SigApp.rows_append src.sig t'
-
-theorem pointTyped_rows_append {w : Typed.World} {point : Point} {ty : EffTy}
-    (h : PointTyped src w point ty) : PointTyped src' w point ty := by
-  obtain ⟨e, env, hat, hcheck, henv⟩ := h
-  refine ⟨e, env, ?_, ?_, henv⟩
-  · rw [hprog]
-    exact hat
-  · exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
-
-theorem bodyTyped_rows_append {w : Typed.World} {body : Body} {ty : EffTy}
-    (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
-  cases h with
-  | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-  | fin name ex ty hex => exact .fin name ex ty hex
-  | raceCleanup race => exact .raceCleanup race
-  | acquireIn p ctx ty hp =>
-    exact .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-  | release p prev ty hp =>
-    exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-  | layerBuild p m scope ty hp =>
-    exact .layerBuild p m scope ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-
-theorem storePre_rows_append {w : Typed.World} {op : SyncOp} {cert : StoreCert op}
-    (h : storePre src w op cert) : storePre src' w op cert := by
-  cases op with
-  | memoGet layer m =>
-    obtain ⟨l, lt, hat, hcheck, herr⟩ := h
-    refine ⟨l, lt, ?_, ?_, herr⟩
-    · rw [hprog]
-      exact hat
-    · exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
-  | _ => exact h
-
-omit hprog hsvc in
-theorem asyncPre_rows_append (hentry : AsyncEntryRows) {w : Typed.World} {register : EffName}
-    {cert : EffTy} (h : asyncPre src w register cert) : asyncPre src' w register cert := by
-  cases register with
-  | external op req => exact hentry src src' t' htab w op req cert h
-  | store name => cases name <;> exact h
-  | _ => exact h
-
-theorem fiberPre_rows_append (hentry : AsyncEntryRows) {w : Typed.World} {op : FiberOp}
-    {cert : FiberCert op} (h : fiberPre src w op cert) : fiberPre src' w op cert := by
-  cases op with
-  | raceAll entrants race =>
-    intro p hp
-    obtain ⟨ty, hpt, ha, he⟩ := h p hp
-    exact ⟨ty, pointTyped_rows_append src src' t' hprog htab hsvc hpt, ha, he⟩
-  | async register token => exact asyncPre_rows_append src src' t' htab hentry h
-  | «scoped» body => exact pointTyped_rows_append src src' t' hprog htab hsvc h
-  | mask flag body => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
-  | forkScoped child options path => exact pointTyped_rows_append src src' t' hprog htab hsvc h
-  | fork body options path => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
-  | forkIn child options scope path => exact ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, h.2⟩
-  | gen p => exact pointTyped_rows_append src src' t' hprog htab hsvc h
-  | loop p name => exact pointTyped_rows_append src src' t' hprog htab hsvc h
-  | _ => exact h
-
-/-- **TY-12's positive control (proved, under the entry's transport).** With row 116's entry,
-`TypedProg` is monotone along an appended table: every precondition that reads the source
-transports (`check_ext` for the checked points, `checkLayer_ext` for the memo layer, the entry
-for host rows), and no postcondition reads it. -/
-theorem typedProg_rows_append (hentry : AsyncEntryRows) :
-    ∀ {w : Typed.World} {ty : EffTy} {p : RProgram}, TypedProg src w ty p → TypedProg src' w ty p := by
-  intro w ty p h
-  induction h with
-  | pure exit => exact .pure exit
-  | store cert pre next ih =>
-    exact .store cert (storePre_rows_append src src' t' hprog htab hsvc pre)
-      fun w' hle ans hpost => ih w' hle ans hpost
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre next ih =>
-    exact .fiber notGuard notUnguard notFinish notScopeExit cert
-      (fiberPre_rows_append src src' t' hprog htab hsvc hentry pre)
-      fun w' hle ans hpost => ih w' hle ans hpost
-  | guard mid body run skip ihbody ihrun =>
-    exact .guard mid ihbody (fun w' hle ex hpost => ihrun w' hle ex hpost) skip
-  | unguard payload => exact .unguard payload
-  | finishFinalizer payload => exact .finishFinalizer payload
-  | scopeExit payload next ih => exact .scopeExit payload fun w' hle ans => ih w' hle ans
-
-end Transport
-
-#print axioms asyncRowOnly_now
+#print axioms asyncDomainBit_now
 #print axioms rowB_lawful
 #print axioms typedProg_not_table_monotone_of
-#print axioms typedProg_not_table_monotone
-#print axioms bitEntry_rows_append
-#print axioms signature_rows_append
-#print axioms pointTyped_rows_append
-#print axioms bodyTyped_rows_append
-#print axioms storePre_rows_append
-#print axioms asyncPre_rows_append
-#print axioms fiberPre_rows_append
-#print axioms typedProg_rows_append
+#print axioms asyncRowOnly_false
+#print axioms typedProg_table_monotone
+#print axioms asyncEntryRows
+#print axioms Effect4.Program.Typed.bitEntry_rows_append
+#print axioms Effect4.Program.Typed.signature_rows_append
+#print axioms Effect4.Program.Typed.pointTyped_rows_append
+#print axioms Effect4.Program.Typed.bodyTyped_rows_append
+#print axioms Effect4.Program.Typed.storePre_rows_append
+#print axioms Effect4.Program.Typed.asyncPre_rows_append
+#print axioms Effect4.Program.Typed.fiberPre_rows_append
+#print axioms Effect4.Program.Typed.typedProg_rows_append
 
 end Test.Program.TypedProgRows
