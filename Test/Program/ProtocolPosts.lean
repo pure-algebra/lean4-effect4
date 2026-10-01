@@ -515,6 +515,83 @@ theorem release_registration_admitted (root : ProgramSource) (w : W)
   rw [store]
   decide +kernel
 
+/-! ### The second refused shape: a lone `acquireRelease` release that answers a value
+
+Receipt B's finding 1 read this shape off the code; proved here. `acquireRelease(succeed 1, (a,
+exit) => succeed 5)` is checked (`acq_checked`): the release may answer any value
+(`Effect<unknown, never, R2>`, `Program/Checker.lean:201-209`; rc.112 `internal/effect.ts:3973`).
+A scope whose lone finalizer is its capture closes to that finalizer's program
+(`closeScopeUnsafeR`, `InterpR.lean:157-163`; rc.112 `internal/effect.ts:3795`), which answers the
+release's value, so it is typed at no type whose answer column is `unit` (`foreign_untyped`): the
+`lone` premise of `closeScope_installs` fails for it, and option (a) of decisions row 151 needs the
+release voided in the term before the scope's typing can type it at `⟨unit, never⟩`. -/
+
+/-- `acquireRelease(succeed 1, (a, exit) => succeed 5)`. -/
+def acqProg : NativeEff := .acquireRelease (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 5)))
+
+/-- The checker admits it, at the scope service's row. -/
+theorem acq_checked : Program.typeOfProgram (acqProg : ProgramSource).signature acqProg =
+    some ⟨.nat, .never, Env.Requirement.single nativeScopeKey⟩ := by
+  decide +kernel
+
+/-- The capture its masked half registers (the acquired value `1`, the empty context). -/
+def acqCapture : Capture := { path := [], env := [Val.nat 1], fuel := 10, tape := [], ctx := emptyCtx }
+
+/-- The release's node checks at `nat` in every environment. -/
+theorem release_check (env : List Ty) :
+    Checker.check (acqProg : ProgramSource).signature env [1]
+      (Eff.expandIn acqProg (.succeed (.lit (.nat 5)))) = .ok (EffTy.pure .nat) := rfl
+
+/-- **Red** (proved): the foreign finalizer's program for this capture is typed at no type whose
+answer column is `unit`, at any world and closing exit: the masked release answers `5`. -/
+theorem foreign_untyped (w : W) (ex : ExitV) (ty : EffTy) (unit : ty.answer = .unit) :
+    ¬ TypedProg (acqProg : ProgramSource) w ty (denoteFin (.foreign acqCapture) ex) := by
+  intro h
+  -- the counted suspend before the release
+  obtain ⟨_, _, next1⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have h1 := next1 w (leHost_refl w) Val.unit rfl
+  -- the context read, under its guard
+  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv h1
+  obtain ⟨certG, preG, nextG⟩ := TypedProg.fiber_inv body (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change certG = .handle Ty.contextTarget at preG
+  subst preG
+  have services : ServicesFit w emptyCtx.services := fun key sv sty hget _ => by
+    change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
+    rw [Env.Context.getV_empty] at hget
+    cases hget
+  have live : Live w (Val.context emptyCtx) := live_of_keys_nil rfl
+  have hG := nextG w (leHost_refl w) (Val.context emptyCtx)
+    (getContext_answers (acqProg : ProgramSource) w emptyCtx services live)
+  have hmid := unguard_payload_inv _ _ _ _ _ hG
+  have h2 := run w (leHost_refl w) (.success (Val.context emptyCtx)) ⟨rfl, hmid⟩
+  -- the captured context set, under its guard
+  obtain ⟨mid2, body2, run2, _⟩ := TypedProg.guard_inv h2
+  obtain ⟨_, _, next2⟩ := TypedProg.fiber_inv body2 (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have hS := next2 w (leHost_refl w) Val.unit rfl
+  have hmid2 := unguard_payload_inv _ _ _ _ _ hS
+  have h3 := run2 w (leHost_refl w) (.success Val.unit) ⟨rfl, hmid2⟩
+  -- the construction query, then the masked release
+  obtain ⟨_, _, next3⟩ := TypedProg.fiber_inv h3 (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have h4 := next3 w (leHost_refl w) [] (fun _ hp => nomatch hp)
+  obtain ⟨cert4, pre4, next4⟩ := TypedProg.fiber_inv h4 (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  cases pre4 with
+  | release _ _ _ hp =>
+    obtain ⟨e, env, hat, hcheck, _⟩ := hp
+    change some (Node.eff (.succeed (.lit (.nat 5)))) = some (.eff e) at hat
+    cases hat
+    have hcert : Except.ok (EffTy.pure .nat) = Except.ok cert4 :=
+      (release_check env).symm.trans hcheck
+    cases hcert
+    have h5 := next4 w (leHost_refl w) (.success (Val.nat 5)) ⟨trivial, trivial⟩
+    have hfit := (TypedProg.pure_inv h5).1
+    rw [fitsExit_success_iff, unit] at hfit
+    exact hfit
+
 /-! ### `Scope.close` with zero, one and several finalizers (positive controls)
 
 Decisions row 151's acceptance keeps these positive under every option: the close installs a
@@ -1242,6 +1319,12 @@ open Test.Program.ProtocolPosts in
 #print axioms CloseScope.lone_release_outside_post
 open Test.Program.ProtocolPosts in
 #print axioms CloseScope.release_registration_admitted
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.acq_checked
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.release_check
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.foreign_untyped
 open Test.Program.ProtocolPosts in
 #print axioms CloseScope.close_zero_typed
 open Test.Program.ProtocolPosts in
