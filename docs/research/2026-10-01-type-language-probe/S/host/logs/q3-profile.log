@@ -1,5 +1,5 @@
 # check: q3-profile
-# date: 2026-10-01T19:29:45Z
+# date: 2026-10-01T19:32:14Z
 # cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
 # command: bun run q3-profile.ts
 # versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
@@ -161,6 +161,55 @@ ok   ESC_PROTO: no code is emitted (Lean refuses)
 ok   MAP_NUMBER: no code is emitted (Lean refuses)
 ok   REST: no code is emitted (Lean refuses)
 ok   RC_INT: no code is emitted (Lean refuses)
+ok   N_PROTO: rc.112's persisted form of the readable text equals Lean's document modulo nS
+ok   N_PROTO: decode {"__proto__":1} default
+ok   N_PROTO: decode {} default
+ok   N_PROTO: decode {"__proto__":"x"} default
+ok   N_PROTO: decode {"__proto__":1} strict
+ok   N_PROTO: decode {} strict
+ok   N_PROTO: decode {"__proto__":"x"} strict
+ok   N_HYPHEN: rc.112's persisted form of the readable text equals Lean's document modulo nS
+ok   N_HYPHEN: decode {"a-b":"x"} default
+ok   N_HYPHEN: decode {} default
+ok   N_HYPHEN: decode {"a-b":1} default
+ok   N_HYPHEN: decode {"a-b":"x"} strict
+ok   N_HYPHEN: decode {} strict
+ok   N_HYPHEN: decode {"a-b":1} strict
+ok   N_UNICODE: rc.112's persisted form of the readable text equals Lean's document modulo nS
+ok   N_UNICODE: decode {"é":true,"日本":1,"😀":"x"} default
+ok   N_UNICODE: decode {"é":true,"日本":1} default
+ok   N_UNICODE: decode {"é":true,"日本":1,"😀":"x"} strict
+ok   N_UNICODE: decode {"é":true,"日本":1} strict
+ok   N_RESERVED: rc.112's persisted form of the readable text equals Lean's document modulo nS
+ok   N_RESERVED: decode {"constructor":"c","toString":"t","default":1,"class":true} default
+ok   N_RESERVED: decode {} default
+ok   N_RESERVED: decode {"constructor":"c","toString":"t","default":1} default
+ok   N_RESERVED: decode {"constructor":"c","toString":"t","default":1,"class":true} strict
+ok   N_RESERVED: decode {} strict
+ok   N_RESERVED: decode {"constructor":"c","toString":"t","default":1} strict
+ok   N_EMPTY: rc.112's persisted form of the readable text equals Lean's document modulo nS
+ok   N_EMPTY: decode {"":1} default
+ok   N_EMPTY: decode {} default
+ok   N_EMPTY: decode {"":"x"} default
+ok   N_EMPTY: decode {"":1} strict
+ok   N_EMPTY: decode {} strict
+ok   N_EMPTY: decode {"":"x"} strict
+ok   N_NUMERIC: rc.112's persisted form of the readable text equals Lean's document modulo nS
+ok   N_NUMERIC: decode {"9":3,"10":2,"01":1,"1e3":4} default
+ok   N_NUMERIC: decode {"9":3,"10":2,"01":1} default
+ok   N_NUMERIC: decode {"1":1,"9":3,"10":2,"1e3":4} default
+ok   N_NUMERIC: decode {"9":3,"10":2,"01":1,"1e3":4} strict
+ok   N_NUMERIC: decode {"9":3,"10":2,"01":1} strict
+ok   N_NUMERIC: decode {"1":1,"9":3,"10":2,"1e3":4} strict
+ok   N_QUOTE: rc.112's persisted form of the readable text equals Lean's document modulo nS
+ok   N_QUOTE: decode {"x\"y":"s","line\nbreak":1} default
+ok   N_QUOTE: decode {"x\"y":"s"} default
+ok   N_QUOTE: decode {"x\"y":"s","line\nbreak":1} strict
+ok   N_QUOTE: decode {"x\"y":"s"} strict
+ok   OPTION: no code is emitted (Lean refuses)
+ok   RESULT: no code is emitted (Lean refuses)
+ok   EXIT: no code is emitted (Lean refuses)
+ok   BYTES: no code is emitted (Lean refuses)
 ok   RC_INT: rc.112 revives its own document (the profile's refusal is the allowlist's)
-SUMMARY examples=20 decode-comparisons=138 failures=0
+SUMMARY examples=31 decode-comparisons=176 failures=0
 # exit=0 seconds=0

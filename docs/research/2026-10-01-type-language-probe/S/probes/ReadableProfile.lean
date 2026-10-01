@@ -610,7 +610,21 @@ def examples : List (String × Representation) :=
     ("TUPLE3", tuple3Rep), ("ARRAY", arrayRep), ("NESTED", validNestedRep),
     ("SPECIAL", specialRep), ("ESCAPED", escapedRep), ("MUTABLE", mutableRep),
     ("ESC_PROTO", escapedProtoRep), ("MAP_NUMBER", mapNumberRep), ("REST", restRep),
-    ("RC_INT", rcIntRep) ]
+    ("RC_INT", rcIntRep),
+    -- adversarial names one at a time, so `__proto__` hides no other spelling bug
+    ("N_PROTO", .objects none [] [prop "__proto__" intRepS] []),
+    ("N_HYPHEN", .objects none [] [prop "a-b" (.string none [])] []),
+    ("N_UNICODE", .objects none [] [prop "é" (.boolean none []), prop "日本" intRepS, prop "😀" (.string none [])] []),
+    ("N_RESERVED", .objects none [] [prop "constructor" (.string none []), prop "toString" (.string none []),
+      prop "default" intRepS, prop "class" (.boolean none [])] []),
+    ("N_EMPTY", .objects none [] [prop "" intRepS] []),
+    ("N_NUMERIC", .objects none [] [prop "01" intRepS, prop "10" intRepS, prop "9" intRepS, prop "1e3" intRepS] []),
+    ("N_QUOTE", .objects none [] [prop "x\"y" (.string none []), prop "line\nbreak" intRepS] []),
+    -- the declarations `Bridge.schema` writes, which the profile refuses (rc.112 revives them)
+    ("OPTION", Effect4.Schema.Bridge.schema (.option .int)),
+    ("RESULT", Effect4.Schema.Bridge.schema (.except .string .int)),
+    ("EXIT", Effect4.Schema.Bridge.schema (.exitOf .int .string)),
+    ("BYTES", .declaration ⟨"effect/schema/Uint8Array", .null⟩ none [] []) ]
 
 #eval do
   for (name, rep) in examples do

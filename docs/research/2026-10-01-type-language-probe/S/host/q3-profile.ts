@@ -72,8 +72,15 @@ const inputs: Record<string, unknown[]> = {
     P('{"__proto__":1,"a-b":"x","é":true,"constructor":"c","":2,"10":3,"9":-4}')],
   ESCAPED: [P('{"x\\"y":"s","a":1}'), { a: 1 }],
   MUTABLE: [{}, { "a-b": "ok" }, { "a-b": undefined }, { "a-b": 1 }],
+  N_PROTO: [P('{"__proto__":1}'), {}, P('{"__proto__":"x"}')],
+  N_HYPHEN: [{ "a-b": "x" }, {}, { "a-b": 1 }],
+  N_UNICODE: [{ "é": true, "日本": 1, "😀": "x" }, { "é": true, "日本": 1 }],
+  N_RESERVED: [{ constructor: "c", toString: "t", default: 1, class: true }, {}, { constructor: "c", toString: "t", default: 1 }],
+  N_EMPTY: [{ "": 1 }, {}, { "": "x" }],
+  N_NUMERIC: [{ "01": 1, "10": 2, "9": 3, "1e3": 4 }, { "01": 1, "10": 2, "9": 3 }, { "1": 1, "10": 2, "9": 3, "1e3": 4 }],
+  N_QUOTE: [P('{"x\\"y":"s","line\\nbreak":1}'), { "x\"y": "s" }],
 }
-const refused = ["ESC_PROTO", "MAP_NUMBER", "REST", "RC_INT"]
+const refused = ["ESC_PROTO", "MAP_NUMBER", "REST", "RC_INT", "OPTION", "RESULT", "EXIT", "BYTES"]
 
 let failures = 0, comparisons = 0
 function check(what: string, actual: unknown, expected: unknown) {
