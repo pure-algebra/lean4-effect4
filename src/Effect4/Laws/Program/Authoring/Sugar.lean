@@ -19,10 +19,16 @@ namespace Effect4.Program.Authoring
 
 open Effect4.Program
 
+/-- Whatever name is minted, `k` of it is scoped: the lemma `authoring_scoped` applies to a
+binder the surface names for itself, here and in the generated forms. -/
+theorem minting_scoped {Op : Type} (stem : String) {k : String → Src Op}
+    (h : ∀ x : String, (k x).Scoped) : (minting stem k).Scoped :=
+  ⟨fun env p e he => (h (env.mint stem)).holds env p e he⟩
+
 theorem bindWith_scoped {Op : Type} {first : Src Op} {rest : TermSrc → Src Op}
     (h0 : first.Scoped) (h1 : ∀ r : TermSrc, r.Scoped → (rest r).Scoped) :
     (bindWith first rest).Scoped :=
-  ⟨fun env p e h => (bind_scoped _ h0 (h1 _ (var_scoped _))).holds env p e h⟩
+  minting_scoped _ fun x => bind_scoped x h0 (h1 _ (minted_scoped x))
 
 theorem bindName_scoped {Op : Type} (name : String) {first : Src Op} {rest : TermSrc → Src Op}
     (h0 : first.Scoped) (h1 : ∀ r : TermSrc, r.Scoped → (rest r).Scoped) :
@@ -41,7 +47,7 @@ theorem flatMap_scoped {Op : Type} (answer : String) {first rest : Src Op}
 
 theorem andThen_scoped {Op : Type} {first rest : Src Op} (h0 : first.Scoped) (h1 : rest.Scoped) :
     (andThen first rest).Scoped :=
-  bind_scoped _ h0 h1
+  minting_scoped _ fun x => bind_scoped x h0 h1
 
 theorem map_scoped {Op : Type} (atom : String) {effect : Src Op} (h : effect.Scoped) :
     (map atom effect).Scoped :=

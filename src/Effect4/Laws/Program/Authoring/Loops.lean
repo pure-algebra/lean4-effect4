@@ -6,7 +6,7 @@ import Effect4.Program.Authoring.Loops
 
 Each definition of `Program/Authoring/Loops.lean` gets the lemma the generated lifts carry, named
 so `authoring_scoped` finds it. `iterateWith_scoped` is `bindWith_scoped`'s shape over
-`iterate_scoped`; the rest are one application of it.
+`iterate_scoped` (two minted names); the rest are one application of it.
 -/
 
 set_option autoImplicit false
@@ -22,10 +22,9 @@ theorem iterateWith_scoped {Op : Type} {initial : TermSrc} {spec : LoopSpec Op}
     (hs : ∀ c a : TermSrc, c.Scoped → a.Scoped → (spec.step c a).Scoped)
     (hr : ∀ c : TermSrc, c.Scoped → (spec.result c).Scoped) :
     (iterateWith initial spec).Scoped :=
-  ⟨fun env p e h =>
-    (iterate_scoped _ _ spec.cursorTy h0 (hw _ (var_scoped _))
-      (hs _ _ (var_scoped _) (var_scoped _)) (hr _ (var_scoped _)) (hb _ (var_scoped _))).holds
-      env p e h⟩
+  minting_scoped _ fun c => minting_scoped _ fun a =>
+    iterate_scoped c a spec.cursorTy h0 (hw _ (minted_scoped c))
+      (hs _ _ (minted_scoped c) (minted_scoped a)) (hr _ (minted_scoped c)) (hb _ (minted_scoped c))
 
 theorem forRange_scoped {Op : Type} {lo hi : TermSrc} {body : TermSrc → Src Op}
     (h0 : lo.Scoped) (h1 : hi.Scoped) (h2 : ∀ i : TermSrc, i.Scoped → (body i).Scoped) :

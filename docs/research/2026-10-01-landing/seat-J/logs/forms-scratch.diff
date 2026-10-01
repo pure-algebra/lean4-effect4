@@ -1,0 +1,34 @@
+4c4
+< --   lake env lean -M 4096 --run tools/Effect4Gen/Forms.lean --group Forms --imports Effect4.Program.Authoring.Lifts,Effect4.Codegen.Forms --out src/Effect4/Codegen/Authoring/Forms.lean
+---
+> --   lake env lean -M 4096 --run tools/Effect4Gen/Forms.lean --group Forms --imports Effect4.Program.Authoring.Lifts,Effect4.Program.Authoring.Sugar,Effect4.Codegen.Forms --out src/Effect4/Codegen/Authoring/Forms.lean
+5a6
+> import Effect4.Program.Authoring.Sugar
+28c29
+<   Authoring.bind "_answer0" (effect) (effect1)
+---
+>   Authoring.minting "answer" fun mintedAnswer0 => Authoring.bind mintedAnswer0 (effect) (effect1)
+36c37
+<   Authoring.bind "_answer0" (effect) (thunk)
+---
+>   Authoring.minting "answer" fun mintedAnswer0 => Authoring.bind mintedAnswer0 (effect) (thunk)
+44c45
+<   Authoring.bind "_answer0" (effect) (Authoring.succeed Authoring.unit)
+---
+>   Authoring.minting "answer" fun mintedAnswer0 => Authoring.bind mintedAnswer0 (effect) (Authoring.succeed Authoring.unit)
+48c49
+<   Authoring.bind answer (effect) (Authoring.bind "_answer1" (continuation) (Authoring.succeed (Authoring.var answer)))
+---
+>   Authoring.bind answer (effect) (Authoring.minting "answer" fun mintedAnswer1 => Authoring.bind mintedAnswer1 (continuation) (Authoring.succeed (Authoring.var answer)))
+52c53
+<   Authoring.bind "_answer0" (effect) (Authoring.bind "_answer1" (effect1) (Authoring.succeed (Authoring.var "_answer0")))
+---
+>   Authoring.minting "answer" fun mintedAnswer0 => Authoring.bind mintedAnswer0 (effect) (Authoring.minting "answer" fun mintedAnswer1 => Authoring.bind mintedAnswer1 (effect1) (Authoring.succeed (Authoring.minted mintedAnswer0)))
+56c57
+<   Authoring.onExit "_exit0" (effect) (effect1)
+---
+>   Authoring.minting "exit" fun mintedExit0 => Authoring.onExit mintedExit0 (effect) (effect1)
+88c89
+<   Authoring.acquireRelease resource "_exit1" (effect) (release)
+---
+>   Authoring.minting "exit" fun mintedExit1 => Authoring.acquireRelease resource mintedExit1 (effect) (release)

@@ -1,0 +1,50 @@
+# summary of step2-prebuild.log (12134 lines)
+## commands
+## errors and warnings
+(none)
+## gates
+info: Test/All.lean:169:0: Effect4 library-root gate: 134 API/utility modules, 221 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:169:0: Effect4 module and axiom gate: checked 524 modules and 72071 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+## built (not replayed)
+✔ [560/579] Built Effect4.Program.Authoring.Services (913ms)
+ℹ [562/579] Built Test.Counterexamples.Machine.Semantics.H1Shapes (2.8s)
+ℹ [563/579] Built Test.Program.H2PartOne (3.2s)
+ℹ [564/579] Built Test.Counterexamples.Machine.Semantics.ScopePresence (2.0s)
+ℹ [565/603] Built Test.Program.ProtocolPosts (2.4s)
+✔ [566/603] Built Effect4.Api.Author (501ms)
+ℹ [567/603] Built Test.Counterexamples.Machine.Semantics.FitsOrder (1.8s)
+ℹ [569/603] Built Test.Counterexamples.Machine.Semantics.StaleCode (2.8s)
+ℹ [571/603] Built Test.Counterexamples.Machine.Semantics.ValueMembership (2.9s)
+ℹ [582/603] Built Test.Counterexamples.Machine.Semantics.M6Capstone (4.3s)
+ℹ [585/603] Built Test.Api.TestClockContract (631ms)
+ℹ [588/604] Built Test.Counterexamples.Machine.Semantics.AwaitLoad (1.0s)
+✔ [589/604] Built Effect4.Laws.Program.Author (2.5s)
+✔ [590/604] Built Effect4 (1.9s)
+ℹ [592/604] Built Test.Counterexamples.Machine.Semantics.RawOrderLoad (2.0s)
+ℹ [593/604] Built Test.Counterexamples.Machine.Semantics.TrivialPosts (2.1s)
+ℹ [598/631] Built Effect4.Laws (5.1s)
+✔ [613/631] Built Test.Audit.AxiomGate (2.5s)
+✔ [614/631] Built Test.Audit.ExhaustiveFixture (1.0s)
+ℹ [615/632] Built Test.Api.TraceOrigin (22s)
+✔ [626/634] Built Test.Audit.TraversalFixture (2.1s)
+✔ [631/643] Built Test.Api.SupervisionContract (2.7s)
+ℹ [640/645] Built Test.Program.TypedSplit (2.8s)
+ℹ [642/654] Built Test.Program.SignatureControls (2.5s)
+ℹ [651/659] Built Test.Program.TypedControl (2.2s)
+ℹ [656/660] Built Test.Program.AdmissionCensus (2.4s)
+ℹ [657/661] Built Test.Program.LoadedAdmission (3.1s)
+ℹ [658/662] Built Test.Program.TypedStack (3.8s)
+ℹ [659/669] Built Test.Program.FramesNotKripke (5.7s)
+ℹ [697/702] Built Test.Program.AuthorContract (3.4s)
+ℹ [698/702] Built Test.Program.AuthoringContract (5.8s)
+ℹ [699/732] Built Test.Program.LoopSugarContract (3.2s)
+ℹ [729/742] Built Test.Machine.StepInvRulesRed (4.4s)
+ℹ [740/746] Built Test.Program.BlameContract (1.5s)
+ℹ [743/746] Built Test.Audit.TraversalCensus (94s)
+ℹ [744/746] Built Test.All (67s)
+✔ [745/746] Built Test (5.2s)
+## tail
+✔ [745/746] Built Test (5.2s)
+Build completed successfully (746 jobs).
+LEAN_NUM_THREADS=2 lake build  230.13s user 52.19s system 138% cpu 3:23.58 total

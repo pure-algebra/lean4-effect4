@@ -2,6 +2,7 @@ import Effect4.Api.Author
 import Effect4.Laws.Program.Author
 import Effect4.Codegen.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Forms
+import Effect4.Program.Authoring.Loops
 import Test.Program.LayerSharingContract
 
 /-!
@@ -23,9 +24,10 @@ mistake — a merge where a `provideMerge` was meant — is caught by `Api.check
 program exists.
 
 Then B-9: a name the surface mints for itself is reserved, `var` refuses it, and a binder
-minted through `Env.mint` cannot be captured. The red control is pinned beside the fix: the
-generated forms still mint a constant spelling, so the bug is reachable through them until
-their generator mints through `Env.mint` too.
+minted through `Env.mint` cannot be captured. Every binder the surface names for itself is
+minted (decisions row 24): the generated forms, `andThen`, `bindWith` and `iterateWith`. Each
+red control is kept as history beside the flipped one: the constant spelling each used to bind
+captured an author's name of the same spelling.
 -/
 
 set_option autoImplicit false
@@ -317,32 +319,118 @@ scope are two names. `var_push_minted` (`Laws/Program/Author.lean`) is why that 
     (Forms.tapContinuation "_%answer1" (succeed (nat 1)) (succeed (nat 2)) : Src NativeOp)
   = .error ⟨[1, 1], .reservedName "_%answer1"⟩
 
--- RED CONTROL, B-9 still open in the generated forms: `Forms.tapContinuation` mints the
--- constant `"_answer1"` (`Authoring/Forms.lean`, generated from `Codegen.Forms.all`), so an
--- author who names their own answer `"_answer1"` reads the continuation's answer instead of
--- their own — `.var 1` where they meant `.var 0`. Owed: the forms generator mints through
--- `Env.mint` and reads through `minted`, as the expansion below does.
+-- B-9 in the generated forms (repaired, decisions row 24): `Forms.tapContinuation` bound its
+-- continuation's answer under the constant `"_answer1"`, so an author who named their own
+-- answer `"_answer1"` read the continuation's answer instead of their own: `.var 1` where they
+-- meant `.var 0`. The forms generator mints through `Env.mint` (`Authoring.minting`) and reads
+-- through `minted`. The red control as it stood, kept as history:
+/--
+error: Expression
+  decide
+    (elaborate (Forms.tapContinuation "_answer1" (succeed (nat 1)) (succeed (nat 2))) =
+      Except.ok
+        ((Eff.succeed (Term.lit (Lit.nat 1))).bind
+          ((Eff.succeed (Term.lit (Lit.nat 2))).bind (Eff.succeed (Term.var 1)))))
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
 #guard elaborate
     (Forms.tapContinuation "_answer1" (succeed (nat 1)) (succeed (nat 2)) : Src NativeOp)
   = .ok (.bind (.succeed (.lit (.nat 1)))
       (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 1))))
 
+-- The control flipped: the author's own `"_answer1"` reads their own answer.
+#guard elaborate
+    (Forms.tapContinuation "_answer1" (succeed (nat 1)) (succeed (nat 2)) : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 1)))
+      (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 0))))
+
 /-- `Effect.tap`'s expansion with the continuation's binder minted instead of spelled: the
-shape `Codegen/Forms` pins, with `"_answer1"` replaced by `Env.mint "answer"`. This is what
-the forms generator must emit. -/
+shape `Codegen/Forms` pins, with `"_answer1"` replaced by `Env.mint "answer"`, written out by
+hand. The forms generator emits it (`Authoring.minting "answer" fun mintedAnswer1 => …`). -/
 def tapMinted (answer : String) (effect continuation : Src NativeOp) : Src NativeOp :=
   fun env p =>
     bind answer effect
       (fun env' p' => bind (env'.mint "answer") continuation (succeed (var answer)) env' p')
       env p
 
--- THE FIX: the same author name, and the author's own variable.
+-- The same author name, and the author's own variable.
 #guard elaborate (tapMinted "_answer1" (succeed (nat 1)) (succeed (nat 2)))
   = .ok (.bind (.succeed (.lit (.nat 1)))
       (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 0))))
--- and any other name behaves as it did.
+-- The generated form and the hand expansion agree on the name that used to capture, and on
+-- any other name.
+#guard elaborate (tapMinted "_answer1" (succeed (nat 1)) (succeed (nat 2)))
+  = elaborate (Forms.tapContinuation "_answer1" (succeed (nat 1)) (succeed (nat 2)) : Src NativeOp)
 #guard elaborate (tapMinted "r" (succeed (nat 1)) (succeed (nat 2)))
   = elaborate (Forms.tapContinuation "r" (succeed (nat 1)) (succeed (nat 2)) : Src NativeOp)
+
+-- B-9 in the hand conveniences (repaired, decisions row 24). `andThen` bound the constant `"_"`,
+-- `bindWith` the name `"_<level>"`, `iterateWith` the names `"_c<level>"` and `"_a<level>"`:
+-- each could capture an author's own name of that spelling. Each control as it stood, kept as
+-- history, then flipped.
+/--
+error: Expression
+  decide
+    (elaborate (Authoring.bind "_" (succeed (nat 1)) (andThen (succeed (nat 2)) (succeed (var "_")))) =
+      Except.ok
+        ((Eff.succeed (Term.lit (Lit.nat 1))).bind
+          ((Eff.succeed (Term.lit (Lit.nat 2))).bind (Eff.succeed (Term.var 1)))))
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard elaborate (bind "_" (succeed (nat 1)) (andThen (succeed (nat 2)) (succeed (var "_")))
+    : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 1)))
+      (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 1))))
+#guard elaborate (bind "_" (succeed (nat 1)) (andThen (succeed (nat 2)) (succeed (var "_")))
+    : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 1)))
+      (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 0))))
+
+/--
+error: Expression
+  decide
+    (elaborate (Authoring.bind "_1" (succeed (nat 1)) (bindWith (succeed (nat 2)) fun x => succeed (var "_1"))) =
+      Except.ok
+        ((Eff.succeed (Term.lit (Lit.nat 1))).bind
+          ((Eff.succeed (Term.lit (Lit.nat 2))).bind (Eff.succeed (Term.var 1)))))
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard elaborate (bind "_1" (succeed (nat 1)) (bindWith (succeed (nat 2)) fun _ => succeed (var "_1"))
+    : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 1)))
+      (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 1))))
+#guard elaborate (bind "_1" (succeed (nat 1)) (bindWith (succeed (nat 2)) fun _ => succeed (var "_1"))
+    : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 1)))
+      (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 0))))
+
+/-- A loop whose test reads an author's own `"_c1"`, bound just outside it: the level the loop
+mints its cursor at is 1, so the old spelling of the cursor was `"_c1"` too. -/
+def outerCursor : Src NativeOp :=
+  bind "_c1" (succeed (bool false)) <|
+    iterateWith (nat 0) { while_ := fun _ => var "_c1", body := fun _ => succeed unit,
+                          step := fun c _ => c }
+
+/--
+error: Expression
+  decide
+    (elaborate outerCursor =
+      Except.ok
+        ((Eff.succeed (Term.lit (Lit.bool false))).bind
+          (Eff.iterate none (Term.lit (Lit.nat 0)) (Term.var 1) (Term.var 1) (Term.var 1)
+            (Eff.succeed (Term.lit Lit.unit)))))
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard elaborate outerCursor
+  = .ok (.bind (.succeed (.lit (.bool false)))
+      (.iterate none (.lit (.nat 0)) (.var 1) (.var 1) (.var 1) (.succeed (.lit .unit))))
+#guard elaborate outerCursor
+  = .ok (.bind (.succeed (.lit (.bool false)))
+      (.iterate none (.lit (.nat 0)) (.var 0) (.var 1) (.var 1) (.succeed (.lit .unit))))
 
 /-! ## Scope safety of the new surface, and the axioms every proof reaches -/
 
