@@ -115,6 +115,42 @@ theorem externalValue_typed (ty : Ty) (allocated allocated' : List String) (valu
       exact (Bool.and_eq_true_iff.mp ha).1
     · cases h
 
+/-- Every accepted conversion either keeps a handle-free value and the allocation table,
+or constructs exactly the external handle at the old table's next index. -/
+theorem externalValue_internalFree (ty : Ty) (allocated allocated' : List String)
+    (value result : Val)
+    (h : externalValue ty allocated value = some (allocated', result)) :
+    (allocated' = allocated ∧ result = value ∧ result.handles = []) ∨
+      ∃ target, ty = .handle target ∧ externalHandleTarget target = true ∧
+        value = .nat allocated.length ∧ allocated' = allocated ++ [target] ∧
+        result = Value.external allocated.length := by
+  unfold externalValue at h
+  split at h
+  · rename_i target index
+    split at h
+    · rename_i ha
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨ht, hi⟩ := Bool.and_eq_true_iff.mp ha
+      have hi : index = allocated.length := beq_iff_eq.mp hi
+      subst index
+      exact Or.inr ⟨target, rfl, ht, rfl, rfl, rfl⟩
+    · cases h
+  · split at h
+    · rename_i ha
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      exact Or.inl ⟨rfl, rfl, List.isEmpty_iff.mp (Bool.and_eq_true_iff.mp ha).2⟩
+    · cases h
+
+/-- The host supplies handle-free data even when conversion allocates: that arm takes the
+next scalar index, not a host-created handle. -/
+theorem externalValue_input_handleFree (ty : Ty) (allocated allocated' : List String)
+    (value result : Val)
+    (h : externalValue ty allocated value = some (allocated', result)) : value.handles = [] := by
+  rcases externalValue_internalFree ty allocated allocated' value result h with
+    ⟨_, rfl, free⟩ | ⟨_, _, _, rfl, _, _⟩
+  · exact free
+  · rfl
+
 /-- Admission returns a conversion whose actual output, including a freshly minted
 handle, inhabits the parked row's answer type. -/
 theorem external_answer_typed (table : RowTable) (m : NativeMachine)
@@ -319,6 +355,30 @@ theorem valOfErr_keys (e : Err) (v : Val) (h : valOfErr e = some v) : v.keys = [
   | tagged t m => cases Option.some.inj h; rfl
   | text s => cases Option.some.inj h; rfl
 
+/-- Closed failure images contain no handles, including every decoded typed-failure
+payload. This holds before admission, so neither host failure arm needs a new check. -/
+theorem external_failure_internalFree (cause : CauseV) :
+    (causeImage.toVal cause).handles = [] ∧
+      ∀ error annotations, .fail error annotations ∈ cause.reasons →
+        ∀ value, valOfErr error = some value → value.keys = [] := by
+  exact ⟨causeImage_handleFree cause, fun error _ _ value h => valOfErr_keys error value h⟩
+
+/-- An admitted host exit contributes no existing handle. Fresh external allocation occurs
+only when preparing a success; reference-read completions are separate effect requests. -/
+theorem admitAnswer_exit_keys (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)
+    (exit : ExitV) (h : admitAnswer row m fiber token (.ofExit exit) = none) :
+    (Completion.ofExit exit : Completion Val Err Defect FiberId Ann).keys = [] := by
+  cases exit with
+  | failure cause => rfl
+  | success value =>
+    cases hv : externalValue row.answer m.state.externals.allocated value with
+    | none => simp only [admitAnswer, hv, Option.isNone_none, if_true] at h; cases h
+    | some converted =>
+      obtain ⟨allocated, result⟩ := converted
+      have free := externalValue_input_handleFree row.answer m.state.externals.allocated
+        allocated value result hv
+      simp only [Completion.keys, exitKeys, Val.keys_eq_handles, free, List.filterMap_nil]
+
 /-- Row DI-62. Converting a well-typed supported error gives an admitted failure reason. -/
 theorem errAdmits_errOf (ty : Ty) (v : Val) (allocated : List String)
     (a : ReasonAnnotations Ann)
@@ -468,6 +528,38 @@ theorem external_prepared_answer_typed (program : NativeEff) (table : RowTable)
     simp only [prepareAsyncAnswer, hs, Option.isSome_none, Bool.false_eq_true, if_false,
       hf, hp, if_true, interpOf, prepareExternalAnswer, hne, hc, hrow, hv]
   exact ht
+
+/-- The actual prepared success contains no internal handle: it is handle-free, or exactly
+the new external handle, with its target appended at that index in the returned table. -/
+theorem external_prepared_answer_internalFree (program : NativeEff) (table : RowTable)
+    (m : NativeMachine) (fiber : FiberId) (token : Nat) (value : Val)
+    (hs : m.stuck = none)
+    (ha : admit table m (.answerAsync fiber token (.ofExit (.success value))) = none) :
+    ∃ result,
+      (prepareAsyncAnswer (interpOf program table) m fiber token (.ofExit (.success value))).2 =
+        .success result ∧
+      (result.handles = [] ∨ ∃ target,
+        result = Value.external m.state.externals.allocated.length ∧
+        (prepareAsyncAnswer (interpOf program table) m fiber token
+          (.ofExit (.success value))).1.externals.allocated =
+            m.state.externals.allocated ++ [target]) := by
+  obtain ⟨i, request, row, allocated, result, hreq, hrow, hv, _⟩ :=
+    external_answer_typed table m fiber token value ha
+  obtain ⟨f, controller, cancel, hf, hp, hc⟩ := requestOf_current m fiber token _ _ hreq
+  have hne : table.isEmpty = false := by
+    cases table with
+    | nil => simp only [externalRow, List.getElem?_nil] at hrow; cases hrow
+    | cons row rest => rfl
+  have prepared : prepareAsyncAnswer (interpOf program table) m fiber token
+      (.ofExit (.success value)) =
+        ({ m.state with externals := { m.state.externals with allocated } }, .success result) := by
+    simp only [prepareAsyncAnswer, hs, Option.isSome_none, Bool.false_eq_true, if_false,
+      hf, hp, if_true, interpOf, prepareExternalAnswer, hne, hc, hrow, hv]
+  refine ⟨result, congrArg Prod.snd prepared, ?_⟩
+  rcases externalValue_internalFree row.answer m.state.externals.allocated allocated value result hv with
+    ⟨_, _, free⟩ | ⟨target, _, _, _, halloc, hresult⟩
+  · exact Or.inl free
+  · exact Or.inr ⟨target, hresult, by rw [prepared]; exact halloc⟩
 
 /-- Every accepted completion names only handles present before the answer. -/
 theorem admitAnswer_minted (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)

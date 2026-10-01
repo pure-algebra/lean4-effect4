@@ -206,8 +206,8 @@ theorem drive_eq_play {σ : Type} (r : Reactor σ) (rounds : Nat) (s : Run) (st 
 type is a proof, and the type is the one the checker computes, so two certificates agree. -/
 theorem admitted_unique (program : Api.Program) (table : RowTable)
     (a b : AdmittedProgram program table) : a = b := by
-  obtain ⟨⟨tya, ha⟩, _, _, _, _, _⟩ := a
-  obtain ⟨⟨tyb, hb⟩, _, _, _, _, _⟩ := b
+  obtain ⟨⟨tya, ha⟩, _, _, _, _, _, _⟩ := a
+  obtain ⟨⟨tyb, hb⟩, _, _, _, _, _, _⟩ := b
   have hty : tya = tyb := Option.some.inj (ha.symm.trans hb)
   subst hty
   rfl
@@ -218,7 +218,7 @@ needs and the tree did not have. -/
 theorem admitProgram_certificate (program : Api.Program) (table : RowTable)
     (c : AdmittedProgram program table) : admitProgram program table = .ok c := by
   aesop (add norm unfold [admitProgram, checkTypedProgram])
-    (add norm simp [c.intFreeTable, c.intFreeProgram, c.typed, c.intFreeType, c.lawful,
+    (add norm simp [c.intFreeTable, c.internalFreeTable, c.intFreeProgram, c.typed, c.intFreeType, c.lawful,
       c.runnable]) (add safe apply admitted_unique)
 
 /-- **O-1.** Opening cannot refuse. With a `Built` in hand the checked `start` of

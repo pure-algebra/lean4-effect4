@@ -522,35 +522,37 @@ theorem externalAdmits_keys (table : RowTable) (i : Nat)
   | ofRefGet cell =>
     cases hr : externalRow table i <;> simp only [externalAdmits, hr, Bool.false_eq_true] at h
 
-/-- A converted reply grows only the external allocation list; every returned handle
-is either an already valid input or the fresh index just appended. -/
+/-- A converted reply grows only the external allocation list. Its value is handle-free
+or exactly the fresh external handle; existing store handles remain valid. -/
 theorem externalValue_minted (ty : Ty) (s : Stores) (ids : List FiberId)
     (value result : Val) (allocated : List String)
     (hc : externalValue ty s.externals.allocated value = some (allocated, result))
     (hok : Ok ⟨ids, s⟩ (value.keys ++ s.keys)) :
     let next := { s with externals := { s.externals with allocated } }
     s.le next ∧ Ok ⟨ids, next⟩ (next.keys ++ result.keys) := by
-  unfold externalValue at hc
-  split at hc
-  · rename_i target index
-    split at hc
-    · rename_i ha
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
-      simp only [Bool.and_eq_true, beq_iff_eq] at ha
-      obtain ⟨_, rfl⟩ := ha
-      have hle : s.le { s with externals := { s.externals with
-          allocated := s.externals.allocated ++ [target] } } :=
-        ⟨Nat.le_refl _, Nat.le_refl _, (fun _ h => h), Nat.le_refl _,
-          (fun _ h => h), by simp⟩
-      refine ⟨hle, Ok_append.mpr ⟨?_, ?_⟩⟩
-      · exact Ok_mono (World.le_of_state hle) (Ok_append.mp hok).2
-      · simp [Val.keys_eq_handles, Store.Val.handles, Handle.ofCode, HandleKind.ofByte?,
-          Ok, Handle.existsIn]
-    · cases hc
-  · split at hc
-    · obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
-      exact ⟨Stores.le_refl _, Ok_append.mpr ⟨(Ok_append.mp hok).2, (Ok_append.mp hok).1⟩⟩
-    · cases hc
+  rcases externalValue_internalFree ty s.externals.allocated allocated value result hc with
+    ⟨rfl, rfl, free⟩ | ⟨target, _, _, rfl, rfl, rfl⟩
+  · have keys : result.keys = [] := by
+      rw [Val.keys_eq_handles, free]
+      rfl
+    change s.le s ∧ Ok ⟨ids, s⟩ (s.keys ++ result.keys)
+    rw [keys, List.append_nil]
+    exact ⟨Stores.le_refl _, (Ok_append.mp hok).2⟩
+  · have hle : s.le { s with externals := { s.externals with
+        allocated := s.externals.allocated ++ [target] } } :=
+      ⟨Nat.le_refl _, Nat.le_refl _, (fun _ h => h), Nat.le_refl _,
+        (fun _ h => h), by
+          simpa only [List.length_append, List.length_singleton] using
+            Nat.le_succ s.externals.allocated.length⟩
+    refine ⟨hle, Ok_append.mpr ⟨?_, ?_⟩⟩
+    · exact Ok_mono (World.le_of_state hle) (Ok_append.mp hok).2
+    · change Ok _ [Handle.external s.externals.allocated.length]
+      refine Ok_cons.mpr ⟨?_, Ok_nil _⟩
+      change decide (s.externals.allocated.length <
+        (s.externals.allocated ++ [target]).length) = true
+      apply decide_eq_true
+      simpa only [List.length_append, List.length_singleton] using
+        Nat.lt_succ_self s.externals.allocated.length
 
 /-- The stateful answer hook meets the generic handle contract for every current
 code and table, including refused and nonexternal inputs. -/

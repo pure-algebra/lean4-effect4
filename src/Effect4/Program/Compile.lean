@@ -1350,7 +1350,7 @@ def externalRow (table : RowTable) (i : Nat) : Option Row := do
 
 /-- A host gives the next scalar allocation index for an external handle. The
 machine writes the target spelling and constructs the handle. Other values retain
-their shape; a host-supplied external handle is never an allocation request. -/
+their shape and carry no handles; a host-supplied handle is never an allocation request. -/
 def externalValue (ty : Ty) (allocated : List String) (value : Val) :
     Option (List String × Val) :=
   match ty, value with
@@ -1360,7 +1360,7 @@ def externalValue (ty : Ty) (allocated : List String) (value : Val) :
     else none
   | _, _ =>
     if Val.hasTy value ty allocated &&
-        !(Store.Val.handles value).any (fun h => h.1 == HandleKind.external.byte) then
+        (Store.Val.handles value).isEmpty then
       some (allocated, value)
     else none
 

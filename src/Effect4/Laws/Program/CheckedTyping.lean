@@ -112,29 +112,33 @@ Its typing component is the same shared certificate used by other boundaries. -/
 theorem admitProgram_eq_ok {program : NativeEff} {table : RowTable}
     (admitted : AdmittedProgram program table) :
     admitProgram program table = .ok admitted := by
-  have tableFree := admitted.intFreeTable
-  have programFree := admitted.intFreeProgram
-  have typeFree := admitted.intFreeType
-  have lawful := admitted.lawful
-  have runnable := admitted.runnable
-  have checked := checkTypedProgram_eq_some admitted.toTypedProgram
   unfold admitProgram
   split
-  · simp_all
+  · rename_i found hfound
+    rw [admitted.intFreeTable] at hfound
+    contradiction
   · split
-    · simp_all
+    · rename_i found hfound
+      rw [admitted.internalFreeTable] at hfound
+      contradiction
     · split
-      · simp_all
-      · rename_i typing htyping
-        have same : typing = admitted.toTypedProgram :=
-          Option.some.inj (htyping.symm.trans checked)
-        subst same
+      · rename_i found hfound
+        rw [admitted.intFreeProgram] at hfound
+        contradiction
+      · rw [checkTypedProgram_eq_some admitted.toTypedProgram]
+        dsimp only
         split
-        · simp_all
-        · simp only [lawful, dite_true]
-          split
-          · simp_all
-          · cases admitted
-            rfl
+        · rename_i found hfound
+          rw [admitted.intFreeType] at hfound
+          contradiction
+        · split
+          · split
+            · rename_i why hwhy
+              rw [admitted.runnable] at hwhy
+              contradiction
+            · cases admitted
+              rfl
+          · rename_i unlawful
+            exact False.elim (unlawful admitted.lawful)
 
 end Effect4.Program

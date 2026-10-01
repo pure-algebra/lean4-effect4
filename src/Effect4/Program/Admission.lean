@@ -1,6 +1,7 @@
 import Effect4.Program.Table
 import Effect4.Program.CheckedTyping
 import Effect4.Program.Native
+import Effect4.Program.Typed
 import Effect4.Program.Fragment
 import Effect4.Program.Fold
 
@@ -12,8 +13,9 @@ A program is admitted to run when:
 2. It is well-typed against the supplied row table (`Program.typeOf program table = some ty`).
 3. The table meets the three program-plane lawfulness conditions (`Table.lawful table = true`).
 4. Every row can be registered by the runner (`checkTable table = none`).
+5. Host answer and error types contain no internal handle kind (row 97 interim).
 
-All four requirements are verified by `admitProgram`, producing a certified `AdmittedProgram`
+All five requirements are verified by `admitProgram`, producing a certified `AdmittedProgram`
 whose fields witness each check. If admission fails, an exact `AdmitRefusal` reports the failure.
 Admission depends strictly on the program plane and never imports codegen.
 
@@ -51,6 +53,44 @@ where
           findInt (pos ++ ["answer"]) row.answer <|>
           findInt (pos ++ ["error"]) row.error <|> go (index + 1) rest
 
+/-- Locate internal handle types with the generated type fold. Raw syntax is inspected
+before normalization, including every nested answer and error column. -/
+def internalHandleScan : TyAlgebra (fun _ => Path → Option Path) where
+  ty_never := fun _ => none
+  ty_unit := fun _ => none
+  ty_nat := fun _ => none
+  ty_int := fun _ => none
+  ty_string := fun _ => none
+  ty_bool := fun _ => none
+  ty_handle target := fun pos => if internalHandleTargets.contains target then some pos else none
+  ty_option inner := fun pos => inner (pos ++ ["inner"])
+  ty_list inner := fun pos => inner (pos ++ ["inner"])
+  ty_prod left right := fun pos => left (pos ++ ["left"]) <|> right (pos ++ ["right"])
+  ty_except error value := fun pos => error (pos ++ ["error"]) <|> value (pos ++ ["value"])
+  ty_exitOf value error := fun pos => value (pos ++ ["value"]) <|> error (pos ++ ["error"])
+  ty_causeOf error := fun pos => error (pos ++ ["error"])
+  ty_fiberOf _ _ := some
+  ty_union left right := fun pos => left (pos ++ ["left"]) <|> right (pos ++ ["right"])
+  ty_lit _ := fun _ => none
+  ty_refOf _ := some
+  ty_deferredOf _ _ := some
+  ty_var _ := fun _ => none
+  ty_unknown := fun _ => none
+
+def findInternalHandle (pos : Path) (ty : Ty) : Option Path :=
+  cata_ty internalHandleScan ty pos
+
+/-- Requests may pass internal handles outward. Host answer and error columns cannot
+introduce them until their declaration registry is available (row 97 interim). -/
+def findInternalHandleInTable (table : RowTable) : Option Path := go 0 table
+where
+  go (index : Nat) : RowTable → Option Path
+    | [] => none
+    | row :: rest =>
+        let pos := ["table", toString index]
+        findInternalHandle (pos ++ ["answer"]) row.answer <|>
+          findInternalHandle (pos ++ ["error"]) row.error <|> go (index + 1) rest
+
 /-- The inferred answer and error are the program's explicit type columns. -/
 def findIntInEffTy (ty : EffTy) : Option Path :=
   findInt ["program", "answer"] ty.answer <|> findInt ["program", "error"] ty.error
@@ -81,16 +121,19 @@ inductive AdmitRefusal
   /-- A raw table, the program tree or the inferred program type mentions the reserved
   integer constructor. -/
   | uninhabited («at» : Path)
+  /-- A host answer or error type mentions a reserved internal handle kind. -/
+  | internalHandle («at» : Path)
 deriving DecidableEq, Repr
 
 /-- A program admitted to run against a table: its type, the execution checks, and
-the successful integer scans. The fields are proofs, so an `AdmittedProgram` cannot be forged by
+the successful integer and internal-handle scans. The fields are proofs, so an `AdmittedProgram` cannot be forged by
 building the structure with the wrong table — the table and the program are its indices. -/
 structure AdmittedProgram (program : NativeEff) (table : RowTable)
     extends TypedProgram (nativeSignature table) program where
   lawful : Table.lawful table = true
   runnable : checkTable table = none
   intFreeTable : findIntInTable table = none
+  internalFreeTable : findInternalHandleInTable table = none
   intFreeProgram : findIntInProgram program = none
   intFreeType : findIntInEffTy ty = none
 
@@ -102,6 +145,9 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
   match htable : findIntInTable table with
   | some pos => .error (.uninhabited pos)
   | none =>
+    match hinternal : findInternalHandleInTable table with
+    | some pos => .error (.internalHandle pos)
+    | none =>
     match hprogram : findIntInProgram program with
     | some pos => .error (.uninhabited pos)
     | none =>
@@ -114,7 +160,7 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
         if hlawful : Table.lawful table = true then
           match hrunnable : checkTable table with
           | some why => .error (.table why)
-          | none => .ok ⟨typing, hlawful, hrunnable, htable, hprogram, htype⟩
+          | none => .ok ⟨typing, hlawful, hrunnable, htable, hinternal, hprogram, htype⟩
         else
           match Table.checkLawful table with
           | some (.duplicateKey k) => .error (.duplicateKey k)
@@ -173,42 +219,95 @@ theorem admitProgram_table_int (program : NativeEff) (table : RowTable) (pos : P
     (h : findIntInTable table = some pos) :
     admitProgram program table = .error (.uninhabited pos) := by
   unfold admitProgram
-  split <;> simp_all
+  split
+  · rename_i found hfound
+    have same : found = pos := Option.some.inj (hfound.symm.trans h)
+    cases same
+    rfl
+  · rename_i hnone
+    rw [h] at hnone
+    contradiction
 
-/-- Integer syntax stated inside the program tree is refused with its exact path, after the
-table scan succeeds (DI-92). -/
+/-- A reserved host handle type is refused immediately after the integer table scan. -/
+theorem admitProgram_table_internal (program : NativeEff) (table : RowTable) (pos : Path)
+    (hTable : findIntInTable table = none) (h : findInternalHandleInTable table = some pos) :
+    admitProgram program table = .error (.internalHandle pos) := by
+  unfold admitProgram
+  split
+  · rename_i found hfound
+    rw [hTable] at hfound
+    contradiction
+  · split
+    · rename_i found hfound
+      have same : found = pos := Option.some.inj (hfound.symm.trans h)
+      cases same
+      rfl
+    · rename_i hnone
+      rw [h] at hnone
+      contradiction
+
+/-- Integer syntax stated inside the program tree is refused after both table scans. -/
 theorem admitProgram_program_int (program : NativeEff) (table : RowTable) (pos : Path)
-    (hTable : findIntInTable table = none) (h : findIntInProgram program = some pos) :
+    (hTable : findIntInTable table = none) (hInternal : findInternalHandleInTable table = none)
+    (h : findIntInProgram program = some pos) :
     admitProgram program table = .error (.uninhabited pos) := by
   unfold admitProgram
   split
-  · simp_all
-  · split <;> simp_all
+  · rename_i found hfound
+    rw [hTable] at hfound
+    contradiction
+  · split
+    · rename_i found hfound
+      rw [hInternal] at hfound
+      contradiction
+    · split
+      · rename_i found hfound
+        have same : found = pos := Option.some.inj (hfound.symm.trans h)
+        cases same
+        rfl
+      · rename_i hnone
+        rw [h] at hnone
+        contradiction
 
-/-- An inferred integer occurrence is refused after the table and the tree scans succeed. -/
+/-- An inferred integer occurrence is refused after the table and tree scans succeed. -/
 theorem admitProgram_type_int (program : NativeEff) (table : RowTable) (ty : EffTy) (pos : Path)
-    (hTable : findIntInTable table = none) (hProgram : findIntInProgram program = none)
+    (hTable : findIntInTable table = none) (hInternal : findInternalHandleInTable table = none)
+    (hProgram : findIntInProgram program = none)
     (hTy : typeOfProgram (nativeSignature table) program = some ty)
     (hInt : findIntInEffTy ty = some pos) :
     admitProgram program table = .error (.uninhabited pos) := by
   unfold admitProgram
   split
-  · simp_all
+  · rename_i found hfound
+    rw [hTable] at hfound
+    contradiction
   · split
-    · simp_all
+    · rename_i found hfound
+      rw [hInternal] at hfound
+      contradiction
     · split
-      · rename_i hnone
-        unfold checkTypedProgram at hnone
-        split at hnone <;> simp_all
-      · rename_i typing _
-        have heq : typing.ty = ty := Option.some.inj (typing.typed.symm.trans hTy)
+      · rename_i found hfound
+        rw [hProgram] at hfound
+        contradiction
+      · have hChecked : checkTypedProgram (nativeSignature table) program = some ⟨ty, hTy⟩ := by
+          unfold checkTypedProgram
+          split
+          · rename_i hnone
+            rw [hTy] at hnone
+            contradiction
+          · rename_i inferred hinferred
+            have same : inferred = ty := Option.some.inj (hinferred.symm.trans hTy)
+            cases same
+            rfl
+        rw [hChecked]
+        dsimp only
         split
-        · rename_i pos' hpos'
-          rw [heq] at hpos'
-          have hpos : pos' = pos := by injection (hpos'.symm.trans hInt)
-          rw [hpos]
+        · rename_i found hfound
+          have same : found = pos := Option.some.inj (hfound.symm.trans hInt)
+          cases same
+          rfl
         · rename_i hnone
-          rw [heq, hInt] at hnone
+          rw [hInt] at hnone
           contradiction
 
 end Effect4.Program
