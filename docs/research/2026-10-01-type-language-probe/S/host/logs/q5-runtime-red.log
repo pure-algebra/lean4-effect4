@@ -1,0 +1,7 @@
+# check: q5-runtime-red
+# date: 2026-10-01T19:50:03Z
+# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
+# command: bash -c cd q5 && bun run runtime-red.ts
+# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
+raw JSON object keys: 8; the red claim expects 30
+# exit=1 seconds=1

@@ -601,6 +601,68 @@ def rcIntRep : Representation := .number none [.filter ⟨"effect/schema/isInt",
 #guard refusedAt ["check[0]", "annotations"] rcIntRep
 #guard admits recordRep && admits mapRep && admits tagged3Rep && !admits restRep && explain recordRep == none
 
+/-! ## 6b. [S] Red controls: each claim is false, and `#guard_msgs` asserts its `#guard` fails -/
+
+/-- RED: a three-element tuple prints as an array. -/
+def red_tupleAsArray : Bool := text tuple3Rep == some "Schema.Array(Schema.Int)"
+/--
+error: Expression
+  red_tupleAsArray
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_tupleAsArray
+
+/-- RED: a union prints in the variadic call shape `Schema.Union(a, b)`, which rc.112 rejects (question 2 E7). -/
+def red_unionVariadic : Bool := (text tagged2Rep).map (·.startsWith "Schema.Union(Schema.Struct") == some true
+/--
+error: Expression
+  red_unionVariadic
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_unionVariadic
+
+/-- RED: a mutable optional field prints without `mutableKey`. -/
+def red_mutableDropped : Bool := text mutableRep == some "Schema.Struct({ \"a-b\": Schema.optionalKey(Schema.String) })"
+/--
+error: Expression
+  red_mutableDropped
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_mutableDropped
+
+/-- RED: an annotation on an unsupported node is dropped and the node admitted. -/
+def red_annotationDropped : Bool := admits (.enum (some [⟨"parseOptions", .obj []⟩]) [] [])
+/--
+error: Expression
+  red_annotationDropped
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_annotationDropped
+
+/-- RED: `__proto__` is spelled quoted (upstream `toCodeDocument`'s spelling, which sets the prototype at run time: question 2 E8). -/
+def red_quotedProto : Bool := keySpelling "__proto__" == some "\"__proto__\""
+/--
+error: Expression
+  red_quotedProto
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_quotedProto
+
+/-- RED: revision 5's eight-key allowlist admits rc.112's own persisted `Schema.Int` (its `isInt` filter carries `arbitrary`). -/
+def red_rcIntAdmitted : Bool := admits rcIntRep
+/--
+error: Expression
+  red_rcIntAdmitted
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_rcIntAdmitted
+
 /-! ## 7. [S] The examples for the host harness (`S/host/q3-profile.ts`) -/
 
 def examples : List (String × Representation) :=

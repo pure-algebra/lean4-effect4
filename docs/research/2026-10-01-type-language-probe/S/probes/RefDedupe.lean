@@ -194,6 +194,30 @@ def conflicting : List ReferenceEntry :=
   | .ok out => out == [⟨"A", Schema.string⟩]
   | .error _ => false
 
+/-! ## Red controls: each claim is false, and `#guard_msgs` asserts its `#guard` fails -/
+
+/-- RED: a repeated key with a different body deduplicates silently (the first body kept). -/
+def red_conflictAccepted : Bool := match dedupeRefs conflicting with
+  | .ok _ => true
+  | .error _ => false
+/--
+error: Expression
+  red_conflictAccepted
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_conflictAccepted
+
+/-- RED: the meta-schema's table has distinct keys, so (C) has nothing to do there. -/
+def red_metaDistinct : Bool := repeatsOf (shape Document).document == 0
+/--
+error: Expression
+  red_metaDistinct
+did not evaluate to `true`
+-/
+#guard_msgs (error) in
+#guard red_metaDistinct
+
 /-! ## Output for the host comparison (`S/host/q5-dedupe.sh`) -/
 
 #eval do

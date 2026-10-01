@@ -1,8 +1,8 @@
 # probe: docs/research/2026-10-01-type-language-probe/S/probes/ReadableProfile.lean
-# date: 2026-10-01T19:32:06Z
+# date: 2026-10-01T19:47:24Z
 # command: LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true docs/research/2026-10-01-type-language-probe/S/probes/ReadableProfile.lean
 # toolchain: leanprover/lean4:v4.33.1
-# sha256: 0d7a49c56e2e1b97284e7cff21c0764dea6bd8df28e5bff984db75ff9f55164d
+# sha256: c325b67e9a4197245df8945970fef142e1b7323faac45c58ae923db011d95d41
 EXPR_NAT:"Schema.Natural"
 REPR_NAT:"{\n  \"_tag\": \"Number\",\n  \"checks\": [\n    {\n      \"_tag\": \"Filter\",\n      \"representation\": { \"id\": \"effect/schema/isInt\", \"payload\": null },\n      \"aborted\": false,\n    },\n    {\n      \"_tag\": \"Filter\",\n      \"representation\": { \"id\": \"effect/schema/isGreaterThanOrEqualTo\", \"payload\": { \"minimum\": new DataView(Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0).buffer).getFloat64(0, false) } },\n      \"aborted\": false,\n    },\n  ],\n}"
 EXPR_INT:"Schema.Int"
@@ -73,4 +73,4 @@ REPR_BYTES:"{\n  \"_tag\": \"Declaration\",\n  \"representation\": { \"id\": \"e
 'SeatS.Readable.toReadableSchema' depends on axioms: [propext]
 'SeatS.Readable.admits' depends on axioms: [propext]
 'SeatS.Readable.admits_iff_explain' depends on axioms: [propext]
-# exit=0 seconds=2
+# exit=0 seconds=4
