@@ -1,0 +1,44 @@
+  pWhile           finished  fibers=1  trace=21   exits=1  EQ
+  pYieldError      finished  fibers=1  trace=3    exits=1  EQ
+PASS Fast = Ref on every golden: outcome, exits, fibers, trace, store (53/53)
+== ALL PASS: 0 failure(s) in 82 checks ==
+FAIL the Lean corpus is present (`make corpus` writes it under .lake/corpus)
+PASS mutating p7_exits is caught, and only it (at index 0)
+PASS mutating p8_root_exit is caught, and only it
+== FAILED: 1 failure(s) in 32 checks ==
+== ALL PASS: 0 failure(s) in 32 checks ==
+  212 cases, EVERY i on all of them; the ten longest tapes are: p42/gen64 pAcquire/gen64 pActions/gen64 pAwait/gen64 pBind/gen64 pBranch/gen64 pCallback/gen64 pCatch/gen64 pCatchError/gen64 pCatchIf/gen64
+== ALL PASS: 0 failure(s) in 21 checks ==
+== ALL PASS: 0 failure(s) in 41 checks ==
+PASS FB6 finished is `fibers.all (·.exit.isSome)`; completed_exits is the ascending filterMap
+PASS  K4 is_run_relative = {tape, log, exits, checkpoint} (amendment M2)
+-- X6(b) a flipped row checksum (the mutation check)
+NOTE  X6(b) verdict: bad-crc: the row at index 37 failed its checksum
+PASS  X6(b) a flip in any byte of that checksum is caught at the same index
+PASS  X6(f) a well-checksummed row with an unknown tag is Bad_row
+PASS  R4 changing the status moves the checksum field and nothing else before it
+-- E: every constructor of open_error (CF1, CF2, D3, CF9)
+PASS  E4 Corrupt: a flipped checksum field
+-- X: A2 §4.3 X4 — a torn tmp, a rename that did not happen, a bad checksum
+PASS  C1 the first move at version 1 is ok
+PASS  C9 a second publication with the right prev is ok
+PASS  G3 g3-v1 -> ok
+PASS  G3 g3-advance-v2 -> ok
+PASS  T8 an interior bad head does not stop open_ (the LAST head still checks); recovery names it, and no segment is deleted
+PASS  L-CAS-6 verify on a store this module wrote is ok
+-- golden G3: the roots plane, with the kind and dangling checks real
+PASS  G3 the first move is ok
+   107 checks
+PASS  B5 capacity 0 and one slot are caches, not errors (CA7)
+PASS  V3 `E4_cas.verify_node` on the poisoned address is ok
+NOTE  S1 pCatchError      bytes=179    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pYieldError      bytes=67     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+-- mutation checks (cas-design §11 commit 9)
+PASS FV3 add is spawn's append; a child with no exit leaves the view PHYSICALLY alone
+PASS FV4 map is id-preserving and re-derives the view (even when it changes exits)
+PASS FV8 a write that does not change an exit leaves the view PHYSICALLY shared (384/384)
+PASS FV9 completed is O(1), set O(log n) (+O(C) when an exit changes), map O(N) [by construction; the engine numbers are in the lane G3 receipt]
+opam exec --switch=effect4 -- dune test engine -j 2 --force 2>&1  38.30s user 2.07s system 64% cpu 1:02.39 total
+grep -E "checks|failures|FAIL|rror|passed|ok$|exit"  0.05s user 0.09s system 0% cpu 1:02.39 total
+tail -40  0.00s user 0.00s system 0% cpu 1:02.39 total
+exit 0

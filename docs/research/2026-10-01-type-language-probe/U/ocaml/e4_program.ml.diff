@@ -1,0 +1,36 @@
+127c127
+< let () = assert (List.length Eff_types.ctor_names_ty = 20)
+---
+> let () = assert (List.length Eff_types.ctor_names_ty = 20)  (* emitted *)
+137,153c137,149
+<     | Eff_types.Ty_handle h -> A.Ty_handle h
+<     | Eff_types.Ty_option a -> A.Ty_option (of_ty a)
+<     | Eff_types.Ty_list a -> A.Ty_list (of_ty a)
+<     | Eff_types.Ty_prod (a, b) -> A.Ty_prod (of_ty a, of_ty b)
+<     | Eff_types.Ty_except (a, b) -> A.Ty_except (of_ty a, of_ty b)
+<     | Eff_types.Ty_exitOf (a, b) -> A.Ty_exitOf (of_ty a, of_ty b)
+<     | Eff_types.Ty_causeOf a -> A.Ty_causeOf (of_ty a)
+<     | Eff_types.Ty_fiberOf (a, b) -> A.Ty_fiberOf (of_ty a, of_ty b)
+<     | Eff_types.Ty_union (a, b) -> A.Ty_union (of_ty a, of_ty b)
+<     | Eff_types.Ty_lit s -> A.Ty_lit s
+<     (* `Ref.Ref<A>` and `Deferred.Deferred<A, E>` (decisions row 42), the row template's
+<        parameter and the top `unknown` (row 46), in the source's declaration order. The
+<        engine's alphabet used to end at `lit` and the four were refused by name here; the
+<        mirror is at twenty now, so the match is total and the catch-all is gone. *)
+<     | Eff_types.Ty_refOf a -> A.Ty_refOf (of_ty a)
+<     | Eff_types.Ty_deferredOf (a, b) -> A.Ty_deferredOf (of_ty a, of_ty b)
+<     | Eff_types.Ty_var i -> A.Ty_var i
+---
+>     | Eff_types.Ty_handle a0 -> A.Ty_handle a0
+>     | Eff_types.Ty_option a0 -> A.Ty_option (of_ty a0)
+>     | Eff_types.Ty_list a0 -> A.Ty_list (of_ty a0)
+>     | Eff_types.Ty_prod (a0, a1) -> A.Ty_prod (of_ty a0, of_ty a1)
+>     | Eff_types.Ty_except (a0, a1) -> A.Ty_except (of_ty a0, of_ty a1)
+>     | Eff_types.Ty_exitOf (a0, a1) -> A.Ty_exitOf (of_ty a0, of_ty a1)
+>     | Eff_types.Ty_causeOf a0 -> A.Ty_causeOf (of_ty a0)
+>     | Eff_types.Ty_fiberOf (a0, a1) -> A.Ty_fiberOf (of_ty a0, of_ty a1)
+>     | Eff_types.Ty_union (a0, a1) -> A.Ty_union (of_ty a0, of_ty a1)
+>     | Eff_types.Ty_lit a0 -> A.Ty_lit a0
+>     | Eff_types.Ty_refOf a0 -> A.Ty_refOf (of_ty a0)
+>     | Eff_types.Ty_deferredOf (a0, a1) -> A.Ty_deferredOf (of_ty a0, of_ty a1)
+>     | Eff_types.Ty_var a0 -> A.Ty_var a0

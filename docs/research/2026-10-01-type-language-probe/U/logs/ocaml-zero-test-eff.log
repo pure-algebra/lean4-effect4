@@ -1,0 +1,33 @@
+  pIllInterruptor      95 ok       identical  equal  ill   ill-typed
+  pProvide            945 ok       identical  equal  typed {"answer":["nat"],"error":["never"],"requir…
+  pSleep              180 ok       identical  equal  typed {"answer":["nat"],"error":["never"],"requir…
+  pDiamond            346 ok       identical  equal  ill   ill-typed
+  pMergeAll           729 ok       identical  equal  typed {"answer":["bool"],"error":["never"],"requi…
+  pExternal            84 ok       identical  equal  ill   ill-typed
+  pIllExternalDomain    160 ok       identical  equal  ill   ill-typed
+  pFailText            70 ok       identical  equal  typed {"answer":["never"],"error":["string"],"req…
+  pIllFailBool         67 ok       identical  equal  ill   ill-typed
+  pIllCauseBool        85 ok       identical  equal  ill   ill-typed
+  pCatchError         179 ok       identical  equal  typed {"answer":["nat"],"error":["never"],"requir…
+  pCatchIf            292 ok       identical  equal  typed {"answer":["nat"],"error":["nat"],"requires…
+  pIllCatchIf         179 ok       identical  equal  ill   ill-typed
+test_eff: 451 checks, 0 failures
+prop_wire: 6250 checks, 0 failures (seed 42)
+test_val_frames: the ref (11) and handle (12) frames
+  val_handle       59 bytes  emit=golden  decode=tree
+  val_ref          75 bytes  emit=golden  decode=tree
+test_val_frames: 26 checks, 0 failures
+  program       bytes  decode    re-encode  vs goldens/<name>.bin
+  p42              66  ok        identical  identical
+  pAwait          159  ok        identical  identical
+  pBind           199  ok        identical  identical
+  pCatch          206  ok        identical  differs at 8 (8e vs c5) — different programs, same name
+  pFork           290  ok        identical  identical
+  pGen            484  ok        identical  differs at 8 (09 vs db) — different programs, same name
+  pLoop           494  ok        identical  (no golden of that name)
+  pScope          329  ok        identical  (no golden of that name)
+test_lean_wire: 117 checks, 0 failures
+metadata: 167 checks passed
+opam exec --switch=effect4 -- dune test eff -j 2 --force 2>&1  0.09s user 0.14s system 17% cpu 1.288 total
+tail -30  0.00s user 0.00s system 0% cpu 1.288 total
+exit 0

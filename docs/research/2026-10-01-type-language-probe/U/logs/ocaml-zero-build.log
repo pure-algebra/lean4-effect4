@@ -1,0 +1,3 @@
+opam exec --switch=effect4 -- dune build -j 2 2>&1  30.55s user 11.68s system 171% cpu 24.591 total
+tail -20  0.00s user 0.00s system 0% cpu 24.591 total
+exit 0

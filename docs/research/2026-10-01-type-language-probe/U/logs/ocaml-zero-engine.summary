@@ -1,0 +1,94 @@
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== lane Q2: the timer store (OCaml 5.1.1) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== lane D: the drive loop, the conversion, the two instances of the generated engine ==
+== 1. G0 on both instances (fuel 1000) ==
+== 2. the byte corpus: 37 programs, Fast vs Ref (fuel 1000) ==
+PASS Fast = Ref on every golden: outcome, exits, fibers, trace, store (53/53)
+== 3. the ordinal pin (M17) ==
+== 4. replay_steps (EN4) ==
+PASS Fast generated clock: load starts at zero
+PASS Fast generated clock: advance beyond max_int settles
+PASS Fast generated clock: large advance retains every digit
+PASS Fast generated clock: add seven settles
+PASS Fast generated clock: addition beyond max_int is exact
+PASS Fast generated clock: register sleep settles
+PASS Fast generated clock: sleep stores the exact now plus duration
+PASS Fast generated clock: advance before deadline settles
+PASS Fast generated clock: timer remains pending one millisecond before its deadline
+PASS Fast generated clock: cross deadline settles
+PASS Fast generated clock: timer fires and advance finishes at its exact target
+PASS Fast generated clock: add another large advance settles
+PASS Fast generated clock: successive large advances exceed signed 64-bit exactly
+PASS Fast exact clock: large adjustment is accepted
+PASS Fast exact clock: clockNow explicitly refuses the numeric profile
+PASS Fast exact clock: mid-decision refusal retains the input machine
+PASS Fast exact clock: refused decision stays unread
+PASS Fast exact clock: refusal cannot become differential agreement
+PASS Fast exact clock: halted refusal holds the input machine
+PASS Fast creation origin: the root has no fork record
+PASS Fast creation origin: spawn retains parent, daemon and exact site
+== 5. the two failwith rows of the generated prelude ==
+== W1: the GENERATED Api.run, fuel 100, 20 000 iterations, best of 3 ==
+== W2: the chain of refMake, fuel 8n+400, best of 5 ==
+== ALL PASS: 0 failure(s) in 82 checks ==
+== lane X: the differential over every corpus, three engines ==
+== 1. ocaml/eff/goldens: the byte goldens (fuel 1000) ==
+== 2. the truth corpus: the Lean-cut wire goldens (fuel 1000) ==
+== 3. the Lean corpus: the programs `make corpus` printed (random tapes, fuel sweep) ==
+FAIL the Lean corpus is present (`make corpus` writes it under .lake/corpus)
+== 4. the owed rows ==
+== 5. the comparison has teeth: one mutation per field ==
+== the cross face: the engines against harness/truth/corpus.json ==
+== totals: 64 programs, 512 tapes, 12672 positions, 25344 projection comparisons, 0 divergences, 0 profile-refused tapes, 0 raised tapes, 1.00 s ==
+== FAILED: 1 failure(s) in 32 checks ==
+== lane Q3a: the persistent log (L1-L5), the codec, and the incremental indexes (X1-X3) ==
+== the log: L1..L5 ==
+== the codec: parse_run_event_row over the rendered rows ==
+== the indexes: X1..X3 ==
+== ALL PASS: 0 failure(s) in 32 checks ==
+== lane Q3b: the query API over a run (Q1, Q3, Q4, the cost model, DF-3) ==
+== the INV-TAPE-1(query) repo gate ==
+== by_cid / by_occurrence / by_path: what they answer today ==
+== the query laws on pFork (|tape| = 40) ==
+== DF-3: query agreement over the 37 byte goldens (fuel 1000) ==
+== ALL PASS: 0 failure(s) in 21 checks ==
+== lane W: replay_steps, replay_positions and replay_to (E4_engine EN4/EN4b) ==
+== finding F1: the 64-decision tape ==
+== the refusal ==
+== ALL PASS: 0 failure(s) in 41 checks ==
+== prop_point: E4_ppath / E4_env against their list twins ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== 1 skipped ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== test_checkpoint (lane P6: E4_chunk, E4_checkpoint) ==
+== 1. E4_chunk: cutting ==
+== 2. E4_chunk: the manifest ==
+== 3. E4_checkpoint: the byte table ==
+== 4. E4_checkpoint: write, read, LOG-REL, the chain ==
+== 4b. the prev chain, the head root, the cycle refusal ==
+== 4c. a flipped byte inside a stored chunk ==
+== 5. CP9 / risk R8: closure_streaming ==
+== 6. CP10: an ephemeral checkpoint files no node ==
+== 7. CP11: image_of_machine / machine_of_image ==
+== 8. A2 §4.4 / bench B7: 64 consecutive checkpoints of chain n=2000 ==
+== ALL PASS: 0 failure(s) ==
+   107 checks
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
+== ALL PASS: 0 failure(s) ==
