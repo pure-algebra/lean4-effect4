@@ -23,6 +23,13 @@ The cases and what each one holds (the evidence words of the seat's receipt):
   elim-record           tested: the `elim` kind on the record fixture; the output compiles
   elim-val-agrees       proved: on `Store.Val` the generated companions are the hand ones
   fold-record           tested: the fold group of the nested record fixture compiles
+  view-record           tested: the view at a field-list head (no table: today's literal rule) compiles
+  view-no-arity         tested: a field-list head whose variance row has no arity word is refused
+  view-leaf-one         tested: the view in table mode at today's one edge (`lit < string`) compiles
+  view-leaf-cyclic      tested: a cyclic leaf-order table is refused by name before a line is written
+  variances-module      tested: the variances producer's core module (`--lean-out`) compiles
+  wave-view             tested: the wave fixture (variable-arity heads and the four-edge table) compiles
+  wave-controls         proved: `nat ⊑ number` accepted, its converse rejected, through the restated laws
 """
 import argparse
 import json
@@ -111,6 +118,30 @@ class Context:
 
 
 FOLD = 'tools/Effect4Gen/Fold.lean'
+VIEW = 'tools/Effect4Gen/View.lean'
+VARIANCES = 'tools/Tools/Variances.lean'
+VIEW_IMPORTS = 'Effect4.Laws.Auto.RuleSets,Effect4.Machine.Alphabets'
+
+
+def variances_with(cx, name, rows):
+    """Today's variance table with fixture head rows appended, written to the scratch tree: the
+    rows a commit-4 constructor would carry, without touching the tracked table."""
+    table = json.loads((ROOT / 'tools/Effect4Gen/variances.json').read_text())
+    table['heads'] += rows
+    out = cx.build / name
+    out.write_text(json.dumps(table, indent=1))
+    return out
+
+
+RECORD_ROW = {'head': 'record', 'source': 'printer', 'arity': 'each', 'variance': ['co'],
+              'spelling': '{ readonly a: A; … }', 'note': 'fixture: every field covariant (readonly)'}
+WAVE_ROWS = [RECORD_ROW,
+             {'head': 'map', 'source': 'printer', 'variance': ['inv', 'co'],
+              'spelling': 'Readonly<Record<K, V>>', 'note': 'fixture: key exact, value covariant'},
+             {'head': 'tuple', 'source': 'printer', 'arity': 'each', 'variance': ['co'],
+              'spelling': 'readonly [A, B, C]', 'note': 'fixture: every item covariant'},
+             {'head': 'app', 'source': 'declarations', 'arity': 'byName', 'variance': [],
+              'note': "fixture: each argument at the named declaration's variance"}]
 
 
 # ------------------------------------------------------------------------- the cases
@@ -160,12 +191,109 @@ def fold_record(cx):
     cx.compile(out, cx.src)
 
 
+def view_record(cx):
+    table = variances_with(cx, 'variances-record.json', [RECORD_ROW])
+    out = cx.gen('GenFix/Record/TyView.lean')
+    cx.tool(VIEW, ['--group', 'TyView', '--imports', 'GenFix.Record.Fold,' + VIEW_IMPORTS,
+                   '--variances', str(table), '--out', str(out), 'GenFix.Record.Ty'])
+    text = out.read_text()
+    if 'litRule' not in text or 'leafRule' in text:
+        raise CaseFailed('TyView: a family with no leaf table must read today\'s literal rule')
+    cx.compile(out, cx.src)
+
+
+def view_no_arity(cx):
+    row = {k: v for k, v in RECORD_ROW.items() if k != 'arity'}
+    table = variances_with(cx, 'variances-record-no-arity.json', [row])
+    cx.tool(VIEW, ['--group', 'TyView', '--imports', 'GenFix.Record.Fold,' + VIEW_IMPORTS,
+                   '--variances', str(table), '--out', str(cx.gen('Refused/TyView.lean')),
+                   'GenFix.Record.Ty'],
+            expect_fail='View: `Ty.record` has variable arity')
+
+
+def view_leaf_one(cx):
+    cx.compile(FIXTURES / 'GenFix/LeafOne/Ty.lean')
+    fold = cx.gen('GenFix/LeafOne/Fold.lean')
+    cx.tool(FOLD, ['--group', 'Fold', '--imports', 'GenFix.LeafOne.Ty', '--out', str(fold),
+                   'GenFix.LeafOne.Ty'])
+    cx.compile(fold, cx.src)
+    out = cx.gen('GenFix/LeafOne/TyView.lean')
+    cx.tool(VIEW, ['--group', 'TyView', '--imports', 'GenFix.LeafOne.Fold,' + VIEW_IMPORTS,
+                   '--out', str(out), 'GenFix.LeafOne.Ty'])
+    text = out.read_text()
+    for needed in ['hleaf : leafRule a b = false', 'theorem leafLe_antisymm', 'theorem leafRule_trans',
+                   'theorem sub_eq_leafRule_of_not_sameHead', 'lit_string :']:
+        if needed not in text:
+            raise CaseFailed(f'TyView: table mode did not emit {needed!r}')
+    if re.search(r'\blitRule\b', text):
+        raise CaseFailed('TyView: table mode still emits `litRule`')
+    cx.compile(out, cx.src)
+
+
+def view_leaf_cyclic(cx):
+    cx.compile(FIXTURES / 'GenFix/LeafCyclic/Ty.lean')
+    out = cx.gen('Refused/LeafCyclic.lean')
+    cx.tool(VIEW, ['--group', 'TyView', '--imports', 'GenFix.LeafCyclic.Ty', '--out', str(out),
+                   'GenFix.LeafCyclic.Ty'],
+            expect_fail='is cyclic: its closure puts `nat` below `int` and `int` below `nat`')
+    if out.exists():
+        raise CaseFailed('the refused view wrote its output anyway')
+
+
+def variances_module(cx):
+    cx.compile(FIXTURES / 'GenFix/Wave/TyCore.lean')
+    module = cx.gen('GenFix/Wave/TyVariance.lean')
+    cx.tool(VARIANCES, [str(cx.build / 'variances-wave-out.json'), '--lean-out', str(module),
+                        '--lean-namespace', 'GenFix.Wave'])
+    text = module.read_text()
+    for needed in ['def argVariance', 'def declaredVariance', '"Layer.Layer" => [.contra, .co, .co]']:
+        if needed not in text:
+            raise CaseFailed(f'TyVariance: no {needed!r}')
+    cx.compile(module, cx.src)
+
+
+def wave_view(cx):
+    eq = cx.gen('GenFix/Wave/TyEq.lean')
+    cx.tool(FOLD, ['--group', 'TyEq', '--imports', 'GenFix.Wave.TyCore', '--out', str(eq),
+                   '--kind', 'GenFix.Wave.Ty=elim', 'GenFix.Wave.Ty'])
+    cx.compile(eq, cx.src)
+    cx.compile(FIXTURES / 'GenFix/Wave/Ty.lean')
+    fold = cx.gen('GenFix/Wave/Fold.lean')
+    cx.tool(FOLD, ['--group', 'Fold', '--imports', 'GenFix.Wave.Ty', '--out', str(fold), 'GenFix.Wave.Ty'])
+    cx.compile(fold, cx.src)
+    table = variances_with(cx, 'variances-wave.json', WAVE_ROWS)
+    out = cx.gen('GenFix/Wave/TyView.lean')
+    cx.tool(VIEW, ['--group', 'TyView', '--imports', 'GenFix.Wave.Fold,' + VIEW_IMPORTS,
+                   '--variances', str(table), '--out', str(out), 'GenFix.Wave.Ty'])
+    text = out.read_text()
+    for needed in ['#guard Ty.sub .nat .number  -- derived through the closure, not an entry',
+                   '#guard !Ty.sub .number .nat', 'theorem sub_args_record', 'theorem sub_args_app',
+                   'theorem leafHead_facts', 'normalize t = t', 'nat_int :', 'undefined_unit :']:
+        if needed not in text:
+            raise CaseFailed(f'TyView: the wave view did not emit {needed!r}')
+    cx.compile(out, cx.src)
+
+
+def wave_controls(cx):
+    text = cx.compile(FIXTURES / 'GenFix/Controls/WaveOrder.lean')
+    for name in ['nat_sub_number', 'number_not_sub_nat', 'undefined_sub_unit', 'unit_not_sub_undefined']:
+        if f"'GenFix.Controls.{name}'" not in text:
+            raise CaseFailed(f'WaveOrder: no axiom receipt for {name}')
+
+
 CASES = [
     ('elim-refuses-plain', elim_refuses_plain),
     ('elim-refuses-param', elim_refuses_param),
     ('elim-record', elim_record),
     ('elim-val-agrees', elim_val_agrees),
     ('fold-record', fold_record),
+    ('view-record', view_record),
+    ('view-no-arity', view_no_arity),
+    ('view-leaf-one', view_leaf_one),
+    ('view-leaf-cyclic', view_leaf_cyclic),
+    ('variances-module', variances_module),
+    ('wave-view', wave_view),
+    ('wave-controls', wave_controls),
 ]
 
 
