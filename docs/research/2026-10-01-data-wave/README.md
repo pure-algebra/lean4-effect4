@@ -34,3 +34,36 @@ Each seat: its own worktree from the base the coordinator names, commits by expl
 narrow builds, generators only where its commit says and in the fixed order, a receipt
 (`receipt-W<n>.md` here), and nothing pushed. The coordinator verifies, merges, rebuilds and records
 each landing; row 123 (decoding inside a program) follows commit 10; Queue follows for p4 and p5.
+
+## Landing style (the owner, 2026-10-01: land it quickly, cut over, add gates back at stability)
+
+The wave is a cut-over to the unified laws, not a migration beside the old ones (AGENTS: build in
+parallel, slot in, delete at a good place; the owner's 2026-09-18 rule on gate removal).
+
+- **Generated, never hand-migrated.** Every per-constructor artefact a generator can produce is
+  regenerated in the fixed order in the append commit, and the hand copy deleted in the same
+  commit: the fold group, `TyView`, the eliminator and equality, the wire tags, and (W2 to measure,
+  Q's questions 4 and 5) `tools/Conform/Effect4/cases-policy.json` and the OCaml mirrors'
+  constructor tables (`e4_program.ml`'s `of_ty` and its count, `prop_wire.ml`'s `rand_ty`,
+  `OCaml5.Eff`'s `tyO`/`tyV`, `ProfileJson.tyJson`, `LcnfMl.tyOcaml`/`tyT`, `LcnfSemantics.tyValue`)
+  generated from the family description where the generator reaches them. A hand table that
+  stays is named in the receipt with the reason.
+- **Laws stated once over the signature.** The order and membership laws (S6) land as theorems
+  over the signature's description (the congruence rows, the declared leaf-order table, the union
+  rules), and the per-constructor proofs they subsume are deleted in the same commit; the receipt
+  lists them by name (plan §5 item 1). A new constructor after the wave costs its arms and no law.
+- **The gates that run during the wave** are the ones with a reader: the trust gate (`lake build
+  Effect4.Laws Test.All`, the axiom audit), `make check-gen` (byte-identity of the generated
+  groups: the conservativity instrument), `dune build` and `make check-ocaml`, `make check-target`
+  and `make check-truth` where a commit touches the faces, and the acceptance batteries (the
+  counterexample register's controls, red and green). `make check-cases`, the exhaustive fixtures'
+  pins ("alts 20") and the traversal census's pins are regenerated or re-pinned by the seat that
+  changes the family, never hand-maintained against it; a pin that only restates a count is deleted
+  rather than updated.
+- **Added back after v0.** When commit 10 passes (p2's handler with host-side decoding), the
+  coordinator runs `make check-full` once, reads what it says, and keeps the sweeps that found
+  something or that a document names as a reader's instrument; the rest are retired with a dated
+  line in `docs/GENERATED.md` or the Makefile, not left to rot.
+- **No shortcut on rigor.** Unchanged: `[propext, Quot.sound]` everywhere, no `sorry`/`partial`/
+  `unsafe`, every statement kept or refuted with its history, every traversal a fold or generated.
+  Speed comes from deleting duplicates and hand tables, not from weakening a judgment.

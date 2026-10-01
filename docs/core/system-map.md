@@ -388,3 +388,24 @@ signature row or an `app` declaration and reopens no law; a new machine behaviou
 site with its clause or a command with its instance; and M7's claim is reached by the one route.
 Until then, the open counts above are the distance, and every row of this table is re-checked at
 each landing like §8.
+
+### 10.4 What stability buys, in outcomes (the owner's question, 2026-10-01)
+
+The criteria are not an end: each exists because an outcome a user can see depends on it, and
+"stable" means that adding the next form or behaviour cannot take an earlier outcome away. One row
+per outcome, with the construction that delivers it, the acceptance that demonstrates it, and the
+status. This is the table a release reads; §10.3 is the table a landing reads.
+
+| Outcome (what a user does) | Delivered by | Demonstrated by | Status (2026-10-01) |
+| --- | --- | --- | --- |
+| O1 author a complex program as data: records with optional fields, tagged unions, maps, tuples, nominal references to Effect's module types, error payloads, numbers, `null`/`undefined`, through the authoring surface and its generated forms, with located refusals | construction 1 (the closed signature, S6) and the checker (construction 2) | the data wave's p2 handler (commit 10) and p1, p3, p5 as far as their non-data needs allow; the typed corpus; the admission census | the forms are probed (rows 157–167); the wave lands them once (row 162) |
+| O2 run it: the machine executes it under the host session with scripted host answers, every exit typed, every store typed, never halting on the fragment | constructions 3 and 4 (S1–S3, S5) and the route (construction 5) | `run_eq_ref` at the empty table; the truth harness's differential (121/127 agree); M7's three lines once M5 and M6 close | the route proved; M5, M6 open (wave 2) |
+| O3 print it as idiomatic TypeScript that tsgo 7 accepts and that behaves as rc.112, and read it back exactly | the faces (`read_print`, `read_exact`), the exact embeddings (S7), the vendored syntax after row 164 | `check-target` (row 68's vectors, both readings), `check-truth` (the corpus differential), the p2 printed module against its idiomatic signatures | present forms green; the wave's commits 8–10 for the new forms |
+| O4 lower it to a concrete implementation: the OCaml engine from LCNF, the CAS store with content addresses, byte-identical generated groups | the generated groups (one producer order), the LCNF route, conservativity (DI-47) | `make check-gen`, `dune build`, `make check-ocaml`, the CAS goldens; `run_eq_ref` carried through `replayR_bmeans_reachable` | green today; the wave regenerates once (row 162) and keeps the goldens byte-identical |
+| O5 extend it without reopening O1–O4: a new Effect module is a row table or an `app` declaration, a new behaviour is a halting site with its clause or a command with its instance | S3, S4, S6 | the census instrument (row 143), §10.3's table re-checked at each landing | holds once S5–S7 close |
+| O6 the proof infrastructure stays manageable: obligations are declared by name, searched by `aesop` banks, counted per scope, and the map is measured, not drawn | the ledger commands (`#typed_state_obligations`, `#obligation_proved`, `#obligation_audit`), the banks (row 65), the architecture map (`make gen-architecture`) | the open counts per scope; the map's "0 imports against the direction" | in place; the counts are the distance |
+
+The link the owner asked for: O1 is why S6 matters (a form the signature cannot say is a program a
+user cannot write); O2 is why S1–S5 matter; O3 and O4 are why S7 and the generated groups matter;
+O5 is what "stable" means for the next slice; O6 is the tooling that makes the rest affordable.
+A criterion with no row here is not a criterion.
