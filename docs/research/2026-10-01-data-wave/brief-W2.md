@@ -80,3 +80,12 @@ are commit 4's data rows. Probe U's amendment (the hand tables generated) is sti
 message; the Makefile: add `check-conservativity` as its own rule at the end of the checks block
 and touch neither `check:`'s prerequisite line, `CHECKS`, nor the help text (seat J2 edits those;
 the coordinator wires yours in after both merge).
+
+## Amendment 3 (2026-10-01, Codex 20:46 and 21:16, verified): the checker's revisions
+
+Row 172 is amended (sent to the seat by message): `conservativity.py` resolves each supplied
+revision to a commit before reading (`git rev-parse --verify <rev>^{commit}`, a named refusal),
+fails on a git execution error, keeps an absent historical file distinct from an unreadable
+revision, and its self-test gains invalid-base, invalid-candidate and invalid-both, each also
+under `--strict`, all refusing with exit 1, beside the ten controls. Codex's fixture evidence:
+`reviews/codex-2046-conservativity/`.

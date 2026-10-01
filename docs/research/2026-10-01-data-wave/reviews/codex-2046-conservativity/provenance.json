@@ -1,0 +1,8 @@
+{
+  "source_repo": "/Users/pooks/Dev/lean4-effect4-probe-Q",
+  "revision": "6f77dd571c72ab095117b491341b1c5825806a0a",
+  "source_path": "docs/research/2026-10-01-type-language-probe/Q/bin/conservativity.py",
+  "sha256": "24ed40bcaa9e3a07a14056a1d4f2eb52ba34016c73e31dfa7a969332cbb74b20",
+  "timestamp": "2026-10-01T20:52:25.387990+00:00",
+  "scope": "Exact source snapshot; standalone temporary Git fixture; serial read-only checker invocations with 20s timeout; no compiler"
+}

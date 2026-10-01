@@ -79,3 +79,12 @@ Seat S's half (above, from S §7.1) stands where it does not conflict; where S w
 by a guard", P's plain-reader proof replaces it. The register: `E4-SCHEMA-CE-061` stays as the
 defect-id finding (S); the red controls above are fixtures, not register rows, unless one changes
 a declaration. Codex's 20:16 finding (`E4-SCHEMA-CE-062`) is W5's, not yours.
+
+## Amendment 2 (2026-10-01, Codex 21:16, verified): check annotations
+
+Row 179 covers a check's annotations too (sent to the seat by message): `N_S` applies `normAnn`
+in its `check_filter`/`check_filterGroup` arms, the number arm compares the normalised whole check
+with the bare `isIntCheck`/`nonNegativeCheck`, the number case of `ofSchema_exact` is extended,
+and three controls land: the documented `isInt` accepted at `int` (with the nonnegative check at
+`nat`), the same check with a non-documentation key refused at `["checks[i]"]`, S's `red_ge5` and
+`groupedInt` still red.

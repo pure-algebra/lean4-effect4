@@ -1,0 +1,24 @@
+# 21:16 independent review
+
+Integration pin `4034bd5ee6c33c904e947c80b6b72c6b81966b89` on `refactor/phase1-phase3`. Fresh screenshot and accessibility state confirmed the correct Claude project/session, latest coordinator message, active subagents and background commands. [Activity](2116-claude-activity.json), [worktrees](2116-worktrees.json). P/Q research is now merged. D2, D3, D4, J2 and U are active; W1/W2 await the dependency-pin build. The pin and consumer updates were uncommitted, so they were not treated as part of the reviewed head.
+
+## New static finding: W1's accepted annotations exceed the reader it is told to copy
+
+[W1:47–49](/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-wave/brief-W1.md:47) allows documentation annotations on integer/nonnegative filter checks. Its new dispatch instructions select P's plain-reader exactness proof and substitute row179's annotation allowlist. But [P's number reader:93–96](/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-type-language-probe/P/probes/P8Schema.lean:93) compares entire checks to the annotation-free checks, and its normalizer leaves check annotations intact (:72–73). Merely substituting the node-annotation allowlist leaves a documented integer check refused.
+
+**Action before W1 closes:** align the accepted filter profile with the reader and its normalizer. If documentation on checks is accepted, normalize those permitted annotations before whole-check comparison and in the schema normalizer, then extend the number-case proof and add accepted/rejected controls. Otherwise explicitly retain the narrower accepted profile. Continue refusing unknown or meaning-changing annotations.
+
+This is a source-confirmed specification/implementation-recipe mismatch, not a refutation of P's exactness theorem. The small counterexample is not independently compiled. [Detailed independent review and proposed control](2116-p-exactness-review.md) also checks the proof boundary: today's forms only; JSON duplicates retained by normalization; ordered unions retain the canonical-branch rule; encoder successful-value domain still restricted; bridge-level writer and closed/reserved-name premises named. P's committed build/axiom logs were inspected, not rerun. No new-constructor or host-equivalence theorem is established by that copy.
+
+## Previous checker bug now reaches an imminent production dispatch
+
+The compatibility checker merged with Q is byte-identical to the source already tested at 20:46 ([hash comparison](2116-q-comparison.json)). [W2:53–56](/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-wave/brief-W2.md:53) now tells the seat to promote it to `scripts/check-conservativity.sh`, with the existing ten controls and a Make target; it contains no invalid-revision amendment. Thus the previously confirmed false PASS on two unreadable revisions remains. The wrapper adds no validation. Fix commit resolution/error handling and add invalid-base, invalid-candidate and invalid-both controls before using this as acceptance evidence. No repeated test was needed: the exact source hash matches [the isolated successful/failing controls](2046-conservativity/results.json).
+
+## Meaningful progress and pending work
+
+- The coordinator now records the earlier reference-chain candidate as seeded on D2 and assigns its statement repair, alongside completed-view and service-table findings in row175. D2 is actively changing the relevant judgments; its updated proof receipt is not yet complete. This is coordinator-reported kernel evidence, not independently reproduced here. The public loader still rejects the malformed-reference root.
+- D3 committed eight refutations of outstanding command/edit statements at `5789df56`, with logs and proposed additional state conditions: timers, deferred waiters, terminal stacks, observer/race key disjointness and fresh-id bounds. Its draft receipt labels the statements false on constructed typed states and keeps them open. These are not by themselves checked reachable-program runtime bugs. The existing broad stability claims in the main system map remain too strong; the new evidence reinforces the earlier review rather than establishing a fresh version of it.
+- D4 now implements the explicitly ratified finalizer/closed-row choices. Part two's service-presence design stays open. M7 remains restricted; there is no new completed machine-safety claim.
+- U is using fold laws in concrete copy proofs, and is now measuring lowering. The visible LCNF attempts were refused on a polymorphic algebra parameter; the wrapper's exit0 does not make them successes. No final lowering claim was seen, so this is ongoing work rather than a reported defect.
+
+No active repository/worktree/branch/UI draft was edited. No messages were sent to Claude or its seats. One bounded static reviewer was used; no compiler, generator, build or installation ran in this review.

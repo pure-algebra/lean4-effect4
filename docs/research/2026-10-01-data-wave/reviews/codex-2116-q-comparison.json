@@ -1,0 +1,6 @@
+{
+  "main_pin": "4034bd5ee6c33c904e947c80b6b72c6b81966b89",
+  "checker_path": "docs/research/2026-10-01-type-language-probe/Q/bin/conservativity.py",
+  "matches_tested_defective_source": true,
+  "sha256": "24ed40bcaa9e3a07a14056a1d4f2eb52ba34016c73e31dfa7a969332cbb74b20"
+}
