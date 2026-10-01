@@ -117,14 +117,14 @@ theorem FMeans.publish (h : FMeans root f₁ f₂) (exit : ExitV) :
   unfold RunFiber.publish
   dsimp only [FiberCore.setDeferred, frameCore, termCore]
   exact FMeans.mk' h.id rfl h.context rfl rfl rfl rfl h.opCount h.maxOps h.preventYield
-    h.yieldOverride h.observers h.children h.dispatcher (means_setDeferred h.means false) h.origin
+    h.yieldOverride h.observers h.children h.dispatcher (means_setDeferred h.means false)
 
 theorem FMeans.cleared (h : FMeans root f₁ f₂) :
     FMeans root (f₁.cleared (interpOf root)) (f₂.cleared (interpR root)) := by
   unfold RunFiber.cleared
   dsimp only [FiberCore.clearStack, frameCore, termCore]
   exact FMeans.mk' h.id h.parked rfl h.running h.pending h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride rfl rfl h.dispatcher (means_clearStack h.means) h.origin
+    h.preventYield h.yieldOverride rfl rfl h.dispatcher (means_clearStack h.means)
 
 theorem FMeans.runloopTop (h : FMeans root f₁ f₂) :
     FMeans root (runloopTop f₁) (runloopTop f₂) := by
@@ -145,7 +145,7 @@ theorem FMeans.countdownEntry (h : FMeans root f₁ f₂) (token : Nat) (w : Opt
       { f₂ with pending := f₂.pending.map fun q =>
         if q.token = token then { q with waitingOn := w, remaining := rem, collected := exits } else q } :=
   FMeans.mk' h.id h.parked h.context h.running rfl h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
+    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
 
 end FiberShapes
 
@@ -612,7 +612,7 @@ theorem exitInterruptChildren_rel (root : NativeEff) {m₁ : FMachine} {m₂ : R
   · exact pendingOk_of_fields hp rfl
   · exact FMeans.mk' hf.id hf.parked hf.context rfl hf.pending rfl hf.exit hf.opCount hf.maxOps
       hf.preventYield hf.yieldOverride hf.observers hf.children hf.dispatcher
-      (means_answerWith (means_setDeferred hf.means false) hcode) hf.origin
+      (means_answerWith (means_setDeferred hf.means false) hcode)
 
 theorem exitStore_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState}
     (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
@@ -751,7 +751,7 @@ theorem drive_resume (id : FiberId) (token : Nat) {c₁ : NCode} {c₂ : RProgra
         · exact pendingOk_filter (pendingOk_of_fiber? hok h₁) _ rfl
         · exact FMeans.mk' ht.id rfl ht.context ht.running (by rw [ht.pending]) ht.finalizing ht.exit
             ht.opCount ht.maxOps ht.preventYield ht.yieldOverride ht.observers ht.children ht.dispatcher
-            (means_answerWith ht.means hc) ht.origin
+            (means_answerWith ht.means hc)
       · rw [if_neg he, if_neg he]
         exact CmdsRel.mk' hok hm hr
 

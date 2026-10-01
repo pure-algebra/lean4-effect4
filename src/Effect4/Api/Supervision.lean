@@ -211,7 +211,8 @@ def pinOf (f : Fiber) : Option (Nat × Nat) :=
 
 /-- What the machine holds this fiber by: four observations, all of them machine state — its
 own exit, the fiber whose `children` name it, the scope link on its own observer list, and
-its origin. -/
+its origin in the fork ledger. Comparisons with the retired fiber field apply only
+to member fibers of well-formed machines; the total fallback for an absent id is root. -/
 def statusOf (m : Machine) (f : Fiber) : FiberStatus :=
   match f.exit with
   | some exit => .exited exit
@@ -222,9 +223,9 @@ def statusOf (m : Machine) (f : Fiber) : FiberStatus :=
       match pinOf f with
       | some (scope, key) => .pinned scope key
       | none =>
-        match f.origin with
-        | .forked _ _ _ => .daemon
-        | .root => .root
+        match m.originOf f.id with
+        | some (.forked _ _ _) => .daemon
+        | _ => .root
 
 /-- Every fiber of the run with what holds it, in creation order (`spawn` appends and nothing
 removes a fiber, `Machine/Fibers.lean:922`). -/
@@ -264,12 +265,10 @@ def Inspection.unpinnedDaemonsAlive (r : Inspection) : List FiberId :=
 /-- Whether the run left no unpinned daemon alive. -/
 def Inspection.daemonsQuiet (r : Inspection) : Bool := Api.daemonsQuiet r.machine
 
-/-- Every fork recorded on the run's fibers, with its parent and daemon flag. -/
+/-- Every fork recorded in the machine ledger, with its parent and daemon flag,
+in creation order. Roots have no fork record. -/
 def Inspection.forked (r : Inspection) : List (FiberId × FiberId × Bool) :=
-  r.machine.fibers.filterMap fun f =>
-    match f.origin with
-    | .forked parent daemon _ => some (parent, f.id, daemon)
-    | .root => none
+  r.machine.forks.map fun record => (record.parent, record.child, record.daemon)
 
 /-! ## Receipts -/
 
@@ -343,7 +342,7 @@ driver and not by anything in the machine. Running programs is the battery's job
 private def loaded : Machine := load (.succeed (.lit (.nat 1))) 100
 
 #guard (loaded.fibers.map RunFiber.id) = [root]
-#guard loaded.fibers.map RunFiber.origin = [.root]
+#guard loaded.fibers.map (fun f => loaded.originOf f.id) = [some .root]
 #guard fiberStatuses loaded = [(root, .root)]
 #guard unpinnedDaemonsAlive loaded = []
 #guard daemonsQuiet loaded

@@ -1,0 +1,1 @@
+['rg', '-n', '\\.origin\\b|RunFiber\\.origin|origin : Origin|origin := ', 'src', 'Test', '--glob', '*.lean']

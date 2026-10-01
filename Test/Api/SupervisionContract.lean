@@ -92,12 +92,12 @@ def pinnedRun : Api.Inspection := Api.run pinnedDaemon 400 [] table
 #guard Api.Inspection.forked looseRun = [(⟨0⟩, ⟨1⟩, true)]
 #guard Api.Inspection.forked pinnedRun = [(⟨0⟩, ⟨1⟩, true)]
 
-#guard childRun.machine.fibers.map RunFiber.origin =
-  [.root, .forked ⟨0⟩ false [0, 0]]
-#guard looseRun.machine.fibers.map RunFiber.origin =
-  [.root, .forked ⟨0⟩ true [0, 0]]
-#guard pinnedRun.machine.fibers.map RunFiber.origin =
-  [.root, .forked ⟨0⟩ true [0, 0, 0]]
+#guard childRun.machine.fibers.map (fun f => childRun.machine.originOf f.id) =
+  [some .root, some (.forked ⟨0⟩ false [0, 0])]
+#guard looseRun.machine.fibers.map (fun f => looseRun.machine.originOf f.id) =
+  [some .root, some (.forked ⟨0⟩ true [0, 0])]
+#guard pinnedRun.machine.fibers.map (fun f => pinnedRun.machine.originOf f.id) =
+  [some .root, some (.forked ⟨0⟩ true [0, 0, 0])]
 
 -- Replacing the diagnostic trace does not change supervision.
 #guard [childRun, looseRun, pinnedRun].all fun r =>

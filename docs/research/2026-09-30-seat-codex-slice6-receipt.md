@@ -3,9 +3,9 @@
 ## After addendum 4
 
 **The one thing first.** The model-probe audit is committed at
-`2d27419eab723f265e718a0f7a82708f560c04a2`. Item A landed at `90df5d21a4d33ad9d5330e090ea102024a318d66`. C step 3 now passes its
-local laws and finite comparison. **C is not integration-ready:** the old origin field remains,
-readers have not moved, and the engine has not been regenerated. C steps 4–5 and D's held users,
+`2d27419eab723f265e718a0f7a82708f560c04a2`. Item A landed at `90df5d21a4d33ad9d5330e090ea102024a318d66`. C step 3 is committed at
+`be6631ab`; step 4 now passes its reader/relation checks. **C is not integration-ready:** the
+old origin field remains and the engine has not been regenerated. C step 5 and D's held users,
 then F, G and H1, remain in that order. H2 and proposed D1–D6 remain held for the coordinator. Nothing has been pushed.
 
 Continuation base: `f437b066` (the tracked audit brief), then audit commit `2d27419e`.
@@ -96,6 +96,49 @@ argv, worktree, result and output for each command, with `LEAN_NUM_THREADS=1`.
 
 No generator, OCaml check, full battery or `make check` was run for this beside checkpoint;
 step 5 owns those checks. The comparison runner must retire in the same commit as the old field.
+
+### C — step 4, readers and relations
+
+Base: `be6631ab`. All amended checklist readers now use the machine ledger. The old fiber field
+and its comparison runner remain until step 5. `readers-census.log` shows only that runner and
+mechanical make-argument plumbing still using the old field (Codegen's unrelated `Origin` is
+unchanged). There is no additional operational reader or fork writer.
+
+`originEntries` is now the ordered **fork-only** ledger projection; roots are absent there.
+`load_origins` separately proves both the empty ledger and the root's `originOf = some root`.
+Append/source statements remain unconditional append statements. The source allocation bridge
+also has a separate exact lookup law with explicit fiber and record freshness. World Γ freshness
+is not silently used as runtime freshness. Fresh-child status requires a fresh record lookup;
+existing member status uses the distinct allocated id. These statements do not claim lookup/field
+agreement for an arbitrary detached fiber value.
+
+The book and native/reference relation compare the complete machine ledger. FiberControl no
+longer stores origin. `bookMeans_controls_forks` names the combined control-and-provenance
+observation; exit/store observations and trace exclusion are unchanged. Mechanical relation
+consumers in Simulation and RuntimeR moved with that signature. The guard's exact `spawn_machine`
+equation includes the record append, with a separate lemma that GuardState ignores provenance.
+No guard condition or typing judgment was weakened.
+
+Changed implementation paths are in `C/step4-paths.json` (paths relative to this worktree).
+Commands in `C/`:
+- `lake build Effect4.Laws.Api.Supervision Effect4.Laws.Program.RuntimeR
+  Effect4.Laws.Program.Typed.ForkSource Test.Api.SupervisionContract`: exit 0, 367 jobs
+  (`readers-2`). The first run exposed only the exact-machine construction in `spawn_rel`;
+  the explicit fork-field transport fixed it.
+- `lake build Effect4.Laws.Program.Guard.Core`: exit 0, 305 jobs (`readers-guard-final`).
+  Earlier guard-dependency logs retain the exact-record equation and elaboration repairs.
+- `lake env lean -DwarningAsError=true
+  docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/C/readers-axioms.lean`:
+  exit 0. All 22 printed new/restated laws are at `[propext, Quot.sound]` or less.
+- The affected origin gates have zero open obligations: API 18 proved, Book 2,
+  Simulation/Fibers 6, Simulation/Actions 10, Guard 18, ForkSource 2.
+- `git diff --check`: exit 0 for implementation/receipt paths.
+
+D research preparation is retained without claiming it landed: `InvariantCandidate.lean` passed
+as `invariant-4` after its generic allocation/transport lemmas were repaired. Its command-level
+premise is explicit. `InvariantFullCandidate.lean` adds an **uncompiled** concrete native command
+candidate. Neither is the required whole-run proof yet. There is no new library invariant or
+StepInv bank at this checkpoint, and no generated change.
 
 ## First receipt — historical status before addendum 4
 

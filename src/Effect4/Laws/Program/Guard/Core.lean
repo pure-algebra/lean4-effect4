@@ -3421,6 +3421,12 @@ theorem internalKeys_spawnAppend (m : NativeMachine) (child : NFiber)
   change _ ++ (_ ++ fiberKeys child) = _
   rw [keys, List.append_nil]
 
+/-- The guard observes scheduling and code ownership, independently of provenance records. -/
+theorem guardState_forks {m : NativeMachine} (state : GuardState m) (records : List ForkRecord) :
+    GuardState { m with forks := records } := by
+  cases state
+  constructor <;> assumption
+
 theorem guardState_spawnAppend {m : NativeMachine} (state : GuardState m)
     (child : NFiber) (fresh : child.id.value = m.nextId)
     (valid : FiberGuardState { m with nextId := m.nextId + 1 } child)
@@ -3499,13 +3505,15 @@ abbrev spawnedChild (p : NativeEff) (table : RowTable) (m : NativeMachine)
 
 theorem M1Origin.spawn_machine (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).1 =
-      (spawnAppend m (spawnedChild p table m parent code options site)).emit
+      ({ (spawnAppend m (spawnedChild p table m parent code options site)) with
+        forks := m.forks ++ [(⟨⟨m.nextId⟩, parent.id, options.daemon, site⟩ : ForkRecord)] }).emit
         [.forked parent.id ⟨m.nextId⟩ options.daemon]) := ⟨⟩
 
 theorem spawn_machine (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
     (spawn (interpOf p table) m parent code options site).1 =
-      (spawnAppend m (spawnedChild p table m parent code options site)).emit
+      ({ (spawnAppend m (spawnedChild p table m parent code options site)) with
+        forks := m.forks ++ [(⟨⟨m.nextId⟩, parent.id, options.daemon, site⟩ : ForkRecord)] }).emit
         [.forked parent.id ⟨m.nextId⟩ options.daemon] := by aesop
 
 theorem M1Origin.requestOf_spawn (p : NativeEff) (table : RowTable) (m : NativeMachine)
@@ -3540,6 +3548,7 @@ theorem guardState_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
     GuardState (spawn (interpOf p table) m parent code options site).1 := by
   rw [spawn_machine (site := site)]
   apply guardState_emit
+  apply guardState_forks
   apply guardState_spawnAppend state _ rfl
   · exact fiberGuardState_freshChild m code sites _ _ _ (.forked parent.id options.daemon site)
   · rfl

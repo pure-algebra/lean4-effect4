@@ -1,0 +1,763 @@
+--- a/src/Effect4/Api/Supervision.lean
++++ b/src/Effect4/Api/Supervision.lean
+@@ -211,7 +211,8 @@
+ 
+ /-- What the machine holds this fiber by: four observations, all of them machine state — its
+ own exit, the fiber whose `children` name it, the scope link on its own observer list, and
+-its origin. -/
++its origin in the fork ledger. Comparisons with the retired fiber field apply only
++to member fibers of well-formed machines; the total fallback for an absent id is root. -/
+ def statusOf (m : Machine) (f : Fiber) : FiberStatus :=
+   match f.exit with
+   | some exit => .exited exit
+@@ -222,9 +223,9 @@
+       match pinOf f with
+       | some (scope, key) => .pinned scope key
+       | none =>
+-        match f.origin with
+-        | .forked _ _ _ => .daemon
+-        | .root => .root
++        match m.originOf f.id with
++        | some (.forked _ _ _) => .daemon
++        | _ => .root
+ 
+ /-- Every fiber of the run with what holds it, in creation order (`spawn` appends and nothing
+ removes a fiber, `Machine/Fibers.lean:922`). -/
+@@ -264,12 +265,10 @@
+ /-- Whether the run left no unpinned daemon alive. -/
+ def Inspection.daemonsQuiet (r : Inspection) : Bool := Api.daemonsQuiet r.machine
+ 
+-/-- Every fork recorded on the run's fibers, with its parent and daemon flag. -/
++/-- Every fork recorded in the machine ledger, with its parent and daemon flag,
++in creation order. Roots have no fork record. -/
+ def Inspection.forked (r : Inspection) : List (FiberId × FiberId × Bool) :=
+-  r.machine.fibers.filterMap fun f =>
+-    match f.origin with
+-    | .forked parent daemon _ => some (parent, f.id, daemon)
+-    | .root => none
++  r.machine.forks.map fun record => (record.parent, record.child, record.daemon)
+ 
+ /-! ## Receipts -/
+ 
+@@ -343,7 +342,7 @@
+ private def loaded : Machine := load (.succeed (.lit (.nat 1))) 100
+ 
+ #guard (loaded.fibers.map RunFiber.id) = [root]
+-#guard loaded.fibers.map RunFiber.origin = [.root]
++#guard loaded.fibers.map (fun f => loaded.originOf f.id) = [some .root]
+ #guard fiberStatuses loaded = [(root, .root)]
+ #guard unpinnedDaemonsAlive loaded = []
+ #guard daemonsQuiet loaded
+--- a/Test/Api/SupervisionContract.lean
++++ b/Test/Api/SupervisionContract.lean
+@@ -92,12 +92,12 @@
+ #guard Api.Inspection.forked looseRun = [(⟨0⟩, ⟨1⟩, true)]
+ #guard Api.Inspection.forked pinnedRun = [(⟨0⟩, ⟨1⟩, true)]
+ 
+-#guard childRun.machine.fibers.map RunFiber.origin =
+-  [.root, .forked ⟨0⟩ false [0, 0]]
+-#guard looseRun.machine.fibers.map RunFiber.origin =
+-  [.root, .forked ⟨0⟩ true [0, 0]]
+-#guard pinnedRun.machine.fibers.map RunFiber.origin =
+-  [.root, .forked ⟨0⟩ true [0, 0, 0]]
++#guard childRun.machine.fibers.map (fun f => childRun.machine.originOf f.id) =
++  [some .root, some (.forked ⟨0⟩ false [0, 0])]
++#guard looseRun.machine.fibers.map (fun f => looseRun.machine.originOf f.id) =
++  [some .root, some (.forked ⟨0⟩ true [0, 0])]
++#guard pinnedRun.machine.fibers.map (fun f => pinnedRun.machine.originOf f.id) =
++  [some .root, some (.forked ⟨0⟩ true [0, 0, 0])]
+ 
+ -- Replacing the diagnostic trace does not change supervision.
+ #guard [childRun, looseRun, pinnedRun].all fun r =>
+--- a/src/Effect4/Laws/Machine/Book.lean
++++ b/src/Effect4/Laws/Machine/Book.lean
+@@ -158,7 +158,6 @@
+   interruptedCause : Option (Cause ε δ ι α)
+   deferredInterrupt : Bool
+   context : χ
+-  origin : Origin
+ 
+ /-- One function of the `FiberCore` instance. The mask is read only while the fiber is
+ live: the finite battery compared it that way when the frame's `finishFrame` still
+@@ -168,13 +167,17 @@
+     (f : RunFiber ν σ β ε δ ι α χ κ φ) : FiberControl ε δ ι α χ :=
+   ⟨f.id, f.parked,
+     if f.exit.isSome then none else some (c.interruptible f.frame),
+-    c.interruptedCause f.frame, c.deferredInterrupt f.frame, f.context, f.origin⟩
+-
+-/-! ## The sixteen fields of `RunFiber` and the ten of `RunMachine` -/
++    c.interruptedCause f.frame, c.deferredInterrupt f.frame, f.context⟩
++
++/-! ## The runtime fields and the machine fork ledger
++
++The old RunFiber.origin field is retained only for the step-3 comparison runner until
++step 5 deletes it. It is no longer part of this relation; provenance is the machine ledger.
++-/
+ 
+ /-- Code-free by equality: `id`, `running`, `parked`, `pending`, `finalizing`, `exit`,
+ `currentOpCount`, `maxOpsBeforeYield`, `preventYield`, `yieldOverride`, `observers`,
+-`children`, `context`, `origin` (fourteen; `Pending` carries a name, never code). Code-carrying:
++`children`, `context` (thirteen; `Pending` carries a name, never code). Code-carrying:
+ `dispatcher`, through `Task.resume`. Related by `S`: `frame`, live or exited (the loop may
+ re-enter an exited fiber's saved state through a late `loop`/`deliver` command, and the
+ exit path only clears it). -/
+@@ -189,7 +192,7 @@
+     S f₁.frame f₂.frame
+ 
+ /-- Code-free by equality: `nextId`, `nextToken`, `nextRace`, `middlewareInstalled`,
+-`armed`, `state`, `stuck` (seven). Code-carrying: `fibers` and `races`, pairwise. Excluded:
++`armed`, `state`, `stuck`, `forks` (eight). Code-carrying: `fibers` and `races`, pairwise. Excluded:
+ `trace` (D3); the two instances need not share the event type. -/
+ def BookMeans (C : κ₁ → κ₂ → Prop) (S : φ₁ → φ₂ → Prop)
+     (m₁ : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
+@@ -198,7 +201,7 @@
+     ListRel (RaceMeans C) m₁.races m₂.races ∧
+     m₁.nextId = m₂.nextId ∧ m₁.nextToken = m₂.nextToken ∧ m₁.nextRace = m₂.nextRace ∧
+     m₁.middlewareInstalled = m₂.middlewareInstalled ∧ m₁.armed = m₂.armed ∧
+-    m₁.state = m₂.state ∧ m₁.stuck = m₂.stuck
++    m₁.state = m₂.state ∧ m₁.stuck = m₂.stuck ∧ m₁.forks = m₂.forks
+ 
+ /-! ## The commands: the same shape, code related -/
+ 
+@@ -361,7 +364,12 @@
+   h.2.2.2.2.2.2.2.1
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+ theorem BookMeans.stuck (h : BookMeans C S m₁ m₂) : m₁.stuck = m₂.stuck :=
+-  h.2.2.2.2.2.2.2.2
++  h.2.2.2.2.2.2.2.2.1
++
++omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
++@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
++theorem BookMeans.forks (h : BookMeans C S m₁ m₂) : m₁.forks = m₂.forks :=
++  h.2.2.2.2.2.2.2.2.2
+ 
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+ /-- The trace is not in the book, so `emit` is free on either side, with unrelated event
+@@ -375,7 +383,7 @@
+ theorem book_halt (h : BookMeans C S m₁ m₂) (why : Stuck) :
+     BookMeans C S (m₁.halt why) (m₂.halt why) :=
+   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2.1, h.2.2.2.2.2.2.1,
+-    h.2.2.2.2.2.2.2.1, rfl⟩
++    h.2.2.2.2.2.2.2.1, rfl, h.forks⟩
+ 
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+ theorem book_disarm (h : BookMeans C S m₁ m₂) (owner : FiberId) :
+@@ -424,15 +432,9 @@
+   congrArg FiberControl.context h.1
+ 
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+-theorem M1OriginBook.fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
+-    {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (_h : FiberMeans C S f₁ f₂) : ProofGraph.Obligation (
+-    f₁.origin = f₂.origin) := ⟨⟩
+-
+-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+-@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+-theorem fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
+-    {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.origin = f₂.origin :=
+-  congrArg FiberControl.origin h.1
++/-- Provenance is compared in the machine ledger, independently of fiber updates. -/
++theorem M1OriginBook.bookMeans_forks (_h : BookMeans C S m₁ m₂) :
++    ProofGraph.Obligation (m₁.forks = m₂.forks) := ⟨⟩
+ 
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+ theorem fiberMeans_interruptedCause {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
+@@ -547,6 +549,22 @@
+     cases h₂ : m₂.fiber? id with
+     | none => rw [h₁, h₂] at hf; exact absurd hf not_false
+     | some g => rw [h₁, h₂] at hf; exact Or.inr ⟨f, g, rfl, rfl, hf⟩
++
++omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
++theorem M1OriginBook.bookMeans_originOf (_h : BookMeans C S m₁ m₂) (id : FiberId) :
++    ProofGraph.Obligation (m₁.originOf id = m₂.originOf id) := ⟨⟩
++
++omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
++/-- The same member lookup and the same first-match ledger give the same origin.
++No claim of ledger freshness or reachable well-formedness is used here. -/
++@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
++theorem BookMeans.originOf (h : BookMeans C S m₁ m₂) (id : FiberId) :
++    m₁.originOf id = m₂.originOf id := by
++  rcases book_fiber?_cases h id with hnone | hsome
++  · rcases hnone with ⟨h₁, h₂⟩
++    simp only [RunMachine.originOf, h₁, h₂]
++  · rcases hsome with ⟨f₁, f₂, h₁, h₂, _⟩
++    simp only [RunMachine.originOf, h₁, h₂, RunMachine.forkRecord?, h.forks]
+ 
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+ theorem listRel_insert (priority : Nat) {t₁ : Task ν σ β ε δ ι α κ₁} {t₂ : Task ν σ β ε δ ι α κ₂}
+@@ -1269,12 +1287,20 @@
+   unfold obs
+   rw [bookMeans_exits h, h.state]
+ 
+-/-- The control lists of the finite battery are equal whenever the book holds. -/
++/-- The control lists of the finite battery are equal whenever the book holds.
++Provenance is compared separately through the machine ledger. -/
+ theorem bookMeans_controls {m₁ : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ₁ φ₁ η₁}
+     {m₂ : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ₂ φ₂ η₂} (h : BookMeans C S m₁ m₂) :
+     m₁.fibers.map controlOf = m₂.fibers.map controlOf :=
+   ListRel.map h.1 fun _ _ hab => hab.1
+ 
++/-- Control and the complete fork ledger agree; the exit/store observation above
++is unchanged, and diagnostic traces are still excluded by D3. -/
++theorem bookMeans_controls_forks {m₁ : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ₁ φ₁ η₁}
++    {m₂ : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ₂ φ₂ η₂} (h : BookMeans C S m₁ m₂) :
++    (m₁.fibers.map controlOf, m₁.forks) = (m₂.fibers.map controlOf, m₂.forks) := by
++  rw [bookMeans_controls h, h.forks]
++
+ end Observation
+ 
+ end Effect4.Machine
+@@ -1282,4 +1308,6 @@
+ 
+ #obligation_proved Effect4.Machine.M1Clock.book_advanceState := @Effect4.Machine.book_advanceState
+ 
++#obligation_proved Effect4.Machine.M1OriginBook.bookMeans_forks := @Effect4.Machine.BookMeans.forks
++#obligation_proved Effect4.Machine.M1OriginBook.bookMeans_originOf := @Effect4.Machine.BookMeans.originOf
+ #typed_state_obligations Effect4.Machine.M1OriginBook ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+--- a/src/Effect4/Laws/Program/Simulation/Fibers.lean
++++ b/src/Effect4/Laws/Program/Simulation/Fibers.lean
+@@ -60,11 +60,6 @@
+ theorem FMeans.id (h : FMeans root f₁ f₂) : f₁.id = f₂.id := fiberMeans_id h
+ theorem FMeans.parked (h : FMeans root f₁ f₂) : f₁.parked = f₂.parked := fiberMeans_parked h
+ theorem FMeans.context (h : FMeans root f₁ f₂) : f₁.context = f₂.context := fiberMeans_context h
+-theorem M1OriginFibers.FMeans_origin (_h : FMeans root f₁ f₂) : ProofGraph.Obligation (
+-    f₁.origin = f₂.origin) := ⟨⟩
+-
+-@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+-theorem FMeans.origin (h : FMeans root f₁ f₂) : f₁.origin = f₂.origin := fiberMeans_origin h
+ theorem FMeans.running (h : FMeans root f₁ f₂) : f₁.running = f₂.running := h.2.1
+ theorem FMeans.pending (h : FMeans root f₁ f₂) : f₁.pending = f₂.pending := h.2.2.1
+ theorem FMeans.finalizing (h : FMeans root f₁ f₂) : f₁.finalizing = f₂.finalizing := h.2.2.2.1
+@@ -107,7 +102,7 @@
+     (_hyo : f₁.yieldOverride = f₂.yieldOverride) (_hobs : f₁.observers = f₂.observers)
+     (_hch : f₁.children = f₂.children)
+     (_hdisp : DispatcherMeans (CodeMeans root) f₁.dispatcher f₂.dispatcher)
+-    (_hS : Means root f₁.frame f₂.frame) (_horigin : f₁.origin = f₂.origin) : ProofGraph.Obligation (
++    (_hS : Means root f₁.frame f₂.frame) : ProofGraph.Obligation (
+     FMeans root f₁ f₂) := ⟨⟩
+ 
+ /-- The relation from its fields. -/
+@@ -120,18 +115,18 @@
+     (hyo : f₁.yieldOverride = f₂.yieldOverride) (hobs : f₁.observers = f₂.observers)
+     (hch : f₁.children = f₂.children)
+     (hdisp : DispatcherMeans (CodeMeans root) f₁.dispatcher f₂.dispatcher)
+-    (hS : Means root f₁.frame f₂.frame) (horigin : f₁.origin = f₂.origin) : FMeans root f₁ f₂ := by
++    (hS : Means root f₁.frame f₂.frame) : FMeans root f₁ f₂ := by
+   refine ⟨?_, hrun, hpend, hfin, hex, hoc, hmo, hpy, hyo, hobs, hch, hdisp, hS⟩
+   show FiberControl.mk f₁.id f₁.parked (if f₁.exit.isSome then none else some f₁.frame.interruptible)
+-      f₁.frame.interruptedCause f₁.frame.deferredInterrupt f₁.context f₁.origin =
++      f₁.frame.interruptedCause f₁.frame.deferredInterrupt f₁.context =
+     FiberControl.mk f₂.id f₂.parked (if f₂.exit.isSome then none else some f₂.frame.interruptible)
+-      f₂.frame.interruptedCause f₂.frame.deferredInterrupt f₂.context f₂.origin
+-  rw [hid, hpk, hctx, hex, hS.1, hS.2.1, hS.2.2.1, horigin]
++      f₂.frame.interruptedCause f₂.frame.deferredInterrupt f₂.context
++  rw [hid, hpk, hctx, hex, hS.1, hS.2.1, hS.2.2.1]
+ 
+ theorem FMeans.withFrame (h : FMeans root f₁ f₂) {fr₁ : FFiber} {fr₂ : RSaved}
+     (hS : Means root fr₁ fr₂) : FMeans root { f₁ with frame := fr₁ } { f₂ with frame := fr₂ } :=
+   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
+-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher hS h.origin
++    h.preventYield h.yieldOverride h.observers h.children h.dispatcher hS
+ 
+ theorem FMeans.answer (h : FMeans root f₁ f₂) {c₁ : NCode} {c₂ : RProgram}
+     (hc : CodeMeans root c₁ c₂) :
+@@ -143,46 +138,46 @@
+     FMeans root (f₁.park p) (f₂.park p) :=
+   FMeans.mk' h.id rfl h.context h.running (by show f₁.pending ++ [p] = f₂.pending ++ [p]; rw [h.pending])
+     h.finalizing h.exit h.opCount h.maxOps h.preventYield h.yieldOverride h.observers h.children
+-    h.dispatcher h.means h.origin
++    h.dispatcher h.means
+ 
+ theorem FMeans.withContext (h : FMeans root f₁ f₂) (ctx : Ctx) (maxOps : Nat) (prevent : Bool) :
+     FMeans root { f₁ with context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent }
+       { f₂ with context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent } :=
+   FMeans.mk' h.id h.parked rfl h.running h.pending h.finalizing h.exit h.opCount rfl rfl
+-    h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
++    h.yieldOverride h.observers h.children h.dispatcher h.means
+ 
+ theorem FMeans.withObservers (h : FMeans root f₁ f₂) (obs : List Observer) :
+     FMeans root { f₁ with observers := obs } { f₂ with observers := obs } :=
+   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
+-    h.preventYield h.yieldOverride rfl h.children h.dispatcher h.means h.origin
++    h.preventYield h.yieldOverride rfl h.children h.dispatcher h.means
+ 
+ theorem FMeans.withChildren (h : FMeans root f₁ f₂) (ch : List FiberId) :
+     FMeans root { f₁ with children := ch } { f₂ with children := ch } :=
+   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
+-    h.preventYield h.yieldOverride h.observers rfl h.dispatcher h.means h.origin
++    h.preventYield h.yieldOverride h.observers rfl h.dispatcher h.means
+ 
+ theorem FMeans.withRunning (h : FMeans root f₁ f₂) (b : Bool) :
+     FMeans root { f₁ with running := b } { f₂ with running := b } :=
+   FMeans.mk' h.id h.parked h.context rfl h.pending h.finalizing h.exit h.opCount h.maxOps
+-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
++    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
+ 
+ theorem FMeans.started (h : FMeans root f₁ f₂) :
+     FMeans root { f₁ with running := true, currentOpCount := 0, parked := .notParked }
+       { f₂ with running := true, currentOpCount := 0, parked := .notParked } :=
+   FMeans.mk' h.id rfl h.context rfl h.pending h.finalizing h.exit rfl h.maxOps
+-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
++    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
+ 
+ theorem FMeans.unparked (h : FMeans root f₁ f₂) :
+     FMeans root { f₁ with parked := .notParked, pending := [] }
+       { f₂ with parked := .notParked, pending := [] } :=
+   FMeans.mk' h.id rfl h.context h.running rfl h.finalizing h.exit h.opCount h.maxOps
+-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
++    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
+ 
+ theorem FMeans.withPending (h : FMeans root f₁ f₂)
+     (l : List (Pending EffName Val Err Defect FiberId Ann)) :
+     FMeans root { f₁ with pending := l } { f₂ with pending := l } :=
+   FMeans.mk' h.id h.parked h.context h.running rfl h.finalizing h.exit h.opCount h.maxOps
+-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
++    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
+ 
+ theorem FMeans.withYield (h : FMeans root f₁ f₂) (v : Option Bool) :
+     FMeans root { f₁ with yieldOverride := v } { f₂ with yieldOverride := v } :=
+@@ -192,7 +187,7 @@
+     FMeans root (Effect4.Machine.countOp f₁) (Effect4.Machine.countOp f₂) :=
+   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit
+     (by show f₁.currentOpCount + 1 = f₂.currentOpCount + 1; rw [h.opCount]) h.maxOps
+-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
++    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
+ 
+ theorem FMeans.verdict (h : FMeans root f₁ f₂) :
+     Effect4.Machine.yieldVerdict f₁ = Effect4.Machine.yieldVerdict f₂ := by
+@@ -258,7 +253,7 @@
+       { f₂ with dispatcher := f₂.dispatcher.enqueue priority t₂ } :=
+   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
+     h.preventYield h.yieldOverride h.observers h.children (dispatcherMeans_enqueue h.dispatcher priority ht)
+-    h.means h.origin
++    h.means
+ 
+ theorem M1OriginFibers.fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
+     (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (
+@@ -271,7 +266,7 @@
+     (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
+     FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin) :=
+   FMeans.mk' rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl ⟨ListRel.nil, rfl⟩
+-    (means_start root hc flag) rfl
++    (means_start root hc flag)
+ 
+ end Fiber
+ 
+@@ -291,7 +286,16 @@
+     m₁.middlewareInstalled = m₂.middlewareInstalled := h.2.2.2.2.2.1
+ theorem BMeans.armed (h : BMeans root m₁ m₂) : m₁.armed = m₂.armed := h.2.2.2.2.2.2.1
+ theorem BMeans.state (h : BMeans root m₁ m₂) : m₁.state = m₂.state := h.2.2.2.2.2.2.2.1
+-theorem BMeans.stuck (h : BMeans root m₁ m₂) : m₁.stuck = m₂.stuck := h.2.2.2.2.2.2.2.2
++theorem BMeans.stuck (h : BMeans root m₁ m₂) : m₁.stuck = m₂.stuck := h.2.2.2.2.2.2.2.2.1
++
++theorem M1OriginFibers.BMeans_forks (_h : BMeans root m₁ m₂) :
++    ProofGraph.Obligation (m₁.forks = m₂.forks) := ⟨⟩
++
++@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
++theorem BMeans.forks (h : BMeans root m₁ m₂) : m₁.forks = m₂.forks := BookMeans.forks h
++
++theorem BMeans.originOf (h : BMeans root m₁ m₂) (id : FiberId) :
++    m₁.originOf id = m₂.originOf id := BookMeans.originOf h id
+ theorem BMeans.completedExits (h : BMeans root m₁ m₂) : m₁.completedExits = m₂.completedExits :=
+   book_completedExits h
+ 
+@@ -299,8 +303,16 @@
+     (hr : ListRel (RaceMeans (CodeMeans root)) m₁.races m₂.races) (hid : m₁.nextId = m₂.nextId)
+     (htok : m₁.nextToken = m₂.nextToken) (hrace : m₁.nextRace = m₂.nextRace)
+     (hmid : m₁.middlewareInstalled = m₂.middlewareInstalled) (harm : m₁.armed = m₂.armed)
+-    (hst : m₁.state = m₂.state) (hstuck : m₁.stuck = m₂.stuck) : BMeans root m₁ m₂ :=
+-  ⟨hf, hr, hid, htok, hrace, hmid, harm, hst, hstuck⟩
++    (hst : m₁.state = m₂.state) (hstuck : m₁.stuck = m₂.stuck)
++    (hforks : m₁.forks = m₂.forks) : BMeans root m₁ m₂ :=
++  ⟨hf, hr, hid, htok, hrace, hmid, harm, hst, hstuck, hforks⟩
++
++/-- Appending the same creation record keeps the two machine ledgers equal. -/
++theorem BMeans.appendFork (h : BMeans root m₁ m₂) (record : ForkRecord) :
++    BMeans root { m₁ with forks := m₁.forks ++ [record] }
++      { m₂ with forks := m₂.forks ++ [record] } :=
++  BMeans.mk' h.fibers h.races h.nextId h.nextToken h.nextRace h.middleware
++    h.armed h.state h.stuck (congrArg (fun records => records ++ [record]) h.forks)
+ 
+ theorem BMeans.update (h : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber} (hf : FMeans root f₁ f₂) :
+     BMeans root (m₁.update f₁) (m₂.update f₂) := book_update h hf
+@@ -520,4 +532,5 @@
+ 
+ end Effect4.Program.Sched
+ 
++#obligation_proved Effect4.Program.Sched.M1OriginFibers.BMeans_forks := @Effect4.Program.Sched.BMeans.forks
+ #typed_state_obligations Effect4.Program.Sched.M1OriginFibers ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+--- a/src/Effect4/Laws/Program/Simulation/Drive.lean
++++ b/src/Effect4/Laws/Program/Simulation/Drive.lean
+@@ -117,14 +117,14 @@
+   unfold RunFiber.publish
+   dsimp only [FiberCore.setDeferred, frameCore, termCore]
+   exact FMeans.mk' h.id rfl h.context rfl rfl rfl rfl h.opCount h.maxOps h.preventYield
+-    h.yieldOverride h.observers h.children h.dispatcher (means_setDeferred h.means false) h.origin
++    h.yieldOverride h.observers h.children h.dispatcher (means_setDeferred h.means false)
+ 
+ theorem FMeans.cleared (h : FMeans root f₁ f₂) :
+     FMeans root (f₁.cleared (interpOf root)) (f₂.cleared (interpR root)) := by
+   unfold RunFiber.cleared
+   dsimp only [FiberCore.clearStack, frameCore, termCore]
+   exact FMeans.mk' h.id h.parked rfl h.running h.pending h.finalizing h.exit h.opCount h.maxOps
+-    h.preventYield h.yieldOverride rfl rfl h.dispatcher (means_clearStack h.means) h.origin
++    h.preventYield h.yieldOverride rfl rfl h.dispatcher (means_clearStack h.means)
+ 
+ theorem FMeans.runloopTop (h : FMeans root f₁ f₂) :
+     FMeans root (runloopTop f₁) (runloopTop f₂) := by
+@@ -145,7 +145,7 @@
+       { f₂ with pending := f₂.pending.map fun q =>
+         if q.token = token then { q with waitingOn := w, remaining := rem, collected := exits } else q } :=
+   FMeans.mk' h.id h.parked h.context h.running rfl h.finalizing h.exit h.opCount h.maxOps
+-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
++    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
+ 
+ end FiberShapes
+ 
+@@ -612,7 +612,7 @@
+   · exact pendingOk_of_fields hp rfl
+   · exact FMeans.mk' hf.id hf.parked hf.context rfl hf.pending rfl hf.exit hf.opCount hf.maxOps
+       hf.preventYield hf.yieldOverride hf.observers hf.children hf.dispatcher
+-      (means_answerWith (means_setDeferred hf.means false) hcode) hf.origin
++      (means_answerWith (means_setDeferred hf.means false) hcode)
+ 
+ theorem exitStore_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState}
+     (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
+@@ -751,7 +751,7 @@
+         · exact pendingOk_filter (pendingOk_of_fiber? hok h₁) _ rfl
+         · exact FMeans.mk' ht.id rfl ht.context ht.running (by rw [ht.pending]) ht.finalizing ht.exit
+             ht.opCount ht.maxOps ht.preventYield ht.yieldOverride ht.observers ht.children ht.dispatcher
+-            (means_answerWith ht.means hc) ht.origin
++            (means_answerWith ht.means hc)
+       · rw [if_neg he, if_neg he]
+         exact CmdsRel.mk' hok hm hr
+ 
+--- a/src/Effect4/Laws/Program/Simulation/Evaluate.lean
++++ b/src/Effect4/Laws/Program/Simulation/Evaluate.lean
+@@ -28,7 +28,7 @@
+     {c₂ : RProgram} (hc : CodeMeans root f₁.frame.current c₂) : FMeans root f₁ (answerR f₂ c₂) :=
+   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
+     h.preventYield h.yieldOverride h.observers h.children h.dispatcher
+-    ⟨h.interruptible, h.interruptedCause, h.deferred, hc, h.stack, h.maskInv⟩ h.origin
++    ⟨h.interruptible, h.interruptedCause, h.deferred, hc, h.stack, h.maskInv⟩
+ 
+ /-- One iteration's result, the term's current related only once constructed at the
+ result's view. -/
+@@ -1024,7 +1024,7 @@
+     refine FMeans.mk' hf'.id hf'.parked rfl hf'.running hf'.pending hf'.finalizing hf'.exit hf'.opCount rfl rfl
+       hf'.yieldOverride hf'.observers hf'.children hf'.dispatcher
+       ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_, StackMeans.answer k hk hf'.stack,
+-        hf'.maskInv⟩ hf'.origin
++        hf'.maskInv⟩
+     show CodeMeans root (Prim.onExit (resolve root (p.child 0)) (.scopedExit g₂.context m₂.state.nextName) false)
+       (prepareR _ ((guardR (.onExit false) (bodyR (interpRAt root m₂.completedExits) (.at_ (p.child 0)))).bind
+         fun ex => .vis (.inr (.scopeExit g₂.context m₂.state.nextName ex)) Effects.Program.pure))
+--- a/src/Effect4/Laws/Program/Simulation/Actions.lean
++++ b/src/Effect4/Laws/Program/Simulation/Actions.lean
+@@ -39,7 +39,7 @@
+   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
+     h.preventYield h.yieldOverride h.observers h.children h.dispatcher
+     ⟨h.interruptible, h.interruptedCause, h.deferred, h.current, StackMeans.answer k hk h.stack,
+-      h.maskInv⟩ h.origin
++      h.maskInv⟩
+ 
+ /-! ## The interpreters, beyond the code hooks -/
+ 
+@@ -162,7 +162,7 @@
+         rw [if_neg hrun, if_neg hrun₂]
+         exact ⟨FMeans.mk' ht.id rfl ht.context ht.running rfl ht.finalizing ht.exit ht.opCount
+           ht.maxOps ht.preventYield ht.yieldOverride ht.observers ht.children ht.dispatcher
+-          ⟨ht.interruptible, rfl, ht.deferred, CodeMeans.failure acc, ht.stack, ht.maskInv⟩ ht.origin, rfl⟩
++          ⟨ht.interruptible, rfl, ht.deferred, CodeMeans.failure acc, ht.stack, ht.maskInv⟩, rfl⟩
+     · have hint₂ : ¬ t₂.frame.interruptible = true := by rw [← ht.interruptible]; exact hint
+       rw [if_neg hint, if_neg hint₂]
+       exact ⟨ht.withFrame ⟨ht.interruptible, rfl, ht.deferred, ht.current, ht.stack, ht.maskInv⟩, rfl⟩
+@@ -202,15 +202,18 @@
+   cases options.maskMode with
+   | interruptible =>
+     exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _) _,
+-      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _) _ _, hp, rfl⟩
++      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _).appendFork
++        (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
+   | uninterruptible =>
+     exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _) _,
+-      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _) _ _, hp, rfl⟩
++      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _).appendFork
++        (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
+   | inherit =>
+     dsimp only
+     rw [hp.interruptible]
+     exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _) _,
+-      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _) _ _, hp, rfl⟩
++      BMeans.emit ((hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _).appendFork
++        (ForkRecord.mk ⟨m₂.nextId⟩ p₂.id options.daemon site)) _ _, hp, rfl⟩
+ 
+ theorem start_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
+     (hm : BMeans root m₁ m₂) {p₁ : FRun} {p₂ : RFiber} (hp : FMeans root p₁ p₂) (child : FiberId)
+@@ -417,7 +420,7 @@
+       { f₂ with frame := { f₂.frame with current := c₂ }, dispatcher := f₂.dispatcher.enqueue priority t₂ } :=
+   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
+     h.preventYield h.yieldOverride h.observers h.children
+-    (dispatcherMeans_enqueue h.dispatcher priority ht) (means_answerWith h.means hc) h.origin
++    (dispatcherMeans_enqueue h.dispatcher priority ht) (means_answerWith h.means hc)
+ 
+ /-- A value answered through related answer functions. -/
+ theorem iterRel_answer {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
+@@ -806,7 +809,7 @@
+       · exact pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl
+       · exact FMeans.mk' ht.id ht.parked ht.context ht.running ht.pending ht.finalizing rfl ht.opCount
+           ht.maxOps ht.preventYield ht.yieldOverride (by rw [ht.observers, hf.id]) ht.children
+-          ht.dispatcher ht.means ht.origin
++          ht.dispatcher ht.means
+       · rw [hf.id]
+         exact means_pushAsyncFinalizer hf.means _
+     · rw [hex₁] at hex
+--- a/src/Effect4/Laws/Program/Simulation/Deliver.lean
++++ b/src/Effect4/Laws/Program/Simulation/Deliver.lean
+@@ -451,7 +451,7 @@
+       { f₁ with frame := fr₁, context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent }
+       { f₂ with frame := fr₂, context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent } :=
+   FMeans.mk' h.id h.parked rfl h.running h.pending h.finalizing h.exit h.opCount rfl rfl
+-    h.yieldOverride h.observers h.children h.dispatcher hS h.origin
++    h.yieldOverride h.observers h.children h.dispatcher hS
+ 
+ theorem BMeans.emitL {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (h : BMeans root m₁ m₂)
+     (e : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
+--- a/src/Effect4/Laws/Program/RuntimeR.lean
++++ b/src/Effect4/Laws/Program/RuntimeR.lean
+@@ -156,7 +156,7 @@
+ theorem load_rel (e : NativeEff) (fuel : Nat) :
+     BMeans e (Api.load e fuel) (loadR e fuel) :=
+   BMeans.mk' (ListRel.cons (fmeans_make e Api.root (compile_intro e fuel []) true _ _) ListRel.nil)
+-    ListRel.nil rfl rfl rfl rfl rfl rfl rfl
++    ListRel.nil rfl rfl rfl rfl rfl rfl rfl rfl
+ 
+ /-- Every tape replays to related results, at any compile budget and any command budget. -/
+ theorem replay_rel (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision)
+--- a/src/Effect4/Laws/Machine/Clauses.lean
++++ b/src/Effect4/Laws/Machine/Clauses.lean
+@@ -665,10 +665,12 @@
+           | Supervision.MaskMode.uninterruptible => false
+           | Supervision.MaskMode.inherit => parent.frame.interruptible) ∧
+       (spawnChild interp m parent program options site).observers = [] ∧
+-      (spawnChild interp m parent program options site).origin = .forked parent.id options.daemon site) := ⟨⟩
++      (spawn interp m parent program options site).1.forks =
++        m.forks ++ [ForkRecord.mk ⟨m.nextId⟩ parent.id options.daemon site]) := ⟨⟩
+ 
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+ /-- The child's identity, context and mask (`:5264-5284`); it carries no observer yet.
++Creation provenance is the appended machine record, independently of the child's mutable fields.
+ census: fork.unsafe -/
+ @[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
+ theorem spawnChild_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+@@ -682,7 +684,8 @@
+           | Supervision.MaskMode.uninterruptible => false
+           | Supervision.MaskMode.inherit => parent.frame.interruptible) ∧
+       (spawnChild interp m parent program options site).observers = [] ∧
+-      (spawnChild interp m parent program options site).origin = .forked parent.id options.daemon site := by
++      (spawn interp m parent program options site).1.forks =
++        m.forks ++ [ForkRecord.mk ⟨m.nextId⟩ parent.id options.daemon site] := by
+   cases hm : options.maskMode <;>
+     aesop (add norm simp [spawnChild, RunFiber.make, hm])
+ 
+--- a/src/Effect4/Laws/Program/Typed/ForkSource.lean
++++ b/src/Effect4/Laws/Program/Typed/ForkSource.lean
+@@ -24,7 +24,8 @@
+ open Effect4 Effect4.Machine Effect4.Program.Sched
+ 
+ /-- Fresh source fork: Γ receives the checked body type at the id spawn returns,
+-and the new fiber records the same site and source-denoted body. -/
++the appended ledger record has the same site, and the new fiber has the source-denoted body.
++This is an append statement, not a first-match origin lookup on an arbitrary machine. -/
+ theorem source_fork_extension (root : NativeEff) (site : Point) (body : NativeEff)
+     (env : TyEnv) (ty : EffTy) (w : World) (m : RState) (parent : RFiber)
+     (options : Supervision.ForkOptions)
+@@ -41,7 +42,8 @@
+      newer.ids = spawned.1.fibers.map (fun f => f.id) ∧
+      newer.Γ spawned.2.2 = some ty ∧
+      ∃ child, child ∈ spawned.1.fibers ∧ child.id = spawned.2.2 ∧
+-       child.origin = .forked parent.id options.daemon site.path ∧
++       spawned.1.forks = m.forks ++
++         [ForkRecord.mk child.id parent.id options.daemon site.path] ∧
+        child.frame.current = denoteAt root (site.child 0) ∧
+        Node.at_ (.eff root) (site.child 0).path = some (.eff body) ∧
+        Checker.check nativeSignature env (site.child 0).path body = .ok ty) := ⟨⟩
+@@ -62,7 +64,8 @@
+      newer.ids = spawned.1.fibers.map (fun f => f.id) ∧
+      newer.Γ spawned.2.2 = some ty ∧
+      ∃ child, child ∈ spawned.1.fibers ∧ child.id = spawned.2.2 ∧
+-       child.origin = .forked parent.id options.daemon site.path ∧
++       spawned.1.forks = m.forks ++
++         [ForkRecord.mk child.id parent.id options.daemon site.path] ∧
+        child.frame.current = denoteAt root (site.child 0) ∧
+        Node.at_ (.eff root) (site.child 0).path = some (.eff body) ∧
+        Checker.check nativeSignature env (site.child 0).path body = .ok ty) := by
+--- a/src/Effect4/Laws/Api/Supervision.lean
++++ b/src/Effect4/Laws/Api/Supervision.lean
+@@ -309,7 +309,8 @@
+     (program : κ) (options : Supervision.ForkOptions) : ProofGraph.Obligation (∃ child : RunFiber ν σ β ε δ ι α χ κ φ,
+       (spawn interp m parent program options).1.fibers = m.fibers ++ [child] ∧
+         child.id = ⟨m.nextId⟩ ∧ child.exit = none ∧ child.observers = [] ∧
+-        child.children = [] ∧ child.origin = .forked parent.id options.daemon []) := ⟨⟩
++        child.children = [] ∧ (spawn interp m parent program options).1.forks =
++          m.forks ++ [ForkRecord.mk child.id parent.id options.daemon []]) := ⟨⟩
+ 
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+ theorem spawn_fibers (interp : RunInterp ν σ β ε δ ι α χ St κ)
+@@ -318,7 +319,8 @@
+     ∃ child : RunFiber ν σ β ε δ ι α χ κ φ,
+       (spawn interp m parent program options).1.fibers = m.fibers ++ [child] ∧
+         child.id = ⟨m.nextId⟩ ∧ child.exit = none ∧ child.observers = [] ∧
+-        child.children = [] ∧ child.origin = .forked parent.id options.daemon [] := by aesop
++        child.children = [] ∧ (spawn interp m parent program options).1.forks =
++          m.forks ++ [ForkRecord.mk child.id parent.id options.daemon []] := by aesop
+ 
+ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
+ theorem M1Trace.start_forked (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+@@ -573,14 +575,14 @@
+     (_exit : f'.exit = f.exit)
+     (_track : parentOf m' f'.id = parentOf m f.id)
+     (_pin : pinOf f' = pinOf f)
+-    (_origin : f'.origin = f.origin) : ProofGraph.Obligation (statusOf m' f' = statusOf m f) := ⟨⟩
++    (_origin : m'.originOf f'.id = m.originOf f.id) : ProofGraph.Obligation (statusOf m' f' = statusOf m f) := ⟨⟩
+ 
+ @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+ theorem status_persists (m m' : Machine) (f f' : Fiber)
+     (exit : f'.exit = f.exit)
+     (track : parentOf m' f'.id = parentOf m f.id)
+     (pin : pinOf f' = pinOf f)
+-    (origin : f'.origin = f.origin) :
++    (origin : m'.originOf f'.id = m.originOf f.id) :
+     statusOf m' f' = statusOf m f := by
+   unfold statusOf
+   aesop
+@@ -619,11 +621,11 @@
+ theorem spawn_status_fresh
+     (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) (m : Machine)
+     (parent : Fiber) (program : NCode) (options : Supervision.ForkOptions)
+-    (fresh : NextIdFresh m) (child : Fiber)
++    (fresh : NextIdFresh m) (recordsFresh : m.forkRecord? ⟨m.nextId⟩ = none) (child : Fiber)
+     (member : child ∈ (spawn interp m parent program options).1.fibers)
+     (id : child.id = ⟨m.nextId⟩) :
+     statusOf (spawn interp m parent program options).1 child = FiberStatus.daemon := by
+-  obtain ⟨new, hfib, hid, hexit, hobs, hchildren, horigin⟩ :=
++  obtain ⟨new, hfib, hid, hexit, hobs, hchildren, _hforks⟩ :=
+     spawn_fibers interp m parent program options
+   rw [hfib, List.mem_append] at member
+   have hsame : child = new := by
+@@ -640,20 +642,27 @@
+     unfold pinOf
+     rw [hobs]
+     rfl
++  have hfresh : m.fiber? ⟨m.nextId⟩ = none := by
++    apply List.find?_eq_none.mpr
++    intro g hg hit
++    exact (fresh g hg).1 (of_decide_eq_true hit)
++  have horigin := ForkLedger.spawn_originOf_new interp m parent program options [] hfresh recordsFresh
+   unfold statusOf
+-  rw [hexit, hparent, hpin, horigin]
++  rw [hexit, hparent, hpin, id, horigin]
+ 
+ /-- A spawn changes no existing fiber's status: it appends a fiber with no children, touches
+ no other, and retains every existing origin. -/
+ theorem spawn_status_other
+     (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) (m : Machine)
+     (parent : Fiber) (program : NCode) (options : Supervision.ForkOptions)
+-    (_fresh : NextIdFresh m) (g : Fiber) (_member : g ∈ m.fibers) :
++    (fresh : NextIdFresh m) (g : Fiber) (member : g ∈ m.fibers) :
+     statusOf (spawn interp m parent program options).1 g = statusOf m g := by
+   obtain ⟨new, hfib, _, _, _, hchildren, _⟩ := spawn_fibers interp m parent program options
+-  refine status_persists m (spawn interp m parent program options).1 g g rfl ?_ rfl rfl
+-  unfold parentOf
+-  rw [hfib, parentOf_append_same m.fibers new g.id hchildren]
++  refine status_persists m (spawn interp m parent program options).1 g g rfl ?_ rfl ?_
++  · unfold parentOf
++    rw [hfib, parentOf_append_same m.fibers new g.id hchildren]
++  · exact ForkLedger.spawn_originOf_other interp m parent program options [] g.id
++      (Ne.symm (fresh g member).1)
+ 
+ /-! ## (c) `fiberStatuses` and `awaits` agree on which fibers are parked -/
+ 
+@@ -745,11 +754,13 @@
+ 
+ universe u v
+ 
+-/-- Laws-side projection of the stored id and origin; includes roots and paths. -/
++/-- The ordered fork-ledger projection, including exact source paths. Roots have no
++entry. Root/member origin observations use RunMachine.originOf separately. -/
+ def originEntries {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+     {St κ φ η : Type (max u v)} (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+     List (FiberId × Origin) :=
+-  m.fibers.map fun f => (f.id, f.origin)
++  m.forks.map fun record =>
++    (record.child, Origin.forked record.parent record.daemon record.site)
+ 
+ namespace M1Origin
+ 
+@@ -802,10 +813,11 @@
+ 
+ end MachineForks
+ 
+-/-- Loaded roots are roots by their stored field, independent of diagnostics. -/
++/-- A load has no fork records and its member root reads as a root, independent of diagnostics. -/
+ theorem load_origins (program : NativeEff) (fuel : Nat)
+     (answers : List (Completion Val Err Defect FiberId Ann)) : ProofGraph.Obligation
+-    (originEntries (Api.load program fuel answers) = [(Api.root, Origin.root)]) := ⟨⟩
++    (originEntries (Api.load program fuel answers) = [] ∧
++      (Api.load program fuel answers).originOf Api.root = some .root) := ⟨⟩
+ 
+ /-- One located source fork, its decoded action, and its stamp. Static membership
+ is frozen separately with exactly the same parameters and premises.
+@@ -990,10 +1002,7 @@
+ def originForks {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+     {St κ φ η : Type (max u v)} (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+     List (FiberId × FiberId × Bool) :=
+-  m.fibers.filterMap fun f =>
+-    match f.origin with
+-    | .forked parent daemon _ => some (parent, f.id, daemon)
+-    | .root => none
++  m.forks.map fun record => (record.parent, record.child, record.daemon)
+ 
+ /-- Diagnostic agreement; deliberately not an invariant of arbitrary records. -/
+ def Agrees {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+@@ -1026,7 +1035,14 @@
+ 
+ universe u v
+ 
+-/-! ## Origins, machine half: what each fork records on the fiber it creates -/
++/-! ## Origins, machine half: the record each fork appends to the machine ledger -/
++
++@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
++theorem load_origins (program : NativeEff) (fuel : Nat)
++    (answers : List (Completion Val Err Defect FiberId Ann)) :
++    originEntries (Api.load program fuel answers) = [] ∧
++      (Api.load program fuel answers).originOf Api.root = some .root := by
++  constructor <;> rfl
+ 
+ section OriginFacts
+ variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+@@ -1047,7 +1063,7 @@
+     (options : Supervision.ForkOptions) (site : List Nat) :
+     originEntries (spawn interp m parent program options site).1 =
+       originEntries m ++ [(⟨m.nextId⟩, .forked parent.id options.daemon site)] := by
+-  aesop (add norm simp [spawn, RunFiber.make, RunMachine.emit, originEntries])
++  aesop (add norm simp [spawn, RunMachine.emit, originEntries])
+ 
+ omit [FiberCore ν β ε δ ι α κ φ] in
+ theorem start_origins (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+@@ -1061,7 +1077,7 @@
+     (program : κ) (site : List Nat) :
+     originEntries (launchEntrant interp raceId m host program site).1 =
+       originEntries m ++ [(⟨m.nextId⟩, .forked host.id true site)] := by
+-  aesop (add norm simp [launchEntrant, spawn, RunFiber.make, RunMachine.emit, originEntries])
++  aesop (add norm simp [launchEntrant, spawn, RunMachine.emit, originEntries])
+ 
+ omit [FiberCore ν β ε δ ι α κ φ] in
+ /-- Updating the race found under an id leaves that id finding the update. -/
+@@ -1283,6 +1299,7 @@
+ #obligation_proved Effect4.Api.M1Trace.forkScoped_forked := @Effect4.Api.forkScoped_forked
+ #obligation_proved Effect4.Api.M1Trace.forkFinalizers_forked := @Effect4.Api.forkFinalizers_forked
+ #obligation_proved Effect4.Api.M1Trace.supervision_static := @Effect4.Api.TraceFacts.supervision_static_flags
++#obligation_proved Effect4.Api.M1Origin.load_origins := @Effect4.Api.load_origins
+ #obligation_proved Effect4.Api.M1Origin.supervision_static := @Effect4.Api.supervision_static_origins
+ #obligation_proved Effect4.Api.M1Origin.source_fork := @Effect4.Api.source_fork_holds
+ #obligation_proved Effect4.Api.M1Origin.race_launch_origins := @Effect4.Api.race_launch_origins_holds

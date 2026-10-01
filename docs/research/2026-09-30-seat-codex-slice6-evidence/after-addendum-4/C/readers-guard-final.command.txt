@@ -1,0 +1,1 @@
+['lake', 'build', 'Effect4.Laws.Program.Guard.Core']
