@@ -1,0 +1,50 @@
+# check: int-twin-red
+# date: 2026-10-01T22:30:55Z
+# command: bun int-twin-red.ts logs/lean-int-docs.ts (cwd: this folder; effect/* through tsconfig.json paths to the worktree's vendor/effect-4.0.0-rc.112/src)
+# versions: bun 1.4.2; node v22.23.2
+ 6 | import * as Schema from "effect/Schema"
+ 7 | import * as SR from "effect/SchemaRepresentation"
+ 8 | const { intDoc } = await import(pathToFileURL(process.argv[2]!).href)
+ 9 | const withoutArbitrary = structuredClone(intDoc)
+10 | delete withoutArbitrary.representation.checks[0].annotations.arbitrary
+11 | assert.deepEqual(withoutArbitrary, SR.toJson(SR.toRepresentation(Schema.Int.ast)))
+            ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+... Skipped lines
+
+  {
+    references: {},
+    representation: {
+      _tag: 'Number',
+      checks: [
+...
+          annotations: {
+-           arbitrary: {
+-             constraint: {
+-               integer: true
+-             }
+-           },
+            expected: 'an integer'
+          },
+          representation: {
+            id: 'effect/schema/isInt',
+            payload: null
+
+ generatedMessage: true,
+     actual: {
+  representation: [Object ...],
+  references: [Object ...],
+},
+   expected: {
+  representation: [Object ...],
+  references: [Object ...],
+},
+   operator: "deepStrictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /Users/pooks/Dev/lean4-effect4-seat-W1/docs/research/2026-10-01-data-wave/W1/host/vendored/int-twin-red.ts:11:8
+
+Bun v1.4.2 (macOS arm64)
+# exit=1
