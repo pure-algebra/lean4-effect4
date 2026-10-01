@@ -87,21 +87,24 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .deferredAwaitCleanup _ _ _ => ans = Val.unit
   | .clockNow => ∃ n, ans = Val.nat n
   | .sleepCancel _ _ => ans = Val.unit
-  | .scopeMake _ => ∃ sc, ans = Val.scopeHandle sc
+  -- a scope-answering row answers a present scope's handle (decisions row 156): the step
+  -- installs or holds the entry, and `Fits` at `Ty.scope` reads presence (`fits_scope_inv`)
+  | .scopeMake _ => Fits w' ans Ty.scope
   -- an open scope registers and answers `unit`; a closed one answers its closing exit, at
   -- `Exit<unknown, unknown>` (DI-94's release type), for the caller to run the finalizer now
   | .scopeAdd _ _ => ans = Val.unit ∨
       ∃ ex, ans = reifyExitVal ex ∧ FitsExit w' ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex
   | .scopeRemove _ _ => ans = Val.unit
   | .scopeIsClosed _ => ∃ b, ans = Val.bool b
-  | .scopeFork _ _ => ∃ sc, ans = Val.scopeHandle sc
+  | .scopeFork _ _ => Fits w' ans Ty.scope
   | .memoFork _ => ∃ id, ans = Val.memoMap id
   | .memoGet _ _ => ans = Val.unit ∨ ∃ cell owner, Val.memoHit? ans = some (cell, owner) ∧
       w'.«Π» cell = some (.handle Ty.contextTarget, cert)
-  | .memoBuild _ _ => ∃ sc, ans = Val.scopeHandle sc
+  | .memoBuild _ _ => Fits w' ans Ty.scope
   | .memoComplete _ _ _ => ans = Val.unit
-  -- the last observer's release answers the layer's scope handle, for the caller to close
-  | .memoRelease _ _ => ans = Val.unit ∨ ∃ sc, ans = Val.scopeHandle sc
+  -- the last observer's release answers the layer's scope handle, for the caller to close; the
+  -- layer scope is present (`Stores.MemoValid`, which `StoreTyped` carries)
+  | .memoRelease _ _ => ans = Val.unit ∨ Fits w' ans Ty.scope
 
 def Ψ_S (root : ProgramSource) : Protocol World StoreSig where
   Cert := StoreCert
@@ -198,7 +201,8 @@ def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer
   | .setContext _ | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _
   | .interruptAll _ _ | .runIn _ _ | .cancelRace _ | .dropObservers _
   | .foreignRelease _ _ | .closeWalk _ _ _ | .awaitNewChildren _ => ans = Val.unit
-  | .ambientScope => ∃ sc, ans = Val.scopeHandle sc
+  -- the context's ambient scope, present by `J` (`ambientScope_live`, decisions row 156)
+  | .ambientScope => Fits w' ans Ty.scope
   | .sync value => ans = value
   | .await target mode => match mode with
     | .joinEffect => ∃ ty, w'.Γ target = some ty ∧ ExitOk w' ty ans

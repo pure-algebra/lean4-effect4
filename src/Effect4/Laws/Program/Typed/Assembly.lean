@@ -304,6 +304,16 @@ theorem ambientScope_live {root : ProgramSource} {rootTy : EffTy} {w : World} {m
     rfl
   exact (fit Env.scopeKey _ _ bound carrier).2
 
+/-- **The ambient-scope read answers inside its post at `J`** (decisions row 156): the machine
+answers `.ambientScope` with the fiber context's ambient scope (`FiberAction.ambientScope`,
+`Machine/Fibers.lean:1491-1498`), which `J` holds present (`ambientScope_live`), so the handle
+fits `Ty.scope` (`ambientScope_answers`). -/
+theorem ambientScope_answers_of_typed {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} (typed : MachineTyped root rootTy w m) {f : RFiber} (hf : f ∈ m.fibers)
+    {scope : Nat} (ambient : Ctx.ambientScope f.context = some scope) :
+    fiberPost w .ambientScope () ((interpR root.program).scopeValue scope) :=
+  ambientScope_answers root w scope (ambientScope_live typed hf ambient)
+
 /-- A halted machine is outside `J` (row 139; probe C's `typedState_halt`, read at `J`). -/
 theorem machineTyped_not_halted (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
     (why : Stuck) : ¬ MachineTyped root rootTy w (m.halt why) := by
@@ -315,12 +325,13 @@ theorem machineTyped_not_halted (root : ProgramSource) (rootTy : EffTy) (w : Wor
 receipt-B "For seat C" item 3): the declarations cover exactly the allocated cells and promises
 (`WorldValid.heap`, `.promises` over `WorldValid.state`), every stored value fits its cell's
 declared type (the generated `HeapCell` column), and every closing exit a scope holds fits
-`Exit<unknown, unknown>` (the un-refused `ScopeExitOk` row, row 140). It reads only `J`'s
-`TypedState`; `storeStep_typed` consumes it in wave 2's `loop` arm. -/
+`Exit<unknown, unknown>` (the un-refused `ScopeExitOk` row, row 140), and every memo entry's
+allocations exist (`WorldValid.wf`'s memo clause, which `memoRelease`'s post reads, row 156). It
+reads only `J`'s `TypedState`; `storeStep_typed` consumes it in wave 2's `loop` arm. -/
 theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} (typed : MachineTyped root rootTy w m) : StoreTyped w := by
   obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _, _⟩ := typed
-  refine ⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_, fun e he ex hex => ?_⟩
+  refine ⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_, fun e he ex hex => ?_, ?_⟩
   · rw [valid.state]
     exact valid.heap key
   · rw [valid.state]
@@ -339,6 +350,8 @@ theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : Wo
     | openEmpty => cases hex
     | openInline _ _ => cases hex
     | openMap _ => cases hex
+  · rw [valid.state]
+    exact valid.wf.2.2.1
 
 /-- **TY-08's promise half (proved)**: the coarse promise column (`PromiseTable`, the leaf
 `CompletionOk`) from the strong one (`preds`' `PromiseCell`, the leaf `CompletionStrong`): an

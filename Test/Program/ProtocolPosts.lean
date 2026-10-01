@@ -273,8 +273,13 @@ theorem memoRelease_post_excludes (w : W) (cert : StoreCert (.memoRelease [] ⟨
   intro h
   cases h
 
-theorem memoRelease_post_admits (w : W) (cert : StoreCert (.memoRelease [] ⟨0⟩)) :
-    storePost w (.memoRelease [] ⟨0⟩) cert (Val.scopeHandle 1) := Or.inr ⟨1, rfl⟩
+/-- The flip: the current post admits the layer scope's handle, at a world that holds that scope
+(decisions row 156: the post carries presence; `memoRelease_implements` supplies it from the
+store's memo clause). -/
+theorem memoRelease_post_admits (w : W) (cert : StoreCert (.memoRelease [] ⟨0⟩))
+    (live : ScopeLive w 1) :
+    storePost w (.memoRelease [] ⟨0⟩) cert (Val.scopeHandle 1) :=
+  Or.inr (fits_scopeHandle w 1 live)
 
 def natTy : EffTy := EffTy.pure .nat
 
@@ -304,14 +309,16 @@ theorem memo_next_untyped (root : ProgramSource) (w' : W) :
   rw [hk] at h
   exact (OldTypedProg.pure_inv h).1
 
-/-- The flip: the current judgment refuses the program, since the handle is now an answer. -/
-theorem memoCode_refused (root : ProgramSource) (w : W) : ¬ TypedProg root w natTy memoCode := by
+/-- The flip: the current judgment refuses the program, since the handle is now an answer (at a
+world that holds the layer scope, which the store's memo clause guarantees after a build). -/
+theorem memoCode_refused (root : ProgramSource) (w : W) (live : ScopeLive w 1) :
+    ¬ TypedProg root w natTy memoCode := by
   intro h
   obtain ⟨_, _, next⟩ := TypedProg.store_inv h
   have hk : k (Val.scopeHandle 1) = .pure (.success (.str "x")) := by
     unfold k
     rw [if_neg (by intro e; cases e)]
-  have typed := next w (leHost_refl w) (Val.scopeHandle 1) (Or.inr ⟨1, rfl⟩)
+  have typed := next w (leHost_refl w) (Val.scopeHandle 1) (Or.inr (fits_scopeHandle w 1 live))
   rw [hk] at typed
   exact (TypedProg.pure_inv typed).1
 
@@ -883,7 +890,7 @@ h✝ : Val.scopeHandle 1 = Val.unit
 case inr
 w : W
 cert : StoreCert (SyncOp.memoRelease [] { index := 0 })
-h✝ : ∃ sc, Val.scopeHandle 1 = Val.scopeHandle sc
+h✝ : Typed.Fits w (Val.scopeHandle 1) Ty.scope
 ⊢ False
 -/
 #guard_msgs (error) in
@@ -1080,3 +1087,17 @@ open Test.Program.ProtocolPosts in
 #print axioms Effect4.Program.Typed.refUpdateSome_implements
 #print axioms Effect4.Program.Typed.refGetAndUpdateSome_implements
 #print axioms Effect4.Program.Typed.refUpdateSomeAndGet_implements
+
+/-! The scope-answering rows' adequacy, re-proved at decisions row 156 (integration seat I2): the
+step installs or holds the scope it answers. -/
+#print axioms Effect4.Program.Typed.scopeMake_implements
+#print axioms Effect4.Program.Typed.scopeFork_implements
+#print axioms Effect4.Program.Typed.memoBuild_implements
+#print axioms Effect4.Program.Typed.memoRelease_implements
+#print axioms Effect4.Program.Typed.ambientScope_answers
+#print axioms Effect4.Program.Typed.restate_world
+#print axioms Effect4.Program.Typed.poke_world
+#print axioms Effect4.Program.Typed.complete_world
+#print axioms Effect4.Program.Typed.refMake_implements
+#print axioms Effect4.Program.Typed.deferredMake_implements
+#print axioms Effect4.Machine.syncOpStep_memoValid

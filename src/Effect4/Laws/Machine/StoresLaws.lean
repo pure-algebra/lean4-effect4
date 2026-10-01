@@ -1220,14 +1220,15 @@ theorem syncOpStep_isSome_of_valid (o : SyncOp) (s : Stores) (hv : o.validIn s =
       · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs]; rfl
 
 /-- A memo entry's allocations exist after a step (the join): the old entries by growth, a
-built entry by its own allocations, the world otherwise unchanged. -/
-theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
+built entry by its own allocations, the world otherwise unchanged. It reads only the memo clause
+of `Stores.WF` (`StoreTyped.memo` carries that clause alone, decisions row 156). -/
+theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hmemo : s.MemoValid)
     (h : syncOpStep o s = some (s', v)) : s'.MemoValid := by
   have hle := syncOpStep_le o s s' v h
   have hsame : ∀ {t : Stores}, t.memo = s.memo → s.le t → t.MemoValid := by
     intro t ht hlt m hm e he
     rw [ht] at hm
-    obtain ⟨hd, hs⟩ := hwf.2.2.1 m hm e he
+    obtain ⟨hd, hs⟩ := hmemo m hm e he
     exact ⟨Nat.lt_of_lt_of_le hd hlt.2.1, hlt.2.2.1 _ hs⟩
   cases o with
   | memoFork parent =>
@@ -1235,7 +1236,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     obtain ⟨rfl, _⟩ := h
     intro m hm e he
     rcases List.mem_append.mp hm with hm | hm
-    · exact hwf.2.2.1 m hm e he
+    · exact hmemo m hm e he
     · rw [List.mem_singleton] at hm
       subst hm
       exact nomatch he
@@ -1244,7 +1245,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     | none =>
       rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      exact hwf.2.2.1
+      exact hmemo
     | some p =>
       obtain ⟨owner, entry⟩ := p
       rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
@@ -1253,7 +1254,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
       have hm' : m ∈ s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 } :=
         hm
       obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
-      obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e₀ he₀
+      obtain ⟨hd, hs⟩ := hmemo m₀ hm₀ e₀ he₀
       rcases heq with rfl | rfl
       · exact ⟨hd, hs⟩
       · exact ⟨hd, hs⟩
@@ -1263,7 +1264,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     intro m hm e he
     have hm' : m ∈ s.memo.insertEntry memoMap layer _ := hm
     rcases MemoWorld.mem_insertEntry_entries hm' he with ⟨m₀, hm₀, he₀⟩ | rfl
-    · obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e he₀
+    · obtain ⟨hd, hs⟩ := hmemo m₀ hm₀ e he₀
       exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hle.2.2.1 _ hs⟩
     · exact ⟨by aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel]), ScopeStore.entryAt_make_self _ _ _⟩
   | memoComplete layer memoMap exit =>
@@ -1272,20 +1273,20 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
       rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      exact hwf.2.2.1
+      exact hmemo
     | some entry =>
       rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
       intro m hm e he
-      obtain ⟨hd, hs⟩ := hwf.2.2.1 m hm e he
+      obtain ⟨hd, hs⟩ := hmemo m hm e he
       exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hs⟩
   | memoRelease layer memoMap =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
       rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      exact hwf.2.2.1
+      exact hmemo
     | some entry =>
       by_cases hobs : entry.observers ≤ 1
       · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
@@ -1294,7 +1295,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
         intro m hm e he
         have hm' : m ∈ s.memo.deleteEntry memoMap layer := hm
         obtain ⟨m₀, hm₀, he₀⟩ := MemoWorld.mem_deleteEntry_entries hm' he
-        exact hwf.2.2.1 m₀ hm₀ e he₀
+        exact hmemo m₀ hm₀ e he₀
       · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
           Prod.mk.injEq] at h
         obtain ⟨rfl, _⟩ := h
@@ -1302,7 +1303,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
         have hm' : m ∈ s.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 } :=
           hm
         obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
-        obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e₀ he₀
+        obtain ⟨hd, hs⟩ := hmemo m₀ hm₀ e₀ he₀
         rcases heq with rfl | rfl
         · exact ⟨hd, hs⟩
         · exact ⟨hd, hs⟩
@@ -1648,7 +1649,7 @@ leave the heap untouched; the closing exits by `syncOpStep_closingValid`. -/
 theorem syncOpStep_wf (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     (hv : o.validIn s = true) (h : syncOpStep o s = some (s', v)) : s'.WF := by
   have hle := syncOpStep_le o s s' v h
-  refine ⟨?_, syncOpStep_closingValid o s s' v hwf h, syncOpStep_memoValid o s s' v hwf h,
+  refine ⟨?_, syncOpStep_closingValid o s s' v hwf h, syncOpStep_memoValid o s s' v hwf.2.2.1 h,
     syncOpStep_timers_wf o s s' v hwf.2.2.2 h⟩
   cases o with
   | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
