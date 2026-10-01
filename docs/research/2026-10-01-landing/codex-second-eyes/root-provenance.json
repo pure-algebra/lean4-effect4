@@ -1,0 +1,8 @@
+{
+  "reviewed_commit": "509d243c31b5c324fd7af19a70781dd5ea810e10",
+  "source_sha256": "1f7c445a630fc1771ae777cb5a3726a00ac2e8939af82ba6a96e80cb082cec5c",
+  "compiled_module_sha256": "3fec8a4a11333f2f8a3fc18ae808b628e62560112d3747fdcba2d15a25040142",
+  "command": "LEAN_NUM_THREADS=1 LEAN_PATH=/private/tmp/codex-second-eyes-2026-10-01/lib /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -j1 -M2048 -DwarningAsError=true -o lib/Effect4/Laws/Program/Typed/Residual.olean sources/Effect4/Laws/Program/Typed/Residual.lean",
+  "exit_code": 0,
+  "log": "residual-recompile.log"
+}

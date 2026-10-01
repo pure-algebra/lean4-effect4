@@ -367,7 +367,7 @@ inductive ProgName
   | intoBody (body : ProgName) (cell : DeferredKey)
   /-- A program that masks its own fiber and then parks (`internal/effect.ts:4302-4310`). -/
   | maskedPark (slot : Nat)
-  /-- `fiberAwaitAll(targets)` (`internal/effect.ts:779`), answering the exits (M6). -/
+  /-- `fiberAwaitAll(targets)` (`internal/effect.ts:779`), answering the exits (S2-M6). -/
   | awaitFibers (targets : List FiberId)
   /-- The program one scope finalizer *name* runs, as a forkable program. -/
   | finalizerOf (fin : FinName) (exit : ExitV)
@@ -469,7 +469,7 @@ inductive Name
   frame's name: the remaining finalizers, the closing exit, and the reasons captured so far. -/
   | closeSeq (remaining : List FinName) (exit : ExitV)
       (captured : List (Reason Err Defect FiberId Ann))
-  /-- The parallel close generator under its await (`internal/effect.ts:3823-3826`, §20; M6):
+  /-- The parallel close generator under its await (`internal/effect.ts:3823-3826`, §20; S2-M6):
   the frame's next step is `exitAsVoidAll` of the exits the `awaitAll` park answered with. -/
   | closeParDone
   /-- `memoEntry`'s continuation after `memoRelease` (`Layer.ts:403-408`, the join): the last
@@ -1642,7 +1642,7 @@ theorem reifyExitVal_eq_exitImage (exit : ExitV) : reifyExitVal exit = exitImage
   cases exit <;> rfl
 
 /-- `RunInterp.exitsValue`: the exits a countdown collected, as one value — one `list` frame
-(`fiberAwaitAll`, `internal/effect.ts:779`; M6). -/
+(`fiberAwaitAll`, `internal/effect.ts:779`; S2-M6). -/
 def exitsVal (exits : List ExitV) : Val := .list (exits.map reifyExitVal)
 
 mutual
@@ -1676,7 +1676,7 @@ theorem reasonsOfList_map_reifyExitVal (exits : List ExitV) :
   | cons exit rest ih =>
     rw [List.map_cons, reasonsOfList, reasonsOfVal_reifyExitVal, List.flatMap_cons, ih]
 
-/-- Reading the reasons back off an exits value is reading them off the list: the M6 channel
+/-- Reading the reasons back off an exits value is reading them off the list: the S2-M6 channel
 loses nothing, so the merge of an awaited list is `exitAsVoidAll` of that list.
 census: scope.close-merge -/
 theorem reasonsOfVal_exitsVal (exits : List ExitV) :
@@ -1925,7 +1925,7 @@ def storesCloseScopeUnsafe (scope : Nat) (exit : ExitV) (_closerInterruptible : 
 /-- `Scope.close(scope, exit)` (`internal/effect.ts:3775-3776`): `scopeCloseUnsafe(...) ??
 void_` — the unsafe close's program, or void when it returns none (an empty or already
 closed scope). `none` is an unknown scope key, which the machine turns into
-`Stuck.unknownScope` — a live frontier, never a cause (M7). -/
+`Stuck.unknownScope` — a live frontier, never a cause (S2-M7). -/
 def storesCloseScope (scope : Nat) (exit : ExitV) (closerInterruptible : Bool)
     (state : Stores) : Option (Stores × Program) :=
   (storesCloseScopeUnsafe scope exit closerInterruptible state).map fun r =>
@@ -1960,7 +1960,7 @@ def syncOpStep : SyncOp → Stores → Option (Stores × Val)
     some ({ st with scopes := st.scopes.make st.nextName strategy, nextName := st.nextName + 1 },
       Val.scopeHandle st.nextName)
   -- `scopeAddFinalizerExit` (`internal/effect.ts:3846-3858`): an unknown scope is a frontier
-  -- (M7); a closed scope answers its closing exit, the caller running the finalizer now
+  -- (S2-M7); a closed scope answers its closing exit, the caller running the finalizer now
   -- (`:3851-3853`); an open one registers under a key allocated from the supply (`:3855-3856`,
   -- `E4-CHECK-CE-016`), so the supply keeps dominating every key the store holds
   | SyncOp.scopeAdd scope finalizer, st =>
@@ -2233,7 +2233,7 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
     | none => none
     | some _ =>
       -- `forkIn` registers the self-guarded finalizer (`:5370`), `fiberRunIn` the unguarded
-      -- one (`:5458`) — M4. The identity is allocated here, from the store's own supply,
+      -- one (`:5458`) — S2-M4. The identity is allocated here, from the store's own supply,
       -- because the source allocates `const key = {}` at each registration (`:5366`,
       -- `:5457`) — `E4-CHECK-CE-016`.
       let skipSelf :=
@@ -2416,7 +2416,7 @@ theorem actionOf_closePar (order : List FinName) (exit : ExitV) :
     actionOf (ActionName.closePar order exit) =
       WithFiberAction.closePar (order.map fun fin => finProgram fin exit) := rfl
 
-/-- `scope.close-merge` (M6, §20): the parallel walk's done step, delivered the exits its await
+/-- `scope.close-merge` (S2-M6, §20): the parallel walk's done step, delivered the exits its await
 answered, is `exitAsVoidAll` of exactly those exits — no store side-channel. -/
 theorem closeParDone_is_asVoidAll (exits : List ExitV) :
     stores.iterNext Name.closeParDone (stores.exitsValue exits) =
@@ -2437,7 +2437,7 @@ theorem storesCloseScope_state_first (scope : Nat) (exit : ExitV) (state : Store
   have _ := hopen
   constructor <;> simp [storesCloseScope, storesCloseScopeUnsafe, scopeCloseSnapshot, h]
 
-/-- M7: an unknown scope key is a frontier, not a cause — the hook answers `none` and the
+/-- S2-M7: an unknown scope key is a frontier, not a cause — the hook answers `none` and the
 machine halts with `Stuck.unknownScope`. -/
 theorem storesCloseScope_unknown (scope : Nat) (exit : ExitV) (masked : Bool) (state : Stores)
     (h : state.scopes.entryAt scope = none) :
@@ -2473,7 +2473,7 @@ theorem scopeLinkFiber_name (scope : Nat) (fiber : FiberId) (state : Stores)
         nextName := state.nextName + 1 }, state.nextName) := by
   simp [stores, h]
 
-/-- M4: `fiberRunIn` registers the *unguarded* finalizer (`internal/effect.ts:5458`), under
+/-- S2-M4: `fiberRunIn` registers the *unguarded* finalizer (`internal/effect.ts:5458`), under
 its own freshly allocated identity (`:5457`). census: scope.fork-linkage -/
 theorem scopeLinkFiber_runIn_name (scope : Nat) (fiber : FiberId) (state : Stores)
     (entry : ScopeEntry) (h : state.scopes.entryAt scope = some entry) :
@@ -2485,7 +2485,7 @@ theorem scopeLinkFiber_runIn_name (scope : Nat) (fiber : FiberId) (state : Store
         nextName := state.nextName + 1 }, state.nextName) := by
   simp [stores, h]
 
-/-- M7 again: linking into an unknown scope is a frontier. -/
+/-- S2-M7 again: linking into an unknown scope is a frontier. -/
 theorem scopeLinkFiber_unknown (mode : Supervision.ScopeMode) (scope : Nat)
     (fiber : FiberId) (state : Stores) (h : state.scopes.entryAt scope = none) :
     stores.scopeLinkFiber mode scope fiber state = none := by

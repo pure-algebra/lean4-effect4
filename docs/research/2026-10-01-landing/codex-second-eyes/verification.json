@@ -1,0 +1,38 @@
+[
+  {
+    "name": "hash-verification",
+    "command": [
+      "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+      "--run",
+      "VerifyHashes.lean"
+    ],
+    "environment": {
+      "LEAN_NUM_THREADS": "1",
+      "LEAN_PATH": "/private/tmp/codex-second-eyes-2026-10-01/lib"
+    },
+    "working_directory": "/private/tmp/codex-second-eyes-2026-10-01",
+    "seconds": 0.782,
+    "exit_code": 0
+  },
+  {
+    "name": "scope-allocation-post",
+    "command": [
+      "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+      "-j1",
+      "-M2048",
+      "-DwarningAsError=true",
+      "probes/ScopeAllocationPost.lean"
+    ],
+    "environment": {
+      "LEAN_NUM_THREADS": "1",
+      "LEAN_PATH": "/private/tmp/codex-second-eyes-2026-10-01/lib"
+    },
+    "working_directory": "/private/tmp/codex-second-eyes-2026-10-01",
+    "seconds": 1.336,
+    "exit_code": 0
+  },
+  {
+    "probe_sha256": "ba5e2e9e623880470cdba982b09f45ecf15c1935b3ff21930c9669b48420ea33",
+    "child_peak_rss_bytes_macos": 1603223552
+  }
+]

@@ -284,6 +284,21 @@ retired to history, one bibliography, the eight ruling-bearing notes force-added
 DB-01 … DB-17 in one row shape, status by link to §8, every citation checked at `dceae006` by the
 seat's script; the re-pin after seat C's split is row 154.
 
+**Seats C and I merged (2026-10-01, `38686e44`).** Seat C landed row 134's split (`J = MachineTyped`,
+`I = ConfigTyped`), M7 declared over `M7Fragment` with its route proved (row 138), the liveness
+clauses (row 139), the ledger as one list (row 140), and the register's CE-011 and CE-014
+repaired; seat I integrated it with seats B, E and F: `M6Stack` folded into `M3bWorld` (row 87),
+`E4-TYPED-CE-010` flipped against M5 over `J` (`AwaitLoad.loadsTyped`), `fiberPre`'s halting arms
+with their refusal controls, `storeTyped_of_typedState`; `lake build Effect4.Laws Test.All` green
+with both gates. Two checked refutations stand and are one row, 156 (recommended (a), authorized
+for pass I2, ratification owed): the `scopeExit` constructor reads no scope liveness, so
+`step_deliver` stays refuted (`E4-SCHED-CE-020`, re-opened); and Codex's second-eyes review
+([`codex-second-eyes/review.md`](research/2026-10-01-landing/codex-second-eyes/review.md)) shows
+the scope-handle posts carry no presence, so the checked program "make a scope, fork into it" has
+no `TypedProg` derivation and M5's `DenotesTyped` is false there (`E4-TYPED-CE-018`). Pass I2
+(seat A on top of seat I, [brief](research/2026-10-01-landing/brief-I2.md)) runs on `seat/I2` with
+row 156 as its step 10; row 154's re-pin follows I2's merge.
+
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
 it ([synthesis](research/2026-10-01-data-probe/synthesis.md), the entry). The design is not one we

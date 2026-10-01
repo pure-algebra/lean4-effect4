@@ -97,3 +97,74 @@ the generated files changed and the producer commands with their exit codes; the
 and after; the census; what is owed, with the exact obstacle for anything left; the lines for the
 coordinator's files (register cells for `E4-TYPED-CE-006`, `-009`, `-015`; rows 96, 111–116, 127,
 137, 149 as receipt A proposes, checked against what you landed).
+
+## Amendments (2026-10-01, after seat I's receipt and Codex's second-eyes review)
+
+Dated additions. Where they differ from the text above, they win.
+
+- **Base named.** `seat/I` head `160012dc` (receipt-I, merged to main as `38686e44`); `seat/A`
+  merged by the coordinator as the first commit of `seat/I2`, `a6ec2a28` (no conflicts; `.lake`
+  cloned from seat I's worktree, current at its head). This brief and Codex's evidence live in the
+  main checkout, `/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-landing/` (`brief-I2.md`,
+  `codex-second-eyes/`): read them there; edit and build only in this worktree.
+- **Step 10 (after step 9's green build): decisions row 156, scope presence as one predicate.**
+  Two checked refutations stand after row 139's consumer premises landed. Seat I's: the
+  `TypedProg.scopeExit` constructor reads no pre, so `M6Ledger.step_deliver` stays refuted by
+  `M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope` (receipt-I "What is owed",
+  with the measured repair). Codex's (`codex-second-eyes/review.md`, `ScopeAllocationPost.lean`,
+  `scope-allocation-post.log`; nine theorems at `[propext, Quot.sound]`, five guards, at
+  `509d243c`): the five posts that answer a scope handle (`storePost`'s `scopeMake`
+  `Residual.lean:90`, `scopeFork` `:97`, `memoBuild` `:101`, `memoRelease` `:104`; `fiberPost`'s
+  `ambientScope` `:191`) say only `∃ sc, ans = scopeHandle sc`, so the continuation of an
+  allocation must be typed at an absent scope; the checked source `forkAfterMake` (make a
+  sequential scope, fork a unit child into it; the checker accepts it at
+  `pure (fiberOf unit never)`, the run answers `fiber 1` at fuel 40) has no `TypedProg`
+  derivation at any world where scope 0 is absent (`forkAfterMake_denotation_refused`), which
+  refutes the exact `DenotesTyped` proposition (`m5_denotation_shape_false`); `makeThenClose_refused`
+  is the same without fork machinery; `absent_scope_still_fits` shows membership at `Ty.scope`
+  ignores presence (seat A's `HandleFits` scope arm, `Membership.lean:64`, checks the target name
+  only, where the external arm checks allocation). Land, in this order, each with its narrow
+  build and its own commit:
+  1. `ScopeLive (w : World) (sc : Nat) : Prop := (w.state.scopes.entryAt sc).isSome = true`
+     once, in `World.lean` beside the world order, with `scopeLive_mono` along the order's
+     scope-persistence component (receipt-I names it `ord.1.1.2.2.2.1`). Every site below reads
+     it by name; no second spelling of the fact.
+  2. `HandleFits`'s scope arm: `target = Ty.scopeTarget ∧ ScopeLive w index`, as the cell,
+     promise and external arms read their stores (row 139's clause); `handleFits_map` gains the
+     transport. Then `MachineLive.ambientScopes` (`Assembly.lean:251`) is derived from the
+     context's membership if that is a few lines, else kept with its docstring naming the
+     derivation as owed.
+  3. The five posts carry presence at the answer world: as `Fits w' ans Ty.scope` if membership
+     now owns the shape (one owner), else `∃ sc, ans = scopeHandle sc ∧ ScopeLive w' sc`;
+     `memoRelease` on its scope-handle disjunct. Re-prove the adequacy instances from the actual
+     operation (`Adequacy.lean`: `scopeMake_implements` `:662`, `scopeFork_implements` `:684`,
+     the memo instances, `ambientScope_answers` `:973` from `MachineLive.ambientScopes` through
+     `J`): the step installs the entry (Codex's `#guard`s on `syncOpStep`).
+  4. `fiberPre`'s arms (`Residual.lean:144`, `interruptAs`, `runIn`, `scopeExit`, `closeScope`,
+     `forkIn`) read `ScopeLive` by name; no change of content.
+  5. The `scopeExit` constructor takes `live : ScopeLive w sc` (receipt-I's measured hunk: the
+     constructor, `fiber_inv`'s pattern, `typedProg_mono`'s arm, seat E's `Seq.close_typed`,
+     seat C's `RawOrderLoad.fiber_inv`). In `M6Capstone.H1HaltAmendment`, `callback_typed`
+     takes the premise; the eight controls that fall (`worker_saved`, `typed`, `old_typed`,
+     `typedState_input`, `config_input`, `step_deliver_false`, `deliver_preserves_this_state`,
+     `step_deliver_refuted_by_absent_scope`) stay as history over one local copy of the judgment
+     without the premise and of H1's and the split's states over it (named `Old…`, as `AwaitLoad`
+     does); `input_refused (w) : ¬ ConfigTyped rootProgram unitTy w machine commands` replaces
+     the red control, proved. `M6Ledger.step_deliver`'s docstring and `MachineLive`'s drop the
+     refutation; the ledger line stays open.
+  6. The battery `Test/Counterexamples/Machine/Semantics/ScopePresence.lean`, reachable from
+     `Test/All.lean` at the anchor: Codex's probe as history (its refutations over local copies
+     of the old post and the old membership, or pinned failing by `#guard_msgs (error)` against
+     the current judgment, as `AwaitLoad` pins seat C's script) beside the positive controls:
+     `forkAfterMake` and `makeThenClose` typed as `TypedProg` derivations at Codex's
+     `startingWorld` and through the `DenotesTyped` shape at `point` (the exact proposition of
+     `Assembly.lean`'s `DenotesTyped`), the kernel-checked checker certificate and the runtime
+     `#guard`s kept. `E4-TYPED-CE-018` becomes REPAIRED by it (propose the cell).
+  7. `LEAN_NUM_THREADS=6 lake build Effect4.Laws Test.All` green with both gates; the ledger per
+     scope; `#print axioms` for every theorem added or re-proved; the admission census unchanged.
+  Plan §4's stop rule holds: a repair past a few lines outside this list stops with a measured
+  report. If step 9's receipt is due before step 10 is reached, write it, continue step 10 in the
+  same worktree, and update the receipt in place ("After the amendment").
+- **Receipt additions:** the lines for rows 139 and 156, `E4-TYPED-CE-018` and
+  `E4-SCHED-CE-020`; what `step_deliver`'s ledger line reads after the constructor change (open
+  and no longer refuted by that witness, or the exact obstacle).

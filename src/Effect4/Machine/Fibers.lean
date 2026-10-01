@@ -81,7 +81,7 @@ deriving DecidableEq
 /-- One outstanding park. A join or await (`:5291`, `:5304`) waits on one fiber; a countdown
 park (`fiberAwaitAll`, `:779-811`; `awaitAllChildren`; the exit path's child interruption)
 walks its targets *in input order*, one observer at a time (R2-4): `waitingOn` is the target
-observed now, `remaining` the targets not yet visited, `collected` the exits so far (M6). -/
+observed now, `remaining` the targets not yet visited, `collected` the exits so far (S2-M6). -/
 structure Pending (ν : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
   token : Nat
   waitingOn : Option FiberId
@@ -472,7 +472,7 @@ inductive RunDecision (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Ty
   tape to the existing Completion data; the interpreter supplies its code. -/
   | answerAsync (fiber : FiberId) (token : Nat) (answer : Completion β ε δ ι α)
   /-- (d) `interruptUnsafe(fiberId, annotations)` (`:574`): the interruptor the wire drops
-  and the caller's annotations (M5); `none` is `runFork`'s abort signal (`:5427-5429`). -/
+  and the caller's annotations (S2-M5); `none` is `runFork`'s abort signal (`:5427-5429`). -/
   | interruptFrom (interruptor : Option FiberId) (annotations : ReasonAnnotations α)
       (target : FiberId)
   /-- (e) the `interruptChildren` middleware latch (`:6656-6658`). -/
@@ -562,7 +562,7 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   /-- Register the keyed fiber finalizer of `forkIn` (self-guarded, `:5370`) or
   `fiberRunIn` (unguarded, `:5458`), allocating the registration identity the way the
   source allocates `const key = {}` at each registration (`:5366`, `:5457`), and answering
-  it beside the updated store; `none` when the scope is unknown (M4, M7).
+  it beside the updated store; `none` when the scope is unknown (S2-M4, S2-M7).
   `E4-CHECK-CE-016`. -/
   scopeLinkFiber : Supervision.ScopeMode → Nat → FiberId → St → Option (St × Nat)
   /-- `forkIn`'s key-dropping observer (`:5370-5372`); `none` when the scope is unknown. -/
@@ -570,7 +570,7 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   /-- The close program of a scope for its strategy: sequential awaits each finalizer
   through its exit; parallel forks daemons that inherit the closing fiber's mask and merges
   every exit by `exitAsVoidAll`. Arguments: scope, exit, the closer's `interruptible`, the
-  closer's id; `none` when the scope is unknown (M7). -/
+  closer's id; `none` when the scope is unknown (S2-M7). -/
   closeScope : Nat → Exit β ε δ ι α → Bool → FiberId → St → Option (St × κ)
   /-- The ambient `Scope` service of a context (`forkScoped`, `:5400-5406`). -/
   ambientScope : χ → Option Nat
@@ -590,7 +590,7 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   fiberIdValue : FiberId → β
   /-- A list of handles as a value (`awaitAllChildren`'s snapshot). -/
   fibersValue : List FiberId → β
-  /-- A list of exits as a value (`fiberAwaitAll`, `:779`; M6). -/
+  /-- A list of exits as a value (`fiberAwaitAll`, `:779`; S2-M6). -/
   exitsValue : List (Exit β ε δ ι α) → β
   /-- `exitVoid` as a value (`:988`). -/
   voidValue : β
@@ -796,7 +796,7 @@ variable {κ φ η : Type (max u v)} [core : FiberCore ν β ε δ ι α κ φ]
 
 /-- `interruptUnsafe(fiberId, annotations)` (`:574-595`) on one fiber, without the
 apply-now re-entry, which the loop performs as a command. The cause is annotated from the
-target's stack frame and from the caller (`:578-584`, M5). Returns the fiber and whether to
+target's stack frame and from the caller (`:578-584`, S2-M5). Returns the fiber and whether to
 evaluate it now. When the fiber was parked on an `Async` that pushed an `AsyncFinalizer`,
 applying the interrupt means failing through that frame, whose `contE` runs the cancel
 (`:1155-1159`) — the frame machine does that; nothing here has to. -/
@@ -1000,8 +1000,8 @@ def forkFinalizers (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMa
 /-- Link a fiber to a scope (`forkIn`, `:5364-5378`; `fiberRunIn`, `:5447-5461`): open, a
 keyed finalizer of the mode's shape under the identity the store allocates for this
 registration, and the observer that drops exactly that identity; closed, an immediate
-interrupt with `interruptor` and the interruptor's own stack annotations (`:5374`, M5);
-unknown, stuck (M7). -/
+interrupt with `interruptor` and the interruptor's own stack annotations (`:5374`, S2-M5);
+unknown, stuck (S2-M7). -/
 def linkScope (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (interruptor : Option FiberId) (extra : ReasonAnnotations α) :
@@ -1331,7 +1331,7 @@ where
       ⟨m, answer f (interp.fiberIdValue f.id), yielding, Outcome.continue_, []⟩
     | WithFiberAction.closeScope scope exit =>
       match interp.closeScope scope exit f.frame.interruptible f.id m.state with
-      | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownScope scope), []⟩   -- M7
+      | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownScope scope), []⟩   -- S2-M7
       | some (state, program) =>
         ⟨{ m with state := state }, { f with frame := { f.frame with current := program } },
           yielding, Outcome.continue_, []⟩
@@ -1670,7 +1670,7 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St κ) (id : FiberI
     match interp.dropFinalizer scope key m.state with
     | none => (m.halt (Stuck.unknownScope scope), acc.2)
     | some state => ({ m with state := state }, acc.2)
-  | Observer.countdown waiter token =>                                 -- :802-805 (M6, R2-4)
+  | Observer.countdown waiter token =>                                 -- :802-805 (S2-M6, R2-4)
     match m.fiber? waiter with
     | none => (m, acc.2)
     | some w =>

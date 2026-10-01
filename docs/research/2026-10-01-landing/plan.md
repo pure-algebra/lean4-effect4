@@ -178,3 +178,14 @@ reads them before merging:
 
 The synthesis's corrections to the briefs (§4.5 of `docs/research/2026-10-01-formal-pass/synthesis.md`)
 were sent to every seat and recorded on rows 134, 136, 137, 143 and 149 before any merge.
+
+## Amendments (dated)
+
+- 2026-10-01, after seat I's merge (`38686e44`): pass I2 (`brief-I2.md`, seat A on top of seat I)
+  carries decisions row 156 as its step 10: scope presence as one predicate (`ScopeLive`), read by
+  the five scope-handle posts, the scope arm of `HandleFits`, the `fiberPre` arms and the
+  `scopeExit` constructor, with its transport lemma; witnesses `E4-SCHED-CE-020` (seat I's
+  `step_deliver_refuted_by_absent_scope`) and `E4-TYPED-CE-018` (Codex's second-eyes review,
+  `codex-second-eyes/`: the checked program "make a scope, fork into it" has no `TypedProg`
+  derivation). Acceptance: that program and "make a scope, close it" typed as positive controls.
+  Wave 2's list is unchanged otherwise; row 154's re-pin follows I2's merge.

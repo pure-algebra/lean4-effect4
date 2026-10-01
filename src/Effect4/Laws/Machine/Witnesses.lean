@@ -901,7 +901,7 @@ theorem w6_sequential_captures_and_merges :
   by aesop
 
 /-- The parallel close forks one immediate daemon per finalizer, awaits them together, and
-merges *every* awaited exit — since M6 through `Resume.exitsValue`, not a store side-channel. -/
+merges *every* awaited exit — since S2-M6 through `Resume.exitsValue`, not a store side-channel. -/
 theorem w6_parallel_forks_and_merges :
     fiberCount w6Parallel = 3 ∧
       exitOf w6Parallel 1 =
@@ -997,9 +997,9 @@ theorem w11_cancel_splices_the_waiter :
       exitOf w11Cancelled 1 = some (interruptedBy ⟨0⟩ ⟨1⟩) :=
   by aesop
 
-/-! ## W12 — `awaitAll` answers the exits it collected (M6)
+/-! ## W12 — `awaitAll` answers the exits it collected (S2-M6)
 
-`fiberAwaitAll` answers `Array<Exit>` (`internal/effect.ts:779`); before M6 the countdown
+`fiberAwaitAll` answers `Array<Exit>` (`internal/effect.ts:779`); before S2-M6 the countdown
 discarded them and `awaitAll` resumed with `void`. -/
 
 /-- A parent that forks two children with different exits and then awaits both. -/
