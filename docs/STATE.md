@@ -101,7 +101,8 @@ an append-only list on the machine that only `spawn` writes. The plan,
 [`origin ledger and step invariants`](research/2026-09-30-origin-ledger-and-step-invariants-plan.md),
 is reviewed three times and its decisions are rows 91–94. The ledger landed on 2026-10-01 (Codex
 item C, merged at `bc77e97f`): every reader moved, the old field and the comparison runner retired
-together, the engine regenerated. The trace agreement through it is D's next item.
+together, the engine regenerated. The trace agreement through it landed the same day (item D,
+merged at `9ad8a7c0`, rows 93–94). Slice 6 is complete.
 
 **Foundation completion (2026-09-30).** The same reviews, and a probe of the external-reply lane,
 found three things:
@@ -224,7 +225,12 @@ fixed point for deadlock; load inputs as a congruence law). The owner ruled: H2 
 as amended. Recorded: rows 111–118, row 107 and row 21;
 [addendum 5](research/2026-09-30-codex-brief-slice6-addendum-5.md) to Codex. Meanwhile Codex
 landed A (`90df5d21`) and C (`be6631ab`, `e5cc184b`, `f05a6ace`) on its branch, merged at
-`bc77e97f` with the audit. Four rulings the owner gave Codex directly on 2026-10-01 are
+`bc77e97f` with the audit; then D (`fa5add20`) and F (`d20f3292`, row 104, `E4-PROV-CE-005`
+repaired), merged at `9ad8a7c0`. G, H1 and H2 part one each stopped on a checked counterexample
+and wait on a ruling: G's fourth refused fixture (`TemplatesContract.layerSamples[1]`); H1's
+terminal-delivery witness (after delivery the fiber's code slot still holds the delivered value
+while `finish` is queued); H2's two existing test statements that are false under the repaired
+judgment (`cancel_typed`, `lookup_typed`). Four rulings the owner gave Codex directly on 2026-10-01 are
 recorded in addendum 5's amendments and rows 91 and 107: part one's clause excludes `badName` and
 `notImplemented` only (the addendum had stated the full clause, which part two holds); the engine
 prelude and the engine tests join C's checklist; two more closure manifests and the `ForkRecord`
@@ -235,6 +241,19 @@ stated as the audit corrected them. The design-basis refresh is briefed as a doc
 typing as a protocol over a world, DB-17 the requirement row calculus), three stale sections
 retired to history, one bibliography, the eight ruling-bearing notes force-added. Dispatch is the
 owner's call.
+
+**The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
+JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
+it ([synthesis](research/2026-10-01-data-probe/synthesis.md), the entry). The design is not one we
+have: tracked files hold the rule (AGENTS.md "Schema and program") and DB-15's refusals; the
+boundary rulings of 2026-09-10 live only in gitignored notes; records, their value encoding,
+decoding inside a program, error payloads, signed numbers and recursive types have no ruling. The
+probe narrows records to one design (proposed row 119: `Ty.record` with fields in canonical order,
+positional values, exact subtyping, width projected at the boundary), restates R3 as theorem
+shapes with a staged plan and measured costs, finds DI-67's inhabitance check enforced for `int`
+only (`prod never nat` and `except never never` admitted though empty: a counterexample to
+register), and proposes rows 119–132. Nothing changes for Codex; the first data slice starts after
+F is merged (it is) and, by default, after the M5–M7 milestone. The owner decides.
 
 ## What the owner must decide
 
