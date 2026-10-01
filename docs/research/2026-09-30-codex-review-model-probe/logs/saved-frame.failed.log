@@ -1,0 +1,29 @@
+'SideAudit.H2.MissingServiceTransport.same_error' depends on axioms: [propext, Quot.sound]
+'SideAudit.H2.MissingServiceTransport.requirements_differ' depends on axioms: [propext, Quot.sound]
+'SideAudit.H2.MissingServiceTransport.allowed_inside' depends on axioms: [propext, Quot.sound]
+'SideAudit.H2.MissingServiceTransport.excluded_outside' depends on axioms: [propext, Quot.sound]
+'SideAudit.H2.MissingServiceTransport.failure_of_error_refuted' depends on axioms: [propext, Quot.sound]
+docs/research/2026-09-30-codex-review-model-probe/probes/SavedFrameTransport.lean:73:4: error: Type mismatch
+  StackAccepts.nil outer
+has type
+  StackAccepts ?m.35 ?m.36 ?m.37 ?m.38 outer outer []
+but is expected to have type
+  StackAccepts (TypedProg src) ExitOk (frameProtocols src) w inner outer []
+docs/research/2026-09-30-codex-review-model-probe/probes/SavedFrameTransport.lean:79:2: error: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Program.Typed.Contracts.InterruptProvenance.mk` has 2 explicit field, but only 1 was provided
+docs/research/2026-09-30-codex-review-model-probe/probes/SavedFrameTransport.lean:79:38: error: Tactic `cases` failed: major premise type is not an inductive type
+  ?m.8
+
+Explanation: the `cases` tactic is for constructor-based reasoning as well as for applying custom cases principles with a 'using' clause or a registered '@[cases_eliminator]' theorem. The above type neither is an inductive type nor has a registered theorem.
+
+x✝ : CauseV
+h✝ : saved.interruptedCause = some x✝
+h : ?m.8
+⊢ ?m.11 h
+docs/research/2026-09-30-codex-review-model-probe/probes/SavedFrameTransport.lean:79:17: error: Missing eliminator: An eliminator must be provided when multiple induction targets are specified and no default eliminator has been registered
+
+Hint: Write `using <eliminator-name>` to specify an eliminator, or register a default eliminator with the attribute `[cases_eliminator]`
+'AuditH2.loop_admitted' depends on axioms: [propext, sorryAx, Quot.sound]
+'AuditH2.input_ok' depends on axioms: [propext, Quot.sound]
+'AuditH2.provenance' depends on axioms: [propext, sorryAx]
+'AuditH2.output_eq' depends on axioms: [propext]
+'AuditH2.output_bad' depends on axioms: [propext, Quot.sound]

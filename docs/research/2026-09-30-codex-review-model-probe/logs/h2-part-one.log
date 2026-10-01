@@ -1,0 +1,78 @@
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:80:32: error: Type mismatch
+  h
+has type
+  Typed.Fits w v ty.answer
+but is expected to have type
+  ExitOk w ty (Exit.success v)
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:89:6: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.failure ?c)
+in the target expression
+  ExitOk w ty (Exit.failure c)
+
+w : World
+ty : EffTy
+c : CauseV
+h : cleanExit (Exit.failure c) = true
+hall : ∀ (r : Reason Err Defect FiberId Ann), r ∈ c.reasons → r.tag ≠ ReasonTag.fail
+⊢ ExitOk w ty (Exit.failure c)
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:100:6: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.failure ?c)
+in the target expression
+  ExitOk w ty (Exit.failure c)
+
+w : World
+ty : EffTy
+c : CauseV
+never : ty.error = Ty.never
+h : ExitOk w ty (Exit.failure c)
+⊢ cleanExit (Exit.failure c) = true
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:433:48: error: Type mismatch
+  hv
+has type
+  Typed.Fits w v Ty.bool
+but is expected to have type
+  ExitOk w (EffTy.pure Ty.bool) (Exit.success v)
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:471:24: error: Application type mismatch: The argument
+  cert
+has type
+  EffTy
+of sort `Type` but is expected to have type
+  FitsExit w' (EffTy.pure (cert.answer.fiberOf cert.error)) (Exit.success (Val.fiber id))
+of sort `Prop` in the application
+  And.intro cert
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:471:23: error: Insufficient number of fields for `⟨...⟩` constructor: Constructor `True.intro` does not have explicit fields, but 3 were provided
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:525:41: error: Application type mismatch: The argument
+  h
+has type
+  ExitOk w ty ex
+but is expected to have type
+  FitsExit w ?m.5 ?m.6
+in the application
+  fitsExit_mono ordered h
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:630:6: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  FitsExit ?w ?ty (Exit.failure ?c)
+in the target expression
+  ExitOk w tin (Exit.failure c)
+
+w : World
+tin tout : EffTy
+c : CauseV
+herr : tin.error = tout.error
+h : ExitOk w tin (Exit.failure c)
+⊢ ExitOk w tout (Exit.failure c)
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:801:25: error: Application type mismatch: The argument
+  hex
+has type
+  ExitOk w tin (Exit.success v)
+but is expected to have type
+  Typed.Fits w v tin.answer
+in the application
+  step v hex
+docs/research/2026-09-30-seat-codex-slice6-evidence/H2/PartOne.lean:824:25: error: Application type mismatch: The argument
+  hex
+has type
+  ExitOk w tin (Exit.success v)
+but is expected to have type
+  Typed.Fits w v tin.answer
+in the application
+  step v hex
