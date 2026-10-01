@@ -1,0 +1,235 @@
+{
+ "format": "probe-u-ty-faces-v1",
+ "family": "Effect4.Program.Ty",
+ "comment": [
+  "RED CONTROL: ty-faces.json with the row of `unknown` removed. The table emitter must refuse it by name."
+ ],
+ "rows": {
+  "never": {
+   "ts": [
+    {
+     "text": "never"
+    }
+   ],
+   "schema": {
+    "const": "Schema.never"
+   },
+   "code": 0
+  },
+  "unit": {
+   "ts": [
+    {
+     "text": "void"
+    }
+   ],
+   "schema": {
+    "const": "Schema.void"
+   },
+   "code": 1
+  },
+  "nat": {
+   "ts": [
+    {
+     "text": "number"
+    }
+   ],
+   "schema": {
+    "const": ".number none [Schema.Bridge.isIntCheck, Schema.Bridge.nonNegativeCheck]"
+   },
+   "code": 2
+  },
+  "int": {
+   "ts": [
+    {
+     "text": "number"
+    }
+   ],
+   "schema": {
+    "const": ".number none [Schema.Bridge.isIntCheck]"
+   },
+   "code": 3
+  },
+  "string": {
+   "ts": [
+    {
+     "text": "string"
+    }
+   ],
+   "schema": {
+    "const": "Schema.string"
+   },
+   "code": 4
+  },
+  "bool": {
+   "ts": [
+    {
+     "text": "boolean"
+    }
+   ],
+   "schema": {
+    "const": "Schema.boolean"
+   },
+   "code": 5
+  },
+  "handle": {
+   "ts": [
+    {
+     "leaf": true
+    }
+   ],
+   "schema": {
+    "declLeaf": true
+   },
+   "code": 6
+  },
+  "option": {
+   "module": "Option",
+   "perm": [
+    0
+   ],
+   "extras": [],
+   "code": 7
+  },
+  "list": {
+   "ts": [
+    {
+     "text": "ReadonlyArray<"
+    },
+    {
+     "child": 0
+    },
+    {
+     "text": ">"
+    }
+   ],
+   "schema": {
+    "array": true
+   },
+   "code": 8
+  },
+  "prod": {
+   "ts": [
+    {
+     "text": "readonly ["
+    },
+    {
+     "child": 0
+    },
+    {
+     "text": ", "
+    },
+    {
+     "child": 1
+    },
+    {
+     "text": "]"
+    }
+   ],
+   "schema": {
+    "tuple": true
+   },
+   "code": 9
+  },
+  "except": {
+   "module": "Result",
+   "perm": [
+    1,
+    0
+   ],
+   "extras": [],
+   "code": 10
+  },
+  "exitOf": {
+   "module": "Exit",
+   "perm": [
+    0,
+    1
+   ],
+   "extras": [
+    "Schema.Bridge.defectRep"
+   ],
+   "code": 11
+  },
+  "causeOf": {
+   "module": "Cause",
+   "perm": [
+    0
+   ],
+   "extras": [
+    "Schema.Bridge.defectRep"
+   ],
+   "code": 12
+  },
+  "fiberOf": {
+   "module": "Fiber",
+   "perm": [
+    0,
+    1
+   ],
+   "extras": [],
+   "code": 13
+  },
+  "union": {
+   "ts": [
+    {
+     "child": 0
+    },
+    {
+     "text": " | "
+    },
+    {
+     "child": 1
+    }
+   ],
+   "schema": {
+    "union": true
+   },
+   "code": 14
+  },
+  "lit": {
+   "ts": [
+    {
+     "text": "\""
+    },
+    {
+     "leaf": true
+    },
+    {
+     "text": "\""
+    }
+   ],
+   "schema": {
+    "literalLeaf": true
+   },
+   "code": 15
+  },
+  "refOf": {
+   "module": "Ref",
+   "perm": [
+    0
+   ],
+   "extras": [],
+   "code": 16
+  },
+  "deferredOf": {
+   "module": "Deferred",
+   "perm": [
+    0,
+    1
+   ],
+   "extras": [],
+   "code": 17
+  },
+  "var": {
+   "ts": [
+    {
+     "leaf": true
+    }
+   ],
+   "schema": {
+    "const": "(.declaration ⟨\"effect/schema/TypeParameter\", .null⟩ none [] [])"
+   },
+   "code": 18
+  }
+ }
+}

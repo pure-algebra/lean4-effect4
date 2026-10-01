@@ -1,0 +1,11 @@
+== the committed Fold generator on the nested copy (its nested path)
+exit 0
+== the patched generator's extras on the nested copy (refused by name)
+uncaught exception: extras: ProbeU.RecordTy holds a member under a container; its layer is `ArgF`'s (tools/Effect4Gen/LayerView.lean), not one payload and a list of children
+exit 1
+'ProbeU.hom_pos_prod_string_recordty' depends on axioms: [propext]
+'ProbeU.hom_pos_list_prod_string_recordty' depends on axioms: [propext]
+'ProbeU.cata_id_recordty' depends on axioms: [propext]
+'ProbeU.cata_id_pos_prod_string_recordty' depends on axioms: [propext]
+'ProbeU.cata_id_pos_list_prod_string_recordty' depends on axioms: [propext]
+exit 0
