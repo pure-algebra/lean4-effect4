@@ -338,7 +338,13 @@ rows are templates), and DI-21 stays deferred until foreign lift is a goal (row 
 owner). Decoding inside a program (row 123) is next after the wave, and
 `Schedule`, `Stream`, `Config`, the stateful modules and the host packages have no admitted member.
 The runtime coverage report counts the fiber runtime only: green 132, partial 2, absent 0 of 135 at
-`bff50631`. The other four probes (P, Q, R, S) are running; their notes and T's become the wave's briefs.
+`bff50631`. Probe R (merged `1b2bd11d`; rows 165–167, register `E4-RECORD-CE-001`–`012`) found that row 119's
+positional record values make projection type-directed while every evaluator and reader is
+type-blind, and one positional value fits two branches of a union of records; it recommends values
+that carry their canonical names in the existing frames (row 165 (a), the owner's ruling owed), two
+`Term` constructors for construction and projection (166), and the field-name domain with computed
+keys for `__proto__` (167). Probes P, Q and S are running with that shape in hand; their notes and
+T's and R's become the wave's briefs.
 
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
