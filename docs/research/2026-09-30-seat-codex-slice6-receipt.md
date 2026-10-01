@@ -7,7 +7,8 @@ integration-ready: the old fiber field and its comparison runner are removed tog
 Lean and OCaml paths read/write the machine ledger, generation is current, and the required
 OCaml and repository checks pass. The owner authorized the additional prelude/test readers,
 two closure manifests, and explicit ForkRecord type root as recorded below. D's held users and diagnostic move are complete;
-F is also complete. G is held by its checked fourth-fixture stop; H1 and H2 part one follow. H2 excludes only badName and notImplemented;
+F is also complete. G is held by its checked fourth-fixture stop. H1 is also held: the final proposed contract
+has a checked delivery counterexample. H2 part one follows independently. H2 excludes only badName and notImplemented;
 missingService waits for part two. Nothing has been pushed.
 
 Authority read from the main checkout:
@@ -16,6 +17,35 @@ commit `56da0e1edeefc97ce878afaefe34ca702f86c35f` (hash receipt under
 `2026-09-30-seat-codex-slice6-evidence/after-addendum-5/authority.json`). It is not merged into
 this branch; the coordinator owns that merge. Rows 111–117 are not implementation work here.
 The After-addendum-4 and first receipt sections below are retained as checkpoint history.
+
+### H1 — checked delivery stop
+
+Base: `19baddc5`. The four final candidate modules compile (`H1/contract-modules`, 379 jobs).
+They include all six TypedState conjuncts and nine QueueOk fields, with registration and
+observer-delivery conditions. M3bWorld remains 1 open/2 proved, M3bAssembly 1 open/1 proved,
+and M6Ledger 20 open/0 proved. The new command proofs remain open as required.
+
+`H1/TerminalSavedWitness.candidate.lean` refutes the actual proposed `StepPreserves` for
+`deliver`. A typed root has current code returning Nat 42 and one typed answer continuation
+returning unit. Delivery removes the continuation and queues finish(unit), but retains current
+Nat 42 with an empty saved stack and exit=none. Every valid output world still declares the
+root at unit, so the output cannot satisfy TypedState. The pending finish value is correct;
+the saved code at the intermediate boundary is the mismatch. This is an arbitrary-typed-state
+counterexample, not evidence of a reachable program failure.
+
+`terminal-witness-2` passes with all fifteen authored theorem prints at `[propext, Quot.sound]`
+or less, including the positive state/queue premises, exact result equations and final
+refutation. The first failed syntax/type-inference draft is retained. `checked-hashes.json`
+pins the applied source bytes. `candidate-status.md` records reproduction and interpretation.
+The candidate is preserved; all four temporary source edits are restored. No H1 implementation,
+register repair claim, runtime change or test migration is landed.
+
+**Smallest required amendment:** settle the relation between terminal delivery and saved-code
+typing, including the boundary before finish sets the exit field. An exited-fiber-only exception
+is insufficient; a changing intermediate type is already legal. The evaluator/state contract
+needs an owner ruling before freezing the new M6 target. Do not silently add reachability,
+weaken the legitimate saved-frame contract or assume an entire transition. Original brief §6
+requires this item stop on a checked counterexample; continue independent H2 measurement.
 
 ### C — additional OCaml reader, stop lifted by the owner
 

@@ -1,0 +1,13 @@
+# H1 checked stop
+
+Base: `19baddc5`. The four candidate source modules were applied together. The two proposed test migrations and register patch were not applied. `contract-modules` passes (379 jobs), retaining M3bWorld 1 open/2 proved, M3bAssembly 1 open/1 proved and M6Ledger 20 open/0 proved.
+
+`TerminalSavedWitness.candidate.lean` then passes as `terminal-witness-2`: all 15 authored theorems use at most `[propext, Quot.sound]`. The first attempt failed on a record-layout syntax error and an inferred intermediate type; its failure is retained. The second changes only that probe's syntax/type annotations, not the candidate contracts.
+
+The witness constructs all six final TypedState conjuncts and all nine QueueOk fields, including registration and direct-delivery conditions. The root has current code returning Nat 42, with an answer continuation returning unit; SavedOk admits that change of intermediate type. Delivery removes the continuation, retains current Nat 42, queues finish(unit), and leaves exit=none. The empty saved stack now requires current code at unit, which is impossible in every output world that retains the declared root type. This proves `not StepPreserves ... deliver` for arbitrary accepted states. It does not show a reachable program failure.
+
+The brief section 6 requires stopping this statement change. All four temporary source changes were restored after retaining their exact candidate bytes and hashes. No runtime, contract repair, test migration, register status or generated change is included in the evidence commit.
+
+The required design amendment must align terminal delivery and the saved-code judgment. It must explicitly cover the boundary before the queued finish publishes an exit; ignoring only exited fibers cannot repair this witness. Retain legitimate changing-intermediate-type saved frames. Do not add reachability as an unreviewed premise or assume the pending finish implies current-code typing. The owner must choose the state/evaluator contract before the M6 command proof is dispatched.
+
+To reproduce from this base in the designated worktree, copy the four exact files listed by checked-hashes.json from candidate/ to their source paths. Run contract-modules.command.json, then terminal-witness-2.command.json, with LEAN_NUM_THREADS=1. Restore the three tracked source files and remove only the new Scheduler file afterward. The compile log, commands, exits and axiom reports are retained beside this note. The candidate README and independent static review predate compilation and are historical preparation, not the final evidence status.
