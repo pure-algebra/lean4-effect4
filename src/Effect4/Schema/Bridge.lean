@@ -27,7 +27,9 @@ Exactness is stated at the bridge (`schema`, `ofSchema` on raw types), where `sc
 type first; a statement against it would need `N_S` to sort and to reorder union members, which
 rc.112's ordered `anyOf` observes (probe S, `docs/research/2026-10-01-type-language-probe/S/note.md`
 §1.1). The proofs are seat P's (`.../P/probes/P8Schema.lean`, on today's functions), with row 179's
-annotation policy (amended 2026-10-01: a check's annotations too) in place of the probe's.
+annotation policy (amended twice on 2026-10-01: a check's annotations too, and `arbitrary` erased)
+in place of the probe's; the proofs read only `normAnn none = none` and the guard, so the key list
+can change without touching them.
 -/
 
 namespace Effect4.Schema.Bridge
@@ -85,27 +87,31 @@ def checkId : Check → String
 /-! ## `N_S`: the annotation policy and the normaliser (decisions rows 128, 179)
 
 One policy for the normaliser and the reader's guard (row 179, ruled 2026-10-01; amended the same
-day to cover a check's annotations): an annotation bag is read modulo revision 5's eight
-documentation keys (`docs/research/2026-10-01-type-language-probe/S-inputs/revision-5/annotation-review.md`:
-rc.112 reads them for diagnostics, references and documentation, never for acceptance or decoded
-values). `normAnn` erases those entries and keeps every other entry, and a bag left empty is
-`none`; the reader admits a bag only when nothing is left (`normAnn ann = none`), at every bag it
-reads: each node, each check, each tuple element, the defect slot. Every other key, `parseOptions`
-and `arbitrary` among them, is refused. `normS` applies `normAnn` to every bag of the tree, checks
-and properties included, and changes nothing else. -/
+day twice: a check's annotations are covered, and `arbitrary` is erased). The principle: an
+annotation that does not change decoding is erased, one that does (or that is unknown) is refused.
+The erased keys are revision 5's eight documentation keys
+(`docs/research/2026-10-01-type-language-probe/S-inputs/revision-5/annotation-review.md`: rc.112
+reads them for diagnostics, references and documentation, never for acceptance or decoded values)
+and `arbitrary`, a fast-check generator hint with no decoding meaning, which rc.112's own
+`Schema.Int` writes on its `isInt` filter (probe S, E9d). `normAnn` erases those entries and keeps
+every other entry, and a bag left empty is `none`; the reader admits a bag only when nothing is left
+(`normAnn ann = none`), at every bag it reads: each node, each check, each tuple element, the defect
+slot. Every other key, `parseOptions` among them, is refused. `normS` applies `normAnn` to every bag
+of the tree, checks and properties included, and changes nothing else. -/
 
-/-- The annotation keys that change nothing rc.112 accepts or decodes (row 179: seat S's
-allowlist, revision 5's eight documentation keys). -/
-def documentationKeys : List String :=
+/-- The annotation keys that change nothing rc.112 accepts or decodes, erased by `N_S` (row 179:
+revision 5's eight documentation keys, seat S's allowlist, and `arbitrary`, the ninth, a generator
+hint rc.112's own `Schema.Int` writes). -/
+def erasedKeys : List String :=
   ["identifier", "title", "description", "documentation", "examples", "default", "message",
-   "expected"]
+   "expected", "arbitrary"]
 
-/-- An annotation bag modulo the documentation keys: those entries erased, the rest kept in order,
-an empty remainder `none` (so an absent bag and an all-documentation bag are one). -/
+/-- An annotation bag modulo the erased keys: those entries erased, the rest kept in order, an
+empty remainder `none` (so an absent bag and a bag of erased keys only are one). -/
 def normAnn : Annotations → Annotations
   | none => none
   | some entries =>
-    match entries.filter (fun e => !documentationKeys.contains e.key) with
+    match entries.filter (fun e => !erasedKeys.contains e.key) with
     | [] => none
     | rest => some rest
 
@@ -148,14 +154,14 @@ def normSAlg : RepresentationAlgebra RepresentationSelfCarrier where
 /-- **`N_S`**, a fold: a representation modulo the annotation entries that change no decoding. -/
 def normS (r : Representation) : Representation := cata_representation normSAlg r
 
-/-- A check modulo the documentation keys: `N_S`'s check arm. The reader compares a check with
-`schema`'s bare checks after this, so a documented `isInt` is `isInt`. -/
+/-- A check modulo the erased keys: `N_S`'s check arm. The reader compares a check with `schema`'s
+bare checks after this, so a documented `isInt`, or rc.112's own with `arbitrary`, is `isInt`. -/
 def normCheck (c : Check) : Check := cata_check normSAlg c
 
 /-! ## The reader -/
 
 /-- The defect slot of an `Exit` or `Cause` declaration is the `Json` declaration `schema` mints
-(`defectRep`), with a documentation-only annotation bag (rc.112 writes `expected` there); nothing
+(`defectRep`), with an annotation bag of erased keys only (rc.112 writes `expected` there); nothing
 else. -/
 def isDefect : Representation → Bool
   | .declaration ⟨"effect/schema/Json", .null⟩ ann [] [] => decide (normAnn ann = none)
@@ -163,7 +169,7 @@ def isDefect : Representation → Bool
 
 /-- Reconstitutes a first-order `Ty` from an rc.112 `SchemaRepresentation` (decisions rows 6 and
 128): exactly the nodes `schema` mints, modulo `N_S`. Each arm reads its annotation bag first and
-refuses a key that is not documentation (row 179). A `number`'s checks are compared whole, after
+refuses a key outside the erased ones (row 179). A `number`'s checks are compared whole, after
 `N_S`, with the two `schema` mints (`[isInt, ≥ 0]` reads `nat`, `[isInt]` reads `int`): until row
 128's commit they were read by id, so `≥ 5` read as `nat` and a filter group as `int`. The
 template parameter's declaration (`effect/schema/TypeParameter`, what `schema (.var i)` writes) is

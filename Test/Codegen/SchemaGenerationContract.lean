@@ -316,47 +316,68 @@ did not evaluate to `true`
 #guard ofSchema (.declaration ⟨"effect/schema/Cause", .null⟩ none [Schema.string,
   .declaration ⟨"effect/schema/Json", .null⟩ (some [⟨"parseOptions", .obj []⟩]) [] []] []) = none
 
--- Row 179 at a check (the coordinator's amendment, Codex 21:16): one policy for nodes and checks.
+-- Row 179 at a check (the coordinator's amendments, Codex 21:16 and the ninth key): one policy for
+-- nodes and checks. An annotation that does not change decoding is erased (the eight documentation
+-- keys and `arbitrary`); one that does, or an unknown one, is refused.
 /-- A documented `isInt` filter: `title` is documentation, erased by `N_S`'s check arm. -/
 def documentedIsInt : Check :=
   Schema.Check.named "effect/schema/isInt" .null none (some [⟨"title", .str "documented integer"⟩])
-/-- The same filter with `arbitrary`, which is not documentation under row 179's eight keys. -/
-def arbitraryIsInt : Check :=
-  Schema.Check.named "effect/schema/isInt" .null none (some [⟨"arbitrary", .obj []⟩])
+/-- The same filter with `parseOptions`, which changes decoding: refused. -/
+def parseOptionsIsInt : Check :=
+  Schema.Check.named "effect/schema/isInt" .null none
+    (some [⟨"parseOptions", .obj [("disableChecks", .bool true)]⟩])
 -- (1) the documented `isInt` read at `int`, and with the nonnegative check at `nat`; exact
 #guard ofSchema (.number none [documentedIsInt]) = some .int
 #guard ofSchema (.number none [documentedIsInt, nonNegativeCheck]) = some .nat
 #guard ofSchema (.number none [isIntCheck, Schema.Check.named "effect/schema/isGreaterThanOrEqualTo"
   (.obj [("minimum", .number Float64.zero)]) none (some [⟨"expected", .str "≥ 0"⟩])]) = some .nat
 #guard normS (.number none [documentedIsInt]) = schema .int
--- (2) the same check with a non-documentation key refused (`arbitrary`; `parseOptions`), at either
+-- (2) a check carrying a key outside the nine is refused (`parseOptions`; an unknown key), at either
 -- check; the reader is `Option`-valued, so the refusal carries no path (`["checks[i]"]` is the
 -- located reader's, seat S's `ofSchemaLocated`, not landed here)
-#guard ofSchema (.number none [arbitraryIsInt]) = none
-#guard ofSchema (.number none [arbitraryIsInt, nonNegativeCheck]) = none
+#guard ofSchema (.number none [parseOptionsIsInt]) = none
+#guard ofSchema (.number none [parseOptionsIsInt, nonNegativeCheck]) = none
 #guard ofSchema (.number none [Schema.Check.named "effect/schema/isInt" .null none
-  (some [⟨"parseOptions", .obj [("disableChecks", .bool true)]⟩])]) = none
+  (some [⟨"x-unknown", .null⟩])]) = none
 #guard ofSchema (.number none [isIntCheck, Schema.Check.named "effect/schema/isGreaterThanOrEqualTo"
-  (.obj [("minimum", .number Float64.zero)]) none (some [⟨"arbitrary", .obj []⟩])]) = none
-/-- RED: a check carrying a non-documentation key reads as `int`. -/
-def red_arbitraryIsInt : Bool := ofSchema (.number none [arbitraryIsInt]) == some .int
+  (.obj [("minimum", .number Float64.zero)]) none (some [⟨"parseOptions", .obj []⟩])]) = none
+/-- RED: a check carrying `parseOptions` reads as `int`. -/
+def red_parseOptionsIsInt : Bool := ofSchema (.number none [parseOptionsIsInt]) == some .int
 /--
 error: Expression
-  red_arbitraryIsInt
+  red_parseOptionsIsInt
 did not evaluate to `true`
 -/
 #guard_msgs (error) in
-#guard red_arbitraryIsInt
--- (3) seat S's `ge5` and `groupedInt` stay refused (above). A consequence recorded, not blessed:
--- rc.112's own `Schema.Int` persists `arbitrary` on its `isInt` filter (probe S, E9d), so it is
--- refused until the owner rules on a ninth key (probe S's choice S-A (a)); without it, it reads.
-def rcIntDoc (arbitrary : Bool) : Representation :=
-  .number none [.filter ⟨"effect/schema/isInt", .null, none⟩
-    (some ([⟨"expected", .str "an integer"⟩] ++
-      if arbitrary then [⟨"arbitrary", .obj [("constraint", .obj [("integer", .bool true)])]⟩] else []))
-    false]
-#guard ofSchema (rcIntDoc true) = none
-#guard ofSchema (rcIntDoc false) = some .int
+#guard red_parseOptionsIsInt
+-- (3) seat S's `ge5` and `groupedInt` stay refused (above).
+-- (4) rc.112's own documents read (row 179, the ninth key): `Schema.Int` persists its `isInt` filter
+-- with `expected` and `arbitrary`, and `Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))` adds the
+-- nonnegative filter with `expected` (probe S, `.../S/host/logs/q2-edges.log`, REPR int and natural;
+-- the host case `docs/research/2026-10-01-data-wave/W1/host/vendored/int-twin.ts` checks these
+-- transcriptions against the vendored source's own persisted documents under bun).
+/-- rc.112's persisted `isInt` filter (`Schema.ts:8298-8304`, with its `expected` and `arbitrary`). -/
+def rcIsIntFilter : Check :=
+  .filter ⟨"effect/schema/isInt", .null, none⟩
+    (some [⟨"expected", .str "an integer"⟩,
+      ⟨"arbitrary", .obj [("constraint", .obj [("integer", .bool true)])]⟩])
+    false
+/-- rc.112's persisted `isGreaterThanOrEqualTo(0)` filter, with its `expected`. -/
+def rcNonNegativeFilter : Check :=
+  .filter ⟨"effect/schema/isGreaterThanOrEqualTo", .obj [("minimum", .number Float64.zero)], none⟩
+    (some [⟨"expected", .str "a value greater than or equal to 0"⟩])
+    false
+/-- rc.112's own `Schema.Int` document. -/
+def rcIntDocument : Representation := .number none [rcIsIntFilter]
+/-- rc.112's own `Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))` document (`Schema.Natural`'s). -/
+def rcNatDocument : Representation := .number none [rcIsIntFilter, rcNonNegativeFilter]
+#guard ofSchema rcIntDocument = some .int
+#guard ofSchema rcNatDocument = some .nat
+#guard normS rcIntDocument = schema .int
+#guard normS rcNatDocument = schema .nat
+-- the same filter with `parseOptions` beside `arbitrary` stays refused
+#guard ofSchema (.number none [.filter ⟨"effect/schema/isInt", .null, none⟩
+  (some [⟨"arbitrary", .obj []⟩, ⟨"parseOptions", .obj []⟩]) false]) = none
 
 -- One policy at every bag the reader reads, a tuple element's included (row 179).
 #guard ofSchema (.arrays none [] [Schema.element Schema.string
