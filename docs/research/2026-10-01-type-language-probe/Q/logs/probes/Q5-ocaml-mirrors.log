@@ -1,5 +1,5 @@
 $ cd /Users/pooks/Dev/lean4-effect4-probe-Q
 $ opam exec --switch=effect4 -- dune exec --root docs/research/2026-10-01-type-language-probe/Q/ocaml/mirrors --build-dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/dune-mirrors ./mirrors_check.exe
-# started 2026-10-01T20:17:32Z (LEAN_NUM_THREADS=1)
+# started 2026-10-01T20:59:46Z (LEAN_NUM_THREADS=1)
 rand_ty: 28 of 28 constructors drawn at the root in 5000 samples; of_ty identity: true
-# exit=0 seconds=4
+# exit=0 seconds=0

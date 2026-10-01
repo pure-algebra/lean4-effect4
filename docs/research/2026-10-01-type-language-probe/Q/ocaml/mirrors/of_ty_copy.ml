@@ -1,4 +1,4 @@
-(* Copy of ocaml/engine/e4_program.ml:126-158 (`of_ty` and its count) over the wave family. The
+(* Copy of ocaml/engine/e4_program.ml:127-154 (`of_ty` and its count) over the wave family. The
    source type and the engine type are both the wave's `ty` here (the identity instance of the
    functor), which is enough to type-check every arm. *)
 module type PROGRAM_TYPES = sig
