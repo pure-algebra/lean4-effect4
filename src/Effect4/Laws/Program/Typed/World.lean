@@ -141,6 +141,13 @@ def World.le (w newer : World) : Prop :=
   (∀ id, TableExtends (w.Θ id) (newer.Θ id)) ∧
   newer.serviceTy = w.serviceTy
 
+/-- **Scope presence** (decisions row 156): the world's store holds an entry for scope `sc`, open
+or closed. One predicate, read by name wherever a scope's presence is demanded or supplied: the
+scope arm of `HandleFits`, the posts that answer a scope handle, the scope-reading arms of the
+store and fiber protocols, and `TypedProg`'s `scopeExit` constructor. It persists along the world
+order (`scopeLive_mono`). -/
+def ScopeLive (w : World) (sc : Nat) : Prop := (w.state.scopes.entryAt sc).isSome = true
+
 /-- Ghost updates used by the four allocation contracts. -/
 def World.addFiber (w : World) (id : FiberId) (ty : EffTy) : World :=
   { w with ids := w.ids ++ [id], Γ := tableInsert w.Γ id ty }
@@ -416,6 +423,12 @@ theorem order_trans (a b c : World) : a.le b → b.le c → a.le c :=
 /-- The world order fixes the static service table (shape A, decisions row 112). -/
 theorem le_serviceTy {w newer : World} (ordered : w.le newer) : newer.serviceTy = w.serviceTy :=
   ordered.2.2.2.2.2.2
+
+/-- **Scope presence persists along the world order** (decisions row 156): a scope entry is never
+removed (`Stores.le`'s scope component, under the machine world order). -/
+theorem scopeLive_mono {w newer : World} (ordered : w.le newer) {sc : Nat} (h : ScopeLive w sc) :
+    ScopeLive newer sc :=
+  ordered.1.2.2.2.1 sc h
 
 theorem protocol_order : ∃ order : Effect4.Laws.Effects.WorldOrder World, order.le = World.le :=
   ⟨⟨World.le, order_refl, fun h₁ h₂ => order_trans _ _ _ h₁ h₂⟩, rfl⟩
