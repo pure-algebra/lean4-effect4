@@ -110,7 +110,32 @@ Commit ledger: `ca05788c` records A's stopped patch and evidence only, with all 
 
 
 ## C — fork ledger steps 3–5
-Pending.
+
+**STOPPED before changing the runtime, under original §6's reader rule.** The precise extra
+reader is `src/Effect4/Api/Supervision.lean:346`:
+`#guard loaded.fibers.map RunFiber.origin = [.root]`. The plan §2 and the brief step-4 checklist
+name the two runtime readers, the laws and three Test guards, but not this inline loaded-root
+assertion. It also must move before the origin field can be deleted. `reader-census.log` records
+the read-only search at `eca77d6a` (the B commit).
+
+Smallest amendment: include this one inline loaded-root assertion in item C's reader checklist,
+restating it via `originOf`. Its file is already in scope; no extra operational reader or live
+fork creator was found. `RuntimeR.loadR` and the witness `spawnRoot` create roots only.
+No ledger, comparison runner, reader migration or deletion landed, so there are no runner
+counts or mutant results to report, and C's final regeneration/full check was not run.
+
+Addendum 1's default-removal fallback also applies by static inspection: one laws file alone
+has 37 calls omitting the site argument, more than the threshold of about 20 outside Machine
+and Compile. `src/Effect4/Laws/Api/Supervision.lean` lines
+270,277,285,294,301,309,318,340,349,358,367,376,386,396,405,413,422,445,458,467,477,486,496,506,
+515,518,521,523,535,538,541,543,622,624,633,651,653: 13 spawn, 4 launchEntrant, 14 WithFiberAction
+constructors, 6 FiberAction steps. This is a static lower bound, not measured compiler failures.
+Keep the eight defaults when C resumes. The first three belong to WithFiberAction, despite the
+addendum's shorter name. There is no proposed kind field.
+
+D's ledger-dependent users and control move must remain held; its generic lifts and guard
+re-derivation can be checked independently. Protected authority files remain untouched.
+
 
 ## D — generic lifts and slice 6 proofs
 Pending.
