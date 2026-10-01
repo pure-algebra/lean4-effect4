@@ -8,7 +8,9 @@ Effect TypeScript or any host runtime.
 
 Status: decision record begun 2026-08-31; refreshed 2026-10-01 at `dceae006` (the DESIGN-BASIS
 refresh, seat H of the 2026-10-01 landing; receipt
-`docs/research/2026-10-01-design-basis-refresh/receipt.md`). This file owns settled decisions,
+`docs/research/2026-10-01-design-basis-refresh/receipt.md`) and re-pinned at `6b3f2c92`, DB-16
+re-read there (decisions row 154; receipt
+`docs/research/2026-10-01-design-basis-refresh/receipt-H2.md`). This file owns settled decisions,
 their rationale and dated evidence receipts. It owns no live status: a row's status is a link to
 the system map's §8 (`docs/core/system-map.md`), which alone owns the status of the
 requirements; open decisions live in `docs/core/decisions.md` and `docs/DESIGN-ISSUES.md`. The
@@ -21,7 +23,7 @@ Every row ends in six fields.
 - **Decision**: what is decided, in today's names.
 - **Witnesses**: theorems with `file:line` at the commit the status line names; a test is named as a
   test, a finite probe as a probe. A theorem a research probe proved and the tree does not hold yet
-  is written "witness missing at `dceae006`", with the probe and the seat that proved it.
+  is written "witness missing at `6b3f2c92`", with the probe and the seat that proved it.
 - **Refusals**: the register ids (`Test/Counterexamples/REGISTER.md` and its archive) and the DI
   numbers the decision rests on.
 - **Sources**: research notes by path and section, each marked *tracked* or *untracked*.
@@ -38,19 +40,15 @@ check behind it is the trust gate's, at `[propext, Quot.sound]` (the refresh ran
 **Tested** is a finite check, **reading** a reading of code or notes, **assumed** not checked.
 "Proved" is never said of a paper.
 
-Paths and commits. Tree paths are from the repository root, with lines at `dceae006`; a cited line
-in a file that changed since may have moved, and this refresh's checker prints where its text sits
-at a later commit (`check_citations.py --drift <rev>`, in
-`docs/research/2026-10-01-design-basis-refresh/`). `Effects/…` is the pinned `effects` package
-(`lakefile.toml:126-131`: tag `v0.8.0`, `a4ee7a14`). A bare `Name.ts:n` is under
-`vendor/effect-4.0.0-rc.112/src/`. `git:<rev>:<path>` is a path at the commit named: earlier
-history, or `a561d604`, the merge of the laws seat E landed after `dceae006`, which this file cites
-from the tree rather than from their probes. Decisions rows are cited as `docs/core/decisions.md`
-holds them at `e7f9756f` (rows 134–150 were written after `dceae006`; the owner ratified rows 134,
-137, 138 and 149 on 2026-10-01). Research notes are under `docs/research/`; a note is *tracked* when
-it is tracked on `refactor/phase1-phase3` at `efcf1ae2` (the formal pass since `c5ec3efd`, the
-landing plan since `bb269fde`, its ports since `1c6f9c92`, eighteen notes the authority documents
-cite since `27495d51`) or by this refresh (the eight notes force-added at `1efb963e`).
+Paths and commits. Tree paths are from the repository root, with lines at `6b3f2c92`, where
+decisions row 154 re-pinned them from `dceae006`; a cited line in a file that changed since may have
+moved, and this refresh's checker prints where its text sits at a later commit
+(`check_citations.py --drift <rev>`, in `docs/research/2026-10-01-design-basis-refresh/`).
+`Effects/…` is the pinned `effects` package (`lakefile.toml:126-131`: tag `v0.8.0`, `a4ee7a14`). A
+bare `Name.ts:n` is under `vendor/effect-4.0.0-rc.112/src/`. `git:<rev>:<path>` is a path at the
+commit named, in earlier history. Decisions rows are cited as `docs/core/decisions.md` holds them at
+`6b3f2c92`. Research notes are under `docs/research/`; a note is *tracked* when it is tracked at
+`6b3f2c92` or by this refresh.
 
 ## Re-review ruling
 
@@ -205,7 +203,7 @@ Two facts bound what extension means.
   `Eff` is the one program representation it is related to (DB-02). The signature is
   `Σ_core ⊕ Σ_app` (system map §1.1); an extension of Σ_app is conservative only under C1–C8 as
   qualified above; Σ_core grows only under DI-47's finite gate.
-- **Witnesses** (re-read at `dceae006`; the package at `a4ee7a14`). Defined or proved, package:
+- **Witnesses** (re-read at `6b3f2c92`; the package at `a4ee7a14`). Defined or proved, package:
   `Program` (`Effects/Algebra/Program.lean:33`), `Handler` (`Effects/Algebra/Handler.lean:30`),
   `interpret` (`Effects/Algebra/Handler.lean:45`), `Handler.sum`
   (`Effects/Algebra/Handler.lean:51`), `Signature.sum` (`Effects/Algebra/Signature.lean:35`),
@@ -221,7 +219,7 @@ Two facts bound what extension means.
   sum: `interpret_inl` (`Effects/Algebra/Sum.lean:48`). Proved, tree: `interpret_inl_store`
   (`src/Effect4/Laws/Program/Sched.lean:230`), `meaning_via_rsig`
   (`src/Effect4/Laws/Program/Sched.lean:237`), `denoteR_straight`
-  (`src/Effect4/Laws/Program/DenoteR.lean:1380`). Proved in research probes, by the seats named:
+  (`src/Effect4/Laws/Program/DenoteR.lean:1385`). Proved in research probes, by the seats named:
   `along_bind` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:239`),
   `interpret_along` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:253`),
   `typed_along` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:266`),
@@ -249,15 +247,15 @@ Two facts bound what extension means.
   (`docs/research/2026-09-30-codex-review-model-probe/probes/RefinementNotIff.lean:203`),
   `typedProg_not_table_monotone`
   (`docs/research/2026-09-30-codex-review-model-probe/probes/VerifyTreeCurrent.lean:97`) (Codex's
-  audit; the last restates the TREE verifier's control after item E). Proved in the tree at
+  audit; the last restates the TREE verifier's control after item E). Proved in the tree since
   `a561d604` (landed by seat E from the algebra seat's probes): `sum_is_coproduct`
-  (`git:a561d604:src/Effect4/Laws/Effects/Sum.lean:103`), `interpret_inl_restrict`
-  (`git:a561d604:src/Effect4/Laws/Effects/Sum.lean:61`), `interpret_inr_restrict`
-  (`git:a561d604:src/Effect4/Laws/Effects/Sum.lean:68`), `inl_isMonadMorphism`
-  (`git:a561d604:src/Effect4/Laws/Effects/Sum.lean:79`), `Typed.inl_iff`
-  (`git:a561d604:src/Effect4/Laws/Effects/Protocol.lean:159`), `Typed.inr_iff`
-  (`git:a561d604:src/Effect4/Laws/Effects/Protocol.lean:170`); tested, the red control
-  `sum_not_tensor` (`git:a561d604:Test/Program/SignatureSum.lean:39`).
+  (`src/Effect4/Laws/Effects/Sum.lean:103`), `interpret_inl_restrict`
+  (`src/Effect4/Laws/Effects/Sum.lean:61`), `interpret_inr_restrict`
+  (`src/Effect4/Laws/Effects/Sum.lean:68`), `inl_isMonadMorphism`
+  (`src/Effect4/Laws/Effects/Sum.lean:79`), `Typed.inl_iff`
+  (`src/Effect4/Laws/Effects/Protocol.lean:159`), `Typed.inr_iff`
+  (`src/Effect4/Laws/Effects/Protocol.lean:170`); tested, the red control
+  `sum_not_tensor` (`Test/Program/SignatureSum.lean:39`).
 - **Refusals.** Archived and moved to the `effects` package with their witnesses: `E4-ALG-CE-001`,
   `E4-ALG-CE-002`, `E4-ALG-CE-003`, `E4-ALG-CE-004`, `E4-ALG-CE-005`, `E4-ALG-CE-007`,
   `E4-ALG-CE-008` (`Test/Counterexamples/Archive/REGISTER.md`). DI-22, DI-47, DI-64, DI-69, DI-90.
@@ -281,8 +279,8 @@ Two facts bound what extension means.
   probe's pedigree seat). Hyland, Plotkin and Power, *Combining effects: sum and tensor*: by name
   only, its content assumed. Goguen, Thatcher, Wagner and Wright (1977): by name. Ehrig and Mahr
   (1985): by name.
-- **Status.** See system map §8, R1 and R2; witnesses re-read at `dceae006` (the package at
-  `a4ee7a14`; seat E's landings at `a561d604`).
+- **Status.** See system map §8, R1 and R2; witnesses re-read at `6b3f2c92` (the package at
+  `a4ee7a14`).
 
 ### DB-02 — `Flow` was the sole reifiable program representation (superseded by `Eff`)
 
@@ -318,13 +316,13 @@ uninspectable escape from being mislabeled as full reification.
   rule: pure code is closed at the boundary, and a host function, promise or closure is a named,
   registered foreign row or a refusal. `AGENTS.md`'s representation rules own that rule today, and
   it is the pedigree of R7 (system map §8).
-- **Witnesses** (re-read at `dceae006`). `Eff` (`src/Effect4/Program/Eff.lean:266`); the Flow route
+- **Witnesses** (re-read at `6b3f2c92`). `Eff` (`src/Effect4/Program/Eff.lean:266`); the Flow route
   at `606918e` and on `archive/flow-route` (history, not re-read).
 - **Refusals.** `E4-ALG-CE-007` (archived: the higher-order carrier is not canonical program
   content); the Flow route's rows in the archive register.
 - **Sources.** `docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-02 row (tracked).
 - **Literature.** None.
-- **Status.** Settled (superseded); witnesses re-read at `dceae006`.
+- **Status.** Settled (superseded); witnesses re-read at `6b3f2c92`.
 
 ### DB-03 — open nondeterminism and divergence are relational; behaviour is a function of the tape
 
@@ -381,26 +379,26 @@ No decisions row rules them (the model probe's D7 is open); where they stand is 
   machine is deterministic and its behaviour is `Beh`; every choice, host answers included, is a
   tape decision; divergence is witnessed by an infinite run or compatible finite prefixes, never by
   fuel.
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `stepDecisionState`
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `stepDecisionState`
   (`src/Effect4/Machine/Fibers.lean:2111`) and `replayEval`
   (`src/Effect4/Machine/Fibers.lean:2188`), both functions; `obs`
   (`src/Effect4/Laws/Machine/Behaviour.lean:50`), `Beh`
   (`src/Effect4/Laws/Machine/Behaviour.lean:74`), `Beh_fuel_irrelevant`
   (`src/Effect4/Laws/Machine/Behaviour.lean:92`), `obs_mono_of_le_terminal`
   (`src/Effect4/Laws/Machine/Behaviour.lean:54`), `replayEval_trace_extends`
-  (`src/Effect4/Laws/Machine/Approximation.lean:756`); the journal action `replay_append`
-  (`src/Effect4/Laws/Api/Runner.lean:81`), `replay_unique` (`src/Effect4/Laws/Api/Runner.lean:157`),
-  `behaviour_cons` (`src/Effect4/Laws/Api/Runner.lean:174`), `journal_replays`
+  (`src/Effect4/Laws/Machine/Approximation.lean:765`); the journal action `replay_append`
+  (`src/Effect4/Laws/Api/Runner.lean:83`), `replay_unique` (`src/Effect4/Laws/Api/Runner.lean:160`),
+  `behaviour_cons` (`src/Effect4/Laws/Api/Runner.lean:177`), `journal_replays`
   (`src/Effect4/Laws/Run.lean:184`); host answers at the empty table,
   `emptyTable_refuses_every_answer` (`src/Effect4/Laws/Program/Admit.lean:83`); the frontier law
   `awaitDecision_iff` (`src/Effect4/Laws/Api/Frontier.lean:13`); `FairTape`
   (`src/Effect4/Laws/Machine/Scheduling.lean:432`) is a definition on finite tapes. Proved in the
-  tree at `a561d604` (landed by seat E): the tape action `replayEval_append`
-  (`git:a561d604:src/Effect4/Laws/Machine/Approximation.lean:904`) and the session runner's
-  uniqueness `behaviour_unique` (`git:a561d604:src/Effect4/Laws/Api/Runner.lean:187`; it concerns
+  tree since `a561d604` (landed by seat E): the tape action `replayEval_append`
+  (`src/Effect4/Laws/Machine/Approximation.lean:904`) and the session runner's
+  uniqueness `behaviour_unique` (`src/Effect4/Laws/Api/Runner.lean:187`; it concerns
   the session runner, the coherence principle's census row 27); tested,
-  `git:a561d604:Test/Machine/Runtime/TapeAction.lean` and
-  `git:a561d604:Test/Api/RunnerFinality.lean`.
+  `Test/Machine/Runtime/TapeAction.lean` and
+  `Test/Api/RunnerFinality.lean`.
 - **Refusals.** `E4-SCHED-CE-015` (row 95's repair: the capstone counts only tapes with no host
   answer), `E4-BEH-CE-001`, `E4-BEH-CE-002`, `E4-LIVE-CE-001`, `E4-LIVE-CE-002`; DI-23, DI-57,
   DI-58, DI-68. Decisions row 95 (ruled, landed) and row 146 (recorded); status: those rows.
@@ -418,7 +416,7 @@ No decisions row rules them (the model probe's D7 is open); where they stand is 
   synthesis marks ch. 2 read; ch. 3, Thm 3.4.1 (bisimilarity is equality of behaviour). Rutten
   (2000): by name. Lee, Cho, Song, Hur et al., *Fair operational semantics*: by name (core math §9).
 - **Status.** See system map §8, R12 (divergence, liveness, frontiers) and R6 (host answers);
-  witnesses re-read at `dceae006` (seat E's landings at `a561d604`).
+  witnesses re-read at `6b3f2c92`.
 
 ### DB-04 — fixed fuel is an approximation; the meaning of a loop is the limit of a budget chain
 
@@ -494,10 +492,10 @@ divergence, and a budget claims nothing about it.
   failure, defect, interruption or refusal. A loop's meaning is the limit of the budget chain
   (`denoteB` beside `denote`), single-valued by `meaningB_unique`; laws for the limit, not for one
   budget.
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `iter`
-  (`src/Effect4/Laws/Program/Iter.lean:30`), `iter_zero` (`src/Effect4/Laws/Program/Iter.lean:34`),
-  `iter_succ` (`src/Effect4/Laws/Program/Iter.lean:36`), `iter_uniform`
-  (`src/Effect4/Laws/Program/Iter.lean:40`), `Looped` (`src/Effect4/Laws/Program/DenoteB.lean:125`),
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `iter`
+  (`src/Effect4/Laws/Program/Iter.lean:32`), `iter_zero` (`src/Effect4/Laws/Program/Iter.lean:36`),
+  `iter_succ` (`src/Effect4/Laws/Program/Iter.lean:38`), `iter_uniform`
+  (`src/Effect4/Laws/Program/Iter.lean:42`), `Looped` (`src/Effect4/Laws/Program/DenoteB.lean:125`),
   `denoteB` (`src/Effect4/Laws/Program/DenoteB.lean:208`), `meaningB`
   (`src/Effect4/Laws/Program/DenoteB.lean:241`), `denoteB_straight`
   (`src/Effect4/Laws/Program/DenoteB.lean:285`), `iter_mono`
@@ -508,19 +506,19 @@ divergence, and a budget claims nothing about it.
   (`src/Effect4/Laws/Program/Agreement/Loop.lean:839`), `soundB`
   (`src/Effect4/Laws/Program/LoopSound.lean:306`), `meaningB_typed`
   (`src/Effect4/Laws/Program/LoopSound.lean:535`), `drive_add`
-  (`src/Effect4/Laws/Machine/Approximation.lean:176`), `drive_stable_of_done`
-  (`src/Effect4/Laws/Machine/Approximation.lean:184`), `replay_stable`
-  (`src/Effect4/Laws/Machine/Approximation.lean:1237`), `replay_obs_mono`
-  (`src/Effect4/Laws/Machine/Approximation.lean:1403`), `replay_colimit`
-  (`src/Effect4/Laws/Machine/Approximation.lean:1662`), `Suffices`
-  (`src/Effect4/Laws/Machine/Approximation.lean:1208`), `Beh_fuel_irrelevant`
-  (`src/Effect4/Laws/Machine/Behaviour.lean:92`). The limit's laws, proved in the tree at `a561d604`
-  (landed by seat E from the algebra seat's probe): `Conv`
-  (`git:a561d604:src/Effect4/Laws/Program/IterLimit.lean:42`), `conv_fixpoint`
-  (`git:a561d604:src/Effect4/Laws/Program/IterLimit.lean:48`), `conv_least`
-  (`git:a561d604:src/Effect4/Laws/Program/IterLimit.lean:79`), `conv_unique`
-  (`git:a561d604:src/Effect4/Laws/Program/IterLimit.lean:122`); tested, the red control
-  `budget_not_fixpoint` (`git:a561d604:Test/Program/IterLimit.lean:39`).
+  (`src/Effect4/Laws/Machine/Approximation.lean:185`), `drive_stable_of_done`
+  (`src/Effect4/Laws/Machine/Approximation.lean:193`), `replay_stable`
+  (`src/Effect4/Laws/Machine/Approximation.lean:1322`), `replay_obs_mono`
+  (`src/Effect4/Laws/Machine/Approximation.lean:1488`), `replay_colimit`
+  (`src/Effect4/Laws/Machine/Approximation.lean:1747`), `Suffices`
+  (`src/Effect4/Laws/Machine/Approximation.lean:1293`), `Beh_fuel_irrelevant`
+  (`src/Effect4/Laws/Machine/Behaviour.lean:92`). The limit's laws, proved in the tree since
+  `a561d604` (landed by seat E from the algebra seat's probe): `Conv`
+  (`src/Effect4/Laws/Program/IterLimit.lean:42`), `conv_fixpoint`
+  (`src/Effect4/Laws/Program/IterLimit.lean:48`), `conv_least`
+  (`src/Effect4/Laws/Program/IterLimit.lean:79`), `conv_unique`
+  (`src/Effect4/Laws/Program/IterLimit.lean:122`); tested, the red control `budget_not_fixpoint`
+  (`Test/Program/IterLimit.lean:39`).
 - **Refusals.** `E4-ALG-CE-006` (archived, moved to the `effects` package: a fixed-fuel evaluator
   admits a bind law), `E4-APPROX-CE-001`, `E4-APPROX-CE-002`, `E4-APPROX-CE-003`,
   `E4-APPROX-CE-004`, `E4-RTERM-CE-007`; DI-10 (no general bind law; the fixed-fuel counterexample
@@ -538,8 +536,8 @@ divergence, and a budget claims nothing about it.
   Adámek, Milius and Velebil, *Elgot algebras* (2006): by name (the coherence principle; core math
   §3). Xia et al.'s `iter` laws: by name (core math §4). Leroy, CompCert (2009), for the measure: by
   name.
-- **Status.** Settled; divergence adequacy is R12's (system map §8); witnesses re-read at `dceae006`
-  (seat E's landings at `a561d604`).
+- **Status.** Settled; divergence adequacy is R12's (system map §8); witnesses re-read at
+  `6b3f2c92`.
 
 ### DB-05 — first-order children do not require `HHandler`; the fiber layer is algebraic in representation and operational in meaning
 
@@ -605,7 +603,7 @@ on those fragments (the algebra verifier's ALG-10).
   `denoteR` into bracketed `RSig` programs; there is no `HHandler`. The fiber signature has no
   handler; the fiber layer's meaning is operational, related to the denotation and between the two
   machines only by simulations on named fragments.
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `Point`
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `Point`
   (`src/Effect4/Program/Compile.lean:57`), `Straight` (`src/Effect4/Program/Fragment.lean:22`),
   `seqR` (`src/Effect4/Laws/Program/DenoteR.lean:47`), `guardR`
   (`src/Effect4/Laws/Program/DenoteR.lean:69`), `controlErasure`
@@ -613,7 +611,7 @@ on those fragments (the algebra verifier's ALG-10).
   (`src/Effect4/Laws/Program/DenoteR.lean:120`), `eraseControl_guardR`
   (`src/Effect4/Laws/Program/DenoteR.lean:125`), `denoteR`
   (`src/Effect4/Laws/Program/DenoteR.lean:799`), `denoteR_straight`
-  (`src/Effect4/Laws/Program/DenoteR.lean:1380`), `RSig`
+  (`src/Effect4/Laws/Program/DenoteR.lean:1385`), `RSig`
   (`src/Effect4/Laws/Program/Sched.lean:197`), `fiberRefusal`
   (`src/Effect4/Laws/Program/Sched.lean:217`) with the module's boundary paragraph
   (`src/Effect4/Laws/Program/Sched.lean:32-39`), `run_eq_meaning`
@@ -624,9 +622,9 @@ on those fragments (the algebra verifier's ALG-10).
   `cleanup_boundary_distinct` (`Test/Program/DenoteRContract.lean:240`). The scope law is proved in
   the tree: `guardR_bind` (`src/Effect4/Laws/Program/Intro/Prepare.lean:44`; it predates the formal
   pass, whose probe proved the same equation again, spelling out `unguardTail`). Proved in the tree
-  at `a561d604` (landed by seat E): `eraseControl_guardR_bind`
-  (`git:a561d604:src/Effect4/Laws/Program/ScopeMarkers.lean:47`); tested, the red control
-  `guardR_not_algebraic` (`git:a561d604:Test/Program/ScopeMarkers.lean:26`).
+  since `a561d604` (landed by seat E): `eraseControl_guardR_bind`
+  (`src/Effect4/Laws/Program/ScopeMarkers.lean:47`); tested, the red control
+  `guardR_not_algebraic` (`Test/Program/ScopeMarkers.lean:26`).
 - **Refusals.** `E4-SCHED-CE-001` (the summed handler is not a semantics of the fiber operations),
   the archive's `E4-SCHED-CE-004` (`Test/Counterexamples/Archive/REGISTER.md`: raw bind terms lose
   the cleanup boundary; the register's row with that id is another statement); DI-07, DI-12, DI-57.
@@ -646,7 +644,7 @@ on those fragments (the algebra verifier's ALG-10).
   Berg, Schrijvers, Bach Poulsen and Wu (latent effects, 2021): read, §2.1–§2.3 and §3's opening
   (lit-papers Q2, §D). Chappe et al., *Choice Trees* §7.2 (no congruence across the scheduler): read
   (lit-papers §0 item 1). Plotkin and Power (2002) on algebraicity: by name (core math §6).
-- **Status.** Settled; witnesses re-read at `dceae006` (seat E's landings at `a561d604`).
+- **Status.** Settled; witnesses re-read at `6b3f2c92`.
 
 ### DB-06 — EffHOL contributes the logic layer, not the carrier
 
@@ -683,19 +681,19 @@ EffHOL, not a proof of Effect4's instance.
   not select it. EffHOL's modality is classified as a weakest liberal precondition (`wlp`); a
   judgment is called `wp` only with `wp ↔ wlp ∧ total` proved for the chosen semantics, where
   `total` never treats fuel as partiality (DB-04).
-- **Witnesses** (re-read at `dceae006`). None on `Eff`: the tree declares no weakest-precondition
-  calculus over `Eff` at `dceae006` (tested, `git grep`: no `wp` or `wlp` declaration under
+- **Witnesses** (re-read at `6b3f2c92`). None on `Eff`: the tree declares no weakest-precondition
+  calculus over `Eff` at `6b3f2c92` (tested, `git grep`: no `wp` or `wlp` declaration under
   `src/Effect4`; the `wp` some proofs unfold is Lean core's `Std.Do`, over `Except` and `Option`).
   The archived route's receipt: `wp_iff_wlp_and_total`
   (`git:c407ab7:Effect4/Semantics/Logic.lean:89`).
 - **Refusals.** DI-10 (no general bind law until a neutral-stack shape is chosen; the logic inherits
   it).
-- **Sources.** `docs/research/2026-09-05-reification-effhol.md` (untracked; its "What the paper
+- **Sources.** `docs/research/2026-09-05-reification-effhol.md` (tracked; its "What the paper
   establishes").
 - **Literature.** Cohen, Grunfeld, Kirst and Miquey, *Syntactic Effectful Realizability in
   Higher-Order Logic* (EffHOL): read, Sections IV–V, VII, IX and Appendix E
-  (`docs/research/2026-09-05-reification-effhol.md`, untracked).
-- **Status.** Settled (a constraint); witnesses re-read at `dceae006`.
+  (`docs/research/2026-09-05-reification-effhol.md`, tracked).
+- **Status.** Settled (a constraint); witnesses re-read at `6b3f2c92`.
 
 ### DB-07 — runtime state remains observable on failure
 
@@ -746,7 +744,7 @@ or an optimization declares a state equation.
 - **Decision.** The runtime's result keeps the state with every exit (an exit value beside the
   stores, under `StateT`); rollback is a separate transactional operation with its own laws. The
   store handler is a comodel of the store signature, lawful on live cells.
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `ExitV`
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `ExitV`
   (`src/Effect4/Machine/Alphabets.lean:369`), `storeHandler`
   (`src/Effect4/Laws/Program/Denote.lean:124`), `meaning`
   (`src/Effect4/Laws/Program/Denote.lean:130`), `runState`
@@ -756,12 +754,12 @@ or an optimization declares a state equation.
   (`src/Effect4/Laws/Machine/ScopeMachine.lean:233`), the heap's read-over-write `refPeek_poke_self`
   (`src/Effect4/Machine/Stores.lean:962`) and `refStep_get_after_set`
   (`src/Effect4/Machine/Stores.lean:968`), the arena's `peek_poke_other`
-  (`src/Effect4/Laws/Machine/Arena.lean:30`). The comodel's laws, proved in the tree at `a561d604`
-  (landed by seat E from the algebra seat's probe): `put_get`
-  (`git:a561d604:src/Effect4/Laws/Program/StoreComodel.lean:51`), `get_get`
-  (`git:a561d604:src/Effect4/Laws/Program/StoreComodel.lean:67`), `put_put`
-  (`git:a561d604:src/Effect4/Laws/Program/StoreComodel.lean:88`); tested, the red control
-  `put_get_dead_fails` (`git:a561d604:Test/Program/StoreComodel.lean:33`).
+  (`src/Effect4/Laws/Machine/Arena.lean:30`). The comodel's laws, proved in the tree since
+  `a561d604` (landed by seat E from the algebra seat's probe): `put_get`
+  (`src/Effect4/Laws/Program/StoreComodel.lean:51`), `get_get`
+  (`src/Effect4/Laws/Program/StoreComodel.lean:67`), `put_put`
+  (`src/Effect4/Laws/Program/StoreComodel.lean:88`); tested, the red control `put_get_dead_fails`
+  (`Test/Program/StoreComodel.lean:33`).
 - **Refusals.** `E4-DEN-CE-002` (the handler's fallback on an unminted key), `E4-STORES-CE-001`;
   DI-65 (terminal cleanup needs completed-cleanup and ownership premises, not correspondence alone).
 - **Sources.** `docs/research/2026-09-30-model-probe/synthesis.md` §2.2 R11, §3.3 the DB-07 row
@@ -776,8 +774,7 @@ or an optimization declares a state equation.
   (2008), comodels: by name (core math §7). Ahman and Bauer, *Runners in action* (2020): by name
   (core math §7). Sivaramakrishnan et al., *Retrofitting effect handlers onto OCaml*, §3.2 on what a
   stopped run leaves open: read (lit-papers Q3).
-- **Status.** See system map §8, R11; witnesses re-read at `dceae006` (seat E's landings at
-  `a561d604`).
+- **Status.** See system map §8, R11; witnesses re-read at `6b3f2c92`.
 
 ### DB-08 — `Expr` is a metaprogramming input only
 
@@ -804,7 +801,7 @@ not evidence about generated TypeScript behavior.
 - **Decision.** Raw `Expr`, syntax, metavariables, tactic closures and elaborator state never enter
   program identity, semantics or generated code; a checked first-order row does. Persistent metadata
   is deterministic serializable rows; `collectAxioms` is an axiom receipt, not a correctness proof.
-- **Witnesses** (re-read at `dceae006`). Tested: the trust gate `Test/Audit/AxiomGate.lean` (imports
+- **Witnesses** (re-read at `6b3f2c92`). Tested: the trust gate `Test/Audit/AxiomGate.lean` (imports
   `Lean.Util.CollectAxioms`, `Test/Audit/AxiomGate.lean:2`, and audits declarations by module); the
   rule is written in `AGENTS.md` (Representation rules).
 - **Refusals.** None registered; `AGENTS.md`'s trust rules refuse `unsafe`, `extern` and
@@ -812,7 +809,7 @@ not evidence about generated TypeScript behavior.
 - **Sources.** None beyond this row.
 - **Literature.** Lean `v4.33.1` sources and documentation (`Expr`, `Environment`, `collectAxioms`):
   read by the 2026-08-31 re-review at the digests its ruling records.
-- **Status.** Settled; witnesses re-read at `dceae006`.
+- **Status.** Settled; witnesses re-read at `6b3f2c92`.
 
 ### DB-09 — Effect TypeScript is a versioned target profile
 
@@ -838,7 +835,7 @@ while the file at the pinned upstream commit has SHA-256
 This mismatch is not classified as package corruption; it is evidence that a
 repository revision cannot stand in for installed bytes.
 (2026-10-01: the vendored `vendor/effect-4.0.0-rc.112/src/Schema.ts` hashes to the installed
-digest above, tested with `shasum -a 256` at `dceae006`.)
+digest above, tested with `shasum -a 256` at `dceae006` and again at `6b3f2c92`.)
 
 The
 [`effect-ts/language-service`](https://github.com/Effect-TS/language-service/tree/5e4d380b6fcd20f048dd8d41515bcd9ea47ffda4)
@@ -904,7 +901,7 @@ that lands, the truth claim names the exercised safe fragment (DI-56).
   observation, lawful by `LawfulHostSpec`) and a binding (the adapter and its evidence). Each
   profile's scalar domain is bounded with an explicit refusal, intermediates included. The route is
   the system map's.
-- **Witnesses** (re-read at `dceae006`). Defined: `ProfileData`
+- **Witnesses** (re-read at `6b3f2c92`). Defined: `ProfileData`
   (`src/Effect4/Program/Profile.lean:87`), `HostSpec` (`src/Effect4/Program/Profile.lean:178`),
   `LawfulHostSpec` (`src/Effect4/Program/Profile.lean:198`). Tested:
   `Test/Program/HostSpecContract.lean` (each general law earned by a fixture); the frozen amendment
@@ -913,7 +910,7 @@ that lands, the truth claim names the exercised safe fragment (DI-56).
 - **Sources.** `docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-09 row (tracked);
   `docs/core/host-boundary.md` (the host lane's authority).
 - **Literature.** None; the Effect source and the language service are sources, pinned above.
-- **Status.** See system map §8, R6 (the host) and R8 (faces); witnesses re-read at `dceae006`.
+- **Status.** See system map §8, R6 (the host) and R8 (faces); witnesses re-read at `6b3f2c92`.
 
 ### DB-10 — PolyFun is pinned prior art, not a public dependency
 
@@ -945,7 +942,7 @@ dependency would not remove the reification boundary.
 - **Refusals.** None.
 - **Sources.** None tracked; the isolated audit is recorded here only.
 - **Literature.** None (PolyFun is a code dependency, not a paper).
-- **Status.** Settled; witnesses re-read at `dceae006` (none in the tree).
+- **Status.** Settled; witnesses re-read at `6b3f2c92` (none in the tree).
 
 ### DB-11 — one value carrier, images over it, admission as a premise and as a check
 
@@ -982,13 +979,13 @@ declarations in the checker's order since row 137 was ruled); DB-16 owns that de
 - **Decision.** One value carrier, `Store.Val`; every runtime alphabet an exact image over it, read
   back by a reader; well-formedness a premise of the laws; admission a located decision before a
   program runs (`admitProgram`) and before a host answer is applied (`admitAnswer`).
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `Val`
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `Val`
   (`src/Effect4/Store/Carrier/Val.lean:150`), `Image` (`src/Effect4/Store/Carrier/Image.lean:39`)
   with its laws `ofVal_toVal` (`src/Effect4/Store/Carrier/Image.lean:45`) and `ofVal_exact`
   (`src/Effect4/Store/Carrier/Image.lean:47`), `AdmittedProgram`
-  (`src/Effect4/Program/Admission.lean:131`), `admitProgram`
-  (`src/Effect4/Program/Admission.lean:143`), `internalHandleScan`
-  (`src/Effect4/Program/Admission.lean:58`), `admitAnswer` (`src/Effect4/Program/Admit.lean:59`),
+  (`src/Effect4/Program/Admission.lean:325`), `admitProgram`
+  (`src/Effect4/Program/Admission.lean:340`), `internalHandleScan`
+  (`src/Effect4/Program/Admission.lean:100`), `admitAnswer` (`src/Effect4/Program/Admit.lean:59`),
   `mintedIn` (`src/Effect4/Program/Admit.lean:25`), `admitted_row`
   (`src/Effect4/Laws/Program/Admit.lean:68`), `external_answer_typed`
   (`src/Effect4/Laws/Program/Admit.lean:156`), `external_error_typed`
@@ -998,8 +995,7 @@ declarations in the checker's order since row 137 was ruled); DB-16 owns that de
   `admitProgram_certificate` (`src/Effect4/Laws/Run.lean:218`).
 - **Refusals.** `E4-HANDLE-CE-001`, `E4-HOST-CE-007` (row 97's interim rule, repaired);
   `E4-TYPED-CE-015` (DI-67's emptiness gap: `prod never nat` and `except never never` are admitted
-  though empty), allocated by the landing plan §2, not in the register at `dceae006`, in it since
-  `66aa97d7`; DI-61, DI-62, DI-67, DI-92.
+  though empty; registered at `66aa97d7`); DI-61, DI-62, DI-67, DI-92.
   Decisions rows 97 (interim rule landed), 127 (ruled: register, then repair) and 149 (ruled: the
   frozen `uninhabited` stays for the `int` scan, the emptiness check is `emptyColumn`); status:
   those rows.
@@ -1009,7 +1005,7 @@ declarations in the checker's order since row 137 was ruled); DB-16 owns that de
   `docs/research/2026-10-01-formal-pass/synthesis.md` §4.4 (tracked).
 - **Literature.** Miller's thesis (2006) and Devriese, Birkedal and Piessens (2016) on capability
   safety, for the minted-handle invariant: by name (the types note §9).
-- **Status.** See system map §8, R1 (admission) and R4 (state); witnesses re-read at `dceae006`.
+- **Status.** See system map §8, R1 (admission) and R4 (state); witnesses re-read at `6b3f2c92`.
 
 ### DB-12 — one context, layers by path
 
@@ -1074,7 +1070,7 @@ DB-17's; the service table's place in the world and its lawful declarations are 
   built by one constructor); a layer is a subterm of `Eff`, identified by its path, built at its
   checked closed point, its value fitting its key's declared carrier; a reference shares its
   target's memo entry.
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `Ctx`
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `Ctx`
   (`src/Effect4/Machine/Stores.lean:82`), `withServices` (`src/Effect4/Machine/Stores.lean:94`),
   `ambientScope` (`src/Effect4/Machine/Stores.lean:98`), `CacheAgrees`
   (`src/Effect4/Machine/Stores.lean:102`), `LayerTerm` (`src/Effect4/Program/Eff.lean:383`),
@@ -1097,7 +1093,7 @@ DB-17's; the service table's place in the world and its lawful declarations are 
   `docs/research/2026-09-08-host-rows-slice.md` (tracked);
   `docs/research/2026-09-30-pass/synthesis.md` §6 slices 1–2 (tracked).
 - **Literature.** None.
-- **Status.** See system map §8, R5; witnesses re-read at `dceae006`.
+- **Status.** See system map §8, R5; witnesses re-read at `6b3f2c92`.
 
 ### DB-13 — one wake protocol, the family's policy on top
 
@@ -1151,7 +1147,7 @@ this list.
 - **Decision.** One waiter list, `WakeList π`, for every waiting family; the protocol fixes when a
   waiter is woken and how a cancel is accounted; the family's policy is a function over the list; a
   later module is a composed `Eff` program over `Ref`, `Deferred` and this list (DI-11).
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `WakeList`
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `WakeList`
   (`src/Effect4/Machine/Wake.lean:119`), `WakeMode` (`src/Effect4/Machine/Wake.lean:62`),
   `WakePolicy` (`src/Effect4/Machine/Wake.lean:69`), `Owed` (`src/Effect4/Machine/Wake.lean:97`),
   `delay` (`src/Effect4/Machine/Wake.lean:142`), `wakeBy` (`src/Effect4/Machine/Wake.lean:179`),
@@ -1164,7 +1160,7 @@ this list.
 - **Sources.** `docs/research/2026-09-30-model-probe/pedigree/verify.md` P10 (tracked).
 - **Literature.** None; Eio's `In_transition` and Riot's `Proc_state.step` are cited above for their
   roles, from those runtimes' sources.
-- **Status.** Settled; witnesses re-read at `dceae006`.
+- **Status.** Settled; witnesses re-read at `6b3f2c92`.
 
 ### DB-14 — one logical clock, a duration decision, staged fires
 
@@ -1218,7 +1214,7 @@ elsewhere as not worth a second structure; a keyed carrier is a later, measured 
 - **Decision.** Physical time is not modelled; logical time is one store on the wake protocol, moved
   only by the host's `advance` decision (a duration in exact milliseconds), with staged fires; a
   cancelled sleep is removed; out-of-profile clock values are host profile refusals.
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `TimerStore`
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `TimerStore`
   (`src/Effect4/Machine/Timer.lean:45`), `advanceState` (`src/Effect4/Machine/Fibers.lean:2066`),
   `clockStep` (`src/Effect4/Machine/Fibers.lean:533`), `wakeBy`
   (`src/Effect4/Machine/Wake.lean:179`); `ClockMillis` (`src/Effect4/Data/ClockMillis.lean`). The
@@ -1231,7 +1227,7 @@ elsewhere as not worth a second structure; a keyed carrier is a later, measured 
   `docs/research/2026-09-04-timer-semantics-and-proofs.md` finding 4 (tracked);
   `docs/research/2026-09-20-skeleton-first-receipt.md` (tracked).
 - **Literature.** None; rc.112's `TestClock` and `ClockImpl` are sources, cited above.
-- **Status.** Settled; witnesses re-read at `dceae006`.
+- **Status.** Settled; witnesses re-read at `6b3f2c92`.
 
 ### DB-15 — strings are machine values; host records and errors cross as strings; records are type-language growth
 
@@ -1240,14 +1236,13 @@ Adopted 2026-09-08 (the host rows slice, decision 3 of
 dispatch).
 
 A `str` literal is a machine value on the native route: `Lit.toVal (.str s) = some (.str s)`
-(`src/Effect4/Machine/Term.lean`), and the value typing inhabits `.string` with the
-carrier's `str` frame and `.option t` with its `none` and `some` frames (`Val.hasTy`,
+(`src/Effect4/Machine/Term.lean`), and the value typing inhabits `.string` with the carrier's `str`
+frame and `.option t` with its `none` and `some` frames (`Val.hasTy`,
 `src/Effect4/Program/Typed.lean`; both paths corrected 2026-10-01 to where the definitions are at
-`dceae006`). Every literal now evaluates, so `evalTerm_isSome` carries no `noStr` premise and the
-register row `E4-TYPED-CE-001` is retired with its ID
-kept. The provision route's `litVal` (`src/Effect4/Program/Typing.lean`) still refuses a
-string as a layer value (`PROV-FB-STRING-VALUE`); that refusal is its own and is not moved
-here.
+`dceae006`, unchanged at `6b3f2c92`). Every literal now evaluates, so `evalTerm_isSome` carries no
+`noStr` premise and the register row `E4-TYPED-CE-001` is retired with its ID kept. The provision
+route's `litVal` (`src/Effect4/Program/Typing.lean`) still refuses a string as a layer value
+(`PROV-FB-STRING-VALUE`); that refusal is its own and is not moved here.
 
 What crosses a host row, so that a canonical row table can be typed with neither a record
 nor a dynamic type in `Ty` (`src/Effect4/Program/Eff.lean` has neither and gains no `json`
@@ -1371,12 +1366,12 @@ admission refusals; row 2's stage (b) is ruled by row 119.
   `never`, `nat`, `string`, `prod string string` or their unions; `int` stays uninhabited. Records
   enter `Ty` by row 119's ruled design (canonical field order, positional values, exact subtyping,
   width projected at the boundary); until that slice lands, `Ty` has none.
-- **Witnesses** (re-read at `dceae006`). Defined or proved (string values and pairs): `Lit.toVal`
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved (string values and pairs): `Lit.toVal`
   (`src/Effect4/Machine/Term.lean:134`), `Val.hasTy` (`src/Effect4/Program/Typed.lean:34`), `errOf`
   (`src/Effect4/Machine/Term.lean:27`), `errAdmits_errOf`
   (`src/Effect4/Laws/Program/Admit.lean:383`), `evalTerm_isSome`
   (`src/Effect4/Laws/Program/Typed.lean:1027`); tested: `Test/Program/TypedContract.lean` (the
-  retired `E4-TYPED-CE-001`'s fixture). Records: witness missing at `dceae006` (stage 1 not landed);
+  retired `E4-TYPED-CE-001`'s fixture). Records: witness missing at `6b3f2c92` (stage 1 not landed);
   the design's facts are proved in the data probe's models: `positional_width_unsound`
   (`docs/research/2026-10-01-data-probe/tree/RecordNested.lean:1087`), `fitsFields_exact_mono`
   (`docs/research/2026-10-01-data-probe/tree/RecordNested.lean:1259`) (the tree seat);
@@ -1385,8 +1380,8 @@ admission refusals; row 2's stage (b) is ruled by row 119.
   verifier); in the synthesis's own model, `hasTy_normalize`
   (`docs/research/2026-10-01-data-probe/synthesis.md:1143`) and its red control
   `written_order_not_invariant` (`docs/research/2026-10-01-data-probe/synthesis.md:1174`).
-- **Refusals.** `E4-TYPED-CE-001` (retired), `E4-TYPED-CE-002`; `E4-TYPED-CE-015` (not in the
-  register at `dceae006`; in it since `66aa97d7`); `TYPED-FB-INT`, `ORDIE-FB-TAGGED`,
+- **Refusals.** `E4-TYPED-CE-001` (retired), `E4-TYPED-CE-002`; `E4-TYPED-CE-015` (registered at
+  `66aa97d7`); `TYPED-FB-INT`, `ORDIE-FB-TAGGED`,
   `PROV-FB-STRING-VALUE` (fallback ids, in the text above); DI-15, DI-35, DI-56, DI-59, DI-62,
   DI-67.
 - **Sources.** `docs/research/2026-09-08-host-rows-slice.md` §7 (tracked);
@@ -1399,16 +1394,18 @@ admission refusals; row 2's stage (b) is ruled by row 119.
   semantics); Breazu-Tannen, Coquand, Gunter and Scedrov (1991); Luo (1999): by name (the types note
   §9). Frisch, Castagna and Benzaken, *Semantic subtyping* (2008): assumed. Lean 4.33.1's deriving
   and induction facts F1–F6: read and tested (the type-algebra note §0; the data probe).
-- **Status.** See system map §8, R3; witnesses re-read at `dceae006`.
+- **Status.** See system map §8, R3; witnesses re-read at `6b3f2c92`.
 
 ### DB-16 — typing is a protocol per operation over a world
 
-New 2026-10-01. Settled by decisions rows 44–45 (coarse values, a typed world; ruled 2026-09-19),
+New 2026-10-01; re-read at `6b3f2c92` against decisions rows 134–137, 139 and 156 as recorded
+there (row 154). Settled by decisions rows 44–45 (coarse values, a typed world; ruled 2026-09-19),
 48 (existential middle types in the stack; ruled 2026-09-20), 96 (`Fits`; landed 2026-09-30),
-106 and 107 (the queue facts and the exit clause; ruled, part one landed) and the slice-5 contract
-ruling of 2026-09-23; what is *not* settled is marked below, with the rows that carry it. The
-glossary of the formal notions (tree name, literature name, law) is system map §9 (row 142); this
-row links to it and does not copy it.
+106 and 107 (the queue facts and the exit clause), 134 and 137 (ruled 2026-10-01) and the slice-5
+contract ruling of 2026-09-23. Rows 135, 136 and 156 have landed in the tree and row 139 in part;
+what is ruled and what is open is each row's own status. The glossary of the formal notions (tree
+name, literature name, law) is system map §9 (row 142); this row links to it and does not copy
+it.
 
 **The judgment.** A protocol says, for each operation, what it demands of the world it is
 performed in (`pre`) and what its handler promises of the answer in the world it answers in
@@ -1419,190 +1416,275 @@ handler answers within the protocol. The generic judgment `Typed` states this ov
 signature. The concrete judgment `TypedProg` is its own inductive since the slice-5 ruling: it
 reuses the generic protocol structure through `Ψ_S` (31 store rows) and `Ψ_F` (40 fiber rows),
 and has four arms of its own for the control markers (`guard_`, `unguard`, `finishFinalizer`,
-`scopeExit`). It shares the protocol shape of de Vilhena's judgment and is not an instance of it,
-so `Typed.inl` and the generic inversions do not apply to it.
+`scopeExit`); the scope-exit arm holds only at a world whose store holds the scope it exits
+(`ScopeLive`, row 156). It shares the protocol shape of de Vilhena's judgment and is not an
+instance of it, so `Typed.inl` and the generic inversions do not apply to it.
 
 **The world and its order.** A world is `⟨ids, state, Γ, Π, Ρ, Θ⟩`: the machine's identifiers and
 stores, and four ghost tables typing fibers, deferreds, cells and resume tokens. It is ordered by
 table extension and cell compatibility (`World.le`), with external handle spellings stable
-(`World.leHost`). Typing is upward closed along this order (`Typed.mono` for the generic
-judgment; for the concrete one the tree declares it as an open obligation,
-`M3bWorld.typedProg_mono`, which a probe proves; row 135), and
-antitone in the order relation itself: a finer order keeps every derivation (`typed_antitone`), a
-wider one can lose it (`order_widening_loses_typing`). The typed state as a whole is not upward
-closed: world validity has exact support (`worldValid_not_upward_closed`), as a well-typed store
-in TAPL's sense is not; "Kripke" names `Fits`, `TypedProg` and the amended stacks, not the
-typed state.
+(`World.leHost`). Typing is upward closed along this order: `Typed.mono` for the generic
+judgment, and for the concrete one `typedProg_mono` (proved; row 135), because every
+continuation clause, the saved frames' arms and the hook protocols quantify over later worlds in
+their own definitions. It is antitone in the order relation itself: a finer order keeps every
+derivation (`typed_antitone`), a wider one can lose it (`order_widening_loses_typing`). Scope
+presence persists along the order (`scopeLive_mono`: a scope entry is never removed). The typed
+state as a whole is not upward closed: world validity has exact support
+(`worldValid_not_upward_closed`), as a well-typed store in TAPL's sense is not; "Kripke" names
+`Fits`, `TypedProg` and the saved stacks, not the typed state.
 
 **Values are coarse; the world types them.** The runtime keeps one executable check, `Val.hasTy`,
 which ignores the type arguments of handle sorts (Effect's own erasure); the proof side has one
 judgment, `Fits`, constructor-complete over the actual encoding, whose handle leaves read the
-world's declarations (rows 44, 96). Declared types come from creation evidence and the checker,
-never from values (row 97). `Fits` is the world-indexed value interpretation of a Kripke model
-for first-order references, a store typing in TAPL's sense rather than a full logical relation
-(it has no arrow clause); `fits_hasTy` is type erasure to the executable check. No step indexing
+world's declarations (rows 44, 96) and compare a declaration with a certificate in the checker's
+order, `subN` (`sub (normalize a) (normalize b)`, row 137), and whose scope leaf reads the one
+presence predicate (`ScopeLive` in `HandleFits`, row 156). Declared types come from creation
+evidence and the checker, never from values (row 97). `Fits` is the world-indexed value
+interpretation of a Kripke model for first-order references, a store typing in TAPL's sense
+rather than a full logical relation (it has no arrow clause); `fits_hasTy` is type erasure to the
+executable check. Membership is invariant under normalization and closed under the checker's
+order and join (`fits_normalize`, `fits_subN`, `fits_join_left`, `fits_join_right`), and a term
+the checker types evaluates to a member of its type (`evalTerm_fits`, TY-07). No step indexing
 is needed, because worlds hold syntactic types that the handle arms read as declarations, so the
 world is not defined through `Fits`. The exit judgment at every typed position is
 `ExitOk w ty ex := FitsExit w ty ex ∧ NoShapeDefect ty ex` (row 107); part two, the
 `missingService` clause, is row 117's presence (coeffect) contract.
 
-**What the formal pass refuted, and what is decided about it** (2026-10-01). The clauses below,
-as the tree declares them at `dceae006`, are refuted, and none of them is this basis's decision:
-the one-world frame judgment, the raw order in `Fits`, the posts as written, the reading at a
-budget cut. Each repair changes statements only, no runtime code. Rows 134 and 137 rule their
-repairs (2026-10-01); rows 135, 136, 139 and 148 propose theirs and are proceeding; status in each
-row.
-- **Saved frames and hook protocols are typed at one world today.** `FrameAccepts`, `StackAccepts`
-  and the iterator, loop and async-finalizer protocols quantify at the one world the stack is
-  checked at, so world weakening fails for saved stacks (`stackAccepts_not_mono`) and the declared
-  `M6Ledger.step_loop` is false at a concrete typed state (`step_loop_refuted`). The repair closes
-  the frame arms and the hook protocols over later worlds in their own definitions and restates
-  the walk over Kripke stacks (`stackAcceptsK_mono`, `stackAcceptsK_now`): row 135,
-  `E4-TYPED-CE-012`; it answers row 87 and strengthens row 48.
-- **`Fits` compares declared handle types in the raw order; the checker compares and joins in the
-  normalized order.** A checked, closed, admitted, host-free program then loads into no typed
-  state, and the capstone fails with it (`m5_false`, `capstone_false`). The repair compares in
-  `subN` (`sub (normalize a) (normalize b)`) inside `Fits` and the protocol entries, with
-  `fits_normalize`, `fits_subN` and `fits_join_left/right` (proved on a copy by the types
-  verifier): row 137 (ruled: the checker's order; "exactly the declared type" means equal normal
-  forms), `E4-TYPED-CE-009`; it re-reads row 96's D1.
-- **Eight protocol rows' posts contradict their handlers, and no obligation says a handler
-  answers within its protocol** (the missing half of the handler rule). The await-by-value post
-  alone makes M5 false for the typed corpus's own program (`typedState_load_false`): row 136,
-  `E4-TYPED-CE-010`, `E4-TYPED-CE-013`.
+**The typed state, split on `running`** (row 134). The machine-level statements read `J`,
+`MachineTyped`: the generated typed state `TypedState` (world validity, every typed position, the
+scheduler, observer and registration facts; it reads no queue and no current code), the world's
+service table tied to the source's (row 112), `LiveCode` (the code of every fiber that has not
+exited and is not running is typed with its stack at its declared type) and `MachineLive` (the
+machine has not halted; a scheduled resume has its owner). The command loop reads `I`,
+`ConfigTyped`: `J`, `ReadCode` (a running fiber whose code a queued `loop` or `deliver` reads is
+typed) and `QueueOk` (every queued command's content, authority and keys, the observer and
+enrollment correlations, and the scope of a queued `link` present). A budget cut drops the queue,
+so `J` holds where the single invariant failed. `StepPreserves` over `I` is exactly the lift's
+step premise (`guarded_stepKeeps_of_stepPreserves`), the loop-entry premise holds
+(`evaluate_entry`), `J` is `I`'s projection (`machineTyped_of_configTyped`), all proved, and
+`DecisionLift` is unchanged. `decision_preserves` and `typedState_reachable` are stated over `J`.
+
+**What the formal pass refuted, and the repairs that landed** (2026-10-01). The clauses below,
+as the tree declared them at `dceae006`, were refuted, and none of them is this basis's decision.
+Each refutation is kept in the tree as a historical control over a local copy of the old clause,
+beside the repair and its positive controls (tested, in the batteries named in the witnesses).
+Each repair changed statements only, no runtime code.
+- **Saved frames and hook protocols were typed at one world** (row 135, `E4-TYPED-CE-012`; it
+  answers row 87 and strengthens row 48). World weakening failed for saved stacks
+  (`stackAccepts_not_mono`) and the declared `M6Ledger.step_loop` was false at a concrete typed
+  state (`step_loop_refuted`). The repair closes `FrameAccepts`'s arms, the three hook protocols
+  and `HookLaws` over later worlds in their own definitions: saved stacks transport along the
+  host order (`stackAccepts_mono`, `savedOk_mono`), the closed judgment refuses the bad frame at
+  once (`bad_not_kripke_initial`) and gives the one-world judgment at the current world
+  (`stackAccepts_now`), so nothing proved is lost, and the same `loop` keeps `I` once the frame
+  is typed on every success (`step_loop_good`). Wrapping at the frame does not survive the walk
+  (`output_not_kripke`, `hookLawsX_refused`).
+- **`Fits` compared declared handle types in the raw order; the checker compares and joins in the
+  normalized order** (row 137, `E4-TYPED-CE-009`; it re-reads row 96's D1). A checked, closed,
+  admitted, host-free program loaded into no typed state, and the capstone failed with it
+  (`m5_false`, `capstone_false`). The repair compares in `subN` at every handle arm and protocol
+  entry that compares a declaration with a certificate; membership's closure laws hold, and the
+  same program loads into `J`, where M5's and the capstone's propositions hold
+  (`prog3_loads_typed`, `loadsTyped`, `capstone_at_load`).
+- **Eight protocol rows' posts contradicted their handlers, and no obligation said a handler
+  answers within its protocol** (row 136, `E4-TYPED-CE-010`, `E4-TYPED-CE-013`). The
+  await-by-value post made M5 false for the typed corpus's own program (`typedState_load_false`).
+  The repair puts the posts at the machine's answers (await-by-value at `exitOf ty.answer
+  ty.error`, the cleanup rows at `unit`, `refModify`'s pre at the declared `nat`, the scope rows'
+  pre carrying presence) and proves the handler rule once for the store rows and once per fiber
+  frame (`storeStep_typed`, `answerFrame_typed`, `seqFrame_typed`), each row's fulfilment an
+  instance in `M3bAdequacy`, proved or declared there; the corpus program now loads into `J`
+  (`loadsTyped`). The close rows' handler side is rows 151 and 152: a lone finalizer may answer
+  outside the close-scope post (`lone_release_outside_post`), and the close walk's protocol cannot
+  carry shape-defect exclusion through reified exits (`closeSeq_protocol_refused`).
 - **The machine-level statements read the typed state at a budget cut, where the command residue
-  is dropped** (`window_untyped`, `capstone_false_window`, `ledger_jointly_false_window`). The
-  repair splits the typed state on `running`: a machine-only, cut-tolerant `J` that types the
-  code of fibers neither exited nor running and carries `stuck = none`, and a configuration `I`
-  that adds each running fiber's typing by the queued command that continues it, with
-  `DecisionLift` unchanged (`running_exempt_at_m6`): row 134 (ruled),
-  `E4-TYPED-CE-011` (at a budget cut only: the finished run is covered by row 133's
-  published-exit clause, `m9_root_inert`). It supersedes row 133's halt extension (plan O4).
-- **The typed state does not exclude halting** (no scope or race liveness): row 139,
-  `E4-TYPED-CE-014`.
+  was dropped** (row 134, `E4-TYPED-CE-011`, at the cut only: the finished run is covered by row
+  133's published-exit clause, `m9_root_inert`). The single invariant failed at the cut
+  (`window_untyped`, `capstone_false_window`, `ledger_jointly_false_window`). The repair is the
+  split above: `J` holds at the cut and at the finished run (`machineTyped_m6`,
+  `machineTyped_m9`), the running-keyed clause being the reason (`running_exempt_at_m6`). It
+  supersedes row 133's halt extension (plan O4).
+- **The typed state did not exclude halting** (row 139, `E4-TYPED-CE-014`). Landed so far:
+  `MachineLive`'s `stuck = none`, `QueueOk`'s live link scope, the scope-drop arms of the observer
+  clauses, race-id liveness by `RegistrationState`, and the target and scope premises of the
+  halting fiber rows; a close at an absent scope is refused (`close_code_refused_absent`);
+  scope-handle validity is declared for M7 (`M7.exitHandles_valid`).
+- **Scope presence was not one fact** (row 156, `E4-TYPED-CE-018`). The posts that answer a scope
+  handle said only that the answer is some scope handle, and membership at `Ty.scope` read the
+  target name only, so a checked program that makes a scope and forks into it had no typing at
+  any world without that scope (Codex's second-eyes review, kept as history). The repair is one
+  predicate, `ScopeLive` (the world's store holds the scope's entry), read by name by the scope
+  arm of `HandleFits`, the five scope-handle posts, the scope arms of `storePre` and `fiberPre`,
+  and `TypedProg`'s `scopeExit` constructor; it persists along the order, and a fiber's ambient
+  scope is live from `J` (`ambientScope_live`). Positive controls: `makeThenClose_typed` and
+  `forkAfterMake_typed` at every world, and `forkAfterMake_denotes` (M5's `DenotesTyped`
+  proposition at its point). The machine stores' three spellings of presence are owed one shared
+  definition (row 156).
 - **`TypedProg` is not closed under bind**, because a scope marker's skipped exit bypasses the
   continuation (a non-local exit, not a handler frame in the context): `bind_not_typed`,
   `guard_bind_not_closed`. The sequencing tool M5 uses is the `seqR` compatibility lemma
-  (`seq_typed`, resting on `close_typed`, in the tree since `a561d604`), and M5's content is the
-  denotation lemma `denoteR_typed` with term soundness `evalTerm_fits`, declared by name: row
-  148.
+  (`seq_typed`, resting on `close_typed`; landed by seat E), and M5's content is the denotation
+  lemma `denoteR_typed` with term soundness: row 148. Term soundness is proved (`evalTerm_fits`;
+  at any row table, `evalTerm_fits_native`); the ledger states it as its goal
+  `M3bAssembly.evalTerm_fits`.
 
 - **Decision.** Typing is a protocol per operation over a world: one certificate per operation
-  shared by its pre, its post and its continuation; continuations typed at every later world; the
-  generic `Typed` and the concrete `TypedProg` (its own inductive) share the protocol shape; worlds
-  are ghost store typings ordered by extension; values are coarse at run time and typed by the world
-  through `Fits`; the exit judgment is `ExitOk`. Ruled on 2026-10-01: `Fits` and the protocol
-  entries compare declarations in the checker's order (row 137); the machine-level statements read a
-  cut-tolerant `J`, the typed state split on `running` (row 134). Not settled: the one-world frame
-  judgment (row 135 proposes the Kripke closure), the posts against the handlers (row 136),
-  halting-freedom in `J` (row 139).
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `WorldOrder`
-  (`src/Effect4/Laws/Effects/Protocol.lean:30`), `Protocol`
-  (`src/Effect4/Laws/Effects/Protocol.lean:37`), `Typed`
-  (`src/Effect4/Laws/Effects/Protocol.lean:45`), `Typed.mono`
-  (`src/Effect4/Laws/Effects/Protocol.lean:57`), `Typed.bind`
-  (`src/Effect4/Laws/Effects/Protocol.lean:66`), `Typed.widen`
-  (`src/Effect4/Laws/Effects/Protocol.lean:75`), `Protocol.sum`
-  (`src/Effect4/Laws/Effects/Protocol.lean:83`), `Typed.inl`
-  (`src/Effect4/Laws/Effects/Protocol.lean:97`), `Typed.inl_inv`
-  (`src/Effect4/Laws/Effects/Protocol.lean:108`), `Typed.inr_inv`
-  (`src/Effect4/Laws/Effects/Protocol.lean:119`); at `a561d604` (landed by seat E), `Typed.inr`
-  (`git:a561d604:src/Effect4/Laws/Effects/Protocol.lean:119`) and protocol refinement `Typed.refine`
-  (`git:a561d604:src/Effect4/Laws/Effects/Protocol.lean:194`); `StoreCert`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:29`), `Ψ_S`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:83`), `FiberCert`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:95`), `Ψ_F`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:170`), `TypedProg`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:186`), `IteratorProtocol`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:268`), `LoopProtocol`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:286`); `World`
-  (`src/Effect4/Laws/Program/Typed/World.lean:52`), `World.le`
-  (`src/Effect4/Laws/Program/Typed/World.lean:131`), `order_refl`
-  (`src/Effect4/Laws/Program/Typed/World.lean:394`), `order_trans`
-  (`src/Effect4/Laws/Program/Typed/World.lean:398`), `WorldValid`
+  shared by its pre, its post and its continuation; continuations typed at every later world, the
+  saved frames and the hook protocols included (row 135); the generic `Typed` and the concrete
+  `TypedProg` (its own inductive) share the protocol shape; worlds are ghost store typings ordered
+  by extension, along which scope presence persists; values are coarse at run time and typed by
+  the world through `Fits`, which compares declarations in the checker's order (row 137) and reads
+  a scope's presence through the one predicate `ScopeLive` (row 156); the posts sit at the
+  machine's answers, the handler rule a theorem (row 136); the exit judgment is `ExitOk`; the
+  machine-level statements read the cut-tolerant `J`, and the command loop's configuration `I`
+  adds the running fibers' code and the queue (row 134). Ruled: rows 134 and 137. Landed in the
+  tree, each row holding its own ruling: rows 135, 136 and 156, and row 139 in part. Open: the
+  close rows' handler side (rows 151 and 152). Owed: one definition of presence shared by the machine stores' three
+  spellings of it (row 156).
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved, the generic judgment: `WorldOrder`
+  (`src/Effect4/Laws/Effects/Protocol.lean:41`), `Protocol`
+  (`src/Effect4/Laws/Effects/Protocol.lean:48`), `Typed`
+  (`src/Effect4/Laws/Effects/Protocol.lean:56`), `Typed.mono`
+  (`src/Effect4/Laws/Effects/Protocol.lean:68`), `Typed.bind`
+  (`src/Effect4/Laws/Effects/Protocol.lean:77`), `Typed.widen`
+  (`src/Effect4/Laws/Effects/Protocol.lean:86`), `Protocol.sum`
+  (`src/Effect4/Laws/Effects/Protocol.lean:94`), `Typed.inl`
+  (`src/Effect4/Laws/Effects/Protocol.lean:108`), `Typed.inr`
+  (`src/Effect4/Laws/Effects/Protocol.lean:119`), `Typed.inl_inv`
+  (`src/Effect4/Laws/Effects/Protocol.lean:130`), `Typed.inr_inv`
+  (`src/Effect4/Laws/Effects/Protocol.lean:141`) and protocol refinement `Typed.refine`
+  (`src/Effect4/Laws/Effects/Protocol.lean:194`). The concrete judgment: `StoreCert`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:29`), `storePre`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:36`), `storePost`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:73`), `Ψ_S`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:110`), `FiberCert`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:122`), `fiberPre`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:158`), `fiberPost`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:197`), `Ψ_F`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:229`), `TypedProg`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:248`) and its scope-exit arm `TypedProg.scopeExit`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:274`), `fiber_inv`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:297`), `IteratorProtocol`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:362`), `LoopProtocol`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:380`), `guard_frame`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:435`), `typedProg_mono`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean:686`), the ledger's goal for it
+  `M3bWorld.typedProg_mono` (`src/Effect4/Laws/Program/Typed/Residual.lean:842`, declared, its
+  statement the theorem's). The world: `World` (`src/Effect4/Laws/Program/Typed/World.lean:52`),
+  `World.le` (`src/Effect4/Laws/Program/Typed/World.lean:137`), `ScopeLive`
+  (`src/Effect4/Laws/Program/Typed/World.lean:149`), `order_refl`
+  (`src/Effect4/Laws/Program/Typed/World.lean:411`), `order_trans`
+  (`src/Effect4/Laws/Program/Typed/World.lean:415`), `scopeLive_mono`
+  (`src/Effect4/Laws/Program/Typed/World.lean:432`), `WorldValid`
   (`src/Effect4/Laws/Program/Typed/Validity.lean:19`), `World.leHost`
   (`src/Effect4/Laws/Program/Typed/Validity.lean:38`), `leHost_refl`
-  (`src/Effect4/Laws/Program/Typed/Validity.lean:112`), `leHost_trans`
-  (`src/Effect4/Laws/Program/Typed/Validity.lean:115`); `Val.hasTy`
-  (`src/Effect4/Program/Typed.lean:34`), `Fits`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:87`), `FitsExit`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:152`), `fits_hasTy`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:269`), `fits_map`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:729`), `fits_mono`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:829`), `fits_sub`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:837`), `NoShapeDefect`
-  (`src/Effect4/Laws/Program/Typed/Admission.lean:23`), `ExitOk`
-  (`src/Effect4/Laws/Program/Typed/Admission.lean:30`); `FrameAccepts`
-  (`src/Effect4/Laws/Program/Typed/Contracts.lean:32`), `StackAccepts`
-  (`src/Effect4/Laws/Program/Typed/Contracts.lean:51`), `SavedOk`
-  (`src/Effect4/Laws/Program/Typed/Contracts.lean:67`), `CodeInert`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:84`), `TypedState`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:123`), `StepPreserves`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:180`), `Guarded`
+  (`src/Effect4/Laws/Program/Typed/Validity.lean:116`), `leHost_trans`
+  (`src/Effect4/Laws/Program/Typed/Validity.lean:119`). Membership: `Val.hasTy`
+  (`src/Effect4/Program/Typed.lean:34`), `HandleFits`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:62`), `Fits`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:98`), `FitsExit`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:163`), `fits_hasTy`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:280`), `fits_map`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:749`), `fits_mono`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:856`), `fits_sub`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:894`), `fits_normalize`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:1126`), `fits_subN`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:1232`), `fits_join_left`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:1237`), `fits_join_right`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean:1241`), `NoShapeDefect`
+  (`src/Effect4/Laws/Program/Typed/Admission.lean:24`), `ExitOk`
+  (`src/Effect4/Laws/Program/Typed/Admission.lean:31`), `evalTerm_fits`
+  (`src/Effect4/Laws/Program/Typed/Admission.lean:81`), `evalTerm_fits_native`
+  (`src/Effect4/Laws/Program/Typed/Admission.lean:88`). Frames: `FrameAccepts`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean:43`), `StackAccepts`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean:66`), `SavedOk`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean:82`), `stackAccepts_mono`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean:131`), `savedOk_mono`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean:139`), `HookLaws`
+  (`src/Effect4/Laws/Program/Typed/Stack.lean:30`). The typed state: `TypedState`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:147`), `QueueOk`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:183`), `LiveCode`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:217`), `ReadCode`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:227`), `MachineLive`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:245`), `MachineTyped`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:257`), `ConfigTyped`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:269`), `machineTyped_of_configTyped`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:277`), `ambientScope_live`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:287`), `evaluate_entry`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:385`), `StepPreserves`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:416`), `guarded_stepKeeps_of_stepPreserves`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:693`), `Guarded`
   (`src/Effect4/Laws/Machine/Lift.lean:278`), `DecisionLift`
-  (`src/Effect4/Laws/Machine/Lift.lean:308`). Declared, not proved (each a `ProofGraph.Obligation`):
-  `typedProg_mono` (`src/Effect4/Laws/Program/Typed/Residual.lean:424`), `typedState_load`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:262`), `step_loop`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:278`), `decision_preserves`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:332`), `typedState_reachable`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:350`). Proved in probes, by the seats named
-  (tracked; the ports in `docs/research/2026-10-01-landing/ports-at-dceae006/` elaborate at the
-  merged head): `typed_antitone`
-  (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:198`) and
-  `order_widening_loses_typing`
-  (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:215`) (the model probe's
-  pedigree seat); `typedProg_mono_ledger` (witness missing at `dceae006`; proved in
-  `docs/research/2026-10-01-landing/ports-at-dceae006/HeadTypedProgMono.lean:174`; row 135 carries
-  it, in place of the `#proof_wanted`); `stackAccepts_not_mono`
-  (`docs/research/2026-10-01-formal-pass/algebra/probes/P2KripkeTyping.lean:248`) (the algebra seat,
-  at `ea5b28b5`); `step_loop_refuted`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadStepLoop.lean:306`), `stackAcceptsK_mono`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadKripkeWalk.lean:149`),
-  `stackAcceptsK_now`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadKripkeWalk.lean:168`),
-  `output_not_kripke`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadKripkeWalk.lean:237`); `m5_false`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadM5Fits.lean:85`), `capstone_false`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadM5Fits.lean:159`); `fitsN_normalize`
-  (`docs/research/2026-10-01-formal-pass/types/verify-AmendedFitsProbe.lean:512`), `fitsN_subN`
-  (`docs/research/2026-10-01-formal-pass/types/verify-AmendedFitsProbe.lean:619`), `fitsN_join_left`
-  (`docs/research/2026-10-01-formal-pass/types/verify-AmendedFitsProbe.lean:623`) (the types
-  verifier, on a copy of `Fits`); `typedState_load_false`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadAwaitLoad.lean:119`); `window_untyped`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadCut.lean:109`), `capstone_false_window`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadCut.lean:120`),
-  `ledger_jointly_false_window`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadCut.lean:157`), `m9_root_inert`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadCut.lean:171`), `running_exempt_at_m6`
-  (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadCut.lean:245`);
-  `worldValid_not_upward_closed`
-  (`docs/research/2026-10-01-formal-pass/proofs/verify-probes/VerifySplit.lean:184`) (the proofs
-  verifier, at `ea5b28b5`; the file's other theorems no longer elaborate after the merge, this one
-  does, per the formal synthesis). Proved in the tree at `a561d604` (landed by seat E from the
-  algebra verifier's probe): `close_typed`
-  (`git:a561d604:src/Effect4/Laws/Program/Typed/Seq.lean:40`), `seq_typed`
-  (`git:a561d604:src/Effect4/Laws/Program/Typed/Seq.lean:59`); tested, the red controls
-  `typedProg_not_bind_closed` (`git:a561d604:Test/Program/TypedProgBindRed.lean:32`),
-  `bind_not_typed` (`git:a561d604:Test/Program/TypedProgBindRed.lean:106`), `guard_bind_not_closed`
-  (`git:a561d604:Test/Program/TypedProgBindRed.lean:120`).
-- **Refusals.** In the register (`Test/Counterexamples/REGISTER.md`) at `dceae006`:
+  (`src/Effect4/Laws/Machine/Lift.lean:308`). The handler rule: `StoreTyped`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:39`), `StoreImplements`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:50`), `storeStep_typed`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:59`), `answerFrame_typed`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:867`), `seqFrame_typed`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:874`). Sequencing (landed by seat E):
+  `close_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean:40`), `seq_typed`
+  (`src/Effect4/Laws/Program/Typed/Seq.lean:59`). Declared, not proved (each a
+  `ProofGraph.Obligation`): `denoteR_typed`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1447`), `typedState_load`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1452`), `step_loop`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1478`), `decision_preserves`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1540`), `typedState_reachable`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1573`), `exitHandles_valid`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1597`). Tested, the refutations kept as history
+  over local copies of the old clauses: `stackAccepts_not_mono`
+  (`Test/Program/FramesNotKripke.lean:238`), `step_loop_refuted`
+  (`Test/Program/FramesNotKripke.lean:565`); `m5_false`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:388`), `capstone_false`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:416`); `typedState_load_false`
+  (`Test/Program/ProtocolPosts.lean:758`); `window_untyped`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:228`), `capstone_false_window`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:239`), `ledger_jointly_false_window`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:278`). Tested, the positive and red
+  controls of the current judgment: `step_loop_good` (`Test/Program/FramesNotKripke.lean:942`),
+  `bad_not_kripke_initial` (`Test/Program/FramesNotKripke.lean:950`), `stackAccepts_now`
+  (`Test/Program/FramesNotKripke.lean:1011`), `hookLawsX_refused`
+  (`Test/Program/FramesNotKripke.lean:1117`), `output_not_kripke`
+  (`Test/Program/FramesNotKripke.lean:1156`); `prog3_loads_typed`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:499`), `loadsTyped`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:503`), `capstone_at_load`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:508`); `loadsTyped`
+  (`Test/Counterexamples/Machine/Semantics/AwaitLoad.lean:289`); `close_code_refused_absent`
+  (`Test/Program/ProtocolPosts.lean:470`), `lone_release_outside_post`
+  (`Test/Program/ProtocolPosts.lean:499`), `closeSeq_protocol_refused`
+  (`Test/Program/ProtocolPosts.lean:548`); `m9_root_inert`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:299`), `running_exempt_at_m6`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:387`), `worldValid_not_upward_closed`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:412`), `machineTyped_m6`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:814`), `machineTyped_m9`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:818`); `makeThenClose_typed`
+  (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean:328`), `forkAfterMake_typed`
+  (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean:360`), `forkAfterMake_denotes`
+  (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean:399`); the red controls
+  `typedProg_not_bind_closed` (`Test/Program/TypedProgBindRed.lean:32`), `bind_not_typed`
+  (`Test/Program/TypedProgBindRed.lean:106`), `guard_bind_not_closed`
+  (`Test/Program/TypedProgBindRed.lean:120`). Proved in a probe, by the model probe's pedigree
+  seat: `typed_antitone` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:198`)
+  and `order_widening_loses_typing`
+  (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:215`). The formal pass's
+  probes and their ports at `dceae006` (`docs/research/2026-10-01-landing/ports-at-dceae006/`) are
+  the sources of the batteries above, which replace them as witnesses.
+- **Refusals.** In the register (`Test/Counterexamples/REGISTER.md`) at `6b3f2c92`:
   `E4-TYPED-CE-003`, `E4-TYPED-CE-004`, `E4-TYPED-CE-005`, `E4-TYPED-CE-006`, `E4-TYPED-CE-007`,
-  `E4-TYPED-CE-008`, `E4-SCHED-CE-010`, `E4-SCHED-CE-011`, `E4-SCHED-CE-012`, `E4-SCHED-CE-013`,
-  `E4-SCHED-CE-014`, `E4-SCHED-CE-016`, `E4-SCHED-CE-017`, `E4-SCHED-CE-018`, `E4-SCHED-CE-019`,
-  `E4-SCHED-CE-020`. Allocated in the landing plan §2, not in the register at `dceae006`, and in it
-  since `66aa97d7` (citing the ports): `E4-TYPED-CE-009` to `E4-TYPED-CE-014`. DI-10 (a bind law
-  waits for its neutral-stack shape). Decisions rows: ruled 44, 45, 48, 96, 106, 107, 134, 137, 138;
-  proposed 87, 117, 135, 136, 139, 140, 148 (each proceeding) and 150 (a narrower lift for the six
-  fold-level guard inductions, `DecisionLift` unchanged: `FoldLift`
-  (`docs/research/2026-10-01-landing/seat-F/probes/FoldLiftRoute.lean:45`), the six proved over it
-  in seat F's probe; recommended for wave 3); status: those rows.
+  `E4-TYPED-CE-008`, `E4-TYPED-CE-009`, `E4-TYPED-CE-010`, `E4-TYPED-CE-011`, `E4-TYPED-CE-012`,
+  `E4-TYPED-CE-013`, `E4-TYPED-CE-014`, `E4-TYPED-CE-016`, `E4-TYPED-CE-017`, `E4-TYPED-CE-018`,
+  `E4-SCHED-CE-010`, `E4-SCHED-CE-011`, `E4-SCHED-CE-012`, `E4-SCHED-CE-013`, `E4-SCHED-CE-014`,
+  `E4-SCHED-CE-016`, `E4-SCHED-CE-017`, `E4-SCHED-CE-018`, `E4-SCHED-CE-019`, `E4-SCHED-CE-020`.
+  DI-10 (a bind law waits for its neutral-stack shape). Decisions rows: ruled 44, 45, 48, 96, 106,
+  107, 134, 137, 138, 150 (a narrower lift for the six fold-level guard inductions, `FoldLift`
+  (`src/Effect4/Laws/Machine/Lift.lean:363`), with `DecisionLift` unchanged); landed with their
+  rulings their own: 135, 136, 156, and 139 in part; open: 87, 117, 140, 148, 151, 152, 153;
+  status: those rows.
 - **Sources.** `docs/research/2026-09-20-m1-kickoff-confidence-and-design-representations.md` §2–§4
   (tracked; its §3 mapping of `Typed.mono` is corrected below);
   `docs/research/2026-09-18-typed-state-composed-graph.md` §4 (tracked);
   `docs/research/2026-09-23-foundations-slice5-contract-ruling.md` (tracked);
   `docs/research/2026-09-21-foundations-review-and-theoretical-analysis.md` §4 (tracked; its §2.4,
   §4.3 and §7.2 item 5 are corrected by the model probe's synthesis §3.2 items 2–3);
-  `docs/research/2026-09-05-effects-papers-review.md` §1.3, A3, G8 (tracked);
+  `docs/research/2026-09-05-effects-papers-review.md` §1.3, A2, A3, G8 (tracked);
   `docs/research/2026-09-30-pass/membership/note.md` §2 (tracked);
   `docs/research/2026-09-30-model-probe/synthesis.md` §3.1 levels 0–2, §3.2 items 1–3 (tracked);
   `docs/research/2026-10-01-formal-pass/synthesis.md` §1, §2, §3.1, §4.4, §5 (tracked);
@@ -1611,24 +1693,30 @@ row.
   `docs/research/2026-10-01-formal-pass/types/note.md` §4 (tracked);
   `docs/research/2026-10-01-formal-pass/types/verify.md` TY-01, TY-19 (tracked);
   `docs/research/2026-10-01-formal-pass/proofs/note.md` §1, G1, G2, G4, G6 (tracked);
-  `docs/research/2026-10-01-landing/plan.md` §0, §2 (tracked).
+  `docs/research/2026-10-01-landing/plan.md` §0, §2 (tracked);
+  `docs/research/2026-10-01-landing/receipt-B.md` (tracked; rows 135, 136);
+  `docs/research/2026-10-01-landing/receipt-C.md` (tracked; rows 134, 139);
+  `docs/research/2026-10-01-landing/receipt-I.md` (tracked; the union of seats B, C, E and F);
+  `docs/research/2026-10-01-landing/receipt-I2.md` (tracked; rows 137 and 156);
+  `docs/research/2026-10-01-landing/codex-second-eyes/review.md` (tracked; row 156).
 - **Literature.** Level 0, the free monad typed by a protocol per operation: Xia et al.,
   *Interaction Trees*, §3.2 and §7: read (lit-papers Q7, Q10); de Vilhena's thesis (2022), Def. 2.2,
   2.4–2.8 and the rules Bind and Monotonicity: read (papers review §1.3; Def. 2.4, 2.5, 2.8 and
-  Monotonicity read again by the model probe's pedigree seat). The correction (model-probe synthesis
-  §3.2 item 1): Monotonicity is `Typed.widen` plus protocol refinement (`typed_along`); `Typed.mono`
-  is world-order weakening, the upward closure of Kripke and Iris semantics (by name). Timany and
-  Birkedal, "non-local control breaks the bind rule": by name, as de Vilhena §2.4 cites it (read via
-  papers review G8). Level 1, the world and its order: de Vilhena §4.3; Cohen, Grunfeld, Kirst and
-  Miquey (FSCD 2025) §4.1.1; Jacobs, Prop. 6.2.4: read (papers review A3); Ahmed (2004 thesis;
-  2006), Ahmed, Dreyer and Rossberg (2009), Appel and McAllester (2001), Iris: by name; Pierce,
-  *TAPL* ch. 13 (§13.4–§13.5, store typings): by name; Reynolds (2000), extrinsic typing: by name.
-  Level 2, the typed stack: Danvy and Nielsen, *Defunctionalization at work*, §1 and §3: read
-  (lit-papers Q12); Harper, *PFPL* ch. 28; Reynolds; Van Horn and Might: by name. The typed state as
-  an inductive invariant with a ghost world: Wright and Felleisen (1994); Manna and Pnueli; Owicki
-  and Gries; Abadi and Lamport (1991); Jones (1983); O'Hearn, Reynolds and Yang (2001): by name.
-- **Status.** See system map §8, R9 (and R1, R4); witnesses re-read at `dceae006` (seat E's landings
-  at `a561d604`).
+  Monotonicity read again by the model probe's pedigree seat); the handler rule's premise, Def.
+  2.2, as the papers review's *Implements* (A2), which the store rows' adequacy states. The
+  correction (model-probe synthesis §3.2 item 1): Monotonicity is `Typed.widen` plus protocol
+  refinement (`typed_along`); `Typed.mono` is world-order weakening, the upward closure of Kripke
+  and Iris semantics (by name). Timany and Birkedal, "non-local control breaks the bind rule": by
+  name, as de Vilhena §2.4 cites it (read via papers review G8). Level 1, the world and its order:
+  de Vilhena §4.3; Cohen, Grunfeld, Kirst and Miquey (FSCD 2025) §4.1.1; Jacobs, Prop. 6.2.4:
+  read (papers review A3); Ahmed (2004 thesis; 2006), Ahmed, Dreyer and Rossberg (2009), Appel and
+  McAllester (2001), Iris: by name; Pierce, *TAPL* ch. 13 (§13.4–§13.5, store typings): by name;
+  Reynolds (2000), extrinsic typing: by name. Level 2, the typed stack: Danvy and Nielsen,
+  *Defunctionalization at work*, §1 and §3: read (lit-papers Q12); Harper, *PFPL* ch. 28;
+  Reynolds; Van Horn and Might: by name. The typed state as an inductive invariant with a ghost
+  world: Wright and Felleisen (1994); Manna and Pnueli; Owicki and Gries; Abadi and Lamport (1991);
+  Jones (1983); O'Hearn, Reynolds and Yang (2001): by name.
+- **Status.** See system map §8, R9 (and R1, R4); witnesses re-read at `6b3f2c92`.
 
 ### DB-17 — services and layers are one requirement row calculus
 
@@ -1687,39 +1775,39 @@ capability question the calculus records and does not decide (`PROV-FB-KEY-FORGE
   complement; `provide` is substitution; regrouping is through `provideMerge`; a program's row is
   its grade, a flat coeffect; satisfaction is inclusion into the context's key row; grading
   soundness is row 117's theorem; `build_total`'s restoration is owed under R5.
-- **Witnesses** (re-read at `dceae006`). Defined or proved: `Row` (`src/Effect4/Data/Row.lean:30`),
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `Row` (`src/Effect4/Data/Row.lean:30`),
   `union_assoc` (`src/Effect4/Data/Row.lean:464`), `union_comm` (`src/Effect4/Data/Row.lean:473`),
   `union_idem` (`src/Effect4/Data/Row.lean:482`), `union_empty_left`
   (`src/Effect4/Data/Row.lean:491`), `union_empty_right` (`src/Effect4/Data/Row.lean:502`),
   `mem_diff` (`src/Effect4/Data/Row.lean:590`), `diff_subset` (`src/Effect4/Data/Row.lean:595`),
   `diff_eq_empty_iff_subset` (`src/Effect4/Data/Row.lean:614`), `union_diff_distrib`
-  (`src/Effect4/Data/Row.lean:636`); `Requirement` (`src/Effect4/Machine/Context.lean:72`),
-  `keysRow` (`src/Effect4/Machine/Context.lean:185`), `Satisfies`
-  (`src/Effect4/Machine/Context.lean:188`); `LayerTy` (`src/Effect4/Program/Typing/Rules.lean:240`),
+  (`src/Effect4/Data/Row.lean:636`); `Requirement` (`src/Effect4/Machine/Context.lean:76`),
+  `keysRow` (`src/Effect4/Machine/Context.lean:120`), `Satisfies`
+  (`src/Effect4/Machine/Context.lean:123`); `LayerTy` (`src/Effect4/Program/Typing/Rules.lean:240`),
   `provide` (`src/Effect4/Program/Typing/Rules.lean:250`), `provideMerge`
   (`src/Effect4/Program/Typing/Rules.lean:256`), `bodyRequires`
   (`src/Effect4/Program/Typing/Rules.lean:277`); the checker's arms `scoped`
   (`src/Effect4/Program/Checker.lean:198`) and `provideLayer`
-  (`src/Effect4/Program/Checker.lean:211`); `provide_out` (`src/Effect4/Program/Provision.lean:69`),
-  `provide_requires_subset` (`src/Effect4/Program/Provision.lean:75`), `provide_discharges`
-  (`src/Effect4/Program/Provision.lean:85`), `provide_closed`
-  (`src/Effect4/Program/Provision.lean:97`), `covers_of_provide_closed`
-  (`src/Effect4/Program/Provision.lean:106`), `provide_provide_rows`
-  (`src/Effect4/Program/Provision.lean:122`), `merge_rows_comm`
-  (`src/Effect4/Program/Provision.lean:137`), `merge_requires`
-  (`src/Effect4/Program/Provision.lean:142`), `provide_requires_antitone_out`
-  (`src/Effect4/Program/Provision.lean:148`), `satisfies_iff_subset_keysRow`
-  (`src/Effect4/Program/Provision.lean:168`), `appTy_closed_iff`
-  (`src/Effect4/Program/Provision.lean:246`), `build` (`src/Effect4/Program/Provision.lean:297`),
+  (`src/Effect4/Program/Checker.lean:211`); `provide_out` (`src/Effect4/Program/Provision.lean:71`),
+  `provide_requires_subset` (`src/Effect4/Program/Provision.lean:77`), `provide_discharges`
+  (`src/Effect4/Program/Provision.lean:87`), `provide_closed`
+  (`src/Effect4/Program/Provision.lean:99`), `covers_of_provide_closed`
+  (`src/Effect4/Program/Provision.lean:108`), `provide_provide_rows`
+  (`src/Effect4/Program/Provision.lean:128`), `merge_rows_comm`
+  (`src/Effect4/Program/Provision.lean:160`), `merge_requires`
+  (`src/Effect4/Program/Provision.lean:165`), `provide_requires_antitone_out`
+  (`src/Effect4/Program/Provision.lean:171`), `satisfies_iff_subset_keysRow`
+  (`src/Effect4/Program/Provision.lean:193`), `appTy_closed_iff`
+  (`src/Effect4/Program/Provision.lean:271`), `build` (`src/Effect4/Program/Provision.lean:322`),
   `join_assoc` (`src/Effect4/Laws/Program/TypeAlgebra.lean:433`); tested: `leftWins` and `rightWins`
-  (`src/Effect4/Program/Provision.lean:606-607`, same signature, different built contexts) and
+  (`src/Effect4/Program/Provision.lean:631-632`, same signature, different built contexts) and
   `Test/Program/ProvisionContract.lean`. The cut theorem: `build_total` at
-  `git:f182d2b3:src/Effect4/Program/Provision.lean:429` (absent at `dceae006`). Proved in the tree
-  at `a561d604` (landed by seat E from the algebra verifier's probe): `provideMerge_assoc_rows`
-  (`git:a561d604:src/Effect4/Program/Provision.lean:143`), `provideMerge_assoc`
-  (`git:a561d604:src/Effect4/Laws/Program/Provision.lean:32`), `provide_provide`
-  (`git:a561d604:src/Effect4/Laws/Program/Provision.lean:45`); tested, the red control
-  `provide_not_assoc` (`git:a561d604:Test/Program/ProvideRows.lean:45`).
+  `git:f182d2b3:src/Effect4/Program/Provision.lean:429` (absent at `6b3f2c92`). Proved in the tree
+  since `a561d604` (landed by seat E from the algebra verifier's probe): `provideMerge_assoc_rows`
+  (`src/Effect4/Program/Provision.lean:143`), `provideMerge_assoc`
+  (`src/Effect4/Laws/Program/Provision.lean:32`), `provide_provide`
+  (`src/Effect4/Laws/Program/Provision.lean:45`); tested, the red control
+  `provide_not_assoc` (`Test/Program/ProvideRows.lean:45`).
 - **Refusals.** In `Test/Counterexamples/REGISTER.md`: `E4-PROV-CE-001`, `E4-PROV-CE-002`,
   `E4-PROV-CE-003`, `E4-PROV-CE-004`, `E4-PROV-CE-005` and `E4-PROV-CE-006` (repaired; the archive's
   rows with those two ids are other statements), `E4-TYPED-CE-008` (row 117's red control); in
@@ -1746,8 +1834,7 @@ capability question the calculus records and does not decide (`PROV-FB-KEY-FORGE
   Rémy; Gaster and Jones: by name (the 2026-09-09 types scout, as the data probe §6.4 records it;
   the type-algebra note §8 lists them as assumed). Morris and McKinna: assumed (the type-algebra
   note §8).
-- **Status.** See system map §8, R5; witnesses re-read at `dceae006` (seat E's landings at
-  `a561d604`).
+- **Status.** See system map §8, R5; witnesses re-read at `6b3f2c92`.
 
 ## Source and evidence rules
 
@@ -1829,8 +1916,9 @@ and the types verifier's §3 (tracked).
 - **No step indexing, for this reason.** Worlds hold syntactic types that the handle arms of `Fits`
   read as declarations, so the world is not defined through `Fits`; "values carry no code" is the
   looser reason (Ahmed 2004; Appel and McAllester 2001: by name; the types verifier TY-19).
-- **"Kripke" names `Fits`, `TypedProg` and the amended stacks, not the typed state**, whose world
-  validity has exact support and is not upward closed (TAPL ch. 13's well-typed store: by name).
+- **"Kripke" names `Fits`, `TypedProg` and the saved stacks (closed under later worlds since row
+  135), not the typed state**, whose world validity has exact support and is not upward closed
+  (TAPL ch. 13's well-typed store: by name).
 - **A runner only on the fragments.** The machine runs the free model against the store comodel on
   the straight and looped fragments; past the first fiber operation it is an abstract machine
   related to the reference by a lock-step simulation, at the empty host table (Ahman and Bauer 2020:
@@ -2018,7 +2106,7 @@ is the literature list of `docs/core/coherence-principle.md`.
 - Liron Cohen, Ariel Grunfeld, Dominik Kirst, and Étienne Miquey,
   [*Syntactic Effectful Realizability in Higher-Order Logic*](https://arxiv.org/abs/2506.09458)
   (EffHOL), arXiv v1, 2025-06-11. **Read**, Sections IV–V, VII, IX and Appendix E
-  (`docs/research/2026-09-05-reification-effhol.md`, untracked). DB-06.
+  (`docs/research/2026-09-05-reification-effhol.md`, tracked). DB-06.
 
 *The toolchain and the target, as sources*
 

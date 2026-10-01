@@ -53,15 +53,21 @@ import re
 import subprocess
 import sys
 
-BASE = "dceae006"
+# The commit the basis's lines and names are stated at; the reading guide and every status field
+# name it, and a re-pin moves them together (decisions row 154: dceae006, then 6b3f2c92).
+BASE = "6b3f2c92"
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 MAIN = "/Users/pooks/Dev/lean4-effect4"           # the main checkout: untracked research
 PKG_DIR = os.path.join(MAIN, ".lake", "packages", "effects")
 PKG_REV = "a4ee7a14"
-# refactor/phase1-phase3 when this refresh closed: a note is tracked when it is present at BASE,
-# at HEAD of this branch, or here (seat F tracked eighteen notes at 27495d51). A fixed commit, not
-# the moving branch name, so a rerun gives the same answer.
-TRACK = "efcf1ae2"
+# A note is tracked when it is present at BASE, at HEADREV (this branch's head) or at TRACK, a fixed
+# commit rather than a moving branch name, so a rerun gives the same answer. At the re-pin TRACK is
+# BASE.
+TRACK = "6b3f2c92"
+HEADREV = "HEAD"
+# The red controls were written against these commits and stay pinned to them: a re-pin of the
+# basis moves BASE and TRACK, never the fixtures (they name lines and tracking as they stood there).
+FIXTURE_BASE, FIXTURE_TRACK, FIXTURE_HEAD = "dceae006", "efcf1ae2", "621c2210"
 VENDOR = "vendor/effect-4.0.0-rc.112/src/"
 HISTORY_MARK = "\n## History"
 
@@ -120,7 +126,7 @@ def read_file(path):
                 return f.read().split("\n"), f"toolchain {TOOL_VERSION}"
         return None, f"absent in toolchain {TOOL_VERSION}"
     if path.startswith("docs/research/"):
-        for rev, where in ((BASE, f"tracked at {BASE}"), ("HEAD", "tracked on this branch")):
+        for rev, where in ((BASE, f"tracked at {BASE}"), (HEADREV, "tracked on this branch")):
             if exists_at(rev, path.rstrip("/")):
                 return (show(rev, path) or []), where
         if exists_at(TRACK, path.rstrip("/")):
@@ -247,7 +253,9 @@ PATHLINE = re.compile(r"^((?:git:[0-9a-f]+\^?:)?[A-Za-z0-9_./@+-]+?\.(?:lean|md|
 DIRPATH = re.compile(r"^(?:src|Test|docs|harness|tools|scripts|vendor|ocaml|generated)/[A-Za-z0-9_./-]*/?$")
 NAME = r"[^\W\d][\w'.!?]*"
 PAIR = re.compile(r"`(" + NAME + r")`\s*\(`([^`]+?):(\d+)(?:-(\d+))?`")
-MISSING = re.compile(r"`(" + NAME + r")`[^`\n]{0,40}\(witness missing at `" + BASE + r"`([^)]*)\)")
+def missing_rx():
+    """A claim of absence names the stated commit, so it is read at the BASE in force."""
+    return re.compile(r"`(" + NAME + r")`[^`\n]{0,40}\(witness missing at `" + BASE + r"`([^)]*)\)")
 PROBE_AT = re.compile(r"`(docs/research/[^`]+?\.lean):(\d+)`")
 DIGEST_PAIR = re.compile(r"`(Lean/[^`]+)`\s*\|\s*`([0-9a-f]{64})`")
 
@@ -376,7 +384,7 @@ def check(text, label):
         stop = tail.find(":=")
         if "ProofGraph.Obligation" in (tail[:stop] if stop >= 0 else tail):
             obligations.append(f"{name} @ {path}:{lo}")
-    for m in MISSING.finditer(text):
+    for m in missing_rx().finditer(text):
         counts["missing"] += 1
         name = m.group(1)
         if tree_declared(name):
@@ -403,7 +411,7 @@ def check(text, label):
             want_tracked = mark.group(1) is None
             for path in paths:
                 marks += 1
-                is_tracked = any(exists_at(rev, path) for rev in (BASE, "HEAD", TRACK))
+                is_tracked = any(exists_at(rev, path) for rev in (BASE, HEADREV, TRACK))
                 if is_tracked != want_tracked:
                     fails.append(f"source mark {path}: marked {'tracked' if want_tracked else 'untracked'}, "
                                  f"is {'tracked' if is_tracked else 'untracked'}")
@@ -567,7 +575,7 @@ def report(fails, obligations, summary, history_fails=()):
 
 
 def main():
-    global BASE
+    global BASE, TRACK, HEADREV
     if len(sys.argv) > 2 and sys.argv[1] == "--base":
         # rerun every check at another commit (for a drift report; the stated commit stays BASE)
         BASE = sys.argv[2]
@@ -585,6 +593,7 @@ def main():
               f"(citations into files that changed; the history appendix is not re-pinned)")
         sys.exit(0)
     if len(sys.argv) > 1 and sys.argv[1] == "--self-test":
+        BASE, TRACK, HEADREV = FIXTURE_BASE, FIXTURE_TRACK, FIXTURE_HEAD
         s_fails = structure(RED_STRUCTURE)
         for f in s_fails:
             print("  FAIL (structure)", f)
