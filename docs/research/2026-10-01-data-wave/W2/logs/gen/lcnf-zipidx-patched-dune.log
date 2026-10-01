@@ -1,0 +1,7 @@
+$ cd /Users/pooks/Dev/lean4-effect4-seat-W2
+$ opam exec --switch=effect4 -- dune build --root /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/w2/tgL/lcnf --build-dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/w2/tgL/dune-patched
+# started 2026-10-01T22:31:59Z (LEAN_NUM_THREADS=unset)
+# exit=0 seconds=2
+6
+x 0
+_ 1

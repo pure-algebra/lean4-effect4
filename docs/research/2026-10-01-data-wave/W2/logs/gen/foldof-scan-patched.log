@@ -1,0 +1,35 @@
+$ cd /Users/pooks/Dev/lean4-effect4-seat-W2
+$ lake env lean -R Test/fixtures/generators -DwarningAsError=true -M6144 Test/fixtures/generators/GenFix/Record/FoldOfScan.lean
+# started 2026-10-01T22:28:14Z (LEAN_NUM_THREADS=1)
+fold_of: GenFix.Record.Ty.members.eq_cata : ∀ (a : Ty), a.members = (cata_ty Ty.members.alg a).snd
+fold_of (paramorphism: the carrier pairs the value): GenFix.Record.Ty.members.alg : TyAlgebra fun fam =>
+  TyFam.rec (Ty × List Ty) fam
+fold_of: GenFix.Record.Ty.isNever.eq_cata : ∀ (a : Ty), a.isNever = cata_ty Ty.isNever.alg a
+fold_of: GenFix.Record.Ty.isNever.alg : TyAlgebra fun fam => TyFam.rec Bool fam
+fold_of: GenFix.Record.Ty.isMember.eq_cata : ∀ (a : Ty), a.isMember = cata_ty Ty.isMember.alg a
+fold_of: GenFix.Record.Ty.isMember.alg : TyAlgebra fun fam => TyFam.rec Bool fam
+fold_of: GenFix.Record.Ty.renderRaw.eq_cata : ∀ (a : Ty), a.renderRaw = cata_ty Ty.renderRaw.alg a
+fold_of: GenFix.Record.Ty.renderFields.eq_cata : ∀ (a : List (String × Ty)),
+  Ty.renderFields a =
+    List.foldr (fun x rrest => "readonly " ++ x.fst ++ ": " ++ x.snd ++ "; " ++ rrest) ""
+      (cata_pos_list_prod_string_ty Ty.renderRaw.alg a)
+fold_of: GenFix.Record.Ty.renderRaw.alg : TyAlgebra fun fam => TyFam.rec String fam
+fold_of: GenFix.Record.Ty.closed.eq_cata : ∀ (a : Ty), a.closed = cata_ty Ty.closed.alg a
+fold_of: GenFix.Record.Ty.closedFields.eq_cata : ∀ (a : List (String × Ty)),
+  Ty.closedFields a = List.foldr (fun x rrest => x.snd && rrest) true (cata_pos_list_prod_string_ty Ty.closed.alg a)
+fold_of: GenFix.Record.Ty.closed.alg : TyAlgebra fun fam => TyFam.rec Bool fam
+fold_of: GenFix.Record.Ty.fieldTys.eq_cata : ∀ (a : Ty), a.fieldTys = (cata_ty Ty.fieldTys.alg a).snd
+fold_of: GenFix.Record.Ty.fieldTysOf.eq_cata : ∀ (a : List (String × Ty)),
+  Ty.fieldTysOf a =
+    List.foldr (fun x rrest => x.snd.fst :: (x.snd.snd ++ rrest)) [] (cata_pos_list_prod_string_ty Ty.fieldTys.alg a)
+fold_of (paramorphism: the carrier pairs the value): GenFix.Record.Ty.fieldTys.alg : TyAlgebra fun fam =>
+  TyFam.rec (Ty × List Ty) fam
+'GenFix.Record.Ty.members.eq_cata' depends on axioms: [propext, Quot.sound]
+'GenFix.Record.Ty.renderRaw.eq_cata' depends on axioms: [propext]
+'GenFix.Record.Ty.renderFields.eq_foldr' depends on axioms: [propext]
+'GenFix.Record.Ty.renderFields.eq_cata' depends on axioms: [propext, Quot.sound]
+'GenFix.Record.Ty.closedFields.eq_cata' depends on axioms: [propext, Quot.sound]
+'GenFix.Record.Ty.fieldTys.eq_cata' depends on axioms: [propext, Quot.sound]
+'GenFix.Record.Ty.fieldTysOf.eq_foldr' depends on axioms: [propext]
+'GenFix.Record.Ty.fieldTysOf.eq_cata' depends on axioms: [propext, Quot.sound]
+# exit=0 seconds=15
