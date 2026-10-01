@@ -1,0 +1,23 @@
+'ProbeU.Laws.hasTy_eq_cata' depends on axioms: [propext, Quot.sound]
+'ProbeU.Laws.hasTy_eq' depends on axioms: [propext, Quot.sound]
+'ProbeU.Laws.normalize_commutes' depends on axioms: [propext, Quot.sound]
+'ProbeU.Laws.hasTy_normalize'' depends on axioms: [propext, Quot.sound]
+'ProbeU.cata_ofLayer_view' does not depend on any axioms
+'ProbeU.sizeOf_tyKids' depends on axioms: [propext, Quot.sound]
+'ProbeU.cata_ofLayer_inv' depends on axioms: [propext, Quot.sound]
+'ProbeU.Laws.varsUnder_of_closed' depends on axioms: [propext, Quot.sound]
+'ProbeU.Laws.templateAdmissible_pair' depends on axioms: [propext]
+'ProbeU.Laws.templateAdmissible_of_closed'' depends on axioms: [propext, Quot.sound]
+'ProbeU.Laws.recCombine_and_some' depends on axioms: [propext]
+'ProbeU.Laws.nodeThen_and' depends on axioms: [propext]
+'ProbeU.Laws.prod_ofLayer' does not depend on any axioms
+'ProbeU.Laws.allHeads_mono' depends on axioms: [propext, Quot.sound]
+'ProbeU.Laws.codec_le_handleFree' does not depend on any axioms
+'ProbeU.Laws.isSupported_eq'' depends on axioms: [propext]
+'ProbeU.Laws.handleFreeAlg_eq'' depends on axioms: [propext]
+'ProbeU.Laws.handleFree_of_isSupported' depends on axioms: [propext, Quot.sound]
+'ProbeU.Laws.isEmpty_append' does not depend on any axioms
+'ProbeU.Laws.isEmpty_commutes' depends on axioms: [propext]
+'ProbeU.Laws.closed_eq_isEmpty' depends on axioms: [propext]
+'ProbeU.Laws.varsOf_eq_nil_of_closed'' depends on axioms: [propext]
+exit 0
