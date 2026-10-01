@@ -129,7 +129,7 @@ inductions, the twelve slack ceilings, the literature names.
   Scheduler,TypedStateDecl,State}.lean`, `Laws/Machine/Lift.lean` only if a lemma is missing;
   `M6Capstone.lean`.
 
-**Wave 2 (serial on the merged statements):** row 117's contract and part two (seat D); the
+**Wave 2 (serial on the merged statements):** row 117's contract and part two, with rows 151 and 152 (the close rows: contract choices whose acceptance is that every existing cleanup and exit-inspection example stays a positive control, one red control per refused shape) and row 153 (M5 for programs with layer references: the redirect-agreement lemma, with a positive control at the corpus's `layer.ref` program) (seat D); the
 adequacy instances per row (store rows via `syncOpStep`, fiber rows via the `FiberAction`
 helpers, the frontier arm); `Book` once and transported (relative induction); M5's denotation
 lemma (`denoteR_typed`, `evalTerm_fits`, `seq_typed`); the easy commands (`evaluate`,
