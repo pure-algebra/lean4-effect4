@@ -12,7 +12,7 @@ ecosystem (the printer and readers). Programs are data: a canonical `Eff` tree w
 a computed typing certificate, folds, a journaled run with replay, and a printed image that
 reads back.
 
-## Current milestone (2026-09-23)
+## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 
 Phase A, placement, the Phase B skeleton and the Phase C fills of the skeleton-first redirect
 are landed; the phase-by-phase account is
@@ -67,7 +67,8 @@ amendment carries the sanitized cause through the compiled walk and its three co
 The unchanged runtime agreement statements remain at `[propext, Quot.sound]`. The receipt
 records green `make check`, `check-ocaml`, `check-truth` and `check-census`; the once-over
 verified the retained evidence hashes and reran the exact-exception controls. The unique
-production ledger remains 342 total, 333 proved, 9 open.
+production ledger was 342 total, 333 proved, 9 open on 2026-09-21 (the architecture map measures
+the ledger at HEAD: 403 declared, 370 proved, 33 open over all roots at `dceae006`).
 
 [Foundations slice 5](research/2026-09-21-codex-brief-foundations-slice-5.md) was retargeted to
 `fc638550`. Its preflight stopped on three checked admission counterexamples, retained at
@@ -86,7 +87,7 @@ then the residual protocols, with the stack contracts a parametric interface onl
 module instantiates. The regenerated [architecture map](core/architecture-map.html) found three
 upward imports that arrived after 2026-09-20 (the answer gate, the trace-origin obligations and
 the protocol ledger file); all three are repaired, so the map shows no import against the
-declared direction beyond the two accepted ones, and no pair of areas importing each other. The production ledger is unchanged at 342 total, 333 proved, 9 open. Slice
+declared direction beyond the two accepted ones, and no pair of areas importing each other. The production ledger was unchanged then at 342 total, 333 proved, 9 open. Slice
 5's stack and delivery proofs, assembly and M6 declarations remain Codex's, on the recorded head.
 
 The five chat rulings of 2026-09-20 (rows 20, 48, 51, 52, 79) are written into
@@ -293,7 +294,7 @@ service types, which is what the checker uses (the recommendation's per-fiber pr
 and is corrected in the register). Slice 5 landed the same day ([landing record](research/2026-09-24-foundations-slice5-landing.md)):
 the stack walk is proved type-preserving with no run premise, delivery and the hook laws are proved,
 the typed state is assembled, and the transition ledger is declared per command. Slice 6's fork
-ledger landed on 2026-10-01 (rows 91–92). The open choices from 2026-09-30 are rows 93–94 (the trace agreement and its automation) and the host boundary and its connections (rows 95–101); rows 102–103 (the documentation homes) are ruled. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
+ledger landed on 2026-10-01 (rows 91–92), and the trace agreement with it (rows 93–94, closed). The open choices from 2026-09-30 are the host boundary and its connections (rows 95–101); rows 102–103 (the documentation homes) are ruled. Background: the [typed-state admission audit](research/2026-09-23-typed-state-admission-audit.md)
 found that the program judgment refused most programs the checker admits; the census and the
 dynamic lane landed on your ruling (8,584 typed programs, 34,336 runs, no exit outside its
 checked type), and the [protocol repair](research/2026-09-24-typed-state-protocol-repair.md)
@@ -304,32 +305,12 @@ on the straight and looped fragments and runtime agreement were never affected. 
 `U-01` upstream remains the owner's decision; its reproduction and Effect 3 comparison are in
 `docs/UPSTREAM-BACKLOG.md`.
 
-| row | question | the register's recommendation (first line) |
-| --- | --- | --- |
-| 1 | The canonical schema object | (b), after row 6 and row 11 land — the pin and `fromJson` are about the persisted projection, so (a) discards the estate's only stamped schema claim; |
-| 2 | Names for records and sums | (c) now, (b) before the first foreign consumer, as stages — `select` reads the tagged tuple that `Arrays[Literal t, T]` already is, so annotations kee |
-| 7 | Handles at the boundary | (b), with the cross-process refusal — rc.112's own mechanism, the same one the six `effect/schema/*` ids need for row 11; the schema accepts a live ha |
-| 10 | One `Val → Json` | `ShapeDoc.print` survives, `Schema.encode` proved equal to it on the admitted domain, the harness's two `valJson`s deleted — the shape-directed image |
-| 11 | Where `Schema | (b) — one owner for the spelling; the reviver table is row 7's work |
-| 14 | The table travels by digest | yes, now — 89% of an answer's bytes and a 231 KB advertised schema are the table by value; `Canonical RowTable` exists. Changes the wire shape of `Hea |
-| 15 | The MCP server | yes, as one choice — only a Lean host gets `open_total` (a `Module` is a function, a certificate is a `Prop` record); `journal_replays` makes the cach |
-| 19 | The three root modules and the daemon words | yes, as a file-move wave after group A's first slice |
-| 21 | `nativeSignatureWith` stays a declaration-site check (`ServiceDef | keep until an application needs a seventh carrier — threading changes `Built`, `HostSession.start`, `Run.open` and both soundness statements |
-| 22 | `gen`/`Stmt` stays a printer spelling with no authoring lift (authored | confirm the first; the owner ruled `gen` stays on 2026-09-17; the consequence is one constructor family no author can write |
-| 26 | The rules for canonical TypeScript, corrected by E | adopt — E's count (91 of 7,008 exports are AST-typed entries; `Effect`, `Layer`, `Stream`, `Ref`, `Deferred`, `Queue`, `Scope`, `Fiber`, `Exit` all 0) |
-| 27 | The LCNF per-module recipe (roots → closure + case-site policy → emit  | adopt |
-| 28 | What "verified lowering" means | (b) — six mutants for a twelve-row walk plus a 50-row table is an under-covered control; the full proof is not the cheapest true claim |
-| 29 | The lowering architecture (the LLVM steer) | adopt after row 31 — the TypeScript printer is the profile's first customer |
-| 30 | `denote`, `effTy`, `compileEff` onto the fold (the three exemptions of | `denote` and `effTy` this wave; decide whether `compileEff` stays exempt |
-| 32 | Vendoring order | adopt — the first two steps produce falsifiable evidence with zero emitter work |
-| 53 | Layer 0's home | keep it there; move to `Effects/Protocol.lean` (outside the frozen `Algebra/`) at the package's next release; no vendoring of `Effects` into `Effect4` |
-| 78 | Completion data and duplicated memo state; when to change the ledger's | Set the representation/observation contract, migrate promise cells and owed resumes to admitted Completion, replace memo census witnesses, then pin th |
-| 80 | Atomic or preemptible transactions, admission and retry contract | Start with pure/TxRef admitted bodies on the existing evaluator; prove transitive non-reentrancy, ownership through an explicit replay contract, or a |
-| 81 | Scheduled-wake primitive for composed modules | Design Latch against cancellation in pending and captured batches, coalescing, live/snapshot traversal and dispatcher ownership; add it only with thos |
-| 82 | Typed behavior values for APIs that retain code | A typed first-order code reference into the existing Eff owner with typed captures; settle typed registry/entry resolution, lexical captures versus in |
-| 83 | Clock, randomness and behavior-bearing context profiles | Keep the logical clock and name the custom-Clock refusal; propose a versioned seeded generator held in ordinary Ref state behind its context reference |
-| 84 | Which fragment the first transaction profile admits, and whether owner | Admit `TxBody ∩ Straight` first, with a proved sufficient budget: a straight body compiles to continuation frames and the driver's budget is independe |
-| 85 | What D5's first storage refinement delivers | The `Arena` interface (peek, poke, alloc, size and the dense-arena laws) with `refStepOf` and `refStepOf_keeps` restated over it and `RefHeap` as its |
+The register [`docs/core/decisions.md`](core/decisions.md) is the one owner of each row's
+recommendation and status. The copy of its recommendations that stood here until 2026-10-01 is
+removed: it had drifted (row 21 read "keep" after the ruling "thread it"), and the formal pass's
+organization seat named it as a second owner (its §4.2). Read the open rows there, in the order
+its history section gives, and the owner-level choices of 2026-10-01 in
+[`2026-10-01-landing/plan.md`](research/2026-10-01-landing/plan.md) §1.
 
 
 The preceding review is retained in
@@ -341,8 +322,8 @@ The research packet's C1–C4 statements have now been promoted and proved: C1 a
 `Typed.completion_transport`, C2 as `indexed_ref_step_preserves`, C3/C4 as
 `Refinement.projects_compose` and `projects_induces_refines`. Their research copies retain
 the original checkpoint. These conditional abstract laws do not certify a backend implementation.
-Decisions 86–88 record the technical questions; the five chat rulings of 2026-09-20 still wait
-for the owner's word to be written into `decisions.md`.
+Decisions 86–88 record the technical questions; the five chat rulings of 2026-09-20 were written
+into `decisions.md` on 2026-09-21 (rows 20, 48, 51, 52, 79).
 
 The foundations plan and slice briefs are in
 `docs/research/2026-09-20-foundations-plan-and-next-two-slices.md`: the review's findings
@@ -354,7 +335,7 @@ slice 2 adds owner-level source rows so the skeleton states `SavedOk`, `ResumeOk
 `CaptureOk` whole, puts the ghost token table on the world, and declares the typed-stack
 interface parameterised in `TypedProg`; slice 3 (world validity and transport) is written
 and disjoint. Decisions D1–D11 of that note are the coordinator's; the five chat rulings of
-2026-09-20 still wait for the owner's word to be written into `decisions.md`.
+2026-09-20 were written into `decisions.md` on 2026-09-21.
 Slice 1 is landed as `3aa1a9f1`
 (`docs/research/2026-09-21-foundations-slice1-receipt.md`): 329 obligation declarations
 in 40 files now use theorem binders, seven statements have their approved premises restored,
@@ -583,8 +564,8 @@ deep-dive review. Step 0 of the milestone is landed
 table under a totality gate (87/87, two refusals named), layer 0, and the generated skeleton
 `Laws/Program/Typed/State.lean`, elaborated in place and parametric in the carrier predicates
 (the source-file writer is retired; `make check-typed-state` owns the focused group).
-Owed: the concrete transition-obligation set and its pinned count, at M6 of plan §14 after M1
-and M2. Open, in the order `decisions.md`'s last section
+The concrete transition-obligation set and its pinned count were declared at slice 5 (2026-09-24):
+`M6Ledger`, 20 goals, ceiling 20 (`Laws/Program/Typed/Assembly.lean`). Open, in the order `decisions.md`'s last section
 gives: group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2, 7, 10, 11; then 1
 with 3, and 19–22. Row 5 has the restatement `docs/research/2026-09-17-ontology-and-do-now-probe.md` §2 gives.
 
