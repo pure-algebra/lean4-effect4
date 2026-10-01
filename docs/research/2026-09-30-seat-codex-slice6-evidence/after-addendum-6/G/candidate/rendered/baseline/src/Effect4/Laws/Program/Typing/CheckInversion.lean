@@ -407,15 +407,13 @@ theorem inv_action_closeScope (sig : Signature Op) (env : TyEnv) (p : List Nat)
 
 theorem inv_layer_succeed (sig : Signature Op) (p : List Nat) (key : ServiceKey) (value : Lit) :
     ∀ l, checkLayer sig p (.succeed key value : LayerTerm Op) = .ok l →
-      ∃ v ty, litVal value = some v ∧ sig.serviceTy key = some ty ∧
-        Ty.sub (Lit.ty value).normalize ty.normalize = true ∧
+      ∃ v, litVal value = some v ∧
         l = ⟨Requirement.single key, .never, Requirement.empty⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_layer_effect (sig : Signature Op) (p : List Nat) (key : ServiceKey) (body : Eff Op) :
     ∀ l, checkLayer sig p (.effect key body) = .ok l →
-      ∃ t ty, check sig [] (p ++ [0]) body = .ok t ∧ sig.serviceTy key = some ty ∧
-        Ty.sub t.answer.normalize ty.normalize = true ∧
+      ∃ t, check sig [] (p ++ [0]) body = .ok t ∧
         l = ⟨Requirement.single key, t.error, bodyRequires sig t⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 

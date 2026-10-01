@@ -34,9 +34,10 @@ What this module adds to the tree, and what it deliberately reuses:
   theorem that its requirement row is empty exactly when the layer closes the program.
 * **`build`, the specification of provisioning**, structural over the combinators with the
   leaves supplied as a `LeafSem` hook (the trusted-boundary position `ServiceUniverse` and
-  `RunInterp` already occupy). The proved laws concern the requirement and context algebra,
-  including when a layer signature closes an application's requirements. The connection from
-  a well-typed layer to its built context is checked by the finite witnesses below.
+  `RunInterp` already occupy), and `build_total`: *a well-typed layer builds under every
+  context that satisfies its requirement row, and what it builds satisfies its output row*.
+  That sentence is what "the `R` channel guarantees the wiring" means, and it is proved once
+  over the algebra, for every leaf semantics that is honest about its own leaves.
 * **The machine half, on the compile route.** `Effect.provide(self, layer)` is a program
   (`Eff.provideLayer`), so the witnesses are runs: `buildServices`, `buildSucceeds` and
   `provideThenService` run native programs through `runSyncExit` at `interpOf` and pin, by
@@ -603,16 +604,14 @@ end
 
 /-! ### Order is invisible to the type and visible to the run (CE 5, lifted to layers) -/
 
-def leftWins : LayerTerm DocsOp := .merge (.succeed dbBinding (.nat 1)) (.succeed dbBinding (.nat 2))
-def rightWins : LayerTerm DocsOp := .merge (.succeed dbBinding (.nat 2)) (.succeed dbBinding (.nat 1))
+def leftWins : LayerTerm DocsOp := .merge (.succeed dbKey (.nat 1)) (.succeed dbKey (.nat 2))
+def rightWins : LayerTerm DocsOp := .merge (.succeed dbKey (.nat 2)) (.succeed dbKey (.nat 1))
 
-#guard (layerTy docsSig leftWins).isSome
-#guard (layerTy docsSig rightWins).isSome
 #guard layerTy docsSig leftWins = layerTy docsSig rightWins
-#guard (docsLayer leftWins).map buildServices = some [(20, 2), (3, 0)]
-#guard (docsLayer rightWins).map buildServices = some [(20, 1), (3, 0)]
-#guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbBinding) = some (some (.nat 2))
-#guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbBinding) = some (some (.nat 1))
+#guard (docsLayer leftWins).map buildServices = some [(10, 2), (3, 0)]
+#guard (docsLayer rightWins).map buildServices = some [(10, 1), (3, 0)]
+#guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 2))
+#guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 1))
 
 /-! ### Configuration: the two scheduler references are satisfied by the empty context -/
 

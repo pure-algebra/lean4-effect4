@@ -288,12 +288,12 @@ theorem checkLayer_sound (sig : Signature Op) (layer : LayerTerm Op) :
   cases layer with
   | succeed key value =>
     intro p s h
-    obtain ⟨_, _, hv, hkey, hsub, rfl⟩ := inv_layer_succeed sig p key value s h
-    exact .succeed hv hkey hsub
+    obtain ⟨v, hv, rfl⟩ := inv_layer_succeed sig p key value s h
+    exact .succeed hv
   | effect key body =>
     intro p s h
-    obtain ⟨t, _, ht, hkey, hsub, rfl⟩ := inv_layer_effect sig p key body s h
-    exact .effect (check_sound sig body [] _ t ht) hkey hsub
+    obtain ⟨t, ht, rfl⟩ := inv_layer_effect sig p key body s h
+    exact .effect (check_sound sig body [] _ t ht)
   | effectDiscard body =>
     intro p s h
     obtain ⟨t, ht, rfl⟩ := inv_layer_effectDiscard sig p body s h

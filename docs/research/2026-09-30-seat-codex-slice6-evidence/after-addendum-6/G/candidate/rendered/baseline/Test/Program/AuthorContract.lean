@@ -264,8 +264,8 @@ theorem detachedInScope_scoped : Src.Scoped detachedInScope := by
 -- what `Layer.succeed` cannot take: a string is outside the value alphabet its literal
 -- argument is admitted at, so a string-valued service is the layer whose body answers it.
 #guard Program.layerTy (nativeSignature) (.succeed Counter.key (.str "x")) = none
-#guard (Effect4.Api.checkLayer (Layer.value Counter.key (str "x"))).map
-    (fun _ => ()) = .error (.typing ⟨[], .valueNotSubtype Counter.key .string .nat⟩)
+#guard (Effect4.Api.checkLayer (Layer.value Counter.key (str "x"))).toOption.map
+    (fun l => l.provides) = some [Counter.key]
 #guard elaborateLayer (Layer.empty : LayerSrc NativeOp)
   = .ok (.effectDiscard (.succeed (.lit .unit)))
 #guard (Effect4.Api.checkLayer (Layer.empty : LayerSrc NativeOp)).toOption.map

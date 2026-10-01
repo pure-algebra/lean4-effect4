@@ -141,7 +141,7 @@ g137	true	true	47	-	-	-
 g138	false	true	240	term	.	2345|2769|2554
 g139	false	true	28	term	.	2345|2769|2554
 g140	false	true	98	exitExpected	0.0	2345
-g141	false	true	191	valueNotSubtype	0.0	2345|2375|2322
+g141	false	true	191	term	1.0	2345|2769|2554
 g142	false	false	457	predicateNotBool	0.0.0	-
 g143	false	true	33	exitExpected	0	2345
 g144	true	true	14	-	-	-

@@ -1,5 +1,55 @@
 # Slice 6 implementation receipt
 
+## After addendum 6
+
+**The one thing first.** D and F are merged at `9ad8a7c0`. Addendum 6 at `ea5b28b5`
+lifts the three recorded stops. Work resumes in order G, H1, H2 part one, then row 39 only
+after H2 lands and if no newer brief supersedes it. This section records the current status;
+earlier sections remain checkpoint history. Nothing is pushed.
+
+Authority was read from the main checkout; its path/hash and starting HEAD `c42f4a46` are
+retained in `after-addendum-6/authority.json`. No integration merge or coordinator-register
+edit is performed here.
+
+### G — landed in the commit containing this section
+
+Base `c42f4a46`. The two checker leaves and LayerHasTy leaf rules now require a declared
+service carrier and normalized value subtyping. Their two inversion and soundness cases are
+updated; completeness and downstream uniqueness statements are unchanged. Exact old/new
+statements are retained in `after-addendum-6/G/candidate/statement-diff.md`. The local former
+rules retain old admission and refute the claim that it implies a fitting carrier.
+
+The four authorized fixtures have explicit controls: both provision ordering examples now use
+the number-typed dbBinding and individually check; AuthorContract's string-at-nat sample has its
+exact refusal; TemplatesContract's actual `layerSamples[1]` has its exact-source refusal beside
+the matching nat-valued succeed positive. Its shared definitions and printer coverage remain.
+Addendum 3's blanket unchanged-leaf census missed that fourth unit-producing effect leaf.
+Provision's failure-only docs layer remains accepted under docsSig. The stale build_total
+header is removed. E4-PROV-CE-006 is REPAIRED; CE-002 retains its nonvacuous ordering witness.
+
+Validation (every exact command, exit and raw output is beside this receipt under
+`after-addendum-6/G`; all commands use LEAN_NUM_THREADS=1):
+
+- `source-1`: the ten named checker, typing, provision and direct law targets pass, 372 jobs.
+- `tests-2`: ProvisionContract, AuthorContract, CheckerRulesRed and LayerValue pass, 323 jobs.
+  `tests-1` retained two elaboration failures in new local counterexample proof scripts;
+  explicit finite rejection facts fixed them without changing either statement.
+- `layer-controls` and `axioms`: 22 new test theorem prints and seven law prints are all at
+  `[propext, Quot.sound]` or less. `printer` directly checks TemplatesContract and passes.
+- `make corpus` passes, including its required build prerequisites. The exact 408-row before/
+  after comparison has **zero verdict changes**. Only already-refused g141 changes its diagnostic
+  from term at 1.0 to valueNotSubtype at 0.0 (and corresponding printed codes). This is finite
+  generated/wire-corpus evidence, not general execution or target equivalence. No fifth newly
+  refused in-tree fixture was found in these required checks.
+
+Changed production/test paths are Checker, Typing/HasTy, CheckInversion, CheckSound,
+Program/Provision, ProvisionContract, AuthorContract, the new LayerValue and its Test/All
+import. The register, generated corpus index, receipt and evidence are the remaining paths.
+No engine regeneration is required by G's brief; no OCaml source changes. The generated corpus
+index comes only from its prescribed producer. `G/final-source.patch` retains the final diff.
+Independent source review found no additional issue. Nothing is pushed.
+
+
 ## After addendum 5
 
 **The one thing first.** C is merged into `refactor/phase1-phase3` at `bc77e97f`, with

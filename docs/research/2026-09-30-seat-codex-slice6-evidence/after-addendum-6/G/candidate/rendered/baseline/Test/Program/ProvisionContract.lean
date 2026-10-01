@@ -94,16 +94,14 @@ section Register
 #guard (docsLayer siblingMistake).map buildSucceeds = some false
 #guard (docsLayer deploymentLayer).map buildSucceeds = some true
 
--- `E4-PROV-CE-002`, the typing half: two admitted layers with one signature.
-#guard (layerTy docsSig leftWins).isSome
-#guard (layerTy docsSig rightWins).isSome
+-- `E4-PROV-CE-002`, the typing half: one signature.
 #guard layerTy docsSig leftWins = layerTy docsSig rightWins
 
 -- `E4-PROV-CE-002`, the run half: two contexts, through the specification and the machine.
-#guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbBinding) = some (some (.nat 2))
-#guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbBinding) = some (some (.nat 1))
-#guard (docsLayer leftWins).map buildServices = some [(20, 2), (3, 0)]
-#guard (docsLayer rightWins).map buildServices = some [(20, 1), (3, 0)]
+#guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 2))
+#guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 1))
+#guard (docsLayer leftWins).map buildServices = some [(10, 2), (3, 0)]
+#guard (docsLayer rightWins).map buildServices = some [(10, 1), (3, 0)]
 
 -- `E4-PROV-CE-003`: typed with `E := never`; the machine half (`orDie` builds, and turns a
 -- leaf's failure into a defect) is the `#guard` pair in `Provision.lean`.

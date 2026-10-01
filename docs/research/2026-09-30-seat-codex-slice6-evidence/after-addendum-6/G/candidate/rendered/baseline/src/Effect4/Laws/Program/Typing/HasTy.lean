@@ -413,20 +413,16 @@ environment, which is why this judgment carries no `Γ`. One rule per arm of `la
 (`Typing.lean:290-314`) — except `LayerTerm.ref`, which has none. -/
 inductive LayerHasTy (sig : Signature Op) : LayerTerm Op → LayerTy → Prop
   /-- `Layer.succeed(key, value)` (`Layer.ts:1074`): a service from a value already in hand.
-  The literal is in the machine's value alphabet — a string is not
-  (`PROV-FB-STRING-VALUE`) — and its type is below the key's declared service type. -/
-  | succeed {key : ServiceKey} {value : Lit} {v : _root_.Effect4.Machine.Env.Val} {ty : Ty} :
+  The premise is that the literal is in the machine's value alphabet — a string is not
+  (`PROV-FB-STRING-VALUE`) — and the value's *type* plays no part. -/
+  | succeed {key : ServiceKey} {value : Lit} {v : _root_.Effect4.Machine.Env.Val} :
       litVal value = some v →
-      sig.serviceTy key = some ty →
-      Ty.sub (Lit.ty value).normalize ty.normalize = true →
       LayerHasTy sig (.succeed key value) ⟨Requirement.single key, .never, Requirement.empty⟩
   /-- `Layer.effect(key, body)` (`Layer.ts:1427`): the layer provides its key with the body's
   error, and requires the body's **scope-free** row — the layer's own scope answers the body's
-  `Scope` requirement (`:1438`, `bodyRequires`). Its answer is below the key's service type. -/
-  | effect {key : ServiceKey} {body : Eff Op} {t : EffTy} {ty : Ty} :
+  `Scope` requirement (`:1438`, `bodyRequires`). -/
+  | effect {key : ServiceKey} {body : Eff Op} {t : EffTy} :
       HasTy sig [] body t →
-      sig.serviceTy key = some ty →
-      Ty.sub t.answer.normalize ty.normalize = true →
       LayerHasTy sig (.effect key body) ⟨Requirement.single key, t.error, bodyRequires sig t⟩
   /-- `Layer.effectDiscard(body)` (`Layer.ts:1512`): construction work that provides nothing. -/
   | effectDiscard {body : Eff Op} {t : EffTy} :

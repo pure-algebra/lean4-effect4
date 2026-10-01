@@ -227,16 +227,10 @@ mutual
   def checkLayer (sig : Signature Op) (p : List Nat) : LayerTerm Op → Except TypeRefusal LayerTy
     | .succeed key value => do
       let _ ← expect ⟨p, .literalOutsideAlphabet value⟩ (litVal value)
-      let ty ← expect ⟨p, .serviceUnknown key⟩ (sig.serviceTy key)
-      if Ty.sub (Lit.ty value).normalize ty.normalize then
-        pure ⟨Requirement.single key, .never, Requirement.empty⟩
-      else throw ⟨p, .valueNotSubtype key (Lit.ty value) ty⟩
+      pure ⟨Requirement.single key, .never, Requirement.empty⟩
     | .effect key body => do
       let t ← check sig [] (p ++ [0]) body
-      let ty ← expect ⟨p, .serviceUnknown key⟩ (sig.serviceTy key)
-      if Ty.sub t.answer.normalize ty.normalize then
-        pure ⟨Requirement.single key, t.error, bodyRequires sig t⟩
-      else throw ⟨p, .valueNotSubtype key t.answer ty⟩
+      pure ⟨Requirement.single key, t.error, bodyRequires sig t⟩
     | .effectDiscard body => do
       let t ← check sig [] (p ++ [0]) body
       pure ⟨Requirement.empty, t.error, bodyRequires sig t⟩
