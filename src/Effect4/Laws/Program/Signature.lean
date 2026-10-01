@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typing.Sound
 import Effect4.Laws.Program.Typed.Admission
+import Effect4.Laws.Program.Folds.Checker
 
 /-!
 # Laws.Program.Signature — Σ_app: the signature as data, its extension and its lawfulness
@@ -357,6 +358,531 @@ theorem services_append (app : SigApp) (s' : List (ServiceKey × Ty))
         exact hk
 
 end SigApp
+
+/-! ## Fold congruence on a program's reads (TY-04)
+
+The checker is one fold of the program (`Checker.check.eq_cata`,
+`Laws/Program/Folds/Checker.lean`), so two signatures give the same checker answer on a program
+when their checker algebras agree on the nodes of that program. `EffAlgebra.AgreeOn` says which
+agreement is needed: outright at every constructor that carries no operation or service key, and
+at the ones that do for the operations and keys a guard admits. `cata_eff_congr_on` (and its six
+siblings over the family) is that fact for every fold over the program family, proved once by
+structural recursion; C3's reflection (`check_restrict`) is an instance with no induction of its
+own. -/
+
+section FoldCongr
+universe u
+/-- Two algebras over the program family agree at every constructor that carries no operation
+or service key outright, and at the four that do (`perform`, `service`, `provideService`, the
+layers' `succeed` and `effect`) for the operations and keys the guards admit. -/
+structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ : EffAlgebra Op R)
+    (okOp : Op → Prop) (okKey : ServiceKey → Prop) : Prop where
+  eff_succeed : alg₁.eff_succeed = alg₂.eff_succeed
+  eff_fail : alg₁.eff_fail = alg₂.eff_fail
+  eff_failCause : alg₁.eff_failCause = alg₂.eff_failCause
+  eff_sync : alg₁.eff_sync = alg₂.eff_sync
+  eff_suspend : alg₁.eff_suspend = alg₂.eff_suspend
+  eff_perform : ∀ op, okOp op → alg₁.eff_perform op = alg₂.eff_perform op
+  eff_bind : alg₁.eff_bind = alg₂.eff_bind
+  eff_gen : alg₁.eff_gen = alg₂.eff_gen
+  eff_catchCause : alg₁.eff_catchCause = alg₂.eff_catchCause
+  eff_matchCause : alg₁.eff_matchCause = alg₂.eff_matchCause
+  eff_onExit : alg₁.eff_onExit = alg₂.eff_onExit
+  eff_exit : alg₁.eff_exit = alg₂.eff_exit
+  eff_uninterruptible : alg₁.eff_uninterruptible = alg₂.eff_uninterruptible
+  eff_interruptible : alg₁.eff_interruptible = alg₂.eff_interruptible
+  eff_yieldNow : alg₁.eff_yieldNow = alg₂.eff_yieldNow
+  eff_awaitFiber : alg₁.eff_awaitFiber = alg₂.eff_awaitFiber
+  eff_withFiber : alg₁.eff_withFiber = alg₂.eff_withFiber
+  eff_scoped : alg₁.eff_scoped = alg₂.eff_scoped
+  eff_acquireRelease : alg₁.eff_acquireRelease = alg₂.eff_acquireRelease
+  eff_provideLayer : alg₁.eff_provideLayer = alg₂.eff_provideLayer
+  eff_service : ∀ key, okKey key → alg₁.eff_service key = alg₂.eff_service key
+  eff_provideService : ∀ key, okKey key → alg₁.eff_provideService key = alg₂.eff_provideService key
+  eff_catchIf : alg₁.eff_catchIf = alg₂.eff_catchIf
+  eff_select : alg₁.eff_select = alg₂.eff_select
+  eff_iterate : alg₁.eff_iterate = alg₂.eff_iterate
+  stmt_bindYield : alg₁.stmt_bindYield = alg₂.stmt_bindYield
+  stmt_yieldDiscard : alg₁.stmt_yieldDiscard = alg₂.stmt_yieldDiscard
+  stmt_ret : alg₁.stmt_ret = alg₂.stmt_ret
+  stmt_ifElse : alg₁.stmt_ifElse = alg₂.stmt_ifElse
+  stmt_whileTrue : alg₁.stmt_whileTrue = alg₂.stmt_whileTrue
+  stmt_breakLoop : alg₁.stmt_breakLoop = alg₂.stmt_breakLoop
+  stmts_nil : alg₁.stmts_nil = alg₂.stmts_nil
+  stmts_cons : alg₁.stmts_cons = alg₂.stmts_cons
+  effs_nil : alg₁.effs_nil = alg₂.effs_nil
+  effs_cons : alg₁.effs_cons = alg₂.effs_cons
+  action_fork : alg₁.action_fork = alg₂.action_fork
+  action_forkIn : alg₁.action_forkIn = alg₂.action_forkIn
+  action_forkScoped : alg₁.action_forkScoped = alg₂.action_forkScoped
+  action_runIn : alg₁.action_runIn = alg₂.action_runIn
+  action_interrupt : alg₁.action_interrupt = alg₂.action_interrupt
+  action_interruptScoped : alg₁.action_interruptScoped = alg₂.action_interruptScoped
+  action_interruptAll : alg₁.action_interruptAll = alg₂.action_interruptAll
+  action_awaitAll : alg₁.action_awaitAll = alg₂.action_awaitAll
+  action_awaitAllFailFast : alg₁.action_awaitAllFailFast = alg₂.action_awaitAllFailFast
+  action_snapshotChildren : alg₁.action_snapshotChildren = alg₂.action_snapshotChildren
+  action_awaitNewChildren : alg₁.action_awaitNewChildren = alg₂.action_awaitNewChildren
+  action_raceAll : alg₁.action_raceAll = alg₂.action_raceAll
+  action_setContext : alg₁.action_setContext = alg₂.action_setContext
+  action_getContext : alg₁.action_getContext = alg₂.action_getContext
+  action_getId : alg₁.action_getId = alg₂.action_getId
+  action_closeScope : alg₁.action_closeScope = alg₂.action_closeScope
+  layer_succeed : ∀ key, okKey key → alg₁.layer_succeed key = alg₂.layer_succeed key
+  layer_effect : ∀ key, okKey key → alg₁.layer_effect key = alg₂.layer_effect key
+  layer_effectDiscard : alg₁.layer_effectDiscard = alg₂.layer_effectDiscard
+  layer_provide : alg₁.layer_provide = alg₂.layer_provide
+  layer_provideMerge : alg₁.layer_provideMerge = alg₂.layer_provideMerge
+  layer_merge : alg₁.layer_merge = alg₂.layer_merge
+  layer_fresh : alg₁.layer_fresh = alg₂.layer_fresh
+  layer_orDie : alg₁.layer_orDie = alg₂.layer_orDie
+  layer_ref : alg₁.layer_ref = alg₂.layer_ref
+  layer_mergeAll : alg₁.layer_mergeAll = alg₂.layer_mergeAll
+  layers_nil : alg₁.layers_nil = alg₂.layers_nil
+  layers_cons : alg₁.layers_cons = alg₂.layers_cons
+
+/-- The reads a program makes of a signature, as a fold: every operation it performs satisfies
+`okOp`, every service key it reads satisfies `okKey`. -/
+def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) :
+    EffAlgebra Op (fun _ => Prop) where
+  eff_succeed _ := True
+  eff_fail _ := True
+  eff_failCause _ := True
+  eff_sync _ := True
+  eff_suspend r0 := r0
+  eff_perform op _ := okOp op
+  eff_bind r0 r1 := r0 ∧ r1
+  eff_gen r0 := r0
+  eff_catchCause r0 r1 := r0 ∧ r1
+  eff_matchCause r0 r1 r2 := r0 ∧ r1 ∧ r2
+  eff_onExit r0 r1 := r0 ∧ r1
+  eff_exit r0 := r0
+  eff_uninterruptible r0 := r0
+  eff_interruptible r0 := r0
+  eff_yieldNow _ := True
+  eff_awaitFiber _ _ := True
+  eff_withFiber r0 := r0
+  eff_scoped r0 := r0
+  eff_acquireRelease r0 r1 := r0 ∧ r1
+  eff_provideLayer r0 _ r2 := r0 ∧ r2
+  eff_service key := okKey key
+  eff_provideService key _ r2 := okKey key ∧ r2
+  eff_catchIf _ r1 r2 := r1 ∧ r2
+  eff_select _ _ r2 r3 := r2 ∧ r3
+  eff_iterate _ _ _ _ _ r5 := r5
+  stmt_bindYield r0 := r0
+  stmt_yieldDiscard r0 := r0
+  stmt_ret _ := True
+  stmt_ifElse _ r1 r2 := r1 ∧ r2
+  stmt_whileTrue r0 := r0
+  stmt_breakLoop := True
+  stmts_nil := True
+  stmts_cons r0 r1 := r0 ∧ r1
+  effs_nil := True
+  effs_cons r0 r1 := r0 ∧ r1
+  action_fork r0 _ := r0
+  action_forkIn r0 _ _ := r0
+  action_forkScoped r0 _ := r0
+  action_runIn _ _ := True
+  action_interrupt _ := True
+  action_interruptScoped _ := True
+  action_interruptAll _ _ := True
+  action_awaitAll _ := True
+  action_awaitAllFailFast _ := True
+  action_snapshotChildren := True
+  action_awaitNewChildren _ := True
+  action_raceAll r0 := r0
+  action_setContext _ := True
+  action_getContext := True
+  action_getId := True
+  action_closeScope _ _ := True
+  layer_succeed key _ := okKey key
+  layer_effect key r1 := okKey key ∧ r1
+  layer_effectDiscard r0 := r0
+  layer_provide r0 r1 := r0 ∧ r1
+  layer_provideMerge r0 r1 := r0 ∧ r1
+  layer_merge r0 r1 := r0 ∧ r1
+  layer_fresh r0 := r0
+  layer_orDie r0 := r0
+  layer_ref _ := True
+  layer_mergeAll r0 := r0
+  layers_nil := True
+  layers_cons r0 r1 := r0 ∧ r1
+
+variable {Op : Type} {R : EffFam → Type u} {alg₁ alg₂ : EffAlgebra Op R}
+  {okOp : Op → Prop} {okKey : ServiceKey → Prop}
+
+mutual
+/-- Fold congruence at `Eff`. -/
+theorem cata_eff_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Eff Op)
+    (hr : cata_eff (readsAlg okOp okKey) e) : cata_eff alg₁ e = cata_eff alg₂ e := by
+  cases e with
+  | succeed a0 =>
+    show alg₁.eff_succeed a0 = alg₂.eff_succeed a0
+    rw [h.eff_succeed]
+  | fail a0 =>
+    show alg₁.eff_fail a0 = alg₂.eff_fail a0
+    rw [h.eff_fail]
+  | failCause a0 =>
+    show alg₁.eff_failCause a0 = alg₂.eff_failCause a0
+    rw [h.eff_failCause]
+  | sync a0 =>
+    show alg₁.eff_sync a0 = alg₂.eff_sync a0
+    rw [h.eff_sync]
+  | suspend a0 =>
+    show alg₁.eff_suspend (cata_eff alg₁ a0) = alg₂.eff_suspend (cata_eff alg₂ a0)
+    rw [h.eff_suspend, cata_eff_congr_on h a0 hr]
+  | perform a0 a1 =>
+    show alg₁.eff_perform a0 a1 = alg₂.eff_perform a0 a1
+    rw [h.eff_perform a0 hr]
+  | bind a0 a1 =>
+    show alg₁.eff_bind (cata_eff alg₁ a0) (cata_eff alg₁ a1) =
+      alg₂.eff_bind (cata_eff alg₂ a0) (cata_eff alg₂ a1)
+    rw [h.eff_bind, cata_eff_congr_on h a0 hr.1, cata_eff_congr_on h a1 hr.2]
+  | gen a0 =>
+    show alg₁.eff_gen (cata_stmts alg₁ a0) = alg₂.eff_gen (cata_stmts alg₂ a0)
+    rw [h.eff_gen, cata_stmts_congr_on h a0 hr]
+  | catchCause a0 a1 =>
+    show alg₁.eff_catchCause (cata_eff alg₁ a0) (cata_eff alg₁ a1) =
+      alg₂.eff_catchCause (cata_eff alg₂ a0) (cata_eff alg₂ a1)
+    rw [h.eff_catchCause, cata_eff_congr_on h a0 hr.1, cata_eff_congr_on h a1 hr.2]
+  | matchCause a0 a1 a2 =>
+    show alg₁.eff_matchCause (cata_eff alg₁ a0) (cata_eff alg₁ a1) (cata_eff alg₁ a2) =
+      alg₂.eff_matchCause (cata_eff alg₂ a0) (cata_eff alg₂ a1) (cata_eff alg₂ a2)
+    rw [h.eff_matchCause, cata_eff_congr_on h a0 hr.1, cata_eff_congr_on h a1 hr.2.1,
+      cata_eff_congr_on h a2 hr.2.2]
+  | onExit a0 a1 =>
+    show alg₁.eff_onExit (cata_eff alg₁ a0) (cata_eff alg₁ a1) =
+      alg₂.eff_onExit (cata_eff alg₂ a0) (cata_eff alg₂ a1)
+    rw [h.eff_onExit, cata_eff_congr_on h a0 hr.1, cata_eff_congr_on h a1 hr.2]
+  | exit a0 =>
+    show alg₁.eff_exit (cata_eff alg₁ a0) = alg₂.eff_exit (cata_eff alg₂ a0)
+    rw [h.eff_exit, cata_eff_congr_on h a0 hr]
+  | uninterruptible a0 =>
+    show alg₁.eff_uninterruptible (cata_eff alg₁ a0) = alg₂.eff_uninterruptible (cata_eff alg₂ a0)
+    rw [h.eff_uninterruptible, cata_eff_congr_on h a0 hr]
+  | interruptible a0 =>
+    show alg₁.eff_interruptible (cata_eff alg₁ a0) = alg₂.eff_interruptible (cata_eff alg₂ a0)
+    rw [h.eff_interruptible, cata_eff_congr_on h a0 hr]
+  | yieldNow a0 =>
+    show alg₁.eff_yieldNow a0 = alg₂.eff_yieldNow a0
+    rw [h.eff_yieldNow]
+  | awaitFiber a0 a1 =>
+    show alg₁.eff_awaitFiber a0 a1 = alg₂.eff_awaitFiber a0 a1
+    rw [h.eff_awaitFiber]
+  | withFiber a0 =>
+    show alg₁.eff_withFiber (cata_action alg₁ a0) = alg₂.eff_withFiber (cata_action alg₂ a0)
+    rw [h.eff_withFiber, cata_action_congr_on h a0 hr]
+  | «scoped» a0 =>
+    show alg₁.eff_scoped (cata_eff alg₁ a0) = alg₂.eff_scoped (cata_eff alg₂ a0)
+    rw [h.eff_scoped, cata_eff_congr_on h a0 hr]
+  | acquireRelease a0 a1 =>
+    show alg₁.eff_acquireRelease (cata_eff alg₁ a0) (cata_eff alg₁ a1) =
+      alg₂.eff_acquireRelease (cata_eff alg₂ a0) (cata_eff alg₂ a1)
+    rw [h.eff_acquireRelease, cata_eff_congr_on h a0 hr.1, cata_eff_congr_on h a1 hr.2]
+  | provideLayer a0 a1 a2 =>
+    show alg₁.eff_provideLayer (cata_layer alg₁ a0) a1 (cata_eff alg₁ a2) =
+      alg₂.eff_provideLayer (cata_layer alg₂ a0) a1 (cata_eff alg₂ a2)
+    rw [h.eff_provideLayer, cata_layer_congr_on h a0 hr.1, cata_eff_congr_on h a2 hr.2]
+  | service a0 =>
+    show alg₁.eff_service a0 = alg₂.eff_service a0
+    rw [h.eff_service a0 hr]
+  | provideService a0 a1 a2 =>
+    show alg₁.eff_provideService a0 a1 (cata_eff alg₁ a2) =
+      alg₂.eff_provideService a0 a1 (cata_eff alg₂ a2)
+    rw [h.eff_provideService a0 hr.1, cata_eff_congr_on h a2 hr.2]
+  | catchIf a0 a1 a2 =>
+    show alg₁.eff_catchIf a0 (cata_eff alg₁ a1) (cata_eff alg₁ a2) =
+      alg₂.eff_catchIf a0 (cata_eff alg₂ a1) (cata_eff alg₂ a2)
+    rw [h.eff_catchIf, cata_eff_congr_on h a1 hr.1, cata_eff_congr_on h a2 hr.2]
+  | select a0 a1 a2 a3 =>
+    show alg₁.eff_select a0 a1 (cata_eff alg₁ a2) (cata_eff alg₁ a3) =
+      alg₂.eff_select a0 a1 (cata_eff alg₂ a2) (cata_eff alg₂ a3)
+    rw [h.eff_select, cata_eff_congr_on h a2 hr.1, cata_eff_congr_on h a3 hr.2]
+  | iterate a0 a1 a2 a3 a4 a5 =>
+    show alg₁.eff_iterate a0 a1 a2 a3 a4 (cata_eff alg₁ a5) =
+      alg₂.eff_iterate a0 a1 a2 a3 a4 (cata_eff alg₂ a5)
+    rw [h.eff_iterate, cata_eff_congr_on h a5 hr]
+termination_by structural e
+
+/-- Fold congruence at `Stmt`. -/
+theorem cata_stmt_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Stmt Op)
+    (hr : cata_stmt (readsAlg okOp okKey) e) : cata_stmt alg₁ e = cata_stmt alg₂ e := by
+  cases e with
+  | bindYield a0 =>
+    show alg₁.stmt_bindYield (cata_eff alg₁ a0) = alg₂.stmt_bindYield (cata_eff alg₂ a0)
+    rw [h.stmt_bindYield, cata_eff_congr_on h a0 hr]
+  | yieldDiscard a0 =>
+    show alg₁.stmt_yieldDiscard (cata_eff alg₁ a0) = alg₂.stmt_yieldDiscard (cata_eff alg₂ a0)
+    rw [h.stmt_yieldDiscard, cata_eff_congr_on h a0 hr]
+  | ret a0 =>
+    show alg₁.stmt_ret a0 = alg₂.stmt_ret a0
+    rw [h.stmt_ret]
+  | ifElse a0 a1 a2 =>
+    show alg₁.stmt_ifElse a0 (cata_stmts alg₁ a1) (cata_stmts alg₁ a2) =
+      alg₂.stmt_ifElse a0 (cata_stmts alg₂ a1) (cata_stmts alg₂ a2)
+    rw [h.stmt_ifElse, cata_stmts_congr_on h a1 hr.1, cata_stmts_congr_on h a2 hr.2]
+  | whileTrue a0 =>
+    show alg₁.stmt_whileTrue (cata_stmts alg₁ a0) = alg₂.stmt_whileTrue (cata_stmts alg₂ a0)
+    rw [h.stmt_whileTrue, cata_stmts_congr_on h a0 hr]
+  | breakLoop =>
+    show alg₁.stmt_breakLoop = alg₂.stmt_breakLoop
+    rw [h.stmt_breakLoop]
+termination_by structural e
+
+/-- Fold congruence at `Stmts`. -/
+theorem cata_stmts_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Stmts Op)
+    (hr : cata_stmts (readsAlg okOp okKey) e) : cata_stmts alg₁ e = cata_stmts alg₂ e := by
+  cases e with
+  | nil =>
+    show alg₁.stmts_nil = alg₂.stmts_nil
+    rw [h.stmts_nil]
+  | cons a0 a1 =>
+    show alg₁.stmts_cons (cata_stmt alg₁ a0) (cata_stmts alg₁ a1) =
+      alg₂.stmts_cons (cata_stmt alg₂ a0) (cata_stmts alg₂ a1)
+    rw [h.stmts_cons, cata_stmt_congr_on h a0 hr.1, cata_stmts_congr_on h a1 hr.2]
+termination_by structural e
+
+/-- Fold congruence at `Effs`. -/
+theorem cata_effs_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Effs Op)
+    (hr : cata_effs (readsAlg okOp okKey) e) : cata_effs alg₁ e = cata_effs alg₂ e := by
+  cases e with
+  | nil =>
+    show alg₁.effs_nil = alg₂.effs_nil
+    rw [h.effs_nil]
+  | cons a0 a1 =>
+    show alg₁.effs_cons (cata_eff alg₁ a0) (cata_effs alg₁ a1) =
+      alg₂.effs_cons (cata_eff alg₂ a0) (cata_effs alg₂ a1)
+    rw [h.effs_cons, cata_eff_congr_on h a0 hr.1, cata_effs_congr_on h a1 hr.2]
+termination_by structural e
+
+/-- Fold congruence at `ActionTerm`. -/
+theorem cata_action_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : ActionTerm Op)
+    (hr : cata_action (readsAlg okOp okKey) e) : cata_action alg₁ e = cata_action alg₂ e := by
+  cases e with
+  | fork a0 a1 =>
+    show alg₁.action_fork (cata_eff alg₁ a0) a1 = alg₂.action_fork (cata_eff alg₂ a0) a1
+    rw [h.action_fork, cata_eff_congr_on h a0 hr]
+  | forkIn a0 a1 a2 =>
+    show alg₁.action_forkIn (cata_eff alg₁ a0) a1 a2 = alg₂.action_forkIn (cata_eff alg₂ a0) a1 a2
+    rw [h.action_forkIn, cata_eff_congr_on h a0 hr]
+  | forkScoped a0 a1 =>
+    show alg₁.action_forkScoped (cata_eff alg₁ a0) a1 = alg₂.action_forkScoped (cata_eff alg₂ a0) a1
+    rw [h.action_forkScoped, cata_eff_congr_on h a0 hr]
+  | runIn a0 a1 =>
+    show alg₁.action_runIn a0 a1 = alg₂.action_runIn a0 a1
+    rw [h.action_runIn]
+  | interrupt a0 =>
+    show alg₁.action_interrupt a0 = alg₂.action_interrupt a0
+    rw [h.action_interrupt]
+  | interruptScoped a0 =>
+    show alg₁.action_interruptScoped a0 = alg₂.action_interruptScoped a0
+    rw [h.action_interruptScoped]
+  | interruptAll a0 a1 =>
+    show alg₁.action_interruptAll a0 a1 = alg₂.action_interruptAll a0 a1
+    rw [h.action_interruptAll]
+  | awaitAll a0 =>
+    show alg₁.action_awaitAll a0 = alg₂.action_awaitAll a0
+    rw [h.action_awaitAll]
+  | awaitAllFailFast a0 =>
+    show alg₁.action_awaitAllFailFast a0 = alg₂.action_awaitAllFailFast a0
+    rw [h.action_awaitAllFailFast]
+  | snapshotChildren =>
+    show alg₁.action_snapshotChildren = alg₂.action_snapshotChildren
+    rw [h.action_snapshotChildren]
+  | awaitNewChildren a0 =>
+    show alg₁.action_awaitNewChildren a0 = alg₂.action_awaitNewChildren a0
+    rw [h.action_awaitNewChildren]
+  | raceAll a0 =>
+    show alg₁.action_raceAll (cata_effs alg₁ a0) = alg₂.action_raceAll (cata_effs alg₂ a0)
+    rw [h.action_raceAll, cata_effs_congr_on h a0 hr]
+  | setContext a0 =>
+    show alg₁.action_setContext a0 = alg₂.action_setContext a0
+    rw [h.action_setContext]
+  | getContext =>
+    show alg₁.action_getContext = alg₂.action_getContext
+    rw [h.action_getContext]
+  | getId =>
+    show alg₁.action_getId = alg₂.action_getId
+    rw [h.action_getId]
+  | closeScope a0 a1 =>
+    show alg₁.action_closeScope a0 a1 = alg₂.action_closeScope a0 a1
+    rw [h.action_closeScope]
+termination_by structural e
+
+/-- Fold congruence at `LayerTerm`. -/
+theorem cata_layer_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : LayerTerm Op)
+    (hr : cata_layer (readsAlg okOp okKey) e) : cata_layer alg₁ e = cata_layer alg₂ e := by
+  cases e with
+  | succeed a0 a1 =>
+    show alg₁.layer_succeed a0 a1 = alg₂.layer_succeed a0 a1
+    rw [h.layer_succeed a0 hr]
+  | effect a0 a1 =>
+    show alg₁.layer_effect a0 (cata_eff alg₁ a1) = alg₂.layer_effect a0 (cata_eff alg₂ a1)
+    rw [h.layer_effect a0 hr.1, cata_eff_congr_on h a1 hr.2]
+  | effectDiscard a0 =>
+    show alg₁.layer_effectDiscard (cata_eff alg₁ a0) = alg₂.layer_effectDiscard (cata_eff alg₂ a0)
+    rw [h.layer_effectDiscard, cata_eff_congr_on h a0 hr]
+  | provide a0 a1 =>
+    show alg₁.layer_provide (cata_layer alg₁ a0) (cata_layer alg₁ a1) =
+      alg₂.layer_provide (cata_layer alg₂ a0) (cata_layer alg₂ a1)
+    rw [h.layer_provide, cata_layer_congr_on h a0 hr.1, cata_layer_congr_on h a1 hr.2]
+  | provideMerge a0 a1 =>
+    show alg₁.layer_provideMerge (cata_layer alg₁ a0) (cata_layer alg₁ a1) =
+      alg₂.layer_provideMerge (cata_layer alg₂ a0) (cata_layer alg₂ a1)
+    rw [h.layer_provideMerge, cata_layer_congr_on h a0 hr.1, cata_layer_congr_on h a1 hr.2]
+  | merge a0 a1 =>
+    show alg₁.layer_merge (cata_layer alg₁ a0) (cata_layer alg₁ a1) =
+      alg₂.layer_merge (cata_layer alg₂ a0) (cata_layer alg₂ a1)
+    rw [h.layer_merge, cata_layer_congr_on h a0 hr.1, cata_layer_congr_on h a1 hr.2]
+  | fresh a0 =>
+    show alg₁.layer_fresh (cata_layer alg₁ a0) = alg₂.layer_fresh (cata_layer alg₂ a0)
+    rw [h.layer_fresh, cata_layer_congr_on h a0 hr]
+  | orDie a0 =>
+    show alg₁.layer_orDie (cata_layer alg₁ a0) = alg₂.layer_orDie (cata_layer alg₂ a0)
+    rw [h.layer_orDie, cata_layer_congr_on h a0 hr]
+  | ref a0 =>
+    show alg₁.layer_ref a0 = alg₂.layer_ref a0
+    rw [h.layer_ref]
+  | mergeAll a0 =>
+    show alg₁.layer_mergeAll (cata_layers alg₁ a0) = alg₂.layer_mergeAll (cata_layers alg₂ a0)
+    rw [h.layer_mergeAll, cata_layers_congr_on h a0 hr]
+termination_by structural e
+
+/-- Fold congruence at `LayerTerms`. -/
+theorem cata_layers_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : LayerTerms Op)
+    (hr : cata_layers (readsAlg okOp okKey) e) : cata_layers alg₁ e = cata_layers alg₂ e := by
+  cases e with
+  | nil =>
+    show alg₁.layers_nil = alg₂.layers_nil
+    rw [h.layers_nil]
+  | cons a0 a1 =>
+    show alg₁.layers_cons (cata_layer alg₁ a0) (cata_layers alg₁ a1) =
+      alg₂.layers_cons (cata_layer alg₂ a0) (cata_layers alg₂ a1)
+    rw [h.layers_cons, cata_layer_congr_on h a0 hr.1, cata_layers_congr_on h a1 hr.2]
+termination_by structural e
+
+end
+
+end FoldCongr
+
+/-! ## C3's reflection (TY-04): a Σ-program is checked the same under every extension -/
+
+/-- The operations a signature admits: the checker reads an operation's domain bit and row. -/
+def SigOkOp {Op : Type} (s : Signature Op) (op : Op) : Prop := s.dom op = true
+
+/-- The service keys a signature types: the checker reads a key's carrier. -/
+def SigOkKey {Op : Type} (s : Signature Op) (key : ServiceKey) : Prop := (s.serviceTy key).isSome = true
+
+/-- **A Σ-program** (TY-04): every operation it performs is in `dom s`, every service key it reads
+has a carrier in `s` — exactly the reads the checker's algebra makes of the signature. -/
+def SigProgram {Op : Type} (s : Signature Op) (e : Eff Op) : Prop :=
+  cata_eff (readsAlg (SigOkOp s) (SigOkKey s)) e
+
+/-- The term reader agrees along an extension. -/
+theorem term?_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
+    Checker.term? s' = Checker.term? s := by
+  funext env p t
+  unfold Checker.term?
+  rw [h.termTy]
+
+/-- **Along an extension the checker's two algebras agree on the reads the smaller signature
+admits** (proved): field by field, outright where the field reads only atoms and the scope key,
+guarded where it reads an operation's row or a key's carrier. -/
+theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
+    (Checker.check.alg s').AgreeOn (Checker.check.alg s) (SigOkOp s) (SigOkKey s) := by
+  have hterm := term?_ext h
+  have hcause : causeTy s' = causeTy s := funext fun env => funext fun c => h.causeTy env c
+  have hbody : bodyRequires s' = bodyRequires s := funext h.bodyRequires
+  exact {
+    eff_succeed := by simp only [Checker.check.alg, hterm]
+    eff_fail := by simp only [Checker.check.alg, hterm]
+    eff_failCause := by simp only [Checker.check.alg, hcause]
+    eff_sync := by simp only [Checker.check.alg, hterm]
+    eff_suspend := rfl
+    eff_perform := fun op hd => by
+      have hdom : s.dom op = true := hd
+      simp only [Checker.check.alg, hterm, (h.row op hdom).1, (h.row op hdom).2, hdom]
+    eff_bind := rfl
+    eff_gen := rfl
+    eff_catchCause := rfl
+    eff_matchCause := rfl
+    eff_onExit := rfl
+    eff_exit := rfl
+    eff_uninterruptible := rfl
+    eff_interruptible := rfl
+    eff_yieldNow := rfl
+    eff_awaitFiber := by simp only [Checker.check.alg, hterm]
+    eff_withFiber := rfl
+    eff_scoped := by simp only [Checker.check.alg, hbody]
+    eff_acquireRelease := by simp only [Checker.check.alg, h.scopeKey]
+    eff_provideLayer := rfl
+    eff_service := fun key hk => by
+      obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
+      simp only [Checker.check.alg, h.service key ty hty, hty]
+    eff_provideService := fun key hk => by
+      obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
+      simp only [Checker.check.alg, h.service key ty hty, hty, hterm]
+    eff_catchIf := by simp only [Checker.check.alg, hterm]
+    eff_select := by simp only [Checker.check.alg, hterm]
+    eff_iterate := by simp only [Checker.check.alg, hterm]
+    stmt_bindYield := rfl
+    stmt_yieldDiscard := rfl
+    stmt_ret := by simp only [Checker.check.alg, hterm]
+    stmt_ifElse := by simp only [Checker.check.alg, hterm]
+    stmt_whileTrue := rfl
+    stmt_breakLoop := rfl
+    stmts_nil := rfl
+    stmts_cons := rfl
+    effs_nil := rfl
+    effs_cons := rfl
+    action_fork := rfl
+    action_forkIn := by simp only [Checker.check.alg, hterm]
+    action_forkScoped := by simp only [Checker.check.alg, h.scopeKey]
+    action_runIn := by simp only [Checker.check.alg, hterm]
+    action_interrupt := by simp only [Checker.check.alg, hterm]
+    action_interruptScoped := by simp only [Checker.check.alg, hterm]
+    action_interruptAll := by simp only [Checker.check.alg, hterm]
+    action_awaitAll := by simp only [Checker.check.alg, hterm]
+    action_awaitAllFailFast := by simp only [Checker.check.alg, hterm]
+    action_snapshotChildren := rfl
+    action_awaitNewChildren := by simp only [Checker.check.alg, hterm]
+    action_raceAll := rfl
+    action_setContext := by simp only [Checker.check.alg, hterm]
+    action_getContext := rfl
+    action_getId := rfl
+    action_closeScope := by simp only [Checker.check.alg, hterm]
+    layer_succeed := fun key hk => by
+      obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
+      simp only [Checker.check.alg, h.service key ty hty, hty]
+    layer_effect := fun key hk => by
+      obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
+      simp only [Checker.check.alg, h.service key ty hty, hty, hbody]
+    layer_effectDiscard := by simp only [Checker.check.alg, hbody]
+    layer_provide := rfl
+    layer_provideMerge := rfl
+    layer_merge := rfl
+    layer_fresh := rfl
+    layer_orDie := rfl
+    layer_ref := rfl
+    layer_mergeAll := rfl
+    layers_nil := rfl
+    layers_cons := rfl
+  }
+
+/-- **C3's reflection** (TY-04, proved): on a Σ-program, the checker answers the same under every
+extension of Σ, refusals included, at every environment and path. -/
+theorem check_restrict {Op : Type} {s s' : Signature Op} (h : SigExtends s s') {e : Eff Op}
+    (hp : SigProgram s e) (env : TyEnv) (p : List Nat) :
+    Checker.check s' env p e = Checker.check s env p e := by
+  rw [Checker.check.eq_cata, Checker.check.eq_cata]
+  rw [cata_eff_congr_on (check_alg_agreeOn h) e hp]
+
+/-- The success projection, likewise. -/
+theorem effTy_restrict {Op : Type} {s s' : Signature Op} (h : SigExtends s s') {e : Eff Op}
+    (hp : SigProgram s e) (env : TyEnv) : effTy s' env e = effTy s env e := by
+  unfold effTy
+  rw [check_restrict h hp]
 
 /-! ## `π` for services (C5) -/
 

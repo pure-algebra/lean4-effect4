@@ -118,6 +118,44 @@ theorem per_code_one_carrier :
       (SigApp.mk [] [(keyA, .string), (keyB, .nat)]).serviceTy keyB :=
   SigApp.serviceTy_code _ rfl (by decide) (by decide) (by decide +kernel) (by decide +kernel)
 
+/-! ## C3's reflection: refusals included, on Σ-programs only -/
+
+/-- `yield* A.a(1)`: row 0's request is `unit`, so the checker refuses it. -/
+def badCall : NativeEff := .perform (.external 0) (.lit (.nat 1))
+
+theorem badCall_sigProgram : SigProgram (nativeSignature [rowA]) badCall := rfl
+
+/-- **Positive control (proved).** The refusal is the same under the appended table: C3's
+reflection, refusals included. -/
+theorem badCall_same_refusal :
+    Checker.check (nativeSignature ([rowA] ++ [rowB])) [] [] badCall =
+      Checker.check (nativeSignature [rowA]) [] [] badCall :=
+  check_restrict (rows_append [rowA] [rowB]) badCall_sigProgram [] []
+
+-- tested: and it is a refusal
+#guard (Checker.check (nativeSignature [rowA]) [] [] badCall).toOption.isNone
+
+/-- `yield* B.b()` at index 1: outside the shorter table's domain. -/
+def callB : NativeEff := .perform (.external 1) (.lit .unit)
+
+theorem callB_refused_short : (Checker.check (nativeSignature [rowA]) [] [] callB).toOption = none := by
+  decide +kernel
+
+theorem callB_typed_long :
+    (Checker.check (nativeSignature ([rowA] ++ [rowB])) [] [] callB).toOption =
+      some ⟨.string, .never, Requirement.empty⟩ := by
+  decide +kernel
+
+/-- **Red control (proved).** Without the Σ-program premise the checker's answer changes under
+an extension: an operation outside the shorter domain is refused there and typed in the longer. -/
+theorem reflection_needs_sigProgram :
+    ¬ ∀ e : NativeEff, Checker.check (nativeSignature ([rowA] ++ [rowB])) [] [] e =
+        Checker.check (nativeSignature [rowA]) [] [] e := by
+  intro h
+  have hl := callB_typed_long
+  rw [h callB, callB_refused_short] at hl
+  cases hl
+
 #print axioms prepend_not_extends
 #print axioms append_keeps_call
 #print axioms natKey_ty
@@ -128,6 +166,11 @@ theorem per_code_one_carrier :
 #print axioms greet_extends
 #print axioms one_code_two_carriers
 #print axioms per_code_one_carrier
+#print axioms badCall_sigProgram
+#print axioms badCall_same_refusal
+#print axioms callB_refused_short
+#print axioms callB_typed_long
+#print axioms reflection_needs_sigProgram
 
 /-! The step's own theorems: shape A (`World.lean`, `Membership.lean`) and the signature. -/
 #print axioms Effect4.Program.Typed.order_refl
@@ -168,5 +211,16 @@ theorem per_code_one_carrier :
 #print axioms Effect4.Program.SigApp.services_append
 #print axioms Effect4.Program.Typed.servicesFit_restrict
 #print axioms Effect4.Program.Typed.fits_restrict
+#print axioms Effect4.Program.cata_eff_congr_on
+#print axioms Effect4.Program.cata_stmt_congr_on
+#print axioms Effect4.Program.cata_stmts_congr_on
+#print axioms Effect4.Program.cata_effs_congr_on
+#print axioms Effect4.Program.cata_action_congr_on
+#print axioms Effect4.Program.cata_layer_congr_on
+#print axioms Effect4.Program.cata_layers_congr_on
+#print axioms Effect4.Program.term?_ext
+#print axioms Effect4.Program.check_alg_agreeOn
+#print axioms Effect4.Program.check_restrict
+#print axioms Effect4.Program.effTy_restrict
 
 end Test.Program.SignatureControls
