@@ -459,11 +459,13 @@ $(CHK)/ingest-smoke: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES)
 	$(BUN) ts/eff/ingest/check-corpus.ts printed $(abspath $(CORPUS))
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/Drivers/ForeignCorpus.lean tools/Drivers/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh
+# The fidelity step observes modules through harness/truth/run-truth.ts, which resolves `effect`
+# through the truth link; a fresh worktree has none (order-only, like every other consumer).
+$(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/Drivers/ForeignCorpus.lean tools/Drivers/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh | harness/truth/node_modules
 	bash scripts/check-ingest.sh
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/host-protocol: $(CORE) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py
+$(CHK)/host-protocol: $(CORE) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
 	$(PY) scripts/check-host-protocol.py
 	@mkdir -p $(CHK) && touch $@
 
