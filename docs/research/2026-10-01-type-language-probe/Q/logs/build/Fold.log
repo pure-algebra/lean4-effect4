@@ -1,0 +1,33 @@
+$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
+$ docs/research/2026-10-01-type-language-probe/Q/bin/olean.sh docs/research/2026-10-01-type-language-probe/Q/generated docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQ/Fold.lean
+# started 2026-10-01T18:53:40Z (LEAN_NUM_THREADS=1)
+'ProbeQ.cata_pos_prod_string_ty_eq' depends on axioms: [propext]
+'ProbeQ.cata_pos_list_prod_string_ty_eq' depends on axioms: [propext]
+'ProbeQ.cata_ty_never' does not depend on any axioms
+'ProbeQ.cata_ty_unit' does not depend on any axioms
+'ProbeQ.cata_ty_nat' does not depend on any axioms
+'ProbeQ.cata_ty_int' does not depend on any axioms
+'ProbeQ.cata_ty_string' does not depend on any axioms
+'ProbeQ.cata_ty_bool' does not depend on any axioms
+'ProbeQ.cata_ty_handle' does not depend on any axioms
+'ProbeQ.cata_ty_option' does not depend on any axioms
+'ProbeQ.cata_ty_list' does not depend on any axioms
+'ProbeQ.cata_ty_prod' does not depend on any axioms
+'ProbeQ.cata_ty_except' does not depend on any axioms
+'ProbeQ.cata_ty_exitOf' does not depend on any axioms
+'ProbeQ.cata_ty_causeOf' does not depend on any axioms
+'ProbeQ.cata_ty_fiberOf' does not depend on any axioms
+'ProbeQ.cata_ty_union' does not depend on any axioms
+'ProbeQ.cata_ty_lit' does not depend on any axioms
+'ProbeQ.cata_ty_refOf' does not depend on any axioms
+'ProbeQ.cata_ty_deferredOf' does not depend on any axioms
+'ProbeQ.cata_ty_var' does not depend on any axioms
+'ProbeQ.cata_ty_unknown' does not depend on any axioms
+'ProbeQ.cata_ty_record' depends on axioms: [propext]
+'ProbeQ.hom_eq_cata_ty' depends on axioms: [propext]
+'ProbeQ.hom_pos_prod_string_ty' depends on axioms: [propext]
+'ProbeQ.hom_pos_list_prod_string_ty' depends on axioms: [propext]
+'ProbeQ.cata_id_ty' depends on axioms: [propext]
+'ProbeQ.cata_id_pos_prod_string_ty' depends on axioms: [propext]
+'ProbeQ.cata_id_pos_list_prod_string_ty' depends on axioms: [propext]
+# exit=0 seconds=1
