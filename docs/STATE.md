@@ -305,6 +305,13 @@ in receipt G, ratification owed. Wave 2 is briefed: D1 (rows 117, 151, 152, 153,
 [brief](research/2026-10-01-landing/brief-D1.md)) and D3 (the eighteen commands, the six edits,
 M6c, `exitHandles_valid`, [brief](research/2026-10-01-landing/brief-D3.md)) in parallel after I2
 merges, then D2 (M5's `denoteR_typed`, [brief](research/2026-10-01-landing/brief-D2.md)) after D1.
+In parallel, on the owner's instruction to finish the type language once (records and every other
+form the target profile needs), five probe seats run the
+[type-language probe](research/2026-10-01-type-language-probe/README.md) on copies, no production
+edits: P (records and the algebra), Q (generators, lowering, conservativity), R (terms, faces, the
+p2 harness), S (the Schema arms and a readable profile), T (the completeness census); their notes
+become the data-wave briefs (synthesis §7's commit series extended), dispatched after wave 2 by
+default (row 119).
 
 **The data probe (2026-10-01).** The owner asked whether to explore full typing with records and
 JSON, and whether native schema support was ever determined. Four seats and four verifiers probed
