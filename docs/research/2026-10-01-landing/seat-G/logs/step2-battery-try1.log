@@ -1,0 +1,10 @@
+Test/Program/GuardFoldLift.lean:77:37: error: synthesized type class instance is not definitionally equal to expression inferred by typing rules, synthesized
+  frameEvaluator
+inferred
+  evaluatorFor p table
+'Test.Program.GuardFoldLift.no_decisionLift' depends on axioms: [propext, sorryAx, Quot.sound]
+Test/Program/GuardFoldLift.lean:94:0: error: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+- info: 'Test.Program.GuardFoldLift.no_decisionLift' depends on axioms: [propext, Quot.sound]
++ info: 'Test.Program.GuardFoldLift.no_decisionLift' depends on axioms: [propext, sorryAx, Quot.sound]
+## exit=1 seconds=2 cmd=LEAN_NUM_THREADS=4 lake env lean -M6144 -DwarningAsError=true Test/Program/GuardFoldLift.lean head=7baca4c1 dirty=2

@@ -1,0 +1,12 @@
+held_fireFold: 0f7a47c0 src/Effect4/Laws/Program/Guard/Single.lean:225-237 (13 lines) -> WORKTREE :350-360 (11 lines)
+held_fireState: 0f7a47c0 src/Effect4/Laws/Program/Guard/Single.lean:239-264 (26 lines) -> WORKTREE :363-371 (9 lines)
+held_flushAllState: 0f7a47c0 src/Effect4/Laws/Program/Guard/Single.lean:266-282 (17 lines) -> WORKTREE :374-382 (9 lines)
+held_advanceState: 0f7a47c0 src/Effect4/Laws/Program/Guard/Single.lean:347-386 (40 lines) -> WORKTREE :392-400 (9 lines)
+held_foldLift: None -> (286, 347)
+total 96 -> 100 lines
+fireFold_preserved: 0f7a47c0 src/Effect4/Laws/Program/Guard/OuterDriver.lean:95-110 (16 lines) -> WORKTREE :257-266 (10 lines)
+fireState_preserved: 0f7a47c0 src/Effect4/Laws/Program/Guard/OuterDriver.lean:148-165 (18 lines) -> WORKTREE :269-276 (8 lines)
+flushAllState_preserved: 0f7a47c0 src/Effect4/Laws/Program/Guard/OuterDriver.lean:167-185 (19 lines) -> WORKTREE :279-286 (8 lines)
+advanceState_preserved: 0f7a47c0 src/Effect4/Laws/Program/Guard/OuterDriver.lean:274-301 (28 lines) -> WORKTREE :327-334 (8 lines)
+preserved_foldLift: None -> (185, 253)
+total 81 -> 103 lines
