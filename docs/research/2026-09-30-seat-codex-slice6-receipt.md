@@ -138,7 +138,32 @@ re-derivation can be checked independently. Protected authority files remain unt
 
 
 ## D — generic lifts and slice 6 proofs
-Pending.
+
+**PARTIAL: generic family landed; ledger-dependent users remain held by C.**
+The generic module is `src/Effect4/Laws/Machine/Lift.lean`, namespace `Effect4.Machine.Lift`,
+with exactly the three prescribed imports. It contains command-loop, decision and replay lifts,
+the 13-field DecisionLift premise, frame law, and generic MachineEdits adapter for native facts.
+No M6 instance was ported. The frame law is written against all 18 command constructors;
+`parkedAt_em` retains its constructive proof. The native fold/reachability helpers sit beside
+`Guard.Reachable` in Core, which imports Lift and makes the new module reachable from Laws.
+No root-import anchor or core-root dependency was changed.
+
+Lift step checks (evidence directory D):
+- `LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Lift Effect4.Laws.Program.Guard.Core`:
+  exit 0, 305 jobs (`lift-build.log`). Existing Core obligation ceilings unchanged.
+- `lake env lean -DwarningAsError=true docs/research/2026-09-30-seat-codex-slice6-evidence/D/lift-axioms.lean`:
+  exit 0, all 30 newly added theorems at `[propext, Quot.sound]` or less (`lift-axioms.log`).
+- Static inspection: no forbidden first/try/simp_all or unrestricted hand simp in the new Lift
+  module; no Guard or Typed import cycle, and no trace/M6 instances copied from the research file.
+
+These are generic implications under explicit command/edit premises; they do not discharge the
+M5–M7 statements. The guard replacement, native memo-id user, and its evidence follow below.
+The trace user, four ledger facts, AgreesUpdates restatements, and forkedOf/Agrees move require C
+and remain unlanded. M1Trace ceiling therefore remains 2. Row 94's three-user comparison is
+not yet available.
+
+Prior commit ledger: `eca77d6a` is item B; `4369c629` is the C stop receipt and census only.
+
 
 ## F — closed layer build environment
 Pending.

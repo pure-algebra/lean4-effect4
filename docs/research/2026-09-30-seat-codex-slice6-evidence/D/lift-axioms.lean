@@ -1,0 +1,32 @@
+import Effect4.Laws.Machine.Lift
+import Effect4.Laws.Program.Guard.Core
+#print axioms Effect4.Machine.Lift.stuck_none_of_not
+#print axioms Effect4.Machine.Lift.driveState_lift
+#print axioms Effect4.Machine.Lift.driveState_lift_of
+#print axioms Effect4.Machine.Lift.driveState_lift_unit
+#print axioms Effect4.Machine.Lift.driveState_keeps
+#print axioms Effect4.Machine.Lift.driveState_keeps_of_keeps
+#print axioms Effect4.Machine.Lift.stepKeeps_of_keeps
+#print axioms Effect4.Machine.Lift.settle_append
+#print axioms Effect4.Machine.Lift.framed_append
+#print axioms Effect4.Machine.Lift.driveStep_append
+#print axioms Effect4.Machine.Lift.not_isSome_of_none
+#print axioms Effect4.Machine.Lift.isSome_of_ne_none
+#print axioms Effect4.Machine.Lift.parkedAt_em
+#print axioms Effect4.Machine.Lift.inert_resume
+#print axioms Effect4.Machine.Lift.interruptFrom_eq
+#print axioms Effect4.Machine.Lift.answer_of_split
+#print axioms Effect4.Machine.Lift.loop_lift
+#print axioms Effect4.Machine.Lift.loop_entry
+#print axioms Effect4.Machine.Lift.fireFold_lift
+#print axioms Effect4.Machine.Lift.fireState_lift
+#print axioms Effect4.Machine.Lift.flushAllState_lift
+#print axioms Effect4.Machine.Lift.advanceState_lift
+#print axioms Effect4.Machine.Lift.stepDecisionState_lift
+#print axioms Effect4.Machine.Lift.replayEval_nil_machine
+#print axioms Effect4.Machine.Lift.replayEval_lift
+#print axioms Effect4.Machine.Lift.machineFact_stepDecision
+#print axioms Effect4.Program.Guard.foldl_lift
+#print axioms Effect4.Program.Guard.admitted_true
+#print axioms Effect4.Program.Guard.reachable_lift
+#print axioms Effect4.Program.Guard.reachable_lift_pure
