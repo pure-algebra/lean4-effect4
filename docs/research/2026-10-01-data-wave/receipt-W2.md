@@ -24,12 +24,14 @@ exit 0, none untracked (reproduced; step 1's whole chain is below). `git merge-t
 against main's `f4881f74` (no file changed on both sides) and against the line's head `68ddb9ed`
 (J2 merged; the Makefile changed on both sides and merges clean). Step 2 stopped at the owner's
 word: item 4 (the rule checker, which validates its evidence first, and the census's completeness
-footer) landed whole; item 1 is half done (the `--extras` mode for a plain block, which today's
-`Ty` is); the nested `ArgF` extension, the prisms, the table emitter, D-U1 (a)'s expansion, the
-mirrors, U's 24-theorem battery and U's red tables and `axioms.py` are owed, each with its
-obstacle under "Step 2". Generator inputs changed on both sides of the merge (J2's manifest and
-guards; this branch's fold, view, variance and wire-tag tools), so `make check-gen` on the merged
-tree is the interaction check this seat cannot run.
+footer) landed, its log check confirmed by Codex at 23:16, but its `--tree` wrapper still passes
+a failed or missing producer run (Codex 23:16, reported after the stop; owed); item 1 is half done
+(the `--extras` mode for a plain block, which today's `Ty` is); the nested `ArgF` extension, the
+prisms, the table emitter, D-U1 (a)'s expansion, the mirrors, U's 24-theorem battery and U's red
+tables and `axioms.py` are owed, each with its obstacle under "Step 2". Generator inputs changed
+on both sides of the merge (J2's manifest and guards; this branch's fold, view, variance and
+wire-tag tools), so `make check-gen` on the merged tree is the interaction check this seat cannot
+run.
 
 ## Step 1: probe Q's commit 2, amended by probe P's table and the checker's repair
 
@@ -145,11 +147,11 @@ stands:
 | (1) the prisms beside the view | owed, not started | — |
 | (2) the table emitter, `ty-faces` and `ty-classes` as JSON, their generated modules | owed, not started | — |
 | (3) D-U1 (a)'s expansion with an `eq_cata` connector per expanded definition | owed, not started | — |
-| (4) the rule checker, its evidence validation, the census's completeness footer | landed whole | `d1e76a19` |
+| (4) the rule checker, its evidence validation, the census's completeness footer | landed; the `--tree` wrapper's producer checks owed (Codex 23:16, below) | `d1e76a19` |
 | (5) the mirrors `of_ty` and `rand_ty` emitted into OCaml | owed; left to W4, as the message allows | — |
 | acceptance: U's 24 agreement theorems as a battery, the two red tables refused, U's `axioms.py` | owed: they test items 1 and 2's output | — |
 
-### Item 4, landed whole (`d1e76a19`)
+### Item 4, landed (`d1e76a19`), its `--tree` wrapper owed a repair
 
 - **The completeness footer.** `#traversal_census` and `#exhaustive_gate`
   (`src/Effect4/Laws/Auto/Traversals.lean` +6, `Exhaustive.lean` +4) end each report with
@@ -202,7 +204,12 @@ under `OCaml5`, `Tools` and `Conform` (`ty-rule/census.log`, `ty-rule/census-mir
 counted 78 at `630e6c37`; the one row fewer is R4's `LcnfMl.tyOcaml`, deleted in step 1f. The
 number is not the contract (row 182 amended) and it moves at the merge: W1 changed
 `Schema/Codec.lean` and `Schema/Bridge.lean`, whose matches are R3 rows here, and D3 added
-modules to the Laws root.
+modules to the Laws root. The baseline's completeness rests on its logs alone: all eight producer
+runs (the main census and the seven mirror fixtures) printed both sections with their footers and
+no `error:` line, but the wrapper did not record their exit codes (the gap below).
+
+Codex's 23:16 review confirms the log check: empty, error-only and truncated logs exit 2, and the
+seven built-in controls pass. It found a gap in the `--tree` wrapper, owed below.
 
 ### Item 1, half done (`21249189`)
 
@@ -256,6 +263,20 @@ each. Each also has its own:
 - **(3) D-U1 (a)'s expansion.** It expands each table-driven fold on the LCNF cut into a plain
   structural definition beside its `eq_cata` connector, so it needs (2)'s tables and the
   interpreters in the tree first.
+- **(4) The `--tree` wrapper (Codex 23:16; reported after the stop, not repaired).** The wrapper
+  calls each producer without inspecting the return code (`scripts/check-ty-rule.py:224-228`), the
+  aggregate mirror-log check requires only the three top-level scopes so a lost Tools run still
+  leaves "enough" evidence (`:133-143`), and the fixture set is discovered by `glob` with no check
+  that each intended mirror fixture exists (`:233-234`). With a fake `lake` injecting exit codes,
+  three cases still exit 0: the main producer emitting a complete report then exiting 7; one Tools
+  mirror producer exiting 7 silently; one intended mirror fixture missing from the directory. The
+  repair: refuse on every nonzero producer exit, naming the producer and status, and keep the
+  producer logs; verify the intended fixture and module inventory against a list, not a glob; add
+  those three cases to the self-test beside the existing controls. Evidence: Codex's
+  `/private/tmp/codex-second-eyes-2026-10-01/2316-ty-rule/` (`run.py`, `run-extra.py`,
+  `results.json`: expected exit 2, actual 0, in `tree-main-fails-after-output`,
+  `tree-one-mirror-fails-silently` and `tree-missing-one-mirror-fixture`). The three causes are
+  confirmed here by reading the cited lines (reading); the fake-`lake` runs were not repeated here.
 - **(5) The mirrors `of_ty` and `rand_ty`.** Not started; left to W4 (the message's own
   alternative). Landing them needs `dune build` and `make check-ocaml` green with the emitted files.
 - **Acceptance.** U's 24 agreement theorems are stated against the generated view, tables and
@@ -378,7 +399,9 @@ each. Each also has its own:
   (the `--extras` mode reproduces U's 522 lines from today's `Ty`; without the flag every output is
   today's). Owed: the nested extension with `ArgF` positions, the prisms, the table emitter with the
   face table's Schema column as `Representation` values (U's emitter splices Lean text), D-U1 (a)'s
-  expansion, the mirrors (to W4), U's 24-theorem battery, its red tables and `axioms.py`."
+  expansion, the mirrors (to W4), U's 24-theorem battery, its red tables and `axioms.py`, and the
+  `--tree` wrapper's repair (Codex 23:16: refuse a nonzero producer exit by name, keep the producer
+  logs, check the fixtures and modules against a list, three new controls)."
 - **The Makefile, after J2's merge (the coordinator's lines):** the help text names
   `check-conservativity` and `check-ty-rule` as instruments run by name. Neither joins `CHECKS`
   (both are plain rules, not `$(CHK)` markers, so the `check-%` pattern would ask for a marker that
