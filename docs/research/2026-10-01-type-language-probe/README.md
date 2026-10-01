@@ -18,8 +18,9 @@ seat folders (`tree/`, `effect/`, `pedigree/`, `programs/`, with their model pro
 `docs/research/2026-10-01-formal-pass/types/note.md` TY-09, TY-10; Codex's reviews of the owner's
 draft reference (`/private/tmp/codex-record-review-2026-10-01/review.md`, `practical-review.md`,
 with its probes `ConstructiveOrdering.lean`, `NestedDeriving.lean`, `field-names.cjs`) and of
-Gemini's Schema scouting (`/private/tmp/codex-schema-scout-review-2026-10-01/review.md`,
-`probe-review.md`, `gemini-report.md`); the owner's draft
+Gemini's Schema scouting, whose current state is revision 5 (copied to `S-inputs/revision-5/`:
+`review.md`, `annotation-review.md`, the probes and the host harness; the first revision's
+`review.md` and `probe-review.md` at the folder root are history); the owner's draft
 `docs/research/2026-10-01-data-stage-1-record-theory-reference.md` (untracked; read it as a draft
 with the corrections Codex lists, never as authority). The vocabulary is `AGENTS.md` and system map
 §§4–5, §9: a new representation is admitted by naming its sort's signature and its arrows' kinds;

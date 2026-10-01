@@ -1,0 +1,15 @@
+import * as Schema from "effect/Schema";
+export const NAT = Schema.Natural;
+export const INT = Schema.Int;
+export const NUMBER = Schema.Number;
+export const NESTED = Schema.Struct({ "user": Schema.Struct({ "age": Schema.Natural, "name": Schema.String }) });
+export const UNIQUE = Schema.Struct({ "a": Schema.Number, "b": Schema.String });
+export const MODIFIER = Schema.Struct({ "a-b": Schema.optionalKey(Schema.mutableKey(Schema.String)) });
+export const ESCAPE = Schema.Struct({ "x\"\n\\y": Schema.String });
+export const DOC_STRING = Schema.String;
+export const DOC_PROPERTY = Schema.Struct({ "child": Schema.String });
+export const DOC_ELEMENT = Schema.Tuple([Schema.String]);
+export const DOC_FILTER = Schema.Int;
+export const TUPLE = Schema.Tuple([Schema.String]);
+export const ARRAY = Schema.Array(Schema.String);
+export const UNION = Schema.Union([Schema.String, Schema.Number]);

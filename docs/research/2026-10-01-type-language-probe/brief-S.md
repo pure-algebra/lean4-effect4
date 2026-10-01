@@ -78,3 +78,34 @@ asserting controls and `tsgo`/`bun` logs under `S/host/`; the comparison table o
 the proposed decisions rows (a readable-profile row with the contract; row 8's (C) measured; row
 123's input if the profile changes it) and the brief text for the data wave's commit 5 and for a
 Schema-face slice.
+
+## Amendments (2026-10-01, after Codex's 18:15 observation)
+
+- **The input is revision 5, not the first scouting.** The body's description of the prototype
+  (lines 26–29: accepted inputs changed, no located refusals, no asserting controls) is the state
+  of revision 1; revisions 2–5 repaired it. Codex's revision-5 review accepts the narrow readable
+  profile for briefing: behaviour-changing annotations refused before emission with located
+  refusals (two Lean equations, all 16 accepted node constructors exercised), fixed checks and
+  duplicates, the constructive key order, an annotation allowlist of eight documentation keys, 144
+  host acceptance/decoded-value comparisons, the whole-union image check as evidence for the needed
+  codec check. Read, in this order, in the main checkout (read-only; copied from Codex's folder):
+  `docs/research/2026-10-01-type-language-probe/S-inputs/revision-5/review.md`,
+  `annotation-review.md`, `gemini-report.md`, `DefinitiveSchemaProbe.lean`,
+  `DefinitiveSchemaAudit.lean`, `ConstructiveProjectionProbe.lean`, `UnionImageProbe.lean`,
+  `ExtraSchemaChecks.txt`, the host harness (`runtime.mjs`, `inference.ts`, `verify-host.py`) and
+  the results files; and `S-inputs/codex-1815-observation.md`. Do not restart that slice: reproduce
+  its Lean probes once in your folder (your own `#print axioms`), then build on them.
+- **The annotation policy is the reviewed one.** Question 3's "preserved or refused by name, never
+  dropped" is reconciled to: behaviour-changing annotations and modifiers are refused by name with
+  a located refusal; the allowlisted documentation metadata (the eight keys of `annotation-review.md`)
+  is erased under the named observation (acceptance and decoded values; identifier and reference
+  presentation and error messages are outside it); nothing is silently reinterpreted. State the
+  observation and the allowlist in the profile's predicate and cite the review's equations.
+- **Your genuinely new work:** the per-form expansion of the profile and the K2 arms (records,
+  optional keys, maps, tagged unions, number/int) on the `ProbeTy` copy; the broader target
+  comparison including the bounded upstream route (question 4); row 8's dedupe measurement
+  (question 5); and the static-layout preparation only as the review bounds it (an evaluator-
+  agreement argument, not a completed result). Record execution and read-back stay seat R's.
+- **tsgo 7 only.** Revision 5's TypeScript type controls ran on TypeScript 5.9.2 (its
+  `verify-host.py`); rerun every type control you rely on with tsgo 7 (`AGENTS.md`'s bullet; the
+  exact binary and version logged), and keep 5.9 results as history, not evidence.

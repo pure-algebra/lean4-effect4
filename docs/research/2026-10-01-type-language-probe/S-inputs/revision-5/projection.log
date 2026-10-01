@@ -1,0 +1,5 @@
+'ConstructiveProjection.stringLt' does not depend on any axioms
+'ConstructiveProjection.typeCheck' depends on axioms: [propext]
+'ConstructiveProjection.eval' depends on axioms: [propext]
+'ConstructiveProjection.insertSorted_mapPayload' does not depend on any axioms
+'ConstructiveProjection.sortFields_mapPayload' depends on axioms: [propext]

@@ -1,0 +1,70 @@
+[
+  {
+    "name": "hashes",
+    "command": [
+      "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "VerifyHashes.lean"
+    ],
+    "cwd": "/private/tmp/codex-second-eyes-2026-10-01",
+    "exit_code": 0,
+    "seconds": 1.26,
+    "environment": {
+      "LEAN_NUM_THREADS": "1",
+      "LEAN_PATH": "/private/tmp/codex-second-eyes-2026-10-01/lib"
+    }
+  },
+  {
+    "name": "schema",
+    "command": [
+      "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+      "-j1",
+      "-M1536",
+      "-DwarningAsError=true",
+      "DefinitiveSchemaAudit.lean"
+    ],
+    "cwd": "/private/tmp/codex-schema-scout-review-2026-10-01/revision-5",
+    "exit_code": 0,
+    "seconds": 3.036,
+    "environment": {
+      "LEAN_NUM_THREADS": "1",
+      "LEAN_PATH": "/private/tmp/codex-second-eyes-2026-10-01/lib"
+    }
+  },
+  {
+    "name": "projection",
+    "command": [
+      "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+      "-j1",
+      "-M1536",
+      "-DwarningAsError=true",
+      "ConstructiveProjectionProbe.lean"
+    ],
+    "cwd": "/private/tmp/codex-schema-scout-review-2026-10-01/revision-5",
+    "exit_code": 0,
+    "seconds": 0.479,
+    "environment": {
+      "LEAN_NUM_THREADS": "1",
+      "LEAN_PATH": "/private/tmp/codex-second-eyes-2026-10-01/lib"
+    }
+  },
+  {
+    "name": "union",
+    "command": [
+      "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+      "-j1",
+      "-M1536",
+      "-DwarningAsError=true",
+      "UnionImageProbe.lean"
+    ],
+    "cwd": "/private/tmp/codex-schema-scout-review-2026-10-01/revision-5",
+    "exit_code": 0,
+    "seconds": 0.235,
+    "environment": {
+      "LEAN_NUM_THREADS": "1",
+      "LEAN_PATH": "/private/tmp/codex-second-eyes-2026-10-01/lib"
+    }
+  }
+]
