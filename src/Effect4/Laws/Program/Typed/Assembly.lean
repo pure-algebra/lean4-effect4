@@ -6,20 +6,59 @@ import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.Typing.CheckInversion
 
 /-!
-# Laws.Program.Typed.Assembly — the typed state of the reference machine
+# Laws.Program.Typed.Assembly — the typed state of the reference machine, split at the cut
 
-Slice 5's assembly (§3.5 of the brief, as amended): the generated predicate bundle `Preds`
-instantiated with the strong judgments (`preds`), the typed state (`TypedState`: validity, the
-generated whole-state predicate, and the active-delivery correlation), reachability
-(`RReachable`), admitted host answers (`AnswerOk`), and the declared obligations the milestones
-after slice 5 prove: initialization (`typedState_load`, M5) and the transition ledger, one
-preservation obligation per command constructor (M6). `capture_lookup` is proved here.
+Slice 5's assembly, split by decisions row 134 (ruled 2026-10-01; the formal pass's G1 and its
+verifier's split keyed on `running`). The generated predicate bundle `Preds` is instantiated once
+(`preds`), independent of the machine and the queue: it types every stored value, exit, stack and
+payload position. Current code is typed by two hand clauses keyed on the fiber's own flags and on
+the queue, because whether a fiber's code is read again depends on them, not on the saved frame:
 
-H1 adds the settled scheduler guards and observer-to-token payload connections. `PendingOk`
-still receives no enclosing fiber, so `ObserverState.pendingOwner` supplies that correlation.
-`RaceOk` owns every buffered race payload and finite unlaunched program. The reference code-site
-scan remains explicitly OPEN (H1-RCODE-SITES); no continuation-wide approximation is claimed.
-All eighteen command-preservation declarations remain obligations.
+* `MachineTyped` (`J`, machine-only and cut-tolerant): world validity, the generated predicate
+  with the correlations (`TypedState`), the code of every fiber that has not exited and is not
+  running (`LiveCode`), and `stuck = none` with the liveness clauses of row 139 (`MachineLive`).
+  A budget cut drops the residue (`Machine/Fibers.lean:2080`, `:2139-2140`) and leaves a running
+  fiber whose code no queued command will read: `J` does not type it (`E4-TYPED-CE-011`,
+  `Test/Counterexamples/Machine/Semantics/StaleCode.lean`).
+* `ConfigTyped` (`I`, the configuration `(m, q)`): `J`, the code of each running fiber a queued
+  `loop` or `deliver` reads (`ReadCode`), and the queue facts of rows 106 and 133 (`QueueOk`).
+
+In H1's vocabulary: a running fiber that no queued `loop` or `deliver` continues is inert; `J`
+reads that at the empty queue, `I` at the real queue. A halted machine is outside `J`
+(`stuck = none`, row 139), which supersedes H1's halt extension of row 133 (plan O4).
+`DecisionLift` is unchanged (`Laws/Machine/Lift.lean:308-355`): each command obligation is
+`StepPreserves` over `I` at the dispatch premise `m.stuck = none`, and with the fire snapshot
+riding as a suffix of the queue they are exactly the lift's `step` premise
+(`guarded_stepKeeps_of_stepPreserves`). `decision_preserves` and `typedState_reachable` are
+stated over `J`. No configuration capstone over `I` is declared: no consumer reads one (M7 reads
+`J` through `obs`; the decision lift builds `I` from `J` at fresh queues).
+
+The commands that continue a running fiber, and how `I` types it (the reference code-site census
+H1 left open, `2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H1/resolution/README.md`;
+`Machine/Fibers.lean` at `bb269fde`):
+
+| Command | Reads the fiber's current code? | Typing in `I` |
+| --- | --- | --- |
+| `loop id` | yes: `iteration` evaluates it (`:1857-1860`) | `ReadCode`: the code with its stack at `Γ id` |
+| `deliver id` | yes: the evaluator pops the delivered value (`:1861-1864`) | `ReadCode` |
+| `finish id ex` | no: `exitFiber` publishes `ex` or installs the middleware program (`:1983-1988`, `:1772-1803`) | `QueueOk.payload`: `ex` at `Γ id` (row 133) |
+| `registrationDone race` | the marker's head only (`CommandAuthorityR`); replaced by the settle program, or parked (`:1912-1931`) | `RegistrationState`: the race token's result meets the saved stack |
+| `afterInterrupt host kind` | no: replaced by `asVoid(awaitCode kind)` (`:1939-1944`) | `QueueOk.delivery`: `AfterInterruptReply`, `StackReply` |
+| `raceCancel race host` | no: walks to `afterInterrupt host (awaitAll visited)` (`:1945-1955`) | `QueueOk.delivery`: `FiberListColumns`, `StackReply unit` |
+| `closeParAwait host fibers` | no: pushes the iterator frame, installs the await-all park (`:1971-1979`) | `QueueOk.delivery`: the iterator protocol, `StackReply` |
+
+No other command reads a running fiber's code: `evaluate` reads the flags and is a no-op on a
+running fiber (`:1849-1856`); `resume` overwrites a parked fiber's code (`:1865-1878`); `launch` and
+`enrollRace` spawn and observe while the host waits for its `registrationDone` (`:1879-1911`);
+`interruptTarget` records an interrupt and overwrites only an idle interruptible target's code
+(`interruptRecord`, `:803-824`); `trackChild`, `observe`, `exitDone`, `link`, `drainDue` and `wake`
+read no code. A fiber whose current code is a race registration marker is typed by
+`RegistrationState`, not by `TypedProg`: `beginRace` alone installs the marker
+(`Laws/Program/InterpR.lean:320`), so both code clauses skip it.
+
+All eighteen command-preservation declarations, `decision_preserves`, `typedState_reachable` and
+`typedState_load` (M5) remain obligations. This module proves the adapters between them and the
+lift, never a command case.
 -/
 
 set_option autoImplicit false
@@ -49,10 +88,17 @@ def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
     Checker.check (nativeSignature root.table) env (c.path ++ [0]) acquire = .ok a ∧
     EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
 
-/-- The generated bundle, instantiated with the strong judgments. -/
+/-- The saved stack and its provenance at a position: the stack composes from some intermediate
+type to the position's declared type, and recorded causes are interrupts. Current code is not part
+of it: `LiveCode` and `ReadCode` type it where it is read. -/
+def SavedPosition (root : ProgramSource) (w : World) (final : EffTy) (saved : RSaved) : Prop :=
+  ∃ tin, StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
+    InterruptProvenance saved
+
+/-- The generated bundle, instantiated with the strong judgments once. It depends on neither the
+machine nor the queue, so a step that leaves a field alone leaves its clause alone. -/
 def preds (root : ProgramSource) : Preds World where
-  SavedOk w e x := ∀ ty, expectOf w e = some ty →
-    Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty x
+  SavedOk w e x := ∀ ty, expectOf w e = some ty → SavedPosition root w ty x
   PendingOk w _ ps := ∀ p ∈ ps, ∃ id, (w.Θ id p.token).isSome = true
   exit w e ex := ∀ ty, expectOf w e = some ty → ExitOk w ty ex
   ResumeOk w _ target token code := Contracts.ResumeOk (TypedProg root) w target token code
@@ -65,47 +111,12 @@ def preds (root : ProgramSource) : Preds World where
     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
   CaptureOk w _ c := CaptureTyped root w c
 
-/-- A terminal fiber delivers the exit carried by its queued finish, or the exit already
-published on that fiber. This finite boundary does not assert that an arbitrary queue is inert. -/
-def TerminalFiber (m : RState) (commands : List RCmd) (id : FiberId) : Prop :=
-  (∃ exit, .finish id exit ∈ commands) ∨
-    ∃ fiber ∈ m.fibers, fiber.id = id ∧ fiber.exit.isSome = true
-
-/-- The generated saved position retains its identity while its current code becomes inert. -/
-def TerminalPosition (m : RState) (commands : List RCmd) : Expect → Prop
-  | .root => TerminalFiber m commands Api.root
-  | .fiber id => TerminalFiber m commands id
-  | .hook _ => False
-
-/-- Current code is inert after a machine halt, while its finish is queued, or after its exit
-has been published. Halting does not require an empty queue: some native halt paths retain it.
-The executable command loop checks halt before dispatch; raw `driveStep` requires its explicit
-not-halted premise in `StepPreserves`. -/
-def CodeInert (m : RState) (commands : List RCmd) (position : Expect) : Prop :=
-  m.stuck.isSome = true ∨ TerminalPosition m commands position
-
-/-- Only the current-code premise is conditional. The stack still composes to the declared
-fiber type, and interrupt provenance is required even when current code is inert. -/
-def SavedPosition (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd)
-    (position : Expect) (final : EffTy) (saved : RSaved) : Prop :=
-  ∃ tin, (¬ CodeInert m commands position → TypedProg root w tin saved.current) ∧
-    StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
-    InterruptProvenance saved
-
-/-- All generated data clauses are unchanged. Only saved current code is conditional on
-`CodeInert`; queued exit typing is still the unchanged `preds.exit` in `RCmdOk`. -/
-def statePreds (root : ProgramSource) (m : RState) (commands : List RCmd) : Preds World :=
-  { preds root with
-    SavedOk := fun w position saved => ∀ ty, expectOf w position = some ty →
-      SavedPosition root w m commands position ty saved }
-
-/-- A fully typed saved frame also satisfies the conditional current-code clause. -/
-theorem savedPosition_of_saved (root : ProgramSource) (w : World) (m : RState)
-    (commands : List RCmd) (position : Expect) (final : EffTy) (saved : RSaved)
+/-- A fully typed saved frame, code included, gives its saved position. -/
+theorem savedPosition_of_saved (root : ProgramSource) (w : World) (final : EffTy) (saved : RSaved)
     (typed : Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final saved) :
-    SavedPosition root w m commands position final saved := by
-  obtain ⟨tin, code, stack, provenance⟩ := typed
-  exact ⟨tin, fun _ => code, stack, provenance⟩
+    SavedPosition root w final saved := by
+  obtain ⟨tin, _, stack, provenance⟩ := typed
+  exact ⟨tin, stack, provenance⟩
 
 /-- The active park and saved stack agree on what the declared token delivers. -/
 def ActiveDelivery (root : ProgramSource) (w : World) (m : RState) : Prop :=
@@ -114,20 +125,18 @@ def ActiveDelivery (root : ProgramSource) (w : World) (m : RState) : Prop :=
       StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final f.frame.stack ∧
       InterruptProvenance f.frame
 
-/-- World validity, every generated typed position, active delivery, the settled native guard
-conditions, and the exact observer/pending correlations. Internal key bounds live here so every
-StepPreserves input/output carries them. Its explicit queue controls the saved current-code
-clause; the empty queue remains the initialization and completed-run interface. Arbitrary queues
-are still admitted by their own fact, including generated typing for every carried finish.
-H1-RCODE-SITES is an explicit remaining condition, not an established invariant. -/
-def TypedState (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
-    (commands : List RCmd := []) : Prop :=
-  WorldValid rootTy w m ∧ RStateOk (statePreds root m commands) w m ∧
+/-- The generated whole-state predicate and the correlations: world validity, every generated
+typed position, active delivery, the settled native guard conditions, and the exact
+observer/pending and registration correlations. It reads no queue and no current code (`J` adds
+`LiveCode`, `I` adds `ReadCode`). Internal key bounds live here, so every command obligation's
+input and output carry them. -/
+def TypedState (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) : Prop :=
+  WorldValid rootTy w m ∧ RStateOk (preds root) w m ∧
     ActiveDelivery root w m ∧ SchedulerState m ∧ ObserverState root w m ∧ RegistrationState root w m
 
 /-- PendingOk supplies a declaration; WorldValid bounds all declarations. -/
 theorem pending_below (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
-    (commands : List RCmd) (typed : TypedState root rootTy w m commands) (f : RFiber) (hf : f ∈ m.fibers)
+    (typed : TypedState root rootTy w m) (f : RFiber) (hf : f ∈ m.fibers)
     (p : Pending EffName Val Err Defect FiberId Ann) (hp : p ∈ f.pending) :
     p.token < m.nextToken := by
   obtain ⟨id, declared⟩ := (typed.2.1.c0 f hf).c1 p hp
@@ -154,9 +163,9 @@ def AnswerOk (w : World) (m : RState) : Api.Decision → Prop
   | _ => True
 
 /-- Every queued command's generated content judgment, scheduler authority and keys, plus
-observer and enrollment payload correlation. H1-RCODE-SITES remains OPEN for resume code:
-there is intentionally no field claiming an unimplemented recursive reference scan. The direct
-forbidden afterInterrupt race form is recorded separately and exactly. -/
+observer and enrollment payload correlation. The code a queued `loop` or `deliver` reads is
+`ReadCode`'s, beside this structure in `ConfigTyped`. The direct forbidden afterInterrupt race
+form is recorded separately and exactly. -/
 structure QueueOk (root : ProgramSource) (w : World) (m : RState)
     (commands : List RCmd) : Prop where
   payload : ∀ command ∈ commands, RCmdOk (preds root) w command
@@ -174,41 +183,387 @@ structure QueueOk (root : ProgramSource) (w : World) (m : RState)
 theorem QueueOk.fresh {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
     (queue : QueueOk root w m commands) : QueueFresh m commands := queue.keys.below
 
-/-- One dispatched command keeps the typed state and queue typed at some later world.
-The exact `m.stuck = none` dispatch premise is shared with `Machine.Lift.StepKeeps` and
-`driveState`; it does not assert reachability or constrain the pending suffix. -/
+/-! ## Row 134: the split keyed on `running` -/
+
+/-- A queued `loop` or `deliver` will read this fiber's current code: the only two commands
+that do (the table in the module header). -/
+def ReadsCode (id : FiberId) (commands : List RCmd) : Prop :=
+  ∃ yielding, Cmd.loop id yielding ∈ commands ∨ Cmd.deliver id yielding ∈ commands
+
+/-- `J`'s code clause: the current code of every fiber that has not exited and is not running
+is typed with its stack at the fiber's declared type. An exited fiber's code slot is never read
+again (`E4-TYPED-CE-011`'s finished run); a running fiber's code is read only by the queued
+command that continues it, which a budget cut may have dropped. A race registration marker is
+`RegistrationState`'s. -/
+def LiveCode (root : ProgramSource) (w : World) (m : RState) : Prop :=
+  ∀ f ∈ m.fibers, f.exit = none → f.running = false → raceRegistrationR f.frame.current = none →
+    ∀ ty, w.Γ f.id = some ty →
+      Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty f.frame
+
+/-- `I`'s code clause for running fibers: a running fiber whose current code a queued `loop` or
+`deliver` reads is typed with its stack at its declared type. A running fiber continued by
+`finish`, the race commands or the interrupt commands is typed by their own facts (`QueueOk`,
+`RegistrationState`; the module header's table); one that no queued command continues is
+inert. -/
+def ReadCode (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd) : Prop :=
+  ∀ f ∈ m.fibers, f.running = true → ReadsCode f.id commands →
+    raceRegistrationR f.frame.current = none → ∀ ty, w.Γ f.id = some ty →
+      Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty f.frame
+
+/-- Row 139's halting freedom and liveness, on the machine alone. -/
+structure MachineLive (m : RState) : Prop where
+  /-- The machine has not halted (`E4-TYPED-CE-014`): every halting arm of a command is an
+  obligation of that command's preservation proof. -/
+  running : m.stuck = none
+
+/-- **`J`**, the machine-only typed state (decisions row 134): what every reachable machine
+carries, a budget cut included. -/
+structure MachineTyped (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) :
+    Prop where
+  typed : TypedState root rootTy w m
+  code : LiveCode root w m
+  live : MachineLive m
+
+/-- **`I`**, the typed configuration (decisions row 134): the machine with the residue the
+command loop runs. -/
+structure ConfigTyped (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
+    (commands : List RCmd) : Prop where
+  machine : MachineTyped root rootTy w m
+  code : ReadCode root w m commands
+  queue : QueueOk root w m commands
+
+/-- `J` after a step is part of `I` after it: the re-establishment the lift's `Guarded` needs is
+this projection. -/
+theorem machineTyped_of_configTyped {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} {commands : List RCmd} (typed : ConfigTyped root rootTy w m commands) :
+    MachineTyped root rootTy w m := typed.machine
+
+/-- A halted machine is outside `J` (row 139; probe C's `typedState_halt`, read at `J`). -/
+theorem machineTyped_not_halted (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
+    (why : Stuck) : ¬ MachineTyped root rootTy w (m.halt why) := by
+  intro typed
+  have running : (m.halt why).stuck = none := typed.live.running
+  cases running
+
+/-- **The loop-entry premise holds for this split** (`DecisionLift.evaluate`): `J` gives `I` at
+the fresh queue an evaluate or interrupt decision starts, at every machine, a budget cut
+included. The proofs seat's split keyed on a queued `finish` fails exactly here
+(`Test/Counterexamples/Machine/Semantics/StaleCode.lean`, `seat_split_not_decisionLift`). -/
+theorem evaluate_entry (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
+    (id : FiberId) (typed : MachineTyped root rootTy w m) :
+    ConfigTyped root rootTy w m [Cmd.evaluate id, Cmd.drainDue] := by
+  refine ⟨typed, ?_, ⟨?_, ?_, ?_, List.nodup_nil, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_⟩⟩
+  · rintro f _ _ ⟨yielding, member | member⟩ <;>
+      simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
+  · intro command member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;> trivial
+  · intro command member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;> trivial
+  · intro command member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;> trivial
+  · intro key member
+    cases member
+  · intro fiber token request _ member
+    cases member
+  · intro source exit observer member
+    simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
+  · intro race child member
+    simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
+  · intro host yielding race member
+    simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
+
+/-- One dispatched command keeps the typed configuration at some later world. The dispatch
+premise `m.stuck = none` is the one `Machine.Lift.StepKeeps` and `driveState` use; `I`'s own
+`stuck = none` makes every halting arm of the command an obligation of its proof. -/
 def StepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop :=
-  ∀ w m rest, m.stuck = none → TypedState root rootTy w m (cmd :: rest) →
-    QueueOk root w m (cmd :: rest) →
+  ∀ w m rest, m.stuck = none → ConfigTyped root rootTy w m (cmd :: rest) →
     let r := (letI := termEvaluatorFor root.program
               driveStep (interpR root.program) m cmd rest)
-    ∃ w', w.leHost w' ∧ TypedState root rootTy w' r.1 r.2 ∧ QueueOk root w' r.1 r.2
+    ∃ w', w.leHost w' ∧ ConfigTyped root rootTy w' r.1 r.2
 
-/-- The eighteen command facts, once proved, provide exactly the existing generic loop
-premise. This adapter proves no individual command fact and requires no reachability premise. -/
+/-- The eighteen command facts, once proved, are exactly the generic loop premise over `I`.
+This adapter proves no individual command fact. -/
 theorem stepKeeps_of_stepPreserves (root : ProgramSource) (rootTy : EffTy)
     (steps : ∀ command, StepPreserves root rootTy command) :
     letI := termEvaluatorFor root.program
-    Machine.Lift.StepKeeps hostOrder (interpR root.program)
-      (fun w m commands => TypedState root rootTy w m commands ∧ QueueOk root w m commands) := by
+    Machine.Lift.StepKeeps hostOrder (interpR root.program) (ConfigTyped root rootTy) := by
   letI := termEvaluatorFor root.program
   intro w m command rest running typed
-  exact steps command w m rest running typed.1 typed.2
+  exact steps command w m rest running typed
 
-/-- Conditional assembly lift through the actual command loop, including its halt boundary.
-All eighteen `StepPreserves` facts remain hypotheses, not discharged obligations. -/
+/-- The typed configuration through the actual command loop, including its halt boundary.
+All eighteen `StepPreserves` facts remain hypotheses. -/
 theorem driveState_typed_of_stepPreserves (root : ProgramSource) (rootTy : EffTy)
     (steps : ∀ command, StepPreserves root rootTy command)
     (fuel : Nat) (w : World) (m : RState) (commands : List RCmd)
-    (typed : TypedState root rootTy w m commands) (queue : QueueOk root w m commands) :
+    (typed : ConfigTyped root rootTy w m commands) :
     letI := termEvaluatorFor root.program
     let result := driveState (interpR root.program) fuel m commands
-    ∃ w', w.leHost w' ∧ TypedState root rootTy w' result.1 result.2 ∧
-      QueueOk root w' result.1 result.2 := by
+    ∃ w', w.leHost w' ∧ ConfigTyped root rootTy w' result.1 result.2 := by
   letI := termEvaluatorFor root.program
-  exact Machine.Lift.driveState_lift hostOrder (interpR root.program)
-    (fun w m commands => TypedState root rootTy w m commands ∧ QueueOk root w m commands)
-    (stepKeeps_of_stepPreserves root rootTy steps) fuel w m commands ⟨typed, queue⟩
+  exact Machine.Lift.driveState_lift hostOrder (interpR root.program) (ConfigTyped root rootTy)
+    (stepKeeps_of_stepPreserves root rootTy steps) fuel w m commands typed
+
+/-! ## The fire snapshot rides as a suffix of the queue
+
+A `fire` drains a dispatcher and holds the tasks outside the machine and the queue while it runs
+them (`Machine/Fibers.lean:2026-2045`); `Lift.Guarded`'s `O` types them. A task's commands are an
+`evaluate`, a `resume` or a `wake`, then the due drain: none has an owner, reads code, registers a
+race or names a scope. So `I` over the queue followed by the snapshot's commands is `I` over the
+queue and the snapshot's queue facts, and the frame law `driveStep_append` carries the snapshot
+through every command. -/
+
+abbrev RTask := Machine.Task EffName EffThunk Val Err Defect FiberId Ann RProgram
+
+/-- `Lift.Guarded`'s `O` for the typed state: the drained, not yet run tasks' commands are a
+typed queue on the current machine. -/
+def SnapshotTyped (root : ProgramSource) (w : World) (m : RState) (tasks : List RTask) : Prop :=
+  QueueOk root w m (tasks.flatMap taskCmds)
+
+/-- A task's commands: an `evaluate`, a `resume` or a `wake`, then the due drain. -/
+theorem mem_taskCmds {command : RCmd} {tasks : List RTask}
+    (member : command ∈ tasks.flatMap taskCmds) :
+    (∃ child, command = .evaluate child) ∨ (∃ target token code, command = .resume target token code) ∨
+      (∃ list phase, command = .wake list phase) ∨ command = .drainDue := by
+  obtain ⟨task, _, inTask⟩ := List.mem_flatMap.mp member
+  cases task with
+  | start child =>
+    simp only [taskCmds, List.mem_cons, List.not_mem_nil, or_false] at inTask
+    rcases inTask with rfl | rfl
+    · exact Or.inl ⟨child, rfl⟩
+    · exact Or.inr (Or.inr (Or.inr rfl))
+  | resume target token code =>
+    simp only [taskCmds, List.mem_cons, List.not_mem_nil, or_false] at inTask
+    rcases inTask with rfl | rfl
+    · exact Or.inr (Or.inl ⟨target, token, code, rfl⟩)
+    · exact Or.inr (Or.inr (Or.inr rfl))
+  | wake list phase =>
+    simp only [taskCmds, List.mem_cons, List.not_mem_nil, or_false] at inTask
+    rcases inTask with rfl | rfl
+    · exact Or.inr (Or.inr (Or.inl ⟨list, phase, rfl⟩))
+    · exact Or.inr (Or.inr (Or.inr rfl))
+
+/-- A task command has no owner. -/
+theorem taskCmd_owner (m : RState) {command : RCmd} {tasks : List RTask}
+    (member : command ∈ tasks.flatMap taskCmds) : Guard.commandOwner m command = none := by
+  rcases mem_taskCmds member with ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ | ⟨_, _, rfl⟩ | rfl <;> rfl
+
+/-- A task command is not a race registration's return. -/
+theorem taskCmd_not_registrationDone {command : RCmd} {tasks : List RTask}
+    (member : command ∈ tasks.flatMap taskCmds) (race : Nat) (yielding : Bool) :
+    command ≠ .registrationDone race yielding := by
+  rcases mem_taskCmds member with ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ | ⟨_, _, rfl⟩ | rfl <;>
+    exact fun h => nomatch h
+
+/-- A task command reads no fiber's current code. -/
+theorem taskCmd_not_reads {command : RCmd} {tasks : List RTask}
+    (member : command ∈ tasks.flatMap taskCmds) (id : FiberId) (yielding : Bool) :
+    command ≠ .loop id yielding ∧ command ≠ .deliver id yielding := by
+  rcases mem_taskCmds member with ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ | ⟨_, _, rfl⟩ | rfl <;>
+    exact ⟨fun h => (nomatch h), fun h => (nomatch h)⟩
+
+/-- A task command is not a registration's work (`launch`, `enrollRace`). -/
+theorem taskCmd_tail {command : RCmd} {tasks : List RTask}
+    (member : command ∈ tasks.flatMap taskCmds) (rest : List RCmd) :
+    Guard.RegistrationQueue.RegistrationTail command rest := by
+  rcases mem_taskCmds member with ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ | ⟨_, _, rfl⟩ | rfl <;> trivial
+
+theorem registrationTail_mono {command : RCmd} {left right : List RCmd} (subset : left ⊆ right)
+    (tail : Guard.RegistrationQueue.RegistrationTail command left) :
+    Guard.RegistrationQueue.RegistrationTail command right := by
+  cases command with
+  | launch race =>
+    obtain ⟨yielding, member⟩ := tail
+    exact ⟨yielding, subset member⟩
+  | enrollRace race child =>
+    obtain ⟨yielding, member⟩ := tail
+    exact ⟨yielding, subset member⟩
+  | evaluate _ => trivial
+  | loop _ _ => trivial
+  | deliver _ _ => trivial
+  | finish _ _ => trivial
+  | resume _ _ _ => trivial
+  | registrationDone _ _ => trivial
+  | interruptTarget _ _ _ => trivial
+  | afterInterrupt _ _ _ => trivial
+  | raceCancel _ _ _ _ _ => trivial
+  | trackChild _ _ => trivial
+  | observe _ _ _ => trivial
+  | exitDone _ => trivial
+  | closeParAwait _ _ _ => trivial
+  | link _ _ _ _ _ => trivial
+  | drainDue => trivial
+  | wake _ _ => trivial
+
+/-- Registration work keeps its return when the snapshot's commands follow the queue. -/
+theorem registrationQueue_append_tasks {commands : List RCmd} {tasks : List RTask} :
+    Guard.RegistrationQueue.RegistrationQueue (commands ++ tasks.flatMap taskCmds) ↔
+      Guard.RegistrationQueue.RegistrationQueue commands ∧
+        Guard.RegistrationQueue.RegistrationQueue (tasks.flatMap taskCmds) := by
+  induction commands with
+  | nil =>
+    refine ⟨fun queue => ⟨trivial, queue⟩, fun queue => queue.2⟩
+  | cons command rest ih =>
+    constructor
+    · rintro ⟨tail, queue⟩
+      refine ⟨⟨?_, (ih.mp queue).1⟩, (ih.mp queue).2⟩
+      cases command with
+      | launch race =>
+        obtain ⟨yielding, member⟩ := tail
+        rcases List.mem_append.mp member with here | there
+        · exact ⟨yielding, here⟩
+        · exact absurd rfl (taskCmd_not_registrationDone there race yielding)
+      | enrollRace race child =>
+        obtain ⟨yielding, member⟩ := tail
+        rcases List.mem_append.mp member with here | there
+        · exact ⟨yielding, here⟩
+        · exact absurd rfl (taskCmd_not_registrationDone there race yielding)
+      | evaluate _ => trivial
+      | loop _ _ => trivial
+      | deliver _ _ => trivial
+      | finish _ _ => trivial
+      | resume _ _ _ => trivial
+      | registrationDone _ _ => trivial
+      | interruptTarget _ _ _ => trivial
+      | afterInterrupt _ _ _ => trivial
+      | raceCancel _ _ _ _ _ => trivial
+      | trackChild _ _ => trivial
+      | observe _ _ _ => trivial
+      | exitDone _ => trivial
+      | closeParAwait _ _ _ => trivial
+      | link _ _ _ _ _ => trivial
+      | drainDue => trivial
+      | wake _ _ => trivial
+    · rintro ⟨⟨tail, queue⟩, tasksQueue⟩
+      exact ⟨registrationTail_mono (List.subset_append_left _ _) tail, ih.mpr ⟨queue, tasksQueue⟩⟩
+
+/-- The snapshot's commands split off the queue facts. -/
+theorem queueOk_append_tasks {root : ProgramSource} {w : World} {m : RState}
+    {commands : List RCmd} {tasks : List RTask} :
+    QueueOk root w m (commands ++ tasks.flatMap taskCmds) ↔
+      QueueOk root w m commands ∧ SnapshotTyped root w m tasks := by
+  have ownersNil : (tasks.flatMap taskCmds).filterMap (Guard.commandOwner m) = [] :=
+    List.filterMap_eq_nil_iff.mpr fun _ member => taskCmd_owner m member
+  constructor
+  · intro queue
+    have owners := queue.owners
+    rw [List.filterMap_append, ownersNil, List.append_nil] at owners
+    have regs := registrationQueue_append_tasks.mp queue.registration
+    refine ⟨⟨fun c hc => queue.payload c (List.mem_append_left _ hc),
+        fun c hc => queue.authority c (List.mem_append_left _ hc),
+        fun c hc => queue.delivery c (List.mem_append_left _ hc), owners, regs.1,
+        ⟨fun key hk => queue.keys.below key (by
+            rw [List.flatMap_append]; exact List.mem_append_left _ hk),
+          fun fiber token request hr hk => queue.keys.disjoint fiber token request hr (by
+            rw [List.flatMap_append]; exact List.mem_append_left _ hk)⟩,
+        fun s e o ho => queue.observer s e o (List.mem_append_left _ ho),
+        fun r c hc => queue.enroll r c (List.mem_append_left _ hc),
+        fun h y r hr => queue.noRaceAfterInterrupt h y r (List.mem_append_left _ hr)⟩,
+      ⟨fun c hc => queue.payload c (List.mem_append_right _ hc),
+        fun c hc => queue.authority c (List.mem_append_right _ hc),
+        fun c hc => queue.delivery c (List.mem_append_right _ hc),
+        by rw [ownersNil]; exact List.nodup_nil, regs.2,
+        ⟨fun key hk => queue.keys.below key (by
+            rw [List.flatMap_append]; exact List.mem_append_right _ hk),
+          fun fiber token request hr hk => queue.keys.disjoint fiber token request hr (by
+            rw [List.flatMap_append]; exact List.mem_append_right _ hk)⟩,
+        fun s e o ho => queue.observer s e o (List.mem_append_right _ ho),
+        fun r c hc => queue.enroll r c (List.mem_append_right _ hc),
+        fun h y r hr => queue.noRaceAfterInterrupt h y r (List.mem_append_right _ hr)⟩⟩
+  · rintro ⟨queue, snapshot⟩
+    refine ⟨fun c hc => ?_, fun c hc => ?_, fun c hc => ?_, ?_,
+      registrationQueue_append_tasks.mpr ⟨queue.registration, snapshot.registration⟩, ⟨?_, ?_⟩,
+      fun s e o ho => ?_, fun r c hc => ?_, fun h y r hr => ?_⟩
+    · rcases List.mem_append.mp hc with hc | hc
+      · exact queue.payload c hc
+      · exact snapshot.payload c hc
+    · rcases List.mem_append.mp hc with hc | hc
+      · exact queue.authority c hc
+      · exact snapshot.authority c hc
+    · rcases List.mem_append.mp hc with hc | hc
+      · exact queue.delivery c hc
+      · exact snapshot.delivery c hc
+    · rw [List.filterMap_append, ownersNil, List.append_nil]
+      exact queue.owners
+    · intro key hk
+      rw [List.flatMap_append] at hk
+      rcases List.mem_append.mp hk with hk | hk
+      · exact queue.keys.below key hk
+      · exact snapshot.keys.below key hk
+    · intro fiber token request hr hk
+      rw [List.flatMap_append] at hk
+      rcases List.mem_append.mp hk with hk | hk
+      · exact queue.keys.disjoint fiber token request hr hk
+      · exact snapshot.keys.disjoint fiber token request hr hk
+    · rcases List.mem_append.mp ho with ho | ho
+      · exact queue.observer s e o ho
+      · exact snapshot.observer s e o ho
+    · rcases List.mem_append.mp hc with hc | hc
+      · exact queue.enroll r c hc
+      · exact snapshot.enroll r c hc
+    · rcases List.mem_append.mp hr with hr | hr
+      · exact queue.noRaceAfterInterrupt h y r hr
+      · exact snapshot.noRaceAfterInterrupt h y r hr
+
+/-- The snapshot's commands read no code, so `ReadCode` ignores them. -/
+theorem readsCode_append_tasks {id : FiberId} {commands : List RCmd} {tasks : List RTask} :
+    ReadsCode id (commands ++ tasks.flatMap taskCmds) ↔ ReadsCode id commands := by
+  constructor
+  · rintro ⟨yielding, member | member⟩
+    · rcases List.mem_append.mp member with here | there
+      · exact ⟨yielding, Or.inl here⟩
+      · exact absurd rfl (taskCmd_not_reads there id yielding).1
+    · rcases List.mem_append.mp member with here | there
+      · exact ⟨yielding, Or.inr here⟩
+      · exact absurd rfl (taskCmd_not_reads there id yielding).2
+  · rintro ⟨yielding, member | member⟩
+    · exact ⟨yielding, Or.inl (List.mem_append_left _ member)⟩
+    · exact ⟨yielding, Or.inr (List.mem_append_left _ member)⟩
+
+/-- `I` over the queue followed by the snapshot's commands is `I` over the queue and `O`. -/
+theorem configTyped_append_tasks {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} {commands : List RCmd} {tasks : List RTask} :
+    ConfigTyped root rootTy w m (commands ++ tasks.flatMap taskCmds) ↔
+      ConfigTyped root rootTy w m commands ∧ SnapshotTyped root w m tasks := by
+  constructor
+  · intro typed
+    obtain ⟨queue, snapshot⟩ := queueOk_append_tasks.mp typed.queue
+    exact ⟨⟨typed.machine, fun f hf hr reads => typed.code f hf hr (readsCode_append_tasks.mpr reads),
+      queue⟩, snapshot⟩
+  · rintro ⟨typed, snapshot⟩
+    exact ⟨typed.machine, fun f hf hr reads => typed.code f hf hr (readsCode_append_tasks.mp reads),
+      queueOk_append_tasks.mpr ⟨typed.queue, snapshot⟩⟩
+
+/-- **`StepPreserves` is the lift's `step` premise.** The eighteen command facts give
+`StepKeeps (Guarded J I O ts)` for every snapshot `ts`: the snapshot rides as a suffix of the
+queue (`configTyped_append_tasks`), the frame law moves it through the command
+(`Machine.Lift.driveStep_append`), and `I`'s `stuck = none` rules out the frame law's halting
+alternative. `J` after the step is `I`'s projection. -/
+theorem guarded_stepKeeps_of_stepPreserves (root : ProgramSource) (rootTy : EffTy)
+    (steps : ∀ command, StepPreserves root rootTy command) (tasks : List RTask) :
+    letI := termEvaluatorFor root.program
+    Machine.Lift.StepKeeps hostOrder (interpR root.program)
+      (Machine.Lift.Guarded (MachineTyped root rootTy) (ConfigTyped root rootTy)
+        (SnapshotTyped root) tasks) := by
+  letI := termEvaluatorFor root.program
+  intro w m command rest running guarded
+  obtain ⟨typed, snapshot⟩ := guarded.2 running
+  have joined : ConfigTyped root rootTy w m (command :: (rest ++ tasks.flatMap taskCmds)) := by
+    rw [← List.cons_append]
+    exact configTyped_append_tasks.mpr ⟨typed, snapshot⟩
+  obtain ⟨w', ordered, after⟩ := steps command w m (rest ++ tasks.flatMap taskCmds) running joined
+  obtain ⟨sameMachine, residue⟩ :=
+    Machine.Lift.driveStep_append (interpR root.program) m command rest (tasks.flatMap taskCmds)
+  rw [sameMachine] at after
+  rcases residue with residue | ⟨_, _, halted⟩
+  · rw [residue] at after
+    obtain ⟨typed', snapshot'⟩ := configTyped_append_tasks.mp after
+    exact ⟨w', ordered, typed'.machine, fun _ => ⟨typed', snapshot'⟩⟩
+  · rw [after.machine.live.running] at halted
+    cases halted
 
 /-! ## The capture lookup -/
 
@@ -252,6 +607,72 @@ theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
     have := envTyped_append henv hex
     simpa only [List.append_assoc, List.singleton_append] using this
 
+/-! ## The milestone propositions
+
+Named once, so the ledger's declarations and the connectors below read the same statement. -/
+
+/-- Rows 111–116: the source's Σ_app is lawful. Today this is the program-plane row-table check
+`Table.lawful` (unique keys, no built-in collision, no dropped trailing names). Seat A's evidence
+field on `ProgramSource` (row 114) supplies the service-table clauses (rows 112–114) and replaces
+this body; the statements keep this premise's name, and `w.serviceTy` (row 112, shape A) joins
+`MachineTyped` as the static world component tied to the source when seat A's field lands. -/
+def LawfulSource (root : ProgramSource) : Prop := Table.lawful root.table = true
+
+/-- M5's proposition: a lawful, checked, closed source loads into `J`. -/
+def LoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
+  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
+    ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel)
+
+/-- M6b's proposition: one tape decision keeps `J` when its host answer, if any, is admitted. -/
+def DecisionKeeps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.Decision) :
+    Prop :=
+  ∀ w m, MachineTyped root rootTy w m → AnswerOk w m d →
+    ∃ w', w.leHost w' ∧ MachineTyped root rootTy w'
+      (letI := termEvaluatorFor root.program
+       stepDecisionState (interpR root.program) fuel m d).1
+
+/-- M6c's proposition: every machine an answer-free tape reaches from a lawful, checked, closed
+source is in `J`. -/
+def ReachableTyped (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
+  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
+    RReachable root fuel m → ∃ w, MachineTyped root rootTy w m
+
+/-- A tape with no host answer is admitted at every machine it meets. -/
+theorem admittedReplay_noHostAnswer (root : ProgramSource) (J : World → RState → Prop)
+    (fuel : Nat) :
+    ∀ (tape : List Api.Decision), (∀ d ∈ tape, NoHostAnswer d) → ∀ m : RState,
+      letI := termEvaluatorFor root.program
+      Machine.Lift.AdmittedReplay J (fun w m d => AnswerOk w m d) (interpR root.program) fuel m tape
+  | [], _, _ => trivial
+  | d :: tape, free, m => by
+    intro _
+    refine ⟨fun w _ => ?_, fun _ => admittedReplay_noHostAnswer root J fuel tape
+      (fun d' hd' => free d' (List.mem_cons_of_mem _ hd')) _⟩
+    have hd := free d List.mem_cons_self
+    cases d with
+    | answerAsync id token answer => exact hd.elim
+    | fire owner => trivial
+    | flush => trivial
+    | evaluate id => trivial
+    | yieldVerdict id verdict => trivial
+    | interruptFrom who extra target => trivial
+    | installMiddleware => trivial
+    | advance millis => trivial
+
+/-- **M6c from M5 and M6b**, through the replay lift (`Machine.Lift.replayEval_lift`). -/
+theorem reachable_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
+    (load : LoadsTyped root rootTy fuel fuel) (decisions : ∀ d, DecisionKeeps root rootTy fuel d)
+    (m : RState) : ReachableTyped root rootTy fuel m := by
+  rintro lawful checked closed ⟨tape, free, rfl⟩
+  obtain ⟨w₀, loaded⟩ := load lawful checked closed
+  letI := termEvaluatorFor root.program
+  obtain ⟨w, _, typed⟩ := Machine.Lift.replayEval_lift hostOrder (MachineTyped root rootTy)
+    (fun w m d => AnswerOk w m d) (interpR root.program) fuel
+    (fun w m d _ held admitted => decisions d w m held admitted) tape w₀
+    (loadR root.program fuel fuel) loaded
+    (admittedReplay_noHostAnswer root (MachineTyped root rootTy) fuel tape free _)
+  exact ⟨w, typed⟩
+
 /-! ## Declared obligations
 
 `typedState_load` (M5: initialization from an admitted source). The transition ledger (M6): one
@@ -260,8 +681,7 @@ answers, and the capstone that every reachable state is typed. Declared, not pro
 namespace M3bAssembly
 
 theorem typedState_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) :
-    ProofGraph.Obligation (Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-      ∃ w, TypedState root rootTy w (loadR root.program fuel compileFuel)) := ⟨⟩
+    ProofGraph.Obligation (LoadsTyped root rootTy fuel compileFuel) := ⟨⟩
 
 theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
     (completed : List (FiberId × ExitV)) (exVal : Val) (_h : CaptureTyped root w c)
@@ -328,28 +748,30 @@ theorem step_drainDue (root : ProgramSource) (rootTy : EffTy) :
 theorem step_wake (root : ProgramSource) (rootTy : EffTy) (list : WakeKey) (phase : WakePhase) :
     ProofGraph.Obligation (StepPreserves root rootTy (.wake list phase)) := ⟨⟩
 
-/-- A tape decision keeps the typed state when its host answer, if any, is admitted. -/
+/-- A tape decision keeps `J` when its host answer, if any, is admitted. -/
 theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.Decision) :
-    ProofGraph.Obligation (∀ w m, TypedState root rootTy w m → AnswerOk w m d →
-      ∃ w', w.leHost w' ∧ TypedState root rootTy w'
-        (letI := termEvaluatorFor root.program
-         stepDecisionState (interpR root.program) fuel m d).1) := ⟨⟩
+    ProofGraph.Obligation (DecisionKeeps root rootTy fuel d) := ⟨⟩
 
-/-- The capstone obligation: every state a tape with no host answer reaches from a
-checked, closed source is typed. This restriction repairs `E4-SCHED-CE-015` for host answers
-only. The historical host-free obstructions `E4-PROV-CE-005`, `E4-PROV-CE-006` and
-`E4-SCHED-CE-016` have their local repairs in F, G and H1; their retained falsifiers use
-the reviewed pre-amendment clauses. The table-based Fits judgment repairs the liveness
-obstruction E4-TYPED-CE-004; the general M5 initialization proof is still open.
+/-- The capstone obligation: every machine a tape with no host answer reaches from a lawful,
+checked, closed source is in `J` (`reachable_of_ledger` derives it from `typedState_load` and
+`decision_preserves`). The host-answer restriction repairs `E4-SCHED-CE-015`.
 
-`ExitOk` excludes `badName` and `notImplemented` at typed code, saved-stack, queued-result
-and stored-completion exit positions (`E4-TYPED-CE-007`). The initialization, transition and
-reachability proofs remain open, so this judgment alone does not establish their absence
-from every run. `missingService` remains admitted at every requirement row in H2 part one;
-its exclusion requires the held frame-and-operation contract amendment (row 117). -/
+Live refutations at this commit: `E4-TYPED-CE-009` (`Fits` compares declared types in the raw
+order while the checker normalizes, so M5 is false for a checked program; seat A, row 137) and
+`E4-TYPED-CE-010` (the await-by-value post reads the target's answer column, so M5 is false for
+the typed corpus's `awaitFiber.value`; seat B, row 136); either falsifies the capstone at the
+loaded machine. `E4-TYPED-CE-011` (the saved-code clause read at a budget cut) refuted the
+statement over the typed state before row 134 and is repaired by the split
+(`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), as is `E4-TYPED-CE-014` (a halted
+machine typed) by `J`'s `stuck = none`.
+
+`ExitOk` excludes `badName` and `notImplemented` at typed code, saved-stack, queued-result and
+stored-completion exit positions (`E4-TYPED-CE-007`); the obligations above remain open, so this
+judgment alone does not establish their absence from every run. `missingService` remains
+admitted at every requirement row in H2 part one; its exclusion requires row 117's
+frame-and-operation contract. -/
 theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
-    ProofGraph.Obligation (Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
-      RReachable root fuel m → ∃ w, TypedState root rootTy w m) := ⟨⟩
+    ProofGraph.Obligation (ReachableTyped root rootTy fuel m) := ⟨⟩
 
 end M6Ledger
 

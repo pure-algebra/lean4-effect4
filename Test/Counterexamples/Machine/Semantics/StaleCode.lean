@@ -1,15 +1,17 @@
 import Effect4.Laws.Program.Typed.Assembly
 import Effect4.Laws.Machine.Lift
+import Test.Counterexamples.Machine.Semantics.H1Shapes
 
 /-!
-# `E4-TYPED-CE-011`: the saved-code clause at a budget cut (row 134's red control)
+# `E4-TYPED-CE-011`: the saved-code clause at a budget cut, and row 134's split
 
 The formal pass's probe A (`docs/research/2026-10-01-formal-pass/proofs/probes/StaleCode.lean`),
-its verifier's `verify-probes/VerifySplit.lean` and probe C (`probes/HaltTyped.lean`), restated
-against the merged typed state (`0c534f06`: H1's `CodeInert`, the scheduler facts, H2's
-`ExitOk`). The synthesis seat's port at `dceae006`
-(`docs/research/2026-10-01-landing/ports-at-dceae006/HeadCut.lean`) is the base of the cut and
-split sections.
+its verifier's `verify-probes/VerifySplit.lean` and probe C (`probes/HaltTyped.lean`), first
+restated against the merged typed state of `0c534f06` (H1's `CodeInert`, the scheduler facts,
+H2's `ExitOk`; now the copies in `H1Shapes.lean`), then read against decisions row 134's split
+(`MachineTyped` `J`, `ConfigTyped` `I`, `Laws/Program/Typed/Assembly.lean`). The synthesis
+seat's port at `dceae006` (`docs/research/2026-10-01-landing/ports-at-dceae006/HeadCut.lean`) is
+the base of the cut and split sections.
 
 The program is `E4-SCHED-CE-008`'s preempted catch with a one-millisecond timer in place of the
 deferred answer (the tape has no host answer, as `RReachable` requires) and one pure bind (so a
@@ -17,22 +19,25 @@ uniform command budget can stop between the walk that finishes the root and its 
 After the signed divergence `U-01` the root's exit is the recorded interrupt with no `Fail`
 reason, which fits `⟨nat, never, ∅⟩`; its code slot still holds the escaped `Fail 42`.
 
-What this file proves, at the merged head:
+Historical, against H1's typed state (red):
 * the window (budget 6): the cut lands between the finishing walk and its `finish`; the root
   is running, not exited, not halted, and the machine the capstone receives carries no queue,
-  so H1's clause types its stale code and fails at every world (`window_untyped`); the ledger's
-  `typedState_reachable` is false there (`capstone_false_window`), and `typedState_load` and
+  so H1's clause types its stale code and fails at every world (`window_untyped`); H1's
+  `typedState_reachable` is false there (`capstone_false_window`), and its `typedState_load` and
   `decision_preserves` are jointly false at this program (`ledger_jointly_false_window`);
-* the finished run (budgets 7 and 9): H1's published-exit disjunct makes the stale slot inert
-  (`m7_root_inert`, `m9_root_inert`), so `E4-TYPED-CE-011` claims the cut only (the coordinator's
-  correction, decisions row 134); the earlier note's finished-run refutations are not restated;
-* the split: a `J` true at the cut with an `I` keyed on a queued `finish` cannot instantiate
-  `DecisionLift` (`seat_split_not_decisionLift`, red); a clause keyed on `running` holds at the
-  window (`running_clause_vacuous_at_m6`, `running_exempt_at_m6`, positive); the
-  observation-level clause holds at both machines (`exitsTyped6`, `exitsTyped7`, positive);
-* halting keeps the typed state (`typedState_halt`, `halting_result_typed`,
-  `typed_not_imply_running`), so the typed state cannot yield "never halts" (`E4-TYPED-CE-014`);
-* `WorldValid` is not upward closed along `leHost` (`worldValid_not_upward_closed`).
+* the finished run (budgets 7 and 9) is covered by H1's published-exit disjunct (`m7_root_inert`,
+  `m9_root_inert`), so `E4-TYPED-CE-011` claims the cut only (decisions row 134);
+* the proofs seat's split keyed on a queued `finish` cannot instantiate `DecisionLift`
+  (`seat_split_not_decisionLift`);
+* probe C holds by design under H1 (`CodeInert` tolerates a halt): `H1.typedState_halt`,
+  `H1.halting_result_typed`, `H1.typed_not_imply_running` (`E4-TYPED-CE-014`).
+
+Row 134's split (positive): `J` holds at the cut and at the finished run, at an explicit world
+(`machineTyped_m6`, `machineTyped_m9`), so the amended capstone is not refuted by probe A; the
+loop-entry premise holds there (`evaluate_entry_m6`); the running-keyed clause is the reason
+(`running_clause_vacuous_at_m6`, `liveCode_m6`). Row 139 side by side with probe C: the generated
+part still tolerates a halt (`typedState_halt`), `J` does not (`machineTyped_not_halted_here`).
+`WorldValid` is not upward closed along `leHost` (`worldValid_not_upward_closed`).
 
 Probe-author lessons kept (`proofs/note.md` §5, `verify.md` item 11): replay facts by
 `decide +kernel`, never elaborator `decide`; no `classify (replayR …)`; `Api.typeOf` by `rfl'`;
@@ -174,7 +179,7 @@ def rootShape (m : RState) : Option (Option ExitV × Nat × Bool) :=
 /-- The recomputed cut and the replay's frontier machine agree on the root. -/
 theorem residue6_machine : rootShape cut.1 = rootShape m6 := by decide +kernel
 
-/-! ## The merged typed state fails at the cut -/
+/-! ## Historical: H1's typed state fails at the cut (`E4-TYPED-CE-011`) -/
 
 theorem any_fail_not_clean (c : CauseV)
     (hany : c.reasons.any (fun r => r.tag == ReasonTag.fail) = true)
@@ -185,7 +190,7 @@ theorem any_fail_not_clean (c : CauseV)
   exact hne (beq_iff_eq.mp htag)
 
 /-- At the cut, H1's inertness does not apply to the root: no halt, no queue, no published exit. -/
-theorem m6_not_inert : ¬ CodeInert m6 [] (.fiber Api.root) := by
+theorem m6_not_inert : ¬ H1Shapes.CodeInert m6 [] (.fiber Api.root) := by
   intro h
   rcases h with hs | hterm
   · rw [m6_stuck_none] at hs
@@ -198,9 +203,9 @@ theorem m6_not_inert : ¬ CodeInert m6 [] (.fiber Api.root) := by
 /-- A stale `Fail` over an empty stack is not a typed saved position at the root's type
 (error `never`) when its code is not inert. -/
 theorem stale_not_saved (w : W) (m : RState) (q : List RCmd) (p : Expect) (x : RSaved)
-    (hni : ¬ CodeInert m q p) (hlen : x.stack.length = 0)
+    (hni : ¬ H1Shapes.CodeInert m q p) (hlen : x.stack.length = 0)
     (hstale : staleFail x.current = true) :
-    ¬ SavedPosition (prog : ProgramSource) w m q p ty x := by
+    ¬ H1Shapes.SavedPosition (prog : ProgramSource) w m q p ty x := by
   rintro ⟨tin, code0, stack, _⟩
   have code := code0 hni
   have hnil : x.stack = [] := List.eq_nil_of_length_eq_zero hlen
@@ -218,21 +223,21 @@ theorem stale_not_saved (w : W) (m : RState) (q : List RCmd) (p : Expect) (x : R
       exact any_fail_not_clean c hstale
         (cleanExit_of_never_fits w ty c rfl (TypedProg.pure_inv code).1)
 
-/-- **The merged typed state fails at the cut machine, at every world** (the empty queue is
-what `decision_preserves` and `typedState_reachable` read). -/
-theorem window_untyped (w : W) : ¬ TypedState (prog : ProgramSource) ty w m6 := by
+/-- **H1's typed state fails at the cut machine, at every world** (the empty queue is what its
+`decision_preserves` and `typedState_reachable` read). -/
+theorem window_untyped (w : W) : ¬ H1Shapes.TypedState (prog : ProgramSource) ty w m6 := by
   intro typed
   obtain ⟨f, hf, hid, _, _, hlen, hstale⟩ := m6_root_running
   have declared : expectOf w (.fiber f.id) = some ty := by
     change w.Γ f.id = some ty
     rw [hid]
     exact typed.1.root
-  have hni : ¬ CodeInert m6 [] (.fiber f.id) := by rw [hid]; exact m6_not_inert
+  have hni : ¬ H1Shapes.CodeInert m6 [] (.fiber f.id) := by rw [hid]; exact m6_not_inert
   exact stale_not_saved w m6 [] _ f.frame hni hlen hstale (((typed.2.1.c0 f hf).c0).c0 ty declared)
 
-/-- `M6Ledger.typedState_reachable`'s proposition at the merged head, refuted at the cut. -/
+/-- H1's `M6Ledger.typedState_reachable` proposition, refuted at the cut. -/
 theorem capstone_false_window : ¬ (Api.typeOf prog [] = some ty → ClosedEff ty →
-    RReachable (prog : ProgramSource) 6 m6 → ∃ w, TypedState (prog : ProgramSource) ty w m6) := by
+    RReachable (prog : ProgramSource) 6 m6 → ∃ w, H1Shapes.TypedState (prog : ProgramSource) ty w m6) := by
   intro h
   obtain ⟨w, hw⟩ := h typed_source closed_ty reach6
   exact window_untyped w hw
@@ -258,28 +263,28 @@ theorem admitted_noAnswer (J : W → RState → Prop) (fuel : Nat) :
     | installMiddleware => trivial
     | advance millis => trivial
 
-/-- `decision_preserves`'s proposition at the merged head, at this program and budget. -/
+/-- H1's `decision_preserves` proposition, at this program and budget. -/
 def DecisionPreserves (fuel : Nat) : Prop :=
-  ∀ (d : Api.Decision) (w : W) (m : RState), TypedState (prog : ProgramSource) ty w m →
-    AnswerOk w m d → ∃ w', w.leHost w' ∧ TypedState (prog : ProgramSource) ty w'
+  ∀ (d : Api.Decision) (w : W) (m : RState), H1Shapes.TypedState (prog : ProgramSource) ty w m →
+    AnswerOk w m d → ∃ w', w.leHost w' ∧ H1Shapes.TypedState (prog : ProgramSource) ty w'
       (letI := termEvaluatorFor prog
        stepDecisionState (interpR prog) fuel m d).1
 
-/-- `typedState_load`'s conclusion at the merged head, at this program and budget. -/
-def Loads (fuel : Nat) : Prop := ∃ w, TypedState (prog : ProgramSource) ty w (loadR prog fuel fuel)
+/-- H1's `typedState_load` conclusion, at this program and budget. -/
+def Loads (fuel : Nat) : Prop := ∃ w, H1Shapes.TypedState (prog : ProgramSource) ty w (loadR prog fuel fuel)
 
-/-- **The merged ledger's M5 and M6b cannot both hold at this program** (budget 6), through the
-tree's own replay lift. -/
+/-- **H1's M5 and M6b cannot both hold at this program** (budget 6), through the tree's own
+replay lift. -/
 theorem ledger_jointly_false_window : ¬ (Loads 6 ∧ DecisionPreserves 6) := by
   rintro ⟨⟨w0, h0⟩, pres⟩
   letI := termEvaluatorFor prog
   obtain ⟨w, _, hw⟩ := Effect4.Machine.Lift.replayEval_lift hostOrder
-    (fun w m => TypedState (prog : ProgramSource) ty w m) (fun w m d => AnswerOk w m d)
+    (fun w m => H1Shapes.TypedState (prog : ProgramSource) ty w m) (fun w m d => AnswerOk w m d)
     (interpR prog) 6 (fun w m d _ ht ha => pres d w m ht ha) tape w0 (loadR prog 6 6) h0
     (admitted_noAnswer _ 6 tape answerFree _)
   exact window_untyped w hw
 
-/-! ## The finished run: covered by H1's published-exit disjunct at the merged head -/
+/-! ## Historical: the finished run is covered by H1's published-exit disjunct -/
 
 theorem m7_root_published : ∃ f ∈ m7.fibers, f.id = Api.root ∧ f.exit.isSome = true := by
   decide +kernel
@@ -287,11 +292,11 @@ theorem m7_root_published : ∃ f ∈ m7.fibers, f.id = Api.root ∧ f.exit.isSo
 theorem m9_root_published : ∃ f ∈ m9.fibers, f.id = Api.root ∧ f.exit.isSome = true := by
   decide +kernel
 
-theorem m7_root_inert : CodeInert m7 [] (.fiber Api.root) := by
+theorem m7_root_inert : H1Shapes.CodeInert m7 [] (.fiber Api.root) := by
   obtain ⟨f, hf, hid, hex⟩ := m7_root_published
   exact Or.inr (Or.inr ⟨f, hf, hid, hex⟩)
 
-theorem m9_root_inert : CodeInert m9 [] (.fiber Api.root) := by
+theorem m9_root_inert : H1Shapes.CodeInert m9 [] (.fiber Api.root) := by
   obtain ⟨f, hf, hid, hex⟩ := m9_root_published
   exact Or.inr (Or.inr ⟨f, hf, hid, hex⟩)
 
@@ -376,7 +381,7 @@ def positionId : Expect → Option FiberId
 
 /-- H1's inertness, extended: a running fiber whose code no queued command runs. -/
 def CodeInertRun (m : RState) (q : List RCmd) (p : Expect) : Prop :=
-  CodeInert m q p ∨ ∃ id, positionId p = some id ∧
+  H1Shapes.CodeInert m q p ∨ ∃ id, positionId p = some id ∧
     (∃ f ∈ m.fibers, f.id = id ∧ f.running = true) ∧ q.all (fun c => !continues id c) = true
 
 theorem running_exempt_at_m6 : CodeInertRun m6 [] (.fiber Api.root) := by
@@ -416,12 +421,14 @@ theorem worldValid_not_upward_closed :
   revert hmem
   decide
 
-/-! ## Probe C at the merged head: halting keeps the typed state (`E4-TYPED-CE-014`)
+/-! ## Historical: probe C under H1 (`E4-TYPED-CE-014`)
 
-`RunMachine.halt` sets only `stuck` (`Machine/Fibers.lean:665-667`); the merged `TypedState`
-reads `stuck` only through H1's `CodeInert`, which makes every current code inert on a halted
-machine. So halting keeps it at every queue, a halting command meets `StepPreserves`'s
-conclusion at the same world, and the typed state never excludes a stuck machine. -/
+`RunMachine.halt` sets only `stuck` (`Machine/Fibers.lean:665-667`); H1's typed state reads
+`stuck` only through its `CodeInert`, which makes every current code inert on a halted machine.
+So halting keeps it at every queue, a halting command meets H1's `StepPreserves` conclusion at
+the same world, and H1's typed state never excludes a stuck machine. -/
+
+namespace H1
 
 /-! ### Transport through the generated skeleton
 
@@ -434,11 +441,11 @@ structure over the bundle, so finalizer names and scope states are taken by case
 section Transport
 variable {root : ProgramSource} {m m' : RState} {q q' : List RCmd} {w : W} {e : Expect}
 
-theorem finNameOk_tr (x : FinName) (h : FinNameOk (statePreds root m q) w e x) :
-    FinNameOk (statePreds root m' q') w e x := by
+theorem finNameOk_tr (x : FinName) (h : FinNameOk (H1Shapes.statePreds root m q) w e x) :
+    FinNameOk (H1Shapes.statePreds root m' q') w e x := by
   cases x with
   | foreign capture =>
-    change CaptureOk (statePreds root m q) w e capture at h
+    change CaptureOk (H1Shapes.statePreds root m q) w e capture at h
     exact ⟨h.c0⟩
   | interruptFiber fiber skipSelf => trivial
   | closeChildScope scope => trivial
@@ -451,7 +458,7 @@ theorem finNameOk_tr (x : FinName) (h : FinNameOk (statePreds root m q) w e x) :
   | memoDone layer memoMap => trivial
 
 theorem scopeStateOk_tr (x : Effect4.ScopeState Nat FinName Val Err Defect FiberId Ann)
-    (h : ScopeStateOk (statePreds root m q) w e x) : ScopeStateOk (statePreds root m' q') w e x := by
+    (h : ScopeStateOk (H1Shapes.statePreds root m q) w e x) : ScopeStateOk (H1Shapes.statePreds root m' q') w e x := by
   cases x with
   | empty => trivial
   | openEmpty => trivial
@@ -459,20 +466,20 @@ theorem scopeStateOk_tr (x : Effect4.ScopeState Nat FinName Val Err Defect Fiber
   | openMap entries => exact fun v hv => finNameOk_tr v.2 (h v hv)
   | closed exit => trivial
 
-theorem storesOk_tr (x : Stores) (h : StoresOk (statePreds root m q) w e x) :
-    StoresOk (statePreds root m' q') w e x :=
+theorem storesOk_tr (x : Stores) (h : StoresOk (H1Shapes.statePreds root m q) w e x) :
+    StoresOk (H1Shapes.statePreds root m' q') w e x :=
   ⟨h.c0, h.c1, ⟨h.c2.c0⟩,
     ⟨fun entry member => ⟨⟨scopeStateOk_tr entry.scope.state ((h.c3.c0 entry member).c0.c0)⟩⟩⟩,
     fun memo member => ⟨fun v hv => ⟨finNameOk_tr v.2.finalizer (((h.c4 memo member).c0 v hv).c0)⟩⟩,
     h.c5⟩
 
 theorem dispatcherOk_tr (x : Dispatcher EffName EffThunk Val Err Defect FiberId Ann RProgram)
-    (h : DispatcherOk (statePreds root m q) w e x) : DispatcherOk (statePreds root m' q') w e x :=
+    (h : DispatcherOk (H1Shapes.statePreds root m q) w e x) : DispatcherOk (H1Shapes.statePreds root m' q') w e x :=
   ⟨fun bucket hb => ⟨fun task ht => ((h.c0 bucket hb).c0 task ht)⟩⟩
 
 theorem runFiberOk_tr (x : RFiber)
-    (hs : ∀ w e x, (statePreds root m q).SavedOk w e x → (statePreds root m' q').SavedOk w e x)
-    (h : RunFiberOk (statePreds root m q) w e x) : RunFiberOk (statePreds root m' q') w e x :=
+    (hs : ∀ w e x, (H1Shapes.statePreds root m q).SavedOk w e x → (H1Shapes.statePreds root m' q').SavedOk w e x)
+    (h : RunFiberOk (H1Shapes.statePreds root m q) w e x) : RunFiberOk (H1Shapes.statePreds root m' q') w e x :=
   ⟨⟨hs _ _ _ h.c0.c0⟩, h.c1, h.c2, h.c3, dispatcherOk_tr x.dispatcher h.c4, h.c5⟩
 
 end Transport
@@ -520,11 +527,11 @@ theorem storedObserverOk_halt {root : ProgramSource} {w : W} {m : RState} {why :
 /-- Halting changes no clause the merged typed state checks: H1's `CodeInert` makes every current
 code inert on a halted machine, and the rest reads fields `halt` leaves alone. -/
 theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)
-    (q : List RCmd) (why : Stuck) (h : TypedState root rootTy w m q) :
-    TypedState root rootTy w (m.halt why) q := by
+    (q : List RCmd) (why : Stuck) (h : H1Shapes.TypedState root rootTy w m q) :
+    H1Shapes.TypedState root rootTy w (m.halt why) q := by
   obtain ⟨valid, ok, deliv, sched, obsv, reg⟩ := h
-  have saved : ∀ w e x, (statePreds root m q).SavedOk w e x →
-      (statePreds root (m.halt why) q).SavedOk w e x := by
+  have saved : ∀ w e x, (H1Shapes.statePreds root m q).SavedOk w e x →
+      (H1Shapes.statePreds root (m.halt why) q).SavedOk w e x := by
     intro w e x hx t ht
     obtain ⟨tin, _, stack, prov⟩ := hx t ht
     exact ⟨tin, fun live => False.elim (live (Or.inl rfl)), stack, prov⟩
@@ -555,16 +562,304 @@ theorem queueOk_nil (root : ProgramSource) (w : W) (m : RState) : QueueOk root w
 /-- A command whose result is `(m.halt why, [])` (for example `linkScope` on an unknown scope,
 `Machine/Fibers.lean:1010`) meets the conclusion `StepPreserves` asks for, at the same world. -/
 theorem halting_result_typed (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)
-    (why : Stuck) (h : TypedState root rootTy w m) :
-    ∃ w', w.leHost w' ∧ TypedState root rootTy w' (m.halt why) [] ∧
+    (why : Stuck) (h : H1Shapes.TypedState root rootTy w m) :
+    ∃ w', w.leHost w' ∧ H1Shapes.TypedState root rootTy w' (m.halt why) [] ∧
       QueueOk root w' (m.halt why) [] :=
   ⟨w, leHost_refl w, typedState_halt root rootTy w m [] why h, queueOk_nil root w (m.halt why)⟩
 
 /-- Hence the typed state does not imply that the machine is not stuck. -/
 theorem typed_not_imply_running (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)
-    (why : Stuck) (h : TypedState root rootTy w m) :
-    ∃ m', TypedState root rootTy w m' ∧ m'.stuck = some why :=
+    (why : Stuck) (h : H1Shapes.TypedState root rootTy w m) :
+    ∃ m', H1Shapes.TypedState root rootTy w m' ∧ m'.stuck = some why :=
   ⟨m.halt why, typedState_halt root rootTy w m [] why h, rfl⟩
+
+end H1
+
+/-! ## Row 134's split at probe A's machines (positive)
+
+`J` is `MachineTyped`. At the cut the root is running, so `J`'s code clause does not read its
+stale slot; at the finished run the root has exited. Both machines hold one quiet root over
+empty stores, so one builder, over facts checked by `decide +kernel`, gives `J` at an explicit
+world. -/
+
+/-- `J`'s code clause at the cut, at every world: the window fiber is running. -/
+theorem liveCode_m6 (w : W) : LiveCode (prog : ProgramSource) w m6 := by
+  intro f hf _ idle
+  rw [(m6_only_root f hf).2.1] at idle
+  cases idle
+
+/-- The world a quiet root machine is typed at: the root at `ty`, the machine's store. -/
+def rootWorld (m : RState) : W := { initialWorld ty with state := m.state }
+
+/-- One quiet fiber: the root, not parked, nothing pending, an empty stack, no observers or
+tasks, the empty context, recorded causes interrupts, no race marker, running or exited, and an
+exit (if any) that is an interrupt-only failure. -/
+abbrev QuietFiber (f : RFiber) : Prop :=
+  f.id = Api.root ∧ f.parked = .notParked ∧ f.pending.isEmpty = true ∧
+    f.finalizing.isNone = true ∧ f.frame.stack.isEmpty = true ∧ f.observers.isEmpty = true ∧
+    f.dispatcher.buckets.isEmpty = true ∧ f.context = emptyCtx ∧
+    f.frame.deferredInterrupt = false ∧ raceRegistrationR f.frame.current = none ∧
+    (f.frame.interruptedCause.all fun c => c.reasons.all (·.tag == .interrupt)) = true ∧
+    (f.running || f.exit.isSome) = true ∧ (!f.exit.isSome || !f.running) = true ∧
+    (f.exit.all fun ex => match ex with
+      | .success _ => false
+      | .failure c => c.reasons.all (·.tag == .interrupt)) = true
+
+/-- A machine of one quiet root over empty stores. Every field is decidable. -/
+structure QuietRoot (m : RState) : Prop where
+  ids : m.fibers.map (·.id) = [Api.root]
+  races : m.races.isEmpty = true
+  stuck : m.stuck = none
+  refs : m.state.refs.isEmpty = true
+  cells : m.state.deferreds.cells.isEmpty = true
+  due : m.state.deferreds.due.isEmpty = true
+  scopes : m.state.scopes.entries.isEmpty = true
+  memo : m.state.memo.isEmpty = true
+  wf : m.state.WF
+  keys : (Guard.internalKeys m).isEmpty = true
+  nextId : 1 ≤ m.nextId
+  fibers : ∀ f ∈ m.fibers, QuietFiber f
+
+theorem interrupts_of_all {c : CauseV} (h : c.reasons.all (·.tag == .interrupt) = true) :
+    ∀ r ∈ c.reasons, r.tag = .interrupt :=
+  fun r hr => beq_iff_eq.mp (List.all_eq_true.mp h r hr)
+
+/-- `QuietFiber` with its facts named. -/
+structure QuietFacts (f : RFiber) : Prop where
+  id : f.id = Api.root
+  parked : f.parked = .notParked
+  pending : f.pending = []
+  finalizing : f.finalizing = none
+  stack : f.frame.stack = []
+  observers : f.observers = []
+  buckets : f.dispatcher.buckets = []
+  context : f.context = emptyCtx
+  deferred : f.frame.deferredInterrupt = false
+  marker : raceRegistrationR f.frame.current = none
+  recorded : ∀ c, f.frame.interruptedCause = some c → ∀ r ∈ c.reasons, r.tag = .interrupt
+  live : f.running = true ∨ f.exit.isSome = true
+  idle : f.exit.isSome = true → f.running = false
+  exitClean : ∀ ex, f.exit = some ex → ∃ c, ex = .failure c ∧ ∀ r ∈ c.reasons, r.tag = .interrupt
+
+theorem quietFacts {f : RFiber} (h : QuietFiber f) : QuietFacts f := by
+  obtain ⟨fid, parked, pending, finalizing, stack, observers, buckets, context, deferred, marker,
+    recorded, live, idle, exitClean⟩ := h
+  refine ⟨fid, parked, List.isEmpty_iff.mp pending, Option.isNone_iff_eq_none.mp finalizing,
+    List.isEmpty_iff.mp stack, List.isEmpty_iff.mp observers, List.isEmpty_iff.mp buckets, context,
+    deferred, marker, ?_, Bool.or_eq_true_iff.mp live, ?_, ?_⟩
+  · intro c hc
+    rw [hc] at recorded
+    exact interrupts_of_all recorded
+  · intro hexit
+    rw [hexit] at idle
+    cases hrun : f.running
+    · rfl
+    · rw [hrun] at idle
+      cases idle
+  · intro ex hex
+    rw [hex] at exitClean
+    cases ex with
+    | success v => cases exitClean
+    | failure c => exact ⟨c, rfl, interrupts_of_all exitClean⟩
+
+/-- A quiet root machine is in `J` at its root world. -/
+theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
+    MachineTyped (prog : ProgramSource) ty (rootWorld m) m := by
+  have old := initial_world_valid ty prog 6 6 closed_ty
+  have facts : ∀ f ∈ m.fibers, QuietFacts f := fun f hf => quietFacts (q.fibers f hf)
+  have races : m.races = [] := List.isEmpty_iff.mp q.races
+  have refs : m.state.refs = [] := List.isEmpty_iff.mp q.refs
+  have cells : m.state.deferreds.cells = [] := List.isEmpty_iff.mp q.cells
+  have due : m.state.deferreds.due = [] := List.isEmpty_iff.mp q.due
+  have entries : m.state.scopes.entries = [] := List.isEmpty_iff.mp q.scopes
+  have memo : m.state.memo = [] := List.isEmpty_iff.mp q.memo
+  have keys : Guard.internalKeys m = [] := List.isEmpty_iff.mp q.keys
+  have noRequests : ∀ fiber token, requestOfR m fiber token = none := by
+    intro fiber token
+    unfold requestOfR
+    cases found : m.fiber? fiber with
+    | none => rfl
+    | some f =>
+      have parked := (facts f (List.mem_of_find?_eq_some found)).parked
+      show (guard (f.parked = .withGuard token) >>= fun _ => externalRequestR f.frame.current) = none
+      rw [parked]
+      rfl
+  have valid : WorldValid ty (rootWorld m) m :=
+    { ids := q.ids.symm
+      fibers := fun id => by rw [q.ids]; exact old.fibers id
+      heap := fun key => by
+        change ((initialWorld ty).Ρ key).isSome = true ↔ key.index < m.state.refs.length
+        rw [refs]
+        exact old.heap key
+      promises := fun key => by
+        change ((initialWorld ty).«Π» key).isSome = true ↔ key.index < m.state.deferreds.cells.length
+        rw [cells]
+        exact old.promises key
+      tokens := fun f hf token parked => by
+        rw [(facts f hf).parked] at parked
+        cases parked
+      tokenBound := fun _ _ _ h => nomatch h
+      tokenTargets := fun _ _ _ h => nomatch h
+      state := rfl
+      wf := q.wf
+      cells := ⟨fun i v hv => (by
+          change m.state.refs[i]? = some v at hv
+          rw [refs] at hv
+          cases hv),
+        fun i v hv => (by
+          change m.state.deferreds.cells[i]? = some v at hv
+          rw [cells] at hv
+          cases hv)⟩
+      fiberClosed := old.fiberClosed
+      heapClosed := old.heapClosed
+      promiseClosed := old.promiseClosed
+      tokenClosed := old.tokenClosed
+      root := old.root }
+  refine ⟨⟨valid, ⟨fun f hf => ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩, ?_, ⟨q.stuck⟩⟩
+  · have fact := facts f hf
+    refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
+    · intro t _
+      refine ⟨t, ?_, ⟨fact.recorded, fun deferred => ?_⟩⟩
+      · rw [fact.stack]
+        exact .nil _
+      · rw [fact.deferred] at deferred
+        cases deferred
+    · intro p hp
+      rw [fact.pending] at hp
+      cases hp
+    · intro v hv
+      rw [fact.finalizing] at hv
+      cases hv
+    · intro ex hex t _
+      obtain ⟨c, rfl, interrupts⟩ := fact.exitClean ex hex
+      exact ⟨fitsExit_of_clean _ t c (cleanExit_of_interrupts c interrupts),
+        noShapeDefect_of_interrupts t c interrupts⟩
+    · intro b hb
+      rw [fact.buckets] at hb
+      cases hb
+    · intro key value sty lookup
+      rw [fact.context] at lookup
+      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
+      rw [Env.Context.getV_empty] at lookup
+      cases lookup
+  · intro r hr
+    rw [races] at hr
+    cases hr
+  · refine ⟨fun o ho => ?_, fun i v hv => ?_, ⟨fun i v hv => ?_⟩, ⟨fun e he => ?_⟩,
+      fun v hv => ?_, trivial⟩
+    · rw [due] at ho; cases ho
+    · change m.state.refs[i]? = some v at hv
+      rw [refs] at hv; cases hv
+    · change m.state.deferreds.cells[i]? = some v at hv
+      rw [cells] at hv; cases hv
+    · rw [entries] at he; cases he
+    · rw [memo] at hv; cases hv
+  · intro f hf token parked
+    rw [(facts f hf).parked] at parked
+    cases parked
+  · exact
+      { fiberIds := by rw [q.ids]; exact List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩
+        fibersBelow := fun f hf => by
+          rw [(facts f hf).id]
+          exact q.nextId
+        raceIds := by rw [races]; exact List.nodup_nil
+        racesBelow := fun r hr => by rw [races] at hr; cases hr
+        raceHosts := fun r hr => by rw [races] at hr; cases hr
+        keysBelow := fun key hk => by rw [keys] at hk; cases hk
+        requestsBelow := fun fiber token request hr => by rw [noRequests] at hr; cases hr
+        requestsOwned := fun fiber token request hr => by rw [noRequests] at hr; cases hr
+        pendingShape := fun f hf => by
+          unfold Guard.PendingShape
+          rw [(facts f hf).parked]
+          exact (facts f hf).pending
+        parkedIdle := fun f hf parked => absurd (facts f hf).parked parked
+        parkedBelow := fun f hf token parked => by
+          rw [(facts f hf).parked] at parked
+          cases parked
+        exited := fun f hf hexit => ⟨(facts f hf).parked, (facts f hf).idle hexit⟩
+        deferredCause := fun f hf deferred => by
+          rw [(facts f hf).deferred] at deferred
+          cases deferred }
+  · refine ⟨fun f hf p hp => ?_, fun f hf o ho => ?_⟩
+    · rw [(facts f hf).pending] at hp
+      cases hp
+    · rw [(facts f hf).observers] at ho
+      cases ho
+  · intro f hf raceId marker
+    rw [(facts f hf).marker] at marker
+    cases marker
+  · intro f hf hexit idle
+    rcases (facts f hf).live with running | exited
+    · rw [idle] at running
+      cases running
+    · rw [hexit] at exited
+      cases exited
+
+theorem quiet6 : QuietRoot m6 :=
+  { ids := by decide +kernel, races := by decide +kernel, stuck := m6_stuck_none,
+    refs := by decide +kernel, cells := by decide +kernel, due := by decide +kernel,
+    scopes := by decide +kernel, memo := by decide +kernel, wf := by decide +kernel,
+    keys := by decide +kernel, nextId := by decide +kernel, fibers := by decide +kernel }
+
+theorem quiet9 : QuietRoot m9 :=
+  { ids := by decide +kernel, races := by decide +kernel, stuck := by decide +kernel,
+    refs := by decide +kernel, cells := by decide +kernel, due := by decide +kernel,
+    scopes := by decide +kernel, memo := by decide +kernel, wf := by decide +kernel,
+    keys := by decide +kernel, nextId := by decide +kernel, fibers := by decide +kernel }
+
+/-- **`J` holds at the cut** where H1's typed state failed (`window_untyped`). -/
+theorem machineTyped_m6 : MachineTyped (prog : ProgramSource) ty (rootWorld m6) m6 :=
+  machineTyped_of_quiet m6 quiet6
+
+/-- **`J` holds on the finished run**, the root's stale slot outside the code clause. -/
+theorem machineTyped_m9 : MachineTyped (prog : ProgramSource) ty (rootWorld m9) m9 :=
+  machineTyped_of_quiet m9 quiet9
+
+/-- The amended capstone's conclusion at the cut: probe A does not refute it. -/
+theorem capstone_window_holds :
+    LawfulSource (prog : ProgramSource) → Api.typeOf prog [] = some ty → ClosedEff ty →
+      RReachable (prog : ProgramSource) 6 m6 → ∃ w, MachineTyped (prog : ProgramSource) ty w m6 :=
+  fun _ _ _ _ => ⟨rootWorld m6, machineTyped_m6⟩
+
+/-- The decision lift's loop entry at the cut: `J` gives `I` at the evaluate queue. -/
+theorem evaluate_entry_m6 :
+    ConfigTyped (prog : ProgramSource) ty (rootWorld m6) m6 [Cmd.evaluate Api.root, Cmd.drainDue] :=
+  evaluate_entry _ _ _ _ _ machineTyped_m6
+
+/-! ## Row 139 beside probe C
+
+The generated part with its correlations still tolerates a halt: `TypedState` reads no `stuck`,
+and with the bundle independent of the machine its clauses carry over by the fields `halt`
+leaves alone. `J` carries `stuck = none` and excludes every halted machine. -/
+
+theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)
+    (why : Stuck) (h : TypedState root rootTy w m) : TypedState root rootTy w (m.halt why) := by
+  obtain ⟨valid, ok, deliv, sched, obsv, reg⟩ := h
+  exact ⟨{ ids := valid.ids, fibers := valid.fibers, heap := valid.heap,
+           promises := valid.promises, tokens := valid.tokens, tokenBound := valid.tokenBound,
+           tokenTargets := valid.tokenTargets, state := valid.state, wf := valid.wf,
+           cells := valid.cells, fiberClosed := valid.fiberClosed, heapClosed := valid.heapClosed,
+           promiseClosed := valid.promiseClosed, tokenClosed := valid.tokenClosed,
+           root := valid.root },
+    ⟨ok.c0, ok.c1, ok.c2⟩, deliv,
+    { fiberIds := sched.fiberIds, fibersBelow := sched.fibersBelow, raceIds := sched.raceIds,
+      racesBelow := sched.racesBelow, raceHosts := sched.raceHosts, keysBelow := sched.keysBelow,
+      requestsBelow := sched.requestsBelow, requestsOwned := sched.requestsOwned,
+      pendingShape := sched.pendingShape, parkedIdle := sched.parkedIdle,
+      parkedBelow := sched.parkedBelow, exited := sched.exited,
+      deferredCause := sched.deferredCause },
+    ⟨obsv.pendingOwner, fun f hf o ho => H1.storedObserverOk_halt o (obsv.observers f hf o ho)⟩, reg⟩
+
+/-- Probe C's `typedState_halt` read at `J`: false at every halted machine. -/
+theorem machineTyped_not_halted_here (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)
+    (why : Stuck) : ¬ MachineTyped root rootTy w (m.halt why) :=
+  machineTyped_not_halted root rootTy w m why
+
+/-- Probe C's `halting_result_typed` read at `I`: a command whose result halts never meets
+`StepPreserves`'s conclusion. -/
+theorem halting_result_outside (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)
+    (why : Stuck) (rest : List RCmd) : ¬ ConfigTyped root rootTy w (m.halt why) rest :=
+  fun typed => machineTyped_not_halted root rootTy w m why typed.machine
 
 end Test.Counterexamples.Machine.Semantics.StaleCode
 
@@ -608,16 +903,29 @@ open Test.Counterexamples.Machine.Semantics.StaleCode
 #print axioms exitsTyped6
 #print axioms exitsTyped7
 #print axioms worldValid_not_upward_closed
-#print axioms finNameOk_tr
-#print axioms scopeStateOk_tr
-#print axioms storesOk_tr
-#print axioms dispatcherOk_tr
-#print axioms runFiberOk_tr
-#print axioms halt_fiber?
-#print axioms halt_race?
-#print axioms countdownAt_halt
-#print axioms storedObserverOk_halt
+#print axioms H1.finNameOk_tr
+#print axioms H1.scopeStateOk_tr
+#print axioms H1.storesOk_tr
+#print axioms H1.dispatcherOk_tr
+#print axioms H1.runFiberOk_tr
+#print axioms H1.halt_fiber?
+#print axioms H1.halt_race?
+#print axioms H1.countdownAt_halt
+#print axioms H1.storedObserverOk_halt
+#print axioms H1.typedState_halt
+#print axioms H1.queueOk_nil
+#print axioms H1.halting_result_typed
+#print axioms H1.typed_not_imply_running
+#print axioms liveCode_m6
+#print axioms interrupts_of_all
+#print axioms quietFacts
+#print axioms machineTyped_of_quiet
+#print axioms quiet6
+#print axioms quiet9
+#print axioms machineTyped_m6
+#print axioms machineTyped_m9
+#print axioms capstone_window_holds
+#print axioms evaluate_entry_m6
 #print axioms typedState_halt
-#print axioms queueOk_nil
-#print axioms halting_result_typed
-#print axioms typed_not_imply_running
+#print axioms machineTyped_not_halted_here
+#print axioms halting_result_outside
