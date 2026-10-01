@@ -1,0 +1,18 @@
+# summary of step5-gen-wire.log (12395 lines)
+## commands
+lake build
+python3 scripts/generate.py --only wire
++ lake build OCaml5.Tools.EffWire
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/EffWire.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-ywbyyv2h/ocaml/goldens/eff
+## errors and warnings
+(none)
+## gates
+info: Test/All.lean:169:0: Effect4 library-root gate: 135 API/utility modules, 221 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:169:0: Effect4 module and axiom gate: checked 525 modules and 72539 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (15 module(s), 23 declaration(s)) additionally allows Classical.choice
+## built (not replayed)
+(none)
+## tail
+wrote 8 goldens and manifest.txt to /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-ywbyyv2h/ocaml/goldens/eff
+PASS generate: requested producers ran in dependency order
+LEAN_NUM_THREADS=1 make gen-$g  1.14s user 1.78s system 92% cpu 3.166 total
