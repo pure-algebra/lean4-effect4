@@ -43,19 +43,21 @@ planted shapes of `Test/Audit/TraversalFixture.lean` and four definitions of the
 members of the two fold definitions (`Checker.check`'s seven, `argTy`/`argsTy`, §7.8–§7.9), is
 the distance from "every traversal is a fold or generated".
 
-**A one-level match does not count** (this document's rule since 2026-10-01; the landing brief
-asked it to say which). It is listed by name in its own class, so AGENTS.md's "a hand `match` is
-an exemption the census lists by name" holds, but it is not in the distance, for three reasons.
-A case analysis that does not recurse is already a fold whose arms ignore the recursive results
-(`fold_of` reads it as one, pairing the value in — the paramorphism of §7), so converting it
-changes its spelling and nothing else; the principle is about recursion. What a new constructor
-costs a `match`, with or without a catch-all, is measured by the exhaustiveness inventory
-(`#exhaustive_gate`, read from the matcher's own type) and governed by the case-site policy
-(row 56, `make check-cases`); counting matches here as well would give that fact a second owner.
-And until 2026-10-01 the census counted a one-level match only when the compiler encoded it
-through the family's own `casesOn` (an exhaustive `match`, `Ty.isNever`) and missed it when the
-encoding went through a sparse `casesOn` (a catch-all, `Ty.isFactor`), so the old `structural`
-counts mixed the two; now every one-level match is a `one-level` row, whatever its encoding.
+**What the census counts** (decisions row 143, ruled 2026-10-01): recursive traversals only,
+structural or well-founded, private definitions included. A one-level case analysis is a
+classifier under row 56 and is not counted as a traversal; the instrument reports it in its own
+column, `one-level`, by name, so AGENTS.md's "a hand `match` is an exemption the census lists by
+name" still holds. The reasons the ruling rests on: a case analysis that does not recurse is
+already a fold whose arms ignore the recursive results (`fold_of` reads it as one, pairing the
+value in — the paramorphism of §7), so converting it changes its spelling and nothing else, and
+the principle is about recursion; what a new constructor costs a `match`, with or without a
+catch-all, is measured by the exhaustiveness inventory (`#exhaustive_gate`, read from the
+matcher's own type) and governed by the case-site policy (row 56, `make check-cases`), so
+counting matches here as well would give that fact a second owner; and until 2026-10-01 the
+census counted a one-level match only when the compiler encoded it through the family's own
+`casesOn` (an exhaustive `match`, `Ty.isNever`) and missed it when the encoding went through a
+sparse `casesOn` (a catch-all, `Ty.isFactor`), so the old `structural` counts mixed the two; now
+every one-level match is a `one-level` row, whatever its encoding.
 
 ## 2. The numbers
 
@@ -332,7 +334,11 @@ proofs that unfold `f` rewrite by `f.eq_cata`, and `f` is deleted. That is where
 **The named exemptions at `dceae006` (2026-10-01, by the instrument as repaired in §7.11).**
 Row 40 closed this list as tracked debt — nothing is converted for uniformity's sake, a hand
 definition that is not a fold is not thereby wrong — so naming each row with its shape is the
-whole obligation. The 24 hand traversals without a fold beside them:
+whole obligation. The exemptions named on 2026-10-01 (row 143) are `Ty.closed`,
+`Ty.instantiate`, `Ty.infer`, `Ty.varsOf`, `Ty.templateAdmissible`, `Ty.sub` and the three
+private traversals `Codegen.Types.ofNormalized`, `Representation.beq` and `Check.beq`. With the
+thirteen of row 40 as they classify now and the statement walks the repaired instrument shows,
+the 24 hand traversals without a fold beside them are:
 
 | rows | where | shape | why no connector |
 | --- | --- | --- | --- |
