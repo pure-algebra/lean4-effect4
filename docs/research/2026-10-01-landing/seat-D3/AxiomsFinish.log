@@ -1,0 +1,10 @@
+'Effect4.Program.Typed.raceRegistrationR_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.not_readsCode_idle' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.not_owner_idle' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.evaluate_preserves' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.pendingWeaker_filter' depends on axioms: [propext]
+'Effect4.Program.Typed.resume_step' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.resume_preserves' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.M6Ledger.step_evaluate.checked' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Typed.M6Ledger.step_resume.checked' depends on axioms: [propext, Quot.sound]
+exit 0
