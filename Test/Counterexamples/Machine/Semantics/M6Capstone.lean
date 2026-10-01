@@ -1593,15 +1593,13 @@ theorem published_saved_typed : H1Shapes.SavedPosition (rootProgram : ProgramSou
 #print axioms completed_position
 #print axioms published_saved_typed
 
-/-- Row 139's liveness at a machine with the empty context everywhere and no owed resume. -/
+/-- Row 139's liveness at a machine with no owed resume (the ambient scopes are `J`'s typed
+state's since row 156, `ambientScope_live`). -/
 theorem quiet_live (m : RState) (stuck : m.stuck = none)
-    (contexts : ∀ f ∈ m.fibers, f.context = emptyCtx)
     (due : m.state.deferreds.due = []) : MachineLive m := by
-  refine ⟨stuck, fun f hf scope ambient => ?_, fun o ho => ?_⟩
-  · rw [contexts f hf] at ambient
-    cases ambient
-  · rw [due] at ho
-    cases ho
+  refine ⟨stuck, fun o ho => ?_⟩
+  rw [due] at ho
+  cases ho
 
 /-! Row 134: the same terminal delivery under the split. The input's running root is read by the
 queued `deliver` (`ReadCode`); after the step its running root is continued by the queued
@@ -1638,7 +1636,7 @@ theorem typedState_machine : TypedState (rootProgram : ProgramSource) unitTy wor
     cases hp
 
 theorem machine_typed : MachineTyped (rootProgram : ProgramSource) unitTy world machine := by
-  refine ⟨typedState_machine, rfl, ?_, quiet_live machine rfl (by decide) rfl⟩
+  refine ⟨typedState_machine, rfl, ?_, quiet_live machine rfl rfl⟩
   intro f hf _ idle
   change f ∈ [fiber] at hf
   rw [List.mem_singleton] at hf
@@ -1689,7 +1687,7 @@ theorem typedState_result : TypedState (rootProgram : ProgramSource) unitTy worl
 `finish` is queued. -/
 theorem result_config_typed :
     ConfigTyped (rootProgram : ProgramSource) unitTy world result.1 result.2 := by
-  refine ⟨⟨typedState_result, rfl, ?_, quiet_live result.1 rfl (by decide) rfl⟩, ?_, result_queue⟩
+  refine ⟨⟨typedState_result, rfl, ?_, quiet_live result.1 rfl rfl⟩, ?_, result_queue⟩
   · intro f hf _ idle
     change f ∈ [afterFiber] at hf
     rw [List.mem_singleton] at hf
@@ -2339,7 +2337,7 @@ theorem typedState_input : TypedState (rootProgram : ProgramSource) unitTy world
 
 theorem config_input : ConfigTyped (rootProgram : ProgramSource) unitTy world machine commands := by
   refine ⟨⟨typedState_input, rfl, ?_,
-    H1TerminalAmendment.quiet_live machine rfl (by decide +kernel) rfl⟩, ?_, queue⟩
+    H1TerminalAmendment.quiet_live machine rfl rfl⟩, ?_, queue⟩
   · intro f member _ idle
     rcases member_cases f member with rfl | rfl <;> cases idle
   · intro f member _ reads _ ty declared

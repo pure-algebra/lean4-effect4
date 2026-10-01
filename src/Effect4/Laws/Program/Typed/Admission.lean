@@ -180,6 +180,7 @@ theorem fits_restrict {app app' : SigApp} (hext : SigExtends app.signature app'.
     (w : World) (hw : w.serviceTy = app'.serviceTy) (ty : Ty) (v : Val) (h : Fits w v ty) :
     Fits (restrictWorld app w) v ty :=
   @fits_map w (restrictWorld app w) (table_refl _) (table_refl _) (table_refl _) (fun _ _ hx => hx)
+    (fun _ hs => hs)
     (fun key sty hk => by
       change app.serviceTy key = some sty at hk
       rw [hw]

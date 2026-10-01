@@ -148,6 +148,9 @@ store and fiber protocols, and `TypedProg`'s `scopeExit` constructor. It persist
 order (`scopeLive_mono`). -/
 def ScopeLive (w : World) (sc : Nat) : Prop := (w.state.scopes.entryAt sc).isSome = true
 
+instance (w : World) (sc : Nat) : Decidable (ScopeLive w sc) :=
+  inferInstanceAs (Decidable ((w.state.scopes.entryAt sc).isSome = true))
+
 /-- Ghost updates used by the four allocation contracts. -/
 def World.addFiber (w : World) (id : FiberId) (ty : EffTy) : World :=
   { w with ids := w.ids ++ [id], Γ := tableInsert w.Γ id ty }

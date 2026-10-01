@@ -132,7 +132,7 @@ theorem context_of_fits (w : W) (v : Val) (typed : Fits w v (.handle Ty.contextT
     split at typed
     · exact absurd typed.1 (by decide)
     · exact absurd typed.1 (by decide)
-    · exact absurd typed (by decide)
+    · exact absurd typed.1 (by decide)
     · exact absurd typed.1 (by decide)
     · exact typed.elim
   · obtain ⟨_, ctx, hctx, services, _⟩ := typed

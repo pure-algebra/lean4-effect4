@@ -241,16 +241,13 @@ carries the scope's liveness (seat I's receipt). Race-id liveness for the
 codes that name a race is `RegistrationState` (in `TypedState`): the only race halt is
 `registerRace` on a registration marker (`Machine/Fibers.lean:937-944`), and both code clauses
 leave the marker to it. A fiber handle's liveness is `Fits`'s fiber arm with
-`WorldValid.fibers`. -/
+`WorldValid.fibers`; a fiber context's ambient scope is present by membership (`forkScoped` links
+the child into it, `:1474-1489`, `linkScope` `:1005-1036`): `ambientScope_live`, from `J`'s typed
+state, which replaced this structure's stand-in field `ambientScopes` at decisions row 156. -/
 structure MachineLive (m : RState) : Prop where
   /-- The machine has not halted (`E4-TYPED-CE-014`): every halting arm of a command is an
   obligation of that command's preservation proof. -/
   running : m.stuck = none
-  /-- `forkScoped` links the child into the context's ambient scope (`:1474-1489`; `linkScope`,
-  `:1005-1036`). The scope arm of `HandleFits` reading the scope store (seat A) makes
-  `ServiceOk` carry this for every typed context; until it lands the clause is stated here. -/
-  ambientScopes : ∀ f ∈ m.fibers, ∀ scope, Ctx.ambientScope f.context = some scope →
-    (m.state.scopes.entryAt scope).isSome = true
   /-- `drainOwed` posts a scheduled resume on its owner's dispatcher and halts on an absent owner
   (`postTask`, `:709-716`). Today's stores owe only `now` resumes (`DeferredStore.due`,
   `Machine/Stores.lean:1090`), so this holds vacuously on reachable machines. -/
@@ -282,6 +279,30 @@ this projection. -/
 theorem machineTyped_of_configTyped {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} {commands : List RCmd} (typed : ConfigTyped root rootTy w m commands) :
     MachineTyped root rootTy w m := typed.machine
+
+/-- **Every fiber's ambient scope is present** (decisions rows 139 and 156), from `J`: the
+fiber context's services fit their keys' carriers (`preds`' `ServiceOk`), the world's service
+table is the source's (row 112), which types the reserved `Scope` key at `Ty.scope`, and a scope
+handle's membership reads its scope's presence (row 156). With `WorldValid.state` it is the
+machine's store: `forkScoped`'s link never halts on the ambient scope (`Machine/Fibers.lean`
+`:1474-1489`, `linkScope` `:1005-1036`). It replaced `MachineLive`'s stand-in field. -/
+theorem ambientScope_live {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    (typed : MachineTyped root rootTy w m) {f : RFiber} (hf : f ∈ m.fibers) {scope : Nat}
+    (ambient : Ctx.ambientScope f.context = some scope) : ScopeLive w scope := by
+  obtain ⟨⟨_, ok, _, _, _, _⟩, services, _, _⟩ := typed
+  have fit : ServicesFit w f.context.services := (ok.c0 f hf).c5
+  have bound : f.context.services.getV Env.scopeKey = some (Val.scopeHandle scope) := by
+    change Env.scopeOfVal (f.context.services.getV Env.scopeKey) = some scope at ambient
+    unfold Env.scopeOfVal at ambient
+    split at ambient
+    · rename_i sc hsc
+      cases ambient
+      exact hsc
+    · cases ambient
+  have carrier : w.serviceTy Env.scopeKey = some Ty.scope := by
+    rw [services]
+    rfl
+  exact (fit Env.scopeKey _ _ bound carrier).2
 
 /-- A halted machine is outside `J` (row 139; probe C's `typedState_halt`, read at `J`). -/
 theorem machineTyped_not_halted (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
@@ -762,12 +783,10 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
         deferredCause := fun f hf => sched.deferredCause f (member f hf) }
   · obtain ⟨race, resultTy, found, host, token, reply⟩ := reg f (member f hf) raceId marker
     exact ⟨race, resultTy, (raceLookup raceId).trans found, host, token, reply⟩
-  · refine ⟨stuck.trans live.running, fun f hf scope ambient => ?_, fun o ho owner priority mode => ?_⟩
-    · rw [state]
-      exact live.ambientScopes f (member f hf) scope ambient
-    · rw [state] at ho
-      rw [lookup]
-      exact live.dueOwners o ho owner priority mode
+  · refine ⟨stuck.trans live.running, fun o ho owner priority mode => ?_⟩
+    rw [state] at ho
+    rw [lookup]
+    exact live.dueOwners o ho owner priority mode
 
 /-- The queue facts survive a trace edit: an `emit` changes no lookup, counter or store. -/
 theorem queueOk_emit {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
@@ -881,16 +900,12 @@ under the source's signature (`root.signature`, rows 111–114), after expanding
 references (`Program/Typing.lean:61-64`) while `loadR` loads the program as written
 (`RuntimeR.lean:41-46`), so the reduction is for a program with no reference sites. -/
 
-/-- `MachineLive` holds on a running machine whose fibers carry the empty context and whose
-store owes nothing. -/
+/-- `MachineLive` holds on a running machine whose store owes nothing. -/
 theorem machineLive_of_quiet (m : RState) (stuck : m.stuck = none)
-    (contexts : ∀ f ∈ m.fibers, f.context = emptyCtx) (due : m.state.deferreds.due = []) :
-    MachineLive m := by
-  refine ⟨stuck, fun f hf scope ambient => ?_, fun o ho => ?_⟩
-  · rw [contexts f hf] at ambient
-    cases ambient
-  · rw [due] at ho
-    cases ho
+    (due : m.state.deferreds.due = []) : MachineLive m := by
+  refine ⟨stuck, fun o ho => ?_⟩
+  rw [due] at ho
+  cases ho
 
 /-- **M5's builder.** A root whose loaded code is typed at every world, and whose head is not a
 race marker, loads into `J` at the initial world over the source's service table (row 112). -/
@@ -906,7 +921,7 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
     schedulerState_load root.program fuel compileFuel,
     observerState_load root _ fuel compileFuel,
     registrationState_load root _ fuel compileFuel noMarker⟩, rfl, ?_,
-    machineLive_of_quiet _ rfl (fun f hf => ?_) rfl⟩
+    machineLive_of_quiet _ rfl rfl⟩
   · intro f hf
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
@@ -947,10 +962,6 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
     rw [declared] at hty
     cases hty
     exact ⟨rootTy, code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
-  · change f ∈ [_] at hf
-    rw [List.mem_singleton] at hf
-    subst hf
-    rfl
 
 /-- **M5's reduction lemma, at the generated typed state** (seat A's
 `ValueMembership.typedStateF_load`, moved here and restated over row 134's split): a root whose
@@ -1304,9 +1315,10 @@ def M7NoHalt (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List A
 /-- Organization M4 (decisions row 139): every recorded exit's success value names only handles
 its machine's stores hold, on every reachable machine. The exit connector from `FitsExit` to the
 meaning layer's exit judgment (`organization/verify-ExitOkConnector.lean`, `exitOk_of_fitsExit`)
-takes this as its validity premise. It does not follow from `J` while the scope arm of
-`HandleFits` checks only the spelling (`organization/verify-ExitOkConnector.lean`'s `redA_scope`)
-and `Live` admits scope and memo handles unchecked; with seat A's scope arm and those arms it is a
+takes this as its validity premise. The scope arm of `HandleFits` reads the scope's presence
+since decisions row 156 (the formal pass's `redA_scope` dangling handle no longer fits:
+`Test/Program/ExitConnector.lean`, `dangling_scope_refused`), but `Live` still admits scope and
+memo handles unchecked at `unknown`, so it does not yet follow from `J`; with those arms it is a
 consequence of `J`, otherwise the native guard's handle facts transport through R4's bridge. -/
 def ExitHandlesValid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
   LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →

@@ -36,6 +36,7 @@ open Effect4.Program.Typed
 #print axioms Effect4.Program.Typed.machineTyped_of_configTyped
 #print axioms Effect4.Program.Typed.machineTyped_not_halted
 #print axioms Effect4.Program.Typed.storeTyped_of_typedState
+#print axioms Effect4.Program.Typed.ambientScope_live
 #print axioms Effect4.Program.Typed.promiseTable_of_strong
 #print axioms Effect4.Program.Typed.cells_of_typedState
 #print axioms Effect4.Program.Typed.evaluate_entry

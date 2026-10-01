@@ -970,7 +970,7 @@ theorem getProg_typedF (w : W) :
           cases hty
           exact TypedProg.pure ⟨fits_subN w''' hsub ans hfit, trivial⟩
         · exact absurd hv.1 (by decide)
-        · exact absurd hv (by decide)
+        · exact absurd hv.1 (by decide)
         · exact absurd hv.1 (by decide)
         · exact hv.elim
       · exact absurd hv.1 (by decide)

@@ -651,7 +651,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | async register _ => exact asyncPre_mono root ord register cert h
   | setContext ctx =>
     simp only [fiberPre] at h ⊢
-    exact servicesFit_map hPi hRho ord.2 (serviceTy_of_le ord.1) h
+    exact servicesFit_map hPi hRho ord.2 (fun _ hs => scopeLive_mono ord.1 hs) (serviceTy_of_le ord.1) h
   | getContext | snapshotChildren => exact h
   | refuse _ | raceRegister _ => exact (h : False).elim
   | interruptAs target _ =>

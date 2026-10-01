@@ -8,9 +8,12 @@ typed state's `FitsExit` to the meaning layer's `Denote.ExitHasTy` when the worl
 external handle and a successful value is valid in the store. Each premise is necessary: drop
 either and the statement is false, at a world the typed state reaches by construction.
 
-* `validity_needed` (red control A): at the initial world, which allocates nothing, a scope
-  handle naming no scope fits `.handle Ty.scopeTarget` (`HandleFits` checks the spelling only),
-  while the meaning layer refuses it at the empty store, which holds no scope entry.
+* `validity_needed` (red control A): at a world that allocates nothing and whose store holds scope
+  7, the scope handle fits `.handle Ty.scopeTarget`, while the meaning layer refuses it at the
+  empty store, which holds no scope entry: the connector's store is not the world's. Before
+  decisions row 156 the witness was the initial world itself, whose store holds no scope
+  (`HandleFits` checked the spelling only); since row 156 membership reads the scope's presence,
+  and the dangling handle no longer fits there (`dangling_scope_refused`, integration seat I2).
 * `allocation_needed` (red control B): at a world whose store allocates one external handle
   spelled `"Foo"`, the handle fits `.handle "Foo"` and is valid in that store, while the meaning
   layer's `Val.hasTy`, at its default empty allocation list, refuses it.
@@ -38,19 +41,34 @@ def fooWorld : Typed.World :=
   { initialWorld fooRoot with
     state := { Stores.empty with externals := { ExternalStore.empty with allocated := ["Foo"] } } }
 
-/-- Red control A: with the allocation premise met, a dangling scope handle fits and the meaning
-layer refuses it. -/
+/-- A world whose store holds scope 7, a sequential scope made under the name 7. -/
+def scopeWorld : Typed.World :=
+  { initialWorld scopeRoot with
+    state := { Stores.empty with scopes := Stores.empty.scopes.make 7 .sequential } }
+
+/-- Red control A: with the allocation premise met, a scope handle fits at a world whose store
+holds its scope, and the meaning layer refuses it at a store that does not. -/
 theorem redA_scope :
-    (initialWorld scopeRoot).state.externals.allocated = [] ∧
-    FitsExit (initialWorld scopeRoot) scopeRoot (.success (Value.scope 7)) ∧
+    scopeWorld.state.externals.allocated = [] ∧
+    FitsExit scopeWorld scopeRoot (.success (Value.scope 7)) ∧
     ¬ Denote.ExitHasTy scopeRoot.answer scopeRoot.error Stores.empty
       (.success (Value.scope 7)) := by
-  refine ⟨rfl, (fitsExit_success_iff _ _ _).mpr rfl, ?_⟩
+  refine ⟨rfl, (fitsExit_success_iff _ _ _).mpr ⟨rfl, ScopeStore.entryAt_make_self _ _ _⟩, ?_⟩
   intro h
   have hv : Val.validIn Stores.empty (Value.scope 7) = false := by decide
   have h2 : Val.validIn Stores.empty (Value.scope 7) = true := h.2
   rw [hv] at h2
   exact Bool.false_ne_true h2
+
+/-- **Row 156 (proved)**: the dangling scope handle of the old red control A no longer fits at the
+initial world, whose store holds no scope: the scope arm of `HandleFits` reads presence. -/
+theorem dangling_scope_refused :
+    ¬ FitsExit (initialWorld scopeRoot) scopeRoot (.success (Value.scope 7)) := by
+  intro h
+  rw [fitsExit_success_iff] at h
+  obtain ⟨_, same, live⟩ := fits_scope_inv h
+  cases same
+  exact absurd live (by decide)
 
 /-- Red control B: with the validity premise met, an allocated external handle fits and the
 meaning layer refuses it. -/
@@ -82,3 +100,7 @@ theorem allocation_needed :
     redB_external.2.1)
 
 end Test.Program.ExitConnector
+
+#print axioms Test.Program.ExitConnector.redA_scope
+#print axioms Test.Program.ExitConnector.dangling_scope_refused
+#print axioms Test.Program.ExitConnector.validity_needed
