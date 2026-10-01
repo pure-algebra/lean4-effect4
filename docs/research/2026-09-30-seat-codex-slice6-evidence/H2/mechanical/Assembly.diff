@@ -1,0 +1,32 @@
+--- E/cutover/Assembly.lean
++++ H2/mechanical/Assembly.lean
+@@ -33,7 +33,7 @@
+ /-- A completion at an effect type: an exit strongly, a reference completion through the
+ heap table. -/
+ def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberId Ann → Prop
+-  | .ofExit ex => FitsExit w ty ex
++  | .ofExit ex => ExitOk w ty ex
+   | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ t.sub ty.answer = true
+ 
+ /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
+@@ -49,9 +49,9 @@
+ /-- The generated bundle, instantiated with the strong judgments. -/
+ def preds (root : ProgramSource) : Preds World where
+   SavedOk w e x := ∀ ty, expectOf w e = some ty →
+-    Contracts.SavedOk (TypedProg root) FitsExit (frameProtocols root) w ty x
++    Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty x
+   PendingOk w _ ps := ∀ p ∈ ps, ∃ id, (w.Θ id p.token).isSome = true
+-  exit w e ex := ∀ ty, expectOf w e = some ty → FitsExit w ty ex
++  exit w e ex := ∀ ty, expectOf w e = some ty → ExitOk w ty ex
+   ResumeOk w _ target token code := Contracts.ResumeOk (TypedProg root) w target token code
+   ServiceOk w _ ctx := ServicesFit w ctx.services
+   RaceOk w _ races := ∀ r ∈ races, (w.Θ r.host r.token).isSome = true
+@@ -68,7 +68,7 @@
+   WorldValid rootTy w m ∧ RStateOk (preds root) w m ∧
+   ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token →
+     ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
+-      StackAccepts (TypedProg root) FitsExit (frameProtocols root) w tin final f.frame.stack ∧
++      StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final f.frame.stack ∧
+       InterruptProvenance f.frame
+ 
+ /-- M6's reference runner has no host table, so its tapes contain no host answer.

@@ -1,0 +1,30 @@
+{
+  "Admission": {
+    "input_path": "/Users/pooks/Dev/lean4-effect4-slice6/docs/research/2026-09-30-seat-codex-slice6-evidence/E/cutover/Admission.lean",
+    "input_sha256": "0f437beae4538aa7ea57973a010a4d8148ad1ca44102a87612b32ff97eac38a0",
+    "candidate_sha256": "53316738e82e6f4dd8c29d3af6c18c815b381b6ec78d4456fe064b684220bb17",
+    "mechanical_substitution_count": 4,
+    "proof_body_repairs": 0
+  },
+  "Residual": {
+    "input_path": "/Users/pooks/Dev/lean4-effect4-slice6/docs/research/2026-09-30-seat-codex-slice6-evidence/E/cutover/Residual.lean",
+    "input_sha256": "d233dc0b5f4f22c5a6cb17a25a3a15398158d377cefca754850a2790997b2ef4",
+    "candidate_sha256": "8e41657950185e70dbd37e7694618355c2e7d40e62e1256f1b701732e628cc17",
+    "mechanical_substitution_count": 25,
+    "proof_body_repairs": 0
+  },
+  "Stack": {
+    "input_path": "/Users/pooks/Dev/lean4-effect4-slice6/docs/research/2026-09-30-seat-codex-slice6-evidence/E/cutover/Stack.lean",
+    "input_sha256": "dc88cf42d832d3bc832a1307cf54b8be2d7b09525fc6c9c5cff664025369a9f1",
+    "candidate_sha256": "79358578a1c506682410d8df31b9f52a5e61b4c09af36dcf4c3507d8a3ebea52",
+    "mechanical_substitution_count": 26,
+    "proof_body_repairs": 0
+  },
+  "Assembly": {
+    "input_path": "/Users/pooks/Dev/lean4-effect4-slice6/docs/research/2026-09-30-seat-codex-slice6-evidence/E/cutover/Assembly.lean",
+    "input_sha256": "266b401f702487041cfca861e80370e721d8262bf64e1183f553466049279108",
+    "candidate_sha256": "531d59250cb79132d15eed1f9d09eca7910b2c49d01bf3b59d3913239b3569fa",
+    "mechanical_substitution_count": 4,
+    "proof_body_repairs": 0
+  }
+}

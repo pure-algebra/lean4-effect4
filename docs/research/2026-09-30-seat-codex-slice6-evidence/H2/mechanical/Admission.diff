@@ -1,0 +1,54 @@
+--- E/cutover/Admission.lean
++++ H2/mechanical/Admission.lean
+@@ -16,6 +16,18 @@
+ 
+ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+ open Effect4.Laws.Effects
++
++/-- Part-one exclusion: no failure reason is a shape defect. This does not depend on the
++answer, error, or requirement columns; ordinary defects remain admitted. -/
++def NoShapeDefect : ExitV → Prop
++  | .success _ => True
++  | .failure cause => ∀ reason ∈ cause.reasons, match reason with
++    | .die defect _ => defect ≠ .badName ∧ defect ≠ .notImplemented
++    | _ => True
++
++/-- Membership plus the part-one exclusion, shared by every typed exit position. -/
++def ExitOk (w : World) (ty : EffTy) (ex : ExitV) : Prop :=
++  FitsExit w ty ex ∧ NoShapeDefect ex
+ 
+ /-- An evaluation environment typed pointwise at the corresponding static types. -/
+ def EnvTyped (w : World) (env : List Ty) (vals : List Val) : Prop :=
+@@ -42,7 +54,7 @@
+ inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
+   | at_ (p : Point) (ty : EffTy) (h : PointTyped src w p ty) :
+       BodyTyped src w (.at_ p) ty
+-  | fin (name : FinName) (ex : ExitV) (ty : EffTy) (hex : FitsExit w ty ex) :
++  | fin (name : FinName) (ex : ExitV) (ty : EffTy) (hex : ExitOk w ty ex) :
+       BodyTyped src w (.fin name ex) ty
+   | raceCleanup (race : Nat) :
+       BodyTyped src w (.raceCleanup race) (EffTy.pure .unit)
+@@ -55,12 +67,12 @@
+ 
+ /-- Membership at the answer column gives membership of the successful exit. -/
+ theorem strongExit_success (w : World) (ty : EffTy) (v : Val) (h : Fits w v ty.answer) :
+-    FitsExit w ty (.success v) := h
++    ExitOk w ty (.success v) := h
+ 
+ /-- A clean failure fits every effect type at every world: the error column constrains
+ `Fail` reasons only. -/
+ theorem strongExit_of_clean (w : World) (ty : EffTy) (c : CauseV)
+-    (h : cleanExit (.failure c) = true) : FitsExit w ty (.failure c) := by
++    (h : cleanExit (.failure c) = true) : ExitOk w ty (.failure c) := by
+   have hall : ∀ r ∈ c.reasons, r.tag ≠ .fail := by
+     intro r hr
+     exact bne_iff_ne.mp (List.all_eq_true.mp h r hr)
+@@ -74,7 +86,7 @@
+ 
+ /-- At a `never` error column a fitting failure is clean: no value has type `never`. -/
+ theorem cleanExit_of_never (w : World) (ty : EffTy) (c : CauseV) (never : ty.error = .never)
+-    (h : FitsExit w ty (.failure c)) : cleanExit (.failure c) = true := by
++    (h : ExitOk w ty (.failure c)) : cleanExit (.failure c) = true := by
+   rw [fitsExit_failure_iff, never] at h
+   unfold cleanExit
+   rw [List.all_eq_true]

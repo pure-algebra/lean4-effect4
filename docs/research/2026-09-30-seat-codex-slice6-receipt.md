@@ -456,4 +456,60 @@ point; blindly quantifying over every continuation answer would strengthen the n
 Rows 106 and the command ledger remain open; no M5–M7 proof was started. E4 is `0c1e9915`.
 
 ## H2 — shared exit judgment, probe first
-Pending.
+
+**STOPPED under addendum 3's part-one cost rule. Eight existing proof bodies require changes;
+no H2 production change landed.** The successful baseline and the mechanical part-one probe
+use the same fresh namespace and the same 67 copied theorem regions. The baseline compiles;
+the part-one probe fails in eight distinct bodies, with no errors outside theorem regions.
+The two failure sites in popR_typed count once. This is a measured lower bound on required
+repairs, not eight completed repairs or a claim that all remaining proofs would pass after them.
+
+| Module | Existing bodies requiring repair |
+| --- | --- |
+| Admission | strongExit_success, strongExit_of_clean, cleanExit_of_never |
+| Residual | strongExit_bool, settling_fork, strongExit_mono |
+| Stack | strongExit_failure_of_error, popR_typed |
+
+Seven bodies predate E; strongExit_mono is the adapter added in E and is now an existing body
+on this branch. It is counted, not hidden as a mechanical rename or a new helper. The probe
+makes 59 mechanical FitsExit-to-ExitOk substitutions and adds the two part-one definitions;
+no existing proof body was repaired. Membership's base FitsExit remains unchanged. Copies of
+the four E cutover modules supply the baseline, including their then-retained old definitions;
+the mapped proof bodies are the post-E bodies. The harness transformations and source hashes
+are recorded in harness-notes.md and the two map files.
+
+The required repair to strongExit_of_clean includes an explicit new premise: cleanExit alone
+permits die badName, so it cannot imply the strengthened exclusion. Its callers in popR_typed
+also need the appropriate original-cause and interrupt-provenance evidence. Merely adding
+unfolding to the failed proof would leave that statement false. The diagnostic attribution and
+local repair outline are in part-one-errors.json and mechanical/repair-plan.md. The latter is
+retained as the preparing seat's static plan; the compiler results in probe-status.json and
+this receipt supersede its uncompiled status.
+
+Smallest amendment: authorize the eight named existing-body repairs (seven legacy plus the E
+adapter), the explicit clean-failure premise, and the local cause-exclusion lemmas needed by
+those bodies. Keep the part-two requirement-row question separate and retain the prohibition
+on M5–M7 proofs. Further failures after those repairs would need another cost report; this
+probe does not promise that eight is the final cost. Proposed row 107 remains open. Neither
+E4-TYPED-CE-007 nor E4-TYPED-CE-003's repair column was changed.
+
+Commands, all with LEAN_NUM_THREADS=1 and from this worktree:
+- `lake env lean -DwarningAsError=true
+  docs/research/2026-09-30-seat-codex-slice6-evidence/H2/Baseline.lean`: exit 0
+  (`baseline.log`, empty successful output).
+- The same command for `H2/PartOne.lean`: exit 1, expected diagnostic result
+  (`part-one.log`). `map_errors.py PartOne part-one.log` maps the primary errors to the eight
+  bodies above (`part-one-errors.json`); no harness errors remain. A failing elaboration's
+  recovery placeholders are not proof evidence, and no positive claim is drawn from its
+  apparently unchanged downstream proofs.
+- The same command for `H2/diagnostics/MissingServiceTransport.lean`: final exit 0
+  (`missing-service.log`), all five printed theorems within [propext, Quot.sound]. The first
+  run's opaque-definition decidability failure was replaced by direct reduction; its log is
+  retained as missing-service.failed.log and is not proof evidence.
+
+The last diagnostic is limited to the part-two helper: equal error columns do not transport
+missingService exclusion when the requirement row changes from nonempty to empty. It supplies
+no saved frame or reached run and does not refute the full stack walk. It records why an
+additional service-presence argument is needed; part two was not implemented after the stop.
+All H2 candidates remain research evidence only. No source, tests, generated files or runtime
+behavior changed for H2. The preceding H1 evidence commit is `ea80292b`.
