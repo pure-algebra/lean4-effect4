@@ -262,7 +262,14 @@ C the assembled state, M7 and the ledger; E the algebra laws; F the instrument, 
 imports; H the DESIGN-BASIS refresh), then wave 2 (row 117's contract, the adequacy instances,
 M5, the eighteen commands, M6c, M7) and wave 3 (data stage 1, the renames, the glossary). The
 owner ratified rows 134, 137, 138 and 149 as recommended on 2026-10-01; the other owner-level
-choices proceed on the coordinator's recommendation (plan §1). Four rulings the owner gave Codex directly on 2026-10-01 are
+choices proceed on the coordinator's recommendation (plan §1). Merged so far: seat E
+(`a561d604`, the algebra laws), seat F (`efcf1ae2`, the census instrument, the registers, the
+`Effects`-free core root, the `ExitHasTy` rename and its connector, host-boundary §7) and seat B
+(`b9d0d19f`, rows 135 and 136: frames closed under world growth, every post at the machine's
+answer, the handler-adequacy rule proved with 63 instances and 8 declared). Seat B found that the
+exact close post is not fulfilled for a lone finalizer outside `⟨unit, never⟩` nor by the close
+walk through reified exits: rows 151 and 152, recommended (a) and (a), proceeding in wave 2 with
+ratification owed. Four rulings the owner gave Codex directly on 2026-10-01 are
 recorded in addendum 5's amendments and rows 91 and 107: part one's clause excludes `badName` and
 `notImplemented` only (the addendum had stated the full clause, which part two holds); the engine
 prelude and the engine tests join C's checklist; two more closure manifests and the `ForkRecord`

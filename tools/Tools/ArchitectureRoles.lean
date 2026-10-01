@@ -231,7 +231,7 @@ def milestone : List Slice := [
   ⟨"T3 · T4", "frames and the ledger", ["Effect4.Laws.Auto.Frames", "Effect4.Laws.Program.Typed.Frames", "Effect4.Laws.Auto.Obligations"]⟩,
   ⟨"M2", "the world and its order; validity; a fiber's type from its fork site; the saved-frame contracts", ["Effect4.Laws.Program.Typed.World", "Effect4.Laws.Program.Typed.Validity", "Effect4.Laws.Program.Typed.ForkSource", "Effect4.Laws.Program.Typed.Contracts", "Effect4.Laws.Program.Typed.ProtocolObligations"]⟩,
   ⟨"M3b", "admission: the value judgment Fits, and the admitted source", ["Effect4.Laws.Program.Typed.Membership", "Effect4.Laws.Program.Typed.Admission"]⟩,
-  ⟨"M3", "the residual protocol under an answer gate; the seqR sequencing lemma (seat E)", ["Effect4.Laws.Program.Typed.Residual", "Effect4.Laws.Auto.AnswerGate", "Effect4.Laws.Program.Typed.Seq"]⟩,
+  ⟨"M3", "the residual protocol under an answer gate; the handler-adequacy rules (seat B); the seqR sequencing lemma (seat E)", ["Effect4.Laws.Program.Typed.Residual", "Effect4.Laws.Auto.AnswerGate", "Effect4.Laws.Program.Typed.Adequacy", "Effect4.Laws.Program.Typed.Seq"]⟩,
   ⟨"M4", "the unary ladder and the typed stack walk", ["Effect4.Laws.Machine.Keeps", "Effect4.Laws.Program.Typed.Stack"]⟩,
   ⟨"slice 5", "the typed state assembled, with the scheduler's queue and observer facts (H1); M5 (initialization) and M6 (one goal per command) declared", ["Effect4.Laws.Program.Typed.Scheduler", "Effect4.Laws.Program.Typed.Assembly"]⟩,
   ⟨"D · row 110", "the generic lifts through commands, decisions and replay; their first native user", ["Effect4.Laws.Machine.Lift", "Effect4.Laws.Program.Guard.MemoIds"]⟩,
