@@ -84,3 +84,24 @@ Evidence words on every claim.
 first; base and head; every changed path, the generated files among them with the producer
 commands and exit codes; per row what moved and the control that flipped; what is owed with the
 exact obstacle (row 16's outside readers if any); the proposed lines for rows 16, 17, 24 and 150.
+
+## Amendments (2026-10-01, after pass I2)
+
+- **Base:** main after I2's merge and record (the coordinator names the commit at dispatch).
+- **Step 7: one TypeScript compiler, tsgo 7** (owner's rule of 2026-09-18, restated 2026-10-01;
+  `AGENTS.md`'s new bullet). Two lanes still run TypeScript 5.9.2: (i) `scripts/check-host-protocol.py:52`
+  invokes `typescript/bin/tsc`; move it to the pinned `@typescript/native-preview` `tsgo` as
+  `check-target` does (`Makefile:393`), same flags, and run `make check-host-protocol` green.
+  (ii) `ts/eff/package.json:19` pins `"typescript": "5.9.2"`, imported by the ingest recognizer
+  (`ts/eff/check-styles.ts`, `ts/eff/ingest/ck.ts`, `ingest/census/{corpus,legs,decls-ck}.ts`,
+  `ingest/fidelity/source.ts`) for its compiler API (`createSourceFile`, the AST walk). Measure the
+  move: does `typescript@7.0.2` (as `harness/schema-host` pins it, with `effect-tsgo patch
+  --typescript`) or tsgo's shipped API (`dist/api/sync/api.d.ts`) expose the AST functions the six
+  files use (list them by `grep`)? If yes, repin to 7.0.2 (or the preview's API), run the ingest's
+  own checks (`make check-ingest`, `check-ingest-smoke`, `check-ts-reader`, `check-census`) green,
+  and delete the 5.9.2 pin and its lockfile entries; if an AST function is missing, land (i) alone
+  and record the exact missing function and the two options (keep the parser-only dependency under
+  a named exception pinned by hash, or write the walk against the native API). (iii) A one-line
+  guard, `make check-tsgo`, in `check`: fail if any `node_modules/typescript/package.json` under
+  `ts/`, `harness/` or `tools/` has a major version below 7, naming the path. Nothing else: no
+  compiler wrapper script, no second lane.
