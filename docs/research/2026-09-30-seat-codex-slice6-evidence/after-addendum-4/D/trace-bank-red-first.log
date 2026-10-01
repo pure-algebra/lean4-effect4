@@ -1,0 +1,18 @@
+Test/Machine/StepInvRulesRed.lean:13:2: error: Tactic `aesop` failed, made no progress
+Initial goal:
+  m : NativeMachine
+  events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)
+  h : Ok m
+  hf : NoFork events
+  ⊢ Ok (RunMachine.emit m events)
+Test/Machine/StepInvRulesRed.lean:9:0: error: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+- D_RED_MESSAGE_TRACE_MUST_BE_RECORDED_BY_ROOT
++ error: Tactic `aesop` failed, made no progress
++ Initial goal:
++   m : NativeMachine
++   events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)
++   h : Ok m
++   hf : NoFork events
++   ⊢ Ok (RunMachine.emit m events)
+'Effect4.Api.TraceFacts.Agreement.emit_with_bank' depends on axioms: [propext, Quot.sound]

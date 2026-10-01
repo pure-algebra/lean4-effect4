@@ -111,6 +111,43 @@ exit and elapsed time; earlier generation uses `C/run.py` with command/result te
 These execution comparisons are finite evidence. D still owes the general reachable ledger
 facts and trace agreement; C does not claim them from the runner or backend differential.
 
+### D — trace user and named bank
+
+Base: C step 5, `f05a6acec7f52c91efa717739b9afb87b729e16b`. This commit supplies the
+native trace-agreement user. The ledger user and diagnostic module move follow separately.
+The already landed generic lifts, guard re-derivation and memo-ID user are unchanged.
+
+The observation is the ordered list of parent/child/daemon triples in the fork events and
+ledger. Source paths are absent from the events. Agreement does not establish semantic
+correctness of the recorded parent or flag. Emission requires an explicit no-fork condition;
+spawn appends the same triple on both sides. All eighteen native commands and all eight
+outside-loop edits feed the existing loop/decision/history lifts. The final theorems have
+no per-command, admission or typed-state premise. The four AgreesUpdates fields hold for
+any input machine satisfying agreement. There is no reference-machine or M6 instance.
+
+Verification is under `after-addendum-4/D/`, via `check.py` command/result JSON:
+- The trace candidate passes (`trace-3`), with 69 theorem dependency reports at the ceiling.
+  The first two failed drafts are retained; repairs only add required type annotations,
+  exact intermediate states, and the explicit safe emission rule to the named bank.
+- Production `lake build Effect4.Laws.Api.TraceOrigin`: exit 0, 312 jobs
+  (`trace-production-1`). `TraceFacts.M1Trace` is now **0 open, 3 proved**, ceiling **2 → 0**.
+- All 72 authored production theorem declarations print at `[propext, Quot.sound]` or less
+  (`trace-production-axioms`). This includes the bank positive and original obligations.
+- The omitted-bank fixture first failed as intended; its exact diagnostic is now captured
+  under `#guard_msgs (error)`. The fixture and direct Supervision consumer build pass
+  (`trace-bank-red`, `trace-tests`, 315 jobs). The named-bank positive uses the exact same
+  proposition.
+- Row 94 measurement (`trace-census`): plain aesop closes **23/76** inspected statements,
+  and aesop with StepInv closes **20/76**, within the census's default per-goal budget.
+  The denominator includes generated projections. This is not a claim that enabling the bank
+  improves every statement. The targeted emit positive requires it; native case analysis and
+  history-wrapper selection remain written by hand. No statement generator is introduced.
+- Source/test whitespace and forbidden-tactic scans pass. No generator was required.
+
+The independently checked ledger draft has 77 theorem dependency reports: 27 require no axioms
+and 50 use only the permitted ceiling. It remains a checked draft until the next production
+commit; this trace commit does not claim its integration.
+
 ### H2 — part-one exclusion clarified by the owner
 
 Addendum 5's “The judgment” requires `NoShapeDefect ty ex` to exclude `missingService` when

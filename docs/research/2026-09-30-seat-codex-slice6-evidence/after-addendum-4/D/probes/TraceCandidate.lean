@@ -1,14 +1,30 @@
+import Slice6Probe.StepInvBank
 import Effect4.Laws.Api.Supervision
 import Effect4.Laws.Program.Guard.Core
-import Effect4.Laws.Auto.Obligations
 
-/-! Diagnostic agreement of the ordered (parent, child, daemon) observations.
-This does not observe source paths or prove that recorded parents/flags are correct. -/
+/-!
+UNCOMPILED C/D TRACE-AGREEMENT CANDIDATE, 2026-10-01.
+No source mutations, Lean, lake, builds or generators were run by its author.
+
+The observation is the ordered list of (parent, child, daemon) triples, using the
+current Api.TraceFacts.Agrees and originForks. Source paths are not in RunEvent.forked,
+so this theorem cannot establish source-site correctness. It does not establish that
+a parent or daemon flag is semantically correct; it establishes agreement of the two
+recordings. The allocation invariants and their runFork/runCallback facts are separate.
+
+The candidate supplies native command preservation without a command premise, then
+uses the existing Lift and Guard history lift. Primitive spawn also has a proposition
+equality, but command-level forward preservation is not called Keeps.
+
+Effect4.StepInv is a local draft bank; production placement belongs in the
+named bank selected by the root. The diagnostic definitions and users move together
+to Test only after their proofs pass. Update imports/names after that relocation.
+-/
 
 set_option autoImplicit false
 
 
-namespace Effect4.Api.TraceFacts.Agreement
+namespace Draft.TraceAgreement
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Api.TraceFacts
 
@@ -511,7 +527,7 @@ theorem steppedBy_ok (p : NativeEff) (table : RowTable) (fuel : Nat)
   letI := evaluatorFor p table
   exact Lift.machineFact_stepDecision (interpOf p table) Ok
     (fun m c rest _ hm => driveStep_ok p table m c rest hm)
-    (Effect4.Api.TraceFacts.Agreement.edits (interpOf p table)) fuel m decision h
+    (Draft.TraceAgreement.edits (interpOf p table)) fuel m decision h
 
 theorem drive_ok (p : NativeEff) (table : RowTable) (fuel : Nat)
     (m : NativeMachine) (cmds : List NCmd) (h : Ok m) :
@@ -576,44 +592,78 @@ theorem reachable_agrees (program : NativeEff) (table : RowTable) (compileFuel :
       step_agrees program table compileFuel answers m hr ha fuel decision) m reachable
 
 end Native
-end Effect4.Api.TraceFacts.Agreement
+end Draft.TraceAgreement
 
-namespace Effect4.Api.TraceFacts.Agreement
-open Effect4 Effect4.Machine Effect4.Program
+/- Append after the corresponding full candidate, in the SAME module.
+This includes private theorems through their same-module source alias.
+The expected ceiling is [propext, Quot.sound]; this file has NOT been run. -/
 
-/-- The named bank supplies the conditional emit equation. -/
-theorem emit_with_bank (m : NativeMachine)
-    (events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx))
-    (h : Ok m) (hf : NoFork events) : Ok (m.emit events) := by
-  aesop (rule_sets := [Effect4.StepInv])
-
-end Effect4.Api.TraceFacts.Agreement
-
-/-! Trace/origin agreement on the existing API decision-prefix domain.
-Arbitrary records with erased traces are not in the premise of these obligations. -/
-
-set_option autoImplicit false
-namespace Effect4.Api.TraceFacts.M1Trace
-open Effect4 Effect4.Machine Effect4.Program
-
-theorem step_agrees (program : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
-    (_reachable : Guard.Reachable program table compileFuel answers m)
-    (_agrees : Agrees m) (fuel : Nat) (decision : NativeDecision) :
-    ProofGraph.Obligation (Agrees (steppedBy program fuel table m decision)) := ⟨⟩
-
-theorem reachable_agrees (program : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
-    (_reachable : Guard.Reachable program table compileFuel answers m) :
-    ProofGraph.Obligation (forkedOf m.trace = originForks m) := ⟨⟩
-
-end Effect4.Api.TraceFacts.M1Trace
-
-#obligation_proved Effect4.Api.TraceFacts.M1Trace.load_agrees :=
-  @Effect4.Api.TraceFacts.Agreement.Native.load_agrees
-#obligation_proved Effect4.Api.TraceFacts.M1Trace.step_agrees :=
-  @Effect4.Api.TraceFacts.Agreement.Native.step_agrees
-#obligation_proved Effect4.Api.TraceFacts.M1Trace.reachable_agrees :=
-  @Effect4.Api.TraceFacts.Agreement.Native.reachable_agrees
-
-#typed_state_obligations Effect4.Api.TraceFacts.M1Trace ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#print axioms Draft.TraceAgreement.noFork_nil
+#print axioms Draft.TraceAgreement.noFork_append
+#print axioms Draft.TraceAgreement.forkedOf_frame_map
+#print axioms Draft.TraceAgreement.noFork_frame_map
+#print axioms Draft.TraceAgreement.ok_update_iff
+#print axioms Draft.TraceAgreement.ok_emit_iff
+#print axioms Draft.TraceAgreement.ok_modify_iff
+#print axioms Draft.TraceAgreement.ok_updateRace_iff
+#print axioms Draft.TraceAgreement.ok_arm_iff
+#print axioms Draft.TraceAgreement.ok_disarm_iff
+#print axioms Draft.TraceAgreement.ok_halt_iff
+#print axioms Draft.TraceAgreement.ok_state_iff
+#print axioms Draft.TraceAgreement.ok_token_iff
+#print axioms Draft.TraceAgreement.ok_state_token_iff
+#print axioms Draft.TraceAgreement.ok_middleware_iff
+#print axioms Draft.TraceAgreement.ok_fibers_iff
+#print axioms Draft.TraceAgreement.update_keeps
+#print axioms Draft.TraceAgreement.emit_keeps
+#print axioms Draft.TraceAgreement.update_ok
+#print axioms Draft.TraceAgreement.emit_ok
+#print axioms Draft.TraceAgreement.updateRace_ok
+#print axioms Draft.TraceAgreement.halt_ok
+#print axioms Draft.TraceAgreement.arm_ok
+#print axioms Draft.TraceAgreement.disarm_ok
+#print axioms Draft.TraceAgreement.state_ok
+#print axioms Draft.TraceAgreement.middleware_ok
+#print axioms Draft.TraceAgreement.modify_ok
+#print axioms Draft.TraceAgreement.mapFibers_ok
+#print axioms Draft.TraceAgreement.appendRoot_ok
+#print axioms Draft.TraceAgreement.postTask_ok
+#print axioms Draft.TraceAgreement.start_ok
+#print axioms Draft.TraceAgreement.drainOwed_ok
+#print axioms Draft.TraceAgreement.spawn_forked_site
+#print axioms Draft.TraceAgreement.spawn_iff
+#print axioms Draft.TraceAgreement.spawn_keeps
+#print axioms Draft.TraceAgreement.spawn_ok
+#print axioms Draft.TraceAgreement.launchEntrant_ok
+#print axioms Draft.TraceAgreement.forkFinalizers_ok
+#print axioms Draft.TraceAgreement.settle_ok
+#print axioms Draft.TraceAgreement.interruptEdit_ok
+#print axioms Draft.TraceAgreement.agrees_updates
+#print axioms Draft.TraceAgreement.agrees_edits
+#print axioms Draft.TraceAgreement.edits
+#print axioms Draft.TraceAgreement.Native.countdown_ok
+#print axioms Draft.TraceAgreement.Native.countdown_result_ok
+#print axioms Draft.TraceAgreement.Native.linkScope_ok
+#print axioms Draft.TraceAgreement.Native.interruptEach_ok
+#print axioms Draft.TraceAgreement.Native.interruptEach_result_ok
+#print axioms Draft.TraceAgreement.Native.beginRace_ok
+#print axioms Draft.TraceAgreement.Native.registerRace_ok
+#print axioms Draft.TraceAgreement.Native.stepFrame_ok
+#print axioms Draft.TraceAgreement.Native.finalizerOr_ok
+#print axioms Draft.TraceAgreement.Native.withFiber_ok
+#print axioms Draft.TraceAgreement.Native.evaluatePrim_ok
+#print axioms Draft.TraceAgreement.Native.enterScoped_ok
+#print axioms Draft.TraceAgreement.Native.exitScoped_ok
+#print axioms Draft.TraceAgreement.Native.evaluateNative_ok
+#print axioms Draft.TraceAgreement.Native.iteration_ok
+#print axioms Draft.TraceAgreement.Native.exitFiber_ok
+#print axioms Draft.TraceAgreement.Native.fireObserver_ok
+#print axioms Draft.TraceAgreement.Native.driveStep_ok
+#print axioms Draft.TraceAgreement.Native.steppedBy_ok
+#print axioms Draft.TraceAgreement.Native.drive_ok
+#print axioms Draft.TraceAgreement.Native.runFork_ok
+#print axioms Draft.TraceAgreement.Native.runCallback_ok
+#print axioms Draft.TraceAgreement.Native.load_agrees
+#print axioms Draft.TraceAgreement.Native.reachable_agrees_of
+#print axioms Draft.TraceAgreement.Native.step_agrees
+#print axioms Draft.TraceAgreement.Native.reachable_agrees

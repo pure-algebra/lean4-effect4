@@ -120,6 +120,7 @@ import Test.Program.AtomTable
 import Test.Program.AtomRulesRed
 import Test.Program.CheckerRulesRed
 import Test.Program.TypedStateRulesRed
+import Test.Machine.StepInvRulesRed
 import Test.Program.ErrorQueriesContract
 import Test.Program.CatchIfContract
 import Test.Machine.Fuzz

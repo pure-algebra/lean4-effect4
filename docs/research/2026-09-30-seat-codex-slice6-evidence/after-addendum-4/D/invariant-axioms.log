@@ -1,0 +1,78 @@
+'Draft.ForkLedger.ViewOk.of_view' does not depend on any axioms
+'Draft.ForkLedger.ViewOk.fresh_ids' does not depend on any axioms
+'Draft.ForkLedger.ViewOk.fresh_children' does not depend on any axioms
+'_private.docs.research.«2026-09-30-seat-codex-slice6-evidence».«after-addendum-4».D.probes.InvariantCandidate.0.Draft.ForkLedger.ViewOk.nodup_snoc' depends on axioms: [propext,
+ Quot.sound]
+'Draft.ForkLedger.ViewOk.spawn' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.ViewOk.root' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.of_view' does not depend on any axioms
+'Draft.ForkLedger.fiber_ids_unique' does not depend on any axioms
+'Draft.ForkLedger.record_children_unique' does not depend on any axioms
+'Draft.ForkLedger.fiber_below' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.record_below' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.record_corresponds' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.fresh' does not depend on any axioms
+'Draft.ForkLedger.fresh_fiber_lookup' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.empty_ok' does not depend on any axioms
+'Draft.ForkLedger.update_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.emit_ok' does not depend on any axioms
+'Draft.ForkLedger.updateRace_ok' does not depend on any axioms
+'Draft.ForkLedger.halt_ok' does not depend on any axioms
+'Draft.ForkLedger.arm_ok' does not depend on any axioms
+'Draft.ForkLedger.disarm_ok' does not depend on any axioms
+'Draft.ForkLedger.state_ok' does not depend on any axioms
+'Draft.ForkLedger.middleware_ok' does not depend on any axioms
+'Draft.ForkLedger.modify_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.mapFibers_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.postTask_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.start_ok' does not depend on any axioms
+'Draft.ForkLedger.drainOwed_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.spawn_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.launchEntrant_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.forkFinalizers_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.settle_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.interruptEdit_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.edits' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.stepDecision_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.load_ok' depends on axioms: [propext]
+'Draft.ForkLedger.steppedBy_ok_of' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.reachable_ok_of' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.ok_update_iff' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.ok_emit_iff' does not depend on any axioms
+'Draft.ForkLedger.ok_modify_iff' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.ok_updateRace_iff' does not depend on any axioms
+'Draft.ForkLedger.ok_arm_iff' does not depend on any axioms
+'Draft.ForkLedger.ok_disarm_iff' does not depend on any axioms
+'Draft.ForkLedger.ok_halt_iff' does not depend on any axioms
+'Draft.ForkLedger.ok_state_iff' does not depend on any axioms
+'Draft.ForkLedger.ok_token_iff' does not depend on any axioms
+'Draft.ForkLedger.ok_state_token_iff' does not depend on any axioms
+'Draft.ForkLedger.ok_middleware_iff' does not depend on any axioms
+'Draft.ForkLedger.appendRoot_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.countdown_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.countdown_result_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.linkScope_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.interruptEach_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.interruptEach_result_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.beginRace_ok' does not depend on any axioms
+'Draft.ForkLedger.Native.registerRace_ok' does not depend on any axioms
+'Draft.ForkLedger.Native.stepFrame_ok' depends on axioms: [propext]
+'Draft.ForkLedger.Native.finalizerOr_ok' depends on axioms: [propext]
+'Draft.ForkLedger.Native.withFiber_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.evaluatePrim_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.enterScoped_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.exitScoped_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.evaluateNative_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.iteration_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.exitFiber_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.fireObserver_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.driveStep_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.steppedBy_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.drive_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.runFork_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.runCallback_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.reachable_ok' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.reachable_unique' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.reachable_bounded' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.reachable_corresponding' depends on axioms: [propext, Quot.sound]
+'Draft.ForkLedger.Native.reachable_fresh' depends on axioms: [propext, Quot.sound]

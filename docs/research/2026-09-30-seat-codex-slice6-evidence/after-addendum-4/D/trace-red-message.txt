@@ -1,0 +1,7 @@
+error: Tactic `aesop` failed, made no progress
+Initial goal:
+  m : NativeMachine
+  events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)
+  h : Ok m
+  hf : NoFork events
+  ⊢ Ok (RunMachine.emit m events)
