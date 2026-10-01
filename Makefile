@@ -242,6 +242,7 @@ corpus: $(CORPUS)/index.tsv ## the printed corpus under .lake/corpus (Lean's 400
 
 # The pinned TypeScript install the reader, the ingest and the truth harness run on.
 ts/eff/node_modules: ts/eff/package.json ts/eff/bun.lock
+	rm -rf ts/eff/node_modules
 	cd ts/eff && $(BUN) install --frozen-lockfile
 	@touch $@
 

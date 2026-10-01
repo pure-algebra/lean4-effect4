@@ -54,10 +54,10 @@ Checked here, fatal, and printed on every run: `Ref` reads `inv`, `Fiber` reads 
 parameters, `Layer` reads `[contra, co, co]`, `Context` reads `contra`. A reader that lost the
 `in` keyword, or that read the modifiers of the wrong parameter, fails on one of the four.
 
-The cross-check is `ts/eff/ingest/census/decls-ck.ts:21-28`, whose `hasVariance` is "some type
-parameter of this declaration carries an `in` or an `out` modifier" under `typescript@5.9.2`'s
-own parser: this driver records the same boolean per declaration, so the two notions can be
-compared without sharing a line of code.
+The cross-check is `ts/eff/ingest/census/decls-ck.ts`'s `hasVariance`, "some type parameter of
+this declaration carries an `in` or an `out` modifier", read off oxc-parser's tree (decisions row
+168): this driver records the same boolean per declaration, so the two notions can be compared
+without sharing a line of code.
 -/
 
 open Lean
