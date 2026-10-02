@@ -645,4 +645,128 @@ theorem deliver_preserves_of_clauses (root : ProgramSource) (rootTy : EffTy)
   simp only [driveStep, hf]
   exact keeps
 
+/-! ## The clauses: shared shapes -/
+
+/-- The evaluated fiber is its own record in the configuration's machine. -/
+theorem Evaluating.look {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y) :
+    (m.update f).fiber? f.id = some f := by
+  obtain ⟨f0, hf0, _⟩ := ev.stale
+  have id0 : f0.id = f.id := rfiber?_id hf0
+  exact rfiber?_update_self (m := m) (f := f0) (g := f) (by rw [id0]; exact hf0) id0.symm
+
+/-- The evaluated fiber's code and stack, when its current code is no registration marker. -/
+theorem Evaluating.code {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    (marker : raceRegistrationR f.frame.current = none) :
+    ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty f.frame :=
+  fun ty declared => ev.typed.code f (rfiber?_mem ev.look) ev.running
+    ⟨y, Or.inr List.mem_cons_self⟩ marker ty declared
+
+/-- The evaluated fiber is declared. -/
+theorem Evaluating.declared {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y) :
+    ∃ ty, w.Γ f.id = some ty :=
+  Option.isSome_iff_exists.mp ((ev.typed.machine.wide.fibers f.id).mpr
+    (List.mem_map.mpr ⟨f, rfiber?_mem ev.look, rfl⟩))
+
+/-- The evaluator's completed view is typed at the step's world. -/
+theorem Evaluating.view {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y) :
+    ViewTyped w m.completedExits := by
+  obtain ⟨f0, hf0, exit0⟩ := ev.stale
+  have nodup : (m.fibers.map RunFiber.id).Nodup := by
+    rw [← rupdate_ids m f]
+    exact ev.typed.machine.wide.fiberIds
+  rw [← completedExits_rupdate (g := f) (x := f0) hf0 exit0 nodup]
+  exact viewTyped_completed ev.typed.machine
+
+/-- **A frame-only clause whose iteration continues settles typed**, from the new frame's typing. -/
+theorem Evaluating.settle_continue {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y y' : Bool} (ev : Evaluating root rootTy w m rest f y)
+    (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, []⟩) := by
+  obtain ⟨f0, hf0, exit0⟩ := ev.stale
+  exact settle_frame_continue ev.typed hf0 exit0 ev.running fr code
+
+/-- **A frame-only clause whose iteration is answered settles typed**: the glue leaves it, and
+`settle` queues `deliver`. -/
+theorem Evaluating.settle_answered {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y y' : Bool} (ev : Evaluating root rootTy w m rest f y)
+    (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR ⟨m, { f with frame := fr }, y', .answered, []⟩) := by
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, _, _⟩ := code ty declared
+  have step := (configTyped_frame_step ev.typed rfl ev.look ev.running fr code
+    (raceRegistrationR_typed current)).2 y'
+  rw [rupdate_rupdate m (show ({ f with frame := fr } : RFiber).id = f.id from rfl)] at step
+  exact ⟨w, leHost_refl w, step⟩
+
+/-- **An inline answer**: the clause installs the continuation at answer `v` the operation's post
+admits; the stack and everything else stay. -/
+theorem Evaluating.answer_typed {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    {op : FiberOp} {next : op.answer → RProgram} (hc : f.frame.current = .vis (.inr op) next)
+    (marker : raceRegistrationR f.frame.current = none)
+    (notGuard : ∀ kind, op ≠ .guard_ kind) (notUnguard : ∀ ex, op ≠ .unguard ex)
+    (notFinish : ∀ ex, op ≠ .finishFinalizer ex)
+    (notScopeExit : ∀ prev sc ex, op ≠ .scopeExit prev sc ex) (v : op.answer)
+    (post : ∀ cert, fiberPre root w op cert → fiberPost w op cert v) :
+    ∀ ty, w.Γ f.id = some ty →
+      CodeOk root w (m.update f) f.id ty { f.frame with current := next v } := by
+  intro ty declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code marker ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current notGuard notUnguard notFinish notScopeExit
+  exact ⟨tin, typedNext w (leHost_refl w) v (post cert pre), stack, ⟨prov.recorded, prov.deferred⟩⟩
+
+/-! ## The clauses: inline answers and no-ops -/
+
+theorem clause_suspend (root : ProgramSource) (rootTy : EffTy) (p : Point) :
+    FiberClauseKeeps root rootTy (.suspend p) := by
+  intro w m rest f y next ev hc
+  exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) .unit
+    (fun _ _ => trivial))
+
+theorem clause_foreignRelease (root : ProgramSource) (rootTy : EffTy) (c : Capture) (ex : ExitV) :
+    FiberClauseKeeps root rootTy (.foreignRelease c ex) := by
+  intro w m rest f y next ev hc
+  exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) .unit
+    (fun _ _ => rfl))
+
+theorem clause_closeWalk (root : ProgramSource) (rootTy : EffTy) (strategy : FinalizerStrategy)
+    (order : List FinName) (ex : ExitV) : FiberClauseKeeps root rootTy (.closeWalk strategy order ex) := by
+  intro w m rest f y next ev hc
+  exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) .unit
+    (fun _ _ => rfl))
+
+theorem clause_frontier (root : ProgramSource) (rootTy : EffTy) (reason : PendingReason) (p : Point) :
+    FiberClauseKeeps root rootTy (.frontier reason p) := by
+  intro w m rest f y next ev hc
+  exact ev.settle_continue f.frame (ev.code (by rw [hc]; rfl))
+
+theorem clause_construction (root : ProgramSource) (rootTy : EffTy) :
+    FiberClauseKeeps root rootTy .construction := by
+  intro w m rest f y next ev hc
+  have view := ev.view
+  refine ev.settle_continue { f.frame with current := prepareR m.completedExits (next m.completedExits) } ?_
+  intro ty declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, _, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  exact ⟨tin, prepareR_typed _ _ view (typedNext w (leHost_refl w) m.completedExits view), stack,
+    ⟨prov.recorded, prov.deferred⟩⟩
+
+theorem clause_sync (root : ProgramSource) (rootTy : EffTy) (v : Val) :
+    FiberClauseKeeps root rootTy (.sync v) := by
+  intro w m rest f y next ev hc
+  exact ev.settle_answered _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) v (fun _ _ => rfl))
+
 end Effect4.Program.Typed

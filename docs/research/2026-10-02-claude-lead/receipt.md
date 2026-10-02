@@ -835,3 +835,97 @@ times on record, five of them 44%.
 
 Commands: the default build through `make corpus` (`Test.All`'s gate green with the slow files
 outside it, 63 s warm); `make -n check-slow`. Not run: `make check-slow` itself (the sweep).
+
+## Slice M6-E — the evaluation step through operation clauses; row 170's premise carried in J
+
+**First:** `MachineTyped` (J) has a fifth field, `sourceWF : root.program.layerRefsWF = true`
+(owner, 2026-10-02: "carry it in J"). This makes the invariant's contract stronger: every
+`StepPreserves`, decision and reachability statement now asks a post-state for it too. The root
+never changes, so each step keeps it by the frame. No runtime definition changed, and no
+ledger goal's text changed.
+
+Base `7e087c20`; heads `58cccb7a` (the clause interface), then this slice's two commits.
+
+### Row 170's premise in J
+
+- Why: M5's `DenotesTyped` takes `layerRefsWF` (decisions row 170, `E4-TYPED-CE-020` repaired at
+  `aabb1b5e`). An M6 or M7 consumer that reads a layer reference at a reachable state needs it, and
+  J did not hold it.
+- `Typed/Assembly.lean`:
+  - the field, with its docstring citing row 170 and CE-020;
+  - `typedState_of_load`: the `TypedState` half of the load, with no premise;
+  - `machineTyped_load closed sourceWF noMarker code`, built from it;
+  - `typedState_load_of_code` goes through `typedState_of_load` and no longer takes the premise;
+  - `loadsTyped_of_denotesTyped` passes `DenotesTyped`'s own `wf`;
+  - the congruence lemma threads the field.
+- `Commands/Bookkeeping.lean`:
+  - `MachineWide.sourceWF`;
+  - `MachineTyped.wide`, `machineTyped_of` and the three `MachineWide` constructions thread it.
+- `Commands/Launch.lean`: `machineWide_alloc` threads it.
+- Tests:
+  - The eight concrete J witnesses close the field by `rfl` at their roots: StaleCode, M6Capstone
+    (two), RegistrationColumn, RegistrationYield (two), TimerColumn and WaiterColumn.
+  - So do the admitted loads in AwaitLoad and FitsOrder.
+  - New control, `TypedDenotation.chain_untyped`: CE-020's root (`chainSrc`; `chain_not_wf` by
+    `decide +kernel`) has no J at any `rootTy`, world or state.
+- What CE-020 does and does not show here:
+  - CE-020's checked refutation is of `DenotesTyped`, the denotation (M5).
+  - The machine-side falsifier would be a J without the premise that admits a state whose step
+    reaches the `.ref` arm's `badShapeExit`. It is not compiled.
+  - `chain_untyped` shows that the strengthened J refuses CE-020's root. It does not show that the
+    old J was false there.
+
+### The clauses (`Typed/Commands/Evaluate.lean`)
+
+- Accessors on `Evaluating`: `look`, `code`, `declared`, `view`, `settle_continue`,
+  `settle_answered` and `answer_typed`. `answer_typed` handles a fiber operation whose answer is
+  typed at the operation's post: a value `v` with `fiberPost` gives the continuation's typed code at
+  the same world.
+- Six `FiberClauseKeeps` instances:
+  - `clause_suspend`, `clause_foreignRelease` and `clause_closeWalk` answer `unit` inline;
+  - `clause_frontier` leaves the frame as it is;
+  - `clause_construction` is `prepareR` glue at the completed view;
+  - `clause_sync` delivers an answered value.
+
+### Placement (`deliver_preserves_of_clauses` and the clauses)
+
+1. Concept: Reactive Scheduling & Machine Invariants (`reactive-scheduling`). The required
+   property served is `step-deliver-preserves`, and through the same clauses
+   `step-loop-preserves`.
+2. Question: the `ProofGraph` ledger goals `M6Ledger.step_deliver` and `M6Ledger.step_loop`.
+   - `deliver_preserves_of_clauses` is the step from the clauses to `StepPreserves` for `deliver`.
+   - Each clause is one premise of it.
+   - `sourceWF` serves the M7 consumers' reads of layer references, and the `mask` and `scoped`
+     clauses through `denotesTyped`.
+3. Reach:
+   - the judgment is `ConfigTyped root rootTy w` (I);
+   - the observation is the next configuration of `driveStep` at the `deliver` head, at the same
+     world;
+   - the fragment is a non-halted machine whose evaluating fiber is `Evaluating` (typed, stale exit,
+     running, live);
+   - hypotheses: one `FiberClauseKeeps` per fiber operation, `StoreClauseKeeps` per sync operation,
+     and `WalkKeeps`.
+4. Not established:
+   - The theorem is conditional. Its open premises are:
+     - the frame-pushing clauses: `guard_`, `mask`, `scoped` and the sequential `closeIter`;
+     - `gen` and `loop`, which wait on row 190 (b), the cursor fit and the 8c producers;
+     - `scopeExit` and `refuse`;
+     - `raceRegister`;
+     - the `FiberAction` arms;
+     - `StoreClauseKeeps` and `WalkKeeps`.
+   - It is an invariant, not progress (row 139). It is safety only; `fair-scheduling` (R12) is
+     separate.
+   - The host boundary stays where `host-boundary.md` puts it.
+5. Unlocks: `step_deliver`, then `step_loop` (the same clauses plus the runloop prefix lemma), then
+   `typedState_reachable`, then M7's four goals. `exitHandles_valid` also needs
+   `HandlesRegistered`.
+
+Commands:
+- `lake build Effect4.Laws` (green);
+- `lake build` of the twelve batteries that construct J or `MachineWide` (green; the slowest,
+  M6Capstone, took 22 s);
+- the axiom scan over every declaration of `Evaluate`, `Assembly`, `Bookkeeping` and `Launch`:
+  1,037 declarations, none outside `[propext, Quot.sound]`.
+
+Not run: `lake build Test`, the trust gate and `make check`, which are owed at the sweep. All
+evidence is kernel-checked; none is bounded or host-only.
