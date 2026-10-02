@@ -1150,53 +1150,6 @@ theorem stackReply_world {root : ProgramSource} {m : RState} {f : RFiber} {ty : 
   obtain ⟨final, declared, stack, provenance⟩ := h
   exact ⟨final, by rw [hΓ]; exact declared, hostStack_mono ord stack, provenance⟩
 
-include hΓ in
-theorem commandDelivery_world {root : ProgramSource} {m : RState} (c : RCmd)
-    (h : CommandDeliveryOk root w m c) : CommandDeliveryOk root w' m c := by
-  cases c with
-  | afterInterrupt host _ kind =>
-    intro f hf
-    obtain ⟨replyTy, reply, stack⟩ := h f hf
-    refine ⟨replyTy, ?_, stackReply_world ord hΓ stack⟩
-    cases kind with
-    | join target mode =>
-      cases mode with
-      | joinEffect =>
-        obtain ⟨sourceTy, declared, eq⟩ := reply
-        exact ⟨sourceTy, by rw [hΓ]; exact declared, eq⟩
-      | awaitValue =>
-        obtain ⟨sourceTy, declared, eq⟩ := reply
-        exact ⟨sourceTy, by rw [hΓ]; exact declared, eq⟩
-    | awaitAll targets =>
-      obtain ⟨answer, error, cols, eq⟩ := reply
-      exact ⟨answer, error, fun id hid => fiberColumnsBelow_world hΓ (cols id hid), eq⟩
-    | race _ => exact reply
-  | raceCancel _ host _ remaining visited =>
-    intro f hf
-    obtain ⟨answer, error, cols, stack⟩ := h f hf
-    exact ⟨answer, error, fun id hid => fiberColumnsBelow_world hΓ (cols id hid),
-      stackReply_world ord hΓ stack⟩
-  | closeParAwait host _ targets =>
-    intro f hf
-    obtain ⟨answer, error, cols, protocol, stack⟩ := h f hf
-    exact ⟨answer, error, fun id hid => fiberColumnsBelow_world hΓ (cols id hid),
-      iteratorProtocol_mono ord protocol, stackReply_world ord hΓ stack⟩
-  | finish _ _ => exact h
-  | evaluate _ => trivial
-  | loop _ _ => trivial
-  | deliver _ _ => trivial
-  | resume _ _ _ => trivial
-  | launch _ => trivial
-  | enrollRace _ _ => trivial
-  | registrationDone _ _ => trivial
-  | interruptTarget _ _ _ => trivial
-  | trackChild _ _ => trivial
-  | observe _ _ _ => trivial
-  | exitDone _ => trivial
-  | link _ _ _ _ _ => trivial
-  | drainDue => trivial
-  | wake _ _ => trivial
-
 include hΘ in
 /-- A resume's code is typed at the same token declaration at the later world. -/
 theorem resumeOk_world {root : ProgramSource} {target : FiberId} {token : Nat} {code : RProgram}
@@ -1241,7 +1194,8 @@ include hΓ hΘ in
 theorem queueOk_world {root : ProgramSource} {m : RState} {q : List RCmd}
     (queue : QueueOk root w m q) : QueueOk root w' m q :=
   ⟨fun c hc => rcmdOk_world ord hΓ hΘ c (queue.payload c hc), queue.authority,
-    fun c hc => commandDelivery_world ord hΓ c (queue.delivery c hc), queue.owners,
+    fun c hc => commandDelivery_mono ord (fun _ _ h => by rw [hΓ]; exact h)
+      (racesKept_of_eq fun _ => rfl) (fun _ _ => rfl) (queue.delivery c hc), queue.owners,
     queue.registration, queue.keys,
     fun s e o ho => ⟨(queue.observer s e o ho).1,
       observerCommandOk_world ord hΓ hΘ o (queue.observer s e o ho).2⟩,

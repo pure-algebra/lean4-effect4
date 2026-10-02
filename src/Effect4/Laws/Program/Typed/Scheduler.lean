@@ -489,45 +489,64 @@ def CommandDeliveryOk (root : ProgramSource) (w : World) (m : RState) : RCmd →
         StackReply root w m fiber ⟨.unit, error, Env.Requirement.empty⟩
   | _ => True
 
-/-- The delivery facts move to a machine with the same fiber lookups whose races keep their host
-and token (row 188 (b)'s registration arrows read them). -/
-theorem commandDelivery_races {root : ProgramSource} {w : World} {m m' : RState}
-    (fibers : ∀ id, m'.fiber? id = m.fiber? id) (kept : RacesKept m m') (c : RCmd)
-    (h : CommandDeliveryOk root w m c) : CommandDeliveryOk root w m' c := by
+/-- The delivery reads see the fiber table only positively: a declaration exists, a column bound,
+a reply stack's final type. They move along any world extension. -/
+theorem fiberListColumns_mono {w w' : World} (ext : ∀ id t, w.Γ id = some t → w'.Γ id = some t)
+    {targets : List FiberId} {answer error : Ty} (h : FiberListColumns w targets answer error) :
+    FiberListColumns w' targets answer error := by
+  intro id hid
+  obtain ⟨t, declared, ha, he⟩ := h id hid
+  exact ⟨t, ext _ _ declared, ha, he⟩
+
+theorem afterInterruptReply_mono {w w' : World} (ext : ∀ id t, w.Γ id = some t → w'.Γ id = some t)
+    {kind : ParkKind} {replyTy : EffTy} (h : AfterInterruptReply w kind replyTy) :
+    AfterInterruptReply w' kind replyTy := by
+  cases kind with
+  | join target mode =>
+    cases mode <;> (obtain ⟨sourceTy, declared, eq⟩ := h; exact ⟨sourceTy, ext _ _ declared, eq⟩)
+  | awaitAll targets =>
+    obtain ⟨answer, error, cols, eq⟩ := h
+    exact ⟨answer, error, fiberListColumns_mono ext cols, eq⟩
+  | race _ => exact h
+
+theorem stackReply_mono {root : ProgramSource} {w w' : World} {m m' : RState} {fiber : RFiber}
+    {replyTy : EffTy} (ord : w.leHost w') (ext : ∀ id t, w.Γ id = some t → w'.Γ id = some t)
+    (kept : RacesKept m m') (h : StackReply root w m fiber replyTy) :
+    StackReply root w' m' fiber replyTy := by
+  obtain ⟨final, declared, stack, provenance⟩ := h
+  exact ⟨final, ext _ _ declared, hostStack_mono ord (hostStack_races kept stack), provenance⟩
+
+/-- **The delivery facts are monotone**: they read the world only positively, the machine only at
+the command's owner (`Guard.commandOwner`, the host of every command that installs a reply), and
+the races only through their host and token (row 188 (b)'s registration arrows). So they move
+along a world extension to any machine that agrees at the owner and keeps the races' host and
+token: a trace edit, a race edit, an allocation (`Commands/Launch.lean`). -/
+theorem commandDelivery_mono {root : ProgramSource} {w w' : World} {m m' : RState}
+    (ord : w.leHost w') (ext : ∀ id t, w.Γ id = some t → w'.Γ id = some t) (kept : RacesKept m m')
+    {c : RCmd} (owner : ∀ o, Guard.commandOwner m c = some o → m'.fiber? o = m.fiber? o)
+    (h : CommandDeliveryOk root w m c) : CommandDeliveryOk root w' m' c := by
   cases c with
   | afterInterrupt host _ kind =>
     intro f hf
-    rw [fibers] at hf
+    rw [owner host rfl] at hf
     obtain ⟨replyTy, reply, stack⟩ := h f hf
-    exact ⟨replyTy, reply, stackReply_races kept stack⟩
+    exact ⟨replyTy, afterInterruptReply_mono ext reply, stackReply_mono ord ext kept stack⟩
   | raceCancel _ host _ remaining visited =>
     intro f hf
-    rw [fibers] at hf
+    rw [owner host rfl] at hf
     obtain ⟨answer, error, cols, stack⟩ := h f hf
-    exact ⟨answer, error, cols, stackReply_races kept stack⟩
+    exact ⟨answer, error, fiberListColumns_mono ext cols, stackReply_mono ord ext kept stack⟩
   | closeParAwait host _ targets =>
     intro f hf
-    rw [fibers] at hf
+    rw [owner host rfl] at hf
     obtain ⟨answer, error, cols, protocol, stack⟩ := h f hf
-    exact ⟨answer, error, cols, protocol, stackReply_races kept stack⟩
+    exact ⟨answer, error, fiberListColumns_mono ext cols, iteratorProtocol_mono ord protocol,
+      stackReply_mono ord ext kept stack⟩
   | finish host _ =>
     intro f hf
-    rw [fibers] at hf
+    rw [owner host rfl] at hf
     exact h f hf
-  | evaluate _ => trivial
-  | loop _ _ => trivial
-  | deliver _ _ => trivial
-  | resume _ _ _ => trivial
-  | launch _ => trivial
-  | enrollRace _ _ => trivial
-  | registrationDone _ _ => trivial
-  | interruptTarget _ _ _ => trivial
-  | trackChild _ _ => trivial
-  | observe _ _ _ => trivial
-  | exitDone _ => trivial
-  | link _ _ _ _ _ => trivial
-  | drainDue => trivial
-  | wake _ _ => trivial
+  | _ => trivial
 
 def CommandAuthorityR (m : RState) : RCmd → Prop
   | .loop fiber _ | .deliver fiber _ | .finish fiber _ => Guard.ActiveAt m fiber
@@ -541,6 +560,43 @@ def CommandAuthorityR (m : RState) : RCmd → Prop
       ∃ race, m.race? raceId = some race ∧ Guard.ActiveAt m race.host
   | .exitDone fiber => ∃ found, m.fiber? fiber = some found ∧ found.exit.isSome = true
   | _ => True
+
+/-- A queued command's owner exists: it is active, or it hosts the race the command completes. -/
+theorem commandOwner_found {m : RState} {c : RCmd} (authority : CommandAuthorityR m c) {o : FiberId}
+    (h : Guard.commandOwner m c = some o) : ∃ f, m.fiber? o = some f := by
+  cases c with
+  | registrationDone raceId _ =>
+    obtain ⟨race, fiber, found, host, _⟩ := authority
+    rw [show Guard.commandOwner m (.registrationDone raceId _) = (m.race? raceId).map Race.host
+      from rfl, found, Option.map_some] at h
+    cases h
+    exact ⟨fiber, host⟩
+  | _ => cases h <;> (obtain ⟨f, hf, _, _⟩ := authority; exact ⟨f, hf⟩)
+
+/-- **Authority is monotone in the fiber table**: it reads fibers only through lookups that find
+them (`ActiveAt`, an exited fiber, a race host) and races by id, so a machine that finds every old
+fiber unchanged and keeps the races keeps it. -/
+theorem commandAuthority_mono {m m' : RState}
+    (look : ∀ id f, m.fiber? id = some f → m'.fiber? id = some f)
+    (races : ∀ r, m'.race? r = m.race? r) {c : RCmd} (h : CommandAuthorityR m c) :
+    CommandAuthorityR m' c := by
+  have active : ∀ {id}, Guard.ActiveAt m id → Guard.ActiveAt m' id := by
+    intro id a
+    obtain ⟨f, hf, running, parked⟩ := a
+    exact ⟨f, look _ _ hf, running, parked⟩
+  cases c with
+  | loop _ _ | deliver _ _ | finish _ _ | afterInterrupt _ _ _ | closeParAwait _ _ _
+  | raceCancel _ _ _ _ _ => exact active h
+  | registrationDone _ _ =>
+    obtain ⟨race, fiber, found, host, running, parked, marker⟩ := h
+    exact ⟨race, fiber, (races _).trans found, look _ _ host, running, parked, marker⟩
+  | launch _ | enrollRace _ _ =>
+    obtain ⟨race, found, a⟩ := h
+    exact ⟨race, (races _).trans found, active a⟩
+  | exitDone _ =>
+    obtain ⟨found, hf, exited⟩ := h
+    exact ⟨found, look _ _ hf, exited⟩
+  | _ => trivial
 
 structure ReservedKeysR (m : RState) (keys : List Guard.GuardKey) : Prop where
   below : ∀ key ∈ keys, key.2 < m.nextToken

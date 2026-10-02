@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.Typed.Commands.Registration
+import Effect4.Laws.Program.Typed.Commands.Launch
 
 /-!
 # Laws.Program.Typed.Commands.Observe — `observe` keeps the typed configuration
@@ -1406,5 +1406,5 @@ end Effect4.Program.Typed
 #obligation_proved Effect4.Program.Typed.M6Ledger.step_observe :=
   @Effect4.Program.Typed.observe_preserves
 -- `M6Ledger`'s report runs at the foot of the last command module, which sees every proof.
-#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 5
+#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 4
   using aesop (rule_sets := [Effect4.TypedState])

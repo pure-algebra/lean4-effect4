@@ -241,3 +241,116 @@ block rewritten over it); tests `RegistrationYield` (arrows written as `.cons (.
 - `lake build Effect4.Laws` — exit 0 (`path-build-01`); every Typed module rebuilt unchanged.
 - `lake build` of the 18 test modules reading the stack judgments — exit 0 (`path-tests-01`);
   `RegistrationYield`'s 15 reports `[propext, Quot.sound]`, no `sorryAx` in the log.
+
+## Slice 5 — `launch` keeps `I` (`M6Ledger.step_launch`), and the read-site transports made general
+
+**First:** `M6Ledger.step_launch` is proved (`launch_preserves`, `Typed/Commands/Launch.lean`); the
+ledger stands at 4 open of 20 (`loop`, `deliver`, decision preservation, reachable typing), and
+`Commands/Observe.lean`'s report runs at ceiling 4. No judgment changed meaning. Two transports in
+`Scheduler.lean`/`Bookkeeping.lean` that enumerated all twenty commands (`commandDelivery_races`,
+`commandDelivery_world`) are replaced by one monotonicity lemma, `commandDelivery_mono`; their
+callers (`queueOk_emit`, `queueOk_world`) moved.
+
+The step (`Machine/Fibers.lean:1879-1896`, rc.112 `:1520-1528`): on the allocating arm the entrant
+is appended at the old `nextId` (`allocR`, `spawn`'s record update, `:948-966`) and the world declares
+it (`World.addFiber`) at the race's result type: the program is typed at a type whose columns are
+below it (`RacePayload.programs`), widened there (`typedProg_widen`), and the type is closed because
+the race token's declaration is (`WorldValid.tokenClosed`). The race loses that program
+(`configTyped_updateRace`), and the entrant's evaluation and enrollment join the queue ahead of the
+next launch (`configTyped_cons_evaluate`, `configTyped_cons_enroll`, with the new child's columns at
+its own declaration and the race's registration completion still queued). Every other arm drops the
+head (`configTyped_tail`).
+
+The allocation transport (`configTyped_alloc`) is assembled from the per-fiber and machine-wide split
+(`machineTyped_of`): `machineWide_alloc`; `fiberTyped_alloc` for each old fiber (its own reads at its
+id, below `nextId`; observers by `storedObserverOk_alloc`; stacks by `hostStack_mono`/`_races`);
+`fiberTyped_child` (idle, unparked, no record, an empty stack, its code at its declaration);
+`readCode_alloc`; `queueOk_alloc`. Each negative read of the fiber table is at an id below `nextId`:
+the clause's own fiber, live sets and countdown targets (row 134 (e)), queued enrollments (row
+134 (e)), queued observe sources (row 189), a queued `finish`'s active owner. Positive reads are kept
+by the extension.
+
+General lemmas, at the owner's direction during this slice ("if we can do something general and not
+do a bunch of pattern matching … we're obviously going to want to do that"). A transport is stated
+once as monotonicity in what the predicate observes, and each edit is an instance:
+
+- `commandDelivery_mono` (`Scheduler.lean`): delivery reads the world only positively, the machine
+  only at the command's owner (`Guard.commandOwner`), and races only through host and token; it moves
+  along any world extension to a machine that agrees at the owner and keeps the races. Instances: the
+  trace edit (`queueOk_emit`), a fixed fiber table (`queueOk_world`), the allocation
+  (`commandDelivery_alloc`). Helpers `fiberListColumns_mono`, `afterInterruptReply_mono`,
+  `stackReply_mono`.
+- `commandAuthority_mono`: authority is monotone in the fiber table (old lookups found unchanged,
+  races kept). Instance: `commandAuthority_alloc`, a one-line term.
+- `commandOwner_found`: a queued command's owner exists (active, or the host of the race it
+  completes). It gives the allocation's owner agreement.
+- The remaining case splits list only the constructors that read and close the rest with one
+  catch-all alternative (`| _ => trivial`), as the 2026-09-18 owner rule asks of proofs.
+
+The theory behind it is the store-typing weakening lemma of the references chapter of TAPL (and
+Software Foundations' store weakening, per Codex's `theorem-reuse-scout/map-literature.md`; citation
+not checked here against a vendored copy). A judgment consults the store typing only at locations
+the term names. Every such location is allocated, so typing survives any extension. Here
+the positive reads are Kripke-monotone outright, and a negative read (`∀ ty, Γ id = some ty → …`) is
+stable exactly where `id` is already declared. Codex's packet states the same thing as observational
+congruence: a predicate that factors through equal observations transfers, absent lookups included.
+
+A possible consolidation, recorded for the owner and not proposed for landing: one queue clause,
+"every fiber id a queued command names literally is below `nextId`", in place of the per-command
+bounds of rows 134 (e) (enrollment) and 189 (observe source). Codex's follow-up review
+(`transport-consolidation-review/review.md`) corrects my first statement of it. It would be a new
+admission policy, not a consequence of `launch`. It would not by itself make `QueueOk` monotone across
+world or record changes: `resume` reads Θ negatively, and race- and host-derived dependencies are not
+literal ids (`EnrollRaceOk`'s live set). The ratified missing-old behaviour (an absent old source stays
+admitted and inert) must be kept. The existing view and stack-edit transports still serve edits that
+change a fiber record, so they are not redundant. Codex also notes a small simplification for the next
+touch: the Γ-extension premise of the new monotonicity lemmas is already inside `w.leHost w'`.
+
+Placement (the five, for `launch_preserves` and its helpers):
+1. Concept 4 (the configuration invariant `I`), property: step preservation for `launch`.
+2. Question: ledger goal `M6Ledger.step_launch`. The helpers are steps of it. `configTyped_alloc`
+   and its parts also serve every allocating evaluator arm (`fork`, `forkIn`, `forkScoped`, the
+   parallel close) under `step_loop`/`step_deliver`. `commandDelivery_mono` and
+   `commandAuthority_mono` serve every queue transport.
+3. Reach: `StepPreserves root rootTy (.launch raceId)` for every input satisfying `ConfigTyped`, at
+   the reference runner's evaluator (`termEvaluatorFor`). Bounded by decisions rows 134 (e), 188 (b)
+   and 189, and register lines CE-032 and CE-035.
+4. Not established: progress; that the entrant's evaluation keeps `I` (that is `evaluate`, `loop`
+   and the evaluator goals); reachability of the inputs; the host boundary (no host answer is in
+   scope, row 95).
+5. Unlocks: one of the five open M6 command goals on the M5 → M6 → M7 spine. The allocation transport
+   is the piece `step_loop`'s fork arms need.
+
+Control: `Test/Program/LaunchEntrant.lean`. It takes RegistrationColumn's typed configuration with
+one unlaunched entrant moved onto its race by the general race edit, and the two commands
+`registerRace` queues. The actual step allocates (`allocates`, by `rfl`: the queue is
+`[evaluate ⟨1⟩, enrollRace 0 ⟨1⟩, launch 0, registrationDone 0 false]`, `nextId = 2`, two fibers,
+the race's programs empty), and `launch_preserves` types the result (`result_typed`). The original
+witnesses stay refused (`EnrollmentBound`: `Future.config_refused`, `ObserveSource`).
+
+Changes: new `src/Effect4/Laws/Program/Typed/Commands/Launch.lean`. Edited: `Typed/Scheduler.lean`
+(the general lemmas; `commandDelivery_races` removed), `Typed/Assembly.lean` (`queueOk_emit` caller;
+`step_launch` docstring; its `#proof_wanted` removed), `Commands/Bookkeeping.lean`
+(`commandDelivery_world` removed; `queueOk_world` caller), `Commands/Observe.lean` (imports `Launch`;
+ceiling 4), `src/Effect4/Laws.lean` (imports `Launch` after `Registration`), `Test/All.lean`
+(`LaunchEntrant` after `RegistrationYield`). New `Test/Program/LaunchEntrant.lean`. Records:
+`Test/Counterexamples/REGISTER.md` (CE-032, CE-035), `docs/STATE.md`.
+
+- `lake env lean -j1 -M6144 -DwarningAsError=true src/Effect4/Laws/Program/Typed/Commands/Launch.lean`
+  — exit 0 (`launch-18`).
+- `lake build Effect4.Laws.Program.Typed.Commands.Observe Test.Program.RegistrationColumn` — exit 0
+  (`launch-19`); the M6 report passes at ceiling 4.
+- `lake build Effect4.Laws Test.Program.LaunchEntrant Test.Program.EnrollmentBound
+  Test.Program.RegistrationYield` — the four built; the fifth target was named at a wrong path
+  (`launch-22`). It was rebuilt at its real path with the other 15 test modules importing the
+  changed modules: exit 0 (`launch-23`).
+- Axioms (`launch-axioms`): `launch_preserves`, `commandDelivery_mono`, `configTyped_alloc`
+  `[propext, Quot.sound]`; `commandAuthority_mono`, `commandOwner_found` `[propext]`.
+
+Open after this slice: the walk's typing over `HostStack` tails (`CallbackSaved`/`WalkTyped`, Codex's
+note), `prepareScopedExitR`, the G2 hook-law gap (`interpRAt` against `interpR`), then `step_loop` and
+`step_deliver`. Codex's theorem-reuse packet (`/private/tmp/codex-lead-2026-10-02/theorem-reuse-scout/`)
+proposes a `popR` prefix/suffix factoring for the walk and a `PointTyped`/`completed_mono` route for
+G2. It is evidence to check at those steps, not kernel-checked. The generated reports
+(`generated/semantics.*`, the architecture page) lag the ledger by this goal until the next docs
+checkpoint.

@@ -911,8 +911,8 @@ theorem queueOk_emit {root : ProgramSource} {w : World} {m : RState} {commands :
     (events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram Unit))
     (queue : QueueOk root w m commands) : QueueOk root w (m.emit events) commands :=
   { payload := queue.payload, authority := queue.authority,
-    delivery := fun c hc => commandDelivery_races (m := m) (m' := m.emit events) (fun _ => rfl)
-      (racesKept_of_eq fun _ => rfl) c (queue.delivery c hc),
+    delivery := fun c hc => commandDelivery_mono (m := m) (m' := m.emit events) (leHost_refl w)
+      (fun _ _ h => h) (racesKept_of_eq fun _ => rfl) (fun _ _ => rfl) (queue.delivery c hc),
     owners := queue.owners, registration := queue.registration,
     keys := ⟨queue.keys.below, queue.keys.disjoint⟩,
     observer := fun source exit o ho => ⟨(queue.observer source exit o ho).1,
@@ -1811,6 +1811,9 @@ theorem step_finish (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (exit
 theorem step_resume (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (token : Nat) (code : RProgram) :
     ProofGraph.Obligation (StepPreserves root rootTy (.resume id token code)) := ⟨⟩
 
+/-- Proved in `Typed/Commands/Launch.lean` (`launch_preserves`): the entrant is allocated at the
+old `nextId` and declared at the race's result type. Its transport needs every negative read of the
+fiber table at an id below `nextId` (decisions rows 134 (e) and 189). -/
 theorem step_launch (root : ProgramSource) (rootTy : EffTy) (race : Nat) :
     ProofGraph.Obligation (StepPreserves root rootTy (.launch race)) := ⟨⟩
 
@@ -1967,7 +1970,6 @@ end Effect4.Program.Typed
 -- (the import direction forbids this module naming the proofs; decisions row 140)
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_launch
 #proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves
 #proof_wanted Effect4.Program.Typed.M6Ledger.typedState_reachable
 -- `M6Ledger`'s proved goals and its report are at the foot of the last command module
