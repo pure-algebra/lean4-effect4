@@ -67,6 +67,8 @@ import Effect4.Laws.Program.ReasonsR
 import Effect4.Laws.Program.Guard
 import Effect4.Laws.Program.LayerSharing
 import Effect4.Laws.Program.ReferenceTyping
+import Effect4.Laws.Program.PathFold
+import Effect4.Laws.Program.ExpandFix
 import Effect4.Laws.Program.Hoisting
 import Effect4.Laws.Program.HoistingTotal
 import Effect4.Laws.Program.Invocation
