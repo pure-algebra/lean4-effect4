@@ -1,0 +1,14 @@
+{
+  "command": [
+    "lake",
+    "env",
+    "lean",
+    "-j1",
+    "-M4096",
+    "-DwarningAsError=true",
+    "--run",
+    "tools/Drivers/SemanticsControls.lean"
+  ],
+  "exit": 0,
+  "elapsed": 57.38
+}

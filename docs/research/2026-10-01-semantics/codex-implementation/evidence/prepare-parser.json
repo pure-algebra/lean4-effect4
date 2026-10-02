@@ -1,0 +1,15 @@
+{
+  "command": [
+    "lake",
+    "--no-cache",
+    "--rehash",
+    "build",
+    "Effect4.Laws.Program.Typed.Assembly",
+    "Test.Program.TypedProgBindRed",
+    "Test.Audit.SemanticsCensus",
+    "Drivers.Semantics",
+    "Drivers.SemanticsControls"
+  ],
+  "exit": 0,
+  "elapsed": 13.572
+}

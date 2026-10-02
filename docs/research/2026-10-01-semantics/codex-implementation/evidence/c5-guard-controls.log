@@ -1,0 +1,13 @@
+PASS prepared report roots accepted
+PASS unprepared report root refused
+PASS saved root and import hashes accepted
+PASS corrupt imported private artifact refused
+PASS corrupt dynamic root artifact refused
+PASS oversized artifact refused before reading
+PASS hash traversal deadline refused
+PASS partial publication restores both prior files
+PASS validated publication replaces both files
+PASS snapshot-change preserves both prior files
+PASS late-freshness preserves both prior files
+PASS host process and memory bounds present
+PASS C5 guard controls: 12 finite controls; no compiler or live artifact mutation
