@@ -548,7 +548,9 @@ check-conservativity: ## the alphabet-append check: its controls; BASE=<rev> als
 # `Ty` outside the generated folds and Laws/Program/Typed/Membership.lean, read from the census and
 # the exhaustiveness gate, after the checker has established that it read a whole census (row 182
 # amended: an empty, truncated or error-carrying log refuses with exit 2). `make check-ty-rule`
-# runs its seven controls; `python3 scripts/check-ty-rule.py --tree` runs the census over the tree
+# runs its eighteen controls (seven log controls, eleven tree controls: the explicit producer
+# inventory and every producer's exit status, seat ty-rule); `python3 scripts/check-ty-rule.py
+# --tree` runs the census over the tree
 # and prints the distance from the rule. The gate turns on with the append (seat W4): not in `check`.
 .PHONY: check-ty-rule
 check-ty-rule: ## the Ty append's rule checker: its controls (the gate is the append's)
