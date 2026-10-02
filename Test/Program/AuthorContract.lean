@@ -16,8 +16,9 @@ from the module to the value a run needs.
 
 Three programs end to end. **E1** is the layer-sharing battery's own `once`, written in the
 new surface: two service declarations, one layer, the layer used twice. It elaborates to
-exactly the tree `Test/Program/LayerSharingContract.lean` certifies, so the new surface is
-held to a program the runtime already proves things about. **E2** is a package operation: the
+exactly the tree `Test/Program/LayerSharingContract.lean` defines and its slow-lane certificate
+(`Test/Program/LayerSharingCertificate.lean`) runs, so the new surface is held to a program the
+runtime already proves things about. **E2** is a package operation: the
 rc.112 key-value store's shipped table installed as a package, its rows called by spelling,
 and no table position written anywhere. **E3** is a two-service deployment whose sibling
 mistake — a merge where a `provideMerge` was meant — is caught by `Api.checkLayer` before a

@@ -1,6 +1,5 @@
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Residual
-import Test.Data.DataContract
 
 /-! DI-53: deep canonicalization, exact membership and deliberate admission deltas.
 These finite controls supplement the universal laws; they do not prove host conformance. -/

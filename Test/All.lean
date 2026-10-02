@@ -52,7 +52,6 @@ import Test.Program.GuardFoldLift
 import Test.Program.ParkHandshake
 import Test.Program.ExitConnector
 import Test.Program.TypedCorpus
-import Test.Program.ExitTypeLane
 import Test.Program.AdmissionCensus
 import Test.Program.LoadedAdmission
 import Test.Program.TypedStack
@@ -129,7 +128,6 @@ import Test.Program.HostBoundaryContract
 import Test.Api.HostSessionContract
 import Test.Api.RunnerContract
 import Test.Api.RunnerFinality
-import Test.Api.SupervisionContract
 import Test.Api.KeyedHostContract
 import Test.Run.RunContract
 import Test.Program.SchedContract
@@ -149,16 +147,11 @@ import Test.Program.AtomTable
 import Test.Program.AtomRulesRed
 import Test.Program.CheckerRulesRed
 import Test.Program.TypedStateRulesRed
-import Test.Machine.StepInvRulesRed
 import Test.Program.ErrorQueriesContract
 import Test.Program.CatchIfContract
-import Test.Machine.Fuzz
 import Test.Audit.RuntimeCoverage
 import Test.Audit.ClockLowering
 import Test.Audit.AxiomGate
-import Test.Audit.ExhaustiveFixture
-import Test.Audit.TraversalFixture
-import Test.Audit.TraversalCensus
 import Test.Audit.PositionCensus
 import Test.Audit.PositionAnalysis
 import Test.Audit.TypedStateDecl

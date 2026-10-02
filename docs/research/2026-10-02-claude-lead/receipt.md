@@ -805,3 +805,33 @@ an unsound default. The scans that must look inside (`findInt`, `internalHandleS
    and `{}` have equal membership but stay apart in the order (Codex's record/tuple note).
 5. Unlocks: W5 (codecs replace the refusals), W6 (record terms with P7's required-field lookup),
    M5's host-row arm at tables using the new forms.
+
+## Slice T1 — the default battery's slow lane and two dead batteries (owner, 2026-10-02)
+
+**First:** `lake build` (and so `make check`) no longer builds the five slowest batteries; they are
+built at a sweep by `make check-slow`, through `Test/Slow.lean`, which imports `Test.All` and them
+and runs the axiom gate over everything. The owner's choice ("cut + slow lane") after the measured
+inventory: 211 test files, 46,836 lines, about 48 minutes single-threaded over the 169 with build
+times on record, five of them 44%.
+
+- Deleted: `Test/Machine/Fuzz.lean` (347 s; 160,384 machine runs by `#guard`, untouched since
+  2026-09-12; the M6 theorems state what it enumerated) and `Test/Data/DataContract.lean` (it guarded
+  Lean's own `Option`/`Bool`/`List` functions and nothing of the tree; its import leaves
+  `TypeAlgebraContract`).
+- The slow lane (`slowLane` in `Test/Audit/AxiomGate.lean`, imported by `Test/Slow.lean`):
+  `Test/Program/LayerSharingCertificate.lean` (the kernel-checked run certificate, 414 s, split from
+  `LayerSharingContract`, whose fixtures stay in the default battery for the authoring contracts),
+  `Test/Audit/TraversalCensus.lean` with its two fixtures (260 s; a printed report, also
+  `make traversal-census`), `Test/Api/TraceOrigin.lean` with its importers `SupervisionContract` and
+  `StepInvRulesRed` (137 + 10 + 12 s), `Test/Program/ExitTypeLane.lean` (109 s; delete when M6's
+  typed-state proof lands). Paths unchanged, so no library docstring moved.
+- The module-closure gate admits the slow files unreachable only when it runs from `Test.All`;
+  from `Test/Slow.lean` they must be reached like every other source (Codex's review: a dropped
+  slow import would otherwise escape the sweep). `check-slow` is an explicit phony target, not a
+  stamped `CHECKS` entry (Codex: the stamp rule gave it a prerequisite with no rule; `make -n
+  check-slow` now prints `lake build Test.Slow`). `AGENTS.md`'s closure rule names the exception.
+- Kept, after reading the 60 batteries untouched since before 2026-09-20: the frozen contract
+  packets and the seeded counterexample models (register entries; most build in seconds).
+
+Commands: the default build through `make corpus` (`Test.All`'s gate green with the slow files
+outside it, 63 s warm); `make -n check-slow`. Not run: `make check-slow` itself (the sweep).

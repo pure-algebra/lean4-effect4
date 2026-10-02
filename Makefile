@@ -302,11 +302,11 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
   host-protocol census schema-ts schema-pins tools corpus tsgo semantics
-.PHONY: check check-full check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
+.PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
 
 check: build check-roots check-gen check-tsgo ## after every change: the build with its axiom audit, the fresh root elaboration, the generated-file drift, no TypeScript below 7
-check-full: check check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
+check-full: check check-slow check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -316,6 +316,13 @@ define refuse_drift
 	@untracked="$$(git status --porcelain -- $(GENERATED_PATHS) | grep '^??' || true)"; \
 	  if [ -n "$$untracked" ]; then echo "FAIL check-gen: untracked generated files:"; echo "$$untracked"; exit 1; fi
 endef
+
+# The slow lane (owner, 2026-10-02): the batteries out of the default build, at a sweep.
+check-slow: ## the slow batteries (`Test/Slow.lean`: long finite runs, the trace laws, the traversal census) and the axiom audit over them
+	$(LAKE) build Test.Slow
+
+traversal-census: ## print the traversal census (`docs/core/traversal-census.md`)
+	$(LAKE) build Test.Audit.TraversalCensus
 
 check-gen: gen-hermetic $(CORPUS)/index.tsv ## regenerate the stale Lean-only groups and the corpus index; refuse a changed committed file
 	$(refuse_drift)

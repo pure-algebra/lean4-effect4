@@ -104,7 +104,9 @@ its arrows; anything else is a leak.
 - Every library source must be reachable from `Effect4` or `Effect4.Laws`; `Effect4`
   must never import the Laws graph. The module-closure gate checks both roots.
 - Every battery file under `Test/` must be reachable from
-  `Test/All.lean`, or the module-closure gate refuses the build.
+  `Test/All.lean`, or the module-closure gate refuses the build; the slow lane is the one
+  exception, the files `slowLane` lists in `Test/Audit/AxiomGate.lean`, reached from
+  `Test/Slow.lean` and built at a sweep (`make check-slow`).
 - Do not say "sound", "equivalent", "preserves", "fully reified", or
   "complete" without naming the exact judgment, observation, theorem or gate,
   assumptions, and remaining host boundary. A compiling finite probe is
