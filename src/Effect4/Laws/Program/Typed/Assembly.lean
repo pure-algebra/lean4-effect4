@@ -953,10 +953,7 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
       exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
         (fun _ _ _ h => nomatch h) () (scopeLive_mono ord.1 h)
         fun _ _ _ post => TypedProg.pure (exitOk_finalizer rfl post)
-  | memoDone layer memoMap =>
-    refine TypedProg.store () trivial fun w'' _ ans post => ?_
-    subst post
-    exact TypedProg.pure (exitOk_unit_finalizer w'')
+  | memoDone layer memoMap => exact h.elim
   | memoEntry layer memoMap =>
     -- `observers--` answers `unit` or the layer scope's handle, present (`memoRelease`'s post),
     -- carried through the guard at `unit | Scope`; the last observer closes that scope
