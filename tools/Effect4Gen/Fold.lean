@@ -2423,6 +2423,19 @@ def emitExtras (root : Name) : MetaM String := do
   s := s ++ s!"    cata_{label} ({algT}.ofLayer layer) t =\n"
   s := s ++ s!"      layer ({viewCtor} t) ({viewLeaf} t) (({viewKids} t).map (cata_{label} ({algT}.ofLayer layer))) := by\n"
   s := s ++ "  cases t <;> rfl\n\n"
+  s := s ++ s!"/-- **Uniqueness, one layer down**: a function that satisfies the layer equation at every node is\n"
+  s := s ++ s!"the fold of the layer function (`hom_eq_cata_{label}`, every field by definition). -/\n"
+  s := s ++ s!"theorem eq_cata_ofLayer \{R : Type u} (layer : {ctorT} → {leafT} → List R → R) (f : {famT} → R)\n"
+  s := s ++ s!"    (hf : ∀ t, f t = layer ({viewCtor} t) ({viewLeaf} t) (({viewKids} t).map f)) (t : {famT}) :\n"
+  s := s ++ s!"    f t = cata_{label} ({algT}.ofLayer layer) t :=\n"
+  s := s ++ s!"  hom_eq_cata_{label} (alg := {algT}.ofLayer layer)\n"
+  s := s ++ s!"    \{ f_{label} := f\n"
+  let uniqFields := rows.map fun r =>
+    if r.args.isEmpty then s!"      h_{r.field} := hf .{r.ctor}"
+    else
+      let names := joinArgs (r.args.map (·.name))
+      s!"      h_{r.field} := fun {names} => hf (.{r.ctor} {names})"
+  s := s ++ String.intercalate "\n" uniqFields ++ " } t\n\n"
   let specs := (rows.filter fun r => !(kidsOf r).isEmpty).map fun r => s!"{famT}.{r.ctor}.sizeOf_spec"
   s := s ++ s!"/-- A child is smaller. -/\n"
   s := s ++ s!"theorem sizeOf_{viewKids} \{t k : {famT}} (h : k ∈ {viewKids} t) : sizeOf k < sizeOf t := by\n"
@@ -2520,7 +2533,8 @@ def receipts (root : Name) : MetaM (List String) := do
   let (_, blockName, block) ← readBlock root
   let (label, _, _) := block.head!
   let low := lowerFirst blockName
-  return [s!"{low}Build_view", "cata_ofLayer_view", s!"sizeOf_{low}Kids", "cata_ofLayer_inv",
+  return [s!"{low}Build_view", "cata_ofLayer_view", "eq_cata_ofLayer", s!"sizeOf_{low}Kids",
+    "cata_ofLayer_inv",
     "foldMap_head_eq_cata", "foldMap_eq_cata", s!"cata_fusion_{label}", s!"cata_prod_{label}"]
 
 /-- The extras of one block and their receipts: the nested form for a block with a member under

@@ -282,6 +282,34 @@ theorem cata_ofLayer_view {R : Type u} (layer : TyCtor → TyLeaf → List R →
       layer (tyCtor t) (tyLeaf t) ((tyKids t).map (cata_ty (TyAlgebra.ofLayer layer))) := by
   cases t <;> rfl
 
+/-- **Uniqueness, one layer down**: a function that satisfies the layer equation at every node is
+the fold of the layer function (`hom_eq_cata_ty`, every field by definition). -/
+theorem eq_cata_ofLayer {R : Type u} (layer : TyCtor → TyLeaf → List R → R) (f : Effect4.Program.Ty → R)
+    (hf : ∀ t, f t = layer (tyCtor t) (tyLeaf t) ((tyKids t).map f)) (t : Effect4.Program.Ty) :
+    f t = cata_ty (TyAlgebra.ofLayer layer) t :=
+  hom_eq_cata_ty (alg := TyAlgebra.ofLayer layer)
+    { f_ty := f
+      h_ty_never := hf .never
+      h_ty_unit := hf .unit
+      h_ty_nat := hf .nat
+      h_ty_int := hf .int
+      h_ty_string := hf .string
+      h_ty_bool := hf .bool
+      h_ty_handle := fun a0 => hf (.handle a0)
+      h_ty_option := fun a0 => hf (.option a0)
+      h_ty_list := fun a0 => hf (.list a0)
+      h_ty_prod := fun a0 a1 => hf (.prod a0 a1)
+      h_ty_except := fun a0 a1 => hf (.except a0 a1)
+      h_ty_exitOf := fun a0 a1 => hf (.exitOf a0 a1)
+      h_ty_causeOf := fun a0 => hf (.causeOf a0)
+      h_ty_fiberOf := fun a0 a1 => hf (.fiberOf a0 a1)
+      h_ty_union := fun a0 a1 => hf (.union a0 a1)
+      h_ty_lit := fun a0 => hf (.lit a0)
+      h_ty_refOf := fun a0 => hf (.refOf a0)
+      h_ty_deferredOf := fun a0 a1 => hf (.deferredOf a0 a1)
+      h_ty_var := fun a0 => hf (.var a0)
+      h_ty_unknown := hf .unknown } t
+
 /-- A child is smaller. -/
 theorem sizeOf_tyKids {t k : Effect4.Program.Ty} (h : k ∈ tyKids t) : sizeOf k < sizeOf t := by
   cases t <;> simp only [tyKids, List.mem_cons, List.not_mem_nil, or_false] at h <;>
@@ -511,6 +539,7 @@ theorem cata_prod_ty {R : TyFam → Type u} {S : TyFam → Type v}
 
 #print axioms tyBuild_view
 #print axioms cata_ofLayer_view
+#print axioms eq_cata_ofLayer
 #print axioms sizeOf_tyKids
 #print axioms cata_ofLayer_inv
 #print axioms foldMap_head_eq_cata

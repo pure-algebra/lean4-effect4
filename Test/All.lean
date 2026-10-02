@@ -46,6 +46,7 @@ import Test.Program.H2PartOne
 import Test.Program.TypedDenotation
 import Test.Program.LayerDenotation
 import Test.Program.LayerRefs
+import Test.Program.TyTables
 import Test.Program.GuardFoldLift
 import Test.Program.ParkHandshake
 import Test.Program.ExitConnector
