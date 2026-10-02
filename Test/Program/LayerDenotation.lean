@@ -3,9 +3,11 @@ import Test.Program.TypedDenotation
 /-!
 # Test.Program.LayerDenotation — the layer family of M5 (decisions row 176)
 
-M5's fundamental property (`DenotesTyped`, `Laws/Program/Typed/Assembly.lean`) is proved for every
-arm of `denoteR` but the layer family's, which enters the assembly as the hypothesis
-`ProvideLayerArm` (`Laws/Program/Typed/Denotation.lean`). This battery holds that family's controls.
+M5's fundamental property (`DenotesTyped`, `Laws/Program/Typed/Assembly.lean`) is proved at every
+source (`denotesTyped`, `Laws/Program/Typed/LayerArm.lean`); the layer family's arm, which the
+assembly takes as the hypothesis `ProvideLayerArm` (`Laws/Program/Typed/Denotation.lean`), was the
+last, proved there (`provideLayerArm`). This battery holds that family's controls: the statements
+below were false before the rows that repaired them.
 
 **Row 176, the image of a built context.** A layer build answers its context, and the memo rows
 declare a built context at `Ty.context` (`storePost`'s `memoGet` arm, `Typed/Residual.lean`), whose
@@ -23,17 +25,20 @@ controls, kernel-checked:
   build answers the same image (`fresh_image`), which the reader reads back (`built_reads`); the
   program runs to its body's answer on both machines (`memo_runs`, `memo_runs_reference`).
 
-**A finding outside row 176** (proposed `E4-TYPED-CE-031`; the register is the coordinator's): a
-reference under `orDie`. `layerRefsWF` admits `orDie (ref t)` and the checker types the
-expansion, where the reference is its target's term; the run compiles `orDie`'s inner term
-directly (`compileLayer`'s `orDie` arm, `Program/Compile.lean`, mirrored by `denoteLayer`'s), so a
-reference there is the wrong shape at every fuel. `ProvideLayerArm` is false at such a program
-(`orDie_arm_refuted`), at fuel 1, where the induction's premise holds at every program
-(`ih_zero`).
+**Row 185, a reference under `orDie`** (`E4-TYPED-CE-031`). `layerRefsWF` admits `orDie (ref t)`,
+and the checker types the expansion, where the reference is its target's term. Before the row the
+run compiled `orDie`'s inner term directly (`compileLayer`'s `orDie` arm, mirrored by `denoteLayer`'s),
+so a reference there was the wrong shape at every fuel, and `ProvideLayerArm` and `DenotesTyped`
+were false at such a program (`orDie_arm_refuted`, `orDie_denotes_refuted`, kernel-checked at
+`c1c05314`, this file, over the old arms). Since the row `orDie` resolves its inner layer as every
+other child does (`Layer.ts:3327-3328`, `self.build(memoMap, scope)`): `resolveLayerWith`, the
+frame machine's resolver at the point's fuel, and `denoteLayerWith`'s `orDie` arm. The controls,
+kernel-evaluated on both machines:
 
-The refutations invert `TypedProg` along one answer per operation, with seat D2's helpers
-(`Test/Program/TypedDenotation.lean`: `guardStore_run`, `guardGetContext_run`,
-`guardSetContext_run`, `guardBind_body`).
+* the program runs to its body's answer (`orDie_runs`, `orDie_runs_reference`);
+* a reference whose target is `orDie` over another reference hops twice, one fuel each, and runs
+  too (`chain_runs`, `chain_runs_reference`).
+
 -/
 
 set_option autoImplicit false
@@ -136,7 +141,7 @@ theorem memo_runs_reference :
       some (.success .unit) := by
   decide +kernel
 
-/-! ## A reference under `orDie` (proposed `E4-TYPED-CE-031`) -/
+/-! ## A reference under `orDie` (decisions row 185, `E4-TYPED-CE-031`) -/
 
 /-- A layer, then `orDie` of a reference to it, built through a private memo map. -/
 def orDieRoot : NativeEff :=
@@ -152,87 +157,41 @@ theorem orDie_typed :
     Program.typeOfProgram orDieSrc.signature orDieRoot = some (EffTy.pure .unit) := by
   decide +kernel
 
-/-- The second `provideLayer`, at fuel 1, its environment the first's `unit`. -/
-def orDiePoint : Point := ⟨[1], [Val.unit], 1, [], [], 0⟩
-
-theorem orDie_node : Node.at_ (.eff orDieSrc.program) orDiePoint.path =
-    some (.eff (.provideLayer (.orDie (.ref [0, 0])) true U)) := by decide +kernel
-
-theorem orDie_check : Checker.check orDieSrc.signature [.unit] orDiePoint.path
-    (Eff.expandIn orDieRoot (.provideLayer (.orDie (.ref [0, 0])) true U)) =
-      .ok (EffTy.pure .unit) := by
+/-- **Repaired** (the frame machine, kernel-evaluated): `orDie` builds the reference's target, and
+the body answers `unit`. -/
+theorem orDie_runs : (Api.replay orDieRoot 200 tape).exit = some (.success .unit) := by
   decide +kernel
 
-theorem orDie_point (w : W) : PointTyped orDieSrc w orDiePoint (EffTy.pure .unit) := by
-  refine ⟨_, [.unit], orDie_node, orDie_check, ⟨rfl, ?_⟩, fun _ h => nomatch h⟩
-  intro i ty v hty hv
-  cases i with
-  | zero =>
-    cases hty
-    cases hv
-    exact trivial
-  | succ i => cases hty
+/-- The same run on the reference machine, whose code is `denoteR`. -/
+theorem orDie_runs_reference :
+    ((replayR orDieRoot 200 tape).machine.fiber? Api.root).bind RunFiber.exit =
+      some (.success .unit) := by
+  decide +kernel
 
-/-- The induction's premise at no fuel holds at every program: every point is the frontier. -/
-theorem ih_zero (root : ProgramSource) :
-    ∀ f' ≤ 0, ∀ (c : NativeEff) (path : List Nat),
-      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path :=
-  fun _ hf' c _ _ _ _ q _ hq _ _ => denoteR_zero_typed c (by omega)
+/-- A reference to the `orDie` layer: its hop lands on `orDie (ref [0, 0])`, whose inner reference
+hops again. -/
+def chainRoot : NativeEff :=
+  .bind (.provideLayer (.succeed K (.nat 7)) false U)
+    (.bind (.provideLayer (.orDie (.ref [0, 0])) true U)
+      (.provideLayer (.ref [1, 0, 0]) true U))
+def chainSrc : ProgramSource := chainRoot
 
-/-- The build of `orDie` over a reference answers the wrong shape inside its guard, at every
-fuel. -/
-theorem orDie_ref_build (root : NativeEff) (t : List Nat) (q : Point) (m : MemoMapId) (s : Nat) :
-    denoteLayer root (.orDie (.ref t)) q m s =
-      (guardR .onFailure (.pure badShapeExit)).bind fun
-        | .success v => .pure (.success v)
-        | .failure c => .pure (.failure (orDieCause c)) := by
-  rw [denoteLayer_orDie]
-  rfl
+/-- Well formed: the outer reference's target, `[1, 0, 0]`, is the `orDie` layer, not a reference. -/
+theorem chain_wf : chainRoot.layerRefsWF = true := by decide +kernel
 
-/-- **Red (proposed `E4-TYPED-CE-031`)**: the layer family's arm is false at the `orDie`
-program. Following the second `provideLayer` at fuel 1 through the counted suspend, the
-construction, the scope, the private memo fork and the build region, the build of `orDie (ref
-[0, 0])` answers `badShapeExit` inside its guard. -/
-theorem orDie_arm_refuted : ¬ ProvideLayerArm orDieSrc := by
-  intro h
-  have typed := h orDie_wf 0 (ih_zero orDieSrc) w0 rfl orDiePoint (EffTy.pure .unit)
-    (.orDie (.ref [0, 0])) true U rfl orDie_node (orDie_point w0)
-  rw [denoteR_provideLayer _ _ _ _ (by decide)] at typed
-  obtain ⟨_, _, next⟩ := TypedProg.fiber_inv typed (fun _ h => nomatch h)
-    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  have t1 := next w0 (leHost_refl w0) Val.unit trivial
-  obtain ⟨_, _, next1⟩ := TypedProg.fiber_inv t1 (fun _ h => nomatch h)
-    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  have t2 := next1 w0 (leHost_refl w0) [] (fun _ hm => nomatch hm)
-  obtain ⟨_, _, run2⟩ := guardStore_run t2
-  have t3 := run2 w0 (leHost_refl w0) (Val.scopeHandle 0) (fits_scopeHandle w0 0 w0_live)
-  simp only [seqR, Val.scope?_scopeHandle, onExitR] at t3
-  obtain ⟨_, t4⟩ := guardBind_body t3
-  simp only [Effects.Program.bind_assoc, ↓reduceIte] at t4
-  obtain ⟨_, t5⟩ := guardBind_body t4
-  simp only [Effects.Program.bind_assoc] at t5
-  obtain ⟨_, _, run7⟩ := guardStore_run t5
-  have t7 := run7 w0 (leHost_refl w0) (Val.memoMap ⟨0⟩) ⟨⟨0⟩, rfl⟩
-  simp only [seqR, Val.memoMap?_memoMap, buildWithMemoMapR, updateContextR,
-    Effects.Program.bind_assoc] at t7
-  have t8 := guardGetContext_run t7 w0 (leHost_refl w0) (Val.context emptyCtx) (emptyCtx_fits w0)
-  simp only [seqR, Val.context?_context, updateKeepsIdentity, Bool.false_eq_true, ↓reduceIte,
-    Effects.Program.bind_assoc] at t8
-  have t9 := guardSetContext_run t8 w0 (leHost_refl w0)
-  simp only [onExitR, Effects.Program.bind_assoc] at t9
-  obtain ⟨_, t10⟩ := guardBind_body t9
-  simp only [Effects.Program.bind_assoc] at t10
-  obtain ⟨_, t11⟩ := guardBind_body t10
-  dsimp only at t11
-  rw [orDie_ref_build] at t11
-  simp only [Effects.Program.bind_assoc] at t11
-  obtain ⟨mid, t12⟩ := guardBind_body t11
-  exact badShape_refused w0 mid (unguard_payload_inv _ _ _ _ _ t12)
+theorem chain_typed :
+    Program.typeOfProgram chainSrc.signature chainRoot = some (EffTy.pure .unit) := by
+  decide +kernel
 
-/-- The capstone is therefore false at the same program: `DenotesTyped` gives the layer arm's
-conclusion at every `provideLayer` point. -/
-theorem orDie_denotes_refuted : ¬ DenotesTyped orDieSrc := fun h =>
-  orDie_arm_refuted fun hwf _ _ w htie p ty _ _ _ _ hat hpt => h hwf w htie p _ ty hat hpt
+/-- **The two hops** (the frame machine): the reference resolves its target's `orDie` through
+`resolveLayerWith`, not the table, so the inner reference is resolved as well. -/
+theorem chain_runs : (Api.replay chainRoot 200 tape).exit = some (.success .unit) := by
+  decide +kernel
+
+theorem chain_runs_reference :
+    ((replayR chainRoot 200 tape).machine.fiber? Api.root).bind RunFiber.exit =
+      some (.success .unit) := by
+  decide +kernel
 
 end Test.Program.LayerDenotation
 
@@ -240,5 +199,7 @@ end Test.Program.LayerDenotation
 #print axioms Test.Program.LayerDenotation.built_reads
 #print axioms Test.Program.LayerDenotation.memo_runs
 #print axioms Test.Program.LayerDenotation.memo_runs_reference
-#print axioms Test.Program.LayerDenotation.orDie_arm_refuted
-#print axioms Test.Program.LayerDenotation.orDie_denotes_refuted
+#print axioms Test.Program.LayerDenotation.orDie_runs
+#print axioms Test.Program.LayerDenotation.orDie_runs_reference
+#print axioms Test.Program.LayerDenotation.chain_runs
+#print axioms Test.Program.LayerDenotation.chain_runs_reference

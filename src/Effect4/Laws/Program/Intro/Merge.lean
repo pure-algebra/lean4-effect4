@@ -104,9 +104,9 @@ theorem mergeTwo_intro (root : NativeEff) (q : Point) (m : MemoMapId) (child : N
                 cases contextsOf ex with
                 | some ctxs => simp only [prepareR_pure]; exact CodeMeans.success _
                 | none =>
-                  cases reasonsOfVal ex with
-                  | nil => exact codeMeans_badShape root
-                  | cons reason rest => simp only [prepareR_pure]; exact CodeMeans.failure _
+                  cases failedIn ex with
+                  | false => exact codeMeans_badShape root
+                  | true => simp only [↓reduceIte, prepareR_pure]; exact CodeMeans.failure _
               | none =>
                 show CodeMeans root
                   (Program.contAOf root (.mergeForkNext q 1 m parent ([] ++ [id0])) f1) _
@@ -173,9 +173,9 @@ theorem mergeAllFork_intro (root : NativeEff) (q : Point) (m : MemoMapId) (paren
     cases contextsOf ex with
     | some ctxs => simp only [prepareR_pure]; exact CodeMeans.success _
     | none =>
-      cases reasonsOfVal ex with
-      | nil => exact codeMeans_badShape root
-      | cons reason rest => simp only [prepareR_pure]; exact CodeMeans.failure _
+      cases failedIn ex with
+      | false => exact codeMeans_badShape root
+      | true => simp only [↓reduceIte, prepareR_pure]; exact CodeMeans.failure _
   | remaining + 1, i, forked, hsum => by
     show CodeMeans root
       (Prim.onSuccess

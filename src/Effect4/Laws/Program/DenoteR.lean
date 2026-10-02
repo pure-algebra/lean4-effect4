@@ -340,14 +340,12 @@ def combineWithR (mode : CombineMode) (that : Env.Ctx) (v : Val) : RProgram :=
     | .provideMerge => .pure (.success (builtContext (that.merge merged.services)))
   | none => .pure badShapeExit
 
-/-- `Context.mergeAll(...contexts)` (`Layer.ts:1600`) over the awaited exits. -/
+/-- `Context.mergeAll(...contexts)` (`Layer.ts:1600`) over the awaited exits; a failed build,
+whatever its cause, fails the merge (`internal/effect.ts:4950-4951`; decisions row 186). -/
 def mergeContextsR (v : Val) : RProgram :=
   match contextsOf v with
   | some ctxs => .pure (.success (builtContext (Env.Context.mergeAll ctxs)))
-  | none =>
-    match reasonsOfVal v with
-    | [] => .pure badShapeExit
-    | reason :: rest => .pure (.failure ⟨reason :: rest⟩)
+  | none => if failedIn v then .pure (.failure ⟨reasonsOfVal v⟩) else .pure badShapeExit
 
 /-- `Effect.service(key)` on the context value: the lookup, or the host throw as a defect. -/
 def serviceLookupR (key : ServiceKey) (v : Val) : RProgram :=
@@ -570,14 +568,6 @@ a layer at no fuel, whose children have none either, descends in its term
 batteries pin (`Test/Program/RuntimeRContract.lean`); the equations below are the only
 interface the proofs use. -/
 
-/-- Whether a layer term is a reference. `compileLayer` compiles the inner term of `orDie`
-directly (`Prim.onFailure (compileLayer inner …)`), never through `resolveLayer`, so a
-reference there is the wrong shape it is at that table; the `orDie` arm of the build mirrors
-that. -/
-def _root_.Effect4.Program.LayerTerm.isRef {Op : Type} : LayerTerm Op → Bool
-  | .ref _ => true
-  | _ => false
-
 /-- The arms of the denotation at a positive budget, every child at the predecessor budget
 through `rec` (a program at its point) and `recL` (a layer at its point). Every arm names the `compileEff` arm it
 mirrors; the counted checkpoints are where the frame machine spends a primitive that the term
@@ -708,11 +698,10 @@ def denoteLayerBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
       match Val.memoMap? v with
       | some id => recL inner (q.child 0) id scope
       | none => .pure badShapeExit)
-  -- the inner term is compiled at the table directly (`compileLayer`'s `orDie` arm), never
-  -- resolved: a reference there is the wrong shape
+  -- the inner layer is built as it resolves, a reference included (`Layer.ts:3328`,
+  -- `self.build(memoMap, scope)`; decisions row 185), as `resolveLayerTerm`'s `orDie` arm does
   | .orDie inner, q, m, scope =>
-    (guardR .onFailure
-      (if inner.isRef then .pure badShapeExit else recL inner (q.child 0) m scope)).bind fun
+    (guardR .onFailure (recL inner (q.child 0) m scope)).bind fun
       | .success v => .pure (.success v)
       | .failure c => .pure (.failure (orDieCause c))
   | .effect key body, q, m, scope =>
@@ -755,9 +744,7 @@ def denoteLayerZero (root : NativeEff) : LayerTerm NativeOp → Point → MemoMa
       | some id => denoteLayerZero root inner (q.child 0) id scope
       | none => .pure badShapeExit)
   | .orDie inner, q, m, scope =>
-    (guardR .onFailure
-      (if inner.isRef then .pure badShapeExit
-       else denoteLayerZero root inner (q.child 0) m scope)).bind fun
+    (guardR .onFailure (denoteLayerZero root inner (q.child 0) m scope)).bind fun
       | .success v => .pure (.success v)
       | .failure c => .pure (.failure (orDieCause c))
   | .effect key _body, q, m, scope =>
@@ -1122,9 +1109,7 @@ theorem denoteLayer_fresh (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapI
 
 theorem denoteLayer_orDie (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat) :
     denoteLayer root (.orDie inner) q m scope =
-      (guardR .onFailure
-        (if inner.isRef then .pure badShapeExit
-         else denoteLayer root inner (q.child 0) m scope)).bind fun
+      (guardR .onFailure (denoteLayer root inner (q.child 0) m scope)).bind fun
         | .success v => .pure (.success v)
         | .failure c => .pure (.failure (orDieCause c)) := by
   layerBudget q

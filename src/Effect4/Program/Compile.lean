@@ -521,20 +521,29 @@ def contextsOfList : List Val → Option (List Env.Ctx)
       | _, _ => none
     | _ => none
 
-/-- The contexts of an awaited exits value (`exitsVal`, one `list` frame). -/
-def contextsOf : Val → Option (List Env.Ctx)
-  | .list values => contextsOfList values
-  | _ => none
+/-- The contexts of an awaited exits value, read as a list (`Val.asList?`, the reader the list
+type's membership reads, `fits_list_iff`): the `list` frame `exitsVal` writes, or an admitted
+fiber snapshot, whose elements are fiber handles and never exits, so only the empty snapshot,
+the empty list, has contexts (decisions row 186). -/
+def contextsOf (v : Val) : Option (List Env.Ctx) :=
+  (Val.asList? v).bind contextsOfList
+
+/-- Whether an awaited exits value holds a failed exit, whatever its cause, the empty cause
+included: `forEachConcurrent`'s `step` returns the first `Failure` exit as it is
+(`internal/effect.ts:4950-4951`), so the merge fails even when the cause carries no reason
+(decisions row 186). -/
+def failedIn (v : Val) : Bool :=
+  ((Val.asList? v).getD []).any fun x =>
+    match exitOfVal x with
+    | some (Exit.failure _) => true
+    | _ => false
 
 /-- `Context.mergeAll(...contexts)` (`Layer.ts:1600`) over the awaited exits; a failed build
-fails the merge with every failure's reasons, in order. -/
+fails the merge with every failure's reasons, in order, an empty cause's none included. -/
 def mergeContextsK (v : Val) : NCode :=
   match contextsOf v with
   | some ctxs => Prim.success (builtContext (Env.Context.mergeAll ctxs))
-  | none =>
-    match reasonsOfVal v with
-    | [] => badShape
-    | reason :: rest => Prim.failure ⟨reason :: rest⟩
+  | none => if failedIn v then Prim.failure ⟨reasonsOfVal v⟩ else badShape
 
 /-- The route an asynchronous invocation takes, shared by `perform` and `callback`
 (DI-61 (a)). It is a plain definition, outside the
@@ -701,31 +710,53 @@ def compileLayer : LayerTerm NativeOp → Point → MemoMapId → Nat → NCode
     Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
       (EffName.fromBuildThen q m)
 
+/-- A layer term at a point without fuel: a reference is the live frontier at its own point (no
+fuel for its hop; DB-04: fuel exhaustion is never an error), `orDie` resolves its inner layer (a
+child of a point without fuel has none either), every other term is the table's. Structural in
+the term, the descent no fuel can make (as `denoteLayerZero` is). -/
+def resolveLayerZero : LayerTerm NativeOp → Point → MemoMapId → Nat → NCode
+  | .ref _, q, _, _ => frontier q
+  | .orDie inner, q, m, scope =>
+    Prim.onFailure (resolveLayerZero inner (q.child 0) m scope) EffName.orDie
+  | l, q, m, scope => compileLayer l q m scope
+
+/-- A layer term at a point, at the given fuel (the point's own, `resolveLayer.resolveLayerTerm`):
+with none, `resolveLayerZero`; else a reference hops to its target's term at the target's path,
+one fuel down (`Point.redirect`), and `orDie` resolves its inner layer one fuel down
+(`Point.child`). `Layer.orDie(self)` builds `self` whatever layer it is (`Layer.ts:3327-3328`,
+`self.build(memoMap, scope)`), so a reference under `orDie`, at a reference's target or not,
+resolves as every other child does (decisions row 185). Every other term is the table's. -/
+def resolveLayerWith (root : NativeEff) : Nat → LayerTerm NativeOp → Point → MemoMapId → Nat → NCode
+  | 0, l, q, m, scope => resolveLayerZero l q m scope
+  | f + 1, .ref target, q, m, scope =>
+    match Node.at_ (Node.eff root) (q.redirect target).path with
+    | some (Node.layer (.ref _)) => badShape
+    | some (Node.layer l) => resolveLayerWith root f l (q.redirect target) m scope
+    | _ => badShape
+  | f + 1, .orDie inner, q, m, scope =>
+    Prim.onFailure (resolveLayerWith root f inner (q.child 0) m scope) EffName.orDie
+  | _ + 1, l, q, m, scope => compileLayer l q m scope
+
 /-- The layer at a point of the root, built: `compileLayer` of the node there. A reference
 (`LayerTerm.ref`, the host rows slice) is compiled as its target at the target's path, one
 hop and one fuel down (`Point.redirect`): both memo sites (`EffThunk.memoLookup`'s
 `SyncOp.memoGet q.path` and `SyncOp.memoBuild q.path`) then key on the target's path, so the
 defining occurrence and every reference share one memo entry, which is the whole of the
 memo fix (DB-12: identity is a path, the path of the definition). Well-formedness
-(`Refs.lean` `layerRefsWF`) forbids a reference to a reference, so one hop resolves; a
-second reference at the target is the refusal. -/
+(`Refs.lean` `layerRefsWF`) forbids a reference to a reference, so a hop lands on a term that is
+no reference; a reference at the target is the refusal. A reference under an `orDie` at the
+target hops again, one more fuel down. -/
 def resolveLayer (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) : NCode :=
   match Node.at_ (Node.eff root) q.path with
   | some (Node.layer l) => resolveLayerTerm root l q m scope
   | _ => badShape
 where
-  /-- The term at the point, built; a reference is the hop, which costs one fuel and is a
-  live frontier when none is left (DB-04: fuel exhaustion is never an error). -/
-  resolveLayerTerm (root : NativeEff) : LayerTerm NativeOp → Point → MemoMapId → Nat → NCode
-    | .ref target, q, m, scope =>
-      match q.fuel with
-      | 0 => frontier q
-      | _ + 1 =>
-        match Node.at_ (Node.eff root) (q.redirect target).path with
-        | some (Node.layer (.ref _)) => badShape
-        | some (Node.layer l) => compileLayer l (q.redirect target) m scope
-        | _ => badShape
-    | l, q, m, scope => compileLayer l q m scope
+  /-- The term at the point, built at the point's fuel (`resolveLayerWith`): a reference is the
+  hop, which costs one fuel and is a live frontier when none is left; `orDie` resolves its inner
+  layer (decisions row 185). -/
+  resolveLayerTerm (root : NativeEff) (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+      (scope : Nat) : NCode :=
+    resolveLayerWith root q.fuel l q m scope
 
 /-- How many layers the `mergeAll` at a point has; `0` at any other node. -/
 def mergeAllCount (root : NativeEff) (q : Point) : Nat :=
@@ -1164,7 +1195,7 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
   -- `getOrElseMemoize` after `get` (`Layer.ts:451-455`): a hit is the entry's deferred and its
   -- owning map (`:439-440`, `:246-249`), registering the entry finalizer on the caller scope
   -- then awaiting; unit is a miss, `memoMapBuild`
-  | .memoize q _ scope, Val.pair (Val.promise ⟨cell⟩) (Val.memoMap ⟨owner⟩) =>
+  | .memoize q _ scope, Val.list [Val.promise ⟨cell⟩, Val.memoMap ⟨owner⟩] =>
     Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path ⟨owner⟩))
       (EffName.awaitPromise ⟨cell⟩)
   | .memoize q m scope, Val.unit =>

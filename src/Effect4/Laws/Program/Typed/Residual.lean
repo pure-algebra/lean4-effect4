@@ -44,7 +44,10 @@ def FinalizerAdmitted (root : ProgramSource) (w : World) : FinName → Prop
   | .release _ fails => fails = false
   | .closeChildScope scope | .closeChildOnFailure scope => ScopeLive w scope
   | .detachFromParent parent _ => ScopeLive w parent
-  | .interruptFiber _ _ | .awaitNewChildren _ | .parkThen _ | .memoEntry _ _ | .memoDone _ _ => True
+  | .interruptFiber _ _ | .awaitNewChildren _ | .parkThen _ | .memoEntry _ _ => True
+  -- `memoMapBuild`'s `onExit` (`Layer.ts:414-417`), never a scope's finalizer: its exit is the
+  -- construction's, which `memoComplete`'s pre types at the layer's columns (decisions row 187)
+  | .memoDone _ _ => False
 
 /-- What each store row demands of its request (decisions row 136 for `refModify`,
 `refModifySome` and the scope rows). -/
@@ -78,13 +81,24 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   -- (a″)), so the scope store's typing types it at `⟨unknown, never⟩`
   | .scopeAdd scope fin => ScopeLive w scope ∧ FinalizerAdmitted root w fin
   | .scopeRemove scope _ | .scopeIsClosed scope | .scopeFork scope _ => ScopeLive w scope
-  | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
+  | .memoFork _ | .memoRelease _ _ => True
+  -- the exit that completes a memo entry fits the entry's columns, the built context and the
+  -- layer's own checked error type, as `deferredCompleteWith`'s exit fits its cell's; with
+  -- `memoBuild`'s row, the memo-table clause `memoGet`'s post reads (decisions row 187)
+  | .memoComplete layer _ ex => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
+      Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+      ExitOk w ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩ ex
   -- the looked-up layer's own checked error type (decision row 90), read through the
   -- expansion's rounds as `PointTyped` reads a node (decisions row 153 (b))
   | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
       Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt ∧
       lt.error = cert
-  | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
+  -- the entry's Deferred is declared at the layer's columns, the built context and the layer's
+  -- own checked error type, read as `memoGet` reads them: the promise table's `memoBuild` row
+  -- (`Typed/Vocabulary.lean`), the memo-table clause `memoGet`'s post relies on (decisions row 187)
+  | .memoBuild layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
+      Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+      cert = (.handle Ty.contextTarget, lt.error)
 
 /-- What each store row's answer satisfies: the store's actual answer (decisions row 136; the
 handler's adequacy is `StoreImplements`, `Typed/Adequacy.lean`). -/
@@ -591,6 +605,13 @@ theorem pointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {t
   obtain ⟨fty, hfty, hex⟩ := hview q hq
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
+theorem layerPointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {lt : LayerTy}
+    (h : LayerPointTyped src w p lt) : LayerPointTyped src w' p lt := by
+  obtain ⟨l, hat, hchk, henv, hview⟩ := h
+  refine ⟨l, hat, hchk, henv, fun q hq => ?_⟩
+  obtain ⟨fty, hfty, hex⟩ := hview q hq
+  exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
+
 theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty : EffTy}
     (h : BodyTyped src w b ty) : BodyTyped src w' b ty := by
   cases h with
@@ -599,7 +620,8 @@ theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty 
   | raceCleanup race => exact .raceCleanup race
   | acquireIn p ctx ty h => exact .acquireIn p ctx ty (pointTyped_mono ord h)
   | release p prev ty h => exact .release p prev ty (pointTyped_mono ord h)
-  | layerBuild p m scope ty h => exact .layerBuild p m scope ty (pointTyped_mono ord h)
+  | layerBuild p m scope lt ty h hty =>
+    exact .layerBuild p m scope lt ty (layerPointTyped_mono ord h) hty
 
 /-- A finalizer's admission is upward closed (decisions row 151 (a″)): a capture's
 environment and services by membership's transport, a scope's presence by scope persistence. -/
@@ -657,7 +679,10 @@ theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
   | scopeRemove scope _ | scopeIsClosed scope | scopeFork scope _ =>
     simp only [storePre] at h ⊢
     exact scopeLive_mono ord.1 h
-  | clockNow | sleepCancel _ _ | scopeMake _ | memoFork _ | memoComplete _ _ _ | memoRelease _ _ =>
+  | memoComplete layer _ ex =>
+    obtain ⟨l, lt, hat, hcheck, hex⟩ := h
+    exact ⟨l, lt, hat, hcheck, strongExit_mono _ _ _ _ ord hex⟩
+  | clockNow | sleepCancel _ _ | scopeMake _ | memoFork _ | memoRelease _ _ =>
     exact trivial
 
 theorem asyncPre_mono (root : ProgramSource) (ord : w.leHost w') (register : EffName)
@@ -806,6 +831,15 @@ theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
   · rw [hprog]
     exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
 
+theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
+    (h : LayerPointTyped src w point lt) : LayerPointTyped src' w point lt := by
+  obtain ⟨l, hat, hcheck, henv, hview⟩ := h
+  refine ⟨l, ?_, ?_, henv, hview⟩
+  · rw [hprog]
+    exact hat
+  · rw [hprog]
+    exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+
 theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
   cases h with
@@ -816,8 +850,9 @@ theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     exact .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
   | release p prev ty hp =>
     exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-  | layerBuild p m scope ty hp =>
-    exact .layerBuild p m scope ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | layerBuild p m scope lt ty hp hty =>
+    exact .layerBuild p m scope lt ty
+      (layerPointTyped_rows_append src src' t' hprog htab hsvc hp) hty
 
 /-- A capture typed under the shorter source is typed under the longer one: its node is the
 same program's, and the checker's verdicts extend along an appended row table. -/
@@ -838,6 +873,20 @@ theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
   | memoGet layer m =>
     obtain ⟨l, lt, hat, hcheck, herr⟩ := h
     refine ⟨l, lt, ?_, ?_, herr⟩
+    · rw [hprog]
+      exact hat
+    · rw [hprog]
+      exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+  | memoBuild layer m =>
+    obtain ⟨l, lt, hat, hcheck, hcert⟩ := h
+    refine ⟨l, lt, ?_, ?_, hcert⟩
+    · rw [hprog]
+      exact hat
+    · rw [hprog]
+      exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+  | memoComplete layer m ex =>
+    obtain ⟨l, lt, hat, hcheck, hex⟩ := h
+    refine ⟨l, lt, ?_, ?_, hex⟩
     · rw [hprog]
       exact hat
     · rw [hprog]

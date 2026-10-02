@@ -713,7 +713,7 @@ theorem syncOpStep_memoGet_some (s : Stores) (layer : LayerId) (memoMap : MemoMa
     syncOpStep (SyncOp.memoGet layer memoMap) s =
       some ({ s with
           memo := s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 } },
-        Val.pair (Val.promise entry.deferred) (Val.memoMap owner)) := by
+        (Val.memoHit entry.deferred owner)) := by
   simp only [syncOpStep, h]
 
 theorem M1.StoresLaws.syncOpStep_memoBuild (s : Stores) (layer : LayerId) (memoMap : MemoMapId) : ProofGraph.Obligation (syncOpStep (SyncOp.memoBuild layer memoMap) s =
@@ -1801,8 +1801,9 @@ theorem syncOpStep_answer_valid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m, hm, hid, hmem⟩ := MemoWorld.get_mem hget
       obtain ⟨hd, _⟩ := hwf.2.2.1 m hm _ hmem
-      show (Val.validIn _ (Val.promise entry.deferred) && Val.validIn _ (Val.memoMap owner)) = true
-      rw [Bool.and_eq_true]
+      show (Val.validIn _ (Val.promise entry.deferred) &&
+        (Val.validIn _ (Val.memoMap owner) && true)) = true
+      rw [Bool.and_true, Bool.and_eq_true]
       refine ⟨decide_eq_true hd, ?_⟩
       rw [Val.validIn_memoMap]
       show ((s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 }).mapAt

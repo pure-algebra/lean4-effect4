@@ -23,8 +23,9 @@ copy at the site would memoize at the site's own path (`memo_keys_differ`, at a 
 target is memoized). So the agreement is the redirect, with the typing read through the
 expansion, not an equality of the program's and the expansion's denotations.
 
-`DenotesTyped` is M5's open denotation lemma (`M3bAssembly.denoteR_typed`); `loadsTyped` is
-proved from it, as `loadsTyped_of_denotesTyped` is. Its premise that the references are well
+`DenotesTyped` is M5's denotation lemma (`M3bAssembly.denoteR_typed`, proved at every source by
+`denotesTyped`, `Laws/Program/Typed/LayerArm.lean`); `loadsTyped` here is the reduction from it at
+this program, as `loadsTyped_of_denotesTyped` is. Its premise that the references are well
 formed (decisions row 170) holds here (`wellFormed`), and the reduction discharges it from the
 checker's verdict (`checked`, `layerRefsWF_of_typeOf`). The finite facts (`checked`,
 `wellFormed`, `site`, the memo keys) are computed by the kernel.

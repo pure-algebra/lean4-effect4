@@ -73,7 +73,7 @@ theorem memoize_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Na
     have hv := Val.memoHit?_exact hhit
     subst hv
     show CodeMeans root
-      (Program.contAOf root (.memoize q m scope) (.pair (Val.promise cell) (Val.memoMap owner))) _
+      (Program.contAOf root (.memoize q m scope) (Val.memoHit cell owner)) _
     rw [contAOf_memoize_hit]
     dsimp only
     rw [prepareR_guardR_bind, guardR_bind]

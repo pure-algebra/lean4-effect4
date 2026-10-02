@@ -45,7 +45,7 @@ theorem mapAt_setMap_other (w : MemoWorld) (m : MemoMap) (id : MemoMapId)
 /-- A hit registers release and awaits the stored deferred; it contains no build. -/
 theorem memoize_hit (root : NativeEff) (q : Point) (map : MemoMapId) (scope : Nat)
     (entry : MemoEntry) (owner : MemoMapId) :
-    contAOf root (.memoize q map scope) (Val.pair (Val.promise entry.deferred) (Val.memoMap owner)) =
+    contAOf root (.memoize q map scope) (Val.memoHit entry.deferred owner) =
       Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path owner))
         (EffName.awaitPromise entry.deferred) :=
   by aesop

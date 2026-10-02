@@ -2027,7 +2027,7 @@ def syncOpStep : SyncOp → Stores → Option (Stores × Val)
     | some (owner, entry) =>                                                              -- :245, :438-442
       some ({ st with
           memo := st.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 } },
-        Val.pair (Val.promise entry.deferred) (Val.memoMap owner))
+        Val.memoHit entry.deferred owner)
   | SyncOp.memoBuild layer memoMap, st =>                                                 -- :396-411
     let layerScope := st.nextName
     let (deferred, deferreds) := st.deferreds.make

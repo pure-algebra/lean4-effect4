@@ -954,10 +954,7 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
       exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
         (fun _ _ _ h => nomatch h) () (scopeLive_mono ord.1 h)
         fun _ _ _ post => TypedProg.pure (exitOk_finalizer rfl post)
-  | memoDone layer memoMap =>
-    refine TypedProg.store () trivial fun w'' _ ans post => ?_
-    subst post
-    exact TypedProg.pure (exitOk_unit_finalizer w'')
+  | memoDone layer memoMap => exact h.elim
   | memoEntry layer memoMap =>
     -- `observers--` answers `unit` or the layer scope's handle, present (`memoRelease`'s post),
     -- carried through the guard at `unit | Scope`; the last observer closes that scope
@@ -1217,8 +1214,9 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
         fun _ h => nomatch h⟩)⟩
 
 /-- **M5 from the layer family's arm** (`Typed/Denotation.lean`, `childDenotes_upto`: every arm of
-`denoteR` by induction on fuel, groups 1–4 proved). Conditional: `ProvideLayerArm` is the layer
-family's arm (decisions row 176 (b), owed), so this does not close `M3bAssembly.denoteR_typed`. -/
+`denoteR` by induction on fuel). The layer family's arm (`ProvideLayerArm`, decisions row 176 (b)) is
+proved at every source in `Typed/LayerArm.lean` (`provideLayerArm`), where this closes
+`M3bAssembly.denoteR_typed` (`denotesTyped`). -/
 theorem denotesTyped_of_provideLayer (root : ProgramSource) (hlayer : ProvideLayerArm root) :
     DenotesTyped root := fun hwf w htie p e ty hat hpt =>
   childDenotes_upto root hlayer hwf p.fuel p.fuel (Nat.le_refl _) e p.path hat w htie p ty rfl rfl
@@ -1661,12 +1659,13 @@ theorem replayR_bmeans_reachable (e : NativeEff) (fuel : Nat) (tape : List Api.D
 
 /-! ## Declared obligations
 
-`typedState_load` (M5: initialization from an admitted source). The transition ledger (M6): one
+`typedState_load` (M5: initialization from an admitted source) and the denotation lemma, proved in
+`Typed/LayerArm.lean`, where `M3bAssembly`'s report runs. The transition ledger (M6): one
 preservation obligation per command constructor, one for a tape decision under admitted host
-answers, and the capstone that every reachable state is typed. Declared, not proved. -/
+answers, and the capstone that every reachable state is typed. -/
 namespace M3bAssembly
 
-/-- Row 148: the fundamental property (algebra A3); wave 2 proves it with `seq_typed`. -/
+/-- Row 148: the fundamental property (algebra A3); proved in `Typed/LayerArm.lean` (`denotesTyped`). -/
 theorem denoteR_typed (root : ProgramSource) : ProofGraph.Obligation (DenotesTyped root) := ⟨⟩
 
 /-- Row 148: term soundness at `Fits` (types TY-07); seat A proves it. -/
@@ -1676,8 +1675,8 @@ theorem typedState_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFue
     ProofGraph.Obligation (LoadsTyped root rootTy fuel compileFuel) := ⟨⟩
 
 /-- Row 176 (b): the layer family's arm (`ProvideLayerArm`, `Typed/Denotation.lean`), the one arm
-`denoteR_typed` still needs: `denotesTyped_of_provideLayer` assembles every other arm, and
-`denotesTyped_of_layerFree` proves M5 on the fragment without `provideLayer`. -/
+`denotesTyped_of_provideLayer` takes as a hypothesis; proved in `Typed/LayerArm.lean`
+(`provideLayerArm`). -/
 theorem denoteR_typed_provideLayer (root : ProgramSource) :
     ProofGraph.Obligation (ProvideLayerArm root) := ⟨⟩
 
@@ -1878,11 +1877,8 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.capture_lookup
 #obligation_proved Effect4.Program.Typed.M3bAssembly.evalTerm_fits :=
   @Effect4.Program.Typed.termFits
-#proof_wanted Effect4.Program.Typed.M3bAssembly.typedState_load
-#proof_wanted Effect4.Program.Typed.M3bAssembly.denoteR_typed
-#proof_wanted Effect4.Program.Typed.M3bAssembly.denoteR_typed_provideLayer
-#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 3
-  using aesop (rule_sets := [Effect4.TypedState])
+-- `M3bAssembly`'s report runs at the foot of `Typed/LayerArm.lean`, which proves its last three goals
+-- (the import direction forbids this module naming the proofs; decisions row 140)
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_launch

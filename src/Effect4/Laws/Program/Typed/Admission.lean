@@ -154,6 +154,25 @@ def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
     Checker.check root.signature env (c.path ++ [0]) (Eff.expandIn root.program acquire) = .ok a ∧
     EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
 
+/-- A layer point is admitted (decisions row 186 (a)): its path addresses a layer the checker
+types, read through the expansion's rounds as `PointTyped` reads a program node and as the memo
+rows read the memo layer (`storePre`'s `memoGet` arm, `Typed/Residual.lean`); its lexical
+environment is the empty one a layer is checked and built in (`Point.layerBuild`, decisions rows
+104, 105), and its completed view is typed as `PointTyped`'s is. `PointTyped` admits only a
+program node, so a layer build's point needs its own admission. -/
+def LayerPointTyped (src : ProgramSource) (w : World) (point : Point) (lt : LayerTy) : Prop :=
+  ∃ l : LayerTerm NativeOp,
+    Node.at_ (.eff src.program) point.path = some (.layer l) ∧
+    Checker.checkLayer src.signature point.path (LayerTerm.expandIn src.program l) = .ok lt ∧
+    point.env = [] ∧
+    ∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2
+
+/-- The types a layer's build runs at: it answers a built context, the fiber-context image
+(`Ty.contextTarget`, decisions row 176 (b)), and fails at the layer's checked error type or
+above it. -/
+def LayerBuildTy (lt : LayerTy) (ty : EffTy) : Prop :=
+  ty.answer = .handle Ty.contextTarget ∧ lt.error.sub ty.error = true
+
 /-- Admitted bodies covering all six `Body` constructors. -/
 inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
   | at_ (p : Point) (ty : EffTy) (h : PointTyped src w p ty) :
@@ -166,7 +185,8 @@ inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
       BodyTyped src w (.acquireIn p ctx) ty
   | release (p : Point) (prev : Ctx) (ty : EffTy) (h : PointTyped src w p ty) :
       BodyTyped src w (.release p prev) ty
-  | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (ty : EffTy) (h : PointTyped src w p ty) :
+  | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (lt : LayerTy) (ty : EffTy)
+      (h : LayerPointTyped src w p lt) (hty : LayerBuildTy lt ty) :
       BodyTyped src w (.layerBuild p m scope) ty
 
 /-- Membership at the answer column gives the successful exit; its defect exclusion is vacuous. -/

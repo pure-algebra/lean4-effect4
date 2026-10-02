@@ -2171,6 +2171,7 @@ theorem fits_refTy_inv {w : World} {v : Val} (h : Fits w v NativeOp.refTy) :
       exact ⟨⟨index⟩, rfl, h.2⟩
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
+    · exact absurd h (by decide)
     · exact nomatch h
     · exact nomatch h
   · exact absurd h.1 (by decide)
@@ -2190,6 +2191,7 @@ theorem fits_deferredTy_inv {w : World} {v : Val} (h : Fits w v NativeOp.deferre
       subst hk_byte
       exact ⟨⟨index⟩, rfl, h.2⟩
     · exact absurd h.1 (by decide)
+    · exact absurd h (by decide)
     · exact nomatch h
     · exact nomatch h
   · exact absurd h.1 (by decide)
@@ -3004,11 +3006,13 @@ end ExitArm
 
 At no fuel every point is the frontier (`denoteR_zero_typed`); at positive fuel each constructor's
 arm applies, every child's hypothesis (`ChildDenotes`) being the induction's at the child's node
-and the lower fuel. The layer family (`provideLayer`, decisions row 176 (b)) is not proved here:
-its arm enters as the hypothesis `ProvideLayerArm`, so the assembly is conditional on it. -/
+and the lower fuel. The layer family (`provideLayer`, decisions row 176 (b)) is proved in
+`Typed/LayerArm.lean`: its arm enters here as the hypothesis `ProvideLayerArm`, which that module
+discharges (`provideLayerArm`). -/
 
 /-- **The layer family's arm, as a hypothesis** (decisions row 176 (b): built layers answer the
-fiber-context image; the repair and its controls are owed): at a well-formed program, given that
+fiber-context image; proved at every source by `provideLayerArm`, `Typed/LayerArm.lean`, which the
+import direction places after this module): at a well-formed program, given that
 every node at every fuel up to `f` denotes typed programs at its typed points, a typed
 `provideLayer` point with fuel `f + 1` denotes a typed program. -/
 def ProvideLayerArm (root : ProgramSource) : Prop :=
