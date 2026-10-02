@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lake",
+    "env",
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "-j1",
+    "-M4096",
+    "-DwarningAsError=true",
+    "Test/Audit/ProofGraph.lean",
+    "-o",
+    ".lake/build/lib/lean/Test/Audit/ProofGraph.olean"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4",
+  "exit": 1,
+  "elapsed": 2.334,
+  "threads": 1,
+  "memoryMiB": 4096
+}

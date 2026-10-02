@@ -1,0 +1,5 @@
+'ProofGraph.disallowedAxioms' does not depend on any axioms
+'Test.ProofGraph.polymorphicGoal' does not depend on any axioms
+'Test.ProofGraph.polymorphicWitness' does not depend on any axioms
+'Test.ProofGraph.nestedMarker' does not depend on any axioms
+'Test.ProofGraph.allowedPropext' depends on axioms: [propext]

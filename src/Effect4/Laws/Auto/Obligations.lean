@@ -12,17 +12,6 @@ namespace Effect4.Laws.Auto.Obligations
 open Lean Meta Elab Command
 open ProofGraph
 
-private def readGoal (name : Name) : MetaM (Option Goal) := do
-  let info ← getConstInfo name
-  forallTelescope info.type fun xs body => do
-    if body.isAppOfArity ``Obligation 1 then
-      unless info matches .thmInfo _ do
-        throwError "obligation ledger: {name} must be declared as a theorem"
-      return some ⟨name, info.levelParams, (← mkForallFVars xs body.appArg!), #[]⟩
-    if info.type.getUsedConstants.contains ``Obligation then
-      throwError "obligation ledger: unsupported declaration shape at {name}"
-    return none
-
 syntax (name := proofWanted) "#proof_wanted " ident : command
 @[command_elab proofWanted] def elabProofWanted : CommandElab := fun stx => do
   liftTermElabM do

@@ -20,6 +20,20 @@ structure Goal where
   proposition : Expr
   dependencies : Array Name := #[]
 
+/-- Read a theorem ending in an obligation marker, retaining all binders and universes.
+An ordinary declaration returns `none`; other occurrences of the marker are refused.
+The marker declares a goal only. Evidence for its proposition is checked separately. -/
+def readGoal (name : Name) : MetaM (Option Goal) := do
+  let info ← getConstInfo name
+  forallTelescope info.type fun xs body => do
+    if body.isAppOfArity ``Obligation 1 then
+      unless info matches .thmInfo _ do
+        throwError "obligation ledger: {name} must be declared as a theorem"
+      return some ⟨name, info.levelParams, (← mkForallFVars xs body.appArg!), #[]⟩
+    if info.type.getUsedConstants.contains ``Obligation then
+      throwError "obligation ledger: unsupported declaration shape at {name}"
+    return none
+
 inductive Evidence where
   | proved (theoremName : Name)
   | wanted (placeholder : Name)
@@ -51,7 +65,7 @@ private def validateWanted (g : Goal) (name : Name) : MetaM Unit := do
   let expected := mkApp (mkConst ``ProofWanted [.zero]) g.proposition
   unless ← isDefEq info.type expected do
     throwError "proof graph: placeholder proposition changed for {g.id}"
-  let extra := (← collectAxioms name).filter fun a => ![``propext, ``Quot.sound].contains a
+  let extra := disallowedAxioms (← collectAxioms name)
   unless extra.isEmpty do throwError "proof graph: placeholder {name} reaches {extra}"
 
 /-- Validate before counting. Equal counts cannot hide a replaced, missing, or stale goal. -/
