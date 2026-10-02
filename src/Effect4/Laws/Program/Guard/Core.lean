@@ -407,7 +407,7 @@ theorem timer_fireNext_key {κ : Type} (timers : TimerStore) (target : ClockMill
   | some w =>
     rw [(TimerStore.fireNext_now timers target answer w hd).1] at h
     cases Option.some.inj h
-    exact List.mem_append_left _ (List.mem_map.mpr ⟨w, TimerStore.dueMin_mem _ _ _ hd, rfl⟩)
+    exact wakeKeys_waiter_mem (TimerStore.dueMin_mem _ _ _ hd)
 
 theorem M1Clock.timer_clockStep_key {κ : Type} (timers : TimerStore) (millis : ClockMillis)
     (answer : κ) (owed : Owed κ) (_h : (timers.clockStep millis answer).1 = some owed) : ProofGraph.Obligation ((owed.waiter, owed.token) ∈ wakeKeys timers.wake) := ⟨⟩
@@ -424,6 +424,32 @@ theorem timer_clockStep_key {κ : Type} (timers : TimerStore) (millis : ClockMil
     | some o =>
       cases Option.some.inj h
       exact timer_fireNext_key timers _ answer owed (by rw [hf])
+
+/-- A fire removes keys: the timer store's chosen wake (`wakeKeys_wakeBy_subset`), at any answer
+alphabet. -/
+theorem timer_fireNext_keys {κ : Type} (timers : TimerStore) (target : ClockMillis) (answer : κ) :
+    wakeKeys (timers.fireNext target answer).2.wake ⊆ wakeKeys timers.wake := by
+  have sub := wakeKeys_wakeBy_subset timers.wake (TimerStore.dueMin target)
+  unfold TimerStore.fireNext
+  cases h : timers.wake.wakeBy (TimerStore.dueMin target) with
+  | mk chosen wake =>
+    rw [h] at sub
+    cases chosen with
+    | none => exact List.Subset.refl _
+    | some w => exact sub
+
+/-- A clock step removes keys: it fires, or it moves the clock alone. -/
+theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) :
+    wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake := by
+  have sub := timer_fireNext_keys timers (timers.target.getD (timers.now + millis)) answer
+  unfold TimerStore.clockStep
+  dsimp only
+  cases h : timers.fireNext (timers.target.getD (timers.now + millis)) answer with
+  | mk owed after =>
+    rw [h] at sub
+    cases owed with
+    | none => exact sub
+    | some o => exact sub
 
 theorem M1Clock.clock_resume_not_external_key (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (fiber : FiberId) (token : Nat) (millis : ClockMillis) (request : NativeOp × Val)
@@ -842,14 +868,18 @@ theorem requestOf_postTask (m : NativeMachine) (owner : FiberId) (priority : Nat
       { f with dispatcher := f.dispatcher.enqueue priority task }
       ⟨rfl, rfl, rfl⟩ fiber token
 
-theorem internalKeys_store_decomposition (m : NativeMachine) :
+theorem internalKeys_store_decomposition {Code Saved Event : Type}
+    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores Code Saved Event) :
     internalKeys m = storeKeys m.state ++ m.races.map (fun r => (r.host, r.token)) ++
       m.fibers.flatMap fiberKeys := by
   simp only [internalKeys, storeKeys, deferredKeys, List.append_assoc]
   rfl
 
-theorem internalKeys_state_subset (m : NativeMachine) (state : Stores)
-    (hstate : storeKeys state ⊆ storeKeys m.state) :
+/-- A store edit whose keys only shrink shrinks the machine's internal keys, at any code alphabet
+(the guard's native machine, the reference interpreter's `RState`). -/
+theorem internalKeys_state_subset {Code Saved Event : Type}
+    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores Code Saved Event)
+    (state : Stores) (hstate : storeKeys state ⊆ storeKeys m.state) :
     internalKeys { m with state } ⊆ internalKeys m := by
   intro key hk
   rw [internalKeys_store_decomposition] at hk ⊢

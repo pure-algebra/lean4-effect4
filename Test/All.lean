@@ -56,6 +56,7 @@ import Test.Program.AdmissionCensus
 import Test.Program.LoadedAdmission
 import Test.Program.TypedStack
 import Test.Program.FramesNotKripke
+import Test.Program.TimerColumn
 import Test.Program.ProtocolPosts
 import Test.Audit.AnswerGate
 import Test.Machine.Runtime.RepresentationFoundations

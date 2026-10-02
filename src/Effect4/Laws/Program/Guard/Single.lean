@@ -216,28 +216,15 @@ theorem M1Clock.timer_fireNext_keys (timers : TimerStore) (target : ClockMillis)
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code : Completion Val Err Defect FiberId Ann) :
-    wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake := by
-  cases hd : TimerStore.dueMin target timers.wake.waiters with
-  | none => simp only [TimerStore.fireNext_none timers target code hd]; exact List.Subset.refl _
-  | some chosen =>
-    simp only [TimerStore.fireNext, WakeList.wakeBy, hd]
-    intro key hk
-    rcases List.mem_append.mp hk with hk | hk
-    · obtain ⟨w, hw, rfl⟩ := List.mem_map.mp hk
-      exact List.mem_append_left _ (List.mem_map.mpr ⟨w, List.mem_of_mem_erase hw, rfl⟩)
-    · exact List.mem_append_right _ hk
+    wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake :=
+  Effect4.Program.Guard.timer_fireNext_keys timers target code
 
 theorem M1Clock.timer_clockStep_keys (timers : TimerStore) (millis : ClockMillis) (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (wakeKeys (timers.clockStep millis code).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem timer_clockStep_keys (timers : TimerStore) (millis : ClockMillis) (code : Completion Val Err Defect FiberId Ann) :
-    wakeKeys (timers.clockStep millis code).2.wake ⊆ wakeKeys timers.wake := by
-  have hs := timer_fireNext_keys timers (timers.target.getD (timers.now + millis)) code
-  unfold TimerStore.clockStep
-  cases hc : timers.fireNext (timers.target.getD (timers.now + millis)) code with
-  | mk owed after =>
-    rw [hc] at hs
-    cases owed <;> simpa only [hc] using hs
+    wakeKeys (timers.clockStep millis code).2.wake ⊆ wakeKeys timers.wake :=
+  Effect4.Program.Guard.timer_clockStep_keys timers millis code
 
 theorem M1Clock.clockStep_storeKeys (p : NativeEff) (table : RowTable) (stores : Stores) (millis : ClockMillis) : ProofGraph.Obligation (storeKeys ((interpOf p table).clockStep millis stores).2 ⊆ storeKeys stores) := ⟨⟩
 

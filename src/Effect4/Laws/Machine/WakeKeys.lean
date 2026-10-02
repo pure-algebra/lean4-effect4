@@ -7,8 +7,8 @@ One view of the shape every waiting family shares (`Machine/Wake.lean`'s `WakeLi
 store's sleeps, each Deferred cell's waiters): the `(fiber, token)` keys it holds, pending or in a
 captured batch. The guard's key bookkeeping (`Guard.internalKeys`) and the typed state's wake
 columns (`Typed/Validity.lean`'s `WakeTyped`, decisions row 134 (a), (b)) both read it, so each
-operation's effect on the keys is stated once, here: a registration adds its key, a cancel or a
-broadcast wake removes keys, running a batch partitions them.
+operation's effect on the keys is stated once, here: a registration adds its key; a cancel, a
+chosen wake (the timer's fire) or a broadcast wake removes keys; running a batch partitions them.
 -/
 
 set_option autoImplicit false
@@ -52,6 +52,24 @@ theorem wakeKeys_cancel_subset {α : Type} (wake : WakeList α) (fiber : FiberId
       exact List.mem_append_left _ (List.mem_map.mpr ⟨w, (List.mem_filter.mp hw).1, rfl⟩)
     · exact List.mem_append_right _ h
   · exact List.Subset.refl _
+
+/-- A pending waiter's key is its list's. -/
+theorem wakeKeys_waiter_mem {α : Type} {wake : WakeList α} {w : Waiter α} (h : w ∈ wake.waiters) :
+    (w.fiber, w.token) ∈ wakeKeys wake :=
+  List.mem_append_left _ (List.mem_map.mpr ⟨w, h, rfl⟩)
+
+/-- A chosen wake (`WakeList.wakeBy`, the timer store's fire) removes keys. -/
+theorem wakeKeys_wakeBy_subset {α : Type} [DecidableEq α] (wake : WakeList α)
+    (choose : List (Waiter α) → Option (Waiter α)) :
+    wakeKeys (wake.wakeBy choose).2 ⊆ wakeKeys wake := by
+  unfold WakeList.wakeBy
+  split
+  · exact List.Subset.refl _
+  · intro key hk
+    rcases List.mem_append.mp hk with h | h
+    · obtain ⟨x, hx, rfl⟩ := List.mem_map.mp h
+      exact wakeKeys_waiter_mem (List.mem_of_mem_erase hx)
+    · exact List.mem_append_right _ h
 
 /-- A broadcast wake removes keys. -/
 theorem wakeKeys_wakeAll_subset {α : Type} (wake : WakeList α) :

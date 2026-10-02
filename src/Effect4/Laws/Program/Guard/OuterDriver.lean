@@ -118,17 +118,8 @@ theorem M1Clock.timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis :
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) :
-    wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake := by
-  unfold TimerStore.clockStep TimerStore.fireNext WakeList.wakeBy
-  dsimp only
-  cases hd : TimerStore.dueMin (timers.target.getD (timers.now + millis)) timers.wake.waiters with
-  | none => exact List.Subset.refl _
-  | some waiter =>
-    intro key hk
-    rcases List.mem_append.mp hk with hk | hk
-    · obtain ⟨w, hw, rfl⟩ := List.mem_map.mp hk
-      exact List.mem_append_left _ (List.mem_map.mpr ⟨w, List.mem_of_mem_erase hw, rfl⟩)
-    · exact List.mem_append_right _ hk
+    wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake :=
+  Effect4.Program.Guard.timer_clockStep_keys timers millis answer
 
 theorem M1Clock.clockStep_preserved (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (millis : ClockMillis) (_state : GuardState m) : ProofGraph.Obligation (Preserved m { m with state := ((interpOf p table).clockStep millis m.state).2 }) := ⟨⟩

@@ -14,13 +14,12 @@ Wave 2's fifth group (seat D3): the edits a decision makes outside the command l
   snapshot, typed by the dispatcher's column (`TaskOk`), their keys the machine's internal ones.
 * `clockNone` (an `advance` step that fires nothing): the timer store's clock moves; nothing any
   clause reads changes, and the timers stay well formed (`TimerStore.clockStep_wf`).
+* `clockSome` (an `advance` step that fires a sleep): the clock-none restate with the timers'
+  keys shrinking, and the fired sleeper's `resume` queued, its `void` typed at the sleeper's token
+  by `J`'s timer column (decisions row 134 (a); `E4-TYPED-CE-024` repaired).
 * `answer` (`prepareAsyncAnswer` and the `resume` it queues): the reference interpreter prepares
   nothing (`RunInterp.prepareAnswer`'s default), and the admission types the answer at a parked
   fiber's token (`AnswerOk`), which is what `resume_step` reads.
-
-`clockSome` (an `advance` step that fires a sleep) is not proved here; seat D3's receipt records
-why: the fired sleeper's `resume` carries `void`, and nothing in `J` types a timer's sleeper token
-at a type `void` fits.
 -/
 
 set_option autoImplicit false
@@ -335,40 +334,116 @@ theorem edit_clockNone (root : ProgramSource) (rootTy : EffTy) : EditClockNone r
       exact fun _ h => h)
   exact ⟨_, ord, restated.machine⟩
 
+/-! ## `clockSome` -/
+
+/-- The fired sleeper's answer, `void`, is a strong completion at every type `void` fits: row 134
+(a)'s demand on a sleeper's token. -/
+theorem completionStrong_sleep {w : World} {ty : EffTy} (demand : SleepDemand ty) :
+    CompletionStrong w ty (.ofExit (.success .unit)) :=
+  ⟨fitsExit_success w ty Val.unit (fits_sub w demand Val.unit trivial), trivial⟩
+
+/-- **`clockSome` keeps `J` and `I`**, at the world over the advanced store. A clock step that
+fires a sleep pops its waiter (`Guard.timer_clockStep_keys`: the timers' keys only shrink, so the
+restate of `clockNone` applies) and owes its resume inline (`TimerStore.clockStep_owed`), so the
+drain queues one `resume`. Its key is one the timer store held (`Guard.timer_clockStep_key`): row
+134 (a) declares its token at a type `void` fits, which types the resume's code
+(`completionStrong_sleep`, `denoteCompletion_typed`), and the guard's bookkeeping puts the key below
+the token supply with no external request at it (`configTyped_cons_resume`). Whether the sleeper is
+still parked at that token (an active park, a stale token, an absent fiber) is the queued
+command's own case split (`resume_step`), not this edit's. -/
+theorem edit_clockSome (root : ProgramSource) (rootTy : EffTy) : EditClockSome root rootTy := by
+  intro w m millis owed st typed _ step
+  have wide := typed.wide
+  have step' : (Option.map (Owed.mapCode denoteCompletion)
+        (m.state.timers.clockStep millis
+          (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1,
+      { m.state with timers := (m.state.timers.clockStep millis
+          (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 }) =
+      (some owed, st) := step
+  rw [Prod.mk.injEq] at step'
+  obtain ⟨fired, rfl⟩ := step'
+  obtain ⟨o, ho, rfl⟩ := Option.map_eq_some_iff.mp fired
+  have facts := TimerStore.clockStep_owed m.state.timers millis
+    (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) o ho
+  have key := Guard.timer_clockStep_key m.state.timers millis
+    (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) o ho
+  let T : TimerStore := (m.state.timers.clockStep millis
+    (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2
+  have timerKeys : Guard.wakeKeys T.wake ⊆ Guard.wakeKeys m.state.timers.wake :=
+    Guard.timer_clockStep_keys m.state.timers millis _
+  have wf : ({ m.state with timers := T } : Stores).WF :=
+    wf_retime wide.wf T (TimerStore.clockStep_wf wide.wf.2.2.2 millis
+      (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann))
+  have le : m.state.le { m.state with timers := T } := Stores.le_refl m.state
+  have ord : w.leHost { w with state := { m.state with timers := T } } := by
+    apply leHost_restate
+    · rw [wide.state]
+      exact le
+    · rw [wide.state]
+    · rw [wide.state]
+    · rw [wide.state]
+  obtain ⟨c0, c1, c2, c3, c4, c5⟩ := storesOk_world ord rfl rfl rfl wide.stores
+  have keys : Guard.internalKeys ({ m with state := { m.state with timers := T } } : RState) ⊆
+      Guard.internalKeys m :=
+    Guard.internalKeys_state_subset m _ (Guard.storeKeys_mono timerKeys (List.Subset.refl _))
+  obtain ⟨_, restated⟩ := configTyped_restate (s := { m.state with timers := T })
+    (configTyped_nil typed) le rfl rfl rfl wf ⟨c0, c1, c2, c3, c4, c5⟩ keys wide.live.dueOwners
+    timerKeys
+  have internal : (o.waiter, o.token) ∈ Guard.internalKeys m :=
+    List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _
+      (List.mem_append_left _ key)))
+  have drained : drainOwed ({ m with state := { m.state with timers := T } } : RState)
+      [o.mapCode denoteCompletion] = ({ m with state := { m.state with timers := T } },
+        [Cmd.resume o.waiter o.token (denoteCompletion o.code)]) := by
+    unfold drainOwed
+    rw [Owed.mapCode_mode, facts.2]
+    rfl
+  rw [drained, List.singleton_append]
+  refine ⟨_, ord, restated.machine, fun _ => ?_⟩
+  refine configTyped_cons_resume (configTyped_drainDue restated) ?_ ?_ ?_
+  · intro ty declared
+    obtain ⟨ty', declared', demand⟩ := wide.timers _ key
+    have same : w.Θ o.waiter o.token = some ty := declared
+    rw [show w.Θ o.waiter o.token = some ty' from declared'] at same
+    cases same
+    rw [facts.1]
+    exact denoteCompletion_typed root (completionStrong_sleep demand)
+  · exact wide.keysBelow _ internal
+  · cases hr : requestOfR m o.waiter o.token with
+    | none => exact hr
+    | some r => exact absurd internal (wide.requestsOwned _ _ r hr)
+
 /-! ## M6b from what remains
 
-Five of the six edits are proved above. `DecisionKeeps` (`M6Ledger.decision_preserves`) follows
-from the eighteen command facts and the sixth edit through the lift (`decisionKeeps_of_ledger`);
-these two theorems state exactly that, so the goal closes by one line when its premises do. -/
+The six edits are proved above. `DecisionKeeps` (`M6Ledger.decision_preserves`) follows from the
+eighteen command facts through the lift (`decisionKeeps_of_ledger`); these two theorems state
+exactly that, so the goal closes by one line when its premises do. -/
 
-/-- The six edits from the one this module does not prove. -/
-theorem decisionEdits_of_clockSome (root : ProgramSource) (rootTy : EffTy)
-    (clockSome : EditClockSome root rootTy) : DecisionEdits root rootTy :=
+/-- The six edits. -/
+theorem decisionEdits (root : ProgramSource) (rootTy : EffTy) : DecisionEdits root rootTy :=
   { drain := edit_drain root rootTy
     yield := edit_yield root rootTy
     interrupt := edit_interrupt root rootTy
     clockNone := edit_clockNone root rootTy
-    clockSome := clockSome
+    clockSome := edit_clockSome root rootTy
     answer := edit_answer root rootTy }
 
-/-- **M6b from the eighteen command facts and the clock's firing edit**: the other five edits are
-proved here, and the lift (`decisionKeeps_of_ledger`, `Machine.Lift.stepDecisionState_lift`) does
-the rest. -/
+/-- **M6b from the eighteen command facts**: the six edits are proved here, and the lift
+(`decisionKeeps_of_ledger`, `Machine.Lift.stepDecisionState_lift`) does the rest. -/
 theorem decisionKeeps_of_steps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
-    (steps : ∀ command, StepPreserves root rootTy command) (clockSome : EditClockSome root rootTy)
-    (d : Api.Decision) : DecisionKeeps root rootTy fuel d :=
-  decisionKeeps_of_ledger root rootTy fuel d steps (decisionEdits_of_clockSome root rootTy clockSome)
+    (steps : ∀ command, StepPreserves root rootTy command) (d : Api.Decision) :
+    DecisionKeeps root rootTy fuel d :=
+  decisionKeeps_of_ledger root rootTy fuel d steps (decisionEdits root rootTy)
 
 /-! ## M6c from what remains (step 6) -/
 
-/-- **M6c from M5, the eighteen command facts and the clock's firing edit**: `reachable_of_ledger`
-over `decisionKeeps_of_steps`, written as the proof it is, with the goals it consumes as
-premises. -/
+/-- **M6c from M5 and the eighteen command facts**: `reachable_of_ledger` over
+`decisionKeeps_of_steps`, written as the proof it is, with the goals it consumes as premises. -/
 theorem typedState_reachable_of_steps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (load : LoadsTyped root rootTy fuel fuel) (steps : ∀ command, StepPreserves root rootTy command)
-    (clockSome : EditClockSome root rootTy) (m : RState) : ReachableTyped root rootTy fuel m :=
+    (m : RState) : ReachableTyped root rootTy fuel m :=
   reachable_of_ledger root rootTy fuel load
-    (fun d => decisionKeeps_of_steps root rootTy fuel steps clockSome d) m
+    (fun d => decisionKeeps_of_steps root rootTy fuel steps d) m
 
 /-! ## Exit handles from the native handle invariant (step 6, `M7.exitHandles_valid`)
 
@@ -491,7 +566,8 @@ end Effect4.Program.Typed
 #obligation_proved Effect4.Program.Typed.M6Edits.yield := @Effect4.Program.Typed.edit_yield
 #obligation_proved Effect4.Program.Typed.M6Edits.interrupt := @Effect4.Program.Typed.edit_interrupt
 #obligation_proved Effect4.Program.Typed.M6Edits.clockNone := @Effect4.Program.Typed.edit_clockNone
+#obligation_proved Effect4.Program.Typed.M6Edits.clockSome := @Effect4.Program.Typed.edit_clockSome
 #obligation_proved Effect4.Program.Typed.M6Edits.answer := @Effect4.Program.Typed.edit_answer
 -- `M6Edits`' report moved here from `Assembly.lean`'s foot: this module sees the proofs.
-#typed_state_obligations Effect4.Program.Typed.M6Edits ceiling 1
+#typed_state_obligations Effect4.Program.Typed.M6Edits ceiling 0
   using aesop (rule_sets := [Effect4.TypedState])

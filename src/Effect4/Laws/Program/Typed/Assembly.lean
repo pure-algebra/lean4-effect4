@@ -1929,8 +1929,7 @@ end Effect4.Program.Typed
 #obligation_proved Effect4.Program.Typed.M6Edits.skip := @Effect4.Program.Typed.edit_skip
 #obligation_proved Effect4.Program.Typed.M6Edits.middleware := @Effect4.Program.Typed.edit_middleware
 #obligation_proved Effect4.Program.Typed.M6Edits.reestablish := @Effect4.Program.Typed.reestablishes
-#proof_wanted Effect4.Program.Typed.M6Edits.clockSome
--- `M6Edits`' report is at `Typed/Edits.lean`'s foot, which imports this module and proves five goals.
+-- `M6Edits`' report is at `Typed/Edits.lean`'s foot, which imports this module and proves six goals.
 #obligation_proved Effect4.Program.Typed.M3bWorld.preds_savedOk_mono :=
   @Effect4.Program.Typed.preds_savedOk_mono
 #obligation_audit Effect4.Program.Typed.M3bWorld
