@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lake",
+    "env",
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "-j1",
+    "-M4096",
+    "-DwarningAsError=true",
+    "--run",
+    "/private/tmp/codex-second-eyes-2026-10-01/metaprogramming/CacheHashes.lean"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4",
+  "exit": 1,
+  "elapsed": 0.877,
+  "threads": 1,
+  "memoryMiB": 4096
+}

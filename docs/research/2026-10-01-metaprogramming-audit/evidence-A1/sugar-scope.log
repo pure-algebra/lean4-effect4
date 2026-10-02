@@ -1,0 +1,5 @@
+Test/Program/AuthoringScope.lean:61:2: error: unsupported final statement in eff block
+Test/Program/AuthoringScope.lean:59:0: error: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+- error: an eff block cannot end with a `let ←` binding
++ error: unsupported final statement in eff block

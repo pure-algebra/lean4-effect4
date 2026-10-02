@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lake",
+    "env",
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "-j1",
+    "-M4096",
+    "-DwarningAsError=true",
+    "-R",
+    "src",
+    "src/Effect4/Program/Authoring/Sugar.lean",
+    "-o",
+    ".lake/build/lib/lean/Effect4/Program/Authoring/Sugar.olean"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4",
+  "exit": 0,
+  "elapsed": 2.988,
+  "threads": 1,
+  "memoryMiB": 4096
+}

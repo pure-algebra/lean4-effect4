@@ -1,3 +1,4 @@
+import Lean.Parser.Do
 import Effect4.Program.Authoring.Lifts
 import Effect4.Program.Authoring.Rows
 
@@ -92,23 +93,17 @@ without calling `Name.toString`. -/
 def identToString (x : Ident) : String :=
   nameToString x.getId
 
-/-- Deconstructs a `doSeq` syntax node into its constituent `doElem` elements. -/
+/-- Deconstructs a `doSeq` using Lean's typed parser API.
+The list result retains the authoring macro's existing interface. -/
 def getDoSeqElems (seq : TSyntax `Lean.Parser.Term.doSeq) : List (TSyntax `doElem) :=
-  let raw := seq.raw
-  if raw.getKind == `Lean.Parser.Term.doSeqBracketed then
-    raw[1].getArgs.toList.map fun arg => ⟨arg[0]⟩
-  else if raw.getKind == `Lean.Parser.Term.doSeqIndent then
-    raw[0].getArgs.toList.map fun arg => ⟨arg[0]⟩
-  else
-    []
+  (Lean.Parser.Term.getDoElems seq).toList
 
 /-- Unnests a singleton `doNested` element if `eff do ...` was passed. -/
 def unnestElems : List (TSyntax `doElem) → List (TSyntax `doElem)
   | [elem] =>
-    if elem.raw.getKind == `Lean.Parser.Term.doNested then
-      getDoSeqElems ⟨elem.raw[1]⟩
-    else
-      [elem]
+    match elem with
+    | `(doElem| do $seq:doSeq) => getDoSeqElems seq
+    | _ => [elem]
   | elems => elems
 
 /-- `eff { ... }` or `eff do ...` authoring block for `Src Op` programs. Scoped to this namespace
