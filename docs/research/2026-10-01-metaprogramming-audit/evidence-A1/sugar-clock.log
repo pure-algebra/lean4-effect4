@@ -1,0 +1,2 @@
+'Effect4.Api.TestClock.fastForward' depends on axioms: [propext]
+'Effect4.Api.TestClock.sleepDeadlines' depends on axioms: [propext]

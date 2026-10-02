@@ -1,0 +1,2414 @@
+{
+  "roots": [
+    "Test.Audit.ProofGraph",
+    "Test.Audit.Obligations",
+    "Conform.Core.Proof",
+    "Effect4.Laws.Auto.Frames",
+    "Test.Program.AuthoringScope",
+    "Effect4.Laws.Machine.Handles"
+  ],
+  "sources": [
+    {
+      "module": "ProofGraph.Proof",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/tools/ProofGraph/Proof.lean",
+      "sourceSha256": "283b11563eb0328e1b354c257b5436d64d957ef51596defa738699fe5b9e62d7",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/ProofGraph/Proof.olean",
+      "rebuilt": true
+    },
+    {
+      "module": "ProofGraph.Search",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/tools/ProofGraph/Search.lean",
+      "sourceSha256": "4e6d033546ac50bee7c7a84d8f07364dc0edbbd60d3e3c7fcec48b2e69985f41",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/ProofGraph/Search.olean",
+      "rebuilt": true
+    },
+    {
+      "module": "Test.Audit.ProofGraphSearch",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/Test/Audit/ProofGraphSearch.lean",
+      "sourceSha256": "9bedaedec0989030e9aeede5f75c3d08428a140f16fd50f147ced6eba18d850a",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Test/Audit/ProofGraphSearch.olean",
+      "rebuilt": false,
+      "traceSha256": "5710ab2c05b1240b3726121ac0bd25711e9c66136eaec2ffa2cd9ec73fc15da6"
+    },
+    {
+      "module": "Aesop.Script.Tactic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/Tactic.lean",
+      "sourceSha256": "48c1dc81b64c4dabf93ab71c03d1501ac2eb5f44eb1f7ef879d04c306285b01e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/Tactic.olean",
+      "rebuilt": false,
+      "traceSha256": "0578b368a0b645fbe51e54db0be85b5a55bfc9788eec95fc044cf14ac413cae7"
+    },
+    {
+      "module": "Batteries.Lean.Meta.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/Meta/Basic.lean",
+      "sourceSha256": "0b4b4f806416d95c9b67515baa4b1d2f11cad960e18987a7ca6c63c328baf423",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Meta/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "895acc8a6e989cdfcaf044ac05c27c3752ca382f0ea9fb9b82df56b99aa1b9a3"
+    },
+    {
+      "module": "Aesop.Script.GoalWithMVars",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/GoalWithMVars.lean",
+      "sourceSha256": "cfea836cd3919948dac6e203f9f917ef3c366f8fae0dcf460148655aadb1cec4",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/GoalWithMVars.olean",
+      "rebuilt": false,
+      "traceSha256": "b0966fcd36684e9066cfa157e7fd6a4fdc7bedce2c86d109c708786ded619400"
+    },
+    {
+      "module": "Aesop.Script.TacticState",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/TacticState.lean",
+      "sourceSha256": "aca2291287516db2491c648170b3d169139488d029800de3e0bfe2e02e24e851",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/TacticState.olean",
+      "rebuilt": false,
+      "traceSha256": "99811366609a96aa21c836b6195960d1b4bd8ad035b61d7afdd0b43d66233ed6"
+    },
+    {
+      "module": "Aesop.Nanos",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Nanos.lean",
+      "sourceSha256": "3dbae06eb9ecab0376f6202c2586a81327ef38871773a7c6a35d54b3998c2616",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Nanos.olean",
+      "rebuilt": false,
+      "traceSha256": "dd0142fb6b112c0d6ee09389bd9a7508b8be312b63b1f2313fb4c641d0d0b9b1"
+    },
+    {
+      "module": "Batteries.Data.Array.Merge",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Data/Array/Merge.lean",
+      "sourceSha256": "552140f63d6a304c68ee4e7e5c1054df5629bb2ca6e2de8bd732663a3adf9fca",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Data/Array/Merge.olean",
+      "rebuilt": false,
+      "traceSha256": "9821beb2cf80c45ab91d50bc968e80b36b61bc79b3bc6e2ab5307d4a73a91045"
+    },
+    {
+      "module": "Aesop.Util.UnorderedArraySet",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Util/UnorderedArraySet.lean",
+      "sourceSha256": "8e829303d7583ebb284ee574c0b5779f03478b4998eeaadd732958f475a7a4d8",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Util/UnorderedArraySet.olean",
+      "rebuilt": false,
+      "traceSha256": "f58d5a71e12d9bf9b7e471b4dcb5e6aacb59e5fcbf6a9b1efc787b6407cf7f34"
+    },
+    {
+      "module": "Aesop.Index.DiscrTreeConfig",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Index/DiscrTreeConfig.lean",
+      "sourceSha256": "d816388c2f73d1e51b6c84e41a79521fff82f606140ec4004a2ccf52f5bd91b7",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Index/DiscrTreeConfig.olean",
+      "rebuilt": false,
+      "traceSha256": "6d0e2e10e4605423bac7a02f555bcfa438e4b9d4edafbb14ec5086feb9f7cfd6"
+    },
+    {
+      "module": "Aesop.Util.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Util/Basic.lean",
+      "sourceSha256": "889b0abf7a8f588048ef076869745808a2f1dcc71c6e0130ce7159b65b8fffd0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Util/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "c60bb0b16a0c8f38ceb196ec1475ddb376ff43cd90ac77b773392cd22185e3d3"
+    },
+    {
+      "module": "Aesop.Tracing",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tracing.lean",
+      "sourceSha256": "9dcb9960323578ca32cf4c60e575169e3fc37fcb303dcb64b33a167e3abc5fd2",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tracing.olean",
+      "rebuilt": false,
+      "traceSha256": "02eba39487f70c3712ed47a084ebc833c4353804ad26ff922d8c6f4d7eb0cd3b"
+    },
+    {
+      "module": "Batteries.Tactic.PermuteGoals",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Tactic/PermuteGoals.lean",
+      "sourceSha256": "2163efc92beb0094986d0993bd4637c0bcae14818afdd7a0eaa554fc3c8a6c03",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/PermuteGoals.olean",
+      "rebuilt": false,
+      "traceSha256": "448810fd72f1162445e7a8673cd099ce40b0bc2e141bdc7b0a8444f403eea6e7"
+    },
+    {
+      "module": "Batteries.Lean.MonadBacktrack",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/MonadBacktrack.lean",
+      "sourceSha256": "0cd6f3af1933f15cb54a2bf70d27f86225e1711f5fea9c9e12d892bdb18851f0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/MonadBacktrack.olean",
+      "rebuilt": false,
+      "traceSha256": "6e1f99d482deec7cd35cfde8aeb2a818de902faa348d5160b86bcb5c8dd2aa2c"
+    },
+    {
+      "module": "Batteries.Lean.Meta.SavedState",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/Meta/SavedState.lean",
+      "sourceSha256": "3d9845d3356ed537871cfcdff20419c83323fd8b559a031dca483eaf72890d43",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Meta/SavedState.olean",
+      "rebuilt": false,
+      "traceSha256": "a6e9c283e00d6dbb3aa0da7a98ab5cd35bf4006dbb3a785839b1858a53eba637"
+    },
+    {
+      "module": "Aesop.Util.EqualUpToIds",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Util/EqualUpToIds.lean",
+      "sourceSha256": "5cb2b601c59ef55202ff1d747edb6587cf37deda5e3f66b1d3b41f643f21e744",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Util/EqualUpToIds.olean",
+      "rebuilt": false,
+      "traceSha256": "e2e7f7b429a529732ae71a70946f65ef0e8a6e76d219d8ee2b742a87e1e9d1a0"
+    },
+    {
+      "module": "Aesop.Script.Util",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/Util.lean",
+      "sourceSha256": "e4cd604a4f74b8bd2a5da676736ae0080d709f8892e78785000a24231b2d0122",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/Util.olean",
+      "rebuilt": false,
+      "traceSha256": "27d5c1ad036f745eb5362e5593f472241342de5cdb16d7ce9494f9b42491069f"
+    },
+    {
+      "module": "Aesop.Script.Step",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/Step.lean",
+      "sourceSha256": "b200c193512da81f639bf68cd33cf2f1a564698102734c8920a0cbbe9b75e9e9",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/Step.olean",
+      "rebuilt": false,
+      "traceSha256": "1fdab030e1074d302b0b2ddd0f43c354d79ee940a23cbbf04427f2141a11949a"
+    },
+    {
+      "module": "Aesop.Script.UScript",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/UScript.lean",
+      "sourceSha256": "fc59c178a83442d842c44923ecaa7c358385b7ee92ece83971ee4153ff492610",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/UScript.olean",
+      "rebuilt": false,
+      "traceSha256": "c37212e5403d645222bd8a0a502c4a4698430ac268019bc297041672f92a1f35"
+    },
+    {
+      "module": "Aesop.Check",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Check.lean",
+      "sourceSha256": "d40831751f0423be5e3a78031c240d6fe0bd01f674e1cc4c569dd825f068ab8e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Check.olean",
+      "rebuilt": false,
+      "traceSha256": "6e4628b4660ac31307dc1e0d6cfd71babf896b9de76508e46cac654a45b4ecf9"
+    },
+    {
+      "module": "Aesop.Script.Check",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/Check.lean",
+      "sourceSha256": "411252b0d77ea0088b0c49ea73720ce2abe70d3987ca46341577ff610c66e90b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/Check.olean",
+      "rebuilt": false,
+      "traceSha256": "90b6f39b87ea4579775ec6a1880172f83e3fd6111db5bc1859b7f89d9ae5bf33"
+    },
+    {
+      "module": "Aesop.Rule.Name",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Rule/Name.lean",
+      "sourceSha256": "6dc5bc557fd31bc927c3a0c86379fa37935148db857bc03181cc73e83d3f29b4",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Rule/Name.olean",
+      "rebuilt": false,
+      "traceSha256": "f53b1c6e076d076e59fe6b3c745f3d17d4edbe670575eda6d7d6c3d9fcc52ec0"
+    },
+    {
+      "module": "Aesop.Options.Public",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Options/Public.lean",
+      "sourceSha256": "9aa5555935aa919f0fbdf069de4b0a8ab81ddae629a4db13180dc6f3d7123aec",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Options/Public.olean",
+      "rebuilt": false,
+      "traceSha256": "fd26f963766e6d1eed967f3232f2cf97aacb439db651217fdaf445386f70d309"
+    },
+    {
+      "module": "Aesop.Stats.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Stats/Basic.lean",
+      "sourceSha256": "dfd6a895c344ebe6a1dddc573c0886403bec5ea839b5b4b5c66e6aa523233319",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Stats/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "69a07dac2a36051e69830d21d1e352a640dc3f75148d389bb748235712430e00"
+    },
+    {
+      "module": "Aesop.Options.Internal",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Options/Internal.lean",
+      "sourceSha256": "876ba63e306f608719c5dece7d92266cef9dda97e604b5b6860a9a2ba99f8e18",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Options/Internal.olean",
+      "rebuilt": false,
+      "traceSha256": "a7e891e05500a658873e36f5ce7632b19acebf57acea1be06a2bf1939fa8dfab"
+    },
+    {
+      "module": "Aesop.Script.OptimizeSyntax",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/OptimizeSyntax.lean",
+      "sourceSha256": "1b12de57536bf443ef3ba4779da6111ed893476f8339f15baae76c050227a68c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/OptimizeSyntax.olean",
+      "rebuilt": false,
+      "traceSha256": "d730947975de7f4fe2b0693f9a11684778f1fa2815944862b6147a05275baaea"
+    },
+    {
+      "module": "Aesop.Script.SScript",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/SScript.lean",
+      "sourceSha256": "f4eb49215a0906021f649581312abeb4e61b6a400ef363114ddd896d17091eae",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/SScript.olean",
+      "rebuilt": false,
+      "traceSha256": "99301ccbf8896b5dc9fcff09cd0cc5b3c796fc75926cebe24b30cb8664054989"
+    },
+    {
+      "module": "Aesop.Script.UScriptToSScript",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/UScriptToSScript.lean",
+      "sourceSha256": "044092129a8e108b73bf627e4ea77a15f79b36c0b355932628e36c0f48186828",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/UScriptToSScript.olean",
+      "rebuilt": false,
+      "traceSha256": "08c45bf9698b2ee4f1c58be5ff10518e9ab5ded92e44f8c02670623530cc7c29"
+    },
+    {
+      "module": "Aesop.Script.StructureDynamic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/StructureDynamic.lean",
+      "sourceSha256": "35d1aaab87fbdf44bd61096644fe2c3b69f963a488bfce22f83ba66e664c7a28",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/StructureDynamic.olean",
+      "rebuilt": false,
+      "traceSha256": "241a55774b2721d851139cd843d4f5afae794a3d7a0ac21be24326337cd071ac"
+    },
+    {
+      "module": "Aesop.Script.StructureStatic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/StructureStatic.lean",
+      "sourceSha256": "f06132cd7573e7ef4426ed53fd3c6b3d2135916a065a110848c148dfdd5a8182",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/StructureStatic.olean",
+      "rebuilt": false,
+      "traceSha256": "47f82f25de9ff0a0e86ef7dae26b1b872afa1920165dbc30c1878174e0ce81be"
+    },
+    {
+      "module": "Aesop.Script.Main",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/Main.lean",
+      "sourceSha256": "c2db929766d316e142a87fb21dee362ac55c8470e346a8532bb7a6cc1ba9c926",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/Main.olean",
+      "rebuilt": false,
+      "traceSha256": "e0988abd8bca21e9eaad09b15f55d4519ade763813834d06705df5f982ffaa7b"
+    },
+    {
+      "module": "Aesop.Forward.LevelIndex",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/LevelIndex.lean",
+      "sourceSha256": "98acaf47ffcb6a64458fc9254e43d2a8d506e3ff35e120e7d6b79f2602df98b0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/LevelIndex.olean",
+      "rebuilt": false,
+      "traceSha256": "dfc1fbc928f6dc9790f7c987ae2b799710613fe1813f49a3fe661e59ad8b6e05"
+    },
+    {
+      "module": "Aesop.Forward.PremiseIndex",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/PremiseIndex.lean",
+      "sourceSha256": "8251a4b130ea392b184b08ba056f345523846e88a7d7b3f5996a72c8c832bd6a",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/PremiseIndex.olean",
+      "rebuilt": false,
+      "traceSha256": "3ae2286d5acf7697e98ef5760afe2fa03398ea4eaab1c2cecae8aec3e9bf9643"
+    },
+    {
+      "module": "Aesop.Forward.Substitution",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/Substitution.lean",
+      "sourceSha256": "39099f7cef9ff6e577ac4d0a63238bcfdb0eae14d562deb26ab017b475e22677",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/Substitution.olean",
+      "rebuilt": false,
+      "traceSha256": "966e70be37fc88838dedee02952d3547b0daa58c1d28fe474c2ff04413853677"
+    },
+    {
+      "module": "Aesop.Index.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Index/Basic.lean",
+      "sourceSha256": "56ca5de2dd76dd716fbc18558dbc3e93502df64e8c22aacbd830cd1a23e20662",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Index/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "56d51687a6bf6e419056fdfb8f640c10e39e77273c327c5a92cbb950f6ec3304"
+    },
+    {
+      "module": "Aesop.Percent",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Percent.lean",
+      "sourceSha256": "018c491c4aba730acc649714091ff3b1605aa7fb40d302bf312b7d4477d8a76e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Percent.olean",
+      "rebuilt": false,
+      "traceSha256": "d790bb344f0bdc542e1141535b6034bf40449374f11bcd238e1b552046071af8"
+    },
+    {
+      "module": "Aesop.RulePattern.Cache",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RulePattern/Cache.lean",
+      "sourceSha256": "72de9f4d8b65463f066839ddade22d845cabee125f31dfbd167251459e1551fe",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RulePattern/Cache.olean",
+      "rebuilt": false,
+      "traceSha256": "67939a057e789724a301a39a37fad3d9141b5fd122b5765ac160c3451dad91d3"
+    },
+    {
+      "module": "Aesop.BaseM",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BaseM.lean",
+      "sourceSha256": "1363357eb12f4245c05cb3bb1c0e4bd0ea11df60a9ac2018fc280c0498e93f89",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BaseM.olean",
+      "rebuilt": false,
+      "traceSha256": "adf77568358d8810ec8a5f694ce9625c87e07f3d5c1e433f928e67444d2f59a3"
+    },
+    {
+      "module": "Aesop.RuleTac.GoalDiff",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/GoalDiff.lean",
+      "sourceSha256": "975755be019f959083d5064737e3758e62caefcd1bb119dc6c8bca2bb0ca4aac",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/GoalDiff.olean",
+      "rebuilt": false,
+      "traceSha256": "25a1ed8fcec35d545f51e8b1003c96fdc012f10ec6911dfd4f29ff5ff7e4fb12"
+    },
+    {
+      "module": "Aesop.RuleTac.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/Basic.lean",
+      "sourceSha256": "39788520fa03626c8d86caa3d4ad79d001185f3fc7336aa55d391262b0e51fe1",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "4d1fe44a1952c9938bd87f5d1d400b95a260a5c8c1dd732e3b48c6eb67cd1525"
+    },
+    {
+      "module": "Aesop.Forward.SlotIndex",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/SlotIndex.lean",
+      "sourceSha256": "bbd54944a07082f8d14babbc0a79ebc4831201ba6c8e154036e349c8b972d88d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/SlotIndex.olean",
+      "rebuilt": false,
+      "traceSha256": "00cdeddd17c4856908e71fccca00a843c4d962714634430fa3a94bb663e38d74"
+    },
+    {
+      "module": "Aesop.RulePattern",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RulePattern.lean",
+      "sourceSha256": "597dec6514b1ac817578c101ed9ee1321e9e1d69430345b0b8c7c6e4fc96ee02",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RulePattern.olean",
+      "rebuilt": false,
+      "traceSha256": "40886d6854eff3dae0b145985f33f808866985b4d2549aa3532a5d7878b306a8"
+    },
+    {
+      "module": "Aesop.Util.UnionFind",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Util/UnionFind.lean",
+      "sourceSha256": "6da0d9be7470f222aa4b42922e5ed556e4e36bfb30a0971ae6257a8851ca3d8f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Util/UnionFind.olean",
+      "rebuilt": false,
+      "traceSha256": "460743a7bbe910093795ac95a847efa85d076189d6b4035deee2ba1df988c8f1"
+    },
+    {
+      "module": "Batteries.CodeAction.Deprecated",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/CodeAction/Deprecated.lean",
+      "sourceSha256": "eb8e4c2b5e86626e3fc291c77d31b29f036e788808d838df6c3b6d4f0d8a5b84",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/CodeAction/Deprecated.olean",
+      "rebuilt": false,
+      "traceSha256": "17cdc47eb857bb0537b1dc3c33e78512fa5fd60f6e6dfeaafcb4fe42eb06331f"
+    },
+    {
+      "module": "Batteries.Tactic.Alias",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Tactic/Alias.lean",
+      "sourceSha256": "f8b2a18c6c39c653bda7d8dc38e55d5f692b446c8a7254d613eebb8386eb53d7",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Alias.olean",
+      "rebuilt": false,
+      "traceSha256": "8fcc1af34a0b36b2973295c98b650f2991d1694a74c00b07adbe25d23afaadcd"
+    },
+    {
+      "module": "Batteries.Tactic.Unreachable",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Tactic/Unreachable.lean",
+      "sourceSha256": "b0a97e9b68e71bf9d2f006a241ba7d52b1165f8af921da8d31d05de108b115ff",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Unreachable.olean",
+      "rebuilt": false,
+      "traceSha256": "0f3cd2b1ebfbb456fcb60049b2706ee2d860a8539e35babd9b076b9ca781bb47"
+    },
+    {
+      "module": "Batteries.Linter.UnreachableTactic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Linter/UnreachableTactic.lean",
+      "sourceSha256": "985ba647192c78910e67b9d04b3e7f621aa1a3adbbbbdae84f7edd7488413417",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Linter/UnreachableTactic.olean",
+      "rebuilt": false,
+      "traceSha256": "89dba9a1024440ee246f841f397560bd717788f9c26014257c60f2917bb0d728"
+    },
+    {
+      "module": "Batteries.Lean.TagAttribute",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/TagAttribute.lean",
+      "sourceSha256": "0bdb26e3e60f36b6cec4839c1f53d18cbc6e154a1bbb324e638d8a5c21380852",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/TagAttribute.olean",
+      "rebuilt": false,
+      "traceSha256": "656b4cfc83806c3042b6fe55dd8c4b8f6be91cc4bba2ed52064ba95e091e83e4"
+    },
+    {
+      "module": "Batteries.Lean.AttributeExtra",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/AttributeExtra.lean",
+      "sourceSha256": "2609adf8d6fbce65686c01e8b8930381af1c6cc3233972a282cfca99bc3810ea",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/AttributeExtra.olean",
+      "rebuilt": false,
+      "traceSha256": "81f8bba1e1f9bbf561b9d69f56f8b0556962994f0e307f106438d87006c3b15a"
+    },
+    {
+      "module": "Batteries.Linter.UnnecessarySeqFocus",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Linter/UnnecessarySeqFocus.lean",
+      "sourceSha256": "8b29be115163e2a837ad2ead2ccb7b48c674ca7248c3318d323efc19cc176034",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Linter/UnnecessarySeqFocus.olean",
+      "rebuilt": false,
+      "traceSha256": "eb3158c20ad4932f1813fc882816aafe98a3b3e2895f6fdafd04bab3caa9b282"
+    },
+    {
+      "module": "Batteries.Linter",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Linter.lean",
+      "sourceSha256": "968013f74f47ca13860b36ebc7d51f9d9e4d496474fa93368b93537eaf34bd65",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Linter.olean",
+      "rebuilt": false,
+      "traceSha256": "41effcd749560e8f94a5063e47c0e740557ebf45b3d0770a9e82c6dd129591da"
+    },
+    {
+      "module": "Batteries.Tactic.Init",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Tactic/Init.lean",
+      "sourceSha256": "e229147582bc1071219f85a831310e95e70554ec69f84c67a315b32ebe02fd40",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Init.olean",
+      "rebuilt": false,
+      "traceSha256": "a329a6c10e6693a8a1696c650a376f668032a740b9370eac4b485f0614132adb"
+    },
+    {
+      "module": "Batteries.Tactic.SeqFocus",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Tactic/SeqFocus.lean",
+      "sourceSha256": "b978f1ec3b614fda93ef10847cefe117698cfd1390d1c419b1c50c027c0c76a6",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/SeqFocus.olean",
+      "rebuilt": false,
+      "traceSha256": "a1763732d995cb8bed25bc66064539a52e5ae53401662e59169aeb99266b9be5"
+    },
+    {
+      "module": "Batteries.Tactic.Lint.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Tactic/Lint/Basic.lean",
+      "sourceSha256": "a6df6a54285448c19a3a4a721011f36a8735e027707fa3225c718380f14081e3",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "325e223f6084fdb9729fdf103a0f434b7c805a6ac9a240c11e12b2224811c45c"
+    },
+    {
+      "module": "Batteries.Tactic.Lint.Misc",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Tactic/Lint/Misc.lean",
+      "sourceSha256": "f686cbdbcf8c266533eecaa7ba49ed4c5fdb1a7375352bf9e3029cfd255362bb",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Misc.olean",
+      "rebuilt": false,
+      "traceSha256": "f9ac925b3c80adbb0b9bbdec8f188ba5f7265689258dad7f343c30ab3494f900"
+    },
+    {
+      "module": "Batteries.Lean.Syntax",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/Syntax.lean",
+      "sourceSha256": "996f042a39a2ead850d3f2466b52002c7d194b2432d75605f345f460cd92cf44",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Syntax.olean",
+      "rebuilt": false,
+      "traceSha256": "13851795b8a4c5d6c472d426918a24953c06fa5865aa4329063a5874c4e42830"
+    },
+    {
+      "module": "Batteries.Util.ProofWanted",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Util/ProofWanted.lean",
+      "sourceSha256": "cfd89307234c074205ee323ee1e77cd9aab0c5c895e16eac032d478d93feec1b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Util/ProofWanted.olean",
+      "rebuilt": false,
+      "traceSha256": "b9fceafcdcc93c17a7fff90612a2fb7f43dcf30212b93828343f495dd1685bd9"
+    },
+    {
+      "module": "Batteries.Tactic.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Tactic/Basic.lean",
+      "sourceSha256": "8a29b7854fe340ac13ff13838d924b87c7a7c6c2f52cd0678117de8ffec8295e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "19cc62cc97b48b368ed464ecda7fe7578f518a1cf055557fc38005ba7611999d"
+    },
+    {
+      "module": "Batteries.Classes.Order",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Classes/Order.lean",
+      "sourceSha256": "8e593bc38701f9f64c036a6e12ec5e913e7af65c06d3ce9e402c429b1fd79283",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Classes/Order.olean",
+      "rebuilt": false,
+      "traceSha256": "e4d1ae8ba7c85a1082900dd899f9ef8d726cf800b4a390ea9057b800d74105d0"
+    },
+    {
+      "module": "Batteries.Data.UInt",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Data/UInt.lean",
+      "sourceSha256": "031fbbb32a1a564d349eb6767ae3b572f43d87dbbe3a124157ff3f08a76196d2",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Data/UInt.olean",
+      "rebuilt": false,
+      "traceSha256": "eb7b3d7bb949315327e1a97335fc63ea5f2b547111b10645561002dfe604d245"
+    },
+    {
+      "module": "Batteries.Data.Array.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Data/Array/Basic.lean",
+      "sourceSha256": "22548801a504f9fb31de357484c4ecae6b8c9a8e5bf5e102cfcbfecf8971b486",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Data/Array/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "0043fe26f912961aea05fb811d9ac4763d939cea10caa09a8f01a62898a3f6cb"
+    },
+    {
+      "module": "Aesop.Forward.RuleInfo",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/RuleInfo.lean",
+      "sourceSha256": "7e612777abcbaf7672774f10abff8bc1f87ae52ffdeeaca0a528e1567699a66a",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/RuleInfo.olean",
+      "rebuilt": false,
+      "traceSha256": "6038722b530825a53e1e7c520600f9a5f1b96a6f8d78020bdc1ac01a0af3b413"
+    },
+    {
+      "module": "Aesop.RuleTac.RuleTerm",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/RuleTerm.lean",
+      "sourceSha256": "173fa280bee8b161326be2f951d61c3aa232ac06d0c16ac140e0bd16fa61e961",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/RuleTerm.olean",
+      "rebuilt": false,
+      "traceSha256": "804ad126f6928c21ff168623269b023775e4c6da0f1497a7a2429a13c4f787c2"
+    },
+    {
+      "module": "Aesop.Rule.Forward",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Rule/Forward.lean",
+      "sourceSha256": "eb5613bd7d585643c601847f985613f4e54fc6719dbf010f858f4bee8f80c29d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Rule/Forward.olean",
+      "rebuilt": false,
+      "traceSha256": "99cd45309e0c4cc0c0ca5c9c60cf3c2ae4f8b39a3af55a5b3e8c07395303e876"
+    },
+    {
+      "module": "Aesop.Forward.Match.Types",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/Match/Types.lean",
+      "sourceSha256": "5751e55a72d0f1c7b0d67d14a3bedcdfa4d867bcd702ece06b47bc357af5a9be",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/Match/Types.olean",
+      "rebuilt": false,
+      "traceSha256": "6ac5d948ff625ab1ada3a1dd44d243a6893c87c2f760680de1bd56c17662e611"
+    },
+    {
+      "module": "Aesop.Script.CtorNames",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/CtorNames.lean",
+      "sourceSha256": "6d43226e76cdb8a76da204c9abea9959c83dfb506a7679542369b484c98d35ae",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/CtorNames.olean",
+      "rebuilt": false,
+      "traceSha256": "06e0c46218c81048c920107b80f9ea88b3a35b35bd2e6063690f523e8710d835"
+    },
+    {
+      "module": "Aesop.RuleTac.Descr",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/Descr.lean",
+      "sourceSha256": "0a04a56a1d99239ad7a5690e3a9e759808017251a061cd17306ef5e19433e7c0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/Descr.olean",
+      "rebuilt": false,
+      "traceSha256": "95741bd0c216f72acf4ad78dc8e61f01b9127a7447f37b361fb44a4fbb6a8ca5"
+    },
+    {
+      "module": "Aesop.Rule.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Rule/Basic.lean",
+      "sourceSha256": "a01206a7097efc52821b86341c382beb4250349a095d1f78b831ed4f77586f5d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Rule/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "4b55a31e3716c052973938b57a7276aae2264c098be2befb139edc5ecd2eb534"
+    },
+    {
+      "module": "Aesop.Rule",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Rule.lean",
+      "sourceSha256": "1f19949060bcb5757dd9637101643b36d4f8f4c567d181f47e0766bfa0290f23",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Rule.olean",
+      "rebuilt": false,
+      "traceSha256": "7e7cf6415fd9bc35ca31c989a69eb6c241effbae4f124320c641f849cc44fd5e"
+    },
+    {
+      "module": "Aesop.ElabM",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/ElabM.lean",
+      "sourceSha256": "1664355fd7a398234a5fc8e79b20657b57c08e311c68a37c75c0b72af76f52c5",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/ElabM.olean",
+      "rebuilt": false,
+      "traceSha256": "620c3c60983d04196d56166c026071755ac7e1d242a49c40dc31c41c50fa298d"
+    },
+    {
+      "module": "Aesop.RuleTac.ElabRuleTerm",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/ElabRuleTerm.lean",
+      "sourceSha256": "df3203dad823ab596246030972846252135d230edc9b7dd0768c2f92fe4e49c4",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/ElabRuleTerm.olean",
+      "rebuilt": false,
+      "traceSha256": "e6f7befd08eae340b4a4e0f2be62e5bb3ba6d3456ce2413df9997470a0d00270"
+    },
+    {
+      "module": "Aesop.Util.Tactic.Ext",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Util/Tactic/Ext.lean",
+      "sourceSha256": "7cb49b37e100e31dc4b1c0b5b8921344e23a3bdb306afc33adc667d06c0661f1",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Util/Tactic/Ext.olean",
+      "rebuilt": false,
+      "traceSha256": "4c6dee79349f46e21c3aea46d0a9f9d9ea9a65acbf0c37158ba443c67607d303"
+    },
+    {
+      "module": "Aesop.Script.ScriptM",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/ScriptM.lean",
+      "sourceSha256": "19e55f1952c9b08ab7f070a90eb86e4e2081be8aae4b10977966f1fb4c7b7429",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/ScriptM.olean",
+      "rebuilt": false,
+      "traceSha256": "8f61edb05a969f97f76817ee296c3534c7c4ed224bbc366fc35bd32852d6fed2"
+    },
+    {
+      "module": "Batteries.Lean.Meta.Inaccessible",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/Meta/Inaccessible.lean",
+      "sourceSha256": "1a637e3b23d7e28cf0d66cd7bcb694ff32971a5a597c134c2dddbb0f2939b537",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Meta/Inaccessible.olean",
+      "rebuilt": false,
+      "traceSha256": "7bbc449072a4f93eece1b75e826c8b4647694dff7326b15e5a38d871705bda87"
+    },
+    {
+      "module": "Aesop.Util.Tactic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Util/Tactic.lean",
+      "sourceSha256": "fec2b66aab7c69d825a191b7f136bc3ee3388b4dba7c816dd1c20277e651ca7b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Util/Tactic.olean",
+      "rebuilt": false,
+      "traceSha256": "0dbb05e3324fd912b9fdf8e47720ff4856f7c3f6e4e7aeb7937e307964e43a8e"
+    },
+    {
+      "module": "Aesop.Util.Unfold",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Util/Unfold.lean",
+      "sourceSha256": "38fa112bb2fe7ade0feed23a4f5375cdfb4273eb7d8f0290c298c14b4f77c78a",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Util/Unfold.olean",
+      "rebuilt": false,
+      "traceSha256": "02bc3865ec5722fc382cada6c10fb859dba445279f73db133417ff15772c6f40"
+    },
+    {
+      "module": "Aesop.Util.Tactic.Unfold",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Util/Tactic/Unfold.lean",
+      "sourceSha256": "4c048632f7f7fee02d63ce3bfd1685cda8c0428004edbea09552d26c81debce7",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Util/Tactic/Unfold.olean",
+      "rebuilt": false,
+      "traceSha256": "79d53f7fe677650e95d010fd4683375033053c197756418db72e9b6cf3b87a74"
+    },
+    {
+      "module": "Aesop.Script.SpecificTactics",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Script/SpecificTactics.lean",
+      "sourceSha256": "26118ff575de646a61e88195c1b59c0e1fde2fab68052a25b9a68f79e5e5133e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Script/SpecificTactics.olean",
+      "rebuilt": false,
+      "traceSha256": "4c90f08bfbc40fe0f8e4ef9340c57b133995dab3b373f433f9d7512c7ba39157"
+    },
+    {
+      "module": "Aesop.RuleTac.Forward.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/Forward/Basic.lean",
+      "sourceSha256": "c4dc85c3d1508922296f86b32f78461955e2efcefe2852e4b87368dffb990dc0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/Forward/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "d370b7eee9bed6bc9b6a82f63794d2c80aa66ef8a036399575d5635548fbe772"
+    },
+    {
+      "module": "Batteries.Lean.Meta.UnusedNames",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/Meta/UnusedNames.lean",
+      "sourceSha256": "b0c0b9c8aeb1bc1c31d30bc99a58b3d678ec89bdc89905c50f8001e945145c2b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Meta/UnusedNames.olean",
+      "rebuilt": false,
+      "traceSha256": "dd9725f28a4a84d74c16a215667f6077bd625243d9a8c55ec24841c30cc3fdc1"
+    },
+    {
+      "module": "Aesop.Forward.Match",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/Match.lean",
+      "sourceSha256": "68647e8d05c0c3dee85d0f3d2bda42d723f7e9c542921cddb6e36e24e9e6688d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/Match.olean",
+      "rebuilt": false,
+      "traceSha256": "adb6be8c71fb923f7451fe6cc2c1b814980c2203a508e747d65c396361364246"
+    },
+    {
+      "module": "Aesop.Tree.Data.ForwardRuleMatches",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/Data/ForwardRuleMatches.lean",
+      "sourceSha256": "a23be6e151064f3a3886642ade55bb7a4c43793b749f98ae8889f687cc242b4d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/Data/ForwardRuleMatches.olean",
+      "rebuilt": false,
+      "traceSha256": "71b2ef53f7c67dfce0941692babde7acf8718988d1db17be8c483b362834afa3"
+    },
+    {
+      "module": "Aesop.Constants",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Constants.lean",
+      "sourceSha256": "1406d23ca68a786564a5fffa414067690960f560ea57624e5c0a40147f5749b3",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Constants.olean",
+      "rebuilt": false,
+      "traceSha256": "93dccebce67ea90c7ace02148205f26b6b943cd0de615ffa9e155abe4f03ca8b"
+    },
+    {
+      "module": "Aesop.Tree.UnsafeQueue",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/UnsafeQueue.lean",
+      "sourceSha256": "8e5b976a26d9817f19d45986b8ecf017c08d06f9516eba3193ada2bdfb2adacd",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/UnsafeQueue.olean",
+      "rebuilt": false,
+      "traceSha256": "c60b3978bb77be7340eac01ab17787fd25b102cf7e1bc36ce8b42e459b61ef0b"
+    },
+    {
+      "module": "Aesop.EMap",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/EMap.lean",
+      "sourceSha256": "af1215fc741523fc33bb41553523b3ada944ea4bf70843509de7523f7f3f3eae",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/EMap.olean",
+      "rebuilt": false,
+      "traceSha256": "c735a235dc5b46df1d0448e2bec81796abc2c81df06a01cbe1a449c56c8cda35"
+    },
+    {
+      "module": "Aesop.Forward.State",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/State.lean",
+      "sourceSha256": "3249143deab03d0d0806fc418669ad3547a7388c5c88a95763d5cec413ef7d64",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/State.olean",
+      "rebuilt": false,
+      "traceSha256": "764d282e452f4e64e9c9851c9a2da2a1909103cc1059e1e75d3498b4a3a2f966"
+    },
+    {
+      "module": "Aesop.Tree.Data",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/Data.lean",
+      "sourceSha256": "abe682ec1aa9891b0005da83f46e3be6271e2e5e451bcd34431b6faa95f40b51",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/Data.olean",
+      "rebuilt": false,
+      "traceSha256": "38d663818a7b092230ddc8bf78f07097bc97d4783b2a8886abc2d352b0a560e6"
+    },
+    {
+      "module": "Aesop.Search.Queue.Class",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/Queue/Class.lean",
+      "sourceSha256": "c2b64776f16a3efb5bec2d2e0b53e42754a03df46572b2cb3cd6ab221f24d7bd",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/Queue/Class.olean",
+      "rebuilt": false,
+      "traceSha256": "e8fac834ac44e9e6eb9449e90b7f2dc571e833a9b5d1b150ee3303f3244409fe"
+    },
+    {
+      "module": "Aesop.Util.OrderedHashSet",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Util/OrderedHashSet.lean",
+      "sourceSha256": "8bd05912708184e2f18180441ce4feab19e62263daa3e43cebc8f1216e09015d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Util/OrderedHashSet.olean",
+      "rebuilt": false,
+      "traceSha256": "33d1e1d0a2634553d0a02517c1119078518de53f28f01d8fcad4c0a4f5f10930"
+    },
+    {
+      "module": "Batteries.Lean.Meta.Expr",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/Meta/Expr.lean",
+      "sourceSha256": "53557c521c3e19d3c61e0bfc82ffdbaf801dc897a1ec87dc823936c2f7235dc3",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Meta/Expr.olean",
+      "rebuilt": false,
+      "traceSha256": "48972270a3ac723802ec40ab41919b96a81b1849bbe3fd63e9b67dcdbd95608e"
+    },
+    {
+      "module": "Batteries.Lean.PersistentHashMap",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/PersistentHashMap.lean",
+      "sourceSha256": "ecd3809e9edee709f5fba56a16fce438dee0124dd4d0411710e7e51cfaf6da10",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/PersistentHashMap.olean",
+      "rebuilt": false,
+      "traceSha256": "e89f1778b6742489ca3d90c6d2b90a82570278487824723ee5a71aa8c21207e9"
+    },
+    {
+      "module": "Batteries.Lean.Meta.DiscrTree",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/Meta/DiscrTree.lean",
+      "sourceSha256": "7e15e05976732f6508368a0c465073cf0a2a1c5f44c92405800bca93252c40e1",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Meta/DiscrTree.olean",
+      "rebuilt": false,
+      "traceSha256": "5108083301d9758926344eee4ff0094cd6eb5607875f0709b3f885a3832fc1a5"
+    },
+    {
+      "module": "Aesop.Index.RulePattern",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Index/RulePattern.lean",
+      "sourceSha256": "01f61a1c3e7d673dfb32251a0675142bd35341cd025d2055edc59393213765fe",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Index/RulePattern.olean",
+      "rebuilt": false,
+      "traceSha256": "d491ba2e59b8f8a89de56b0145a57237bf129d8cec8149824a1640b63dd798ba"
+    },
+    {
+      "module": "Batteries.Lean.Meta.InstantiateMVars",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/Meta/InstantiateMVars.lean",
+      "sourceSha256": "414ec0eab586b66f311c5d59f01a1fde7d2c5c9ab0ab3d9df18aa511bcefe650",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Meta/InstantiateMVars.olean",
+      "rebuilt": false,
+      "traceSha256": "12f1e90ddb15a13dc872f83f71a64cdf14999d5d5483ab898ba58bb62fb724c1"
+    },
+    {
+      "module": "Batteries.Lean.PersistentHashSet",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/PersistentHashSet.lean",
+      "sourceSha256": "8e8befa4956c99cf968804d4e6230b84b9cb235194d4922f0d065c03b37a4e2b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/PersistentHashSet.olean",
+      "rebuilt": false,
+      "traceSha256": "591c3bca9f20ac34340711747fb490b3953234c51e526a6dfd2bb852a17f3663"
+    },
+    {
+      "module": "Aesop.Index",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Index.lean",
+      "sourceSha256": "a6abdfb91d6eeeb2e14b850a8f094f49f508403d4057ac51cd1323cb7692b8b1",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Index.olean",
+      "rebuilt": false,
+      "traceSha256": "70524377afb076f7989682fae3be7962ade18475cc1d25fd0d605d50f3d2d177"
+    },
+    {
+      "module": "Aesop.Index.Forward",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Index/Forward.lean",
+      "sourceSha256": "44cfc9d28fb915d76d810feeca2c7c727d271e9fe40f15c90e05ff838caa392c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Index/Forward.olean",
+      "rebuilt": false,
+      "traceSha256": "94926fb47dc102ea16585efadffae4ef102fe9f869d6ea69d587820439ac785b"
+    },
+    {
+      "module": "Aesop.RuleSet.Name",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleSet/Name.lean",
+      "sourceSha256": "935b8305a29faed6d0c6da368935c1f146674441650369d9e035621a4e27eb8a",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleSet/Name.olean",
+      "rebuilt": false,
+      "traceSha256": "1c8b181894069fdd809f0f1b6644cb5071109e68ef2e695e47b647253941a10f"
+    },
+    {
+      "module": "Aesop.RuleSet.Filter",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleSet/Filter.lean",
+      "sourceSha256": "38436d296949f99c983f9a2653095282d0e261f4757e4173f2a27b6e242da146",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleSet/Filter.olean",
+      "rebuilt": false,
+      "traceSha256": "bbc13b86f4f0c68228595ffa7d8de715d7f8da5df228cfbb098f7414907a70a1"
+    },
+    {
+      "module": "Aesop.RuleSet.Member",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleSet/Member.lean",
+      "sourceSha256": "0b11f44c4ce0dabb0da8023a17c819806c1969039dd8c2bf7309205dda49b323",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleSet/Member.olean",
+      "rebuilt": false,
+      "traceSha256": "983477ad529b10a7ab64c52c5137962589fc00aab6d4f3700f031e8e620f0c7e"
+    },
+    {
+      "module": "Aesop.RuleSet",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleSet.lean",
+      "sourceSha256": "7d08d9588a327688bb48a5c548f6ab7e2c2f9a3d1139f30f7287a1aa5f32ff68",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleSet.olean",
+      "rebuilt": false,
+      "traceSha256": "2b848205b2bd8d5366c80894c5586fc6238d63b4313f9bbc2684af87bbd00fce"
+    },
+    {
+      "module": "Aesop.Forward.State.Initial",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/State/Initial.lean",
+      "sourceSha256": "71663c4de8e0b6376373e4646d7351ef74b040d617c02020f3c66f39ff7354a2",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/State/Initial.olean",
+      "rebuilt": false,
+      "traceSha256": "6d3499af224ce69b395e42cd494a8205a21ae524fa25a8746a53a29ab698fdeb"
+    },
+    {
+      "module": "Aesop.Tree.TreeM",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/TreeM.lean",
+      "sourceSha256": "c412d8a3512fa4a8eec257efbfc36149ac046360d41fe079ff5b1f3d8bccc392",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/TreeM.olean",
+      "rebuilt": false,
+      "traceSha256": "4f880a025f58e20779701f38d7483e7a4862c8ea478071e8bfdedcad3dfb185b"
+    },
+    {
+      "module": "Aesop.Search.SearchM",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/SearchM.lean",
+      "sourceSha256": "2fa61f1477d9df307637caa0fbe29de553b6dc7a83d2ad9dad4845078ef6fbee",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/SearchM.olean",
+      "rebuilt": false,
+      "traceSha256": "d2d532070853488e9e0e3fda0eecedb8766304acb87a9386147e26f1347891a6"
+    },
+    {
+      "module": "Aesop.Tree.RunMetaM",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/RunMetaM.lean",
+      "sourceSha256": "d89a9840aa5f12e9306b25139a51846c2717d344b57018c9f476566d713a4433",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/RunMetaM.olean",
+      "rebuilt": false,
+      "traceSha256": "5d16b03ba16b4ba2078e00d1802c4868ed5e74bc6dac6eebb54f57f8f2e15922"
+    },
+    {
+      "module": "Aesop.Tree.Traversal",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/Traversal.lean",
+      "sourceSha256": "6b9401204d8b69e878edd762c1212705e326fb1deb8f89b71922377dff666feb",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/Traversal.olean",
+      "rebuilt": false,
+      "traceSha256": "e37352a7fe395ec9c720959a499478cdce12859c59096f36e9588a80d60914b8"
+    },
+    {
+      "module": "Aesop.Tree.State",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/State.lean",
+      "sourceSha256": "4306bdabd6512e343c659fb15d86d399d1dc85a8afe5bab8a417fc3a906aa501",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/State.olean",
+      "rebuilt": false,
+      "traceSha256": "0f0cedf42af1b46fed6e1d29e5e7328dc8ae77e1b9958fc82f4de7a7ed3528f5"
+    },
+    {
+      "module": "Batteries.Lean.HashSet",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/HashSet.lean",
+      "sourceSha256": "d78be8b7f563b38ad827a55676d27ef5b05636ad18b20a9015e531c2e58d423e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/HashSet.olean",
+      "rebuilt": false,
+      "traceSha256": "d91f70a79e0688b3f81a172e90a8f259463173eeec56234bb510a39f56e1e841"
+    },
+    {
+      "module": "Aesop.Forward.State.ApplyGoalDiff",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/State/ApplyGoalDiff.lean",
+      "sourceSha256": "782f71bd8ae05284633dc8b1d26157197f82e7bc71b0e99a4721f2c5a7e227a4",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/State/ApplyGoalDiff.olean",
+      "rebuilt": false,
+      "traceSha256": "5ec41441592628bcfe56bb495e43ad9d897f95199f32149c9957df9d8d7083f7"
+    },
+    {
+      "module": "Aesop.RuleTac.Apply",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/Apply.lean",
+      "sourceSha256": "5d9ac94541b87d943ddaa8ba9c29867d8a72e7fdaa0a60e44ce2ff510e3ae3fb",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/Apply.olean",
+      "rebuilt": false,
+      "traceSha256": "84e3050d9b1928d20707fb17102dee27a2438088a7e3058a3869cfd8bdf10b43"
+    },
+    {
+      "module": "Aesop.RuleTac.Cases",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/Cases.lean",
+      "sourceSha256": "41894e7d01212ce9a6c8915fa0c654a2a8b15a59d2dba8782e0e430dc25ae57d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/Cases.olean",
+      "rebuilt": false,
+      "traceSha256": "45c074cadc6809c1feba04d8e0331f7a8b68dca9247b49e9505b823ba01076b9"
+    },
+    {
+      "module": "Aesop.RuleTac.Forward",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/Forward.lean",
+      "sourceSha256": "9dc9c8abf26334209bdd3b55dd48d54d7284a865d2110a4c0e94f95328d9826e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/Forward.olean",
+      "rebuilt": false,
+      "traceSha256": "3d9e4319f4217b270457ab8cce265593eed5d809163284ac21144666946dfa63"
+    },
+    {
+      "module": "Aesop.RuleTac.Preprocess",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/Preprocess.lean",
+      "sourceSha256": "dc3c0227bea44873acdb1bee024043a5fd699812232e355a08f67654f4f7905c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/Preprocess.olean",
+      "rebuilt": false,
+      "traceSha256": "96d8250ae4826dbb297a253aa980c9f74b5968a060607ce2a83a63389e1e2f39"
+    },
+    {
+      "module": "Aesop.RuleTac.Tactic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac/Tactic.lean",
+      "sourceSha256": "ae02990abe5a0b14c03d8b2fe15e6a86fbc94e266f07e8bbd7816af93bdac584",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac/Tactic.olean",
+      "rebuilt": false,
+      "traceSha256": "0b2665f83e184d94612bcc094619abeee8c163e5dd5a71c47f600fdda42f7b1e"
+    },
+    {
+      "module": "Aesop.RuleTac",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/RuleTac.lean",
+      "sourceSha256": "b0c4dc2069b3c874e533a11402c42d8edca375fde1c962e115e5e843a310d7e6",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/RuleTac.olean",
+      "rebuilt": false,
+      "traceSha256": "fe1323a1eb2e755e75ddd113dc24c30f3a8f649a7daef1989c8f632eed33195e"
+    },
+    {
+      "module": "Aesop.Search.Expansion.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/Expansion/Basic.lean",
+      "sourceSha256": "2476339216f379c2cde0fde4b885e9e3b4e5ecbdb41bc07e7fc8e62c470a2e46",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/Expansion/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "64a466cb1703c5ecf2ad64c9cc988f0cbb76939938dcb07ff217d852978df7b2"
+    },
+    {
+      "module": "Aesop.Search.Expansion.Simp",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/Expansion/Simp.lean",
+      "sourceSha256": "2b43d8d550d9e702f644a88205e6f0fd1fb7e28480064e5642c753e218e9ba85",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/Expansion/Simp.olean",
+      "rebuilt": false,
+      "traceSha256": "d759f98a6afc5b4f7b2c7d07a39e1c8af70bd9dc0d4e54ce35d2610e07c4dd48"
+    },
+    {
+      "module": "Aesop.Search.RuleSelection",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/RuleSelection.lean",
+      "sourceSha256": "f2fa0fe863e2a1872232f4303573e5ea014adc6833a13f389fdb7930bdf74242",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/RuleSelection.olean",
+      "rebuilt": false,
+      "traceSha256": "6f94dd3311acb940ace8c6f87ed20cace199133d695e0a9b1f98dbbc676a25ef"
+    },
+    {
+      "module": "Aesop.Search.Expansion.Norm",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/Expansion/Norm.lean",
+      "sourceSha256": "c366e6d89d41f83eec01ebe6a704ddb1e6227cd756e35a40525da3251a13fc56",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/Expansion/Norm.olean",
+      "rebuilt": false,
+      "traceSha256": "ffb22043ab8e4a5ae2eea321c351f7f5728d8cd52b4e7988ac931d3f205e5bf3"
+    },
+    {
+      "module": "Aesop.Tree.AddRapp",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/AddRapp.lean",
+      "sourceSha256": "a3d5fc58f60c4a14992682988937c8c2a0855bce9cf7da20e41f8e8e0831922e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/AddRapp.olean",
+      "rebuilt": false,
+      "traceSha256": "21e98f2a84c114a65c5de8c15ac0c31b91369976a2d3846195b2b05f390299d7"
+    },
+    {
+      "module": "Aesop.Forward.State.UpdateGoal",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Forward/State/UpdateGoal.lean",
+      "sourceSha256": "89f0c6ace2500e78c56c316937a6a8e0a5556e362ffb467ab716cebae79b090c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Forward/State/UpdateGoal.olean",
+      "rebuilt": false,
+      "traceSha256": "bd003d29b637370348a13264caa1b2b9f808d9d0ad1afc348844f2eead26808f"
+    },
+    {
+      "module": "Aesop.Search.Expansion",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/Expansion.lean",
+      "sourceSha256": "7eeee4656e838e398ce12fbab36a9fc5920d6d95b8d4207db731ad65d552ee1b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/Expansion.olean",
+      "rebuilt": false,
+      "traceSha256": "455d8c5e2e2d0a51c1e627c69b6d7afbd8620202994cdb686749dffd28acf27d"
+    },
+    {
+      "module": "Aesop.Exception",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Exception.lean",
+      "sourceSha256": "1eae03b3c64d6d73ca03fafd81eecfcd1e6d6fb4540b9238313817e43fd705ca",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Exception.olean",
+      "rebuilt": false,
+      "traceSha256": "0d78df34d1f76f770fbefb0d3816114181633efee27a7fff4ffb5083834a712a"
+    },
+    {
+      "module": "Aesop.Search.ExpandSafePrefix",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/ExpandSafePrefix.lean",
+      "sourceSha256": "63c84297e8e22340506d96700667325c8d197afcbaebeedd4db787e57c3ce07d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/ExpandSafePrefix.olean",
+      "rebuilt": false,
+      "traceSha256": "12b05abfb03b5588c18a9f0c3b9a857a7e399f1602487a0e7e7d6af63d8a35d7"
+    },
+    {
+      "module": "Aesop.Tree.Check",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/Check.lean",
+      "sourceSha256": "26358e41dbaf1c391bd0d55035975da5f641333e56088b52e7edf66f778723bb",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/Check.olean",
+      "rebuilt": false,
+      "traceSha256": "8548c989658397fdb879584c9873630ffe58d5ca10a2af95c87eac621a06d4ca"
+    },
+    {
+      "module": "Aesop.Tree.ExtractProof",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/ExtractProof.lean",
+      "sourceSha256": "f1c5310f3fa55583b3389c2f1514da1628d3c3574e229cc383894005c2968b83",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/ExtractProof.olean",
+      "rebuilt": false,
+      "traceSha256": "f8f693f4f6575204527efd60248d70a84b85dfc86356402eedd80e578d5a6606"
+    },
+    {
+      "module": "Aesop.Tree.ExtractScript",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/ExtractScript.lean",
+      "sourceSha256": "5474c713ef7f0d9a386248362e0e4170a9a2f31d6d85ad2f6f19bfd8520a8ba0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/ExtractScript.olean",
+      "rebuilt": false,
+      "traceSha256": "a5c927d9506d12143889e98c5d38eb0947b10b683c283337899a5e870a8775ff"
+    },
+    {
+      "module": "Aesop.Tree.Tracing",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/Tracing.lean",
+      "sourceSha256": "e17bab4a5c0e98853c231b9221d02491402793a50ab8706f14949f63d4ff93f6",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/Tracing.olean",
+      "rebuilt": false,
+      "traceSha256": "069151234da614faabb3dccaa8b8e3d2c1d806ac436fcc0894374764df404dbd"
+    },
+    {
+      "module": "Aesop.Frontend.Extension.Init",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Frontend/Extension/Init.lean",
+      "sourceSha256": "eebb1c6f6ed50edda3817e580e456b158d943acc8aa39754d1073fc16c98352c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Frontend/Extension/Init.olean",
+      "rebuilt": false,
+      "traceSha256": "d34ca0f45f4acbf9a6e39a6e1d2ddb4ab8f354ca2d5f96d6b69021e9f24d7ded"
+    },
+    {
+      "module": "Aesop.Frontend.Extension",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Frontend/Extension.lean",
+      "sourceSha256": "cef9a9dd119cd6cc9f10671a8f26f01efce38bfd190152ffeb36d4ad4e1b3161",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Frontend/Extension.olean",
+      "rebuilt": false,
+      "traceSha256": "3a7445a5e1f9e83ed311aa50088909cbb8c46e3c11785ab09db987f8d4d622e2"
+    },
+    {
+      "module": "Batteries.Control.ForInStep.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Control/ForInStep/Basic.lean",
+      "sourceSha256": "8ec4237f9363d4d6a0a390cf62808c1676b7ba496b533ec2c5228b8bb152d89e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Control/ForInStep/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "2b07963275bbe20c10cbb8f12caa8331df88f919cca25c578fffc6b26cb35623"
+    },
+    {
+      "module": "Batteries.Data.BinomialHeap.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Data/BinomialHeap/Basic.lean",
+      "sourceSha256": "8e027aa85eaedcdad0ab30ca3c5d3c00ffc853dfde87ceee35e14bb8d88de1c3",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Data/BinomialHeap/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "7c6924caa235ba8f8719bb9bbc09313f8747cc75224b06a8964e988847363620"
+    },
+    {
+      "module": "Aesop.Search.Queue",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/Queue.lean",
+      "sourceSha256": "3ef26820f9353eb26342c06a2388b743422d0bc5f40fa99dc8af9304311ac952",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/Queue.olean",
+      "rebuilt": false,
+      "traceSha256": "c69e44e08e6202574006104491e3d6b08a435fcb68607f49a3d697e4c27227a6"
+    },
+    {
+      "module": "Aesop.Tree.Free",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/Free.lean",
+      "sourceSha256": "46a55621040a2c41891df504fb8b9d81e9958cd17afb8ecf4472f33c34f4db76",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/Free.olean",
+      "rebuilt": false,
+      "traceSha256": "461bbbf61e0d4911b8bc675f7ff687b77380268f1873c06b49afe423a2a185ee"
+    },
+    {
+      "module": "Aesop.Tree.Stats",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Tree/Stats.lean",
+      "sourceSha256": "bc6c2be59c61021bc55dfe67867be975a1dc24caa4d6ed8dfcfd6db38eeefffc",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Tree/Stats.olean",
+      "rebuilt": false,
+      "traceSha256": "44ab809e6cd32897ad5dafa31964757e1ef4cbc06f470d5ad63522f55791a287"
+    },
+    {
+      "module": "Aesop.Search.Main",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Search/Main.lean",
+      "sourceSha256": "7f32a6a524aeee0f6df8694575e47f74442f238444ddddb38cdd174c08cc8462",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Search/Main.olean",
+      "rebuilt": false,
+      "traceSha256": "a2c90404d93ab601ff90af6ff8fd73e128a17b8553adff679b664640bde49fa5"
+    },
+    {
+      "module": "Aesop.Builder.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Builder/Basic.lean",
+      "sourceSha256": "2aa56bbaa5bbf72b10a8d9c18d34a27acca3bebd9bd4c661e5b783715f5642f0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Builder/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "6529dc6dfe237738fe2a102f33713a65bdc70c09ab77ddcd79e1955ba7fefcf9"
+    },
+    {
+      "module": "Batteries.Lean.Expr",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/Batteries/Lean/Expr.lean",
+      "sourceSha256": "e36a0e6f2c0ff7f6e2055cc5a517f3332812abe17b7f2635c5a2bd435079efec",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Expr.olean",
+      "rebuilt": false,
+      "traceSha256": "e889e67816abe05fef9f401335206ea1dbc1821b2d02d2ac8580d13b53b61946"
+    },
+    {
+      "module": "Aesop.Builder.Cases",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Builder/Cases.lean",
+      "sourceSha256": "fb150abdf155e3746bb623efca5f53c4947fcce7c9b0542a252abf402fbc71ed",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Builder/Cases.olean",
+      "rebuilt": false,
+      "traceSha256": "c8ef243539d606eed58f297f9e11753f4bef316006e8a66ad18c910d08d52430"
+    },
+    {
+      "module": "Aesop.Builder.Constructors",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Builder/Constructors.lean",
+      "sourceSha256": "b2851bc173f7f3696edc89592b8b59b4e4b78a271a0c78eb2b46d2ff7fa701fb",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Builder/Constructors.olean",
+      "rebuilt": false,
+      "traceSha256": "b968fda366fad728274e6c8872cb768fb7d4cca414b9e071b3650a9756e322bd"
+    },
+    {
+      "module": "Aesop.Builder.NormSimp",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Builder/NormSimp.lean",
+      "sourceSha256": "d10cbc2104999437682e32d075dc10229b277cc7cdf5f157ad5fc77cae4b1f94",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Builder/NormSimp.olean",
+      "rebuilt": false,
+      "traceSha256": "4a0faff876990f687078beeb5627e84ab7a240c4d0892b1af1741bdac74bd353"
+    },
+    {
+      "module": "Aesop.Builder.Tactic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Builder/Tactic.lean",
+      "sourceSha256": "d0d8284c962a60113041a110d268a9d0ab17089cc051240aa407167c5a8558f6",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Builder/Tactic.olean",
+      "rebuilt": false,
+      "traceSha256": "5d856a22ac1d0e8bf318c75fc41ad8feb27c0ecd9ce002f1439be1d1a9489770"
+    },
+    {
+      "module": "Aesop.Builder.Apply",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Builder/Apply.lean",
+      "sourceSha256": "1d75e204b0b0a7e29978e20cb0c1ab833a8fa701a91e3bef8f947c488ed6b10b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Builder/Apply.olean",
+      "rebuilt": false,
+      "traceSha256": "a753e40a80af3c7b9a4e26b6fab91d41983dc1ee10a60d7c0a27cf55190f8b46"
+    },
+    {
+      "module": "Aesop.Builder.Default",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Builder/Default.lean",
+      "sourceSha256": "cc901da10482780df7ff8b9e4eb7d529d16116ff2031298819d52595a5019a98",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Builder/Default.olean",
+      "rebuilt": false,
+      "traceSha256": "f19ea87f73ad20797c32ffee647e1cbc5352470eb09d1d6052bb1cf8f66a8b38"
+    },
+    {
+      "module": "Aesop.Builder.Forward",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Builder/Forward.lean",
+      "sourceSha256": "66cbd9b365ad7928bd955e2cafea45ebf2b2f85bec68775c5c65888b8650f3e8",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Builder/Forward.olean",
+      "rebuilt": false,
+      "traceSha256": "7faf186025d8c70337112799a5e3c294a70024b5a5c2d885847bb9e5a6fe76b8"
+    },
+    {
+      "module": "Aesop.Builder.Unfold",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Builder/Unfold.lean",
+      "sourceSha256": "8464fbf97cc3adce5373b7a4462320080d4865493c0dd1acd6f7a502dd9a325d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Builder/Unfold.olean",
+      "rebuilt": false,
+      "traceSha256": "1dbe2f5e2cdf9e63e57ba5f8306f1ddfff2350a4fcbc23fc848a70eb88d7bef5"
+    },
+    {
+      "module": "Aesop.Frontend.RuleExpr",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Frontend/RuleExpr.lean",
+      "sourceSha256": "1db0f649e81d140301a21c559298308b77ffd8e51a3221f4f7ed13d0da1ad281",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Frontend/RuleExpr.olean",
+      "rebuilt": false,
+      "traceSha256": "4f95503b4ecfbe0e32129a83f812507d38c6978e8308b68e2d79612a3d46eb73"
+    },
+    {
+      "module": "Aesop.Frontend.Tactic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Frontend/Tactic.lean",
+      "sourceSha256": "4de8bd498bd6655cbfaa1f75b640c4ee3d9db42d9cada4dcff9a05912bbced0f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Frontend/Tactic.olean",
+      "rebuilt": false,
+      "traceSha256": "5b53b0cbb274241cf198dbbb949ebd1dc9eb2b9247708381189f34f064f9558f"
+    },
+    {
+      "module": "Aesop.Stats.Extension",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Stats/Extension.lean",
+      "sourceSha256": "a135bd78e2f504f1774db72c9c3b4f1bc6a25bafcecee4af5ef7a0286c45575f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Stats/Extension.olean",
+      "rebuilt": false,
+      "traceSha256": "0a47819663004417548aedbfe0b5afd0dbc8a667f387a8d3b22901ba1495b38b"
+    },
+    {
+      "module": "Aesop.Stats.File",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Stats/File.lean",
+      "sourceSha256": "86a5ae9d2ae2953177c0158a9f27f4b9df4b6e61be0bb53bfabee44ec7d3aeac",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Stats/File.olean",
+      "rebuilt": false,
+      "traceSha256": "782b55ef3e65e760fc9456de2df56fab1a1b7baf292abb164bd713e93d8374a3"
+    },
+    {
+      "module": "Aesop.Main",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Main.lean",
+      "sourceSha256": "1dcc1fcfff276a1d00cdc32cf2767d93ee6cd088247c6ab8c69c31c653160a33",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Main.olean",
+      "rebuilt": false,
+      "traceSha256": "490d0f500407d6f373b8bacd54bd67cfcb5f34d88f4f6b4d78534f65897d331a"
+    },
+    {
+      "module": "Aesop.Frontend.Attribute",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Frontend/Attribute.lean",
+      "sourceSha256": "2d2fd56166a5472b74ab182fa6999bc098247326396c913b434738d3b1455a3d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Frontend/Attribute.olean",
+      "rebuilt": false,
+      "traceSha256": "9f25ec0a3679184d4328491d36dd022b8afc752a988c003675c98cb59ab73baa"
+    },
+    {
+      "module": "Aesop.Frontend.Basic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Frontend/Basic.lean",
+      "sourceSha256": "56709adee6bb856633a5af6475589200c104e0cc8b0727023b3b72aae7d05818",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Frontend/Basic.olean",
+      "rebuilt": false,
+      "traceSha256": "419dc200718d5d32578f12b15d3ca2f54d49173ee7717ffff7c0a47c855b8c21"
+    },
+    {
+      "module": "Aesop.Stats.Report",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Stats/Report.lean",
+      "sourceSha256": "b4c897105bce396b9f63a8d0362b77cf95ee9f624cda23d5bdfab19bc12bcea4",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Stats/Report.olean",
+      "rebuilt": false,
+      "traceSha256": "0ecdcfee944dd2c9e2bd8338dac7e96bae81b87eac9808504a47708e0afb0839"
+    },
+    {
+      "module": "Aesop.Frontend.Command",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Frontend/Command.lean",
+      "sourceSha256": "23cbf1313141c43ec78b44d38fd2978c0ad44cfc601cdcaf191e4e0e7db1cae2",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Frontend/Command.olean",
+      "rebuilt": false,
+      "traceSha256": "b7d2b2e4fbffd1e13b8bcaa694538851fbdb1bdb546cff53c9d4aac5bd2dde5a"
+    },
+    {
+      "module": "Aesop.Saturate",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Saturate.lean",
+      "sourceSha256": "313a2d68709ed69c64130d24772e1fb4185aed98ca11509f7aeb7270edf97a88",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Saturate.olean",
+      "rebuilt": false,
+      "traceSha256": "a1c01e690736ed0e13810d6d07e33736573c99e908167e583ef407a28fbb7a1d"
+    },
+    {
+      "module": "Aesop.Frontend.Saturate",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Frontend/Saturate.lean",
+      "sourceSha256": "1977fcff92fbf3a7927ac3d0618c0d60fe85dcff9a87911fcd74cef864e23d68",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Frontend/Saturate.olean",
+      "rebuilt": false,
+      "traceSha256": "e503718f67f25a7acaacde9b89b704accb842992acb9d5e136926074eb74f31a"
+    },
+    {
+      "module": "Aesop.Frontend",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/Frontend.lean",
+      "sourceSha256": "755cf427c42bfcc1c97760c82827c105fc168a875a809be74ac886f74e195423",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/Frontend.olean",
+      "rebuilt": false,
+      "traceSha256": "50ae03e904303cd612e67be1db29103352aaf8a5d58dff2bab292bac30cec1d3"
+    },
+    {
+      "module": "Aesop.BuiltinRules.Assumption",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BuiltinRules/Assumption.lean",
+      "sourceSha256": "a40b74f7cd0c796a2e3759863be052f20f71ea25b723a9061283fd601ac6bde6",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BuiltinRules/Assumption.olean",
+      "rebuilt": false,
+      "traceSha256": "6b2db344934dad977818daf2b04066d10f7c5d3c57bbfe8046759040c12928a8"
+    },
+    {
+      "module": "Aesop.BuiltinRules.ApplyHyps",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BuiltinRules/ApplyHyps.lean",
+      "sourceSha256": "2386ba354d3e2b2e2284aa208033554a1c398a588b87cd4c1f65d6f0518696e2",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BuiltinRules/ApplyHyps.olean",
+      "rebuilt": false,
+      "traceSha256": "698298c1852b6b8ac1e81702ccb061d706333a8aa1920ecc38f0d8b757c71881"
+    },
+    {
+      "module": "Aesop.BuiltinRules.DestructProducts",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BuiltinRules/DestructProducts.lean",
+      "sourceSha256": "6626554bb0f7b24d95f0b91ab6afcaaa3acf9c17662d4b2d7b367933f0efd15b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BuiltinRules/DestructProducts.olean",
+      "rebuilt": false,
+      "traceSha256": "b9b224a84ec9d588428192311c7dbc19522334f1843c8e8effbcbcdc6c8139e0"
+    },
+    {
+      "module": "Aesop.BuiltinRules.Ext",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BuiltinRules/Ext.lean",
+      "sourceSha256": "602292051351aa87744fcfc90cca86c718428576fad89d3f1df7aa317afb3641",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BuiltinRules/Ext.olean",
+      "rebuilt": false,
+      "traceSha256": "7f56166b9a8acc2eccd3603cdb32e29f891bf15c5396dcb06ec4648c377b94d8"
+    },
+    {
+      "module": "Aesop.BuiltinRules.Intros",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BuiltinRules/Intros.lean",
+      "sourceSha256": "f17fbbb2dfb37688a73b8dd8bfdf67c1923e5784cc3e7a4e2f061b3fd5e1fe6c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BuiltinRules/Intros.olean",
+      "rebuilt": false,
+      "traceSha256": "503e7e65ac412ab348b387fa24c691663f16790c07e36e8fc49d9b43f1ae5d47"
+    },
+    {
+      "module": "Aesop.BuiltinRules.Rfl",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BuiltinRules/Rfl.lean",
+      "sourceSha256": "f72f8008d4080b2f9984e74b1b989e464f39ff48b5ab2cc481b2d1041dfe8d60",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BuiltinRules/Rfl.olean",
+      "rebuilt": false,
+      "traceSha256": "2f0fb0719d8b1dde64c7aaa362f82a8deada3ccb6fa802642060443b93879d90"
+    },
+    {
+      "module": "Aesop.BuiltinRules.Split",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BuiltinRules/Split.lean",
+      "sourceSha256": "312b9167d64314540b13da100ff2f18907a3b53fc0dd9e69b82f31f8a7c90fc2",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BuiltinRules/Split.olean",
+      "rebuilt": false,
+      "traceSha256": "623dda235a0fbd5f66ca89a470c00e7931a5ddd0a14465c595cd3aca85b715a6"
+    },
+    {
+      "module": "Aesop.BuiltinRules.Subst",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BuiltinRules/Subst.lean",
+      "sourceSha256": "eac974cebafc3a49e9a5e7293ddc1033a41050891c8fd1ef0426f52ef99dc6c9",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BuiltinRules/Subst.olean",
+      "rebuilt": false,
+      "traceSha256": "96cb6d70d88f1fd976e3eca5c41c18df9ba046431db6f8d51feebe183fe581e4"
+    },
+    {
+      "module": "Aesop.BuiltinRules",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop/BuiltinRules.lean",
+      "sourceSha256": "60a2029cb540854afebccd00b0a3ad7fc4ce1274cbad36f00a87795d0d96a376",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop/BuiltinRules.olean",
+      "rebuilt": false,
+      "traceSha256": "90b604d3364b2818124f6dcdd422cd1148cae60a45f4e88a2fe77cd4d9202656"
+    },
+    {
+      "module": "Aesop",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/Aesop.lean",
+      "sourceSha256": "6806b32ad8ef01dd86cbf70d72a64ab731858956522a336409804ac303b14260",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean/Aesop.olean",
+      "rebuilt": false,
+      "traceSha256": "49902e7d39ff81b08880bccb1003599951c1b0f43d9a75ddd0dfe0bbf73bbdcb"
+    },
+    {
+      "module": "Effect4.Laws.Auto.Inversion",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Auto/Inversion.lean",
+      "sourceSha256": "ef041007ba7a29cc8e5f3807d9613b2cf0ae32f09d347536603a7dfc021a821b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/Inversion.olean",
+      "rebuilt": false,
+      "traceSha256": "ffad88e028acc1c3c5d668e59c652211b37ac71f9685210bbbcaf38bee0378c6"
+    },
+    {
+      "module": "Effect4.Laws.Auto.Census",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Auto/Census.lean",
+      "sourceSha256": "7b1b6bdbf3cd061154581ca896ece642ada94076dc7c00732efe9d5cfff0a58b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/Census.olean",
+      "rebuilt": false,
+      "traceSha256": "66cbd0b3440ebd5697fc62caec283e660af4baef40d5de1bafda79699fb6e300"
+    },
+    {
+      "module": "Effect4.Laws.Auto.RuleSets",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Auto/RuleSets.lean",
+      "sourceSha256": "0da15c0754834d4584b1573846f57d96de803b4c040f77a090b031e173b06bc2",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/RuleSets.olean",
+      "rebuilt": false,
+      "traceSha256": "caf3cb66439b2098c284a0a0288603b67ce469dfcb8d72fc4760d818a5680942"
+    },
+    {
+      "module": "ProofGraph.Ledger",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/tools/ProofGraph/Ledger.lean",
+      "sourceSha256": "02e071b8df7cc571d81abf8e7dc59a1ba67baaf0e9b6024774b1d5173d2dc29c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/ProofGraph/Ledger.olean",
+      "rebuilt": true
+    },
+    {
+      "module": "Test.Audit.ProofGraph",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/Test/Audit/ProofGraph.lean",
+      "sourceSha256": "2095ddc29483021f95d48bc86cebb9804b4b67ec96e5a8604ddf8452a6950dfb",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Test/Audit/ProofGraph.olean",
+      "rebuilt": true
+    },
+    {
+      "module": "Effect4.Laws.Auto.Obligations",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Auto/Obligations.lean",
+      "sourceSha256": "eee3ff8e3d48c34ebf329819109a87b06ef752c3e653a91711d0e2c5e5bcd01e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/Obligations.olean",
+      "rebuilt": true
+    },
+    {
+      "module": "Test.Audit.Obligations",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/Test/Audit/Obligations.lean",
+      "sourceSha256": "565e3401c7e3ce909dfa092a3d82af9285379a74fbb2bcd3643c8221317517e8",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Test/Audit/Obligations.olean",
+      "rebuilt": false,
+      "traceSha256": "a540f2d2da5a104cc41eddc3bf9417784c4cc10e9b7d8fdfb835b23b330bc754"
+    },
+    {
+      "module": "Conform.Core.Proof",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/tools/Conform/Core/Proof.lean",
+      "sourceSha256": "fa556a0f2158f6f505f60497a9e184deee8f587e1f00f3c6f452ea1d44e1a023",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Conform/Core/Proof.olean",
+      "rebuilt": false,
+      "traceSha256": "132055ad310a4e4daa5ae150e79102399dab0997da3fb4b0e1da35f0dfb7c636"
+    },
+    {
+      "module": "Effect4.Laws.Auto.Positions",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Auto/Positions.lean",
+      "sourceSha256": "cfbe9f64af42400a50ea296df372dabd0356819bef9925a5179561f61660c02a",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/Positions.olean",
+      "rebuilt": false,
+      "traceSha256": "70978215cc83363cffb6fc521505ad80186fa4bf3563c292ce6bf72c8fc3327e"
+    },
+    {
+      "module": "Effect4.Laws.Auto.Frames",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Auto/Frames.lean",
+      "sourceSha256": "85f195ba415dab7a6eadb47f172c074499aa2d575352a0d39fa5dfb83fc217b0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/Frames.olean",
+      "rebuilt": false,
+      "traceSha256": "dc335d636c4139af9e064caefea46483d1b5dcced07c012d90104dd0e3504722"
+    },
+    {
+      "module": "Effect4.Data.Constructive",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Data/Constructive.lean",
+      "sourceSha256": "244191f1c1a38e193a77a5d84aea8c712222f87033dbf97c08586b507791c99d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Constructive.olean",
+      "rebuilt": false,
+      "traceSha256": "17223dc950055f9cccacad2200b5ce7f732a35e89caf32a2d108415096c6170f"
+    },
+    {
+      "module": "Effect4.Data.Row",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Data/Row.lean",
+      "sourceSha256": "d34ce891e47c0fcb0398c2f2b550ca093830e69e287acd436a8362e61378efae",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Row.olean",
+      "rebuilt": false,
+      "traceSha256": "973e4c5e1dc836b7bc3b4b95a9b7078a3858719f20b8745574d7abf9bb302009"
+    },
+    {
+      "module": "Effect4.Program.Ty",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Ty.lean",
+      "sourceSha256": "ca9e83f2e03e55a7454554c3ce606e645d962a75fc58154aa4e3f22745262655",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Ty.olean",
+      "rebuilt": false,
+      "traceSha256": "b5926eaff5e512d76e5b6333683a9e51eb5b266ae8d9f9ec161fcbb8ce8397cd"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Digits",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Carrier/Digits.lean",
+      "sourceSha256": "148b57880824da05f322013e6ce44b13d2a2b1ff051dcb6a6006ec2a11d4ab4e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digits.olean",
+      "rebuilt": false,
+      "traceSha256": "e35b829c670e452943dece2074dc487d68f0b7e551338786329d74099bc090b8"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Utf8",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Carrier/Utf8.lean",
+      "sourceSha256": "acb9896cfb4e3a3604e90c1f04245b5bcbe3fc39d6c2c847b1a5bb38f4b4da4f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Utf8.olean",
+      "rebuilt": false,
+      "traceSha256": "6b2164ddf101c273f768860f0396b8ac5956b05bfc12c75c585595d4e0e246c0"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Val",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Carrier/Val.lean",
+      "sourceSha256": "7d9f711fd8ec083a782009ee04ccec36e7f6a1d793946e3e1b49e163771f0e24",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Val.olean",
+      "rebuilt": false,
+      "traceSha256": "3d1b913674af00cacf1c30c3abad5c94be07bdeb58d453431fa0ae3266917c9c"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Carrier/Image.lean",
+      "sourceSha256": "db57ceffaaab2a99f30b643e0f6fde44a7dee65aa0593c3db9aeb0972e0e416d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image.olean",
+      "rebuilt": false,
+      "traceSha256": "b71fd2a02d3f9992a4b5d4532b41c71a1dfbf42b12401a89a49cfa686fe0740f"
+    },
+    {
+      "module": "Effect4.Machine.Cause",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Cause.lean",
+      "sourceSha256": "ab9dcc8f6386925bb99aecef3765bfc91b35d9b7e432894e1ba8436f9efdf982",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Cause.olean",
+      "rebuilt": false,
+      "traceSha256": "1387af280e062015ab70eb3dff81ace1c11c4fc74a4ca4af3dceb471c056bcc2"
+    },
+    {
+      "module": "Effect4.Machine.Exit",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Exit.lean",
+      "sourceSha256": "c29b8999fa1e807d89303b1124ff323326faa33dce4d35400138ea7ef06385fc",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Exit.olean",
+      "rebuilt": false,
+      "traceSha256": "5b0b6ffba22d41caefd8de8cd1663a052389b2d44c97eded01e655ac1ede90fe"
+    },
+    {
+      "module": "Effect4.Machine.Fiber",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Fiber.lean",
+      "sourceSha256": "804e126340aa3933819f6a2561ff5cfa95e5f28ba92926ef723c095b8d796bee",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fiber.olean",
+      "rebuilt": false,
+      "traceSha256": "78285aed83f64709e0dcc7f4ef3269602c71be7b9c05f91796690513d9994976"
+    },
+    {
+      "module": "Effect4.Machine.Value",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Value.lean",
+      "sourceSha256": "6fea7879bb27681c3cb4cd06db747e04b3d66f0aeaa56c7f7cdd31bfa8401a31",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Value.olean",
+      "rebuilt": false,
+      "traceSha256": "38a4034a350549281a8a7874d008ce64f221a593a6a798cbd3182645ced7e0bd"
+    },
+    {
+      "module": "Effect4.Machine.Supervision",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Supervision.lean",
+      "sourceSha256": "675bf84940cc1e89bdc1ecdfedef9b94a81e3fc322e036ff25a8311498349fd6",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Supervision.olean",
+      "rebuilt": false,
+      "traceSha256": "8098d965ca8f91239ce10af6d4c4036e63b7d6c844bdc5250bbb16982d12ee13"
+    },
+    {
+      "module": "Effect4.Machine.Completion",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Completion.lean",
+      "sourceSha256": "0ae6167b79b5af271385f9fd15df824f5b16152bf3e9e356daddad480c551431",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Completion.olean",
+      "rebuilt": false,
+      "traceSha256": "380eb2dd6dcdeca9579fe46b3c3a34db0ab1296a5d61b1c3580b1b4e2936dda6"
+    },
+    {
+      "module": "Effect4.Machine.Wake",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Wake.lean",
+      "sourceSha256": "27dca8657ba65dc0f3ef40b82bc3d9fe4fc1468272ea82d88c81b03b708c8065",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Wake.olean",
+      "rebuilt": false,
+      "traceSha256": "cbff5c659be09f4292e38c8c96d0c4ce0a5af6cd3865a3f76bd7d640d035b4cd"
+    },
+    {
+      "module": "Effect4.Machine.Alphabets",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Alphabets.lean",
+      "sourceSha256": "a945895bab92e2e4a3713e60d6edcb35aff636a79adc11295df2ea807a85c8e5",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Alphabets.olean",
+      "rebuilt": false,
+      "traceSha256": "75a70a6ec0206525670f1fe5dae83e084329609cf0ee2789e16b83dd7f45299d"
+    },
+    {
+      "module": "Effect4.Machine.Term",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Term.lean",
+      "sourceSha256": "1e2afb13a9422d105e5fe133c9ee70d52af24ad28bbdd0c6d1597d01b3f956da",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Term.olean",
+      "rebuilt": false,
+      "traceSha256": "c70172a478d579c07396842c17797a468f6b7518153ac7fb9cec3af17971cf54"
+    },
+    {
+      "module": "Effect4.Program.AtomInventory",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/AtomInventory.lean",
+      "sourceSha256": "de4bf8667ad3aa40cd832cb96c1e7e2c3c56d6c2e8f436fef7598f0b4294947a",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/AtomInventory.olean",
+      "rebuilt": false,
+      "traceSha256": "7f90fca2ceff313839a4bf26f036dade24528ea94c40af4c69f827bd2e18eb2b"
+    },
+    {
+      "module": "Effect4.Program.NativeAtom",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/NativeAtom.lean",
+      "sourceSha256": "af8505497bc417cc3cf78f5efb6e00d53a3a7ab18af9794cc3f70f2d57c9e79d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NativeAtom.olean",
+      "rebuilt": false,
+      "traceSha256": "32e57d944cf1f96b8f20e1512636bcd0de434e6086ef2954c9ecfea1b9c11461"
+    },
+    {
+      "module": "Effect4.Program.ErrorImage",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/ErrorImage.lean",
+      "sourceSha256": "2604b116b39655c40be102476e97f551932f08b2d242bf96a56c62aea4fc270a",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ErrorImage.olean",
+      "rebuilt": false,
+      "traceSha256": "b8eaeac426ad641e782c6772dcefca3c6bf2c1b0674880f07e9a6a0835dd354b"
+    },
+    {
+      "module": "Effect4.Machine.Key",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Key.lean",
+      "sourceSha256": "a01ef4b968b1a5a4cb5b68e523584de88bb1784ad1e25a5b747dba3807dc6ccc",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Key.olean",
+      "rebuilt": false,
+      "traceSha256": "4f8ede1c7a9d0ddccf081b9285258f762e0683fda67dc3ed3776ae0f57c28978"
+    },
+    {
+      "module": "Effect4.Program.Decision",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Decision.lean",
+      "sourceSha256": "1db477f9ccceff5258c9bc3f9c7bd621938f194056623b62bb9d1617c3073249",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Decision.olean",
+      "rebuilt": false,
+      "traceSha256": "983c9d0b9ef06cf5cdae469c7f99a5e730eb088d8c282f530bf1329190f52967"
+    },
+    {
+      "module": "Effect4.Program.Eff",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Eff.lean",
+      "sourceSha256": "3116a30518519ca497ed9af7249db8c241099bee5dcec50ded1272d8b1e8248e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Eff.olean",
+      "rebuilt": false,
+      "traceSha256": "b919ab590f6106dd4c828b181e9bbdf7a521dee05f5503ddd344d60ad2ab7ef0"
+    },
+    {
+      "module": "Effect4.Program.Node",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Node.lean",
+      "sourceSha256": "cdd004d28beb1a3080a998e1f159dff52365545c3a11262af88d350cbde9038b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Node.olean",
+      "rebuilt": false,
+      "traceSha256": "c74941060ffbfb2c852de895d977ac3d13d6d433a3c6df651cc23158c15eea8c"
+    },
+    {
+      "module": "Effect4.Program.NodeLenses",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/NodeLenses.lean",
+      "sourceSha256": "eb3b6454357d7175f862606228b586b4929236e07cb7fdfa5f6e50b5aa84e0ba",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NodeLenses.olean",
+      "rebuilt": false,
+      "traceSha256": "b523906ac8bd4e84526468612a9dab6ba3d7e91226ea84c620373fb46e72f9d1"
+    },
+    {
+      "module": "Effect4.Program.Fold",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Fold.lean",
+      "sourceSha256": "a4563ebf499fcd73c96fe3595a6448fdd2bad8e1cd65b9d90aa0e197be6d7f3c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fold.olean",
+      "rebuilt": false,
+      "traceSha256": "7cc79b146a3c25ad87631153ef7a634b4f6dcfc9bf5e4651ba3af4be1792f77a"
+    },
+    {
+      "module": "Effect4.Program.Refs",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Refs.lean",
+      "sourceSha256": "d0c4f64ccca5e412162545d942454605c08b082bfd98372a2cfc054b8c4a14b6",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Refs.olean",
+      "rebuilt": false,
+      "traceSha256": "6f948386515ffb8f015fa4d29ffbe417db4fa2725f1bd9b10c0f6750f909076b"
+    },
+    {
+      "module": "Effect4.Machine.ContextMap",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/ContextMap.lean",
+      "sourceSha256": "f839d02164edb916d5867f58227000451f1bf9001a5e5d7ba99d577e1dcf1e82",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/ContextMap.olean",
+      "rebuilt": false,
+      "traceSha256": "5477cc6a3d6a3ce9536fd2ece7ef1474f54db0acf452247ae8c0569da7181374"
+    },
+    {
+      "module": "Effect4.Data.Ascii",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Data/Ascii.lean",
+      "sourceSha256": "a738d5ae14ef9ce71f691ab7fe545346270d204097218dd1e8f0820df340bc3f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Ascii.olean",
+      "rebuilt": false,
+      "traceSha256": "7e157f88987eaae598bca359188112664daa9f9189ca3b2f70d453ea88a2c606"
+    },
+    {
+      "module": "Effect4.Data.ClockMillis",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Data/ClockMillis.lean",
+      "sourceSha256": "b08f0a01109f73c89ad4481373e8d3efd059d886c1fa3a2fcaa03a596beb063c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Data/ClockMillis.olean",
+      "rebuilt": false,
+      "traceSha256": "0a6db18d1e99db66a5e30bcc3349b767a0cd0e187f21cb8dab0b848e467b26c2"
+    },
+    {
+      "module": "Effect4.Machine.Frames",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Frames.lean",
+      "sourceSha256": "a2f073639894bd4a7a88730bc27c6e098b3be76f2c9c2115dd4e56418b8845ab",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Frames.olean",
+      "rebuilt": false,
+      "traceSha256": "1f67cf3dcb19b81c355538199e63728ae4504aa3b0dc5a02a6534aa3a867b8b3"
+    },
+    {
+      "module": "Effect4.Machine.Fibers",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Fibers.lean",
+      "sourceSha256": "d8d1f50b246fc145665db5ed0797aee1948e3230f32f30a40794e7092bbfb2a8",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fibers.olean",
+      "rebuilt": false,
+      "traceSha256": "84e823471eb20161f4023f47f272f64e3ca169f23a862819f0e4f59a915ca5ec"
+    },
+    {
+      "module": "Effect4.Machine.Context",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Context.lean",
+      "sourceSha256": "7381556a77ac17f3d8afff1b440a5b559b63da3d730da4b7ddf07dd218d700a5",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Context.olean",
+      "rebuilt": false,
+      "traceSha256": "5c0fc0af8fe7c2504f2a81e77134ca329269b5a972231bc2fddbb63593171e13"
+    },
+    {
+      "module": "Effect4.Program.Typing.Rules",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Typing/Rules.lean",
+      "sourceSha256": "eb4fd9fe5222ee84c7359977981bc47a6c0c9c0116718cce2d15c29eb1303ecb",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Rules.olean",
+      "rebuilt": false,
+      "traceSha256": "302d41ca07165185386e0e3519d7b95542ad13ef4b2c4fafb2df2a0f4f484787"
+    },
+    {
+      "module": "Effect4.Program.Typing.Blame",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Typing/Blame.lean",
+      "sourceSha256": "1f7d4a80e4bc9d6688f3ea7eee34cc1f842d2b4b74e6ce5de42bff6ab2ef4d1b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Blame.olean",
+      "rebuilt": false,
+      "traceSha256": "baf8de6590f3e2eb0edf1e899126ca5b53628a714bc68aea3e3f47e9ce87c115"
+    },
+    {
+      "module": "Effect4.Program.Checker",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Checker.lean",
+      "sourceSha256": "dccbb27dd2526566ad7625f127b72b2de943ea6200715fca61f02c60d5f2aa02",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Checker.olean",
+      "rebuilt": false,
+      "traceSha256": "6481c9d000f0964fe0ac42e3072020bb0475895f1de7e8b08cb33898b7539a6f"
+    },
+    {
+      "module": "Effect4.Program.Typing",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Typing.lean",
+      "sourceSha256": "db7eb9a325cbf17e2119c5d95e9fca549d3bc3da06bc152070aaa66b2a0911f4",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing.olean",
+      "rebuilt": false,
+      "traceSha256": "8bcea4df7aeca735c326d98cded0a2662e5881d7062dd6477f259bea2559dfbf"
+    },
+    {
+      "module": "Effect4.Machine.Scope",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Scope.lean",
+      "sourceSha256": "73a72e53394fcf24a7599708a140c15de67cea023dc3fd45f70f635b039da8e6",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Scope.olean",
+      "rebuilt": false,
+      "traceSha256": "13b1d4c03a39e345102add9190c147433d4ead7e5ba0d9a2ffb40f2c644e4c61"
+    },
+    {
+      "module": "Effect4.Machine.Timer",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Timer.lean",
+      "sourceSha256": "f333df352e0ece26d283438ea2a8640b879d82e63f6472ac692ff22e5b33ffb7",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Timer.olean",
+      "rebuilt": false,
+      "traceSha256": "690fcf0d892e4d2774b640433ebf29dc584bf7370246206130557682c1e4a337"
+    },
+    {
+      "module": "Effect4.Machine.Stores",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Machine/Stores.lean",
+      "sourceSha256": "30f4560ab1a82625c9489aef9750b6db2145f2e8997de64c5856a6303b0eecc3",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Stores.olean",
+      "rebuilt": false,
+      "traceSha256": "f062bebeaffb026f8216b185b7eb79591f6534bb0a8d63dc9ad8b6e543bdb3eb"
+    },
+    {
+      "module": "Effect4.Program.Native",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Native.lean",
+      "sourceSha256": "5e4ee526c563318a5cd7ebdf1f6dd6f18ef0c5fa6625c3680967611f08b4a857",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Native.olean",
+      "rebuilt": false,
+      "traceSha256": "a7ac4d6daed4c5fe593b8189bbfe7deeccf5011745fdd40ccbbe44bf0cfbbc74"
+    },
+    {
+      "module": "Effect4.Program.Typed",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Typed.lean",
+      "sourceSha256": "de510c59c9fb211d9d59c687aeaefe7bd0fe8970ff1427e1579402fba0b9a625",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typed.olean",
+      "rebuilt": false,
+      "traceSha256": "8302ea489cbcc3e9a7af327a0cd19817921115cad52d3c37aeb1d4b2362bb55d"
+    },
+    {
+      "module": "Effect4.Program.Compile",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Compile.lean",
+      "sourceSha256": "806eee27201015b51ee258ad873c5989b56e312143cdb9eae864581cd11b833d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Compile.olean",
+      "rebuilt": false,
+      "traceSha256": "19880b43ce88bd72a0812487bc6ce60d0f9c5d06425e275dd5559ad827fe8975"
+    },
+    {
+      "module": "Effect4.Program.Admit",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Admit.lean",
+      "sourceSha256": "4c458ce2409c45cbbc514b47454a3be7af5cbbc8a9b9bd627570214ba7a7b28d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Admit.olean",
+      "rebuilt": false,
+      "traceSha256": "f626da6a031b3700d2d68937d164b1359fdede88f4262bea51c1941c7c1e0c2e"
+    },
+    {
+      "module": "Effect4.Program.Table",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Table.lean",
+      "sourceSha256": "adbf83e6ba379ab6aed7f0a11582426dbc76be6e34b21d161501238d2fcbb97d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Table.olean",
+      "rebuilt": false,
+      "traceSha256": "4667a193be822e889873924d059c43e040064bf4b6dd1dc0b25d925136128840"
+    },
+    {
+      "module": "Effect4.Program.CheckedTyping",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/CheckedTyping.lean",
+      "sourceSha256": "e55ab16eb19e5bb1cd538a1a7838397dc26ddd50666f542cd29e439d28a1a3c9",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/CheckedTyping.olean",
+      "rebuilt": false,
+      "traceSha256": "8d16dceeb4a790562453c94d8ed09a4c3632d13973e5d75520623d1b31da654c"
+    },
+    {
+      "module": "Effect4.Program.Fragment",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Fragment.lean",
+      "sourceSha256": "de570af3e7f1d12a5148a07dfbfc14cf3b03cf5e2955f5eab0133c0e87f78923",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fragment.olean",
+      "rebuilt": false,
+      "traceSha256": "18ad938ad91407f263298238a929fee3195f5abc16b61d7aff3178806d4286f7"
+    },
+    {
+      "module": "Effect4.Program.Admission",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Admission.lean",
+      "sourceSha256": "f4ff34b2ebf98f51af14fba3265236e146c54b9efc9afdfba2f4145446a5456d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Admission.olean",
+      "rebuilt": false,
+      "traceSha256": "edf10b52a9cb68889ed62ece56b7f4a50eabffdff66df649d4adebb3ec569a73"
+    },
+    {
+      "module": "Effect4.Program.Typing.Agreement",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Typing/Agreement.lean",
+      "sourceSha256": "a54f671a95ff46482b2dbc3cd08b9a4d693274d9d98bc1378435bbd619ab2972",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Agreement.olean",
+      "rebuilt": false,
+      "traceSha256": "354031f083dfbefe70af0d2ba58c07ca72f8c986656ea78c6e812c32199bda27"
+    },
+    {
+      "module": "Effect4.Program.Authoring",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Authoring.lean",
+      "sourceSha256": "74743552fccedc6a4684f360679dc4a7735ac00d0e64d25825b98a940d1949b0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring.olean",
+      "rebuilt": false,
+      "traceSha256": "7b4d810085a5c1f3fc76e23f431151c58bf523cbdae00d932daed9987df653bc"
+    },
+    {
+      "module": "Effect4.Api.Frontier",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Api/Frontier.lean",
+      "sourceSha256": "03d4d9b5d0ab03e129f500ee942bd5b37a9920e71047e10c9bf47e16a05255c3",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Api/Frontier.olean",
+      "rebuilt": false,
+      "traceSha256": "6a9d659c9e18bd8dde48a66e177087fc0914e74677152ef63515e7ffd5a9c185"
+    },
+    {
+      "module": "Effect4.Data.Json",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Data/Json.lean",
+      "sourceSha256": "aedfb6ccf23396bc817a9d722a8319c76d13206a06679fcb6941af20c33f7e6e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Json.olean",
+      "rebuilt": false,
+      "traceSha256": "e0c56238669e167bb65a90e524b861363a181a453dfca1c1e31ca9979f0d8c62"
+    },
+    {
+      "module": "Effect4.Data.JsonNumber",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Data/JsonNumber.lean",
+      "sourceSha256": "f5f8c5098a3386eb68fd1f0b47dc7d2e6605c5bd01b47f33c892ee5531d34b76",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Data/JsonNumber.olean",
+      "rebuilt": false,
+      "traceSha256": "2a132acdc85bed73a111accdc5686bd1ba95035f9f877acadc32e5d785143aba"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Kind",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Carrier/Kind.lean",
+      "sourceSha256": "efe84efb7270b1313545a1069aeee7672315f7711562889f4c4f33496878aa9d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Kind.olean",
+      "rebuilt": false,
+      "traceSha256": "e5f84babd88eaa37394d536a43e32dcfa6c3aa7ba1288389f8544dd12232820e"
+    },
+    {
+      "module": "Hash.Sha256.Vec",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/Hash/Sha256/Vec.lean",
+      "sourceSha256": "8eceef738e15b4a4af75a0ac9ff950ba4e494fecbdef969d13cadcd76f2af08f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean/Hash/Sha256/Vec.olean",
+      "rebuilt": false,
+      "traceSha256": "81b9eebbcb42eb70014736eb7dff8b1baa974bee446d2c1cb799ee9a242a670d"
+    },
+    {
+      "module": "Hash.Sha256.Spec",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/Hash/Sha256/Spec.lean",
+      "sourceSha256": "9eaaab130b8f3de1d75ed0d81955fd860dd11472ead70f32ba3511e5f2241a0b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean/Hash/Sha256/Spec.olean",
+      "rebuilt": false,
+      "traceSha256": "5935845871c868f6015034daa9c229002b6548bcdfd26cd0edaeb00024ffa58f"
+    },
+    {
+      "module": "Hash.Sha256.Impl",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/Hash/Sha256/Impl.lean",
+      "sourceSha256": "1c777f1a2d6cb7a21cb4dc3f9d5b7e8dbabfb32e948519309a159c8152c956c4",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean/Hash/Sha256/Impl.olean",
+      "rebuilt": false,
+      "traceSha256": "4a94dc7cbcddc3f5441d2260dbe1a0940288852cd3a455af671b60da716a4b16"
+    },
+    {
+      "module": "Hash.Sha256.Lengths",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/Hash/Sha256/Lengths.lean",
+      "sourceSha256": "75321a2bf238918bc262aad7bde8a80c62fd6bdc68e92c0b89e86bda598c0148",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean/Hash/Sha256/Lengths.olean",
+      "rebuilt": false,
+      "traceSha256": "f7ae084c087ce847bccdbea0a602263388c2e2a83c455b0e68d4e37512578401"
+    },
+    {
+      "module": "Hash.Sha256.Bridge",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/Hash/Sha256/Bridge.lean",
+      "sourceSha256": "77b8bcedd9470c1dbb51a77964566b79339240890675f579e17c6a53c795f195",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean/Hash/Sha256/Bridge.olean",
+      "rebuilt": false,
+      "traceSha256": "d02ef60ed6d7d07fd2f097ceebf6fc5dfc331e6fbb3aff824bccc65138eeba29"
+    },
+    {
+      "module": "Hash.Sha256.Hex",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/Hash/Sha256/Hex.lean",
+      "sourceSha256": "76f02d7f839e80d0c35dd90b29ff34d9511ef383457a4889a048b7da6528e9db",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean/Hash/Sha256/Hex.olean",
+      "rebuilt": false,
+      "traceSha256": "391cae934e0ef8c1fd4f4702153da837290ebd8fd131254a8fef15a806572911"
+    },
+    {
+      "module": "Hash.Sha256.Digest",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/Hash/Sha256/Digest.lean",
+      "sourceSha256": "590ebfa2d660fa0db8c7744510795761a804b04bd68ca4f5b3f99d5050b19e42",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean/Hash/Sha256/Digest.olean",
+      "rebuilt": false,
+      "traceSha256": "1bcaf8e8cebab4ab15b43c64644b2f569ce7bf3abb356e1508e397f16887a219"
+    },
+    {
+      "module": "Hash.Sha256.Fast",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/Hash/Sha256/Fast.lean",
+      "sourceSha256": "e53fc43d8d2307356e3f9b1b52d57096571a0e8247ba17b80a3cbf415f4d6f6d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean/Hash/Sha256/Fast.olean",
+      "rebuilt": false,
+      "traceSha256": "97101c39a49ef65131969d58ecb1a2aadd465967023bce84c7f4b878f70b6c6f"
+    },
+    {
+      "module": "Hash.Sha256.Api",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/Hash/Sha256/Api.lean",
+      "sourceSha256": "ef319152d5f2a8cd670b70b547e993161b5085b1bba8d2db71cbf3c638e228c3",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean/Hash/Sha256/Api.olean",
+      "rebuilt": false,
+      "traceSha256": "8370e13afe728867a1675bf0227a37d253bdb096974229e3773eec2516c7629c"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Digest",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Carrier/Digest.lean",
+      "sourceSha256": "3cc3373de9b78b86a19ee5091a75a2bb668a62f9875f7a78afd193027251ff5a",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digest.olean",
+      "rebuilt": false,
+      "traceSha256": "400cdf2b7a664782a991e524ff3f819e9686a50a2bd4a033e15c6e6d329b047e"
+    },
+    {
+      "module": "Effect4.Store.Domain.Shape",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Domain/Shape.lean",
+      "sourceSha256": "928043acac873101ed5f0a0845bd699ac1b894c43082f4588c09e1dcaac81aa5",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Shape.olean",
+      "rebuilt": false,
+      "traceSha256": "5f31c76e0df9a7dfcfeca4678a0479924991b497c207a636ff34df4850a3bae1"
+    },
+    {
+      "module": "Effect4.Data.Optic",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Data/Optic.lean",
+      "sourceSha256": "0a02907cd4e994ff180c2d11b090f7948481dc888812d85bdb892fb7c0adf78f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Optic.olean",
+      "rebuilt": false,
+      "traceSha256": "099a391fd75afe0742494455828d1cf7a656bb1aab030040542f090b9090476f"
+    },
+    {
+      "module": "Effect4.Schema.Payload",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Schema/Payload.lean",
+      "sourceSha256": "22af7b6ac008f18128566e1819ea0ce440b6769c57387522d3a49c707afac594",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Payload.olean",
+      "rebuilt": false,
+      "traceSha256": "77d8ac7515cc52d6584d2739e166bcba290d108fb24ab8927813e63709cabfae"
+    },
+    {
+      "module": "Effect4.Schema.Representation",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Schema/Representation.lean",
+      "sourceSha256": "65c2b5fccb135187bfb282d5cf491734afccae19def2a8ce729c296b795d00b9",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Representation.olean",
+      "rebuilt": false,
+      "traceSha256": "3dcfd65e5443e62750e65658d3dc434122a392dd92cdc45f013b7b45eb013228"
+    },
+    {
+      "module": "Effect4.Schema.Annotations",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Schema/Annotations.lean",
+      "sourceSha256": "7725aeff8f8e6ddd3b3e4a0bbe3514c6874c8dbba1698346807dffdc3863f789",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Annotations.olean",
+      "rebuilt": false,
+      "traceSha256": "8111bd8c9763adfe9b36bbefcba267bc455256f28e18a1572f47111d41295669"
+    },
+    {
+      "module": "Effect4.Schema.Document",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Schema/Document.lean",
+      "sourceSha256": "64464dbaff579af1bca915d0c75982aaec7416b5af68cbb314e16fbb2cb0e1d9",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Document.olean",
+      "rebuilt": false,
+      "traceSha256": "0ea1cd301f0d80f221535941e378a005a937a413523057262a844700c5157b07"
+    },
+    {
+      "module": "Effect4.Schema.Authoring",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Schema/Authoring.lean",
+      "sourceSha256": "39628fac371dd26f185b5b61c4767aa50f262b21a3d6a12a376ac3dd13702934",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Authoring.olean",
+      "rebuilt": false,
+      "traceSha256": "9575ab90ce407890a13188ae2208038a278ccaa44835a32b27d4e59397dae0c4"
+    },
+    {
+      "module": "Effect4.Schema.OfShape",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Schema/OfShape.lean",
+      "sourceSha256": "159df83bba773d551c8ba421ec59e7becbcff473c44b921ccb99edd357f24ee8",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/OfShape.olean",
+      "rebuilt": false,
+      "traceSha256": "b82ea7dba542e32397dd4521e40ba7d9e8885f83f2e8f9053fd696c266f225a3"
+    },
+    {
+      "module": "Effect4.Store.Domain.Canonical",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Domain/Canonical.lean",
+      "sourceSha256": "fdfa7e771a0b05676e39f5155ff0692d2bba0df18b21633e9bf4ffbc8163594f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Canonical.olean",
+      "rebuilt": false,
+      "traceSha256": "30f0f3433217ca5cbfdc47e95cc6eecf189ee8579cd14fbfe9737a07023ccee8"
+    },
+    {
+      "module": "Effect4.Store.Domain.Clock",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Domain/Clock.lean",
+      "sourceSha256": "171966a79cc540898b5f5b6655103133bb6e0d8de3a806c0a1a83d4c97d85c39",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Clock.olean",
+      "rebuilt": false,
+      "traceSha256": "51ddbf0d9776a729fa60a14530cb79467e4694394a05561aab813184cdc863cc"
+    },
+    {
+      "module": "Effect4.Api.Derived",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Api/Derived.lean",
+      "sourceSha256": "fd260d0e64f26b02d505734e40dcb478e7441204e94fe7f98a62a8930bfb8787",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Api/Derived.olean",
+      "rebuilt": false,
+      "traceSha256": "8d96605181f3d773540721beb0f893a2f7216c064b75d2a3b889552f8da0200a"
+    },
+    {
+      "module": "Effect4.Program.Packages.SqliteBun",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Packages/SqliteBun.lean",
+      "sourceSha256": "65e2f931ebd29807fdf51c04b5f1cb6ce2ddccd5ea0ffdfbeda3adc71a0ba997",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Packages/SqliteBun.olean",
+      "rebuilt": false,
+      "traceSha256": "ced382ba69ed193b4d5a04093f634470aaaf29dbbdf8aebe1f177e9c3421ac14"
+    },
+    {
+      "module": "Effect4.Program.Packages.KeyValueStoreMemory",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Packages/KeyValueStoreMemory.lean",
+      "sourceSha256": "ba790d3625f191ba22cd6955b9135f1f2e1544bad81d53bb25c28cd17ba6737e",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Packages/KeyValueStoreMemory.olean",
+      "rebuilt": false,
+      "traceSha256": "0224051336ac5a128f5a0da67ab5063e803549d9d562b2ace29addafc69b9bea"
+    },
+    {
+      "module": "Effect4.Program.Packages",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Packages.lean",
+      "sourceSha256": "9fec7eeb98c29bede2d9ef855e7498e5ee3e7ab290740bcc3c4d6b6f73c36489",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Packages.olean",
+      "rebuilt": false,
+      "traceSha256": "94814224977f4e6b742e6503ff9fc48b808a25af0f2245abf6e65c75c2b8ae5b"
+    },
+    {
+      "module": "Effect4.Store.Domain.RowCanonical",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Domain/RowCanonical.lean",
+      "sourceSha256": "12e99704c15ee195c6aa8ac9e1dfe37406f855cccafa7db0e520a064c0c4bff7",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/RowCanonical.olean",
+      "rebuilt": false,
+      "traceSha256": "c8e56478e96a49202b265e98ab618bb43ff1cc5ed57d7f67c8311014ffe1eb21"
+    },
+    {
+      "module": "Effect4.Store.Domain.Derived.Program",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Domain/Derived/Program.lean",
+      "sourceSha256": "04e1dee961944155fbc40ed7c6d6a9a189815179d98ca9336c7cdaae9501b40c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Derived/Program.olean",
+      "rebuilt": false,
+      "traceSha256": "46a5217b65ffd059ab4ef0169cbf1dd3359ea78f5de964157a6ad97d2d5a1d58"
+    },
+    {
+      "module": "Effect4.Store.Domain.ProgramWire",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Domain/ProgramWire.lean",
+      "sourceSha256": "f91ccf2d370e3068e7f8822ae3f0a407acabdfb506a104362bff1bded8d73206",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/ProgramWire.olean",
+      "rebuilt": false,
+      "traceSha256": "f6eaa1224fb5be6ea72084b7d04ec6d8796fee731a04662180eb2d437f510403"
+    },
+    {
+      "module": "TypeScript.TypeRef",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/TypeScript/TypeRef.lean",
+      "sourceSha256": "0fefe0eb79ac19997a8b5d9df408c3cd46c9c0b9177746256a25e4ae9cd9bd57",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean/TypeScript/TypeRef.olean",
+      "rebuilt": false,
+      "traceSha256": "80f893974ef93114e4211708fae998f0d74835d67f64999f6584ec9c62cfd237"
+    },
+    {
+      "module": "TypeScript.Syntax",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/TypeScript/Syntax.lean",
+      "sourceSha256": "c127a4692df836cf651acdc0eee2b4eaa5d6e6c222d91742b5b23b9b4983bfb4",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean/TypeScript/Syntax.olean",
+      "rebuilt": false,
+      "traceSha256": "32929910df6af7a2d8f9dfbb75cfd2151ec5cd9450290d18d541386e61413307"
+    },
+    {
+      "module": "Effect4.Codegen.Template",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Template.lean",
+      "sourceSha256": "ff3431263198e2e01030a966ba152931b898113cd0ffbd9034377888ff6c6f47",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Template.olean",
+      "rebuilt": false,
+      "traceSha256": "aec704609367c0640e4b35d1701eebaebcc55ac880d88b3cfa211e08d2c51ee1"
+    },
+    {
+      "module": "TypeScript.Identifier",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/TypeScript/Identifier.lean",
+      "sourceSha256": "963e96b24d7ad70eee9948a205e52eed46f98383e4062c21359a0c4f59c9f9cd",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean/TypeScript/Identifier.olean",
+      "rebuilt": false,
+      "traceSha256": "557624a389975333b5f7d192bccdc5b2c59194b8ebc3eedb5dde3c0df0cf8ad7"
+    },
+    {
+      "module": "Effect4.Codegen.Names",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Names.lean",
+      "sourceSha256": "843b35fc4adec1378b5af7a3304626a0bd95c5cd97bae1eb9bb17bae1a036f84",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Names.olean",
+      "rebuilt": false,
+      "traceSha256": "78571be6dad86975fcb8b0e9d1e82b6d1d2c2f5f40614ebbaa08d4ae9c7fab73"
+    },
+    {
+      "module": "Effect4.Codegen.Types",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Types.lean",
+      "sourceSha256": "149dd7ac7e44bfdca4105a4cf6bc2f86bb992b06f10417358c2d4c8eac84213c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Types.olean",
+      "rebuilt": false,
+      "traceSha256": "cc0f2fc1d29edf519751fb5bdb31ca3c8f04bc9ba1865470de3746e156944521"
+    },
+    {
+      "module": "TypeScript.Render",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/TypeScript/Render.lean",
+      "sourceSha256": "7a4f7e9cfb48669a2de19ad70518160e5e33b95566e0804da86e201ebe4ca96b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean/TypeScript/Render.olean",
+      "rebuilt": false,
+      "traceSha256": "b3d826fdfd98048407697fe0a899431d458d2d14bd4d4a188b544695314c9b2c"
+    },
+    {
+      "module": "TypeScript.HostPin",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/TypeScript/HostPin.lean",
+      "sourceSha256": "402c6cf138699c26640a006f7fdd6edd8e24c8b2b2d11e940189eac527f2e010",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean/TypeScript/HostPin.olean",
+      "rebuilt": false,
+      "traceSha256": "520c2bffd95f9c4bd65bf940916178f40bd2fafcad5acf5c47f99544620c4a74"
+    },
+    {
+      "module": "TypeScript.Structure",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/TypeScript/Structure.lean",
+      "sourceSha256": "54631186594e0f03608fe400f1e1238d2b208e528030f64c25fbbbbee345b948",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean/TypeScript/Structure.olean",
+      "rebuilt": false,
+      "traceSha256": "4d6f251d24264a1a2992dacb0458fe9cf54533e52b3639e29409efa756aadcb4"
+    },
+    {
+      "module": "TypeScript",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/TypeScript.lean",
+      "sourceSha256": "79848579dba0738d666c62ac6d4b8a452d55765332ee5091b012ace910504676",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean/TypeScript.olean",
+      "rebuilt": false,
+      "traceSha256": "e3f20a7c126ce1bccad87aa3c57fc00b0129697c768d76337802bbb2a57ebebb"
+    },
+    {
+      "module": "Effect4.Codegen.PrintLeaf",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/PrintLeaf.lean",
+      "sourceSha256": "839a96a4e87387f1c41e687350f3c3628238bc21be2e9972946eebffb809b8d0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/PrintLeaf.olean",
+      "rebuilt": false,
+      "traceSha256": "8a1a3159ad81102adc50a23a6fd6c469bbf4a726d0c5c24087ac9f374455fde0"
+    },
+    {
+      "module": "Effect4.Program.LayerView",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/LayerView.lean",
+      "sourceSha256": "72ea915c82b2da666d318aaef8d4429b2666a34d1c5cb9969858e7d57fa36237",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/LayerView.olean",
+      "rebuilt": false,
+      "traceSha256": "3955e8003413d4dfe419569dd7e65e78c7562b76f058bd03f9c06c5b77b02f3a"
+    },
+    {
+      "module": "Effect4.Codegen.Templates",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Templates.lean",
+      "sourceSha256": "1e801f85b4175b7b982b18aebc69ae73c931941176f87bfd693999105a681871",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Templates.olean",
+      "rebuilt": false,
+      "traceSha256": "c2f62b6b2b0ac20c3e71000f6fa12b49d3624869d5cf19f207cd54eb92a84f63"
+    },
+    {
+      "module": "Effect4.Codegen.Print",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Print.lean",
+      "sourceSha256": "e5993e25ac39e7582c4e95fa6020f20ded962f183525fed2cef500c849bed664",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Print.olean",
+      "rebuilt": false,
+      "traceSha256": "94111600e860b3e4492506e09c243e4ad50c19ae0f71b18b7f95ef5a6d3c716f"
+    },
+    {
+      "module": "Effect4.Codegen.Checked",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Checked.lean",
+      "sourceSha256": "143773f4142d89005febd47458c8c8b3aff8c6665acc1ba0b2a854739682123b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Checked.olean",
+      "rebuilt": false,
+      "traceSha256": "77561e864d22a04cb0e189c380e448a4df8181b3a2ce545592472f9b4e4b12c5"
+    },
+    {
+      "module": "Effect4.Codegen.Bindings",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Bindings.lean",
+      "sourceSha256": "7f66edfeebec699c417509d2bff5982cf5cefc349da0ced8946a919c15614138",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Bindings.olean",
+      "rebuilt": false,
+      "traceSha256": "bf59d50251d8bd5ea51e3a662867575cf5be62baf1024797a314395b32031b52"
+    },
+    {
+      "module": "Effect4.Codegen.SourceBindings",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/SourceBindings.lean",
+      "sourceSha256": "23a32d056579ae64983f152a4b1e562520c0847c078ce0f777a2dc1f5be25588",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/SourceBindings.olean",
+      "rebuilt": false,
+      "traceSha256": "9f0d443af146ffeade270eca312119aa3ee6f29b25809800aa1e55dbe4929f12"
+    },
+    {
+      "module": "Effect4.Codegen.Read",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Read.lean",
+      "sourceSha256": "058945827074fa18a70f402d161d8d94a3f03088bb4306ed4e55c274d13edb5f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Read.olean",
+      "rebuilt": false,
+      "traceSha256": "a6a284d1aa1393f1e96029d52326bdb2b7776f41b3af1599a8eea287fc3f4758"
+    },
+    {
+      "module": "Effect4.Codegen.Admit",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Admit.lean",
+      "sourceSha256": "b18c332ca2b07ec94980c18dec1e0f61ef938fc7559f378553f96d2caff16add",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Admit.olean",
+      "rebuilt": false,
+      "traceSha256": "a3db212035a9f79ccbc4cf01497d493590dd626687a3582cd4c52bb4538c085e"
+    },
+    {
+      "module": "Effect4.Schema.Fold",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Schema/Fold.lean",
+      "sourceSha256": "f68daef1a61cdf224bf0b567722d0c4a726b24ecd40b92f882f1b7c1f472137f",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Fold.olean",
+      "rebuilt": false,
+      "traceSha256": "857a11bde6507784f24debed236c4803f6803b50230193bbbc35c42707bcdaae"
+    },
+    {
+      "module": "Effect4.Codegen.Schema",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Schema.lean",
+      "sourceSha256": "2100b16be20299aadf52e0f87992917fa9b0b3150080cdaa8ee594bf92bf34d7",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Schema.olean",
+      "rebuilt": false,
+      "traceSha256": "d1e71ae2e7011c5ae8e0cf630084bb4eb74fc16518fe1e0e0aef4b9fa06cab23"
+    },
+    {
+      "module": "Effect4.Codegen.Target",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Codegen/Target.lean",
+      "sourceSha256": "af175df86d9fc90137dca60d4d10fb4c369e8b59740b1efc5331a62b7980bb4b",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Target.olean",
+      "rebuilt": false,
+      "traceSha256": "7db9a0cc4ca7b6c5f62c411368c4d023dfefccd22c0f89c4bd52c2316829ae64"
+    },
+    {
+      "module": "Effect4.Store.Domain.Node",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Domain/Node.lean",
+      "sourceSha256": "d37a23ad0067f193d06ae0d3aa18ce856b0ee273370aefe324fb22ec55ff1bd0",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Node.olean",
+      "rebuilt": false,
+      "traceSha256": "f988fee32a432c65529a60fe7d1ec1e9b973479d26ef8b9afab62b3d7e96295b"
+    },
+    {
+      "module": "Effect4.Store.Domain.Store",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Domain/Store.lean",
+      "sourceSha256": "d981810473b4d6984ef5f4910446d3bdee22cadfff9de537db973097b9d23440",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Store.olean",
+      "rebuilt": false,
+      "traceSha256": "1947eae4781082f9a2835aae8fd70237b5f442462a4b91bb137a2904cdb1af7f"
+    },
+    {
+      "module": "Effect4.Store.Domain.Cascade",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Store/Domain/Cascade.lean",
+      "sourceSha256": "3107adfac35ef2226c1ad6c59e75a937775237e4b0aa2c86ccf7c30710e411c2",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Cascade.olean",
+      "rebuilt": false,
+      "traceSha256": "deced9586fa2e2fc05c2fdb635941662738280ec893dae04320ea4b29e39fefc"
+    },
+    {
+      "module": "Effect4.Schema.Bridge",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Schema/Bridge.lean",
+      "sourceSha256": "883e7da9e33771920f422cc48a18b1369564b7b13c444f308c82bfdf41158849",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Bridge.olean",
+      "rebuilt": false,
+      "traceSha256": "9e8c03867beb840fa0f15f0a61786e239efbc5eb8a615b342fc3da92604a2eb9"
+    },
+    {
+      "module": "Effect4.Schema.Codec",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Schema/Codec.lean",
+      "sourceSha256": "ae5a7c2f2b956db428367ef3253f68e2635dbb80d3b9dcd9b0afdc35e471bb18",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Codec.olean",
+      "rebuilt": false,
+      "traceSha256": "4848cf3498b1921a661ddc449c75ff8611c511937c93ad519891e04cc575578f"
+    },
+    {
+      "module": "Effect4.Api",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Api.lean",
+      "sourceSha256": "e9e2703632e18f712e4ef80bde6561e2a12a4fb12b8e0b294cb081ecd7090b23",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean",
+      "rebuilt": false,
+      "traceSha256": "2942737eb97fd3374b162dfa9d7b61adabaa6a45136a17f33f17bcf1c36e16d4"
+    },
+    {
+      "module": "Effect4.Api.Built",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Api/Built.lean",
+      "sourceSha256": "20852ca3e1f0fd68ef814d19f2973411611e784c41a37f42055f5996c7435c77",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Api/Built.olean",
+      "rebuilt": false,
+      "traceSha256": "61de4c921057338338aca6c945ed6d1e17ae2e005225c072a45b0cc072f7e2e5"
+    },
+    {
+      "module": "Effect4.Program.Authoring.Lifts",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Authoring/Lifts.lean",
+      "sourceSha256": "2e1254f6b27c621f20015083d613163dc4961320f8007e5b512ef63b04906958",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Lifts.olean",
+      "rebuilt": false,
+      "traceSha256": "99eeef4c4107a4059166bca8b838bd998425ee95ffc8e2780cbceb340aaa6b3c"
+    },
+    {
+      "module": "Effect4.Program.Authoring.Rows",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Authoring/Rows.lean",
+      "sourceSha256": "1d5787bef67c1cfbfc91716488b14d243653d639f2ed4d546226806ffc11cbad",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Rows.olean",
+      "rebuilt": false,
+      "traceSha256": "c6cf6b72e640a6a40220f84efd35b48d7f46f7bcb6e69b02cf90304c8f1cc04c"
+    },
+    {
+      "module": "Effect4.Program.Authoring.Sugar",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Authoring/Sugar.lean",
+      "sourceSha256": "01586ff7a36b8c1686ab79ee58cec4db8fca9d73589957d60981f60873866d6c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Sugar.olean",
+      "rebuilt": true
+    },
+    {
+      "module": "Effect4.Program.Authoring.Services",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Program/Authoring/Services.lean",
+      "sourceSha256": "e77919595f3d07578cf55e56547974fbeabf2dcb7d3efbc2dee3ecf2cf314771",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Services.olean",
+      "rebuilt": false,
+      "traceSha256": "7e73f7f95feff0c97da2ec03ac8c8986e5330458b9b755b1acecbdf59bac0420"
+    },
+    {
+      "module": "Effect4.Api.Author",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Api/Author.lean",
+      "sourceSha256": "2c4c37e3b5974708de919ef8b23526db3916d4245f06769fb1ac0164cb87a64d",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Api/Author.olean",
+      "rebuilt": false,
+      "traceSha256": "754c79bee18eb2888a839541f43144b154f63f80f32834eea64d3586f8d15679"
+    },
+    {
+      "module": "Test.Program.AuthoringScope",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/Test/Program/AuthoringScope.lean",
+      "sourceSha256": "48eb19877004d91ba4f87d2ce3271302dbf5b7ff855d664ceadd21c3f99d7d2c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Test/Program/AuthoringScope.olean",
+      "rebuilt": true
+    },
+    {
+      "module": "Effect4.Laws.Machine.Clauses",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Machine/Clauses.lean",
+      "sourceSha256": "b603946c52c9b2b5e009128a2866054edb337a87b04c1a4aa36f1b0e778cbd52",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/Clauses.olean",
+      "rebuilt": false,
+      "traceSha256": "a5027b0b825fbb657987357ce36251babf67438a7661eb2a0a11be0363a88d13"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Arena",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Machine/Arena.lean",
+      "sourceSha256": "89b56076dde461a400adb08b99db0852307352494f7ccfa2443b9ec5cc4c4970",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/Arena.olean",
+      "rebuilt": false,
+      "traceSha256": "70ac7737b37b94606ff3b9bfefeab1646457abe7b792db9d9f995d6d192485c5"
+    },
+    {
+      "module": "Effect4.Laws.Machine.RefKernel",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Machine/RefKernel.lean",
+      "sourceSha256": "0e00e296159929d7c10af78eb0b78324746cd37f151169dbfc55e010aa34a255",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/RefKernel.olean",
+      "rebuilt": false,
+      "traceSha256": "031941ff5a5b7029fd09e879147903d04748ed664e639825af3a34fe61fcf40a"
+    },
+    {
+      "module": "Effect4.Laws.Machine.CompletionData",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Machine/CompletionData.lean",
+      "sourceSha256": "2d25a08f1e3f9057db0d55753c76485f56a29573944473577e2493860e2ae3b3",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/CompletionData.olean",
+      "rebuilt": false,
+      "traceSha256": "a86af35b41401ce61cb3c504927936d2d356f8701702f70759653a4b7653a551"
+    },
+    {
+      "module": "Effect4.Laws.Machine.StoresLaws",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Machine/StoresLaws.lean",
+      "sourceSha256": "a41b5b5d0908c28cb5ea989f336ac62ba0eb0add2d5f80a9f25604afcc4936c8",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/StoresLaws.olean",
+      "rebuilt": false,
+      "traceSha256": "060df1ec9f3e26d70bd69808ca2de5f13e6aa3f61bf4c60a75df5b053cbd23ac"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Approximation",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Machine/Approximation.lean",
+      "sourceSha256": "3515a3003e584ca5515b1489f93a1efc0b5f72c7c88b95e44c6f62fd3ba6a44c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/Approximation.olean",
+      "rebuilt": false,
+      "traceSha256": "c9c7e875a44f742dc22cf64b5c7074d4d1f5f834d055953fe2435e07317a1d09"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Handles",
+      "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/src/Effect4/Laws/Machine/Handles.lean",
+      "sourceSha256": "3df2c1a281ea61c586faa0197f44340223031a6ae0ce7e7f29c244f55b78ed5c",
+      "artifact": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/Handles.olean",
+      "rebuilt": false,
+      "traceSha256": "275310208a41c1e40e61d395a7d443397f4e38e33102d2f3b656bff19c7ca73e"
+    }
+  ],
+  "missing": []
+}

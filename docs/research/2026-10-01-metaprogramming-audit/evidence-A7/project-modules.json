@@ -1,0 +1,2852 @@
+[
+  {
+    "module": "Effect4",
+    "path": "src/Effect4.lean",
+    "git_blob": "d985ff2131c08120dbfc160f18abf5c33f1bdb84",
+    "sha256": "bc6fa95f08bbcee22e1f230395d67fd18cd20aefbf4fad0d7a0d244679e5005a"
+  },
+  {
+    "module": "Effect4.Api",
+    "path": "src/Effect4/Api.lean",
+    "git_blob": "6adecb94107d19ca0fa271f402f6abdd3466d916",
+    "sha256": "e9e2703632e18f712e4ef80bde6561e2a12a4fb12b8e0b294cb081ecd7090b23"
+  },
+  {
+    "module": "Effect4.Api.Author",
+    "path": "src/Effect4/Api/Author.lean",
+    "git_blob": "f06237799213e7e05c464c1727711af1c19474e6",
+    "sha256": "2c4c37e3b5974708de919ef8b23526db3916d4245f06769fb1ac0164cb87a64d"
+  },
+  {
+    "module": "Effect4.Api.Built",
+    "path": "src/Effect4/Api/Built.lean",
+    "git_blob": "4e925975e8f59dc44f5fc94ac52d9c5448f49e83",
+    "sha256": "20852ca3e1f0fd68ef814d19f2973411611e784c41a37f42055f5996c7435c77"
+  },
+  {
+    "module": "Effect4.Api.Derived",
+    "path": "src/Effect4/Api/Derived.lean",
+    "git_blob": "58d1f2c371fd71a455535b59a20d2d34fae5f7d7",
+    "sha256": "fd260d0e64f26b02d505734e40dcb478e7441204e94fe7f98a62a8930bfb8787"
+  },
+  {
+    "module": "Effect4.Api.Frontier",
+    "path": "src/Effect4/Api/Frontier.lean",
+    "git_blob": "98777f3528c8bc5b27f3ad7ab764b78a182b9405",
+    "sha256": "03d4d9b5d0ab03e129f500ee942bd5b37a9920e71047e10c9bf47e16a05255c3"
+  },
+  {
+    "module": "Effect4.Api.HostProtocol",
+    "path": "src/Effect4/Api/HostProtocol.lean",
+    "git_blob": "cc12b9cd4a64594bdef4792f5fcc0bd4c03d0bac",
+    "sha256": "dcec8adce472f8348a080419a15bee1e0892999fd0a58220c6a2ce64fd46d451"
+  },
+  {
+    "module": "Effect4.Api.HostSession",
+    "path": "src/Effect4/Api/HostSession.lean",
+    "git_blob": "79e7cafa3910bf5ab99e394ea17177a4318c464f",
+    "sha256": "010480e607f88ce4230b7f44463bf3e1047c854aa4f8be07d1cd2a2f94798497"
+  },
+  {
+    "module": "Effect4.Api.RefusalsDerived",
+    "path": "src/Effect4/Api/RefusalsDerived.lean",
+    "git_blob": "c387e753347552d03fb9f93455cc52436f0f7814",
+    "sha256": "bee8d524b16fc2f5f31cdfbc32cce96d6a6012b8bf353fae334476cb8658742d"
+  },
+  {
+    "module": "Effect4.Api.Runner",
+    "path": "src/Effect4/Api/Runner.lean",
+    "git_blob": "d8e6907e06a3898093daf68f3696cbac329ccddd",
+    "sha256": "57a2f1a0ecd32bf67cc5c8821df4ad44d857a221e28cdfddf2b02a81688aab5a"
+  },
+  {
+    "module": "Effect4.Api.RunnerBytes",
+    "path": "src/Effect4/Api/RunnerBytes.lean",
+    "git_blob": "c02103bd93be124db850c8030d1ac24502df2d41",
+    "sha256": "8a1086b5a3e598dab9351049353215e8ba485d6c0eb3e3fe420b0daa86778059"
+  },
+  {
+    "module": "Effect4.Api.RunnerDerived",
+    "path": "src/Effect4/Api/RunnerDerived.lean",
+    "git_blob": "8bb3805983ca73b299cba81093841b40071f80ca",
+    "sha256": "91fc259a7bf1fe59fb86f8c8f7b54d69198c68cbf093660ac051ec124f27f6bc"
+  },
+  {
+    "module": "Effect4.Api.Supervision",
+    "path": "src/Effect4/Api/Supervision.lean",
+    "git_blob": "8f4a308fdc29c7127c26d0fcaeae31b483c6d73a",
+    "sha256": "f8307a1b2d54df623b690ff2f0ec3446eb442bd7bf285ef24607c4236ad4fca4"
+  },
+  {
+    "module": "Effect4.Api.TestClock",
+    "path": "src/Effect4/Api/TestClock.lean",
+    "git_blob": "bd5cd620b178e473142ea951146ea0cbaa3f35c2",
+    "sha256": "09696211eba234065e3b7ca7ce23af9b1fcda9a65dc6242fe801f504be73c7f3"
+  },
+  {
+    "module": "Effect4.Codegen.Admit",
+    "path": "src/Effect4/Codegen/Admit.lean",
+    "git_blob": "fb505e130df4f6717a1803708368193e87732993",
+    "sha256": "b18c332ca2b07ec94980c18dec1e0f61ef938fc7559f378553f96d2caff16add"
+  },
+  {
+    "module": "Effect4.Codegen.Authoring.Forms",
+    "path": "src/Effect4/Codegen/Authoring/Forms.lean",
+    "git_blob": "4f371057634c08aa597edc14f929169cb7dc84ee",
+    "sha256": "8a7ad9d349c41bf5dd01d234cb2478eb1e312bba532a15367317ff957f69a994"
+  },
+  {
+    "module": "Effect4.Codegen.Bindings",
+    "path": "src/Effect4/Codegen/Bindings.lean",
+    "git_blob": "30286ee8a780179989a6fe59f558159e56ae1a3b",
+    "sha256": "7f66edfeebec699c417509d2bff5982cf5cefc349da0ced8946a919c15614138"
+  },
+  {
+    "module": "Effect4.Codegen.Checked",
+    "path": "src/Effect4/Codegen/Checked.lean",
+    "git_blob": "219b0ca48fe4ad23021edd77ae3a3b46eae7bad7",
+    "sha256": "143773f4142d89005febd47458c8c8b3aff8c6665acc1ba0b2a854739682123b"
+  },
+  {
+    "module": "Effect4.Codegen.Diagnostics",
+    "path": "src/Effect4/Codegen/Diagnostics.lean",
+    "git_blob": "16ae62bc157a3df1094e47c4751b55fe19cdb744",
+    "sha256": "c451a4781962bf2a38a68676e3f64503f0a1a6dc6ba107027a48717bad38c931"
+  },
+  {
+    "module": "Effect4.Codegen.Forms",
+    "path": "src/Effect4/Codegen/Forms.lean",
+    "git_blob": "8841def33820d7b18f6275dfc673ef8192d708d7",
+    "sha256": "7dddd8ff8d0e0348884b6853c6a1a32c791447b14346bbd143a5dc0c3525c6ec"
+  },
+  {
+    "module": "Effect4.Codegen.Names",
+    "path": "src/Effect4/Codegen/Names.lean",
+    "git_blob": "df865a272a173f8945db6bb1da967afa141679b8",
+    "sha256": "843b35fc4adec1378b5af7a3304626a0bd95c5cd97bae1eb9bb17bae1a036f84"
+  },
+  {
+    "module": "Effect4.Codegen.Print",
+    "path": "src/Effect4/Codegen/Print.lean",
+    "git_blob": "bc2d57b166e37248cc7189c7baef706addfda846",
+    "sha256": "e5993e25ac39e7582c4e95fa6020f20ded962f183525fed2cef500c849bed664"
+  },
+  {
+    "module": "Effect4.Codegen.PrintLeaf",
+    "path": "src/Effect4/Codegen/PrintLeaf.lean",
+    "git_blob": "f9e57b2dc3febb802bfe91bf00bc3e31eb516964",
+    "sha256": "839a96a4e87387f1c41e687350f3c3628238bc21be2e9972946eebffb809b8d0"
+  },
+  {
+    "module": "Effect4.Codegen.Read",
+    "path": "src/Effect4/Codegen/Read.lean",
+    "git_blob": "22027db4fc5724de8423964b3567a03d35e74da3",
+    "sha256": "058945827074fa18a70f402d161d8d94a3f03088bb4306ed4e55c274d13edb5f"
+  },
+  {
+    "module": "Effect4.Codegen.Schema",
+    "path": "src/Effect4/Codegen/Schema.lean",
+    "git_blob": "7f8509e17a20846f0adf53985af081d536f7edc3",
+    "sha256": "2100b16be20299aadf52e0f87992917fa9b0b3150080cdaa8ee594bf92bf34d7"
+  },
+  {
+    "module": "Effect4.Codegen.SourceBindings",
+    "path": "src/Effect4/Codegen/SourceBindings.lean",
+    "git_blob": "dc9a25e68c79a1c5ba5184cb0fce261ec8ecbc4e",
+    "sha256": "23a32d056579ae64983f152a4b1e562520c0847c078ce0f777a2dc1f5be25588"
+  },
+  {
+    "module": "Effect4.Codegen.Styles",
+    "path": "src/Effect4/Codegen/Styles.lean",
+    "git_blob": "b17e9a4cbe69e07c3e343fe680cfd21c8ebdf2b9",
+    "sha256": "ee5c3653f164e3b9bf4ecd4cc9b19c389bb1a087b3e83ff5c00350aad9700c0a"
+  },
+  {
+    "module": "Effect4.Codegen.Target",
+    "path": "src/Effect4/Codegen/Target.lean",
+    "git_blob": "752dfdef8649f9daa4650d313eef1fa90acea450",
+    "sha256": "af175df86d9fc90137dca60d4d10fb4c369e8b59740b1efc5331a62b7980bb4b"
+  },
+  {
+    "module": "Effect4.Codegen.Template",
+    "path": "src/Effect4/Codegen/Template.lean",
+    "git_blob": "360f09cf658d99e1e60f1bf72819d119d435e018",
+    "sha256": "ff3431263198e2e01030a966ba152931b898113cd0ffbd9034377888ff6c6f47"
+  },
+  {
+    "module": "Effect4.Codegen.Templates",
+    "path": "src/Effect4/Codegen/Templates.lean",
+    "git_blob": "f79535e71e7e37d8b0b7904f145df97761fbc4a1",
+    "sha256": "1e801f85b4175b7b982b18aebc69ae73c931941176f87bfd693999105a681871"
+  },
+  {
+    "module": "Effect4.Codegen.Types",
+    "path": "src/Effect4/Codegen/Types.lean",
+    "git_blob": "3fded13442ff771d28b1b938b9297be3edf710b8",
+    "sha256": "149dd7ac7e44bfdca4105a4cf6bc2f86bb992b06f10417358c2d4c8eac84213c"
+  },
+  {
+    "module": "Effect4.Data.Ascii",
+    "path": "src/Effect4/Data/Ascii.lean",
+    "git_blob": "cfc92e632a4dc1530585d03650c7f7d50b1e7748",
+    "sha256": "a738d5ae14ef9ce71f691ab7fe545346270d204097218dd1e8f0820df340bc3f"
+  },
+  {
+    "module": "Effect4.Data.ClockMillis",
+    "path": "src/Effect4/Data/ClockMillis.lean",
+    "git_blob": "5c458f4f456b2e4e1a48e6873cc376212552cd1c",
+    "sha256": "b08f0a01109f73c89ad4481373e8d3efd059d886c1fa3a2fcaa03a596beb063c"
+  },
+  {
+    "module": "Effect4.Data.Constructive",
+    "path": "src/Effect4/Data/Constructive.lean",
+    "git_blob": "3ea8ae0230ec220017d67743f30273ef278358db",
+    "sha256": "244191f1c1a38e193a77a5d84aea8c712222f87033dbf97c08586b507791c99d"
+  },
+  {
+    "module": "Effect4.Data.Json",
+    "path": "src/Effect4/Data/Json.lean",
+    "git_blob": "6dddc69e34d48bfe494790ec813c48941a1fcbae",
+    "sha256": "aedfb6ccf23396bc817a9d722a8319c76d13206a06679fcb6941af20c33f7e6e"
+  },
+  {
+    "module": "Effect4.Data.JsonNumber",
+    "path": "src/Effect4/Data/JsonNumber.lean",
+    "git_blob": "03dd98545c1ebe16cf63e51bb226ce21a880de46",
+    "sha256": "f5f8c5098a3386eb68fd1f0b47dc7d2e6605c5bd01b47f33c892ee5531d34b76"
+  },
+  {
+    "module": "Effect4.Data.JsonOptic",
+    "path": "src/Effect4/Data/JsonOptic.lean",
+    "git_blob": "991a3bd715fdf7d97619c75a097b6fd32b7b54f9",
+    "sha256": "35fbcfd6c8560d6420a88132af8c4368f054a76c2ed69e2b9bcddde6adc9d939"
+  },
+  {
+    "module": "Effect4.Data.Optic",
+    "path": "src/Effect4/Data/Optic.lean",
+    "git_blob": "b2a4d5bf140271d3e9f794b4d9020d7011b3d8ba",
+    "sha256": "0a02907cd4e994ff180c2d11b090f7948481dc888812d85bdb892fb7c0adf78f"
+  },
+  {
+    "module": "Effect4.Data.Row",
+    "path": "src/Effect4/Data/Row.lean",
+    "git_blob": "88c7b0950666fa005412ca8e77d3cfb0a591df3b",
+    "sha256": "d34ce891e47c0fcb0398c2f2b550ca093830e69e287acd436a8362e61378efae"
+  },
+  {
+    "module": "Effect4.Ingest.Taxonomy",
+    "path": "src/Effect4/Ingest/Taxonomy.lean",
+    "git_blob": "acc9f99629c735722d0091f57c74e9fd3390172f",
+    "sha256": "2d467fd2a36dccda245ec77d6ebc8d535c4aae0cdf2063cfe62aabdd28d875d4"
+  },
+  {
+    "module": "Effect4.Laws",
+    "path": "src/Effect4/Laws.lean",
+    "git_blob": "c36f99352232408893d686bde5916b512ff21628",
+    "sha256": "597f57b836812e0670fc1522af7f59e1c1fb75d194989e84a34bf315e3fc7f77"
+  },
+  {
+    "module": "Effect4.Laws.Api.Codegen",
+    "path": "src/Effect4/Laws/Api/Codegen.lean",
+    "git_blob": "e772e041aa31f839c6213bf3e4136212bf0f3618",
+    "sha256": "f953194e21f852bf0291c0dd0191964a86785e989decbdae3e7cd8de70314b57"
+  },
+  {
+    "module": "Effect4.Laws.Api.Frontier",
+    "path": "src/Effect4/Laws/Api/Frontier.lean",
+    "git_blob": "042592879320342ceb130e17a3be700e1fdd22b0",
+    "sha256": "4a500675f90d9d59ac800c018d4a60642bf2c7aff5496afd65ab5f3515710ddd"
+  },
+  {
+    "module": "Effect4.Laws.Api.Fuel",
+    "path": "src/Effect4/Laws/Api/Fuel.lean",
+    "git_blob": "a0addedc069881eee019bde8bc8a9f52b3c69009",
+    "sha256": "f0a3323aed8c5538c5d2b2e64ab2b9f167342dc859175e62e7a6f577c3dd19f2"
+  },
+  {
+    "module": "Effect4.Laws.Api.Guard",
+    "path": "src/Effect4/Laws/Api/Guard.lean",
+    "git_blob": "6ec3845646f95fc577b7d7a2dbe03bd8599786d6",
+    "sha256": "595ba0450721728d4946aab1625a8a77bf31720f7bbb21d31d6f7a4f392670a2"
+  },
+  {
+    "module": "Effect4.Laws.Api.HostSession",
+    "path": "src/Effect4/Laws/Api/HostSession.lean",
+    "git_blob": "26fd11aa981e71c879339484a6e484159035c3d4",
+    "sha256": "698a8e0c47aba2236d0ad8c5e3cd3de33a2fb2bab6552757a866a992d829e5f8"
+  },
+  {
+    "module": "Effect4.Laws.Api.ModuleReadable",
+    "path": "src/Effect4/Laws/Api/ModuleReadable.lean",
+    "git_blob": "4344e730fce0fb83cb73f6fd18c85e6426b7e219",
+    "sha256": "ea070274537ce0b95c8c7c32822949083a30e129d029d76732044491f0feecbe"
+  },
+  {
+    "module": "Effect4.Laws.Api.Runner",
+    "path": "src/Effect4/Laws/Api/Runner.lean",
+    "git_blob": "0179bd449e402a7373c13654e2cde2942c0614b9",
+    "sha256": "4bb12cf61577287fdec8c66c46aa4da9f7f9a732be9e022a8b7d74cefede48b3"
+  },
+  {
+    "module": "Effect4.Laws.Api.RunnerBytes",
+    "path": "src/Effect4/Laws/Api/RunnerBytes.lean",
+    "git_blob": "24326f66980dfcd75885a658ffbfc9c44c9e4630",
+    "sha256": "93a2834d896d7c30f7a2c4a7b26c47a8ea1e55deedd5c12952899c4d6c08891e"
+  },
+  {
+    "module": "Effect4.Laws.Api.Supervision",
+    "path": "src/Effect4/Laws/Api/Supervision.lean",
+    "git_blob": "c860b73ee57ec684ff234e3eec46f1341f60347c",
+    "sha256": "51b30cc191e2557898a48bbaf2d0764107711ed70929e76321f55a2b194e0453"
+  },
+  {
+    "module": "Effect4.Laws.Auto.AnswerGate",
+    "path": "src/Effect4/Laws/Auto/AnswerGate.lean",
+    "git_blob": "207881c5d668aec3652ec1154c291fab5970b71d",
+    "sha256": "7ad0cc1d25fcd42bc161710cd435c3c8984850c5f2687d0bab7f5e934dada4b3"
+  },
+  {
+    "module": "Effect4.Laws.Auto.Census",
+    "path": "src/Effect4/Laws/Auto/Census.lean",
+    "git_blob": "234044fbabec95b74bc6046dffcd13c62324932b",
+    "sha256": "7b1b6bdbf3cd061154581ca896ece642ada94076dc7c00732efe9d5cfff0a58b"
+  },
+  {
+    "module": "Effect4.Laws.Auto.Exhaustive",
+    "path": "src/Effect4/Laws/Auto/Exhaustive.lean",
+    "git_blob": "02a17133062b043721fa524d8a670822ad891e93",
+    "sha256": "6ea361aa47b3b5be639fcd2c121f0c5fbe58652e6c14cf458c05a4f2d69be4bc"
+  },
+  {
+    "module": "Effect4.Laws.Auto.Frames",
+    "path": "src/Effect4/Laws/Auto/Frames.lean",
+    "git_blob": "f0b3085c25a8f9db70c6c444838ccf1b0a697eb0",
+    "sha256": "85f195ba415dab7a6eadb47f172c074499aa2d575352a0d39fa5dfb83fc217b0"
+  },
+  {
+    "module": "Effect4.Laws.Auto.Inversion",
+    "path": "src/Effect4/Laws/Auto/Inversion.lean",
+    "git_blob": "16ac8cf3e3bcfe5fe4a920ea4e60aaf73802a640",
+    "sha256": "ef041007ba7a29cc8e5f3807d9613b2cf0ae32f09d347536603a7dfc021a821b"
+  },
+  {
+    "module": "Effect4.Laws.Auto.Obligations",
+    "path": "src/Effect4/Laws/Auto/Obligations.lean",
+    "git_blob": "79fb7580137202343b2e57737263739b753bc16a",
+    "sha256": "93dc067288cf235012d874f5a1db872a094d78206496b3b14f925fd31797ac5c"
+  },
+  {
+    "module": "Effect4.Laws.Auto.Positions",
+    "path": "src/Effect4/Laws/Auto/Positions.lean",
+    "git_blob": "80cc0226efa749f3b2c3f7c46b9f3586fc3d2c8a",
+    "sha256": "cfbe9f64af42400a50ea296df372dabd0356819bef9925a5179561f61660c02a"
+  },
+  {
+    "module": "Effect4.Laws.Auto.RuleSets",
+    "path": "src/Effect4/Laws/Auto/RuleSets.lean",
+    "git_blob": "508ad362d80a0ed009d17efd6b334b59ad98a3b3",
+    "sha256": "0da15c0754834d4584b1573846f57d96de803b4c040f77a090b031e173b06bc2"
+  },
+  {
+    "module": "Effect4.Laws.Auto.Traversals",
+    "path": "src/Effect4/Laws/Auto/Traversals.lean",
+    "git_blob": "99526dd90d8210a705f411db81a4e0a1dc72284a",
+    "sha256": "710b9b0196c5ecb0d89b5a84d30f3fe1df1c69322b277074587589f0eeaf1eea"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.Admit",
+    "path": "src/Effect4/Laws/Codegen/Admit.lean",
+    "git_blob": "bcc4133ce2d5a9b52778a84221c1436e76ac1e20",
+    "sha256": "faafaecd7af89da0442635b43d79e77f5e32cf2f41b3abcf67ec664e4a9b681b"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.Bindings",
+    "path": "src/Effect4/Laws/Codegen/Bindings.lean",
+    "git_blob": "9d6e2c2d1b75746296d058748176878f01478492",
+    "sha256": "01a5d1a1750b141aea630b2efdfde86bafb725b40454109be7711c59d8f409c4"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.Checked",
+    "path": "src/Effect4/Laws/Codegen/Checked.lean",
+    "git_blob": "4d61d801147773ad0594ad84bf2f2c3e97fc1b48",
+    "sha256": "ba45282651e77a8ac10af062e8fd11f4f0f68d32cf67f2e49c68ebc7678ccf72"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.Forms",
+    "path": "src/Effect4/Laws/Codegen/Forms.lean",
+    "git_blob": "a85319cdd526edc71f23d62b2fb8b1dde034d2c8",
+    "sha256": "d79273685103012acb2f8ca348a6347a81a3787131d474436399e03f5e2b149a"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.Module",
+    "path": "src/Effect4/Laws/Codegen/Module.lean",
+    "git_blob": "578a5e6a57d3cb87eeb30fbddea306f1c74407ff",
+    "sha256": "45a7d02d9a594df2b070cb0317331c869ae9c752366dde64afd01e63c1818971"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.PrintReadable",
+    "path": "src/Effect4/Laws/Codegen/PrintReadable.lean",
+    "git_blob": "c92a04feaebe3ce06133ace3d2b9ff2b15523bc3",
+    "sha256": "4e33d7a03ea15831f08e7226a8025a9b199f4f1b27cd7ba8c875fdd4a3b17084"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.Read",
+    "path": "src/Effect4/Laws/Codegen/Read.lean",
+    "git_blob": "7986a149c57047e9d97f92ff2c7c6a240c918b38",
+    "sha256": "efad0c7857b7568797e45a8c76fe4814a2f4fb7766e4a74dc4608f83080a2721"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.ReadPrint",
+    "path": "src/Effect4/Laws/Codegen/ReadPrint.lean",
+    "git_blob": "6da34d3ce48925eda60ead384e52a68859088c56",
+    "sha256": "11047c04ff5b3752bec1998cd21b43b509ca0d8343a61c606d2d82e9554140ea"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.SourceBindings",
+    "path": "src/Effect4/Laws/Codegen/SourceBindings.lean",
+    "git_blob": "6af4587682f76596c60a1f747f20d9713c156341",
+    "sha256": "33a938e819d607b02bf045e0fa81df0f2c92da9e1bc45d3f6801bfe762abf024"
+  },
+  {
+    "module": "Effect4.Laws.Codegen.Template",
+    "path": "src/Effect4/Laws/Codegen/Template.lean",
+    "git_blob": "14d5f90c5ba383e0cbca844852ca47b3cbb45102",
+    "sha256": "384fda41e9a68cb53a0622bea4be50de2734350c54e94b3d044f7102cb113a69"
+  },
+  {
+    "module": "Effect4.Laws.Effects.Protocol",
+    "path": "src/Effect4/Laws/Effects/Protocol.lean",
+    "git_blob": "fadfbc3e8160deedf3d881a8742cd1b4b0bd3276",
+    "sha256": "1cc3421f077e574aade645e382a70567e943f3f0d8be7f56e8600f9b785661e4"
+  },
+  {
+    "module": "Effect4.Laws.Effects.Sum",
+    "path": "src/Effect4/Laws/Effects/Sum.lean",
+    "git_blob": "20f267d75047a4f9c8158601be60e2158b177451",
+    "sha256": "46fce32b4044c6edc2a2b3073ec8fefd29bce9ab45e0199507d9481486b5e25f"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Approximation",
+    "path": "src/Effect4/Laws/Machine/Approximation.lean",
+    "git_blob": "678728d851b499f5c44902a72c2e00f323d25e7f",
+    "sha256": "3515a3003e584ca5515b1489f93a1efc0b5f72c7c88b95e44c6f62fd3ba6a44c"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Arena",
+    "path": "src/Effect4/Laws/Machine/Arena.lean",
+    "git_blob": "32bd4295c8594a53611c1bb091629a3cbcb2e39b",
+    "sha256": "89b56076dde461a400adb08b99db0852307352494f7ccfa2443b9ec5cc4c4970"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Behaviour",
+    "path": "src/Effect4/Laws/Machine/Behaviour.lean",
+    "git_blob": "0bbe5bd60ab528c773a5d7cf876c5821f99e0d91",
+    "sha256": "80e8db22c9d861225564079ddb4b565eb5d357a17c5cc85a5aa8b7671af61f87"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Book",
+    "path": "src/Effect4/Laws/Machine/Book.lean",
+    "git_blob": "83bf76bb6daac948250bf0c22da01ff12bac8589",
+    "sha256": "c45785dd0788fb92cc5964c143325cd2918c5b543059035262cfb7bf86b949a3"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Clauses",
+    "path": "src/Effect4/Laws/Machine/Clauses.lean",
+    "git_blob": "6437f62c64c87f64839d864a442ee544b3b74b40",
+    "sha256": "b603946c52c9b2b5e009128a2866054edb337a87b04c1a4aa36f1b0e778cbd52"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Clock",
+    "path": "src/Effect4/Laws/Machine/Clock.lean",
+    "git_blob": "c3f35fb02f2f84b2f4084c9b33c6486ca59673ab",
+    "sha256": "91693c9ffe212ab1da87175116ebe841fed61cebe085be54e2575e6e852b054f"
+  },
+  {
+    "module": "Effect4.Laws.Machine.CompletionData",
+    "path": "src/Effect4/Laws/Machine/CompletionData.lean",
+    "git_blob": "ca88383dea18faff1ea5cd3c0c32ae1fdfdbfafa",
+    "sha256": "2d25a08f1e3f9057db0d55753c76485f56a29573944473577e2493860e2ae3b3"
+  },
+  {
+    "module": "Effect4.Laws.Machine.ContextValue",
+    "path": "src/Effect4/Laws/Machine/ContextValue.lean",
+    "git_blob": "0c49b13d0a710a5660092195355a9981a17f3eb8",
+    "sha256": "8ffba58ae3fbc125638f6f98cfbe0cd83bc2cf893bfbab85d6928a3e10ed3071"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Folds.Stores",
+    "path": "src/Effect4/Laws/Machine/Folds/Stores.lean",
+    "git_blob": "4e90d06f21625f0e150e250c150ff9fe0411049b",
+    "sha256": "f92b54729b3f96e660bfea62606ba19947b11b8c3b58c503d075e06d7ffa8d09"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Folds.Val",
+    "path": "src/Effect4/Laws/Machine/Folds/Val.lean",
+    "git_blob": "e4945a1c649acf53b07afec9ddd4fa1cb34adc56",
+    "sha256": "436630ad18e9b9fded1ed0e41c509d3135c97fd4c35c3a9e613e9a7b1aad05ee"
+  },
+  {
+    "module": "Effect4.Laws.Machine.ForkLedger",
+    "path": "src/Effect4/Laws/Machine/ForkLedger.lean",
+    "git_blob": "8d4fad9caeea9636a523ded2e3942395b082d543",
+    "sha256": "b7d9a5045457b10955faf84fe1064463b32ce4d10e177a0538923f7b83c5d4cf"
+  },
+  {
+    "module": "Effect4.Laws.Machine.ForkLedgerInvariant",
+    "path": "src/Effect4/Laws/Machine/ForkLedgerInvariant.lean",
+    "git_blob": "93e0fb8877f5d35a90874c558364fa515c9b2ddc",
+    "sha256": "0c40fbcf342f9bef20e3c38dc1b50363d05224b3205ffff4e3c9dfe98ca9ef0e"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Handles",
+    "path": "src/Effect4/Laws/Machine/Handles.lean",
+    "git_blob": "8d614861c1c42c3e042d7089543292acbd8c461d",
+    "sha256": "3df2c1a281ea61c586faa0197f44340223031a6ae0ce7e7f29c244f55b78ed5c"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Handshake",
+    "path": "src/Effect4/Laws/Machine/Handshake.lean",
+    "git_blob": "270adeb355b0386c27462740a0794bc464d271eb",
+    "sha256": "1021c3910e1093049be44b365f570d98f667fa6efb68545e7b7e3d4fac20dd92"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Keeps",
+    "path": "src/Effect4/Laws/Machine/Keeps.lean",
+    "git_blob": "062dc03e081a3aa8e510d0d0eda0f7a2f1655cbe",
+    "sha256": "4c8633cc93f17c4e9e9d0339ab6d7cfa606bdabe32f88616f94e7509607ef562"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Lift",
+    "path": "src/Effect4/Laws/Machine/Lift.lean",
+    "git_blob": "8f0e813bfa3f9b25d389d7b65ac71049154f5159",
+    "sha256": "25e17e39895813098656ccb0f30b6543565cdf19b097165edcb83884f93fbf2e"
+  },
+  {
+    "module": "Effect4.Laws.Machine.LiveStack",
+    "path": "src/Effect4/Laws/Machine/LiveStack.lean",
+    "git_blob": "6249a8cefcc5594ce7bd29036f96202f4c84f00b",
+    "sha256": "c03bdf982328b8e853f3ad2e3f998fba7393bfaaa616304d0e88954e5345378d"
+  },
+  {
+    "module": "Effect4.Laws.Machine.RefKernel",
+    "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+    "git_blob": "6615e3ac4c5ea68f62ec958dfe09d3c0294f7b18",
+    "sha256": "0e00e296159929d7c10af78eb0b78324746cd37f151169dbfc55e010aa34a255"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Refinement",
+    "path": "src/Effect4/Laws/Machine/Refinement.lean",
+    "git_blob": "034cfc4e34aecc6627e4ae318b7837b92c2ca65d",
+    "sha256": "93032f429ed0bd6663285853f9272cc31c527ee6e8afab62c689b44eaacc5c25"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Scheduling",
+    "path": "src/Effect4/Laws/Machine/Scheduling.lean",
+    "git_blob": "34aac95647dd0f32f822cf15f6697f6fa149b309",
+    "sha256": "f043ff1e7ed9c397bb527d3c8835f709fb14c5132d02cbdaf818ec616625c3af"
+  },
+  {
+    "module": "Effect4.Laws.Machine.ScopeMachine",
+    "path": "src/Effect4/Laws/Machine/ScopeMachine.lean",
+    "git_blob": "9f6f41f48109827f6762e8a7004519b781b62305",
+    "sha256": "cb98b3644b4f37c9b0dbe45b44f00794b500e5f798605d9d17d096bcd024f3dc"
+  },
+  {
+    "module": "Effect4.Laws.Machine.ScopeRestoration",
+    "path": "src/Effect4/Laws/Machine/ScopeRestoration.lean",
+    "git_blob": "01d10f7e4a3952d1808611bcde18f3319a56c815",
+    "sha256": "18d843289df6de2fffd027475bf8ed66b2b4233b55fd4162c15dd79d586c867c"
+  },
+  {
+    "module": "Effect4.Laws.Machine.StoresLaws",
+    "path": "src/Effect4/Laws/Machine/StoresLaws.lean",
+    "git_blob": "b3f8390d862903e032cb0d6a531d2506f28bb2ec",
+    "sha256": "a41b5b5d0908c28cb5ea989f336ac62ba0eb0add2d5f80a9f25604afcc4936c8"
+  },
+  {
+    "module": "Effect4.Laws.Machine.StoresValue",
+    "path": "src/Effect4/Laws/Machine/StoresValue.lean",
+    "git_blob": "0280d06eee86c9369bf186138ada3353471713aa",
+    "sha256": "8193ffc4a8d471e4711d8cb314e77aa72ee89a11bb78f185b87f3e7eb9853559"
+  },
+  {
+    "module": "Effect4.Laws.Machine.Witnesses",
+    "path": "src/Effect4/Laws/Machine/Witnesses.lean",
+    "git_blob": "58aeccbcd31cfc8796d49ce116dfd5ce1802b2ba",
+    "sha256": "204741ef0ba9404f822675acaff64cb1d561798d976af87454f97a9c17198f3d"
+  },
+  {
+    "module": "Effect4.Laws.Program.Admit",
+    "path": "src/Effect4/Laws/Program/Admit.lean",
+    "git_blob": "4620a5b02e1dcb1d497248942b90600d209e51c3",
+    "sha256": "ada4d7d4019cd6dfcf2ab45727e7d27cd29c7d40632871f0cc70a2a96a00e5f9"
+  },
+  {
+    "module": "Effect4.Laws.Program.Admits",
+    "path": "src/Effect4/Laws/Program/Admits.lean",
+    "git_blob": "834f87a25809a5d4ffcf202c0b3a32a6264f5438",
+    "sha256": "8467fa42c7dc86a157571d46522a9e235f00f4fd0d182a7bd5b4759c9cdb0297"
+  },
+  {
+    "module": "Effect4.Laws.Program.Agreement",
+    "path": "src/Effect4/Laws/Program/Agreement.lean",
+    "git_blob": "dcbdb0cde3f05680394e81abd9a160867a9b89d3",
+    "sha256": "4f5cf8acf467c62b00221894c30d4c057ceb58911783cc3ee1c94c12883bf7f1"
+  },
+  {
+    "module": "Effect4.Laws.Program.Agreement.Loop",
+    "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+    "git_blob": "8b85578e2b9e73b019bde407870059600bcd16c1",
+    "sha256": "95738a739b870e48280704b922d615e62e126aaf20e4396e3155638345820906"
+  },
+  {
+    "module": "Effect4.Laws.Program.Agreement.LoopSteps",
+    "path": "src/Effect4/Laws/Program/Agreement/LoopSteps.lean",
+    "git_blob": "8a77e835d58744aa7ea6edb0fd8533e9169efcfa",
+    "sha256": "f3ce9bbc78ce3e5c1193eeb83851bc52b6522b84f2c90a3a1439024bcedf3e49"
+  },
+  {
+    "module": "Effect4.Laws.Program.Agreement.Machine",
+    "path": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+    "git_blob": "9de90df318362dd877da4af2d2cdec92c8f98442",
+    "sha256": "05ba599705031fb7d65fcb19247a989160371f4c8963f526d3ea57e5e6903e74"
+  },
+  {
+    "module": "Effect4.Laws.Program.AtomRules",
+    "path": "src/Effect4/Laws/Program/AtomRules.lean",
+    "git_blob": "dc95670ef7acb9a27e93d49dcf25a9108130fe87",
+    "sha256": "7b6f52560c1ff3a9846d70db015f1068978428af761273cfd2935f8cdab76c83"
+  },
+  {
+    "module": "Effect4.Laws.Program.Author",
+    "path": "src/Effect4/Laws/Program/Author.lean",
+    "git_blob": "345976a2666cf743cdc9932f602184dded5383b9",
+    "sha256": "02184bbec103c84a597fd9db6dbf3da8a89f0901e796b0e9c85afc1ce55512fa"
+  },
+  {
+    "module": "Effect4.Laws.Program.Authoring",
+    "path": "src/Effect4/Laws/Program/Authoring.lean",
+    "git_blob": "ad473c97ff7f9e3ba85489f3aeca37db2d679070",
+    "sha256": "52b6370b8696e93a548cf150e271a061cd541614de7aa51500a133a48dfb95fe"
+  },
+  {
+    "module": "Effect4.Laws.Program.Authoring.Forms",
+    "path": "src/Effect4/Laws/Program/Authoring/Forms.lean",
+    "git_blob": "6775ecd4bb29afcc22699a38fef6adfbd54dd404",
+    "sha256": "b500d2c33df45fd80a890041920ed3275ae527f685fd2cbd1270cb3adbd7feb0"
+  },
+  {
+    "module": "Effect4.Laws.Program.Authoring.Lifts",
+    "path": "src/Effect4/Laws/Program/Authoring/Lifts.lean",
+    "git_blob": "af84c3f1ec3ada595557eba63a992824a0b4eb05",
+    "sha256": "879c89e6ba191dc6c54c2e81364f0eca0f0819f354522df8c33c23bf5d65709e"
+  },
+  {
+    "module": "Effect4.Laws.Program.Authoring.Loops",
+    "path": "src/Effect4/Laws/Program/Authoring/Loops.lean",
+    "git_blob": "21ce771196ddbfb92fda1822884c4eece9da6f0f",
+    "sha256": "abfcc84c669357b5ae4fbb93719a90c3ac7924854b569dd0480ec28e47e86186"
+  },
+  {
+    "module": "Effect4.Laws.Program.Authoring.Rows",
+    "path": "src/Effect4/Laws/Program/Authoring/Rows.lean",
+    "git_blob": "d09a51f10b43a5cedff9a18c3e23750da5901dcc",
+    "sha256": "eb228da317a65b35e691c61f5097d7f4504622ebbec7ad56cb1a5d79b1361b31"
+  },
+  {
+    "module": "Effect4.Laws.Program.Authoring.Sugar",
+    "path": "src/Effect4/Laws/Program/Authoring/Sugar.lean",
+    "git_blob": "e8e5b4b20d91bd0b8046d1b3aadaae55988b76dd",
+    "sha256": "21b48152c425071cefee592ecfd56ec56602995cbda13ae1f7156ad427ac9446"
+  },
+  {
+    "module": "Effect4.Laws.Program.Authoring.Tactic",
+    "path": "src/Effect4/Laws/Program/Authoring/Tactic.lean",
+    "git_blob": "7905d0a0c2baad7d3a483a09fab5219c211795b3",
+    "sha256": "b1f24bc91ba3724c25dce7782a89353cb2cb2f18e4c433ab71e3a5048b1697e2"
+  },
+  {
+    "module": "Effect4.Laws.Program.CheckedTyping",
+    "path": "src/Effect4/Laws/Program/CheckedTyping.lean",
+    "git_blob": "534de81cd54346fbc4a239ee94b75a8ef1228965",
+    "sha256": "3600a04147e9bc53c0a9b2c3af8e0b025cb92d9f4420e692a666d78cbd4f56de"
+  },
+  {
+    "module": "Effect4.Laws.Program.Decision",
+    "path": "src/Effect4/Laws/Program/Decision.lean",
+    "git_blob": "a02510d8e071fc386057a6207f895623ec6d6d7a",
+    "sha256": "e48888357f22a83ebcc82020390c9fc358786a3b43813954f6a934257e1d4b2f"
+  },
+  {
+    "module": "Effect4.Laws.Program.Denote",
+    "path": "src/Effect4/Laws/Program/Denote.lean",
+    "git_blob": "2a94882ac2b23f55c4ea3e89f7f8cbff77747c8c",
+    "sha256": "34c66bdfd6879d07ee4fe1c00453bee0738b678ca0a76a8eafe0ee82fe2a7339"
+  },
+  {
+    "module": "Effect4.Laws.Program.DenoteB",
+    "path": "src/Effect4/Laws/Program/DenoteB.lean",
+    "git_blob": "5f0f8bebccb4c129a0e2041bc89dbb90a0621ede",
+    "sha256": "96e4fc0e142f85296e4226064ac04cce9f5cebbb4e81473b25f475bc694faee3"
+  },
+  {
+    "module": "Effect4.Laws.Program.DenoteR",
+    "path": "src/Effect4/Laws/Program/DenoteR.lean",
+    "git_blob": "59c2c7165baa9d43b4936bdb50a724568ba1204a",
+    "sha256": "fea6d24139a1aaea38ca0d6e7cdc172d916eda9322181aa8f3d50f7b979f33a1"
+  },
+  {
+    "module": "Effect4.Laws.Program.ErrorQueries",
+    "path": "src/Effect4/Laws/Program/ErrorQueries.lean",
+    "git_blob": "c1ec98960dc967d7b4760de4d1d05234555548fc",
+    "sha256": "774c15c51f1144684a1b6513124e094c98a08ef6cfdecc1ae339256d7759d7e1"
+  },
+  {
+    "module": "Effect4.Laws.Program.EvaluateR",
+    "path": "src/Effect4/Laws/Program/EvaluateR.lean",
+    "git_blob": "af48ff2682987924a4c1ad9d75911e694a469148",
+    "sha256": "70201518dac2d42926000d250882892b825d33adb1bcf2fc11d3b7ea816e44a0"
+  },
+  {
+    "module": "Effect4.Laws.Program.Folds.Checker",
+    "path": "src/Effect4/Laws/Program/Folds/Checker.lean",
+    "git_blob": "0df97b3262974a7db2e4e317a69f44f928da8d8a",
+    "sha256": "4f1f051bc48dda79ad567b4656856c8637d00b63b5718348cd6488ea196a37ee"
+  },
+  {
+    "module": "Effect4.Laws.Program.Folds.Denote",
+    "path": "src/Effect4/Laws/Program/Folds/Denote.lean",
+    "git_blob": "e13523960ca15041f554eec2deb12ded70e13b5f",
+    "sha256": "1bb035d34d2ef1ab48c1919c9b75004f5ceae0030a965a6aa8bb9bbd58102c16"
+  },
+  {
+    "module": "Effect4.Laws.Program.Folds.Looped",
+    "path": "src/Effect4/Laws/Program/Folds/Looped.lean",
+    "git_blob": "5a21dc3de8697fc620c81552a6a8e8f08563b24e",
+    "sha256": "8c13e8c02abe44590b4ba106c9ff1885ddeab476cdf3d12c6707f7c4d9383e25"
+  },
+  {
+    "module": "Effect4.Laws.Program.Folds.Projections",
+    "path": "src/Effect4/Laws/Program/Folds/Projections.lean",
+    "git_blob": "c84d418f7873f1ca4828b9ffd8e2006df64e4afd",
+    "sha256": "4073a35d5df43dd42db227d7b8c84fb67b77307f5da7c0507034d5c17b3a6c8a"
+  },
+  {
+    "module": "Effect4.Laws.Program.Folds.Provision",
+    "path": "src/Effect4/Laws/Program/Folds/Provision.lean",
+    "git_blob": "fda506b3a5efa65d4f6f50e910bc045fecff09c2",
+    "sha256": "2896c75c2405f10d0c7b2ac395b0a4c65a867a6ab089b9881df5b8de340ca191"
+  },
+  {
+    "module": "Effect4.Laws.Program.Folds.Representation",
+    "path": "src/Effect4/Laws/Program/Folds/Representation.lean",
+    "git_blob": "b97fda3a74f6315470e00449800fbb6a8123ab1e",
+    "sha256": "968c139cea8bdf36d0c4c3e9f9b967b00bb484f7ac540d37f6294fcb0b15b0e2"
+  },
+  {
+    "module": "Effect4.Laws.Program.Folds.Straight",
+    "path": "src/Effect4/Laws/Program/Folds/Straight.lean",
+    "git_blob": "5809a6dd073f50ec0d4cb5055d02d4d7833b2339",
+    "sha256": "4915c0bc70668e909605ffe0e9cd43abf715f163f472ce2f087147c999a56e0d"
+  },
+  {
+    "module": "Effect4.Laws.Program.Folds.Term",
+    "path": "src/Effect4/Laws/Program/Folds/Term.lean",
+    "git_blob": "420227268f27216910925d210a7ff84b4a40c7da",
+    "sha256": "51795e90f9638f17abdb34f0ef1417fc1352e2aaf0c31d7d3df5537552d2d1b2"
+  },
+  {
+    "module": "Effect4.Laws.Program.Folds.Ty",
+    "path": "src/Effect4/Laws/Program/Folds/Ty.lean",
+    "git_blob": "09442ff05f5c90d2542cc458127c6cc8bae628d7",
+    "sha256": "34e2c220d78db4cdd1ef7bdcf887235e4839a658602fb494a4a42cdd717b6743"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard",
+    "path": "src/Effect4/Laws/Program/Guard.lean",
+    "git_blob": "d9dea6ef0e046dcdaa31ef22a885b910e05c1025",
+    "sha256": "0b7e038654c5a5253a5afb92b61692b58905d4501b2d205cfc2c0be64cceb20e"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.AnswerDecision",
+    "path": "src/Effect4/Laws/Program/Guard/AnswerDecision.lean",
+    "git_blob": "1efe9e72d747a0f187ac3464d6df985c11435007",
+    "sha256": "31f199c066e76e671b0a24db63bba43e73c0145fa386becbcb6f86cb491bbfa0"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Command",
+    "path": "src/Effect4/Laws/Program/Guard/Command.lean",
+    "git_blob": "63d859b7a6f1ddd41615a736577eefff1ea192c9",
+    "sha256": "f716e9aee01838f8f079a6c120c4b4b40e7ab6827e8aeea0352a4555085ccb5b"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.CommandObservations",
+    "path": "src/Effect4/Laws/Program/Guard/CommandObservations.lean",
+    "git_blob": "9008898f0bc50442d503f8bc6fd43324adab7b5b",
+    "sha256": "923fe31f2e69c0d64bef4c07636661ea99c90a9cff50d5daf2d105bef5a67c89"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Continuation",
+    "path": "src/Effect4/Laws/Program/Guard/Continuation.lean",
+    "git_blob": "d4f90192d791dbaf3aa7648fbfb0cbbe5c1757ac",
+    "sha256": "8f2a298dde6e0374d68fb75b9d2bbf593582eabc13dedebb8f575d06b3328c56"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Contract",
+    "path": "src/Effect4/Laws/Program/Guard/Contract.lean",
+    "git_blob": "d9d86b3006ab51c9d84c3993d33f0ddfded90b8a",
+    "sha256": "2093f93749ad94a0a75be5255d5c7c447ab06155f813811cbcc5c745cbd7c418"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.ControlRemainder",
+    "path": "src/Effect4/Laws/Program/Guard/ControlRemainder.lean",
+    "git_blob": "f94b9af0900caf062742b039625f9a26b0cd7928",
+    "sha256": "666f3a9b88cc80449a145bd85fceba2caff1424f6557c61b9c6234250c9840b3"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Core",
+    "path": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "git_blob": "71fd3f92e0c3cb9180b7d4d1d41ac53e4041dbd6",
+    "sha256": "66acff9931d94aefee89236ae161cde61f788097fc207cd8540a2ce24d3bf48e"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Decision",
+    "path": "src/Effect4/Laws/Program/Guard/Decision.lean",
+    "git_blob": "cb73fe77a9d8803fa96ed0a62f8e41bcef64b6b7",
+    "sha256": "d08dbb7697d91d1f40747aab00723a553068b9447af92f52e0e546a06bb3f86b"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.DeferredCause",
+    "path": "src/Effect4/Laws/Program/Guard/DeferredCause.lean",
+    "git_blob": "c6e1da746a9ab200556a6df65b2156bdf7efbf7c",
+    "sha256": "c2838bf382f6fc50e783548df838d8f8b4e03c51e76f3455f38f049dfb16d0ee"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Driver",
+    "path": "src/Effect4/Laws/Program/Guard/Driver.lean",
+    "git_blob": "8d4a4ce9dfbabcd09daf707b59eb66a1f9a50842",
+    "sha256": "1d9a4ed3622db4beca2d5c4bb53e234d0c9c4576e342e5c952efc30ba82ef8f7"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Finish",
+    "path": "src/Effect4/Laws/Program/Guard/Finish.lean",
+    "git_blob": "abe94a1cad3e6648c0cd2804a7609d7ad2e32a5e",
+    "sha256": "43d9f19bc09be3c6b4c7b69a71b9c4970a81d596aae1fd8d907115f5b59d4338"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.FinishQueue",
+    "path": "src/Effect4/Laws/Program/Guard/FinishQueue.lean",
+    "git_blob": "b08f43908befac88c6659da7e72a9ca27d5fe3dd",
+    "sha256": "903d332aa9d4c8ef771625d4877c6d2e52663a808b70d5206f37ee42e51ad5a0"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.ForkLedger",
+    "path": "src/Effect4/Laws/Program/Guard/ForkLedger.lean",
+    "git_blob": "cbd077181cf45fdfd585c25182351ac49ea0f639",
+    "sha256": "2c393501d3af096050cdc98a504605a1c45d70b30bfa67cc74c50298eda8ba05"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.FrameOwned",
+    "path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+    "git_blob": "c5bf0b1c01fb3333539b3a3a396964af2a484afe",
+    "sha256": "279fd68313b4ff332ab85b0ec346f458bf69557965bcc2a8d920a68b4fb5cdb1"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Handshake",
+    "path": "src/Effect4/Laws/Program/Guard/Handshake.lean",
+    "git_blob": "5357c3fff86744ecc26195af1c33b99914ec4075",
+    "sha256": "305aa8f46f594e9e5ed46bcfb51517d71ec7a08e4e84ec486a9f8f86e25626cd"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Interruption",
+    "path": "src/Effect4/Laws/Program/Guard/Interruption.lean",
+    "git_blob": "3269204cbb560d398630311a26517aa7ead1d019",
+    "sha256": "c418c2e562e7cc195e941d2352cfa4e03a6f4ae6d0a3deecd2c49a589f121f19"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.LocalDecision",
+    "path": "src/Effect4/Laws/Program/Guard/LocalDecision.lean",
+    "git_blob": "a2258046536130919f2514d906da2dd8360a9387",
+    "sha256": "cbc093af67122f892c1d5331449fdf558cc07b7531f09e4578395c41340cdad2"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.MemoIds",
+    "path": "src/Effect4/Laws/Program/Guard/MemoIds.lean",
+    "git_blob": "c23d35aa46de2197e2579916b309ebf1796bb4a9",
+    "sha256": "7499569e303a0b68d010331900ed9cca29921b508c2d3fe5bb672eb90de826d7"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeAssembly",
+    "path": "src/Effect4/Laws/Program/Guard/NativeAssembly.lean",
+    "git_blob": "fc8a0508f0e39893cac5fe1aa9135f8e328388f3",
+    "sha256": "1df5a5040055933b371c05c07ca94258a33edf56fb11cbd8ff4fa53969db840a"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeQueueAssembly",
+    "path": "src/Effect4/Laws/Program/Guard/NativeQueueAssembly.lean",
+    "git_blob": "8324d3ea52d98385b2ee11da15cd33ef9219ba57",
+    "sha256": "0a6a08c09a78e3c317d793fc40b399b64ba6df9f227d3b56098a37c428bd6552"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeQueueTail",
+    "path": "src/Effect4/Laws/Program/Guard/NativeQueueTail.lean",
+    "git_blob": "cec2d24133d61022d2ef6b1d9b4396b61b4f37c4",
+    "sha256": "cd7a945aa56070488e48c9c4806386b97b5cbaa70b76b8c01b61eaaa8f61ed40"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeState",
+    "path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+    "git_blob": "897b138383096974a3c2e5150b97a8efeeee8872",
+    "sha256": "11dec52c99a4e05fc980b05004f13d233a5bd6cb92f599633a15a7eb4d4be288"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeStateExternal",
+    "path": "src/Effect4/Laws/Program/Guard/NativeStateExternal.lean",
+    "git_blob": "671546855600f1bac28a51cd24a4508757817a80",
+    "sha256": "45292f6cdb4639b009cdf032d7eff694e185e192fc237c732e9bd63a91472455"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeStateLinks",
+    "path": "src/Effect4/Laws/Program/Guard/NativeStateLinks.lean",
+    "git_blob": "7eb3422f8d8ac3dd74eaa98d0c2eccab499d74f6",
+    "sha256": "e15f0376617b1453a2b571a9324b55472ee7d3f98cbc457346a680526386d4a3"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeStateMotion",
+    "path": "src/Effect4/Laws/Program/Guard/NativeStateMotion.lean",
+    "git_blob": "31123c02961cf4d9ab4e23e4409c670478b823bb",
+    "sha256": "3e6ce81d0d9f68517eddf71fb96eab27b79231aee2794d9849b2882a59ac99bc"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Observer",
+    "path": "src/Effect4/Laws/Program/Guard/Observer.lean",
+    "git_blob": "1421586d6bb5b8b50dca8a930350339d60af0f6d",
+    "sha256": "03f9fbae3e91950a8eba6c04d41d8658d2f606eaa8ae957b3bdc2c245c0e9ad0"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.OuterDriver",
+    "path": "src/Effect4/Laws/Program/Guard/OuterDriver.lean",
+    "git_blob": "c45d54a8fb6137ccbe14c60b0d01d964c82e89a8",
+    "sha256": "82c2971119524e3f0fb36a4e71322157196dea3baf5a0225f0c02aba6c72d7a2"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Race",
+    "path": "src/Effect4/Laws/Program/Guard/Race.lean",
+    "git_blob": "bab2c07a1baec53028942ba20ec00760c604792d",
+    "sha256": "6df1549b72238abb2cdedf21e744ba3dbdac842110d3f518dac419009e7a8d87"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.RaceSites",
+    "path": "src/Effect4/Laws/Program/Guard/RaceSites.lean",
+    "git_blob": "b4c83ff3f374aa72adc074f4d12f66b19c128249",
+    "sha256": "1be6668515a6ea5fe8d8001d43e35c2a9d86f8839edfd2a57c12130ece0f6c93"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.RegistrationDone",
+    "path": "src/Effect4/Laws/Program/Guard/RegistrationDone.lean",
+    "git_blob": "fc395cd4b42bbe6211447719b3d8740a3a050d6e",
+    "sha256": "212bae3148539f6b3a1f67107f2c7c7f06e17cf9ff49bea9582f7bffe6462c05"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.RegistrationNested",
+    "path": "src/Effect4/Laws/Program/Guard/RegistrationNested.lean",
+    "git_blob": "78bf50312aed6b205b44bd805a85fb4a5b0bc5c7",
+    "sha256": "12e7285024f1b8ab0d043f8e71b2a4c1800e1233183318fba11229e5a0160f31"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.RegistrationQueue",
+    "path": "src/Effect4/Laws/Program/Guard/RegistrationQueue.lean",
+    "git_blob": "9ebc845986e9aacde0f9802c61a9ccad408982cd",
+    "sha256": "5dbe7972f3198e4eeb39fe251a22feb94c7d3a93b0de84948a8f6acab56bea0e"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.ReturnCommands",
+    "path": "src/Effect4/Laws/Program/Guard/ReturnCommands.lean",
+    "git_blob": "f3aa6fcfc547672714cddeee304fa92ca637f275",
+    "sha256": "a4d46e3347ad009c223a5463310488e4a8456dabd7a8e0b2090f008f16b1c614"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.ReturnFields",
+    "path": "src/Effect4/Laws/Program/Guard/ReturnFields.lean",
+    "git_blob": "0369ff7aa599ac3fa6e84dc50b934f6bb5880992",
+    "sha256": "c52c2c4193cd50be7de9f90bf0dbc02d02b6b23ead7dff064daaa95eb2929532"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.ReturnTasks",
+    "path": "src/Effect4/Laws/Program/Guard/ReturnTasks.lean",
+    "git_blob": "2c5468b33530bed9bc15bf19dc4da3e42c7c9b71",
+    "sha256": "eeaf78ca759d76d0d97a0bb5933729bc37d90c2b4307365e17ec3440add66cd4"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Settle",
+    "path": "src/Effect4/Laws/Program/Guard/Settle.lean",
+    "git_blob": "e11cf8d14631963495579848ef09fd74bc6720ac",
+    "sha256": "d9721c2bf867a9f7e4211025858b67032c2b9c4c777ce0573bfcc5ca4c99e880"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.SettleQueue",
+    "path": "src/Effect4/Laws/Program/Guard/SettleQueue.lean",
+    "git_blob": "6d15fb8daecf7fc11ecdd91b60b2758b8bd0da78",
+    "sha256": "f46ec1a3c2298d1c5a4576bc72ead5419b2858fb0a1fb08d31db556aa8f2c0cb"
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Single",
+    "path": "src/Effect4/Laws/Program/Guard/Single.lean",
+    "git_blob": "9fe82305d811ed706e5e62263f01697a1673c007",
+    "sha256": "61ad1f7d6033475e5c84007b3d4a71e8c01db3f1a46c11c46b121470946689cc"
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles",
+    "path": "src/Effect4/Laws/Program/Handles.lean",
+    "git_blob": "b3b6da563159185a88a570103f79a9b5e7055d19",
+    "sha256": "c445a32d6226dc999af5e035ffe30ffa8a515adadffecc045c2ca3d0f9d813f1"
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Alphabet",
+    "path": "src/Effect4/Laws/Program/Handles/Alphabet.lean",
+    "git_blob": "953d3859a1216cb08cbdbd5244ab3e8ce6becf68",
+    "sha256": "304b5feebc2bf38965f046485b16758e236cc8ae4eb2fcfe09b790d47f2f9192"
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Compile",
+    "path": "src/Effect4/Laws/Program/Handles/Compile.lean",
+    "git_blob": "870793c0ba0c6694b9dfa1218d9668bd52421928",
+    "sha256": "dae94c8fac67ee3d183f8b0b7c54075960880c4cd7c40ab07dbb989e8a6ddfba"
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Evaluation",
+    "path": "src/Effect4/Laws/Program/Handles/Evaluation.lean",
+    "git_blob": "47870143f8a8206ff76f9518123f9c17c216e076",
+    "sha256": "64a4443abf23ce0fe8ea6bfa34f3e364d8af20976e10fa98549032033f53c42b"
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Hooks",
+    "path": "src/Effect4/Laws/Program/Handles/Hooks.lean",
+    "git_blob": "8f1308afcbcfa5fb313823efe0c1383cd9fb5798",
+    "sha256": "fcd51f503e6cfab47b44d6fbd82e5bbf9b1c7fc5da12858ff8df290391698cec"
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Layer",
+    "path": "src/Effect4/Laws/Program/Handles/Layer.lean",
+    "git_blob": "23e13f958f17da85c15c4ce9ad2976d507dd5d98",
+    "sha256": "1e4cd77f333e4ac51b310e14ec2fea332efae4c61b8a45cf11f63326e7b298b1"
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Term",
+    "path": "src/Effect4/Laws/Program/Handles/Term.lean",
+    "git_blob": "2b1614b23b66896334d9f602bccc0f447ba8b265",
+    "sha256": "789576d4c6237535a3919192e8f107d49f6adfa0b797c06c8959ba6ed128374d"
+  },
+  {
+    "module": "Effect4.Laws.Program.Hoisting",
+    "path": "src/Effect4/Laws/Program/Hoisting.lean",
+    "git_blob": "4d6c19ca298a5058b40f4f35f7eb127f45272e34",
+    "sha256": "512fa1ba2c91c2d78a2be507f5471610ebd98e12c1c51158368ecfbd15fd384f"
+  },
+  {
+    "module": "Effect4.Laws.Program.HoistingTotal",
+    "path": "src/Effect4/Laws/Program/HoistingTotal.lean",
+    "git_blob": "4978bf42e58e450e508360d2b2cdb65d16af64a4",
+    "sha256": "6094fb71c81cd615fa4b87bf6384b57b2e684e774c75727f4ffeb62286960fc7"
+  },
+  {
+    "module": "Effect4.Laws.Program.HostBoundary",
+    "path": "src/Effect4/Laws/Program/HostBoundary.lean",
+    "git_blob": "e0d39fa6238043449c2ff52475acec9c4516cf53",
+    "sha256": "4b90ad2967409d819c58ac7e350a3da9ffc6392c1d6078bfb0d003e5776d37c3"
+  },
+  {
+    "module": "Effect4.Laws.Program.InterpR",
+    "path": "src/Effect4/Laws/Program/InterpR.lean",
+    "git_blob": "3d70b1f778b6adc766d214b389f2a73737106257",
+    "sha256": "bef167de77485d557d3b1f6ff777889fb5f723e286a4619d4917d9c691509715"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro",
+    "path": "src/Effect4/Laws/Program/Intro.lean",
+    "git_blob": "3e1d2faafc1d3a58b4493da2734c3741cb310470",
+    "sha256": "e536e2dcafa2d513e880d4e9c19b7d8b10df5b5506263695bd480c0929a8eefb"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.AcquireRelease",
+    "path": "src/Effect4/Laws/Program/Intro/AcquireRelease.lean",
+    "git_blob": "69a85443cffa79254183f2d3eeb446ee5145f0a9",
+    "sha256": "4cab61d014a684f1866cc9c4d78c44f7325daae86ba043169270a8a65d010e17"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Elementary",
+    "path": "src/Effect4/Laws/Program/Intro/Elementary.lean",
+    "git_blob": "a87837f6e05c3aa1e09f0da465b015e1a14a1f12",
+    "sha256": "00686501b40f45c4e13c39cdc950a4410c04d5d1a3e7a02addde79dd1414dfac"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Equations",
+    "path": "src/Effect4/Laws/Program/Intro/Equations.lean",
+    "git_blob": "f6e1f293ef95ff73ae105c62fcdf7e20b98e83bc",
+    "sha256": "41ef404a7c025d9c4d12e93e6fecaab7b7978ea428fa665a4a364902380a7f2d"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Errors",
+    "path": "src/Effect4/Laws/Program/Intro/Errors.lean",
+    "git_blob": "4a990444010b258f9aac125a1c614d6befbe2ce6",
+    "sha256": "74bc9fe3e5bef08627ce71da567ae3ed7958e579a2c4a3604c0706ddd3949072"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Fibers",
+    "path": "src/Effect4/Laws/Program/Intro/Fibers.lean",
+    "git_blob": "dc793b9abcc003cbcd9ecb6cebfa51b2c91c8959",
+    "sha256": "21d626df98d4f5e32d19a72ac1b58297e6f341e4181da9d12f7afbfec4826e3c"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Identity",
+    "path": "src/Effect4/Laws/Program/Intro/Identity.lean",
+    "git_blob": "252927f1dd123ed19dcd5987d216f544899fd577",
+    "sha256": "5eb06d93e6ea31e53067ab5598e80bf3bb7fa30a0e687151f86515b85cd07bba"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Layer",
+    "path": "src/Effect4/Laws/Program/Intro/Layer.lean",
+    "git_blob": "1ee1159def34ca57c358884fc219911436e10d4f",
+    "sha256": "4225ff5a6affc675a0d1b7444f2ba4af1050f618abe0bf44423c681f4311419d"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Memo",
+    "path": "src/Effect4/Laws/Program/Intro/Memo.lean",
+    "git_blob": "5569f9340e15ba34bf2532b191a4929212a6769d",
+    "sha256": "f7f275cc576088ba8c1c87af2ba3d1c96057568700d921880a87847ec23acdd8"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Merge",
+    "path": "src/Effect4/Laws/Program/Intro/Merge.lean",
+    "git_blob": "cd4f412c06874fa04b1cf1952e8925dfa103e54c",
+    "sha256": "dbc1b914cd7c8c251d4ce664a5195aac956bcdb0a843ac1ed3abcc2486645f93"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Prepare",
+    "path": "src/Effect4/Laws/Program/Intro/Prepare.lean",
+    "git_blob": "8db851877afe86cc2534323ec096b780dc43bfb8",
+    "sha256": "d267f5faa128345ce531ebcfdff81d9124f378d0a9e4a9fd9d1b5dbaaf6824b5"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Region",
+    "path": "src/Effect4/Laws/Program/Intro/Region.lean",
+    "git_blob": "1f4f9f2349ac13380211130e15a43a1c74d3aaef",
+    "sha256": "3c1f96e108e65d8048df2d2454e464ed92149831f67348338f704cde303c6e4f"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Scope",
+    "path": "src/Effect4/Laws/Program/Intro/Scope.lean",
+    "git_blob": "4278b98433b99afe2b36258cd9e77dcf98411299",
+    "sha256": "7368d502ab249561fce1cfccee1804e9e53a157ba9578632c4bd9a6c3ac2e7a4"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Sequential",
+    "path": "src/Effect4/Laws/Program/Intro/Sequential.lean",
+    "git_blob": "6f808f1bbf98a7e674bec0b6be34b2b4aa164687",
+    "sha256": "b565d31e68d55a812857efe5167986623c4efcad07d65f7b3d939aa7aeca8b91"
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Weight",
+    "path": "src/Effect4/Laws/Program/Intro/Weight.lean",
+    "git_blob": "4a3301a1474cbaaf8fb7a624751c1f33317751c7",
+    "sha256": "ad9c1f38516e00cd0a1a651d53dcb4883432a3ad0b1a521db65536d7bdc295c6"
+  },
+  {
+    "module": "Effect4.Laws.Program.Invocation",
+    "path": "src/Effect4/Laws/Program/Invocation.lean",
+    "git_blob": "7631cae4597bc3443a4d877c82379fc8ccc6ddfc",
+    "sha256": "10a9b48076195fae6af01db7f243075db32cf25decc89e0172c3a42954e20fbc"
+  },
+  {
+    "module": "Effect4.Laws.Program.Iter",
+    "path": "src/Effect4/Laws/Program/Iter.lean",
+    "git_blob": "ca4ac13d1f8921aaa47ca022161475ffc5986f67",
+    "sha256": "7e96d47319e44efb207ca4449ad4ed2b8d7908ca038cf2c391f15078d2972f62"
+  },
+  {
+    "module": "Effect4.Laws.Program.IterLimit",
+    "path": "src/Effect4/Laws/Program/IterLimit.lean",
+    "git_blob": "7d9a561deedd7282c1a8d94f725c2f9bd2101d51",
+    "sha256": "449760faffe0b6127d670937cbe20e7357e606ea86f245501e57ee73124ad721"
+  },
+  {
+    "module": "Effect4.Laws.Program.LayerSharing",
+    "path": "src/Effect4/Laws/Program/LayerSharing.lean",
+    "git_blob": "18eb256ae41cfd133012192ec2b3e45a03ddd006",
+    "sha256": "13893f726db155eef7b1c803942b02a06b1cf8c9c9eb71b59f24ce69303a3f8d"
+  },
+  {
+    "module": "Effect4.Laws.Program.LinkedRows",
+    "path": "src/Effect4/Laws/Program/LinkedRows.lean",
+    "git_blob": "9e5777deaa6463a75574287225c90d3b7e7aa081",
+    "sha256": "04af0ace97c3f477bccd75e406eb80ea0c8eff4b66119ccbcef3cdc528e8bca3"
+  },
+  {
+    "module": "Effect4.Laws.Program.LoopAgreement",
+    "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+    "git_blob": "097d6c0229218c495aecf26be38e7dc3558bd6ce",
+    "sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000"
+  },
+  {
+    "module": "Effect4.Laws.Program.LoopSound",
+    "path": "src/Effect4/Laws/Program/LoopSound.lean",
+    "git_blob": "cb7d72e90418062b54a81d6842386e024978b7f7",
+    "sha256": "c8ec71a5c6395f5ff56353e68fdfa369425eae64fd9d0745d68cea04bf170e03"
+  },
+  {
+    "module": "Effect4.Laws.Program.MeaningSound",
+    "path": "src/Effect4/Laws/Program/MeaningSound.lean",
+    "git_blob": "071202d5d635206aa0c2504370eeb364061ec3ce",
+    "sha256": "9bcf352dbb648849d51c0b100eb7dd5273cae9d709524c84f032122b554f72a7"
+  },
+  {
+    "module": "Effect4.Laws.Program.Means",
+    "path": "src/Effect4/Laws/Program/Means.lean",
+    "git_blob": "ba18480610507f411cb8c85c590a47ac5fd655d9",
+    "sha256": "16408c2608c6b148f0f98a190a719da7c7bd977184191e5145368aa18960416e"
+  },
+  {
+    "module": "Effect4.Laws.Program.PathOrder",
+    "path": "src/Effect4/Laws/Program/PathOrder.lean",
+    "git_blob": "61bb104721e0da27258ca66e0f2eeb87c4f4fe77",
+    "sha256": "e8cfabfca3ac587209d002e9250ac563efebbcaa7a31b81dabd7ec68e67cb0f7"
+  },
+  {
+    "module": "Effect4.Laws.Program.Progress",
+    "path": "src/Effect4/Laws/Program/Progress.lean",
+    "git_blob": "f91e6e7fd7da9804f52bf474a805cdb59fc7a7d5",
+    "sha256": "d2ba8eac238ca99a2ec5185b6e83b1c10a2306d280839a67165ef3e346cd5ce6"
+  },
+  {
+    "module": "Effect4.Laws.Program.Provision",
+    "path": "src/Effect4/Laws/Program/Provision.lean",
+    "git_blob": "ec9eca470c7acc51df2cbb3b7b042da42bb397d1",
+    "sha256": "5d6f68fa896a436dde106a2fb62eedc70c6fc3d587101dad97d697f4016791cc"
+  },
+  {
+    "module": "Effect4.Laws.Program.ReasonsR",
+    "path": "src/Effect4/Laws/Program/ReasonsR.lean",
+    "git_blob": "75f45d38752f8f604dcf00d1ec19644c01ebb327",
+    "sha256": "c73632af3a504094e1556010b99388cb483a9bae7dd6e40c82f14f87435cfdbd"
+  },
+  {
+    "module": "Effect4.Laws.Program.ReferenceTyping",
+    "path": "src/Effect4/Laws/Program/ReferenceTyping.lean",
+    "git_blob": "5683ef5842c703a4ebdaf384e138144dfe806368",
+    "sha256": "bd98048d469a624ddc92f60ca8c70104a8d16e2aa1ac624ef0271937b045ff76"
+  },
+  {
+    "module": "Effect4.Laws.Program.References",
+    "path": "src/Effect4/Laws/Program/References.lean",
+    "git_blob": "ba1b650f9ac46dfddb81b30550708f2fa2e3d75f",
+    "sha256": "dc748a2cba769c449ce16d2cde673d9c3af28002e8c57bb788c79466ec6c01d1"
+  },
+  {
+    "module": "Effect4.Laws.Program.Residual",
+    "path": "src/Effect4/Laws/Program/Residual.lean",
+    "git_blob": "c07c4a0912f91f3fc88640d5b939790189dcdadf",
+    "sha256": "bea303222a2a899eaa0170edd53625b753492642132b44f67af4ddf7bc47b933"
+  },
+  {
+    "module": "Effect4.Laws.Program.RuntimeR",
+    "path": "src/Effect4/Laws/Program/RuntimeR.lean",
+    "git_blob": "79e81e47d454aa5fce9d8a0ac2be51d5d8e71a63",
+    "sha256": "e9327d8f0221831518381b11ad3fd83bffb718d5404c3ea0e8e7c3dcd40b81d9"
+  },
+  {
+    "module": "Effect4.Laws.Program.Sched",
+    "path": "src/Effect4/Laws/Program/Sched.lean",
+    "git_blob": "c78d923f7c0f63e04434d1425c4ba066d670a16f",
+    "sha256": "0a26f79cbd0be936f60c0ec51b692e36712d73f3f54dcb9c4520a88a00485776"
+  },
+  {
+    "module": "Effect4.Laws.Program.ScopeMarkers",
+    "path": "src/Effect4/Laws/Program/ScopeMarkers.lean",
+    "git_blob": "e1305bf469ddc33f8431b040094b6568a9ff8274",
+    "sha256": "c6c109e9b18cc8b5a2c66eb822f2ce34ffb07a3cef22c1f7f4303bf330ac35a9"
+  },
+  {
+    "module": "Effect4.Laws.Program.ScopedTyping",
+    "path": "src/Effect4/Laws/Program/ScopedTyping.lean",
+    "git_blob": "e0658fa22b1c70599cb9a66216a6bd654a81e23c",
+    "sha256": "ddc7c43c95872f81624aee6388841da5a3c07b661e5bd8bd3b716fa1f8712aec"
+  },
+  {
+    "module": "Effect4.Laws.Program.Signature",
+    "path": "src/Effect4/Laws/Program/Signature.lean",
+    "git_blob": "50ba695a513f9db6754dd819d2df69ae9143fc93",
+    "sha256": "5e7134b1e97509b86ed1c49b242f729852b1b557562e1d8161f744e55cde8d54"
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Actions",
+    "path": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+    "git_blob": "928505d3256181fed99f402c019bff33c4bdf7cf",
+    "sha256": "39ad3856659ee9a3dd97c55f83599b5967550ca4ec581039435b70653284c948"
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Deliver",
+    "path": "src/Effect4/Laws/Program/Simulation/Deliver.lean",
+    "git_blob": "1ff515f4e686c901aac3500075897bfbf39a535d",
+    "sha256": "23d46637b41eb98e762112e63ba702701f61151217fbf7ec0b09c8692bfbd6ed"
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Drive",
+    "path": "src/Effect4/Laws/Program/Simulation/Drive.lean",
+    "git_blob": "178c0b0a6a7f0e6fc56d67156155d0b5e3d71180",
+    "sha256": "7e6e8d2ddbec51c62177c5f527913038fc5c98231ff05685f26e8c1760e0bbf6"
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Evaluate",
+    "path": "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+    "git_blob": "d48df748f29ca4d267ee8b573a51e5538d8754c9",
+    "sha256": "1c77c752a0bfbbf159642b148d9e8d71be5ebb6f70daf4c99975411edc482578"
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Fibers",
+    "path": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+    "git_blob": "d7be94c10a0914bbd6af8ef01bc9dc0d3b9a5b1d",
+    "sha256": "49a278f7d52759d6deb41e19eecb9ec8911392860cf1b4c05a5ba64faf0ab915"
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Hooks",
+    "path": "src/Effect4/Laws/Program/Simulation/Hooks.lean",
+    "git_blob": "a359c8166400a5d3161f39159088dad408e2f17c",
+    "sha256": "056946aac4ce59454a6f2025b450b4a00101f5e5ee74f5450293853a65ad4888"
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Pending",
+    "path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+    "git_blob": "b03defe94f20a9a0da8a2a48ace4e415939e8cac",
+    "sha256": "f37244ad86d0d5a652863e7d0eae978e525ee78466e2f4f388f141e8fba75b2e"
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Walk",
+    "path": "src/Effect4/Laws/Program/Simulation/Walk.lean",
+    "git_blob": "d93a49ed07880bf181ae22226eae54346ee96fa7",
+    "sha256": "f91d79aa7db29889264726e62a1d859c8973234e0b47d87b4534af2dedb6197f"
+  },
+  {
+    "module": "Effect4.Laws.Program.Size",
+    "path": "src/Effect4/Laws/Program/Size.lean",
+    "git_blob": "55102a88bfab17eed61abd175e886d3b19f5cbbd",
+    "sha256": "1f54bbdc4238e6e97940cd67354303274941a16718bfddb4a5d0cdc1e8f2e897"
+  },
+  {
+    "module": "Effect4.Laws.Program.StoreComodel",
+    "path": "src/Effect4/Laws/Program/StoreComodel.lean",
+    "git_blob": "c99f6f2f70d6661f08e1a7f49c58941bf2ffd970",
+    "sha256": "2278270b3c1075647eafb24d2b18c35a460adb7647c54c76fb5d6c7164cf1e48"
+  },
+  {
+    "module": "Effect4.Laws.Program.Template",
+    "path": "src/Effect4/Laws/Program/Template.lean",
+    "git_blob": "44c6e3515a121c38ba2920183513fdfa5c0fb529",
+    "sha256": "11f9e3c5cd30b13fea519358cc3b116e5e0cd0b94b165aaaee1ff6cb2eff5976"
+  },
+  {
+    "module": "Effect4.Laws.Program.TyView",
+    "path": "src/Effect4/Laws/Program/TyView.lean",
+    "git_blob": "72dea91acf5cb838a419d9771a8b1db0cf1b1347",
+    "sha256": "b4bb571e8705daa6b4a6e174b1555f6d12b467863c27b57732a646ad9a49883f"
+  },
+  {
+    "module": "Effect4.Laws.Program.TypeAlgebra",
+    "path": "src/Effect4/Laws/Program/TypeAlgebra.lean",
+    "git_blob": "cced1afa11e559b7a2aa3b9d3f6422f973cb3ecb",
+    "sha256": "201e75b45b3c5426e7a6c9a23ef429c3d84adb034117ef310cc88d197e9b53b8"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed",
+    "path": "src/Effect4/Laws/Program/Typed.lean",
+    "git_blob": "0c3446e12a47995504c2ce7429072ca4a849f444",
+    "sha256": "aa0f2a17fe0e3a931532b2c2cdfdca41da8e8c2f4b41db83c07cb1dd239d82ea"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Adequacy",
+    "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+    "git_blob": "dd127fe0facdbaa2d95cb7bd3d102ae4920555f3",
+    "sha256": "e70fcee2fa8f1aa4ba92687a224c81dacd8e0e2c458ab025f689a9ff5de69376"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Admission",
+    "path": "src/Effect4/Laws/Program/Typed/Admission.lean",
+    "git_blob": "1043171397e45bd25978c968f46ff91086601d1b",
+    "sha256": "98849aece718b0f05b15a957628c5eec1008c241934bf831613fb9d30a58ae2c"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Assembly",
+    "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+    "git_blob": "78bd27667967ecd959d718951228099a4a520265",
+    "sha256": "faef0661ca1133feea62eba944b75185fdd03851e6a7a50e530e598a8c3cfa10"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Commands.Bookkeeping",
+    "path": "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+    "git_blob": "0293307aa95411ef2417e7bf23a44a98d54dab94",
+    "sha256": "bb660b01c204370af0076f3ac85066039f8e72e3627c2a920c262c2a55ff4e29"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Commands.Finish",
+    "path": "src/Effect4/Laws/Program/Typed/Commands/Finish.lean",
+    "git_blob": "0a626b0cad0e1109625bf13dbac784c1217cbb3b",
+    "sha256": "557a6a63fea4f7970b6fc208a0ab536b6902e21cf5a40149ae5c9b412e32af1e"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Commands.Observe",
+    "path": "src/Effect4/Laws/Program/Typed/Commands/Observe.lean",
+    "git_blob": "c7368c5fc58539703cd7b6e74e896362e2a3348a",
+    "sha256": "4efdaaf5cea864839318f94f4568c7460920f6352e0dd4250d9f27403452bdd2"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Commands.Race",
+    "path": "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+    "git_blob": "ab3a281c4a82512d2aad0aac4f357210936e5956",
+    "sha256": "1b1b7b7115adcd6843d8e0bd8bc3475aa873ca272352f2ec41e27b7f7496b599"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Contracts",
+    "path": "src/Effect4/Laws/Program/Typed/Contracts.lean",
+    "git_blob": "2e1ffe4db728aa3c65ca2e4ff006cd6633c6029b",
+    "sha256": "5c9be58b61f1ecfa4be8c0732c637f3cf8ac0df0ab3aada1b33abf1fcf3a7f8f"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Edits",
+    "path": "src/Effect4/Laws/Program/Typed/Edits.lean",
+    "git_blob": "5a25be4e000774b10446feea087167b2f42a0fdf",
+    "sha256": "ecd7c557459572640b1f0dbc562cf20a6ba3ec4b83cf140a1ec5844ea75ccd2f"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.ExitConnector",
+    "path": "src/Effect4/Laws/Program/Typed/ExitConnector.lean",
+    "git_blob": "261ccf55605aacb5806fc3c420a79c855b64b6d8",
+    "sha256": "139de7d89566982a492620f940d189d51b0ab681e3e91acd85495ee1990cd903"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.ForkSource",
+    "path": "src/Effect4/Laws/Program/Typed/ForkSource.lean",
+    "git_blob": "952e1a2de0b95e6c1a4f9dbb3bbc04b6d02e1f1e",
+    "sha256": "b319e59ba636e09b4a35905c100998150745f0b6daecd8fc8afa1d174d513820"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Frames",
+    "path": "src/Effect4/Laws/Program/Typed/Frames.lean",
+    "git_blob": "e6bda01ef3bf40cf837437f25e2065dd480cf9d7",
+    "sha256": "e28e0e85207c84eb2d246a410984d5db4605a0f2da3f3eecb2a34178a388d19c"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Membership",
+    "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+    "git_blob": "bbfef0bff486edf528332b45513b078493c42af7",
+    "sha256": "09beeaef665e37201c7c2a22b195080962b41a88c0534d79796bf963917db8dd"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.PositionGate",
+    "path": "src/Effect4/Laws/Program/Typed/PositionGate.lean",
+    "git_blob": "48e4728b5e265ebb9344ae596db0cdd9c6f1b1a9",
+    "sha256": "24cf9ea5b58b3be2809397ec4c17928f3ebd533a9a31bd2a2f3a7c9060dc7a93"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.ProtocolObligations",
+    "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+    "git_blob": "c80d0b057d0de1601f341c3fd0f1e77dd6b7b224",
+    "sha256": "3605f21d4761070495e7c28761b5f3ece902e1e30e3eb51186151f37191a7525"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Residual",
+    "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+    "git_blob": "a3a22751cbb6646d459a43943a1fccef4bc2c247",
+    "sha256": "1fa50a31814a35d367fd2995a08d4c62db370114f3631b8f2825831032e05c12"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Scheduler",
+    "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+    "git_blob": "5690e8b2373d9ff48ee5e590fdf11b5bd15eb263",
+    "sha256": "d8bbc7f17e207e580764df13ec0be1708d259e2636cc87e28433b96b03f2610c"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Seq",
+    "path": "src/Effect4/Laws/Program/Typed/Seq.lean",
+    "git_blob": "b43b7b3377dfd79fdab07ef447587876ed65b4d4",
+    "sha256": "56423af5a1f34b314e2bc5d6ba5047278886e664900ec781219f8cd0496abb6b"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Sources",
+    "path": "src/Effect4/Laws/Program/Typed/Sources.lean",
+    "git_blob": "1693bad7375e03c34205694a9893493fa2f09ec1",
+    "sha256": "b7698dc958cad50f986d2a80e1c4688a1d09b7ab8926ae65d9612dcd3bd8a944"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Stack",
+    "path": "src/Effect4/Laws/Program/Typed/Stack.lean",
+    "git_blob": "4dd3f46b47dafc736d5207c862d3162da8f6d04c",
+    "sha256": "255c3a9099dd3e520d841a42dd4920e201eba8c257812440a2b54dd2d5cdb204"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.State",
+    "path": "src/Effect4/Laws/Program/Typed/State.lean",
+    "git_blob": "12a06c96ddbefde26b3f28d8d7a223d948be74bc",
+    "sha256": "583f6116be9047dac407db2b3d2ee96c1d90002a73f2397e3eab7ab922482784"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.TypedSources",
+    "path": "src/Effect4/Laws/Program/Typed/TypedSources.lean",
+    "git_blob": "b8475535088d49bc502efedd89081eea17d747a7",
+    "sha256": "61dbba084810a50b4bbbad9c9b039376b0487589ba6a660c406e11fbf4c68695"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.TypedStateDecl",
+    "path": "src/Effect4/Laws/Program/Typed/TypedStateDecl.lean",
+    "git_blob": "d9200b9abfacf40133a25bf894b39a183a8be20f",
+    "sha256": "827f080609d35bb3ccce45fa8a4bdfd0a74acd7703cf60c1134955c8b6db62fa"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Validity",
+    "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+    "git_blob": "baaedac0b6796641a5aae6322891bcf7263a4887",
+    "sha256": "9290cfedb230bf663718ef5addbf0fd6ca8da87d466646806dbf33c7dcb7c558"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Vocabulary",
+    "path": "src/Effect4/Laws/Program/Typed/Vocabulary.lean",
+    "git_blob": "ad3663b6fde59ab30096737024ed7e89096c970f",
+    "sha256": "cc58a6f5a49108eb27530db4b8140cecc5f06ffbc710e41f3109a8bd61f5ffdd"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.World",
+    "path": "src/Effect4/Laws/Program/Typed/World.lean",
+    "git_blob": "93f83e21da1250e5c338c3ac6d5816653845b617",
+    "sha256": "32be5194574dcf8af29f51e2c6898548a079599f1404d7c49848e1cfdb637bd7"
+  },
+  {
+    "module": "Effect4.Laws.Program.TypedRun",
+    "path": "src/Effect4/Laws/Program/TypedRun.lean",
+    "git_blob": "67b1af760190719a9906e8672bad62de90cdfb67",
+    "sha256": "259f3073e5c7319d711e2a90cccb362b536a2c1c1176c3b026b304c3836e2bd9"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typing.Check",
+    "path": "src/Effect4/Laws/Program/Typing/Check.lean",
+    "git_blob": "33359f72b7fbb60eaeec1304139052ab5bedef21",
+    "sha256": "c89f2043d0a7e8b528fe3826db476a0464ed5878e59b2af30da9ad76e7d65e64"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typing.CheckInversion",
+    "path": "src/Effect4/Laws/Program/Typing/CheckInversion.lean",
+    "git_blob": "ba36c95335fea3e1d97e9c735c2315798e7c45e3",
+    "sha256": "37c9310c293218b1222eece0fb142438b88a9d5e134c3d7668051fa47583feb2"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typing.CheckSound",
+    "path": "src/Effect4/Laws/Program/Typing/CheckSound.lean",
+    "git_blob": "8c8f6854c4a904cd9247bf52c8a89d9c5bbe1c34",
+    "sha256": "bfc805d5359d92d236f78a558aae8911d6c1071e7a27e53f471427873e322553"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typing.FoldAgreement",
+    "path": "src/Effect4/Laws/Program/Typing/FoldAgreement.lean",
+    "git_blob": "71ea858c6469dbd5e4466601e5c0de4ac991bec2",
+    "sha256": "868d3879fe54bc4067dc51ce4584217705d222e532ba84ea198474a012f52f5b"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typing.HasTy",
+    "path": "src/Effect4/Laws/Program/Typing/HasTy.lean",
+    "git_blob": "0fe305d0c123c2d375739df653fb72963aaeeb20",
+    "sha256": "89b77d127e4abe9e2870dbafca8442bb29e0a7811bfb7accd59171c436ee325b"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typing.Inversion",
+    "path": "src/Effect4/Laws/Program/Typing/Inversion.lean",
+    "git_blob": "024f434502a9d41ba6e8728c1ced5a9f9b611e5b",
+    "sha256": "29234b4d2e4aa2bf582083d263de9f882848969d1b4aaba7874fd97f8eb048b8"
+  },
+  {
+    "module": "Effect4.Laws.Program.Typing.Sound",
+    "path": "src/Effect4/Laws/Program/Typing/Sound.lean",
+    "git_blob": "e320a47e25f199c54df697fc0c71d1637c1de56d",
+    "sha256": "cc22bccd33a7e4df9561e9db93e21db4220f7020dbb7b0cdf99d6290a2973d6a"
+  },
+  {
+    "module": "Effect4.Laws.Program.ValueModel",
+    "path": "src/Effect4/Laws/Program/ValueModel.lean",
+    "git_blob": "ebdaddf6d1e1e217d3016ce32702ddc401633bf5",
+    "sha256": "d4fbd13f5e1d086755aa524beffbed0045afad03e51d5505f8ca6753d82a0a76"
+  },
+  {
+    "module": "Effect4.Laws.Run",
+    "path": "src/Effect4/Laws/Run.lean",
+    "git_blob": "21b0301718eb02b2a5d250300ec98952df35bdfe",
+    "sha256": "aec5de719846b9c0c03daceb623d6a13699e3bc9eb2adb130e169b739cf6c3ac"
+  },
+  {
+    "module": "Effect4.Laws.Schema.Codec",
+    "path": "src/Effect4/Laws/Schema/Codec.lean",
+    "git_blob": "3d48d07171cfd0f4f6540b7aefa24dcd75540dc0",
+    "sha256": "bc2a07d4f569003162c844490684f602ef89d95373f5f24f01486c8f72ee2dc0"
+  },
+  {
+    "module": "Effect4.Laws.Store.CanonicalSpec",
+    "path": "src/Effect4/Laws/Store/CanonicalSpec.lean",
+    "git_blob": "c57c0c5ed4ea138aad175a2789bf1a6170c7a1a9",
+    "sha256": "77cac3c3e3f79bc116bd0b04ad3a090162a4294f475628e0f5f7610b42d31bb9"
+  },
+  {
+    "module": "Effect4.Laws.Store.Folds.Val",
+    "path": "src/Effect4/Laws/Store/Folds/Val.lean",
+    "git_blob": "3e078bfbcef5080ffaf435d2243066d3df6e257f",
+    "sha256": "769c3cdc1e56d74dd5f3c187a3a6b3b178b29197a81d7d34b2be15a4f7f27aaa"
+  },
+  {
+    "module": "Effect4.Machine.Alphabets",
+    "path": "src/Effect4/Machine/Alphabets.lean",
+    "git_blob": "a0831dc8d50a115bbecf62f67d1fb691cf08555e",
+    "sha256": "a945895bab92e2e4a3713e60d6edcb35aff636a79adc11295df2ea807a85c8e5"
+  },
+  {
+    "module": "Effect4.Machine.Cause",
+    "path": "src/Effect4/Machine/Cause.lean",
+    "git_blob": "77eab203b6881920057ad946ab3016e952e250a8",
+    "sha256": "ab9dcc8f6386925bb99aecef3765bfc91b35d9b7e432894e1ba8436f9efdf982"
+  },
+  {
+    "module": "Effect4.Machine.Completion",
+    "path": "src/Effect4/Machine/Completion.lean",
+    "git_blob": "22077caff34892dce3ad8c40f43eedd737e4af0b",
+    "sha256": "0ae6167b79b5af271385f9fd15df824f5b16152bf3e9e356daddad480c551431"
+  },
+  {
+    "module": "Effect4.Machine.Context",
+    "path": "src/Effect4/Machine/Context.lean",
+    "git_blob": "08e30012a1f975ac2f06d395f508bfda7262937b",
+    "sha256": "7381556a77ac17f3d8afff1b440a5b559b63da3d730da4b7ddf07dd218d700a5"
+  },
+  {
+    "module": "Effect4.Machine.ContextMap",
+    "path": "src/Effect4/Machine/ContextMap.lean",
+    "git_blob": "aa688138c1aaa0715992cda1ba166f9a69a55586",
+    "sha256": "f839d02164edb916d5867f58227000451f1bf9001a5e5d7ba99d577e1dcf1e82"
+  },
+  {
+    "module": "Effect4.Machine.Exit",
+    "path": "src/Effect4/Machine/Exit.lean",
+    "git_blob": "c7f36141f10e3d168c96cba66c3d73edf202dd9c",
+    "sha256": "c29b8999fa1e807d89303b1124ff323326faa33dce4d35400138ea7ef06385fc"
+  },
+  {
+    "module": "Effect4.Machine.Fiber",
+    "path": "src/Effect4/Machine/Fiber.lean",
+    "git_blob": "e25464433d30a3312ef4d6527aa0b4499c502aa1",
+    "sha256": "804e126340aa3933819f6a2561ff5cfa95e5f28ba92926ef723c095b8d796bee"
+  },
+  {
+    "module": "Effect4.Machine.Fibers",
+    "path": "src/Effect4/Machine/Fibers.lean",
+    "git_blob": "7d5f3ece83a38d3f7b647dc8d76710e0aadbee5e",
+    "sha256": "d8d1f50b246fc145665db5ed0797aee1948e3230f32f30a40794e7092bbfb2a8"
+  },
+  {
+    "module": "Effect4.Machine.Frames",
+    "path": "src/Effect4/Machine/Frames.lean",
+    "git_blob": "f2b3d9ef91dd3f5e06410ba43e5f4ba5af29ffcb",
+    "sha256": "a2f073639894bd4a7a88730bc27c6e098b3be76f2c9c2115dd4e56418b8845ab"
+  },
+  {
+    "module": "Effect4.Machine.Key",
+    "path": "src/Effect4/Machine/Key.lean",
+    "git_blob": "44ba8579b7bc096720d3eddc5cda9693a0767e4b",
+    "sha256": "a01ef4b968b1a5a4cb5b68e523584de88bb1784ad1e25a5b747dba3807dc6ccc"
+  },
+  {
+    "module": "Effect4.Machine.Scope",
+    "path": "src/Effect4/Machine/Scope.lean",
+    "git_blob": "bc0606fd8fdfdc7bda6e69917c1747d9929238bf",
+    "sha256": "73a72e53394fcf24a7599708a140c15de67cea023dc3fd45f70f635b039da8e6"
+  },
+  {
+    "module": "Effect4.Machine.Stores",
+    "path": "src/Effect4/Machine/Stores.lean",
+    "git_blob": "ea01d614f5f9d625079d81710c049f749f19d7d0",
+    "sha256": "30f4560ab1a82625c9489aef9750b6db2145f2e8997de64c5856a6303b0eecc3"
+  },
+  {
+    "module": "Effect4.Machine.Supervision",
+    "path": "src/Effect4/Machine/Supervision.lean",
+    "git_blob": "07942fe2cb4517ca514bb65d62c0b01fc0386f8a",
+    "sha256": "675bf84940cc1e89bdc1ecdfedef9b94a81e3fc322e036ff25a8311498349fd6"
+  },
+  {
+    "module": "Effect4.Machine.Term",
+    "path": "src/Effect4/Machine/Term.lean",
+    "git_blob": "e4f5c75e838008c82f547814a876c195ee2c69de",
+    "sha256": "1e2afb13a9422d105e5fe133c9ee70d52af24ad28bbdd0c6d1597d01b3f956da"
+  },
+  {
+    "module": "Effect4.Machine.Timer",
+    "path": "src/Effect4/Machine/Timer.lean",
+    "git_blob": "6fbc7eb7860b0de56de10b04183a2920778c3cbc",
+    "sha256": "f333df352e0ece26d283438ea2a8640b879d82e63f6472ac692ff22e5b33ffb7"
+  },
+  {
+    "module": "Effect4.Machine.Value",
+    "path": "src/Effect4/Machine/Value.lean",
+    "git_blob": "73a682e8979f2721415a345ec390b06a5ee6c8a2",
+    "sha256": "6fea7879bb27681c3cb4cd06db747e04b3d66f0aeaa56c7f7cdd31bfa8401a31"
+  },
+  {
+    "module": "Effect4.Machine.Wake",
+    "path": "src/Effect4/Machine/Wake.lean",
+    "git_blob": "9482990103f888386d6fb759c98b04bf9d3451d3",
+    "sha256": "27dca8657ba65dc0f3ef40b82bc3d9fe4fc1468272ea82d88c81b03b708c8065"
+  },
+  {
+    "module": "Effect4.Program.Admission",
+    "path": "src/Effect4/Program/Admission.lean",
+    "git_blob": "34024286f4de5e2362c3d10b86aa93b020de206c",
+    "sha256": "f4ff34b2ebf98f51af14fba3265236e146c54b9efc9afdfba2f4145446a5456d"
+  },
+  {
+    "module": "Effect4.Program.Admit",
+    "path": "src/Effect4/Program/Admit.lean",
+    "git_blob": "3b67179fb4d8978f17abde16e5d64d805cdd38c5",
+    "sha256": "4c458ce2409c45cbbc514b47454a3be7af5cbbc8a9b9bd627570214ba7a7b28d"
+  },
+  {
+    "module": "Effect4.Program.AtomInventory",
+    "path": "src/Effect4/Program/AtomInventory.lean",
+    "git_blob": "8bf001e28e7135a0dd3f902dce4bacc9f3261a31",
+    "sha256": "de4bf8667ad3aa40cd832cb96c1e7e2c3c56d6c2e8f436fef7598f0b4294947a"
+  },
+  {
+    "module": "Effect4.Program.Authoring",
+    "path": "src/Effect4/Program/Authoring.lean",
+    "git_blob": "b198c6e16ef9efb7056da42b7ef0e0d409d029b8",
+    "sha256": "74743552fccedc6a4684f360679dc4a7735ac00d0e64d25825b98a940d1949b0"
+  },
+  {
+    "module": "Effect4.Program.Authoring.Lifts",
+    "path": "src/Effect4/Program/Authoring/Lifts.lean",
+    "git_blob": "d1e6209fc364b99167104e1e978a7b3a88940f8a",
+    "sha256": "2e1254f6b27c621f20015083d613163dc4961320f8007e5b512ef63b04906958"
+  },
+  {
+    "module": "Effect4.Program.Authoring.Loops",
+    "path": "src/Effect4/Program/Authoring/Loops.lean",
+    "git_blob": "94eb5bfcac574770444db8449b02afb47ce5d53a",
+    "sha256": "4c22836f4f13f8111519b2d4a2432daea6695277cc3856deec0eed5efe597e71"
+  },
+  {
+    "module": "Effect4.Program.Authoring.Rows",
+    "path": "src/Effect4/Program/Authoring/Rows.lean",
+    "git_blob": "507d7792f7c0a1995556d36366ea0aee3e982a81",
+    "sha256": "1d5787bef67c1cfbfc91716488b14d243653d639f2ed4d546226806ffc11cbad"
+  },
+  {
+    "module": "Effect4.Program.Authoring.Services",
+    "path": "src/Effect4/Program/Authoring/Services.lean",
+    "git_blob": "ae83dd7ae8c67793ce2b72bc7f320c022e5a589e",
+    "sha256": "e77919595f3d07578cf55e56547974fbeabf2dcb7d3efbc2dee3ecf2cf314771"
+  },
+  {
+    "module": "Effect4.Program.Authoring.Sugar",
+    "path": "src/Effect4/Program/Authoring/Sugar.lean",
+    "git_blob": "6a4b5ae5b03be191770a6bc3eabe0e161d77bdb1",
+    "sha256": "ceddac3bb6a1f0c33de8b47bf322b2ba1c8d63543d3c1a6a5489067945d94e68"
+  },
+  {
+    "module": "Effect4.Program.Binders",
+    "path": "src/Effect4/Program/Binders.lean",
+    "git_blob": "15cdb620cc78fe5b1bdb3b7441a2e9b76dbe1cf5",
+    "sha256": "f430d8b5b25952d9c0c2433a6c981939a77b55f73e1b923103de6ae863a92c2c"
+  },
+  {
+    "module": "Effect4.Program.CheckedTyping",
+    "path": "src/Effect4/Program/CheckedTyping.lean",
+    "git_blob": "633698b0faa60da1482bb9e360f567c68b9a3a86",
+    "sha256": "e55ab16eb19e5bb1cd538a1a7838397dc26ddd50666f542cd29e439d28a1a3c9"
+  },
+  {
+    "module": "Effect4.Program.Checker",
+    "path": "src/Effect4/Program/Checker.lean",
+    "git_blob": "83e96831658c32a57a4fd842db444259b4cdb70d",
+    "sha256": "dccbb27dd2526566ad7625f127b72b2de943ea6200715fca61f02c60d5f2aa02"
+  },
+  {
+    "module": "Effect4.Program.Compile",
+    "path": "src/Effect4/Program/Compile.lean",
+    "git_blob": "4e53ac0d9d8e347971caf1b2de7be2e125e743c5",
+    "sha256": "806eee27201015b51ee258ad873c5989b56e312143cdb9eae864581cd11b833d"
+  },
+  {
+    "module": "Effect4.Program.Config",
+    "path": "src/Effect4/Program/Config.lean",
+    "git_blob": "8c4e03233de2ba320b025d3c25acbd748d252ab2",
+    "sha256": "31e2f12cdbbf5cf3ce5bd3ea30bd82ff079aa340e1b611806bdf2e735bad8e3c"
+  },
+  {
+    "module": "Effect4.Program.ConfigValue",
+    "path": "src/Effect4/Program/ConfigValue.lean",
+    "git_blob": "36f14a5c2258a2da9e6549f2a2f7d18216ef8824",
+    "sha256": "ce4ed4457de61a6b369db13a064276506240f8bed01ea284acd236cdf43ed1d9"
+  },
+  {
+    "module": "Effect4.Program.Decision",
+    "path": "src/Effect4/Program/Decision.lean",
+    "git_blob": "646bd2698f53d114e28ff2d68e357e6636ca53d7",
+    "sha256": "1db477f9ccceff5258c9bc3f9c7bd621938f194056623b62bb9d1617c3073249"
+  },
+  {
+    "module": "Effect4.Program.Eff",
+    "path": "src/Effect4/Program/Eff.lean",
+    "git_blob": "3f48c917dfa9d4ff76581abdcb25a237b10a1932",
+    "sha256": "3116a30518519ca497ed9af7249db8c241099bee5dcec50ded1272d8b1e8248e"
+  },
+  {
+    "module": "Effect4.Program.ErrorImage",
+    "path": "src/Effect4/Program/ErrorImage.lean",
+    "git_blob": "a4193582947d7f0af307a799b5f03a7df4b32f10",
+    "sha256": "2604b116b39655c40be102476e97f551932f08b2d242bf96a56c62aea4fc270a"
+  },
+  {
+    "module": "Effect4.Program.Fold",
+    "path": "src/Effect4/Program/Fold.lean",
+    "git_blob": "db711f38f6ed6195d26d6ce5620044a0dff43603",
+    "sha256": "a4563ebf499fcd73c96fe3595a6448fdd2bad8e1cd65b9d90aa0e197be6d7f3c"
+  },
+  {
+    "module": "Effect4.Program.FoldOf",
+    "path": "src/Effect4/Program/FoldOf.lean",
+    "git_blob": "59e68b62f6f4e12c4cc5d7d465735dadb3ad68d0",
+    "sha256": "2c8ccc28c7407ae60dbc6b241fe929463f23ecd16e3f8347f0cbe02925c06363"
+  },
+  {
+    "module": "Effect4.Program.Fragment",
+    "path": "src/Effect4/Program/Fragment.lean",
+    "git_blob": "baa7c7ca456058936a348fd9553c47049e574aa6",
+    "sha256": "de570af3e7f1d12a5148a07dfbfc14cf3b03cf5e2955f5eab0133c0e87f78923"
+  },
+  {
+    "module": "Effect4.Program.HostBoundary",
+    "path": "src/Effect4/Program/HostBoundary.lean",
+    "git_blob": "978acb8d2cad07bcf7d3e08d9b0f297f57da293a",
+    "sha256": "00ea4c9e979c0e857c3fa5d769a8b2f9ed31ec5ba01755f7b0a76a7790c64d92"
+  },
+  {
+    "module": "Effect4.Program.LayerView",
+    "path": "src/Effect4/Program/LayerView.lean",
+    "git_blob": "0cc12f6e28b5f7172d9d45b8417f08a4b324a685",
+    "sha256": "72ea915c82b2da666d318aaef8d4429b2666a34d1c5cb9969858e7d57fa36237"
+  },
+  {
+    "module": "Effect4.Program.Native",
+    "path": "src/Effect4/Program/Native.lean",
+    "git_blob": "9180b01277076131b23d7b4373fd295a4e53e4fa",
+    "sha256": "5e4ee526c563318a5cd7ebdf1f6dd6f18ef0c5fa6625c3680967611f08b4a857"
+  },
+  {
+    "module": "Effect4.Program.NativeAtom",
+    "path": "src/Effect4/Program/NativeAtom.lean",
+    "git_blob": "fffbabb269bd50a9834077b91a66c42d0fc20ed4",
+    "sha256": "af8505497bc417cc3cf78f5efb6e00d53a3a7ab18af9794cc3f70f2d57c9e79d"
+  },
+  {
+    "module": "Effect4.Program.Node",
+    "path": "src/Effect4/Program/Node.lean",
+    "git_blob": "5a97200c26ead8d1cddc27c3489a847ec33d2717",
+    "sha256": "cdd004d28beb1a3080a998e1f159dff52365545c3a11262af88d350cbde9038b"
+  },
+  {
+    "module": "Effect4.Program.NodeLenses",
+    "path": "src/Effect4/Program/NodeLenses.lean",
+    "git_blob": "b33aeddbec3f0a7b9e79bd038546ab600599843a",
+    "sha256": "eb3b6454357d7175f862606228b586b4929236e07cb7fdfa5f6e50b5aa84e0ba"
+  },
+  {
+    "module": "Effect4.Program.Packages",
+    "path": "src/Effect4/Program/Packages.lean",
+    "git_blob": "817190c7f5156be0dcefdf345c02abe32b8a9623",
+    "sha256": "9fec7eeb98c29bede2d9ef855e7498e5ee3e7ab290740bcc3c4d6b6f73c36489"
+  },
+  {
+    "module": "Effect4.Program.Packages.KeyValueStoreMemory",
+    "path": "src/Effect4/Program/Packages/KeyValueStoreMemory.lean",
+    "git_blob": "b7994c83bf87e1c38692217dc92dc6cea769c4af",
+    "sha256": "ba790d3625f191ba22cd6955b9135f1f2e1544bad81d53bb25c28cd17ba6737e"
+  },
+  {
+    "module": "Effect4.Program.Packages.SqliteBun",
+    "path": "src/Effect4/Program/Packages/SqliteBun.lean",
+    "git_blob": "8ab2af8356bfbb2d9ce71670af8c62f48fe904e2",
+    "sha256": "65e2f931ebd29807fdf51c04b5f1cb6ce2ddccd5ea0ffdfbeda3adc71a0ba997"
+  },
+  {
+    "module": "Effect4.Program.Profile",
+    "path": "src/Effect4/Program/Profile.lean",
+    "git_blob": "b5a24cfd3314f492bc41447626990f74cfe54c66",
+    "sha256": "d99b4b36e0e5dc146562c341aa18cd5b92f67723b7a5da1744e9b1276bbcc291"
+  },
+  {
+    "module": "Effect4.Program.Provision",
+    "path": "src/Effect4/Program/Provision.lean",
+    "git_blob": "06522d517931f2d0a64fad4b8a08ba4f59dcb2d4",
+    "sha256": "94145541f19074b1506a264f89494bdf2783ed9110e8d5b6caea8659ec2e5e74"
+  },
+  {
+    "module": "Effect4.Program.Refs",
+    "path": "src/Effect4/Program/Refs.lean",
+    "git_blob": "963e1428055aa7e320ecdffb9d1ef700b5bb82d3",
+    "sha256": "d0c4f64ccca5e412162545d942454605c08b082bfd98372a2cfc054b8c4a14b6"
+  },
+  {
+    "module": "Effect4.Program.Scoped",
+    "path": "src/Effect4/Program/Scoped.lean",
+    "git_blob": "8d0d40a8aa2efaaef056faa8e4a813f97b0ca4e3",
+    "sha256": "dc0c13cbc24df67f1de6917823cdc6c5c83cbc039fdc79415bfa5ee15bd8361c"
+  },
+  {
+    "module": "Effect4.Program.Stream",
+    "path": "src/Effect4/Program/Stream.lean",
+    "git_blob": "9a141f14cb36a1dccf11202bfcce3bd14665c3bd",
+    "sha256": "2573ac5520840d25dd76fa218d9a38ffc2ad0591769ef584292079442873f054"
+  },
+  {
+    "module": "Effect4.Program.Table",
+    "path": "src/Effect4/Program/Table.lean",
+    "git_blob": "8712c2c4b365b297e0b3875e5ebdf8c1c057b10d",
+    "sha256": "adbf83e6ba379ab6aed7f0a11582426dbc76be6e34b21d161501238d2fcbb97d"
+  },
+  {
+    "module": "Effect4.Program.Ty",
+    "path": "src/Effect4/Program/Ty.lean",
+    "git_blob": "de7708bbf17a31152facf872423b108be21b2b3a",
+    "sha256": "ca9e83f2e03e55a7454554c3ce606e645d962a75fc58154aa4e3f22745262655"
+  },
+  {
+    "module": "Effect4.Program.Typed",
+    "path": "src/Effect4/Program/Typed.lean",
+    "git_blob": "c09c725d9d82a627b39f498ad12415f97f70b795",
+    "sha256": "de510c59c9fb211d9d59c687aeaefe7bd0fe8970ff1427e1579402fba0b9a625"
+  },
+  {
+    "module": "Effect4.Program.Typing",
+    "path": "src/Effect4/Program/Typing.lean",
+    "git_blob": "ad8af8806e5596d6c5d3a60d543f3e8e6e4cd79f",
+    "sha256": "db7eb9a325cbf17e2119c5d95e9fca549d3bc3da06bc152070aaa66b2a0911f4"
+  },
+  {
+    "module": "Effect4.Program.Typing.Agreement",
+    "path": "src/Effect4/Program/Typing/Agreement.lean",
+    "git_blob": "3e5664f92e143bec08e2be7c93954f8eed4ee8c7",
+    "sha256": "a54f671a95ff46482b2dbc3cd08b9a4d693274d9d98bc1378435bbd619ab2972"
+  },
+  {
+    "module": "Effect4.Program.Typing.Blame",
+    "path": "src/Effect4/Program/Typing/Blame.lean",
+    "git_blob": "e0dcac14bda35c9a48e54c69bdcba1b2f885f1c2",
+    "sha256": "1f7d4a80e4bc9d6688f3ea7eee34cc1f842d2b4b74e6ce5de42bff6ab2ef4d1b"
+  },
+  {
+    "module": "Effect4.Program.Typing.Rules",
+    "path": "src/Effect4/Program/Typing/Rules.lean",
+    "git_blob": "2e4bec48efe759ed789df25115b51a11f623fb7c",
+    "sha256": "eb4fd9fe5222ee84c7359977981bc47a6c0c9c0116718cce2d15c29eb1303ecb"
+  },
+  {
+    "module": "Effect4.Run",
+    "path": "src/Effect4/Run.lean",
+    "git_blob": "df45515c2999a14bd06e4a91e48f9720f09779ac",
+    "sha256": "29945a848a10dbf4b4bfe10930f5795c197cc6f21e8738d308d2db46aeba9531"
+  },
+  {
+    "module": "Effect4.Schema.Annotations",
+    "path": "src/Effect4/Schema/Annotations.lean",
+    "git_blob": "a3a3525cf9f421f2a6141a5adfa60a7dd93e8f3b",
+    "sha256": "7725aeff8f8e6ddd3b3e4a0bbe3514c6874c8dbba1698346807dffdc3863f789"
+  },
+  {
+    "module": "Effect4.Schema.Authoring",
+    "path": "src/Effect4/Schema/Authoring.lean",
+    "git_blob": "27e1f2bb7280f7a208f7e4fd2e2db21bea6dc24c",
+    "sha256": "39628fac371dd26f185b5b61c4767aa50f262b21a3d6a12a376ac3dd13702934"
+  },
+  {
+    "module": "Effect4.Schema.Bridge",
+    "path": "src/Effect4/Schema/Bridge.lean",
+    "git_blob": "13d7a9f83cbb8d3187899d84da5685a9958d0e1f",
+    "sha256": "883e7da9e33771920f422cc48a18b1369564b7b13c444f308c82bfdf41158849"
+  },
+  {
+    "module": "Effect4.Schema.Codec",
+    "path": "src/Effect4/Schema/Codec.lean",
+    "git_blob": "55f58fb57bf14a899d78b95aa01deff35111cfc5",
+    "sha256": "ae5a7c2f2b956db428367ef3253f68e2635dbb80d3b9dcd9b0afdc35e471bb18"
+  },
+  {
+    "module": "Effect4.Schema.Document",
+    "path": "src/Effect4/Schema/Document.lean",
+    "git_blob": "5bcb5194aedd813c7881c48aa89886d9060a1761",
+    "sha256": "64464dbaff579af1bca915d0c75982aaec7416b5af68cbb314e16fbb2cb0e1d9"
+  },
+  {
+    "module": "Effect4.Schema.Fold",
+    "path": "src/Effect4/Schema/Fold.lean",
+    "git_blob": "6ee607a1fc24aa97a88a4009d5d35224df1655fd",
+    "sha256": "f68daef1a61cdf224bf0b567722d0c4a726b24ecd40b92f882f1b7c1f472137f"
+  },
+  {
+    "module": "Effect4.Schema.OfShape",
+    "path": "src/Effect4/Schema/OfShape.lean",
+    "git_blob": "2175e30190c31761c175c1b82e796b261e13c135",
+    "sha256": "159df83bba773d551c8ba421ec59e7becbcff473c44b921ccb99edd357f24ee8"
+  },
+  {
+    "module": "Effect4.Schema.Payload",
+    "path": "src/Effect4/Schema/Payload.lean",
+    "git_blob": "6894f1294d14385b8152fe2dbe31bfb2da957e3c",
+    "sha256": "22af7b6ac008f18128566e1819ea0ce440b6769c57387522d3a49c707afac594"
+  },
+  {
+    "module": "Effect4.Schema.Representation",
+    "path": "src/Effect4/Schema/Representation.lean",
+    "git_blob": "88aecca3b429e8cc8999ab214b6a07436d8dbc34",
+    "sha256": "65c2b5fccb135187bfb282d5cf491734afccae19def2a8ce729c296b795d00b9"
+  },
+  {
+    "module": "Effect4.Store.Carrier.Digest",
+    "path": "src/Effect4/Store/Carrier/Digest.lean",
+    "git_blob": "c923d1d690838b3d29270b0cde31e3662c1f6574",
+    "sha256": "3cc3373de9b78b86a19ee5091a75a2bb668a62f9875f7a78afd193027251ff5a"
+  },
+  {
+    "module": "Effect4.Store.Carrier.Digits",
+    "path": "src/Effect4/Store/Carrier/Digits.lean",
+    "git_blob": "a28f9d26ecc56dbc545517bb6a3c2fa48674a704",
+    "sha256": "148b57880824da05f322013e6ce44b13d2a2b1ff051dcb6a6006ec2a11d4ab4e"
+  },
+  {
+    "module": "Effect4.Store.Carrier.Fold",
+    "path": "src/Effect4/Store/Carrier/Fold.lean",
+    "git_blob": "f681d25396a691884a4159ac01477034fa67abe2",
+    "sha256": "fbfca23d0356e144011aa38be891e4a565c0d2e7ef26784db9e2e30afe4a7197"
+  },
+  {
+    "module": "Effect4.Store.Carrier.Image",
+    "path": "src/Effect4/Store/Carrier/Image.lean",
+    "git_blob": "a81d2731c63e0b32f7b81273feffb6332ea6378c",
+    "sha256": "db57ceffaaab2a99f30b643e0f6fde44a7dee65aa0593c3db9aeb0972e0e416d"
+  },
+  {
+    "module": "Effect4.Store.Carrier.Image.Containers",
+    "path": "src/Effect4/Store/Carrier/Image/Containers.lean",
+    "git_blob": "d9f95853f823f40bdc200db9d6775962ecb6e137",
+    "sha256": "26c6d7f70c368cc75a190b1453b0c7f7584e11405a1af1e361cbd95ab928607c"
+  },
+  {
+    "module": "Effect4.Store.Carrier.Kind",
+    "path": "src/Effect4/Store/Carrier/Kind.lean",
+    "git_blob": "37fe67654f5dc6d002596f1aa522534bfcb3c0c0",
+    "sha256": "efe84efb7270b1313545a1069aeee7672315f7711562889f4c4f33496878aa9d"
+  },
+  {
+    "module": "Effect4.Store.Carrier.Utf8",
+    "path": "src/Effect4/Store/Carrier/Utf8.lean",
+    "git_blob": "90e1615aed54bd78ac82d004999b6fae1d8b71de",
+    "sha256": "acb9896cfb4e3a3604e90c1f04245b5bcbe3fc39d6c2c847b1a5bb38f4b4da4f"
+  },
+  {
+    "module": "Effect4.Store.Carrier.Val",
+    "path": "src/Effect4/Store/Carrier/Val.lean",
+    "git_blob": "850459cbfe5b3d5d9243d1f3d13007aa9be35036",
+    "sha256": "7d9f711fd8ec083a782009ee04ccec36e7f6a1d793946e3e1b49e163771f0e24"
+  },
+  {
+    "module": "Effect4.Store.Domain.AnnotationsCanonical",
+    "path": "src/Effect4/Store/Domain/AnnotationsCanonical.lean",
+    "git_blob": "a4aeb7caf876730489086bdbd0638a8b24d3a186",
+    "sha256": "dab64674464041e6b20122bdc883fbced6aa3e47618982c9ba55de472394a1f0"
+  },
+  {
+    "module": "Effect4.Store.Domain.Canonical",
+    "path": "src/Effect4/Store/Domain/Canonical.lean",
+    "git_blob": "2855bd60cf279776b4af34b5da8061b2372fd3fb",
+    "sha256": "fdfa7e771a0b05676e39f5155ff0692d2bba0df18b21633e9bf4ffbc8163594f"
+  },
+  {
+    "module": "Effect4.Store.Domain.Cascade",
+    "path": "src/Effect4/Store/Domain/Cascade.lean",
+    "git_blob": "b4df307bd1961ef7ffc9b2daf7759c532df3cf4e",
+    "sha256": "3107adfac35ef2226c1ad6c59e75a937775237e4b0aa2c86ccf7c30710e411c2"
+  },
+  {
+    "module": "Effect4.Store.Domain.Clock",
+    "path": "src/Effect4/Store/Domain/Clock.lean",
+    "git_blob": "4ca56677574bc7340c4b6c9429daf8c0969f533b",
+    "sha256": "171966a79cc540898b5f5b6655103133bb6e0d8de3a806c0a1a83d4c97d85c39"
+  },
+  {
+    "module": "Effect4.Store.Domain.Derived.Json",
+    "path": "src/Effect4/Store/Domain/Derived/Json.lean",
+    "git_blob": "e3e944bd21141c69680d43fb30495241f5f7099f",
+    "sha256": "54f25d6e1b7511f3897f9bc5778317a8723f275bcd2c65399476ded3ebd37c26"
+  },
+  {
+    "module": "Effect4.Store.Domain.Derived.Program",
+    "path": "src/Effect4/Store/Domain/Derived/Program.lean",
+    "git_blob": "1f108f022d7d984e6851919a91354d3c68e9c2fb",
+    "sha256": "04e1dee961944155fbc40ed7c6d6a9a189815179d98ca9336c7cdaae9501b40c"
+  },
+  {
+    "module": "Effect4.Store.Domain.Derived.Schema",
+    "path": "src/Effect4/Store/Domain/Derived/Schema.lean",
+    "git_blob": "ed7133284063d0c0a71b6447d4fed4037a78f365",
+    "sha256": "ea10972375589d8c6f91016c2072516b31afb2485f9bdfa8395cff6883cb0930"
+  },
+  {
+    "module": "Effect4.Store.Domain.Derived.Value",
+    "path": "src/Effect4/Store/Domain/Derived/Value.lean",
+    "git_blob": "953cd6f22d1e6542c7351d0edca41238c72b7bfb",
+    "sha256": "eb2bcacc34e1f6d4d44797331c672ba86b99b2aceacdd3d0302769d1582dab3b"
+  },
+  {
+    "module": "Effect4.Store.Domain.Genesis",
+    "path": "src/Effect4/Store/Domain/Genesis.lean",
+    "git_blob": "23a7d35324410f032f601def2d481b36b029dfca",
+    "sha256": "b52d15f5fb21cf59a2cbf60fbb6fc447261538620c29e20e97dd6c94a5beda61"
+  },
+  {
+    "module": "Effect4.Store.Domain.Node",
+    "path": "src/Effect4/Store/Domain/Node.lean",
+    "git_blob": "5b3d66fc16744306b7f7e2356e02ab3eb4acb503",
+    "sha256": "d37a23ad0067f193d06ae0d3aa18ce856b0ee273370aefe324fb22ec55ff1bd0"
+  },
+  {
+    "module": "Effect4.Store.Domain.Pin",
+    "path": "src/Effect4/Store/Domain/Pin.lean",
+    "git_blob": "69f3a1d4927e710ed044938702527452b6066471",
+    "sha256": "5d9367aa8261e339895fc45ff30728ae327027fef7abd3e0c5b9b1481f39ffb8"
+  },
+  {
+    "module": "Effect4.Store.Domain.PinDerived",
+    "path": "src/Effect4/Store/Domain/PinDerived.lean",
+    "git_blob": "6a324adbd82661fb716a1807ff224ed76eee2b46",
+    "sha256": "3d30b1f5e474f0cf23791252743e11e460670fc32dceee159e39d2f5618a3719"
+  },
+  {
+    "module": "Effect4.Store.Domain.ProgramWire",
+    "path": "src/Effect4/Store/Domain/ProgramWire.lean",
+    "git_blob": "50b8be440a58bd3c36048927ed1ce4ff6f82f5ed",
+    "sha256": "f91ccf2d370e3068e7f8822ae3f0a407acabdfb506a104362bff1bded8d73206"
+  },
+  {
+    "module": "Effect4.Store.Domain.RowCanonical",
+    "path": "src/Effect4/Store/Domain/RowCanonical.lean",
+    "git_blob": "dfe77a241b19dd214709e3781c2e7dbd5a931ece",
+    "sha256": "12e99704c15ee195c6aa8ac9e1dfe37406f855cccafa7db0e520a064c0c4bff7"
+  },
+  {
+    "module": "Effect4.Store.Domain.Shape",
+    "path": "src/Effect4/Store/Domain/Shape.lean",
+    "git_blob": "1f671d12733304a4192119aad3ad5c5ded395c1e",
+    "sha256": "928043acac873101ed5f0a0845bd699ac1b894c43082f4588c09e1dcaac81aa5"
+  },
+  {
+    "module": "Effect4.Store.Domain.Store",
+    "path": "src/Effect4/Store/Domain/Store.lean",
+    "git_blob": "ad2f6e298258495cd3ea10ce896da85b70faaf35",
+    "sha256": "d981810473b4d6984ef5f4910446d3bdee22cadfff9de537db973097b9d23440"
+  },
+  {
+    "module": "Effect4.Store.Domain.Traits",
+    "path": "src/Effect4/Store/Domain/Traits.lean",
+    "git_blob": "95c4e421ebeb36f3ec46638de2abce486c3f4f95",
+    "sha256": "839d2279d72398c3bf4fe539ed1a2c316a7c7cdc79e4a3ac018405994fd6bfa6"
+  },
+  {
+    "module": "Effect4.Store.Domain.Word",
+    "path": "src/Effect4/Store/Domain/Word.lean",
+    "git_blob": "78294979f4534a7b74a5e0df0cec8d6123d4af36",
+    "sha256": "0f935c001fb954325a84e080eb4254a989e27d74408d2b3b971651339d27ac70"
+  },
+  {
+    "module": "OCaml5",
+    "path": "src/OCaml5.lean",
+    "git_blob": "7c3626c4ed1709da785ec3be669b8983a2392f68",
+    "sha256": "add971703ab4f394c4bcaa85a75766281bbcbc1145b9058b1a1b09d0871968a6"
+  },
+  {
+    "module": "OCaml5.Eff.Emit",
+    "path": "src/OCaml5/Eff/Emit.lean",
+    "git_blob": "ce2be6390a2c4ba1d42d366ba18cf7e5ae7523a7",
+    "sha256": "fc5608c9ad52e24f1a956e5b6db0f480a3389c2573e72b5e5c6adcaa05575566"
+  },
+  {
+    "module": "OCaml5.Eff.Goldens",
+    "path": "src/OCaml5/Eff/Goldens.lean",
+    "git_blob": "5f75cbc0bb84eee351ecbfacf9515ecc776ec739",
+    "sha256": "98b7dcd04056e4bc51a59920f96cd1aec5020e512a9cafd80062ba811238c817"
+  },
+  {
+    "module": "OCaml5.Eff.Metadata",
+    "path": "src/OCaml5/Eff/Metadata.lean",
+    "git_blob": "153c57b7aa51707c55832d861e8a603c85f4a44a",
+    "sha256": "a581b1033e4fdb5086fe3b64c3f140889c932621950808635fa807166b81df23"
+  },
+  {
+    "module": "OCaml5.Eff.World",
+    "path": "src/OCaml5/Eff/World.lean",
+    "git_blob": "da6ef0173a6a8c77bb4a71a416a6b3ebd5a96c62",
+    "sha256": "866823acc753618c6236758feef7d15e4f27eef4e0976d9a9bb5e8950d712132"
+  },
+  {
+    "module": "OCaml5.Lcnf.Clock",
+    "path": "src/OCaml5/Lcnf/Clock.lean",
+    "git_blob": "3fc96cc3441b542173af1c011e572c1e2e590655",
+    "sha256": "24b8ffb59c1b521bed203bcd5c33638f5a936c4bbe3b13236e7a246174c63e14"
+  },
+  {
+    "module": "OCaml5.Lcnf.ClockFlow",
+    "path": "src/OCaml5/Lcnf/ClockFlow.lean",
+    "git_blob": "5e08a224ebbf19cbac19eb6aa59bd99d6942f215",
+    "sha256": "2e134ceabbad3a3dbe3f70d216245b03918d77c07f9970ddbe0c8d2d4ea2e677"
+  },
+  {
+    "module": "OCaml5.Lcnf.Dump",
+    "path": "src/OCaml5/Lcnf/Dump.lean",
+    "git_blob": "87d98005b7471e10c80de231a935d910718a604d",
+    "sha256": "88e09284806322ec35467230917976523a2faf0586572faa70d3b19e5cd9534a"
+  },
+  {
+    "module": "OCaml5.Lcnf.Externs",
+    "path": "src/OCaml5/Lcnf/Externs.lean",
+    "git_blob": "b99c1be5441e9bbdfd77ef169084d945d4767987",
+    "sha256": "b661396bc00d843aadaf5aa7f4cb4f7c37849e959d94f8c0ae6953ba3fc61a47"
+  },
+  {
+    "module": "OCaml5.Lcnf.Naming",
+    "path": "src/OCaml5/Lcnf/Naming.lean",
+    "git_blob": "bc5b0d2e94b0c5972e78d576c6d11c380a875340",
+    "sha256": "511afe79d5c9dd063666f8100ecb4b2323c538a364e9173c311aacbbe778d9b8"
+  },
+  {
+    "module": "OCaml5.Lcnf.Native",
+    "path": "src/OCaml5/Lcnf/Native.lean",
+    "git_blob": "bfbeb66ba1f10f65f6da24f214eb9294508d9ff8",
+    "sha256": "f46727f3b757aefc4489ac9f4f8431ceb64c42d9fd4d221a945442562e320c5d"
+  },
+  {
+    "module": "OCaml5.Lcnf.Translate",
+    "path": "src/OCaml5/Lcnf/Translate.lean",
+    "git_blob": "3b3aba7340bf84d1a2d185ca31bb06d663c7e03d",
+    "sha256": "86649e17d703651cd1e9bab72d32f2a04d3284ab9ac2683354ee3b32601a6d6c"
+  },
+  {
+    "module": "OCaml5.Lcnf.Types",
+    "path": "src/OCaml5/Lcnf/Types.lean",
+    "git_blob": "6233dc2d5141ef164638a72d371b99bfd23878bc",
+    "sha256": "3e9fb8d9175ed3455d80f9271de6749df0910cc8ba262defd875a420eba0a65d"
+  },
+  {
+    "module": "OCaml5.Ml.Check",
+    "path": "src/OCaml5/Ml/Check.lean",
+    "git_blob": "9d3a962bebca6ef53008aadcb77582f3ee51d0df",
+    "sha256": "f144aaeae442a580e1e0e29e1778d5143c7d4ec9aeeebf4666b4234ef0f140d9"
+  },
+  {
+    "module": "OCaml5.Ml.Identifier",
+    "path": "src/OCaml5/Ml/Identifier.lean",
+    "git_blob": "43a81482692116b8469ae98c821f55afc6921cdf",
+    "sha256": "23ade1518ef7bbecd89ea60c8d0e0cf9a3e2ab3d78c026659966bf4ca773e236"
+  },
+  {
+    "module": "OCaml5.Ml.Profile",
+    "path": "src/OCaml5/Ml/Profile.lean",
+    "git_blob": "f0323afffd0d7fe1cc6ebf9a0451cb47e0c006c5",
+    "sha256": "1e1dadc13b927d7af15ae68ade02a141d5a9b2d18c2d414fcf9d71f86ed2a26b"
+  },
+  {
+    "module": "OCaml5.Ml.Render",
+    "path": "src/OCaml5/Ml/Render.lean",
+    "git_blob": "89d8e580a581026baa5f0afa433451e0c1d06302",
+    "sha256": "ee35ae2f71cccafe3b28e7ab9ea1d90b1dc9eae35d78f646ab2563b0abe7807d"
+  },
+  {
+    "module": "OCaml5.Ml.Syntax",
+    "path": "src/OCaml5/Ml/Syntax.lean",
+    "git_blob": "9e0d73af7f59e38b3b58fff1e69625ba4a439894",
+    "sha256": "1869f4e9c140077b53c29e43784cae9f8db91cb6b03c1484efb465f60ee5ec37"
+  },
+  {
+    "module": "OCaml5.Tools.CasGoldens",
+    "path": "src/OCaml5/Tools/CasGoldens.lean",
+    "git_blob": "8deda98e23a22fd5a430c251a0e44dd7ba18e6f7",
+    "sha256": "925dd96bded2ea51c637b2660f9e2e91a1761e13a0ed71eca85aabe916cbe3df"
+  },
+  {
+    "module": "OCaml5.Tools.EffGen",
+    "path": "src/OCaml5/Tools/EffGen.lean",
+    "git_blob": "84e7094a494b0a36394a5a244b721b3455bfd544",
+    "sha256": "5757fb36db61f768219404bb8f3a2b30eb3a1765bce01dca64afb99d242cd9eb"
+  },
+  {
+    "module": "OCaml5.Tools.EffWire",
+    "path": "src/OCaml5/Tools/EffWire.lean",
+    "git_blob": "218f92d45415e95418ee7b2c9f1661fc8a12d6fb",
+    "sha256": "2da49dd410c2bdcc33b932e9fe532e833b6b2801a7bb66a4229a30c50a24afe8"
+  },
+  {
+    "module": "OCaml5.Tools.LcnfDump",
+    "path": "src/OCaml5/Tools/LcnfDump.lean",
+    "git_blob": "4d7866db594e069ec7ada3af2d2d2b0ffe11e572",
+    "sha256": "ac6b1f774443df89a791c6d8cc597f8b5b8d98ca2c8d2374aebbde42739fc449"
+  },
+  {
+    "module": "OCaml5.Tools.LcnfGen",
+    "path": "src/OCaml5/Tools/LcnfGen.lean",
+    "git_blob": "8f7fd9d8bcdfecf1d98f64323c95cb752d932913",
+    "sha256": "34fcc2936e393d794231720c0ed97e2d1b5e52e7e6293ea54cec8fe0ca6302cf"
+  },
+  {
+    "module": "Conform.Cli.Audit",
+    "path": "tools/Conform/Cli/Audit.lean",
+    "git_blob": "cc9f440b17fc5e58d377136ba3977f7c1a38cfa1",
+    "sha256": "b5e178d37ccaed4d9cea606543ab3118042c32b79b7c57a403581a743ee1f11c"
+  },
+  {
+    "module": "Conform.Cli.BoundaryControls",
+    "path": "tools/Conform/Cli/BoundaryControls.lean",
+    "git_blob": "6466caec1b120833bbefd2cea0f185b0303445da",
+    "sha256": "e4d7dd9fba405b540fa5642ecb32c666fed0116a3e82938b1cd05d0139fd730e"
+  },
+  {
+    "module": "Conform.Cli.LcnfMl",
+    "path": "tools/Conform/Cli/LcnfMl.lean",
+    "git_blob": "5533e01b3f37c0fa5ac40323f89b47e1b92dca77",
+    "sha256": "4d531102e0eb940b5bb30a671d6a446c476ae251a8495f1c0bca3ae4805a6896"
+  },
+  {
+    "module": "Conform.Cli.LcnfSemantics",
+    "path": "tools/Conform/Cli/LcnfSemantics.lean",
+    "git_blob": "72220988cb66c5f6f80fa67bac783b6912e589ed",
+    "sha256": "8d560472cc83618716e98336de810300e1a713cdcbcea0b8b25435fa82dbbdf2"
+  },
+  {
+    "module": "Conform.Cli.Selftest",
+    "path": "tools/Conform/Cli/Selftest.lean",
+    "git_blob": "16df60f7c080e16f55a1ef3b74104496f01c00fe",
+    "sha256": "0760e2d6f7e6fb0832f8b4321e4718bcd4619f7205c0fb554e730bb438e6da54"
+  },
+  {
+    "module": "Conform.Core.Evidence",
+    "path": "tools/Conform/Core/Evidence.lean",
+    "git_blob": "e259eb26c517785183d5787c7412f297cf873251",
+    "sha256": "b0783a3cac562bc2542090f81c5ddb40d2f1770913c2ffe8701d5e2e2c7afc4d"
+  },
+  {
+    "module": "Conform.Core.Obligation",
+    "path": "tools/Conform/Core/Obligation.lean",
+    "git_blob": "caab4952f2b23571f921282704d8e5a4fc283264",
+    "sha256": "1f5f8c3e22fa17a958055569c16a6a2b926446e772f22dae26da855bf8086c8a"
+  },
+  {
+    "module": "Conform.Core.Policy",
+    "path": "tools/Conform/Core/Policy.lean",
+    "git_blob": "5d8d524776a1e76a3c8bf448a894b065b323f31a",
+    "sha256": "01c892d336f69feeedf14e1f07a16c043eed73b6335e8f840a65f3f4187e0a0a"
+  },
+  {
+    "module": "Conform.Core.Proof",
+    "path": "tools/Conform/Core/Proof.lean",
+    "git_blob": "c1548363ee7f943fbbc9f18ecb4836cc0e4002bb",
+    "sha256": "fa556a0f2158f6f505f60497a9e184deee8f587e1f00f3c6f452ea1d44e1a023"
+  },
+  {
+    "module": "Conform.Core.Report",
+    "path": "tools/Conform/Core/Report.lean",
+    "git_blob": "0cf39b8578eeb92b015a256121cde7cdb7ca8eb0",
+    "sha256": "22cb35550b231565d1d27fd478347db06e15c95421f9b549b7d1c06f8b9d9ed3"
+  },
+  {
+    "module": "Conform.Effect4.CompilerControls",
+    "path": "tools/Conform/Effect4/CompilerControls.lean",
+    "git_blob": "22c1fe58716e3162930f089547a25f8503c86dd5",
+    "sha256": "d31073d2feeeebda32d38875925970d0a1846dcc19d8d9f1fb9d35983d198084"
+  },
+  {
+    "module": "Conform.Effect4.Fixtures.Traffic",
+    "path": "tools/Conform/Effect4/Fixtures/Traffic.lean",
+    "git_blob": "e83d78af4572e8b4228e263addfe0932e7730834",
+    "sha256": "b5f329e0447e230ddeec132fdc73c8d91de733e700657756905564d2a97d2817"
+  },
+  {
+    "module": "Conform.Effect4.LayoutWorld",
+    "path": "tools/Conform/Effect4/LayoutWorld.lean",
+    "git_blob": "9275146af4a44e12fe821c1262a505a094f5bea6",
+    "sha256": "aa7489a93380a6ec8f7a67149db374c478262722c668f27b277d0d94b30d8f49"
+  },
+  {
+    "module": "Conform.Effect4.Lcnf",
+    "path": "tools/Conform/Effect4/Lcnf.lean",
+    "git_blob": "8f173d292c7727d9fcbd32806b7169562ce97303",
+    "sha256": "65091e7806e4d2a4b4d05d72be731f08c680c26f253c1036fba8cce814edc8f8"
+  },
+  {
+    "module": "Conform.Effect4.LcnfMl",
+    "path": "tools/Conform/Effect4/LcnfMl.lean",
+    "git_blob": "90cc691358ea7f7a78b3a1ce1450d2a91e9b44d9",
+    "sha256": "7846de4395fe01cfa0a44190b2e0241ceaf7a77c62ccfa3959c6d15036d53129"
+  },
+  {
+    "module": "Conform.Effect4.LcnfSemantics",
+    "path": "tools/Conform/Effect4/LcnfSemantics.lean",
+    "git_blob": "68c1f4094c4dff9023b018adeba8294a88b602b0",
+    "sha256": "ba206cac357f49f530b4e5e710fb0d9f2b68c16e671401e550ec951303b6089c"
+  },
+  {
+    "module": "Conform.Effect4.NativeMain",
+    "path": "tools/Conform/Effect4/NativeMain.lean",
+    "git_blob": "c6b88df02865cfe923fa836a2f4ff9b81db4a5a1",
+    "sha256": "45994dba2ab04b549694ab5e4753d3aa6e56e366e7d61eb90437ac2ea5f3ae31"
+  },
+  {
+    "module": "Conform.Effect4.Normalization",
+    "path": "tools/Conform/Effect4/Normalization.lean",
+    "git_blob": "51add4d214f803df48418e22b62e2a9d3771c5a1",
+    "sha256": "fd86d4f769a82439cdcbdc12fdadd64543cc378ac6c1bf0ca8f0252a7ee9f326"
+  },
+  {
+    "module": "Conform.Effect4.NormalizationInputs",
+    "path": "tools/Conform/Effect4/NormalizationInputs.lean",
+    "git_blob": "f8074df2e2f82bbc085f94521966cade89318dfc",
+    "sha256": "d65d0db57cafa054d31d854b57bf15c1ad0ff7aa329f6dc5dadab57c64e65056"
+  },
+  {
+    "module": "Conform.Effect4.TargetLeanNative",
+    "path": "tools/Conform/Effect4/TargetLeanNative.lean",
+    "git_blob": "7a1cd1cd7fc09146eb6601aa91b383cd51254644",
+    "sha256": "fa499d573ac65018782a93963deab03c7a3672e9f7458018eb98f20e8f065664"
+  },
+  {
+    "module": "Conform.Layout.Build",
+    "path": "tools/Conform/Layout/Build.lean",
+    "git_blob": "3a976e56347defa4edc0b254abe0f75a40f05ebe",
+    "sha256": "9c9a2a3d3fb7d3442312f4ed530a7bd2d400e135e11fa6405265cf4ece553edb"
+  },
+  {
+    "module": "Conform.Layout.Check",
+    "path": "tools/Conform/Layout/Check.lean",
+    "git_blob": "d80e4ceb52b53784c0abd2122ba39a57ae16acd0",
+    "sha256": "99231d23186ba2cbeb41916db56dd756a0e563f26fa1937015c27c01d24dc091"
+  },
+  {
+    "module": "Conform.Layout.Laws",
+    "path": "tools/Conform/Layout/Laws.lean",
+    "git_blob": "f19f6be9ae1cd89aa90717e9f910be0180db6c59",
+    "sha256": "77501b2d15aa5d4566905625a4e4a7f1f55179082bfb30dfad35007792274a9e"
+  },
+  {
+    "module": "Conform.Layout.Layout",
+    "path": "tools/Conform/Layout/Layout.lean",
+    "git_blob": "7495eaaf70e7dc2229f89f829e0d8c36973d78c8",
+    "sha256": "12df178af5b45e7949be95c281094f5294c254fcac687fd9c9c532668b655677"
+  },
+  {
+    "module": "Conform.Layout.Native",
+    "path": "tools/Conform/Layout/Native.lean",
+    "git_blob": "4953043ff235770b83196bb8a08120632f8a5d1a",
+    "sha256": "e320ef74b1b7d61b3d84cb73d34f3a26a9b5f321d3e54699abdb3777d6673741"
+  },
+  {
+    "module": "Conform.Layout.Reflect",
+    "path": "tools/Conform/Layout/Reflect.lean",
+    "git_blob": "02332c818cec9e125dbbcc7e82c00c68504f6641",
+    "sha256": "ba8ac47ac2fc9030d411c81db44630c35664a422f1dbf5b838b7149b4dd6a68a"
+  },
+  {
+    "module": "Conform.Layout.Types",
+    "path": "tools/Conform/Layout/Types.lean",
+    "git_blob": "dce7308116b3e282080797546cc7d40d7b43bbb0",
+    "sha256": "1137f790183d990f761f68d76371036fc8d10256837d1007ee127745652b9991"
+  },
+  {
+    "module": "Conform.Lcnf.Cases",
+    "path": "tools/Conform/Lcnf/Cases.lean",
+    "git_blob": "e4d8b2348fc23182fa6bc279400363e3240e021b",
+    "sha256": "7975c7d2890998fbabd63c291aa5b7f5bf52034ba94a5a1406f70405a1a8f920"
+  },
+  {
+    "module": "Conform.Lcnf.Index",
+    "path": "tools/Conform/Lcnf/Index.lean",
+    "git_blob": "393876c0d300ab5710e7a70ec85acc533dd3913d",
+    "sha256": "b2b539ec19d61fbd0da7cf657099748cf299bdce3e89e5798207f3dfca14f3e1"
+  },
+  {
+    "module": "Conform.Lcnf.Rules",
+    "path": "tools/Conform/Lcnf/Rules.lean",
+    "git_blob": "98e20dc741a970f6a4174f849951ad0c321c027d",
+    "sha256": "796166b048e37c7f3319a8571b87147d8b7f30de23e973e3f05542384dce828d"
+  },
+  {
+    "module": "Conform.Lcnf.Semantics",
+    "path": "tools/Conform/Lcnf/Semantics.lean",
+    "git_blob": "8e35ebf06a130cf861f7e6ca0c4e019f61e2a699",
+    "sha256": "31213ad99494c434ac7d59f19b7de664f0520658496de38054ee3347de0a876f"
+  },
+  {
+    "module": "Conform.Lcnf.SemanticsTarget",
+    "path": "tools/Conform/Lcnf/SemanticsTarget.lean",
+    "git_blob": "9bea1fc70cf5a4c3a1781a7cde5811fffa915f16",
+    "sha256": "60c84600aaad58214889bb98597ddcaa8ea071f49800d65f76c9d13b722ced0d"
+  },
+  {
+    "module": "Conform.Lcnf.Validity",
+    "path": "tools/Conform/Lcnf/Validity.lean",
+    "git_blob": "b1b5bb67b065b0f00980058ce655833ead967b0b",
+    "sha256": "5bd0057c2a5e6c78be0660f5b8dddccfc4262380e98b58ebb0eab1ba31a45730"
+  },
+  {
+    "module": "Conform.Manifest.Mirror",
+    "path": "tools/Conform/Manifest/Mirror.lean",
+    "git_blob": "53821ec63573d3fbe752d9b95203fd632531457a",
+    "sha256": "257ea43ed418e6f9192278130b25003f3ba555683673d981b5cd58ac54a180bb"
+  },
+  {
+    "module": "Conform.Manifest.Readers",
+    "path": "tools/Conform/Manifest/Readers.lean",
+    "git_blob": "2b7d0c6808b9763f0cbb870d1d8d3cbd34a2bfd4",
+    "sha256": "eb04419fe81501da8412d066776010482866b4d59fd3e8d8beb6754a98c268c3"
+  },
+  {
+    "module": "Conform.Model.Container",
+    "path": "tools/Conform/Model/Container.lean",
+    "git_blob": "89ab96637954d01755acbbed8fcfced039ef5674",
+    "sha256": "7ce0cf2cbcaf5ce50f72ec6b205813148f288866b70c5cc6633262a8daeb7271"
+  },
+  {
+    "module": "Conform.Source.Description",
+    "path": "tools/Conform/Source/Description.lean",
+    "git_blob": "b87c88235993734e4adc3d00ecc97c79906dc537",
+    "sha256": "128b40901ed28ee9023ff2b233f854c0658f88c8e8be579f48320728564fad4d"
+  },
+  {
+    "module": "Conform.Spec.Reflect",
+    "path": "tools/Conform/Spec/Reflect.lean",
+    "git_blob": "d3f52a05c8f35a28ad427e0a78b293bbbe96ed2e",
+    "sha256": "41e03b5a6fbe962804c24806fbb3f426fd974eb4f909e886fba57da512f924d9"
+  },
+  {
+    "module": "Drivers.Corpus",
+    "path": "tools/Drivers/Corpus.lean",
+    "git_blob": "4d08bb8294b4651df63bc2a6c2af4c5b51e7ed6c",
+    "sha256": "b1a35d06f0129146ea906a43209b29587c76bbb7b554dce9519b14cb7e391618"
+  },
+  {
+    "module": "Drivers.ForeignCorpus",
+    "path": "tools/Drivers/ForeignCorpus.lean",
+    "git_blob": "8078dfeed1f9b5eb51444f5ac06763e1f35e99f1",
+    "sha256": "ea75571827e7011fbb3851ae7c2965d68246903a8c6f99801def9fcad30e84f5"
+  },
+  {
+    "module": "Drivers.ProgramStructureCheck",
+    "path": "tools/Drivers/ProgramStructureCheck.lean",
+    "git_blob": "8eb6285930a43c0f2a8fe198039550622f2b168f",
+    "sha256": "317ae7e5c265eeafbfeb06f250fe9a8c60c1d7ce4717015b403a85613539f605"
+  },
+  {
+    "module": "Drivers.Styles",
+    "path": "tools/Drivers/Styles.lean",
+    "git_blob": "534ef7c895fd9420b8b0711ca0d7297bbe698ed3",
+    "sha256": "9f1aa07251c621edb387e335eb4eab3fb79b0b671d469e5e23336f4e43bee299"
+  },
+  {
+    "module": "Drivers.TsGen",
+    "path": "tools/Drivers/TsGen.lean",
+    "git_blob": "7af3c9463caeb96ad738d4793d8ce42e9bf3765e",
+    "sha256": "15405b6d4fe3bb78235ac16059fbeb3d30b0fd5d1106277fc1e83dd12bbf8e3e"
+  },
+  {
+    "module": "Effect4Gen.Atoms",
+    "path": "tools/Effect4Gen/Atoms.lean",
+    "git_blob": "2c6efc482b1bc84a7883af51a8ae7a7e4d71963d",
+    "sha256": "aea348397574b4e040b8db9de1a5d1f2611652eeb0d18218b88751087415becc"
+  },
+  {
+    "module": "Effect4Gen.Authoring",
+    "path": "tools/Effect4Gen/Authoring.lean",
+    "git_blob": "54e67bc42b52bade9b0c229d3f3ccb990ea9a7b1",
+    "sha256": "e938b5fff0ca279e277ca988e713a83e764160c58ec31e6ba2c4a346f151ac5e"
+  },
+  {
+    "module": "Effect4Gen.Check",
+    "path": "tools/Effect4Gen/Check.lean",
+    "git_blob": "ce50c2d77857c0b952d6a1eed4928a953eab47ac",
+    "sha256": "dfcb442e2cccf5b3f25c07b5f8afb917db7b4091398cdb08b464beb1524b9fa3"
+  },
+  {
+    "module": "Effect4Gen.Driver",
+    "path": "tools/Effect4Gen/Driver.lean",
+    "git_blob": "7bda8a5b9cc838cfd50290888fe9cc2b6e15d7f9",
+    "sha256": "98b9d3e5a0edb1cac5115295eedf887da8b529347bdd7dbf7e01f1d4adbdbe24"
+  },
+  {
+    "module": "Effect4Gen.Fold",
+    "path": "tools/Effect4Gen/Fold.lean",
+    "git_blob": "ad21e95cb7d6bfbc2c2e6afde57a6d9ea4ab8b89",
+    "sha256": "e0b777fd24ff7a2b952b5be034b5757d6cb90c8d56d2803f15cc019c17c6dbd7"
+  },
+  {
+    "module": "Effect4Gen.Forms",
+    "path": "tools/Effect4Gen/Forms.lean",
+    "git_blob": "4f65182f0188055fd62f1abb4483f5223c330e43",
+    "sha256": "8efad2a0b87f2904b2080c611261bbf9944e9c5ce1b2f73c5d0b821e81d681c0"
+  },
+  {
+    "module": "Effect4Gen.LayerView",
+    "path": "tools/Effect4Gen/LayerView.lean",
+    "git_blob": "88935d92cd45bc9856537d680d6e63507a4b921a",
+    "sha256": "9454e619ad1f4311dc5ea00904cb584d23ae6180a9fd8a6f4a9fc9620e886ec7"
+  },
+  {
+    "module": "Effect4Gen.Main",
+    "path": "tools/Effect4Gen/Main.lean",
+    "git_blob": "8651e0fac8f6d7a7cfaf25e19653e18a9b8d12d5",
+    "sha256": "b19352732072be84c4a92dd3cea2542ff40605dd3449bd071f107d8d5eb3ffc9"
+  },
+  {
+    "module": "Effect4Gen.PreludeAtoms",
+    "path": "tools/Effect4Gen/PreludeAtoms.lean",
+    "git_blob": "1fe76cedef3cdaa01a7cd65fec5d67c466589502",
+    "sha256": "9c67368f2c16c406b97d948b6238baf1dce628a28fdd758f7df1aac2a29b1983"
+  },
+  {
+    "module": "Effect4Gen.Rows",
+    "path": "tools/Effect4Gen/Rows.lean",
+    "git_blob": "0c8636d7c6a649e77e03789049b52106e757154f",
+    "sha256": "c6b768e49381d2d1691e03781abe363b341a3d4ac13e500cd023107306a9eba7"
+  },
+  {
+    "module": "Effect4Gen.View",
+    "path": "tools/Effect4Gen/View.lean",
+    "git_blob": "a0744f52f7fe5a0bf8514efbdbc6507ab0c6dd4b",
+    "sha256": "fae8094347a85881242ee65a78847e2b8e58f215d148854bf23fb496c0bd7717"
+  },
+  {
+    "module": "Effect4Gen.guards.api",
+    "path": "tools/Effect4Gen/guards/api.lean",
+    "git_blob": "ebf24d47bf22a9474ef9261f98616736d9a7ffc0",
+    "sha256": "4d18892e0142f6b2afb95c339fb657260e7bdfc31e615778dd826428a0c63e28"
+  },
+  {
+    "module": "Effect4Gen.guards.atominventory",
+    "path": "tools/Effect4Gen/guards/atominventory.lean",
+    "git_blob": "4b9644ec3d6007d66b46d76450be601d44478e07",
+    "sha256": "d81e118fc01e38ecc826b55ca1d5ad112b1a8ecbecc1b7fbe455aab7bbc001d0"
+  },
+  {
+    "module": "Effect4Gen.guards.authoring",
+    "path": "tools/Effect4Gen/guards/authoring.lean",
+    "git_blob": "c32178bc6c86c4dccd7037e8c570b16bc79c990b",
+    "sha256": "415f01e6d02a15cec83b8b72a732c80179799f3f78c5ea8244cfdd88e97a4029"
+  },
+  {
+    "module": "Effect4Gen.guards.binders",
+    "path": "tools/Effect4Gen/guards/binders.lean",
+    "git_blob": "ef12efc2dbefad8a1c34f62588bd75190304eb32",
+    "sha256": "1347631449bc493f47ce442c1e92802c15bd2aca88edc23cb6a46b5f0482b0e0"
+  },
+  {
+    "module": "Effect4Gen.guards.fold",
+    "path": "tools/Effect4Gen/guards/fold.lean",
+    "git_blob": "bc2baa83f6016373a61e062551e50a67a1e3593e",
+    "sha256": "8e0f4c052db76edfa8dc0e9bc5cd0f56da0d007bc8cf1391b7e9f89dae4274e7"
+  },
+  {
+    "module": "Effect4Gen.guards.json",
+    "path": "tools/Effect4Gen/guards/json.lean",
+    "git_blob": "b3b5ab4a0c51aef6a38e5e0aebd7b2894a6a3251",
+    "sha256": "57ef1513a321febdd3831a09eddfbec98b1dfe9e81f20547a375fbc77962cee6"
+  },
+  {
+    "module": "Effect4Gen.guards.layerview",
+    "path": "tools/Effect4Gen/guards/layerview.lean",
+    "git_blob": "2725ee5638b4f73bace91791febc3d00f46c15d0",
+    "sha256": "eb6378e3d1d951c344a200fb01088594b9b5684b6c334af7c09266d2d5970305"
+  },
+  {
+    "module": "Effect4Gen.guards.nodelenses",
+    "path": "tools/Effect4Gen/guards/nodelenses.lean",
+    "git_blob": "b318e8519b53c3fce8b03daa53a012a3cecabe47",
+    "sha256": "8c3d13b5ba09703f745081a011d8a93d77949bc74512f6c97b6582f77b84ecc0"
+  },
+  {
+    "module": "Effect4Gen.guards.pin",
+    "path": "tools/Effect4Gen/guards/pin.lean",
+    "git_blob": "d5c6d3d77b689a30e5f0ebbded12a50c86584cc7",
+    "sha256": "4dc3c2d2a09ceb2d77995ff92b58b1d19a3fd02694004d53dafac988e380ffb2"
+  },
+  {
+    "module": "Effect4Gen.guards.program",
+    "path": "tools/Effect4Gen/guards/program.lean",
+    "git_blob": "aa7421d1c62d5f3a43dd7ec6a8b6a7057160c823",
+    "sha256": "d1c7e39efbc223d30067efa3b8c8b1f4bd88155f8fb809af5abba054bcb7b4d5"
+  },
+  {
+    "module": "Effect4Gen.guards.refusals",
+    "path": "tools/Effect4Gen/guards/refusals.lean",
+    "git_blob": "a45a1a4e4499c809ef99f63699c1deb5d813f743",
+    "sha256": "74b2a581f76a92725207184ffa286b8c907bcac5d9256bc8f8306e0ed6203e99"
+  },
+  {
+    "module": "Effect4Gen.guards.rows",
+    "path": "tools/Effect4Gen/guards/rows.lean",
+    "git_blob": "a4096971f18ca4e2cbf9edc504a68ab87bffa18c",
+    "sha256": "cf2c8f1d84eed1071950c81431cce0f265c6779858de82213de3377fe44cb36a"
+  },
+  {
+    "module": "Effect4Gen.guards.rowslaws",
+    "path": "tools/Effect4Gen/guards/rowslaws.lean",
+    "git_blob": "59d372349b9e3c41b6a3d26445f2183871616f03",
+    "sha256": "f426b6652bdab0adf24b1d27124b5bc841883dbec375c5fe0560e2f981ce66af"
+  },
+  {
+    "module": "Effect4Gen.guards.runner",
+    "path": "tools/Effect4Gen/guards/runner.lean",
+    "git_blob": "15050fb1b3122971ecb0c704a04e72d2971836c3",
+    "sha256": "1618ee14d6df03f3e86ce2cbe2767f4e9530dc59473ac834f52c2378224944ce"
+  },
+  {
+    "module": "Effect4Gen.guards.schema",
+    "path": "tools/Effect4Gen/guards/schema.lean",
+    "git_blob": "5afd6f32de31c2ddc9c33197896394423d055af3",
+    "sha256": "9e48b62591e707acbeb281a622f4278cc556f5943fd5f6227780e56a1a958c48"
+  },
+  {
+    "module": "Effect4Gen.guards.schemafold",
+    "path": "tools/Effect4Gen/guards/schemafold.lean",
+    "git_blob": "6f5eb94967cf403ff1ab0747e5a343af7ba8c7e1",
+    "sha256": "baf5d1152bc01ad85de39947ad947af29e8227eebbf0ee564b0dbe32d51af5aa"
+  },
+  {
+    "module": "Effect4Gen.guards.scoped",
+    "path": "tools/Effect4Gen/guards/scoped.lean",
+    "git_blob": "b977f6cffd7b14df71f669a128b2c8138517a7b3",
+    "sha256": "a1ba4b0cb2f7a5e5618629b38cc0e196d4bf595cd0aa98527c0378707540a779"
+  },
+  {
+    "module": "Effect4Gen.guards.scopedlaws",
+    "path": "tools/Effect4Gen/guards/scopedlaws.lean",
+    "git_blob": "02b1219d30e221e9030a4294b1849f72baa8d22c",
+    "sha256": "ac73cea684506269d32329b07d6849b2f30ed0bd21b47179d2731738d978f8db"
+  },
+  {
+    "module": "Effect4Gen.guards.tyview",
+    "path": "tools/Effect4Gen/guards/tyview.lean",
+    "git_blob": "703dc2341a296429eea0e15206ef92bfb4122ccc",
+    "sha256": "bcc16a3f376d7be1bf69c4501be607c486350972679066c307a37a7b63021fba"
+  },
+  {
+    "module": "Effect4Gen.guards.value",
+    "path": "tools/Effect4Gen/guards/value.lean",
+    "git_blob": "dd4a4bd0c9a8f562842df4cc023f9aab60839523",
+    "sha256": "e3989dfe19d7fa71c7e420a75b74dba8c21742f9cd374eb9d8778069f182e209"
+  },
+  {
+    "module": "ProofGraph.Ledger",
+    "path": "tools/ProofGraph/Ledger.lean",
+    "git_blob": "2a4be4d4b05b690806bd3da628099a7455c5d192",
+    "sha256": "92b0424a54a54d4f2c798d9df4d2158e9b8c7c20b7ada5cabcfb135cd800fbe5"
+  },
+  {
+    "module": "ProofGraph.Proof",
+    "path": "tools/ProofGraph/Proof.lean",
+    "git_blob": "e6af9526447ece3551170644dc457105447d7057",
+    "sha256": "c4c225227644f2a467a23168820d1489a2d9ac0830b684177dcf6092a869657f"
+  },
+  {
+    "module": "ProofGraph.Search",
+    "path": "tools/ProofGraph/Search.lean",
+    "git_blob": "1cc4d66576d4ec2f5c0f0c0fff84f565c269e60b",
+    "sha256": "07c369e09b40e4b7922bde688313f4e0f4515d8ce022e1eb2f5a144d7ed7d2df"
+  },
+  {
+    "module": "TestSupport.AcquireHandle",
+    "path": "tools/TestSupport/AcquireHandle.lean",
+    "git_blob": "b891d6b0a88fdccf3a2e6ba5b9e3a3d8dfde003b",
+    "sha256": "cce1fbc4bc0eb36c0dc331167d51bd49cf2439d5526ab2c2db474d82cf0fd80c"
+  },
+  {
+    "module": "TestSupport.CasEntry",
+    "path": "tools/TestSupport/CasEntry.lean",
+    "git_blob": "4b40bc2462c682c069983b9011d5af0ddd3a818c",
+    "sha256": "0f1a314f71a792be114dc845a433100f2c5e6d5105fc3829ad6606a68927dc99"
+  },
+  {
+    "module": "Tools.Architecture",
+    "path": "tools/Tools/Architecture.lean",
+    "git_blob": "66fc961702bfe668d7d7044e0918735e7cf39370",
+    "sha256": "523fe4f996f9b035e0273bd46154302c18f737ce6a578c9823da929ed62b7b3e"
+  },
+  {
+    "module": "Tools.ArchitectureRoles",
+    "path": "tools/Tools/ArchitectureRoles.lean",
+    "git_blob": "6f0915699d1b8ce5f05358b57bbd7b4569ef7130",
+    "sha256": "b532fb460a5b5eb6e60f5d601d32379f500202b64d23e46094b022ba4ee21980"
+  },
+  {
+    "module": "Tools.GeneratedStamp",
+    "path": "tools/Tools/GeneratedStamp.lean",
+    "git_blob": "764733f8f14f101078bdd818f6b8c845fe75a164",
+    "sha256": "d00baa7de51d9003ab44cda0a336d568991b05650e402c2b23def3b52f9bcab5"
+  },
+  {
+    "module": "Tools.HostProtocol",
+    "path": "tools/Tools/HostProtocol.lean",
+    "git_blob": "40a7b548c9a76e75510f0d18d120313aef6a1f3b",
+    "sha256": "23f6696463dd7a92e42a96762585e4a59d2a1f01b7856f0050353f87c8443d74"
+  },
+  {
+    "module": "Tools.ProfileJson",
+    "path": "tools/Tools/ProfileJson.lean",
+    "git_blob": "04300cc5b6309029f0f1bbfb980638d108c689a0",
+    "sha256": "bb212a86533cccdf22201f0cebe37702e162044ece3aee184d7be2cd8d5e35f4"
+  },
+  {
+    "module": "Tools.ProgramStructure",
+    "path": "tools/Tools/ProgramStructure.lean",
+    "git_blob": "ff8a7ebe4bde40aefceb62906a7e6ace95aaee4a",
+    "sha256": "860f476281ad173db996766106a030cdc72f434fcff2f3bdb0bfd74855703d6e"
+  },
+  {
+    "module": "Tools.RowTypes",
+    "path": "tools/Tools/RowTypes.lean",
+    "git_blob": "d707fe11df12795a873e6d7712e9a9de441c9e31",
+    "sha256": "92f83e7fc32f7ff27e3dc39a0cbbcfd7c25dcc92981c7e036f6a72e33a0a193c"
+  },
+  {
+    "module": "Tools.TyVectors",
+    "path": "tools/Tools/TyVectors.lean",
+    "git_blob": "8b5629683eae88507ae6531e0d627d2604094973",
+    "sha256": "b29c176ca04925c49bb7a593ecdad43f5e8f85ffa96f4a067390f84d9b1ed659"
+  },
+  {
+    "module": "Tools.Variances",
+    "path": "tools/Tools/Variances.lean",
+    "git_blob": "432dd101a583ff54ff186936503d397ebe442c91",
+    "sha256": "e46037d1a7522b185bb3bcb5a21f981900ae8c1c65597d0bd3b4527af12f6299"
+  },
+  {
+    "module": "Tools.WireTags",
+    "path": "tools/Tools/WireTags.lean",
+    "git_blob": "aa18c6a6d4112608c40f70c9a8e82cf15394ea8a",
+    "sha256": "7966ffca53a7e0c0f6d3f15c5a974252737045355345899ac1760fddf1eeb446"
+  },
+  {
+    "module": "conform-red.Probe2Neg",
+    "path": "tools/conform-red/Probe2Neg.lean",
+    "git_blob": "745372ff71d900a52bed1202853d8bd02ad573a5",
+    "sha256": "e5a3d0b4ebd26ced792ccd314c5ffea6103bc8125118b84dc6645473a2313059"
+  },
+  {
+    "module": "conform-red.RulesNeg",
+    "path": "tools/conform-red/RulesNeg.lean",
+    "git_blob": "235671727fb70276ed45edea91426ee42b198d25",
+    "sha256": "a5d8aaf6f131c051419c73e76111daef02b370dbb437bf1fa127d8e4b64be644"
+  }
+]

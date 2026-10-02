@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Residual
+import Effect4.Laws.Auto.Semantics
 
 /-!
 # Laws.Program.Typed.Seq — the sequencing lemma `denoteR`'s bind needs
@@ -37,6 +38,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
 
 /-- **Closing keeps the type.** Closing a typed program with `unguard` is typed at the same
 type: every leaf becomes a closing marker carrying the leaf's exit. -/
+@[semantics "residual-program-typing"]
 theorem close_typed (root : ProgramSource) {w : World} {T : EffTy} {a : RProgram}
     (h : TypedProg root w T a) (g : ExitV → RProgram) :
     TypedProg root w T (a.bind (fun ex => .vis (.inr (.unguard ex)) g)) := by
@@ -56,6 +58,7 @@ theorem close_typed (root : ProgramSource) {w : World} {T : EffTy} {a : RProgram
 typed at `ty` at every later world on every value that fits `mid`'s answer column, and equal
 error columns: the sequence `denoteR` builds is typed at `ty`. A failure of the first program
 skips the continuation and must fit `ty`'s error column, which the equal columns give. -/
+@[semantics "residual-program-typing"]
 theorem seq_typed (root : ProgramSource) {w : World} {mid ty : EffTy} {a : RProgram}
     {k : Val → RProgram} (ha : TypedProg root w mid a)
     (hk : ∀ w', w.leHost w' → ∀ v, Fits w' v mid.answer → TypedProg root w' ty (k v))

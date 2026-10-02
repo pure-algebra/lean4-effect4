@@ -10,6 +10,11 @@ This reflection data is tooling only; it never enters stored program content.
 namespace ProofGraph
 open Lean Meta Elab Term
 
+/-- Axioms outside the semantic evidence ceiling, preserving the collector's order.
+This is the proof-graph policy, not the whole-library gate's implementation policy. -/
+def disallowedAxioms (axioms : Array Name) : Array Name :=
+  axioms.filter fun n => ![``propext, ``Quot.sound].contains n
+
 structure ProofRef where
   name : Name
   levels : List Name
@@ -23,7 +28,7 @@ def ProofRef.validate (p : ProofRef) : MetaM (Except String Unit) := do
   if t.levelParams != p.levels then return .error s!"{p.name}: universe parameters changed"
   unless ← isDefEq t.type p.proposition do
     return .error s!"{p.name}: proposition changed"
-  let extra := (← collectAxioms p.name).filter fun n => ![``propext, ``Quot.sound].contains n
+  let extra := disallowedAxioms (← collectAxioms p.name)
   unless extra.isEmpty do return .error s!"{p.name}: disallowed axioms {extra}"
   return .ok ()
 

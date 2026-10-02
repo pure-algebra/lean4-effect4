@@ -183,11 +183,29 @@ generated/effect-runtime-census.tsv: scripts/generate-effect-runtime-census.sh $
 $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 	@mkdir -p $(GEN) && touch $@
 
+# This report reads no previous generation group. The owner prepares these roots in
+# the bounded Lean lane; the script checks Lake freshness without building or installing.
+SEMANTICS_INPUTS := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
+  src/Effect4/Laws/Auto/Semantics.lean Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain \
+  tools/ProofGraph/Proof.lean tools/ProofGraph/Ledger.lean tools/Tools/GeneratedStamp.lean \
+  Test/Audit/AxiomGate.lean scripts/check-semantics.py
+SEMANTICS_TRACES := $(TRACE)/Laws/Program/Typed/Assembly.trace .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
+  .lake/build/lib/lean/Test/Audit/SemanticsCensus.trace .lake/build/lib/lean/Drivers/Semantics.trace \
+  .lake/build/lib/lean/Drivers/SemanticsControls.trace
+$(SEMANTICS_TRACES):
+	@echo 'Missing semantics artifact $@. Prepare in the bounded Lean lane:' >&2
+	@echo '$(LAKE) build Effect4.Laws.Program.Typed.Assembly Test.Program.TypedProgBindRed Test.Audit.SemanticsCensus Drivers.Semantics Drivers.SemanticsControls' >&2
+	@exit 1
+
+$(GEN)/semantics: FORCE $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES)
+	$(PY) scripts/check-semantics.py --generate generated
+	@mkdir -p $(GEN) && touch $@
+
 # The groups generate.py can regenerate into a temporary directory (no host runtime).
 HERMETIC_GROUPS := variances derived eff wire cas ts readme
 # `gen`'s order, which is the producers' order above; lcnf is named here, between derived
 # and eff, and nowhere in HERMETIC_GROUPS.
-GEN_GROUPS := variances derived lcnf eff wire cas ts readme truth host-protocol schema-ts census
+GEN_GROUPS := variances derived lcnf eff wire cas ts readme truth host-protocol schema-ts census semantics
 
 .PHONY: gen gen-hermetic $(addprefix gen-,$(GEN_GROUPS)) clean-gen
 gen: $(addprefix $(GEN)/,$(GEN_GROUPS)) ## regenerate every stale generated group, in order
@@ -209,7 +227,8 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) \
   harness/truth/corpus.json harness/truth/generated harness/truth/result.json harness/truth/result.md \
   harness/truth/tapes harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
   $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \
-  generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv generated/row-citations.tsv
+  generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv generated/row-citations.tsv \
+  generated/semantics.json generated/semantics.md
 
 # ---------------------------------------------------------------------------- corpus
 #
@@ -268,12 +287,12 @@ doctor: ## the tools and installs every tier needs, with their versions
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
-  host-protocol census schema-ts schema-pins tools corpus tsgo
+  host-protocol census schema-ts schema-pins tools corpus tsgo semantics
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
 FORCE:
 
 check: build check-roots check-gen check-tsgo ## after every change: the build with its axiom audit, the fresh root elaboration, the generated-file drift, no TypeScript below 7
-check-full: check check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins ## everything else: the outside oracles, the host groups and the tool harnesses
+check-full: check check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -474,6 +493,15 @@ $(CHK)/census: $(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/
 	bash scripts/check-effect-runtime-census.sh
 	@mkdir -p $(CHK) && touch $@
 
+# Two fresh reports, Lean refusal controls, pinned tsgo 7 and strict decoding controls.
+# No order-only build/install prerequisite: missing prepared artifacts are a refusal.
+$(CHK)/semantics: FORCE $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) generated/semantics.json generated/semantics.md \
+  tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean $(TS_EFF_SOURCES) \
+  ts/eff/test/semantics.fixture.json $(wildcard ts/eff/node_modules/effect/package.json \
+  ts/eff/node_modules/@typescript/native-preview/package.json ts/eff/node_modules/@typescript/native-preview/bin/tsgo)
+	$(PY) scripts/check-semantics.py
+	@mkdir -p $(CHK) && touch $@
+
 SCHEMA_SOURCES := $(shell find src/Effect4/Schema -name '*.lean') src/Effect4/Codegen/Schema.lean
 $(CHK)/schema-ts: $(SCHEMA_SOURCES) $(wildcard $(SCHEMA_TS_DIR)/*) scripts/check-schema-typescript-generation.sh
 	bash scripts/check-schema-typescript-generation.sh
@@ -502,10 +530,10 @@ help: ## this list
 	@echo
 	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
 	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts, corpus,'
-	@echo '                     schema-pins, tools, tsgo'
+	@echo '                     schema-pins, tools, tsgo, semantics'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
-	@echo '                     truth, host-protocol, schema-ts, census'
+	@echo '                     truth, host-protocol, schema-ts, census, semantics'
 
 clean: ## lake clean (drops the build, the generation and check markers)
 	$(LAKE) clean

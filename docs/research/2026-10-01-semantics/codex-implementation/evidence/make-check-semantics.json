@@ -1,0 +1,8 @@
+{
+  "command": [
+    "make",
+    "check-semantics"
+  ],
+  "exit": 0,
+  "elapsed": 114.36
+}

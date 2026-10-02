@@ -1,0 +1,1120 @@
+{
+  "#proof_wanted": {
+    "count": 20,
+    "files": 3,
+    "sites": [
+      {
+        "path": "src/Effect4/Laws/Program/Guard/Handshake.lean",
+        "line": 26
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1717
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1718
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1838
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1839
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1840
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1843
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1844
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1845
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1846
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1847
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1848
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1849
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1850
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1851
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1854
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1855
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1856
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1857
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1867
+      }
+    ]
+  },
+  "#obligation_proved": {
+    "count": 181,
+    "files": 25,
+    "sites": [
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1007
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1008
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1009
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1010
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1012
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1013
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1014
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1015
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1017
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Book.lean",
+        "line": 1308
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Book.lean",
+        "line": 1310
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Book.lean",
+        "line": 1311
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6761
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6762
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6763
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6764
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6765
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6766
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6767
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6768
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6769
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+        "line": 266
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+        "line": 267
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Refinement.lean",
+        "line": 115
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Refinement.lean",
+        "line": 116
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Intro/Weight.lean",
+        "line": 247
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Intro/Weight.lean",
+        "line": 248
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Intro/Weight.lean",
+        "line": 249
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Intro/Weight.lean",
+        "line": 250
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+        "line": 825
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+        "line": 826
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+        "line": 827
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+        "line": 828
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Deliver.lean",
+        "line": 651
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Drive.lean",
+        "line": 1144
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+        "line": 537
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+        "line": 291
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+        "line": 292
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+        "line": 293
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1575
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1577
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1579
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1581
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1583
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1585
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1587
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1589
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1591
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1593
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1595
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1597
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1599
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1601
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1603
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1605
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1607
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1609
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1611
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1613
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1615
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1617
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1619
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1621
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1623
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1625
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1627
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1629
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1631
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1633
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1635
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1637
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1639
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1641
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1643
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1645
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1647
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1649
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1651
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1653
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1655
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1657
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1659
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1661
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1663
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1665
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1667
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1669
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1671
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1673
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1675
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1677
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1679
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1681
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1683
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1685
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1687
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1689
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1691
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1693
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1695
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1697
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1699
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1701
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1703
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1705
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1707
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1709
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1711
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1713
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1715
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1719
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1721
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1836
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1860
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1861
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1862
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1863
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1864
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1865
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1866
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1869
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+        "line": 3007
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+        "line": 3009
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+        "line": 3011
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Finish.lean",
+        "line": 351
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Finish.lean",
+        "line": 353
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Observe.lean",
+        "line": 1353
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+        "line": 806
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+        "line": 808
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+        "line": 810
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+        "line": 812
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+        "line": 814
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Edits.lean",
+        "line": 481
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Edits.lean",
+        "line": 482
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Edits.lean",
+        "line": 483
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Edits.lean",
+        "line": 484
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Edits.lean",
+        "line": 485
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ForkSource.lean",
+        "line": 113
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ForkSource.lean",
+        "line": 115
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+        "line": 20
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+        "line": 26
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+        "line": 31
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+        "line": 37
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+        "line": 45
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+        "line": 53
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+        "line": 58
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+        "line": 63
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 926
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 928
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 930
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 932
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 935
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 937
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 945
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 947
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 949
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 951
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 953
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Stack.lean",
+        "line": 472
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Stack.lean",
+        "line": 473
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Stack.lean",
+        "line": 475
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Stack.lean",
+        "line": 476
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Stack.lean",
+        "line": 477
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 224
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 225
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 226
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 227
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 228
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 229
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 230
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 231
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 232
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 233
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 234
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 235
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 236
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 237
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 238
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/World.lean",
+        "line": 817
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/World.lean",
+        "line": 819
+      },
+      {
+        "path": "src/Effect4/Laws/Run.lean",
+        "line": 903
+      }
+    ]
+  },
+  "#typed_state_obligations": {
+    "count": 74,
+    "files": 42,
+    "sites": [
+      {
+        "path": "src/Effect4/Laws.lean",
+        "line": 157
+      },
+      {
+        "path": "src/Effect4/Laws.lean",
+        "line": 159
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1019
+      },
+      {
+        "path": "src/Effect4/Laws/Api/Supervision.lean",
+        "line": 1020
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Approximation.lean",
+        "line": 1778
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Arena.lean",
+        "line": 249
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Arena.lean",
+        "line": 252
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Behaviour.lean",
+        "line": 119
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Book.lean",
+        "line": 1312
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Clauses.lean",
+        "line": 2123
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Clock.lean",
+        "line": 23
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Clock.lean",
+        "line": 81
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Clock.lean",
+        "line": 116
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Clock.lean",
+        "line": 132
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/CompletionData.lean",
+        "line": 61
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/CompletionData.lean",
+        "line": 98
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/CompletionData.lean",
+        "line": 113
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6771
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6772
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Handles.lean",
+        "line": 6773
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+        "line": 268
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+        "line": 381
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+        "line": 384
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Refinement.lean",
+        "line": 117
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Refinement.lean",
+        "line": 290
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Refinement.lean",
+        "line": 292
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Refinement.lean",
+        "line": 729
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Refinement.lean",
+        "line": 732
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Refinement.lean",
+        "line": 735
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/StoresLaws.lean",
+        "line": 2239
+      },
+      {
+        "path": "src/Effect4/Laws/Machine/Witnesses.lean",
+        "line": 1488
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Agreement.lean",
+        "line": 1941
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+        "line": 1943
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/Core.lean",
+        "line": 3816
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/Core.lean",
+        "line": 3824
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/Core.lean",
+        "line": 3827
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/Core.lean",
+        "line": 3832
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+        "line": 905
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+        "line": 908
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+        "line": 911
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+        "line": 914
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/Handshake.lean",
+        "line": 30
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+        "line": 642
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+        "line": 646
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+        "line": 650
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/NativeStateLinks.lean",
+        "line": 341
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/OuterDriver.lean",
+        "line": 445
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/RaceSites.lean",
+        "line": 480
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Guard/Single.lean",
+        "line": 503
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+        "line": 830
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+        "line": 831
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Deliver.lean",
+        "line": 653
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Drive.lean",
+        "line": 1146
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Drive.lean",
+        "line": 1147
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+        "line": 1037
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+        "line": 538
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Hooks.lean",
+        "line": 739
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+        "line": 295
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+        "line": 1724
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1841
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1858
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+        "line": 1872
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Commands/Observe.lean",
+        "line": 1356
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Edits.lean",
+        "line": 487
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ForkSource.lean",
+        "line": 116
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/ProtocolObligations.lean",
+        "line": 66
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 940
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+        "line": 942
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Stack.lean",
+        "line": 479
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Stack.lean",
+        "line": 481
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/Validity.lean",
+        "line": 240
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/World.lean",
+        "line": 821
+      },
+      {
+        "path": "src/Effect4/Laws/Program/Typed/World.lean",
+        "line": 822
+      },
+      {
+        "path": "src/Effect4/Laws/Run.lean",
+        "line": 907
+      }
+    ]
+  }
+}

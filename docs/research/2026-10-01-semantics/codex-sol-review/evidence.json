@@ -1,0 +1,548 @@
+{
+  "format": "gemini-sol-literature-review",
+  "date": "2026-10-01",
+  "reviewer": "GPT-6.1 Sol literature seat",
+  "main_head_observed": "d7b9cb113d6014f9439fb846bb79713ca73294e9",
+  "parent_worktree": {
+    "base": "8c9be258",
+    "head": "9190c779",
+    "classification": "brief-provided, not verified"
+  },
+  "draft_snapshot": {
+    "sha256": "371ec83de053edbf55e56d4418f2afc049676bdf8a5e34b9f73d47430f90d00c",
+    "mtime": "2026-10-01T20:53:39-0500",
+    "bytes": 41910,
+    "state": "active draft; not asserted complete"
+  },
+  "scope": {
+    "repository_edits": false,
+    "gemini_edits": false,
+    "builds_run": false,
+    "external_sources_fetched": false,
+    "subagents_spawned": false,
+    "proof_status": "source reading only; no current kernel or gate verification"
+  },
+  "inputs": [
+    {
+      "id": "rules",
+      "path": "/Users/pooks/Dev/lean4-effect4/AGENTS.md",
+      "sha256": "cfd2b0fb255930b1c28e5b6df00e2e5f1f9a33718b90df818211b325b320d978",
+      "anchors": [
+        1,
+        210
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "brief",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/brief-gemini-documentation.md",
+      "sha256": "f279b9312c287c69a235adeff471e52edfd8f4a58b1795b5acf124bdedb07467",
+      "anchors": [
+        1,
+        131
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "spec",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/seat-B/spec-v3.md",
+      "sha256": "e38369797d3be26ae3ed7a3e4e8be70efecb6ce12ff7593a97f67995b308bd08",
+      "anchors": [
+        1,
+        656
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "audit",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/citations-audit.md",
+      "sha256": "50e8ee6e595981284d7d1ac00dc8606da74351e8e5cea2e8e103fd45179115de",
+      "anchors": [
+        1,
+        564
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "source_index",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/README.md",
+      "sha256": "c949886fc3645435dbf1055d951f65d54fa99a79f179105e8f02ba036f3dba0f",
+      "anchors": [
+        1,
+        146
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "active_draft",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/gemini/semantics-v1.md",
+      "sha256": "371ec83de053edbf55e56d4418f2afc049676bdf8a5e34b9f73d47430f90d00c",
+      "anchors": [
+        1,
+        640
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "old_draft",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/gemini/semantics-draft.md",
+      "sha256": "67982c8d74dde3965cbcb26587b1f667e3de2d7b0e342ae3e2c58ffb06f0194c",
+      "anchors": [
+        1,
+        396
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "old_census",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/gemini/lemma-census.md",
+      "sha256": "b11e88429dfdc4cf3c253621e74fdf81dbd20b739e0c58655e9aba81a5cafac3",
+      "anchors": [
+        26,
+        55,
+        191,
+        244
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "old_chapters",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/gemini/chapter-table.md",
+      "sha256": "4d4e64fca220a94b2c35e83b5af859b64ade1b273804a86875d0f5d1739c53dd",
+      "anchors": [
+        325,
+        346,
+        396,
+        418
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "membership",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/Membership.lean",
+      "sha256": "09beeaef665e37201c7c2a22b195080962b41a88c0534d79796bf963917db8dd",
+      "anchors": [
+        112,
+        174,
+        1503,
+        1525,
+        2165,
+        2174
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "world",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/World.lean",
+      "sha256": "32be5194574dcf8af29f51e2c6898548a079599f1404d7c49848e1cfdb637bd7",
+      "anchors": [
+        137,
+        142
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "residual",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/Residual.lean",
+      "sha256": "1fa50a31814a35d367fd2995a08d4c62db370114f3631b8f2825831032e05c12",
+      "anchors": [
+        250,
+        342
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "assembly",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "sha256": "faef0661ca1133feea62eba944b75185fdd03851e6a7a50e530e598a8c3cfa10",
+      "anchors": [
+        251,
+        315,
+        1075,
+        1078,
+        1634,
+        1648,
+        1830,
+        1860
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "scheduling",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/Scheduling.lean",
+      "sha256": "f043ff1e7ed9c397bb527d3c8835f709fb14c5132d02cbdaf818ec616625c3af",
+      "anchors": [
+        1,
+        15,
+        389,
+        442
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "refinement",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/Refinement.lean",
+      "sha256": "93032f429ed0bd6663285853f9272cc31c527ee6e8afab62c689b44eaacc5c25",
+      "anchors": [
+        20,
+        37,
+        99,
+        120
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "adequacy",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/Adequacy.lean",
+      "sha256": "e70fcee2fa8f1aa4ba92687a224c81dacd8e0e2c458ab025f689a9ff5de69376",
+      "anchors": [
+        1,
+        68
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "agreement",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/RuntimeR.lean",
+      "sha256": "e9327d8f0221831518381b11ad3fd83bffb718d5404c3ea0e8e7c3dcd40b81d9",
+      "anchors": [
+        198,
+        215
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "eff",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Eff.lean",
+      "sha256": "3116a30518519ca497ed9af7249db8c241099bee5dcec50ded1272d8b1e8248e",
+      "anchors": [
+        277,
+        277
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "rprogram",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Sched.lean",
+      "sha256": "0a26f79cbd0be936f60c0ec51b692e36712d73f3f54dcb9c4520a88a00485776",
+      "anchors": [
+        14,
+        30,
+        196,
+        206
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "program_carrier",
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/Effects/Algebra/Program.lean",
+      "sha256": "059ead99039b3715e6823e861ac4c8e5bb59a705026d884a1eca99c5b7c1d671",
+      "anchors": [
+        33,
+        38
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "denote",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/DenoteR.lean",
+      "sha256": "fea6d24139a1aaea38ca0d6e7cdc172d916eda9322181aa8f3d50f7b979f33a1",
+      "anchors": [
+        69,
+        72
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "canonical",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Store/Domain/Canonical.lean",
+      "sha256": "fdfa7e771a0b05676e39f5155ff0692d2bba0df18b21633e9bf4ffbc8163594f",
+      "anchors": [
+        33,
+        46
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "hasTy",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typing/HasTy.lean",
+      "sha256": "89b77d127e4abe9e2870dbafca8442bb29e0a7811bfb7accd59171c436ee325b",
+      "anchors": [
+        101,
+        106
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "weaken",
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typing/Sound.lean",
+      "sha256": "cc22bccd33a7e4df9561e9db93e21db4220f7020dbb7b0cdf99d6290a2973d6a",
+      "anchors": [
+        156,
+        161
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "bind_red",
+      "path": "/Users/pooks/Dev/lean4-effect4/Test/Program/TypedProgBindRed.lean",
+      "sha256": "d9537b1053e099cd81b0ad0a82f0cb523f0af4b0b544ce2584772a438890daa5",
+      "anchors": [
+        32,
+        49
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "register",
+      "path": "/Users/pooks/Dev/lean4-effect4/Test/Counterexamples/REGISTER.md",
+      "sha256": "efc7313bdeedf809321e6d42b40e597ec7090c5523241de63976cc30b126d9ea",
+      "anchors": [
+        258,
+        258
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "decisions",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+      "sha256": "3858ca648316a4fc397f722cce0ca17becff1a255ead2435755233535b9ded58",
+      "anchors": [
+        210,
+        210,
+        231,
+        231,
+        256,
+        256
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "ahmed",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/text/ahmed-2004-semantics-of-types-for-mutable-state.txt",
+      "sha256": "37faebfe73ba331086b47b2ebd14367b36cdbd6e865e437868d1be643c22a564",
+      "anchors": [
+        1755,
+        1781,
+        2166,
+        2209
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "dvp",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/text/de-vilhena-pottier-2021-separation-logic-for-effect-handlers.txt",
+      "sha256": "a71dfe761e929a421331fa1be29d3c5ede1191a4c8350260b890c1c6dc5a2191",
+      "anchors": [
+        588,
+        636,
+        849,
+        855,
+        1349,
+        1364
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "itrees",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-02-web-standards-sources/text/02-interaction-trees.txt",
+      "sha256": "1901a20c60f1993ea2383300ba89d5298e058b533e654035b1de514dc1b23c7c",
+      "anchors": [
+        157,
+        160,
+        186,
+        192
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "plf_types",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/plf/Types.v",
+      "sha256": "3ee7d5ed371227dcf709e750a226f831fba0163d14aadecfe39f355b05085a6c",
+      "anchors": [
+        366,
+        381,
+        394,
+        397,
+        463,
+        467
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "plf_substitution",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/plf/StlcProp.v",
+      "sha256": "8de15339a22847f8637e8a2c485c9e09d1b2f01a782e6c5300cd6e41d41d85b5",
+      "anchors": [
+        230,
+        234
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "pfpl",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/text/pfpl-2nded-abbrev.txt",
+      "sha256": "e4567d1a3dc5be81505b880ad8fcec739c239ae0345852821756f3357367417f",
+      "anchors": [
+        3180,
+        3233
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "lv95_text",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/text/lynch-vaandrager-1995-forward-and-backward-simulations.txt",
+      "sha256": "4d263a4a92b4fecabf2163696af54b2597ab4ff5f4cb96ae100a9429dd8faded",
+      "anchors": [
+        1072,
+        1083
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    },
+    {
+      "id": "lv95_pdf",
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/lynch-vaandrager-1995-forward-and-backward-simulations.pdf",
+      "sha256": "fac099bf3462b90c58b8ed1077abef0808f5412f21879a5d1024ecdfdd5ff050",
+      "anchors": [
+        17,
+        17
+      ],
+      "classification": "reading",
+      "locator_from_memory": false
+    }
+  ],
+  "material_points": [
+    {
+      "id": 1,
+      "priority": "high",
+      "title": "Stored syntax versus semantic function continuations; membership versus WP",
+      "source_evidence": [
+        "eff",
+        "rprogram",
+        "program_carrier",
+        "denote",
+        "itrees",
+        "membership",
+        "world",
+        "residual",
+        "assembly",
+        "ahmed",
+        "dvp",
+        "bind_red",
+        "register"
+      ],
+      "classification": "reading; replacement proposed"
+    },
+    {
+      "id": 2,
+      "title": "Invariant exclusion versus progress",
+      "source_evidence": [
+        "assembly",
+        "plf_types",
+        "pfpl"
+      ],
+      "classification": "reading; latest draft partly corrected; clarification proposed"
+    },
+    {
+      "id": 3,
+      "title": "Finite fairness bounds",
+      "source_evidence": [
+        "scheduling",
+        "lv95_text",
+        "lv95_pdf"
+      ],
+      "classification": "reading; next-pass addition proposed"
+    },
+    {
+      "id": 4,
+      "title": "Simulation versus handler fulfillment versus denotational typing",
+      "source_evidence": [
+        "refinement",
+        "adequacy",
+        "assembly",
+        "agreement",
+        "dvp",
+        "lv95_pdf"
+      ],
+      "classification": "reading; latest draft improved; table addition proposed"
+    },
+    {
+      "id": 5,
+      "title": "Applicability of textbook lemma roles",
+      "source_evidence": [
+        "canonical",
+        "membership",
+        "hasTy",
+        "weaken",
+        "plf_types",
+        "plf_substitution",
+        "decisions"
+      ],
+      "classification": "reading; next-pass table proposed"
+    }
+  ],
+  "verification": {
+    "commands": [
+      "git rev-parse HEAD",
+      "stat -f %Sm/%z active draft",
+      "shasum -a 256 active draft",
+      "bounded rg and sed reads",
+      "pdftoppm -f 17 -l 17 -scale-to 1600 -png -singlefile <lv95 PDF> /private/tmp/codex-lv95-230",
+      "tools.view_image /private/tmp/codex-lv95-230.png"
+    ],
+    "command_results": "read commands and PDF rendering exit 0; early lookup of nonexistent guessed path returned error and was corrected by file/name discovery",
+    "pdf_visual_check": "printed page 230; right column scope excludes liveness confirmed visually; temporary rendered image deleted after inspection",
+    "build_commands": [],
+    "axiom_output": null,
+    "meaning": "No fresh proof or runtime result is claimed.",
+    "artifact_checks": {
+      "json_valid": true,
+      "material_points": 5,
+      "documentation_section_words": 441,
+      "classification": "tested artifact format checks only"
+    }
+  },
+  "memory_use": {
+    "path": "/Users/pooks/.codex/memories/MEMORY.md",
+    "lines": [
+      134,
+      135
+    ],
+    "purpose": "respect frozen contracts only; no code or literature locator taken from memory"
+  },
+  "new_citation_audit_candidates": "See literature.md adoption section; body locators read locally but not yet admitted by coordinator."
+}

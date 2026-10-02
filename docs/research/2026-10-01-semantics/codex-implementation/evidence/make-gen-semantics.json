@@ -1,0 +1,8 @@
+{
+  "command": [
+    "make",
+    "gen-semantics"
+  ],
+  "exit": 0,
+  "elapsed": 41.324
+}

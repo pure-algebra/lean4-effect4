@@ -1,0 +1,3 @@
+'Effect4.Program.Authoring.getDoSeqElems' depends on axioms: [propext]
+'Effect4.Program.Authoring.unnestElems' depends on axioms: [propext]
+'Effect4.Program.Authoring.expandDoElems' depends on axioms: [propext]

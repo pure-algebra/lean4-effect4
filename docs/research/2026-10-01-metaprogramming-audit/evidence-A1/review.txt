@@ -1,0 +1,1 @@
+Independent source review: getDoElems preserves the bracketed/indented indexes, order, and empty fallback. doNested is exactly do followed by doSeq; quotation removes one wrapper. Scoped approval for parser-produced syntax. No compiler run by reviewer; primary owns compiler lane.

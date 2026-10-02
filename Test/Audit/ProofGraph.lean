@@ -86,4 +86,57 @@ run_cmd liftTermElabM do
 #guard_msgs in
 #auto_census Effect4.Laws.Auto.RuleSets using aesop
 
+
+-- The shared reader retains the proposition's telescope, not the marker's type.
+theorem polymorphicGoal.{u} (α : Sort u) (x : α) : Obligation (x = x) := ⟨⟩
+theorem polymorphicWitness.{u} (α : Sort u) (x : α) : x = x := rfl
+-- Deliberately malformed marker, matching the existing legacy-definition control.
+set_option linter.defProp false in
+def notATheorem : Obligation True := ⟨⟩
+theorem nestedMarker : True ∧ Obligation True := ⟨True.intro, ⟨⟩⟩
+
+#guard_msgs in
+run_cmd liftTermElabM do
+  let some goal ← readGoal ``polymorphicGoal | throwError "goal was not read"
+  let info ← getConstInfo ``polymorphicWitness
+  unless goal.id == ``polymorphicGoal && goal.levels == info.levelParams &&
+      goal.dependencies.isEmpty && !goal.proposition.hasFVar && !goal.proposition.hasMVar do
+    throwError "goal's identity, universes or closedness changed"
+  unless ← isDefEq goal.proposition info.type do throwError "goal proposition changed"
+  let report ← check #[goal] #[⟨goal.id, .proved ``polymorphicWitness⟩] 0
+  unless report.proved == 1 do throwError "goal evidence did not validate"
+  unless (← readGoal ``reflexive).isNone do throwError "ordinary theorem became a goal"
+  unless (← readGoal ``ordinary).isNone do throwError "ordinary definition became a goal"
+
+/-- error: obligation ledger: Test.ProofGraph.notATheorem must be declared as a theorem -/
+#guard_msgs (error) in
+run_cmd liftTermElabM do
+  discard <| readGoal ``notATheorem
+
+/-- error: obligation ledger: unsupported declaration shape at Test.ProofGraph.nestedMarker -/
+#guard_msgs (error) in
+run_cmd liftTermElabM do
+  discard <| readGoal ``nestedMarker
+
+-- The same ceiling admits its named axioms in both evidence paths.
+#guard_msgs in
+run_cmd liftTermElabM do
+  unless disallowedAxioms #[``propext, ``Classical.choice, ``Quot.sound] == #[``Classical.choice] do
+    throwError "semantic ceiling changed"
+  let proposition := (← getConstInfo ``propext).type
+  let reference ← addTheorem `Test.ProofGraph.allowedPropext [] proposition (mkConst ``propext)
+  if let .error why ← reference.validate then throwError why
+
+-- A placeholder cannot hide a forbidden axiom in its proposition, even in an unused let.
+-- Keep this temporary declaration out of the module's exported constants.
+/-- error: proof graph: placeholder Test.ProofGraph.forbiddenPlaceholder reaches [Classical.choice] -/
+#guard_msgs (error) in
+run_cmd liftTermElabM do
+  withoutModifyingState do
+    let proposition := mkLet `hidden (← inferType (mkConst ``Classical.em))
+      (mkConst ``Classical.em) (mkConst ``True)
+    addWanted `Test.ProofGraph.forbiddenPlaceholder [] proposition
+    discard <| check #[{ id := `forbidden, proposition }]
+      #[⟨`forbidden, .wanted `Test.ProofGraph.forbiddenPlaceholder⟩] 1
+
 end Test.ProofGraph

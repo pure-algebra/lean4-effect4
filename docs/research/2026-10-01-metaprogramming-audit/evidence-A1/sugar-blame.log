@@ -1,0 +1,4 @@
+'Effect4.Api.explain_none_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.check' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.author' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.explain_none_iff' depends on axioms: [propext, Quot.sound]

@@ -1,0 +1,13 @@
+{
+  "command": [
+    "lake",
+    "--no-cache",
+    "--rehash",
+    "build",
+    "Test.Program.ProtocolPosts",
+    "Test.Counterexamples.Machine.Semantics.ScopePresence",
+    "Test.Counterexamples.Machine.Semantics.AwaitLoad"
+  ],
+  "exit": 0,
+  "elapsed": 9.387
+}
