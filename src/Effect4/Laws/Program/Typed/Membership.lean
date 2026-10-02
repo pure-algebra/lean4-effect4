@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Typed.Validity
 import Effect4.Program.FoldOf
 import Effect4.Laws.Program.Signature
+import Effect4.Program.TyClasses
 
 /-!
 # Value membership in a typed world
@@ -2323,31 +2324,11 @@ theorem inhabited_of_hasTy :
 
 /-! ### The data fragment: a witness that needs no world -/
 
-/-- No handle, fiber, cell or deferred anywhere in the type: its members name no world entry. -/
-def handleFreeAlg : TyAlgebra (fun _ => Bool) where
-  ty_never := true
-  ty_unit := true
-  ty_nat := true
-  ty_int := true
-  ty_string := true
-  ty_bool := true
-  ty_handle _ := false
-  ty_option a := a
-  ty_list a := a
-  ty_prod a b := a && b
-  ty_except e a := e && a
-  ty_exitOf a e := a && e
-  ty_causeOf e := e
-  ty_fiberOf _ _ := false
-  ty_union l r := l && r
-  ty_lit _ := true
-  ty_refOf _ := false
-  ty_deferredOf _ _ := false
-  ty_var _ := true
-  ty_unknown := true
-
-/-- The data fragment (`handleFreeAlg`). -/
-def handleFree (t : Ty) : Bool := cata_ty handleFreeAlg t
+/-- **The data fragment**: no handle, fiber, cell or deferred anywhere in the type, so its members
+name no world entry. The classifier table's `handleFree` column read at every node
+(`TyTable.allHeads`, `Program/TyClasses.lean`; decisions row 182 (a)): one answer per constructor,
+the node's and all of its children's. -/
+def handleFree (t : Ty) : Bool := cata_ty (TyTable.allHeads tyClasses ClassRow.handleFree) t
 
 /-- **Complete on the data fragment (proved)**, with one witness for every world. -/
 theorem fits_of_inhabited_handleFree :
