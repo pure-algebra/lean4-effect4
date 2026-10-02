@@ -540,6 +540,21 @@ The active sequence is the foundations review above. Phase C's existing receipt 
 historical evidence; the dated notes below explain the redirect and its earlier plans. They
 do not override the corrected protocol-before-assembly order or constitute a new pause instruction.
 
+**Semantics pass, late 2026-10-01 (the latest design push; read these first).** The formalization
+pass of §7 of `docs/research/2026-10-01-landing/status-2026-10-01-evening.md` continued as three
+briefs. Gemini lands the semantics report's first slice from
+`docs/research/2026-10-01-semantics/seat-B/brief-gemini-implementation.md` (spec `seat-B/spec-v3.md`;
+base `66b7c525`, which adds register row `E4-TYPED-CE-030`; the coordinator's rulings at the
+brief's end). Codex audits the metaprogramming surface from
+`docs/research/2026-10-01-metaprogramming-audit/brief-codex-metaprogramming.md` (a read-only note
+first, then slices; three rulings owed by the owner: the `first`-hiding tactic macros, unexpanders
+for the object language, the home of `fold_of`). The review of Gemini's spec v2 is
+`docs/research/2026-10-01-semantics/review-gemini-v2.md`; the citations audit `citations-audit.md`
+and the sources index `sources/README.md` (22 sources vendored with checksums; the full texts of
+TAPL and ATTAPL are still owed by the owner). DI-18 was re-ruled by the owner: the `import Lean`
+ban is dropped and the representation rules are the guard (`docs/DESIGN-ISSUES.md`,
+`docs/ARCHITECTURE.md`'s roots paragraph).
+
 **Design review before implementation resumes (2026-09-19).** The completed STM and stateful-API
 research is reconciled in `docs/core/machine-state.md`, with the detailed contracts, retained
 finite controls and proposed D0–D7 sequence in `docs/research/2026-09-19-state-refinement-plan.md`.

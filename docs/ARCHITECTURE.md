@@ -96,13 +96,20 @@ functional utilities without reaching Laws. The audit checks both closures again
 every library source; `make check-roots` elaborates `Test/All.lean` freshly so a new
 unimported source cannot hide behind a cached build.
 
-**Runtime code imports no proof tooling.** General deriving and reflection live in tool
-roots (`tools/Tools`, `tools/Effect4Gen`, `tools/Conform`, `tools/ProofGraph`). Bounded
-command elaborators specific to the law graph live in `Laws/Auto`; their implementation
-modules have explicit trust-gate admissions, while every generated theorem is checked in
-its consuming module at the ordinary axiom ceiling. The typed-state skeleton and frame
-rules are declarations generated during elaboration, so no printed source or TSV is read
-back. `docs/GENERATED.md` owns their build/check entry points.
+**Runtime content holds no proof tooling; imports are not the gate (DI-18, re-ruled 2026-10-01).**
+General deriving and reflection live in tool roots (`tools/Tools`, `tools/Effect4Gen`,
+`tools/Conform`, `tools/ProofGraph`). Command elaborators and tactic instruments of the law graph
+live in `Laws/Auto` and beside the proofs they serve; their implementation modules have explicit
+trust-gate admissions, every generated theorem is checked in its consuming module at the ordinary
+axiom ceiling, and a module that imports Lean's elaboration APIs is audited like any other. What
+the rule protects is the representation: no `Expr`, `Syntax`, metavariable or elaborator closure
+is stored program content or a runtime value (`AGENTS.md`'s representation rules,
+`docs/DESIGN-BASIS.md` DB-08, the separation gates at the foot of the machine modules). The
+runtime root's one metaprogram, `Program/FoldOf.lean`, and a measured check in place of the former
+import ban are open under the Codex metaprogramming audit
+(`docs/research/2026-10-01-metaprogramming-audit/brief-codex-metaprogramming.md`, A7). The
+typed-state skeleton and frame rules are declarations generated during elaboration, so no printed
+source or TSV is read back. `docs/GENERATED.md` owns their build/check entry points.
 
 `Effect4.Laws.Program.Typing` owns declarative typing judgments, generated specifications,
 checker-agreement proofs and the input-indexed checking API. Its legacy
