@@ -7,16 +7,67 @@ inputs: tools/Tools/SemanticsRegistry.lean, tools/Tools/Semantics.lean, tools/Dr
 
 Selected evidence only. English associations are authored; inherited placement is provisional. The semantic axiom ceiling is not a whole-library gate verdict.
 
+## store-typing
+
+Store Typing: World-indexed semantic value membership (Fits) and store typings
+
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
+| --- | --- | --- | --- | --- | --- |
+| fits-mono | monotonicity | proved | Effect4.Program.Typed.fits_mono | yes |  |
+| fits-subn | preservation | proved | Effect4.Program.Typed.fits_subN | yes |  |
+| fits-normalize | compatibility | proved | Effect4.Program.Typed.fits_normalize | yes |  |
+| fits-scope-inv | inversion | proved | Effect4.Program.Typed.fits_scope_inv | yes |  |
+| store-safety | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) | — |  |
+
+### Printed statements
+
+**fits-mono**
+
+```lean
+∀ {w w' : Effect4.Program.Typed.World},
+  w.leHost w' →
+    ∀ {ty : Effect4.Program.Ty} {v : Effect4.Machine.Val},
+      Effect4.Program.Typed.Fits w v ty → Effect4.Program.Typed.Fits w' v ty
+```
+
+**fits-subn**
+
+```lean
+∀ (w : Effect4.Program.Typed.World) {a b : Effect4.Program.Ty},
+  Eq (a.subN b) Bool.true →
+    ∀ (v : Effect4.Machine.Val), Effect4.Program.Typed.Fits w v a → Effect4.Program.Typed.Fits w v b
+```
+
+**fits-normalize**
+
+```lean
+∀ (w : Effect4.Program.Typed.World) (t : Effect4.Program.Ty) (v : Effect4.Machine.Val),
+  Iff (Effect4.Program.Typed.Fits w v t.normalize) (Effect4.Program.Typed.Fits w v t)
+```
+
+**fits-scope-inv**
+
+```lean
+∀ {w : Effect4.Program.Typed.World} {v : Effect4.Machine.Val},
+  Effect4.Program.Typed.Fits w v Effect4.Program.Ty.scope →
+    Exists fun sc =>
+      And (Eq v (Effect4.Machine.Val.scopeHandle sc)) (Effect4.Program.Typed.ScopeLive w sc)
+```
+
 ## residual-program-typing
 
-Residual program typing: TypedProg, the protocol-indexed judgment on residual programs
+Residual Program Typing: TypedProg, the protocol-indexed judgment on residual programs
 
-| Claim | Role | Status | Evidence | At the ceiling | Contested by |
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
 | --- | --- | --- | --- | --- | --- |
 | seq-typed | compatibility | proved | Effect4.Program.Typed.seq_typed | yes |  |
+| close-typed | preservation | proved | Effect4.Program.Typed.close_typed | yes |  |
 | denote-typed | fundamentalProperty | wanted | Effect4.Program.Typed.M3bAssembly.denoteR_typed | yes | E4-TYPED-CE-020, E4-TYPED-CE-021, E4-TYPED-CE-022 |
 | bind-closed | compatibility | refuted | Test.Program.TypedProgBindRed.typedProg_not_bind_closed | yes |  |
-| on-failure-typed | compatibility | absent | owed beside seq_typed under M5's ledger with the all and onExit shapes (decisions row 148); no declaration or goal selected for this owed claim | — |  |
+| guard-bind-typed | compatibility | proved | Effect4.Program.Typed.guardBind_typed | yes |  |
+| on-failure-typed | compatibility | proved | Effect4.Program.Typed.catchGuard_typed | yes |  |
+| all-guard-typed | compatibility | proved | Effect4.Program.Typed.allGuard_typed | yes |  |
+| on-exit-typed | compatibility | proved | Effect4.Program.Typed.onExit_typed | yes |  |
 
 ### Printed statements
 
@@ -37,6 +88,18 @@ Residual program typing: TypedProg, the protocol-indexed judgment on residual pr
           (Effects.Program.bind
             (Effect4.Program.Sched.guardR Effect4.Program.Sched.GuardKind.onSuccess a)
             (Effect4.Program.Sched.seqR k))
+```
+
+**close-typed**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) {w : Effect4.Program.Typed.World}
+  {T : Effect4.Program.EffTy} {a : Effect4.Program.Sched.RProgram},
+  Effect4.Program.Typed.TypedProg root w T a →
+    ∀ (g : Effect4.Machine.ExitV → Effect4.Program.Sched.RProgram),
+      Effect4.Program.Typed.TypedProg root w T
+        (Effects.Program.bind a fun ex =>
+          Effects.Program.vis (Sum.inr (Effect4.Program.Sched.FiberOp.unguard ex)) g)
 ```
 
 **denote-typed**
@@ -61,6 +124,587 @@ Residual program typing: TypedProg, the protocol-indexed judgment on residual pr
                     Effect4.Program.Typed.ExitOk w' mid ex →
                       Effect4.Program.Typed.TypedProg root w' ty (k ex))
               (Not (Effect4.Program.Typed.TypedProg root w ty (Effects.Program.bind p k))))
+```
+
+**guard-bind-typed**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) {w : Effect4.Program.Typed.World}
+  {mid ty : Effect4.Program.EffTy} {kind : Effect4.Program.Sched.GuardKind}
+  {a : Effect4.Program.Sched.RProgram} {K : Effect4.Machine.ExitV → Effect4.Program.Sched.RProgram},
+  Effect4.Program.Typed.TypedProg root w mid a →
+    (∀ (w' : Effect4.Program.Typed.World),
+        w.leHost w' →
+          ∀ (ex : Effect4.Machine.ExitV),
+            Eq (kind.hasExitArm ex) Bool.true →
+              Effect4.Program.Typed.ExitOk w' mid ex →
+                Effect4.Program.Typed.TypedProg root w' ty (K ex)) →
+      (∀ (w' : Effect4.Program.Typed.World),
+          w.leHost w' →
+            ∀ (ex : Effect4.Machine.ExitV),
+              Effect4.Program.Typed.ExitOk w' mid ex →
+                Eq (kind.hasExitArm ex) Bool.false → Effect4.Program.Typed.ExitOk w' ty ex) →
+        Effect4.Program.Typed.TypedProg root w ty
+          (Effects.Program.bind (Effect4.Program.Sched.guardR kind a) K)
+```
+
+**on-failure-typed**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) {w : Effect4.Program.Typed.World}
+  {mid ty : Effect4.Program.EffTy} {a : Effect4.Program.Sched.RProgram}
+  {K : Effect4.Machine.ExitV → Effect4.Program.Sched.RProgram},
+  Effect4.Program.Typed.TypedProg root w mid a →
+    Eq (mid.answer.subN ty.answer) Bool.true →
+      (∀ (w' : Effect4.Program.Typed.World),
+          w.leHost w' →
+            ∀
+              (c :
+                Effect4.Cause Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+                  Effect4.Machine.Ann),
+              Effect4.Program.Typed.ExitOk w' mid (Effect4.Exit.failure c) →
+                Effect4.Program.Typed.TypedProg root w' ty (K (Effect4.Exit.failure c))) →
+        Effect4.Program.Typed.TypedProg root w ty
+          (Effects.Program.bind
+            (Effect4.Program.Sched.guardR Effect4.Program.Sched.GuardKind.onFailure a) K)
+```
+
+**all-guard-typed**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) {w : Effect4.Program.Typed.World}
+  {mid ty : Effect4.Program.EffTy} {kind : Effect4.Program.Sched.GuardKind},
+  (∀ (ex : Effect4.Machine.ExitV), Eq (kind.hasExitArm ex) Bool.true) →
+    ∀ {a : Effect4.Program.Sched.RProgram}
+      {K : Effect4.Machine.ExitV → Effect4.Program.Sched.RProgram},
+      Effect4.Program.Typed.TypedProg root w mid a →
+        (∀ (w' : Effect4.Program.Typed.World),
+            w.leHost w' →
+              ∀ (ex : Effect4.Machine.ExitV),
+                Effect4.Program.Typed.ExitOk w' mid ex →
+                  Effect4.Program.Typed.TypedProg root w' ty (K ex)) →
+          Effect4.Program.Typed.TypedProg root w ty
+            (Effects.Program.bind (Effect4.Program.Sched.guardR kind a) K)
+```
+
+**on-exit-typed**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) {w : Effect4.Program.Typed.World}
+  {b f ty : Effect4.Program.EffTy} {body : Effect4.Program.Sched.RProgram}
+  {fin : Effect4.Machine.ExitV → Effect4.Program.Sched.RProgram} {flag : Bool},
+  Eq (b.answer.subN ty.answer) Bool.true →
+    Eq (b.error.subN ty.error) Bool.true →
+      Eq (f.error.subN ty.error) Bool.true →
+        Effect4.Program.Typed.TypedProg root w b body →
+          (∀ (w' : Effect4.Program.Typed.World),
+              w.leHost w' →
+                ∀ (ex : Effect4.Machine.ExitV),
+                  Effect4.Program.Typed.ExitOk w' b ex →
+                    Effect4.Program.Typed.TypedProg root w' f (fin ex)) →
+            Effect4.Program.Typed.TypedProg root w ty (Effect4.Program.Sched.onExitR body fin flag)
+```
+
+## scope-lifetime-finalization
+
+Scope Lifetime & Finalization: Lifetimes, finalizer registration, and LIFO unwinding
+
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
+| --- | --- | --- | --- | --- | --- |
+| close-idempotent | preservation | proved | Effect4.Scope.close_idempotent | yes |  |
+| close-twice | preservation | proved | Effect4.Scope.close_twice | yes |  |
+| close-order-eq | inversion | proved | Effect4.Scope.closeOrder_eq | yes |  |
+| close-reentrant-add | preservation | proved | Effect4.Scope.close_reentrant_add | yes |  |
+| close-seq-protocol | fundamentalProperty | proved | Test.Program.ProtocolPosts.CloseIter.closeSeq_protocol | yes |  |
+
+### Printed statements
+
+**close-idempotent**
+
+```lean
+∀ {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+  (run : φ → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α)
+  (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+  Eq self.isClosed Bool.true →
+    Eq (Effect4.Scope.close run self exit) { fst := self, snd := Effect4.Exit.void }
+```
+
+**close-twice**
+
+```lean
+∀ {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+  (run : φ → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α)
+  (self : Effect4.Scope κ φ β ε δ ι α) (first second : Effect4.Exit β ε δ ι α),
+  Eq (Effect4.Scope.close run (Effect4.Scope.close run self first).fst second)
+    { fst := (Effect4.Scope.close run self first).fst, snd := Effect4.Exit.void }
+```
+
+**close-order-eq**
+
+```lean
+∀ {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
+  Eq self.closeOrder (List.map Prod.snd self.finalizers).reverse
+```
+
+**close-reentrant-add**
+
+```lean
+∀ {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq κ]
+  (run : φ → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α)
+  (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α) (key : κ) (finalizer : φ),
+  Eq self.isClosed Bool.false →
+    Eq (Effect4.Scope.addExit run (self.closeState exit) key finalizer)
+      { fst := self.closeState exit, snd := run finalizer exit }
+```
+
+**close-seq-protocol**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (ex : Effect4.Machine.ExitV)
+  (remaining : List Effect4.Machine.FinName)
+  (captured :
+    List
+      (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+        Effect4.Machine.Ann))
+  (w : Test.Program.ProtocolPosts.W),
+  Test.Program.ProtocolPosts.CloseIter.CapturedOk captured →
+    (∀ (w' : Effect4.Program.Typed.World),
+        Effect4.Program.Typed.World.leHost w w' →
+          ∀ (fin : Effect4.Machine.FinName),
+            List.instMembership.mem remaining fin →
+              Effect4.Program.Typed.TypedProg root w'
+                (Effect4.Program.EffTy.pure Effect4.Program.Ty.unit)
+                (Effect4.Program.Sched.denoteFin fin ex)) →
+      Effect4.Program.Typed.IteratorProtocol root w
+        (Effect4.Program.EffTy.pure (Effect4.Program.Ty.unit.exitOf Effect4.Program.Ty.never))
+        (Effect4.Program.EffTy.pure Effect4.Program.Ty.unit)
+        (Effect4.Program.EffName.store (Effect4.Machine.Name.closeSeq remaining ex captured))
+```
+
+## reactive-scheduling
+
+Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants
+
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
+| --- | --- | --- | --- | --- | --- |
+| machine-typed-not-halted | inversion | proved | Effect4.Program.Typed.machineTyped_not_halted | yes |  |
+| flush-fair | fundamentalProperty | proved | Effect4.Machine.Scheduling.flush_fair | yes |  |
+| step-loop-preserves | preservation | wanted | Effect4.Program.Typed.M6Ledger.step_loop | yes | E4-TYPED-CE-012, E4-TYPED-CE-025 |
+| step-deliver-preserves | preservation | wanted | Effect4.Program.Typed.M6Ledger.step_deliver | yes | E4-TYPED-CE-025 |
+| drivestate-lift | simulation | proved | Effect4.Machine.Lift.driveState_lift | yes |  |
+| scheduler-progress | progress | absent | Operational progress is an open obligation; machineTyped_not_halted provides an invariant consequence (stuck = none) without successor existence | — |  |
+| fair-scheduling | adequacy | absent | Weak fairness progress is open (R12; decisions row 86) | — |  |
+
+### Printed statements
+
+**machine-typed-not-halted**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)
+  (w : Effect4.Program.Typed.World) (m : Effect4.Program.Sched.RState)
+  (why : Effect4.Machine.Stuck),
+  Not (Effect4.Program.Typed.MachineTyped root rootTy w (Effect4.Machine.RunMachine.halt m why))
+```
+
+**flush-fair**
+
+```lean
+∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq ε]
+  [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+  (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
+  (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St),
+  (m.armed (Effect4.Prim ν σ β ε δ ι α) (Effect4.FrameFiber ν σ β ε δ ι α)
+        (Effect4.FrameEvent ν σ β ε δ ι α)).Nodup →
+    Eq
+        (Effect4.Machine.Scheduling.FlushReady interp fuel
+          (m.armed (Effect4.Prim ν σ β ε δ ι α) (Effect4.FrameFiber ν σ β ε δ ι α)
+              (Effect4.FrameEvent ν σ β ε δ ι α)).length
+          m)
+        Bool.true →
+      instLENat.le
+          (m.armed (Effect4.Prim ν σ β ε δ ι α) (Effect4.FrameFiber ν σ β ε δ ι α)
+              (Effect4.FrameEvent ν σ β ε δ ι α)).length
+          rounds →
+        ∀ (owner : Effect4.FiberId),
+          List.instMembership.mem
+              (m.armed (Effect4.Prim ν σ β ε δ ι α) (Effect4.FrameFiber ν σ β ε δ ι α)
+                (Effect4.FrameEvent ν σ β ε δ ι α))
+              owner →
+            Eq (Effect4.Machine.Scheduling.FiredWithin interp fuel rounds m owner) Bool.true
+```
+
+**step-loop-preserves**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)
+  (id : Effect4.FiberId) (yielding : Bool),
+  Effect4.Program.Typed.StepPreserves root rootTy (Effect4.Machine.Cmd.loop id yielding)
+```
+
+**step-deliver-preserves**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)
+  (id : Effect4.FiberId) (yielding : Bool),
+  Effect4.Program.Typed.StepPreserves root rootTy (Effect4.Machine.Cmd.deliver id yielding)
+```
+
+**drivestate-lift**
+
+```lean
+∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)} [inst : DecidableEq ε]
+  [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+  {κ φ η : Type (max u v)} [inst_4 : Effect4.Machine.FiberCore ν β ε δ ι α κ φ]
+  [inst_5 : Effect4.Machine.FiberEvaluator ν σ β ε δ ι α χ St κ φ η] {W : Type w}
+  (o : Effect4.Laws.Effects.WorldOrder W) (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St κ)
+  (I :
+    W →
+      Effect4.Machine.RunMachine ν σ β ε δ ι α χ St κ φ η →
+        List (Effect4.Machine.Cmd ν σ β ε δ ι α κ) → Prop),
+  Effect4.Machine.Lift.StepKeeps o interp I →
+    ∀ (fuel : Nat) (w : W) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St κ φ η)
+      (cmds : List (Effect4.Machine.Cmd ν σ β ε δ ι α κ)),
+      I w m cmds →
+        Exists fun w' =>
+          And (o.le w w')
+            (I w' (Effect4.Machine.driveState interp fuel m cmds).fst
+              (Effect4.Machine.driveState interp fuel m cmds).snd)
+```
+
+## exact-codecs
+
+Exact Codecs: Invertible embeddings for JSON and Schema representations
+
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
+| --- | --- | --- | --- | --- | --- |
+| decode-iff | decidability | proved | Effect4.Schema.decode_iff | yes |  |
+| decode-encode | compatibility | proved | Effect4.Schema.decode_encode | yes |  |
+| of-schema-exact | compatibility | proved | Effect4.Schema.Bridge.ofSchema_exact | yes |  |
+| of-schema-schema | compatibility | proved | Effect4.Schema.Bridge.ofSchema_schema | yes |  |
+| record-codec-layout | compatibility | absent | Planned data-wave feature under decisions row 165; record codecs carry canonical field names when implemented | — |  |
+
+### Printed statements
+
+**decode-iff**
+
+```lean
+∀ {t : Effect4.Program.Ty} {j : Effect4.Json} {v : Effect4.Machine.Val},
+  Iff (Eq (Effect4.Schema.decode t j) (Option.some v))
+    (Exists fun j' =>
+      And (Eq (Effect4.Schema.encode t v) (Option.some j'))
+        (Eq (Effect4.Schema.Codec.normJ j') (Effect4.Schema.Codec.normJ j)))
+```
+
+**decode-encode**
+
+```lean
+∀ {t : Effect4.Program.CTy} {v : Effect4.Machine.Val},
+  Eq (Effect4.Program.Val.hasTy v t.toRaw) Bool.true →
+    Eq (t.toRaw.isCodecValue v) Bool.true →
+      Eq ((Effect4.Schema.encode t.toRaw v).bind (Effect4.Schema.decode t.toRaw)) (Option.some v)
+```
+
+**of-schema-exact**
+
+```lean
+∀ (r : Effect4.Representation) (t : Effect4.Program.Ty),
+  Eq (Effect4.Schema.Bridge.ofSchema r) (Option.some t) →
+    Eq (Effect4.Schema.Bridge.normS r) (Effect4.Schema.Bridge.schema t)
+```
+
+**of-schema-schema**
+
+```lean
+∀ (t : Effect4.Program.Ty),
+  Eq t.closed Bool.true →
+    Eq (Effect4.Schema.Bridge.reservedFree t) Bool.true →
+      Eq (Effect4.Schema.Bridge.ofSchema (Effect4.Schema.Bridge.schema t)) (Option.some t)
+```
+
+## subtyping-algebra
+
+Subtyping Algebra: Preorder laws, normalization, and join-semilattice on CTy
+
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
+| --- | --- | --- | --- | --- | --- |
+| subn-refl | compatibility | proved | Effect4.Program.Ty.subN_refl | yes |  |
+| subn-trans | transitivity | proved | Effect4.Program.Ty.subN_trans | yes |  |
+| subn-equiv-iff | decidability | proved | Effect4.Program.Ty.subN_equiv_iff | yes |  |
+| normalize-idem | compatibility | proved | Effect4.Program.Ty.normalize_idem | yes |  |
+| sub-antisymm-canonical | antisymmetry | proved | Effect4.Program.Ty.sub_antisymm_canonical | yes |  |
+| record-app-subtyping | compatibility | absent | Planned data-wave feature under decisions row 119; Ty currently has 20 constructors without record or app | — |  |
+
+### Printed statements
+
+**subn-refl**
+
+```lean
+∀ (a : Effect4.Program.Ty), Eq (a.subN a) Bool.true
+```
+
+**subn-trans**
+
+```lean
+∀ {a b c : Effect4.Program.Ty},
+  Eq (a.subN b) Bool.true → Eq (b.subN c) Bool.true → Eq (a.subN c) Bool.true
+```
+
+**subn-equiv-iff**
+
+```lean
+∀ (a b : Effect4.Program.Ty),
+  Iff (And (Eq (a.subN b) Bool.true) (Eq (b.subN a) Bool.true)) (Eq a.normalize b.normalize)
+```
+
+**normalize-idem**
+
+```lean
+∀ (t : Effect4.Program.Ty), Eq t.normalize.normalize t.normalize
+```
+
+**sub-antisymm-canonical**
+
+```lean
+∀ (a b : Effect4.Program.CTy),
+  Eq (a.toRaw.sub b.toRaw) Bool.true → Eq (b.toRaw.sub a.toRaw) Bool.true → Eq a b
+```
+
+## initial-algebras-folds
+
+Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniqueness
+
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
+| --- | --- | --- | --- | --- | --- |
+| hom-eq-cata-eff | fundamentalProperty | proved | Effect4.Program.hom_eq_cata_eff | yes |  |
+| inhabited-iff-fits | decidability | proved | Effect4.Program.Typed.inhabited_iff_fits | yes |  |
+| cata-eff-congr-on | compatibility | proved | Effect4.Program.cata_eff_congr_on | yes |  |
+
+### Printed statements
+
+**hom-eq-cata-eff**
+
+```lean
+∀ {Op : Type} {R : Effect4.Program.EffFam → Type u} {alg : Effect4.Program.EffAlgebra Op R}
+  (hom : Effect4.Program.EffHom alg) (node : Effect4.Program.Eff Op),
+  Eq (hom.f_eff node) (Effect4.Program.cata_eff alg node)
+```
+
+**inhabited-iff-fits**
+
+```lean
+∀ (t : Effect4.Program.Ty),
+  Iff (Eq (Effect4.Program.inhabited t) Bool.true)
+    (Exists fun w => Exists fun v => Effect4.Program.Typed.Fits w v t)
+```
+
+**cata-eff-congr-on**
+
+```lean
+∀ {Op : Type} {R : Effect4.Program.EffFam → Type u} {alg₁ alg₂ : Effect4.Program.EffAlgebra Op R}
+  {okOp : Op → Prop} {okKey : Effect4.ServiceKey → Prop},
+  alg₁.AgreeOn alg₂ okOp okKey →
+    ∀ (e : Effect4.Program.Eff Op),
+      Effect4.Program.cata_eff (Effect4.Program.readsAlg okOp okKey) e →
+        Eq (Effect4.Program.cata_eff alg₁ e) (Effect4.Program.cata_eff alg₂ e)
+```
+
+## context-requirements
+
+Context Requirements: Graded coeffects, requirement rows, and layer discharge
+
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
+| --- | --- | --- | --- | --- | --- |
+| satisfies-empty | compatibility | proved | Effect4.Machine.Env.Context.satisfies_empty | yes |  |
+| satisfies-single | inversion | proved | Effect4.Machine.Env.Context.satisfies_single | yes |  |
+| satisfies-union | compatibility | proved | Effect4.Machine.Env.Context.satisfies_union | yes |  |
+| satisfies-weaken | weakening | proved | Effect4.Machine.Env.Context.satisfies_weaken | yes |  |
+| provide-discharges | preservation | proved | Effect4.Program.Provision.LayerTy.provide_discharges | yes |  |
+| provide-closed | fundamentalProperty | proved | Effect4.Program.Provision.LayerTy.provide_closed | yes |  |
+
+### Printed statements
+
+**satisfies-empty**
+
+```lean
+∀ {U : Effect4.ServiceUniverse} (self : Effect4.Machine.Env.Context U),
+  self.Satisfies Effect4.Machine.Env.Requirement.empty
+```
+
+**satisfies-single**
+
+```lean
+∀ {U : Effect4.ServiceUniverse} (self : Effect4.Machine.Env.Context U) (key : Effect4.ServiceKey),
+  Iff (self.Satisfies (Effect4.Machine.Env.Requirement.single key))
+    (Eq (self.get? key).isSome Bool.true)
+```
+
+**satisfies-union**
+
+```lean
+∀ {U : Effect4.ServiceUniverse} (self : Effect4.Machine.Env.Context U)
+  (r s : Effect4.Machine.Env.Requirement),
+  Iff (self.Satisfies (r.union s)) (And (self.Satisfies r) (self.Satisfies s))
+```
+
+**satisfies-weaken**
+
+```lean
+∀ {U : Effect4.ServiceUniverse} (self : Effect4.Machine.Env.Context U)
+  {r s : Effect4.Machine.Env.Requirement},
+  self.Satisfies s → Effect4.Row.Subset r s → self.Satisfies r
+```
+
+**provide-discharges**
+
+```lean
+∀ (s t : Effect4.Program.LayerTy) (key : Effect4.ServiceKey),
+  Effect4.Row.instMembership.mem t.out key →
+    Not (Effect4.Row.instMembership.mem t.requires key) →
+      Not (Effect4.Row.instMembership.mem (s.provide t).requires key)
+```
+
+**provide-closed**
+
+```lean
+∀ (s t : Effect4.Program.LayerTy),
+  t.Closed → Effect4.Row.Subset s.requires t.out → (s.provide t).Closed
+```
+
+## host-session-protocol
+
+Host Session Protocol: Session automaton, external reply ingestion, and boundary capabilities
+
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
+| --- | --- | --- | --- | --- | --- |
+| allows-answer | preservation | proved | Effect4.Run.allows_answer | yes |  |
+| reply-commute | compatibility | proved | Effect4.Api.HostSession.reply_commute | yes |  |
+| frontier-awaithost | inversion | proved | Effect4.Api.observe_awaitingAsync_iff | yes |  |
+| host-progress | progress | assumed | Host session progress is subject to external driver execution; outside closed runtime | — |  |
+
+### Printed statements
+
+**allows-answer**
+
+```lean
+∀ (key : Effect4.Api.HostSession.Key) (target : Effect4.Api.HostProtocol.State),
+  Eq
+    (Effect4.Api.HostProtocol.allows Effect4.Api.HostProtocol.State.awaitingAsync
+      (Effect4.Api.HostProtocol.Label.answer key) target)
+    Bool.true
+```
+
+**reply-commute**
+
+```lean
+∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (a b : Effect4.Api.HostSession.Reply),
+  Ne a.key b.key →
+    Eq (Effect4.Api.HostSession.submit s a).phase Effect4.Api.HostSession.Phase.preflight →
+      Eq (Effect4.Api.HostSession.submit s b).phase Effect4.Api.HostSession.Phase.preflight →
+        Eq (Effect4.Api.HostSession.submit (Effect4.Api.HostSession.submit s a).session b).session
+          (Effect4.Api.HostSession.submit (Effect4.Api.HostSession.submit s b).session a).session
+```
+
+**frontier-awaithost**
+
+```lean
+∀ (why : Effect4.Machine.Exhaustion) (m : Effect4.Program.NativeMachine),
+  Iff (Eq (Effect4.Api.HostProtocol.observe m) Effect4.Api.HostProtocol.State.awaitingAsync)
+    (Exists fun key =>
+      List.instMembership.mem (Effect4.Api.frontierReasons why m)
+        (Effect4.Api.FrontierReason.awaitHost key))
+```
+
+## translation-simulation
+
+Translation & Simulation: Semantic preservation, replay relations, and capstone M7
+
+| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
+| --- | --- | --- | --- | --- | --- |
+| run-eq-meaning | simulation | proved | Effect4.Program.Agreement.run_eq_meaning | yes |  |
+| loop-agreement | simulation | proved | Effect4.Program.Agreement.loopAgreement_of_straight | yes |  |
+| run-eq-ref | simulation | proved | Effect4.Program.Sched.run_eq_ref | yes |  |
+| m7-route | fundamentalProperty | proved | Effect4.Program.Typed.m7_of_ledger | yes |  |
+| m7-exits-typed | adequacy | wanted | Effect4.Program.Typed.M7.exits_typed | yes |  |
+| m7-stores-typed | adequacy | wanted | Effect4.Program.Typed.M7.stores_typed | yes |  |
+| m7-never-halts | progress | wanted | Effect4.Program.Typed.M7.never_halts | yes |  |
+| m7-exit-handles-valid | preservation | wanted | Effect4.Program.Typed.M7.exitHandles_valid | yes |  |
+
+### Printed statements
+
+**run-eq-meaning**
+
+```lean
+∀ (e : Effect4.Program.NativeEff) (fuel : Nat),
+  Eq (Effect4.Program.Denote.Straight e) Bool.true →
+    instLENat.le (Effect4.Program.Agreement.depth e) fuel →
+      instLENat.le (instHAdd.hAdd (instHMul.hMul 2 (Effect4.Program.Agreement.steps e)) 6) fuel →
+        And (Eq (Effect4.Api.run e fuel).outcome Effect4.Api.Outcome.finished)
+          (And
+            (Eq (Effect4.Api.run e fuel).exit
+              (Option.some
+                (Effect4.Program.Denote.meaning e List.nil Effect4.Machine.Stores.empty).fst))
+            (Eq (Effect4.Api.run e fuel).stores
+              (Effect4.Program.Denote.meaning e List.nil Effect4.Machine.Stores.empty).snd))
+```
+
+**loop-agreement**
+
+```lean
+∀ (e : Effect4.Program.NativeEff),
+  Eq (Effect4.Program.Denote.Straight e) Bool.true → Effect4.Program.Agreement.LoopAgreement e
+```
+
+**run-eq-ref**
+
+```lean
+∀ (e : Effect4.Program.NativeEff) (fuel : Nat) (tape : List Effect4.Api.Decision),
+  And
+    (Eq (Effect4.Api.replay e fuel tape).outcome
+      (Effect4.Program.Sched.classify (Effect4.Program.Sched.replayR e fuel tape)))
+    (Eq (Effect4.Machine.obs (Effect4.Api.replay e fuel tape).machine)
+      (Effect4.Program.Sched.obsR
+        (Effect4.Machine.ReplayResult.machine (Effect4.Program.Sched.replayR e fuel tape))))
+```
+
+**m7-route**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel : Nat)
+  (tape : List Effect4.Api.Decision),
+  Effect4.Program.Typed.LoadsTyped root rootTy fuel fuel →
+    (∀ (d : Effect4.Api.Decision), Effect4.Program.Typed.DecisionKeeps root rootTy fuel d) →
+      And (Effect4.Program.Typed.M7Exits root rootTy fuel tape)
+        (And (Effect4.Program.Typed.M7Stores root rootTy fuel tape)
+          (Effect4.Program.Typed.M7NoHalt root rootTy fuel tape))
+```
+
+**m7-exits-typed**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel : Nat)
+  (tape : List Effect4.Api.Decision), Effect4.Program.Typed.M7Exits root rootTy fuel tape
+```
+
+**m7-stores-typed**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel : Nat)
+  (tape : List Effect4.Api.Decision), Effect4.Program.Typed.M7Stores root rootTy fuel tape
+```
+
+**m7-never-halts**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel : Nat)
+  (tape : List Effect4.Api.Decision), Effect4.Program.Typed.M7NoHalt root rootTy fuel tape
+```
+
+**m7-exit-handles-valid**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel : Nat)
+  (m : Effect4.Program.Sched.RState), Effect4.Program.Typed.ExitHandlesValid root rootTy fuel m
 ```
 
 ## Register context
@@ -91,15 +735,55 @@ These are authored links to historical attacks. Read each full row: a leading st
 | `E4-TYPED-CE-030` | SEEDED 2026-10-01 (coordinator; the red controls landed with decisions row 148, in the battery under the gate's ceiling) | `TypedProg` is closed under bind: a program typed at `mid` and a continuation typed at `ty` at every later world on every exit `ExitOk` admits at `mid` make a sequence typed at `ty` | `Test/Program/TypedProgBindRed.lean`: `typedProg_not_bind_closed` (`:32`; a closing marker's exit must fit the current type), `bind_not_typed` and `guard_bind_not_closed` (a first program whose only closing marker sits inside a guard body does not bind either); green control `seq_sample` | no bind rule: M5 sequences per construct (`seq_typed`, `src/Effect4/Laws/Program/Typed/Seq.lean:59`, with `close_typed`); the `onFailure`, `all` and `onExit` shapes owed beside it (decisions row 148) |
 ```
 
+**step-loop-preserves: E4-TYPED-CE-012**
+
+```text
+| `E4-TYPED-CE-012` | REPAIRED 2026-10-01 (seat B, `074f03ff`); SEEDED 2026-10-01 | Saved stacks transport along world growth (`M6Ledger.step_loop` as declared) | `Test/Program/FramesNotKripke.lean`: `stackAccepts_not_mono`, `step_loop_refuted`, `hookLawsX_old`, `output_typed_one_world` (historical, over `Old.*`); `bad_not_kripke_initial`, `bad_not_kripke_by_transport`, `hookLawsX_refused` (the closed judgment refuses the frame); `output_not_kripke` (wrapping at the frame, refuted); `evaluate_keeps`, `step_loop_good`, `good_stack_transports` (green); at the union (seat I, `4a08dd1b`, `6a477f47`): `step_loop_refuted` compiles over `Old.*`, `step_loop_good` is restated over `I` (`good_config`, `afterGood_config`), the laws are `M3bWorld`'s (`M6Stack` deleted) | seat B: `FrameAccepts`'s arms and the hook protocols (`IteratorProtocol`, `LoopProtocol`, the async finalizer clause) quantified over later worlds; the walk restated over Kripke stacks; `savedOk_mono`, `stackAccepts_mono`, `typedProg_mono` in `M3bWorld` |
+```
+
+**step-loop-preserves: E4-TYPED-CE-025**
+
+```text
+| `E4-TYPED-CE-025` | SEEDED 2026-10-01 (seat D3, `5789df56`, merged `7d50cfe6`; kernel-checked at `[propext, Quot.sound]`) | `StepPreserves` for `loop` and `deliver` is false: completing a Deferred owes its waiters the completion at tokens no clause relates to the cell | `docs/research/2026-10-01-landing/seat-D3/probes/LoopDeliver.lean`: `loop_false`, `deliver_false` | row 134 (b): a waiter column in `J` (ruled; seat D5) |
+```
+
+**step-deliver-preserves: E4-TYPED-CE-025**
+
+```text
+| `E4-TYPED-CE-025` | SEEDED 2026-10-01 (seat D3, `5789df56`, merged `7d50cfe6`; kernel-checked at `[propext, Quot.sound]`) | `StepPreserves` for `loop` and `deliver` is false: completing a Deferred owes its waiters the completion at tokens no clause relates to the cell | `docs/research/2026-10-01-landing/seat-D3/probes/LoopDeliver.lean`: `loop_false`, `deliver_false` | row 134 (b): a waiter column in `J` (ruled; seat D5) |
+```
+
 ## Applicability decisions
 
 | Concept | Row | Who | Excluded |
 | --- | --- | --- | --- |
-| residual-program-typing | 163 | owner | stored function values and function types; semantic carriers may use Lean functions |
+| store-typing | 163 | owner | function values and closures in Val: Fits contains no arrow clause |
+| store-typing | 96 | owner | raw subtyping in handle arms: comparisons use Equiv under Ty.subN |
+| store-typing | 156 | owner | dangling scope handles: ScopeLive presence required at Ty.scope |
+| residual-program-typing | 163 | owner | stored function values and closures: stored Eff syntax uses first-order program trees, while proof-side RProgram carries Lean function continuations at visible operations |
 | residual-program-typing | 117 | owner | open root requirement rows: M5, M6c and M7 take the premise rootTy.requires = empty |
+| residual-program-typing | 148 | coordinator | general bind closure: sequencing is proved per construct via compatibility lemmas |
+| scope-lifetime-finalization | 156 | owner | closure or exit of absent scopes: ScopeLive required |
+| scope-lifetime-finalization | 152 | owner | badName and notImplemented defect transmission during close walk |
+| reactive-scheduling | 106 | owner | unbounded token indices: QueueOk enforces GuardState.keysBelow |
+| reactive-scheduling | 107 | owner | defect-bearing exit boundaries: ExitOk requires NoShapeDefect |
+| reactive-scheduling | 134 | owner | untyped timer and race columns in configuration typing |
+| exact-codecs | 128 | owner | arbitrary syntactic equality: embeddings are exact modulo normJ and normS |
+| exact-codecs | 179 | coordinator | unconditional metadata preservation: normS erases only nine approved keys |
+| subtyping-algebra | 137 | owner | raw subtyping for checker comparisons: subN normalizes both sides first |
+| subtyping-algebra | 163 | owner | arrow subtyping: Ty contains no function constructor |
+| initial-algebras-folds | 127 | owner | recursive-type unfolding in inhabited: inhabited is a fold over finite syntax |
+| context-requirements | 117 | owner | open root requirement rows: M5, M6c and M7 require rootTy.requires = empty |
+| context-requirements | 104 | owner | lexical environment capture in layers: layers build at closed points |
+| context-requirements | 105 | owner | mismatched layer values: layer value must fit declared service type |
+| host-session-protocol | 122 | owner | in-engine boundary decoding: Decision 12 adopts Route A typed membership |
+| host-session-protocol | 97 | owner | internal handle kinds at host boundary: cells, promises, fibers, scopes refused |
+| translation-simulation | 138 | owner | non-empty host tables in M7: M7 is stated strictly on M7Fragment with root.table = [] |
+| translation-simulation | 95 | owner | host answers on decision tapes: M6 and M7 quantify over answer-free tapes |
+| translation-simulation | 117 | owner | open requirement rows: M7Fragment enforces rootTy.requires = empty |
 
 ## Placement
 
 theorems of the registry's concept-named modules; auxiliary names, ledger goals and their checked witnesses excluded
 
-Tagged: 2; inherited (provisional): 36; unplaced: 0.
+Tagged: 2; inherited (provisional): 1119; unplaced: 0.

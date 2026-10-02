@@ -23,7 +23,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = ("semantics.json", "semantics.md")
-TARGETS = ("Effect4.Laws.Program.Typed.Assembly", "Test.Program.TypedProgBindRed", "Test.Audit.SemanticsCensus",
+TARGETS = ("Effect4.Laws", "Test.Program.TypedProgBindRed", "Test.Program.ProtocolPosts", "Test.Audit.SemanticsCensus",
            "Drivers.Semantics", "Drivers.SemanticsControls")
 POLICY_FILES = ("Test/Audit/AxiomGate.lean", "tools/ProofGraph/Proof.lean")
 INPUTS = ("tools/Tools/SemanticsRegistry.lean", "tools/Tools/Semantics.lean",

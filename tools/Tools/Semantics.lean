@@ -325,7 +325,7 @@ def renderMarkdown (report : Json) : String := Id.run do
   out := out ++ "Selected evidence only. English associations are authored; inherited placement is provisional. The semantic axiom ceiling is not a whole-library gate verdict.\n\n"
   for concept in array report "concepts" do
     out := out ++ s!"## {field concept "id"}\n\n{field concept "title"}\n\n"
-    out := out ++ "| Claim | Role | Status | Evidence | At the ceiling | Contested by |\n| --- | --- | --- | --- | --- | --- |\n"
+    out := out ++ "| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |\n| --- | --- | --- | --- | --- | --- |\n"
     for claim in (array report "claims").filter (field · "concept" == field concept "id") do
       let status := nested claim "status"
       let tag := field status "_tag"

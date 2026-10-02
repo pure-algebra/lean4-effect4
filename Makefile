@@ -189,12 +189,13 @@ SEMANTICS_INPUTS := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tool
   src/Effect4/Laws/Auto/Semantics.lean Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain \
   tools/ProofGraph/Proof.lean tools/ProofGraph/Ledger.lean tools/Tools/GeneratedStamp.lean \
   Test/Audit/AxiomGate.lean scripts/check-semantics.py
-SEMANTICS_TRACES := $(TRACE)/Laws/Program/Typed/Assembly.trace .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
+SEMANTICS_TRACES := $(TRACE)/Laws.trace .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
+  .lake/build/lib/lean/Test/Program/ProtocolPosts.trace \
   .lake/build/lib/lean/Test/Audit/SemanticsCensus.trace .lake/build/lib/lean/Drivers/Semantics.trace \
   .lake/build/lib/lean/Drivers/SemanticsControls.trace
 $(SEMANTICS_TRACES):
 	@echo 'Missing semantics artifact $@. Prepare in the bounded Lean lane:' >&2
-	@echo '$(LAKE) build Effect4.Laws.Program.Typed.Assembly Test.Program.TypedProgBindRed Test.Audit.SemanticsCensus Drivers.Semantics Drivers.SemanticsControls' >&2
+	@echo '$(LAKE) build Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts Test.Audit.SemanticsCensus Drivers.Semantics Drivers.SemanticsControls' >&2
 	@exit 1
 
 $(GEN)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES)

@@ -34,8 +34,8 @@ The three tiers are:
 marker depends on the previous one, so a regenerated upstream group re-cuts everything
 downstream of it. The semantics group reads no preceding group's output and has no chain
 prerequisite. It requires prepared artifacts for its named roots and drivers; its Lake
-roots are `Effect4.Laws.Program.Typed.Assembly` and `Test.Program.TypedProgBindRed`, covering
-the selected evidence and concept modules. Its freshness preflight refuses a stale or missing artifact and prints the narrow preparation
+roots are `Effect4.Laws`, `Test.Program.TypedProgBindRed` and `Test.Program.ProtocolPosts`,
+covering every concept's selected evidence and default modules. Its freshness preflight refuses a stale or missing artifact and prints the narrow preparation
 command. It also compares the prepared project/package import artifacts with saved build hashes,
 checks that the report names only prepared roots, and stages generation until final validation
 succeeds. It never starts a build or installs host dependencies. Its run receipt records the checkout

@@ -1,7 +1,12 @@
 import Lean
 
 /-! Authored concepts and evidence pointers; facts and statuses are read from the environment.
-The first slice uses no literature locators. See the semantics implementation receipt. -/
+The value below is the ten-concept registry Gemini drafted (2026-10-01), checked by the
+coordinator against the tree and adopted with three repairs: the roots load the whole proof
+graph, the frontier claim names the theorem its title states, and the M7 capstone is one claim
+per ledger goal. A literature `work` is an author-year key of the source index
+(`docs/research/2026-10-01-semantics/sources/README.md`) and a `locator` a row id of the
+citations audit (`citations-audit.md`); checking keys against the index is owed. -/
 namespace Tools.Semantics
 open Lean
 
@@ -72,31 +77,467 @@ structure Registry where
 deriving Repr, Inhabited
 
 def registry : Registry where
-  roots := [`Effect4.Laws.Program.Typed.Assembly, `Test.Program.TypedProgBindRed]
+  roots := [`Effect4.Laws, `Test.Program.TypedProgBindRed, `Test.Program.ProtocolPosts]
   concepts := [
+    { id := "store-typing"
+      title := "Store Typing: World-indexed semantic value membership (Fits) and store typings"
+      defaultModules := [
+        `Effect4.Laws.Program.Typed.Membership,
+        `Effect4.Laws.Program.Typed.World,
+        `Effect4.Laws.Program.Typed.Validity
+      ] },
     { id := "residual-program-typing"
-      title := "Residual program typing: TypedProg, the protocol-indexed judgment on residual programs"
-      defaultModules := [`Effect4.Laws.Program.Typed.Residual, `Effect4.Laws.Program.Typed.Seq] }]
+      title := "Residual Program Typing: TypedProg, the protocol-indexed judgment on residual programs"
+      defaultModules := [
+        `Effect4.Laws.Program.Typed.Residual,
+        `Effect4.Laws.Program.Typed.Seq,
+        `Effect4.Laws.Program.Typed.Assembly
+      ] },
+    { id := "scope-lifetime-finalization"
+      title := "Scope Lifetime & Finalization: Lifetimes, finalizer registration, and LIFO unwinding"
+      defaultModules := [
+        `Effect4.Laws.Machine.ScopeMachine,
+        `Effect4.Laws.Machine.ScopeRestoration
+      ] },
+    { id := "reactive-scheduling"
+      title := "Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants"
+      defaultModules := [
+        `Effect4.Laws.Machine.Scheduling,
+        `Effect4.Laws.Machine.Lift,
+        `Effect4.Laws.Program.Typed.Scheduler
+      ] },
+    { id := "exact-codecs"
+      title := "Exact Codecs: Invertible embeddings for JSON and Schema representations"
+      defaultModules := [
+        `Effect4.Laws.Schema.Codec,
+        `Effect4.Laws.Codegen.ReadPrint,
+        `Effect4.Laws.Codegen.Read
+      ] },
+    { id := "subtyping-algebra"
+      title := "Subtyping Algebra: Preorder laws, normalization, and join-semilattice on CTy"
+      defaultModules := [
+        `Effect4.Laws.Program.TypeAlgebra
+      ] },
+    { id := "initial-algebras-folds"
+      title := "Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniqueness"
+      defaultModules := [
+        `Effect4.Laws.Program.Folds.Ty,
+        `Effect4.Laws.Machine.Folds.Val,
+        `Effect4.Laws.Machine.Folds.Stores
+      ] },
+    { id := "context-requirements"
+      title := "Context Requirements: Graded coeffects, requirement rows, and layer discharge"
+      defaultModules := [
+        `Effect4.Laws.Effects.Protocol
+      ] },
+    { id := "host-session-protocol"
+      title := "Host Session Protocol: Session automaton, external reply ingestion, and boundary capabilities"
+      defaultModules := [
+        `Effect4.Laws.Api.HostSession,
+        `Effect4.Laws.Api.Frontier,
+        `Effect4.Laws.Api.Guard
+      ] },
+    { id := "translation-simulation"
+      title := "Translation & Simulation: Semantic preservation, replay relations, and capstone M7"
+      defaultModules := [
+        `Effect4.Laws.Program.Agreement.Machine,
+        `Effect4.Laws.Program.Agreement.Loop,
+        `Effect4.Laws.Program.LoopAgreement,
+        `Effect4.Laws.Program.RuntimeR,
+        `Effect4.Laws.Machine.Book
+      ] }
+  ]
   claims := [
+    -- 1. store-typing
+    { id := "fits-mono", concept := "store-typing", role := .monotonicity
+      title := "Membership is monotone under host world order"
+      pointer := .witness `Effect4.Program.Typed.fits_mono
+      literature := [
+        { work := "TAPL", locator := "§13.5, pp. 165–169", relation := "proofTechnique" },
+        { work := "Ahmed2004", locator := "audit P1", relation := "adaptedResult" }
+      ] },
+    { id := "fits-subn", concept := "store-typing", role := .preservation
+      title := "Membership is closed under the checker's subtyping order"
+      pointer := .witness `Effect4.Program.Typed.fits_subN
+      literature := [
+        { work := "TAPL", locator := "§15.1, p. 181", relation := "definitionUsed" }
+      ] },
+    { id := "fits-normalize", concept := "store-typing", role := .compatibility
+      title := "Membership is invariant under type normalization"
+      pointer := .witness `Effect4.Program.Typed.fits_normalize
+      literature := [
+        { work := "Castagna2024", locator := "audit P6", relation := "adaptedResult" }
+      ] },
+    { id := "fits-scope-inv", concept := "store-typing", role := .inversion
+      title := "A member of Ty.scope is a present scope's handle"
+      pointer := .witness `Effect4.Program.Typed.fits_scope_inv
+      literature := [
+        { work := "ATTAPL", locator := "ch. 3, pp. 87–136", relation := "analogy" }
+      ] },
+    { id := "store-safety", concept := "store-typing", role := .progress
+      title := "Store safety through inductive configuration typing"
+      pointer := .absent "Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139)"
+      literature := [
+        { work := "TAPL", locator := "§13.5, pp. 165–169", relation := "excludedFeature" }
+      ] },
+
+    -- 2. residual-program-typing
     { id := "seq-typed", concept := "residual-program-typing", role := .compatibility
-      title := "The seqR compatibility lemma: the shape denoteR sequences with is typed"
-      pointer := .witness `Effect4.Program.Typed.seq_typed },
+      title := "The seqR compatibility lemma: denoteR sequences with typed continuations"
+      pointer := .witness `Effect4.Program.Typed.seq_typed
+      literature := [
+        { work := "ATTAPL", locator := "ch. 3, pp. 87–136", relation := "adaptedResult" }
+      ] },
+    { id := "close-typed", concept := "residual-program-typing", role := .preservation
+      title := "Closing a typed program with unguard preserves typing"
+      pointer := .witness `Effect4.Program.Typed.close_typed
+      literature := [
+        { work := "deVilhenaPottier2021", locator := "audit P8", relation := "proofTechnique" }
+      ] },
     { id := "denote-typed", concept := "residual-program-typing", role := .fundamentalProperty
       title := "The denotation of a checked program is TypedProg at its certificate (M5)"
       pointer := .goal `Effect4.Program.Typed.M3bAssembly.denoteR_typed
-      contestedBy := ["E4-TYPED-CE-020", "E4-TYPED-CE-021", "E4-TYPED-CE-022"] },
+      contestedBy := ["E4-TYPED-CE-020", "E4-TYPED-CE-021", "E4-TYPED-CE-022"]
+      literature := [
+        { work := "XiaEtAl2020", locator := "audit P37", relation := "definitionUsed" }
+      ] },
     { id := "bind-closed", concept := "residual-program-typing", role := .compatibility
       title := "TypedProg is closed under bind"
-      pointer := .refutedBy "E4-TYPED-CE-030" `Test.Program.TypedProgBindRed.typedProg_not_bind_closed },
+      pointer := .refutedBy "E4-TYPED-CE-030" `Test.Program.TypedProgBindRed.typedProg_not_bind_closed
+      literature := [
+        { work := "deVilhenaPottier2021", locator := "audit P8", relation := "excludedFeature" }
+      ] },
+    { id := "guard-bind-typed", concept := "residual-program-typing", role := .compatibility
+      title := "The guard compatibility lemma: a guarded program bound into its arms is typed (the general form of seq_typed, row 148)"
+      pointer := .witness `Effect4.Program.Typed.guardBind_typed },
     { id := "on-failure-typed", concept := "residual-program-typing", role := .compatibility
-      title := "The onFailure-shape compatibility lemma beside seq_typed"
-      pointer := .absent "owed beside seq_typed under M5's ledger with the all and onExit shapes (decisions row 148); no declaration or goal selected for this owed claim" }]
+      title := "The onFailure shape (catchCause, catchIf, orDie, a finalizer's cleanup) is typed"
+      pointer := .witness `Effect4.Program.Typed.catchGuard_typed },
+    { id := "all-guard-typed", concept := "residual-program-typing", role := .compatibility
+      title := "The all and onExit guard shapes (exit, matchCause, a finalizer's boundary) are typed"
+      pointer := .witness `Effect4.Program.Typed.allGuard_typed },
+    { id := "on-exit-typed", concept := "residual-program-typing", role := .compatibility
+      title := "The onExit shape onExitR builds: the body and the finalizer at their types"
+      pointer := .witness `Effect4.Program.Typed.onExit_typed },
+
+    -- 3. scope-lifetime-finalization
+    { id := "close-idempotent", concept := "scope-lifetime-finalization", role := .preservation
+      title := "Closing an already-closed scope returns void without re-running finalizers"
+      pointer := .witness `Effect4.Scope.close_idempotent
+      literature := [
+        { work := "PFPL", locator := "ch. 28, §28.1, p. 261", relation := "adaptedResult" }
+      ] },
+    { id := "close-twice", concept := "scope-lifetime-finalization", role := .preservation
+      title := "A second close runs nothing"
+      pointer := .witness `Effect4.Scope.close_twice },
+    { id := "close-order-eq", concept := "scope-lifetime-finalization", role := .inversion
+      title := "Scope finalizers run in reverse registration order (LIFO)"
+      pointer := .witness `Effect4.Scope.closeOrder_eq
+      literature := [
+        { work := "ATTAPL", locator := "ch. 3, pp. 87–136", relation := "analogy" }
+      ] },
+    { id := "close-reentrant-add", concept := "scope-lifetime-finalization", role := .preservation
+      title := "Re-entrant finalizer addition observes closed state immediately"
+      pointer := .witness `Effect4.Scope.close_reentrant_add },
+    { id := "close-seq-protocol", concept := "scope-lifetime-finalization", role := .fundamentalProperty
+      title := "The close walk meets the iterator protocol for clean finalizers"
+      pointer := .witness `Test.Program.ProtocolPosts.CloseIter.closeSeq_protocol
+      literature := [
+        { work := "deVilhenaPottier2021", locator := "audit P8", relation := "adaptedResult" }
+      ] },
+
+    -- 4. reactive-scheduling
+    { id := "machine-typed-not-halted", concept := "reactive-scheduling", role := .inversion
+      title := "Halted machine configuration outside MachineTyped invariant"
+      pointer := .witness `Effect4.Program.Typed.machineTyped_not_halted
+      literature := [
+        { work := "PFPL", locator := "ch. 28, §28.2, p. 263", relation := "adaptedResult" }
+      ] },
+    { id := "flush-fair", concept := "reactive-scheduling", role := .fundamentalProperty
+      title := "Every initially armed owner in a duplicate-free queue is entered within its length in rounds"
+      pointer := .witness `Effect4.Machine.Scheduling.flush_fair
+      literature := [
+        { work := "LynchVaandrager1995", locator := "audit C4", relation := "proofTechnique" }
+      ] },
+    { id := "step-loop-preserves", concept := "reactive-scheduling", role := .preservation
+      title := "The loop decision preserves configuration typing"
+      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_loop
+      contestedBy := ["E4-TYPED-CE-012", "E4-TYPED-CE-025"]
+      literature := [
+        { work := "WrightFelleisen1994", locator := "audit P36", relation := "adaptedResult" }
+      ] },
+    { id := "step-deliver-preserves", concept := "reactive-scheduling", role := .preservation
+      title := "The deliver decision preserves configuration typing"
+      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_deliver
+      contestedBy := ["E4-TYPED-CE-025"] },
+    { id := "drivestate-lift", concept := "reactive-scheduling", role := .simulation
+      title := "Command loop invariant lifting for driveState"
+      pointer := .witness `Effect4.Machine.Lift.driveState_lift
+      literature := [
+        { work := "PFPL", locator := "ch. 28, pp. 261–268", relation := "proofTechnique" }
+      ] },
+    { id := "scheduler-progress", concept := "reactive-scheduling", role := .progress
+      title := "Operational progress with successor transitions or live frontier classification"
+      pointer := .absent "Operational progress is an open obligation; machineTyped_not_halted provides an invariant consequence (stuck = none) without successor existence" },
+    { id := "fair-scheduling", concept := "reactive-scheduling", role := .adequacy
+      title := "Progress under weak fairness"
+      pointer := .absent "Weak fairness progress is open (R12; decisions row 86)"
+      literature := [
+        { work := "PFPL", locator := "chs. 39–41, pp. 371–406", relation := "excludedFeature" }
+      ] },
+
+    -- 5. exact-codecs
+    { id := "decode-iff", concept := "exact-codecs", role := .decidability
+      title := "Exactness of JSON decoding modulo normJ"
+      pointer := .witness `Effect4.Schema.decode_iff
+      literature := [
+        { work := "RendelOstermann2010", locator := "audit P32", relation := "definitionUsed" }
+      ] },
+    { id := "decode-encode", concept := "exact-codecs", role := .compatibility
+      title := "Retraction of JSON encoding on canonical types"
+      pointer := .witness `Effect4.Schema.decode_encode
+      literature := [
+        { work := "FosterEtAl2007", locator := "audit P11", relation := "adaptedResult" }
+      ] },
+    { id := "of-schema-exact", concept := "exact-codecs", role := .compatibility
+      title := "Exactness of Schema reader modulo normS"
+      pointer := .witness `Effect4.Schema.Bridge.ofSchema_exact
+      literature := [
+        { work := "RendelOstermann2010", locator := "audit P32", relation := "adaptedResult" }
+      ] },
+    { id := "of-schema-schema", concept := "exact-codecs", role := .compatibility
+      title := "Retraction of Schema generation on reserved-free types"
+      pointer := .witness `Effect4.Schema.Bridge.ofSchema_schema },
+    { id := "record-codec-layout", concept := "exact-codecs", role := .compatibility
+      title := "Exact codec representation for positional record layouts"
+      pointer := .absent "Planned data-wave feature under decisions row 165; record codecs carry canonical field names when implemented" },
+
+    -- 6. subtyping-algebra
+    { id := "subn-refl", concept := "subtyping-algebra", role := .compatibility
+      title := "Reflexivity of normalized subtyping"
+      pointer := .witness `Effect4.Program.Ty.subN_refl
+      literature := [
+        { work := "TAPL", locator := "§15.2, p. 182", relation := "definitionUsed" }
+      ] },
+    { id := "subn-trans", concept := "subtyping-algebra", role := .transitivity
+      title := "Transitivity of normalized subtyping"
+      pointer := .witness `Effect4.Program.Ty.subN_trans
+      literature := [
+        { work := "TAPL", locator := "§15.2, p. 182", relation := "proofTechnique" }
+      ] },
+    { id := "subn-equiv-iff", concept := "subtyping-algebra", role := .decidability
+      title := "Kernel of subN is syntactic normal form equality"
+      pointer := .witness `Effect4.Program.Ty.subN_equiv_iff
+      literature := [
+        { work := "TAPL", locator := "§16.3, p. 218", relation := "adaptedResult" }
+      ] },
+    { id := "normalize-idem", concept := "subtyping-algebra", role := .compatibility
+      title := "Normalization idempotence"
+      pointer := .witness `Effect4.Program.Ty.normalize_idem },
+    { id := "sub-antisymm-canonical", concept := "subtyping-algebra", role := .antisymmetry
+      title := "Antisymmetry of subtyping on canonical representatives CTy"
+      pointer := .witness `Effect4.Program.Ty.sub_antisymm_canonical
+      literature := [
+        { work := "Castagna2024", locator := "audit P6", relation := "adaptedResult" }
+      ] },
+    { id := "record-app-subtyping", concept := "subtyping-algebra", role := .compatibility
+      title := "Subtyping and normalization for record and application constructors"
+      pointer := .absent "Planned data-wave feature under decisions row 119; Ty currently has 20 constructors without record or app" },
+
+    -- 7. initial-algebras-folds
+    { id := "hom-eq-cata-eff", concept := "initial-algebras-folds", role := .fundamentalProperty
+      title := "Pointwise equality of algebra homomorphisms with cata_eff"
+      pointer := .witness `Effect4.Program.hom_eq_cata_eff
+      literature := [
+        { work := "MeijerFokkingaPaterson1991", locator := "audit P24", relation := "definitionUsed" },
+        { work := "Gibbons2002", locator := "audit P12", relation := "proofTechnique" }
+      ] },
+    { id := "inhabited-iff-fits", concept := "initial-algebras-folds", role := .decidability
+      title := "Syntactic inhabited fold agrees with semantic value existence in Fits"
+      pointer := .witness `Effect4.Program.Typed.inhabited_iff_fits
+      literature := [
+        { work := "TAPL", locator := "§16.1, p. 210", relation := "adaptedResult" }
+      ] },
+    { id := "cata-eff-congr-on", concept := "initial-algebras-folds", role := .compatibility
+      title := "Fold congruence along agreeing signature algebras"
+      pointer := .witness `Effect4.Program.cata_eff_congr_on },
+
+    -- 8. context-requirements
+    { id := "satisfies-empty", concept := "context-requirements", role := .compatibility
+      title := "The empty requirement is satisfied by every context"
+      pointer := .witness `Effect4.Machine.Env.Context.satisfies_empty
+      literature := [
+        { work := "PetricekOrchardMycroft2014", locator := "audit C8", relation := "analogy" }
+      ] },
+    { id := "satisfies-single", concept := "context-requirements", role := .inversion
+      title := "A singleton requirement is satisfied iff the key is present in the context"
+      pointer := .witness `Effect4.Machine.Env.Context.satisfies_single },
+    { id := "satisfies-union", concept := "context-requirements", role := .compatibility
+      title := "Union requirement satisfaction splits across components"
+      pointer := .witness `Effect4.Machine.Env.Context.satisfies_union },
+    { id := "satisfies-weaken", concept := "context-requirements", role := .weakening
+      title := "Context satisfaction is monotone under requirement row inclusion"
+      pointer := .witness `Effect4.Machine.Env.Context.satisfies_weaken },
+    { id := "provide-discharges", concept := "context-requirements", role := .preservation
+      title := "Providing a layer discharges its output services from requirement rows"
+      pointer := .witness `Effect4.Program.Provision.LayerTy.provide_discharges
+      literature := [
+        { work := "Leijen2014", locator := "audit P22", relation := "adaptedResult" }
+      ] },
+    { id := "provide-closed", concept := "context-requirements", role := .fundamentalProperty
+      title := "A closed dependency layer that covers all requirements yields a closed program"
+      pointer := .witness `Effect4.Program.Provision.LayerTy.provide_closed },
+
+    -- 9. host-session-protocol
+    { id := "allows-answer", concept := "host-session-protocol", role := .preservation
+      title := "Answering an async request is an allowed transition from awaitingAsync"
+      pointer := .witness `Effect4.Run.allows_answer
+      literature := [
+        { work := "Wadler2012", locator := "audit P35", relation := "adaptedResult" }
+      ] },
+    { id := "reply-commute", concept := "host-session-protocol", role := .compatibility
+      title := "Independent host replies commute in session submission"
+      pointer := .witness `Effect4.Api.HostSession.reply_commute
+      literature := [
+        { work := "LynchVaandrager1995", locator := "audit C4", relation := "analogy" }
+      ] },
+    { id := "frontier-awaithost", concept := "host-session-protocol", role := .inversion
+      title := "Machine awaitingAsync state matches frontier awaitHost reasons"
+      pointer := .witness `Effect4.Api.observe_awaitingAsync_iff },
+    { id := "host-progress", concept := "host-session-protocol", role := .progress
+      title := "Host session progress under external answers"
+      pointer := .assumed "docs/core/host-boundary.md" "Host session progress is subject to external driver execution; outside closed runtime" },
+
+    -- 10. translation-simulation
+    { id := "run-eq-meaning", concept := "translation-simulation", role := .simulation
+      title := "Frame machine execution matches denotational meaning on Straight fragment"
+      pointer := .witness `Effect4.Program.Agreement.run_eq_meaning
+      literature := [
+        { work := "Leroy2009", locator := "audit C10", relation := "analogy" }
+      ] },
+    { id := "loop-agreement", concept := "translation-simulation", role := .simulation
+      title := "Loop agreement on the straight fragment"
+      pointer := .witness `Effect4.Program.Agreement.loopAgreement_of_straight },
+    { id := "run-eq-ref", concept := "translation-simulation", role := .simulation
+      title := "Frame machine replay matches term reference replay at empty host table"
+      pointer := .witness `Effect4.Program.Sched.run_eq_ref
+      literature := [
+        { work := "LynchVaandrager1995", locator := "audit C4", relation := "proofTechnique" }
+      ] },
+    { id := "m7-route", concept := "translation-simulation", role := .fundamentalProperty
+      title := "M7 conditional route: typed exits and stores from ledger hypotheses M5 and M6"
+      pointer := .witness `Effect4.Program.Typed.m7_of_ledger
+      literature := [
+        { work := "WrightFelleisen1994", locator := "audit P36", relation := "analogy" }
+      ] },
+    { id := "m7-exits-typed", concept := "translation-simulation", role := .adequacy
+      title := "M7a: every exit the observation records fits its fiber's declared type on M7Fragment"
+      pointer := .goal `Effect4.Program.Typed.M7.exits_typed
+      literature := [
+        { work := "WrightFelleisen1994", locator := "audit P36", relation := "analogy" }
+      ] },
+    { id := "m7-stores-typed", concept := "translation-simulation", role := .adequacy
+      title := "M7b: the observed stores fit at a world that describes them on M7Fragment"
+      pointer := .goal `Effect4.Program.Typed.M7.stores_typed },
+    { id := "m7-never-halts", concept := "translation-simulation", role := .progress
+      title := "M7c: the frame machine never halts on M7Fragment (row 139's stuck = none in J)"
+      pointer := .goal `Effect4.Program.Typed.M7.never_halts },
+    { id := "m7-exit-handles-valid", concept := "translation-simulation", role := .preservation
+      title := "Recorded exits name only live scope handles on every reachable machine (row 139)"
+      pointer := .goal `Effect4.Program.Typed.M7.exitHandles_valid }
+  ]
   cuts := [
-    { concept := "residual-program-typing", decisionRow := 163
-      excluded := "stored function values and function types; semantic carriers may use Lean functions"
+    -- 1. store-typing
+    { concept := "store-typing", decisionRow := 163
+      excluded := "function values and closures in Val: Fits contains no arrow clause"
       reason := "the language cut, docs/core/language-cut.md section 1" },
+    { concept := "store-typing", decisionRow := 96
+      excluded := "raw subtyping in handle arms: comparisons use Equiv under Ty.subN"
+      reason := "checker compares and joins in normalized order (decisions row 137, E4-TYPED-CE-009)" },
+    { concept := "store-typing", decisionRow := 156
+      excluded := "dangling scope handles: ScopeLive presence required at Ty.scope"
+      reason := "machine halts on absent scope in prepareScopedExitR (E4-SCHED-CE-020)" },
+
+    -- 2. residual-program-typing
+    { concept := "residual-program-typing", decisionRow := 163
+      excluded := "stored function values and closures: stored Eff syntax uses first-order program trees, while proof-side RProgram carries Lean function continuations at visible operations"
+      reason := "the language cut, docs/core/language-cut.md section 1; row 163 excludes stored function values, not functions in the semantic model" },
     { concept := "residual-program-typing", decisionRow := 117
       excluded := "open root requirement rows: M5, M6c and M7 take the premise rootTy.requires = empty"
-      reason := "rc.112 runs closed rows (Effect.ts:17494-17497, as the register row cites)" }]
+      reason := "rc.112 runs closed root rows (Effect.ts:17494-17497), while retaining separate per-position obligations" },
+    { concept := "residual-program-typing", decisionRow := 148
+      excluded := "general bind closure: sequencing is proved per construct via compatibility lemmas"
+      reason := "closing marker unguard fixes exit type (E4-TYPED-CE-030)" },
+
+    -- 3. scope-lifetime-finalization
+    { concept := "scope-lifetime-finalization", decisionRow := 156
+      excluded := "closure or exit of absent scopes: ScopeLive required"
+      reason := "machine halts on absent scope in prepareScopedExitR" },
+    { concept := "scope-lifetime-finalization", decisionRow := 152
+      excluded := "badName and notImplemented defect transmission during close walk"
+      reason := "ShapeFree exclusion on encoded causes in exit types (row 152)" },
+
+    -- 4. reactive-scheduling
+    { concept := "reactive-scheduling", decisionRow := 106
+      excluded := "unbounded token indices: QueueOk enforces GuardState.keysBelow"
+      reason := "fresh token bounds protect scheduler invariants (decisions row 106)" },
+    { concept := "reactive-scheduling", decisionRow := 107
+      excluded := "defect-bearing exit boundaries: ExitOk requires NoShapeDefect"
+      reason := "badName and notImplemented defects excluded from typed exits" },
+    { concept := "reactive-scheduling", decisionRow := 134
+      excluded := "untyped timer and race columns in configuration typing"
+      reason := "E4-TYPED-CE-024 through CE-029 separate timer, waiter, and race keys" },
+
+    -- 5. exact-codecs
+    { concept := "exact-codecs", decisionRow := 128
+      excluded := "arbitrary syntactic equality: embeddings are exact modulo normJ and normS"
+      reason := "JSON object key order and Schema AST annotations do not affect decoding" },
+    { concept := "exact-codecs", decisionRow := 179
+      excluded := "unconditional metadata preservation: normS erases only nine approved keys"
+      reason := "arbitrary effect4/* annotations cannot be silently discarded" },
+
+    -- 6. subtyping-algebra
+    { concept := "subtyping-algebra", decisionRow := 137
+      excluded := "raw subtyping for checker comparisons: subN normalizes both sides first"
+      reason := "raw sub does not distribute products over unions (E4-TYPED-CE-009)" },
+    { concept := "subtyping-algebra", decisionRow := 163
+      excluded := "arrow subtyping: Ty contains no function constructor"
+      reason := "the language cut, docs/core/language-cut.md section 1" },
+
+    -- 7. initial-algebras-folds
+    { concept := "initial-algebras-folds", decisionRow := 127
+      excluded := "recursive-type unfolding in inhabited: inhabited is a fold over finite syntax"
+      reason := "Ty is an inductive data type with no infinite equi-recursive unfolding" },
+
+    -- 8. context-requirements
+    { concept := "context-requirements", decisionRow := 117
+      excluded := "open root requirement rows: M5, M6c and M7 require rootTy.requires = empty"
+      reason := "rc.112 runs closed rows (Effect.ts:17494-17497)" },
+    { concept := "context-requirements", decisionRow := 104
+      excluded := "lexical environment capture in layers: layers build at closed points"
+      reason := "Point.layerBuild prevents layer bodies from reading outer environments (E4-PROV-CE-005)" },
+    { concept := "context-requirements", decisionRow := 105
+      excluded := "mismatched layer values: layer value must fit declared service type"
+      reason := "LayerHasTy requires declared service carrier and value subtyping (E4-PROV-CE-006)" },
+
+    -- 9. host-session-protocol
+    { concept := "host-session-protocol", decisionRow := 122
+      excluded := "in-engine boundary decoding: Decision 12 adopts Route A typed membership"
+      reason := "boundary decode checks membership before runtime admission (host-boundary.md section 7)" },
+    { concept := "host-session-protocol", decisionRow := 97
+      excluded := "internal handle kinds at host boundary: cells, promises, fibers, scopes refused"
+      reason := "prevents leaking internal runtime capabilities across boundary (E4-HOST-CE-007)" },
+
+    -- 10. translation-simulation
+    { concept := "translation-simulation", decisionRow := 138
+      excluded := "non-empty host tables in M7: M7 is stated strictly on M7Fragment with root.table = []"
+      reason := "table-aware agreement is deferred to R6 (DI-57)" },
+    { concept := "translation-simulation", decisionRow := 95
+      excluded := "host answers on decision tapes: M6 and M7 quantify over answer-free tapes"
+      reason := "reference machine has no host table and refuses every answer (emptyTable_refuses_every_answer)" },
+    { concept := "translation-simulation", decisionRow := 117
+      excluded := "open requirement rows: M7Fragment enforces rootTy.requires = empty"
+      reason := "rc.112 runs closed rows (Effect.ts:17494-17497)" }
+  ]
 
 end Tools.Semantics
