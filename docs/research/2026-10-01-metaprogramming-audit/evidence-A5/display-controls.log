@@ -1,0 +1,8 @@
+'Test.Program.TypedProgBindRed.typedProg_not_bind_closed' depends on axioms: [propext, Quot.sound]
+'Test.Program.TypedProgBindRed.catchNat_typed' depends on axioms: [propext, Quot.sound]
+'Test.Program.TypedProgBindRed.toUnit_typed' depends on axioms: [propext, Quot.sound]
+'Test.Program.TypedProgBindRed.bind_not_typed' depends on axioms: [propext, Quot.sound]
+'Test.Program.TypedProgBindRed.guard_bind_not_closed' depends on axioms: [propext, Quot.sound]
+'Test.Program.TypedProgBindRed.seq_sample' depends on axioms: [propext, Quot.sound]
+/private/tmp/codex-second-eyes-2026-10-01/metaprogramming/DisplayControls.lean:183:5: error: unexpected token 'partial'; expected '(', ':=', 'rec', '|', identifier or term
+/private/tmp/codex-second-eyes-2026-10-01/metaprogramming/DisplayControls.lean:183:13: error: unexpected token ':='; expected 'abbrev', 'alias', 'axiom', 'builtin_initialize', 'class', 'coinductive', 'def', 'def_wanted', 'example', 'inductive', 'initialize', 'instance', 'instance_wanted', 'opaque', 'proof_wanted', 'register_option', 'structure', 'theorem' or 'theorem_wanted'

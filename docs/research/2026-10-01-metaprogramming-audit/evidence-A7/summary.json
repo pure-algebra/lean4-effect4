@@ -1,0 +1,70 @@
+{
+  "base": "198dd5331eb6607e1e94f3abad39ebbda90c86dc",
+  "scope": "tracked src/tools .lean modules at the base; explicit source imports only",
+  "method": "git cat-file blobs; comment/string stripping; graph reachability; no Lean compiler",
+  "project_modules": 475,
+  "runtime_project_modules_including_root": 135,
+  "laws_project_modules_including_root": 351,
+  "runtime_external_frontier": [
+    "Hash.Sha256.Api",
+    "Init.Data.Nat.ToString",
+    "Lean",
+    "Std",
+    "TypeScript",
+    "TypeScript.Identifier",
+    "TypeScript.Syntax",
+    "TypeScript.TypeRef"
+  ],
+  "laws_external_frontier": [
+    "Aesop",
+    "Batteries.Util.ProofWanted",
+    "Effects.Algebra.Laws",
+    "Effects.Algebra.Sum",
+    "Effects.Algebra.Universal",
+    "Hash.Sha256.Api",
+    "Init.Data.List.Perm",
+    "Init.Data.Nat.ToString",
+    "Lean",
+    "Lean.Elab.Tactic",
+    "Lean.Util.CollectAxioms",
+    "Std",
+    "Std.Tactic.Do",
+    "TypeScript",
+    "TypeScript.Identifier",
+    "TypeScript.Syntax",
+    "TypeScript.TypeRef"
+  ],
+  "src_effect4_direct_lean_importers": 5,
+  "runtime_direct_lean_importers": [
+    "Effect4.Program.FoldOf"
+  ],
+  "fold_command_sites": 62,
+  "fold_command_files": {
+    "src/Effect4/Laws/Machine/Folds/Stores.lean": 1,
+    "src/Effect4/Laws/Machine/Folds/Val.lean": 2,
+    "src/Effect4/Laws/Program/Folds/Checker.lean": 1,
+    "src/Effect4/Laws/Program/Folds/Denote.lean": 8,
+    "src/Effect4/Laws/Program/Folds/Looped.lean": 1,
+    "src/Effect4/Laws/Program/Folds/Projections.lean": 4,
+    "src/Effect4/Laws/Program/Folds/Provision.lean": 2,
+    "src/Effect4/Laws/Program/Folds/Representation.lean": 4,
+    "src/Effect4/Laws/Program/Folds/Straight.lean": 1,
+    "src/Effect4/Laws/Program/Folds/Term.lean": 8,
+    "src/Effect4/Laws/Program/Folds/Ty.lean": 16,
+    "src/Effect4/Laws/Program/Typed/Membership.lean": 1,
+    "src/Effect4/Laws/Store/Folds/Val.lean": 13
+  },
+  "src_tools_eff_block_sites": 0,
+  "test_eff_block_sites": 21,
+  "test_eff_accepting_sites": 20,
+  "test_eff_intentional_rejecting_sites": 1,
+  "remove_foldof_root_edge_project_runtime_count": 134,
+  "remove_foldof_root_edge_direct_project_lean_importers": [],
+  "limits": [
+    "External package import graphs are not traversed.",
+    "Source parsing is a bounded lexical census, not Lean.Elab.parseImports or a compiled environment.",
+    "No .olean provenance, axiom audit, compilation, build time, or memory cost is measured.",
+    "Reverse counts exclude the subject and exclude Test and downstream external applications.",
+    "Three named Test files are scanned separately for authoring blocks; these do not enter the import graph."
+  ]
+}

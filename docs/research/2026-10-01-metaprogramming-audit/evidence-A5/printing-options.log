@@ -1,0 +1,1 @@
+/private/tmp/codex-second-eyes-2026-10-01/metaprogramming/PrintingOptions.lean:10:0: error: to use this command, include `import Lean.Elab.Command`

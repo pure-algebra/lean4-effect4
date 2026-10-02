@@ -1,6 +1,9 @@
-# Lean metaprogramming audit — first implementation slice
+# Lean metaprogramming audit and tested cleanups
 
-Base: `198dd5331eb6607e1e94f3abad39ebbda90c86dc`, Lean 4.33.1. Worktree:
+Initial inspection base: `198dd5331eb6607e1e94f3abad39ebbda90c86dc`, Lean 4.33.1.
+Current branch base: `8c9be258` (the coordinator’s recorded DI-18 ruling). No source or
+toolchain changed between those bases; the only Test change is a counterexample register row.
+Worktree:
 `/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4`, branch
 `codex/metaprogramming`. Claude's checkouts and research seats are read-only inputs.
 The dispatch is `docs/research/2026-10-01-metaprogramming-audit/brief-codex-metaprogramming.md`
@@ -24,12 +27,13 @@ a typed `(doElem| do $seq:doSeq)` quotation instead of indexing the raw node. Pr
 one-level behavior, empty/unrecognized fallback, scoped keyword and all refusal messages.
 Files: Sugar and the already-reachable `Test/Program/AuthoringScope.lean`. Expected existing
 fixture-output changes: zero. Build cost: small module plus direct consumers.
-**Held after testing:** the API is not in the current import closure; it requires
-`import Lean.Parser.Do`. DI-18 is unresolved and both alternatives in the coordinator
-addendum keep Lean tooling out of the runtime root. The experimental patch is retained
-outside the branch; Sugar and its test are unchanged. The compiled experiment and the
+**Initially held after testing (now released by DI-18 at `8c9be258`):** the API is not in the current import closure; it requires
+`import Lean.Parser.Do`. DI-18 was unresolved and both alternatives in the coordinator
+addendum kept Lean tooling out of the runtime root. The experimental patch was retained
+outside the branch while the ruling was pending. The compiled experiment and the
 new refusal fixture exposed a pre-existing generic final-binding error, not a repair in
-this slice. Do not land this additional runtime dependency before the DI-18 ruling.
+this slice. The owner subsequently dropped the import ban while retaining the first-order representation
+rule. Adopting this helper changes the authoring macro only, not stored program fields.
 
 **P2 / A2 — reuse `simpArg`, preserving the grammar (reading).**
 `Init/Tactics.lean:707` defines the exact disjunction copied five times at
@@ -77,9 +81,13 @@ Source-read families: Approximation's `trace_leaf`, `trace_chain`, `hops_leaf`,
 The leaf macros normalize then try reflexivity, append or transitivity; the hop macros
 dispatch among named helper theorems; the chain macros repeat those steps. This is more
 specific than arbitrary backtracking, but includes silent `skip`/`try` cases.
-No fired-arm counts have been measured yet. Do not infer them from source or treat these
-macros as approved exemptions. Keep unchanged; instrument the current proofs in an isolated
-copy before recommending a named bank or explicit arms. The coordinator owns that ruling.
+The five requested hop families have now been instrumented in isolated full-source copies;
+`evidence-A3/RESULTS.md` gives all 22 arm counts at all nine proof sites, including zeros and
+per-macro proposals. Baseline and instrumented runs passed with matching theorem fingerprints
+(303/168 declarations). Rollback controls ensure abandoned attempts do not inflate selected
+counts. Other listed families remain source readings, not measured firing counts. Keep
+production macros unchanged until the coordinator rules; a hidden fallback is not thereby
+an approved exemption.
 
 **P6 / A5a — printed source is partially pinned (reading).**
 Five `srcOf` functions in `Effect4Gen/{Rows,LayerView,View,Fold,Authoring}.lean` already pin
@@ -89,27 +97,40 @@ Five `srcOf` functions in `Effect4Gen/{Rows,LayerView,View,Fold,Authoring}.lean`
 `OCaml5/Lcnf/Types.lean:290` are diagnostic descriptions of unsupported fields, not emitted
 target syntax. The FoldOf occurrences are diagnostics too. Do not call all of them
 unstable code generation.
-Before changing producers: compare an actual `srcOf` result under default and perturbed
-options, pin a reviewed profile, regenerate each affected group, and compare bytes. View/Fold
+The CLI drivers construct a fresh `Core.Context` with default options and an empty Meta
+context (`Rows.lean:171–181`, `Fold.lean:1376–1386`; `Lean/CoreM.lean:217–222`). Thus
+inheriting options inside `srcOf` is not evidence that command-line generation inherits an
+interactive caller’s settings. With a fixed compiler and imported environment, defaults are
+fixed inputs. Before changing producers, distinguish reusable-helper context sensitivity
+from the actual driver; require a concrete changed output under a supported invocation. View/Fold
 are also in the active data-wave generator work; keep changes to them out of this first slice.
-This is pending testing and coordination, not a proved determinism defect.
+The bounded helper probe in `evidence-A5/` confirms option sensitivity and restoration.
+The supported CLI reading above supplies no demonstrated nondeterminism defect; no producer
+change or regeneration is warranted on that evidence.
 
 **P7 / A5b — readable Lean goals are a separate output contract (reading).**
 No project delaborator/unexpander was found by the named-attribute census. The book's
 [pretty-printing chapter](https://leanprover-community.github.io/lean4-metaprogramming-book/extra/03_pretty-printing.html)
 explains Expr → Syntax → parenthesizing → Format. An application unexpander can improve
 display, but must handle partial applications and return failure for unsupported shapes.
-This does not establish Effect4's exact print/read laws. Keep a before/after prototype local;
-measure affected `#guard_msgs` fixtures before any global registration. Ruling required;
-no production display changes in this slice.
+This does not establish Effect4's exact print/read laws. The existing `eff` notation produces `Authoring.Src`, not `Eff`; printing an Eff value
+as that authoring block would not by itself re-elaborate at the original type. A goal-display
+proposal must preserve this layer distinction. Keep a before/after prototype local;
+measure affected `#guard_msgs` fixtures before any global registration. The local Val.nat
+prototype in `evidence-A5/` changes one of two message fixtures in TypedProgBindRed and passes
+notation elaboration, fallback and scope controls. This is a one-battery measurement, not a
+global count. Recommend keeping current display: the new spelling adds little demonstrated
+value. A global adoption still needs the coordinator’s ruling; no production display changes
+in this slice.
 
 **P8 / A7 — ownership follows dependency direction (reading).**
 `docs/ARCHITECTURE.md:100–110` places law-specific commands in Laws and generic evidence in
-ProofGraph. `Program/FoldOf.lean` is intentionally below generated runtime folds. Moving it
-to Laws would introduce the forbidden runtime-to-Laws edge. `Program/Authoring/Sugar` is
+ProofGraph. `Program/FoldOf.lean` is imported by the runtime umbrella, but its measured command
+callers are in Laws (see the A7 follow-up). Moving it requires changing the umbrella edge
+and retaining a deliberate tooling import for clients. `Program/Authoring/Sugar` is
 an author-facing syntax macro and needs no theorem inspection. `TypedStateDecl` is already
-in the Laws graph, contrary to the coordinator's intermediate UI speculation. The measured
-direct imports do not prove the entire transitive closure; that measurement remains pending.
+in the Laws graph, contrary to the coordinator's intermediate UI speculation. Direct imports alone do not prove the entire transitive closure; the project-only
+closure measurement is recorded below, with external packages explicitly unmeasured.
 Prefer functional ownership to one giant Meta module. No file moves without a dependency
 graph and an agreed public import seam.
 
@@ -141,20 +162,23 @@ command families and their existing fixture homes are:
 
 | Family | Layer / module | Fixture or current consumer |
 | --- | --- | --- |
-| `#answer_gate` | CommandElabM + MetaM / Laws.Auto.AnswerGate | typed residual answer tables |
+| `#answer_gate` | CommandElabM + MetaM / Laws.Auto.AnswerGate | typed residual answer tables (no standalone Test invocation found) |
 | `#auto_census` | CommandElabM + speculative TermElabM / Laws.Auto.Census | Test.Audit.ProofGraph, ProofGraphSearch |
 | `#proof_wanted`, `#obligation_proved`, `#typed_state_obligations`, `#obligation_audit` | CommandElabM / Laws.Auto.Obligations | Test.Audit.Obligations |
-| `#frame_rules` | CommandElabM / Laws.Auto.Frames | typed-state frame rules and Test audit fixtures |
-| `#position_census`, `#edge_census`, `#write_census`, `#read_census` | CommandElabM + MetaM / Laws.Auto.Positions | typed source and position census fixtures |
-| `#traversal_census`, `#traversal_class`, `#exhaustive_gate` | CommandElabM / Laws.Auto.Traversals, Exhaustive | Test.Audit traversal/exhaustiveness fixtures |
-| `#position_gate`, `#typed_state` | CommandElabM / Laws.Program.Typed.PositionGate, TypedStateDecl | typed-state fixtures |
-| `fold_of` | CommandElabM + MetaM / Program.FoldOf | fold consumers and fold batteries (fixture path to be measured) |
+| `#frame_rules` | CommandElabM / Laws.Auto.Frames | Test.Audit.FrameRules |
+| `#position_census`, `#edge_census`, `#write_census`, `#read_census` | CommandElabM + MetaM / Laws.Auto.Positions | Test.Audit.PositionCensus |
+| `#traversal_census`, `#traversal_class`, `#exhaustive_gate` | CommandElabM / Laws.Auto.Traversals, Exhaustive | Test.Audit.TraversalCensus |
+| `#position_gate`, `#typed_state` | CommandElabM / Laws.Program.Typed.PositionGate, TypedStateDecl | Test.Audit.TypedStateDecl, IndexedColumns, PositionCensus |
+| `fold_of` | CommandElabM + MetaM / Program.FoldOf | 62 invocations across 13 Laws files; no direct Test invocation found |
 | `reflect_spec`, `harvest_specs` | CommandElabM + MetaM / Conform.Spec.Reflect | conformance specification pilot |
 | `checked_theorem%` | TermElabM / ProofGraph.Proof | Test.Audit.ProofGraph and conformance evidence |
 | axiom/runtime coverage commands | CommandElabM / Test.Audit | Test.Audit.AxiomGate, RuntimeCoverage |
 | `eff`, `daemon` | MacroM / Authoring.Sugar, Services | Test.Program.AuthoringScope, AuthoringContract |
-| trace/queue/handle tactic families | tactic syntax macros / Laws.Machine | same modules' theorems; fired-arm audit pending |
-| `authoring_scoped` | tactic macro / Laws.Program.Authoring.Tactic | authoring law fixtures |
+| trace/queue/handle tactic families | tactic syntax macros / Laws.Machine | same modules' theorems; five hop families measured in evidence-A3, others source-only |
+| `authoring_scoped_step`, `authoring_scoped` | tactic elaborator and macro / Laws.Program.Authoring.Tactic | authoring laws |
+| `close_ref_free` | scoped tactic macro / Laws.Program.ReferenceTyping | mutual reference-expansion proofs in that module |
+| `budget`, `layerBudget` | scoped tactic macros / Laws.Program.DenoteR | denotation equations in that module |
+| `close_arm` | scoped tactic macro / Codegen.Read | no use found outside its declaration; do not infer external API retirement |
 
 Raw Syntax is justified where a command parser owns fixed indexes. Prefer typed quotations
 for stable syntax rearrangements; use elaborators where inspection/validation is needed.
@@ -163,3 +187,48 @@ is appropriate for small one-off commands; changing spelling alone is not consol
 Use MessageData (`m!`, `throwError`) for Lean objects in diagnostics; strings remain appropriate
 for serializable report/refusal fields. A full per-site and fired-arm census remains separate
 from this first safe implementation receipt.
+
+
+## A7 measured follow-up and the recorded ruling
+
+The import-only ban was dropped by the owner at `8c9be258`; no repeat decision is requested.
+The measurement in `evidence-A7/` reads immutable base `198dd533` with `git cat-file`, removes
+comments and strings before counting source commands, and records the command, source hashes,
+module lists and limitations. The relevant source trees are identical at the new base.
+
+| Measurement | Result |
+| --- | --- |
+| Tracked project modules in src/tools | 475 |
+| Runtime-root project closure | 135 modules |
+| Laws-root project closure | 351 modules |
+| Direct Lean importers in runtime closure | Program.FoldOf only |
+| Direct Lean importers exclusive to Laws | Auto.AnswerGate, Auto.Positions, Program.Authoring.Tactic, Program.Typed.TypedSources |
+| FoldOf callers | 14 direct importers; 68 reverse dependents, excluding itself |
+| `fold_of` commands | 62 in 13 Laws files; none in runtime/tools source |
+| Sugar callers | 5 direct importers; 20 reverse dependents |
+| Tested authoring-block source sites | 20 accepting examples and one intended rejection in three Test files (counted, not rerun by this measurement) |
+
+These are project source-import counts, not external package closure measurements or proof
+of first-order representations. Macro definitions also occur without a direct `import Lean`,
+including `daemon` and `Codegen.Read.close_arm`; imports are a poor proxy for representation.
+
+**Home proposal:** leave FoldOf in place during this consolidation. A later relocation can
+remove the runtime umbrella’s FoldOf import and update 13 Laws imports plus the gate’s named
+module admission while preserving declaration namespaces. This reduces runtime project closure
+by one module, but removes a public command from the runtime umbrella. No lower runtime
+consumer needs that command today. It is an API/organization choice, not needed to enforce the
+owner’s representation rule. A separate tooling face is another option if external consumers
+need `fold_of`; it costs a deliberate compatibility import rather than moving everything to Laws.
+
+**Check proposal:** reject the suggested blanket signature test as currently phrased. Sugar’s
+existing `getDoSeqElems` and `expandDoElems` intentionally mention Syntax/MacroM, and FoldOf
+intentionally consumes Expr, while neither stores those objects in Eff. Scanning every
+runtime-root declaration would reintroduce the import ban under a different name. If repeated
+escapes justify a new check, scope it to stored-sort constructor fields and the actual runtime
+alphabet instantiations, with accepted tooling controls and rejected Expr/function payloads.
+The existing representation rules and separation controls remain the authority. No new gate
+or root move was introduced here.
+
+The original strict migration is no longer requested. For cost context it would have replaced
+181 explicit obligation commands, 74 search/check commands and 20 placeholder commands, plus
+censuses and tactics: a generator migration, not a simple directory move.

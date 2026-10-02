@@ -1,0 +1,12 @@
+measure.py exited 0.
+base: 8c9be2588332d9f9094c5a6ecd7d9e3af8a0ac55
+families: 5
+directArms: 22
+definition occurrences: 5
+nested-arm occurrences: 3
+proof-site occurrences: 9
+dynamicCounts: null
+compilerRun: false
+check-prepared.py exited 0.
+Approximation.lean: removing arm wrappers reproduces baseline byte-for-byte
+Scheduling.lean: removing arm wrappers reproduces baseline byte-for-byte
