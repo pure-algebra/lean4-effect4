@@ -960,4 +960,30 @@ theorem clause_deferredPoll (root : ProgramSource) (rootTy : EffTy) (key : Defer
     simp only [syncOpStep, DeferredStore.poll, DeferredStore.cellAt, hc0, Option.map_some]
   exact ev.store_same hc (Val.bool c.completion.isSome) step (fun _ _ => ⟨_, rfl⟩)
 
+
+/-! ## The clauses no typed code reaches -/
+
+/-- **`scopeExit`**: a raw scope-exit marker is no typed code (`TypedProg.fiber` excludes it,
+decisions row 188 (a)); the generated callback is consumed by `prepareScopedExitR` inside the
+preceding delivery, never evaluated as a counted operation. -/
+theorem clause_scopeExit (root : ProgramSource) (rootTy : EffTy) (prev : Ctx) (scope : Nat)
+    (ex : ExitV) : FiberClauseKeeps root rootTy (.scopeExit prev scope ex) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, _, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  cases current with
+  | fiber _ _ _ notScopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
+
+/-- **`refuse`**: its pre is `False`; no typed code refuses. -/
+theorem clause_refuse (root : ProgramSource) (rootTy : EffTy) (cause : CauseV) :
+    FiberClauseKeeps root rootTy (.refuse cause) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, _, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  exact (pre : False).elim
+
 end Effect4.Program.Typed
