@@ -64,8 +64,10 @@ model and are not stored function values in `Eff` or `Val`.
 
 `Fits` is value membership in a world. `TypedProg` is residual program typing: ordinary operation
 clauses require certificate permission and typed continuations for permitted replies at later worlds. Its
-`unguard` and `finishFinalizer` clauses require an exit payload without a continuation premise;
-`scopeExit` separately requires a live scope and typed continuation. `DenotesTyped` connects admitted
+`unguard` and `finishFinalizer` clauses require an exit payload without a continuation premise.
+The scope-exit marker is typed only at the run position of the guard the `scoped` arm installs
+(`scopedGuard`, with a live scope and a fitting restored context; decisions row 188 (a)): as current
+code the counted step answers it `badShapeExit` (`E4-TYPED-CE-034`). `DenotesTyped` connects admitted
 source points to that residual judgment. These definitions resemble protocol-based program logics,
 but identifying them with weakest preconditions would require a named execution interpretation and
 a stated correspondence. The unrestricted bind counterexample (`E4-TYPED-CE-030`) alone does not
@@ -208,7 +210,9 @@ inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Pr
 ```
 (`src/Effect4/Laws/Program/Typed/Residual.lean:266`). Operation clauses require certificate validation and enforce that
 continuations type for all permitted replies at later worlds. Dedicated typing arms govern control
-bracket markers: `.guard`, `.unguard`, `.finishFinalizer`, and `.scopeExit`.
+bracket markers: `.guard`, `.unguard`, `.finishFinalizer`, and the `scoped` guard whose run arm is the
+scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of that guard is
+`FrameAccepts.scopedResume`.
 
 #### 4. Required Properties and Obligations
 - **Sequence compatibility (`seq-typed`)**: Compatibility lemma for sequence composition.
@@ -378,6 +382,20 @@ It supplies the unchanged `M6Ledger.step_registrationDone` goal; the CE-028 batt
 checks refusal of the historical countdown collision and acceptance after removing only that
 countdown. The [receipt](../research/2026-10-02-codex-lead/registration-receipt.md) records each
 helper's concrete consumer. This remains a local invariant proof, with the same limits as above.
+
+The machine generates two administrative markers that are no programs, and the invariant types
+each where the machine puts it (decisions row 188; the lead
+[receipt](../research/2026-10-02-claude-lead/receipt.md)). A scope's exit callback lives only in
+the run arm of the `scoped` guard and its saved slot, and the walk hands it to
+`prepareScopedExitR` (the walk's `CallbackSaved` outcome). A race's registration marker may be saved
+by an injected yield in a success callback; a host's saved stack is therefore a typed path
+(`HostStack`) of ordinary frame arrows and registration arrows that carry their race's existence,
+host and token type on the arrow, and every reader of a host stack (`CodeOk`, `ActiveDelivery`,
+`StackReply`) uses it. This is the same free-category structure as `StackAccepts` (composition and
+decomposition through middle types, decisions row 48), extended by arrows whose premises read the
+machine; correlation on the arrow, rather than a separate clause over the stack's shape, is what
+keeps typed code from forging a callback. Each was found by a checked refutation of an open command
+goal (`E4-TYPED-CE-033`, `-034`) and two review cases before landing; none closes a goal by itself.
 
 In particular, token bounds, disjointness from external requests, and race/observer separation
 are different properties. They do not state that every internal key occurs at most once, nor

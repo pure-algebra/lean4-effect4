@@ -541,7 +541,16 @@ The active sequence is the foundations review above. Phase C's existing receipt 
 historical evidence; the dated notes below explain the redirect and its earlier plans. They
 do not override the corrected protocol-before-assembly order or constitute a new pause instruction.
 
-**Lead continuation, 2026-10-02 (current).** Codex has taken over implementation on
+**Lead continuation, 2026-10-02 (current).** At the owner's instruction ("hand back primary
+implementation to claude") Claude is the lead implementation and integration seat again, on
+`claude/proofs`; Codex reviews and supports (testing, proof-graph organisation, landing checks) and
+edits no production file. Three checked refutations of the open command goals are repaired at the
+contract, each ratified by the owner ("ratified as recommended"), with controls and history kept
+([the lead receipt](research/2026-10-02-claude-lead/receipt.md)): the queued enrollment bound
+(decisions row 134 (e), `E4-TYPED-CE-032`), the scope-exit callback typed only at the `scoped` guard's
+run position (row 188 (a), `E4-TYPED-CE-034`), and registration callbacks under injected yields as
+correlated arrows of a host stack (row 188 (b), `E4-TYPED-CE-033`). They close no ledger goal: the
+three goals stay open, no longer refuted by those witnesses. Earlier: Codex led implementation on
 `codex/proofs-lead`. Claude's clean handoff `247d7487` and the CE-026 regression battery
 `e493b67d` are now merged into the local `refactor/phase1-phase3`; nothing was pushed.
 M5 and all 31 store rows of M3bAdequacy are closed; M6Edits has 0 open of 13. M6Ledger has

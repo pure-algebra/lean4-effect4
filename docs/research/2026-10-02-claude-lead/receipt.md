@@ -162,3 +162,20 @@ Commands and results:
   all 15 reports `[propext, Quot.sound]`.
 
 No whole battery (`lake build Test`), trust gate or generator was run.
+
+## Documentation checkpoint (after slice 2b)
+
+`docs/STATE.md`'s lead paragraph names Claude as the lead implementation seat with Codex reviewing
+and supporting (Codex's request), and lists the three contract repairs. `docs/core/semantics.md`:
+Concept 2's account of the scope-exit marker (row 188 (a)); Concept 4 §5 on the two administrative
+markers and the typed-path host stack (row 188 (b)). Regenerated, not hand-edited:
+`generated/semantics.{md,json}` (inherited theorems 1138 → 1157) and
+`docs/core/architecture-map.html`.
+
+- `lake build Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts
+  Test.Audit.SemanticsCensus Drivers.Semantics Drivers.SemanticsControls Tools.ProofMapFixture
+  Tools.Architecture` — exit 0 (39 s).
+- `python3 scripts/check-semantics.py --generate generated` — exit 0 (92.7 s).
+- `lake env lean -j1 -M6144 -DwarningAsError=true --run tools/Tools/Architecture.lean` — exit 0;
+  then `--check` — exit 0 ("current", 658 Lean files).
+- `python3 scripts/check-semantics.py` — exit 0 (253.7 s), after the `semantics.md` edit.
