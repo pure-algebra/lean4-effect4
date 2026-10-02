@@ -249,6 +249,48 @@ them would capture it. -/
 def reservedBinders : List String :=
   ["alg", "hom", "node", "x", "xs", "y", "u", "v", "op", "unit", "R", "M", "N", "f", "p"]
 
+/-- The declaration-derived map of one position, as an expression. The extras reader uses
+this to check an imported structure map; a matching name or functor laws alone do not say
+that every field and payload is preserved. -/
+partial def mapPosExpr (p : Pos) (f target x : Expr) : MetaM Expr := do
+  match p with
+  | .leaf _ => return x
+  | .direct _ => return mkApp f x
+  | .list q | .option q =>
+    let ty ← whnfR (← inferType x)
+    let source := ty.getAppArgs[0]!
+    withLocalDeclD `item source fun item => do
+      let body ← mapPosExpr q f target item
+      let fn ← mkLambdaFVars #[item] body
+      mkAppM (if p matches .list _ then ``List.map else ``Option.map) #[fn, x]
+  | .prod a b =>
+    let left ← mapPosExpr a f target (mkProj ``Prod 0 x)
+    let right ← mapPosExpr b f target (mkProj ``Prod 1 x)
+    mkAppM ``Prod.mk #[left, right]
+  | .record st _ _ fields =>
+    let n := st.toName
+    let mut args : Array (Option Expr) := #[some target]
+    for (field, i) in fields.zipIdx do
+      args := args.push (some (← mapPosExpr field.2 f target (mkProj n i x)))
+    mkAppOptM (getStructureCtor (← getEnv) n).name args
+
+/-- Accept an existing map only when its action is definitionally the map derived from
+all fields of this structure, at arbitrary source and target carrier types. -/
+def recordMapMatches (st : Name) (p : Pos) : MetaM Bool := withNewMCtxDepth do
+  let info ← getConstInfo st
+  let carrierType (levelBase : Name) : Expr :=
+    (info.instantiateTypeLevelParams
+      (info.levelParams.map fun n => .param (Name.str levelBase n.toString))).bindingDomain!
+  withLocalDeclD `Source (carrierType `mapSource) fun source =>
+  withLocalDeclD `Target (carrierType `mapTarget) fun target => do
+    let fnTy ← mkArrow source target
+    withLocalDeclD `fn fnTy fun f => do
+      let inputTy ← mkAppM st #[source]
+      withLocalDeclD `value inputTy fun x => do
+        let actual ← mkAppM (Name.str st "map") #[f, x]
+        let expected ← mapPosExpr p f target x
+        withTransparency .all <| isDefEq actual expected
+
 /--
 The position of one constructor argument.
 
@@ -258,7 +300,8 @@ through. An argument that names a member in a way the language does not cover �
 is an error naming the constructor and the argument. That refusal is the drift guard for the
 next constructor someone adds: it can never be read as a leaf by accident.
 -/
-partial def posOf (members : List Name) (ctor arg : String) (ty : Expr) : MetaM Pos := do
+partial def posOf (members : List Name) (ctor arg : String) (ty : Expr)
+    (allowCheckedMaps : Bool := false) : MetaM Pos := do
   let txt ← srcOf ty
   let refuse (why : String) : MetaM Unit := do
     throwError "{ctor}.{arg} : {txt} — {why}. The fold generator's position language covers \
@@ -272,31 +315,30 @@ reading this argument as a leaf."
   | .const n us =>
     if members.contains n then return .direct (famLabel n)
     if n == ``List && as.size == 1 then
-      let p ← posOf members ctor arg as[0]!
+      let p ← posOf members ctor arg as[0]! allowCheckedMaps
       return if p.isLeaf then .leaf txt else .list p
     if n == ``Option && as.size == 1 then
-      let p ← posOf members ctor arg as[0]!
+      let p ← posOf members ctor arg as[0]! allowCheckedMaps
       return if p.isLeaf then .leaf txt else .option p
     if n == ``Prod && as.size == 2 then
-      let a ← posOf members ctor arg as[0]!
-      let b ← posOf members ctor arg as[1]!
+      let a ← posOf members ctor arg as[0]! allowCheckedMaps
+      let b ← posOf members ctor arg as[1]! allowCheckedMaps
       return if a.isLeaf && b.isLeaf then .leaf txt else .prod a b
     let env ← getEnv
     if isStructure env n && as.size == 1 && mentionsMember members ty' then
       let iv ← getConstInfoInduct n
       unless iv.numParams == 1 do
         refuse s!"`{n}` takes {iv.numParams} parameters; only a one-parameter structure is read"
-      let argPos ← posOf members ctor arg as[0]!
+      let argPos ← posOf members ctor arg as[0]! allowCheckedMaps
       if argPos.isLeaf then return .leaf txt
       unless (match argPos with | .direct _ => true | _ => false) do
         refuse s!"`{n}` is applied to a composite type; only a structure applied directly to \
 a member is read (its functor map would not be the parameter's)"
-      -- The emitted equations are stated with the structure's own functor map. When the
-      -- structure already carries a `map`, the generator cannot check that it *is* the
-      -- functor map, so it refuses rather than trusting the name. `Array` is refused here:
-      -- it is a one-parameter structure with a `map` of its own, and folding through its
-      -- `toList` field is not what anyone asking for an `Array` child means.
-      if env.contains (Name.str n "map") then
+      -- Ordinary fold generation owns this map and refuses an existing definition.
+      -- Extras import that fold, so they may reuse its map only after the field-by-field
+      -- check below. A name alone never establishes that payloads and children survive.
+      -- The ordinary `Array` refusal stays unchanged.
+      if env.contains (Name.str n "map") && !allowCheckedMaps then
         refuse s!"`{n}` already carries a `{n}.map`; the generator states its equations with \
 the structure's functor map and cannot check that an existing one is it"
       let cval := getStructureCtor env n
@@ -319,18 +361,22 @@ the structure's functor map and cannot check that an existing one is it"
               e.isFVar && xs.any (fun y => y.isFVar && y.fvarId! == e.fvarId!)).isSome then
             refuse s!"`{n}.{fname}` depends on another field; only a non-dependent \
 structure is rebuilt"
-          let p ← posOf members ctor arg fieldTy
+          let p ← posOf members ctor arg fieldTy allowCheckedMaps
           acc := acc ++ [(fname, p)]
           i := i + 1
         return acc
-      return .record n.toString (shortName n) argPos flds
+      let p := Pos.record n.toString (shortName n) argPos flds
+      if env.contains (Name.str n "map") && allowCheckedMaps then
+        unless ← recordMapMatches n p do
+          refuse s!"`{n}.map` is not the field-by-field functor map derived from `{n}`"
+      return p
     if mentionsMember members ty' then refuse "the type names a member of the family"
     return .leaf txt
   | _ =>
     if mentionsMember members ty' then refuse "the type names a member of the family"
     return .leaf txt
 
-def readBlock (root : Name) : MetaM (Bool × String × List (String × Name × List CtorRow)) := do
+def readBlock (root : Name) (allowCheckedMaps : Bool := false) : MetaM (Bool × String × List (String × Name × List CtorRow)) := do
   let iv ← getConstInfoInduct root
   let members := iv.all
   let isParam := iv.numParams > 0
@@ -352,7 +398,7 @@ def readBlock (root : Name) : MetaM (Bool × String × List (String × Name × L
         let mut i := 0
         for x in xs[ci.numParams:] do
           let ty ← inferType x
-          let pos ← posOf members (shortName c) s!"a{i}" ty
+          let pos ← posOf members (shortName c) s!"a{i}" ty allowCheckedMaps
           acc := acc ++ [({ name := s!"a{i}", pos, tyText := ← srcOf ty,
                             binder := (← x.fvarId!.getUserName).toString } : Arg)]
           i := i + 1
@@ -2484,7 +2530,7 @@ def emit (root : Name) : MetaM (String × List String) := do
   let iv ← getConstInfoInduct root
   if iv.numParams > 0 then throwError "extras: {root} takes parameters; the extras do not"
   if iv.all.length != 1 then throwError "extras: {root} is mutual; the extras do not"
-  let (_, blockName, block) ← readBlock root
+  let (_, blockName, block) ← readBlock root true
   if blockNested block then
     let (label, fam, rows) := block.head!
     emitNestedExtras root blockName label fam rows
