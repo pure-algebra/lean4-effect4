@@ -595,7 +595,7 @@ theorem foreign_untyped (w : W) (ex : ExitV) (ty : EffTy) (unit : ty.answer = .u
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   have h1 := next1 w (leHost_refl w) Val.unit rfl
   -- the context read, under its guard
-  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv h1
+  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv_of_ne h1 (fun h => nomatch h)
   obtain ⟨certG, preG, nextG⟩ := TypedProg.fiber_inv body (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   change certG = .handle Ty.contextTarget at preG
@@ -610,7 +610,7 @@ theorem foreign_untyped (w : W) (ex : ExitV) (ty : EffTy) (unit : ty.answer = .u
   have hmid := unguard_payload_inv _ _ _ _ _ hG
   have h2 := run w (leHost_refl w) (.success (Val.context emptyCtx)) ⟨rfl, hmid⟩
   -- the captured context set, under its guard
-  obtain ⟨mid2, body2, run2, _⟩ := TypedProg.guard_inv h2
+  obtain ⟨mid2, body2, run2, _⟩ := TypedProg.guard_inv_of_ne h2 (fun h => nomatch h)
   obtain ⟨_, _, next2⟩ := TypedProg.fiber_inv body2 (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   have hS := next2 w (leHost_refl w) Val.unit rfl

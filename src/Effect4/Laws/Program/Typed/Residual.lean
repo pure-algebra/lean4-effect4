@@ -273,10 +273,13 @@ which have their own arms. A guard's body is typed at the guard's certified inte
 not take must fit the outer type. `unguard` and `finishFinalizer` carry an exit at the current
 type and type no continuation: the reference machine never resumes one (`evaluateFiberR`
 hands the payload to `deliverR`; `popR`'s answer glue passes it to the next frame).
-`scopeExit` carries its exit and keeps its continuation, at a world whose store holds the scope it
-exits (`ScopeLive`, decisions row 156: the machine halts on an absent scope,
-`prepareScopedExitR`, so the marker reads the same presence `fiberPre`'s `scopeExit` arm states;
-before row 156 it read no pre, `E4-SCHED-CE-020`). -/
+The scope-exit marker is no program: `prepareScopedExitR` consumes it in the evaluation whose walk
+installed it, and as current code reaching a counted step the evaluator answers `badShapeExit`
+(`E4-TYPED-CE-034`). So it is typed only where the `scoped` arm puts it, the run arm of the
+`onExit false` guard that arm installs (`scopedGuard`, decisions row 188 (a)): every exit runs the
+scope's callback, whose scope is present (`ScopeLive`, row 156: the machine halts on an absent
+scope, `E4-SCHED-CE-020`) and whose restored context fits; the callback delivers the same exit,
+so the guard widens its body's type to its own. -/
 inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Prop
   | pure {w : World} {ty : EffTy} {ex : ExitV} (exit : ExitOk w ty ex) :
       TypedProg root w ty (.pure ex)
@@ -303,11 +306,12 @@ inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Pr
       (payload : ExitOk w ty ex) : TypedProg root w ty (.vis (.inr (.unguard ex)) k)
   | finishFinalizer {w : World} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
       (payload : ExitOk w ty ex) : TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k)
-  | scopeExit {w : World} {ty : EffTy} {prev : Ctx} {sc : Nat} {ex : ExitV} {k : ExitV → RProgram}
-      (live : ScopeLive w sc)
-      (payload : ExitOk w ty ex)
-      (next : ∀ w', w.leHost w' → ∀ ans, TypedProg root w' ty (k ans)) :
-      TypedProg root w ty (.vis (.inr (.scopeExit prev sc ex)) k)
+  | scopedGuard {w : World} {ty : EffTy} {k : Option ExitV → RProgram} (mid : EffTy) (prev : Ctx)
+      (sc : Nat) (body : TypedProg root w mid (k none))
+      (callback : ∀ ex, Contracts.scopeExitCallback? (k (some ex)) = some (prev, sc, ex))
+      (live : ScopeLive w sc) (services : ServicesFit w prev.services)
+      (widen : ∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → ExitOk w' ty ex) :
+      TypedProg root w ty (.vis (.inr (.guard_ (.onExit false))) k)
 
 namespace TypedProg
 
@@ -338,7 +342,7 @@ theorem fiber_inv {root : ProgramSource} {w : World} {ty : EffTy} {op : FiberOp}
   | guard _ _ _ _ => exact absurd rfl (notGuard _)
   | unguard _ => exact absurd rfl (notUnguard _)
   | finishFinalizer _ => exact absurd rfl (notFinish _)
-  | scopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
+  | scopedGuard _ _ _ _ _ _ _ _ => exact absurd rfl (notGuard _)
 
 /-- A guard's typing: the body at the guard's intermediate type `mid`, a run arm for the exits
 the guard row admits at `mid` and a skip arm, both at every later world. With the Kripke-closed
@@ -349,14 +353,49 @@ the frame's arms were stated at one world, so the two were not the same arrow, w
 docstring then said. -/
 theorem guard_inv {root : ProgramSource} {w : World} {ty : EffTy} {kind : GuardKind}
     {k : Option ExitV → RProgram} (h : TypedProg root w ty (.vis (.inr (.guard_ kind)) k)) :
+    (∃ mid : EffTy, TypedProg root w mid (k none) ∧
+      (∀ w', w.leHost w' → ∀ ex, fiberPost w' (.guard_ kind) mid (some ex) →
+        TypedProg root w' ty (k (some ex))) ∧
+      (∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → kind.hasExitArm ex = false →
+        ExitOk w' ty ex)) ∨
+    (kind = .onExit false ∧ ∃ (mid : EffTy) (prev : Ctx) (sc : Nat),
+      TypedProg root w mid (k none) ∧
+      (∀ ex, Contracts.scopeExitCallback? (k (some ex)) = some (prev, sc, ex)) ∧
+      ScopeLive w sc ∧ ServicesFit w prev.services ∧
+      (∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → ExitOk w' ty ex)) := by
+  cases h with
+  | fiber notGuard _ _ _ _ _ _ => exact absurd rfl (notGuard kind)
+  | guard mid body run skip => exact .inl ⟨mid, body, run, skip⟩
+  | scopedGuard mid prev sc body callback live services widen =>
+    exact .inr ⟨rfl, mid, prev, sc, body, callback, live, services, widen⟩
+
+/-- A guard of any kind but `onExit false` is an ordinary guard: its body, run and skip arms. -/
+theorem guard_inv_of_ne {root : ProgramSource} {w : World} {ty : EffTy} {kind : GuardKind}
+    {k : Option ExitV → RProgram} (h : TypedProg root w ty (.vis (.inr (.guard_ kind)) k))
+    (hk : kind ≠ .onExit false) :
     ∃ mid : EffTy, TypedProg root w mid (k none) ∧
       (∀ w', w.leHost w' → ∀ ex, fiberPost w' (.guard_ kind) mid (some ex) →
         TypedProg root w' ty (k (some ex))) ∧
       (∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → kind.hasExitArm ex = false →
         ExitOk w' ty ex) := by
-  cases h with
-  | fiber notGuard _ _ _ _ _ _ => exact absurd rfl (notGuard kind)
-  | guard mid body run skip => exact ⟨mid, body, run, skip⟩
+  rcases guard_inv h with plain | ⟨same, _⟩
+  · exact plain
+  · exact absurd same hk
+
+/-- A guard whose run arm is not a scope's exit callback is an ordinary guard: its body, run and
+skip arms (the `scopedGuard` constructor's callbacks hold at every exit). -/
+theorem guard_inv_ordinary {root : ProgramSource} {w : World} {ty : EffTy} {kind : GuardKind}
+    {k : Option ExitV → RProgram} (h : TypedProg root w ty (.vis (.inr (.guard_ kind)) k))
+    (ordinary : Contracts.scopeExitCallback? (k (some (.success .unit))) = none) :
+    ∃ mid : EffTy, TypedProg root w mid (k none) ∧
+      (∀ w', w.leHost w' → ∀ ex, fiberPost w' (.guard_ kind) mid (some ex) →
+        TypedProg root w' ty (k (some ex))) ∧
+      (∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → kind.hasExitArm ex = false →
+        ExitOk w' ty ex) := by
+  rcases guard_inv h with plain | ⟨_, _, _, _, _, callback, _⟩
+  · exact plain
+  · rw [callback] at ordinary
+    cases ordinary
 
 end TypedProg
 
@@ -446,6 +485,7 @@ def frameProtocols (root : ProgramSource) : Contracts.FrameProtocols where
       TypedProg root w' tout ((interpR root.program).cancelThenFail name cause)
   iterator := IteratorProtocol root
   loop := LoopProtocol root
+  scopeExit w prev sc := ScopeLive w sc ∧ ServicesFit w prev.services
 
 /-- An iterator protocol holds at every later world, with the same intermediate type. -/
 theorem iteratorProtocol_mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
@@ -479,8 +519,11 @@ theorem guard_frame {root : ProgramSource} {w : World} {ty : EffTy} {kind : Guar
     ∃ mid : EffTy, TypedProg root w mid (k none) ∧
       Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w mid ty
         (.resume kind fun ex => k (some ex)) := by
-  obtain ⟨mid, body, run, skip⟩ := guard_inv h
-  exact ⟨mid, body, .resume kind _ (fun w' ord ex hex arm => run w' ord ex ⟨arm, hex⟩) skip⟩
+  rcases guard_inv h with ⟨mid, body, run, skip⟩ | ⟨rfl, mid, prev, sc, body, callback, live, services, widen⟩
+  · exact ⟨mid, body, .resume kind _ (fun w' ord ex hex arm => run w' ord ex ⟨arm, hex⟩) skip⟩
+  · refine ⟨mid, body, .scopedResume _ prev sc callback (fun w' ord => ⟨scopeLive_mono ord.1 live, ?_⟩) widen⟩
+    exact servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 (fun _ hs => scopeLive_mono ord.1 hs)
+      (serviceTy_of_le ord.1) services
 
 end TypedProg
 
@@ -771,9 +814,11 @@ theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : R
       (fun w'' ord' ex hfit harm => skip w'' (leHost_trans _ _ _ ord ord') ex hfit harm)
   | unguard payload => exact .unguard (strongExit_mono _ _ _ _ ord payload)
   | finishFinalizer payload => exact .finishFinalizer (strongExit_mono _ _ _ _ ord payload)
-  | scopeExit live payload next _ =>
-    exact .scopeExit (scopeLive_mono ord.1 live) (strongExit_mono _ _ _ _ ord payload)
-      (fun w'' ord' ans => next w'' (leHost_trans _ _ _ ord ord') ans)
+  | scopedGuard mid prev sc _ callback live services widen ihBody =>
+    exact .scopedGuard mid prev sc (ihBody _ ord) callback (scopeLive_mono ord.1 live)
+      (servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 (fun _ hs => scopeLive_mono ord.1 hs)
+        (serviceTy_of_le ord.1) services)
+      (fun w'' ord' ex hex => widen w'' (leHost_trans _ _ _ ord ord') ex hex)
 
 /-- A saved frame of the typed state transports along the host order. -/
 theorem savedOk_mono (root : ProgramSource) (w w' : World) (final : EffTy) (x : RSaved)
@@ -943,7 +988,8 @@ theorem typedProg_rows_append :
     exact .guard mid ihbody (fun w' hle ex hpost => ihrun w' hle ex hpost) skip
   | unguard payload => exact .unguard payload
   | finishFinalizer payload => exact .finishFinalizer payload
-  | scopeExit live payload next ih => exact .scopeExit live payload fun w' hle ans => ih w' hle ans
+  | scopedGuard mid prev sc _ callback live services widen ihbody =>
+    exact .scopedGuard mid prev sc ihbody callback live services widen
 
 end RowsAppend
 

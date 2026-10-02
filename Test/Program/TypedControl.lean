@@ -174,7 +174,7 @@ def leakyGuard : RProgram :=
 theorem leakyGuard_rejected (root : NativeEff) (w : W) :
     ¬ TypedProg root w (EffTy.pure .nat) leakyGuard := by
   intro h
-  obtain ⟨mid, body, _, skip⟩ := TypedProg.guard_inv h
+  obtain ⟨mid, body, _, skip⟩ := TypedProg.guard_inv_of_ne h (fun h => nomatch h)
   have inner := unguard_payload_inv root w mid _ _ body
   have failed := fitsExit_failure_cause (skip w (leHost_refl w) _ inner rfl).1
   obtain ⟨v, _, hv⟩ := failed (.fail (.tag 7) .empty) (List.mem_singleton_self _)

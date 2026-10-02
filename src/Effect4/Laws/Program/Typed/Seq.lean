@@ -59,7 +59,9 @@ theorem close_typed (root : ProgramSource) {w : World} {T : EffTy} {a : RProgram
     exact .guard mid ihBody (fun w' o ex post => ihRun w' o ex post) skip
   | unguard payload => exact .unguard payload
   | finishFinalizer payload => exact .finishFinalizer payload
-  | scopeExit live payload _ ih => exact .scopeExit live payload (fun w' o ans => ih w' o ans)
+  | scopedGuard mid prev sc _ callback live services widen ihBody =>
+    exact .scopedGuard mid prev sc ihBody
+      (fun ex => Contracts.scopeExitCallback?_bind (callback ex) _) live services widen
 
 /-- A failed exit's judgment moves along the checker's order on error columns: only `Fail`
 reasons read the column, and the shape exclusion reads no type. -/
@@ -101,6 +103,25 @@ theorem guardBind_typed (root : ProgramSource) {w : World} {mid ty : EffTy} {kin
     ((a.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure).bind K)
   rw [Effects.Program.bind_assoc]
   exact close_typed root ha K
+
+/-- **The `scoped` arm's code** (decisions row 188 (a)): `evaluateFiberR`'s `.scoped` arm
+(`EvaluateR.lean`) installs the `onExit false` guard over the body, bound to the scope's exit
+callback. It is typed at `ty` when the body is typed at `mid`, the scope is present, the context
+the callback restores fits, and every exit `mid` admits fits `ty`. The callback is typed only at
+this run position (`TypedProg.scopedGuard`); as code it is not (`E4-TYPED-CE-034`). Consumer: the
+`scoped` arm of `M6Ledger.step_loop` and `M6Ledger.step_deliver`. -/
+theorem scopedGuardBind_typed (root : ProgramSource) {w : World} {mid ty : EffTy} {a : RProgram}
+    {prev : Ctx} {sc : Nat} {j : ExitV → RProgram} (ha : TypedProg root w mid a)
+    (live : ScopeLive w sc) (services : ServicesFit w prev.services)
+    (widen : ∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → ExitOk w' ty ex) :
+    TypedProg root w ty
+      ((guardR (.onExit false) a).bind fun ex => .vis (.inr (.scopeExit prev sc ex)) j) := by
+  show TypedProg root w ty (.vis (.inr (.guard_ (.onExit false))) _)
+  refine TypedProg.scopedGuard mid prev sc ?_ (fun _ => rfl) live services widen
+  show TypedProg root w mid
+    ((a.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure).bind _)
+  rw [Effects.Program.bind_assoc]
+  exact close_typed root ha fun ex => .vis (.inr (.scopeExit prev sc ex)) j
 
 /-- **The `onSuccess` shape** (`bind`, the joins' sequencing): the continuation at every success
 `mid` admits; a failure skips it and must fit `ty`'s error column, below which `mid`'s is. -/
@@ -174,8 +195,9 @@ theorem typedProg_widen (root : ProgramSource) {w : World} {T T' : EffTy} {p : R
       (fun w' o ex hfit harm => exitOk_widen hans herr (skip w' o ex hfit harm))
   | unguard payload => exact .unguard (exitOk_widen hans herr payload)
   | finishFinalizer payload => exact .finishFinalizer (exitOk_widen hans herr payload)
-  | scopeExit live payload _ ih =>
-    exact .scopeExit live (exitOk_widen hans herr payload) (fun w' o ans => ih w' o ans hans herr)
+  | scopedGuard mid prev sc body callback live services widen _ =>
+    exact .scopedGuard mid prev sc body callback live services
+      (fun w' o ex hex => exitOk_widen hans herr (widen w' o ex hex))
 
 /-- The exit a failed finalizer leaves after a failed body: both causes combined
 (`Exit.restoreAfterFinalizer`, rc.112's `combineFinalizerCause`), typed at a column both fit. -/

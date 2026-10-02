@@ -28,12 +28,38 @@ structure FrameProtocols where
   asyncFinalizer : World → EffTy → EffTy → EffName → Prop
   iterator : World → EffTy → EffTy → EffName → Prop
   loop : World → EffTy → EffTy → EffName → Val → Prop
+  /-- What a scope's exit callback needs of the world when it runs: the scope it closes and the
+  context it restores (decisions row 188 (a)). -/
+  scopeExit : World → Ctx → Nat → Prop
+
+/-- The scope-exit callback the `scoped` arm generates (`EvaluateR.lean`, `.scoped`): the marker
+carrying the context to restore, the scope to close and the exit the body delivered.
+`prepareScopedExitR` consumes exactly this head in the evaluation whose walk installed it; its
+continuation is never run (the callback continues with `finishFinalizer`, which ignores it). As
+current code reaching a counted step it is outside that protocol (`evaluateFiberR`'s raw
+`scopeExit` arm answers `badShapeExit`), so the judgments admit it only at a guard's run position
+(decisions row 188 (a), `E4-TYPED-CE-034`). -/
+def scopeExitCallback? : RProgram → Option (Ctx × Nat × ExitV)
+  | .vis (.inr (.scopeExit prev sc ex)) _ => some (prev, sc, ex)
+  | _ => none
+
+/-- Binding a continuation after a callback leaves its head, which is all the evaluator reads. -/
+theorem scopeExitCallback?_bind {p : RProgram} {t : Ctx × Nat × ExitV}
+    (h : scopeExitCallback? p = some t) (K : ExitV → RProgram) :
+    scopeExitCallback? (p.bind K) = some t := by
+  cases p with
+  | pure ex => cases h
+  | vis op k =>
+    rw [← h]
+    cases op with
+    | inl op => rfl
+    | inr op => cases op <;> rfl
 
 section
 variable (TypedProg : World → EffTy → RProgram → Prop)
   (Exits : World → EffTy → ExitV → Prop) (hooks : FrameProtocols)
 
-/-- Seven arms of `ScopeFrame` as typed arrows (slice 5 R3, ruled 2026-09-21), closed under
+/-- Seven arms of `ScopeFrame` as typed arrows, and the `scoped` guard's slot, `scopedResume` (row 188 (a)) (slice 5 R3, ruled 2026-09-21), closed under
 later worlds (row 135). `resume` types the running arm and the guard miss separately; a
 preempted skip passes the sanitized exit, which carries no `Fail` and fits every type
 (`strongExit_of_clean`; divergence `U-01`, `E4-SCHED-CE-008`). The former all-failures
@@ -61,6 +87,14 @@ inductive FrameAccepts (w : World) : EffTy → EffTy → ScopeFrame → Prop
   | loop {tin tout : EffTy} (name : EffName) (cursor : Val)
       (protocol : ∀ w', w.leHost w' → hooks.loop w' tin tout name cursor) :
       FrameAccepts w tin tout (.loop name cursor)
+  /-- The slot a `scoped` guard saves (decisions row 188 (a)): on every exit it runs that scope's
+  exit callback, which `prepareScopedExitR` consumes; the callback delivers the same exit, so the
+  frame widens `tin` to `tout`. An `onExit false` slot always runs (`popR` masks first). -/
+  | scopedResume {tin tout : EffTy} (next : ExitV → RProgram) (prev : Ctx) (sc : Nat)
+      (callback : ∀ ex, scopeExitCallback? (next ex) = some (prev, sc, ex))
+      (hook : ∀ w', w.leHost w' → hooks.scopeExit w' prev sc)
+      (widen : ∀ w', w.leHost w' → ∀ ex, Exits w' tin ex → Exits w' tout ex) :
+      FrameAccepts w tin tout (.resume (.onExit false) next)
 
 /-- A stack composes arrows through a shared middle type, not one type at every frame. -/
 inductive StackAccepts (w : World) : EffTy → EffTy → List ScopeFrame → Prop
@@ -125,6 +159,9 @@ theorem frameAccepts_mono {w w' : World} (ord : w.leHost w') {a b : EffTy} {f : 
   | iter name protocol => exact .iter name (fun w'' o => protocol w'' (leHost_trans _ _ _ ord o))
   | loop name cursor protocol =>
     exact .loop name cursor (fun w'' o => protocol w'' (leHost_trans _ _ _ ord o))
+  | scopedResume next prev sc callback hook widen =>
+    exact .scopedResume next prev sc callback (fun w'' o => hook w'' (leHost_trans _ _ _ ord o))
+      (fun w'' o ex hx => widen w'' (leHost_trans _ _ _ ord o) ex hx)
 
 /-- **A saved stack transports along the host order** (row 135), with no premise on the
 program judgment, the exit judgment or the hooks. -/

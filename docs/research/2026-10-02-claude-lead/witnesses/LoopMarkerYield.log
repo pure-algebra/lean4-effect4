@@ -1,0 +1,5 @@
+'LoopMarkerYield.emptyPayload' depends on axioms: [propext, Quot.sound]
+'LoopMarkerYield.config_typed' depends on axioms: [propext, Quot.sound]
+'LoopMarkerYield.result_eq' depends on axioms: [propext, Quot.sound]
+'LoopMarkerYield.output_saved_false' depends on axioms: [propext, Quot.sound]
+'LoopMarkerYield.step_loop_false' depends on axioms: [propext, Quot.sound]

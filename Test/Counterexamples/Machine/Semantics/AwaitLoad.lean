@@ -168,7 +168,7 @@ example (w : W) (fresh : w.Γ ⟨1⟩ = none) :
     ¬ TypedProg (awaitProg : ProgramSource) w rootTy code := by
   intro h
   rw [code_eq] at h
-  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv h
+  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv_of_ne h (fun h => nomatch h)
   cases body with
   | fiber _ notUnguard _ _ certF preF nextF =>
     have hcert : certF = EffTy.pure .nat := cert_of_bodyTyped w certF _ rfl rfl preF

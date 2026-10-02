@@ -243,8 +243,9 @@ arm it rules out; with the scope-finalizer drops of `ObserverState` and `QueueOk
 `QueueOk.links` (in `I`) and the target and scope premises on the halting fiber rows (`fiberPre`'s
 `interruptAs`, `runIn`, `forkIn`, `closeScope`, `scopeExit` arms; `raceRegister` refused) they are
 what each command proof needs to show its halting arms unreachable. The scope-exit marker is
-typed through `TypedProg`'s own `scopeExit` constructor, which carries the same presence
-(`ScopeLive`, decisions row 156) that `fiberPre`'s `scopeExit` arm states. Race-id liveness for the
+typed only at the run position of the guard the `scoped` arm installs and of the slot that guard
+saves (`TypedProg.scopedGuard`, `FrameAccepts.scopedResume`, decisions row 188 (a)), which carry the
+same presence (`ScopeLive`, row 156) that `fiberPre`'s `scopeExit` arm states. Race-id liveness for the
 codes that name a race is `RegistrationState` (in `TypedState`): the only race halt is
 `registerRace` on a registration marker (`Machine/Fibers.lean:937-944`), and both code clauses
 leave the marker to it. A fiber handle's liveness is `Fits`'s fiber arm with
@@ -1744,8 +1745,9 @@ into `unit` keeps `I` at the world that declares the new cell (`step_loop_good`,
 Its halting arms (the census in `MachineLive`'s section) read the target and scope premises
 `fiberPre` carries on the halting rows (row 139); the absent-scope callback that refuted
 `step_deliver` before row 156 reaches the same walk from `loop` (`Laws/Program/EvaluateR.lean`
-`:309-319`; reading, not checked here), and the `scopeExit` constructor's presence premise (row
-156) now types it only where the scope is present. -/
+`:309-319`; reading, not checked here); since rows 156 and 188 (a) the callback is typed only at a
+`scoped` guard's run position, where the scope is present. `E4-TYPED-CE-033` (a registration
+marker under an injected yield) refuted this statement at `53caad0f`; decisions row 188 (b). -/
 theorem step_loop (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.loop id yielding)) := ⟨⟩
 
@@ -1756,7 +1758,11 @@ kept as history over a local copy of that judgment
 (`M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope`). Since row 156 the
 constructor carries the scope's presence (`ScopeLive`), and the witness's input is no typed
 configuration at any world (`M6Capstone.H1HaltAmendment.input_refused`), so it no longer refutes
-this obligation. -/
+this obligation. `E4-TYPED-CE-034` refuted it again at `53caad0f` with the scope present: the
+general constructor typed a raw marker as current code, which the counted step answers
+`badShapeExit`. Decisions row 188 (a) types the callback only at the `scoped` guard's run position
+(`TypedProg.scopedGuard`, `FrameAccepts.scopedResume`, the walk's `CallbackSaved`); the witness's
+input is refused at every world (`Test/Program/ScopeExitCallback.lean`, `input_refused`). -/
 theorem step_deliver (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.deliver id yielding)) := ⟨⟩
 

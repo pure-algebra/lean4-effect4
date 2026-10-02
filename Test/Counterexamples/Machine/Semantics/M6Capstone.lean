@@ -1789,9 +1789,11 @@ for the absent scope 0 was typed at every world and the controls of this section
 kept as history over `OldTypedProg`, a local copy of the judgment whose `scopeExit` constructor
 reads no pre (every other constructor the current one), and over H1's and the split's states
 built on it; every other clause is the current one, as `AwaitLoad.OldMachineTyped` keeps it (the
-old omission, not a complete pre-156 model). Under the current judgment the callback needs scope 0
-(`callback_typed`), and the witness's input is not a typed configuration at any world
-(`input_refused`, the repaired red control). Integration seat I2, 2026-10-01. -/
+old omission, not a complete pre-156 model). Under row 156 the callback needed scope 0; under
+decisions row 188 (a) the raw marker is no typed code at any world (`callback_untyped`: the scope's
+exit callback is typed only at the `scoped` guard's run position), and the witness's input is not
+a typed configuration at any world (`input_refused`, the repaired red control). Integration seat
+I2, 2026-10-01; row 188 (a), 2026-10-02. -/
 
 /-- `TypedProg` before row 156: the `scopeExit` constructor reads no pre. -/
 inductive OldTypedProg (root : ProgramSource) : W → EffTy → RProgram → Prop
@@ -2062,10 +2064,16 @@ theorem registration : RegistrationState (rootProgram : ProgramSource) world mac
   intro f member race marker
   rcases member_cases f member with rfl | rfl <;> cases marker
 
-/-- Under row 156 the callback's scope-exit marker is typed only where scope 0 is present. -/
-theorem callback_typed (w : W) (live : ScopeLive w 0) (ex : ExitV) :
-    TypedProg (rootProgram : ProgramSource) w unitTy (callback ex) :=
-  .scopeExit live ⟨trivial, trivial⟩ (fun _ _ _ => .pure ⟨trivial, trivial⟩)
+/-- Under decisions row 188 (a) the callback's scope-exit marker is no typed code at any world
+and type: `TypedProg` types the marker only at the run position of the guard the `scoped` arm
+installs (`scopedGuard`), never as code. (Under row 156 it was typed where scope 0 was present,
+which `E4-TYPED-CE-034` refuted.) -/
+theorem callback_untyped (w : W) (ty : EffTy) (ex : ExitV) :
+    ¬ TypedProg (rootProgram : ProgramSource) w ty (callback ex) := by
+  intro typed
+  change TypedProg _ w _ (.vis (.inr (.scopeExit emptyCtx 0 (.success .unit))) _) at typed
+  cases typed with
+  | fiber _ _ _ notScopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
 
 /-- History: before row 156 the callback was typed at every world. -/
 theorem old_callback_typed (w : W) (ex : ExitV) :
@@ -2073,14 +2081,10 @@ theorem old_callback_typed (w : W) (ex : ExitV) :
   .scopeExit ⟨trivial, trivial⟩ (fun _ _ _ => .pure ⟨trivial, trivial⟩)
 
 /-- The flip of the old `callback_typed` (row 156): at the witness's world, whose store holds no
-scope, the callback is not typed. -/
+scope, the callback is not typed (since row 188 (a), at no world). -/
 theorem callback_refused (ex : ExitV) :
-    ¬ TypedProg (rootProgram : ProgramSource) world unitTy (callback ex) := by
-  intro typed
-  change TypedProg _ world _ (.vis (.inr (.scopeExit emptyCtx 0 (.success .unit))) _) at typed
-  cases typed with
-  | scopeExit live _ _ => exact absurd live (by decide)
-  | fiber _ _ _ notScopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
+    ¬ TypedProg (rootProgram : ProgramSource) world unitTy (callback ex) :=
+  callback_untyped world unitTy ex
 
 /-- History: the worker's frame, code included (a unit value under the scope-exit callback), over
 the judgment before row 156. -/
@@ -2267,7 +2271,7 @@ theorem step_deliver_false : ¬ OldStepPreserves (rootProgram : ProgramSource) u
 #print axioms scheduler
 #print axioms observers
 #print axioms registration
-#print axioms callback_typed
+#print axioms callback_untyped
 #print axioms typed
 #print axioms queue
 #print axioms result_queue
@@ -2652,11 +2656,11 @@ theorem step_deliver_refuted_by_absent_scope :
   obtain ⟨w', _, after⟩ := step world machine rest rfl config_input
   exact old_output_outside w' after.machine
 
-/-- **The repaired red control (row 156)**: under the current judgment the witness's input is no
-typed configuration at any world. The queued `deliver` reads the running worker's code
-(`ReadCode`), whose saved resume frame must type the callback at the input's world, and the
-callback's scope-exit marker demands scope 0, which the machine's store does not hold
-(`WorldValid.state`). So `M6Ledger.step_deliver` is not refuted by this witness. -/
+/-- **The repaired red control (rows 156 and 188 (a))**: under the current judgment the witness's
+input is no typed configuration at any world. The queued `deliver` reads the running worker's code
+(`ReadCode`), whose saved `onSuccess` frame must type the callback as code at the input's world,
+and the scope's exit callback is typed only at a `scoped` guard's run position
+(`callback_untyped`). So this witness does not refute `M6Ledger.step_deliver`. -/
 theorem input_refused (w : W) :
     ¬ ConfigTyped (rootProgram : ProgramSource) unitTy w machine commands := by
   intro config
@@ -2672,14 +2676,7 @@ theorem input_refused (w : W) :
   | cons head _ =>
     cases head with
     | resume _ _ run _ =>
-      have marker := run w (leHost_refl w) (.success .unit) exited rfl
-      change TypedProg _ w _ (.vis (.inr (.scopeExit emptyCtx 0 (.success .unit))) _) at marker
-      cases marker with
-      | scopeExit live _ _ =>
-        change (w.state.scopes.entryAt 0).isSome = true at live
-        rw [valid.state] at live
-        exact Bool.noConfusion live
-      | fiber _ _ _ notScopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
+      exact callback_untyped w _ (.success .unit) (run w (leHost_refl w) (.success .unit) exited rfl)
 
 #print axioms typedState_input
 #print axioms config_input

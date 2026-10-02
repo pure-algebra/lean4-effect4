@@ -390,6 +390,8 @@ def frameProtocols (root : ProgramSource) : Contracts.FrameProtocols where
     cause.hasInterrupts = true → TypedProg root w tout ((interpR root.program).cancelThenFail name cause)
   iterator := IteratorProtocol root
   loop := LoopProtocol root
+  -- the reviewed judgment had no `scoped` guard's slot (decisions row 188 (a) came later)
+  scopeExit _ _ _ := False
 
 /-- The type a position is expected at: the root's and each fiber's declared type (D7). -/
 def expectOf (w : World) : Expect → Option EffTy

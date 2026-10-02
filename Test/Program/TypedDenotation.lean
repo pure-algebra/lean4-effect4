@@ -74,7 +74,7 @@ theorem guardStore_run {root : ProgramSource} {w : W} {T : EffTy} {op : SyncOp}
     ∃ cert : StoreCert op, storePre root w op cert ∧
       ∀ w', w.leHost w' → ∀ ans, storePost w' op cert ans →
         TypedProg root w' T (Kc (.success ans)) := by
-  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv h
+  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv_of_ne h (fun h => nomatch h)
   obtain ⟨cert, pre, next⟩ := TypedProg.store_inv body
   exact ⟨cert, pre, fun w' o ans post =>
     run w' o (.success ans) ⟨rfl, unguard_payload_inv root w' mid _ _ (next w' o ans post)⟩⟩
@@ -84,7 +84,7 @@ theorem guardGetContext_run {root : ProgramSource} {w : W} {T : EffTy} {Kc : Exi
     (h : TypedProg root w T ((guardR .onSuccess (fiberValR .getContext rfl)).bind Kc)) :
     ∀ w', w.leHost w' → ∀ ans, Fits w' ans (.handle Ty.contextTarget) →
       TypedProg root w' T (Kc (.success ans)) := by
-  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv h
+  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv_of_ne h (fun h => nomatch h)
   obtain ⟨cert, pre, next⟩ := TypedProg.fiber_inv body (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   intro w' o ans hans
@@ -97,7 +97,7 @@ theorem guardSetContext_run {root : ProgramSource} {w : W} {T : EffTy} {ctx : Ct
     {Kc : ExitV → RProgram}
     (h : TypedProg root w T ((guardR .onSuccess (fiberValR (.setContext ctx) rfl)).bind Kc)) :
     ∀ w', w.leHost w' → TypedProg root w' T (Kc (.success .unit)) := by
-  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv h
+  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv_of_ne h (fun h => nomatch h)
   obtain ⟨cert, pre, next⟩ := TypedProg.fiber_inv body (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   intro w' o
@@ -108,8 +108,9 @@ theorem guardBind_body {root : ProgramSource} {w : W} {T : EffTy} {kind : GuardK
     {a : RProgram} {Kc : ExitV → RProgram} (h : TypedProg root w T ((guardR kind a).bind Kc)) :
     ∃ mid, TypedProg root w mid
       ((a.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure).bind Kc) := by
-  obtain ⟨mid, body, _, _⟩ := TypedProg.guard_inv h
-  exact ⟨mid, body⟩
+  rcases TypedProg.guard_inv h with ⟨mid, body, _, _⟩ | ⟨_, mid, _, _, body, _⟩
+  · exact ⟨mid, body⟩
+  · exact ⟨mid, body⟩
 
 /-- The wrong-shape exit is refused at every exit type: part one's exclusion (`badName`). -/
 theorem badShape_refused (w : W) (ty : EffTy) : ¬ ExitOk w ty badShapeExit := by

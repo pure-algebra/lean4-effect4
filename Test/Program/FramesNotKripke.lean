@@ -1037,9 +1037,12 @@ example :
     exact hf
 
 /-- The closed judgment gives the one-world judgment at the current world: every frame clause
-read at `w` by reflexivity. Nothing proved over the one-world judgment is lost. -/
+read at `w` by reflexivity. Nothing proved over the one-world judgment is lost. The `scoped`
+guard's slot (decisions row 188 (a)) is a frame the one-world judgment never had; a frame that is
+not one is mapped. -/
 theorem frameAccepts_now {TP : W → EffTy → RProgram → Prop} {Ex : W → EffTy → ExitV → Prop}
     {hooks : FrameProtocols} {w : W} {a b : EffTy} {f : ScopeFrame}
+    (notScoped : ∀ next, f ≠ .resume (.onExit false) next)
     (h : FrameAccepts TP Ex hooks w a b f) : Old.FrameAccepts TP Ex hooks w a b f := by
   cases h with
   | resume kind next run skip =>
@@ -1050,13 +1053,17 @@ theorem frameAccepts_now {TP : W → EffTy → RProgram → Prop} {Ex : W → Ef
   | finalizerMask flag => exact .finalizerMask _ flag
   | iter name protocol => exact .iter name (protocol w (leHost_refl w))
   | loop name cursor protocol => exact .loop name cursor (protocol w (leHost_refl w))
+  | scopedResume next _ _ _ _ _ => exact absurd rfl (notScoped next)
 
 theorem stackAccepts_now {TP : W → EffTy → RProgram → Prop} {Ex : W → EffTy → ExitV → Prop}
     {hooks : FrameProtocols} {w : W} {a b : EffTy} {s : List ScopeFrame}
+    (notScoped : ∀ f ∈ s, ∀ next, f ≠ .resume (.onExit false) next)
     (h : StackAccepts TP Ex hooks w a b s) : Old.StackAccepts TP Ex hooks w a b s := by
   induction h with
   | nil ty => exact .nil ty
-  | cons head _ ih => exact .cons (frameAccepts_now head) ih
+  | cons head _ ih =>
+    exact .cons (frameAccepts_now (notScoped _ List.mem_cons_self) head)
+      (ih fun f hf => notScoped f (List.mem_cons_of_mem _ hf))
 
 /-- The flip of `stackAccepts_not_mono`: the closed judgment transports every stack it accepts to
 every later world, so the good frame accepted at the initial world is accepted at `w1`. -/
@@ -1080,7 +1087,12 @@ would transport to `w1`, where even the one-world judgment refuses the frame. -/
 theorem bad_not_kripke_by_transport :
     ¬ StackAccepts (TypedProg (refProg : ProgramSource)) ExitOk (frameProtocols refProg)
       world tin unitTy [.answer badNext] :=
-  fun h => bad_refused_at_w1 (stackAccepts_now (Contracts.stackAccepts_mono w0_le_w1 h))
+  fun h => bad_refused_at_w1 (stackAccepts_now
+    (fun f hf next same => by
+      rw [List.mem_singleton] at hf
+      subst hf
+      cases same)
+    (Contracts.stackAccepts_mono w0_le_w1 h))
 
 /-! ### Wrapping the hook premises at the frame does not survive the walk
 
@@ -1119,6 +1131,7 @@ def hooksX : FrameProtocols where
     | .restore _ => tin = midOf w ∧ tout = T
     | _ => False
   loop _ _ _ _ _ := False
+  scopeExit _ _ _ := False
 
 theorem unit_fits_mid (w : W) : ExitOk w (midOf w) (.success Val.unit) := by
   refine ⟨?_, trivial⟩

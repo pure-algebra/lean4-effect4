@@ -63,7 +63,7 @@ body's store answer is Unit, so the guard's success arm must run. -/
 theorem cancellation_exit (root : NativeEff) (w : W) (ty : EffTy) (cause : CauseV)
     (h : TypedProg root w ty ((interpR root).cancelThenFail sleepCancel cause)) :
     FitsExit w ty (.failure cause) := by
-  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv h
+  obtain ⟨mid, body, run, _⟩ := TypedProg.guard_inv_of_ne h (fun h => nomatch h)
   obtain ⟨_, _, next⟩ := TypedProg.store_inv body
   have unit : ExitOk w mid (.success .unit) :=
     unguard_payload_inv root w mid _ _ (next w (leHost_refl w) .unit rfl)

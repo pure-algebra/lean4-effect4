@@ -45,10 +45,22 @@ structure HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
           ∀ w', w.leHost w' → hooks.loop w' tin' tout name cursor'
       | .finish code => TypedProg root w tout code
 
-/-- The two outcomes of the walk, at the saved stack's final type. -/
+/-- The walk ran a `scoped` guard's slot (decisions row 188 (a)): the current code is that scope's
+exit callback, whose exit is typed at the remaining stack's input type, over the remaining stack
+with the finalizer mask the `onExit` slot pushes. `prepareScopedExitR` consumes it in the same
+evaluation; it is no typed program. -/
+def CallbackSaved (root : ProgramSource) (hooks : FrameProtocols) (w : World) (tout : EffTy)
+    (x : RSaved) : Prop :=
+  ∃ ty prev sc ex, scopeExitCallback? x.current = some (prev, sc, ex) ∧ ExitOk w ty ex ∧
+    hooks.scopeExit w prev sc ∧ StackAccepts (TypedProg root) ExitOk hooks w ty tout x.stack ∧
+    InterruptProvenance x
+
+/-- The outcomes of the walk, at the saved stack's final type: typed code over the remaining
+stack, a scope's exit callback over it (row 188 (a)), or the exit the whole stack delivered. -/
 def WalkTyped (root : ProgramSource) (hooks : FrameProtocols) (w : World) (tout : EffTy) :
     RSaved × Option ExitV → Prop
-  | (frame, none) => SavedOk (TypedProg root) ExitOk hooks w tout frame
+  | (frame, none) => SavedOk (TypedProg root) ExitOk hooks w tout frame ∨
+      CallbackSaved root hooks w tout frame
   | (_, some ex) => ExitOk w tout ex
 
 /-! ## Clean exits along the walk -/
@@ -131,7 +143,7 @@ theorem walk_saved {root : ProgramSource} {hooks : FrameProtocols} {w : World} {
     {x : RSaved} (tin : EffTy) (code : TypedProg root w tin x.current)
     (stack : StackAccepts (TypedProg root) ExitOk hooks w tin tout x.stack)
     (hp : InterruptProvenance x) : WalkTyped root hooks w tout (x, none) :=
-  ⟨tin, code, stack, hp⟩
+  .inl ⟨tin, code, stack, hp⟩
 
 theorem walk_done {root : ProgramSource} {hooks : FrameProtocols} {w : World} {tout : EffTy}
     {x : RSaved} {ex : ExitV} (h : ExitOk w tout ex) : WalkTyped root hooks w tout (x, some ex) :=
@@ -253,6 +265,11 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
             · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
             · exact walk_saved _ (run w (leHost_refl w) _ hex rfl) (.cons (.finalizerMask _ _) tail) (hp' _ _ _)
             · exact ih _ _ _ _ tail (preempt _ c _ hex.2 rfl) (hp' _ _ _)
+    | scopedResume next prev sc callback hook widen =>
+      obtain ⟨current, stack, i, ic, deferred⟩ := frame
+      cases ex <;> simp only [popR] <;>
+        exact .inr ⟨_, prev, sc, _, callback _, widen w (leHost_refl w) _ hex, hook w (leHost_refl w),
+          .cons (.finalizerMask _ _) tail, ⟨hp.recorded, hp.deferred⟩⟩
     | answer next run =>
       have hrun := run w (leHost_refl w) ex hex
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
