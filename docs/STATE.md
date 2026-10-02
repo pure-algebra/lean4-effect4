@@ -541,20 +541,23 @@ The active sequence is the foundations review above. Phase C's existing receipt 
 historical evidence; the dated notes below explain the redirect and its earlier plans. They
 do not override the corrected protocol-before-assembly order or constitute a new pause instruction.
 
-**Semantics pass, late 2026-10-01 (the latest design push; read these first).** The formalization
-pass of §7 of `docs/research/2026-10-01-landing/status-2026-10-01-evening.md` continued as three
-briefs. Gemini lands the semantics report's first slice from
-`docs/research/2026-10-01-semantics/seat-B/brief-gemini-implementation.md` (spec `seat-B/spec-v3.md`;
-base `66b7c525`, which adds register row `E4-TYPED-CE-030`; the coordinator's rulings at the
-brief's end). Codex audits the metaprogramming surface from
-`docs/research/2026-10-01-metaprogramming-audit/brief-codex-metaprogramming.md` (a read-only note
-first, then slices; three rulings owed by the owner: the `first`-hiding tactic macros, unexpanders
-for the object language, the home of `fold_of`). The review of Gemini's spec v2 is
-`docs/research/2026-10-01-semantics/review-gemini-v2.md`; the citations audit `citations-audit.md`
-and the sources index `sources/README.md` (22 sources vendored with checksums; the full texts of
-TAPL and ATTAPL are still owed by the owner). DI-18 was re-ruled by the owner: the `import Lean`
-ban is dropped and the representation rules are the guard (`docs/DESIGN-ISSUES.md`,
-`docs/ARCHITECTURE.md`'s roots paragraph).
+**Integration, late 2026-10-01 (the base to build on; read first).** Merged into
+`refactor/phase1-phase3`: seat D4's merge completed (Bookkeeping's scope clauses, `04956067`);
+Codex's metaprogramming branch (the audit's cleanups and the semantics report's first slice); seat
+W2 (the generator for variable arity, the conservativity and `Ty`-rule checkers on demand); seat D2,
+reconciled by hand with D4 (rows 170 and 175 landed; M5's arm groups 1–3 and every guard shape's
+compatibility lemma). The sweep passes: `lake build` 758 jobs, the trust gate 536 modules and 75 032
+declarations, `make check-gen` (W2's interaction check: every Lean-only generated file is what its
+generator emits), after decisions row 184 (the gate admits the `semantics` attribute's
+initializer-set handle by exact name; the owner ratifies). The language's judgments are described by
+concept in `docs/core/semantics.md` (promoted from Gemini's draft, every locator checked), and their
+status is measured in `generated/semantics.md` over the ten concepts: 57 claims, 43 proved, 7
+wanted, 5 absent, 1 refuted, 1 assumed (`make gen-semantics`; `python3 scripts/check-semantics.py`
+passes). Next, in this order (Gemini, `docs/research/2026-10-01-semantics/brief-gemini-proofs.md`):
+M5's `evalTerm_fits`, group 4 and the assembly for layer-free programs (receipt D2); then M6 as seat
+D5's brief has it (row 134 (a)–(e), row 181, the eight goals, M6b, M6c, row 180); then M7. Owner
+decisions in the way: row 176 (the layer family), row 184 (ratify the gate admission). The review
+record of the pass: `docs/research/2026-10-01-semantics/review-codex-gemini-2026-10-01-late.md`.
 
 **Design review before implementation resumes (2026-09-19).** The completed STM and stateful-API
 research is reconciled in `docs/core/machine-state.md`, with the detailed contracts, retained
