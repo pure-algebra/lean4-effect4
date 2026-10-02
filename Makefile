@@ -197,7 +197,7 @@ $(SEMANTICS_TRACES):
 	@echo '$(LAKE) build Effect4.Laws.Program.Typed.Assembly Test.Program.TypedProgBindRed Test.Audit.SemanticsCensus Drivers.Semantics Drivers.SemanticsControls' >&2
 	@exit 1
 
-$(GEN)/semantics: FORCE $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES)
+$(GEN)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES)
 	$(PY) scripts/check-semantics.py --generate generated
 	@mkdir -p $(GEN) && touch $@
 
@@ -495,7 +495,7 @@ $(CHK)/census: $(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/
 
 # Two fresh reports, Lean refusal controls, pinned tsgo 7 and strict decoding controls.
 # No order-only build/install prerequisite: missing prepared artifacts are a refusal.
-$(CHK)/semantics: FORCE $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) generated/semantics.json generated/semantics.md \
+$(CHK)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) generated/semantics.json generated/semantics.md \
   tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean $(TS_EFF_SOURCES) \
   ts/eff/test/semantics.fixture.json $(wildcard ts/eff/node_modules/effect/package.json \
   ts/eff/node_modules/@typescript/native-preview/package.json ts/eff/node_modules/@typescript/native-preview/bin/tsgo)

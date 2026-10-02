@@ -40,8 +40,11 @@ command. It also compares the prepared project/package import artifacts with sav
 checks that the report names only prepared roots, and stages generation until final validation
 succeeds. It never starts a build or installs host dependencies. Its run receipt records the checkout
 head, dirty state and policy hash under `.lake/`, outside the committed report bytes.
-Both semantics targets run on every invocation, so an imported source edit cannot skip
-the freshness preflight while its Lake trace remains unchanged.
+Both semantics targets are incremental like every other group (the owner's rule: no re-run
+when the inputs are unchanged): they re-run when the registry, the producer, a register or a
+named root's Lake trace changes, and `make check` builds before it checks, so an imported
+source edit refreshes the traces first; the script's freshness preflight still refuses a
+stale artifact when it runs.
 lcnf is another deliberate exception: it sits in the order between
 derived and eff, because eff cuts the engine's layout mirror from the api_engine.ml lcnf
 writes, but its marker is not a link of the chain, so `check-gen` — which runs inside `make
