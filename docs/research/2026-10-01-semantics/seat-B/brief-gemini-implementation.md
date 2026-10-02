@@ -157,3 +157,9 @@ Where this section and the spec differ, this section wins.
 - **Your receipt** goes where the brief says; add a section "Companion files corrected" naming
   every line of `gemini/note.md`, `chapter-table.md`, `lemma-census.md` and `domain-model-spec.md`
   you change to match the audit, or say that you left them as history.
+
+**Base, final (coordinator, ~22:55):** branch from `8c9be258` on `refactor/phase1-phase3`. It holds
+`66b7c525`'s register row, tonight's tracked notes (`36650548`) and the DI-18 re-ruling
+(`docs/DESIGN-ISSUES.md`): a Laws module that imports Lean's elaboration APIs is audited like any
+other, so `src/Effect4/Laws/Auto/Semantics.lean` needs no exemption text, only the gate entry spec
+§4.1 names.

@@ -195,3 +195,15 @@ src/Effect4/Laws/Program/Typed/TypedSources.lean
   beside it, and your A4 helper module lands first among your slices so Gemini's census can be
   moved onto it afterwards. The attribute pattern Gemini uses (a parametric attribute with an
   `initialize`, one `auditImplementationModules` entry) is the one to review in A1.
+
+## Addendum 2 (coordinator, 2026-10-01 ~22:55): DI-18 is ruled; the base
+
+The owner re-ruled DI-18 before dispatch (`docs/DESIGN-ISSUES.md`, row DI-18; `docs/ARCHITECTURE.md`,
+the roots paragraph; commit `8c9be258`): the `import Lean` ban is dropped. The risk it guarded, a
+Lean meta object entering the runtime representation by accident, is owned by the representation
+rules (`AGENTS.md`; `docs/DESIGN-BASIS.md` DB-08) and the separation gates, not by an import list.
+A7 therefore no longer ends in a choice between (a) and (b). It ends in two measured proposals:
+where `Program/FoldOf.lean` belongs (the runtime root's one metaprogram), and whether a check
+should replace the former ban (no declaration of the runtime root `Effect4` mentions `Lean.Expr`,
+`Lean.Syntax` or an elaborator monad in its signature), with the cost of each. Base your branch
+on `8c9be258` (it holds this ruling, register row `E4-TYPED-CE-030` and tonight's notes).
