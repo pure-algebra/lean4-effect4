@@ -23,6 +23,18 @@ The cases and what each one holds (the evidence words of the seat's receipt):
   elim-record           tested: the `elim` kind on the record fixture; the output compiles
   elim-val-agrees       proved: on `Store.Val` the generated companions are the hand ones
   fold-record           tested: the fold group of the nested record fixture compiles
+  extras-record         proved: `--extras` on the nested record fixture (arguments by sort, `ArgF`):
+                        the view law, uniqueness in layer form, fusion, the layer invariant, the
+                        banana split, `foldMap` one layer down and both connectors, the position
+                        helpers' functor laws; every law at most `[propext, Quot.sound]`
+  extras-record-lengths tested: records of 0, 1, 2, 3 and 7 labelled fields through the generated
+                        view, layer fold, head and paired folds; red: a two-field reading differs
+                        at 3 and 7 (`GenFix/Controls/RecordExtras.lean`)
+  extras-val            proved: `--extras` on `Store.Val` (a list of members, two payloads per
+                        constructor); nothing written to the tree
+  extras-refuses-param  tested: `--extras Effect4.Program.Eff` refused, a parameterised family
+  extras-refuses-mutual tested: `--extras Effect4.Representation` refused, a mutual block
+  extras-refuses-nullary tested: `--extras` on a nested family with no nullary constructor refused
   foldof-record         proved: `fold_of` through a product position and a field-list sibling
                         (`List (String × Ty)`), a paramorphism among them: six connectors
   view-record           tested: the view at a field-list head (no table: today's literal rule) compiles
@@ -196,6 +208,82 @@ def fold_record(cx):
     cx.compile(out, cx.src)
 
 
+def receipts_present(text, prefix, names, what):
+    """Every law must print its `#print axioms` line (its axioms are checked by `compile`)."""
+    for name in names:
+        if f"'{prefix}{name}'" not in text:
+            raise CaseFailed(f'{what}: no axiom receipt for {name}')
+
+
+# the laws `--extras` writes for a nested one-member block, by the family's label
+def extras_laws(label, argf, positions):
+    laws = [f'{label}Build_view', f'{argf}.map_comp', f'{argf}.map_id', f'{argf}.kids_map',
+            'cata_ofLayer_view', 'eq_cata_ofLayer', f'cata_fusion_{label}', 'cata_ofLayer_inv',
+            f'cata_prod_{label}', 'foldMap_view', 'foldMap_head_eq_cata', 'foldMap_eq_cata']
+    for p in positions:
+        laws += [f'map_pos_{p}_comp', f'map_pos_{p}_id', f'kids_pos_{p}_map', f'foldMap_pos_{p}_eq']
+    return laws
+
+
+def extras_record(cx):
+    out = cx.gen('GenFix/Record/TyExtras.lean')
+    cx.tool(FOLD, ['--extras', '--group', 'TyExtras', '--imports', 'GenFix.Record.Fold',
+                   '--namespace', 'GenFix.Record', '--out', str(out), 'GenFix.Record.Ty'])
+    text = out.read_text()
+    for absent in ['TyLeaf', 'sizeOf_tyKids']:
+        if re.search(r'\b' + absent + r'\b', text):
+            raise CaseFailed(f'TyExtras: the nested block emitted the plain form\'s {absent}')
+    if '| list_prod_string_ty (v : List (String × R))' not in text:
+        raise CaseFailed('TyExtras: the field list is not an argument sort `List (String × R)`')
+    receipts_present(cx.compile(out, cx.src), 'GenFix.Record.',
+                     extras_laws('ty', 'TyArgF', ['prod_string_ty', 'list_prod_string_ty']), 'TyExtras')
+
+
+def extras_record_lengths(cx):
+    text = cx.compile(FIXTURES / 'GenFix/Controls/RecordExtras.lean')
+    receipts_present(text, 'GenFix.Controls.RecordExtras.', ['size_pos', 'spell_size_rec7'], 'RecordExtras')
+
+
+def extras_val(cx):
+    out = cx.gen('GenFix/ValExtras.lean')
+    cx.tool(FOLD, ['--extras', '--group', 'ValExtras', '--imports', 'Effect4.Store.Carrier.Fold',
+                   '--namespace', 'GenFix.ValExtras', '--out', str(out), 'Effect4.Store.Val'])
+    text = out.read_text()
+    for needed in ['| .ref a0 a1 => [.uInt8 a0, .bytes a1]', '| list_val (v : List R)']:
+        if needed not in text:
+            raise CaseFailed(f'ValExtras: no {needed!r}')
+    receipts_present(cx.compile(out, cx.src), 'GenFix.ValExtras.',
+                     extras_laws('val', 'ValArgF', ['list_val']), 'ValExtras')
+
+
+def extras_refuses_param(cx):
+    out = cx.gen('Refused/EffExtras.lean')
+    cx.tool(FOLD, ['--extras', '--group', 'EffExtras', '--imports', 'Effect4.Program.Fold', '--out',
+                   str(out), 'Effect4.Program.Eff'],
+            expect_fail='extras: Effect4.Program.Eff takes parameters')
+    if out.exists():
+        raise CaseFailed('the refused extras wrote their output anyway')
+
+
+def extras_refuses_mutual(cx):
+    out = cx.gen('Refused/SchemaExtras.lean')
+    cx.tool(FOLD, ['--extras', '--group', 'SchemaExtras', '--imports', 'Effect4.Schema.Fold', '--out',
+                   str(out), 'Effect4.Representation'],
+            expect_fail='extras: Effect4.Representation is mutual')
+    if out.exists():
+        raise CaseFailed('the refused extras wrote their output anyway')
+
+
+def extras_refuses_nullary(cx):
+    cx.compile(FIXTURES / 'GenFix/Refuse/Rose.lean')
+    out = cx.gen('Refused/RoseExtras.lean')
+    cx.tool(FOLD, ['--extras', '--group', 'RoseExtras', '--imports', 'GenFix.Refuse.Rose', '--out',
+                   str(out), 'GenFix.Refuse.Rose'],
+            expect_fail='extras: GenFix.Refuse.Rose has no nullary constructor')
+    if out.exists():
+        raise CaseFailed('the refused extras wrote their output anyway')
+
+
 def foldof_record(cx):
     text = cx.compile(FIXTURES / 'GenFix/Record/FoldOfScan.lean')
     for name in ['members.eq_cata', 'renderRaw.eq_cata', 'renderFields.eq_foldr', 'renderFields.eq_cata',
@@ -325,6 +413,12 @@ CASES = [
     ('elim-record', elim_record),
     ('elim-val-agrees', elim_val_agrees),
     ('fold-record', fold_record),
+    ('extras-record', extras_record),
+    ('extras-record-lengths', extras_record_lengths),
+    ('extras-val', extras_val),
+    ('extras-refuses-param', extras_refuses_param),
+    ('extras-refuses-mutual', extras_refuses_mutual),
+    ('extras-refuses-nullary', extras_refuses_nullary),
     ('foldof-record', foldof_record),
     ('view-record', view_record),
     ('view-no-arity', view_no_arity),

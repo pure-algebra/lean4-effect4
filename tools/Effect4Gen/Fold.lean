@@ -24,12 +24,18 @@ From the constructor declarations of each named family, nothing hand-listed:
   Refused by name: a parameterised or indexed family, a mutual block, a family with no member
   under a container (derive it), a one-parameter-structure position.
 * **`--extras [--namespace NS]`** (probe U, decisions row 182): instead of the fold, the generic
-  families every table-driven traversal is read through, from the declaration of a plain block —
-  the tags with their names and binders, the payload by sort, `build`/`kids` and the view law, the
-  per-constructor table type, the layer algebra, the head and paired folds with their connectors,
-  fusion and the banana split from uniqueness, the per-layer invariant. Without the flag nothing
-  of it is emitted and every output is today's. Refused by name: a nested block (its layer is
-  `ArgF`'s; the nested extension is owed), a constructor with two payload arguments.
+  families every table-driven traversal is read through, from the declaration of a one-member
+  block — the tags with their names and binders, the per-constructor table type, the view and
+  its law, the layer algebra, the head and paired folds with their connectors, fusion and the
+  banana split, the per-layer invariant. A plain block reads one payload and a list of children
+  (`TyLeaf`, today's text). A nested block (a member under a container) reads its arguments by
+  sort (`TyArgF`, `ArgF`'s form: a composite position kept with the carrier in the member's place,
+  so a field list is `List (String × R)` and every child position is read with its payloads), with
+  uniqueness in layer form (`eq_cata_ofLayer`) and each composite position's functor laws (seat
+  nested-extras, 2026-10-02; the section "The nested form"). Without the flag nothing of it is
+  emitted and every output is today's. Refused by name: a parameterised family, a mutual block, a
+  family with no nullary constructor (`build`'s refusal); in the plain form, a constructor with two
+  payload arguments (the nested form packs each by sort).
 
 ## The monadic-fold decision (seat W2, 2026-10-01; probe Q, Q3)
 
@@ -1660,9 +1666,9 @@ table-driven traversal is read through: the tags and their names and binders, th
 sorts, `build`/`kids` and the view law, the per-constructor table type, the layer algebra, the
 head fold and the paired fold with their connectors, fusion and the banana split from
 uniqueness, and the per-layer invariant. All of it is read off the constructor rows; nothing
-here is hand-listed. A block with a composite position (`record`'s `List (String × Ty)`) or a
-constructor with two payload arguments is refused by name: its layer needs `ArgF`'s positions
-(the `LayerView` emitter's), not one payload and a list of children.
+here is hand-listed. A block with a composite position (`record`'s `List (String × Ty)`) takes
+the nested form below (its layer is `ArgF`'s: arguments by sort, every child position read); in
+this plain form a constructor with two payload arguments is refused by name.
 -/
 
 namespace Extras
@@ -1691,13 +1697,594 @@ def helpers : String :=
   "  | none => here\n" ++
   "  | some k => op here k\n\n"
 
+/-- The tags of a one-member block, shared by both forms: the inductive, every tag, the tag of a
+node, the constructors' names and binders. -/
+def tagsText (famT ctorT viewCtor : String) (rows : List CtorRow) (wild : CtorRow → String) :
+    String := Id.run do
+  let mut s := ""
+  s := s ++ s!"/-- The constructor tags of `{famT}`, in declaration order. -/\n"
+  s := s ++ s!"inductive {ctorT} where\n"
+  for r in rows do s := s ++ s!"  | {r.ctor}\n"
+  s := s ++ "deriving DecidableEq, Repr\n\n"
+  s := s ++ s!"/-- Every tag, in declaration order. -/\n"
+  s := s ++ s!"def {ctorT}.all : List {ctorT} :=\n  [" ++
+    String.intercalate ", " (rows.map fun r => s!".{r.ctor}") ++ "]\n\n"
+  s := s ++ s!"/-- The tag of a node: one level, no recursion. -/\n"
+  s := s ++ s!"def {viewCtor} : {famT} → {ctorT}\n"
+  for r in rows do s := s ++ s!"  | {wild r} => .{r.ctor}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The constructor's name, as the declaration spells it. -/\n"
+  s := s ++ s!"def {ctorT}.name : {ctorT} → String\n"
+  for r in rows do s := s ++ s!"  | .{r.ctor} => \"{r.ctor}\"\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The constructor's binder names, in declaration order. -/\n"
+  s := s ++ s!"def {ctorT}.binders : {ctorT} → List String\n"
+  for r in rows do
+    s := s ++ s!"  | .{r.ctor} => [" ++ String.intercalate ", " (r.args.map fun a => s!"\"{a.binder}\"") ++ "]\n"
+  s := s ++ "\n"
+  return s
+
+/-- The per-constructor table type and its lookup by tag, shared by both forms. -/
+def tableText (tableT ctorT : String) (rows : List CtorRow) : String := Id.run do
+  let mut s := ""
+  s := s ++ s!"/-- One row per constructor. -/\n"
+  s := s ++ s!"structure {tableT} (α : Type u) where\n"
+  for r in rows do s := s ++ s!"  {r.ctor} : α\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- A row by tag. -/\n"
+  s := s ++ s!"def {tableT}.get \{α : Type u} (t : {tableT} α) : {ctorT} → α\n"
+  for r in rows do s := s ++ s!"  | .{r.ctor} => t.{r.ctor}\n"
+  s := s ++ "\n"
+  return s
+
+/-! ### The nested form: arguments by sort, every child position read (seat nested-extras)
+
+A block with a member under a container (`record (fields : List (String × Ty))`) has no
+"one payload and a list of children" layer: a child sits inside a container beside payloads of
+its own (a field's name). Its layer is `ArgF`'s (`tools/Effect4Gen/LayerView.lean`; probe U
+§3.5): every argument packed by sort, a member as `child`, a leaf type under its sort's name,
+and a member under a container under its position's name, the container kept with the carrier
+in the member's place (`List (String × R)`), so every child position is read with its payloads
+and a list of children has no fixed arity. From the constructor rows and the nested fold's own
+position language (`Pos`), nothing hand-listed:
+
+* `<B>ArgF` with its functor map, its children (`kids`) and its monoid contribution (`contrib`);
+  the functor laws `map_comp`, `map_id` and the children's naturality `kids_map`;
+* per composite position (children before parents): the children helper `kids_pos_*`, the
+  combination `comb_pos_*` (bracketed as `foldMap_*` brackets), the position's functor laws
+  `map_pos_*_comp`/`_id`, the children's naturality `kids_pos_*_map`, and the fold module's
+  `foldMap_pos_*` as the combination of the folded children (`foldMap_pos_*_eq`);
+* `<b>Args`/`<b>Build` and the view law `<b>Build_view`; `<b>Shape`, `<b>Kids`;
+* the layer algebra `ofLayer` over `TyCtor → List (TyArgF R) → R`, its one-layer equation
+  `cata_ofLayer_view`, and uniqueness in layer form `eq_cata_ofLayer` (every `Hom` field by
+  definition);
+* fusion `cata_fusion_<f>` from `hom_eq_cata_<f>` (a composite constructor's square through the
+  position's composition law); the layer invariant `cata_ofLayer_inv` (by fusion through the
+  subtype); the banana split `cata_prod_<f>` (by fusion at each projection);
+* `foldMap_view` (the fold module's `foldMap_*` one layer down) and the head and paired folds
+  with their connectors `foldMap_head_eq_cata`, `foldMap_eq_cata` (by `eq_cata_ofLayer`).
+
+The head hook reads the node's shape (`List (TyArgF Unit)`: its tag's arguments with every child
+erased, every payload kept), the nested analogue of the plain form's `TyLeaf`.
+-/
+
+/-- Is the position a member itself? -/
+def isDirect : Pos → Bool
+  | .direct _ => true
+  | _ => false
+
+/-- The `ArgF` constructor an argument at the position is packed under: `child` for a member,
+the sort's name for a leaf type, the position's suffix for a member under a container. -/
+def argCtor : Pos → String
+  | .leaf ty => leafCtor ty
+  | .direct _ => "child"
+  | q => q.suffix
+
+/-- The position's container map of `fn` applied to `e`, parenthesized where it must be. -/
+def mapOf (fn : String) (p : Pos) (e : String) : String := p.appliedArg (fun _ => fn) e
+
+/-- One child of a composite position for the children helper: a member itself (`true`) or a
+composite position's helper applied (`false`); a leaf is no child. -/
+def kidsItem (q : Pos) (e : String) : Option (Bool × String) :=
+  match q with
+  | .leaf _ => none
+  | .direct _ => some (true, e)
+  | _ => some (false, s!"kids_pos_{q.suffix} {e}")
+
+/-- The children of a list of items, in order: a member consed, a helper's list appended. -/
+def joinKids : List (Bool × String) → String
+  | [] => "[]"
+  | [(true, e)] => s!"[{e}]"
+  | [(false, l)] => l
+  | (true, e) :: rest => s!"{e} :: {parenArg (joinKids rest)}"
+  | (false, l) :: rest => s!"{l} ++ {parenArg (joinKids rest)}"
+
+/-- The rewrites that push `List.map f` through a children list `joinKids` built from items
+(`true` a member), then the composite items' naturality lemmas. -/
+def natLemmas (items : List (Bool × String)) (childLemmas : List String) : List String :=
+  let ds := items.any (·.1)
+  let lastD := match items.getLast? with
+    | some (true, _) => true
+    | _ => false
+  let app := items.dropLast.any (fun i => !i.1)
+  (if ds then ["List.map_cons"] else []) ++ (if lastD then ["List.map_nil"] else []) ++
+    (if app then ["List.map_append"] else []) ++ childLemmas
+
+/-- One child of a composite position for the combination: a member's value, or a composite
+position's combination applied; a leaf contributes nothing. -/
+def combItem (q : Pos) (e : String) : Option String :=
+  match q with
+  | .leaf _ => none
+  | .direct _ => some e
+  | _ => some s!"(comb_pos_{q.suffix} unit op {e})"
+
+/-- A product's or a record's children, each with the binder the helpers give it. -/
+def tupleChildren : Pos → List (Pos × String)
+  | .prod a b => [(a, "u"), (b, "v")]
+  | .record _ _ _ flds => flds.zipIdx.map fun (f, i) => (f.2, s!"w{i}")
+  | _ => []
+
+/-- The pattern of a product or a record, a leaf child as `_`. -/
+def tuplePat (p : Pos) : String :=
+  let bs := (tupleChildren p).map fun (q, b) => if q.isLeaf then "_" else b
+  match p with
+  | .prod _ _ => "(" ++ String.intercalate ", " bs ++ ")"
+  | _ => "⟨" ++ String.intercalate ", " bs ++ "⟩"
+
+/-- The `cases … with | mk …` arm of a product or a record, every child named. -/
+def tupleMk (p : Pos) : String := "mk " ++ joinArgs ((tupleChildren p).map (·.2))
+
+/-- The lemma that opens a product's or a record's own map on a literal. -/
+def tupleOpen : Pos → String
+  | .prod a b => Nested.prodLemma a b
+  | .record st _ _ _ => s!"{st}.map"
+  | _ => ""
+
+/-- The named lemma of a composite child position, none for a member or a leaf. -/
+def childLemma (q : Pos) (name : String → String) : List String :=
+  if q.isLeaf || isDirect q then [] else [name q.suffix]
+
+/-- The helpers and laws of one composite position (its children's are emitted before it):
+the children `kids_pos_*`, the combination `comb_pos_*`, the composition and identity laws of
+the position's map, the children's naturality, and the fold module's `foldMap_pos_*` as the
+combination of the folded children. Every proof's rewrites are computed from the position, so
+a `simp only` list holds exactly the lemmas its goal uses. -/
+def emitPos (label famT : String) (p : Pos) : MetaM (String × List String) := do
+  let sfx := p.suffix
+  let cR := p.source (fun _ => "R") false
+  let cM := p.source (fun _ => "M") false
+  let cA := p.source (fun _ => "A") false
+  let cF := p.source (fun _ => famT) false
+  let kidsN := s!"kids_pos_{sfx}"
+  let combN := s!"comb_pos_{sfx}"
+  let compN := s!"map_pos_{sfx}_comp"
+  let idN := s!"map_pos_{sfx}_id"
+  let natN := s!"kids_pos_{sfx}_map"
+  let eqN := s!"foldMap_pos_{sfx}_eq"
+  let foldN := s!"foldMap_pos_{sfx}"
+  let joinL (xs : List String) : String := String.intercalate ", " xs.eraseDups
+  let tupleKids := (tupleChildren p).filter fun (q, _) => !q.isLeaf
+  let mut o := ""
+  -- the children
+  o := o ++ s!"/-- The children at a `{cR}` position, in order. -/\n"
+  o := o ++ s!"def {kidsN} \{R : Type u} : {cR} → List R\n"
+  match p with
+  | .list q =>
+    let some it := kidsItem q "x" | throwError "extras: the list position {p.key} holds no member"
+    o := o ++ "  | [] => []\n"
+    o := o ++ s!"  | x :: rest => {joinKids [it, (false, s!"{kidsN} rest")]}\n\n"
+  | .option q =>
+    let some it := kidsItem q "y" | throwError "extras: the option position {p.key} holds no member"
+    o := o ++ "  | none => []\n"
+    o := o ++ s!"  | some y => {joinKids [it]}\n\n"
+  | .prod .. | .record .. =>
+    let items := tupleKids.filterMap fun (q, b) => kidsItem q b
+    o := o ++ s!"  | {tuplePat p} => {joinKids items}\n\n"
+  | _ => throwError "extras: {p.key} is not a composite position"
+  -- the combination, bracketed as the fold module's `foldMap_pos_*`
+  let (usesUnit, usesOp) : Bool × Bool := match p with
+    | .list _ => (true, true)
+    | .option q => (true, !(q.isLeaf || isDirect q))
+    | _ =>
+      let anyComp := tupleKids.any fun (q, _) => !isDirect q
+      (anyComp, tupleKids.length ≥ 2 || anyComp)
+  let unitB := if usesUnit then "unit" else "_unit"
+  let opB := if usesOp then "op" else "_op"
+  o := o ++ s!"/-- The children's values at a `{cM}` position, combined as `foldMap_{label}` \
+combines them. -/\n"
+  o := o ++ s!"def {combN} \{M : Type u} ({unitB} : M) ({opB} : M → M → M) : {cM} → M\n"
+  match p with
+  | .list q =>
+    let some c := combItem q "x" | throwError "extras: the list position {p.key} holds no member"
+    o := o ++ "  | [] => unit\n"
+    o := o ++ s!"  | x :: rest => op {c} ({combN} unit op rest)\n\n"
+  | .option q =>
+    let some c := combItem q "y" | throwError "extras: the option position {p.key} holds no member"
+    o := o ++ "  | none => unit\n"
+    o := o ++ s!"  | some y => {c}\n\n"
+  | _ =>
+    let items := tupleKids.filterMap fun (q, b) => combItem q b
+    o := o ++ s!"  | {tuplePat p} => {recComb items}\n\n"
+  -- the composition and identity laws of the position's map
+  o := o ++ s!"/-- Two maps at a `{cA}` position fuse into one. -/\n"
+  o := o ++ s!"theorem {compN} \{A : Type u} \{B : Type v} \{C : Type w} (h : B → C) (k : A → B)\n"
+  o := o ++ s!"    (x : {cA}) :\n    {mapOf "h" p (mapOf "k" p "x")} = {mapOf "fun s => h (k s)" p "x"} := by\n"
+  let compL (q : Pos) := childLemma q fun t => s!"map_pos_{t}_comp"
+  let idL (q : Pos) := childLemma q fun t => s!"map_pos_{t}_id"
+  let natL (q : Pos) := childLemma q fun t => s!"kids_pos_{t}_map"
+  let eqL (q : Pos) := childLemma q fun t => s!"foldMap_pos_{t}_eq"
+  let byShape (listL optionL : Pos → List String) (tupleL : List String) : String :=
+    match p with
+    | .list q =>
+      s!"  induction x with\n  | nil => rfl\n  | cons y rest ih => simp only [{joinL (listL q)}]\n"
+    | .option q =>
+      s!"  cases x with\n  | none => rfl\n  | some y => simp only [{joinL (optionL q)}]\n"
+    | _ => s!"  cases x with\n  | {tupleMk p} => simp only [{joinL tupleL}]\n"
+  let tupleComp := [tupleOpen p] ++ tupleKids.foldl (fun acc (q, _) => acc ++ compL q) []
+  o := o ++ byShape (fun q => ["List.map_cons", "ih"] ++ compL q)
+    (fun q => ["Option.map_some"] ++ compL q) tupleComp ++ "\n"
+  o := o ++ s!"/-- The map at a `{cA}` position at the identity is the identity. -/\n"
+  o := o ++ s!"theorem {idN} \{A : Type u} (x : {cA}) :\n    {mapOf "fun s => s" p "x"} = x := by\n"
+  let tupleId := [tupleOpen p] ++ tupleKids.foldl (fun acc (q, _) => acc ++ idL q) []
+  o := o ++ byShape (fun q => ["List.map_cons", "ih"] ++ idL q)
+    (fun q => ["Option.map_some"] ++ idL q) tupleId ++ "\n"
+  -- the children's naturality
+  o := o ++ s!"/-- The children of a mapped `{cA}` position are the children mapped. -/\n"
+  o := o ++ s!"theorem {natN} \{A : Type u} \{B : Type v} (f : A → B) (x : {cA}) :\n"
+  o := o ++ s!"    {kidsN} {mapOf "f" p "x"} = ({kidsN} x).map f := by\n"
+  let tupleItems := tupleKids.filterMap fun (q, b) => kidsItem q b
+  let tupleNat := [tupleOpen p, kidsN] ++
+    natLemmas tupleItems (tupleKids.foldl (fun acc (q, _) => acc ++ natL q) [])
+  o := o ++ byShape
+    (fun q => ["List.map_cons", kidsN, "ih"] ++
+      (if q.isLeaf || isDirect q then [] else ["List.map_append"] ++ natL q))
+    (fun q => ["Option.map_some", kidsN] ++
+      (if isDirect q then ["List.map_cons", "List.map_nil"] else natL q))
+    tupleNat ++ "\n"
+  -- the fold module's position fold is the combination of the folded children
+  o := o ++ s!"/-- `{foldN}` is the combination of the folded children. -/\n"
+  o := o ++ s!"theorem {eqN} \{M : Type u} (unit : M) (op : M → M → M) (f : {famT} → M)\n"
+  o := o ++ s!"    (x : {cF}) :\n    {foldN} unit op x f =\n"
+  o := o ++ s!"      {combN} unit op {mapOf s!"fun s => foldMap_{label} unit op s f" p "x"} := by\n"
+  let tupleEq := [foldN, tupleOpen p, combN] ++ tupleKids.foldl (fun acc (q, _) => acc ++ eqL q) []
+  o := o ++ byShape (fun q => [foldN, "List.map_cons", combN, "ih"] ++ eqL q)
+    (fun q => [foldN, "Option.map_some", combN] ++ eqL q) tupleEq ++ "\n"
+  return (o, [compN, idN, natN, eqN])
+
+/-- The extras of a nested one-member block: arguments by sort and every child position read
+(the section's header lists what is emitted). -/
+def emitNestedExtras (root : Name) (blockName : String) (label : String) (fam : Name)
+    (rows : List CtorRow) : MetaM (String × List String) := do
+  let famT := fam.toString
+  let ctorT := s!"{blockName}Ctor"
+  let argT := s!"{blockName}ArgF"
+  let tableT := s!"{blockName}Table"
+  let algT := s!"{blockName}Algebra"
+  let famE := s!"{blockName}Fam"
+  let low := lowerFirst blockName
+  let viewCtor := s!"{low}Ctor"
+  let viewArgs := s!"{low}Args"
+  let viewBuild := s!"{low}Build"
+  let viewShape := s!"{low}Shape"
+  let viewKids := s!"{low}Kids"
+  let cataN := s!"cata_{label}"
+  let foldMapN := s!"foldMap_{label}"
+  let some dflt := (rows.find? (·.args.isEmpty)).map (·.ctor)
+    | throwError "extras: {root} has no nullary constructor for `build`'s refusal"
+  -- the argument sorts: `child`, then every leaf type and argument-level composite position
+  let allPos := rows.foldl (fun acc r => acc ++ r.args.map (·.pos)) []
+  let mut sorts : List (String × Pos) := []
+  if let some d := allPos.find? isDirect then sorts := [("child", d)]
+  for q in allPos do
+    unless isDirect q do
+      let n := argCtor q
+      match sorts.find? (·.1 == n) with
+      | some (_, q') =>
+        if q'.key != q.key then
+          throwError "extras: two argument sorts of {root} take the `{argT}` constructor \
+`{n}`: {q'.key} and {q.key}"
+      | none => sorts := sorts ++ [(n, q)]
+  if sorts.any (fun (n, q) => n == "child" && !isDirect q) then
+    throwError "extras: a leaf type of {root} takes the `{argT}` constructor `child`"
+  -- every composite position, children before parents
+  let mut comps : List Pos := []
+  for q in allPos do
+    for c in q.composites do
+      unless comps.any (·.key == c.key) do comps := comps ++ [c]
+  for a in comps do
+    for b in comps do
+      if a.key != b.key && a.suffix == b.suffix then
+        throwError "extras: one helper name `{a.suffix}` for two positions: {a.key} and {b.key}"
+  let isComp (q : Pos) : Bool := !(q.isLeaf || isDirect q)
+  let anyComp := sorts.any fun (_, q) => isComp q
+  let names (r : CtorRow) : String := joinArgs (r.args.map (·.name))
+  let lhs (r : CtorRow) : String := if r.args.isEmpty then "" else " " ++ names r
+  let pat (r : CtorRow) : String := if r.args.isEmpty then s!".{r.ctor}" else s!".{r.ctor} {names r}"
+  let wild (r : CtorRow) : String :=
+    if r.args.isEmpty then s!".{r.ctor}" else s!".{r.ctor} {joinArgs (r.args.map fun _ => "_")}"
+  let packs (r : CtorRow) : String :=
+    "[" ++ String.intercalate ", " (r.args.map fun a => s!".{argCtor a.pos} {a.name}") ++ "]"
+  let hasComp (r : CtorRow) : Bool := r.args.any fun a => isComp a.pos
+  let mut s := ""
+  let mut rcpts : List String := []
+  s := s ++ tagsText famT ctorT viewCtor rows wild
+  -- the arguments by sort
+  s := s ++ s!"/-- One argument of a constructor of `{famT}`, by sort: a member is a `child`, a \
+leaf type has its sort's\nconstructor, and a member under a container has its position's, \
+the container kept with the carrier in\nthe member's place, so a position's payloads travel \
+with its children. -/\n"
+  s := s ++ s!"inductive {argT} (R : Type u) where\n"
+  for (n, q) in sorts do
+    let ty := match q with
+      | .direct _ => "R"
+      | _ => q.source (fun _ => "R") false
+    let b := if isDirect q then "r" else "v"
+    s := s ++ s!"  | {n} ({b} : {ty})\n"
+  s := s ++ "\n"
+  -- the composite positions' helpers and laws
+  for p in comps do
+    let (t, r) ← emitPos label famT p
+    s := s ++ t
+    rcpts := rcpts ++ r
+  -- the functor, the children, the contribution
+  s := s ++ s!"/-- The carrier mapped at every child position; every payload (a leaf, a label) \
+unchanged. -/\n"
+  s := s ++ s!"def {argT}.map \{R : Type u} \{S : Type v} (f : R → S) : {argT} R → {argT} S\n"
+  for (n, q) in sorts do
+    match q with
+    | .direct _ => s := s ++ s!"  | .{n} r => .{n} (f r)\n"
+    | .leaf _ => s := s ++ s!"  | .{n} v => .{n} v\n"
+    | _ => s := s ++ s!"  | .{n} v => .{n} {mapOf "f" q "v"}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- Every child of an argument, at every position, in order. -/\n"
+  s := s ++ s!"def {argT}.kids \{R : Type u} : {argT} R → List R\n"
+  for (n, q) in sorts do
+    match q with
+    | .direct _ => s := s ++ s!"  | .{n} r => [r]\n"
+    | .leaf _ => s := s ++ s!"  | .{n} _ => []\n"
+    | _ => s := s ++ s!"  | .{n} v => kids_pos_{q.suffix} v\n"
+  s := s ++ "\n"
+  let cUnit := if anyComp then "unit" else "_unit"
+  let cOp := if anyComp then "op" else "_op"
+  s := s ++ s!"/-- What an argument contributes to a monoid fold: a child its value, a composite \
+position its children\ncombined as `{foldMapN}` combines them, a leaf nothing. -/\n"
+  s := s ++ s!"def {argT}.contrib \{M : Type u} ({cUnit} : M) ({cOp} : M → M → M) : {argT} M → \
+Option M\n"
+  for (n, q) in sorts do
+    match q with
+    | .direct _ => s := s ++ s!"  | .{n} r => some r\n"
+    | .leaf _ => s := s ++ s!"  | .{n} _ => none\n"
+    | _ => s := s ++ s!"  | .{n} v => some (comb_pos_{q.suffix} unit op v)\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **The functor's composition law.** -/\n"
+  s := s ++ s!"theorem {argT}.map_comp \{A : Type u} \{B : Type v} \{C : Type w} (h : B → C) \
+(k : A → B) :\n    ∀ a : {argT} A, (a.map k).map h = a.map (fun s => h (k s))\n"
+  for (n, q) in sorts do
+    if isComp q then
+      s := s ++ s!"  | .{n} v => congrArg {argT}.{n} (map_pos_{q.suffix}_comp h k v)\n"
+    else s := s ++ s!"  | .{n} _ => rfl\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **The functor's identity law.** -/\n"
+  s := s ++ s!"theorem {argT}.map_id \{A : Type u} : ∀ a : {argT} A, a.map (fun s => s) = a\n"
+  for (n, q) in sorts do
+    if isComp q then
+      s := s ++ s!"  | .{n} v => congrArg {argT}.{n} (map_pos_{q.suffix}_id v)\n"
+    else s := s ++ s!"  | .{n} _ => rfl\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The children of a mapped argument are the children mapped. -/\n"
+  s := s ++ s!"theorem {argT}.kids_map \{A : Type u} \{B : Type v} (f : A → B) :\n"
+  s := s ++ s!"    ∀ a : {argT} A, (a.map f).kids = a.kids.map f\n"
+  for (n, q) in sorts do
+    if isComp q then s := s ++ s!"  | .{n} v => kids_pos_{q.suffix}_map f v\n"
+    else s := s ++ s!"  | .{n} _ => rfl\n"
+  s := s ++ "\n"
+  rcpts := rcpts ++ [s!"{argT}.map_comp", s!"{argT}.map_id", s!"{argT}.kids_map"]
+  -- the view
+  s := s ++ s!"/-- The arguments of a node by sort, in declaration order: one level, no recursion. -/\n"
+  s := s ++ s!"def {viewArgs} : {famT} → List ({argT} {famT})\n"
+  for r in rows do s := s ++ s!"  | {pat r} => {packs r}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- A node from its tag and its arguments; a tag whose arguments do not have its \
+sorts is `{dflt}`. -/\n"
+  s := s ++ s!"def {viewBuild} : {ctorT} → List ({argT} {famT}) → {famT}\n"
+  for r in rows do s := s ++ s!"  | .{r.ctor}, {packs r} => {pat r}\n"
+  s := s ++ s!"  | _, _ => .{dflt}\n\n"
+  s := s ++ s!"/-- **A node is rebuilt from its view.** -/\n"
+  s := s ++ s!"theorem {viewBuild}_view (t : {famT}) : {viewBuild} ({viewCtor} t) ({viewArgs} t) \
+= t := by\n"
+  s := s ++ "  cases t <;> rfl\n\n"
+  rcpts := [s!"{viewBuild}_view"] ++ rcpts
+  s := s ++ s!"/-- The shape of a node: its arguments with every child erased, every payload kept. -/\n"
+  s := s ++ s!"def {viewShape} (t : {famT}) : List ({argT} Unit) :=\n"
+  s := s ++ s!"  ({viewArgs} t).map ({argT}.map fun _ => ())\n\n"
+  s := s ++ s!"/-- Every child of a node, at every position, in declaration order. -/\n"
+  s := s ++ s!"def {viewKids} (t : {famT}) : List {famT} := ({viewArgs} t).flatMap {argT}.kids\n\n"
+  s := s ++ tableText tableT ctorT rows
+  -- the layer algebra, its one-layer equation, uniqueness in layer form
+  s := s ++ s!"/-- A layer function as an algebra: every constructor hands its tag and its \
+arguments by sort, its\nchildren folded at every position, to one function. -/\n"
+  s := s ++ s!"def {algT}.ofLayer \{R : Type u} (layer : {ctorT} → List ({argT} R) → R) :\n"
+  s := s ++ s!"    {algT} (fun _ => R) where\n"
+  for r in rows do s := s ++ s!"  {r.field}{lhs r} := layer .{r.ctor} {packs r}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **The fold of a layer function, one layer down.** -/\n"
+  s := s ++ s!"theorem cata_ofLayer_view \{R : Type u} (layer : {ctorT} → List ({argT} R) → R) \
+(t : {famT}) :\n"
+  s := s ++ s!"    {cataN} ({algT}.ofLayer layer) t =\n"
+  s := s ++ s!"      layer ({viewCtor} t) (({viewArgs} t).map ({argT}.map ({cataN} \
+({algT}.ofLayer layer)))) :=\n"
+  s := s ++ "  match t with\n"
+  for r in rows do
+    if hasComp r then
+      s := s ++ s!"  | {pat r} => {cataN}_{r.ctor} ({algT}.ofLayer layer){lhs r}\n"
+    else s := s ++ s!"  | {wild r} => rfl\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **Uniqueness, one layer down**: a function that satisfies the layer equation \
+at every node is the\nfold of the layer function (`hom_eq_cata_{label}`, every field by \
+definition). -/\n"
+  s := s ++ s!"theorem eq_cata_ofLayer \{R : Type u} (layer : {ctorT} → List ({argT} R) → R) \
+(f : {famT} → R)\n"
+  s := s ++ s!"    (hf : ∀ t, f t = layer ({viewCtor} t) (({viewArgs} t).map ({argT}.map f))) \
+(t : {famT}) :\n"
+  s := s ++ s!"    f t = {cataN} ({algT}.ofLayer layer) t :=\n"
+  s := s ++ s!"  hom_eq_cata_{label} (alg := {algT}.ofLayer layer)\n"
+  s := s ++ s!"    \{ f_{label} := f\n"
+  let homFields := rows.map fun r =>
+    if r.args.isEmpty then s!"      h_{r.field} := hf .{r.ctor}"
+    else s!"      h_{r.field} := fun {names r} => hf ({pat r})"
+  s := s ++ String.intercalate "\n" homFields ++ " } t\n\n"
+  rcpts := rcpts ++ ["cata_ofLayer_view", "eq_cata_ofLayer"]
+  -- fusion
+  s := s ++ s!"/-- An algebra morphism `h` from `alg` to `alg'`, one square per constructor (a \
+composite position\nthrough its container's map), each defaulting to `rfl`. -/\n"
+  s := s ++ s!"structure {algT}.Commutes \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    (h : R .{label} → S .{label}) (alg : {algT} R) (alg' : {algT} S) : Prop where\n"
+  for r in rows do
+    let quant := if r.args.isEmpty then "" else s!"∀ {names r}, "
+    let rhsArgs := String.join (r.args.map fun a =>
+      match a.pos with
+      | .leaf _ => s!" {a.name}"
+      | .direct _ => s!" (h {a.name})"
+      | q => " " ++ mapOf "h" q a.name)
+    s := s ++ s!"  {r.field} : {quant}h (alg.{r.field}{lhs r}) = alg'.{r.field}{rhsArgs} := by\n\
+    intros; rfl\n"
+  s := s ++ "\n"
+  let congrApp (f : String) (es : List String) : String :=
+    match es with
+    | [] => "rfl"
+    | e :: rest => rest.foldl (fun acc e => s!"congr ({acc}) {parenArg e}") s!"congrArg {f} {parenArg e}"
+  s := s ++ s!"/-- **Fusion, from uniqueness.** -/\n"
+  s := s ++ s!"theorem cata_fusion_{label} \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    \{h : R .{label} → S .{label}} \{alg : {algT} R} \{alg' : {algT} S}\n"
+  s := s ++ s!"    (c : {algT}.Commutes h alg alg') (t : {famT}) :\n"
+  s := s ++ s!"    h ({cataN} alg t) = {cataN} alg' t :=\n"
+  s := s ++ s!"  hom_eq_cata_{label} (alg := alg')\n"
+  s := s ++ s!"    \{ f_{label} := fun s => h ({cataN} alg s)\n"
+  let fusionFields := rows.map fun r =>
+    let xs := r.args.map fun a =>
+      match a.pos with
+      | .leaf _ => a.name
+      | .direct _ => s!"({cataN} alg {a.name})"
+      | q => mapOf s!"{cataN} alg" q a.name
+    if hasComp r then
+      let es := r.args.map fun a =>
+        match a.pos with
+        | .leaf _ | .direct _ => "rfl"
+        | q => s!"map_pos_{q.suffix}_comp h ({cataN} alg) {a.name}"
+      s!"      h_{r.field} := fun {names r} =>\n        (congrArg h ({cataN}_{r.ctor} alg{lhs r})).trans\n          ((c.{r.field} {joinArgs xs}).trans ({congrApp s!"alg'.{r.field}" es}))"
+    else if r.args.all (·.pos.isLeaf) then s!"      h_{r.field} := c.{r.field}"
+    else s!"      h_{r.field} := fun {names r} => c.{r.field} {joinArgs xs}"
+  s := s ++ String.intercalate "\n" fusionFields ++ " } t\n\n"
+  rcpts := rcpts ++ [s!"cata_fusion_{label}"]
+  -- the layer invariant, by fusion through the subtype
+  s := s ++ s!"/-- **The fold of a layer function keeps every property its layers keep**, every \
+child at every\nposition read (by fusion: the layers on the subtype commute with `Subtype.val`). -/\n"
+  s := s ++ s!"theorem cata_ofLayer_inv \{R : Type u} (layer : {ctorT} → List ({argT} R) → R) \
+(P : R → Prop)\n"
+  s := s ++ s!"    (h : ∀ c args, (∀ a ∈ args, ∀ k ∈ {argT}.kids a, P k) → P (layer c args)) \
+(t : {famT}) :\n"
+  s := s ++ s!"    P ({cataN} ({algT}.ofLayer layer) t) := by\n"
+  s := s ++ s!"  let algP : {algT} (fun _ => \{r : R // P r}) := {algT}.ofLayer fun c args =>\n"
+  s := s ++ s!"    ⟨layer c (args.map ({argT}.map Subtype.val)), h c _ fun _ ha k hk => by\n"
+  s := s ++ "      obtain ⟨_, _, rfl⟩ := List.mem_map.mp ha\n"
+  s := s ++ s!"      rw [{argT}.kids_map] at hk\n"
+  s := s ++ "      obtain ⟨k', _, rfl⟩ := List.mem_map.mp hk\n"
+  s := s ++ "      exact k'.property⟩\n"
+  s := s ++ s!"  rw [← cata_fusion_{label} (h := Subtype.val) (alg := algP) (alg' := {algT}.ofLayer \
+layer) \{} t]\n"
+  s := s ++ s!"  exact ({cataN} algP t).property\n\n"
+  rcpts := rcpts ++ ["cata_ofLayer_inv"]
+  -- the banana split, by fusion at each projection
+  s := s ++ s!"/-- Two algebras run side by side. -/\n"
+  s := s ++ s!"def {algT}.prod \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    (a : {algT} R) (b : {algT} S) : {algT} (fun f => R f × S f) where\n"
+  for r in rows do
+    let side (w : String) (proj : String) : String :=
+      if r.args.isEmpty then s!"{w}.{r.field}" else
+        s!"{w}.{r.field} " ++ joinArgs (r.args.map fun a =>
+          match a.pos with
+          | .leaf _ => a.name
+          | .direct _ => s!"{a.name}.{if proj == "Prod.fst" then "1" else "2"}"
+          | q => mapOf proj q a.name)
+    s := s ++ s!"  {r.field}{lhs r} := ({side "a" "Prod.fst"}, {side "b" "Prod.snd"})\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **The banana split, by fusion at each projection.** -/\n"
+  s := s ++ s!"theorem cata_prod_{label} \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    (a : {algT} R) (b : {algT} S) (t : {famT}) :\n"
+  s := s ++ s!"    {cataN} ({algT}.prod a b) t = ({cataN} a t, {cataN} b t) :=\n"
+  s := s ++ s!"  Prod.ext (cata_fusion_{label} (h := Prod.fst) (alg := {algT}.prod a b) (alg' := a) \{} t)\n"
+  s := s ++ s!"    (cata_fusion_{label} (h := Prod.snd) (alg := {algT}.prod a b) (alg' := b) \{} t)\n\n"
+  rcpts := rcpts ++ [s!"cata_prod_{label}"]
+  -- foldMap one layer down; the head and the paired folds
+  s := s ++ s!"/-- **`{foldMapN}` one layer down**: the hook at the node, then the arguments' \
+contributions, each\nchild folded and a composite position's children combined as \
+`{foldMapN}` combines them. -/\n"
+  s := s ++ s!"theorem foldMap_view \{M : Type u} (unit : M) (op : M → M → M) (f : {famT} → M) \
+(t : {famT}) :\n"
+  s := s ++ s!"    {foldMapN} unit op t f =\n"
+  s := s ++ s!"      nodeThen op (f t) (({viewArgs} t).filterMap fun a =>\n"
+  s := s ++ s!"        {argT}.contrib unit op (a.map fun s => {foldMapN} unit op s f)) :=\n"
+  s := s ++ "  match t with\n"
+  let congrOp : List String → String := fun ps =>
+    let rec go : List String → String
+      | [] => "rfl"
+      | [p] => p
+      | p :: rest => s!"congr (congrArg op {parenArg p}) ({go rest})"
+    go ps
+  for r in rows do
+    if hasComp r then
+      let ps := (r.args.filter (!·.pos.isLeaf)).map fun a =>
+        match a.pos with
+        | .direct _ => "rfl"
+        | q => s!"foldMap_pos_{q.suffix}_eq unit op f {a.name}"
+      -- only the composite arguments are named: the others are no binder of the proof
+      let compPat := s!".{r.ctor} " ++ joinArgs (r.args.map fun a => if isComp a.pos then a.name else "_")
+      s := s ++ s!"  | {compPat} => congrArg (op _) ({congrOp ps})\n"
+    else s := s ++ s!"  | {wild r} => rfl\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The monoid fold whose node contribution reads only the node's shape, as a \
+layer algebra. -/\n"
+  s := s ++ s!"def {algT}.headAlg \{M : Type u} (unit : M) (op : M → M → M)\n"
+  s := s ++ s!"    (g : {ctorT} → List ({argT} Unit) → M) : {algT} (fun _ => M) :=\n"
+  s := s ++ s!"  {algT}.ofLayer fun c args =>\n"
+  s := s ++ s!"    nodeThen op (g c (args.map ({argT}.map fun _ => ()))) (args.filterMap \
+({argT}.contrib unit op))\n\n"
+  s := s ++ s!"/-- **Connector, once for every head fold.** -/\n"
+  s := s ++ s!"theorem foldMap_head_eq_cata \{M : Type u} (unit : M) (op : M → M → M)\n"
+  s := s ++ s!"    (g : {ctorT} → List ({argT} Unit) → M) (t : {famT}) :\n"
+  s := s ++ s!"    {foldMapN} unit op t (fun s => g ({viewCtor} s) ({viewShape} s)) =\n"
+  s := s ++ s!"      {cataN} ({algT}.headAlg unit op g) t :=\n"
+  s := s ++ s!"  eq_cata_ofLayer _ (fun s => {foldMapN} unit op s (fun s => g ({viewCtor} s) \
+({viewShape} s)))\n"
+  s := s ++ "    (fun s => (foldMap_view unit op _ s).trans (by\n"
+  s := s ++ s!"      simp only [{viewShape}, List.map_map, List.filterMap_map, Function.comp_def, \
+{argT}.map_comp])) t\n\n"
+  s := s ++ s!"/-- The general monoid fold (its hook reads the whole node) as the paired \
+catamorphism. -/\n"
+  s := s ++ s!"def {algT}.paraAlg \{M : Type u} (unit : M) (op : M → M → M) (f : {famT} → M) :\n"
+  s := s ++ s!"    {algT} (fun _ => {famT} × M) :=\n"
+  s := s ++ s!"  {algT}.ofLayer fun c args =>\n"
+  s := s ++ s!"    let node := {viewBuild} c (args.map ({argT}.map Prod.fst))\n"
+  s := s ++ s!"    (node, nodeThen op (f node) ((args.map ({argT}.map Prod.snd)).filterMap \
+({argT}.contrib unit op)))\n\n"
+  s := s ++ s!"/-- **Connector, once for every monoid fold.** -/\n"
+  s := s ++ s!"theorem foldMap_eq_cata \{M : Type u} (unit : M) (op : M → M → M) (f : {famT} → M) \
+(t : {famT}) :\n"
+  s := s ++ s!"    (t, {foldMapN} unit op t f) = {cataN} ({algT}.paraAlg unit op f) t :=\n"
+  s := s ++ s!"  eq_cata_ofLayer _ (fun s => (s, {foldMapN} unit op s f))\n"
+  s := s ++ "    (fun s => (congrArg (Prod.mk s) (foldMap_view unit op f s)).trans (by\n"
+  s := s ++ s!"      simp only [List.map_map, List.filterMap_map, Function.comp_def, \
+{argT}.map_comp, {argT}.map_id,\n        List.map_id', {viewBuild}_view])) t\n\n"
+  rcpts := rcpts ++ ["foldMap_view", "foldMap_head_eq_cata", "foldMap_eq_cata"]
+  return (s, rcpts)
+
 def emitExtras (root : Name) : MetaM String := do
   let (isParam, blockName, block) ← readBlock root
   if isParam then throwError "extras: {root} takes parameters; the plain-block extras do not"
   if block.length != 1 then throwError "extras: {root} is mutual; the plain-block extras do not"
   if blockNested block then
     throwError "extras: {root} holds a member under a container; its layer is `ArgF`'s \
-(tools/Effect4Gen/LayerView.lean), not one payload and a list of children"
+(the nested form, `emitNestedExtras`), not one payload and a list of children"
   let (label, fam, rows) := block.head!
   let famT := fam.toString
   let ctorT := s!"{blockName}Ctor"
@@ -1739,26 +2326,7 @@ def emitExtras (root : Name) : MetaM String := do
   let homRfl : String := String.intercalate "\n" (rows.map fun r => s!"      h_{r.field} := {arity r}")
   let mut s := ""
   -- the tags
-  s := s ++ s!"/-- The constructor tags of `{famT}`, in declaration order. -/\n"
-  s := s ++ s!"inductive {ctorT} where\n"
-  for r in rows do s := s ++ s!"  | {r.ctor}\n"
-  s := s ++ "deriving DecidableEq, Repr\n\n"
-  s := s ++ s!"/-- Every tag, in declaration order. -/\n"
-  s := s ++ s!"def {ctorT}.all : List {ctorT} :=\n  [" ++
-    String.intercalate ", " (rows.map fun r => s!".{r.ctor}") ++ "]\n\n"
-  s := s ++ s!"/-- The tag of a node: one level, no recursion. -/\n"
-  s := s ++ s!"def {viewCtor} : {famT} → {ctorT}\n"
-  for r in rows do s := s ++ s!"  | {wild r} => .{r.ctor}\n"
-  s := s ++ "\n"
-  s := s ++ s!"/-- The constructor's name, as the declaration spells it. -/\n"
-  s := s ++ s!"def {ctorT}.name : {ctorT} → String\n"
-  for r in rows do s := s ++ s!"  | .{r.ctor} => \"{r.ctor}\"\n"
-  s := s ++ "\n"
-  s := s ++ s!"/-- The constructor's binder names, in declaration order. -/\n"
-  s := s ++ s!"def {ctorT}.binders : {ctorT} → List String\n"
-  for r in rows do
-    s := s ++ s!"  | .{r.ctor} => [" ++ String.intercalate ", " (r.args.map fun a => s!"\"{a.binder}\"") ++ "]\n"
-  s := s ++ "\n"
+  s := s ++ tagsText famT ctorT viewCtor rows wild
   -- the payload
   s := s ++ s!"/-- The non-recursive payload of a node, by sort. -/\n"
   s := s ++ s!"inductive {leafT} where\n  | none\n"
@@ -1794,14 +2362,7 @@ def emitExtras (root : Name) : MetaM String := do
   s := s ++ s!"theorem {viewBuild}_view (t : {famT}) : {viewBuild} ({viewCtor} t) ({viewLeaf} t) ({viewKids} t) = t := by\n"
   s := s ++ "  cases t <;> rfl\n\n"
   -- the table
-  s := s ++ s!"/-- One row per constructor. -/\n"
-  s := s ++ s!"structure {tableT} (α : Type u) where\n"
-  for r in rows do s := s ++ s!"  {r.ctor} : α\n"
-  s := s ++ "\n"
-  s := s ++ s!"/-- A row by tag. -/\n"
-  s := s ++ s!"def {tableT}.get \{α : Type u} (t : {tableT} α) : {ctorT} → α\n"
-  for r in rows do s := s ++ s!"  | .{r.ctor} => t.{r.ctor}\n"
-  s := s ++ "\n"
+  s := s ++ tableText tableT ctorT rows
   -- the layer algebra
   s := s ++ s!"/-- A layer function as an algebra: every constructor hands its tag, its payload and its\n"
   s := s ++ s!"folded children (declaration order) to one function. -/\n"
@@ -1916,6 +2477,20 @@ def receipts (root : Name) : MetaM (List String) := do
   return [s!"{low}Build_view", "cata_ofLayer_view", s!"sizeOf_{low}Kids", "cata_ofLayer_inv",
     "foldMap_head_eq_cata", "foldMap_eq_cata", s!"cata_fusion_{label}", s!"cata_prod_{label}"]
 
+/-- The extras of one block and their receipts: the nested form for a block with a member under
+a container, the plain form otherwise (today's text). -/
+def emit (root : Name) : MetaM (String × List String) := do
+  -- the declaration's own refusals first, before any argument's position is read
+  let iv ← getConstInfoInduct root
+  if iv.numParams > 0 then throwError "extras: {root} takes parameters; the extras do not"
+  if iv.all.length != 1 then throwError "extras: {root} is mutual; the extras do not"
+  let (_, blockName, block) ← readBlock root
+  if blockNested block then
+    let (label, fam, rows) := block.head!
+    emitNestedExtras root blockName label fam rows
+  else
+    return (← emitExtras root, ← receipts root)
+
 end Extras
 
 
@@ -1963,12 +2538,15 @@ def runExtras (args : Args) : MetaM (Array String) := do
     "-- GENERATED by tools/Effect4Gen/Fold.lean (--extras) from the Lean environment. Do not edit.",
     "-- Regenerate:", "--   " ++ head]
   lines := lines ++ (args.imports.map fun i => s!"import {i}").toArray
+  -- the families' own namespaces, opened (today's `Ty`: `open Effect4.Program`, as before)
+  let opens := (args.types.map fun t => t.toName.getPrefix.toString).eraseDups
   lines := lines ++ #["", "set_option autoImplicit false", "", "namespace " ++ ns, "",
-    "open Effect4.Program", "", "universe u v w", "", Extras.helpers]
+    "open " ++ String.intercalate " " opens, "", "universe u v w", "", Extras.helpers]
   let mut receipts : List String := []
   for t in args.types do
-    lines := lines.push (← Extras.emitExtras t.toName)
-    receipts := receipts ++ (← Extras.receipts t.toName)
+    let (text, rs) ← Extras.emit t.toName
+    lines := lines.push text
+    receipts := receipts ++ rs
   lines := lines ++ #["/-! ## Receipts -/", ""]
   for r in receipts do lines := lines.push s!"#print axioms {r}"
   lines := lines ++ #["", "end " ++ ns, ""]
