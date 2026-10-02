@@ -307,19 +307,129 @@ def check (value : Check) : Expr := cata_check printAlgebra value
 
 /-! ## Documents, data, and generation entry points -/
 
-private def references (entries : List ReferenceEntry) : Expr :=
-  dataObject (entries.map fun entry =>
-    (entry.key, representation entry.representation))
+/-! ### The references table, written once per key (decisions row 8 (C))
 
-def documentExpr (document : Document) : Expr :=
-  .objectQuotedML
+A document's references table is written as a JSON object, so a repeated key would be a repeated
+property: TS1117 under tsgo 7, and the last body winning at run time. The store keeps its version-0
+bytes (`ShapeDoc.document` repeats keys whose bodies are equal, and the store's addresses are a
+frozen contract), so the emitter writes each key once. The first entry of a key is kept, a later one
+with an equal body is dropped, and a later one whose body differs is refused at
+`["references", key]`. On a table whose keys are distinct this is the identity
+(`dedupeReferences_distinct`), so such a document's bytes do not move (`documentExpr_distinct`);
+whatever it answers has distinct keys (`dedupeReferences_nodup`). -/
+
+/-- A refusal of the emitter, located in the emitted JSON. -/
+structure ReferenceRefusal where
+  path : List String
+  reason : String
+deriving DecidableEq, Repr
+
+/-- The table after `acc`: the first entry of each key kept, a later one with an equal body dropped,
+a later one whose body differs refused at its key. -/
+def dedupeFrom (acc : List ReferenceEntry) :
+    List ReferenceEntry → Except ReferenceRefusal (List ReferenceEntry)
+  | [] => .ok acc
+  | e :: es =>
+    match acc.find? (fun f => f.key == e.key) with
+    | none => dedupeFrom (acc ++ [e]) es
+    | some f =>
+      if f.representation = e.representation then dedupeFrom acc es
+      else .error ⟨["references", e.key], "a repeated reference key with a different body"⟩
+
+/-- A references table written once per key. -/
+def dedupeReferences (es : List ReferenceEntry) : Except ReferenceRefusal (List ReferenceEntry) :=
+  dedupeFrom [] es
+
+/-- The keys of a table are distinct. -/
+def KeysDistinct (es : List ReferenceEntry) : Prop := (es.map (·.key)).Nodup
+
+private theorem find?_none_of_not_mem {acc : List ReferenceEntry} {k : String}
+    (h : k ∉ acc.map (·.key)) : acc.find? (fun f => f.key == k) = none := by
+  rw [List.find?_eq_none]
+  intro f hf hk
+  apply h
+  rw [List.mem_map]
+  exact ⟨f, hf, (beq_iff_eq.mp hk)⟩
+
+theorem dedupeFrom_distinct (acc es : List ReferenceEntry)
+    (h : ((acc ++ es).map (·.key)).Nodup) : dedupeFrom acc es = .ok (acc ++ es) := by
+  induction es generalizing acc with
+  | nil => simp only [dedupeFrom, List.append_nil]
+  | cons e es ih =>
+    have hnot : e.key ∉ acc.map (·.key) := by
+      intro hm
+      rw [List.map_append, List.map_cons] at h
+      exact (List.nodup_append.mp h).2.2 e.key hm e.key List.mem_cons_self rfl
+    simp only [dedupeFrom, find?_none_of_not_mem hnot]
+    have h' : ((acc ++ [e]) ++ es).map (·.key) = (acc ++ e :: es).map (·.key) := by
+      rw [List.append_assoc, List.singleton_append]
+    rw [ih (acc ++ [e]) (h' ▸ h), List.append_assoc, List.singleton_append]
+
+/-- **The identity on a table without repeats.** -/
+theorem dedupeReferences_distinct (es : List ReferenceEntry) (h : KeysDistinct es) :
+    dedupeReferences es = .ok es := by
+  unfold dedupeReferences
+  unfold KeysDistinct at h
+  rw [dedupeFrom_distinct [] es (by simpa only [List.nil_append] using h), List.nil_append]
+
+theorem dedupeFrom_nodup (acc es : List ReferenceEntry) (hacc : KeysDistinct acc)
+    (out : List ReferenceEntry) (h : dedupeFrom acc es = .ok out) : KeysDistinct out := by
+  induction es generalizing acc with
+  | nil =>
+    simp only [dedupeFrom, Except.ok.injEq] at h
+    exact h ▸ hacc
+  | cons e es ih =>
+    simp only [dedupeFrom] at h
+    split at h
+    · rename_i hnone
+      apply ih (acc ++ [e]) _ h
+      unfold KeysDistinct
+      rw [List.map_append, List.map_singleton]
+      refine List.nodup_append.mpr ⟨hacc, List.pairwise_singleton _ _, ?_⟩
+      intro a ha b hb hab
+      rw [List.mem_singleton] at hb
+      subst hb
+      rw [List.find?_eq_none] at hnone
+      rw [List.mem_map] at ha
+      obtain ⟨f, hf, hk⟩ := ha
+      exact hnone f hf (beq_iff_eq.mpr (hk.trans hab))
+    · split at h
+      · exact ih acc hacc h
+      · exact nomatch h
+
+/-- **Distinct keys out**: whatever the dedupe answers has no repeated key. -/
+theorem dedupeReferences_nodup (es out : List ReferenceEntry) (h : dedupeReferences es = .ok out) :
+    KeysDistinct out :=
+  dedupeFrom_nodup [] es List.nodup_nil out h
+
+/-- The references table as a JSON object, each key once. -/
+private def references (entries : List ReferenceEntry) : Except ReferenceRefusal Expr := do
+  let refs ← dedupeReferences entries
+  pure (dataObject (refs.map fun entry => (entry.key, representation entry.representation)))
+
+/-- Raw rc.112 JSON syntax for one document, its references written once per key. -/
+def documentExpr (document : Document) : Except ReferenceRefusal Expr := do
+  let refs ← references document.references
+  pure (.objectQuotedML
     [ ("representation", representation document.representation)
-    , ("references", references document.references) ]
+    , ("references", refs) ])
 
-def multiDocumentExpr (document : MultiDocument) : Expr :=
-  .objectQuotedML
+/-- Raw rc.112 JSON syntax for one multi-document, its references written once per key. -/
+def multiDocumentExpr (document : MultiDocument) : Except ReferenceRefusal Expr := do
+  let refs ← references document.references
+  pure (.objectQuotedML
     [ ("representations", .arr (document.representations.map representation))
-    , ("references", references document.references) ]
+    , ("references", refs) ])
+
+/-- **No byte moves on a table without repeats**: the document's references in order. -/
+theorem documentExpr_distinct (document : Document) (h : KeysDistinct document.references) :
+    documentExpr document = .ok (.objectQuotedML
+      [ ("representation", representation document.representation)
+      , ("references", dataObject (document.references.map fun entry =>
+          (entry.key, representation entry.representation))) ]) := by
+  unfold documentExpr references
+  rw [dedupeReferences_distinct _ h]
+  rfl
 
 /-- Render one raw first-order JSON datum without constructing a module. -/
 def jsonSource (value : Json) (style : Style := house0) : String :=
@@ -330,20 +440,22 @@ def representationSource (value : Representation) (style : Style := house0) : St
   Render.expr style 0 (representation value)
 
 /-- Render one raw persisted Schema document without constructing a module. -/
-def documentSource (value : Document) (style : Style := house0) : String :=
-  Render.expr style 0 (documentExpr value)
+def documentSource (value : Document) (style : Style := house0) : Except ReferenceRefusal String :=
+  (documentExpr value).map (Render.expr style 0)
 
 /-- Render one raw persisted multi-document without constructing a module. -/
-def multiDocumentSource (value : MultiDocument) (style : Style := house0) : String :=
-  Render.expr style 0 (multiDocumentExpr value)
+def multiDocumentSource (value : MultiDocument) (style : Style := house0) :
+    Except ReferenceRefusal String :=
+  (multiDocumentExpr value).map (Render.expr style 0)
 
 /-- One exported raw persisted Schema JSON value. -/
-def rawDocumentDecl (name : String) (document : Document) : Decl :=
-  .const
+def rawDocumentDecl (name : String) (document : Document) : Except ReferenceRefusal Decl := do
+  let value ← documentExpr document
+  pure (.const
     { doc := ["Raw Effect Schema document."]
       name := name ++ "Json"
-      value := documentExpr document
-      type := some (.name ["Schema", "Json"] []) }
+      value
+      type := some (.name ["Schema", "Json"] []) })
 
 /-- Decode the generated raw value through Effect's own pinned document codec.
 The host typechecker therefore sees a `SchemaRepresentation.Document`, not only
@@ -364,16 +476,17 @@ def dataDecl (name : String) (value : Json) : Decl :=
       value := json value
       type := some (.name ["Schema", "Json"] []) }
 
-/-- Build raw target module syntax. This constructor checks neither binding
-names nor document fields; emitted object expressions have the target runtime's
-key behavior. The caller chooses when to render and execute the module. -/
+/-- Build raw target module syntax. This constructor checks neither binding names nor document
+fields; it writes the references table once per key and refuses a repeated key whose bodies differ
+(decisions row 8 (C)). Emitted object expressions have the target runtime's key behavior. The
+caller chooses when to render and execute the module. -/
 def moduleSyntax (schemaName : String) (document : Document)
-    (data : List (String × Json) := []) : Module :=
-  { header := ["Generated by Effect4 Schema.", "", "Do not edit."]
-    imports :=
-      [ .all "Schema" "effect/Schema"
-      , .all "SchemaRepresentation" "effect/SchemaRepresentation" ]
-    decls := rawDocumentDecl schemaName document :: documentDecl schemaName ::
-      data.map fun entry => dataDecl entry.1 entry.2 }
+    (data : List (String × Json) := []) : Except ReferenceRefusal Module := do
+  let raw ← rawDocumentDecl schemaName document
+  pure { header := ["Generated by Effect4 Schema.", "", "Do not edit."]
+         imports :=
+           [ .all "Schema" "effect/Schema"
+           , .all "SchemaRepresentation" "effect/SchemaRepresentation" ]
+         decls := raw :: documentDecl schemaName :: data.map fun entry => dataDecl entry.1 entry.2 }
 
 end Effect4.Codegen.Schema

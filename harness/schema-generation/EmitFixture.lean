@@ -13,14 +13,16 @@ private def person : Representation :=
 
 private def personDocument : Document := Schema.document person
 
-private def fixture : String :=
-  TypeScript.Render.module TypeScript.house0
-    (Codegen.Schema.moduleSyntax "PersonSchema" personDocument
+private def fixture : Except Codegen.Schema.ReferenceRefusal String :=
+  (Codegen.Schema.moduleSyntax "PersonSchema" personDocument
     [ ("ada", .obj [("name", .str "Ada"), ("active", .bool true)])
-    , ("prototypeData", .obj [("__proto__", .str "data")]) ])
+    , ("prototypeData", .obj [("__proto__", .str "data")]) ]).map
+    (TypeScript.Render.module TypeScript.house0)
 
 #eval do
   IO.println ("// " ++ Tools.GeneratedStamp.note "harness/schema-generation/EmitFixture.lean")
-  IO.print fixture
+  match fixture with
+  | .ok text => IO.print text
+  | .error e => throw (IO.userError s!"the emitter refused at {e.path}: {e.reason}")
 
 end Effect4Harness.SchemaGeneration

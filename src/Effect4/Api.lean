@@ -59,7 +59,8 @@ One module, the whole pipeline, small interface:
   (`schemaDocument`, `schemaRepresentation`) and the JSON payload beside it
   (`jsonExpr`). `Codegen.Schema.moduleSyntax` assembles raw module syntax;
   `Effect4.Codegen.Schema.documentSource` renders one raw document and is admitted
-  by exact name in the axiom gate.
+  by exact name in the axiom gate. A document's references table is written once per key, and a
+  repeated key whose bodies differ is refused (decisions row 8 (C)).
 * The codegen crossing: `Target` and `Artefact` represent emitted syntax, and `render`
   is the one crossing from an artefact to bytes — admitted by exact name in the gate as
   `Effect4.Codegen.Artefact.render`, and the reason the rest of this face never returns text.
@@ -568,8 +569,11 @@ end TypedLayer
 
 /-! ## Schema, as syntax -/
 
-/-- A persisted Schema document as raw `SchemaRepresentation` JSON syntax. -/
-def schemaDocument (document : Effect4.Document) : TypeScript.Expr :=
+/-- A persisted Schema document as raw `SchemaRepresentation` JSON syntax, its references table
+written once per key; a repeated key whose bodies differ is refused at `["references", key]`
+(decisions row 8 (C)). -/
+def schemaDocument (document : Effect4.Document) :
+    Except Effect4.Codegen.Schema.ReferenceRefusal TypeScript.Expr :=
   Effect4.Codegen.Schema.documentExpr document
 
 /-- A persisted representation as raw `SchemaRepresentation` JSON syntax. -/

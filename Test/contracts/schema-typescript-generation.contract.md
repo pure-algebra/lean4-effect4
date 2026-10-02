@@ -26,7 +26,18 @@ generic renderer.
 
 Generation refuses illegal or colliding binding names, field-inadmissible
 documents, duplicate reference/annotation/JSON object keys, and duplicate
-data names. A `__proto__` data key lowers through `Object.fromEntries` so it
+data names.
+
+*Amended 2026-10-02 (decisions row 8 (C)).* The `generate?` boundary named above
+is not in the tree; `moduleSyntax` assembles the module, and its constructor
+checks neither binding names nor document fields. What holds of references:
+every document entry point (`documentExpr`, `multiDocumentExpr`,
+`documentSource`, `multiDocumentSource`, `rawDocumentDecl`, `moduleSyntax`)
+writes a document's references table once per key, dropping a later entry with
+an equal body, and refuses a repeated key whose bodies differ with a
+`ReferenceRefusal` at `["references", key]`. The store keeps its version-0
+bytes. On a table without repeats the emitted expression is the table in order
+(`documentExpr_distinct`), so the three harness fixtures re-emit byte-identical. A `__proto__` data key lowers through `Object.fromEntries` so it
 remains an own data property rather than activating object-literal prototype
 semantics.
 
