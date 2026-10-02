@@ -45,7 +45,14 @@ unchanged). Source changes also trigger the freshness preflight before a root tr
 been refreshed. Prepared import artifacts and traces are inputs; checking also watches
 TypeScript sources and JSON fixtures recursively. These deliberately broad triggers
 start no build: the preflight validates the exact loaded closure and refuses stale
-artifacts. The v2 report includes the selected feature/proof map from
+artifacts. Lake's configuration, package manifest and the Makefile are also inputs.
+Each successful receipt retains project and package source/configuration filenames and
+the checked imports' artifacts and traces, so deleting one cannot silently remove it
+from a wildcard. Missing reports and absent, old or
+failed receipts force the existing check; unchanged successful receipts remain cached.
+`python3 scripts/test-semantics-freshness.py` exercises these Make decisions with
+temporary files and checks publication against a stub producer, without running Lean.
+The v2 report includes the selected feature/proof map from
 `Tools.ProofMapSelection`, with actual statement/body references extracted by
 `Tools.ProofMap`; `ProofGraph` validates the selected goals and evidence. The architecture
 view and Markdown consume this same report. Graph controls distinguish references from

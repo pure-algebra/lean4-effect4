@@ -32,6 +32,8 @@ The cases and what each one holds (the evidence words of the seat's receipt):
                         at 3 and 7 (`GenFix/Controls/RecordExtras.lean`)
   extras-val            proved: `--extras` on `Store.Val` (a list of members, two payloads per
                         constructor); nothing written to the tree
+  extras-structure      proved/tested: generated structure maps reused after field-by-field checking;
+                        payload-corrupting maps refused before output
   extras-refuses-param  tested: `--extras Effect4.Program.Eff` refused, a parameterised family
   extras-refuses-mutual tested: `--extras Effect4.Representation` refused, a mutual block
   extras-refuses-nullary tested: `--extras` on a nested family with no nullary constructor refused
@@ -256,6 +258,31 @@ def extras_val(cx):
                      extras_laws('val', 'ValArgF', ['list_val']), 'ValExtras')
 
 
+def extras_structure(cx):
+    # A real structure position, unlike Record's List (String × Ty). The fold owns its map.
+    cx.compile(FIXTURES / 'GenFix/Structure/Core.lean')
+    fold = cx.gen('GenFix/Structure/Fold.lean')
+    cx.tool(FOLD, ['--group', 'StructureFold', '--imports', 'GenFix.Structure.Core',
+                   '--out', str(fold), 'GenFix.Structure.Tree'])
+    cx.compile(fold, cx.src)
+    extras = cx.gen('GenFix/Structure/Extras.lean')
+    cx.tool(FOLD, ['--extras', '--group', 'StructureExtras', '--imports', 'GenFix.Structure.Fold',
+                   '--namespace', 'GenFix.Structure', '--out', str(extras), 'GenFix.Structure.Tree'])
+    receipts_present(cx.compile(extras, cx.src), 'GenFix.Structure.',
+                     extras_laws('tree', 'TreeArgF', ['elemOf_tree', 'list_elemOf_tree']),
+                     'StructureExtras')
+    receipts_present(cx.compile(FIXTURES / 'GenFix/Structure/Controls.lean'),
+                     'GenFix.Structure.', ['allGood_true'], 'StructureControls')
+    # Same map type and recursive action, but it replaces a String payload: refuse before output.
+    cx.compile(FIXTURES / 'GenFix/Structure/BadMap.lean')
+    refused = cx.gen('Refused/StructureExtras.lean')
+    cx.tool(FOLD, ['--extras', '--group', 'StructureExtras', '--imports', 'GenFix.Structure.BadMap',
+                   '--namespace', 'GenFix.Structure', '--out', str(refused), 'GenFix.Structure.Tree'],
+            expect_fail='`GenFix.Structure.ElemOf.map` is not the field-by-field functor map')
+    if refused.exists():
+        raise CaseFailed('the refused structure extras wrote their output anyway')
+
+
 def extras_refuses_param(cx):
     out = cx.gen('Refused/EffExtras.lean')
     cx.tool(FOLD, ['--extras', '--group', 'EffExtras', '--imports', 'Effect4.Program.Fold', '--out',
@@ -416,6 +443,7 @@ CASES = [
     ('extras-record', extras_record),
     ('extras-record-lengths', extras_record_lengths),
     ('extras-val', extras_val),
+    ('extras-structure', extras_structure),
     ('extras-refuses-param', extras_refuses_param),
     ('extras-refuses-mutual', extras_refuses_mutual),
     ('extras-refuses-nullary', extras_refuses_nullary),

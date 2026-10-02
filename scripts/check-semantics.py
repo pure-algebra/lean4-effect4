@@ -32,6 +32,7 @@ INPUTS = ("tools/Tools/SemanticsRegistry.lean", "tools/Tools/Semantics.lean",
           "tools/Drivers/Semantics.lean", "tools/Drivers/SemanticsControls.lean",
           "src/Effect4/Laws/Auto/Semantics.lean", "Test/Audit/SemanticsCensus.lean",
           "Test/Counterexamples/REGISTER.md", "docs/core/decisions.md", "lean-toolchain",
+          "lakefile.toml", "lake-manifest.json", "Makefile",
           "scripts/check-semantics.py", "ts/eff/semantics.ts", "ts/eff/check-semantics.ts", "ts/eff/proof-map.ts",
           "ts/eff/test/semantics.test.ts", "ts/eff/test/proof-map.test.ts", "ts/eff/test/semantics.fixture.json",
           "ts/eff/package.json", "ts/eff/bun.lock", "ts/eff/tsconfig.json")
@@ -172,6 +173,61 @@ def snapshot():
     return {name: digest(ROOT / name) for name in paths}
 
 
+def dependency_files(mode, receipt):
+    """Remember the last successful run's inputs, including files a glob can later lose.
+
+    Make still discovers additions and compares mtimes. Remembered removals force the
+    existing preflight; this inventory neither loads Lean nor claims artifact validity.
+    """
+    paths = set(INPUTS) | set(POLICY_FILES) | set(receipt["savedOutputs"])
+    paths.update(str(Path(name).with_suffix(".trace")) for name in receipt["savedOutputs"]
+                 if name.endswith(".olean"))
+    for directory in ("src", "Test", "tools"):
+        paths.update(str(p.relative_to(ROOT)) for p in (ROOT / directory).rglob("*.lean"))
+    for directory, subdirs, files in os.walk(ROOT / ".lake/packages"):
+        subdirs[:] = [name for name in subdirs if name not in (".lake", ".git", "node_modules")]
+        paths.update(str((Path(directory) / name).relative_to(ROOT)) for name in files
+                     if name.endswith(".lean") or name in ("lakefile.toml", "lake-manifest.json", "lean-toolchain"))
+    for target in TARGETS:
+        relative = target.replace(".", "/")
+        paths.add(TRACE_DIR + relative + ".trace")
+        paths.add(".lake/build/ir/" + relative + ".setup.json")
+    if mode == "check":
+        for directory, subdirs, files in os.walk(ROOT / "ts/eff"):
+            subdirs[:] = [name for name in subdirs if name != "node_modules"]
+            paths.update(str((Path(directory) / name).relative_to(ROOT)) for name in files
+                         if name.endswith((".ts", ".json")))
+        paths.update("ts/eff/node_modules/" + name for name in (
+            "effect/package.json", "@typescript/native-preview/package.json",
+            "@typescript/native-preview/bin/tsgo"))
+    return sorted(paths)
+
+
+def make_dependencies(mode):
+    """Print prior dependencies, or FORCE for an absent/obsolete/incomplete run receipt."""
+    try:
+        receipt = json.loads((ROOT / f".lake/{'gen' if mode == 'generate' else 'check'}/semantics.receipt.json").read_text())
+        paths = receipt["dependencyFiles"]
+        if (receipt["result"] != "passed" or receipt["mode"] != mode or
+                not isinstance(paths, list) or not paths or
+                not set(INPUTS).issubset(paths)):
+            return "FORCE"
+        if mode == "generate" and receipt.get("outputDirectory") != "generated":
+            return "FORCE"
+        # Never let a removed input disappear from Make's wildcard prerequisites.
+        paths = [*paths, *("generated/" + name for name in FILES)]
+        for name in paths:
+            if (not isinstance(name, str) or Path(name).is_absolute() or
+                    ".." in Path(name).parts or any(c in name for c in "\n\r\t") or
+                    not (ROOT / name).is_file()):
+                return "FORCE"
+        return " ".join(name.replace("\\", "\\\\").replace("$", "$$")
+                        .replace("#", "\\#").replace(" ", "\\ ").replace(":", "\\:")
+                        for name in sorted(set(paths)))
+    except (OSError, ValueError, KeyError, TypeError):
+        return "FORCE"
+
+
 def command(name, default):
     return shlex.split(os.environ.get(name, default))
 
@@ -290,7 +346,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--generate", metavar="DIRECTORY", type=Path,
                         help="write the projection instead of checking it")
+    parser.add_argument("--make-deps", choices=("generate", "check"),
+                        help="read saved dependencies for Make; never build or check proofs")
     args = parser.parse_args()
+    if args.make_deps is not None:
+        print(make_dependencies(args.make_deps))
+        return 0
     mode = "generate" if args.generate is not None else "check"
     receipt_path = ROOT / f".lake/{'gen' if args.generate is not None else 'check'}/semantics.receipt.json"
     receipt = {"format": "effect4-semantics-run-v1", "mode": mode,
@@ -306,10 +367,13 @@ def main():
         host = require_host() if mode == "check" else None
         # Required runtime import roots are separate from the thin driver's imports.
         require_artifacts(receipt)
+        dependencies = dependency_files(mode, receipt)
+        receipt["dependencyFiles"] = dependencies
         before = snapshot()
         receipt["inputs"] = before
         if args.generate is not None:
             out = args.generate if args.generate.is_absolute() else ROOT / args.generate
+            receipt["outputDirectory"] = os.path.relpath(out, ROOT)
             staging = tempfile.TemporaryDirectory(prefix="effect4-semantics-stage-")
             stage = Path(staging.name)
             lean("tools/Drivers/Semantics.lean", receipt, stage)
@@ -348,6 +412,8 @@ def main():
             raise RuntimeError("a semantics input changed during this run; rerun after the edit finishes")
         # Detect imported source edits too, even if no producer refreshed their traces.
         require_artifacts(receipt)
+        if dependencies != dependency_files(mode, receipt):
+            raise RuntimeError("the semantics input inventory changed during this run; rerun after the edit finishes")
         if args.generate is not None:
             publish_reports(stage, out)
         receipt["result"] = "passed"

@@ -191,7 +191,7 @@ SEMANTICS_INPUTS := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tool
   tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean \
   src/Effect4/Laws/Auto/Semantics.lean Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain \
   tools/ProofGraph/Proof.lean tools/ProofGraph/Ledger.lean tools/Tools/GeneratedStamp.lean \
-  Test/Audit/AxiomGate.lean scripts/check-semantics.py
+  Test/Audit/AxiomGate.lean scripts/check-semantics.py lakefile.toml lake-manifest.json Makefile
 SEMANTICS_TRACES := $(TRACE)/Laws.trace .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
   .lake/build/lib/lean/Test/Program/ProtocolPosts.trace \
   .lake/build/lib/lean/Test/Audit/SemanticsCensus.trace .lake/build/lib/lean/Drivers/Semantics.trace \
@@ -199,14 +199,19 @@ SEMANTICS_TRACES := $(TRACE)/Laws.trace .lake/build/lib/lean/Test/Program/TypedP
 # Detect edits before Lake has refreshed a root trace, and replaced imported artifacts.
 # The preflight then checks the exact resolved closure; this broader trigger does not build it.
 SEMANTICS_LEAN_INPUTS := $(LEAN_SOURCES) $(shell find tools -name '*.lean')
+SEMANTICS_PACKAGE_INPUTS := $(shell find .lake/packages -type d \( -name .lake -o -name .git -o -name node_modules \) -prune -o -type f \( -name '*.lean' -o -name lakefile.toml -o -name lake-manifest.json -o -name lean-toolchain \) -print 2>/dev/null)
 SEMANTICS_ARTIFACTS := $(shell find .lake/build/lib/lean .lake/packages -type f \( -name '*.olean' -o -name '*.olean.private' -o -name '*.olean.server' -o -name '*.ir' -o -name '*.ir.sig' -o -name '*.trace' \) 2>/dev/null)
 SEMANTICS_TS_INPUTS := $(shell find ts/eff -path '*/node_modules' -prune -o -type f \( -name '*.ts' -o -name '*.json' \) -print) ts/eff/bun.lock
+# Keep the successful run's input names even after a file is deleted. Old/missing
+# receipts or reports force the existing preflight; reading this metadata runs no Lean.
+SEMANTICS_GEN_SAVED := $(shell $(PY) scripts/check-semantics.py --make-deps generate || echo FORCE)
+SEMANTICS_CHECK_SAVED := $(shell $(PY) scripts/check-semantics.py --make-deps check || echo FORCE)
 $(SEMANTICS_TRACES):
 	@echo 'Missing semantics artifact $@. Prepare in the bounded Lean lane:' >&2
 	@echo '$(LAKE) build Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts Test.Audit.SemanticsCensus Drivers.Semantics Drivers.SemanticsControls Tools.ProofMapFixture' >&2
 	@exit 1
 
-$(GEN)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) $(SEMANTICS_LEAN_INPUTS) $(SEMANTICS_ARTIFACTS)
+$(GEN)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) $(SEMANTICS_LEAN_INPUTS) $(SEMANTICS_PACKAGE_INPUTS) $(SEMANTICS_ARTIFACTS) $(SEMANTICS_GEN_SAVED)
 	$(PY) scripts/check-semantics.py --generate generated
 	@mkdir -p $(GEN) && touch $@
 
@@ -504,7 +509,8 @@ $(CHK)/census: $(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/
 
 # Two fresh reports, Lean refusal controls, pinned tsgo 7 and strict decoding controls.
 # No order-only build/install prerequisite: missing prepared artifacts are a refusal.
-$(CHK)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) $(SEMANTICS_LEAN_INPUTS) $(SEMANTICS_ARTIFACTS) $(SEMANTICS_TS_INPUTS) generated/semantics.json generated/semantics.md \
+$(CHK)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) $(SEMANTICS_LEAN_INPUTS) $(SEMANTICS_PACKAGE_INPUTS) $(SEMANTICS_ARTIFACTS) $(SEMANTICS_TS_INPUTS) $(SEMANTICS_CHECK_SAVED) \
+  $(wildcard generated/semantics.json generated/semantics.md) \
   tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean $(TS_EFF_SOURCES) \
   ts/eff/test/semantics.fixture.json $(wildcard ts/eff/node_modules/effect/package.json \
   ts/eff/node_modules/@typescript/native-preview/package.json ts/eff/node_modules/@typescript/native-preview/bin/tsgo)
