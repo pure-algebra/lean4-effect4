@@ -253,6 +253,11 @@ open.
 
 ## 9. The glossary: the tree's names in the literature's terms (2026-10-01)
 
+The concept-first account of the judgments, with the literature each adopts or adapts, the cuts
+and the required properties, is `docs/core/semantics.md` (its glossary also sets our words against
+Lean's: syntax, the three senses of elaborate, print and read); this section keeps the table of the
+tree's names in the literature's terms.
+
 One row per named object: its site, the literature's name for it in one line, the mark of the
 note that read the literature (**read** with the note; **by name**; **assumed**; **standard**),
 the law that makes it that thing, and the correction the formal pass applied

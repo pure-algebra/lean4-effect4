@@ -520,6 +520,7 @@ and focused proofs; add tools or repeat broad checks only when they serve concre
 | file | what it holds |
 | --- | --- |
 | `docs/core/system-map.md` | the frame: the goal, the ten layers with their owners and status, the sorts with one representation each, the five arrow kinds and what each owes, coherence, scope-correct composition, generation as a fixed point |
+| `docs/core/semantics.md` | the language's judgments by concept (ten): the literature each adopts or adapts, the cuts by decisions row, the definitions in the tree, the required properties and the glossary of our words against Lean's; the statuses are generated (`generated/semantics.md`, `make gen-semantics`) from `tools/Tools/SemanticsRegistry.lean` |
 | `docs/core/host-boundary.md` | the external-reply lane: how host answers flow today, the known holes with evidence, the boundary contract (lifecycle, handle declarations, membership matrix, entry paths, controls), the interim profile and the order |
 | `docs/core/coherence-principle.md` | scout F: the principle in full, the seven squares, the arrows lacking obligations |
 | `docs/core/traversal-census.md` | the census numbers, every hand traversal by root, the converter design |
