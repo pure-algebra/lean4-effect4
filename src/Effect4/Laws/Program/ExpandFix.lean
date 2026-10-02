@@ -181,15 +181,12 @@ private abbrev lrounds (xs : List Nat) (l : LayerTerm Op) : LayerTerm Op :=
 private abbrev erounds (xs : List Nat) (e : Eff Op) : Eff Op :=
   xs.foldl (fun acc _ => Eff.expandRound orig acc) e
 
+/-- A constructor that commutes with one round commutes with every number of them: the rounds
+are a fold, and `C` a homomorphism of the step (`List.foldl_hom`). -/
 private theorem lrounds_one : ∀ (C : LayerTerm Op → LayerTerm Op),
     (∀ a, LayerTerm.expandRound orig (C a) = C (LayerTerm.expandRound orig a)) →
-    ∀ (xs : List Nat) (a : LayerTerm Op), lrounds orig xs (C a) = C (lrounds orig xs a)
-  | _, _, [], _ => rfl
-  | C, hC, _ :: xs, a => by
-    show lrounds orig xs (LayerTerm.expandRound orig (C a)) =
-      C (lrounds orig xs (LayerTerm.expandRound orig a))
-    rw [hC]
-    exact lrounds_one C hC xs _
+    ∀ (xs : List Nat) (a : LayerTerm Op), lrounds orig xs (C a) = C (lrounds orig xs a) :=
+  fun C hC _ _ => List.foldl_hom C (fun x _ => hC x)
 
 private theorem lrounds_two : ∀ (C : LayerTerm Op → LayerTerm Op → LayerTerm Op),
     (∀ a b, LayerTerm.expandRound orig (C a b) =
@@ -203,15 +200,11 @@ private theorem lrounds_two : ∀ (C : LayerTerm Op → LayerTerm Op → LayerTe
     rw [hC]
     exact lrounds_two C hC xs _ _
 
+/-- As `lrounds_one`, for a layer built from a program: the homomorphism crosses the two sorts. -/
 private theorem lrounds_body : ∀ (C : Eff Op → LayerTerm Op),
     (∀ e, LayerTerm.expandRound orig (C e) = C (Eff.expandRound orig e)) →
-    ∀ (xs : List Nat) (e : Eff Op), lrounds orig xs (C e) = C (erounds orig xs e)
-  | _, _, [], _ => rfl
-  | C, hC, _ :: xs, e => by
-    show lrounds orig xs (LayerTerm.expandRound orig (C e)) =
-      C (erounds orig xs (Eff.expandRound orig e))
-    rw [hC]
-    exact lrounds_body C hC xs _
+    ∀ (xs : List Nat) (e : Eff Op), lrounds orig xs (C e) = C (erounds orig xs e) :=
+  fun C hC _ _ => List.foldl_hom C (fun x _ => hC x)
 
 private theorem erounds_provideLayer : ∀ (xs : List Nat) (l : LayerTerm Op) (i : Bool)
     (b : Eff Op),
@@ -220,20 +213,17 @@ private theorem erounds_provideLayer : ∀ (xs : List Nat) (l : LayerTerm Op) (i
   | _ :: xs, l, i, b => erounds_provideLayer xs (LayerTerm.expandRound orig l) i (Eff.expandRound orig b)
 
 
+/-- `mergeAll` is a homomorphism from the spine's rounds to the layer's. -/
 private theorem lrounds_mergeAll : ∀ (xs : List Nat) (ls : LayerTerms Op),
     lrounds orig xs (.mergeAll ls) =
-      .mergeAll (xs.foldl (fun acc _ => LayerTerms.expandRound orig acc) ls)
-  | [], _ => rfl
-  | _ :: xs, ls => lrounds_mergeAll xs (LayerTerms.expandRound orig ls)
+      .mergeAll (xs.foldl (fun acc _ => LayerTerms.expandRound orig acc) ls) :=
+  fun _ _ => List.foldl_hom LayerTerm.mergeAll (fun _ _ => rfl)
 
-/-- A layer one round fixes is fixed by every number of rounds. -/
+/-- A layer one round fixes is fixed by every number of rounds: the constant map out of `Unit`
+is a homomorphism of the step exactly when the round fixes the layer (`List.foldl_hom`). -/
 private theorem lrounds_fix : ∀ (l : LayerTerm Op), LayerTerm.expandRound orig l = l →
-    ∀ (xs : List Nat), lrounds orig xs l = l
-  | _, _, [] => rfl
-  | l, hl, _ :: xs => by
-    show lrounds orig xs (LayerTerm.expandRound orig l) = l
-    rw [hl]
-    exact lrounds_fix l hl xs
+    ∀ (xs : List Nat), lrounds orig xs l = l :=
+  fun l hl _ => List.foldl_hom (fun _ : Unit => l) (g₁ := fun _ _ => ()) (init := ()) (fun _ _ => hl)
 
 end LayerRounds
 

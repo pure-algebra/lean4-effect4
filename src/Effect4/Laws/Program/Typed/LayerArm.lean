@@ -730,9 +730,8 @@ theorem layerPointTyped_child {w : World} {q : Point} {l c : LayerTerm NativeOp}
 
 /-- One more round, applied first, is one more round applied last. -/
 private theorem foldl_shift {α β : Type} (g : α → α) : ∀ (L : List β) (x : α),
-    L.foldl (fun acc _ => g acc) (g x) = g (L.foldl (fun acc _ => g acc) x)
-  | [], _ => rfl
-  | _ :: rest, x => foldl_shift g rest (g x)
+    L.foldl (fun acc _ => g acc) (g x) = g (L.foldl (fun acc _ => g acc) x) :=
+  fun _ _ => List.foldl_hom g (fun _ _ => rfl)
 
 /-- The node a layer lookup reads. -/
 theorem at_of_layerAt {n : Node NativeOp} {path : List Nat} {l : LayerTerm NativeOp}
