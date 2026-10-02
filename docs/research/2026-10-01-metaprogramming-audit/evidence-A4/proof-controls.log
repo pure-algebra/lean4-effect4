@@ -1,0 +1,4 @@
+'Test.ProofGraph.searched' does not depend on any axioms
+Test/Audit/ProofGraph.lean:93:0: error: Definition `notATheorem` is a proposition; use `theorem` instead of `def`
+
+Note: This linter can be disabled with `set_option linter.defProp false`

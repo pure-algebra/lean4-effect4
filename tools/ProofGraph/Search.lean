@@ -129,8 +129,7 @@ def addTheorem (name : Name) (levels : List Name) (proposition proof : Expr) : M
   if proposition.hasMVar || proposition.hasFVar || proposition.hasSorry ||
       proof.hasMVar || proof.hasFVar || proof.hasSorry then
     throwError "proof graph: cannot publish open evidence {name}"
-  let extra := (← axiomsOfTheorem proposition proof).filter fun a =>
-    ![``propext, ``Quot.sound].contains a
+  let extra := disallowedAxioms (← axiomsOfTheorem proposition proof)
   unless extra.isEmpty do throwError "proof graph: {name} reaches disallowed axioms {extra}"
   let declaration := Declaration.thmDecl
     {name, levelParams := levels, type := proposition, value := proof}

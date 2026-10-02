@@ -23,7 +23,13 @@ list-returning signature by delegating to this function. For the one-level neste
 a typed `(doElem| do $seq:doSeq)` quotation instead of indexing the raw node. Preserve the
 one-level behavior, empty/unrecognized fallback, scoped keyword and all refusal messages.
 Files: Sugar and the already-reachable `Test/Program/AuthoringScope.lean`. Expected existing
-fixture-output changes: zero. Build cost: small module plus direct consumers. No ruling needed.
+fixture-output changes: zero. Build cost: small module plus direct consumers.
+**Held after testing:** the API is not in the current import closure; it requires
+`import Lean.Parser.Do`. DI-18 is unresolved and both alternatives in the coordinator
+addendum keep Lean tooling out of the runtime root. The experimental patch is retained
+outside the branch; Sugar and its test are unchanged. The compiled experiment and the
+new refusal fixture exposed a pre-existing generic final-binding error, not a repair in
+this slice. Do not land this additional runtime dependency before the DI-18 ruling.
 
 **P2 / A2 — reuse `simpArg`, preserving the grammar (reading).**
 `Init/Tactics.lean:707` defines the exact disjunction copied five times at
@@ -38,7 +44,7 @@ No ruling needed for grammar reuse; fallback policy is P5.
 
 **P3 / A4 — share evidence policy, not every census (reading).**
 The literal semantic axiom filter is identical in `ProofGraph/Proof.lean:26`,
-`Ledger.lean:54` and `Search.lean:137`. A small policy helper below these three clients is
+`Ledger.lean:54` and `Search.lean:132–133`. A small policy helper below these three clients is
 appropriate. Keep rejection messages and the order of offending axioms unchanged. The
 full `Test/Audit/AxiomGate.lean` policy includes implementation exceptions and must remain
 separate. A passing axiom subset check is not a whole-tree gate verdict.
@@ -81,7 +87,7 @@ Five `srcOf` functions in `Effect4Gen/{Rows,LayerView,View,Fold,Authoring}.lean`
 `pp.explicit`, `pp.notation` and `pp.all` (`Lean/PrettyPrinter/Delaborator/Options.lean:24,
 56–63,163,254–270`). The direct `ppExpr` uses in `Conform/Layout/Reflect.lean:121` and
 `OCaml5/Lcnf/Types.lean:290` are diagnostic descriptions of unsupported fields, not emitted
-target syntax. The eight FoldOf occurrences are diagnostics too. Do not call all of them
+target syntax. The FoldOf occurrences are diagnostics too. Do not call all of them
 unstable code generation.
 Before changing producers: compare an actual `srcOf` result under default and perturbed
 options, pin a reviewed profile, regenerate each affected group, and compare bytes. View/Fold
@@ -141,8 +147,8 @@ command families and their existing fixture homes are:
 | `#frame_rules` | CommandElabM / Laws.Auto.Frames | typed-state frame rules and Test audit fixtures |
 | `#position_census`, `#edge_census`, `#write_census`, `#read_census` | CommandElabM + MetaM / Laws.Auto.Positions | typed source and position census fixtures |
 | `#traversal_census`, `#traversal_class`, `#exhaustive_gate` | CommandElabM / Laws.Auto.Traversals, Exhaustive | Test.Audit traversal/exhaustiveness fixtures |
-| `#typed_position_gate`, `#typed_state` | CommandElabM / Laws.Program.Typed.PositionGate, TypedStateDecl | typed-state fixtures |
-| `fold_of` | CommandElabM + MetaM / Program.FoldOf | fold consumers and Test.Program.FoldOf |
+| `#position_gate`, `#typed_state` | CommandElabM / Laws.Program.Typed.PositionGate, TypedStateDecl | typed-state fixtures |
+| `fold_of` | CommandElabM + MetaM / Program.FoldOf | fold consumers and fold batteries (fixture path to be measured) |
 | `reflect_spec`, `harvest_specs` | CommandElabM + MetaM / Conform.Spec.Reflect | conformance specification pilot |
 | `checked_theorem%` | TermElabM / ProofGraph.Proof | Test.Audit.ProofGraph and conformance evidence |
 | axiom/runtime coverage commands | CommandElabM / Test.Audit | Test.Audit.AxiomGate, RuntimeCoverage |
