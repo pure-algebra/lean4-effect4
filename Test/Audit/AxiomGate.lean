@@ -114,6 +114,9 @@ private def auditImplementationModules : List Name :=
   , `Effect4.Laws.Auto.Obligations
   , `Effect4.Laws.Program.Typed.TypedSources
   , `Effect4.Laws.Auto.AnswerGate
+  -- Semantic concept tags and their census are environment instrumentation.
+  -- No semantic theorem or runtime representation is declared here.
+  , `Effect4.Laws.Auto.Semantics
   ]
 
 /--
