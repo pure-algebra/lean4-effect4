@@ -237,6 +237,21 @@
       ]
     },
     {
+      "Note": "The generic fold families of `Ty` (decisions row 182 (a), probe U): the one-layer view (TyCtor, TyLeaf, tyKids, tyBuild with tyBuild_view), the per-constructor table type TyTable, the layer algebra TyAlgebra.ofLayer with its view and invariant laws, the head and paired folds with their connectors, fusion and the banana split, all from the declaration of `Ty` alone. What the classifier and face tables stand on (slice C).",
+      "Name": "TyExtras",
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Flags": [
+        "--extras"
+      ],
+      "Imports": "Effect4.Program.Fold",
+      "Out": "src\\Effect4\\Program\\TyFoldExtras.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Ty"
+      ]
+    },
+    {
       "Note": "Node.child and Node.setChild from the constructor declarations: one arm per node-typed argument, the child scheme every consumer resolves against.",
       "Name": "NodeLenses",
       "Tool": "tools/Effect4Gen/Authoring.lean",

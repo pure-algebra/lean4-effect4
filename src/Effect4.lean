@@ -85,6 +85,7 @@ import Effect4.Codegen.Template
 import Effect4.Program.Eff
 import Effect4.Program.Fold
 import Effect4.Program.LayerView
+import Effect4.Program.TyFoldExtras
 import Effect4.Program.Typing
 import Effect4.Program.Typing.Blame
 import Effect4.Program.Binders

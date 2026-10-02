@@ -59,6 +59,9 @@ structure Group where
   guards : String
   kinds : Array String
   types : Array String
+  /-- The tool's mode flags (`Flags`, optional: `--extras` for the fold tool's generic families),
+  passed right after the tool's path. -/
+  flags : Array String := #[]
   deriving Inhabited
 
 def getStr (j : Json) (key : String) : Except String String := do
@@ -77,6 +80,12 @@ def getStrArr (j : Json) (key : String) : Except String (Array String) := do
   let arr ← v.getArr?
   arr.mapM Json.getStr?
 
+/-- A missing key reads as the empty array; a present one must be an array of strings. -/
+def getStrArrD (j : Json) (key : String) : Except String (Array String) :=
+  match j.getObjVal? key with
+  | .ok _ => getStrArr j key
+  | .error _ => .ok #[]
+
 def parseGroup (j : Json) : Except String Group := do
   let name ← getStr j "Name"
   let tool := match getStr j "Tool" with | .ok t => t | .error _ => "tools/Effect4Gen/Main.lean"
@@ -85,7 +94,8 @@ def parseGroup (j : Json) : Except String Group := do
   let guards ← getStrD j "Guards"
   let kinds ← getStrArr j "Kinds"
   let types ← getStrArr j "Types"
-  return { name, tool, imports, out, guards, kinds, types }
+  let flags ← getStrArrD j "Flags"
+  return { name, tool, imports, out, guards, kinds, types, flags }
 
 def parseManifest (text : String) : Except String (Array Group) := do
   let j ← Json.parse text
@@ -136,8 +146,8 @@ def runLake (args : Array String) : IO Result := do
 
 /-- The generator's argument list for one group: the old `Invoke-Lean`'s, in its order. -/
 def generateArgs (tool : String) (g : Group) (appendGuards : Bool) : Array String :=
-  let base := #["env", "lean", "-M", "4096", "--run", tool,
-    "--group", g.name, "--imports", g.imports, "--out", g.out]
+  let base := #["env", "lean", "-M", "4096", "--run", tool] ++ g.flags ++
+    #["--group", g.name, "--imports", g.imports, "--out", g.out]
   let base := if appendGuards then base ++ #["--append", g.guards] else base
   let base := g.kinds.foldl (fun acc k => acc ++ #["--kind", k]) base
   base ++ g.types
