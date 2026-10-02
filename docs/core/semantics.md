@@ -246,6 +246,11 @@ bracket markers: `.guard`, `.unguard`, `.finishFinalizer`, and `.scopeExit`.
   service-table agreement as a premise and admits the missing-service defect, which is not a service
   value (`service_arm`, `src/Effect4/Laws/Program/Typed/Denotation.lean:2758`); `exit` covers its inline
   branch through `inlineYield_typed` (`src/Effect4/Laws/Program/Typed/Denotation.lean:2859`).
+  The load connector needs only the fundamental property: typed root code is never a race
+  registration marker, so `loadsTyped_of_denotesTyped_typed`
+  (`src/Effect4/Laws/Program/Typed/Commands/Finish.lean:48`) discharges the marker premise, and a
+  checked layer-free program loads into `J` (`loadsTyped_of_layerFree`,
+  `src/Effect4/Laws/Program/Typed/Commands/Finish.lean:68`).
 
 ### 2.3 Concept 3: Scope Lifetime & Finalization (`scope-lifetime-finalization`)
 

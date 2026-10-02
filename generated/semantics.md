@@ -64,6 +64,7 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 | close-typed | preservation | proved | Effect4.Program.Typed.close_typed | yes |  |
 | denote-typed | fundamentalProperty | wanted | Effect4.Program.Typed.M3bAssembly.denoteR_typed | yes | E4-TYPED-CE-020, E4-TYPED-CE-021, E4-TYPED-CE-022 |
 | denote-typed-layer-free | fundamentalProperty | proved | Effect4.Program.Typed.denotesTyped_of_layerFree | yes |  |
+| load-typed-layer-free | preservation | proved | Effect4.Program.Typed.loadsTyped_of_layerFree | yes |  |
 | bind-closed | compatibility | refuted | Test.Program.TypedProgBindRed.typedProg_not_bind_closed | yes |  |
 | guard-bind-typed | compatibility | proved | Effect4.Program.Typed.guardBind_typed | yes |  |
 | on-failure-typed | compatibility | proved | Effect4.Program.Typed.catchGuard_typed | yes |  |
@@ -114,6 +115,15 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 ```lean
 ∀ (root : Effect4.Program.Typed.ProgramSource),
   Effect4.Program.Typed.LayerFree root.program → Effect4.Program.Typed.DenotesTyped root
+```
+
+**load-typed-layer-free**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)
+  (fuel compileFuel : Nat),
+  Effect4.Program.Typed.LayerFree root.program →
+    Effect4.Program.Typed.LoadsTyped root rootTy fuel compileFuel
 ```
 
 **bind-closed**

@@ -41,6 +41,34 @@ theorem raceRegistrationR_typed {root : ProgramSource} {w : World} {ty : EffTy} 
         exact absurd pre id
       | _ => rfl
 
+/-- **M5's load connector, its marker premise discharged** (decisions rows 148, 153 (b)): the root
+code's typing makes it no race registration marker (`raceRegistrationR_typed`), so
+`loadsTyped_of_denotesTyped` needs only the fundamental property. Placed here, after the marker
+fact, since `Finish` imports `Assembly`. -/
+theorem loadsTyped_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
+    (fuel compileFuel : Nat) (denotes : DenotesTyped root) :
+    LoadsTyped root rootTy fuel compileFuel := by
+  intro lawful checked closed empty
+  have wf := layerRefsWF_of_typeOf checked
+  have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
+    rw [Eff.expandIn_self]
+    unfold Program.typeOfProgram at checked
+    split at checked
+    · exact checked
+    · cases checked
+  have rootTyped := denotes wf (initialWorld rootTy root.sig.serviceTy) rfl (rootPoint compileFuel)
+    root.program rootTy rfl
+    ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
+      fun _ h => nomatch h⟩
+  exact loadsTyped_of_denotesTyped root rootTy fuel compileFuel denotes
+    (raceRegistrationR_typed rootTyped) lawful checked closed empty
+
+/-- **The typed load on the layer-free fragment**: a checked program none of whose nodes is a
+`provideLayer` loads into `J` (`denotesTyped_of_layerFree`, then the load connector). -/
+theorem loadsTyped_of_layerFree (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
+    (h : LayerFree root.program) : LoadsTyped root rootTy fuel compileFuel :=
+  loadsTyped_of_denotesTyped_typed root rootTy fuel compileFuel (denotesTyped_of_layerFree root h)
+
 /-- A queued `loop` or `deliver` names an active fiber (`CommandAuthorityR`), so no queued command
 reads the code of a fiber that is not running. -/
 theorem not_readsCode_idle {root : ProgramSource} {w : World} {m : RState} {q : List RCmd}

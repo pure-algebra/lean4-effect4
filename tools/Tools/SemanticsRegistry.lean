@@ -208,6 +208,9 @@ def registry : Registry where
       literature := [
         { work := "XiaEtAl2020", locator := "audit P37", relation := "definitionUsed" }
       ] },
+    { id := "load-typed-layer-free", concept := "residual-program-typing", role := .preservation
+      title := "The typed load on the layer-free fragment: a checked program loads into J (M5's load connector, the marker premise discharged)"
+      pointer := .witness `Effect4.Program.Typed.loadsTyped_of_layerFree },
     { id := "bind-closed", concept := "residual-program-typing", role := .compatibility
       title := "TypedProg is closed under bind"
       pointer := .refutedBy "E4-TYPED-CE-030" `Test.Program.TypedProgBindRed.typedProg_not_bind_closed

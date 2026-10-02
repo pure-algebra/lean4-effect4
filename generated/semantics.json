@@ -4704,8 +4704,8 @@
    "counts":
    {"wanted": 1,
     "refuted": 1,
-    "proved": 7,
-    "claims": 9,
+    "proved": 8,
+    "claims": 10,
     "assumed": 0,
     "absent": 0}},
   {"title":
@@ -5010,6 +5010,25 @@
      "relation": "definitionUsed",
      "locator": "audit P37"}],
    "id": "denote-typed-layer-free",
+   "contestedBy": [],
+   "concept": "residual-program-typing"},
+  {"title":
+   "The typed load on the layer-free fragment: a checked program loads into J (M5's load connector, the marker premise discharged)",
+   "status":
+   {"witness":
+    {"withinSemanticAxiomCeiling": true,
+     "statement":
+     "∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)\n  (fuel compileFuel : Nat),\n  Effect4.Program.Typed.LayerFree root.program →\n    Effect4.Program.Typed.LoadsTyped root rootTy fuel compileFuel",
+     "name": "Effect4.Program.Typed.loadsTyped_of_layerFree",
+     "module": "Effect4.Laws.Program.Typed.Commands.Finish",
+     "levels": [],
+     "axioms": ["Quot.sound", "propext"]},
+    "goal": null,
+    "by": "theorem",
+    "_tag": "proved"},
+   "role": "preservation",
+   "literature": [],
+   "id": "load-typed-layer-free",
    "contestedBy": [],
    "concept": "residual-program-typing"},
   {"title": "TypedProg is closed under bind",
