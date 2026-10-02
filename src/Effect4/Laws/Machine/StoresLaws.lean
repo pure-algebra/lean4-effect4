@@ -143,6 +143,8 @@ theorem Val.validIn_eq_handles (s : Stores) (v : Val) :
   | nat _ => rfl
   | str _ => rfl
   | bytes _ => rfl
+  | negInt _ => rfl
+  | float _ => rfl
   | none => rfl
   | ref _ _ => rfl
   | handle kind index =>

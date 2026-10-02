@@ -41,13 +41,16 @@ def ValShape : Shape :=
       ("ctor", 9, [("index", (shape _root_.Nat).root), ("args", .list (.named "Val"))]),
       ("ref", 10, [("kind", (shape _root_.UInt8).root),
         ("digest", (shape (@_root_.List (_root_.UInt8))).root)]),
-      ("handle", 11, [("kind", (shape _root_.UInt8).root), ("key", (shape _root_.Nat).root)])]
+      ("handle", 11, [("kind", (shape _root_.UInt8).root), ("key", (shape _root_.Nat).root)]),
+      ("negInt", 12, [("n", (shape _root_.Nat).root)]),
+      ("float", 13, [("bits", (shape _root_.UInt64).root)])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
   ("Val", ValShape) ::
     ((shape _root_.Bool).defs ++ (shape _root_.Nat).defs ++ (shape _root_.String).defs ++
-      (shape (@_root_.List (_root_.UInt8))).defs ++ (shape _root_.UInt8).defs)
+      (shape (@_root_.List (_root_.UInt8))).defs ++ (shape _root_.UInt8).defs ++
+      (shape _root_.UInt64).defs)
 
 mutual
 def toValVal : _root_.Effect4.Store.Val → Val
@@ -63,6 +66,8 @@ def toValVal : _root_.Effect4.Store.Val → Val
   | .ctor a0 a1 => .ctor 9 [Canonical.toVal a0, .list (toValL0 a1)]
   | .ref a0 a1 => .ctor 10 [Canonical.toVal a0, Canonical.toVal a1]
   | .handle a0 a1 => .ctor 11 [Canonical.toVal a0, Canonical.toVal a1]
+  | .negInt a0 => .ctor 12 [Canonical.toVal a0]
+  | .float a0 => .ctor 13 [Canonical.toVal a0]
 def toValL0 : @_root_.List (_root_.Effect4.Store.Val) → List Val
   | [] => []
   | x :: xs => toValVal x :: toValL0 xs
@@ -116,6 +121,14 @@ def rawVal : Val → Option (_root_.Effect4.Store.Val)
     match Canonical.ofVal (α := _root_.UInt8) v0, Canonical.ofVal (α := _root_.Nat) v1 with
     | some a0, some a1 => some (.handle a0 a1)
     | _, _ => none
+  | .ctor 12 [v0] =>
+    match Canonical.ofVal (α := _root_.Nat) v0 with
+    | some a0 => some (.negInt a0)
+    | _ => none
+  | .ctor 13 [v0] =>
+    match Canonical.ofVal (α := _root_.UInt64) v0 with
+    | some a0 => some (.float a0)
+    | _ => none
   | _ => none
 def rawL0 : List Val → Option (@_root_.List (_root_.Effect4.Store.Val))
   | [] => some []
@@ -151,6 +164,10 @@ theorem rawVal_toValVal (a : _root_.Effect4.Store.Val) :
     simp [toValVal, rawVal, Canonical.ofVal_toVal]
   | «handle» a0 a1 =>
     simp [toValVal, rawVal, Canonical.ofVal_toVal]
+  | «negInt» a0 =>
+    simp [toValVal, rawVal, Canonical.ofVal_toVal]
+  | «float» a0 =>
+    simp [toValVal, rawVal, Canonical.ofVal_toVal]
 termination_by structural a
 theorem rawL0_toValL0 (xs : @_root_.List (_root_.Effect4.Store.Val)) :
     rawL0 (toValL0 xs) = some xs := by
@@ -168,30 +185,36 @@ theorem mem_Val : ("Val", ValShape) ∈ defs := List.Mem.head _
 /-- Into the appended tail of the block's table. -/
 theorem mem_tail {p : String × Shape}
     (h : p ∈ (shape _root_.Bool).defs ++ (shape _root_.Nat).defs ++ (shape _root_.String).defs ++
-      (shape (@_root_.List (_root_.UInt8))).defs ++ (shape _root_.UInt8).defs) : p ∈ defs :=
+      (shape (@_root_.List (_root_.UInt8))).defs ++ (shape _root_.UInt8).defs ++
+      (shape _root_.UInt64).defs) : p ∈ defs :=
   List.Mem.tail _ (h)
 
 theorem lift_Bool (x : _root_.Bool) :
     acceptsIn defs (shape _root_.Bool).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))
     _ _ (Canonical.fits x)
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
     _ _ (Canonical.fits x)
 theorem lift_String (x : _root_.String) :
     acceptsIn defs (shape _root_.String).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_ListUInt8 (x : (@_root_.List (_root_.UInt8))) :
     acceptsIn defs (shape (@_root_.List (_root_.UInt8))).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_UInt8 (x : _root_.UInt8) :
     acceptsIn defs (shape _root_.UInt8).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_UInt64 (x : _root_.UInt64) :
+    acceptsIn defs (shape _root_.UInt64).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_right (hp)))
     _ _ (Canonical.fits x)
 
@@ -238,6 +261,12 @@ theorem fitsVal (a : _root_.Effect4.Store.Val) :
     exact acceptsAt_sum _ _ _ 11 "handle" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_UInt8 a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a1) (acceptsFields_nil _)))
+  | «negInt» a0 =>
+    exact acceptsAt_sum _ _ _ 12 "negInt" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
+  | «float» a0 =>
+    exact acceptsAt_sum _ _ _ 13 "float" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_UInt64 a0) (acceptsFields_nil _))
 termination_by structural a
 theorem fitsL0 (xs : @_root_.List (_root_.Effect4.Store.Val)) :
     ∀ v ∈ toValL0 xs,

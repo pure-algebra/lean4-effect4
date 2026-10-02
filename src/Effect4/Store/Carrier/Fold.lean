@@ -28,6 +28,8 @@ structure ValAlgebra (R : ValFam → Type u) where
   val_ctor : (Nat) → List (R .val) → R .val
   val_ref : (UInt8) → (Effect4.Store.Bytes) → R .val
   val_handle : (UInt8) → (Nat) → R .val
+  val_negInt : (Nat) → R .val
+  val_float : (UInt64) → R .val
 
 mutual
 def cata_val {R : ValFam → Type u} (alg : ValAlgebra R)
@@ -45,6 +47,8 @@ def cata_val {R : ValFam → Type u} (alg : ValAlgebra R)
   | .ctor a0 a1 => alg.val_ctor a0 (cata_pos_list_val alg a1)
   | .ref a0 a1 => alg.val_ref a0 a1
   | .handle a0 a1 => alg.val_handle a0 a1
+  | .negInt a0 => alg.val_negInt a0
+  | .float a0 => alg.val_float a0
 termination_by structural node
 def cata_pos_list_val {R : ValFam → Type u} (alg : ValAlgebra R)
     (xs : List Effect4.Store.Val) : List (R .val) :=
@@ -123,6 +127,16 @@ theorem cata_pos_list_val_eq {R : ValFam → Type u}
     cata_val alg (.handle a0 a1) =
       alg.val_handle a0 a1 := rfl
 
+@[simp] theorem cata_val_negInt {R : ValFam → Type u}
+    (alg : ValAlgebra R) (a0 : Nat) :
+    cata_val alg (.negInt a0) =
+      alg.val_negInt a0 := rfl
+
+@[simp] theorem cata_val_float {R : ValFam → Type u}
+    (alg : ValAlgebra R) (a0 : UInt64) :
+    cata_val alg (.float a0) =
+      alg.val_float a0 := rfl
+
 structure ValHom {R : ValFam → Type u} (alg : ValAlgebra R) where
   f_val : Effect4.Store.Val → R .val
   h_val_unit : f_val (.unit) =
@@ -149,6 +163,10 @@ structure ValHom {R : ValFam → Type u} (alg : ValAlgebra R) where
     alg.val_ref a0 a1
   h_val_handle : ∀ a0 a1, f_val (.handle a0 a1) =
     alg.val_handle a0 a1
+  h_val_negInt : ∀ a0, f_val (.negInt a0) =
+    alg.val_negInt a0
+  h_val_float : ∀ a0, f_val (.float a0) =
+    alg.val_float a0
 
 mutual
 theorem hom_eq_cata_val {R : ValFam → Type u}
@@ -179,6 +197,10 @@ theorem hom_eq_cata_val {R : ValFam → Type u}
     simp only [cata_val, hom.h_val_ref a0 a1]
   | .handle a0 a1 =>
     simp only [cata_val, hom.h_val_handle a0 a1]
+  | .negInt a0 =>
+    simp only [cata_val, hom.h_val_negInt a0]
+  | .float a0 =>
+    simp only [cata_val, hom.h_val_float a0]
 termination_by structural node
 theorem hom_pos_list_val {R : ValFam → Type u}
     {alg : ValAlgebra R} (hom : ValHom alg) (xs : List Effect4.Store.Val) :
@@ -205,6 +227,8 @@ def ValAlgebra.id : ValAlgebra (ValSelfCarrier) where
   val_ctor a0 a1 := Effect4.Store.Val.ctor a0 a1
   val_ref a0 a1 := Effect4.Store.Val.ref a0 a1
   val_handle a0 a1 := Effect4.Store.Val.handle a0 a1
+  val_negInt a0 := Effect4.Store.Val.negInt a0
+  val_float a0 := Effect4.Store.Val.float a0
 
 mutual
 @[simp] theorem cata_id_val (node : Effect4.Store.Val) :
@@ -246,6 +270,12 @@ mutual
   | .handle a0 a1 =>
     simp only [cata_val]
     rfl
+  | .negInt a0 =>
+    simp only [cata_val]
+    rfl
+  | .float a0 =>
+    simp only [cata_val]
+    rfl
 termination_by structural node
 theorem cata_id_pos_list_val (xs : List Effect4.Store.Val) :
     cata_pos_list_val (ValAlgebra.id) xs = xs := by
@@ -283,6 +313,10 @@ def foldMap_val {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Sto
     f_val (.ref a0 a1)
   | .handle a0 a1 =>
     f_val (.handle a0 a1)
+  | .negInt a0 =>
+    f_val (.negInt a0)
+  | .float a0 =>
+    f_val (.float a0)
 termination_by structural node
 def foldMap_pos_list_val {M : Type u} (unit : M) (op : M → M → M) (xs : List Effect4.Store.Val)
     (f_val : Effect4.Store.Val → M := fun _ => unit) : M :=
@@ -308,6 +342,8 @@ end
 #print axioms cata_val_ctor
 #print axioms cata_val_ref
 #print axioms cata_val_handle
+#print axioms cata_val_negInt
+#print axioms cata_val_float
 #print axioms hom_eq_cata_val
 #print axioms hom_pos_list_val
 #print axioms cata_id_val

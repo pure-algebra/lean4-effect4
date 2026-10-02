@@ -107,6 +107,8 @@ theorem ofStore_exact : ∀ (w : Store.Val) (v : Val), ofStore w = Option.some v
   | ctor i args _ => intro v h; exact nomatch h
   | ref k d => intro v h; exact nomatch h
   | handle k n => intro v h; exact nomatch h
+  | negInt n => intro v h; exact nomatch h
+  | float b => intro v h; exact nomatch h
 
 /-- The configuration values as an exact image of the shared carrier. -/
 def image : Image Val := ⟨toStore, ofStore, ofStore_toStore, fun h => ofStore_exact _ _ h⟩

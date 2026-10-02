@@ -70,10 +70,17 @@ def ctor : UInt8 := 10
 def ref : UInt8 := 11
 /-- A live handle: the kind byte, then the allocation index as `nat` digits. -/
 def handle : UInt8 := 12
+/-- A negative integer `-(n+1)`: the digits of `n` (decisions row 121, the nesting images: a
+non-negative integer is its `nat` frame, so this frame holds the negatives only). -/
+def int : UInt8 := 13
+/-- An IEEE 754 binary64 datum not stored as an integer image: its bit pattern, eight bytes
+big-endian (`Val.floatFrame`). -/
+def float : UInt8 := 14
 
 /-- The finite frame alphabet; current explicit bytes remain the wire authority. -/
 inductive Code where
   | bool | nat | string | list | pair | none | some | bytes | unit | ctor | ref | handle
+  | int | float
   deriving DecidableEq, Repr
 
 def Code.byte : Code → UInt8
@@ -89,6 +96,8 @@ def Code.byte : Code → UInt8
   | .ctor => Tag.ctor
   | .ref => Tag.ref
   | .handle => Tag.handle
+  | .int => Tag.int
+  | .float => Tag.float
 
 def Code.spelling : Code → String
   | .bool => "bool"
@@ -103,9 +112,11 @@ def Code.spelling : Code → String
   | .ctor => "ctor"
   | .ref => "ref"
   | .handle => "handle"
+  | .int => "int"
+  | .float => "float"
 
 def codes : List Code := [.bool, .nat, .string, .list, .pair, .none, .some,
-  .bytes, .unit, .ctor, .ref, .handle]
+  .bytes, .unit, .ctor, .ref, .handle, .int, .float]
 
 theorem mem_codes (code : Code) : code ∈ codes := by cases code <;> decide
 
@@ -164,6 +175,11 @@ inductive Val where
   /-- A live handle into a running machine's stores: the kind byte, then the allocation
   index. Not content: no shape accepts it and no node carries it. -/
   | handle (kind : UInt8) (key : Nat)
+  /-- The negative integer `-(n+1)` (decisions row 121: a non-negative integer is `nat`). -/
+  | negInt (n : Nat)
+  /-- A binary64 datum not stored as an integer image, by its bit pattern: well formed only when
+  `floatFrame` admits the bits (non-integral, infinite, NaN or negative zero). -/
+  | float (bits : UInt64)
 deriving Inhabited
 
 namespace Val
@@ -190,6 +206,8 @@ def render : Val → String
   | .ctor i args => s!"(Val.ctor {i} [{", ".intercalate (renderList args)}])"
   | .ref k d => s!"(Val.ref {k} {d})"
   | .handle k n => s!"(Val.handle {k} {n})"
+  | .negInt n => s!"(Val.negInt {n})"
+  | .float b => s!"(Val.float {b})"
 def renderList : List Val → List String
   | [] => []
   | x :: xs => render x :: renderList xs
@@ -212,6 +230,8 @@ def encode : Val → Bytes
   | .ctor i args => framed Tag.ctor (framed Tag.nat (natBytes i) ++ encodeList args)
   | .ref k d => framed Tag.ref (k :: d)
   | .handle k n => framed Tag.handle (k :: natBytes n)
+  | .negInt n => framed Tag.int (natBytes n)
+  | .float b => framed Tag.float (be64 b.toNat)
 /-- The frames of a list of values, back to back. -/
 def encodeList : List Val → Bytes
   | [] => []
@@ -242,6 +262,8 @@ def tag : Val → UInt8
   | .ctor _ _ => Tag.ctor
   | .ref _ _ => Tag.ref
   | .handle _ _ => Tag.handle
+  | .negInt _ => Tag.int
+  | .float _ => Tag.float
 
 /-- The payload of a value's frame. -/
 def payload : Val → Bytes
@@ -257,6 +279,8 @@ def payload : Val → Bytes
   | .ctor i args => framed Tag.nat (natBytes i) ++ encodeList args
   | .ref k d => k :: d
   | .handle k n => k :: natBytes n
+  | .negInt n => natBytes n
+  | .float b => be64 b.toNat
 
 /-- Every encoding is one frame: its tag, its payload. -/
 theorem encode_eq (v : Val) : encode v = framed v.tag v.payload := by
@@ -274,10 +298,11 @@ theorem ind {motive : Val → Prop}
     (pair : ∀ a b, motive a → motive b → motive (.pair a b))
     (none : motive .none) (some : ∀ a, motive a → motive (.some a))
     (ctor : ∀ i args, (∀ x ∈ args, motive x) → motive (.ctor i args))
-    (ref : ∀ k d, motive (.ref k d)) (handle : ∀ k n, motive (.handle k n)) : ∀ v, motive v :=
+    (ref : ∀ k d, motive (.ref k d)) (handle : ∀ k n, motive (.handle k n))
+    (negInt : ∀ n, motive (.negInt n)) (float : ∀ b, motive (.float b)) : ∀ v, motive v :=
   fun v =>
     Val.rec (motive_1 := motive) (motive_2 := fun xs => ∀ x ∈ xs, motive x)
-      unit bool nat str bytes list pair none some ctor ref handle
+      unit bool nat str bytes list pair none some ctor ref handle negInt float
       (by intro _ h; cases h)
       (fun _ _ ihHead ihTail => by
         intro _ hmem
@@ -324,6 +349,22 @@ theorem handlesList_eq_flatMap (xs : List Val) : handlesList xs = xs.flatMap han
 
 /-! ## Well-formedness: every payload shorter than `2^64` -/
 
+/-- **The binary64 frame's domain** (decisions row 121, the nesting images): the doubles that are
+not stored as an integer image. A finite integral double other than negative zero is its `nat` or
+`negInt` image, so one value has one image and `nat ⊑ int ⊑ number` are membership inclusions;
+non-integral values, infinities, NaNs (every payload) and negative zero stay in this frame, so the
+bit pattern of every double is kept exactly. Read off the exponent and fraction fields; no
+floating-point operation. -/
+def floatFrame (b : UInt64) : Bool :=
+  let n := b.toNat
+  let exponent := n / 2 ^ 52 % 2048
+  let fraction := n % 2 ^ 52
+  if exponent = 2047 then true
+  else if exponent = 0 then (fraction != 0 || n / 2 ^ 63 != 0)
+  else if exponent < 1023 then true
+  else if 1075 ≤ exponent then false
+  else fraction % 2 ^ (1075 - exponent) != 0
+
 mutual
 /-- Every frame's payload is shorter than `2^64`, so its length prefix is exact. -/
 def WF : Val → Prop
@@ -341,6 +382,8 @@ def WF : Val → Prop
       WFList args
   | .ref k d => (k :: d).length < 2 ^ 64
   | .handle k n => (k :: natBytes n).length < 2 ^ 64
+  | .negInt n => (natBytes n).length < 2 ^ 64
+  | .float b => floatFrame b = true
 /-- `WF` at every member. -/
 def WFList : List Val → Prop
   | [] => True
@@ -364,6 +407,8 @@ def wf : Val → Bool
       decide ((framed Tag.nat (natBytes i) ++ encodeList args).length < 2 ^ 64) && wfList args
   | .ref k d => decide ((k :: d).length < 2 ^ 64)
   | .handle k n => decide ((k :: natBytes n).length < 2 ^ 64)
+  | .negInt n => decide ((natBytes n).length < 2 ^ 64)
+  | .float b => floatFrame b
 /-- `wf` at every member. -/
 def wfList : List Val → Bool
   | [] => true
@@ -422,6 +467,11 @@ theorem WF_payload_lt {v : Val} (h : WF v) : v.payload.length < 2 ^ 64 := by
   | ctor i args => exact h.2.1
   | ref k d => exact h
   | handle k n => exact h
+  | negInt n => exact h
+  | float b =>
+    show (be64 b.toNat).length < 2 ^ 64
+    rw [length_be64]
+    decide
 
 /-- Well-formedness reaches every child. -/
 theorem WF_child {v c : Val} (hv : WF v) (hc : c ∈ v.children) : WF c := by
@@ -669,6 +719,11 @@ def decodeBody (dec : Bytes → Option (Val × Bytes)) (tag : UInt8) (payload : 
     match payload with
     | k :: digits => if digits.head? = some 0 then none else some (.handle k (natOfDigits digits))
     | [] => none
+  else if tag = Tag.int then
+    (if payload.head? = some 0 then none else some (.negInt (natOfDigits payload)))
+  else if tag = Tag.float then
+    (if payload.length = 8 ∧ Val.floatFrame (UInt64.ofNat (natOfDigits payload)) = true then
+      some (.float (UInt64.ofNat (natOfDigits payload))) else none)
   else none
 
 /-! The dispatch, one equation per tag: the tag comparisons are closed terms, so each is `rfl`,
@@ -737,6 +792,15 @@ theorem decodeBody_handle :
           if digits.head? = some 0 then none else some (.handle k (natOfDigits digits))
         | [] => none) := rfl
 
+theorem decodeBody_int :
+    decodeBody dec Tag.int payload =
+      (if payload.head? = some 0 then none else some (.negInt (natOfDigits payload))) := rfl
+
+theorem decodeBody_float :
+    decodeBody dec Tag.float payload =
+      (if payload.length = 8 ∧ Val.floatFrame (UInt64.ofNat (natOfDigits payload)) = true then
+        some (.float (UInt64.ofNat (natOfDigits payload))) else none) := rfl
+
 end dispatch
 
 theorem decodeBody_encode (dec : Bytes → Option (Val × Bytes)) (v : Val) (hwf : v.WF)
@@ -804,16 +868,25 @@ theorem decodeBody_encode (dec : Bytes → Option (Val × Bytes)) (v : Val) (hwf
     show (if (natBytes n).head? = some 0 then none else some (Val.handle k (natOfDigits (natBytes n))))
       = some (.handle k n)
     rw [if_neg (natBytes_head n), natOfDigits_natBytes]
+  | negInt n =>
+    show decodeBody dec Tag.int (natBytes n) = some (.negInt n)
+    rw [decodeBody_int, if_neg (natBytes_head n), natOfDigits_natBytes]
+  | float b =>
+    have frame : Val.floatFrame b = true := hwf
+    show decodeBody dec Tag.float (be64 b.toNat) = some (.float b)
+    rw [decodeBody_float, natOfDigits_be64, Nat.mod_eq_of_lt b.toNat_lt, UInt64.ofNat_toNat,
+      if_pos ⟨length_be64 _, frame⟩]
 
 /-- Any other tag byte is refused. -/
 theorem decodeBody_unknown (dec : Bytes → Option (Val × Bytes)) (tag : UInt8) (payload : Bytes)
     (h1 : tag ≠ Tag.unit) (h2 : tag ≠ Tag.bool) (h3 : tag ≠ Tag.nat) (h4 : tag ≠ Tag.string)
     (h5 : tag ≠ Tag.bytes) (h6 : tag ≠ Tag.list) (h7 : tag ≠ Tag.pair) (h8 : tag ≠ Tag.none)
-    (h9 : tag ≠ Tag.some) (h10 : tag ≠ Tag.ctor) (h11 : tag ≠ Tag.ref) (h12 : tag ≠ Tag.handle) :
+    (h9 : tag ≠ Tag.some) (h10 : tag ≠ Tag.ctor) (h11 : tag ≠ Tag.ref) (h12 : tag ≠ Tag.handle)
+    (h13 : tag ≠ Tag.int) (h14 : tag ≠ Tag.float) :
     decodeBody dec tag payload = none := by
   unfold decodeBody
   rw [if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8,
-    if_neg h9, if_neg h10, if_neg h11, if_neg h12]
+    if_neg h9, if_neg h10, if_neg h11, if_neg h12, if_neg h13, if_neg h14]
 
 theorem decodeBody_exact (dec : Bytes → Option (Val × Bytes))
     (hdec : ∀ b v r, dec b = some (v, r) → b = Val.encode v ++ r ∧ v.WF)
@@ -972,7 +1045,33 @@ theorem decodeBody_exact (dec : Bytes → Option (Val × Bytes))
           rw [hdigits]
           exact hlen
     · exact nomatch h
-  rw [decodeBody_unknown dec tag payload h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12] at h
+  by_cases h13 : tag = Tag.int
+  · rw [h13, decodeBody_int] at h
+    split at h
+    · exact nomatch h
+    · next hhead =>
+      injection h with h
+      subst h
+      refine ⟨h13, (natBytes_natOfDigits payload hhead).symm, ?_⟩
+      show (natBytes (natOfDigits payload)).length < 2 ^ 64
+      rw [natBytes_natOfDigits payload hhead]
+      exact hlen
+  by_cases h14 : tag = Tag.float
+  · rw [h14, decodeBody_float] at h
+    split at h
+    · next hcond =>
+      obtain ⟨h8, frame⟩ := hcond
+      injection h with h
+      subst h
+      have hlt : natOfDigits payload < 2 ^ 64 := by
+        have := natOfDigits_lt payload
+        rw [h8] at this
+        exact this
+      refine ⟨h14, ?_, frame⟩
+      show payload = be64 (UInt64.ofNat (natOfDigits payload)).toNat
+      rw [UInt64.toNat_ofNat_of_lt' hlt, be64_natOfDigits payload h8]
+    · exact nomatch h
+  rw [decodeBody_unknown dec tag payload h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14] at h
   exact nomatch h
 
 /-! ## The knot: fuel -/
@@ -1122,6 +1221,8 @@ def beq : Val → Val → Bool
   | .ctor i a, .ctor j b => decide (i = j) && beqList a b
   | .ref k d, .ref k' d' => decide (k = k') && decide (d = d')
   | .handle k n, .handle k' n' => decide (k = k') && decide (n = n')
+  | .negInt a, .negInt b => decide (a = b)
+  | .float a, .float b => decide (a = b)
   | _, _ => false
 def beqList : List Val → List Val → Bool
   | [], [] => true
@@ -1225,7 +1326,35 @@ def sampleEntry : Val :=
   some (.ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9]])
 #guard Val.decode (framed Tag.handle []) = none
 #guard Val.decode (framed Tag.handle [2, 0, 7]) = none
-#guard Val.decode (framed 13 []) = none
+#guard Val.decode (framed 15 []) = none
+-- The numeric frames (decisions row 121, the nesting images): a negative integer round-trips; the
+-- binary64 frame keeps negative zero, a fraction and an infinity, and refuses an integral double
+-- (`3.0`, `+0.0`), whose value is its integer image.
+#guard Val.decode (Val.encode (.negInt 41)) = some (.negInt 41)
+#guard Val.decode (framed Tag.int [0, 1]) = none
+#guard Val.floatFrame 0x8000000000000000 && Val.floatFrame 0x3FE0000000000000 &&
+  Val.floatFrame 0x7FF0000000000000 && !Val.floatFrame 0x4008000000000000 && !Val.floatFrame 0
+#guard Val.decode (Val.encode (.float 0x8000000000000000)) = some (.float 0x8000000000000000)
+#guard Val.decode (Val.encode (.float 0x3FE0000000000000)) = some (.float 0x3FE0000000000000)
+#guard Val.decode (framed Tag.float (be64 0x4008000000000000)) = none
+#guard Val.decode (framed Tag.float (be64 0)) = none
+-- The integral boundary: `2^51 + 0.5` is a fraction, `2^51 + 1`, `2^52` and `-1` are integers.
+#guard Val.floatFrame 0x4320000000000001 && !Val.floatFrame 0x4320000000000002 &&
+  !Val.floatFrame 0x4330000000000000 && !Val.floatFrame 0xBFF0000000000000
+-- The smallest and largest subnormals and the smallest normal keep their eight bytes.
+#guard [0x0000000000000001, 0x000FFFFFFFFFFFFF, 0x0010000000000000].all fun (b : UInt64) =>
+  Val.floatFrame b && Val.decode (Val.encode (.float b)) == some (.float b)
+-- Signalling, quiet and signed NaN payloads and negative infinity stay distinct bit patterns.
+#guard [0x7FF0000000000001, 0x7FF8000000000001, 0xFFF8000000000001, 0xFFF0000000000000].all
+  fun (b : UInt64) => Val.floatFrame b && Val.decode (Val.encode (.float b)) == some (.float b)
+#guard [(0x7FF0000000000001 : UInt64), 0x7FF8000000000001, 0xFFF8000000000001].eraseDups.length = 3
+-- A binary64 payload is exactly eight bytes; a nested integral double is refused by `encode?`.
+#guard Val.decode (framed Tag.float ((be64 0x3FE0000000000000).drop 1)) = none
+#guard Val.decode (framed Tag.float (be64 0x3FE0000000000000 ++ [0])) = none
+#guard Val.encode? (.some (.float 0x4008000000000000)) = none
+-- `-1` is the empty digit string; `-256` and `-257` cross the byte boundary.
+#guard Val.encode (.negInt 0) = [13, 0, 0, 0, 0, 0, 0, 0, 0]
+#guard [0, 255, 256].all fun n => Val.decode (Val.encode (.negInt n)) == some (.negInt n)
 #guard Val.encode? (.handle 2 7) = some (Val.encode (.handle 2 7))
 #guard Val.encode? sampleEntry = some (Val.encode sampleEntry)
 #guard (Val.encode? sampleEntry).bind Val.decode = some sampleEntry

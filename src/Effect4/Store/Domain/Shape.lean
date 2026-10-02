@@ -415,6 +415,10 @@ def printIn (defs : List (String × Shape)) : Shape → Val → Json
     | _ => .str (hexString d)
   -- A live handle fits no shape; it prints by structure, as an unfitting `ctor` does.
   | _, .handle k n => .obj [("handle", Json.ofNat k.toNat), ("key", Json.ofNat n)]
+  -- The numeric frames (decisions row 121) print exactly, with no floating-point conversion: a
+  -- negative integer as its decimal text, a binary64 datum as its bit pattern in hex.
+  | _, .negInt n => .obj [("int", .str (toString (-((n : Int) + 1))))]
+  | _, .float b => .obj [("float64", .str (hexString (be64 b.toNat)))]
 /-- The elements of a list, each under the item shape. -/
 def printList (defs : List (String × Shape)) : Shape → List Val → List Json
   | _, [] => []
