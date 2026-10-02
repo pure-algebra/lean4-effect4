@@ -375,6 +375,19 @@ private def moduleImportClosure
     if frontier.isEmpty then break
   return reached
 
+/--
+The `initialize`d handles admitted by exact name (decisions row 184; the coordinator, 2026-10-01,
+for the owner's ratification). `initialize x : T ← action` compiles to `opaque x : T` with the
+synthesised value and an `[init]` initializer that sets the run-time value: the handle is a
+registration object (an attribute's environment extension), never a value a theorem is stated
+about, so the ruling on `opaque` above does not reach it. Admitted only while the declaration
+exists, is such an opaque, and carries its initializer; an entry that is none of these fails the
+gate as stale. A binder-free `initialize` (the aesop banks, `Laws/Auto/RuleSets.lean`) declares
+no opaque and needs no entry.
+-/
+private def admittedInitializedHandles : List Name :=
+  [`Effect4.Laws.Auto.semanticsAttribute]
+
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do
   let environment ← getEnv
@@ -439,7 +452,9 @@ elab "#effect4_axiom_gate" : command => do
           if (Compiler.getImplementedBy? environment name).isSome then
             throwError "Effect4 trust gate: declaration {name} is `@[implemented_by]`; a checked body is replaced by another"
           if let .opaqueInfo opaqueInfo := info then
-            if isSynthesizedOpaqueBody opaqueInfo.value then
+            if isSynthesizedOpaqueBody opaqueInfo.value &&
+                !(admittedInitializedHandles.contains name &&
+                  (getInitFnNameFor? environment name).isSome) then
               throwError
                 "Effect4 trust gate: declaration {name} is an `opaque` with no body, so it \
                  denotes an arbitrary inhabitant rather than the value it advertises; give it \
@@ -491,6 +506,16 @@ elab "#effect4_axiom_gate" : command => do
     if !(← collectAxioms exempted).contains ``Classical.choice then
       throwError
         "Effect4 axiom gate: stale exact implementation exemption for {exempted}; it no longer reaches Classical.choice"
+
+  for handle in admittedInitializedHandles do
+    match environment.find? handle with
+    | some (.opaqueInfo opaqueInfo) =>
+      unless isSynthesizedOpaqueBody opaqueInfo.value && (getInitFnNameFor? environment handle).isSome do
+        throwError
+          "Effect4 trust gate: stale initialized-handle admission for {handle}; it is no longer an initializer-set opaque"
+    | _ =>
+      throwError
+        "Effect4 trust gate: initialized-handle admission names a missing or non-opaque declaration {handle}"
 
   logInfo
     m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {exactImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
