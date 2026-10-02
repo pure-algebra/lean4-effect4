@@ -109,6 +109,29 @@ its arrows; anything else is a leak.
   "complete" without naming the exact judgment, observation, theorem or gate,
   assumptions, and remaining host boundary. A compiling finite probe is
   reported as a finite probe.
+- **Every proof obligation is placed in the theory before it is worked** (owner, 2026-10-02:
+  no proofs to nowhere). Before a theorem is stated, proved, repaired or put in a brief, write
+  down five things:
+  1. its concept, the one of the ten in `docs/core/semantics.md`, and the required property there
+     that it is or serves;
+  2. its question: a `ProofGraph` ledger goal, or a registry claim with its role
+     (`tools/Tools/SemanticsRegistry.lean`, `generated/semantics.md`). A helper names the goal or
+     claim it is a step of, and the consumer that uses it;
+  3. its reach: the exact judgment, observation, fragment and hypotheses, with the decisions rows
+     and register lines that bound it;
+  4. what it does not establish:
+     - a conditional theorem leaves its premises open;
+     - an invariant is not progress;
+     - safety is not liveness;
+     - an equal-observation theorem holds only on its fragment;
+     - the host boundary stays where `docs/core/host-boundary.md` puts it;
+  5. what it unlocks on the M5 → M6 → M7 spine, or which requirement it serves (R1–R13,
+     `docs/core/system-map.md`).
+
+  Do not start a lemma that has no consumer on a path to a ledger goal or a registry claim. If the
+  theory lacks a property, add it to `semantics.md` and the registry (or propose it in the receipt)
+  in the slice that proves it. A receipt gives each landed theorem's placement, and a brief gives
+  each assigned obligation's.
 - Coverage of the Effect runtime is stated only in the block printed by
   `scripts/report-effect-runtime-coverage.sh`, after
   `scripts/check-effect-runtime-census.sh` passes.
