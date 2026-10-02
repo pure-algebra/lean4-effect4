@@ -841,4 +841,123 @@ theorem clause_mask (root : ProgramSource) (rootTy : EffTy) (flag : Bool) (body 
     · exact answer
     · exact hostStack_push (.restoreMask cert _) answer
 
+/-! ## Read-only store clauses (Concept 4)
+
+Helpers of `M6Ledger.step_loop` and `M6Ledger.step_deliver`, via `StoreClauseKeeps` and
+`evaluateRaw_keeps`/`evaluate_keeps`. These preserve the unchanged `ConfigTyped` judgment for
+four actual same-state store operations, including the real `[.drainDue]` queue prefix.
+The operation's returned value meets `storePost`; `TypedProg.store_inv` supplies the typed
+continuation. Existing frame and queue lemmas complete the configuration proof.
+This is the operation-clause handler proof pattern of Plotkin--Pretnar (2009, sections 2--5),
+applied here to the concrete evaluator. It is not the whole store family, scheduler progress,
+host adequacy, or backend correctness. Source-well-formedness and the existing queue/world
+hypotheses stay in `Evaluating`; no output-preservation premise is added.
+-/
+
+/-- DrainDue has no payload obligation, owner, token, registration tail or code read. -/
+theorem configTyped_cons_drainDue {root : ProgramSource} {rootTy : EffTy}
+    {w : World} {m : RState} {q : List RCmd} (typed : ConfigTyped root rootTy w m q) :
+    ConfigTyped root rootTy w m (.drainDue :: q) := by
+  refine ⟨typed.machine,
+    readCode_cons (fun _ _ h => nomatch h) (fun _ _ h => nomatch h) typed.code,
+    queueOk_cons ?_ typed.queue⟩
+  exact ⟨trivial, trivial, trivial, (fun _ h => nomatch h), trivial,
+    (fun _ h => nomatch h), (fun _ _ _ _ h => nomatch h),
+    (fun _ _ _ h => nomatch h), (fun _ _ h => nomatch h),
+    (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h),
+    (fun _ _ _ h => nomatch h)⟩
+
+/-- The actual successful-store queue: drain the due work before delivering the answer. -/
+theorem Evaluating.settle_answered_drain {root : ProgramSource} {rootTy : EffTy}
+    {w : World} {m : RState} {rest : List RCmd} {f : RFiber} {y y' : Bool}
+    (ev : Evaluating root rootTy w m rest f y) (fr : RSaved)
+    (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR ⟨m, { f with frame := fr }, y', .answered, [.drainDue]⟩) := by
+  obtain ⟨w', ord, typed⟩ := ev.settle_answered (y' := y') fr code
+  exact ⟨w', ord, configTyped_cons_drainDue typed⟩
+
+/-- Store inversion gives the same-world continuation without any fiber-control exclusions. -/
+theorem Evaluating.store_answer_typed {root : ProgramSource} {rootTy : EffTy}
+    {w : World} {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool}
+    (ev : Evaluating root rootTy w m rest f y) {op : SyncOp} {next : Val → RProgram}
+    (hc : f.frame.current = .vis (.inl op) next) (v : Val)
+    (post : ∀ cert, storePre root w op cert → storePost w op cert v) :
+    ∀ ty, w.Γ f.id = some ty →
+      CodeOk root w (m.update f) f.id ty { f.frame with current := next v } := by
+  intro ty declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.store_inv current
+  exact ⟨tin, typedNext w (leHost_refl w) v (post cert pre), stack,
+    ⟨prov.recorded, prov.deferred⟩⟩
+
+/-- Successful read-only store evaluation uses its exact answer and retains drainDue. -/
+theorem Evaluating.store_same {root : ProgramSource} {rootTy : EffTy}
+    {w : World} {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool}
+    (ev : Evaluating root rootTy w m rest f y) {op : SyncOp} {next : Val → RProgram}
+    (hc : f.frame.current = .vis (.inl op) next) (v : Val)
+    (step : syncOpStep op m.state = some (m.state, v))
+    (post : ∀ cert, storePre root w op cert → storePost w op cert v) :
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR (evaluateRawR (interpRAt root.program m.completedExits) m f y)) := by
+  simp only [evaluateRawR, hc, step]
+  exact ev.settle_answered_drain _ (ev.store_answer_typed hc v post)
+
+/-- The operation's existing certificate and precondition are available from current code. -/
+theorem Evaluating.store_pre {root : ProgramSource} {rootTy : EffTy}
+    {w : World} {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool}
+    (ev : Evaluating root rootTy w m rest f y) {op : SyncOp} {next : Val → RProgram}
+    (hc : f.frame.current = .vis (.inl op) next) : ∃ cert, storePre root w op cert := by
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, _, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, _⟩ := TypedProg.store_inv current
+  exact ⟨cert, pre⟩
+
+theorem clause_clockNow (root : ProgramSource) (rootTy : EffTy) :
+    StoreClauseKeeps root rootTy .clockNow := by
+  intro w m rest f y next ev hc
+  exact ev.store_same hc (Val.nat m.state.timers.now.toNat) rfl (fun _ _ => ⟨_, rfl⟩)
+
+theorem clause_refGet (root : ProgramSource) (rootTy : EffTy) (cell : RefKey) :
+    StoreClauseKeeps root rootTy (.refGet cell) := by
+  intro w m rest f y next ev hc
+  have store := storeTyped_of_typedState ev.typed.machine
+  have state : w.state = m.state := ev.typed.machine.wide.state
+  obtain ⟨cert, pre⟩ := ev.store_pre hc
+  obtain ⟨t, declared⟩ := pre
+  obtain ⟨a, ha⟩ := cell_readable store declared
+  have step : syncOpStep (.refGet cell) m.state = some (m.state, a) := by
+    rw [← state]
+    simp only [syncOpStep, refStep, refPeek, ha, Option.map_some]
+  exact ev.store_same hc a step
+    (fun _ _ => ⟨t, declared, store.values cell.index a ha t declared⟩)
+
+theorem clause_deferredIsDone (root : ProgramSource) (rootTy : EffTy) (key : DeferredKey) :
+    StoreClauseKeeps root rootTy (.deferredIsDone key) := by
+  intro w m rest f y next ev hc
+  have store := storeTyped_of_typedState ev.typed.machine
+  have state : w.state = m.state := ev.typed.machine.wide.state
+  obtain ⟨cert, pre⟩ := ev.store_pre hc
+  obtain ⟨c, hc0⟩ := promise_readable store pre
+  have step : syncOpStep (.deferredIsDone key) m.state =
+      some (m.state, Val.bool c.completion.isSome) := by
+    rw [← state]
+    simp only [syncOpStep, DeferredStore.isDone, DeferredStore.cellAt, hc0, Option.map_some]
+  exact ev.store_same hc (Val.bool c.completion.isSome) step (fun _ _ => ⟨_, rfl⟩)
+
+theorem clause_deferredPoll (root : ProgramSource) (rootTy : EffTy) (key : DeferredKey) :
+    StoreClauseKeeps root rootTy (.deferredPoll key) := by
+  intro w m rest f y next ev hc
+  have store := storeTyped_of_typedState ev.typed.machine
+  have state : w.state = m.state := ev.typed.machine.wide.state
+  obtain ⟨cert, pre⟩ := ev.store_pre hc
+  obtain ⟨c, hc0⟩ := promise_readable store pre
+  have step : syncOpStep (.deferredPoll key) m.state =
+      some (m.state, Val.bool c.completion.isSome) := by
+    rw [← state]
+    simp only [syncOpStep, DeferredStore.poll, DeferredStore.cellAt, hc0, Option.map_some]
+  exact ev.store_same hc (Val.bool c.completion.isSome) step (fun _ _ => ⟨_, rfl⟩)
+
 end Effect4.Program.Typed
