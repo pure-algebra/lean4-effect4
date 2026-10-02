@@ -1038,8 +1038,8 @@ the context, no scope handling of its own. census: layer.from-build-unsafe -/
 theorem compileLayer_succeed (key : ServiceKey) (value : Lit) (q : Point) (m : MemoMapId)
     (scope : Nat) (v : Val) (h : Lit.toVal value = some v) :
     compileLayer (.succeed key value) q m scope =
-      Prim.success (Env.encode (Env.Context.empty.addV key v)) := by
-  simp [compileLayer, h]
+      Prim.success (builtContext (Env.Context.empty.addV key v)) := by
+  simp only [compileLayer, h]
 
 /-- `fromBuild` (`:333-345`): a child of the caller's scope forked first, the rest named.
 census: layer.from-build-child-scope -/
@@ -1141,10 +1141,12 @@ theorem regionCode_buildAdding (q : Point) (m : MemoMapId) (scope : Nat) :
 theorem regionCode_construct (q : Point) (key : Option ServiceKey) :
     regionCode root (.construct q key) = Prim.onSuccess (resolve root q) (.bindService key) := by aesop
 
-theorem addCurrentMemoMapK_context (m : MemoMapId) (ctx : Env.Ctx) :
-    addCurrentMemoMapK m (Env.encode ctx) =
-      Prim.success (Env.encode (ctx.addV Env.currentMemoMapKey (Val.memoMap m))) := by
-  simp [addCurrentMemoMapK, Env.decode_encode]
+/-- `Context.add(CurrentMemoMap, memoMap)` on a built context, read back with the fiber
+context's reader (decisions row 176 (b)). -/
+theorem addCurrentMemoMapK_context (m : MemoMapId) (ctx : Ctx) :
+    addCurrentMemoMapK m (Val.context ctx) =
+      Prim.success (builtContext (ctx.services.addV Env.currentMemoMapKey (Val.memoMap m))) := by
+  simp only [addCurrentMemoMapK, Val.context?_context]
 
 /-- `buildWithScope` on the fiber context: the memo map is still forked or created from it
 (`:974-979`). census: layer.build-with-scope-still-forks-memo -/
@@ -1171,24 +1173,24 @@ theorem serviceLookupK_missing (key : ServiceKey) (ctx : Ctx) (h : ctx.services.
 /-- `provideWith` on the dependency's context: the dependent's build under `provideContext`, then
 the combiner (`Layer.ts:1920-1923`). census: layer.provide-dependency-first -/
 theorem provideThenK_context (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode)
-    (ctx : Env.Ctx) :
-    provideThenK q m scope mode (Env.encode ctx) =
+    (ctx : Ctx) :
+    provideThenK q m scope mode (Val.context ctx) =
       Prim.onSuccess
-        (updateContextAt (Env.ContextUpdate.provide ctx) (Region.build (q.child 0) m scope))
-        (.combineWith mode ctx) := by
-  simp [provideThenK, Env.decode_encode]
+        (updateContextAt (Env.ContextUpdate.provide ctx.services) (Region.build (q.child 0) m scope))
+        (.combineWith mode ctx.services) := by
+  simp only [provideThenK, Val.context?_context]
 
 /-- `provide`'s combiner is the identity: the dependency's services do not reach the caller
 (`:2348`). census: layer.provide-dependency-first -/
-theorem combineWithK_provide (that merged : Env.Ctx) :
-    combineWithK .provide that (Env.encode merged) = Prim.success (Env.encode merged) := by
-  simp [combineWithK, Env.decode_encode]
+theorem combineWithK_provide (that : Env.Ctx) (merged : Ctx) :
+    combineWithK .provide that (Val.context merged) = Prim.success (Val.context merged) := by
+  simp only [combineWithK, Val.context?_context]
 
 /-- `provideMerge`'s combiner is `Context.merge(that, self)` (`:2800`). -/
-theorem combineWithK_provideMerge (that merged : Env.Ctx) :
-    combineWithK .provideMerge that (Env.encode merged) =
-      Prim.success (Env.encode (that.merge merged)) := by
-  simp [combineWithK, Env.decode_encode]
+theorem combineWithK_provideMerge (that : Env.Ctx) (merged : Ctx) :
+    combineWithK .provideMerge that (Val.context merged) =
+      Prim.success (builtContext (that.merge merged.services)) := by
+  simp only [combineWithK, Val.context?_context]
 
 /-- `updateContext` on the previous context (`internal/effect.ts:2088-2095`): the body as is when
 the map is the same object, else `setContext(next)` and the restoring frame.
@@ -1203,28 +1205,30 @@ theorem updateThenK_context (u : Env.ContextUpdate) (body : Region) (prev : Ctx)
   simp [updateThenK, Val.context?_context]
 
 theorem bindServiceK_some (key : ServiceKey) (v : Val) :
-    bindServiceK (some key) v = Prim.success (Env.encode (Env.Context.empty.addV key v)) := by aesop
+    bindServiceK (some key) v = Prim.success (builtContext (Env.Context.empty.addV key v)) := rfl
 
 theorem bindServiceK_none (v : Val) :
-    bindServiceK none v = Prim.success (Env.encode Env.Context.empty) := by aesop
+    bindServiceK none v = Prim.success (builtContext Env.Context.empty) := rfl
 
 theorem exitOfVal_reifyExitVal (e : ExitV) : exitOfVal (reifyExitVal e) = some e := by
   rw [reifyExitVal_eq_exitImage]
   exact exitImage.ofVal_toVal e
 
 theorem contextsOfList_contexts :
-    ∀ ctxs : List Env.Ctx,
-      contextsOfList (ctxs.map fun c => reifyExitVal (Exit.success (Env.encode c))) = some ctxs
+    ∀ ctxs : List Ctx,
+      contextsOfList (ctxs.map fun c => reifyExitVal (Exit.success (Val.context c))) =
+        some (ctxs.map Ctx.services)
   | [] => rfl
   | c :: rest => by
-    simp [contextsOfList, exitOfVal_reifyExitVal, Env.decode_encode, contextsOfList_contexts rest]
+    simp only [List.map_cons, contextsOfList, exitOfVal_reifyExitVal, Val.context?_context,
+      contextsOfList_contexts rest]
 
 /-- `Context.mergeAll` over the awaited builds' contexts (`Layer.ts:1600`).
 census: layer.merge-parallel-scopes -/
-theorem mergeContextsK_contexts (ctxs : List Env.Ctx) :
-    mergeContextsK (exitsVal (ctxs.map fun c => Exit.success (Env.encode c))) =
-      Prim.success (Env.encode (Env.Context.mergeAll ctxs)) := by
-  simp [mergeContextsK, contextsOf, exitsVal, List.map_map, Function.comp_def,
+theorem mergeContextsK_contexts (ctxs : List Ctx) :
+    mergeContextsK (exitsVal (ctxs.map fun c => Exit.success (Val.context c))) =
+      Prim.success (builtContext (Env.Context.mergeAll (ctxs.map Ctx.services))) := by
+  simp only [mergeContextsK, contextsOf, exitsVal, List.map_map, Function.comp_def,
     contextsOfList_contexts]
 
 /-- `scopedWith`'s frame at a `provideLayer` node (`internal/layer.ts:8-22`): the build into the
@@ -1248,17 +1252,17 @@ theorem provideLayerWithK_at (p : Point) (scope : Nat) (l : LayerTerm NativeOp) 
 
 /-- The body under `provideContext(built)` (`internal/layer.ts:20`).
 census: layer.provide-effect-scope -/
-theorem provideLayerBodyK_context (p : Point) (built : Env.Ctx)
+theorem provideLayerBodyK_context (p : Point) (built : Ctx)
     (h : (resolve root (p.child 1)).asExit? = none) :
-    provideLayerBodyK root p (Env.encode built) =
-      updateContextAt (Env.ContextUpdate.provide built) (Region.program (p.child 1)) := by
-  simp [provideLayerBodyK, Env.decode_encode, h]
+    provideLayerBodyK root p (Val.context built) =
+      updateContextAt (Env.ContextUpdate.provide built.services) (Region.program (p.child 1)) := by
+  simp only [provideLayerBodyK, Val.context?_context, h]
 
 /-- `provideContext` of an exit is that exit (`internal/effect.ts:2196`). -/
-theorem provideLayerBodyK_exit (p : Point) (built : Env.Ctx) (exit : ExitV)
+theorem provideLayerBodyK_exit (p : Point) (built : Ctx) (exit : ExitV)
     (h : (resolve root (p.child 1)).asExit? = some exit) :
-    provideLayerBodyK root p (Env.encode built) = Prim.ofExit exit := by
-  simp [provideLayerBodyK, Env.decode_encode, h]
+    provideLayerBodyK root p (Val.context built) = Prim.ofExit exit := by
+  simp only [provideLayerBodyK, Val.context?_context, h]
 
 /-- The scope `scopedWith` made closes with the frame's exit (`internal/effect.ts:3967`).
 census: layer.provide-effect-scope -/

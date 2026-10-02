@@ -315,31 +315,35 @@ def scopeAddR (scope : Nat) (fin : FinName) : RProgram :=
       | none => .pure badShapeExit)
 
 /-- `Context.make(key, value)` (`Layer.ts:1440`), or `Context.empty()` (`:1515`), over a leaf's
-answer. -/
+answer: a built context, the fiber-context image (`builtContext`, decisions row 176 (b)). -/
 def bindServiceR (key : Option ServiceKey) (v : Val) : RProgram :=
   match key with
-  | some key => .pure (.success (Env.encode (Env.Context.empty.addV key v)))
-  | none => .pure (.success (Env.encode Env.Context.empty))
+  | some key => .pure (.success (builtContext (Env.Context.empty.addV key v)))
+  | none => .pure (.success (builtContext Env.Context.empty))
 
-/-- `map(_, Context.add(CurrentMemoMap, memoMap))` (`Layer.ts:762`) on the built context. -/
+/-- `map(_, Context.add(CurrentMemoMap, memoMap))` (`Layer.ts:762`) on the built context, read back
+with the fiber context's reader (`Val.context?`, row 176 (b)). -/
 def addCurrentMemoMapR (m : MemoMapId) (v : Val) : RProgram :=
-  match Env.decode v with
-  | some ctx => .pure (.success (Env.encode (ctx.addV Env.currentMemoMapKey (Val.memoMap m))))
+  match Val.context? v with
+  | some ctx =>
+    .pure (.success (builtContext (ctx.services.addV Env.currentMemoMapKey (Val.memoMap m))))
   | none => .pure badShapeExit
 
-/-- `f(merged, context)` (`Layer.ts:1923`) on the dependent's context. -/
+/-- `f(merged, context)` (`Layer.ts:1923`) on the dependent's context: `provide`'s identity
+answers the context as read (the value itself, `Val.context?` being exact), `provideMerge`'s
+`Context.merge(that, self)` a new built context. -/
 def combineWithR (mode : CombineMode) (that : Env.Ctx) (v : Val) : RProgram :=
-  match Env.decode v with
+  match Val.context? v with
   | some merged =>
     match mode with
-    | .provide => .pure (.success (Env.encode merged))
-    | .provideMerge => .pure (.success (Env.encode (that.merge merged)))
+    | .provide => .pure (.success (Val.context merged))
+    | .provideMerge => .pure (.success (builtContext (that.merge merged.services)))
   | none => .pure badShapeExit
 
 /-- `Context.mergeAll(...contexts)` (`Layer.ts:1600`) over the awaited exits. -/
 def mergeContextsR (v : Val) : RProgram :=
   match contextsOf v with
-  | some ctxs => .pure (.success (Env.encode (Env.Context.mergeAll ctxs)))
+  | some ctxs => .pure (.success (builtContext (Env.Context.mergeAll ctxs)))
   | none =>
     match reasonsOfVal v with
     | [] => .pure badShapeExit
@@ -393,10 +397,10 @@ def memoizeR (q : Point) (m : MemoMapId) (scope : Nat) (construction : Nat → R
 `provideContext(context)`, the combiner. -/
 def provideWithR (dependency dependent : RProgram) (mode : CombineMode) : RProgram :=
   (guardR .onSuccess dependency).bind (seqR fun v =>
-    match Env.decode v with
+    match Val.context? v with
     | some ctx =>
-      (guardR .onSuccess (updateContextR (.provide ctx) dependent)).bind (seqR fun w =>
-        combineWithR mode ctx w)
+      (guardR .onSuccess (updateContextR (.provide ctx.services) dependent)).bind (seqR fun w =>
+        combineWithR mode ctx.services w)
     | none => .pure badShapeExit)
 
 /-- One sibling's build forked as an immediate daemon (`Layer.ts:1597`; `forEach`'s
@@ -545,12 +549,12 @@ def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt :
                     | some id => buildWithMemoMapR (fun m => buildAt p.layerBuild m scope) id
                     | none => .pure badShapeExit)
               | none => .pure badShapeExit))).bind (seqR fun built =>
-          match Env.decode built with
+          match Val.context? built with
           | some ctx =>
             -- `provideContext` of an exit is that exit (`internal/effect.ts:2196`)
             match bodyExit (p.child 1) with
             | some exit => .pure exit
-            | none => updateContextR (.provide ctx) (bodyAt (p.child 1))
+            | none => updateContextR (.provide ctx.services) (bodyAt (p.child 1))
           | none => .pure badShapeExit))
         (fun ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure)
     | none => .pure badShapeExit)
@@ -697,7 +701,7 @@ def denoteLayerBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
     LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram
   | .succeed key value, _, _, _ =>
     match Lit.toVal value with
-    | some v => .pure (.success (Env.encode (Env.Context.empty.addV key v)))
+    | some v => .pure (.success (builtContext (Env.Context.empty.addV key v)))
     | none => .pure badShapeExit
   | .fresh inner, q, _, scope =>
     (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun v =>
@@ -743,7 +747,7 @@ never an error). Structural in the term, which is the descent the budget cannot 
 def denoteLayerZero (root : NativeEff) : LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram
   | .succeed key value, _, _, _ =>
     match Lit.toVal value with
-    | some v => .pure (.success (Env.encode (Env.Context.empty.addV key v)))
+    | some v => .pure (.success (builtContext (Env.Context.empty.addV key v)))
     | none => .pure badShapeExit
   | .fresh inner, q, _, scope =>
     (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun v =>
@@ -1104,7 +1108,7 @@ theorem denoteLayer_succeed (key : ServiceKey) (value : Lit) (q : Point) (m : Me
     (scope : Nat) :
     denoteLayer root (.succeed key value) q m scope =
       (match Lit.toVal value with
-       | some v => .pure (.success (Env.encode (Env.Context.empty.addV key v)))
+       | some v => .pure (.success (builtContext (Env.Context.empty.addV key v)))
        | none => .pure badShapeExit) := by
   layerBudget q
 
