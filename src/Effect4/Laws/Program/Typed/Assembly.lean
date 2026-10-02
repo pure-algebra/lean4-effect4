@@ -1085,6 +1085,10 @@ def TermFits (table : RowTable) : Prop :=
     termTy (nativeSignature table) env t = some ty → EnvTyped w env vals →
       evalTerm vals t = some v → Fits w v ty
 
+/-- Row 148 (types TY-07): term soundness at `Fits`, by the native evaluation adapter. -/
+theorem termFits (table : RowTable) : TermFits table :=
+  fun _ _ _ _ _ _ hty henv hev => evalTerm_fits_native table henv hty hev
+
 /-! ## M5 from the fundamental property
 
 The loaded machine has one fiber, not running, whose code is the root's denotation; every other
@@ -1850,10 +1854,11 @@ end Effect4.Program.Typed
 
 #obligation_proved Effect4.Program.Typed.M3bAssembly.capture_lookup :=
   @Effect4.Program.Typed.capture_lookup
+#obligation_proved Effect4.Program.Typed.M3bAssembly.evalTerm_fits :=
+  @Effect4.Program.Typed.termFits
 #proof_wanted Effect4.Program.Typed.M3bAssembly.typedState_load
 #proof_wanted Effect4.Program.Typed.M3bAssembly.denoteR_typed
-#proof_wanted Effect4.Program.Typed.M3bAssembly.evalTerm_fits
-#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 3
+#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 2
   using aesop (rule_sets := [Effect4.TypedState])
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
