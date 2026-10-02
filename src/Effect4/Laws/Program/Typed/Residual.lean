@@ -31,24 +31,6 @@ def StoreCert : SyncOp → Type
   | .deferredMake | .memoBuild _ _ => Ty × Ty
   | _ => PUnit
 
-/-- **A finalizer the scope registration admits** (decisions row 151 (a″)): what makes its program
-typed at rc.112's finalizer type `⟨unknown, never⟩` (`internal/effect.ts:3849`) at every later
-world, read by name, since the pre cannot mention the program judgment it is a premise of. A
-foreign finalizer's capture is typed (`CaptureTyped`: what the checker gives an
-`acquireRelease`, whose release is declared `Effect<unknown, never, R2>`, `:3973`); a `release`
-does not fail (a failing one answers a typed failure, which no `never` error column admits); a
-finalizer that closes or detaches a scope names a present one. Every other name is typed by its
-program alone. The bridge to the typing is `finalizerTyped_of_admitted` (`Typed/Assembly.lean`). -/
-def FinalizerAdmitted (root : ProgramSource) (w : World) : FinName → Prop
-  | .foreign c => CaptureTyped root w c
-  | .release _ fails => fails = false
-  | .closeChildScope scope | .closeChildOnFailure scope => ScopeLive w scope
-  | .detachFromParent parent _ => ScopeLive w parent
-  | .interruptFiber _ _ | .awaitNewChildren _ | .parkThen _ | .memoEntry _ _ => True
-  -- `memoMapBuild`'s `onExit` (`Layer.ts:414-417`), never a scope's finalizer: its exit is the
-  -- construction's, which `memoComplete`'s pre types at the layer's columns (decisions row 187)
-  | .memoDone _ _ => False
-
 /-- What each store row demands of its request (decisions row 136 for `refModify`,
 `refModifySome` and the scope rows). -/
 def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert op) : Prop :=
@@ -731,17 +713,6 @@ theorem layerPointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Poin
   obtain ⟨fty, hfty, hex⟩ := hview q hq
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
-theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty : EffTy}
-    (h : BodyTyped src w b ty) : BodyTyped src w' b ty := by
-  cases h with
-  | at_ p ty h => exact .at_ p ty (pointTyped_mono ord h)
-  | fin name ex ty hex => exact .fin name ex ty (strongExit_mono _ _ _ _ ord hex)
-  | raceCleanup race => exact .raceCleanup race
-  | acquireIn p ctx ty h => exact .acquireIn p ctx ty (pointTyped_mono ord h)
-  | release p prev ty h => exact .release p prev ty (pointTyped_mono ord h)
-  | layerBuild p m scope lt ty h hty =>
-    exact .layerBuild p m scope lt ty (layerPointTyped_mono ord h) hty
-
 /-- A finalizer's admission is upward closed (decisions row 151 (a″)): a capture's
 environment and services by membership's transport, a scope's presence by scope persistence. -/
 theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin : FinName)
@@ -757,6 +728,23 @@ theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin :
   | release _ _ => exact h
   | closeChildScope _ | closeChildOnFailure _ | detachFromParent _ _ => exact scopeLive_mono ord.1 h
   | interruptFiber _ _ | awaitNewChildren _ | parkThen _ | memoEntry _ _ | memoDone _ _ => trivial
+
+theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty : EffTy}
+    (h : BodyTyped src w b ty) : BodyTyped src w' b ty := by
+  have services : ∀ {ctx : Ctx}, ServicesFit w ctx.services → ServicesFit w' ctx.services :=
+    fun h => servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 (fun _ hs => scopeLive_mono ord.1 hs)
+      (serviceTy_of_le ord.1) h
+  cases h with
+  | at_ p ty h => exact .at_ p ty (pointTyped_mono ord h)
+  | fin name ex h hex =>
+    exact .fin name ex (finalizerAdmitted_mono src ord name h) (fitsExit_mono ord hex)
+  | raceCleanup race => exact .raceCleanup race
+  | acquireIn p ctx ty h node hsvc =>
+    exact .acquireIn p ctx ty (pointTyped_mono ord h) node (services hsvc)
+  | release p prev ty h hsvc => exact .release p prev ty (pointTyped_mono ord h) (services hsvc)
+  | layerBuild p m scope lt h live =>
+    exact .layerBuild p m scope lt (layerPointTyped_mono ord h) (scopeLive_mono ord.1 live)
+
 
 /-- Every store row's demand is upward closed (all 31 rows). -/
 theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
@@ -961,20 +949,6 @@ theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
   · rw [hprog]
     exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
 
-theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
-    (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
-  cases h with
-  | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-  | fin name ex ty hex => exact .fin name ex ty hex
-  | raceCleanup race => exact .raceCleanup race
-  | acquireIn p ctx ty hp =>
-    exact .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-  | release p prev ty hp =>
-    exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-  | layerBuild p m scope lt ty hp hty =>
-    exact .layerBuild p m scope lt ty
-      (layerPointTyped_rows_append src src' t' hprog htab hsvc hp) hty
-
 /-- A capture typed under the shorter source is typed under the longer one: its node is the
 same program's, and the checker's verdicts extend along an appended row table. -/
 theorem captureTyped_rows_append {w : World} {c : Capture}
@@ -987,6 +961,28 @@ theorem captureTyped_rows_append {w : World} {c : Capture}
     exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
   · rw [hprog]
     exact check_ext (signature_rows_append src src' t' htab hsvc) hacq
+
+theorem finalizerAdmitted_rows_append {w : World} {fin : FinName}
+    (h : FinalizerAdmitted src w fin) : FinalizerAdmitted src' w fin := by
+  cases fin with
+  | foreign c => exact captureTyped_rows_append src src' t' hprog htab hsvc h
+  | _ => exact h
+
+theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
+    (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
+  cases h with
+  | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | fin name ex hf hex =>
+    exact .fin name ex (finalizerAdmitted_rows_append src src' t' hprog htab hsvc hf) hex
+  | raceCleanup race => exact .raceCleanup race
+  | acquireIn p ctx ty hp node services =>
+    refine .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp) ?_ services
+    rw [hprog]
+    exact node
+  | release p prev ty hp services =>
+    exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp) services
+  | layerBuild p m scope lt hp live =>
+    exact .layerBuild p m scope lt (layerPointTyped_rows_append src src' t' hprog htab hsvc hp) live
 
 theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     (h : storePre src w op cert) : storePre src' w op cert := by
@@ -1013,10 +1009,7 @@ theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     · rw [hprog]
       exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
   | scopeAdd scope fin =>
-    refine ⟨h.1, ?_⟩
-    cases fin with
-    | foreign c => exact captureTyped_rows_append src src' t' hprog htab hsvc h.2
-    | _ => exact h.2
+    exact ⟨h.1, finalizerAdmitted_rows_append src src' t' hprog htab hsvc h.2⟩
   | _ => exact h
 
 omit hprog hsvc in

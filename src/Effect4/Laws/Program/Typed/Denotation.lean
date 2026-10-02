@@ -1213,19 +1213,21 @@ theorem interruptible_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
     (fun _ _ _ post => .pure post)
 
 /-- **`acquireRelease`**: the context read (`seqGuard_typed`), then the masked acquire at the
-point itself (`Body.acquireIn`), whose row is the node's own type. -/
+point itself (`Body.acquireIn`), whose row is the node's own type; the body names the node and
+the context read, whose services fit (`fits_context_inv`). -/
 theorem acquireRelease_arm {a r : NativeEff} (hfuel : p.fuel = f + 1)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.acquireRelease a r)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.acquireRelease a r) p) := by
   rw [denoteR_acquireRelease _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' o v hv => ?_)
-  obtain ⟨ctx, hctx, _⟩ := fits_context_inv hv
+  obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hv
   show TypedProg root w' ty (match Val.context? v with
     | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
     | none => .pure badShapeExit)
   rw [hctx]
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) ty (BodyTyped.acquireIn _ _ _ (pointTyped_mono o hpt))
+    (fun _ _ _ h => nomatch h) ty (BodyTyped.acquireIn _ _ _ (pointTyped_mono o hpt) ⟨a, r, hat⟩ hsvc)
     (fun _ _ _ post => .pure post)
 
 end ScopedArms3
@@ -3065,7 +3067,7 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | awaitFiber t mode => exact awaitFiber_arm hpos hat hqt
       | withFiber a => exact withFiber_arm hpos hat hqt
       | «scoped» b => exact scoped_arm hq hat hqt
-      | acquireRelease a r => exact acquireRelease_arm hq hqt
+      | acquireRelease a r => exact acquireRelease_arm hq hat hqt
       | provideLayer l i b => exact hlayer hwf f ih w htie q ty l i b hq hat hqt
       | service key => exact service_arm hpos htie hat hqt
       | provideService key value b => exact provideService_arm hq hat hqt htie (hch b 0 rfl)

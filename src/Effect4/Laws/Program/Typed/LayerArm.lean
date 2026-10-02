@@ -617,15 +617,14 @@ theorem mergeContexts_typed {w : World} {v : Val} {e : Ty} {T : EffTy}
     | interrupt _ _ => intro _; trivial
 
 /-- One sibling's build forked as an immediate daemon (`Layer.ts:1597`): the fork's body is the
-build at the sibling's admitted layer point (`BodyTyped.layerBuild`, decisions row 186 (a)), its
-fiber declared at the build's types. -/
+build at the sibling's admitted layer point into a present scope (`BodyTyped.layerBuild`, decisions
+row 186 (a)), its fiber declared at the build's types. -/
 theorem forkLayer_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt : LayerTy}
-    (hpt : LayerPointTyped root w q lt) :
+    (hpt : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) :
     TypedProg root w ⟨.fiberOf (.handle Ty.contextTarget) lt.error, .never, Env.Requirement.empty⟩
       (forkLayerR q m scope) :=
   TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) (buildTy lt)
-    (BodyTyped.layerBuild q m scope lt (buildTy lt) hpt ⟨rfl, Ty.sub_refl _⟩)
+    (fun _ _ _ h => nomatch h) (buildTy lt) (BodyTyped.layerBuild q m scope lt hpt hlive)
     (fun w' _ ans post => by
       obtain ⟨id, rfl, hΓ⟩ := post
       exact .pure (strongExit_success w' _ _ ⟨buildTy lt, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩))
@@ -648,9 +647,9 @@ theorem mergeFork_typed {w : World} {q : Point} {m : MemoMapId} {parent : Nat} {
     (TypedProg.store (op := .scopeFork parent .sequential) (cert := ()) hlive
       (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
     (subN_never _) (fun w1 o1 v hv => ?_)
-  obtain ⟨c0, rfl, _⟩ := fits_scope_inv hv
+  obtain ⟨c0, rfl, hc0⟩ := fits_scope_inv hv
   simp only [seqR, Val.scope?_scopeHandle]
-  refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 ha)) (subN_never _)
+  refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 ha) hc0) (subN_never _)
     (fun w2 o2 f0 hf0 => ?_)
   obtain ⟨i0, rfl, hd0⟩ := fiber_of_fits hf0
   simp only [seqR]
@@ -662,10 +661,10 @@ theorem mergeFork_typed {w : World} {q : Point} {m : MemoMapId} {parent : Nat} {
       (scopeLive_mono o12.1 hlive)
       (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
     (subN_never _) (fun w3 o3 u hu => ?_)
-  obtain ⟨c1, rfl, _⟩ := fits_scope_inv hu
+  obtain ⟨c1, rfl, hc1⟩ := fits_scope_inv hu
   simp only [seqR, Val.scope?_scopeHandle]
   have o13 := leHost_trans _ _ _ o12 o3
-  refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o13 hb)) (subN_never _)
+  refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o13 hb) hc1) (subN_never _)
     (fun w4 o4 f1 hf1 => ?_)
   obtain ⟨i1, rfl, hd1⟩ := fiber_of_fits hf1
   simp only [seqR]
@@ -1137,9 +1136,9 @@ theorem mergeAllFork_typed {q : Point} {m : MemoMapId} {parent : Nat} {E : Ty} :
       (TypedProg.store (op := .scopeFork parent .sequential) (cert := ()) hlive
         (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
       (subN_never _) (fun w1 o1 v hv => ?_)
-    obtain ⟨c, rfl, _⟩ := fits_scope_inv hv
+    obtain ⟨c, rfl, hc⟩ := fits_scope_inv hv
     simp only [seqR, Val.scope?_scopeHandle]
-    refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 hpti)) (subN_never _)
+    refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 hpti) hc) (subN_never _)
       (fun w2 o2 f hf => ?_)
     obtain ⟨index, rfl, hd⟩ := fiber_of_fits hf
     simp only [seqR]

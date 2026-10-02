@@ -144,7 +144,7 @@ def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : 
 under an environment its values fit, extended by the acquired value, and its context's
 services are typed. The checker reads the node through the expansion's rounds, as `PointTyped`
 does (decisions row 153 (b)). Here since decisions row 151 (a″): the scope registration's pre
-reads it (`FinalizerAdmitted`, `Typed/Residual.lean`), as the generated bundle's `CaptureOk` does
+reads it (`FinalizerAdmitted`, `Typed/Admission.lean`), as the generated bundle's `CaptureOk` does
 (`preds`, `Typed/Assembly.lean`). -/
 def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
   ∃ (acquire release : NativeEff) (env : List Ty) (t a : EffTy),
@@ -167,27 +167,60 @@ def LayerPointTyped (src : ProgramSource) (w : World) (point : Point) (lt : Laye
     point.env = [] ∧
     ∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2
 
-/-- The types a layer's build runs at: it answers a built context, the fiber-context image
-(`Ty.contextTarget`, decisions row 176 (b)), and fails at the layer's checked error type or
-above it. -/
-def LayerBuildTy (lt : LayerTy) (ty : EffTy) : Prop :=
-  ty.answer = .handle Ty.contextTarget ∧ lt.error.sub ty.error = true
+/-- **A finalizer the scope registration admits** (decisions row 151 (a″)): what makes its program
+typed at rc.112's finalizer type `⟨unknown, never⟩` (`internal/effect.ts:3849`) at every later
+world, read by name, since the pre cannot mention the program judgment it is a premise of. A
+foreign finalizer's capture is typed (`CaptureTyped`: what the checker gives an
+`acquireRelease`, whose release is declared `Effect<unknown, never, R2>`, `:3973`); a `release`
+does not fail (a failing one answers a typed failure, which no `never` error column admits); a
+finalizer that closes or detaches a scope names a present one. Every other name is typed by its
+program alone. The bridge to the typing is `finalizerTyped_of_admitted` (`Typed/Assembly.lean`).
+Read by the scope registration's pre (`storePre`, `Typed/Residual.lean`) and by a finalizer body's
+admission (`BodyTyped.fin`). -/
+def FinalizerAdmitted (root : ProgramSource) (w : World) : FinName → Prop
+  | .foreign c => CaptureTyped root w c
+  | .release _ fails => fails = false
+  | .closeChildScope scope | .closeChildOnFailure scope => ScopeLive w scope
+  | .detachFromParent parent _ => ScopeLive w parent
+  | .interruptFiber _ _ | .awaitNewChildren _ | .parkThen _ | .memoEntry _ _ => True
+  -- `memoMapBuild`'s `onExit` (`Layer.ts:414-417`), never a scope's finalizer: its exit is the
+  -- construction's, which `memoComplete`'s pre types at the layer's columns (decisions row 187)
+  | .memoDone _ _ => False
 
-/-- Admitted bodies covering all six `Body` constructors. -/
+/-- **Admitted bodies**, one arm per `Body` constructor, each what its program needs (`bodyR`,
+`Laws/Program/EvaluateR.lean`; the bridge is `bodyTyped_typed`, `Typed/Body.lean`): the pre of
+`mask` and `fork` (`fiberPre`, `Typed/Residual.lean`).
+
+- A body at a point is the point's admission (`PointTyped`).
+- A finalizer body is its admission by name (`FinalizerAdmitted`) at a closing exit that fits rc.112's
+  release parameter type `Exit<unknown, unknown>`, and runs at the finalizer type `⟨unknown, never⟩`
+  (`E4-TYPED-CE-036`: admitting it at any type its exit fits typed a program the finalizer never
+  runs; no producer of `Body.fin` exists in the tree).
+- `acquireRelease`'s masked half (`acquireInR`) names its node and a context whose services fit: the
+  release's registration reads both (`CaptureTyped`), and the acquire runs at the node's child 0.
+- A capture's release restores a context whose services fit (`setContext`'s pre).
+- A layer's build runs into a present scope (`layerBuild_typed` reads it, `Typed/LayerArm.lean`) at
+  the build's types: the built context at the layer's checked error (`buildTy`). -/
 inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
   | at_ (p : Point) (ty : EffTy) (h : PointTyped src w p ty) :
       BodyTyped src w (.at_ p) ty
-  | fin (name : FinName) (ex : ExitV) (ty : EffTy) (hex : ExitOk w ty ex) :
-      BodyTyped src w (.fin name ex) ty
+  | fin (name : FinName) (ex : ExitV) (h : FinalizerAdmitted src w name)
+      (hex : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex) :
+      BodyTyped src w (.fin name ex) ⟨.unknown, .never, Env.Requirement.empty⟩
   | raceCleanup (race : Nat) :
       BodyTyped src w (.raceCleanup race) (EffTy.pure .unit)
-  | acquireIn (p : Point) (ctx : Ctx) (ty : EffTy) (h : PointTyped src w p ty) :
+  | acquireIn (p : Point) (ctx : Ctx) (ty : EffTy) (h : PointTyped src w p ty)
+      (node : ∃ acquire release : NativeEff,
+        Node.at_ (.eff src.program) p.path = some (.eff (.acquireRelease acquire release)))
+      (services : ServicesFit w ctx.services) :
       BodyTyped src w (.acquireIn p ctx) ty
-  | release (p : Point) (prev : Ctx) (ty : EffTy) (h : PointTyped src w p ty) :
+  | release (p : Point) (prev : Ctx) (ty : EffTy) (h : PointTyped src w p ty)
+      (services : ServicesFit w prev.services) :
       BodyTyped src w (.release p prev) ty
-  | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (lt : LayerTy) (ty : EffTy)
-      (h : LayerPointTyped src w p lt) (hty : LayerBuildTy lt ty) :
-      BodyTyped src w (.layerBuild p m scope) ty
+  | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (lt : LayerTy)
+      (h : LayerPointTyped src w p lt) (live : ScopeLive w scope) :
+      BodyTyped src w (.layerBuild p m scope)
+        ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩
 
 /-- Membership at the answer column gives the successful exit; its defect exclusion is vacuous. -/
 theorem strongExit_success (w : World) (ty : EffTy) (v : Val) (h : Fits w v ty.answer) :

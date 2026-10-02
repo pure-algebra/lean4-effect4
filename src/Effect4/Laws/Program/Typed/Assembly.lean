@@ -968,7 +968,7 @@ theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
 /-! ## Registered finalizers: from the registration pre to the scope store's typing
 
 Decisions row 151 (a″). The registration pre reads a finalizer's admission by name
-(`FinalizerAdmitted`, `Typed/Residual.lean`: the pre is a premise of the program judgment, so it
+(`FinalizerAdmitted`, `Typed/Admission.lean`: the pre is a premise of the program judgment, so it
 cannot mention it); the scope store's typing states the program's typing (`FinalizerTyped`,
 `Typed/Adequacy.lean`). The bridge is one theorem per finalizer name: the synthetic finalizers by
 their programs, the foreign one by its capture's typing. -/
@@ -1070,7 +1070,7 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
         (fun _ _ _ h => nomatch h) (.handle Ty.contextTarget) rfl
         fun _ _ _ post => TypedProg.pure ⟨post, trivial⟩
     · intro w2 o2 v hv
-      obtain ⟨previous, hprev, _⟩ := fits_context_inv hv
+      obtain ⟨previous, hprev, hprevious⟩ := fits_context_inv hv
       have o12 : w'.leHost w2 := leHost_trans _ _ _ o1 o2
       obtain ⟨_, _, _, _, _, _, _, _, _, hsvc⟩ := finalizerAdmitted_mono root o12 (.foreign c) hc
       show TypedProg root w2 _ (match Val.context? v with
@@ -1096,7 +1096,8 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
         obtain ⟨rty, hpt, hnever⟩ := capture_release root w4 c completed (reifyExitVal ex)
           (finalizerAdmitted_mono root o14 (.foreign c) hc) (fitsExit_mono o14 hex) hview
         exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-          (fun _ _ _ h => nomatch h) rty (.release _ _ rty hpt)
+          (fun _ _ _ h => nomatch h) rty
+          (.release _ _ rty hpt (servicesFit_mono (leHost_trans _ _ _ o3 o4) hprevious))
           fun _ _ _ post => TypedProg.pure (exitOk_finalizer hnever post)
 
 /-! ## The milestone propositions

@@ -138,6 +138,7 @@ import Effect4.Laws.Program.Typed.Stack
 import Effect4.Laws.Program.Typed.Assembly
 import Effect4.Laws.Program.Typed.HostWalk
 import Effect4.Laws.Program.Typed.LayerArm
+import Effect4.Laws.Program.Typed.Body
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Auto.AnswerGate
 import Effect4.Laws.Machine.Handshake
