@@ -32,7 +32,17 @@ The three tiers are:
 `make gen` runs every stale group in the producers' dependency order, which is the Makefile's
 `GEN_GROUPS` (the architecture map reads that list; this file does not restate it). Each group's
 marker depends on the previous one, so a regenerated upstream group re-cuts everything
-downstream of it. lcnf is the exception, and it is deliberate: it sits in the order between
+downstream of it. The semantics group reads no preceding group's output and has no chain
+prerequisite. It requires prepared artifacts for its named roots and drivers; its Lake
+roots are `Effect4.Laws.Program.Typed.Assembly` and `Test.Program.TypedProgBindRed`, covering
+the selected evidence and concept modules. Its freshness preflight refuses a stale or missing artifact and prints the narrow preparation
+command. It also compares the prepared project/package import artifacts with saved build hashes,
+checks that the report names only prepared roots, and stages generation until final validation
+succeeds. It never starts a build or installs host dependencies. Its run receipt records the checkout
+head, dirty state and policy hash under `.lake/`, outside the committed report bytes.
+Both semantics targets run on every invocation, so an imported source edit cannot skip
+the freshness preflight while its Lake trace remains unchanged.
+lcnf is another deliberate exception: it sits in the order between
 derived and eff, because eff cuts the engine's layout mirror from the api_engine.ml lcnf
 writes, but its marker is not a link of the chain, so `check-gen` — which runs inside `make
 check`, on every core change — does not reach a group whose engine cut is minutes. lcnf used
@@ -82,6 +92,7 @@ set still requires the typing-world instantiation; frame premises are not that p
 | host-protocol | `tools/Tools/HostProtocol.lean` (the `gen-host-protocol` recipe) | `Effect4.Api.HostProtocol` | `harness/truth/session/protocol.gen.ts`, `tape.schema.json` | `make check-host-protocol` | reproduced; tested |
 | schema-ts | `harness/schema-generation/Emit{Fixture,CoverageFixture,MultiFixture}.lean`, stdout redirected | `Effect4.Codegen.Schema`, the fixture declarations | the three `.generated.ts` beside them | `make check-schema-ts` | reproduced; tested |
 | census | `scripts/generate-effect-runtime-census.sh` (stdout) | the twelve vendored rc.112 sources it names | `generated/effect-runtime-census.tsv`, joined by `Test/Audit/RuntimeCoverage.lean` | `make check-census` | reproduced; proved where a row's witness theorem is joined |
+| semantics | `tools/Drivers/Semantics.lean` over `tools/Tools/Semantics.lean` (`make gen-semantics`) | `tools/Tools/SemanticsRegistry.lean` (concepts, claims, cuts, defaults, roots), the loaded roots and `semantics` tags, `ProofGraph` evidence, the counterexample register's IDs/statuses, the decisions register's rows/owners, `lean-toolchain` | `generated/semantics.json`, `generated/semantics.md`; `ts/eff/semantics.ts` | `make check-semantics`: two fresh runs equal each other and the maintained bytes; pinned tsgo 7 checks `ts/eff`; Bun decodes with excess keys refused and runs decoding controls; Lean runs refusal controls; removing CE-030 from a temporary register makes the real producer refuse without replacing existing output bytes. `check-gen` diffs without regenerating; `check-gen-full` regenerates | reproduced (bytes); tested (controls and decoding); proved only for each claim's reported statement and assumptions |
 | architecture | `tools/Tools/Architecture.lean` (`make gen-architecture`) | every `.lean` under `src/`, `tools/` and `Test/` (import headers through `Lean.Elab.parseImports`), the roots `Tools.Architecture.roots` loaded for declaration counts, the estates by file walk, this table, `lakefile.toml`, the role register `tools/Tools/ArchitectureRoles.lean` (checked for totality on every run) | `docs/core/architecture-map.html` | `make check-architecture` on demand; not in `make check`: the map is a report and changes whenever the tree does | reproduced |
 
 Retired 2026-09-13 (the scripts ledger): `generated/schema-structural-assurance.tsv`, a
