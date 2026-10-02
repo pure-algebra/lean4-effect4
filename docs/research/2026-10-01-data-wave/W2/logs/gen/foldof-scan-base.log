@@ -1,0 +1,12 @@
+$ cd /Users/pooks/Dev/lean4-effect4-seat-W2
+$ lake env lean -R Test/fixtures/generators -DwarningAsError=true -M6144 Test/fixtures/generators/GenFix/Record/FoldOfScan.lean
+# started 2026-10-01T21:44:06Z (LEAN_NUM_THREADS=1)
+Test/fixtures/generators/GenFix/Record/FoldOfScan.lean:19:0: error: AppBuilder for `mkAppM`, result contains metavariables
+  Prod.map Prod.fst
+Test/fixtures/generators/GenFix/Record/FoldOfScan.lean:20:0: error: AppBuilder for `mkAppM`, result contains metavariables
+  Prod.map Prod.fst
+Test/fixtures/generators/GenFix/Record/FoldOfScan.lean:21:0: error: AppBuilder for `mkAppM`, result contains metavariables
+  Prod.map Prod.fst
+Test/fixtures/generators/GenFix/Record/FoldOfScan.lean:22:0: error: fold_of: GenFix.Record.Ty.renderFields takes no value of the family [GenFix.Record.Ty]
+Test/fixtures/generators/GenFix/Record/FoldOfScan.lean:23:0: error: fold_of: GenFix.Record.Ty.closedFields takes no value of the family [GenFix.Record.Ty]
+# exit=1 seconds=2

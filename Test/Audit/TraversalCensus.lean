@@ -53,6 +53,7 @@ info: #traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under T
   structural	Test.Audit.TraversalFixture:77	Test.Audit.TraversalFixture.fuelDepth	(Ty)
   wf	Test.Audit.TraversalFixture:36	Test.Audit.TraversalFixture.wfPair	(Ty)
   wf	Test.Audit.TraversalFixture:45	Test.Audit.TraversalFixture.fuelWalk	(Ty)
+#traversal_census done: 9 rows; 1 modules under Test.Audit.TraversalFixture scanned
 -/
 #guard_msgs in
 #traversal_census Effect4.Program.Ty under Test.Audit.TraversalFixture
@@ -91,6 +92,7 @@ info: #exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Te
   Test.Audit.ExhaustiveFixture.catchAllAbsent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllAbsent.match_1	discr 0	alts 20	catchAll false
   Test.Audit.ExhaustiveFixture.catchAllPresent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllPresent.match_1	discr 0	alts 4	catchAll true
   Test.Audit.ExhaustiveFixture.privateCatchAll [private]	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.privateCatchAll.match_1	discr 0	alts 2	catchAll true
+#exhaustive_gate done: 3 rows; 1 modules under Test.Audit.ExhaustiveFixture scanned
 -/
 #guard_msgs in
 #exhaustive_gate Effect4.Program.Ty under Test.Audit.ExhaustiveFixture

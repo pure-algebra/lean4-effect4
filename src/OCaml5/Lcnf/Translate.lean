@@ -610,6 +610,10 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
           else useAsList s!"{ci.name}.{fn}" c e
       rel := rel ++ [e]
       named := named ++ [(fieldName fn.toString, e)]
+  -- seat Q (2026-10-01): `Array.mk l` is `l` under the Array-as-list shim (`Types.lean:61`);
+  -- `List.zipIdxTR` builds one from `l.toArray`, and the record it rendered refused in ocamlopt.
+  if ci.name == ``Array.mk then
+    if let [l] := rel then return l
   if let some clock := Clock.constructor? ci.name rel then return clock
   else if let some native := Native.expression ci.name rel then return native
   else

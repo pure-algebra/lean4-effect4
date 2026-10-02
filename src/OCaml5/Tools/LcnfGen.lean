@@ -105,9 +105,33 @@ private def manifestRow (env : Environment) (mono : Conform.Lcnf.MonoIndex)
       ++ Conform.Lcnf.constructs.map (fun k => toString (census.get k))
       ++ [toString (hash d)])
 
+/-- The `--out` paths of the recipe's artefacts (`ocaml/gen/roots.json`), whose closure manifests
+are data in `GENERATED_PATHS` at `ocaml/gen/closure-<stem>.tsv` (decisions row 70); empty when the
+recipe is absent or unreadable, which sends every manifest beside its artefact. -/
+def recipeOuts : IO (List String) := do
+  let path : System.FilePath := "ocaml/gen/roots.json"
+  unless ← path.pathExists do return []
+  match Json.parse (← IO.FS.readFile path) with
+  | .error _ => return []
+  | .ok j =>
+    match j.getObjVal? "artefacts" with
+    | .ok (.arr rows) => return rows.toList.filterMap fun r => (r.getObjValAs? String "out").toOption
+    | _ => return []
+
+/-- Where a run writes its closure manifest: in `ocaml/gen/` for one of the recipe's four
+artefacts (row 70, all four in one folder, named after the artefact's stem), and beside `--out`
+for any other run, so a probe that redirects its output never writes into the tree (decisions
+row 174 (i); probe Q's patch wrote every manifest beside `--out`, which would have moved
+`api_engine.ml`'s from `ocaml/gen/` to `ocaml/engine/`). -/
+def manifestPathFor (out : String) (recipe : List String) : String :=
+  let stem := (System.FilePath.mk out).fileStem.getD "closure"
+  if recipe.contains out then s!"ocaml/gen/closure-{stem}.tsv"
+  else ((System.FilePath.mk out).parent.getD "." / s!"closure-{stem}.tsv").toString
+
 def main (argv : List String) : IO Unit := do
   initSearchPath (← findSysroot)
   let args := parseArgs argv {}
+  let recipe ← recipeOuts
   let ex : Externs ← match args.externs with
     | none => pure {}
     | some path => do
@@ -173,13 +197,13 @@ def main (argv : List String) : IO Unit := do
     -- declaration on a terminal nobody reads; the manifest is beside the artefact and inside
     -- GENERATED_PATHS, so a declaration entering or leaving the engine's closure, or a body
     -- whose shape changed, is a diff at review time. One file per artefact, all four in
-    -- `ocaml/gen/`, named after the artefact's own stem. It is BUILT here and WRITTEN with the
-    -- artefact, below every fatal check: a manifest beside an artefact the run never wrote
-    -- would be the drift it exists to catch.
+    -- `ocaml/gen/`, named after the artefact's own stem; a run whose `--out` is not one of the
+    -- recipe's writes its manifest beside its output (`manifestPathFor`). It is BUILT here and
+    -- WRITTEN with the artefact, below every fatal check: a manifest beside an artefact the run
+    -- never wrote would be the drift it exists to catch.
     let env ← getEnv
     let monoIndex := Conform.Lcnf.persistedMonoIndex env
-    let stem := (System.FilePath.mk args.out).fileStem.getD "closure"
-    let manifestPath := s!"ocaml/gen/closure-{stem}.tsv"
+    let manifestPath := manifestPathFor args.out recipe
     let manifestHeader := "\t".intercalate
       (["lean", "ocaml", "recursive"] ++ Conform.Lcnf.constructs ++ ["declHash"])
     let manifestRows ← closure.decls.mapM (manifestRow env monoIndex)

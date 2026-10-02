@@ -522,6 +522,29 @@ $(CHK)/tools: $(SELFTEST_SOURCES) | build
 	bash scripts/test-trust-boundaries.sh
 	@mkdir -p $(CHK) && touch $@
 
+# The conservativity check of an alphabet append (DI-47, decisions row 172; seat W2): goldens
+# byte-identical unless the baseline policy names them, tags and manifests append-only, every
+# verdict unchanged, every addition named, the generated diff recorded (C1-C5,
+# scripts/lib/conservativity.py). It judges committed files, so an append's producers and
+# `make corpus` run first. `make check-conservativity` runs its controls (ten mutations of HEAD and
+# six unresolvable revisions); `make check-conservativity BASE=<rev>` also judges the working tree
+# against BASE. Not `--strict` until the owner rules on promoting refOf, deferredOf, var and
+# unknown in the baseline policy (row 172).
+.PHONY: check-conservativity
+check-conservativity: ## the alphabet-append check: its controls; BASE=<rev> also judges the tree
+	bash scripts/check-conservativity.sh --self-test
+	@if [ -n "$(BASE)" ]; then bash scripts/check-conservativity.sh $(BASE); fi
+
+# The rule for the `Ty` append (decisions row 182; probe U §6.1; seat W2): no hand case analysis on
+# `Ty` outside the generated folds and Laws/Program/Typed/Membership.lean, read from the census and
+# the exhaustiveness gate, after the checker has established that it read a whole census (row 182
+# amended: an empty, truncated or error-carrying log refuses with exit 2). `make check-ty-rule`
+# runs its seven controls; `python3 scripts/check-ty-rule.py --tree` runs the census over the tree
+# and prints the distance from the rule. The gate turns on with the append (seat W4): not in `check`.
+.PHONY: check-ty-rule
+check-ty-rule: ## the Ty append's rule checker: its controls (the gate is the append's)
+	$(PY) scripts/check-ty-rule.py --self-test
+
 # ---------------------------------------------------------------------------- help
 
 .PHONY: help clean

@@ -1,0 +1,14 @@
+#traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Effect4: synthetic GREEN fixture for scripts/check-ty-rule.py (probe U's census-green.log with the instrument's completeness footer and a row in each expected module)
+  fold	Effect4.Program.Ty:95	Effect4.Program.Ty.renderRaw	(Ty)	Effect4.Program.tsAlg
+  generated	Effect4.Program.Fold:51	Effect4.Program.cata_ty	(Ty)
+  generated	Effect4.Program.TyFoldExtras:30	Effect4.Program.tyCtor	(Ty)
+  generated	Effect4.Laws.Program.TyView:56	Effect4.Program.Ty.sameHead	(Ty)
+  one-level	Effect4.Laws.Program.Typed.Membership:71	Effect4.Program.Typed.FlatFits	(Ty)
+  structural	Effect4.Laws.Program.Typed.Membership:96	Effect4.Program.Typed.Fits	(Ty)
+  delegates	Effect4.Program.Ty:755	Effect4.Program.Ty.render	(Ty)	→ [Effect4.Program.Ty.renderRaw, Effect4.Program.Ty.normalize]
+#traversal_census done: 7 rows; 412 modules under Effect4 scanned
+#exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Effect4: synthetic GREEN fixture
+  Effect4.Program.Typed.Fits	Effect4.Laws.Program.Typed.Membership	Effect4.Program.Typed.Fits.match_25	discr 0	alts 20	catchAll false
+  Effect4.Program.Ty.sameHead	Effect4.Laws.Program.TyView	Effect4.Program.Ty.sameHead.match_1	discr 0	alts 20	catchAll true
+  Effect4.Program.selectRefusal	Effect4.Program.Typing.Blame	Effect4.Program.selectRefusal.match_1	discr 1	alts 3	catchAll true
+#exhaustive_gate done: 3 rows; 412 modules under Effect4 scanned

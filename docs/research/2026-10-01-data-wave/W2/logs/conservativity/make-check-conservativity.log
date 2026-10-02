@@ -1,0 +1,130 @@
+$ cd /Users/pooks/Dev/lean4-effect4-seat-W2
+$ make check-conservativity BASE=74dae8d2
+# started 2026-10-01T22:19:43Z (LEAN_NUM_THREADS=unset)
+bash scripts/check-conservativity.sh --self-test
+--- control R1 a golden byte vector changes (expect REFUSE)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmpjw0kjn5g
+C1 goldens: REFUSE: 295 byte vectors at BASE; 1 changed, 0 removed, 0 changed or removed by policy name, 0 added
+  changed: ocaml/eff/goldens/p42.bin
+C2 alphabets: PASS: 21 tag families, 3 manifests; appended 0 constructors 
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: PASS: 0 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R1 a golden byte vector changes: REFUSE (ok, the clause C1)
+--- control R2 a frozen baseline file changes (expect REFUSE)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp9hm9b20n
+C1 goldens: REFUSE: 295 byte vectors at BASE; 1 changed, 0 removed, 0 changed or removed by policy name, 0 added
+  changed: Test/fixtures/baseline/66ee4657/eff_manifest.txt
+C2 alphabets: PASS: 21 tag families, 3 manifests; appended 0 constructors 
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: PASS: 0 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R2 a frozen baseline file changes: REFUSE (ok, the clause C1)
+--- control R3 an existing constructor moves in a generated manifest (expect REFUSE)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmpqyv30v58
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: REFUSE: 21 tag families, 3 manifests; appended 0 constructors 
+  ocaml/goldens/eff/manifest.txt: Ty position 1: BASE 'unit', CAND 'nat'
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: PASS: 0 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R3 an existing constructor moves in a generated manifest: REFUSE (ok, the clause C2)
+--- control R4 an existing constructor is re-typed (expect REFUSE)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmps62ufvq_
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: REFUSE: 21 tag families, 3 manifests; appended 0 constructors 
+  ocaml/eff/eff_manifest.txt: Effect4.Program.Ty position 15: BASE 'lit(string)', CAND 'lit(ty)'
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: PASS: 0 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R4 an existing constructor is re-typed: REFUSE (ok, the clause C2)
+--- control R5 a new constructor reuses a tag (expect REFUSE)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmpyhvkzr86
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: REFUSE: 21 tag families, 3 manifests; appended 1 constructors {'Effect4.Program.Ty': ['record']}
+  wire-tags: Effect4.Program.Ty gives the tags [3] twice
+  wire-tags: new Effect4.Program.Ty.record reuses tag 3
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: PASS: 1 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R5 a new constructor reuses a tag: REFUSE (ok, the clause C2)
+--- control R6 a corpus verdict moves (expect REFUSE)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp_nay4trz
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: PASS: 21 tag families, 3 manifests; appended 0 constructors 
+C3 verdicts: REFUSE: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+  generated/corpus-index.tsv: g0: BASE 'g0\tfalse\ttrue\t21\tnotFiber\t.\t2345' CAND 'g0\ttrue\ttrue\t21\tnotFiber\t.\t2345'
+C4 policy: PASS: 0 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R6 a corpus verdict moves: REFUSE (ok, the clause C3)
+--- control R7 a golden program's typing verdict moves (expect REFUSE)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmpj_24uxhj
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: PASS: 21 tag families, 3 manifests; appended 0 constructors 
+C3 verdicts: REFUSE: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+  ocaml/eff/goldens/corpus.txt: p42: BASE 'p42\twell-typed' CAND 'p42\till-typed'
+C4 policy: PASS: 0 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R7 a golden program's typing verdict moves: REFUSE (ok, the clause C3)
+--- control R8 an appended constructor the policy does not name (expect REFUSE)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp_phcaaeb
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: PASS: 21 tag families, 3 manifests; appended 1 constructors {'Effect4.Program.Ty': ['record']}
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: REFUSE: 1 added and 0 retired between BASE and CAND; 1 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  not named: Effect4.Program.Ty.record
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R8 an appended constructor the policy does not name: REFUSE (ok, the clause C4)
+--- control R9 a tag row given twice in one object (the loaders keep the last) (expect REFUSE)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp6zdoxvu7
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: REFUSE: 21 tag families, 3 manifests; appended 1 constructors {'Effect4.Program.Ty': ['record']}
+  wire-tags: the key(s) ['record'] given twice in one object (the loaders refuse it, decisions row 174)
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: PASS: 1 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: REFUSE (3 of 4 clauses pass)
+--- control R9 a tag row given twice in one object (the loaders keep the last): REFUSE (ok, the clause C2)
+--- control G1 the wave appended, every addition named, goldens and verdicts untouched (expect PASS)
+conservativity: BASE HEAD 9986a92b, CAND dir /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmpqrtaupn4
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: PASS: 21 tag families, 3 manifests; appended 8 constructors {'Effect4.Program.Ty': ['record', 'map', 'tuple', 'app', 'null', 'undefined', 'number', 'bytes']}
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: PASS: 8 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: (a directory candidate has no git diff)
+conservativity: PASS (4 of 4 clauses pass)
+--- control G1 the wave appended, every addition named, goldens and verdicts untouched: PASS (ok)
+--- control V1 invalid BASE: exit 1 (ok): conservativity: REFUSE: the BASE revision 'no-such-conservativity-base' does not resolve to a commit (git rev-parse --verify <rev>^{commit}); nothing was compared
+--- control V1 invalid BASE --strict: exit 1 (ok): conservativity: REFUSE: the BASE revision 'no-such-conservativity-base' does not resolve to a commit (git rev-parse --verify <rev>^{commit}); nothing was compared
+--- control V2 invalid CAND: exit 1 (ok): conservativity: REFUSE: the CAND revision 'no-such-conservativity-candidate' does not resolve to a commit (git rev-parse --verify <rev>^{commit}); nothing was compared
+--- control V2 invalid CAND --strict: exit 1 (ok): conservativity: REFUSE: the CAND revision 'no-such-conservativity-candidate' does not resolve to a commit (git rev-parse --verify <rev>^{commit}); nothing was compared
+--- control V3 invalid BASE and CAND: exit 1 (ok): conservativity: REFUSE: the BASE revision 'no-such-conservativity-base' and the CAND revision 'no-such-conservativity-candidate' do not resolve to a commit (git rev-parse --verify <rev>^{commit}); nothing was compared
+--- control V3 invalid BASE and CAND --strict: exit 1 (ok): conservativity: REFUSE: the BASE revision 'no-such-conservativity-base' and the CAND revision 'no-such-conservativity-candidate' do not resolve to a commit (git rev-parse --verify <rev>^{commit}); nothing was compared
+self-test: 16 of 16 controls as expected
+conservativity: BASE 74dae8d2 (74dae8d2), CAND working tree
+C1 goldens: PASS: 295 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: PASS: 21 tag families, 3 manifests; appended 0 constructors 
+C3 verdicts: PASS: 862 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables
+C4 policy: PASS: 0 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+  pre-existing (since the frozen baseline, not named; reported): 4 ['Effect4.Program.Ty.refOf', 'Effect4.Program.Ty.deferredOf', 'Effect4.Program.Ty.var', 'Effect4.Program.Ty.unknown']
+C5 record: git diff --stat over 62 GENERATED_PATHS entries: no change
+conservativity: PASS (4 of 4 clauses pass)
+# exit=0 seconds=4

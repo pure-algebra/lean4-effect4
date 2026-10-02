@@ -361,6 +361,12 @@ syntax (name := traversalCensus) "#traversal_census " ident (" under " ident)? :
     let detail := if r.detail.isEmpty then "" else s!"\t{r.detail}"
     report := report ++ m!"\n  {r.kind.label}\t{r.mod}:{r.line}\t{r.name}{r.marks}\t\
       ({r.domain.getString!}){detail}"
+  -- the completeness footer (decisions row 182 amended): a reader of the report checks that it
+  -- holds exactly this many rows and that the scope's modules were in the environment, so a
+  -- truncated or partial census is refused rather than read as "nothing found"
+  let scanned := ((← getEnv).header.moduleNames.filter (scope.isPrefixOf ·)).size
+  report := report ++ m!"\n#traversal_census done: {sorted.size} rows; {scanned} modules under \
+    {scope} scanned"
   logInfo report
 
 syntax (name := traversalClass) "#traversal_class " ident (" under " ident)? " for " ident+ :

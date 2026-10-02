@@ -1,0 +1,4 @@
+$ cd /Users/pooks/Dev/lean4-effect4-seat-W2
+$ git grep -nwE foldMapAt_ty\|TyMAlgebra\|foldM_ty\|foldM_eq_cata_ty\|foldM_id_ty\|foldM_natural_ty\|TyAlgebra\\.toM -- src Test tools :\!src/Effect4/Program/Fold.lean
+# started 2026-10-01T21:44:24Z (LEAN_NUM_THREADS=unset)
+# exit=1 seconds=0

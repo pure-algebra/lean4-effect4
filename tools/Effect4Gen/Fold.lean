@@ -1,6 +1,51 @@
 import Lean
 import Tools.GeneratedStamp
 
+/-!
+# Effect4Gen.Fold — the fold of a free object, and the companions of a nested one
+
+    lake env lean -M 4096 --run tools/Effect4Gen/Fold.lean --group <G> --imports <M,…>
+      --out <file> [--append <guards>] [--kind <Type>=elim[:<prefix>]]… <Type>…
+
+From the constructor declarations of each named family, nothing hand-listed:
+
+* **a plain block** (no member under a container): the algebra `XAlgebra`, the fold
+  `cata_<fam>`, the homomorphism `XHom` with its uniqueness `hom_eq_cata_<fam>`, `foldMap`, the
+  path fold `foldMapAt`, and the monadic half (`XMAlgebra`, `foldM`, `foldM_eq_cata`,
+  `foldM_id`, `foldM_natural`, the `MonadMorphism` they quantify over);
+* **a nested block** (a member under `List`, `Option`, a product or a one-parameter record): the
+  same pure fold with one helper per composite position (`cata_pos_*` and their map lemmas), one
+  public equation per constructor, and **no monadic half and no path fold** (below);
+* **`--kind <Type>=elim`**: instead of a fold, the companions Lean does not derive for a nested
+  one-member family — the single-motive eliminator `T.ind` (registered
+  `@[induction_eliminator]`), the structural equality `T.beq` with `T.beq_iff` and the
+  `DecidableEq` instance over it, and the structural `Repr` printing the derived text — into a
+  module between the declaration and its functions (decisions rows 119 and 171; probe Q, Q1).
+  Refused by name: a parameterised or indexed family, a mutual block, a family with no member
+  under a container (derive it), a one-parameter-structure position.
+* **`--extras [--namespace NS]`** (probe U, decisions row 182): instead of the fold, the generic
+  families every table-driven traversal is read through, from the declaration of a plain block —
+  the tags with their names and binders, the payload by sort, `build`/`kids` and the view law, the
+  per-constructor table type, the layer algebra, the head and paired folds with their connectors,
+  fusion and the banana split from uniqueness, the per-layer invariant. Without the flag nothing
+  of it is emitted and every output is today's. Refused by name: a nested block (its layer is
+  `ArgF`'s; the nested extension is owed), a constructor with two payload arguments.
+
+## The monadic-fold decision (seat W2, 2026-10-01; probe Q, Q3)
+
+A block with a nested position gets no monadic half and no path fold. A `foldM` over a nested
+position needs a `sequence` per position type (a list of monadic results is not a monadic
+list), and nothing reads one: at `74dae8d2`, `git grep -nwE
+'foldMapAt_ty|TyMAlgebra|foldM_ty|foldM_eq_cata_ty|foldM_id_ty|foldM_natural_ty|TyAlgebra\.toM'
+-- src Test tools ':!src/Effect4/Program/Fold.lean'` finds nothing (tested; seat W2's log
+`gen/fold-monadic-consumers.log`), and `SchemaFold` and `ValFold` have been nested blocks without
+one since they landed. So when `Ty` becomes nested (the wave's append) the `Ty` block loses
+exactly these nine declarations: `foldMapAt_ty`, `TyMAlgebra`, `TyAlgebra.toM`,
+`TyMAlgebra.map`, `TyMAlgebra.toSeq`, `foldM_ty`, `foldM_eq_cata_ty`, `foldM_id_ty`,
+`foldM_natural_ty`. A consumer that needs one later adds the per-position `sequence` here first;
+the plain blocks (`Eff`, `Term`, `CauseTerm`) keep theirs.
+-/
+
 open Lean Meta Elab
 
 namespace Effect4Gen.Fold
@@ -169,6 +214,8 @@ structure Arg where
   name : String
   pos : Pos
   tyText : String
+  /-- The binder's name in the constructor's declaration (`inner`, `left`, …). -/
+  binder : String := ""
 
 /-- Today's reading of an argument: the label of the member it is, when it is one. -/
 def Arg.recFam (a : Arg) : Option String :=
@@ -300,7 +347,8 @@ def readBlock (root : Name) : MetaM (Bool × String × List (String × Name × L
         for x in xs[ci.numParams:] do
           let ty ← inferType x
           let pos ← posOf members (shortName c) s!"a{i}" ty
-          acc := acc ++ [({ name := s!"a{i}", pos, tyText := ← srcOf ty } : Arg)]
+          acc := acc ++ [({ name := s!"a{i}", pos, tyText := ← srcOf ty,
+                            binder := (← x.fvarId!.getUserName).toString } : Arg)]
           i := i + 1
         return acc
       rows := rows ++ [({ fam := label, ctor := shortName c,
@@ -1241,6 +1289,636 @@ def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List St
   s := s ++ "end\n\n"
   return (s, receipts)
 
+/-! ## The nested companions: eliminator, equality, `Repr` (`--kind <Type>=elim`)
+
+Lean 4.33.1 gives a nested inductive (a member under a `List`, an `Option` or a product) no
+`induction` ("…because it is a nested inductive type"), no derived `DecidableEq` (the handler
+returns early on a nested type, `Lean/Elab/Deriving/DecEq.lean`: `if indVal.isNested then return
+false`) and only a `partial` derived `Repr` (an `opaque` over an `_unsafe_rec`, which the trust gate
+refuses). The tree wrote the three by hand twice (`Store.Val.ind`, `Val.beq`, `Val.beq_iff`,
+`Val.render`; `Json.ind`, `Json.beq`, `Json.beq_iff`). This emission writes them from the fold's
+own position language, so a third nested family costs a manifest row, not a third hand copy:
+
+* `T.ind`: the single-motive eliminator in membership form, registered
+  `@[induction_eliminator]` so `induction t with | c … ih` keeps its text. One hypothesis per
+  constructor; a member under a container arrives as `∀ x ∈ xs, motive x`, a product's member
+  side projected. Built from `T.rec` as the environment declares it: one motive per auxiliary
+  type, each container constructor's minor premise discharged by a fixed term.
+* `T.beq` and one helper per composite position, structural, a leaf compared by `decide` (never
+  `==`: at `String`/`Nat` the `LawfulBEq` route reaches `Classical.choice`); `T.beq_pos_*_iff` per
+  position; `T.beq_iff` by `induction … using T.ind`; the `DecidableEq` instance is
+  `decidable_of_iff` over it, so the computation and its proof stay apart.
+* `T.repr` and its helpers, structural, printing exactly what the derived `Repr` prints (the
+  constructor's full name, `Format.line`-separated arguments, `Repr.addAppParen`) and a container
+  as the core instance prints it (`List.repr`, `Prod.repr`'s tuple flattening, `Option.repr`).
+
+Refused by name: a parameterised or indexed family, a mutual block, a family with no nested
+position (derive it), a one-parameter structure position (no nested family of the estate has
+one), a field spelled `motive`.
+-/
+
+namespace Elim
+
+def keywords : List String :=
+  ["fun", "match", "with", "at", "by", "do", "from", "have", "show", "if", "then", "else", "let",
+   "in", "open", "where", "deriving", "structure", "inductive", "theorem", "def", "instance",
+   "end", "namespace", "section", "import", "mutual", "for", "unless", "return", "try", "catch",
+   "finally", "break", "continue", "macro", "syntax", "local", "private", "protected", "partial",
+   "unsafe", "variable", "universe", "example", "abbrev", "class", "extends", "forall", "Type",
+   "Prop", "Sort", "this"]
+
+/-- A name as source text, quoted where it would read as a keyword. -/
+def ident (s : String) : String := if keywords.contains s then s!"«{s}»" else s
+
+/-- One constructor: its full name, its short name, and each field's name, position and type. -/
+structure ECtor where
+  full : Name
+  short : String
+  fields : List (String × Pos × String)
+
+/-- The constructors of a one-member family, the fields by their declared names. -/
+def readECtors (root : Name) (members : List Name) : MetaM (List ECtor) := do
+  let iv ← getConstInfoInduct root
+  iv.ctors.mapM fun c => do
+    let ci ← getConstInfoCtor c
+    let fields ← forallBoundedTelescope ci.type (ci.numParams + ci.numFields) fun xs _ => do
+      let mut acc : List (String × Pos × String) := []
+      let mut i := 0
+      for x in xs[ci.numParams:] do
+        let ty ← inferType x
+        let nm ← x.fvarId!.getUserName
+        let nm := if nm.isAnonymous || nm.hasMacroScopes then s!"a{i}" else nm.toString
+        if nm == "motive" then
+          throwError "elim: {c}.{nm} is spelled like the eliminator's motive"
+        let pos ← posOf members (shortName c) nm ty
+        if (match pos with | .record .. => true | _ => false) then
+          throwError "elim: {c}.{nm} sits under a one-parameter structure; this emission reads \
+            `List`, `Option` and products only"
+        acc := acc ++ [(nm, pos, ← srcOf ty)]
+        i := i + 1
+      return acc
+    return { full := c, short := shortName c, fields }
+
+/-- The induction hypothesis a member at position `p` contributes about the value `e`, with `m`
+the motive applied: `none` at a leaf. `d` numbers the bound variables of nested quantifiers. -/
+partial def ihAt (m : String → String) : Pos → String → Nat → Option String
+  | .leaf _, _, _ => none
+  | .direct _, e, _ => some (m e)
+  | .list q, e, d => (ihAt m q s!"x{d}" (d + 1)).map fun b => s!"∀ x{d} ∈ {e}, {b}"
+  | .option q, e, d => (ihAt m q s!"x{d}" (d + 1)).map fun b => s!"∀ x{d} ∈ {e}, {b}"
+  | .prod a b, e, d =>
+    match ihAt m a s!"{e}.1" d, ihAt m b s!"{e}.2" d with
+    | none, none => none
+    | some s, none => some s
+    | none, some t => some t
+    | some s, some t => some s!"({s}) ∧ ({t})"
+  | .record .., _, _ => none
+
+/-- How many induction hypotheses a product's constructor minor receives: one per side that is
+not a leaf. -/
+def prodSides (a b : Pos) : Nat := (if a.isLeaf then 0 else 1) + (if b.isLeaf then 0 else 1)
+
+/-- A constructor pattern or application: `.c a0 a1`, or `.c` with no field. -/
+def ctorApp (c : ECtor) (args : List String) : String :=
+  if args.isEmpty then s!".{ident c.short}"
+  else s!".{ident c.short} " ++ String.intercalate " " args
+
+/-- The comparison of two values at a position. -/
+def cmpAt (pfx : String) (p : Pos) (l r : String) : String :=
+  match p with
+  | .leaf _ => s!"decide ({l} = {r})"
+  | .direct _ => s!"{pfx}.beq {l} {r}"
+  | _ => s!"{pfx}.beq_pos_{p.suffix} {l} {r}"
+
+/-- The rewrite that turns one position's comparison into an equality, given the hypothesis
+`ih` about the left value; `none` when the leaf rule `decide_eq_true_eq` does it. -/
+def iffAt (pfx : String) (p : Pos) (ih r : String) : Option String :=
+  match p with
+  | .leaf _ => none
+  | .direct _ => some s!"{ih} {r}"
+  | _ => some s!"{pfx}.beq_pos_{p.suffix}_iff {ih} {r}"
+
+/-- The components of a product's right spine, left to right, and whether the last is a leaf
+(whose own product structure, if any, `reprTuple` flattens as core's instance does). -/
+partial def spine : Pos → List Pos
+  | .prod a b => a :: (match b with | .prod .. => spine b | _ => [b])
+  | p => [p]
+
+def emitElim (root : Name) (pfxIn : Option String) : MetaM String := do
+  let iv ← getConstInfoInduct root
+  unless iv.numParams == 0 && iv.numIndices == 0 do
+    throwError "elim: {root} has parameters or indices; this emission reads a plain family"
+  unless iv.all.length == 1 do
+    throwError "elim: {root} is mutual ({iv.all}); one eliminator per member is not emitted here"
+  let members := iv.all
+  let ctors ← readECtors root members
+  unless ctors.any (fun c => c.fields.any fun f => match f.2.1 with
+      | .leaf _ | .direct _ => false | _ => true) do
+    throwError "elim: {root} has no member under a container; derive `DecidableEq` and `Repr` \
+      and use `induction` as they are"
+  let T := s!"_root_.{root}"
+  -- Declarations are named relative to the file's namespace (the root's prefix): inside a
+  -- `mutual` block a `_root_.`-qualified self-reference is not the function being defined.
+  let pfx := pfxIn.getD (shortName root)
+  let instNs := match pfxIn with
+    | some p => if p.toName.getPrefix.isAnonymous then "" else p.toName.getPrefix.toString ++ "."
+    | none => ""
+  let short := shortName root
+  let srcP : Pos → String := fun p => p.source (fun _ => T) false
+  -- every distinct composite position, children before parents (the fold's own order)
+  let mut comps : List Pos := []
+  for c in ctors do
+    for (_, p, _) in c.fields do
+      for q in p.composites do
+        unless comps.any (·.key == q.key) do comps := comps ++ [q]
+  let mut s := ""
+  -- ## The eliminator
+  let motive : String → String := fun e => s!"motive {e}"
+  s := s ++ s!"/-- The single-motive induction principle of `{root}`, membership form: one\n"
+  s := s ++ "hypothesis per constructor, a member under a container quantified by membership.\n"
+  s := s ++ "Registered as the induction eliminator, so `induction t with` keeps its arms. -/\n"
+  s := s ++ "@[elab_as_elim, induction_eliminator]\n"
+  s := s ++ s!"theorem {pfx}.ind \{motive : {T} → Prop}\n"
+  for c in ctors do
+    let body :=
+      if c.fields.isEmpty then s!"motive {ctorApp c []}"
+      else
+        let binders := String.intercalate " " (c.fields.map fun (n, _, ty) => s!"({ident n} : {ty})")
+        let ihs := c.fields.filterMap fun (n, p, _) =>
+          (ihAt motive p (ident n) 0).map fun h => if p matches .direct _ then h else s!"({h})"
+        let concl := s!"motive ({ctorApp c (c.fields.map fun (n, _, _) => ident n)})"
+        s!"∀ {binders}, " ++ String.join (ihs.map (· ++ " → ")) ++ concl
+    s := s ++ s!"    ({ident c.short} : {body})\n"
+  s := s ++ "    : ∀ t, motive t := fun t =>\n"
+  let recName := root ++ `rec
+  let rv ← getConstInfoRec recName
+  let (motiveArgs, minorArgs) ← forallBoundedTelescope rv.type
+      (rv.numParams + rv.numMotives + rv.numMinors) fun xs _ => do
+    let motives := xs[rv.numParams:rv.numParams + rv.numMotives].toArray
+    let minors := xs[rv.numParams + rv.numMotives:rv.numParams + rv.numMotives + rv.numMinors].toArray
+    -- each motive's auxiliary type, as a position of the family
+    let mut mPos : Array (Option Pos) := #[]
+    let mut margs : List String := []
+    for h : j in [:motives.size] do
+      let mv := motives[j]
+      let nm ← mv.fvarId!.getUserName
+      let dom := (← inferType mv).bindingDomain!
+      if j == 0 then
+        mPos := mPos.push none
+        margs := margs ++ [s!"({nm} := motive)"]
+      else
+        let p ← posOf members "rec" s!"motive {j}" dom
+        let some body := ihAt motive p "e" 0
+          | throwError "elim: the auxiliary type {← srcOf dom} names no member"
+        mPos := mPos.push (some p)
+        margs := margs ++ [s!"({nm} := fun e => {body})"]
+    let mut mins : List String := []
+    for mn in minors do
+      let mty ← inferType mn
+      let txt ← forallTelescope mty fun _ concl => do
+        let some k := motives.findIdx? (· == concl.getAppFn)
+          | throwError "elim: a minor premise of {recName} concludes at no motive"
+        let .const cName _ := concl.appArg!.getAppFn
+          | throwError "elim: a minor premise of {recName} is not at a constructor"
+        if k == 0 then
+          return ident (shortName cName)
+        let p := (mPos[k]!).getD (.leaf "")
+        if cName == ``List.nil || cName == ``Option.none then
+          return "(fun _ hx => nomatch hx)"
+        else if cName == ``List.cons then
+          return "(fun _ _ ihHead ihTail => by\n      intro _ hx\n      cases hx with\n      \
+            | head => exact ihHead\n      | tail _ hx' => exact ihTail _ hx')"
+        else if cName == ``Option.some then
+          return "(fun _ ih _ hx => by\n      cases hx\n      exact ih)"
+        else if cName == ``Prod.mk then
+          match p with
+          | .prod a b =>
+            if prodSides a b == 2 then return "(fun _ _ iha ihb => ⟨iha, ihb⟩)"
+            else return "(fun _ _ ih => ih)"
+          | _ => throwError "elim: a `Prod.mk` minor at a position that is not a product"
+        else
+          throwError "elim: the auxiliary constructor {cName} has no discharge in this emission"
+      mins := mins ++ [txt]
+    return (margs, mins)
+  s := s ++ s!"  {T}.rec " ++ String.intercalate "\n    " motiveArgs ++ "\n"
+  for m in minorArgs do s := s ++ s!"    {m}\n"
+  s := s ++ "    t\n\n"
+  -- ## The equality
+  s := s ++ s!"mutual\n/-- Structural equality on `{root}` as a Boolean; leaves compared by `decide`. -/\n"
+  s := s ++ s!"def {pfx}.beq : {T} → {T} → Bool\n"
+  for c in ctors do
+    let as := (List.range c.fields.length).map fun i => s!"a{i}"
+    let bs := (List.range c.fields.length).map fun i => s!"b{i}"
+    let cmps := (c.fields.zipIdx).map fun ((_, p, _), i) => cmpAt pfx p s!"a{i}" s!"b{i}"
+    let rhs := if cmps.isEmpty then "true" else String.intercalate " && " cmps
+    s := s ++ s!"  | {ctorApp c as}, {ctorApp c bs} => {rhs}\n"
+  if ctors.length > 1 then s := s ++ "  | _, _ => false\n"
+  s := s ++ "termination_by structural a _ => a\n"
+  for p in comps do
+    s := s ++ s!"def {pfx}.beq_pos_{p.suffix} : {srcP p} → {srcP p} → Bool\n"
+    match p with
+    | .list q =>
+      s := s ++ "  | [], [] => true\n"
+      s := s ++ s!"  | x :: xs, y :: ys => {cmpAt pfx q "x" "y"} && {pfx}.beq_pos_{p.suffix} xs ys\n"
+      s := s ++ "  | _, _ => false\n"
+    | .option q =>
+      s := s ++ "  | none, none => true\n"
+      s := s ++ s!"  | some x, some y => {cmpAt pfx q "x" "y"}\n"
+      s := s ++ "  | _, _ => false\n"
+    | .prod a b =>
+      s := s ++ s!"  | (u0, v0), (u1, v1) => {cmpAt pfx a "u0" "u1"} && {cmpAt pfx b "v0" "v1"}\n"
+    | _ => throwError "elim: no comparison for the position {p.key}"
+    s := s ++ "termination_by structural x _ => x\n"
+  s := s ++ "end\n\n"
+  -- the comparison is equality, position by position, children first
+  let beqIff : String → String := fun e => s!"(∀ b, {pfx}.beq {e} b = true ↔ {e} = b)"
+  for p in comps do
+    let h := s!"{pfx}.beq_pos_{p.suffix}"
+    let v := match p with | .list _ => "xs" | _ => "x"
+    let some ih := ihAt beqIff p v 0
+      | throwError "elim: the position {p.key} names no member"
+    s := s ++ s!"theorem {h}_iff \{{v} : {srcP p}} (ih : {ih}) :\n"
+    s := s ++ s!"    ∀ y, {h} {v} y = true ↔ {v} = y := by\n"
+    match p with
+    | .prod a b =>
+      let ihA := if prodSides a b == 2 then "ih.1" else "ih"
+      let ihB := if prodSides a b == 2 then "ih.2" else "ih"
+      let ls := ([h, "Bool.and_eq_true"] ++
+        (if a.isLeaf || b.isLeaf then ["decide_eq_true_eq"] else []) ++
+        (iffAt pfx a ihA "u1").toList ++ (iffAt pfx b ihB "v1").toList ++ ["Prod.mk.injEq"])
+      s := s ++ "  intro y\n  obtain ⟨u0, v0⟩ := x\n  obtain ⟨u1, v1⟩ := y\n"
+      s := s ++ s!"  simp only [{String.intercalate ", " ls}]\n\n"
+    | .list q =>
+      let elemIh := "(ih x List.mem_cons_self)"
+      let elem := (iffAt pfx q elemIh "y").toList
+      let elem := if q.isLeaf then ["decide_eq_true_eq"] else elem
+      let ls := [h, "Bool.and_eq_true"] ++ elem ++
+        ["iht (fun z hz => ih z (List.mem_cons_of_mem x hz)) ys", "List.cons.injEq"]
+      s := s ++ "  induction xs with\n  | nil =>\n    intro y\n    cases y with\n"
+      s := s ++ s!"    | nil => simp only [{h}]\n"
+      s := s ++ s!"    | cons _ _ => simp only [{h}, Bool.false_eq_true, reduceCtorEq]\n"
+      s := s ++ "  | cons x xs iht =>\n    intro y\n    cases y with\n"
+      s := s ++ s!"    | nil => simp only [{h}, Bool.false_eq_true, reduceCtorEq]\n"
+      s := s ++ s!"    | cons y ys =>\n      simp only [{String.intercalate ", " ls}]\n\n"
+    | .option q =>
+      let elem := (iffAt pfx q "(ih x rfl)" "y").toList
+      let elem := if q.isLeaf then ["decide_eq_true_eq"] else elem
+      s := s ++ "  intro y\n  cases x with\n  | none =>\n    cases y with\n"
+      s := s ++ s!"    | none => simp only [{h}]\n"
+      s := s ++ s!"    | some _ => simp only [{h}, Bool.false_eq_true, reduceCtorEq]\n"
+      s := s ++ "  | some x =>\n    cases y with\n"
+      s := s ++ s!"    | none => simp only [{h}, Bool.false_eq_true, reduceCtorEq]\n"
+      s := s ++ s!"    | some y => simp only [{String.intercalate ", " ([h] ++ elem ++ ["Option.some.injEq"])}]\n\n"
+    | _ => throwError "elim: no lemma for the position {p.key}"
+  s := s ++ s!"/-- `beq` decides structural equality. -/\n"
+  s := s ++ s!"theorem {pfx}.beq_iff : ∀ a b : {T}, {pfx}.beq a b = true ↔ a = b := by\n"
+  s := s ++ s!"  intro a\n  induction a using {pfx}.ind with\n"
+  for c in ctors do
+    let names := c.fields.map fun (n, _, _) => ident n
+    let ihNames := (c.fields.zipIdx).filterMap fun ((_, p, _), i) =>
+      if p.isLeaf then none else some s!"ih{i}"
+    let pat := String.intercalate " " ([ident c.short] ++ names ++ ihNames)
+    let mut ls : List String := [s!"{pfx}.beq"]
+    if ctors.length > 1 then ls := ls ++ ["Bool.false_eq_true", "reduceCtorEq"]
+    if c.fields.length ≥ 2 then ls := ls ++ ["Bool.and_eq_true"]
+    if c.fields.any (fun f => f.2.1.isLeaf) then ls := ls ++ ["decide_eq_true_eq"]
+    for ((_, p, _), i) in c.fields.zipIdx do
+      match p with
+      | .leaf _ => pure ()
+      | .direct _ => ls := ls ++ [s!"ih{i}"]
+      | _ => ls := ls ++ [s!"{pfx}.beq_pos_{p.suffix}_iff ih{i}"]
+    if !c.fields.isEmpty then ls := ls ++ [s!"{c.full}.injEq"]
+    s := s ++ s!"  | {pat} =>\n    intro b\n    cases b <;> simp only [{String.intercalate ", " ls}]\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- Decidable structural equality, by `beq` and its proof. -/\n"
+  s := s ++ s!"instance {instNs}instDecidableEq{short} : DecidableEq {T} := fun a b =>\n"
+  s := s ++ s!"  decidable_of_iff _ ({pfx}.beq_iff a b)\n\n"
+  -- ## Repr
+  let argFmt : Pos → String → String := fun p e =>
+    match p with
+    | .leaf _ => s!"_root_.reprArg {e}"
+    | .direct _ => s!"{pfx}.repr {e} max_prec"
+    | .list _ => s!"(match {e} with | [] => Std.Format.text \"[]\" | _ => Std.Format.bracket \"[\" \
+        (Std.Format.joinSep ({pfx}.repr_items_{p.suffix} {e}) (\",\" ++ Std.Format.line)) \"]\")"
+    | .prod .. => s!"Std.Format.bracket \"(\" (Std.Format.joinSep ({pfx}.repr_tuple_{p.suffix} {e}) \
+        (\",\" ++ Std.Format.line)) \")\""
+    | .option _ => s!"{pfx}.repr_pos_{p.suffix} {e} max_prec"
+    | .record .. => "«record»"
+  let elemFmt : Pos → String → String := fun p e =>
+    match p with
+    | .leaf _ => s!"_root_.repr {e}"
+    | .direct _ => s!"{pfx}.repr {e} 0"
+    | .option _ => s!"{pfx}.repr_pos_{p.suffix} {e} 0"
+    | _ => argFmt p e
+  s := s ++ s!"mutual\n/-- The derived `Repr`'s text, structurally (the derived one is `partial` here). -/\n"
+  s := s ++ s!"def {pfx}.repr : {T} → Nat → Std.Format\n"
+  for c in ctors do
+    let as := (List.range c.fields.length).map fun i => s!"a{i}"
+    let parts := (c.fields.zipIdx).map fun ((_, p, _), i) => argFmt p s!"a{i}"
+    let body := String.join ([s!"Std.Format.text \"{c.full}\""] ++
+      parts.map fun x => s!" ++ Std.Format.line ++ {x}")
+    s := s ++ s!"  | {ctorApp c as}, prec => Repr.addAppParen (Std.Format.group (Std.Format.nest \
+      (if prec >= max_prec then 1 else 2) ({body}))) prec\n"
+  s := s ++ "termination_by structural t _ => t\n"
+  for p in comps do
+    match p with
+    | .list q =>
+      s := s ++ s!"def {pfx}.repr_items_{p.suffix} : {srcP p} → List Std.Format\n"
+      s := s ++ "  | [] => []\n"
+      s := s ++ s!"  | x :: xs => ({elemFmt q "x"}) :: {pfx}.repr_items_{p.suffix} xs\n"
+      s := s ++ "termination_by structural xs => xs\n"
+    | .prod a b =>
+      s := s ++ s!"def {pfx}.repr_tuple_{p.suffix} : {srcP p} → List Std.Format\n"
+      let rest := match b with
+        | .prod .. => s!"{pfx}.repr_tuple_{b.suffix} v"
+        | .leaf _ => "(ReprTuple.reprTuple v []).reverse"
+        | _ => s!"[{elemFmt b "v"}]"
+      s := s ++ s!"  | (u, v) => ({elemFmt a "u"}) :: {rest}\n"
+      s := s ++ "termination_by structural x => x\n"
+    | .option q =>
+      s := s ++ s!"def {pfx}.repr_pos_{p.suffix} : {srcP p} → Nat → Std.Format\n"
+      s := s ++ "  | none, _ => Std.Format.text \"none\"\n"
+      s := s ++ s!"  | some y, prec => Repr.addAppParen (Std.Format.text \"some \" ++ {argFmt q "y"}) prec\n"
+      s := s ++ "termination_by structural x _ => x\n"
+    | _ => throwError "elim: no printer for the position {p.key}"
+  s := s ++ "end\n\n"
+  s := s ++ s!"instance {instNs}instRepr{short} : Repr {T} := ⟨{pfx}.repr⟩\n\n"
+  s := s ++ "/-! ## Receipts -/\n\n"
+  s := s ++ s!"#print axioms {pfx}.ind\n#print axioms {pfx}.beq_iff\n"
+  s := s ++ s!"#print axioms {instNs}instDecidableEq{short}\n#print axioms {instNs}instRepr{short}\n"
+  for p in comps do
+    s := s ++ s!"#print axioms {pfx}.beq_pos_{p.suffix}_iff\n"
+  return s
+
+end Elim
+
+
+/-! ## The generic fold families of a plain block (probe U)
+
+For a non-nested, non-mutual block (`Ty`), the one-level view and the generic families every
+table-driven traversal is read through: the tags and their names and binders, the payload
+sorts, `build`/`kids` and the view law, the per-constructor table type, the layer algebra, the
+head fold and the paired fold with their connectors, fusion and the banana split from
+uniqueness, and the per-layer invariant. All of it is read off the constructor rows; nothing
+here is hand-listed. A block with a composite position (`record`'s `List (String × Ty)`) or a
+constructor with two payload arguments is refused by name: its layer needs `ArgF`'s positions
+(the `LayerView` emitter's), not one payload and a list of children.
+-/
+
+namespace Extras
+
+/-- A payload sort's constructor name in `<Block>Leaf`. -/
+def leafCtor (tyText : String) : String :=
+  match tyText with
+  | "String" => "str"
+  | "Nat" => "nat"
+  | "Bool" => "bool"
+  | t => lowerFirst (leafHint t)
+
+def joinArgs (xs : List String) : String := String.intercalate " " xs
+
+/-- The fixed helpers, once per file: how `foldMap_*` combines a node with its children. -/
+def helpers : String :=
+  "/-- The children combined the way `foldMap_*` combines them: none, one, or\n" ++
+  "`op c₀ (op c₁ …)`. -/\n" ++
+  "def recCombine {M : Type u} (op : M → M → M) : List M → Option M\n" ++
+  "  | [] => none\n" ++
+  "  | [c] => some c\n" ++
+  "  | c :: rest => (recCombine op rest).map (op c)\n\n" ++
+  "/-- The node's contribution, then its children. -/\n" ++
+  "def nodeThen {M : Type u} (op : M → M → M) (here : M) (kids : List M) : M :=\n" ++
+  "  match recCombine op kids with\n" ++
+  "  | none => here\n" ++
+  "  | some k => op here k\n\n"
+
+def emitExtras (root : Name) : MetaM String := do
+  let (isParam, blockName, block) ← readBlock root
+  if isParam then throwError "extras: {root} takes parameters; the plain-block extras do not"
+  if block.length != 1 then throwError "extras: {root} is mutual; the plain-block extras do not"
+  if blockNested block then
+    throwError "extras: {root} holds a member under a container; its layer is `ArgF`'s \
+(tools/Effect4Gen/LayerView.lean), not one payload and a list of children"
+  let (label, fam, rows) := block.head!
+  let famT := fam.toString
+  let ctorT := s!"{blockName}Ctor"
+  let leafT := s!"{blockName}Leaf"
+  let tableT := s!"{blockName}Table"
+  let algT := s!"{blockName}Algebra"
+  let homT := s!"{blockName}Hom"
+  let famE := s!"{blockName}Fam"
+  let low := lowerFirst blockName
+  let viewCtor := s!"{low}Ctor"
+  let viewLeaf := s!"{low}Leaf"
+  let viewBuild := s!"{low}Build"
+  let viewKids := s!"{low}Kids"
+  -- every constructor: at most one payload argument, which precedes no child
+  for r in rows do
+    let leaves := r.args.filter (·.pos.isLeaf)
+    if leaves.length > 1 then
+      throwError "extras: {r.ctor} has {leaves.length} payload arguments; one is read"
+  let sorts : List String := rows.foldl (fun acc r =>
+    r.args.foldl (fun acc a => if a.pos.isLeaf && !(acc.contains a.tyText) then acc ++ [a.tyText] else acc) acc) []
+  let leafOf (r : CtorRow) : Option Arg := r.args.find? (·.pos.isLeaf)
+  let kidsOf (r : CtorRow) : List Arg := r.args.filter (·.recFam.isSome)
+  let pat (r : CtorRow) : String :=
+    if r.args.isEmpty then s!".{r.ctor}" else s!".{r.ctor} {joinArgs (r.args.map (·.name))}"
+  let wild (r : CtorRow) : String :=
+    if r.args.isEmpty then s!".{r.ctor}" else s!".{r.ctor} {joinArgs (r.args.map fun _ => "_")}"
+  let leafExpr (r : CtorRow) : String :=
+    match leafOf r with
+    | some a => s!"(.{leafCtor a.tyText} {a.name})"
+    | none => ".none"
+  let kidList (r : CtorRow) (f : Arg → String) : String :=
+    "[" ++ String.intercalate ", " ((kidsOf r).map f) ++ "]"
+  let arity (r : CtorRow) : String :=
+    match r.args.length with
+    | 0 => "rfl"
+    | 1 => "fun _ => rfl"
+    | 2 => "fun _ _ => rfl"
+    | n => "fun " ++ joinArgs (List.replicate n "_") ++ " => rfl"
+  let homRfl : String := String.intercalate "\n" (rows.map fun r => s!"      h_{r.field} := {arity r}")
+  let mut s := ""
+  -- the tags
+  s := s ++ s!"/-- The constructor tags of `{famT}`, in declaration order. -/\n"
+  s := s ++ s!"inductive {ctorT} where\n"
+  for r in rows do s := s ++ s!"  | {r.ctor}\n"
+  s := s ++ "deriving DecidableEq, Repr\n\n"
+  s := s ++ s!"/-- Every tag, in declaration order. -/\n"
+  s := s ++ s!"def {ctorT}.all : List {ctorT} :=\n  [" ++
+    String.intercalate ", " (rows.map fun r => s!".{r.ctor}") ++ "]\n\n"
+  s := s ++ s!"/-- The tag of a node: one level, no recursion. -/\n"
+  s := s ++ s!"def {viewCtor} : {famT} → {ctorT}\n"
+  for r in rows do s := s ++ s!"  | {wild r} => .{r.ctor}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The constructor's name, as the declaration spells it. -/\n"
+  s := s ++ s!"def {ctorT}.name : {ctorT} → String\n"
+  for r in rows do s := s ++ s!"  | .{r.ctor} => \"{r.ctor}\"\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The constructor's binder names, in declaration order. -/\n"
+  s := s ++ s!"def {ctorT}.binders : {ctorT} → List String\n"
+  for r in rows do
+    s := s ++ s!"  | .{r.ctor} => [" ++ String.intercalate ", " (r.args.map fun a => s!"\"{a.binder}\"") ++ "]\n"
+  s := s ++ "\n"
+  -- the payload
+  s := s ++ s!"/-- The non-recursive payload of a node, by sort. -/\n"
+  s := s ++ s!"inductive {leafT} where\n  | none\n"
+  for t in sorts do s := s ++ s!"  | {leafCtor t} (v : {t})\n"
+  s := s ++ "deriving DecidableEq, Repr\n\n"
+  s := s ++ s!"/-- The payload of a node: one level, no recursion. -/\n"
+  s := s ++ s!"def {viewLeaf} : {famT} → {leafT}\n"
+  let leafPat (r : CtorRow) : String :=
+    if r.args.isEmpty then s!".{r.ctor}" else
+      s!".{r.ctor} " ++ joinArgs (r.args.map fun a => if a.pos.isLeaf then a.name else "_")
+  for r in rows do s := s ++ s!"  | {leafPat r} => {leafExpr r}\n"
+  s := s ++ "\n"
+  -- build, kids, the view law
+  let first := (rows.find? (·.args.isEmpty)).map (·.ctor)
+  let some dflt := first | throwError "extras: {root} has no nullary constructor for `build`'s refusal"
+  s := s ++ s!"/-- A node from its tag, payload and children; a tag whose payload or arity does not\n"
+  s := s ++ s!"match is `{dflt}`. -/\n"
+  s := s ++ s!"def {viewBuild} : {ctorT} → {leafT} → List {famT} → {famT}\n"
+  for r in rows do
+    let lp := match leafOf r with
+      | some a => s!".{leafCtor a.tyText} {a.name}"
+      | none => ".none"
+    s := s ++ s!"  | .{r.ctor}, {lp}, {kidList r (·.name)} => {pat r}\n"
+  s := s ++ s!"  | _, _, _ => .{dflt}\n\n"
+  s := s ++ s!"/-- The children of a node, in declaration order. -/\n"
+  s := s ++ s!"def {viewKids} : {famT} → List {famT}\n"
+  let kidPat (r : CtorRow) : String :=
+    if r.args.isEmpty then s!".{r.ctor}" else
+      s!".{r.ctor} " ++ joinArgs (r.args.map fun a => if a.recFam.isSome then a.name else "_")
+  for r in rows do s := s ++ s!"  | {kidPat r} => {kidList r (·.name)}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- A node is rebuilt from its view. -/\n"
+  s := s ++ s!"theorem {viewBuild}_view (t : {famT}) : {viewBuild} ({viewCtor} t) ({viewLeaf} t) ({viewKids} t) = t := by\n"
+  s := s ++ "  cases t <;> rfl\n\n"
+  -- the table
+  s := s ++ s!"/-- One row per constructor. -/\n"
+  s := s ++ s!"structure {tableT} (α : Type u) where\n"
+  for r in rows do s := s ++ s!"  {r.ctor} : α\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- A row by tag. -/\n"
+  s := s ++ s!"def {tableT}.get \{α : Type u} (t : {tableT} α) : {ctorT} → α\n"
+  for r in rows do s := s ++ s!"  | .{r.ctor} => t.{r.ctor}\n"
+  s := s ++ "\n"
+  -- the layer algebra
+  s := s ++ s!"/-- A layer function as an algebra: every constructor hands its tag, its payload and its\n"
+  s := s ++ s!"folded children (declaration order) to one function. -/\n"
+  s := s ++ s!"def {algT}.ofLayer \{R : Type u} (layer : {ctorT} → {leafT} → List R → R) :\n"
+  s := s ++ s!"    {algT} (fun _ => R) where\n"
+  for r in rows do
+    let lhs := if r.args.isEmpty then "" else " " ++ joinArgs (r.args.map (·.name))
+    s := s ++ s!"  {r.field}{lhs} := layer .{r.ctor} {leafExpr r} {kidList r (·.name)}\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- The fold of a layer function, one layer down. -/\n"
+  s := s ++ s!"theorem cata_ofLayer_view \{R : Type u} (layer : {ctorT} → {leafT} → List R → R) (t : {famT}) :\n"
+  s := s ++ s!"    cata_{label} ({algT}.ofLayer layer) t =\n"
+  s := s ++ s!"      layer ({viewCtor} t) ({viewLeaf} t) (({viewKids} t).map (cata_{label} ({algT}.ofLayer layer))) := by\n"
+  s := s ++ "  cases t <;> rfl\n\n"
+  let specs := (rows.filter fun r => !(kidsOf r).isEmpty).map fun r => s!"{famT}.{r.ctor}.sizeOf_spec"
+  s := s ++ s!"/-- A child is smaller. -/\n"
+  s := s ++ s!"theorem sizeOf_{viewKids} \{t k : {famT}} (h : k ∈ {viewKids} t) : sizeOf k < sizeOf t := by\n"
+  s := s ++ s!"  cases t <;> simp only [{viewKids}, List.mem_cons, List.not_mem_nil, or_false] at h <;>\n"
+  s := s ++ "    rcases h with rfl | rfl <;> simp only [" ++ String.intercalate ", " specs ++ "] <;> omega\n\n"
+  s := s ++ s!"/-- **The fold of a layer function keeps every property its layers keep.** -/\n"
+  s := s ++ s!"theorem cata_ofLayer_inv \{R : Type u} (layer : {ctorT} → {leafT} → List R → R) (P : R → Prop)\n"
+  s := s ++ s!"    (h : ∀ c l kids, (∀ k ∈ kids, P k) → P (layer c l kids)) (t : {famT}) :\n"
+  s := s ++ s!"    P (cata_{label} ({algT}.ofLayer layer) t) := by\n"
+  s := s ++ "  rw [cata_ofLayer_view]\n  apply h\n  intro k hk\n"
+  s := s ++ "  obtain ⟨k', hk', rfl⟩ := List.mem_map.mp hk\n"
+  s := s ++ "  exact cata_ofLayer_inv layer P h k'\n"
+  s := s ++ "termination_by sizeOf t\n"
+  s := s ++ s!"decreasing_by exact sizeOf_{viewKids} hk'\n\n"
+  -- the head fold and its connector
+  s := s ++ s!"/-- The monoid fold whose node contribution reads only the node's layer, as an algebra. -/\n"
+  s := s ++ s!"def {algT}.headAlg \{M : Type u} (op : M → M → M) (g : {ctorT} → {leafT} → M) :\n"
+  s := s ++ s!"    {algT} (fun _ => M) :=\n"
+  s := s ++ s!"  {algT}.ofLayer fun c l kids => nodeThen op (g c l) kids\n\n"
+  s := s ++ s!"/-- **Connector, once for every head fold.** -/\n"
+  s := s ++ s!"theorem foldMap_head_eq_cata \{M : Type u} (unit : M) (op : M → M → M)\n"
+  s := s ++ s!"    (g : {ctorT} → {leafT} → M) (t : {famT}) :\n"
+  s := s ++ s!"    foldMap_{label} unit op t (fun s => g ({viewCtor} s) ({viewLeaf} s)) =\n"
+  s := s ++ s!"      cata_{label} ({algT}.headAlg op g) t :=\n"
+  s := s ++ s!"  hom_eq_cata_{label} (alg := {algT}.headAlg op g)\n"
+  s := s ++ s!"    \{ f_{label} := fun s => foldMap_{label} unit op s (fun s => g ({viewCtor} s) ({viewLeaf} s))\n"
+  s := s ++ homRfl ++ " } t\n\n"
+  -- the paired fold and its connector
+  s := s ++ s!"/-- The general monoid fold (its hook reads the whole node) as the paired catamorphism. -/\n"
+  s := s ++ s!"def {algT}.paraAlg \{M : Type u} (op : M → M → M) (f : {famT} → M) :\n"
+  s := s ++ s!"    {algT} (fun _ => {famT} × M) where\n"
+  for r in rows do
+    let lhs := if r.args.isEmpty then "" else " " ++ joinArgs (r.args.map (·.name))
+    let node := if r.args.isEmpty then s!".{r.ctor}" else
+      s!".{r.ctor} " ++ joinArgs (r.args.map fun a => if a.recFam.isSome then s!"{a.name}.1" else a.name)
+    let kids := (kidsOf r).map fun a => s!"{a.name}.2"
+    let rhs := match kids with
+      | [] => s!"f ({node})"
+      | _ => s!"op (f ({node})) ({recComb kids})"
+    s := s ++ s!"  {r.field}{lhs} := ({node}, {rhs})\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **Connector, once for every monoid fold.** -/\n"
+  s := s ++ s!"theorem foldMap_eq_cata \{M : Type u} (unit : M) (op : M → M → M) (f : {famT} → M) (t : {famT}) :\n"
+  s := s ++ s!"    (t, foldMap_{label} unit op t f) = cata_{label} ({algT}.paraAlg op f) t :=\n"
+  s := s ++ s!"  hom_eq_cata_{label} (alg := {algT}.paraAlg op f)\n"
+  s := s ++ s!"    \{ f_{label} := fun s => (s, foldMap_{label} unit op s f)\n"
+  s := s ++ homRfl ++ " } t\n\n"
+  -- fusion
+  s := s ++ s!"/-- An algebra morphism `h` from `alg` to `alg'`, one square per constructor, each\n"
+  s := s ++ s!"defaulting to `rfl`. -/\n"
+  s := s ++ s!"structure {algT}.Commutes \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    (h : R .{label} → S .{label}) (alg : {algT} R) (alg' : {algT} S) : Prop where\n"
+  for r in rows do
+    let binders := joinArgs (r.args.map (·.name))
+    let quant := if r.args.isEmpty then "" else s!"∀ {binders}, "
+    let lhsArgs := if r.args.isEmpty then "" else " " ++ binders
+    let rhsArgs := String.join (r.args.map fun a => if a.recFam.isSome then s!" (h {a.name})" else s!" {a.name}")
+    s := s ++ s!"  {r.field} : {quant}h (alg.{r.field}{lhsArgs}) = alg'.{r.field}{rhsArgs} := by\n    intros; rfl\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **Fusion, from uniqueness.** -/\n"
+  s := s ++ s!"theorem cata_fusion_{label} \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    \{h : R .{label} → S .{label}} \{alg : {algT} R} \{alg' : {algT} S}\n"
+  s := s ++ s!"    (c : {algT}.Commutes h alg alg') (t : {famT}) :\n"
+  s := s ++ s!"    h (cata_{label} alg t) = cata_{label} alg' t :=\n"
+  s := s ++ s!"  hom_eq_cata_{label} (alg := alg')\n"
+  s := s ++ s!"    \{ f_{label} := fun s => h (cata_{label} alg s)\n"
+  let fusionFields := rows.map fun r =>
+    if (kidsOf r).isEmpty then s!"      h_{r.field} := c.{r.field}"
+    else
+      let binders := joinArgs (r.args.map (·.name))
+      let callArgs := joinArgs (r.args.map fun a => if a.recFam.isSome then s!"(cata_{label} alg {a.name})" else a.name)
+      s!"      h_{r.field} := fun {binders} => c.{r.field} {callArgs}"
+  s := s ++ String.intercalate "\n" fusionFields ++ " } t\n\n"
+  -- the banana split
+  s := s ++ s!"/-- Two algebras run side by side. -/\n"
+  s := s ++ s!"def {algT}.prod \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    (a : {algT} R) (b : {algT} S) : {algT} (fun f => R f × S f) where\n"
+  for r in rows do
+    let lhs := if r.args.isEmpty then "" else " " ++ joinArgs (r.args.map (·.name))
+    let side (w : String) (proj : String) : String :=
+      if r.args.isEmpty then s!"{w}.{r.field}" else
+        s!"{w}.{r.field} " ++ joinArgs (r.args.map fun a => if a.recFam.isSome then s!"{a.name}.{proj}" else a.name)
+    s := s ++ s!"  {r.field}{lhs} := ({side "a" "1"}, {side "b" "2"})\n"
+  s := s ++ "\n"
+  s := s ++ s!"/-- **The banana split, from uniqueness.** -/\n"
+  s := s ++ s!"theorem cata_prod_{label} \{R : {famE} → Type u} \{S : {famE} → Type v}\n"
+  s := s ++ s!"    (a : {algT} R) (b : {algT} S) (t : {famT}) :\n"
+  s := s ++ s!"    cata_{label} ({algT}.prod a b) t = (cata_{label} a t, cata_{label} b t) :=\n"
+  s := s ++ s!"  (hom_eq_cata_{label} (alg := {algT}.prod a b)\n"
+  s := s ++ s!"    \{ f_{label} := fun s => (cata_{label} a s, cata_{label} b s)\n"
+  s := s ++ homRfl ++ " } t).symm\n\n"
+  let _ := homT
+  return s
+def receipts (root : Name) : MetaM (List String) := do
+  let (_, blockName, block) ← readBlock root
+  let (label, _, _) := block.head!
+  let low := lowerFirst blockName
+  return [s!"{low}Build_view", "cata_ofLayer_view", s!"sizeOf_{low}Kids", "cata_ofLayer_inv",
+    "foldMap_head_eq_cata", "foldMap_eq_cata", s!"cata_fusion_{label}", s!"cata_prod_{label}"]
+
+end Extras
+
+
 structure Args where
   group : String := "Fold"
   imports : List String := []
@@ -1249,6 +1927,9 @@ structure Args where
   append : Option String := none
   kinds : List (String × String) := []
   types : List String := []
+  /-- Emit only the generic fold families of each (plain) block, into `ns` (probe U). -/
+  extras : Bool := false
+  ns : Option String := none
 
 partial def parseArgs : List String → Args → Except String Args
   | [], a => .ok a
@@ -1258,6 +1939,8 @@ partial def parseArgs : List String → Args → Except String Args
   | "--out" :: o :: rest, a => parseArgs rest { a with out := some o }
   | "--header-out" :: o :: rest, a => parseArgs rest { a with headerOut := some o }
   | "--append" :: p :: rest, a => parseArgs rest { a with append := some p }
+  | "--extras" :: rest, a => parseArgs rest { a with extras := true }
+  | "--namespace" :: n :: rest, a => parseArgs rest { a with ns := some n }
   | "--kind" :: k :: rest, a =>
     match k.splitOn "=" with
     | [ty, kind] => if ty.isEmpty || kind.isEmpty then .error s!"--kind {k}: expected <Type>=<kind>"
@@ -1268,7 +1951,34 @@ partial def parseArgs : List String → Args → Except String Args
       if rest.isEmpty then .error s!"{t} needs a value" else .error s!"unknown option {t}"
     else parseArgs rest { a with types := a.types ++ [t] }
 
+def runExtras (args : Args) : MetaM (Array String) := do
+  let ns := args.ns.getD "Effect4.Program"
+  let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
+  let head := "lake env lean -M 4096 --run tools/Effect4Gen/Fold.lean --extras --group " ++ args.group
+    ++ " --imports " ++ String.intercalate "," args.imports ++ " --out " ++ outPath
+    ++ (match args.ns with | some n => " --namespace " ++ n | none => "")
+    ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
+    ++ String.join (args.types.map fun t => " " ++ t)
+  let mut lines : Array String := #[
+    "-- GENERATED by tools/Effect4Gen/Fold.lean (--extras) from the Lean environment. Do not edit.",
+    "-- Regenerate:", "--   " ++ head]
+  lines := lines ++ (args.imports.map fun i => s!"import {i}").toArray
+  lines := lines ++ #["", "set_option autoImplicit false", "", "namespace " ++ ns, "",
+    "open Effect4.Program", "", "universe u v w", "", Extras.helpers]
+  let mut receipts : List String := []
+  for t in args.types do
+    lines := lines.push (← Extras.emitExtras t.toName)
+    receipts := receipts ++ (← Extras.receipts t.toName)
+  lines := lines ++ #["/-! ## Receipts -/", ""]
+  for r in receipts do lines := lines.push s!"#print axioms {r}"
+  lines := lines ++ #["", "end " ++ ns, ""]
+  if let some p := args.append then
+    let txt ← IO.FS.readFile p
+    lines := lines ++ (txt.splitOn "\n").toArray.map (·.replace "\r" "")
+  return lines
+
 def run (args : Args) : MetaM (Array String) := do
+  if args.extras then return ← runExtras args
   -- The blocks first: the emitted header depends on whether any of them has a monadic half,
   -- and the namespace is the first carrier's own prefix.
   let mut blockTexts : Array String := #[]
@@ -1281,6 +1991,13 @@ def run (args : Args) : MetaM (Array String) := do
     | none => `Effect4.Program
   for t in args.types do
     let root := t.toName
+    -- `--kind <Type>=elim[:<prefix>]`: the nested companions instead of the fold
+    match args.kinds.find? (fun (ty, k) => ty == t && (k == "elim" || k.startsWith "elim:")) with
+    | some (_, k) =>
+      let pfx := if k.startsWith "elim:" then some (k.drop 5).toString else none
+      blockTexts := blockTexts.push (← Elim.emitElim root pfx)
+      continue
+    | none => pure ()
     let (_, _, block) ← readBlock root
     if blockNested block then
       let (blockText, blockReceipts, aux) ← emitNestedBlock namespaceName root emittedAux
@@ -1350,7 +2067,8 @@ def run (args : Args) : MetaM (Array String) := do
     lines := lines.push frontierText
     allReceipts := allReceipts ++ frontierReceipts
 
-  lines := lines ++ #["/-! ## Receipts -/", ""]
+  if !allReceipts.isEmpty then
+    lines := lines ++ #["/-! ## Receipts -/", ""]
   for r in allReceipts do
     lines := lines.push s!"#print axioms {r}"
   lines := lines ++ #["", "end " ++ namespaceName.toString, ""]

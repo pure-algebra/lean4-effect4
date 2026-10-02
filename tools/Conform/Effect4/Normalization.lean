@@ -48,7 +48,7 @@ def fixtures : Array Fixture := Id.run do
   let mut out := #[]
   for t in vectors do
     let label := toString out.size
-    let ml := Conform.Effect4.LcnfMl.tyOcaml t
+    let ml := (Conform.Effect4.LcnfMl.tyT t).render
     let g := OCaml5.Lcnf.globalName
     out := out.push ⟨label ++ "/key", ``Ty.key, #[Conform.Effect4.LcnfSemantics.tyValue t], #[Conform.Effect4.LcnfMl.tyT t],
       Value.ofNatList t.key, Conform.Effect4.LcnfMl.natListT t.key,
@@ -56,18 +56,18 @@ def fixtures : Array Fixture := Id.run do
     for name in [``Ty.normalize, ``canonicalRaw] do
       out := out.push ⟨label ++ "/" ++ name.toString, name, #[Conform.Effect4.LcnfSemantics.tyValue t], #[Conform.Effect4.LcnfMl.tyT t],
         Conform.Effect4.LcnfSemantics.tyValue t.normalize, Conform.Effect4.LcnfMl.tyT t.normalize,
-        s!"{g name} ({ml}) = ({Conform.Effect4.LcnfMl.tyOcaml t.normalize})"⟩
+        s!"{g name} ({ml}) = ({(Conform.Effect4.LcnfMl.tyT t.normalize).render})"⟩
   for a in vectors.take 8 do
     for b in vectors.take 8 do
       let result : Option (Option Ty × Ty × List (Nat × Nat)) := mergeColumns a b
       let expected := match result with
         | none => "None"
         | some (answer, error, rows) =>
-          let ans := match answer with | none => "None" | some t => s!"Some ({Conform.Effect4.LcnfMl.tyOcaml t})"
-          s!"Some ({ans}, ({Conform.Effect4.LcnfMl.tyOcaml error}, [{String.intercalate ";" (rows.map fun (pair : Nat × Nat) => s!"({pair.1},{pair.2})")}]))"
+          let ans := match answer with | none => "None" | some t => s!"Some ({(Conform.Effect4.LcnfMl.tyT t).render})"
+          s!"Some ({ans}, ({(Conform.Effect4.LcnfMl.tyT error).render}, [{String.intercalate ";" (rows.map fun (pair : Nat × Nat) => s!"({pair.1},{pair.2})")}]))"
       out := out.push ⟨toString out.size ++ "/merge", ``mergeColumns,
         #[Conform.Effect4.LcnfSemantics.tyValue a, Conform.Effect4.LcnfSemantics.tyValue b], #[Conform.Effect4.LcnfMl.tyT a, Conform.Effect4.LcnfMl.tyT b], mergeS result, mergeT result,
-        s!"{OCaml5.Lcnf.globalName ``mergeColumns} ({Conform.Effect4.LcnfMl.tyOcaml a}) ({Conform.Effect4.LcnfMl.tyOcaml b}) = ({expected})"⟩
+        s!"{OCaml5.Lcnf.globalName ``mergeColumns} ({(Conform.Effect4.LcnfMl.tyT a).render}) ({(Conform.Effect4.LcnfMl.tyT b).render}) = ({expected})"⟩
   return out
 
 end Conform.Effect4.Normalization
