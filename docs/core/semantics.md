@@ -343,8 +343,10 @@ inductive RunDecision ...
   (`flush_fair` (`src/Effect4/Laws/Machine/Scheduling.lean:413`)).
 - **Step invariant lifting (`drivestate-lift`)**: Step invariant lifting for sequential command loops
   (`driveState_lift` (`src/Effect4/Laws/Machine/Lift.lean:56`)).
-- **Scheduler step preservation (`step-loop-preserves`, `step-deliver-preserves`)**: Preservation of `MachineTyped`
-  across `stepDecision` on loop and deliver decisions (`M6Ledger.step_loop` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1708`), `M6Ledger.step_deliver` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1719`)).
+- **Scheduler step preservation (`step-loop-preserves`, `step-deliver-preserves`)**: Preservation of `ConfigTyped`
+  across the actual `driveStep` command at an extending world (`StepPreserves`, `M6Ledger.step_loop`,
+  `M6Ledger.step_deliver` in `src/Effect4/Laws/Program/Typed/Assembly.lean`). The later decision
+  and reachability statements use `MachineTyped`; they are distinct assembly goals.
 - **Operational progress (`scheduler-progress`)**: Every typed state is either terminal, takes a step, or is at a live frontier
   (decisions row 139).
 - **Infinite liveness (`fair-scheduling`)**: Temporal liveness under weak fairness (Requirement R12).
@@ -366,6 +368,16 @@ waiter type. `wake_preserves` uses both arguments at the actual machine step, an
 de Vilhena and Pottier, *A Separation Logic for Effect Handlers*, §3.3 and §4.2.4 (audit P8), guides
 this decomposition. Our ordinary Lean predicates do not implement that paper's Iris resource
 algebra or separation logic; the displayed theorem premises are the local contract.
+
+Registration completion adds a pending record at one race key. `ObsViewOff` and
+`configTyped_rupdate_park` permit that one lookup change while transporting countdown
+correlations at other keys. Decisions row 134(d) supplies the stored and queued observer
+exclusions. `registrationDone_preserves` combines this transport, race payload typing and
+cancellation-frame typing for the accepted, deferred-interrupt and ordinary park branches.
+It supplies the unchanged `M6Ledger.step_registrationDone` goal; the CE-028 battery separately
+checks refusal of the historical countdown collision and acceptance after removing only that
+countdown. The [receipt](../research/2026-10-02-codex-lead/registration-receipt.md) records each
+helper's concrete consumer. This remains a local invariant proof, with the same limits as above.
 
 In particular, token bounds, disjointness from external requests, and race/observer separation
 are different properties. They do not state that every internal key occurs at most once, nor

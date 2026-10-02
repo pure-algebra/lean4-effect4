@@ -1923,7 +1923,6 @@ end Effect4.Program.Typed
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_launch
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_registrationDone
 #proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves
 #proof_wanted Effect4.Program.Typed.M6Ledger.typedState_reachable
 -- `M6Ledger`'s proved goals and its report are at the foot of the last command module

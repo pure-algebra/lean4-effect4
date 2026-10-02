@@ -545,10 +545,13 @@ do not override the corrected protocol-before-assembly order or constitute a new
 `codex/proofs-lead`. Claude's clean handoff `247d7487` and the CE-026 regression battery
 `e493b67d` are now merged into the local `refactor/phase1-phase3`; nothing was pushed.
 M5 and all 31 store rows of M3bAdequacy are closed; M6Edits has 0 open of 13. M6Ledger has
-6 open of 20: `loop`, `deliver`, `launch`, `registrationDone`, decision preservation and
+5 open of 20: `loop`, `deliver`, `launch`, decision preservation and
 reachable typing. M7 retains 4 open on its existing fragment. The general wake proof and its
 positive/refusing controls are recorded in
 [the wake receipt](research/2026-10-02-codex-lead/waiter-receipt.md).
+The unchanged registration-completion obligation is now proved for all three command branches;
+its CE-028 controls reject the old countdown collision and accept the input with only that
+countdown removed. See [the registration receipt](research/2026-10-02-codex-lead/registration-receipt.md).
 The [lead plan](research/2026-10-02-codex-lead/plan.md) carries the remaining sequence, including
 the theoretical placement and proof-graph update required with each slice. The shared frame
 method and its ownership limits are explained in semantics Concept 4 §5. The earlier design

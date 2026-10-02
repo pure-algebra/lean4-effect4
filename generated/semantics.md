@@ -30,7 +30,6 @@ Authored significant declarations grouped by language feature. Edges are direct 
 - `Effect4.Program.Typed.M6Ledger.step_loop` — [src/Effect4/Laws/Program/Typed/Assembly.lean](../src/Effect4/Laws/Program/Typed/Assembly.lean).
 - `Effect4.Program.Typed.M6Ledger.step_deliver` — [src/Effect4/Laws/Program/Typed/Assembly.lean](../src/Effect4/Laws/Program/Typed/Assembly.lean).
 - `Effect4.Program.Typed.M6Ledger.step_launch` — [src/Effect4/Laws/Program/Typed/Assembly.lean](../src/Effect4/Laws/Program/Typed/Assembly.lean).
-- `Effect4.Program.Typed.M6Ledger.step_registrationDone` — [src/Effect4/Laws/Program/Typed/Assembly.lean](../src/Effect4/Laws/Program/Typed/Assembly.lean).
 - `Effect4.Program.Typed.M6Ledger.decision_preserves` — [src/Effect4/Laws/Program/Typed/Assembly.lean](../src/Effect4/Laws/Program/Typed/Assembly.lean).
 - `Effect4.Program.Typed.M6Ledger.typedState_reachable` — [src/Effect4/Laws/Program/Typed/Assembly.lean](../src/Effect4/Laws/Program/Typed/Assembly.lean).
 - `Effect4.Program.Typed.M7.exits_typed` — [src/Effect4/Laws/Program/Typed/Assembly.lean](../src/Effect4/Laws/Program/Typed/Assembly.lean).
@@ -400,7 +399,7 @@ Reactive Scheduling: Multi-fiber execution, decision steps, and configuration in
 | waiter-completion-typing | preservation | proved | Effect4.Program.Typed.completionStrong_await | yes |  |
 | step-wake-preserves | preservation | proved | Effect4.Program.Typed.M6Ledger.step_wake.checked | yes | E4-TYPED-CE-026 |
 | step-launch-preserves | preservation | wanted | Effect4.Program.Typed.M6Ledger.step_launch | yes | E4-TYPED-CE-029 |
-| step-registration-done-preserves | preservation | wanted | Effect4.Program.Typed.M6Ledger.step_registrationDone | yes | E4-TYPED-CE-028 |
+| step-registration-done-preserves | preservation | proved | Effect4.Program.Typed.M6Ledger.step_registrationDone.checked | yes | E4-TYPED-CE-028 |
 | drivestate-lift | simulation | proved | Effect4.Machine.Lift.driveState_lift | yes |  |
 | scheduler-progress | progress | absent | Operational progress is an open obligation; machineTyped_not_halted provides an invariant consequence (stuck = none) without successor existence | — |  |
 | fair-scheduling | adequacy | absent | Weak fairness progress is open (R12; decisions row 86) | — |  |
@@ -1039,7 +1038,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 **step-registration-done-preserves: E4-TYPED-CE-028**
 
 ```text
-| `E4-TYPED-CE-028` | SEEDED 2026-10-01 (seat D3, `5789df56`, merged `7d50cfe6`; kernel-checked at `[propext, Quot.sound]`) | `StepPreserves` for `registrationDone` is false: a stored countdown observer on the race's key reads the park's `void` record | `docs/research/2026-10-01-landing/seat-D3/probes/Races.lean`: `Registration.registrationDone_false` | row 134 (d): race keys disjoint from stored observer keys (ruled; seat D5) |
+| `E4-TYPED-CE-028` | REPAIRED 2026-10-02 (row 134(d), `a7294954`; general `registrationDone_preserves` and Codex lead control battery; `[propext, Quot.sound]`) | Historically `StepPreserves` for `registrationDone` was false: a stored countdown observer on the race's key read the park's `void` record. Stored and queued observer exclusion now supports the unchanged command theorem. | Historical refutation unchanged: `docs/research/2026-10-01-landing/seat-D3/probes/Races.lean`, `Registration.registrationDone_false`. Current controls: `Test/Program/RegistrationColumn.lean`, `historical_scheduler_refused`, `historical_config_refused`, `only_countdown_removed`, `config_typed`, `result_typed`, `parked`, `registration_flag_cleared`, `historical_parked`. | row 134(d); the number-typed token is unchanged, only the countdown is removed in the positive control. General configuration preservation plus finite machine controls; no reachability, progress, fairness or host/target claim. |
 ```
 
 ## Applicability decisions

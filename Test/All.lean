@@ -59,6 +59,7 @@ import Test.Program.FramesNotKripke
 import Test.Program.TimerColumn
 import Test.Program.MemoTable
 import Test.Program.WaiterColumn
+import Test.Program.RegistrationColumn
 import Test.Program.ProtocolPosts
 import Test.Audit.AnswerGate
 import Test.Machine.Runtime.RepresentationFoundations

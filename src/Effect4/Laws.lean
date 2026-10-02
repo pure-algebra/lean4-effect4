@@ -128,6 +128,7 @@ import Effect4.Laws.Program.Typed.Seq
 import Effect4.Laws.Program.Typed.Commands.Bookkeeping
 import Effect4.Laws.Program.Typed.Commands.Finish
 import Effect4.Laws.Program.Typed.Commands.Race
+import Effect4.Laws.Program.Typed.Commands.Registration
 import Effect4.Laws.Program.Typed.Commands.Observe
 import Effect4.Laws.Program.Typed.Edits
 import Effect4.Laws.Program.Typed.Stack

@@ -61,3 +61,35 @@ Effect Schema report and architecture renderer. It introduces no parallel status
   exposes the existing wake proof's direct frame/transfer references, complete hypotheses,
   historical CE-026 link and literature associations. Reports and the architecture page are
   generated, not hand-edited, at this documentation checkpoint.
+
+## Registration completion slice placement
+
+The existing final command report lives in `Commands/Observe.lean`. Its import is advanced from
+Race to Registration and its ceiling from 6 to 5 so it sees the new witness; no Observe proof
+or statement changes. The initial integration build caught this missing import boundary.
+
+- Concept 4, reactive scheduling: preserve `ConfigTyped` across the actual
+  `registrationDone` command; consumer `M6Ledger.step_registrationDone`, then the existing
+  decision/reachability capstones on the M5 → M6 → M7 path.
+- Frozen reach: `StepPreserves root rootTy (.registrationDone race yielding)` at the same
+  world. No machine definition, source-typing rule or additional premise changes.
+- Row 134(d) separates race keys from stored and queued observer keys. A new park changes
+  pending lookup at its own key; `PendingWeakerOff`/`ObsViewOff` express precisely that local
+  exception. The observer transport and park-update helpers have this command as their first
+  consumer; the ordinary no-new-park view is insufficient. Global unique-sender ownership is
+  neither assumed nor concluded.
+- The race cancellation-frame typing and marker/request exclusion discharge the actual
+  stack/authority premises. The accepted, deferred-interrupt and ordinary park branches all
+  feed the one command theorem. Future loop parking can reuse the park helper after supplying
+  its own exclusion premise; that reuse is not claimed proved here.
+- Evidence: compile the saved candidate, retain the historical CE-028 exclusion plus a typed
+  positive park and actual branch controls, inspect transitive axioms, bind the exact ledger
+  goal, and build the touched module and importing Laws root. No progress, fairness, arbitrary
+  host replies or generated-target behavior is established.
+
+Files: new `src/Effect4/Laws/Program/Typed/Commands/Registration.lean`; `src/Effect4/Laws.lean`
+immediately after the `Commands.Race` import; remove only the matching wanted marker in
+`Typed/Assembly.lean`; new `Test/Program/RegistrationColumn.lean`, imported immediately after
+`WaiterColumn` in `Test/All.lean`; CE-028 register entry and this slice's receipt. Retain the
+source candidate and review outside the repository. Avoid refactoring unrelated transport
+consumers during this proof landing.
