@@ -40,11 +40,16 @@ command. It also compares the prepared project/package import artifacts with sav
 checks that the report names only prepared roots, and stages generation until final validation
 succeeds. It never starts a build or installs host dependencies. Its run receipt records the checkout
 head, dirty state and policy hash under `.lake/`, outside the committed report bytes.
-Both semantics targets are incremental like every other group (the owner's rule: no re-run
-when the inputs are unchanged): they re-run when the registry, the producer, a register or a
-named root's Lake trace changes, and `make check` builds before it checks, so an imported
-source edit refreshes the traces first; the script's freshness preflight still refuses a
-stale artifact when it runs.
+Both semantics targets are incremental (the owner's rule: no re-run when inputs are
+unchanged). Source changes also trigger the freshness preflight before a root trace has
+been refreshed. Prepared import artifacts and traces are inputs; checking also watches
+TypeScript sources and JSON fixtures recursively. These deliberately broad triggers
+start no build: the preflight validates the exact loaded closure and refuses stale
+artifacts. The v2 report includes the selected feature/proof map from
+`Tools.ProofMapSelection`, with actual statement/body references extracted by
+`Tools.ProofMap`; `ProofGraph` validates the selected goals and evidence. The architecture
+view and Markdown consume this same report. Graph controls distinguish references from
+authored prerequisites and retain conditional hypotheses, structure fields and open goals.
 lcnf is another deliberate exception: it sits in the order between
 derived and eff, because eff cuts the engine's layout mirror from the api_engine.ml lcnf
 writes, but its marker is not a link of the chain, so `check-gen` — which runs inside `make
@@ -95,7 +100,7 @@ set still requires the typing-world instantiation; frame premises are not that p
 | host-protocol | `tools/Tools/HostProtocol.lean` (the `gen-host-protocol` recipe) | `Effect4.Api.HostProtocol` | `harness/truth/session/protocol.gen.ts`, `tape.schema.json` | `make check-host-protocol` | reproduced; tested |
 | schema-ts | `harness/schema-generation/Emit{Fixture,CoverageFixture,MultiFixture}.lean`, stdout redirected | `Effect4.Codegen.Schema`, the fixture declarations | the three `.generated.ts` beside them | `make check-schema-ts` | reproduced; tested |
 | census | `scripts/generate-effect-runtime-census.sh` (stdout) | the twelve vendored rc.112 sources it names | `generated/effect-runtime-census.tsv`, joined by `Test/Audit/RuntimeCoverage.lean` | `make check-census` | reproduced; proved where a row's witness theorem is joined |
-| semantics | `tools/Drivers/Semantics.lean` over `tools/Tools/Semantics.lean` (`make gen-semantics`) | `tools/Tools/SemanticsRegistry.lean` (concepts, claims, cuts, defaults, roots), the loaded roots and `semantics` tags, `ProofGraph` evidence, the counterexample register's IDs/statuses, the decisions register's rows/owners, `lean-toolchain` | `generated/semantics.json`, `generated/semantics.md`; `ts/eff/semantics.ts` | `make check-semantics`: two fresh runs equal each other and the maintained bytes; pinned tsgo 7 checks `ts/eff`; Bun decodes with excess keys refused and runs decoding controls; Lean runs refusal controls; removing CE-030 from a temporary register makes the real producer refuse without replacing existing output bytes. `check-gen` diffs without regenerating; `check-gen-full` regenerates | reproduced (bytes); tested (controls and decoding); proved only for each claim's reported statement and assumptions |
+| semantics | `tools/Drivers/Semantics.lean` over `tools/Tools/Semantics.lean` (`make gen-semantics`) | `tools/Tools/SemanticsRegistry.lean` (concepts, claims, cuts, defaults, roots), the loaded roots and `semantics` tags, `ProofGraph` evidence, `Tools.ProofMapSelection` feature groups and prerequisites, kernel expression references, the counterexample register's IDs/statuses, the decisions register's rows/owners, `lean-toolchain` | `generated/semantics.json`, `generated/semantics.md`; `ts/eff/semantics.ts`, `ts/eff/proof-map.ts`, `docs/core/architecture-map.html` | `make check-semantics`: two fresh runs equal each other and the maintained bytes; pinned tsgo 7 checks `ts/eff`; Bun decodes with excess keys refused and runs decoding controls; Lean runs refusal controls; removing CE-030 from a temporary register makes the real producer refuse without replacing existing output bytes. `check-gen` diffs without regenerating; `check-gen-full` regenerates | reproduced (bytes); tested (controls and decoding); proved only for each claim's reported statement and assumptions |
 | architecture | `tools/Tools/Architecture.lean` (`make gen-architecture`) | every `.lean` under `src/`, `tools/` and `Test/` (import headers through `Lean.Elab.parseImports`), the roots `Tools.Architecture.roots` loaded for declaration counts, the estates by file walk, this table, `lakefile.toml`, the role register `tools/Tools/ArchitectureRoles.lean` (checked for totality on every run) | `docs/core/architecture-map.html` | `make check-architecture` on demand; not in `make check`: the map is a report and changes whenever the tree does | reproduced |
 
 Retired 2026-09-13 (the scripts ledger): `generated/schema-structural-assurance.tsv`, a

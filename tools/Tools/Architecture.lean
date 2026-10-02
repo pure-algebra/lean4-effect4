@@ -1,6 +1,7 @@
 import Lean
 import Tools.GeneratedStamp
 import Tools.ArchitectureRoles
+import Tools.ProofMapHtml
 
 /-!
 # Tools.Architecture — the architecture map, measured from the tree
@@ -19,6 +20,8 @@ What is measured, and how:
   `Lean.Elab.parseImports`, the parser the compiler uses on the same header;
 - the roots of `Tools.Architecture.roots`, loaded with `importModules`, for the theorems,
   definitions and inductives each module declares (auxiliary declarations skipped by name);
+- the v2 `generated/semantics.json` feature/proof map, whose evidence is validated by its
+  own producer; selected proof badges never use the architecture count heuristic;
 - every estate outside the Lean roots by file walk, lines counted for text extensions;
 - the generated groups in the order of the Makefile's `GEN_GROUPS` (the list `make gen` runs),
   the derived group's outputs from `tools/Effect4Gen/manifest.json`, each group's description
@@ -29,7 +32,7 @@ What is measured, and how:
 What is declared, in `Tools.ArchitectureRoles`: the areas and their roles, the column and
 height of each, the layering rule, the accepted exceptions, the milestone's modules. The
 register is total: a Lean file under no area, or an area whose path does not exist, stops the
-run with the name. Nothing else stops it.
+run with the name. Missing or malformed v2 semantics graph data also stops generation.
 
 A tool (`lakefile.toml`, the `Tools` library): outside the axiom gate, imported by nothing.
 -/
@@ -728,11 +731,12 @@ def page (f : Facts) : IO String := do
   let leanLines := linesOf f.leanFiles
   let loaded := (f.leanFiles.filter fun x => f.counts.contains x.module).size
   let thms := (f.countsOf f.leanFiles).theorems
+  let proofMap ← Tools.ProofMapHtml.load
   let milestoneSvg ← renderMilestone f.counts
   let ledger := f.countsOf f.leanFiles
   let head := "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n<title>Effect4 Architecture Map</title>\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap\">\n<style>" ++ css ++ "</style>\n</head>\n<body>\n<!-- " ++ Tools.GeneratedStamp.note "tools/Tools/Architecture.lean (make gen-architecture)" ++ " -->\n<div class=\"wrap\">\n"
   let header := s!"<header><h1>Effect4 Architecture Map</h1><p>The tree as it is: the four Lean roots and the direction their imports run, the estates around them, the typed-state proof stack as it lands, and what the tree says against what the role register declares. Measured by <code>tools/Tools/Architecture.lean</code>; the roles and the layering are declared in <code>tools/Tools/ArchitectureRoles.lean</code>.</p><div class=\"stamp\">{f.leanFiles.size} Lean modules · {fmt leanLines} lines · {loaded} loaded for counts · {fmt thms} theorems · regenerate with <code>make gen-architecture</code></div>" ++
-    "<nav><a href=\"#roots\">The roots</a><a href=\"#matrix\">The import matrix</a><a href=\"#against\">Against the direction</a><a href=\"#stack\">The typed-state stack</a><a href=\"#map\">The file map</a><a href=\"#faces\">Faces and generated groups</a><a href=\"#pins\">Pinned references</a><a href=\"#audit\">Audit</a></nav>" ++
+    "<nav><a href=\"#proof-map\">Features and proofs</a><a href=\"#roots\">The roots</a><a href=\"#matrix\">The import matrix</a><a href=\"#against\">Against the direction</a><a href=\"#stack\">The typed-state stack</a><a href=\"#map\">The file map</a><a href=\"#faces\">Faces and generated groups</a><a href=\"#pins\">Pinned references</a><a href=\"#audit\">Audit</a></nav>" ++
     "<div class=\"legend\"><span class=\"runtime\">runtime</span><span class=\"laws\">proofs</span><span class=\"tools\">tools</span><span class=\"tests\">batteries</span><span class=\"planned\">planned, not yet a file</span><span class=\"bad\">imports against the declared direction</span></div></header>"
   let roots := "<section id=\"roots\"><h2>The roots and their direction</h2><p class=\"lede\">Each column is a lake root; each box an area at the height the register declares. Inside a column an import may point at the same height or lower; the runtime imports only itself; the proof graph imports the runtime and <code>ProofGraph</code>; the tool roots import the runtime, the proof graph and lower tools; the batteries import everything. A red count on a box is the number of that area's imports that break one of those rules.</p><figure><div class=\"scroll\">" ++ renderStack f ++ "</div><figcaption>Arrows at the top aggregate the import statements between columns. Counts on the boxes are the area with its detail directories; theorems, definitions and inductives are counted from the loaded environment, auxiliaries excluded.</figcaption></figure></section>"
   let matrix := "<section id=\"matrix\"><h2>The import matrix</h2><p class=\"lede\">Rows import columns. A red cell is an import against the direction; a dot is none. The external columns are the packages the tree imports, by first component.</p><div class=\"scroll\">" ++ renderMatrix f ++ "</div></section>"
@@ -744,8 +748,8 @@ def page (f : Facts) : IO String := do
   let faces := "<section id=\"faces\"><h2>Faces and generated groups</h2><p class=\"lede\">How a Lean definition becomes an OCaml or TypeScript face: the Makefile's <code>GEN_GROUPS</code> in order, described by <code>docs/GENERATED.md</code>, the derived group's outputs read from <code>tools/Effect4Gen/manifest.json</code>.</p>" ++ renderGroups f ++ "</section>"
   let pins := "<section id=\"pins\"><h2>Pinned references</h2><p class=\"lede\">The packages <code>lakefile.toml</code> requires, at their exact revisions, and the vendored behavioral reference.</p>" ++ renderPins f ++ "</section>"
   let audit := "<section id=\"audit\"><h2>Audit</h2><p class=\"lede\">What the tree says about itself at this measurement. None of it fails a build; all of it is a question for the next slice.</p>" ++ renderAudit f ++ "</section>"
-  let footer := "<footer>Generated by <code>tools/Tools/Architecture.lean</code> from the tree: import headers through <code>Lean.Elab.parseImports</code>, declaration counts from the loaded roots, sizes by file walk, the groups from the Makefile's <code>GEN_GROUPS</code>, the manifest and <code>docs/GENERATED.md</code>, the pins from <code>lakefile.toml</code>. The role register <code>tools/Tools/ArchitectureRoles.lean</code> is the one hand input and is checked for totality on every run. No commit or date is embedded; the map changes when the tree does.</footer>"
-  return head ++ header ++ roots ++ matrix ++ against ++ stack ++ map ++ faces ++ pins ++ audit ++ footer ++ "\n</div>\n</body>\n</html>\n"
+  let footer := "<footer>Generated by <code>tools/Tools/Architecture.lean</code> from the tree: import headers through <code>Lean.Elab.parseImports</code>, declaration counts from the loaded roots, sizes by file walk, the groups from the Makefile's <code>GEN_GROUPS</code>, the manifest and <code>docs/GENERATED.md</code>, the pins from <code>lakefile.toml</code>. The architecture role register <code>tools/Tools/ArchitectureRoles.lean</code> is checked for totality on every run. The selected feature/proof view is read from <code>generated/semantics.json</code>; its authored associations and checked evidence retain that report’s separate provenance. No commit or date is embedded; the map changes when the tree does.</footer>"
+  return head ++ header ++ proofMap ++ roots ++ matrix ++ against ++ stack ++ map ++ faces ++ pins ++ audit ++ footer ++ "\n</div>\n</body>\n</html>\n"
 
 end Tools.Architecture
 
