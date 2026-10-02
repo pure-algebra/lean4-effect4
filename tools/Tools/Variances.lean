@@ -393,7 +393,23 @@ def heads : List (String × Source) :=
        distribution on the left and choice on the right, so `Ty.sameHead` answers `false` on it \
        and the arm never reaches the variance-wise comparison."),
     ("refOf", .rc112 "Ref" "Ref"),
-    ("deferredOf", .rc112 "Deferred" "Deferred") ]
+    ("deferredOf", .rc112 "Deferred" "Deferred"),
+    ("record", .printerEach "{ readonly a: A; readonly b?: B }" .co
+      "TypeScript's own object type literal, every property `readonly` (decisions row 119's \
+       printed form); a readonly property is compared covariantly. Variable arity: the one word \
+       is every field's, read in canonical order (`Ty.canon`); the names and optional flags are \
+       the head (row 178 (a): exact)."),
+    ("map", .printer "Readonly<Record<string, V>>" [.inv, .co]
+      "Decisions row 125 as ruled: a string-keyed map printed `Readonly<Record<string, V>>`, the \
+       key exact, the value covariant. Not read off rc.112: `HashMap` declares `<out Key, out \
+       Value>` (HashMap.ts:50), which is not the printed spelling."),
+    ("tuple", .printerEach "readonly [A, B, C]" .co
+      "TypeScript's own readonly tuple of any arity (decisions row 159; `prod` is its arity two); \
+       each element covariant. Variable arity: the one word is every item's."),
+    ("app", .byName
+      "A nominal reference `Name<A, …>` (decisions row 158): each argument's variance is the \
+       named declaration's, read from `declarations` (`Module.Name`); invariant where none is \
+       declared.") ]
 
 /-! ## The order's cross-head rules live in the core, not here
 

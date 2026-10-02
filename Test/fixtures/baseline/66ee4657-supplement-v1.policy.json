@@ -33,7 +33,15 @@
     "Effect4.Program.Eff.iterate",
     "Effect4.Program.Ty.lit",
     "Effect4.Machine.Err.text",
-    "Effect4.Machine.Defect.error"
+    "Effect4.Machine.Defect.error",
+    "Effect4.Program.Ty.record",
+    "Effect4.Program.Ty.map",
+    "Effect4.Program.Ty.tuple",
+    "Effect4.Program.Ty.app",
+    "Effect4.Program.Ty.null",
+    "Effect4.Program.Ty.undefined",
+    "Effect4.Program.Ty.number",
+    "Effect4.Program.Ty.bytes"
   ],
   "constructor_retirements": [
     "Effect4.Program.Eff.branch",

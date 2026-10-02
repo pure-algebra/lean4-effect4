@@ -113,7 +113,7 @@ end Inhabited
 
 section Refused
 
-#guard Val.hasTy (Val.nat 1) .int = false
+#guard Val.hasTy (Val.str "1") .int = false
 #guard Val.hasTy Val.unit .string = false
 #guard Val.hasTy Val.unit (.option .unit) = false
 #guard Val.hasTy (Val.exitOk Val.unit) (.except .nat .unit) = false
@@ -278,8 +278,12 @@ section Rows
 #guard evalTerm [Val.str "a"] (.app "pair" (.cons (.var 0) (.cons (.lit (.str "b")) .nil)))
   = some (Val.tuple [Val.str "a", Val.str "b"])
 
--- E4-TYPED-CE-002: `Val.nat` does not inhabit `.int`, though both render as `number`
-#guard Val.hasTy (Val.nat 1) .int = false
+-- E4-TYPED-CE-002, retired 2026-10-02 (decisions row 121, the nesting images): `.int`'s image is
+-- `nat`'s and the signed frame, so `Val.nat` inhabits `.int` by that inclusion, not because both
+-- render as `number`; the signed frame is no `nat`
+#guard Val.hasTy (Val.nat 1) .int = true
+#guard Val.hasTy (.negInt 0) .int = true
+#guard Val.hasTy (.negInt 0) .nat = false
 #guard Ty.render .nat = Ty.render .int
 #guard Val.hasTy (Val.nat 1) .nat = true
 

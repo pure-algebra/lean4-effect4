@@ -48,6 +48,10 @@ let tag_unit = 9
 let tag_ctor = 10
 let tag_ref = 11
 let tag_handle = 12
+(* The signed and binary64 frames of the value append (decisions rows 121, 162): named so the
+   tag table matches the store's; a program's wire carries neither, so no reader here takes one. *)
+let tag_int = 13
+let tag_float = 14
 
 (* ---- UTF-8 (RFC 3629: no overlongs, no surrogates, at most U+10FFFF) ---- *)
 

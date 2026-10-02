@@ -327,7 +327,11 @@ private def exitPayload? : Val → Option Val
 #guard resultPayload? (.ctor 1 [.str "ok", .nat 0]) = none
 #guard Effect4.Program.Val.hasTy (Val.resultSuccess (.str "ok")) (Ty.result .string .nat)
 #guard !Effect4.Program.Val.hasTy (Val.resultFailure (.str "wrong")) (Ty.result .string .nat)
-#guard Effect4.Program.Val.hasTy (.handle 7 0) (Ty.nullable .nat) ["null"]
+-- `null` and `undefined` are forms of their own since the data wave (row 162): their images are
+-- `none` and `unit`, and the external handle that stood in for `null` no longer fits
+#guard Effect4.Program.Val.hasTy .none (Ty.nullable .nat)
+#guard Effect4.Program.Val.hasTy .unit (Ty.nullable .nat)
+#guard !Effect4.Program.Val.hasTy (.handle 7 0) (Ty.nullable .nat) ["null"]
 #guard !Effect4.Program.Val.hasTy (.handle 7 0) Ty.duration ["DateTime.DateTime"]
 #guard !Effect4.Program.Val.hasTy .unit Ty.null
 

@@ -1,9 +1,9 @@
 Effect4.Program.Ty.never	3
 Effect4.Program.Ty.unit	3
-Effect4.Program.Ty.nat	13
+Effect4.Program.Ty.nat	17
 Effect4.Program.Ty.int	1
-Effect4.Program.Ty.string	12
-Effect4.Program.Ty.bool	1
+Effect4.Program.Ty.string	15
+Effect4.Program.Ty.bool	2
 Effect4.Program.Ty.handle	2
 Effect4.Program.Ty.option	4
 Effect4.Program.Ty.list	5
@@ -18,6 +18,14 @@ Effect4.Program.Ty.refOf	1
 Effect4.Program.Ty.deferredOf	1
 Effect4.Program.Ty.var	1
 Effect4.Program.Ty.unknown	1
+Effect4.Program.Ty.record	1
+Effect4.Program.Ty.map	1
+Effect4.Program.Ty.tuple	1
+Effect4.Program.Ty.app	1
+Effect4.Program.Ty.null	1
+Effect4.Program.Ty.undefined	1
+Effect4.Program.Ty.number	1
+Effect4.Program.Ty.bytes	1
 Effect4.Program.RowKind.sync	1
 Effect4.Program.RowKind.async	2
 Effect4.Program.RowKind.program	1

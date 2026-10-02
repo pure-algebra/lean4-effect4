@@ -26,6 +26,14 @@ let rec json_ty (v : ty) : Eff_json_text.t =
   | Ty_deferredOf (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "deferredOf"; json_ty a0; json_ty a1]
   | Ty_var a0 -> Eff_json_text.Array [Eff_json_text.String "var"; Eff_json_text.Int a0]
   | Ty_unknown -> Eff_json_text.Array [Eff_json_text.String "unknown"]
+  | Ty_record a0 -> Eff_json_text.Array [Eff_json_text.String "record"; Eff_json_text.Array (List.map (fun y -> (let (y0, y1) = y in Eff_json_text.Array [Eff_json_text.String y0; (let (y0, y1) = y1 in Eff_json_text.Array [Eff_json_text.Bool y0; json_ty y1])])) a0)]
+  | Ty_map (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "map"; json_ty a0; json_ty a1]
+  | Ty_tuple a0 -> Eff_json_text.Array [Eff_json_text.String "tuple"; Eff_json_text.Array (List.map (fun y -> json_ty y) a0)]
+  | Ty_app (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "app"; Eff_json_text.String a0; Eff_json_text.Array (List.map (fun y -> json_ty y) a1)]
+  | Ty_null -> Eff_json_text.Array [Eff_json_text.String "null"]
+  | Ty_undefined -> Eff_json_text.Array [Eff_json_text.String "undefined"]
+  | Ty_number -> Eff_json_text.Array [Eff_json_text.String "number"]
+  | Ty_bytes -> Eff_json_text.Array [Eff_json_text.String "bytes"]
 
 let print_ty (v : ty) : string = Eff_json_text.render (json_ty v)
 

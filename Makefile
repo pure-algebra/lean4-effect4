@@ -94,11 +94,11 @@ $(GEN)/variances: $(VARIANCE_SOURCES) | build
 DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json \
   $(VARIANCES) $(WIRE_TAGS) tools/Tools/WireTags.lean
 DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Domain/Canonical.trace Program/Native.trace Store/Domain/RowCanonical.trace \
-  Store/Domain/Pin.trace Store/Domain/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace Laws/Program/Folds/Ty.trace Laws/Auto/RuleSets.trace Program/Refs.trace \
+  Store/Domain/Pin.trace Store/Domain/Node.trace Api/Frontier.trace Program/Eff.trace Program/TyCore.trace Program/Ty.trace Laws/Program/Folds/Ty.trace Laws/Auto/RuleSets.trace Program/Refs.trace \
   Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \
   Api/Runner.trace Store/Domain/AnnotationsCanonical.trace Schema/Representation.trace \
   Machine/Term.trace Program/NativeAtom.trace Run.trace)
-DERIVED_OUT := src/Effect4/Store/Domain/Derived/Json.lean src/Effect4/Store/Domain/Derived/Schema.lean \
+DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Json.lean src/Effect4/Store/Domain/Derived/Schema.lean \
   src/Effect4/Store/Domain/Derived/Program.lean src/Effect4/Store/Domain/PinDerived.lean src/Effect4/Api/Derived.lean \
   src/Effect4/Store/Domain/Derived/Value.lean src/Effect4/Api/RefusalsDerived.lean src/Effect4/Api/RunnerDerived.lean \
   src/Effect4/Program/Fold.lean src/Effect4/Program/TyFoldExtras.lean src/Effect4/Laws/Program/TyView.lean src/Effect4/Store/Carrier/Fold.lean src/Effect4/Schema/Fold.lean src/Effect4/Program/LayerView.lean src/Effect4/Program/NodeLenses.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Scoped.lean \
@@ -230,7 +230,7 @@ clean-gen: ## forget the generation markers (the next `make gen` re-cuts everyth
 	rm -rf $(GEN)
 
 # Every committed path a generator writes. The drift check diffs exactly these.
-GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) \
+GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.lean \
   ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens ocaml/engine/e4_program_layout.ml \
   ocaml/engine/e4_program_layout.json \
   ocaml/gen/api_gen.ml ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/engine/api_engine.ml \

@@ -11,7 +11,11 @@ private theorem sub_never_core (t : Ty) : sub .never t = true := by
 reach here — `sub_eq_args` speaks between two members and `never` is not one — so this is the
 one arm of the order that is still read off the definition, and it is read once. -/
 theorem sub_never_right {a : Ty} (ha : isMember a = true) : sub a .never = false := by
+  have hne : a ≠ .never := by
+    rintro rfl
+    exact Bool.noConfusion ha
   conv => lhs; unfold sub
+  rw [if_neg hne, ite_leafRule_false (leafRule_of_right_none a .never rfl)]
   cases a
   case never => exact Bool.noConfusion ha
   case union _ _ => exact Bool.noConfusion ha
@@ -32,11 +36,12 @@ theorem isMember_eq_false {t : Ty} (h : isMember t = false) :
 
 The case list is the **order's**, not the alphabet's. Four equalities and the top are
 dispatched first; then the two rows (`never` and `union`, the two shapes `isMember` answers
-`false` at) on each side; then the literal rule, which is the one rule between members that is
-not a congruence; and what is left is a single step over `sub_eq_args` — `sameHead_trans` for
-the head and `argsBelow_trans` for the children, the latter taking this very recursion as its
-transitivity at every smaller triple. There is no congruence case, so no constructor is named
-in one. -/
+`false` at) on each side; then the leaf table's rule (decisions row 177), read through the
+table's laws (`sub_of_leafRule`, `leafRule_trans`, `leafRule_args`): the composite of two rules
+relates different heads because the table is acyclic, and no edge is named; and what is left is
+a single step over `sub_eq_args` — `sameHead_trans` for the head and `argsBelow_trans` for the
+children, the latter taking this very recursion as its transitivity at every smaller triple.
+There is no congruence case, so no constructor is named in one. -/
 private theorem sub_trans_core (a b c : Ty) (hab : sub a b = true) (hbc : sub b c = true) :
     sub a c = true := by
   by_cases hac : a = c
@@ -51,29 +56,28 @@ private theorem sub_trans_core (a b c : Ty) (hab : sub a b = true) (hbc : sub b 
   · by_cases hb : isMember b = true
     · by_cases hc : isMember c = true
       · -- three members, no two equal, and `c` is not the top: the only rules left are the
-        -- literal one and the congruences
-        cases hlac : litRule a c with
-        | true =>
-          obtain ⟨s, rfl, rfl⟩ := litRule_eq_true hlac
-          exact sub_lit_string s
+        -- table's and the congruences
+        cases hlac : leafRule a c with
+        | true => exact sub_of_leafRule hlac
         | false =>
-          cases hlab : litRule a b with
+          cases hlab : leafRule a b with
           | true =>
-            -- `a = lit s`, `b = string`: `sub string c` is then a congruence at an atom,
-            -- which forces `c = string = b`
-            obtain ⟨s, rfl, rfl⟩ := litRule_eq_true hlab
-            rw [sub_eq_args _ _ hb hc
-              (litRule_eq_false_of_head (by rintro ⟨t, ht, -⟩; exact Ty.noConfusion ht))
-              (topRule_eq_false hcu), Bool.and_eq_true_iff] at hbc
-            exact absurd (eq_of_sameHead_nil hbc.1 rfl) hbcEq
-          | false =>
-            cases hlbc : litRule b c with
+            -- `a` below `b` by the table: `b` is childless, so `sub b c` is the table's (which
+            -- would compose into `a`'s, excluded) or equality (excluded)
+            cases hlbc : leafRule b c with
             | true =>
-              -- `b = lit s`, `c = string`: `sub a (lit s)` forces `a = lit s = b`
-              obtain ⟨s, rfl, rfl⟩ := litRule_eq_true hlbc
-              rw [sub_eq_args _ _ ha hb hlab (topRule_eq_false (fun h => Ty.noConfusion h)),
+              rw [leafRule_trans hlab hlbc] at hlac
+              exact Bool.noConfusion hlac
+            | false =>
+              rw [sub_eq_args _ _ hb hc hlbc (topRule_eq_false hcu), Bool.and_eq_true_iff] at hbc
+              exact absurd (eq_of_sameHead_nil hbc.1 (leafRule_args hlab).2.1) hbcEq
+          | false =>
+            cases hlbc : leafRule b c with
+            | true =>
+              -- `b` below `c` by the table: `b` is childless, so `sub a b` forces `a = b`
+              rw [sub_eq_args _ _ ha hb hlab (topRule_eq_false (leafRule_ne_unknown hlbc).1),
                 Bool.and_eq_true_iff] at hab
-              exact absurd (eq_of_sameHead_nil (sameHead_symm hab.1) rfl).symm habEq
+              exact absurd (eq_of_sameHead_nil (sameHead_symm hab.1) (leafRule_args hlbc).1).symm habEq
             | false =>
               rw [sub_eq_args _ _ hb hc hlbc (topRule_eq_false hcu), Bool.and_eq_true_iff] at hbc
               have hbu : b ≠ .unknown := by
@@ -304,13 +308,99 @@ theorem hasTy_normalize_causeOf (e : Ty) (v : Val) (allocated : List String)
   · exact causeAdmits_congr_pred ih e.normalize e _
   · rfl
 
+/-- The record case of `hasTy_normalize`, named: the canonical read is invariant because
+normalizing a record maps its canonical list (names and flags kept), and the checker of a
+normalized field type is the checker of the field type. -/
+theorem hasTy_normalize_record (fs : List (String × Bool × Ty)) (v : Val) (allocated : List String)
+    (ih : ∀ p ∈ fs, ∀ v, Val.hasTy v (Ty.normalize p.2.2) allocated = Val.hasTy v p.2.2 allocated) :
+    Val.hasTy v (Ty.normalize (.record fs)) allocated = Val.hasTy v (.record fs) allocated := by
+  rw [Ty.normalize_record]
+  cases hv : recordParts? v with
+  | none => rw [Val.hasTy_record_none hv, Val.hasTy_record_none hv]
+  | some parts =>
+    obtain ⟨ns, xs⟩ := parts
+    rw [Val.hasTy_record hv, Val.hasTy_record hv, Ty.canon,
+      Field.canonBy_of_ascending _ (Field.ascending_map Ty.normPayload (Field.canonBy_ascending fs)),
+      List.map_map]
+    congr 1
+    apply List.map_congr_left
+    intro q hq
+    have hfun : (fun x => Val.hasTy x (Ty.normalize q.2.2) allocated) =
+        fun x => Val.hasTy x q.2.2 allocated :=
+      funext fun x => ih q (Field.mem_canonBy hq) x
+    simp only [Function.comp_apply, Val.checkerOf, Ty.normPayload]
+    rw [hfun]
+
+/-- The map case: both arguments in place. -/
+theorem hasTy_normalize_map (k t : Ty) (v : Val) (allocated : List String)
+    (ihk : ∀ v, Val.hasTy v k.normalize allocated = Val.hasTy v k allocated)
+    (iht : ∀ v, Val.hasTy v t.normalize allocated = Val.hasTy v t allocated) :
+    Val.hasTy v (Ty.map k t).normalize allocated = Val.hasTy v (Ty.map k t) allocated := by
+  show Val.hasTy v (.map k.normalize t.normalize) allocated = _
+  have hk : (fun a => Val.hasTy a k.normalize allocated) = fun a => Val.hasTy a k allocated :=
+    funext ihk
+  have ht : (fun x => Val.hasTy x t.normalize allocated) = fun x => Val.hasTy x t allocated :=
+    funext iht
+  simp only [Val.hasTy]
+  split
+  · rw [hk, ht]
+  · rfl
+
+/-- A pair tuple and a product have the same members (so `tuple [a, b]` may normalize to
+`prod a b`). -/
+theorem hasTy_tuple_pair (v : Val) (a b : Ty) (allocated : List String) :
+    Val.hasTy v (.tuple [a, b]) allocated = Val.hasTy v (.prod a b) allocated := by
+  cases v
+  case list xs =>
+    rw [Val.hasTy_tuple]
+    match xs with
+    | [] => rfl
+    | [_] => simp only [List.map_cons, List.map_nil, itemsHasTy, Bool.and_false, Val.hasTy]
+    | [x, y] => simp only [List.map_cons, List.map_nil, itemsHasTy, Bool.and_true, Val.hasTy]
+    | _ :: _ :: _ :: _ =>
+      simp only [List.map_cons, List.map_nil, itemsHasTy, Bool.and_false, Val.hasTy]
+  all_goals rfl
+
+/-- The tuple case: a pair is a product; any other arity in place, item by item. -/
+theorem hasTy_normalize_tuple (ts : List Ty) (v : Val) (allocated : List String)
+    (ih : ∀ t ∈ ts, ∀ v, Val.hasTy v (Ty.normalize t) allocated = Val.hasTy v t allocated) :
+    Val.hasTy v (Ty.normalize (.tuple ts)) allocated = Val.hasTy v (.tuple ts) allocated := by
+  by_cases h2 : ts.length = 2
+  · match ts, h2, ih with
+    | [a, b], _, ih =>
+      rw [hasTy_tuple_pair]
+      exact hasTy_normalize_prod a b v allocated (ih a List.mem_cons_self)
+        (ih b (List.mem_cons_of_mem _ List.mem_cons_self))
+  · rw [Ty.normalize_tuple_of_ne ts h2, Ty.normalizeItems_eq_map]
+    cases v
+    case list xs =>
+      rw [Val.hasTy_tuple, Val.hasTy_tuple, List.map_map]
+      congr 1
+      apply List.map_congr_left
+      intro t ht
+      funext x
+      exact ih t ht x
+    all_goals rfl
+
+/-- The reference case: membership reads the name only, and `app n []` is `handle n`. -/
+theorem hasTy_normalize_app (n : String) (ts : List Ty) (v : Val) (allocated : List String) :
+    Val.hasTy v (Ty.normalize (.app n ts)) allocated = Val.hasTy v (.app n ts) allocated := by
+  cases ts with
+  | nil => rfl
+  | cons t ts => rw [Ty.normalize_app_of_ne n _ (List.cons_ne_nil _ _)]; rfl
+
 /-- Normalization preserves value typing at every type. Proved by structural induction,
 dispatching each case to its named congruence or normalisation fact with no catch-all. -/
 theorem hasTy_normalize (t : Ty) (v : Val) (allocated : List String) :
     Val.hasTy v t.normalize allocated = Val.hasTy v t allocated := by
   induction t generalizing v with
   | never => exact hasTy_normalize_never v allocated
-  | unknown | unit | nat | int | string | bool | handle | lit | fiberOf | refOf | deferredOf | var => rfl
+  | unknown | unit | nat | int | string | bool | handle | lit | fiberOf | refOf | deferredOf | var
+  | null | undefined | number | bytes => rfl
+  | record fs ih => exact hasTy_normalize_record fs v allocated (fun p hp v => ih p hp v)
+  | map k t ihk iht => exact hasTy_normalize_map k t v allocated ihk iht
+  | tuple ts ih => exact hasTy_normalize_tuple ts v allocated (fun t ht v => ih t ht v)
+  | app n ts _ => exact hasTy_normalize_app n ts v allocated
   | except error value ihe ihv => exact hasTy_normalize_except error value v allocated ihe ihv
   | option inner ih => exact hasTy_normalize_option inner v allocated ih
   | prod a b iha ihb => exact hasTy_normalize_prod a b v allocated iha ihb
@@ -519,7 +609,8 @@ theorem sub_member_right_iff (x t : Ty) (hx : Ty.isMember x = true) :
         · exact Or.inl ⟨y, hy, hxy⟩
         · exact Or.inr ⟨y, hy, hxy⟩
   | never =>
-      cases x <;> simp_all [Ty.isMember, Ty.sub, Ty.members]
+      rw [Ty.sub_never_right hx]
+      exact ⟨fun h => Bool.noConfusion h, fun ⟨_, hy, _⟩ => absurd hy List.not_mem_nil⟩
   | _ => simp only [Ty.members, List.mem_singleton, exists_eq_left]
 
 theorem sub_iff_members
@@ -613,7 +704,42 @@ theorem normal_args {t : Ty} (hn : Ty.Normal t) (hm : Ty.isMember t = true) :
       | cons y ys =>
         rw [hr, hxs] at hm
         exact Bool.noConfusion hm
+  | record hfs _ =>
+    intro x hx
+    simp only [Ty.args, List.map_map, List.mem_map] at hx
+    obtain ⟨p, hp, rfl⟩ := hx
+    exact hfs p (Ty.mem_canon hp)
+  | tuple hts _ =>
+    intro x hx
+    simp only [Ty.args, List.map_map, List.mem_map] at hx
+    obtain ⟨t, ht, rfl⟩ := hx
+    exact hts t ht
+  | app hts _ =>
+    intro x hx
+    simp only [Ty.args, List.map_map, List.mem_map] at hx
+    obtain ⟨p, hp, rfl⟩ := hx
+    exact hts p.1 (List.fst_mem_of_mem_zipIdx hp)
   | _ => aesop (add norm simp [Ty.args])
+
+/-- `sameHead` is symmetric at `false` too. -/
+theorem sameHead_false_symm {a b : Ty} (h : Ty.sameHead a b = false) : Ty.sameHead b a = false := by
+  cases hba : Ty.sameHead b a with
+  | false => rfl
+  | true => rw [Ty.sameHead_symm hba] at h; exact Bool.noConfusion h
+
+/-- A normal form's head is canonical: a normal record's fields are in canonical order already
+(the premise `argsBelow_antisymm` reads; Codex's bridge for the generated interface). -/
+theorem normal_headCanon {t : Ty} (hn : Ty.Normal t) : Ty.headCanon t = true := by
+  induction hn with
+  | record _ hasc => exact decide_eq_true (Field.canonBy_of_ascending _ hasc)
+  | row r children atoms maximal ih =>
+    cases hr : r.elems with
+    | nil => rfl
+    | cons x xs =>
+      cases hxs : xs with
+      | nil => exact ih x (by rw [hr, hxs]; exact List.mem_cons_self)
+      | cons y ys => rfl
+  | _ => rfl
 
 theorem sub_antisymm_normal
     (htrans : ∀ a b c, Ty.sub a b = true → Ty.sub b c = true → Ty.sub a c = true)
@@ -625,19 +751,18 @@ theorem sub_antisymm_normal
   by_cases hatoms : Ty.isMember a = true ∧ Ty.isMember b = true
   · -- two members, not equal: the literal rule, the top, then one step over `sub_eq_args`
     rcases hatoms with ⟨haAtom, hbAtom⟩
-    cases hlab : Ty.litRule a b with
+    cases hlab : Ty.leafRule a b with
     | true =>
-      obtain ⟨s, rfl, rfl⟩ := Ty.litRule_eq_true hlab
-      rw [Ty.sub_eq_args _ _ hbAtom haAtom
-        (Ty.litRule_eq_false_of_head (by rintro ⟨u, hu, -⟩; exact Ty.noConfusion hu))
-        (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true_iff] at hba
+      rw [Ty.sub_eq_args _ _ hbAtom haAtom (Ty.leafRule_asymm hlab)
+        (Ty.topRule_eq_false (Ty.leafRule_ne_unknown hlab).1), Bool.and_eq_true_iff,
+        sameHead_false_symm (Ty.leafRule_sameHead hlab)] at hba
       exact Bool.noConfusion hba.1
     | false =>
-      cases hlba : Ty.litRule b a with
+      cases hlba : Ty.leafRule b a with
       | true =>
-        obtain ⟨s, rfl, rfl⟩ := Ty.litRule_eq_true hlba
         rw [Ty.sub_eq_args _ _ haAtom hbAtom hlab
-          (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true_iff] at hab
+          (Ty.topRule_eq_false (Ty.leafRule_ne_unknown hlba).1), Bool.and_eq_true_iff,
+          sameHead_false_symm (Ty.leafRule_sameHead hlba)] at hab
         exact Bool.noConfusion hab.1
       | false =>
         have hau : a ≠ .unknown := by
@@ -655,6 +780,7 @@ theorem sub_antisymm_normal
         rw [Ty.sub_eq_args _ _ hbAtom haAtom hlba (Ty.topRule_eq_false hau),
           Bool.and_eq_true_iff] at hba
         refine Ty.argsBelow_antisymm hab.1 (fun x hx y hy hxy hyx => ?_) hab.2 hba.2
+          (normal_headCanon ha) (normal_headCanon hb)
         have hxs : sizeOf x < sizeOf a := Ty.sizeOf_args_mem hx
         have hys : sizeOf y < sizeOf b := Ty.sizeOf_args_mem hy
         exact sub_antisymm_normal htrans x y (normal_args ha haAtom x hx)
@@ -682,6 +808,7 @@ theorem sub_antisymm_normal
         obtain ⟨z, hz, hyz⟩ := hbaMembers y hy
         have hzx := haForm.2.2 x hx z hz (htrans x y z hxy hyz)
         have hyx := htrans y z x hyz hzx
+        have := hsize x hx y hy
         have hEq := sub_antisymm_normal htrans x y (ha.members hx) (hb.members hy) hxy hyx
         exact hEq ▸ hy
       · intro hy
@@ -689,6 +816,7 @@ theorem sub_antisymm_normal
         obtain ⟨z, hz, hx'z⟩ := habMembers x' hx'
         have hzx := hbForm.2.2 x hy z hz (htrans x x' z hyx' hx'z)
         have hx'x := htrans x' z x hx'z hzx
+        have := hsize x' hx' x hy
         have hEq := sub_antisymm_normal htrans x' x (ha.members hx') (hb.members hy) hx'x hyx'
         exact hEq ▸ hx'
     have hrows : (⟨a.members, haForm.2.1⟩ : Effect4.Row Ty) = ⟨b.members, hbForm.2.1⟩ :=
@@ -699,8 +827,7 @@ termination_by sizeOf a + sizeOf b
 decreasing_by
   all_goals subst_vars
   all_goals simp_wf
-  all_goals try omega
-  all_goals try (apply hsize <;> assumption)
+  all_goals omega
 
 theorem sub_antisymm_canonical
     (htrans : ∀ a b c, Ty.sub a b = true → Ty.sub b c = true → Ty.sub a c = true)
@@ -880,6 +1007,90 @@ theorem sub_normalize_prod_mono
   exact ⟨q, (members_normalize_prod c d).symm ▸ hq,
     htrans _ _ _ (sub_prod_mono x y z w hxz hyw) hzwq⟩
 
+/-- At a reference, `argsBelow` is the variance-wise comparison of corresponding arguments,
+position by position. -/
+theorem argsBelow_app_iff (r : Ty → Ty → Bool) (n : String) (xs ys : List Ty) :
+    Ty.argsBelow r (.app n xs) (.app n ys) =
+      (xs.zipIdx.zip ys.zipIdx).all fun p => (Ty.argVariance n p.1.2).holds r p.1.1 p.2.1 := by
+  simp only [Ty.argsBelow, Ty.args, List.zip_map, List.all_map, Function.comp_def]
+  rfl
+
+/-- Between two canonical field lists, `sub` is the field-wise comparison. -/
+theorem sub_record_of_canonical (cf cg : List (String × Bool × Ty))
+    (hcf : Field.Ascending Field.bytesKey cf) (hcg : Field.Ascending Field.bytesKey cg)
+    (hh : cf.map (fun p => (p.1, p.2.1)) = cg.map (fun p => (p.1, p.2.1)))
+    (hpairs : ∀ p ∈ cf.zip cg, Ty.sub p.1.2.2 p.2.2.2 = true) :
+    Ty.sub (.record cf) (.record cg) = true := by
+  have hcf' : Ty.canon cf = cf := Field.canonBy_of_ascending cf hcf
+  have hcg' : Ty.canon cg = cg := Field.canonBy_of_ascending cg hcg
+  rw [Ty.sub_args_record cf cg (by simp only [Ty.sameHead, hcf', hcg', hh, decide_true])]
+  unfold Ty.argsBelow
+  simp only [Ty.args]
+  rw [hcf', hcg', List.zip_map, List.all_map, List.all_eq_true]
+  intro p hp
+  exact hpairs p hp
+
+/-- The record case of `sub_normalize_of_sub`, given the field-wise step. -/
+theorem sub_normalize_record (_htrans : ∀ a b c, Ty.sub a b = true → Ty.sub b c = true → Ty.sub a c = true)
+    (fs gs : List (String × Bool × Ty))
+    (hh : (Ty.canon fs).map (fun p => (p.1, p.2.1)) = (Ty.canon gs).map (fun p => (p.1, p.2.1)))
+    (hpair : ∀ p ∈ (Ty.canon fs).zip (Ty.canon gs),
+      Ty.sub (Ty.normalize p.1.2.2) (Ty.normalize p.2.2.2) = true) :
+    Ty.sub (Ty.normalize (.record fs)) (Ty.normalize (.record gs)) = true := by
+  rw [Ty.normalize_record, Ty.normalize_record]
+  apply sub_record_of_canonical _ _ (Field.ascending_map Ty.normPayload (Field.canonBy_ascending fs))
+    (Field.ascending_map Ty.normPayload (Field.canonBy_ascending gs))
+  · have := Ty.heads_normPayload (Ty.canon fs)
+    have := Ty.heads_normPayload (Ty.canon gs)
+    simp only [Ty.heads] at *
+    rw [‹List.map (fun p => (p.1, p.2.1)) (List.map (fun q => (q.1, Ty.normPayload q.2)) (Ty.canon fs)) = _›,
+      ‹List.map (fun p => (p.1, p.2.1)) (List.map (fun q => (q.1, Ty.normPayload q.2)) (Ty.canon gs)) = _›]
+    exact hh
+  · intro p hp
+    rw [List.zip_map, List.mem_map] at hp
+    obtain ⟨q, hq, rfl⟩ := hp
+    exact hpair q hq
+
+/-- The tuple case of `sub_normalize_of_sub`, given the item-wise step: a pair tuple normalizes as
+a product, every other arity in place. -/
+theorem sub_normalize_tuple (htrans : ∀ a b c, Ty.sub a b = true → Ty.sub b c = true → Ty.sub a c = true)
+    (ts us : List Ty) (hlen : ts.length = us.length)
+    (hpair : ∀ p ∈ ts.zip us, Ty.sub (Ty.normalize p.1) (Ty.normalize p.2) = true) :
+    Ty.sub (Ty.normalize (.tuple ts)) (Ty.normalize (.tuple us)) = true := by
+  by_cases h2 : ts.length = 2
+  · match ts, us, h2, hlen, hpair with
+    | [a1, a2], [b1, b2], _, _, hpair =>
+      rw [Ty.normalize_tuple_pair, Ty.normalize_tuple_pair]
+      exact sub_normalize_prod_mono htrans a1 a2 b1 b2 (hpair (a1, b1) List.mem_cons_self)
+        (hpair (a2, b2) (List.mem_cons_of_mem _ List.mem_cons_self))
+  · rw [Ty.normalize_tuple_of_ne ts h2, Ty.normalize_tuple_of_ne us (hlen ▸ h2),
+      Ty.sub_args_tuple _ _ (by simp only [Ty.sameHead, Ty.normalizeItems_eq_map, List.length_map,
+        hlen, decide_true])]
+    unfold Ty.argsBelow
+    simp only [Ty.args]
+    rw [Ty.normalizeItems_eq_map, Ty.normalizeItems_eq_map, List.zip_map, List.all_map, List.zip_map,
+      List.all_map, List.all_eq_true]
+    intro p hp
+    exact hpair p hp
+
+/-- The reference case of `sub_normalize_of_sub`, given the variance-wise step at every argument
+(decisions row 158: each at its declaration's variance, not all invariant). -/
+theorem sub_normalize_app (_htrans : ∀ a b c, Ty.sub a b = true → Ty.sub b c = true → Ty.sub a c = true)
+    (n : String) (ts us : List Ty) (hlen : ts.length = us.length)
+    (hpair : ∀ p ∈ ts.zipIdx.zip us.zipIdx,
+      (Ty.argVariance n p.1.2).holds Ty.sub (Ty.normalize p.1.1) (Ty.normalize p.2.1) = true) :
+    Ty.sub (Ty.normalize (.app n ts)) (Ty.normalize (.app n us)) = true := by
+  match ts, us, hlen with
+  | [], [], _ => exact Ty.sub_refl _
+  | t :: ts', u :: us', hlen =>
+    rw [Ty.normalize_app_of_ne n _ (List.cons_ne_nil _ _), Ty.normalize_app_of_ne n _ (List.cons_ne_nil _ _),
+      Ty.sub_args_app _ _ _ _ (by simp only [Ty.sameHead, Ty.normalizeItems_eq_map, List.length_map,
+        hlen, decide_true, Bool.and_self])]
+    rw [argsBelow_app_iff, Ty.normalizeItems_eq_map, Ty.normalizeItems_eq_map, List.zipIdx_map,
+      List.zipIdx_map, List.zip_map, List.all_map, List.all_eq_true]
+    intro p hp
+    exact hpair p hp
+
 theorem sub_normalize_of_sub
     (htrans : ∀ a b c, Ty.sub a b = true → Ty.sub b c = true → Ty.sub a c = true)
     (a b : Ty) : Ty.sub a b = true → Ty.sub a.normalize b.normalize = true := by
@@ -892,10 +1103,10 @@ theorem sub_normalize_of_sub
   · rw [hnorm]; exact Ty.sub_refl _
   by_cases ha : Ty.isMember a = true
   · by_cases hb : Ty.isMember b = true
-    · cases hlab : Ty.litRule a b with
+    · cases hlab : Ty.leafRule a b with
       | true =>
-        obtain ⟨s, rfl, rfl⟩ := Ty.litRule_eq_true hlab
-        exact Ty.sub_lit_string s
+        rw [(Ty.leafRule_normalize hlab).1, (Ty.leafRule_normalize hlab).2]
+        exact Ty.sub_of_leafRule hlab
       | false =>
         have htop : Ty.topRule a b = false := Ty.topRule_eq_false hbu
         rw [Ty.sub_eq_args a b ha hb hlab htop, Bool.and_eq_true_iff] at hab
@@ -914,18 +1125,20 @@ theorem sub_normalize_of_sub
           subst this
           cases (heq rfl)
         case case8 =>
-          intro _ hnorm _ _ _ hargs
+          intro _ _ _ _ _ hargs
           simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons, List.all_nil, Bool.and_true] at hargs
-          dsimp only [Ty.normalize] at hnorm ⊢
-          unfold Ty.sub
-          simp only [hnorm, ↓reduceIte]
+          dsimp only [Ty.normalize]
+          rw [Ty.sub_args_option]
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+            List.all_nil, Bool.and_true]
           exact sub_normalize_of_sub htrans _ _ hargs
         case case9 =>
-          intro _ hnorm _ _ _ hargs
+          intro _ _ _ _ _ hargs
           simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons, List.all_nil, Bool.and_true] at hargs
-          dsimp only [Ty.normalize] at hnorm ⊢
-          unfold Ty.sub
-          simp only [hnorm, ↓reduceIte]
+          dsimp only [Ty.normalize]
+          rw [Ty.sub_args_list]
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+            List.all_nil, Bool.and_true]
           exact sub_normalize_of_sub htrans _ _ hargs
         case case10 =>
           intro _ _ _ _ _ hargs
@@ -935,66 +1148,66 @@ theorem sub_normalize_of_sub
             (sub_normalize_of_sub htrans _ _ h1)
             (sub_normalize_of_sub htrans _ _ h2)
         case case11 =>
-          intro _ hnorm _ _ _ hargs
+          intro _ _ _ _ _ hargs
           simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons, List.all_nil, Bool.and_true] at hargs
-          dsimp only [Ty.normalize] at hnorm ⊢
-          unfold Ty.sub
-          simp only [hnorm, ↓reduceIte, Bool.and_eq_true]
+          dsimp only [Ty.normalize]
+          rw [Ty.sub_args_except]
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+            List.all_nil, Bool.and_true, Bool.and_eq_true]
           obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hargs
-          exact ⟨sub_normalize_of_sub htrans _ _ h1,
-                 sub_normalize_of_sub htrans _ _ h2⟩
+          exact ⟨sub_normalize_of_sub htrans _ _ h1, sub_normalize_of_sub htrans _ _ h2⟩
         case case12 =>
-          intro _ hnorm _ _ _ hargs
+          intro _ _ _ _ _ hargs
           simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons, List.all_nil, Bool.and_true] at hargs
-          dsimp only [Ty.normalize] at hnorm ⊢
-          unfold Ty.sub
-          simp only [hnorm, ↓reduceIte, Bool.and_eq_true]
+          dsimp only [Ty.normalize]
+          rw [Ty.sub_args_exitOf]
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+            List.all_nil, Bool.and_true, Bool.and_eq_true]
           obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hargs
-          exact ⟨sub_normalize_of_sub htrans _ _ h1,
-                 sub_normalize_of_sub htrans _ _ h2⟩
+          exact ⟨sub_normalize_of_sub htrans _ _ h1, sub_normalize_of_sub htrans _ _ h2⟩
         case case13 =>
-          intro _ hnorm _ _ _ hargs
+          intro _ _ _ _ _ hargs
           simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons, List.all_nil, Bool.and_true] at hargs
-          dsimp only [Ty.normalize] at hnorm ⊢
-          unfold Ty.sub
-          simp only [hnorm, ↓reduceIte]
+          dsimp only [Ty.normalize]
+          rw [Ty.sub_args_causeOf]
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+            List.all_nil, Bool.and_true]
           exact sub_normalize_of_sub htrans _ _ hargs
         case case14 =>
-          intro _ hnorm _ _ _ hargs
+          intro _ _ _ _ _ hargs
           simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons, List.all_nil, Bool.and_true] at hargs
-          dsimp only [Ty.normalize] at hnorm ⊢
-          unfold Ty.sub
-          simp only [hnorm, ↓reduceIte, Bool.and_eq_true]
+          dsimp only [Ty.normalize]
+          rw [Ty.sub_args_fiberOf]
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+            List.all_nil, Bool.and_true, Bool.and_eq_true]
           obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hargs
-          exact ⟨sub_normalize_of_sub htrans _ _ h1,
-                 sub_normalize_of_sub htrans _ _ h2⟩
+          exact ⟨sub_normalize_of_sub htrans _ _ h1, sub_normalize_of_sub htrans _ _ h2⟩
         case case15 value1 value2 =>
           intro heq _ _ _ hh
           have : value1 = value2 := of_decide_eq_true hh
           subst this
           cases (heq rfl)
         case case16 =>
-          intro _ hnorm _ _ _ hargs
+          intro _ _ _ _ _ hargs
           simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons, List.all_nil, Bool.and_true] at hargs
-          dsimp only [Ty.normalize] at hnorm ⊢
-          unfold Ty.sub
-          simp only [hnorm, ↓reduceIte, Bool.and_eq_true]
+          dsimp only [Ty.normalize]
+          rw [Ty.sub_args_refOf]
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+            List.all_nil, Bool.and_true, Bool.and_eq_true]
           obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hargs
-          exact ⟨sub_normalize_of_sub htrans _ _ h1,
-                 sub_normalize_of_sub htrans _ _ h2⟩
+          exact ⟨sub_normalize_of_sub htrans _ _ h1, sub_normalize_of_sub htrans _ _ h2⟩
         case case17 =>
-          intro _ hnorm _ _ _ hargs
+          intro _ _ _ _ _ hargs
           simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons, List.all_nil, Bool.and_true] at hargs
-          dsimp only [Ty.normalize] at hnorm ⊢
-          unfold Ty.sub
-          simp only [hnorm, ↓reduceIte, Bool.and_eq_true]
+          dsimp only [Ty.normalize]
+          rw [Ty.sub_args_deferredOf]
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+            List.all_nil, Bool.and_true, Bool.and_eq_true]
           obtain ⟨h12, h34⟩ := Bool.and_eq_true_iff.mp hargs
           obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp h12
           obtain ⟨h3, h4⟩ := Bool.and_eq_true_iff.mp h34
-          exact ⟨⟨⟨sub_normalize_of_sub htrans _ _ h1,
-                    sub_normalize_of_sub htrans _ _ h2⟩,
-                    sub_normalize_of_sub htrans _ _ h3⟩,
-                    sub_normalize_of_sub htrans _ _ h4⟩
+          exact ⟨⟨sub_normalize_of_sub htrans _ _ h1, sub_normalize_of_sub htrans _ _ h2⟩,
+            ⟨sub_normalize_of_sub htrans _ _ h3, sub_normalize_of_sub htrans _ _ h4⟩⟩
         case case18 index1 index2 =>
           intro heq _ _ _ hh
           have : index1 = index2 := of_decide_eq_true hh
@@ -1003,7 +1216,72 @@ theorem sub_normalize_of_sub
         case case19 =>
           intro heq
           cases (heq rfl)
-        case case20 =>
+        case case20 fs gs =>
+          intro _ _ _ _ hh hargs
+          have hh' := of_decide_eq_true hh
+          apply sub_normalize_record htrans fs gs hh'
+          intro p hp
+          have := Ty.sizeOf_field_lt (Ty.mem_canon (List.of_mem_zip hp).1)
+          have := Ty.sizeOf_field_lt (Ty.mem_canon (List.of_mem_zip hp).2)
+          have hsub : Ty.sub p.1.2.2 p.2.2.2 = true := by
+            unfold Ty.argsBelow at hargs
+            simp only [Ty.args] at hargs
+            rw [List.zip_map, List.all_map, List.all_eq_true] at hargs
+            exact hargs p hp
+          exact sub_normalize_of_sub htrans _ _ hsub
+        case case21 =>
+          intro _ _ _ _ _ hargs
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons, List.all_nil, Bool.and_true] at hargs
+          dsimp only [Ty.normalize]
+          rw [Ty.sub_args_map]
+          simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+            List.all_nil, Bool.and_true, Bool.and_eq_true]
+          obtain ⟨h12, h3⟩ := Bool.and_eq_true_iff.mp hargs
+          obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp h12
+          exact ⟨⟨sub_normalize_of_sub htrans _ _ h1, sub_normalize_of_sub htrans _ _ h2⟩,
+            sub_normalize_of_sub htrans _ _ h3⟩
+        case case22 ts us =>
+          intro _ _ _ _ hh hargs
+          have hlen : ts.length = us.length := of_decide_eq_true hh
+          apply sub_normalize_tuple htrans ts us hlen
+          intro p hp
+          have := List.sizeOf_lt_of_mem (List.of_mem_zip hp).1
+          have := List.sizeOf_lt_of_mem (List.of_mem_zip hp).2
+          have hsub : Ty.sub p.1 p.2 = true := by
+            unfold Ty.argsBelow at hargs
+            simp only [Ty.args] at hargs
+            rw [List.zip_map, List.all_map, List.all_eq_true] at hargs
+            exact hargs p hp
+          exact sub_normalize_of_sub htrans _ _ hsub
+        case case23 n ts m us =>
+          intro _ _ _ _ hh hargs
+          obtain ⟨hnm, hlen⟩ := Bool.and_eq_true_iff.mp hh
+          have hn : n = m := of_decide_eq_true hnm
+          subst hn
+          have hlen' : ts.length = us.length := of_decide_eq_true hlen
+          rw [argsBelow_app_iff, List.all_eq_true] at hargs
+          apply sub_normalize_app htrans n ts us hlen'
+          intro p hp
+          have := List.sizeOf_lt_of_mem (List.fst_mem_of_mem_zipIdx (List.of_mem_zip hp).1)
+          have := List.sizeOf_lt_of_mem (List.fst_mem_of_mem_zipIdx (List.of_mem_zip hp).2)
+          have hh2 := hargs p hp
+          cases hv : Ty.argVariance n p.1.2 with
+          | co =>
+            rw [hv] at hh2
+            exact sub_normalize_of_sub htrans _ _ hh2
+          | contra =>
+            rw [hv] at hh2
+            exact sub_normalize_of_sub htrans _ _ hh2
+          | inv =>
+            rw [hv] at hh2
+            obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hh2
+            exact Bool.and_eq_true_iff.mpr
+              ⟨sub_normalize_of_sub htrans _ _ h1, sub_normalize_of_sub htrans _ _ h2⟩
+        case case24 => intro heq; cases (heq rfl)
+        case case25 => intro heq; cases (heq rfl)
+        case case26 => intro heq; cases (heq rfl)
+        case case27 => intro heq; cases (heq rfl)
+        case case28 =>
           intro _ _ _ _ hh
           cases hh
     · -- `b` is a row: nothing but `never` is below the empty union
@@ -1215,6 +1493,17 @@ def valueVarsAlg : TyAlgebra (fun _ => Bool × Bool) where
   ty_deferredOf a b := (a.1 && b.1, a.1 && b.1)
   ty_var _ := (false, true)
   ty_unknown := (true, true)
+  -- a record, a map and a tuple are value formers, like `prod`; a reference's arguments are
+  -- unread by membership (`Fits` at `app` is the handle's at its name), so any parameter under
+  -- them is allowed, and the data wave's leaves have none
+  ty_record fs := (fs.all fun p => p.2.2.1, fs.all fun p => p.2.2.2)
+  ty_map a b := (a.1 && b.1, a.2 && b.2)
+  ty_tuple ts := (ts.all (·.1), ts.all (·.2))
+  ty_app _ ts := (ts.all (·.1), true)
+  ty_null := (true, true)
+  ty_undefined := (true, true)
+  ty_number := (true, true)
+  ty_bytes := (true, true)
 
 /-- Parameters only under value formers (`valueVarsAlg`). -/
 def valueVars (t : Ty) : Bool := (cata_ty valueVarsAlg t).2
@@ -1223,7 +1512,38 @@ def valueVars (t : Ty) : Bool := (cata_ty valueVarsAlg t).2
 theorem instantiate_of_noVars (σ : Subst) :
     ∀ t : Ty, (cata_ty valueVarsAlg t).1 = true → instantiate σ t = t := by
   intro t
-  induction t <;> aesop (add norm simp [cata_ty, valueVarsAlg, instantiate])
+  induction t with
+  | record fs ih =>
+    intro h
+    have h' : ∀ p ∈ fs, (cata_ty valueVarsAlg p.2.2).1 = true := fun p hp =>
+      List.all_eq_true.mp (show ((fs.map (prodMapSnd (prodMapSnd (cata_ty valueVarsAlg)))).all
+        fun p => p.2.2.1) = true from by rw [cata_ty_record] at h; exact h) _ (List.mem_map_of_mem hp)
+    rw [instantiate, instantiateFields_eq_map]
+    congr 1
+    conv => rhs; rw [← List.map_id fs]
+    apply List.map_congr_left
+    intro p hp
+    rw [ih p hp (h' p hp)]
+    rfl
+  | tuple ts ih =>
+    intro h
+    have h' : ∀ t ∈ ts, (cata_ty valueVarsAlg t).1 = true := fun t ht =>
+      List.all_eq_true.mp (show ((ts.map (cata_ty valueVarsAlg)).all (·.1)) = true from by
+        rw [cata_ty_tuple] at h; exact h) _ (List.mem_map_of_mem ht)
+    rw [instantiate, instantiateItems_eq_map]
+    congr 1
+    conv => rhs; rw [← List.map_id ts]
+    exact List.map_congr_left fun t ht => ih t ht (h' t ht)
+  | app n ts ih =>
+    intro h
+    have h' : ∀ t ∈ ts, (cata_ty valueVarsAlg t).1 = true := fun t ht =>
+      List.all_eq_true.mp (show ((ts.map (cata_ty valueVarsAlg)).all (·.1)) = true from by
+        rw [cata_ty_app] at h; exact h) _ (List.mem_map_of_mem ht)
+    rw [instantiate, instantiateItems_eq_map]
+    congr 1
+    conv => rhs; rw [← List.map_id ts]
+    exact List.map_congr_left fun t ht => ih t ht (h' t ht)
+  | _ => aesop (add norm simp [cata_ty, valueVarsAlg, instantiate])
 
 /-! ### The top absorbs (tooling plan 0.6, decisions row 46)
 

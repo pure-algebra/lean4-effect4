@@ -54,8 +54,11 @@ def install(source, destination, checking):
 # just wrote. `lcnf` is the explicit Phase 1 route and is requested by name.
 ALL = ['variances', 'derived', 'eff', 'wire', 'cas', 'ts', 'readme']
 
-# The variance table, its producer and its landing path (tooling plan 1.4a).
+# The variance table, its producer and its landing path (tooling plan 1.4a), and the core
+# module the same run writes: the declared variances `sub` reads at a nominal reference
+# (`Ty.argVariance`, decisions row 158).
 VARIANCES = 'tools/Effect4Gen/variances.json'
+TY_VARIANCE = 'src/Effect4/Program/TyVariance.lean'
 
 # The LCNF artefacts and their arguments. Until 2026-09-19 this list held the four paths and
 # the command came out of each file's own `Regenerate with:` header -- a generated file was its
@@ -88,9 +91,12 @@ def generate(families, output):
             run(['lake', 'build', 'Tools.Variances'])
             temp = out / VARIANCES
             temp.parent.mkdir(parents=True, exist_ok=True)
+            core = out / TY_VARIANCE
+            core.parent.mkdir(parents=True, exist_ok=True)
             run(['lake', 'env', 'lean', '-M4096', '--run',
-                 'tools/Tools/Variances.lean', str(temp)])
+                 'tools/Tools/Variances.lean', str(temp), '--lean-out', str(core)])
             install(temp, ROOT / VARIANCES, checking)
+            install(core, ROOT / TY_VARIANCE, checking)
         if 'derived' in families:
             rows = json.loads(run(['lake', 'env', 'lean', '-M4096', '--run',
                                    'tools/Effect4Gen/Driver.lean', '--commands'], True))

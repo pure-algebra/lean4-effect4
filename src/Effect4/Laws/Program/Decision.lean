@@ -73,8 +73,9 @@ theorem Ty.payload_hasTy (tag : String) (c : Ty) (v p : Val) (P : Ty) (allocated
         obtain ⟨rfl, hq⟩ := hvm
         exact ⟨b, rfl, hq⟩
       | _ => exact absurd hcm Bool.false_ne_true
-    | unit | nat | int | string | bool | lit _ =>
+    | unit | nat | string | bool | lit _ =>
       simp only [Val.hasTy, Bool.false_eq_true] at hvm
+    | int => exact Bool.noConfusion hvm
     | _ => exact absurd hcm Bool.false_ne_true
   -- so `q` is one of the payloads
   have hq_mem : q ∈ c.members.filterMap (Ty.payloadOf tag) := by

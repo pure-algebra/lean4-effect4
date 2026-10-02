@@ -237,6 +237,8 @@ and val_ =
   | Val_ctor of int * val_ list
   | Val_ref of int * int list
   | Val_handle of int * int
+  | Val_negInt of int
+  | Val_float of int
 and fn_name =
   | FnName_incr
   | FnName_double
@@ -842,6 +844,14 @@ and ty =
   | Ty_deferredOf of ty * ty
   | Ty_var of int
   | Ty_unknown
+  | Ty_record of (string * (bool * ty)) list
+  | Ty_map of ty * ty
+  | Ty_tuple of ty list
+  | Ty_app of string * ty list
+  | Ty_null
+  | Ty_undefined
+  | Ty_number
+  | Ty_bytes
 and await = {
   fiber : fiber_id;
   token : int;
@@ -929,6 +939,15 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =
   | FrameEvent_deferred of ('e, 'd, 'i, 'a) cause
   | FrameEvent_yielded of ('b, 'e, 'd, 'i, 'a) exit_
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step = FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber | FrameStep_finished of ('b, 'e, 'd, 'i, 'a) exit_
+and leaf_head =
+  | LeafHead_lit
+  | LeafHead_string
+  | LeafHead_nat
+  | LeafHead_int
+  | LeafHead_number
+  | LeafHead_undefined
+  | LeafHead_unit
+and variance = Variance_co | Variance_contra | Variance_inv
 and row_shape =
   | RowShape_call
   | RowShape_value
@@ -8119,206 +8138,754 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
   let _x_4 = list_flat_map_tr_go_at_program_ty_product_members_spec_1 b _x_1 _x_3 in
   _x_4
   
-  (* LCNF mono: Effect4.Program.Ty.ctorIdx (x : Effect4.Program.Ty) : Nat *)
-  let program_ty_ctor_idx (x : ty) : int =
-  match (x : ty) with
-    | Ty_never -> (let _x_1 = 0 in
-      _x_1)
-    | Ty_unit -> (let _x_2 = 1 in
-      _x_2)
-    | Ty_nat -> (let _x_3 = 2 in
-      _x_3)
-    | Ty_int -> (let _x_4 = 3 in
+  (* LCNF mono: Effect4.Program.Ty.beq (x.1 : Effect4.Program.Ty) (x.2 : Effect4.Program.Ty) : Bool
+   Effect4.Program.Ty.beq_pos_list_prod_string_prod_bool_ty (x.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) (x.2 : List (Prod String (Prod Bool Effect4.Program.Ty))) : Bool
+   Effect4.Program.Ty.beq_pos_prod_string_prod_bool_ty (x.1 : Prod String (Prod Bool Effect4.Program.Ty)) (x.2 : Prod String (Prod Bool Effect4.Program.Ty)) : Bool
+   Effect4.Program.Ty.beq_pos_prod_bool_ty (x.1 : Prod Bool Effect4.Program.Ty) (x.2 : Prod Bool Effect4.Program.Ty) : Bool
+   Effect4.Program.Ty.beq_pos_list_ty (x.1 : List Effect4.Program.Ty) (x.2 : List Effect4.Program.Ty) : Bool *)
+  let rec program_ty_beq (x_1 : ty) (x_2 : ty) : bool =
+  let _jp_3 = fun a0 a1 b0 b1 -> let _x_4 = program_ty_beq a0 b0 in
+  if _x_4 then (let _x_5 = program_ty_beq a1 b1 in
+    _x_5) else _x_4 in
+  match (x_1 : ty) with
+    | Ty_never -> (match (x_2 : ty) with
+        | Ty_never -> (let _x_6 = true in
+          _x_6)
+        | _ -> (let _x_7 = false in
+          _x_7))
+    | Ty_unit -> (match (x_2 : ty) with
+        | Ty_unit -> (let _x_8 = true in
+          _x_8)
+        | _ -> (let _x_9 = false in
+          _x_9))
+    | Ty_nat -> (match (x_2 : ty) with
+        | Ty_nat -> (let _x_10 = true in
+          _x_10)
+        | _ -> (let _x_11 = false in
+          _x_11))
+    | Ty_int -> (match (x_2 : ty) with
+        | Ty_int -> (let _x_12 = true in
+          _x_12)
+        | _ -> (let _x_13 = false in
+          _x_13))
+    | Ty_string -> (match (x_2 : ty) with
+        | Ty_string -> (let _x_14 = true in
+          _x_14)
+        | _ -> (let _x_15 = false in
+          _x_15))
+    | Ty_bool -> (match (x_2 : ty) with
+        | Ty_bool -> (let _x_16 = true in
+          _x_16)
+        | _ -> (let _x_17 = false in
+          _x_17))
+    | Ty_handle target_18 -> (match (x_2 : ty) with
+        | Ty_handle target_19 -> (let _x_20 = target_18 = target_19 in
+          _x_20)
+        | _ -> (let _x_21 = false in
+          _x_21))
+    | Ty_option inner_22 -> (match (x_2 : ty) with
+        | Ty_option inner_23 -> (let _x_24 = program_ty_beq inner_22 inner_23 in
+          _x_24)
+        | _ -> (let _x_25 = false in
+          _x_25))
+    | Ty_list inner_26 -> (match (x_2 : ty) with
+        | Ty_list inner_27 -> (let _x_28 = program_ty_beq inner_26 inner_27 in
+          _x_28)
+        | _ -> (let _x_29 = false in
+          _x_29))
+    | Ty_prod (left_30, right_31) -> (match (x_2 : ty) with
+        | Ty_prod (left_32, right_33) -> _jp_3 left_30 right_31 left_32 right_33
+        | _ -> (let _x_34 = false in
+          _x_34))
+    | Ty_except (error_35, value_36) -> (match (x_2 : ty) with
+        | Ty_except (error_37, value_38) -> _jp_3 error_35 value_36 error_37 value_38
+        | _ -> (let _x_39 = false in
+          _x_39))
+    | Ty_exitOf (value_40, error_41) -> (match (x_2 : ty) with
+        | Ty_exitOf (value_42, error_43) -> _jp_3 value_40 error_41 value_42 error_43
+        | _ -> (let _x_44 = false in
+          _x_44))
+    | Ty_causeOf error_45 -> (match (x_2 : ty) with
+        | Ty_causeOf error_46 -> (let _x_47 = program_ty_beq error_45 error_46 in
+          _x_47)
+        | _ -> (let _x_48 = false in
+          _x_48))
+    | Ty_fiberOf (value_49, error_50) -> (match (x_2 : ty) with
+        | Ty_fiberOf (value_51, error_52) -> _jp_3 value_49 error_50 value_51 error_52
+        | _ -> (let _x_53 = false in
+          _x_53))
+    | Ty_union (left_54, right_55) -> (match (x_2 : ty) with
+        | Ty_union (left_56, right_57) -> _jp_3 left_54 right_55 left_56 right_57
+        | _ -> (let _x_58 = false in
+          _x_58))
+    | Ty_lit value_59 -> (match (x_2 : ty) with
+        | Ty_lit value_60 -> (let _x_61 = value_59 = value_60 in
+          _x_61)
+        | _ -> (let _x_62 = false in
+          _x_62))
+    | Ty_refOf value_63 -> (match (x_2 : ty) with
+        | Ty_refOf value_64 -> (let _x_65 = program_ty_beq value_63 value_64 in
+          _x_65)
+        | _ -> (let _x_66 = false in
+          _x_66))
+    | Ty_deferredOf (value_67, error_68) -> (match (x_2 : ty) with
+        | Ty_deferredOf (value_69, error_70) -> _jp_3 value_67 error_68 value_69 error_70
+        | _ -> (let _x_71 = false in
+          _x_71))
+    | Ty_var index_72 -> (match (x_2 : ty) with
+        | Ty_var index_73 -> (let _x_74 = index_72 = index_73 in
+          _x_74)
+        | _ -> (let _x_75 = false in
+          _x_75))
+    | Ty_unknown -> (match (x_2 : ty) with
+        | Ty_unknown -> (let _x_76 = true in
+          _x_76)
+        | _ -> (let _x_77 = false in
+          _x_77))
+    | Ty_record fields_78 -> (match (x_2 : ty) with
+        | Ty_record fields_79 -> (let _x_80 = program_ty_beq_pos_list_prod_string_prod_bool_ty fields_78 fields_79 in
+          _x_80)
+        | _ -> (let _x_81 = false in
+          _x_81))
+    | Ty_map (key_82, value_83) -> (match (x_2 : ty) with
+        | Ty_map (key_84, value_85) -> _jp_3 key_82 value_83 key_84 value_85
+        | _ -> (let _x_86 = false in
+          _x_86))
+    | Ty_tuple items_87 -> (match (x_2 : ty) with
+        | Ty_tuple items_88 -> (let _x_89 = program_ty_beq_pos_list_ty items_87 items_88 in
+          _x_89)
+        | _ -> (let _x_90 = false in
+          _x_90))
+    | Ty_app (name_91, args_92) -> (match (x_2 : ty) with
+        | Ty_app (name_93, args_94) -> (let _x_95 = name_91 = name_93 in
+          if _x_95 then (let _x_96 = program_ty_beq_pos_list_ty args_92 args_94 in
+            _x_96) else _x_95)
+        | _ -> (let _x_97 = false in
+          _x_97))
+    | Ty_null -> (match (x_2 : ty) with
+        | Ty_null -> (let _x_98 = true in
+          _x_98)
+        | _ -> (let _x_99 = false in
+          _x_99))
+    | Ty_undefined -> (match (x_2 : ty) with
+        | Ty_undefined -> (let _x_100 = true in
+          _x_100)
+        | _ -> (let _x_101 = false in
+          _x_101))
+    | Ty_number -> (match (x_2 : ty) with
+        | Ty_number -> (let _x_102 = true in
+          _x_102)
+        | _ -> (let _x_103 = false in
+          _x_103))
+    | Ty_bytes -> (match (x_2 : ty) with
+        | Ty_bytes -> (let _x_104 = true in
+          _x_104)
+        | _ -> (let _x_105 = false in
+          _x_105))
+
+and program_ty_beq_pos_list_prod_string_prod_bool_ty (x_1 : (string * (bool * ty)) list) (x_2 : (string * (bool * ty)) list) : bool =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (let _x_3 = true in
+          _x_3)
+        | _ -> (let _x_4 = false in
+          _x_4))
+    | head_5 :: tail_6 -> (match x_2 with
+        | head_7 :: tail_8 -> (let _x_9 = program_ty_beq_pos_prod_string_prod_bool_ty head_5 head_7 in
+          if _x_9 then (let _x_10 = program_ty_beq_pos_list_prod_string_prod_bool_ty tail_6 tail_8 in
+            _x_10) else _x_9)
+        | _ -> (let _x_11 = false in
+          _x_11))
+
+and program_ty_beq_pos_prod_string_prod_bool_ty (x_1 : string * (bool * ty)) (x_2 : string * (bool * ty)) : bool =
+  match x_1 with
+    | fst_3, snd_4 -> (match x_2 with
+        | fst_5, snd_6 -> (let _x_7 = fst_3 = fst_5 in
+          if _x_7 then (let _x_8 = program_ty_beq_pos_prod_bool_ty snd_4 snd_6 in
+            _x_8) else _x_7))
+
+and program_ty_beq_pos_prod_bool_ty (x_1 : bool * ty) (x_2 : bool * ty) : bool =
+  match x_1 with
+    | fst_3, snd_4 -> (match x_2 with
+        | fst_5, snd_6 -> if fst_3 then (if fst_5 then (let _x_8 = program_ty_beq snd_4 snd_6 in
+              _x_8) else fst_5) else if fst_5 then fst_3 else (let _x_7 = program_ty_beq snd_4 snd_6 in
+              _x_7))
+
+and program_ty_beq_pos_list_ty (x_1 : ty list) (x_2 : ty list) : bool =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (let _x_3 = true in
+          _x_3)
+        | _ -> (let _x_4 = false in
+          _x_4))
+    | head_5 :: tail_6 -> (match x_2 with
+        | head_7 :: tail_8 -> (let _x_9 = program_ty_beq head_5 head_7 in
+          if _x_9 then (let _x_10 = program_ty_beq_pos_list_ty tail_6 tail_8 in
+            _x_10) else _x_9)
+        | _ -> (let _x_11 = false in
+          _x_11))
+  
+  (* LCNF mono: Effect4.Program.Ty.leafHead (x.1 : Effect4.Program.Ty) : Option Effect4.Program.Ty.LeafHead *)
+  let program_ty_leaf_head (x_1 : ty) : leaf_head option =
+  match (x_1 : ty) with
+    | Ty_lit _ -> (let _x_3 = LeafHead_lit in
+      let _x_4 = Some _x_3 in
       _x_4)
-    | Ty_string -> (let _x_5 = 4 in
-      _x_5)
-    | Ty_bool -> (let _x_6 = 5 in
+    | Ty_string -> (let _x_5 = LeafHead_string in
+      let _x_6 = Some _x_5 in
       _x_6)
-    | Ty_handle _ -> (let _x_7 = 6 in
-      _x_7)
-    | Ty_option _ -> (let _x_8 = 7 in
+    | Ty_nat -> (let _x_7 = LeafHead_nat in
+      let _x_8 = Some _x_7 in
       _x_8)
-    | Ty_list _ -> (let _x_9 = 8 in
-      _x_9)
-    | Ty_prod (_, _) -> (let _x_10 = 9 in
+    | Ty_int -> (let _x_9 = LeafHead_int in
+      let _x_10 = Some _x_9 in
       _x_10)
-    | Ty_except (_, _) -> (let _x_11 = 10 in
-      _x_11)
-    | Ty_exitOf (_, _) -> (let _x_12 = 11 in
+    | Ty_number -> (let _x_11 = LeafHead_number in
+      let _x_12 = Some _x_11 in
       _x_12)
-    | Ty_causeOf _ -> (let _x_13 = 12 in
-      _x_13)
-    | Ty_fiberOf (_, _) -> (let _x_14 = 13 in
+    | Ty_undefined -> (let _x_13 = LeafHead_undefined in
+      let _x_14 = Some _x_13 in
       _x_14)
-    | Ty_union (_, _) -> (let _x_15 = 14 in
-      _x_15)
-    | Ty_lit _ -> (let _x_16 = 15 in
+    | Ty_unit -> (let _x_15 = LeafHead_unit in
+      let _x_16 = Some _x_15 in
       _x_16)
-    | Ty_refOf _ -> (let _x_17 = 16 in
+    | _ -> (let _x_17 = None in
       _x_17)
-    | Ty_deferredOf (_, _) -> (let _x_18 = 17 in
-      _x_18)
-    | Ty_var _ -> (let _x_19 = 18 in
-      _x_19)
-    | Ty_unknown -> (let _x_20 = 19 in
-      _x_20)
   
-  (* LCNF mono: Effect4.Program.instDecidableEqTy.decEq (x.1 : Effect4.Program.Ty) (x.2 : Effect4.Program.Ty) : Bool *)
-  let rec program_inst_decidable_eq_ty_dec_eq (x_1 : ty) (x_2 : ty) : bool =
-  let _x_3 = program_ty_ctor_idx x_1 in
-  let _x_4 = program_ty_ctor_idx x_2 in
+  (* LCNF mono: Effect4.Program.Ty.LeafHead.ctorIdx (x : Effect4.Program.Ty.LeafHead) : Nat *)
+  let program_ty_leaf_head_ctor_idx (x : leaf_head) : int =
+  match (x : leaf_head) with
+    | LeafHead_lit -> (let _x_1 = 0 in
+      _x_1)
+    | LeafHead_string -> (let _x_2 = 1 in
+      _x_2)
+    | LeafHead_nat -> (let _x_3 = 2 in
+      _x_3)
+    | LeafHead_int -> (let _x_4 = 3 in
+      _x_4)
+    | LeafHead_number -> (let _x_5 = 4 in
+      _x_5)
+    | LeafHead_undefined -> (let _x_6 = 5 in
+      _x_6)
+    | LeafHead_unit -> (let _x_7 = 6 in
+      _x_7)
+  
+  (* LCNF mono: Effect4.Program.Ty.instDecidableEqLeafHead (x.1 : Effect4.Program.Ty.LeafHead) (y.2 : Effect4.Program.Ty.LeafHead) : Bool *)
+  let program_ty_inst_decidable_eq_leaf_head (x_1 : leaf_head) (y_2 : leaf_head) : bool =
+  let _x_3 = program_ty_leaf_head_ctor_idx x_1 in
+  let _x_4 = program_ty_leaf_head_ctor_idx y_2 in
   let _x_5 = _x_3 = _x_4 in
-  if _x_5 then (match (x_1 : ty) with
-      | Ty_handle target -> (match (x_2 : ty) with
-          | Ty_handle target_1 -> (let _x_6 = target = target_1 in
+  _x_5
+  
+  (* LCNF mono: Effect4.Program.Ty.leafEdges : List (Prod Effect4.Program.Ty.LeafHead Effect4.Program.Ty.LeafHead) *)
+  let program_ty_leaf_edges : (leaf_head * leaf_head) list =
+  let _x_1 = LeafHead_lit in
+  let _x_2 = LeafHead_string in
+  let _x_3 = _x_1, _x_2 in
+  let _x_4 = LeafHead_nat in
+  let _x_5 = LeafHead_int in
+  let _x_6 = _x_4, _x_5 in
+  let _x_7 = LeafHead_number in
+  let _x_8 = _x_5, _x_7 in
+  let _x_9 = LeafHead_undefined in
+  let _x_10 = LeafHead_unit in
+  let _x_11 = _x_9, _x_10 in
+  let _x_12 = [] in
+  let _x_13 = _x_11 :: _x_12 in
+  let _x_14 = _x_8 :: _x_13 in
+  let _x_15 = _x_6 :: _x_14 in
+  let _x_16 = _x_3 :: _x_15 in
+  _x_16
+  
+  (* LCNF mono: Effect4.Program.Ty.leafReach (edges : List (Prod Effect4.Program.Ty.LeafHead Effect4.Program.Ty.LeafHead)) (x.1 : Nat) (x.2 : Effect4.Program.Ty.LeafHead) (x.3 : Effect4.Program.Ty.LeafHead) : Bool
+   List.any._at_.Effect4.Program.Ty.leafReach.spec_0 (x.1 : Effect4.Program.Ty.LeafHead) (edges : List (Prod Effect4.Program.Ty.LeafHead Effect4.Program.Ty.LeafHead)) (n.2 : Nat) (x.3 : Effect4.Program.Ty.LeafHead) (x.4 : List (Prod Effect4.Program.Ty.LeafHead Effect4.Program.Ty.LeafHead)) : Bool *)
+  let rec program_ty_leaf_reach (edges : (leaf_head * leaf_head) list) (x_1 : int) (x_2 : leaf_head) (x_3 : leaf_head) : bool =
+  let zero = 0 in
+  let is_zero = x_1 = zero in
+  if is_zero then (let _x_4 = program_ty_inst_decidable_eq_leaf_head x_2 x_3 in
+    _x_4) else (let _x_5 = program_ty_inst_decidable_eq_leaf_head x_2 x_3 in
+    if _x_5 then _x_5 else (let one = 1 in
+      let n_6 = max 0 (x_1 - one) in
+      let _x_7 = list_any_at_program_ty_leaf_reach_spec_0 x_2 edges n_6 x_3 edges in
+      _x_7))
+
+and list_any_at_program_ty_leaf_reach_spec_0 (x_1 : leaf_head) (edges : (leaf_head * leaf_head) list) (n_2 : int) (x_3 : leaf_head) (x_4 : (leaf_head * leaf_head) list) : bool =
+  match x_4 with
+    | [] -> (let _x_5 = false in
+      _x_5)
+    | head_6 :: tail_7 -> (let _jp_8 = fun _y_9 -> if _y_9 then _y_9 else (let _x_10 = list_any_at_program_ty_leaf_reach_spec_0 x_1 edges n_2 x_3 tail_7 in
+        _x_10) in
+      match head_6 with
+        | fst_1, snd_1 -> (let _x_11 = program_ty_inst_decidable_eq_leaf_head fst_1 x_1 in
+          if _x_11 then (let _x_12 = program_ty_leaf_reach edges n_2 snd_1 x_3 in
+            _jp_8 _x_12) else _jp_8 _x_11))
+  
+  (* LCNF mono: Effect4.Program.Ty.leafLe (x : Effect4.Program.Ty.LeafHead) (y : Effect4.Program.Ty.LeafHead) : Bool *)
+  let program_ty_leaf_le (x : leaf_head) (y : leaf_head) : bool =
+  let _x_1 = program_ty_leaf_edges in
+  let _x_2 = List.length _x_1 in
+  let _x_3 = program_ty_leaf_reach _x_1 _x_2 x y in
+  _x_3
+  
+  (* LCNF mono: Effect4.Program.Ty.leafRule (a : Effect4.Program.Ty) (b : Effect4.Program.Ty) : Bool *)
+  let program_ty_leaf_rule (a : ty) (b : ty) : bool =
+  let _x_1 = program_ty_leaf_head a in
+  match _x_1 with
+    | Some val__2 -> (let _x_3 = program_ty_leaf_head b in
+      match _x_3 with
+        | Some val__4 -> (let _x_5 = program_ty_inst_decidable_eq_leaf_head val__2 val__4 in
+          if _x_5 then (let _x_7 = false in
+            _x_7) else (let _x_6 = program_ty_leaf_le val__2 val__4 in
             _x_6))
-      | Ty_option inner -> (match (x_2 : ty) with
-          | Ty_option inner_1 -> (let inst_7 = program_inst_decidable_eq_ty_dec_eq inner inner_1 in
-            inst_7))
-      | Ty_list inner_2 -> (match (x_2 : ty) with
-          | Ty_list inner_3 -> (let inst_8 = program_inst_decidable_eq_ty_dec_eq inner_2 inner_3 in
-            inst_8))
-      | Ty_prod (left, right) -> (match (x_2 : ty) with
-          | Ty_prod (left_1, right_1) -> (let inst_9 = program_inst_decidable_eq_ty_dec_eq left left_1 in
-            if inst_9 then (let inst_10 = program_inst_decidable_eq_ty_dec_eq right right_1 in
-              inst_10) else inst_9))
-      | Ty_except (error, value) -> (match (x_2 : ty) with
-          | Ty_except (error_1, value_1) -> (let inst_11 = program_inst_decidable_eq_ty_dec_eq error error_1 in
-            if inst_11 then (let inst_12 = program_inst_decidable_eq_ty_dec_eq value value_1 in
-              inst_12) else inst_11))
-      | Ty_exitOf (value_2, error_2) -> (match (x_2 : ty) with
-          | Ty_exitOf (value_3, error_3) -> (let inst_13 = program_inst_decidable_eq_ty_dec_eq value_2 value_3 in
-            if inst_13 then (let inst_14 = program_inst_decidable_eq_ty_dec_eq error_2 error_3 in
-              inst_14) else inst_13))
-      | Ty_causeOf error_4 -> (match (x_2 : ty) with
-          | Ty_causeOf error_5 -> (let inst_15 = program_inst_decidable_eq_ty_dec_eq error_4 error_5 in
-            inst_15))
-      | Ty_fiberOf (value_4, error_6) -> (match (x_2 : ty) with
-          | Ty_fiberOf (value_5, error_7) -> (let inst_16 = program_inst_decidable_eq_ty_dec_eq value_4 value_5 in
-            if inst_16 then (let inst_17 = program_inst_decidable_eq_ty_dec_eq error_6 error_7 in
-              inst_17) else inst_16))
-      | Ty_union (left_2, right_2) -> (match (x_2 : ty) with
-          | Ty_union (left_3, right_3) -> (let inst_18 = program_inst_decidable_eq_ty_dec_eq left_2 left_3 in
-            if inst_18 then (let inst_19 = program_inst_decidable_eq_ty_dec_eq right_2 right_3 in
-              inst_19) else inst_18))
-      | Ty_lit value_6 -> (match (x_2 : ty) with
-          | Ty_lit value_7 -> (let _x_20 = value_6 = value_7 in
-            _x_20))
-      | Ty_refOf value_8 -> (match (x_2 : ty) with
-          | Ty_refOf value_9 -> (let inst_21 = program_inst_decidable_eq_ty_dec_eq value_8 value_9 in
-            inst_21))
-      | Ty_deferredOf (value_10, error_8) -> (match (x_2 : ty) with
-          | Ty_deferredOf (value_11, error_9) -> (let inst_22 = program_inst_decidable_eq_ty_dec_eq value_10 value_11 in
-            if inst_22 then (let inst_23 = program_inst_decidable_eq_ty_dec_eq error_8 error_9 in
-              inst_23) else inst_22))
-      | Ty_var index -> (match (x_2 : ty) with
-          | Ty_var index_1 -> (let _x_24 = index = index_1 in
-            _x_24))
-      | _ -> _x_5) else _x_5
+        | _ -> (let _x_8 = false in
+          _x_8))
+    | _ -> (let _x_9 = false in
+      _x_9)
   
-  (* LCNF mono: Effect4.Program.Ty.sub (a : Effect4.Program.Ty) (b : Effect4.Program.Ty) : Bool *)
-  let rec program_ty_sub (a : ty) (b : ty) : bool =
-  let _jp_1 = fun a1 a2 b1 b2 -> let _x_2 = program_ty_sub a1 b1 in
-  if _x_2 then (let _x_3 = program_ty_sub a2 b2 in
-    _x_3) else _x_2 in
-  let _jp_4 = fun a_1 b1_1 b2_1 -> let _x_5 = program_ty_sub a_1 b1_1 in
-  if _x_5 then _x_5 else (let _x_6 = program_ty_sub a_1 b2_1 in
-    _x_6) in
-  let _x_7 = program_inst_decidable_eq_ty_dec_eq a b in
-  if _x_7 then _x_7 else (match (a : ty) with
-      | Ty_never -> (let _x_8 = true in
-        _x_8)
-      | Ty_union (left_9, right_10) -> (let _x_11 = program_ty_sub left_9 b in
-        if _x_11 then (let _x_12 = program_ty_sub right_10 b in
-          _x_12) else _x_11)
-      | Ty_lit _ -> (match (b : ty) with
-          | Ty_union (left_14, right_15) -> _jp_4 a left_14 right_15
-          | Ty_unknown -> (let _x_16 = true in
-            _x_16)
-          | Ty_string -> (let _x_17 = true in
-            _x_17)
-          | _ -> _x_7)
-      | Ty_option inner_18 -> (match (b : ty) with
-          | Ty_union (left_19, right_20) -> _jp_4 a left_19 right_20
-          | Ty_unknown -> (let _x_21 = true in
-            _x_21)
-          | Ty_option inner_22 -> (let _x_23 = program_ty_sub inner_18 inner_22 in
-            _x_23)
-          | _ -> _x_7)
-      | Ty_list inner_24 -> (match (b : ty) with
-          | Ty_union (left_25, right_26) -> _jp_4 a left_25 right_26
-          | Ty_unknown -> (let _x_27 = true in
-            _x_27)
-          | Ty_list inner_28 -> (let _x_29 = program_ty_sub inner_24 inner_28 in
-            _x_29)
-          | _ -> _x_7)
-      | Ty_prod (left_30, right_31) -> (match (b : ty) with
-          | Ty_union (left_32, right_33) -> _jp_4 a left_32 right_33
-          | Ty_unknown -> (let _x_34 = true in
-            _x_34)
-          | Ty_prod (left_35, right_36) -> _jp_1 left_30 right_31 left_35 right_36
-          | _ -> _x_7)
-      | Ty_except (error_37, value_38) -> (match (b : ty) with
-          | Ty_union (left_39, right_40) -> _jp_4 a left_39 right_40
-          | Ty_unknown -> (let _x_41 = true in
-            _x_41)
-          | Ty_except (error_42, value_43) -> _jp_1 error_37 value_38 error_42 value_43
-          | _ -> _x_7)
-      | Ty_exitOf (value_44, error_45) -> (match (b : ty) with
-          | Ty_union (left_46, right_47) -> _jp_4 a left_46 right_47
-          | Ty_unknown -> (let _x_48 = true in
-            _x_48)
-          | Ty_exitOf (value_49, error_50) -> _jp_1 value_44 error_45 value_49 error_50
-          | _ -> _x_7)
-      | Ty_causeOf error_51 -> (match (b : ty) with
-          | Ty_union (left_52, right_53) -> _jp_4 a left_52 right_53
-          | Ty_unknown -> (let _x_54 = true in
-            _x_54)
-          | Ty_causeOf error_55 -> (let _x_56 = program_ty_sub error_51 error_55 in
-            _x_56)
-          | _ -> _x_7)
-      | Ty_fiberOf (value_57, error_58) -> (match (b : ty) with
-          | Ty_union (left_59, right_60) -> _jp_4 a left_59 right_60
-          | Ty_unknown -> (let _x_61 = true in
-            _x_61)
-          | Ty_fiberOf (value_62, error_63) -> _jp_1 value_57 error_58 value_62 error_63
-          | _ -> _x_7)
-      | Ty_refOf value_64 -> (match (b : ty) with
-          | Ty_union (left_65, right_66) -> _jp_4 a left_65 right_66
-          | Ty_unknown -> (let _x_67 = true in
-            _x_67)
-          | Ty_refOf value_68 -> (let _x_69 = program_ty_sub value_64 value_68 in
-            if _x_69 then (let _x_70 = program_ty_sub value_68 value_64 in
-              _x_70) else _x_69)
-          | _ -> _x_7)
-      | Ty_deferredOf (value_71, error_72) -> (match (b : ty) with
-          | Ty_union (left_73, right_74) -> _jp_4 a left_73 right_74
-          | Ty_unknown -> (let _x_75 = true in
-            _x_75)
-          | Ty_deferredOf (value_76, error_77) -> (let _jp_78 = fun _y_79 -> if _y_79 then (let _x_80 = program_ty_sub error_72 error_77 in
-              if _x_80 then (let _x_81 = program_ty_sub error_77 error_72 in
-                _x_81) else _x_80) else _y_79 in
-            let _x_82 = program_ty_sub value_71 value_76 in
-            if _x_82 then (let _x_83 = program_ty_sub value_76 value_71 in
-              _jp_78 _x_83) else _jp_78 _x_82)
-          | _ -> _x_7)
-      | _ -> (match (b : ty) with
-          | Ty_union (left_84, right_85) -> _jp_4 a left_84 right_85
-          | Ty_unknown -> (let _x_86 = true in
-            _x_86)
-          | _ -> _x_7))
+  (* LCNF mono: Effect4.Program.Ty.sub._lam_0 (_y.1 : Bool) (_y.2 : Bool) : Bool *)
+  let program_ty_sub__lam_0 (_y_1 : bool) (_y_2 : bool) : bool =
+  if _y_1 then _y_2 else if _y_2 then _y_1 else (let _x_3 = true in
+      _x_3)
   
-  (* LCNF mono: List.mapTR.loop._at_.Effect4.Program.Ty.key.spec_0 (a.1 : List UInt8) (a.2 : List Nat) : List Nat *)
-  let rec list_map_tr_loop_at_program_ty_key_spec_0 (a_1 : int list) (a_2 : int list) : int list =
+  (* LCNF mono: Effect4.Program.Ty.sub._lam_1 (_f.1 : Bool -> Bool -> Bool) (a : Prod String Bool) (b : Prod String Bool) : Bool *)
+  let program_ty_sub__lam_1 (_f_1 : bool -> bool -> bool) (a : string * bool) (b : string * bool) : bool =
+  let _x_2 = fun _b1 _b2 -> _b1 = _b2 in
+  let _x_3 = inst_decidable_eq_prod _x_2 _f_1 a b in
+  _x_3
+  
+  (* LCNF mono: List.mapTR.loop._at_.Effect4.Field.bytesKey.spec_0 (a.1 : List UInt8) (a.2 : List Nat) : List Nat *)
+  let rec list_map_tr_loop_at_field_bytes_key_spec_0 (a_1 : int list) (a_2 : int list) : int list =
   match a_1 with
     | [] -> (let _x_3 = List.rev a_2 in
       _x_3)
     | head_4 :: tail_5 -> (let _x_6 = head_4 in
       let _x_7 = _x_6 :: a_2 in
-      let _x_8 = list_map_tr_loop_at_program_ty_key_spec_0 tail_5 _x_7 in
+      let _x_8 = list_map_tr_loop_at_field_bytes_key_spec_0 tail_5 _x_7 in
       _x_8)
   
-  (* LCNF mono: Effect4.Program.Ty.key (x.1 : Effect4.Program.Ty) : List Nat *)
+  (* LCNF mono: Effect4.Field.bytesKey (s : String) : List Nat *)
+  let field_bytes_key (s : string) : int list =
+  let _x_1 = lcnf_utf8_bytes s in
+  let _x_2 = _x_1 in
+  let _x_3 = _x_2 in
+  let _x_4 = [] in
+  let _x_5 = list_map_tr_loop_at_field_bytes_key_spec_0 _x_3 _x_4 in
+  _x_5
+  
+  (* LCNF mono: Effect4.Field.ltKey (x.1 : List Nat) (x.2 : List Nat) : Bool *)
+  let rec field_lt_key (x_1 : int list) (x_2 : int list) : bool =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (let _x_3 = false in
+          _x_3)
+        | _ :: _ -> (let _x_6 = true in
+          _x_6))
+    | head_7 :: tail_8 -> (match x_2 with
+        | [] -> (let _x_9 = false in
+          _x_9)
+        | head_10 :: tail_11 -> (let _x_12 = head_7 < head_10 in
+          if _x_12 then _x_12 else (let _x_13 = head_10 < head_7 in
+            if _x_13 then _x_12 else (let _x_14 = field_lt_key tail_8 tail_11 in
+              _x_14))))
+  
+  (* LCNF mono: Effect4.Field.insertBy._redArg (key : String -> (List Nat)) (p : Prod String lcAny) (x.1 : List (Prod String lcAny)) : List (Prod String lcAny) *)
+  let rec field_insert_by (key : string -> int list) (p : string * _) (x_1 : (string * _) list) : (string * _) list =
+  match x_1 with
+    | [] -> (let _x_2 = p :: x_1 in
+      _x_2)
+    | head_3 :: tail_4 -> (match p with
+        | fst_1, _ -> (match head_3 with
+            | fst_2, _ -> (let _x_5 = key fst_1 in
+              let _x_6 = key fst_2 in
+              let _x_7 = field_lt_key _x_5 _x_6 in
+              if _x_7 then (let _x_12 = p :: x_1 in
+                _x_12) else (let _x_8 = fun _b1 _b2 -> _b1 = _b2 in
+                let _x_9 = inst_decidable_eq_list _x_8 _x_5 _x_6 in
+                if _x_9 then x_1 else (let _x_10 = field_insert_by key p tail_4 in
+                  let _x_11 = head_3 :: _x_10 in
+                  _x_11)))))
+  
+  (* LCNF mono: List.foldl._at_.Effect4.Field.canonBy.spec_0._redArg (key : String -> (List Nat)) (x.1 : List (Prod String lcAny)) (x.2 : List (Prod String lcAny)) : List (Prod String lcAny) *)
+  let rec list_foldl_at_field_canon_by_spec_0 (key : string -> int list) (x_1 : (string * _) list) (x_2 : (string * _) list) : (string * _) list =
+  match x_2 with
+    | [] -> x_1
+    | head_3 :: tail_4 -> (let _x_5 = field_insert_by key head_3 x_1 in
+      let _x_6 = list_foldl_at_field_canon_by_spec_0 key _x_5 tail_4 in
+      _x_6)
+  
+  (* LCNF mono: Effect4.Field.canonBy._redArg (key : String -> (List Nat)) (fs : List (Prod String lcAny)) : List (Prod String lcAny) *)
+  let field_canon_by (key : string -> int list) (fs : (string * _) list) : (string * _) list =
+  let _x_1 = [] in
+  let _x_2 = list_foldl_at_field_canon_by_spec_0 key _x_1 fs in
+  _x_2
+  
+  (* LCNF mono: List.mapTR.loop._at_.Effect4.Program.Ty.heads.spec_0 (a.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) (a.2 : List (Prod String Bool)) : List (Prod String Bool) *)
+  let rec list_map_tr_loop_at_program_ty_heads_spec_0 (a_1 : (string * (bool * ty)) list) (a_2 : (string * bool) list) : (string * bool) list =
+  match a_1 with
+    | [] -> (let _x_3 = List.rev a_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_1, snd_1 -> (match snd_1 with
+            | fst_2, _ -> (let _x_6 = fst_1, fst_2 in
+              let _x_7 = _x_6 :: a_2 in
+              let _x_8 = list_map_tr_loop_at_program_ty_heads_spec_0 tail_5 _x_7 in
+              _x_8)))
+  
+  (* LCNF mono: List.zipWith._at_.List.zip.spec_0._redArg (x.1 : List lcAny) (x.2 : List lcAny) : List (Prod lcAny lcAny) *)
+  let rec list_zip_with_at_list_zip_spec_0 (x_1 : _ list) (x_2 : _ list) : (_ * _) list =
+  match x_1 with
+    | [] -> (let _x_3 = [] in
+      _x_3)
+    | head_4 :: tail_5 -> (match x_2 with
+        | [] -> (let _x_6 = [] in
+          _x_6)
+        | head_7 :: tail_8 -> (let _x_9 = head_4, head_7 in
+          let _x_10 = list_zip_with_at_list_zip_spec_0 tail_5 tail_8 in
+          let _x_11 = _x_9 :: _x_10 in
+          _x_11))
+  
+  (* LCNF mono: _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_.List.zipIdxTR.spec_0._redArg (as : Array lcAny) (i : USize) (stop : USize) (b : Prod Nat (List (Prod lcAny Nat))) : Prod Nat (List (Prod lcAny Nat)) *)
+  let rec array_foldr_munsafe_fold_at_list_zip_idx_tr_spec_0 (as_ : _ list) (i : int) (stop : int) (b : int * (_ * int) list) : int * (_ * int) list =
+  let _x_1 = i = stop in
+  if _x_1 then b else (match b with
+      | fst_2, snd_3 -> (let _x_4 = 1 in
+        let _x_5 = max 0 (i - _x_4) in
+        let _x_6 = List.nth as_ _x_5 in
+        let _x_7 = 1 in
+        let _x_8 = max 0 (fst_2 - _x_7) in
+        let _x_9 = _x_6, _x_8 in
+        let _x_10 = _x_9 :: snd_3 in
+        let _x_11 = _x_8, _x_10 in
+        let _x_12 = array_foldr_munsafe_fold_at_list_zip_idx_tr_spec_0 as_ _x_5 stop _x_11 in
+        _x_12))
+  
+  (* LCNF mono: List.zipIdxTR._redArg (l : List lcAny) (n : Nat) : List (Prod lcAny Nat) *)
+  let list_zip_idx_tr (l : _ list) (n : int) : (_ * int) list =
+  let as_ = l in
+  let _x_1 = List.length as_ in
+  let _x_2 = [] in
+  let _x_3 = 0 in
+  let _x_4 = _x_3 < _x_1 in
+  if _x_4 then (let _x_5 = n + _x_1 in
+    let _x_6 = _x_5, _x_2 in
+    let _x_7 = _x_1 in
+    let _x_8 = 0 in
+    let _x_9 = array_foldr_munsafe_fold_at_list_zip_idx_tr_spec_0 as_ _x_7 _x_8 _x_6 in
+    match _x_9 with
+      | _, snd_1 -> snd_1) else _x_2
+  
+  (* LCNF mono: Effect4.Program.Ty.declaredVariance (x.1 : String) : List Effect4.Program.Ty.Variance *)
+  let program_ty_declared_variance (x_1 : string) : variance list =
+  let _jp_2 = fun () -> let _x_3 = Variance_inv in
+  let _x_4 = [] in
+  let _x_5 = _x_3 :: _x_4 in
+  _x_5 in
+  let _jp_6 = fun () -> let _x_7 = Variance_inv in
+  let _x_8 = [] in
+  let _x_9 = _x_7 :: _x_8 in
+  let _x_10 = _x_7 :: _x_9 in
+  _x_10 in
+  let _jp_11 = fun () -> let _x_12 = Variance_co in
+  let _x_13 = [] in
+  let _x_14 = _x_12 :: _x_13 in
+  let _x_15 = _x_12 :: _x_14 in
+  _x_15 in
+  let _jp_16 = fun () -> let _x_17 = Variance_co in
+  let _x_18 = [] in
+  let _x_19 = _x_17 :: _x_18 in
+  _x_19 in
+  let _jp_20 = fun () -> let _x_21 = Variance_inv in
+  let _x_22 = [] in
+  let _x_23 = _x_21 :: _x_22 in
+  let _x_24 = _x_21 :: _x_23 in
+  let _x_25 = _x_21 :: _x_24 in
+  _x_25 in
+  let _jp_26 = fun () -> let _x_27 = Variance_contra in
+  let _x_28 = Variance_co in
+  let _x_29 = [] in
+  let _x_30 = _x_28 :: _x_29 in
+  let _x_31 = _x_28 :: _x_30 in
+  let _x_32 = _x_27 :: _x_31 in
+  _x_32 in
+  let _x_33 = "Ref.Ref" in
+  let _x_34 = x_1 = _x_33 in
+  if _x_34 then _jp_2 () else (let _x_35 = "Deferred.Deferred" in
+    let _x_36 = x_1 = _x_35 in
+    if _x_36 then _jp_6 () else (let _x_37 = "Fiber.Fiber" in
+      let _x_38 = x_1 = _x_37 in
+      if _x_38 then _jp_11 () else (let _x_39 = "Cause.Cause" in
+        let _x_40 = x_1 = _x_39 in
+        if _x_40 then _jp_16 () else (let _x_41 = "Cause.Reason" in
+          let _x_42 = x_1 = _x_41 in
+          if _x_42 then _jp_16 () else (let _x_43 = "Cause.Fail" in
+            let _x_44 = x_1 = _x_43 in
+            if _x_44 then _jp_16 () else (let _x_45 = "Cause.Done" in
+              let _x_46 = x_1 = _x_45 in
+              if _x_46 then _jp_2 () else (let _x_47 = "Exit.Exit" in
+                let _x_48 = x_1 = _x_47 in
+                if _x_48 then _jp_11 () else (let _x_49 = "Exit.Success" in
+                  let _x_50 = x_1 = _x_49 in
+                  if _x_50 then _jp_11 () else (let _x_51 = "Exit.Failure" in
+                    let _x_52 = x_1 = _x_51 in
+                    if _x_52 then _jp_11 () else (let _x_53 = "Effect.Effect" in
+                      let _x_54 = x_1 = _x_53 in
+                      if _x_54 then (let _x_121 = Variance_co in
+                        let _x_122 = [] in
+                        let _x_123 = _x_121 :: _x_122 in
+                        let _x_124 = _x_121 :: _x_123 in
+                        let _x_125 = _x_121 :: _x_124 in
+                        _x_125) else (let _x_55 = "Effect.EffectUnify" in
+                        let _x_56 = x_1 = _x_55 in
+                        if _x_56 then _jp_2 () else (let _x_57 = "Effect.Variance" in
+                          let _x_58 = x_1 = _x_57 in
+                          if _x_58 then _jp_20 () else (let _x_59 = "Effect.Success" in
+                            let _x_60 = x_1 = _x_59 in
+                            if _x_60 then _jp_2 () else (let _x_61 = "Effect.Error" in
+                              let _x_62 = x_1 = _x_61 in
+                              if _x_62 then _jp_2 () else (let _x_63 = "Effect.Services" in
+                                let _x_64 = x_1 = _x_63 in
+                                if _x_64 then _jp_2 () else (let _x_65 = "Effect.EffectIterator" in
+                                  let _x_66 = x_1 = _x_65 in
+                                  if _x_66 then _jp_2 () else (let _x_67 = "Effect.TagsWithReason" in
+                                    let _x_68 = x_1 = _x_67 in
+                                    if _x_68 then _jp_2 () else (let _x_69 = "Context.Key" in
+                                      let _x_70 = x_1 = _x_69 in
+                                      if _x_70 then _jp_11 () else (let _x_71 = "Context.Service" in
+                                        let _x_72 = x_1 = _x_71 in
+                                        if _x_72 then _jp_6 () else (let _x_73 = "Context.ServiceClass" in
+                                          let _x_74 = x_1 = _x_73 in
+                                          if _x_74 then _jp_20 () else (let _x_75 = "Context.Reference" in
+                                            let _x_76 = x_1 = _x_75 in
+                                            if _x_76 then _jp_2 () else (let _x_77 = "Context.Context" in
+                                              let _x_78 = x_1 = _x_77 in
+                                              if _x_78 then (let _x_118 = Variance_contra in
+                                                let _x_119 = [] in
+                                                let _x_120 = _x_118 :: _x_119 in
+                                                _x_120) else (let _x_79 = "Layer.Layer" in
+                                                let _x_80 = x_1 = _x_79 in
+                                                if _x_80 then _jp_26 () else (let _x_81 = "Layer.LayerUnify" in
+                                                  let _x_82 = x_1 = _x_81 in
+                                                  if _x_82 then _jp_2 () else (let _x_83 = "Layer.Variance" in
+                                                    let _x_84 = x_1 = _x_83 in
+                                                    if _x_84 then _jp_26 () else (let _x_85 = "Layer.Services" in
+                                                      let _x_86 = x_1 = _x_85 in
+                                                      if _x_86 then _jp_2 () else (let _x_87 = "Layer.Error" in
+                                                        let _x_88 = x_1 = _x_87 in
+                                                        if _x_88 then _jp_2 () else (let _x_89 = "Layer.Success" in
+                                                          let _x_90 = x_1 = _x_89 in
+                                                          if _x_90 then _jp_2 () else (let _x_91 = "Layer.PartialEffectful" in
+                                                            let _x_92 = x_1 = _x_91 in
+                                                            if _x_92 then _jp_2 () else (let _x_93 = "Queue.Enqueue" in
+                                                              let _x_94 = x_1 = _x_93 in
+                                                              if _x_94 then (let _x_114 = Variance_contra in
+                                                                let _x_115 = [] in
+                                                                let _x_116 = _x_114 :: _x_115 in
+                                                                let _x_117 = _x_114 :: _x_116 in
+                                                                _x_117) else (let _x_95 = "Queue.Dequeue" in
+                                                                let _x_96 = x_1 = _x_95 in
+                                                                if _x_96 then _jp_11 () else (let _x_97 = "Queue.Queue" in
+                                                                  let _x_98 = x_1 = _x_97 in
+                                                                  if _x_98 then _jp_6 () else (let _x_99 = "PubSub.PubSub" in
+                                                                    let _x_100 = x_1 = _x_99 in
+                                                                    if _x_100 then _jp_2 () else (let _x_101 = "PubSub.Subscription" in
+                                                                      let _x_102 = x_1 = _x_101 in
+                                                                      if _x_102 then _jp_16 () else (let _x_103 = "Option.Option" in
+                                                                        let _x_104 = x_1 = _x_103 in
+                                                                        if _x_104 then _jp_16 () else (let _x_105 = "Option.None" in
+                                                                          let _x_106 = x_1 = _x_105 in
+                                                                          if _x_106 then _jp_16 () else (let _x_107 = "Option.OptionIterator" in
+                                                                            let _x_108 = x_1 = _x_107 in
+                                                                            if _x_108 then _jp_2 () else (let _x_109 = "Option.Some" in
+                                                                              let _x_110 = x_1 = _x_109 in
+                                                                              if _x_110 then _jp_16 () else (let _x_111 = "Option.OptionUnify" in
+                                                                                let _x_112 = x_1 = _x_111 in
+                                                                                if _x_112 then _jp_2 () else (let _x_113 = [] in
+                                                                                  _x_113))))))))))))))))))))))))))))))))))))))))
+  
+  (* LCNF mono: Effect4.Program.Ty.argVariance (name : String) (i : Nat) : Effect4.Program.Ty.Variance *)
+  let program_ty_arg_variance (name : string) (i : int) : variance =
+  let _x_1 = program_ty_declared_variance name in
+  let _x_2 = list_get_opt_internal _x_1 i in
+  match _x_2 with
+    | None -> (let _x_3 = Variance_inv in
+      _x_3)
+    | Some val__4 -> val__4
+  
+  (* LCNF mono: Effect4.Program.Ty.Variance.select (x.1 : Effect4.Program.Ty.Variance) (x.2 : Bool) (x.3 : Bool) : Bool *)
+  let program_ty_variance_select (x_1 : variance) (x_2 : bool) (x_3 : bool) : bool =
+  match (x_1 : variance) with
+    | Variance_co -> x_2
+    | Variance_contra -> x_3
+    | Variance_inv -> if x_2 then x_3 else x_2
+  
+  (* LCNF mono: Effect4.Program.Ty.sub (a : Effect4.Program.Ty) (b : Effect4.Program.Ty) : Bool
+   List.all._at_.Effect4.Program.Ty.sub.spec_0 (x.1 : List (Prod (Prod String (Prod Bool Effect4.Program.Ty)) (Prod String (Prod Bool Effect4.Program.Ty)))) : Bool
+   List.all._at_.Effect4.Program.Ty.sub.spec_1 (x.1 : List (Prod Effect4.Program.Ty Effect4.Program.Ty)) : Bool
+   List.all._at_.Effect4.Program.Ty.sub.spec_2 (name.1 : String) (x.2 : List (Prod (Prod Effect4.Program.Ty Nat) (Prod Effect4.Program.Ty Nat))) : Bool *)
+  let rec program_ty_sub (a : ty) (b : ty) : bool =
+  let _jp_1 = fun a1 a2 b1 b2 -> let _x_2 = program_ty_sub a1 b1 in
+  if _x_2 then (let _x_3 = program_ty_sub a2 b2 in
+    _x_3) else _x_2 in
+  let _x_4 = program_ty_beq a b in
+  if _x_4 then _x_4 else (let _x_5 = program_ty_leaf_rule a b in
+    let _x_6 = true in
+    let _jp_7 = fun a_1 b1_1 b2_1 -> let _x_8 = program_ty_sub a_1 b1_1 in
+    if _x_8 then _x_6 else (let _x_9 = program_ty_sub a_1 b2_1 in
+      _x_9) in
+    if _x_5 then _x_6 else (match (a : ty) with
+        | Ty_never -> _x_6
+        | Ty_union (left_10, right_11) -> (let _x_12 = program_ty_sub left_10 b in
+          if _x_12 then (let _x_13 = program_ty_sub right_11 b in
+            _x_13) else _x_12)
+        | Ty_option inner_14 -> (match (b : ty) with
+            | Ty_union (left_15, right_16) -> _jp_7 a left_15 right_16
+            | Ty_unknown -> _x_6
+            | Ty_option inner_17 -> (let _x_18 = program_ty_sub inner_14 inner_17 in
+              _x_18)
+            | _ -> _x_5)
+        | Ty_list inner_19 -> (match (b : ty) with
+            | Ty_union (left_20, right_21) -> _jp_7 a left_20 right_21
+            | Ty_unknown -> _x_6
+            | Ty_list inner_22 -> (let _x_23 = program_ty_sub inner_19 inner_22 in
+              _x_23)
+            | _ -> _x_5)
+        | Ty_prod (left_24, right_25) -> (match (b : ty) with
+            | Ty_union (left_26, right_27) -> _jp_7 a left_26 right_27
+            | Ty_unknown -> _x_6
+            | Ty_prod (left_28, right_29) -> _jp_1 left_24 right_25 left_28 right_29
+            | _ -> _x_5)
+        | Ty_except (error_30, value_31) -> (match (b : ty) with
+            | Ty_union (left_32, right_33) -> _jp_7 a left_32 right_33
+            | Ty_unknown -> _x_6
+            | Ty_except (error_34, value_35) -> _jp_1 error_30 value_31 error_34 value_35
+            | _ -> _x_5)
+        | Ty_exitOf (value_36, error_37) -> (match (b : ty) with
+            | Ty_union (left_38, right_39) -> _jp_7 a left_38 right_39
+            | Ty_unknown -> _x_6
+            | Ty_exitOf (value_40, error_41) -> _jp_1 value_36 error_37 value_40 error_41
+            | _ -> _x_5)
+        | Ty_causeOf error_42 -> (match (b : ty) with
+            | Ty_union (left_43, right_44) -> _jp_7 a left_43 right_44
+            | Ty_unknown -> _x_6
+            | Ty_causeOf error_45 -> (let _x_46 = program_ty_sub error_42 error_45 in
+              _x_46)
+            | _ -> _x_5)
+        | Ty_fiberOf (value_47, error_48) -> (match (b : ty) with
+            | Ty_union (left_49, right_50) -> _jp_7 a left_49 right_50
+            | Ty_unknown -> _x_6
+            | Ty_fiberOf (value_51, error_52) -> _jp_1 value_47 error_48 value_51 error_52
+            | _ -> _x_5)
+        | Ty_refOf value_53 -> (match (b : ty) with
+            | Ty_union (left_54, right_55) -> _jp_7 a left_54 right_55
+            | Ty_unknown -> _x_6
+            | Ty_refOf value_56 -> (let _x_57 = program_ty_sub value_53 value_56 in
+              if _x_57 then (let _x_58 = program_ty_sub value_56 value_53 in
+                _x_58) else _x_57)
+            | _ -> _x_5)
+        | Ty_deferredOf (value_59, error_60) -> (match (b : ty) with
+            | Ty_union (left_61, right_62) -> _jp_7 a left_61 right_62
+            | Ty_unknown -> _x_6
+            | Ty_deferredOf (value_63, error_64) -> (let _jp_65 = fun _y_66 -> if _y_66 then (let _x_67 = program_ty_sub error_60 error_64 in
+                if _x_67 then (let _x_68 = program_ty_sub error_64 error_60 in
+                  _x_68) else _x_67) else _y_66 in
+              let _x_69 = program_ty_sub value_59 value_63 in
+              if _x_69 then (let _x_70 = program_ty_sub value_63 value_59 in
+                _jp_65 _x_70) else _jp_65 _x_69)
+            | _ -> _x_5)
+        | Ty_record fields_71 -> (match (b : ty) with
+            | Ty_union (left_72, right_73) -> _jp_7 a left_72 right_73
+            | Ty_unknown -> _x_6
+            | Ty_record fields_74 -> (let _f_75 = program_ty_sub__lam_0 in
+              let _f_76 = program_ty_sub__lam_1 _f_75 in
+              let _x_77 = field_bytes_key in
+              let _x_78 = field_canon_by _x_77 fields_71 in
+              let _x_79 = [] in
+              let _x_80 = list_map_tr_loop_at_program_ty_heads_spec_0 _x_78 _x_79 in
+              let _x_81 = field_canon_by _x_77 fields_74 in
+              let _x_82 = list_map_tr_loop_at_program_ty_heads_spec_0 _x_81 _x_79 in
+              let _x_83 = inst_decidable_eq_list _f_76 _x_80 _x_82 in
+              if _x_83 then (let _x_84 = list_zip_with_at_list_zip_spec_0 _x_78 _x_81 in
+                let _x_85 = list_all_at_program_ty_sub_spec_0 _x_84 in
+                _x_85) else _x_83)
+            | _ -> _x_5)
+        | Ty_map (key_86, value_87) -> (match (b : ty) with
+            | Ty_union (left_88, right_89) -> _jp_7 a left_88 right_89
+            | Ty_unknown -> _x_6
+            | Ty_map (key_90, value_91) -> (let _jp_92 = fun _y_93 -> if _y_93 then (let _x_94 = program_ty_sub value_87 value_91 in
+                _x_94) else _y_93 in
+              let _x_95 = program_ty_sub key_86 key_90 in
+              if _x_95 then (let _x_96 = program_ty_sub key_90 key_86 in
+                _jp_92 _x_96) else _jp_92 _x_95)
+            | _ -> _x_5)
+        | Ty_tuple items_97 -> (match (b : ty) with
+            | Ty_union (left_98, right_99) -> _jp_7 a left_98 right_99
+            | Ty_unknown -> _x_6
+            | Ty_tuple items_100 -> (let _x_101 = List.length items_97 in
+              let _x_102 = List.length items_100 in
+              let _x_103 = _x_101 = _x_102 in
+              if _x_103 then (let _x_104 = list_zip_with_at_list_zip_spec_0 items_97 items_100 in
+                let _x_105 = list_all_at_program_ty_sub_spec_1 _x_104 in
+                _x_105) else _x_103)
+            | _ -> _x_5)
+        | Ty_app (name_106, args_107) -> (match (b : ty) with
+            | Ty_union (left_108, right_109) -> _jp_7 a left_108 right_109
+            | Ty_unknown -> _x_6
+            | Ty_app (name_110, args_111) -> (let _jp_112 = fun _y_113 -> if _y_113 then (let _x_114 = 0 in
+                let _x_115 = list_zip_idx_tr args_107 _x_114 in
+                let _x_116 = list_zip_idx_tr args_111 _x_114 in
+                let _x_117 = list_zip_with_at_list_zip_spec_0 _x_115 _x_116 in
+                let _x_118 = list_all_at_program_ty_sub_spec_2 name_106 _x_117 in
+                _x_118) else _y_113 in
+              let _x_119 = name_106 = name_110 in
+              if _x_119 then (let _x_120 = List.length args_107 in
+                let _x_121 = List.length args_111 in
+                let _x_122 = _x_120 = _x_121 in
+                _jp_112 _x_122) else _jp_112 _x_119)
+            | _ -> _x_5)
+        | _ -> (match (b : ty) with
+            | Ty_union (left_123, right_124) -> _jp_7 a left_123 right_124
+            | Ty_unknown -> _x_6
+            | _ -> _x_5)))
+
+and list_all_at_program_ty_sub_spec_0 (x_1 : ((string * (bool * ty)) * (string * (bool * ty))) list) : bool =
+  match x_1 with
+    | [] -> (let _x_2 = true in
+      _x_2)
+    | head_3 :: tail_4 -> (match head_3 with
+        | fst_1, snd_1 -> (match fst_1 with
+            | _, snd_2 -> (match snd_2 with
+                | _, snd_3 -> (match snd_1 with
+                    | _, snd_4 -> (match snd_4 with
+                        | _, snd_5 -> (let _x_5 = program_ty_sub snd_3 snd_5 in
+                          if _x_5 then (let _x_6 = list_all_at_program_ty_sub_spec_0 tail_4 in
+                            _x_6) else _x_5))))))
+
+and list_all_at_program_ty_sub_spec_1 (x_1 : (ty * ty) list) : bool =
+  match x_1 with
+    | [] -> (let _x_2 = true in
+      _x_2)
+    | head_3 :: tail_4 -> (match head_3 with
+        | fst_1, snd_1 -> (let _x_5 = program_ty_sub fst_1 snd_1 in
+          if _x_5 then (let _x_6 = list_all_at_program_ty_sub_spec_1 tail_4 in
+            _x_6) else _x_5))
+
+and list_all_at_program_ty_sub_spec_2 (name_1 : string) (x_2 : ((ty * int) * (ty * int)) list) : bool =
+  match x_2 with
+    | [] -> (let _x_3 = true in
+      _x_3)
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_1, snd_1 -> (match fst_1 with
+            | fst_2, snd_2 -> (match snd_1 with
+                | fst_3, _ -> (let _x_6 = program_ty_arg_variance name_1 snd_2 in
+                  let _x_7 = program_ty_sub fst_2 fst_3 in
+                  let _x_8 = program_ty_sub fst_3 fst_2 in
+                  let _x_9 = program_ty_variance_select _x_6 _x_7 _x_8 in
+                  if _x_9 then (let _x_10 = list_all_at_program_ty_sub_spec_2 name_1 tail_5 in
+                    _x_10) else _x_9))))
+  
+  (* LCNF mono: Effect4.Program.Ty.key (x.1 : Effect4.Program.Ty) : List Nat
+   Effect4.Program.Ty.keyFields (x.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) : List Nat
+   Effect4.Program.Ty.keyItems (x.1 : List Effect4.Program.Ty) : List Nat *)
   let rec program_ty_key (x_1 : ty) : int list =
   match (x_1 : ty) with
     | Ty_never -> (let _x_2 = 0 in
@@ -8346,116 +8913,171 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
       let _x_19 = _x_17 :: _x_18 in
       _x_19)
     | Ty_handle target_20 -> (let _x_21 = 6 in
-      let _x_22 = lcnf_utf8_bytes target_20 in
-      let _x_23 = _x_22 in
-      let _x_24 = _x_23 in
-      let _x_25 = [] in
-      let _x_26 = list_map_tr_loop_at_program_ty_key_spec_0 _x_24 _x_25 in
-      let _x_27 = _x_21 :: _x_26 in
+      let _x_22 = field_bytes_key target_20 in
+      let _x_23 = _x_21 :: _x_22 in
+      _x_23)
+    | Ty_option inner_24 -> (let _x_25 = 7 in
+      let _x_26 = program_ty_key inner_24 in
+      let _x_27 = _x_25 :: _x_26 in
       _x_27)
-    | Ty_option inner_28 -> (let _x_29 = 7 in
+    | Ty_list inner_28 -> (let _x_29 = 8 in
       let _x_30 = program_ty_key inner_28 in
       let _x_31 = _x_29 :: _x_30 in
       _x_31)
-    | Ty_list inner_32 -> (let _x_33 = 8 in
-      let _x_34 = program_ty_key inner_32 in
-      let _x_35 = _x_33 :: _x_34 in
-      _x_35)
-    | Ty_prod (left_36, right_37) -> (let _x_38 = 9 in
-      let _x_39 = program_ty_key left_36 in
-      let _x_40 = List.length _x_39 in
-      let _x_41 = _x_40 :: _x_39 in
-      let _x_42 = _x_38 :: _x_41 in
-      let _x_43 = program_ty_key right_37 in
-      let _x_44 = _x_42 @ _x_43 in
-      _x_44)
-    | Ty_except (error_45, value_46) -> (let _x_47 = 10 in
-      let _x_48 = program_ty_key error_45 in
-      let _x_49 = List.length _x_48 in
-      let _x_50 = _x_49 :: _x_48 in
-      let _x_51 = _x_47 :: _x_50 in
-      let _x_52 = program_ty_key value_46 in
-      let _x_53 = _x_51 @ _x_52 in
-      _x_53)
-    | Ty_exitOf (value_54, error_55) -> (let _x_56 = 11 in
-      let _x_57 = program_ty_key value_54 in
-      let _x_58 = List.length _x_57 in
-      let _x_59 = _x_58 :: _x_57 in
-      let _x_60 = _x_56 :: _x_59 in
-      let _x_61 = program_ty_key error_55 in
-      let _x_62 = _x_60 @ _x_61 in
+    | Ty_prod (left_32, right_33) -> (let _x_34 = 9 in
+      let _x_35 = program_ty_key left_32 in
+      let _x_36 = List.length _x_35 in
+      let _x_37 = _x_36 :: _x_35 in
+      let _x_38 = _x_34 :: _x_37 in
+      let _x_39 = program_ty_key right_33 in
+      let _x_40 = _x_38 @ _x_39 in
+      _x_40)
+    | Ty_except (error_41, value_42) -> (let _x_43 = 10 in
+      let _x_44 = program_ty_key error_41 in
+      let _x_45 = List.length _x_44 in
+      let _x_46 = _x_45 :: _x_44 in
+      let _x_47 = _x_43 :: _x_46 in
+      let _x_48 = program_ty_key value_42 in
+      let _x_49 = _x_47 @ _x_48 in
+      _x_49)
+    | Ty_exitOf (value_50, error_51) -> (let _x_52 = 11 in
+      let _x_53 = program_ty_key value_50 in
+      let _x_54 = List.length _x_53 in
+      let _x_55 = _x_54 :: _x_53 in
+      let _x_56 = _x_52 :: _x_55 in
+      let _x_57 = program_ty_key error_51 in
+      let _x_58 = _x_56 @ _x_57 in
+      _x_58)
+    | Ty_causeOf error_59 -> (let _x_60 = 12 in
+      let _x_61 = program_ty_key error_59 in
+      let _x_62 = _x_60 :: _x_61 in
       _x_62)
-    | Ty_causeOf error_63 -> (let _x_64 = 12 in
-      let _x_65 = program_ty_key error_63 in
-      let _x_66 = _x_64 :: _x_65 in
-      _x_66)
-    | Ty_fiberOf (value_67, error_68) -> (let _x_69 = 13 in
-      let _x_70 = program_ty_key value_67 in
-      let _x_71 = List.length _x_70 in
-      let _x_72 = _x_71 :: _x_70 in
-      let _x_73 = _x_69 :: _x_72 in
-      let _x_74 = program_ty_key error_68 in
-      let _x_75 = _x_73 @ _x_74 in
-      _x_75)
-    | Ty_union (left_76, right_77) -> (let _x_78 = 14 in
-      let _x_79 = program_ty_key left_76 in
-      let _x_80 = List.length _x_79 in
-      let _x_81 = _x_80 :: _x_79 in
-      let _x_82 = _x_78 :: _x_81 in
-      let _x_83 = program_ty_key right_77 in
-      let _x_84 = _x_82 @ _x_83 in
+    | Ty_fiberOf (value_63, error_64) -> (let _x_65 = 13 in
+      let _x_66 = program_ty_key value_63 in
+      let _x_67 = List.length _x_66 in
+      let _x_68 = _x_67 :: _x_66 in
+      let _x_69 = _x_65 :: _x_68 in
+      let _x_70 = program_ty_key error_64 in
+      let _x_71 = _x_69 @ _x_70 in
+      _x_71)
+    | Ty_union (left_72, right_73) -> (let _x_74 = 14 in
+      let _x_75 = program_ty_key left_72 in
+      let _x_76 = List.length _x_75 in
+      let _x_77 = _x_76 :: _x_75 in
+      let _x_78 = _x_74 :: _x_77 in
+      let _x_79 = program_ty_key right_73 in
+      let _x_80 = _x_78 @ _x_79 in
+      _x_80)
+    | Ty_lit value_81 -> (let _x_82 = 15 in
+      let _x_83 = field_bytes_key value_81 in
+      let _x_84 = _x_82 :: _x_83 in
       _x_84)
-    | Ty_lit value_85 -> (let _x_86 = 15 in
-      let _x_87 = lcnf_utf8_bytes value_85 in
-      let _x_88 = _x_87 in
-      let _x_89 = _x_88 in
-      let _x_90 = [] in
-      let _x_91 = list_map_tr_loop_at_program_ty_key_spec_0 _x_89 _x_90 in
-      let _x_92 = _x_86 :: _x_91 in
-      _x_92)
-    | Ty_refOf value_93 -> (let _x_94 = 16 in
-      let _x_95 = program_ty_key value_93 in
-      let _x_96 = _x_94 :: _x_95 in
-      _x_96)
-    | Ty_deferredOf (value_97, error_98) -> (let _x_99 = 17 in
-      let _x_100 = program_ty_key value_97 in
-      let _x_101 = List.length _x_100 in
-      let _x_102 = _x_101 :: _x_100 in
-      let _x_103 = _x_99 :: _x_102 in
-      let _x_104 = program_ty_key error_98 in
-      let _x_105 = _x_103 @ _x_104 in
+    | Ty_refOf value_85 -> (let _x_86 = 16 in
+      let _x_87 = program_ty_key value_85 in
+      let _x_88 = _x_86 :: _x_87 in
+      _x_88)
+    | Ty_deferredOf (value_89, error_90) -> (let _x_91 = 17 in
+      let _x_92 = program_ty_key value_89 in
+      let _x_93 = List.length _x_92 in
+      let _x_94 = _x_93 :: _x_92 in
+      let _x_95 = _x_91 :: _x_94 in
+      let _x_96 = program_ty_key error_90 in
+      let _x_97 = _x_95 @ _x_96 in
+      _x_97)
+    | Ty_var index_98 -> (let _x_99 = 18 in
+      let _x_100 = [] in
+      let _x_101 = index_98 :: _x_100 in
+      let _x_102 = _x_99 :: _x_101 in
+      _x_102)
+    | Ty_unknown -> (let _x_103 = 19 in
+      let _x_104 = [] in
+      let _x_105 = _x_103 :: _x_104 in
       _x_105)
-    | Ty_var index_106 -> (let _x_107 = 18 in
-      let _x_108 = [] in
-      let _x_109 = index_106 :: _x_108 in
-      let _x_110 = _x_107 :: _x_109 in
-      _x_110)
-    | Ty_unknown -> (let _x_111 = 19 in
-      let _x_112 = [] in
-      let _x_113 = _x_111 :: _x_112 in
-      _x_113)
-  
-  (* LCNF mono: Effect4.Program.Ty.ltKey (x.1 : List Nat) (x.2 : List Nat) : Bool *)
-  let rec program_ty_lt_key (x_1 : int list) (x_2 : int list) : bool =
+    | Ty_record fields_106 -> (let _x_107 = 20 in
+      let _x_108 = program_ty_key_fields fields_106 in
+      let _x_109 = _x_107 :: _x_108 in
+      _x_109)
+    | Ty_map (key_110, value_111) -> (let _x_112 = 21 in
+      let _x_113 = program_ty_key key_110 in
+      let _x_114 = List.length _x_113 in
+      let _x_115 = _x_114 :: _x_113 in
+      let _x_116 = _x_112 :: _x_115 in
+      let _x_117 = program_ty_key value_111 in
+      let _x_118 = _x_116 @ _x_117 in
+      _x_118)
+    | Ty_tuple items_119 -> (let _x_120 = 22 in
+      let _x_121 = program_ty_key_items items_119 in
+      let _x_122 = _x_120 :: _x_121 in
+      _x_122)
+    | Ty_app (name_123, args_124) -> (let _x_125 = 23 in
+      let _x_126 = field_bytes_key name_123 in
+      let _x_127 = List.length _x_126 in
+      let _x_128 = _x_127 :: _x_126 in
+      let _x_129 = _x_125 :: _x_128 in
+      let _x_130 = program_ty_key_items args_124 in
+      let _x_131 = _x_129 @ _x_130 in
+      _x_131)
+    | Ty_null -> (let _x_132 = 24 in
+      let _x_133 = [] in
+      let _x_134 = _x_132 :: _x_133 in
+      _x_134)
+    | Ty_undefined -> (let _x_135 = 25 in
+      let _x_136 = [] in
+      let _x_137 = _x_135 :: _x_136 in
+      _x_137)
+    | Ty_number -> (let _x_138 = 26 in
+      let _x_139 = [] in
+      let _x_140 = _x_138 :: _x_139 in
+      _x_140)
+    | Ty_bytes -> (let _x_141 = 27 in
+      let _x_142 = [] in
+      let _x_143 = _x_141 :: _x_142 in
+      _x_143)
+
+and program_ty_key_fields (x_1 : (string * (bool * ty)) list) : int list =
   match x_1 with
-    | [] -> (match x_2 with
-        | [] -> (let _x_3 = false in
-          _x_3)
-        | _ :: _ -> (let _x_6 = true in
-          _x_6))
-    | head_7 :: tail_8 -> (match x_2 with
-        | [] -> (let _x_9 = false in
-          _x_9)
-        | head_10 :: tail_11 -> (let _x_12 = head_7 < head_10 in
-          if _x_12 then _x_12 else (let _x_13 = head_10 < head_7 in
-            if _x_13 then _x_12 else (let _x_14 = program_ty_lt_key tail_8 tail_11 in
-              _x_14))))
+    | [] -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      let _x_4 = _x_2 :: _x_3 in
+      _x_4)
+    | head_5 :: tail_6 -> (match head_5 with
+        | fst_7, snd_8 -> (match snd_8 with
+            | fst_9, snd_10 -> (let _x_11 = 1 in
+              let _x_12 = field_bytes_key fst_7 in
+              let _x_13 = List.length _x_12 in
+              let _x_14 = _x_13 :: _x_12 in
+              let _x_15 = _x_11 :: _x_14 in
+              let _jp_16 = fun _y_17 -> let _x_18 = program_ty_key snd_10 in
+              let _x_19 = List.length _x_18 in
+              let _x_20 = _x_19 :: _x_18 in
+              let _x_21 = _y_17 :: _x_20 in
+              let _x_22 = _x_15 @ _x_21 in
+              let _x_23 = program_ty_key_fields tail_6 in
+              let _x_24 = _x_22 @ _x_23 in
+              _x_24 in
+              if fst_9 then _jp_16 _x_11 else (let _x_25 = 0 in
+                _jp_16 _x_25))))
+
+and program_ty_key_items (x_1 : ty list) : int list =
+  match x_1 with
+    | [] -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      let _x_4 = _x_2 :: _x_3 in
+      _x_4)
+    | head_5 :: tail_6 -> (let _x_7 = 1 in
+      let _x_8 = program_ty_key head_5 in
+      let _x_9 = List.length _x_8 in
+      let _x_10 = _x_9 :: _x_8 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = program_ty_key_items tail_6 in
+      let _x_13 = _x_11 @ _x_12 in
+      _x_13)
   
   (* LCNF mono: Effect4.Program.Ty.instDecidableLT (a : Effect4.Program.Ty) (b : Effect4.Program.Ty) : Bool *)
   let program_ty_inst_decidable_lt (a : ty) (b : ty) : bool =
   let _x_1 = program_ty_key a in
   let _x_2 = program_ty_key b in
-  let _x_3 = program_ty_lt_key _x_1 _x_2 in
+  let _x_3 = field_lt_key _x_1 _x_2 in
   _x_3
   
   (* LCNF mono: _private.Effect4.Data.Row.0.Effect4.Row.insertElems._at_.Effect4.Row.insert._at_.Effect4.Row.normalize._at_.Effect4.Program.Ty.normalizeRow.spec_0.spec_1.spec_2 (x : Effect4.Program.Ty) (x.1 : List Effect4.Program.Ty) : List Effect4.Program.Ty *)
@@ -8465,7 +9087,7 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
       _x_2)
     | head_3 :: tail_4 -> (let _x_5 = program_ty_inst_decidable_lt x head_3 in
       if _x_5 then (let _x_9 = x :: x_1 in
-        _x_9) else (let _x_6 = program_inst_decidable_eq_ty_dec_eq x head_3 in
+        _x_9) else (let _x_6 = program_ty_beq x head_3 in
         if _x_6 then x_1 else (let _x_7 = row_insert_elems_at_row_insert_at_row_normalize_at_program_ty_normalize_row_spec_0_spec_1_spec_2 x tail_4 in
           let _x_8 = head_3 :: _x_7 in
           _x_8)))
@@ -8525,7 +9147,33 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
           let _x_6 = Ty_union (head_3, _x_5) in
           _x_6))
   
-  (* LCNF mono: Effect4.Program.Ty.normalize (x.1 : Effect4.Program.Ty) : Effect4.Program.Ty *)
+  (* LCNF mono: Effect4.Program.Ty.normTuple (x.1 : List Effect4.Program.Ty) : Effect4.Program.Ty *)
+  let program_ty_norm_tuple (x_1 : ty list) : ty =
+  match x_1 with
+    | head_2 :: tail_3 -> (match tail_3 with
+        | head_4 :: tail_5 -> (match tail_5 with
+            | [] -> (let _x_6 = program_ty_product_members head_2 head_4 in
+              let _x_7 = program_ty_normalize_row _x_6 in
+              let _x_8 = program_ty_of_members _x_7 in
+              _x_8)
+            | _ -> (let _x_9 = Ty_tuple x_1 in
+              _x_9))
+        | _ -> (let _x_10 = Ty_tuple x_1 in
+          _x_10))
+    | _ -> (let _x_11 = Ty_tuple x_1 in
+      _x_11)
+  
+  (* LCNF mono: Effect4.Program.Ty.normApp (name : String) (x.1 : List Effect4.Program.Ty) : Effect4.Program.Ty *)
+  let program_ty_norm_app (name : string) (x_1 : ty list) : ty =
+  match x_1 with
+    | [] -> (let _x_2 = Ty_handle name in
+      _x_2)
+    | _ -> (let _x_3 = Ty_app (name, x_1) in
+      _x_3)
+  
+  (* LCNF mono: Effect4.Program.Ty.normalize (x.1 : Effect4.Program.Ty) : Effect4.Program.Ty
+   Effect4.Program.Ty.normalizeFields (x.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) : List (Prod String (Prod Bool Effect4.Program.Ty))
+   Effect4.Program.Ty.normalizeItems (x.1 : List Effect4.Program.Ty) : List Effect4.Program.Ty *)
   let rec program_ty_normalize (x_1 : ty) : ty =
   match (x_1 : ty) with
     | Ty_handle _ -> x_1
@@ -8573,7 +9221,42 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
       let _x_51 = Ty_deferredOf (_x_49, _x_50) in
       _x_51)
     | Ty_var _ -> x_1
+    | Ty_record fields_53 -> (let _x_54 = program_ty_normalize_fields fields_53 in
+      let _x_55 = field_bytes_key in
+      let _x_56 = field_canon_by _x_55 _x_54 in
+      let _x_57 = Ty_record _x_56 in
+      _x_57)
+    | Ty_map (key_58, value_59) -> (let _x_60 = program_ty_normalize key_58 in
+      let _x_61 = program_ty_normalize value_59 in
+      let _x_62 = Ty_map (_x_60, _x_61) in
+      _x_62)
+    | Ty_tuple items_63 -> (let _x_64 = program_ty_normalize_items items_63 in
+      let _x_65 = program_ty_norm_tuple _x_64 in
+      _x_65)
+    | Ty_app (name_66, args_67) -> (let _x_68 = program_ty_normalize_items args_67 in
+      let _x_69 = program_ty_norm_app name_66 _x_68 in
+      _x_69)
     | _ -> x_1
+
+and program_ty_normalize_fields (x_1 : (string * (bool * ty)) list) : (string * (bool * ty)) list =
+  match x_1 with
+    | [] -> x_1
+    | head_2 :: tail_3 -> (match head_2 with
+        | fst_4, snd_5 -> (match snd_5 with
+            | fst_6, snd_7 -> (let _x_8 = program_ty_normalize snd_7 in
+              let _x_9 = fst_6, _x_8 in
+              let _x_10 = fst_4, _x_9 in
+              let _x_11 = program_ty_normalize_fields tail_3 in
+              let _x_12 = _x_10 :: _x_11 in
+              _x_12)))
+
+and program_ty_normalize_items (x_1 : ty list) : ty list =
+  match x_1 with
+    | [] -> x_1
+    | head_2 :: tail_3 -> (let _x_4 = program_ty_normalize head_2 in
+      let _x_5 = program_ty_normalize_items tail_3 in
+      let _x_6 = _x_4 :: _x_5 in
+      _x_6)
   
   (* LCNF mono: Effect4.Program.Row.normalizeTypes (row : Effect4.Program.Row) : Effect4.Program.Row *)
   let program_row_normalize_types (row : row) : row =
@@ -8599,6 +9282,16 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
               _x_10) else (let _x_8 = None in
               _x_8)) else (let _x_5 = None in
             _x_5)))
+  
+  (* LCNF mono: Effect4.Program.intImage (x.1 : Effect4.Store.Val) : Bool *)
+  let program_int_image (x_1 : val_) : bool =
+  match (x_1 : val_) with
+    | Val_nat _ -> (let _x_3 = true in
+      _x_3)
+    | Val_negInt _ -> (let _x_5 = true in
+      _x_5)
+    | _ -> (let _x_6 = false in
+      _x_6)
   
   (* LCNF mono: Effect4.Machine.HandleKind.ofByte? (b : UInt8) : Option Effect4.Machine.HandleKind *)
   let handle_kind_of_byte_opt (b : int) : handle_kind option =
@@ -8733,22 +9426,189 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
         | Some val__8 -> (let _x_9 = inst_decidable_eq_handle_kind val__6 val__8 in
           _x_9))
   
+  (* LCNF mono: Effect4.Program.recordParts? (x.1 : Effect4.Store.Val) : Option (Prod (List Effect4.Store.Val) (List Effect4.Store.Val)) *)
+  let program_record_parts_opt (x_1 : val_) : (val_ list * val_ list) option =
+  match (x_1 : val_) with
+    | Val_ctor (index_2, args_3) -> (let _x_4 = 0 in
+      let _x_5 = index_2 = _x_4 in
+      if _x_5 then (match args_3 with
+          | head_7 :: tail_8 -> (match (head_7 : val_) with
+              | Val_list xs_9 -> (match tail_8 with
+                  | head_10 :: tail_11 -> (match (head_10 : val_) with
+                      | Val_list xs_12 -> (match tail_11 with
+                          | [] -> (let _x_13 = xs_9, xs_12 in
+                            let _x_14 = Some _x_13 in
+                            _x_14)
+                          | _ -> (let _x_15 = None in
+                            _x_15))
+                      | _ -> (let _x_16 = None in
+                        _x_16))
+                  | _ -> (let _x_17 = None in
+                    _x_17))
+              | _ -> (let _x_18 = None in
+                _x_18))
+          | _ -> (let _x_19 = None in
+            _x_19)) else (let _x_6 = None in
+        _x_6))
+    | _ -> (let _x_20 = None in
+      _x_20)
+  
+  (* LCNF mono: Effect4.Program.namedHasTy (x.1 : List (Prod String (Prod Bool (Effect4.Store.Val -> Bool)))) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Store.Val) : Bool *)
+  let rec program_named_has_ty (x_1 : (string * (bool * (val_ -> bool))) list) (x_2 : val_ list) (x_3 : val_ list) : bool =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (match x_3 with
+            | [] -> (let _x_4 = true in
+              _x_4)
+            | _ -> (let _x_5 = false in
+              _x_5))
+        | _ -> (let _x_6 = false in
+          _x_6))
+    | head_7 :: tail_8 -> (match head_7 with
+        | fst_9, snd_10 -> (match snd_10 with
+            | fst_11, snd_12 -> (match x_2 with
+                | [] -> (match x_3 with
+                    | [] -> if fst_11 then (let _x_13 = program_named_has_ty tail_8 x_3 x_3 in
+                        _x_13) else fst_11
+                    | _ -> (let _x_14 = false in
+                      _x_14))
+                | head_15 :: tail_16 -> (match (head_15 : val_) with
+                    | Val_str s_17 -> (match x_3 with
+                        | head_18 :: tail_19 -> (let _x_20 = s_17 = fst_9 in
+                          if _x_20 then (let _x_22 = snd_12 head_18 in
+                            if _x_22 then (let _x_23 = program_named_has_ty tail_8 tail_16 tail_19 in
+                              _x_23) else _x_22) else if fst_11 then (let _x_21 = program_named_has_ty tail_8 x_2 x_3 in
+                              _x_21) else fst_11)
+                        | _ -> (let _x_24 = false in
+                          _x_24))
+                    | _ -> (let _x_25 = false in
+                      _x_25)))))
+  
+  (* LCNF mono: Effect4.Program.keyLt (x.1 : Effect4.Store.Val) (x.2 : Effect4.Store.Val) : Bool *)
+  let program_key_lt (x_1 : val_) (x_2 : val_) : bool =
+  match (x_1 : val_) with
+    | Val_str s_3 -> (match (x_2 : val_) with
+        | Val_str s_4 -> (let _x_5 = field_bytes_key s_3 in
+          let _x_6 = field_bytes_key s_4 in
+          let _x_7 = field_lt_key _x_5 _x_6 in
+          _x_7)
+        | _ -> (let _x_8 = false in
+          _x_8))
+    | _ -> (let _x_9 = false in
+      _x_9)
+  
+  (* LCNF mono: Effect4.Program.sortedEntries (x.1 : List Effect4.Store.Val) : Bool *)
+  let rec program_sorted_entries (x_1 : val_ list) : bool =
+  match x_1 with
+    | [] -> (let _x_2 = true in
+      _x_2)
+    | head_3 :: tail_4 -> (match (head_3 : val_) with
+        | Val_pair (a_5, _) -> (match tail_4 with
+            | [] -> (let _x_7 = true in
+              _x_7)
+            | head_8 :: _ -> (match (head_8 : val_) with
+                | Val_pair (a_10, _) -> (let _x_12 = program_key_lt a_5 a_10 in
+                  if _x_12 then (let _x_13 = program_sorted_entries tail_4 in
+                    _x_13) else _x_12)
+                | _ -> (let _x_14 = false in
+                  _x_14)))
+        | _ -> (let _x_15 = false in
+          _x_15))
+  
+  (* LCNF mono: List.all._at_.Effect4.Program.entriesHasTy.spec_0 (ck : Effect4.Store.Val -> Bool) (cv : Effect4.Store.Val -> Bool) (x.1 : List Effect4.Store.Val) : Bool *)
+  let rec list_all_at_program_entries_has_ty_spec_0 (ck : val_ -> bool) (cv : val_ -> bool) (x_1 : val_ list) : bool =
+  match x_1 with
+    | [] -> (let _x_2 = true in
+      _x_2)
+    | head_3 :: tail_4 -> (match (head_3 : val_) with
+        | Val_pair (a_5, b_6) -> (let _x_7 = ck a_5 in
+          if _x_7 then (let _x_8 = cv b_6 in
+            if _x_8 then (let _x_9 = list_all_at_program_entries_has_ty_spec_0 ck cv tail_4 in
+              _x_9) else _x_8) else _x_7)
+        | _ -> (let _x_10 = false in
+          _x_10))
+  
+  (* LCNF mono: Effect4.Program.entriesHasTy (ck : Effect4.Store.Val -> Bool) (cv : Effect4.Store.Val -> Bool) (es : List Effect4.Store.Val) : Bool *)
+  let program_entries_has_ty (ck : val_ -> bool) (cv : val_ -> bool) (es : val_ list) : bool =
+  let _x_1 = program_sorted_entries es in
+  if _x_1 then (let _x_2 = list_all_at_program_entries_has_ty_spec_0 ck cv es in
+    _x_2) else _x_1
+  
+  (* LCNF mono: Effect4.Program.itemsHasTy (x.1 : List (Effect4.Store.Val -> Bool)) (x.2 : List Effect4.Store.Val) : Bool *)
+  let rec program_items_has_ty (x_1 : (val_ -> bool) list) (x_2 : val_ list) : bool =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (let _x_3 = true in
+          _x_3)
+        | _ -> (let _x_4 = false in
+          _x_4))
+    | head_5 :: tail_6 -> (match x_2 with
+        | head_7 :: tail_8 -> (let _x_9 = head_5 head_7 in
+          if _x_9 then (let _x_10 = program_items_has_ty tail_6 tail_8 in
+            _x_10) else _x_9)
+        | _ -> (let _x_11 = false in
+          _x_11))
+  
+  (* LCNF mono: Effect4.Store.Val.floatFrame (b : UInt64) : Bool *)
+  let store_val__float_frame (b : int) : bool =
+  let n = b in
+  let _x_1 = 2048 in
+  let _x_2 = 52 in
+  let _x_3 = if _x_2 >= 63 then 0 else n lsr _x_2 in
+  let _x_4 = E4_nat.rem _x_3 _x_1 in
+  let _x_5 = 2047 in
+  let _x_6 = _x_4 = _x_5 in
+  if _x_6 then _x_6 else (let _x_7 = 4503599627370496 in
+    let fraction = E4_nat.rem n _x_7 in
+    let _x_8 = 0 in
+    let _x_9 = _x_4 = _x_8 in
+    if _x_9 then (let _x_20 = fraction = _x_8 in
+      if _x_20 then (let _x_21 = 63 in
+        let _x_22 = if _x_21 >= 63 then 0 else n lsr _x_21 in
+        let _x_23 = _x_22 = _x_8 in
+        if _x_23 then _x_6 else _x_20) else _x_9) else (let _x_10 = 1023 in
+      let _x_11 = _x_4 < _x_10 in
+      if _x_11 then _x_11 else (let _x_12 = 1075 in
+        let _x_13 = _x_12 <= _x_4 in
+        if _x_13 then _x_11 else (let _x_14 = 2 in
+          let _x_15 = max 0 (_x_12 - _x_4) in
+          let _x_16 = let rec _pow_clamped _pa _pb = if _pb = 0 then 1 else (let _ph = _pow_clamped _pa (_pb - 1) in
+              if _pa = 0 then 0 else if _ph > max_int / _pa then max_int else _ph * _pa) in
+          _pow_clamped _x_14 _x_15 in
+          let _x_17 = E4_nat.rem fraction _x_16 in
+          let _x_18 = _x_17 = _x_8 in
+          if _x_18 then _x_13 else (let _x_19 = true in
+            _x_19)))))
+  
+  (* LCNF mono: Effect4.Program.numberImage (v : Effect4.Store.Val) : Bool *)
+  let program_number_image (v : val_) : bool =
+  let _x_1 = program_int_image v in
+  if _x_1 then _x_1 else (match (v : val_) with
+      | Val_float bits_2 -> (let _x_3 = store_val__float_frame bits_2 in
+        _x_3)
+      | _ -> _x_1)
+  
   (* LCNF mono: Effect4.Program.Val.hasTy (v : Effect4.Store.Val) (ty : Effect4.Program.Ty) (allocated : List String) : Bool
    List.all._at_.Effect4.Program.Val.hasTy.spec_0 (inner.1 : Effect4.Program.Ty) (allocated : List String) (x.2 : List Nat) : Bool
    List.all._at_.Effect4.Program.Val.hasTy.spec_1 (inner.1 : Effect4.Program.Ty) (allocated : List String) (x.2 : List Effect4.Store.Val) : Bool
-   Effect4.Program.Val.hasTy._lam_0 (error.1 : Effect4.Program.Ty) (allocated : List String) (w : Effect4.Store.Val) (x.2 : Effect4.Program.Ty) : Bool *)
+   Effect4.Program.Val.hasTy._lam_0 (error.1 : Effect4.Program.Ty) (allocated : List String) (w : Effect4.Store.Val) (x.2 : Effect4.Program.Ty) : Bool
+   Effect4.Program.Val.fieldCheckers (fs : List (Prod String (Prod Bool Effect4.Program.Ty))) (allocated : List String) : List (Prod String (Prod Bool (Effect4.Store.Val -> Bool)))
+   Effect4.Program.Val.fieldCheckers._lam_0 (snd.1 : Effect4.Program.Ty) (allocated : List String) (x : Effect4.Store.Val) : Bool
+   Effect4.Program.Val.hasTy._lam_2 (value.1 : Effect4.Program.Ty) (allocated : List String) (x : Effect4.Store.Val) : Bool
+   Effect4.Program.Val.hasTy._lam_1 (key.1 : Effect4.Program.Ty) (allocated : List String) (a : Effect4.Store.Val) : Bool
+   Effect4.Program.Val.itemCheckers (ts : List Effect4.Program.Ty) (allocated : List String) : List (Effect4.Store.Val -> Bool)
+   Effect4.Program.Val.itemCheckers._lam_0 (head.1 : Effect4.Program.Ty) (allocated : List String) (x : Effect4.Store.Val) : Bool *)
   let rec program_val__has_ty (v : val_) (ty : ty) (allocated : string list) : bool =
   match (ty : ty) with
-    | Ty_unit -> (match (v : val_) with
-        | Val_unit -> (let _x_1 = true in
-          _x_1)
-        | _ -> (let _x_2 = false in
-          _x_2))
+    | Ty_never -> (let _x_1 = false in
+      _x_1)
     | Ty_nat -> (match (v : val_) with
-        | Val_nat _ -> (let _x_4 = true in
-          _x_4)
-        | _ -> (let _x_5 = false in
-          _x_5))
+        | Val_nat _ -> (let _x_3 = true in
+          _x_3)
+        | _ -> (let _x_4 = false in
+          _x_4))
+    | Ty_int -> (let _x_5 = program_int_image v in
+      _x_5)
     | Ty_string -> (match (v : val_) with
         | Val_str _ -> (let _x_7 = true in
           _x_7)
@@ -8919,8 +9779,78 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
       _x_147)
     | Ty_unknown -> (let _x_148 = true in
       _x_148)
-    | _ -> (let _x_149 = false in
-      _x_149)
+    | Ty_record fields_149 -> (let _x_150 = program_record_parts_opt v in
+      match _x_150 with
+        | None -> (let _x_151 = false in
+          _x_151)
+        | Some val__152 -> (match val__152 with
+            | fst_153, snd_154 -> (let _x_155 = program_val__field_checkers fields_149 allocated in
+              let _x_156 = field_bytes_key in
+              let _x_157 = field_canon_by _x_156 _x_155 in
+              let _x_158 = program_named_has_ty _x_157 fst_153 snd_154 in
+              _x_158)))
+    | Ty_map (key_159, value_160) -> (match (v : val_) with
+        | Val_list xs_161 -> (let _f_162 = program_val__has_ty__lam_2 value_160 allocated in
+          let _f_163 = program_val__has_ty__lam_1 key_159 allocated in
+          let _x_164 = program_entries_has_ty _f_163 _f_162 xs_161 in
+          _x_164)
+        | _ -> (let _x_165 = false in
+          _x_165))
+    | Ty_tuple items_166 -> (match (v : val_) with
+        | Val_list xs_167 -> (let _x_168 = program_val__item_checkers items_166 allocated in
+          let _x_169 = program_items_has_ty _x_168 xs_167 in
+          _x_169)
+        | _ -> (let _x_170 = false in
+          _x_170))
+    | Ty_app (name_171, _) -> (match (v : val_) with
+        | Val_handle (kind_173, key_174) -> (let _x_175 = handle_kind_of_byte_opt kind_173 in
+          match _x_175 with
+            | Some val__176 -> (match (val__176 : handle_kind) with
+                | HandleKind_cell -> (let _x_177 = "Ref.Ref<number>" in
+                  let _x_178 = name_171 = _x_177 in
+                  _x_178)
+                | HandleKind_promise -> (let _x_179 = "Deferred.Deferred<number, number>" in
+                  let _x_180 = name_171 = _x_179 in
+                  _x_180)
+                | HandleKind_scope -> (let _x_181 = "Scope.Scope" in
+                  let _x_182 = name_171 = _x_181 in
+                  _x_182)
+                | HandleKind_memoMap -> (let _x_183 = "Layer.MemoMap" in
+                  let _x_184 = name_171 = _x_183 in
+                  _x_184)
+                | HandleKind_external -> (let _x_185 = program_external_handle_target name_171 in
+                  if _x_185 then (let _x_186 = list_get_opt_internal allocated key_174 in
+                    let _x_187 = Some name_171 in
+                    let _x_188 = option_inst_beq_beq_at_std_http_header_transfer_encoding_validate_spec_0 _x_186 _x_187 in
+                    _x_188) else _x_185)
+                | _ -> (let _x_189 = false in
+                  _x_189))
+            | _ -> (let _x_190 = false in
+              _x_190))
+        | _ -> (let _x_191 = "Context.Context<unknown>" in
+          let _x_192 = name_171 = _x_191 in
+          if _x_192 then (let _x_193 = val__context_opt v in
+            match _x_193 with
+              | None -> (let _x_194 = false in
+                _x_194)
+              | Some _ -> _x_192) else _x_192))
+    | Ty_null -> (match (v : val_) with
+        | Val_none -> (let _x_196 = true in
+          _x_196)
+        | _ -> (let _x_197 = false in
+          _x_197))
+    | Ty_number -> (let _x_198 = program_number_image v in
+      _x_198)
+    | Ty_bytes -> (match (v : val_) with
+        | Val_bytes _ -> (let _x_200 = true in
+          _x_200)
+        | _ -> (let _x_201 = false in
+          _x_201))
+    | _ -> (match (v : val_) with
+        | Val_unit -> (let _x_202 = true in
+          _x_202)
+        | _ -> (let _x_203 = false in
+          _x_203))
 
 and list_all_at_program_val__has_ty_spec_0 (inner_1 : ty) (allocated : string list) (x_2 : int list) : bool =
   match x_2 with
@@ -8943,6 +9873,44 @@ and list_all_at_program_val__has_ty_spec_1 (inner_1 : ty) (allocated : string li
 and program_val__has_ty__lam_0 (error_1 : ty) (allocated : string list) (w : val_) (x_2 : ty) : bool =
   let _x_3 = program_val__has_ty w error_1 allocated in
   _x_3
+
+and program_val__field_checkers (fs : (string * (bool * ty)) list) (allocated : string list) : (string * (bool * (val_ -> bool))) list =
+  match fs with
+    | [] -> (let _x_1 = [] in
+      _x_1)
+    | head_2 :: tail_3 -> (match head_2 with
+        | fst_4, snd_5 -> (match snd_5 with
+            | fst_6, snd_7 -> (let _f_8 = program_val__field_checkers__lam_0 snd_7 allocated in
+              let _x_9 = fst_6, _f_8 in
+              let _x_10 = fst_4, _x_9 in
+              let _x_11 = program_val__field_checkers tail_3 allocated in
+              let _x_12 = _x_10 :: _x_11 in
+              _x_12)))
+
+and program_val__field_checkers__lam_0 (snd_1 : ty) (allocated : string list) (x : val_) : bool =
+  let _x_2 = program_val__has_ty x snd_1 allocated in
+  _x_2
+
+and program_val__has_ty__lam_2 (value_1 : ty) (allocated : string list) (x : val_) : bool =
+  let _x_2 = program_val__has_ty x value_1 allocated in
+  _x_2
+
+and program_val__has_ty__lam_1 (key_1 : ty) (allocated : string list) (a : val_) : bool =
+  let _x_2 = program_val__has_ty a key_1 allocated in
+  _x_2
+
+and program_val__item_checkers (ts : ty list) (allocated : string list) : (val_ -> bool) list =
+  match ts with
+    | [] -> (let _x_1 = [] in
+      _x_1)
+    | head_2 :: tail_3 -> (let _f_4 = program_val__item_checkers__lam_0 head_2 allocated in
+      let _x_5 = program_val__item_checkers tail_3 allocated in
+      let _x_6 = _f_4 :: _x_5 in
+      _x_6)
+
+and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x : val_) : bool =
+  let _x_2 = program_val__has_ty x head_1 allocated in
+  _x_2
   
   (* LCNF mono: Effect4.Store.Val.handles (x.1 : Effect4.Store.Val) : List (Prod UInt8 Nat)
    Effect4.Store.Val.handlesList (x.1 : List Effect4.Store.Val) : List (Prod UInt8 Nat) *)
@@ -9449,6 +10417,16 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
             _x_59) else _x_58)
         | _ -> (let _x_60 = false in
           _x_60))
+    | Val_negInt n_61 -> (match (x_2 : val_) with
+        | Val_negInt n_62 -> (let _x_63 = n_61 = n_62 in
+          _x_63)
+        | _ -> (let _x_64 = false in
+          _x_64))
+    | Val_float bits_65 -> (match (x_2 : val_) with
+        | Val_float bits_66 -> (let _x_67 = bits_65 = bits_66 in
+          _x_67)
+        | _ -> (let _x_68 = false in
+          _x_68))
 
 and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   match x_1 with
@@ -11535,26 +12513,26 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
       let _x_10 = events @ _x_9 in
       let _x_11 = _x_6, _x_10 in
       _x_11) in
-  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_13 _y_17 _y_18 in
+  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_14 _y_16 _y_18 in
   match _x_19 with
-    | None -> _jp_4 _y_16
+    | None -> _jp_4 _y_13
     | Some val__20 -> (match val__20 with
         | fst_21, _ -> (let _x_23 = [] in
-          match (_y_15 : (_, _, _, _, _, _, _) frame_fiber) with
+          match (_y_17 : (_, _, _, _, _, _, _) frame_fiber) with
             | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_24 = _x_23 @ stack in
               let _x_25 = ({ current = fst_21; stack = _x_24; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
               let _x_26 = FrameStep_running _x_25 in
-              let _x_27 = prim_finalizer_events _y_13 _y_16 in
-              let _x_28 = _y_14 @ _x_27 in
+              let _x_27 = prim_finalizer_events _y_14 _y_13 in
+              let _x_28 = _y_15 @ _x_27 in
               let _x_29 = list_map_tr_loop_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_12 _x_23 _x_23 in
               let _x_30 = _x_28 @ _x_29 in
               let _x_31 = _x_26, _x_30 in
               _x_31))) in
   let _jp_32 = fun _y_33 _y_34 _y_35 _y_36 _y_37 -> match provided with
-    | None -> _jp_12 _y_33 _y_35 _y_34 _y_36 _y_37 provided
+    | None -> _jp_12 _y_33 _y_34 _y_35 _y_37 _y_36 provided
     | Some val__38 -> (let _x_39 = frame_pop_delivered_exit pop val__38 in
       let _x_40 = Some _x_39 in
-      _jp_12 _y_33 _y_35 _y_34 _y_36 _y_37 _x_40) in
+      _jp_12 _y_33 _y_34 _y_35 _y_37 _y_36 _x_40) in
   let _jp_41 = fun _y_42 -> match (pop : (_, _, _, _, _, _, _) frame_pop) with
     | { answer = answer; events = events_1; fiber = fiber; carried_cause = carried_cause; _ } -> (let delivered = frame_pop_delivered_exit pop _y_42 in
       match (answer : (_, _, _, _, _, _, _) cont_answer) with
@@ -11570,8 +12548,8 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
               let _x_51 = _x_50, events_1 in
               _x_51))
         | ContAnswer_frame frame_52 -> (match carried_cause with
-            | None -> _jp_32 frame_52 fiber events_1 delivered cause
-            | Some val__53 -> _jp_32 frame_52 fiber events_1 delivered val__53)
+            | None -> _jp_32 delivered frame_52 events_1 fiber cause
+            | Some val__53 -> _jp_32 delivered frame_52 events_1 fiber val__53)
         | ContAnswer_empty -> _jp_4 delivered) in
   match provided with
     | None -> (let _x_54 = Exit_failure cause in
@@ -12319,7 +13297,7 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   (* LCNF mono: Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4._redArg (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (action : Effect4.Machine.WithFiberAction lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Machine.Iter lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
   let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4 (interp : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim) run_interp) (m : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) run_machine) (f : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (action : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim) with_fiber_action) : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) iter =
   let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_3 @ _y_6 in
-  let _x_8 = ({ machine = _y_2; fiber = _y_5; yielding = yielding; outcome = _y_4; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+  let _x_8 = ({ machine = _y_2; fiber = _y_4; yielding = yielding; outcome = _y_5; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
   _x_8 in
   match (action : (_, _, _, _, _, _, _, _, _) with_fiber_action) with
     | WithFiberAction_fork (program_9, options_10, site_11) -> (match (options_10 : fork_options) with
@@ -12335,10 +13313,10 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                                   let _x_25 = evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4__red_arg__lam_0 fst_22 _x_24 in
                                   let _x_26 = Effect4_machine_outcome_continue_ in
                                   if daemon then (let _x_30 = [] in
-                                    _jp_1 fst_20 snd_23 _x_26 _x_25 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
+                                    _jp_1 fst_20 snd_23 _x_25 _x_26 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
                                     let _x_28 = [] in
                                     let _x_29 = _x_27 :: _x_28 in
-                                    _jp_1 fst_20 snd_23 _x_26 _x_25 _x_29))))))) in
+                                    _jp_1 fst_20 snd_23 _x_25 _x_26 _x_29))))))) in
           if daemon then _jp_12 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
               | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks; _ } -> (let _x_31 = true in
                 let _x_32 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_31; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
@@ -12967,11 +13945,11 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   (* LCNF mono: Effect4.Program.exitScoped (root : Effect4.Program.Eff Effect4.Program.NativeOp) (m : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (exit : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Machine.Iter Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
   let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (f : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (val_, err, defect, int, unit) exit_) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) iter =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_9; interruptible = _y_7; interrupted_cause = _y_6; deferred_interrupt = _y_5 } : (_, _, _, _, _, _, _) frame_fiber) in
-      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_8; prevent_yield = _y_4; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_3 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_8; interruptible = _y_3; interrupted_cause = _y_5; deferred_interrupt = _y_9 } : (_, _, _, _, _, _, _) frame_fiber) in
+      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_4; prevent_yield = _y_7; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_2 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       let _x_13 = Effect4_machine_outcome_continue_ in
       let _x_14 = [] in
-      let _x_15 = ({ machine = _y_2; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+      let _x_15 = ({ machine = _y_6; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
       _x_15 in
       let _x_16 = sh_machine_completed_exits m in
       let _x_17 = [] in
@@ -12999,13 +13977,13 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                                     | Some val__35 -> (match val__35 with
                                         | fst_36, snd_37 -> (let m_2 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = fst_36; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                           match snd_37 with
-                                            | None -> _jp_1 m_2 previous_26 prevent_yield deferred_interrupt interrupted_cause interruptible max_ops_before_yield stack _x_29
+                                            | None -> _jp_1 previous_26 interruptible max_ops_before_yield interrupted_cause m_2 prevent_yield stack deferred_interrupt _x_29
                                             | Some val__38 -> (let _x_39 = RunEvent_finalizerProgram (id, finalizer_24, exit__2) in
                                               let _x_40 = _x_39 :: _x_17 in
                                               let _x_41 = sh_machine_emit m_2 _x_40 in
                                               let _x_42 = program_embed val__38 in
                                               let _x_43 = finalizer_code interp exit__2 _x_42 in
-                                              _jp_1 _x_41 previous_26 prevent_yield deferred_interrupt interrupted_cause interruptible max_ops_before_yield stack _x_43)))))))
+                                              _jp_1 previous_26 interruptible max_ops_before_yield interrupted_cause _x_41 prevent_yield stack deferred_interrupt _x_43)))))))
                     | _ -> (let _x_44 = evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding in
                       _x_44))
                 | _ -> (let _x_45 = evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding in
@@ -13836,13 +14814,13 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                 | [] -> (let _x_73 = m, x_2 in
                   _x_73)
                 | head_74 :: tail_75 -> (let _jp_76 = fun _y_77 _y_78 _y_79 -> let _x_80 = ({ id = id_3; host = host; token = token; state = state; settled = settled; programs = tail_75; registering = registering; next_site = _y_79 } : (_, _, _, _, _, _, _, _) race) in
-                  let m_1 = run_machine_update_race _y_77 _x_80 in
-                  let _x_81 = RunEvent_raceLaunched (race_69, _y_78) in
+                  let m_1 = run_machine_update_race _y_78 _x_80 in
+                  let _x_81 = RunEvent_raceLaunched (race_69, _y_77) in
                   let _x_82 = [] in
                   let _x_83 = _x_81 :: _x_82 in
                   let _x_84 = sh_machine_emit m_1 _x_83 in
-                  let _x_85 = Cmd_evaluate _y_78 in
-                  let _x_86 = Cmd_enrollRace (race_69, _y_78) in
+                  let _x_85 = Cmd_evaluate _y_77 in
+                  let _x_86 = Cmd_enrollRace (race_69, _y_77) in
                   let _x_87 = x_1 :: x_2 in
                   let _x_88 = _x_86 :: _x_87 in
                   let _x_89 = _x_85 :: _x_88 in
@@ -13857,13 +14835,13 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                             | Some val__93 -> (let _jp_94 = fun _y_95 -> let _x_96 = launch_entrant_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_12 interp m val__93 head_74 _y_95 in
                               match _x_96 with
                                 | fst_97, snd_98 -> (match next_site with
-                                    | None -> _jp_76 fst_97 snd_98 next_site
+                                    | None -> _jp_76 snd_98 fst_97 next_site
                                     | Some val__99 -> (let _x_100 = 1 in
                                       let _x_101 = [] in
                                       let _x_102 = _x_100 :: _x_101 in
                                       let _x_103 = val__99 @ _x_102 in
                                       let _x_104 = Some _x_103 in
-                                      _jp_76 fst_97 snd_98 _x_104)) in
+                                      _jp_76 snd_98 fst_97 _x_104)) in
                               match next_site with
                                 | None -> (let _x_105 = [] in
                                   _jp_94 _x_105)

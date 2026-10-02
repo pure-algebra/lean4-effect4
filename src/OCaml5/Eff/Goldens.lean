@@ -86,6 +86,7 @@ partial def V.names : V → List Name
 
 /-! ### The conversions, one per family, total by pattern matching -/
 
+mutual
 def tyV : Ty → V
   | .never => .ctor ``Ty.never []
   | .unknown => .ctor ``Ty.unknown []
@@ -107,6 +108,23 @@ def tyV : Ty → V
   | .refOf v => .ctor ``Ty.refOf [tyV v]
   | .deferredOf v e => .ctor ``Ty.deferredOf [tyV v, tyV e]
   | .var i => .ctor ``Ty.var [.nat i]
+  | .record fs => .ctor ``Ty.record [.list (fieldsV fs)]
+  | .map k v => .ctor ``Ty.map [tyV k, tyV v]
+  | .tuple ts => .ctor ``Ty.tuple [.list (itemsV ts)]
+  | .app n ts => .ctor ``Ty.app [.str n, .list (itemsV ts)]
+  | .null => .ctor ``Ty.null []
+  | .undefined => .ctor ``Ty.undefined []
+  | .number => .ctor ``Ty.number []
+  | .bytes => .ctor ``Ty.bytes []
+/-- A record's fields, each the nested pair `(name, (optional, type))`. -/
+def fieldsV : List (String × Bool × Ty) → List V
+  | [] => []
+  | (n, o, t) :: rest => .pair (.str n) (.pair (.bool o) (tyV t)) :: fieldsV rest
+/-- A tuple's or a reference's items. -/
+def itemsV : List Ty → List V
+  | [] => []
+  | t :: rest => tyV t :: itemsV rest
+end
 
 def litV : Lit → V
   | .unit => .ctor ``Lit.unit []

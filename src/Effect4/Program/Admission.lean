@@ -32,6 +32,7 @@ namespace Effect4.Program
 /-- A boundary field path, with decimal positions for table rows. -/
 abbrev Path := List String
 
+mutual
 /-- First occurrence of the reserved integer constructor in a raw type. -/
 def findInt (pos : Path) : Ty → Option Path
   | .int => some pos
@@ -43,12 +44,26 @@ def findInt (pos : Path) : Ty → Option Path
   | .exitOf a e | .fiberOf a e | .deferredOf a e =>
       findInt (pos ++ ["value"]) a <|> findInt (pos ++ ["error"]) e
   | .refOf a => findInt (pos ++ ["value"]) a
-  | .never | .unknown | .unit | .nat | .string | .bool | .handle _ | .lit _ | .var _ => none
+  | .map k v => findInt (pos ++ ["key"]) k <|> findInt (pos ++ ["value"]) v
+  | .record fs => findIntFields pos fs
+  | .tuple ts | .app _ ts => findIntItems pos 0 ts
+  | .never | .unknown | .unit | .nat | .string | .bool | .handle _ | .lit _ | .var _
+  | .null | .undefined | .number | .bytes => none
+/-- The field-list companion of `findInt`: a field at its name. -/
+def findIntFields (pos : Path) : List (String × Bool × Ty) → Option Path
+  | [] => none
+  | (n, _, t) :: rest => findInt (pos ++ [n]) t <|> findIntFields pos rest
+/-- The item-list companion of `findInt`: an item at its decimal position. -/
+def findIntItems (pos : Path) (i : Nat) : List Ty → Option Path
+  | [] => none
+  | t :: rest => findInt (pos ++ [toString i]) t <|> findIntItems pos (i + 1) rest
+end
 
-/-- Inhabitance as a fold (decisions row 127; DI-67): `never`, `int` and a template parameter
-have no member; a product needs both columns, a result or a union either; every other former
-has a member at every argument in some world (`none`, `[]`, a failure with no typed reason, the
-empty cause, a declared handle). The laws are `Laws/Program/Typed/Membership.lean`'s:
+/-- Inhabitance as a fold (decisions row 127; DI-67): `never` and a template parameter have no
+member; a product needs both columns, a result or a union either, a tuple every item, a record
+every canonical field that is not optional (an absent optional field is a member's, decisions row
+157); every other former has a member at every argument in some world (`none`, `[]`, a failure
+with no typed reason, the empty cause, a declared handle, the empty map, an integer, the leaves). The laws are `Laws/Program/Typed/Membership.lean`'s:
 `inhabited_iff_fits` (agreement with `Fits` on every type, one world for every handle position by
 fresh keys), `inhabited_of_hasTy` (sound against DI-67's `Val.hasTy`),
 `fits_of_inhabited_handleFree` (a world-free witness on the data fragment) and the handle
@@ -57,7 +72,7 @@ def inhabitedAlg : TyAlgebra (fun _ => Bool) where
   ty_never := false
   ty_unit := true
   ty_nat := true
-  ty_int := false
+  ty_int := true
   ty_string := true
   ty_bool := true
   ty_handle _ := true
@@ -74,6 +89,14 @@ def inhabitedAlg : TyAlgebra (fun _ => Bool) where
   ty_deferredOf _ _ := true
   ty_var _ := false
   ty_unknown := true
+  ty_record fs := (Ty.canon fs).all fun p => p.2.1 || p.2.2
+  ty_map _ _ := true
+  ty_tuple ts := ts.all id
+  ty_app _ _ := true
+  ty_null := true
+  ty_undefined := true
+  ty_number := true
+  ty_bytes := true
 
 /-- Whether a type has a member (`inhabitedAlg`). -/
 def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
@@ -118,6 +141,16 @@ def internalHandleScan : TyAlgebra (fun _ => Path → Option Path) where
   ty_deferredOf _ _ := some
   ty_var _ := fun _ => none
   ty_unknown := fun _ => none
+  ty_record fs := fun pos => fs.foldr (fun p acc => p.2.2 (pos ++ [p.1]) <|> acc) none
+  ty_map key value := fun pos => key (pos ++ ["key"]) <|> value (pos ++ ["value"])
+  ty_tuple items := fun pos =>
+    items.zipIdx.foldr (fun p acc => p.1 (pos ++ [toString p.2]) <|> acc) none
+  -- a nominal reference is the handle at its name (its arguments are unread by membership)
+  ty_app name _ := fun pos => if internalHandleTargets.contains name then some pos else none
+  ty_null := fun _ => none
+  ty_undefined := fun _ => none
+  ty_number := fun _ => none
+  ty_bytes := fun _ => none
 
 def findInternalHandle (pos : Path) (ty : Ty) : Option Path :=
   cata_ty internalHandleScan ty pos

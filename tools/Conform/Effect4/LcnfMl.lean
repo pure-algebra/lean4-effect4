@@ -161,6 +161,7 @@ comparing two different representations. -/
 
 def tyCtor (c : String) : String := OCaml5.Lcnf.ctorName ``Ty c
 
+mutual
 def tyT : Ty → Target.TValue
   | .never => .ctorV (tyCtor "never") #[]
   | .unit => .ctorV (tyCtor "unit") #[]
@@ -182,6 +183,23 @@ def tyT : Ty → Target.TValue
   | .deferredOf v e => .ctorV (tyCtor "deferredOf") #[tyT v, tyT e]
   | .var i => .ctorV (tyCtor "var") #[.int i]
   | .unknown => .ctorV (tyCtor "unknown") #[]
+  | .record fs => .ctorV (tyCtor "record") #[Target.TValue.ofList (fieldTs fs)]
+  | .map k v => .ctorV (tyCtor "map") #[tyT k, tyT v]
+  | .tuple ts => .ctorV (tyCtor "tuple") #[Target.TValue.ofList (itemTs ts)]
+  | .app n ts => .ctorV (tyCtor "app") #[.str n, Target.TValue.ofList (itemTs ts)]
+  | .null => .ctorV (tyCtor "null") #[]
+  | .undefined => .ctorV (tyCtor "undefined") #[]
+  | .number => .ctorV (tyCtor "number") #[]
+  | .bytes => .ctorV (tyCtor "bytes") #[]
+/-- A record's fields, each the OCaml tuple `(name, (optional, type))`. -/
+def fieldTs : List (String × Bool × Ty) → List Target.TValue
+  | [] => []
+  | (n, o, t) :: rest => .tupleV #[.str n, .tupleV #[.bool o, tyT t]] :: fieldTs rest
+/-- A tuple's or a reference's items. -/
+def itemTs : List Ty → List Target.TValue
+  | [] => []
+  | t :: rest => tyT t :: itemTs rest
+end
 
 def tyListT (ts : List Ty) : Target.TValue := Target.TValue.ofList (ts.map tyT)
 def natListT (ns : List Nat) : Target.TValue :=
@@ -231,9 +249,9 @@ def buildCases : Array Target.TCase := Id.run do
       let lbl := a.render ++ " | " ++ b.render
       out := out.push { label := lbl, bind := gname ``Ty.join, args := #[tyT a, tyT b],
                         expected := tyT (Ty.join a b) }
-      out := out.push { label := lbl, bind := gname ``Ty.ltKey,
+      out := out.push { label := lbl, bind := gname ``Effect4.Field.ltKey,
                         args := #[natListT a.key, natListT b.key],
-                        expected := .bool (Ty.ltKey a.key b.key) }
+                        expected := .bool (Effect4.Field.ltKey a.key b.key) }
       out := out.push { label := lbl, bind := gname ``Ty.insertMember,
                         args := #[tyT a, tyListT [b]],
                         expected := tyListT (Ty.insertMember a [b]) }
@@ -292,7 +310,7 @@ def driverSource : String :=
   "    (List.length (" ++ gname ``Ty.members ++ " t))) vectors\n"
 
 def roots : Array Name :=
-  #[``Ty.key, ``Ty.members, ``Ty.join, ``Ty.render, ``Ty.ltKey, ``Ty.insertMember,
+  #[``Ty.key, ``Ty.members, ``Ty.join, ``Ty.render, ``Effect4.Field.ltKey, ``Ty.insertMember,
     ``Ty.ofMembers, ``Ty.isNever, ``GenTy.merge]
 
 def main (argv : List String) : IO UInt32 := do

@@ -13,19 +13,8 @@ namespace Effect4.Program
 
 namespace Ty
 
-/-- How a relation reads a recursive argument: as rc.112 declares the parameter
-(`Fiber<out A, out E>` covariant, `Ref<in out A>` invariant; decisions row 55). -/
-inductive Variance where
-  | co
-  | contra
-  | inv
-deriving DecidableEq, Repr
-
-/-- A Boolean relation lifted through a variance. -/
-def Variance.holds (r : Ty → Ty → Bool) : Variance → Ty → Ty → Bool
-  | .co,     x, y => r x y
-  | .contra, x, y => r y x
-  | .inv,    x, y => r x y && r y x
+-- `Variance` and `Variance.holds` are the core's (`TyVariance`, generated from
+-- variances.json), which `sub` itself reads for a reference's declared variances.
 
 /-- The immediate `Ty` children of a type, each with the variance the order reads it at.
 Not one row of this is declared here: every variance comes from
@@ -52,6 +41,14 @@ def args : Ty → List (Variance × Ty)
   | .deferredOf value error => [(.inv, value), (.inv, error)]  -- vendor/effect-4.0.0-rc.112/src/Deferred.ts:58
   | .var _ => []
   | .unknown => []
+  | .record fs => (canon fs).map fun p => (.co, p.2.2)  -- { readonly a: A; readonly b?: B }
+  | .map key value => [(.inv, key), (.co, value)]  -- Readonly<Record<string, V>>
+  | .tuple xs => xs.map fun x => (.co, x)  -- readonly [A, B, C]
+  | .app n xs => xs.zipIdx.map fun p => (argVariance n p.2, p.1)  -- rc.112's declared variances, by name (Ty.declaredVariance)
+  | .null => []
+  | .undefined => []
+  | .number => []
+  | .bytes => []
 
 /-- Same constructor and equal non-recursive payload. -/
 def sameHead : Ty → Ty → Bool
@@ -74,16 +71,23 @@ def sameHead : Ty → Ty → Bool
   | .deferredOf _ _, .deferredOf _ _ => true
   | .var index1, .var index2 => decide (index1 = index2)
   | .unknown, .unknown => true
+  | .record fs1, .record fs2 =>
+    decide ((canon fs1).map (fun p => (p.1, p.2.1)) = (canon fs2).map (fun p => (p.1, p.2.1)))
+  | .map _ _, .map _ _ => true
+  | .tuple xs1, .tuple xs2 => decide (xs1.length = xs2.length)
+  | .app n1 xs1, .app n2 xs2 => decide (n1 = n2) && decide (xs1.length = xs2.length)
+  | .null, .null => true
+  | .undefined, .undefined => true
+  | .number, .number => true
+  | .bytes, .bytes => true
   -- `union` is deliberately absent: the order distributes a union on the left and chooses on the right (`sub_union_left`/`sub_union_right`), so it is row structure and not a head
   | _, _ => false
 
-/-- The literal rule: one of the order's rules between members that is not a congruence
-(`sub_lit_string`). -/
-def litRule : Ty → Ty → Bool
-  | .lit _, .string => true
-  | _, _            => false
+-- The order's cross-head rules are the core's leaf-order table (`leafEdges`, decisions
+-- row 177), which `sub` consults through `leafRule` before its rows; its laws are below.
 
-/-- The top (decisions row 46), the other one (`sub_unknown`). -/
+/-- The top (decisions row 46), the one rule beside the congruences that the leaf table does
+not hold (`sub_unknown`). -/
 def topRule : Ty → Ty → Bool
   | _, .unknown => true
   | _, _        => false
@@ -143,11 +147,159 @@ order. A variance row that does not match `sub`'s arm makes this file red, which
 #guard !Ty.sub (.deferredOf .nat .string) (.deferredOf .nat (.lit "a"))
 #guard !Ty.sub (.deferredOf .nat .bool) (.deferredOf .bool .unit)
 
+-- `record`: every field co, read in canonical order; the head is the canonical payload list
+#guard Ty.sub (.record [("a", false, (.lit "a"))]) (.record [("a", false, .string)])
+#guard !Ty.sub (.record [("a", false, .string)]) (.record [("a", false, (.lit "a"))])
+#guard !Ty.sub (.record [("a", false, .nat), ("b", false, .bool)]) (.record [("a", false, .bool), ("b", false, .unit)])
+-- TY-10's positive control: a permuted field list is below its canonical order, both ways
+#guard Ty.sub (.record [("b", false, .nat), ("a", false, .bool)]) (.record [("a", false, .bool), ("b", false, .nat)])
+#guard Ty.sub (.record [("a", false, .bool), ("b", false, .nat)]) (.record [("b", false, .nat), ("a", false, .bool)])
+-- names are the head's payload; width is not a rule
+#guard !Ty.sub (.record [("a", false, .nat)]) (.record [("b", false, .nat)])
+#guard !Ty.sub (.record [("a", false, .nat), ("b", false, .nat)]) (.record [("a", false, .nat)])
+-- a modifier is payload too: the exact rule does not put a required field below an optional one
+#guard !Ty.sub (.record [("a", false, .nat)]) (.record [("a", true, .nat)])
+
+#guard !Ty.sub (.map (.lit "a") .nat) (.map .string .nat)
+#guard !Ty.sub (.map .string .nat) (.map (.lit "a") .nat)
+#guard Ty.sub (.map .nat (.lit "a")) (.map .nat .string)
+#guard !Ty.sub (.map .nat .string) (.map .nat (.lit "a"))
+#guard !Ty.sub (.map .nat .bool) (.map .bool .unit)
+
+-- `tuple`: every item co, by position; the head is the arity
+#guard Ty.sub (.tuple [.lit "a", .nat]) (.tuple [.string, .nat])
+#guard !Ty.sub (.tuple [.string, .nat]) (.tuple [.lit "a", .nat])
+#guard !Ty.sub (.tuple [.nat, .bool]) (.tuple [.bool, .unit])
+#guard !Ty.sub (.tuple [.nat]) (.tuple [.nat, .nat])
+
+-- `app`: each argument at the name's declared variance (rc.112, `declaredVariance`);
+-- invariant where nothing is declared; the head is the name and the arity
+#guard Ty.sub (.app "Fiber.Fiber" [.lit "a", .nat]) (.app "Fiber.Fiber" [.string, .nat])
+#guard !Ty.sub (.app "Fiber.Fiber" [.string, .nat]) (.app "Fiber.Fiber" [.lit "a", .nat])
+#guard !Ty.sub (.app "Ref.Ref" [.lit "a"]) (.app "Ref.Ref" [.string])
+#guard Ty.sub (.app "Layer.Layer" [.string, .nat, .nat]) (.app "Layer.Layer" [.lit "a", .nat, .nat])
+#guard !Ty.sub (.app "Undeclared.Name" [.lit "a"]) (.app "Undeclared.Name" [.string])
+#guard !Ty.sub (.app "Fiber.Fiber" [.nat, .nat]) (.app "Exit.Exit" [.nat, .nat])
+#guard !Ty.sub (.app "Fiber.Fiber" [.nat]) (.app "Fiber.Fiber" [.nat, .nat])
+
+/-! ### The leaf-order table's probes: at two different leaf heads, `sub` is the closure -/
+
+#guard Ty.sub (.lit "a") .string  -- a declared edge
+#guard !Ty.sub (.lit "a") .nat
+#guard !Ty.sub (.lit "a") .int
+#guard !Ty.sub (.lit "a") .number
+#guard !Ty.sub (.lit "a") .undefined
+#guard !Ty.sub (.lit "a") .unit
+#guard !Ty.sub .string (.lit "a")  -- the converse of a declared edge
+#guard !Ty.sub .string .nat
+#guard !Ty.sub .string .int
+#guard !Ty.sub .string .number
+#guard !Ty.sub .string .undefined
+#guard !Ty.sub .string .unit
+#guard !Ty.sub .nat (.lit "a")
+#guard !Ty.sub .nat .string
+#guard Ty.sub .nat .int  -- a declared edge
+#guard Ty.sub .nat .number  -- derived through the closure, not an entry
+#guard !Ty.sub .nat .undefined
+#guard !Ty.sub .nat .unit
+#guard !Ty.sub .int (.lit "a")
+#guard !Ty.sub .int .string
+#guard !Ty.sub .int .nat  -- the converse of a declared edge
+#guard Ty.sub .int .number  -- a declared edge
+#guard !Ty.sub .int .undefined
+#guard !Ty.sub .int .unit
+#guard !Ty.sub .number (.lit "a")
+#guard !Ty.sub .number .string
+#guard !Ty.sub .number .nat
+#guard !Ty.sub .number .int  -- the converse of a declared edge
+#guard !Ty.sub .number .undefined
+#guard !Ty.sub .number .unit
+#guard !Ty.sub .undefined (.lit "a")
+#guard !Ty.sub .undefined .string
+#guard !Ty.sub .undefined .nat
+#guard !Ty.sub .undefined .int
+#guard !Ty.sub .undefined .number
+#guard Ty.sub .undefined .unit  -- a declared edge
+#guard !Ty.sub .unit (.lit "a")
+#guard !Ty.sub .unit .string
+#guard !Ty.sub .unit .nat
+#guard !Ty.sub .unit .int
+#guard !Ty.sub .unit .number
+#guard !Ty.sub .unit .undefined  -- the converse of a declared edge
+
+/-! ### What a head of variable arity reads its children through -/
+
+/-- A list zipped with itself compares each child with itself, at any variance. -/
+theorem zip_self_all (r : Ty → Ty → Bool) (hr : ∀ x, r x x = true) :
+    ∀ (l : List (Variance × Ty)), (l.zip l).all (fun p => p.1.1.holds r p.1.2 p.2.2) = true
+  | [] => rfl
+  | (v, t) :: rest => by
+    simp only [List.zip_cons_cons, List.all_cons, zip_self_all r hr rest, Bool.and_true]
+    cases v <;> simp only [Variance.holds, hr, Bool.and_self]
+
+theorem map_const_eq {α β : Type} (c : β) {l l' : List α} (h : l.length = l'.length) :
+    l.map (fun _ => c) = l'.map (fun _ => c) := by
+  rw [List.map_const', List.map_const', h]
+
+/-- `all` over an attached list reads the values: `sub`'s variable arms attach for their
+termination, the view does not. -/
+theorem all_attach_eq {α : Type} (l : List α) (f : α → Bool) :
+    (l.attach.all fun x => f x.1) = l.all f := by
+  have h := List.all_map (l := l.attach) (f := Subtype.val) (p := f)
+  rw [List.attach_map_subtype_val] at h
+  exact h.symm
+
+/-- Two argument lists of one length are read at the same variances. -/
+theorem map_zipIdx_snd_eq {α β : Type} (f : Nat → β) {xs ys : List α}
+    (h : xs.length = ys.length) :
+    xs.zipIdx.map (fun p => f p.2) = ys.zipIdx.map (fun p => f p.2) := by
+  have hx : xs.zipIdx.map (fun p => f p.2) = (xs.zipIdx.map Prod.snd).map f := by
+    rw [List.map_map]; rfl
+  have hy : ys.zipIdx.map (fun p => f p.2) = (ys.zipIdx.map Prod.snd).map f := by
+    rw [List.map_map]; rfl
+  rw [hx, hy, List.zipIdx_map_snd, List.zipIdx_map_snd, h]
+
+theorem map_fst_zipIdx {α : Type} (l : List α) : l.zipIdx.map (fun p => p.1) = l :=
+  List.zipIdx_map_fst 0 l
+
+/-- A head whose children are read in canonical order is in that order already. -/
+def headCanon : Ty → Bool
+  | .record fs => decide (canon fs = fs)
+  | _ => true
+
+theorem headCanon_of_args_nil {t : Ty} (h : t.args = []) : headCanon t = true := by
+  cases t
+  case record fs =>
+    have hf : fs = [] := canon_eq_nil (List.map_eq_nil_iff.mp h)
+    subst hf
+    rfl
+  all_goals rfl
+
+/-- A field's type is smaller than its `record`'s field list. -/
+theorem sizeOf_field_lt_record {p : String × Bool × Ty} {fs : List (String × Bool × Ty)} (h : p ∈ fs) :
+    sizeOf p.2.2 < sizeOf fs := by
+  have hp : sizeOf p < sizeOf fs := List.sizeOf_lt_of_mem h
+  obtain ⟨n, t, b⟩ := p
+  simp only [Prod.mk.sizeOf_spec] at hp
+  simp only
+  omega
+
+/-- Two field lists with the same payloads and the same children are equal. -/
+theorem eq_of_fields_record :
+    ∀ {l l' : List (String × Bool × Ty)}, l.map (fun p => (p.1, p.2.1)) = l'.map (fun p => (p.1, p.2.1)) →
+      l.map (fun p => p.2.2) = l'.map (fun p => p.2.2) → l = l'
+  | [], [], _, _ => rfl
+  | [], _ :: _, h, _ => absurd h (List.cons_ne_nil _ _).symm
+  | _ :: _, [], h, _ => absurd h (List.cons_ne_nil _ _)
+  | (a, b, c) :: l, (a', b', c') :: l', h1, h2 => by
+    simp only [List.map_cons, List.cons.injEq, Prod.mk.injEq] at h1 h2
+    rw [h1.1.1, h1.1.2, h2.1, eq_of_fields_record h1.2 h2.2]
+
 /-- `union` is the one head `sameHead` refuses, so reflexivity is stated at a member; an
 `isMember` hypothesis is exactly what every caller of the view has: the one goal the
 normalisation leaves is that head, and `isMember` is `false` there. -/
 theorem sameHead_refl (t : Ty) (h : isMember t = true) : sameHead t t = true := by
-  cases t <;> simp only [sameHead, decide_eq_true_eq]
+  cases t <;> simp only [sameHead, decide_eq_true_eq, Bool.and_eq_true, and_self]
   exact h
 
 theorem sameHead_symm {a b : Ty} (h : sameHead a b = true) : sameHead b a = true := by
@@ -161,19 +313,58 @@ theorem sameHead_trans {a b c : Ty} (hab : sameHead a b = true)
 
 /-- The variance-wise comparison of a node with itself, from `sub_refl`. -/
 theorem argsBelow_refl (t : Ty) : argsBelow sub t t = true := by
-  cases t <;>
+  cases t
+  case record fs => exact zip_self_all sub sub_refl _
+  case tuple xs => exact zip_self_all sub sub_refl _
+  case app n xs => exact zip_self_all sub sub_refl _
+  all_goals
     simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith, List.all_cons,
       List.all_nil, Bool.and_true, sub_refl]
 
 /-- Corresponding arguments correspond: same length, same variances. -/
 theorem args_congr {a b : Ty} (h : sameHead a b = true) :
     a.args.length = b.args.length ∧ a.args.map Prod.fst = b.args.map Prod.fst := by
-  cases a <;> cases b <;> aesop (add norm simp [sameHead, args])
+  cases a <;> cases b
+  case record.record fs gs =>
+    have hl := congrArg List.length (of_decide_eq_true h)
+    simp only [List.length_map] at hl
+    simp only [args, List.length_map, List.map_map, Function.comp_def]
+    exact ⟨hl, map_const_eq _ hl⟩
+  case tuple.tuple xs ys =>
+    have hl : xs.length = ys.length := of_decide_eq_true h
+    simp only [args, List.length_map, List.map_map, Function.comp_def]
+    exact ⟨hl, map_const_eq _ hl⟩
+  case app.app n1 xs n2 ys =>
+    simp only [sameHead, Bool.and_eq_true, decide_eq_true_eq] at h
+    obtain ⟨rfl, hl⟩ := h
+    simp only [args, List.length_map, List.length_zipIdx, List.map_map, Function.comp_def]
+    exact ⟨hl, map_zipIdx_snd_eq _ hl⟩
+  all_goals aesop (add norm simp [sameHead, args])
 
-/-- A node is its head and its children. -/
+/-- A node is its head and its children, read in canonical order: at a field list the
+children are in that order, so the node must be (`headCanon`); a permuted record has its
+canonical record's head and children and is another term. -/
 theorem eq_of_sameHead {a b : Ty} (h : sameHead a b = true)
-    (hx : a.args.map Prod.snd = b.args.map Prod.snd) : a = b := by
-  cases a <;> cases b <;> aesop (add norm simp [sameHead, args, Ty.handle.injEq, Ty.option.injEq, Ty.list.injEq, Ty.prod.injEq, Ty.except.injEq, Ty.exitOf.injEq, Ty.causeOf.injEq, Ty.fiberOf.injEq, Ty.union.injEq, Ty.lit.injEq, Ty.refOf.injEq, Ty.deferredOf.injEq, Ty.var.injEq])
+    (hx : a.args.map Prod.snd = b.args.map Prod.snd)
+    (hca : headCanon a = true) (hcb : headCanon b = true) : a = b := by
+  cases a <;> cases b
+  case record.record fs gs =>
+    have hn := of_decide_eq_true h
+    simp only [args, List.map_map, Function.comp_def] at hx
+    have hc : canon fs = canon gs := eq_of_fields_record hn hx
+    have hf : canon fs = fs := of_decide_eq_true hca
+    have hg : canon gs = gs := of_decide_eq_true hcb
+    rw [← hf, ← hg, hc]
+  case tuple.tuple xs ys =>
+    simp only [args, List.map_map, Function.comp_def, List.map_id'] at hx
+    rw [hx]
+  case app.app n1 xs n2 ys =>
+    simp only [sameHead, Bool.and_eq_true, decide_eq_true_eq] at h
+    obtain ⟨rfl, _⟩ := h
+    simp only [args, List.map_map, Function.comp_def] at hx
+    rw [map_fst_zipIdx, map_fst_zipIdx] at hx
+    rw [hx]
+  all_goals aesop (add norm simp [sameHead, args, Ty.handle.injEq, Ty.option.injEq, Ty.list.injEq, Ty.prod.injEq, Ty.except.injEq, Ty.exitOf.injEq, Ty.causeOf.injEq, Ty.fiberOf.injEq, Ty.union.injEq, Ty.lit.injEq, Ty.refOf.injEq, Ty.deferredOf.injEq, Ty.var.injEq, Ty.record.injEq, Ty.map.injEq, Ty.tuple.injEq, Ty.app.injEq])
 
 /-- Composition at each variance, once, for every relational law that needs it. -/
 theorem Variance.holds_trans {r : Ty → Ty → Bool} (v : Variance)
@@ -202,7 +393,8 @@ theorem sub_args_option (x0 y0 : Ty) :
   by_cases h : Ty.option x0 = Ty.option y0
   · rw [h, sub_refl, argsBelow_refl]
   · conv => lhs; unfold sub
-    simp only [h, ↓reduceIte, argsBelow, args, Variance.holds, List.zip, List.zipWith,
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.option x0) (.option y0) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
       List.all_cons, List.all_nil, Bool.and_true]
 
 theorem sub_args_list (x0 y0 : Ty) :
@@ -210,7 +402,8 @@ theorem sub_args_list (x0 y0 : Ty) :
   by_cases h : Ty.list x0 = Ty.list y0
   · rw [h, sub_refl, argsBelow_refl]
   · conv => lhs; unfold sub
-    simp only [h, ↓reduceIte, argsBelow, args, Variance.holds, List.zip, List.zipWith,
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.list x0) (.list y0) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
       List.all_cons, List.all_nil, Bool.and_true]
 
 theorem sub_args_prod (x0 x1 y0 y1 : Ty) :
@@ -218,7 +411,8 @@ theorem sub_args_prod (x0 x1 y0 y1 : Ty) :
   by_cases h : Ty.prod x0 x1 = Ty.prod y0 y1
   · rw [h, sub_refl, argsBelow_refl]
   · conv => lhs; unfold sub
-    simp only [h, ↓reduceIte, argsBelow, args, Variance.holds, List.zip, List.zipWith,
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.prod x0 x1) (.prod y0 y1) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
       List.all_cons, List.all_nil, Bool.and_true]
 
 theorem sub_args_except (x0 x1 y0 y1 : Ty) :
@@ -226,7 +420,8 @@ theorem sub_args_except (x0 x1 y0 y1 : Ty) :
   by_cases h : Ty.except x0 x1 = Ty.except y0 y1
   · rw [h, sub_refl, argsBelow_refl]
   · conv => lhs; unfold sub
-    simp only [h, ↓reduceIte, argsBelow, args, Variance.holds, List.zip, List.zipWith,
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.except x0 x1) (.except y0 y1) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
       List.all_cons, List.all_nil, Bool.and_true]
 
 theorem sub_args_exitOf (x0 x1 y0 y1 : Ty) :
@@ -234,7 +429,8 @@ theorem sub_args_exitOf (x0 x1 y0 y1 : Ty) :
   by_cases h : Ty.exitOf x0 x1 = Ty.exitOf y0 y1
   · rw [h, sub_refl, argsBelow_refl]
   · conv => lhs; unfold sub
-    simp only [h, ↓reduceIte, argsBelow, args, Variance.holds, List.zip, List.zipWith,
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.exitOf x0 x1) (.exitOf y0 y1) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
       List.all_cons, List.all_nil, Bool.and_true]
 
 theorem sub_args_causeOf (x0 y0 : Ty) :
@@ -242,7 +438,8 @@ theorem sub_args_causeOf (x0 y0 : Ty) :
   by_cases h : Ty.causeOf x0 = Ty.causeOf y0
   · rw [h, sub_refl, argsBelow_refl]
   · conv => lhs; unfold sub
-    simp only [h, ↓reduceIte, argsBelow, args, Variance.holds, List.zip, List.zipWith,
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.causeOf x0) (.causeOf y0) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
       List.all_cons, List.all_nil, Bool.and_true]
 
 theorem sub_args_fiberOf (x0 x1 y0 y1 : Ty) :
@@ -250,7 +447,8 @@ theorem sub_args_fiberOf (x0 x1 y0 y1 : Ty) :
   by_cases h : Ty.fiberOf x0 x1 = Ty.fiberOf y0 y1
   · rw [h, sub_refl, argsBelow_refl]
   · conv => lhs; unfold sub
-    simp only [h, ↓reduceIte, argsBelow, args, Variance.holds, List.zip, List.zipWith,
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.fiberOf x0 x1) (.fiberOf y0 y1) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
       List.all_cons, List.all_nil, Bool.and_true]
 
 theorem sub_args_refOf (x0 y0 : Ty) :
@@ -258,7 +456,8 @@ theorem sub_args_refOf (x0 y0 : Ty) :
   by_cases h : Ty.refOf x0 = Ty.refOf y0
   · rw [h, sub_refl, argsBelow_refl]
   · conv => lhs; unfold sub
-    simp only [h, ↓reduceIte, argsBelow, args, Variance.holds, List.zip, List.zipWith,
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.refOf x0) (.refOf y0) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
       List.all_cons, List.all_nil, Bool.and_true]
 
 theorem sub_args_deferredOf (x0 x1 y0 y1 : Ty) :
@@ -266,23 +465,89 @@ theorem sub_args_deferredOf (x0 x1 y0 y1 : Ty) :
   by_cases h : Ty.deferredOf x0 x1 = Ty.deferredOf y0 y1
   · rw [h, sub_refl, argsBelow_refl]
   · conv => lhs; unfold sub
-    simp only [h, ↓reduceIte, argsBelow, args, Variance.holds, List.zip, List.zipWith,
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.deferredOf x0 x1) (.deferredOf y0 y1) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
       List.all_cons, List.all_nil, Bool.and_true, Bool.and_assoc]
 
-/-- Different heads: the order answers `false`. `fun_cases Ty.sub` makes the catch-all —
-the one case a square-of-constructors proof cannot discharge without search — into `rfl`,
-because the arm it takes IS `false`. -/
+/-- The `record` arm: under the head, `sub` is the comparison of corresponding
+children. It reads `sub`'s arm in the form `decide (head) && (zip).attach.all …`, the one
+form this generator proves. -/
+theorem sub_args_record (fs gs : List (String × Bool × Ty))
+    (hh : sameHead (.record fs) (.record gs) = true) :
+    sub (.record fs) (.record gs) = argsBelow sub (.record fs) (.record gs) := by
+  by_cases h : Ty.record fs = Ty.record gs
+  · rw [h, sub_refl, argsBelow_refl]
+  · simp only [sameHead] at hh
+    conv => lhs; unfold sub
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.record fs) (.record gs) rfl)]
+    simp only [hh, Bool.true_and, argsBelow, args, List.zip_map, List.all_map,
+      Function.comp_def, Prod.map, Variance.holds]
+    exact all_attach_eq _ (fun (pq : (String × Bool × Ty) × (String × Bool × Ty)) => sub pq.1.2.2 pq.2.2.2)
+
+theorem sub_args_map (x0 x1 y0 y1 : Ty) :
+    sub (.map x0 x1) (.map y0 y1) = argsBelow sub (.map x0 x1) (.map y0 y1) := by
+  by_cases h : Ty.map x0 x1 = Ty.map y0 y1
+  · rw [h, sub_refl, argsBelow_refl]
+  · conv => lhs; unfold sub
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.map x0 x1) (.map y0 y1) rfl)]
+    simp only [argsBelow, args, Variance.holds, List.zip, List.zipWith,
+      List.all_cons, List.all_nil, Bool.and_true, Bool.and_assoc]
+
+/-- The `tuple` arm: under the head, `sub` is the comparison of corresponding
+children. It reads `sub`'s arm in the form `decide (head) && (zip).attach.all …`, the one
+form this generator proves. -/
+theorem sub_args_tuple (xs ys : List Ty)
+    (hh : sameHead (.tuple xs) (.tuple ys) = true) :
+    sub (.tuple xs) (.tuple ys) = argsBelow sub (.tuple xs) (.tuple ys) := by
+  by_cases h : Ty.tuple xs = Ty.tuple ys
+  · rw [h, sub_refl, argsBelow_refl]
+  · simp only [sameHead] at hh
+    conv => lhs; unfold sub
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.tuple xs) (.tuple ys) rfl)]
+    simp only [hh, Bool.true_and, argsBelow, args, List.zip_map, List.all_map,
+      Function.comp_def, Prod.map, Variance.holds]
+    exact all_attach_eq _ (fun (pq : Ty × Ty) => sub pq.1 pq.2)
+
+/-- The `app` arm: under the head, `sub` is the comparison of corresponding
+children. It reads `sub`'s arm in the form `decide (head) && (zip).attach.all …`, the one
+form this generator proves. -/
+theorem sub_args_app (n1 : String) (xs : List Ty) (n2 : String) (ys : List Ty)
+    (hh : sameHead (.app n1 xs) (.app n2 ys) = true) :
+    sub (.app n1 xs) (.app n2 ys) = argsBelow sub (.app n1 xs) (.app n2 ys) := by
+  by_cases h : Ty.app n1 xs = Ty.app n2 ys
+  · rw [h, sub_refl, argsBelow_refl]
+  · simp only [sameHead] at hh
+    conv => lhs; unfold sub
+    rw [if_neg h, ite_leafRule_false (leafRule_of_left_none (.app n1 xs) (.app n2 ys) rfl)]
+    simp only [hh, Bool.true_and, argsBelow, args, List.zip_map, List.all_map,
+      Function.comp_def, Prod.map, Variance.holds_eq_select]
+    exact all_attach_eq _ (fun (pq : (Ty × Nat) × (Ty × Nat)) =>
+      (argVariance n1 pq.1.2).select (sub pq.1.1 pq.2.1) (sub pq.2.1 pq.1.1))
+
+/-- Different heads, no declared edge: the order answers `false`. The hypothesis `hleaf` is
+the leaf table's (`leafRule`, decisions row 177), so the conclusion is false only where the
+table declares no edge (`sub_eq_leafRule_of_not_sameHead` below states the other half).
+`fun_cases Ty.sub` makes the catch-all into `rfl`, because the arm it takes IS `false`. -/
 theorem sub_eq_false_of_not_sameHead (a b : Ty) (ha : isMember a = true)
-    (hb : isMember b = true) (hlit : litRule a b = false) (htop : topRule a b = false)
+    (hb : isMember b = true) (hleaf : leafRule a b = false) (htop : topRule a b = false)
     (hh : sameHead a b = false) : sub a b = false := by
   fun_cases Ty.sub a b
   case case1 => rw [sameHead_refl _ ha] at hh; exact Bool.noConfusion hh
-  case case2 => exact Bool.noConfusion ha
+  case case2 _ hl => rw [hleaf] at hl; exact Bool.noConfusion hl
   case case3 => exact Bool.noConfusion ha
-  case case4 => exact Bool.noConfusion hb
-  case case5 => exact Bool.noConfusion htop
-  case case6 => exact Bool.noConfusion hlit
-  case case16 => rfl
+  case case4 => exact Bool.noConfusion ha
+  case case5 => exact Bool.noConfusion hb
+  case case6 => exact Bool.noConfusion htop
+  case case16 =>
+    simp only [sameHead] at hh
+    simp only [hh, Bool.false_and]
+  case case18 =>
+    simp only [sameHead] at hh
+    simp only [hh, Bool.false_and]
+  case case19 =>
+    simp only [sameHead] at hh
+    simp only [hh, Bool.false_and]
+  case case20 => rfl
   -- the congruence arms: `sameHead` answers `true` at a matching head, so `hh` is absurd
   all_goals simp only [sameHead, Bool.true_eq_false] at hh
 
@@ -323,7 +588,15 @@ theorem sub_eq_argsBelow_of_sameHead (a b : Ty) (hh : sameHead a b = true) :
     subst hp
     rw [sub_refl, argsBelow_refl]
   case case19 => intro _; rw [sub_refl, argsBelow_refl]
-  case case20 => intro hh; exact Bool.noConfusion hh
+  case case20 => intro hh; exact sub_args_record _ _ hh
+  case case21 => intro _; exact sub_args_map _ _ _ _
+  case case22 => intro hh; exact sub_args_tuple _ _ hh
+  case case23 => intro hh; exact sub_args_app _ _ _ _ hh
+  case case24 => intro _; rw [sub_refl, argsBelow_refl]
+  case case25 => intro _; rw [sub_refl, argsBelow_refl]
+  case case26 => intro _; rw [sub_refl, argsBelow_refl]
+  case case27 => intro _; rw [sub_refl, argsBelow_refl]
+  case case28 => intro hh; exact Bool.noConfusion hh
 
 /-- **`sub` between union members is the variance-wise comparison of corresponding
 arguments.** Everything a relational proof needs to know about `Ty`'s constructors, in one
@@ -331,11 +604,11 @@ statement: the exceptional rules are excluded by the four hypotheses, and the co
 arms are the right-hand side. The two directions above are the proof, and neither names a
 constructor: a new one adds an arm lemma and a `case`, both generated. -/
 theorem sub_eq_args (a b : Ty) (ha : isMember a = true) (hb : isMember b = true)
-    (hlit : litRule a b = false) (htop : topRule a b = false) :
+    (hleaf : leafRule a b = false) (htop : topRule a b = false) :
     sub a b = (sameHead a b && argsBelow sub a b) := by
   cases hh : sameHead a b
   · rw [Bool.false_and]
-    exact sub_eq_false_of_not_sameHead a b ha hb hlit htop hh
+    exact sub_eq_false_of_not_sameHead a b ha hb hleaf htop hh
   · rw [Bool.true_and]
     exact sub_eq_argsBelow_of_sameHead a b hh
 
@@ -384,6 +657,34 @@ theorem sizeOf_args {t : Ty} {v : Variance} {x : Ty} (h : (v, x) ∈ t.args) :
     rcases h with ⟨-, rfl⟩ | ⟨-, rfl⟩ <;> simp only [Ty.deferredOf.sizeOf_spec] <;> omega
   case var index => simp only [args, List.not_mem_nil] at h
   case unknown => simp only [args, List.not_mem_nil] at h
+  case record fs =>
+    simp only [args, List.mem_map, Prod.mk.injEq] at h
+    obtain ⟨p, hp, _, hpx⟩ := h
+    have hlt := sizeOf_field_lt_record (mem_canon hp)
+    rw [hpx] at hlt
+    simp only [Ty.record.sizeOf_spec]
+    omega
+  case map key value =>
+    simp only [args, List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at h
+    rcases h with ⟨-, rfl⟩ | ⟨-, rfl⟩ <;> simp only [Ty.map.sizeOf_spec] <;> omega
+  case tuple xs =>
+    simp only [args, List.mem_map, Prod.mk.injEq] at h
+    obtain ⟨y, hy, _, hyx⟩ := h
+    have hlt := List.sizeOf_lt_of_mem hy
+    rw [hyx] at hlt
+    simp only [Ty.tuple.sizeOf_spec]
+    omega
+  case app nm xs =>
+    simp only [args, List.mem_map, Prod.mk.injEq] at h
+    obtain ⟨p, hp, _, hpx⟩ := h
+    have hlt := List.sizeOf_lt_of_mem (List.fst_mem_of_mem_zipIdx hp)
+    rw [hpx] at hlt
+    simp only [Ty.app.sizeOf_spec]
+    omega
+  case null => simp only [args, List.not_mem_nil] at h
+  case undefined => simp only [args, List.not_mem_nil] at h
+  case number => simp only [args, List.not_mem_nil] at h
+  case bytes => simp only [args, List.not_mem_nil] at h
 
 /-! ### The order's two generic steps -/
 
@@ -493,8 +794,9 @@ membership gives the measure back through `sizeOf_args_mem`. -/
 theorem argsBelow_antisymm {r : Ty → Ty → Bool} {a b : Ty} (hab : sameHead a b = true)
     (heq : ∀ x ∈ a.args.map Prod.snd, ∀ y ∈ b.args.map Prod.snd,
       r x y = true → r y x = true → x = y)
-    (h1 : argsBelow r a b = true) (h2 : argsBelow r b a = true) : a = b := by
-  refine eq_of_sameHead hab (zipAll_antisymm a.args b.args (args_congr hab).2 ?_ h1 h2)
+    (h1 : argsBelow r a b = true) (h2 : argsBelow r b a = true)
+    (hca : headCanon a = true) (hcb : headCanon b = true) : a = b := by
+  refine eq_of_sameHead hab (zipAll_antisymm a.args b.args (args_congr hab).2 ?_ h1 h2) hca hcb
   intro x hx y hy hxy hyx
   exact heq x.2 (List.mem_map_of_mem hx) y.2 (List.mem_map_of_mem hy) hxy hyx
 
@@ -506,36 +808,189 @@ theorem topRule_eq_false {a b : Ty} (h : b ≠ .unknown) : topRule a b = false :
   case unknown => exact absurd rfl h
   all_goals rfl
 
-/-- The literal rule fires only into `string`. -/
-theorem litRule_eq_false {a b : Ty} (h : b ≠ .string) : litRule a b = false := by
-  cases b
-  case string => exact absurd rfl h
-  all_goals cases a <;> rfl
-
 /-- At a head with no children, `sameHead` IS equality: a node is its head and its children,
 and there are none. -/
 theorem eq_of_sameHead_nil {a b : Ty} (h : sameHead a b = true) (hx : a.args = []) : a = b := by
   have hlen := (args_congr h).1
   rw [hx, List.length_nil] at hlen
   have hb : b.args = [] := List.eq_nil_of_length_eq_zero hlen.symm
-  exact eq_of_sameHead h (by rw [hx, hb])
+  exact eq_of_sameHead h (by rw [hx, hb]) (headCanon_of_args_nil hx) (headCanon_of_args_nil hb)
 
-/-- The literal rule fires at exactly one pair of shapes. -/
-theorem litRule_eq_true {a b : Ty} (h : litRule a b = true) :
-    ∃ s, a = .lit s ∧ b = .string := by
-  cases a
-  case lit s =>
-    cases b
-    case string => exact ⟨s, rfl, rfl⟩
-    all_goals exact Bool.noConfusion h
-  all_goals exact Bool.noConfusion h
+/-! ### The leaf-order table's laws (decisions row 177)
 
-/-- …so it does not fire whenever either side is known not to be that shape. -/
-theorem litRule_eq_false_of_head {a b : Ty} (h : ¬ ∃ s, a = .lit s ∧ b = .string) :
-    litRule a b = false := by
-  cases hl : litRule a b
-  · rfl
-  · exact absurd (litRule_eq_true hl) h
+The closure's laws are checked over the finite head domain (`LeafHead.all`) by `decide`, so
+they are regenerated with the table and name no edge; a leaf head's type carries the facts the
+order's proofs read. Transcribed from probe P (`P3View.lean:666-826`). -/
+
+theorem LeafHead.mem_all (x : LeafHead) : x ∈ LeafHead.all := by
+  cases x <;> decide
+
+/-- The closure's specification: a path of declared edges. -/
+inductive LeafPath (edges : List (LeafHead × LeafHead)) : LeafHead → LeafHead → Prop
+  | refl (x : LeafHead) : LeafPath edges x x
+  | step {x y z : LeafHead} : (x, y) ∈ edges → LeafPath edges y z → LeafPath edges x z
+
+/-- The search finds only paths (any table, any fuel). -/
+theorem leafReach_sound (edges : List (LeafHead × LeafHead)) :
+    ∀ (n : Nat) (x y : LeafHead), leafReach edges n x y = true → LeafPath edges x y
+  | 0, x, y, h => by
+    rw [leafReach] at h
+    rw [of_decide_eq_true h]
+    exact .refl y
+  | n + 1, x, y, h => by
+    rw [leafReach, Bool.or_eq_true, List.any_eq_true] at h
+    rcases h with h | ⟨e, he, hstep⟩
+    · rw [of_decide_eq_true h]
+      exact .refl y
+    · rw [Bool.and_eq_true] at hstep
+      have hx : e.1 = x := of_decide_eq_true hstep.1
+      subst hx
+      exact .step he (leafReach_sound edges n e.2 y hstep.2)
+
+theorem leafLe_refl (x : LeafHead) : leafLe x x = true := by
+  cases x <;> rfl
+
+/-- **Transitivity of the leaf order** (checked over the finite domain). -/
+theorem leafLe_trans {x y z : LeafHead} (hxy : leafLe x y = true) (hyz : leafLe y z = true) :
+    leafLe x z = true := by
+  have h : ∀ x ∈ LeafHead.all, ∀ y ∈ LeafHead.all, ∀ z ∈ LeafHead.all,
+      leafLe x y = true → leafLe y z = true → leafLe x z = true := by decide
+  exact h x (LeafHead.mem_all x) y (LeafHead.mem_all y) z (LeafHead.mem_all z) hxy hyz
+
+/-- **The table is acyclic**, as the closure's antisymmetry (checked over the finite domain):
+what `sub`'s antisymmetry reads (`leafRule_asymm`) and its transitivity at a payload head
+(`leafRule_trans`). A cyclic table is refused before this file is written. -/
+theorem leafLe_antisymm {x y : LeafHead} (hxy : leafLe x y = true) (hyx : leafLe y x = true) :
+    x = y := by
+  have h : ∀ x ∈ LeafHead.all, ∀ y ∈ LeafHead.all,
+      leafLe x y = true → leafLe y x = true → x = y := by decide
+  exact h x (LeafHead.mem_all x) y (LeafHead.mem_all y) hxy hyx
+
+/-- Every declared edge is in the closure, and none is a loop. -/
+theorem leafLe_of_edge {x y : LeafHead} (h : (x, y) ∈ leafEdges) : leafLe x y = true := by
+  have hall : ∀ e ∈ leafEdges, leafLe e.1 e.2 = true := by decide
+  exact hall (x, y) h
+
+theorem leafEdge_ne {x y : LeafHead} (h : (x, y) ∈ leafEdges) : x ≠ y := by
+  have hall : ∀ e ∈ leafEdges, e.1 ≠ e.2 := by decide
+  exact hall (x, y) h
+
+/-- **The leaf order is the table's reflexive-transitive closure.** -/
+theorem leafLe_iff_path {x y : LeafHead} : leafLe x y = true ↔ LeafPath leafEdges x y := by
+  constructor
+  · exact leafReach_sound leafEdges _ x y
+  · intro h
+    induction h with
+    | refl x => exact leafLe_refl x
+    | step he _ ih => exact leafLe_trans (leafLe_of_edge he) ih
+
+/-- The acyclicity in path form: two paths that close a loop are both empty. -/
+theorem leafEdges_acyclic {x y : LeafHead} (hxy : LeafPath leafEdges x y)
+    (hyx : LeafPath leafEdges y x) : x = y :=
+  leafLe_antisymm (leafLe_iff_path.mpr hxy) (leafLe_iff_path.mpr hyx)
+
+/-- A leaf head's type is a childless member and its own normal form: one case per leaf head. -/
+theorem leafHead_facts {t : Ty} {x : LeafHead} (h : leafHead t = some x) :
+    t.args = [] ∧ isMember t = true ∧ normalize t = t := by
+  cases t
+  case lit | string | nat | int | number | undefined | unit => exact ⟨rfl, rfl, rfl⟩
+  all_goals cases h
+
+/-- The table's rule, unpacked. -/
+theorem leafRule_eq_true {a b : Ty} (h : leafRule a b = true) :
+    ∃ x y, leafHead a = some x ∧ leafHead b = some y ∧ x ≠ y ∧ leafLe x y = true := by
+  unfold leafRule at h
+  split at h
+  · rename_i x y hx hy
+    rw [Bool.and_eq_true, Bool.not_eq_true', decide_eq_false_iff_not] at h
+    exact ⟨x, y, hx, hy, h.1, h.2⟩
+  · exact Bool.noConfusion h
+
+/-- The table's rule, packed. -/
+theorem leafRule_of_heads {a b : Ty} {x y : LeafHead} (ha : leafHead a = some x)
+    (hb : leafHead b = some y) (hne : x ≠ y) (hle : leafLe x y = true) : leafRule a b = true := by
+  unfold leafRule
+  rw [ha, hb]
+  show (!decide (x = y) && leafLe x y) = true
+  rw [decide_eq_false hne, hle]
+  rfl
+
+/-- A declared edge between two types' leaf heads is a rule of the order. -/
+theorem leafRule_of_edge {a b : Ty} {x y : LeafHead} (he : (x, y) ∈ leafEdges)
+    (ha : leafHead a = some x) (hb : leafHead b = some y) : leafRule a b = true :=
+  leafRule_of_heads ha hb (leafEdge_ne he) (leafLe_of_edge he)
+
+/-- The table's rule is between childless members. -/
+theorem leafRule_args {a b : Ty} (h : leafRule a b = true) :
+    a.args = [] ∧ b.args = [] ∧ isMember a = true ∧ isMember b = true := by
+  obtain ⟨x, y, hx, hy, -, -⟩ := leafRule_eq_true h
+  exact ⟨(leafHead_facts hx).1, (leafHead_facts hy).1, (leafHead_facts hx).2.1,
+    (leafHead_facts hy).2.1⟩
+
+/-- **The rule composes**: the closure is transitive, and the composite relates different
+heads because the table is acyclic. -/
+theorem leafRule_trans {a b c : Ty} (hab : leafRule a b = true) (hbc : leafRule b c = true) :
+    leafRule a c = true := by
+  obtain ⟨x, y, hx, hy, hxy, hlxy⟩ := leafRule_eq_true hab
+  obtain ⟨y', z, hy', hz, -, hlyz⟩ := leafRule_eq_true hbc
+  rw [hy] at hy'
+  cases hy'
+  refine leafRule_of_heads hx hz ?_ (leafLe_trans hlxy hlyz)
+  intro hxz
+  subst hxz
+  exact hxy (leafLe_antisymm hlxy hlyz)
+
+/-- The rule is asymmetric (the table is acyclic). -/
+theorem leafRule_asymm {a b : Ty} (h : leafRule a b = true) : leafRule b a = false := by
+  cases hba : leafRule b a with
+  | false => rfl
+  | true =>
+    obtain ⟨x, y, hx, hy, hxy, hlxy⟩ := leafRule_eq_true h
+    obtain ⟨y', x', hy', hx', -, hlyx⟩ := leafRule_eq_true hba
+    rw [hx] at hx'
+    rw [hy] at hy'
+    cases hx'
+    cases hy'
+    exact absurd (leafLe_antisymm hlxy hlyx) hxy
+
+/-- Neither side of a rule is the top. -/
+theorem leafRule_ne_unknown {a b : Ty} (h : leafRule a b = true) :
+    a ≠ .unknown ∧ b ≠ .unknown := by
+  obtain ⟨x, y, hx, hy, -, -⟩ := leafRule_eq_true h
+  refine ⟨?_, ?_⟩
+  · rintro rfl
+    cases hx
+  · rintro rfl
+    cases hy
+
+/-- A rule relates two different heads. -/
+theorem leafRule_sameHead {a b : Ty} (h : leafRule a b = true) : sameHead a b = false := by
+  cases hs : sameHead a b with
+  | false => rfl
+  | true =>
+    obtain ⟨x, y, hx, hy, hxy, -⟩ := leafRule_eq_true h
+    have hab : a = b := eq_of_sameHead_nil hs (leafHead_facts hx).1
+    subst hab
+    rw [hx] at hy
+    cases hy
+    exact absurd rfl hxy
+
+/-- Both sides of a rule are their own normal forms. -/
+theorem leafRule_normalize {a b : Ty} (h : leafRule a b = true) :
+    normalize a = a ∧ normalize b = b := by
+  obtain ⟨x, y, hx, hy, -, -⟩ := leafRule_eq_true h
+  exact ⟨(leafHead_facts hx).2.2, (leafHead_facts hy).2.2⟩
+
+/-- **Different heads: `sub` IS the declared edge.** At two members with different heads, not
+the top, the order answers the table's rule: `true` on the closure of a declared edge, `false`
+exactly where the table declares none (Codex, 19:30; probe Q's `sub_eq_edgeRule_of_not_sameHead`
+over probe P's table). -/
+theorem sub_eq_leafRule_of_not_sameHead (a b : Ty) (ha : isMember a = true)
+    (hb : isMember b = true) (htop : topRule a b = false) (hh : sameHead a b = false) :
+    sub a b = leafRule a b := by
+  cases hl : leafRule a b with
+  | true => exact sub_of_leafRule hl
+  | false => exact sub_eq_false_of_not_sameHead a b ha hb hl htop hh
 
 end Ty
 
@@ -557,11 +1012,12 @@ abbrev AdmCarrier : TyFam → Type := fun fam => TyFam.rec (Ty × Adm) fam
 
 /-- **One field per constructor**: what an admission algebra must satisfy for its fold to
 respect `sub`. The empty union admits nothing and the top admits everything; a union is
-the disjunction of its members; the literal rule is an inclusion; a covariant argument is
-monotone, a contravariant one antitone, and an invariant one is IGNORED — which is
-decisions row 44 (a handle is coarse by kind; the world's tables type what it holds)
-stated as a law. A new constructor adds a field here and one line to each instance, at a
-place the compiler names. -/
+the disjunction of its members; each declared leaf edge is an inclusion; a covariant argument is
+monotone, a contravariant one antitone, and an invariant one is read at equivalent
+admissions (each below the other: the symmetric part of the order, which is what an
+invariant `sub` arm compares). A handle coarse by kind (decisions row 44) ignores its
+argument and discharges the field outright. A new constructor adds a field here and one
+line to each instance, at a place the compiler names. -/
 structure AdmitsSub (alg : TyAlgebra AdmCarrier) : Prop where
   /-- the empty union admits nothing -/
   never : ∀ v al, (alg.ty_never).2 v al = false
@@ -569,8 +1025,14 @@ structure AdmitsSub (alg : TyAlgebra AdmCarrier) : Prop where
   union : ∀ p q v al, (alg.ty_union p q).2 v al = ((p.2 v al) || (q.2 v al))
   /-- the top admits everything (decisions row 46) -/
   top : ∀ v al, (alg.ty_unknown).2 v al = true
-  /-- the literal rule -/
-  lit_string : ∀ s, Adm.le (alg.ty_lit s).2 (alg.ty_string).2
+  /-- the declared leaf edge `lit ⊑ string` (decisions row 177) -/
+  lit_string : ∀ (s : String), Adm.le (alg.ty_lit s).2 (alg.ty_string).2
+  /-- the declared leaf edge `nat ⊑ int` (decisions row 177) -/
+  nat_int : Adm.le (alg.ty_nat).2 (alg.ty_int).2
+  /-- the declared leaf edge `int ⊑ number` (decisions row 177) -/
+  int_number : Adm.le (alg.ty_int).2 (alg.ty_number).2
+  /-- the declared leaf edge `undefined ⊑ unit` (decisions row 177) -/
+  undefined_unit : Adm.le (alg.ty_undefined).2 (alg.ty_unit).2
   /-- a template parameter has no inhabitant -/
   var : ∀ i v al, (alg.ty_var i).2 v al = false
   /-- argument 0 co (vendor/effect-4.0.0-rc.112/src/Option.ts:55) -/
@@ -588,9 +1050,66 @@ structure AdmitsSub (alg : TyAlgebra AdmCarrier) : Prop where
   /-- argument 0 co, argument 1 co (vendor/effect-4.0.0-rc.112/src/Fiber.ts:70) -/
   fiberOf : ∀ p0 p1 q0 q1, Adm.le (p0).2 (q0).2 → Adm.le (p1).2 (q1).2 → Adm.le (alg.ty_fiberOf p0 p1).2 (alg.ty_fiberOf q0 q1).2
   /-- argument 0 inv (vendor/effect-4.0.0-rc.112/src/Ref.ts:59) -/
-  refOf : ∀ p0 q0, (alg.ty_refOf p0).2 = (alg.ty_refOf q0).2
+  refOf : ∀ p0 q0, (Adm.le (p0).2 (q0).2 ∧ Adm.le (q0).2 (p0).2) → Adm.le (alg.ty_refOf p0).2 (alg.ty_refOf q0).2
   /-- argument 0 inv, argument 1 inv (vendor/effect-4.0.0-rc.112/src/Deferred.ts:58) -/
-  deferredOf : ∀ p0 p1 q0 q1, (alg.ty_deferredOf p0 p1).2 = (alg.ty_deferredOf q0 q1).2
+  deferredOf : ∀ p0 p1 q0 q1, (Adm.le (p0).2 (q0).2 ∧ Adm.le (q0).2 (p0).2) → (Adm.le (p1).2 (q1).2 ∧ Adm.le (q1).2 (p1).2) → Adm.le (alg.ty_deferredOf p0 p1).2 (alg.ty_deferredOf q0 q1).2
+  /-- every field co, the payloads equal in canonical order ({ readonly a: A; readonly b?: B }) -/
+  record : ∀ (ps qs : List (String × Bool × AdmCarrier .ty)),
+    (Ty.canon ps).map (fun p => (p.1, p.2.1)) = (Ty.canon qs).map (fun p => (p.1, p.2.1)) →
+    (∀ p q, (p, q) ∈ (Ty.canon ps).zip (Ty.canon qs) → Adm.le (p.2.2).2 (q.2.2).2) →
+    Adm.le (alg.ty_record ps).2 (alg.ty_record qs).2
+  /-- argument 0 inv, argument 1 co (Readonly<Record<string, V>>) -/
+  map : ∀ p0 p1 q0 q1, (Adm.le (p0).2 (q0).2 ∧ Adm.le (q0).2 (p0).2) → Adm.le (p1).2 (q1).2 → Adm.le (alg.ty_map p0 p1).2 (alg.ty_map q0 q1).2
+  /-- every item co, by position (readonly [A, B, C]) -/
+  tuple : ∀ (ps qs : List (AdmCarrier .ty)), ps.length = qs.length →
+    (∀ p q, (p, q) ∈ ps.zip qs → Adm.le p.2 q.2) →
+    Adm.le (alg.ty_tuple ps).2 (alg.ty_tuple qs).2
+  /-- each argument at the name's declared variance, an invariant one at equivalent admissions (rc.112's declared variances, by name (Ty.declaredVariance)) -/
+  app : ∀ (n : String) (ps qs : List (AdmCarrier .ty)), ps.length = qs.length →
+    (∀ p q, (p, q) ∈ ps.zipIdx.zip qs.zipIdx → match Ty.argVariance n p.2 with
+      | .co => Adm.le p.1.2 q.1.2 | .contra => Adm.le q.1.2 p.1.2
+      | .inv => Adm.le p.1.2 q.1.2 ∧ Adm.le q.1.2 p.1.2) →
+    Adm.le (alg.ty_app n ps).2 (alg.ty_app n qs).2
+
+/-- **One field per constructor with children**: what an admission algebra must satisfy
+for its fold to be monotone in every child — each child read forward, whatever variance the
+order reads it at. Instantiating a template at wider bindings is such a widening. -/
+structure AdmitsMono (alg : TyAlgebra AdmCarrier) : Prop where
+  /-- every argument forward -/
+  option : ∀ p0 q0, Adm.le (p0).2 (q0).2 → Adm.le (alg.ty_option p0).2 (alg.ty_option q0).2
+  /-- every argument forward -/
+  list : ∀ p0 q0, Adm.le (p0).2 (q0).2 → Adm.le (alg.ty_list p0).2 (alg.ty_list q0).2
+  /-- every argument forward -/
+  prod : ∀ p0 p1 q0 q1, Adm.le (p0).2 (q0).2 → Adm.le (p1).2 (q1).2 → Adm.le (alg.ty_prod p0 p1).2 (alg.ty_prod q0 q1).2
+  /-- every argument forward -/
+  except : ∀ p0 p1 q0 q1, Adm.le (p0).2 (q0).2 → Adm.le (p1).2 (q1).2 → Adm.le (alg.ty_except p0 p1).2 (alg.ty_except q0 q1).2
+  /-- every argument forward -/
+  exitOf : ∀ p0 p1 q0 q1, Adm.le (p0).2 (q0).2 → Adm.le (p1).2 (q1).2 → Adm.le (alg.ty_exitOf p0 p1).2 (alg.ty_exitOf q0 q1).2
+  /-- every argument forward -/
+  causeOf : ∀ p0 q0, Adm.le (p0).2 (q0).2 → Adm.le (alg.ty_causeOf p0).2 (alg.ty_causeOf q0).2
+  /-- every argument forward -/
+  fiberOf : ∀ p0 p1 q0 q1, Adm.le (p0).2 (q0).2 → Adm.le (p1).2 (q1).2 → Adm.le (alg.ty_fiberOf p0 p1).2 (alg.ty_fiberOf q0 q1).2
+  /-- every argument forward -/
+  union : ∀ p0 p1 q0 q1, Adm.le (p0).2 (q0).2 → Adm.le (p1).2 (q1).2 → Adm.le (alg.ty_union p0 p1).2 (alg.ty_union q0 q1).2
+  /-- every argument forward -/
+  refOf : ∀ p0 q0, Adm.le (p0).2 (q0).2 → Adm.le (alg.ty_refOf p0).2 (alg.ty_refOf q0).2
+  /-- every argument forward -/
+  deferredOf : ∀ p0 p1 q0 q1, Adm.le (p0).2 (q0).2 → Adm.le (p1).2 (q1).2 → Adm.le (alg.ty_deferredOf p0 p1).2 (alg.ty_deferredOf q0 q1).2
+  /-- every field forward, the payloads equal in written order -/
+  record : ∀ (ps qs : List (String × Bool × AdmCarrier .ty)),
+    ps.map (fun p => (p.1, p.2.1)) = qs.map (fun p => (p.1, p.2.1)) →
+    (∀ p q, (p, q) ∈ ps.zip qs → Adm.le (p.2.2).2 (q.2.2).2) →
+    Adm.le (alg.ty_record ps).2 (alg.ty_record qs).2
+  /-- every argument forward -/
+  map : ∀ p0 p1 q0 q1, Adm.le (p0).2 (q0).2 → Adm.le (p1).2 (q1).2 → Adm.le (alg.ty_map p0 p1).2 (alg.ty_map q0 q1).2
+  /-- every item forward, by position -/
+  tuple : ∀ (ps qs : List (AdmCarrier .ty)), ps.length = qs.length →
+    (∀ p q, (p, q) ∈ ps.zip qs → Adm.le p.2 q.2) →
+    Adm.le (alg.ty_tuple ps).2 (alg.ty_tuple qs).2
+  /-- every argument forward, by position -/
+  app : ∀ (n : String) (ps qs : List (AdmCarrier .ty)), ps.length = qs.length →
+    (∀ p q, (p, q) ∈ ps.zip qs → Adm.le p.2 q.2) →
+    Adm.le (alg.ty_app n ps).2 (alg.ty_app n qs).2
 
 /-- The allocation table `after` agrees with `before` at every index `before` has. -/
 def Extends (before after : List String) : Prop :=
@@ -630,6 +1149,14 @@ structure AdmitsExtend (alg : TyAlgebra AdmCarrier) : Prop where
   deferredOf : ∀ p0 p1, Adm.Extends (p0).2 → Adm.Extends (p1).2 → Adm.Extends (alg.ty_deferredOf p0 p1).2
   var : ∀ (index : Nat), Adm.Extends (alg.ty_var index).2
   unknown : Adm.Extends (alg.ty_unknown).2
+  record : ∀ (ps : List (String × Bool × AdmCarrier .ty)), (∀ p ∈ ps, Adm.Extends (p.2.2).2) → Adm.Extends (alg.ty_record ps).2
+  map : ∀ p0 p1, Adm.Extends (p0).2 → Adm.Extends (p1).2 → Adm.Extends (alg.ty_map p0 p1).2
+  tuple : ∀ (ps : List (AdmCarrier .ty)), (∀ p ∈ ps, Adm.Extends p.2) → Adm.Extends (alg.ty_tuple ps).2
+  app : ∀ (n : String) (ps : List (AdmCarrier .ty)), (∀ p ∈ ps, Adm.Extends p.2) → Adm.Extends (alg.ty_app n ps).2
+  null : Adm.Extends (alg.ty_null).2
+  undefined : Adm.Extends (alg.ty_undefined).2
+  number : Adm.Extends (alg.ty_number).2
+  bytes : Adm.Extends (alg.ty_bytes).2
 
 end Effect4.Program
 
@@ -644,7 +1171,7 @@ guards are the view's own contract, and they do not depend on which constructors
 1. `sub_eq_args` holds at named pairs that exercise each variance, so the law is exercised as a
    computation and not only as a theorem.
 2. The four hypotheses are each necessary: dropping any one of them makes the two sides differ
-   at a named counterexample (`never`, `union`, the literal rule, the top).
+   at a named counterexample (`never`, `union`, the leaf table's rule, the top).
 3. `sameHead` is an equivalence on members, and `union` is outside it.
 4. `eq_of_sameHead` and `args_congr` at a pair the printer's corpus actually carries.
 -/
@@ -686,9 +1213,11 @@ are for. -/
 -- `isMember b`: a union on the right is a choice, not a congruence
 #guard Ty.isMember (.union .nat .string) = false
 #guard lhs .nat (.union .nat .string) != rhs .nat (.union .nat .string)
--- `litRule`: a literal is below `string` with no head in common
-#guard Ty.litRule (.lit "a") .string = true
+-- `leafRule`: a declared leaf edge relates two heads with nothing in common (decisions row 177)
+#guard Ty.leafRule (.lit "a") .string = true
 #guard lhs (.lit "a") .string != rhs (.lit "a") .string
+#guard Ty.leafRule .nat .number = true
+#guard lhs .nat .number != rhs .nat .number
 -- `topRule`: everything is below the top (decisions row 46)
 #guard Ty.topRule .nat .unknown = true
 #guard lhs .nat .unknown != rhs .nat .unknown
@@ -708,7 +1237,8 @@ example {a b c : Ty} (h : Ty.sameHead a b = true) (h' : Ty.sameHead b c = true) 
 /-! ### 4. The node is its head and its children -/
 
 example {a b : Ty} (h : Ty.sameHead a b = true)
-    (hx : a.args.map Prod.snd = b.args.map Prod.snd) : a = b := Ty.eq_of_sameHead h hx
+    (hx : a.args.map Prod.snd = b.args.map Prod.snd) (hca : Ty.headCanon a = true)
+    (hcb : Ty.headCanon b = true) : a = b := Ty.eq_of_sameHead h hx hca hcb
 example {a b : Ty} (h : Ty.sameHead a b = true) :
     a.args.length = b.args.length ∧ a.args.map Prod.fst = b.args.map Prod.fst := Ty.args_congr h
 example {t : Ty} {v : Ty.Variance} {x : Ty} (h : (v, x) ∈ t.args) : sizeOf x < sizeOf t :=

@@ -37,6 +37,33 @@ theorem closed_ofMembers (xs : List Ty) (h : ∀ x ∈ xs, closed x = true) :
   | nil => rfl
   | cons x xs ih => cases xs <;> aesop (add norm simp [ofMembers, closed])
 
+/-- A product of closed factors normalizes to a closed type (the product case, shared with the
+pair tuple). -/
+theorem closed_productRow (a b : Ty) (ha : closed a = true) (hb : closed b = true) :
+    closed (ofMembers (normalizeRow (productMembers a b)).elems) = true := by
+  aesop (add norm simp [closed, productMembers, mem_normalizeRow],
+    safe apply closed_ofMembers, safe forward closed_factors)
+
+/-- A tuple of closed items normalizes to a closed type. -/
+theorem closed_normTuple : ∀ (xs : List Ty), (∀ t ∈ xs, closed t = true) → closed (normTuple xs) = true
+  | [a, b], h => closed_productRow a b (h a List.mem_cons_self)
+      (h b (List.mem_cons_of_mem _ List.mem_cons_self))
+  | [], _ => rfl
+  | [a], h => by
+    simp only [normTuple, closed, closedItems_eq_all, List.all_cons, List.all_nil,
+      h a List.mem_cons_self, Bool.and_true]
+  | _ :: _ :: _ :: _, h => by
+    simp only [normTuple, closed, closedItems_eq_all, List.all_eq_true]
+    exact h
+
+/-- A reference at closed arguments normalizes to a closed type. -/
+theorem closed_normApp (n : String) :
+    ∀ (xs : List Ty), (∀ t ∈ xs, closed t = true) → closed (normApp n xs) = true
+  | [], _ => rfl
+  | _ :: _, h => by
+    simp only [normApp, closed, closedItems_eq_all, List.all_eq_true]
+    exact h
+
 theorem closed_normalize (t : Ty) (h : closed t = true) : closed (normalize t) = true := by
   induction t with
   | prod a b iha ihb =>
@@ -45,10 +72,51 @@ theorem closed_normalize (t : Ty) (h : closed t = true) : closed (normalize t) =
   | union a b iha ihb =>
     aesop (add norm simp [closed, normalize, mem_normalizeRow],
       safe apply closed_ofMembers, safe forward closed_members)
+  | record fs ih =>
+    simp only [closed, closedFields_eq_all, List.all_eq_true] at h ⊢
+    rw [normalize_record]
+    simp only [closed, closedFields_eq_all, List.all_eq_true]
+    intro p hp
+    obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
+    exact ih q (mem_canon hq) (h q (mem_canon hq))
+  | tuple ts ih =>
+    simp only [closed, closedItems_eq_all, List.all_eq_true] at h
+    rw [normalize, normalizeItems_eq_map]
+    exact closed_normTuple _ fun t ht => by
+      obtain ⟨u, hu, rfl⟩ := List.mem_map.mp ht
+      exact ih u hu (h u hu)
+  | app n ts ih =>
+    simp only [closed, closedItems_eq_all, List.all_eq_true] at h
+    rw [normalize, normalizeItems_eq_map]
+    exact closed_normApp n _ fun t ht => by
+      obtain ⟨u, hu, rfl⟩ := List.mem_map.mp ht
+      exact ih u hu (h u hu)
   | _ => aesop (add norm simp [closed, normalize])
 
 theorem instantiate_closed (σ : Subst) (t : Ty) (h : closed t = true) : instantiate σ t = t := by
-  induction t <;> aesop (add norm simp [closed, instantiate])
+  induction t with
+  | record fs ih =>
+    simp only [closed, closedFields_eq_all, List.all_eq_true] at h
+    rw [instantiate, instantiateFields_eq_map]
+    congr 1
+    conv => rhs; rw [← List.map_id fs]
+    apply List.map_congr_left
+    intro p hp
+    rw [ih p hp (h p hp)]
+    rfl
+  | tuple ts ih =>
+    simp only [closed, closedItems_eq_all, List.all_eq_true] at h
+    rw [instantiate, instantiateItems_eq_map]
+    congr 1
+    conv => rhs; rw [← List.map_id ts]
+    exact List.map_congr_left fun t ht => ih t ht (h t ht)
+  | app n ts ih =>
+    simp only [closed, closedItems_eq_all, List.all_eq_true] at h
+    rw [instantiate, instantiateItems_eq_map]
+    congr 1
+    conv => rhs; rw [← List.map_id ts]
+    exact List.map_congr_left fun t ht => ih t ht (h t ht)
+  | _ => aesop (add norm simp [closed, instantiate])
 
 theorem infer_closed {join : Bool} (σ : Subst) (t r : Ty) (h : closed t = true) :
     infer σ t r join = σ := by
@@ -71,9 +139,11 @@ theorem matchTemplate_closed {join : Bool} (σ : Subst) (t r : Ty) (h : closed t
 and an atom's answer is instantiated at the bindings of the last step. Between the two sits
 one fact: inference only widens. A parameter it binds was `never` before, which admits
 nothing, and a parameter it rebinds moves up the order (`infer`'s `join`). Instantiation
-carries a widening to every template, as a condition on the admission algebra — the order's
-own congruence (`AdmitsSub`), not an argument about `hasTy` — and handles are coarse by kind
-(decisions row 44), so an invariant position costs nothing here. -/
+carries a widening to every template, as a condition on the admission algebra — every child
+read forward (`AdmitsMono`), not an argument about `hasTy`. It is not the order's own condition
+(`AdmitsSub`): an invariant position there only promises to keep EQUIVALENT admissions, while a
+widening moves its child one way; membership reads every position forward at the value level
+(a handle ignores its argument, decisions row 44), so the admission fold satisfies both. -/
 
 /-- `σ'` admits at every parameter at least what `σ` admits there. -/
 def Widens (σ σ' : Subst) : Prop :=
@@ -100,9 +170,9 @@ theorem Widens.of_lookup {σ σ' : Subst}
     simp only [hj', Option.getD_some]
     exact hasTy_sub u u' v al hsub hv
 
-/-- Instantiation is monotone in the bindings, for any admission algebra with the order's
-condition: bindings that admit more make every template admit more. -/
-theorem cata_admits_instantiate {alg : TyAlgebra AdmCarrier} (h : AdmitsSub alg) {σ σ' : Subst}
+/-- Instantiation is monotone in the bindings, for any admission algebra monotone in every child:
+bindings that admit more make every template admit more. -/
+theorem cata_admits_instantiate {alg : TyAlgebra AdmCarrier} (h : AdmitsMono alg) {σ σ' : Subst}
     (hσ : ∀ i, Adm.le (cata_ty alg (instantiate σ (.var i))).2
       (cata_ty alg (instantiate σ' (.var i))).2)
     (t : Ty) : Adm.le (cata_ty alg (instantiate σ t)).2 (cata_ty alg (instantiate σ' t)).2 := by
@@ -111,20 +181,46 @@ theorem cata_admits_instantiate {alg : TyAlgebra AdmCarrier} (h : AdmitsSub alg)
   | option t ih => simp only [instantiate, cata_ty]; exact h.option _ _ ih
   | list t ih => simp only [instantiate, cata_ty]; exact h.list _ _ ih
   | causeOf t ih => simp only [instantiate, cata_ty]; exact h.causeOf _ _ ih
+  | refOf t ih => simp only [instantiate, cata_ty]; exact h.refOf _ _ ih
   | prod a b iha ihb => simp only [instantiate, cata_ty]; exact h.prod _ _ _ _ iha ihb
   | except a b iha ihb => simp only [instantiate, cata_ty]; exact h.except _ _ _ _ iha ihb
   | exitOf a b iha ihb => simp only [instantiate, cata_ty]; exact h.exitOf _ _ _ _ iha ihb
   | fiberOf a b iha ihb => simp only [instantiate, cata_ty]; exact h.fiberOf _ _ _ _ iha ihb
-  -- the invariant handles ignore their argument, so the inclusion is an equality
-  | refOf t _ => simp only [instantiate, cata_ty]; exact (h.refOf _ _) ▸ Adm.le_refl _
-  | deferredOf a b _ _ =>
-    simp only [instantiate, cata_ty]; exact (h.deferredOf _ _ _ _) ▸ Adm.le_refl _
-  | union a b iha ihb =>
-    intro v al hp
-    simp only [instantiate, cata_ty, h.union] at hp ⊢
-    exact (Bool.or_eq_true_iff.mp hp).elim
-      (fun hx => Bool.or_eq_true_iff.mpr (Or.inl (iha v al hx)))
-      (fun hx => Bool.or_eq_true_iff.mpr (Or.inr (ihb v al hx)))
+  | deferredOf a b iha ihb => simp only [instantiate, cata_ty]; exact h.deferredOf _ _ _ _ iha ihb
+  | union a b iha ihb => simp only [instantiate, cata_ty]; exact h.union _ _ _ _ iha ihb
+  | map a b iha ihb => simp only [instantiate, cata_ty]; exact h.map _ _ _ _ iha ihb
+  | record fs ih =>
+    simp only [instantiate, cata_ty_record, instantiateFields_eq_map, List.map_map]
+    refine h.record _ _ ?_ ?_
+    · simp only [List.map_map]
+      rfl
+    · intro p q hpq
+      rw [List.zip_map, List.mem_map] at hpq
+      obtain ⟨⟨f1, f2⟩, hf, hpq⟩ := hpq
+      have heq : f1 = f2 := Ty.mem_zip_self hf
+      subst heq
+      cases hpq
+      exact ih f1 (List.of_mem_zip hf).1
+  | tuple ts ih =>
+    simp only [instantiate, cata_ty_tuple, instantiateItems_eq_map, List.map_map]
+    refine h.tuple _ _ (by rw [List.length_map, List.length_map]) ?_
+    intro p q hpq
+    rw [List.zip_map, List.mem_map] at hpq
+    obtain ⟨⟨t1, t2⟩, ht, hpq⟩ := hpq
+    have heq : t1 = t2 := Ty.mem_zip_self ht
+    subst heq
+    cases hpq
+    exact ih t1 (List.of_mem_zip ht).1
+  | app n ts ih =>
+    simp only [instantiate, cata_ty_app, instantiateItems_eq_map, List.map_map]
+    refine h.app _ _ _ (by rw [List.length_map, List.length_map]) ?_
+    intro p q hpq
+    rw [List.zip_map, List.mem_map] at hpq
+    obtain ⟨⟨t1, t2⟩, ht, hpq⟩ := hpq
+    have heq : t1 = t2 := Ty.mem_zip_self ht
+    subst heq
+    cases hpq
+    exact ih t1 (List.of_mem_zip ht).1
   -- every other head is closed: both instances are the node itself
   | _ => simp only [instantiate]; exact Adm.le_refl _
 
@@ -134,7 +230,7 @@ theorem hasTy_instantiate_widens {σ σ' : Subst} (hw : Widens σ σ') (t : Ty)
     Val.hasTy v (instantiate σ' t) al = true := by
   rw [Val.hasTy.eq_cata v (instantiate σ t) al] at hv
   rw [Val.hasTy.eq_cata v (instantiate σ' t) al]
-  refine cata_admits_instantiate Val.hasTy_admitsSub (fun i w bl hw' => ?_) t v al hv
+  refine cata_admits_instantiate Val.hasTy_admitsMono (fun i w bl hw' => ?_) t v al hv
   rw [← Val.hasTy.eq_cata w (instantiate σ (.var i)) bl] at hw'
   rw [← Val.hasTy.eq_cata w (instantiate σ' (.var i)) bl]
   exact hw i w bl hw'
@@ -253,13 +349,26 @@ no reader, printer, emitter or codec asks whether a template is admissible. -/
 
 namespace Ty
 
+mutual
 /-- The parameters a template mentions, in occurrence order. -/
 def varsOf : Ty → List Nat
   | .var i => [i]
-  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ => []
+  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
+  | .null | .undefined | .number | .bytes => []
   | .option t | .list t | .causeOf t | .refOf t => varsOf t
-  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b =>
-    varsOf a ++ varsOf b
+  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b
+  | .map a b => varsOf a ++ varsOf b
+  | .record fs => varsOfFields fs
+  | .tuple ts | .app _ ts => varsOfItems ts
+/-- The field-list companion of `varsOf`. -/
+def varsOfFields : List (String × Bool × Ty) → List Nat
+  | [] => []
+  | (_, _, t) :: rest => varsOf t ++ varsOfFields rest
+/-- The item-list companion of `varsOf`. -/
+def varsOfItems : List Ty → List Nat
+  | [] => []
+  | t :: rest => varsOf t ++ varsOfItems rest
+end
 
 /-- A template is admissible when no parameter sits under a union head. `infer` walks the
 template and the request together and binds at a position; a union is a ROW, whose members
@@ -271,14 +380,46 @@ def templateAdmissible : Ty → Bool
   | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .deferredOf a b =>
     templateAdmissible a && templateAdmissible b
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
-  | .var _ => true
+  | .var _ | .null | .undefined | .number | .bytes => true
+  -- `infer` binds no position under the data wave's heads, so a parameter there would be
+  -- instantiated at nothing: they are admissible only when closed
+  | t@(.record _) | t@(.map _ _) | t@(.tuple _) | t@(.app _ _) => t.closed
 
 theorem templateAdmissible_of_closed (t : Ty) (h : closed t = true) :
     templateAdmissible t = true := by
   induction t <;> aesop (add norm simp [closed, templateAdmissible])
 
+theorem varsOfFields_nil {fs : List (String × Bool × Ty)} (h : ∀ p ∈ fs, varsOf p.2.2 = []) :
+    varsOfFields fs = [] := by
+  induction fs with
+  | nil => rfl
+  | cons p fs ih =>
+    obtain ⟨n, o, t⟩ := p
+    rw [varsOfFields, h _ List.mem_cons_self, ih (fun q hq => h q (List.mem_cons_of_mem _ hq))]
+    rfl
+
+theorem varsOfItems_nil {ts : List Ty} (h : ∀ t ∈ ts, varsOf t = []) : varsOfItems ts = [] := by
+  induction ts with
+  | nil => rfl
+  | cons t ts ih =>
+    rw [varsOfItems, h _ List.mem_cons_self, ih (fun q hq => h q (List.mem_cons_of_mem _ hq))]
+    rfl
+
 theorem varsOf_eq_nil_of_closed (t : Ty) (h : closed t = true) : varsOf t = [] := by
-  induction t <;> aesop (add norm simp [closed, varsOf])
+  induction t with
+  | record fs ih =>
+    simp only [closed, closedFields_eq_all, List.all_eq_true] at h
+    rw [varsOf]
+    exact varsOfFields_nil fun p hp => ih p hp (h p hp)
+  | tuple ts ih =>
+    simp only [closed, closedItems_eq_all, List.all_eq_true] at h
+    rw [varsOf]
+    exact varsOfItems_nil fun t ht => ih t ht (h t ht)
+  | app n ts ih =>
+    simp only [closed, closedItems_eq_all, List.all_eq_true] at h
+    rw [varsOf]
+    exact varsOfItems_nil fun t ht => ih t ht (h t ht)
+  | _ => aesop (add norm simp [closed, varsOf])
 
 end Ty
 

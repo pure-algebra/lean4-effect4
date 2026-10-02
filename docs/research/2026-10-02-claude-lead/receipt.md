@@ -658,3 +658,150 @@ core root clean and every Laws module but `Handles` (its one error, the third ma
 (`scripts/check-conservativity.sh 695bc714` on the generated tree): C1 295 goldens unchanged, C2
 pass, C3 862 verdict rows, C4 pass. Axioms: `Val.decode_encode`, `Val.decode_exact` at
 `[propext, Quot.sound]` (the module's guards and receipts).
+
+## Slice W4b — the `Ty` append: eight forms with their order, normalization and membership (data wave commit 4; decisions rows 119, 125, 157–162, 165, 166, 177, 178)
+
+**First:** `Ty` gains `record`, `map`, `tuple`, `app`, `null`, `undefined`, `number` and `bytes`,
+appended, with the subtype order, normalization, membership (`Val.hasTy`, `Fits`), inhabitance and
+the classifier columns at every one; the Schema bridge, the JSON codec and codegen refuse each by
+name (row 162) until W5. Two deliberate changes beyond the brief, both for a consumer:
+
+1. `Ty.valueVarsAlg` (Laws/Program/TypeAlgebra): a record, a map and a tuple are value formers like
+   `prod`, so a parameter under them is allowed when their children allow it, and a reference's
+   arguments are unread by membership, so they always allow it. The first cut (children closed)
+   made `valueVars_of_noInternalHandle` false — `record [("a", required, var 0)]` passes the
+   internal-handle scan — and that theorem feeds `hostRow_valueVars`, M5's host-row arm. The
+   widening also makes `tuple [a, b]` agree with `prod a b`, which it normalizes to.
+2. `Bridge.unlowered` writes a non-null payload (Codex's unlowered-boundary review): the marker
+   used to be the same declaration as `schema (.handle "effect4/unlowered/<head>")`, so `ofSchema`
+   read it back as that handle. Every declaration arm of `ofSchema` demands `.null`, so the marker
+   now refuses at the reader while a handle of the same name keeps its image (controls in
+   `Test/Program/TyWave.lean`). A raw exporter still writes the marker; no publication gate is
+   claimed.
+
+### What landed
+
+- Core: `Program/TyCore.lean` (the inductive), `Program/Ty.lean` (rendering, the leaf table
+  `leafEdges` with `lit < string`, `nat < int < number`, `undefined < unit`, `sub` with its record,
+  map, tuple and variance-read reference arms, `normalize` with `normTuple`/`normApp` and the field
+  canonicalization `Ty.canon`, `mapKeyOk`), `Data/FieldOrder.lean` (`Field.canonBy`, first wins on a
+  repeated name), `Program/Typed.lean` (`Val.hasTy` mutual with `fieldCheckers`/`itemCheckers`;
+  `namedHasTy`, `itemsHasTy`, `entriesHasTy`, `intImage`, `numberImage`), `Program/Admission.lean`
+  (inhabitance: a record reads its canonical fields, optional-or-inhabited; `findInt` through the
+  new children), `TyClasses` (eight rows), `Schema/TyFaces`, `Schema/Bridge`, `Schema/Codec`,
+  `Codegen/Types` (the refusals), `Eff.lean`.
+- Generated (`generate.py --only variances` and `--only derived`, the TyEq group first):
+  `Program/TyEq.lean`, `Program/TyVariance.lean`, `Program/Fold.lean`, `Program/TyFoldExtras.lean`,
+  `Store/Domain/Derived/Program.lean` (wire tags 20–27), `Laws/Program/TyView.lean` (the leaf laws,
+  `AdmitsSub` with an invariant child read both ways, `AdmitsMono`, `AdmitsExtend`).
+- Laws: `Admits` (membership respects the order and allocation growth at every form),
+  `TypeAlgebra` (transitivity through the leaf table, antisymmetry on normal forms with canonical
+  heads, normalization's laws, the widened `valueVarsAlg`), `Template` (widening by `AdmitsMono`),
+  `Signature`, `Decision` (an `int` member under a tag hit), `Typed/Membership`.
+- Membership (`Typed/Membership.lean`, 14 s alone): `Fits` mutual with `fitters`/`itemFitters`;
+  `NamedFit`/`ItemsFit`/`EntriesFit`; every law ported — `fits_hasTy`, liveness, world growth,
+  `fits_sub`, `fits_normalize`, `fits_members`, the instantiation laws (parameters under the value
+  formers now), and inhabitance from probe P6 on the tree's world (`namedFit_fresh`/`itemsFit_fresh`
+  thread one world; `namedFit_world_free`/`itemsFit_world_free` for the data fragment;
+  `inhabited_of_fits` is now `inhabited_of_hasTy ∘ fits_hasTy`, one induction fewer). Helpers checked
+  first in a scratch file in seconds: `allHeads_record`/`allHeads_tuple` (the classifier through
+  `cata_ofLayer_view`), `inhabited_record`/`inhabited_tuple`, `namedFit_of_namedHasTy`,
+  `itemsFit_of_itemsHasTy`, `namedFit_witness`, `itemsFit_witness`, `namedFit_map`, `itemsFit_map`,
+  `namedFit_skip`, `namedFit_cons_eq`, `canon_instantiate`, `valueVarsAlg_record/tuple/app`.
+- Tests: `Test/Program/TyWave.lean` (probe P's order and formation controls, the reader controls
+  for the unlowered marker at all eight heads, P6's inhabitance controls), `TyTables` (the full
+  table; the missing-field control on `bigint`), `Store/Templates` (the `negInt`/`float` arms),
+  the historical `Fits` copies in `FitsOrder`/`ValueMembership` (a catch-all: the historical
+  relation predates the appended forms).
+
+### Commands and results
+
+Builds (`scratchpad/run.py`, logs `logs/<id>.log`; `LEAN_NUM_THREADS=1` through w4b-33, `3` from
+w4b-34 at the owner's word):
+
+| Run | Target | Exit | Seconds | What it showed |
+| --- | --- | --- | --- | --- |
+| w4b-26 | Membership | 1 | 1240 | `Handles` alone 703 s (its W4a edit had not been rebuilt in this worktree); Membership 103 errors, all in unported arms |
+| w4b-27 | TypeAlgebra | 0 | 35 | the widened `valueVarsAlg` |
+| w4b-28 | Membership | 1 | 44 | one error (a closed `decide` over a free variable) |
+| w4b-29 | Membership | 0 | 15 | Membership green |
+| w4b-30 | `Effect4.Laws` | 1 | 1036 | every module but `Decision` (an `int` member under a tag hit) |
+| w4b-31 | `Effect4.Laws` | 1 | 1043 | `LayerArm`'s ledger: `denoteR_typed.checked` and `typedState_load.checked` reach `Classical.choice` |
+| w4b-32, -33 | Membership | 0 | 36, 33 | the source: `valueVars_normalize` (an `omega` closing an existential goal by `Classical.byContradiction`); a scan of the touched modules finds no reacher after the fix |
+| w4b-34 | `Effect4.Laws` and 18 batteries | 1 | 251 | the ledger green; two stale pins (`ApiContract`'s `null` handle, `TyViewContract`'s `litRule`) |
+| w4b-35 | the two batteries | 0 | 4 | green |
+
+The batteries built in w4b-34/35: `TyWave`, `TyTables`, `Store.Templates`, `FitsOrder`,
+`ValueMembership`, `SchemaGenerationContract`, `TermFits`, `AdmissionColumns`, `TypeAlgebraContract`,
+`DecisionContract`, `CatchIfContract`, `ExprContract`, `ReadContract`, `ApiContract`, `TyViewContract`,
+`LayerSharingContract`, `AuthorContract`, `AuthoringContract`. `ApiContract`'s `nullable` pins move to
+the new images (`none`, `unit`) with a control that the retired `"null"` handle no longer fits.
+
+Producers (`python3 scripts/generate.py --only <family>`; each first run named the next fix):
+
+- `cas` and `readme` regenerated unchanged on the first run.
+- `eff`, `wire`, `ts`: the hand-written `Ty` traversals of the producers gain the eight arms, each a
+  mutual fold over the field and item lists — `OCaml5/Eff/Emit.lean` (`tyO`, OCaml literals; a
+  record's fields are `(string * (bool * ty)) list`), `OCaml5/Eff/Goldens.lean` (`tyV`),
+  `tools/Tools/ProfileJson.lean` (`tyJson`; a product is the generated codec's two-element array,
+  fields named by their Lean binders), and `OCaml5/Eff/Metadata.lean` gains one fixture per new
+  constructor (its coverage check refused the run). The conformance encoders
+  `tools/Conform/Effect4/{LcnfMl,LcnfSemantics}.lean` gain the same arms and read the renamed
+  `Field.ltKey`.
+- `lcnf`: W4a's debt — `Api.run`'s closure reaches `UInt64.decEq` and `UInt64.toNat` through the
+  `float` frame. `OCaml5/Lcnf/Translate.lean` maps both (equality and the identity, `UInt64` being
+  `int` like `UInt8`); a `UInt64` literal above `max_int` is now a fatal hole. See point 4 below.
+- `variances` and `derived` reproduce byte for byte (hashes taken before the run).
+- OCaml (`opam exec --switch=effect4 -- dune build`, `dune test`, both exit 0 after): the
+  hand-written mirrors gain the forms and frames — `engine/e4_engine.{ml,mli}` (`Val_negInt`,
+  `Val_float`, their rendering), `engine/e4_program.ml` (`of_ty`'s eight arms, the alphabet count
+  28), `eff/eff_frame.ml` (`tag_int = 13`, `tag_float = 14`, named only: a program's wire carries
+  neither frame) and `test_lean_wire.ml`'s tag list. `test_eff` 451, `test_val_frames` 26,
+  `test_lean_wire` 117, all passing.
+
+The default build (`make corpus`, which builds `Effect4`, `Effect4.Laws` and `Test` first; 63 s at
+three jobs once warm) is green with `Test.All`'s axiom gate and module-closure gate: the gate first
+refused `Test/Program/TyWave.lean` as unreachable (added to `Test/All`), and two stale pins of the
+value append — `StoreContract`'s "tag 13 is unused" (13 is the signed frame; the empty payload is
+-1; the next unused tag is 15) and `TypedContract`'s `nat 1 : int = false` — moved. The latter is
+`E4-TYPED-CE-002`'s witness: the register row is `RETIRED` 2026-10-02 (decisions row 121), its
+attacked statement — `nat` in `int` because both print as `number` — gone with the refusal it
+attacked; `nat` is in `int` now by the image inclusion. `generated/corpus-index.tsv` unchanged.
+
+Conservativity (`scripts/check-conservativity.sh 41cafcfd`): C1 295 goldens unchanged, C2 8
+constructors appended to `Ty` and nothing reordered, C3 862 verdict rows unchanged, C4 pass after
+the eight are named in `Test/fixtures/baseline/66ee4657-supplement-v1.policy.json`'s
+`constructor_additions`, C5 the record. PASS, 4 of 4.
+
+`make check-cases`: PASS after the case policy is re-seeded from the measured scan
+(`Audit.lean --seed-policy`, notes kept; decisions row 173's route). The diff is the `Ty` family
+only: `Ty.beq`/`Ty.repr` (the generated `TyEq`) replace the derived `instDecidableEqTy`/`instReprTy`;
+`findRepeatedField`, `leafHead`, `tyArgs`, `tyCtor` and `Ty.sub`'s three new sites are named; and
+the existing default arms gain the forms they absorb. Reviewed site by site: every default arm
+absorbing a record, map, tuple or reference is a shape query (tags, payloads, `exitOf?`,
+`listOf?`, members, factors), the JSON codec's refusal until W5, the verified order's dispatch, or
+`Ty.infer`, which binds no parameter under a composite head — a completeness gap for templates, not
+an unsound default. The scans that must look inside (`findInt`, `internalHandleScan`,
+`valueVarsAlg`, `varsOf`) are folds over the new children and absorb nothing.
+
+### Placement
+
+1. Concept 1 (typing and membership) with Concept 5 (exact codecs) at the refusal boundary; required
+   properties: membership respects the order (`AdmitsSub`, `fits_sub`), normalization does not
+   change membership (`fits_normalize`), inhabitance agrees with membership (`inhabited_iff_fits`).
+2. Questions: the existing ledger goals and registry claims at the appended forms — `hasTy_sub`,
+   `fits_sub`, `fits_normalize`, `inhabited-iff-fits`, `of-schema-exact` (unchanged statements).
+3. Reach: closed and template types; records first-wins canonical, closed width, exact flags (row
+   178 (a)); maps with `string` keys (row 125); tuples at exact arity; references at declared
+   variances (row 158).
+4. Not established: the OCaml engine's `UInt64` carrier is not exact (Codex's lowering review):
+   `UInt64` lowers to the 63-bit `int`, so a float bit pattern at `2 ^ 62` or above (negative zero,
+   the infinities, every NaN) has no carrier there. The generated closure only compares and
+   converts float bits and constructs none, so none reaches it today; a `UInt64` literal above
+   `max_int` is now a fatal generation hole, not a clamp. The repair, an exact 64-bit carrier
+   (`Int64` or eight bytes) with its byte connector, is owed before a float producer reaches the
+   engine; the values goal keeps every binary64. Schema/JSON lowering of the eight forms (W5); terms over them (W6); `int` stays
+   refused by admission's `findInt` (DB-15); no width subtyping on unchanged values; `{a?: never}`
+   and `{}` have equal membership but stay apart in the order (Codex's record/tuple note).
+5. Unlocks: W5 (codecs replace the refusals), W6 (record terms with P7's required-field lookup),
+   M5's host-row arm at tables using the new forms.

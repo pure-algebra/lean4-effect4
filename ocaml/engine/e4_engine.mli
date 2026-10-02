@@ -161,6 +161,8 @@ module type INSTANCE = sig
     | Val_ctor of int * val_ list
     | Val_ref of int * int list
     | Val_handle of int * int
+    | Val_negInt of int
+    | Val_float of int
 
   type stuck =  (* :651 *)
     | Stuck_unknownFiber of fiber_id

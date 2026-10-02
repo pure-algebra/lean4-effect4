@@ -206,6 +206,8 @@ def Fits (w : Typed.World) (v : Val) : Ty → Prop
     | _ => False
   | .var _ => False
   | .unknown => Live w v
+  -- the historical relation predates the data wave's forms (decisions row 162)
+  | _ => False
 
 /-- The handle fits its declared (raw) type. -/
 theorem fits_fiber_raw : Fits w0 (Val.fiber Api.root) (.fiberOf T .never) :=

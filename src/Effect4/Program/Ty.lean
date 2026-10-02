@@ -1,80 +1,33 @@
 import Effect4.Data.Row
+import Effect4.Data.FieldOrder
+import Effect4.Program.TyEq
+import Effect4.Program.TyVariance
 
 /-!
 # The inspectable type language and its canonical API
 
-Raw `Ty` remains first-order program data. Its key order supports `Effect4.Row` sorting;
-`CTy` exposes the subtype order on canonical representatives. `Normal` is an erased
-proof invariant, not another stored type representation. `CTy.ofRaw` is total because deep
-normalization is proved idempotent here; value-membership laws belong to the Laws graph.
+Raw `Ty` remains first-order program data; its declaration is `Effect4.Program.TyCore` and its
+eliminator, equality and printer are generated (`Effect4.Program.TyEq`). Its key order supports
+`Effect4.Row` sorting; `CTy` exposes the subtype order on canonical representatives. `Normal` is
+an erased proof invariant, not another stored type representation. `CTy.ofRaw` is total because
+deep normalization is proved idempotent here; value-membership laws belong to the Laws graph.
 
-## The carrier rule for a new constructor
+`render` is its TypeScript spelling; the codegen layer reads that and adds nothing. Deep
+normalization recurses through every constructor; unions have members sorted by a structural key,
+maximal under subtyping, right-nested, `never` the empty union. Products have no union child;
+normalization distributes only products. A record's fields are in canonical order (`canon`, the
+names' UTF-8 bytes), a tuple of two items is a product, and a reference with no argument is a
+handle.
 
-A `Ty` constructor is first-order, non-dependent and proof-free, and every field is a `Shape`:
-a `Nat`, a `Bool`, a `String`, a `Unit`, an `Option`/`List`/`Prod` of one, a canonical row, or a
-nominal carrier the description already knows, at its own parameters
-(`Conform.Source.readShape`, `tools/Conform/Source/Description.lean:35-54`, which refuses a
-function-typed, dependent or free-variable field by name). A field outside that grammar has no
-image in the engine's structure mirror, so the OCaml estate cannot be cut from the declaration
-and the constructor cannot land. Two consequences the tree already pays: a `List Ty` argument
-would make `Ty` nested and cost the derived equality and every `induction` on it — which is why
-`refOf`/`deferredOf`/`fiberOf` are dedicated constructors; and a constructor is **appended**,
-never inserted, because the mirror pins declaration order
-(`scripts/lib/program_structure.py`).
+The order's rules between two different heads that are not congruences are one table of declared
+edges on leaf heads (`leafEdges`, decisions row 177), consulted by `sub` before its rows.
 -/
 
 namespace Effect4.Program
 
-/-! ## The type language
-
-`Ty` is the type language of the programs this tree prints: the wire types a service row
-spells plus what an `Effect<A, E, R>` needs and a row never spells: `never`, the `Exit`,
-`Cause` and `Fiber` handles, and unions of error types. `render` is its TypeScript spelling;
-the codegen layer reads that and adds nothing. Deep normalization recurses through every constructor; unions have members
-sorted by a structural key, maximal under subtyping, right-nested, `never` the empty union.
-Products have no union child; normalization distributes only products. -/
-
-inductive Ty
-  | never
-  | unit
-  | nat
-  | int
-  | string
-  | bool
-  | handle (target : String)
-  | option (inner : Ty)
-  | list (inner : Ty)
-  | prod (left right : Ty)
-  | except (error value : Ty)
-  /-- `Exit.Exit<A, E>`: what `Effect.exit` and `Fiber.await` answer. -/
-  | exitOf (value error : Ty)
-  /-- `Cause.Cause<E>`: what a `catchCause` handler receives. -/
-  | causeOf (error : Ty)
-  /-- `Fiber.Fiber<A, E>`: what a fork answers. -/
-  | fiberOf (value error : Ty)
-  | union (left right : Ty)
-  | lit (value : String)
-  /-- `Ref.Ref<A>` (decisions row 42): a cell handle, coarse in `hasTy` as every handle is;
-  what the cell holds is typed by the world's heap column. A dedicated constructor, as
-  `fiberOf` is, so `Ty` stays a plain inductive (a `List Ty` argument would make it nested and
-  cost the derived equality and every `induction` on it). -/
-  | refOf (value : Ty)
-  /-- `Deferred.Deferred<A, E>` (decisions row 42): a promise handle; what it completes with is
-  typed by the world's promise table. -/
-  | deferredOf (value error : Ty)
-  /-- A row template's parameter (`Ref.get<A>`), never a program's type: the checker
-  instantiates every variable of a row from the request or the operation's type arguments
-  (decisions row 42). -/
-  | var (index : Nat)
-  /-- TypeScript's `unknown` (decisions row 46): the top of `sub`, inhabited by every value
-  (`Val.hasTy v unknown = true`); what rc.112 gives a release's exit parameter
-  (`Exit<unknown, unknown>`, `Effect.ts:12930`) and the children snapshot's fiber columns.
-  Appended last: the engine's structure mirror pins declaration order, so a constructor is
-  appended, never inserted (`scripts/lib/program_structure.py`). -/
-  | unknown
-deriving DecidableEq, Repr
-
 namespace Ty
+
+open Effect4.Field (ltKey ltKey_iff_lex lex_trichotomy bytesKey bytesKey_injective)
 
 /-- Effect rc.112 `Result.Result<A, E>` (Result.ts:66). Value first, error second,
 like `exitOf` and `fiberOf`. The existing constructor and its ordinal remain unchanged. -/
@@ -90,13 +43,17 @@ abbrev cause (error : Ty) : Ty := .causeOf error
 abbrev array (inner : Ty) : Ty := .list inner
 abbrev readonlyArray (inner : Ty) : Ty := .list inner
 
-/-- Structural spelling, used after normalization by the public renderer. rc.112 has no `Either`: an `except` answer is the data reading
-`Result.Result<A, E>`; a `handle` is an opaque host type whose spelling is carried verbatim. -/
+mutual
+/-- Structural spelling, used after normalization by the public renderer. rc.112 has no `Either`:
+an `except` answer is the data reading `Result.Result<A, E>`; a `handle` is an opaque host type
+whose spelling is carried verbatim. A record prints its fields in the order given (`render`
+normalizes first), each `readonly` and an optional one with `?`; a map prints
+`Readonly<Record<K, V>>` (decisions row 125). -/
 def renderRaw : Ty → String
   | .never => "never"
   | .unknown => "unknown"
   | .unit => "void"
-  | .nat | .int => "number"
+  | .nat | .int | .number => "number"
   | .string => "string"
   | .bool => "boolean"
   | .handle target => target
@@ -115,6 +72,29 @@ def renderRaw : Ty → String
   | .var 0 => "A"
   | .var 1 => "E"
   | .var index => "T" ++ toString index
+  | .record fields =>
+    match renderFields fields with
+    | [] => "{}"
+    | parts => "{ " ++ String.intercalate "; " parts ++ " }"
+  | .map key value => "Readonly<Record<" ++ renderRaw key ++ ", " ++ renderRaw value ++ ">>"
+  | .tuple items => "readonly [" ++ String.intercalate ", " (renderItems items) ++ "]"
+  | .app name args =>
+    match renderItems args with
+    | [] => name
+    | parts => name ++ "<" ++ String.intercalate ", " parts ++ ">"
+  | .null => "null"
+  | .undefined => "undefined"
+  | .bytes => "Uint8Array"
+/-- The item-list companion of `renderRaw`: each item's spelling. -/
+def renderItems : List Ty → List String
+  | [] => []
+  | t :: rest => renderRaw t :: renderItems rest
+/-- The field-list companion of `renderRaw`: each field's spelling. -/
+def renderFields : List (String × Bool × Ty) → List String
+  | [] => []
+  | (n, o, t) :: rest =>
+    ("readonly " ++ n ++ (if o then "?: " else ": ") ++ renderRaw t) :: renderFields rest
+end
 
 /-- The members of a union, flattened at the top; `never` contributes none. -/
 def members : Ty → List Ty
@@ -138,11 +118,22 @@ def members : Ty → List Ty
   | .refOf value => [.refOf value]
   | .deferredOf value error => [.deferredOf value error]
   | .var index => [.var index]
+  | .record fields => [.record fields]
+  | .map key value => [.map key value]
+  | .tuple items => [.tuple items]
+  | .app name args => [.app name args]
+  | .null => [.null]
+  | .undefined => [.undefined]
+  | .number => [.number]
+  | .bytes => [.bytes]
 
+mutual
 /-- An injective structural key, for ordering union members: a constructor code, then the
 length-prefixed keys of the components; a handle's target by its UTF-8 bytes
 (`String.toUTF8` is the representation; `String.toList` and the string order reach
-`Classical.choice` on this toolchain, so no member is ordered by its rendering). -/
+`Classical.choice` on this toolchain, so no member is ordered by its rendering). A record: code
+20, then each field as a marker, its length-prefixed name bytes, its flag and its
+length-prefixed type key, `0` closing the list; a tuple and a reference's arguments likewise. -/
 def key : Ty → List Nat
   | .never => [0]
   | .unknown => [19]
@@ -151,7 +142,7 @@ def key : Ty → List Nat
   | .int => [3]
   | .string => [4]
   | .bool => [5]
-  | .handle target => 6 :: target.toUTF8.data.toList.map UInt8.toNat
+  | .handle target => 6 :: bytesKey target
   | .option inner => 7 :: key inner
   | .list inner => 8 :: key inner
   | .prod left right => 9 :: (key left).length :: key left ++ key right
@@ -160,17 +151,29 @@ def key : Ty → List Nat
   | .causeOf error => 12 :: key error
   | .fiberOf value error => 13 :: (key value).length :: key value ++ key error
   | .union left right => 14 :: (key left).length :: key left ++ key right
-  | .lit value => 15 :: value.toUTF8.data.toList.map UInt8.toNat
+  | .lit value => 15 :: bytesKey value
   | .refOf value => 16 :: key value
   | .deferredOf value error => 17 :: (key value).length :: key value ++ key error
   | .var index => [18, index]
-
-/-- Lexicographic order on keys, as a Boolean. -/
-def ltKey : List Nat → List Nat → Bool
-  | [], [] => false
-  | [], _ :: _ => true
-  | _ :: _, [] => false
-  | a :: as, b :: bs => if a < b then true else if b < a then false else ltKey as bs
+  | .record fields => 20 :: keyFields fields
+  | .map k v => 21 :: (key k).length :: key k ++ key v
+  | .tuple items => 22 :: keyItems items
+  | .app name args => 23 :: (bytesKey name).length :: bytesKey name ++ keyItems args
+  | .null => [24]
+  | .undefined => [25]
+  | .number => [26]
+  | .bytes => [27]
+/-- The item-list companion of `key`. -/
+def keyItems : List Ty → List Nat
+  | [] => [0]
+  | t :: rest => 1 :: (key t).length :: key t ++ keyItems rest
+/-- The field-list companion of `key`. -/
+def keyFields : List (String × Bool × Ty) → List Nat
+  | [] => [0]
+  | (n, o, t) :: rest =>
+    1 :: (bytesKey n).length :: bytesKey n ++ (if o then 1 else 0) :: (key t).length :: key t ++
+      keyFields rest
+end
 
 /-- Insert into a list sorted by key, without duplicates. -/
 def insertMember (t : Ty) : List Ty → List Ty
@@ -186,23 +189,52 @@ def ofMembers : List Ty → Ty
   | [t] => t
   | t :: rest => .union t (ofMembers rest)
 
-
 def isNever : Ty → Bool
   | .never => true
   | .unknown | .unit | .nat | .int | .string | .bool
   | .handle _ | .option _ | .list _ | .prod _ _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _ | .union _ _
-  | .lit _ | .refOf _ | .deferredOf _ _ | .var _ => false
+  | .lit _ | .refOf _ | .deferredOf _ _ | .var _
+  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => false
 
+mutual
 /-- No template parameter inside: a program's type. `schema` is exact on closed types only
 (`Schema/Bridge.lean`); the checker instantiates every row it admits, so every type it gives
 a program is closed. -/
 def closed : Ty → Bool
   | .var _ => false
-  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ => true
+  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
+  | .null | .undefined | .number | .bytes => true
   | .option t | .list t | .causeOf t | .refOf t => closed t
-  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b =>
-    closed a && closed b
+  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b
+  | .map a b => closed a && closed b
+  | .record fs => closedFields fs
+  | .tuple ts | .app _ ts => closedItems ts
+/-- The field-list companion of `closed`. -/
+def closedFields : List (String × Bool × Ty) → Bool
+  | [] => true
+  | (_, _, t) :: rest => closed t && closedFields rest
+/-- The item-list companion of `closed`. -/
+def closedItems : List Ty → Bool
+  | [] => true
+  | t :: rest => closed t && closedItems rest
+end
+
+/-- The field companion of `closed` reads every field's type. -/
+theorem closedFields_eq_all (fs : List (String × Bool × Ty)) :
+    closedFields fs = fs.all fun p => closed p.2.2 := by
+  induction fs with
+  | nil => rfl
+  | cons p fs ih =>
+    obtain ⟨n, o, t⟩ := p
+    rw [closedFields, ih]
+    rfl
+
+/-- The item companion of `closed` reads every item. -/
+theorem closedItems_eq_all (ts : List Ty) : closedItems ts = ts.all closed := by
+  induction ts with
+  | nil => rfl
+  | cons t ts ih => rw [closedItems, ih, List.all_cons]
 
 /-- The `Scope` service handle; its spelling is written once, here. -/
 def scopeTarget : String := "Scope.Scope"
@@ -218,19 +250,10 @@ what its intermediate type says (decisions row 187). Its spelling is written onc
 def memoMapTarget : String := "Layer.MemoMap"
 def memoMap : Ty := .handle memoMapTarget
 
-/-- TypeScript's null spelling (rc.112 Option.ts:1209). -/
-def nullTarget : String := "null"
-def null : Ty := .handle nullTarget
-
-/-- TypeScript's undefined spelling (rc.112 Option.ts:1239). -/
-def undefinedTarget : String := "undefined"
-def undefined : Ty := .handle undefinedTarget
-
-/-- Nullable spellings use the existing union and allocated external-handle admission.
-They do not turn the unit value, whose type renders as `void`, into a null handle. -/
-abbrev undefinedOr (t : Ty) : Ty := .union t Ty.undefined
-abbrev nullOr (t : Ty) : Ty := .union t Ty.null
-abbrev nullable (t : Ty) : Ty := .union t (.union Ty.null Ty.undefined)
+/-- Nullable spellings: the `null` and `undefined` leaves (decisions row 160) in a union. -/
+abbrev undefinedOr (t : Ty) : Ty := .union t .undefined
+abbrev nullOr (t : Ty) : Ty := .union t .null
+abbrev nullable (t : Ty) : Ty := .union t (.union .null .undefined)
 
 /-- Effect rc.112 `Duration.Duration` (Duration.ts:84), as an opaque host handle. -/
 def durationTarget : String := "Duration.Duration"
@@ -247,79 +270,166 @@ def take (a : Ty) (e : Ty := .never) (done : Ty := .unit) : Ty :=
   .union (.list a) (.exitOf done e)
 
 
-private theorem utf8_key_injective {s t : String}
-    (h : s.toUTF8.data.toList.map UInt8.toNat =
-      t.toUTF8.data.toList.map UInt8.toNat) : s = t := by
-  have bytes : s.toUTF8.data.toList = t.toUTF8.data.toList :=
-    List.map_inj_right (fun _ _ he => UInt8.toNat_inj.mp he) |>.mp h
-  have arrays : s.toUTF8.data = t.toUTF8.data := Array.toList_inj.mp bytes
-  apply String.toByteArray_inj.mp
-  exact ByteArray.ext arrays
+private theorem flag_inj {o p : Bool} (h : (if o then 1 else 0 : Nat) = (if p then 1 else 0)) :
+    o = p := by
+  cases o <;> cases p
+  · rfl
+  · exact absurd h (by decide)
+  · exact absurd h (by decide)
+  · rfl
 
-theorem key_injective {a b : Ty} (h : key a = key b) : a = b := by
-  induction a generalizing b <;> cases b <;>
-    simp only [key, List.cons_append, List.cons.injEq] at h
-  all_goals try (rcases h with ⟨h, _⟩; contradiction)
-  all_goals try rfl
-  · exact congrArg Ty.handle (utf8_key_injective h.2)
-  · exact congrArg Ty.option (by apply_assumption; exact h.2)
-  · exact congrArg Ty.list (by apply_assumption; exact h.2)
-  · obtain ⟨hl, hr⟩ := List.append_inj h.2.2 h.2.1
-    congr 1 <;> (apply_assumption; assumption)
-  · obtain ⟨hl, hr⟩ := List.append_inj h.2.2 h.2.1
-    congr 1 <;> (apply_assumption; assumption)
-  · obtain ⟨hl, hr⟩ := List.append_inj h.2.2 h.2.1
-    congr 1 <;> (apply_assumption; assumption)
-  · exact congrArg Ty.causeOf (by apply_assumption; exact h.2)
-  · obtain ⟨hl, hr⟩ := List.append_inj h.2.2 h.2.1
-    congr 1 <;> (apply_assumption; assumption)
-  · obtain ⟨hl, hr⟩ := List.append_inj h.2.2 h.2.1
-    congr 1 <;> (apply_assumption; assumption)
-  · exact congrArg Ty.lit (utf8_key_injective h.2)
-  · exact congrArg Ty.refOf (by apply_assumption; exact h.2)
-  · obtain ⟨hl, hr⟩ := List.append_inj h.2.2 h.2.1
-    congr 1 <;> (apply_assumption; assumption)
-  · exact congrArg Ty.var h.2.1
-
-theorem ltKey_iff_lex (a b : List Nat) :
-    ltKey a b = true ↔ List.Lex (· < ·) a b := by
-  induction a generalizing b with
-  | nil => cases b <;> simp [ltKey]
-  | cons a as ih =>
-    cases b with
-    | nil => simp [ltKey]
-    | cons b bs =>
-      rw [List.cons_lex_cons_iff]
-      by_cases hab : a < b
-      · simp [ltKey, hab]
-      · by_cases hba : b < a
-        · have hne : a ≠ b := by omega
-          simp [ltKey, hab, hba, hne]
-        · have he : a = b := by omega
-          subst b
-          simp [ltKey, ih]
-
-private theorem lex_trichotomy (a b : List Nat) :
-    List.Lex (· < ·) a b ∨ a = b ∨ List.Lex (· < ·) b a := by
-  induction a generalizing b with
+/-- The field companion's injectivity, from the types' (the eliminator's hypothesis). -/
+private theorem keyFields_injective {fs : List (String × Bool × Ty)}
+    (ih : ∀ p ∈ fs, ∀ {b : Ty}, key p.2.2 = key b → p.2.2 = b) :
+    ∀ {gs : List (String × Bool × Ty)}, keyFields fs = keyFields gs → fs = gs := by
+  induction fs with
   | nil =>
-    cases b with
-    | nil => exact Or.inr (Or.inl rfl)
-    | cons b bs => exact Or.inl List.Lex.nil
-  | cons a as ih =>
-    cases b with
-    | nil => exact Or.inr (Or.inr List.Lex.nil)
-    | cons b bs =>
-      by_cases hab : a < b
-      · exact Or.inl (List.Lex.rel hab)
-      · by_cases hba : b < a
-        · exact Or.inr (Or.inr (List.Lex.rel hba))
-        · have he : a = b := by omega
-          subst b
-          rcases ih bs with hab | he | hba
-          · exact Or.inl (List.Lex.cons hab)
-          · exact Or.inr (Or.inl (congrArg (List.cons a) he))
-          · exact Or.inr (Or.inr (List.Lex.cons hba))
+    intro gs h
+    cases gs with
+    | nil => rfl
+    | cons q gs =>
+      obtain ⟨m, p, u⟩ := q
+      simp only [keyFields] at h
+      exact absurd (List.cons.inj h).1 (by decide)
+  | cons q fs ihf =>
+    intro gs h
+    obtain ⟨n, o, t⟩ := q
+    cases gs with
+    | nil =>
+      simp only [keyFields] at h
+      exact absurd (List.cons.inj h).1 (by decide)
+    | cons r gs =>
+      obtain ⟨m, p, u⟩ := r
+      simp only [keyFields, List.cons.injEq, List.append_assoc, List.cons_append] at h
+      obtain ⟨hn, hrest⟩ := List.append_inj h.2.2 h.2.1
+      simp only [List.cons.injEq] at hrest
+      obtain ⟨ho, hrest⟩ := hrest
+      obtain ⟨ht, hfs⟩ := List.append_inj hrest.2 hrest.1
+      have hnm : n = m := bytesKey_injective n m hn
+      have hop : o = p := flag_inj ho
+      have htu : t = u := ih (n, o, t) List.mem_cons_self ht
+      have hfg : fs = gs := ihf (fun q hq => ih q (List.mem_cons_of_mem _ hq)) hfs
+      rw [hnm, hop, htu, hfg]
+
+/-- The item companion's injectivity, from the items' (the eliminator's hypothesis). -/
+private theorem keyItems_injective {ts : List Ty}
+    (ih : ∀ t ∈ ts, ∀ {b : Ty}, key t = key b → t = b) :
+    ∀ {us : List Ty}, keyItems ts = keyItems us → ts = us := by
+  induction ts with
+  | nil =>
+    intro us h
+    cases us with
+    | nil => rfl
+    | cons u us =>
+      simp only [keyItems] at h
+      exact absurd (List.cons.inj h).1 (by decide)
+  | cons t ts iht =>
+    intro us h
+    cases us with
+    | nil =>
+      simp only [keyItems] at h
+      exact absurd (List.cons.inj h).1 (by decide)
+    | cons u us =>
+      simp only [keyItems, List.cons.injEq, List.cons_append] at h
+      obtain ⟨ht, hrest⟩ := List.append_inj h.2.2 h.2.1
+      rw [ih t List.mem_cons_self ht, iht (fun q hq => ih q (List.mem_cons_of_mem _ hq)) hrest]
+
+/-- The key is injective: one arm per head, each `simp only` closing the mismatched heads (their
+codes differ) and leaving the matched one. -/
+theorem key_injective {a b : Ty} (h : key a = key b) : a = b := by
+  induction a generalizing b with
+  | never =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, reduceCtorEq, false_and] at h
+    rfl
+  | unit =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
+  | nat =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
+  | int =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
+  | string =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
+  | bool =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
+  | unknown =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
+  | handle s =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    exact congrArg Ty.handle (bytesKey_injective _ _ h)
+  | lit s =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    exact congrArg Ty.lit (bytesKey_injective _ _ h)
+  | var i =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    exact congrArg Ty.var h.1
+  | option x ih =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    exact congrArg Ty.option (ih h)
+  | list x ih =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    exact congrArg Ty.list (ih h)
+  | causeOf x ih =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    exact congrArg Ty.causeOf (ih h)
+  | refOf x ih =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    exact congrArg Ty.refOf (ih h)
+  | prod x y ihx ihy =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    obtain ⟨hl, hr⟩ := List.append_inj h.2 h.1
+    rw [ihx hl, ihy hr]
+  | except x y ihx ihy =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    obtain ⟨hl, hr⟩ := List.append_inj h.2 h.1
+    rw [ihx hl, ihy hr]
+  | exitOf x y ihx ihy =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    obtain ⟨hl, hr⟩ := List.append_inj h.2 h.1
+    rw [ihx hl, ihy hr]
+  | fiberOf x y ihx ihy =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    obtain ⟨hl, hr⟩ := List.append_inj h.2 h.1
+    rw [ihx hl, ihy hr]
+  | union x y ihx ihy =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    obtain ⟨hl, hr⟩ := List.append_inj h.2 h.1
+    rw [ihx hl, ihy hr]
+  | deferredOf x y ihx ihy =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    obtain ⟨hl, hr⟩ := List.append_inj h.2 h.1
+    rw [ihx hl, ihy hr]
+  | map x y ihx ihy =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    obtain ⟨hl, hr⟩ := List.append_inj h.2 h.1
+    rw [ihx hl, ihy hr]
+  | record fs ih =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    exact congrArg Ty.record (keyFields_injective (fun p hp _ hb => ih p hp hb) h)
+  | tuple ts ih =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    exact congrArg Ty.tuple (keyItems_injective (fun p hp _ hb => ih p hp hb) h)
+  | app n ts ih =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and, true_and] at h
+    obtain ⟨hn, hrest⟩ := List.append_inj h.2 h.1
+    rw [bytesKey_injective _ _ hn, keyItems_injective (fun p hp _ hb => ih p hp hb) hrest]
+  | null =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
+  | undefined =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
+  | number =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
+  | bytes =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
+    rfl
 
 instance instLT : LT Ty where
   lt a b := ltKey a.key b.key = true
@@ -411,16 +521,26 @@ def isMember : Ty → Bool
   | .unit | .nat | .int | .string | .bool
   | .handle _ | .option _ | .list _ | .prod _ _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _
-  | .lit _ | .refOf _ | .deferredOf _ _ | .var _ | .unknown => true
+  | .lit _ | .refOf _ | .deferredOf _ _ | .var _ | .unknown
+  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => true
 
 theorem members_isMember {t x : Ty} (h : x ∈ members t) : isMember x = true := by
-  induction t <;> simp only [members, List.mem_append, List.mem_singleton] at h
-  all_goals try contradiction
-  all_goals try (subst x; rfl)
-  case union a b iha ihb => exact h.elim iha ihb
+  induction t with
+  | union a b iha ihb =>
+    rcases List.mem_append.mp h with h | h
+    · exact iha h
+    · exact ihb h
+  | never => exact absurd h List.not_mem_nil
+  | _ =>
+    simp only [members, List.mem_singleton] at h
+    subst x
+    rfl
 
 theorem members_atom {t : Ty} (h : isMember t = true) : members t = [t] := by
-  cases t <;> simp_all [isMember, members]
+  cases t
+  case never => exact Bool.noConfusion h
+  case union a b => exact Bool.noConfusion h
+  all_goals rfl
 
 theorem members_ofMembers (xs : List Ty)
     (h : ∀ x ∈ xs, isMember x = true) : members (ofMembers xs) = xs := by
@@ -434,21 +554,168 @@ theorem members_ofMembers (xs : List Ty)
       rw [ih (fun z hz => h z (List.mem_cons_of_mem x hz))]
       rfl
 
+/-! ## The canonical field order of a record (decisions rows 119, 165)
+
+A record's fields in canonical order: ascending by the name's UTF-8 bytes, the first occurrence of
+a repeated name kept (`Effect4.Field`, where every law is proved once for any key). -/
+
+/-- The canonical field order (`Field.canonBy` at the name's UTF-8 bytes). -/
+abbrev canon {β : Type} (fs : List (String × β)) : List (String × β) :=
+  Field.canonBy bytesKey fs
+
+theorem mem_canon {β : Type} {x : String × β} {fs : List (String × β)} (h : x ∈ canon fs) :
+    x ∈ fs :=
+  Field.mem_canonBy h
+
+theorem canon_eq_nil {β : Type} {fs : List (String × β)} (h : canon fs = []) : fs = [] :=
+  (Field.canonBy_eq_nil_iff fs).mp h
+
+/-- A record's head: its names with their optional flags. -/
+def heads (fs : List (String × Bool × Ty)) : List (String × Bool) := fs.map fun p => (p.1, p.2.1)
+
+/-- A list zipped with itself pairs each element with itself. -/
+theorem mem_zip_self {α : Type} : ∀ {l : List α} {a b : α}, (a, b) ∈ l.zip l → a = b
+  | [], _, _, h => absurd h List.not_mem_nil
+  | x :: xs, a, b, h => by
+    rw [List.zip_cons_cons, List.mem_cons] at h
+    rcases h with h | h
+    · simp only [Prod.mk.injEq] at h
+      rw [h.1, h.2]
+    · exact mem_zip_self h
+
+/-- Two field lists with equal heads (names and flags, in order) pair every field with a field of
+the same flag, whatever their payloads. -/
+theorem zip_flag {β γ : Type} {cf : List (String × Bool × β)} {cg : List (String × Bool × γ)}
+    (hh : cf.map (fun p => (p.1, p.2.1)) = cg.map (fun p => (p.1, p.2.1)))
+    {p : String × Bool × β} {q : String × Bool × γ} (hpq : (p, q) ∈ cf.zip cg) : p.2.1 = q.2.1 := by
+  induction cf generalizing cg with
+  | nil => exact absurd hpq (by rw [List.zip_nil_left]; exact List.not_mem_nil)
+  | cons a cf ih =>
+    cases cg with
+    | nil => exact absurd hpq (by rw [List.zip_nil_right]; exact List.not_mem_nil)
+    | cons b cg =>
+      simp only [List.map_cons, List.cons.injEq, Prod.mk.injEq] at hh
+      rw [List.zip_cons_cons, List.mem_cons] at hpq
+      rcases hpq with hpq | hpq
+      · simp only [Prod.mk.injEq] at hpq
+        rw [hpq.1, hpq.2]
+        exact hh.1.2
+      · exact ih hh.2 hpq
+
+/-! ## The leaf order: one table of declared edges, closed reflexively and transitively
+
+Every rule of the order between two **different** heads that is not a congruence is one relation on
+*leaf heads*, read from one table, `leafEdges` (decisions row 177). `sub` consults it
+(`leafRule`) before its rows; the generated view (`Laws/Program/TyView.lean`) reads the same table
+and emits its laws by `decide` over the finite head domain. Adding a rule is one list element; its
+membership obligation is one inclusion per edge, and the images must nest (row 121). -/
+
+/-- The heads the leaf order relates: childless heads. A literal's leaf head forgets its payload:
+every literal is below `string`, and two different literals are related by `sub`'s reflexive line
+only. -/
+inductive LeafHead where
+  | lit
+  | string
+  | nat
+  | int
+  | number
+  | undefined
+  | unit
+deriving DecidableEq, Repr
+
+/-- Every leaf head: the finite domain the closure's checks range over. -/
+def LeafHead.all : List LeafHead := [.lit, .string, .nat, .int, .number, .undefined, .unit]
+
+/-- A type's leaf head, when its head is one. -/
+def leafHead : Ty → Option LeafHead
+  | .lit _ => some .lit
+  | .string => some .string
+  | .nat => some .nat
+  | .int => some .int
+  | .number => some .number
+  | .undefined => some .undefined
+  | .unit => some .unit
+  | _ => none
+
+/-- **The declared edges** (one element per rule). The number tower is two edges: `nat` below
+`number` is their composite, not an entry. -/
+def leafEdges : List (LeafHead × LeafHead) :=
+  [ (.lit, .string)        -- a literal below its base
+  , (.nat, .int)           -- decisions row 121: the number tower, over nesting images
+  , (.int, .number)
+  , (.undefined, .unit) ]  -- decisions row 160: `undefined` below `void`
+
+/-- Reachability in a table of edges, with fuel. -/
+def leafReach (edges : List (LeafHead × LeafHead)) : Nat → LeafHead → LeafHead → Bool
+  | 0, x, y => decide (x = y)
+  | n + 1, x, y => decide (x = y) || edges.any fun e => decide (e.1 = x) && leafReach edges n e.2 y
+
+/-- **The leaf order**: the table's reflexive-transitive closure. The fuel is the table's length,
+which bounds a path in an acyclic table (`leafLe_iff_path`, the generated view). -/
+def leafLe (x y : LeafHead) : Bool := leafReach leafEdges leafEdges.length x y
+
+/-- **The rule `sub` consults before its rows**: two types whose leaf heads differ and are related
+by the leaf order. -/
+def leafRule (a b : Ty) : Bool :=
+  match leafHead a, leafHead b with
+  | some x, some y => !decide (x = y) && leafLe x y
+  | _, _ => false
+
+/-! ## Subtyping -/
+
+/-- A field's type is smaller than its field list. -/
+theorem sizeOf_field_lt {p : String × Bool × Ty} {fs : List (String × Bool × Ty)} (h : p ∈ fs) :
+    sizeOf p.2.2 < sizeOf fs := by
+  have hp : sizeOf p < sizeOf fs := List.sizeOf_lt_of_mem h
+  obtain ⟨n, b, t⟩ := p
+  simp only [Prod.mk.sizeOf_spec] at hp
+  simp only
+  omega
+
+theorem sizeOf_lt_of_mem_zip_canon {fs gs : List (String × Bool × Ty)}
+    {pq : (String × Bool × Ty) × (String × Bool × Ty)}
+    (h : pq ∈ (canon fs).zip (canon gs)) :
+    sizeOf pq.1.2.2 + sizeOf pq.2.2.2 < 1 + sizeOf fs + (1 + sizeOf gs) := by
+  have h1 := sizeOf_field_lt (mem_canon (List.of_mem_zip h).1)
+  have h2 := sizeOf_field_lt (mem_canon (List.of_mem_zip h).2)
+  omega
+
+theorem sizeOf_lt_of_mem_zip {xs ys : List Ty} {pq : Ty × Ty} (h : pq ∈ xs.zip ys) :
+    sizeOf pq.1 + sizeOf pq.2 < 1 + sizeOf xs + (1 + sizeOf ys) := by
+  have h1 : sizeOf pq.1 < sizeOf xs := List.sizeOf_lt_of_mem (List.of_mem_zip h).1
+  have h2 : sizeOf pq.2 < sizeOf ys := List.sizeOf_lt_of_mem (List.of_mem_zip h).2
+  omega
+
+theorem sizeOf_lt_of_mem_zipIdx_zip {n1 n2 : String} {xs ys : List Ty}
+    {pq : (Ty × Nat) × (Ty × Nat)} (h : pq ∈ xs.zipIdx.zip ys.zipIdx) :
+    sizeOf pq.1.1 + sizeOf pq.2.1 < 1 + sizeOf n1 + sizeOf xs + (1 + sizeOf n2 + sizeOf ys) := by
+  have h1 : sizeOf pq.1.1 < sizeOf xs :=
+    List.sizeOf_lt_of_mem (List.fst_mem_of_mem_zipIdx (List.of_mem_zip h).1)
+  have h2 : sizeOf pq.2.1 < sizeOf ys :=
+    List.sizeOf_lt_of_mem (List.fst_mem_of_mem_zipIdx (List.of_mem_zip h).2)
+  omega
+
 /-- The subtype relation on `Ty` (DI-15). Covariant in structural constructors and at the
 fiber handle (`Fiber<out A, out E>`); invariant at the cell and promise handles
 (`Ref<in out A>`, `Deferred<in out A, in out E>`, rc.112 `Ref.ts:59`, `Deferred.ts:58`), since
 a cell is written through its handle and a widened handle would admit a write the other
 alias reads at the narrower type (decisions row 55); unions distribute on the left and are
-choices on the right; string literals are subtypes of `string`. Reflexive. -/
+choices on the right; the leaf table (`leafRule`) before the rows: a literal below `string`, the
+number tower `nat ⊑ int ⊑ number`, `undefined` below `void`. A record compares its canonical
+field lists: equal heads (names with flags, exact: row 178 (a)), then each field type below its
+partner, with no width rule; a map is exact in the key and covariant in the value; a tuple is
+pointwise at exact arity; a reference compares its name and arity, then each argument at the
+named declaration's variance (`argVariance`). Reflexive. The variable-arity arms are in the form
+the generated view proves (`decide (head) && (zip).attach.all …`). -/
 def sub (a b : Ty) : Bool :=
   if a = b then true
+  else if leafRule a b then true
   else match a, b with
   | .never, _ => true
   | .union a1 a2, b => sub a1 b && sub a2 b
   | a, .union b1 b2 => sub a b1 || sub a b2
   -- the top (decisions row 46): every type is below `unknown`
   | _, .unknown => true
-  | .lit _, .string => true
   | .option a, .option b => sub a b
   | .list a, .list b => sub a b
   | .prod a1 a2, .prod b1 b2 => sub a1 b1 && sub a2 b2
@@ -458,8 +725,52 @@ def sub (a b : Ty) : Bool :=
   | .fiberOf a1 e1, .fiberOf a2 e2 => sub a1 a2 && sub e1 e2
   | .refOf a1, .refOf a2 => sub a1 a2 && sub a2 a1
   | .deferredOf a1 e1, .deferredOf a2 e2 => sub a1 a2 && sub a2 a1 && sub e1 e2 && sub e2 e1
+  | .record fs, .record gs =>
+    decide ((canon fs).map (fun p => (p.1, p.2.1)) = (canon gs).map (fun p => (p.1, p.2.1))) &&
+      ((canon fs).zip (canon gs)).attach.all fun ⟨pq, h⟩ =>
+        have : sizeOf pq.1.2.2 + sizeOf pq.2.2.2 < 1 + sizeOf fs + (1 + sizeOf gs) :=
+          sizeOf_lt_of_mem_zip_canon h
+        sub pq.1.2.2 pq.2.2.2
+  | .map k1 v1, .map k2 v2 => sub k1 k2 && sub k2 k1 && sub v1 v2
+  | .tuple xs, .tuple ys =>
+    decide (xs.length = ys.length) &&
+      (xs.zip ys).attach.all fun ⟨pq, h⟩ =>
+        have : sizeOf pq.1 + sizeOf pq.2 < 1 + sizeOf xs + (1 + sizeOf ys) := sizeOf_lt_of_mem_zip h
+        sub pq.1 pq.2
+  | .app n1 xs, .app n2 ys =>
+    decide (n1 = n2) && decide (xs.length = ys.length) &&
+      (xs.zipIdx.zip ys.zipIdx).attach.all fun ⟨pq, h⟩ =>
+        have : sizeOf pq.1.1 + sizeOf pq.2.1 < 1 + sizeOf n1 + sizeOf xs + (1 + sizeOf n2 + sizeOf ys) :=
+          sizeOf_lt_of_mem_zipIdx_zip h
+        (argVariance n1 pq.1.2).select (sub pq.1.1 pq.2.1) (sub pq.2.1 pq.1.1)
   | _, _ => false
 termination_by sizeOf a + sizeOf b
+
+/-! ### The table's line of `sub` (the four lemmas the generated view reads) -/
+
+/-- The table is silent when the left side has no leaf head. -/
+theorem leafRule_of_left_none (a b : Ty) (h : leafHead a = none) : leafRule a b = false := by
+  unfold leafRule
+  rw [h]
+
+/-- The table is silent when the right side has no leaf head. -/
+theorem leafRule_of_right_none (a b : Ty) (h : leafHead b = none) : leafRule a b = false := by
+  unfold leafRule
+  rw [h]
+  cases leafHead a <;> rfl
+
+/-- The table's line of `sub`, when the table is silent. -/
+theorem ite_leafRule_false {a b : Ty} {r : Bool} (h : leafRule a b = false) :
+    (if leafRule a b = true then true else r) = r := by
+  rw [h]
+  rfl
+
+/-- Each rule of the table is in the order. -/
+theorem sub_of_leafRule {a b : Ty} (h : leafRule a b = true) : sub a b = true := by
+  unfold sub
+  by_cases hab : a = b
+  · rw [if_pos hab]
+  · rw [if_neg hab, if_pos h]
 
 /-! ## Row templates (decisions row 42)
 
@@ -474,6 +785,7 @@ make: `join`, how a parameter repeated across an application's arguments binds. 
 /-- Bindings for a template's parameters, by index. -/
 abbrev Subst := List (Nat × Ty)
 
+mutual
 /-- Each parameter replaced by its binding. A parameter no binding names is `never`: what
 TypeScript infers for a parameter the arguments leave unconstrained, which happens only on a
 branch a `never` request marks as dead. -/
@@ -489,6 +801,10 @@ def instantiate (σ : Subst) : Ty → Ty
   | .refOf t => .refOf (instantiate σ t)
   | .deferredOf a b => .deferredOf (instantiate σ a) (instantiate σ b)
   | .union a b => .union (instantiate σ a) (instantiate σ b)
+  | .map a b => .map (instantiate σ a) (instantiate σ b)
+  | .record fs => .record (instantiateFields σ fs)
+  | .tuple ts => .tuple (instantiateItems σ ts)
+  | .app n ts => .app n (instantiateItems σ ts)
   | .never => .never
   | .unknown => .unknown
   | .unit => .unit
@@ -498,6 +814,36 @@ def instantiate (σ : Subst) : Ty → Ty
   | .bool => .bool
   | .handle s => .handle s
   | .lit s => .lit s
+  | .null => .null
+  | .undefined => .undefined
+  | .number => .number
+  | .bytes => .bytes
+/-- The field-list companion of `instantiate`. -/
+def instantiateFields (σ : Subst) : List (String × Bool × Ty) → List (String × Bool × Ty)
+  | [] => []
+  | (n, o, t) :: rest => (n, o, instantiate σ t) :: instantiateFields σ rest
+/-- The item-list companion of `instantiate`. -/
+def instantiateItems (σ : Subst) : List Ty → List Ty
+  | [] => []
+  | t :: rest => instantiate σ t :: instantiateItems σ rest
+end
+
+/-- The field companion of `instantiate` is a map. -/
+theorem instantiateFields_eq_map (σ : Subst) (fs : List (String × Bool × Ty)) :
+    instantiateFields σ fs = fs.map (fun q => (q.1, q.2.1, instantiate σ q.2.2)) := by
+  induction fs with
+  | nil => rfl
+  | cons p fs ih =>
+    obtain ⟨n, o, t⟩ := p
+    rw [instantiateFields, ih]
+    rfl
+
+/-- The item companion of `instantiate` is a map. -/
+theorem instantiateItems_eq_map (σ : Subst) (ts : List Ty) :
+    instantiateItems σ ts = ts.map (instantiate σ) := by
+  induction ts with
+  | nil => rfl
+  | cons t ts ih => rw [instantiateItems, ih, List.map_cons]
 
 /-- The bindings a request fixes for a template, read structurally from the seed: a
 parameter binds at its first occurrence, to the request's type at that position; shapes that
@@ -583,14 +929,18 @@ theorem factors_isFactor {t x : Ty} (h : x ∈ factors t) : isFactor x = true :=
   | never => simp only [factors, List.mem_singleton] at h; subst x; rfl
   | union a b =>
     have hm := members_isMember (t := .union a b) h
-    cases x <;> simp_all [isMember, isFactor]
+    cases x
+    case union => exact Bool.noConfusion hm
+    all_goals rfl
   | _ =>
     simp only [factors, members, List.mem_singleton] at h
     subst x
     rfl
 
 theorem factors_singleton {t : Ty} (h : isFactor t = true) : factors t = [t] := by
-  cases t <;> simp_all [factors, isFactor, members]
+  cases t
+  case union => exact Bool.noConfusion h
+  all_goals rfl
 
 /-- Sort, deduplicate and retain only maximal union members. -/
 def normalizeRow (xs : List Ty) : Effect4.Row Ty :=
@@ -609,7 +959,21 @@ theorem mem_normalizeRow (x : Ty) (xs : List Ty) :
 def productMembers (a b : Ty) : List Ty :=
   a.factors.flatMap fun x => b.factors.map fun y => .prod x y
 
-/-- Deep normalization uses the existing canonical finite-row algebra. -/
+/-- A tuple of normal items: two items are a product (distributed, as `prod` normalizes), any
+other arity stays a tuple. -/
+def normTuple : List Ty → Ty
+  | [a, b] => ofMembers (normalizeRow (productMembers a b)).elems
+  | items => .tuple items
+
+/-- A reference at normal arguments: with none it is the handle at its name. -/
+def normApp (name : String) : List Ty → Ty
+  | [] => .handle name
+  | args => .app name args
+
+mutual
+/-- Deep normalization uses the existing canonical finite-row algebra. A record normalizes each
+field type, then takes the canonical field order; a tuple of two items is a product (normalized as
+one); a reference with no argument is a handle. -/
 def normalize : Ty → Ty
   | .option t => .option (normalize t)
   | .list t => .list (normalize t)
@@ -632,8 +996,83 @@ def normalize : Ty → Ty
   | .bool => .bool
   | .handle s => .handle s
   | .lit s => .lit s
+  | .record fs => .record (canon (normalizeFields fs))
+  | .map k v => .map (normalize k) (normalize v)
+  | .tuple items => normTuple (normalizeItems items)
+  | .app name args => normApp name (normalizeItems args)
+  | .null => .null
+  | .undefined => .undefined
+  | .number => .number
+  | .bytes => .bytes
+/-- The item-list companion of `normalize`. -/
+def normalizeItems : List Ty → List Ty
+  | [] => []
+  | t :: rest => normalize t :: normalizeItems rest
+/-- The field-list companion of `normalize`. -/
+def normalizeFields : List (String × Bool × Ty) → List (String × Bool × Ty)
+  | [] => []
+  | (n, o, t) :: rest => (n, o, normalize t) :: normalizeFields rest
+end
 
-/-- Proof-only construction invariant. Its row case has canonical atomic members. -/
+/-- A field's payload, normalized: the flag kept, the type normalized. -/
+def normPayload (c : Bool × Ty) : Bool × Ty := (c.1, normalize c.2)
+
+/-- The field companion is a payload map, so `Field.canonBy_map` applies to it. -/
+theorem normalizeFields_eq_map (fs : List (String × Bool × Ty)) :
+    normalizeFields fs = fs.map (fun q => (q.1, normPayload q.2)) := by
+  induction fs with
+  | nil => rfl
+  | cons p fs ih =>
+    obtain ⟨n, o, t⟩ := p
+    rw [normalizeFields, ih]
+    rfl
+
+/-- The item companion is a map. -/
+theorem normalizeItems_eq_map (ts : List Ty) : normalizeItems ts = ts.map normalize := by
+  induction ts with
+  | nil => rfl
+  | cons t ts ih => rw [normalizeItems, ih, List.map_cons]
+
+/-- A record normalizes to its canonical fields with normalized types. -/
+theorem normalize_record (fs : List (String × Bool × Ty)) :
+    normalize (.record fs) = .record ((canon fs).map (fun q => (q.1, normPayload q.2))) := by
+  rw [normalize, normalizeFields_eq_map, canon, Field.canonBy_map]
+
+/-- A payload map keeps the heads when it keeps every flag. -/
+theorem heads_normPayload (l : List (String × Bool × Ty)) :
+    heads (l.map (fun q => (q.1, normPayload q.2))) = heads l := by
+  simp only [heads, List.map_map]
+  rfl
+
+/-- A tuple of any arity but two normalizes its items in place. -/
+theorem normalize_tuple_of_ne (ts : List Ty) (h : ts.length ≠ 2) :
+    normalize (.tuple ts) = .tuple (normalizeItems ts) := by
+  rw [normalize, normalizeItems_eq_map]
+  match ts, h with
+  | [], _ => rfl
+  | [_], _ => rfl
+  | _ :: _ :: _ :: _, _ => rfl
+
+/-- A pair tuple normalizes as the product of its items. -/
+theorem normalize_tuple_pair (a b : Ty) : normalize (.tuple [a, b]) = normalize (.prod a b) := by
+  rw [normalize, normalize, normalizeItems_eq_map]
+  rfl
+
+/-- A reference with arguments normalizes them in place. -/
+theorem normalize_app_of_ne (n : String) (ts : List Ty) (h : ts ≠ []) :
+    normalize (.app n ts) = .app n (normalizeItems ts) := by
+  rw [normalize, normalizeItems_eq_map]
+  match ts, h with
+  | _ :: _, _ => rfl
+
+/-- A reference with no argument is the handle at its name. -/
+theorem normalize_app_nil (n : String) : normalize (.app n []) = .handle n := by
+  rw [normalize]
+  rfl
+
+/-- Proof-only construction invariant. Its row case has canonical atomic members; a record's
+fields are canonical (strictly ascending by name) and each normal; a tuple's arity is not two; a
+reference has an argument. -/
 inductive Normal : Ty → Prop
   | never : Normal .never
   | unknown : Normal .unknown
@@ -659,13 +1098,26 @@ inductive Normal : Ty → Prop
       (atoms : ∀ t ∈ r.elems, isMember t = true)
       (maximal : ∀ x ∈ r.elems, ∀ y ∈ r.elems, sub x y = true → sub y x = true) :
       Normal (ofMembers r.elems)
+  | record {fs : List (String × Bool × Ty)} :
+      (∀ p ∈ fs, Normal p.2.2) → Field.Ascending bytesKey fs → Normal (.record fs)
+  | map {k v} : Normal k → Normal v → Normal (.map k v)
+  | tuple {ts : List Ty} : (∀ t ∈ ts, Normal t) → ts.length ≠ 2 → Normal (.tuple ts)
+  | app {n : String} {ts : List Ty} : (∀ t ∈ ts, Normal t) → ts ≠ [] → Normal (.app n ts)
+  | null : Normal .null
+  | undefined : Normal .undefined
+  | number : Normal .number
+  | bytes : Normal .bytes
 
 theorem Normal.members {t x : Ty} (h : Normal t) (hx : x ∈ t.members) : Normal x := by
-  cases h <;> try (simp only [Ty.members, List.mem_singleton] at hx; subst x; constructor <;> assumption)
-  case never => exact False.elim (List.not_mem_nil hx)
+  cases h
+  case never => exact absurd hx List.not_mem_nil
   case row r children atoms maximal =>
     rw [members_ofMembers r.elems atoms] at hx
     exact children x hx
+  all_goals
+    simp only [Ty.members, List.mem_singleton] at hx
+    subst x
+    constructor <;> assumption
 
 theorem Normal.factors {t x : Ty} (h : Normal t) (hx : x ∈ t.factors) : Normal x := by
   cases t with
@@ -679,6 +1131,29 @@ theorem normal_row (xs : List Ty) (hn : ∀ t ∈ xs, Normal t)
   · intro t ht; exact ha t ((mem_normalizeRow t xs).mp ht).1
   · intro x hx y hy hxy
     exact ((mem_normalizeRow x xs).mp hx).2 y ((mem_normalizeRow y xs).mp hy).1 hxy
+
+/-- A tuple of normal items normalizes to a normal form: a product row at arity two. -/
+theorem normal_normTuple : ∀ (xs : List Ty), (∀ t ∈ xs, Normal t) → Normal (normTuple xs)
+  | [a, b], h => by
+    have iha := h a List.mem_cons_self
+    have ihb := h b (List.mem_cons_of_mem _ List.mem_cons_self)
+    apply normal_row
+    · intro t ht
+      obtain ⟨x, hx, ht⟩ := List.mem_flatMap.mp ht
+      obtain ⟨y, hy, rfl⟩ := List.mem_map.mp ht
+      exact .prod (iha.factors hx) (ihb.factors hy) (factors_isFactor hx) (factors_isFactor hy)
+    · intro t ht
+      obtain ⟨x, hx, ht⟩ := List.mem_flatMap.mp ht
+      obtain ⟨y, hy, rfl⟩ := List.mem_map.mp ht
+      rfl
+  | [], h => .tuple h (by simp only [List.length_nil]; omega)
+  | [_], h => .tuple h (by simp only [List.length_cons, List.length_nil]; omega)
+  | _ :: _ :: _ :: _, h => .tuple h (by simp only [List.length_cons]; omega)
+
+/-- A reference at normal arguments is a normal form. -/
+theorem normal_normApp (n : String) : ∀ (xs : List Ty), (∀ t ∈ xs, Normal t) → Normal (normApp n xs)
+  | [], _ => .handle n
+  | _ :: _, h => .app h (List.cons_ne_nil _ _)
 
 theorem normal_normalize (t : Ty) : Normal (normalize t) := by
   induction t with
@@ -718,6 +1193,27 @@ theorem normal_normalize (t : Ty) : Normal (normalize t) := by
       · exact ihb.members hb
     · intro t ht
       exact (List.mem_append.mp ht).elim members_isMember members_isMember
+  | record fs ih =>
+    refine .record (fun x hx => ?_) (Field.canonBy_ascending _)
+    have hx' := Field.mem_canonBy hx
+    rw [normalizeFields_eq_map] at hx'
+    obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hx'
+    exact ih p hp
+  | map k v ihk ihv => exact .map ihk ihv
+  | tuple ts ih =>
+    rw [normalize, normalizeItems_eq_map]
+    exact normal_normTuple _ fun t ht => by
+      obtain ⟨u, hu, rfl⟩ := List.mem_map.mp ht
+      exact ih u hu
+  | app n ts ih =>
+    rw [normalize, normalizeItems_eq_map]
+    exact normal_normApp n _ fun t ht => by
+      obtain ⟨u, hu, rfl⟩ := List.mem_map.mp ht
+      exact ih u hu
+  | null => exact .null
+  | undefined => exact .undefined
+  | number => exact .number
+  | bytes => exact .bytes
 
 theorem normalize_ofMembers_fixed (xs : List Ty)
     (ha : ∀ t ∈ xs, isMember t = true)
@@ -743,16 +1239,58 @@ theorem normalize_ofMembers_fixed (xs : List Ty)
       rw [Effect4.Row.normalize_of_ascending _ hs,
         (Effect4.Row.antichain_eq_self_iff sub _).mpr hm]
 
+/-- A canonical field list of normal types is its own normal form. -/
+theorem normalizeFields_fixed (fs : List (String × Bool × Ty))
+    (hf : ∀ p ∈ fs, normalize p.2.2 = p.2.2) : normalizeFields fs = fs := by
+  induction fs with
+  | nil => rfl
+  | cons p fs ih =>
+    obtain ⟨n, o, t⟩ := p
+    rw [normalizeFields, hf (n, o, t) List.mem_cons_self,
+      ih (fun q hq => hf q (List.mem_cons_of_mem _ hq))]
+
 theorem Normal.fixed {t : Ty} (h : Normal t) : normalize t = t := by
-  induction h <;> try (simp only [normalize, *])
+  induction h
+  case never => rfl
+  case unknown => rfl
+  case unit => rfl
+  case nat => rfl
+  case int => rfl
+  case string => rfl
+  case bool => rfl
+  case handle => rfl
+  case lit => rfl
+  case var => rfl
+  case option t _ ih => rw [normalize, ih]
+  case list t _ ih => rw [normalize, ih]
+  case except a b _ _ iha ihb => rw [normalize, iha, ihb]
+  case exitOf a b _ _ iha ihb => rw [normalize, iha, ihb]
+  case causeOf t _ ih => rw [normalize, ih]
+  case fiberOf a b _ _ iha ihb => rw [normalize, iha, ihb]
+  case refOf a _ ih => rw [normalize, ih]
+  case deferredOf a b _ _ iha ihb => rw [normalize, iha, ihb]
+  case map k v _ _ ihk ihv => rw [normalize, ihk, ihv]
   case prod a b ha hb hfa hfb iha ihb =>
-    simp only [productMembers, factors_singleton hfa, factors_singleton hfb,
+    simp only [normalize, iha, ihb, productMembers, factors_singleton hfa, factors_singleton hfb,
       List.flatMap_cons, List.flatMap_nil, List.map_cons, List.map_nil, List.append_nil]
     change ofMembers (Effect4.Row.antichain sub [.prod a b]) = .prod a b
     rw [Effect4.Row.antichain_singleton]
     rfl
   case row r children atoms maximal ih =>
     exact normalize_ofMembers_fixed r.elems atoms ih r.ascending maximal
+  case record fs hfs hasc ih =>
+    rw [normalize, normalizeFields_fixed fs ih]
+    exact congrArg Ty.record (Field.canonBy_of_ascending fs hasc)
+  case tuple ts _ hlen ih =>
+    rw [normalize_tuple_of_ne ts hlen, normalizeItems_eq_map]
+    exact congrArg Ty.tuple ((List.map_congr_left ih).trans (List.map_id ts))
+  case app n ts _ hne ih =>
+    rw [normalize_app_of_ne n ts hne, normalizeItems_eq_map]
+    exact congrArg (Ty.app n) ((List.map_congr_left ih).trans (List.map_id ts))
+  case null => rfl
+  case undefined => rfl
+  case number => rfl
+  case bytes => rfl
 
 /-- Construction is total; no checked partial constructor is needed. -/
 theorem normalize_idem (t : Ty) : normalize (normalize t) = normalize t :=
@@ -768,12 +1306,6 @@ def chunk (inner : Ty) : Ty := .handle (chunkTarget inner)
 
 /-- Canonical union includes deep normalization of both inputs. -/
 def join (a b : Ty) : Ty := normalize (.union a b)
-
-/-- The top (decisions row 46): every type is below `unknown`, a union memberwise. -/
-theorem sub_unknown (t : Ty) : sub t unknown = true := by
-  induction t with
-  | union a b iha ihb => unfold sub; simp [iha, ihb]
-  | _ => unfold sub; simp
 
 /-- A member the tag test `tagIs tag` can be true on: a pair whose first component is the
 literal `tag` (DI-39). A bare `lit tag` is not one — the atom is false on a bare string. -/
@@ -817,28 +1349,75 @@ def Canonical (t : Ty) : Prop := normalize t = t
 
 theorem sub_refl (t : Ty) : sub t t = true := by
   unfold sub
-  simp
+  rw [if_pos rfl]
 
 theorem sub_union_right (a b1 b2 : Ty) (ha : isMember a = true) :
     sub a (.union b1 b2) = (sub a b1 || sub a b2) := by
   have hne : a ≠ .union b1 b2 := by
     rintro rfl
-    contradiction
+    exact Bool.noConfusion ha
   conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-  cases a <;> try contradiction
+  rw [if_neg hne, ite_leafRule_false (leafRule_of_right_none a (.union b1 b2) rfl)]
+  cases a
+  case never => exact Bool.noConfusion ha
+  case union => exact Bool.noConfusion ha
   all_goals rfl
 
 theorem sub_union_left (a1 a2 b : Ty) (hne : union a1 a2 ≠ b) :
     sub (union a1 a2) b = (sub a1 b && sub a2 b) := by
   conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
+  rw [if_neg hne, ite_leafRule_false (leafRule_of_left_none (.union a1 a2) b rfl)]
 
+/-- The top (decisions row 46): every type is below `unknown`, a union memberwise. -/
+theorem sub_unknown (t : Ty) : sub t unknown = true := by
+  induction t with
+  | union a b iha ihb =>
+    rw [sub_union_left a b .unknown (fun h => Ty.noConfusion h), iha, ihb]
+    rfl
+  | unknown => exact sub_refl _
+  | _ =>
+    unfold sub
+    rw [if_neg (fun h => Ty.noConfusion h), ite_leafRule_false (leafRule_of_right_none _ .unknown rfl)]
+
+/-- A literal is below `string`: the leaf table's first edge. -/
 theorem sub_lit_string (s : String) :
-    sub (lit s) string = true := by
-  have hne : lit s ≠ string := by intro h; contradiction
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
+    sub (lit s) string = true :=
+  sub_of_leafRule rfl
+
+/-! ## Formation: the located refusals a record and a map add -/
+
+/-- A boundary field path. -/
+abbrev Path := List String
+
+mutual
+/-- The first record anywhere in the type with a repeated field name, with its path (decisions
+row 119: repeated names refused at formation; `Field.firstRepeated_eq_none_iff`). -/
+def findRepeatedField (pos : Path) : Ty → Option (Path × String)
+  | .record fs =>
+    match Field.firstRepeated fs with
+    | some n => some (pos, n)
+    | none => findRepeatedFields pos fs
+  | .option t | .list t | .causeOf t | .refOf t => findRepeatedField (pos ++ ["inner"]) t
+  | .prod a b | .union a b | .except a b | .exitOf a b | .fiberOf a b | .deferredOf a b =>
+    findRepeatedField (pos ++ ["left"]) a <|> findRepeatedField (pos ++ ["right"]) b
+  | .map k v => findRepeatedField (pos ++ ["key"]) k <|> findRepeatedField (pos ++ ["value"]) v
+  | .tuple ts | .app _ ts => findRepeatedItems pos 0 ts
+  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ | .var _
+  | .null | .undefined | .number | .bytes => none
+/-- The field-list companion of `findRepeatedField`. -/
+def findRepeatedFields (pos : Path) : List (String × Bool × Ty) → Option (Path × String)
+  | [] => none
+  | (n, _, t) :: rest => findRepeatedField (pos ++ [n]) t <|> findRepeatedFields pos rest
+/-- The item-list companion of `findRepeatedField`. -/
+def findRepeatedItems (pos : Path) (i : Nat) : List Ty → Option (Path × String)
+  | [] => none
+  | t :: rest => findRepeatedField (pos ++ [toString i]) t <|> findRepeatedItems pos (i + 1) rest
+end
+
+/-- A map's key type is `string` (decisions row 125 as ruled: string-keyed maps in the wave). A
+literal key is a record's property, not a map's (rc.112 `SchemaAST.record`, literal keys become
+property signatures); any other key type is refused until DI-78 freezes its contract. -/
+def mapKeyOk (k : Ty) : Bool := decide (k.normalize = .string)
 
 end Ty
 end Effect4.Program

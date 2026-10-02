@@ -48,11 +48,19 @@ inductive TyCtor where
   | deferredOf
   | var
   | unknown
+  | record
+  | map
+  | tuple
+  | app
+  | null
+  | undefined
+  | number
+  | bytes
 deriving DecidableEq, Repr
 
 /-- Every tag, in declaration order. -/
 def TyCtor.all : List TyCtor :=
-  [.never, .unit, .nat, .int, .string, .bool, .handle, .option, .list, .prod, .except, .exitOf, .causeOf, .fiberOf, .union, .lit, .refOf, .deferredOf, .var, .unknown]
+  [.never, .unit, .nat, .int, .string, .bool, .handle, .option, .list, .prod, .except, .exitOf, .causeOf, .fiberOf, .union, .lit, .refOf, .deferredOf, .var, .unknown, .record, .map, .tuple, .app, .null, .undefined, .number, .bytes]
 
 /-- The tag of a node: one level, no recursion. -/
 def tyCtor : Effect4.Program.Ty → TyCtor
@@ -76,6 +84,14 @@ def tyCtor : Effect4.Program.Ty → TyCtor
   | .deferredOf _ _ => .deferredOf
   | .var _ => .var
   | .unknown => .unknown
+  | .record _ => .record
+  | .map _ _ => .map
+  | .tuple _ => .tuple
+  | .app _ _ => .app
+  | .null => .null
+  | .undefined => .undefined
+  | .number => .number
+  | .bytes => .bytes
 
 /-- The constructor's name, as the declaration spells it. -/
 def TyCtor.name : TyCtor → String
@@ -99,6 +115,14 @@ def TyCtor.name : TyCtor → String
   | .deferredOf => "deferredOf"
   | .var => "var"
   | .unknown => "unknown"
+  | .record => "record"
+  | .map => "map"
+  | .tuple => "tuple"
+  | .app => "app"
+  | .null => "null"
+  | .undefined => "undefined"
+  | .number => "number"
+  | .bytes => "bytes"
 
 /-- The constructor's binder names, in declaration order. -/
 def TyCtor.binders : TyCtor → List String
@@ -122,88 +146,301 @@ def TyCtor.binders : TyCtor → List String
   | .deferredOf => ["value", "error"]
   | .var => ["index"]
   | .unknown => []
+  | .record => ["fields"]
+  | .map => ["key", "value"]
+  | .tuple => ["items"]
+  | .app => ["name", "args"]
+  | .null => []
+  | .undefined => []
+  | .number => []
+  | .bytes => []
 
-/-- The non-recursive payload of a node, by sort. -/
-inductive TyLeaf where
-  | none
+/-- One argument of a constructor of `Effect4.Program.Ty`, by sort: a member is a `child`, a leaf type has its sort's
+constructor, and a member under a container has its position's, the container kept with the carrier in
+the member's place, so a position's payloads travel with its children. -/
+inductive TyArgF (R : Type u) where
+  | child (r : R)
   | str (v : String)
   | nat (v : Nat)
-deriving DecidableEq, Repr
+  | list_prod_string_prod_bool_ty (v : List (String × Bool × R))
+  | list_ty (v : List R)
 
-/-- The payload of a node: one level, no recursion. -/
-def tyLeaf : Effect4.Program.Ty → TyLeaf
-  | .never => .none
-  | .unit => .none
-  | .nat => .none
-  | .int => .none
-  | .string => .none
-  | .bool => .none
-  | .handle a0 => (.str a0)
-  | .option _ => .none
-  | .list _ => .none
-  | .prod _ _ => .none
-  | .except _ _ => .none
-  | .exitOf _ _ => .none
-  | .causeOf _ => .none
-  | .fiberOf _ _ => .none
-  | .union _ _ => .none
-  | .lit a0 => (.str a0)
-  | .refOf _ => .none
-  | .deferredOf _ _ => .none
-  | .var a0 => (.nat a0)
-  | .unknown => .none
+/-- The children at a `Bool × R` position, in order. -/
+def kids_pos_prod_bool_ty {R : Type u} : Bool × R → List R
+  | (_, v) => [v]
 
-/-- A node from its tag, payload and children; a tag whose payload or arity does not
-match is `never`. -/
-def tyBuild : TyCtor → TyLeaf → List Effect4.Program.Ty → Effect4.Program.Ty
-  | .never, .none, [] => .never
-  | .unit, .none, [] => .unit
-  | .nat, .none, [] => .nat
-  | .int, .none, [] => .int
-  | .string, .none, [] => .string
-  | .bool, .none, [] => .bool
-  | .handle, .str a0, [] => .handle a0
-  | .option, .none, [a0] => .option a0
-  | .list, .none, [a0] => .list a0
-  | .prod, .none, [a0, a1] => .prod a0 a1
-  | .except, .none, [a0, a1] => .except a0 a1
-  | .exitOf, .none, [a0, a1] => .exitOf a0 a1
-  | .causeOf, .none, [a0] => .causeOf a0
-  | .fiberOf, .none, [a0, a1] => .fiberOf a0 a1
-  | .union, .none, [a0, a1] => .union a0 a1
-  | .lit, .str a0, [] => .lit a0
-  | .refOf, .none, [a0] => .refOf a0
-  | .deferredOf, .none, [a0, a1] => .deferredOf a0 a1
-  | .var, .nat a0, [] => .var a0
-  | .unknown, .none, [] => .unknown
-  | _, _, _ => .never
+/-- The children's values at a `Bool × M` position, combined as `foldMap_ty` combines them. -/
+def comb_pos_prod_bool_ty {M : Type u} (_unit : M) (_op : M → M → M) : Bool × M → M
+  | (_, v) => v
 
-/-- The children of a node, in declaration order. -/
-def tyKids : Effect4.Program.Ty → List Effect4.Program.Ty
+/-- Two maps at a `Bool × A` position fuse into one. -/
+theorem map_pos_prod_bool_ty_comp {A : Type u} {B : Type v} {C : Type w} (h : B → C) (k : A → B)
+    (x : Bool × A) :
+    (prodMapSnd h (prodMapSnd k x)) = (prodMapSnd (fun s => h (k s)) x) := by
+  cases x with
+  | mk u v => simp only [prodMapSnd_mk]
+
+/-- The map at a `Bool × A` position at the identity is the identity. -/
+theorem map_pos_prod_bool_ty_id {A : Type u} (x : Bool × A) :
+    (prodMapSnd (fun s => s) x) = x := by
+  cases x with
+  | mk u v => simp only [prodMapSnd_mk]
+
+/-- The children of a mapped `Bool × A` position are the children mapped. -/
+theorem kids_pos_prod_bool_ty_map {A : Type u} {B : Type v} (f : A → B) (x : Bool × A) :
+    kids_pos_prod_bool_ty (prodMapSnd f x) = (kids_pos_prod_bool_ty x).map f := by
+  cases x with
+  | mk u v => simp only [prodMapSnd_mk, kids_pos_prod_bool_ty, List.map_cons, List.map_nil]
+
+/-- `foldMap_pos_prod_bool_ty` is the combination of the folded children. -/
+theorem foldMap_pos_prod_bool_ty_eq {M : Type u} (unit : M) (op : M → M → M) (f : Effect4.Program.Ty → M)
+    (x : Bool × Effect4.Program.Ty) :
+    foldMap_pos_prod_bool_ty unit op x f =
+      comb_pos_prod_bool_ty unit op (prodMapSnd (fun s => foldMap_ty unit op s f) x) := by
+  cases x with
+  | mk u v => simp only [foldMap_pos_prod_bool_ty, prodMapSnd_mk, comb_pos_prod_bool_ty]
+
+/-- The children at a `String × Bool × R` position, in order. -/
+def kids_pos_prod_string_prod_bool_ty {R : Type u} : String × Bool × R → List R
+  | (_, v) => kids_pos_prod_bool_ty v
+
+/-- The children's values at a `String × Bool × M` position, combined as `foldMap_ty` combines them. -/
+def comb_pos_prod_string_prod_bool_ty {M : Type u} (unit : M) (op : M → M → M) : String × Bool × M → M
+  | (_, v) => (comb_pos_prod_bool_ty unit op v)
+
+/-- Two maps at a `String × Bool × A` position fuse into one. -/
+theorem map_pos_prod_string_prod_bool_ty_comp {A : Type u} {B : Type v} {C : Type w} (h : B → C) (k : A → B)
+    (x : String × Bool × A) :
+    (prodMapSnd (prodMapSnd h) (prodMapSnd (prodMapSnd k) x)) = (prodMapSnd (prodMapSnd (fun s => h (k s))) x) := by
+  cases x with
+  | mk u v => simp only [prodMapSnd_mk, map_pos_prod_bool_ty_comp]
+
+/-- The map at a `String × Bool × A` position at the identity is the identity. -/
+theorem map_pos_prod_string_prod_bool_ty_id {A : Type u} (x : String × Bool × A) :
+    (prodMapSnd (prodMapSnd (fun s => s)) x) = x := by
+  cases x with
+  | mk u v => simp only [prodMapSnd_mk, map_pos_prod_bool_ty_id]
+
+/-- The children of a mapped `String × Bool × A` position are the children mapped. -/
+theorem kids_pos_prod_string_prod_bool_ty_map {A : Type u} {B : Type v} (f : A → B) (x : String × Bool × A) :
+    kids_pos_prod_string_prod_bool_ty (prodMapSnd (prodMapSnd f) x) = (kids_pos_prod_string_prod_bool_ty x).map f := by
+  cases x with
+  | mk u v => simp only [prodMapSnd_mk, kids_pos_prod_string_prod_bool_ty, kids_pos_prod_bool_ty_map]
+
+/-- `foldMap_pos_prod_string_prod_bool_ty` is the combination of the folded children. -/
+theorem foldMap_pos_prod_string_prod_bool_ty_eq {M : Type u} (unit : M) (op : M → M → M) (f : Effect4.Program.Ty → M)
+    (x : String × Bool × Effect4.Program.Ty) :
+    foldMap_pos_prod_string_prod_bool_ty unit op x f =
+      comb_pos_prod_string_prod_bool_ty unit op (prodMapSnd (prodMapSnd (fun s => foldMap_ty unit op s f)) x) := by
+  cases x with
+  | mk u v => simp only [foldMap_pos_prod_string_prod_bool_ty, prodMapSnd_mk, comb_pos_prod_string_prod_bool_ty, foldMap_pos_prod_bool_ty_eq]
+
+/-- The children at a `List (String × Bool × R)` position, in order. -/
+def kids_pos_list_prod_string_prod_bool_ty {R : Type u} : List (String × Bool × R) → List R
+  | [] => []
+  | x :: rest => kids_pos_prod_string_prod_bool_ty x ++ (kids_pos_list_prod_string_prod_bool_ty rest)
+
+/-- The children's values at a `List (String × Bool × M)` position, combined as `foldMap_ty` combines them. -/
+def comb_pos_list_prod_string_prod_bool_ty {M : Type u} (unit : M) (op : M → M → M) : List (String × Bool × M) → M
+  | [] => unit
+  | x :: rest => op (comb_pos_prod_string_prod_bool_ty unit op x) (comb_pos_list_prod_string_prod_bool_ty unit op rest)
+
+/-- Two maps at a `List (String × Bool × A)` position fuse into one. -/
+theorem map_pos_list_prod_string_prod_bool_ty_comp {A : Type u} {B : Type v} {C : Type w} (h : B → C) (k : A → B)
+    (x : List (String × Bool × A)) :
+    ((x.map (prodMapSnd (prodMapSnd k))).map (prodMapSnd (prodMapSnd h))) = (x.map (prodMapSnd (prodMapSnd (fun s => h (k s))))) := by
+  induction x with
+  | nil => rfl
+  | cons y rest ih => simp only [List.map_cons, ih, map_pos_prod_string_prod_bool_ty_comp]
+
+/-- The map at a `List (String × Bool × A)` position at the identity is the identity. -/
+theorem map_pos_list_prod_string_prod_bool_ty_id {A : Type u} (x : List (String × Bool × A)) :
+    (x.map (prodMapSnd (prodMapSnd (fun s => s)))) = x := by
+  induction x with
+  | nil => rfl
+  | cons y rest ih => simp only [List.map_cons, ih, map_pos_prod_string_prod_bool_ty_id]
+
+/-- The children of a mapped `List (String × Bool × A)` position are the children mapped. -/
+theorem kids_pos_list_prod_string_prod_bool_ty_map {A : Type u} {B : Type v} (f : A → B) (x : List (String × Bool × A)) :
+    kids_pos_list_prod_string_prod_bool_ty (x.map (prodMapSnd (prodMapSnd f))) = (kids_pos_list_prod_string_prod_bool_ty x).map f := by
+  induction x with
+  | nil => rfl
+  | cons y rest ih => simp only [List.map_cons, kids_pos_list_prod_string_prod_bool_ty, ih, List.map_append, kids_pos_prod_string_prod_bool_ty_map]
+
+/-- `foldMap_pos_list_prod_string_prod_bool_ty` is the combination of the folded children. -/
+theorem foldMap_pos_list_prod_string_prod_bool_ty_eq {M : Type u} (unit : M) (op : M → M → M) (f : Effect4.Program.Ty → M)
+    (x : List (String × Bool × Effect4.Program.Ty)) :
+    foldMap_pos_list_prod_string_prod_bool_ty unit op x f =
+      comb_pos_list_prod_string_prod_bool_ty unit op (x.map (prodMapSnd (prodMapSnd (fun s => foldMap_ty unit op s f)))) := by
+  induction x with
+  | nil => rfl
+  | cons y rest ih => simp only [foldMap_pos_list_prod_string_prod_bool_ty, List.map_cons, comb_pos_list_prod_string_prod_bool_ty, ih, foldMap_pos_prod_string_prod_bool_ty_eq]
+
+/-- The children at a `List R` position, in order. -/
+def kids_pos_list_ty {R : Type u} : List R → List R
+  | [] => []
+  | x :: rest => x :: (kids_pos_list_ty rest)
+
+/-- The children's values at a `List M` position, combined as `foldMap_ty` combines them. -/
+def comb_pos_list_ty {M : Type u} (unit : M) (op : M → M → M) : List M → M
+  | [] => unit
+  | x :: rest => op x (comb_pos_list_ty unit op rest)
+
+/-- Two maps at a `List A` position fuse into one. -/
+theorem map_pos_list_ty_comp {A : Type u} {B : Type v} {C : Type w} (h : B → C) (k : A → B)
+    (x : List A) :
+    ((x.map k).map h) = (x.map (fun s => h (k s))) := by
+  induction x with
+  | nil => rfl
+  | cons y rest ih => simp only [List.map_cons, ih]
+
+/-- The map at a `List A` position at the identity is the identity. -/
+theorem map_pos_list_ty_id {A : Type u} (x : List A) :
+    (x.map (fun s => s)) = x := by
+  induction x with
+  | nil => rfl
+  | cons y rest ih => simp only [List.map_cons, ih]
+
+/-- The children of a mapped `List A` position are the children mapped. -/
+theorem kids_pos_list_ty_map {A : Type u} {B : Type v} (f : A → B) (x : List A) :
+    kids_pos_list_ty (x.map f) = (kids_pos_list_ty x).map f := by
+  induction x with
+  | nil => rfl
+  | cons y rest ih => simp only [List.map_cons, kids_pos_list_ty, ih]
+
+/-- `foldMap_pos_list_ty` is the combination of the folded children. -/
+theorem foldMap_pos_list_ty_eq {M : Type u} (unit : M) (op : M → M → M) (f : Effect4.Program.Ty → M)
+    (x : List Effect4.Program.Ty) :
+    foldMap_pos_list_ty unit op x f =
+      comb_pos_list_ty unit op (x.map (fun s => foldMap_ty unit op s f)) := by
+  induction x with
+  | nil => rfl
+  | cons y rest ih => simp only [foldMap_pos_list_ty, List.map_cons, comb_pos_list_ty, ih]
+
+/-- The carrier mapped at every child position; every payload (a leaf, a label) unchanged. -/
+def TyArgF.map {R : Type u} {S : Type v} (f : R → S) : TyArgF R → TyArgF S
+  | .child r => .child (f r)
+  | .str v => .str v
+  | .nat v => .nat v
+  | .list_prod_string_prod_bool_ty v => .list_prod_string_prod_bool_ty (v.map (prodMapSnd (prodMapSnd f)))
+  | .list_ty v => .list_ty (v.map f)
+
+/-- Every child of an argument, at every position, in order. -/
+def TyArgF.kids {R : Type u} : TyArgF R → List R
+  | .child r => [r]
+  | .str _ => []
+  | .nat _ => []
+  | .list_prod_string_prod_bool_ty v => kids_pos_list_prod_string_prod_bool_ty v
+  | .list_ty v => kids_pos_list_ty v
+
+/-- What an argument contributes to a monoid fold: a child its value, a composite position its children
+combined as `foldMap_ty` combines them, a leaf nothing. -/
+def TyArgF.contrib {M : Type u} (unit : M) (op : M → M → M) : TyArgF M → Option M
+  | .child r => some r
+  | .str _ => none
+  | .nat _ => none
+  | .list_prod_string_prod_bool_ty v => some (comb_pos_list_prod_string_prod_bool_ty unit op v)
+  | .list_ty v => some (comb_pos_list_ty unit op v)
+
+/-- **The functor's composition law.** -/
+theorem TyArgF.map_comp {A : Type u} {B : Type v} {C : Type w} (h : B → C) (k : A → B) :
+    ∀ a : TyArgF A, (a.map k).map h = a.map (fun s => h (k s))
+  | .child _ => rfl
+  | .str _ => rfl
+  | .nat _ => rfl
+  | .list_prod_string_prod_bool_ty v => congrArg TyArgF.list_prod_string_prod_bool_ty (map_pos_list_prod_string_prod_bool_ty_comp h k v)
+  | .list_ty v => congrArg TyArgF.list_ty (map_pos_list_ty_comp h k v)
+
+/-- **The functor's identity law.** -/
+theorem TyArgF.map_id {A : Type u} : ∀ a : TyArgF A, a.map (fun s => s) = a
+  | .child _ => rfl
+  | .str _ => rfl
+  | .nat _ => rfl
+  | .list_prod_string_prod_bool_ty v => congrArg TyArgF.list_prod_string_prod_bool_ty (map_pos_list_prod_string_prod_bool_ty_id v)
+  | .list_ty v => congrArg TyArgF.list_ty (map_pos_list_ty_id v)
+
+/-- The children of a mapped argument are the children mapped. -/
+theorem TyArgF.kids_map {A : Type u} {B : Type v} (f : A → B) :
+    ∀ a : TyArgF A, (a.map f).kids = a.kids.map f
+  | .child _ => rfl
+  | .str _ => rfl
+  | .nat _ => rfl
+  | .list_prod_string_prod_bool_ty v => kids_pos_list_prod_string_prod_bool_ty_map f v
+  | .list_ty v => kids_pos_list_ty_map f v
+
+/-- The arguments of a node by sort, in declaration order: one level, no recursion. -/
+def tyArgs : Effect4.Program.Ty → List (TyArgF Effect4.Program.Ty)
   | .never => []
   | .unit => []
   | .nat => []
   | .int => []
   | .string => []
   | .bool => []
-  | .handle _ => []
-  | .option a0 => [a0]
-  | .list a0 => [a0]
-  | .prod a0 a1 => [a0, a1]
-  | .except a0 a1 => [a0, a1]
-  | .exitOf a0 a1 => [a0, a1]
-  | .causeOf a0 => [a0]
-  | .fiberOf a0 a1 => [a0, a1]
-  | .union a0 a1 => [a0, a1]
-  | .lit _ => []
-  | .refOf a0 => [a0]
-  | .deferredOf a0 a1 => [a0, a1]
-  | .var _ => []
+  | .handle a0 => [.str a0]
+  | .option a0 => [.child a0]
+  | .list a0 => [.child a0]
+  | .prod a0 a1 => [.child a0, .child a1]
+  | .except a0 a1 => [.child a0, .child a1]
+  | .exitOf a0 a1 => [.child a0, .child a1]
+  | .causeOf a0 => [.child a0]
+  | .fiberOf a0 a1 => [.child a0, .child a1]
+  | .union a0 a1 => [.child a0, .child a1]
+  | .lit a0 => [.str a0]
+  | .refOf a0 => [.child a0]
+  | .deferredOf a0 a1 => [.child a0, .child a1]
+  | .var a0 => [.nat a0]
   | .unknown => []
+  | .record a0 => [.list_prod_string_prod_bool_ty a0]
+  | .map a0 a1 => [.child a0, .child a1]
+  | .tuple a0 => [.list_ty a0]
+  | .app a0 a1 => [.str a0, .list_ty a1]
+  | .null => []
+  | .undefined => []
+  | .number => []
+  | .bytes => []
 
-/-- A node is rebuilt from its view. -/
-theorem tyBuild_view (t : Effect4.Program.Ty) : tyBuild (tyCtor t) (tyLeaf t) (tyKids t) = t := by
+/-- A node from its tag and its arguments; a tag whose arguments do not have its sorts is `never`. -/
+def tyBuild : TyCtor → List (TyArgF Effect4.Program.Ty) → Effect4.Program.Ty
+  | .never, [] => .never
+  | .unit, [] => .unit
+  | .nat, [] => .nat
+  | .int, [] => .int
+  | .string, [] => .string
+  | .bool, [] => .bool
+  | .handle, [.str a0] => .handle a0
+  | .option, [.child a0] => .option a0
+  | .list, [.child a0] => .list a0
+  | .prod, [.child a0, .child a1] => .prod a0 a1
+  | .except, [.child a0, .child a1] => .except a0 a1
+  | .exitOf, [.child a0, .child a1] => .exitOf a0 a1
+  | .causeOf, [.child a0] => .causeOf a0
+  | .fiberOf, [.child a0, .child a1] => .fiberOf a0 a1
+  | .union, [.child a0, .child a1] => .union a0 a1
+  | .lit, [.str a0] => .lit a0
+  | .refOf, [.child a0] => .refOf a0
+  | .deferredOf, [.child a0, .child a1] => .deferredOf a0 a1
+  | .var, [.nat a0] => .var a0
+  | .unknown, [] => .unknown
+  | .record, [.list_prod_string_prod_bool_ty a0] => .record a0
+  | .map, [.child a0, .child a1] => .map a0 a1
+  | .tuple, [.list_ty a0] => .tuple a0
+  | .app, [.str a0, .list_ty a1] => .app a0 a1
+  | .null, [] => .null
+  | .undefined, [] => .undefined
+  | .number, [] => .number
+  | .bytes, [] => .bytes
+  | _, _ => .never
+
+/-- **A node is rebuilt from its view.** -/
+theorem tyBuild_view (t : Effect4.Program.Ty) : tyBuild (tyCtor t) (tyArgs t) = t := by
   cases t <;> rfl
+
+/-- The shape of a node: its arguments with every child erased, every payload kept. -/
+def tyShape (t : Effect4.Program.Ty) : List (TyArgF Unit) :=
+  (tyArgs t).map (TyArgF.map fun _ => ())
+
+/-- Every child of a node, at every position, in declaration order. -/
+def tyKids (t : Effect4.Program.Ty) : List Effect4.Program.Ty := (tyArgs t).flatMap TyArgF.kids
 
 /-- One row per constructor. -/
 structure TyTable (α : Type u) where
@@ -227,6 +464,14 @@ structure TyTable (α : Type u) where
   deferredOf : α
   var : α
   unknown : α
+  record : α
+  map : α
+  tuple : α
+  app : α
+  null : α
+  undefined : α
+  number : α
+  bytes : α
 
 /-- A row by tag. -/
 def TyTable.get {α : Type u} (t : TyTable α) : TyCtor → α
@@ -250,42 +495,86 @@ def TyTable.get {α : Type u} (t : TyTable α) : TyCtor → α
   | .deferredOf => t.deferredOf
   | .var => t.var
   | .unknown => t.unknown
+  | .record => t.record
+  | .map => t.map
+  | .tuple => t.tuple
+  | .app => t.app
+  | .null => t.null
+  | .undefined => t.undefined
+  | .number => t.number
+  | .bytes => t.bytes
 
-/-- A layer function as an algebra: every constructor hands its tag, its payload and its
-folded children (declaration order) to one function. -/
-def TyAlgebra.ofLayer {R : Type u} (layer : TyCtor → TyLeaf → List R → R) :
+/-- A layer function as an algebra: every constructor hands its tag and its arguments by sort, its
+children folded at every position, to one function. -/
+def TyAlgebra.ofLayer {R : Type u} (layer : TyCtor → List (TyArgF R) → R) :
     TyAlgebra (fun _ => R) where
-  ty_never := layer .never .none []
-  ty_unit := layer .unit .none []
-  ty_nat := layer .nat .none []
-  ty_int := layer .int .none []
-  ty_string := layer .string .none []
-  ty_bool := layer .bool .none []
-  ty_handle a0 := layer .handle (.str a0) []
-  ty_option a0 := layer .option .none [a0]
-  ty_list a0 := layer .list .none [a0]
-  ty_prod a0 a1 := layer .prod .none [a0, a1]
-  ty_except a0 a1 := layer .except .none [a0, a1]
-  ty_exitOf a0 a1 := layer .exitOf .none [a0, a1]
-  ty_causeOf a0 := layer .causeOf .none [a0]
-  ty_fiberOf a0 a1 := layer .fiberOf .none [a0, a1]
-  ty_union a0 a1 := layer .union .none [a0, a1]
-  ty_lit a0 := layer .lit (.str a0) []
-  ty_refOf a0 := layer .refOf .none [a0]
-  ty_deferredOf a0 a1 := layer .deferredOf .none [a0, a1]
-  ty_var a0 := layer .var (.nat a0) []
-  ty_unknown := layer .unknown .none []
+  ty_never := layer .never []
+  ty_unit := layer .unit []
+  ty_nat := layer .nat []
+  ty_int := layer .int []
+  ty_string := layer .string []
+  ty_bool := layer .bool []
+  ty_handle a0 := layer .handle [.str a0]
+  ty_option a0 := layer .option [.child a0]
+  ty_list a0 := layer .list [.child a0]
+  ty_prod a0 a1 := layer .prod [.child a0, .child a1]
+  ty_except a0 a1 := layer .except [.child a0, .child a1]
+  ty_exitOf a0 a1 := layer .exitOf [.child a0, .child a1]
+  ty_causeOf a0 := layer .causeOf [.child a0]
+  ty_fiberOf a0 a1 := layer .fiberOf [.child a0, .child a1]
+  ty_union a0 a1 := layer .union [.child a0, .child a1]
+  ty_lit a0 := layer .lit [.str a0]
+  ty_refOf a0 := layer .refOf [.child a0]
+  ty_deferredOf a0 a1 := layer .deferredOf [.child a0, .child a1]
+  ty_var a0 := layer .var [.nat a0]
+  ty_unknown := layer .unknown []
+  ty_record a0 := layer .record [.list_prod_string_prod_bool_ty a0]
+  ty_map a0 a1 := layer .map [.child a0, .child a1]
+  ty_tuple a0 := layer .tuple [.list_ty a0]
+  ty_app a0 a1 := layer .app [.str a0, .list_ty a1]
+  ty_null := layer .null []
+  ty_undefined := layer .undefined []
+  ty_number := layer .number []
+  ty_bytes := layer .bytes []
 
-/-- The fold of a layer function, one layer down. -/
-theorem cata_ofLayer_view {R : Type u} (layer : TyCtor → TyLeaf → List R → R) (t : Effect4.Program.Ty) :
+/-- **The fold of a layer function, one layer down.** -/
+theorem cata_ofLayer_view {R : Type u} (layer : TyCtor → List (TyArgF R) → R) (t : Effect4.Program.Ty) :
     cata_ty (TyAlgebra.ofLayer layer) t =
-      layer (tyCtor t) (tyLeaf t) ((tyKids t).map (cata_ty (TyAlgebra.ofLayer layer))) := by
-  cases t <;> rfl
+      layer (tyCtor t) ((tyArgs t).map (TyArgF.map (cata_ty (TyAlgebra.ofLayer layer)))) :=
+  match t with
+  | .never => rfl
+  | .unit => rfl
+  | .nat => rfl
+  | .int => rfl
+  | .string => rfl
+  | .bool => rfl
+  | .handle _ => rfl
+  | .option _ => rfl
+  | .list _ => rfl
+  | .prod _ _ => rfl
+  | .except _ _ => rfl
+  | .exitOf _ _ => rfl
+  | .causeOf _ => rfl
+  | .fiberOf _ _ => rfl
+  | .union _ _ => rfl
+  | .lit _ => rfl
+  | .refOf _ => rfl
+  | .deferredOf _ _ => rfl
+  | .var _ => rfl
+  | .unknown => rfl
+  | .record a0 => cata_ty_record (TyAlgebra.ofLayer layer) a0
+  | .map _ _ => rfl
+  | .tuple a0 => cata_ty_tuple (TyAlgebra.ofLayer layer) a0
+  | .app a0 a1 => cata_ty_app (TyAlgebra.ofLayer layer) a0 a1
+  | .null => rfl
+  | .undefined => rfl
+  | .number => rfl
+  | .bytes => rfl
 
-/-- **Uniqueness, one layer down**: a function that satisfies the layer equation at every node is
-the fold of the layer function (`hom_eq_cata_ty`, every field by definition). -/
-theorem eq_cata_ofLayer {R : Type u} (layer : TyCtor → TyLeaf → List R → R) (f : Effect4.Program.Ty → R)
-    (hf : ∀ t, f t = layer (tyCtor t) (tyLeaf t) ((tyKids t).map f)) (t : Effect4.Program.Ty) :
+/-- **Uniqueness, one layer down**: a function that satisfies the layer equation at every node is the
+fold of the layer function (`hom_eq_cata_ty`, every field by definition). -/
+theorem eq_cata_ofLayer {R : Type u} (layer : TyCtor → List (TyArgF R) → R) (f : Effect4.Program.Ty → R)
+    (hf : ∀ t, f t = layer (tyCtor t) ((tyArgs t).map (TyArgF.map f))) (t : Effect4.Program.Ty) :
     f t = cata_ty (TyAlgebra.ofLayer layer) t :=
   hom_eq_cata_ty (alg := TyAlgebra.ofLayer layer)
     { f_ty := f
@@ -308,152 +597,76 @@ theorem eq_cata_ofLayer {R : Type u} (layer : TyCtor → TyLeaf → List R → R
       h_ty_refOf := fun a0 => hf (.refOf a0)
       h_ty_deferredOf := fun a0 a1 => hf (.deferredOf a0 a1)
       h_ty_var := fun a0 => hf (.var a0)
-      h_ty_unknown := hf .unknown } t
+      h_ty_unknown := hf .unknown
+      h_ty_record := fun a0 => hf (.record a0)
+      h_ty_map := fun a0 a1 => hf (.map a0 a1)
+      h_ty_tuple := fun a0 => hf (.tuple a0)
+      h_ty_app := fun a0 a1 => hf (.app a0 a1)
+      h_ty_null := hf .null
+      h_ty_undefined := hf .undefined
+      h_ty_number := hf .number
+      h_ty_bytes := hf .bytes } t
 
-/-- A child is smaller. -/
-theorem sizeOf_tyKids {t k : Effect4.Program.Ty} (h : k ∈ tyKids t) : sizeOf k < sizeOf t := by
-  cases t <;> simp only [tyKids, List.mem_cons, List.not_mem_nil, or_false] at h <;>
-    rcases h with rfl | rfl <;> simp only [Effect4.Program.Ty.option.sizeOf_spec, Effect4.Program.Ty.list.sizeOf_spec, Effect4.Program.Ty.prod.sizeOf_spec, Effect4.Program.Ty.except.sizeOf_spec, Effect4.Program.Ty.exitOf.sizeOf_spec, Effect4.Program.Ty.causeOf.sizeOf_spec, Effect4.Program.Ty.fiberOf.sizeOf_spec, Effect4.Program.Ty.union.sizeOf_spec, Effect4.Program.Ty.refOf.sizeOf_spec, Effect4.Program.Ty.deferredOf.sizeOf_spec] <;> omega
-
-/-- **The fold of a layer function keeps every property its layers keep.** -/
-theorem cata_ofLayer_inv {R : Type u} (layer : TyCtor → TyLeaf → List R → R) (P : R → Prop)
-    (h : ∀ c l kids, (∀ k ∈ kids, P k) → P (layer c l kids)) (t : Effect4.Program.Ty) :
-    P (cata_ty (TyAlgebra.ofLayer layer) t) := by
-  rw [cata_ofLayer_view]
-  apply h
-  intro k hk
-  obtain ⟨k', hk', rfl⟩ := List.mem_map.mp hk
-  exact cata_ofLayer_inv layer P h k'
-termination_by sizeOf t
-decreasing_by exact sizeOf_tyKids hk'
-
-/-- The monoid fold whose node contribution reads only the node's layer, as an algebra. -/
-def TyAlgebra.headAlg {M : Type u} (op : M → M → M) (g : TyCtor → TyLeaf → M) :
-    TyAlgebra (fun _ => M) :=
-  TyAlgebra.ofLayer fun c l kids => nodeThen op (g c l) kids
-
-/-- **Connector, once for every head fold.** -/
-theorem foldMap_head_eq_cata {M : Type u} (unit : M) (op : M → M → M)
-    (g : TyCtor → TyLeaf → M) (t : Effect4.Program.Ty) :
-    foldMap_ty unit op t (fun s => g (tyCtor s) (tyLeaf s)) =
-      cata_ty (TyAlgebra.headAlg op g) t :=
-  hom_eq_cata_ty (alg := TyAlgebra.headAlg op g)
-    { f_ty := fun s => foldMap_ty unit op s (fun s => g (tyCtor s) (tyLeaf s))
-      h_ty_never := rfl
-      h_ty_unit := rfl
-      h_ty_nat := rfl
-      h_ty_int := rfl
-      h_ty_string := rfl
-      h_ty_bool := rfl
-      h_ty_handle := fun _ => rfl
-      h_ty_option := fun _ => rfl
-      h_ty_list := fun _ => rfl
-      h_ty_prod := fun _ _ => rfl
-      h_ty_except := fun _ _ => rfl
-      h_ty_exitOf := fun _ _ => rfl
-      h_ty_causeOf := fun _ => rfl
-      h_ty_fiberOf := fun _ _ => rfl
-      h_ty_union := fun _ _ => rfl
-      h_ty_lit := fun _ => rfl
-      h_ty_refOf := fun _ => rfl
-      h_ty_deferredOf := fun _ _ => rfl
-      h_ty_var := fun _ => rfl
-      h_ty_unknown := rfl } t
-
-/-- The general monoid fold (its hook reads the whole node) as the paired catamorphism. -/
-def TyAlgebra.paraAlg {M : Type u} (op : M → M → M) (f : Effect4.Program.Ty → M) :
-    TyAlgebra (fun _ => Effect4.Program.Ty × M) where
-  ty_never := (.never, f (.never))
-  ty_unit := (.unit, f (.unit))
-  ty_nat := (.nat, f (.nat))
-  ty_int := (.int, f (.int))
-  ty_string := (.string, f (.string))
-  ty_bool := (.bool, f (.bool))
-  ty_handle a0 := (.handle a0, f (.handle a0))
-  ty_option a0 := (.option a0.1, op (f (.option a0.1)) (a0.2))
-  ty_list a0 := (.list a0.1, op (f (.list a0.1)) (a0.2))
-  ty_prod a0 a1 := (.prod a0.1 a1.1, op (f (.prod a0.1 a1.1)) (op a0.2 (a1.2)))
-  ty_except a0 a1 := (.except a0.1 a1.1, op (f (.except a0.1 a1.1)) (op a0.2 (a1.2)))
-  ty_exitOf a0 a1 := (.exitOf a0.1 a1.1, op (f (.exitOf a0.1 a1.1)) (op a0.2 (a1.2)))
-  ty_causeOf a0 := (.causeOf a0.1, op (f (.causeOf a0.1)) (a0.2))
-  ty_fiberOf a0 a1 := (.fiberOf a0.1 a1.1, op (f (.fiberOf a0.1 a1.1)) (op a0.2 (a1.2)))
-  ty_union a0 a1 := (.union a0.1 a1.1, op (f (.union a0.1 a1.1)) (op a0.2 (a1.2)))
-  ty_lit a0 := (.lit a0, f (.lit a0))
-  ty_refOf a0 := (.refOf a0.1, op (f (.refOf a0.1)) (a0.2))
-  ty_deferredOf a0 a1 := (.deferredOf a0.1 a1.1, op (f (.deferredOf a0.1 a1.1)) (op a0.2 (a1.2)))
-  ty_var a0 := (.var a0, f (.var a0))
-  ty_unknown := (.unknown, f (.unknown))
-
-/-- **Connector, once for every monoid fold.** -/
-theorem foldMap_eq_cata {M : Type u} (unit : M) (op : M → M → M) (f : Effect4.Program.Ty → M) (t : Effect4.Program.Ty) :
-    (t, foldMap_ty unit op t f) = cata_ty (TyAlgebra.paraAlg op f) t :=
-  hom_eq_cata_ty (alg := TyAlgebra.paraAlg op f)
-    { f_ty := fun s => (s, foldMap_ty unit op s f)
-      h_ty_never := rfl
-      h_ty_unit := rfl
-      h_ty_nat := rfl
-      h_ty_int := rfl
-      h_ty_string := rfl
-      h_ty_bool := rfl
-      h_ty_handle := fun _ => rfl
-      h_ty_option := fun _ => rfl
-      h_ty_list := fun _ => rfl
-      h_ty_prod := fun _ _ => rfl
-      h_ty_except := fun _ _ => rfl
-      h_ty_exitOf := fun _ _ => rfl
-      h_ty_causeOf := fun _ => rfl
-      h_ty_fiberOf := fun _ _ => rfl
-      h_ty_union := fun _ _ => rfl
-      h_ty_lit := fun _ => rfl
-      h_ty_refOf := fun _ => rfl
-      h_ty_deferredOf := fun _ _ => rfl
-      h_ty_var := fun _ => rfl
-      h_ty_unknown := rfl } t
-
-/-- An algebra morphism `h` from `alg` to `alg'`, one square per constructor, each
-defaulting to `rfl`. -/
+/-- An algebra morphism `h` from `alg` to `alg'`, one square per constructor (a composite position
+through its container's map), each defaulting to `rfl`. -/
 structure TyAlgebra.Commutes {R : TyFam → Type u} {S : TyFam → Type v}
     (h : R .ty → S .ty) (alg : TyAlgebra R) (alg' : TyAlgebra S) : Prop where
   ty_never : h (alg.ty_never) = alg'.ty_never := by
-    intros; rfl
+intros; rfl
   ty_unit : h (alg.ty_unit) = alg'.ty_unit := by
-    intros; rfl
+intros; rfl
   ty_nat : h (alg.ty_nat) = alg'.ty_nat := by
-    intros; rfl
+intros; rfl
   ty_int : h (alg.ty_int) = alg'.ty_int := by
-    intros; rfl
+intros; rfl
   ty_string : h (alg.ty_string) = alg'.ty_string := by
-    intros; rfl
+intros; rfl
   ty_bool : h (alg.ty_bool) = alg'.ty_bool := by
-    intros; rfl
+intros; rfl
   ty_handle : ∀ a0, h (alg.ty_handle a0) = alg'.ty_handle a0 := by
-    intros; rfl
+intros; rfl
   ty_option : ∀ a0, h (alg.ty_option a0) = alg'.ty_option (h a0) := by
-    intros; rfl
+intros; rfl
   ty_list : ∀ a0, h (alg.ty_list a0) = alg'.ty_list (h a0) := by
-    intros; rfl
+intros; rfl
   ty_prod : ∀ a0 a1, h (alg.ty_prod a0 a1) = alg'.ty_prod (h a0) (h a1) := by
-    intros; rfl
+intros; rfl
   ty_except : ∀ a0 a1, h (alg.ty_except a0 a1) = alg'.ty_except (h a0) (h a1) := by
-    intros; rfl
+intros; rfl
   ty_exitOf : ∀ a0 a1, h (alg.ty_exitOf a0 a1) = alg'.ty_exitOf (h a0) (h a1) := by
-    intros; rfl
+intros; rfl
   ty_causeOf : ∀ a0, h (alg.ty_causeOf a0) = alg'.ty_causeOf (h a0) := by
-    intros; rfl
+intros; rfl
   ty_fiberOf : ∀ a0 a1, h (alg.ty_fiberOf a0 a1) = alg'.ty_fiberOf (h a0) (h a1) := by
-    intros; rfl
+intros; rfl
   ty_union : ∀ a0 a1, h (alg.ty_union a0 a1) = alg'.ty_union (h a0) (h a1) := by
-    intros; rfl
+intros; rfl
   ty_lit : ∀ a0, h (alg.ty_lit a0) = alg'.ty_lit a0 := by
-    intros; rfl
+intros; rfl
   ty_refOf : ∀ a0, h (alg.ty_refOf a0) = alg'.ty_refOf (h a0) := by
-    intros; rfl
+intros; rfl
   ty_deferredOf : ∀ a0 a1, h (alg.ty_deferredOf a0 a1) = alg'.ty_deferredOf (h a0) (h a1) := by
-    intros; rfl
+intros; rfl
   ty_var : ∀ a0, h (alg.ty_var a0) = alg'.ty_var a0 := by
-    intros; rfl
+intros; rfl
   ty_unknown : h (alg.ty_unknown) = alg'.ty_unknown := by
-    intros; rfl
+intros; rfl
+  ty_record : ∀ a0, h (alg.ty_record a0) = alg'.ty_record (a0.map (prodMapSnd (prodMapSnd h))) := by
+intros; rfl
+  ty_map : ∀ a0 a1, h (alg.ty_map a0 a1) = alg'.ty_map (h a0) (h a1) := by
+intros; rfl
+  ty_tuple : ∀ a0, h (alg.ty_tuple a0) = alg'.ty_tuple (a0.map h) := by
+intros; rfl
+  ty_app : ∀ a0 a1, h (alg.ty_app a0 a1) = alg'.ty_app a0 (a1.map h) := by
+intros; rfl
+  ty_null : h (alg.ty_null) = alg'.ty_null := by
+intros; rfl
+  ty_undefined : h (alg.ty_undefined) = alg'.ty_undefined := by
+intros; rfl
+  ty_number : h (alg.ty_number) = alg'.ty_number := by
+intros; rfl
+  ty_bytes : h (alg.ty_bytes) = alg'.ty_bytes := by
+intros; rfl
 
 /-- **Fusion, from uniqueness.** -/
 theorem cata_fusion_ty {R : TyFam → Type u} {S : TyFam → Type v}
@@ -481,7 +694,35 @@ theorem cata_fusion_ty {R : TyFam → Type u} {S : TyFam → Type v}
       h_ty_refOf := fun a0 => c.ty_refOf (cata_ty alg a0)
       h_ty_deferredOf := fun a0 a1 => c.ty_deferredOf (cata_ty alg a0) (cata_ty alg a1)
       h_ty_var := c.ty_var
-      h_ty_unknown := c.ty_unknown } t
+      h_ty_unknown := c.ty_unknown
+      h_ty_record := fun a0 =>
+        (congrArg h (cata_ty_record alg a0)).trans
+          ((c.ty_record (a0.map (prodMapSnd (prodMapSnd (cata_ty alg))))).trans (congrArg alg'.ty_record (map_pos_list_prod_string_prod_bool_ty_comp h (cata_ty alg) a0)))
+      h_ty_map := fun a0 a1 => c.ty_map (cata_ty alg a0) (cata_ty alg a1)
+      h_ty_tuple := fun a0 =>
+        (congrArg h (cata_ty_tuple alg a0)).trans
+          ((c.ty_tuple (a0.map (cata_ty alg))).trans (congrArg alg'.ty_tuple (map_pos_list_ty_comp h (cata_ty alg) a0)))
+      h_ty_app := fun a0 a1 =>
+        (congrArg h (cata_ty_app alg a0 a1)).trans
+          ((c.ty_app a0 (a1.map (cata_ty alg))).trans (congr (congrArg alg'.ty_app rfl) (map_pos_list_ty_comp h (cata_ty alg) a1)))
+      h_ty_null := c.ty_null
+      h_ty_undefined := c.ty_undefined
+      h_ty_number := c.ty_number
+      h_ty_bytes := c.ty_bytes } t
+
+/-- **The fold of a layer function keeps every property its layers keep**, every child at every
+position read (by fusion: the layers on the subtype commute with `Subtype.val`). -/
+theorem cata_ofLayer_inv {R : Type u} (layer : TyCtor → List (TyArgF R) → R) (P : R → Prop)
+    (h : ∀ c args, (∀ a ∈ args, ∀ k ∈ TyArgF.kids a, P k) → P (layer c args)) (t : Effect4.Program.Ty) :
+    P (cata_ty (TyAlgebra.ofLayer layer) t) := by
+  let algP : TyAlgebra (fun _ => {r : R // P r}) := TyAlgebra.ofLayer fun c args =>
+    ⟨layer c (args.map (TyArgF.map Subtype.val)), h c _ fun _ ha k hk => by
+      obtain ⟨_, _, rfl⟩ := List.mem_map.mp ha
+      rw [TyArgF.kids_map] at hk
+      obtain ⟨k', _, rfl⟩ := List.mem_map.mp hk
+      exact k'.property⟩
+  rw [← cata_fusion_ty (h := Subtype.val) (alg := algP) (alg' := TyAlgebra.ofLayer layer) {} t]
+  exact (cata_ty algP t).property
 
 /-- Two algebras run side by side. -/
 def TyAlgebra.prod {R : TyFam → Type u} {S : TyFam → Type v}
@@ -506,46 +747,119 @@ def TyAlgebra.prod {R : TyFam → Type u} {S : TyFam → Type v}
   ty_deferredOf a0 a1 := (a.ty_deferredOf a0.1 a1.1, b.ty_deferredOf a0.2 a1.2)
   ty_var a0 := (a.ty_var a0, b.ty_var a0)
   ty_unknown := (a.ty_unknown, b.ty_unknown)
+  ty_record a0 := (a.ty_record (a0.map (prodMapSnd (prodMapSnd Prod.fst))), b.ty_record (a0.map (prodMapSnd (prodMapSnd Prod.snd))))
+  ty_map a0 a1 := (a.ty_map a0.1 a1.1, b.ty_map a0.2 a1.2)
+  ty_tuple a0 := (a.ty_tuple (a0.map Prod.fst), b.ty_tuple (a0.map Prod.snd))
+  ty_app a0 a1 := (a.ty_app a0 (a1.map Prod.fst), b.ty_app a0 (a1.map Prod.snd))
+  ty_null := (a.ty_null, b.ty_null)
+  ty_undefined := (a.ty_undefined, b.ty_undefined)
+  ty_number := (a.ty_number, b.ty_number)
+  ty_bytes := (a.ty_bytes, b.ty_bytes)
 
-/-- **The banana split, from uniqueness.** -/
+/-- **The banana split, by fusion at each projection.** -/
 theorem cata_prod_ty {R : TyFam → Type u} {S : TyFam → Type v}
     (a : TyAlgebra R) (b : TyAlgebra S) (t : Effect4.Program.Ty) :
     cata_ty (TyAlgebra.prod a b) t = (cata_ty a t, cata_ty b t) :=
-  (hom_eq_cata_ty (alg := TyAlgebra.prod a b)
-    { f_ty := fun s => (cata_ty a s, cata_ty b s)
-      h_ty_never := rfl
-      h_ty_unit := rfl
-      h_ty_nat := rfl
-      h_ty_int := rfl
-      h_ty_string := rfl
-      h_ty_bool := rfl
-      h_ty_handle := fun _ => rfl
-      h_ty_option := fun _ => rfl
-      h_ty_list := fun _ => rfl
-      h_ty_prod := fun _ _ => rfl
-      h_ty_except := fun _ _ => rfl
-      h_ty_exitOf := fun _ _ => rfl
-      h_ty_causeOf := fun _ => rfl
-      h_ty_fiberOf := fun _ _ => rfl
-      h_ty_union := fun _ _ => rfl
-      h_ty_lit := fun _ => rfl
-      h_ty_refOf := fun _ => rfl
-      h_ty_deferredOf := fun _ _ => rfl
-      h_ty_var := fun _ => rfl
-      h_ty_unknown := rfl } t).symm
+  Prod.ext (cata_fusion_ty (h := Prod.fst) (alg := TyAlgebra.prod a b) (alg' := a) {} t)
+    (cata_fusion_ty (h := Prod.snd) (alg := TyAlgebra.prod a b) (alg' := b) {} t)
+
+/-- **`foldMap_ty` one layer down**: the hook at the node, then the arguments' contributions, each
+child folded and a composite position's children combined as `foldMap_ty` combines them. -/
+theorem foldMap_view {M : Type u} (unit : M) (op : M → M → M) (f : Effect4.Program.Ty → M) (t : Effect4.Program.Ty) :
+    foldMap_ty unit op t f =
+      nodeThen op (f t) ((tyArgs t).filterMap fun a =>
+        TyArgF.contrib unit op (a.map fun s => foldMap_ty unit op s f)) :=
+  match t with
+  | .never => rfl
+  | .unit => rfl
+  | .nat => rfl
+  | .int => rfl
+  | .string => rfl
+  | .bool => rfl
+  | .handle _ => rfl
+  | .option _ => rfl
+  | .list _ => rfl
+  | .prod _ _ => rfl
+  | .except _ _ => rfl
+  | .exitOf _ _ => rfl
+  | .causeOf _ => rfl
+  | .fiberOf _ _ => rfl
+  | .union _ _ => rfl
+  | .lit _ => rfl
+  | .refOf _ => rfl
+  | .deferredOf _ _ => rfl
+  | .var _ => rfl
+  | .unknown => rfl
+  | .record a0 => congrArg (op _) (foldMap_pos_list_prod_string_prod_bool_ty_eq unit op f a0)
+  | .map _ _ => rfl
+  | .tuple a0 => congrArg (op _) (foldMap_pos_list_ty_eq unit op f a0)
+  | .app _ a1 => congrArg (op _) (foldMap_pos_list_ty_eq unit op f a1)
+  | .null => rfl
+  | .undefined => rfl
+  | .number => rfl
+  | .bytes => rfl
+
+/-- The monoid fold whose node contribution reads only the node's shape, as a layer algebra. -/
+def TyAlgebra.headAlg {M : Type u} (unit : M) (op : M → M → M)
+    (g : TyCtor → List (TyArgF Unit) → M) : TyAlgebra (fun _ => M) :=
+  TyAlgebra.ofLayer fun c args =>
+    nodeThen op (g c (args.map (TyArgF.map fun _ => ()))) (args.filterMap (TyArgF.contrib unit op))
+
+/-- **Connector, once for every head fold.** -/
+theorem foldMap_head_eq_cata {M : Type u} (unit : M) (op : M → M → M)
+    (g : TyCtor → List (TyArgF Unit) → M) (t : Effect4.Program.Ty) :
+    foldMap_ty unit op t (fun s => g (tyCtor s) (tyShape s)) =
+      cata_ty (TyAlgebra.headAlg unit op g) t :=
+  eq_cata_ofLayer _ (fun s => foldMap_ty unit op s (fun s => g (tyCtor s) (tyShape s)))
+    (fun s => (foldMap_view unit op _ s).trans (by
+      simp only [tyShape, List.map_map, List.filterMap_map, Function.comp_def, TyArgF.map_comp])) t
+
+/-- The general monoid fold (its hook reads the whole node) as the paired catamorphism. -/
+def TyAlgebra.paraAlg {M : Type u} (unit : M) (op : M → M → M) (f : Effect4.Program.Ty → M) :
+    TyAlgebra (fun _ => Effect4.Program.Ty × M) :=
+  TyAlgebra.ofLayer fun c args =>
+    let node := tyBuild c (args.map (TyArgF.map Prod.fst))
+    (node, nodeThen op (f node) ((args.map (TyArgF.map Prod.snd)).filterMap (TyArgF.contrib unit op)))
+
+/-- **Connector, once for every monoid fold.** -/
+theorem foldMap_eq_cata {M : Type u} (unit : M) (op : M → M → M) (f : Effect4.Program.Ty → M) (t : Effect4.Program.Ty) :
+    (t, foldMap_ty unit op t f) = cata_ty (TyAlgebra.paraAlg unit op f) t :=
+  eq_cata_ofLayer _ (fun s => (s, foldMap_ty unit op s f))
+    (fun s => (congrArg (Prod.mk s) (foldMap_view unit op f s)).trans (by
+      simp only [List.map_map, List.filterMap_map, Function.comp_def, TyArgF.map_comp, TyArgF.map_id,
+        List.map_id', tyBuild_view])) t
 
 
 /-! ## Receipts -/
 
 #print axioms tyBuild_view
+#print axioms map_pos_prod_bool_ty_comp
+#print axioms map_pos_prod_bool_ty_id
+#print axioms kids_pos_prod_bool_ty_map
+#print axioms foldMap_pos_prod_bool_ty_eq
+#print axioms map_pos_prod_string_prod_bool_ty_comp
+#print axioms map_pos_prod_string_prod_bool_ty_id
+#print axioms kids_pos_prod_string_prod_bool_ty_map
+#print axioms foldMap_pos_prod_string_prod_bool_ty_eq
+#print axioms map_pos_list_prod_string_prod_bool_ty_comp
+#print axioms map_pos_list_prod_string_prod_bool_ty_id
+#print axioms kids_pos_list_prod_string_prod_bool_ty_map
+#print axioms foldMap_pos_list_prod_string_prod_bool_ty_eq
+#print axioms map_pos_list_ty_comp
+#print axioms map_pos_list_ty_id
+#print axioms kids_pos_list_ty_map
+#print axioms foldMap_pos_list_ty_eq
+#print axioms TyArgF.map_comp
+#print axioms TyArgF.map_id
+#print axioms TyArgF.kids_map
 #print axioms cata_ofLayer_view
 #print axioms eq_cata_ofLayer
-#print axioms sizeOf_tyKids
+#print axioms cata_fusion_ty
 #print axioms cata_ofLayer_inv
+#print axioms cata_prod_ty
+#print axioms foldMap_view
 #print axioms foldMap_head_eq_cata
 #print axioms foldMap_eq_cata
-#print axioms cata_fusion_ty
-#print axioms cata_prod_ty
 
 end Effect4.Program
 

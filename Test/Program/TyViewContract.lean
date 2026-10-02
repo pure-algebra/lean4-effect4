@@ -106,8 +106,8 @@ compares position 0 with position 0. -/
 
 /-- The law as a proof obligation, so this module fails if its statement moves. -/
 example (a b : Ty) (ha : Ty.isMember a = true) (hb : Ty.isMember b = true)
-    (hlit : Ty.litRule a b = false) (htop : Ty.topRule a b = false) :
+    (hleaf : Ty.leafRule a b = false) (htop : Ty.topRule a b = false) :
     Ty.sub a b = (Ty.sameHead a b && Ty.argsBelow Ty.sub a b) :=
-  Ty.sub_eq_args a b ha hb hlit htop
+  Ty.sub_eq_args a b ha hb hleaf htop
 
 end Test.Program.TyViewContract

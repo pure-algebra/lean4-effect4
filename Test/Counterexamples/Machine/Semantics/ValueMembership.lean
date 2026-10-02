@@ -613,6 +613,8 @@ def FitsInv (w : W) (inv : Inv) (v : Val) : Ty → Prop
     | _ => False
   | .var _ => False
   | .unknown => Live w v
+  -- the historical relation predates the data wave's forms (decisions row 162)
+  | _ => False
 
 /-- **The proposed judgment**: invariant handles read as `Ty.sub` reads them. -/
 abbrev Fits (w : W) (v : Val) (ty : Ty) : Prop := FitsInv w Equiv v ty

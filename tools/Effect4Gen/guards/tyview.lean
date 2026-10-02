@@ -9,7 +9,7 @@ guards are the view's own contract, and they do not depend on which constructors
 1. `sub_eq_args` holds at named pairs that exercise each variance, so the law is exercised as a
    computation and not only as a theorem.
 2. The four hypotheses are each necessary: dropping any one of them makes the two sides differ
-   at a named counterexample (`never`, `union`, the literal rule, the top).
+   at a named counterexample (`never`, `union`, the leaf table's rule, the top).
 3. `sameHead` is an equivalence on members, and `union` is outside it.
 4. `eq_of_sameHead` and `args_congr` at a pair the printer's corpus actually carries.
 -/
@@ -51,9 +51,11 @@ are for. -/
 -- `isMember b`: a union on the right is a choice, not a congruence
 #guard Ty.isMember (.union .nat .string) = false
 #guard lhs .nat (.union .nat .string) != rhs .nat (.union .nat .string)
--- `litRule`: a literal is below `string` with no head in common
-#guard Ty.litRule (.lit "a") .string = true
+-- `leafRule`: a declared leaf edge relates two heads with nothing in common (decisions row 177)
+#guard Ty.leafRule (.lit "a") .string = true
 #guard lhs (.lit "a") .string != rhs (.lit "a") .string
+#guard Ty.leafRule .nat .number = true
+#guard lhs .nat .number != rhs .nat .number
 -- `topRule`: everything is below the top (decisions row 46)
 #guard Ty.topRule .nat .unknown = true
 #guard lhs .nat .unknown != rhs .nat .unknown
@@ -73,7 +75,8 @@ example {a b c : Ty} (h : Ty.sameHead a b = true) (h' : Ty.sameHead b c = true) 
 /-! ### 4. The node is its head and its children -/
 
 example {a b : Ty} (h : Ty.sameHead a b = true)
-    (hx : a.args.map Prod.snd = b.args.map Prod.snd) : a = b := Ty.eq_of_sameHead h hx
+    (hx : a.args.map Prod.snd = b.args.map Prod.snd) (hca : Ty.headCanon a = true)
+    (hcb : Ty.headCanon b = true) : a = b := Ty.eq_of_sameHead h hx hca hcb
 example {a b : Ty} (h : Ty.sameHead a b = true) :
     a.args.length = b.args.length ∧ a.args.map Prod.fst = b.args.map Prod.fst := Ty.args_congr h
 example {t : Ty} {v : Ty.Variance} {x : Ty} (h : (v, x) ∈ t.args) : sizeOf x < sizeOf t :=

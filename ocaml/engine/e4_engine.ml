@@ -63,6 +63,8 @@ module type INSTANCE = sig
     | Val_ctor of int * val_ list
     | Val_ref of int * int list
     | Val_handle of int * int
+    | Val_negInt of int
+    | Val_float of int
 
   type stuck =
     | Stuck_unknownFiber of fiber_id
@@ -416,6 +418,9 @@ module Make (I : INSTANCE) = struct
     | I.Val_ref (k, path) ->
       Printf.sprintf "ref %d/[%s]" k (String.concat "," (List.map string_of_int path))
     | I.Val_handle (k, n) -> Printf.sprintf "handle %d/%d" k n
+    (* the signed frame holds -(n+1); the binary64 frame its bits (below 2^62: the carrier) *)
+    | I.Val_negInt n -> "-" ^ string_of_int (n + 1)
+    | I.Val_float bits -> Printf.sprintf "float %016x" bits
 
   let show_err (e : I.err) : string =
     match e with

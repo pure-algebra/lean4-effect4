@@ -37,6 +37,7 @@ constructor's own name applied to its own arguments. The round trip is checked o
 vector (`marshalRoundTrip` below), so a mistake here is a red row rather than a silent
 agreement. -/
 
+mutual
 def tyValue : Ty → Value
   | .never => .ctor ``Ty.never #[]
   | .unit => .ctor ``Ty.unit #[]
@@ -58,6 +59,24 @@ def tyValue : Ty → Value
   | .deferredOf v e => .ctor ``Ty.deferredOf #[tyValue v, tyValue e]
   | .var i => .ctor ``Ty.var #[.nat i]
   | .unknown => .ctor ``Ty.unknown #[]
+  | .record fs => .ctor ``Ty.record #[Value.ofList (fieldValues fs)]
+  | .map k v => .ctor ``Ty.map #[tyValue k, tyValue v]
+  | .tuple ts => .ctor ``Ty.tuple #[Value.ofList (itemValues ts)]
+  | .app n ts => .ctor ``Ty.app #[.str n, Value.ofList (itemValues ts)]
+  | .null => .ctor ``Ty.null #[]
+  | .undefined => .ctor ``Ty.undefined #[]
+  | .number => .ctor ``Ty.number #[]
+  | .bytes => .ctor ``Ty.bytes #[]
+/-- A record's fields, each `Prod.mk name (Prod.mk optional type)`. -/
+def fieldValues : List (String × Bool × Ty) → List Value
+  | [] => []
+  | (n, o, t) :: rest =>
+    .ctor ``Prod.mk #[.str n, .ctor ``Prod.mk #[Value.bool o, tyValue t]] :: fieldValues rest
+/-- A tuple's or a reference's items. -/
+def itemValues : List Ty → List Value
+  | [] => []
+  | t :: rest => tyValue t :: itemValues rest
+end
 
 /-- The inverse, so the marshalling can be round-tripped rather than trusted. -/
 partial def valueTy? (v : Value) : Option Ty := do
@@ -288,9 +307,9 @@ def buildCases : Array Case := Id.run do
       let lbl := a.render ++ " | " ++ b.render
       out := out.push { label := lbl, decl := ``Ty.join, args := #[tyValue a, tyValue b],
                         expected := tyValue (Ty.join a b) }
-      out := out.push { label := lbl, decl := ``Ty.ltKey,
+      out := out.push { label := lbl, decl := ``Effect4.Field.ltKey,
                         args := #[Value.ofNatList a.key, Value.ofNatList b.key],
-                        expected := Value.bool (Ty.ltKey a.key b.key) }
+                        expected := Value.bool (Effect4.Field.ltKey a.key b.key) }
       out := out.push { label := lbl, decl := ``Ty.insertMember,
                         args := #[tyValue a, tyListValue [b]],
                         expected := tyListValue (Ty.insertMember a [b]) }
@@ -329,7 +348,7 @@ builtin table switched **off** so the interpreter reads Lean's own bodies wherev
 exist. -/
 def closureNames : CoreM (Array Name) := do
   let roots : Array Name :=
-    #[``Ty.key, ``Ty.members, ``Ty.join, ``Ty.render, ``Ty.ltKey, ``Ty.insertMember,
+    #[``Ty.key, ``Ty.members, ``Ty.join, ``Ty.render, ``Effect4.Field.ltKey, ``Ty.insertMember,
       ``Ty.ofMembers, ``Ty.isNever, ``GenTy.merge]
   let c ← walkClosure roots { primitive := fun _ => false, cap := 4000 }
   return c.decls.map (·.name) ++ c.missing.map (·.name)

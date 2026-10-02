@@ -49,7 +49,25 @@ structure TyAlgebra (R : TyFam → Type u) where
   ty_deferredOf : R .ty → R .ty → R .ty
   ty_var : (Nat) → R .ty
   ty_unknown : R .ty
+  ty_record : List (String × Bool × R .ty) → R .ty
+  ty_map : R .ty → R .ty → R .ty
+  ty_tuple : List (R .ty) → R .ty
+  ty_app : (String) → List (R .ty) → R .ty
+  ty_null : R .ty
+  ty_undefined : R .ty
+  ty_number : R .ty
+  ty_bytes : R .ty
 
+/-- The map of a product's components. -/
+def prodMapSnd {α : Type u} {β : Type v} {γ : Type w} (f : β → γ) (x : α × β) : α × γ := (x.1, f x.2)
+
+/-- The only equation the proofs use: on a pair literal. Unfolding the map itself
+would also open an inner application on a variable, before the induction hypothesis
+could rewrite it. -/
+theorem prodMapSnd_mk {α : Type u} {β : Type v} {γ : Type w} (f : β → γ) (a : α) (b : β) :
+    prodMapSnd f (a, b) = (a, f b) := rfl
+
+mutual
 def cata_ty {R : TyFam → Type u} (alg : TyAlgebra R)
     (node : Effect4.Program.Ty) : R .ty :=
   match node with
@@ -73,31 +91,268 @@ def cata_ty {R : TyFam → Type u} (alg : TyAlgebra R)
   | .deferredOf a0 a1 => alg.ty_deferredOf (cata_ty alg a0) (cata_ty alg a1)
   | .var a0 => alg.ty_var a0
   | .unknown => alg.ty_unknown
+  | .record a0 => alg.ty_record (cata_pos_list_prod_string_prod_bool_ty alg a0)
+  | .map a0 a1 => alg.ty_map (cata_ty alg a0) (cata_ty alg a1)
+  | .tuple a0 => alg.ty_tuple (cata_pos_list_ty alg a0)
+  | .app a0 a1 => alg.ty_app a0 (cata_pos_list_ty alg a1)
+  | .null => alg.ty_null
+  | .undefined => alg.ty_undefined
+  | .number => alg.ty_number
+  | .bytes => alg.ty_bytes
 termination_by structural node
+def cata_pos_prod_bool_ty {R : TyFam → Type u} (alg : TyAlgebra R)
+    (x : Bool × Effect4.Program.Ty) : Bool × R .ty :=
+  match x with
+  | (u, v) => (u, cata_ty alg v)
+termination_by structural x
+def cata_pos_prod_string_prod_bool_ty {R : TyFam → Type u} (alg : TyAlgebra R)
+    (x : String × Bool × Effect4.Program.Ty) : String × Bool × R .ty :=
+  match x with
+  | (u, v) => (u, cata_pos_prod_bool_ty alg v)
+termination_by structural x
+def cata_pos_list_prod_string_prod_bool_ty {R : TyFam → Type u} (alg : TyAlgebra R)
+    (xs : List (String × Bool × Effect4.Program.Ty)) : List (String × Bool × R .ty) :=
+  match xs with
+  | [] => []
+  | x :: rest => cata_pos_prod_string_prod_bool_ty alg x :: cata_pos_list_prod_string_prod_bool_ty alg rest
+termination_by structural xs
+def cata_pos_list_ty {R : TyFam → Type u} (alg : TyAlgebra R)
+    (xs : List Effect4.Program.Ty) : List (R .ty) :=
+  match xs with
+  | [] => []
+  | x :: rest => cata_ty alg x :: cata_pos_list_ty alg rest
+termination_by structural xs
+end
+
+theorem cata_pos_prod_bool_ty_eq {R : TyFam → Type u}
+    (alg : TyAlgebra R) (x : Bool × Effect4.Program.Ty) :
+    cata_pos_prod_bool_ty alg x = prodMapSnd (cata_ty alg) x := by
+  cases x with
+  | mk u v => simp only [cata_pos_prod_bool_ty, prodMapSnd_mk]
+
+theorem cata_pos_prod_string_prod_bool_ty_eq {R : TyFam → Type u}
+    (alg : TyAlgebra R) (x : String × Bool × Effect4.Program.Ty) :
+    cata_pos_prod_string_prod_bool_ty alg x = prodMapSnd (prodMapSnd (cata_ty alg)) x := by
+  cases x with
+  | mk u v => simp only [cata_pos_prod_string_prod_bool_ty, prodMapSnd_mk, cata_pos_prod_bool_ty_eq]
+
+theorem cata_pos_list_prod_string_prod_bool_ty_eq {R : TyFam → Type u}
+    (alg : TyAlgebra R) (xs : List (String × Bool × Effect4.Program.Ty)) :
+    cata_pos_list_prod_string_prod_bool_ty alg xs = xs.map (prodMapSnd (prodMapSnd (cata_ty alg))) := by
+  induction xs with
+  | nil => simp only [cata_pos_list_prod_string_prod_bool_ty, List.map_nil]
+  | cons x rest ih => simp only [cata_pos_list_prod_string_prod_bool_ty, List.map_cons, ih, cata_pos_prod_string_prod_bool_ty_eq]
+
+theorem cata_pos_list_ty_eq {R : TyFam → Type u}
+    (alg : TyAlgebra R) (xs : List Effect4.Program.Ty) :
+    cata_pos_list_ty alg xs = xs.map (cata_ty alg) := by
+  induction xs with
+  | nil => simp only [cata_pos_list_ty, List.map_nil]
+  | cons x rest ih => simp only [cata_pos_list_ty, List.map_cons, ih]
+
+@[simp] theorem cata_ty_never {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.never) =
+      alg.ty_never := rfl
+
+@[simp] theorem cata_ty_unit {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.unit) =
+      alg.ty_unit := rfl
+
+@[simp] theorem cata_ty_nat {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.nat) =
+      alg.ty_nat := rfl
+
+@[simp] theorem cata_ty_int {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.int) =
+      alg.ty_int := rfl
+
+@[simp] theorem cata_ty_string {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.string) =
+      alg.ty_string := rfl
+
+@[simp] theorem cata_ty_bool {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.bool) =
+      alg.ty_bool := rfl
+
+@[simp] theorem cata_ty_handle {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : String) :
+    cata_ty alg (.handle a0) =
+      alg.ty_handle a0 := rfl
+
+@[simp] theorem cata_ty_option {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) :
+    cata_ty alg (.option a0) =
+      alg.ty_option (cata_ty alg a0) := rfl
+
+@[simp] theorem cata_ty_list {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) :
+    cata_ty alg (.list a0) =
+      alg.ty_list (cata_ty alg a0) := rfl
+
+@[simp] theorem cata_ty_prod {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) (a1 : Effect4.Program.Ty) :
+    cata_ty alg (.prod a0 a1) =
+      alg.ty_prod (cata_ty alg a0) (cata_ty alg a1) := rfl
+
+@[simp] theorem cata_ty_except {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) (a1 : Effect4.Program.Ty) :
+    cata_ty alg (.except a0 a1) =
+      alg.ty_except (cata_ty alg a0) (cata_ty alg a1) := rfl
+
+@[simp] theorem cata_ty_exitOf {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) (a1 : Effect4.Program.Ty) :
+    cata_ty alg (.exitOf a0 a1) =
+      alg.ty_exitOf (cata_ty alg a0) (cata_ty alg a1) := rfl
+
+@[simp] theorem cata_ty_causeOf {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) :
+    cata_ty alg (.causeOf a0) =
+      alg.ty_causeOf (cata_ty alg a0) := rfl
+
+@[simp] theorem cata_ty_fiberOf {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) (a1 : Effect4.Program.Ty) :
+    cata_ty alg (.fiberOf a0 a1) =
+      alg.ty_fiberOf (cata_ty alg a0) (cata_ty alg a1) := rfl
+
+@[simp] theorem cata_ty_union {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) (a1 : Effect4.Program.Ty) :
+    cata_ty alg (.union a0 a1) =
+      alg.ty_union (cata_ty alg a0) (cata_ty alg a1) := rfl
+
+@[simp] theorem cata_ty_lit {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : String) :
+    cata_ty alg (.lit a0) =
+      alg.ty_lit a0 := rfl
+
+@[simp] theorem cata_ty_refOf {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) :
+    cata_ty alg (.refOf a0) =
+      alg.ty_refOf (cata_ty alg a0) := rfl
+
+@[simp] theorem cata_ty_deferredOf {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) (a1 : Effect4.Program.Ty) :
+    cata_ty alg (.deferredOf a0 a1) =
+      alg.ty_deferredOf (cata_ty alg a0) (cata_ty alg a1) := rfl
+
+@[simp] theorem cata_ty_var {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Nat) :
+    cata_ty alg (.var a0) =
+      alg.ty_var a0 := rfl
+
+@[simp] theorem cata_ty_unknown {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.unknown) =
+      alg.ty_unknown := rfl
+
+@[simp] theorem cata_ty_record {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : List (String × Bool × Effect4.Program.Ty)) :
+    cata_ty alg (.record a0) =
+      alg.ty_record (a0.map (prodMapSnd (prodMapSnd (cata_ty alg)))) := by
+  simp only [cata_ty, cata_pos_list_prod_string_prod_bool_ty_eq]
+
+@[simp] theorem cata_ty_map {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Program.Ty) (a1 : Effect4.Program.Ty) :
+    cata_ty alg (.map a0 a1) =
+      alg.ty_map (cata_ty alg a0) (cata_ty alg a1) := rfl
+
+@[simp] theorem cata_ty_tuple {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : List Effect4.Program.Ty) :
+    cata_ty alg (.tuple a0) =
+      alg.ty_tuple (a0.map (cata_ty alg)) := by
+  simp only [cata_ty, cata_pos_list_ty_eq]
+
+@[simp] theorem cata_ty_app {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : String) (a1 : List Effect4.Program.Ty) :
+    cata_ty alg (.app a0 a1) =
+      alg.ty_app a0 (a1.map (cata_ty alg)) := by
+  simp only [cata_ty, cata_pos_list_ty_eq]
+
+@[simp] theorem cata_ty_null {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.null) =
+      alg.ty_null := rfl
+
+@[simp] theorem cata_ty_undefined {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.undefined) =
+      alg.ty_undefined := rfl
+
+@[simp] theorem cata_ty_number {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.number) =
+      alg.ty_number := rfl
+
+@[simp] theorem cata_ty_bytes {R : TyFam → Type u}
+    (alg : TyAlgebra R) :
+    cata_ty alg (.bytes) =
+      alg.ty_bytes := rfl
 
 structure TyHom {R : TyFam → Type u} (alg : TyAlgebra R) where
   f_ty : Effect4.Program.Ty → R .ty
-  h_ty_never : f_ty (.never) = alg.ty_never
-  h_ty_unit : f_ty (.unit) = alg.ty_unit
-  h_ty_nat : f_ty (.nat) = alg.ty_nat
-  h_ty_int : f_ty (.int) = alg.ty_int
-  h_ty_string : f_ty (.string) = alg.ty_string
-  h_ty_bool : f_ty (.bool) = alg.ty_bool
-  h_ty_handle : ∀ a0, f_ty (.handle a0) = alg.ty_handle a0
-  h_ty_option : ∀ a0, f_ty (.option a0) = alg.ty_option (f_ty a0)
-  h_ty_list : ∀ a0, f_ty (.list a0) = alg.ty_list (f_ty a0)
-  h_ty_prod : ∀ a0 a1, f_ty (.prod a0 a1) = alg.ty_prod (f_ty a0) (f_ty a1)
-  h_ty_except : ∀ a0 a1, f_ty (.except a0 a1) = alg.ty_except (f_ty a0) (f_ty a1)
-  h_ty_exitOf : ∀ a0 a1, f_ty (.exitOf a0 a1) = alg.ty_exitOf (f_ty a0) (f_ty a1)
-  h_ty_causeOf : ∀ a0, f_ty (.causeOf a0) = alg.ty_causeOf (f_ty a0)
-  h_ty_fiberOf : ∀ a0 a1, f_ty (.fiberOf a0 a1) = alg.ty_fiberOf (f_ty a0) (f_ty a1)
-  h_ty_union : ∀ a0 a1, f_ty (.union a0 a1) = alg.ty_union (f_ty a0) (f_ty a1)
-  h_ty_lit : ∀ a0, f_ty (.lit a0) = alg.ty_lit a0
-  h_ty_refOf : ∀ a0, f_ty (.refOf a0) = alg.ty_refOf (f_ty a0)
-  h_ty_deferredOf : ∀ a0 a1, f_ty (.deferredOf a0 a1) = alg.ty_deferredOf (f_ty a0) (f_ty a1)
-  h_ty_var : ∀ a0, f_ty (.var a0) = alg.ty_var a0
-  h_ty_unknown : f_ty (.unknown) = alg.ty_unknown
+  h_ty_never : f_ty (.never) =
+    alg.ty_never
+  h_ty_unit : f_ty (.unit) =
+    alg.ty_unit
+  h_ty_nat : f_ty (.nat) =
+    alg.ty_nat
+  h_ty_int : f_ty (.int) =
+    alg.ty_int
+  h_ty_string : f_ty (.string) =
+    alg.ty_string
+  h_ty_bool : f_ty (.bool) =
+    alg.ty_bool
+  h_ty_handle : ∀ a0, f_ty (.handle a0) =
+    alg.ty_handle a0
+  h_ty_option : ∀ a0, f_ty (.option a0) =
+    alg.ty_option (f_ty a0)
+  h_ty_list : ∀ a0, f_ty (.list a0) =
+    alg.ty_list (f_ty a0)
+  h_ty_prod : ∀ a0 a1, f_ty (.prod a0 a1) =
+    alg.ty_prod (f_ty a0) (f_ty a1)
+  h_ty_except : ∀ a0 a1, f_ty (.except a0 a1) =
+    alg.ty_except (f_ty a0) (f_ty a1)
+  h_ty_exitOf : ∀ a0 a1, f_ty (.exitOf a0 a1) =
+    alg.ty_exitOf (f_ty a0) (f_ty a1)
+  h_ty_causeOf : ∀ a0, f_ty (.causeOf a0) =
+    alg.ty_causeOf (f_ty a0)
+  h_ty_fiberOf : ∀ a0 a1, f_ty (.fiberOf a0 a1) =
+    alg.ty_fiberOf (f_ty a0) (f_ty a1)
+  h_ty_union : ∀ a0 a1, f_ty (.union a0 a1) =
+    alg.ty_union (f_ty a0) (f_ty a1)
+  h_ty_lit : ∀ a0, f_ty (.lit a0) =
+    alg.ty_lit a0
+  h_ty_refOf : ∀ a0, f_ty (.refOf a0) =
+    alg.ty_refOf (f_ty a0)
+  h_ty_deferredOf : ∀ a0 a1, f_ty (.deferredOf a0 a1) =
+    alg.ty_deferredOf (f_ty a0) (f_ty a1)
+  h_ty_var : ∀ a0, f_ty (.var a0) =
+    alg.ty_var a0
+  h_ty_unknown : f_ty (.unknown) =
+    alg.ty_unknown
+  h_ty_record : ∀ a0, f_ty (.record a0) =
+    alg.ty_record (a0.map (prodMapSnd (prodMapSnd f_ty)))
+  h_ty_map : ∀ a0 a1, f_ty (.map a0 a1) =
+    alg.ty_map (f_ty a0) (f_ty a1)
+  h_ty_tuple : ∀ a0, f_ty (.tuple a0) =
+    alg.ty_tuple (a0.map f_ty)
+  h_ty_app : ∀ a0 a1, f_ty (.app a0 a1) =
+    alg.ty_app a0 (a1.map f_ty)
+  h_ty_null : f_ty (.null) =
+    alg.ty_null
+  h_ty_undefined : f_ty (.undefined) =
+    alg.ty_undefined
+  h_ty_number : f_ty (.number) =
+    alg.ty_number
+  h_ty_bytes : f_ty (.bytes) =
+    alg.ty_bytes
 
+mutual
 theorem hom_eq_cata_ty {R : TyFam → Type u}
     {alg : TyAlgebra R} (hom : TyHom alg) (node : Effect4.Program.Ty) :
     hom.f_ty node = cata_ty alg node := by
@@ -142,7 +397,50 @@ theorem hom_eq_cata_ty {R : TyFam → Type u}
     simp only [cata_ty, hom.h_ty_var a0]
   | .unknown =>
     simp only [cata_ty, hom.h_ty_unknown]
+  | .record a0 =>
+    simp only [cata_ty, hom.h_ty_record a0, hom_pos_list_prod_string_prod_bool_ty hom a0]
+  | .map a0 a1 =>
+    simp only [cata_ty, hom.h_ty_map a0 a1, hom_eq_cata_ty hom a0, hom_eq_cata_ty hom a1]
+  | .tuple a0 =>
+    simp only [cata_ty, hom.h_ty_tuple a0, hom_pos_list_ty hom a0]
+  | .app a0 a1 =>
+    simp only [cata_ty, hom.h_ty_app a0 a1, hom_pos_list_ty hom a1]
+  | .null =>
+    simp only [cata_ty, hom.h_ty_null]
+  | .undefined =>
+    simp only [cata_ty, hom.h_ty_undefined]
+  | .number =>
+    simp only [cata_ty, hom.h_ty_number]
+  | .bytes =>
+    simp only [cata_ty, hom.h_ty_bytes]
 termination_by structural node
+theorem hom_pos_prod_bool_ty {R : TyFam → Type u}
+    {alg : TyAlgebra R} (hom : TyHom alg) (x : Bool × Effect4.Program.Ty) :
+    prodMapSnd hom.f_ty x = cata_pos_prod_bool_ty alg x := by
+  match x with
+  | (u, v) => simp only [cata_pos_prod_bool_ty, prodMapSnd_mk, hom_eq_cata_ty hom v]
+termination_by structural x
+theorem hom_pos_prod_string_prod_bool_ty {R : TyFam → Type u}
+    {alg : TyAlgebra R} (hom : TyHom alg) (x : String × Bool × Effect4.Program.Ty) :
+    prodMapSnd (prodMapSnd hom.f_ty) x = cata_pos_prod_string_prod_bool_ty alg x := by
+  match x with
+  | (u, v) => simp only [cata_pos_prod_string_prod_bool_ty, prodMapSnd_mk, hom_pos_prod_bool_ty hom v]
+termination_by structural x
+theorem hom_pos_list_prod_string_prod_bool_ty {R : TyFam → Type u}
+    {alg : TyAlgebra R} (hom : TyHom alg) (xs : List (String × Bool × Effect4.Program.Ty)) :
+    xs.map (prodMapSnd (prodMapSnd hom.f_ty)) = cata_pos_list_prod_string_prod_bool_ty alg xs := by
+  match xs with
+  | [] => simp only [cata_pos_list_prod_string_prod_bool_ty, List.map_nil]
+  | x :: rest => simp only [cata_pos_list_prod_string_prod_bool_ty, List.map_cons, hom_pos_prod_string_prod_bool_ty hom x, hom_pos_list_prod_string_prod_bool_ty hom rest]
+termination_by structural xs
+theorem hom_pos_list_ty {R : TyFam → Type u}
+    {alg : TyAlgebra R} (hom : TyHom alg) (xs : List Effect4.Program.Ty) :
+    xs.map hom.f_ty = cata_pos_list_ty alg xs := by
+  match xs with
+  | [] => simp only [cata_pos_list_ty, List.map_nil]
+  | x :: rest => simp only [cata_pos_list_ty, List.map_cons, hom_eq_cata_ty hom x, hom_pos_list_ty hom rest]
+termination_by structural xs
+end
 
 abbrev TySelfCarrier : TyFam → Type
   | .ty => Effect4.Program.Ty
@@ -168,7 +466,16 @@ def TyAlgebra.id : TyAlgebra (TySelfCarrier) where
   ty_deferredOf a0 a1 := Effect4.Program.Ty.deferredOf a0 a1
   ty_var a0 := Effect4.Program.Ty.var a0
   ty_unknown := Effect4.Program.Ty.unknown
+  ty_record a0 := Effect4.Program.Ty.record a0
+  ty_map a0 a1 := Effect4.Program.Ty.map a0 a1
+  ty_tuple a0 := Effect4.Program.Ty.tuple a0
+  ty_app a0 a1 := Effect4.Program.Ty.app a0 a1
+  ty_null := Effect4.Program.Ty.null
+  ty_undefined := Effect4.Program.Ty.undefined
+  ty_number := Effect4.Program.Ty.number
+  ty_bytes := Effect4.Program.Ty.bytes
 
+mutual
 @[simp] theorem cata_id_ty (node : Effect4.Program.Ty) :
     cata_ty (TyAlgebra.id) node = node := by
   match node with
@@ -232,53 +539,56 @@ def TyAlgebra.id : TyAlgebra (TySelfCarrier) where
   | .unknown =>
     simp only [cata_ty]
     rfl
+  | .record a0 =>
+    simp only [cata_ty, cata_id_pos_list_prod_string_prod_bool_ty a0]
+    rfl
+  | .map a0 a1 =>
+    simp only [cata_ty, cata_id_ty a0, cata_id_ty a1]
+    rfl
+  | .tuple a0 =>
+    simp only [cata_ty, cata_id_pos_list_ty a0]
+    rfl
+  | .app a0 a1 =>
+    simp only [cata_ty, cata_id_pos_list_ty a1]
+    rfl
+  | .null =>
+    simp only [cata_ty]
+    rfl
+  | .undefined =>
+    simp only [cata_ty]
+    rfl
+  | .number =>
+    simp only [cata_ty]
+    rfl
+  | .bytes =>
+    simp only [cata_ty]
+    rfl
 termination_by structural node
+theorem cata_id_pos_prod_bool_ty (x : Bool × Effect4.Program.Ty) :
+    cata_pos_prod_bool_ty (TyAlgebra.id) x = x := by
+  match x with
+  | (u, v) => simp only [cata_pos_prod_bool_ty, cata_id_ty v]
+termination_by structural x
+theorem cata_id_pos_prod_string_prod_bool_ty (x : String × Bool × Effect4.Program.Ty) :
+    cata_pos_prod_string_prod_bool_ty (TyAlgebra.id) x = x := by
+  match x with
+  | (u, v) => simp only [cata_pos_prod_string_prod_bool_ty, cata_id_pos_prod_bool_ty v]
+termination_by structural x
+theorem cata_id_pos_list_prod_string_prod_bool_ty (xs : List (String × Bool × Effect4.Program.Ty)) :
+    cata_pos_list_prod_string_prod_bool_ty (TyAlgebra.id) xs = xs := by
+  match xs with
+  | [] => simp only [cata_pos_list_prod_string_prod_bool_ty]
+  | x :: rest => simp only [cata_pos_list_prod_string_prod_bool_ty, cata_id_pos_prod_string_prod_bool_ty x, cata_id_pos_list_prod_string_prod_bool_ty rest]
+termination_by structural xs
+theorem cata_id_pos_list_ty (xs : List Effect4.Program.Ty) :
+    cata_pos_list_ty (TyAlgebra.id) xs = xs := by
+  match xs with
+  | [] => simp only [cata_pos_list_ty]
+  | x :: rest => simp only [cata_pos_list_ty, cata_id_ty x, cata_id_pos_list_ty rest]
+termination_by structural xs
+end
 
-def foldMapAt_ty {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Ty)
-    (f_ty : Effect4.Program.Ty → List Nat → M := fun _ _ => unit) : M :=
-  match node with
-  | .never =>
-    f_ty (.never) p
-  | .unit =>
-    f_ty (.unit) p
-  | .nat =>
-    f_ty (.nat) p
-  | .int =>
-    f_ty (.int) p
-  | .string =>
-    f_ty (.string) p
-  | .bool =>
-    f_ty (.bool) p
-  | .handle a0 =>
-    f_ty (.handle a0) p
-  | .option a0 =>
-    op (f_ty (.option a0) p) ((foldMapAt_ty unit op (p ++ [0]) a0 f_ty))
-  | .list a0 =>
-    op (f_ty (.list a0) p) ((foldMapAt_ty unit op (p ++ [0]) a0 f_ty))
-  | .prod a0 a1 =>
-    op (f_ty (.prod a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
-  | .except a0 a1 =>
-    op (f_ty (.except a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
-  | .exitOf a0 a1 =>
-    op (f_ty (.exitOf a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
-  | .causeOf a0 =>
-    op (f_ty (.causeOf a0) p) ((foldMapAt_ty unit op (p ++ [0]) a0 f_ty))
-  | .fiberOf a0 a1 =>
-    op (f_ty (.fiberOf a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
-  | .union a0 a1 =>
-    op (f_ty (.union a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
-  | .lit a0 =>
-    f_ty (.lit a0) p
-  | .refOf a0 =>
-    op (f_ty (.refOf a0) p) ((foldMapAt_ty unit op (p ++ [0]) a0 f_ty))
-  | .deferredOf a0 a1 =>
-    op (f_ty (.deferredOf a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
-  | .var a0 =>
-    f_ty (.var a0) p
-  | .unknown =>
-    f_ty (.unknown) p
-termination_by structural node
-
+mutual
 def foldMap_ty {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.Ty)
     (f_ty : Effect4.Program.Ty → M := fun _ => unit) : M :=
   match node with
@@ -322,276 +632,46 @@ def foldMap_ty {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Prog
     f_ty (.var a0)
   | .unknown =>
     f_ty (.unknown)
+  | .record a0 =>
+    op (f_ty (.record a0)) ((foldMap_pos_list_prod_string_prod_bool_ty unit op a0 f_ty))
+  | .map a0 a1 =>
+    op (f_ty (.map a0 a1)) (op (foldMap_ty unit op a0 f_ty) ((foldMap_ty unit op a1 f_ty)))
+  | .tuple a0 =>
+    op (f_ty (.tuple a0)) ((foldMap_pos_list_ty unit op a0 f_ty))
+  | .app a0 a1 =>
+    op (f_ty (.app a0 a1)) ((foldMap_pos_list_ty unit op a1 f_ty))
+  | .null =>
+    f_ty (.null)
+  | .undefined =>
+    f_ty (.undefined)
+  | .number =>
+    f_ty (.number)
+  | .bytes =>
+    f_ty (.bytes)
 termination_by structural node
-
-structure TyMAlgebra (M : Type u → Type v) (R : TyFam → Type u) where
-  ty_never : M (R .ty)
-  ty_unit : M (R .ty)
-  ty_nat : M (R .ty)
-  ty_int : M (R .ty)
-  ty_string : M (R .ty)
-  ty_bool : M (R .ty)
-  ty_handle : (String) → M (R .ty)
-  ty_option : R .ty → M (R .ty)
-  ty_list : R .ty → M (R .ty)
-  ty_prod : R .ty → R .ty → M (R .ty)
-  ty_except : R .ty → R .ty → M (R .ty)
-  ty_exitOf : R .ty → R .ty → M (R .ty)
-  ty_causeOf : R .ty → M (R .ty)
-  ty_fiberOf : R .ty → R .ty → M (R .ty)
-  ty_union : R .ty → R .ty → M (R .ty)
-  ty_lit : (String) → M (R .ty)
-  ty_refOf : R .ty → M (R .ty)
-  ty_deferredOf : R .ty → R .ty → M (R .ty)
-  ty_var : (Nat) → M (R .ty)
-  ty_unknown : M (R .ty)
-
-def TyAlgebra.toM {M : Type u → Type v} [Monad M] {R : TyFam → Type u}
-    (alg : TyAlgebra R) : TyMAlgebra M R where
-  ty_never := pure alg.ty_never
-  ty_unit := pure alg.ty_unit
-  ty_nat := pure alg.ty_nat
-  ty_int := pure alg.ty_int
-  ty_string := pure alg.ty_string
-  ty_bool := pure alg.ty_bool
-  ty_handle a0 := pure (alg.ty_handle a0)
-  ty_option a0 := pure (alg.ty_option a0)
-  ty_list a0 := pure (alg.ty_list a0)
-  ty_prod a0 a1 := pure (alg.ty_prod a0 a1)
-  ty_except a0 a1 := pure (alg.ty_except a0 a1)
-  ty_exitOf a0 a1 := pure (alg.ty_exitOf a0 a1)
-  ty_causeOf a0 := pure (alg.ty_causeOf a0)
-  ty_fiberOf a0 a1 := pure (alg.ty_fiberOf a0 a1)
-  ty_union a0 a1 := pure (alg.ty_union a0 a1)
-  ty_lit a0 := pure (alg.ty_lit a0)
-  ty_refOf a0 := pure (alg.ty_refOf a0)
-  ty_deferredOf a0 a1 := pure (alg.ty_deferredOf a0 a1)
-  ty_var a0 := pure (alg.ty_var a0)
-  ty_unknown := pure alg.ty_unknown
-
-def TyMAlgebra.map {M : Type u → Type v} {N : Type u → Type w}
-    {R : TyFam → Type u} (φ : ∀ {α}, M α → N α)
-    (alg : TyMAlgebra M R) : TyMAlgebra N R where
-  ty_never := φ alg.ty_never
-  ty_unit := φ alg.ty_unit
-  ty_nat := φ alg.ty_nat
-  ty_int := φ alg.ty_int
-  ty_string := φ alg.ty_string
-  ty_bool := φ alg.ty_bool
-  ty_handle a0 := φ (alg.ty_handle a0)
-  ty_option a0 := φ (alg.ty_option a0)
-  ty_list a0 := φ (alg.ty_list a0)
-  ty_prod a0 a1 := φ (alg.ty_prod a0 a1)
-  ty_except a0 a1 := φ (alg.ty_except a0 a1)
-  ty_exitOf a0 a1 := φ (alg.ty_exitOf a0 a1)
-  ty_causeOf a0 := φ (alg.ty_causeOf a0)
-  ty_fiberOf a0 a1 := φ (alg.ty_fiberOf a0 a1)
-  ty_union a0 a1 := φ (alg.ty_union a0 a1)
-  ty_lit a0 := φ (alg.ty_lit a0)
-  ty_refOf a0 := φ (alg.ty_refOf a0)
-  ty_deferredOf a0 a1 := φ (alg.ty_deferredOf a0 a1)
-  ty_var a0 := φ (alg.ty_var a0)
-  ty_unknown := φ alg.ty_unknown
-
-def TyMAlgebra.toSeq {M : Type u → Type v} [Monad M]
-    {R : TyFam → Type u} (alg : TyMAlgebra M R) :
-    TyAlgebra (fun f => M (R f)) where
-  ty_never := alg.ty_never
-  ty_unit := alg.ty_unit
-  ty_nat := alg.ty_nat
-  ty_int := alg.ty_int
-  ty_string := alg.ty_string
-  ty_bool := alg.ty_bool
-  ty_handle a0 := alg.ty_handle a0
-  ty_option a0 := do
-    let x0 ← a0
-    alg.ty_option x0
-  ty_list a0 := do
-    let x0 ← a0
-    alg.ty_list x0
-  ty_prod a0 a1 := do
-    let x0 ← a0
-    let x1 ← a1
-    alg.ty_prod x0 x1
-  ty_except a0 a1 := do
-    let x0 ← a0
-    let x1 ← a1
-    alg.ty_except x0 x1
-  ty_exitOf a0 a1 := do
-    let x0 ← a0
-    let x1 ← a1
-    alg.ty_exitOf x0 x1
-  ty_causeOf a0 := do
-    let x0 ← a0
-    alg.ty_causeOf x0
-  ty_fiberOf a0 a1 := do
-    let x0 ← a0
-    let x1 ← a1
-    alg.ty_fiberOf x0 x1
-  ty_union a0 a1 := do
-    let x0 ← a0
-    let x1 ← a1
-    alg.ty_union x0 x1
-  ty_lit a0 := alg.ty_lit a0
-  ty_refOf a0 := do
-    let x0 ← a0
-    alg.ty_refOf x0
-  ty_deferredOf a0 a1 := do
-    let x0 ← a0
-    let x1 ← a1
-    alg.ty_deferredOf x0 x1
-  ty_var a0 := alg.ty_var a0
-  ty_unknown := alg.ty_unknown
-
-def foldM_ty {M : Type u → Type v} [Monad M] {R : TyFam → Type u}
-    (alg : TyMAlgebra M R) (node : Effect4.Program.Ty) : M (R .ty) :=
-  match node with
-  | .never => alg.ty_never
-  | .unit => alg.ty_unit
-  | .nat => alg.ty_nat
-  | .int => alg.ty_int
-  | .string => alg.ty_string
-  | .bool => alg.ty_bool
-  | .handle a0 => alg.ty_handle a0
-  | .option a0 => do
-      let x0 ← foldM_ty alg a0
-      alg.ty_option x0
-  | .list a0 => do
-      let x0 ← foldM_ty alg a0
-      alg.ty_list x0
-  | .prod a0 a1 => do
-      let x0 ← foldM_ty alg a0
-      let x1 ← foldM_ty alg a1
-      alg.ty_prod x0 x1
-  | .except a0 a1 => do
-      let x0 ← foldM_ty alg a0
-      let x1 ← foldM_ty alg a1
-      alg.ty_except x0 x1
-  | .exitOf a0 a1 => do
-      let x0 ← foldM_ty alg a0
-      let x1 ← foldM_ty alg a1
-      alg.ty_exitOf x0 x1
-  | .causeOf a0 => do
-      let x0 ← foldM_ty alg a0
-      alg.ty_causeOf x0
-  | .fiberOf a0 a1 => do
-      let x0 ← foldM_ty alg a0
-      let x1 ← foldM_ty alg a1
-      alg.ty_fiberOf x0 x1
-  | .union a0 a1 => do
-      let x0 ← foldM_ty alg a0
-      let x1 ← foldM_ty alg a1
-      alg.ty_union x0 x1
-  | .lit a0 => alg.ty_lit a0
-  | .refOf a0 => do
-      let x0 ← foldM_ty alg a0
-      alg.ty_refOf x0
-  | .deferredOf a0 a1 => do
-      let x0 ← foldM_ty alg a0
-      let x1 ← foldM_ty alg a1
-      alg.ty_deferredOf x0 x1
-  | .var a0 => alg.ty_var a0
-  | .unknown => alg.ty_unknown
-termination_by structural node
-
-theorem foldM_eq_cata_ty {M : Type u → Type v} [Monad M]
-    {R : TyFam → Type u} (alg : TyMAlgebra M R) (node : Effect4.Program.Ty) :
-    foldM_ty alg node = cata_ty alg.toSeq node := by
-  match node with
-  | .never =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-  | .unit =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-  | .nat =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-  | .int =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-  | .string =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-  | .bool =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-  | .handle a0 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-  | .option a0 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0]
-  | .list a0 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0]
-  | .prod a0 a1 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0, foldM_eq_cata_ty alg a1]
-  | .except a0 a1 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0, foldM_eq_cata_ty alg a1]
-  | .exitOf a0 a1 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0, foldM_eq_cata_ty alg a1]
-  | .causeOf a0 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0]
-  | .fiberOf a0 a1 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0, foldM_eq_cata_ty alg a1]
-  | .union a0 a1 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0, foldM_eq_cata_ty alg a1]
-  | .lit a0 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-  | .refOf a0 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0]
-  | .deferredOf a0 a1 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0, foldM_eq_cata_ty alg a1]
-  | .var a0 =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-  | .unknown =>
-    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
-termination_by structural node
-
-theorem foldM_id_ty {R : TyFam → Type u} (alg : TyAlgebra R)
-    (node : Effect4.Program.Ty) :
-    foldM_ty (M := Id) alg.toM node = cata_ty alg node := by
-  rw [foldM_eq_cata_ty]
-  rfl
-
-theorem foldM_natural_ty {M : Type u → Type v} {N : Type u → Type w}
-    [Monad M] [Monad N] {R : TyFam → Type u} (φ : MonadMorphism M N)
-    (alg : TyMAlgebra M R) (node : Effect4.Program.Ty) :
-    φ.toFun (foldM_ty alg node) = foldM_ty (alg.map φ.toFun) node := by
-  match node with
-  | .never =>
-    simp only [foldM_ty, TyMAlgebra.map]
-  | .unit =>
-    simp only [foldM_ty, TyMAlgebra.map]
-  | .nat =>
-    simp only [foldM_ty, TyMAlgebra.map]
-  | .int =>
-    simp only [foldM_ty, TyMAlgebra.map]
-  | .string =>
-    simp only [foldM_ty, TyMAlgebra.map]
-  | .bool =>
-    simp only [foldM_ty, TyMAlgebra.map]
-  | .handle a0 =>
-    simp only [foldM_ty, TyMAlgebra.map]
-  | .option a0 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0]
-  | .list a0 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0]
-  | .prod a0 a1 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0, foldM_natural_ty φ alg a1]
-  | .except a0 a1 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0, foldM_natural_ty φ alg a1]
-  | .exitOf a0 a1 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0, foldM_natural_ty φ alg a1]
-  | .causeOf a0 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0]
-  | .fiberOf a0 a1 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0, foldM_natural_ty φ alg a1]
-  | .union a0 a1 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0, foldM_natural_ty φ alg a1]
-  | .lit a0 =>
-    simp only [foldM_ty, TyMAlgebra.map]
-  | .refOf a0 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0]
-  | .deferredOf a0 a1 =>
-    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0, foldM_natural_ty φ alg a1]
-  | .var a0 =>
-    simp only [foldM_ty, TyMAlgebra.map]
-  | .unknown =>
-    simp only [foldM_ty, TyMAlgebra.map]
-termination_by structural node
+def foldMap_pos_prod_bool_ty {M : Type u} (unit : M) (op : M → M → M) (x : Bool × Effect4.Program.Ty)
+    (f_ty : Effect4.Program.Ty → M := fun _ => unit) : M :=
+  match x with
+  | (_, v) => (foldMap_ty unit op v f_ty)
+termination_by structural x
+def foldMap_pos_prod_string_prod_bool_ty {M : Type u} (unit : M) (op : M → M → M) (x : String × Bool × Effect4.Program.Ty)
+    (f_ty : Effect4.Program.Ty → M := fun _ => unit) : M :=
+  match x with
+  | (_, v) => (foldMap_pos_prod_bool_ty unit op v f_ty)
+termination_by structural x
+def foldMap_pos_list_prod_string_prod_bool_ty {M : Type u} (unit : M) (op : M → M → M) (xs : List (String × Bool × Effect4.Program.Ty))
+    (f_ty : Effect4.Program.Ty → M := fun _ => unit) : M :=
+  match xs with
+  | [] => unit
+  | x :: rest => op (foldMap_pos_prod_string_prod_bool_ty unit op x f_ty) (foldMap_pos_list_prod_string_prod_bool_ty unit op rest f_ty)
+termination_by structural xs
+def foldMap_pos_list_ty {M : Type u} (unit : M) (op : M → M → M) (xs : List Effect4.Program.Ty)
+    (f_ty : Effect4.Program.Ty → M := fun _ => unit) : M :=
+  match xs with
+  | [] => unit
+  | x :: rest => op (foldMap_ty unit op x f_ty) (foldMap_pos_list_ty unit op rest f_ty)
+termination_by structural xs
+end
 
 
 inductive TermFam where
@@ -3347,11 +3427,48 @@ end
 
 /-! ## Receipts -/
 
+#print axioms cata_pos_prod_bool_ty_eq
+#print axioms cata_pos_prod_string_prod_bool_ty_eq
+#print axioms cata_pos_list_prod_string_prod_bool_ty_eq
+#print axioms cata_pos_list_ty_eq
+#print axioms cata_ty_never
+#print axioms cata_ty_unit
+#print axioms cata_ty_nat
+#print axioms cata_ty_int
+#print axioms cata_ty_string
+#print axioms cata_ty_bool
+#print axioms cata_ty_handle
+#print axioms cata_ty_option
+#print axioms cata_ty_list
+#print axioms cata_ty_prod
+#print axioms cata_ty_except
+#print axioms cata_ty_exitOf
+#print axioms cata_ty_causeOf
+#print axioms cata_ty_fiberOf
+#print axioms cata_ty_union
+#print axioms cata_ty_lit
+#print axioms cata_ty_refOf
+#print axioms cata_ty_deferredOf
+#print axioms cata_ty_var
+#print axioms cata_ty_unknown
+#print axioms cata_ty_record
+#print axioms cata_ty_map
+#print axioms cata_ty_tuple
+#print axioms cata_ty_app
+#print axioms cata_ty_null
+#print axioms cata_ty_undefined
+#print axioms cata_ty_number
+#print axioms cata_ty_bytes
 #print axioms hom_eq_cata_ty
+#print axioms hom_pos_prod_bool_ty
+#print axioms hom_pos_prod_string_prod_bool_ty
+#print axioms hom_pos_list_prod_string_prod_bool_ty
+#print axioms hom_pos_list_ty
 #print axioms cata_id_ty
-#print axioms foldM_eq_cata_ty
-#print axioms foldM_id_ty
-#print axioms foldM_natural_ty
+#print axioms cata_id_pos_prod_bool_ty
+#print axioms cata_id_pos_prod_string_prod_bool_ty
+#print axioms cata_id_pos_list_prod_string_prod_bool_ty
+#print axioms cata_id_pos_list_ty
 #print axioms hom_eq_cata_term
 #print axioms hom_eq_cata_terms
 #print axioms cata_id_term

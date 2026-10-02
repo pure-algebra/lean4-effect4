@@ -136,7 +136,8 @@ let () =
       (tags
        = [ ("bool", tag_bool); ("nat", tag_nat); ("string", tag_string); ("list", tag_list);
            ("pair", tag_pair); ("none", tag_none); ("some", tag_some); ("bytes", tag_bytes);
-           ("unit", tag_unit); ("ctor", tag_ctor); ("ref", tag_ref); ("handle", tag_handle) ]);
+           ("unit", tag_unit); ("ctor", tag_ctor); ("ref", tag_ref); ("handle", tag_handle);
+           ("int", tag_int); ("float", tag_float) ]);
 
     (* ---- L1b: the wire tags ---- *)
     let tag_lines =

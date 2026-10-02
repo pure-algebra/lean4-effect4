@@ -363,6 +363,7 @@ def manifest (bs : List (List Family)) : String :=
 
 /-! ## eff_native.ml — the alphabet as data, rendered from Lean values -/
 
+mutual
 def tyO : Ty → String
   | .never => octor "ty" "never"
   | .unknown => octor "ty" "unknown"
@@ -384,6 +385,23 @@ def tyO : Ty → String
   | .refOf v => s!"({octor "ty" "refOf"} {tyO v})"
   | .deferredOf v e => s!"({octor "ty" "deferredOf"} ({tyO v}, {tyO e}))"
   | .var i => s!"({octor "ty" "var"} {i})"
+  | .record fs => s!"({octor "ty" "record"} [{"; ".intercalate (fieldsO fs)}])"
+  | .map k v => s!"({octor "ty" "map"} ({tyO k}, {tyO v}))"
+  | .tuple ts => s!"({octor "ty" "tuple"} [{"; ".intercalate (itemsO ts)}])"
+  | .app n ts => s!"({octor "ty" "app"} ({ostr n}, [{"; ".intercalate (itemsO ts)}]))"
+  | .null => octor "ty" "null"
+  | .undefined => octor "ty" "undefined"
+  | .number => octor "ty" "number"
+  | .bytes => octor "ty" "bytes"
+/-- A record's fields, `(string * (bool * ty))` each. -/
+def fieldsO : List (String × Bool × Ty) → List String
+  | [] => []
+  | (n, o, t) :: rest => s!"({ostr n}, ({o}, {tyO t}))" :: fieldsO rest
+/-- A tuple's or a reference's items. -/
+def itemsO : List Ty → List String
+  | [] => []
+  | t :: rest => tyO t :: itemsO rest
+end
 
 def kindO : RowKind → String
   | .sync => octor "row_kind" "sync"

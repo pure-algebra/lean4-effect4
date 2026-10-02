@@ -968,6 +968,15 @@ def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
   ty_deferredOf _ _ := false
   ty_var _ := false
   ty_unknown := false
+  -- structured carriers are row 118's; the data wave's leaves are not service carriers yet
+  ty_record _ := false
+  ty_map _ _ := false
+  ty_tuple _ := false
+  ty_app _ _ := false
+  ty_null := false
+  ty_undefined := false
+  ty_number := false
+  ty_bytes := false
 
 /-- A flat carrier (row 114; row 118 owns structured carriers). -/
 def flatCarrier (t : Ty) : Bool := cata_ty flatCarrierAlg t

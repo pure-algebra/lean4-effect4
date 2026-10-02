@@ -20,17 +20,18 @@ namespace Effect4.Program
 
 /-- One constructor's answers to the classifier questions. -/
 structure ClassRow where
-  /-- The node holds no handle, fiber, cell or deferred: its members name no world entry. -/
+  /-- The node holds no handle, nominal reference, fiber, cell or deferred: its members name no
+  world entry. -/
   handleFree : Bool
-  /-- At this node the shape check decides membership at every world: not a handle, fiber, cell,
-  deferred or `unknown` (members read the world), and not an exit (its membership also asks a
-  shape-free cause, decisions row 152). -/
+  /-- At this node the shape check decides membership at every world: not a handle, a nominal
+  reference, fiber, cell, deferred or `unknown` (members read the world), and not an exit (its
+  membership also asks a shape-free cause, decisions row 152). -/
   shapeDecides : Bool
 
 /-- **Every node in a class**: the head fold `(Bool, &&)` of a column, the node's answer and all of
 its children's. -/
 def TyTable.allHeads (tbl : TyTable ClassRow) (col : ClassRow → Bool) : TyAlgebra (fun _ => Bool) :=
-  TyAlgebra.headAlg (· && ·) fun c _ => col (tbl.get c)
+  TyAlgebra.headAlg true (· && ·) fun c _ => col (tbl.get c)
 
 /-- The classifier table of `Ty`. -/
 def tyClasses : TyTable ClassRow where
@@ -54,5 +55,13 @@ def tyClasses : TyTable ClassRow where
   deferredOf := ⟨false, false⟩
   var := ⟨true, true⟩
   unknown := ⟨true, false⟩
+  record := ⟨true, true⟩
+  map := ⟨true, true⟩
+  tuple := ⟨true, true⟩
+  app := ⟨false, false⟩
+  null := ⟨true, true⟩
+  undefined := ⟨true, true⟩
+  number := ⟨true, true⟩
+  bytes := ⟨true, true⟩
 
 end Effect4.Program

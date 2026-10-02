@@ -308,6 +308,9 @@ private def ofNormalized : Program.Ty → Option TypeRef
       pure (.name ["Deferred", "Deferred"] [a, e])
   -- a row template's parameter is not a program type: no reference
   | .var _ => none
+  -- the data wave's forms (decisions row 162) are refused here until the faces commit gives
+  -- each its target syntax (the record's object type, the map's `Readonly<Record<…>>`, …)
+  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => none
   | .union left right => do
       let a ← ofNormalized left
       let b ← ofNormalized right

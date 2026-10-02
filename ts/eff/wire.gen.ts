@@ -116,6 +116,14 @@ const writeTy = (w: Writer, v: Ty): void => {
     case "deferredOf": return w.ctor(17, [() => writeTy(w, v.value), () => writeTy(w, v.error)])
     case "var": return w.ctor(18, [() => w.nat(v.index)])
     case "unknown": return w.ctor(19, [])
+    case "record": return w.ctor(20, [() => w.list(v.fields, (y) => w.frame(5, [() => w.str(y[0]), () => w.frame(5, [() => w.bool(y[1][0]), () => writeTy(w, y[1][1])])]))])
+    case "map": return w.ctor(21, [() => writeTy(w, v.key), () => writeTy(w, v.value)])
+    case "tuple": return w.ctor(22, [() => w.list(v.items, (y) => writeTy(w, y))])
+    case "app": return w.ctor(23, [() => w.str(v.name), () => w.list(v.args, (y) => writeTy(w, y))])
+    case "null": return w.ctor(24, [])
+    case "undefined": return w.ctor(25, [])
+    case "number": return w.ctor(26, [])
+    case "bytes": return w.ctor(27, [])
     default: throw new TypeError("wire Ty constructor")
   }
 }

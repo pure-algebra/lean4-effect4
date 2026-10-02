@@ -605,8 +605,8 @@ theorem payload?_exact {j : Json} {tag field : String} (hne : "_tag" ≠ field) 
 
 /-- `N_J` at a tagged pair whose payload name sorts after `_tag`: both orders, one normal form. -/
 theorem normJ_tagged_orders {tag field : String}
-    (hlt : Ty.ltKey (keyBytes "_tag") (keyBytes field) = true)
-    (hgt : Ty.ltKey (keyBytes field) (keyBytes "_tag") = false) (p : Json) :
+    (hlt : Field.ltKey (keyBytes "_tag") (keyBytes field) = true)
+    (hgt : Field.ltKey (keyBytes field) (keyBytes "_tag") = false) (p : Json) :
     normJ (.obj [("_tag", .str tag), (field, p)]) = .obj [("_tag", .str tag), (field, normJ p)] ∧
       normJ (.obj [(field, p), ("_tag", .str tag)]) = .obj [("_tag", .str tag), (field, normJ p)] := by
   rw [normJ_obj, normJ_obj]
@@ -617,8 +617,8 @@ theorem normJ_tagged_orders {tag field : String}
 /-- **The object step of exactness**: a payload read off `j`, re-encoded at its tag, is `j`
 modulo `N_J`. -/
 theorem normJ_tagged_of_payload {tag field : String} (hne : "_tag" ≠ field)
-    (hlt : Ty.ltKey (keyBytes "_tag") (keyBytes field) = true)
-    (hgt : Ty.ltKey (keyBytes field) (keyBytes "_tag") = false) {j p q : Json}
+    (hlt : Field.ltKey (keyBytes "_tag") (keyBytes field) = true)
+    (hgt : Field.ltKey (keyBytes field) (keyBytes "_tag") = false) {j p q : Json}
     (h : payload? j tag field = some p) (hq : normJ q = normJ p) :
     normJ (tagged tag field q) = normJ j := by
   have ho := normJ_tagged_orders (tag := tag) hlt hgt q
@@ -629,20 +629,20 @@ theorem normJ_tagged_of_payload {tag field : String} (hne : "_tag" ≠ field)
   · rw [hp.2]
 
 /-- The tag names the codec uses, in the byte order: `_tag` sorts first. -/
-theorem key_value : Ty.ltKey (keyBytes "_tag") (keyBytes "value") = true ∧
-    Ty.ltKey (keyBytes "value") (keyBytes "_tag") = false := by decide +kernel
-theorem key_failure : Ty.ltKey (keyBytes "_tag") (keyBytes "failure") = true ∧
-    Ty.ltKey (keyBytes "failure") (keyBytes "_tag") = false := by decide +kernel
-theorem key_success : Ty.ltKey (keyBytes "_tag") (keyBytes "success") = true ∧
-    Ty.ltKey (keyBytes "success") (keyBytes "_tag") = false := by decide +kernel
-theorem key_cause : Ty.ltKey (keyBytes "_tag") (keyBytes "cause") = true ∧
-    Ty.ltKey (keyBytes "cause") (keyBytes "_tag") = false := by decide +kernel
-theorem key_error : Ty.ltKey (keyBytes "_tag") (keyBytes "error") = true ∧
-    Ty.ltKey (keyBytes "error") (keyBytes "_tag") = false := by decide +kernel
-theorem key_defect : Ty.ltKey (keyBytes "_tag") (keyBytes "defect") = true ∧
-    Ty.ltKey (keyBytes "defect") (keyBytes "_tag") = false := by decide +kernel
-theorem key_fiberId : Ty.ltKey (keyBytes "_tag") (keyBytes "fiberId") = true ∧
-    Ty.ltKey (keyBytes "fiberId") (keyBytes "_tag") = false := by decide +kernel
+theorem key_value : Field.ltKey (keyBytes "_tag") (keyBytes "value") = true ∧
+    Field.ltKey (keyBytes "value") (keyBytes "_tag") = false := by decide +kernel
+theorem key_failure : Field.ltKey (keyBytes "_tag") (keyBytes "failure") = true ∧
+    Field.ltKey (keyBytes "failure") (keyBytes "_tag") = false := by decide +kernel
+theorem key_success : Field.ltKey (keyBytes "_tag") (keyBytes "success") = true ∧
+    Field.ltKey (keyBytes "success") (keyBytes "_tag") = false := by decide +kernel
+theorem key_cause : Field.ltKey (keyBytes "_tag") (keyBytes "cause") = true ∧
+    Field.ltKey (keyBytes "cause") (keyBytes "_tag") = false := by decide +kernel
+theorem key_error : Field.ltKey (keyBytes "_tag") (keyBytes "error") = true ∧
+    Field.ltKey (keyBytes "error") (keyBytes "_tag") = false := by decide +kernel
+theorem key_defect : Field.ltKey (keyBytes "_tag") (keyBytes "defect") = true ∧
+    Field.ltKey (keyBytes "defect") (keyBytes "_tag") = false := by decide +kernel
+theorem key_fiberId : Field.ltKey (keyBytes "_tag") (keyBytes "fiberId") = true ∧
+    Field.ltKey (keyBytes "fiberId") (keyBytes "_tag") = false := by decide +kernel
 
 /-- A list read element by element is re-encoded element by element, modulo `N_J`. -/
 theorem mapM_exact {α : Type} (dec : Json → Option α) (enc : α → Option Json)

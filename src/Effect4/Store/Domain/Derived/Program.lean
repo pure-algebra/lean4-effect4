@@ -9,7 +9,7 @@
 --    Effect4.Program.Ty Effect4.Program.Eff@Effect4.Program.NativeOp Effect4.Program.RowKind \
 --    Effect4.Program.RowShape Effect4.Program.Registration Effect4.Program.Row \
 --    Effect4.Program.EffTy
--- Carriers read from: Effect4.Machine.Term, Effect4.Machine.Stores, Effect4.Machine.Scope, Effect4.Machine.Supervision, Effect4.Program.Decision, Effect4.Program.Native, Effect4.Program.Eff, Effect4.Machine.Key, Effect4.Program.Ty, Effect4.Program.Typing.Rules
+-- Carriers read from: Effect4.Machine.Term, Effect4.Machine.Stores, Effect4.Machine.Scope, Effect4.Machine.Supervision, Effect4.Program.Decision, Effect4.Program.Native, Effect4.Program.Eff, Effect4.Machine.Key, Effect4.Program.TyCore, Effect4.Program.Typing.Rules
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/program.lean
 import Effect4.Program.Native
 import Effect4.Store.Domain.Canonical
@@ -1080,12 +1080,21 @@ def TyShape : Shape :=
       ("refOf", 16, [("value", .named "Ty")]),
       ("deferredOf", 17, [("value", .named "Ty"), ("error", .named "Ty")]),
       ("var", 18, [("index", (shape _root_.Nat).root)]),
-      ("unknown", 19, [])]
+      ("unknown", 19, []),
+      ("record", 20, [
+        ("fields", .list (.pair ((shape _root_.String).root) (.pair ((shape _root_.Bool).root) (.named "Ty"))))]),
+      ("map", 21, [("key", .named "Ty"), ("value", .named "Ty")]),
+      ("tuple", 22, [("items", .list (.named "Ty"))]),
+      ("app", 23, [("name", (shape _root_.String).root), ("args", .list (.named "Ty"))]),
+      ("null", 24, []),
+      ("undefined", 25, []),
+      ("number", 26, []),
+      ("bytes", 27, [])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
   ("Ty", TyShape) ::
-    ((shape _root_.String).defs ++ (shape _root_.Nat).defs)
+    ((shape _root_.String).defs ++ (shape _root_.Nat).defs ++ (shape _root_.Bool).defs)
 
 mutual
 def toValTy : _root_.Effect4.Program.Ty → Val
@@ -1109,6 +1118,24 @@ def toValTy : _root_.Effect4.Program.Ty → Val
   | .deferredOf a0 a1 => .ctor 17 [toValTy a0, toValTy a1]
   | .var a0 => .ctor 18 [Canonical.toVal a0]
   | .unknown => .ctor 19 []
+  | .record a0 => .ctor 20 [.list (toValL2 a0)]
+  | .map a0 a1 => .ctor 21 [toValTy a0, toValTy a1]
+  | .tuple a0 => .ctor 22 [.list (toValL3 a0)]
+  | .app a0 a1 => .ctor 23 [Canonical.toVal a0, .list (toValL3 a1)]
+  | .null => .ctor 24 []
+  | .undefined => .ctor 25 []
+  | .number => .ctor 26 []
+  | .bytes => .ctor 27 []
+def toValP0 : @_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty) → Val
+  | (x, y) => .pair (Canonical.toVal x) (toValTy y)
+def toValP1 : @_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty)) → Val
+  | (x, y) => .pair (Canonical.toVal x) (toValP0 y)
+def toValL2 : @_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))) → List Val
+  | [] => []
+  | x :: xs => toValP1 x :: toValL2 xs
+def toValL3 : @_root_.List (_root_.Effect4.Program.Ty) → List Val
+  | [] => []
+  | x :: xs => toValTy x :: toValL3 xs
 end
 
 /-! The structural readers. Exactness is bought by the re-encode guard, so a reader
@@ -1175,7 +1202,51 @@ def rawTy : Val → Option (_root_.Effect4.Program.Ty)
     | some a0 => some (.var a0)
     | _ => none
   | .ctor 19 [] => some .unknown
+  | .ctor 20 [(.list v0)] =>
+    match rawL2 v0 with
+    | some a0 => some (.record a0)
+    | _ => none
+  | .ctor 21 [v0, v1] =>
+    match rawTy v0, rawTy v1 with
+    | some a0, some a1 => some (.map a0 a1)
+    | _, _ => none
+  | .ctor 22 [(.list v0)] =>
+    match rawL3 v0 with
+    | some a0 => some (.tuple a0)
+    | _ => none
+  | .ctor 23 [v0, (.list v1)] =>
+    match Canonical.ofVal (α := _root_.String) v0, rawL3 v1 with
+    | some a0, some a1 => some (.app a0 a1)
+    | _, _ => none
+  | .ctor 24 [] => some .null
+  | .ctor 25 [] => some .undefined
+  | .ctor 26 [] => some .number
+  | .ctor 27 [] => some .bytes
   | _ => none
+def rawP0 : Val → Option (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))
+  | .pair v w =>
+    match Canonical.ofVal (α := _root_.Bool) v, rawTy w with
+    | some x, some y => some (x, y)
+    | _, _ => none
+  | _ => none
+def rawP1 : Val → Option (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty)))
+  | .pair v w =>
+    match Canonical.ofVal (α := _root_.String) v, rawP0 w with
+    | some x, some y => some (x, y)
+    | _, _ => none
+  | _ => none
+def rawL2 : List Val → Option (@_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))))
+  | [] => some []
+  | v :: vs =>
+    match rawP1 v, rawL2 vs with
+    | some x, some xs => some (x :: xs)
+    | _, _ => none
+def rawL3 : List Val → Option (@_root_.List (_root_.Effect4.Program.Ty))
+  | [] => some []
+  | v :: vs =>
+    match rawTy v, rawL3 vs with
+    | some x, some xs => some (x :: xs)
+    | _, _ => none
 end
 
 mutual
@@ -1215,7 +1286,45 @@ theorem rawTy_toValTy (a : _root_.Effect4.Program.Ty) :
   | «var» a0 =>
     simp [toValTy, rawTy, Canonical.ofVal_toVal]
   | «unknown» => rfl
+  | «record» a0 =>
+    simp [toValTy, rawTy, rawL2_toValL2 a0]
+  | «map» a0 a1 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+  | «tuple» a0 =>
+    simp [toValTy, rawTy, rawL3_toValL3 a0]
+  | «app» a0 a1 =>
+    simp [toValTy, rawTy, Canonical.ofVal_toVal, rawL3_toValL3 a1]
+  | «null» => rfl
+  | «undefined» => rfl
+  | «number» => rfl
+  | «bytes» => rfl
 termination_by structural a
+theorem rawP0_toValP0 (p : @_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty)) :
+    rawP0 (toValP0 p) = some p := by
+  match p with
+  | (x, y) =>
+    simp [toValP0, rawP0, Canonical.ofVal_toVal, rawTy_toValTy y]
+termination_by structural p
+theorem rawP1_toValP1 (p : @_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))) :
+    rawP1 (toValP1 p) = some p := by
+  match p with
+  | (x, y) =>
+    simp [toValP1, rawP1, Canonical.ofVal_toVal, rawP0_toValP0 y]
+termination_by structural p
+theorem rawL2_toValL2 (xs : @_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty)))) :
+    rawL2 (toValL2 xs) = some xs := by
+  match xs with
+  | [] => rfl
+  | x :: xs =>
+    simp [toValL2, rawL2, rawP1_toValP1 x, rawL2_toValL2 xs]
+termination_by structural xs
+theorem rawL3_toValL3 (xs : @_root_.List (_root_.Effect4.Program.Ty)) :
+    rawL3 (toValL3 xs) = some xs := by
+  match xs with
+  | [] => rfl
+  | x :: xs =>
+    simp [toValL3, rawL3, rawTy_toValTy x, rawL3_toValL3 xs]
+termination_by structural xs
 end
 
 /-! The table memberships and the field lifts, one per member and one per field type. -/
@@ -1224,15 +1333,20 @@ theorem mem_Ty : ("Ty", TyShape) ∈ defs := List.Mem.head _
 
 /-- Into the appended tail of the block's table. -/
 theorem mem_tail {p : String × Shape}
-    (h : p ∈ (shape _root_.String).defs ++ (shape _root_.Nat).defs) : p ∈ defs :=
+    (h : p ∈ (shape _root_.String).defs ++ (shape _root_.Nat).defs ++
+      (shape _root_.Bool).defs) : p ∈ defs :=
   List.Mem.tail _ (h)
 
 theorem lift_String (x : _root_.String) :
     acceptsIn defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (hp)))
+  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (hp))))
     _ _ (Canonical.fits x)
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_Bool (x : _root_.Bool) :
+    acceptsIn defs (shape _root_.Bool).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_right (hp)))
     _ _ (Canonical.fits x)
 
@@ -1300,7 +1414,73 @@ theorem fitsTy (a : _root_.Effect4.Program.Ty) :
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
   | «unknown» =>
     exact acceptsAt_sum _ _ _ 19 "unknown" [] [] rfl (acceptsFields_nil _)
+  | «record» a0 =>
+    exact acceptsAt_sum _ _ _ 20 "record" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (accepts_list _ _ _ (fitsL2 a0)) (acceptsFields_nil _))
+  | «map» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 21 "map" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
+        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
+  | «tuple» a0 =>
+    exact acceptsAt_sum _ _ _ 22 "tuple" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (accepts_list _ _ _ (fitsL3 a0)) (acceptsFields_nil _))
+  | «app» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 23 "app" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
+        (acceptsFields_cons _ _ _ _ _ _ (accepts_list _ _ _ (fitsL3 a1)) (acceptsFields_nil _)))
+  | «null» =>
+    exact acceptsAt_sum _ _ _ 24 "null" [] [] rfl (acceptsFields_nil _)
+  | «undefined» =>
+    exact acceptsAt_sum _ _ _ 25 "undefined" [] [] rfl (acceptsFields_nil _)
+  | «number» =>
+    exact acceptsAt_sum _ _ _ 26 "number" [] [] rfl (acceptsFields_nil _)
+  | «bytes» =>
+    exact acceptsAt_sum _ _ _ 27 "bytes" [] [] rfl (acceptsFields_nil _)
 termination_by structural a
+theorem fitsP0 (p : @_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty)) :
+    acceptsIn defs (.pair ((shape _root_.Bool).root) (.named "Ty"))
+      (toValP0 p) = true := by
+  match p with
+  | (x, y) =>
+    exact accepts_pair _ _ _ _ _
+      (lift_Bool x) (fitsTy y)
+termination_by structural p
+theorem fitsP1 (p : @_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))) :
+    acceptsIn defs (.pair ((shape _root_.String).root) (.pair ((shape _root_.Bool).root) (.named "Ty")))
+      (toValP1 p) = true := by
+  match p with
+  | (x, y) =>
+    exact accepts_pair _ _ _ _ _
+      (lift_String x) (fitsP0 y)
+termination_by structural p
+theorem fitsL2 (xs : @_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty)))) :
+    ∀ v ∈ toValL2 xs,
+      acceptsIn defs (.pair ((shape _root_.String).root) (.pair ((shape _root_.Bool).root) (.named "Ty"))) v = true := by
+  match xs with
+  | [] =>
+    intro v hv
+    exact nomatch hv
+  | x :: xs =>
+    intro v hv
+    simp only [toValL2, List.mem_cons] at hv
+    rcases hv with rfl | hv
+    · exact fitsP1 x
+    · exact fitsL2 xs v hv
+termination_by structural xs
+theorem fitsL3 (xs : @_root_.List (_root_.Effect4.Program.Ty)) :
+    ∀ v ∈ toValL3 xs,
+      acceptsIn defs (.named "Ty") v = true := by
+  match xs with
+  | [] =>
+    intro v hv
+    exact nomatch hv
+  | x :: xs =>
+    intro v hv
+    simp only [toValL3, List.mem_cons] at hv
+    rcases hv with rfl | hv
+    · exact fitsTy x
+    · exact fitsL3 xs v hv
+termination_by structural xs
 end
 
 instance instCanonicalTy : Canonical (_root_.Effect4.Program.Ty) :=

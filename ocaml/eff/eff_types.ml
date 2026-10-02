@@ -23,6 +23,14 @@ type ty =
   | Ty_deferredOf of ty * ty
   | Ty_var of int
   | Ty_unknown
+  | Ty_record of (string * (bool * ty)) list
+  | Ty_map of ty * ty
+  | Ty_tuple of ty list
+  | Ty_app of string * ty list
+  | Ty_null
+  | Ty_undefined
+  | Ty_number
+  | Ty_bytes
 
 let ctor_index_ty : ty -> int = function
   | Ty_never -> 0
@@ -45,6 +53,14 @@ let ctor_index_ty : ty -> int = function
   | Ty_deferredOf _ -> 17
   | Ty_var _ -> 18
   | Ty_unknown -> 19
+  | Ty_record _ -> 20
+  | Ty_map _ -> 21
+  | Ty_tuple _ -> 22
+  | Ty_app _ -> 23
+  | Ty_null -> 24
+  | Ty_undefined -> 25
+  | Ty_number -> 26
+  | Ty_bytes -> 27
 let wire_tag_ty : ty -> int = function
   | Ty_never -> 0
   | Ty_unit -> 1
@@ -66,6 +82,14 @@ let wire_tag_ty : ty -> int = function
   | Ty_deferredOf _ -> 17
   | Ty_var _ -> 18
   | Ty_unknown -> 19
+  | Ty_record _ -> 20
+  | Ty_map _ -> 21
+  | Ty_tuple _ -> 22
+  | Ty_app _ -> 23
+  | Ty_null -> 24
+  | Ty_undefined -> 25
+  | Ty_number -> 26
+  | Ty_bytes -> 27
 let ctor_name_ty : ty -> string = function
   | Ty_never -> "never"
   | Ty_unit -> "unit"
@@ -87,7 +111,15 @@ let ctor_name_ty : ty -> string = function
   | Ty_deferredOf _ -> "deferredOf"
   | Ty_var _ -> "var"
   | Ty_unknown -> "unknown"
-let ctor_names_ty : string list = ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"; "unknown"]
+  | Ty_record _ -> "record"
+  | Ty_map _ -> "map"
+  | Ty_tuple _ -> "tuple"
+  | Ty_app _ -> "app"
+  | Ty_null -> "null"
+  | Ty_undefined -> "undefined"
+  | Ty_number -> "number"
+  | Ty_bytes -> "bytes"
+let ctor_names_ty : string list = ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"; "unknown"; "record"; "map"; "tuple"; "app"; "null"; "undefined"; "number"; "bytes"]
 
 
 type lit =

@@ -52,6 +52,14 @@ node named `effect/schema/Defect`, an id rc.112 never writes: rc.112 could not r
 def defectRep : Representation :=
   .declaration ⟨"effect/schema/Json", .null⟩ none [] []
 
+/-- The declaration the bridge writes for a data-wave form it does not lower yet (decisions row
+162: every appended constructor is refused by name until its Schema commit). `reservedFree` is
+false at each, so the retraction never claims one. Its payload is not `null`, which every
+declaration arm of `ofSchema` demands, so the marker never reads back as the handle of its name
+and a handle of that name keeps its own image (Codex, unlowered-boundary review). -/
+def unlowered (head : String) : Representation :=
+  .declaration ⟨"effect4/unlowered/" ++ head, .str "unlowered"⟩ none [] []
+
 /-- Lowers any first-order `Ty` into its canonical rc.112 `SchemaRepresentation`. -/
 def schema : Ty → Representation
   | .never => Schema.never
@@ -75,6 +83,15 @@ def schema : Ty → Representation
   -- a row template's parameter has no schema: an opaque node `ofSchema` refuses by name
   | .var _ => .declaration ⟨"effect/schema/TypeParameter", .null⟩ none [] []
   | .union left right => .union none [] [schema left, schema right] .anyOf
+  -- the data wave's forms, refused by name until the Schema commit lowers each
+  | .record _ => unlowered "record"
+  | .map _ _ => unlowered "map"
+  | .tuple _ => unlowered "tuple"
+  | .app _ _ => unlowered "app"
+  | .null => unlowered "null"
+  | .undefined => unlowered "undefined"
+  | .number => unlowered "number"
+  | .bytes => unlowered "bytes"
 
 /-- Extracts the identifier of a persisted check. The reader no longer reads a check by its id
 (row 128: it compares whole checks); this stays the id projection the fold census registers
@@ -372,6 +389,7 @@ theorem normS_schema (t : Ty) : normS (schema t) = schema t := by
     show normS (.union none [] [schema a, schema b] .anyOf) = _
     rw [normS_union, List.map_cons, List.map_cons, List.map_nil, iha, ihb]
     rfl
+  | record _ _ | map _ _ _ _ | tuple _ _ | app _ _ _ | null | undefined | number | bytes => rfl
 
 /-! ## The retraction and exactness -/
 
@@ -398,10 +416,20 @@ def reservedFreeAlg : TyAlgebra (fun _ => Bool) where
   ty_deferredOf a b := a && b
   ty_var _ := true
   ty_unknown := true
+  ty_record _ := false
+  ty_map _ _ := false
+  ty_tuple _ := false
+  ty_app _ _ := false
+  ty_null := false
+  ty_undefined := false
+  ty_number := false
+  ty_bytes := false
 
-/-- No handle target is the reserved type-parameter id `effect/schema/TypeParameter`: the premise
-the retraction gains when the reader refuses that id by name (a fold; formation should refuse such
-a handle, and then the premise goes). -/
+/-- No handle target is the reserved type-parameter id `effect/schema/TypeParameter`, and no node
+is a data-wave form the bridge does not lower yet (`unlowered`): the premise the retraction gains
+when the reader refuses that id by name and the writer refuses those forms by name (a fold;
+formation should refuse such a handle, the Schema commit lowers the forms, and then the premise
+goes). -/
 def reservedFree (t : Ty) : Bool := cata_ty reservedFreeAlg t
 
 /-- **The retraction**: `ofSchema` is a left inverse to `schema` on every closed type whose handles
@@ -426,6 +454,9 @@ theorem ofSchema_schema (t : Ty) (h : t.closed = true) (hr : reservedFree t = tr
       (if target = "effect/schema/TypeParameter" then none else some (Ty.handle target)) else none) = _
     rw [if_pos (show normAnn none = none from rfl), if_neg hne]
   | var _ => exact Bool.noConfusion h
+  -- the data wave's forms are not lowered yet, so `reservedFree` excludes them
+  | record _ _ | map _ _ _ _ | tuple _ _ | app _ _ _ | null | undefined | number | bytes =>
+    exact Bool.noConfusion hr
   | option a ih =>
     show ofSchema (.declaration ⟨"effect/schema/Option", .null⟩ none [schema a] []) = _
     rw [ofSchema, ih h hr]

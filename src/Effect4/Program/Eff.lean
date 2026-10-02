@@ -60,6 +60,8 @@ def rawSupportedErrTy : Ty → Bool
   | .unit | .int | .bool | .handle _ | .option _ | .list _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _
   | .refOf _ | .deferredOf _ _ | .var _ | .unknown => false
+  -- the data wave's forms carry no `Err` image until the error-payload commit (decisions row 120)
+  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => false
 
 /-- Error support reads the raw profile of the canonical type. -/
 def supportedErrTy (t : Ty) : Bool := rawSupportedErrTy t.normalize

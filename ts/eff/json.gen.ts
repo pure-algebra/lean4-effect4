@@ -41,6 +41,14 @@ export const tyJson = (v: Ty): Json => {
     case "deferredOf": return ["deferredOf", tyJson(v.value), tyJson(v.error)]
     case "var": return ["var", v.index]
     case "unknown": return ["unknown"]
+    case "record": return ["record", v.fields.map((y) => [y[0], [y[1][0], tyJson(y[1][1])]])]
+    case "map": return ["map", tyJson(v.key), tyJson(v.value)]
+    case "tuple": return ["tuple", v.items.map((y) => tyJson(y))]
+    case "app": return ["app", v.name, v.args.map((y) => tyJson(y))]
+    case "null": return ["null"]
+    case "undefined": return ["undefined"]
+    case "number": return ["number"]
+    case "bytes": return ["bytes"]
   }
 }
 

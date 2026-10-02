@@ -48,10 +48,18 @@ example : TyTable ClassRow where
   refOf := ⟨false, false⟩
   deferredOf := ⟨false, false⟩
   var := ⟨true, true⟩
+  record := ⟨true, true⟩
+  map := ⟨true, true⟩
+  tuple := ⟨true, true⟩
+  app := ⟨false, false⟩
+  null := ⟨true, true⟩
+  undefined := ⟨true, true⟩
+  number := ⟨true, true⟩
+  bytes := ⟨true, true⟩
 
-/-- error: `record` is not a field of structure `TyTable` -/
+/-- error: `bigint` is not a field of structure `TyTable` -/
 #guard_msgs (error) in
-example : TyTable ClassRow := { tyClasses with record := ⟨true, true⟩ }
+example : TyTable ClassRow := { tyClasses with bigint := ⟨true, true⟩ }
 
 /-- error: field `never` has already been specified -/
 #guard_msgs (error) in

@@ -57,7 +57,9 @@ def types : List (String × Ty) := [
   ("exitOf", .exitOf .nat .string), ("causeOf", .causeOf .string),
   ("fiberOf", .fiberOf .unit .nat), ("union", .union .nat (.union .never .string)),
   ("lit", .lit "tag"), ("refOf", .refOf .nat), ("deferredOf", .deferredOf .nat .string),
-  ("var", .var 0)]
+  ("var", .var 0), ("record", .record [("a", false, .nat), ("b", true, .string)]),
+  ("map", .map .string .nat), ("tuple", .tuple [.nat, .string, .bool]), ("app", .app "Option" [.nat]),
+  ("null", .null), ("undefined", .undefined), ("number", .number), ("bytes", .bytes)]
 
 def keys : List Effect4.ServiceKey := [⟨⟨1⟩, ⟨2⟩⟩, ⟨⟨1⟩, ⟨3⟩⟩, ⟨⟨2⟩, ⟨0⟩⟩]
 

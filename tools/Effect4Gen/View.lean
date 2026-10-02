@@ -29,7 +29,7 @@ From the constructor declarations of `Ty` and the variance table read off rc.112
 ## Heads of variable arity (decisions row 171; probe Q, Q2)
 
 Three kinds are read from the declaration, each needing a `heads` row with an arity word in
-`variances.json`: a field list (`List (String × Ty)` or `List (String × Ty × P)`; its names
+`variances.json`: a field list (`List (String × Ty)`, `List (String × Ty × P)` or `List (String × P × Ty)`; its names
 and modifiers in canonical order are the head's payload, its children read through the core's
 `canon`), an item list (`List Ty`; the length is the head), and an applied head (`String` then
 `List Ty`; each argument at the named declaration's variance, `argVariance`). The dispatch's
@@ -162,7 +162,7 @@ def readHeads (text : String) : Except String (List Head) := do
 /-! ## The constructor declarations -/
 
 /-- One field of a constructor: a `Ty` child, a payload `sameHead` compares by `==`, a list of
-`Ty` children (`List Ty`), or a field list `List (String × Ty)`/`List (String × Ty × P)` whose
+`Ty` children (`List Ty`), or a field list `List (String × Ty)`/`List (String × Ty × P)`/`List (String × P × Ty)` whose
 `Ty` sits at the selector `child`, its payload components at `payloads` (selector, type), the
 element's printed type with the member written `{M}`. -/
 inductive Field where
@@ -226,7 +226,7 @@ def srcOf (e : Expr) : MetaM String := do
   withOptions (fun o => (o.setBool `pp.fullNames true).setBool `pp.universes false) do
     return toString (← ppExpr e)
 
-/-- A field list `List (String × Ty)` or `List (String × Ty × P)`, `P` a known element payload:
+/-- A field list `List (String × Ty)`, `List (String × Ty × P)` or `List (String × P × Ty)`, `P` a known element payload:
 the child's selector, the payload selectors with their types, and the element type with the
 member written `{M}`. `none` for any other type. -/
 def fieldElem (root : Name) (ty : Expr) : MetaM (Option (String × List (String × String) × String)) := do
@@ -242,6 +242,11 @@ def fieldElem (root : Name) (ty : Expr) : MetaM (Option (String × List (String 
     let p ← srcOf b.appArg!
     if knownElemPayload.contains p then
       return some (".2.1", [(".1", "String"), (".2.2", p)], "String × {M} × " ++ p)
+  -- the payload before the member (`record (fields : List (String × Bool × Ty))`: name, flag, type)
+  if b.isAppOfArity ``Prod 2 && b.appArg!.isConstOf root then
+    let p ← srcOf b.appFn!.appArg!
+    if knownElemPayload.contains p then
+      return some (".2.2", [(".1", "String"), (".2.1", p)], "String × " ++ p ++ " × {M}")
   return none
 
 /-- `Ty`'s constructors with their fields: the walk of `Fold.readBlock`/`Main.ctorFields`. -/
@@ -894,8 +899,13 @@ def emitProbes (rs : List Row) : List String := Id.run do
       let c := r.ctor.name
       match k with
       | .fields _ ch ps _ =>
-        let el (name ty : String) : String :=
-          if ch == ".2" then s!"(\"{name}\", {ty})" else s!"(\"{name}\", {ty}, false)"
+        -- a sample field at the descriptor's layout: a pair, the child before its flag, or the
+        -- flag before its child (`record (fields : List (String × Bool × Ty))`)
+        let elF (name ty flag : String) : String :=
+          if ch == ".2" then s!"(\"{name}\", {ty})"
+          else if ch == ".2.2" then s!"(\"{name}\", {flag}, {ty})"
+          else s!"(\"{name}\", {ty}, {flag})"
+        let el (name ty : String) : String := elF name ty "false"
         let r_ (els : List String) : String := s!"(.{c} [" ++ String.intercalate ", " els ++ "])"
         s := s ++
           [ s!"-- `{c}`: every field co, read in canonical order; the head is the canonical payload list",
@@ -910,7 +920,7 @@ def emitProbes (rs : List Row) : List String := Id.run do
             s!"#guard !Ty.sub {r_ [el "a" ".nat", el "b" ".nat"]} {r_ [el "a" ".nat"]}" ] ++
           (if ps.length > 1 then
             [ "-- a modifier is payload too: the exact rule does not put a required field below an optional one",
-              s!"#guard !Ty.sub (.{c} [(\"a\", .nat, false)]) (.{c} [(\"a\", .nat, true)])" ]
+              s!"#guard !Ty.sub {r_ [elF "a" ".nat" "false"]} {r_ [elF "a" ".nat" "true"]}" ]
            else []) ++ [""]
       | .items _ =>
         s := s ++
@@ -1513,10 +1523,11 @@ def emitAdmits (rs : List Row) (table : Option LeafTable := none) : List String 
       (if table.isSome then
         "the disjunction of its members; each declared leaf edge is an inclusion; a covariant argument is"
        else "the disjunction of its members; the literal rule is an inclusion; a covariant argument is"),
-      "monotone, a contravariant one antitone, and an invariant one is IGNORED — which is",
-      "decisions row 44 (a handle is coarse by kind; the world's tables type what it holds)",
-      "stated as a law. A new constructor adds a field here and one line to each instance, at a",
-      "place the compiler names. -/",
+      "monotone, a contravariant one antitone, and an invariant one is read at equivalent",
+      "admissions (each below the other: the symmetric part of the order, which is what an",
+      "invariant `sub` arm compares). A handle coarse by kind (decisions row 44) ignores its",
+      "argument and discharges the field outright. A new constructor adds a field here and one",
+      "line to each instance, at a place the compiler names. -/",
       "structure AdmitsSub (alg : TyAlgebra AdmCarrier) : Prop where" ]
   -- the exceptional rules first, in the order of `sub`'s own arms
   s := s ++
@@ -1568,10 +1579,11 @@ def emitAdmits (rs : List Row) (table : Option LeafTable := none) : List String 
             "    (∀ p q, (p, q) ∈ ps.zip qs → Adm.le p.2 q.2) →",
             s!"    Adm.le (alg.ty_{c.name} ps).2 (alg.ty_{c.name} qs).2" ]
         | .applied _ _ =>
-          [ s!"  /-- each argument at the name's declared variance, an invariant one ignored ({h.cite}) -/",
+          [ s!"  /-- each argument at the name's declared variance, an invariant one at equivalent admissions ({h.cite}) -/",
             s!"  {c.name} : ∀ (n : String) (ps qs : List (AdmCarrier .ty)), ps.length = qs.length →",
             "    (∀ p q, (p, q) ∈ ps.zipIdx.zip qs.zipIdx → match Ty.argVariance n p.2 with",
-            "      | .co => Adm.le p.1.2 q.1.2 | .contra => Adm.le q.1.2 p.1.2 | .inv => True) →",
+            "      | .co => Adm.le p.1.2 q.1.2 | .contra => Adm.le q.1.2 p.1.2",
+            "      | .inv => Adm.le p.1.2 q.1.2 ∧ Adm.le q.1.2 p.1.2) →",
             s!"    Adm.le (alg.ty_{c.name} n ps).2 (alg.ty_{c.name} n qs).2" ]
       s := s ++ lines
       continue
@@ -1587,17 +1599,61 @@ def emitAdmits (rs : List Row) (table : Option LeafTable := none) : List String 
       match (vs[i]! : Variance) with
       | .co => some s!"Adm.le (p{i}).2 (q{i}).2"
       | .contra => some s!"Adm.le (q{i}).2 (p{i}).2"
-      | .inv => none
+      | .inv => some s!"(Adm.le (p{i}).2 (q{i}).2 ∧ Adm.le (q{i}).2 (p{i}).2)"
     let doc := String.intercalate ", " ((List.range n).map fun i =>
       s!"argument {i} " ++ (vs[i]!: Variance).text)
     let lhs := s!"(alg.ty_{c.name} " ++ String.intercalate " " ps ++ ").2"
     let rhs := s!"(alg.ty_{c.name} " ++ String.intercalate " " qs ++ ").2"
     s := s ++ [s!"  /-- {doc} ({h.cite}) -/"]
-    if vs.all (fun v => v == .inv) then
-      s := s ++ [s!"  {c.name} : ∀ {binders}, {lhs} = {rhs}"]
-    else
-      let pre := if hyps.isEmpty then "" else String.intercalate " → " hyps ++ " → "
-      s := s ++ [s!"  {c.name} : ∀ {binders}, {pre}Adm.le {lhs} {rhs}"]
+    let pre := if hyps.isEmpty then "" else String.intercalate " → " hyps ++ " → "
+    s := s ++ [s!"  {c.name} : ∀ {binders}, {pre}Adm.le {lhs} {rhs}"]
+  return s ++ [""]
+
+/-- `AdmitsMono`: one field per constructor with children, every child read FORWARD whatever
+the order's variance: the condition under which an admission algebra's fold is monotone in a
+pointwise widening of its leaves, which is what instantiating a template at wider bindings is
+(`Laws/Program/Template.lean`, `cata_admits_instantiate`). Membership reads every position
+forward at the value level (a handle ignores its argument), so the admission fold of this tree
+satisfies both conditions; neither implies the other for an arbitrary algebra. -/
+def emitAdmitsMono (rs : List Row) : List String := Id.run do
+  let mut s : List String :=
+    [ "/-- **One field per constructor with children**: what an admission algebra must satisfy",
+      "for its fold to be monotone in every child — each child read forward, whatever variance the",
+      "order reads it at. Instantiating a template at wider bindings is such a widening. -/",
+      "structure AdmitsMono (alg : TyAlgebra AdmCarrier) : Prop where" ]
+  for r in rs do
+    let c := r.ctor
+    if let some k := c.varKind? then
+      let lines := match k with
+        | .fields _ ch ps elem =>
+          let el := elem.replace "{M}" "AdmCarrier .ty"
+          [ s!"  /-- every field forward, the payloads equal in written order -/",
+            s!"  {c.name} : ∀ (ps qs : List ({el})),",
+            s!"    ps.map (fun p => {payText ps}) = qs.map (fun p => {payText ps}) →",
+            s!"    (∀ p q, (p, q) ∈ ps.zip qs → Adm.le (p{ch}).2 (q{ch}).2) →",
+            s!"    Adm.le (alg.ty_{c.name} ps).2 (alg.ty_{c.name} qs).2" ]
+        | .items _ =>
+          [ s!"  /-- every item forward, by position -/",
+            s!"  {c.name} : ∀ (ps qs : List (AdmCarrier .ty)), ps.length = qs.length →",
+            "    (∀ p q, (p, q) ∈ ps.zip qs → Adm.le p.2 q.2) →",
+            s!"    Adm.le (alg.ty_{c.name} ps).2 (alg.ty_{c.name} qs).2" ]
+        | .applied _ _ =>
+          [ s!"  /-- every argument forward, by position -/",
+            s!"  {c.name} : ∀ (n : String) (ps qs : List (AdmCarrier .ty)), ps.length = qs.length →",
+            "    (∀ p q, (p, q) ∈ ps.zip qs → Adm.le p.2 q.2) →",
+            s!"    Adm.le (alg.ty_{c.name} n ps).2 (alg.ty_{c.name} n qs).2" ]
+      s := s ++ lines
+      continue
+    let n := c.children.length
+    if n == 0 then continue
+    let ps := (List.range n).map fun i => s!"p{i}"
+    let qs := (List.range n).map fun i => s!"q{i}"
+    let binders := String.intercalate " " (ps ++ qs)
+    let hyps := (List.range n).map fun i => s!"Adm.le (p{i}).2 (q{i}).2"
+    let lhs := s!"(alg.ty_{c.name} " ++ String.intercalate " " ps ++ ").2"
+    let rhs := s!"(alg.ty_{c.name} " ++ String.intercalate " " qs ++ ").2"
+    s := s ++ [s!"  /-- every argument forward -/",
+      s!"  {c.name} : ∀ {binders}, " ++ String.intercalate " → " hyps ++ s!" → Adm.le {lhs} {rhs}"]
   return s ++ [""]
 
 /-- `AdmitsExtend`: one field per constructor, the condition under which an admission algebra's
@@ -1741,7 +1797,7 @@ def run (args : Args) (heads : List Head) : MetaM (Array String) := do
       emitSameHead rs ++ emitRules hasTable ++ emitProbes rs ++ leafProbes ++ emitVarHelpers rs ++
       emitLaws rs ++ emitArmLemmas rs hasTable ++ emitDispatch rs hasTable ++ emitSizeOf rs ++
       emitOrderLaws hasVar hasTable ++ leafLaws ++
-      ["end Ty", ""] ++ emitAdmits rs table? ++ emitAdmitsExtend ns rs))
+      ["end Ty", ""] ++ emitAdmits rs table? ++ emitAdmitsMono rs ++ emitAdmitsExtend ns rs))
   lines := lines ++ #["end " ++ ns, ""]
   if let some p := args.append then
     let txt ← IO.FS.readFile p

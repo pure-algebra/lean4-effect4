@@ -26,6 +26,14 @@ let rec emit_ty (b : Buffer.t) (v : ty) : unit =
   | Ty_deferredOf (a0, a1) -> Eff_frame.emit_ctor b 17 (fun b -> emit_ty b a0; emit_ty b a1)
   | Ty_var a0 -> Eff_frame.emit_ctor b 18 (fun b -> Eff_frame.emit_nat b a0)
   | Ty_unknown -> Eff_frame.emit_ctor b 19 (fun _ -> ())
+  | Ty_record a0 -> Eff_frame.emit_ctor b 20 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_string b y) (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_bool b y) (fun b y -> emit_ty b y) y) y) a0)
+  | Ty_map (a0, a1) -> Eff_frame.emit_ctor b 21 (fun b -> emit_ty b a0; emit_ty b a1)
+  | Ty_tuple a0 -> Eff_frame.emit_ctor b 22 (fun b -> Eff_frame.emit_list b (fun b y -> emit_ty b y) a0)
+  | Ty_app (a0, a1) -> Eff_frame.emit_ctor b 23 (fun b -> Eff_frame.emit_string b a0; Eff_frame.emit_list b (fun b y -> emit_ty b y) a1)
+  | Ty_null -> Eff_frame.emit_ctor b 24 (fun _ -> ())
+  | Ty_undefined -> Eff_frame.emit_ctor b 25 (fun _ -> ())
+  | Ty_number -> Eff_frame.emit_ctor b 26 (fun _ -> ())
+  | Ty_bytes -> Eff_frame.emit_ctor b 27 (fun _ -> ())
 
 let encode_ty (v : ty) : string = Eff_frame.to_string emit_ty v
 
@@ -131,6 +139,40 @@ let rec decode_ty (s : string) (pos : int) (limit : int) : (ty * int) option =
         if p = e then Some (Ty_var a0, next) else None)
     | 19 ->
       if p = e then Some (Ty_unknown, next) else None
+    | 20 ->
+      (match (Eff_frame.decode_list (Eff_frame.decode_pair Eff_frame.decode_string (Eff_frame.decode_pair Eff_frame.decode_bool decode_ty))) s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Ty_record a0, next) else None)
+    | 21 ->
+      (match decode_ty s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_ty s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Ty_map (a0, a1), next) else None))
+    | 22 ->
+      (match (Eff_frame.decode_list decode_ty) s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Ty_tuple a0, next) else None)
+    | 23 ->
+      (match Eff_frame.decode_string s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match (Eff_frame.decode_list decode_ty) s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Ty_app (a0, a1), next) else None))
+    | 24 ->
+      if p = e then Some (Ty_null, next) else None
+    | 25 ->
+      if p = e then Some (Ty_undefined, next) else None
+    | 26 ->
+      if p = e then Some (Ty_number, next) else None
+    | 27 ->
+      if p = e then Some (Ty_bytes, next) else None
     | _ -> None)
 
 let decode_ty_exact (s : string) : ty option = Eff_frame.exact decode_ty s

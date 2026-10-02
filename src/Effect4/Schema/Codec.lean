@@ -237,7 +237,7 @@ def keyBytes (s : String) : List Nat := s.toUTF8.data.toList.map UInt8.toNat
 def insertE (e : String × Json) : List (String × Json) → List (String × Json)
   | [] => [e]
   | f :: fs =>
-    if Ty.ltKey (keyBytes e.1) (keyBytes f.1) = true then e :: f :: fs else f :: insertE e fs
+    if Field.ltKey (keyBytes e.1) (keyBytes f.1) = true then e :: f :: fs else f :: insertE e fs
 
 /-- Entries sorted by key bytes (insertion sort, stable). -/
 def sortE (es : List (String × Json)) : List (String × Json) :=

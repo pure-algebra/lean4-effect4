@@ -28,14 +28,16 @@ structure FaceRow where
   /-- The constructor's node of rc.112's Schema IR, its children and payload as holes. -/
   schema : Representation
 
-/-- A node's payload as a string, where it has one. -/
-def TyLeaf.str? : TyLeaf → Option String
+/-- An argument's string payload, where it is one. -/
+def TyArgF.str? {R : Type} : TyArgF R → Option String
   | .str s => some s
   | _ => Option.none
 
-/-- **The Schema face**: each node's row filled with its payload and its children's faces. -/
+/-- **The Schema face**: each node's row filled with its string payload and its children's faces,
+in declaration order. -/
 def TyTable.schemaFace (tbl : TyTable FaceRow) : TyAlgebra (fun _ => Representation) :=
-  TyAlgebra.ofLayer fun c l kids => fill (tbl.get c).schema l.str? kids
+  TyAlgebra.ofLayer fun c args =>
+    fill (tbl.get c).schema (args.findSome? TyArgF.str?) (args.flatMap TyArgF.kids)
 
 /-- The face table of `Ty`. -/
 def tyFaces : TyTable FaceRow where
@@ -60,5 +62,14 @@ def tyFaces : TyTable FaceRow where
   deferredOf := ⟨.declaration ⟨"effect/schema/Deferred", .null⟩ none [child 0, child 1] []⟩
   var := ⟨.declaration ⟨"effect/schema/TypeParameter", .null⟩ none [] []⟩
   unknown := ⟨.unknown none []⟩
+  -- the data wave's forms, refused by name until the Schema commit lowers each (decisions row 162)
+  record := ⟨Schema.Bridge.unlowered "record"⟩
+  map := ⟨Schema.Bridge.unlowered "map"⟩
+  tuple := ⟨Schema.Bridge.unlowered "tuple"⟩
+  app := ⟨Schema.Bridge.unlowered "app"⟩
+  null := ⟨Schema.Bridge.unlowered "null"⟩
+  undefined := ⟨Schema.Bridge.unlowered "undefined"⟩
+  number := ⟨Schema.Bridge.unlowered "number"⟩
+  bytes := ⟨Schema.Bridge.unlowered "bytes"⟩
 
 end Effect4.Program

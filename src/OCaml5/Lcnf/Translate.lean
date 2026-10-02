@@ -203,6 +203,13 @@ def builtin? (n : Name) : Option Builtin :=
   | `UInt8.ofNatTruncate | `UInt8.ofNatClamp => some (1, fun | [a] => Ml.Expr.call "min" [a, .int 255] | _ => .unit)
   | `UInt8.toNat | `UInt8.toUInt64 | `UInt8.toUInt32 =>
     some (1, fun | [a] => a | _ => .unit)
+  -- UInt64 as `int` too: the float frame's bits (`Store.Val.float`); equality and the identity
+  -- out. Not exact: a pattern at `2 ^ 62` or above (negative zero, the infinities, every NaN)
+  -- has no carrier here. The generated closure constructs no float (no decoder or operation in
+  -- it produces one), so none reaches it today; the repair is an exact 64-bit carrier (`Int64`
+  -- or eight bytes) before a float producer does. Open, not supported.
+  | `UInt64.decEq | `instDecidableEqUInt64 | `UInt64.beq => some (bin "=")
+  | `UInt64.toNat => some (1, fun | [a] => a | _ => .unit)
   -- Bool
   | `Bool.decEq | `instDecidableEqBool => some (bin "=")
   | `Bool.not | `not => some (call1 "not")
@@ -730,7 +737,14 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
   | .lit (.uint8 n) => return (.int n.toNat, none)
   | .lit (.uint16 n) => return (.int n.toNat, none)
   | .lit (.uint32 n) => return (.int n.toNat, none)
-  | .lit (.uint64 n) => return (.int n.toNat, none)
+  -- A `UInt64` is a bit pattern (the float frame's bits), not a quantity: clamping it at
+  -- `max_int` like a `Nat` would change the value, so a literal OCaml's `int` cannot hold is a
+  -- hole, fatal at generation, until the engine has an exact 64-bit carrier.
+  | .lit (.uint64 n) =>
+    if n.toNat ≥ 4611686018427387904 then do
+      todo s!"{declName}: UInt64 literal {n.toNat} exceeds the OCaml int carrier"
+      return (.unit, none)
+    else return (.int n.toNat, none)
   | .lit (.usize n) => return (.int n.toNat, none)
   | .erased => return (.unit, none)
   | .proj typeName i s =>

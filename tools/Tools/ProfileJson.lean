@@ -18,6 +18,7 @@ open Lean Effect4.Program
 def tagged (name : String) (fields : List (String × Json)) : Json :=
   Json.mkObj (("_tag", Json.str name) :: fields)
 
+mutual
 def tyJson : Ty → Json
   | .never => tagged "never" []
   | .unknown => tagged "unknown" []
@@ -39,6 +40,24 @@ def tyJson : Ty → Json
   | .refOf value => tagged "refOf" [("value", tyJson value)]
   | .deferredOf value error => tagged "deferredOf" [("value", tyJson value), ("error", tyJson error)]
   | .var index => tagged "var" [("index", .num index)]
+  | .record fields => tagged "record" [("fields", Json.arr (fieldsJson fields).toArray)]
+  | .map key value => tagged "map" [("key", tyJson key), ("value", tyJson value)]
+  | .tuple items => tagged "tuple" [("items", Json.arr (itemsJson items).toArray)]
+  | .app name args => tagged "app" [("name", .str name), ("args", Json.arr (itemsJson args).toArray)]
+  | .null => tagged "null" []
+  | .undefined => tagged "undefined" []
+  | .number => tagged "number" []
+  | .bytes => tagged "bytes" []
+/-- A record's fields: each `String × Bool × Ty` a nested pair, `[name, [optional, type]]`, the
+generated codec's product spelling. -/
+def fieldsJson : List (String × Bool × Ty) → List Json
+  | [] => []
+  | (n, o, t) :: rest => Json.arr #[.str n, Json.arr #[.bool o, tyJson t]] :: fieldsJson rest
+/-- A tuple's or a reference's items. -/
+def itemsJson : List Ty → List Json
+  | [] => []
+  | t :: rest => tyJson t :: itemsJson rest
+end
 
 def shapeJson : RowShape → Json
   | .call => .str "call"

@@ -200,10 +200,12 @@ Machine layer uses, byte for byte. -/
 #guard Val.decode (Val.encode (.ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9],
     .pair (.some (.handle 4 5)) .unit])) =
   some (.ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9], .pair (.some (.handle 4 5)) .unit])
--- Refused: an empty handle payload, a leading-zero index, the next unused tag byte.
+-- Refused: an empty handle payload, a leading-zero index, the next unused tag byte (15 since the
+-- signed and binary64 frames took 13 and 14; the empty signed payload is -1).
 #guard Val.decode (framed Tag.handle []) = none
 #guard Val.decode (framed Tag.handle [2, 0, 7]) = none
-#guard Val.decode (framed 13 []) = none
+#guard Val.decode (framed 13 []) = some (.negInt 0)
+#guard Val.decode (framed 15 []) = none
 -- No shape accepts a handle, a handle is not a reference, and a `ref` is not a handle.
 #guard acceptsIn [] .nat (.handle 2 7) = false
 #guard acceptsIn [] .anyRef (.handle 2 7) = false

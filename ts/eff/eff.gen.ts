@@ -11,7 +11,7 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 // Families:
-//   Ty (Effect4.Program.Ty, tagged union): never unit nat int string bool handle(target: string) option(inner: Ty) list(inner: Ty) prod(left: Ty, right: Ty) except(error: Ty, value: Ty) exitOf(value: Ty, error: Ty) causeOf(error: Ty) fiberOf(value: Ty, error: Ty) union(left: Ty, right: Ty) lit(value: string) refOf(value: Ty) deferredOf(value: Ty, error: Ty) var(index: number) unknown
+//   Ty (Effect4.Program.Ty, tagged union): never unit nat int string bool handle(target: string) option(inner: Ty) list(inner: Ty) prod(left: Ty, right: Ty) except(error: Ty, value: Ty) exitOf(value: Ty, error: Ty) causeOf(error: Ty) fiberOf(value: Ty, error: Ty) union(left: Ty, right: Ty) lit(value: string) refOf(value: Ty) deferredOf(value: Ty, error: Ty) var(index: number) unknown record(fields: ReadonlyArray<readonly [string, readonly [boolean, Ty]]>) map(key: Ty, value: Ty) tuple(items: ReadonlyArray<Ty>) app(name: string, args: ReadonlyArray<Ty>) null undefined number bytes
 //   Lit (Effect4.Program.Lit, tagged union): unit nat(value: number) bool(value: boolean) str(value: string)
 //   Term (Effect4.Program.Term, tagged union): var(index: number) lit(value: Lit) app(atom: string, args: ReadonlyArray<Term>)
 //   Terms (Effect4.Program.Terms, ReadonlyArray<Term>): nil cons(head: Term, tail: ReadonlyArray<Term>)
@@ -62,6 +62,14 @@ export type Ty =
   | { readonly _tag: "deferredOf"; readonly value: Ty; readonly error: Ty }
   | { readonly _tag: "var"; readonly index: number }
   | { readonly _tag: "unknown" }
+  | { readonly _tag: "record"; readonly fields: ReadonlyArray<readonly [string, readonly [boolean, Ty]]> }
+  | { readonly _tag: "map"; readonly key: Ty; readonly value: Ty }
+  | { readonly _tag: "tuple"; readonly items: ReadonlyArray<Ty> }
+  | { readonly _tag: "app"; readonly name: string; readonly args: ReadonlyArray<Ty> }
+  | { readonly _tag: "null" }
+  | { readonly _tag: "undefined" }
+  | { readonly _tag: "number" }
+  | { readonly _tag: "bytes" }
 
 export const Ty = Schema.TaggedUnion({
   never: {},
@@ -84,6 +92,14 @@ export const Ty = Schema.TaggedUnion({
   deferredOf: { value: Schema.suspend((): Schema.Codec<Ty> => Ty), error: Schema.suspend((): Schema.Codec<Ty> => Ty) },
   var: { index: Schema.Int },
   unknown: {},
+  record: { fields: Schema.Array(Schema.Tuple([Schema.String, Schema.Tuple([Schema.Boolean, Schema.suspend((): Schema.Codec<Ty> => Ty)])])) },
+  map: { key: Schema.suspend((): Schema.Codec<Ty> => Ty), value: Schema.suspend((): Schema.Codec<Ty> => Ty) },
+  tuple: { items: Schema.Array(Schema.suspend((): Schema.Codec<Ty> => Ty)) },
+  app: { name: Schema.String, args: Schema.Array(Schema.suspend((): Schema.Codec<Ty> => Ty)) },
+  null: {},
+  undefined: {},
+  number: {},
+  bytes: {},
 })
 
 export type Lit =
