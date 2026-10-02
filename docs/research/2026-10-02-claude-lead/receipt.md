@@ -472,3 +472,78 @@ Placement of the proposed work:
 Changes: witness `docs/research/2026-10-02-claude-lead/witnesses/LoopProtocols.lean`;
 `Test/Counterexamples/REGISTER.md` (CE-036, CE-037, CE-038, SEEDED); `docs/core/decisions.md` (row
 190, proposed).
+
+## Slice 8a — decisions row 190 (a) and (c): the protocols as greatest invariants over typed views
+
+**First:** the frame contract for saved `iter`/`loop` slots changed meaning, as ruled. The inductive
+protocols, the global `HookLaws` and `hookLaws_interpR` are deleted, per the owner's instruction at
+the ruling: "This is all greenfield". Two ledger goals were restated:
+- `M4Stack.popR_typed` takes `HookLawsAt` at the walk's world;
+- `M5Hooks.hookLaws_interpR` is replaced by `M5Hooks.hookLawsAt_interpRAt`: the machine's
+  interpreter has its hook laws wherever its completed view is typed.
+
+The coalgebraic structure (`Typed/Contracts.lean`, `Greatest`). A step on predicates over states,
+an invariant `I ⊆ F I` (a coalgebra of `F` in the order of predicates), and the greatest one,
+`Greatest F`, the union of all of them (Knaster–Tarski). It is the dual of the free objects' folds:
+`Eff` is the initial algebra with its fold, the protocols are the greatest invariant of the
+interpreter's hook, itself a coalgebra on hook names (`iterNext`: name → value → done | halt |
+resume code name'). Laws proved once:
+- `coind` (an invariant lies below the greatest one);
+- `unfold`/`fold`/`iff` (for a monotone step it is a fixed point);
+- `coind_upto` (coinduction up to the greatest invariant: an invariant may close its tails in any
+  known protocol, the shape a generator that ends in a close walk needs);
+- `weaken` (a larger step, a larger invariant);
+- `transport` (closure under any relation the unfolding respects).
+
+`IteratorProtocol`/`LoopProtocol` (`Typed/Residual.lean`) are `Greatest (IteratorStep root)` and
+`Greatest (LoopStep root)` over `IterState`/`LoopState`. Each step answers every fitting value at
+every later world under every completed view typed there (`ViewTyped`, the construction post's
+clause). It keeps the error-column equality and the requirement-row condition (rows 117 and 135),
+with one intermediate type per resumed tail.
+
+The aesop bank `Effect4.Coind` (`Laws/Auto/RuleSets.lean`) holds only finite-search rules:
+- protocols move to later worlds (`iteratorProtocol_mono`, `loopProtocol_mono`, safe forward);
+- the steps are monotone (safe apply);
+- the frame hooks project to the protocols (norm simp).
+
+It never folds or unfolds a protocol, since a greatest fixed point has no bottom; coinduction takes
+its invariant from the call. Its theorems are `frameAccepts_iter`/`frameAccepts_loop` (a frame
+accepted by a protocol at the current world, one `aesop (rule_sets := [Effect4.Coind])` each). The
+red control is in `Test/Program/LoopProtocols.lean`.
+
+Controls: `Test/Program/LoopProtocols.lean`.
+- `Endless.protocol`: the always-true loop has a protocol, by `Greatest.coind` on the one state it
+  revisits.
+- `Endless.entry_saved`: the frame its entry leaves is typed.
+- `Finishing.protocol`: the finishing loop's protocol, folded once.
+- `View.refused`: the view-dependent frame is refused at input `unit` where the awaited fiber is
+  undeclared.
+- The bank's red control: `frameAccepts_iter`'s premise without `Effect4.Coind` fails under
+  `#guard_msgs (error)`.
+
+Ported: `TypedStack` (the walk at the machine's interpreter at an empty view), `H2PartOne` (the
+row-117 controls by `unfold`/`fold`), `ProtocolPosts` (`closeSeq_protocol` by `fold`; the history
+step over the deleted inductive protocol removed, register CE-017 updated), `FramesNotKripke`
+(`hookLawsX_refused` over `HookLawsAt`), `HostWalk`. Register: CE-036, CE-038 REPAIRED; CE-037
+waits for (b).
+
+Placement:
+1. Concepts 2 and 4; property: admitted loop and generator continuations, the walk's hook premise.
+2. Questions: `M5Hooks.hookLawsAt_interpRAt` (proved), `M4Stack.popR_typed` (restated, proved);
+   consumers `popR_hostTyped`, then `step_loop`/`step_deliver`.
+3. Reach: every interpreter and protocol as stated; rows 117, 135, 175, 190.
+4. Not established: the cursor's fit (b); the producers (8c); whole-step preservation.
+5. Unlocks: protocols that safe nonterminating loops and the machine's own interpreter can meet.
+
+Changes: `Laws/Auto/RuleSets.lean` (`Effect4.Coind`), `Typed/Contracts.lean` (`StepMono`, `Greatest`
+and its laws), `Typed/Residual.lean` (protocols, steps, bank rules, `frameAccepts_iter`/`_loop`),
+`Typed/Stack.lean`, `Typed/HostWalk.lean`; tests above, new `Test/Program/LoopProtocols.lean`,
+`Test/All.lean`; `docs/core/decisions.md` (row 190 ruled and its landing).
+
+- `lake build Effect4.Laws.Program.Typed.Stack` — exit 0 (`p8-05`, 545 s, the bank declaration
+  rebuilds the law graph).
+- `lake build Effect4.Laws Test.Program.LoopProtocols Test.Program.HostWalk Test.Program.TypedStack
+  Test.Program.H2PartOne Test.Program.ProtocolPosts Test.Program.FramesNotKripke` — exit 0 (`p8-06`).
+- `lake env lean … Test/Program/LoopProtocols.lean` — exit 0 (`p8-08`). Axioms
+  (`p8-ax`): `hookLawsAt_interpRAt`, `popR_typed`, `frameAccepts_iter`/`_loop`, the four controls
+  `[propext, Quot.sound]`; `Greatest.coind_upto`, `Greatest.transport` none.

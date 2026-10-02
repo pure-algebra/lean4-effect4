@@ -415,66 +415,135 @@ theorem finishFinalizer_payload_inv (root : ProgramSource) (w : World) (ty : Eff
   | fiber _ _ notFinish _ _ _ _ => exact absurd rfl (notFinish ex)
   | finishFinalizer payload => exact payload
 
-/-! ## Interpreter hook contracts -/
+/-! ## Interpreter hook contracts (decisions row 190)
 
-/-! The recursive hook contracts use mutually inductive step witnesses. This is the
-strictly positive form of the brief's existential resume clause: the resume constructor
-stores its intermediate type and the next protocol witness. No new program syntax is
-stored, and no termination theorem for arbitrary source code is asserted.
+A saved iterator or loop frame is accepted by a protocol: an invariant that contains it and is
+closed under one hook step, the postfixed (greatest-fixed-point) form. A step answers every value
+that fits at every later world (decisions row 135), under every completed view typed there (row
+175: the machine runs `interpRAt root m.completedExits`, whose generator and loop steps read that
+view), with typed code or exit; a resumed tail lies in the invariant again with one intermediate
+type. A safe loop that never finishes is admitted (`E4-TYPED-CE-036` refuted the inductive form),
+and a step at a view no producer typed is not assumed (`E4-TYPED-CE-038`).
 
-They are Kripke-closed in their own definitions (decisions row 135): a step answers every value
-that fits at every later world, and the answer's `resume`/`continue` tail is a protocol at that
-answer's world. So a protocol holds at every later world with one intermediate type
-(`iteratorProtocol_mono`, `loopProtocol_mono`), which is what the walk needs when it re-pushes
-the resumed frame. Wrapping a one-world protocol at the frame is not enough: the pushed
-protocol could then pick its intermediate type per world (`output_not_kripke`,
-`Test/Program/FramesNotKripke.lean`). The world is an index, not a parameter, since a step's
-answer lives at a later world.
-
-An iterator or loop frame discharges no service, and the walk passes a failure through it by
-the error columns alone (`errors`, `Typed/Stack.lean`'s `popR_typed`), so a step also keeps the
+An iterator or loop frame discharges no service, and the walk passes a failure through it by the
+error columns alone (`errors`, `Typed/Stack.lean`'s `popR_typed`), so a step also keeps the
 requirement row from emptying (`rows`, decisions row 117 and the formal pass's G5: the side
-condition of `exitOk2_transport`, under which an exit judgment that refuses `missingService` at
-an empty row transports along the frame). Without it a loop frame at an answer no value fits
-carried `die missingService` from a row requiring the scope service to an empty one
-(`E4-TYPED-CE-008`, `Test/Program/H2PartOne.lean`, `MissingServiceTransport`). -/
-mutual
-  inductive IteratorProtocol (root : ProgramSource) : World → EffTy → EffTy → EffName → Prop
-    | step {w : World} {tin tout : EffTy} {name : EffName}
-        (errors : tin.error = tout.error)
-        (rows : tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty)
-        (next : ∀ w', w.leHost w' → ∀ v, Fits w' v tin.answer →
-          IteratorAnswer root w' tout ((interpR root.program).iterNext name v).2) :
-        IteratorProtocol root w tin tout name
-  inductive IteratorAnswer (root : ProgramSource) :
-      World → EffTy → IterStep EffName EffThunk Val Err Defect FiberId Ann RProgram → Prop
-    | done {w : World} {tout : EffTy} (result : Val) (typed : ExitOk w tout (.success result)) :
-        IteratorAnswer root w tout (.done result)
-    | halt {w : World} {tout : EffTy} (cause : CauseV) (typed : ExitOk w tout (.failure cause)) :
-        IteratorAnswer root w tout (.halt cause)
-    | resume {w : World} {tout : EffTy} (code : RProgram) (name : EffName) (tin : EffTy)
-        (typed : TypedProg root w tin code) (tail : IteratorProtocol root w tin tout name) :
-        IteratorAnswer root w tout (.resume code name)
-end
+condition of `exitOk2_transport`). Without it a loop frame at an answer no value fits carried
+`die missingService` from a row requiring the scope service to an empty one (`E4-TYPED-CE-008`,
+`Test/Program/H2PartOne.lean`, `MissingServiceTransport`). -/
 
-mutual
-  inductive LoopProtocol (root : ProgramSource) : World → EffTy → EffTy → EffName → Val → Prop
-    | step {w : World} {tin tout : EffTy} {name : EffName} {cursor : Val}
-        (errors : tin.error = tout.error)
-        (rows : tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty)
-        (next : ∀ w', w.leHost w' → ∀ v, Fits w' v tin.answer →
-          LoopAnswer root w' tout name ((interpR root.program).loopResume name cursor v)) :
-        LoopProtocol root w tin tout name cursor
-  inductive LoopAnswer (root : ProgramSource) :
-      World → EffTy → EffName → LoopNext Val RProgram → Prop
-    | continue {w : World} {tout : EffTy} {name : EffName} (cursor : Val) (body : RProgram)
-        (tin : EffTy) (typed : TypedProg root w tin body)
-        (tail : LoopProtocol root w tin tout name cursor) :
-        LoopAnswer root w tout name (.continue cursor body)
-    | finish {w : World} {tout : EffTy} {name : EffName} (code : RProgram)
-        (typed : TypedProg root w tout code) :
-        LoopAnswer root w tout name (.finish code)
-end
+/-- The completed views typed at a world (row 175): each listed exit's fiber is declared and the
+exit fits its declaration, the `construction` post's clause. -/
+def ViewTyped (w : World) (completed : List (FiberId × ExitV)) : Prop :=
+  ∀ q ∈ completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2
+
+open Contracts (Greatest StepMono)
+
+/-- A saved iterator frame's state: the world, the input and final types, the hook name. -/
+abbrev IterState := World × EffTy × EffTy × EffName
+
+/-- A saved loop frame's state: the world, the input and final types, the hook name, the cursor. -/
+abbrev LoopState := World × EffTy × EffTy × EffName × Val
+
+/-- One iterator step from `w`, its resumed tails in `I`. -/
+def IteratorStep (root : ProgramSource) (I : IterState → Prop) : IterState → Prop
+  | (w, tin, tout, name) =>
+    tin.error = tout.error ∧
+      (tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty) ∧
+      ∀ w', w.leHost w' → ∀ completed, ViewTyped w' completed → ∀ v, Fits w' v tin.answer →
+        match ((interpRAt root.program completed).iterNext name v).2 with
+        | .done result => ExitOk w' tout (.success result)
+        | .halt cause => ExitOk w' tout (.failure cause)
+        | .resume code name' => ∃ tin', TypedProg root w' tin' code ∧ I (w', tin', tout, name')
+
+/-- One loop step from `w`, its continued tails in `I`. -/
+def LoopStep (root : ProgramSource) (I : LoopState → Prop) : LoopState → Prop
+  | (w, tin, tout, name, cursor) =>
+    tin.error = tout.error ∧
+      (tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty) ∧
+      ∀ w', w.leHost w' → ∀ completed, ViewTyped w' completed → ∀ v, Fits w' v tin.answer →
+        match (interpRAt root.program completed).loopResume name cursor v with
+        | .continue cursor' body =>
+          ∃ tin', TypedProg root w' tin' body ∧ I (w', tin', tout, name, cursor')
+        | .finish code => TypedProg root w' tout code
+
+/-- An iterator frame's protocol: the greatest invariant of `IteratorStep` holds at its state. -/
+abbrev IteratorProtocol (root : ProgramSource) (w : World) (tin tout : EffTy) (name : EffName) : Prop :=
+  Greatest (IteratorStep root) (w, tin, tout, name)
+
+/-- A loop frame's protocol: the greatest invariant of `LoopStep` holds at its state. -/
+abbrev LoopProtocol (root : ProgramSource) (w : World) (tin tout : EffTy) (name : EffName)
+    (cursor : Val) : Prop :=
+  Greatest (LoopStep root) (w, tin, tout, name, cursor)
+
+section Protocols
+variable {root : ProgramSource}
+
+@[aesop safe apply (rule_sets := [Effect4.Coind])]
+theorem iteratorStep_mono : StepMono (IteratorStep root) := by
+  rintro I J sub ⟨w, tin, tout, name⟩ ⟨errors, rows, next⟩
+  refine ⟨errors, rows, fun w' o completed view v hv => ?_⟩
+  have step := next w' o completed view v hv
+  revert step
+  cases ((interpRAt root.program completed).iterNext name v).2 with
+  | done result => exact id
+  | halt cause => exact id
+  | resume code name' =>
+    intro step
+    obtain ⟨tin', typed, tail⟩ := step
+    exact ⟨tin', typed, sub _ tail⟩
+
+@[aesop safe apply (rule_sets := [Effect4.Coind])]
+theorem loopStep_mono : StepMono (LoopStep root) := by
+  rintro I J sub ⟨w, tin, tout, name, cursor⟩ ⟨errors, rows, next⟩
+  refine ⟨errors, rows, fun w' o completed view v hv => ?_⟩
+  have step := next w' o completed view v hv
+  revert step
+  cases (interpRAt root.program completed).loopResume name cursor v with
+  | «continue» cursor' body =>
+    intro step
+    obtain ⟨tin', typed, tail⟩ := step
+    exact ⟨tin', typed, sub _ tail⟩
+  | finish code => exact id
+
+theorem IteratorProtocol.unfold {w : World} {tin tout : EffTy} {name : EffName}
+    (h : IteratorProtocol root w tin tout name) :
+    IteratorStep root (Greatest (IteratorStep root)) (w, tin, tout, name) :=
+  Greatest.unfold iteratorStep_mono h
+
+theorem IteratorProtocol.fold {w : World} {tin tout : EffTy} {name : EffName}
+    (h : IteratorStep root (Greatest (IteratorStep root)) (w, tin, tout, name)) :
+    IteratorProtocol root w tin tout name :=
+  Greatest.fold iteratorStep_mono h
+
+theorem LoopProtocol.unfold {w : World} {tin tout : EffTy} {name : EffName} {cursor : Val}
+    (h : LoopProtocol root w tin tout name cursor) :
+    LoopStep root (Greatest (LoopStep root)) (w, tin, tout, name, cursor) :=
+  Greatest.unfold loopStep_mono h
+
+theorem LoopProtocol.fold {w : World} {tin tout : EffTy} {name : EffName} {cursor : Val}
+    (h : LoopStep root (Greatest (LoopStep root)) (w, tin, tout, name, cursor)) :
+    LoopProtocol root w tin tout name cursor :=
+  Greatest.fold loopStep_mono h
+
+/-- An iterator protocol holds at every later world, with the same intermediate type: its step
+already answers at every later world. -/
+@[aesop safe forward (rule_sets := [Effect4.Coind])]
+theorem iteratorProtocol_mono {w w' : World} (ord : w.leHost w') {tin tout : EffTy}
+    {name : EffName} (h : IteratorProtocol root w tin tout name) :
+    IteratorProtocol root w' tin tout name := by
+  obtain ⟨errors, rows, next⟩ := h.unfold
+  exact IteratorProtocol.fold ⟨errors, rows, fun w'' o => next w'' (leHost_trans _ _ _ ord o)⟩
+
+/-- A loop protocol holds at every later world, with the same intermediate type. -/
+@[aesop safe forward (rule_sets := [Effect4.Coind])]
+theorem loopProtocol_mono {w w' : World} (ord : w.leHost w') {tin tout : EffTy} {name : EffName}
+    {cursor : Val} (h : LoopProtocol root w tin tout name cursor) :
+    LoopProtocol root w' tin tout name cursor := by
+  obtain ⟨errors, rows, next⟩ := h.unfold
+  exact LoopProtocol.fold ⟨errors, rows, fun w'' o => next w'' (leHost_trans _ _ _ ord o)⟩
+
+end Protocols
 
 /-- The three named hook arrows (slice 5 brief §3.3 as amended 2026-09-23), each closed under
 later worlds (row 135). The async clause types the cancellation only for an incoming failure
@@ -488,21 +557,27 @@ def frameProtocols (root : ProgramSource) : Contracts.FrameProtocols where
   loop := LoopProtocol root
   scopeExit w prev sc := ScopeLive w sc ∧ ServicesFit w prev.services
 
-/-- An iterator protocol holds at every later world, with the same intermediate type. -/
-theorem iteratorProtocol_mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
-    {tin tout : EffTy} {name : EffName} (h : IteratorProtocol root w tin tout name) :
-    IteratorProtocol root w' tin tout name := by
-  cases h with
-  | step errors rows next =>
-    exact .step errors rows (fun w'' o v hv => next w'' (leHost_trans _ _ _ ord o) v hv)
+@[aesop norm simp (rule_sets := [Effect4.Coind])]
+theorem frameProtocols_iterator (root : ProgramSource) :
+    (frameProtocols root).iterator = IteratorProtocol root := rfl
 
-/-- A loop protocol holds at every later world, with the same intermediate type. -/
-theorem loopProtocol_mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
-    {tin tout : EffTy} {name : EffName} {cursor : Val} (h : LoopProtocol root w tin tout name cursor) :
-    LoopProtocol root w' tin tout name cursor := by
-  cases h with
-  | step errors rows next =>
-    exact .step errors rows (fun w'' o v hv => next w'' (leHost_trans _ _ _ ord o) v hv)
+@[aesop norm simp (rule_sets := [Effect4.Coind])]
+theorem frameProtocols_loop (root : ProgramSource) :
+    (frameProtocols root).loop = LoopProtocol root := rfl
+
+/-- An iterator frame is accepted by a protocol at the current world (row 135's closure is the
+protocol's own). The bank's control: it closes only with `Effect4.Coind`. -/
+theorem frameAccepts_iter {root : ProgramSource} {w : World} {tin tout : EffTy} {name : EffName}
+    (h : IteratorProtocol root w tin tout name) :
+    Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w tin tout (.iter name) :=
+  .iter name (by aesop (rule_sets := [Effect4.Coind]))
+
+/-- A loop frame is accepted by a protocol at the current world. -/
+theorem frameAccepts_loop {root : ProgramSource} {w : World} {tin tout : EffTy} {name : EffName}
+    {cursor : Val} (h : LoopProtocol root w tin tout name cursor) :
+    Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w tin tout
+      (.loop name cursor) :=
+  .loop name cursor (by aesop (rule_sets := [Effect4.Coind]))
 
 /-- The async finalizer's clause holds at every later world. -/
 theorem asyncFinalizerProtocol_mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')

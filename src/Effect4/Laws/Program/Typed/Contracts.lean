@@ -281,4 +281,64 @@ theorem stackAccepts_of_framePath {w : World} {a b : EffTy} {s : List ScopeFrame
 
 end Paths
 
+/-! ## The greatest predicate closed under a step (decisions row 190)
+
+The dual of the free objects' folds: a step `F` on predicates over states, an invariant `I` with
+`I ⊆ F I` (a coalgebra of `F` in the order of predicates), and the greatest one, `Greatest F`, the
+union of all of them (Knaster–Tarski). Membership is shown by exhibiting an invariant (`coind`, the
+coinduction principle); for a monotone `F` it is a fixed point (`unfold`, `fold`). The hook
+protocols (`IteratorProtocol`, `LoopProtocol`, `Typed/Residual.lean`) are its instances: a safe
+loop that never finishes is in the greatest fixed point and not in the least. -/
+
+/-- A step on predicates is monotone when it carries a larger invariant to a larger one. -/
+def StepMono {α : Type} (F : (α → Prop) → α → Prop) : Prop :=
+  ∀ I J : α → Prop, (∀ s, I s → J s) → ∀ s, F I s → F J s
+
+/-- The states some invariant of `F` contains. -/
+def Greatest {α : Type} (F : (α → Prop) → α → Prop) (s : α) : Prop :=
+  ∃ I : α → Prop, I s ∧ ∀ t, I t → F I t
+
+namespace Greatest
+variable {α : Type} {F : (α → Prop) → α → Prop}
+
+/-- Coinduction: every invariant lies below the greatest one. -/
+theorem coind {I : α → Prop} (closed : ∀ t, I t → F I t) {s : α} (h : I s) : Greatest F s :=
+  ⟨I, h, closed⟩
+
+theorem unfold (mono : StepMono F) {s : α} (h : Greatest F s) : F (Greatest F) s := by
+  obtain ⟨I, member, closed⟩ := h
+  exact mono I (Greatest F) (fun _ tail => ⟨I, tail, closed⟩) s (closed s member)
+
+theorem fold (mono : StepMono F) {s : α} (h : F (Greatest F) s) : Greatest F s :=
+  ⟨F (Greatest F), h, fun t step => mono _ _ (fun _ tail => unfold mono tail) t step⟩
+
+/-- The greatest invariant is a fixed point of a monotone step. -/
+theorem iff (mono : StepMono F) {s : α} : Greatest F s ↔ F (Greatest F) s :=
+  ⟨unfold mono, fold mono⟩
+
+/-- **Coinduction up to the greatest invariant**: an invariant may close a tail either in itself
+or in any state already known to be in `Greatest F` (a producer's tail that is a known protocol,
+such as a close walk after a generator). -/
+theorem coind_upto (mono : StepMono F) {I : α → Prop}
+    (closed : ∀ t, I t → F (fun u => I u ∨ Greatest F u) t) {s : α} (h : I s) : Greatest F s :=
+  coind (I := fun u => I u ∨ Greatest F u)
+    (fun t member => member.elim (closed t)
+      (fun known => mono _ _ (fun _ tail => Or.inr tail) t (unfold mono known)))
+    (Or.inl h)
+
+/-- A larger step has a larger greatest invariant. -/
+theorem weaken {G : (α → Prop) → α → Prop} (sub : ∀ I s, F I s → G I s) {s : α}
+    (h : Greatest F s) : Greatest G s := by
+  obtain ⟨I, member, closed⟩ := h
+  exact ⟨I, member, fun t tail => sub I t (closed t tail)⟩
+
+/-- The greatest invariant is closed under every relation its one-step unfolding is closed under
+(a protocol's move to a later world). -/
+theorem transport (mono : StepMono F) {R : α → α → Prop}
+    (step : ∀ s t, R s t → F (Greatest F) s → F (Greatest F) t) {s t : α} (r : R s t)
+    (h : Greatest F s) : Greatest F t :=
+  fold mono (step s t r (unfold mono h))
+
+end Greatest
+
 end Effect4.Program.Typed.Contracts

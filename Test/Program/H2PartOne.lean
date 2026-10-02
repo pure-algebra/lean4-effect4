@@ -375,8 +375,7 @@ theorem loop_refused (src : ProgramSource) (w : W)
     cases tail
     cases head with
     | loop _ _ protocol =>
-      cases protocol w (leHost_refl w) with
-      | step _ rows _ => exact absurd (rows rfl) (by decide)
+      exact absurd ((protocol w (leHost_refl w)).unfold.2.1 rfl) (by decide)
 
 /-- A loop that keeps its requirement row. -/
 def innerKept : EffTy := ⟨.unit, .never, Env.Requirement.single nativeScopeKey⟩
@@ -389,8 +388,8 @@ theorem loop_kept_admitted (src : ProgramSource) (w : W) :
   apply StackAccepts.cons (middle := innerKept)
   · apply FrameAccepts.loop
     intro w' _
-    exact LoopProtocol.step (tin := inner) (tout := innerKept) rfl
-      (fun h => absurd h (by decide)) (fun _ _ _ h => False.elim h)
+    exact LoopProtocol.fold (tin := inner) (tout := innerKept)
+      ⟨rfl, fun h => absurd h (by decide), fun _ _ _ _ _ h => False.elim h⟩
   · exact StackAccepts.nil innerKept
 
 theorem input_ok (w : W) : FullExitOk w inner (.failure missing) :=
@@ -502,11 +501,11 @@ theorem presence_not_walked (root : ProgramSource) (w : W) :
   cases stack
   exact emptyCtx_lacks_scope present
 
-/-- The presence-free walk theorem still types the same output (`popR_typed_interpR`). -/
+/-- The presence-free walk theorem still types the same output (`popR_typed`). -/
 theorem walked_typed (root : ProgramSource) (w : W) :
     WalkTyped root (frameProtocols root) w keyTy
-      (popR (interpR root.program) (.success Val.unit) x0.stack x0) :=
-  popR_typed_interpR root w x0.stack (EffTy.pure .unit) keyTy (.success Val.unit) x0
+      (popR (interpRAt root.program []) (.success Val.unit) x0.stack x0) :=
+  popR_typed _ _ _ w (hookLawsAt_interpRAt _ w [] (fun _ h => nomatch h)) x0.stack (EffTy.pure .unit) keyTy (.success Val.unit) x0
     (.cons (.answer next fun w' _ ex _ => next_typed root w' ex) (.nil keyTy))
     ⟨trivial, trivial⟩ ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩
 

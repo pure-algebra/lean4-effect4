@@ -23,7 +23,7 @@ declare_aesop_rule_sets [Effect4.Inversion] (default := true)
 
 declare_aesop_rule_sets [Effect4.TyOrder, Effect4.TypedState, Effect4.Rows, Effect4.Atoms,
   Effect4.Reader, Effect4.Checker, Effect4.Stores, Effect4.StoreKernel, Effect4.Fibers,
-  Effect4.StepInv]
+  Effect4.StepInv, Effect4.Coind]
 
 /-! `Effect4.Stores` carries the store equations and laws only; `Effect4.StoreKernel` carries the
 store definitions and the arena view, unfolded inside the store kernel modules
@@ -33,3 +33,9 @@ the fiber machine's clause theorems (spawn, start, fork, race, origin, trace). -
 
 /-! `Effect4.StepInv` carries leaf equations for machine facts. Allocation laws keep their
 necessary invariant premises; trace emission requires a no-fork observation. -/
+
+/-! `Effect4.Coind` carries the hook protocols' finite-search rules (decisions row 190): a protocol
+moves to later worlds (forward), a step operator is monotone (apply), and the frame hooks project to
+the protocols (simp). It never folds or unfolds a protocol: the protocols are greatest fixed
+points, and a rule that unfolds them has no bottom. Coinduction itself (`Contracts.Greatest.coind`,
+`coind_upto`) takes its invariant from the call that needs it. -/

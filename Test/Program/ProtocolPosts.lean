@@ -29,8 +29,7 @@ later world types; the pre now types it), `lone_release_outside_post` (a scope's
 answers outside the close-scope post) and `closeSeq_protocol_refused` (the close walk's iterator
 protocol cannot carry shape-defect exclusion through reified exits). Decisions row 152 (seat D1,
 2026-10-01) repairs the last: membership at an exit type reads `ShapeFree`, so a reified
-`badName` failure no longer fits (`badName_refused`), the refutation is history over the old
-`exitOf` arm (`old_closeSeq_protocol_refused`), and the walk types at the exact post for clean
+`badName` failure no longer fits (`badName_refused`), and the walk types at the exact post for clean
 finalizers (`closeSeq_protocol`, `closeSeq_protocol_typed`). Decisions row 151 (a″) (seat D4,
 2026-10-01) repairs the second: `Scope.close` voids a lone finalizer's value on both machines (the
 signed divergence `U-02`; `closeLone` answers `unit`), every finalizer a scope holds is typed at
@@ -871,30 +870,6 @@ def badNameExit : Val := reifyExitVal (.failure (Cause.die .badName))
 theorem old_badName_fits (w : W) : Test.Program.H2PartOne.oldExitFits w badNameExit .unit .never :=
   Test.Program.H2PartOne.old_base_badName_fits w (EffTy.pure .unit)
 
-/-- History: the step clause of `IteratorProtocol` at the walk's exit type, over the old
-membership (the current clause with `oldExitFits` for `Fits`). -/
-def OldCloseStep (root : ProgramSource) (w : W) (name : EffName) : Prop :=
-  ∀ w', w.leHost w' → ∀ v, Test.Program.H2PartOne.oldExitFits w' v .unit .never →
-    IteratorAnswer root w' (EffTy.pure .unit) ((interpR root.program).iterNext name v).2
-
-/-- History (the refutation found landing row 136, restated over the old membership): the walk
-halts with the admitted `badName` failure, which `ExitOk` at `⟨unit, never⟩` refuses, so no step
-over the old membership types the walk at the exact post. -/
-theorem old_closeSeq_protocol_refused (root : ProgramSource) (w : W) (ex : ExitV) :
-    ¬ OldCloseStep root w (.store (.closeSeq [] ex [])) := by
-  intro next
-  have answer := next w (leHost_refl w) badNameExit (old_badName_fits w)
-  have step : ((interpR root.program).iterNext (.store (.closeSeq [] ex [])) badNameExit).2 =
-      .halt ⟨[.die .badName .empty]⟩ := by
-    change closeDone ([] ++ reasonsOfVal (Val.exitErr (Cause.die .badName))) = _
-    rw [reasonsOfVal_exitErr]
-    rfl
-  rw [step] at answer
-  cases answer with
-  | halt cause typed =>
-    have excluded := typed.2 (.die .badName .empty) (List.mem_singleton_self _)
-    exact excluded.1 rfl
-
 /-- The flip of `badName_fits` (decisions row 152, proved): membership at an exit type refuses a
 reified `badName` failure. -/
 theorem badName_refused (w : W) : ¬ Fits w badNameExit (.exitOf .unit .never) :=
@@ -975,24 +950,26 @@ theorem closeSeq_protocol (root : ProgramSource) (ex : ExitV) :
       IteratorProtocol root w (EffTy.pure (.exitOf .unit .never)) (EffTy.pure .unit)
         (.store (.closeSeq remaining ex captured))
   | [], captured, w, hcap, _ => by
-    refine .step rfl (fun _ => rfl) fun w' _ v hv => ?_
+    refine IteratorProtocol.fold ⟨rfl, fun _ => rfl, fun w' _ completed _ v hv => ?_⟩
     have hcap' := capturedOk_append hcap hv
-    show IteratorAnswer root w' (EffTy.pure .unit) (closeDone (captured ++ reasonsOfVal v))
+    have step : ((interpRAt root.program completed).iterNext (.store (.closeSeq [] ex captured)) v).2 =
+        closeDone (captured ++ reasonsOfVal v) := rfl
+    rw [step]
     generalize captured ++ reasonsOfVal v = all at hcap'
     cases all with
-    | nil => exact .done Val.unit ⟨trivial, trivial⟩
-    | cons r rest =>
-      exact .halt ⟨r :: rest⟩
-        ⟨fitsExit_of_clean w' _ _ hcap'.1 hcap'.2, hcap'.2⟩
+    | nil => exact ⟨trivial, trivial⟩
+    | cons r rest => exact ⟨fitsExit_of_clean w' _ _ hcap'.1 hcap'.2, hcap'.2⟩
   | fin :: rest, captured, w, hcap, hfins => by
-    refine .step rfl (fun _ => rfl) fun w' hw' v hv => ?_
+    refine IteratorProtocol.fold ⟨rfl, fun _ => rfl, fun w' hw' completed _ v hv => ?_⟩
     have hcap' := capturedOk_append hcap hv
-    show IteratorAnswer root w' (EffTy.pure .unit)
-      (.resume (exitR (denoteFin fin ex)) (.store (.closeSeq rest ex (captured ++ reasonsOfVal v))))
-    refine .resume _ _ (EffTy.pure (.exitOf .unit .never))
-      (exitR_typed root (hfins w' hw' fin List.mem_cons_self)) ?_
-    exact closeSeq_protocol root ex rest _ w' hcap' fun w'' hw'' fin' hfin' =>
-      hfins w'' (leHost_trans _ _ _ hw' hw'') fin' (List.mem_cons_of_mem fin hfin')
+    have step : ((interpRAt root.program completed).iterNext
+        (.store (.closeSeq (fin :: rest) ex captured)) v).2 =
+        .resume (exitR (denoteFin fin ex)) (.store (.closeSeq rest ex (captured ++ reasonsOfVal v))) :=
+      rfl
+    rw [step]
+    exact ⟨EffTy.pure (.exitOf .unit .never), exitR_typed root (hfins w' hw' fin List.mem_cons_self),
+      closeSeq_protocol root ex rest _ w' hcap' fun w'' hw'' fin' hfin' =>
+        hfins w'' (leHost_trans _ _ _ hw' hw'') fin' (List.mem_cons_of_mem fin hfin')⟩
 
 /-- **The flip of the historical refutation** (decisions row 152, proved): with no finalizer
 left and nothing captured, the walk's last step types at the exact post at every world. -/
@@ -1567,7 +1544,6 @@ open Test.Program.ProtocolPosts in
 open Test.Program.ProtocolPosts in
 #print axioms CloseIter.old_badName_fits
 open Test.Program.ProtocolPosts in
-#print axioms CloseIter.old_closeSeq_protocol_refused
 open Test.Program.ProtocolPosts in
 #print axioms CloseIter.badName_refused
 open Test.Program.ProtocolPosts in

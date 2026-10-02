@@ -1170,11 +1170,11 @@ theorem mid_w1 : midOf w1 = B := by
   unfold midOf
   rw [show w1.Ρ ⟨0⟩ = some .nat by simp only [w1, if_pos]]
 
-/-- **The current `HookLaws` refuse these hooks**: a resumed protocol must hold at every later
+/-- **The current hook laws refuse these hooks** (at the initial world): a resumed protocol must hold at every later
 world with one intermediate type, and `n2`'s is `A` at the initial world and `B` at `w1`. -/
-theorem hookLawsX_refused : ¬ HookLaws (refProg : ProgramSource) interpX hooksX := by
+theorem hookLawsX_refused : ¬ HookLawsAt (refProg : ProgramSource) interpX hooksX world := by
   intro laws
-  obtain ⟨_, step⟩ := (laws world).iterator A T n1 ⟨rfl, rfl⟩
+  obtain ⟨_, step⟩ := laws.iterator A T n1 ⟨rfl, rfl⟩
   obtain ⟨tin', _, tail⟩ := step Val.unit trivial
   have h0 : tin' = midOf world ∧ T = T := tail world (leHost_refl world)
   have h1 : tin' = midOf w1 ∧ T = T := tail w1 w0_le_w1

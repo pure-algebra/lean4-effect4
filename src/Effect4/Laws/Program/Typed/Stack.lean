@@ -5,18 +5,18 @@ import Effect4.Laws.Auto.Obligations
 /-!
 # Laws.Program.Typed.Stack — the saved stack's walk preserves typing
 
-Slice 5 (M4) of the foundations plan, as amended by the contract ruling of 2026-09-23 and the
-protocol repair of 2026-09-24. `popR_typed`: delivering a typed exit to a typed stack either
-installs typed code over a typed remaining stack, or completes with an exit typed at the stack's
-final type. Its only premises are `HookLaws` (the three named hooks) and `InterruptProvenance`
-(recorded causes are interrupts); there is no run premise. A preempted catch passes the sanitized
-cause (`U-01`), which carries no `Fail`. Its original typed exit and recorded-interrupt
-provenance separately supply the part-one defect exclusion.
+Slice 5 (M4) of the foundations plan, as amended by the contract ruling of 2026-09-23, the
+protocol repair of 2026-09-24 and decisions row 190. `popR_typed`: delivering a typed exit to a
+typed stack either installs typed code over a typed remaining stack, or completes with an exit
+typed at the stack's final type. Its only premises are the interpreter's hook laws at the walk's
+world (`HookLawsAt`) and `InterruptProvenance` (recorded causes are interrupts); there is no run
+premise. A preempted catch passes the sanitized cause (`U-01`), which carries no `Fail`.
 
 The stacks are Kripke-closed (decisions row 135, `Contracts.FrameAccepts`): the walk reads each
 frame's clauses at the current world, and every stack it hands back, including a frame it
-re-pushes after an iterator or loop resume, holds at every later world. `HookLaws` therefore
-returns a resumed protocol at every later world with one intermediate type.
+re-pushes after an iterator or loop resume, holds at every later world. The machine's interpreter
+(`interpRAt root m.completedExits`) has its hook laws wherever its completed view is typed
+(`hookLawsAt_interpRAt`, row 190).
 -/
 
 set_option autoImplicit false
@@ -25,10 +25,9 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Progr
 open Effect4.Laws.Effects Contracts
 
 /-- Exactly the facts `popR`'s three named-hook arms need about an interpreter, at the one world
-the walk runs at (`popR_typedAt` reads nothing else of it). A resume's protocol is handed back at
-every later world with one intermediate type, so the frame the walk re-pushes is Kripke-closed
-(row 135; `output_not_kripke` refutes a per-world choice); that closure is the protocol's own,
-not a requirement at other worlds. -/
+the walk runs at. A resume's protocol is handed back at every later world with one intermediate
+type, so the frame the walk re-pushes is Kripke-closed (row 135; `output_not_kripke` refutes a
+per-world choice). -/
 structure HookLawsAt (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
     (w : World) : Prop where
   asyncFinalizer : ∀ tin tout name, hooks.asyncFinalizer w tin tout name →
@@ -47,12 +46,6 @@ structure HookLawsAt (root : ProgramSource) (interp : RInterp) (hooks : FramePro
       | .continue cursor' body => ∃ tin', TypedProg root w tin' body ∧
           ∀ w', w.leHost w' → hooks.loop w' tin' tout name cursor'
       | .finish code => TypedProg root w tout code
-
-/-- The hook laws at every world, what a walk at an arbitrary world needs of one interpreter. The
-machine's own interpreter depends on its completed view (`interpRAt`), which is typed at the
-machine's world only, so its consumers use `HookLawsAt` there. -/
-def HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols) : Prop :=
-  ∀ w, HookLawsAt root interp hooks w
 
 /-- The walk ran a `scoped` guard's slot (decisions row 188 (a)): the current code is that scope's
 exit callback, whose exit is typed at the remaining stack's input type, over the remaining stack
@@ -160,7 +153,7 @@ theorem walk_done {root : ProgramSource} {hooks : FrameProtocols} {w : World} {t
 
 /-! ## The walk -/
 
-theorem popR_typedAt (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
+theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
     (w : World) (laws : HookLawsAt root interp hooks w) :
     ∀ (stack : List ScopeFrame) (tin tout : EffTy) (ex : ExitV) (frame : RSaved),
       StackAccepts (TypedProg root) ExitOk hooks w tin tout stack →
@@ -359,57 +352,38 @@ theorem popR_typedAt (root : ProgramSource) (interp : RInterp) (hooks : FramePro
           simp only [popR, hs]
           exact walk_saved _ h tail ⟨hp.recorded, hp.deferred⟩
 
-theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
-    (laws : HookLaws root interp hooks) (w : World) :
-    ∀ (stack : List ScopeFrame) (tin tout : EffTy) (ex : ExitV) (frame : RSaved),
-      StackAccepts (TypedProg root) ExitOk hooks w tin tout stack →
-      ExitOk w tin ex → InterruptProvenance frame →
-      WalkTyped root hooks w tout (popR interp ex stack frame) :=
-  popR_typedAt root interp hooks w (laws w)
+/-! ## The machine's interpreter -/
 
-/-! ## The reference interpreter's hooks -/
-
-/-- The concrete hook contracts are exactly what the walk needs of `interpR` (the M5 hook
-obligation of the slice 5 brief, closed here because the repaired protocols state them
-directly). Each protocol reads its step at the current world; a resumed tail holds at every
-later world because the protocols are closed in their own definitions
-(`iteratorProtocol_mono`, `loopProtocol_mono`). -/
-theorem hookLaws_interpR (root : ProgramSource) :
-    HookLaws root (interpR root.program) (frameProtocols root) := fun w => {
-  asyncFinalizer := fun _ _ _ h => ⟨h.1, h.2 w (leHost_refl w)⟩
-  iterator := fun tin tout name h => by
-    cases h with
-    | step errors _ next =>
-      refine ⟨errors, fun v hv => ?_⟩
-      have answer := next w (leHost_refl w) v hv
-      revert answer
-      generalize ((interpR root.program).iterNext name v).2 = s
-      intro answer
-      cases answer with
-      | done result typed => exact typed
-      | halt cause typed => exact typed
-      | resume code name' tin' typed tail =>
-        exact ⟨tin', typed, fun _ ord => iteratorProtocol_mono ord tail⟩
-  loop := fun tin tout name cursor h => by
-    cases h with
-    | step errors _ next =>
-      refine ⟨errors, fun v hv => ?_⟩
-      have answer := next w (leHost_refl w) v hv
-      revert answer
-      generalize (interpR root.program).loopResume name cursor v = s
-      intro answer
-      cases answer with
-      | «continue» cursor' body tin' typed tail =>
-        exact ⟨tin', typed, fun _ ord => loopProtocol_mono ord tail⟩
-      | finish code typed => exact typed }
-
-/-- The walk on the reference interpreter needs no hook premise. -/
-theorem popR_typed_interpR (root : ProgramSource) (w : World) (stack : List ScopeFrame)
-    (tin tout : EffTy) (ex : ExitV) (frame : RSaved)
-    (hstack : StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin tout stack)
-    (hex : ExitOk w tin ex) (hp : InterruptProvenance frame) :
-    WalkTyped root (frameProtocols root) w tout (popR (interpR root.program) ex stack frame) :=
-  popR_typed root _ _ (hookLaws_interpR root) w stack tin tout ex frame hstack hex hp
+/-- **The machine's hook laws** (decisions row 190 (c)): wherever the completed view it reads is
+typed, `interpRAt root C` meets the frame protocols, since every protocol step answers at every
+typed view. The async finalizer's hook is the reference interpreter's, which `interpRAt` keeps. -/
+theorem hookLawsAt_interpRAt (root : ProgramSource) (w : World) (completed : List (FiberId × ExitV))
+    (view : ViewTyped w completed) :
+    HookLawsAt root (interpRAt root.program completed) (frameProtocols root) w where
+  asyncFinalizer _ _ _ h := ⟨h.1, h.2 w (leHost_refl w)⟩
+  iterator tin tout name h := by
+    obtain ⟨errors, _, next⟩ := h.unfold
+    refine ⟨errors, fun v hv => ?_⟩
+    have step := next w (leHost_refl w) completed view v hv
+    revert step
+    cases ((interpRAt root.program completed).iterNext name v).2 with
+    | done result => exact id
+    | halt cause => exact id
+    | resume code name' =>
+      intro step
+      obtain ⟨tin', typed, tail⟩ := step
+      exact ⟨tin', typed, fun _ ord => iteratorProtocol_mono ord tail⟩
+  loop tin tout name cursor h := by
+    obtain ⟨errors, _, next⟩ := h.unfold
+    refine ⟨errors, fun v hv => ?_⟩
+    have step := next w (leHost_refl w) completed view v hv
+    revert step
+    cases (interpRAt root.program completed).loopResume name cursor v with
+    | «continue» cursor' body =>
+      intro step
+      obtain ⟨tin', typed, tail⟩ := step
+      exact ⟨tin', typed, fun _ ord => loopProtocol_mono ord tail⟩
+    | finish code => exact id
 
 /-! ## Saving and delivering -/
 
@@ -462,7 +436,7 @@ theorem deliver_stale (root : ProgramSource) (interp : RInterp) (m : RState) (f 
 namespace M4Stack
 
 theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
-    (_laws : HookLaws root interp hooks) (w : World) : ProofGraph.Obligation
+    (w : World) (_laws : HookLawsAt root interp hooks w) : ProofGraph.Obligation
     (∀ (stack : List ScopeFrame) (tin tout : EffTy) (ex : ExitV) (frame : RSaved),
       StackAccepts (TypedProg root) ExitOk hooks w tin tout stack →
       ExitOk w tin ex → InterruptProvenance frame →
@@ -497,8 +471,9 @@ theorem deliver_stale (root : ProgramSource) (interp : RInterp) (m : RState) (f 
 end M4Stack
 
 namespace M5Hooks
-theorem hookLaws_interpR (root : ProgramSource) :
-    ProofGraph.Obligation (HookLaws root (interpR root.program) (frameProtocols root)) := ⟨⟩
+theorem hookLawsAt_interpRAt (root : ProgramSource) (w : World) (completed : List (FiberId × ExitV))
+    (_view : ViewTyped w completed) : ProofGraph.Obligation
+    (HookLawsAt root (interpRAt root.program completed) (frameProtocols root) w) := ⟨⟩
 end M5Hooks
 
 end Effect4.Program.Typed
@@ -508,8 +483,8 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.saveAnswerR_typed
 #obligation_proved Effect4.Program.Typed.M4Stack.deliver_active := @Effect4.Program.Typed.deliver_active
 #obligation_proved Effect4.Program.Typed.M4Stack.deliver_stale := @Effect4.Program.Typed.deliver_stale
-#obligation_proved Effect4.Program.Typed.M5Hooks.hookLaws_interpR :=
-  @Effect4.Program.Typed.hookLaws_interpR
+#obligation_proved Effect4.Program.Typed.M5Hooks.hookLawsAt_interpRAt :=
+  @Effect4.Program.Typed.hookLawsAt_interpRAt
 #typed_state_obligations Effect4.Program.Typed.M4Stack ceiling 0
   using aesop (rule_sets := [Effect4.TypedState])
 #typed_state_obligations Effect4.Program.Typed.M5Hooks ceiling 0

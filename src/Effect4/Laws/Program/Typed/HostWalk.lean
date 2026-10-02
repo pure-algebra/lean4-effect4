@@ -7,7 +7,7 @@ Concept 4 (the configuration invariant); questions `M6Ledger.step_loop` and `M6L
 whose `unguard`/`finishFinalizer`/bare-exit arms deliver an exit through the fiber's saved stack
 (`deliverR`, `popR`). The stack a live fiber holds is a `HostStack` (decisions row 188 (b)): ordinary
 frames and registration arrows in any order. This module types the walk over it, reusing the
-ordinary walk (`popR_typedAt`) for each ordinary frame, through one operational equation: a walk
+ordinary walk (`popR_typed`) for each ordinary frame, through one operational equation: a walk
 over `slot :: rest` is the walk over `[slot]`, then, if that completed, the walk over `rest` from
 the frame it returned (`popR_cons`). Codex's theorem-reuse review (2026-10-02,
 `path-review.md` §3) proposed the equation; it is proved here for every interpreter.
@@ -130,7 +130,7 @@ def HostWalkTyped (root : ProgramSource) (w : World) (m : RState) (host : FiberI
 /-- **The walk over a host stack is typed.** Delivering a typed exit to a host stack installs typed
 code, a scope's exit callback or a race's registration marker over a typed remaining host stack, or
 completes with an exit typed at the stack's final type. An ordinary frame is the ordinary walk on
-the singleton stack (`popR_typedAt`), its remaining stack appended to the host tail; a registration
+the singleton stack (`popR_typed`), its remaining stack appended to the host tail; a registration
 arrow installs its race's marker on a success and passes a failure at the race token's type
 (`RegistrationArrow.skip`). The hook laws are needed at the walk's own world only. -/
 theorem popR_hostTyped (root : ProgramSource) (interp : RInterp) (w : World) (m : RState)
@@ -146,7 +146,7 @@ theorem popR_hostTyped (root : ProgramSource) (interp : RInterp) (w : World) (m 
     intro ex frame hex hp
     rw [popR_cons]
     rcases edge with ordinary | arrow
-    · have walk := popR_typedAt root interp (frameProtocols root) w laws [slot] a b ex frame
+    · have walk := popR_typed root interp (frameProtocols root) w laws [slot] a b ex frame
         (.cons ordinary (.nil b)) hex hp
       have kept : InterruptProvenance (popR interp ex [slot] frame).1 := by
         obtain ⟨cause, deferred⟩ := popR_interrupts interp ex [slot] frame

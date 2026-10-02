@@ -6,14 +6,13 @@ import Effect4.Laws.Program.Typed.HostWalk
 
 Placement: semantics Concept 4, the walk consumer of `M6Ledger.step_loop` and `.step_deliver`
 (`popR_hostTyped`, `Typed/HostWalk.lean`). Two stacks from RegistrationYield's fixtures, each
-delivered a typed success under the reference interpreter's hook laws at the fixture's world. Two
+delivered a typed success under the machine's interpreter at an empty view (`hookLawsAt_interpRAt`). Two
 registration arrows: the first installs its race's marker over the second (the `HostMarker`
 outcome, the case the ordinary walk has no outcome for). An answer slot above an arrow: the
 ordinary slot completes (`popR_cons`'s second branch) and the arrow then installs the marker.
 
 Reach: finite stacks at one world; the controls show the theorem's new outcome is inhabited and
-that its other outcomes are excluded there. They do not exercise the machine's interpreter
-(`interpRAt`, whose hook laws are G2) or a whole step.
+that its other outcomes are excluded there. They do not exercise a whole step.
 -/
 
 set_option autoImplicit false
@@ -48,14 +47,14 @@ theorem host : HostStack (rootProgram : ProgramSource) world (machineOf fiber) A
   arrow rfl rfl (arrow rfl rfl (.nil natTy))
 
 /-- The actual walk installs the marker over the second arrow. -/
-theorem walk_eq : popR (interpR rootProgram) (.success Val.unit) stack fiber.frame =
+theorem walk_eq : popR (interpRAt rootProgram []) (.success Val.unit) stack fiber.frame =
     ({ fiber.frame with current := marker, stack := [.resume .onSuccess yieldNext] }, none) := rfl
 
 theorem reaches_marker :
     HostMarker (rootProgram : ProgramSource) world (machineOf fiber) Api.root natTy
-      (popR (interpR rootProgram) (.success Val.unit) stack fiber.frame).1 := by
-  have walk := popR_hostTyped (rootProgram : ProgramSource) (interpR rootProgram) world
-    (machineOf fiber) Api.root (hookLaws_interpR _ world) host (.success Val.unit) fiber.frame
+      (popR (interpRAt rootProgram []) (.success Val.unit) stack fiber.frame).1 := by
+  have walk := popR_hostTyped (rootProgram : ProgramSource) (interpRAt rootProgram []) world
+    (machineOf fiber) Api.root (hookLawsAt_interpRAt _ world [] (fun _ h => nomatch h)) host (.success Val.unit) fiber.frame
     unit_ok (provenance _ rfl rfl)
   rw [walk_eq] at walk ⊢
   exact marker_outcome rfl walk
@@ -72,14 +71,14 @@ theorem host : HostStack (rootProgram : ProgramSource) world (machineOf fiber) A
   .cons (.inl (iaSlot world)) (arrow rfl rfl (.nil natTy))
 
 /-- The answer slot completes with the same success, which the arrow turns into its marker. -/
-theorem walk_eq : popR (interpR rootProgram) (.success Val.unit) stack fiber.frame =
+theorem walk_eq : popR (interpRAt rootProgram []) (.success Val.unit) stack fiber.frame =
     ({ fiber.frame with current := marker, stack := [] }, none) := rfl
 
 theorem reaches_marker :
     HostMarker (rootProgram : ProgramSource) world (machineOf fiber) Api.root natTy
-      (popR (interpR rootProgram) (.success Val.unit) stack fiber.frame).1 := by
-  have walk := popR_hostTyped (rootProgram : ProgramSource) (interpR rootProgram) world
-    (machineOf fiber) Api.root (hookLaws_interpR _ world) host (.success Val.unit) fiber.frame
+      (popR (interpRAt rootProgram []) (.success Val.unit) stack fiber.frame).1 := by
+  have walk := popR_hostTyped (rootProgram : ProgramSource) (interpRAt rootProgram []) world
+    (machineOf fiber) Api.root (hookLawsAt_interpRAt _ world [] (fun _ h => nomatch h)) host (.success Val.unit) fiber.frame
     unit_ok (provenance _ rfl rfl)
   rw [walk_eq] at walk ⊢
   exact marker_outcome rfl walk

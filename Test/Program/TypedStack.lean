@@ -5,7 +5,7 @@ import Effect4.Laws.Machine.Keeps
 /-!
 # Test.Program.TypedStack — slice 5's controls
 
-The stack walk on concrete typed stacks (`popR_typed_interpR`): an error-removing catch that runs,
+The stack walk on concrete typed stacks (`popR_typed` under the machine's interpreter at an empty view): an error-removing catch that runs,
 a preempted catch whose walk completes with the sanitized cause at `never`, a stack whose frames
 do not compose (refused), a stale resume that changes nothing, and the assembled typed state
 elaborating over a real reachable machine.
@@ -42,8 +42,9 @@ theorem quiet_provenance : InterruptProvenance quiet := ⟨(fun _ h => nomatch h
 /-- The walk runs the handler: typed code installed over the empty remainder. -/
 theorem catch_walk (w : W) :
     WalkTyped (sleeping : ProgramSource) (frameProtocols sleeping) w (EffTy.pure .nat)
-      (popR (interpR sleeping) (.failure (natErr 7)) [catchFrame] quiet) :=
-  popR_typed_interpR sleeping w _ _ _ _ _ (catch_accepted _ w) (natErr_exitOk w _ 7 rfl) quiet_provenance
+      (popR (interpRAt sleeping []) (.failure (natErr 7)) [catchFrame] quiet) :=
+  popR_typed _ _ _ w (hookLawsAt_interpRAt _ w [] (fun _ h => nomatch h)) _ _ _ _ _ (catch_accepted _ w) (natErr_exitOk w _ 7 rfl)
+    quiet_provenance
 
 /-- The same catch with a recorded interrupt: preempted, the walk passes the sanitized cause. -/
 def preempted : RSaved := { quiet with interruptedCause := some (Cause.interrupt none) }
@@ -55,13 +56,13 @@ theorem preempted_provenance : InterruptProvenance preempted := by
   subst hr
   rfl
 
-#guard (popR (interpR sleeping) (.failure (natErr 7)) [catchFrame] preempted).2.isSome
+#guard (popR (interpRAt sleeping []) (.failure (natErr 7)) [catchFrame] preempted).2.isSome
 
 /-- The completed exit is the sanitized cause, typed at `never` by the walk theorem. -/
 theorem preempted_walk (w : W) :
     WalkTyped (sleeping : ProgramSource) (frameProtocols sleeping) w (EffTy.pure .nat)
-      (popR (interpR sleeping) (.failure (natErr 7)) [catchFrame] preempted) :=
-  popR_typed_interpR sleeping w _ _ _ _ _ (catch_accepted _ w) (natErr_exitOk w _ 7 rfl)
+      (popR (interpRAt sleeping []) (.failure (natErr 7)) [catchFrame] preempted) :=
+  popR_typed _ _ _ w (hookLawsAt_interpRAt _ w [] (fun _ h => nomatch h)) _ _ _ _ _ (catch_accepted _ w) (natErr_exitOk w _ 7 rfl)
     preempted_provenance
 
 /-- A pass-through frame from `nat`/`nat` to `nat`/`never` is refused: its miss would pass a
@@ -123,8 +124,7 @@ theorem parked_reachable : RReachable (sleeping : ProgramSource) 20 parked := by
   trivial
 
 #print axioms popR_typed
-#print axioms popR_typed_interpR
-#print axioms hookLaws_interpR
+#print axioms hookLawsAt_interpRAt
 #print axioms saveAnswerR_typed
 #print axioms deliver_active
 #print axioms deliver_stale
