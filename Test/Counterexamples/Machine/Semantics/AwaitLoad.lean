@@ -288,7 +288,7 @@ theorem code_typed (w : W) : TypedProg (awaitProg : ProgramSource) w rootTy code
 /-- **The flip of `loadsTyped_false`: M5's proposition over `J` holds at this program** (fuel 5,
 the empty row table), through `machineTyped_load`. -/
 theorem loadsTyped : LoadsTyped (awaitProg : ProgramSource) rootTy 5 5 :=
-  fun _ _ closed _ => ⟨_, machineTyped_load _ rootTy 5 5 closed rfl (code_typed _)⟩
+  fun _ _ closed _ => ⟨_, machineTyped_load _ rootTy 5 5 closed rfl rfl (code_typed _)⟩
 
 /-- **The flip of `capstone_false`: the capstone's proposition holds at the loaded machine.** -/
 theorem capstone_at_load :

@@ -248,15 +248,17 @@ structure MachineWide (root : ProgramSource) (rootTy : EffTy) (w : World) (m : R
   /-- Decisions row 134 (e): every race's live set names fibers below `nextId`. -/
   liveBelow : ∀ raceId race, m.race? raceId = some race → ∀ id ∈ race.state.live,
     id.value < m.nextId
+  /-- The source's layer references are well formed (decisions row 170; `MachineTyped.sourceWF`). -/
+  sourceWF : root.program.layerRefsWF = true
 
 theorem MachineTyped.wide {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     (typed : MachineTyped root rootTy w m) : MachineWide root rootTy w m := by
-  obtain ⟨⟨valid, ok, _, sched, _, _⟩, services, _, live⟩ := typed
+  obtain ⟨⟨valid, ok, _, sched, _, _⟩, services, _, live, sourceWF⟩ := typed
   exact ⟨valid.ids, valid.fibers, valid.heap, valid.promises, valid.tokenBound, valid.tokenTargets,
     valid.state, valid.wf, valid.cells, valid.fiberClosed, valid.heapClosed, valid.promiseClosed,
     valid.tokenClosed, valid.root, ok.c1, ok.c2, sched.fiberIds, sched.raceIds, sched.racesBelow,
     sched.raceHosts, sched.keysBelow, sched.requestsBelow, sched.requestsOwned, services, live,
-    valid.timers, valid.waiters, sched.liveBelow⟩
+    valid.timers, valid.waiters, sched.liveBelow, sourceWF⟩
 
 theorem MachineTyped.fiber {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     (typed : MachineTyped root rootTy w m) {f : RFiber} (hf : f ∈ m.fibers) :
@@ -288,7 +290,7 @@ theorem machineTyped_of {root : ProgramSource} {rootTy : EffTy} {w : World} {m :
       fun f hf => (fibers f hf).targetsBelow, fun f hf => (fibers f hf).observersBelow⟩,
     ⟨fun f hf => (fibers f hf).pendingOwner, fun f hf => (fibers f hf).observers⟩,
     fun f hf => (fibers f hf).registration⟩,
-    wide.services, fun f hf => (fibers f hf).code, wide.live⟩
+    wide.services, fun f hf => (fibers f hf).code, wide.live, wide.sourceWF⟩
 
 /-! ## The observer correlations and the queue between two machines -/
 
@@ -839,7 +841,7 @@ theorem machineWide_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     fun fiber token r hr => wide.requestsBelow fiber token r (requests fiber token r hr),
     fun fiber token r hr hk => ?_, wide.services,
     ⟨wide.live.running, fun o ho owner priority mode => ?_⟩, wide.timers, wide.waiters,
-    wide.liveBelow⟩
+    wide.liveBelow, wide.sourceWF⟩
   · obtain ⟨x, hx⟩ := wide.raceHosts race hr
     rw [rfiber?_update, hx, Option.map_some]
     exact ⟨_, rfl⟩
@@ -1769,7 +1771,7 @@ theorem machineWide_frame {root : ProgramSource} {rootTy : EffTy} {w : World} {m
     fun key hk => wide.keysBelow key (keys hk), wide.requestsBelow,
     fun fiber token r hr hk => wide.requestsOwned fiber token r hr (keys hk), wide.services,
     ⟨wide.live.running, due⟩, WakeTyped.of_subset frame.timers wide.timers,
-    fun key cell hc a e declared => ?_, wide.liveBelow⟩
+    fun key cell hc a e declared => ?_, wide.liveBelow, wide.sourceWF⟩
   · show (w.Ρ key).isSome = true ↔ key.index < s.refs.length
     rw [frame.refs]
     exact wide.heap key
@@ -3057,7 +3059,7 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
       fun key hk => wide.keysBelow key (by rw [← keys]; exact hk), wide.requestsBelow,
       fun fiber token r' hr'' hk => wide.requestsOwned fiber token r' hr'' (by rw [← keys]; exact hk),
       wide.services, ⟨wide.live.running, wide.live.dueOwners⟩, wide.timers, wide.waiters,
-      fun r race hr' id hid' => ?_⟩ (fun x hx => ?_), readCode_races (m := m) rfl lookFwd code,
+      fun r race hr' id hid' => ?_, wide.sourceWF⟩ (fun x hx => ?_), readCode_races (m := m) rfl lookFwd code,
       ⟨queue.payload, fun c hc => ?_,
       fun c hc => commandDelivery_view (m := m) (m' := m.updateRace new) (fun _ => rfl) lookFwd c
         (queue.delivery c hc), ?_,

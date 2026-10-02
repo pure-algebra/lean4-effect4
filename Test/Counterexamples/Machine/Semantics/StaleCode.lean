@@ -735,7 +735,7 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
         rw [cells] at hc
         cases hc }
   refine ⟨⟨valid, ⟨fun f hf => ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩, rfl, ?_,
-    ⟨q.stuck, fun o ho => ?_⟩⟩
+    ⟨q.stuck, fun o ho => ?_⟩, rfl⟩
   · have fact := facts f hf
     refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
     · intro t _

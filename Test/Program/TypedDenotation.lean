@@ -168,6 +168,17 @@ theorem chain_point_old (w : W) : OldPointTyped chainSrc w chainPoint (EffTy.pur
 theorem chain_point (w : W) : PointTyped chainSrc w chainPoint (EffTy.pure .unit) :=
   ⟨C, [], chain_node, chain_check, envTyped_nil w, fun _ h => nomatch h⟩
 
+/-- **Row 170 carried by `J`** (`MachineTyped.sourceWF`): the malformed chain is typed by no machine
+at any world, though its point is checked (`chain_point`), so no step obligation is asked of it. The
+checked refutation here is of the denotation (`E4-TYPED-CE-020`); the step falsifier the field rules
+out — a fork of `chainPoint`, whose child's code would be untyped — is argued in the lead receipt,
+not compiled. -/
+theorem chain_untyped (rootTy : EffTy) (w : W) (m : RState) : ¬ MachineTyped chainSrc rootTy w m := by
+  intro typed
+  have wf : chainRoot.layerRefsWF = true := typed.sourceWF
+  rw [chain_not_wf] at wf
+  cases wf
+
 /-- The target of the last reference is a reference. -/
 theorem target_is_ref :
     Node.at_ (Node.eff chainRoot) [1, 0, 0] = some (Node.layer (.ref [0, 0])) := by

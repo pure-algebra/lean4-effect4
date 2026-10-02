@@ -220,7 +220,7 @@ theorem typedState : TypedState (rootProgram : ProgramSource) natTy world machin
     exact ⟨race, natTy, rfl, rfl, rfl, natTy, rfl, .nil natTy, provenance _ rfl rfl⟩
 
 theorem machine_typed : MachineTyped (rootProgram : ProgramSource) natTy world machine := by
-  refine ⟨typedState, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩⟩
+  refine ⟨typedState, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩, rfl⟩
   intro f hf _ idle
   rw [member hf] at idle
   cases idle
@@ -491,7 +491,7 @@ theorem machineTyped_of'
     (registration : ∀ raceId, raceRegistrationR c = some raceId → raceId = 0 ∧
       HostStack (rootProgram : ProgramSource) world (machineOf (fiberOf c s n)) Api.root natTy natTy s) :
     MachineTyped (rootProgram : ProgramSource) natTy world (machineOf (fiberOf c s n)) := by
-  refine ⟨typedState_of c s n position registration, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩⟩
+  refine ⟨typedState_of c s n position registration, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩, rfl⟩
   intro f hf _ idle
   rw [member_of c s n hf] at idle
   cases idle

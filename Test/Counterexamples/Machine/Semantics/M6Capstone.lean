@@ -1686,7 +1686,7 @@ theorem typedState_machine : TypedState (rootProgram : ProgramSource) unitTy wor
     cases hp
 
 theorem machine_typed : MachineTyped (rootProgram : ProgramSource) unitTy world machine := by
-  refine ⟨typedState_machine, rfl, ?_, quiet_live machine rfl rfl⟩
+  refine ⟨typedState_machine, rfl, ?_, quiet_live machine rfl rfl, rfl⟩
   intro f hf _ idle
   change f ∈ [fiber] at hf
   rw [List.mem_singleton] at hf
@@ -1737,7 +1737,7 @@ theorem typedState_result : TypedState (rootProgram : ProgramSource) unitTy worl
 `finish` is queued. -/
 theorem result_config_typed :
     ConfigTyped (rootProgram : ProgramSource) unitTy world result.1 result.2 := by
-  refine ⟨⟨typedState_result, rfl, ?_, quiet_live result.1 rfl rfl⟩, ?_, result_queue⟩
+  refine ⟨⟨typedState_result, rfl, ?_, quiet_live result.1 rfl rfl, rfl⟩, ?_, result_queue⟩
   · intro f hf _ idle
     change f ∈ [afterFiber] at hf
     rw [List.mem_singleton] at hf

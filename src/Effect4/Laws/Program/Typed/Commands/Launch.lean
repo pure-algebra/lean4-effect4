@@ -348,7 +348,7 @@ theorem machineWide_alloc (typed : MachineTyped root rootTy w m) (closed : Close
     wide.heapClosed, wide.promiseClosed, wide.tokenClosed, addFiber_extends fresh.2 wide.rootDeclared,
     ?_, storesOk_world ord rfl rfl rfl wide.stores, ?_, wide.raceIds, wide.racesBelow, ?_, ?_, ?_, ?_,
     wide.services, ⟨wide.live.running, ?_⟩, wide.timers, wide.waiters,
-    fun r race h id hid => Nat.lt_succ_of_lt (wide.liveBelow r race h id hid)⟩
+    fun r race h id hid => Nat.lt_succ_of_lt (wide.liveBelow r race h id hid), wide.sourceWF⟩
   · show w.ids ++ [⟨m.nextId⟩] = (m.fibers ++ [spawnChild m program flag budget ctx]).map (·.id)
     rw [List.map_append, ← wide.ids]
     rfl

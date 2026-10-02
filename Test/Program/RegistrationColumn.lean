@@ -215,7 +215,7 @@ theorem typedState : TypedState (rootProgram : ProgramSource) natTy world machin
     exact ⟨race, natTy, rfl, rfl, rfl, natTy, rfl, .nil natTy, provenance _ rfl rfl⟩
 
 theorem machine_typed : MachineTyped (rootProgram : ProgramSource) natTy world machine := by
-  refine ⟨typedState, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩⟩
+  refine ⟨typedState, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩, rfl⟩
   intro f hf _ idle
   rw [member hf] at idle
   cases idle

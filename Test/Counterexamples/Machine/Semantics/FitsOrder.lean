@@ -500,11 +500,11 @@ theorem prog3_typedF (w : Typed.World) :
 /-- **M5's first positive control (proved).** The TY-01 program, which refuted M5 and the
 capstone under the raw arms, loads into `J` under row 137. -/
 theorem prog3_loads_typed : ∃ w, MachineTyped src rootTy3 w (loadR prog3 100 100) :=
-  ⟨_, machineTyped_load src rootTy3 100 100 rootTy3_closed rfl (prog3_typedF _)⟩
+  ⟨_, machineTyped_load src rootTy3 100 100 rootTy3_closed rfl rfl (prog3_typedF _)⟩
 
 /-- **The flip of `Reviewed.loadsTyped_false`: M5's proposition holds at this program.** -/
 theorem loadsTyped : LoadsTyped src rootTy3 100 100 :=
-  fun _ _ closed _ => ⟨_, machineTyped_load src rootTy3 100 100 closed rfl (prog3_typedF _)⟩
+  fun _ _ closed _ => ⟨_, machineTyped_load src rootTy3 100 100 closed rfl rfl (prog3_typedF _)⟩
 
 /-- **The flip of `Reviewed.capstone_false` at this program: the capstone's proposition holds at
 the loaded machine**, which the empty tape reaches. -/

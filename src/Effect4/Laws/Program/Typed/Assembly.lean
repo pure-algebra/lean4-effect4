@@ -305,6 +305,12 @@ structure MachineTyped (root : ProgramSource) (rootTy : EffTy) (w : World) (m : 
   services : w.serviceTy = root.sig.serviceTy
   code : LiveCode root w m
   live : MachineLive m
+  /-- The source's layer references are well formed (decisions row 170): a constant fact of the
+  source, carried so a step that creates code from a point reads M5's `DenotesTyped`, whose premise
+  it is (without it a fork of a checked point that denotes `badShapeExit` breaks the step,
+  `E4-TYPED-CE-020`'s shape). The load discharges it from the checker's verdict
+  (`layerRefsWF_of_typeOf`); every step keeps it. A field of `J`, not of `ProgramSource`. -/
+  sourceWF : root.program.layerRefsWF = true
 
 /-- **`I`**, the typed configuration (decisions row 134): the machine with the residue the
 command loop runs. -/
@@ -813,7 +819,7 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     (nextId : m'.nextId = m.nextId) (nextToken : m'.nextToken = m.nextToken)
     (nextRace : m'.nextRace = m.nextRace) (stuck : m'.stuck = m.stuck)
     (typed : MachineTyped root rootTy w m) : MachineTyped root rootTy w m' := by
-  obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, services, code, live⟩ := typed
+  obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, services, code, live, sourceWF⟩ := typed
   have member : ∀ f, f ∈ m'.fibers → f ∈ m.fibers := fun f hf => by rw [← fibers]; exact hf
   have raceMember : ∀ r, r ∈ m'.races → r ∈ m.races := fun r hr => by rw [← races]; exact hr
   have lookup : ∀ id, m'.fiber? id = m.fiber? id := fun id => by
@@ -834,7 +840,7 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     ⟨fun f hf => obsv.pendingOwner f (member f hf), fun f hf o ho =>
       storedObserverOk_congr lookup raceLookup state o (obsv.observers f (member f hf) o ho)⟩,
     fun f hf raceId marker => ?_⟩, services, fun f hf hx hr hm ty d =>
-      codeOk_races (racesKept_of_eq raceLookup) (code f (member f hf) hx hr hm ty d), ?_⟩
+      codeOk_races (racesKept_of_eq raceLookup) (code f (member f hf) hx hr hm ty d), ?_, sourceWF⟩
   · exact
       { ids := by rw [fibers]; exact valid.ids
         fibers := fun id => by rw [fibers]; exact valid.fibers id
@@ -1191,20 +1197,19 @@ theorem machineLive_of_quiet (m : RState) (stuck : m.stuck = none)
 service table (row 112), and whose head is not a race marker, loads into `J` there. The code is
 read at that world only (decisions row 175; before it this premise demanded every world, which is
 false for a program that reads a service, `E4-TYPED-CE-022`). -/
-theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
+theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (closed : ClosedEff rootTy)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : TypedProg root (initialWorld rootTy root.sig.serviceTy) rootTy
       (denoteR root.program root.program (rootPoint compileFuel))) :
-    MachineTyped root rootTy (initialWorld rootTy root.sig.serviceTy)
+    TypedState root rootTy (initialWorld rootTy root.sig.serviceTy)
       (loadR root.program fuel compileFuel) := by
   have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
     insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
-  refine ⟨⟨initial_world_valid_at _ _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩, ?_,
+  refine ⟨initial_world_valid_at _ _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩, ?_,
     schedulerState_load root.program fuel compileFuel,
     observerState_load root _ fuel compileFuel,
-    registrationState_load root _ fuel compileFuel noMarker⟩, rfl, ?_,
-    machineLive_of_quiet _ rfl rfl⟩
+    registrationState_load root _ fuel compileFuel noMarker⟩
   · intro f hf
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
@@ -1237,14 +1242,28 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
     rw [List.mem_singleton] at hf
     subst hf
     cases hq
-  · intro f hf _ _ _ ty hty
-    change f ∈ [_] at hf
-    rw [List.mem_singleton] at hf
-    subst hf
-    change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
-    rw [declared] at hty
-    cases hty
-    exact ⟨rootTy, code, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+
+/-- **M5's builder.** `typedState_of_load` with the loaded root's code clause, the quiet machine's
+liveness and the source's well-formedness (decisions row 170, `MachineTyped.sourceWF`). -/
+theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
+    (closed : ClosedEff rootTy) (sourceWF : root.program.layerRefsWF = true)
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
+    (code : TypedProg root (initialWorld rootTy root.sig.serviceTy) rootTy
+      (denoteR root.program root.program (rootPoint compileFuel))) :
+    MachineTyped root rootTy (initialWorld rootTy root.sig.serviceTy)
+      (loadR root.program fuel compileFuel) := by
+  have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
+    insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
+  refine ⟨typedState_of_load root rootTy fuel compileFuel closed noMarker code, rfl, ?_,
+    machineLive_of_quiet _ rfl rfl, sourceWF⟩
+  intro f hf _ _ _ ty hty
+  change f ∈ [_] at hf
+  rw [List.mem_singleton] at hf
+  subst hf
+  change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
+  rw [declared] at hty
+  cases hty
+  exact ⟨rootTy, code, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
 
 /-- **M5's reduction lemma, at the generated typed state** (seat A's
 `ValueMembership.typedStateF_load`, moved here and restated over row 134's split): a root whose
@@ -1256,7 +1275,7 @@ theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compil
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
     ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) :=
-  ⟨_, (machineTyped_load root ty fuel compileFuel closed noMarker (code _)).typed⟩
+  ⟨_, typedState_of_load root ty fuel compileFuel closed noMarker (code _)⟩
 
 /-- **A checked program's layer references are well formed** (decisions row 170):
 `typeOfProgram` answers only under `layerRefsWF` (`Program/Typing.lean:61-64`), so the load's
@@ -1288,7 +1307,7 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
     split at checked
     · exact checked
     · cases checked
-  exact ⟨_, machineTyped_load root rootTy fuel compileFuel closed noMarker
+  exact ⟨_, machineTyped_load root rootTy fuel compileFuel closed wf noMarker
     (denotes wf _ rfl (rootPoint compileFuel) root.program rootTy rfl
       ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
         fun _ h => nomatch h⟩)⟩

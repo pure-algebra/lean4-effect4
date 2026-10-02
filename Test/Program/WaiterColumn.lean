@@ -265,7 +265,7 @@ theorem typedState : TypedState (rootProgram : ProgramSource) unitTy world machi
     cases marker
 
 theorem machine_typed : MachineTyped (rootProgram : ProgramSource) unitTy world machine := by
-  refine ⟨typedState, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩⟩
+  refine ⟨typedState, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩, rfl⟩
   intro f hf _ idle
   rw [member_fiber hf] at idle
   cases idle
