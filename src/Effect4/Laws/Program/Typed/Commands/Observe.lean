@@ -287,8 +287,9 @@ theorem configTyped_replace {root : ProgramSource} {rootTy : EffTy} {w : World} 
       fun s e o ho => ?_, fun r c hc => enrollRaceOk_except view (Nat.le_refl _) (queue.enroll r c hc),
       queue.noRaceAfterInterrupt, fun md sc tg ir ex hl => ?_,
       fun s e o ho r race hr => queue.raceObservers s e o ho r race ((view.races r).symm.trans hr)⟩
-    · by_cases off : OffKey key o
-      · exact observerCommandOk_except view o off (queue.observer s e o ho)
+    · refine ⟨(queue.observer s e o ho).1, ?_⟩
+      by_cases off : OffKey key o
+      · exact observerCommandOk_except view o off (queue.observer s e o ho).2
       · exact keyedQ s e o ho off
     · obtain ⟨live', present⟩ := queue.links md sc tg ir ex hl
       exact ⟨view.scopes sc live', view.exists_ tg present⟩
@@ -884,7 +885,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
   have tail := configTyped_tail typed
   have t1 := configTyped_emit tail [RunEvent.observerFired source (.countdown waiter token)]
   have obsOk : ObserverCommandOk root w m source exit (.countdown waiter token) :=
-    typed.queue.observer source exit _ List.mem_cons_self
+    (typed.queue.observer source exit _ List.mem_cons_self).2
   have keyMem : (waiter, token) ∈
       (Cmd.observe source exit (.countdown waiter token) :: rest).flatMap Guard.commandKeys :=
     List.mem_flatMap.mpr ⟨_, List.mem_cons_self, List.mem_singleton_self _⟩
@@ -1066,7 +1067,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
           (fun src ex o ho off => by
             have ho' := countdown_of_not_offKey off
             dsimp only at ho'
-            have queued := typed.queue.observer src ex o (List.mem_cons_of_mem _ ho)
+            have queued := (typed.queue.observer src ex o (List.mem_cons_of_mem _ ho)).2
             rw [ho'] at queued ⊢
             exact advance _ (fun a e h => exitOk_subN h (subN_unknown _) (subN_unknown _)) queued)
           fresh
@@ -1320,7 +1321,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
           (fun src ex o ho off => by
             have ho' := countdown_of_not_offKey off
             dsimp only at ho'
-            have queued := typed.queue.observer src ex o (List.mem_cons_of_mem _ ho)
+            have queued := (typed.queue.observer src ex o (List.mem_cons_of_mem _ ho)).2
             rw [ho'] at queued ⊢
             exact advance _ (fun a e h => exitOk_subN h (subN_unknown _) (subN_unknown _))
               (countdownAt_found queued hw hp))
@@ -1341,7 +1342,7 @@ theorem observe_preserves (root : ProgramSource) (rootTy : EffTy) (source : Fibe
   have tail := configTyped_tail typed
   have wide := typed.machine.wide
   have obsOk : ObserverCommandOk root w m source exit observer :=
-    typed.queue.observer source exit observer List.mem_cons_self
+    (typed.queue.observer source exit observer List.mem_cons_self).2
   cases observer with
   | countdown waiter token => exact ⟨w, leHost_refl w, observe_countdown root rootTy typed⟩
   | raceCallback raceId =>

@@ -174,7 +174,8 @@ theorem queueOk_transport_off {root : ProgramSource} {w : World} {m m' : RState}
     fun c hc => delivery c hc (queue.delivery c hc), owners ▸ queue.owners, queue.registration,
     ⟨fun k hk => Nat.lt_of_lt_of_le (queue.keys.below k hk) tokens,
       fun fiber token r hr hk => queue.keys.disjoint fiber token r (requests fiber token r hr) hk⟩,
-    fun s e o ho => observerCommandOk_off view o (off s e o ho) (queue.observer s e o ho),
+    fun s e o ho => ⟨Nat.lt_of_lt_of_le (queue.observer s e o ho).1 ids,
+      observerCommandOk_off view o (off s e o ho) (queue.observer s e o ho).2⟩,
     fun r c hc => enrollRaceOk_off view ids (queue.enroll r c hc), queue.noRaceAfterInterrupt,
     fun md sc tg ir ex hl => ?_,
     fun s e o ho r race hr => queue.raceObservers s e o ho r race ((view.races r).symm.trans hr)⟩

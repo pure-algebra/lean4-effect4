@@ -659,7 +659,7 @@ theorem configTyped_cons_head {root : ProgramSource} {rootTy : EffTy} {w : World
 command correlation, its keys below the token supply and no external request at them. -/
 theorem configTyped_observes {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {q : List RCmd} (typed : ConfigTyped root rootTy w m q) (source : FiberId) (exit : ExitV)
-    (payload : (preds root).exit w (.fiber source) exit) :
+    (payload : (preds root).exit w (.fiber source) exit) (sourceBelow : source.value < m.nextId) :
     ∀ (obs : List Observer), (∀ o ∈ obs, ObserverCommandOk root w m source exit o) →
       (∀ o ∈ obs, ∀ key ∈ Guard.observerKeys o, key.2 < m.nextToken) →
       (∀ o ∈ obs, ∀ fiber token r, requestOfR m fiber token = some r →
@@ -669,7 +669,7 @@ theorem configTyped_observes {root : ProgramSource} {rootTy : EffTy} {w : World}
       ConfigTyped root rootTy w m (obs.map (Cmd.observe source exit) ++ q)
   | [], _, _, _, _ => typed
   | o :: os, ok, below, freeKeys, raceFree => by
-    have rest := configTyped_observes typed source exit payload os
+    have rest := configTyped_observes typed source exit payload sourceBelow os
       (fun x hx => ok x (List.mem_cons_of_mem _ hx))
       (fun x hx => below x (List.mem_cons_of_mem _ hx))
       (fun x hx => freeKeys x (List.mem_cons_of_mem _ hx))
@@ -680,7 +680,7 @@ theorem configTyped_observes {root : ProgramSource} {rootTy : EffTy} {w : World}
       (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
     · intro src e x hx
       cases hx
-      exact ok o List.mem_cons_self
+      exact ⟨sourceBelow, ok o List.mem_cons_self⟩
     · intro src e x hx
       cases hx
       exact raceFree o List.mem_cons_self
@@ -893,7 +893,7 @@ theorem finish_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
         (configTyped_cons_head typed1 (headOk_drainDue _ _ _ _) (fun _ _ h => nomatch h)
           (fun _ _ h => nomatch h))
         (headOk_exitDone _ _ _ _ hp1 rfl) (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
-      have observed := configTyped_observes base f.id exit exitF (o :: os)
+      have observed := configTyped_observes base f.id exit exitF pTyped.below (o :: os)
         (fun x hx => observerCommandOk_of_stored exitF x (pTyped.observers x hx))
         (fun x hx key hk => wide.keysBelow key
           (fiberKeys_internal pmem (List.mem_append_left _ (List.mem_flatMap.mpr ⟨x, hx, hk⟩))))

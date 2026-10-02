@@ -422,7 +422,8 @@ theorem queueOk_transport {root : ProgramSource} {w : World} {m m' : RState} {q 
     fun c hc => delivery c hc (queue.delivery c hc), owners ▸ queue.owners, queue.registration,
     ⟨fun key hk => Nat.lt_of_lt_of_le (queue.keys.below key hk) tokens,
       fun fiber token r hr hk => queue.keys.disjoint fiber token r (requests fiber token r hr) hk⟩,
-    fun s e o ho => observerCommandOk_view view o (queue.observer s e o ho),
+    fun s e o ho => ⟨Nat.lt_of_lt_of_le (queue.observer s e o ho).1 ids,
+      observerCommandOk_view view o (queue.observer s e o ho).2⟩,
     fun r c hc => enrollRaceOk_view view ids (queue.enroll r c hc), queue.noRaceAfterInterrupt,
     fun md sc tg ir ex hl => ?_,
     fun s e o ho r race hr => queue.raceObservers s e o ho r race ((view.races r).symm.trans hr)⟩
@@ -1242,7 +1243,8 @@ theorem queueOk_world {root : ProgramSource} {m : RState} {q : List RCmd}
   ⟨fun c hc => rcmdOk_world ord hΓ hΘ c (queue.payload c hc), queue.authority,
     fun c hc => commandDelivery_world ord hΓ c (queue.delivery c hc), queue.owners,
     queue.registration, queue.keys,
-    fun s e o ho => observerCommandOk_world ord hΓ hΘ o (queue.observer s e o ho),
+    fun s e o ho => ⟨(queue.observer s e o ho).1,
+      observerCommandOk_world ord hΓ hΘ o (queue.observer s e o ho).2⟩,
     fun r c hc => enrollRaceOk_world ord hΓ hΘ (queue.enroll r c hc),
     queue.noRaceAfterInterrupt, queue.links, queue.raceObservers⟩
 
@@ -1360,7 +1362,7 @@ structure HeadOk (root : ProgramSource) (w : World) (m : RState) (c : RCmd) (q :
   keysBelow : ∀ key ∈ Guard.commandKeys c, key.2 < m.nextToken
   keysFree : ∀ fiber token r, requestOfR m fiber token = some r → (fiber, token) ∉ Guard.commandKeys c
   observer : ∀ source exit observer, c = .observe source exit observer →
-    ObserverCommandOk root w m source exit observer
+    source.value < m.nextId ∧ ObserverCommandOk root w m source exit observer
   enroll : ∀ race child, c = .enrollRace race child → EnrollRaceOk root w m race child
   noRace : ∀ host yielding race, c ≠ .afterInterrupt host yielding (.race race)
   link : ∀ mode scope target interruptor extra, c = .link mode scope target interruptor extra →
@@ -3188,8 +3190,9 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
       have pay := queue.payload (.observe src e o) ho
       intro ty declared
       exact pay ty declared
-    exact observerCommandOk_updateRace hr hid hhost htoken payload liveCols typedExit o
-      (queue.observer src e o ho)
+    exact ⟨(queue.observer src e o ho).1,
+      observerCommandOk_updateRace hr hid hhost htoken payload liveCols typedExit o
+        (queue.observer src e o ho).2⟩
 
 /-- **Sequencing after a program that never fails with a typed error**: its failures are clean
 (interrupts and defects), so they fit every error column; the continuation types the successes. -/

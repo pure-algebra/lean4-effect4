@@ -1,4 +1,5 @@
 import Test.Program.RegistrationColumn
+import Effect4.Laws.Program.Typed.Commands.Observe
 
 /-!
 # Test.Program.EnrollmentBound — weak queued-child allocation bound
@@ -254,6 +255,66 @@ theorem enrollment_refused :
 
 end IncompatiblePresent
 
+namespace ObserveSource
+
+/-- The second clarification of row 134 (e) (`E4-TYPED-CE-035`): a queued `observe` whose source
+is the next fiber id is refused at every world, whatever its observer and exit (the checked
+falsifier `witnesses/LaunchQueuedObserve.lean` queued exactly this with an `untrackChild`). -/
+theorem future_refused (w : W) (q : List RCmd) :
+    ¬ QueueOk (Test.Program.RegistrationColumn.rootProgram : ProgramSource) w
+      Test.Program.RegistrationColumn.machine
+      (.observe ⟨1⟩ (.success (.str "x")) (.untrackChild Api.root) :: q) := by
+  intro queue
+  exact Nat.lt_irrefl 1 (queue.observer _ _ _ List.mem_cons_self).1
+
+abbrev rootProgram := Test.Program.RegistrationColumn.rootProgram
+abbrev natTy := Test.Program.RegistrationColumn.natTy
+abbrev world := Test.Program.RegistrationColumn.world
+
+def source : FiberId := ⟨1⟩
+def obs : RCmd := .observe source (.success (.str "x")) (.untrackChild Api.root)
+def commands : List RCmd := obs :: MissingOld.rest
+
+/-- A missing old source (below `nextId`, undeclared) stays admitted with any exit: the payload
+clause is vacuous at an undeclared source and the bound holds. -/
+theorem config_typed : ConfigTyped (rootProgram : ProgramSource) natTy world MissingOld.machine
+    commands := by
+  refine ⟨MissingOld.tail_typed.machine,
+    readCode_cons (fun _ _ h => nomatch h) (fun _ _ h => nomatch h) MissingOld.tail_typed.code,
+    queueOk_cons ?_ MissingOld.tail_typed.queue⟩
+  refine
+    { payload := fun ty declared => by
+        change (initialWorld natTy).Γ source = some ty at declared
+        cases declared
+      authority := trivial
+      delivery := trivial
+      owner := fun _ h => nomatch h
+      tail := trivial
+      keysBelow := fun _ h => nomatch h
+      keysFree := fun _ _ _ _ h => nomatch h
+      observer := ?_
+      enroll := fun _ _ h => nomatch h
+      noRace := fun _ _ _ h => nomatch h
+      link := fun _ _ _ _ _ h => nomatch h
+      raceObservers := ?_ }
+  · intro src e o same
+    cases same
+    exact ⟨Nat.one_lt_two, trivial⟩
+  · intro src e o same _ _ _ hk
+    cases same
+    cases hk
+
+/-- The existing general command theorem types the absent-old observe's step. -/
+theorem result_typed : ∃ w', world.leHost w' ∧ ConfigTyped (rootProgram : ProgramSource) natTy w'
+    (letI := termEvaluatorFor rootProgram
+     driveStep (interpR rootProgram) MissingOld.machine obs MissingOld.rest).1
+    (letI := termEvaluatorFor rootProgram
+     driveStep (interpR rootProgram) MissingOld.machine obs MissingOld.rest).2 :=
+  observe_preserves (rootProgram : ProgramSource) natTy source _ _ world MissingOld.machine
+    MissingOld.rest rfl config_typed
+
+end ObserveSource
+
 end Test.Program.EnrollmentBound
 
 #print axioms Test.Program.EnrollmentBound.Future.at_counter
@@ -271,3 +332,6 @@ end Test.Program.EnrollmentBound
 #print axioms Test.Program.EnrollmentBound.MissingOld.result_typed
 #print axioms Test.Program.EnrollmentBound.IncompatiblePresent.present_below
 #print axioms Test.Program.EnrollmentBound.IncompatiblePresent.enrollment_refused
+#print axioms Test.Program.EnrollmentBound.ObserveSource.future_refused
+#print axioms Test.Program.EnrollmentBound.ObserveSource.config_typed
+#print axioms Test.Program.EnrollmentBound.ObserveSource.result_typed

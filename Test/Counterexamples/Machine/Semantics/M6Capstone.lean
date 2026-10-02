@@ -354,8 +354,8 @@ def badObserve : RCmd := .observe Api.root (.success .unit) (.resumeAwait Api.ro
 theorem bad_observe_rejected :
     ¬ QueueOk (program : ProgramSource) observeWorld observeMachine [badObserve] := by
   intro queue
-  have payload := queue.observer Api.root (.success .unit) (.resumeAwait Api.root 0 .awaitValue)
-    (List.mem_singleton_self _)
+  have payload := (queue.observer Api.root (.success .unit) (.resumeAwait Api.root 0 .awaitValue)
+    (List.mem_singleton_self _)).2
   obtain ⟨sourceTy, source, delivered, _⟩ := payload
   have root : observeWorld.Γ Api.root = some ty := rfl
   rw [root] at source
@@ -2728,8 +2728,8 @@ theorem link_absent_refused (root : ProgramSource) (w : W) : ¬ QueueOk root w m
 
 theorem drop_absent_refused (root : ProgramSource) (w : W) : ¬ QueueOk root w m0 [dropAbsent] := by
   intro queue
-  have live := queue.observer Api.root (.success .unit) (.dropScopeFinalizer 7 0)
-    (List.mem_singleton_self _)
+  have live := (queue.observer Api.root (.success .unit) (.dropScopeFinalizer 7 0)
+    (List.mem_singleton_self _)).2
   cases live
 
 #print axioms link_absent_halts

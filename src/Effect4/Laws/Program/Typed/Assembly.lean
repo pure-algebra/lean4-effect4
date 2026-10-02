@@ -212,8 +212,12 @@ structure QueueOk (root : ProgramSource) (w : World) (m : RState)
   owners : (commands.filterMap (Guard.commandOwner m)).Nodup
   registration : Guard.RegistrationQueue.RegistrationQueue commands
   keys : ReservedKeysR m (commands.flatMap Guard.commandKeys)
+  /-- A queued observer types what it can deliver (`ObserverCommandOk`), and its source is a fiber
+  id below `nextId` (decisions row 134 (e), `E4-TYPED-CE-035`): the payload clause reads the
+  source's declaration antitonically, so a future id's clause would hold vacuously until an
+  allocation declared it. Missing old sources stay inert. -/
   observer : ∀ source exit observer, .observe source exit observer ∈ commands →
-    ObserverCommandOk root w m source exit observer
+    source.value < m.nextId ∧ ObserverCommandOk root w m source exit observer
   enroll : ∀ race child, .enrollRace race child ∈ commands → EnrollRaceOk root w m race child
   noRaceAfterInterrupt : ∀ host yielding race,
     .afterInterrupt host yielding (.race race) ∉ commands
@@ -911,8 +915,9 @@ theorem queueOk_emit {root : ProgramSource} {w : World} {m : RState} {commands :
       (racesKept_of_eq fun _ => rfl) c (queue.delivery c hc),
     owners := queue.owners, registration := queue.registration,
     keys := ⟨queue.keys.below, queue.keys.disjoint⟩,
-    observer := fun source exit o ho => observerCommandOk_congr (m := m) (m' := m.emit events)
-      (fun _ => rfl) (fun _ => rfl) rfl o (queue.observer source exit o ho),
+    observer := fun source exit o ho => ⟨(queue.observer source exit o ho).1,
+      observerCommandOk_congr (m := m) (m' := m.emit events)
+        (fun _ => rfl) (fun _ => rfl) rfl o (queue.observer source exit o ho).2⟩,
     enroll := queue.enroll, noRaceAfterInterrupt := queue.noRaceAfterInterrupt,
     links := queue.links, raceObservers := queue.raceObservers }
 

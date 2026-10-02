@@ -179,3 +179,36 @@ markers and the typed-path host stack (row 188 (b)). Regenerated, not hand-edite
 - `lake env lean -j1 -M6144 -DwarningAsError=true --run tools/Tools/Architecture.lean` — exit 0;
   then `--check` — exit 0 ("current", 658 Lean files).
 - `python3 scripts/check-semantics.py` — exit 0 (253.7 s), after the `semantics.md` edit.
+
+## Slice 3 — queued observe sources below `nextId` (`E4-TYPED-CE-035`, row 134 (e) again)
+
+**First:** `ConfigTyped` is strengthened once more in row 134 (e)'s family: a queued `observe`'s
+source is below `nextId` (`QueueOk.observer`, `HeadOk.observer`, beside the unchanged
+`ObserverCommandOk`). Recorded as the lead coordinator's clarification; the owner's ratification
+of this second clause is owed (the first, the enrollment bound, was ratified).
+
+Found while placing `launch_preserves`: allocation extends the fiber table, and every queued
+command's typed reading was checked for an antitone read at a future fiber id. Exactly one exists:
+`RCmdOk`'s `observe` arm (`∀ ty, Γ source = some ty → ExitOk ty exit`). The checked falsifier
+`witnesses/LaunchQueuedObserve.lean` (the registration fixture with one unlaunched entrant and a
+queued `observe ⟨1⟩ (success "x") (untrackChild root)` at `nextId = 1`) refutes the unchanged
+`M6Ledger.step_launch` at `96415122` (`config_typed`, `launch_false`, both `[propext, Quot.sound]`;
+log `observe-falsifier-03`). The other readings are positive (`FiberColumnsBelow`, `StackReply`,
+`AfterInterruptReply`), bounded (`EnrollRaceOk`, countdown targets, live sets), or read Θ, which
+allocation does not extend.
+
+Placement. Concept 4 (`I`); question `M6Ledger.step_launch` (and every allocating evaluator arm).
+Consumers: `queueOk_transport`/`_world`/`_emit`/`_off`, the `except` and `updateRace` queue
+constructions, `observe_preserves` and the countdown walk (`.2`), `configTyped_observes`
+(producer: `finish` queues its observers at its own id, `FiberTyped.below`). Not established:
+`launch_preserves`, which still owes the allocation transports.
+
+Changes: `Typed/Assembly.lean` (`QueueOk.observer`, `queueOk_emit`), `Commands/Bookkeeping.lean`
+(`HeadOk.observer`, the queue transports), `Commands/Finish.lean` (`configTyped_observes`,
+caller), `Commands/Registration.lean`, `Commands/Observe.lean`; tests `M6Capstone` (`.2` at two
+refusals), `EnrollmentBound` (`ObserveSource` controls; imports `Commands.Observe`).
+
+- `lake build Effect4.Laws` — exit 0 (`observe-build-06`).
+- `lake build` of the 16 affected test modules — exit 0 (`observe-tests-01`).
+- `lake env lean -j1 -M6144 -DwarningAsError=true Test/Program/EnrollmentBound.lean` — exit 0;
+  18 reports `[propext, Quot.sound]` (`observe-controls-02`).
