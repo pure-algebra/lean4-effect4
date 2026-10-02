@@ -541,6 +541,21 @@ The active sequence is the foundations review above. Phase C's existing receipt 
 historical evidence; the dated notes below explain the redirect and its earlier plans. They
 do not override the corrected protocol-before-assembly order or constitute a new pause instruction.
 
+**M5 closed, 2026-10-02 (branch `claude/proofs`, not merged into `refactor/phase1-phase3`; read
+first).** The layer family's arm is proved at every source (`provideLayerArm`,
+`src/Effect4/Laws/Program/Typed/LayerArm.lean`), so M5's two goals hold with no fragment premise:
+`denotesTyped` (`M3bAssembly.denoteR_typed`) and `loadsTyped` (`typedState_load`); `M3bAssembly` reads
+0 open of 5, `M6Ledger` 7 open of 20, `M7` 4 open. The repairs it needed are decisions rows 176 (b),
+185, 186 and 187 (`E4-TYPED-CE-023` and `-031` repaired). Also on the branch: Codex's park handshake
+and proof-feature graph, the `check-ty-rule` repair, the generator's nested extras, and the data
+wave's rulings (decisions rows 8, 121, 125, 157–161, 166, 167, 169, 180 (a)). Built:
+`lake build Effect4 Effect4.Laws` (565 jobs), the touched batteries, the lcnf faces regenerated with
+`dune build` and `dune test`. Deferred to the next pause: `make check-gen`, the semantics report and
+the architecture page. Next: M6 (row 187's memo-table store clause, which makes
+`memoGet_implements` and `memoComplete_implements` provable; row 180 (a); the open commands), then
+M7; in this session, slice C (the `Ty` tables and the first classifier on the generated fold, row
+182) and row 8 (the emitter's duplicate keys).
+
 **Integration, late 2026-10-01 (the base to build on; read first).** Merged into
 `refactor/phase1-phase3`: seat D4's merge completed (Bookkeeping's scope clauses, `04956067`);
 Codex's metaprogramming branch (the audit's cleanups and the semantics report's first slice); seat

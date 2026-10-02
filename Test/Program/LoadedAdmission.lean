@@ -123,20 +123,11 @@ theorem lookup_typed (w : W) (ty : EffTy) (answer : ty.answer = .nat) (v : Val)
     exact hfit
   · exact TypedProg.pure (Test.Program.H2PartOne.missingService_admitted_at_any_type w ty)
 
-/-- The existing context fit supplies the finite decoder witness needed by the amended test. -/
+/-- The existing context fit supplies the finite decoder witness needed by the amended test: the
+library's inversion (`fits_context_inv`), which reads every handle arm. -/
 theorem context_of_fits (w : W) (v : Val) (typed : Fits w v (.handle Ty.contextTarget)) :
-    ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services := by
-  simp only [Effect4.Program.Typed.Fits] at typed
-  split at typed
-  · simp only [HandleFits] at typed
-    split at typed
-    · exact absurd typed.1 (by decide)
-    · exact absurd typed.1 (by decide)
-    · exact absurd typed.1 (by decide)
-    · exact absurd typed.1 (by decide)
-    · exact typed.elim
-  · obtain ⟨_, ctx, hctx, services, _⟩ := typed
-    exact ⟨ctx, hctx, services⟩
+    ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services :=
+  fits_context_inv typed
 
 theorem service_admitted (w : W) (ty : EffTy) (answer : ty.answer = .nat)
     (hkey : w.serviceTy natKey = some .nat) :

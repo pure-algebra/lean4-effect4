@@ -66,9 +66,9 @@ M7   M7Exits / M7Stores / M7NoHalt on M7Fragment   (M7.exits_typed / stores_type
 
 | Goal | Concept (semantics.md) | Role | What it says once proved | Kept as hypotheses | What it does not give | Consumer |
 | --- | --- | --- | --- | --- | --- | --- |
-| `M3bAssembly.denoteR_typed` (claim `denote-typed`) | residual-program-typing (§2.2) | fundamentalProperty | At a program with well-formed references, every checked point's denotation is a `TypedProg` at its certificate, at every world whose service table is the source's. | `layerRefsWF` (row 170); the world's service table (row 175); `PointTyped` with the completed view (row 175) | anything about the machine or a run; bind closure (refuted, `E4-TYPED-CE-030`); which host answers arrive | `typedState_load` |
-| `M3bAssembly.denoteR_typed_provideLayer` (`ProvideLayerArm root`) | residual-program-typing, with context-requirements (§2.8) | the one missing arm of the fundamental property | A typed `provideLayer` point at fuel `f + 1` denotes a typed program, given every node at fuel ≤ `f`. | the induction hypothesis (`childDenotes_upto`'s form) | the arms already proved | `denotesTyped_of_provideLayer` → `denoteR_typed` |
-| `M3bAssembly.typedState_load` (`LoadsTyped`) | residual-program-typing → reactive-scheduling | preservation (initialization) | A lawful, checked, closed source with an empty requirement row loads into `J`. | `LawfulSource`, a closed type, the empty row (row 117) | anything after the load | `reachable_of_ledger` |
+| `M3bAssembly.denoteR_typed` (claim `denote-typed`; **proved 2026-10-02**, `denotesTyped`) | residual-program-typing (§2.2) | fundamentalProperty | At a program with well-formed references, every checked point's denotation is a `TypedProg` at its certificate, at every world whose service table is the source's. | `layerRefsWF` (row 170); the world's service table (row 175); `PointTyped` with the completed view (row 175) | anything about the machine or a run; bind closure (refuted, `E4-TYPED-CE-030`); which host answers arrive | `typedState_load` |
+| `M3bAssembly.denoteR_typed_provideLayer` (`ProvideLayerArm root`; **proved 2026-10-02**, `provideLayerArm`) | residual-program-typing, with context-requirements (§2.8) | the one missing arm of the fundamental property | A typed `provideLayer` point at fuel `f + 1` denotes a typed program, given every node at fuel ≤ `f`. | the induction hypothesis (`childDenotes_upto`'s form) | the arms already proved | `denotesTyped_of_provideLayer` → `denoteR_typed` |
+| `M3bAssembly.typedState_load` (`LoadsTyped`; **proved 2026-10-02**, `loadsTyped`) | residual-program-typing → reactive-scheduling | preservation (initialization) | A lawful, checked, closed source with an empty requirement row loads into `J`. | `LawfulSource`, a closed type, the empty row (row 117) | anything after the load | `reachable_of_ledger` |
 | `M6Ledger.step_*` (7 open: `loop`, `deliver`, `launch`, `registrationDone`, `wake`, with `decision_preserves` and `typedState_reachable` below) | reactive-scheduling (§2.4) | preservation | One dispatched command keeps `I = J + ReadCode + QueueOk` at some later world (`StepPreserves`). | `m.stuck = none` at dispatch | **progress** (`scheduler-progress` is absent; row 139); fairness (`fair-scheduling` is absent; R12, row 86); termination | `stepKeeps_of_stepPreserves` → `decision_preserves` |
 | `M6Edits.clockSome` | reactive-scheduling | preservation | The clock edit with a due time keeps `J`. | — | as above | `decision_preserves` |
 | `M6Ledger.decision_preserves` (`DecisionKeeps`) | reactive-scheduling, host-session-protocol (§2.9) | preservation | One tape decision keeps `J` when its host answer, if any, is admitted (`AnswerOk`). | `AnswerOk`; that the host answers at all is an assumption (`host-progress`, assumed) | host progress | `reachable_of_ledger` |
@@ -80,7 +80,12 @@ The utility, in one line: M7 is the first statement that a run of a checked prog
 machine executes it, is typed. Every row above is a premise of it through a proved route theorem, and
 nothing else on this list is needed for M7.
 
-## 2. The slice in flight: the layer family (`ProvideLayerArm`)
+## 2. The layer family (`ProvideLayerArm`): landed 2026-10-02
+
+**Closed.** L0 `f8571cf0`, L1 `569d3d69`, L2 `45790d80`, row 187 `2c5a0818` and `20835431`, the two
+fold laws for the hop `f654f2f7`, L3 and L4 `8c9464b6` (merged `71b1c9c1`, the load closed at the
+integration). `M3bAssembly` reads 0 open of 5: `provideLayerArm`, `denotesTyped`, `loadsTyped`
+(`Laws/Program/Typed/LayerArm.lean`). The steps below are as planned; L3 needed no step beyond them.
 
 Why the arm is not one lemma: Seat L's controls (`c1c05314`, proved) showed `ProvideLayerArm` is false
 as stated at three programs. At each, the run answers `badShapeExit`, which no `TypedProg` derivation

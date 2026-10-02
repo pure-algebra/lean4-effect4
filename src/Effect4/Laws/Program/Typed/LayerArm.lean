@@ -2,6 +2,7 @@ import Effect4.Laws.Program.Typed.Assembly
 import Effect4.Laws.Program.Handles.Layer
 import Effect4.Laws.Program.PathFold
 import Effect4.Laws.Program.ExpandFix
+import Effect4.Laws.Program.Typed.Commands.Finish
 
 /-!
 # The layer family's arm, and M5 unconditional
@@ -11,11 +12,11 @@ denotation of a checked program is `TypedProg` at its certificate, at every worl
 (decisions row 148, the fundamental property; algebra A3). `childDenotes_upto`
 (`Typed/Denotation.lean`) assembles every arm of `denoteR` by induction on fuel except the layer
 family's, which it takes as the hypothesis `ProvideLayerArm` (decisions row 176 (b)). This module
-proves that hypothesis at every source (`provideLayerArm`), so M5's fundamental property holds
-without a fragment premise (`denotesTyped`, `M3bAssembly.denoteR_typed`). The load
-(`M3bAssembly.typedState_load`) follows by the load connector whose race-marker premise the root
-code's typing discharges (`loadsTyped_of_denotesTyped_typed`, `Typed/Commands/Finish.lean` on the
-integration base), and closes there.
+proves that hypothesis at every source (`provideLayerArm`), so M5's two goals close without a
+fragment premise: the fundamental property (`denotesTyped`, `M3bAssembly.denoteR_typed`) and the
+load (`loadsTyped`, `M3bAssembly.typedState_load`), through the load connector whose race-marker
+premise the root code's typing discharges (`loadsTyped_of_denotesTyped_typed`,
+`Typed/Commands/Finish.lean`, which this module imports for it).
 
 The argument is the logical relation's compatibility lemmas, one per construct (the per-construct
 sequencing of `Typed/Seq.lean`, since `TypedProg` is not bind-closed: `E4-TYPED-CE-030`), read
@@ -1350,12 +1351,19 @@ layer family's by `provideLayerArm`. -/
 theorem denotesTyped (root : ProgramSource) : DenotesTyped root :=
   denotesTyped_of_provideLayer root (provideLayerArm root)
 
+/-- **M5** (`M3bAssembly.typedState_load`): a lawful, checked, closed source whose requirement row is
+empty loads into `J` at the initial world, at every fuel and compile budget. -/
+theorem loadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) :
+    LoadsTyped root rootTy fuel compileFuel :=
+  loadsTyped_of_denotesTyped_typed root rootTy fuel compileFuel (denotesTyped root)
+
 end Effect4.Program.Typed
 
 #obligation_proved Effect4.Program.Typed.M3bAssembly.denoteR_typed_provideLayer :=
   @Effect4.Program.Typed.provideLayerArm
 #obligation_proved Effect4.Program.Typed.M3bAssembly.denoteR_typed :=
   @Effect4.Program.Typed.denotesTyped
-#proof_wanted Effect4.Program.Typed.M3bAssembly.typedState_load
-#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 1
+#obligation_proved Effect4.Program.Typed.M3bAssembly.typedState_load :=
+  @Effect4.Program.Typed.loadsTyped
+#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 0
   using aesop (rule_sets := [Effect4.TypedState])

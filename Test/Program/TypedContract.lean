@@ -130,10 +130,13 @@ section Refused
 #guard Val.hasTy (Store.Val.some (Val.bool true)) (.option .nat) = false
 #guard Val.hasTy (Val.str "x") (.option .string) = false
 #guard Val.hasTy (Store.Val.handle 9 0) NativeOp.refTy = false
-#guard Val.hasTy (Value.memoMap 0) (.handle "Layer.MemoMap") = false
 #guard Val.hasTy (Value.exitErr (Val.nat 1)) (.exitOf .nat .nat) = false
 #guard Val.hasTy (Value.fiberSnapshot (Val.list [Val.nat 1])) (.list (.fiberOf .nat .never)) = false
 #guard Val.hasTy (Value.fiberContext (Val.nat 1) (Val.nat 2) (Val.nat 3)) Ty.context = false
+-- a memo map's handle has its own type since decisions row 187 (refused before it); at another
+-- handle type it is refused
+#guard Val.hasTy (Value.memoMap 0) (.handle "Layer.MemoMap") = true
+#guard Val.hasTy (Value.memoMap 0) (.handle "Scope.Scope") = false
 #guard Val.hasTy (Val.nat 1) (.union .bool .unit) = false
 
 end Refused

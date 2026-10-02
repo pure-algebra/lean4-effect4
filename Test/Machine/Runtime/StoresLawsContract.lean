@@ -229,8 +229,9 @@ def sF : Stores := after (SyncOp.memoFork (some ⟨0⟩)) sB
 #guard Val.validIn sB (Val.scopeHandle 1)
 #guard Val.validIn sB (Val.promise ⟨0⟩)
 #guard Stores.WF sB
--- a hit answers the entry's Deferred and its owner, and bumps the observers
-#guard answer (SyncOp.memoGet [0] ⟨0⟩) sB = some (Val.pair (Val.promise ⟨0⟩) (Val.memoMap ⟨0⟩))
+-- a hit answers the entry's Deferred and its owner (`Val.memoHit`, decisions row 187: the product
+-- a guard keeps), and bumps the observers
+#guard answer (SyncOp.memoGet [0] ⟨0⟩) sB = some (Val.memoHit ⟨0⟩ ⟨0⟩)
 #guard (sG.memo.entryAt ⟨0⟩ [0]).map (·.observers) = some 2
 #guard (answer (SyncOp.memoGet [0] ⟨0⟩) sB).map (Val.validIn sG) = some true
 -- the second release is the last: the entry goes, the layer scope is answered to close
@@ -240,7 +241,7 @@ def sF : Stores := after (SyncOp.memoFork (some ⟨0⟩)) sB
 #guard ((after (SyncOp.memoRelease [0] ⟨0⟩) (after (SyncOp.memoRelease [0] ⟨0⟩) sG)).memo.entryAt
   ⟨0⟩ [0]).isNone
 -- a forked map falls through to its parent; another path is a miss
-#guard answer (SyncOp.memoGet [0] ⟨2⟩) sF = some (Val.pair (Val.promise ⟨0⟩) (Val.memoMap ⟨0⟩))
+#guard answer (SyncOp.memoGet [0] ⟨2⟩) sF = some (Val.memoHit ⟨0⟩ ⟨0⟩)
 #guard answer (SyncOp.memoGet [1] ⟨2⟩) sF = some Val.unit
 -- `memoComplete` completes the build's Deferred: the Deferred family's wakeup, borrowed
 #guard answer (SyncOp.deferredIsDone ⟨0⟩) sB = some (Val.bool false)

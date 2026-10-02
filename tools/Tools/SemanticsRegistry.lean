@@ -197,7 +197,8 @@ def registry : Registry where
     { id := "denote-typed", concept := "residual-program-typing", role := .fundamentalProperty
       title := "The denotation of a checked program is TypedProg at its certificate (M5)"
       pointer := .goal `Effect4.Program.Typed.M3bAssembly.denoteR_typed
-      contestedBy := ["E4-TYPED-CE-020", "E4-TYPED-CE-021", "E4-TYPED-CE-022"]
+      contestedBy := ["E4-TYPED-CE-020", "E4-TYPED-CE-021", "E4-TYPED-CE-022", "E4-TYPED-CE-023",
+        "E4-TYPED-CE-031"]
       literature := [
         { work := "XiaEtAl2020", locator := "audit P37", relation := "definitionUsed" }
       ] },
@@ -211,6 +212,13 @@ def registry : Registry where
     { id := "load-typed-layer-free", concept := "residual-program-typing", role := .preservation
       title := "The typed load on the layer-free fragment: a checked program loads into J (M5's load connector, the marker premise discharged)"
       pointer := .witness `Effect4.Program.Typed.loadsTyped_of_layerFree },
+    { id := "provide-layer-arm", concept := "residual-program-typing", role := .compatibility
+      title := "The layer family's arm: a layer build at an admitted layer point answers the built context at the layer's checked error type, and the provide protocol around it is typed (decisions rows 176 (b), 185-187)"
+      pointer := .goal `Effect4.Program.Typed.M3bAssembly.denoteR_typed_provideLayer
+      contestedBy := ["E4-TYPED-CE-023", "E4-TYPED-CE-031"] },
+    { id := "load-typed", concept := "residual-program-typing", role := .preservation
+      title := "M5: a lawful, checked, closed source with an empty requirement row loads into J"
+      pointer := .goal `Effect4.Program.Typed.M3bAssembly.typedState_load },
     { id := "bind-closed", concept := "residual-program-typing", role := .compatibility
       title := "TypedProg is closed under bind"
       pointer := .refutedBy "E4-TYPED-CE-030" `Test.Program.TypedProgBindRed.typedProg_not_bind_closed

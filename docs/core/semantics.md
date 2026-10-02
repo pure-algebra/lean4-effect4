@@ -220,21 +220,30 @@ bracket markers: `.guard`, `.unguard`, `.finishFinalizer`, and `.scopeExit`.
   (`typedProg_not_bind_closed` (`Test/Program/TypedProgBindRed.lean:32`), register row `E4-TYPED-CE-030`).
 - **Fundamental elaboration property (`denote-typed`)**: Denotation of a checked program is `TypedProg`.
   `typeOfProgram root.sig root.prog = some ty → TypedProg root w ty (denoteR root)`
-  (`denoteR_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1669`)).
+  (`denoteR_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1669`)), proved at every source by
+  `denotesTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean:1351`); the load
+  (`load-typed`, `typedState_load`, `Assembly.lean:1674`) by `loadsTyped` (`LayerArm.lean:1356`), through
+  the load connector whose race-marker premise the root code's typing discharges
+  (`loadsTyped_of_denotesTyped_typed`, `src/Effect4/Laws/Program/Typed/Commands/Finish.lean:48`).
 - **Failure handler compatibility (`on-failure-typed`)**: Compatibility lemma for the error recovery bracket `onFailure` (decisions row 148), proved by
   `catchGuard_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean:123`).
-- **M5 on the layer-free fragment (`denote-typed-layer-free`)**: every arm of `denoteR` but the layer
-  family's is proved, and the arms are assembled by induction on fuel (`childDenotes_upto`
-  (`src/Effect4/Laws/Program/Typed/Denotation.lean:3025`)): at no fuel the frontier, at positive fuel
-  each constructor's arm with its children's hypotheses taken at the children's nodes. The layer
-  family's arm enters as the hypothesis `ProvideLayerArm`
-  (`src/Effect4/Laws/Program/Typed/Denotation.lean:3014`), so `denotesTyped_of_provideLayer`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1221`) is conditional and does not close
-  `denoteR_typed`; the remaining arm is the open goal `denoteR_typed_provideLayer`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1680`, decisions row 176 (b)). On programs no node of
-  which is a `provideLayer` (`LayerFree`, `src/Effect4/Laws/Program/Typed/Denotation.lean:3074`) the arm
-  cannot be reached (`provideLayerArm_of_layerFree`), so M5 holds there unconditionally:
-  `denotesTyped_of_layerFree` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1229`). The store-row arm
+- **M5 on the layer-free fragment (`denote-typed-layer-free`), and the layer family's arm
+  (`provide-layer-arm`)**: every arm of `denoteR` is assembled by induction on fuel
+  (`childDenotes_upto` (`src/Effect4/Laws/Program/Typed/Denotation.lean:3029`)): at no fuel the
+  frontier, at positive fuel each constructor's arm with its children's hypotheses taken at the
+  children's nodes. The layer family's arm enters there as the hypothesis `ProvideLayerArm`
+  (`Denotation.lean:3018`), so `denotesTyped_of_provideLayer` (`Assembly.lean:1220`) is conditional;
+  on programs no node of which is a `provideLayer` (`LayerFree`, `Denotation.lean:3078`) the arm cannot
+  be reached (`denotesTyped_of_layerFree`, `Assembly.lean:1228`). The arm itself is proved at every
+  source (`provideLayerArm`, `LayerArm.lean:1340`, decisions rows 176 (b), 185–187;
+  `E4-TYPED-CE-023` and `-031` repaired): every `LayerTerm` constructor's build at an admitted layer
+  point answers the built context at the layer's checked error type (`layerBuild_typed`,
+  `LayerArm.lean:1218`, structural on the term inside an induction on the fuel a reference's hop
+  spends; the hop's point typed because expansion fixes checked terms and checking is
+  path-independent, `ExpandFix`), a memo hit is typed by the memo-table clause (`memoize_typed`,
+  `LayerArm.lean:233`), a merge's awaited exits either all read back or fail with reasons that fit
+  (`mergeContexts_typed`, `LayerArm.lean:561`), and the protocol around the build is typed
+  (`provideLayer_arm`, `LayerArm.lean:1267`). The store-row arm
   is the textbook's reference-read argument in its adapted form (TAPL §13.4's store typing; PLF
   `References.v`'s `store_weakening`): membership in the cell type exposes a declaration
   (`fits_refTy_inv`, `src/Effect4/Laws/Program/Typed/Denotation.lean:2161`) at a type equivalent to
