@@ -412,3 +412,63 @@ Changes: `Typed/Stack.lean` (`HookLawsAt`, `HookLaws` as its conjunction, `popR_
 - `lake build Effect4.Laws Test.Program.FramesNotKripke Test.Program.TypedStack Test.Program.H2PartOne
   Test.Program.HostWalk Test.Program.LaunchEntrant` — exit 0 (`walk-15`; `walk-09`, `walk-13` rebuilt
   the chain through `Scheduler` and `RegistrationYield` first).
+
+## Slice 7 — G2 and the loop/generator hook contract (controls; repair proposed, not landed)
+
+**First:** the loop/generator part of the frame contract has three kernel-checked gaps, and their
+repair is a contract change for the owner (decisions row 190, proposed). The walk (slice 6) is
+unaffected. Nothing in `src/` changed in this slice.
+
+Codex's hook-view-support packet (priority note, `protocol-review.md`, `producer-review.md`) was
+read before any design. It proposed the first two controls from source reading and asked that they
+be kernel-checked, with a finishing-loop positive control, before choosing a producer. Checked at
+`ed83ea23`, `docs/research/2026-10-02-claude-lead/witnesses/LoopProtocols.lean` (log `g2-04`, every
+report `[propext, Quot.sound]`):
+
+| Control | Result |
+| --- | --- |
+| `Endless` (CE-036) | The checker admits `iterate (some unit) unit true unit unit (succeed unit)` at `pure unit` from the root (`decide +kernel`). Entry and every resume answer `continue unit (pure (success unit))` under the same loop name (`rfl`). `no_protocol`: no `LoopProtocol` at an input type admitting `unit`, by `LoopProtocol.rec` with both motives (the continue's body is typed at the tail's input type, so the tail admits `unit` again). `no_code_after_entry`: the frame the entry leaves (`entry_eq`) has no `CodeOk` at any world. |
+| `Finishing` | The same loop with a false test has a protocol (positive control). |
+| `Cursor` (CE-037) | A checked Boolean-cursor loop entered with `unit` meets `fiberPre`'s loop arm (`pre_admits`, it reads only `PointTyped`); its entry installs `badShapeExit` (`entry_current`), typed at no type (`bad_untyped`). |
+| `View` (CE-038) | A loop whose point's own view holds a fiber's failure has a protocol at every world (`protocol`: the inline failure typed at `never`'s answer, the tail vacuous). Under the machine's interpreter at the empty view the body is `await` of that fiber (`empty_view`); at a world not declaring it, `HookLawsAt` fails (`no_hookLaws`) and the ordinary walk's premises hold while its conclusion fails (`walk_untyped`). |
+
+The generator analogue of `View` was run by `#eval` only (`walkR` is defined by well-founded
+recursion and does not reduce by `rfl`); it is not part of the evidence.
+
+Against the existing goals:
+- `M4Stack.popR_typed` and `M5Hooks.hookLaws_interpR`: unaffected (conditional, and the bare
+  interpreter respectively).
+- `M6Ledger.step_loop`: unprovable over the current contract. The evaluator's `loop` entry on the
+  endless loop leaves a running fiber whose code clause (`ReadCode`, through the `loop` that `settle`
+  queues) can hold at no world; on the Boolean-cursor loop entered with `unit` it installs
+  `badShapeExit`. A full `StepPreserves` falsifier needs a `ConfigTyped` input fixture, not built.
+- `M6Ledger.step_deliver` (and `step_loop`'s walk arm): the walk route needs `HookLawsAt` for the
+  machine's interpreter, which the current protocols do not give (CE-038). A full falsifier would
+  likewise need an input fixture.
+
+Proposed (row 190):
+- (a) The protocols in their postfixed (greatest-fixed-point) form: an invariant containing the
+  frame and closed under one hook step. The old inductive protocol embeds one way; the endless loop
+  is admitted, and an ill-typed body is still refused. This is Codex's priority-note candidate. The
+  theory is the coinduction principle for postfixed sets, which Leroy and Grall's coinductive
+  big-step semantics, §2, applies to inference rules; I have not reread the paper, and the citation
+  is Codex's.
+- (c) The step obligation over every completed view typed at the step's world, which gives
+  `HookLawsAt` for `interpRAt root C` from the construction post's clause on `C`.
+- (b) `fiberPre`'s loop arm adds the cursor's fit.
+- The producers supply source-derived invariants.
+
+Placement of the proposed work:
+1. Concepts 2 (residual typing) and 4; property: admitted loop and generator continuations, and
+   preservation by `loop`/`deliver`.
+2. Questions: `M6Ledger.step_loop`/`.step_deliver`. A protocol-producer claim would be registered
+   with the corrected contract; `M5Hooks.hookLaws_interpR` kept as history beside a goal for the
+   machine's interpreter.
+3. Reach: the unchanged checker and machine; rows 117, 135, 175.
+4. Not established by any of it: termination, progress, fairness, a host result.
+5. Unlocks: a non-vacuous generator/loop producer for M5 → M6, before decision preservation and
+   reachable typing.
+
+Changes: witness `docs/research/2026-10-02-claude-lead/witnesses/LoopProtocols.lean`;
+`Test/Counterexamples/REGISTER.md` (CE-036, CE-037, CE-038, SEEDED); `docs/core/decisions.md` (row
+190, proposed).
