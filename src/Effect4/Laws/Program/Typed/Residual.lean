@@ -278,8 +278,9 @@ installed it, and as current code reaching a counted step the evaluator answers 
 (`E4-TYPED-CE-034`). So it is typed only where the `scoped` arm puts it, the run arm of the
 `onExit false` guard that arm installs (`scopedGuard`, decisions row 188 (a)): every exit runs the
 scope's callback, whose scope is present (`ScopeLive`, row 156: the machine halts on an absent
-scope, `E4-SCHED-CE-020`) and whose restored context fits; the callback delivers the same exit,
-so the guard widens its body's type to its own. -/
+scope, `E4-SCHED-CE-020`) and whose restored context fits; the callback carries the body's exit
+(a finalizer's failure may combine with it when the scope closes), so the guard widens its
+body's type to its own for that exit. -/
 inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Prop
   | pure {w : World} {ty : EffTy} {ex : ExitV} (exit : ExitOk w ty ex) :
       TypedProg root w ty (.pure ex)

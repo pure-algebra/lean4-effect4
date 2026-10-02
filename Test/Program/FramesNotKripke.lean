@@ -29,8 +29,10 @@ one-world omission, not a complete pre-amendment model; the original statement i
    machine it keeps the `Old` typed state at the same world. The breaking command is `loop`.
 4. The repair: the closed judgment refuses the bad frame at the initial world
    (`bad_not_kripke_initial`), transports along the host order (`stackAccepts_mono`, landed
-   in `Contracts`), and gives the one-world judgment at the current world
-   (`stackAccepts_now`), so nothing proved over the one-world judgment is lost.
+   in `Contracts`), and gives the one-world judgment at the current world for every stack with
+   no `onExit false` resume slot (`stackAccepts_now`; the shape of decisions row 188 (a)'s
+   `scopedResume`, which the one-world judgment never had), so nothing proved over the
+   one-world judgment on such stacks is lost.
 5. `step_loop_good` (green, current judgment): with a frame typed into `unit` on every success,
    the same `loop` keeps the typed configuration (row 134's `I`: `good_config` before,
    `afterGood_config` after) at the world that declares the new cell.
@@ -672,7 +674,7 @@ theorem good_config : ConfigTyped (refProg : ProgramSource) unitTy world good [c
     change world.Γ Api.root = some ty at declared
     rw [(valid_of [.answer goodNext] true).root] at declared
     cases declared
-    exact good_saved world
+    exact codeOk_of_saved (good_saved world)
 
 def afterGood : RState × List RCmd :=
   letI := termEvaluatorFor (refProg : ProgramSource).program
@@ -965,7 +967,7 @@ theorem afterGood_config :
     change w1g.Γ Api.root = some ty at declared
     rw [valid_w1g.root] at declared
     cases declared
-    exact saved
+    exact codeOk_of_saved saved
   · intro f hf _ _ _ ty declared
     have saved := afterGood_saved f hf
     change f ∈ [_] at hf
@@ -974,7 +976,7 @@ theorem afterGood_config :
     change w1g.Γ Api.root = some ty at declared
     rw [valid_w1g.root] at declared
     cases declared
-    exact saved
+    exact codeOk_of_saved saved
 
 /-- **Green control: with a frame typed into `unit` on every success, the same `loop` keeps
 the typed configuration** (`good_config` to `afterGood_config`), at the world that declares the
@@ -1037,9 +1039,9 @@ example :
     exact hf
 
 /-- The closed judgment gives the one-world judgment at the current world: every frame clause
-read at `w` by reflexivity. Nothing proved over the one-world judgment is lost. The `scoped`
-guard's slot (decisions row 188 (a)) is a frame the one-world judgment never had; a frame that is
-not one is mapped. -/
+read at `w` by reflexivity, for a frame that is no `onExit false` resume slot: that shape covers
+decisions row 188 (a)'s `scopedResume`, a frame the one-world judgment never had (the premise also
+excludes an ordinary `onExit false` slot, which none of this file's stacks holds). -/
 theorem frameAccepts_now {TP : W → EffTy → RProgram → Prop} {Ex : W → EffTy → ExitV → Prop}
     {hooks : FrameProtocols} {w : W} {a b : EffTy} {f : ScopeFrame}
     (notScoped : ∀ next, f ≠ .resume (.onExit false) next)

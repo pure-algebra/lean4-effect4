@@ -265,12 +265,164 @@ def raceRegistrationR : RProgram → Option Nat
   | .vis (.inr (.raceRegister raceId)) _ => some raceId
   | _ => none
 
+/-! ## Decisions row 188 (b): registration markers under injected yields -/
+
+/-- **A host's saved stack as a typed path with correlated registration arrows** (decisions row
+188 (b), `E4-TYPED-CE-033`). `beginRace` leaves a race's registration marker current with `loop`
+queued (`Machine/Fibers.lean:919-931`); a budget-triggered `injectYield` (`:1056-1064`; the term
+core's `yieldBefore`, `Laws/Program/InterpR.lean:89-91`) saves it in a success callback around
+`Yield`. The callback returns the marker, which is no typed code: its reply is the race's. So the
+path has, beside every ordinary frame arrow (`Contracts.FrameAccepts`), a `registration` arrow for
+such a callback: every success answer returns race `raceId`'s marker, the race exists on this
+machine with this host, a failure skips into the rest at the race token's declared type, and the
+rest accepts that type (the reply `registrationDone` delivers once the walk makes the marker
+current again, `RegistrationState`). The race correlation sits on the arrow, so typed code cannot
+forge it, and arrows compose like `StackAccepts`'s (any number of callbacks; `hostStack_push`).
+With no registration arrow it is `StackAccepts` (`hostStack_of_stackAccepts`). -/
+inductive HostStack (root : ProgramSource) (w : World) (m : RState) (host : FiberId) :
+    EffTy → EffTy → List ScopeFrame → Prop
+  | nil (ty : EffTy) : HostStack root w m host ty ty []
+  | cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
+      (head : Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w tin middle frame)
+      (tail : HostStack root w m host middle tout rest) :
+      HostStack root w m host tin tout (frame :: rest)
+  | registration {tin tout resultTy : EffTy} {next : ExitV → RProgram} {rest : List ScopeFrame}
+      {raceId : Nat} {race : RRace}
+      (marker : ∀ v, raceRegistrationR (next (.success v)) = some raceId)
+      (skip : ∀ w', w.leHost w' → ∀ c, ExitOk w' tin (.failure c) → ExitOk w' resultTy (.failure c))
+      (found : m.race? raceId = some race) (hosted : race.host = host)
+      (token : w.Θ race.host race.token = some resultTy)
+      (tail : HostStack root w m host resultTy tout rest) :
+      HostStack root w m host tin tout (.resume .onSuccess next :: rest)
+
+/-- A host's saved frame at `final`: its current code typed over a `HostStack`, with recorded
+interrupts only. With no registration arrow in the stack this is `SavedOk` (`codeOk_of_saved`). -/
+def CodeOk (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (final : EffTy)
+    (x : RSaved) : Prop :=
+  ∃ tin, TypedProg root w tin x.current ∧ HostStack root w m host tin final x.stack ∧
+    Contracts.InterruptProvenance x
+
+theorem hostStack_of_stackAccepts {root : ProgramSource} {w : World} {m : RState}
+    {host : FiberId} {tin final : EffTy} {stack : List ScopeFrame}
+    (h : Contracts.StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final stack) :
+    HostStack root w m host tin final stack := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons head ih
+
+theorem codeOk_of_saved {root : ProgramSource} {w : World} {m : RState} {host : FiberId}
+    {final : EffTy} {x : RSaved}
+    (h : Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final x) :
+    CodeOk root w m host final x := by
+  obtain ⟨tin, code, stack, provenance⟩ := h
+  exact ⟨tin, code, hostStack_of_stackAccepts stack, provenance⟩
+
+/-- The race facts the registration arrows read move to a machine whose races keep their host
+and token. -/
+def RacesKept (m m' : RState) : Prop :=
+  ∀ r race, m.race? r = some race →
+    ∃ race', m'.race? r = some race' ∧ race'.host = race.host ∧ race'.token = race.token
+
+theorem racesKept_of_eq {m m' : RState} (races : ∀ r, m'.race? r = m.race? r) : RacesKept m m' :=
+  fun r race h => ⟨race, (races r).trans h, rfl, rfl⟩
+
+theorem hostStack_mono {root : ProgramSource} {w w' : World} {m : RState} {host : FiberId}
+    {tin final : EffTy} {stack : List ScopeFrame} (ord : w.leHost w')
+    (h : HostStack root w m host tin final stack) : HostStack root w' m host tin final stack := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons (Contracts.frameAccepts_mono ord head) ih
+  | registration marker skip found hosted token _ ih =>
+    exact .registration marker (fun w'' o c hc => skip w'' (leHost_trans _ _ _ ord o) c hc) found
+      hosted (ord.1.2.2.2.2.2.1 _ _ _ token) ih
+
+theorem hostStack_races {root : ProgramSource} {w : World} {m m' : RState} {host : FiberId}
+    {tin final : EffTy} {stack : List ScopeFrame} (kept : RacesKept m m')
+    (h : HostStack root w m host tin final stack) : HostStack root w m' host tin final stack := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons head ih
+  | registration marker skip found hosted token _ ih =>
+    obtain ⟨race', found', host', token'⟩ := kept _ _ found
+    exact .registration marker skip found' (host'.trans hosted)
+      (by rw [host', token']; exact token) ih
+
+/-- A frame pushed on a host stack. -/
+theorem hostStack_push {root : ProgramSource} {w : World} {m : RState} {host : FiberId}
+    {a b final : EffTy} {f : ScopeFrame} {stack : List ScopeFrame}
+    (hf : Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w a b f)
+    (h : HostStack root w m host b final stack) : HostStack root w m host a final (f :: stack) :=
+  .cons hf h
+
+theorem codeOk_mono {root : ProgramSource} {w w' : World} {m : RState} {host : FiberId}
+    {final : EffTy} {x : RSaved} (ord : w.leHost w') (h : CodeOk root w m host final x) :
+    CodeOk root w' m host final x := by
+  obtain ⟨tin, code, stack, provenance⟩ := h
+  exact ⟨tin, typedProg_mono root w w' tin x.current ord code, hostStack_mono ord stack, provenance⟩
+
+theorem codeOk_races {root : ProgramSource} {w : World} {m m' : RState} {host : FiberId}
+    {final : EffTy} {x : RSaved} (kept : RacesKept m m') (h : CodeOk root w m host final x) :
+    CodeOk root w m' host final x := by
+  obtain ⟨tin, code, stack, provenance⟩ := h
+  exact ⟨tin, code, hostStack_races kept stack, provenance⟩
+
+/-- **The generated position clause's path** (decisions row 188 (b)), which reads no machine:
+ordinary frame arrows and registration arrows typed by the failures they skip alone. A
+registration arrow's race correlation is the machine clauses' (`HostStack`); this path keeps only
+the stack's shape typed around it. -/
+inductive PositionStack (root : ProgramSource) (w : World) :
+    EffTy → EffTy → List ScopeFrame → Prop
+  | nil (ty : EffTy) : PositionStack root w ty ty []
+  | cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
+      (head : Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w tin middle frame)
+      (tail : PositionStack root w middle tout rest) : PositionStack root w tin tout (frame :: rest)
+  | registration {tin middle tout : EffTy} {next : ExitV → RProgram} {rest : List ScopeFrame}
+      (marker : ∀ v, (raceRegistrationR (next (.success v))).isSome = true)
+      (skip : ∀ w', w.leHost w' → ∀ c, ExitOk w' tin (.failure c) → ExitOk w' middle (.failure c))
+      (tail : PositionStack root w middle tout rest) :
+      PositionStack root w tin tout (.resume .onSuccess next :: rest)
+
+theorem positionStack_of_stackAccepts {root : ProgramSource} {w : World} {tin final : EffTy}
+    {stack : List ScopeFrame}
+    (h : Contracts.StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final stack) :
+    PositionStack root w tin final stack := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons head ih
+
+theorem positionStack_mono {root : ProgramSource} {w w' : World} {tin final : EffTy}
+    {stack : List ScopeFrame} (ord : w.leHost w') (h : PositionStack root w tin final stack) :
+    PositionStack root w' tin final stack := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons (Contracts.frameAccepts_mono ord head) ih
+  | registration marker skip _ ih =>
+    exact .registration marker (fun w'' o c hc => skip w'' (leHost_trans _ _ _ ord o) c hc) ih
+
+/-- A host stack is a position stack: the race correlation is forgotten. -/
+theorem positionStack_of_host {root : ProgramSource} {w : World} {m : RState} {host : FiberId}
+    {tin final : EffTy} {stack : List ScopeFrame} (h : HostStack root w m host tin final stack) :
+    PositionStack root w tin final stack := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons head ih
+  | registration marker skip _ _ _ _ ih =>
+    exact .registration (fun v => by rw [marker v]; rfl) skip ih
+
 /-- A concrete reply must meet the actual saved stack, independently of whatever type
-certified the current administrative operation. This names a local delivery boundary. -/
-def StackReply (root : ProgramSource) (w : World) (fiber : RFiber) (replyTy : EffTy) : Prop :=
-  ∃ final, w.Γ fiber.id = some final ∧
-    Contracts.StackAccepts (TypedProg root) ExitOk (frameProtocols root) w replyTy final
-      fiber.frame.stack ∧ Contracts.InterruptProvenance fiber.frame
+certified the current administrative operation. This names a local delivery boundary. The stack
+may hold row 188 (b)'s injected registration callback (`HostStack`): every reply consumer
+(`afterInterrupt`, `raceCancel`, `closeParAwait`, a registration's delivery) carries it. -/
+def StackReply (root : ProgramSource) (w : World) (m : RState) (fiber : RFiber) (replyTy : EffTy) :
+    Prop :=
+  ∃ final, w.Γ fiber.id = some final ∧ HostStack root w m fiber.id replyTy final fiber.frame.stack ∧
+    Contracts.InterruptProvenance fiber.frame
+
+theorem stackReply_races {root : ProgramSource} {w : World} {m m' : RState} {fiber : RFiber}
+    {replyTy : EffTy} (kept : RacesKept m m') (h : StackReply root w m fiber replyTy) :
+    StackReply root w m' fiber replyTy := by
+  obtain ⟨final, declared, stack, provenance⟩ := h
+  exact ⟨final, declared, hostStack_races kept stack, provenance⟩
 
 /-- The direct registration marker owns a real race on this fiber, and the race token's
 result meets this host's saved continuation. This finite current-code clause covers both
@@ -278,7 +430,7 @@ immediate buffered settlement and parking; it is not the open recursive code-sit
 def RegistrationState (root : ProgramSource) (w : World) (m : RState) : Prop :=
   ∀ fiber ∈ m.fibers, ∀ raceId, raceRegistrationR fiber.frame.current = some raceId →
     ∃ race resultTy, m.race? raceId = some race ∧ race.host = fiber.id ∧
-      w.Θ race.host race.token = some resultTy ∧ StackReply root w fiber resultTy
+      w.Θ race.host race.token = some resultTy ∧ StackReply root w m fiber resultTy
 
 /-- A loaded code with no direct registration marker needs no race/token correlation yet. -/
 theorem registrationState_load (root : ProgramSource) (w : World) (fuel compileFuel : Nat)
@@ -313,10 +465,10 @@ Their finite targets and result columns must meet the actual host stack. This do
 that an evaluated transition be typed, and does not quantify over unknown code continuations. -/
 def CommandDeliveryOk (root : ProgramSource) (w : World) (m : RState) : RCmd → Prop
   | .afterInterrupt host _ kind => ∀ fiber, m.fiber? host = some fiber →
-      ∃ replyTy, AfterInterruptReply w kind replyTy ∧ StackReply root w fiber replyTy
+      ∃ replyTy, AfterInterruptReply w kind replyTy ∧ StackReply root w m fiber replyTy
   | .raceCancel _ host _ remaining visited => ∀ fiber, m.fiber? host = some fiber →
       ∃ answer error, FiberListColumns w (visited ++ remaining) answer error ∧
-        StackReply root w fiber (EffTy.pure .unit)
+        StackReply root w m fiber (EffTy.pure .unit)
   /- Decisions row 134 (c): a queued `finish` names a fiber whose saved stack is empty: the loop
   queues it only from the `finished` outcome (`settle`), after `frameExitState` drained the
   stack. -/
@@ -326,8 +478,48 @@ def CommandDeliveryOk (root : ProgramSource) (w : World) (m : RState) : RCmd →
         (frameProtocols root).iterator w
           ⟨.list (.exitOf answer error), error, Env.Requirement.empty⟩
           ⟨.unit, error, Env.Requirement.empty⟩ (interpR root.program).closeDoneName ∧
-        StackReply root w fiber ⟨.unit, error, Env.Requirement.empty⟩
+        StackReply root w m fiber ⟨.unit, error, Env.Requirement.empty⟩
   | _ => True
+
+/-- The delivery facts move to a machine with the same fiber lookups whose races keep their host
+and token (row 188 (b)'s registration arrows read them). -/
+theorem commandDelivery_races {root : ProgramSource} {w : World} {m m' : RState}
+    (fibers : ∀ id, m'.fiber? id = m.fiber? id) (kept : RacesKept m m') (c : RCmd)
+    (h : CommandDeliveryOk root w m c) : CommandDeliveryOk root w m' c := by
+  cases c with
+  | afterInterrupt host _ kind =>
+    intro f hf
+    rw [fibers] at hf
+    obtain ⟨replyTy, reply, stack⟩ := h f hf
+    exact ⟨replyTy, reply, stackReply_races kept stack⟩
+  | raceCancel _ host _ remaining visited =>
+    intro f hf
+    rw [fibers] at hf
+    obtain ⟨answer, error, cols, stack⟩ := h f hf
+    exact ⟨answer, error, cols, stackReply_races kept stack⟩
+  | closeParAwait host _ targets =>
+    intro f hf
+    rw [fibers] at hf
+    obtain ⟨answer, error, cols, protocol, stack⟩ := h f hf
+    exact ⟨answer, error, cols, protocol, stackReply_races kept stack⟩
+  | finish host _ =>
+    intro f hf
+    rw [fibers] at hf
+    exact h f hf
+  | evaluate _ => trivial
+  | loop _ _ => trivial
+  | deliver _ _ => trivial
+  | resume _ _ _ => trivial
+  | launch _ => trivial
+  | enrollRace _ _ => trivial
+  | registrationDone _ _ => trivial
+  | interruptTarget _ _ _ => trivial
+  | trackChild _ _ => trivial
+  | observe _ _ _ => trivial
+  | exitDone _ => trivial
+  | link _ _ _ _ _ => trivial
+  | drainDue => trivial
+  | wake _ _ => trivial
 
 def CommandAuthorityR (m : RState) : RCmd → Prop
   | .loop fiber _ | .deliver fiber _ | .finish fiber _ => Guard.ActiveAt m fiber

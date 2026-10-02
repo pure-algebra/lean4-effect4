@@ -19,6 +19,9 @@ Controls:
 2. `scoped_code_typed`: the code the real producer installs, the `onExit false` guard over a body
    bound to the scope's exit callback, is typed at the same world (`scopedGuardBind_typed`), and
    its saved slot is the `scopedResume` arrow (`scoped_slot_accepted`).
+3. `absent_scope_refused`: the same well-shaped code is not typed where scope 0 is absent (row
+   156's presence, now read at the run position): an ordinary guard would have to type the raw
+   callback, and the `scopedGuard` reading needs the scope.
 
 These are constructed-configuration controls, not reachability claims; they prove neither
 `step_deliver` nor `step_loop`.
@@ -105,6 +108,25 @@ theorem scoped_slot_accepted : ∃ mid : EffTy,
   obtain ⟨mid, _, slot⟩ := TypedProg.guard_frame scoped_code_typed
   exact ⟨mid, slot⟩
 
+/-- A world whose store holds no scope. -/
+def absentWorld : W := initialWorld unitTy
+
+/-- **The presence control** (rows 156 and 188 (a)): where scope 0 is absent the producer's
+well-shaped code is not typed at any type. -/
+theorem absent_scope_refused (ty : EffTy) :
+    ¬ TypedProg (rootProgram : ProgramSource) absentWorld ty scopedCode := by
+  intro typed
+  rcases TypedProg.guard_inv typed with ⟨mid, body, run, _⟩ | ⟨_, mid, prev, sc, _, callback, live, _⟩
+  · have payload : ExitOk absentWorld mid (.success .unit) :=
+      unguard_payload_inv _ _ _ _ _ body
+    have raw := run absentWorld (leHost_refl _) (.success .unit) ⟨rfl, payload⟩
+    cases raw with
+    | fiber _ _ _ notScopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
+  · have same := callback (.success .unit)
+    change some (emptyCtx, 0, Exit.success Val.unit) = some (prev, sc, Exit.success Val.unit) at same
+    cases same
+    exact absurd live (by decide)
+
 end Test.Program.ScopeExitCallback
 
 #print axioms Test.Program.ScopeExitCallback.live
@@ -113,3 +135,4 @@ end Test.Program.ScopeExitCallback
 #print axioms Test.Program.ScopeExitCallback.empty_services
 #print axioms Test.Program.ScopeExitCallback.scoped_code_typed
 #print axioms Test.Program.ScopeExitCallback.scoped_slot_accepted
+#print axioms Test.Program.ScopeExitCallback.absent_scope_refused

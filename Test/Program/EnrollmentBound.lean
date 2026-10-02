@@ -135,8 +135,12 @@ only the scheduler's allocation bound changes. The structure clauses read no all
 counter, so each is the fixture's own fields at the raised machine. -/
 theorem typedState : TypedState (rootProgram : ProgramSource) natTy world machine := by
   have old := Test.Program.RegistrationColumn.typedState
-  refine ⟨{ old.1 with }, { old.2.1 with }, old.2.2.1, scheduler,
-    { old.2.2.2.2.1 with observers := ?_ }, old.2.2.2.2.2⟩
+  refine ⟨{ old.1 with }, { old.2.1 with },
+    activeDelivery_races (m := Test.Program.RegistrationColumn.machine) rfl
+      (racesKept_of_eq fun _ => rfl) old.2.2.1, scheduler,
+    { old.2.2.2.2.1 with observers := ?_ },
+    registrationState_races (m := Test.Program.RegistrationColumn.machine) rfl
+      (racesKept_of_eq fun _ => rfl) old.2.2.2.2.2⟩
   intro f hf o ho
   rw [Test.Program.RegistrationColumn.member hf] at ho
   cases ho

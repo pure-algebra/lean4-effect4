@@ -88,8 +88,10 @@ inductive FrameAccepts (w : World) : EffTy → EffTy → ScopeFrame → Prop
       (protocol : ∀ w', w.leHost w' → hooks.loop w' tin tout name cursor) :
       FrameAccepts w tin tout (.loop name cursor)
   /-- The slot a `scoped` guard saves (decisions row 188 (a)): on every exit it runs that scope's
-  exit callback, which `prepareScopedExitR` consumes; the callback delivers the same exit, so the
-  frame widens `tin` to `tout`. An `onExit false` slot always runs (`popR` masks first). -/
+  exit callback, which `prepareScopedExitR` consumes by closing the scope and continuing with the
+  exit the callback carries, or with that exit combined with a finalizer's failure
+  (`finalizerR`); the frame types the carried exit by widening `tin` to `tout`. An `onExit false`
+  slot always runs (`popR` masks first). -/
   | scopedResume {tin tout : EffTy} (next : ExitV → RProgram) (prev : Ctx) (sc : Nat)
       (callback : ∀ ex, scopeExitCallback? (next ex) = some (prev, sc, ex))
       (hook : ∀ w', w.leHost w' → hooks.scopeExit w' prev sc)

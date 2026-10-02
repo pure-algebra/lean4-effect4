@@ -62,6 +62,7 @@ import Test.Program.WaiterColumn
 import Test.Program.RegistrationColumn
 import Test.Program.EnrollmentBound
 import Test.Program.ScopeExitCallback
+import Test.Program.RegistrationYield
 import Test.Program.ProtocolPosts
 import Test.Audit.AnswerGate
 import Test.Machine.Runtime.RepresentationFoundations

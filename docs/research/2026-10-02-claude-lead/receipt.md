@@ -92,3 +92,73 @@ Commands and results:
   TypedProgBindRed, TypedProgRows, TypedResidual, TypedStack) — exit 0.
 - `lake env lean -j1 -M6144 -DwarningAsError=true Test/Program/ScopeExitCallback.lean` — exit 0;
   `live` axiom-free, the other five `[propext, Quot.sound]`.
+
+### Slice 2a follow-ups (Codex's scope-callback review, applied with 2b)
+
+`Test/Program/ScopeExitCallback.lean` gains `absent_scope_refused`: the producer's well-shaped code
+is not typed where scope 0 is absent, so presence is still tested at the run position now that the
+raw marker is refused independently of presence. `FramesNotKripke`'s projection prose is narrowed to
+stacks with no `onExit false` resume slot (its premise). The `scopedResume` and `TypedProg`
+docstrings no longer say the callback "delivers the same exit": a finalizer's failure may combine
+with it when the scope closes; the frame types the carried exit. Codex's reuse points for typing
+`prepareScopedExitR` (`closeScopeUnsafeR`'s three cases with `FinalizerTyped`/`lone_of_snapshot` and
+`closeWalk_typed`, the cleanup bind through outer guard associativity ending at `finishFinalizer`)
+are recorded for the evaluator proof; none is implemented here.
+
+## Slice 2b — registration callbacks as correlated arrows (`E4-TYPED-CE-033`, row 188 (b))
+
+**First:** a host's saved stack is now a typed path, `HostStack` (`Typed/Scheduler.lean`), with
+ordinary frame arrows and correlated registration arrows (every success answer returns race `r`'s
+marker; `r` exists with this host; a failure skips into the rest at the token's declared type).
+Every consumer reads it: `CodeOk` (in `LiveCode`/`ReadCode`), `ActiveDelivery`, and `StackReply`
+(so the reply consumers `afterInterrupt`, `raceCancel`, `closeParAwait` and the registration's
+delivery carry it). The generated position clause reads the machine-free shape, `PositionStack`.
+`ConfigTyped` admits more stacks (the injected callbacks); no `StepPreserves` premise, no machine
+change.
+
+The design went through two checked-by-review corrections before landing, both from Codex:
+1. a disjunction placed only in the code clauses (`CodeOk`) left the reply consumers on plain
+   stacks: typed code above a stored callback (`interruptAll []`) queues `afterInterrupt`, whose
+   reply would have to cross the callback (consumer-check);
+2. a single distinguished callback is not closed under a second injection over a stored one
+   (closure review); the inductive path composes any number.
+Both cases are positive controls now. The generated position clause could not be left on plain
+`StackAccepts` either: typed code above a callback can force the callback's input type inhabited, so
+the position clause gets its own machine-free registration arrow; its one code-building consumer
+(the applied interrupt in `Bookkeeping`) now takes its stack from the fiber's correlated clauses
+(`code`, or the registration's reply stack).
+
+Placement. Concept 4 (the configuration invariant `I`); question `M6Ledger.step_loop` (the
+injection) and, through the reply consumers, every command that installs a reply over a host stack.
+Consumers: the walk's success arm installs the marker over the arrow's rest (`RegistrationState`
+reads that rest through `StackReply`), its failure arm continues at the token type. Not
+established: `step_loop` or `step_deliver`; the walk's typing over `HostStack` (an extension of
+`popR_typed`) is the evaluator proof's next obligation.
+
+Changes: `Typed/Scheduler.lean` (`HostStack`, `CodeOk`, `PositionStack`, `RacesKept`, the transports,
+`hostStack_push`, `StackReply` over `HostStack` with the machine, `stackReply_races`,
+`commandDelivery_races`), `Typed/Assembly.lean` (`SavedPosition` over `PositionStack`,
+`ActiveDelivery`/`LiveCode`/`ReadCode` over the new clauses, `activeDelivery_races`,
+`registrationState_races`, `readCode_races`), `Commands/Bookkeeping.lean` (`FiberTyped.delivery`/`code`/
+`registration`, `delivery_races`/`code_races`, `configTyped_rupdate_code` beside
+`configTyped_rupdate_gen`, the transports carrying `RacesKept`, the applied interrupt),
+`Commands/Finish.lean`, `Commands/Race.lean` (`configTyped_cons_loop` and `configTyped_rupdate_owner`
+take `CodeOk`; `afterInterrupt`, `closeParAwait` over `HostStack`), `Commands/Registration.lean`
+(`hostStack_raceFinalizer`; both branches over `HostStack`), `Commands/Observe.lean`. Tests adjusted
+without weakening a statement: `FitsOrder`, `M6Capstone`, `StaleCode`, `EnrollmentBound`,
+`FramesNotKripke`, `RegistrationColumn`, `WaiterColumn`, `TimerColumn`. New controls
+`Test/Program/RegistrationYield.lean`. Witness pinned unchanged: `witnesses/LoopMarkerYield.lean`
+(sha256 `22085f4b…`).
+
+Commands and results:
+
+- `lake build Effect4.Laws` — exit 0 after the last production edit (`race-tests-07`).
+- `lake build` of the 38 test modules reading the changed clauses (the 18 of slice 2a and the 20
+  that read `ConfigTyped`/`MachineTyped`/`TypedState`/`StackReply`) — exit 0 (`race-tests-07`,
+  `race-tests-08`).
+- `lake env lean -j1 -M6144 -DwarningAsError=true Test/Program/ScopeExitCallback.lean` — exit 0;
+  `live` axiom-free, six reports `[propext, Quot.sound]`.
+- `lake env lean -j1 -M6144 -DwarningAsError=true Test/Program/RegistrationYield.lean` — exit 0;
+  all 15 reports `[propext, Quot.sound]`.
+
+No whole battery (`lake build Test`), trust gate or generator was run.

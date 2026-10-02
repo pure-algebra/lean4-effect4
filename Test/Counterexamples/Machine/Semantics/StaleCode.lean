@@ -548,7 +548,8 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
             promiseClosed := valid.promiseClosed, tokenClosed := valid.tokenClosed,
             root := valid.root, timers := valid.timers, waiters := valid.waiters },
     ⟨fun f hf => runFiberOk_tr f saved (ok.c0 f hf), ok.c1, storesOk_tr m.state ok.c2⟩,
-    deliv, ?_, ?_, reg⟩
+    activeDelivery_races (m := m) rfl (racesKept_of_eq fun _ => rfl) deliv, ?_, ?_,
+    registrationState_races (m := m) rfl (racesKept_of_eq fun _ => rfl) reg⟩
   · exact { fiberIds := sched.fiberIds, fibersBelow := sched.fibersBelow, raceIds := sched.raceIds,
             racesBelow := sched.racesBelow, raceHosts := sched.raceHosts, keysBelow := sched.keysBelow,
             requestsBelow := sched.requestsBelow, requestsOwned := sched.requestsOwned,
@@ -902,7 +903,7 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
            cells := valid.cells, fiberClosed := valid.fiberClosed, heapClosed := valid.heapClosed,
            promiseClosed := valid.promiseClosed, tokenClosed := valid.tokenClosed,
            root := valid.root, timers := valid.timers, waiters := valid.waiters },
-    ⟨ok.c0, ok.c1, ok.c2⟩, deliv,
+    ⟨ok.c0, ok.c1, ok.c2⟩, activeDelivery_races (m := m) rfl (racesKept_of_eq fun _ => rfl) deliv,
     { fiberIds := sched.fiberIds, fibersBelow := sched.fibersBelow, raceIds := sched.raceIds,
       racesBelow := sched.racesBelow, raceHosts := sched.raceHosts, keysBelow := sched.keysBelow,
       requestsBelow := sched.requestsBelow, requestsOwned := sched.requestsOwned,
@@ -911,7 +912,8 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
       deferredCause := sched.deferredCause, raceObservers := sched.raceObservers,
       liveBelow := sched.liveBelow, targetsBelow := sched.targetsBelow,
       observersBelow := sched.observersBelow },
-    ⟨obsv.pendingOwner, fun f hf o ho => H1.storedObserverOk_halt o (obsv.observers f hf o ho)⟩, reg⟩
+    ⟨obsv.pendingOwner, fun f hf o ho => H1.storedObserverOk_halt o (obsv.observers f hf o ho)⟩,
+    registrationState_races (m := m) rfl (racesKept_of_eq fun _ => rfl) reg⟩
 
 /-- Probe C's `typedState_halt` read at `J`: false at every halted machine. -/
 theorem machineTyped_not_halted_here (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RState)

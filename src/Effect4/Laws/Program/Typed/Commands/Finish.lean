@@ -198,7 +198,7 @@ theorem evaluate_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId
       have readLoop : ReadCode root w (m.update g) (.loop id false :: rest) := by
         intro x hx running reads marker ty declared
         rcases mem_rupdate hx with rfl | ⟨hold, hne⟩
-        · exact old.code live idle marker ty declared
+        · exact codeOk_races (racesKept_of_eq (m := m) fun _ => rfl) (old.code live idle marker ty declared)
         · obtain ⟨y, r⟩ := reads
           refine edited.code x hx running ⟨y, ?_⟩ marker ty declared
           rcases r with r | r
@@ -309,8 +309,7 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
             exact fun h => of_decide_eq_true h rfl
           rw [single, List.filter_cons, if_neg drop, List.filter_nil]
         have frameOk : ∀ ty, w.Γ g.id = some ty →
-            ∃ tin, StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin ty
-              g.frame.stack ∧ InterruptProvenance g.frame := by
+            ∃ tin, PositionStack root w tin ty g.frame.stack ∧ InterruptProvenance g.frame := by
           intro ty declared
           obtain ⟨tin', stack', _⟩ := old.position declared
           exact ⟨tin', stack', provG⟩
@@ -320,13 +319,12 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
           cases hx
         have registrationG : ∀ raceId, raceRegistrationR g.frame.current = some raceId →
             ∃ race resultTy, (m.update g).race? raceId = some race ∧ race.host = g.id ∧
-              w.Θ race.host race.token = some resultTy ∧ StackReply root w g resultTy := by
+              w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy := by
           intro raceId marker
           rw [notMarker] at marker
           cases marker
         have codeG : g.exit = none → g.running = false → raceRegistrationR g.frame.current = none →
-            ∀ ty, w.Γ g.id = some ty →
-              SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty g.frame := by
+            ∀ ty, w.Γ g.id = some ty → CodeOk root w (m.update g) g.id ty g.frame := by
           intro _ _ _ ty declared
           have same : ty = final := by
             have both : w.Γ t.id = some ty := declared
@@ -334,7 +332,7 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
             cases both
             rfl
           subst same
-          exact ⟨tin, answerTyped, stackOk, provG⟩
+          exact ⟨tin, answerTyped, hostStack_races (racesKept_of_eq view.races) stackOk, provG⟩
         have fresh : FiberTyped root w (m.update g) g :=
           { ok := ⟨⟨frameOk⟩, fun q hq => moved.ok.c1 q (List.mem_filter.mp hq).1, moved.ok.c2,
               moved.ok.c3, moved.ok.c4, moved.ok.c5⟩
@@ -436,7 +434,8 @@ theorem configTyped_cleared {root : ProgramSource} {rootTy : EffTy} {w : World} 
       registration := fun raceId marker => by
         rw [gframe] at marker
         obtain ⟨race, resultTy, found, host, token, reply⟩ := moved.registration raceId marker
-        exact ⟨race, resultTy, found, host, token, stackReply_congr (f := f) rfl gframe reply⟩
+        exact ⟨race, resultTy, found, host, token,
+          stackReply_congr (f := f) (racesKept_of_eq fun _ => rfl) rfl gframe reply⟩
       code := fun hx => by
         have none' : f.exit = none := hx
         rw [none'] at exited
@@ -745,7 +744,7 @@ theorem configTyped_publish {root : ProgramSource} {rootTy : EffTy} {w : World} 
       registration := fun raceId marker => by
         obtain ⟨race, resultTy, found, host, token, reply⟩ := moved.registration raceId marker
         exact ⟨race, resultTy, found, host, token,
-          stackReply_view (f := f) rfl rfl (fun _ => provP) reply⟩
+          stackReply_view (f := f) (racesKept_of_eq fun _ => rfl) rfl rfl (fun _ => provP) reply⟩
       code := fun hx => nomatch hx
       tokens := fun _ hp => nomatch hp
       raceObservers := moved.raceObservers

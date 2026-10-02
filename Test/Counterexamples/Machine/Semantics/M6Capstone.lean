@@ -413,9 +413,9 @@ theorem registration_tail_green (race : Nat) (yielding : Bool) :
 #print axioms registration_tail_green
 
 /-- The empty stack is the identity on its input/output type. -/
-theorem stackReply_empty_declared (root : ProgramSource) (w : W) (fiber : RFiber)
-    (replyTy : EffTy) (empty : fiber.frame.stack = []) (reply : StackReply root w fiber replyTy) :
-    w.Γ fiber.id = some replyTy := by
+theorem stackReply_empty_declared (root : ProgramSource) (w : W) {m : RState} (fiber : RFiber)
+    (replyTy : EffTy) (empty : fiber.frame.stack = [])
+    (reply : StackReply root w m fiber replyTy) : w.Γ fiber.id = some replyTy := by
   obtain ⟨final, declared, stack, _⟩ := reply
   rw [empty] at stack
   cases stack
@@ -1070,7 +1070,9 @@ theorem mT_typed (w : Typed.World)
     exact ⟨old.c0, old.c1, old.c2, old.c3, hd, old.c5⟩
   · intro f hf token hp
     obtain ⟨g, hg, rfl⟩ := List.mem_map.mp hf
-    exact hpark g hg token hp
+    obtain ⟨tin, final, d1, d2, stack, provenance⟩ := hpark g hg token hp
+    exact ⟨tin, final, d1, d2, hostStack_races (racesKept_of_eq (m := m0) fun _ => rfl) stack,
+      provenance⟩
 
 /-- `typedState_load`'s statement at this program and budget. -/
 def LoadAt : Prop :=
@@ -1700,7 +1702,7 @@ theorem config_typed : ConfigTyped (rootProgram : ProgramSource) unitTy world ma
   change world.Γ Api.root = some ty at declared
   rw [valid.root] at declared
   cases declared
-  exact saved_typed
+  exact codeOk_of_saved saved_typed
 
 theorem typedState_result : TypedState (rootProgram : ProgramSource) unitTy world result.1 := by
   refine ⟨result_valid, ⟨?_, ?_, ?_⟩, ?_, result_scheduler, result_observers, result_registration⟩
@@ -2677,6 +2679,9 @@ theorem input_refused (w : W) :
     cases head with
     | resume _ _ run _ =>
       exact callback_untyped w _ (.success .unit) (run w (leHost_refl w) (.success .unit) exited rfl)
+  | registration _ _ found _ _ _ =>
+    -- row 188 (b)'s registration arrow names a race, and the witness has none
+    cases found
 
 #print axioms typedState_input
 #print axioms config_input

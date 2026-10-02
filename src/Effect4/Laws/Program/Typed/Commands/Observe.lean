@@ -144,9 +144,11 @@ theorem fiberTyped_except {root : ProgramSource} {w : World} {m m' : RState} {x 
     (nextId : m.nextId ≤ m'.nextId) (nextToken : m.nextToken ≤ m'.nextToken)
     (keyed : ∀ o ∈ x.observers, ¬ OffKey key o → StoredObserverOk root w m' x.id o) :
     FiberTyped root w m' x := by
-  refine ⟨h.ok, h.delivery, Nat.lt_of_lt_of_le h.below nextId, h.pendingShape, h.parkedIdle,
+  refine ⟨h.ok, h.delivery_races (racesKept_of_eq view.races), Nat.lt_of_lt_of_le h.below nextId,
+    h.pendingShape, h.parkedIdle,
     fun token hp => Nat.lt_of_lt_of_le (h.parkedBelow token hp) nextToken, h.exited,
-    h.exitedStack, h.deferredCause, h.pendingOwner, fun o ho => ?_, fun raceId marker => ?_, h.code, h.tokens,
+    h.exitedStack, h.deferredCause, h.pendingOwner, fun o ho => ?_, fun raceId marker => ?_,
+    h.code_races (racesKept_of_eq view.races), h.tokens,
     fun r race hr o ho => h.raceObservers r race ((view.races r).symm.trans hr) o ho,
     fun p hp id hid => Nat.lt_of_lt_of_le (h.targetsBelow p hp id hid) nextId,
     fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId⟩
@@ -154,7 +156,8 @@ theorem fiberTyped_except {root : ProgramSource} {w : World} {m m' : RState} {x 
     · exact storedObserverOk_except view o off (h.observers o ho)
     · exact keyed o ho off
   · obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
-    exact ⟨race, resultTy, (view.races raceId).trans found, host, token, reply⟩
+    exact ⟨race, resultTy, (view.races raceId).trans found, host, token,
+      stackReply_races (racesKept_of_eq view.races) reply⟩
 
 /-- The view after replacing one fiber's record by one that agrees on every pending record but
 the one at `key`. -/
@@ -197,19 +200,23 @@ theorem commandDelivery_idle {root : ProgramSource} {w : World} {m : RState} {y 
     cases hx
     rw [idle] at running
     cases running
+  have kept : RacesKept m (m.update g) := racesKept_of_eq fun _ => rfl
   cases c with
   | afterInterrupt host _ kind =>
     intro f' hf'
     rw [rfiber?_update_other (other host hauth)] at hf'
-    exact h f' hf'
+    obtain ⟨replyTy, ok, reply⟩ := h f' hf'
+    exact ⟨replyTy, ok, stackReply_races kept reply⟩
   | raceCancel _ host _ remaining visited =>
     intro f' hf'
     rw [rfiber?_update_other (other host hauth)] at hf'
-    exact h f' hf'
+    obtain ⟨answer, error, cols, reply⟩ := h f' hf'
+    exact ⟨answer, error, cols, stackReply_races kept reply⟩
   | closeParAwait host _ targets =>
     intro f' hf'
     rw [rfiber?_update_other (other host hauth)] at hf'
-    exact h f' hf'
+    obtain ⟨answer, error, cols, protocol, reply⟩ := h f' hf'
+    exact ⟨answer, error, cols, protocol, stackReply_races kept reply⟩
   | finish host _ =>
     intro f' hf'
     rw [rfiber?_update_other (other host hauth)] at hf'
@@ -268,7 +275,7 @@ theorem configTyped_replace {root : ProgramSource} {rootTy : EffTy} {w : World} 
   · rcases mem_rupdate hx with rfl | ⟨hold, _⟩
     · rw [gIdle] at hrun
       cases hrun
-    · exact code x hold hrun reads marker ty declared
+    · exact codeOk_races (racesKept_of_eq view.races) (code x hold hrun reads marker ty declared)
   · have same : Guard.commandOwner (Code := RProgram) (M.update g) = Guard.commandOwner M :=
       commandOwner_update M g
     refine ⟨queue.payload,
@@ -770,10 +777,12 @@ theorem fiberTyped_repend {root : ProgramSource} {w : World} {m M' : RState} {wf
     (targets : ∀ id ∈ p'.waitingOn.toList ++ p'.remaining, id.value < m.nextId) :
     FiberTyped root w M' { wf with pending := [p'] } := by
   have declared : (w.Θ wf.id token).isSome = true := old.tokens token parked
-  refine ⟨⟨old.ok.c0, fun q hq => ?_, old.ok.c2, old.ok.c3, old.ok.c4, old.ok.c5⟩, old.delivery,
+  refine ⟨⟨old.ok.c0, fun q hq => ?_, old.ok.c2, old.ok.c3, old.ok.c4, old.ok.c5⟩,
+    old.delivery_races (racesKept_of_eq view.races),
     Nat.lt_of_lt_of_le old.below nextId, ?_, old.parkedIdle,
     fun t hp => Nat.lt_of_lt_of_le (old.parkedBelow t hp) nextToken, old.exited,
-    old.exitedStack, old.deferredCause, fun q hq => ?_, fun o ho => ?_, fun raceId marker => ?_, old.code,
+    old.exitedStack, old.deferredCause, fun q hq => ?_, fun o ho => ?_, fun raceId marker => ?_,
+    old.code_races (racesKept_of_eq view.races),
     old.tokens, fun r race hr o ho => old.raceObservers r race ((view.races r).symm.trans hr) o ho,
     fun q hq id hid => by
       rw [List.mem_singleton.mp hq] at hid
@@ -791,7 +800,8 @@ theorem fiberTyped_repend {root : ProgramSource} {w : World} {m M' : RState} {wf
     · exact storedObserverOk_except view o off (old.observers o ho)
     · exact keyed o ho off
   · obtain ⟨race, resultTy, found, host, token', reply⟩ := old.registration raceId marker
-    exact ⟨race, resultTy, (view.races raceId).trans found, host, token', reply⟩
+    exact ⟨race, resultTy, (view.races raceId).trans found, host, token',
+      stackReply_races (racesKept_of_eq view.races) reply⟩
 
 /-! ## The countdown arm -/
 

@@ -91,11 +91,11 @@ def CompletionStrong (w : World) (ty : EffTy) : Completion Val Err Defect FiberI
   | .ofRefGet cell => ∃ t, w.Ρ cell = some t ∧ Ty.subN t ty.answer = true
 
 /-- The saved stack and its provenance at a position: the stack composes from some intermediate
-type to the position's declared type, and recorded causes are interrupts. Current code is not part
-of it: `LiveCode` and `ReadCode` type it where it is read. -/
+type to the position's declared type (`PositionStack`: up to row 188 (b)'s injected registration
+callback), and recorded causes are interrupts. Current code is not part of it: `LiveCode` and
+`ReadCode` type it where it is read. -/
 def SavedPosition (root : ProgramSource) (w : World) (final : EffTy) (saved : RSaved) : Prop :=
-  ∃ tin, StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
-    InterruptProvenance saved
+  ∃ tin, PositionStack root w tin final saved.stack ∧ InterruptProvenance saved
 
 /-- **The promise-table column** (`Typed/Vocabulary.lean`: `Π` declares every Deferred cell at the
 type it was made at), its two rows: the work a store owes fits its waiter's token (`Owed`, the due
@@ -133,14 +133,35 @@ theorem savedPosition_of_saved (root : ProgramSource) (w : World) (final : EffTy
     (typed : Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final saved) :
     SavedPosition root w final saved := by
   obtain ⟨tin, _, stack, provenance⟩ := typed
-  exact ⟨tin, stack, provenance⟩
+  exact ⟨tin, positionStack_of_stackAccepts stack, provenance⟩
 
-/-- The active park and saved stack agree on what the declared token delivers. -/
+/-- The active park and saved stack agree on what the declared token delivers; the stack may hold
+row 188 (b)'s injected registration callback (`HostStack`). -/
 def ActiveDelivery (root : ProgramSource) (w : World) (m : RState) : Prop :=
   ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token →
     ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
-      StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final f.frame.stack ∧
-      InterruptProvenance f.frame
+      HostStack root w m f.id tin final f.frame.stack ∧ InterruptProvenance f.frame
+
+/-- `ActiveDelivery` moves to a machine with the same fibers whose races keep their host and
+token (row 188 (b)'s registration arrows read them). -/
+theorem activeDelivery_races {root : ProgramSource} {w : World} {m m' : RState}
+    (fibers : m'.fibers = m.fibers) (kept : RacesKept m m') (h : ActiveDelivery root w m) :
+    ActiveDelivery root w m' := by
+  intro f hf token parked
+  obtain ⟨tin, final, declared, final', stack, provenance⟩ :=
+    h f (by rw [← fibers]; exact hf) token parked
+  exact ⟨tin, final, declared, final', hostStack_races kept stack, provenance⟩
+
+/-- `RegistrationState` moves likewise. -/
+theorem registrationState_races {root : ProgramSource} {w : World} {m m' : RState}
+    (fibers : m'.fibers = m.fibers) (kept : RacesKept m m') (h : RegistrationState root w m) :
+    RegistrationState root w m' := by
+  intro fiber hf raceId marker
+  obtain ⟨race, resultTy, found, host, token, reply⟩ :=
+    h fiber (by rw [← fibers]; exact hf) raceId marker
+  obtain ⟨race', found', host', token'⟩ := kept raceId race found
+  exact ⟨race', resultTy, found', host'.trans host, by rw [host', token']; exact token,
+    stackReply_races kept reply⟩
 
 /-- The generated whole-state predicate and the correlations: world validity, every generated
 typed position, active delivery, the settled native guard conditions, and the exact
@@ -222,11 +243,11 @@ def ReadsCode (id : FiberId) (commands : List RCmd) : Prop :=
 is typed with its stack at the fiber's declared type. An exited fiber's code slot is never read
 again (`E4-TYPED-CE-011`'s finished run); a running fiber's code is read only by the queued
 command that continues it, which a budget cut may have dropped. A race registration marker is
-`RegistrationState`'s. -/
+`RegistrationState`'s; a registration callback an injected yield saved in the stack is a
+registration arrow of the code's `HostStack` (decisions row 188 (b)). -/
 def LiveCode (root : ProgramSource) (w : World) (m : RState) : Prop :=
   ∀ f ∈ m.fibers, f.exit = none → f.running = false → raceRegistrationR f.frame.current = none →
-    ∀ ty, w.Γ f.id = some ty →
-      Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty f.frame
+    ∀ ty, w.Γ f.id = some ty → CodeOk root w m f.id ty f.frame
 
 /-- `I`'s code clause for running fibers: a running fiber whose current code a queued `loop` or
 `deliver` reads is typed with its stack at its declared type. A running fiber continued by
@@ -236,7 +257,14 @@ inert. -/
 def ReadCode (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd) : Prop :=
   ∀ f ∈ m.fibers, f.running = true → ReadsCode f.id commands →
     raceRegistrationR f.frame.current = none → ∀ ty, w.Γ f.id = some ty →
-      Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty f.frame
+      CodeOk root w m f.id ty f.frame
+
+/-- `ReadCode` moves to a machine with the same fibers whose races keep their host and token. -/
+theorem readCode_races {root : ProgramSource} {w : World} {m m' : RState} {q : List RCmd}
+    (fibers : m'.fibers = m.fibers) (kept : RacesKept m m') (code : ReadCode root w m q) :
+    ReadCode root w m' q := by
+  intro f hf running reads marker ty declared
+  exact codeOk_races kept (code f (by rw [← fibers]; exact hf) running reads marker ty declared)
 
 /-- Row 139's halting freedom and liveness, on the machine alone. Each clause names the halting
 arm it rules out; with the scope-finalizer drops of `ObserverState` and `QueueOk.observer`, with
@@ -798,10 +826,11 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     unfold Guard.internalKeys
     rw [state, races, fibers]
   refine ⟨⟨?_, ⟨fun f hf => ok.c0 f (member f hf), ?_, ?_⟩,
-    fun f hf token parked => deliv f (member f hf) token parked, ?_,
+    fun f hf token parked => ?_, ?_,
     ⟨fun f hf => obsv.pendingOwner f (member f hf), fun f hf o ho =>
       storedObserverOk_congr lookup raceLookup state o (obsv.observers f (member f hf) o ho)⟩,
-    fun f hf raceId marker => ?_⟩, services, fun f hf => code f (member f hf), ?_⟩
+    fun f hf raceId marker => ?_⟩, services, fun f hf hx hr hm ty d =>
+      codeOk_races (racesKept_of_eq raceLookup) (code f (member f hf) hx hr hm ty d), ?_⟩
   · exact
       { ids := by rw [fibers]; exact valid.ids
         fibers := fun id => by rw [fibers]; exact valid.fibers id
@@ -824,6 +853,8 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     exact ok.c1
   · rw [state]
     exact ok.c2
+  · obtain ⟨tin, final, d1, d2, st, pv⟩ := deliv f (member f hf) token parked
+    exact ⟨tin, final, d1, d2, hostStack_races (racesKept_of_eq raceLookup) st, pv⟩
   · exact
       { fiberIds := by rw [fibers]; exact sched.fiberIds
         fibersBelow := fun f hf => by rw [nextId]; exact sched.fibersBelow f (member f hf)
@@ -864,7 +895,8 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
           rw [nextId]
           exact sched.observersBelow f (member f hf) o ho k hk }
   · obtain ⟨race, resultTy, found, host, token, reply⟩ := reg f (member f hf) raceId marker
-    exact ⟨race, resultTy, (raceLookup raceId).trans found, host, token, reply⟩
+    exact ⟨race, resultTy, (raceLookup raceId).trans found, host, token,
+      stackReply_races (racesKept_of_eq raceLookup) reply⟩
   · refine ⟨stuck.trans live.running, fun o ho owner priority mode => ?_⟩
     rw [state] at ho
     rw [lookup]
@@ -874,7 +906,9 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
 theorem queueOk_emit {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
     (events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram Unit))
     (queue : QueueOk root w m commands) : QueueOk root w (m.emit events) commands :=
-  { payload := queue.payload, authority := queue.authority, delivery := queue.delivery,
+  { payload := queue.payload, authority := queue.authority,
+    delivery := fun c hc => commandDelivery_races (m := m) (m' := m.emit events) (fun _ => rfl)
+      (racesKept_of_eq fun _ => rfl) c (queue.delivery c hc),
     owners := queue.owners, registration := queue.registration,
     keys := ⟨queue.keys.below, queue.keys.disjoint⟩,
     observer := fun source exit o ho => observerCommandOk_congr (m := m) (m' := m.emit events)
@@ -1295,7 +1329,7 @@ theorem preds_savedOk_mono (root : ProgramSource) (w w' : World) (e : Expect) (x
   rw [same] at hty
   cases hty
   obtain ⟨tin, stack, provenance⟩ := h _ h0
-  exact ⟨tin, Contracts.stackAccepts_mono ord stack, provenance⟩
+  exact ⟨tin, positionStack_mono ord stack, provenance⟩
 
 /-- A tape with no host answer is admitted at every machine it meets. -/
 theorem admittedReplay_noHostAnswer (root : ProgramSource) (J : World → RState → Prop)
