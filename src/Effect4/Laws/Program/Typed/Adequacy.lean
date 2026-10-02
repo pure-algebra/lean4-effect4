@@ -30,28 +30,81 @@ open Contracts
 
 /-! ## The handler judgment for the store rows -/
 
+/-! ## The memo table (decisions row 187 (c)) -/
+
+/-- A memo entry's cell at its layer: declared at the built context and the layer's own checked
+error type, the certificate `memoBuild`'s row declares it at (`storePre`) and the columns
+`memoComplete`'s exit fits. A path that is no checked layer constrains nothing. -/
+def LayerCellTyped (root : ProgramSource) (w : World) (layer : LayerId) (cell : DeferredKey) :
+    Prop :=
+  ∀ l lt, Node.at_ (.eff root.program) layer = some (.layer l) →
+    Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt →
+      w.«Π» cell = some (.handle Ty.contextTarget, lt.error)
+
+/-- **The memo table**: every entry's cell is typed at its layer, read through the memo world's
+one view of its cells (`MemoWorld.layerCells`). The promise table's `memoBuild` row
+(`Typed/Vocabulary.lean`: `Π` declares a built cell at its layer's type). -/
+def MemoTableTyped (root : ProgramSource) (w : World) (memo : MemoWorld) : Prop :=
+  ∀ p ∈ memo.layerCells, LayerCellTyped root w p.1 p.2
+
+/-- Declarations are kept along the host order (`World.le`'s `Π` extension). -/
+theorem MemoTableTyped.mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
+    {memo : MemoWorld} (h : MemoTableTyped root w memo) : MemoTableTyped root w' memo :=
+  fun p hp l lt node checked => ord.1.2.2.1 _ _ (h p hp l lt node checked)
+
+/-- A memo world whose cells are among a typed one's is typed at every later world. -/
+theorem memoTable_step {root : ProgramSource} {w w' : World} {memo memo' : MemoWorld}
+    (ord : w.leHost w') (h : MemoTableTyped root w memo)
+    (keep : ∀ p ∈ memo'.layerCells, p ∈ memo.layerCells) : MemoTableTyped root w' memo' :=
+  fun p hp => MemoTableTyped.mono ord h p (keep p hp)
+
+/-- A step that is no build adds no memo cell (`syncOpStep_layerCells`). -/
+theorem layerCells_of_not_build {op : SyncOp} {s s' : Stores} {ans : Val}
+    (step : syncOpStep op s = some (s', ans))
+    (notBuild : ∀ layer memoMap, op ≠ .memoBuild layer memoMap) :
+    ∀ p ∈ s'.memo.layerCells, p ∈ s.memo.layerCells := by
+  intro p hp
+  rcases syncOpStep_layerCells op s s' ans step p hp with old | ⟨⟨memoMap, build⟩, _, _⟩
+  · exact old
+  · exact absurd build (notBuild _ _)
+
+/-- A step that keeps the Deferred cells' count adds no memo cell: a build allocates one. -/
+theorem layerCells_of_cells_length {op : SyncOp} {s s' : Stores} {ans : Val}
+    (step : syncOpStep op s = some (s', ans))
+    (len : s'.deferreds.cells.length = s.deferreds.cells.length) :
+    ∀ p ∈ s'.memo.layerCells, p ∈ s.memo.layerCells := by
+  intro p hp
+  rcases syncOpStep_layerCells op s s' ans step p hp with old | ⟨_, _, grown⟩
+  · exact old
+  · rw [grown] at len
+    simp only [DeferredStore.make, List.length_append, List.length_singleton] at len
+    omega
+
 /-- The store half of the typed state that the store rows read and keep: the world's
 declarations cover exactly the allocated cells and promises (`WorldValid.heap`, `.promises`),
 every stored value fits its cell's declared type (the generated `HeapCell` column), every
 closing exit a scope holds fits `Exit<unknown, unknown>` (DI-94's release type: the
 `ScopeState.closed.exit` source row, which seat C un-refuses), and every memo entry's Deferred
 and layer scope exist (`Stores.MemoValid`, the memo clause of `WorldValid.wf`), which
-`memoRelease`'s post reads when it answers the layer scope (decisions row 156). -/
-structure StoreTyped (w : World) : Prop where
+`memoRelease`'s post reads when it answers the layer scope (decisions row 156), and every memo
+entry's cell is declared at its layer's columns (`MemoTableTyped`, decisions row 187 (c)), which
+`memoGet`'s post and `memoComplete`'s completion read. -/
+structure StoreTyped (root : ProgramSource) (w : World) : Prop where
   heap : ∀ key, (w.Ρ key).isSome = true ↔ key.index < w.state.refs.length
   promises : ∀ key, (w.«Π» key).isSome = true ↔ key.index < w.state.deferreds.cells.length
   values : ∀ (i : Nat) (v : Val), w.state.refs[i]? = some v → ∀ ty, w.Ρ ⟨i⟩ = some ty → Fits w v ty
   scopeExits : ∀ e ∈ w.state.scopes.entries, ∀ ex, e.scope.closingExit? = some ex →
     FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex
   memo : w.state.MemoValid
+  memoTable : MemoTableTyped root w w.state.memo
 
 /-- **The store handler fulfils row `op`** (the 2026-09-05 review's `Implements`): at a world
 whose store is typed, a request the row's pre admits steps (no frontier), and its answer lies in
 the row's post at a later world over the new store, which is typed again. -/
 def StoreImplements (root : ProgramSource) (op : SyncOp) : Prop :=
-  ∀ (w : World) (cert : StoreCert op), StoreTyped w → storePre root w op cert →
+  ∀ (w : World) (cert : StoreCert op), StoreTyped root w → storePre root w op cert →
     ∃ st' ans, syncOpStep op w.state = some (st', ans) ∧
-      ∃ w', w.leHost w' ∧ w'.state = st' ∧ StoreTyped w' ∧ storePost w' op cert ans
+      ∃ w', w.leHost w' ∧ w'.state = st' ∧ StoreTyped root w' ∧ storePost w' op cert ans
 
 /-- **The handler rule for `TypedProg`'s store arm**, one theorem for every row: a typed store
 operation run by a handler that fulfils its row steps to a typed continuation at a later world
@@ -59,9 +112,9 @@ over the new store, which is typed again. This is what the evaluator's store arm
 (`evaluateRawR` installs `k ans` over the new store). -/
 theorem storeStep_typed {root : ProgramSource} {op : SyncOp} (impl : StoreImplements root op)
     {w : World} {ty : EffTy} {k : Val → RProgram}
-    (typed : TypedProg root w ty (.vis (.inl op) k)) (store : StoreTyped w) :
+    (typed : TypedProg root w ty (.vis (.inl op) k)) (store : StoreTyped root w) :
     ∃ st' ans, syncOpStep op w.state = some (st', ans) ∧
-      ∃ w', w.leHost w' ∧ w'.state = st' ∧ StoreTyped w' ∧ TypedProg root w' ty (k ans) := by
+      ∃ w', w.leHost w' ∧ w'.state = st' ∧ StoreTyped root w' ∧ TypedProg root w' ty (k ans) := by
   obtain ⟨cert, pre, next⟩ := TypedProg.store_inv typed
   obtain ⟨st', ans, step, w', ord, hstate, store', post⟩ := impl w cert store pre
   exact ⟨st', ans, step, w', ord, hstate, store', next w' ord ans post⟩
@@ -70,7 +123,7 @@ theorem storeStep_typed {root : ProgramSource} {op : SyncOp} (impl : StoreImplem
 `unit` whatever the row's post says. -/
 theorem storeStep_answers {root : ProgramSource} {op : SyncOp} (impl : StoreImplements root op)
     {w : World} {ty : EffTy} {k : Val → RProgram}
-    (typed : TypedProg root w ty (.vis (.inl op) k)) (store : StoreTyped w) :
+    (typed : TypedProg root w ty (.vis (.inl op) k)) (store : StoreTyped root w) :
     syncOpStep op w.state ≠ none := by
   obtain ⟨st', ans, step, _⟩ := storeStep_typed impl typed store
   rw [step]
@@ -80,14 +133,14 @@ theorem storeStep_answers {root : ProgramSource} {op : SyncOp} (impl : StoreImpl
 
 /-- A store step that keeps the heap, the Deferred cells' completions and the external
 spellings moves to the world over the new store: later in the host order, and typed. -/
-theorem restate_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
-    (store : StoreTyped w) (step : syncOpStep op w.state = some (st', ans))
+theorem restate_world {root : ProgramSource} {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
+    (store : StoreTyped root w) (step : syncOpStep op w.state = some (st', ans))
     (refs : st'.refs = w.state.refs)
     (cellsLength : st'.deferreds.cells.length = w.state.deferreds.cells.length)
     (completions : ∀ key c', st'.deferreds.cellAt key = some c' →
       ∃ c, w.state.deferreds.cellAt key = some c ∧ c'.completion = c.completion)
     (externals : st'.externals = w.state.externals) :
-    w.leHost { w with state := st' } ∧ StoreTyped { w with state := st' } := by
+    w.leHost { w with state := st' } ∧ StoreTyped root { w with state := st' } := by
   have le := syncOpStep_le op w.state st' ans step
   have ext : Extends w.state.externals.allocated st'.externals.allocated := by
     rw [externals]
@@ -108,7 +161,7 @@ theorem restate_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
       rw [same] at hcomp
       exact completion_transport w { w with state := st' } types (fun _ _ h => h) ext completion
         (h.2 c hc0 completion hcomp)
-  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_⟩⟩
+  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩
   · intro key
     change (w.Ρ key).isSome = true ↔ key.index < st'.refs.length
     rw [refs]
@@ -125,13 +178,15 @@ theorem restate_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit op w.state st' ans step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
   · exact syncOpStep_memoValid _ _ _ _ store.memo step
+  · exact memoTable_step ord store.memoTable (layerCells_of_cells_length step cellsLength)
 
 /-- A step that keeps the whole store answers at the same world. -/
-theorem same_world {w : World} {op : SyncOp} {ans : Val} (store : StoreTyped w)
+theorem same_world {root : ProgramSource} {w : World} {op : SyncOp} {ans : Val}
+    (store : StoreTyped root w)
     {post : World → Val → Prop} (holds : post w ans)
     (step : syncOpStep op w.state = some (w.state, ans)) :
     ∃ st' ans', syncOpStep op w.state = some (st', ans') ∧
-      ∃ w', w.leHost w' ∧ w'.state = st' ∧ StoreTyped w' ∧ post w' ans' :=
+      ∃ w', w.leHost w' ∧ w'.state = st' ∧ StoreTyped root w' ∧ post w' ans' :=
   ⟨w.state, ans, step, w, leHost_refl w, rfl, store, holds⟩
 
 /-! ## Value facts the store rows read -/
@@ -170,18 +225,21 @@ theorem fits_partialUpdate {w : World} (f : FnName) {a a' : Val} {t : Ty} (h : F
     exact fits_total _ h
 
 /-- A declared cell holds a value: reading it is not a frontier. -/
-theorem cell_readable {w : World} {cell : RefKey} {t : Ty} (store : StoreTyped w)
+theorem cell_readable {root : ProgramSource} {w : World} {cell : RefKey} {t : Ty}
+    (store : StoreTyped root w)
     (declared : w.Ρ cell = some t) : ∃ a, w.state.refs[cell.index]? = some a :=
   ⟨_, List.getElem?_eq_getElem ((store.heap cell).mp (by rw [declared]; rfl))⟩
 
 /-- A declared promise has a cell: reading it is not a frontier. -/
-theorem promise_readable {w : World} {key : DeferredKey} (store : StoreTyped w)
+theorem promise_readable {root : ProgramSource} {w : World} {key : DeferredKey}
+    (store : StoreTyped root w)
     (declared : (w.«Π» key).isSome = true) : ∃ c, w.state.deferreds.cells[key.index]? = some c :=
   ⟨_, List.getElem?_eq_getElem ((store.promises key).mp declared)⟩
 
 /-- The cell a `refModify`-like row names holds a `nat` at a cell declared at the native row's
 cell type; reading it is not a frontier. -/
-theorem nat_cell {w : World} {cell : RefKey} (store : StoreTyped w) (pre : RefDeclared w cell .nat) :
+theorem nat_cell {root : ProgramSource} {w : World} {cell : RefKey} (store : StoreTyped root w)
+    (pre : RefDeclared w cell .nat) :
     ∃ t n, w.Ρ cell = some t ∧ Equiv t .nat ∧ refPeek w.state.refs cell = some (.nat n) := by
   obtain ⟨t, declared, equiv⟩ := pre
   have live : cell.index < w.state.refs.length := (store.heap cell).mp (by rw [declared]; rfl)
@@ -262,12 +320,12 @@ theorem complete_cells_length (d : DeferredStore) (cell : DeferredKey)
 
 /-- A store step that writes one ref cell with a value its declared type admits moves to the world
 over the new store: later in the host order, and typed. -/
-theorem poke_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : RefKey} {t : Ty}
-    {v : Val} (store : StoreTyped w) (step : syncOpStep op w.state = some (st', ans))
+theorem poke_world {root : ProgramSource} {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : RefKey} {t : Ty}
+    {v : Val} (store : StoreTyped root w) (step : syncOpStep op w.state = some (st', ans))
     (refs : st'.refs = refPoke w.state.refs cell v) (deferreds : st'.deferreds = w.state.deferreds)
     (externals : st'.externals = w.state.externals)
     (declared : w.Ρ cell = some t) (fits : Fits w v t) :
-    w.leHost { w with state := st' } ∧ StoreTyped { w with state := st' } := by
+    w.leHost { w with state := st' } ∧ StoreTyped root { w with state := st' } := by
   have le := syncOpStep_le op w.state st' ans step
   have ext : Extends w.state.externals.allocated st'.externals.allocated := by
     rw [externals]
@@ -311,7 +369,7 @@ theorem poke_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : 
       rw [deferreds] at hc
       exact completion_transport w { w with state := st' } types (fun _ _ h => h) ext completion
         (h.2 c hc completion hcomp)
-  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_⟩⟩
+  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩
   · intro key
     change (w.Ρ key).isSome = true ↔ key.index < st'.refs.length
     rw [refs]
@@ -337,16 +395,17 @@ theorem poke_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : 
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit op w.state st' ans step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
   · exact syncOpStep_memoValid _ _ _ _ store.memo step
+  · exact memoTable_step ord store.memoTable (layerCells_of_cells_length step (by rw [deferreds]))
 
 /-- A store step that completes one promise with a completion its declared columns admit moves to
 the world over the new store: later in the host order, and typed. -/
-theorem complete_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : DeferredKey}
+theorem complete_world {root : ProgramSource} {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : DeferredKey}
     {effect : Completion Val Err Defect FiberId Ann}
-    (store : StoreTyped w) (step : syncOpStep op w.state = some (st', ans))
+    (store : StoreTyped root w) (step : syncOpStep op w.state = some (st', ans))
     (deferreds : st'.deferreds = (w.state.deferreds.complete cell effect).1)
     (refs : st'.refs = w.state.refs) (externals : st'.externals = w.state.externals)
     (typed : ∀ types, w.«Π» cell = some types → CompletionOk w types effect) :
-    w.leHost { w with state := st' } ∧ StoreTyped { w with state := st' } := by
+    w.leHost { w with state := st' } ∧ StoreTyped root { w with state := st' } := by
   have le := syncOpStep_le op w.state st' ans step
   have ext : Extends w.state.externals.allocated st'.externals.allocated := by
     rw [externals]
@@ -381,7 +440,7 @@ theorem complete_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cel
         rw [hkey] at h
         exact completion_transport w { w with state := st' } types (fun _ _ h => h) ext effect
           (typed types h.1)
-  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_⟩⟩
+  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩
   · intro key
     change (w.Ρ key).isSome = true ↔ key.index < st'.refs.length
     rw [refs]
@@ -398,6 +457,8 @@ theorem complete_world {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cel
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit op w.state st' ans step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
   · exact syncOpStep_memoValid _ _ _ _ store.memo step
+  · exact memoTable_step ord store.memoTable
+      (layerCells_of_cells_length step (by rw [deferreds, complete_cells_length]))
 
 /-! ## The store rows, one instance each
 
@@ -405,9 +466,9 @@ Twenty-nine of the thirty-one rows. The six read-modify-write rows that write `f
 (`refUpdate`, `refGetAndUpdate`, `refUpdateAndGet`, `refUpdateSome`, `refGetAndUpdateSome`,
 `refUpdateSomeAndGet`) read `Fits w (nat n) t → Fits w (nat m) t` (`fits_nat_irrel`, one
 induction over the membership fold in `Membership.lean`) through `fits_total` and
-`fits_partialUpdate`; `memoGet` and `memoComplete` need a memo-table typing clause (every entry's
-Deferred declared at its layer's context and error types) that no typed-state clause states yet.
-Those two are declared in `M3bAdequacy`. -/
+`fits_partialUpdate`; `memoGet` and `memoComplete` read the memo table (`MemoTableTyped`: every
+entry's Deferred declared at its layer's context and error types, decisions row 187 (c)), which
+`memoBuild` establishes and every other row keeps (`syncOpStep_layerCells`). -/
 
 theorem scopeRemove_implements (root : ProgramSource) (scope key : Nat) :
     StoreImplements root (.scopeRemove scope key) := by
@@ -616,7 +677,7 @@ theorem refMake_implements (root : ProgramSource) (initial : Val) :
   obtain ⟨le, _⟩ := refMake_extension w initial cert _ _ step fresh (fits_hasTy w cert initial fits)
   have ord : w.leHost (w.addRef { w.state with refs := w.state.refs ++ [initial] }
       ⟨w.state.refs.length⟩ cert) := ⟨le, fun _ _ h => h⟩
-  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
+  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
   · change ∀ k, (tableInsert w.Ρ ⟨w.state.refs.length⟩ cert k).isSome = true ↔
       k.index < (w.state.refs ++ [initial]).length
     rw [List.length_append, List.length_singleton]
@@ -650,6 +711,7 @@ theorem refMake_implements (root : ProgramSource) (initial : Val) :
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit _ w.state _ _ step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
   · exact syncOpStep_memoValid _ _ _ _ store.memo step
+  · exact memoTable_step ord store.memoTable (layerCells_of_not_build step (fun _ _ h => nomatch h))
 
 theorem refGet_implements (root : ProgramSource) (cell : RefKey) :
     StoreImplements root (.refGet cell) := by
@@ -708,7 +770,7 @@ theorem deferredMake_implements (root : ProgramSource) : StoreImplements root .d
   obtain ⟨le, _⟩ := deferredMake_extension w cert _ _ step fresh
   have ord : w.leHost (w.addPromise { w.state with deferreds := w.state.deferreds.make.2 }
       w.state.deferreds.make.1 cert) := ⟨le, fun _ _ h => h⟩
-  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
+  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
   · exact store.heap
   · change ∀ k, (tableInsert w.«Π» w.state.deferreds.make.1 cert k).isSome = true ↔
       k.index < w.state.deferreds.make.2.cells.length
@@ -723,6 +785,7 @@ theorem deferredMake_implements (root : ProgramSource) : StoreImplements root .d
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit _ w.state _ _ step e he ex hex
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
   · exact syncOpStep_memoValid _ _ _ _ store.memo step
+  · exact memoTable_step ord store.memoTable (layerCells_of_not_build step (fun _ _ h => nomatch h))
 
 theorem deferredIsDone_implements (root : ProgramSource) (key : DeferredKey) :
     StoreImplements root (.deferredIsDone key) := by
@@ -828,7 +891,7 @@ theorem memoFork_implements (root : ProgramSource) (parent : Option MemoMapId) :
 
 theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap : MemoMapId) :
     StoreImplements root (.memoBuild layer memoMap) := by
-  intro w cert store _
+  intro w cert store pre
   change Ty × Ty at cert
   have fresh : w.«Π» w.state.deferreds.make.1 = none := by
     cases h : w.«Π» w.state.deferreds.make.1 with
@@ -838,7 +901,7 @@ theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap :
       exact absurd this (Nat.lt_irrefl _)
   have step := syncOpStep_memoBuild w.state layer memoMap
   obtain ⟨le, _⟩ := memoBuild_extension w cert _ layer memoMap _ step fresh
-  refine ⟨_, _, step, _, ⟨le, fun _ _ h => h⟩, rfl, ⟨?_, ?_, ?_, ?_, ?_⟩,
+  refine ⟨_, _, step, _, ⟨le, fun _ _ h => h⟩, rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩,
     fits_scopeHandle _ _ (ScopeStore.entryAt_make_self _ _ _)⟩
   · exact store.heap
   · change ∀ k, (tableInsert w.«Π» w.state.deferreds.make.1 cert k).isSome = true ↔
@@ -854,6 +917,64 @@ theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap :
     obtain ⟨e₀, he₀, hex₀⟩ := syncOpStep_closingExit _ w.state _ _ step e he ex hex
     exact fitsExit_mono ⟨le, fun _ _ h => h⟩ (store.scopeExits e₀ he₀ ex hex₀)
   · exact syncOpStep_memoValid _ _ _ _ store.memo step
+  · intro q hq
+    rcases syncOpStep_layerCells _ w.state _ _ step q hq with old | ⟨⟨mm, build⟩, cell, _⟩
+    · exact MemoTableTyped.mono ⟨le, fun _ _ h => h⟩ store.memoTable q old
+    · injection build with same
+      intro l lt node checked
+      obtain ⟨l', lt', node', checked', hcert⟩ := pre
+      rw [same, node] at node'
+      cases node'
+      rw [same, checked] at checked'
+      cases checked'
+      rw [cell]
+      change tableInsert w.«Π» w.state.deferreds.make.1 cert w.state.deferreds.make.1 = _
+      rw [insert_here, hcert]
+
+/-- **`memoGet` fulfils its row** (decisions row 187): a hit answers the entry's cell and its map,
+and the memo table declares the cell at the asked layer's columns, the built context and the
+error type the row's certificate names; a miss answers `unit`. -/
+theorem memoGet_implements (root : ProgramSource) (layer : LayerId) (memoMap : MemoMapId) :
+    StoreImplements root (.memoGet layer memoMap) := by
+  intro w cert store pre
+  change Ty at cert
+  obtain ⟨l, lt, node, checked, hcert⟩ := pre
+  cases hget : w.state.memo.get layer memoMap with
+  | none =>
+    exact same_world store (post := fun w' a => storePost w' (.memoGet layer memoMap) cert a)
+      (Or.inl rfl) (syncOpStep_memoGet_none _ _ _ hget)
+  | some q =>
+    obtain ⟨owner, entry⟩ := q
+    have step := syncOpStep_memoGet_some w.state layer memoMap hget
+    obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
+    obtain ⟨m, hm, _, he⟩ := MemoWorld.get_mem hget
+    have declared := store.memoTable (layer, entry.deferred)
+      (MemoWorld.mem_layerCells.mpr ⟨m, hm, (layer, entry), he, rfl⟩) l lt node checked
+    rw [hcert] at declared
+    exact ⟨_, _, step, _, ord, rfl, store',
+      Or.inr ⟨entry.deferred, owner, Val.memoHit?_memoHit _ _, declared⟩⟩
+
+/-- **`memoComplete` fulfils its row** (decisions row 187): the memo table declares the entry's
+cell at the layer's columns, which the row's exit fits, so the completed cell stays typed; an
+absent entry changes nothing. -/
+theorem memoComplete_implements (root : ProgramSource) (layer : LayerId) (memoMap : MemoMapId)
+    (exit : ExitV) : StoreImplements root (.memoComplete layer memoMap exit) := by
+  intro w cert store pre
+  obtain ⟨l, lt, node, checked, fits⟩ := pre
+  cases hentry : w.state.memo.entryAt memoMap layer with
+  | none =>
+    exact same_world store (post := fun w' a => storePost w' (.memoComplete layer memoMap exit) cert a)
+      rfl (syncOpStep_memoComplete_none _ _ _ _ hentry)
+  | some entry =>
+    have step := syncOpStep_memoComplete_some w.state layer memoMap exit hentry
+    obtain ⟨m, hm, _, he⟩ := MemoWorld.entryAt_mem hentry
+    have declared := store.memoTable (layer, entry.deferred)
+      (MemoWorld.mem_layerCells.mpr ⟨m, hm, (layer, entry), he, rfl⟩) l lt node checked
+    obtain ⟨ord, store'⟩ := complete_world store step rfl rfl rfl fun types h => by
+      rw [declared] at h
+      cases h
+      exact completionOk_of_fitsExit fits.1
+    exact ⟨_, _, step, _, ord, rfl, store', rfl⟩
 
 /-! ## The fiber rows
 
@@ -1254,9 +1375,9 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
 One goal per row the evaluator answers, beside the eighteen command goals (`M6Ledger`), with the
 two generic rules: the store rows through `syncOpStep` (`StoreImplements`), the fiber rows
 through the frame the evaluator saves and the answers their helpers give. Wave 2 consumes them
-in M6's `loop` and `deliver` arms. Proved here: the three generic rules, 29 store rows and 40
-fiber instances (the guard row's through `TypedProg.guard_frame`); declared: the 2 store rows
-named above (`memoGet`, `memoComplete`). -/
+in M6's `loop` and `deliver` arms. Proved here: the three generic rules, the 31 store rows (`memoGet`
+and `memoComplete` through the memo table, decisions row 187) and 40 fiber instances (the guard
+row's through `TypedProg.guard_frame`). -/
 
 namespace M3bAdequacy
 
@@ -1355,9 +1476,9 @@ theorem memoRelease_implements (root : ProgramSource) (layer : LayerId) (memoMap
 
 theorem storeStep_typed (root : ProgramSource) (op : SyncOp) : ProofGraph.Obligation
     (StoreImplements root op → ∀ (w : World) (ty : EffTy) (k : Val → RProgram),
-      TypedProg root w ty (.vis (.inl op) k) → StoreTyped w →
+      TypedProg root w ty (.vis (.inl op) k) → StoreTyped root w →
       ∃ st' ans, syncOpStep op w.state = some (st', ans) ∧
-        ∃ w', w.leHost w' ∧ w'.state = st' ∧ StoreTyped w' ∧ TypedProg root w' ty (k ans)) := ⟨⟩
+        ∃ w', w.leHost w' ∧ w'.state = st' ∧ StoreTyped root w' ∧ TypedProg root w' ty (k ans)) := ⟨⟩
 
 theorem answerFrame_typed (root : ProgramSource) (w : World) (outer tin : EffTy) (post : World → ExitV → Prop)
     (next : ExitV → RProgram) : ProofGraph.Obligation
@@ -1714,12 +1835,14 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.refGetAndUpdateSome_implements
 #obligation_proved Effect4.Program.Typed.M3bAdequacy.refUpdateSomeAndGet_implements :=
   @Effect4.Program.Typed.refUpdateSomeAndGet_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.memoGet_implements
-#proof_wanted Effect4.Program.Typed.M3bAdequacy.memoComplete_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.memoGet_implements :=
+  @Effect4.Program.Typed.memoGet_implements
+#obligation_proved Effect4.Program.Typed.M3bAdequacy.memoComplete_implements :=
+  @Effect4.Program.Typed.memoComplete_implements
 #obligation_proved Effect4.Program.Typed.M3bAdequacy.guard_frame :=
   fun _ _ _ _ _ h => Effect4.Program.Typed.TypedProg.guard_frame h
 #obligation_proved Effect4.Program.Typed.M3bWorld.finalizerTyped_mono :=
   @Effect4.Program.Typed.finalizerTyped_mono
 #obligation_audit Effect4.Program.Typed.M3bAdequacy
-#typed_state_obligations Effect4.Program.Typed.M3bAdequacy ceiling 2
+#typed_state_obligations Effect4.Program.Typed.M3bAdequacy ceiling 0
   using aesop (rule_sets := [Effect4.TypedState])

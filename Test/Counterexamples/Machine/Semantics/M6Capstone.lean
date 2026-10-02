@@ -142,7 +142,7 @@ theorem typed_loaded_at (p : NativeEff) (resultTy : EffTy) (fuel compileFuel : N
       rw [Env.Context.getV_empty] at hget
       cases hget
   · intro race hr; cases hr
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
   · intro f hf token hq
     change f ∈ [_] at hf
@@ -269,7 +269,7 @@ theorem reviewed_loaded_at (p : NativeEff) (resultTy : EffTy) (fuel compileFuel 
       rw [Env.Context.getV_empty] at hget
       cases hget
   · intro race hr; cases hr
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
   · intro f hf token hq
     change f ∈ [_] at hf
@@ -723,7 +723,7 @@ theorem typed : H1.ReviewedTypedState (program : ProgramSource) ty world machine
       cases hget
   · intro r hr
     cases hr
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
   · intro f hf token hp
     change f ∈ [_] at hf
@@ -1293,7 +1293,7 @@ theorem typed : OldTypedState (rootProgram : ProgramSource) unitTy world machine
       rw [Env.Context.getV_empty] at lookup
       cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f hf token hp
     change f ∈ [fiber] at hf
@@ -1403,7 +1403,7 @@ theorem typed_queued (commands : List RCmd) : H1Shapes.TypedState (rootProgram :
       rw [Env.Context.getV_empty] at lookup
       cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f hf token hp
     change f ∈ [fiber] at hf
@@ -1546,7 +1546,7 @@ theorem result_typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy 
       rw [Env.Context.getV_empty] at lookup
       cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f hf token hp
     change f ∈ [afterFiber] at hf
@@ -1675,7 +1675,7 @@ theorem typedState_machine : TypedState (rootProgram : ProgramSource) unitTy wor
       rw [Env.Context.getV_empty] at lookup
       cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f hf token hp
     change f ∈ [fiber] at hf
@@ -1723,7 +1723,7 @@ theorem typedState_result : TypedState (rootProgram : ProgramSource) unitTy worl
       rw [Env.Context.getV_empty] at lookup
       cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f hf token hp
     change f ∈ [afterFiber] at hf
@@ -2123,7 +2123,7 @@ theorem typed : OldH1TypedState (rootProgram : ProgramSource) unitTy world machi
         change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
         rw [Env.Context.getV_empty] at lookup; cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f member token parked
     rcases member_cases f member with rfl | rfl <;> cases parked
@@ -2161,7 +2161,7 @@ theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world mac
         change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
         rw [Env.Context.getV_empty] at lookup; cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f member token parked
     rcases member_cases f member with rfl | rfl <;> cases parked
@@ -2388,7 +2388,7 @@ theorem result_typed (commands : List RCmd) :
         change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
         rw [Env.Context.getV_empty] at lookup; cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f member token parked
     rcases result_member_cases f member with rfl | rfl <;> cases parked
@@ -2429,7 +2429,7 @@ theorem old_result_typed (commands : List RCmd) :
         change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
         rw [Env.Context.getV_empty] at lookup; cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f member token parked
     rcases result_member_cases f member with rfl | rfl <;> cases parked
@@ -2599,7 +2599,7 @@ theorem typedState_input : OldSplitTypedState (rootProgram : ProgramSource) unit
         change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
         rw [Env.Context.getV_empty] at lookup; cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f member token parked
     rcases member_cases f member with rfl | rfl <;> cases parked

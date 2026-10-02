@@ -764,9 +764,10 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
   · intro r hr
     rw [races] at hr
     cases hr
-  · refine ⟨fun o ho => ?_, fun i v hv => ?_, ⟨fun i v hv => ?_⟩, ⟨fun e he => ?_⟩,
-      fun v hv => ?_, trivial⟩
+  · refine ⟨⟨fun o ho => ?_, fun p hp => ?_⟩, fun i v hv => ?_, ⟨fun i v hv => ?_⟩,
+      ⟨fun e he => ?_⟩, fun v hv => ?_, trivial⟩
     · rw [due] at ho; cases ho
+    · rw [memo] at hp; cases hp
     · change m.state.refs[i]? = some v at hv
       rw [refs] at hv; cases hv
     · change m.state.deferreds.cells[i]? = some v at hv

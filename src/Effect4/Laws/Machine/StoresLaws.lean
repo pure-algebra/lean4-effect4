@@ -1351,6 +1351,166 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hmemo : s.M
     cases hf
     exact hsame rfl hle
 
+/-! ## The memo world's cells by layer (decisions row 187)
+
+The memo-table clause reads one view of the memo world: each entry's layer path with the Deferred
+cell its build allocated (`MemoWorld.layerCells`). A step keeps every pair the view holds, except
+that a build adds its own, at the cell it allocates (`syncOpStep_layerCells`). -/
+
+namespace MemoWorld
+
+/-- Each entry's layer path with its Deferred cell, over every map. -/
+def layerCells (w : MemoWorld) : List (LayerId × DeferredKey) :=
+  w.flatMap fun m => m.entries.map fun e => (e.1, e.2.deferred)
+
+theorem mem_layerCells {w : MemoWorld} {p : LayerId × DeferredKey} :
+    p ∈ w.layerCells ↔ ∃ m ∈ w, ∃ e ∈ m.entries, (e.1, e.2.deferred) = p := by
+  simp only [layerCells, List.mem_flatMap, List.mem_map]
+
+/-- An entry an update rewrites with a function that keeps the cell keeps its pair. -/
+theorem layerCells_updateEntry {w : MemoWorld} {id : MemoMapId} {layer : LayerId}
+    {f : MemoEntry → MemoEntry} {p : LayerId × DeferredKey}
+    (hp : p ∈ (w.updateEntry id layer f).layerCells) (keep : ∀ e, (f e).deferred = e.deferred) :
+    p ∈ w.layerCells := by
+  obtain ⟨n, hn, e', he', rfl⟩ := mem_layerCells.mp hp
+  obtain ⟨m, hm, e, he, heq⟩ := mem_updateEntry_entries hn he'
+  refine mem_layerCells.mpr ⟨m, hm, e, he, ?_⟩
+  rcases heq with rfl | rfl
+  · rfl
+  · rw [keep]
+
+theorem layerCells_deleteEntry {w : MemoWorld} {id : MemoMapId} {layer : LayerId}
+    {p : LayerId × DeferredKey} (hp : p ∈ (w.deleteEntry id layer).layerCells) :
+    p ∈ w.layerCells := by
+  obtain ⟨n, hn, e', he', rfl⟩ := mem_layerCells.mp hp
+  obtain ⟨m, hm, he⟩ := mem_deleteEntry_entries hn he'
+  exact mem_layerCells.mpr ⟨m, hm, e', he, rfl⟩
+
+theorem layerCells_insertEntry {w : MemoWorld} {id : MemoMapId} {layer : LayerId}
+    {entry : MemoEntry} {p : LayerId × DeferredKey} (hp : p ∈ (w.insertEntry id layer entry).layerCells) :
+    p ∈ w.layerCells ∨ p = (layer, entry.deferred) := by
+  obtain ⟨n, hn, e', he', rfl⟩ := mem_layerCells.mp hp
+  rcases mem_insertEntry_entries hn he' with ⟨m, hm, he⟩ | rfl
+  · exact Or.inl (mem_layerCells.mpr ⟨m, hm, e', he, rfl⟩)
+  · exact Or.inr rfl
+
+theorem layerCells_append_empty (w : MemoWorld) (m : MemoMap) (hm : m.entries = []) :
+    layerCells (w ++ [m]) = w.layerCells := by
+  simp only [layerCells, List.flatMap_append, List.flatMap_cons, List.flatMap_nil, hm,
+    List.map_nil, List.append_nil]
+
+end MemoWorld
+
+/-- **A step's memo cells**: every pair after a step was there before, or the step is the build
+of that pair's layer and the pair's cell is the one it allocated. -/
+theorem syncOpStep_layerCells (o : SyncOp) (s s' : Stores) (v : Val)
+    (h : syncOpStep o s = some (s', v)) (p : LayerId × DeferredKey) (hp : p ∈ s'.memo.layerCells) :
+    p ∈ s.memo.layerCells ∨
+      ((∃ memoMap, o = .memoBuild p.1 memoMap) ∧ p.2 = s.deferreds.make.1 ∧
+        s'.deferreds = s.deferreds.make.2) := by
+  have hsame : s'.memo = s.memo → p ∈ s.memo.layerCells := fun ht => by
+    rw [ht] at hp
+    exact hp
+  cases o with
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    left
+    have hp' : p ∈ MemoWorld.layerCells (s.memo ++ [⟨⟨s.nextName⟩, parent, []⟩]) := hp
+    rwa [MemoWorld.layerCells_append_empty _ _ rfl] at hp'
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact Or.inl hp
+    | some q =>
+      obtain ⟨owner, entry⟩ := q
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      have hp' : p ∈ (s.memo.updateEntry owner layer fun e =>
+          { e with observers := e.observers + 1 }).layerCells := hp
+      exact Or.inl (MemoWorld.layerCells_updateEntry hp' (by intro _; rfl))
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    rcases MemoWorld.layerCells_insertEntry hp with old | rfl
+    · exact Or.inl old
+    · exact Or.inr ⟨⟨memoMap, rfl⟩, rfl, rfl⟩
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact Or.inl hp
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact Or.inl hp
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact Or.inl hp
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact Or.inl (MemoWorld.layerCells_deleteEntry hp)
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        have hp' : p ∈ (s.memo.updateEntry memoMap layer fun e =>
+            { e with observers := e.observers - 1 }).layerCells := hp
+        exact Or.inl (MemoWorld.layerCells_updateEntry hp' (by intro _; rfl))
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact Or.inl (hsame rfl)
+  | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
+  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ =>
+    simp only [syncOpStep_deferredMake, syncOpStep_deferredCompleteWith,
+      syncOpStep_deferredInterruptWith, syncOpStep_deferredAwaitCleanup, syncOpStep_scopeMake,
+      syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact Or.inl (hsame rfl)
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact Or.inl (hsame rfl)
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact Or.inl (hsame rfl)
+  | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
+    simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
+    obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact Or.inl (hsame rfl)
+  | clockNow | sleepCancel _ _ =>
+    simp only [syncOpStep_clockNow, syncOpStep_sleepCancel, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact Or.inl (hsame rfl)
+  | _ =>
+    simp only [syncOpStep] at h
+    obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact Or.inl (hsame rfl)
+
 /-! ## Memo map ids (slice 6, the memo cleanup)
 
 Memo maps have distinct ids, each below the next fresh name. Every entry update rewrites a map

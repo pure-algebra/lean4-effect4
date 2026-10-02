@@ -195,7 +195,7 @@ theorem typedState : TypedState (rootProgram : ProgramSource) unitTy world machi
       rw [Env.Context.getV_empty] at lookup
       cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f hf token hp
     rw [member_fiber hf] at hp

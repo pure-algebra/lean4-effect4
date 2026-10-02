@@ -417,7 +417,7 @@ theorem typed_of (s : List ScopeFrame) (running : Bool)
       rw [Env.Context.getV_empty] at lookup
       cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f hf token hp
     change f ∈ [rootFiber s running] at hf
@@ -453,7 +453,7 @@ theorem old_typed_of (s : List ScopeFrame) (running : Bool) (commands : List RCm
       rw [Env.Context.getV_empty] at lookup
       cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
   · intro f hf token hp
     change f ∈ [rootFiber s running] at hf
@@ -817,7 +817,7 @@ theorem afterGood_typed :
       rw [Env.Context.getV_empty] at lookup
       cases lookup
   · intro race member; cases member
-  · refine ⟨(fun o ho => nomatch ho), ?_, ⟨(fun i v h => nomatch h)⟩,
+  · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, ?_, ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
     intro i v hv ty hty
     cases i with

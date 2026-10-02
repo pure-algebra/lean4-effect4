@@ -97,6 +97,16 @@ def SavedPosition (root : ProgramSource) (w : World) (final : EffTy) (saved : RS
   ∃ tin, StackAccepts (TypedProg root) ExitOk (frameProtocols root) w tin final saved.stack ∧
     InterruptProvenance saved
 
+/-- **The promise-table column** (`Typed/Vocabulary.lean`: `Π` declares every Deferred cell at the
+type it was made at), its two rows: the work a store owes fits its waiter's token (`Owed`, the due
+list), and a memo entry's cell is declared at its layer's columns (the `memoBuild` row, decisions
+row 187 (c); `MemoTableTyped`), which `memoGet` and `memoComplete` read (`StoreTyped`). It reads
+the two fields it types, so a store edit that keeps them keeps it by computation. -/
+structure PromiseTableOk (root : ProgramSource) (w : World)
+    (owed : List (Owed (Completion Val Err Defect FiberId Ann))) (memoWorld : MemoWorld) : Prop where
+  due : ∀ o ∈ owed, ∀ ty, w.Θ o.waiter o.token = some ty → CompletionStrong w ty o.code
+  memo : MemoTableTyped root w memoWorld
+
 /-- The generated bundle, instantiated with the strong judgments once. It depends on neither the
 machine nor the queue, so a step that leaves a field alone leaves its clause alone. A closed
 scope's exit fits DI-94's release type `Exit<unknown, unknown>` (decisions row 140): its values
@@ -110,8 +120,7 @@ def preds (root : ProgramSource) : Preds World where
   ResumeOk w _ target token code := Contracts.ResumeOk (TypedProg root) w target token code
   ServiceOk w _ ctx := ServicesFit w ctx.services
   RaceOk w _ races := ∀ r ∈ races, ∃ resultTy, RacePayload root w r resultTy
-  PromiseTable w s := ∀ o ∈ s.deferreds.due, ∀ ty, w.Θ o.waiter o.token = some ty →
-    CompletionStrong w ty o.code
+  PromiseTable w s := PromiseTableOk root w s.deferreds.due s.memo
   HeapCell w key v := ∀ ty, w.Ρ key = some ty → Fits w v ty
   PromiseCell w key cell := ∀ a e, w.«Π» key = some (a, e) →
     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
@@ -323,13 +332,15 @@ theorem machineTyped_not_halted (root : ProgramSource) (rootTy : EffTy) (w : Wor
 receipt-B "For seat C" item 3): the declarations cover exactly the allocated cells and promises
 (`WorldValid.heap`, `.promises` over `WorldValid.state`), every stored value fits its cell's
 declared type (the generated `HeapCell` column), and every closing exit a scope holds fits
-`Exit<unknown, unknown>` (the un-refused `ScopeExitOk` row, row 140), and every memo entry's
-allocations exist (`WorldValid.wf`'s memo clause, which `memoRelease`'s post reads, row 156). It
-reads only `J`'s `TypedState`; `storeStep_typed` consumes it in wave 2's `loop` arm. -/
+`Exit<unknown, unknown>` (the un-refused `ScopeExitOk` row, row 140), every memo entry's
+allocations exist (`WorldValid.wf`'s memo clause, which `memoRelease`'s post reads, row 156), and
+every memo entry's cell is declared at its layer's columns (the promise table's memo row,
+`PromiseTableOk.memo`, row 187). It reads only `J`'s `TypedState`; `storeStep_typed` consumes it
+in wave 2's `loop` arm. -/
 theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
-    {m : RState} (typed : MachineTyped root rootTy w m) : StoreTyped w := by
+    {m : RState} (typed : MachineTyped root rootTy w m) : StoreTyped root w := by
   obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _, _⟩ := typed
-  refine ⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_, fun e he ex hex => ?_, ?_⟩
+  refine ⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_, fun e he ex hex => ?_, ?_, ?_⟩
   · rw [valid.state]
     exact valid.heap key
   · rw [valid.state]
@@ -350,6 +361,8 @@ theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : Wo
     | openMap _ => cases hex
   · rw [valid.state]
     exact valid.wf.2.2.1
+  · rw [valid.state]
+    exact PromiseTableOk.memo ok.c2.c0
 
 /-- **The generated scope clause types every finalizer the scope holds** (decisions row 151
 (a″)): it states the bundle's `FinalizerOk` at the inline slot and at each entry of the map, and a
@@ -1177,8 +1190,8 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
       cases hget
   · intro race hr
     cases hr
-  · exact ⟨(fun o ho => nomatch ho), (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
-      ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
+  · exact ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h),
+      ⟨(fun i v h => nomatch h)⟩, ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
   · intro f hf token hq
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf

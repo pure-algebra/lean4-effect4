@@ -1639,10 +1639,11 @@ theorem storesOk_world {root : ProgramSource} {w w' : World} (ord : w.leHost w')
     (hΘ : w'.Θ = w.Θ) (hΡ : w'.Ρ = w.Ρ) (hPi : w'.«Π» = w.«Π») {e : Expect} {s : Stores}
     (h : StoresOk (preds root) w e s) : StoresOk (preds root) w' e s := by
   obtain ⟨c0, c1, ⟨c2⟩, ⟨c3⟩, c4, c5⟩ := h
-  refine ⟨fun o ho ty declared => ?_, fun i v hv ty declared => ?_,
+  refine ⟨⟨fun o ho ty declared => ?_, MemoTableTyped.mono ord (PromiseTableOk.memo c0)⟩,
+    fun i v hv ty declared => ?_,
     ⟨fun i cell hc a e' declared c hcomp => ?_⟩, ⟨fun entry he => ?_⟩, fun mm hm => ?_, c5⟩
   · rw [hΘ] at declared
-    exact completionStrong_mono ord (c0 o ho ty declared)
+    exact completionStrong_mono ord (PromiseTableOk.due c0 o ho ty declared)
   · rw [hΡ] at declared
     exact fits_mono ord (c1 i v hv ty declared)
   · rw [hPi] at declared
@@ -1990,8 +1991,8 @@ theorem drainDue_preserves (root : ProgramSource) (rootTy : EffTy) :
       · rw [wide.state]
       · rw [wide.state]
       · rw [wide.state]
-    obtain ⟨_, c1, c2, c3, c4, c5⟩ := storesOk_world ord rfl rfl rfl wide.stores
-    exact ⟨(fun o ho => nomatch ho), c1, ⟨c2.c0⟩, c3, c4, c5⟩
+    obtain ⟨c0, c1, c2, c3, c4, c5⟩ := storesOk_world ord rfl rfl rfl wide.stores
+    exact ⟨⟨(fun o ho => nomatch ho), PromiseTableOk.memo c0⟩, c1, ⟨c2.c0⟩, c3, c4, c5⟩
   obtain ⟨ord, restated⟩ := configTyped_restate tail le rfl rfl rfl
     (wf_restate wide.wf le rfl rfl rfl rfl rfl) stores (internalKeys_dueless m)
     (fun o ho => nomatch ho) (fun _ h => h)
@@ -2008,7 +2009,7 @@ theorem drainDue_preserves (root : ProgramSource) (rootTy : EffTy) :
     exact List.mem_append_left _ (List.mem_append_left _ (List.mem_append_right _
       (List.mem_map.mpr ⟨d, hd, rfl⟩)))
   refine ⟨fun ty declared => ?_, wide.keysBelow _ key, ?_, fun owner priority mode => ?_⟩
-  · have strong := wide.stores.c0 d hd ty declared
+  · have strong := PromiseTableOk.due wide.stores.c0 d hd ty declared
     exact typedProg_mono root w _ ty _ ord (denoteCompletion_typed root strong)
   · cases hr : requestOfR m d.waiter d.token with
     | none => exact hr
