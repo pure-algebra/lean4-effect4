@@ -465,6 +465,15 @@ theorem exitOfVal_exitOk (v : Val) : exitOfVal (Val.exitOk v) = some (Exit.succe
 theorem exitOfVal_exitErr (c : CauseV) : exitOfVal (Val.exitErr c) = some (Exit.failure c) :=
   exitImage.ofVal_toVal (Exit.failure c)
 
+/-- A built layer context as a value (decisions row 176 (b)): the fiber-context image
+(`Val.context`, `ctxImage`) of the context whose services are the map, its caches recomputed
+(`Ctx.withServices`, the one constructor the runtime calls). A build answers it and the build's
+readers read it back with `Val.context?`; the memo rows declare a built context at `Ty.context`,
+whose members are these images (`storePost`'s `memoGet` arm), so `Ty.context` has one image.
+Before the ruling a build answered the service spine (`Env.encode`), which `Val.context?` refuses
+and `Ty.context` admits no member of (`E4-TYPED-CE-023`, `Test/Program/LayerDenotation.lean`). -/
+def builtContext (services : Env.Ctx) : Val := Val.context (Ctx.withServices services)
+
 /-- `CurrentMemoMap` in a service map (`Layer.ts:584-592`): the map a build forks, if any. -/
 def currentMemoMapOf (c : Env.Ctx) : Option MemoMapId :=
   match c.getV Env.currentMemoMapKey with
@@ -500,14 +509,15 @@ def orDieCause (cause : CauseV) : CauseV :=
   | some e => Cause.die (Defect.ofError e)
   | none => cause
 
-/-- The contexts of a list of reified exits, when every one succeeded with a context. -/
+/-- The contexts of a list of reified exits, when every one succeeded with a built context
+(`builtContext`, read back by `Val.context?`): their service maps. -/
 def contextsOfList : List Val → Option (List Env.Ctx)
   | [] => some []
   | x :: rest =>
     match exitOfVal x with
     | some (Exit.success c) =>
-      match Env.decode c, contextsOfList rest with
-      | some ctx, some ctxs => some (ctx :: ctxs)
+      match Val.context? c, contextsOfList rest with
+      | some ctx, some ctxs => some (ctx.services :: ctxs)
       | _, _ => none
     | _ => none
 
@@ -520,7 +530,7 @@ def contextsOf : Val → Option (List Env.Ctx)
 fails the merge with every failure's reasons, in order. -/
 def mergeContextsK (v : Val) : NCode :=
   match contextsOf v with
-  | some ctxs => Prim.success (Env.encode (Env.Context.mergeAll ctxs))
+  | some ctxs => Prim.success (builtContext (Env.Context.mergeAll ctxs))
   | none =>
     match reasonsOfVal v with
     | [] => badShape
@@ -677,7 +687,7 @@ first and builds inside it (`innerLayerAt`). -/
 def compileLayer : LayerTerm NativeOp → Point → MemoMapId → Nat → NCode
   | .succeed key value, _, _, _ =>
     match Lit.toVal value with
-    | some v => Prim.success (Env.encode (Env.Context.empty.addV key v))
+    | some v => Prim.success (builtContext (Env.Context.empty.addV key v))
     | none => badShape
   | .fresh _, q, _, scope =>
     Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
@@ -775,8 +785,9 @@ def regionCode (root : NativeEff) : Region → NCode
 /-! ### The continuations that read a value
 
 Each is a function of the value, so that a theorem about it case-splits on a reader
-(`Val.context?`, `Env.decode`) and never has to match a compiled `match` (the Layer machine's
-`*K` functions, `Machine/Layer.lean`). -/
+(`Val.context?`, `Val.scope?`, …) and never has to match a compiled `match` (the Layer machine's
+`*K` functions, `Machine/Layer.lean`). A built context and the fiber context share one reader,
+`Val.context?` (decisions row 176 (b), `builtContext`). -/
 
 /-- `scopedWith`'s scope is made, the handle in hand (`internal/layer.ts:15-21`): the node's
 `local` flag decides the build; the scope closes with the exit (`internal/effect.ts:3967`).
@@ -799,11 +810,11 @@ def provideLayerWithK (root : NativeEff) (p : Point) (scope : Nat) : NCode :=
 /-- `flatMap(build, context => provideContext(self, context))` (`internal/layer.ts:20`) on the
 built context; `provideContext` of an exit is that exit (`internal/effect.ts:2196`). -/
 def provideLayerBodyK (root : NativeEff) (p : Point) (v : Val) : NCode :=
-  match Env.decode v with
+  match Val.context? v with
   | some built =>
     match (resolve root (p.child 1)).asExit? with
     | some exit => Prim.ofExit exit
-    | none => updateContextAt (Env.ContextUpdate.provide built) (Region.program (p.child 1))
+    | none => updateContextAt (Env.ContextUpdate.provide built.services) (Region.program (p.child 1))
   | none => badShape
 
 /-- `updateContext` on the previous context (`internal/effect.ts:2088-2095`): `f(prev)`; the
@@ -829,37 +840,39 @@ def buildWithScopeK (q : Point) (scope : Nat) (v : Val) : NCode :=
 
 /-- `Context.add(CurrentMemoMap, memoMap)` over the built context (`Layer.ts:762`). -/
 def addCurrentMemoMapK (m : MemoMapId) (v : Val) : NCode :=
-  match Env.decode v with
-  | some ctx => Prim.success (Env.encode (ctx.addV Env.currentMemoMapKey (Val.memoMap m)))
+  match Val.context? v with
+  | some ctx =>
+    Prim.success (builtContext (ctx.services.addV Env.currentMemoMapKey (Val.memoMap m)))
   | none => badShape
 
 /-- `provideWith` on the dependency's context (`Layer.ts:1920-1923`): the dependent's build,
 child 0, under `provideContext(context)`, then the combiner. -/
 def provideThenK (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode) (v : Val) :
     NCode :=
-  match Env.decode v with
+  match Val.context? v with
   | some ctx =>
     Prim.onSuccess
-      (updateContextAt (Env.ContextUpdate.provide ctx) (Region.build (q.child 0) m scope))
-      (EffName.combineWith mode ctx)
+      (updateContextAt (Env.ContextUpdate.provide ctx.services) (Region.build (q.child 0) m scope))
+      (EffName.combineWith mode ctx.services)
   | none => badShape
 
-/-- `f(merged, context)` (`Layer.ts:1923`): `identity` for `provide` (`:2348`),
+/-- `f(merged, context)` (`Layer.ts:1923`): `identity` for `provide` (`:2348`), the built context
+answered as it was read (`Val.context?` is exact, so this is the value itself);
 `Context.merge(that, self)` for `provideMerge` (`:2800`). -/
 def combineWithK (mode : CombineMode) (that : Env.Ctx) (v : Val) : NCode :=
-  match Env.decode v with
+  match Val.context? v with
   | some merged =>
     match mode with
-    | CombineMode.provide => Prim.success (Env.encode merged)
-    | CombineMode.provideMerge => Prim.success (Env.encode (that.merge merged))
+    | CombineMode.provide => Prim.success (Val.context merged)
+    | CombineMode.provideMerge => Prim.success (builtContext (that.merge merged.services))
   | none => badShape
 
 /-- `Context.make(key, value)` over a leaf's answer (`Layer.ts:1440`), or `Context.empty()` in
 place of it (`:1515`). -/
 def bindServiceK (key : Option ServiceKey) (v : Val) : NCode :=
   match key with
-  | some key => Prim.success (Env.encode (Env.Context.empty.addV key v))
-  | none => Prim.success (Env.encode Env.Context.empty)
+  | some key => Prim.success (builtContext (Env.Context.empty.addV key v))
+  | none => Prim.success (builtContext Env.Context.empty)
 
 /-- `Effect.service(key)` on the fiber context: the value, or the host throw as a defect
 (`Context.getUnsafe`, `internal/effect.ts:2134`; `Defect.missingService`). -/

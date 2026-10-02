@@ -27,14 +27,28 @@ theorem Env.ContextUpdate.apply_keys (u : Env.ContextUpdate) (c : Env.Ctx) :
     show Env.Context.handleKeys (c.add key value) ⊆ Val.keys value ++ Env.Context.handleKeys c
     exact Env.Context.handleKeys_add c key value
 
+/-- A built context's handles are its map's (decisions row 176 (b): a build answers the
+fiber-context image of the map, `builtContext`). -/
+theorem Val.keys_builtContext (s : Env.Ctx) :
+    Val.keys (builtContext s) = Env.Context.handleKeys s := by
+  show (Val.context (Ctx.withServices s)).keys = _
+  rw [Val.keys_context, Ctx.keys_eq_handleKeys]
+  rfl
+
+/-- A context read back with `Val.context?`: its map's handles are the value's. -/
+theorem Val.context?_keys {v : Val} {ctx : Ctx} (h : Val.context? v = some ctx) :
+    Env.Context.handleKeys ctx.services ⊆ Val.keys v := by
+  rw [Val.context?_exact h, Val.keys_context, Ctx.keys_eq_handleKeys]
+  exact List.Subset.refl _
+
 theorem compileLayer_keys : ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat),
     nativeKeys (compileLayer l q m scope) ⊆ Handle.scope scope :: Handle.memoMap m.index :: q.keys
   | .succeed key value, q, m, scope => by
     simp only [compileLayer]
     split
     · next v hv =>
-      show Val.keys (Env.encode (Env.Context.empty.addV key v)) ⊆ _
-      rw [Val.keys_encode]
+      show Val.keys (builtContext (Env.Context.empty.addV key v)) ⊆ _
+      rw [Val.keys_builtContext]
       intro x hx
       rcases List.mem_append.mp (Env.Context.handleKeys_addV _ key v hx) with h | h
       · rw [Lit.toVal_keys value v hv] at h
@@ -132,7 +146,7 @@ theorem contextsOfList_keys : ∀ (vs : List Val) (cs : List Env.Ctx), contextsO
         refine List.append_subset.mpr ⟨?_, ?_⟩
         · have hx := exitOfVal_keys x _ hc
           simp only [exitKeys] at hx
-          exact List.Subset.trans (Env.decode_keys hctx) (List.Subset.trans hx (List.subset_append_left _ _))
+          exact List.Subset.trans (Val.context?_keys hctx) (List.Subset.trans hx (List.subset_append_left _ _))
         · exact List.Subset.trans (contextsOfList_keys rest ctxs hrest) (List.subset_append_right _ _)
       · cases h
     · cases h
@@ -149,8 +163,8 @@ theorem mergeContextsK_keys (v : Val) : nativeKeys (mergeContextsK v) ⊆ v.keys
   unfold mergeContextsK
   split
   · next ctxs hctxs =>
-    show Val.keys (Env.encode (Env.Context.mergeAll ctxs)) ⊆ _
-    rw [Val.keys_encode]
+    show Val.keys (builtContext (Env.Context.mergeAll ctxs)) ⊆ _
+    rw [Val.keys_builtContext]
     exact List.Subset.trans (Env.Context.handleKeys_mergeAll ctxs) (contextsOf_keys v ctxs hctxs)
   · split <;> exact List.nil_subset _
 
@@ -182,7 +196,7 @@ theorem provideLayerBodyK_keys (root : NativeEff) (p : Point) (v : Val) :
       rw [Prim.asExit?_eq_some _ _ hexit, ← exitKeys_eq_nativeKeys_ofExit] at hb
       rw [← exitKeys_eq_nativeKeys_ofExit]
       exact List.Subset.trans hb (List.subset_append_left _ _)
-    · sub_tac using (Env.decode_keys hbuilt)
+    · sub_tac using (Val.context?_keys hbuilt)
   · exact List.nil_subset _
 
 theorem updateThenK_keys (root : NativeEff) (u : Env.ContextUpdate) (body : Region) (v : Val) :
@@ -230,13 +244,13 @@ theorem addCurrentMemoMapK_keys (m : MemoMapId) (v : Val) :
   unfold addCurrentMemoMapK
   split
   · next ctx hctx =>
-    show Val.keys (Env.encode _) ⊆ _
-    rw [Val.keys_encode]
+    show Val.keys (builtContext _) ⊆ _
+    rw [Val.keys_builtContext]
     intro x hx
     rcases List.mem_append.mp (Env.Context.handleKeys_addV _ _ _ hx) with h | h
     · rw [Val.keys_memoMap] at h
       exact List.mem_cons.mpr (Or.inl (List.mem_singleton.mp h))
-    · exact List.mem_cons_of_mem _ (Env.decode_keys hctx h)
+    · exact List.mem_cons_of_mem _ (Val.context?_keys hctx h)
   · exact List.nil_subset _
 
 theorem provideThenK_keys (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode) (v : Val) :
@@ -244,7 +258,7 @@ theorem provideThenK_keys (q : Point) (m : MemoMapId) (scope : Nat) (mode : Comb
       Handle.scope scope :: Handle.memoMap m.index :: q.keys ++ v.keys := by
   unfold provideThenK
   split
-  · next ctx hctx => sub_tac using (Env.decode_keys hctx)
+  · next ctx hctx => sub_tac using (Val.context?_keys hctx)
   · exact List.nil_subset _
 
 theorem combineWithK_keys (mode : CombineMode) (that : Env.Ctx) (v : Val) :
@@ -253,31 +267,31 @@ theorem combineWithK_keys (mode : CombineMode) (that : Env.Ctx) (v : Val) :
   split
   · next merged hm =>
     split
-    · show Val.keys (Env.encode merged) ⊆ _
-      rw [Val.keys_encode]
-      exact List.Subset.trans (Env.decode_keys hm) (List.subset_append_right _ _)
-    · show Val.keys (Env.encode (that.merge merged)) ⊆ _
-      rw [Val.keys_encode]
+    · show Val.keys (Val.context merged) ⊆ _
+      rw [← Val.context?_exact hm]
+      exact List.subset_append_right _ _
+    · show Val.keys (builtContext (that.merge merged.services)) ⊆ _
+      rw [Val.keys_builtContext]
       intro x hx
-      rcases List.mem_append.mp (Env.Context.handleKeys_merge that merged hx) with h | h
+      rcases List.mem_append.mp (Env.Context.handleKeys_merge that merged.services hx) with h | h
       · exact List.mem_append_left _ h
-      · exact List.mem_append_right _ (Env.decode_keys hm h)
+      · exact List.mem_append_right _ (Val.context?_keys hm h)
   · exact List.nil_subset _
 
 theorem bindServiceK_keys (key : Option ServiceKey) (v : Val) :
     nativeKeys (bindServiceK key v) ⊆ v.keys := by
   cases key with
   | some key =>
-    show Val.keys (Env.encode (Env.Context.empty.addV key v)) ⊆ _
-    rw [Val.keys_encode]
+    show Val.keys (builtContext (Env.Context.empty.addV key v)) ⊆ _
+    rw [Val.keys_builtContext]
     intro x hx
     rcases List.mem_append.mp (Env.Context.handleKeys_addV _ key v hx) with h | h
     · exact h
     · rw [Env.Context.handleKeys_empty] at h
       exact absurd h List.not_mem_nil
   | none =>
-    show Val.keys (Env.encode Env.Context.empty) ⊆ _
-    rw [Val.keys_encode, Env.Context.handleKeys_empty]
+    show Val.keys (builtContext Env.Context.empty) ⊆ _
+    rw [Val.keys_builtContext, Env.Context.handleKeys_empty]
     exact List.nil_subset _
 
 theorem serviceLookupK_keys (key : ServiceKey) (v : Val) :

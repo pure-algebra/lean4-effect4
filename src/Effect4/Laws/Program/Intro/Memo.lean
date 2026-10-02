@@ -154,7 +154,7 @@ theorem buildWithMemoMap_intro (root : NativeEff) (q : Point) (scope : Nat)
   rw [contAOf_addCurrentMemoMap]
   unfold addCurrentMemoMapK addCurrentMemoMapR
   simp only [seqR]
-  cases Env.decode v with
+  cases Val.context? v with
   | some ctx => simp only [prepareR_pure]; exact CodeMeans.success _
   | none => exact codeMeans_badShape root
 
@@ -196,19 +196,20 @@ theorem provideWith_intro (root : NativeEff) (q : Point) (m : MemoMapId) (child 
   rw [contAOf_provideThen]
   unfold provideThenK
   simp only [seqR]
-  cases hd : Env.decode v with
+  cases hd : Val.context? v with
   | some ctx =>
     dsimp only
     rw [prepareR_guardR_bind, guardR_bind]
-    refine CodeMeans.onSuccess _ _ _ (prepareR completed (updateContextR (.provide ctx) depdR)) _
+    refine CodeMeans.onSuccess _ _ _
+      (prepareR completed (updateContextR (.provide ctx.services) depdR)) _
       ((updateContext_intro root _ (Region.build (q.child 0) m child) depdR hdept).prepare _) ?_
       rfl (fun _ => rfl)
     intro completed' w
-    show CodeMeans root (Program.contAOf root (.combineWith mode ctx) w) _
+    show CodeMeans root (Program.contAOf root (.combineWith mode ctx.services) w) _
     rw [contAOf_combineWith]
     unfold combineWithK combineWithR
     simp only [seqR]
-    cases Env.decode w with
+    cases Val.context? w with
     | some merged => cases mode <;> (simp only [prepareR_pure]; exact CodeMeans.success _)
     | none => exact codeMeans_badShape root
   | none => exact codeMeans_badShape root

@@ -335,7 +335,7 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
         rw [contAOf_provideLayerBody]
         unfold provideLayerBodyK
         simp only [seqR]
-        cases hd : Env.decode built with
+        cases hd : Val.context? built with
         | some ctx =>
           dsimp only
           rw [resolve_of_at hb, inlineYield_eq_headExit b (p.child 1), headExit_eq_asExit?]
