@@ -426,8 +426,8 @@ def registry : Registry where
         { work := "Leroy2009", locator := "audit C10", relation := "analogy" }
       ] },
     { id := "loop-agreement", concept := "translation-simulation", role := .simulation
-      title := "Loop agreement on the straight fragment"
-      pointer := .witness `Effect4.Program.Agreement.loopAgreement_of_straight },
+      title := "Loop agreement on the loop-bearing fragment (Looped)"
+      pointer := .witness `Effect4.Program.Agreement.loopAgreement },
     { id := "run-eq-ref", concept := "translation-simulation", role := .simulation
       title := "Frame machine replay matches term reference replay at empty host table"
       pointer := .witness `Effect4.Program.Sched.run_eq_ref
