@@ -1174,7 +1174,7 @@ theorem mid_w1 : midOf w1 = B := by
 world with one intermediate type, and `n2`'s is `A` at the initial world and `B` at `w1`. -/
 theorem hookLawsX_refused : ¬ HookLaws (refProg : ProgramSource) interpX hooksX := by
   intro laws
-  obtain ⟨_, step⟩ := laws.iterator world A T n1 ⟨rfl, rfl⟩
+  obtain ⟨_, step⟩ := (laws world).iterator A T n1 ⟨rfl, rfl⟩
   obtain ⟨tin', _, tail⟩ := step Val.unit trivial
   have h0 : tin' = midOf world ∧ T = T := tail world (leHost_refl world)
   have h1 : tin' = midOf w1 ∧ T = T := tail w1 w0_le_w1

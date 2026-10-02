@@ -24,26 +24,35 @@ namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 open Effect4.Laws.Effects Contracts
 
-/-- Exactly the facts `popR`'s three named-hook arms need about an interpreter. A resume's
-protocol is handed back at every later world with one intermediate type, so the frame the walk
-re-pushes is Kripke-closed (row 135; `output_not_kripke` refutes a per-world choice). -/
-structure HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols) : Prop where
-  asyncFinalizer : ∀ w tin tout name, hooks.asyncFinalizer w tin tout name →
+/-- Exactly the facts `popR`'s three named-hook arms need about an interpreter, at the one world
+the walk runs at (`popR_typedAt` reads nothing else of it). A resume's protocol is handed back at
+every later world with one intermediate type, so the frame the walk re-pushes is Kripke-closed
+(row 135; `output_not_kripke` refutes a per-world choice); that closure is the protocol's own,
+not a requirement at other worlds. -/
+structure HookLawsAt (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
+    (w : World) : Prop where
+  asyncFinalizer : ∀ tin tout name, hooks.asyncFinalizer w tin tout name →
     tin = tout ∧ ∀ cause, ExitOk w tin (.failure cause) → cause.hasInterrupts = true →
       TypedProg root w tout (interp.cancelThenFail name cause)
-  iterator : ∀ w tin tout name, hooks.iterator w tin tout name →
+  iterator : ∀ tin tout name, hooks.iterator w tin tout name →
     tin.error = tout.error ∧ ∀ v, Fits w v tin.answer →
       match (interp.iterNext name v).2 with
       | .done result => ExitOk w tout (.success result)
       | .halt cause => ExitOk w tout (.failure cause)
       | .resume code name' => ∃ tin', TypedProg root w tin' code ∧
           ∀ w', w.leHost w' → hooks.iterator w' tin' tout name'
-  loop : ∀ w tin tout name cursor, hooks.loop w tin tout name cursor →
+  loop : ∀ tin tout name cursor, hooks.loop w tin tout name cursor →
     tin.error = tout.error ∧ ∀ v, Fits w v tin.answer →
       match interp.loopResume name cursor v with
       | .continue cursor' body => ∃ tin', TypedProg root w tin' body ∧
           ∀ w', w.leHost w' → hooks.loop w' tin' tout name cursor'
       | .finish code => TypedProg root w tout code
+
+/-- The hook laws at every world, what a walk at an arbitrary world needs of one interpreter. The
+machine's own interpreter depends on its completed view (`interpRAt`), which is typed at the
+machine's world only, so its consumers use `HookLawsAt` there. -/
+def HookLaws (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols) : Prop :=
+  ∀ w, HookLawsAt root interp hooks w
 
 /-- The walk ran a `scoped` guard's slot (decisions row 188 (a)): the current code is that scope's
 exit callback, whose exit is typed at the remaining stack's input type, over the remaining stack
@@ -151,8 +160,8 @@ theorem walk_done {root : ProgramSource} {hooks : FrameProtocols} {w : World} {t
 
 /-! ## The walk -/
 
-theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
-    (laws : HookLaws root interp hooks) (w : World) :
+theorem popR_typedAt (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
+    (w : World) (laws : HookLawsAt root interp hooks w) :
     ∀ (stack : List ScopeFrame) (tin tout : EffTy) (ex : ExitV) (frame : RSaved),
       StackAccepts (TypedProg root) ExitOk hooks w tin tout stack →
       ExitOk w tin ex → InterruptProvenance frame →
@@ -283,7 +292,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
         exact ih _ _ _ _ tail (unguard_payload_inv _ _ _ _ _ hrun) ⟨hp.recorded, hp.deferred⟩
       · exact walk_saved _ hrun tail ⟨hp.recorded, hp.deferred⟩
     | asyncFinalizer name protocol =>
-      obtain ⟨same, cancel⟩ := laws.asyncFinalizer w _ _ name (protocol w (leHost_refl w))
+      obtain ⟨same, cancel⟩ := laws.asyncFinalizer _ _ name (protocol w (leHost_refl w))
       subst same
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       cases ex with
@@ -308,7 +317,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
           (pendingCause_noShapeDefect _ ⟨hp.recorded, hp.deferred⟩)))
             tail ⟨hp.recorded, hp.deferred⟩
     | iter name protocol =>
-      obtain ⟨errors, step⟩ := laws.iterator w _ _ name (protocol w (leHost_refl w))
+      obtain ⟨errors, step⟩ := laws.iterator _ _ name (protocol w (leHost_refl w))
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       cases ex with
       | failure c =>
@@ -331,7 +340,7 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
           simp only [popR, hs]
           exact walk_saved _ typed (.cons (.iter _ next) tail) ⟨hp.recorded, hp.deferred⟩
     | loop name cursor protocol =>
-      obtain ⟨errors, step⟩ := laws.loop w _ _ name cursor (protocol w (leHost_refl w))
+      obtain ⟨errors, step⟩ := laws.loop _ _ name cursor (protocol w (leHost_refl w))
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       cases ex with
       | failure c =>
@@ -350,6 +359,14 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
           simp only [popR, hs]
           exact walk_saved _ h tail ⟨hp.recorded, hp.deferred⟩
 
+theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProtocols)
+    (laws : HookLaws root interp hooks) (w : World) :
+    ∀ (stack : List ScopeFrame) (tin tout : EffTy) (ex : ExitV) (frame : RSaved),
+      StackAccepts (TypedProg root) ExitOk hooks w tin tout stack →
+      ExitOk w tin ex → InterruptProvenance frame →
+      WalkTyped root hooks w tout (popR interp ex stack frame) :=
+  popR_typedAt root interp hooks w (laws w)
+
 /-! ## The reference interpreter's hooks -/
 
 /-- The concrete hook contracts are exactly what the walk needs of `interpR` (the M5 hook
@@ -358,9 +375,9 @@ directly). Each protocol reads its step at the current world; a resumed tail hol
 later world because the protocols are closed in their own definitions
 (`iteratorProtocol_mono`, `loopProtocol_mono`). -/
 theorem hookLaws_interpR (root : ProgramSource) :
-    HookLaws root (interpR root.program) (frameProtocols root) where
-  asyncFinalizer w _ _ _ h := ⟨h.1, h.2 w (leHost_refl w)⟩
-  iterator w tin tout name h := by
+    HookLaws root (interpR root.program) (frameProtocols root) := fun w => {
+  asyncFinalizer := fun _ _ _ h => ⟨h.1, h.2 w (leHost_refl w)⟩
+  iterator := fun tin tout name h => by
     cases h with
     | step errors _ next =>
       refine ⟨errors, fun v hv => ?_⟩
@@ -373,7 +390,7 @@ theorem hookLaws_interpR (root : ProgramSource) :
       | halt cause typed => exact typed
       | resume code name' tin' typed tail =>
         exact ⟨tin', typed, fun _ ord => iteratorProtocol_mono ord tail⟩
-  loop w tin tout name cursor h := by
+  loop := fun tin tout name cursor h => by
     cases h with
     | step errors _ next =>
       refine ⟨errors, fun v hv => ?_⟩
@@ -384,7 +401,7 @@ theorem hookLaws_interpR (root : ProgramSource) :
       cases answer with
       | «continue» cursor' body tin' typed tail =>
         exact ⟨tin', typed, fun _ ord => loopProtocol_mono ord tail⟩
-      | finish code typed => exact typed
+      | finish code typed => exact typed }
 
 /-- The walk on the reference interpreter needs no hook premise. -/
 theorem popR_typed_interpR (root : ProgramSource) (w : World) (stack : List ScopeFrame)

@@ -354,3 +354,61 @@ proposes a `popR` prefix/suffix factoring for the walk and a `PointTyped`/`compl
 G2. It is evidence to check at those steps, not kernel-checked. The generated reports
 (`generated/semantics.*`, the architecture page) lag the ledger by this goal until the next docs
 checkpoint.
+
+## Slice 6 — the walk over a host stack
+
+**First:** no judgment changes meaning. `HookLaws` is now the conjunction over worlds of a one-world
+interface, `HookLawsAt` (the same three fields at a fixed world). `popR_typed` is `popR_typedAt` at
+each world, and `hookLaws_interpR` is unchanged in content. The walk reads the hook laws only at its
+own world; the resumed tails' later-world closure is the protocols' own. This is the interface G2
+needs: the machine's interpreter (`interpRAt root m.completedExits`) can only have hook laws at the
+world where its completed view is typed.
+
+The walk over a host stack (`Typed/HostWalk.lean`):
+- `popR_cons` (Codex's `theorem-reuse-scout/path-review.md` §3, at the singleton prefix): a walk over
+  `slot :: rest` is the walk over `[slot]`, then either `rest` appended below the frame it stopped
+  in, or the walk over `rest` with the returned exit from the returned frame. Proved for every
+  interpreter, by cases on the slot (`[propext]`).
+- `popR_stack`/`popR_mk` (the walk ignores the stack field it is handed) and `popR_interrupts` (it
+  never changes the recorded interrupt or the deferred flag; by `fun_induction popR`).
+- `popR_hostTyped`: delivering a typed exit to a `HostStack` installs typed code (`CodeOk`), a scope's
+  exit callback (`HostCallback`, `CallbackSaved` with a host tail) or a race registration marker
+  (`HostMarker`, the correlation `RegistrationState` reads) over a typed remaining host stack, or
+  completes typed at the final type. Ordinary frames reuse `popR_typedAt` on the singleton stack
+  (the 200-line frame analysis is not repeated) and `FramePath.append` the host tail. A registration
+  arrow installs its marker on a success and passes a failure by `RegistrationArrow.skip`.
+- `deliverR_hostTyped` and `deliverR_shape`: the delivery to a fiber (the deferred-interrupt branch
+  installs the pending cause as typed code; otherwise the walk), which changes only the frame and
+  ends `continue_` or `finished`.
+
+Placement:
+1. Concept 4, property: preservation by `loop` and `deliver` (`semantics.md`'s step-loop and
+   step-deliver properties); the walk serves their evaluator arms that deliver an exit (a bare exit,
+   `unguard`, `finishFinalizer`).
+2. Questions: `M6Ledger.step_loop` and `.step_deliver`. The equations and `popR_interrupts` are
+   steps of `popR_hostTyped`, whose consumer is `deliverR_hostTyped`, whose consumers are those
+   arms.
+3. Reach: every interpreter with `HookLawsAt` at the walk's world; a `HostStack`, an exit typed at
+   its input type, recorded-interrupt provenance. Rows 48, 135, 188 (a) and (b).
+4. Not established: `HookLawsAt` for the machine's interpreter (G2, next); the typing of the scoped
+   exit's cleanup that consumes `HostCallback` (`prepareScopedExitR`); the rest of the evaluation
+   step and `settle`; progress.
+5. Unlocks: the walk arm of `step_loop`/`step_deliver` over the stacks rows 188 (a)/(b) admit.
+
+Controls: `Test/Program/HostWalk.lean`, two stacks from RegistrationYield delivered a success under
+the reference hook laws. Two arrows: the first installs its marker over the second. An answer slot
+above an arrow: the slot completes and the arrow installs its marker. Both reach `HostMarker`, the
+other outcomes refuted there (`[propext, Quot.sound]`).
+
+Changes: `Typed/Stack.lean` (`HookLawsAt`, `HookLaws` as its conjunction, `popR_typedAt`); new
+`Typed/HostWalk.lean`; `src/Effect4/Laws.lean` (imports it after `Typed.Assembly`);
+`Test/Program/FramesNotKripke.lean` (`hookLawsX_refused` reads `(laws world).iterator`); new
+`Test/Program/HostWalk.lean`; `Test/All.lean` (after `LaunchEntrant`).
+
+- `lake env lean -j1 -M6144 -DwarningAsError=true src/Effect4/Laws/Program/Typed/HostWalk.lean` —
+  exit 0 (`walk-12`); axioms `popR_hostTyped`, `deliverR_hostTyped`, `popR_interrupts`
+  `[propext, Quot.sound]`, `popR_cons`, `deliverR_shape` `[propext]`.
+- `lake env lean … Test/Program/HostWalk.lean` — exit 0 (`walk-14`).
+- `lake build Effect4.Laws Test.Program.FramesNotKripke Test.Program.TypedStack Test.Program.H2PartOne
+  Test.Program.HostWalk Test.Program.LaunchEntrant` — exit 0 (`walk-15`; `walk-09`, `walk-13` rebuilt
+  the chain through `Scheduler` and `RegistrationYield` first).

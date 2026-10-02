@@ -134,6 +134,7 @@ import Effect4.Laws.Program.Typed.Commands.Observe
 import Effect4.Laws.Program.Typed.Edits
 import Effect4.Laws.Program.Typed.Stack
 import Effect4.Laws.Program.Typed.Assembly
+import Effect4.Laws.Program.Typed.HostWalk
 import Effect4.Laws.Program.Typed.LayerArm
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Auto.AnswerGate
