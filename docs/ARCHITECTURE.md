@@ -7,6 +7,39 @@ lands, the file map by role, and every import against the direction this documen
 `architecture`); the roles and the layering it checks against are declared in
 `tools/Tools/ArchitectureRoles.lean`. This document is the prose; the map is the measurement.
 
+## Proof and feature view
+
+The architecture map also presents selected declarations by language feature. Each feature
+groups syntax sorts and constructors, judgments and supporting definitions, and rules,
+theorems and formal goals. This is an authored explanation of the language, distinct from
+the map of module imports. The selection lives in `tools/Tools/ProofMapSelection.lean`;
+`tools/Tools/ProofMap.lean` projects it through the existing semantics report and proof
+ledger. The [method and notation](research/2026-10-02-proof-feature-graph/method.md) explain
+the adaptation of Adams's feature hierarchy, Ballarin's contextual assumptions and
+Wiedijk's selected proof sketches, with chapter and page references.
+
+An edge from a referenced declaration to its user records a selected direct reference in
+a Lean statement or body. A statement reference identifies vocabulary; it does not show
+that a premise has been discharged. Body references may include annotations and supporting
+definitions, so they do not establish minimal mathematical dependence. Authored feature
+prerequisites, declared goal prerequisites and proposed work order have separate labels.
+None of these graph arrows is one of the semantic maps K1–K5 in the
+[system map](core/system-map.md#5-arrows-five-kinds-and-what-each-owes).
+
+The detail view retains the full statement, its parameters and top-level propositional
+hypotheses. Definition bodies and constructor signatures expose conditions bundled inside
+predicates and structures. A checked conditional theorem proves its conclusion under its
+hypotheses; the graph does not discharge them by connecting or coloring nodes. Open formal
+goals stay open, and proposed work is not a proof obligation until a proposition is declared.
+Feature membership and prerequisite arrows do not prove conservative extension.
+
+The judgments and their meanings remain owned by [semantics](core/semantics.md), the sorts
+and semantic arrows by the [system map](core/system-map.md), and status by the generated
+semantics report. The view uses those names and exact Lean declarations. Its selected
+reference graph is neither a complete proof census nor a checked natural-deduction sketch.
+Internal replay and TypeScript syntax reconstruction retain their stated fragments and
+premises; neither is evidence of target execution or verified compiler lowering.
+
 ## Dependency direction
 
 ```text

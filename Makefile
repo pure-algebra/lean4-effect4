@@ -186,19 +186,27 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 # This report reads no previous generation group. The owner prepares these roots in
 # the bounded Lean lane; the script checks Lake freshness without building or installing.
 SEMANTICS_INPUTS := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
+  tools/Tools/SemanticsDisplay.lean \
+  tools/Tools/ProofMap.lean tools/Tools/ProofMapSelection.lean tools/Tools/ProofMapFixture.lean \
+  tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean \
   src/Effect4/Laws/Auto/Semantics.lean Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain \
   tools/ProofGraph/Proof.lean tools/ProofGraph/Ledger.lean tools/Tools/GeneratedStamp.lean \
   Test/Audit/AxiomGate.lean scripts/check-semantics.py
 SEMANTICS_TRACES := $(TRACE)/Laws.trace .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
   .lake/build/lib/lean/Test/Program/ProtocolPosts.trace \
   .lake/build/lib/lean/Test/Audit/SemanticsCensus.trace .lake/build/lib/lean/Drivers/Semantics.trace \
-  .lake/build/lib/lean/Drivers/SemanticsControls.trace
+  .lake/build/lib/lean/Drivers/SemanticsControls.trace .lake/build/lib/lean/Tools/ProofMapFixture.trace
+# Detect edits before Lake has refreshed a root trace, and replaced imported artifacts.
+# The preflight then checks the exact resolved closure; this broader trigger does not build it.
+SEMANTICS_LEAN_INPUTS := $(LEAN_SOURCES) $(shell find tools -name '*.lean')
+SEMANTICS_ARTIFACTS := $(shell find .lake/build/lib/lean .lake/packages -type f \( -name '*.olean' -o -name '*.olean.private' -o -name '*.olean.server' -o -name '*.ir' -o -name '*.ir.sig' -o -name '*.trace' \) 2>/dev/null)
+SEMANTICS_TS_INPUTS := $(shell find ts/eff -path '*/node_modules' -prune -o -type f \( -name '*.ts' -o -name '*.json' \) -print) ts/eff/bun.lock
 $(SEMANTICS_TRACES):
 	@echo 'Missing semantics artifact $@. Prepare in the bounded Lean lane:' >&2
-	@echo '$(LAKE) build Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts Test.Audit.SemanticsCensus Drivers.Semantics Drivers.SemanticsControls' >&2
+	@echo '$(LAKE) build Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts Test.Audit.SemanticsCensus Drivers.Semantics Drivers.SemanticsControls Tools.ProofMapFixture' >&2
 	@exit 1
 
-$(GEN)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES)
+$(GEN)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) $(SEMANTICS_LEAN_INPUTS) $(SEMANTICS_ARTIFACTS)
 	$(PY) scripts/check-semantics.py --generate generated
 	@mkdir -p $(GEN) && touch $@
 
@@ -397,11 +405,11 @@ gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus
 # input. A report, replaced at landings like STATE.md; `check-architecture` says whether the
 # committed map still matches the tree and is not a member of `check`.
 .PHONY: gen-architecture check-architecture
-gen-architecture: | build build-tools ## the architecture map, measured from the tree, into docs/core/architecture-map.html
+gen-architecture: $(GEN)/semantics | build build-tools ## the architecture map, measured from the tree, into docs/core/architecture-map.html
 	$(LAKE) build Tools.Architecture
 	$(LAKE) build ProofGraph
 	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Tools/Architecture.lean
-check-architecture: | build build-tools ## does the committed architecture map match the tree (a report, not in check)
+check-architecture: $(CHK)/semantics | build build-tools ## does the committed architecture map match the tree (a report, not in check)
 	$(LAKE) build Tools.Architecture
 	$(LAKE) build ProofGraph
 	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Tools/Architecture.lean --check
@@ -496,7 +504,7 @@ $(CHK)/census: $(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/
 
 # Two fresh reports, Lean refusal controls, pinned tsgo 7 and strict decoding controls.
 # No order-only build/install prerequisite: missing prepared artifacts are a refusal.
-$(CHK)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) generated/semantics.json generated/semantics.md \
+$(CHK)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) $(SEMANTICS_LEAN_INPUTS) $(SEMANTICS_ARTIFACTS) $(SEMANTICS_TS_INPUTS) generated/semantics.json generated/semantics.md \
   tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean $(TS_EFF_SOURCES) \
   ts/eff/test/semantics.fixture.json $(wildcard ts/eff/node_modules/effect/package.json \
   ts/eff/node_modules/@typescript/native-preview/package.json ts/eff/node_modules/@typescript/native-preview/bin/tsgo)

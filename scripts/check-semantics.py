@@ -24,14 +24,16 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 FILES = ("semantics.json", "semantics.md")
 TARGETS = ("Effect4.Laws", "Test.Program.TypedProgBindRed", "Test.Program.ProtocolPosts", "Test.Audit.SemanticsCensus",
-           "Drivers.Semantics", "Drivers.SemanticsControls")
+           "Drivers.Semantics", "Drivers.SemanticsControls", "Tools.ProofMapFixture")
 POLICY_FILES = ("Test/Audit/AxiomGate.lean", "tools/ProofGraph/Proof.lean")
 INPUTS = ("tools/Tools/SemanticsRegistry.lean", "tools/Tools/Semantics.lean",
+          "tools/Tools/SemanticsDisplay.lean",
+          "tools/Tools/ProofMap.lean", "tools/Tools/ProofMapSelection.lean", "tools/Tools/ProofMapFixture.lean",
           "tools/Drivers/Semantics.lean", "tools/Drivers/SemanticsControls.lean",
           "src/Effect4/Laws/Auto/Semantics.lean", "Test/Audit/SemanticsCensus.lean",
           "Test/Counterexamples/REGISTER.md", "docs/core/decisions.md", "lean-toolchain",
-          "scripts/check-semantics.py", "ts/eff/semantics.ts", "ts/eff/check-semantics.ts",
-          "ts/eff/test/semantics.test.ts", "ts/eff/test/semantics.fixture.json",
+          "scripts/check-semantics.py", "ts/eff/semantics.ts", "ts/eff/check-semantics.ts", "ts/eff/proof-map.ts",
+          "ts/eff/test/semantics.test.ts", "ts/eff/test/proof-map.test.ts", "ts/eff/test/semantics.fixture.json",
           "ts/eff/package.json", "ts/eff/bun.lock", "ts/eff/tsconfig.json")
 TRACE_DIR = ".lake/build/lib/lean/"
 
@@ -341,7 +343,7 @@ def main():
             run([*command("NODE", "node"), str(tsgo), "--noEmit", "-p", "ts/eff/tsconfig.json"], receipt)
             run([*command("BUN", "bun"), "run", "check-semantics.ts", "../../generated/semantics.json"],
                 receipt, cwd=ROOT / "ts/eff")
-            run([*command("BUN", "bun"), "test", "test/semantics.test.ts"], receipt, cwd=ROOT / "ts/eff")
+            run([*command("BUN", "bun"), "test", "test/semantics.test.ts", "test/proof-map.test.ts"], receipt, cwd=ROOT / "ts/eff")
         if before != snapshot():
             raise RuntimeError("a semantics input changed during this run; rerun after the edit finishes")
         # Detect imported source edits too, even if no producer refreshed their traces.

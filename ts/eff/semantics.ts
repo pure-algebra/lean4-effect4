@@ -1,6 +1,7 @@
-// The v1 semantics report (seat-B/spec-v3 §§2.3, 8), separate from the program IR.
+// The v2 semantics report and selected proof/feature map, separate from the program IR.
 // The producer validates Lean evidence; this consumer checks the report's shape and links.
 import { Schema } from "effect"
+import { ProofMap, proofMapIntegrity } from "./proof-map.ts"
 
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
 const Text = Schema.String.check(Schema.isPattern(/\S/))
@@ -94,7 +95,7 @@ export const Placement = Schema.Struct({
 
 const ReportShape = Schema.Struct({
   format: Schema.Literal("effect4-semantics-report"),
-  schemaVersion: Schema.Literal(1),
+  schemaVersion: Schema.Literal(2),
   producer: Text,
   command: Schema.Literal("make gen-semantics"),
   inputs: Schema.Array(Text),
@@ -107,6 +108,7 @@ const ReportShape = Schema.Struct({
   claims: Schema.Array(Claim),
   cuts: Schema.Array(Cut),
   placement: Placement,
+  proofMap: ProofMap,
 })
 
 type Report = typeof ReportShape.Type
@@ -213,6 +215,7 @@ export const integrity = (report: Report): Array<string> => {
         issues.push(`concepts (${concept.id}): counts.${key} is ${concept.counts[key]}, claims say ${expected[key]}`)
     }
   }
+  issues.push(...proofMapIntegrity(report.proofMap, conceptIds, report.claims, ceiling))
   return issues
 }
 
