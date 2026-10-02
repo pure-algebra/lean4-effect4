@@ -714,25 +714,25 @@ These are authored links to historical attacks. Read each full row: a leading st
 **denote-typed: E4-TYPED-CE-020**
 
 ```text
-| `E4-TYPED-CE-020` | SEEDED 2026-10-01 (seat D2, proved on `seat/D2`, merge pending; then REPAIRED by row 170's premise) | `DenotesTyped` is false at a root whose layer reference targets a reference | Codex's candidate (`docs/research/2026-10-01-landing/codex-second-eyes/2016-d1-review.md`): three `provideLayer`s of `Test.Program.TypedSplit.key` with unit bodies, the last `.ref [1,0,0]` to `.ref [0,0]`; the point `[1,1]` is `PointTyped` at `pure unit` through `Eff.expandIn`, the run's `.ref` arm answers `badShapeExit` (reading, not compiled) | decisions row 170: the premise `layerRefsWF` on `DenotesTyped`, discharged at the load from `typeOfProgram` |
+| `E4-TYPED-CE-020` | REPAIRED 2026-10-01 (seat D2, merged `aabb1b5e`: `DenotesTyped` takes row 170's premise `layerRefsWF`, discharged at the load by `layerRefsWF_of_typeOf`); SEEDED 2026-10-01 (seat D2) | `DenotesTyped` is false at a root whose layer reference targets a reference | Codex's candidate (`docs/research/2026-10-01-landing/codex-second-eyes/2016-d1-review.md`): three `provideLayer`s of `Test.Program.TypedSplit.key` with unit bodies, the last `.ref [1,0,0]` to `.ref [0,0]`; the point `[1,1]` is `PointTyped` at `pure unit` through `Eff.expandIn`, the run's `.ref` arm answers `badShapeExit` (reading, not compiled) | decisions row 170: the premise `layerRefsWF` on `DenotesTyped`, discharged at the load from `typeOfProgram` |
 ```
 
 **denote-typed: E4-TYPED-CE-021**
 
 ```text
-| `E4-TYPED-CE-021` | SEEDED 2026-10-01 (seat D2, proved on `seat/D2`, merge pending) | `DenotesTyped` is false at a point whose completed view holds an exit the world refuses, because `PointTyped` never reads `point.completed` | seat D2's witness: the corpus program `awaitFiber.value`, point `[1]`, env `[fiber 1]`, completed `[(1, success "x")]`, world `Γ 1 = pure nat`; `PointTyped` at `pure (exitOf nat never)`, the denotation `.pure (success (exitOk "x"))` refused | decisions row 175 (ruled): `PointTyped` carries the completed view |
+| `E4-TYPED-CE-021` | REPAIRED 2026-10-01 (seat D2, merged `aabb1b5e`: `PointTyped` carries the completed view, row 175 (a)); SEEDED 2026-10-01 (seat D2) | `DenotesTyped` is false at a point whose completed view holds an exit the world refuses, because `PointTyped` never reads `point.completed` | seat D2's witness: the corpus program `awaitFiber.value`, point `[1]`, env `[fiber 1]`, completed `[(1, success "x")]`, world `Γ 1 = pure nat`; `PointTyped` at `pure (exitOf nat never)`, the denotation `.pure (success (exitOk "x"))` refused | decisions row 175 (ruled): `PointTyped` carries the completed view |
 ```
 
 **denote-typed: E4-TYPED-CE-022**
 
 ```text
-| `E4-TYPED-CE-022` | SEEDED 2026-10-01 (seat D2, proved on `seat/D2`, merge pending) | `DenotesTyped` is false at a world whose service table differs from the checker's | seat D2's witness: `.service ⟨4,4⟩` (native carrier `nat`) at a world with `serviceTy := fun _ => none` and a context holding `str "x"` under the key | decisions row 175 (ruled): `DenotesTyped` ranges over worlds whose service table is the source's |
+| `E4-TYPED-CE-022` | REPAIRED 2026-10-01 (seat D2, merged `aabb1b5e`: `DenotesTyped` ranges over worlds whose service table is the source's, row 175); SEEDED 2026-10-01 (seat D2) | `DenotesTyped` is false at a world whose service table differs from the checker's | seat D2's witness: `.service ⟨4,4⟩` (native carrier `nat`) at a world with `serviceTy := fun _ => none` and a context holding `str "x"` under the key | decisions row 175 (ruled): `DenotesTyped` ranges over worlds whose service table is the source's |
 ```
 
 **bind-closed: E4-TYPED-CE-030**
 
 ```text
-| `E4-TYPED-CE-030` | SEEDED 2026-10-01 (coordinator; the red controls landed with decisions row 148, in the battery under the gate's ceiling) | `TypedProg` is closed under bind: a program typed at `mid` and a continuation typed at `ty` at every later world on every exit `ExitOk` admits at `mid` make a sequence typed at `ty` | `Test/Program/TypedProgBindRed.lean`: `typedProg_not_bind_closed` (`:32`; a closing marker's exit must fit the current type), `bind_not_typed` and `guard_bind_not_closed` (a first program whose only closing marker sits inside a guard body does not bind either); green control `seq_sample` | no bind rule: M5 sequences per construct (`seq_typed`, `src/Effect4/Laws/Program/Typed/Seq.lean:59`, with `close_typed`); the `onFailure`, `all` and `onExit` shapes owed beside it (decisions row 148) |
+| `E4-TYPED-CE-030` | REPAIRED 2026-10-01 (seat D2, merged `aabb1b5e`: every guard shape has its compatibility lemma); SEEDED 2026-10-01 (coordinator; the red controls landed with decisions row 148, in the battery under the gate's ceiling) | `TypedProg` is closed under bind: a program typed at `mid` and a continuation typed at `ty` at every later world on every exit `ExitOk` admits at `mid` make a sequence typed at `ty` | `Test/Program/TypedProgBindRed.lean`: `typedProg_not_bind_closed` (`:32`; a closing marker's exit must fit the current type), `bind_not_typed` and `guard_bind_not_closed` (a first program whose only closing marker sits inside a guard body does not bind either); green control `seq_sample` | no bind rule: M5 sequences per construct (`seq_typed`, `src/Effect4/Laws/Program/Typed/Seq.lean:59`, with `close_typed`); the `onFailure`, `all` and `onExit` shapes beside it, landed by seat D2 (`catchGuard_typed`, `allGuard_typed`, `onExit_typed`, the general `guardBind_typed`; decisions row 148) |
 ```
 
 **step-loop-preserves: E4-TYPED-CE-012**
