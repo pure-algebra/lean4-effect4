@@ -3299,3 +3299,99 @@ end Effect4.Program.Typed
 #obligation_proved Effect4.Program.Typed.M6Ledger.step_wake :=
   @Effect4.Program.Typed.wake_preserves
 -- `M6Ledger`'s report runs at the foot of the last command module, which sees every proof.
+
+/-!
+## Completing a Deferred preserves the due-typing column
+
+The four corresponding isolated declarations were checked on Lean v4.33.1 over
+actual Bookkeeping imports, using at most [propext, Quot.sound]. This local
+connection retains the strong completion input before coarse store typing hides it.
+
+Placement:
+1. Concept4, typed scheduler/store invariant preservation.
+2. Existing M6Ledger.step_loop store arm, consumed by PromiseTableOk.due and
+   then drainDue_preserves; no new ledger target.
+3. Actual DeferredStore.complete, current MachineWide, row134(b)'s declared
+   waiter columns and CompletionStrong. Later-world transfer requires leHost
+   and unchanged token declarations, as the explicit complete_world witness has.
+4. No whole store/loop step, new invariant, progress, host safety or backend claim.
+5. Supplies one R4/R9 preservation conjunct on the existing M5 -> M6 -> M7 spine.
+
+The structural lemmas use the actual Deferred operations and the existing Guard
+wake-key view. The typed lemmas use only MachineWide's stores, promises and waiters
+projections; they retain the entire current MachineWide premise.
+-/
+namespace Effect4.Program.Typed.CompletionDue
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+open Effect4.Program.Typed Effect4.Program.Guard
+
+/-- Completion provenance for M6.step_loop: retain the cell, pending waiter and entire output.
+An old entry and a newly appended equal entry need not be disjoint alternatives. -/
+theorem complete_due_origin {κ : Type} {store : DeferredStore κ} {cell : DeferredKey}
+    {effect : κ} {o : Owed κ} (h : o ∈ (store.complete cell effect).1.due) :
+    o ∈ store.due ∨ ∃ c w, store.cellAt cell = some c ∧ c.completion = none ∧
+      w ∈ c.wake.waiters ∧ o = ⟨w.fiber, w.token, effect, .now⟩ := by
+  unfold DeferredStore.complete at h
+  cases hc : store.cellAt cell with
+  | none =>
+    simp only [hc] at h
+    exact Or.inl h
+  | some c =>
+    cases hd : c.completion with
+    | some previous =>
+      simp only [hc, hd] at h
+      exact Or.inl h
+    | none =>
+      simp only [hc, hd, WakeList.wakeAll] at h
+      rcases List.mem_append.mp h with old | new
+      · exact Or.inl old
+      · obtain ⟨w, hw, rfl⟩ := List.mem_map.mp new
+        exact Or.inr ⟨c, w, rfl, hd, hw, rfl⟩
+
+/-- The wake-key view used by the typed due transfer below.
+Only the forward implication uses wakeKeys: the view also contains captured batches. -/
+theorem complete_due {κ : Type} {store : DeferredStore κ} {cell : DeferredKey}
+    {effect : κ} {o : Owed κ} (h : o ∈ (store.complete cell effect).1.due) :
+    o ∈ store.due ∨ ∃ c, store.cellAt cell = some c ∧ c.completion = none ∧
+      (o.waiter, o.token) ∈ wakeKeys c.wake ∧ o.code = effect ∧ o.mode = .now := by
+  rcases complete_due_origin h with old | ⟨c, w, hc, hd, hw, rfl⟩
+  · exact Or.inl old
+  · exact Or.inr ⟨c, hc, hd, wakeKeys_waiter_mem hw, rfl, rfl⟩
+
+
+theorem completion_due_typed {root : ProgramSource} {rootTy : EffTy}
+    {w : Effect4.Program.Typed.World} {m : RState} (wide : MachineWide root rootTy w m)
+    (cell : DeferredKey) (completion : Completion Val Err Defect FiberId Ann)
+    (strong : ∀ a e, w.«Π» cell = some (a, e) →
+      CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ completion) :
+    ∀ o ∈ (m.state.deferreds.complete cell completion).1.due, ∀ ty,
+      w.Θ o.waiter o.token = some ty → CompletionStrong w ty o.code := by
+  intro o ho ty declared
+  rcases complete_due ho with old | ⟨c, hcell, _, key, code, _⟩
+  · exact PromiseTableOk.due wide.stores.c0 o old ty declared
+  · have hcell' : m.state.deferreds.cells[cell.index]? = some c := hcell
+    obtain ⟨live, _⟩ := List.getElem?_eq_some_iff.mp hcell'
+    obtain ⟨⟨a, e⟩, declaredCell⟩ :=
+      Option.isSome_iff_exists.mp ((wide.promises cell).mpr live)
+    obtain ⟨ty0, declared0, demand⟩ :=
+      wide.waiters cell c hcell a e declaredCell _ key
+    have same : ty0 = ty := Option.some.inj (declared0.symm.trans declared)
+    subst same
+    rw [code]
+    exact completionStrong_await demand (strong a e declaredCell)
+
+/-- The same due typing at an explicitly related world with unchanged token declarations.
+This is a small transport used after the concrete complete_world witness. -/
+theorem completion_due_typed_later {root : ProgramSource} {rootTy : EffTy}
+    {w newer : Effect4.Program.Typed.World} {m : RState} (wide : MachineWide root rootTy w m)
+    (cell : DeferredKey) (completion : Completion Val Err Defect FiberId Ann)
+    (strong : ∀ a e, w.«Π» cell = some (a, e) →
+      CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ completion)
+    (ord : w.leHost newer) (tokens : newer.Θ = w.Θ) :
+    ∀ o ∈ (m.state.deferreds.complete cell completion).1.due, ∀ ty,
+      newer.Θ o.waiter o.token = some ty → CompletionStrong newer ty o.code := by
+  intro o ho ty declared
+  rw [tokens] at declared
+  exact completionStrong_mono ord (completion_due_typed wide cell completion strong o ho ty declared)
+
+end Effect4.Program.Typed.CompletionDue

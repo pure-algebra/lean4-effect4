@@ -68,6 +68,8 @@ import Test.Program.HostWalk
 import Test.Program.LoopProtocols
 import Test.Program.AnswerSchema
 import Test.Program.ProtocolPosts
+import Test.Program.RawHandleTerms
+import Test.Program.CompletionDueControls
 import Test.Audit.AnswerGate
 import Test.Machine.Runtime.RepresentationFoundations
 import Test.Machine.Runtime.ScopeContract

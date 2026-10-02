@@ -201,3 +201,180 @@ theorem mapM_fiber_keys (g : Val → Option FiberId) (hg : ∀ v id, g v = some 
       List.Subset.trans (mapM_fiber_keys g hg vs rest hrest) (List.subset_append_right _ _)⟩
 
 end Effect4.Program
+
+/-!
+## Raw handle frames through native terms
+
+The corresponding isolated candidate was checked on Lean v4.33.1 at
+58cccb7a28c4df4d1a73dd6db1c2e3c811455b7a; all ten declarations use at most
+[propext, Quot.sound]. These laws retain every raw kind byte and index.
+
+Placement:
+1. Concept4 native value invariant; Concept1 identifies the value boundary.
+2. Serves M7.exitHandles_valid through Edits.exitHandles_valid_of_registered:
+   this term producer is a local step of the still-missing reachable-exit connector.
+3. Actual nativeAtom/evalTerm success, arbitrary values/environments, ALL raw
+   Store.Val.handles; no typing or registered-input premise on the subset laws.
+4. No machine preservation, reachability, handle existence, progress, host or
+   backend claim. The final consequence requires registered environment values.
+5. Supplies term-construction closure for the separate fourth M7 goal (R4/R9);
+   does not close that goal or strengthen its frozen statement.
+
+The immediate consumer of evalTerm_handles is evalTerm_registered below. The raw
+collector is needed because the existing Val.keys collector drops unregistered
+kind bytes; its subset law cannot supply registration of all output frames.
+-/
+set_option autoImplicit false
+namespace Effect4.Program.RawHandles
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Program.Agreement
+
+theorem lit_toVal_handles (l : Lit) (v : Val) (h : l.toVal = some v) :
+    Store.Val.handles v = [] := by
+  cases l with
+  | unit => cases h; rfl
+  | nat n => cases h; rfl
+  | bool b => cases h; rfl
+  | str s => cases h; rfl
+
+theorem valOfErr_handles (err : Err) (v : Val) (h : valOfErr err = some v) :
+    Store.Val.handles v = [] := by
+  cases err <;> cases h <;> rfl
+
+theorem queryTag_handles (tag : ReasonTag) (input output : Val)
+    (h : queryTag tag input = some output) : Store.Val.handles output = [] := by
+  obtain ⟨reasons, _, houtput⟩ := Option.map_eq_some_iff.mp h
+  cases houtput
+  rfl
+
+theorem queryError_handles (input output : Val) (h : queryError input = some output) :
+    Store.Val.handles output = [] := by
+  obtain ⟨reasons, _, houtput⟩ := Option.bind_eq_some_iff.mp h
+  cases hfound : (reasons.findSome? Reason.error?).bind valOfErr with
+  | none =>
+    simp only [hfound] at houtput
+    cases houtput
+    rfl
+  | some value =>
+    simp only [hfound] at houtput
+    cases houtput
+    change Store.Val.handles value = []
+    obtain ⟨error, _, hvalue⟩ := Option.bind_eq_some_iff.mp hfound
+    exact valOfErr_handles error value hvalue
+
+theorem handles_list (vs : List Val) :
+    Store.Val.handles (Val.list vs) = vs.flatMap Store.Val.handles :=
+  Store.Val.handlesList_eq_flatMap vs
+
+theorem asList_handles {v : Val} {vs : List Val} (h : Val.asList? v = some vs) :
+    vs.flatMap Store.Val.handles ⊆ Store.Val.handles v := by
+  rcases Val.asList?_exact h with rfl | rfl
+  · rw [handles_list]
+    exact List.Subset.refl _
+  · show vs.flatMap Store.Val.handles ⊆ Store.Val.handles (.list vs) ++ []
+    rw [List.append_nil, handles_list]
+    exact List.Subset.refl _
+
+/-- Atoms return scalars, preserve/rearrange their arguments, or use the closed error image.
+The subset forgets multiplicity and order; it retains unregistered bytes and exact indices. -/
+theorem nativeAtom_handles (atom : String) (vs : List Val) (v : Val)
+    (h : nativeAtom atom vs = some v) :
+    Store.Val.handles v ⊆ vs.flatMap Store.Val.handles := by
+  unfold nativeAtom at h
+  obtain ⟨named, _, h⟩ := Option.bind_eq_some_iff.mp h
+  unfold NativeAtom.eval at h
+  split at h
+  case h_12 =>
+    unfold stringsAtom at h
+    split at h
+    · cases h
+      rw [handles_list]
+      exact List.Subset.refl _
+    · cases h
+  case h_13 => rw [queryTag_handles _ _ _ h]; exact List.nil_subset _
+  case h_14 => rw [queryError_handles _ _ h]; exact List.nil_subset _
+  case h_15 => rw [queryTag_handles _ _ _ h]; exact List.nil_subset _
+  case h_16 => rw [queryTag_handles _ _ _ h]; exact List.nil_subset _
+  case h_24 =>
+    cases h
+    split
+    · exact fun x hx => List.mem_flatMap.mpr ⟨_, List.mem_cons_of_mem _ (List.mem_cons_self ..), hx⟩
+    · exact fun x hx => List.mem_flatMap.mpr
+        ⟨_, List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)), hx⟩
+  case h_25 =>
+    cases h
+    exact fun x hx => List.mem_flatMap.mpr ⟨_, List.mem_cons_self .., hx⟩
+  case h_29 =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    intro k hk
+    simp only [handles_list, List.flatMap_cons, List.flatMap_nil, List.append_nil,
+      List.mem_append] at hk ⊢
+    exact hk.imp id (fun hk => asList_handles hl hk)
+  case h_30 =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    split
+    · next e he =>
+      intro k hk
+      simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.mem_append]
+      exact .inl (asList_handles hl (List.mem_flatMap.mpr ⟨e, List.mem_of_getElem? he, hk⟩))
+    · exact List.nil_subset _
+  case h_31 =>
+    obtain ⟨_, _, rfl⟩ := Option.map_eq_some_iff.mp h
+    exact List.nil_subset _
+  case h_32 =>
+    obtain ⟨front, hf, h⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨back, hb, rfl⟩ := Option.map_eq_some_iff.mp h
+    intro k hk
+    simp only [handles_list, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
+      List.append_nil, List.mem_append] at hk ⊢
+    exact hk.imp (fun hk => asList_handles hf hk) (fun hk => asList_handles hb hk)
+  all_goals cases h
+  all_goals sub_tac norm [Val.tuple, Store.Val.handles, Store.Val.handlesList]
+
+mutual
+ theorem evalTerm_handles (t : Term) (env : List Val) (v : Val)
+     (h : evalTerm env t = some v) :
+     Store.Val.handles v ⊆ env.flatMap Store.Val.handles := by
+   cases t with
+   | var i =>
+     have h' : env[i]? = some v := h
+     exact fun x hx => List.mem_flatMap.mpr ⟨v, List.mem_of_getElem? h', hx⟩
+   | lit l =>
+     have h' : l.toVal = some v := h
+     rw [lit_toVal_handles l v h']
+     exact List.nil_subset _
+   | app atom args =>
+     rw [evalTerm_app] at h
+     obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp h
+     exact List.Subset.trans (nativeAtom_handles atom vs v hv) (evalTerms_handles args env vs hvs)
+ termination_by structural t
+ theorem evalTerms_handles (ts : Terms) (env : List Val) (vs : List Val)
+     (h : evalTerms env ts = some vs) :
+     vs.flatMap Store.Val.handles ⊆ env.flatMap Store.Val.handles := by
+   cases ts with
+   | nil =>
+     have h' : some ([] : List Val) = some vs := h
+     cases h'
+     exact List.nil_subset _
+   | cons head tail =>
+     rw [evalTerms_cons] at h
+     obtain ⟨v1, hv1, h'⟩ := Option.bind_eq_some_iff.mp h
+     obtain ⟨rest, hrest, hcons⟩ := Option.bind_eq_some_iff.mp h'
+     cases hcons
+     rw [List.flatMap_cons]
+     exact List.append_subset.mpr
+       ⟨evalTerm_handles head env v1 hv1, evalTerms_handles tail env rest hrest⟩
+ termination_by structural ts
+end
+
+/-- Exactly the HandlesRegistered conclusion, without importing the changing Typed.Edits. -/
+theorem evalTerm_registered (t : Term) (env : List Val) (v : Val)
+    (registered : ∀ x ∈ env, ∀ code ∈ Store.Val.handles x,
+      (HandleKind.ofByte? code.1).isSome = true)
+    (h : evalTerm env t = some v) :
+    ∀ code ∈ Store.Val.handles v, (HandleKind.ofByte? code.1).isSome = true := by
+  intro code member
+  obtain ⟨x, hx, hcode⟩ := List.mem_flatMap.mp (evalTerm_handles t env v h member)
+  exact registered x hx code hcode
+
+end Effect4.Program.RawHandles
