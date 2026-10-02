@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Commands.Observe
+import Effect4.Laws.Program.Typed.Body
 
 /-!
 # Laws.Program.Typed.Commands.Evaluate — the evaluation step as handler soundness
@@ -18,7 +19,9 @@ This file's first layer: a running fiber's frame may move under the queued `loop
 owns it, because the only queued commands whose delivery reads a fiber's stack own that fiber, and
 the queue holds one owner per fiber (`QueueOk.owners`).
 
-Not established here: any operation clause, the settle step, progress.
+Not established here: the clauses the receipt lists open (`scoped`, the generator and loop
+entries, the race registration, the fiber actions, the store rows, the walk), `loop`'s prefix,
+progress.
 -/
 
 set_option autoImplicit false
@@ -768,5 +771,74 @@ theorem clause_sync (root : ProgramSource) (rootTy : EffTy) (v : Val) :
   intro w m rest f y next ev hc
   exact ev.settle_answered _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) v (fun _ _ => rfl))
+
+
+/-! ## The clauses: the frame pushers -/
+
+/-- **`guard_`**: the guard installs its body and saves the resume frame (`saveR`), the arrow
+`guard_frame` types from the body's type to the guard's. -/
+theorem clause_guard_ (root : ProgramSource) (rootTy : EffTy) (kind : GuardKind) :
+    FiberClauseKeeps root rootTy (.guard_ kind) := by
+  intro w m rest f y next ev hc
+  refine ev.settle_continue { f.frame with
+    current := next none, stack := .resume kind (fun ex => next (some ex)) :: f.frame.stack } ?_
+  intro ty declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨mid, body, frame⟩ := TypedProg.guard_frame current
+  exact ⟨mid, body, hostStack_push frame stack, ⟨prov.recorded, prov.deferred⟩⟩
+
+/-- The frame `mask flag body` installs (`Laws/Program/EvaluateR.lean`, the `mask` arm;
+`internal/effect.ts`'s `interruptible`/`uninterruptible`): the answer frame saved, the mask set with
+the restore frame pushed when it changes, and the body current unless the mask turns interruptible
+with an interrupt recorded, when the recorded cause is current. -/
+def maskFrame (fr : RSaved) (flag : Bool) (body : RProgram) (next : ExitV → RProgram) : RSaved :=
+  let saved : RSaved := { fr with stack := .answer next :: fr.stack }
+  let old := saved.interruptible
+  let stack := if old = flag then saved.stack else .restoreMask old :: saved.stack
+  let frame : RSaved := { saved with interruptible := flag, stack }
+  { frame with current :=
+      if flag && !old && frame.interruptedCause.isSome then .pure (.failure frame.pendingCause)
+      else body }
+
+theorem evaluateFiberR_mask (interp : RInterp) (m : RState) (f : RFiber) (y : Bool) (flag : Bool)
+    (body : Body) (next : ExitV → RProgram) :
+    evaluateFiberR interp m f y (.mask flag body) next =
+      ⟨m, { f with frame := maskFrame f.frame flag (bodyR interp body) next }, y, .continue_, []⟩ :=
+  rfl
+
+/-- **`mask`**: the body's program is typed at the certificate (`bodyTyped_typed`, from `J`'s
+source and service facts), or the recorded interrupt is delivered (`InterruptProvenance`); the
+answer frame carries the certificate to the continuation and the restore frame is an identity
+arrow. -/
+theorem clause_mask (root : ProgramSource) (rootTy : EffTy) (flag : Bool) (body : Body) :
+    FiberClauseKeeps root rootTy (.mask flag body) := by
+  intro w m rest f y next ev hc
+  rw [evaluateFiberR_mask]
+  refine ev.settle_continue _ ?_
+  intro ty declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have typedBody : TypedProg root w cert (bodyR (interpRAt root.program m.completedExits) body) :=
+    bodyTyped_typed root ev.typed.machine.sourceWF ev.typed.machine.services m.completedExits pre
+  have answer : HostStack root w (m.update f) f.id cert ty (.answer next :: f.frame.stack) :=
+    hostStack_push (answerFrame_typed (fun _ _ _ hex => hex) typedNext) stack
+  refine ⟨cert, ?_, ?_, ⟨prov.recorded, prov.deferred⟩⟩
+  · show TypedProg root w cert
+      (if flag && !f.frame.interruptible && f.frame.interruptedCause.isSome then
+        .pure (.failure f.frame.pendingCause)
+      else bodyR (interpRAt root.program m.completedExits) body)
+    split
+    · exact TypedProg.pure (strongExit_of_clean w cert _ (pendingCause_clean prov)
+        (pendingCause_noShapeDefect cert prov))
+    · exact typedBody
+  · show HostStack root w (m.update f) f.id cert ty
+      (if f.frame.interruptible = flag then .answer next :: f.frame.stack
+       else .restoreMask f.frame.interruptible :: .answer next :: f.frame.stack)
+    split
+    · exact answer
+    · exact hostStack_push (.restoreMask cert _) answer
 
 end Effect4.Program.Typed

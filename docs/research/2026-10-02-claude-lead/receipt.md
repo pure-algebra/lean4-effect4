@@ -929,3 +929,129 @@ Commands:
 
 Not run: `lake build Test`, the trust gate and `make check`, which are owed at the sweep. All
 evidence is kernel-checked; none is bounded or host-only.
+
+## Slice M6-F — the body bridge, `BodyTyped` at what its programs need, and the frame-pushing clauses `guard_` and `mask`; two Codex ports adopted
+
+**First:** `BodyTyped` (`Typed/Admission.lean`), the pre of `mask` and `fork`, changed in four of its
+six arms so that an admitted body's program is typed (`bodyTyped_typed`, the new
+`Typed/Body.lean`). The old `fin` arm admitted a finalizer body at any type its exit fits while the
+step installs the finalizer's own program: a refutation of the bridge at every source and world
+(`E4-TYPED-CE-036`, the witness compiled at `f4d8be8f` and kept under `witnesses/`). The three
+producers of the strengthened arms already had the facts and discharge them; no runtime definition
+changed; no ledger goal's text changed. Two additive Codex ports ride the same rebuild.
+
+Base `f4d8be8f`.
+
+### The judgment
+
+| Arm | Before | After | Why the program needs it |
+| --- | --- | --- | --- |
+| `fin name ex` | any `ty` with `ExitOk w ty ex` | `FinalizerAdmitted src w name`, `ex` fits `Exit<unknown, unknown>`; type `⟨unknown, never⟩` | `bodyR … (.fin name ex) = denoteFin name ex`, typed by `finalizerTyped_of_admitted` and nothing else |
+| `acquireIn p ctx` | `PointTyped` | + the node is an `acquireRelease`, + `ServicesFit w ctx.services` | `acquireInR` registers `p.capture a ctx`, whose pre `CaptureTyped` reads both |
+| `release p prev` | `PointTyped` | + `ServicesFit w prev.services` | the finalizer restores `prev` (`setContext`'s pre) |
+| `layerBuild p m scope` | `LayerPointTyped`, `LayerBuildTy lt ty` | `LayerPointTyped`, `ScopeLive w scope`; type `buildTy lt` | `layerBuild_typed` reads the scope's presence; the one producer builds at `buildTy` |
+
+`LayerBuildTy` is deleted (its one user was this arm). `FinalizerAdmitted` moved from
+`Typed/Residual.lean` to `Typed/Admission.lean` unchanged, so `BodyTyped.fin` can read it; the
+pre still cannot mention `TypedProg`. The transports (`bodyTyped_mono`, `bodyTyped_rows_append`,
+with the new `finalizerAdmitted_rows_append`; `finalizerAdmitted_mono` and
+`captureTyped_rows_append` moved earlier in the file) carry the new fields.
+
+The producers:
+- `acquireRelease_arm` (`Typed/Denotation.lean`) takes the node fact its dispatcher already held and
+  keeps the services fit `fits_context_inv` returns;
+- the foreign arm of `finalizerTyped_of_admitted` (`Typed/Assembly.lean`) keeps the previous
+  context's services fit from the same inversion, transported to the release's world;
+- `forkLayer_typed` (`Typed/LayerArm.lean`) takes the forked scope's presence; its three call sites
+  had it from `fits_scope_inv` and discarded it.
+
+### The bridge (`Typed/Body.lean`, after `LayerArm`)
+
+`denoteAt_typed` (M5 through the interpreter's body hook), `acquireIn_typed`, `release_typed`,
+`layerBuildR_typed`, and `bodyTyped_typed` over `bodyR (interpRAt root.program completed)`, by cases
+on the admission. `acquireIn_typed` is the one with content: the `Scope` read, the acquire at the
+point's child 0 at the node's own columns (`Checker.inv_acquireRelease`), the registration as a
+store step whose answer is typed at `unit | Exit<unknown, unknown>` (the two posts of `scopeAdd`),
+and the closed branch's release now, typed by the registration pre's bridge at the exit read back
+(`exitOfVal_of_fits`, `fitsExit_of_exitOfVal`).
+
+### The clauses (`Typed/Commands/Evaluate.lean`)
+
+- `clause_guard_`: the resume frame `guard_frame` types, pushed on the host stack.
+- `maskFrame` and `evaluateFiberR_mask` (by `rfl`): the frame the `mask` arm installs, named once.
+- `clause_mask`: the body's program typed at the certificate by the bridge from `J.sourceWF` and
+  `J.services` (this is what row 170's premise in J is for), or the recorded interrupt delivered
+  (`pendingCause_clean`, `pendingCause_noShapeDefect` from `InterruptProvenance`); the answer
+  frame carries the certificate; the restore frame is the identity arrow.
+
+Eight of the fiber clauses are now proved: `suspend`, `foreignRelease`, `closeWalk`, `frontier`,
+`construction`, `sync`, `guard_`, `mask`.
+
+### `E4-TYPED-CE-036` (register row added)
+
+`docs/research/2026-10-02-claude-lead/witnesses/FinBody.lean` (log beside it): at every source,
+world and view, `BodyTyped root w (.fin (.interruptFiber ⟨0⟩ true) (.success (.str "x"))) ⟨string, never⟩`
+held (`admitted`) and the installed program was not `TypedProg` there (`body_untyped`, the finalizer
+answers `unit`). What it does not show: a `ConfigTyped` state with this code current was not built;
+the bridge's refutation is the exact statement, and it is what the `mask` clause needs. `Body.fin`
+has no producer in the tree (the close walk passes `denoteFin` programs directly).
+
+### The Codex ports (additive; `git apply --check` together, then applied)
+
+- `Effect4.Program.RawHandles` (`Laws/Program/Handles/Term.lean`, ten declarations): a successful
+  `nativeAtom`/`evalTerm`/`evalTerms` evaluation's raw handle frames (`Store.Val.handles`) are a
+  subset of its inputs'; `evalTerm_registered` gives the existing `HandlesRegistered` conclusion
+  from registered inputs. One producer leaf of `M7.exitHandles_valid`; not the reachable-exit
+  connector. Fixture `Test/Program/RawHandleTerms.lean` (eighteen evaluator controls; byte 6
+  unregistered copied, byte 7 kept; the overstrong claim refuted).
+- `Effect4.Program.Typed.CompletionDue` (`Typed/Commands/Bookkeeping.lean`, four declarations):
+  `complete_due_origin`, `complete_due`, `completion_due_typed`, `completion_due_typed_later` — a
+  Deferred's completion keeps `PromiseTableOk.due` from `MachineWide` and `CompletionStrong`,
+  transported to a later world with the token table unchanged. The due-field conjunct of the
+  completing-store clause; not the store or frame invariants. Fixture
+  `Test/Program/CompletionDueControls.lean` (the coarse completion is insufficient; the due
+  typing is not monotone in the world alone).
+- Both fixtures imported in `Test/All.lean` after `Test.Program.ProtocolPosts`.
+
+### Placement
+
+1. Concept 2 (`residual-program-typing`) for the bridge and the judgment; concept 4
+   (`reactive-scheduling`), properties `step-deliver-preserves` and `step-loop-preserves`, for the
+   clauses.
+2. `M6Ledger.step_deliver` and `M6Ledger.step_loop`: `bodyTyped_typed` is a step of the `mask`
+   clause and of the fork clauses to come; each clause is a premise of
+   `deliver_preserves_of_clauses`.
+3. Reach: `TypedProg root w ty` at a world whose service table is the source's, at a source whose
+   layer references are well formed (rows 112, 170); the clauses on the `Evaluating` fragment at the
+   same world (no world extension: `guard_` and `mask` allocate nothing).
+4. Not established: the clauses listed open (`scoped`, `gen`, `loop`, `raceRegister`, the fiber
+   actions, `scopeExit`, `refuse`, `closeIter`, the store rows, the walk); `loop`'s prefix; progress;
+   the host boundary unchanged. The ports: no reachability, no handle existence, no whole store step.
+5. Unlocks: the fork clauses (`fork`, `forkIn`, `forkScoped`, `scoped`, `raceAll`) read the same
+   bridge; `step_deliver`; the M7 exit-handle route's term leaf.
+
+### Proposed decisions rows (coordinator's register)
+
+- `Body.fin` has no producer; cut it (`Sched.Body`, `denoteBody`, `bodyR`, `body_means`,
+  `BodyTyped.fin`, `SchedContract`'s guard, the contract packet's two words). A representation cut,
+  so proposed, not landed.
+- `BodyTyped` is "what the program needs": an admission arm is stated from its program's typing
+  derivation, and a producer that lacks a fact the program needs is the finding, not a weaker arm.
+
+
+Commands and results:
+- `lake env lean docs/research/2026-10-02-claude-lead/witnesses/FinBody.lean` at `f4d8be8f`, before
+  the change: `admitted`, `body_untyped`, `bridge_refuted` at `[propext, Quot.sound]`
+  (`FinBody.log`).
+- `lake build Effect4.Laws Test.Program.RawHandleTerms Test.Program.CompletionDueControls`: green
+  in three runs (a shadowed section binder in `Residual.lean`; then an implicit `fin` and an unused
+  binder in `Body.lean`). The rebuilt cone: Residual 34 s, Denotation 18 s, Assembly 8.3 s,
+  LayerArm 8.7 s, Bookkeeping 7.6 s, Body 11 s, Evaluate 3.1 s, RawHandleTerms 4.4 s,
+  CompletionDueControls 3.1 s. The ledger report is unchanged (`M6Ledger: 4 open, 16 proved, 20
+  total`): the clauses are premises of `step_deliver`, not yet all of them.
+- The axiom scan over every declaration of Evaluate, Body, Admission, Residual, Denotation,
+  Assembly, LayerArm, Handles/Term and Bookkeeping: 2,352 declarations, none outside
+  `[propext, Quot.sound]`.
+
+Not run: `lake build Test`, the trust gate, `make check` (owed at the sweep). All evidence is
+kernel-checked; none is bounded or host-only.
