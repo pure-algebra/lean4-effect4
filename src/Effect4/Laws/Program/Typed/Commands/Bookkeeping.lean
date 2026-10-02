@@ -958,10 +958,7 @@ section World
 variable {w w' : World} (ord : w.leHost w') (hΓ : w'.Γ = w.Γ) (hΘ : w'.Θ = w.Θ)
 include ord
 
-theorem servicesFit_mono {services : Env.Ctx} (h : ServicesFit w services) :
-    ServicesFit w' services :=
-  servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 (fun _ hs => scopeLive_mono ord.1 hs)
-    (serviceTy_of_le ord.1) h
+-- `servicesFit_mono` (a context's services fit at every later world) is `Typed/Denotation.lean`'s.
 
 omit ord in
 include hΓ in

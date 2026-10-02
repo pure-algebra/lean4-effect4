@@ -220,9 +220,32 @@ bracket markers: `.guard`, `.unguard`, `.finishFinalizer`, and `.scopeExit`.
   (`typedProg_not_bind_closed` (`Test/Program/TypedProgBindRed.lean:32`), register row `E4-TYPED-CE-030`).
 - **Fundamental elaboration property (`denote-typed`)**: Denotation of a checked program is `TypedProg`.
   `typeOfProgram root.sig root.prog = some ty → TypedProg root w ty (denoteR root)`
-  (`denoteR_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1650`)).
+  (`denoteR_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1669`)).
 - **Failure handler compatibility (`on-failure-typed`)**: Compatibility lemma for the error recovery bracket `onFailure` (decisions row 148), proved by
   `catchGuard_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean:123`).
+- **M5 on the layer-free fragment (`denote-typed-layer-free`)**: every arm of `denoteR` but the layer
+  family's is proved, and the arms are assembled by induction on fuel (`childDenotes_upto`
+  (`src/Effect4/Laws/Program/Typed/Denotation.lean:3025`)): at no fuel the frontier, at positive fuel
+  each constructor's arm with its children's hypotheses taken at the children's nodes. The layer
+  family's arm enters as the hypothesis `ProvideLayerArm`
+  (`src/Effect4/Laws/Program/Typed/Denotation.lean:3014`), so `denotesTyped_of_provideLayer`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1221`) is conditional and does not close
+  `denoteR_typed`; the remaining arm is the open goal `denoteR_typed_provideLayer`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1680`, decisions row 176 (b)). On programs no node of
+  which is a `provideLayer` (`LayerFree`, `src/Effect4/Laws/Program/Typed/Denotation.lean:3074`) the arm
+  cannot be reached (`provideLayerArm_of_layerFree`), so M5 holds there unconditionally:
+  `denotesTyped_of_layerFree` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1229`). The store-row arm
+  is the textbook's reference-read argument in its adapted form (TAPL §13.4's store typing; PLF
+  `References.v`'s `store_weakening`): membership in the cell type exposes a declaration
+  (`fits_refTy_inv`, `src/Effect4/Laws/Program/Typed/Denotation.lean:2161`) at a type equivalent to
+  `nat` under normalized subtyping, not syntactic equality; `leHost` keeps the declaration; the reply's
+  lookup identifies it, and `fits_subN` transports the reply (`refRead_nat`,
+  `src/Effect4/Laws/Program/Typed/Denotation.lean:2213`), consumed by `syncRow_typed`
+  (`src/Effect4/Laws/Program/Typed/Denotation.lean:2224`) and `perform_arm`
+  (`src/Effect4/Laws/Program/Typed/Denotation.lean:2671`). The service arm keeps the source/world
+  service-table agreement as a premise and admits the missing-service defect, which is not a service
+  value (`service_arm`, `src/Effect4/Laws/Program/Typed/Denotation.lean:2758`); `exit` covers its inline
+  branch through `inlineYield_typed` (`src/Effect4/Laws/Program/Typed/Denotation.lean:2859`).
 
 ### 2.3 Concept 3: Scope Lifetime & Finalization (`scope-lifetime-finalization`)
 
@@ -307,7 +330,7 @@ inductive RunDecision ...
 - **Step invariant lifting (`drivestate-lift`)**: Step invariant lifting for sequential command loops
   (`driveState_lift` (`src/Effect4/Laws/Machine/Lift.lean:56`)).
 - **Scheduler step preservation (`step-loop-preserves`, `step-deliver-preserves`)**: Preservation of `MachineTyped`
-  across `stepDecision` on loop and deliver decisions (`M6Ledger.step_loop` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1683`), `M6Ledger.step_deliver` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1694`)).
+  across `stepDecision` on loop and deliver decisions (`M6Ledger.step_loop` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1708`), `M6Ledger.step_deliver` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1719`)).
 - **Operational progress (`scheduler-progress`)**: Every typed state is either terminal, takes a step, or is at a live frontier
   (decisions row 139).
 - **Infinite liveness (`fair-scheduling`)**: Temporal liveness under weak fairness (Requirement R12).
@@ -574,9 +597,9 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
 - **Reference machine simulation (`run-eq-ref`)**: Frame machine replay matches term reference replay at empty host table
   (`run_eq_ref` (`src/Effect4/Laws/Program/RuntimeR.lean:211`)).
 - **M7 conditional route (`m7-route`)**: Derivation of M7 capstone conditionally from M5 and M6 ledger components
-  (`m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1593`)).
+  (`m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1612`)).
 - **Capstone M7 goals (`m7-capstone-goals`)**: Exit value agreement, final store agreement, non-halting, and exit handle
-  validity on `M7Fragment` (`M7.exits_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1789`)).
+  validity on `M7Fragment` (`M7.exits_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1814`)).
 
 ## 3. The Object-Language Glossary (Object-Language vs. Host Metatheory)
 

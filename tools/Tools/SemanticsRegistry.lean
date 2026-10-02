@@ -201,6 +201,13 @@ def registry : Registry where
       literature := [
         { work := "XiaEtAl2020", locator := "audit P37", relation := "definitionUsed" }
       ] },
+    { id := "denote-typed-layer-free", concept := "residual-program-typing",
+      role := .fundamentalProperty
+      title := "M5 on the layer-free fragment: every arm but provideLayer's, assembled by induction on fuel"
+      pointer := .witness `Effect4.Program.Typed.denotesTyped_of_layerFree
+      literature := [
+        { work := "XiaEtAl2020", locator := "audit P37", relation := "definitionUsed" }
+      ] },
     { id := "bind-closed", concept := "residual-program-typing", role := .compatibility
       title := "TypedProg is closed under bind"
       pointer := .refutedBy "E4-TYPED-CE-030" `Test.Program.TypedProgBindRed.typedProg_not_bind_closed

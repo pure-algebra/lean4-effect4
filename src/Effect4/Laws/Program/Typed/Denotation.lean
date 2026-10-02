@@ -2141,4 +2141,943 @@ theorem withFiber_arm {a : ActionTerm NativeOp} (hfuel : p.fuel ≠ 0)
 
 end FiberArms
 
+/-! ## Arms: the store rows, the services and `exit`
+
+A `perform` at a built-in row is the row's store operation (`syncRow_typed`), its asynchronous
+registration (`deferredAwait`, `sleep`) or, at a host row, the host registration whose certificate
+`bitEntry` (`Typed/Residual.lean`) holds raw-above the row's template columns. The checker types
+the node at the row's instance at the request (`rowTy`); a template's post has no member at a
+parameter, so the continuation is typed at the instance by `fits_instantiate`
+(`Typed/Membership.lean`), not because a host answer can meet the template there (decisions
+row 183). `service` reads the context's binding at the key's declared carrier (`ServicesFit`, the
+world's table tied to the source's); `provideService` sets a context whose new binding fits that
+carrier (`fits_flatFits`, a lawful signature's carriers being flat) and restores the previous
+one. `exit` reifies its body's exit, an inline exit typed by `inlineYield_typed`. -/
+
+/-! ### Built-in rows -/
+
+/-- A member of the native cell type is a cell declared at a type equivalent to `nat` in the
+checker's order (`RefDeclared`: both `subN` directions, not syntactic equality). -/
+theorem fits_refTy_inv {w : World} {v : Val} (h : Fits w v NativeOp.refTy) :
+    ∃ k, v = Val.cell k ∧ RefDeclared w k .nat := by
+  simp only [Fits, NativeOp.refTy] at h
+  split at h
+  · rename_i kind index
+    simp only [HandleFits] at h
+    split at h
+    · rename_i hk
+      have hk_byte : kind = HandleKind.cell.byte := HandleKind.ofByte?_exact hk
+      subst hk_byte
+      exact ⟨⟨index⟩, rfl, h.2⟩
+    · exact absurd h.1 (by decide)
+    · exact absurd h.1 (by decide)
+    · exact nomatch h
+    · exact nomatch h
+  · exact absurd h.1 (by decide)
+
+/-- A member of the native deferred type is a deferred declared at columns equivalent to
+`(nat, nat)` in the checker's order. -/
+theorem fits_deferredTy_inv {w : World} {v : Val} (h : Fits w v NativeOp.deferredTy) :
+    ∃ k, v = Val.promise k ∧ PromiseDeclared w k .nat .nat := by
+  simp only [Fits, NativeOp.deferredTy] at h
+  split at h
+  · rename_i kind index
+    simp only [HandleFits] at h
+    split at h
+    · exact absurd h.1 (by decide)
+    · rename_i hk
+      have hk_byte : kind = HandleKind.promise.byte := HandleKind.ofByte?_exact hk
+      subst hk_byte
+      exact ⟨⟨index⟩, rfl, h.2⟩
+    · exact absurd h.1 (by decide)
+    · exact nomatch h
+    · exact nomatch h
+  · exact absurd h.1 (by decide)
+
+/-- A cell's declaration survives compatible world extension (`leHost` extends the reference
+table). -/
+theorem refDeclared_mono {w w' : World} (ord : w.leHost w') {key : RefKey} {t : Ty}
+    (h : RefDeclared w key t) : RefDeclared w' key t := by
+  obtain ⟨t', hlookup, hequiv⟩ := h
+  exact ⟨t', ord.1.2.2.2.1 _ _ hlookup, hequiv⟩
+
+/-- A deferred's declaration survives compatible world extension. -/
+theorem promiseDeclared_mono {w w' : World} (ord : w.leHost w') {key : DeferredKey} {a e : Ty}
+    (h : PromiseDeclared w key a e) : PromiseDeclared w' key a e := by
+  obtain ⟨a', e', hlookup, ha, he⟩ := h
+  exact ⟨a', e', ord.1.2.2.1 _ _ hlookup, ha, he⟩
+
+/-- **Reference read** (the TYPES 2003 card's first step): a reply fitting the cell's declared
+type at the reply's world fits `nat` when the cell is declared equivalent to `nat`; the lookup's
+equality identifies the reply's declaration, and normalized subtyping transports the reply. -/
+theorem refRead_nat {w : World} {key : RefKey} {ty : Ty} {ans : Val}
+    (hdecl : RefDeclared w key .nat) (hlookup : w.Ρ key = some ty) (hfit : Fits w ans ty) :
+    Fits w ans .nat := by
+  obtain ⟨t', hlookup', hequiv⟩ := hdecl
+  rw [hlookup] at hlookup'
+  cases hlookup'
+  exact fits_subN w hequiv.1 ans hfit
+
+/-- **The store rows**: a request fitting a `sync` row's request column decodes to the row's
+store operation (`NativeOp.syncOpOf`), whose pre it meets at a certificate the row fixes, and
+whose post answers at the row's answer column at every later world. -/
+theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
+    (op : NativeOp) (hk : NativeOp.kind op = .sync) (v : Val)
+    (hfit : Fits w v (NativeOp.row op).request) :
+    ∃ o, NativeOp.syncOpOf op v = some o ∧
+      TypedProg root w ⟨(NativeOp.row op).answer, (NativeOp.row op).error, req⟩
+        (.vis (.inl o) fun ans => .pure (.success ans)) := by
+  cases op with
+  | refMake =>
+    change Fits w v .nat at hfit
+    cases v with
+    | nat n =>
+      refine ⟨SyncOp.refMake (Val.nat n), rfl, ?_⟩
+      refine TypedProg.store (op := SyncOp.refMake (Val.nat n)) (cert := .nat) ⟨rfl, hfit⟩ ?_
+      intro w' ord ans post
+      obtain ⟨key, rfl, hlookup⟩ := post
+      refine TypedProg.pure ?_
+      refine strongExit_success w' _ (Val.cell key) ?_
+      change Fits w' (Val.cell key) NativeOp.refTy
+      show HandleFits w' HandleKind.cell.byte key.index NativeOp.refTarget
+      change NativeOp.refTarget = NativeOp.refTarget ∧ RefDeclared w' key .nat
+      exact ⟨rfl, ⟨.nat, hlookup, ⟨Ty.subN_refl .nat, Ty.subN_refl .nat⟩⟩⟩
+    | _ => exact hfit.elim
+  | refGet =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refGet k, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refGet k) (cert := ()) ⟨t', hlookup⟩ ?_
+    intro w' ord ans post
+    obtain ⟨ty, hlookup', hfit'⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ ans ?_
+    exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
+  | refSet =>
+    obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w v NativeOp.refTy .nat).mp hfit
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hp
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refSet k q, rfl, ?_⟩
+    have hq' : Fits w q t' := fits_subN w hequiv.2 q hq
+    refine TypedProg.store (op := SyncOp.refSet k q) (cert := ()) ⟨t', hlookup, hq'⟩ ?_
+    intro w' ord ans post
+    subst post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ (Val.cell k) ?_
+    change Fits w' (Val.cell k) NativeOp.refTy
+    show HandleFits w' HandleKind.cell.byte k.index NativeOp.refTarget
+    change NativeOp.refTarget = NativeOp.refTarget ∧ RefDeclared w' k .nat
+    exact ⟨rfl, refDeclared_mono ord ⟨t', hlookup, hequiv⟩⟩
+  | refGetAndSet =>
+    obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w v NativeOp.refTy .nat).mp hfit
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hp
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refGetAndSet k q, rfl, ?_⟩
+    have hq' : Fits w q t' := fits_subN w hequiv.2 q hq
+    refine TypedProg.store (op := SyncOp.refGetAndSet k q) (cert := ()) ⟨t', hlookup, hq'⟩ ?_
+    intro w' ord ans post
+    obtain ⟨ty, hlookup', hfit'⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ ans ?_
+    exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
+  | refSetAndGet =>
+    obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w v NativeOp.refTy .nat).mp hfit
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hp
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refSetAndGet k q, rfl, ?_⟩
+    have hq' : Fits w q t' := fits_subN w hequiv.2 q hq
+    refine TypedProg.store (op := SyncOp.refSetAndGet k q) (cert := ()) ⟨t', hlookup, hq'⟩ ?_
+    intro w' ord ans post
+    obtain ⟨ty, hlookup', hfit'⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ ans ?_
+    exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
+  | refUpdate f =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
+    obtain ⟨t', hlookup, _⟩ := hdecl
+    refine ⟨SyncOp.refUpdate k f, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refUpdate k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    intro w' ord ans post
+    subst post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ Val.unit trivial
+  | refGetAndUpdate f =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refGetAndUpdate k f, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refGetAndUpdate k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    intro w' ord ans post
+    obtain ⟨ty, hlookup', hfit'⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ ans ?_
+    exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
+  | refUpdateAndGet f =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refUpdateAndGet k f, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refUpdateAndGet k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    intro w' ord ans post
+    obtain ⟨ty, hlookup', hfit'⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ ans ?_
+    exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
+  | refUpdateSome f =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
+    obtain ⟨t', hlookup, _⟩ := hdecl
+    refine ⟨SyncOp.refUpdateSome k f, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refUpdateSome k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    intro w' ord ans post
+    subst post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ Val.unit trivial
+  | refGetAndUpdateSome f =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refGetAndUpdateSome k f, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refGetAndUpdateSome k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    intro w' ord ans post
+    obtain ⟨ty, hlookup', hfit'⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ ans ?_
+    exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
+  | refUpdateSomeAndGet f =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refUpdateSomeAndGet k f, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refUpdateSomeAndGet k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    intro w' ord ans post
+    obtain ⟨ty, hlookup', hfit'⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ ans ?_
+    exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
+  | refModify f =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
+    refine ⟨SyncOp.refModify k f, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refModify k f) (cert := ()) hdecl ?_
+    intro w' ord ans post
+    obtain ⟨n, rfl⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ (Val.nat n) trivial
+  | refModifySome f =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
+    refine ⟨SyncOp.refModifySome k f, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refModifySome k f) (cert := ()) hdecl ?_
+    intro w' ord ans post
+    obtain ⟨n, rfl⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ (Val.nat n) trivial
+  | deferredMake =>
+    have hv : v = Val.unit := fits_unit_inv hfit
+    subst hv
+    refine ⟨SyncOp.deferredMake, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.deferredMake) (cert := (.nat, .nat)) ⟨rfl, rfl⟩ ?_
+    intro w' ord ans post
+    obtain ⟨key, rfl, hlookup⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ (Val.promise key) ?_
+    change Fits w' (Val.promise key) NativeOp.deferredTy
+    show HandleFits w' HandleKind.promise.byte key.index NativeOp.deferredTarget
+    change NativeOp.deferredTarget = NativeOp.deferredTarget ∧ PromiseDeclared w' key .nat .nat
+    exact ⟨rfl, ⟨.nat, .nat, hlookup, ⟨Ty.subN_refl .nat, Ty.subN_refl .nat⟩,
+      ⟨Ty.subN_refl .nat, Ty.subN_refl .nat⟩⟩⟩
+  | deferredIsDone =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_deferredTy_inv hfit
+    obtain ⟨a', e', hlookup, _, _⟩ := hdecl
+    refine ⟨SyncOp.deferredIsDone k, rfl, ?_⟩
+    have hisSome : (w.«Π» k).isSome = true := by rw [hlookup]; rfl
+    refine TypedProg.store (op := SyncOp.deferredIsDone k) (cert := ()) hisSome ?_
+    intro w' ord ans post
+    obtain ⟨b, rfl⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ (Val.bool b) trivial
+  | deferredPoll =>
+    obtain ⟨k, rfl, hdecl⟩ := fits_deferredTy_inv hfit
+    obtain ⟨a', e', hlookup, _, _⟩ := hdecl
+    refine ⟨SyncOp.deferredPoll k, rfl, ?_⟩
+    have hisSome : (w.«Π» k).isSome = true := by rw [hlookup]; rfl
+    refine TypedProg.store (op := SyncOp.deferredPoll k) (cert := ()) hisSome ?_
+    intro w' ord ans post
+    obtain ⟨b, rfl⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ (Val.bool b) trivial
+  | deferredSucceed =>
+    obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w v NativeOp.deferredTy .nat).mp hfit
+    obtain ⟨k, rfl, hdecl⟩ := fits_deferredTy_inv hp
+    obtain ⟨n, rfl⟩ := fits_nat_inv hq
+    obtain ⟨a', e', hlookup, ha, _⟩ := hdecl
+    refine ⟨SyncOp.deferredCompleteWith k (.ofExit (.success (Val.nat n))), rfl, ?_⟩
+    have hexit : ExitOk w ⟨a', e', Env.Requirement.empty⟩ (.success (Val.nat n)) := by
+      refine strongExit_success w _ (Val.nat n) ?_
+      exact fits_subN w ha.2 (Val.nat n) trivial
+    refine TypedProg.store (op := SyncOp.deferredCompleteWith k (.ofExit (.success (Val.nat n))))
+      (cert := ()) ⟨a', e', hlookup, hexit⟩ ?_
+    intro w' ord ans post
+    obtain ⟨b, rfl⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ (Val.bool b) trivial
+  | deferredFail =>
+    obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w v NativeOp.deferredTy .nat).mp hfit
+    obtain ⟨k, rfl, hdecl⟩ := fits_deferredTy_inv hp
+    obtain ⟨n, rfl⟩ := fits_nat_inv hq
+    obtain ⟨a', e', hlookup, _, he⟩ := hdecl
+    refine ⟨SyncOp.deferredCompleteWith k (.ofExit (.failure (.fail (.tag n)))), rfl, ?_⟩
+    have hexit : ExitOk w ⟨a', e', Env.Requirement.empty⟩ (.failure (.fail (.tag n))) := by
+      refine ⟨(fitsExit_failure_iff _ _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩, fun r hr => ?_⟩
+      all_goals
+        simp only [Cause.fail, List.mem_singleton] at hr
+        subst hr
+      · exact ⟨Val.nat n, rfl, fits_subN w he.2 (Val.nat n) trivial⟩
+      · trivial
+      · trivial
+    refine TypedProg.store
+      (op := SyncOp.deferredCompleteWith k (.ofExit (.failure (.fail (.tag n)))))
+      (cert := ()) ⟨a', e', hlookup, hexit⟩ ?_
+    intro w' ord ans post
+    obtain ⟨b, rfl⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ (Val.bool b) trivial
+  | scopeMake strategy =>
+    cases strategy with
+    | sequential =>
+      have hv : v = Val.unit := fits_unit_inv hfit
+      subst hv
+      refine ⟨SyncOp.scopeMake .sequential, rfl, ?_⟩
+      refine TypedProg.store (op := SyncOp.scopeMake .sequential) (cert := ()) trivial ?_
+      intro w' ord ans post
+      exact TypedProg.pure (strongExit_success w' _ ans post)
+    | parallel =>
+      have hv : v = Val.unit := fits_unit_inv hfit
+      subst hv
+      refine ⟨SyncOp.scopeMake .parallel, rfl, ?_⟩
+      refine TypedProg.store (op := SyncOp.scopeMake .parallel) (cert := ()) trivial ?_
+      intro w' ord ans post
+      exact TypedProg.pure (strongExit_success w' _ ans post)
+  | clockNow =>
+    have hv : v = Val.unit := fits_unit_inv hfit
+    subst hv
+    refine ⟨SyncOp.clockNow, rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.clockNow) (cert := ()) trivial ?_
+    intro w' ord ans post
+    obtain ⟨n, rfl⟩ := post
+    refine TypedProg.pure ?_
+    refine strongExit_success w' _ (Val.nat n) trivial
+  | deferredAwait => cases hk
+  | sleep => cases hk
+  | external _ => cases hk
+
+/-- A built-in operation reads its own row; only a host operation reads the table. -/
+theorem nativeRowOf_builtin (table : RowTable) {op : NativeOp}
+    (hk : NativeOp.kind op ≠ .program) : nativeRowOf table op = op.row := by
+  cases op with
+  | external i => exact absurd rfl hk
+  | _ => rfl
+
+/-- A store row is not a host row. -/
+theorem kind_ne_program_of_sync {op : NativeOp} (h : NativeOp.kind op = .sync) :
+    NativeOp.kind op ≠ .program := by
+  rw [h]
+  decide
+
+/-- The checker's order places a type below its double normal form. -/
+theorem subN_normalize₂ {a b : Ty} (h : Ty.subN a b = true) :
+    Ty.subN a b.normalize.normalize = true := by
+  rw [Ty.subN_normalize_right, Ty.subN_normalize_right]
+  exact h
+
+section PerformArms
+
+variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy}
+
+/-- **A checked built-in `perform`**: its request evaluates to a value fitting the row's request
+column (`evalTerm_progress_env`), and its type is the row's normalized columns
+(`rowTy_closed_some`; every built-in row is closed, `NativeOp.row_closed`). -/
+theorem builtinPerform_inv {op : NativeOp} {r : Term} {q : Point} {t : EffTy}
+    (hk : NativeOp.kind op ≠ .program)
+    (hat : Node.at_ (.eff root.program) q.path = some (.eff (.perform op r)))
+    (hpt : PointTyped root w q t) :
+    ∃ v, evalTerm q.env r = some v ∧ Fits w v (NativeOp.row op).request ∧
+      t = ⟨(NativeOp.row op).answer.normalize.normalize,
+        (NativeOp.row op).error.normalize.normalize,
+        Env.Requirement.ofList (NativeOp.row op).requires⟩ := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨reqTy, -, hreq, hrow⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
+  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hreq
+  have hrowOf : root.signature.rowOf op = (NativeOp.row op).normalizeTypes := by
+    show (nativeRowOf root.table op).normalizeTypes = _
+    rw [nativeRowOf_builtin root.table hk]
+  rw [hrowOf] at hrow
+  obtain ⟨hsub, rfl⟩ := rowTy_closed_some (Ty.closed_normalize _ (NativeOp.row_closed op).1)
+    (Ty.closed_normalize _ (NativeOp.row_closed op).2.1)
+    (Ty.closed_normalize _ (NativeOp.row_closed op).2.2) hrow
+  have hnorm : Fits w v (NativeOp.row op).request.normalize := fits_subN w hsub v hvfit
+  exact ⟨v, hv, (fits_normalize w _ v).mp hnorm, rfl⟩
+
+/-- **A `perform` at a `sync` built-in row**: the store operation (`syncRow_typed`), widened to
+the row's normalized columns. The consumer of the reference-read card. -/
+theorem syncPerform_arm {op : NativeOp} {r : Term} (hk : NativeOp.kind op = .sync)
+    (hfuel : p.fuel ≠ 0)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform op r)))
+    (hpt : PointTyped root w p ty) :
+    TypedProg root w ty (denoteR root.program (.perform op r) p) := by
+  obtain ⟨v, hv, hfit, rfl⟩ := builtinPerform_inv (by rw [hk]; exact nofun) hat hpt
+  obtain ⟨o, ho, htyped⟩ :=
+    syncRow_typed root (req := Env.Requirement.ofList (NativeOp.row op).requires) op hk v hfit
+  rw [denoteR_perform_sync _ _ _ hfuel ((NativeOp.row_kind op).trans hk), hv, Option.bind_some, ho]
+  exact typedProg_widen root (subN_normalize₂ (Ty.subN_refl _)) (subN_normalize₂ (Ty.subN_refl _))
+    htyped
+
+/-- **`Deferred.await`**: the registration on the request's deferred, met at the deferred's
+declared columns (`asyncPre`), which are below the row's `(nat, nat)` in the checker's order. -/
+theorem deferredAwait_arm {r : Term} (hfuel : p.fuel ≠ 0)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform .deferredAwait r)))
+    (hpt : PointTyped root w p ty) :
+    TypedProg root w ty (denoteR root.program (.perform .deferredAwait r) p) := by
+  obtain ⟨v, hv, hfit, rfl⟩ := builtinPerform_inv (by decide) hat hpt
+  obtain ⟨k, rfl, a', e', hPi, ⟨ha, -⟩, ⟨he, -⟩⟩ := fits_deferredTy_inv hfit
+  rw [denoteR_perform _ _ _ hfuel]
+  show TypedProg root w _ (denoteAsync r p)
+  unfold denoteAsync
+  rw [hv]
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) ⟨a', e', Env.Requirement.empty⟩
+    ⟨a', e', hPi, Ty.sub_refl _, Ty.sub_refl _⟩
+    (fun w' _ ans post => .pure (exitOk_widen (subN_normalize₂ ha) (subN_normalize₂ he) post))
+
+/-- **`Effect.sleep`**: no time is the counted yield, answering `unit`; a positive time the
+timer's registration, met at `(unit, never)`. -/
+theorem sleep_arm {r : Term} (hfuel : p.fuel ≠ 0)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform .sleep r)))
+    (hpt : PointTyped root w p ty) :
+    TypedProg root w ty (denoteR root.program (.perform .sleep r) p) := by
+  obtain ⟨v, hv, hfit, rfl⟩ := builtinPerform_inv (by decide) hat hpt
+  obtain ⟨n, rfl⟩ := fits_nat_inv hfit
+  rw [denoteR_perform _ _ _ hfuel]
+  show TypedProg root w _ (denoteSleep r p)
+  unfold denoteSleep
+  rw [hv, Option.bind_some]
+  cases n with
+  | zero =>
+    show TypedProg root w _ (.vis (.inr (.yieldNow 0)) fun v => .pure (.success v))
+    refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => ?_)
+    have hans : ans = Val.unit := post
+    subst hans
+    exact .pure (strongExit_success w' _ _ trivial)
+  | succ n =>
+    show TypedProg root w _ (.vis (.inr (.async (.store (.registerSleep (ClockMillis.ofNat (n + 1))))
+      (Val.nat (n + 1)))) Effects.Program.pure)
+    exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) (EffTy.pure .unit) (Ty.sub_refl _)
+      (fun w' _ ans post => .pure (exitOk_widen (Ty.subN_refl _) (Ty.subN_refl _) post))
+
+/-- A host row's exit, typed at the row's template columns, is typed at the row's instance at a
+request (`rowTy`) when the columns keep their parameters under value formers: a parameter has no
+member (`fits_instantiate`). -/
+theorem exitOk_instantiate (σ : Ty.Subst) (w : World) (ty : EffTy) (ex : ExitV)
+    (hans : Ty.valueVars ty.answer = true) (herr : Ty.valueVars ty.error = true)
+    (hex : ExitOk w ty ex) {req : Env.Requirement} :
+    ExitOk w ⟨(Ty.instantiate σ ty.answer).normalize, (Ty.instantiate σ ty.error).normalize, req⟩
+      ex := by
+  have hex' : ExitOk w ⟨Ty.instantiate σ ty.answer, Ty.instantiate σ ty.error, req⟩ ex := by
+    cases ex with
+    | success v => exact strongExit_success w _ v (fits_instantiate σ w ty.answer hans v hex.1)
+    | failure cause =>
+      have hfit := (fitsExit_failure_iff w ty cause).mp hex.1
+      refine ⟨(fitsExit_failure_iff w _ cause).mpr ⟨fun r hr => ?_, hex.2⟩, hex.2⟩
+      have hr_fit := hfit.1 r hr
+      cases r with
+      | fail e ann =>
+        obtain ⟨v, he, hv⟩ := hr_fit
+        exact ⟨v, he, fits_instantiate σ w ty.error herr v hv⟩
+      | die defect ann => trivial
+      | interrupt who ann => trivial
+  refine exitOk_widen ?_ ?_ hex'
+  · rw [Ty.subN_normalize_right]
+    exact Ty.subN_refl _
+  · rw [Ty.subN_normalize_right]
+    exact Ty.subN_refl _
+
+/-- **A lawful host row's columns keep their parameters under value formers**: the row passes
+`rowChecks`' internal-handle scan at its answer and error (`LawfulSig.rows`), so
+`valueVars_of_noInternalHandle`, and the signature's row is its normalization
+(`valueVars_normalize`). -/
+theorem hostRow_valueVars (root : ProgramSource) (i : Nat) (hi : i < root.table.length) :
+    Ty.valueVars (root.signature.rowOf (.external i)).answer = true ∧
+    Ty.valueVars (root.signature.rowOf (.external i)).error = true := by
+  have hmem : root.table[i] ∈ root.table := List.get_mem _ ⟨i, hi⟩
+  have hchecks := root.lawful.rows (root.table[i]) hmem
+  have hrow : root.signature.rowOf (.external i) = (root.table[i]).normalizeTypes := by
+    show ((nativeRowOf root.table (.external i)).normalizeTypes) = _
+    unfold nativeRowOf
+    simp only [List.getElem?_eq_getElem hi, Option.getD_some]
+  rw [hrow]
+  show Ty.valueVars (root.table[i]).answer.normalize = true ∧
+    Ty.valueVars (root.table[i]).error.normalize = true
+  have hc7 : ((findInternalHandle [] (root.table[i]).answer).isNone,
+      RowReason.internalHandle "answer") ∈ rowChecks (root.table[i]) := by
+    simp only [rowChecks, List.mem_cons]
+    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl trivial)))))))
+  have hc8 : ((findInternalHandle [] (root.table[i]).error).isNone,
+      RowReason.internalHandle "error") ∈ rowChecks (root.table[i]) := by
+    simp only [rowChecks, List.mem_cons]
+    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl trivial))))))))
+  have h7 := hchecks _ hc7
+  have h8 := hchecks _ hc8
+  simp only [Option.isNone_iff_eq_none] at h7 h8
+  exact ⟨(valueVars_normalize _).2 (valueVars_of_noInternalHandle (root.table[i]).answer [] h7),
+    (valueVars_normalize _).2 (valueVars_of_noInternalHandle (root.table[i]).error [] h8)⟩
+
+/-- **A host row** (`perform (.external i)`): the host registration, its certificate the row's
+template columns (`bitEntry` by reflexivity); the continuation is typed at the checked instance
+because the template's post has no member at a parameter (`exitOk_instantiate`), not because a
+host answer can meet it there (decisions row 183). -/
+theorem external_arm {i : Nat} {request : Term} (hfuel : p.fuel ≠ 0)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform (.external i) request)))
+    (hpt : PointTyped root w p ty) :
+    TypedProg root w ty (denoteR root.program (.perform (.external i) request) p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨requestTy, hdom, hreq, hrow⟩ :=
+    Checker.inv_perform root.signature env p.path (.external i) request ty hcheck
+  have hdom_lt : i < root.table.length := by
+    change decide (i < root.table.length) = true at hdom
+    exact of_decide_eq_true hdom
+  obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hreq
+  rw [denoteR_perform _ _ _ hfuel]
+  show TypedProg root w ty (denoteForeign (.external i) request p)
+  unfold denoteForeign
+  rw [hv]
+  let row := root.signature.rowOf (.external i)
+  have hrow' : rowTy row requestTy = some ty := hrow
+  unfold rowTy at hrow'
+  cases hmatch : Ty.matchTemplate [] row.request.normalize requestTy.normalize with
+  | none =>
+    rw [hmatch] at hrow'
+    exact nomatch hrow'
+  | some subst =>
+    rw [hmatch] at hrow'
+    injection hrow' with hty
+    subst hty
+    have hvv := hostRow_valueVars root i hdom_lt
+    let cert : EffTy := ⟨row.answer, row.error, Env.Requirement.ofList row.requires⟩
+    have hbit : bitEntry root (.external i) cert := ⟨hdom, Ty.sub_refl row.answer, Ty.sub_refl row.error⟩
+    refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) cert hbit ?_
+    intro w' ord ans post
+    exact .pure (exitOk_instantiate subst w' cert ans hvv.1 hvv.2 post)
+
+/-- **`perform`**: a host row, the two asynchronous built-in rows, or a store row. -/
+theorem perform_arm {op : NativeOp} {r : Term} (hfuel : p.fuel ≠ 0)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform op r)))
+    (hpt : PointTyped root w p ty) :
+    TypedProg root w ty (denoteR root.program (.perform op r) p) := by
+  cases op with
+  | external i => exact external_arm hfuel hat hpt
+  | deferredAwait => exact deferredAwait_arm hfuel hat hpt
+  | sleep => exact sleep_arm hfuel hat hpt
+  | _ => exact syncPerform_arm rfl hfuel hat hpt
+
+end PerformArms
+
+/-! ### Services -/
+
+/-- **A lawful source's service carriers are flat**: the reserved `Scope` key's carrier, a
+declaration's (`serviceChecks`' flatness check, `LawfulSig.services`), or a built-in code's. -/
+theorem serviceTy_flat (root : ProgramSource) (key : ServiceKey) (sty : Ty)
+    (hsty : root.signature.serviceTy key = some sty) :
+    flatCarrier sty = true := by
+  have hsig : root.signature.serviceTy = root.sig.serviceTy := rfl
+  rw [hsig] at hsty
+  unfold SigApp.serviceTy at hsty
+  split at hsty
+  · rename_i entry hentry
+    have hmem := List.mem_of_find?_eq_some hentry
+    simp only [nativeReservedServiceTypes, List.mem_singleton] at hmem
+    injection hmem with _ henty
+    subst henty
+    injection hsty with hsty'
+    subst hsty'
+    decide
+  · split at hsty
+    · exact nomatch hsty
+    · split at hsty
+      · rename_i ty hcode
+        unfold SigApp.codeTy at hcode
+        cases hfind : root.sig.services.find? (fun entry => entry.1.service == key.service) with
+        | none =>
+          rw [hfind] at hcode
+          exact nomatch hcode
+        | some entry =>
+          rw [hfind] at hcode
+          simp only [Option.map_some] at hcode
+          injection hcode with hcode'
+          subst hcode'
+          injection hsty with hsty'
+          subst hsty'
+          have hmem := List.mem_of_find?_eq_some hfind
+          have hsvc := root.lawful.services entry hmem
+          have hc1 : (flatCarrier entry.2, ServiceReason.nonFlatCarrier) ∈ serviceChecks entry := by
+            simp only [serviceChecks, List.mem_cons]
+            exact Or.inr (Or.inl trivial)
+          exact hsvc _ hc1
+      · unfold SigApp.builtinCodeTy at hsty
+        cases hfind : nativeServiceTypes.find? (fun entry => entry.1 == key.service.value) with
+        | none =>
+          rw [hfind] at hsty
+          exact nomatch hsty
+        | some entry =>
+          rw [hfind] at hsty
+          simp only [Option.map_some] at hsty
+          injection hsty with hsty'
+          subst hsty'
+          have hmem := List.mem_of_find?_eq_some hfind
+          have hall : ∀ e ∈ nativeServiceTypes, flatCarrier e.2 = true := by decide
+          exact hall entry hmem
+
+/-- A context's services fit at every later world. -/
+theorem servicesFit_mono {w w' : World} (ord : w.leHost w') {ctx : Env.Ctx}
+    (h : ServicesFit w ctx) : ServicesFit w' ctx :=
+  servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 (fun _ hs => scopeLive_mono ord.1 hs)
+    (serviceTy_of_le ord.1) h
+
+/-- The context set, at a context whose services fit, answers `unit`. -/
+theorem setContext_typed (root : ProgramSource) {w : World} {ctx : Ctx}
+    (h : ServicesFit w ctx.services) :
+    TypedProg root w (EffTy.pure .unit) (fiberValR (.setContext ctx) rfl) :=
+  TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () h (fun _ _ _ post => unitAnswer_typed root post)
+
+section ServiceArms
+
+variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {f : Nat}
+
+/-- **`service`**: the context read, then the binding at the key, which fits the key's carrier
+(`ServicesFit`, the world's table being the source's), or the missing-service defect, which the
+part-one exclusion admits; the defect is not a successful service value. -/
+theorem service_arm {key : ServiceKey} (hfuel : p.fuel ≠ 0)
+    (htie : w.serviceTy = root.sig.serviceTy)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.service key)))
+    (hpt : PointTyped root w p ty) :
+    TypedProg root w ty (denoteR root.program (.service key) p) := by
+  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨sty, hsty, rfl⟩ := Checker.inv_service root.signature env p.path key ty hcheck
+  rw [denoteR_service _ _ hfuel]
+  refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' ord v hv => ?_)
+  obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hv
+  simp only [seqR]
+  unfold serviceLookupR
+  rw [hctx]
+  dsimp only
+  cases hget : ctx.services.getV key with
+  | some val =>
+    have hsty' : w'.serviceTy key = some sty := by
+      rw [serviceTy_leHost ord htie]
+      exact hsty
+    exact .pure (strongExit_success w' _ val (flatFits_fits (hsvc key val sty hget hsty')))
+  | none =>
+    refine .pure ⟨?_, ?_⟩
+    · rw [fitsExit_failure_iff]
+      refine ⟨fun r hr => ?_, ?_⟩
+      · simp only [Cause.die, List.mem_singleton] at hr
+        subst hr
+        trivial
+      · intro r hr
+        simp only [Cause.die, List.mem_singleton] at hr
+        subst hr
+        decide
+    · intro r hr
+      simp only [Cause.die, List.mem_singleton] at hr
+      subst hr
+      decide
+
+/-- **`provideService`**: the value term at the key's carrier, then the context update: the
+context read; when the update keeps the context's identity the body runs as is, else the set
+context binding the value (its services fit: `fits_flatFits`, the carrier flat by
+`serviceTy_flat`) and the body at the child under the finalizer restoring the previous context
+(`onExit_typed`). -/
+theorem provideService_arm {key : ServiceKey} {value : Term} {b : NativeEff}
+    (hfuel : p.fuel = f + 1)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.provideService key value b)))
+    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hb : ChildDenotes root f b (p.path ++ [0])) :
+    TypedProg root w ty (denoteR root.program (.provideService key value b) p) := by
+  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  rw [Eff.expandIn_provideService] at hcheck
+  obtain ⟨sty, vty, tb, hsty, hvty, hsub, hcb, rfl⟩ :=
+    Checker.inv_provideService _ _ _ _ _ _ _ hcheck
+  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hvty
+  have hflat : flatCarrier sty = true := serviceTy_flat root key sty hsty
+  have hfit : Fits w v sty := fits_subN w hsub v hvfit
+  have hchild : ∀ w'', w.leHost w'' →
+      TypedProg root w'' ⟨tb.answer, tb.error, Row.diff tb.requires (Env.Requirement.single key)⟩
+        (denoteR root.program b (p.child 0)) := fun w'' o'' =>
+    typedProg_widen root (T := tb) (Ty.subN_refl _) (Ty.subN_refl _)
+      (hb w'' (serviceTy_leHost o'' htie) (p.child 0) tb (child_fuel_eq hfuel 0) rfl
+        (pointTyped_child hat rfl rfl hcb (envTyped_mono o'' henv) (completed_mono o'' hview)))
+  rw [denoteR_provideService _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hv]
+  unfold updateContextR
+  refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' o u hu => ?_)
+  obtain ⟨prev, hprev, hsvc⟩ := fits_context_inv hu
+  simp only [seqR]
+  rw [hprev]
+  dsimp only
+  split
+  · exact hchild w' o
+  · have hsvc' : ServicesFit w' (Ctx.withServices
+        ((Env.ContextUpdate.provideService key v).apply prev.services)).services := by
+      intro key' sv sty' hget hty'
+      change (prev.services.addV key v).getV key' = some sv at hget
+      by_cases hk : key' = key
+      · subst hk
+        rw [Env.Context.getV_addV_same] at hget
+        cases hget
+        rw [serviceTy_leHost o htie] at hty'
+        have hsame : root.sig.serviceTy key' = some sty := hsty
+        rw [hsame] at hty'
+        cases hty'
+        exact fits_flatFits hflat (fits_mono o hfit)
+      · rw [Env.Context.getV_addV_other _ _ _ _ hk] at hget
+        exact hsvc key' sv sty' hget hty'
+    refine seqGuard_typed root (setContext_typed root hsvc') (subN_never _) (fun w'' o' x _ => ?_)
+    simp only [seqR]
+    exact onExit_typed root (b := ⟨tb.answer, tb.error, _⟩) (f := EffTy.pure .unit)
+      (Ty.subN_refl _) (Ty.subN_refl _) (subN_never _)
+      (hchild w'' (leHost_trans _ _ _ o o'))
+      (fun w3 o3 _ _ => setContext_typed root (servicesFit_mono (leHost_trans _ _ _ o' o3) hsvc))
+
+end ServiceArms
+
+/-! ### `exit` -/
+
+/-- **An immediate exit is admitted** (the `exit` arm's inline branch): at a checked point, an
+exit `inlineYield` reads off the source is admitted at the point's type. The wrong-shape branches
+never fire at a typed point: every request, value and target the checker types evaluates and
+decodes (term progress, `syncRow_typed`, the handle inversions); a completed target answers from
+the view (row 175); `exit` of an immediate exit is that exit's success, by induction on fuel. -/
+theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
+    ∀ (p : Point) {e : NativeEff} {ty : EffTy} {ex : ExitV}, p.fuel = f →
+      Node.at_ (.eff root.program) p.path = some (.eff e) → PointTyped root w p ty →
+      inlineYield e p = some ex → ExitOk w ty ex := by
+  induction f with
+  | zero =>
+    intro p e ty ex hfuel _ _ hinline
+    unfold inlineYield at hinline
+    rw [if_pos hfuel] at hinline
+    exact nomatch hinline
+  | succ f ih =>
+    intro p e ty ex hfuel hat hpt hinline
+    have hpos : p.fuel ≠ 0 := by rw [hfuel]; exact Nat.succ_ne_zero f
+    unfold inlineYield at hinline
+    rw [if_neg hpos] at hinline
+    cases e with
+    | succeed t =>
+      obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+      rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+      obtain ⟨t', hty, rfl⟩ := Checker.inv_succeed _ _ _ _ _ hcheck
+      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+      simp only [hv, Option.some.injEq] at hinline
+      subst hinline
+      exact strongExit_success w _ v hfit
+    | fail t =>
+      obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+      rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+      obtain ⟨e, hty, hadm, rfl⟩ := Checker.inv_fail _ _ _ _ _ hcheck
+      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+      simp only [hv, Option.some.injEq] at hinline
+      subst hinline
+      refine ⟨(fitsExit_failure_iff _ _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩, fun r hr => ?_⟩
+      all_goals
+        simp only [Cause.fail, List.mem_singleton] at hr
+        subst hr
+      · exact ⟨v, valOfErr_errOf_fits hadm hfit, hfit⟩
+      · trivial
+      · trivial
+    | failCause c =>
+      obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+      rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+      obtain ⟨e, hty, rfl⟩ := Checker.inv_failCause _ _ _ _ _ hcheck
+      obtain ⟨cause, hc, hfits, hshape⟩ := causeOf_progress henv c e hty
+      simp only [hc, Option.some.injEq] at hinline
+      subst hinline
+      exact ⟨(fitsExit_failure_iff _ _ _).mpr ⟨hfits, hshape⟩, hshape⟩
+    | perform op r =>
+      cases op with
+      | external i =>
+        obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+        rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+        obtain ⟨reqTy, -, hreq, -⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
+        obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hreq
+        simp only [inlineAsyncYield, hv] at hinline
+        exact nomatch hinline
+      | sleep =>
+        obtain ⟨v, hv, hfit, -⟩ := builtinPerform_inv (by decide) hat hpt
+        obtain ⟨n, rfl⟩ := fits_nat_inv hfit
+        simp only [NativeOp.row_kind, NativeOp.kind, inlineAsyncYield, hv, Option.bind_some,
+          NativeOp.sleepMillisOf] at hinline
+        exact nomatch hinline
+      | deferredAwait =>
+        obtain ⟨v, hv, hfit, -⟩ := builtinPerform_inv (by decide) hat hpt
+        obtain ⟨k, rfl, -⟩ := fits_deferredTy_inv hfit
+        simp only [NativeOp.row_kind, NativeOp.kind, inlineAsyncYield, hv, Option.bind_some,
+          NativeOp.awaitCellOf] at hinline
+        exact nomatch hinline
+      | _ =>
+        obtain ⟨v, hv, hfit, -⟩ := builtinPerform_inv (kind_ne_program_of_sync rfl) hat hpt
+        obtain ⟨o, ho, -⟩ := syncRow_typed root (req := Env.Requirement.empty) _ rfl v hfit
+        simp only [NativeOp.row_kind, NativeOp.kind, hv, Option.bind_some, ho] at hinline
+        exact nomatch hinline
+    | awaitFiber target mode =>
+      obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+      rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+      cases mode with
+      | joinEffect =>
+        obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_join _ _ _ _ _ hcheck
+        rw [fiberTy_eq_some hfib] at hty
+        obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+        obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
+        simp only [hv] at hinline
+        obtain ⟨entry, hmem, hid, rfl⟩ := awaitExit_join hinline
+        exact view_exitOk hview hmem hid hdecl _
+      | awaitValue =>
+        obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_await _ _ _ _ _ hcheck
+        rw [fiberTy_eq_some hfib] at hty
+        obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+        obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
+        simp only [hv] at hinline
+        obtain ⟨entry, hmem, hid, rfl⟩ := awaitExit_value hinline
+        exact strongExit_success w _ _ (view_exitOk hview hmem hid hdecl .empty).1
+    | exit b =>
+      obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+      rw [Eff.expandIn_exit] at hcheck
+      obtain ⟨tb, hcb, rfl⟩ := Checker.inv_exit _ _ _ _ _ hcheck
+      dsimp only at hinline
+      cases hsub : inlineYield b (p.child 0) with
+      | none =>
+        rw [hsub] at hinline
+        exact nomatch hinline
+      | some ex' =>
+        rw [hsub, Option.map_some, Option.some.injEq] at hinline
+        subst hinline
+        have hex' := ih (p.child 0) (child_fuel_eq hfuel 0) (node_at_child hat rfl)
+          (pointTyped_child hat rfl rfl hcb henv hview) hsub
+        exact strongExit_success w _ (reifyExitVal ex') hex'.1
+    | provideService key value b =>
+      obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+      rw [Eff.expandIn_provideService] at hcheck
+      obtain ⟨sty, vty, tb, -, hvty, -, -, -⟩ := Checker.inv_provideService _ _ _ _ _ _ _ hcheck
+      obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hvty
+      simp only [hv] at hinline
+      exact nomatch hinline
+    | _ => exact nomatch hinline
+
+section ExitArm
+
+variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {f : Nat}
+
+/-- **`exit`**: the body's exit reified as a successful exit value at `Exit<A, E>`; an immediate
+exit by `inlineYield_typed`, otherwise the body at the child under the both-arm boundary
+(`allGuard_typed`). -/
+theorem exit_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.exit b)))
+    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hb : ChildDenotes root f b (p.path ++ [0])) :
+    TypedProg root w ty (denoteR root.program (.exit b) p) := by
+  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  rw [Eff.expandIn_exit] at hcheck
+  obtain ⟨tb, hcb, rfl⟩ := Checker.inv_exit _ _ _ _ _ hcheck
+  have hchild : PointTyped root w (p.child 0) tb := pointTyped_child hat rfl rfl hcb henv hview
+  rw [denoteR_exit _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
+  cases hsub : inlineYield b (p.child 0) with
+  | some ex' =>
+    exact .pure (strongExit_success w _ _ (inlineYield_typed f (p.child 0) (child_fuel_eq hfuel 0)
+      (node_at_child hat rfl) hchild hsub).1)
+  | none =>
+    exact allGuard_typed root (fun ex => by cases ex <;> rfl)
+      (hb w htie (p.child 0) tb (child_fuel_eq hfuel 0) rfl hchild)
+      (fun w' _ ex hex => .pure (strongExit_success w' _ (reifyExitVal ex) hex.1))
+
+end ExitArm
+
+/-! ## The assembly: the arms by induction on fuel
+
+At no fuel every point is the frontier (`denoteR_zero_typed`); at positive fuel each constructor's
+arm applies, every child's hypothesis (`ChildDenotes`) being the induction's at the child's node
+and the lower fuel. The layer family (`provideLayer`, decisions row 176 (b)) is not proved here:
+its arm enters as the hypothesis `ProvideLayerArm`, so the assembly is conditional on it. -/
+
+/-- **The layer family's arm, as a hypothesis** (decisions row 176 (b): built layers answer the
+fiber-context image; the repair and its controls are owed): at a well-formed program, given that
+every node at every fuel up to `f` denotes typed programs at its typed points, a typed
+`provideLayer` point with fuel `f + 1` denotes a typed program. -/
+def ProvideLayerArm (root : ProgramSource) : Prop :=
+  root.program.layerRefsWF = true → ∀ (f : Nat),
+    (∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
+      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path) →
+    ∀ (w : World), w.serviceTy = root.sig.serviceTy → ∀ (p : Point) (ty : EffTy)
+      (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff), p.fuel = f + 1 →
+      Node.at_ (.eff root.program) p.path = some (.eff (.provideLayer l i b)) →
+      PointTyped root w p ty → TypedProg root w ty (denoteR root.program (.provideLayer l i b) p)
+
+/-- **The arms assembled** (by induction on fuel, given the layer family's arm): every node of a
+well-formed program, at every fuel up to `f`, denotes typed programs at its typed points. -/
+theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
+    (hwf : root.program.layerRefsWF = true) :
+    ∀ (f : Nat), ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
+      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path := by
+  intro f
+  induction f with
+  | zero =>
+    intro f' hf' c path _ w _ q ty hq _ _
+    exact denoteR_zero_typed c (by omega)
+  | succ f ih =>
+    intro f' hf' c path hc w htie q ty hq hqpath hqt
+    rcases Nat.lt_or_eq_of_le hf' with hlt | heq
+    · exact ih f' (Nat.lt_succ_iff.mp hlt) c path hc w htie q ty hq hqpath hqt
+    · subst heq
+      have hat : Node.at_ (.eff root.program) q.path = some (.eff c) := hqpath ▸ hc
+      have hpos : q.fuel ≠ 0 := by rw [hq]; exact Nat.succ_ne_zero f
+      have hch : ∀ (c' : NativeEff) (i : Nat), (Node.eff c).child i = some (.eff c') →
+          ChildDenotes root f c' (q.path ++ [i]) :=
+        fun c' i hci => ih f (Nat.le_refl f) c' (q.path ++ [i]) (node_at_child hat hci)
+      cases c with
+      | succeed t => exact succeed_arm hpos hat hqt
+      | fail t => exact fail_arm hpos hat hqt
+      | failCause c => exact failCause_arm hpos hat hqt
+      | sync t => exact sync_arm hpos hat hqt
+      | suspend b => exact suspend_arm hq hat hqt htie (hch b 0 rfl)
+      | perform op r => exact perform_arm hpos hat hqt
+      | bind a b => exact bind_arm hq hat hqt htie (hch a 0 rfl) (hch b 1 rfl)
+      | gen body => exact gen_arm hq hqt
+      | catchCause b h => exact catchCause_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl)
+      | matchCause b v c =>
+        exact matchCause_arm hq hat hqt htie (hch b 0 rfl) (hch v 1 rfl) (hch c 2 rfl)
+      | onExit b fin => exact onExit_arm hq hat hqt htie (hch b 0 rfl) (hch fin 1 rfl)
+      | exit b => exact exit_arm hq hat hqt htie (hch b 0 rfl)
+      | uninterruptible b => exact uninterruptible_arm hq hat hqt
+      | interruptible b => exact interruptible_arm hq hat hqt
+      | yieldNow priority => exact yieldNow_arm hpos hat hqt
+      | awaitFiber t mode => exact awaitFiber_arm hpos hat hqt
+      | withFiber a => exact withFiber_arm hpos hat hqt
+      | «scoped» b => exact scoped_arm hq hat hqt
+      | acquireRelease a r => exact acquireRelease_arm hq hqt
+      | provideLayer l i b => exact hlayer hwf f ih w htie q ty l i b hq hat hqt
+      | service key => exact service_arm hpos htie hat hqt
+      | provideService key value b => exact provideService_arm hq hat hqt htie (hch b 0 rfl)
+      | catchIf test b h => exact catchIf_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl)
+      | select s d a0 a1 => exact select_arm hq hat hqt htie (hch a0 0 rfl) (hch a1 1 rfl)
+      | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt
+
+/-- **No node of the program is a `provideLayer`**: the fragment on which the layer family's arm
+cannot be reached. -/
+def LayerFree (root : NativeEff) : Prop :=
+  ∀ (path : List Nat) (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff),
+    Node.at_ (.eff root) path ≠ some (.eff (.provideLayer l i b))
+
+/-- On the layer-free fragment the layer family's arm holds: no point reaches it. -/
+theorem provideLayerArm_of_layerFree {root : ProgramSource} (h : LayerFree root.program) :
+    ProvideLayerArm root :=
+  fun _ _ _ _ _ p _ l i b _ hat _ => absurd hat (h p.path l i b)
+
 end Effect4.Program.Typed

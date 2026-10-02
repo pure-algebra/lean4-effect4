@@ -2668,6 +2668,14 @@
     "module": "Effect4.Laws.Program.Typed.World",
     "concept": "store-typing"},
    {"placement": "inherited",
+    "name": "Effect4.Program.Typed.denotesTyped_of_layerFree",
+    "module": "Effect4.Laws.Program.Typed.Assembly",
+    "concept": "residual-program-typing"},
+   {"placement": "inherited",
+    "name": "Effect4.Program.Typed.denotesTyped_of_provideLayer",
+    "module": "Effect4.Laws.Program.Typed.Assembly",
+    "concept": "residual-program-typing"},
+   {"placement": "inherited",
     "name": "Effect4.Program.Typed.driveState_typed_of_stepPreserves",
     "module": "Effect4.Laws.Program.Typed.Assembly",
     "concept": "residual-program-typing"},
@@ -4692,8 +4700,8 @@
    "counts":
    {"wanted": 1,
     "refuted": 1,
-    "proved": 6,
-    "claims": 8,
+    "proved": 7,
+    "claims": 9,
     "assumed": 0,
     "absent": 0}},
   {"title":
@@ -4977,6 +4985,28 @@
      "record":
      "| `E4-TYPED-CE-022` | REPAIRED 2026-10-01 (seat D2, merged `aabb1b5e`: `DenotesTyped` ranges over worlds whose service table is the source's, row 175); SEEDED 2026-10-01 (seat D2) | `DenotesTyped` is false at a world whose service table differs from the checker's | seat D2's witness: `.service ⟨4,4⟩` (native carrier `nat`) at a world with `serviceTy := fun _ => none` and a context holding `str \"x\"` under the key | decisions row 175 (ruled): `DenotesTyped` ranges over worlds whose service table is the source's |",
      "id": "E4-TYPED-CE-022"}],
+   "concept": "residual-program-typing"},
+  {"title":
+   "M5 on the layer-free fragment: every arm but provideLayer's, assembled by induction on fuel",
+   "status":
+   {"witness":
+    {"withinSemanticAxiomCeiling": true,
+     "statement":
+     "∀ (root : Effect4.Program.Typed.ProgramSource),\n  Effect4.Program.Typed.LayerFree root.program → Effect4.Program.Typed.DenotesTyped root",
+     "name": "Effect4.Program.Typed.denotesTyped_of_layerFree",
+     "module": "Effect4.Laws.Program.Typed.Assembly",
+     "levels": [],
+     "axioms": ["Quot.sound", "propext"]},
+    "goal": null,
+    "by": "theorem",
+    "_tag": "proved"},
+   "role": "fundamentalProperty",
+   "literature":
+   [{"work": "XiaEtAl2020",
+     "relation": "definitionUsed",
+     "locator": "audit P37"}],
+   "id": "denote-typed-layer-free",
+   "contestedBy": [],
    "concept": "residual-program-typing"},
   {"title": "TypedProg is closed under bind",
    "status":

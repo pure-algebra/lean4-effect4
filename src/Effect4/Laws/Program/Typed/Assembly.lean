@@ -1215,6 +1215,21 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
       ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
         fun _ h => nomatch h⟩)⟩
 
+/-- **M5 from the layer family's arm** (`Typed/Denotation.lean`, `childDenotes_upto`: every arm of
+`denoteR` by induction on fuel, groups 1–4 proved). Conditional: `ProvideLayerArm` is the layer
+family's arm (decisions row 176 (b), owed), so this does not close `M3bAssembly.denoteR_typed`. -/
+theorem denotesTyped_of_provideLayer (root : ProgramSource) (hlayer : ProvideLayerArm root) :
+    DenotesTyped root := fun hwf w htie p e ty hat hpt =>
+  childDenotes_upto root hlayer hwf p.fuel p.fuel (Nat.le_refl _) e p.path hat w htie p ty rfl rfl
+    hpt
+
+/-- **M5 on the layer-free fragment**: a program none of whose nodes is a `provideLayer` satisfies
+the fundamental property; the layer family's arm cannot be reached there
+(`provideLayerArm_of_layerFree`). -/
+theorem denotesTyped_of_layerFree (root : ProgramSource) (h : LayerFree root.program) :
+    DenotesTyped root :=
+  denotesTyped_of_provideLayer root (provideLayerArm_of_layerFree h)
+
 /-! ## World monotonicity of the bundle's saved positions (decisions rows 87 and 135)
 
 Seat B's Kripke closure (row 135) proves the frame, stack, saved-frame and program laws in
@@ -1659,6 +1674,12 @@ theorem evalTerm_fits (table : RowTable) : ProofGraph.Obligation (TermFits table
 theorem typedState_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) :
     ProofGraph.Obligation (LoadsTyped root rootTy fuel compileFuel) := ⟨⟩
 
+/-- Row 176 (b): the layer family's arm (`ProvideLayerArm`, `Typed/Denotation.lean`), the one arm
+`denoteR_typed` still needs: `denotesTyped_of_provideLayer` assembles every other arm, and
+`denotesTyped_of_layerFree` proves M5 on the fragment without `provideLayer`. -/
+theorem denoteR_typed_provideLayer (root : ProgramSource) :
+    ProofGraph.Obligation (ProvideLayerArm root) := ⟨⟩
+
 theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
     (completed : List (FiberId × ExitV)) (exVal : Val) (_h : CaptureTyped root w c)
     (_hex : Fits w exVal (.exitOf .unknown .unknown))
@@ -1858,7 +1879,8 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.termFits
 #proof_wanted Effect4.Program.Typed.M3bAssembly.typedState_load
 #proof_wanted Effect4.Program.Typed.M3bAssembly.denoteR_typed
-#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 2
+#proof_wanted Effect4.Program.Typed.M3bAssembly.denoteR_typed_provideLayer
+#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 3
   using aesop (rule_sets := [Effect4.TypedState])
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver

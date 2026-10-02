@@ -63,6 +63,7 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 | seq-typed | compatibility | proved | Effect4.Program.Typed.seq_typed | yes |  |
 | close-typed | preservation | proved | Effect4.Program.Typed.close_typed | yes |  |
 | denote-typed | fundamentalProperty | wanted | Effect4.Program.Typed.M3bAssembly.denoteR_typed | yes | E4-TYPED-CE-020, E4-TYPED-CE-021, E4-TYPED-CE-022 |
+| denote-typed-layer-free | fundamentalProperty | proved | Effect4.Program.Typed.denotesTyped_of_layerFree | yes |  |
 | bind-closed | compatibility | refuted | Test.Program.TypedProgBindRed.typedProg_not_bind_closed | yes |  |
 | guard-bind-typed | compatibility | proved | Effect4.Program.Typed.guardBind_typed | yes |  |
 | on-failure-typed | compatibility | proved | Effect4.Program.Typed.catchGuard_typed | yes |  |
@@ -106,6 +107,13 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 
 ```lean
 ∀ (root : Effect4.Program.Typed.ProgramSource), Effect4.Program.Typed.DenotesTyped root
+```
+
+**denote-typed-layer-free**
+
+```lean
+∀ (root : Effect4.Program.Typed.ProgramSource),
+  Effect4.Program.Typed.LayerFree root.program → Effect4.Program.Typed.DenotesTyped root
 ```
 
 **bind-closed**
@@ -786,4 +794,4 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names, ledger goals and their checked witnesses excluded
 
-Tagged: 2; inherited (provisional): 1120; unplaced: 0.
+Tagged: 2; inherited (provisional): 1122; unplaced: 0.
