@@ -43,6 +43,7 @@ import Test.Program.SignatureSum
 import Test.Program.TypedResidual
 import Test.Program.TypedControl
 import Test.Program.H2PartOne
+import Test.Program.TypedDenotation
 import Test.Program.LayerRefs
 import Test.Program.GuardFoldLift
 import Test.Program.ExitConnector

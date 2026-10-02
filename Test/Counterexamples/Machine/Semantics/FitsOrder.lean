@@ -315,7 +315,7 @@ theorem m5_forces_leaf (typed : ∃ w, MachineTyped src rootTy3 w (loadR prog3 1
   have hpre' : BodyTyped src w (.at_ ((((rootPoint 100).child 0).child 0).child 0)) cert := hpre
   cases hpre' with
   | at_ p ty hpt =>
-    obtain ⟨e, env, hat, hcheck, henv⟩ := hpt
+    obtain ⟨e, env, hat, hcheck, henv, -⟩ := hpt
     have hlen : env.length = 0 := henv.1
     have henv0 : env = [] := List.eq_nil_of_length_eq_zero hlen
     subst henv0
@@ -468,7 +468,8 @@ theorem prog3_typedF (w : Typed.World) :
   refine TypedProg.guard midTy ?_ ?_ ?_
   · refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) certT
-      (BodyTyped.at_ _ _ ⟨child, [], child_at, child_check, ⟨rfl, fun _ _ _ h => nomatch h⟩⟩) ?_
+      (BodyTyped.at_ _ _ ⟨child, [], child_at, child_check, ⟨rfl, fun _ _ _ h => nomatch h⟩,
+        fun _ h => nomatch h⟩) ?_
     intro w' _ ans hpost
     obtain ⟨id, rfl, hid⟩ := hpost
     exact TypedProg.unguard ⟨⟨certT, hid, Ty.subN_refl _, Ty.subN_refl _⟩, trivial⟩
@@ -497,11 +498,11 @@ theorem prog3_typedF (w : Typed.World) :
 /-- **M5's first positive control (proved).** The TY-01 program, which refuted M5 and the
 capstone under the raw arms, loads into `J` under row 137. -/
 theorem prog3_loads_typed : ∃ w, MachineTyped src rootTy3 w (loadR prog3 100 100) :=
-  ⟨_, machineTyped_load src rootTy3 100 100 rootTy3_closed rfl prog3_typedF⟩
+  ⟨_, machineTyped_load src rootTy3 100 100 rootTy3_closed rfl (prog3_typedF _)⟩
 
 /-- **The flip of `Reviewed.loadsTyped_false`: M5's proposition holds at this program.** -/
 theorem loadsTyped : LoadsTyped src rootTy3 100 100 :=
-  fun _ _ closed _ => ⟨_, machineTyped_load src rootTy3 100 100 closed rfl prog3_typedF⟩
+  fun _ _ closed _ => ⟨_, machineTyped_load src rootTy3 100 100 closed rfl (prog3_typedF _)⟩
 
 /-- **The flip of `Reviewed.capstone_false` at this program: the capstone's proposition holds at
 the loaded machine**, which the empty tape reaches. -/

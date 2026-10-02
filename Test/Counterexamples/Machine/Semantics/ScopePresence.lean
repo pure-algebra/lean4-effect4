@@ -95,7 +95,7 @@ theorem forkAfterMake_checked :
 
 /-- The root point is admitted at the checked type, at every world. -/
 theorem point_admitted (w : W) : PointTyped (forkAfterMake : ProgramSource) w point fiberTy :=
-  ⟨forkAfterMake, [], rfl, forkAfterMake_checked, envTyped_nil w⟩
+  ⟨forkAfterMake, [], rfl, forkAfterMake_checked, envTyped_nil w, fun _ h => nomatch h⟩
 
 /-! ## History: the judgment with the posts before row 156
 
@@ -373,7 +373,7 @@ theorem forkAfterMake_typed (w : W) :
     obtain ⟨sc, rfl, live⟩ := fits_scope_inv hv
     refine TypedProg.fiber (op := .construction) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial ?_
-    intro w'' ord completed _
+    intro w'' ord completed view
     show TypedProg _ w'' fiberTy (denoteR forkAfterMake
         (.withFiber (.forkIn (.succeed (.lit .unit)) ⟨true, false, .inherit⟩ (.var 0)))
         ({ point with completed }.childWith 1 (Val.scopeHandle sc)))
@@ -382,7 +382,7 @@ theorem forkAfterMake_typed (w : W) :
     refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) unitTy ⟨?_, present⟩ ?_
     · exact ⟨.succeed (.lit .unit), [Ty.scope], rfl, child_checked,
-        envTyped_append (envTyped_nil w'') (fits_scopeHandle w'' sc present)⟩
+        envTyped_append (envTyped_nil w'') (fits_scopeHandle w'' sc present), view⟩
     · intro w''' _ ans post
       obtain ⟨id, rfl, declared⟩ := post
       exact TypedProg.pure (strongExit_success w''' _ _ ⟨unitTy, declared, Ty.subN_refl _, Ty.subN_refl _⟩)
@@ -395,7 +395,9 @@ theorem forkAfterMake_at_start :
 
 /-- **`DenotesTyped` at `point` (row 156)**: `Assembly.lean`'s `DenotesTyped` proposition for the
 checked source, read at its root point, holds at every world. The flip of Codex's
-`m5_denotation_shape_false`, which refuted it at this point and `startingWorld`. -/
+`m5_denotation_shape_false`, which refuted it at this point and `startingWorld`. Stated without
+the proposition's well-formedness premise (decisions row 170), which the source, having no layer
+reference, meets. -/
 theorem forkAfterMake_denotes : ∀ (w : W) (e : NativeEff) (ty : EffTy),
     Node.at_ (.eff (forkAfterMake : ProgramSource).program) point.path = some (.eff e) →
     PointTyped (forkAfterMake : ProgramSource) w point ty →
@@ -404,7 +406,7 @@ theorem forkAfterMake_denotes : ∀ (w : W) (e : NativeEff) (ty : EffTy),
   intro w e ty node admitted
   change some (Node.eff forkAfterMake) = some (.eff e) at node
   cases node
-  obtain ⟨e', env, node', checked, envTyped⟩ := admitted
+  obtain ⟨e', env, node', checked, envTyped, -⟩ := admitted
   change some (Node.eff forkAfterMake) = some (.eff e') at node'
   cases node'
   have empty : env = [] := List.eq_nil_of_length_eq_zero envTyped.1

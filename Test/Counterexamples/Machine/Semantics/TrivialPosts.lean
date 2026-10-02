@@ -130,7 +130,7 @@ theorem hostBody_checks :
 theorem hostBody_admitted (w : W) :
     PointTyped { program := hostBody, table := hostTable, lawful := hostTable_lawful } w
       (rootPoint 20) (EffTy.pure .nat) :=
-  ⟨hostBody, [], rfl, hostBody_checks, rfl, fun _ _ _ h => nomatch h⟩
+  ⟨hostBody, [], rfl, hostBody_checks, ⟨rfl, fun _ _ _ h => nomatch h⟩, fun _ h => nomatch h⟩
 
 #print axioms sleep_code_typed
 #print axioms joinAll_typed

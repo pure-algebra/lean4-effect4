@@ -586,8 +586,10 @@ theorem envTyped_mono (ord : w.leHost w') {env : List Ty} {vals : List Val}
 
 theorem pointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {ty : EffTy}
     (h : PointTyped src w p ty) : PointTyped src w' p ty := by
-  obtain ⟨e, env, hat, hchk, henv⟩ := h
-  exact ⟨e, env, hat, hchk, envTyped_mono ord henv⟩
+  obtain ⟨e, env, hat, hchk, henv, hview⟩ := h
+  refine ⟨e, env, hat, hchk, envTyped_mono ord henv, fun q hq => ?_⟩
+  obtain ⟨fty, hfty, hex⟩ := hview q hq
+  exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
 theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty : EffTy}
     (h : BodyTyped src w b ty) : BodyTyped src w' b ty := by
@@ -797,8 +799,8 @@ theorem signature_rows_append : SigExtends src.signature src'.signature := by
 
 theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
     (h : PointTyped src w point ty) : PointTyped src' w point ty := by
-  obtain ⟨e, env, hat, hcheck, henv⟩ := h
-  refine ⟨e, env, ?_, ?_, henv⟩
+  obtain ⟨e, env, hat, hcheck, henv, hview⟩ := h
+  refine ⟨e, env, ?_, ?_, henv, hview⟩
   · rw [hprog]
     exact hat
   · rw [hprog]

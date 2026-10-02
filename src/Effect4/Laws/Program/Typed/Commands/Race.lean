@@ -616,15 +616,7 @@ theorem configTyped_rupdate_owner {root : ProgramSource} {rootTy : EffTy} {w : W
     · rw [requestOfR_congr (rfiber?_update_other same)] at hr
       exact hr
 
-/-- `a` is below a raw union it heads. -/
-theorem sub_union_self_left (a b : Ty) : Ty.sub a (.union a b) = true :=
-  (Ty.OrderProof.sub_iff_members Ty.sub_trans a (.union a b)).mpr
-    fun x hx => ⟨x, List.mem_append_left _ hx, Ty.sub_refl x⟩
-
-/-- `b` is below a raw union it ends. -/
-theorem sub_union_self_right (a b : Ty) : Ty.sub b (.union a b) = true :=
-  (Ty.OrderProof.sub_iff_members Ty.sub_trans b (.union a b)).mpr
-    fun x hx => ⟨x, List.mem_append_right _ hx, Ty.sub_refl x⟩
+-- `sub_union_self_left` and `sub_union_self_right` are `Typed/Denotation.lean`'s (seat D2), imported here.
 
 /-- The raw union of one column of the declared types of a list of fibers (`never` for an
 undeclared one): an upper bound of each in the raw order (`sub_declaredUnion`), and below every

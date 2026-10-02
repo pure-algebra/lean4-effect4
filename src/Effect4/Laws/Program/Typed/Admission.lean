@@ -125,12 +125,20 @@ denotes; the checker reads it through the rounds of the program's expansion (`Ef
 decisions row 153 (b)): the checker refuses a layer reference (`Program/Checker.lean:259`) and
 certifies a program with references as its expansion (`typeOfProgram`), while the run hops from a
 reference to its target (`denoteLayer_ref_redirect`). For a reference-free node the expansion is
-the node itself (`Eff.expandIn_eq_self`). -/
+the node itself (`Eff.expandIn_eq_self`).
+
+The point's data is its environment and its completed view, both typed at the world (decisions
+row 175, `E4-TYPED-CE-021`): the values in scope fit the checker's environment (`EnvTyped`), and
+each completed exit the point carries fits its fiber's declared type, the `construction` post's
+clause (`Typed/Residual.lean`), which is where a point's view is built. The denotation answers a
+completed exit as an `await`'s result (`Point.awaitExit`), so an untyped view denotes an untyped
+program at a checked node. -/
 def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : Prop :=
   ∃ (e : NativeEff) (env : List Ty),
     Node.at_ (.eff src.program) point.path = some (.eff e) ∧
     Checker.check src.signature env point.path (Eff.expandIn src.program e) = .ok ty ∧
-    EnvTyped w env point.env
+    EnvTyped w env point.env ∧
+    ∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2
 
 /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
 under an environment its values fit, extended by the acquired value, and its context's
