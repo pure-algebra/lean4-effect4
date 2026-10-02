@@ -1568,8 +1568,12 @@ finalizer, a scope-finalizer drop removes one, the clock moves its timers. The w
 the store (`{ w with state := s }`), later in the host order when the store grew and kept its
 heap, its Deferred cells and its external spellings. -/
 
-theorem leHost_restate {w : World} {s : Stores} (le : w.state.le s) (refs : s.refs = w.state.refs)
-    (cells : s.deferreds.cells = w.state.deferreds.cells) (externals : s.externals = w.state.externals) :
+/-- **The host order along a store edit** that keeps the heap, every Deferred cell's completion
+and the external spellings, and only grows (a cell's wake list may change). -/
+theorem leHost_cells {w : World} {s : Stores} (le : w.state.le s) (refs : s.refs = w.state.refs)
+    (cells : ∀ key c', s.deferreds.cellAt key = some c' →
+      ∃ c, w.state.deferreds.cellAt key = some c ∧ c'.completion = c.completion)
+    (externals : s.externals = w.state.externals) :
     w.leHost { w with state := s } := by
   have ext : Extends w.state.externals.allocated s.externals.allocated := by
     rw [externals]
@@ -1585,13 +1589,40 @@ theorem leHost_restate {w : World} {s : Stores} (le : w.state.le s) (refs : s.re
     exact value_transport w { w with state := s } ty value ext (h.2 value hv')
   · intro key types h
     refine ⟨h.1, fun cell hc completion hcomp => ?_⟩
-    have hc' : w.state.deferreds.cellAt key = some cell := by
-      change s.deferreds.cellAt key = some cell at hc
-      unfold DeferredStore.cellAt at hc ⊢
-      rw [cells] at hc
-      exact hc
+    obtain ⟨c, hc0, same⟩ := cells key cell hc
+    rw [same] at hcomp
     exact completion_transport w { w with state := s } types (fun _ _ h => h) ext completion
-      (h.2 cell hc' completion hcomp)
+      (h.2 c hc0 completion hcomp)
+
+/-- Cells unchanged keep every completion. -/
+theorem cells_kept {s t : Stores} (cells : s.deferreds.cells = t.deferreds.cells) :
+    ∀ key c', s.deferreds.cellAt key = some c' →
+      ∃ c, t.deferreds.cellAt key = some c ∧ c'.completion = c.completion ∧
+        Guard.wakeKeys c'.wake ⊆ Guard.wakeKeys c.wake := by
+  intro key c' h
+  refine ⟨c', ?_, rfl, List.Subset.refl _⟩
+  unfold DeferredStore.cellAt at h ⊢
+  rw [← cells]
+  exact h
+
+theorem leHost_restate {w : World} {s : Stores} (le : w.state.le s) (refs : s.refs = w.state.refs)
+    (cells : s.deferreds.cells = w.state.deferreds.cells) (externals : s.externals = w.state.externals) :
+    w.leHost { w with state := s } :=
+  leHost_cells le refs (fun key c' h =>
+    let ⟨c, hc, same, _⟩ := cells_kept cells key c' h
+    ⟨c, hc, same⟩) externals
+
+/-- **The waiter → due transfer** (`note.md` §3): a waiter declared at a type that accepts its
+cell's columns accepts any completion the cell holds, the cell's completion moving along both
+columns (`fitsExit_sub`; a delayed read along the checker's order, `Ty.sub_le_subN`). -/
+theorem completionStrong_await {w : World} {a e : Ty} {ty : EffTy}
+    {c : Completion Val Err Defect FiberId Ann} (demand : AwaitDemand a e ty)
+    (h : CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c) : CompletionStrong w ty c := by
+  cases c with
+  | ofExit ex => exact ⟨fitsExit_sub demand.1 demand.2 h.1, h.2⟩
+  | ofRefGet cell =>
+    obtain ⟨t, declared, sub⟩ := h
+    exact ⟨t, declared, Ty.subN_trans sub (Ty.sub_le_subN demand.1)⟩
 
 theorem completionStrong_mono {w w' : World} (ord : w.leHost w') {ty : EffTy}
     {c : Completion Val Err Defect FiberId Ann} (h : CompletionStrong w ty c) :
@@ -1653,9 +1684,9 @@ theorem storesOk_world {root : ProgramSource} {w w' : World} (ord : w.leHost w')
 
 /-- A store with the same heap, scopes, memo world, timers and Deferred cells as a well-formed
 one it grew from is well-formed. -/
-theorem wf_restate {t s : Stores} (wf : t.WF) (le : t.le s) (refs : s.refs = t.refs)
+theorem wf_cells {t s : Stores} (wf : t.WF) (le : t.le s) (refs : s.refs = t.refs)
     (scopes : s.scopes = t.scopes) (memo : s.memo = t.memo) (timers : s.timers = t.timers)
-    (cells : s.deferreds.cells = t.deferreds.cells) : s.WF := by
+    (cellCount : s.deferreds.cells.length = t.deferreds.cells.length) : s.WF := by
   obtain ⟨hrefs, hscopes, hmemo, htimers⟩ := wf
   refine ⟨fun v hv => ?_, fun e he => ?_, fun mm hm entry he => ?_, ?_⟩
   · rw [refs] at hv
@@ -1669,31 +1700,63 @@ theorem wf_restate {t s : Stores} (wf : t.WF) (le : t.le s) (refs : s.refs = t.r
       exact Val.validIn_mono le _ old
   · rw [memo] at hm
     have old := hmemo mm hm entry he
-    rw [cells, scopes]
+    rw [cellCount, scopes]
     exact old
   · rw [timers]
     exact htimers
 
-/-- `J`'s machine-wide clauses over an edited store. -/
-theorem machineWide_restate {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
-    (wide : MachineWide root rootTy w m) {s : Stores} (le : m.state.le s)
-    (refs : s.refs = m.state.refs) (cells : s.deferreds.cells = m.state.deferreds.cells)
-    (externals : s.externals = m.state.externals) (wf : s.WF)
+theorem wf_restate {t s : Stores} (wf : t.WF) (le : t.le s) (refs : s.refs = t.refs)
+    (scopes : s.scopes = t.scopes) (memo : s.memo = t.memo) (timers : s.timers = t.timers)
+    (cells : s.deferreds.cells = t.deferreds.cells) : s.WF :=
+  wf_cells wf le refs scopes memo timers (by rw [cells])
+
+/-- **How a store edit moves the views `J` reads** (`docs/research/2026-10-02-proof-structure/
+note.md` §4): it grows, keeps the heap and the external spellings, keeps the cell count and every
+cell's completion, and only shrinks each cell's and the timers' wake keys (the waiter and timer
+columns, decisions row 134 (a), (b)). The new store's generated typing, its well-formedness, the
+internal keys and the owners of scheduled due work are separate premises of `configTyped_frame`:
+an edit of the due list, the scopes or the memo world states them. -/
+structure StoreFrame (s s' : Stores) : Prop where
+  le : s.le s'
+  refs : s'.refs = s.refs
+  cellCount : s'.deferreds.cells.length = s.deferreds.cells.length
+  cells : ∀ key c', s'.deferreds.cellAt key = some c' →
+    ∃ c, s.deferreds.cellAt key = some c ∧ c'.completion = c.completion ∧
+      Guard.wakeKeys c'.wake ⊆ Guard.wakeKeys c.wake
+  externals : s'.externals = s.externals
+  timers : Guard.wakeKeys s'.timers.wake ⊆ Guard.wakeKeys s.timers.wake
+
+/-- A store whose Deferred cells are unchanged moves no cell view. -/
+theorem StoreFrame.ofCells {s s' : Stores} (le : s.le s') (refs : s'.refs = s.refs)
+    (cells : s'.deferreds.cells = s.deferreds.cells) (externals : s'.externals = s.externals)
+    (timers : Guard.wakeKeys s'.timers.wake ⊆ Guard.wakeKeys s.timers.wake) : StoreFrame s s' :=
+  ⟨le, refs, by rw [cells], cells_kept cells, externals, timers⟩
+
+/-- The world over a store frame is later in the host order. -/
+theorem leHost_frame {w : World} {m : RState} (state : w.state = m.state) {s : Stores}
+    (frame : StoreFrame m.state s) : w.leHost { w with state := s } :=
+  leHost_cells (by rw [state]; exact frame.le) (by rw [frame.refs, state])
+    (fun key c' h => by
+      obtain ⟨c, hc, same, _⟩ := frame.cells key c' h
+      exact ⟨c, by rw [state]; exact hc, same⟩)
+    (by rw [frame.externals, state])
+
+/-- `J`'s machine-wide clauses over a store frame. -/
+theorem machineWide_frame {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    (wide : MachineWide root rootTy w m) {s : Stores} (frame : StoreFrame m.state s) (wf : s.WF)
     (stores : StoresOk (preds root) { w with state := s } Expect.root s)
     (keys : Guard.internalKeys { m with state := s } ⊆ Guard.internalKeys m)
     (due : ∀ o ∈ s.deferreds.due, ∀ owner priority, o.mode = .scheduled owner priority →
-      (m.fiber? owner).isSome = true)
-    (timerKeys : Guard.wakeKeys s.timers.wake ⊆ Guard.wakeKeys m.state.timers.wake) :
+      (m.fiber? owner).isSome = true) :
     MachineWide root rootTy { w with state := s } { m with state := s } := by
-  have ord : w.leHost { w with state := s } := by
-    apply leHost_restate
-    · rw [wide.state]
-      exact le
-    · rw [refs, wide.state]
-    · rw [cells, wide.state]
-    · rw [externals, wide.state]
+  have kept : ∀ key c', s.deferreds.cellAt key = some c' →
+      ∃ c, w.state.deferreds.cellAt key = some c ∧ c'.completion = c.completion := by
+    intro key c' h
+    obtain ⟨c, hc, same, _⟩ := frame.cells key c' h
+    exact ⟨c, by rw [wide.state]; exact hc, same⟩
+  have ord : w.leHost { w with state := s } := leHost_frame wide.state frame
   have ext : Extends w.state.externals.allocated s.externals.allocated := by
-    rw [externals, wide.state]
+    rw [frame.externals, wide.state]
     exact fun _ _ h => h
   refine ⟨wide.ids, wide.fibers, fun key => ?_, fun key => ?_, wide.tokenBound, wide.tokenTargets,
     rfl, wf, ⟨fun i v hv ty hty => ?_, fun i cell hc types hty c hcomp => ?_⟩, wide.fiberClosed,
@@ -1701,34 +1764,55 @@ theorem machineWide_restate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     fun r hr => ?_, stores, wide.fiberIds, wide.raceIds, wide.racesBelow, wide.raceHosts,
     fun key hk => wide.keysBelow key (keys hk), wide.requestsBelow,
     fun fiber token r hr hk => wide.requestsOwned fiber token r hr (keys hk), wide.services,
-    ⟨wide.live.running, due⟩, WakeTyped.of_subset timerKeys wide.timers,
-    fun key cell hc => wide.waiters key cell (by
-      unfold DeferredStore.cellAt at hc ⊢
-      rw [← cells]
-      exact hc), wide.liveBelow⟩
+    ⟨wide.live.running, due⟩, WakeTyped.of_subset frame.timers wide.timers,
+    fun key cell hc a e declared => ?_, wide.liveBelow⟩
   · show (w.Ρ key).isSome = true ↔ key.index < s.refs.length
-    rw [refs]
+    rw [frame.refs]
     exact wide.heap key
   · show (w.«Π» key).isSome = true ↔ key.index < s.deferreds.cells.length
-    rw [cells]
+    rw [frame.cellCount]
     exact wide.promises key
   · have hv' : w.state.refs[i]? = some v := by
       change s.refs[i]? = some v at hv
-      rw [wide.state, ← refs]
+      rw [wide.state, ← frame.refs]
       exact hv
     exact value_transport w { w with state := s } ty v ext (wide.cells.1 i v hv' ty hty)
-  · have hc' : w.state.deferreds.cells[i]? = some cell := by
-      change s.deferreds.cells[i]? = some cell at hc
-      rw [wide.state, ← cells]
-      exact hc
+  · obtain ⟨c0, hc0, same⟩ := kept ⟨i⟩ cell hc
+    rw [same] at hcomp
     exact completion_transport w { w with state := s } types (fun _ _ h => h) ext c
-      (wide.cells.2 i cell hc' types hty c hcomp)
+      (wide.cells.2 i c0 hc0 types hty c hcomp)
   · obtain ⟨resultTy, payload⟩ := wide.races r hr
     exact ⟨resultTy, racePayload_world ord rfl rfl payload⟩
+  · obtain ⟨c0, hc0, _, sub⟩ := frame.cells key cell hc
+    exact WakeTyped.of_subset sub (wide.waiters key c0 hc0 a e declared)
 
-/-- **A store edit keeps `I`** at the world over the edited store, given the new store's own
-clauses (well-formedness, the store columns, no new internal key, owners for its scheduled due
-entries). -/
+/-- **A store edit keeps `I`** at the world over the edited store (`note.md` §4): the views
+`J` reads move as the frame says, and the new store states its own clauses (well-formedness, the
+generated store typing, no new internal key, owners for its scheduled due entries). -/
+theorem configTyped_frame {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {q : List RCmd} (typed : ConfigTyped root rootTy w m q) {s : Stores}
+    (frame : StoreFrame m.state s) (wf : s.WF)
+    (stores : StoresOk (preds root) { w with state := s } Expect.root s)
+    (keys : Guard.internalKeys { m with state := s } ⊆ Guard.internalKeys m)
+    (due : ∀ o ∈ s.deferreds.due, ∀ owner priority, o.mode = .scheduled owner priority →
+      (m.fiber? owner).isSome = true) :
+    w.leHost { w with state := s } ∧
+      ConfigTyped root rootTy { w with state := s } { m with state := s } q := by
+  obtain ⟨machine, code, queue⟩ := typed
+  have wide := machine.wide
+  have ord : w.leHost { w with state := s } := leHost_frame wide.state frame
+  have view : ObsView m { m with state := s } :=
+    ObsView.ofLookup (fun _ => rfl) (fun _ => rfl) (fun sc h => frame.le.2.2.1 sc h)
+  have ctl : ∀ id, (({ m with state := s } : RState).fiber? id).map ctlView =
+      (m.fiber? id).map ctlView := fun _ => rfl
+  refine ⟨ord, machineTyped_of (machineWide_frame wide frame wf stores keys due)
+    (fun x hx => fiberTyped_transport (fiberTyped_world ord rfl rfl (machine.fiber hx)) view
+      (Nat.le_refl _) (Nat.le_refl _)), readCode_world ord rfl code,
+    queueOk_transport (queueOk_world ord rfl rfl queue) view
+      (fun c _ h => commandAuthority_view ctl view.races c h)
+      (fun c _ h => commandDelivery_view ctl c h) (fun _ _ _ hr => hr) (Nat.le_refl _)⟩
+
+/-- A store edit that keeps every Deferred cell (`configTyped_frame` at `StoreFrame.ofCells`). -/
 theorem configTyped_restate {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {q : List RCmd} (typed : ConfigTyped root rootTy w m q) {s : Stores} (le : m.state.le s)
     (refs : s.refs = m.state.refs) (cells : s.deferreds.cells = m.state.deferreds.cells)
@@ -1739,27 +1823,76 @@ theorem configTyped_restate {root : ProgramSource} {rootTy : EffTy} {w : World} 
       (m.fiber? owner).isSome = true)
     (timerKeys : Guard.wakeKeys s.timers.wake ⊆ Guard.wakeKeys m.state.timers.wake) :
     w.leHost { w with state := s } ∧
-      ConfigTyped root rootTy { w with state := s } { m with state := s } q := by
-  obtain ⟨machine, code, queue⟩ := typed
-  have wide := machine.wide
-  have ord : w.leHost { w with state := s } := by
-    apply leHost_restate
-    · rw [wide.state]
-      exact le
-    · rw [refs, wide.state]
-    · rw [cells, wide.state]
-    · rw [externals, wide.state]
-  have view : ObsView m { m with state := s } :=
-    ObsView.ofLookup (fun _ => rfl) (fun _ => rfl) (fun sc h => le.2.2.1 sc h)
-  have ctl : ∀ id, (({ m with state := s } : RState).fiber? id).map ctlView =
-      (m.fiber? id).map ctlView := fun _ => rfl
-  refine ⟨ord, machineTyped_of
-    (machineWide_restate wide le refs cells externals wf stores keys due timerKeys)
-    (fun x hx => fiberTyped_transport (fiberTyped_world ord rfl rfl (machine.fiber hx)) view
-      (Nat.le_refl _) (Nat.le_refl _)), readCode_world ord rfl code,
-    queueOk_transport (queueOk_world ord rfl rfl queue) view
-      (fun c _ h => commandAuthority_view ctl view.races c h)
-      (fun c _ h => commandDelivery_view ctl c h) (fun _ _ _ hr => hr) (Nat.le_refl _)⟩
+      ConfigTyped root rootTy { w with state := s } { m with state := s } q :=
+  configTyped_frame typed (StoreFrame.ofCells le refs cells externals timerKeys) wf stores keys due
+
+
+/-! ## `wake` (`E4-TYPED-CE-026` repaired)
+
+A scheduled wake runs one Deferred cell's batch (`Stores.wakeList`, `DeferredStore.wakeBatch`,
+`Machine/Stores.lean:1163-1175`): a completed cell owes each batched waiter its completion now, an
+uncompleted one returns the batch to its pending list. The edit is a store frame (completions kept,
+keys shrink: `Guard.wakeBatch_cellAt`), and each new due entry is a transfer from the cell's waiter
+column (`docs/research/2026-10-02-proof-structure/note.md` §3, `completionStrong_await`). -/
+
+/-- **`wake` keeps `I`** at the world over the woken store. -/
+theorem wake_preserves (root : ProgramSource) (rootTy : EffTy) (list : WakeKey) (phase : WakePhase) :
+    StepPreserves root rootTy (.wake list phase) := by
+  intro w m rest _ typed
+  have tail := configTyped_tail typed
+  have wide := typed.machine.wide
+  show ∃ w', w.leHost w' ∧
+    ConfigTyped root rootTy w' { m with state := Stores.wakeList list phase m.state } rest
+  unfold Stores.wakeList
+  split
+  · let cell : DeferredKey := ⟨list.index⟩
+    let s : Stores := { m.state with deferreds := m.state.deferreds.wakeBatch cell }
+    have count : s.deferreds.cells.length = m.state.deferreds.cells.length :=
+      Guard.wakeBatch_cells_length _ _
+    have frame : StoreFrame m.state s :=
+      ⟨⟨Nat.le_refl _, Nat.le_of_eq count.symm, fun _ h => h, Nat.le_refl _, fun _ h => h,
+        Nat.le_refl _⟩, rfl, count, fun _ _ h => Guard.wakeBatch_cellAt h, rfl,
+        List.Subset.refl _⟩
+    have ord : w.leHost { w with state := s } := leHost_frame wide.state frame
+    -- a new due entry: one of the cell's batched waiters, typed by the waiter column
+    have transfer : ∀ o ∈ s.deferreds.due, o ∉ m.state.deferreds.due → ∀ ty,
+        w.Θ o.waiter o.token = some ty → CompletionStrong w ty o.code := by
+      intro o ho fresh ty declared
+      rcases Guard.wakeBatch_due ho with old | ⟨c, effect, hcell, hcomp, key, code, _⟩
+      · exact absurd old fresh
+      · have hcell' : m.state.deferreds.cells[cell.index]? = some c := hcell
+        obtain ⟨live, _⟩ := List.getElem?_eq_some_iff.mp hcell'
+        obtain ⟨⟨a, e⟩, declaredCell⟩ := Option.isSome_iff_exists.mp ((wide.promises cell).mpr live)
+        obtain ⟨ty0, declared0, demand⟩ := wide.waiters cell c hcell a e declaredCell _ key
+        have same : ty0 = ty := Option.some.inj (declared0.symm.trans declared)
+        subst same
+        rw [code]
+        exact completionStrong_await demand
+          (wide.stores.c2.c0 cell.index c hcell' a e declaredCell effect hcomp)
+    have stores : StoresOk (preds root) { w with state := s } Expect.root s := by
+      obtain ⟨c0, c1, ⟨c2⟩, c3, c4, c5⟩ := storesOk_world ord rfl rfl rfl wide.stores
+      refine ⟨⟨fun o ho ty declared => ?_, PromiseTableOk.memo c0⟩, c1,
+        ⟨fun i c' hc a e declaredCell x hx => ?_⟩, c3, c4, c5⟩
+      · by_cases old : o ∈ m.state.deferreds.due
+        · exact PromiseTableOk.due c0 o old ty declared
+        · exact completionStrong_mono ord (transfer o ho old ty declared)
+      · obtain ⟨c0', hc0, same, _⟩ := Guard.wakeBatch_cellAt (key := ⟨i⟩) hc
+        rw [same] at hx
+        exact c2 i c0' hc0 a e declaredCell x hx
+    have owners : ∀ o ∈ s.deferreds.due, ∀ owner priority, o.mode = .scheduled owner priority →
+        (m.fiber? owner).isSome = true := by
+      intro o ho owner priority mode
+      rcases Guard.wakeBatch_due ho with old | ⟨_, _, _, _, _, _, now⟩
+      · exact wide.live.dueOwners o old owner priority mode
+      · rw [now] at mode
+        cases mode
+    obtain ⟨ord', config⟩ := configTyped_frame tail frame
+      (wf_cells wide.wf frame.le rfl rfl rfl rfl count) stores
+      (Guard.internalKeys_state_subset m s (Guard.storeKeys_mono (List.Subset.refl _)
+        (Guard.deferredKeys_wakeBatch_subset _ _)))
+      owners
+    exact ⟨_, ord', config⟩
+  · exact ⟨w, leHost_refl w, tail⟩
 
 /-! ## `drainDue` (one halting arm: `postTask` on an unknown owner, `Machine/Fibers.lean:709-716`,
 excluded by `MachineLive.dueOwners`)
@@ -3134,4 +3267,6 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.drainDue_preserves
 #obligation_proved Effect4.Program.Typed.M6Ledger.step_link :=
   @Effect4.Program.Typed.link_preserves
+#obligation_proved Effect4.Program.Typed.M6Ledger.step_wake :=
+  @Effect4.Program.Typed.wake_preserves
 -- `M6Ledger`'s report runs at the foot of the last command module, which sees every proof.

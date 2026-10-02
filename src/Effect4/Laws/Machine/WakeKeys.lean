@@ -89,4 +89,23 @@ theorem wakeKeys_runBatch_partition {α : Type} (wake : WakeList α) :
     simp only [wakeKeys, WakeList.runBatch, hb, Option.toList, List.flatMap_cons, List.flatMap_nil,
       List.append_nil, Option.getD]
 
+/-- After a run, the list holds a subset of its keys. -/
+theorem wakeKeys_runBatch_subset {α : Type} (wake : WakeList α) :
+    wakeKeys wake.runBatch.2 ⊆ wakeKeys wake := by
+  rw [wakeKeys_runBatch_partition wake]
+  exact List.subset_append_left _ _
+
+/-- A batch with nothing to deliver rejoins the pending list: the keys are kept. -/
+theorem wakeKeys_rejoin_subset {α : Type} (wake : WakeList α) :
+    wakeKeys { wake.runBatch.2 with waiters := wake.runBatch.2.waiters ++ wake.runBatch.1 } ⊆
+      wakeKeys wake := by
+  intro key hk
+  rw [wakeKeys_runBatch_partition wake]
+  rcases List.mem_append.mp hk with h | h
+  · obtain ⟨a, ha, rfl⟩ := List.mem_map.mp h
+    rcases List.mem_append.mp ha with ha | ha
+    · exact List.mem_append_left _ (wakeKeys_waiter_mem ha)
+    · exact List.mem_append_right _ (List.mem_map.mpr ⟨a, ha, rfl⟩)
+  · cases h
+
 end Effect4.Program.Guard

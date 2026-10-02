@@ -752,6 +752,83 @@ theorem deferredKeys_wakeBatch_subset (store : DeferredStore) (cell : DeferredKe
         exact deferredKeys_cell hc
       simpa only [List.append_nil] using deferredKeys_setCell_subset store cell _ [] hnew
 
+/-- `wakeBatch` keeps the cell count. -/
+theorem wakeBatch_cells_length (store : DeferredStore) (cell : DeferredKey) :
+    (store.wakeBatch cell).cells.length = store.cells.length := by
+  unfold DeferredStore.wakeBatch
+  cases hc : store.cellAt cell with
+  | none => rfl
+  | some c =>
+    simp only
+    split <;> simp only [DeferredStore.setCell, List.length_set]
+
+/-- A `setCell` read back: the written cell at its own index, every other cell as it was. -/
+theorem cellAt_setCell {store : DeferredStore} {cell key : DeferredKey} {v c' : DeferredCell}
+    (h : (store.setCell cell v).cellAt key = some c') :
+    (c' = v ∧ cell.index = key.index) ∨ store.cellAt key = some c' := by
+  unfold DeferredStore.setCell DeferredStore.cellAt at h
+  rw [List.getElem?_set] at h
+  split at h
+  · rename_i same
+    split at h
+    · cases h
+      exact Or.inl ⟨rfl, same⟩
+    · cases h
+  · exact Or.inr h
+
+/-- **`wakeBatch` keeps each cell's completion and shrinks its keys** (`Stores.lean:1163-1175`):
+the batch is delivered, the cell completed, or rejoins the pending list. -/
+theorem wakeBatch_cellAt {store : DeferredStore} {cell key : DeferredKey} {c' : DeferredCell}
+    (h : (store.wakeBatch cell).cellAt key = some c') :
+    ∃ c, store.cellAt key = some c ∧ c'.completion = c.completion ∧
+      wakeKeys c'.wake ⊆ wakeKeys c.wake := by
+  unfold DeferredStore.wakeBatch at h
+  cases hc : store.cellAt cell with
+  | none =>
+    simp only [hc] at h
+    exact ⟨c', h, rfl, List.Subset.refl _⟩
+  | some c0 =>
+    have here : cell.index = key.index → store.cellAt key = some c0 := fun same => by
+      unfold DeferredStore.cellAt at hc ⊢
+      rw [← same]
+      exact hc
+    cases hd : c0.completion with
+    | some effect =>
+      simp only [hc, hd] at h
+      rcases cellAt_setCell (store := store) h with ⟨rfl, same⟩ | old
+      · exact ⟨c0, here same, hd.symm, wakeKeys_runBatch_subset _⟩
+      · exact ⟨c', old, rfl, List.Subset.refl _⟩
+    | none =>
+      simp only [hc, hd] at h
+      rcases cellAt_setCell h with ⟨rfl, same⟩ | old
+      · exact ⟨c0, here same, hd.symm, wakeKeys_rejoin_subset _⟩
+      · exact ⟨c', old, rfl, List.Subset.refl _⟩
+
+/-- **What `wakeBatch` owes**: every due entry after it was due before, or is one of the cell's
+waiters, owed the cell's completion now. -/
+theorem wakeBatch_due {store : DeferredStore} {cell : DeferredKey}
+    {o : Owed (Completion Val Err Defect FiberId Ann)} (h : o ∈ (store.wakeBatch cell).due) :
+    o ∈ store.due ∨ ∃ c effect, store.cellAt cell = some c ∧ c.completion = some effect ∧
+      (o.waiter, o.token) ∈ wakeKeys c.wake ∧ o.code = effect ∧ o.mode = .now := by
+  unfold DeferredStore.wakeBatch at h
+  cases hc : store.cellAt cell with
+  | none =>
+    simp only [hc] at h
+    exact Or.inl h
+  | some c =>
+    cases hd : c.completion with
+    | some effect =>
+      simp only [hc, hd] at h
+      rcases List.mem_append.mp h with old | new
+      · exact Or.inl old
+      · obtain ⟨w, hw, rfl⟩ := List.mem_map.mp new
+        refine Or.inr ⟨c, effect, rfl, hd, ?_, rfl, rfl⟩
+        rw [wakeKeys_runBatch_partition]
+        exact List.mem_append_right _ (List.mem_map.mpr ⟨w, hw, rfl⟩)
+    | none =>
+      simp only [hc, hd] at h
+      exact Or.inl h
+
 theorem deferredKeys_drain_partition (store : DeferredStore) :
     deferredKeys store = deferredKeys store.drainDue.2 ++
       store.drainDue.1.map (fun o => (o.waiter, o.token)) := by
