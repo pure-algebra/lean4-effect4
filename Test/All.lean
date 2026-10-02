@@ -47,6 +47,7 @@ import Test.Program.TypedDenotation
 import Test.Program.LayerDenotation
 import Test.Program.LayerRefs
 import Test.Program.GuardFoldLift
+import Test.Program.ParkHandshake
 import Test.Program.ExitConnector
 import Test.Program.TypedCorpus
 import Test.Program.ExitTypeLane
