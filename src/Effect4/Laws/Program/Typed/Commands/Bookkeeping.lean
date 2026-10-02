@@ -1567,8 +1567,10 @@ theorem scopeStateOk_world {root : ProgramSource} {w w' : World} (ord : w.leHost
   cases st with
   | empty => trivial
   | openEmpty => trivial
-  | openInline key fin => exact finNameOk_world ord h
-  | openMap entries => exact fun v0 hv => finNameOk_world ord (h v0 hv)
+  | openInline key fin => exact ⟨finalizerTyped_mono root w w' fin ord h.1, finNameOk_world ord h.2⟩
+  | openMap entries =>
+    exact ⟨fun v0 hv => finalizerTyped_mono root w w' v0.2 ord (h.1 v0 hv),
+      fun v0 hv => finNameOk_world ord (h.2 v0 hv)⟩
   | closed exit => exact fits_mono ord h
 
 /-- The store clauses move to a later world with the same declaration tables. -/
@@ -2238,14 +2240,16 @@ closing exit. -/
 
 theorem scopeStateOk_of {root : ProgramSource} {w : World} {e : Expect}
     {st : ScopeState Nat FinName Val Err Defect FiberId Ann}
+    (typed : ∀ v ∈ st.entries, FinalizerTyped root w v.2)
     (fins : ∀ v ∈ st.entries, FinNameOk (preds root) w e v.2)
     (closed : ∀ ex, st.closingExit? = some ex → (preds root).ScopeExitOk w e ex) :
     ScopeStateOk (preds root) w e st := by
   cases st with
   | empty => trivial
   | openEmpty => trivial
-  | openInline key fin => exact fins (key, fin) (List.mem_singleton_self _)
-  | openMap entries => exact fun v hv => fins v hv
+  | openInline key fin =>
+    exact ⟨typed (key, fin) (List.mem_singleton_self _), fins (key, fin) (List.mem_singleton_self _)⟩
+  | openMap entries => exact ⟨fun v hv => typed v hv, fun v hv => fins v hv⟩
   | closed exit => exact closed exit rfl
 
 theorem scopeStateOk_entries {root : ProgramSource} {w : World} {e : Expect}
@@ -2258,8 +2262,24 @@ theorem scopeStateOk_entries {root : ProgramSource} {w : World} {e : Expect}
     intro v hv
     rw [ScopeState.entries_openInline, List.mem_singleton] at hv
     subst hv
-    exact h
-  | openMap entries => exact h
+    exact h.2
+  | openMap entries => exact h.2
+  | closed exit => exact fun _ hv => nomatch hv
+
+/-- The typed half of the scope clause at every registered finalizer (seat D4's `FinalizerOk`,
+decisions row 151 (a″)): the sibling of `scopeStateOk_entries`. -/
+theorem scopeStateOk_typed {root : ProgramSource} {w : World} {e : Expect}
+    {st : ScopeState Nat FinName Val Err Defect FiberId Ann}
+    (h : ScopeStateOk (preds root) w e st) : ∀ v ∈ st.entries, FinalizerTyped root w v.2 := by
+  cases st with
+  | empty => exact fun _ hv => nomatch hv
+  | openEmpty => exact fun _ hv => nomatch hv
+  | openInline key fin =>
+    intro v hv
+    rw [ScopeState.entries_openInline, List.mem_singleton] at hv
+    subst hv
+    exact h.1
+  | openMap entries => exact h.1
   | closed exit => exact fun _ hv => nomatch hv
 
 theorem scopeStateOk_closed {root : ProgramSource} {w : World} {e : Expect}
@@ -2337,10 +2357,14 @@ theorem scopeStoreOk_setEntry {root : ProgramSource} {w : World} {e : Expect} {s
 theorem scopeStoreOk_addUnsafe {root : ProgramSource} {w : World} {e : Expect} {st : ScopeStore}
     (h : ScopeStoreOk (preds root) w e st) {scope : Nat} {entry : ScopeEntry}
     (hentry : st.entryAt scope = some entry) (key : Nat) {fin : FinName}
-    (finOk : FinNameOk (preds root) w e fin) :
+    (finOk : FinNameOk (preds root) w e fin) (finTyped : FinalizerTyped root w fin) :
     ScopeStoreOk (preds root) w e (st.setEntry { entry with scope := entry.scope.addUnsafe key fin }) := by
   have old := (h.c0 entry (List.mem_of_find?_eq_some hentry)).c0.c0
-  refine scopeStoreOk_setEntry h ⟨⟨scopeStateOk_of (fun v hv => ?_) (fun ex hex => ?_)⟩⟩
+  refine scopeStoreOk_setEntry h
+    ⟨⟨scopeStateOk_of (fun v hv => ?_) (fun v hv => ?_) (fun ex hex => ?_)⟩⟩
+  · rcases entries_addUnsafe entry.scope key fin v hv with oldv | rfl
+    · exact scopeStateOk_typed old v oldv
+    · exact finTyped
   · rcases entries_addUnsafe entry.scope key fin v hv with oldv | rfl
     · exact scopeStateOk_entries old v oldv
     · exact finOk
@@ -2357,7 +2381,10 @@ theorem scopeStoreOk_removeFinalizer {root : ProgramSource} {w : World} {e : Exp
   · exact h
   · rename_i entry hentry
     have old := (h.c0 entry (List.mem_of_find?_eq_some hentry)).c0.c0
-    refine scopeStoreOk_setEntry h ⟨⟨scopeStateOk_of (fun v hv => ?_) (fun ex hex => ?_)⟩⟩
+    refine scopeStoreOk_setEntry h
+      ⟨⟨scopeStateOk_of (fun v hv => ?_) (fun v hv => ?_) (fun ex hex => ?_)⟩⟩
+    · exact scopeStateOk_typed old v
+        ((Effect4.Scope.removeUnsafe_finalizers_sublist entry.scope key).subset hv)
     · exact scopeStateOk_entries old v
         ((Effect4.Scope.removeUnsafe_finalizers_sublist entry.scope key).subset hv)
     · change (entry.scope.removeUnsafe key).closingExit? = some ex at hex
@@ -2462,7 +2489,8 @@ theorem link_preserves (root : ProgramSource) (rootTy : EffTy) (mode : Supervisi
         · rw [wide.state]
       have stores : StoresOk (preds root) { w with state := s } Expect.root s := by
         obtain ⟨c0, c1, c2, c3, c4, c5⟩ := storesOk_world ord rfl rfl rfl wide.stores
-        exact ⟨c0, c1, ⟨c2.c0⟩, scopeStoreOk_addUnsafe c3 hentry m.state.nextName trivial, c4, c5⟩
+        exact ⟨c0, c1, ⟨c2.c0⟩, scopeStoreOk_addUnsafe c3 hentry m.state.nextName trivial
+          (finalizerTyped_of_admitted root _ _ trivial), c4, c5⟩
       obtain ⟨_, restated⟩ := configTyped_restate tail le rfl rfl rfl wf stores
         (fun _ h => h) wide.live.dueOwners
       have modified := configTyped_modify_quiet restated target

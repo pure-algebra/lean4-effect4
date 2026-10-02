@@ -6,7 +6,9 @@ import Lean.Util.CollectAxioms
 /-! Closed counted-layer instance: one actual reference site versus two nested
 reference sites, with the same table and ordinary run tape. Each certificate
 transition is checked by the kernel; the public fuel law extends the finite
-results to every command budget at least 300, with compile fuel fixed at 16. -/
+results to every command budget at least 301, with compile fuel fixed at 16. The counts
+are the first steps at which each run is done on the machine of decisions row 151 (a″): `Scope.close`
+voids a lone finalizer's value, which moved them from 216 and 300 (seat D4, re-pinned at the merge). -/
 set_option autoImplicit false
 set_option maxRecDepth 8192
 set_option maxHeartbeats 800000
@@ -100,7 +102,7 @@ run_elab do
     let value ← instantiateMVars value
     let name := (← getCurrNamespace) ++ n.getId
     addDecl (.thmDecl { name := name, levelParams := [], type := ty, value := value })
-  for (fixture, count) in [("once", 216), ("twice", 300)] do
+  for (fixture, count) in [("once", 220), ("twice", 301)] do
     let p := mkIdent (Lean.Name.mkSimple fixture)
     let base := mkIdent (p.getId.appendAfter "_s0")
     let first := mkIdent (p.getId.appendAfter "_prefix0")
@@ -120,37 +122,37 @@ run_elab do
         (ticks_succ $p $prevIdx $base).trans
           ((congrArg (tick $p) $prevProof).trans $eqProof)))
 
-theorem once_commands_done : once_s216.2 = [] := rfl
-theorem once_exit : (once_s216.1.fiber? Api.root).bind RunFiber.exit =
+theorem once_commands_done : once_s220.2 = [] := rfl
+theorem once_exit : (once_s220.1.fiber? Api.root).bind RunFiber.exit =
     some (.success (.nat 1)) := rfl
-theorem once_refs : once_s216.1.state.refs = [.nat 1] := rfl
-#print axioms once_prefix216
+theorem once_refs : once_s220.1.state.refs = [.nat 1] := rfl
+#print axioms once_prefix220
 #print axioms once_exit
 #print axioms once_refs
 
-theorem twice_commands_done : twice_s300.2 = [] := rfl
-theorem twice_exit : (twice_s300.1.fiber? Api.root).bind RunFiber.exit =
+theorem twice_commands_done : twice_s301.2 = [] := rfl
+theorem twice_exit : (twice_s301.1.fiber? Api.root).bind RunFiber.exit =
     some (.success (.nat 1)) := rfl
-theorem twice_refs : twice_s300.1.state.refs = [.nat 1] := rfl
-#print axioms twice_prefix300
+theorem twice_refs : twice_s301.1.state.refs = [.nat 1] := rfl
+#print axioms twice_prefix301
 #print axioms twice_exit
 #print axioms twice_refs
 
-theorem once_run : (Api.run once 216 [] [] 16).outcome = .finished ∧
-    (Api.run once 216 [] [] 16).machine = once_s216.1 :=
-  run_of_ticks once 216 once_s216
-    ((congrArg (ticks once 216) once_s0_eq).trans once_prefix216)
+theorem once_run : (Api.run once 220 [] [] 16).outcome = .finished ∧
+    (Api.run once 220 [] [] 16).machine = once_s220.1 :=
+  run_of_ticks once 220 once_s220
+    ((congrArg (ticks once 220) once_s0_eq).trans once_prefix220)
     once_commands_done rfl rfl rfl
 
-theorem twice_run : (Api.run twice 300 [] [] 16).outcome = .finished ∧
-    (Api.run twice 300 [] [] 16).machine = twice_s300.1 :=
-  run_of_ticks twice 300 twice_s300
-    ((congrArg (ticks twice 300) twice_s0_eq).trans twice_prefix300)
+theorem twice_run : (Api.run twice 301 [] [] 16).outcome = .finished ∧
+    (Api.run twice 301 [] [] 16).machine = twice_s301.1 :=
+  run_of_ticks twice 301 twice_s301
+    ((congrArg (ticks twice 301) twice_s0_eq).trans twice_prefix301)
     twice_commands_done rfl rfl rfl
 
-theorem once_count : (Api.run once 216 [] [] 16).outcome = .finished ∧
-    (Api.run once 216 [] [] 16).exit = some (.success (.nat 1)) ∧
-    (Api.run once 216 [] [] 16).stores.refs = [.nat 1] := by
+theorem once_count : (Api.run once 220 [] [] 16).outcome = .finished ∧
+    (Api.run once 220 [] [] 16).exit = some (.success (.nat 1)) ∧
+    (Api.run once 220 [] [] 16).stores.refs = [.nat 1] := by
   refine ⟨once_run.1, ?_, ?_⟩
   · unfold Api.Inspection.exit
     rw [once_run.2]
@@ -159,9 +161,9 @@ theorem once_count : (Api.run once 216 [] [] 16).outcome = .finished ∧
     rw [once_run.2]
     exact once_refs
 
-theorem twice_count : (Api.run twice 300 [] [] 16).outcome = .finished ∧
-    (Api.run twice 300 [] [] 16).exit = some (.success (.nat 1)) ∧
-    (Api.run twice 300 [] [] 16).stores.refs = [.nat 1] := by
+theorem twice_count : (Api.run twice 301 [] [] 16).outcome = .finished ∧
+    (Api.run twice 301 [] [] 16).exit = some (.success (.nat 1)) ∧
+    (Api.run twice 301 [] [] 16).stores.refs = [.nat 1] := by
   refine ⟨twice_run.1, ?_, ?_⟩
   · unfold Api.Inspection.exit
     rw [twice_run.2]
@@ -170,17 +172,17 @@ theorem twice_count : (Api.run twice 300 [] [] 16).outcome = .finished ∧
     rw [twice_run.2]
     exact twice_refs
 
-theorem provide_ref_twice (fuel : Nat) (hf : 300 ≤ fuel) :
+theorem provide_ref_twice (fuel : Nat) (hf : 301 ≤ fuel) :
     (Api.run once fuel [] [] 16).outcome = .finished ∧
     (Api.run twice fuel [] [] 16).outcome = .finished ∧
     (Api.run twice fuel [] [] 16).exit = (Api.run once fuel [] [] 16).exit ∧
     (Api.run once fuel [] [] 16).stores.refs = [.nat 1] ∧
     (Api.run twice fuel [] [] 16).stores.refs = [.nat 1] := by
-  have onceStable : Api.run once fuel [] [] 16 = Api.run once 216 [] [] 16 :=
-    Api.finished_mono_fuel once 216 fuel [Api.evaluate, Api.flush] [] [] 16
+  have onceStable : Api.run once fuel [] [] 16 = Api.run once 220 [] [] 16 :=
+    Api.finished_mono_fuel once 220 fuel [Api.evaluate, Api.flush] [] [] 16
       once_count.1 (Nat.le_trans (by decide) hf)
-  have twiceStable : Api.run twice fuel [] [] 16 = Api.run twice 300 [] [] 16 :=
-    Api.finished_mono_fuel twice 300 fuel [Api.evaluate, Api.flush] [] [] 16 twice_count.1 hf
+  have twiceStable : Api.run twice fuel [] [] 16 = Api.run twice 301 [] [] 16 :=
+    Api.finished_mono_fuel twice 301 fuel [Api.evaluate, Api.flush] [] [] 16 twice_count.1 hf
   rw [onceStable, twiceStable]
   exact ⟨once_count.1, twice_count.1, twice_count.2.1.trans once_count.2.1.symm,
     once_count.2.2, twice_count.2.2⟩
