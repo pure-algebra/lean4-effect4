@@ -1,5 +1,17 @@
 # The scheduler's obligations by structure: frames, token senders, and the host reply
 
+**Lead review correction, 2026-10-02.** This note's “exactly one sender” and Iris ownership
+language below is a proposed interpretation, not a consequence proved by the listed clauses.
+`InternalKeysBelow` states a bound; `RequestsOwned` and `ReservedKeysR.disjoint` separate
+external requests from listed keys; `SchedulerState.raceObservers` separates races from
+stored observer keys. None of those predicates states global internal-key uniqueness.
+Similarly, a subset argument preserves those bounds/disjointness facts, not an unstated
+linear resource invariant. The ordinary `World` tables are not Iris ghost ownership, and
+the view lemmas are not verified lens laws. Use the actual theorem premises when applying
+the frame/transfer pattern. The current account is semantics Concept 4 §5; the original
+design discussion below remains visible so this correction is explicit. The completed wake
+pilot and CE-026 controls are recorded in `../2026-10-02-codex-lead/waiter-receipt.md`.
+
 2026-10-02, claude/proofs at `179ee784`. A design note before the remaining M6 steps (`wake`,
 `loop`, `deliver`, `launch`, `registrationDone`), written because the thirteen proved steps and
 thirteen edits already cost about 7,100 lines of threading (`Typed/Commands/*.lean`,

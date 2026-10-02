@@ -41,27 +41,27 @@ def selection : Selection where
       requires := ["control", "stateful"]
       boundary := "World transport must retain scope presence, owner and continuation conditions. These denotation arms are not a global progress or fairness theorem." },
     { id := "layers"
-      title := "Layer provision and its current boundary"
+      title := "Layer provision through typed context images"
       concepts := ["context-requirements", "residual-program-typing"]
       «syntax» := [`Effect4.Program.Eff.provideLayer]
       judgments := [`Effect4.Program.Typed.ProvideLayerArm, `Effect4.Program.Typed.LayerFree]
-      rules := [`Effect4.Program.Typed.provideLayerArm_of_layerFree, `Effect4.Program.Typed.M3bAssembly.denoteR_typed_provideLayer]
+      rules := [`Effect4.Program.Typed.provideLayerArm_of_layerFree, `Effect4.Program.Typed.provideLayerArm, `Effect4.Program.Typed.M3bAssembly.denoteR_typed_provideLayer]
       requires := ["stateful", "control"]
-      boundary := "The layer arm remains a formal goal. The layer-free proof discharges it only by excluding every provideLayer node. The context-image repair discussed in row 176 is separate work; this snapshot's register has not yet recorded the owner's later approval." },
+      boundary := "The general layer arm uses the ruled context-image and memo representations (rows 176, 185–187). The older layer-free theorem remains a restricted instance; current goal evidence is read from the loaded environment." },
     { id := "denotation"
       title := "M5: constructor rules to typed denotation"
       concepts := ["residual-program-typing"]
       «syntax» := [`Effect4.Program.Eff]
       judgments := [`Effect4.Program.Typed.PointTyped, `Effect4.Program.Typed.DenotesTyped, `Effect4.Program.Typed.LoadsTyped]
-      rules := [`Effect4.Program.Typed.succeed_arm, `Effect4.Program.Typed.fail_arm, `Effect4.Program.Typed.failCause_arm, `Effect4.Program.Typed.sync_arm, `Effect4.Program.Typed.suspend_arm, `Effect4.Program.Typed.gen_arm, `Effect4.Program.Typed.matchCause_arm, `Effect4.Program.Typed.uninterruptible_arm, `Effect4.Program.Typed.interruptible_arm, `Effect4.Program.Typed.yieldNow_arm, `Effect4.Program.Typed.awaitFiber_arm, `Effect4.Program.Typed.catchIf_arm, `Effect4.Program.Typed.select_arm, `Effect4.Program.Typed.iterate_arm, `Effect4.Program.Typed.childDenotes_upto, `Effect4.Program.Typed.denotesTyped_of_provideLayer, `Effect4.Program.Typed.denotesTyped_of_layerFree, `Effect4.Program.Typed.loadsTyped_of_denotesTyped, `Effect4.Program.Typed.M3bAssembly.denoteR_typed, `Effect4.Program.Typed.M3bAssembly.typedState_load]
+      rules := [`Effect4.Program.Typed.succeed_arm, `Effect4.Program.Typed.fail_arm, `Effect4.Program.Typed.failCause_arm, `Effect4.Program.Typed.sync_arm, `Effect4.Program.Typed.suspend_arm, `Effect4.Program.Typed.gen_arm, `Effect4.Program.Typed.matchCause_arm, `Effect4.Program.Typed.uninterruptible_arm, `Effect4.Program.Typed.interruptible_arm, `Effect4.Program.Typed.yieldNow_arm, `Effect4.Program.Typed.awaitFiber_arm, `Effect4.Program.Typed.catchIf_arm, `Effect4.Program.Typed.select_arm, `Effect4.Program.Typed.iterate_arm, `Effect4.Program.Typed.childDenotes_upto, `Effect4.Program.Typed.denotesTyped_of_provideLayer, `Effect4.Program.Typed.denotesTyped_of_layerFree, `Effect4.Program.Typed.loadsTyped_of_denotesTyped, `Effect4.Program.Typed.denotesTyped, `Effect4.Program.Typed.loadsTyped, `Effect4.Program.Typed.M3bAssembly.denoteR_typed, `Effect4.Program.Typed.M3bAssembly.typedState_load]
       requires := ["control", "stateful", "scopes", "layers"]
-      boundary := "The induction assembles every constructor given ProvideLayerArm. M5 is proved for LayerFree; the general denotation and load goals remain open. Loading additionally requires the no-race-marker equation." },
+      boundary := "The induction assembles every constructor, using the general layer arm. The concrete denotation and load witnesses discharge the corresponding M5 goals; their source lawfulness, closed-type and requirement premises remain visible. This does not close execution typing." },
     { id := "invariant"
       title := "M6–M7: transitions and observable typing"
       concepts := ["reactive-scheduling", "translation-simulation"]
       «syntax» := []
-      judgments := [`Effect4.Program.Typed.MachineTyped, `Effect4.Program.Typed.StepPreserves, `Effect4.Program.Typed.DecisionKeeps, `Effect4.Program.Typed.M7Fragment, `Effect4.Program.Typed.ExitHandlesValid]
-      rules := [`Effect4.Program.Typed.decisionKeeps_of_ledger, `Effect4.Program.Typed.reachable_of_ledger, `Effect4.Program.Typed.m7_of_capstone, `Effect4.Program.Typed.m7_of_ledger, `Effect4.Program.Typed.M6Ledger.step_loop, `Effect4.Program.Typed.M6Ledger.step_deliver, `Effect4.Program.Typed.M6Ledger.step_finish, `Effect4.Program.Typed.M6Ledger.step_resume, `Effect4.Program.Typed.M6Ledger.step_wake, `Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.typedState_reachable, `Effect4.Program.Typed.M7.exits_typed, `Effect4.Program.Typed.M7.stores_typed, `Effect4.Program.Typed.M7.never_halts, `Effect4.Program.Typed.M7.exitHandles_valid]
+      judgments := [`Effect4.Program.Typed.MachineTyped, `Effect4.Program.Typed.ConfigTyped, `Effect4.Program.Typed.StoreFrame, `Effect4.Program.Typed.WakeTyped, `Effect4.Program.Typed.AwaitDemand, `Effect4.Program.Typed.StepPreserves, `Effect4.Program.Typed.DecisionKeeps, `Effect4.Program.Typed.M7Fragment, `Effect4.Program.Typed.ExitHandlesValid]
+      rules := [`Effect4.Program.Typed.configTyped_frame, `Effect4.Program.Typed.completionStrong_await, `Effect4.Program.Typed.wake_preserves, `Effect4.Program.Typed.decisionKeeps_of_ledger, `Effect4.Program.Typed.decisionKeeps_of_steps, `Effect4.Program.Typed.reachable_of_ledger, `Effect4.Program.Typed.typedState_reachable_of_steps, `Effect4.Program.Typed.m7_of_capstone, `Effect4.Program.Typed.m7_of_ledger, `Effect4.Program.Typed.M6Ledger.step_evaluate, `Effect4.Program.Typed.M6Ledger.step_loop, `Effect4.Program.Typed.M6Ledger.step_deliver, `Effect4.Program.Typed.M6Ledger.step_finish, `Effect4.Program.Typed.M6Ledger.step_resume, `Effect4.Program.Typed.M6Ledger.step_launch, `Effect4.Program.Typed.M6Ledger.step_enrollRace, `Effect4.Program.Typed.M6Ledger.step_registrationDone, `Effect4.Program.Typed.M6Ledger.step_interruptTarget, `Effect4.Program.Typed.M6Ledger.step_afterInterrupt, `Effect4.Program.Typed.M6Ledger.step_raceCancel, `Effect4.Program.Typed.M6Ledger.step_trackChild, `Effect4.Program.Typed.M6Ledger.step_observe, `Effect4.Program.Typed.M6Ledger.step_exitDone, `Effect4.Program.Typed.M6Ledger.step_closeParAwait, `Effect4.Program.Typed.M6Ledger.step_link, `Effect4.Program.Typed.M6Ledger.step_drainDue, `Effect4.Program.Typed.M6Ledger.step_wake, `Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.typedState_reachable, `Effect4.Program.Typed.M7.exits_typed, `Effect4.Program.Typed.M7.stores_typed, `Effect4.Program.Typed.M7.never_halts, `Effect4.Program.Typed.M7.exitHandles_valid]
       requires := ["denotation"]
       boundary := "The capstone connectors are proved implications. Their formal input goals remain separately measured. M7 excludes host answers, requires an empty table and closed source; exit handle validity is a separate property." },
     { id := "replay"
@@ -84,6 +84,24 @@ def selection : Selection where
   prerequisites := #[
     (`Effect4.Program.Typed.M3bAssembly.denoteR_typed, `Effect4.Program.Typed.M3bAssembly.denoteR_typed_provideLayer),
     (`Effect4.Program.Typed.M3bAssembly.typedState_load, `Effect4.Program.Typed.M3bAssembly.denoteR_typed),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_evaluate),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_loop),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_deliver),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_finish),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_resume),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_launch),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_enrollRace),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_registrationDone),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_interruptTarget),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_afterInterrupt),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_raceCancel),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_trackChild),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_observe),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_exitDone),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_closeParAwait),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_link),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_drainDue),
+    (`Effect4.Program.Typed.M6Ledger.decision_preserves, `Effect4.Program.Typed.M6Ledger.step_wake),
     (`Effect4.Program.Typed.M6Ledger.typedState_reachable, `Effect4.Program.Typed.M3bAssembly.typedState_load),
     (`Effect4.Program.Typed.M6Ledger.typedState_reachable, `Effect4.Program.Typed.M6Ledger.decision_preserves),
     (`Effect4.Program.Typed.M7.exits_typed, `Effect4.Program.Typed.M6Ledger.typedState_reachable),
@@ -91,18 +109,18 @@ def selection : Selection where
     (`Effect4.Program.Typed.M7.never_halts, `Effect4.Program.Typed.M6Ledger.typedState_reachable)
   ]
   work := #[
-    { id := "repair-layer-context"
-      title := "Implement and check the layer context-image repair"
-      features := ["layers"]
-      after := []
+    { id := "finish-scheduler-steps"
+      title := "Complete the four remaining command proofs and assemble M6"
+      features := ["invariant"]
+      after := ["Effect4.Program.Typed.configTyped_frame", "Effect4.Program.Typed.loadsTyped"]
+      source := "docs/research/2026-10-02-proof-structure/handoff.md"
+      reason := "Discharge the unchanged loop, deliver, launch and registrationDone goals. Reuse view-based transport and prove each actual answer transfer, then instantiate decisionKeeps_of_steps and typedState_reachable_of_steps. The former counterexamples remain historical controls; literature analogies supply no missing premises." },
+    { id := "observable-typing"
+      title := "Connect reachable typing to the four M7 observations"
+      features := ["invariant"]
+      after := ["finish-scheduler-steps"]
       source := "docs/core/decisions.md"
-      reason := "Aim to discharge M3bAssembly.denoteR_typed_provideLayer by distinguishing freshly built context images and memo-hit results. The owner approved option (b) after this snapshot's open row 176; integrate that ruling with the repair. Existing conditional assembly is a consumer, not a proof of the repair." },
-    { id := "resume-transport"
-      title := "Connect restricted resume transport to actual M6 consumers"
-      features := ["invariant", "scopes"]
-      after := ["Effect4.Program.Typed.typedProg_mono"]
-      source := "docs/core/semantics.md"
-      reason := "Preserve token, source and owner premises; M6Ledger.step_resume is a consumer to discharge, not a prerequisite already proved. Existing world-transport probes guide the candidate; broadening their relation is not licensed by finite tests." },
+      reason := "Use the existing capstone on its answer-free, empty-host-table fragment. Exit handle validity also needs the registered-byte invariant ruled by row 180(a); three typing observations do not supply that fourth property." },
     { id := "lowering-local-rule"
       title := "State one lowering relation at the actual number boundary"
       features := ["replay"]

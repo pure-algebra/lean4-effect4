@@ -42,3 +42,22 @@ later helper theorems is added before writing them, with the concrete ledger con
 
 Files: `Test/Program/WaiterColumn.lean`, `Test/All.lean` immediately after `MemoTable`,
 `Test/Counterexamples/REGISTER.md` only CE-026, and this slice's receipt.
+
+## Proof-documentation slice placement
+
+The owner asked that the theoretical basis and the actual proof graph stay connected to each
+implementation slice. This slice uses the existing registry, declaration-reference extractor,
+Effect Schema report and architecture renderer. It introduces no parallel status system.
+
+- Concepts 1, 2 and 4: show the completed layer/denotation witnesses and the actual frame and
+  waiter-to-completion steps supporting `M6Ledger.step_wake`; retain all four open M6 commands
+  and the two capstones as distinct goals.
+- Theory: induction on executions (Lynch–Vaandrager §6) and local reasoning/protocol subsumption
+  (de Vilhena–Pottier §3.3, §4.2.4). These guide proof structure; the Lean witnesses supply the
+  evidence. The TYPES 2003 method already retained by the graph remains its presentation basis.
+- Correction: bounds and external/internal disjointness do not state global unique ownership
+  of each internal key. No sender-exclusivity theorem is inferred from them or from an Iris analogy.
+- Acceptance: the real producer resolves selected names and checked/wanted evidence; the report
+  exposes the existing wake proof's direct frame/transfer references, complete hypotheses,
+  historical CE-026 link and literature associations. Reports and the architecture page are
+  generated, not hand-edited, at this documentation checkpoint.

@@ -288,6 +288,33 @@ def registry : Registry where
       title := "The deliver decision preserves configuration typing"
       pointer := .goal `Effect4.Program.Typed.M6Ledger.step_deliver
       contestedBy := ["E4-TYPED-CE-025"] },
+    { id := "store-frame-typing", concept := "reactive-scheduling", role := .preservation
+      title := "A store edit satisfying the stated frame, store typing, key and due-owner premises keeps configuration typing"
+      pointer := .witness `Effect4.Program.Typed.configTyped_frame
+      literature := [
+        { work := "deVilhenaPottier2021", locator := "§4.2.4 (frame rule); audit P8", relation := "analogy" }
+      ] },
+    { id := "waiter-completion-typing", concept := "reactive-scheduling", role := .preservation
+      title := "A completion fitting its cell's columns meets a waiter's declared answer and error demand"
+      pointer := .witness `Effect4.Program.Typed.completionStrong_await
+      literature := [
+        { work := "deVilhenaPottier2021", locator := "§3.3 (protocol subsumption); audit P8", relation := "proofTechnique" }
+      ] },
+    { id := "step-wake-preserves", concept := "reactive-scheduling", role := .preservation
+      title := "The wake command keeps configuration typing through its waiter-to-due transfer"
+      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_wake
+      contestedBy := ["E4-TYPED-CE-026"]
+      literature := [
+        { work := "LynchVaandrager1995", locator := "§6 (invariants); audit C4", relation := "proofTechnique" }
+      ] },
+    { id := "step-launch-preserves", concept := "reactive-scheduling", role := .preservation
+      title := "The launch command keeps configuration typing when adding a fresh race entrant"
+      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_launch
+      contestedBy := ["E4-TYPED-CE-029"] },
+    { id := "step-registration-done-preserves", concept := "reactive-scheduling", role := .preservation
+      title := "Completing race registration keeps configuration typing through immediate settlement or parking"
+      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_registrationDone
+      contestedBy := ["E4-TYPED-CE-028"] },
     { id := "drivestate-lift", concept := "reactive-scheduling", role := .simulation
       title := "Command loop invariant lifting for driveState"
       pointer := .witness `Effect4.Machine.Lift.driveState_lift

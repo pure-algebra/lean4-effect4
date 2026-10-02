@@ -349,6 +349,40 @@ inductive RunDecision ...
   (decisions row 139).
 - **Infinite liveness (`fair-scheduling`)**: Temporal liveness under weak fairness (Requirement R12).
 
+#### 5. How the scheduler proofs use the theory
+
+The proof structure is induction on executions: establish the loaded configuration, prove each
+command and decision case, then assemble reachability. This follows the invariant method in
+Lynch and Vaandrager, *Forward and Backward Simulations I*, §6 (audit C4), rather than inferring
+whole-machine typing from isolated command tests. `decisionKeeps_of_steps` and
+`typedState_reachable_of_steps` expose the remaining premises; their formal consumers are
+`M6Ledger.decision_preserves` and `M6Ledger.typedState_reachable`.
+
+Within a command, two smaller arguments meet. `configTyped_frame` transports clauses across a
+store edit under its explicit unchanged-view, typing, key and due-owner hypotheses.
+`completionStrong_await` moves a completed Deferred's answer and error evidence to a declared
+waiter type. `wake_preserves` uses both arguments at the actual machine step, and supplies
+`M6Ledger.step_wake`'s checked witness. The analogy to the frame rule and protocol subsumption in
+de Vilhena and Pottier, *A Separation Logic for Effect Handlers*, §3.3 and §4.2.4 (audit P8), guides
+this decomposition. Our ordinary Lean predicates do not implement that paper's Iris resource
+algebra or separation logic; the displayed theorem premises are the local contract.
+
+In particular, token bounds, disjointness from external requests, and race/observer separation
+are different properties. They do not state that every internal key occurs at most once, nor
+that a reply will eventually arrive. A “sender transfer” is explanatory language for a checked
+implication between two typing demands. Unique ownership, at-most-once delivery and liveness
+require their own stated invariants or operational theorems. The CE-026 battery checks the old
+wrong-column witness is refused and the corrected wake is typed; its repeated-wake equation is
+a finite control, not a general exclusivity theorem.
+
+The generated feature view selects all M6 command goals and the actual frame, transfer and
+assembly declarations. Its proof-reference arrows come from Lean expressions; its authored
+prerequisite arrows explain the intended assembly. The TYPES 2003 basis—Adams's feature
+structure, Ballarin's preservation of context assumptions, and Wiedijk's significant proof
+steps—is documented in the [proof-view method](../research/2026-10-02-proof-feature-graph/method.md).
+Neither kind of arrow proves an open goal. Full statements, hypotheses, literature associations
+and checked/wanted evidence remain available through the existing report and architecture page.
+
 ### 2.5 Concept 5: Exact Codecs & Data Plane Embeddings (`exact-codecs`)
 
 #### 1. What the Literature Defines

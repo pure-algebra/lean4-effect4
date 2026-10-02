@@ -541,8 +541,22 @@ The active sequence is the foundations review above. Phase C's existing receipt 
 historical evidence; the dated notes below explain the redirect and its earlier plans. They
 do not override the corrected protocol-before-assembly order or constitute a new pause instruction.
 
-**M5 closed, 2026-10-02 (branch `claude/proofs`, not merged into `refactor/phase1-phase3`; read
-first).** The layer family's arm is proved at every source (`provideLayerArm`,
+**Lead continuation, 2026-10-02 (current).** Codex has taken over implementation on
+`codex/proofs-lead`. Claude's clean handoff `247d7487` and the CE-026 regression battery
+`e493b67d` are now merged into the local `refactor/phase1-phase3`; nothing was pushed.
+M5 and all 31 store rows of M3bAdequacy are closed; M6Edits has 0 open of 13. M6Ledger has
+6 open of 20: `loop`, `deliver`, `launch`, `registrationDone`, decision preservation and
+reachable typing. M7 retains 4 open on its existing fragment. The general wake proof and its
+positive/refusing controls are recorded in
+[the wake receipt](research/2026-10-02-codex-lead/waiter-receipt.md).
+The [lead plan](research/2026-10-02-codex-lead/plan.md) carries the remaining sequence, including
+the theoretical placement and proof-graph update required with each slice. The shared frame
+method and its ownership limits are explained in semantics Concept 4 §5. The earlier design
+note's unique-sender interpretation is explicitly corrected; it is not an extra theorem.
+The full generator sweep remains due at the handoff checkpoint; a documentation regeneration
+is not that sweep. Row 180(a)'s registered-handle invariant remains part of the M7 work.
+
+**Earlier M5 closure, 2026-10-02 (pre-integration snapshot).** The layer family's arm is proved at every source (`provideLayerArm`,
 `src/Effect4/Laws/Program/Typed/LayerArm.lean`), so M5's two goals hold with no fragment premise:
 `denotesTyped` (`M3bAssembly.denoteR_typed`) and `loadsTyped` (`typedState_load`); `M3bAssembly` reads
 0 open of 5, `M6Ledger` 7 open of 20, `M7` 4 open. The repairs it needed are decisions rows 176 (b),
