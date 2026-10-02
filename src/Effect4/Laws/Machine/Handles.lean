@@ -1111,8 +1111,7 @@ macro_rules
 
 /-- The key traversals unfolded to one depth, and membership unfolded over the tree. The optional
 list adds the unfoldings a section needs beyond the machine's own carriers. -/
-syntax "keys_mem_norm" (" [" (Lean.Parser.Tactic.simpStar <|> Lean.Parser.Tactic.simpErase <|>
-  Lean.Parser.Tactic.simpLemma),* "]")? : tactic
+syntax "keys_mem_norm" (" [" Lean.Parser.Tactic.simpArg,* "]")? : tactic
 macro_rules
   | `(tactic| keys_mem_norm) => `(tactic| keys_mem_norm [])
   | `(tactic| keys_mem_norm [$extra,*]) => `(tactic|
@@ -1135,8 +1134,7 @@ macro_rules
         eq_self_iff_true, $extra,*])
 
 /-- The same normalisation at a hypothesis. -/
-syntax "keys_mem_norm_at" ident (" [" (Lean.Parser.Tactic.simpStar <|> Lean.Parser.Tactic.simpErase <|>
-  Lean.Parser.Tactic.simpLemma),* "]")? : tactic
+syntax "keys_mem_norm_at" ident (" [" Lean.Parser.Tactic.simpArg,* "]")? : tactic
 macro_rules
   | `(tactic| keys_mem_norm_at $h:ident) => `(tactic| keys_mem_norm_at $h [])
   | `(tactic| keys_mem_norm_at $h:ident [$extra,*]) => `(tactic|
@@ -1158,8 +1156,7 @@ macro_rules
         List.mem_cons, List.mem_singleton, List.not_mem_nil, or_assoc, true_or, or_true, false_or, or_false,
         eq_self_iff_true, $extra,*] at $h:ident)
 
-syntax "mem_tac" (" [" (Lean.Parser.Tactic.simpStar <|> Lean.Parser.Tactic.simpErase <|>
-  Lean.Parser.Tactic.simpLemma),* "]")? : tactic
+syntax "mem_tac" (" [" Lean.Parser.Tactic.simpArg,* "]")? : tactic
 macro_rules
   | `(tactic| mem_tac) => `(tactic| mem_tac [])
   | `(tactic| mem_tac [$extra,*]) => `(tactic| (
@@ -1169,8 +1166,7 @@ macro_rules
 /-- Close a membership goal from the case hypothesis `h`: the goal is already normalised, so
 rewriting with `h` is tried first (syntactic, cheap), an equation left by `subst` next, and
 the linear search last. -/
-syntax "close_mem" ident (" [" (Lean.Parser.Tactic.simpStar <|> Lean.Parser.Tactic.simpErase <|>
-  Lean.Parser.Tactic.simpLemma),* "]")? : tactic
+syntax "close_mem" ident (" [" Lean.Parser.Tactic.simpArg,* "]")? : tactic
 macro_rules
   | `(tactic| close_mem $h:ident) => `(tactic| close_mem $h [])
   | `(tactic| close_mem $h:ident [$extra,*]) => `(tactic| first
@@ -1180,8 +1176,7 @@ macro_rules
       | (simp only [eq_self_iff_true, true_or, or_true]; done)
       | mem_tac [$extra,*])
 
-syntax "sub_tac" (" using " term,+)? (" norm " "[" (Lean.Parser.Tactic.simpStar <|>
-  Lean.Parser.Tactic.simpErase <|> Lean.Parser.Tactic.simpLemma),* "]")? : tactic
+syntax "sub_tac" (" using " term,+)? (" norm " "[" Lean.Parser.Tactic.simpArg,* "]")? : tactic
 macro_rules
   | `(tactic| sub_tac) => `(tactic| sub_tac norm [])
   | `(tactic| sub_tac using $hs:term,*) => `(tactic| sub_tac using $hs,* norm [])

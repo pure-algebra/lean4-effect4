@@ -1,0 +1,9 @@
+/private/tmp/codex-second-eyes-2026-10-01/metaprogramming/HandleGrammarControls.lean:18:57: error(lean.invalidField): Invalid field `isError`: The environment does not contain `Except.isError`, so it is not possible to project the field `isError` from an expression
+  Parser.runParserCategory env `tactic text
+of type `Except String Syntax`
+/private/tmp/codex-second-eyes-2026-10-01/metaprogramming/HandleGrammarControls.lean:6:0: error: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+-
++ error: Invalid field `isError`: The environment does not contain `Except.isError`, so it is not possible to project the field `isError` from an expression
++   Parser.runParserCategory env `tactic text
++ of type `Except String Syntax`
