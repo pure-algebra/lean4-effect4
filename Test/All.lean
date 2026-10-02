@@ -66,6 +66,7 @@ import Test.Program.RegistrationYield
 import Test.Program.LaunchEntrant
 import Test.Program.HostWalk
 import Test.Program.LoopProtocols
+import Test.Program.AnswerSchema
 import Test.Program.ProtocolPosts
 import Test.Audit.AnswerGate
 import Test.Machine.Runtime.RepresentationFoundations

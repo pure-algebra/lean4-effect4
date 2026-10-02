@@ -9,8 +9,9 @@ Boolean column per question, answered once per constructor, read by the generate
 one row here, and the table does not elaborate until the row is written (`TyTable` is generated from
 the declaration, `TyFoldExtras`); no column has a default.
 
-A column lands with its consumer. Today: `handleFree`, the data fragment's classifier
-(`Laws/Program/Typed/Membership.lean`).
+A column lands with its consumer. Today: `handleFree`, the data fragment's classifier, and
+`shapeDecides`, where the shape check (`Val.hasTy`) is membership at every world, read by the Schema
+answer bridge (both in `Laws/Program/Typed/Membership.lean`).
 -/
 
 set_option autoImplicit false
@@ -21,6 +22,10 @@ namespace Effect4.Program
 structure ClassRow where
   /-- The node holds no handle, fiber, cell or deferred: its members name no world entry. -/
   handleFree : Bool
+  /-- At this node the shape check decides membership at every world: not a handle, fiber, cell,
+  deferred or `unknown` (members read the world), and not an exit (its membership also asks a
+  shape-free cause, decisions row 152). -/
+  shapeDecides : Bool
 
 /-- **Every node in a class**: the head fold `(Bool, &&)` of a column, the node's answer and all of
 its children's. -/
@@ -29,25 +34,25 @@ def TyTable.allHeads (tbl : TyTable ClassRow) (col : ClassRow → Bool) : TyAlge
 
 /-- The classifier table of `Ty`. -/
 def tyClasses : TyTable ClassRow where
-  never := ⟨true⟩
-  unit := ⟨true⟩
-  nat := ⟨true⟩
-  int := ⟨true⟩
-  string := ⟨true⟩
-  bool := ⟨true⟩
-  handle := ⟨false⟩
-  option := ⟨true⟩
-  list := ⟨true⟩
-  prod := ⟨true⟩
-  except := ⟨true⟩
-  exitOf := ⟨true⟩
-  causeOf := ⟨true⟩
-  fiberOf := ⟨false⟩
-  union := ⟨true⟩
-  lit := ⟨true⟩
-  refOf := ⟨false⟩
-  deferredOf := ⟨false⟩
-  var := ⟨true⟩
-  unknown := ⟨true⟩
+  never := ⟨true, true⟩
+  unit := ⟨true, true⟩
+  nat := ⟨true, true⟩
+  int := ⟨true, true⟩
+  string := ⟨true, true⟩
+  bool := ⟨true, true⟩
+  handle := ⟨false, false⟩
+  option := ⟨true, true⟩
+  list := ⟨true, true⟩
+  prod := ⟨true, true⟩
+  except := ⟨true, true⟩
+  exitOf := ⟨true, false⟩
+  causeOf := ⟨true, true⟩
+  fiberOf := ⟨false, false⟩
+  union := ⟨true, true⟩
+  lit := ⟨true, true⟩
+  refOf := ⟨false, false⟩
+  deferredOf := ⟨false, false⟩
+  var := ⟨true, true⟩
+  unknown := ⟨true, false⟩
 
 end Effect4.Program

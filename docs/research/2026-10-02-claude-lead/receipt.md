@@ -547,3 +547,57 @@ and its laws), `Typed/Residual.lean` (protocols, steps, bank rules, `frameAccept
 - `lake env lean … Test/Program/LoopProtocols.lean` — exit 0 (`p8-08`). Axioms
   (`p8-ax`): `hookLawsAt_interpRAt`, `popR_typed`, `frameAccepts_iter`/`_loop`, the four controls
   `[propext, Quot.sound]`; `Greatest.coind_upto`, `Greatest.transport` none.
+
+## Slice S1 — a host answer decoded by its Schema, admitted at its token
+
+**First:** the Schema JSON decoder yields the shape check (`Val.hasTy`), not membership (`Fits`).
+Codex's `hook-view-support/schema-bridge-review.md` found the same thing independently. They agree
+on a new classifier column. Exits are outside it: the Exit codec is total and represents internal
+defects too (the owner: "generic schema for exit so we can always represent exits"). Their membership
+also asks a shape-free cause (row 152), a decidable check the bridge keeps visible as a premise. No
+codec or contract changed.
+
+- `TyClasses.ClassRow.shapeDecides` (one column of the one classifier table): true for the data
+  constructors, false for handles, fibers, cells, deferreds, `unknown` and exits.
+- `shapeDecides t := cata_ty (TyTable.allHeads tyClasses ClassRow.shapeDecides) t`, and
+  `fits_of_hasTy_shapeDecides` (`Typed/Membership.lean`): on that fragment the shape check is
+  membership at every world and allocation table, the converse of `fits_hasTy` there. When the
+  approved data constructors land (W4), each is one row of this table.
+- `Typed/AnswerSchema.lean`:
+  - `hasTy_of_decode` (`Schema.hasTy_decode` at the raw type);
+  - `fits_of_decode`;
+  - `exitOk_of_hasTy`/`exitOk_of_decode` (a decoded exit at shape-decided columns with a shape-free
+    cause is `ExitOk`);
+  - `answerOk_of_decode` (with the token's declaration, `AnswerOk`);
+  - `decodedAnswer_keeps` (`edit_answer` with it, the consumer).
+
+Placement:
+1. Concept 5 (exact codecs) meeting Concept 1's membership.
+2. Question: the `DecisionKeeps` premise of `M6Ledger.decision_preserves`, consumed by
+   `edit_answer` (`M6Edits.answer`).
+3. Reach: shape-decided answer and error columns, a declared token; rows 95, 96, 122, 152.
+4. Not established: the session's correlation of a reply to its parked row and token (host
+   boundary); world-reading answer types; nested exits; agreement with the target library's decoder
+   (row 5's separate host gate).
+5. Unlocks: a real `AnswerOk` premise for the proved answer edit, and the place the W4 constructors
+   slot into.
+
+Controls: `Test/Program/AnswerSchema.lean`:
+- a string-error failure and a unit success, encoded and decoded, admitted at a declared token;
+- a `badName` die exit decoded from its own encoding (representable) and refused by `ExitOk` at
+  every world;
+- an exit type is not shape-decided.
+
+Changes: `src/Effect4/Program/TyClasses.lean` (column), `Typed/Membership.lean` (`shapeDecides`, the
+theorem), new `Typed/AnswerSchema.lean`, `src/Effect4/Laws.lean` (imports it after `Typed.Edits`),
+new `Test/Program/AnswerSchema.lean`, `Test/All.lean`.
+
+- `lake build Effect4.Laws.Program.Typed.AnswerSchema` — exit 0 (`s1-01`; the core column rebuilds
+  the typing cone); `M6Edits` 13 of 13.
+- `lake env lean … Test/Program/AnswerSchema.lean` — exit 0 (`s1-03`).
+- `lake build Effect4 Effect4.Laws Test.Program.AnswerSchema Test.Program.TyTables
+  Test.Program.ConfigContract Test.Program.AdmissionColumns` — exit 0 (`s1-06`). `s1-05` first
+  failed: `Test/Program/TyTables.lean`'s missing-row control writes one-field rows; it was updated to
+  two columns, with the same expected refusal (`Fields missing: unknown`).
+- Axioms: `fits_of_hasTy_shapeDecides`, `hasTy_of_decode`, `exitOk_of_decode`,
+  `answerOk_of_decode`, `decodedAnswer_keeps` and the four controls `[propext, Quot.sound]`.

@@ -29,33 +29,33 @@ theorem schema_eq_face (t : Ty) : Schema.Bridge.schema t = cata_ty (TyTable.sche
 /-- error: Fields missing: `unknown` -/
 #guard_msgs (error) in
 example : TyTable ClassRow where
-  never := ⟨true⟩
-  unit := ⟨true⟩
-  nat := ⟨true⟩
-  int := ⟨true⟩
-  string := ⟨true⟩
-  bool := ⟨true⟩
-  handle := ⟨false⟩
-  option := ⟨true⟩
-  list := ⟨true⟩
-  prod := ⟨true⟩
-  except := ⟨true⟩
-  exitOf := ⟨true⟩
-  causeOf := ⟨true⟩
-  fiberOf := ⟨false⟩
-  union := ⟨true⟩
-  lit := ⟨true⟩
-  refOf := ⟨false⟩
-  deferredOf := ⟨false⟩
-  var := ⟨true⟩
+  never := ⟨true, true⟩
+  unit := ⟨true, true⟩
+  nat := ⟨true, true⟩
+  int := ⟨true, true⟩
+  string := ⟨true, true⟩
+  bool := ⟨true, true⟩
+  handle := ⟨false, false⟩
+  option := ⟨true, true⟩
+  list := ⟨true, true⟩
+  prod := ⟨true, true⟩
+  except := ⟨true, true⟩
+  exitOf := ⟨true, false⟩
+  causeOf := ⟨true, true⟩
+  fiberOf := ⟨false, false⟩
+  union := ⟨true, true⟩
+  lit := ⟨true, true⟩
+  refOf := ⟨false, false⟩
+  deferredOf := ⟨false, false⟩
+  var := ⟨true, true⟩
 
 /-- error: `record` is not a field of structure `TyTable` -/
 #guard_msgs (error) in
-example : TyTable ClassRow := { tyClasses with record := ⟨true⟩ }
+example : TyTable ClassRow := { tyClasses with record := ⟨true, true⟩ }
 
 /-- error: field `never` has already been specified -/
 #guard_msgs (error) in
-example : TyTable ClassRow := { tyClasses with never := ⟨true⟩, never := ⟨false⟩ }
+example : TyTable ClassRow := { tyClasses with never := ⟨true, true⟩, never := ⟨false, true⟩ }
 
 end Test.Program.TyTables
 

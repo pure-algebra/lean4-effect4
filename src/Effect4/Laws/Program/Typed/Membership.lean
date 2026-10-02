@@ -2330,6 +2330,105 @@ name no world entry. The classifier table's `handleFree` column read at every no
 the node's and all of its children's. -/
 def handleFree (t : Ty) : Bool := cata_ty (TyTable.allHeads tyClasses ClassRow.handleFree) t
 
+/-- **The shape-decided fragment**: at every node the shape check (`Val.hasTy`) decides membership
+at every world. The classifier table's `shapeDecides` column read at every node (`TyTable.allHeads`,
+`Program/TyClasses.lean`): no handle, fiber, cell, deferred or `unknown`, whose members read the
+world, and no exit, whose membership also asks a shape-free cause (decisions row 152). -/
+def shapeDecides (t : Ty) : Bool := cata_ty (TyTable.allHeads tyClasses ClassRow.shapeDecides) t
+
+/-- **On the shape-decided fragment the shape check is membership**, at every world and every
+allocation table: the converse of `fits_hasTy` there. The Schema decoder's filter is this check
+(`Schema.decode`), so a decoded value at such a type fits it (`Typed/AnswerSchema.lean`). -/
+theorem fits_of_hasTy_shapeDecides (w : World) :
+    ∀ t : Ty, shapeDecides t = true → ∀ v allocated, Val.hasTy v t allocated = true → Fits w v t := by
+  intro t
+  induction t with
+  | unit | nat | string | bool =>
+    intro _ v allocated hv
+    simp only [Val.hasTy] at hv
+    split at hv
+    · trivial
+    · exact Bool.noConfusion hv
+  | lit s =>
+    intro _ v allocated hv
+    simp only [Val.hasTy] at hv
+    split at hv
+    · exact beq_iff_eq.mp hv
+    · exact Bool.noConfusion hv
+  | option a iha =>
+    intro hs v allocated hv
+    have ha : shapeDecides a = true := hs
+    simp only [Val.hasTy] at hv
+    split at hv
+    · trivial
+    · exact iha ha _ _ hv
+    · exact Bool.noConfusion hv
+  | list a iha =>
+    intro hs v allocated hv
+    have ha : shapeDecides a = true := hs
+    simp only [Val.hasTy] at hv
+    split at hv
+    · split at hv
+      · rename_i ids hids
+        simp only [Fits, hids]
+        intro id hid
+        exact iha ha _ _ (List.all_eq_true.mp hv id hid)
+      · exact Bool.noConfusion hv
+    · intro x hx
+      exact iha ha _ _ (List.all_eq_true.mp hv x hx)
+    · exact Bool.noConfusion hv
+  | prod a b iha ihb =>
+    intro hs v allocated hv
+    have hs' : (shapeDecides a && shapeDecides b) = true := hs
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs'
+    simp only [Val.hasTy] at hv
+    split at hv
+    · obtain ⟨hx, hy⟩ := Bool.and_eq_true_iff.mp hv
+      exact fits_pair (iha ha _ _ hx) (ihb hb _ _ hy)
+    · exact Bool.noConfusion hv
+  | except e a ihe iha =>
+    intro hs v allocated hv
+    have hs' : (shapeDecides e && shapeDecides a) = true := hs
+    obtain ⟨he, ha⟩ := Bool.and_eq_true_iff.mp hs'
+    simp only [Val.hasTy] at hv
+    split at hv
+    · exact ihe he _ _ hv
+    · exact iha ha _ _ hv
+    · exact Bool.noConfusion hv
+  | union l r ihl ihr =>
+    intro hs v allocated hv
+    have hs' : (shapeDecides l && shapeDecides r) = true := hs
+    obtain ⟨hl, hr⟩ := Bool.and_eq_true_iff.mp hs'
+    simp only [Val.hasTy] at hv
+    rcases Bool.or_eq_true_iff.mp hv with h | h
+    · exact Or.inl (ihl hl _ _ h)
+    · exact Or.inr (ihr hr _ _ h)
+  | causeOf e ihe =>
+    intro hs v allocated hv
+    have he : shapeDecides e = true := hs
+    simp only [Val.hasTy] at hv
+    split at hv
+    · rename_i c hc
+      simp only [Fits, hc]
+      intro r hr
+      have hr' := List.all_eq_true.mp hv r hr
+      cases r with
+      | fail err ann =>
+        simp only [reasonAdmits] at hr'
+        split at hr'
+        · rename_i x hx
+          exact ⟨x, hx, ihe he _ _ hr'⟩
+        · exact Bool.noConfusion hr'
+      | die _ _ => trivial
+      | interrupt _ _ => trivial
+    · exact Bool.noConfusion hv
+  | never | int | var _ =>
+    intro _ v allocated hv
+    exact Bool.noConfusion hv
+  | handle _ | fiberOf _ _ _ _ | refOf _ _ | deferredOf _ _ _ _ | exitOf _ _ _ _ | unknown =>
+    intro hs
+    exact Bool.noConfusion hs
+
 /-- **Complete on the data fragment (proved)**, with one witness for every world. -/
 theorem fits_of_inhabited_handleFree :
     ∀ t : Ty, handleFree t = true → inhabited t = true → ∃ v : Val, ∀ w : World, Fits w v t := by
