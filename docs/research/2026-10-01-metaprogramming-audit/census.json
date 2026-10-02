@@ -1,0 +1,1915 @@
+[
+  {
+    "path": "src/Effect4/Api/Author.lean",
+    "sites": {
+      "reflection": [
+        102
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Api.lean",
+    "sites": {
+      "syntax": [
+        207
+      ],
+      "reflection": [
+        40,
+        137,
+        145,
+        151,
+        479,
+        564,
+        572,
+        576,
+        580
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/Bindings.lean",
+    "sites": {
+      "reflection": [
+        1
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/Print.lean",
+    "sites": {
+      "reflection": [
+        13,
+        37,
+        42,
+        82,
+        108,
+        122,
+        128
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/PrintLeaf.lean",
+    "sites": {
+      "reflection": [
+        156,
+        165,
+        171,
+        178,
+        209,
+        220,
+        247,
+        248,
+        253,
+        265,
+        266,
+        284,
+        300
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/Read.lean",
+    "sites": {
+      "macro": [
+        1715
+      ],
+      "reflection": [
+        44,
+        80,
+        89,
+        143,
+        157,
+        168,
+        187,
+        212,
+        233,
+        238,
+        253,
+        268,
+        314,
+        323,
+        346,
+        363,
+        447,
+        449,
+        475,
+        477,
+        494,
+        496,
+        539,
+        571,
+        578,
+        593,
+        594,
+        596,
+        646,
+        648,
+        680,
+        691,
+        732,
+        737,
+        742,
+        746,
+        975,
+        984,
+        994,
+        1068,
+        1166,
+        1200,
+        1219,
+        1253,
+        1282,
+        1298,
+        1303,
+        1304,
+        1312,
+        1354,
+        1372,
+        1384,
+        1395,
+        1434,
+        1440,
+        1449,
+        1455,
+        1466,
+        1476,
+        1498,
+        1602,
+        1606,
+        1622,
+        1693,
+        1722,
+        1784,
+        1785,
+        1809,
+        1820,
+        1830,
+        1898
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/Schema.lean",
+    "sites": {
+      "syntax": [
+        10
+      ],
+      "reflection": [
+        34,
+        42,
+        52,
+        58,
+        78,
+        90,
+        96,
+        150,
+        156,
+        168,
+        172,
+        182,
+        188,
+        198,
+        206,
+        216,
+        223,
+        232,
+        236,
+        240,
+        303,
+        306,
+        310,
+        314,
+        319
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/SourceBindings.lean",
+    "sites": {
+      "reflection": [
+        118,
+        165,
+        198,
+        209
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/Styles.lean",
+    "sites": {
+      "reflection": [
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        48,
+        51,
+        52,
+        53,
+        54,
+        56,
+        57,
+        58,
+        62,
+        63,
+        67,
+        69,
+        85,
+        86,
+        101,
+        114,
+        119,
+        144,
+        176,
+        178,
+        196,
+        198,
+        202,
+        205,
+        225
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/Target.lean",
+    "sites": {
+      "syntax": [
+        12,
+        14
+      ],
+      "reflection": [
+        71,
+        87,
+        97
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/Template.lean",
+    "sites": {
+      "reflection": [
+        1,
+        7,
+        46,
+        47,
+        134,
+        176,
+        182,
+        226,
+        262,
+        269,
+        359,
+        397,
+        405,
+        623,
+        640,
+        641,
+        680,
+        681,
+        687,
+        688,
+        690,
+        693,
+        697,
+        701,
+        706,
+        712,
+        721,
+        728,
+        733,
+        735,
+        747,
+        877,
+        878,
+        882,
+        895,
+        896,
+        935,
+        936,
+        942,
+        943,
+        945,
+        948,
+        952,
+        956,
+        961,
+        967,
+        976,
+        983,
+        988
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Codegen/Templates.lean",
+    "sites": {
+      "reflection": [
+        247,
+        248,
+        416,
+        438,
+        442
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Auto/AnswerGate.lean",
+    "sites": {
+      "syntax": [
+        15
+      ],
+      "command_elab": [
+        17
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Auto/Census.lean",
+    "sites": {
+      "syntax": [
+        63
+      ],
+      "command_elab": [
+        71
+      ],
+      "environment": [
+        78
+      ],
+      "reflection": [
+        40,
+        50,
+        51,
+        58,
+        59,
+        87
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Auto/Exhaustive.lean",
+    "sites": {
+      "syntax": [
+        191
+      ],
+      "command_elab": [
+        193
+      ],
+      "environment": [
+        156,
+        180
+      ],
+      "reflection": [
+        84,
+        97,
+        109,
+        122,
+        176
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Auto/Frames.lean",
+    "sites": {
+      "syntax": [
+        76
+      ],
+      "command_elab": [
+        77
+      ],
+      "reflection": [
+        21,
+        39
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Auto/Obligations.lean",
+    "sites": {
+      "syntax": [
+        26,
+        34,
+        46,
+        105
+      ],
+      "command_elab": [
+        27,
+        36,
+        49,
+        107
+      ],
+      "environment": [
+        55,
+        113
+      ],
+      "reflection": [
+        15
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Auto/Positions.lean",
+    "sites": {
+      "syntax": [
+        165,
+        176,
+        359,
+        384
+      ],
+      "command_elab": [
+        167,
+        180,
+        363,
+        386
+      ],
+      "ppExpr": [
+        99
+      ],
+      "reflection": [
+        70,
+        75,
+        86,
+        91,
+        153,
+        162,
+        193,
+        204,
+        208,
+        236,
+        237,
+        239,
+        284,
+        285,
+        302,
+        303,
+        307,
+        339
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Auto/Traversals.lean",
+    "sites": {
+      "syntax": [
+        337,
+        366
+      ],
+      "command_elab": [
+        339,
+        372
+      ],
+      "environment": [
+        176
+      ],
+      "reflection": [
+        88,
+        104,
+        112,
+        130,
+        175,
+        177,
+        206,
+        250,
+        284,
+        291
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Codegen/PrintReadable.lean",
+    "sites": {
+      "reflection": [
+        22,
+        227
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Codegen/Read.lean",
+    "sites": {
+      "reflection": [
+        30,
+        338,
+        340,
+        512,
+        532,
+        553,
+        555,
+        557,
+        655,
+        657,
+        677,
+        679,
+        741,
+        743,
+        752,
+        755,
+        766,
+        784,
+        878,
+        888,
+        894
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Codegen/ReadPrint.lean",
+    "sites": {
+      "reflection": [
+        28,
+        41,
+        86,
+        94,
+        157,
+        172,
+        176,
+        181,
+        189,
+        191,
+        243,
+        250,
+        260,
+        300,
+        343,
+        550,
+        552,
+        558,
+        564,
+        805,
+        810,
+        890,
+        925,
+        926,
+        928,
+        987,
+        989,
+        1303,
+        1344,
+        1350,
+        1352,
+        1378,
+        1462,
+        1613,
+        1615,
+        1720,
+        1722,
+        1730,
+        1762,
+        1894,
+        1906,
+        1914
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Codegen/SourceBindings.lean",
+    "sites": {
+      "reflection": [
+        128,
+        135
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Codegen/Template.lean",
+    "sites": {
+      "reflection": [
+        96,
+        141,
+        148,
+        229,
+        283,
+        291,
+        380,
+        510,
+        525,
+        632
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Machine/Approximation.lean",
+    "sites": {
+      "syntax": [
+        308
+      ],
+      "macro": [
+        297,
+        310,
+        386,
+        440,
+        560,
+        598
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Machine/Handles.lean",
+    "sites": {
+      "syntax": [
+        1105,
+        1114,
+        1138,
+        1161,
+        1172,
+        1183
+      ],
+      "macro": [
+        1106,
+        1116,
+        1140,
+        1163,
+        1174,
+        1185,
+        5314
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Machine/Scheduling.lean",
+    "sites": {
+      "syntax": [
+        51
+      ],
+      "macro": [
+        42,
+        52,
+        116
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Authoring/Tactic.lean",
+    "sites": {
+      "macro": [
+        49
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Program/DenoteR.lean",
+    "sites": {
+      "macro": [
+        820,
+        1090
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Handles/Alphabet.lean",
+    "sites": {
+      "macro": [
+        144
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Program/ReferenceTyping.lean",
+    "sites": {
+      "macro": [
+        28
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/PositionGate.lean",
+    "sites": {
+      "syntax": [
+        37
+      ],
+      "command_elab": [
+        39
+      ],
+      "reflection": [
+        46
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/TypedSources.lean",
+    "sites": {
+      "reflection": [
+        27,
+        32,
+        39,
+        47,
+        70,
+        88,
+        101,
+        120
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/TypedStateDecl.lean",
+    "sites": {
+      "syntax": [
+        7,
+        460
+      ],
+      "command_elab": [
+        462
+      ],
+      "reflection": [
+        20,
+        30,
+        55,
+        59,
+        68,
+        77,
+        78,
+        100,
+        110,
+        112,
+        116,
+        117,
+        118,
+        120,
+        129,
+        130,
+        149,
+        150,
+        179,
+        194,
+        215,
+        237,
+        255,
+        270,
+        291,
+        305,
+        312,
+        313,
+        401,
+        430,
+        470,
+        484,
+        530
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Program/Authoring/Services.lean",
+    "sites": {
+      "syntax": [
+        153
+      ],
+      "macro": [
+        155
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Program/Authoring/Sugar.lean",
+    "sites": {
+      "syntax": [
+        117
+      ],
+      "macro": [
+        175
+      ],
+      "reflection": [
+        96,
+        106,
+        120,
+        146,
+        156
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Program/Compile.lean",
+    "sites": {
+      "reflection": [
+        5
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Program/Eff.lean",
+    "sites": {
+      "reflection": [
+        8
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Program/FoldOf.lean",
+    "sites": {
+      "syntax": [
+        897
+      ],
+      "command_elab": [
+        899
+      ],
+      "ppExpr": [
+        511,
+        559,
+        571,
+        574,
+        579,
+        736,
+        847,
+        893,
+        895
+      ],
+      "reflection": [
+        67,
+        70,
+        99,
+        112,
+        123,
+        135,
+        142,
+        147,
+        162,
+        189,
+        208,
+        238,
+        239,
+        247,
+        248,
+        254,
+        259,
+        274,
+        281,
+        286,
+        292,
+        298,
+        322,
+        323,
+        331,
+        333,
+        335,
+        340,
+        361,
+        389,
+        390,
+        394,
+        406,
+        424,
+        437,
+        460,
+        478,
+        494,
+        521,
+        523,
+        525,
+        529,
+        544,
+        549,
+        582,
+        597,
+        599,
+        601,
+        605,
+        647,
+        648,
+        658,
+        666,
+        673,
+        674,
+        688,
+        703,
+        704,
+        866
+      ]
+    }
+  },
+  {
+    "path": "src/Effect4/Program/Native.lean",
+    "sites": {
+      "reflection": [
+        7
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Eff/World.lean",
+    "sites": {
+      "reflection": [
+        137,
+        152,
+        163
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Lcnf/Clock.lean",
+    "sites": {
+      "syntax": [
+        5
+      ],
+      "reflection": [
+        2,
+        17,
+        20,
+        23,
+        24,
+        26,
+        27,
+        29
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Lcnf/Dump.lean",
+    "sites": {
+      "reflection": [
+        100,
+        102
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Lcnf/Externs.lean",
+    "sites": {
+      "reflection": [
+        2,
+        14,
+        209,
+        269,
+        271,
+        276,
+        300,
+        304
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Lcnf/Native.lean",
+    "sites": {
+      "reflection": [
+        2,
+        28,
+        30,
+        32,
+        33
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Lcnf/Translate.lean",
+    "sites": {
+      "reflection": [
+        3,
+        14,
+        19,
+        34,
+        77,
+        105,
+        123,
+        128,
+        130,
+        132,
+        141,
+        146,
+        151,
+        173,
+        176,
+        203,
+        222,
+        226,
+        229,
+        235,
+        236,
+        241,
+        253,
+        258,
+        259,
+        278,
+        283,
+        313,
+        408,
+        457,
+        463,
+        499,
+        507,
+        547,
+        562,
+        572,
+        588,
+        589,
+        597,
+        602,
+        603,
+        628,
+        646,
+        658,
+        671,
+        719,
+        734,
+        736,
+        761,
+        800,
+        822,
+        830,
+        885,
+        904,
+        916,
+        917,
+        918,
+        934,
+        948,
+        1027
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Lcnf/Types.lean",
+    "sites": {
+      "ppExpr": [
+        290
+      ],
+      "reflection": [
+        4,
+        11,
+        19,
+        104,
+        110,
+        130,
+        140,
+        148,
+        151,
+        164,
+        240,
+        366
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Ml/Check.lean",
+    "sites": {
+      "reflection": [
+        9,
+        43,
+        54,
+        302,
+        399,
+        403,
+        407,
+        411,
+        416,
+        500,
+        654,
+        705,
+        708,
+        711,
+        714,
+        726
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Ml/Profile.lean",
+    "sites": {
+      "reflection": [
+        15,
+        52,
+        54,
+        89,
+        740,
+        794,
+        797,
+        800,
+        803,
+        806
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Ml/Render.lean",
+    "sites": {
+      "syntax": [
+        731
+      ],
+      "reflection": [
+        1,
+        6,
+        220,
+        292,
+        419,
+        424,
+        431,
+        435,
+        507,
+        509,
+        511,
+        513,
+        767,
+        770
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Ml/Syntax.lean",
+    "sites": {
+      "reflection": [
+        4,
+        10,
+        28,
+        249,
+        306,
+        320,
+        322,
+        325,
+        328,
+        330,
+        332,
+        334,
+        336,
+        338,
+        340,
+        342,
+        344,
+        346,
+        348,
+        350,
+        352,
+        354,
+        356,
+        358,
+        360,
+        362,
+        364,
+        366,
+        369,
+        373,
+        375,
+        379,
+        393,
+        400,
+        404,
+        406,
+        409,
+        411,
+        413,
+        415,
+        417,
+        419,
+        421,
+        423,
+        425,
+        430,
+        434,
+        436,
+        438,
+        442,
+        446,
+        450,
+        456,
+        461,
+        465,
+        466,
+        468,
+        470,
+        471,
+        472,
+        473,
+        476,
+        478,
+        490,
+        603,
+        694
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5/Tools/LcnfGen.lean",
+    "sites": {
+      "reflection": [
+        4,
+        52,
+        99,
+        123
+      ]
+    }
+  },
+  {
+    "path": "src/OCaml5.lean",
+    "sites": {
+      "reflection": [
+        13
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Core/Proof.lean",
+    "sites": {
+      "reflection": [
+        9
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Effect4/CompilerControls.lean",
+    "sites": {
+      "reflection": [
+        19,
+        48
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Effect4/LayoutWorld.lean",
+    "sites": {
+      "reflection": [
+        61
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Effect4/LcnfMl.lean",
+    "sites": {
+      "reflection": [
+        11,
+        14,
+        20,
+        74,
+        89,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149,
+        152,
+        326
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Effect4/NativeMain.lean",
+    "sites": {
+      "reflection": [
+        64
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Layout/Native.lean",
+    "sites": {
+      "reflection": [
+        50
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Layout/Reflect.lean",
+    "sites": {
+      "ppExpr": [
+        121
+      ],
+      "reflection": [
+        53,
+        61,
+        99,
+        139
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Lcnf/Cases.lean",
+    "sites": {
+      "environment": [
+        333
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Lcnf/SemanticsTarget.lean",
+    "sites": {
+      "reflection": [
+        7,
+        13,
+        67,
+        86,
+        92,
+        93,
+        94,
+        95,
+        96,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        120,
+        393,
+        424,
+        513,
+        524
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Source/Description.lean",
+    "sites": {
+      "reflection": [
+        31,
+        35,
+        73,
+        77
+      ]
+    }
+  },
+  {
+    "path": "tools/Conform/Spec/Reflect.lean",
+    "sites": {
+      "syntax": [
+        144,
+        176
+      ],
+      "command_elab": [
+        146,
+        178
+      ],
+      "reflection": [
+        120,
+        159,
+        183
+      ]
+    }
+  },
+  {
+    "path": "tools/Drivers/ProgramStructureCheck.lean",
+    "sites": {
+      "reflection": [
+        5,
+        13
+      ]
+    }
+  },
+  {
+    "path": "tools/Drivers/Styles.lean",
+    "sites": {
+      "reflection": [
+        15,
+        37,
+        39,
+        82,
+        83,
+        155,
+        157
+      ]
+    }
+  },
+  {
+    "path": "tools/Effect4Gen/Atoms.lean",
+    "sites": {
+      "reflection": [
+        46,
+        99,
+        136
+      ]
+    }
+  },
+  {
+    "path": "tools/Effect4Gen/Authoring.lean",
+    "sites": {
+      "ppExpr": [
+        43
+      ],
+      "reflection": [
+        41,
+        137,
+        142,
+        163,
+        216,
+        230,
+        338,
+        407,
+        417,
+        422,
+        462,
+        477,
+        625,
+        686,
+        694,
+        699,
+        720,
+        782,
+        843
+      ]
+    }
+  },
+  {
+    "path": "tools/Effect4Gen/Check.lean",
+    "sites": {
+      "environment": [
+        25,
+        190
+      ],
+      "reflection": [
+        167,
+        187,
+        196,
+        254
+      ]
+    }
+  },
+  {
+    "path": "tools/Effect4Gen/Fold.lean",
+    "sites": {
+      "ppExpr": [
+        26
+      ],
+      "reflection": [
+        24,
+        189,
+        208,
+        210,
+        280,
+        325,
+        728,
+        1126,
+        1271,
+        1378
+      ]
+    }
+  },
+  {
+    "path": "tools/Effect4Gen/LayerView.lean",
+    "sites": {
+      "ppExpr": [
+        39
+      ],
+      "reflection": [
+        37,
+        74,
+        121,
+        304,
+        342
+      ]
+    }
+  },
+  {
+    "path": "tools/Effect4Gen/Main.lean",
+    "sites": {
+      "reflection": [
+        86,
+        101,
+        112,
+        123,
+        127,
+        138,
+        145,
+        152,
+        157,
+        165,
+        184,
+        208,
+        215,
+        234,
+        238,
+        258,
+        267,
+        278,
+        302,
+        344,
+        914,
+        925,
+        944,
+        978,
+        998,
+        1038,
+        1096
+      ]
+    }
+  },
+  {
+    "path": "tools/Effect4Gen/PreludeAtoms.lean",
+    "sites": {
+      "reflection": [
+        85,
+        106
+      ]
+    }
+  },
+  {
+    "path": "tools/Effect4Gen/Rows.lean",
+    "sites": {
+      "ppExpr": [
+        35
+      ],
+      "reflection": [
+        33,
+        38,
+        106,
+        134,
+        173
+      ]
+    }
+  },
+  {
+    "path": "tools/Effect4Gen/View.lean",
+    "sites": {
+      "ppExpr": [
+        140
+      ],
+      "reflection": [
+        138,
+        143,
+        840,
+        887
+      ]
+    }
+  },
+  {
+    "path": "tools/ProofGraph/Ledger.lean",
+    "sites": {
+      "axioms": [
+        54
+      ],
+      "reflection": [
+        20,
+        37,
+        46,
+        58
+      ]
+    }
+  },
+  {
+    "path": "tools/ProofGraph/Proof.lean",
+    "sites": {
+      "term_elab": [
+        70
+      ],
+      "axioms": [
+        26
+      ],
+      "reflection": [
+        16,
+        18,
+        30,
+        38,
+        42,
+        49,
+        50,
+        51,
+        52,
+        54,
+        56,
+        59,
+        62,
+        64,
+        67
+      ]
+    }
+  },
+  {
+    "path": "tools/ProofGraph/Search.lean",
+    "sites": {
+      "axioms": [
+        116
+      ],
+      "reflection": [
+        9,
+        20,
+        55,
+        70,
+        87,
+        110,
+        121,
+        128
+      ]
+    }
+  },
+  {
+    "path": "tools/Tools/Architecture.lean",
+    "sites": {
+      "environment": [
+        180
+      ],
+      "reflection": [
+        70
+      ]
+    }
+  },
+  {
+    "path": "tools/Tools/ProgramStructure.lean",
+    "sites": {
+      "reflection": [
+        55,
+        58,
+        59
+      ]
+    }
+  },
+  {
+    "path": "Test/Audit/AxiomGate.lean",
+    "sites": {
+      "command_elab": [
+        376,
+        515
+      ],
+      "axioms": [
+        455,
+        478,
+        488,
+        521
+      ],
+      "reflection": [
+        76,
+        303,
+        311
+      ]
+    }
+  },
+  {
+    "path": "Test/Audit/ProofGraphSearch.lean",
+    "sites": {
+      "reflection": [
+        14,
+        22,
+        23,
+        79,
+        85,
+        173
+      ]
+    }
+  },
+  {
+    "path": "Test/Audit/RuntimeCoverage.lean",
+    "sites": {
+      "syntax": [
+        1214,
+        1217
+      ],
+      "reflection": [
+        1118,
+        1129,
+        1160,
+        1176,
+        1194
+      ]
+    }
+  },
+  {
+    "path": "Test/Codegen/ExprContract.lean",
+    "sites": {
+      "reflection": [
+        15
+      ]
+    }
+  },
+  {
+    "path": "Test/Codegen/PrintContract.lean",
+    "sites": {
+      "reflection": [
+        27,
+        408
+      ]
+    }
+  },
+  {
+    "path": "Test/Codegen/SchemaGenerationContract.lean",
+    "sites": {
+      "reflection": [
+        632
+      ]
+    }
+  },
+  {
+    "path": "Test/Codegen/SourceBindingsContract.lean",
+    "sites": {
+      "reflection": [
+        28,
+        32,
+        121
+      ]
+    }
+  },
+  {
+    "path": "Test/Codegen/TemplateContract.lean",
+    "sites": {
+      "reflection": [
+        56,
+        57
+      ]
+    }
+  },
+  {
+    "path": "Test/Codegen/TemplatesContract.lean",
+    "sites": {
+      "reflection": [
+        69
+      ]
+    }
+  },
+  {
+    "path": "Test/Counterexamples/Codegen/TypeScriptRender.lean",
+    "sites": {
+      "reflection": [
+        17
+      ]
+    }
+  },
+  {
+    "path": "Test/Machine/Runtime/ApproximationContract.lean",
+    "sites": {
+      "reflection": [
+        47
+      ]
+    }
+  },
+  {
+    "path": "Test/Machine/Runtime/BehaviourContract.lean",
+    "sites": {
+      "reflection": [
+        19
+      ]
+    }
+  },
+  {
+    "path": "Test/Machine/Runtime/TapeAction.lean",
+    "sites": {
+      "reflection": [
+        20
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/AgreementContract.lean",
+    "sites": {
+      "reflection": [
+        26
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/CompileContract.lean",
+    "sites": {
+      "reflection": [
+        33,
+        827
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/DenoteBContract.lean",
+    "sites": {
+      "reflection": [
+        23
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/DenoteContract.lean",
+    "sites": {
+      "reflection": [
+        24
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/DenoteRContract.lean",
+    "sites": {
+      "reflection": [
+        15
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/LayerSharingContract.lean",
+    "sites": {
+      "environment": [
+        203
+      ],
+      "axioms": [
+        206
+      ],
+      "reflection": [
+        87,
+        97,
+        118,
+        119
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/LoopAgreementContract.lean",
+    "sites": {
+      "reflection": [
+        19
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/LoopSoundContract.lean",
+    "sites": {
+      "reflection": [
+        20
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/MeaningSoundContract.lean",
+    "sites": {
+      "reflection": [
+        17
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/RuntimeRContract.lean",
+    "sites": {
+      "reflection": [
+        608,
+        609,
+        610,
+        611,
+        612,
+        613,
+        614
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/RuntimeRReference.lean",
+    "sites": {
+      "reflection": [
+        62,
+        63,
+        112,
+        206,
+        232,
+        275,
+        280,
+        284,
+        318,
+        322,
+        324,
+        327,
+        328
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/RuntimeRShapesContract.lean",
+    "sites": {
+      "reflection": [
+        17
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/SchedContract.lean",
+    "sites": {
+      "reflection": [
+        21
+      ]
+    }
+  },
+  {
+    "path": "Test/Program/SimulationContract.lean",
+    "sites": {
+      "reflection": [
+        31
+      ]
+    }
+  },
+  {
+    "path": "Test/Store/DerivedCheck.lean",
+    "sites": {
+      "reflection": [
+        15,
+        54
+      ]
+    }
+  }
+]
