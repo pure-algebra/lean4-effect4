@@ -820,6 +820,7 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
           rw [nextToken]
           exact sched.parkedBelow f (member f hf) token parked
         exited := fun f hf => sched.exited f (member f hf)
+        exitedStack := fun f hf => sched.exitedStack f (member f hf)
         deferredCause := fun f hf => sched.deferredCause f (member f hf) }
   · obtain ⟨race, resultTy, found, host, token, reply⟩ := reg f (member f hf) raceId marker
     exact ⟨race, resultTy, (raceLookup raceId).trans found, host, token, reply⟩
@@ -1884,10 +1885,8 @@ end Effect4.Program.Typed
   using aesop (rule_sets := [Effect4.TypedState])
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_finish
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_launch
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_registrationDone
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_exitDone
 #proof_wanted Effect4.Program.Typed.M6Ledger.step_wake
 #proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves
 #proof_wanted Effect4.Program.Typed.M6Ledger.typedState_reachable

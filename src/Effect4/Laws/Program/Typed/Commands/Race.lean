@@ -22,13 +22,7 @@ namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 open Contracts
 
-/-- The owner a queued command's head holds is free in the rest of the queue. -/
-theorem owner_free {root : ProgramSource} {w : World} {m : RState} {c : RCmd} {rest : List RCmd}
-    (queue : QueueOk root w m (c :: rest)) {o : FiberId} (owner : Guard.commandOwner m c = some o) :
-    o ∉ rest.filterMap (Guard.commandOwner m) := by
-  have nodup := queue.owners
-  rw [List.filterMap_cons, owner] at nodup
-  exact (List.nodup_cons.mp nodup).1
+-- `owner_free` (a queued command's owner is free in the rest of the queue) is `Finish.lean`'s.
 
 /-- A command with no payload, no key, no tail obligation and no reading of code, owned by `host`
 (or by nobody), queued in front of a typed configuration. -/
@@ -516,6 +510,7 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
       parkedIdle := moved.parkedIdle
       parkedBelow := moved.parkedBelow
       exited := moved.exited
+      exitedStack := fun hx => absurd (moved.exited hx).2 (by rw [running]; decide)
       deferredCause := moved.deferredCause
       pendingOwner := moved.pendingOwner
       observers := moved.observers
@@ -565,10 +560,13 @@ theorem commandDelivery_owner {root : ProgramSource} {w : World} {m : RState} {f
     intro f' hf'
     rw [rfiber?_update_other (other host rfl)] at hf'
     exact h f' hf'
+  | finish host _ =>
+    intro f' hf'
+    rw [rfiber?_update_other (other host rfl)] at hf'
+    exact h f' hf'
   | evaluate _ => trivial
   | loop _ _ => trivial
   | deliver _ _ => trivial
-  | finish _ _ => trivial
   | resume _ _ _ => trivial
   | launch _ => trivial
   | enrollRace _ _ => trivial
@@ -770,6 +768,7 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
       parkedIdle := moved.parkedIdle
       parkedBelow := moved.parkedBelow
       exited := moved.exited
+      exitedStack := fun hx => absurd (moved.exited hx).2 (by rw [running]; decide)
       deferredCause := moved.deferredCause
       pendingOwner := moved.pendingOwner
       observers := moved.observers

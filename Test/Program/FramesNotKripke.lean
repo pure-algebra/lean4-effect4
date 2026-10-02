@@ -331,6 +331,11 @@ theorem scheduler_of (s : List ScopeFrame) (running : Bool) (trace := (loadR ref
     rw [List.mem_singleton] at hf
     subst f
     cases hx
+  · intro f hf hx
+    change f ∈ [rootFiber s running] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases hx
   · intro f hf hd
     change f ∈ [rootFiber s running] at hf
     rw [List.mem_singleton] at hf
@@ -845,6 +850,11 @@ theorem afterGood_typed :
       rw [List.mem_singleton] at hf
       subst f
       cases hp
+    · intro f hf hx
+      change f ∈ [_] at hf
+      rw [List.mem_singleton] at hf
+      subst f
+      cases hx
     · intro f hf hx
       change f ∈ [_] at hf
       rw [List.mem_singleton] at hf

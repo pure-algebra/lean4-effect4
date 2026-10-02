@@ -553,7 +553,7 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
             racesBelow := sched.racesBelow, raceHosts := sched.raceHosts, keysBelow := sched.keysBelow,
             requestsBelow := sched.requestsBelow, requestsOwned := sched.requestsOwned,
             pendingShape := sched.pendingShape, parkedIdle := sched.parkedIdle,
-            parkedBelow := sched.parkedBelow, exited := sched.exited,
+            parkedBelow := sched.parkedBelow, exited := sched.exited, exitedStack := sched.exitedStack,
             deferredCause := sched.deferredCause }
   · exact ⟨obsv.pendingOwner, fun f hf o ho => storedObserverOk_halt o (obsv.observers f hf o ho)⟩
 
@@ -784,6 +784,7 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
           rw [(facts f hf).parked] at parked
           cases parked
         exited := fun f hf hexit => ⟨(facts f hf).parked, (facts f hf).idle hexit⟩
+        exitedStack := fun f hf _ => (facts f hf).stack
         deferredCause := fun f hf deferred => by
           rw [(facts f hf).deferred] at deferred
           cases deferred }
@@ -879,7 +880,7 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
       racesBelow := sched.racesBelow, raceHosts := sched.raceHosts, keysBelow := sched.keysBelow,
       requestsBelow := sched.requestsBelow, requestsOwned := sched.requestsOwned,
       pendingShape := sched.pendingShape, parkedIdle := sched.parkedIdle,
-      parkedBelow := sched.parkedBelow, exited := sched.exited,
+      parkedBelow := sched.parkedBelow, exited := sched.exited, exitedStack := sched.exitedStack,
       deferredCause := sched.deferredCause },
     ⟨obsv.pendingOwner, fun f hf o ho => H1.storedObserverOk_halt o (obsv.observers f hf o ho)⟩, reg⟩
 

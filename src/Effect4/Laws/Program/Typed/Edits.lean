@@ -218,6 +218,7 @@ theorem edit_drain (root : ProgramSource) (rootTy : EffTy) : EditDrain root root
       parkedIdle := moved.parkedIdle
       parkedBelow := moved.parkedBelow
       exited := moved.exited
+      exitedStack := moved.exitedStack
       deferredCause := moved.deferredCause
       pendingOwner := moved.pendingOwner
       observers := moved.observers

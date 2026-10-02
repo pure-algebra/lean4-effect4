@@ -143,7 +143,7 @@ theorem fiberTyped_except {root : ProgramSource} {w : World} {m m' : RState} {x 
     FiberTyped root w m' x := by
   refine ⟨h.ok, h.delivery, Nat.lt_of_lt_of_le h.below nextId, h.pendingShape, h.parkedIdle,
     fun token hp => Nat.lt_of_lt_of_le (h.parkedBelow token hp) nextToken, h.exited,
-    h.deferredCause, h.pendingOwner, fun o ho => ?_, fun raceId marker => ?_, h.code, h.tokens⟩
+    h.exitedStack, h.deferredCause, h.pendingOwner, fun o ho => ?_, fun raceId marker => ?_, h.code, h.tokens⟩
   · by_cases off : OffKey key o
     · exact storedObserverOk_except view o off (h.observers o ho)
     · exact keyed o ho off
@@ -204,10 +204,13 @@ theorem commandDelivery_idle {root : ProgramSource} {w : World} {m : RState} {y 
     intro f' hf'
     rw [rfiber?_update_other (other host hauth)] at hf'
     exact h f' hf'
+  | finish host _ =>
+    intro f' hf'
+    rw [rfiber?_update_other (other host hauth)] at hf'
+    exact h f' hf'
   | evaluate _ => trivial
   | loop _ _ => trivial
   | deliver _ _ => trivial
-  | finish _ _ => trivial
   | resume _ _ _ => trivial
   | launch _ => trivial
   | enrollRace _ _ => trivial
@@ -762,7 +765,7 @@ theorem fiberTyped_repend {root : ProgramSource} {w : World} {m M' : RState} {wf
   refine ⟨⟨old.ok.c0, fun q hq => ?_, old.ok.c2, old.ok.c3, old.ok.c4, old.ok.c5⟩, old.delivery,
     Nat.lt_of_lt_of_le old.below nextId, ?_, old.parkedIdle,
     fun t hp => Nat.lt_of_lt_of_le (old.parkedBelow t hp) nextToken, old.exited,
-    old.deferredCause, fun q hq => ?_, fun o ho => ?_, fun raceId marker => ?_, old.code,
+    old.exitedStack, old.deferredCause, fun q hq => ?_, fun o ho => ?_, fun raceId marker => ?_, old.code,
     old.tokens⟩
   · rw [List.mem_singleton.mp hq, ptok]
     exact ⟨wf.id, declared⟩
@@ -1114,8 +1117,8 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
               (Nat.le_refl _) (Nat.le_refl _)
             refine ⟨runFiberOk_congr moved.ok rfl rfl rfl rfl rfl rfl rfl, moved.delivery,
               moved.below, moved.pendingShape, moved.parkedIdle,
-              moved.parkedBelow, moved.exited, moved.deferredCause, moved.pendingOwner,
-              fun o ho => ?_, moved.registration, moved.code, moved.tokens⟩
+              moved.parkedBelow, moved.exited, moved.exitedStack, moved.deferredCause,
+              moved.pendingOwner, fun o ho => ?_, moved.registration, moved.code, moved.tokens⟩
             rcases mem_append_observer ho with old' | rfl
             · exact moved.observers o old'
             · show CountdownAt w (m2.update (obs gn)) waiter token (FiberColumnsBelow w gn.id)
@@ -1353,5 +1356,5 @@ end Effect4.Program.Typed
 #obligation_proved Effect4.Program.Typed.M6Ledger.step_observe :=
   @Effect4.Program.Typed.observe_preserves
 -- `M6Ledger`'s report runs at the foot of the last command module, which sees every proof.
-#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 9
+#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 7
   using aesop (rule_sets := [Effect4.TypedState])

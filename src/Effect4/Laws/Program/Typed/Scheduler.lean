@@ -234,6 +234,10 @@ structure SchedulerState (m : RState) : Prop where
     fiber.parked = .withGuard token → token < m.nextToken
   exited : ∀ fiber ∈ m.fibers, fiber.exit.isSome = true →
     fiber.parked = .notParked ∧ fiber.running = false
+  /-- Decisions row 134 (c): an exited fiber's saved stack is empty. Only `RunFiber.publish`
+  (`Machine/Fibers.lean:1750`) writes an exit, from a queued `finish`, whose fiber's stack is
+  empty (`CommandDeliveryOk`'s `finish` clause); `exitDone`'s clear keeps it empty. -/
+  exitedStack : ∀ fiber ∈ m.fibers, fiber.exit.isSome = true → fiber.frame.stack = []
   deferredCause : ∀ fiber ∈ m.fibers, fiber.frame.deferredInterrupt = true →
     fiber.frame.interruptedCause.isSome = true
 
@@ -294,6 +298,10 @@ def CommandDeliveryOk (root : ProgramSource) (w : World) (m : RState) : RCmd →
   | .raceCancel _ host _ remaining visited => ∀ fiber, m.fiber? host = some fiber →
       ∃ answer error, FiberListColumns w (visited ++ remaining) answer error ∧
         StackReply root w fiber (EffTy.pure .unit)
+  /- Decisions row 134 (c): a queued `finish` names a fiber whose saved stack is empty: the loop
+  queues it only from the `finished` outcome (`settle`), after `frameExitState` drained the
+  stack. -/
+  | .finish host _ => ∀ fiber, m.fiber? host = some fiber → fiber.frame.stack = []
   | .closeParAwait host _ targets => ∀ fiber, m.fiber? host = some fiber →
       ∃ answer error, FiberListColumns w targets answer error ∧
         (frameProtocols root).iterator w
@@ -383,6 +391,11 @@ theorem schedulerState_load (program : NativeEff) (fuel compileFuel : Nat) :
     rw [List.mem_singleton] at hf
     subst fiber
     cases hp
+  · intro fiber hf hx
+    change fiber ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst fiber
+    cases hx
   · intro fiber hf hx
     change fiber ∈ [_] at hf
     rw [List.mem_singleton] at hf

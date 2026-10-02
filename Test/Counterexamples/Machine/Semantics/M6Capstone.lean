@@ -1217,6 +1217,11 @@ theorem scheduler : SchedulerState machine := by
     rw [List.mem_singleton] at hf
     subst f
     cases hx
+  · intro f hf hx
+    change f ∈ [fiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases hx
   · intro f hf hd
     change f ∈ [fiber] at hf
     rw [List.mem_singleton] at hf
@@ -1450,6 +1455,11 @@ theorem result_scheduler : SchedulerState result.1 := by
     rw [List.mem_singleton] at hf
     subst f
     cases hx
+  · intro f hf hx
+    change f ∈ [afterFiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases hx
   · intro f hf hd
     change f ∈ [afterFiber] at hf
     rw [List.mem_singleton] at hf
@@ -1531,7 +1541,10 @@ theorem result_queue : QueueOk (rootProgram : ProgramSource) world result.1 resu
   · intro c member
     rw [List.mem_singleton] at member
     subst c
-    trivial
+    intro fiber found
+    rw [result_fiber] at found
+    cases found
+    rfl
   · intro key member; cases member
   · intro id token request lookup
     rw [result_no_requests] at lookup
@@ -1990,6 +2003,8 @@ theorem scheduler : SchedulerState machine := by
     rcases member_cases f member with rfl | rfl <;> cases parked
   · intro f member exited
     rcases member_cases f member with rfl | rfl <;> cases exited
+  · intro f member exitedHx
+    rcases member_cases f member with rfl | rfl <;> cases exitedHx
   · intro f member deferred
     rcases member_cases f member with rfl | rfl <;> cases deferred
 
@@ -2131,7 +2146,12 @@ theorem queue : QueueOk (rootProgram : ProgramSource) world machine commands := 
     change c ∈ [command, .finish Api.root (.success .unit)] at member
     rcases List.mem_cons.mp member with rfl | tail
     · trivial
-    · rw [List.mem_singleton] at tail; subst c; trivial
+    · rw [List.mem_singleton] at tail
+      subst c
+      intro fiber found
+      change some rootFiber = some fiber at found
+      cases found
+      rfl
   · decide +kernel
   · intro key member; cases member
   · intro id token request lookup; rw [no_requests] at lookup; cases lookup
@@ -2259,6 +2279,8 @@ theorem result_scheduler : SchedulerState result.1 := by
     rcases result_member_cases f member with rfl | rfl <;> cases parked
   · intro f member exited
     rcases result_member_cases f member with rfl | rfl <;> cases exited
+  · intro f member exitedHx
+    rcases result_member_cases f member with rfl | rfl <;> cases exitedHx
   · intro f member deferred
     rcases result_member_cases f member with rfl | rfl <;> cases deferred
 

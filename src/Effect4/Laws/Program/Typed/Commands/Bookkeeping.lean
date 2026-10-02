@@ -176,6 +176,7 @@ structure FiberTyped (root : ProgramSource) (w : World) (m : RState) (f : RFiber
   parkedIdle : f.parked ≠ .notParked → f.running = false
   parkedBelow : ∀ token, f.parked = .withGuard token → token < m.nextToken
   exited : f.exit.isSome = true → f.parked = .notParked ∧ f.running = false
+  exitedStack : f.exit.isSome = true → f.frame.stack = []
   deferredCause : f.frame.deferredInterrupt = true → f.frame.interruptedCause.isSome = true
   pendingOwner : ∀ pending ∈ f.pending, (w.Θ f.id pending.token).isSome = true
   observers : ∀ o ∈ f.observers, StoredObserverOk root w m f.id o
@@ -229,7 +230,8 @@ theorem MachineTyped.fiber {root : ProgramSource} {rootTy : EffTy} {w : World} {
     FiberTyped root w m f := by
   obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, _, code, _⟩ := typed
   exact ⟨ok.c0 f hf, deliv f hf, sched.fibersBelow f hf, sched.pendingShape f hf,
-    sched.parkedIdle f hf, sched.parkedBelow f hf, sched.exited f hf, sched.deferredCause f hf,
+    sched.parkedIdle f hf, sched.parkedBelow f hf, sched.exited f hf, sched.exitedStack f hf,
+    sched.deferredCause f hf,
     obsv.pendingOwner f hf, obsv.observers f hf, reg f hf, code f hf, valid.tokens f hf⟩
 
 /-- `J` from its machine-wide clauses and its clauses at every fiber. -/
@@ -245,7 +247,7 @@ theorem machineTyped_of {root : ProgramSource} {rootTy : EffTy} {w : World} {m :
       wide.raceHosts, wide.keysBelow, wide.requestsBelow, wide.requestsOwned,
       fun f hf => (fibers f hf).pendingShape, fun f hf => (fibers f hf).parkedIdle,
       fun f hf => (fibers f hf).parkedBelow, fun f hf => (fibers f hf).exited,
-      fun f hf => (fibers f hf).deferredCause⟩,
+      fun f hf => (fibers f hf).exitedStack, fun f hf => (fibers f hf).deferredCause⟩,
     ⟨fun f hf => (fibers f hf).pendingOwner, fun f hf => (fibers f hf).observers⟩,
     fun f hf => (fibers f hf).registration⟩,
     wide.services, fun f hf => (fibers f hf).code, wide.live⟩
@@ -530,10 +532,14 @@ theorem commandDelivery_view {root : ProgramSource} {w : World} {m m' : RState}
     obtain ⟨f, hf, hid, _, _, _, hframe⟩ := ctlView_lookup_back ctl hf'
     obtain ⟨answer, error, cols, protocol, stack⟩ := h f hf
     exact ⟨answer, error, cols, protocol, stackReply_congr hid hframe stack⟩
+  | finish host _ =>
+    intro f' hf'
+    obtain ⟨f, hf, _, _, _, _, hframe⟩ := ctlView_lookup_back ctl hf'
+    rw [hframe]
+    exact h f hf
   | evaluate _ => trivial
   | loop _ _ => trivial
   | deliver _ _ => trivial
-  | finish _ _ => trivial
   | resume _ _ _ => trivial
   | launch _ => trivial
   | enrollRace _ _ => trivial
@@ -642,10 +648,14 @@ theorem commandDelivery_stack {root : ProgramSource} {w : World} {m m' : RState}
     obtain ⟨f, hf, hid, hstack, hprov⟩ := view host f' hf'
     obtain ⟨answer, error, cols, protocol, stack⟩ := h f hf
     exact ⟨answer, error, cols, protocol, stackReply_view hid hstack hprov stack⟩
+  | finish host _ =>
+    intro f' hf'
+    obtain ⟨f, hf, _, hstack, _⟩ := view host f' hf'
+    rw [hstack]
+    exact h f hf
   | evaluate _ => trivial
   | loop _ _ => trivial
   | deliver _ _ => trivial
-  | finish _ _ => trivial
   | resume _ _ _ => trivial
   | launch _ => trivial
   | enrollRace _ _ => trivial
@@ -699,7 +709,7 @@ theorem fiberTyped_transport {root : ProgramSource} {w : World} {m m' : RState} 
     (nextToken : m.nextToken ≤ m'.nextToken) : FiberTyped root w m' x := by
   refine ⟨h.ok, h.delivery, Nat.lt_of_lt_of_le h.below nextId, h.pendingShape, h.parkedIdle,
     fun token hp => Nat.lt_of_lt_of_le (h.parkedBelow token hp) nextToken, h.exited,
-    h.deferredCause, h.pendingOwner, fun o ho => storedObserverOk_view view o (h.observers o ho),
+    h.exitedStack, h.deferredCause, h.pendingOwner, fun o ho => storedObserverOk_view view o (h.observers o ho),
     fun raceId marker => ?_, h.code, h.tokens⟩
   obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
   exact ⟨race, resultTy, (view.races raceId).trans found, host, token, reply⟩
@@ -879,7 +889,7 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
         exact shape
       refine ⟨runFiberOk_congr old.ok (quiet.id f) (quiet.frame f) (quiet.pending f)
           (quiet.finalizing f) (quiet.exit f) (quiet.dispatcher f) (quiet.context f),
-        ?_, ?_, hpending, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        ?_, ?_, hpending, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [quiet.parked f, quiet.id f, quiet.frame f]
         exact old.delivery
       · rw [quiet.id f]
@@ -890,6 +900,8 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
         exact old.parkedBelow
       · rw [quiet.exit f, quiet.parked f, quiet.running f]
         exact old.exited
+      · rw [quiet.exit f, quiet.frame f]
+        exact old.exitedStack
       · rw [quiet.frame f]
         exact old.deferredCause
       · rw [quiet.pending f, quiet.id f]
@@ -1097,10 +1109,10 @@ theorem commandDelivery_world {root : ProgramSource} {m : RState} (c : RCmd)
     obtain ⟨answer, error, cols, protocol, stack⟩ := h f hf
     exact ⟨answer, error, fun id hid => fiberColumnsBelow_world hΓ (cols id hid),
       iteratorProtocol_mono ord protocol, stackReply_world ord hΓ stack⟩
+  | finish _ _ => exact h
   | evaluate _ => trivial
   | loop _ _ => trivial
   | deliver _ _ => trivial
-  | finish _ _ => trivial
   | resume _ _ _ => trivial
   | launch _ => trivial
   | enrollRace _ _ => trivial
@@ -1199,7 +1211,7 @@ include hΓ hΘ in
 theorem fiberTyped_world {root : ProgramSource} {m : RState} {x : RFiber}
     (h : FiberTyped root w m x) : FiberTyped root w' m x := by
   refine ⟨runFiberOk_world ord hΓ hΘ h.ok, fun token hp => ?_, h.below, h.pendingShape,
-    h.parkedIdle, h.parkedBelow, h.exited, h.deferredCause, fun p hp => ?_,
+    h.parkedIdle, h.parkedBelow, h.exited, h.exitedStack, h.deferredCause, fun p hp => ?_,
     fun o ho => storedObserverOk_world ord hΓ hΘ o (h.observers o ho), fun raceId marker => ?_,
     fun hx hr hm ty declared => ?_, fun token hp => ?_⟩
   · obtain ⟨tin, final, declared, final', stack, provenance⟩ := h.delivery token hp
@@ -1770,8 +1782,8 @@ theorem configTyped_postTask {root : ProgramSource} {rootTy : EffTy} {w : World}
       have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
       refine ⟨⟨moved.ok.c0, moved.ok.c1, moved.ok.c2, moved.ok.c3, ⟨fun b hb => ⟨fun t ht => ?_⟩⟩,
         moved.ok.c5⟩, moved.delivery, moved.below, moved.pendingShape, moved.parkedIdle,
-        moved.parkedBelow, moved.exited, moved.deferredCause, moved.pendingOwner, moved.observers,
-        moved.registration, moved.code, moved.tokens⟩
+        moved.parkedBelow, moved.exited, moved.exitedStack, moved.deferredCause, moved.pendingOwner,
+        moved.observers, moved.registration, moved.code, moved.tokens⟩
       rcases mem_insert_tasks hb ht with rfl | ⟨b', hb', ht'⟩
       · exact resume
       · exact (old.ok.c4.c0 b' hb').c0 t ht'
@@ -2114,7 +2126,8 @@ theorem fiberTyped_reframe {root : ProgramSource} {w : World} {m m' : RState} {t
   have moved := fiberTyped_transport h view nextId nextToken
   refine ⟨⟨⟨fun ty declared => ?_⟩, moved.ok.c1, moved.ok.c2, moved.ok.c3, moved.ok.c4,
       moved.ok.c5⟩, fun token hp => ?_, moved.below, moved.pendingShape, moved.parkedIdle,
-    moved.parkedBelow, moved.exited, fun _ => ?_, moved.pendingOwner, moved.observers,
+    moved.parkedBelow, moved.exited, fun hx => stack.trans (moved.exitedStack hx), fun _ => ?_,
+    moved.pendingOwner, moved.observers,
     fun raceId marker => ?_, fun hx hr hm ty declared => ?_, moved.tokens⟩
   · obtain ⟨tin, stackOk, _⟩ := h.position declared
     exact ⟨tin, by rw [stack]; exact stackOk, prov⟩
@@ -2204,11 +2217,13 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
       have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
       refine ⟨⟨⟨fun ty' declared' => ?_⟩, (fun _ hp => nomatch hp), moved.ok.c2, moved.ok.c3,
           moved.ok.c4, moved.ok.c5⟩, (fun _ hp => nomatch hp), moved.below, rfl,
-        (fun h => absurd rfl h), (fun _ hp => nomatch hp), (fun hx' => ?_), (fun _ => rfl),
-        (fun _ hp => nomatch hp), moved.observers, (fun _ hm => nomatch hm),
+        (fun h => absurd rfl h), (fun _ hp => nomatch hp), (fun hx' => ?_), (fun hx' => ?_),
+        (fun _ => rfl), (fun _ hp => nomatch hp), moved.observers, (fun _ hm => nomatch hm),
         (fun _ _ _ ty' declared' => ?_), (fun _ hp => nomatch hp)⟩
       · obtain ⟨tin', stackOk, _⟩ := old.position declared'
         exact ⟨tin', stackOk, newProv⟩
+      · rw [show g.exit = t.exit from rfl, live] at hx'
+        cases hx'
       · rw [show g.exit = t.exit from rfl, live] at hx'
         cases hx'
       · obtain ⟨tin', stackOk, _⟩ := old.position declared'
@@ -2844,7 +2859,7 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
   · have hx' : x ∈ m.fibers := hx
     have old' := machine.fiber hx'
     refine ⟨old'.ok, old'.delivery, old'.below, old'.pendingShape, old'.parkedIdle,
-      old'.parkedBelow, old'.exited, old'.deferredCause, old'.pendingOwner,
+      old'.parkedBelow, old'.exited, old'.exitedStack, old'.deferredCause, old'.pendingOwner,
       fun o ho => storedObserverOk_updateRace hr hid hhost htoken payload live o
         (old'.observers o ho), fun raceId marker => ?_, old'.code, old'.tokens⟩
     obtain ⟨race, rty, found, host, token, reply⟩ := old'.registration raceId marker
