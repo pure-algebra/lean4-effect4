@@ -257,8 +257,8 @@ end IncompatiblePresent
 
 namespace ObserveSource
 
-/-- The second clarification of row 134 (e) (`E4-TYPED-CE-035`): a queued `observe` whose source
-is the next fiber id is refused at every world, whatever its observer and exit (the checked
+/-- Decisions row 189 (`E4-TYPED-CE-035`), beside row 134 (e)'s enrollment bound: a
+queued `observe` whose source is the next fiber id is refused at every world, whatever its observer and exit (the checked
 falsifier `witnesses/LaunchQueuedObserve.lean` queued exactly this with an `untrackChild`). -/
 theorem future_refused (w : W) (q : List RCmd) :
     ¬ QueueOk (Test.Program.RegistrationColumn.rootProgram : ProgramSource) w

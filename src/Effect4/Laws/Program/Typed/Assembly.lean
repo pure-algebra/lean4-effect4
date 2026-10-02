@@ -213,7 +213,7 @@ structure QueueOk (root : ProgramSource) (w : World) (m : RState)
   registration : Guard.RegistrationQueue.RegistrationQueue commands
   keys : ReservedKeysR m (commands.flatMap Guard.commandKeys)
   /-- A queued observer types what it can deliver (`ObserverCommandOk`), and its source is a fiber
-  id below `nextId` (decisions row 134 (e), `E4-TYPED-CE-035`): the payload clause reads the
+  id below `nextId` (decisions row 189, `E4-TYPED-CE-035`): the payload clause reads the
   source's declaration antitonically, so a future id's clause would hold vacuously until an
   allocation declared it. Missing old sources stay inert. -/
   observer : ∀ source exit observer, .observe source exit observer ∈ commands →

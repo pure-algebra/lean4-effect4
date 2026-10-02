@@ -180,12 +180,14 @@ markers and the typed-path host stack (row 188 (b)). Regenerated, not hand-edite
   then `--check` — exit 0 ("current", 658 Lean files).
 - `python3 scripts/check-semantics.py` — exit 0 (253.7 s), after the `semantics.md` edit.
 
-## Slice 3 — queued observe sources below `nextId` (`E4-TYPED-CE-035`, row 134 (e) again)
+## Slice 3 — queued observe sources below `nextId` (`E4-TYPED-CE-035`, decisions row 189)
 
-**First:** `ConfigTyped` is strengthened once more in row 134 (e)'s family: a queued `observe`'s
-source is below `nextId` (`QueueOk.observer`, `HeadOk.observer`, beside the unchanged
-`ObserverCommandOk`). Recorded as the lead coordinator's clarification; the owner's ratification
-of this second clause is owed (the first, the enrollment bound, was ratified).
+**First:** `ConfigTyped` is strengthened by a new proposed rule, decisions row 189, separate from
+row 134 (e)'s ratified enrollment bound though of the same kind: a queued `observe`'s source is
+below `nextId` (`QueueOk.observer`, `HeadOk.observer`, beside the unchanged `ObserverCommandOk`).
+Proposed by the lead coordinator; the owner ratified it ("ratified as recommended", 2026-10-02),
+after which it landed on main. Codex's command-polarity review independently found the same single
+negative read (`finish`/`observe` on Γ, `resume` on Θ; only `observe`'s source unbounded).
 
 Found while placing `launch_preserves`: allocation extends the fiber table, and every queued
 command's typed reading was checked for an antitone read at a future fiber id. Exactly one exists:
