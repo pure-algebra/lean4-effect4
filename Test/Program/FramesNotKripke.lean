@@ -273,7 +273,8 @@ theorem valid_of (s : List ScopeFrame) (running : Bool) (trace := (loadR refProg
     tokens := ?_, tokenBound := old.tokenBound, tokenTargets := old.tokenTargets,
     state := old.state, wf := old.wf, cells := old.cells, fiberClosed := old.fiberClosed,
     heapClosed := old.heapClosed, promiseClosed := old.promiseClosed,
-    tokenClosed := old.tokenClosed, root := old.root }
+    tokenClosed := old.tokenClosed, root := old.root,
+    timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
   intro f hf token hp
   change f ∈ [rootFiber s running] at hf
   rw [List.mem_singleton] at hf
@@ -341,6 +342,18 @@ theorem scheduler_of (s : List ScopeFrame) (running : Bool) (trace := (loadR ref
     rw [List.mem_singleton] at hf
     subst f
     cases hd
+  · intro raceId race hr; cases hr
+  · intro raceId race hr; cases hr
+  · intro f hf p hp
+    change f ∈ [rootFiber s running] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases hp
+  · intro f hf o ho
+    change f ∈ [rootFiber s running] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases ho
 
 theorem observers_of (s : List ScopeFrame) (running : Bool) (trace := (loadR refProg 20 20).trace) :
     ObserverState (refProg : ProgramSource) world (machineOf s running trace) := by
@@ -462,7 +475,7 @@ theorem queue_of (s : List ScopeFrame) (c : RCmd)
     (hc : c = .loop Api.root false ∨ c = .deliver Api.root false)
     (trace := (loadR refProg 20 20).trace) :
     QueueOk (refProg : ProgramSource) world (machineOf s true trace) [c] := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
   · intro c' hc'
     rw [List.mem_singleton] at hc'
     subst c'
@@ -493,6 +506,10 @@ theorem queue_of (s : List ScopeFrame) (c : RCmd)
     rcases hc with rfl | rfl <;> cases member
   -- row 139's `links`: vacuous, the queue holds no `link`
   · intro mode scope target interruptor extra member
+    rw [List.mem_singleton] at member
+    rcases hc with rfl | rfl <;> cases member
+  -- row 134 (d)'s queued observers: vacuous, the queue holds no `observe`
+  · intro source exit observer member
     rw [List.mem_singleton] at member
     rcases hc with rfl | rfl <;> cases member
 
@@ -691,7 +708,7 @@ theorem valid_w1g : WorldValid unitTy w1g afterGood.1 := by
   have v0 := initial_world_valid unitTy refProg 20 20 ⟨rfl, rfl⟩
   have hids : afterGood.1.fibers.map (·.id) = (loadR refProg 20 20).fibers.map (·.id) := rfl
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, ?_, ⟨?_, ?_⟩, v0.fiberClosed, ?_, v0.promiseClosed,
-    v0.tokenClosed, v0.root⟩
+    v0.tokenClosed, v0.root, WakeTyped.empty _ _, fun _ _ h => by cases h⟩
   · rw [hids]
     exact v0.ids
   · intro id
@@ -865,6 +882,18 @@ theorem afterGood_typed :
       rw [List.mem_singleton] at hf
       subst f
       cases hd
+    · intro raceId race hr; cases hr
+    · intro raceId race hr; cases hr
+    · intro f hf p hp
+      change f ∈ [_] at hf
+      rw [List.mem_singleton] at hf
+      subst f
+      cases hp
+    · intro f hf o ho
+      change f ∈ [_] at hf
+      rw [List.mem_singleton] at hf
+      subst f
+      cases ho
   · constructor
     · intro f hf p hp
       change f ∈ [_] at hf
@@ -886,7 +915,7 @@ theorem afterGood_typed :
 theorem afterGood_queueOk :
     QueueOk (refProg : ProgramSource) w1g afterGood.1 afterGood.2 := by
   rw [afterGood_queue]
-  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
   · intro c hc
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
     rcases hc with rfl | rfl <;> trivial
@@ -915,6 +944,10 @@ theorem afterGood_queueOk :
     rcases member with h | h <;> cases h
   -- row 139's `links`: vacuous, the queue holds no `link`
   · intro mode scope target interruptor extra member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with h | h <;> cases h
+  -- row 134 (d)'s queued observers: vacuous, the queue holds no `observe`
+  · intro source exit observer member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with h | h <;> cases h
 

@@ -240,6 +240,22 @@ structure SchedulerState (m : RState) : Prop where
   exitedStack : ∀ fiber ∈ m.fibers, fiber.exit.isSome = true → fiber.frame.stack = []
   deferredCause : ∀ fiber ∈ m.fibers, fiber.frame.deferredInterrupt = true →
     fiber.frame.interruptedCause.isSome = true
+  /-- Decisions row 134 (d): no stored observer holds a race's key (F5). The registration's
+  no-answer park writes a `void` pending record at that key (`Machine/Fibers.lean:1925-1929`),
+  which a countdown observer there would read at its own type; a race takes a fresh token, above
+  every key an observer holds (`keysBelow`). -/
+  raceObservers : ∀ raceId race, m.race? raceId = some race → ∀ fiber ∈ m.fibers,
+    ∀ o ∈ fiber.observers, (race.host, race.token) ∉ Guard.observerKeys o
+  /-- Decisions row 134 (e): every fiber id the scheduler's records name is below `nextId` (F6), so
+  a fiber spawned at `nextId` (`spawn`, `Machine/Fibers.lean:948-966`) is constrained by none of
+  them: a race's live set (`RacePayload.live`), a countdown's targets
+  (`CountdownPayload.targets`) and a stored observer's keys. -/
+  liveBelow : ∀ raceId race, m.race? raceId = some race → ∀ id ∈ race.state.live,
+    id.value < m.nextId
+  targetsBelow : ∀ fiber ∈ m.fibers, ∀ p ∈ fiber.pending,
+    ∀ id ∈ p.waitingOn.toList ++ p.remaining, id.value < m.nextId
+  observersBelow : ∀ fiber ∈ m.fibers, ∀ o ∈ fiber.observers, ∀ k ∈ Guard.observerKeys o,
+    k.1.value < m.nextId
 
 /-- The reference evaluator consumes this operation directly; interpR.parkOf is none. -/
 def raceRegistrationR : RProgram → Option Nat
@@ -406,6 +422,18 @@ theorem schedulerState_load (program : NativeEff) (fuel compileFuel : Nat) :
     rw [List.mem_singleton] at hf
     subst fiber
     cases hd
+  · intro raceId race hr; cases hr
+  · intro raceId race hr; cases hr
+  · intro fiber hf p hp
+    change fiber ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst fiber
+    cases hp
+  · intro fiber hf o ho
+    change fiber ∈ [_] at hf
+    rw [List.mem_singleton] at hf
+    subst fiber
+    cases ho
 
 theorem observerState_load (root : ProgramSource) (w : World) (fuel compileFuel : Nat) :
     ObserverState root w (loadR root.program fuel compileFuel) := by

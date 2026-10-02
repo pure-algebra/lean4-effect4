@@ -665,7 +665,9 @@ theorem valid : WorldValid ty world machine := by
     heapClosed := old.heapClosed
     promiseClosed := old.promiseClosed
     tokenClosed := ?_
-    root := old.root }
+    root := old.root
+    timers := WakeTyped.empty _ _
+    waiters := fun _ _ h => by cases h }
   · intro f hf token hp
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
@@ -1056,7 +1058,8 @@ theorem mT_typed (w : Typed.World)
   have hd := dT_ok w h
   obtain ⟨hv, hok, hpark⟩ := h
   refine ⟨⟨hv.ids, hv.fibers, hv.heap, hv.promises, ?_, hv.tokenBound, hv.tokenTargets, hv.state,
-    hv.wf, hv.cells, hv.fiberClosed, hv.heapClosed, hv.promiseClosed, hv.tokenClosed, hv.root⟩,
+    hv.wf, hv.cells, hv.fiberClosed, hv.heapClosed, hv.promiseClosed, hv.tokenClosed, hv.root,
+    hv.timers, hv.waiters⟩,
     ⟨?_, hok.c1, hok.c2⟩, ?_⟩
   · intro f hf token hp
     obtain ⟨g, hg, rfl⟩ := List.mem_map.mp hf
@@ -1161,7 +1164,8 @@ theorem valid : WorldValid unitTy world machine := by
     tokens := ?_, tokenBound := old.tokenBound, tokenTargets := old.tokenTargets,
     state := old.state, wf := old.wf, cells := old.cells, fiberClosed := old.fiberClosed,
     heapClosed := old.heapClosed, promiseClosed := old.promiseClosed,
-    tokenClosed := old.tokenClosed, root := old.root }
+    tokenClosed := old.tokenClosed, root := old.root,
+    timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
   intro f hf token hp
   change f ∈ [fiber] at hf
   rw [List.mem_singleton] at hf
@@ -1227,6 +1231,18 @@ theorem scheduler : SchedulerState machine := by
     rw [List.mem_singleton] at hf
     subst f
     cases hd
+  · intro raceId race hr; cases hr
+  · intro raceId race hr; cases hr
+  · intro f hf p hp
+    change f ∈ [fiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases hp
+  · intro f hf o ho
+    change f ∈ [fiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases ho
 
 theorem observers : ObserverState (rootProgram : ProgramSource) world machine := by
   constructor
@@ -1289,7 +1305,7 @@ def command : RCmd := .deliver Api.root false
 
 theorem queue : QueueOk (rootProgram : ProgramSource) world machine [command] := by
   refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩, ⟨trivial, trivial⟩,
-    ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+    ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
   · intro c hc
     rw [List.mem_singleton] at hc
     subst c
@@ -1316,6 +1332,9 @@ theorem queue : QueueOk (rootProgram : ProgramSource) world machine [command] :=
     rw [List.mem_singleton] at member
     cases member
   · intro mode scope target interruptor extra member
+    rw [List.mem_singleton] at member
+    cases member
+  · intro source exit observer member
     rw [List.mem_singleton] at member
     cases member
 
@@ -1399,7 +1418,8 @@ theorem result_valid : WorldValid unitTy world result.1 := by
     tokens := ?_, tokenBound := old.tokenBound, tokenTargets := old.tokenTargets,
     state := old.state, wf := old.wf, cells := old.cells, fiberClosed := old.fiberClosed,
     heapClosed := old.heapClosed, promiseClosed := old.promiseClosed,
-    tokenClosed := old.tokenClosed, root := old.root }
+    tokenClosed := old.tokenClosed, root := old.root,
+    timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
   intro f hf token hp
   change f ∈ [afterFiber] at hf
   rw [List.mem_singleton] at hf
@@ -1465,6 +1485,18 @@ theorem result_scheduler : SchedulerState result.1 := by
     rw [List.mem_singleton] at hf
     subst f
     cases hd
+  · intro raceId race hr; cases hr
+  · intro raceId race hr; cases hr
+  · intro f hf p hp
+    change f ∈ [afterFiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases hp
+  · intro f hf o ho
+    change f ∈ [afterFiber] at hf
+    rw [List.mem_singleton] at hf
+    subst f
+    cases ho
 
 theorem result_observers : ObserverState (rootProgram : ProgramSource) world result.1 := by
   constructor
@@ -1525,7 +1557,7 @@ theorem result_typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy 
 theorem result_queue : QueueOk (rootProgram : ProgramSource) world result.1 result.2 := by
   rw [result_commands]
   refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩, ⟨trivial, trivial⟩,
-    ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+    ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
   · intro c member
     rw [List.mem_singleton] at member
     subst c
@@ -1559,6 +1591,9 @@ theorem result_queue : QueueOk (rootProgram : ProgramSource) world result.1 resu
     rw [List.mem_singleton] at member
     cases member
   · intro mode scope target interruptor extra member
+    rw [List.mem_singleton] at member
+    cases member
+  · intro source exit observer member
     rw [List.mem_singleton] at member
     cases member
 
@@ -1976,6 +2011,8 @@ theorem valid : WorldValid unitTy world machine := by
   · intro key types declared; cases declared
   · intro id token ty declared; cases declared
   · rfl
+  · exact WakeTyped.empty _ _
+  · intro key cell h; cases h
 
 theorem no_requests (id : FiberId) (token : Nat) : requestOfR machine id token = none := by
   unfold requestOfR
@@ -2007,6 +2044,12 @@ theorem scheduler : SchedulerState machine := by
     rcases member_cases f member with rfl | rfl <;> cases exitedHx
   · intro f member deferred
     rcases member_cases f member with rfl | rfl <;> cases deferred
+  · intro raceId race hr; cases hr
+  · intro raceId race hr; cases hr
+  · intro f member p hp
+    rcases member_cases f member with rfl | rfl <;> cases hp
+  · intro f member o ho
+    rcases member_cases f member with rfl | rfl <;> cases ho
 
 theorem observers : ObserverState (rootProgram : ProgramSource) world machine := by
   constructor
@@ -2124,7 +2167,7 @@ theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world mac
     rcases member_cases f member with rfl | rfl <;> cases parked
 
 theorem queue : QueueOk (rootProgram : ProgramSource) world machine commands := by
-  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
   · intro c member
     change c ∈ [command, .finish Api.root (.success .unit)] at member
     rcases List.mem_cons.mp member with rfl | tail
@@ -2172,6 +2215,11 @@ theorem queue : QueueOk (rootProgram : ProgramSource) world machine commands := 
     · rw [List.mem_singleton] at h; cases h
   · intro mode scope target interruptor extra member
     change .link mode scope target interruptor extra ∈ [command, .finish Api.root (.success .unit)] at member
+    rcases List.mem_cons.mp member with h | h
+    · cases h
+    · rw [List.mem_singleton] at h; cases h
+  · intro source exit observer member
+    change .observe source exit observer ∈ [command, .finish Api.root (.success .unit)] at member
     rcases List.mem_cons.mp member with h | h
     · cases h
     · rw [List.mem_singleton] at h; cases h
@@ -2248,7 +2296,8 @@ theorem result_valid : WorldValid unitTy world result.1 := by
     tokens := ?_, tokenBound := valid.tokenBound, tokenTargets := valid.tokenTargets,
     state := valid.state, wf := valid.wf, cells := valid.cells, fiberClosed := valid.fiberClosed,
     heapClosed := valid.heapClosed, promiseClosed := valid.promiseClosed,
-    tokenClosed := valid.tokenClosed, root := valid.root }
+    tokenClosed := valid.tokenClosed, root := valid.root, timers := valid.timers,
+    waiters := valid.waiters }
   intro f member token parked
   rcases result_member_cases f member with rfl | rfl <;> cases parked
 
@@ -2283,6 +2332,12 @@ theorem result_scheduler : SchedulerState result.1 := by
     rcases result_member_cases f member with rfl | rfl <;> cases exitedHx
   · intro f member deferred
     rcases result_member_cases f member with rfl | rfl <;> cases deferred
+  · intro raceId race hr; cases hr
+  · intro raceId race hr; cases hr
+  · intro f member p hp
+    rcases result_member_cases f member with rfl | rfl <;> cases hp
+  · intro f member o ho
+    rcases result_member_cases f member with rfl | rfl <;> cases ho
 
 
 theorem result_observers : ObserverState (rootProgram : ProgramSource) world result.1 := by
@@ -2381,7 +2436,7 @@ theorem old_result_typed (commands : List RCmd) :
 
 theorem result_queue_typed : QueueOk (rootProgram : ProgramSource) world result.1 result.2 := by
   rw [result_queue]
-  refine ⟨?_, ?_, ?_, List.nodup_nil, trivial, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, List.nodup_nil, trivial, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
   · intro c member; cases member
   · intro c member; cases member
   · intro c member; cases member
@@ -2393,6 +2448,7 @@ theorem result_queue_typed : QueueOk (rootProgram : ProgramSource) world result.
   · intro race child member; cases member
   · intro host yielding race member; cases member
   · intro mode scope target interruptor extra member; cases member
+  · intro source exit observer member; cases member
 
 /-- H1 (historical): the dispatched input and the halted output were both typed under the halt
 extension of row 133 (over the judgment before row 156); row 139 removes it, and row 156 refuses
@@ -2442,7 +2498,7 @@ def rawResult : RState × List RCmd :=
 
 theorem raw_input_queue : QueueOk (rootProgram : ProgramSource) world result.1 [rawCommand] := by
   refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩,
-    ⟨trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+    ⟨trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
   · intro c member
     rw [List.mem_singleton] at member
     subst c
@@ -2469,6 +2525,9 @@ theorem raw_input_queue : QueueOk (rootProgram : ProgramSource) world result.1 [
     rw [List.mem_singleton] at member
     cases member
   · intro mode scope target interruptor extra member
+    rw [List.mem_singleton] at member
+    cases member
+  · intro source exit observer member
     rw [List.mem_singleton] at member
     cases member
 

@@ -186,6 +186,13 @@ structure FiberTyped (root : ProgramSource) (w : World) (m : RState) (f : RFiber
   code : f.exit = none → f.running = false → raceRegistrationR f.frame.current = none →
     ∀ ty, w.Γ f.id = some ty → SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty f.frame
   tokens : ∀ token, f.parked = .withGuard token → (w.Θ f.id token).isSome = true
+  /-- Decisions row 134 (d), at this fiber: none of its stored observers holds a race's key. -/
+  raceObservers : ∀ raceId race, m.race? raceId = some race → ∀ o ∈ f.observers,
+    (race.host, race.token) ∉ Guard.observerKeys o
+  /-- Decisions row 134 (e), at this fiber: its countdowns' targets and its stored observers' keys
+  name fibers below `nextId`. -/
+  targetsBelow : ∀ p ∈ f.pending, ∀ id ∈ p.waitingOn.toList ++ p.remaining, id.value < m.nextId
+  observersBelow : ∀ o ∈ f.observers, ∀ k ∈ Guard.observerKeys o, k.1.value < m.nextId
 
 /-- The machine-wide clauses of `J`. -/
 structure MachineWide (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) : Prop where
@@ -216,6 +223,14 @@ structure MachineWide (root : ProgramSource) (rootTy : EffTy) (w : World) (m : R
     (fiber, token) ∉ Guard.internalKeys m
   services : w.serviceTy = root.sig.serviceTy
   live : MachineLive m
+  /-- Decisions row 134 (a): the timer store's sleepers are declared at a type `void` fits. -/
+  timers : WakeTyped w SleepDemand m.state.timers.wake
+  /-- Decisions row 134 (b): a Deferred cell's waiters are declared above the cell's columns. -/
+  waiters : ∀ key cell, m.state.deferreds.cellAt key = some cell → ∀ a e, w.«Π» key = some (a, e) →
+    WakeTyped w (AwaitDemand a e) cell.wake
+  /-- Decisions row 134 (e): every race's live set names fibers below `nextId`. -/
+  liveBelow : ∀ raceId race, m.race? raceId = some race → ∀ id ∈ race.state.live,
+    id.value < m.nextId
 
 theorem MachineTyped.wide {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     (typed : MachineTyped root rootTy w m) : MachineWide root rootTy w m := by
@@ -223,7 +238,8 @@ theorem MachineTyped.wide {root : ProgramSource} {rootTy : EffTy} {w : World} {m
   exact ⟨valid.ids, valid.fibers, valid.heap, valid.promises, valid.tokenBound, valid.tokenTargets,
     valid.state, valid.wf, valid.cells, valid.fiberClosed, valid.heapClosed, valid.promiseClosed,
     valid.tokenClosed, valid.root, ok.c1, ok.c2, sched.fiberIds, sched.raceIds, sched.racesBelow,
-    sched.raceHosts, sched.keysBelow, sched.requestsBelow, sched.requestsOwned, services, live⟩
+    sched.raceHosts, sched.keysBelow, sched.requestsBelow, sched.requestsOwned, services, live,
+    valid.timers, valid.waiters, sched.liveBelow⟩
 
 theorem MachineTyped.fiber {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     (typed : MachineTyped root rootTy w m) {f : RFiber} (hf : f ∈ m.fibers) :
@@ -232,7 +248,9 @@ theorem MachineTyped.fiber {root : ProgramSource} {rootTy : EffTy} {w : World} {
   exact ⟨ok.c0 f hf, deliv f hf, sched.fibersBelow f hf, sched.pendingShape f hf,
     sched.parkedIdle f hf, sched.parkedBelow f hf, sched.exited f hf, sched.exitedStack f hf,
     sched.deferredCause f hf,
-    obsv.pendingOwner f hf, obsv.observers f hf, reg f hf, code f hf, valid.tokens f hf⟩
+    obsv.pendingOwner f hf, obsv.observers f hf, reg f hf, code f hf, valid.tokens f hf,
+    fun r race hr o ho => sched.raceObservers r race hr f hf o ho, sched.targetsBelow f hf,
+    sched.observersBelow f hf⟩
 
 /-- `J` from its machine-wide clauses and its clauses at every fiber. -/
 theorem machineTyped_of {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
@@ -240,14 +258,17 @@ theorem machineTyped_of {root : ProgramSource} {rootTy : EffTy} {w : World} {m :
     MachineTyped root rootTy w m :=
   ⟨⟨⟨wide.ids, wide.fibers, wide.heap, wide.promises, fun f hf => (fibers f hf).tokens,
       wide.tokenBound, wide.tokenTargets, wide.state, wide.wf, wide.cells, wide.fiberClosed,
-      wide.heapClosed, wide.promiseClosed, wide.tokenClosed, wide.rootDeclared⟩,
+      wide.heapClosed, wide.promiseClosed, wide.tokenClosed, wide.rootDeclared, wide.timers,
+      wide.waiters⟩,
     ⟨fun f hf => (fibers f hf).ok, wide.races, wide.stores⟩,
     fun f hf => (fibers f hf).delivery,
     ⟨wide.fiberIds, fun f hf => (fibers f hf).below, wide.raceIds, wide.racesBelow,
       wide.raceHosts, wide.keysBelow, wide.requestsBelow, wide.requestsOwned,
       fun f hf => (fibers f hf).pendingShape, fun f hf => (fibers f hf).parkedIdle,
       fun f hf => (fibers f hf).parkedBelow, fun f hf => (fibers f hf).exited,
-      fun f hf => (fibers f hf).exitedStack, fun f hf => (fibers f hf).deferredCause⟩,
+      fun f hf => (fibers f hf).exitedStack, fun f hf => (fibers f hf).deferredCause,
+      fun r race hr f hf o ho => (fibers f hf).raceObservers r race hr o ho, wide.liveBelow,
+      fun f hf => (fibers f hf).targetsBelow, fun f hf => (fibers f hf).observersBelow⟩,
     ⟨fun f hf => (fibers f hf).pendingOwner, fun f hf => (fibers f hf).observers⟩,
     fun f hf => (fibers f hf).registration⟩,
     wide.services, fun f hf => (fibers f hf).code, wide.live⟩
@@ -384,7 +405,8 @@ theorem queueOk_transport {root : ProgramSource} {w : World} {m m' : RState} {q 
       fun fiber token r hr hk => queue.keys.disjoint fiber token r (requests fiber token r hr) hk⟩,
     fun s e o ho => observerCommandOk_view view o (queue.observer s e o ho),
     fun r c hc => enrollRaceOk_view view (queue.enroll r c hc), queue.noRaceAfterInterrupt,
-    fun md sc tg ir ex hl => ?_⟩
+    fun md sc tg ir ex hl => ?_,
+    fun s e o ho r race hr => queue.raceObservers s e o ho r race ((view.races r).symm.trans hr)⟩
   obtain ⟨live, present⟩ := queue.links md sc tg ir ex hl
   exact ⟨view.scopes sc live, view.exists_ tg present⟩
 
@@ -406,7 +428,8 @@ theorem configTyped_tail {root : ProgramSource} {rootTy : EffTy} {w : World} {m 
       fun s e o ho => queue.observer s e o (List.mem_cons_of_mem _ ho),
       fun r ch hc => queue.enroll r ch (List.mem_cons_of_mem _ hc),
       fun h y r hr => queue.noRaceAfterInterrupt h y r (List.mem_cons_of_mem _ hr),
-      fun md sc tg ir ex hl => queue.links md sc tg ir ex (List.mem_cons_of_mem _ hl)⟩
+      fun md sc tg ir ex hl => queue.links md sc tg ir ex (List.mem_cons_of_mem _ hl),
+      fun s e o ho => queue.raceObservers s e o (List.mem_cons_of_mem _ ho)⟩
     · have nodup := queue.owners
       rw [List.filterMap_cons] at nodup
       cases hc : Guard.commandOwner m c with
@@ -710,7 +733,10 @@ theorem fiberTyped_transport {root : ProgramSource} {w : World} {m m' : RState} 
   refine ⟨h.ok, h.delivery, Nat.lt_of_lt_of_le h.below nextId, h.pendingShape, h.parkedIdle,
     fun token hp => Nat.lt_of_lt_of_le (h.parkedBelow token hp) nextToken, h.exited,
     h.exitedStack, h.deferredCause, h.pendingOwner, fun o ho => storedObserverOk_view view o (h.observers o ho),
-    fun raceId marker => ?_, h.code, h.tokens⟩
+    fun raceId marker => ?_, h.code, h.tokens,
+    fun r race hr o ho => h.raceObservers r race ((view.races r).symm.trans hr) o ho,
+    fun p hp id hid => Nat.lt_of_lt_of_le (h.targetsBelow p hp id hid) nextId,
+    fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId⟩
   obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
   exact ⟨race, resultTy, (view.races raceId).trans found, host, token, reply⟩
 
@@ -787,7 +813,8 @@ theorem machineWide_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     wide.racesBelow, fun race hr => ?_, fun key hk => ?_,
     fun fiber token r hr => wide.requestsBelow fiber token r (requests fiber token r hr),
     fun fiber token r hr hk => ?_, wide.services,
-    ⟨wide.live.running, fun o ho owner priority mode => ?_⟩⟩
+    ⟨wide.live.running, fun o ho owner priority mode => ?_⟩, wide.timers, wide.waiters,
+    wide.liveBelow⟩
   · obtain ⟨x, hx⟩ := wide.raceHosts race hr
     rw [rfiber?_update, hx, Option.map_some]
     exact ⟨_, rfl⟩
@@ -859,7 +886,8 @@ theorem QuietEdit.keys {k : RFiber → RFiber} (quiet : QuietEdit k) (f : RFiber
 
 /-- **A quiet fiber edit keeps `I`**, given that every observer it appends is typed on the edited
 machine (`trackChild`'s untrack observer, `link`'s drop, `enrollRace`'s race callback, the yield
-override). -/
+override). An appended observer holds no key (`QuietEdit.observers`), so decisions row 134 (d)
+and (e) hold of it vacuously. -/
 theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {q : List RCmd} (typed : ConfigTyped root rootTy w m q) (target : FiberId)
     {k : RFiber → RFiber} (quiet : QuietEdit k)
@@ -889,7 +917,7 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
         exact shape
       refine ⟨runFiberOk_congr old.ok (quiet.id f) (quiet.frame f) (quiet.pending f)
           (quiet.finalizing f) (quiet.exit f) (quiet.dispatcher f) (quiet.context f),
-        ?_, ?_, hpending, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        ?_, ?_, hpending, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [quiet.parked f, quiet.id f, quiet.frame f]
         exact old.delivery
       · rw [quiet.id f]
@@ -922,6 +950,22 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
         exact old.code
       · rw [quiet.parked f, quiet.id f]
         exact old.tokens
+      · intro r race hr o ho
+        obtain ⟨extra, hobs, nokeys⟩ := quiet.observers f
+        rw [hobs] at ho
+        rcases List.mem_append.mp ho with stored | new
+        · exact old.raceObservers r race hr o stored
+        · rw [nokeys o new]
+          exact List.not_mem_nil
+      · rw [quiet.pending f]
+        exact old.targetsBelow
+      · intro o ho key hk
+        obtain ⟨extra, hobs, nokeys⟩ := quiet.observers f
+        rw [hobs] at ho
+        rcases List.mem_append.mp ho with stored | new
+        · exact old.observersBelow o stored key hk
+        · rw [nokeys o new] at hk
+          cases hk
     refine ⟨machineTyped_of (machineWide_rupdate machine.wide (quiet.id f)
         (fun key hk => Or.inl (fiberKeys_internal hmem (quiet.keys f hk))) ?_) (fun x hx => ?_), ?_,
       queueOk_transport queue view (fun c _ h => commandAuthority_view ctl view.races c h)
@@ -1173,7 +1217,7 @@ theorem queueOk_world {root : ProgramSource} {m : RState} {q : List RCmd}
     queue.registration, queue.keys,
     fun s e o ho => observerCommandOk_world ord hΓ hΘ o (queue.observer s e o ho),
     fun r c hc => enrollRaceOk_world ord hΓ hΘ (queue.enroll r c hc),
-    queue.noRaceAfterInterrupt, queue.links⟩
+    queue.noRaceAfterInterrupt, queue.links, queue.raceObservers⟩
 
 include hΓ in
 theorem readCode_world {root : ProgramSource} {m : RState} {q : List RCmd}
@@ -1213,7 +1257,8 @@ theorem fiberTyped_world {root : ProgramSource} {m : RState} {x : RFiber}
   refine ⟨runFiberOk_world ord hΓ hΘ h.ok, fun token hp => ?_, h.below, h.pendingShape,
     h.parkedIdle, h.parkedBelow, h.exited, h.exitedStack, h.deferredCause, fun p hp => ?_,
     fun o ho => storedObserverOk_world ord hΓ hΘ o (h.observers o ho), fun raceId marker => ?_,
-    fun hx hr hm ty declared => ?_, fun token hp => ?_⟩
+    fun hx hr hm ty declared => ?_, fun token hp => ?_, h.raceObservers, h.targetsBelow,
+    h.observersBelow⟩
   · obtain ⟨tin, final, declared, final', stack, provenance⟩ := h.delivery token hp
     exact ⟨tin, final, by rw [hΘ]; exact declared, by rw [hΓ]; exact final',
       Contracts.stackAccepts_mono ord stack, provenance⟩
@@ -1293,12 +1338,15 @@ structure HeadOk (root : ProgramSource) (w : World) (m : RState) (c : RCmd) (q :
   noRace : ∀ host yielding race, c ≠ .afterInterrupt host yielding (.race race)
   link : ∀ mode scope target interruptor extra, c = .link mode scope target interruptor extra →
     m.state.ScopeLive scope ∧ (m.fiber? target).isSome = true
+  /-- Decisions row 134 (d) at the head: a queued observer holds no race's key. -/
+  raceObservers : ∀ source exit o, c = .observe source exit o → ∀ raceId race,
+    m.race? raceId = some race → (race.host, race.token) ∉ Guard.observerKeys o
 
 theorem queueOk_cons {root : ProgramSource} {w : World} {m : RState} {c : RCmd} {q : List RCmd}
     (head : HeadOk root w m c q) (queue : QueueOk root w m q) : QueueOk root w m (c :: q) := by
   refine ⟨fun x hx => ?_, fun x hx => ?_, fun x hx => ?_, ?_, ⟨head.tail, queue.registration⟩,
     ⟨fun key hk => ?_, fun fiber token r hr hk => ?_⟩, fun src e o ho => ?_, fun r ch hc => ?_,
-    fun host y r hr => ?_, fun md sc tg ir ex hl => ?_⟩
+    fun host y r hr => ?_, fun md sc tg ir ex hl => ?_, fun src e o ho => ?_⟩
   · rcases List.mem_cons.mp hx with rfl | hx
     · exact head.payload
     · exact queue.payload x hx
@@ -1332,6 +1380,9 @@ theorem queueOk_cons {root : ProgramSource} {w : World} {m : RState} {c : RCmd} 
   · rcases List.mem_cons.mp hl with h | hl
     · exact head.link md sc tg ir ex h.symm
     · exact queue.links md sc tg ir ex hl
+  · rcases List.mem_cons.mp ho with h | ho
+    · exact head.raceObservers src e o h.symm
+    · exact queue.raceObservers src e o ho
 
 /-- A command that is neither `loop` nor `deliver` reads no code: `ReadCode` ignores it. -/
 theorem readCode_cons {root : ProgramSource} {w : World} {m : RState} {c : RCmd} {q : List RCmd}
@@ -1360,7 +1411,8 @@ theorem configTyped_cons_resume {root : ProgramSource} {rootTy : EffTy} {w : Wor
       typed.code,
     queueOk_cons ⟨resume, trivial, trivial, (fun _ h => nomatch h), trivial, fun key hk => ?_,
       fun fiber tok r hr hk => ?_, (fun _ _ _ h => nomatch h), (fun _ _ h => nomatch h),
-      (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h)⟩ typed.queue⟩
+      (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h)⟩
+      typed.queue⟩
   · rw [List.mem_singleton.mp hk]
     exact below
   · obtain ⟨rfl, rfl⟩ := Prod.mk.inj (List.mem_singleton.mp hk)
@@ -1629,7 +1681,8 @@ theorem machineWide_restate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     (stores : StoresOk (preds root) { w with state := s } Expect.root s)
     (keys : Guard.internalKeys { m with state := s } ⊆ Guard.internalKeys m)
     (due : ∀ o ∈ s.deferreds.due, ∀ owner priority, o.mode = .scheduled owner priority →
-      (m.fiber? owner).isSome = true) :
+      (m.fiber? owner).isSome = true)
+    (timerKeys : Guard.wakeKeys s.timers.wake ⊆ Guard.wakeKeys m.state.timers.wake) :
     MachineWide root rootTy { w with state := s } { m with state := s } := by
   have ord : w.leHost { w with state := s } := by
     apply leHost_restate
@@ -1647,7 +1700,11 @@ theorem machineWide_restate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     fun r hr => ?_, stores, wide.fiberIds, wide.raceIds, wide.racesBelow, wide.raceHosts,
     fun key hk => wide.keysBelow key (keys hk), wide.requestsBelow,
     fun fiber token r hr hk => wide.requestsOwned fiber token r hr (keys hk), wide.services,
-    ⟨wide.live.running, due⟩⟩
+    ⟨wide.live.running, due⟩, WakeTyped.of_subset timerKeys wide.timers,
+    fun key cell hc => wide.waiters key cell (by
+      unfold DeferredStore.cellAt at hc ⊢
+      rw [← cells]
+      exact hc), wide.liveBelow⟩
   · show (w.Ρ key).isSome = true ↔ key.index < s.refs.length
     rw [refs]
     exact wide.heap key
@@ -1678,7 +1735,8 @@ theorem configTyped_restate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     (stores : StoresOk (preds root) { w with state := s } Expect.root s)
     (keys : Guard.internalKeys { m with state := s } ⊆ Guard.internalKeys m)
     (due : ∀ o ∈ s.deferreds.due, ∀ owner priority, o.mode = .scheduled owner priority →
-      (m.fiber? owner).isSome = true) :
+      (m.fiber? owner).isSome = true)
+    (timerKeys : Guard.wakeKeys s.timers.wake ⊆ Guard.wakeKeys m.state.timers.wake) :
     w.leHost { w with state := s } ∧
       ConfigTyped root rootTy { w with state := s } { m with state := s } q := by
   obtain ⟨machine, code, queue⟩ := typed
@@ -1694,7 +1752,8 @@ theorem configTyped_restate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     ObsView.ofLookup (fun _ => rfl) (fun _ => rfl) (fun sc h => le.2.2.1 sc h)
   have ctl : ∀ id, (({ m with state := s } : RState).fiber? id).map ctlView =
       (m.fiber? id).map ctlView := fun _ => rfl
-  refine ⟨ord, machineTyped_of (machineWide_restate wide le refs cells externals wf stores keys due)
+  refine ⟨ord, machineTyped_of
+    (machineWide_restate wide le refs cells externals wf stores keys due timerKeys)
     (fun x hx => fiberTyped_transport (fiberTyped_world ord rfl rfl (machine.fiber hx)) view
       (Nat.le_refl _) (Nat.le_refl _)), readCode_world ord rfl code,
     queueOk_transport (queueOk_world ord rfl rfl queue) view
@@ -1783,7 +1842,8 @@ theorem configTyped_postTask {root : ProgramSource} {rootTy : EffTy} {w : World}
       refine ⟨⟨moved.ok.c0, moved.ok.c1, moved.ok.c2, moved.ok.c3, ⟨fun b hb => ⟨fun t ht => ?_⟩⟩,
         moved.ok.c5⟩, moved.delivery, moved.below, moved.pendingShape, moved.parkedIdle,
         moved.parkedBelow, moved.exited, moved.exitedStack, moved.deferredCause, moved.pendingOwner,
-        moved.observers, moved.registration, moved.code, moved.tokens⟩
+        moved.observers, moved.registration, moved.code, moved.tokens, moved.raceObservers,
+        moved.targetsBelow, moved.observersBelow⟩
       rcases mem_insert_tasks hb ht with rfl | ⟨b', hb', ht'⟩
       · exact resume
       · exact (old.ok.c4.c0 b' hb').c0 t ht'
@@ -1934,7 +1994,7 @@ theorem drainDue_preserves (root : ProgramSource) (rootTy : EffTy) :
     exact ⟨(fun o ho => nomatch ho), c1, ⟨c2.c0⟩, c3, c4, c5⟩
   obtain ⟨ord, restated⟩ := configTyped_restate tail le rfl rfl rfl
     (wf_restate wide.wf le rfl rfl rfl rfl rfl) stores (internalKeys_dueless m)
-    (fun o ho => nomatch ho)
+    (fun o ho => nomatch ho) (fun _ h => h)
   refine ⟨{ w with state := s }, ord, ?_⟩
   show ConfigTyped root rootTy { w with state := s }
     (drainOwed { m with state := s } (m.state.deferreds.due.map (Owed.mapCode denoteCompletion))).1
@@ -2128,7 +2188,8 @@ theorem fiberTyped_reframe {root : ProgramSource} {w : World} {m m' : RState} {t
       moved.ok.c5⟩, fun token hp => ?_, moved.below, moved.pendingShape, moved.parkedIdle,
     moved.parkedBelow, moved.exited, fun hx => stack.trans (moved.exitedStack hx), fun _ => ?_,
     moved.pendingOwner, moved.observers,
-    fun raceId marker => ?_, fun hx hr hm ty declared => ?_, moved.tokens⟩
+    fun raceId marker => ?_, fun hx hr hm ty declared => ?_, moved.tokens, moved.raceObservers,
+    moved.targetsBelow, moved.observersBelow⟩
   · obtain ⟨tin, stackOk, _⟩ := h.position declared
     exact ⟨tin, by rw [stack]; exact stackOk, prov⟩
   · obtain ⟨tin, final, token', final', stackOk, _⟩ := h.delivery token hp
@@ -2147,7 +2208,7 @@ theorem headOk_evaluate (root : ProgramSource) (w : World) (m : RState) (id : Fi
     (q : List RCmd) : HeadOk root w m (.evaluate id) q :=
   ⟨trivial, trivial, trivial, (fun _ h => nomatch h), trivial, (fun _ h => nomatch h),
     (fun _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h), (fun _ _ h => nomatch h),
-    (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h)⟩
+    (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h)⟩
 
 theorem configTyped_cons_evaluate {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} {q : List RCmd} (typed : ConfigTyped root rootTy w m q) (id : FiberId) :
@@ -2219,7 +2280,8 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
           moved.ok.c4, moved.ok.c5⟩, (fun _ hp => nomatch hp), moved.below, rfl,
         (fun h => absurd rfl h), (fun _ hp => nomatch hp), (fun hx' => ?_), (fun hx' => ?_),
         (fun _ => rfl), (fun _ hp => nomatch hp), moved.observers, (fun _ hm => nomatch hm),
-        (fun _ _ _ ty' declared' => ?_), (fun _ hp => nomatch hp)⟩
+        (fun _ _ _ ty' declared' => ?_), (fun _ hp => nomatch hp), moved.raceObservers,
+        (fun _ hp => nomatch hp), moved.observersBelow⟩
       · obtain ⟨tin', stackOk, _⟩ := old.position declared'
         exact ⟨tin', stackOk, newProv⟩
       · rw [show g.exit = t.exit from rfl, live] at hx'
@@ -2504,7 +2566,7 @@ theorem link_preserves (root : ProgramSource) (rootTy : EffTy) (mode : Supervisi
         exact ⟨c0, c1, ⟨c2.c0⟩, scopeStoreOk_addUnsafe c3 hentry m.state.nextName trivial
           (finalizerTyped_of_admitted root _ _ trivial), c4, c5⟩
       obtain ⟨_, restated⟩ := configTyped_restate tail le rfl rfl rfl wf stores
-        (fun _ h => h) wide.live.dueOwners
+        (fun _ h => h) wide.live.dueOwners (fun _ h => h)
       have modified := configTyped_modify_quiet restated target
         (quiet_observe (.dropScopeFinalizer scope m.state.nextName) rfl) (by
           intro c _ o ho
@@ -2790,16 +2852,20 @@ theorem enrollRaceOk_updateRace {raceId : Nat} {child : FiberId}
 end RaceEdit
 
 /-- **A race edit that keeps the race's id, host and token keeps `I`**, given the edited race's
-column at its type and a live set that only gains entrants whose columns are below it. -/
+column at its type and a live set that only gains entrants whose columns are below it and whose
+ids are below `nextId` (decisions row 134 (e)). -/
 theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {q : List RCmd} (typed : ConfigTyped root rootTy w m q) {old new : RRace}
     (hr : m.race? old.id = some old) (hid : new.id = old.id) (hhost : new.host = old.host)
     (htoken : new.token = old.token) {resultTy : EffTy} (payload : RacePayload root w new resultTy)
     (live : ∀ src ∈ new.state.live, src ∈ old.state.live ∨
-      FiberColumnsBelow w src resultTy.answer resultTy.error) :
+      (FiberColumnsBelow w src resultTy.answer resultTy.error ∧ src.value < m.nextId)) :
     ConfigTyped root rootTy w (m.updateRace new) q := by
   obtain ⟨machine, code, queue⟩ := typed
   have wide := machine.wide
+  have liveCols : ∀ src ∈ new.state.live, src ∈ old.state.live ∨
+      FiberColumnsBelow w src resultTy.answer resultTy.error :=
+    fun src h => (live src h).imp id And.left
   have hold : old ∈ m.races := List.mem_of_find?_eq_some hr
   have keys := internalKeys_updateRace wide.raceIds hr hid hhost htoken
   have lookHost : ∀ raceId r', (m.updateRace new).race? raceId = some r' →
@@ -2833,11 +2899,16 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
       wide.fiberIds, by rw [raceIds]; exact wide.raceIds, fun r hr' => ?_, fun r hr' => ?_,
       fun key hk => wide.keysBelow key (by rw [← keys]; exact hk), wide.requestsBelow,
       fun fiber token r' hr'' hk => wide.requestsOwned fiber token r' hr'' (by rw [← keys]; exact hk),
-      wide.services, ⟨wide.live.running, wide.live.dueOwners⟩⟩ (fun x hx => ?_), code,
+      wide.services, ⟨wide.live.running, wide.live.dueOwners⟩, wide.timers, wide.waiters,
+      fun r race hr' id hid' => ?_⟩ (fun x hx => ?_), code,
       ⟨queue.payload, fun c hc => ?_, queue.delivery, ?_, queue.registration,
       ⟨queue.keys.below, queue.keys.disjoint⟩, fun src e o ho => ?_,
-      fun r c hc => enrollRaceOk_updateRace hr hid hhost htoken payload live (queue.enroll r c hc),
-      queue.noRaceAfterInterrupt, queue.links⟩⟩
+      fun r c hc => enrollRaceOk_updateRace hr hid hhost htoken payload liveCols
+        (queue.enroll r c hc),
+      queue.noRaceAfterInterrupt, queue.links, fun s e o ho r race hr' => by
+        obtain ⟨r0, found, hh, ht⟩ := lookHost r race hr'
+        rw [hh, ht]
+        exact queue.raceObservers s e o ho r r0 found⟩⟩
   · obtain ⟨s, hs, rfl⟩ := List.mem_map.mp hr'
     by_cases h : s.id = new.id
     · rw [if_pos h]
@@ -2856,15 +2927,27 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
       exact wide.raceHosts old hold
     · rw [if_neg h]
       exact wide.raceHosts s hs
+  · rcases rrace?_updateRace_cases hr hid r with ⟨same, _⟩ | ⟨rfl, found⟩
+    · rw [same] at hr'
+      exact wide.liveBelow r race hr' id hid'
+    · rw [found] at hr'
+      cases hr'
+      rcases live id hid' with inOld | ⟨_, fresh⟩
+      · exact wide.liveBelow old.id old hr id inOld
+      · exact fresh
   · have hx' : x ∈ m.fibers := hx
     have old' := machine.fiber hx'
     refine ⟨old'.ok, old'.delivery, old'.below, old'.pendingShape, old'.parkedIdle,
       old'.parkedBelow, old'.exited, old'.exitedStack, old'.deferredCause, old'.pendingOwner,
-      fun o ho => storedObserverOk_updateRace hr hid hhost htoken payload live o
-        (old'.observers o ho), fun raceId marker => ?_, old'.code, old'.tokens⟩
-    obtain ⟨race, rty, found, host, token, reply⟩ := old'.registration raceId marker
-    obtain ⟨r', found', host', token'⟩ := lookFwd raceId race found
-    exact ⟨r', rty, found', host'.trans host, by rw [host', token']; exact token, reply⟩
+      fun o ho => storedObserverOk_updateRace hr hid hhost htoken payload liveCols o
+        (old'.observers o ho), fun raceId marker => ?_, old'.code, old'.tokens,
+      fun r race hr' o ho => ?_, old'.targetsBelow, old'.observersBelow⟩
+    · obtain ⟨race, rty, found, host, token, reply⟩ := old'.registration raceId marker
+      obtain ⟨r', found', host', token'⟩ := lookFwd raceId race found
+      exact ⟨r', rty, found', host'.trans host, by rw [host', token']; exact token, reply⟩
+    · obtain ⟨r0, found, hh, ht⟩ := lookHost r race hr'
+      rw [hh, ht]
+      exact old'.raceObservers r r0 found o ho
   · have before := queue.authority c hc
     cases c with
     | registrationDone raceId _ =>
@@ -2901,7 +2984,7 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
       have pay := queue.payload (.observe src e o) ho
       intro ty declared
       exact pay ty declared
-    exact observerCommandOk_updateRace hr hid hhost htoken payload live typedExit o
+    exact observerCommandOk_updateRace hr hid hhost htoken payload liveCols typedExit o
       (queue.observer src e o ho)
 
 /-- **Sequencing after a program that never fails with a typed error**: its failures are clean

@@ -40,7 +40,7 @@ theorem configTyped_cons_plain {root : ProgramSource} {rootTy : EffTy} {w : Worl
     (noLoop : ∀ id y, c ≠ .loop id y) (noDeliver : ∀ id y, c ≠ .deliver id y) :
     ConfigTyped root rootTy w m (c :: q) := by
   refine ⟨typed.machine, readCode_cons noLoop noDeliver typed.code, queueOk_cons ?_ typed.queue⟩
-  refine ⟨payload, authority, delivery, owner, tail, ?_, ?_, ?_, ?_, noRace, ?_⟩
+  refine ⟨payload, authority, delivery, owner, tail, ?_, ?_, ?_, ?_, noRace, ?_, ?_⟩
   · intro key hk
     rw [noKeys] at hk
     cases hk
@@ -53,6 +53,8 @@ theorem configTyped_cons_plain {root : ProgramSource} {rootTy : EffTy} {w : Worl
     exact absurd h (noEnroll race child)
   · intro mode scope target interruptor extra h
     exact absurd h (noLink mode scope target interruptor extra)
+  · intro source exit observer h
+    exact absurd h (noObserve source exit observer)
 
 /-! ## `interruptTarget` (no halting arm) -/
 
@@ -205,13 +207,14 @@ theorem enrollRace_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : N
           cases declared
           exact ⟨subA, subE⟩
       have liveNew : ∀ src ∈ new.state.live, src ∈ race.state.live ∨
-          FiberColumnsBelow w src resultTy.answer resultTy.error := by
+          (FiberColumnsBelow w src resultTy.answer resultTy.error ∧ src.value < m.nextId) := by
         intro src hsrc
         rcases List.mem_append.mp hsrc with old | h
         · exact Or.inl old
         · rw [List.mem_singleton] at h
           subst h
-          exact Or.inr ⟨cty, by rw [← cid]; exact declaredC, subA, subE⟩
+          exact Or.inr ⟨⟨cty, by rw [← cid]; exact declaredC, subA, subE⟩,
+            by rw [← cid]; exact (tail.machine.fiber hcmem).below⟩
       have m1 := configTyped_updateRace tail hr' rfl rfl rfl (new := new) payload' liveNew
       have hr1 : (m.updateRace new).race? raceId = some new := by
         rw [rrace?_updateRace, hr, Option.map_some, if_pos rfl]
@@ -330,7 +333,7 @@ theorem configTyped_cons_loop {root : ProgramSource} {rootTy : EffTy} {w : World
         · exact Or.inr h
   · refine ⟨trivial, ⟨f, hf, running, parked⟩, trivial, ?_, trivial, (fun _ h => nomatch h),
       (fun _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h), (fun _ _ h => nomatch h),
-      (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h)⟩
+      (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h)⟩
     intro o owner
     cases owner
     exact free
@@ -516,7 +519,10 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
       observers := moved.observers
       registration := registrationG
       code := fun _ _ _ ty d => savedG ty d
-      tokens := moved.tokens }
+      tokens := moved.tokens
+      raceObservers := moved.raceObservers
+      targetsBelow := moved.targetsBelow
+      observersBelow := moved.observersBelow }
   have noRequest : ∀ tok r, requestOfR (m.update g) g.id tok = some r →
       requestOfR m f.id tok = some r := by
     intro tok r hr
@@ -774,7 +780,10 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
       observers := moved.observers
       registration := registrationG
       code := fun _ _ _ ty d => savedG ty d
-      tokens := moved.tokens }
+      tokens := moved.tokens
+      raceObservers := moved.raceObservers
+      targetsBelow := moved.targetsBelow
+      observersBelow := moved.observersBelow }
   have noRequest : ∀ tok r, requestOfR (m.update g) g.id tok = some r →
       requestOfR m f.id tok = some r := by
     intro tok r hr

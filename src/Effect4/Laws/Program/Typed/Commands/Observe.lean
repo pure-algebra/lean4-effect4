@@ -143,7 +143,10 @@ theorem fiberTyped_except {root : ProgramSource} {w : World} {m m' : RState} {x 
     FiberTyped root w m' x := by
   refine ⟨h.ok, h.delivery, Nat.lt_of_lt_of_le h.below nextId, h.pendingShape, h.parkedIdle,
     fun token hp => Nat.lt_of_lt_of_le (h.parkedBelow token hp) nextToken, h.exited,
-    h.exitedStack, h.deferredCause, h.pendingOwner, fun o ho => ?_, fun raceId marker => ?_, h.code, h.tokens⟩
+    h.exitedStack, h.deferredCause, h.pendingOwner, fun o ho => ?_, fun raceId marker => ?_, h.code, h.tokens,
+    fun r race hr o ho => h.raceObservers r race ((view.races r).symm.trans hr) o ho,
+    fun p hp id hid => Nat.lt_of_lt_of_le (h.targetsBelow p hp id hid) nextId,
+    fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId⟩
   · by_cases off : OffKey key o
     · exact storedObserverOk_except view o off (h.observers o ho)
     · exact keyed o ho off
@@ -272,7 +275,8 @@ theorem configTyped_replace {root : ProgramSource} {rootTy : EffTy} {w : World} 
       ⟨queue.keys.below, fun fiber token r hr hk => queue.keys.disjoint fiber token r
         (requests fiber token r hr) hk⟩,
       fun s e o ho => ?_, fun r c hc => enrollRaceOk_except view (queue.enroll r c hc),
-      queue.noRaceAfterInterrupt, fun md sc tg ir ex hl => ?_⟩
+      queue.noRaceAfterInterrupt, fun md sc tg ir ex hl => ?_,
+      fun s e o ho r race hr => queue.raceObservers s e o ho r race ((view.races r).symm.trans hr)⟩
     · by_cases off : OffKey key o
       · exact observerCommandOk_except view o off (queue.observer s e o ho)
       · exact keyedQ s e o ho off
@@ -759,14 +763,19 @@ theorem fiberTyped_repend {root : ProgramSource} {w : World} {m M' : RState} {wf
     (view : ExceptView m M' (wf.id, token)) (nextId : m.nextId ≤ M'.nextId)
     (nextToken : m.nextToken ≤ M'.nextToken) (parked : wf.parked = .withGuard token)
     (ptok : p'.token = token)
-    (keyed : ∀ o ∈ wf.observers, ¬ OffKey (wf.id, token) o → StoredObserverOk root w M' wf.id o) :
+    (keyed : ∀ o ∈ wf.observers, ¬ OffKey (wf.id, token) o → StoredObserverOk root w M' wf.id o)
+    (targets : ∀ id ∈ p'.waitingOn.toList ++ p'.remaining, id.value < m.nextId) :
     FiberTyped root w M' { wf with pending := [p'] } := by
   have declared : (w.Θ wf.id token).isSome = true := old.tokens token parked
   refine ⟨⟨old.ok.c0, fun q hq => ?_, old.ok.c2, old.ok.c3, old.ok.c4, old.ok.c5⟩, old.delivery,
     Nat.lt_of_lt_of_le old.below nextId, ?_, old.parkedIdle,
     fun t hp => Nat.lt_of_lt_of_le (old.parkedBelow t hp) nextToken, old.exited,
     old.exitedStack, old.deferredCause, fun q hq => ?_, fun o ho => ?_, fun raceId marker => ?_, old.code,
-    old.tokens⟩
+    old.tokens, fun r race hr o ho => old.raceObservers r race ((view.races r).symm.trans hr) o ho,
+    fun q hq id hid => by
+      rw [List.mem_singleton.mp hq] at hid
+      exact Nat.lt_of_lt_of_le (targets id hid) nextId,
+    fun o ho k hk => Nat.lt_of_lt_of_le (old.observersBelow o ho k hk) nextId⟩
   · rw [List.mem_singleton.mp hq, ptok]
     exact ⟨wf.id, declared⟩
   · show Guard.PendingShape { wf with pending := [p'] }
@@ -1033,6 +1042,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
           exact fiberTyped_repend old view' (Nat.le_of_eq view2.nextId.symm)
             (Nat.le_of_eq view2.nextToken.symm) parked ptok
             (fun o ho off => storedNew wf hmem o ho (by rw [← wid]; exact off))
+            (fun _ h => nomatch h)
         have replaced := configTyped_replace t2 hy' hid (ykept.2.2.1.trans idle)
           (ykept.2.1.trans live) idle (key := (waiter, token)) agree keysG
           (fun tok r hr => absurd hr (fun h => gNone tok r (by rw [← gid]; exact h)))
@@ -1118,7 +1128,27 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
             refine ⟨runFiberOk_congr moved.ok rfl rfl rfl rfl rfl rfl rfl, moved.delivery,
               moved.below, moved.pendingShape, moved.parkedIdle,
               moved.parkedBelow, moved.exited, moved.exitedStack, moved.deferredCause,
-              moved.pendingOwner, fun o ho => ?_, moved.registration, moved.code, moved.tokens⟩
+              moved.pendingOwner, fun o ho => ?_, moved.registration, moved.code, moved.tokens,
+              fun r race hr o ho => by
+                rcases mem_append_observer ho with old' | rfl
+                · exact moved.raceObservers r race hr o old'
+                · have hr2 : m2.race? r = some race := (obs2'.races r).symm.trans hr
+                  have hr0 : m.race? r = some race := by
+                    unfold RunMachine.race? at hr2 ⊢
+                    rw [view2.races] at hr2
+                    exact hr2
+                  exact typed.queue.raceObservers source exit (.countdown waiter token)
+                    List.mem_cons_self r race hr0,
+              moved.targetsBelow,
+              fun o ho k hk => by
+                rcases mem_append_observer ho with old' | rfl
+                · exact moved.observersBelow o old' k hk
+                · rw [show Guard.observerKeys (.countdown waiter token) = [(waiter, token)] from rfl,
+                    List.mem_singleton] at hk
+                  subst hk
+                  show waiter.value < m2.nextId
+                  rw [view2.nextId, ← wid]
+                  exact old.below⟩
             rcases mem_append_observer ho with old' | rfl
             · exact moved.observers o old'
             · show CountdownAt w (m2.update (obs gn)) waiter token (FiberColumnsBelow w gn.id)
@@ -1252,6 +1282,12 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
           exact fiberTyped_repend old view' (Nat.le_of_eq view2.nextId.symm)
             (Nat.le_of_eq view2.nextToken.symm) parked ptok
             (fun o ho off => storedNew wf hmem o ho (by rw [← wid]; exact off))
+            (fun id hid => by
+              have pmem : p ∈ wf.pending := List.mem_of_find?_eq_some hp
+              rcases List.mem_append.mp hid with h | h
+              · rw [List.mem_singleton.mp h]
+                exact old.targetsBelow p pmem next (List.mem_append_right _ nextMem)
+              · exact old.targetsBelow p pmem id (List.mem_append_right _ (restSub id h)))
         have replaced := configTyped_replace t3 hy3' hid y3idle y3live idle
           (key := (waiter, token)) agree
           (fun k hk => Or.inl (fiberKeys_internal (rfiber?_mem hy3') (y3keys k hk)))
@@ -1339,7 +1375,7 @@ theorem observe_preserves (root : ProgramSource) (rootTy : EffTy) (source : Fibe
       exact ⟨c0, c1, ⟨c2.c0⟩, scopeStoreOk_removeFinalizer c3 scope key, c4, c5⟩
     have t1 := configTyped_emit tail [RunEvent.observerFired source (.dropScopeFinalizer scope key)]
     obtain ⟨_, restated⟩ := configTyped_restate t1 le rfl rfl rfl wf stores (fun _ h => h)
-      wide.live.dueOwners
+      wide.live.dueOwners (fun _ h => h)
     refine ⟨_, ord, ?_⟩
     show ConfigTyped root rootTy { w with state := s }
       (fireObserver (interpR root.program) source exit (m, []) (.dropScopeFinalizer scope key)).1

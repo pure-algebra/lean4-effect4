@@ -193,6 +193,11 @@ structure QueueOk (root : ProgramSource) (w : World) (m : RState)
   links : ∀ mode scope target interruptor extra,
     .link mode scope target interruptor extra ∈ commands →
       m.state.ScopeLive scope ∧ (m.fiber? target).isSome = true
+  /-- Decisions row 134 (d), on the queue: a queued observer holds no race's key. A stored observer
+  is queued when its fiber exits (`finish`) and the countdown walk re-stores a queued one
+  (`observe`), so the stored clause (`SchedulerState.raceObservers`) is kept only with this one. -/
+  raceObservers : ∀ source exit o, .observe source exit o ∈ commands → ∀ raceId race,
+    m.race? raceId = some race → (race.host, race.token) ∉ Guard.observerKeys o
 
 theorem QueueOk.fresh {root : ProgramSource} {w : World} {m : RState} {commands : List RCmd}
     (queue : QueueOk root w m commands) : QueueFresh m commands := queue.keys.below
@@ -414,7 +419,8 @@ included. The proofs seat's split keyed on a queued `finish` fails exactly here
 theorem evaluate_entry (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState)
     (id : FiberId) (typed : MachineTyped root rootTy w m) :
     ConfigTyped root rootTy w m [Cmd.evaluate id, Cmd.drainDue] := by
-  refine ⟨typed, ?_, ⟨?_, ?_, ?_, List.nodup_nil, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩⟩
+  refine ⟨typed, ?_, ⟨?_, ?_, ?_, List.nodup_nil, ⟨trivial, trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_,
+    ?_⟩⟩
   · rintro f _ _ ⟨yielding, member | member⟩ <;>
       simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
   · intro command member
@@ -437,6 +443,8 @@ theorem evaluate_entry (root : ProgramSource) (rootTy : EffTy) (w : World) (m : 
   · intro host yielding race member
     simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
   · intro mode scope target interruptor extra member
+    simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
+  · intro source exit observer member
     simp only [List.mem_cons, List.not_mem_nil, or_false, reduceCtorEq] at member
 
 /-- One dispatched command keeps the typed configuration at some later world. The dispatch
@@ -634,7 +642,8 @@ theorem queueOk_append_tasks {root : ProgramSource} {w : World} {m : RState}
         fun s e o ho => queue.observer s e o (List.mem_append_left _ ho),
         fun r c hc => queue.enroll r c (List.mem_append_left _ hc),
         fun h y r hr => queue.noRaceAfterInterrupt h y r (List.mem_append_left _ hr),
-        fun md sc tg ir ex hl => queue.links md sc tg ir ex (List.mem_append_left _ hl)⟩,
+        fun md sc tg ir ex hl => queue.links md sc tg ir ex (List.mem_append_left _ hl),
+        fun s e o ho => queue.raceObservers s e o (List.mem_append_left _ ho)⟩,
       ⟨fun c hc => queue.payload c (List.mem_append_right _ hc),
         fun c hc => queue.authority c (List.mem_append_right _ hc),
         fun c hc => queue.delivery c (List.mem_append_right _ hc),
@@ -646,11 +655,13 @@ theorem queueOk_append_tasks {root : ProgramSource} {w : World} {m : RState}
         fun s e o ho => queue.observer s e o (List.mem_append_right _ ho),
         fun r c hc => queue.enroll r c (List.mem_append_right _ hc),
         fun h y r hr => queue.noRaceAfterInterrupt h y r (List.mem_append_right _ hr),
-        fun md sc tg ir ex hl => queue.links md sc tg ir ex (List.mem_append_right _ hl)⟩⟩
+        fun md sc tg ir ex hl => queue.links md sc tg ir ex (List.mem_append_right _ hl),
+        fun s e o ho => queue.raceObservers s e o (List.mem_append_right _ ho)⟩⟩
   · rintro ⟨queue, snapshot⟩
     refine ⟨fun c hc => ?_, fun c hc => ?_, fun c hc => ?_, ?_,
       registrationQueue_append_tasks.mpr ⟨queue.registration, snapshot.registration⟩, ⟨?_, ?_⟩,
-      fun s e o ho => ?_, fun r c hc => ?_, fun h y r hr => ?_, fun md sc tg ir ex hl => ?_⟩
+      fun s e o ho => ?_, fun r c hc => ?_, fun h y r hr => ?_, fun md sc tg ir ex hl => ?_,
+      fun s e o ho => ?_⟩
     · rcases List.mem_append.mp hc with hc | hc
       · exact queue.payload c hc
       · exact snapshot.payload c hc
@@ -684,6 +695,9 @@ theorem queueOk_append_tasks {root : ProgramSource} {w : World} {m : RState}
     · rcases List.mem_append.mp hl with hl | hl
       · exact queue.links md sc tg ir ex hl
       · exact absurd rfl (taskCmd_not_link hl md sc tg ir ex)
+    · rcases List.mem_append.mp ho with ho | ho
+      · exact queue.raceObservers s e o ho
+      · exact snapshot.raceObservers s e o ho
 
 /-- The snapshot's commands read no code, so `ReadCode` ignores them. -/
 theorem readsCode_append_tasks {id : FiberId} {commands : List RCmd} {tasks : List RTask} :
@@ -789,7 +803,9 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
         heapClosed := valid.heapClosed
         promiseClosed := valid.promiseClosed
         tokenClosed := valid.tokenClosed
-        root := valid.root }
+        root := valid.root
+        timers := by rw [state]; exact valid.timers
+        waiters := by rw [state]; exact valid.waiters }
   · rw [races]
     exact ok.c1
   · rw [state]
@@ -821,7 +837,18 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
           exact sched.parkedBelow f (member f hf) token parked
         exited := fun f hf => sched.exited f (member f hf)
         exitedStack := fun f hf => sched.exitedStack f (member f hf)
-        deferredCause := fun f hf => sched.deferredCause f (member f hf) }
+        deferredCause := fun f hf => sched.deferredCause f (member f hf)
+        raceObservers := fun r race hr f hf o ho =>
+          sched.raceObservers r race ((raceLookup r).symm.trans hr) f (member f hf) o ho
+        liveBelow := fun r race hr id hid => by
+          rw [nextId]
+          exact sched.liveBelow r race ((raceLookup r).symm.trans hr) id hid
+        targetsBelow := fun f hf p hp id hid => by
+          rw [nextId]
+          exact sched.targetsBelow f (member f hf) p hp id hid
+        observersBelow := fun f hf o ho k hk => by
+          rw [nextId]
+          exact sched.observersBelow f (member f hf) o ho k hk }
   · obtain ⟨race, resultTy, found, host, token, reply⟩ := reg f (member f hf) raceId marker
     exact ⟨race, resultTy, (raceLookup raceId).trans found, host, token, reply⟩
   · refine ⟨stuck.trans live.running, fun o ho owner priority mode => ?_⟩
@@ -839,7 +866,7 @@ theorem queueOk_emit {root : ProgramSource} {w : World} {m : RState} {commands :
     observer := fun source exit o ho => observerCommandOk_congr (m := m) (m' := m.emit events)
       (fun _ => rfl) (fun _ => rfl) rfl o (queue.observer source exit o ho),
     enroll := queue.enroll, noRaceAfterInterrupt := queue.noRaceAfterInterrupt,
-    links := queue.links }
+    links := queue.links, raceObservers := queue.raceObservers }
 
 /-! ## The capture lookup -/
 
@@ -1325,7 +1352,8 @@ theorem queueOk_nil (root : ProgramSource) (w : World) (m : RState) : QueueOk ro
     delivery := fun _ h => (nomatch h), owners := List.nodup_nil, registration := trivial,
     keys := ⟨fun _ h => (nomatch h), fun _ _ _ _ h => (nomatch h)⟩,
     observer := fun _ _ _ h => (nomatch h), enroll := fun _ _ h => (nomatch h),
-    noRaceAfterInterrupt := fun _ _ _ h => (nomatch h), links := fun _ _ _ _ _ h => (nomatch h) }
+    noRaceAfterInterrupt := fun _ _ _ h => (nomatch h), links := fun _ _ _ _ _ h => (nomatch h),
+    raceObservers := fun _ _ _ h => (nomatch h) }
 
 /-- A task's commands read no code. -/
 theorem not_readsCode_taskCmds (t : RTask) (id : FiberId) : ¬ ReadsCode id (taskCmds t) := by

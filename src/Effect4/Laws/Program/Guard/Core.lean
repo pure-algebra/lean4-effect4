@@ -3,6 +3,7 @@ import Effect4.Laws.Machine.Lift
 import Effect4.Api
 import Effect4.Laws.Program.Guard.RaceSites
 import Effect4.Laws.Auto.Frames
+import Effect4.Laws.Machine.WakeKeys
 
 /-!
 DI-68 guard ownership for the owner-approved reachable-machine scope. A prefix is raw
@@ -149,12 +150,6 @@ theorem requestOf_load (p : NativeEff) (compileFuel : Nat)
 /-- Equality of these three fields is precisely what `requestOf` observes. -/
 def RequestView (f g : NFiber) : Prop :=
   f.id = g.id ∧ f.parked = g.parked ∧ f.frame.current = g.frame.current
-
-abbrev GuardKey := FiberId × Nat
-
-def wakeKeys {α : Type} (w : WakeList α) : List GuardKey :=
-  w.waiters.map (fun a => (a.fiber, a.token)) ++
-    w.batch.toList.flatMap (fun b => b.map fun a => (a.fiber, a.token))
 
 def taskKeys {Code : Type} : Task EffName EffThunk Val Err Defect FiberId Ann Code → List GuardKey
   | .resume fiber token _ => [(fiber, token)]
@@ -598,33 +593,6 @@ theorem requestsOwned_external_park (p : NativeEff) (table : RowTable)
 
 /-! Store operations move existing resume keys or register the caller's fresh key. -/
 
-theorem wakeKeys_register_mem {α : Type} (wake : WakeList α) (fiber : FiberId)
-    (token : Nat) (payload : α) (key : GuardKey) :
-    key ∈ wakeKeys (wake.register fiber token payload) ↔
-      key ∈ wakeKeys wake ∨ key = (fiber, token) := by
-  simp only [wakeKeys, WakeList.register, List.map_append, List.map_cons, List.map_nil,
-    List.mem_append, List.mem_cons, List.not_mem_nil, or_false]
-  constructor
-  · rintro ((h | h) | h)
-    · exact Or.inl (Or.inl h)
-    · exact Or.inr h
-    · exact Or.inl (Or.inr h)
-  · rintro ((h | h) | h)
-    · exact Or.inl (Or.inl h)
-    · exact Or.inr h
-    · exact Or.inl (Or.inr h)
-
-theorem wakeKeys_cancel_subset {α : Type} (wake : WakeList α) (fiber : FiberId) (token : Nat) :
-    wakeKeys (wake.cancel fiber token).1 ⊆ wakeKeys wake := by
-  unfold WakeList.cancel
-  split
-  · intro key hk
-    rcases List.mem_append.mp hk with h | h
-    · obtain ⟨w, hw, rfl⟩ := List.mem_map.mp h
-      exact List.mem_append_left _ (List.mem_map.mpr ⟨w, (List.mem_filter.mp hw).1, rfl⟩)
-    · exact List.mem_append_right _ h
-  · exact List.Subset.refl _
-
 def deferredKeys (store : DeferredStore) : List GuardKey :=
   store.cells.flatMap (fun c => wakeKeys c.wake) ++ store.due.map (fun o => (o.waiter, o.token))
 
@@ -687,11 +655,6 @@ theorem deferredKeys_due_append (store : DeferredStore) (due : List (Owed (Compl
       deferredKeys store ++ due.map (fun o => (o.waiter, o.token)) := by
   simp only [deferredKeys, List.map_append, List.append_assoc]
 
-theorem wakeKeys_wakeAll_subset {α : Type} (wake : WakeList α) :
-    wakeKeys wake.wakeAll.2 ⊆ wakeKeys wake := by
-  intro key hk
-  exact List.mem_append_right _ hk
-
 theorem M1Completion.deferredKeys_complete_subset (store : DeferredStore) (cell : DeferredKey)
     (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (
     deferredKeys (store.complete cell code).1 ⊆ deferredKeys store) := ⟨⟩
@@ -723,11 +686,6 @@ theorem deferredKeys_complete_subset (store : DeferredStore) (cell : DeferredKey
           obtain ⟨w, hw, rfl⟩ := List.mem_map.mp ho
           apply deferredKeys_cell hc
           exact List.mem_append_left _ (List.mem_map.mpr ⟨w, hw, rfl⟩)
-
-theorem wakeKeys_runBatch_partition {α : Type} (wake : WakeList α) :
-    wakeKeys wake = wakeKeys wake.runBatch.2 ++
-      wake.runBatch.1.map (fun w => (w.fiber, w.token)) := by
-  cases hb : wake.batch <;> simp [wakeKeys, WakeList.runBatch, hb]
 
 theorem deferredKeys_wakeBatch_subset (store : DeferredStore) (cell : DeferredKey) :
     deferredKeys (store.wakeBatch cell) ⊆ deferredKeys store := by

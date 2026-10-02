@@ -167,7 +167,8 @@ theorem evaluate_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId
           (fun hx => by rw [show g.exit = f.exit from rfl, live] at hx; cases hx),
           (fun hx => by rw [show g.exit = f.exit from rfl, live] at hx; cases hx),
           moved.deferredCause, moved.pendingOwner, moved.observers, moved.registration,
-          (fun _ hr => by cases hr), moved.tokens⟩
+          (fun _ hr => by cases hr), moved.tokens, moved.raceObservers, moved.targetsBelow,
+          moved.observersBelow⟩
       have noRequest : ∀ token r, requestOfR (m.update g) g.id token = some r →
           requestOfR m f.id token = some r := by
         intro token r hr
@@ -183,7 +184,8 @@ theorem evaluate_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId
       have head : HeadOk root w (m.update g) (.loop id false) rest := by
         refine ⟨trivial, ⟨g, by rw [← fid]; exact look, rfl, notParked⟩, trivial, ?_, trivial,
           (fun _ h => nomatch h), (fun _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h),
-          (fun _ _ h => nomatch h), (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h)⟩
+          (fun _ _ h => nomatch h), (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h),
+          (fun _ _ _ h => nomatch h)⟩
         intro o howner
         cases howner
         have same : Guard.commandOwner (Code := RProgram) (m.update g) = Guard.commandOwner m := by
@@ -348,7 +350,10 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
             observers := moved.observers
             registration := registrationG
             code := codeG
-            tokens := fun _ h => nomatch h }
+            tokens := fun _ h => nomatch h
+            raceObservers := moved.raceObservers
+            targetsBelow := fun q hq => moved.targetsBelow q (List.mem_filter.mp hq).1
+            observersBelow := moved.observersBelow }
         have noRequest : ∀ tok r, requestOfR (m.update g) g.id tok = some r →
             requestOfR m t.id tok = some r := by
           intro tok r hr
@@ -436,7 +441,10 @@ theorem configTyped_cleared {root : ProgramSource} {rootTy : EffTy} {w : World} 
         have none' : f.exit = none := hx
         rw [none'] at exited
         cases exited
-      tokens := moved.tokens }
+      tokens := moved.tokens
+      raceObservers := fun _ _ _ _ h => nomatch h
+      targetsBelow := moved.targetsBelow
+      observersBelow := fun _ h => nomatch h }
   have look : (m.update g).fiber? g.id = some g := rfiber?_update_self hf rfl
   exact configTyped_rupdate_gen (g := g) typed hf rfl (PendingWeaker.refl _)
     (by rw [gframe]) (fun pv => by rw [gframe]; exact pv)
@@ -631,7 +639,7 @@ theorem headOk_drainDue (root : ProgramSource) (w : World) (m : RState) (q : Lis
     HeadOk root w m .drainDue q :=
   ⟨trivial, trivial, trivial, (fun _ h => nomatch h), trivial, (fun _ h => nomatch h),
     (fun _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h), (fun _ _ h => nomatch h),
-    (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h)⟩
+    (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h)⟩
 
 /-- The head facts of an `exitDone` naming an exited fiber. -/
 theorem headOk_exitDone (root : ProgramSource) (w : World) (m : RState) (q : List RCmd)
@@ -639,7 +647,7 @@ theorem headOk_exitDone (root : ProgramSource) (w : World) (m : RState) (q : Lis
     HeadOk root w m (.exitDone id) q :=
   ⟨trivial, ⟨f, hf, exited⟩, trivial, (fun _ h => nomatch h), trivial, (fun _ h => nomatch h),
     (fun _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h), (fun _ _ h => nomatch h),
-    (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h)⟩
+    (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h)⟩
 
 /-- A head command that is neither `loop` nor `deliver` joins a typed configuration. -/
 theorem configTyped_cons_head {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
@@ -657,20 +665,26 @@ theorem configTyped_observes {root : ProgramSource} {rootTy : EffTy} {w : World}
       (∀ o ∈ obs, ∀ key ∈ Guard.observerKeys o, key.2 < m.nextToken) →
       (∀ o ∈ obs, ∀ fiber token r, requestOfR m fiber token = some r →
         (fiber, token) ∉ Guard.observerKeys o) →
+      (∀ o ∈ obs, ∀ raceId race, m.race? raceId = some race →
+        (race.host, race.token) ∉ Guard.observerKeys o) →
       ConfigTyped root rootTy w m (obs.map (Cmd.observe source exit) ++ q)
-  | [], _, _, _ => typed
-  | o :: os, ok, below, freeKeys => by
+  | [], _, _, _, _ => typed
+  | o :: os, ok, below, freeKeys, raceFree => by
     have rest := configTyped_observes typed source exit payload os
       (fun x hx => ok x (List.mem_cons_of_mem _ hx))
       (fun x hx => below x (List.mem_cons_of_mem _ hx))
       (fun x hx => freeKeys x (List.mem_cons_of_mem _ hx))
+      (fun x hx => raceFree x (List.mem_cons_of_mem _ hx))
     refine configTyped_cons_head rest ⟨payload, trivial, trivial, (fun _ h => nomatch h), trivial,
       below o List.mem_cons_self, freeKeys o List.mem_cons_self, ?_, (fun _ _ h => nomatch h),
-      (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h)⟩
+      (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h), ?_⟩
       (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
-    intro src e x hx
-    cases hx
-    exact ok o List.mem_cons_self
+    · intro src e x hx
+      cases hx
+      exact ok o List.mem_cons_self
+    · intro src e x hx
+      cases hx
+      exact raceFree o List.mem_cons_self
 
 /-- **Publishing a finishing fiber's exit keeps `I`** (`RunFiber.publish`, `Machine/Fibers.lean`
 `:1747`): the exit is written, the parks and the finalizing flag cleared, the fiber stopped. Its
@@ -733,7 +747,10 @@ theorem configTyped_publish {root : ProgramSource} {rootTy : EffTy} {w : World} 
         exact ⟨race, resultTy, found, host, token,
           stackReply_view (f := f) rfl rfl (fun _ => provP) reply⟩
       code := fun hx => nomatch hx
-      tokens := fun _ hp => nomatch hp }
+      tokens := fun _ hp => nomatch hp
+      raceObservers := moved.raceObservers
+      targetsBelow := fun _ hp => nomatch hp
+      observersBelow := moved.observersBelow }
   exact configTyped_rupdate_gen (g := p) tail hf rfl (fun _ _ h => nomatch h) rfl (fun _ => provP)
     (fun k hk => Or.inl (fiberKeys_internal hmem hk))
     (fun token r hr => by
@@ -833,7 +850,10 @@ theorem finish_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
             provG⟩
         tokens := fun token hp => by
           rw [show g.parked = f.parked from rfl, parked] at hp
-          cases hp }
+          cases hp
+        raceObservers := moved.raceObservers
+        targetsBelow := moved.targetsBelow
+        observersBelow := moved.observersBelow }
     have edited := configTyped_rupdate_gen (g := g) tail hf rfl (PendingWeaker.refl _) rfl
       (fun _ => provG) (fun k hk => Or.inl (fiberKeys_internal hmem hk))
       (fun token r hr => by
@@ -880,6 +900,7 @@ theorem finish_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
           (fiberKeys_internal pmem (List.mem_append_left _ (List.mem_flatMap.mpr ⟨x, hx, hk⟩))))
         (fun x hx fiber token r hr hk => wide.requestsOwned fiber token r hr
           (fiberKeys_internal pmem (List.mem_append_left _ (List.mem_flatMap.mpr ⟨x, hx, hk⟩))))
+        (fun x hx r race hr => pTyped.raceObservers r race hr x hx)
       have regroup : ∀ (A : List RCmd) (x y : RCmd), A ++ (x :: y :: rest) = (A ++ [x, y]) ++ rest :=
         fun A x y => by rw [List.append_assoc]; rfl
       rw [regroup] at observed

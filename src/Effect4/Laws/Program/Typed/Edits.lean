@@ -173,7 +173,8 @@ theorem snapshotTyped_drain {root : ProgramSource} {w : World} {m : RState}
       enroll := fun race child h => ?_
       noRaceAfterInterrupt := fun host yielding race h => ?_
       links := fun mode scope target interruptor extra h =>
-        absurd rfl (taskCmd_not_link h mode scope target interruptor extra) }
+        absurd rfl (taskCmd_not_link h mode scope target interruptor extra)
+      raceObservers := fun source exit observer h => ?_ }
   · obtain ⟨task, ht, hct⟩ := List.mem_flatMap.mp hc
     obtain ⟨b, hb, htb⟩ := mem_drain ht
     have taskOk := (ok.c0 b hb).c0 task htb
@@ -193,6 +194,7 @@ theorem snapshotTyped_drain {root : ProgramSource} {w : World} {m : RState}
   · rcases mem_taskCmds hc with ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ | ⟨_, _, rfl⟩ | rfl <;> trivial
   · rw [List.filterMap_eq_nil_iff.mpr fun _ member => taskCmd_owner m member]
     exact List.nodup_nil
+  · rcases mem_taskCmds h with ⟨_, h'⟩ | ⟨_, _, _, h'⟩ | ⟨_, _, h'⟩ | h' <;> exact nomatch h'
   · rcases mem_taskCmds h with ⟨_, h'⟩ | ⟨_, _, _, h'⟩ | ⟨_, _, h'⟩ | h' <;> exact nomatch h'
   · rcases mem_taskCmds h with ⟨_, h'⟩ | ⟨_, _, _, h'⟩ | ⟨_, _, h'⟩ | h' <;> exact nomatch h'
   · rcases mem_taskCmds h with ⟨_, h'⟩ | ⟨_, _, _, h'⟩ | ⟨_, _, h'⟩ | h' <;> exact nomatch h'
@@ -224,7 +226,10 @@ theorem edit_drain (root : ProgramSource) (rootTy : EffTy) : EditDrain root root
       observers := moved.observers
       registration := moved.registration
       code := moved.code
-      tokens := moved.tokens }
+      tokens := moved.tokens
+      raceObservers := moved.raceObservers
+      targetsBelow := moved.targetsBelow
+      observersBelow := moved.observersBelow }
   have bucketsIn : ∀ k ∈ Guard.bucketKeys f.dispatcher.buckets, k ∈ Guard.internalKeys m :=
     fun k hk => fiberKeys_internal hmem (List.mem_append_right _ hk)
   have keysG : ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys m ∨
@@ -325,6 +330,9 @@ theorem edit_clockNone (root : ProgramSource) (rootTy : EffTy) : EditClockNone r
     exact hk
   obtain ⟨_, restated⟩ := configTyped_restate (s := { m.state with timers := T })
     (configTyped_nil typed) le rfl rfl rfl wf ⟨c0, c1, c2, c3, c4, c5⟩ keys wide.live.dueOwners
+    (by
+      rw [show ({ m.state with timers := T } : Stores).timers.wake = m.state.timers.wake from wake]
+      exact fun _ h => h)
   exact ⟨_, ord, restated.machine⟩
 
 /-! ## M6b from what remains

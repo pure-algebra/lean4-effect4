@@ -546,7 +546,7 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
             tokenTargets := valid.tokenTargets, state := valid.state, wf := valid.wf,
             cells := valid.cells, fiberClosed := valid.fiberClosed, heapClosed := valid.heapClosed,
             promiseClosed := valid.promiseClosed, tokenClosed := valid.tokenClosed,
-            root := valid.root },
+            root := valid.root, timers := valid.timers, waiters := valid.waiters },
     ⟨fun f hf => runFiberOk_tr f saved (ok.c0 f hf), ok.c1, storesOk_tr m.state ok.c2⟩,
     deliv, ?_, ?_, reg⟩
   · exact { fiberIds := sched.fiberIds, fibersBelow := sched.fibersBelow, raceIds := sched.raceIds,
@@ -554,7 +554,9 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
             requestsBelow := sched.requestsBelow, requestsOwned := sched.requestsOwned,
             pendingShape := sched.pendingShape, parkedIdle := sched.parkedIdle,
             parkedBelow := sched.parkedBelow, exited := sched.exited, exitedStack := sched.exitedStack,
-            deferredCause := sched.deferredCause }
+            deferredCause := sched.deferredCause, raceObservers := sched.raceObservers,
+            liveBelow := sched.liveBelow, targetsBelow := sched.targetsBelow,
+            observersBelow := sched.observersBelow }
   · exact ⟨obsv.pendingOwner, fun f hf o ho => storedObserverOk_halt o (obsv.observers f hf o ho)⟩
 
 /-- The empty residue is typed. -/
@@ -563,7 +565,8 @@ theorem queueOk_nil (root : ProgramSource) (w : W) (m : RState) : QueueOk root w
     delivery := fun _ h => (nomatch h), owners := List.nodup_nil, registration := trivial,
     keys := ⟨fun _ h => (nomatch h), fun _ _ _ _ h => (nomatch h)⟩,
     observer := fun _ _ _ h => (nomatch h), enroll := fun _ _ h => (nomatch h),
-    noRaceAfterInterrupt := fun _ _ _ h => (nomatch h), links := fun _ _ _ _ _ h => (nomatch h) }
+    noRaceAfterInterrupt := fun _ _ _ h => (nomatch h), links := fun _ _ _ _ _ h => (nomatch h),
+    raceObservers := fun _ _ _ h => (nomatch h) }
 
 /-- A command whose result is `(m.halt why, [])` (for example `linkScope` on an unknown scope,
 `Machine/Fibers.lean:1010`) meets the conclusion `StepPreserves` asks for, at the same world. -/
@@ -720,7 +723,16 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
       heapClosed := old.heapClosed
       promiseClosed := old.promiseClosed
       tokenClosed := old.tokenClosed
-      root := old.root }
+      root := old.root
+      timers := fun k hk => by
+        have h : k ∈ Guard.internalKeys m := List.mem_append_left _ (List.mem_append_left _
+          (List.mem_append_left _ (List.mem_append_left _ hk)))
+        rw [keys] at h
+        cases h
+      waiters := fun key cell hc => by
+        unfold DeferredStore.cellAt at hc
+        rw [cells] at hc
+        cases hc }
   refine ⟨⟨valid, ⟨fun f hf => ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩, rfl, ?_,
     ⟨q.stuck, fun o ho => ?_⟩⟩
   · have fact := facts f hf
@@ -787,7 +799,21 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
         exitedStack := fun f hf _ => (facts f hf).stack
         deferredCause := fun f hf deferred => by
           rw [(facts f hf).deferred] at deferred
-          cases deferred }
+          cases deferred
+        raceObservers := fun r race hr => by
+          unfold RunMachine.race? at hr
+          rw [races] at hr
+          cases hr
+        liveBelow := fun r race hr => by
+          unfold RunMachine.race? at hr
+          rw [races] at hr
+          cases hr
+        targetsBelow := fun f hf p hp => by
+          rw [(facts f hf).pending] at hp
+          cases hp
+        observersBelow := fun f hf o ho => by
+          rw [(facts f hf).observers] at ho
+          cases ho }
   · refine ⟨fun f hf p hp => ?_, fun f hf o ho => ?_⟩
     · rw [(facts f hf).pending] at hp
       cases hp
@@ -874,14 +900,16 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
            tokenTargets := valid.tokenTargets, state := valid.state, wf := valid.wf,
            cells := valid.cells, fiberClosed := valid.fiberClosed, heapClosed := valid.heapClosed,
            promiseClosed := valid.promiseClosed, tokenClosed := valid.tokenClosed,
-           root := valid.root },
+           root := valid.root, timers := valid.timers, waiters := valid.waiters },
     ⟨ok.c0, ok.c1, ok.c2⟩, deliv,
     { fiberIds := sched.fiberIds, fibersBelow := sched.fibersBelow, raceIds := sched.raceIds,
       racesBelow := sched.racesBelow, raceHosts := sched.raceHosts, keysBelow := sched.keysBelow,
       requestsBelow := sched.requestsBelow, requestsOwned := sched.requestsOwned,
       pendingShape := sched.pendingShape, parkedIdle := sched.parkedIdle,
       parkedBelow := sched.parkedBelow, exited := sched.exited, exitedStack := sched.exitedStack,
-      deferredCause := sched.deferredCause },
+      deferredCause := sched.deferredCause, raceObservers := sched.raceObservers,
+      liveBelow := sched.liveBelow, targetsBelow := sched.targetsBelow,
+      observersBelow := sched.observersBelow },
     ⟨obsv.pendingOwner, fun f hf o ho => H1.storedObserverOk_halt o (obsv.observers f hf o ho)⟩, reg⟩
 
 /-- Probe C's `typedState_halt` read at `J`: false at every halted machine. -/

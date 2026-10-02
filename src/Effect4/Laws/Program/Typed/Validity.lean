@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typed.World
 import Effect4.Laws.Program.RuntimeR
+import Effect4.Laws.Machine.WakeKeys
 
 /-!
 Foundations slice 3: data validity and local transport. `WorldValid` connects the ghost
@@ -13,6 +14,55 @@ namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program.Sched
 
 def ClosedEff (ty : EffTy) : Prop := ty.answer.closed = true ∧ ty.error.closed = true
+
+/-! ## The wake columns (decisions row 134 (a), (b))
+
+Every waiting family's list has one shape (`WakeList`) and one view of its keys (`Guard.wakeKeys`,
+`Laws/Machine/WakeKeys.lean`). A wake list is typed for a demand when each key it holds, pending or
+in a captured batch, is a declared token whose type its wake can answer: a sleep answers `void`
+(`asyncPre`'s `registerSleep`), a Deferred its completion at the cell's columns (`asyncPre`'s
+`registerAwait`). The registration that adds a key demands exactly this, and every other operation
+only removes or moves keys (`Guard.wakeKeys_*`), so the clause is kept at one access pattern on
+every family. -/
+
+/-- A wake list typed for a demand: every key it holds is a declared token whose type the demand
+admits. -/
+def WakeTyped (w : World) (demand : EffTy → Prop) {α : Type} (l : WakeList α) : Prop :=
+  ∀ k ∈ Guard.wakeKeys l, ∃ ty, w.Θ k.1 k.2 = some ty ∧ demand ty
+
+/-- A sleep's wake answers `void`, below the token's answer column. -/
+def SleepDemand (ty : EffTy) : Prop := Ty.unit.sub ty.answer = true
+
+/-- A Deferred's wake answers the completion at the cell's columns, below the token's. -/
+def AwaitDemand (a e : Ty) (ty : EffTy) : Prop := a.sub ty.answer = true ∧ e.sub ty.error = true
+
+theorem WakeTyped.empty (w : World) (demand : EffTy → Prop) {α : Type} :
+    WakeTyped w demand (WakeList.empty : WakeList α) :=
+  fun _ h => nomatch h
+
+/-- An operation that only removes or moves keys keeps the clause. -/
+theorem WakeTyped.of_subset {w : World} {demand : EffTy → Prop} {α β : Type} {l : WakeList α}
+    {l' : WakeList β} (sub : Guard.wakeKeys l' ⊆ Guard.wakeKeys l) (h : WakeTyped w demand l) :
+    WakeTyped w demand l' :=
+  fun k hk => h k (sub hk)
+
+/-- A registration keeps the clause when its own key meets the demand. -/
+theorem WakeTyped.register {w : World} {demand : EffTy → Prop} {α : Type} {l : WakeList α}
+    (h : WakeTyped w demand l) {fiber : FiberId} {token : Nat} (payload : α)
+    (new : ∃ ty, w.Θ fiber token = some ty ∧ demand ty) :
+    WakeTyped w demand (l.register fiber token payload) := by
+  intro k hk
+  rcases (Guard.wakeKeys_register_mem l fiber token payload k).mp hk with old | rfl
+  · exact h k old
+  · exact new
+
+/-- Declarations only grow along the world order, so the clause persists. -/
+theorem WakeTyped.mono {w w' : World} (theta : ∀ id, TableExtends (w.Θ id) (w'.Θ id))
+    {demand : EffTy → Prop} {α : Type} {l : WakeList α} (h : WakeTyped w demand l) :
+    WakeTyped w' demand l := by
+  intro k hk
+  obtain ⟨ty, declared, ok⟩ := h k hk
+  exact ⟨ty, theta k.1 k.2 ty declared, ok⟩
 
 /-- Exact support, stored column typing, and the global token allocator's freshness domain.
 Historical token entries remain after delivery; only active parks demand an entry. -/
@@ -32,6 +82,13 @@ structure WorldValid (rootTy : EffTy) (w : World) (m : RState) : Prop where
   promiseClosed : ∀ key types, w.«Π» key = some types → types.1.closed = true ∧ types.2.closed = true
   tokenClosed : ∀ id token ty, w.Θ id token = some ty → ClosedEff ty
   root : w.Γ Api.root = some rootTy
+  /-- Decisions row 134 (a): every sleeper of the timer store is declared at a type `void` fits,
+  as `asyncPre`'s `registerSleep` demanded when it parked (F1). -/
+  timers : WakeTyped w SleepDemand m.state.timers.wake
+  /-- Decisions row 134 (b): every waiter of a Deferred cell, pending or batched, is declared
+  above the cell's columns, as `asyncPre`'s `registerAwait` demanded when it parked (F2, F3). -/
+  waiters : ∀ key cell, m.state.deferreds.cellAt key = some cell → ∀ a e, w.«Π» key = some (a, e) →
+    WakeTyped w (AwaitDemand a e) cell.wake
 
 /-- Existing external handles keep their spelling at the same index. Length alone is not
 enough. This strengthens the existing order without asserting global validity. -/
@@ -214,6 +271,9 @@ theorem initial_world_valid_at (rootTy : EffTy) (serviceTy : ServiceKey → Opti
   · intro id token ty h
     cases h
   · exact insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
+  · exact WakeTyped.empty _ _
+  · intro key cell h
+    cases h
 
 theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat)
     (closed : ClosedEff rootTy) : WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel) :=
