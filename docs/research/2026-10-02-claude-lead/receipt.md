@@ -214,3 +214,30 @@ refusals), `EnrollmentBound` (`ObserveSource` controls; imports `Commands.Observ
 - `lake build` of the 16 affected test modules — exit 0 (`observe-tests-01`).
 - `lake env lean -j1 -M6144 -DwarningAsError=true Test/Program/EnrollmentBound.lean` — exit 0;
   18 reports `[propext, Quot.sound]` (`observe-controls-02`).
+
+## Slice 4 — one frame path for the saved-stack judgments
+
+**First:** no judgment changes meaning. The owner asked for reuse of the algebra abstractions to cut
+drift and verbosity; Codex's reuse review agreed on the factoring. `Contracts.FramePath Edge` is the
+free-category path over an edge relation (decisions row 48: existential middle types), with `map`,
+`append`, `split` proved once and `StackAccepts` shown equivalent to its instance
+(`framePath_of_stackAccepts`, `stackAccepts_of_framePath`). `HostStack` and `PositionStack` are now
+instances (`HostEdge` = ordinary frame or `RegistrationArrow`; `PositionEdge` = ordinary frame or
+`PositionArrow`), and their transports and conversions are edge maps through `FramePath.map`
+(`hostStack_mono`, `hostStack_races`, `hostStack_of_stackAccepts`, `positionStack_of_host`, …).
+The edge maps carry the semantic proofs (`registrationArrow_mono`, `registrationArrow_races`,
+`positionArrow_of_registration`, one-way). `StackAccepts` itself is unchanged.
+
+Placement: Concept 4 (row 188 (b)'s judgments), also Concept 7's composition account; consumers
+`step_loop`/`step_deliver` (the walk over `HostStack`) and every command already proved. No new
+theorem about programs. `#frame_rules` (Codex's pointer) rebuilds a state record with one field
+changed at a fixed world; allocation changes the fiber table, the counter and the world together,
+so it will serve only the untouched record clauses there.
+
+Changes: `Typed/Contracts.lean` (`FramePath` and its laws), `Typed/Scheduler.lean` (the row 188 (b)
+block rewritten over it); tests `RegistrationYield` (arrows written as `.cons (.inr (.mk …))`),
+`M6Capstone` (`input_refused` cases on the edge).
+
+- `lake build Effect4.Laws` — exit 0 (`path-build-01`); every Typed module rebuilt unchanged.
+- `lake build` of the 18 test modules reading the stack judgments — exit 0 (`path-tests-01`);
+  `RegistrationYield`'s 15 reports `[propext, Quot.sound]`, no `sorryAx` in the log.

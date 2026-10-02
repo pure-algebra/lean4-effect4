@@ -553,7 +553,8 @@ theorem arrow {tin final : EffTy} {m : RState} {s : List ScopeFrame} (found : m.
     (rest : HostStack (rootProgram : ProgramSource) world m Api.root natTy final s) :
     HostStack (rootProgram : ProgramSource) world m Api.root tin final
       (.resume .onSuccess yieldNext :: s) :=
-  .registration (fun _ => rfl) (fun _ _ _ hc => strongExit_failure_of_error errors hc) found rfl rfl rest
+  .cons (.inr (.mk (fun _ => rfl) (fun _ _ _ hc => strongExit_failure_of_error errors hc) found rfl rfl))
+    rest
 
 /-- The position skip from a `never`-error type to any type. -/
 theorem neverSkip {tin : EffTy} (errors : tin.error = Ty.never) (ty : EffTy) :
@@ -593,7 +594,7 @@ theorem output_typed : ConfigTyped (rootProgram : ProgramSource) natTy world (ma
     [.loop Api.root true] :=
   config_loop yieldCurrent _ 1 true
     (machineTyped_of' yieldCurrent _ 1
-      (fun ty => ⟨EffTy.pure .unit, .registration (fun _ => rfl) (neverSkip rfl ty) (.nil ty)⟩)
+      (fun ty => ⟨EffTy.pure .unit, .cons (.inr (.mk (fun _ => rfl) (neverSkip rfl ty))) (.nil ty)⟩)
       (fun _ hm => by cases hm))
     (fun _ => ⟨EffTy.pure .unit, yieldCurrent_typed world, arrow rfl rfl (.nil natTy),
       provenance _ rfl rfl⟩)
@@ -629,7 +630,7 @@ theorem config_typed : ConfigTyped (rootProgram : ProgramSource) natTy world (ma
     [.loop Api.root true] :=
   config_loop iaCode _ 0 true
     (machineTyped_of' iaCode _ 0
-      (fun ty => ⟨EffTy.pure .unit, .registration (fun _ => rfl) (neverSkip rfl ty) (.nil ty)⟩)
+      (fun ty => ⟨EffTy.pure .unit, .cons (.inr (.mk (fun _ => rfl) (neverSkip rfl ty))) (.nil ty)⟩)
       (fun _ hm => by cases hm))
     (fun _ => ⟨EffTy.pure .unit, iaCode_typed world, arrow rfl rfl (.nil natTy),
       provenance _ rfl rfl⟩)
@@ -649,10 +650,10 @@ theorem output_typed : ConfigTyped (rootProgram : ProgramSource) natTy world (ma
     [.afterInterrupt Api.root true (.awaitAll [])] := by
   have stack : HostStack (rootProgram : ProgramSource) world (machineOf out) Api.root
       (EffTy.pure .unit) natTy [.answer iaNext, .resume .onSuccess yieldNext] :=
-    .cons (iaSlot world) (arrow rfl rfl (.nil natTy))
+    .cons (.inl (iaSlot world)) (arrow rfl rfl (.nil natTy))
   refine ⟨machineTyped_of' iaCode _ 1
       (fun ty => ⟨EffTy.pure .unit,
-        .cons (iaSlot world) (.registration (fun _ => rfl) (neverSkip rfl ty) (.nil ty))⟩)
+        .cons (.inl (iaSlot world)) (.cons (.inr (.mk (fun _ => rfl) (neverSkip rfl ty))) (.nil ty))⟩)
       (fun _ hm => by cases hm), ?_, ?_⟩
   · intro f _ _ reads
     obtain ⟨_, r⟩ := reads
@@ -717,7 +718,7 @@ theorem config_typed : ConfigTyped (rootProgram : ProgramSource) natTy world (ma
     [.loop Api.root false] :=
   config_loop marker _ 0 false
     (machineTyped_of' marker _ 0
-      (fun ty => ⟨natTy, .registration (fun _ => rfl) (neverSkip rfl ty) (.nil ty)⟩)
+      (fun ty => ⟨natTy, .cons (.inr (.mk (fun _ => rfl) (neverSkip rfl ty))) (.nil ty)⟩)
       (fun raceId hm => by
         change some 0 = some raceId at hm
         cases hm
@@ -740,8 +741,8 @@ theorem output_typed : ConfigTyped (rootProgram : ProgramSource) natTy world (ma
     [.loop Api.root true] :=
   config_loop yieldCurrent _ 1 true
     (machineTyped_of' yieldCurrent _ 1
-      (fun ty => ⟨EffTy.pure .unit, .registration (fun _ => rfl) (neverSkip rfl ty)
-        (.registration (fun _ => rfl) (fun _ _ _ hc => hc) (.nil ty))⟩)
+      (fun ty => ⟨EffTy.pure .unit, .cons (.inr (.mk (fun _ => rfl) (neverSkip rfl ty)))
+        (.cons (.inr (.mk (fun _ => rfl) (fun _ _ _ hc => hc))) (.nil ty))⟩)
       (fun _ hm => by cases hm))
     (fun _ => ⟨EffTy.pure .unit, yieldCurrent_typed world,
       arrow rfl rfl (arrow rfl rfl (.nil natTy)), provenance _ rfl rfl⟩)

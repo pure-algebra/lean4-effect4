@@ -219,4 +219,66 @@ theorem stackAccepts_push {w : World} {a b c : EffTy} {f : ScopeFrame} {s : List
 
 end Laws
 
+/-! ## Typed frame paths over an edge relation
+
+A saved stack composes arrows `tin → tout` through existential middle types (decisions row 48).
+`StackAccepts` is that path over the ordinary frame arrows (`FrameAccepts`); decisions row 188 (b)
+adds machine-correlated registration arrows (`HostStack`) and their machine-free shape
+(`PositionStack`). One path type over an edge relation owns identity, composition, decomposition
+and mapping; each instance keeps its own edge relation, and an edge map carries the semantic
+proof (forgetting a correlation is one-way). -/
+inductive FramePath (Edge : EffTy → EffTy → ScopeFrame → Prop) :
+    EffTy → EffTy → List ScopeFrame → Prop
+  | nil (ty : EffTy) : FramePath Edge ty ty []
+  | cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
+      (head : Edge tin middle frame) (tail : FramePath Edge middle tout rest) :
+      FramePath Edge tin tout (frame :: rest)
+
+namespace FramePath
+variable {E E' : EffTy → EffTy → ScopeFrame → Prop}
+
+/-- An edge map, endpoints and frames kept, maps paths. -/
+theorem map (f : ∀ a b frame, E a b frame → E' a b frame) {a b : EffTy} {s : List ScopeFrame}
+    (h : FramePath E a b s) : FramePath E' a b s := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons (f _ _ _ head) ih
+
+theorem append {a b c : EffTy} {s₁ s₂ : List ScopeFrame} (h₁ : FramePath E a b s₁)
+    (h₂ : FramePath E b c s₂) : FramePath E a c (s₁ ++ s₂) := by
+  induction h₁ with
+  | nil ty => exact h₂
+  | cons head _ ih => exact .cons head (ih h₂)
+
+theorem split : ∀ (s₁ s₂ : List ScopeFrame) {a c : EffTy}, FramePath E a c (s₁ ++ s₂) →
+    ∃ b, FramePath E a b s₁ ∧ FramePath E b c s₂
+  | [], _, a, _, h => ⟨a, .nil a, h⟩
+  | f :: s₁, s₂, _, _, h => by
+    rw [List.cons_append] at h
+    cases h with
+    | cons head tail =>
+      obtain ⟨b, h₁, h₂⟩ := split s₁ s₂ tail
+      exact ⟨b, .cons head h₁, h₂⟩
+
+end FramePath
+
+section Paths
+variable {TP : World → EffTy → RProgram → Prop} {Ex : World → EffTy → ExitV → Prop}
+  {hooks : FrameProtocols}
+
+/-- `StackAccepts` is the frame path over the ordinary frame arrows. -/
+theorem framePath_of_stackAccepts {w : World} {a b : EffTy} {s : List ScopeFrame}
+    (h : StackAccepts TP Ex hooks w a b s) : FramePath (FrameAccepts TP Ex hooks w) a b s := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons head ih
+
+theorem stackAccepts_of_framePath {w : World} {a b : EffTy} {s : List ScopeFrame}
+    (h : FramePath (FrameAccepts TP Ex hooks w) a b s) : StackAccepts TP Ex hooks w a b s := by
+  induction h with
+  | nil ty => exact .nil ty
+  | cons head _ ih => exact .cons head ih
+
+end Paths
+
 end Effect4.Program.Typed.Contracts

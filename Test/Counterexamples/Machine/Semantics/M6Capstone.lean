@@ -2676,12 +2676,13 @@ theorem input_refused (w : W) :
   have exited := TypedProg.pure_inv code
   cases stack with
   | cons head _ =>
-    cases head with
-    | resume _ _ run _ =>
-      exact callback_untyped w _ (.success .unit) (run w (leHost_refl w) (.success .unit) exited rfl)
-  | registration _ _ found _ _ _ =>
-    -- row 188 (b)'s registration arrow names a race, and the witness has none
-    cases found
+    rcases head with head | head
+    · cases head with
+      | resume _ _ run _ =>
+        exact callback_untyped w _ (.success .unit) (run w (leHost_refl w) (.success .unit) exited rfl)
+    · -- row 188 (b)'s registration arrow names a race, and the witness has none
+      cases head with
+      | mk _ _ found _ _ => cases found
 
 #print axioms typedState_input
 #print axioms config_input
