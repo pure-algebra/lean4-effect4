@@ -1,0 +1,36 @@
+{
+  "base": "26c7be34e6fea61fe2d13c4fa80d9bcd80d414d5",
+  "observedUtc": "2026-10-02T03:25:34.091928+00:00",
+  "root": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "sourceSha256": {
+    "src/Effect4/Laws/Machine/Handles.lean": "339872525682b32d607cc07f281aed559924dc9d182d6cc2f763b35156656ec1",
+    "src/Effect4/Laws/Effects/Protocol.lean": "1cc3421f077e574aade645e382a70567e943f3f0d8be7f56e8600f9b785661e4",
+    "src/Effect4/Laws/Program/Typed/World.lean": "32be5194574dcf8af29f51e2c6898548a079599f1404d7c49848e1cfdb637bd7",
+    "src/Effect4/Laws/Program/Typed/Validity.lean": "9290cfedb230bf663718ef5addbf0fd6ca8da87d466646806dbf33c7dcb7c558",
+    "src/Effect4/Laws/Program/Typed/Membership.lean": "09beeaef665e37201c7c2a22b195080962b41a88c0534d79796bf963917db8dd",
+    "src/Effect4/Laws/Program/Typed/Residual.lean": "1fa50a31814a35d367fd2995a08d4c62db370114f3631b8f2825831032e05c12",
+    "src/Effect4/Laws/Program/Typed/Contracts.lean": "5c9be58b61f1ecfa4be8c0732c637f3cf8ac0df0ab3aada1b33abf1fcf3a7f8f",
+    "src/Effect4/Laws/Program/Typed/Stack.lean": "255c3a9099dd3e520d841a42dd4920e201eba8c257812440a2b54dd2d5cdb204",
+    "src/Effect4/Laws/Program/Typed/Assembly.lean": "faef0661ca1133feea62eba944b75185fdd03851e6a7a50e530e598a8c3cfa10",
+    "src/Effect4/Laws/Program/Typed/Seq.lean": "29ab3023f1e7407132805d2e1c51670aadcde2010b6d22b0ad7f7aa29e6af56d",
+    "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean": "bb660b01c204370af0076f3ac85066039f8e72e3627c2a920c262c2a55ff4e29",
+    "src/Effect4/Laws/Program/Typed/Commands/Observe.lean": "4efdaaf5cea864839318f94f4568c7460920f6352e0dd4250d9f27403452bdd2",
+    "Test/Program/FramesNotKripke.lean": "3e417ae423a221db965de102f7dfa799ea64da47147f69a9c092dd9bb6bb2950",
+    "Test/Counterexamples/Machine/Semantics/ScopePresence.lean": "fd66360634d040bfea24c9d969f7c4585d32c15874dd59cb1e68f4f601e7a634",
+    "docs/core/system-map.md": "d15e7f14f845d8cbc00f11cb45dbd7093fa1b08c155b12285a82df95d0242752",
+    "docs/core/decisions.md": "3858ca648316a4fc397f722cce0ca17becff1a255ead2435755233535b9ded58",
+    "src/Effect4/Laws/Program/Typed/Adequacy.lean": "e70fcee2fa8f1aa4ba92687a224c81dacd8e0e2c458ab025f689a9ff5de69376",
+    "Test/Program/TypedWorldValidity.lean": "d587587054f5c16eb6ad9f090af2536b640ea4535d732b096697023e193fae9c",
+    "src/Effect4/Program/Ty.lean": "ca9e83f2e03e55a7454554c3ce606e645d962a75fc58154aa4e3f22745262655",
+    "docs/DESIGN-BASIS.md": "c3e5d32a8bf8e8b3873f19d40d9af1df1f9464826b83aa46b4f32b88f6aafe97",
+    "scripts/check-semantics.py": "c3624486073f0d6ef6d2ce74a41eda2eb1ed2aae7fc7abe48cfb29c3110022f2",
+    "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+    "lake-manifest.json": "ee44c5332da7461d94aaa971d06cd684d093d75577ce726d2c4ae71c2accdc46"
+  },
+  "vendoredTextSha256": {
+    "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/text/ahmed-2004-semantics-of-types-for-mutable-state.txt": "37faebfe73ba331086b47b2ebd14367b36cdbd6e865e437868d1be643c22a564",
+    "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/text/ahmed-dreyer-rossberg-2009-state-dependent-representation-independence.txt": "8af73eb2055c3ea09f6136a4db41299e142e1d25bf03dcb07ad12bc98e5392de",
+    "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/text/de-vilhena-pottier-2021-separation-logic-for-effect-handlers.txt": "a71dfe761e929a421331fa1be29d3c5ede1191a4c8350260b890c1c6dc5a2191"
+  }
+}
