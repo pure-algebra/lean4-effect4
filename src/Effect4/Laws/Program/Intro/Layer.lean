@@ -37,13 +37,13 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       q.weight < n → Node.at_ (.eff root) q.path = some (.layer l) →
       CodeMeans root (resolveLayer.resolveLayerTerm root l q m scope) (denoteLayer root l q m scope)
   | .succeed key value, q, m, scope, _, _, _ => by
-    rw [resolveLayerTerm_of_nonref root (.succeed key value) q m scope nofun, denoteLayer_succeed]
+    rw [resolveLayerTerm_of_nonref root (.succeed key value) q m scope nofun nofun, denoteLayer_succeed]
     simp only [compileLayer]
     cases Lit.toVal value with
     | some v => exact CodeMeans.success _
     | none => exact codeMeans_badShape root
   | .fresh inner, q, m, scope, hK, hq, h => by
-    rw [resolveLayerTerm_of_nonref root (.fresh inner) q m scope nofun, compileLayer_fresh,
+    rw [resolveLayerTerm_of_nonref root (.fresh inner) q m scope nofun nofun, compileLayer_fresh,
       denoteLayer_fresh, guardR_bind]
     refine CodeMeans.onSuccess _ _ _ (storeR (.memoFork none)) _
       (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
@@ -66,26 +66,20 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       simp only [prepareR_pure]
       exact codeMeans_badShape root
   | .orDie inner, q, m, scope, hK, hq, h => by
-    rw [resolveLayerTerm_of_nonref root (.orDie inner) q m scope nofun, compileLayer_orDie,
-      denoteLayer_orDie, guardR_bind]
+    rw [resolveLayerTerm_orDie, denoteLayer_orDie, guardR_bind]
     have hinner := at_child_of h 0
-    have ih := layerTerm_intro root n hres K hhop inner (q.child 0) m scope
-      (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) hinner
-    refine CodeMeans.onFailure _ _ _
-      (if inner.isRef then .pure badShapeExit else denoteLayer root inner (q.child 0) m scope) _
-      ?_ ?_ rfl (fun _ => rfl)
-    · -- the inner term is compiled at the table directly: a reference is the refusal on
-      -- both sides, every other constructor its own build
-      cases inner with
-      | ref target => exact codeMeans_badShape root
-      | _ => exact ih
-    · intro completed c
-      show CodeMeans root (Prim.failure (orDieCause c))
-        (prepareR completed (.pure (.failure (orDieCause c))))
-      rw [prepareR_pure]
-      exact CodeMeans.failure _
+    -- the inner layer resolves on both sides, a reference by its hop (decisions row 185)
+    refine CodeMeans.onFailure _ _ _ (denoteLayer root inner (q.child 0) m scope) _
+      (layerTerm_intro root n hres K hhop inner (q.child 0) m scope
+        (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) hinner)
+      ?_ rfl (fun _ => rfl)
+    intro completed c
+    show CodeMeans root (Prim.failure (orDieCause c))
+      (prepareR completed (.pure (.failure (orDieCause c))))
+    rw [prepareR_pure]
+    exact CodeMeans.failure _
   | .effect key body, q, m, scope, _, hq, h => by
-    rw [resolveLayerTerm_of_nonref root (.effect key body) q m scope nofun, compileLayer_effect,
+    rw [resolveLayerTerm_of_nonref root (.effect key body) q m scope nofun nofun, compileLayer_effect,
       denoteLayer_effect]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_effect root h]
@@ -105,7 +99,7 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       simp only [seqR, bindServiceK, bindServiceR, prepareR_pure]
       exact CodeMeans.success _
   | .effectDiscard body, q, m, scope, _, hq, h => by
-    rw [resolveLayerTerm_of_nonref root (.effectDiscard body) q m scope nofun,
+    rw [resolveLayerTerm_of_nonref root (.effectDiscard body) q m scope nofun nofun,
       compileLayer_effectDiscard, denoteLayer_effectDiscard]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_effectDiscard root h]
@@ -125,7 +119,7 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       simp only [seqR, bindServiceK, bindServiceR, prepareR_pure]
       exact CodeMeans.success _
   | .provide self that, q, m, scope, hK, hq, h => by
-    rw [resolveLayerTerm_of_nonref root (.provide self that) q m scope nofun, compileLayer_provide,
+    rw [resolveLayerTerm_of_nonref root (.provide self that) q m scope nofun nofun, compileLayer_provide,
       denoteLayer_provide]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_provide root h]
@@ -139,7 +133,7 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       exact layerTerm_intro root n hres K hhop self (q.child 0) m child
         (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
   | .provideMerge self that, q, m, scope, hK, hq, h => by
-    rw [resolveLayerTerm_of_nonref root (.provideMerge self that) q m scope nofun,
+    rw [resolveLayerTerm_of_nonref root (.provideMerge self that) q m scope nofun nofun,
       compileLayer_provideMerge, denoteLayer_provideMerge]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_provideMerge root h]
@@ -153,7 +147,7 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       exact layerTerm_intro root n hres K hhop self (q.child 0) m child
         (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
   | .merge left right, q, m, scope, hK, hq, h => by
-    rw [resolveLayerTerm_of_nonref root (.merge left right) q m scope nofun, compileLayer_merge,
+    rw [resolveLayerTerm_of_nonref root (.merge left right) q m scope nofun nofun, compileLayer_merge,
       denoteLayer_merge]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_merge root h]
@@ -169,7 +163,7 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       exact layerTerm_intro root n hres K hhop right (q.child 1) m c
         (Nat.le_trans (fuel_child_le q 1) hK) (Nat.lt_of_le_of_lt (weight_child q 1) hq) h1
   | .mergeAll layers, q, m, scope, hK, hq, h => by
-    rw [resolveLayerTerm_of_nonref root (.mergeAll layers) q m scope nofun, compileLayer_mergeAll,
+    rw [resolveLayerTerm_of_nonref root (.mergeAll layers) q m scope nofun nofun, compileLayer_mergeAll,
       denoteLayer_mergeAll]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_mergeAll root h]

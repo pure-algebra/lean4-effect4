@@ -926,21 +926,53 @@ theorem withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
 theorem withFiberOf_awaitAllFailFast (targets : List FiberId) :
     (interpOf root).withFiberOf (.awaitAllFailFast targets) = some (.awaitAllFailFast targets) := by aesop
 
-/-- The layer at a point, resolved: the node's term, built — `compileLayer` for every
-constructor but a reference, which hops to its target (`resolveLayer.resolveLayerTerm`, the
-host rows slice). -/
+/-- The layer at a point, resolved: the node's term, built at the point's fuel —
+`compileLayer` for every constructor but a reference, which hops to its target, and `orDie`,
+which resolves its inner layer (`resolveLayer.resolveLayerTerm`, decisions row 185). -/
 theorem resolveLayer_of_at {q : Point} {l : LayerTerm NativeOp}
     (h : Node.at_ (Node.eff root) q.path = some (Node.layer l)) (m : MemoMapId) (scope : Nat) :
     resolveLayer root q m scope = resolveLayer.resolveLayerTerm root l q m scope := by
   simp [resolveLayer, h]
 
-/-- A term that is no reference resolves as `compileLayer`. -/
-theorem resolveLayerTerm_of_nonref (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
-    (scope : Nat) (hl : ∀ t, l ≠ .ref t) :
-    resolveLayer.resolveLayerTerm root l q m scope = compileLayer l q m scope := by
-  cases l <;> first | rfl | exact absurd rfl (hl _)
+/-- A term that is neither a reference nor an `orDie` resolves as `compileLayer`, at any fuel. -/
+theorem resolveLayerWith_table (f : Nat) (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) (hl : ∀ t, l ≠ .ref t) (ho : ∀ i, l ≠ .orDie i) :
+    resolveLayerWith root f l q m scope = compileLayer l q m scope := by
+  cases l with
+  | ref t => exact absurd rfl (hl t)
+  | orDie i => exact absurd rfl (ho i)
+  | succeed _ _ => cases f <;> rfl
+  | effect _ _ => cases f <;> rfl
+  | effectDiscard _ => cases f <;> rfl
+  | provide _ _ => cases f <;> rfl
+  | provideMerge _ _ => cases f <;> rfl
+  | merge _ _ => cases f <;> rfl
+  | fresh _ => cases f <;> rfl
+  | mergeAll _ => cases f <;> rfl
 
-/-- A reference with fuel hops to its target, one fuel down; with none it is the frontier. -/
+/-- A term that is neither a reference nor an `orDie` resolves as `compileLayer`. -/
+theorem resolveLayerTerm_of_nonref (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) (hl : ∀ t, l ≠ .ref t) (ho : ∀ i, l ≠ .orDie i) :
+    resolveLayer.resolveLayerTerm root l q m scope = compileLayer l q m scope :=
+  resolveLayerWith_table root q.fuel l q m scope hl ho
+
+/-- `orDie` resolves its inner layer, a reference included, one fuel down (decisions row 185). -/
+theorem resolveLayerTerm_orDie (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    resolveLayer.resolveLayerTerm root (.orDie inner) q m scope =
+      Prim.onFailure (resolveLayer.resolveLayerTerm root inner (q.child 0) m scope)
+        EffName.orDie := by
+  unfold resolveLayer.resolveLayerTerm
+  cases hf : q.fuel with
+  | zero =>
+    have hc : (q.child 0).fuel = 0 := by show q.fuel - 1 = 0; rw [hf]
+    rw [hc]; rfl
+  | succ f =>
+    have hc : (q.child 0).fuel = f := by show q.fuel - 1 = f; rw [hf]; rfl
+    rw [hc]; rfl
+
+/-- A reference with fuel hops to its target, resolved one fuel down; with none it is the
+frontier. -/
 theorem resolveLayerTerm_ref (target : List Nat) (q : Point) (m : MemoMapId) (scope : Nat) :
     resolveLayer.resolveLayerTerm root (.ref target) q m scope =
       match q.fuel with
@@ -948,8 +980,14 @@ theorem resolveLayerTerm_ref (target : List Nat) (q : Point) (m : MemoMapId) (sc
       | _ + 1 =>
         match Node.at_ (Node.eff root) target with
         | some (Node.layer (.ref _)) => badShape
-        | some (Node.layer l) => compileLayer l (q.redirect target) m scope
-        | _ => badShape := by aesop
+        | some (Node.layer l) => resolveLayer.resolveLayerTerm root l (q.redirect target) m scope
+        | _ => badShape := by
+  unfold resolveLayer.resolveLayerTerm
+  cases hf : q.fuel with
+  | zero => rfl
+  | succ f =>
+    have hr : (q.redirect target).fuel = f := by show q.fuel - 1 = f; rw [hf]; rfl
+    rw [hr]; rfl
 
 theorem innerLayerAt_effect {q : Point} {key : ServiceKey} {body : NativeEff}
     (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.effect key body)))

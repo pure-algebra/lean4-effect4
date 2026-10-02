@@ -68,20 +68,45 @@ theorem compileLayer_keys : ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMa
 /-- A hop keeps the point's handles: only the path and the fuel move. -/
 theorem Point.redirect_keys (q : Point) (target : List Nat) : (q.redirect target).keys = q.keys := rfl
 
+theorem resolveLayerZero_keys : ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat),
+    nativeKeys (resolveLayerZero l q m scope) ⊆
+      Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | .ref _, q, _, _ => by
+    simp only [resolveLayerZero]
+    exact frontier_keys q |>.trans (List.subset_cons_of_subset _ (List.subset_cons_of_subset _ (List.Subset.refl _)))
+  -- `orDie` resolves its inner layer (decisions row 185)
+  | .orDie inner, q, m, scope => by
+    simp only [resolveLayerZero]
+    sub_tac using (resolveLayerZero_keys inner (q.child 0) m scope)
+  | .succeed _ _, _, _, _ | .effect _ _, _, _, _ | .effectDiscard _, _, _, _
+  | .provide _ _, _, _, _ | .provideMerge _ _, _, _, _ | .merge _ _, _, _, _
+  | .fresh _, _, _, _ | .mergeAll _, _, _, _ => compileLayer_keys _ _ _ _
+
+theorem resolveLayerWith_keys (root : NativeEff) : ∀ (f : Nat) (l : LayerTerm NativeOp)
+    (q : Point) (m : MemoMapId) (scope : Nat),
+    nativeKeys (resolveLayerWith root f l q m scope) ⊆
+      Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | 0, l, q, m, scope => resolveLayerZero_keys l q m scope
+  | f + 1, .ref target, q, m, scope => by
+    simp only [resolveLayerWith]
+    split
+    · exact List.nil_subset _
+    · rw [← Point.redirect_keys q target]; exact resolveLayerWith_keys root f _ _ _ _
+    · exact List.nil_subset _
+  -- `orDie` resolves its inner layer (decisions row 185)
+  | f + 1, .orDie inner, q, m, scope => by
+    simp only [resolveLayerWith]
+    sub_tac using (resolveLayerWith_keys root f inner (q.child 0) m scope)
+  | _ + 1, .succeed _ _, _, _, _ | _ + 1, .effect _ _, _, _, _ | _ + 1, .effectDiscard _, _, _, _
+  | _ + 1, .provide _ _, _, _, _ | _ + 1, .provideMerge _ _, _, _, _ | _ + 1, .merge _ _, _, _, _
+  | _ + 1, .fresh _, _, _, _ | _ + 1, .mergeAll _, _, _, _ => compileLayer_keys _ _ _ _
+
 theorem resolveLayerTerm_keys (root : NativeEff) (l : LayerTerm NativeOp) (q : Point)
     (m : MemoMapId) (scope : Nat) :
     nativeKeys (resolveLayer.resolveLayerTerm root l q m scope) ⊆
-      Handle.scope scope :: Handle.memoMap m.index :: q.keys := by
-  cases l with
-  | ref target =>
-    simp only [resolveLayer.resolveLayerTerm]
-    split
-    · exact frontier_keys q |>.trans (List.subset_cons_of_subset _ (List.subset_cons_of_subset _ (List.Subset.refl _)))
-    · split
-      · exact List.nil_subset _
-      · rw [← Point.redirect_keys q target]; exact compileLayer_keys _ _ _ _
-      · exact List.nil_subset _
-  | _ => exact compileLayer_keys _ _ _ _
+      Handle.scope scope :: Handle.memoMap m.index :: q.keys :=
+  resolveLayerWith_keys root q.fuel l q m scope
 
 theorem resolveLayer_keys (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) :
     nativeKeys (resolveLayer root q m scope) ⊆ Handle.scope scope :: Handle.memoMap m.index :: q.keys := by

@@ -75,12 +75,41 @@ theorem raceSites_compileLayer (layer : LayerTerm NativeOp) (p : Point)
     | (split <;> rfl)
 termination_by sizeOf layer
 
+/-- A resolved layer installs no race registration site: every arm is the table's, a hop to a
+resolved term, the frontier, the refusal, or `orDie` over a resolved layer (decisions row 185). -/
+theorem raceSites_resolveLayerZero : ∀ (layer : LayerTerm NativeOp) (p : Point)
+    (memo : MemoMapId) (scope : Nat),
+    raceSites (resolveLayerZero layer p memo scope) = []
+  | .ref _, _, _, _ => rfl
+  | .orDie inner, p, memo, scope => by
+    simp only [resolveLayerZero]
+    exact raceSites_resolveLayerZero inner (p.child 0) memo scope
+  | .succeed _ _, _, _, _ | .effect _ _, _, _, _ | .effectDiscard _, _, _, _
+  | .provide _ _, _, _, _ | .provideMerge _ _, _, _, _ | .merge _ _, _, _, _
+  | .fresh _, _, _, _ | .mergeAll _, _, _, _ => raceSites_compileLayer _ _ _ _
+
+theorem raceSites_resolveLayerWith (root : NativeEff) : ∀ (f : Nat) (layer : LayerTerm NativeOp)
+    (p : Point) (memo : MemoMapId) (scope : Nat),
+    raceSites (resolveLayerWith root f layer p memo scope) = []
+  | 0, layer, p, memo, scope => raceSites_resolveLayerZero layer p memo scope
+  | f + 1, .ref target, p, memo, scope => by
+    simp only [resolveLayerWith]
+    split
+    · rfl
+    · exact raceSites_resolveLayerWith root f _ _ _ _
+    · rfl
+  | f + 1, .orDie inner, p, memo, scope => by
+    simp only [resolveLayerWith]
+    exact raceSites_resolveLayerWith root f inner (p.child 0) memo scope
+  | _ + 1, .succeed _ _, _, _, _ | _ + 1, .effect _ _, _, _, _ | _ + 1, .effectDiscard _, _, _, _
+  | _ + 1, .provide _ _, _, _, _ | _ + 1, .provideMerge _ _, _, _, _ | _ + 1, .merge _ _, _, _, _
+  | _ + 1, .fresh _, _, _, _ | _ + 1, .mergeAll _, _, _, _ => raceSites_compileLayer _ _ _ _
+
 theorem raceSites_resolveLayer (root : NativeEff) (p : Point) (memo : MemoMapId)
     (scope : Nat) : raceSites (resolveLayer root p memo scope) = [] := by
   unfold resolveLayer
   split
-  · unfold resolveLayer.resolveLayerTerm
-    repeat' first | split | exact raceSites_compileLayer _ _ _ _ | rfl
+  · exact raceSites_resolveLayerWith _ _ _ _ _ _
   · rfl
 
 theorem raceSites_embed_ofExit (exit : ExitV) :
