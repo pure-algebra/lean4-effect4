@@ -3,9 +3,11 @@ import Test.Program.TypedDenotation
 /-!
 # Test.Program.LayerDenotation — the layer family of M5 (decisions row 176)
 
-M5's fundamental property (`DenotesTyped`, `Laws/Program/Typed/Assembly.lean`) is proved for every
-arm of `denoteR` but the layer family's, which enters the assembly as the hypothesis
-`ProvideLayerArm` (`Laws/Program/Typed/Denotation.lean`). This battery holds that family's controls.
+M5's fundamental property (`DenotesTyped`, `Laws/Program/Typed/Assembly.lean`) is proved at every
+source (`denotesTyped`, `Laws/Program/Typed/LayerArm.lean`); the layer family's arm, which the
+assembly takes as the hypothesis `ProvideLayerArm` (`Laws/Program/Typed/Denotation.lean`), was the
+last, proved there (`provideLayerArm`). This battery holds that family's controls: the statements
+below were false before the rows that repaired them.
 
 **Row 176, the image of a built context.** A layer build answers its context, and the memo rows
 declare a built context at `Ty.context` (`storePost`'s `memoGet` arm, `Typed/Residual.lean`), whose

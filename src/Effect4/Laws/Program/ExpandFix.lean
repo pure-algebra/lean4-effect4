@@ -169,4 +169,145 @@ theorem checkLayer_path {p : List Nat} {l : LayerTerm Op} {lt : LayerTy}
 
 end ExpandFix
 
+/-! ## A layer's expansion commutes with its constructors -/
+
+section LayerRounds
+
+variable {Op : Type} (orig : Node Op)
+
+private abbrev lrounds (xs : List Nat) (l : LayerTerm Op) : LayerTerm Op :=
+  xs.foldl (fun acc _ => LayerTerm.expandRound orig acc) l
+
+private abbrev erounds (xs : List Nat) (e : Eff Op) : Eff Op :=
+  xs.foldl (fun acc _ => Eff.expandRound orig acc) e
+
+private theorem lrounds_one : ∀ (C : LayerTerm Op → LayerTerm Op),
+    (∀ a, LayerTerm.expandRound orig (C a) = C (LayerTerm.expandRound orig a)) →
+    ∀ (xs : List Nat) (a : LayerTerm Op), lrounds orig xs (C a) = C (lrounds orig xs a)
+  | _, _, [], _ => rfl
+  | C, hC, _ :: xs, a => by
+    show lrounds orig xs (LayerTerm.expandRound orig (C a)) =
+      C (lrounds orig xs (LayerTerm.expandRound orig a))
+    rw [hC]
+    exact lrounds_one C hC xs _
+
+private theorem lrounds_two : ∀ (C : LayerTerm Op → LayerTerm Op → LayerTerm Op),
+    (∀ a b, LayerTerm.expandRound orig (C a b) =
+      C (LayerTerm.expandRound orig a) (LayerTerm.expandRound orig b)) →
+    ∀ (xs : List Nat) (a b : LayerTerm Op),
+      lrounds orig xs (C a b) = C (lrounds orig xs a) (lrounds orig xs b)
+  | _, _, [], _, _ => rfl
+  | C, hC, _ :: xs, a, b => by
+    show lrounds orig xs (LayerTerm.expandRound orig (C a b)) =
+      C (lrounds orig xs (LayerTerm.expandRound orig a)) (lrounds orig xs (LayerTerm.expandRound orig b))
+    rw [hC]
+    exact lrounds_two C hC xs _ _
+
+private theorem lrounds_body : ∀ (C : Eff Op → LayerTerm Op),
+    (∀ e, LayerTerm.expandRound orig (C e) = C (Eff.expandRound orig e)) →
+    ∀ (xs : List Nat) (e : Eff Op), lrounds orig xs (C e) = C (erounds orig xs e)
+  | _, _, [], _ => rfl
+  | C, hC, _ :: xs, e => by
+    show lrounds orig xs (LayerTerm.expandRound orig (C e)) =
+      C (erounds orig xs (Eff.expandRound orig e))
+    rw [hC]
+    exact lrounds_body C hC xs _
+
+private theorem erounds_provideLayer : ∀ (xs : List Nat) (l : LayerTerm Op) (i : Bool)
+    (b : Eff Op),
+    erounds orig xs (.provideLayer l i b) = .provideLayer (lrounds orig xs l) i (erounds orig xs b)
+  | [], _, _, _ => rfl
+  | _ :: xs, l, i, b => erounds_provideLayer xs (LayerTerm.expandRound orig l) i (Eff.expandRound orig b)
+
+
+private theorem lrounds_mergeAll : ∀ (xs : List Nat) (ls : LayerTerms Op),
+    lrounds orig xs (.mergeAll ls) =
+      .mergeAll (xs.foldl (fun acc _ => LayerTerms.expandRound orig acc) ls)
+  | [], _ => rfl
+  | _ :: xs, ls => lrounds_mergeAll xs (LayerTerms.expandRound orig ls)
+
+/-- A layer one round fixes is fixed by every number of rounds. -/
+private theorem lrounds_fix : ∀ (l : LayerTerm Op), LayerTerm.expandRound orig l = l →
+    ∀ (xs : List Nat), lrounds orig xs l = l
+  | _, _, [] => rfl
+  | l, hl, _ :: xs => by
+    show lrounds orig xs (LayerTerm.expandRound orig l) = l
+    rw [hl]
+    exact lrounds_fix l hl xs
+
+end LayerRounds
+
+variable {Op : Type} (root : Eff Op)
+
+theorem Eff.expandIn_provideLayer (l : LayerTerm Op) (i : Bool) (b : Eff Op) :
+    Eff.expandIn root (.provideLayer l i b) =
+      .provideLayer (LayerTerm.expandIn root l) i (Eff.expandIn root b) :=
+  erounds_provideLayer _ _ l i b
+
+theorem LayerTerm.expandIn_fresh (inner : LayerTerm Op) :
+    LayerTerm.expandIn root (.fresh inner) = .fresh (LayerTerm.expandIn root inner) :=
+  lrounds_one _ LayerTerm.fresh (fun _ => rfl) _ inner
+
+theorem LayerTerm.expandIn_orDie (inner : LayerTerm Op) :
+    LayerTerm.expandIn root (.orDie inner) = .orDie (LayerTerm.expandIn root inner) :=
+  lrounds_one _ LayerTerm.orDie (fun _ => rfl) _ inner
+
+theorem LayerTerm.expandIn_provide (self that : LayerTerm Op) :
+    LayerTerm.expandIn root (.provide self that) =
+      .provide (LayerTerm.expandIn root self) (LayerTerm.expandIn root that) :=
+  lrounds_two _ LayerTerm.provide (fun _ _ => rfl) _ self that
+
+theorem LayerTerm.expandIn_provideMerge (self that : LayerTerm Op) :
+    LayerTerm.expandIn root (.provideMerge self that) =
+      .provideMerge (LayerTerm.expandIn root self) (LayerTerm.expandIn root that) :=
+  lrounds_two _ LayerTerm.provideMerge (fun _ _ => rfl) _ self that
+
+theorem LayerTerm.expandIn_merge (left right : LayerTerm Op) :
+    LayerTerm.expandIn root (.merge left right) =
+      .merge (LayerTerm.expandIn root left) (LayerTerm.expandIn root right) :=
+  lrounds_two _ LayerTerm.merge (fun _ _ => rfl) _ left right
+
+theorem LayerTerm.expandIn_effect (key : ServiceKey) (body : Eff Op) :
+    LayerTerm.expandIn root (.effect key body) = .effect key (Eff.expandIn root body) :=
+  lrounds_body _ (LayerTerm.effect key) (fun _ => rfl) _ body
+
+theorem LayerTerm.expandIn_effectDiscard (body : Eff Op) :
+    LayerTerm.expandIn root (.effectDiscard body) = .effectDiscard (Eff.expandIn root body) :=
+  lrounds_body _ LayerTerm.effectDiscard (fun _ => rfl) _ body
+
+/-- The rounds a `mergeAll`'s spine runs. -/
+def LayerTerms.expandIn (ls : LayerTerms Op) : LayerTerms Op :=
+  (List.range ((root.refSites []).length + 1)).foldl
+    (fun acc _ => LayerTerms.expandRound (Node.eff root) acc) ls
+
+private theorem lsrounds_cons : ∀ (xs : List Nat) (h : LayerTerm Op) (t : LayerTerms Op),
+    xs.foldl (fun acc _ => LayerTerms.expandRound (Node.eff root) acc) (.cons h t) =
+      .cons (xs.foldl (fun acc _ => LayerTerm.expandRound (Node.eff root) acc) h)
+        (xs.foldl (fun acc _ => LayerTerms.expandRound (Node.eff root) acc) t)
+  | [], _, _ => rfl
+  | _ :: xs, h, t => lsrounds_cons xs (LayerTerm.expandRound (Node.eff root) h)
+      (LayerTerms.expandRound (Node.eff root) t)
+
+private theorem lsrounds_nil : ∀ (xs : List Nat),
+    xs.foldl (fun acc _ => LayerTerms.expandRound (Node.eff root) acc) (.nil : LayerTerms Op) = .nil
+  | [] => rfl
+  | _ :: xs => lsrounds_nil xs
+
+theorem LayerTerms.expandIn_cons (h : LayerTerm Op) (t : LayerTerms Op) :
+    LayerTerms.expandIn root (.cons h t) =
+      .cons (LayerTerm.expandIn root h) (LayerTerms.expandIn root t) :=
+  lsrounds_cons root _ h t
+
+theorem LayerTerms.expandIn_nil : LayerTerms.expandIn root (.nil : LayerTerms Op) = .nil :=
+  lsrounds_nil root _
+
+theorem LayerTerm.expandIn_mergeAll (ls : LayerTerms Op) :
+    LayerTerm.expandIn root (.mergeAll ls) = .mergeAll (LayerTerms.expandIn root ls) :=
+  lrounds_mergeAll _ _ ls
+
+theorem LayerTerm.expandIn_succeed (key : ServiceKey) (value : Lit) :
+    LayerTerm.expandIn root (.succeed key value) = .succeed key value :=
+  lrounds_fix _ _ rfl _
+
+
 end Effect4.Program
