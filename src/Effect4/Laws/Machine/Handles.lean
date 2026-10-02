@@ -154,6 +154,12 @@ theorem Val.keys_scopeHandle (key : Nat) : (Val.scopeHandle key).keys = [Handle.
   by aesop
 theorem Val.keys_memoMap (id : MemoMapId) : (Val.memoMap id).keys = [Handle.memoMap id.index] :=
   by aesop
+/-- A memo hit names its deferred and its owning map (decisions row 187: the two-cell list). -/
+theorem Val.keys_memoHit (c : DeferredKey) (o : MemoMapId) :
+    (Val.memoHit c o).keys = [Handle.promise c, Handle.memoMap o.index] := by
+  rw [Val.memoHit, Val.keys_list, List.flatMap_cons, List.flatMap_cons, List.flatMap_nil,
+    Val.keys_promise, Val.keys_memoMap]
+  rfl
 
 theorem Val.keys_exitOk (v : Val) : Val.keys (Val.exitOk v) = v.keys := by
   simp only [Val.keys, Val.keysList, List.append_nil]
@@ -6287,6 +6293,7 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
           rw [MemoEntry.keys_observers]; exact List.Subset.refl _
       rw [List.nil_append] at hmemo
       refine Ok_of_subset ?_ (Ok_append.mpr ⟨hp, Ok_append.mpr ⟨hown, hok'⟩⟩)
+      rw [Val.keys_memoHit]
       sub_tac using hmemo
   | memoBuild layer memoMap =>
     simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h

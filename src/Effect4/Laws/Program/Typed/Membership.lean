@@ -65,6 +65,9 @@ def HandleFits (w : World) (kind : UInt8) (index : Nat) (target : String) : Prop
   | some .cell => target = NativeOp.refTarget ∧ RefDeclared w ⟨index⟩ .nat
   | some .promise => target = NativeOp.deferredTarget ∧ PromiseDeclared w ⟨index⟩ .nat .nat
   | some .scope => target = Ty.scopeTarget ∧ ScopeLive w index
+  -- a memo map is read through a guard, so its handle has its own type; no world column holds
+  -- memo maps, and no store row halts on an unknown one (decisions row 187)
+  | some .memoMap => target = Ty.memoMapTarget
   | some .external => externalHandleTarget target = true ∧
       w.state.externals.allocated[index]? = some target
   | _ => False
@@ -356,6 +359,9 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
         exact beq_iff_eq.mpr h.1
       · rename_i hk
         simp only [hk]
+        exact beq_iff_eq.mpr h
+      · rename_i hk
+        simp only [hk]
         exact Bool.and_eq_true_iff.mpr ⟨h.1, beq_iff_eq.mpr h.2⟩
       · exact h.elim
     · obtain ⟨ht, ctx, hctx, _, _⟩ := h
@@ -545,6 +551,13 @@ theorem live_handle {w : World} {kind : UInt8} {index : Nat} {target : String}
     intro k hk'
     have hk'' : k ∈ (Val.scopeHandle index).keys := hk'
     rw [Val.keys_scopeHandle, List.mem_singleton] at hk''
+    subst hk''
+    trivial
+  · rename_i hk
+    rw [HandleKind.ofByte?_exact hk]
+    intro k hk'
+    have hk'' : k ∈ (Val.memoMap ⟨index⟩).keys := hk'
+    rw [Val.keys_memoMap, List.mem_singleton] at hk''
     subst hk''
     trivial
   · rename_i hk
@@ -742,6 +755,7 @@ theorem handleFits_map {kind : UInt8} {index : Nat} {target : String}
   · exact ⟨h.1, refDeclared_map hRho h.2⟩
   · exact ⟨h.1, promiseDeclared_map hPi h.2⟩
   · exact ⟨h.1, hscope index h.2⟩
+  · exact h
   · exact ⟨h.1, halloc index target h.2⟩
   · exact h.elim
 
@@ -907,6 +921,7 @@ theorem fits_scope_inv {w : World} {v : Val} (h : Fits w v Ty.scope) :
       have hkind : kind = HandleKind.scope.byte := HandleKind.ofByte?_exact hk
       subst hkind
       exact ⟨index, rfl, h.2⟩
+    · exact absurd h (by decide)
     · exact absurd h.1 (by decide)
     · exact h.elim
   · exact absurd h.1 (by decide)
@@ -1473,6 +1488,7 @@ theorem fits_context_inv {w : World} {v : Val} (h : Fits w v (.handle Ty.context
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
+    · exact absurd h (by decide)
     · exact absurd h.1 (by decide)
     · exact h.elim
   · obtain ⟨_, ctx, hctx, services, _⟩ := h
@@ -2510,7 +2526,7 @@ theorem fits_handle_fresh (target : String) (w : World) (n : Nat) (hn : FreshFro
   | true =>
     have hm : target ∈ internalHandleTargets := List.contains_iff_mem.mp hc
     simp only [internalHandleTargets, List.mem_cons, List.not_mem_nil, or_false] at hm
-    rcases hm with rfl | rfl | rfl | rfl
+    rcases hm with rfl | rfl | rfl | rfl | rfl
     · obtain ⟨hg, hf⟩ := hn.addRef .nat
       exact ⟨_, n + 1, Val.handle HandleKind.cell.byte n, hg, hf, rfl, .nat, insert_here _ _ _,
         Ty.subN_refl _, Ty.subN_refl _⟩
@@ -2527,6 +2543,8 @@ theorem fits_handle_fresh (target : String) (w : World) (n : Nat) (hn : FreshFro
       have hnone : emptyCtx.services.getV key = none := rfl
       rw [hnone] at hget
       cases hget
+    -- a memo map handle names no world column (decisions row 187)
+    · exact ⟨w, n, Val.handle HandleKind.memoMap.byte 0, Grows.refl w, hn, rfl⟩
 
 /-- **One world for several handles (proved).** An `inhabited` type has a member in a world grown
 from any world whose keys are fresh from `n` on: each handle position is declared at its own

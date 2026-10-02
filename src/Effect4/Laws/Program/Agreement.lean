@@ -769,7 +769,7 @@ theorem contAOf_fromBuildThen_other (q : Point) (m : MemoMapId) (v : Val) (hne :
 
 theorem contAOf_memoize_hit (q : Point) (m : MemoMapId) (scope : Nat) (cell : DeferredKey)
     (owner : MemoMapId) :
-    Program.contAOf root (.memoize q m scope) (.pair (Val.promise cell) (Val.memoMap owner)) =
+    Program.contAOf root (.memoize q m scope) (Val.memoHit cell owner) =
       Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path owner)) (.awaitPromise cell) := by aesop
 
 theorem contAOf_memoize_unit (q : Point) (m : MemoMapId) (scope : Nat) :
@@ -778,9 +778,9 @@ theorem contAOf_memoize_unit (q : Point) (m : MemoMapId) (scope : Nat) :
         (.buildIntoLayerScope q m scope) := by aesop
 
 theorem contAOf_memoize_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val)
-    (hhit : ∀ c o, v ≠ .pair (Val.promise c) (Val.memoMap o)) (hunit : v ≠ Val.unit) :
+    (hhit : ∀ c o, v ≠ (Val.memoHit c o)) (hunit : v ≠ Val.unit) :
     Program.contAOf root (.memoize q m scope) v = badShape := by
-  have hhit' : ∀ c o, v ≠ .pair (Val.handle 3 c) (Val.handle 5 o) := fun c o => hhit ⟨c⟩ ⟨o⟩
+  have hhit' : ∀ c o, v ≠ .list [Val.handle 3 c, Val.handle 5 o] := fun c o => hhit ⟨c⟩ ⟨o⟩
   simp only [Program.contAOf]
 
 theorem contAOf_awaitPromise (cell : DeferredKey) (v : Val) :

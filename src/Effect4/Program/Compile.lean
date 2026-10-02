@@ -1195,7 +1195,7 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
   -- `getOrElseMemoize` after `get` (`Layer.ts:451-455`): a hit is the entry's deferred and its
   -- owning map (`:439-440`, `:246-249`), registering the entry finalizer on the caller scope
   -- then awaiting; unit is a miss, `memoMapBuild`
-  | .memoize q _ scope, Val.pair (Val.promise ⟨cell⟩) (Val.memoMap ⟨owner⟩) =>
+  | .memoize q _ scope, Val.list [Val.promise ⟨cell⟩, Val.memoMap ⟨owner⟩] =>
     Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path ⟨owner⟩))
       (EffName.awaitPromise ⟨cell⟩)
   | .memoize q m scope, Val.unit =>

@@ -297,18 +297,22 @@ theorem memoMap?_none {v : Val} (h : memoMap? v = none) (id : MemoMapId) : v ≠
   subst hv
   exact nomatch h
 
-/-- A memo hit read back (`SyncOp.memoGet`'s answer on a hit: the entry's deferred and its
-owning map, `Layer.ts:439-440`); `none` on any other shape. -/
+/-- A memo hit (`SyncOp.memoGet`'s answer on a hit: the entry's deferred and its owning map,
+`Layer.ts:439-440`), a pair in the carrier's one product frame, the two-cell `list` the product
+type reads (decisions row 187). -/
+def memoHit (c : DeferredKey) (o : MemoMapId) : Val := .list [promise c, memoMap o]
+
+/-- A memo hit read back; `none` on any other shape. -/
 def memoHit? : Val → Option (DeferredKey × MemoMapId)
-  | .pair (Value.promise c) (Value.memoMap o) => some (⟨c⟩, ⟨o⟩)
+  | .list [Value.promise c, Value.memoMap o] => some (⟨c⟩, ⟨o⟩)
   | _ => none
 
-theorem memoHit?_pair (c : DeferredKey) (o : MemoMapId) :
-    memoHit? (.pair (promise c) (memoMap o)) = some (c, o) := by
+theorem memoHit?_memoHit (c : DeferredKey) (o : MemoMapId) :
+    memoHit? (memoHit c o) = some (c, o) := by
   cases c; cases o; rfl
 
 theorem memoHit?_exact {v : Val} {c : DeferredKey} {o : MemoMapId}
-    (h : memoHit? v = some (c, o)) : v = .pair (promise c) (memoMap o) := by
+    (h : memoHit? v = some (c, o)) : v = memoHit c o := by
   unfold memoHit? at h
   split at h
   · injection h with h
@@ -318,7 +322,7 @@ theorem memoHit?_exact {v : Val} {c : DeferredKey} {o : MemoMapId}
   · exact nomatch h
 
 theorem memoHit?_none {v : Val} (h : memoHit? v = none) (c : DeferredKey) (o : MemoMapId) :
-    v ≠ .pair (promise c) (memoMap o) := by
+    v ≠ memoHit c o := by
   intro hv
   subst hv
   cases c; cases o

@@ -247,6 +247,7 @@ theorem Val.hasTy_admitsExtend : AdmitsExtend Val.hasTy.alg where
       · exact hv
       · exact hv
       · exact hv
+      · exact hv
       · obtain ⟨ht, hi⟩ := Bool.and_eq_true_iff.mp hv
         simp only [ht]
         exact beq_iff_eq.mpr (ext _ target (beq_iff_eq.mp hi))

@@ -79,7 +79,7 @@ theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
     cases hh : Val.memoHit? v with
     | some co =>
       obtain ⟨cell, owner⟩ := co
-      rw [Val.memoHit?_exact hh, contAOf_memoize_hit]
+      rw [Val.memoHit?_exact hh, contAOf_memoize_hit, Val.keys_memoHit]
       sub_tac using (scopeAddAt_keys scope _)
     | none =>
       by_cases hu : v = Val.unit

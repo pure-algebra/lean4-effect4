@@ -7,13 +7,14 @@ namespace Effect4.Program
 open Effect4 Effect4.Machine
 
 /-- The handle spellings the internal kinds own, each defined once beside its type
-(`NativeOp.refTy`, `NativeOp.deferredTy`, `Ty.scope`, `Ty.context`). The `hasTy` arms below
-read the same names, so this list and those arms cannot drift apart. -/
+(`NativeOp.refTy`, `NativeOp.deferredTy`, `Ty.scope`, `Ty.context`, `Ty.memoMap`). The `hasTy`
+arms below read the same names, so this list and those arms cannot drift apart. -/
 def internalHandleTargets : List String :=
-  [NativeOp.refTarget, NativeOp.deferredTarget, Ty.scopeTarget, Ty.contextTarget]
+  [NativeOp.refTarget, NativeOp.deferredTarget, Ty.scopeTarget, Ty.contextTarget,
+    Ty.memoMapTarget]
 
 /-- An external allocation may not reuse an internal spelling: a byte-7 handle would
-otherwise read as a Ref, Deferred, Scope or Context handle by its target alone. -/
+otherwise read as a Ref, Deferred, Scope, Context or MemoMap handle by its target alone. -/
 def externalHandleTarget (target : String) : Bool :=
   !internalHandleTargets.contains target
 
@@ -49,6 +50,7 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
       | some .cell => target == NativeOp.refTarget
       | some .promise => target == NativeOp.deferredTarget
       | some .scope => target == Ty.scopeTarget
+      | some .memoMap => target == Ty.memoMapTarget
       | some .external => externalHandleTarget target && allocated[index]? == some target
       | _ => false
     | _ => target == Ty.contextTarget && (Val.context? v).isSome

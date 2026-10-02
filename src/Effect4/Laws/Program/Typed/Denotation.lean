@@ -2171,6 +2171,7 @@ theorem fits_refTy_inv {w : World} {v : Val} (h : Fits w v NativeOp.refTy) :
       exact ⟨⟨index⟩, rfl, h.2⟩
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
+    · exact absurd h (by decide)
     · exact nomatch h
     · exact nomatch h
   · exact absurd h.1 (by decide)
@@ -2190,6 +2191,7 @@ theorem fits_deferredTy_inv {w : World} {v : Val} (h : Fits w v NativeOp.deferre
       subst hk_byte
       exact ⟨⟨index⟩, rfl, h.2⟩
     · exact absurd h.1 (by decide)
+    · exact absurd h (by decide)
     · exact nomatch h
     · exact nomatch h
   · exact absurd h.1 (by decide)

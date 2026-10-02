@@ -212,6 +212,12 @@ def scope : Ty := .handle scopeTarget
 def contextTarget : String := "Context.Context<unknown>"
 def context : Ty := .handle contextTarget
 
+/-- A layer memo map handle (`Layer.MemoMap`, `Layer.ts`), internal as the scope handle is: no
+source type names it, and a store row that answers one is read through a guard, which keeps only
+what its intermediate type says (decisions row 187). Its spelling is written once, here. -/
+def memoMapTarget : String := "Layer.MemoMap"
+def memoMap : Ty := .handle memoMapTarget
+
 /-- TypeScript's null spelling (rc.112 Option.ts:1209). -/
 def nullTarget : String := "null"
 def null : Ty := .handle nullTarget
