@@ -550,11 +550,18 @@ first).** The layer family's arm is proved at every source (`provideLayerArm`,
 and proof-feature graph, the `check-ty-rule` repair, the generator's nested extras, and the data
 wave's rulings (decisions rows 8, 121, 125, 157–161, 166, 167, 169, 180 (a)). Built:
 `lake build Effect4 Effect4.Laws` (565 jobs), the touched batteries, the lcnf faces regenerated with
-`dune build` and `dune test`. Deferred to the next pause: `make check-gen`, the semantics report and
-the architecture page. Next: M6 (row 187's memo-table store clause, which makes
-`memoGet_implements` and `memoComplete_implements` provable; row 180 (a); the open commands), then
-M7; in this session, slice C (the `Ty` tables and the first classifier on the generated fold, row
-182) and row 8 (the emitter's duplicate keys).
+`dune build` and `dune test`. Since then, on the same branch: Codex's proof-infrastructure branch
+(the semantics cache's freshness; `--extras` reusing a generated structure map; the full `derived`
+group regenerated on this head, every output byte-identical); five round lemmas as `List.foldl_hom`;
+slice C of row 182 (`Ty`'s generic fold families generated into the core; the classifier and face
+tables as values of the generated `TyTable`, the Schema column Schema IR templates filled by a fold
+over the Schema AST, its agreement with `Bridge.schema` proved; `handleFree` on the table's column);
+row 8 (C) (the emitter writes each reference key once and refuses a conflicting repeat; the three
+fixtures byte-identical). Deferred to the next pause: `make check-gen`, `scripts/test-generators.py`,
+the semantics report and the architecture page. Next: M6 (row 187's memo-table store clause, which
+makes `memoGet_implements` and `memoComplete_implements` provable; row 180 (a); the open commands),
+then M7; row 182's C.3 and C.4 (the key and TypeScript faces; `Bridge.schema` onto the fold) and the
+optics row 182 records, each with its caller.
 
 **Integration, late 2026-10-01 (the base to build on; read first).** Merged into
 `refactor/phase1-phase3`: seat D4's merge completed (Bookkeeping's scope clauses, `04956067`);
