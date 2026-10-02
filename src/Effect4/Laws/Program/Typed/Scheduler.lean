@@ -133,14 +133,17 @@ def ObserverCommandOk (root : ProgramSource) (w : World) (m : RState)
   | .dropScopeFinalizer scope _ => m.state.ScopeLive scope
   | .untrackChild _ | .callback _ => True
 
-/-- Enrollment may fire an already-exited entrant immediately, so queueing only a typed
-observe command is insufficient. This clause uses the same declared result as RacePayload. -/
+/-- A queued enrollment names an id below `nextId` (decisions row 134 (e)), so fresh allocation
+cannot activate a previously absent target. Missing old targets remain inert. Enrollment may
+fire an already-exited entrant immediately; its columns use the same declared result as
+`RacePayload`. -/
 def EnrollRaceOk (root : ProgramSource) (w : World) (m : RState)
     (raceId : Nat) (child : FiberId) : Prop :=
-  match m.race? raceId, m.fiber? child with
-  | some race, some fiber => ∃ resultTy, RacePayload root w race resultTy ∧
-      FiberColumnsBelow w fiber.id resultTy.answer resultTy.error
-  | _, _ => True
+  child.value < m.nextId ∧
+    match m.race? raceId, m.fiber? child with
+    | some race, some fiber => ∃ resultTy, RacePayload root w race resultTy ∧
+        FiberColumnsBelow w fiber.id resultTy.answer resultTy.error
+    | _, _ => True
 
 structure ObserverState (root : ProgramSource) (w : World) (m : RState) : Prop where
   pendingOwner : ∀ fiber ∈ m.fibers, ∀ pending ∈ fiber.pending,

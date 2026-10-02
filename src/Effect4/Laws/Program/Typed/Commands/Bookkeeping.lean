@@ -367,9 +367,11 @@ theorem observerCommandOk_view {root : ProgramSource} {w : World} {m m' : RState
   | callback key => trivial
 
 theorem enrollRaceOk_view {root : ProgramSource} {w : World} {m m' : RState}
-    (view : ObsView m m') {raceId : Nat} {child : FiberId}
+    (view : ObsView m m') (ids : m.nextId ≤ m'.nextId) {raceId : Nat} {child : FiberId}
     (h : EnrollRaceOk root w m raceId child) : EnrollRaceOk root w m' raceId child := by
   unfold EnrollRaceOk at h ⊢
+  obtain ⟨below, h⟩ := h
+  refine ⟨Nat.lt_of_lt_of_le below ids, ?_⟩
   rw [view.races]
   cases hr : m.race? raceId with
   | none => trivial
@@ -384,9 +386,9 @@ theorem enrollRaceOk_view {root : ProgramSource} {w : World} {m m' : RState}
       exact h
 
 /-- The queue facts move to a machine whose lookups agree, given the commands' authority and
-delivery there, no new external request and no smaller token supply. -/
+delivery there, no new external request and no smaller fiber-id or token supply. -/
 theorem queueOk_transport {root : ProgramSource} {w : World} {m m' : RState} {q : List RCmd}
-    (queue : QueueOk root w m q) (view : ObsView m m')
+    (queue : QueueOk root w m q) (view : ObsView m m') (ids : m.nextId ≤ m'.nextId)
     (authority : ∀ c ∈ q, CommandAuthorityR m c → CommandAuthorityR m' c)
     (delivery : ∀ c ∈ q, CommandDeliveryOk root w m c → CommandDeliveryOk root w m' c)
     (requests : ∀ fiber token r, requestOfR m' fiber token = some r → requestOfR m fiber token = some r)
@@ -404,7 +406,7 @@ theorem queueOk_transport {root : ProgramSource} {w : World} {m m' : RState} {q 
     ⟨fun key hk => Nat.lt_of_lt_of_le (queue.keys.below key hk) tokens,
       fun fiber token r hr hk => queue.keys.disjoint fiber token r (requests fiber token r hr) hk⟩,
     fun s e o ho => observerCommandOk_view view o (queue.observer s e o ho),
-    fun r c hc => enrollRaceOk_view view (queue.enroll r c hc), queue.noRaceAfterInterrupt,
+    fun r c hc => enrollRaceOk_view view ids (queue.enroll r c hc), queue.noRaceAfterInterrupt,
     fun md sc tg ir ex hl => ?_,
     fun s e o ho r race hr => queue.raceObservers s e o ho r race ((view.races r).symm.trans hr)⟩
   obtain ⟨live, present⟩ := queue.links md sc tg ir ex hl
@@ -968,7 +970,8 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
           cases hk
     refine ⟨machineTyped_of (machineWide_rupdate machine.wide (quiet.id f)
         (fun key hk => Or.inl (fiberKeys_internal hmem (quiet.keys f hk))) ?_) (fun x hx => ?_), ?_,
-      queueOk_transport queue view (fun c _ h => commandAuthority_view ctl view.races c h)
+      queueOk_transport queue view (Nat.le_refl _)
+        (fun c _ h => commandAuthority_view ctl view.races c h)
         (fun c _ h => commandDelivery_view ctl c h) ?_ (Nat.le_refl _)⟩
     · intro token r hr
       by_cases hp : (k f).parked = .withGuard token
@@ -1111,6 +1114,8 @@ include hΓ hΘ in
 theorem enrollRaceOk_world {root : ProgramSource} {m : RState} {raceId : Nat} {child : FiberId}
     (h : EnrollRaceOk root w m raceId child) : EnrollRaceOk root w' m raceId child := by
   unfold EnrollRaceOk at h ⊢
+  obtain ⟨below, h⟩ := h
+  refine ⟨below, ?_⟩
   split at h
   · obtain ⟨resultTy, payload, cols⟩ := h
     exact ⟨resultTy, racePayload_world ord hΓ hΘ payload, fiberColumnsBelow_world hΓ cols⟩
@@ -1438,7 +1443,8 @@ theorem configTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {m
   have ctl : ∀ id, (m'.fiber? id).map ctlView = (m.fiber? id).map ctlView := fun id => by
     rw [lookup]
   refine ⟨machineTyped_congr fibers races state nextId nextToken nextRace stuck typed.machine,
-    fun f hf => typed.code f (by rw [← fibers]; exact hf), queueOk_transport typed.queue view
+    fun f hf => typed.code f (by rw [← fibers]; exact hf),
+    queueOk_transport typed.queue view (Nat.le_of_eq nextId.symm)
       (fun c _ h => commandAuthority_view ctl view.races c h)
       (fun c _ h => commandDelivery_view ctl c h)
       (fun fiber token r hr => by rw [requestOfR_congr (lookup fiber)] at hr; exact hr)
@@ -1512,8 +1518,8 @@ theorem configTyped_rupdate_gen {root : ProgramSource} {rootTy : EffTy} {w : Wor
   have sview := stackView_rupdate hf hid stack prov
   obtain ⟨machine, code, queue⟩ := typed
   refine ⟨machineTyped_of (machineWide_rupdate machine.wide hid keys request) (fun x hx => ?_),
-    ?_, queueOk_transport queue view auth (fun c _ h => commandDelivery_stack sview c h) ?_
-      (Nat.le_refl _)⟩
+    ?_, queueOk_transport queue view (Nat.le_refl _) auth
+      (fun c _ h => commandDelivery_stack sview c h) ?_ (Nat.le_refl _)⟩
   · rcases mem_rupdate hx with rfl | ⟨hold, _⟩
     · exact fresh
     · exact fiberTyped_transport (machine.fiber hold) view (Nat.le_refl _) (Nat.le_refl _)
@@ -1808,7 +1814,7 @@ theorem configTyped_frame {root : ProgramSource} {rootTy : EffTy} {w : World} {m
   refine ⟨ord, machineTyped_of (machineWide_frame wide frame wf stores keys due)
     (fun x hx => fiberTyped_transport (fiberTyped_world ord rfl rfl (machine.fiber hx)) view
       (Nat.le_refl _) (Nat.le_refl _)), readCode_world ord rfl code,
-    queueOk_transport (queueOk_world ord rfl rfl queue) view
+    queueOk_transport (queueOk_world ord rfl rfl queue) view (Nat.le_refl _)
       (fun c _ h => commandAuthority_view ctl view.races c h)
       (fun c _ h => commandDelivery_view ctl c h) (fun _ _ _ hr => hr) (Nat.le_refl _)⟩
 
@@ -2965,6 +2971,8 @@ theorem observerCommandOk_updateRace {source : FiberId} {exit : ExitV}
 theorem enrollRaceOk_updateRace {raceId : Nat} {child : FiberId}
     (h : EnrollRaceOk root w m raceId child) : EnrollRaceOk root w (m.updateRace new) raceId child := by
   unfold EnrollRaceOk at h ⊢
+  obtain ⟨below, h⟩ := h
+  refine ⟨below, ?_⟩
   rcases rrace?_updateRace_cases hr hid raceId with ⟨same, _⟩ | ⟨rfl, found⟩
   · rw [same]
     exact h

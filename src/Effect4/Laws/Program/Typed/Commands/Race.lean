@@ -168,14 +168,14 @@ theorem rmodify_race? (m : RState) (id : FiberId) (k : RFiber → RFiber) (raceI
   · rfl
 
 /-- **`enrollRace` keeps `I`** at the same world: the entrant joins the live set under the race's
-one result type (`EnrollRaceOk`: the race column and the entrant's columns below it); an exited
-entrant's callback fires now (`observe_raceCallback`), a live one stores it. -/
+one result type (`EnrollRaceOk`: an id below `nextId`, the race column and the entrant's columns
+below it); an exited entrant's callback fires now (`observe_raceCallback`), a live one stores it. -/
 theorem enrollRace_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat)
     (child : FiberId) : StepPreserves root rootTy (.enrollRace raceId child) := by
   intro w m rest _ typed
   refine ⟨w, leHost_refl w, ?_⟩
   have tail := configTyped_tail typed
-  have enroll := typed.queue.enroll raceId child List.mem_cons_self
+  have enroll := (typed.queue.enroll raceId child List.mem_cons_self).2
   simp only [driveStep]
   cases hr : m.race? raceId with
   | none => exact tail
@@ -188,7 +188,6 @@ theorem enrollRace_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : N
       have hcmem : c ∈ m.fibers := rfiber?_mem (show m.fiber? c.id = some c by rw [cid]; exact hc)
       obtain ⟨resultTy, payload, below⟩ : ∃ resultTy, RacePayload root w race resultTy ∧
           FiberColumnsBelow w c.id resultTy.answer resultTy.error := by
-        unfold EnrollRaceOk at enroll
         rw [hr, hc] at enroll
         exact enroll
       obtain ⟨cty, declaredC, subA, subE⟩ := below
@@ -603,8 +602,8 @@ theorem configTyped_rupdate_owner {root : ProgramSource} {rootTy : EffTy} {w : W
   have view : ObsView m (m.update g) := obsView_rupdate hf hid pending
   obtain ⟨machine, code, queue⟩ := typed
   refine ⟨machineTyped_of (machineWide_rupdate machine.wide hid keys request) (fun x hx => ?_),
-    ?_, queueOk_transport queue view auth (fun c hc h => commandDelivery_owner hid free c hc h) ?_
-      (Nat.le_refl _)⟩
+    ?_, queueOk_transport queue view (Nat.le_refl _) auth
+      (fun c hc h => commandDelivery_owner hid free c hc h) ?_ (Nat.le_refl _)⟩
   · rcases mem_rupdate hx with rfl | ⟨hold, _⟩
     · exact fresh
     · exact fiberTyped_transport (machine.fiber hold) view (Nat.le_refl _) (Nat.le_refl _)

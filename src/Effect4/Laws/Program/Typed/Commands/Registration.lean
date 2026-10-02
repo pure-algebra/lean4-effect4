@@ -115,9 +115,12 @@ theorem observerCommandOk_off {root : ProgramSource} {w : World} {m m' : RState}
   | callback k => trivial
 
 theorem enrollRaceOk_off {root : ProgramSource} {w : World} {m m' : RState}
-    {key : Guard.GuardKey} (view : ObsViewOff key m m') {raceId : Nat} {child : FiberId}
+    {key : Guard.GuardKey} (view : ObsViewOff key m m') (ids : m.nextId ≤ m'.nextId)
+    {raceId : Nat} {child : FiberId}
     (h : EnrollRaceOk root w m raceId child) : EnrollRaceOk root w m' raceId child := by
   unfold EnrollRaceOk at h ⊢
+  obtain ⟨below, h⟩ := h
+  refine ⟨Nat.lt_of_lt_of_le below ids, ?_⟩
   rw [view.races]
   cases hr : m.race? raceId with
   | none => trivial
@@ -147,9 +150,11 @@ theorem fiberTyped_transport_off {root : ProgramSource} {w : World} {m m' : RSta
   obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
   exact ⟨race, resultTy, (view.races raceId).trans found, host, token, reply⟩
 
-/-- `queueOk_transport` away from one key: no queued observer holds it. -/
+/-- `queueOk_transport` away from one key: no queued observer holds it, and the fiber-id
+supply does not shrink. -/
 theorem queueOk_transport_off {root : ProgramSource} {w : World} {m m' : RState} {q : List RCmd}
     {key : Guard.GuardKey} (queue : QueueOk root w m q) (view : ObsViewOff key m m')
+    (ids : m.nextId ≤ m'.nextId)
     (off : ∀ s e o, .observe s e o ∈ q → key ∉ Guard.observerKeys o)
     (authority : ∀ c ∈ q, CommandAuthorityR m c → CommandAuthorityR m' c)
     (delivery : ∀ c ∈ q, CommandDeliveryOk root w m c → CommandDeliveryOk root w m' c)
@@ -168,7 +173,7 @@ theorem queueOk_transport_off {root : ProgramSource} {w : World} {m m' : RState}
     ⟨fun k hk => Nat.lt_of_lt_of_le (queue.keys.below k hk) tokens,
       fun fiber token r hr hk => queue.keys.disjoint fiber token r (requests fiber token r hr) hk⟩,
     fun s e o ho => observerCommandOk_off view o (off s e o ho) (queue.observer s e o ho),
-    fun r c hc => enrollRaceOk_off view (queue.enroll r c hc), queue.noRaceAfterInterrupt,
+    fun r c hc => enrollRaceOk_off view ids (queue.enroll r c hc), queue.noRaceAfterInterrupt,
     fun md sc tg ir ex hl => ?_,
     fun s e o ho r race hr => queue.raceObservers s e o ho r race ((view.races r).symm.trans hr)⟩
   obtain ⟨live, present⟩ := queue.links md sc tg ir ex hl
@@ -220,7 +225,7 @@ theorem configTyped_rupdate_park {root : ProgramSource} {rootTy : EffTy} {w : Wo
   have view : ObsViewOff (g.id, token₀) m (m.update g) := obsViewOff_rupdate hf hid pending
   obtain ⟨machine, code, queue⟩ := typed
   refine ⟨machineTyped_of (machineWide_rupdate machine.wide hid keys request) (fun x hx => ?_),
-    ?_, queueOk_transport_off queue view queuedOff auth
+    ?_, queueOk_transport_off queue view (Nat.le_refl _) queuedOff auth
       (fun c hc h => commandDelivery_owner hid free c hc h) ?_ (Nat.le_refl _)⟩
   · rcases mem_rupdate hx with rfl | ⟨hold, _⟩
     · exact fresh

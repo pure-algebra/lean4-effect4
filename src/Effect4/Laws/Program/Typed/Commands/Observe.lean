@@ -119,9 +119,12 @@ theorem observerCommandOk_except {root : ProgramSource} {w : World} {m m' : RSta
   | callback key => trivial
 
 theorem enrollRaceOk_except {root : ProgramSource} {w : World} {m m' : RState}
-    {key : FiberId × Nat} (view : ExceptView m m' key) {raceId : Nat} {child : FiberId}
+    {key : FiberId × Nat} (view : ExceptView m m' key) (ids : m.nextId ≤ m'.nextId)
+    {raceId : Nat} {child : FiberId}
     (h : EnrollRaceOk root w m raceId child) : EnrollRaceOk root w m' raceId child := by
   unfold EnrollRaceOk at h ⊢
+  obtain ⟨below, h⟩ := h
+  refine ⟨Nat.lt_of_lt_of_le below ids, ?_⟩
   rw [view.races]
   cases hr : m.race? raceId with
   | none => trivial
@@ -274,7 +277,7 @@ theorem configTyped_replace {root : ProgramSource} {rootTy : EffTy} {w : World} 
       by rw [same]; exact queue.owners, queue.registration,
       ⟨queue.keys.below, fun fiber token r hr hk => queue.keys.disjoint fiber token r
         (requests fiber token r hr) hk⟩,
-      fun s e o ho => ?_, fun r c hc => enrollRaceOk_except view (queue.enroll r c hc),
+      fun s e o ho => ?_, fun r c hc => enrollRaceOk_except view (Nat.le_refl _) (queue.enroll r c hc),
       queue.noRaceAfterInterrupt, fun md sc tg ir ex hl => ?_,
       fun s e o ho r race hr => queue.raceObservers s e o ho r race ((view.races r).symm.trans hr)⟩
     · by_cases off : OffKey key o
