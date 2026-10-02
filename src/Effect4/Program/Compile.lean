@@ -521,20 +521,29 @@ def contextsOfList : List Val → Option (List Env.Ctx)
       | _, _ => none
     | _ => none
 
-/-- The contexts of an awaited exits value (`exitsVal`, one `list` frame). -/
-def contextsOf : Val → Option (List Env.Ctx)
-  | .list values => contextsOfList values
-  | _ => none
+/-- The contexts of an awaited exits value, read as a list (`Val.asList?`, the reader the list
+type's membership reads, `fits_list_iff`): the `list` frame `exitsVal` writes, or an admitted
+fiber snapshot, whose elements are fiber handles and never exits, so only the empty snapshot,
+the empty list, has contexts (decisions row 186). -/
+def contextsOf (v : Val) : Option (List Env.Ctx) :=
+  (Val.asList? v).bind contextsOfList
+
+/-- Whether an awaited exits value holds a failed exit, whatever its cause, the empty cause
+included: `forEachConcurrent`'s `step` returns the first `Failure` exit as it is
+(`internal/effect.ts:4950-4951`), so the merge fails even when the cause carries no reason
+(decisions row 186). -/
+def failedIn (v : Val) : Bool :=
+  ((Val.asList? v).getD []).any fun x =>
+    match exitOfVal x with
+    | some (Exit.failure _) => true
+    | _ => false
 
 /-- `Context.mergeAll(...contexts)` (`Layer.ts:1600`) over the awaited exits; a failed build
-fails the merge with every failure's reasons, in order. -/
+fails the merge with every failure's reasons, in order, an empty cause's none included. -/
 def mergeContextsK (v : Val) : NCode :=
   match contextsOf v with
   | some ctxs => Prim.success (builtContext (Env.Context.mergeAll ctxs))
-  | none =>
-    match reasonsOfVal v with
-    | [] => badShape
-    | reason :: rest => Prim.failure ⟨reason :: rest⟩
+  | none => if failedIn v then Prim.failure ⟨reasonsOfVal v⟩ else badShape
 
 /-- The route an asynchronous invocation takes, shared by `perform` and `callback`
 (DI-61 (a)). It is a plain definition, outside the

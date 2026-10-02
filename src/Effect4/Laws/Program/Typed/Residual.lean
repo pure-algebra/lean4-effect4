@@ -591,6 +591,13 @@ theorem pointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {t
   obtain ⟨fty, hfty, hex⟩ := hview q hq
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
+theorem layerPointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {lt : LayerTy}
+    (h : LayerPointTyped src w p lt) : LayerPointTyped src w' p lt := by
+  obtain ⟨l, hat, hchk, henv, hview⟩ := h
+  refine ⟨l, hat, hchk, henv, fun q hq => ?_⟩
+  obtain ⟨fty, hfty, hex⟩ := hview q hq
+  exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
+
 theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty : EffTy}
     (h : BodyTyped src w b ty) : BodyTyped src w' b ty := by
   cases h with
@@ -599,7 +606,8 @@ theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty 
   | raceCleanup race => exact .raceCleanup race
   | acquireIn p ctx ty h => exact .acquireIn p ctx ty (pointTyped_mono ord h)
   | release p prev ty h => exact .release p prev ty (pointTyped_mono ord h)
-  | layerBuild p m scope ty h => exact .layerBuild p m scope ty (pointTyped_mono ord h)
+  | layerBuild p m scope lt ty h hty =>
+    exact .layerBuild p m scope lt ty (layerPointTyped_mono ord h) hty
 
 /-- A finalizer's admission is upward closed (decisions row 151 (a″)): a capture's
 environment and services by membership's transport, a scope's presence by scope persistence. -/
@@ -806,6 +814,15 @@ theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
   · rw [hprog]
     exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
 
+theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
+    (h : LayerPointTyped src w point lt) : LayerPointTyped src' w point lt := by
+  obtain ⟨l, hat, hcheck, henv, hview⟩ := h
+  refine ⟨l, ?_, ?_, henv, hview⟩
+  · rw [hprog]
+    exact hat
+  · rw [hprog]
+    exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+
 theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
   cases h with
@@ -816,8 +833,9 @@ theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     exact .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
   | release p prev ty hp =>
     exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-  | layerBuild p m scope ty hp =>
-    exact .layerBuild p m scope ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | layerBuild p m scope lt ty hp hty =>
+    exact .layerBuild p m scope lt ty
+      (layerPointTyped_rows_append src src' t' hprog htab hsvc hp) hty
 
 /-- A capture typed under the shorter source is typed under the longer one: its node is the
 same program's, and the checker's verdicts extend along an appended row table. -/

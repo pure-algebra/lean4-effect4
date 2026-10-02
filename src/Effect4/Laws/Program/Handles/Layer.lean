@@ -179,10 +179,8 @@ theorem contextsOfList_keys : ∀ (vs : List Val) (cs : List Env.Ctx), contextsO
 theorem contextsOf_keys (v : Val) (cs : List Env.Ctx) (h : contextsOf v = some cs) :
     cs.flatMap Env.Context.handleKeys ⊆ v.keys := by
   unfold contextsOf at h
-  split at h
-  · rw [Val.keys_list]
-    exact contextsOfList_keys _ _ h
-  · cases h
+  obtain ⟨vs, hvs, hcs⟩ := Option.bind_eq_some_iff.mp h
+  exact List.Subset.trans (contextsOfList_keys vs cs hcs) (asList?_keys hvs)
 
 theorem mergeContextsK_keys (v : Val) : nativeKeys (mergeContextsK v) ⊆ v.keys := by
   unfold mergeContextsK

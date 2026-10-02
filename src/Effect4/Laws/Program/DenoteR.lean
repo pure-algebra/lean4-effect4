@@ -340,14 +340,12 @@ def combineWithR (mode : CombineMode) (that : Env.Ctx) (v : Val) : RProgram :=
     | .provideMerge => .pure (.success (builtContext (that.merge merged.services)))
   | none => .pure badShapeExit
 
-/-- `Context.mergeAll(...contexts)` (`Layer.ts:1600`) over the awaited exits. -/
+/-- `Context.mergeAll(...contexts)` (`Layer.ts:1600`) over the awaited exits; a failed build,
+whatever its cause, fails the merge (`internal/effect.ts:4950-4951`; decisions row 186). -/
 def mergeContextsR (v : Val) : RProgram :=
   match contextsOf v with
   | some ctxs => .pure (.success (builtContext (Env.Context.mergeAll ctxs)))
-  | none =>
-    match reasonsOfVal v with
-    | [] => .pure badShapeExit
-    | reason :: rest => .pure (.failure ⟨reason :: rest⟩)
+  | none => if failedIn v then .pure (.failure ⟨reasonsOfVal v⟩) else .pure badShapeExit
 
 /-- `Effect.service(key)` on the context value: the lookup, or the host throw as a defect. -/
 def serviceLookupR (key : ServiceKey) (v : Val) : RProgram :=

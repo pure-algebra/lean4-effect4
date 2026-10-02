@@ -1266,8 +1266,8 @@ census: layer.merge-parallel-scopes -/
 theorem mergeContextsK_contexts (ctxs : List Ctx) :
     mergeContextsK (exitsVal (ctxs.map fun c => Exit.success (Val.context c))) =
       Prim.success (builtContext (Env.Context.mergeAll (ctxs.map Ctx.services))) := by
-  simp only [mergeContextsK, contextsOf, exitsVal, List.map_map, Function.comp_def,
-    contextsOfList_contexts]
+  simp only [mergeContextsK, contextsOf, exitsVal, Val.asList?, Option.bind_some, List.map_map,
+    Function.comp_def, contextsOfList_contexts]
 
 /-- `scopedWith`'s frame at a `provideLayer` node (`internal/layer.ts:8-22`): the build into the
 fresh scope — through a private memo map when `local`, off the fiber context otherwise — the
