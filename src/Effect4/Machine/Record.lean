@@ -48,6 +48,11 @@ def build (names : List String) (values : List Val) : Option Val := do
 def lookup (value : Val) (name : String) : Option (Option Val) :=
   (entries value).map (Field.firstOf name)
 
+/-- Read in an explicit mode. Optional mode wraps presence rather than inspecting the value. -/
+def read (optional : Bool) (value : Val) (name : String) : Option Val := do
+  let result ← lookup value name
+  if optional then some (result.elim .none .some) else result
+
 /-- Insert or replace one field. The new occurrence precedes every retained occurrence. -/
 def set (value : Val) (name : String) (replacement : Val) : Option Val := do
   let fields ← entries value

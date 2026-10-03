@@ -1,10 +1,10 @@
-import Effect4.Program.Record
+import Effect4.Laws.Program.Typed.RecordOperations
 
 /-! Finite record-operation controls for rows 165, 178, and 195.
 These examples check local values and types. They establish no target execution claim. -/
 
 namespace Effect4.Test.RecordOperations
-open Effect4.Program Effect4.Machine
+open Effect4.Program Effect4.Program.Typed Effect4.Machine
 
 -- Sorting keeps each value with its own name.
 #guard Record.build ["z", "a"] [.nat 7, .str "Ada"] =
@@ -58,5 +58,42 @@ open Effect4.Program Effect4.Machine
 #guard Program.Record.setType (.record [("name", true, .string)]) "name" .nat =
   some (.record [("name", false, .nat)])
 #guard Program.Record.setType (.union (.record []) .nat) "name" .nat = none
+
+-- The mode wraps a present value even when it represents null or an inner None.
+#guard Record.read false (Record.frame []) "nickname" = none
+#guard Record.read true (Record.frame []) "nickname" = some Store.Val.none
+#guard Record.read true (Record.frame [("nickname", .unit)]) "nickname" =
+  some (Store.Val.some .unit)
+#guard Record.read true (Record.frame [("nickname", Store.Val.none)]) "nickname" =
+  some (Store.Val.some Store.Val.none)
+
+-- The construction theorem returns the value produced by the executable operation.
+example (w : Typed.World) : ∃ value,
+    Record.build [] [] = some value ∧ Fits w value (.record []) :=
+  record_build_fits (fields := []) (types := []) rfl .nil
+
+#print axioms ascending_names_sublist
+#print axioms namedFit_of_sublist_lookup
+#print axioms zipNames_columns
+#print axioms zipNames_fits
+#print axioms firstOf_fits
+#print axioms record_build_fits
+#print axioms mapM_some_mem
+#print axioms fits_foldl_join
+#print axioms fits_joinResults
+#print axioms record_fieldOf_fits
+#print axioms record_fieldType_fits
+#print axioms firstOf_filter_other
+#print axioms record_frame_fits
+#print axioms record_set_fits
+#print axioms record_setOf_fits
+#print axioms record_setType_fits
+#print axioms namedFit_columns
+#print axioms namedFit_names_sublist
+#print axioms namedFit_lookup
+#print axioms record_entries_of_fits
+#print axioms record_lookup_fits
+#print axioms record_lookup_required
+#print axioms record_lookup_optional
 
 end Effect4.Test.RecordOperations
