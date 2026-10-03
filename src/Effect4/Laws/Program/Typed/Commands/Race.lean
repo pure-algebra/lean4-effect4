@@ -514,7 +514,7 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
       pendingOwner := moved.pendingOwner
       observers := moved.observers
       registration := registrationG
-      code := fun _ _ _ ty d => codeG ty d
+      code := fun _ _ _ _ ty d => codeG ty d
       tokens := moved.tokens
       raceObservers := moved.raceObservers
       targetsBelow := moved.targetsBelow
@@ -778,7 +778,7 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
       pendingOwner := moved.pendingOwner
       observers := moved.observers
       registration := registrationG
-      code := fun _ _ _ ty d => codeG ty d
+      code := fun _ _ _ _ ty d => codeG ty d
       tokens := moved.tokens
       raceObservers := moved.raceObservers
       targetsBelow := moved.targetsBelow

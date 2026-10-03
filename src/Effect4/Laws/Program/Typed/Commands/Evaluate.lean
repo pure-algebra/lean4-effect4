@@ -1906,6 +1906,7 @@ theorem clause_scoped (root : ProgramSource) (rootTy : EffTy) (body : Point) :
   have services : ServicesFit { w with state := s } ctx.services := by
     show ServicesFit _ (f.context.services.addV Env.scopeKey (Value.scope scope))
     refine servicesFit_addV (servicesFit_mono ord c5) (fun sty hty => ?_)
+      (fits_live _ Ty.scope _ (fits_scopeHandle _ _ live'))
     have carrier : ({ w with state := s } : World).serviceTy Env.scopeKey = some Ty.scope := by
       show w.serviceTy Env.scopeKey = some Ty.scope
       rw [ev.typed.machine.services]

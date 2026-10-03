@@ -274,7 +274,9 @@ theorem valid_of (s : List ScopeFrame) (running : Bool) (trace := (loadR refProg
     ids := old.ids, fibers := old.fibers, heap := old.heap, promises := old.promises,
     tokens := ?_, tokenBound := old.tokenBound, tokenTargets := old.tokenTargets,
     state := old.state, wf := old.wf, cells := old.cells, root := old.root,
-    timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
+    timers := WakeTyped.empty _ _, waiters := (fun _ _ h => by cases h),
+    children := fun f hf c hc => by
+      change f ∈ [rootFiber s running] at hf; rw [List.mem_singleton] at hf; subst f; cases hc }
   intro f hf token hp
   change f ∈ [rootFiber s running] at hf
   rw [List.mem_singleton] at hf
@@ -412,10 +414,7 @@ theorem typed_of (s : List ScopeFrame) (running : Bool)
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -448,10 +447,7 @@ theorem old_typed_of (s : List ScopeFrame) (running : Bool) (commands : List RCm
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -708,7 +704,7 @@ theorem valid_w1g : WorldValid unitTy w1g afterGood.1 := by
   have v0 := initial_world_valid unitTy refProg 20 20
   have hids : afterGood.1.fibers.map (·.id) = (loadR refProg 20 20).fibers.map (·.id) := rfl
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, ?_, ⟨?_, ?_⟩, v0.root, WakeTyped.empty _ _,
-    fun _ _ h => by cases h⟩
+    (fun _ _ h => by cases h), fun f hf c hc => by change f ∈ [_] at hf; rw [List.mem_singleton] at hf; subst hf; cases hc⟩
   · rw [hids]
     exact v0.ids
   · intro id
@@ -804,10 +800,7 @@ theorem afterGood_typed :
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, ?_, ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -949,7 +942,7 @@ theorem afterGood_config :
     ConfigTyped (refProg : ProgramSource) unitTy w1g afterGood.1 afterGood.2 := by
   refine ⟨⟨afterGood_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl, rfl⟩, ?_,
     afterGood_queueOk⟩
-  · intro f hf _ _ _ ty declared
+  · intro f hf _ _ _ _ ty declared
     have saved := afterGood_saved f hf
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf

@@ -2753,7 +2753,7 @@ theorem serviceTy_flat (root : ProgramSource) (key : ServiceKey) (sty : Ty)
 /-- A context's services fit at every later world. -/
 theorem servicesFit_mono {w w' : World} (ord : w.leHost w') {ctx : Env.Ctx}
     (h : ServicesFit w ctx) : ServicesFit w' ctx :=
-  servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
+  servicesFit_map ord.1.2.1 ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
     (serviceTy_of_le ord.1) h
 
 /-- The context set, at a context whose services fit, answers `unit`. -/
@@ -2790,7 +2790,7 @@ theorem service_arm {key : ServiceKey} (hfuel : p.fuel ≠ 0)
     have hsty' : w'.serviceTy key = some sty := by
       rw [serviceTy_leHost ord htie]
       exact hsty
-    exact .pure (strongExit_success w' _ val (flatFits_fits (hsvc key val sty hget hsty')))
+    exact .pure (strongExit_success w' _ val (flatFits_fits (hsvc.1 key val sty hget hsty')))
   | none =>
     refine .pure ⟨?_, ?_⟩
     · rw [fitsExit_failure_iff]
@@ -2842,7 +2842,8 @@ theorem provideService_arm {key : ServiceKey} {value : Term} {b : NativeEff}
   · exact hchild w' o
   · have hsvc' : ServicesFit w' (Ctx.withServices
         ((Env.ContextUpdate.provideService key v).apply prev.services)).services := by
-      intro key' sv sty' hget hty'
+      refine ⟨fun key' sv sty' hget hty' => ?_,
+        entriesLive_addV (fits_live _ _ _ (fits_mono o hfit)) hsvc.2⟩
       change (prev.services.addV key v).getV key' = some sv at hget
       by_cases hk : key' = key
       · subst hk
@@ -2854,7 +2855,7 @@ theorem provideService_arm {key : ServiceKey} {value : Term} {b : NativeEff}
         cases hty'
         exact fits_flatFits hflat (fits_mono o hfit)
       · rw [Env.Context.getV_addV_other _ _ _ _ hk] at hget
-        exact hsvc key' sv sty' hget hty'
+        exact hsvc.1 key' sv sty' hget hty'
     refine seqGuard_typed root (setContext_typed root hsvc') (subN_never _) (fun w'' o' x _ => ?_)
     simp only [seqR]
     exact onExit_typed root (b := ⟨tb.answer, tb.error, _⟩) (f := EffTy.pure .unit)

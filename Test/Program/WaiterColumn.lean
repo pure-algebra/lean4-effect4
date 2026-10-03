@@ -86,7 +86,8 @@ theorem valid : WorldValid unitTy world machine := by
   refine
     { ids := rfl, fibers := old.fibers, heap := old.heap, promises := ?_,
       tokens := ?_, tokenBound := ?_, tokenTargets := ?_, state := rfl, wf := ?_,
-      cells := ⟨(fun i v h => nomatch h), ?_⟩, root := old.root, timers := WakeTyped.empty _ _, waiters := ?_ }
+      cells := ⟨(fun i v h => nomatch h), ?_⟩, root := old.root, timers := WakeTyped.empty _ _, waiters := ?_,
+      children := fun f hf c hc => by rw [member_fiber hf] at hc; cases hc }
   · intro key
     change (if key.index = 0 then some (Ty.unit, Ty.never) else none).isSome = true ↔ key.index < 1
     by_cases c : key.index = 0
@@ -209,10 +210,7 @@ theorem typedState : TypedState (rootProgram : ProgramSource) unitTy world machi
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨fun i v hv a e declared c hc => ?_⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩

@@ -99,7 +99,8 @@ theorem valid : WorldValid natTy world machine := by
     { ids := rfl, fibers := old.fibers, heap := old.heap, promises := old.promises,
       tokens := ?_, tokenBound := ?_, tokenTargets := ?_, state := rfl, wf := old.wf,
       cells := old.cells, root := old.root,
-      timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
+      timers := WakeTyped.empty _ _, waiters := (fun _ _ h => by cases h),
+      children := fun f hf c hc => by rw [member hf] at hc; cases hc }
   · intro f hf token hp
     rw [member hf] at hp
     cases hp
@@ -131,10 +132,7 @@ theorem typedState : TypedState (rootProgram : ProgramSource) natTy world machin
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro r hr
     change r ∈ [race] at hr
     rw [List.mem_singleton.mp hr]
@@ -355,7 +353,8 @@ theorem valid_of : WorldValid natTy world (machineOf (fiberOf c s n)) := by
     { ids := rfl, fibers := old.fibers, heap := old.heap, promises := old.promises,
       tokens := ?_, tokenBound := ?_, tokenTargets := ?_, state := rfl, wf := old.wf,
       cells := old.cells, root := old.root,
-      timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
+      timers := WakeTyped.empty _ _, waiters := (fun _ _ h => by cases h),
+      children := fun f hf c' hc => by rw [member_of c s n hf] at hc; cases hc }
   · intro f hf token hp
     rw [member_of c s n hf] at hp
     cases hp
@@ -395,10 +394,7 @@ theorem typedState_of
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro r hr
     change r ∈ [race] at hr
     rw [List.mem_singleton.mp hr]

@@ -585,7 +585,7 @@ theorem guard_frame {root : ProgramSource} {w : World} {ty : EffTy} {kind : Guar
   rcases guard_inv h with ⟨mid, body, run, skip⟩ | ⟨rfl, mid, prev, sc, body, callback, live, services, widen⟩
   · exact ⟨mid, body, .resume kind _ (fun w' ord ex hex arm => run w' ord ex ⟨arm, hex⟩) skip⟩
   · refine ⟨mid, body, .scopedResume _ prev sc callback (fun w' ord => ⟨scopeLive_mono ord.1 live, ?_⟩) widen⟩
-    exact servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
+    exact servicesFit_map ord.1.2.1 ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
       (serviceTy_of_le ord.1) services
 
 end TypedProg
@@ -728,7 +728,7 @@ theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin :
   | foreign c =>
     obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, hsvc⟩ := h
     exact ⟨acquire, release, env, t, a, hnode, hcheck, hacq, envTyped_mono ord henv,
-      servicesFit_map hPi hRho ord.2 ord.1.1.2 (serviceTy_of_le ord.1)
+      servicesFit_map ord.1.2.1 hPi hRho ord.2 ord.1.1.2 (serviceTy_of_le ord.1)
         hsvc⟩
   | release _ _ => exact h
   | closeChildScope _ | closeChildOnFailure _ | detachFromParent _ _ => exact scopeLive_mono ord.1 h
@@ -737,7 +737,7 @@ theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin :
 theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty : EffTy}
     (h : BodyTyped src w b ty) : BodyTyped src w' b ty := by
   have services : ∀ {ctx : Ctx}, ServicesFit w ctx.services → ServicesFit w' ctx.services :=
-    fun h => servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
+    fun h => servicesFit_map ord.1.2.1 ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
       (serviceTy_of_le ord.1) h
   cases h with
   | at_ p ty h => exact .at_ p ty (pointTyped_mono ord h)
@@ -845,7 +845,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | async register _ => exact asyncPre_mono root ord register cert h
   | setContext ctx =>
     simp only [fiberPre] at h ⊢
-    exact servicesFit_map hPi hRho ord.2 ord.1.1.2 (serviceTy_of_le ord.1) h
+    exact servicesFit_map ord.1.2.1 hPi hRho ord.2 ord.1.1.2 (serviceTy_of_le ord.1) h
   | getContext | snapshotChildren => exact h
   | refuse _ | raceRegister _ => exact (h : False).elim
   | interruptAs target _ =>
@@ -889,7 +889,7 @@ theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : R
   | finishFinalizer payload => exact .finishFinalizer (strongExit_mono _ _ _ _ ord payload)
   | scopedGuard mid prev sc _ callback live services widen ihBody =>
     exact .scopedGuard mid prev sc (ihBody _ ord) callback (scopeLive_mono ord.1 live)
-      (servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
+      (servicesFit_map ord.1.2.1 ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
         (serviceTy_of_le ord.1) services)
       (fun w'' ord' ex hex => widen w'' (leHost_trans _ _ _ ord ord') ex hex)
 

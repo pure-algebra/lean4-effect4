@@ -99,10 +99,45 @@ def FlatFits (w : World) (v : Val) : Ty → Prop
   | _ => False
 
 /-- A context's services fit their keys' static types, read off the world's static service
-table (shape A, decisions row 112). -/
+table (shape A, decisions row 112), and every service value the context holds, declared key or
+not, is live (finding F-CTX: so the context itself is live, `Val.handles_context`, and
+`getContext`'s answer fits the context handle). -/
 def ServicesFit (w : World) (services : Env.Ctx) : Prop :=
-  ∀ key sv sty, services.getV key = some sv → w.serviceTy key = some sty →
-    FlatFits w sv sty
+  (∀ key sv sty, services.getV key = some sv → w.serviceTy key = some sty →
+    FlatFits w sv sty) ∧ ∀ e ∈ services.entries, Live w e.valueVal
+
+/-- The liveness half of `ServicesFit` from the entries' raw handles. -/
+theorem entriesLive_of_flatMap {w : World} {es : List (Env.Service Env.ValU)}
+    (h : ∀ x ∈ es.flatMap (fun e => Store.Val.handles e.valueVal),
+      KindLive w x.2 (HandleKind.ofByte? x.1)) :
+    ∀ e ∈ es, Live w e.valueVal :=
+  fun e he x hx => h x (List.mem_flatMap.mpr ⟨e, he, hx⟩)
+
+/-- …and back. -/
+theorem flatMap_live {w : World} {es : List (Env.Service Env.ValU)}
+    (h : ∀ e ∈ es, Live w e.valueVal) :
+    ∀ x ∈ es.flatMap (fun e => Store.Val.handles e.valueVal),
+      KindLive w x.2 (HandleKind.ofByte? x.1) := by
+  intro x hx
+  obtain ⟨e, he, hxe⟩ := List.mem_flatMap.mp hx
+  exact h e he x hxe
+
+/-- The empty map's services fit vacuously (`Context.empty()`, `Layer.ts:1515`). -/
+theorem servicesFit_empty (w : World) : ServicesFit w Env.Context.empty := by
+  refine ⟨fun key sv sty hget _ => ?_, fun e he => by cases he⟩
+  rw [Env.Context.getV_empty] at hget
+  cases hget
+
+/-- Adding a live service keeps every service value live (`Context.add`, `Map.set`). -/
+theorem entriesLive_addV {w : World} {s : Env.Ctx} {key : ServiceKey} {v : Val} (hv : Live w v)
+    (hs : ∀ e ∈ s.entries, Live w e.valueVal) :
+    ∀ e ∈ (s.addV key v).entries, Live w e.valueVal := by
+  apply entriesLive_of_flatMap
+  intro x hx
+  rcases List.mem_append.mp (Env.Context.flatMap_setEntries_subset
+      (fun e => Store.Val.handles e.valueVal) key v s.entries hx) with new | old
+  · exact hv x new
+  · exact flatMap_live hs x old
 
 /-- Every typed failure of a cause has an image satisfying `member`; defects and interruptions
 are outside the error column (`reasonAdmits`, `Program/ErrorImage.lean:31`). -/
@@ -1331,15 +1366,16 @@ theorem flatFits_map {v : Val} {t : Ty} (h : FlatFits w1 v t) : FlatFits w2 v t 
   all_goals exact h.elim
 
 include halloc hstore in
-omit hΓ in
 /-- A context's services fit in a later world when every carrier the later world reads was the
 earlier world's (the lookup agreement of decisions row 112; the world order gives it as an
-equality of the two tables) and every scope it names is still present (row 156). -/
+equality of the two tables) and every scope it names is still present (row 156); its values stay
+live (`live_map`). -/
 theorem servicesFit_map {services : Env.Ctx}
     (hsvc : ∀ key sty, w2.serviceTy key = some sty → w1.serviceTy key = some sty)
     (h : ServicesFit w1 services) : ServicesFit w2 services :=
-  fun key sv sty hget hty =>
-    flatFits_map hPi hRho halloc hstore (h key sv sty hget (hsvc key sty hty))
+  ⟨fun key sv sty hget hty =>
+    flatFits_map hPi hRho halloc hstore (h.1 key sv sty hget (hsvc key sty hty)),
+   fun e he => live_map hΓ hPi hRho halloc hstore (h.2 e he)⟩
 
 end Map
 
@@ -1399,7 +1435,7 @@ theorem handle_fits_map {w1 w2 : World}
   · exact handleFits_map hPi hRho halloc hstore h
   · obtain ⟨ht, ctx, hctx, hs, hl⟩ := h
     simp only [Fits]
-    exact ⟨ht, ctx, hctx, servicesFit_map hPi hRho halloc hstore hsvc hs, live_map hΓ hPi hRho halloc hstore hl⟩
+    exact ⟨ht, ctx, hctx, servicesFit_map hΓ hPi hRho halloc hstore hsvc hs, live_map hΓ hPi hRho halloc hstore hl⟩
 
 /-- Membership moves to a world whose declaration tables and allocation spellings extend
 the old ones, whose store grows (`Stores.le`: every present scope and memo map stays, rows 156 and
@@ -3790,7 +3826,7 @@ theorem fits_handle_fresh (target : String) (w : World) (n : Nat) (hn : FreshFro
     · have hhandles : Store.Val.handles (Val.context emptyCtx) = [] := by decide
       refine ⟨w, n, Val.context emptyCtx, Grows.refl w, hn, rfl, emptyCtx,
         ctxImage.ofVal_toVal emptyCtx, ?_, live_of_handles_nil hhandles⟩
-      intro key sv sty hget _
+      refine ⟨fun key sv sty hget _ => ?_, fun e he => by cases he⟩
       have hnone : emptyCtx.services.getV key = none := rfl
       rw [hnone] at hget
       cases hget

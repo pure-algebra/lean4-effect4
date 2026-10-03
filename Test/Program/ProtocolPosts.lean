@@ -610,10 +610,7 @@ theorem foreign_untyped (w : W) (ex : ExitV) (ty : EffTy) (unit : ty.answer = .u
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   change certG = .handle Ty.contextTarget at preG
   subst preG
-  have services : ServicesFit w emptyCtx.services := fun key sv sty hget _ => by
-    change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
-    rw [Env.Context.getV_empty] at hget
-    cases hget
+  have services : ServicesFit w emptyCtx.services := servicesFit_empty w
   have live : Live w (Val.context emptyCtx) := live_of_handles_nil rfl
   have hG := nextG w (leHost_refl w) (Val.context emptyCtx)
     (getContext_answers (acqProg : ProgramSource) w emptyCtx services live)
@@ -658,10 +655,7 @@ theorem acq_capture_typed (w : W) : CaptureTyped (acqProg : ProgramSource) w acq
       cases hv
       trivial
     | succ k => cases hi
-  · intro key sv sty hget _
-    change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
-    rw [Env.Context.getV_empty] at hget
-    cases hget
+  · exact servicesFit_empty _
 
 /-- **Positive, the finalizer's own program** (decisions row 151 (a″)): the same capture's program
 is typed at rc.112's finalizer type `⟨unknown, never⟩`, at every world and every closing exit
