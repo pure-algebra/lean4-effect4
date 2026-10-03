@@ -21,8 +21,8 @@ one rule each:
              specification only)
 
 Only prose is read. Fenced blocks, code spans, HTML comments and blockquotes are skipped; words
-inside double quotes are mentions, not uses (a bold label that opens a list item is a mention
-too); identifiers outside code (a name with `_`, `/`, `#`, an inner dot or inner capitals) are
+inside double quotes are mentions, not uses (a bold label that opens a list item, and an italic
+title in title case, are mentions too); identifiers outside code (a name with `_`, `/`, `#`, an inner dot or inner capitals) are
 never matched as words. Table cells are exempt from `length`, and the specification's
 dictionary tables from every word rule.
 """
@@ -62,6 +62,7 @@ CODE_SPAN = re.compile(r"(`+)(.+?)\1")
 LINK = re.compile(r"!?\[([^\]]*)\]\((?:[^()\s]|\([^()]*\))*\)")
 AUTOLINK = re.compile(r"<(?:https?|mailto):[^>]+>")
 QUOTE = re.compile(r"\"[^\"\n]*\"|“[^”\n]*”")
+ITALIC = re.compile(r"(?<![*\w])\*(?!\*)([^*\n]+?)(?<!\*)\*(?![*\w])")
 RAW_LABEL = re.compile(r"^(\s*)(?:\*\*([^*]+)\*\*|__([^_]+)__)(\s*[:.—–-])")
 QUOTED_LABEL = re.compile(r"^\s*(?:\"[^\"]*\"|“[^”]*”)\s*[:.—–-]\s*")
 LIST_MARKER = re.compile(r"^(\s*)(?:[-*+]|\d+[.)])\s+")
@@ -249,14 +250,22 @@ def names_declaration(token: str) -> bool:
             or bool(re.fullmatch(r"[a-z][a-z0-9]*[A-Z]\w*", core)))
 
 
+def title_mention(match: re.Match[str]) -> str:
+    """An italic span in title case (two capitalized words or more) is a title: a mention."""
+    words = match.group(1).split()
+    capitalized = sum(1 for w in words if w[:1].isupper())
+    return f"\"{match.group(1)}\"" if len(words) >= 2 and capitalized >= 2 else match.group(0)
+
+
 def prose_line(line: str, first: bool) -> str:
     """One source line as prose: a code span becomes one placeholder word, a link its text, an
-    opening bold label a quoted mention; emphasis markers go."""
+    opening bold label or an italic title a quoted mention; emphasis markers go."""
     if first:
         line = RAW_LABEL.sub(lambda m: f"{m.group(1)}\"{m.group(2) or m.group(3)}\"{m.group(4)}", line)
     line = AUTOLINK.sub(" ", line)
     line = CODE_SPAN.sub(CODE_TOKEN, line)
     line = LINK.sub(lambda m: m.group(1), line)
+    line = ITALIC.sub(title_mention, line)
     return re.sub(r"\*\*|__|(?<![\w*])\*(?=\S)|(?<=\S)\*(?![\w*])", "", line)
 
 
@@ -317,8 +326,9 @@ def form_pattern(form: str) -> re.Pattern[str]:
 
 
 def qualifier_pattern(word: str) -> re.Pattern[str]:
+    """A qualifier may stand inside a hyphenated compound: "typed-module admission"."""
     escaped = re.escape(word).replace(re.escape("<n>"), r"\d+")
-    return re.compile(r"(?<![\w-])" + escaped + r"(?![\w-])", re.I)
+    return re.compile(r"(?<!\w)" + escaped + r"(?!\w)", re.I)
 
 
 def quoted(cell: str) -> list[str]:

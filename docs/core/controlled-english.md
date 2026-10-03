@@ -137,7 +137,7 @@ The checker reports every word in the left column. Write the right column instea
 
 The checker reads prose only. It skips fenced blocks, code spans, HTML comments and
 blockquotes. A word in double quotes is a mention, not a use: "sound" names the word. A bold
-label that opens a list item is a mention too.
+label that opens a list item is a mention too, and so is an italic title in title case.
 
 An identifier outside code is never read as a word. An identifier holds `_`, `/`, `#`, an inner
 dot or inner capitals. The dictionary tables of this file are exempt from the word rules, and
@@ -200,7 +200,7 @@ Each entry is one row of six columns:
 | Term | Meaning here | Tree anchor | Literature | Do not use | Qualifier |
 | --- | --- | --- | --- | --- | --- |
 | **object language** | A language that Effect4 defines: `Eff`, `Ty`, `Term`, `Val`, `Representation`. | `Eff` (`src/Effect4/Program/Eff.lean`); `Ty` (`src/Effect4/Program/TyCore.lean`) | standard | — | — |
-| **metalanguage** | Lean, the language in which the object languages are defined. | — | standard | "host language", "host syntax", "host metatheory", "host Lean", "Lean host" | — |
+| **metalanguage** | Lean, the language in which the object languages are defined. | — | standard | "host language", "host syntax", "host metatheory", "host Lean" | — |
 | **syntax** (object-language syntax) | First-order data of an object language: a free object. Lean's `Syntax` is Lean's parsed source tree, and TypeScript syntax is the target's. | `Eff` (`src/Effect4/Program/Eff.lean`); `Ty` (`src/Effect4/Program/TyCore.lean`); `Term` (`src/Effect4/Machine/Term.lean`); `Store.Val` (`src/Effect4/Store/Carrier/Val.lean`); `Representation` (`src/Effect4/Schema/Representation.lean`) | abstract syntax (standard) | — | First use: "object-language", "object language", "Lean", "TypeScript", "target", "program", "authoring", "surface", "OCaml", "stored", or in code. |
 | **judgment** | A relation given by rules, an inductive predicate, that says when a statement holds. | `HasTy` (`src/Effect4/Laws/Program/Typing/HasTy.lean`); `Fits` (`src/Effect4/Laws/Program/Typed/Membership.lean`); `TypedProg` (`src/Effect4/Laws/Program/Typed/Residual.lean`) | TAPL §8.2 "The Typing Relation" (audit §1b) | — | — |
 | **typing rule** | One constructor of a typing judgment. | `HasTy` (`src/Effect4/Laws/Program/Typing/HasTy.lean`) | TAPL §8.2 (audit §1b) | — | — |
