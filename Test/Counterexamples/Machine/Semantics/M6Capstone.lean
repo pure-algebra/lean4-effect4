@@ -135,10 +135,7 @@ theorem typed_loaded_at (p : NativeEff) (resultTy : EffTy) (fuel compileFuel : N
     · intro v0 h; cases h
     · intro v0 h; cases h
     · intro v0 hv; cases hv
-    · intro key sv sty hget
-      change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
-      rw [Env.Context.getV_empty] at hget
-      cases hget
+    · exact servicesFit_empty _
   · intro race hr; cases hr
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
@@ -261,10 +258,7 @@ theorem reviewed_loaded_at (p : NativeEff) (resultTy : EffTy) (fuel compileFuel 
     · intro v0 h; cases h
     · intro v0 h; cases h
     · intro v0 hv; cases hv
-    · intro key sv sty hget
-      change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
-      rw [Env.Context.getV_empty] at hget
-      cases hget
+    · exact servicesFit_empty _
   · intro race hr; cases hr
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v0 hv => nomatch hv)⟩, (fun v0 hv => nomatch hv), trivial⟩
@@ -705,10 +699,7 @@ theorem typed : H1.ReviewedTypedState (program : ProgramSource) ty world machine
       cases h
     · intro v0 hv
       cases hv
-    · intro key sv sty hget
-      change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
-      rw [Env.Context.getV_empty] at hget
-      cases hget
+    · exact servicesFit_empty _
   · intro r hr
     cases hr
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
@@ -1279,10 +1270,7 @@ theorem typed : OldTypedState (rootProgram : ProgramSource) unitTy world machine
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -1389,10 +1377,7 @@ theorem typed_queued (commands : List RCmd) : H1Shapes.TypedState (rootProgram :
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -1531,10 +1516,7 @@ theorem result_typed : H1Shapes.TypedState (rootProgram : ProgramSource) unitTy 
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -1660,10 +1642,7 @@ theorem typedState_machine : TypedState (rootProgram : ProgramSource) unitTy wor
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -1708,10 +1687,7 @@ theorem typedState_result : TypedState (rootProgram : ProgramSource) unitTy worl
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -2095,9 +2071,7 @@ theorem typed : OldH1TypedState (rootProgram : ProgramSource) unitTy world machi
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
     · refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
       · intro ty declared
         change some unitTy = some ty at declared
@@ -2107,9 +2081,7 @@ theorem typed : OldH1TypedState (rootProgram : ProgramSource) unitTy world machi
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -2133,9 +2105,7 @@ theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world mac
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
     · refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
       · intro ty declared
         change some unitTy = some ty at declared
@@ -2145,9 +2115,7 @@ theorem old_typed : OldTypedState (rootProgram : ProgramSource) unitTy world mac
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -2358,9 +2326,7 @@ theorem result_typed (commands : List RCmd) :
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
     · refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
       · intro ty declared
         change some unitTy = some ty at declared
@@ -2372,9 +2338,7 @@ theorem result_typed (commands : List RCmd) :
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -2399,9 +2363,7 @@ theorem old_result_typed (commands : List RCmd) :
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
     · refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
       · intro ty declared
         change some unitTy = some ty at declared
@@ -2413,9 +2375,7 @@ theorem old_result_typed (commands : List RCmd) :
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩
@@ -2571,9 +2531,7 @@ theorem typedState_input : OldSplitTypedState (rootProgram : ProgramSource) unit
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
     · refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
       · intro ty declared
         change some unitTy = some ty at declared
@@ -2583,9 +2541,7 @@ theorem typedState_input : OldSplitTypedState (rootProgram : ProgramSource) unit
       · intro v hv; cases hv
       · intro v hv; cases hv
       · intro bucket hb; cases hb
-      · intro key value ty lookup
-        change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-        rw [Env.Context.getV_empty] at lookup; cases lookup
+      · exact servicesFit_empty _
   · intro race member; cases member
   · refine ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h), ⟨(fun i v h => nomatch h)⟩,
       ⟨(fun v hv => nomatch hv)⟩, (fun v hv => nomatch hv), trivial⟩

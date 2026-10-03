@@ -755,11 +755,8 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
     · intro b hb
       rw [fact.buckets] at hb
       cases hb
-    · intro key value sty lookup
-      rw [fact.context] at lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · rw [fact.context]
+      exact servicesFit_empty _
   · intro r hr
     rw [races] at hr
     cases hr

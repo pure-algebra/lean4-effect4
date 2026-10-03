@@ -87,10 +87,7 @@ def scopedCode : RProgram :=
   (guardR (.onExit false) (.pure (.success .unit))).bind
     fun ex => .vis (.inr (.scopeExit emptyCtx 0 ex)) Effects.Program.pure
 
-theorem empty_services (w : W) : ServicesFit w emptyCtx.services := fun key sv _ hget _ => by
-  change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
-  rw [Env.Context.getV_empty] at hget
-  cases hget
+theorem empty_services (w : W) : ServicesFit w emptyCtx.services := servicesFit_empty w
 
 /-- **The positive control**: at the witness's world, where scope 0 is present, the code the
 `scoped` arm installs is typed. -/

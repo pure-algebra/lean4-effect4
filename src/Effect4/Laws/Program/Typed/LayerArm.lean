@@ -73,39 +73,36 @@ theorem live_builtContext_of {w : World} {s : Env.Ctx} {vs : List Val}
   obtain ⟨v, hv, hk⟩ := List.mem_flatMap.mp (hsub hm)
   exact hl v hv h hk
 
-/-- The empty map's services fit vacuously (`Context.empty()`, `Layer.ts:1515`). -/
-theorem servicesFit_empty (w : World) : ServicesFit w Env.Context.empty := by
-  intro key sv sty hget _
-  rw [Env.Context.getV_empty] at hget
-  cases hget
-
 /-- `Context.add(key, v)` keeps the services fitting when `v` fits the key's carrier. -/
 theorem servicesFit_addV {w : World} {s : Env.Ctx} {key : ServiceKey} {v : Val}
-    (hs : ServicesFit w s) (hv : ∀ sty, w.serviceTy key = some sty → FlatFits w v sty) :
-    ServicesFit w (s.addV key v) := by
-  intro key' sv sty hget hty
+    (hs : ServicesFit w s) (hv : ∀ sty, w.serviceTy key = some sty → FlatFits w v sty)
+    (hlive : Live w v) : ServicesFit w (s.addV key v) := by
+  refine ⟨fun key' sv sty hget hty => ?_, entriesLive_addV hlive hs.2⟩
   by_cases hk : key' = key
   · subst hk
     rw [Env.Context.getV_addV_same] at hget
     cases hget
     exact hv sty hty
   · rw [Env.Context.getV_addV_other _ _ _ _ hk] at hget
-    exact hs key' sv sty hget hty
+    exact hs.1 key' sv sty hget hty
 
 /-- The right-biased merge (`Context.merge`, `ContextUpdate.apply_provide_get?`) keeps the services
 fitting: every binding is one side's. -/
 theorem servicesFit_merge {w : World} {a b : Env.Ctx} (ha : ServicesFit w a)
     (hb : ServicesFit w b) : ServicesFit w (a.merge b) := by
-  intro key sv sty hget hty
-  rw [Env.Context.getV_merge] at hget
-  cases hbk : b.getV key with
-  | some x =>
-    rw [hbk] at hget
-    cases hget
-    exact hb key _ sty hbk hty
-  | none =>
-    rw [hbk] at hget
-    exact ha key sv sty hget hty
+  refine ⟨fun key sv sty hget hty => ?_, entriesLive_of_flatMap fun x hx => ?_⟩
+  · rw [Env.Context.getV_merge] at hget
+    cases hbk : b.getV key with
+    | some x =>
+      rw [hbk] at hget
+      cases hget
+      exact hb.1 key _ sty hbk hty
+    | none =>
+      rw [hbk] at hget
+      exact ha.1 key sv sty hget hty
+  · rcases List.mem_append.mp (Env.Context.rawHandles_merge a b hx) with h | h
+    · exact flatMap_live ha.2 x h
+    · exact flatMap_live hb.2 x h
 
 /-- `Context.mergeAll` (`Layer.ts:1600`) keeps the services fitting: a left fold of merges. -/
 theorem servicesFit_mergeAll {w : World} : ∀ (cs : List Env.Ctx), (∀ c ∈ cs, ServicesFit w c) →
@@ -346,7 +343,7 @@ theorem bindService_typed {w : World} {key : Option ServiceKey} {v : Val} {T : E
   | some k =>
     refine .pure (strongExit_success w T _ ?_)
     rw [hT]
-    refine fits_builtContext (servicesFit_addV (servicesFit_empty w) (hfit k rfl)) ?_
+    refine fits_builtContext (servicesFit_addV (servicesFit_empty w) (hfit k rfl) hlive) ?_
     refine live_builtContext_of (vs := [v]) ?_ (fun x hx => by
       rw [List.mem_singleton] at hx
       subst hx
@@ -369,7 +366,8 @@ theorem addCurrentMemoMap_typed {w : World} {m : MemoMapId} {v : Val} {T : EffTy
   rw [hctx]
   refine .pure (strongExit_success w T _ ?_)
   rw [hT]
-  refine fits_builtContext (servicesFit_addV hsvc fun sty h => ?_) ?_
+  refine fits_builtContext (servicesFit_addV hsvc (fun sty h => ?_)
+    (fits_live w Ty.memoMap _ ⟨rfl, hm⟩)) ?_
   · rw [htie, serviceTy_currentMemoMapKey] at h
     cases h
   · refine live_builtContext_of (vs := [Val.memoMap m, v]) ?_ ?_
@@ -461,8 +459,8 @@ theorem buildWithMemoMap_typed {w : World} {build : MemoMapId → RProgram} {m :
     (hbuild : ∀ w', w.leHost w' → TypedProg root w' (buildTy lt) (build m)) :
     TypedProg root w (buildTy lt) (buildWithMemoMapR build m) := by
   unfold buildWithMemoMapR
-  refine updateContext_typed (fun w' o prev hprev => servicesFit_addV hprev fun sty h => ?_)
-    (fun w' o => ?_)
+  refine updateContext_typed (fun w' o prev hprev => servicesFit_addV hprev (fun sty h => ?_)
+    (fits_live w' Ty.memoMap _ ⟨rfl, memoLive_mono o.1 hm⟩)) (fun w' o => ?_)
   · rw [serviceTy_leHost o htie, serviceTy_currentMemoMapKey] at h
     cases h
   · exact seqGuard_typed root (hbuild w' o) (Ty.subN_refl _) (fun w'' o' v hv =>
@@ -827,7 +825,8 @@ theorem construction_typed {w : World} {q : Point} {key : Option ServiceKey} {bo
       (updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
         ((guardR .onSuccess (denoteR root.program body (q.child 0))).bind (seqR fun v =>
           bindServiceR key v))) := by
-  refine updateContext_typed (fun w' o prev hprev => servicesFit_addV hprev fun sty hst => ?_)
+  refine updateContext_typed (fun w' o prev hprev => servicesFit_addV hprev (fun sty hst => ?_)
+    (fits_live w' Ty.scope _ (fits_scopeHandle w' layerScope (scopeLive_mono o.1 hls))))
     (fun w' o => ?_)
   · rw [serviceTy_leHost o htie, serviceTy_scopeKey] at hst
     cases hst

@@ -122,10 +122,7 @@ theorem badShape_refused (w : W) (ty : EffTy) : ¬ ExitOk w ty badShapeExit := b
 handle. -/
 theorem emptyCtx_fits (w : W) : Fits w (Val.context emptyCtx) (.handle Ty.contextTarget) := by
   refine ⟨rfl, emptyCtx, Val.context?_context emptyCtx, ?_, ?_⟩
-  · intro key sv sty hget _
-    change (Machine.Env.Context.empty : Machine.Env.Ctx).getV key = some sv at hget
-    rw [Machine.Env.Context.getV_empty] at hget
-    cases hget
+  · exact servicesFit_empty _
   · intro hd hm
     have none : Store.Val.handles (Val.context emptyCtx) = [] := rfl
     rw [none] at hm
@@ -357,9 +354,10 @@ def strCtx : Ctx := ⟨Machine.Env.Context.empty.addV K (Val.str "x"), defaultBu
 
 /-- At the empty table membership reads no service's carrier, so the context fits. -/
 theorem strCtx_fits : Fits w2 (Val.context strCtx) (.handle Ty.contextTarget) := by
-  refine ⟨rfl, strCtx, Val.context?_context strCtx, ?_, ?_⟩
-  · intro key sv sty _ hty
-    cases hty
+  refine ⟨rfl, strCtx, Val.context?_context strCtx, ⟨(fun key sv sty _ hty => by cases hty),
+    entriesLive_of_flatMap fun x hx => by
+      change x ∈ ([] : List (UInt8 × Nat)) at hx
+      cases hx⟩, ?_⟩
   · intro hd hm
     have none : Store.Val.handles (Val.context strCtx) = [] := rfl
     rw [none] at hm

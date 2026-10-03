@@ -348,7 +348,7 @@ theorem ambientScope_live {root : ProgramSource} {rootTy : EffTy} {w : World} {m
   have carrier : w.serviceTy Env.scopeKey = some Ty.scope := by
     rw [services]
     rfl
-  exact (fit Env.scopeKey _ _ bound carrier).2
+  exact (fit.1 Env.scopeKey _ _ bound carrier).2
 
 /-- **The ambient-scope read answers inside its post at `J`** (decisions row 156): the machine
 answers `.ambientScope` with the fiber context's ambient scope (`FiberAction.ambientScope`,
@@ -1226,10 +1226,7 @@ theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compile
       cases h
     · intro v0 hv
       cases hv
-    · intro key sv sty hget
-      change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
-      rw [Env.Context.getV_empty] at hget
-      cases hget
+    · exact servicesFit_empty _
   · intro race hr
     cases hr
   · exact ⟨⟨(fun o ho => nomatch ho), (fun _ hp => nomatch hp)⟩, (fun i v h => nomatch h),

@@ -132,10 +132,7 @@ theorem typedState : TypedState (rootProgram : ProgramSource) natTy world machin
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro r hr
     change r ∈ [race] at hr
     rw [List.mem_singleton.mp hr]
@@ -397,10 +394,7 @@ theorem typedState_of
     · intro v hv; cases hv
     · intro v hv; cases hv
     · intro v hv; cases hv
-    · intro key value ty lookup
-      change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-      rw [Env.Context.getV_empty] at lookup
-      cases lookup
+    · exact servicesFit_empty _
   · intro r hr
     change r ∈ [race] at hr
     rw [List.mem_singleton.mp hr]

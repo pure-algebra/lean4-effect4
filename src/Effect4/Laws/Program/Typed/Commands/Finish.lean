@@ -415,11 +415,7 @@ theorem configTyped_cleared {root : ProgramSource} {rootTy : EffTy} {w : World} 
     { ok := ⟨⟨fun ty d => by
             obtain ⟨tin, st, pv⟩ := old.position d
             exact ⟨tin, by rw [gframe]; exact st, by rw [gframe]; exact pv⟩⟩,
-          moved.ok.c1, moved.ok.c2, moved.ok.c3, moved.ok.c4,
-          fun key value ty lookup => by
-            change (Env.Context.empty : Env.Ctx).getV key = some value at lookup
-            rw [Env.Context.getV_empty] at lookup
-            cases lookup⟩
+          moved.ok.c1, moved.ok.c2, moved.ok.c3, moved.ok.c4, servicesFit_empty w⟩
       delivery := fun token hp => by
         obtain ⟨tin, final, d1, d2, st, pv⟩ := moved.delivery token hp
         exact ⟨tin, final, d1, d2, by rw [gframe]; exact st, by rw [gframe]; exact pv⟩

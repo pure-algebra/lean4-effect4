@@ -249,17 +249,19 @@ theorem servicesFit_restrict (app : SigApp) (w : World) (services : Env.Ctx)
     (hagree : ∀ key sv, services.getV key = some sv → w.serviceTy key = app.serviceTy key) :
     ServicesFit (restrictWorld app w) services ↔ ServicesFit w services := by
   constructor
-  · intro h key sv sty hget hty
+  · intro h
+    refine ⟨fun key sv sty hget hty => ?_, h.2⟩
     have hty' : app.serviceTy key = some sty := by
       rw [← hagree key sv hget]
       exact hty
-    exact h key sv sty hget hty'
-  · intro h key sv sty hget hty
+    exact h.1 key sv sty hget hty'
+  · intro h
+    refine ⟨fun key sv sty hget hty => ?_, h.2⟩
     change app.serviceTy key = some sty at hty
     have hty' : w.serviceTy key = some sty := by
       rw [hagree key sv hget]
       exact hty
-    exact h key sv sty hget hty'
+    exact h.1 key sv sty hget hty'
 
 /-- Along an extension of the application's signature, membership survives the restriction to
 the smaller table: the restriction reads no carrier the world does not. -/

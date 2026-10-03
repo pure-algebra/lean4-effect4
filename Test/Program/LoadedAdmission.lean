@@ -117,7 +117,7 @@ theorem lookup_typed (w : W) (ty : EffTy) (answer : ty.answer = .nat) (v : Val)
   simp only [serviceLookupR, hctx]
   split
   · rename_i sv hget
-    have hfit := flatFits_fits (typed ctx hctx natKey sv .nat hget hkey)
+    have hfit := flatFits_fits ((typed ctx hctx).1 natKey sv .nat hget hkey)
     refine TypedProg.pure (strongExit_success w ty sv ?_)
     rw [answer]
     exact hfit
@@ -186,7 +186,7 @@ theorem memoAwait_typed (w : W) (m : MemoMapId) :
       cases hhit'
       exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
         (fun _ _ _ h => nomatch h) (EffTy.pure (.handle Ty.contextTarget))
-        ⟨_, _, hPi, Ty.sub_refl _, Ty.sub_refl _⟩ (fun _ _ _ hpost => TypedProg.pure hpost)
+        ⟨_, _, hPi.1, Ty.sub_refl _, Ty.sub_refl _⟩ (fun _ _ _ hpost => TypedProg.pure hpost)
   · exact TypedProg.pure (Test.Program.H2PartOne.interrupt_admitted w' _ none)
 
 #print axioms sleep_admitted
