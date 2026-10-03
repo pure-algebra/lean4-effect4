@@ -4,6 +4,17 @@ version = "0.1.0"
 # and the gate; `#effect4_axiom_gate` runs in it.
 defaultTargets = ["Effect4", "Effect4Laws", "Test"]
 
+# Lake's local artifact cache (tooling map item 1.3, measured 2026-10-03). A build stores each
+# output under its content hash in the toolchain's cache (`lake env printenv LAKE_CACHE_DIR`), and
+# a build whose inputs match a stored entry restores the output as a hard link instead of
+# rebuilding: a fresh worktree restored all 815 jobs in about a second, against 318 s built. A
+# return to any state some worktree has built restores the same way. `restoreAllArtifacts` keeps
+# every output in `.lake/build`, where `lake env lean` and the drivers that load an environment
+# read them. `lake cache clean` empties the cache; a worktree re-seeds it from its own outputs on
+# its next build, so pruning rebuilds nothing.
+enableArtifactCache = true
+restoreAllArtifacts = true
+
 # Every Lean process of this package is capped at 6 GB (`lean --memory`): a runaway
 # elaboration aborts with "memory limit exceeded" instead of taking the machine down
 # (docs/research/2026-09-04-s3-volume-plan.md, memory rule).

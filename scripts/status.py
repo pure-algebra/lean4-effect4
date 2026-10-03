@@ -2,7 +2,8 @@
 """status: one screen of what is true at HEAD, measured, never hand-written.
 
     HEAD and the uncommitted paths; the last battery build against the Lean sources changed
-    since; which check and generation markers are fresh against the inputs the Makefile names
+    since; the size of Lake's artifact cache and the part no build directory uses; which check
+    and generation markers are fresh against the inputs the Makefile names
     for them; the committed generated files that differ from HEAD; the semantics claims by
     status (generated/semantics.md); the open ledger goals (#proof_wanted); the decision
     registers and the counterexample register by status; the stale references in the
@@ -209,6 +210,36 @@ def summarise(counts: Counter, order: tuple[str, ...] = ()) -> str:
     return " · ".join(f"{counts[k]} {k}" for k in keys) if keys else "none"
 
 
+def lake_cache() -> Path | None:
+    """The directory Lake keeps its artifact cache in, chosen as Lake chooses it
+    (`Lake/Config/Env.lean`, `addCacheDirs`): `LAKE_CACHE_DIR` when set (empty: no cache), else the
+    toolchain's own cache when elan runs Lake, else the system cache."""
+    if "LAKE_CACHE_DIR" in os.environ:
+        return Path(os.environ["LAKE_CACHE_DIR"]) if os.environ["LAKE_CACHE_DIR"] else None
+    lake = subprocess.run(["elan", "which", "lake"], cwd=ROOT, capture_output=True, text=True)
+    if lake.returncode == 0 and lake.stdout.strip():
+        return Path(lake.stdout.strip()).resolve().parent.parent / "lake" / "cache"
+    home = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    return Path(home) / "lake"
+
+
+def cache_sizes(cache: Path) -> tuple[int, int]:
+    """Bytes in the cache, each file once, and bytes in files no other directory links to: what
+    `lake cache clean` frees (a restored output is a hard link, so a file a worktree uses survives)."""
+    total = unused = 0
+    seen: set[int] = set()
+    for folder, _, files in os.walk(cache):
+        for name in files:
+            info = os.lstat(os.path.join(folder, name))
+            if info.st_ino in seen:
+                continue
+            seen.add(info.st_ino)
+            total += info.st_size
+            if info.st_nlink == 1:
+                unused += info.st_size
+    return total, unused
+
+
 def main() -> int:
     rules, variables = make_database()  # first: a failed measurement prints nothing else
     head, dirty = head_line()
@@ -235,6 +266,11 @@ def main() -> int:
     if last is not None:
         print(f"profile   last make build: {len(last['times'])} modules rebuilt, {last['summed']:.0f} s summed, "
               f"critical path {last['critical']:.0f} s; slowest {last['ranked'][0][0]} (make build-profile)")
+    cache = lake_cache()
+    if cache is not None and cache.is_dir():
+        total, unused = cache_sizes(cache)
+        print(f"cache     {total / 2**30:.1f} GB in Lake's artifact cache, {unused / 2**30:.1f} GB of it used by no "
+              f"build directory (lake cache clean frees it and rebuilds nothing)")
 
     inventories = {".lake/check/inventory": sources,
                    ".lake/check/paths": run("git", "ls-files").split("\n")[:-1]}

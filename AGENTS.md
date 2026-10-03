@@ -190,8 +190,13 @@ its arrows. Anything else is a leak.
 - `lakefile.toml` and `docs/core/decisions.md` are the coordinator's. An agent proposes a decisions
   row in its receipt (`docs/research/<date>-seat-<X>-receipt.md`) and never edits the register.
 - A worktree never copies `docs/research` (2 GB).
+- A new worktree clones the dependency packages copy-on-write
+  (`cp -c -R .lake/packages <worktree>/.lake/packages`) and then runs `lake build`. Lake's artifact
+  cache (`lakefile.toml`) restores each output that some worktree has already built, in seconds.
+  `lake cache clean` prunes the cache and rebuilds nothing.
 - `make status` gives what is true at HEAD, measured:
   - the build and check markers against their inputs;
+  - the size of Lake's artifact cache, and the part of it that no worktree uses;
   - the claims by status and the open ledger goals;
   - the registers;
   - the documents' stale references.

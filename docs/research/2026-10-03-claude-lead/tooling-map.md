@@ -1,6 +1,6 @@
 # Tooling for the next wave: a measured map
 
-Base: `394bc602`, revised at `43866b84`. Author: Claude, lead. Status: a proposal for the owner,
+Base: `394bc602`, revised at `2410655e`. Author: Claude, lead. Status: a proposal for the owner,
 updated in place as its items land. It lands no planned work. The commands behind the numbers are
 at the end.
 
@@ -41,7 +41,7 @@ authoring, host-session typing and an LCNF lowering checked against named observ
 | the derived generation group | 301 s | 39 s | `089d9d97`, `2f8da42d` |
 | the semantics report | 27 s | 7 s | `e8222420`, `bca33ff6` |
 | the semantics controls | 57 s | 5 s | `e8222420`, `bca33ff6` |
-| a fresh worktree's first build | — | 318 s, 807 jobs | — |
+| a fresh worktree's first build | 318 s, 807 jobs built | about 1 s, 815 jobs restored | 1.3 below |
 
 Three more facts bound the next steps:
 
@@ -49,7 +49,9 @@ Three more facts bound the next steps:
   path, through the `Handles` chain. `Laws/Program/Handles/Hooks` took 84 s of it, under load.
 - **Memory.** A bare `lake build` runs one compilation per core and swaps this 16 GB machine.
   `AGENTS.md` now bounds every Lake call at `LEAN_NUM_THREADS=3` (`6437547c`).
-- **Disk.** 14 GB of 460 GB are free, and each worktree's `.lake` takes 3 GB.
+- **Disk.** 14 GB of 460 GB are free. A worktree that builds its own outputs takes 3 GB in
+  `.lake`. A worktree restored from the artifact cache shares its outputs with the cache as hard
+  links, not copies.
 
 ## 3. The items, with their status
 
@@ -60,9 +62,23 @@ Three more facts bound the next steps:
   note `staged-generation.md` (`a2d6146d`) measures the prerequisites and proposes a pilot.
 - **1.2 The thread bound: landed** in `AGENTS.md` (`6437547c`). Open: choosing 3, 4 or 5 by one
   measured full build each, on a quiet machine.
-- **1.3 Lake's artifact cache across worktrees: in measurement.** Lake 4.33 has a local
-  content-addressed cache (`enableArtifactCache`, `LAKE_ARTIFACT_CACHE`). Cloning `.lake` does not
-  work: Lake rebuilt every job.
+- **1.3 Lake's artifact cache across worktrees: landed.** `lakefile.toml` sets
+  `enableArtifactCache` and `restoreAllArtifacts`. A build stores each output under its content
+  hash in the toolchain's cache. A later build with matching inputs restores that output as a hard
+  link. Measured in two probe worktrees:
+  - a fresh worktree, with its dependency packages cloned copy-on-write, restored all 815 jobs in
+    about a second;
+  - without `restoreAllArtifacts`, the outputs stay in the cache only, and `lake env lean` cannot
+    find them;
+  - a one-module change rebuilt that module and the axiom gate (18 s), and left the other
+    worktree's copy unchanged;
+  - reverting the change restored the earlier outputs in a second;
+  - against an empty cache, a built worktree rebuilt nothing and re-seeded the cache with hard
+    links.
+
+  So `lake cache clean` is a safe prune, and `make status` shows the cache's size and the part
+  that no worktree uses. Limit: the cache holds only the states that a worktree has built since
+  the setting landed. Cloning `.lake` itself does not work: Lake rebuilt every job.
 - **1.4 Native tactic and gate code: landed** (`580261d6`, `834bf7bb`). Two small libraries are
   precompiled: `Effect4Tactics` and `ProofGraphNative`.
 - **1.5 Compiled report drivers: landed** (`bca33ff6`): `semantics-report`, `semantics-controls`
@@ -74,6 +90,24 @@ Three more facts bound the next steps:
 - **1.8 An incremental axiom gate: for the owner.** The gate traverses every declaration at the end
   of the build. A check per module would run in parallel and only for rebuilt modules. It changes
   the trust architecture, so it needs a ruling.
+- **1.9 Compiled generation drivers: measured, not landed.** The six interpreted drivers of
+  `scripts/generate.py` and `make corpus` were built as executables and timed against
+  `lean --run` on a quiet machine. Both forms wrote byte-identical outputs.
+
+  | Driver | Interpreted | Compiled |
+  | --- | ---: | ---: |
+  | variances | 1.9 s | 2.4 s |
+  | effgen | 3.2 s | 2.7 s |
+  | effwire | 2.3 s | 2.7 s |
+  | casgoldens | 1.8 s | 0.6 s |
+  | tsgen | 6.1 s | 2.6 s |
+  | corpus | 2.1 s | 2.4 s |
+
+  The gain is under 4 s for each driver. Five of the six executables link between 41 and 99
+  Effect4 modules. After a core change, each rebuilt module among them would be compiled to C
+  object code again before the next run. The report drivers of 1.5 differ. They load their
+  environment at run time, and their executables link at most one Effect4 module, the semantics
+  attribute (`Effect4.Laws.Auto.Semantics`).
 
 ### Lane 2 — obligations and progress visible from the tree
 
@@ -122,9 +156,9 @@ None of these has landed. Each serves the planned work directly.
 
 ## 4. Order
 
-1. **Landed today:** 1.1's speed, 1.2's rule, 1.4–1.6, 3.1, 3.6, and the three repaired checks.
-2. **Next:** the staged-generation decision with Codex and the owner, then its pilot; 1.7; 1.3's
-   result.
+1. **Landed today:** 1.1's speed, 1.2's rule, 1.3–1.6, 3.1, 3.6, and the three repaired checks.
+   1.9 was measured and dropped.
+2. **Next:** the staged-generation decision with Codex and the owner, then its pilot; 1.7.
 3. **The visibility core:** 2.1–2.5, entering the plan's order and the vertical example as data.
 4. **Documents:** 3.2–3.5 and 3.7.
 5. **With the planned work:** 2.7 before the first brief, 2.8 with the vertical example, 2.9 with
