@@ -27,8 +27,17 @@ sys.path.insert(0, str(ROOT / "scripts" / "lib"))
 from doc_refs import stale_references  # noqa: E402
 
 
+class StatusError(Exception):
+    """A measurement could not be taken; the report refuses rather than guess."""
+
+
 def run(*args: str) -> str:
-    return subprocess.run(args, cwd=ROOT, capture_output=True, text=True).stdout
+    """The command's standard output; a nonzero exit is a StatusError carrying its diagnostic."""
+    done = subprocess.run(args, cwd=ROOT, capture_output=True, text=True)
+    if done.returncode != 0:
+        detail = (done.stderr or done.stdout).strip().splitlines()
+        raise StatusError(f"`{' '.join(args)}` exited {done.returncode}: " + (detail[-1] if detail else "no output"))
+    return done.stdout
 
 
 def mtime(path: str) -> float:
@@ -56,19 +65,26 @@ def head_line() -> tuple[str, list[str]]:
 
 
 def make_database() -> tuple[dict[str, list[str]], dict[str, str]]:
-    """Every rule `target: prerequisites` (order-only dropped) and every `NAME := value`."""
+    """Every rule `target: prerequisites` make knows (order-only prerequisites dropped, files make
+    lists as "Not a target" skipped) and every `NAME := value`."""
     text = run("make", "-pn", "help")
     rules: dict[str, list[str]] = {}
     variables: dict[str, str] = {}
-    for line in text.split("\n"):
-        assignment = re.match(r"^([A-Z_]+) :?= (.*)$", line)
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        assignment = re.match(r"^([A-Z_][A-Z0-9_]*) :?= (.*)$", line)
         if assignment:
             variables[assignment.group(1)] = assignment.group(2)
             continue
-        rule = re.match(r"^(\.lake/(?:check|gen)/[A-Za-z0-9_.-]+):\s*(.*)$", line)
-        if rule:
-            prerequisites = rule.group(2).split("|", 1)[0].split()
-            rules[rule.group(1)] = prerequisites
+        if not line or line[0] in "#\t " or (i > 0 and lines[i - 1].startswith("# Not a target")):
+            continue
+        rule = re.match(r"^([^:=\s][^:=]*?):(?![:=])\s*(.*)$", line)
+        if rule and " " not in rule.group(1) and not re.fullmatch(r"\.[A-Z_]+", rule.group(1)):
+            rules.setdefault(rule.group(1), rule.group(2).split("|", 1)[0].split())
+    missing = [name for name in ("CHECKS", "HERMETIC_GROUPS", "GENERATED_PATHS") if not variables.get(name, "").split()]
+    if missing or ".lake/check/roots" not in rules:
+        raise StatusError("make's database lacks " + ", ".join(missing or [".lake/check/roots"]) +
+                          "; the Makefile changed shape or did not parse")
     return rules, variables
 
 
@@ -79,18 +95,44 @@ def inventory_fresh(marker: str, current: list[str]) -> bool:
     return path.read_text().split("\n")[:-1] == current or path.read_text().split() == current
 
 
-def marker_state(marker: str, rules: dict[str, list[str]], inventories: dict[str, list[str]]) -> str:
-    stamp = mtime(marker)
+def stale_reason(target: str, rules: dict[str, list[str]], inventories: dict[str, list[str]],
+                 memo: dict[str, str | None]) -> str | None:
+    """Why make would rebuild `target`, or None when it would not: the target is missing, an
+    inventory it reads changed, a prerequisite is missing, newer, or itself stale (followed through
+    every prerequisite that has a rule, so a stale upstream marker makes its consumers stale)."""
+    if target in memo:
+        return memo[target]
+    memo[target] = None  # a cycle is make's error, not this report's
+    if target in inventories:
+        memo[target] = None if inventory_fresh(target, inventories[target]) else "the inventory changed"
+        return memo[target]
+    stamp = mtime(target)
     if stamp < 0:
-        return "never"
-    for prerequisite in rules.get(marker, []):
-        if prerequisite in inventories:
-            if not inventory_fresh(prerequisite, inventories[prerequisite]):
-                return "stale"
+        memo[target] = "missing"
+        return memo[target]
+    for prerequisite in rules.get(target, []):
+        if prerequisite == "FORCE":
             continue
-        if mtime(prerequisite) > stamp:
-            return "stale"
-    return "fresh"
+        if prerequisite in rules or prerequisite in inventories:
+            upstream = stale_reason(prerequisite, rules, inventories, memo)
+            if upstream is not None:
+                memo[target] = f"{prerequisite}: {upstream}"
+                return memo[target]
+        when = mtime(prerequisite)
+        if when < 0:
+            memo[target] = f"{prerequisite}: missing"
+            return memo[target]
+        if when > stamp:
+            memo[target] = f"{prerequisite} is newer"
+            return memo[target]
+    return None
+
+
+def marker_state(marker: str, rules: dict[str, list[str]], inventories: dict[str, list[str]],
+                 memo: dict[str, str | None]) -> str:
+    if mtime(marker) < 0:
+        return "never"
+    return "fresh" if stale_reason(marker, rules, inventories, memo) is None else "stale"
 
 
 def table_rows(path: str) -> list[list[str]]:
@@ -149,9 +191,11 @@ def counterexamples() -> Counter:
 
 
 def ledger_goals() -> int:
+    """The library's open goals: `#proof_wanted` under src/. The ledger's own controls in Test/
+    (Test/Audit/Obligations.lean, IndexedColumns.lean) test the instrument and are not goals."""
     count = 0
-    for path in lean_sources() + [os.path.relpath(p, ROOT) for p in (ROOT / "tools").rglob("*.lean")]:
-        if path.endswith("Laws/Auto/Obligations.lean"):
+    for path in lean_sources():
+        if not path.startswith("src/") or path.endswith("Laws/Auto/Obligations.lean"):
             continue
         for line in (ROOT / path).read_text().split("\n"):
             if re.match(r"^\s*#proof_wanted\s+\S", line):
@@ -165,6 +209,7 @@ def summarise(counts: Counter, order: tuple[str, ...] = ()) -> str:
 
 
 def main() -> int:
+    rules, variables = make_database()  # first: a failed measurement prints nothing else
     head, dirty = head_line()
     print(f"effect4   {head}")
     if dirty:
@@ -185,18 +230,18 @@ def main() -> int:
         state = "up to date" if changed == 0 else f"{changed} Lean source(s) changed since (lake build)"
         print(f"build     battery built {when}; {state}")
 
-    rules, variables = make_database()
     inventories = {".lake/check/inventory": sources,
                    ".lake/check/paths": run("git", "ls-files").split("\n")[:-1]}
     checks = variables.get("CHECKS", "").split()
-    states = {name: marker_state(f".lake/check/{name}", rules, inventories) for name in checks}
+    memo: dict[str, str | None] = {}
+    states = {name: marker_state(f".lake/check/{name}", rules, inventories, memo) for name in checks}
     by_state: dict[str, list[str]] = {}
     for name, state in states.items():
         by_state.setdefault(state, []).append(name)
     print("checks    " + "; ".join(f"{state}: {' '.join(names)}" for state, names in
                                   sorted(by_state.items(), key=lambda kv: ("fresh", "stale", "never").index(kv[0]))))
     groups = variables.get("HERMETIC_GROUPS", "").split()
-    gen_states = {g: marker_state(f".lake/gen/{g}", rules, inventories) for g in groups}
+    gen_states = {g: marker_state(f".lake/gen/{g}", rules, inventories, memo) for g in groups}
     stale_groups = [g for g, s in gen_states.items() if s != "fresh"]
     generated = variables.get("GENERATED_PATHS", "").split()
     drift = [line[3:] for line in run("git", "status", "--porcelain", "--", *generated).split("\n") if line]
@@ -209,6 +254,13 @@ def main() -> int:
     print(f"decisions {summarise(decisions(), ('open', 'ruled', 'landed'))}  (docs/core/decisions.md)")
     print(f"issues    {summarise(design_issues(), ('open', 'ruled', 'basis'))}  (docs/DESIGN-ISSUES.md)")
     print(f"attacks   {summarise(counterexamples(), ('seeded', 'repaired', 'pinned', 'retired'))}  (Test/Counterexamples/REGISTER.md)")
+    if "--why" in sys.argv:
+        for name in checks:
+            if states[name] == "stale":
+                print(f"  check-{name}: {stale_reason(f'.lake/check/{name}', rules, inventories, memo)}")
+        for g in groups:
+            if gen_states[g] == "stale":
+                print(f"  gen-{g}: {stale_reason(f'.lake/gen/{g}', rules, inventories, memo)}")
     stale = stale_references(ROOT)
     if stale:
         files = len({s.file for s in stale})
@@ -219,4 +271,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except StatusError as error:
+        print(f"FAIL status: {error}", file=sys.stderr)
+        sys.exit(2)
