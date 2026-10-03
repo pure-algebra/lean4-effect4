@@ -1965,7 +1965,8 @@ theorem Evaluating.unitAnswerFrame {root : ProgramSource} {w : World} {tin : Eff
 
 /-- **`interruptScoped`** (`:5368`, D6b): on the fiber itself, `unit` answered; on another fiber, the
 public interrupt program installed over the saved answer frame, typed at `unit`
-(`fiberValR (.interrupt target)`, whose pre is `True`); the frame carries the reply to the
+(`fiberValR (.interrupt target)`, whose pre is this row's, the target's declaration; finding
+F-PRE); the frame carries the reply to the
 continuation. -/
 theorem clause_interruptScoped (root : ProgramSource) (rootTy : EffTy) (target : FiberId) :
     FiberClauseKeeps root rootTy (.interruptScoped target) := by
@@ -1985,12 +1986,12 @@ theorem clause_interruptScoped (root : ProgramSource) (rootTy : EffTy) (target :
       (fun ty declared => ?_)
     obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
     rw [hc] at current
-    obtain ⟨_, _, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    obtain ⟨_, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
     refine ⟨⟨.unit, .never, Env.Requirement.empty⟩, ?_,
       hostStack_push (Evaluating.unitAnswerFrame typedNext) stack, ⟨prov.recorded, prov.deferred⟩⟩
     exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () trivial (fun _ _ _ post => unitAnswer_typed root post)
+      (fun _ _ _ h => nomatch h) () pre (fun _ _ _ post => unitAnswer_typed root post)
 
 /-! ## `interruptAs`: the interrupt recorded on a declared target -/
 

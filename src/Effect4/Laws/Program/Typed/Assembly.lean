@@ -999,15 +999,16 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
   intro w' ord ex hex
   cases fin with
   | interruptFiber fiber skipSelf =>
+    have declared : (w'.Γ fiber).isSome = true := isSome_extends ord.1.2.1 h
     cases skipSelf with
     | true =>
       refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-        (fun _ _ _ h => nomatch h) () trivial fun w'' _ ans post => ?_
+        (fun _ _ _ h => nomatch h) () declared fun w'' _ ans post => ?_
       subst post
       exact TypedProg.pure (exitOk_unit_finalizer w'')
     | false =>
       refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-        (fun _ _ _ h => nomatch h) () trivial fun w'' _ ans post => ?_
+        (fun _ _ _ h => nomatch h) () declared fun w'' _ ans post => ?_
       subst post
       exact TypedProg.pure (exitOk_unit_finalizer w'')
   | closeChildScope scope =>

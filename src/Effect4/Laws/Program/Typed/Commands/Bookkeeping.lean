@@ -2772,10 +2772,14 @@ theorem link_preserves (root : ProgramSource) (rootTy : EffTy) (mode : Supervisi
         · rw [wide.state]
         · rw [wide.state]
         · rw [wide.state]
+      -- the interrupt finalizer's target is declared: the machine holds it (finding F-PRE)
+      have declared : (w.Γ target).isSome = true := by
+        have ht' : m.fiber? t.id = some t := by rw [rfiber?_id ht]; exact ht
+        exact (wide.fibers target).mpr (List.mem_map.mpr ⟨t, rfiber?_mem ht', rfiber?_id ht⟩)
       have stores : StoresOk (preds root) { w with state := s } Expect.root s := by
         obtain ⟨c0, c1, c2, c3, c4, c5⟩ := storesOk_world ord rfl rfl rfl wide.stores
         exact ⟨c0, c1, ⟨c2.c0⟩, scopeStoreOk_addUnsafe c3 hentry m.state.nextName trivial
-          (finalizerTyped_of_admitted root _ _ trivial), c4, c5⟩
+          (finalizerTyped_of_admitted root _ _ declared), c4, c5⟩
       obtain ⟨_, restated⟩ := configTyped_restate tail le rfl rfl rfl wf stores
         (fun _ h => h) wide.live.dueOwners (fun _ h => h)
       have modified := configTyped_modify_quiet restated target

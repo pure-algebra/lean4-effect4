@@ -182,8 +182,10 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .raceAll entrants _ => ∀ p ∈ entrants, ∃ ty, PointTyped root w p ty ∧
       ty.answer.sub cert.answer = true ∧ ty.error.sub cert.error = true
   | .async register _ => asyncPre root w register cert
-  | .suspend _ | .interrupt _ | .interruptScoped _ | .interruptAll _ _
-  | .awaitNewChildren _ => True
+  | .suspend _ | .interruptAll _ _ | .awaitNewChildren _ => True
+  -- the public interrupt installs `interruptAs(target, self)` (`:857`), whose row demands the
+  -- target (finding F-PRE); `interruptScoped` installs the public interrupt on another fiber
+  | .interrupt target | .interruptScoped target => (w.Γ target).isSome = true
   -- row 139's halting arms (seat C's census): the step halts on an unknown target or an absent
   -- scope (`FiberAction.interruptAs`, `linkScope` from `runIn` and `forkIn`,
   -- `FiberAction.closeScope`, `prepareScopedExitR`), so the row demands them, a scope's
@@ -732,7 +734,8 @@ theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin :
         hsvc⟩
   | release _ _ => exact h
   | closeChildScope _ | closeChildOnFailure _ | detachFromParent _ _ => exact scopeLive_mono ord.1 h
-  | interruptFiber _ _ | awaitNewChildren _ | parkThen _ | memoEntry _ _ | memoDone _ _ => trivial
+  | interruptFiber _ _ => exact isSome_extends ord.1.2.1 h
+  | awaitNewChildren _ | parkThen _ | memoEntry _ _ | memoDone _ _ => trivial
 
 theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty : EffTy}
     (h : BodyTyped src w b ty) : BodyTyped src w' b ty := by
@@ -848,7 +851,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
     exact servicesFit_map ord.1.2.1 hPi hRho ord.2 ord.1.1.2 (serviceTy_of_le ord.1) h
   | getContext | snapshotChildren => exact h
   | refuse _ | raceRegister _ => exact (h : False).elim
-  | interruptAs target _ =>
+  | interruptAs target _ | interrupt target | interruptScoped target =>
     simp only [fiberPre] at h ⊢
     exact isSome_extends hGamma h
   | runIn target scope =>
@@ -860,8 +863,8 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | closeScope scope _ =>
     simp only [fiberPre] at h ⊢
     exact ⟨scopeLive_mono ord.1 h.1, fitsExit_mono ord h.2⟩
-  | getId | yieldNow _ | ambientScope | sync _ | suspend _ | interrupt _
-  | interruptScoped _ | interruptAll _ _ | awaitNewChildren _ | guard_ _ | unguard _
+  | getId | yieldNow _ | ambientScope | sync _ | suspend _
+  | interruptAll _ _ | awaitNewChildren _ | guard_ _ | unguard _
   | finishFinalizer _ | construction | foreignRelease _ _
   | closeWalk _ _ _ | closeIter _ _ _ | cancelRace _ | dropObservers _
   | frontier _ _ => exact trivial
