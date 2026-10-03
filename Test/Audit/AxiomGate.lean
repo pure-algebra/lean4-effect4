@@ -1,5 +1,6 @@
 import Lean
 import Lean.Util.CollectAxioms
+import ProofGraph.Audit
 import ProofGraph.Axioms
 import Effect4
 
@@ -63,6 +64,8 @@ is `Inhabited.default` or `Classical.ofNonempty` and nothing else.
 open Lean
 
 namespace Test.Audit
+
+open ProofGraph.Audit (moduleOf? isSynthesizedOpaqueBody moduleImportClosure)
 
 private def allowedAxioms : List Name :=
   [``propext, ``Quot.sound]
@@ -214,14 +217,6 @@ private def choiceImplementationPrivateDeclarations : List (Name × Name) :=
 private def forbiddenAxioms : List Name :=
   [``sorryAx, ``Lean.ofReduceBool, ``Lean.ofReduceNat, ``Lean.trustCompiler]
 
-/-- The synthesised values Lean gives a bodyless `opaque`. -/
-private def synthesizedOpaqueBodies : List Name :=
-  [``Inhabited.default, ``Classical.ofNonempty]
-
-private def moduleOf? (environment : Environment) (declaration : Name) : Option Name := do
-  let index ← environment.getModuleIdxFor? declaration
-  environment.header.moduleNames[index.toNat]?
-
 /-- Resolve each `(owner, original name)` exemption to the one private
 declaration that carries it, and refuse anything but exactly one.
 
@@ -304,23 +299,6 @@ private def admissionAncestors (environment : Environment) (declaration : Name) 
   else
     sameModule
 
-/-- Strip the binders a parameterised `opaque` puts in front of its value.
-`opaque f (n : Nat) : Nat` has value `fun n => default`, and the head constant
-is what the ruling reads. The bound is generous; no authored signature in this
-tree approaches it. -/
-private def stripBinders : Nat → Expr → Expr
-  | 0, value => value
-  | fuel + 1, value =>
-      if value.isLambda then stripBinders fuel value.bindingBody! else value
-
-/-- Whether an `opaque` declaration's value is the one Lean synthesised for a
-missing body rather than one an author wrote. See the ruling in the module
-header. -/
-private def isSynthesizedOpaqueBody (value : Expr) : Bool :=
-  match (stripBinders 64 value).getAppFn with
-  | .const name _ => synthesizedOpaqueBodies.contains name
-  | _ => false
-
 private def belongsToAuditedTree (moduleName : Name) : Bool :=
   (`Effect4).isPrefixOf moduleName || (`Test).isPrefixOf moduleName
 
@@ -330,15 +308,6 @@ private def modulePath (projectRoot : System.FilePath) (moduleName : Name) : Sys
     (Lean.modToFilePath (projectRoot / "src") moduleName "lean").normalize
   else
     (Lean.modToFilePath projectRoot moduleName "lean").normalize
-
-private def isGeneratedSafeRecursor (environment : Environment) (name : Name) : Bool :=
-  match Lean.Compiler.isUnsafeRecName? name with
-  | none => false
-  | some sourceName =>
-      match environment.find? sourceName with
-      | some (.defnInfo sourceInfo) => sourceInfo.safety == .safe
-      | none => false
-      | _ => false
 
 private def findProjectRoot (directory : System.FilePath) : IO System.FilePath := do
   let mut current := directory
@@ -375,25 +344,6 @@ private def auditedSources (projectRoot : System.FilePath) (slowRoot : Bool) :
       !slow.contains path.normalize
   return effect4 ++ tests |>.push (projectRoot / "src" / "Effect4.lean")
 
-/-- Follow the compiled import graph, including indirect dependencies. Each round
-discovers the next frontier; the finite graph bounds the number of rounds. This
-uses module metadata, so comments or quoted examples of imports are not edges. -/
-private def moduleImportClosure
-    (graph : Array (Name × Array Name)) (root : Name) : Array Name := Id.run do
-  let mut reached := #[root]
-  let mut frontier := #[root]
-  for _ in [:graph.size + 1] do
-    let mut next := #[]
-    for name in frontier do
-      if let some (_, imports) := graph.find? (fun entry => entry.1 == name) then
-        for imported in imports do
-          if !reached.contains imported then
-            reached := reached.push imported
-            next := next.push imported
-    frontier := next
-    if frontier.isEmpty then break
-  return reached
-
 /--
 The `initialize`d handles admitted by exact name (decisions row 184; the coordinator, 2026-10-01,
 for the owner's ratification). `initialize x : T ← action` compiles to `opaque x : T` with the
@@ -421,10 +371,10 @@ elab "#effect4_axiom_gate" : command => do
   let projectRoot ← liftIO <| findProjectRoot sourceDirectory
   let slowRoot := sourceFile.normalize == (projectRoot / "Test" / "Slow.lean").normalize
   let sources ← liftIO <| auditedSources projectRoot slowRoot
-  let importedPaths := environment.header.moduleNames.map fun moduleName =>
-    modulePath projectRoot moduleName
+  let importedPaths : Std.HashSet String := environment.header.moduleNames.foldl
+    (fun set moduleName => set.insert (modulePath projectRoot moduleName).toString) {}
   for source in sources do
-    if source.normalize != sourceFile.normalize && !importedPaths.contains source.normalize then
+    if source.normalize != sourceFile.normalize && !importedPaths.contains source.normalize.toString then
       throwError
         "Effect4 module-closure gate: {source} is not reachable from the Test.All audit root"
 
@@ -446,12 +396,13 @@ elab "#effect4_axiom_gate" : command => do
   for moduleName in admissionModules do
     if (`Effect4.Codegen).isPrefixOf moduleName then
       throwError "Effect4 module-closure gate: Effect4.Program.Admission reaches {moduleName}"
-  let libraryPaths := (apiModules ++ lawsModules).map (modulePath projectRoot)
+  let libraryPaths : Std.HashSet String := (apiModules ++ lawsModules).foldl
+    (fun set moduleName => set.insert (modulePath projectRoot moduleName).toString) {}
   let libraryDirectory := (projectRoot / "src" / "Effect4").toString ++
     System.FilePath.pathSeparator.toString
   for source in sources do
     if source.toString.startsWith libraryDirectory then
-      unless libraryPaths.contains source.normalize do
+      unless libraryPaths.contains source.normalize.toString do
         throwError
           "Effect4 library-root gate: {source} is unreachable from Effect4 and Effect4.Laws"
   let apiCount := (apiModules.filter ((`Effect4).isPrefixOf ·)).size
@@ -460,33 +411,28 @@ elab "#effect4_axiom_gate" : command => do
   logInfo m!"Effect4 library-root gate: {apiCount} API/utility modules, {lawsCount} Laws-only modules; every library source is reachable; Effect4 never reaches Laws"
 
   let t2 ← liftIO IO.monoMsNow
-  let mut declarations : Array Name := #[]
-  -- the audited declarations by module, for the exemption checks below
-  let mut byModule : Std.HashMap Name (Array Name) := {}
-  for (name, info) in environment.constants.toList do
-    if let some moduleName := moduleOf? environment name then
-      if belongsToAuditedTree moduleName then
-        if !isGeneratedSafeRecursor environment name then
-          if info.isUnsafe then
-            throwError "Effect4 trust gate: declaration {name} is unsafe"
-          if info.isPartial then
-            throwError "Effect4 trust gate: declaration {name} is partial"
-          if let .axiomInfo _ := info then
-            throwError "Effect4 trust gate: declaration {name} is an axiom; the tree declares none"
-          if isExtern environment name then
-            throwError "Effect4 trust gate: declaration {name} is `@[extern]`; a checked body is replaced by host code"
-          if (Compiler.getImplementedBy? environment name).isSome then
-            throwError "Effect4 trust gate: declaration {name} is `@[implemented_by]`; a checked body is replaced by another"
-          if let .opaqueInfo opaqueInfo := info then
-            if isSynthesizedOpaqueBody opaqueInfo.value &&
-                !(admittedInitializedHandles.contains name &&
-                  (getInitFnNameFor? environment name).isSome) then
-              throwError
-                "Effect4 trust gate: declaration {name} is an `opaque` with no body, so it \
-                 denotes an arbitrary inhabitant rather than the value it advertises; give it \
-                 a body or make the boundary an authored admission"
-        declarations := declarations.push name
-        byModule := byModule.insert moduleName ((byModule.getD moduleName #[]).push name)
+  -- one native fold over the constants: every audited declaration's facts, and the same
+  -- declarations by module for the exemption checks below
+  let (facts, byModule) := ProofGraph.Audit.auditedFacts environment belongsToAuditedTree
+  for fact in facts do
+    let name := fact.name
+    if !fact.safeRecursor then
+      if fact.isUnsafe then
+        throwError "Effect4 trust gate: declaration {name} is unsafe"
+      if fact.isPartial then
+        throwError "Effect4 trust gate: declaration {name} is partial"
+      if fact.isAxiom then
+        throwError "Effect4 trust gate: declaration {name} is an axiom; the tree declares none"
+      if fact.isExtern then
+        throwError "Effect4 trust gate: declaration {name} is `@[extern]`; a checked body is replaced by host code"
+      if fact.implementedBy then
+        throwError "Effect4 trust gate: declaration {name} is `@[implemented_by]`; a checked body is replaced by another"
+      if fact.bodilessOpaque && !(admittedInitializedHandles.contains name && fact.hasInitFn) then
+        throwError
+          "Effect4 trust gate: declaration {name} is an `opaque` with no body, so it \
+           denotes an arbitrary inhabitant rather than the value it advertises; give it \
+           a body or make the boundary an authored admission"
+  let declarations := facts.map (·.name)
 
   let t3 ← liftIO IO.monoMsNow
   let exactImplementationDeclarations ←
@@ -499,10 +445,9 @@ elab "#effect4_axiom_gate" : command => do
       exactImplementationDeclarations.contains declaration
   let t4 ← liftIO IO.monoMsNow
   -- one memoized traversal of the dependency graph serves every declaration below
-  let mut memo : ProofGraph.AxiomMemo := {}
-  for declaration in declarations do
-    let (reached, memo') := (ProofGraph.reachedAxioms environment declaration).run memo
-    memo := memo'
+  let (reachedAll, memoAll) := ProofGraph.reachedAxiomsMany environment declarations {}
+  let mut memo : ProofGraph.AxiomMemo := memoAll
+  for (declaration, reached) in declarations.zip reachedAll do
     let some axioms := reached
       | throwError "Effect4 axiom gate: axiom collection exhausted its step budget at {declaration}"
     -- An auxiliary or equation lemma inherits the admission of the declaration

@@ -1,30 +1,48 @@
 -- Append to the current AxiomGate source after importing RuntimeCoverage and ConfigContract.
--- These checks inspect its private policy rows without adding a public API.
+-- These checks inspect its private policy rows without adding a public API. The target is the
+-- configuration module (`Effect4.Program.Config`), whose `String`-side instantiations are exact
+-- rendering admissions, public and private, beside theorems that stay at the base ceiling.
+-- (Until 2026-10-01 the target was `Effect4.Codegen.EffectfulField`, retired in `f0591f36`.)
 
-namespace Effect4.Codegen.EffectfulField
+namespace Effect4.Program.Config
 
 noncomputable def generatedSemanticChoiceProbe : Nat :=
   Classical.choice (show Nonempty Nat from ⟨17⟩)
 
-end Effect4.Codegen.EffectfulField
+end Effect4.Program.Config
 
 namespace Test.Audit
+
+open ProofGraph.Audit (moduleOf?)
+
+/-- The configuration module's public rendering declarations, each admitted by its exact name. -/
+private def configPublic : List Lean.Name :=
+  [ ``Effect4.Program.Config.stdScalars
+  , ``Effect4.Program.Config.segOfString
+  , ``Effect4.Program.Config.splitUnderscore
+  , ``Effect4.Program.Config.fromEnvRecord
+  , ``Effect4.Program.Config.configCase
+  , ``Effect4.Program.Config.segCase
+  , ``Effect4.Program.Config.Provider.constantCase
+  ]
+
+/-- Its private ones, by the spelling they were written with. -/
+private def configPrivate : List Lean.Name :=
+  [ `Effect4.Program.Config.ce006Late
+  , `Effect4.Program.Config.ce006Early
+  , `Effect4.Program.Config.entriesOf
+  ]
 
 run_elab do
   let environment ← Lean.getEnv
   let auditModule := `Test.Audit.RuntimeCoverage
-  let targetModule := `Effect4.Codegen.EffectfulField
-  let expectedPublic :=
-    [ ``Effect4.Codegen.EffectfulField.source?
-    , ``Effect4.Codegen.EffectfulField.generate?
-    , ``Effect4.Codegen.EffectfulField.source_contains_directional_rows
-    ]
+  let targetModule := `Effect4.Program.Config
   let mut failures : Array String := #[]
   unless auditImplementationModules.contains auditModule do
     failures := failures.push "RuntimeCoverage is missing its exact audit implementation admission"
   if choiceImplementationModules.contains targetModule then
-    failures := failures.push "EffectfulField has a forbidden blanket module exemption"
-  for name in expectedPublic do
+    failures := failures.push "Config has a forbidden blanket module exemption"
+  for name in configPublic do
     unless choiceImplementationDeclarations.contains name do
       failures := failures.push s!"rendering declaration missing exact admission: {name}"
   let mut auditNeedsChoice := false
@@ -47,55 +65,48 @@ run_elab do
   let admitted ← match resolveChoiceImplementationDeclarations environment declarations with
     | .ok names => pure names
     | .error error => throwError "could not resolve exact implementation admissions: {error}"
-  let targetModule := `Effect4.Codegen.EffectfulField
-  let privateSpelling := `Effect4.Codegen.EffectfulField.directionalRowsPresent
-  let privateMatches := declarations.filter fun name =>
-    moduleOf? environment name == some targetModule &&
-      privateToUserName name == privateSpelling
-  unless privateMatches.size == 1 do
-    throwError "expected exactly one owned directionalRowsPresent declaration, found {privateMatches.size}"
-  let privateName := privateMatches[0]!
-  unless (choiceImplementationPrivateDeclarations.filter
-      (· == (targetModule, privateSpelling))).length == 1 do
-    throwError "private rendering admission must name exactly its owning module and declaration spelling, exactly once"
-  let expected :=
-    [ ``Effect4.Codegen.EffectfulField.source?
-    , ``Effect4.Codegen.EffectfulField.generate?
-    , ``Effect4.Codegen.EffectfulField.source_contains_directional_rows
-    , privateName
-    ]
+  let targetModule := `Effect4.Program.Config
+  let mut privateNames : Array Lean.Name := #[]
+  for spelling in configPrivate do
+    let owned := declarations.filter fun name =>
+      moduleOf? environment name == some targetModule && privateToUserName name == spelling
+    unless owned.size == 1 do
+      throwError "expected exactly one owned {spelling} declaration, found {owned.size}"
+    unless (choiceImplementationPrivateDeclarations.filter (· == (targetModule, spelling))).length == 1 do
+      throwError "private rendering admission must name exactly its owning module and declaration spelling, exactly once: {spelling}"
+    privateNames := privateNames.push owned[0]!
+  let expected := configPublic ++ privateNames.toList
   let actual := admitted.filter fun name => moduleOf? environment name == some targetModule
   unless actual.length == expected.length &&
       expected.all actual.contains && actual.all expected.contains do
-    throwError "EffectfulField implementation admission must contain exactly the four rendering declarations"
+    throwError "Config implementation admission must contain exactly its {expected.length} rendering declarations, found {actual}"
   for name in expected do
     let axioms ← collectAxioms name
     unless axioms.contains ``Classical.choice do
       throwError "stale rendering admission no longer needs Classical.choice: {name}"
     unless axioms.all auditImplementationAxioms.contains do
       throwError "rendering admission exceeds its implementation ceiling: {name}"
+  let firstPrivate := privateNames[0]!
   match resolveChoiceImplementationDeclarations environment
-      (declarations.filter fun name => name != privateName) with
+      (declarations.filter fun name => name != firstPrivate) with
   | .error _ => pure ()
   | .ok _ => throwError "missing private rendering declaration was silently admitted"
-  match resolveChoiceImplementationDeclarations environment (declarations.push privateName) with
+  match resolveChoiceImplementationDeclarations environment (declarations.push firstPrivate) with
   | .error _ => pure ()
   | .ok _ => throwError "duplicate private rendering declaration was silently admitted"
-  let semanticNames :=
-    [ ``Effect4.Codegen.EffectfulField.requestReady
-    , ``Effect4.Codegen.EffectfulField.RequestReady
-    , ``Effect4.Codegen.EffectfulField.requestReady_iff
-    , ``Effect4.Codegen.EffectfulField.decl?
-    , ``Effect4.Codegen.EffectfulField.module?
-    , ``Effect4.Codegen.EffectfulField.decl?_never_raw
-    ]
-  for name in semanticNames do
+  -- every theorem the module declares stays out of the exemption and at the base ceiling
+  let theorems := declarations.filter fun name =>
+    moduleOf? environment name == some targetModule &&
+      (match environment.find? name with | some (.thmInfo _) => true | _ => false)
+  unless theorems.size > 0 do
+    throwError "the configuration module declares no theorem; the semantic half of this check tests nothing"
+  for name in theorems do
     if admitted.contains name ||
         (moduleOf? environment name).any choiceImplementationModules.contains then
-      throwError "semantic admission or lowering received an implementation exemption: {name}"
+      throwError "semantic declaration received an implementation exemption: {name}"
     unless (← collectAxioms name).all allowedAxioms.contains do
-      throwError "semantic admission or lowering exceeds the base ceiling: {name}"
-  let planted := ``Effect4.Codegen.EffectfulField.generatedSemanticChoiceProbe
+      throwError "semantic declaration exceeds the base ceiling: {name}"
+  let planted := ``Effect4.Program.Config.generatedSemanticChoiceProbe
   unless (← collectAxioms planted).contains ``Classical.choice do
     throwError "the fresh semantic probe no longer tests Classical.choice"
   let plantedBound :=
@@ -105,11 +116,7 @@ run_elab do
     else allowedAxioms
   unless !(← collectAxioms planted).all plantedBound.contains do
     throwError "fresh choice-bearing semantic helper received an implementation exemption"
-  logInfo "PASS exact private resolution, rendering receipts, and base ceiling for semantic declarations"
+  logInfo m!"PASS exact private resolution, rendering receipts, and base ceiling for {theorems.size} semantic declarations"
   logInfo "PASS fresh choice-bearing semantic helper exceeds its selected ceiling"
-
--- The emitter bridge theorems this block used to check (`Structuring.emitNode_eq`,
--- `emitWith_eq` in `Effect4.Target.TypeScript.Skeleton`) went to branch
--- `archive/flow-route` with the flow lowering on 2026-09-04.
 
 end Test.Audit

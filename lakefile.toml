@@ -23,6 +23,18 @@ srcDir = "src"
 roots = ["Effect4.Laws"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
+# The subset and membership decisions (`sub_tac`, `mem_tac`) compiled to native code and loaded into
+# the elaborator of every module that uses them (`precompileModules`). Declared after `Effect4` and
+# `Effect4Laws`, whose roots also claim these modules: Lake gives a module to the last library that
+# claims it (`Package.findModule?` searches the libraries in reverse). Interpreted, the tactic
+# was 14.7 s of `Laws/Machine/Handles` alone.
+[[lean_lib]]
+name = "Effect4Tactics"
+srcDir = "src"
+roots = ["Effect4.Laws.Auto.SubsetTac", "Effect4.Laws.Auto.ListSubset"]
+precompileModules = true
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
 # The OCaml estate's Lean half (ocaml/README.md): the part of the OCaml language model the
 # backend prints through (`OCaml5.Ml`), the LCNF→OCaml backend (`OCaml5.Lcnf`), the `Eff` IR
 # emitters (`OCaml5.Eff`) and `--run` drivers under `OCaml5.Tools`. Only what is made directly
@@ -75,6 +87,18 @@ moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 name = "ProofGraph"
 srcDir = "tools"
 globs = ["ProofGraph.+"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
+# The proof graph's whole-environment walks, compiled to native code and loaded into the elaborator
+# (`precompileModules`): the axiom gate's declaration scan and axiom traversal
+# (`ProofGraph.Audit`, `ProofGraph.Axioms`) run natively inside `lake build Test`, where `Test.All`
+# ends the critical path. Declared after `ProofGraph`, whose glob also claims them: Lake gives a module to the last library
+# that claims it. Both import only Lean, so the shared libraries stay small.
+[[lean_lib]]
+name = "ProofGraphNative"
+srcDir = "tools"
+roots = ["ProofGraph.Axioms", "ProofGraph.Audit"]
+precompileModules = true
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # Verification tooling (docs/research/type-tooling/, 2026-09-09): the generic core of

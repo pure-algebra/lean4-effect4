@@ -74,4 +74,12 @@ def reachedAxioms (env : Environment) (root : Name) : StateM AxiomMemo (Option (
         stack := stack.set! (stack.size - 1) (p, pds, pi, union pacc acc)
   return result
 
+/-- `reachedAxioms` for every root, in order, with the memo threaded through: one loop for a whole
+list of declarations, which runs natively when this module is precompiled. -/
+def reachedAxiomsMany (env : Environment) (roots : Array Name) (memo : AxiomMemo) :
+    Array (Option (Array Name)) × AxiomMemo :=
+  roots.foldl (init := (#[], memo)) fun (out, memo) root =>
+    let (reached, memo) := (reachedAxioms env root).run memo
+    (out.push reached, memo)
+
 end ProofGraph
