@@ -265,6 +265,7 @@ def parseLegacy (text : String) : Option TypeRef := do
   let (value, rest) ← readType (2 * bytes.length + 4) bytes
   if (skipSpace rest).isEmpty then some value else none
 
+mutual
 private def ofNormalized : Program.Ty → Option TypeRef
   | .never => some (.name ["never"] [])
   | .unknown => some (.name ["unknown"] [])
@@ -308,13 +309,37 @@ private def ofNormalized : Program.Ty → Option TypeRef
       pure (.name ["Deferred", "Deferred"] [a, e])
   -- a row template's parameter is not a program type: no reference
   | .var _ => none
-  -- the data wave's forms (decisions row 162) are refused here until the faces commit gives
-  -- each its target syntax (the record's object type, the map's `Readonly<Record<…>>`, …)
-  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => none
+  | .record fields => (ofFields fields).map TypeRef.object
+  | .map key value => do
+      if key != .string then none else do
+        let target ← ofNormalized value
+        pure (.name ["Readonly"] [.name ["Record"] [.name ["string"] [], target]])
+  | .tuple items => (ofItems items).map (fun values => .tuple values true)
+  | .null => some (.name ["null"] [])
+  | .undefined => some (.name ["undefined"] [])
+  | .number => some (.name ["number"] [])
+  | .bytes => some (.name ["Uint8Array"] [])
+  -- Nominal applications need their own resolved declaration table.
+  | .app _ _ => none
   | .union left right => do
       let a ← ofNormalized left
       let b ← ofNormalized right
       pure (unionOf (unionParts a ++ unionParts b))
+
+private def ofItems : List Program.Ty → Option (List TypeRef)
+  | [] => some []
+  | value :: rest => do
+      let target ← ofNormalized value
+      let targets ← ofItems rest
+      pure (target :: targets)
+
+private def ofFields : List (String × Bool × Program.Ty) → Option (List TypeRef.Field)
+  | [] => some []
+  | (name, optional, value) :: rest => do
+      let target ← ofNormalized value
+      let targets ← ofFields rest
+      pure ({ name, readonly := true, optional, type := target } :: targets)
+end
 
 /-- Normalize the program type once, then project its target structure.
 Opaque legacy spellings may be refused. Naturals and integers intentionally
