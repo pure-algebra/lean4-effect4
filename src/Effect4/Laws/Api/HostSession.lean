@@ -1,5 +1,8 @@
 import Effect4.Api.HostSession
 import Effect4.Laws.Auto.Inversion
+import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Program.Admit
+import Effect4.Laws.Program.Typed.Membership
 
 /-! Checked host protocol laws. Receipt commutation is equality of sessions, including
 stored replies and the unchanged machine. Answer application is a separate ordered step.
@@ -271,5 +274,78 @@ theorem advance_conforms {program : Api.Program} {table : RowTable}
       · cases h
       · rename_i allowed
         simp_all [retire]
+
+
+/-! ## Accepted successful replies and the actual prepared value
+
+Concept 9 (host-answer admission) meeting concept 1 membership; proposed T4 contributor
+`session-success-prepared-membership`. `PreparedWanted` records the exact local question,
+and `submit_success_prepared_fits` is its session API consumer. Placement and boundaries:
+`docs/research/2026-10-03-session-work/t4-plan.md`, decisions 97–99, 117, 138–139 and 152.
+This is not `AnswerOk`, whole-session typing, or a failure/handle admission theorem.
+-/
+
+/-- The selected association, parked row and actual successful preparation, with value
+membership on the shape-decided fragment. No token declaration in a typed world is inferred. -/
+def PreparedSuccess {program : Api.Program} {table : RowTable}
+    (s : Session program table) (reply : Reply) (decision : NativeDecision) : Prop :=
+  ∃ bound i request row result,
+    s.active.find? (fun b => b.key == reply.key) = some bound ∧
+    reply.callId = bound.call.callId ∧
+    decision = .answerAsync bound.call.fiber bound.token reply.completion ∧
+    requestOf s.machine bound.call.fiber bound.token = some (.external i, request) ∧
+    externalRow table i = some row ∧
+    (Machine.prepareAsyncAnswer (interpOf program table) s.machine bound.call.fiber bound.token
+      reply.completion).2 = .success result ∧
+    ∀ w : Typed.World, Typed.shapeDecides row.answer = true → Typed.Fits w result row.answer
+
+namespace PreparedWanted
+
+/-- T4 contributor: an accepted success prepares a member of its selected shape-decided row. -/
+theorem preflight_success_prepared_fits {program : Api.Program} {table : RowTable}
+    (s : Session program table) (reply : Reply) (decision : NativeDecision) (value : Machine.Val)
+    (_live : s.machine.stuck = none)
+    (_success : reply.completion = .ofExit (.success value))
+    (_accepted : preflight s reply = .ok decision) :
+    ProofGraph.Obligation (PreparedSuccess s reply decision) := ⟨⟩
+
+end PreparedWanted
+
+/-- A session-accepted successful completion prepares the actual row-typed value. Membership
+requires the selected row's shape-decided answer column; failures, world-reading columns and
+token-world correlation remain outside this theorem. The session is not executed here. -/
+theorem preflight_success_prepared_fits {program : Api.Program} {table : RowTable}
+    (s : Session program table) (reply : Reply) (decision : NativeDecision) (value : Machine.Val)
+    (live : s.machine.stuck = none)
+    (success : reply.completion = .ofExit (.success value))
+    (accepted : preflight s reply = .ok decision) : PreparedSuccess s reply decision := by
+  obtain ⟨bound, selected, callId, envelope, decisionEq⟩ :=
+    preflight_envelope s reply decision accepted
+  have admitted : admit table s.machine
+      (.answerAsync bound.call.fiber bound.token (.ofExit (.success value))) = none := by
+    simpa only [BoundCall.record, success] using envelope.2.2
+  obtain ⟨i, request, row, result, parked, rowAt, prepared, typed⟩ :=
+    external_prepared_answer_typed program table s.machine bound.call.fiber bound.token value
+      live admitted
+  refine ⟨bound, i, request, row, result, selected, callId, decisionEq, parked, rowAt, ?_, ?_⟩
+  · simpa only [success] using prepared
+  · intro w decided
+    exact Typed.fits_of_hasTy_shapeDecides w row.answer decided result _ typed
+
+#obligation_proved PreparedWanted.preflight_success_prepared_fits :=
+  @preflight_success_prepared_fits
+#typed_state_obligations Effect4.Api.HostSession.PreparedWanted ceiling 0 using aesop
+
+/-- A received successful completion carries the same exact preparation witness as preflight.
+Receipt stores the reply; this theorem neither applies it nor proves the whole machine typed. -/
+theorem submit_success_prepared_fits {program : Api.Program} {table : RowTable}
+    (s : Session program table) (reply : Reply) (value : Machine.Val)
+    (live : s.machine.stuck = none)
+    (success : reply.completion = .ofExit (.success value))
+    (received : (submit s reply).phase = .preflight) :
+    ∃ decision, preflight s reply = .ok decision ∧ PreparedSuccess s reply decision := by
+  obtain ⟨_, ⟨decision, accepted⟩, _, _⟩ := submit_conditions s reply received
+  exact ⟨decision, accepted, preflight_success_prepared_fits s reply decision value
+    live success accepted⟩
 
 end Effect4.Api.HostSession

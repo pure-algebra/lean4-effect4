@@ -1,0 +1,23 @@
+'Effect4.Api.HostSession.PreparedSuccess' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.HostSession.preflight_success_prepared_fits' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.HostSession.submit_success_prepared_fits' depends on axioms: [propext, Quot.sound]
+'Test.Api.HostSessionContract.received_prepares_nat' depends on axioms: [propext, Quot.sound]
+Effect4.Api.HostSession.preflight_success_prepared_fits {program : Api.Program} {table : RowTable}
+  (s : Session program table) (reply : Reply) (decision : NativeDecision) (value : Val)
+  (live :
+    s.machine.stuck (Prim EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann) =
+      none)
+  (success : reply.completion = Completion.ofExit (Exit.success value))
+  (accepted : preflight s reply = Except.ok decision) : PreparedSuccess s reply decision
+Effect4.Api.HostSession.submit_success_prepared_fits {program : Api.Program} {table : RowTable}
+  (s : Session program table) (reply : Reply) (value : Val)
+  (live :
+    s.machine.stuck (Prim EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann) =
+      none)
+  (success : reply.completion = Completion.ofExit (Exit.success value))
+  (received : (submit s reply).phase = Phase.preflight) :
+  ∃ decision, preflight s reply = Except.ok decision ∧ PreparedSuccess s reply decision

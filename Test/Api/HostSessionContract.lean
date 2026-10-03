@@ -135,4 +135,48 @@ def cancelled : Session program table := (advance pending0 100 (.interruptFrom n
 #check @applied_guard_absent
 #check @applied_reply_refused
 #check @advance_answer_refuses
+
+/-! An accepted receipt reaches the actual preparation code and the selected row's membership
+judgment. This fixture consumes the session bridge; it does not infer a typed whole session. -/
+theorem received_prepares_nat (w : Typed.World) :
+    ∃ result,
+      (prepareAsyncAnswer (interpOf program table) bound0.machine Api.root 0
+        reply0.completion).2 = .success result ∧ Typed.Fits w result .nat := by
+  obtain ⟨decision, _, bound, i, request, row, result, selected, _, _, parkedAt,
+      rowAt, prepared, member⟩ :=
+    submit_success_prepared_fits bound0 reply0 (.nat 2) (by decide) rfl (by decide)
+  have selectedAt : bound0.active.find? (fun b => b.key == reply0.key) =
+      some (⟨call0, 0⟩ : BoundCall) := by decide
+  rw [selectedAt] at selected
+  have boundEq := Option.some.inj selected
+  subst bound
+  change requestOf bound0.machine Api.root 0 = some (.external i, request) at parkedAt
+  have requested : requestOf bound0.machine Api.root 0 = some (.external 0, .nat 2) := by decide
+  rw [requested] at parkedAt
+  have index : i = 0 :=
+    (NativeOp.external.inj (Prod.mk.inj (Option.some.inj parkedAt)).1).symm
+  subst i
+  have normalized : externalRow table 0 = some Profile.Scalar.waitRow := by decide +kernel
+  rw [normalized] at rowAt
+  have rowEq := Option.some.inj rowAt
+  subst row
+  exact ⟨result, prepared, member w (by decide +kernel)⟩
+
+-- The actual prepared code is the same success whose membership the theorem establishes.
+#guard (prepareAsyncAnswer (interpOf program table) bound0.machine Api.root 0
+  reply0.completion).2 = .success (.nat 2)
+#guard Typed.shapeDecides Profile.Scalar.waitRow.answer = true
+#guard Typed.shapeDecides (.exitOf .nat .never) = false
+#guard Typed.shapeDecides .unknown = false
+
+/-- info: 'Effect4.Api.HostSession.preflight_success_prepared_fits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms preflight_success_prepared_fits
+/-- info: 'Effect4.Api.HostSession.submit_success_prepared_fits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms submit_success_prepared_fits
+/-- info: 'Test.Api.HostSessionContract.received_prepares_nat' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms received_prepares_nat
+
 end Test.Api.HostSessionContract
