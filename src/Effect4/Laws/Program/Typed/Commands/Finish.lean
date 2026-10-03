@@ -168,7 +168,7 @@ theorem evaluate_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId
           (fun hx => by rw [show g.exit = f.exit from rfl, live] at hx; cases hx),
           moved.deferredCause, moved.pendingOwner, moved.observers, moved.registration,
           (fun _ hr => by cases hr), moved.tokens, moved.raceObservers, moved.targetsBelow,
-          moved.observersBelow⟩
+          moved.observersBelow, moved.children⟩
       have noRequest : ∀ token r, requestOfR (m.update g) g.id token = some r →
           requestOfR m f.id token = some r := by
         intro token r hr
@@ -351,7 +351,8 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
             tokens := fun _ h => nomatch h
             raceObservers := moved.raceObservers
             targetsBelow := fun q hq => moved.targetsBelow q (List.mem_filter.mp hq).1
-            observersBelow := moved.observersBelow }
+            observersBelow := moved.observersBelow
+            children := moved.children }
         have noRequest : ∀ tok r, requestOfR (m.update g) g.id tok = some r →
             requestOfR m t.id tok = some r := by
           intro tok r hr
@@ -443,7 +444,8 @@ theorem configTyped_cleared {root : ProgramSource} {rootTy : EffTy} {w : World} 
       tokens := moved.tokens
       raceObservers := fun _ _ _ _ h => nomatch h
       targetsBelow := moved.targetsBelow
-      observersBelow := fun _ h => nomatch h }
+      observersBelow := fun _ h => nomatch h
+      children := fun _ h => nomatch h }
   have look : (m.update g).fiber? g.id = some g := rfiber?_update_self hf rfl
   exact configTyped_rupdate_gen (g := g) typed hf rfl (PendingWeaker.refl _)
     (by rw [gframe]) (fun pv => by rw [gframe]; exact pv)
@@ -749,7 +751,8 @@ theorem configTyped_publish {root : ProgramSource} {rootTy : EffTy} {w : World} 
       tokens := fun _ hp => nomatch hp
       raceObservers := moved.raceObservers
       targetsBelow := fun _ hp => nomatch hp
-      observersBelow := moved.observersBelow }
+      observersBelow := moved.observersBelow
+      children := moved.children }
   exact configTyped_rupdate_gen (g := p) tail hf rfl (fun _ _ h => nomatch h) rfl (fun _ => provP)
     (fun k hk => Or.inl (fiberKeys_internal hmem hk))
     (fun token r hr => by
@@ -852,7 +855,8 @@ theorem finish_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
           cases hp
         raceObservers := moved.raceObservers
         targetsBelow := moved.targetsBelow
-        observersBelow := moved.observersBelow }
+        observersBelow := moved.observersBelow
+        children := moved.children }
     have edited := configTyped_rupdate_gen (g := g) tail hf rfl (PendingWeaker.refl _) rfl
       (fun _ => provG) (fun k hk => Or.inl (fiberKeys_internal hmem hk))
       (fun token r hr => by

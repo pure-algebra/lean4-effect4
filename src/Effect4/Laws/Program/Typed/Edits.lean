@@ -53,7 +53,7 @@ theorem quiet_yield (v : Bool) : QuietEdit (fun f : RFiber => { f with yieldOver
 theorem edit_yield (root : ProgramSource) (rootTy : EffTy) : EditYield root rootTy := by
   intro w m id v typed
   exact (configTyped_modify_quiet (configTyped_nil typed) id (quiet_yield v)
-    (fun _ _ o ho => Or.inl ho)).machine
+    (fun _ _ o ho => Or.inl ho) (fun _ _ kept => Or.inl kept)).machine
 
 /-! ## `interrupt` -/
 
@@ -228,7 +228,8 @@ theorem edit_drain (root : ProgramSource) (rootTy : EffTy) : EditDrain root root
       tokens := moved.tokens
       raceObservers := moved.raceObservers
       targetsBelow := moved.targetsBelow
-      observersBelow := moved.observersBelow }
+      observersBelow := moved.observersBelow
+      children := moved.children }
   have bucketsIn : ∀ k ∈ Guard.bucketKeys f.dispatcher.buckets, k ∈ Guard.internalKeys m :=
     fun k hk => fiberKeys_internal hmem (List.mem_append_right _ hk)
   have keysG : ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys m ∨

@@ -285,7 +285,8 @@ theorem fiberTyped_frame {root : ProgramSource} {w : World} {m : RState} {f : RF
       tokens := moved.tokens
       raceObservers := moved.raceObservers
       targetsBelow := moved.targetsBelow
-      observersBelow := moved.observersBelow }
+      observersBelow := moved.observersBelow
+      children := moved.children }
 
 /-- A command's owner does not read the fibers: editing one keeps every owner. -/
 theorem commandOwner_rupdate (m : RState) (g : RFiber) :
@@ -1078,7 +1079,7 @@ theorem budget_fields {root : ProgramSource} {rootTy : EffTy} {w : World} {m : R
       context := fun _ => rfl
       observers := fun x => ⟨[], (List.append_nil _).symm, fun _ h => nomatch h⟩ }
   have moved := configTyped_modify_quiet typed f.id quiet
-    (fun _ _ _ member => Or.inl member)
+    (fun _ _ _ member => Or.inl member) (fun _ _ kept => Or.inl kept)
   simpa only [RunMachine.modify, look] using moved
 
 /-- The loop's deferred-interrupt delivery keeps the actual saved stack. A direct race marker
@@ -1424,7 +1425,7 @@ theorem Evaluating.recontext {root : ProgramSource} {rootTy : EffTy} {w : World}
       moved.below, moved.pendingShape, moved.parkedIdle, moved.parkedBelow, moved.exited,
       moved.exitedStack, moved.deferredCause, moved.pendingOwner, moved.observers,
       moved.registration, moved.code, moved.tokens, moved.raceObservers, moved.targetsBelow,
-      moved.observersBelow⟩
+      moved.observersBelow, moved.children⟩
   have free := owner_free_rest ev.typed.queue (c := .deliver f.id y) rfl
   have typed : ConfigTyped root rootTy w ((m.update f).update g) (.deliver f.id y :: rest) := by
     refine configTyped_rupdate_code ev.typed look rfl (PendingWeaker.refl _) rfl (fun p => p)

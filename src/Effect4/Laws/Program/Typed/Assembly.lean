@@ -854,7 +854,8 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
         cells := valid.cells
         root := valid.root
         timers := by rw [state]; exact valid.timers
-        waiters := by rw [state]; exact valid.waiters }
+        waiters := by rw [state]; exact valid.waiters
+        children := fun f hf => valid.children f (member f hf) }
   · rw [races]
     exact ok.c1
   · rw [state]

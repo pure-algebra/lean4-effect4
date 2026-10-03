@@ -229,7 +229,8 @@ theorem enrollRace_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : N
         exact observe_raceCallback root rootTy m1 child exit raceId obs
       | none =>
         dsimp only
-        apply configTyped_modify_quiet m1 child (quiet_observe (.raceCallback raceId) rfl)
+        refine configTyped_modify_quiet m1 child (quiet_observe (.raceCallback raceId) rfl) ?_
+          (fun _ _ kept => Or.inl kept)
         intro f hf o ho
         rcases mem_append_observer ho with old | rfl
         · exact Or.inl old
@@ -517,7 +518,8 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
       tokens := moved.tokens
       raceObservers := moved.raceObservers
       targetsBelow := moved.targetsBelow
-      observersBelow := moved.observersBelow }
+      observersBelow := moved.observersBelow
+      children := moved.children }
   have noRequest : ∀ tok r, requestOfR (m.update g) g.id tok = some r →
       requestOfR m f.id tok = some r := by
     intro tok r hr
@@ -780,7 +782,8 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
       tokens := moved.tokens
       raceObservers := moved.raceObservers
       targetsBelow := moved.targetsBelow
-      observersBelow := moved.observersBelow }
+      observersBelow := moved.observersBelow
+      children := moved.children }
   have noRequest : ∀ tok r, requestOfR (m.update g) g.id tok = some r →
       requestOfR m f.id tok = some r := by
     intro tok r hr

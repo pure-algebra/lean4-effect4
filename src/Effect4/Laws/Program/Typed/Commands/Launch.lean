@@ -414,7 +414,9 @@ theorem fiberTyped_alloc (typed : MachineTyped root rootTy w m) {x : RFiber} (hx
     fun o ho => storedObserverOk_alloc typed hx ho (old.observers o ho),
     fun raceId marker => ?_, fun hx' hr hm ty' declared => ?_, old.tokens, old.raceObservers,
     fun p hp id hid => Nat.lt_succ_of_lt (old.targetsBelow p hp id hid),
-    fun o ho k hk => Nat.lt_succ_of_lt (old.observersBelow o ho k hk)⟩
+    fun o ho k hk => Nat.lt_succ_of_lt (old.observersBelow o ho k hk),
+    fun c hc => let ⟨t, ht⟩ := Option.isSome_iff_exists.mp (old.children c hc)
+      Option.isSome_iff_exists.mpr ⟨t, addFiber_extends fresh.2 ht⟩⟩
   · change (w.addFiber ⟨m.nextId⟩ ty).Γ x.id = some ty' at declared
     rw [addFiber_Γ_other ne] at declared
     obtain ⟨tin, stack, provenance⟩ := c0 ty' declared
@@ -460,7 +462,8 @@ theorem fiberTyped_child (typed : MachineTyped root rootTy w m) (code : TypedPro
     (fun _ h => nomatch h), Nat.lt_succ_self _, rfl, (fun h => absurd rfl h), (fun _ h => nomatch h),
     (fun h => nomatch h), (fun h => nomatch h), (fun h => nomatch h), (fun _ h => nomatch h),
     (fun _ h => nomatch h), (fun _ marker => ?_), (fun _ _ _ ty' d => ?_), (fun _ h => nomatch h),
-    (fun _ _ _ _ h => nomatch h), (fun _ h => nomatch h), (fun _ h => nomatch h)⟩
+    (fun _ _ _ _ h => nomatch h), (fun _ h => nomatch h), (fun _ h => nomatch h),
+    (fun _ h => nomatch h)⟩
   · rw [declaredOnly ty' d]
     exact ⟨ty, .nil ty, prov⟩
   · rw [show (spawnChild m program flag budget ctx).frame.current = program from rfl,

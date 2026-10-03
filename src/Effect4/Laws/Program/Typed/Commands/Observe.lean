@@ -151,7 +151,7 @@ theorem fiberTyped_except {root : ProgramSource} {w : World} {m m' : RState} {x 
     h.code_races (racesKept_of_eq view.races), h.tokens,
     fun r race hr o ho => h.raceObservers r race ((view.races r).symm.trans hr) o ho,
     fun p hp id hid => Nat.lt_of_lt_of_le (h.targetsBelow p hp id hid) nextId,
-    fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId⟩
+    fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId, h.children⟩
   · by_cases off : OffKey key o
     · exact storedObserverOk_except view o off (h.observers o ho)
     · exact keyed o ho off
@@ -788,7 +788,7 @@ theorem fiberTyped_repend {root : ProgramSource} {w : World} {m M' : RState} {wf
     fun q hq id hid => by
       rw [List.mem_singleton.mp hq] at hid
       exact Nat.lt_of_lt_of_le (targets id hid) nextId,
-    fun o ho k hk => Nat.lt_of_lt_of_le (old.observersBelow o ho k hk) nextId⟩
+    fun o ho k hk => Nat.lt_of_lt_of_le (old.observersBelow o ho k hk) nextId, old.children⟩
   · rw [List.mem_singleton.mp hq, ptok]
     exact ⟨wf.id, declared⟩
   · show Guard.PendingShape { wf with pending := [p'] }
@@ -1162,7 +1162,8 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
                   subst hk
                   show waiter.value < m2.nextId
                   rw [view2.nextId, ← wid]
-                  exact old.below⟩
+                  exact old.below,
+              moved.children⟩
             rcases mem_append_observer ho with old' | rfl
             · exact moved.observers o old'
             · show CountdownAt w (m2.update (obs gn)) waiter token (FiberColumnsBelow w gn.id)
@@ -1364,7 +1365,8 @@ theorem observe_preserves (root : ProgramSource) (rootTy : EffTy) (source : Fibe
   | untrackChild parent =>
     exact ⟨w, leHost_refl w, configTyped_modify_quiet
       (configTyped_emit tail [RunEvent.observerFired source (.untrackChild parent)]) parent
-      (quiet_untrack source) (fun _ _ o ho => Or.inl ho)⟩
+      (quiet_untrack source) (fun _ _ o ho => Or.inl ho)
+      (fun _ _ kept => Or.inl (List.mem_filter.mp kept).1)⟩
   | callback key =>
     exact ⟨w, leHost_refl w, configTyped_emit
       (configTyped_emit tail [RunEvent.observerFired source (.callback key)]) _⟩

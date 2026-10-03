@@ -192,6 +192,8 @@ structure FiberTyped (root : ProgramSource) (w : World) (m : RState) (f : RFiber
   name fibers below `nextId`. -/
   targetsBelow : ∀ p ∈ f.pending, ∀ id ∈ p.waitingOn.toList ++ p.remaining, id.value < m.nextId
   observersBelow : ∀ o ∈ f.observers, ∀ k ∈ Guard.observerKeys o, k.1.value < m.nextId
+  /-- Its tracked children are declared (`WorldValid.children`). -/
+  children : ∀ c ∈ f.children, (w.Γ c).isSome = true
 
 /-- A fiber's delivery clause moves to a machine whose races keep their host and token (row 188
 (b)'s alternative reads them). -/
@@ -264,7 +266,7 @@ theorem MachineTyped.fiber {root : ProgramSource} {rootTy : EffTy} {w : World} {
     sched.deferredCause f hf,
     obsv.pendingOwner f hf, obsv.observers f hf, reg f hf, code f hf, valid.tokens f hf,
     fun r race hr o ho => sched.raceObservers r race hr f hf o ho, sched.targetsBelow f hf,
-    sched.observersBelow f hf⟩
+    sched.observersBelow f hf, valid.children f hf⟩
 
 /-- `J` from its machine-wide clauses and its clauses at every fiber. -/
 theorem machineTyped_of {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
@@ -272,7 +274,7 @@ theorem machineTyped_of {root : ProgramSource} {rootTy : EffTy} {w : World} {m :
     MachineTyped root rootTy w m :=
   ⟨⟨⟨wide.ids, wide.fibers, wide.heap, wide.promises, fun f hf => (fibers f hf).tokens,
       wide.tokenBound, wide.tokenTargets, wide.state, wide.wf, wide.cells, wide.rootDeclared, wide.timers,
-      wide.waiters⟩,
+      wide.waiters, fun f hf => (fibers f hf).children⟩,
     ⟨fun f hf => (fibers f hf).ok, wide.races, wide.stores⟩,
     fun f hf => (fibers f hf).delivery,
     ⟨wide.fiberIds, fun f hf => (fibers f hf).below, wide.raceIds, wide.racesBelow,
@@ -756,7 +758,7 @@ theorem fiberTyped_transport {root : ProgramSource} {w : World} {m m' : RState} 
     fun raceId marker => ?_, h.code_races (racesKept_of_eq view.races), h.tokens,
     fun r race hr o ho => h.raceObservers r race ((view.races r).symm.trans hr) o ho,
     fun p hp id hid => Nat.lt_of_lt_of_le (h.targetsBelow p hp id hid) nextId,
-    fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId⟩
+    fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId, h.children⟩
   obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
   exact ⟨race, resultTy, (view.races raceId).trans found, host, token,
     stackReply_races (racesKept_of_eq view.races) reply⟩
@@ -913,7 +915,8 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
     {q : List RCmd} (typed : ConfigTyped root rootTy w m q) (target : FiberId)
     {k : RFiber → RFiber} (quiet : QuietEdit k)
     (added : ∀ f, m.fiber? target = some f → ∀ o ∈ (k f).observers,
-      o ∈ f.observers ∨ StoredObserverOk root w (m.modify target k) f.id o) :
+      o ∈ f.observers ∨ StoredObserverOk root w (m.modify target k) f.id o)
+    (children : ∀ f, ∀ c ∈ (k f).children, c ∈ f.children ∨ (w.Γ c).isSome = true) :
     ConfigTyped root rootTy w (m.modify target k) q := by
   unfold RunMachine.modify
   cases hfound : m.fiber? target with
@@ -938,7 +941,7 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
         exact shape
       refine ⟨runFiberOk_congr old.ok (quiet.id f) (quiet.frame f) (quiet.pending f)
           (quiet.finalizing f) (quiet.exit f) (quiet.dispatcher f) (quiet.context f),
-        ?_, ?_, hpending, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        ?_, ?_, hpending, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [quiet.parked f, quiet.id f, quiet.frame f]
         exact old.delivery_races (racesKept_of_eq view.races)
       · rw [quiet.id f]
@@ -987,6 +990,10 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
         · exact old.observersBelow o stored key hk
         · rw [nokeys o new] at hk
           cases hk
+      · intro c hc
+        rcases children f c hc with kept | declared
+        · exact old.children c kept
+        · exact declared
     refine ⟨machineTyped_of (machineWide_rupdate machine.wide (quiet.id f)
         (fun key hk => Or.inl (fiberKeys_internal hmem (quiet.keys f hk))) ?_) (fun x hx => ?_), ?_,
       queueOk_transport queue view (Nat.le_refl _)
@@ -1239,7 +1246,7 @@ theorem fiberTyped_world {root : ProgramSource} {m : RState} {x : RFiber}
     h.parkedIdle, h.parkedBelow, h.exited, h.exitedStack, h.deferredCause, fun p hp => ?_,
     fun o ho => storedObserverOk_world ord hΓ hΘ o (h.observers o ho), fun raceId marker => ?_,
     fun hx hr hm ty declared => ?_, fun token hp => ?_, h.raceObservers, h.targetsBelow,
-    h.observersBelow⟩
+    h.observersBelow, fun c hc => by rw [hΓ]; exact h.children c hc⟩
   · obtain ⟨tin, final, declared, final', stack, provenance⟩ := h.delivery token hp
     exact ⟨tin, final, by rw [hΘ]; exact declared, by rw [hΓ]; exact final',
       hostStack_mono ord stack, provenance⟩
@@ -1291,15 +1298,21 @@ theorem trackChild_preserves (root : ProgramSource) (rootTy : EffTy) (parent chi
   simp only [driveStep]
   split
   · exact tail
-  · split
+  · rename_i c hc
+    have hc' : m.fiber? c.id = some c := by rw [rfiber?_id hc]; exact hc
+    have declared : (w.Γ child).isSome = true :=
+      (tail.machine.wide.fibers child).mpr (List.mem_map.mpr ⟨c, rfiber?_mem hc', rfiber?_id hc⟩)
+    split
     · exact tail
-    · apply configTyped_modify_quiet _ child (quiet_observe (.untrackChild parent) rfl)
+    · refine configTyped_modify_quiet ?_ child (quiet_observe (.untrackChild parent) rfl) ?_
+        (fun _ _ kept => Or.inl kept)
+      · exact configTyped_modify_quiet tail parent (quiet_children child)
+          (fun _ _ o ho => Or.inl ho) (fun _ c' hc' => (List.mem_append.mp hc').imp id
+            (fun new => by rw [List.mem_singleton.mp new]; exact declared))
       · intro c _ o ho
         rcases mem_append_observer ho with old | rfl
         · exact Or.inl old
         · exact Or.inr trivial
-      · exact configTyped_modify_quiet tail parent (quiet_children child)
-          (fun _ _ o ho => Or.inl ho)
 
 /-! ## Queue heads, congruent machines and a general fiber edit -/
 
@@ -1979,7 +1992,7 @@ theorem configTyped_postTask {root : ProgramSource} {rootTy : EffTy} {w : World}
         moved.ok.c5⟩, moved.delivery, moved.below, moved.pendingShape, moved.parkedIdle,
         moved.parkedBelow, moved.exited, moved.exitedStack, moved.deferredCause, moved.pendingOwner,
         moved.observers, moved.registration, moved.code, moved.tokens, moved.raceObservers,
-        moved.targetsBelow, moved.observersBelow⟩
+        moved.targetsBelow, moved.observersBelow, moved.children⟩
       rcases mem_insert_tasks hb ht with rfl | ⟨b', hb', ht'⟩
       · exact resume
       · exact (old.ok.c4.c0 b' hb').c0 t ht'
@@ -2324,7 +2337,7 @@ theorem fiberTyped_reframe {root : ProgramSource} {w : World} {m m' : RState} {t
     moved.parkedBelow, moved.exited, fun hx => stack.trans (moved.exitedStack hx), fun _ => ?_,
     moved.pendingOwner, moved.observers,
     fun raceId marker => ?_, fun hx hr hm ty declared => ?_, moved.tokens, moved.raceObservers,
-    moved.targetsBelow, moved.observersBelow⟩
+    moved.targetsBelow, moved.observersBelow, moved.children⟩
   · obtain ⟨tin, stackOk, _⟩ := h.position declared
     exact ⟨tin, by rw [stack]; exact stackOk, prov⟩
   · obtain ⟨tin, final, token', final', stackOk, _⟩ := h.delivery token hp
@@ -2419,7 +2432,7 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
         (fun h => absurd rfl h), (fun _ hp => nomatch hp), (fun hx' => ?_), (fun hx' => ?_),
         (fun _ => rfl), (fun _ hp => nomatch hp), moved.observers, (fun _ hm => nomatch hm),
         (fun _ _ _ ty' declared' => ?_), (fun _ hp => nomatch hp), moved.raceObservers,
-        (fun _ hp => nomatch hp), moved.observersBelow⟩
+        (fun _ hp => nomatch hp), moved.observersBelow, moved.children⟩
       · obtain ⟨tin', stackOk, _⟩ := old.position declared'
         exact ⟨tin', stackOk, newProv⟩
       · rw [show g.exit = t.exit from rfl, live] at hx'
@@ -2759,6 +2772,7 @@ theorem link_preserves (root : ProgramSource) (rootTy : EffTy) (mode : Supervisi
             show Stores.ScopeLive (RunMachine.modify _ target _).state scope
             rw [rmodify_state]
             exact ScopeStore.entryAt_setEntry_isSome _ _ scope live)
+        (fun _ _ kept => Or.inl kept)
       exact ⟨{ w with state := s }, ord, configTyped_emit modified _⟩
 
 /-! ## `observe` (one halting arm: a scope-finalizer drop on an absent scope,
@@ -3127,7 +3141,7 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
       old'.parkedBelow, old'.exited, old'.exitedStack, old'.deferredCause, old'.pendingOwner,
       fun o ho => storedObserverOk_updateRace hr hid hhost htoken payload liveCols o
         (old'.observers o ho), fun raceId marker => ?_, old'.code_races lookFwd, old'.tokens,
-      fun r race hr' o ho => ?_, old'.targetsBelow, old'.observersBelow⟩
+      fun r race hr' o ho => ?_, old'.targetsBelow, old'.observersBelow, old'.children⟩
     · obtain ⟨race, rty, found, host, token, reply⟩ := old'.registration raceId marker
       obtain ⟨r', found', host', token'⟩ := lookFwd raceId race found
       exact ⟨r', rty, found', host'.trans host, by rw [host', token']; exact token,

@@ -84,6 +84,10 @@ structure WorldValid (rootTy : EffTy) (w : World) (m : RState) : Prop where
   above the cell's columns, as `asyncPre`'s `registerAwait` demanded when it parked (F2, F3). -/
   waiters : ∀ key cell, m.state.deferreds.cellAt key = some cell → ∀ a e, w.«Π» key = some (a, e) →
     WakeTyped w (AwaitDemand a e) cell.wake
+  /-- Every child a fiber tracks is declared (`trackChild` appends only a fiber the machine holds,
+  `Machine/Fibers.lean:1956-1963`): what `snapshotChildren`'s answer and the interrupt middleware
+  read. -/
+  children : ∀ f ∈ m.fibers, ∀ c ∈ f.children, (w.Γ c).isSome = true
 
 /-- Existing external handles keep their spelling at the same index. Length alone is not
 enough. This strengthens the existing order without asserting global validity. -/
@@ -256,6 +260,11 @@ theorem initial_world_valid_at (rootTy : EffTy) (serviceTy : ServiceKey → Opti
   · exact WakeTyped.empty _ _
   · intro key cell h
     cases h
+  · intro f mem c hc
+    change f ∈ [_] at mem
+    simp only [List.mem_singleton] at mem
+    subst f
+    cases hc
 
 theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat) :
     WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel) :=

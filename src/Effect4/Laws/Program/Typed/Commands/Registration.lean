@@ -147,7 +147,7 @@ theorem fiberTyped_transport_off {root : ProgramSource} {w : World} {m m' : RSta
     fun raceId marker => ?_, h.code_races (racesKept_of_eq view.races), h.tokens,
     fun r race hr o ho => h.raceObservers r race ((view.races r).symm.trans hr) o ho,
     fun p hp id hid => Nat.lt_of_lt_of_le (h.targetsBelow p hp id hid) nextId,
-    fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId⟩
+    fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId, h.children⟩
   obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
   exact ⟨race, resultTy, (view.races raceId).trans found, host, token,
     stackReply_races (racesKept_of_eq view.races) reply⟩
@@ -403,7 +403,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           tokens := moved.tokens
           raceObservers := moved.raceObservers
           targetsBelow := moved.targetsBelow
-          observersBelow := moved.observersBelow }
+          observersBelow := moved.observersBelow
+          children := moved.children }
       have noRequest : ∀ tok r, requestOfR (m.update g) g.id tok = some r →
           requestOfR m f.id tok = some r := by
         intro tok r hreq
@@ -495,7 +496,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
               cases h
             raceObservers := moved.raceObservers
             targetsBelow := fun _ hp => absurd hp List.not_mem_nil
-            observersBelow := moved.observersBelow }
+            observersBelow := moved.observersBelow
+            children := moved.children }
         have noRequest : ∀ tok r, requestOfR (m.update g) g.id tok = some r →
             requestOfR m f.id tok = some r := by
           intro tok r hreq
@@ -630,7 +632,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
               rfl
             raceObservers := old.raceObservers
             targetsBelow := targetsG
-            observersBelow := old.observersBelow }
+            observersBelow := old.observersBelow
+            children := old.children }
         have noRequest : ∀ tok r, requestOfR (m.update g) g.id tok = some r →
             requestOfR m f.id tok = some r := by
           intro tok r hreq
