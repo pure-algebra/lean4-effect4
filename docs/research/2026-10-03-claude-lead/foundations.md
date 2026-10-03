@@ -372,3 +372,131 @@ argument generalized. The work is `admit_sound` (§4), not the lift.
 
 None of these is started in the tree by this note. It proposes; T1's ingredients are the only code
 measured.
+
+## 10. Programs as answerers: composing the questions of one program with the answers of another
+
+The owner's sharpening (2026-10-03): answering a program's questions should itself be a program,
+so programs compose as handlers of one another, with no difference between the two sides; and a
+program can be *proved* to answer, or to be capable of answering, the questions another program's
+tape poses.
+
+### 10.1 The precise version
+
+- **Questions are rows.** A program asks the operations it performs and does not answer itself.
+  Each row has a request, an answer and an error type (`Row`, `Program/Native.lean`). The
+  checker's requirement row (`EffTy.requires`) is already Effect's `R`: the services a program
+  needs. `rootTy.requires = empty`, the premise of M5–M7, says the program asks nothing outside.
+- **An answerer is a handler.** For each row, a clause: a first-order `Eff` body with the request
+  bound as a variable, checked at the row's answer and error types. It is data, not a Lean
+  function (AGENTS.md representation rules), the way an `iterate` body binds its cursor.
+- **The tape splits in two.**
+  - **Environment questions** that no program answers: scheduling, the clock, external
+    interrupts. The driver or a scheduling strategy answers them.
+  - **Row questions:** `answerAsync` for a call parked on a row. A handler answers them.
+
+  Composing a program with a handler moves its row questions off the tape and into the
+  composite's own steps. The composite's tape keeps the environment questions and whatever the
+  handler itself asks.
+- **"No difference on either side"** is a representation-independence theorem. There are three
+  ways to answer the same row questions, and they should be observationally one:
+  1. **inline:** the handler's clauses substituted at the performs. This is a deep handler as a
+     fold over `Eff`, Plotkin–Pretnar's reading, already cited in `semantics.md` §2.7.
+  2. **dynamic:** when the asker parks on a row, run the clause on the request (a fiber, or a
+     linked machine) and deliver its exit as the answer.
+  3. **external:** a host, specified by `HostSpec` (`Program/Profile.lean:176`), answers through
+     the session.
+
+  The asker's observation must not depend on which: equal behaviour up to the identity bijection
+  and bounded stuttering (§5's preorder).
+- **"Capable of answering"** has a safety half and a liveness half.
+  - **Safety (soundness):** every answer the handler gives is admitted at the asker's waiting
+    token (`AnswerOk`). By §4 this is exactly the premise under which the asker's typing extends
+    to answered tapes. So typing the handler at the dual interface proves it answers soundly:
+    M5–M7 applied to the clause programs.
+  - **Liveness (totality):** every question gets an answer. For a clause in a terminating
+    fragment this is a theorem already in shape: `run_eq_meaning` finishes a straight program
+    given enough fuel. For the composite it is progress (T3): an asker that waits only on rows a
+    total handler serves never stops at that frontier.
+- **The host is the answerer whose code we cannot see.** `HostSpec` is the interface contract; a
+  program handler and an external binding are two implementations of it. A program handler
+  *refines* a spec when every completion it produces is one the spec's `RowStep` permits. The
+  asker's guarantees, proved against the spec, then hold for every lawful implementation. That is
+  the symmetry: both sides are judged against one contract.
+
+### 10.2 What the tree has, and what it lacks
+
+| Piece | Where | State |
+| --- | --- | --- |
+| Free programs, handlers, `interpret` as the induced monad morphism, signature sums, freeness and initiality | `Effects.Algebra` (`Handler`, `interpret`, `Handler.sum`, `program_is_free`, `program_is_initial_in_models`) | proved, `[propext, Quot.sound]`; handlers are Lean functions |
+| A handler into another program signature (`Handler S (Program T)`) | the same | algebraically available: a program answering a program |
+| Store and fiber operations handled natively | `interpRAt`, the evaluator | proved typed (M6) |
+| Services as values in the context; layers that build them | `Eff.service`, `provideService`, `provideLayer` | typed (M5, the layer arm); values only |
+| Program rows (`RowKind.program`) | `Program/Compile.lean:621` | compile to a **frontier**: no implementation |
+| Code-valued services | R5, R7 (`resolve_typed`) | open |
+| External rows answered by the host | `.external i` → the async route; `HostSession` admits replies | runs; typing over host answers open (§4, T4) |
+| The host as a specification | `HostSpec`, `LawfulHostSpec` | defined, with laws; no refinement theorem |
+
+The gap is precise: **a program cannot yet be the implementation of an operation.** Making it so
+is R5/R7's code-valued services, and it is also Effect's own model, where a service is a record of
+effectful methods provided by a layer.
+
+### 10.3 Theorem shapes
+
+- **H1, composition typing (static).**
+  - **Statement.** If `P` checks at `⟨A, E, R⟩` and handler `H` covers the rows of `R` it names,
+    each clause checking at its row's answer and error under the request's type with requirement
+    `R_H`, then `link H P` checks at `⟨A, E, (R \ dom H) ∪ R_H⟩`.
+  - **Proof.** A fold, so it is coherent by construction; the checker inversions are already
+    aesop-proved in `Effect4.Checker`.
+  - **Value.** Composition is typed by the parts; no whole-program recheck.
+- **H2, answers are admitted (soundness by typing).**
+  - **Statement.** For a typed `H`, every exit a clause run reaches on a request of the row's type
+    satisfies `AnswerOk` at every typed asker machine parked on that row.
+  - **Proof.** M6 and M7 on the clause, and `CompletionStrong` from `ExitOk`.
+  - **Value.** The asker's guarantee extends to every tape a typed handler answers. T4 is
+    discharged by a proof instead of a runtime check, wherever the answerer is a program.
+- **H3, adequacy ("no difference").**
+  - **Statement.** `Beh(link H P) ≈ Beh(P answered dynamically by H) ≈ Beh(P answered by any host
+    whose completions equal H's)`, on the asker's observation.
+  - **Prerequisite.** §5's preorder (T5).
+  - **Value.** Where an answerer runs (inlined, in a fiber, across the session) is unobservable.
+    Refactoring between them, and lowering them differently, is sound.
+- **H4, totality and closing.**
+  - **Statement.** A handler whose clauses lie in a terminating fragment answers every question.
+    Composed with an asker it serves completely, the composite is closed (`requires = empty`), so
+    M5–M7 apply to it outright.
+  - **Value.** "Capable of answering" as a theorem. Closing a program by providing its handlers is
+    the operation that makes the typed guarantee apply.
+- **H5, implementations refine the contract.**
+  - **Statement.** A program handler that refines a `HostSpec` transfers every spec-relative
+    guarantee of the asker; so does a proved external binding.
+  - **Value.** The host and the program are interchangeable behind one contract.
+
+### 10.4 The decision this needs first (owner's)
+
+Where handler code lives, as first-order data. Three candidates:
+- **(a)** a constructor, `handleRow row clause body`, scoping a handler over a body. This is the
+  closest to Plotkin–Pretnar and to `provideService`, with code in place of a value.
+- **(b)** code-valued services (R7): a service value carries a resolved code entry, typed at its
+  reference's type (`resolve_typed`), provided by layers as today. This is the closest to Effect.
+- **(c)** a clause table in `ProgramSource` beside the row table: program rows as table entries
+  whose implementation is a program, the dual of `.external`.
+
+The recommendation is (b) with (a) as its typing core:
+- (b) is Effect's model, so it keeps the TypeScript face faithful (a service is a record of
+  effectful methods);
+- (a)'s typing rule is the one H1 needs, so (b) can be defined through it.
+
+Whatever the choice, `RowKind.program` stops compiling to a frontier, and the dynamic answer route
+reuses the async route the external rows already take, answered internally.
+
+### 10.5 Order
+
+1. **The representation decision (§10.4), as a decisions row.**
+2. **H2.** Cheap once clauses exist, since M6 and M7 do the work.
+3. **H1.** A fold and its typing.
+4. **H4,** for the straight and looped fragments, where totality is already in shape.
+5. **H3,** after T5's preorder.
+6. **H5** with the host lane (T4).
+
+T1 and T3 from §7 are independent and can proceed meanwhile.
