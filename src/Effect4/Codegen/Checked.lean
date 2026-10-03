@@ -10,8 +10,7 @@ check and the exact relation between this program, table, requested name and the
 existing declaration printer. The module syntax is a projection of those retained
 declarations, so a caller cannot replace an annotation independently of its receipt.
 
-This certifies production, not source admission. The current raw printer still
-omits annotations for nonempty requirements and supplies no imports. Original
+This certifies production, not source admission. The printer retains all three type parameters but supplies no imports. Original
 source declarations and bindings must be validated at a separate reading boundary.
 Target type checking and execution are not consequences of this certificate.
 -/

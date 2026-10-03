@@ -2,4 +2,4 @@
 // Regenerate: make gen-truth
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv } from "../prelude.ts"
-export const main: Effect.Effect<readonly [Option.Option<string>, boolean], readonly [string, string]> = Effect.flatMap(Kv.make(), (a0) => Effect.flatMap(a0.set("k", "1"), (a1) => Effect.flatMap(a0.get("k"), (a2) => Effect.flatMap(a0.has("k"), (a3) => Effect.flatMap(a0.remove("k"), (a4) => Effect.succeed(pair(a2, a3)))))))
+export const main: Effect.Effect<readonly [Option.Option<string>, boolean], readonly [string, string], never> = Effect.flatMap(Kv.make(), (a0) => Effect.flatMap(a0.set("k", "1"), (a1) => Effect.flatMap(a0.get("k"), (a2) => Effect.flatMap(a0.has("k"), (a3) => Effect.flatMap(a0.remove("k"), (a4) => Effect.succeed(pair(a2, a3)))))))

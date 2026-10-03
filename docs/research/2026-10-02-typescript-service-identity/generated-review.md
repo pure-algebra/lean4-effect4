@@ -1,0 +1,27 @@
+# Final generated-output review
+
+No hidden corpus-program, typing-verdict, exit, schedule, tape, or saved-result change was found. One non-print delta must remain explicit in the receipt: six stored Lean runtime frame counts refreshed. This read-only review ran data comparisons only; no compiler, generator, runtime, or process-control operation was run. Base is `ad447a54aeaab0a83b14f59dcfcac355a1162b63`; the reviewed tree is an uncommitted overlay.
+
+- `generated/corpus-index.tsv`: 408 data rows, unchanged row inventory/order. Exactly 104 rows differ and only column 4 (`chars`) changes. Both verdicts, refusal reason, location, and diagnostic-code columns are byte-identical. Producer is `tools/Drivers/Corpus.lean` (`Makefile:274`, `docs/GENERATED.md:142–150`), which prints existing generated/wire programs.
+- `ts/eff/profile.gen.ts`: decoded payload differs only in adding `Scope.Scope` to heads (56 → 57), preserving all former heads/order. Address, atoms, service tables, and native rows are identical. Recomputed FNV-1a64 equals its recorded `0xd8c82a204e05398b`. `ts/eff/ingest/README.md` adds that one generated head row. Producers are `tools/Drivers/TsGen.lean` and the existing readme renderer (`docs/GENERATED.md:103–104`).
+- `harness/truth/corpus.json`: all 37 program names and order stay fixed. `wellTyped`, `type`, `straight`, `scenario`, `runSync`, and `exprRefusal` are unchanged for every program; all top-level metadata and host rows are unchanged. All 37 declarations now carry the exact A/E/R spelling independently reconstructed from their unchanged type metadata. Seven expression/inferred-declaration strings differ only by the new explicit key generic argument. After that approved key rewrite and annotation erasure, every printed corpus string matches the old one.
+- All 37 `harness/truth/generated/*.ts` differences reduce exactly to the approved generic-key insertion and main declaration annotation changes. Their imports, layer names/order, runtime calls and arguments are otherwise byte-identical. In this existing corpus there is no expression requiring the native Scope-service substitution.
+- Ten retained files (`result.json`, `result.md`, `corpus-results.tsv`, `corpus-known-differences.md`, six tapes) are byte-identical to base. `Truth.lean` changes only the requirement-metadata comment. `run-truth.ts` and runtime/fixture source definitions are unchanged by this slice.
+
+## Frame-count refresh, not printed-text drift
+
+`Truth.lean:568–570,620–633` counts `.frame` entries in the actual Lean machine trace. Only `run.frames` changes: pProvide 89→91; pProvideMerge 253→259; pProvideTwice 214→216; pDiamond 238→244; pMergeAll 281→283; pSqlOrDie 111→113. Every other `run` field, including internal events, remains identical.
+
+The committed corpus was last refreshed at `5f33fe3c47725bf9ff9c6632d90bea50d7a442b6`. Its later ancestor `1ba84f74c285634f61e45472b4ae7d946cb113b2` changed singleton Scope.close by adding an on-success wrapper and unit result (`Machine/Stores.lean:1937–1943`); the commit and current docstring explicitly retain this as the row151/U-02 behavior. This is concrete source support for preexisting frame metadata drift; it is not a printer effect. There are also later layer changes before base. I did not replay historical revisions, so attributing each exact +2/+6 to one source change remains an inference, not independently executed evidence.
+
+## Target oracle and focused controls
+
+`tools/target/profile.ts:37–46` now uses full numeric-key literal identifiers, with only exact scope-key equality mapped to Scope.Scope. It still checks safe natural fields and refuses malformed supplied carrier metadata. Accepting absent/null carrier metadata affects identity construction only; it supplies neither a carrier typing fact nor core program admission. `checker.ts` changes report wording only; `corpus.ts` changes documentation only, preserving the independent initializer-inference lane. The strengthened profile tests cover distinct same-carrier keys, both numeric fields, scope identity, duplicate keys, and malformed metadata. The sole selection change is adding the already-existing pInterruptEscape; no fixture is dropped or skip added.
+
+The new `tools/TestSupport/ServiceIdentity.lean` derives ordinary fixture declarations through `Api.emitModule`; its explicit unknown-carrier fixture uses its own checked signature. Only negative fixtures replace annotations. `scripts/check-service-identity.py` checks emitted annotations and separately unannotated inferred requirements, pins installed tsgo/Effect versions, requires the two specific TS2375 refusals, and checks four runtime outcomes. Its header correctly labels finite compiler/runtime evidence rather than a general lowering proof. I inspected these sources but did not rerun the reported parent checks.
+
+Detailed comparisons, retained-file hashes and reviewed-source SHA-256 values: `/private/tmp/service-identity-generated-structure.json`.
+
+## Subsequent corpus refresh
+
+After this review, the 400-program producer refreshed `corpus-results.tsv`: g21 now agrees instead of refusing colliding carrier bindings; g50/g89/g290 now agree on R; g309 retains its unknown-A refusal and additionally records the compiler diagnostic exposed by its complete annotation. All execution results and schedules remain unchanged. The mutable known-difference table removes exactly the three resolved R rows and adds g309's explicit compiler diagnostic. No immutable baseline or oracle was rewritten.

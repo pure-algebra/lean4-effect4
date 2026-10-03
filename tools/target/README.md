@@ -19,7 +19,7 @@ Expected adapter types come from `generated/row-types.tsv`, which `tools/Tools/R
 writes with `Ty.renderRaw` and each row's own `RowShape`: the tool has no type printer of its
 own, and `make check-target` refuses a stale table rather than reading it.
 The full `scopeKey` maps to `Scope.Scope`; a matching service code alone is insufficient.
-Other requirement keys need explicit bindings before this profile can admit them.
+Other requirements use the printer's full-key string literal identity, independently of their value carrier.
 
 `oracle.ts` is the diagnostic library's face: the types, the query sources, and a `query` that
 runs `checker.ts`. `checker.ts` is the only thing in the repository that drives a type checker;
@@ -74,8 +74,8 @@ refused, except a template atom, which is queried at the explicit instantiation
 `generated/row-types.tsv` names (`typeof Atoms.ite<"p0">`, each parameter at a string literal
 probe) against its template rendered at the same probes; `rows.test.ts` holds the red control.
 These assignment checks are finite TypeScript
-judgments, not Lean semantic theorems, runtime cause agreement, or proof of distinct Lean
-service-key identity.
+judgments, not Lean semantic theorems, runtime cause agreement, or a universal proof of target service-key identity. The Lean key codec and identifier-injectivity
+laws establish the corresponding syntax properties.
 
 `assignability.ts` is the second query kind (plan 1.10): a bare pair of rendered types, both
 readings of both directions (the checker's own `isTypeAssignableTo` and one ordinary assignment

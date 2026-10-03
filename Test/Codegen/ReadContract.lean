@@ -766,16 +766,81 @@ private def joinLayers : List (LayerTerm NativeOp) :=
     (.effect joinKey (.bind joinValue (.succeed (.var 0)))) true (.succeed (.var 0))))
 
 #guard [Effect4.ServiceKey.mk ⟨0⟩ ⟨0⟩, ⟨⟨1⟩, ⟨4⟩⟩, ⟨⟨4⟩, ⟨4⟩⟩,
-    ⟨⟨5⟩, ⟨5⟩⟩, ⟨⟨6⟩, ⟨6⟩⟩, ⟨⟨7⟩, ⟨7⟩⟩].all fun key =>
+    ⟨⟨5⟩, ⟨4⟩⟩, ⟨⟨5⟩, ⟨5⟩⟩, ⟨⟨6⟩, ⟨6⟩⟩, ⟨⟨7⟩, ⟨7⟩⟩,
+    ⟨⟨4⟩, ⟨99⟩⟩].all fun key =>
   decide (roundTrip nativeSignature nativeSpell 0 (.service key) = .ok (.service key))
-#guard readKey nativeSignature (.call (.generic (.ident "Context.Service") [.name ["boolean"] []])
+
+-- Concept 5's print/read embedding: finite controls for readKey_exact/readKey_printKey,
+-- consumed by module reading (DI-24/DI-76, R5 service identity and the R8 face connection).
+-- These fix the signature and canonical spelling; raw unknown-key round trips
+-- are not typed service admission, target type checking, or runtime agreement.
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service")
+    [.literal "k4_4", .name ["number"] []]) [.str "k4_4"]) = .ok ⟨⟨4⟩, ⟨4⟩⟩
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service")
+    [.literal "k5_4", .name ["number"] []]) [.str "k5_4"]) = .ok ⟨⟨5⟩, ⟨4⟩⟩
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service")
+    [.literal "k4_4", .name ["boolean"] []])
   [.str "k4_4"]) = .error (.shape "service key")
-#guard readKey nativeSignature (.call (.generic (.ident "Context.Service") [.name ["number"] []])
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service")
+    [.literal "k5_4", .name ["number"] []])
+  [.str "k4_4"]) = .error (.shape "service key")
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service")
+    [.literal "k4_4", .name ["number"] []])
   [.str "k04_4"]) = .error (.shape "service key")
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service") [.name ["number"] []])
+  [.str "k4_4"]) = .error (.shape "service key")
 #guard readKey nativeSignature (.call (.ident "Context.Service") [.str "k4_4"]) =
   .error (.shape "service key")
+#guard readKey nativeSignature (.call (.ident "Context.Service") [.str "k4_99"]) =
+  .ok ⟨⟨4⟩, ⟨99⟩⟩
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service")
+    [.literal "k4_99", .name ["unknown"] []]) [.str "k4_99"]) = .error (.shape "service key")
+#guard
+  let knownUnknown := { nativeSignature with serviceTy := fun _ => some .unknown }
+  (printKey knownUnknown ⟨⟨4⟩, ⟨99⟩⟩).map (readKey knownUnknown) =
+    .ok (.ok ⟨⟨4⟩, ⟨99⟩⟩)
+#guard readKey nativeSignature (.ident "Scope.Scope") = .ok nativeScopeKey
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service")
+    [.literal "k0_0", .name ["Scope", "Scope"] []]) [.str "k0_0"]) =
+  .error (.shape "service key")
+#guard readKey nativeSignature (.call (.ident "Context.Service") [.str "k0_0"]) =
+  .error (.shape "service key")
+#guard
+  let customKey : Effect4.ServiceKey := ⟨⟨7⟩, ⟨2⟩⟩
+  let customSig := { nativeSignature with scopeKey := customKey }
+  readKey customSig (.ident "Scope.Scope") = .ok customKey
+#guard
+  let customKey : Effect4.ServiceKey := ⟨⟨7⟩, ⟨2⟩⟩
+  let customSig := { nativeSignature with scopeKey := customKey }
+  roundTrip customSig nativeSpell 0 (.service customKey) = .ok (.service customKey)
 #guard (printKey nativeSignature ⟨⟨12345678901234567890⟩, ⟨4⟩⟩).map (readKey nativeSignature) =
   .ok (.ok ⟨⟨12345678901234567890⟩, ⟨4⟩⟩)
+
+-- Checked module admission retains R rather than accepting the old omitted annotation
+-- or a forged empty requirement. The expression reader alone does not check annotations.
+#guard
+  let ty : EffTy := ⟨.nat, .never, Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩
+  let body := TypeScript.Expr.call (.ident "Effect.service")
+    [.call (.generic (.ident "Context.Service") [.literal "k4_4", .name ["number"] []])
+      [.str "k4_4"]]
+  match printDecl "main" ty body with
+  | .error _ => false
+  | .ok declaration =>
+    Effect4.Codegen.envelopeCheck "main" ty [.const declaration] == none
+#guard
+  let ty : EffTy := ⟨.nat, .never, Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩
+  let declaration : TypeScript.ConstDecl :=
+    { doc := [], name := "main", value := .ident "body", type := some (.name ["Effect", "Effect"]
+        [.name ["number"] [], .name ["never"] [], .name ["never"] []]) }
+  match Effect4.Codegen.envelopeCheck "main" ty [.const declaration] with
+  | some (.declaredType _ _) => true
+  | _ => false
+#guard
+  let ty : EffTy := ⟨.nat, .never, Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩
+  let declaration : TypeScript.ConstDecl := { doc := [], name := "main", value := .ident "body" }
+  match Effect4.Codegen.envelopeCheck "main" ty [.const declaration] with
+  | some (.declaredType _ _) => true
+  | _ => false
 
 -- The inner target is captured before the enclosing target; restoration must
 -- rebuild the enclosing layer before putting the inner target back.

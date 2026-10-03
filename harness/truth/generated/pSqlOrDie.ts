@@ -2,4 +2,4 @@
 // Regenerate: make gen-truth
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv } from "../prelude.ts"
-export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>("k8_4")), Layer.orDie(Layer.effect(Context.Service<number>("k8_4"), Effect.flatMap(Effect.acquireRelease(Sql.open(":memory:"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe("SELECT a FROM missing", strings()), (a1) => Effect.succeed(1))))))
+export const main: Effect.Effect<number, never, never> = Effect.provide(Effect.service(Context.Service<"k8_4", number>("k8_4")), Layer.orDie(Layer.effect(Context.Service<"k8_4", number>("k8_4"), Effect.flatMap(Effect.acquireRelease(Sql.open(":memory:"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe("SELECT a FROM missing", strings()), (a1) => Effect.succeed(1))))))

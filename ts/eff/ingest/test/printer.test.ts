@@ -10,10 +10,10 @@ test("the compiler reader recovers the original printed program", () => {
 })
 
 test("printed service identifiers are preserved by the separate printer entrypoint", () => {
-  expect(readPrintedSource('Effect.service(Context.Service<number>("k10_4"))')).toEqual({ _tag: "service", key: { name: { value: 10 }, service: { value: 4 } } })
+  expect(readPrintedSource('Effect.service(Context.Service<"k10_4", number>("k10_4"))')).toEqual({ _tag: "service", key: { name: { value: 10 }, service: { value: 4 } } })
 })
 
-const key = 'Context.Service<number>("k4_4")'
+const key = 'Context.Service<"k4_4", number>("k4_4")'
 const layer = `Layer.succeed(${key}, 7)`
 const k44 = { name: { value: 4 }, service: { value: 4 } }
 

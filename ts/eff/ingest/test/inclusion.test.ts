@@ -105,7 +105,7 @@ test("agreed foreign refusals remain reportable without entering the measured po
 })
 
 test("the inclusion command compares service keys up to their documented renumbering", () => {
-  const result = run("none", 'Effect.service(Context.Service<number>("k10_4"))',
+  const result = run("none", 'Effect.service(Context.Service<"k10_4", number>("k10_4"))',
     ["service", { name: { value: 10 }, service: { value: 4 } }])
   expect(result.error).toBeUndefined()
   expect(result.status).toBe(0)
