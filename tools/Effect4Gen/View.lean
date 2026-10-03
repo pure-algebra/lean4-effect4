@@ -1386,6 +1386,14 @@ def emitLaws (rs : List Row) : List String :=
   let vrs := rs.filter fun r => r.ctor.varKind?.isSome
   let hasVar := !vrs.isEmpty
   let hasFields := vrs.any fun r => match r.ctor.varKind? with | some (.fields ..) => true | _ => false
+  -- The `simp only` set that evaluates `sameHead` at two constructors. A case whose heads differ
+  -- becomes `false = true` and closes, so aesop runs once per arm and not once per case of the
+  -- square (784 cases at `Ty`: 97 s of the module's elaboration, measured 2026-10-03). `restSimp`
+  -- serves the cases left after the named variable-arity ones.
+  let restSimp := "sameHead, Bool.false_eq_true, decide_eq_true_eq"
+  let headSimp := restSimp ++
+    (if vrs.any (fun r => match r.ctor.varKind? with | some (.applied ..) => true | _ => false)
+      then ", Bool.and_eq_true" else "")
   let binders : VarKind → String := fun k => match k with
     | .fields .. => "fs" | .items _ => "xs" | .applied .. => "n xs"
   let reflCases := vrs.filterMap fun r => r.ctor.varKind?.map fun k =>
@@ -1442,14 +1450,17 @@ def emitLaws (rs : List Row) : List String :=
        else if rs.any (fun r => r.ctor.payloads.length >= 2) then ", and_self]" else "]") ++ "",
     "  exact h",
     "",
-    "theorem sameHead_symm {a b : Ty} (h : sameHead a b = true) : sameHead b a = true := by",
-    "  cases a <;> cases b <;> aesop (add norm simp [sameHead])",
-    "",
     "/-- `fun_cases` on `sameHead` itself, so the split is its own arm list and not the square of",
-    "the alphabet: one case per arm, then one `cases c` inside each. -/",
+    "the alphabet: one case per arm. -/",
+    "theorem sameHead_symm {a b : Ty} (h : sameHead a b = true) : sameHead b a = true := by",
+    "  fun_cases Ty.sameHead a b <;> aesop (add norm simp [sameHead])",
+    "",
+    "/-- One case per arm of `sameHead`, then one `cases c` inside each. `simp only` closes every",
+    "case whose heads differ, so aesop runs once per arm. -/",
     "theorem sameHead_trans {a b c : Ty} (hab : sameHead a b = true)",
     "    (hbc : sameHead b c = true) : sameHead a c = true := by",
-    "  fun_cases Ty.sameHead a b <;> cases c <;> aesop (add norm simp [sameHead])",
+    "  fun_cases Ty.sameHead a b <;> simp only [" ++ headSimp ++ "] at hab <;>",
+    "    cases c <;> simp only [" ++ headSimp ++ "] at hbc ⊢ <;> aesop",
     "",
     "/-- The variance-wise comparison of a node with itself, from `sub_refl`. -/",
     "theorem argsBelow_refl (t : Ty) : argsBelow sub t t = true := by" ] ++
@@ -1464,8 +1475,10 @@ def emitLaws (rs : List Row) : List String :=
     "theorem args_congr {a b : Ty} (h : sameHead a b = true) :",
     "    a.args.length = b.args.length ∧ a.args.map Prod.fst = b.args.map Prod.fst := by" ] ++
   (if hasVar then [ "  cases a <;> cases b" ] ++ congrCases ++
-      [ "  all_goals aesop (add norm simp [sameHead, args])" ]
-   else [ "  cases a <;> cases b <;> aesop (add norm simp [sameHead, args])" ]) ++
+      [ "  all_goals simp only [" ++ restSimp ++ "] at h",
+        "  all_goals aesop (add norm simp [sameHead, args])" ]
+   else [ "  cases a <;> cases b <;> simp only [" ++ headSimp ++ "] at h <;>",
+          "    aesop (add norm simp [sameHead, args])" ]) ++
   (if hasVar then
     [ "",
       "/-- A node is its head and its children, read in canonical order: at a field list the" ,
@@ -1475,13 +1488,15 @@ def emitLaws (rs : List Row) : List String :=
       "    (hx : a.args.map Prod.snd = b.args.map Prod.snd)",
       "    (hca : headCanon a = true) (hcb : headCanon b = true) : a = b := by",
       "  cases a <;> cases b" ] ++ eqCases ++
-    [ "  all_goals aesop (add norm simp [sameHead, args, " ++ injEqs ++ "])" ]
+    [ "  all_goals simp only [" ++ restSimp ++ "] at h",
+      "  all_goals aesop (add norm simp [sameHead, args, " ++ injEqs ++ "])" ]
    else
     [ "",
       "/-- A node is its head and its children. -/",
       "theorem eq_of_sameHead {a b : Ty} (h : sameHead a b = true)",
       "    (hx : a.args.map Prod.snd = b.args.map Prod.snd) : a = b := by",
-      "  cases a <;> cases b <;> aesop (add norm simp [sameHead, args, " ++ injEqs ++ "])" ]) ++
+      "  cases a <;> cases b <;> simp only [" ++ headSimp ++ "] at h <;>",
+      "    aesop (add norm simp [sameHead, args, " ++ injEqs ++ "])" ]) ++
   (if hasFields then [] else []) ++
   [ "",
     "/-- Composition at each variance, once, for every relational law that needs it. -/",

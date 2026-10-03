@@ -302,14 +302,17 @@ theorem sameHead_refl (t : Ty) (h : isMember t = true) : sameHead t t = true := 
   cases t <;> simp only [sameHead, decide_eq_true_eq, Bool.and_eq_true, and_self]
   exact h
 
-theorem sameHead_symm {a b : Ty} (h : sameHead a b = true) : sameHead b a = true := by
-  cases a <;> cases b <;> aesop (add norm simp [sameHead])
-
 /-- `fun_cases` on `sameHead` itself, so the split is its own arm list and not the square of
-the alphabet: one case per arm, then one `cases c` inside each. -/
+the alphabet: one case per arm. -/
+theorem sameHead_symm {a b : Ty} (h : sameHead a b = true) : sameHead b a = true := by
+  fun_cases Ty.sameHead a b <;> aesop (add norm simp [sameHead])
+
+/-- One case per arm of `sameHead`, then one `cases c` inside each. `simp only` closes every
+case whose heads differ, so aesop runs once per arm. -/
 theorem sameHead_trans {a b c : Ty} (hab : sameHead a b = true)
     (hbc : sameHead b c = true) : sameHead a c = true := by
-  fun_cases Ty.sameHead a b <;> cases c <;> aesop (add norm simp [sameHead])
+  fun_cases Ty.sameHead a b <;> simp only [sameHead, Bool.false_eq_true, decide_eq_true_eq, Bool.and_eq_true] at hab <;>
+    cases c <;> simp only [sameHead, Bool.false_eq_true, decide_eq_true_eq, Bool.and_eq_true] at hbc ⊢ <;> aesop
 
 /-- The variance-wise comparison of a node with itself, from `sub_refl`. -/
 theorem argsBelow_refl (t : Ty) : argsBelow sub t t = true := by
@@ -339,6 +342,7 @@ theorem args_congr {a b : Ty} (h : sameHead a b = true) :
     obtain ⟨rfl, hl⟩ := h
     simp only [args, List.length_map, List.length_zipIdx, List.map_map, Function.comp_def]
     exact ⟨hl, map_zipIdx_snd_eq _ hl⟩
+  all_goals simp only [sameHead, Bool.false_eq_true, decide_eq_true_eq] at h
   all_goals aesop (add norm simp [sameHead, args])
 
 /-- A node is its head and its children, read in canonical order: at a field list the
@@ -364,6 +368,7 @@ theorem eq_of_sameHead {a b : Ty} (h : sameHead a b = true)
     simp only [args, List.map_map, Function.comp_def] at hx
     rw [map_fst_zipIdx, map_fst_zipIdx] at hx
     rw [hx]
+  all_goals simp only [sameHead, Bool.false_eq_true, decide_eq_true_eq] at h
   all_goals aesop (add norm simp [sameHead, args, Ty.handle.injEq, Ty.option.injEq, Ty.list.injEq, Ty.prod.injEq, Ty.except.injEq, Ty.exitOf.injEq, Ty.causeOf.injEq, Ty.fiberOf.injEq, Ty.union.injEq, Ty.lit.injEq, Ty.refOf.injEq, Ty.deferredOf.injEq, Ty.var.injEq, Ty.record.injEq, Ty.map.injEq, Ty.tuple.injEq, Ty.app.injEq])
 
 /-- Composition at each variance, once, for every relational law that needs it. -/
