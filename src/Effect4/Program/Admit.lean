@@ -59,12 +59,17 @@ inductive Refusal
   | answerType (fiber : FiberId) (token : Nat) (expected : Ty)
   | errorType (fiber : FiberId) (token : Nat) (expected : Ty)
   | deadHandle (fiber : FiberId) (token : Nat)
+  /-- A host failure carrying `badName` or `notImplemented`, the machine's own markers for
+  malformed code (decisions row 191, `E4-HOST-CE-008`). -/
+  | reservedDefect (fiber : FiberId) (token : Nat)
   | unknownCell (cell : RefKey)
   | oracleType (position : Nat) (expected : Ty)
 deriving DecidableEq, Repr
 
 /-- Check the answer's type before liveness, so a typed but unallocated handle
-is reported as `deadHandle`. A reference read must satisfy the same answer type. -/
+is reported as `deadHandle`. A failure is refused first for a reserved defect, then checked
+reason by reason against the error column. A reference read must satisfy the same answer
+type. -/
 def admitAnswer (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat) :
     Completion Val Err Defect FiberId Ann → Option Refusal
   | .ofExit (.success v) =>
@@ -73,7 +78,8 @@ def admitAnswer (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat) 
     else if !mintedIn m v then some (.deadHandle fiber token)
     else none
   | .ofExit (.failure cause) =>
-    if cause.reasons.all (errAdmits row.error) then none
+    if cause.reasons.any reservedDie then some (.reservedDefect fiber token)
+    else if cause.reasons.all (errAdmits row.error) then none
     else some (.errorType fiber token row.error)
   | .ofRefGet cell =>
     match m.state.refs[cell.index]? with

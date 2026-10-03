@@ -440,11 +440,41 @@ theorem external_error_typed (table : RowTable) (m : NativeMachine)
   obtain ⟨i, request, row, hp, hr, ha⟩ := admitted_row table m fiber token _ h
   refine ⟨i, request, row, hp, hr, ?_⟩
   rw [hasTyCause_exitErr]
-  change (if c.reasons.all (errAdmits row.error) then (none : Option Refusal)
+  change (if c.reasons.any reservedDie then some (Refusal.reservedDefect fiber token)
+    else if c.reasons.all (errAdmits row.error) then (none : Option Refusal)
     else some (.errorType fiber token row.error)) = none at ha
   split at ha
-  · assumption
   · cases ha
+  · split at ha
+    · assumption
+    · cases ha
+
+/-- **An accepted failing completion carries no reserved defect** (decisions row 191,
+`E4-HOST-CE-008`): the decision check refuses `badName` and `notImplemented` before it reads the
+error column. The failure half of executable admission's agreement with the typed exit judgment
+(`preflight_failure_noShapeDefect`, `Laws/Api/HostSession.lean`); the value half is row 97's. -/
+theorem admit_failure_reservedFree (table : RowTable) (m : NativeMachine)
+    (fiber : FiberId) (token : Nat) (c : CauseV)
+    (h : admit table m (.answerAsync fiber token (.ofExit (.failure c))) = none) :
+    c.reasons.any reservedDie = false := by
+  obtain ⟨_, _, row, _, _, ha⟩ := admitted_row table m fiber token _ h
+  change (if c.reasons.any reservedDie then some (Refusal.reservedDefect fiber token)
+    else if c.reasons.all (errAdmits row.error) then (none : Option Refusal)
+    else some (.errorType fiber token row.error)) = none at ha
+  cases hany : c.reasons.any reservedDie with
+  | false => rfl
+  | true => rw [if_pos hany] at ha; cases ha
+
+/-- The oracle registration path refuses the reserved defects too (`externalAdmits`). -/
+theorem externalAdmits_failure_reservedFree (table : RowTable) (i : Nat) (c : CauseV)
+    (allocated : List String)
+    (h : externalAdmits table i (.ofExit (.failure c)) allocated = true) :
+    c.reasons.any reservedDie = false := by
+  cases hr : externalRow table i with
+  | none => simp [externalAdmits, hr] at h
+  | some row =>
+    simp only [externalAdmits, hr, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at h
+    exact h.1
 
 /-- The oracle registration path has the same failure-branch guarantee as the delayed
 decision path (`external_oracle_typed` is its success half). -/
@@ -454,7 +484,11 @@ theorem external_oracle_error_typed (table : RowTable) (i : Nat) (c : CauseV)
     ∃ row, externalRow table i = some row ∧ hasTyCause (Val.exitErr c) row.error = true := by
   cases hr : externalRow table i with
   | none => simp [externalAdmits, hr] at h
-  | some row => exact ⟨row, rfl, by simpa [hasTyCause_exitErr, externalAdmits, hr] using h⟩
+  | some row =>
+    refine ⟨row, rfl, ?_⟩
+    rw [hasTyCause_exitErr]
+    simp only [externalAdmits, hr, Bool.and_eq_true] at h
+    exact h.2
 
 /-- A successful oracle registration resumes with its converted value, typed against
 exactly the allocations in the store it produces. -/

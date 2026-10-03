@@ -1443,14 +1443,16 @@ def prepareExternalAnswer (table : RowTable) (current : Option NCode)
         ({ state with externals := { state.externals with allocated } }, .success value)
   | _, _ => fallback
 
-/-- Registration consumes a typed, handle-free oracle completion. A reference
-read is an effect and is admitted only by the later decision check, with its heap. -/
+/-- Registration consumes a typed, handle-free oracle completion with no reserved defect
+(decisions row 191). A reference read is an effect and is admitted only by the later decision
+check, with its heap. -/
 def externalAdmits (table : RowTable) (i : Nat) (answer : Completion Val Err Defect FiberId Ann)
     (allocated : List String := []) : Bool :=
   match externalRow table i, answer with
   | some row, .ofExit (.success v) =>
     (externalValue row.answer allocated v).isSome && (Store.Val.handles v).isEmpty
-  | some row, .ofExit (.failure cause) => cause.reasons.all (errAdmits row.error)
+  | some row, .ofExit (.failure cause) =>
+    !cause.reasons.any reservedDie && cause.reasons.all (errAdmits row.error)
   | _, _ => false
 
 /-- The interp of a root program: names mean the subterms they address. -/

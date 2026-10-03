@@ -256,6 +256,25 @@ This is the shared reason fold at the default empty allocation table. -/
 def errAdmits (ty : Ty) : Reason Err Defect FiberId Ann → Bool :=
   reasonAdmits (fun v t => Val.hasTy v t) ty
 
+/-- The machine's own defects for malformed code and an unimplemented arm (`badShapeExit`,
+`notImplemented`). A host failure may not carry them: the typed exit judgment excludes exactly
+these two (`NoShapeDefect`, decisions row 152), and M7's shape-defect exclusion rests on it.
+Every other defect stays admitted at every error column (row 117 for `missingService`).
+Decisions row 191, `E4-HOST-CE-008`. Every constructor named. -/
+def reservedDefect : Defect → Bool
+  | .notImplemented => true
+  | .asyncFiber => false
+  | .badName => true
+  | .missingService => false
+  | .user _ => false
+  | .error _ => false
+
+/-- A failure reason that dies with a reserved defect. -/
+def reservedDie : Reason Err Defect FiberId Ann → Bool
+  | .die defect _ => reservedDefect defect
+  | .fail _ _ => false
+  | .interrupt _ _ => false
+
 /-- Membership of a reified cause at the public, default-allocation interface. The recursive
 `Val.hasTy` arms close over their own allocation table and use the same cause fold. -/
 def hasTyCause (v : Val) (e : Ty) : Bool :=

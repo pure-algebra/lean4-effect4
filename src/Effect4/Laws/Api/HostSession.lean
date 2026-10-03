@@ -3,6 +3,7 @@ import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Admit
 import Effect4.Laws.Program.Typed.Membership
+import Effect4.Laws.Program.Typed.Admission
 
 /-! Checked host protocol laws. Receipt commutation is equality of sessions, including
 stored replies and the unchanged machine. Answer application is a separate ordered step.
@@ -335,6 +336,42 @@ theorem preflight_success_prepared_fits {program : Api.Program} {table : RowTabl
 #obligation_proved PreparedWanted.preflight_success_prepared_fits :=
   @preflight_success_prepared_fits
 #typed_state_obligations Effect4.Api.HostSession.PreparedWanted ceiling 0 using aesop
+
+/-- A cause with no reserved defect satisfies the typed exit judgment's defect exclusion at
+every type (`NoShapeDefect` reads exactly `badName` and `notImplemented`). -/
+theorem noShapeDefect_of_reservedFree (ty : EffTy) (c : Machine.CauseV)
+    (free : c.reasons.any reservedDie = false) : Typed.NoShapeDefect ty (.failure c) := by
+  intro reason hmem
+  have notAny : ¬ c.reasons.any reservedDie = true := by
+    rw [free]
+    exact Bool.false_ne_true
+  cases reason with
+  | die defect _ =>
+    show defect ≠ .badName ∧ defect ≠ .notImplemented
+    refine ⟨fun h => notAny (List.any_eq_true.mpr ⟨_, hmem, ?_⟩),
+      fun h => notAny (List.any_eq_true.mpr ⟨_, hmem, ?_⟩)⟩
+    · subst h; rfl
+    · subst h; rfl
+  | fail _ _ => trivial
+  | interrupt _ _ => trivial
+
+/-- **An accepted failing reply has no shape defect** (decisions row 191, `E4-HOST-CE-008`):
+executable admission refuses the reserved defects (`admit_failure_reservedFree`), so a
+session-accepted failure satisfies `NoShapeDefect` at every type. This is the failure half of
+`admit_sound`, executable admission implying the ghost `AnswerOk`; the value half waits on
+row 97's handle declarations, and the cause's membership in the error column is
+`external_error_typed`. -/
+theorem preflight_failure_noShapeDefect {program : Api.Program} {table : RowTable}
+    (s : Session program table) (reply : Reply) (decision : NativeDecision) (c : Machine.CauseV)
+    (failed : reply.completion = .ofExit (.failure c))
+    (accepted : preflight s reply = .ok decision) (ty : EffTy) :
+    Typed.NoShapeDefect ty (.failure c) := by
+  obtain ⟨bound, _, _, envelope, _⟩ := preflight_envelope s reply decision accepted
+  have admitted : admit table s.machine
+      (.answerAsync bound.call.fiber bound.token (.ofExit (.failure c))) = none := by
+    simpa only [BoundCall.record, failed] using envelope.2.2
+  exact noShapeDefect_of_reservedFree ty c
+    (admit_failure_reservedFree table s.machine _ _ c admitted)
 
 /-- A received successful completion carries the same exact preparation witness as preflight.
 Receipt stores the reply; this theorem neither applies it nor proves the whole machine typed. -/

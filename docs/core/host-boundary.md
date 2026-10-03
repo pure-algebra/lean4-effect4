@@ -69,6 +69,7 @@ lane lands (row 99).
 | The certificate-first `Typed.replay` runs unchecked answers. | `origin-plan-review/RemediationProbe.lean` | 98 |
 | `replayChecked` uses the execution budget for compilation; swapping it in changes an unfinished run into a finished one. | `RemediationProbe.lean` | 98 |
 | An allocation reply is tied to the allocation count when it is applied; two replies checked against one snapshot need not both apply. | the contract's `Probe.lean` | 100 |
+| **Repaired 2026-10-03.** The runtime check accepted a host failure carrying `badName` or `notImplemented`, the machine's own markers for malformed code, which the typed exit judgment refuses (`NoShapeDefect`, row 152); so `admit = none` did not imply `AnswerOk` on failures. Admission now refuses them on both paths (`Refusal.reservedDefect`). | `docs/research/2026-10-03-session-work/t4-audit.lean` (Codex); `Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean` (`E4-HOST-CE-008`) | 191 |
 
 ## 4. The contract (proposed; rows 96–100)
 
@@ -230,6 +231,11 @@ external allocation.
   even with the table rule in place.
 - **Typed failures need no new check.** The error alphabet is closed, and every decoded error is
   handle-free (`valOfErr_keys`, `causeImage_handleFree`).
+- **Reserved defects are refused (row 191).** A failure whose cause dies with `badName` or
+  `notImplemented` is refused before its error column is read (`reservedDie`, `Program/Typed.lean`),
+  on the decision path and the oracle path alike. Every other defect and every interrupt stays
+  admitted at every error column. An accepted failure therefore satisfies the typed judgment's
+  defect exclusion (`preflight_failure_noShapeDefect`, `Laws/Api/HostSession.lean`).
 - **One test fixture falls under the rule:** the row `"cell"` of `Test/Api/ExternalContract.lean`,
   which answers a cell. Host-returned internal cells wait for the registry (row 7).
 
