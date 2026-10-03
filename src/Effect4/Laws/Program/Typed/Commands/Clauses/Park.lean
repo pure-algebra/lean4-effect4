@@ -1367,4 +1367,173 @@ theorem awaitParks_of_deferred (root : ProgramSource) (rootTy : EffTy) (target :
   | true => exact deferred w m rest f y next t ev hc ht hx hdef
   | false => exact awaitParks_live root rootTy target mode w m rest f y next t ev hc ht hx hdef
 
+/-! ## The countdown parks -/
+
+/-- A machine that has not halted reports a park as parked. -/
+theorem outcomeOf_parked {M : RState} (h : M.stuck = none) : FiberAction.outcomeOf M true = .parked := by
+  unfold FiberAction.outcomeOf
+  rw [h]
+  rfl
+
+/-- The fiber a countdown park leaves before `settle` (`countdownPark`'s live arm). -/
+abbrev countdownFiber (root : ProgramSource) (f : RFiber) (next' : ExitV → RProgram) (p : RPending) :
+    RFiber :=
+  { f with
+    frame := { f.frame with stack := .asyncFinalizer ((interpR root.program).cancelName
+      (interpR root.program).parkCancelName f.id p.token) :: .answer next' :: f.frame.stack }
+    parked := .withGuard p.token
+    pending := f.pending ++ [p] }
+
+/-- The machine a countdown park leaves: the token taken, the countdown observer on the live target. -/
+abbrev countdownMachine (m : RState) (target waiter : FiberId) : RState :=
+  ((({ m with nextToken := m.nextToken + 1 } : RState).modify target fun g =>
+    { g with observers := g.observers ++ [.countdown waiter m.nextToken] }).emit
+    [.parkedOn waiter m.nextToken])
+
+/-- **A countdown's park with no deferred interrupt** (`countdownPark`'s live arm,
+`internal/effect.ts:779-813`): the fiber parks on the fresh token, declared at the record's token
+type `tt`, under the park's cancel frame over the saved answer frame (`Evaluating.park_fresh`), its
+record carrying the collected exits and the targets after the live one; the live target, another
+fiber, gets the countdown observer at the token, typed by the record's payload
+(`configTyped_addObserver`); a self-target's observer is overwritten by the park. -/
+theorem Evaluating.countdown_parks {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    (hdef : f.frame.deferredInterrupt = false) (marker : raceRegistrationR f.frame.current = none)
+    (request : externalRequestR f.frame.current = none)
+    {targets : List FiberId} (resumeWith : Resume EffName) (failFast : Bool) {exits : List ExitV}
+    {target : FiberId} {remaining : List FiberId}
+    (hw : countdownWalk ({ m with nextToken := m.nextToken + 1 } : RState) targets [] =
+      (exits, some (target, remaining)))
+    (tbelow : ∀ id ∈ targets, id.value < m.nextId) {a e : Ty} {tt : EffTy}
+    (cols : ∀ id ∈ targets, FiberColumnsBelow w id a e)
+    (exitsOk : ∀ ex ∈ exits, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex)
+    (resumeOk : match resumeWith with
+      | .exitsValue => tt = EffTy.pure (.list (.exitOf a e))
+      | .void => tt = EffTy.pure .unit
+      | .continueWith (.restore saved) => ExitOk (w.addToken f.id m.nextToken tt) tt saved
+      | .continueWith _ => ExitOk (w.addToken f.id m.nextToken tt) tt outsideExit)
+    (next' : ExitV → RProgram)
+    (frame : ∀ ty, w.Γ f.id = some ty →
+      HostStack root w (m.update f) f.id tt ty (.answer next' :: f.frame.stack))
+    (glue : ∀ (M : RState) (g : RFiber), g.frame.current = f.frame.current →
+      prepareIterR ⟨M, g, y, .parked, []⟩ = ⟨M, g, y, .parked, []⟩) :
+    SettlesTyped root rootTy w f.id rest (prepareIterR
+      ⟨countdownMachine m target f.id,
+        countdownFiber root f next' ⟨m.nextToken, some target, remaining, exits, resumeWith, failFast⟩,
+        y, FiberAction.outcomeOf (countdownMachine m target f.id) true, []⟩) := by
+  have wide := ev.typed.machine.wide
+  have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
+  have old := ev.typed.machine.fiber hmem
+  let tok : Nat := m.nextToken
+  let name := (interpR root.program).cancelName (interpR root.program).parkCancelName f.id tok
+  let fr : RSaved := { f.frame with stack := .asyncFinalizer name :: .answer next' :: f.frame.stack }
+  let p : RPending := ⟨tok, some target, remaining, exits, resumeWith, failFast⟩
+  let gE : RFiber := { f with frame := fr, parked := .withGuard tok, pending := f.pending ++ [p] }
+  let gP : RFiber := { f with frame := fr, dispatcher := f.dispatcher, parked := .withGuard tok,
+                              pending := f.pending ++ [p], running := false }
+  obtain ⟨⟨_, _, _⟩, hnext⟩ := countdownWalk_spec ({ m with nextToken := m.nextToken + 1 } : RState) targets []
+  rw [hw] at hnext
+  obtain ⟨tmem, ⟨t, hlook, _⟩, rsub⟩ := hnext target remaining rfl
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨_, _, _, prov⟩ := ev.code marker ty declared
+  have ord0 : w.leHost (w.addToken f.id tok tt) :=
+    addToken_leHost (valid_nextToken_fresh rootTy w (m.update f) ev.typed.machine.typed.1 f.id)
+  have back : ∀ id t' ty', (w.addToken f.id tok tt).Θ id t' = some ty' → (id, t') ≠ (f.id, tok) →
+      w.Θ id t' = some ty' := fun id t' ty' h ne => by rwa [addToken_Θ_other ne] at h
+  have internal : ∀ k ∈ Guard.fiberKeys f, k ≠ (f.id, tok) :=
+    fun k hk => key_ne_of_lt (wide.keysBelow k (fiberKeys_internal hmem hk))
+  obtain ⟨_, _, _, _, ⟨c4⟩, _⟩ := runFiberOk_tok ord0 rfl back internal old.ok
+  have ptargets : ∀ id ∈ p.waitingOn.toList ++ p.remaining, id ∈ targets := by
+    intro id hid
+    rcases List.mem_append.mp hid with h | h
+    · rw [List.mem_singleton.mp h]
+      exact tmem
+    · exact rsub id h
+  obtain ⟨ord, parked⟩ := ev.park_fresh tt fr f.dispatcher p
+    (fun ty' d => hostStack_parkFinalizer root f.id tok (frame ty' d)) ⟨prov.recorded, prov.deferred⟩
+    rfl (fun id hid => tbelow id (ptargets id hid)) request marker
+    (fun b hb t' ht' => (c4 b hb).c0 t' ht') (fun k hk => Or.inl (List.mem_append_right _ hk))
+  have tid : t.id = target := rfiber?_id hlook
+  let t' : RFiber := { t with observers := t.observers ++ [.countdown f.id tok] }
+  let Mp : RState := ({ (m.update f) with nextToken := m.nextToken + 1 } : RState).update gP
+  have modified : (({ m with nextToken := m.nextToken + 1 } : RState).modify target fun g =>
+      { g with observers := g.observers ++ [.countdown f.id m.nextToken] }) =
+      ({ m with nextToken := m.nextToken + 1 } : RState).update t' := by
+    unfold RunMachine.modify
+    rw [hlook]
+  have hstuck : (countdownMachine m target f.id).stuck = none := by
+    unfold countdownMachine
+    rw [modified]
+    exact ev.live
+  rw [outcomeOf_parked hstuck, glue _ (countdownFiber root f next' p) rfl]
+  refine ⟨w.addToken f.id tok tt, ord, ?_⟩
+  unfold settle countdownMachine
+  dsimp only
+  rw [modified]
+  split
+  · rename_i hd
+    exact absurd (show f.frame.deferredInterrupt = true from hd) (by rw [hdef]; exact Bool.false_ne_true)
+  · by_cases self : target = f.id
+    · have e : (m.update t').update gP = (m.update f).update gP :=
+        (rupdate_rupdate m (f := t') (g := gP) (show gP.id = t'.id by
+          show f.id = t.id
+          rw [tid, self])).trans (rupdate_rupdate m (f := f) (g := gP) rfl).symm
+      refine configTyped_congr (m := Mp) ?_ rfl rfl rfl rfl rfl rfl parked
+      have ef := congrArg RunMachine.fibers e
+      exact ef
+    · have hne : t.id ≠ gP.id := by rw [tid]; exact self
+      have htM : Mp.fiber? t.id = some t := by
+        rw [rfiber?_update_other hne]
+        show (m.update f).fiber? t.id = some t
+        rw [rfiber?_update_other (show t.id ≠ f.id by rw [tid]; exact self), tid]
+        exact hlook
+      have lookP : Mp.fiber? f.id = some gP := rfiber?_update_self (f := f) ev.look rfl
+      have lookP' : (Mp.update t').fiber? f.id = some gP := by
+        rw [rfiber?_update_other (show f.id ≠ t'.id by
+          show f.id ≠ t.id
+          rw [tid]
+          exact fun h => self h.symm)]
+        exact lookP
+      have hpend : f.pending = [] := by
+        have notParked : f.parked = .notParked := by
+          cases hp : f.parked with
+          | notParked => rfl
+          | withGuard _ =>
+            have idle := old.parkedIdle (by rw [hp]; exact fun h => nomatch h)
+            rw [ev.running] at idle
+            cases idle
+        have shape := old.pendingShape
+        unfold Guard.PendingShape at shape
+        rw [notParked] at shape
+        exact shape
+      have found : gP.pending.find? (fun q => q.token = tok) = some p := by
+        show (f.pending ++ [p]).find? (fun q => q.token = tok) = some p
+        rw [hpend, List.nil_append, List.find?_cons, decide_eq_true (show p.token = tok from rfl)]
+      have colsW : ∀ id ∈ targets, FiberColumnsBelow (w.addToken f.id tok tt) id a e :=
+        fun id hid => fiberColumnsBelow_ext (fun _ _ d => ord.1.2.1 _ _ d) (cols id hid)
+      have added := configTyped_addObserver parked htM (.countdown f.id tok)
+        (fun k hk => by
+          rw [show Guard.observerKeys (.countdown f.id tok) = [(f.id, tok)] from rfl,
+            List.mem_singleton] at hk
+          subst hk
+          refine ⟨Nat.lt_succ_self _, ?_, old.below⟩
+          rw [requestOfR_of_parked lookP rfl]
+          exact request)
+        (fun r race hr hk => by
+          rw [show Guard.observerKeys (.countdown f.id tok) = [(f.id, tok)] from rfl,
+            List.mem_singleton] at hk
+          exact key_ne_of_lt (wide.keysBelow _
+            (raceKey_internal (m := m.update f) (List.mem_of_find?_eq_some hr))) hk)
+        (countdownAt_of_found lookP' found ⟨a, e, tt,
+          ⟨addToken_Θ_self, fun ex hex => strongExit_mono _ _ _ _ ord (exitsOk ex hex),
+            fun id hid fiber hfib => by
+              rw [rfiber?_id hfib]
+              exact colsW id (ptargets id hid),
+            resumeOk⟩, by rw [tid]; exact colsW target tmem⟩)
+      have e : (m.update t').update gP = ((m.update f).update gP).update t' := by
+        rw [rupdate_rupdate m (show gP.id = f.id from rfl), rupdate_comm m (show t'.id ≠ gP.id from hne)]
+      refine configTyped_congr (m := Mp.update t') ?_ rfl rfl rfl rfl rfl rfl added
+      have ef := congrArg RunMachine.fibers e
+      exact ef
+
 end Effect4.Program.Typed
