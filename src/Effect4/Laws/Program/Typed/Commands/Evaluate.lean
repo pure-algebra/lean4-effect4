@@ -1709,4 +1709,56 @@ theorem clause_scoped (root : ProgramSource) (rootTy : EffTy) (body : Point) :
       (m' := ({ m with state := s } : RState).update f') (racesKept_of_eq fun _ => rfl) stack)
   exact SettlesTyped.mono ord (ev2.settle_continue fr' fresh)
 
+
+/-! ## `interruptScoped`: the scope's fiber finalizer -/
+
+/-- **The saved answer frame around a `unit` reply**: the frame `saveAnswerR f (seqR next)` saves is an
+arrow from `⟨unit, never⟩` to the code's type: a `unit` success runs the continuation at the
+operation's post, a failure (clean, at `never`) is the code's. -/
+theorem Evaluating.unitAnswerFrame {root : ProgramSource} {w : World} {tin : EffTy}
+    {next : Val → RProgram}
+    (typedNext : ∀ w', w.leHost w' → ∀ ans : Val, ans = Val.unit → TypedProg root w' tin (next ans)) :
+    Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w
+      ⟨.unit, .never, Env.Requirement.empty⟩ tin (.answer (seqR next)) := by
+  refine answerFrame_typed (post := fun w' ex => ExitOk w' ⟨.unit, .never, Env.Requirement.empty⟩ ex)
+    (fun _ _ _ hex => hex) (fun w' o ex hex => ?_)
+  cases ex with
+  | success v =>
+    have hv : Fits w' v .unit := hex.1
+    have unit : v = Val.unit := fits_unit_inv hv
+    show TypedProg root w' tin (next v)
+    exact typedNext w' o v unit
+  | failure c =>
+    show TypedProg root w' tin (.pure (.failure c))
+    exact TypedProg.pure (exitOk_failure_of_errorN (subN_never _) hex)
+
+/-- **`interruptScoped`** (`:5368`, D6b): on the fiber itself, `unit` answered; on another fiber, the
+public interrupt program installed over the saved answer frame, typed at `unit`
+(`fiberValR (.interrupt target)`, whose pre is `True`); the frame carries the reply to the
+continuation. -/
+theorem clause_interruptScoped (root : ProgramSource) (rootTy : EffTy) (target : FiberId) :
+    FiberClauseKeeps root rootTy (.interruptScoped target) := by
+  intro w m rest f y next ev hc
+  show SettlesTyped root rootTy w f.id rest (prepareIterR
+    (if target = f.id then ⟨m, answerR f (next .unit), y, .continue_, []⟩
+     else FiberAction.interruptScoped _ m (saveAnswerR f (seqR next)) y target))
+  split
+  · exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
+      (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) .unit
+      (fun _ _ => rfl))
+  · rename_i other
+    unfold FiberAction.interruptScoped
+    rw [if_neg (show target ≠ (saveAnswerR f (seqR next)).id from other)]
+    refine ev.settle_continue { f.frame with
+      current := fiberValR (.interrupt target) rfl, stack := .answer (seqR next) :: f.frame.stack }
+      (fun ty declared => ?_)
+    obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+    rw [hc] at current
+    obtain ⟨_, _, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+      (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+    refine ⟨⟨.unit, .never, Env.Requirement.empty⟩, ?_,
+      hostStack_push (Evaluating.unitAnswerFrame typedNext) stack, ⟨prov.recorded, prov.deferred⟩⟩
+    exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) () trivial (fun _ _ _ post => unitAnswer_typed root post)
+
 end Effect4.Program.Typed

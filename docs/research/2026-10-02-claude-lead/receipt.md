@@ -1085,10 +1085,16 @@ Proposal (a decisions row for the coordinator): **membership at `unknown` is val
 `Live w v` to every handle frame of `v` (`Store.Val.handles`), each with a registered kind byte and
 present in its table: cells and promises in the world's tables (as now), fibers in the world's ids,
 scopes live at `w.state`, memo maps present (`mapAt`), externals allocated. Then
-`fits_validIn : HeapTable w → PromiseTable w → Fits w v ty → v.validIn w.state` holds for every form
-(the handle forms by their declarations, the data forms by their parts, `unknown` directly), the
-store family and the scope close re-establish `WF` from the pre, and `refMake (.handle 255 7)` is no
-longer typed. `HandleFits`'s memo arm gains presence (row 187 revisited: memo maps are never removed,
+`fits_validIn : StoreTyped root w → Fits w v ty → v.validIn w.state` holds for every form (the handle
+forms by their declarations read through the store's forward bounds, `StoreTyped.heap`/`promises` —
+Codex's `ValidityBoundaryControls.lean` shows the coverage predicates `HeapTable`/`PromiseTable`
+alone leave a declared, absent cell that fits but is invalid; the data forms by their parts; `unknown`
+directly), the store family and the scope close re-establish `WF` from the pre, and
+`refMake (.handle 255 7)` is no longer typed. Codex's `RawLiveBridge.lean`
+(`/private/tmp/codex-lead-2026-10-02/m6-adoption-next/`, `validity-and-closedness-receipt.md`) is the
+proposal's leaf: `rawLive_validIn` from `StoreTyped`, raw liveness kept under `World.le`, transported
+through `evalTerm` by `RawHandles.evalTerm_handles`; its review lists what `live_of_keys_nil`,
+`fits_map`/`Grows` and fresh memo allocation still need, and row 187 is not to be amended silently. `HandleFits`'s memo arm gains presence (row 187 revisited: memo maps are never removed,
 `Stores.le`). Producers of `Fits … unknown` today: closed values (`live_of_keys_nil`), decoded host
 answers, store reads (already `WF`). Cost: one Membership change with its `fits_live`/`fits_subN`
 arms re-proved (the full Typed rebuild), and the register row for the seam. Rejected alternative:
@@ -1158,13 +1164,15 @@ from `closed : ClosedEff ty` (`machineWide_alloc`, `configTyped_alloc`; `launch`
 token, `tokenClosed`). A fork declares its child at its certificate, and
 `fiberPre (.fork body) cert = BodyTyped root w body cert` says nothing about closedness, so the fork
 clauses cannot re-establish the clause. The closed clauses are read (`Ty.closed_normalize`,
-`rowTy_closed_some`, `Typed/Denotation.lean:2514`), so they are not dead. Proposal (a decisions row):
-`PointTyped` carries a closed lexical environment (`∀ t ∈ env, t.closed = true`; the root's is `[]`,
-`pointTyped_child` extends it by checker outputs), a `check_closed` lemma over the checker (the native
-rows are closed, `NativeOp.row_closed`; the checker mints no `var`) makes every checked certificate
-closed, and the fork producers (`fork_arm`, `forkIn_arm`, `forkScoped_arm`, `raceAll_arm`,
-`forkLayer_typed`) discharge `ClosedEff cert` in `fiberPre`. A Typing lemma and an admission field;
-no runtime change. Until the ruling the fork clauses are not attempted.
+`rowTy_closed_some`, `Typed/Denotation.lean:2514`), so they are not dead. A `check_closed` route is refuted: Codex's
+`ForkClosednessLocal.candidate.lean` (same folder) has `PointTyped`/`BodyTyped`/`fiberPre` accept
+`succeed(var0)` over a captured empty list at `list(var0)`, whose certificate is not `ClosedEff`
+(`list(nat)` is the passing control): the checker does mint open certificates. So the fork pre cannot
+simply gain `ClosedEff cert` (M5's `fork_arm`/`settling_fork` could not discharge it;
+`fork-closedness-review.md`). The options for the owner: declare a forked fiber at a closed widening
+of its certificate (the type variables instantiated at `unknown`, the fiber's `Fits` facts kept by
+widening), or narrow `fiberClosed` to where closedness is read. `configTyped_alloc` keeps its
+explicit `closed` premise either way. Until the ruling the fork clauses are not attempted.
 
 Still open and their blockers: `closeScope` and the walk's callback (F-WF: the closing exit's
 `validIn`); `fork`/`forkIn`/`forkScoped`/`raceAll` (F-CLOSED); `gen`/`loop`/`closeIter .sequential`
@@ -1197,3 +1205,28 @@ declaration, discharged where `link` registers it (the forked child is declared)
 the pres are stable. Same kind as `sourceWF` and `BodyTyped`: the admission arm states what the
 program's typing derivation needs. Not landed: it changes `fiberPre` (a Residual rebuild) and three
 producers; the owner's call on ordering against F-WF and F-CLOSED.
+
+**Finding F-LIVE** (`cancelRace`, and every queuing of `raceCancel`). The `raceCancel` command's
+delivery clause (`CommandDeliveryOk`, `Typed/Scheduler.lean:477`) asks `FiberListColumns w live …`,
+each live entrant *declared* with columns below the race's result (`FiberColumnsBelow` is
+existential). `J` holds only `liveBelow` (each live entrant's id below `nextId`) and
+`RacePayload.live`, the conditional form (`∀ childTy, w.Γ id = some childTy → …`). So the
+`cancelRace` clause cannot queue `raceCancel` from `J` alone (`FiberAction.cancelRace` on a known
+race). Proposal (a decisions row): `RacePayload.live` becomes the existential form
+(`∀ id ∈ race.state.live, FiberColumnsBelow w id resultTy.answer resultTy.error`); `enrollRace`
+discharges it (`EnrollRaceOk` already carries `cols : FiberColumnsBelow w c.id …`), the race
+transports keep it (`Γ` is monotone, `fiberColumnsBelow_ext`). The `unknown race` branch of
+`cancelRace` (an inline `unit`) is fine. Same kind as F-PRE.
+
+**Finding F-CTX** (`getContext`). The answer `Val.context f.context` must fit `.handle contextTarget`,
+whose arm asks `Live w (Val.context ctx)` beside `ServicesFit`. `ServicesFit` constrains only the
+keys the static table types (`w.serviceTy key = some sty → FlatFits …`); a bound key outside the
+table is unconstrained, so a context's handle keys are not known declared. Adequacy's
+`getContext_answers` (`Typed/Adequacy.lean:1258`) already takes `Live w (Val.context ctx)` as a
+premise. Proposal: `ServicesFit` (or `J`'s per-fiber services clause) states that every bound key has
+a static type (shape A, row 112: the table fixes the keys a context may bind), after which
+`Live` follows from the entries (`Ctx.keys_eq_handleKeys`, `keysNodup`, `FlatFits`'s handle arm).
+
+Landed meanwhile: `clause_interruptScoped` (self: `unit`; another fiber: the public interrupt
+program, typed at `unit` over the saved answer frame — `Evaluating.unitAnswerFrame`, the arrow from
+`⟨unit, never⟩` to the code's type through `seqR next`). Fifteen fiber clauses unconditional.
