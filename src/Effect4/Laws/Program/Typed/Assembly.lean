@@ -66,10 +66,12 @@ The ledger is the one list (decisions row 140): M5 (`M3bAssembly`: `typedState_l
 (`M6Edits`: `DecisionLift`'s fields other than `step`, and the split's re-establishment), world
 monotonicity (`M3bWorld`: seat B's laws in `Typed/Residual.lean`, with the bundle's `SavedOk`
 transport proved and declared here, `preds_savedOk_mono`) and M7 (`M7`: a–c and scope-handle
-validity). The eighteen, `decision_preserves`, `typedState_reachable` and `typedState_load` remain
-obligations. This module proves the adapters between them and the lift, the six bookkeeping
-edits, M5's builder (`machineTyped_load`) and its reduction to `denoteR_typed`
-(`loadsTyped_of_denotesTyped`), never a command case.
+validity). M5 and M6 are proved: `typedState_load` at `Typed/LayerArm.lean`, the eighteen across
+`Typed/Commands/*.lean`, `decision_preserves` and `typedState_reachable` at
+`Typed/Commands/Clauses/All.lean`, whose foot reports the M6 ledger; M7 remains open. This module
+proves the adapters between them and the lift, the six bookkeeping edits, M5's builder
+(`machineTyped_load`) and its reduction to `denoteR_typed` (`loadsTyped_of_denotesTyped`), never a
+command case.
 -/
 
 set_option autoImplicit false
@@ -1667,7 +1669,9 @@ external registration, evaluator selection) belongs to R6, after M7
 
 The route is proved here (`m7_of_ledger`): from `typedState_load` and `decision_preserves`,
 through `replayEval_lift`, to `J` on the reference replay, then across `BMeans`
-(`bookMeans_obs`, `BookMeans.stuck`). M7a–c stay open while M5 and M6 are. -/
+(`bookMeans_obs`, `BookMeans.stuck`). With M5 and M6 proved, M7a–c follow (`m7_proved`,
+`Typed/Commands/Clauses/All.lean`); scope-handle validity (`M7.exitHandles_valid`) is stated without
+the closed requirement row and stays open. -/
 
 /-- The M7 fragment: a lawful source at the empty host table, checked and closed, its requirement
 row empty (decisions row 117: rc.112's `runPromise` takes `Effect<A, E>`, `Effect.ts:17494-17497`),
@@ -1874,7 +1878,8 @@ marker under an injected yield) refuted this statement at `53caad0f`; decisions 
 theorem step_loop (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
     ProofGraph.Obligation (StepPreserves root rootTy (.loop id yielding)) := ⟨⟩
 
-/-- Open. `E4-SCHED-CE-020`'s witness under `J`'s `stuck = none` refuted it before decisions row
+/-- Proved (`deliver_preserves`, `Typed/Commands/Clauses/All.lean`). `E4-SCHED-CE-020`'s witness
+under `J`'s `stuck = none` refuted it before decisions row
 156: a configuration typed by a judgment whose `scopeExit` constructor read no pre delivered into
 a scope-exit marker for the absent scope 0 and halted (`prepareScopedExitR`); that refutation is
 kept as history over a local copy of that judgment
@@ -1956,8 +1961,9 @@ capstone's at that program's loaded machine, which the empty tape reaches (`rrea
 restatement over `J`, `RawOrderLoad.lean`, is history under the same hypothesis).
 `E4-TYPED-CE-018` (the posts that answer a scope handle carry no presence, so an allocation's
 continuation must be typed at an absent scope; registered from Codex's second-eyes review,
-`docs/research/2026-10-01-landing/codex-second-eyes/ScopeAllocationPost.lean`) refutes
-`DenotesTyped` at a checked allocate-then-fork program and is open under decisions row 156.
+`docs/research/2026-10-01-landing/codex-second-eyes/ScopeAllocationPost.lean`) refuted
+`DenotesTyped` at a checked allocate-then-fork program and is repaired by decisions row 156 (the
+posts that answer a scope handle carry its presence).
 `E4-TYPED-CE-010` (the await-by-value post read the
 target's answer column, so M5 was false for the typed corpus's `awaitFiber.value`) is repaired by
 row 136's post: `Test/Counterexamples/Machine/Semantics/AwaitLoad.lean` proves M5's proposition
@@ -1968,9 +1974,11 @@ statement over the typed state before row 134 and is repaired by the split
 (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), as is `E4-TYPED-CE-014` (a halted
 machine typed) by `J`'s `stuck = none`.
 
-`ExitOk` excludes `badName` and `notImplemented` at typed code, saved-stack, queued-result and
-stored-completion exit positions (`E4-TYPED-CE-007`); the obligations above remain open, so this
-judgment alone does not establish their absence from every run. `missingService` remains
+Proved (`typedState_reachable`, `Typed/Commands/Clauses/All.lean`, from `loadsTyped` and
+`decision_preserves`). `ExitOk` excludes `badName` and `notImplemented` at typed code, saved-stack,
+queued-result and stored-completion exit positions (`E4-TYPED-CE-007`), so on every machine an
+answer-free tape reaches from a lawful, checked, closed source those positions hold neither. This is
+an invariant, not progress, and says nothing of host answers (row 95). `missingService` remains
 admitted at every requirement row in H2 part one; its exclusion requires row 117's
 frame-and-operation contract. -/
 theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
@@ -2054,12 +2062,9 @@ end Effect4.Program.Typed
 -- (the import direction forbids this module naming the proofs; decisions row 140)
 -- `M6Ledger`'s goals are proved across `Typed/Commands/*.lean`; its report is at the foot of
 -- `Typed/Commands/Clauses/All.lean`, which sees every proof.
-#proof_wanted Effect4.Program.Typed.M7.exits_typed
-#proof_wanted Effect4.Program.Typed.M7.stores_typed
-#proof_wanted Effect4.Program.Typed.M7.never_halts
+-- `M7`'s a–c are proved at the foot of `Typed/Commands/Clauses/All.lean` (`m7_proved`), which
+-- runs its report; scope-handle validity stays open.
 #proof_wanted Effect4.Program.Typed.M7.exitHandles_valid
-#typed_state_obligations Effect4.Program.Typed.M7 ceiling 4
-  using aesop (rule_sets := [Effect4.TypedState])
 #obligation_proved Effect4.Program.Typed.M6Edits.nil := @Effect4.Program.Typed.edit_nil
 #obligation_proved Effect4.Program.Typed.M6Edits.evaluate := @Effect4.Program.Typed.edit_evaluate
 #obligation_proved Effect4.Program.Typed.M6Edits.ran := @Effect4.Program.Typed.edit_ran

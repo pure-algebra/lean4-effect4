@@ -21,10 +21,13 @@ and `loop_preserves_of_clauses` (`Commands/Evaluate.lean`) with the walk (`walkK
 proved (`storeClauses`, `fiberClauses`, the generator's protocol `genProtocol`), so
 `step_deliver` and `step_loop` hold, and with the other sixteen command facts and the six decision
 edits, `decision_preserves` and `typedState_reachable` (`decisionKeeps_of_ledger`,
-`reachable_of_ledger`): the M6 ledger is closed here.
+`reachable_of_ledger`): the M6 ledger is closed here. With M5 (`loadsTyped`), M7a–c follow
+(`m7_proved`, through `m7_of_ledger`): on the M7 fragment the frame machine's observation is typed
+and its run never halts.
 
-Not established: progress (`J` is an invariant, not a liveness result); the M7 transfer to the
-frame machine; host answers (M6's tapes carry none, `NoHostAnswer`).
+Not established: progress (`J` is an invariant, not a liveness result); host answers (the tapes
+carry none, `NoHostAnswer`); scope-handle validity (`M7.exitHandles_valid`, stated without the
+closed requirement row); anything about the OCaml engine or a TypeScript run.
 -/
 
 set_option autoImplicit false
@@ -191,6 +194,15 @@ theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat
   reachable_of_ledger root rootTy fuel (loadsTyped root rootTy fuel fuel)
     (decision_preserves root rootTy fuel) m
 
+/-- **M7a–c** (decisions row 138): on the M7 fragment (the empty host table, a checked closed
+source, answer-free tapes), the frame machine's observation is typed and its run never halts:
+`m7_of_ledger` at the proved load (`loadsTyped`) and decisions (`decision_preserves`). The frame
+machine only: not the OCaml engine, not a TypeScript run. -/
+theorem m7_proved (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
+    M7Exits root rootTy fuel tape ∧ M7Stores root rootTy fuel tape ∧ M7NoHalt root rootTy fuel tape :=
+  m7_of_ledger root rootTy fuel tape (loadsTyped root rootTy fuel fuel)
+    (decision_preserves root rootTy fuel)
+
 end Effect4.Program.Typed
 
 #obligation_proved Effect4.Program.Typed.M6Clauses.closeIter_parallel :=
@@ -207,4 +219,14 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.typedState_reachable
 -- `M6Ledger`'s report: every goal proved.
 #typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 0
+  using aesop (rule_sets := [Effect4.TypedState])
+
+#obligation_proved Effect4.Program.Typed.M7.exits_typed :=
+  fun root rootTy fuel tape => (Effect4.Program.Typed.m7_proved root rootTy fuel tape).1
+#obligation_proved Effect4.Program.Typed.M7.stores_typed :=
+  fun root rootTy fuel tape => (Effect4.Program.Typed.m7_proved root rootTy fuel tape).2.1
+#obligation_proved Effect4.Program.Typed.M7.never_halts :=
+  fun root rootTy fuel tape => (Effect4.Program.Typed.m7_proved root rootTy fuel tape).2.2
+-- `M7`'s report: a–c proved; scope-handle validity (`exitHandles_valid`) open.
+#typed_state_obligations Effect4.Program.Typed.M7 ceiling 1
   using aesop (rule_sets := [Effect4.TypedState])

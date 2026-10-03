@@ -20,8 +20,8 @@ This file's first layer: a running fiber's frame may move under the queued `loop
 owns it, because the only queued commands whose delivery reads a fiber's stack own that fiber, and
 the queue holds one owner per fiber (`QueueOk.owners`).
 
-Not established here: the clauses the receipt lists open (the generator and loop entries, the race
-registration, the remaining fiber actions, the store rows), progress.
+Not established here: the clauses proved in `Clauses/*` (every clause is assembled in
+`Clauses/All.lean`); progress.
 -/
 
 set_option autoImplicit false

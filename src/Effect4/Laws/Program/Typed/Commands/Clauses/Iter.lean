@@ -17,11 +17,13 @@ generator entry at a point the checker types at `cert` is in the iterator protoc
 `⟨unit, cert.error, cert.requires⟩` to `cert`. `clause_gen_of` derives the clause from it; the
 protocol's first step is exactly the entry's walk at the value `unit`.
 
-Not established: `GenProtocol` itself, the coinduction over typed generator positions (a position
-in the body with its enclosing blocks, its environment typed at the checker's, and the reachability
-bits of `GenTy` covering the walk's fall-off; the checker repair it needs is seat M6E's
-`1343764b`, owner option (a)). `fiberPre`'s `gen` arm names the generator node (seat M6E's third
-finding). The sequential close's clause waits on its pre (seat M6E's second finding).
+`GenProtocol` itself is proved in `Clauses/Gen.lean` (`genProtocol`): coinduction over typed
+generator positions, a position in the body with its enclosing blocks, its environment typed at the
+checker's, and the reachability bits of `GenTy` covering the walk's fall-off (the checker repair is
+seat M6E's `1343764b`, owner option (a)). `fiberPre`'s `gen` arm names the generator node (seat
+M6E's third finding).
+
+Not established: that a generator finishes.
 -/
 
 set_option autoImplicit false
