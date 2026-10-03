@@ -197,14 +197,12 @@ theorem enrollRace_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : N
         { race with state := { race.state with live := race.state.live ++ [child] } }
       have payload' : RacePayload root w new resultTy := by
         refine ⟨payload.token, payload.failures, payload.winner, payload.accepted, payload.cleanup,
-          fun id hid childTy declared => ?_, payload.programs⟩
+          fun id hid => ?_, payload.programs⟩
         rcases List.mem_append.mp hid with old | h
-        · exact payload.live id old childTy declared
+        · exact payload.live id old
         · rw [List.mem_singleton] at h
           subst h
-          rw [← cid, declaredC] at declared
-          cases declared
-          exact ⟨subA, subE⟩
+          exact ⟨cty, by rw [← cid]; exact declaredC, subA, subE⟩
       have liveNew : ∀ src ∈ new.state.live, src ∈ race.state.live ∨
           (FiberColumnsBelow w src resultTy.answer resultTy.error ∧ src.value < m.nextId) := by
         intro src hsrc

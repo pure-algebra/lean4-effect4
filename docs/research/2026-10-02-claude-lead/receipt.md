@@ -1301,3 +1301,19 @@ Placement: concept 1 (value/capability membership) serving concept 4's store and
 Commands: `lake build Effect4.Laws` (green; Membership 26 s alone); the twenty-five batteries reading
 `Live`, `HandleFits`, the memo posts or the transport signatures (green); the axiom scan over every
 declaration of the sixteen touched modules: 4,388, none outside `[propext, Quot.sound]`.
+
+## Slice F-LIVE — a race's live entrants are declared (owner's ruling, 2026-10-02)
+
+**First:** `RacePayload.live` (`Typed/Scheduler.lean`) is now existential: every live entrant is
+declared, with columns below the race's result (`FiberColumnsBelow`). This is what `raceCancel`'s
+reply reads (`CommandDeliveryOk`'s `FiberListColumns` over the live set), so the `cancelRace` clause
+can queue it from `J`. `enrollRace` supplies it (its `EnrollRaceOk` already carried the columns);
+the world and allocation transports carry it forward along `Γ` (`racePayload_world`,
+`racePayload_alloc`, whose freshness argument is gone: a forward transport needs none).
+
+Tests: the two `emptyPayload` helpers (RegistrationColumn, RegistrationYield) take the existential
+form; H2PartOne's `new_admitted` proves it (its `OldRacePayload` keeps the old form). EnrollmentBound's
+`MachineTyped` witness gains `sourceWF` (`rfl`): red since `f681d65e`, not in that rebuild.
+
+Commands: `lake build Effect4.Laws` (green); the twelve batteries that build `J` or a `RacePayload`
+(green).

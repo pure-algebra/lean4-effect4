@@ -1053,7 +1053,9 @@ theorem racePayload_world {root : ProgramSource} {race : RRace} {ty : EffTy}
     fun pair hp => fits_mono ord (h.winner pair hp),
     fun ex hx => strongExit_mono _ _ _ _ ord (h.accepted ex hx),
     fun wait hw => strongExit_mono _ _ _ _ ord (h.cleanup wait hw),
-    fun id hid childTy hc => h.live id hid childTy (by rw [hΓ] at hc; exact hc),
+    fun id hid => by
+      obtain ⟨t, hd, ha, he⟩ := h.live id hid
+      exact ⟨t, by rw [hΓ]; exact hd, ha, he⟩,
     fun code hc => ?_⟩
   obtain ⟨cty, typed, ha, he⟩ := h.programs code hc
   exact ⟨cty, typedProg_mono root w w' cty code ord typed, ha, he⟩

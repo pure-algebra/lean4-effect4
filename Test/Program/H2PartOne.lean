@@ -218,10 +218,8 @@ theorem new_admitted (cause : CauseV) (typed : ExitOk world unitTy (.failure cau
   · intro pair member; cases member
   · intro exit member; cases member
   · intro wait member; cases member
-  · intro id member childTy declared
-    change some unitTy = some childTy at declared
-    cases declared
-    exact ⟨Ty.sub_refl _, Ty.sub_refl _⟩
+  · intro id member
+    exact ⟨unitTy, rfl, Ty.sub_refl _, Ty.sub_refl _⟩
   · intro code member; cases member
 
 theorem user_die_admitted (value : Nat) :

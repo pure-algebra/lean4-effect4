@@ -65,8 +65,10 @@ structure RacePayload (root : ProgramSource) (w : World) (race : RRace)
   winner : ∀ pair ∈ race.state.winner, Fits w pair.2 resultTy.answer
   accepted : ∀ exit ∈ race.state.accepted, ExitOk w resultTy exit
   cleanup : ∀ wait ∈ race.state.cleanup, ExitOk w resultTy wait.result
-  live : ∀ id ∈ race.state.live, ∀ childTy, w.Γ id = some childTy →
-    Ty.subN childTy.answer resultTy.answer = true ∧ Ty.subN childTy.error resultTy.error = true
+  /-- Every live entrant is declared, below the result's columns (finding F-LIVE, owner's ruling
+  2026-10-02): `raceCancel`'s reply walks the live set and reads each declaration
+  (`CommandDeliveryOk`'s `FiberListColumns`); `enrollRace` supplies it (`EnrollRaceOk`). -/
+  live : ∀ id ∈ race.state.live, FiberColumnsBelow w id resultTy.answer resultTy.error
   programs : ∀ code ∈ race.programs, ∃ childTy, TypedProg root w childTy code ∧
     Ty.subN childTy.answer resultTy.answer = true ∧ Ty.subN childTy.error resultTy.error = true
 

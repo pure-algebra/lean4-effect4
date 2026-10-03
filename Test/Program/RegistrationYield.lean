@@ -50,8 +50,7 @@ theorem provenance (f : RSaved) (h1 : f.interruptedCause = none) (h2 : f.deferre
 theorem emptyPayload (w : W) (r : Effect4.Program.Typed.RRace) (ty : EffTy) (token : w.Θ r.host r.token = some ty)
     (failures : r.state.failures = []) (winner : r.state.winner = none)
     (accepted : r.state.accepted = none) (cleanup : r.state.cleanup = none)
-    (live : ∀ id ∈ r.state.live, ∀ childTy, w.Γ id = some childTy →
-      Ty.subN childTy.answer ty.answer = true ∧ Ty.subN childTy.error ty.error = true)
+    (live : ∀ id ∈ r.state.live, FiberColumnsBelow w id ty.answer ty.error)
     (programs : ∀ code ∈ r.programs, ∃ childTy, TypedProg (rootProgram : ProgramSource) w childTy code ∧
       Ty.subN childTy.answer ty.answer = true ∧ Ty.subN childTy.error ty.error = true) :
     RacePayload (rootProgram : ProgramSource) w r ty := by

@@ -131,16 +131,17 @@ theorem fiberColumnsBelow_ext {id : FiberId} {a e : Ty} (h : FiberColumnsBelow w
   obtain ⟨t, declared, ha, he⟩ := h
   exact ⟨t, ext _ _ declared, ha, he⟩
 
-omit ext in
-include ord back hΘ in
-theorem racePayload_alloc {race : RRace} {resultTy : EffTy}
-    (live : ∀ id ∈ race.state.live, id ≠ n) (h : RacePayload root w race resultTy) :
+omit ext back in
+include ord hΘ in
+theorem racePayload_alloc {race : RRace} {resultTy : EffTy} (h : RacePayload root w race resultTy) :
     RacePayload root w' race resultTy := by
   refine ⟨by rw [hΘ]; exact h.token, strongExit_mono _ _ _ _ ord h.failures,
     fun pair hp => fits_mono ord (h.winner pair hp),
     fun ex hx => strongExit_mono _ _ _ _ ord (h.accepted ex hx),
     fun wait hw => strongExit_mono _ _ _ _ ord (h.cleanup wait hw),
-    fun id hid childTy hc => h.live id hid childTy (back _ _ hc (live id hid)),
+    fun id hid => by
+      obtain ⟨t, declared, ha, he⟩ := h.live id hid
+      exact ⟨t, ord.1.2.1 _ _ declared, ha, he⟩,
     fun code hc => ?_⟩
   obtain ⟨cty, typed, ha, he⟩ := h.programs code hc
   exact ⟨cty, typedProg_mono root w w' cty code ord typed, ha, he⟩
@@ -242,8 +243,7 @@ theorem storedObserverOk_alloc (typed : MachineTyped root rootTy w m) {x : RFibe
     · trivial
     · rename_i race found
       obtain ⟨resultTy, payload, live⟩ := h
-      exact ⟨resultTy, racePayload_alloc ord back rfl
-        (fun id hid => ne_next (sched.liveBelow raceId race found id hid)) payload,
+      exact ⟨resultTy, racePayload_alloc ord rfl payload,
         fun hl => fiberColumnsBelow_ext ext (live hl)⟩
   | dropScopeFinalizer scope key => exact h
   | untrackChild parent => trivial
@@ -292,8 +292,7 @@ theorem observerCommandOk_alloc (typed : MachineTyped root rootTy w m) {source :
     · trivial
     · rename_i race found
       obtain ⟨resultTy, payload, live⟩ := h
-      exact ⟨resultTy, racePayload_alloc ord back rfl
-        (fun id hid => ne_next (sched.liveBelow raceId race found id hid)) payload,
+      exact ⟨resultTy, racePayload_alloc ord rfl payload,
         fun hl => strongExit_mono _ _ _ _ ord (live hl)⟩
   | dropScopeFinalizer scope key => exact h
   | untrackChild parent => trivial
@@ -311,9 +310,7 @@ theorem enrollRaceOk_alloc (typed : MachineTyped root rootTy w m) {raceId : Nat}
   split at h
   · rename_i race fiber found _
     obtain ⟨resultTy, payload, cols⟩ := h
-    exact ⟨resultTy, racePayload_alloc (addFiber_leHost fresh.2)
-      (fun _ _ h ne => by rwa [addFiber_Γ_other (Ne.symm ne)] at h) rfl
-      (fun id hid => ne_next (sched.liveBelow raceId race found id hid)) payload,
+    exact ⟨resultTy, racePayload_alloc (addFiber_leHost fresh.2) rfl payload,
       fiberColumnsBelow_ext (fun _ _ h => addFiber_extends fresh.2 h) cols⟩
   · trivial
 
@@ -370,8 +367,7 @@ theorem machineWide_alloc (typed : MachineTyped root rootTy w m) :
       (fork_extension w _ ty fresh.2).2.2.2.1 wide.cells.2⟩
   · intro r hr
     obtain ⟨resultTy, payload⟩ := wide.races r hr
-    exact ⟨resultTy, racePayload_alloc ord back rfl
-      (fun id hid => ne_next (wide.liveBelow r.id r (rrace?_of_mem wide.raceIds hr) id hid)) payload⟩
+    exact ⟨resultTy, racePayload_alloc ord rfl payload⟩
   · show ((m.fibers ++ [spawnChild m program flag budget ctx]).map RunFiber.id).Nodup
     rw [List.map_append]
     refine List.nodup_append.mpr ⟨wide.fiberIds, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩,
@@ -662,8 +658,7 @@ theorem launch_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) 
           obtain ⟨_, _, _, _, _, services⟩ := (machine.fiber (rfiber?_mem hh)).ok
           have ord : w.leHost (w.addFiber ⟨m.nextId⟩ resultTy) := addFiber_leHost fresh.2
           have payload' : RacePayload root (w.addFiber ⟨m.nextId⟩ resultTy) race resultTy :=
-            racePayload_alloc ord (fun _ _ h ne => by rwa [addFiber_Γ_other (Ne.symm ne)] at h) rfl
-              (fun id hid => ne_next (wide.liveBelow raceId race hr id hid)) payload
+            racePayload_alloc ord rfl payload
           let new : RRace :=
             { race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1]) }
           have payloadNew : RacePayload root (w.addFiber ⟨m.nextId⟩ resultTy) new resultTy :=
