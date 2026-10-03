@@ -283,11 +283,11 @@ doctor: ## the tools and installs every tier needs, with their versions
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
-  host-protocol census schema-ts schema-pins tools corpus tsgo semantics
+  host-protocol census schema-ts schema-pins tools corpus tsgo semantics docs
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
 
-check: build check-roots check-gen check-tsgo ## after every change: the build with its axiom audit, the fresh root elaboration, the generated-file drift, no TypeScript below 7
+check: build check-roots check-gen check-tsgo check-docs ## after every change: the build with its axiom audit, the fresh root elaboration, the generated-file drift, no TypeScript below 7, the authority documents' references
 check-full: check check-slow check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
@@ -342,6 +342,18 @@ TSGO_INPUTS := $(wildcard ts/*/node_modules harness/*/node_modules tools/*/node_
   $(wildcard ts/*/package.json ts/*/bun.lock harness/*/package.json harness/*/package-lock.json harness/*/bun.lock tools/*/package.json)
 $(CHK)/tsgo: $(TSGO_INPUTS)
 	@$(PY) -c 'import json,pathlib,sys; v=lambda p: json.loads(p.read_text())["version"]; bad=[p.as_posix()+": "+v(p) for r in ("ts","harness","tools") for p in sorted(pathlib.Path(r).rglob("node_modules/typescript/package.json")) if int(v(p).split(".")[0]) < 7]; print("\n".join(["FAIL check-tsgo: typescript below 7 (tsgo 7 is the one compiler):"]+bad) if bad else "PASS check-tsgo: no typescript below 7 under ts/, harness/ or tools/"); sys.exit(1 if bad else 0)'
+	@mkdir -p $(CHK) && touch $@
+
+# The authority documents (every tracked Markdown file that is not history) name paths, links,
+# `git:<rev>:<path>` citations and make targets; each must resolve (scripts/lib/doc_refs.py). Keyed
+# on the documents, the Makefile, the checker and the tracked-path inventory, so a deleted or moved
+# file re-runs it the way a new Lean file re-runs the root audit.
+DOCS := $(shell git ls-files -- '*.md' ':!docs/research' ':!vendor')
+$(CHK)/paths: FORCE
+	@mkdir -p $(CHK); git ls-files > $@.new; \
+	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
+$(CHK)/docs: $(CHK)/paths $(DOCS) Makefile scripts/check-docs.py scripts/lib/doc_refs.py
+	$(PY) scripts/check-docs.py
 	@mkdir -p $(CHK) && touch $@
 
 CONFORM_SOURCES := $(shell find tools/Conform -name '*.lean' -o -name '*.json') scripts/check-conform.py scripts/lib/conform_report.py
@@ -545,13 +557,17 @@ check-ty-rule: ## the Ty append's rule checker: its controls (the gate is the ap
 
 # ---------------------------------------------------------------------------- help
 
+.PHONY: status
+status: ## one screen, measured: HEAD and dirty paths, build and check freshness, generated drift, claims, ledger goals, registers, document drift
+	@$(PY) scripts/status.py
+
 .PHONY: help clean
 help: ## this list
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
 	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
 	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts, corpus,'
-	@echo '                     schema-pins, tools, tsgo, semantics'
+	@echo '                     schema-pins, tools, tsgo, semantics, docs'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
 	@echo '                     truth, host-protocol, schema-ts, census, semantics'
