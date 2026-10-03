@@ -1144,8 +1144,8 @@ theorem configTyped_addObserver {root : ProgramSource} {rootTy : EffTy} {w : Wor
     · exact Or.inr (List.mem_singleton.mp h)
   refine configTyped_rupdate_code typed ht rfl (PendingWeaker.refl _) rfl id ?_ ?_
     (fun c _ h => commandAuthority_view ctl view.races c h)
-    (fun hrun reads marker ty d => codeOk_races (racesKept_of_eq view.races)
-      (typed.code t hmem hrun reads marker ty d)) ?_
+    (fun hrun reads marker ty d => ((typed.code t hmem hrun reads marker ty d).races
+      (racesKept_of_eq view.races)).congr rfl rfl) ?_
   · intro k hk
     unfold Guard.fiberKeys at hk
     rcases List.mem_append.mp hk with ho | hb
