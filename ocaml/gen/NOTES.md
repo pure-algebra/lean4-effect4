@@ -227,7 +227,7 @@ above. The rule the backend now follows, and the reason it is a *rule* and not a
 
 * **`Nat.pow` saturates at `max_int`.** `Nat.pow` is `@[extern]`, so without a table row it
   became a hole; with the naive spelling it would overflow silently. `Effect4.Store.Val.WF`
-  and `Val.wf` (`src/Effect4/Store/Carrier/Val.lean:279-316`) decide `… .length < 2 ^ 64` at every
+  and `Val.wf` (`src/Effect4/Store/Carrier/Val.lean`) decide `… .length < 2 ^ 64` at every
   frame. A wrapping `2 ^ 64` is `0` in 63-bit `int`, so `wf` would answer `false` for every
   value and `Api.ofBytes` would answer `none` for every program — **a wrong answer, not a
   compile error**. `Translate.powClamped` computes `a ^ b` by repeated multiplication that

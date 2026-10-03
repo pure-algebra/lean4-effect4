@@ -20,7 +20,7 @@ The evidence is three notes, each cited by section below:
 
 ## 1. What the machine holds
 
-One record, `RunMachine` (`src/Effect4/Machine/Fibers.lean:415-433`), parametric in the code
+One record, `RunMachine` (`src/Effect4/Machine/Fibers.lean`), parametric in the code
 type, the saved-fiber type, the frame-event type and the store type. It holds every fiber, the
 races in flight, three fresh-name counters, the armed host callbacks, the service state, the
 event log and a stuck marker. Four instances run it: the compiled machine, the reference machine
@@ -36,7 +36,7 @@ The current tracking parent remains a separate relation. The compiled runtime us
 The reference proof instance instead has function-valued RProgram/ScopeFrame continuations;
 they are semantic carriers, not stored program syntax or serializable runtime snapshots.
 
-The service state, `Stores` (`src/Effect4/Machine/Stores.lean:1719-1733`), holds seven things:
+The service state, `Stores` (`src/Effect4/Machine/Stores.lean`), holds seven things:
 the ref heap, the promise store, the scopes, the layer memo world, the timer, one fresh-name
 counter and the host's answers. Each transcribes a named part of rc.112, and the map note's §2
 gives the origin, the writers, the readers, the typing source and the OCaml representation of

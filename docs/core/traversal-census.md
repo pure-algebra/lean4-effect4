@@ -85,14 +85,14 @@ nine root traversals** (a traversal of the mutual family is one definition per m
 
 | root | members | where | carrier shape | convertible? |
 | --- | --- | --- | --- | --- |
-| `effTy` | `effTy`, `layerTy`, `layersTy`, `stmtsTy`, `effsTy`, `actionTy` | `Program/Typing.lean:283-488` | `Signature → TyEnv → Option EffTy` — an environment threaded through continuations (`Γ ++ [A]`) | **yes**: carrier `R .eff := TyEnv → Option EffTy`, the standard fold-returning-a-function; the continuation arm extends the environment before applying the child result |
+| `effTy` | `effTy`, `layerTy`, `layersTy`, `stmtsTy`, `effsTy`, `actionTy` | `src/Effect4/Program/Typing.lean` | `Signature → TyEnv → Option EffTy` — an environment threaded through continuations (`Γ ++ [A]`) | **yes**: carrier `R .eff := TyEnv → Option EffTy`, the standard fold-returning-a-function; the continuation arm extends the environment before applying the child result |
 | `explain` | `explainEff`, `explainLayer`, `explainLayers`, `explainStmts`, `explainEffs`, `explainAction` | `Program/Typing/Blame.lean:119-303` | as `effTy` plus a path | **yes**, same shape; carrier `TyEnv → List Nat → Option TypeRefusal` |
-| `compileEff` | `compileEff`, `compileLayer`, `localBinds`, `actionAt`, `actionAt.entrants` | `Program/Compile.lean:547-1045` | `Point` (fuel, addresses) threaded; `actionAt` also resolves | **exempt this wave** (F-3; the 1,900-line agreement proof is stated against it); carrier `Point → NCode` is expressible |
+| `compileEff` | `compileEff`, `compileLayer`, `localBinds`, `actionAt`, `actionAt.entrants` | `src/Effect4/Program/Compile.lean` | `Point` (fuel, addresses) threaded; `actionAt` also resolves | **exempt this wave** (F-3; the 1,900-line agreement proof is stated against it); carrier `Point → NCode` is expressible |
 | `Provision` | `build`, `buildAll`, `docsLayer`, `docsLayers` | `Program/Provision.lean:295-762` | over `LayerTerm(s)` only | **yes**, `R .layer`/`R .layers` carriers, the other five families trivial |
-| list projections | `LayerTerms.toList`, `LayerTerms.length`, `Stmts.toList`, `Effs.toList` | `Program/Eff.lean:459-475` | pure | **yes**, and better *generated* — they are the list view of the `nil`/`cons` families the generator already knows |
-| `Straight` | `Straight` | `Program/Fragment.lean:18` | `Bool`, `| _ => false` wildcard | **yes**, `R _ := Bool` with `&&`; the algebra names every constructor (row 35 settled for real) |
+| list projections | `LayerTerms.toList`, `LayerTerms.length`, `Stmts.toList`, `Effs.toList` | `src/Effect4/Program/Eff.lean` | pure | **yes**, and better *generated* — they are the list view of the `nil`/`cons` families the generator already knows |
+| `Straight` | `Straight` | `src/Effect4/Program/Fragment.lean` | `Bool`, `| _ => false` wildcard | **yes**, `R _ := Bool` with `&&`; the algebra names every constructor (row 35 settled for real) |
 | `denote` | `denote`, `denoteB`, `denoteBWith`, `denoteWith`, `Looped` | `Laws/Program/{Denote:64,DenoteB:121,185,LoopSound:52,MeaningSound:43}` | meaning into the semantic domain; `With` variants take a parameter | **yes** for `denote`/`Looped` (F-3 first); the `With` variants are the same algebra at a parameter — one algebra with the parameter in the carrier, three definitions become projections |
-| `Sched` | `entrantPoints`, `inlineYield`, `denoteEffBody`, `denoteLayerBody`, `denoteLayerZero` | `Laws/Program/DenoteR.lean:158-737` | the R-side evaluator's helpers | **later**: they exist for the simulation proof and follow `compileEff`'s shape |
+| `Sched` | `entrantPoints`, `inlineYield`, `denoteEffBody`, `denoteLayerBody`, `denoteLayerZero` | `src/Effect4/Laws/Program/DenoteR.lean` | the R-side evaluator's helpers | **later**: they exist for the simulation proof and follow `compileEff`'s shape |
 | `Agreement` | `depth`, `steps`, `depthB`, `boundB` | `Laws/Program/Agreement{,.Loop}.lean` | `Nat` measures | **yes**, and `sizeAlg` (`Laws/Program/Size.lean`) already is this fold — `depth`/`steps` are `EffAlgebra.ofLayer` one-liners |
 
 Folds in use today, with their algebras (22 definitions): `superAlg` (`Api.supervision`),
@@ -138,7 +138,7 @@ sort's free object and has **no** `ValAlgebra`/`cata_val` — the generator's `F
 
 ## 4. The converter — the connector that makes a hand traversal click into the fold
 
-The uniqueness theorem is already the proof. `hom_eq_cata_eff` (`Fold.lean:1172`) says: a
+The uniqueness theorem is already the proof. `hom_eq_cata_eff` (`src/Effect4/Program/Fold.lean`) says: a
 function satisfying the homomorphism equations of an algebra *is* `cata_eff` of it. A
 structurally recursive `f` comes with its equation lemmas `f.eq_n : f (ctor a₀ … aₖ) = rhs`;
 when every recursive occurrence in `rhs` is `f aᵢ` on an immediate child, `rhs` with `f aᵢ`

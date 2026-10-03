@@ -17,7 +17,7 @@ not depend on it.
    fix already exists — Jeffrey's **runtime wire**, promoted to a theorem by Román (2205.07664
    Thm 2.14, Cor 2.15). **Our tape is that wire**, and `replay (program, fuel, tape)`
    (`src/Effect4/Api.lean:156-162`) is literally its hom-set.
-3. **Spiders are real here.** `DeferredCell` (`src/Effect4/Machine/Stores.lean:1298-1303`) is one
+3. **Spiders are real here.** `DeferredCell` (`src/Effect4/Machine/Stores.lean`) is one
    completion fused to n waiters: a 1→n spider on the classical wire, with a genuine fusion law
    (await-after-done resumes at once). Same node for fiber-exit observers, Latch, PubSub. One
    node type replaces four.
@@ -49,7 +49,7 @@ the deck does.
 | wire (system) | a **value in flight at a `Ty`** — the answer of a node, the request of a row | `Program/Eff.lean:187-189` |
 | wire, thick | a **handle**: `Val.fiber`, `Val.cell`, `Val.promise`, `Val.scopeHandle` | `Api.lean:66-68` |
 | wire, dashed/cut | a **park token**: `(fiber, token)`, a continuation | `Machine/Fibers.lean:361-362` |
-| box | an `Eff` node under its interpretation | `Program/Eff.lean:250-333` |
+| box | an `Eff` node under its interpretation | `src/Effect4/Program/Eff.lean` |
 | box on the boundary | a **row**: request wire in, answer wire out, error wire out | `Program/Eff.lean:177-199` |
 | `g ∘ f` | `Eff.bind first rest` | `Program/Eff.lean:264` |
 | `f ⊗ g` | the *independence* of two fibers between fork and join | `Program/Eff.lean:288, 315` |
@@ -81,7 +81,7 @@ pure terms.** Not "monoidal with a chosen braiding". Reason: a braiding would ma
 orders isomorphic under a canonical map, i.e. the *same* diagram viewed twice; here they are two
 different runs with two different traces and (in general) two different exits. A braiding asserts
 an equality we can refute from `harness/truth/corpus.json`. The centre is `Term`/`Terms`
-(`Program/Eff.lean:223-230`) plus anything reading no store and touching no scheduler; the
+(`src/Effect4/Machine/Term.lean`) plus anything reading no store and touching no scheduler; the
 effectful part is everything with a store or a fiber leg.
 
 **The construction to adopt.** Jeffrey's technique, promoted to Theorem 2.14 in 2205.07664
@@ -129,8 +129,8 @@ the "the tape orders everything" caveat becomes a *drawing convention* rather th
   fork order. Swapping the forks swaps the trace. Isotopy in a monoidal diagram would make these
   equal.
 - **A park and its resume are one wire.** They are not one wire; they are a wire *cut by the
-  environment*. `callback` (`Program/Eff.lean:285`) parks on a row;
-  `RunDecision.answerAsync (fiber) (token) (answer)` (`Machine/Fibers.lean:441`) re-enters. Isotopy
+  environment*. `callback` (`src/Effect4/Program/Eff.lean`) parks on a row;
+  `RunDecision.answerAsync (fiber) (token) (answer)` (`src/Effect4/Machine/Fibers.lean`) re-enters. Isotopy
   would let a box slide across the cut. Forbidden: everything after the cut depends on a value
   that did not exist before it.
 - **Scoped regions are transparent.** `uninterruptible` (`:272`) changes what the *environment*
@@ -162,7 +162,7 @@ its performance has gone to waste, and we could as well have simply discarded it
 makes this "the tensor unit is terminal".
 
 **(a) Discarding is our interrupt — but ours is not terminal, and that is the finding.**
-`RunDecision.interruptFrom (interruptor) (annotations) (target)` (`Machine/Fibers.lean:444`)
+`RunDecision.interruptFrom (interruptor) (annotations) (target)` (`src/Effect4/Machine/Fibers.lean`)
 discards a fiber's future. CQM's discard is *terminal*: there is exactly one way to throw a wire
 away, and it carries no data. Ours carries data twice over: the interruptor and its annotations,
 and the finalizer program that runs on the way out (`acquireRelease`, `Program/Eff.lean:291`;
@@ -187,9 +187,9 @@ per cell — the "torch" theorems already named in the hazel notes §3).
 
 **(c) Is `Cause` the trace of a discard? No.** The runtime `Cause` is rc.112's flat, dedup'd
 reason list and *is* the normal form (grill agenda Q15); `CauseTerm`
-(`Program/Eff.lean:240-246`) is the tree, whose `causeOf` is a declared lossy quotient. The trace
+(`src/Effect4/Program/Eff.lean`) is the tree, whose `causeOf` is a declared lossy quotient. The trace
 of a discard is the event sequence — `interruptRecorded`, `interruptDeferred`,
-`childrenInterrupted`, `finalizerProgram`, `exited` (`Machine/Fibers.lean:363-376`). `Cause` is
+`childrenInterrupted`, `finalizerProgram`, `exited` (`src/Effect4/Machine/Fibers.lean`). `Cause` is
 only the *annotation the discard carries*. A design language that draws `Cause` as "the discard's
 history" will mis-teach the flat carrier; draw the events as the history and `Cause` as a label
 on the discard box.
@@ -221,8 +221,8 @@ by the copy-spider — copiability **defines** classicality. PQP slides 66 (sing
 
 | grade | draw | copy | delete | witness |
 | --- | --- | --- | --- | --- |
-| **value** | thin | ✓ | ✓ | `Term`, positional `Var := Nat` used any number of times, or none (`Program/Eff.lean:217-230`) |
-| **handle** | thick | ✓ (the *name*) | ✗ | `Val.fiber/cell/promise/scopeHandle` (`Api.lean:66-68`); dropping a scope handle without `closeScope` (`Program/Eff.lean:330`) leaks |
+| **value** | thin | ✓ | ✓ | `Term`, positional `Var := Nat` used any number of times, or none (`src/Effect4/Machine/Term.lean`) |
+| **handle** | thick | ✓ (the *name*) | ✗ | `Val.fiber/cell/promise/scopeHandle` (`Api.lean:66-68`); dropping a scope handle without `closeScope` (`src/Effect4/Program/Eff.lean`) leaks |
 | **continuation** | dashed, cut | ✗ | ✗ | park token `(fiber, token)` (`Machine/Fibers.lean:361-362`); one-shot |
 
 This is a **three**-way split where CQM has two, and the middle grade is new: a handle is a
@@ -236,7 +236,7 @@ and drop the construction.
 
 **Spiders: adopt, and they are already in the tree.**
 
-`DeferredCell` (`Machine/Stores.lean:1298-1303`):
+`DeferredCell` (`src/Effect4/Machine/Stores.lean`):
 
 ```lean
 structure DeferredCell where
@@ -272,11 +272,11 @@ discarding the classical output gives decoherence. §4.2 (from p.25) redraws tel
 say the classical input is *copied* and used to pick the operation. Deleting that classical wire
 destroys the protocol (Bob gets the maximal mixture).
 
-**Our analogue is exactly this.** `RunDecision` (`Machine/Fibers.lean:429-448`) is classical data
+**Our analogue is exactly this.** `RunDecision` (`src/Effect4/Machine/Fibers.lean`) is classical data
 entering from the environment: `fire (owner)`, `flush`, `evaluate (fiber)`,
 `yieldVerdict (fiber) (verdict)`, `answerAsync (fiber) (token) (answer)`, `interruptFrom`,
 `installMiddleware`. `choose (site) (left) (right)` (`Program/Eff.lean:293`) is the controlled
-branch, answered by `choices : List Bool` threaded through `compile` (`Api.lean:124-125`) —
+branch, answered by `choices : List Bool` threaded through `compile` (`src/Effect4/Api.lean`) —
 literally CQM's "classical input copied and used to pick the operation".
 
 ### 5.1 `pFork`, as a **program** diagram (no runtime wire; `⊗` is genuine)
@@ -367,7 +367,7 @@ different label — same shape, different environment permission.
 is the program's diagram with one tape **plugged into `R`** — in CQM's own vocabulary, a classical
 *state* plugged into the runtime wire, exactly as (27)'s classical input picks the operation.
 
-That factoring is what makes the frontier drawable: `Outcome.frontier` (`Api.lean:146`) is the run
+That factoring is what makes the frontier drawable: `Outcome.frontier` (`src/Effect4/Api.lean`) is the run
 diagram with `R` still dangling and one or more dashed continuation wires still open — a diagram
 with a hole. That object has a name and a theory: a **monoidal context** (Román, *Monoidal Context
 Theory*, arXiv:2404.06192; Earnshaw–Hefford–Román, *The Produoidal Algebra of Process
@@ -449,27 +449,27 @@ the recommendation; it is not a compromise, the two halves are disjoint.
 
 | CQM term | our term | transfers, or the caveat |
 | --- | --- | --- |
-| system / wire | a value at a `Ty` (`Eff.lean:187-189`) | transfers |
-| box / process | an `Eff` node (`Eff.lean:250-333`) | transfers |
+| system / wire | a value at a `Ty` (`src/Effect4/Program/Eff.lean`) | transfers |
+| box / process | an `Eff` node (`src/Effect4/Program/Eff.lean`) | transfers |
 | diagram | a program term | transfers, modulo D-DEFORM |
-| sequential composition `∘` | `bind` (`Eff.lean:264`) | transfers |
+| sequential composition `∘` | `bind` (`src/Effect4/Program/Eff.lean`) | transfers |
 | parallel composition `⊗` | fork/join independence (`:288, :286`) | **caveat: not a bifunctor.** Premonoidal; only the centre interchanges |
 | "only connectivity matters" | D-DEFORM D1–D4 | transfers **only** with the runtime wire drawn |
-| — (absent in CQM) | the runtime wire `R` = the tape | Román Thm 2.14; `replay` is its hom-set (`Api.lean:156`) |
+| — (absent in CQM) | the runtime wire `R` = the tape | Román Thm 2.14; `replay` is its hom-set (`src/Effect4/Api.lean`) |
 | state (no input) | `succeed` / `sync` (`:254, :260`) | transfers |
 | effect (no output) | discard / finalizer (`:269, :291`) | transfers as a *shape*; not terminal |
 | number | — | no analogue; reject the Born rule |
 | classical wire (single) | value wire: `Term` (`:223-230`) | transfers; copy and delete both hold |
 | quantum wire (double) | continuation wire: park token (`Fibers.lean:361`) | transfers in spirit — one-shot, no broadcasting; **not** by doubling |
 | — (absent in CQM) | handle wire: `Val.fiber/cell/…` (`Api.lean:66`) | third grade: copy ✓, delete ✗ (a drop must close) |
-| spider (Def 3.1) | a completion cell: `DeferredCell` (`Stores.lean:1298`) | transfers; one completion, n waiters |
+| spider (Def 3.1) | a completion cell: `DeferredCell` (`src/Effect4/Machine/Stores.lean`) | transfers; one completion, n waiters |
 | spider-fusion (eq. 4) | await-after-done resumes at once (`E4-CHECK-CE-005`) | transfers |
 | copy-spider / classical value (eq. 8) | a `Term` bound to a `Var`, used n times | transfers |
 | delete-spider | dropping a value | transfers for values; **not** for handles |
-| discarding (PQP 44) | `interruptFrom` (`Fibers.lean:444`) | **caveat: not terminal**; carries interruptor + annotations |
+| discarding (PQP 44) | `interruptFrom` (`src/Effect4/Machine/Fibers.lean`) | **caveat: not terminal**; carries interruptor + annotations |
 | causality (PQP 50, Def 3.5) | discard-a-scope = run finalizer, then discard | **caveat:** a rewrite rule, not terminality |
 | no-signalling | one-shot continuations | transfers, and is statable as a theorem |
-| measurement (§4.1 p.22) | a `RunDecision` entering `R` (`Fibers.lean:429-448`) | transfers as a *shape* (classical leg out of an effectful box) |
+| measurement (§4.1 p.22) | a `RunDecision` entering `R` (`src/Effect4/Laws/Program/Simulation/Fibers.lean`) | transfers as a *shape* (classical leg out of an effectful box) |
 | controlled unitary (eq. 27) | `branch` (`:275`) / `choose` (`:293`) + `choices` (`Api.lean:124`) | transfers; classical input copied to pick the arm |
 | decoherence (§3.4 p.15) | — | no analogue; reject |
 | — (absent in CQM) | frontier | a **monoidal context**: a diagram with a hole (arXiv:2404.06192) |

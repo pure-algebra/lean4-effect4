@@ -40,13 +40,13 @@ lane lands (row 99).
   and `applyReply` checks it again when it applies it (`:204-215`).
 - **The admission check** (`Program/Admit.lean`). `admit` (`:77`) requires the fiber to be parked
   at that token on an external row. `admitAnswer` then checks the answer:
-  - a success value goes through `externalValue` (`Program/Compile.lean:1354`). At a
+  - a success value goes through `externalValue` (`src/Effect4/Program/Compile.lean`). At a
     handle-typed row a number is an allocation request that becomes a new external handle; any
     other value must pass `Val.hasTy` and carry no external handle;
-  - every handle must exist (`mintedIn`, `Admit.lean:25`);
+  - every handle must exist (`mintedIn`, `src/Effect4/Program/Admit.lean`);
   - typed failures must fit the row's error type;
   - a delayed cell read (`ofRefGet`) is checked by what the cell holds at that moment.
-- **Preparation.** `prepareExternalAnswer` (`Compile.lean:1369`) turns an accepted reply into the
+- **Preparation.** `prepareExternalAnswer` (`src/Effect4/Program/Compile.lean`) turns an accepted reply into the
   code the fiber resumes with, allocating any new external handle.
 - **Tape replays.**
   - `Api.replayChecked` runs `admit` before each decision, but compiles with the execution
@@ -57,13 +57,13 @@ lane lands (row 99).
   conversion or allocation, no prepared answer, and no way to take a table-aware interpreter.
   These are the four gaps filed with DI-57 (`Test/contracts/machine-scheduler-core.contract.md`,
   "Table-aware agreement"). `run_eq_ref` therefore holds at the empty table only
-  (`Laws/Program/RuntimeR.lean:203-210`).
+  (`src/Effect4/Laws/Program/RuntimeR.lean`).
 
 ## 3. Known holes, with evidence
 
 | Hole | Evidence | Row |
 | --- | --- | --- |
-| The runtime check accepts a live handle of the wrong declared type. A program checked at `nat` finishes with a string on the certified live session (start, bind, submit, apply) and on the checked replay. `Val.hasTy` checks a handle by kind only (`Program/Typed.lean:34`); `mintedIn` checks only that it exists. Fiber handles are exploitable now; native cells and deferreds hold numbers only, and generic cells would open the same gap. | `host-answers-evidence/Probe.lean` §2 (proposed `E4-HOST-CE-007`); the contract's `Probe.lean` | 97 |
+| The runtime check accepts a live handle of the wrong declared type. A program checked at `nat` finishes with a string on the certified live session (start, bind, submit, apply) and on the checked replay. `Val.hasTy` checks a handle by kind only (`src/Effect4/Program/Typed.lean`); `mintedIn` checks only that it exists. Fiber handles are exploitable now; native cells and deferreds hold numbers only, and generic cells would open the same gap. | `host-answers-evidence/Probe.lean` §2 (proposed `E4-HOST-CE-007`); the contract's `Probe.lean` | 97 |
 | The proof's value predicate checks nothing inside products, Results or successful exits, and a union can take shape from one branch and handle evidence from another (`Laws/Program/Typed/Admission.lean:39-62`). A closed program with no host stores a fiber handle in a pair, projects it and awaits it; it checks at `nat` and runs to 7. | the contract's `PredicateProbe.lean`; `host-answers-evidence/PathProbes.lean` §D | 96 |
 | M6's capstone counts every decision tape: a `sleep` answered with `42` finishes with `42`. | `origin-plan-review/Probe.lean`, `current_m6_capstone_false` (proposed `E4-SCHED-CE-015`) | 95 |
 | The certificate-first `Typed.replay` runs unchecked answers. | `origin-plan-review/RemediationProbe.lean` | 98 |
@@ -227,7 +227,7 @@ handles arriving in-process. It is lifted kind by kind as declarations land.
 The reply check enforces the same rule on values: a success value carries no handle except a fresh
 external allocation.
 - **Why it is needed.** Today the check refuses only external handles (`externalValue`,
-  `Program/Compile.lean:1352`). So a row answering `unknown` could carry a live internal handle
+  `src/Effect4/Program/Compile.lean`). So a row answering `unknown` could carry a live internal handle
   even with the table rule in place.
 - **Typed failures need no new check.** The error alphabet is closed, and every decoded error is
   handle-free (`valOfErr_keys`, `causeImage_handleFree`).
@@ -273,10 +273,10 @@ things.
 **Decision 12: every boundary value carries an Effect Schema.** The owner's words: "an Effect
 Schema representation of all boundaries. The program at its most degenerate still emits an
 Effect Schema representation of whatever value is there." What it means at `dceae006`:
-- **Landed.** S-1, `Ty.schema : Ty → Representation` (`src/Effect4/Schema/Bridge.lean:38`); S-2,
+- **Landed.** S-1, `Ty.schema : Ty → Representation` (`src/Effect4/Schema/Bridge.lean`); S-2,
   the documents, `EffTy.document` (as an effect: the exit schema with its requirement keys,
-  `Schema/Bridge.lean:246`) and `Row.document` (a row's request, answer and error, `:254`); S-3,
-  the codec at a type, `Effect4.Schema.encode`/`decode` (`src/Effect4/Schema/Codec.lean:230`,
+  `src/Effect4/Schema/Bridge.lean`) and `Row.document` (a row's request, answer and error); S-3,
+  the codec at a type, `Effect4.Schema.encode`/`decode` (`src/Effect4/Schema/Codec.lean`,
   `:239`). `EffTy.document` publishes a program's exit schema; `Api.schemaOf` was deleted with
   row 39. Until their exactness theorems land, `Ty.ofSchema` and the JSON codec are retractions,
   not exact embeddings (row 128).

@@ -172,7 +172,7 @@ when eight obligations hold, each with the qualification Codex's 2026-09-30 audi
   (`src/Effect4/Program/Table.lean:11-13`).
 - **C7, representation.** Old bytes and old text read back unchanged. A published program and a
   session are pinned to their complete assembled table, profile and session (row 115;
-  `HostSession.start` refuses another table, `src/Effect4/Api/HostSession.lean:135`); the
+  `HostSession.start` refuses another table, `src/Effect4/Api/HostSession.lean`); the
   obligation names each selected target's admission and its artifact, header, call, reply and
   journal compatibility. No append claim is made before DI-01's assembly and linking design.
 - **C8, forms.** A form adds nothing to Σ, so C1–C7 say nothing about it. Each form owes an
@@ -217,9 +217,9 @@ Two facts bound what extension means.
   (`Effects/Algebra/Sum.lean:72`), `inl_injective` (`Effects/Algebra/Sum.lean:92`), `inl_unique`
   (`Effects/Algebra/Sum.lean:186`), `sum_unique` (`Effects/Algebra/Sum.lean:36`). C2 for the binary
   sum: `interpret_inl` (`Effects/Algebra/Sum.lean:48`). Proved, tree: `interpret_inl_store`
-  (`src/Effect4/Laws/Program/Sched.lean:230`), `meaning_via_rsig`
-  (`src/Effect4/Laws/Program/Sched.lean:237`), `denoteR_straight`
-  (`src/Effect4/Laws/Program/DenoteR.lean:1385`). Proved in research probes, by the seats named:
+  (`src/Effect4/Laws/Program/Sched.lean`), `meaning_via_rsig`
+  (`src/Effect4/Laws/Program/Sched.lean`), `denoteR_straight`
+  (`src/Effect4/Laws/Program/DenoteR.lean`). Proved in research probes, by the seats named:
   `along_bind` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:239`),
   `interpret_along` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:253`),
   `typed_along` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:266`),
@@ -255,7 +255,7 @@ Two facts bound what extension means.
   (`src/Effect4/Laws/Effects/Sum.lean:79`), `Typed.inl_iff`
   (`src/Effect4/Laws/Effects/Protocol.lean:159`), `Typed.inr_iff`
   (`src/Effect4/Laws/Effects/Protocol.lean:170`); tested, the red control
-  `sum_not_tensor` (`Test/Program/SignatureSum.lean:39`).
+  `sum_not_tensor` (`Test/Program/SignatureSum.lean`).
 - **Refusals.** Archived and moved to the `effects` package with their witnesses: `E4-ALG-CE-001`,
   `E4-ALG-CE-002`, `E4-ALG-CE-003`, `E4-ALG-CE-004`, `E4-ALG-CE-005`, `E4-ALG-CE-007`,
   `E4-ALG-CE-008` (`Test/Counterexamples/Archive/REGISTER.md`). DI-22, DI-47, DI-64, DI-69, DI-90.
@@ -316,7 +316,7 @@ uninspectable escape from being mislabeled as full reification.
   rule: pure code is closed at the boundary, and a host function, promise or closure is a named,
   registered foreign row or a refusal. `AGENTS.md`'s representation rules own that rule today, and
   it is the pedigree of R7 (system map §8).
-- **Witnesses** (re-read at `6b3f2c92`). `Eff` (`src/Effect4/Program/Eff.lean:266`); the Flow route
+- **Witnesses** (re-read at `6b3f2c92`). `Eff` (`src/Effect4/Program/Eff.lean`); the Flow route
   at `606918e` and on `archive/flow-route` (history, not re-read).
 - **Refusals.** `E4-ALG-CE-007` (archived: the higher-order carrier is not canonical program
   content); the Flow route's rows in the archive register.
@@ -380,22 +380,22 @@ No decisions row rules them (the model probe's D7 is open); where they stand is 
   tape decision; divergence is witnessed by an infinite run or compatible finite prefixes, never by
   fuel.
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `stepDecisionState`
-  (`src/Effect4/Machine/Fibers.lean:2111`) and `replayEval`
-  (`src/Effect4/Machine/Fibers.lean:2188`), both functions; `obs`
-  (`src/Effect4/Laws/Machine/Behaviour.lean:50`), `Beh`
-  (`src/Effect4/Laws/Machine/Behaviour.lean:74`), `Beh_fuel_irrelevant`
-  (`src/Effect4/Laws/Machine/Behaviour.lean:92`), `obs_mono_of_le_terminal`
-  (`src/Effect4/Laws/Machine/Behaviour.lean:54`), `replayEval_trace_extends`
-  (`src/Effect4/Laws/Machine/Approximation.lean:765`); the journal action `replay_append`
-  (`src/Effect4/Laws/Api/Runner.lean:83`), `replay_unique` (`src/Effect4/Laws/Api/Runner.lean:160`),
-  `behaviour_cons` (`src/Effect4/Laws/Api/Runner.lean:177`), `journal_replays`
-  (`src/Effect4/Laws/Run.lean:184`); host answers at the empty table,
-  `emptyTable_refuses_every_answer` (`src/Effect4/Laws/Program/Admit.lean:83`); the frontier law
-  `awaitDecision_iff` (`src/Effect4/Laws/Api/Frontier.lean:13`); `FairTape`
-  (`src/Effect4/Laws/Machine/Scheduling.lean:432`) is a definition on finite tapes. Proved in the
+  (`src/Effect4/Machine/Fibers.lean`) and `replayEval`
+  (`src/Effect4/Machine/Fibers.lean`), both functions; `obs`
+  (`src/Effect4/Laws/Machine/Behaviour.lean`), `Beh`
+  (`src/Effect4/Laws/Machine/Behaviour.lean`), `Beh_fuel_irrelevant`
+  (`src/Effect4/Laws/Machine/Behaviour.lean`), `obs_mono_of_le_terminal`
+  (`src/Effect4/Laws/Machine/Behaviour.lean`), `replayEval_trace_extends`
+  (`src/Effect4/Laws/Machine/Approximation.lean`); the journal action `replay_append`
+  (`src/Effect4/Laws/Api/Runner.lean`), `replay_unique` (`src/Effect4/Laws/Api/Runner.lean`),
+  `behaviour_cons` (`src/Effect4/Laws/Api/Runner.lean`), `journal_replays`
+  (`src/Effect4/Laws/Run.lean`); host answers at the empty table,
+  `emptyTable_refuses_every_answer` (`src/Effect4/Laws/Program/Admit.lean`); the frontier law
+  `awaitDecision_iff` (`src/Effect4/Laws/Api/Frontier.lean`); `FairTape`
+  (`src/Effect4/Laws/Machine/Scheduling.lean`) is a definition on finite tapes. Proved in the
   tree since `a561d604` (landed by seat E): the tape action `replayEval_append`
   (`src/Effect4/Laws/Machine/Approximation.lean:904`) and the session runner's
-  uniqueness `behaviour_unique` (`src/Effect4/Laws/Api/Runner.lean:187`; it concerns
+  uniqueness `behaviour_unique` (`src/Effect4/Laws/Api/Runner.lean`; it concerns
   the session runner, the coherence principle's census row 27); tested,
   `Test/Machine/Runtime/TapeAction.lean` and
   `Test/Api/RunnerFinality.lean`.
@@ -493,26 +493,26 @@ divergence, and a budget claims nothing about it.
   (`denoteB` beside `denote`), single-valued by `meaningB_unique`; laws for the limit, not for one
   budget.
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `iter`
-  (`src/Effect4/Laws/Program/Iter.lean:32`), `iter_zero` (`src/Effect4/Laws/Program/Iter.lean:36`),
-  `iter_succ` (`src/Effect4/Laws/Program/Iter.lean:38`), `iter_uniform`
-  (`src/Effect4/Laws/Program/Iter.lean:42`), `Looped` (`src/Effect4/Laws/Program/DenoteB.lean:125`),
-  `denoteB` (`src/Effect4/Laws/Program/DenoteB.lean:208`), `meaningB`
-  (`src/Effect4/Laws/Program/DenoteB.lean:241`), `denoteB_straight`
-  (`src/Effect4/Laws/Program/DenoteB.lean:285`), `iter_mono`
-  (`src/Effect4/Laws/Program/DenoteB.lean:355`), `denoteB_mono`
-  (`src/Effect4/Laws/Program/DenoteB.lean:386`), `meaningB_unique`
-  (`src/Effect4/Laws/Program/DenoteB.lean:496`), `LoopAgreement`
-  (`src/Effect4/Laws/Program/LoopAgreement.lean:27`), `loopAgreement`
-  (`src/Effect4/Laws/Program/Agreement/Loop.lean:839`), `soundB`
-  (`src/Effect4/Laws/Program/LoopSound.lean:306`), `meaningB_typed`
-  (`src/Effect4/Laws/Program/LoopSound.lean:535`), `drive_add`
-  (`src/Effect4/Laws/Machine/Approximation.lean:185`), `drive_stable_of_done`
-  (`src/Effect4/Laws/Machine/Approximation.lean:193`), `replay_stable`
-  (`src/Effect4/Laws/Machine/Approximation.lean:1322`), `replay_obs_mono`
-  (`src/Effect4/Laws/Machine/Approximation.lean:1488`), `replay_colimit`
-  (`src/Effect4/Laws/Machine/Approximation.lean:1747`), `Suffices`
-  (`src/Effect4/Laws/Machine/Approximation.lean:1293`), `Beh_fuel_irrelevant`
-  (`src/Effect4/Laws/Machine/Behaviour.lean:92`). The limit's laws, proved in the tree since
+  (`src/Effect4/Laws/Program/Iter.lean`), `iter_zero` (`src/Effect4/Laws/Program/Iter.lean`),
+  `iter_succ` (`src/Effect4/Laws/Program/Iter.lean`), `iter_uniform`
+  (`src/Effect4/Laws/Program/Iter.lean`), `Looped` (`src/Effect4/Laws/Program/DenoteB.lean`),
+  `denoteB` (`src/Effect4/Laws/Program/DenoteB.lean`), `meaningB`
+  (`src/Effect4/Laws/Program/DenoteB.lean`), `denoteB_straight`
+  (`src/Effect4/Laws/Program/DenoteB.lean`), `iter_mono`
+  (`src/Effect4/Laws/Program/DenoteB.lean`), `denoteB_mono`
+  (`src/Effect4/Laws/Program/DenoteB.lean`), `meaningB_unique`
+  (`src/Effect4/Laws/Program/DenoteB.lean`), `LoopAgreement`
+  (`src/Effect4/Laws/Program/LoopAgreement.lean`), `loopAgreement`
+  (`src/Effect4/Laws/Program/Agreement/Loop.lean`), `soundB`
+  (`src/Effect4/Laws/Program/LoopSound.lean`), `meaningB_typed`
+  (`src/Effect4/Laws/Program/LoopSound.lean`), `drive_add`
+  (`src/Effect4/Laws/Machine/Approximation.lean`), `drive_stable_of_done`
+  (`src/Effect4/Laws/Machine/Approximation.lean`), `replay_stable`
+  (`src/Effect4/Laws/Machine/Approximation.lean`), `replay_obs_mono`
+  (`src/Effect4/Laws/Machine/Approximation.lean`), `replay_colimit`
+  (`src/Effect4/Laws/Machine/Approximation.lean`), `Suffices`
+  (`src/Effect4/Laws/Machine/Approximation.lean`), `Beh_fuel_irrelevant`
+  (`src/Effect4/Laws/Machine/Behaviour.lean`). The limit's laws, proved in the tree since
   `a561d604` (landed by seat E from the algebra seat's probe): `Conv`
   (`src/Effect4/Laws/Program/IterLimit.lean:42`), `conv_fixpoint`
   (`src/Effect4/Laws/Program/IterLimit.lean:48`), `conv_least`
@@ -604,27 +604,27 @@ on those fragments (the algebra verifier's ALG-10).
   handler; the fiber layer's meaning is operational, related to the denotation and between the two
   machines only by simulations on named fragments.
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `Point`
-  (`src/Effect4/Program/Compile.lean:57`), `Straight` (`src/Effect4/Program/Fragment.lean:22`),
-  `seqR` (`src/Effect4/Laws/Program/DenoteR.lean:47`), `guardR`
-  (`src/Effect4/Laws/Program/DenoteR.lean:69`), `controlErasure`
-  (`src/Effect4/Laws/Program/DenoteR.lean:105`), `eraseControl_bind`
-  (`src/Effect4/Laws/Program/DenoteR.lean:120`), `eraseControl_guardR`
-  (`src/Effect4/Laws/Program/DenoteR.lean:125`), `denoteR`
-  (`src/Effect4/Laws/Program/DenoteR.lean:799`), `denoteR_straight`
-  (`src/Effect4/Laws/Program/DenoteR.lean:1385`), `RSig`
-  (`src/Effect4/Laws/Program/Sched.lean:197`), `fiberRefusal`
-  (`src/Effect4/Laws/Program/Sched.lean:217`) with the module's boundary paragraph
+  (`src/Effect4/Program/Compile.lean`), `Straight` (`src/Effect4/Program/Fragment.lean`),
+  `seqR` (`src/Effect4/Laws/Program/DenoteR.lean`), `guardR`
+  (`src/Effect4/Laws/Program/DenoteR.lean`), `controlErasure`
+  (`src/Effect4/Laws/Program/DenoteR.lean`), `eraseControl_bind`
+  (`src/Effect4/Laws/Program/DenoteR.lean`), `eraseControl_guardR`
+  (`src/Effect4/Laws/Program/DenoteR.lean`), `denoteR`
+  (`src/Effect4/Laws/Program/DenoteR.lean`), `denoteR_straight`
+  (`src/Effect4/Laws/Program/DenoteR.lean`), `RSig`
+  (`src/Effect4/Laws/Program/Sched.lean`), `fiberRefusal`
+  (`src/Effect4/Laws/Program/Sched.lean`) with the module's boundary paragraph
   (`src/Effect4/Laws/Program/Sched.lean:32-39`), `run_eq_meaning`
-  (`src/Effect4/Laws/Program/Agreement/Machine.lean:1922`), `loopAgreement`
-  (`src/Effect4/Laws/Program/Agreement/Loop.lean:839`), `run_eq_ref`
-  (`src/Effect4/Laws/Program/RuntimeR.lean:211`; its fragment, the empty table and the empty oracle,
-  at `src/Effect4/Laws/Program/RuntimeR.lean:203-210`). Tested: the frozen scope-versus-bind control
-  `cleanup_boundary_distinct` (`Test/Program/DenoteRContract.lean:240`). The scope law is proved in
-  the tree: `guardR_bind` (`src/Effect4/Laws/Program/Intro/Prepare.lean:44`; it predates the formal
+  (`src/Effect4/Laws/Program/Agreement/Machine.lean`), `loopAgreement`
+  (`src/Effect4/Laws/Program/Agreement/Loop.lean`), `run_eq_ref`
+  (`src/Effect4/Laws/Program/RuntimeR.lean`; its fragment, the empty table and the empty oracle,
+  at `src/Effect4/Laws/Program/RuntimeR.lean`). Tested: the frozen scope-versus-bind control
+  `cleanup_boundary_distinct` (`Test/Program/DenoteRContract.lean`). The scope law is proved in
+  the tree: `guardR_bind` (`src/Effect4/Laws/Program/Intro/Prepare.lean`; it predates the formal
   pass, whose probe proved the same equation again, spelling out `unguardTail`). Proved in the tree
   since `a561d604` (landed by seat E): `eraseControl_guardR_bind`
   (`src/Effect4/Laws/Program/ScopeMarkers.lean:47`); tested, the red control
-  `guardR_not_algebraic` (`Test/Program/ScopeMarkers.lean:26`).
+  `guardR_not_algebraic` (`Test/Program/ScopeMarkers.lean`).
 - **Refusals.** `E4-SCHED-CE-001` (the summed handler is not a semantics of the fiber operations),
   the archive's `E4-SCHED-CE-004` (`Test/Counterexamples/Archive/REGISTER.md`: raw bind terms lose
   the cleanup boundary; the register's row with that id is another statement); DI-07, DI-12, DI-57.
@@ -745,15 +745,15 @@ or an optimization declares a state equation.
   stores, under `StateT`); rollback is a separate transactional operation with its own laws. The
   store handler is a comodel of the store signature, lawful on live cells.
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `ExitV`
-  (`src/Effect4/Machine/Alphabets.lean:369`), `storeHandler`
-  (`src/Effect4/Laws/Program/Denote.lean:124`), `meaning`
-  (`src/Effect4/Laws/Program/Denote.lean:130`), `runState`
-  (`src/Effect4/Laws/Machine/ScopeMachine.lean:89`), `runState_complete`
-  (`src/Effect4/Laws/Machine/ScopeMachine.lean:191`), `runState_restore`
-  (`src/Effect4/Laws/Machine/ScopeMachine.lean:217`), `runState_result`
-  (`src/Effect4/Laws/Machine/ScopeMachine.lean:233`), the heap's read-over-write `refPeek_poke_self`
-  (`src/Effect4/Machine/Stores.lean:962`) and `refStep_get_after_set`
-  (`src/Effect4/Machine/Stores.lean:968`), the arena's `peek_poke_other`
+  (`src/Effect4/Machine/Alphabets.lean`), `storeHandler`
+  (`src/Effect4/Laws/Program/Denote.lean`), `meaning`
+  (`src/Effect4/Laws/Program/Denote.lean`), `runState`
+  (`src/Effect4/Laws/Machine/ScopeMachine.lean`), `runState_complete`
+  (`src/Effect4/Laws/Machine/ScopeMachine.lean`), `runState_restore`
+  (`src/Effect4/Laws/Machine/ScopeMachine.lean`), `runState_result`
+  (`src/Effect4/Laws/Machine/ScopeMachine.lean`), the heap's read-over-write `refPeek_poke_self`
+  (`src/Effect4/Machine/Stores.lean`) and `refStep_get_after_set`
+  (`src/Effect4/Machine/Stores.lean`), the arena's `peek_poke_other`
   (`src/Effect4/Laws/Machine/Arena.lean:30`). The comodel's laws, proved in the tree since
   `a561d604` (landed by seat E from the algebra seat's probe): `put_get`
   (`src/Effect4/Laws/Program/StoreComodel.lean:51`), `get_get`
@@ -902,8 +902,8 @@ that lands, the truth claim names the exercised safe fragment (DI-56).
   profile's scalar domain is bounded with an explicit refusal, intermediates included. The route is
   the system map's.
 - **Witnesses** (re-read at `6b3f2c92`). Defined: `ProfileData`
-  (`src/Effect4/Program/Profile.lean:87`), `HostSpec` (`src/Effect4/Program/Profile.lean:178`),
-  `LawfulHostSpec` (`src/Effect4/Program/Profile.lean:198`). Tested:
+  (`src/Effect4/Program/Profile.lean`), `HostSpec` (`src/Effect4/Program/Profile.lean`),
+  `LawfulHostSpec` (`src/Effect4/Program/Profile.lean`). Tested:
   `Test/Program/HostSpecContract.lean` (each general law earned by a fixture); the frozen amendment
   `Test/contracts/foundation-wave2.contract.md`.
 - **Refusals.** DI-19, DI-56, DI-57, DI-58, DI-65; the number policy is row 108 (open).
@@ -980,19 +980,19 @@ declarations in the checker's order since row 137 was ruled); DB-16 owns that de
   back by a reader; well-formedness a premise of the laws; admission a located decision before a
   program runs (`admitProgram`) and before a host answer is applied (`admitAnswer`).
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `Val`
-  (`src/Effect4/Store/Carrier/Val.lean:150`), `Image` (`src/Effect4/Store/Carrier/Image.lean:39`)
-  with its laws `ofVal_toVal` (`src/Effect4/Store/Carrier/Image.lean:45`) and `ofVal_exact`
-  (`src/Effect4/Store/Carrier/Image.lean:47`), `AdmittedProgram`
-  (`src/Effect4/Program/Admission.lean:325`), `admitProgram`
-  (`src/Effect4/Program/Admission.lean:340`), `internalHandleScan`
-  (`src/Effect4/Program/Admission.lean:100`), `admitAnswer` (`src/Effect4/Program/Admit.lean:59`),
-  `mintedIn` (`src/Effect4/Program/Admit.lean:25`), `admitted_row`
-  (`src/Effect4/Laws/Program/Admit.lean:68`), `external_answer_typed`
-  (`src/Effect4/Laws/Program/Admit.lean:156`), `external_error_typed`
-  (`src/Effect4/Laws/Program/Admit.lean:435`), `admitted_decision_minted`
-  (`src/Effect4/Laws/Program/Admit.lean:587`), `replayCheckedFrom_eq_replay`
-  (`src/Effect4/Laws/Program/Admit.lean:636`), `admitted_unique` (`src/Effect4/Laws/Run.lean:207`),
-  `admitProgram_certificate` (`src/Effect4/Laws/Run.lean:218`).
+  (`src/Effect4/Store/Carrier/Val.lean:150`), `Image` (`src/Effect4/Store/Carrier/Image.lean`)
+  with its laws `ofVal_toVal` (`src/Effect4/Store/Carrier/Image.lean`) and `ofVal_exact`
+  (`src/Effect4/Store/Carrier/Image.lean`), `AdmittedProgram`
+  (`src/Effect4/Program/Admission.lean`), `admitProgram`
+  (`src/Effect4/Program/Admission.lean`), `internalHandleScan`
+  (`src/Effect4/Program/Admission.lean`), `admitAnswer` (`src/Effect4/Program/Admit.lean`),
+  `mintedIn` (`src/Effect4/Program/Admit.lean`), `admitted_row`
+  (`src/Effect4/Laws/Program/Admit.lean`), `external_answer_typed`
+  (`src/Effect4/Laws/Program/Admit.lean`), `external_error_typed`
+  (`src/Effect4/Laws/Program/Admit.lean`), `admitted_decision_minted`
+  (`src/Effect4/Laws/Program/Admit.lean`), `replayCheckedFrom_eq_replay`
+  (`src/Effect4/Laws/Program/Admit.lean`), `admitted_unique` (`src/Effect4/Laws/Run.lean`),
+  `admitProgram_certificate` (`src/Effect4/Laws/Run.lean`).
 - **Refusals.** `E4-HANDLE-CE-001`, `E4-HOST-CE-007` (row 97's interim rule, repaired);
   `E4-TYPED-CE-015` (DI-67's emptiness gap: `prod never nat` and `except never never` are admitted
   though empty; registered at `66aa97d7`); DI-61, DI-62, DI-67, DI-92.
@@ -1071,18 +1071,18 @@ DB-17's; the service table's place in the world and its lawful declarations are 
   checked closed point, its value fitting its key's declared carrier; a reference shares its
   target's memo entry.
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `Ctx`
-  (`src/Effect4/Machine/Stores.lean:82`), `withServices` (`src/Effect4/Machine/Stores.lean:94`),
-  `ambientScope` (`src/Effect4/Machine/Stores.lean:98`), `CacheAgrees`
-  (`src/Effect4/Machine/Stores.lean:102`), `LayerTerm` (`src/Effect4/Program/Eff.lean:383`),
-  `compileLayer` (`src/Effect4/Program/Compile.lean:677`), `resolveLayer`
-  (`src/Effect4/Program/Compile.lean:702`), `layerBuild` (`src/Effect4/Program/Compile.lean:85`),
-  `layerBuild_env` (`src/Effect4/Program/Compile.lean:90`), `provideLayerWithK`
-  (`src/Effect4/Program/Compile.lean:784`), `provideLayerR`
-  (`src/Effect4/Laws/Program/DenoteR.lean:526`), `checkLayer`
-  (`src/Effect4/Program/Checker.lean:227`), `LayerHasTy`
-  (`src/Effect4/Laws/Program/Typing/HasTy.lean:414`), `layerRefsWF`
-  (`src/Effect4/Program/Refs.lean:154`), `find?_append_other_key`
-  (`src/Effect4/Machine/Stores.lean:626`). Tested:
+  (`src/Effect4/Machine/Stores.lean`), `withServices` (`src/Effect4/Machine/Stores.lean`),
+  `ambientScope` (`src/Effect4/Machine/Stores.lean`), `CacheAgrees`
+  (`src/Effect4/Machine/Stores.lean`), `LayerTerm` (`src/Effect4/Program/Eff.lean`),
+  `compileLayer` (`src/Effect4/Program/Compile.lean`), `resolveLayer`
+  (`src/Effect4/Program/Compile.lean`), `layerBuild` (`src/Effect4/Program/Compile.lean`),
+  `layerBuild_env` (`src/Effect4/Program/Compile.lean`), `provideLayerWithK`
+  (`src/Effect4/Program/Compile.lean`), `provideLayerR`
+  (`src/Effect4/Laws/Program/DenoteR.lean`), `checkLayer`
+  (`src/Effect4/Program/Checker.lean`), `LayerHasTy`
+  (`src/Effect4/Laws/Program/Typing/HasTy.lean`), `layerRefsWF`
+  (`src/Effect4/Program/Refs.lean`), `find?_append_other_key`
+  (`src/Effect4/Machine/Stores.lean`). Tested:
   `Test/Counterexamples/Machine/Runtime/LayerEnvironment.lean` and
   `Test/Counterexamples/Machine/Semantics/LayerValue.lean` (rows 104 and 105's retained falsifiers);
   the truth harness's `pProvideTwice` and `pDiamond` (`harness/truth/Truth.lean`).
@@ -1148,12 +1148,12 @@ this list.
   waiter is woken and how a cancel is accounted; the family's policy is a function over the list; a
   later module is a composed `Eff` program over `Ref`, `Deferred` and this list (DI-11).
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `WakeList`
-  (`src/Effect4/Machine/Wake.lean:119`), `WakeMode` (`src/Effect4/Machine/Wake.lean:62`),
-  `WakePolicy` (`src/Effect4/Machine/Wake.lean:69`), `Owed` (`src/Effect4/Machine/Wake.lean:97`),
-  `delay` (`src/Effect4/Machine/Wake.lean:142`), `wakeBy` (`src/Effect4/Machine/Wake.lean:179`),
-  `cancel_owed_iff` (`src/Effect4/Machine/Wake.lean:256`), `schedule_coalesces`
-  (`src/Effect4/Machine/Wake.lean:284`), `wakeAll_cancel_owed`
-  (`src/Effect4/Machine/Wake.lean:301`), `sweep_keeps_order` (`src/Effect4/Machine/Wake.lean:309`).
+  (`src/Effect4/Machine/Wake.lean`), `WakeMode` (`src/Effect4/Machine/Wake.lean`),
+  `WakePolicy` (`src/Effect4/Machine/Wake.lean`), `Owed` (`src/Effect4/Machine/Wake.lean`),
+  `delay` (`src/Effect4/Machine/Wake.lean`), `wakeBy` (`src/Effect4/Machine/Wake.lean`),
+  `cancel_owed_iff` (`src/Effect4/Machine/Wake.lean`), `schedule_coalesces`
+  (`src/Effect4/Machine/Wake.lean`), `wakeAll_cancel_owed`
+  (`src/Effect4/Machine/Wake.lean`), `sweep_keeps_order` (`src/Effect4/Machine/Wake.lean`).
   Tested: the executed fixtures of `Test/Machine/Runtime/SchedulerCoreContract.lean` §Wake.
 - **Refusals.** `SCHED-FB-NO-FIFO`, `SCHED-FB-PRODUCER`, `SCHED-FB-UNKNOWN-OWNER` (fallback ids, in
   the text above); DI-11. Decisions row 81 (open: Latch); status: that row.
@@ -1215,9 +1215,9 @@ elsewhere as not worth a second structure; a keyed carrier is a later, measured 
   only by the host's `advance` decision (a duration in exact milliseconds), with staged fires; a
   cancelled sleep is removed; out-of-profile clock values are host profile refusals.
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `TimerStore`
-  (`src/Effect4/Machine/Timer.lean:45`), `advanceState` (`src/Effect4/Machine/Fibers.lean:2066`),
-  `clockStep` (`src/Effect4/Machine/Fibers.lean:533`), `wakeBy`
-  (`src/Effect4/Machine/Wake.lean:179`); `ClockMillis` (`src/Effect4/Data/ClockMillis.lean`). The
+  (`src/Effect4/Machine/Timer.lean`), `advanceState` (`src/Effect4/Machine/Fibers.lean`),
+  `clockStep` (`src/Effect4/Machine/Fibers.lean`), `wakeBy`
+  (`src/Effect4/Machine/Wake.lean`); `ClockMillis` (`src/Effect4/Data/ClockMillis.lean`). The
   implementation receipt of the 2026-09-20 amendment:
   `docs/research/2026-09-20-skeleton-first-receipt.md`.
 - **Refusals.** `TIMER-FB-SET-TIME`, `TIMER-FB-KEPT-CANCEL`, `TIMER-FB-INFINITE` (fallback ids, in
@@ -1367,10 +1367,10 @@ admission refusals; row 2's stage (b) is ruled by row 119.
   enter `Ty` by row 119's ruled design (canonical field order, positional values, exact subtyping,
   width projected at the boundary); until that slice lands, `Ty` has none.
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved (string values and pairs): `Lit.toVal`
-  (`src/Effect4/Machine/Term.lean:134`), `Val.hasTy` (`src/Effect4/Program/Typed.lean:34`), `errOf`
-  (`src/Effect4/Machine/Term.lean:27`), `errAdmits_errOf`
-  (`src/Effect4/Laws/Program/Admit.lean:383`), `evalTerm_isSome`
-  (`src/Effect4/Laws/Program/Typed.lean:1027`); tested: `Test/Program/TypedContract.lean` (the
+  (`src/Effect4/Machine/Term.lean`), `Val.hasTy` (`src/Effect4/Program/Typed.lean`), `errOf`
+  (`src/Effect4/Machine/Term.lean`), `errAdmits_errOf`
+  (`src/Effect4/Laws/Program/Admit.lean`), `evalTerm_isSome`
+  (`src/Effect4/Laws/Program/Typed.lean`); tested: `Test/Program/TypedContract.lean` (the
   retired `E4-TYPED-CE-001`'s fixture). Records: witness missing at `6b3f2c92` (stage 1 not landed);
   the design's facts are proved in the data probe's models: `positional_width_unsound`
   (`git:f62c972d:docs/research/2026-10-01-data-probe/tree/RecordNested.lean:1087`), `fitsFields_exact_mono`
@@ -1542,124 +1542,124 @@ Each repair changed statements only, no runtime code.
   close rows' handler side (rows 151 and 152). Owed: one definition of presence shared by the machine stores' three
   spellings of it (row 156).
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved, the generic judgment: `WorldOrder`
-  (`src/Effect4/Laws/Effects/Protocol.lean:41`), `Protocol`
-  (`src/Effect4/Laws/Effects/Protocol.lean:48`), `Typed`
-  (`src/Effect4/Laws/Effects/Protocol.lean:56`), `Typed.mono`
-  (`src/Effect4/Laws/Effects/Protocol.lean:68`), `Typed.bind`
-  (`src/Effect4/Laws/Effects/Protocol.lean:77`), `Typed.widen`
-  (`src/Effect4/Laws/Effects/Protocol.lean:86`), `Protocol.sum`
-  (`src/Effect4/Laws/Effects/Protocol.lean:94`), `Typed.inl`
-  (`src/Effect4/Laws/Effects/Protocol.lean:108`), `Typed.inr`
-  (`src/Effect4/Laws/Effects/Protocol.lean:119`), `Typed.inl_inv`
-  (`src/Effect4/Laws/Effects/Protocol.lean:130`), `Typed.inr_inv`
-  (`src/Effect4/Laws/Effects/Protocol.lean:141`) and protocol refinement `Typed.refine`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Protocol`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Typed`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Typed.mono`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Typed.bind`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Typed.widen`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Protocol.sum`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Typed.inl`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Typed.inr`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Typed.inl_inv`
+  (`src/Effect4/Laws/Effects/Protocol.lean`), `Typed.inr_inv`
+  (`src/Effect4/Laws/Effects/Protocol.lean`) and protocol refinement `Typed.refine`
   (`src/Effect4/Laws/Effects/Protocol.lean:194`). The concrete judgment: `StoreCert`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:29`), `storePre`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:36`), `storePost`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:73`), `Ψ_S`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `storePre`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `storePost`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `Ψ_S`
   (`src/Effect4/Laws/Program/Typed/Residual.lean:110`), `FiberCert`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:122`), `fiberPre`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:158`), `fiberPost`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:197`), `Ψ_F`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:229`), `TypedProg`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:248`) and its scope-exit arm `TypedProg.scopeExit`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:274`), `fiber_inv`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:297`), `IteratorProtocol`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:362`), `LoopProtocol`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:380`), `guard_frame`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:435`), `typedProg_mono`
-  (`src/Effect4/Laws/Program/Typed/Residual.lean:686`), the ledger's goal for it
-  `M3bWorld.typedProg_mono` (`src/Effect4/Laws/Program/Typed/Residual.lean:842`, declared, its
-  statement the theorem's). The world: `World` (`src/Effect4/Laws/Program/Typed/World.lean:52`),
-  `World.le` (`src/Effect4/Laws/Program/Typed/World.lean:137`), `ScopeLive`
-  (`src/Effect4/Laws/Program/Typed/World.lean:149`), `order_refl`
-  (`src/Effect4/Laws/Program/Typed/World.lean:411`), `order_trans`
-  (`src/Effect4/Laws/Program/Typed/World.lean:415`), `scopeLive_mono`
-  (`src/Effect4/Laws/Program/Typed/World.lean:432`), `WorldValid`
-  (`src/Effect4/Laws/Program/Typed/Validity.lean:19`), `World.leHost`
-  (`src/Effect4/Laws/Program/Typed/Validity.lean:38`), `leHost_refl`
-  (`src/Effect4/Laws/Program/Typed/Validity.lean:116`), `leHost_trans`
-  (`src/Effect4/Laws/Program/Typed/Validity.lean:119`). Membership: `Val.hasTy`
-  (`src/Effect4/Program/Typed.lean:34`), `HandleFits`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:62`), `Fits`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:98`), `FitsExit`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:163`), `fits_hasTy`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:280`), `fits_map`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:749`), `fits_mono`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:856`), `fits_sub`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:894`), `fits_normalize`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:1126`), `fits_subN`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:1232`), `fits_join_left`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:1237`), `fits_join_right`
-  (`src/Effect4/Laws/Program/Typed/Membership.lean:1241`), `NoShapeDefect`
-  (`src/Effect4/Laws/Program/Typed/Admission.lean:24`), `ExitOk`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `fiberPre`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `fiberPost`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `Ψ_F`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `TypedProg`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`) and its scope-exit arm `TypedProg.scopeExit`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `fiber_inv`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `IteratorProtocol`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `LoopProtocol`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `guard_frame`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), `typedProg_mono`
+  (`src/Effect4/Laws/Program/Typed/Residual.lean`), the ledger's goal for it
+  `M3bWorld.typedProg_mono` (`src/Effect4/Laws/Program/Typed/Residual.lean`, declared, its
+  statement the theorem's). The world: `World` (`src/Effect4/Laws/Program/Typed/World.lean`),
+  `World.le` (`src/Effect4/Laws/Program/Typed/World.lean`), `ScopeLive`
+  (`src/Effect4/Laws/Program/Typed/World.lean`), `order_refl`
+  (`src/Effect4/Laws/Program/Typed/World.lean`), `order_trans`
+  (`src/Effect4/Laws/Program/Typed/World.lean`), `scopeLive_mono`
+  (`src/Effect4/Laws/Program/Typed/World.lean`), `WorldValid`
+  (`src/Effect4/Laws/Program/Typed/Validity.lean`), `World.leHost`
+  (`src/Effect4/Laws/Program/Typed/Validity.lean`), `leHost_refl`
+  (`src/Effect4/Laws/Program/Typed/Validity.lean`), `leHost_trans`
+  (`src/Effect4/Laws/Program/Typed/Validity.lean`). Membership: `Val.hasTy`
+  (`src/Effect4/Program/Typed.lean`), `HandleFits`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `Fits`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `FitsExit`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `fits_hasTy`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `fits_map`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `fits_mono`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `fits_sub`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `fits_normalize`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `fits_subN`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `fits_join_left`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `fits_join_right`
+  (`src/Effect4/Laws/Program/Typed/Membership.lean`), `NoShapeDefect`
+  (`src/Effect4/Laws/Program/Typed/Admission.lean`), `ExitOk`
   (`src/Effect4/Laws/Program/Typed/Admission.lean:31`), `evalTerm_fits`
-  (`src/Effect4/Laws/Program/Typed/Admission.lean:81`), `evalTerm_fits_native`
+  (`src/Effect4/Laws/Program/Typed/Admission.lean`), `evalTerm_fits_native`
   (`src/Effect4/Laws/Program/Typed/Admission.lean:88`). Frames: `FrameAccepts`
-  (`src/Effect4/Laws/Program/Typed/Contracts.lean:43`), `StackAccepts`
-  (`src/Effect4/Laws/Program/Typed/Contracts.lean:66`), `SavedOk`
-  (`src/Effect4/Laws/Program/Typed/Contracts.lean:82`), `stackAccepts_mono`
-  (`src/Effect4/Laws/Program/Typed/Contracts.lean:131`), `savedOk_mono`
-  (`src/Effect4/Laws/Program/Typed/Contracts.lean:139`), `HookLaws`
-  (`src/Effect4/Laws/Program/Typed/Stack.lean:30`). The typed state: `TypedState`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:147`), `QueueOk`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:183`), `LiveCode`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:217`), `ReadCode`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:227`), `MachineLive`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:245`), `MachineTyped`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:257`), `ConfigTyped`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:269`), `machineTyped_of_configTyped`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean`), `StackAccepts`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean`), `SavedOk`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean`), `stackAccepts_mono`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean`), `savedOk_mono`
+  (`src/Effect4/Laws/Program/Typed/Contracts.lean`), `HookLaws`
+  (`Test/Program/FramesNotKripke.lean`). The typed state: `TypedState`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `QueueOk`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `LiveCode`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `ReadCode`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `MachineLive`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `MachineTyped`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `ConfigTyped`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `machineTyped_of_configTyped`
   (`src/Effect4/Laws/Program/Typed/Assembly.lean:277`), `ambientScope_live`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:287`), `evaluate_entry`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:385`), `StepPreserves`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:416`), `guarded_stepKeeps_of_stepPreserves`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:693`), `Guarded`
-  (`src/Effect4/Laws/Machine/Lift.lean:278`), `DecisionLift`
-  (`src/Effect4/Laws/Machine/Lift.lean:308`). The handler rule: `StoreTyped`
-  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:39`), `StoreImplements`
-  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:50`), `storeStep_typed`
-  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:59`), `answerFrame_typed`
-  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:867`), `seqFrame_typed`
-  (`src/Effect4/Laws/Program/Typed/Adequacy.lean:874`). Sequencing (landed by seat E):
-  `close_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean:40`), `seq_typed`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `evaluate_entry`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `StepPreserves`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `guarded_stepKeeps_of_stepPreserves`
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `Guarded`
+  (`src/Effect4/Laws/Machine/Lift.lean`), `DecisionLift`
+  (`src/Effect4/Laws/Machine/Lift.lean`). The handler rule: `StoreTyped`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean`), `StoreImplements`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean`), `storeStep_typed`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean`), `answerFrame_typed`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean`), `seqFrame_typed`
+  (`src/Effect4/Laws/Program/Typed/Adequacy.lean`). Sequencing (landed by seat E):
+  `close_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean`), `seq_typed`
   (`src/Effect4/Laws/Program/Typed/Seq.lean:59`). Declared, not proved (each a
   `ProofGraph.Obligation`): `denoteR_typed`
   (`src/Effect4/Laws/Program/Typed/Assembly.lean:1447`), `typedState_load`
   (`src/Effect4/Laws/Program/Typed/Assembly.lean:1452`), `step_loop`
   (`src/Effect4/Laws/Program/Typed/Assembly.lean:1478`), `decision_preserves`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1540`), `typedState_reachable`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1573`), `exitHandles_valid`
-  (`src/Effect4/Laws/Program/Typed/Assembly.lean:1597`). Tested, the refutations kept as history
+  (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`), `typedState_reachable`
+  (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`), `exitHandles_valid`
+  (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`). Tested, the refutations kept as history
   over local copies of the old clauses: `stackAccepts_not_mono`
-  (`Test/Program/FramesNotKripke.lean:238`), `step_loop_refuted`
-  (`Test/Program/FramesNotKripke.lean:565`); `m5_false`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:388`), `capstone_false`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:416`); `typedState_load_false`
-  (`Test/Program/ProtocolPosts.lean:758`); `window_untyped`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:228`), `capstone_false_window`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:239`), `ledger_jointly_false_window`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:278`). Tested, the positive and red
-  controls of the current judgment: `step_loop_good` (`Test/Program/FramesNotKripke.lean:942`),
-  `bad_not_kripke_initial` (`Test/Program/FramesNotKripke.lean:950`), `stackAccepts_now`
-  (`Test/Program/FramesNotKripke.lean:1011`), `hookLawsX_refused`
-  (`Test/Program/FramesNotKripke.lean:1117`), `output_not_kripke`
-  (`Test/Program/FramesNotKripke.lean:1156`); `prog3_loads_typed`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:499`), `loadsTyped`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:503`), `capstone_at_load`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean:508`); `loadsTyped`
-  (`Test/Counterexamples/Machine/Semantics/AwaitLoad.lean:289`); `close_code_refused_absent`
-  (`Test/Program/ProtocolPosts.lean:470`), `lone_release_outside_post`
-  (`Test/Program/ProtocolPosts.lean:499`), `closeSeq_protocol_refused`
+  (`Test/Program/FramesNotKripke.lean`), `step_loop_refuted`
+  (`Test/Program/FramesNotKripke.lean`); `m5_false`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`), `capstone_false`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`); `typedState_load_false`
+  (`Test/Program/ProtocolPosts.lean`); `window_untyped`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `capstone_false_window`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `ledger_jointly_false_window`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`). Tested, the positive and red
+  controls of the current judgment: `step_loop_good` (`Test/Program/FramesNotKripke.lean`),
+  `bad_not_kripke_initial` (`Test/Program/FramesNotKripke.lean`), `stackAccepts_now`
+  (`Test/Program/FramesNotKripke.lean`), `hookLawsX_refused`
+  (`Test/Program/FramesNotKripke.lean`), `output_not_kripke`
+  (`Test/Program/FramesNotKripke.lean`); `prog3_loads_typed`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`), `loadsTyped`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`), `capstone_at_load`
+  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`); `loadsTyped`
+  (`Test/Counterexamples/Machine/Semantics/AwaitLoad.lean`); `close_code_refused_absent`
+  (`Test/Program/ProtocolPosts.lean`), `lone_release_outside_post`
+  (`Test/Program/ProtocolPosts.lean`), `closeSeq_protocol_refused`
   (`Test/Program/ProtocolPosts.lean:548`); `m9_root_inert`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:299`), `running_exempt_at_m6`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:387`), `worldValid_not_upward_closed`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:412`), `machineTyped_m6`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:814`), `machineTyped_m9`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean:818`); `makeThenClose_typed`
-  (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean:328`), `forkAfterMake_typed`
-  (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean:360`), `forkAfterMake_denotes`
-  (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean:399`); the red controls
-  `typedProg_not_bind_closed` (`Test/Program/TypedProgBindRed.lean:32`), `bind_not_typed`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `running_exempt_at_m6`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `worldValid_not_upward_closed`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `machineTyped_m6`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `machineTyped_m9`
+  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`); `makeThenClose_typed`
+  (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean`), `forkAfterMake_typed`
+  (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean`), `forkAfterMake_denotes`
+  (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean`); the red controls
+  `typedProg_not_bind_closed` (`Test/Program/TypedProgBindRed.lean`), `bind_not_typed`
   (`Test/Program/TypedProgBindRed.lean:106`), `guard_bind_not_closed`
   (`Test/Program/TypedProgBindRed.lean:120`). Proved in a probe, by the model probe's pedigree
   seat: `typed_antitone` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:198`)
@@ -1675,7 +1675,7 @@ Each repair changed statements only, no runtime code.
   `E4-SCHED-CE-016`, `E4-SCHED-CE-017`, `E4-SCHED-CE-018`, `E4-SCHED-CE-019`, `E4-SCHED-CE-020`.
   DI-10 (a bind law waits for its neutral-stack shape). Decisions rows: ruled 44, 45, 48, 96, 106,
   107, 134, 137, 138, 150 (a narrower lift for the six fold-level guard inductions, `FoldLift`
-  (`src/Effect4/Laws/Machine/Lift.lean:363`), with `DecisionLift` unchanged); landed with their
+  (`src/Effect4/Laws/Machine/Lift.lean`), with `DecisionLift` unchanged); landed with their
   rulings their own: 135, 136, 156, and 139 in part; open: 87, 117, 140, 148, 151, 152, 153;
   status: those rows.
 - **Sources.** `docs/research/2026-09-20-m1-kickoff-confidence-and-design-representations.md` §2–§4
@@ -1775,39 +1775,39 @@ capability question the calculus records and does not decide (`PROV-FB-KEY-FORGE
   complement; `provide` is substitution; regrouping is through `provideMerge`; a program's row is
   its grade, a flat coeffect; satisfaction is inclusion into the context's key row; grading
   soundness is row 117's theorem; `build_total`'s restoration is owed under R5.
-- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `Row` (`src/Effect4/Data/Row.lean:30`),
-  `union_assoc` (`src/Effect4/Data/Row.lean:464`), `union_comm` (`src/Effect4/Data/Row.lean:473`),
-  `union_idem` (`src/Effect4/Data/Row.lean:482`), `union_empty_left`
-  (`src/Effect4/Data/Row.lean:491`), `union_empty_right` (`src/Effect4/Data/Row.lean:502`),
-  `mem_diff` (`src/Effect4/Data/Row.lean:590`), `diff_subset` (`src/Effect4/Data/Row.lean:595`),
-  `diff_eq_empty_iff_subset` (`src/Effect4/Data/Row.lean:614`), `union_diff_distrib`
-  (`src/Effect4/Data/Row.lean:636`); `Requirement` (`src/Effect4/Machine/Context.lean:76`),
-  `keysRow` (`src/Effect4/Machine/Context.lean:120`), `Satisfies`
-  (`src/Effect4/Machine/Context.lean:123`); `LayerTy` (`src/Effect4/Program/Typing/Rules.lean:240`),
-  `provide` (`src/Effect4/Program/Typing/Rules.lean:250`), `provideMerge`
-  (`src/Effect4/Program/Typing/Rules.lean:256`), `bodyRequires`
-  (`src/Effect4/Program/Typing/Rules.lean:277`); the checker's arms `scoped`
+- **Witnesses** (re-read at `6b3f2c92`). Defined or proved: `Row` (`src/Effect4/Data/Row.lean`),
+  `union_assoc` (`src/Effect4/Data/Row.lean`), `union_comm` (`src/Effect4/Data/Row.lean`),
+  `union_idem` (`src/Effect4/Data/Row.lean`), `union_empty_left`
+  (`src/Effect4/Data/Row.lean`), `union_empty_right` (`src/Effect4/Data/Row.lean`),
+  `mem_diff` (`src/Effect4/Data/Row.lean`), `diff_subset` (`src/Effect4/Data/Row.lean`),
+  `diff_eq_empty_iff_subset` (`src/Effect4/Data/Row.lean`), `union_diff_distrib`
+  (`src/Effect4/Data/Row.lean`); `Requirement` (`src/Effect4/Machine/Context.lean`),
+  `keysRow` (`src/Effect4/Machine/Context.lean`), `Satisfies`
+  (`src/Effect4/Machine/Context.lean`); `LayerTy` (`src/Effect4/Program/Typing/Rules.lean`),
+  `provide` (`src/Effect4/Program/Typing/Rules.lean`), `provideMerge`
+  (`src/Effect4/Program/Typing/Rules.lean`), `bodyRequires`
+  (`src/Effect4/Program/Typing/Rules.lean`); the checker's arms `scoped`
   (`src/Effect4/Program/Checker.lean:198`) and `provideLayer`
-  (`src/Effect4/Program/Checker.lean:211`); `provide_out` (`src/Effect4/Program/Provision.lean:71`),
-  `provide_requires_subset` (`src/Effect4/Program/Provision.lean:77`), `provide_discharges`
-  (`src/Effect4/Program/Provision.lean:87`), `provide_closed`
-  (`src/Effect4/Program/Provision.lean:99`), `covers_of_provide_closed`
-  (`src/Effect4/Program/Provision.lean:108`), `provide_provide_rows`
-  (`src/Effect4/Program/Provision.lean:128`), `merge_rows_comm`
-  (`src/Effect4/Program/Provision.lean:160`), `merge_requires`
-  (`src/Effect4/Program/Provision.lean:165`), `provide_requires_antitone_out`
-  (`src/Effect4/Program/Provision.lean:171`), `satisfies_iff_subset_keysRow`
-  (`src/Effect4/Program/Provision.lean:193`), `appTy_closed_iff`
-  (`src/Effect4/Program/Provision.lean:271`), `build` (`src/Effect4/Program/Provision.lean:322`),
-  `join_assoc` (`src/Effect4/Laws/Program/TypeAlgebra.lean:433`); tested: `leftWins` and `rightWins`
-  (`src/Effect4/Program/Provision.lean:631-632`, same signature, different built contexts) and
+  (`src/Effect4/Program/Checker.lean:211`); `provide_out` (`src/Effect4/Program/Provision.lean`),
+  `provide_requires_subset` (`src/Effect4/Program/Provision.lean`), `provide_discharges`
+  (`src/Effect4/Program/Provision.lean`), `provide_closed`
+  (`src/Effect4/Program/Provision.lean`), `covers_of_provide_closed`
+  (`src/Effect4/Program/Provision.lean`), `provide_provide_rows`
+  (`src/Effect4/Program/Provision.lean`), `merge_rows_comm`
+  (`src/Effect4/Program/Provision.lean`), `merge_requires`
+  (`src/Effect4/Program/Provision.lean`), `provide_requires_antitone_out`
+  (`src/Effect4/Program/Provision.lean`), `satisfies_iff_subset_keysRow`
+  (`src/Effect4/Program/Provision.lean`), `appTy_closed_iff`
+  (`src/Effect4/Program/Provision.lean`), `build` (`src/Effect4/Program/Provision.lean`),
+  `join_assoc` (`src/Effect4/Laws/Program/TypeAlgebra.lean`); tested: `leftWins` and `rightWins`
+  (`src/Effect4/Program/Provision.lean`, same signature, different built contexts) and
   `Test/Program/ProvisionContract.lean`. The cut theorem: `build_total` at
   `git:f182d2b3:src/Effect4/Program/Provision.lean:429` (absent at `6b3f2c92`). Proved in the tree
   since `a561d604` (landed by seat E from the algebra verifier's probe): `provideMerge_assoc_rows`
-  (`src/Effect4/Program/Provision.lean:143`), `provideMerge_assoc`
+  (`src/Effect4/Program/Provision.lean`), `provideMerge_assoc`
   (`src/Effect4/Laws/Program/Provision.lean:32`), `provide_provide`
   (`src/Effect4/Laws/Program/Provision.lean:45`); tested, the red control
-  `provide_not_assoc` (`Test/Program/ProvideRows.lean:45`).
+  `provide_not_assoc` (`Test/Program/ProvideRows.lean`).
 - **Refusals.** In `Test/Counterexamples/REGISTER.md`: `E4-PROV-CE-001`, `E4-PROV-CE-002`,
   `E4-PROV-CE-003`, `E4-PROV-CE-004`, `E4-PROV-CE-005` and `E4-PROV-CE-006` (repaired; the archive's
   rows with those two ids are other statements), `E4-TYPED-CE-008` (row 117's red control); in

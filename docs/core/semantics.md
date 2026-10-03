@@ -56,8 +56,8 @@ Every claim in this document is backed by an explicit evidence class:
 ### 1.1 Reading the Model and its Evidence
 
 Stored `Eff` syntax uses program-tree continuations with positional inputs (`Eff.bind` stores two
-child trees, `src/Effect4/Program/Eff.lean:277`). `RProgram` is the proof-side semantic carrier
-`Effects.Program RSig ExitV` (`src/Effect4/Laws/Program/Sched.lean:206`); visible operations carry
+child trees, `src/Effect4/Program/Eff.lean`). `RProgram` is the proof-side semantic carrier
+`Effects.Program RSig ExitV` (`src/Effect4/Laws/Program/Sched.lean`); visible operations carry
 Lean function continuations (`vis : Answer operation → Program signature A`,
 `.lake/packages/effects/Effects/Algebra/Program.lean:33–38`). Those functions belong to the semantic
 model and are not stored function values in `Eff` or `Val`.
@@ -168,13 +168,13 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
 
 #### 4. Required Properties and Obligations
 - **Monotonicity (`fits-mono`)**: World extension preserves value membership.
-  (`fits_mono` (`src/Effect4/Laws/Program/Typed/Membership.lean:886`)).
+  (`fits_mono` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
 - **Subtyping preservation (`fits-subn`)**: Subtyping in normalized order preserves membership.
-  (`fits_subN` (`src/Effect4/Laws/Program/Typed/Membership.lean:1262`)).
+  (`fits_subN` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
 - **Normalization compatibility (`fits-normalize`)**: Value membership is invariant under type normalization.
-  (`fits_normalize` (`src/Effect4/Laws/Program/Typed/Membership.lean:1156`)).
+  (`fits_normalize` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
 - **Scope inversion (`fits-scope-inv`)**: Inversion on scope handle values.
-  (`fits_scope_inv` (`src/Effect4/Laws/Program/Typed/Membership.lean:896`)).
+  (`fits_scope_inv` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 
@@ -217,53 +217,53 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
 #### 4. Required Properties and Obligations
 - **Sequence compatibility (`seq-typed`)**: Compatibility lemma for sequence composition.
   `TypedProg root w mid a → (∀ w', w.leHost w' → ∀ v, Fits w' v mid.answer → TypedProg root w' ty (k v)) → mid.error = ty.error → TypedProg root w ty ((guardR .onSuccess a).bind (seqR k))`
-  (`seq_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean:153`)).
+  (`seq_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean`)).
 - **Close invariance (`close-typed`)**: Invariance of `TypedProg` under closing `unguard` markers
-  (`close_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean:49`)).
+  (`close_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean`)).
 - **Bind refutation (`bind-closed`)**: Refutation of unrestricted bind closure
-  (`typedProg_not_bind_closed` (`Test/Program/TypedProgBindRed.lean:32`), register row `E4-TYPED-CE-030`).
+  (`typedProg_not_bind_closed` (`Test/Program/TypedProgBindRed.lean`), register row `E4-TYPED-CE-030`).
 - **Fundamental elaboration property (`denote-typed`)**: Denotation of a checked program is `TypedProg`.
   `typeOfProgram root.sig root.prog = some ty → TypedProg root w ty (denoteR root)`
-  (`denoteR_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1669`)), proved at every source by
-  `denotesTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean:1351`); the load
-  (`load-typed`, `typedState_load`, `Assembly.lean:1674`) by `loadsTyped` (`LayerArm.lean:1356`), through
+  (`denoteR_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)), proved at every source by
+  `denotesTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`); the load
+  (`load-typed`, `typedState_load`, `Assembly.lean:1674`) by `loadsTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`), through
   the load connector whose race-marker premise the root code's typing discharges
-  (`loadsTyped_of_denotesTyped_typed`, `src/Effect4/Laws/Program/Typed/Commands/Finish.lean:48`).
+  (`loadsTyped_of_denotesTyped_typed`, `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
 - **Failure handler compatibility (`on-failure-typed`)**: Compatibility lemma for the error recovery bracket `onFailure` (decisions row 148), proved by
-  `catchGuard_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean:123`).
+  `catchGuard_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean`).
 - **M5 on the layer-free fragment (`denote-typed-layer-free`), and the layer family's arm
   (`provide-layer-arm`)**: every arm of `denoteR` is assembled by induction on fuel
-  (`childDenotes_upto` (`src/Effect4/Laws/Program/Typed/Denotation.lean:3029`)): at no fuel the
+  (`childDenotes_upto` (`src/Effect4/Laws/Program/Typed/Denotation.lean`)): at no fuel the
   frontier, at positive fuel each constructor's arm with its children's hypotheses taken at the
   children's nodes. The layer family's arm enters there as the hypothesis `ProvideLayerArm`
-  (`Denotation.lean:3018`), so `denotesTyped_of_provideLayer` (`Assembly.lean:1220`) is conditional;
-  on programs no node of which is a `provideLayer` (`LayerFree`, `Denotation.lean:3078`) the arm cannot
-  be reached (`denotesTyped_of_layerFree`, `Assembly.lean:1228`). The arm itself is proved at every
-  source (`provideLayerArm`, `LayerArm.lean:1340`, decisions rows 176 (b), 185–187;
+  (`src/Effect4/Laws/Program/Typed/Denotation.lean`), so `denotesTyped_of_provideLayer` (`src/Effect4/Laws/Program/Typed/Assembly.lean`) is conditional;
+  on programs no node of which is a `provideLayer` (`LayerFree`, `src/Effect4/Laws/Program/Typed/Denotation.lean`) the arm cannot
+  be reached (`denotesTyped_of_layerFree`, `src/Effect4/Laws/Program/Typed/Assembly.lean`). The arm itself is proved at every
+  source (`provideLayerArm`, `src/Effect4/Laws/Program/Typed/LayerArm.lean`, decisions rows 176 (b), 185–187;
   `E4-TYPED-CE-023` and `-031` repaired): every `LayerTerm` constructor's build at an admitted layer
   point answers the built context at the layer's checked error type (`layerBuild_typed`,
-  `LayerArm.lean:1218`, structural on the term inside an induction on the fuel a reference's hop
+  `src/Effect4/Laws/Program/Typed/LayerArm.lean`, structural on the term inside an induction on the fuel a reference's hop
   spends; the hop's point typed because expansion fixes checked terms and checking is
   path-independent, `ExpandFix`), a memo hit is typed by the memo-table clause (`memoize_typed`,
-  `LayerArm.lean:233`), a merge's awaited exits either all read back or fail with reasons that fit
-  (`mergeContexts_typed`, `LayerArm.lean:561`), and the protocol around the build is typed
-  (`provideLayer_arm`, `LayerArm.lean:1267`). The store-row arm
+  `src/Effect4/Laws/Program/Typed/LayerArm.lean`), a merge's awaited exits either all read back or fail with reasons that fit
+  (`mergeContexts_typed`, `src/Effect4/Laws/Program/Typed/LayerArm.lean`), and the protocol around the build is typed
+  (`provideLayer_arm`, `src/Effect4/Laws/Program/Typed/LayerArm.lean`). The store-row arm
   is the textbook's reference-read argument in its adapted form (TAPL §13.4's store typing; PLF
   `References.v`'s `store_weakening`): membership in the cell type exposes a declaration
-  (`fits_refTy_inv`, `src/Effect4/Laws/Program/Typed/Denotation.lean:2161`) at a type equivalent to
+  (`fits_refTy_inv`, `src/Effect4/Laws/Program/Typed/Denotation.lean`) at a type equivalent to
   `nat` under normalized subtyping, not syntactic equality; `leHost` keeps the declaration; the reply's
   lookup identifies it, and `fits_subN` transports the reply (`refRead_nat`,
-  `src/Effect4/Laws/Program/Typed/Denotation.lean:2213`), consumed by `syncRow_typed`
-  (`src/Effect4/Laws/Program/Typed/Denotation.lean:2224`) and `perform_arm`
-  (`src/Effect4/Laws/Program/Typed/Denotation.lean:2671`). The service arm keeps the source/world
+  `src/Effect4/Laws/Program/Typed/Denotation.lean`), consumed by `syncRow_typed`
+  (`src/Effect4/Laws/Program/Typed/Denotation.lean`) and `perform_arm`
+  (`src/Effect4/Laws/Program/Typed/Denotation.lean`). The service arm keeps the source/world
   service-table agreement as a premise and admits the missing-service defect, which is not a service
-  value (`service_arm`, `src/Effect4/Laws/Program/Typed/Denotation.lean:2758`); `exit` covers its inline
-  branch through `inlineYield_typed` (`src/Effect4/Laws/Program/Typed/Denotation.lean:2859`).
+  value (`service_arm`, `src/Effect4/Laws/Program/Typed/Denotation.lean`); `exit` covers its inline
+  branch through `inlineYield_typed` (`src/Effect4/Laws/Program/Typed/Denotation.lean`).
   The load connector needs only the fundamental property: typed root code is never a race
   registration marker, so `loadsTyped_of_denotesTyped_typed`
-  (`src/Effect4/Laws/Program/Typed/Commands/Finish.lean:48`) discharges the marker premise, and a
+  (`src/Effect4/Laws/Program/Typed/Commands/Finish.lean`) discharges the marker premise, and a
   checked layer-free program loads into `J` (`loadsTyped_of_layerFree`,
-  `src/Effect4/Laws/Program/Typed/Commands/Finish.lean:68`).
+  `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
 
 ### 2.3 Concept 3: Scope Lifetime & Finalization (`scope-lifetime-finalization`)
 
@@ -294,15 +294,15 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
 
 #### 4. Required Properties and Obligations
 - **Close idempotence (`close-idempotent`)**: Closing an already closed scope is a no-op.
-  (`close_idempotent` (`src/Effect4/Machine/Scope.lean:950`)).
+  (`close_idempotent` (`src/Effect4/Machine/Scope.lean`)).
 - **Consecutive close idempotence (`close-twice`)**: Applying close twice produces void.
-  (`close_twice` (`src/Effect4/Machine/Scope.lean:960`)).
+  (`close_twice` (`src/Effect4/Machine/Scope.lean`)).
 - **LIFO execution order (`close-order-eq`)**: Finalizers run in reverse registration order.
-  (`closeOrder_eq` (`src/Effect4/Machine/Scope.lean:978`)).
+  (`closeOrder_eq` (`src/Effect4/Machine/Scope.lean`)).
 - **Re-entrant addition semantics (`close-reentrant-add`)**: Adding to closed scope executes immediately.
-  (`close_reentrant_add` (`src/Effect4/Machine/Scope.lean:969`)).
+  (`close_reentrant_add` (`src/Effect4/Machine/Scope.lean`)).
 - **Close iterator protocol (`close-seq-protocol`)**: Close walk satisfies iterator protocol for clean finalizers
-  (`closeSeq_protocol` (`Test/Program/ProtocolPosts.lean:970`)).
+  (`closeSeq_protocol` (`Test/Program/ProtocolPosts.lean`)).
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
 
@@ -348,12 +348,12 @@ inductive RunDecision ...
 
 #### 4. Required Properties and Obligations
 - **Invariant non-halted consequence (`machine-typed-not-halted`)**: A halted machine cannot satisfy `MachineTyped`.
-  (`machineTyped_not_halted` (`src/Effect4/Laws/Program/Typed/Assembly.lean:311`)).
+  (`machineTyped_not_halted` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)).
 - **Finite queue fairness (`flush-fair`)**: Callback entry within rounds bound.
   `m.armed.Nodup → FlushReady interp fuel m.armed.length m = true → m.armed.length ≤ rounds → ∀ owner ∈ m.armed, FiredWithin interp fuel rounds m owner = true`
-  (`flush_fair` (`src/Effect4/Laws/Machine/Scheduling.lean:413`)).
+  (`flush_fair` (`src/Effect4/Laws/Machine/Scheduling.lean`)).
 - **Step invariant lifting (`drivestate-lift`)**: Step invariant lifting for sequential command loops
-  (`driveState_lift` (`src/Effect4/Laws/Machine/Lift.lean:56`)).
+  (`driveState_lift` (`src/Effect4/Laws/Machine/Lift.lean`)).
 - **Scheduler step preservation (`step-loop-preserves`, `step-deliver-preserves`)**: Preservation of `ConfigTyped`
   across the actual `driveStep` command at an extending world (`StepPreserves`, `loop_preserves`,
   `deliver_preserves` in `src/Effect4/Laws/Program/Typed/Assembly.lean`). The later decision
@@ -462,14 +462,14 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 
 #### 4. Required Properties and Obligations
 - **Exactness modulo key sorting (`decode-iff`)**: JSON decoding is exact modulo `normJ`
-  (`decode_iff` (`src/Effect4/Laws/Schema/Codec.lean:1052`)).
+  (`decode_iff` (`src/Effect4/Laws/Schema/Codec.lean`)).
 - **Retraction on codec-admitted values (`decode-encode`)**: at a canonical type (`CTy`), decoding the
   encoding of a value that passes the shape check and is codec-admitted (`Ty.isCodecValue`) recovers it
   (`decode_encode`, `src/Effect4/Laws/Schema/Codec.lean`).
 - **Schema exactness modulo nine keys (`of-schema-exact`)**: Schema decoding is exact modulo `normS`
-  (`ofSchema_exact` (`src/Effect4/Schema/Bridge.lean:492`)).
+  (`ofSchema_exact` (`src/Effect4/Schema/Bridge.lean`)).
 - **Schema retraction (`of-schema-schema`)**: Inverting schema representations on reserved-free types
-  (`ofSchema_schema` (`src/Effect4/Schema/Bridge.lean:412`)).
+  (`ofSchema_schema` (`src/Effect4/Schema/Bridge.lean`)).
 - **Record codecs (`record-codec-layout`)**: exact JSON and Schema codecs for record values, which carry
   their canonical names (decisions row 165 (a)); open.
 
@@ -506,15 +506,15 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
 
 #### 4. Required Properties and Obligations
 - **Reflexivity (`subn-refl`)**: Normalized subtyping is reflexive.
-  (`subN_refl` (`src/Effect4/Laws/Program/TypeAlgebra.lean:1069`)).
+  (`subN_refl` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
 - **Transitivity (`subn-trans`)**: Normalized subtyping is transitive.
-  (`subN_trans` (`src/Effect4/Laws/Program/TypeAlgebra.lean:1071`)).
+  (`subN_trans` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
 - **Equivalence characterization (`subn-equiv-iff`)**: Subtyping equivalence coincides with normal-form equality
-  (`subN_equiv_iff` (`src/Effect4/Laws/Program/TypeAlgebra.lean:1088`)).
+  (`subN_equiv_iff` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
 - **Normalization idempotence (`normalize-idem`)**: Normalization is idempotent.
-  (`normalize_idem` (`src/Effect4/Laws/Program/TypeAlgebra.lean:1081`)).
+  (`normalize_idem` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
 - **Antisymmetry on canonical types (`sub-antisymm-canonical`)**: `subN` is antisymmetric on canonical representatives.
-  (`sub_antisymm_canonical` (`src/Effect4/Laws/Program/TypeAlgebra.lean:1035`)).
+  (`sub_antisymm_canonical` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
 
 ### 2.7 Concept 7: Initial Algebras & Catamorphic Folds (`initial-algebras-folds`)
 
@@ -550,11 +550,11 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
 
 #### 4. Required Properties and Obligations
 - **Uniqueness of catamorphism (`hom-eq-cata-eff`)**: Any algebra homomorphism out of `Eff` is pointwise equal to `cata_eff`
-  (`hom_eq_cata_eff` (`src/Effect4/Program/Fold.lean:1270`)).
+  (`hom_eq_cata_eff` (`src/Effect4/Program/Fold.lean`)).
 - **Inhabitation characterization (`inhabited-iff-fits`)**: Syntactic `inhabited` fold characterizes semantic non-emptiness in `Fits`.
-  (`inhabited_iff_fits` (`src/Effect4/Laws/Program/Typed/Membership.lean:2614`)).
+  (`inhabited_iff_fits` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
 - **Fold congruence (`cata-eff-congr-on`)**: Fold congruence over agreeing algebra implementations
-  (`cata_eff_congr_on` (`src/Effect4/Laws/Program/Signature.lean:518`)).
+  (`cata_eff_congr_on` (`src/Effect4/Laws/Program/Signature.lean`)).
 - **Traversal census maintenance**: 100% fold coverage enforced by `#traversal_census`.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
@@ -587,17 +587,17 @@ def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysR
 
 #### 4. Required Properties and Obligations
 - **Empty requirement satisfaction (`satisfies-empty`)**: Empty requirements are unconditionally satisfied.
-  (`satisfies_empty` (`src/Effect4/Machine/Context.lean:149`)).
+  (`satisfies_empty` (`src/Effect4/Machine/Context.lean`)).
 - **Single requirement lookup (`satisfies-single`)**: Singleton requirements check key membership.
-  (`satisfies_single` (`src/Effect4/Machine/Context.lean:153`)).
+  (`satisfies_single` (`src/Effect4/Machine/Context.lean`)).
 - **Union requirement splitting (`satisfies-union`)**: Union requirements split into conjunction.
-  (`satisfies_union` (`src/Effect4/Machine/Context.lean:164`)).
+  (`satisfies_union` (`src/Effect4/Machine/Context.lean`)).
 - **Weakening monotonicity (`satisfies-weaken`)**: Monotonicity under context extension.
-  (`satisfies_weaken` (`src/Effect4/Machine/Context.lean:176`)).
+  (`satisfies_weaken` (`src/Effect4/Machine/Context.lean`)).
 - **Service capability discharge (`provide-discharges`)**: Layer provision discharges output capabilities.
-  (`provide_discharges` (`src/Effect4/Program/Provision.lean:87`)).
+  (`provide_discharges` (`src/Effect4/Program/Provision.lean`)).
 - **Closed layer composition (`provide-closed`)**: Composing closed layers yields closed requirements.
-  (`provide_closed` (`src/Effect4/Program/Provision.lean:99`)).
+  (`provide_closed` (`src/Effect4/Program/Provision.lean`)).
 - **Layer sharing invariants (`layer-sharing-contract`)**: Dynamic layer memoization and sharing invariants
   (`LayerSharingContract.lean`).
 
@@ -637,11 +637,11 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
 
 #### 4. Required Properties and Obligations
 - **Allowed answer step (`allows-answer`)**: Async answering is an allowed transition from `.awaitingAsync`.
-  (`allows_answer` (`src/Effect4/Laws/Run.lean:289`)).
+  (`allows_answer` (`src/Effect4/Laws/Run.lean`)).
 - **Host reply commutativity (`reply-commute`)**: Independent host answers commute in session queues.
-  (`reply_commute` (`src/Effect4/Laws/Api/HostSession.lean:112`)).
+  (`reply_commute` (`src/Effect4/Laws/Api/HostSession.lean`)).
 - **Frontier awaitHost inversion (`frontier-awaithost`)**: Machine awaitingAsync state matches frontier reason.
-  characterization of frontier state matching `.awaitingAsync` (`observe_awaitingAsync_iff` (`src/Effect4/Laws/Api/Frontier.lean:40`)).
+  characterization of frontier state matching `.awaitingAsync` (`observe_awaitingAsync_iff` (`src/Effect4/Laws/Api/Frontier.lean`)).
 - **External host progress (`host-progress`)**: External driver progress assumed under `docs/core/host-boundary.md`.
 - **Typed replay under session (`typed-replay-session`)**: Public typed replay route under keyed host session
   (decisions row 98).
@@ -686,15 +686,15 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
 
 #### 4. Required Properties and Obligations
 - **Straight program agreement (`run-eq-meaning`)**: Frame machine execution matches denotational meaning on `Straight`.
-  (`run_eq_meaning` (`src/Effect4/Laws/Program/Agreement/Machine.lean:1922`)).
+  (`run_eq_meaning` (`src/Effect4/Laws/Program/Agreement/Machine.lean`)).
 - **Loop agreement (`loop-agreement`)**: Replay agreement holds across straight loop steps
-  (`loopAgreement_of_straight` (`src/Effect4/Laws/Program/LoopAgreement.lean:42`)).
+  (`loopAgreement_of_straight` (`src/Effect4/Laws/Program/LoopAgreement.lean`)).
 - **Reference machine simulation (`run-eq-ref`)**: Frame machine replay matches term reference replay at empty host table
-  (`run_eq_ref` (`src/Effect4/Laws/Program/RuntimeR.lean:211`)).
+  (`run_eq_ref` (`src/Effect4/Laws/Program/RuntimeR.lean`)).
 - **M7 conditional route (`m7-route`)**: Derivation of M7 capstone conditionally from M5 and M6 ledger components
-  (`m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1612`)).
+  (`m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)).
 - **Capstone M7 goals (`m7-capstone-goals`)**: Exit value agreement, final store agreement, non-halting, and exit handle
-  validity on `M7Fragment` (`m7_proved` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1814`)).
+  validity on `M7Fragment` (`m7_proved` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)).
 
 ## 3. The object-language glossary (moved 2026-10-03)
 
@@ -711,7 +711,7 @@ Each site is now cited by name and path, not by line.
    Quot.sound]`; the whole-library gate (`Test/Audit/AxiomGate.lean`) holds every declaration
    there too, except the rendering and instrumentation modules it admits by name.
 2. **First-Order Data Discipline**: Stored `Eff` syntax is first-order data: its bind continuation
-   is another program tree with positional inputs (`src/Effect4/Program/Eff.lean:277`). `RProgram` is the proof-side
+   is another program tree with positional inputs (`src/Effect4/Program/Eff.lean`). `RProgram` is the proof-side
    semantic carrier `Effects.Program RSig ExitV`, whose visible operation nodes carry Lean function
    continuations (`vis : Answer op → Program sig A`). Those functions belong to the semantic model
    and are not stored function values in `Eff` or `Val`.

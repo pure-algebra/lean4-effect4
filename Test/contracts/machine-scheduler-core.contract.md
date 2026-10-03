@@ -116,7 +116,7 @@ Four gaps on the reference side, each a place the reference does not yet do what
 the frame machine does with a non-empty table:
 
 * external-row registration — `src/Effect4/Laws/Program/InterpR.lean:313`;
-* evaluator selection — `src/Effect4/Laws/Program/EvaluateR.lean:342`
+* evaluator selection — `src/Effect4/Laws/Program/EvaluateR.lean`
   (`termEvaluatorFor` calls `interpRAt` internally instead of using an interpreter
   supplied to replay, so a table-aware interpreter cannot be passed in);
 * the external answer's conversion and allocation —

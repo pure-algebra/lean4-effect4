@@ -24,7 +24,7 @@ intermediates; neither bounded public results nor arbitrary saturation supplies 
 
 Lean's own compiler IR, mono phase, read off the `.olean` (`getMonoDecl?`, `PhaseExt.lean:162`
 in Lean; no compilation pass is run here), translated by `OCaml5.Lcnf.translateClosure`
-(`src/OCaml5/Lcnf/Translate.lean:1006`, 1,120 lines) into `Ml.Decl` and rendered by
+(`src/OCaml5/Lcnf/Translate.lean`, 1,120 lines) into `Ml.Decl` and rendered by
 `OCaml5.Ml.Render` into `ocaml/gen/*.ml` (22,104 lines today). Roots are chosen by the driver
 (`src/OCaml5/Tools/LcnfGen.lean`); the closure walk enqueues every called global with a cap
 (`translateClosure … cap := 60`). The spike record is `ocaml/gen/NOTES.md`: every top-level
@@ -211,7 +211,7 @@ Neither route supplies a self-application theorem.
 - subtraction floors at zero.
 
 The TypeScript face prints `nat` as a JavaScript number, exact only up to 2^53. The profile's
-`natBound` (`Program/Profile.lean:90`, DI-56) bounds requests and answers, not intermediate values.
+`natBound` (`src/Effect4/Program/Profile.lean`, DI-56) bounds requests and answers, not intermediate values.
 
 So the three faces agree only on a bounded range, and none refuses outside it. The numbers seat
 of the 2026-09-30 pass (`docs/research/2026-09-30-pass/numbers/`) ran one checked program with

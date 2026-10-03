@@ -32,10 +32,10 @@ are the invariants the drawing must make visible or impossible to misread.
 ### 1.1 The program tree
 | primitive | Lean | says |
 | --- | --- | --- |
-| program | `Eff Op` (`Program/Eff.lean:253-293`), `Stmt`/`Stmts`/`Effs`/`ActionTerm` (`:295-331`) | exits, thunks, `bind`/`gen`, `catchCause`/`matchCause`/`onExit`/`exit`, masks, `branch`/`whileLoop`, `yieldNow`, `callback`, `awaitFiber`, `withFiber`, `scoped`, `acquireRelease`, `choose` |
+| program | `Eff Op` (`src/Effect4/Program/Eff.lean`), `Stmt`/`Stmts`/`Effs`/`ActionTerm` (`src/Effect4/Program/Eff.lean`) | exits, thunks, `bind`/`gen`, `catchCause`/`matchCause`/`onExit`/`exit`, masks, `branch`/`whileLoop`, `yieldNow`, `callback`, `awaitFiber`, `withFiber`, `scoped`, `acquireRelease`, `choose` |
 | term | `Term`/`Terms` (`:223-230`); a variable is a position (`:217-218`) | pure, positional; terms are not nodes (`Compile.lean:61-62`) |
-| node, path | `Node.child` (`Compile.lean:63-100`) | a path is a list of child indices from the root; one node per path |
-| point | `Point {root, path, env, fuel, tape(=choices), completed}` (`Compile.lean:112-129`) | where a compiled program stands; `Capture` (`Stores.lean:162-170`) is a point at rest plus its context |
+| node, path | `Node.child` (`src/Effect4/Program/Compile.lean`) | a path is a list of child indices from the root; one node per path |
+| point | `Point {root, path, env, fuel, tape(=choices), completed}` (`src/Effect4/Program/Compile.lean`) | where a compiled program stands; `Capture` (`src/Effect4/Machine/Stores.lean`) is a point at rest plus its context |
 | frame | `Prim` (`Frames.lean:101-152`); the stack is `FrameFiber.stack`, top first (`:287-291`) | the continuation is a list of frames, each naming a Point |
 | layer | a `LayerTerm` subterm addressed by path (join-dispatch §4; `Stores.lean:172-176`) | occurrence identity is the path; allocation identity is the site |
 | never | a term has a path; a path addresses two nodes; a program's identity is anything but its canonical bytes (`Api.lean:105-111`) |
@@ -43,16 +43,16 @@ are the invariants the drawing must make visible or impossible to misread.
 ### 1.2 The row protocol
 | primitive | Lean | says |
 | --- | --- | --- |
-| row | `Row {name, kind, request, answer, error, requires}` (`Eff.lean:177-199`) | a protocol `!request . ?answer` (hazel-notes §1; manifest-review B1.1: types, not assertions) |
-| perform / callback | `Eff.perform`, `Eff.callback` (`:262`, `:285`); `Prim.async register withSignal cancel` (`Frames.lean:146`) | in-machine rows are answered by the stores (`SyncOp`, `Stores.lean:2150ff`); foreign rows by the tape (`answerAsync`, `Fibers.lean:441`) |
-| park, token, resume | `Parked.withGuard token` (`Fibers.lean:64-67`); `parkedOn`/`resumedWith` (`:361-362`); `Cmd.resume` (`:1755-1768`) | a park is one-shot: the guard clears on the matching token; a wrong token is ignored |
-| answer | `Completion.ofExit / ofRefGet` (`Completion.lean:28-31`) | the shape a foreign answer may take (D6) |
+| row | `Row {name, kind, request, answer, error, requires}` (`src/Effect4/Program/Eff.lean`) | a protocol `!request . ?answer` (hazel-notes §1; manifest-review B1.1: types, not assertions) |
+| perform / callback | `Eff.perform`, `Eff.callback` (`:262`, `:285`); `Prim.async register withSignal cancel` (`src/Effect4/Machine/Frames.lean`) | in-machine rows are answered by the stores (`SyncOp`, `Stores.lean:2150ff`); foreign rows by the tape (`answerAsync`, `Fibers.lean:441`) |
+| park, token, resume | `Parked.withGuard token` (`src/Effect4/Machine/Fibers.lean`); `parkedOn`/`resumedWith` (`src/Effect4/Machine/Fibers.lean`); `Cmd.resume` (`src/Effect4/Machine/Fibers.lean`) | a park is one-shot: the guard clears on the matching token; a wrong token is ignored |
+| answer | `Completion.ofExit / ofRefGet` (`src/Effect4/Machine/Completion.lean`) | the shape a foreign answer may take (D6) |
 | never | a park resumes twice; an answer of the wrong shape enters (the profile's `hasTy`, hazel §4, is what a viewer checks); a cancel is syntax (`Eff.lean:283-285`) |
 
 ### 1.3 The fiber tree and the queues
 | primitive | Lean | says |
 | --- | --- | --- |
-| fiber | `FiberId` (`Fiber.lean:12-14`); `RunFiber` (`Fibers.lean:222-240`) | running, parked, pending, finalizing, exit, observers, children, its own dispatcher, its context |
+| fiber | `FiberId` (`src/Effect4/Machine/Fiber.lean`); `RunFiber` (`src/Effect4/Machine/Fibers.lean`) | running, parked, pending, finalizing, exit, observers, children, its own dispatcher, its context |
 | birth, entry, exit | `forked parent child daemon` (`:356`), `started` (`:357`), `exited` (`:376`) | `started` is emitted at *every* loop entry — twice per fiber in `pFork` (corpus lines 73, 77) |
 | queue, task | `Dispatcher {buckets, armed}` (`:124-128`), `Task.start / resume` (`:109-113`), `scheduledTask`/`ranTask` (`:358-359`); armed order (`:419-423`) | priority buckets, FIFO within a bucket; the host runs armed dispatchers in arming order |
 | observer | `Observer` (`:98-105`): `resumeAwait`, `untrackChild`, `dropScopeFinalizer`, `countdown`, `raceCallback`, `callback`; `observerFired` (`:366`) | the recorded link from a completion to what it wakes |
@@ -64,16 +64,16 @@ are the invariants the drawing must make visible or impossible to misread.
 | primitive | Lean | says |
 | --- | --- | --- |
 | scope, strategy | `ScopeState` five arms (`Scope.lean:71-82`); `FinalizerStrategy` (`:39-44`) | `empty → open* → closed exit`; sequential or parallel close |
-| registration | `scopeAdd` under `nextName` (`Stores.lean:2163-2174`); `ScopeKeysFresh` (`:1945`) | keys are fresh (`E4-CHECK-CE-016`); registration into a closed scope runs the finalizer now with the closing exit (`:2167-2168`) |
-| linkage | `scopeLinked mode scope key fiber`, `scopeClosedOnLink` (`Fibers.lean:369-370`) | a forked fiber is a finalizer of its scope |
-| finalizer run | `finalizerProgram fiber finalizer exit` (`:368`); `FrameEvent.ranFinalizer` (`Frames.lean:322`) | runs against the exit it restores; LIFO on close |
+| registration | `scopeAdd` under `nextName` (`src/Effect4/Machine/Stores.lean`); `ScopeKeysFresh` (`src/Effect4/Machine/Stores.lean`) | keys are fresh (`E4-CHECK-CE-016`); registration into a closed scope runs the finalizer now with the closing exit (`:2167-2168`) |
+| linkage | `scopeLinked mode scope key fiber`, `scopeClosedOnLink` (`src/Effect4/Machine/Fibers.lean`) | a forked fiber is a finalizer of its scope |
+| finalizer run | `finalizerProgram fiber finalizer exit` (`:368`); `FrameEvent.ranFinalizer` (`src/Effect4/Machine/Frames.lean`) | runs against the exit it restores; LIFO on close |
 | never | a scope closes twice (idempotent close keeps the first exit); a finalizer runs before its scope's close *unless* the scope was already closed; scope open/close appear in the trace — **they do not** (store operations only), see §6 |
 
 ### 1.5 Causes and exits
 | primitive | Lean | says |
 | --- | --- | --- |
-| exit | `Exit.success v / failure cause` (`Exit.lean:26-31`) | one of two |
-| cause, reason | `Cause {reasons}` (`Cause.lean:579-582`); `Reason.fail e ann / die d ann / interrupt who? ann` (`:408-415`); `dedup` keeps the first (`:687-691`) | flat, ordered, deduplicated; combine is append |
+| exit | `Exit.success v / failure cause` (`src/Effect4/Machine/Exit.lean`) | one of two |
+| cause, reason | `Cause {reasons}` (`src/Effect4/Machine/Cause.lean`); `Reason.fail e ann / die d ann / interrupt who? ann` (`src/Effect4/Machine/Cause.lean`); `dedup` keeps the first (`:687-691`) | flat, ordered, deduplicated; combine is append |
 | annotations | `ReasonAnnotations` (`:28-33`), keys nodup | per-reason, insertion-ordered |
 | squash | `Squashed` (`:585-591`) | a lossy projection; never the cause |
 | never | a cause is drawn as a tree or a set (CAUSE-DAG separation 2); a defect is coloured like a typed error; an interruptor is elided when recorded |
@@ -81,10 +81,10 @@ are the invariants the drawing must make visible or impossible to misread.
 ### 1.6 Tape, decisions, outcomes
 | primitive | Lean | says |
 | --- | --- | --- |
-| decision | `RunDecision`: `fire owner`, `flush`, `evaluate fiber`, `yieldVerdict fiber b`, `answerAsync fiber token completion`, `interruptFrom who? ann target`, `installMiddleware` (`Fibers.lean:429-448`); `advance by` owed (grill-agenda §1 Q6) | every host choice; verbs |
-| choices | `Point.tape : List Bool` (`Compile.lean:120`), `choose site l r` (`Eff.lean:293`) | a second, program-level tape of bits |
-| tape, replay, run | `replay program fuel tape choices` (`Api.lean:156-162`); `run = replay [evaluate, flush]` (`:171-172`) | the meaning is the relation over tapes; a run is its fuel-bounded simulator |
-| outcome | `Outcome.finished / frontier / stuck why` (`:144-148`); `Stuck` (`Fibers.lean:381-386`) | a frontier is live and resumable; stuck is a state rc.112 cannot reach |
+| decision | `RunDecision`: `fire owner`, `flush`, `evaluate fiber`, `yieldVerdict fiber b`, `answerAsync fiber token completion`, `interruptFrom who? ann target`, `installMiddleware` (`src/Effect4/Machine/Fibers.lean`); `advance by` owed (grill-agenda §1 Q6) | every host choice; verbs |
+| choices | `Point.tape : List Bool` (`src/Effect4/Program/Compile.lean`), `choose site l r` (`Eff.lean:293`) | a second, program-level tape of bits |
+| tape, replay, run | `replay program fuel tape choices` (`src/Effect4/Api.lean`); `run = replay [evaluate, flush]` (`src/Effect4/Api.lean`) | the meaning is the relation over tapes; a run is its fuel-bounded simulator |
+| outcome | `Outcome.finished / frontier / stuck why` (`:144-148`); `Stuck` (`src/Effect4/Machine/Fibers.lean`) | a frontier is live and resumable; stuck is a state rc.112 cannot reach |
 | trace, segment | `RunMachine.trace` (`:425`); `emit` the one writer (`:585-587`); `stepDecision` (`:1989-1991`) | each decision appends a segment `[logFrom, logUpto)` |
 | never | an off-tape choice (INV-TAPE-1); a frontier that does not name the row it awaits (INV-TAPE-2); the tape consumed out of order; fairness read off the tape (it is not among the decision sources, grill ruling 11) |
 
@@ -93,9 +93,9 @@ are the invariants the drawing must make visible or impossible to misread.
 | --- | --- | --- |
 | content | `Cid α`, `Canonical.digest` (cas-design §1, §3) | the payload digest; what a job names; the goldens' number |
 | occurrence | `Occurrence {program : Cid, path}`, derived digest under a domain byte (§1, §3) | a place in a program; never stored as identity |
-| allocation | `Site {root, path}`, `MemoMapId`, `Val.handle kind key` (`Val.lean:109-111`; kinds fiber/cell/promise/scope/memoMap, `Value.lean:182-186`) | machine-relative; not content; valid only in its run |
+| allocation | `Site {root, path}`, `MemoMapId`, `Val.handle kind key` (`src/Effect4/Store/Carrier/Val.lean`; kinds fiber/cell/promise/scope/memoMap, `Value.lean:182-186`) | machine-relative; not content; valid only in its run |
 | objects | program, profile, tape, log, exits, job, receipt, checkpoint, annotation (cas §4) | nine kinds; three run observables named apart |
-| values | `Val` (`Val.lean:95-112`): unit, bool, nat, str, bytes, list, pair, none/some, ctor, ref, handle | canonical byte trees; `ref` is content, `handle` is not |
+| values | `Val` (`src/Effect4/Store/Carrier/Val.lean`): unit, bool, nat, str, bytes, list, pair, none/some, ctor, ref, handle | canonical byte trees; `ref` is content, `handle` is not |
 | never | allocation identity by colour; a handle drawn without its run; a seal drawn hollow |
 
 ### 1.8 Time
@@ -104,7 +104,7 @@ are the invariants the drawing must make visible or impossible to misread.
 | trace index | position in `trace` | a total order: the reading order, a function of the tape |
 | causal edge | the recorded pairs: `forked → started`; `scheduledTask → ranTask → started/resumedWith` (the task names its target); `exited → observerFired → resumedWith`; `interruptRecorded → interruptDeferred / exited`; `raceSettled → cancelRace` | a strict partial order (Lamport's three clauses with "message" := these pairs) |
 | logical clock | `Time = fin ms \| inf` (`Timer.lean:72-75`); `Timer {deadline, seq, waiter}` (`:132-136`); `advance` as a decision; fires staged in `(deadline, seq)` order (timer-semantics §3) | `now` moves only under a decision |
-| fuel | `Point.fuel` (`Compile.lean:117-118`), one per child (`:133-135`); DB-04 | a budget; monotone in the trace (fuel-laws) |
+| fuel | `Point.fuel` (`src/Effect4/Program/Compile.lean`), one per child (`:133-135`); DB-04 | a budget; monotone in the trace (fuel-laws) |
 | never | the index axis scaled to anything; a duration read off a length; fuel drawn on the reading axis; `now` interpolated between advances |
 
 ## 2. The visual variables, assigned
@@ -274,17 +274,17 @@ arrival; *cancel* — removal of a registration, only for `Prim.async`'s cancel 
 
 | today | problem | proposed |
 | --- | --- | --- |
-| `RunEvent.started` (`Fibers.lean:357`) | emitted at every loop entry, so `pFork` shows "started 1" twice (corpus :73, :77); reads as a birth | `entered`; `forked` is the birth |
+| `RunEvent.started` (`src/Effect4/Laws/Program/Simulation/Fibers.lean`) | emitted at every loop entry, so `pFork` shows "started 1" twice (corpus :73, :77); reads as a birth | `entered`; `forked` is the birth |
 | `RunDecision.fire` (`:431`), `observerFired` (`:366`), timer "fire" (`Timer.lean`) | one verb, three agents (host, machine, clock) | host `drain` (its own docstring: "drain once, run the tasks in order"); machine `observed`; clock keeps `fired` (rc.112's word) |
-| `Point.tape : List Bool` (`Compile.lean:120`) vs the decision tape | two tapes named "tape"; `Api` already says `choices` | `Point.choices` |
+| `Point.tape : List Bool` (`src/Effect4/Program/Compile.lean`) vs the decision tape | two tapes named "tape"; `Api` already says `choices` | `Point.choices` |
 | `parkedOn`/`resumedWith` (events), `answerAsync` (decision), `Cmd.resume` | one protocol, three spellings | events `parked`/`resumed`; decision `answer` |
 | `Parked.withGuard token` (`:66`) | "guard" and "token" for one thing | `Parked.on token` |
-| `Val.promise` handle (`Value.lean:184`) vs `DeferredStore`/`DeferredCell` (`Stores.lean:1298-1313`) vs TS `Deferred` | three names for one store | the handle spells `deferred·n` |
-| `Val.scopeHandle` (`Api.lean:67`) vs `Value.scope` (`Value.lean:185`) | one handle, two spellings | `scope` |
-| `Stores.lean:1321` "`none` is a frontier" vs `Stuck.unknownScope` (`Fibers.lean:383`) | an unknown key is *stuck*, not a frontier; the comment doubles a word the outcome owns | say "a refusal"; reserve *frontier* for the outcome |
+| `Val.promise` handle (`src/Effect4/Machine/Value.lean`) vs `DeferredStore`/`DeferredCell` (`src/Effect4/Machine/Stores.lean`) vs TS `Deferred` | three names for one store | the handle spells `deferred·n` |
+| `Val.scopeHandle` (`src/Effect4/Api.lean`) vs `Value.scope` (`src/Effect4/Machine/Value.lean`) | one handle, two spellings | `scope` |
+| `Stores.lean:1321` "`none` is a frontier" vs `Stuck.unknownScope` (`src/Effect4/Machine/Fibers.lean`) | an unknown key is *stuck*, not a frontier; the comment doubles a word the outcome owns | say "a refusal"; reserve *frontier* for the outcome |
 | `schedule` / `internal` / `events` in `corpus.json` vs `trace` (`RunMachine`) vs `log` (cas §4) | four names for two things | `trace` = the machine's list; `log` = the stored projection with a `public`/`internal` grade per row; retire `schedule` |
-| `Run` (`Api.lean:151-153`), `Api.run`, "a run", `job` | the noun is overloaded four ways | spoken "a run" = a job with its receipt; the structure `Replay`; the function stays `run` |
-| `Capture` (`Stores.lean:162`) vs `Point` | isomorphic minus `completed` plus `ctx` (`Compile.lean:137-140`) | keep both types, but call a `Capture` "a point at rest" in prose and print it with the point glyph |
+| `Run` (`src/Effect4/Api.lean`), `Api.run`, "a run", `job` | the noun is overloaded four ways | spoken "a run" = a job with its receipt; the structure `Replay`; the function stays `run` |
+| `Capture` (`src/Effect4/Machine/Stores.lean`) vs `Point` | isomorphic minus `completed` plus `ctx` (`Compile.lean:137-140`) | keep both types, but call a `Capture` "a point at rest" in prose and print it with the point glyph |
 | `callback` used for `Eff.callback` (a park on a row), `Observer.callback`, `RunEvent.callback`, `raceCallback` | four meanings | `Eff.callback` → `register` (its rc.112 name is `callbackOptions`; the machine word is `Prim.async`); observers keep `callback key` |
 | `interruptFrom` (decision) vs `interruptRecorded` (event) vs `ActionTerm.interrupt` | fine as verb/participle/action, but the decision should read as the host's verb | decision `interrupt`; event `interruptRecorded` stays |
 
@@ -513,7 +513,7 @@ rejection stands for the *score* (the axis is rigid because `R` is drawn) and is
 into `R`; the process diagram is the primary picture of a program and a derived picture of a run.
 
 **9.2 Three nodes added to §3.**
-- **The spider.** A `DeferredCell` (`Stores.lean:1298-1303`) is one completion leg fused to n
+- **The spider.** A `DeferredCell` (`src/Effect4/Machine/Stores.lean`) is one completion leg fused to n
   resume legs, and completion moves the whole waiter list at once; a fiber's exit and its
   observers, a Latch, a PubSub publish have the same shape (one dot, four store families). §2's
   "completion → resume via the observer" arrow is a leg of this dot; on the score the dot sits at
@@ -534,7 +534,7 @@ into `R`; the process diagram is the primary picture of a program and a derived 
 **9.3 Vocabulary, one refusal.** The reader recommends "context" for a frontier (Román's
 *monoidal context*, a diagram with a hole) and "diagram" for a closed run. The categorical name
 is recorded in the glossary, but **"context" is not adopted as the estate word**: `Ctx` is the
-fiber context (`Stores.lean:104-115`) and the collision would be worse than the gain. The
+fiber context (`src/Effect4/Machine/Stores.lean`) and the collision would be worse than the gain. The
 frontier keeps its name and its fermata; the glossary line reads "frontier — a run with `R`
 dangling (a monoidal context)".
 
