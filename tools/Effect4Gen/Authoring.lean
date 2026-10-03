@@ -27,7 +27,7 @@ constructor declarations from the Lean environment, and emits:
 
 Run by `tools/Effect4Gen/Driver.lean` like the other emitters:
 
-    lake env lean -M 4096 --run tools/Effect4Gen/Authoring.lean --group Binders
+    lake exe effect4gen Authoring --group Binders
       --imports Effect4.Program.Refs --out src/Effect4/Program/Binders.lean
       --append tools/Effect4Gen/guards/binders.lean -- Effect4.Program.Eff
 -/
@@ -785,7 +785,7 @@ def run (args : Args) : MetaM (Array String) := do
     | .ok t => pure t
     | .error e => throwError "{args.table}: {e}"
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake env lean -M 4096 --run tools/Effect4Gen/Authoring.lean --group " ++ args.group
+  let head := "lake exe effect4gen Authoring --group " ++ args.group
     ++ " --imports " ++ String.intercalate "," args.imports
     ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
@@ -828,7 +828,9 @@ def run (args : Args) : MetaM (Array String) := do
 end Effect4Gen.Authoring
 
 open Effect4Gen.Authoring in
-def main (argv : List String) : IO Unit := do
+/-- One generator run: parse the arguments, load the environment `--imports` names, write the
+file. `lake exe effect4gen Authoring <args>` runs it (`Effect4Gen/Exe.lean`). -/
+def Effect4Gen.Authoring.cli (argv : List String) : IO Unit := do
   let args ← match parseArgs argv {} with
     | .ok a => pure a
     | .error e => throw (IO.userError e)

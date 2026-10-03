@@ -43,6 +43,16 @@ moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 name = "Effect4Gen"
 srcDir = "tools"
 roots = ["Effect4Gen.Main", "Effect4Gen.Check"]
+globs = ["Effect4Gen.+"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
+# The derived-code generators compiled into one executable (`tools/Effect4Gen/Exe.lean`):
+# `lake exe effect4gen <Tool> <args>` for one run, `--batch <file>` for every run of the manifest in
+# one process. `lean --run` elaborated the generator's source again for every run and interpreted it.
+[[lean_exe]]
+name = "effect4gen"
+srcDir = "tools"
+root = "Effect4Gen.Exe"
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The Effect4-side `--run` drivers (`tools/Tools/`): thin `main`s over library modules that

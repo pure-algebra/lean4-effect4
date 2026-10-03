@@ -96,7 +96,7 @@ $(GEN)/variances: $(VARIANCE_SOURCES) | build
 	@mkdir -p $(GEN) && touch $@
 
 DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json \
-  $(VARIANCES) $(WIRE_TAGS) tools/Tools/WireTags.lean $(PRODUCER_COMMON)
+  $(VARIANCES) $(WIRE_TAGS) tools/Tools/WireTags.lean $(PRODUCER_COMMON) lakefile.toml
 DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Domain/Canonical.trace Program/Native.trace Store/Domain/RowCanonical.trace \
   Store/Domain/Pin.trace Store/Domain/Node.trace Api/Frontier.trace Program/Eff.trace Program/TyCore.trace Program/Ty.trace Laws/Program/Folds/Ty.trace Laws/Auto/RuleSets.trace Program/Refs.trace \
   Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \

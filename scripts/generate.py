@@ -82,6 +82,61 @@ def lcnf_command(entry):
     return argv + entry['roots']
 
 
+def lean_module(canonical):
+    """The module a generated Lean source under src/ is, or None for any other output."""
+    if canonical.startswith('src/') and canonical.endswith('.lean'):
+        return canonical.removeprefix('src/').removesuffix('.lean').replace('/', '.')
+    return None
+
+
+def derived(out, checking, scratch):
+    """The derived group: every manifest row in one `effect4gen --batch` process, after one
+    `lake build` of the executable and of every row's imports. When an output differs from the
+    committed file, the rows from the first such row on are run again one at a time, each after
+    building the modules it imports, so a row reads the outputs installed before it (the
+    producers' order, DI-33). With `checking`, the first difference refuses."""
+    rows = json.loads(run(['lake', 'env', 'lean', '-M4096', '--run',
+                           'tools/Effect4Gen/Driver.lean', '--commands'], True))
+    def imports_of(args):
+        return args[args.index('--imports') + 1].split(',')
+    def prepared(row):
+        args = list(row['args'])
+        if args[:2] != ['exe', 'effect4gen']:
+            raise ValueError(f"{row['name']}: the driver's command is not an effect4gen run: {args[:3]}")
+        canonical = row['out'].replace('\\', '/')
+        temp = out / canonical
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        args[args.index('--out') + 1] = str(temp)
+        if '--append' in args:
+            i = args.index('--append') + 1
+            args[i] = args[i].replace('\\', '/')
+        return canonical, temp, args[2:] + ['--header-out', canonical]
+    runs = [prepared(row) for row in rows]
+    needed = dict.fromkeys(['Tools.GeneratedStamp'] + [m for row in rows for m in imports_of(row['args'])])
+    run(['lake', 'build', 'effect4gen', *needed])
+    batch = scratch / 'derived-runs.json'
+    batch.write_text(json.dumps([words for _, _, words in runs]))
+    run(['lake', 'exe', 'effect4gen', '--batch', str(batch)])
+    first_change = next((i for i, (canonical, temp, _) in enumerate(runs)
+                         if not (ROOT / canonical).is_file()
+                         or temp.read_bytes() != (ROOT / canonical).read_bytes()), None)
+    if first_change is None:
+        return
+    if checking:
+        canonical = runs[first_change][0]
+        raise ValueError(f'{canonical} is not what Lean emits')
+    for index, (canonical, temp, words) in enumerate(runs):
+        if index < first_change:
+            continue
+        if index > first_change:
+            run(['lake', 'build', 'Tools.GeneratedStamp', *imports_of(rows[index]['args'])])
+            run(['lake', 'exe', 'effect4gen', *words])
+        install(temp, ROOT / canonical, checking)
+        module = lean_module(canonical)
+        if module is not None:
+            run(['lake', 'build', module])
+
+
 def generate(families, output):
     checking = output is not None
     with tempfile.TemporaryDirectory(prefix='effect4-generate-') as scratch:
@@ -98,30 +153,7 @@ def generate(families, output):
             install(temp, ROOT / VARIANCES, checking)
             install(core, ROOT / TY_VARIANCE, checking)
         if 'derived' in families:
-            rows = json.loads(run(['lake', 'env', 'lean', '-M4096', '--run',
-                                   'tools/Effect4Gen/Driver.lean', '--commands'], True))
-            for row in rows:
-                args = row['args']
-                imports = args[args.index('--imports') + 1].split(',')
-                for module in dict.fromkeys(['Tools.GeneratedStamp', *imports]):
-                    run(['lake', 'build', module])
-                canonical = row['out'].replace('\\', '/')
-                temp = out / canonical
-                temp.parent.mkdir(parents=True, exist_ok=True)
-                args[args.index('--out') + 1] = str(temp)
-                if '--append' in args:
-                    i = args.index('--append') + 1
-                    args[i] = args[i].replace('\\', '/')
-                args += ['--header-out', canonical]
-                run(['lake', *args])
-                install(temp, ROOT / canonical, checking)
-                # Schema depends on the Json projection just checked/installed. A group whose
-                # output is not a Lean module of the library -- the TypeScript prelude's atom
-                # block -- has no module to build, and naming one would be a target that does
-                # not exist.
-                if canonical.startswith('src/') and canonical.endswith('.lean'):
-                    module = canonical.removeprefix('src/').removesuffix('.lean').replace('/', '.')
-                    run(['lake', 'build', module])
+            derived(out, checking, Path(scratch))
         routes = [('eff', 'EffGen', 'ocaml/eff'),
                   ('wire', 'EffWire', 'ocaml/goldens/eff'),
                   ('cas', 'CasGoldens', 'ocaml/engine/cas/goldens'),

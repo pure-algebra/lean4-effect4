@@ -20,7 +20,7 @@ file does not list carries its declaration positions); a field goes through its 
 `Canonical` instance and is never inlined; a mutual block is one `ShapeDoc` whose `defs` bind every member by name and whose members refer to each
 other through `.named`.
 
-    lake env lean -M 4096 --run tools\Effect4Gen\Main.lean --group Json \
+    lake exe effect4gen Main --group Json \
       --imports Effect4.Store.Canonical --out src\Effect4\Store\Domain\Derived\Json.lean \
       --append tools\Effect4Gen\guards\json.lean Effect4.Float64 Effect4.Json
 
@@ -981,7 +981,7 @@ def run (args : Args) : MetaM (Array String) := do
   let mut out : Out := {}
   -- The regenerating command, wrapped over `--`-comment lines so that no header line runs long.
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake env lean -M 4096 --run tools/Effect4Gen/Main.lean --group " ++ args.group
+  let head := "lake exe effect4gen Main --group " ++ args.group
     ++ " --imports " ++ String.intercalate "," args.imports
     ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
@@ -1060,7 +1060,9 @@ def run (args : Args) : MetaM (Array String) := do
 end Effect4Gen
 
 open Effect4Gen in
-def main (argv : List String) : IO Unit := do
+/-- One generator run: parse the arguments, load the environment `--imports` names, write the
+file. `lake exe effect4gen Main <args>` runs it (`Effect4Gen/Exe.lean`). -/
+def Effect4Gen.Main.cli (argv : List String) : IO Unit := do
   let args ← match parseArgs argv {} with
     | .ok a => pure a
     | .error e => throw (IO.userError e)

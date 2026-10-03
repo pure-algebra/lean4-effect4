@@ -18,7 +18,7 @@ that file and no change to orchestration; Machine, Tape and Log remain owed at X
 
 One invocation per manifest group:
 
-    lake env lean -M 4096 --run tools/Effect4Gen/Main.lean --group <Name>
+    lake exe effect4gen Main --group <Name>
       --imports <Imports> --out <Out> [--append <Guards>] [--kind <k>]... <Types...>
 
 with the group's fields in the manifest's order, the output file's bytes compared before
@@ -145,9 +145,15 @@ def runLake (args : Array String) : IO Result := do
   let child ← IO.Process.output { cmd := "lake", args := args }
   return { code := child.exitCode.toNat, out := child.stdout, err := child.stderr }
 
+/-- The generator's name in `lake exe effect4gen <Tool>`: the manifest's tool path without its
+directory and extension (`tools/Effect4Gen/Fold.lean` is `Fold`). -/
+def toolName (tool : String) : String :=
+  let file := (tool.replace "\\" "/").splitOn "/" |>.getLast!
+  if file.endsWith ".lean" then (file.dropEnd 5).toString else file
+
 /-- The generator's argument list for one group: the old `Invoke-Lean`'s, in its order. -/
 def generateArgs (tool : String) (g : Group) (appendGuards : Bool) : Array String :=
-  let base := #["env", "lean", "-M", "4096", "--run", tool] ++ g.flags ++
+  let base := #["exe", "effect4gen", toolName tool] ++ g.flags ++
     #["--group", g.name, "--imports", g.imports, "--out", g.out]
   let base := if appendGuards then base ++ #["--append", g.guards] else base
   let base := g.kinds.foldl (fun acc k => acc ++ #["--kind", k]) base

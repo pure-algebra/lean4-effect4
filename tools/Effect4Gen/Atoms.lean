@@ -12,7 +12,7 @@ generator reads the constructor list off the environment and writes `all`, so th
 disagree with the inductive in the first place; `all_complete` stays as the acceptance guard on
 the emitted file (appended verbatim from `tools/Effect4Gen/guards/atominventory.lean`).
 
-    lake env lean -M 4096 --run tools/Effect4Gen/Atoms.lean --group AtomInventory
+    lake exe effect4gen Atoms --group AtomInventory
       --imports Effect4.Machine.Term --out src/Effect4/Program/AtomInventory.lean
       --append tools/Effect4Gen/guards/atominventory.lean
 
@@ -98,7 +98,7 @@ partial def parseArgs : List String → Args → Except String Args
 
 def run (args : Args) : MetaM (Array String) := do
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake env lean -M 4096 --run tools/Effect4Gen/Atoms.lean --group " ++ args.group
+  let head := "lake exe effect4gen Atoms --group " ++ args.group
     ++ " --imports " ++ String.intercalate "," args.imports ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
   let names ← atomCtors
@@ -124,7 +124,9 @@ def run (args : Args) : MetaM (Array String) := do
 end Effect4Gen.Atoms
 
 open Effect4Gen.Atoms in
-def main (argv : List String) : IO Unit := do
+/-- One generator run: parse the arguments, load the environment `--imports` names, write the
+file. `lake exe effect4gen Atoms <args>` runs it (`Effect4Gen/Exe.lean`). -/
+def Effect4Gen.Atoms.cli (argv : List String) : IO Unit := do
   let args ← match parseArgs argv {} with
     | .ok a => pure a
     | .error e => throw (IO.userError e)

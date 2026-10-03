@@ -18,7 +18,7 @@ and emits:
 * group `RowsLaws` → `src/Effect4/Laws/Program/Authoring/Rows.lean`: the scope lemma of
   every wrapper, one application of `perform_scoped`.
 
-    lake env lean -M 4096 --run tools/Effect4Gen/Rows.lean --group Rows
+    lake exe effect4gen Rows --group Rows
       --imports Effect4.Program.Authoring.Lifts --out src/Effect4/Program/Authoring/Rows.lean
       --append tools/Effect4Gen/guards/rows.lean
 -/
@@ -133,7 +133,7 @@ partial def parseArgs : List String → Args → Except String Args
 
 def run (args : Args) : MetaM (Array String) := do
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake env lean -M 4096 --run tools/Effect4Gen/Rows.lean --group " ++ args.group
+  let head := "lake exe effect4gen Rows --group " ++ args.group
     ++ " --imports " ++ String.intercalate "," args.imports ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
   let mut lines : Array String := #[
@@ -158,7 +158,9 @@ def run (args : Args) : MetaM (Array String) := do
 end Effect4Gen.Rows
 
 open Effect4Gen.Rows in
-def main (argv : List String) : IO Unit := do
+/-- One generator run: parse the arguments, load the environment `--imports` names, write the
+file. `lake exe effect4gen Rows <args>` runs it (`Effect4Gen/Exe.lean`). -/
+def Effect4Gen.Rows.cli (argv : List String) : IO Unit := do
   let args ← match parseArgs argv {} with
     | .ok a => pure a
     | .error e => throw (IO.userError e)

@@ -17,7 +17,7 @@ This group closes that row. One export per atom: the body is the `prelude` colum
 table carries. `prelude.ts` re-exports every name and keeps the hand-written self-test table;
 `run-truth.ts` still refuses an atom of the generated profile that has no case in it.
 
-    lake env lean -M 4096 --run tools/Effect4Gen/PreludeAtoms.lean --group PreludeAtoms
+    lake exe effect4gen PreludeAtoms --group PreludeAtoms
       --imports Effect4.Program.NativeAtom --out harness/truth/prelude-atoms.gen.ts
 
 A file of its own, rather than a second group of `tools/Effect4Gen/Atoms.lean`, because it
@@ -84,7 +84,7 @@ partial def parseArgs : List String → Args → Except String Args
 
 def run (args : Args) : MetaM (Array String) := do
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake env lean -M 4096 --run tools/Effect4Gen/PreludeAtoms.lean --group "
+  let head := "lake exe effect4gen PreludeAtoms --group "
     ++ args.group ++ " --imports " ++ String.intercalate "," args.imports
     ++ " --out " ++ outPath
   match args.group with
@@ -94,7 +94,9 @@ def run (args : Args) : MetaM (Array String) := do
 end Effect4Gen.PreludeAtoms
 
 open Effect4Gen.PreludeAtoms in
-def main (argv : List String) : IO Unit := do
+/-- One generator run: parse the arguments, load the environment `--imports` names, write the
+file. `lake exe effect4gen PreludeAtoms <args>` runs it (`Effect4Gen/Exe.lean`). -/
+def Effect4Gen.PreludeAtoms.cli (argv : List String) : IO Unit := do
   let args ← match parseArgs argv {} with
     | .ok a => pure a
     | .error e => throw (IO.userError e)

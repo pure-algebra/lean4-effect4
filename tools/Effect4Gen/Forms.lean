@@ -23,7 +23,7 @@ over argument slots, printed back by recognition), and emits:
 * group `FormsLaws` → `src/Effect4/Laws/Program/Authoring/Forms.lean`: the scope lemma of
   every combinator, `unfold` then `authoring_scoped`.
 
-    lake env lean -M 4096 --run tools/Effect4Gen/Forms.lean --group Forms
+    lake exe effect4gen Forms --group Forms
       --imports Effect4.Program.Authoring.Lifts,Effect4.Program.Authoring.Sugar,
         Effect4.Codegen.Forms --out src/Effect4/Codegen/Authoring/Forms.lean
 
@@ -250,7 +250,7 @@ partial def parseArgs : List String → Args → Except String Args
 
 def run (args : Args) : IO (Array String) := do
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake env lean -M 4096 --run tools/Effect4Gen/Forms.lean --group " ++ args.group
+  let head := "lake exe effect4gen Forms --group " ++ args.group
     ++ " --imports " ++ String.intercalate "," args.imports ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
   let mut lines : Array String := #[
@@ -283,7 +283,9 @@ def run (args : Args) : IO (Array String) := do
 end Effect4Gen.Forms
 
 open Effect4Gen.Forms in
-def main (argv : List String) : IO Unit := do
+/-- One generator run: parse the arguments, load the environment `--imports` names, write the
+file. `lake exe effect4gen Forms <args>` runs it (`Effect4Gen/Exe.lean`). -/
+def Effect4Gen.Forms.cli (argv : List String) : IO Unit := do
   let args ← match parseArgs argv {} with
     | .ok a => pure a
     | .error e => throw (IO.userError e)
