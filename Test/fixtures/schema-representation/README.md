@@ -38,11 +38,11 @@ law about the codec:
 | --- | --- |
 | package | `effect@4.0.0-rc.112` |
 | `package.json` SHA-256 | `0ad20c73dfbe482996f046a0c1170b1a08d6fea7effeb6767fd247cdad53a56d` |
-| `src/SchemaRepresentation.ts` SHA-256 | `a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc` |
-| `src/SchemaAST.ts` SHA-256 | `7f7cb03664cad0f3bfa221f963ea55b1520afe1314c39054e85ad21f322275d8` |
-| `src/Schema.ts` SHA-256 | `9358710e2c0d613371d8feeeccb3716fe98a43f67e6aa1076b00d4079a258784` |
-| `src/internal/schema/toRepresentation.ts` SHA-256 | `677449c734ac6373598a81207ba0573f86fb8bd2c9fb25d1369aa1e710d614a2` |
-| `src/internal/schema/fromRepresentation.ts` SHA-256 | `0b95c360800d3c1dfe3e6c5683f79265fa7217494c8ce9cedb5c6dcbf936d82e` |
+| `vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts` SHA-256 | `a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc` |
+| `vendor/effect-4.0.0-rc.112/src/SchemaAST.ts` SHA-256 | `7f7cb03664cad0f3bfa221f963ea55b1520afe1314c39054e85ad21f322275d8` |
+| `vendor/effect-4.0.0-rc.112/src/Schema.ts` SHA-256 | `9358710e2c0d613371d8feeeccb3716fe98a43f67e6aa1076b00d4079a258784` |
+| `vendor/effect-4.0.0-rc.112/src/internal/schema/toRepresentation.ts` SHA-256 | `677449c734ac6373598a81207ba0573f86fb8bd2c9fb25d1369aa1e710d614a2` |
+| `vendor/effect-4.0.0-rc.112/src/internal/schema/fromRepresentation.ts` SHA-256 | `0b95c360800d3c1dfe3e6c5683f79265fa7217494c8ce9cedb5c6dcbf936d82e` |
 | `dist/` regular files | `1808` |
 | path-independent sorted `dist/` tree SHA-256 | `562fafd9320e4977f1beb9adf37d3ccda55c75034f37d45bfc4cebf7f9307fe5` |
 | execution runtime | `bun 1.3.14` (direct TypeScript, no build or independent typecheck) |

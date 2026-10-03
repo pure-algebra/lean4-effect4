@@ -9,7 +9,7 @@ Lean battery: `Test/Codegen/ExprContract.lean`
 
 Counterexamples: `E4-TARGET-CE-001` through `E4-TARGET-CE-004`
 
-Proof graph: `docs/research/TYPESCRIPT-TARGET-DAG.md`
+Proof graph: the TypeScript target DAG note (not retained)
 
 ## Source and boundary
 

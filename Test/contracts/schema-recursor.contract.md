@@ -12,7 +12,7 @@
 > declarations the generator now emits with those exact types, and a copy of a generated
 > statement pins nothing the generator's own file does not. Its behavioural share moved to
 > `tools/Effect4Gen/guards/schemafold.lean`, appended verbatim into the generated module.
-> The retained executable attack `Test/Counterexamples/Schema/RecursiveElimination.lean`
+> The retained executable attack `git:f0591f36:Test/Counterexamples/Schema/RecursiveElimination.lean`
 > was ported to the generated names and was the falsifier for `E4-SCHEMA-CE-043` until row 39
 > deleted it (`d75f5c25`, 2026-10-01; its last text is `git:f0591f36:Test/Counterexamples/Schema/RecursiveElimination.lean`); the
 > row is in `Test/Counterexamples/Archive/REGISTER.md`. **Owner decision owed:** the freeze receipt below names the SHA-256

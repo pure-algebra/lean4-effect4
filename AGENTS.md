@@ -156,6 +156,12 @@ its arrows; anything else is a leak.
   merge clean; `lakefile.toml` and `docs/core/decisions.md` are the coordinator's — an agent
   proposes a decisions row in its receipt (`docs/research/<date>-seat-<X>-receipt.md`), never
   edits the register. A worktree never copies `docs/research` (2 GB).
+- `make status` prints what is true at HEAD, measured (the build and check markers against their
+  inputs, the claims by status, the open ledger goals, the registers, the documents' stale
+  references); `make check-docs`, in `make check`, refuses a path, link, `git:<rev>:<path>` citation
+  or make target that an authority document names and that does not resolve. A cited research
+  note must be tracked (force-added); history (`docs/research/`, the archives, `ATTACKS.md`) is not
+  checked. What these measure is not written by hand anywhere else.
 - One `lake` at a time in a working tree.
 - In `src/Effect4/Laws/**` proof search is `aesop`
   (`https://github.com/leanprover-community/aesop`, a dependency of the law graph only; the core
@@ -208,4 +214,4 @@ its arrows; anything else is a leak.
 Open decisions: `docs/core/decisions.md` (one list) and `docs/DESIGN-ISSUES.md` (the DI
 register; a ruling is made only when written there). Settled representation decisions:
 `docs/DESIGN-BASIS.md`. Contracts and counterexamples: `Test/contracts/`,
-`Test/Counterexamples/REGISTER.md`. No external tracker, no `docs/adr/`.
+`Test/Counterexamples/REGISTER.md`. No external tracker, no ADR directory.

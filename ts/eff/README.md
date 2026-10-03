@@ -35,12 +35,12 @@ numbers, so its domain is wider than this host representation.
 | file | written by | what |
 | --- | --- | --- |
 | `read.ts` | hand | the printed-image reader above |
-| `eff.gen.ts` | `tools/Tools/TsGen.lean` | one Schema per family of the Eff IR and its typing (24 families: `Eff`, `Term`, `NativeOp`, `Ty`, `Row`, …), read off the Lean environment: names verbatim, constructors in declaration order; `decodeEff`, `isEff` |
-| `json.gen.ts` | `tools/Tools/TsGen.lean` | one JSON writer per family, the bytes `OCaml5.Eff.Goldens` writes and `ocaml/eff/eff_json.ml` prints; `toJson` |
-| `profile.gen.ts` | `tools/Tools/TsGen.lean` | the image profile as one JSON payload decoded at import through the schemas above: the address, the 50 reserved heads, and one entry per native operation, `{ op: NativeOp, row: Row }`; a stamp over the payload bytes is recomputed at import |
-| `taxonomy.gen.ts` | `tools/Tools/TsGen.lean` | 23 refusal codes, their spectra, detail templates and active/reserved status; stamped at import |
-| `forms.gen.ts` | `tools/Tools/TsGen.lean` | 19 relative expansion templates, argument classes, host citations, dual arities and four unambiguous lambda shapes; `takeAndBump` stays named; stamped at import |
-| `wire.gen.ts` | `tools/Tools/TsGen.lean` | one canonical byte writer per family, including `encodeProgram`; explicit work stack, exact natural-number checks and strict Unicode strings |
+| `eff.gen.ts` | `tools/Drivers/TsGen.lean` | one Schema per family of the Eff IR and its typing (24 families: `Eff`, `Term`, `NativeOp`, `Ty`, `Row`, …), read off the Lean environment: names verbatim, constructors in declaration order; `decodeEff`, `isEff` |
+| `json.gen.ts` | `tools/Drivers/TsGen.lean` | one JSON writer per family, the bytes `OCaml5.Eff.Goldens` writes and `ocaml/eff/eff_json.ml` prints; `toJson` |
+| `profile.gen.ts` | `tools/Drivers/TsGen.lean` | the image profile as one JSON payload decoded at import through the schemas above: the address, the 50 reserved heads, and one entry per native operation, `{ op: NativeOp, row: Row }`; a stamp over the payload bytes is recomputed at import |
+| `taxonomy.gen.ts` | `tools/Drivers/TsGen.lean` | 23 refusal codes, their spectra, detail templates and active/reserved status; stamped at import |
+| `forms.gen.ts` | `tools/Drivers/TsGen.lean` | 19 relative expansion templates, argument classes, host citations, dual arities and four unambiguous lambda shapes; `takeAndBump` stays named; stamped at import |
+| `wire.gen.ts` | `tools/Drivers/TsGen.lean` | one canonical byte writer per family, including `encodeProgram`; explicit work stack, exact natural-number checks and strict Unicode strings |
 | `check.ts` | hand | the corpus differential against Lean's JSON and wire (below) |
 | `check-styles.ts` | hand | construction checks over all indexed foreign sources with tsgo 7's API (one node child: the oracle's grammar, decisions row 168) and oxc (bun children recycled after 128 files) |
 | `test/read.test.ts` | hand | the pinned cases |
@@ -54,7 +54,7 @@ tier, so a stale file fails the check and nobody runs a generator by hand. Two c
 ## Check
 
 The receipt is a differential against Lean's own reader: `make check-ts-reader` (in the
-per-change tier; needs bun). `make corpus` runs `tools/Tools/Corpus.lean`, which writes 400
+per-change tier; needs bun). `make corpus` runs `tools/Drivers/Corpus.lean`, which writes 400
 generated programs and the wire corpus under `.lake/corpus` as `.ts` (the printer's bytes)
 with a `.json` and `.eff` beside each — the program Lean's reader gets back after the printer
 (`Api.roundTrip`) — then the check runs `check.ts`, which reads every `.ts` there and must

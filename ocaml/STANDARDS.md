@@ -16,7 +16,7 @@ agent or human, follows this.
 4. **Names and layout.** snake_case files, `E4_`/`e4_` prefixes for daemon modules, `Lib/`
    carriers reused before new ones are written (`Deque`, `Map`, `Set`, `Sexp`, `Stream`,
    `Eio`, `Picos`). Representability: every OCaml construct we rely on has a Lean carrier or
-   a refusal row (`docs/research/2026-09-04-ocaml-packages-plan.md` §4); no `Obj`, no
+   a refusal row (`git:250f57f1:docs/research/2026-09-04-ocaml-packages-plan.md` §4); no `Obj`, no
    `Marshal`, no polymorphic compare on abstract types.
 5. **Tests beside code.** dune `test` stanzas or `%expect` tests where cheap; the corpus and
    witnesses as the differential; every claim in a report is backed by a command that

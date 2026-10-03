@@ -3,7 +3,7 @@
 The authority for the frame: the goal, the layers and their owners, the sorts with their one
 representation each, the kinds of arrow between them and what each owes; since 2026-10-01 also what
 a full program is (§1.1) and the requirements it must satisfy, with their status (§8). Written
-2026-09-30 at `be15b062`. It replaces the former `docs/core/ontology.md`, whose formal frame (its §5) is carried here and
+2026-09-30 at `be15b062`. It replaces the former `docs/research/2026-09-17-ontology-and-do-now-probe.md`, whose formal frame (its §5) is carried here and
 whose dated 2026-09-17 sections are kept as history in
 `docs/research/2026-09-17-ontology-and-do-now-probe.md`.
 

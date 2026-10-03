@@ -16,7 +16,7 @@ Counterexamples: `E4-RUN-CE-001` through `E4-RUN-CE-009` in
 Proof graph: `SCOPE-PG-STATE` in `docs/research/SCOPE-DAG.md`
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
-Reading: `docs/effect-rc112-fiber-runtime.html` section 6.
+Reading: `docs/research/effect-rc112-fiber-runtime.html` section 6.
 
 ## Claim boundary
 

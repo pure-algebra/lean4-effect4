@@ -16,7 +16,7 @@ Counterexamples: `E4-SEM-CE-001` through `E4-SEM-CE-007` in
 Proof graph: `CAUSE-PG-FLAT` in `docs/research/CAUSE-DAG.md`
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
-Reading: `docs/effect-rc112-fiber-runtime.html` section 8.
+Reading: `docs/research/effect-rc112-fiber-runtime.html` section 8.
 
 ## Claim boundary
 
@@ -413,11 +413,11 @@ fails when `a` already repeats a reason.
 `combine_no_new_reason` is `rule.cause-has-no-structure`'s second half.
 
 **Assumption, stated because the bytes are not vendored.** `Arr.union` is
-imported from `../Array.ts` at `internal/effect.ts:1`, and that file is *not*
+imported from `vendor/effect-4.0.0-rc.112/src/Array.ts` at `internal/effect.ts:1`, and that file is *not*
 inside `vendor/effect-4.0.0-rc.112/src/`. The union semantics used here —
 first occurrences kept, `self` before the new elements of `that`, structural
 equality — is taken from the census summary for `cause.combine-union` and from
-`docs/effect-rc112-fiber-runtime.html` section 8 ("set-union of reasons by
+`docs/research/effect-rc112-fiber-runtime.html` section 8 ("set-union of reasons by
 Equal, order a then new from b"). It is an authored assumption, not a byte
 observation, and it is the one place in this packet where that is true. A later
 packet that vendors `Array.ts` must re-check `combine_order` against it.

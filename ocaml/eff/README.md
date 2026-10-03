@@ -68,7 +68,7 @@ The Lean-side hex goldens the differential compares against are a second tool,
 
 ## The wire
 
-Canonical bytes, as `src/Effect4/Store/Canonical.lean` frames every stored value:
+Canonical bytes, as `src/Effect4/Store/Domain/Canonical.lean` frames every stored value:
 `framed tag payload = tag :: be64 (length payload) ++ payload`, `be64` eight big-endian
 bytes.
 
@@ -109,7 +109,7 @@ current tables, and `test_lean_wire` checks the two against each other.
 Tags: `bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10 ref=11
 handle=12`. The last two are not program frames — no `Eff` constructor carries them and the
 program decoder refuses them at the tag comparison. They belong to the shared value carrier
-`Effect4.Store.Val` (`src/Effect4/Store/Val.lean`), whose encoder writes
+`Effect4.Store.Val` (`src/Effect4/Store/Carrier/Val.lean`), whose encoder writes
 `ref k d = framed 11 (k :: d)` — the kind byte then opaque digest bytes — and
 `handle k n = framed 12 (k :: natBytes n)` — the kind byte then the key's `nat` digits, so
 the key `0` is one kind byte and no digits. `Eff_frame` carries both so that an OCaml host can
@@ -140,7 +140,7 @@ before it is run through the three engines.
 
 ## The open theorem
 
-The wire's exactness is stated for a Lean seat, in `src/Effect4/Program/Wire.lean`'s terms,
+The wire's exactness is stated for a Lean seat, in `src/Effect4/Store/Domain/ProgramWire.lean`'s terms,
 with `encodeProgram : Eff NativeOp → Bytes` and `decodeProgram : Bytes → Option (Eff NativeOp)`:
 
 ```lean

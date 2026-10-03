@@ -1,0 +1,392 @@
+{
+  "pin": "vendor/effect-4.0.0-rc.112",
+  "budget": 2048,
+  "rows": {
+    "succeed": {
+      "ops": "Success",
+      "count": 1,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "fail": {
+      "ops": "Failure",
+      "count": 1,
+      "done": true,
+      "exit": "failure(fail(7))",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "failCause": {
+      "ops": "Failure",
+      "count": 1,
+      "done": true,
+      "exit": "failure(die)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "yieldError": {
+      "ops": "YieldableError Failure",
+      "count": 2,
+      "done": true,
+      "exit": "failure(fail(NoSuchElementError: boom))",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "sync": {
+      "ops": "Sync",
+      "count": 1,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "suspend": {
+      "ops": "Suspend Success",
+      "count": 2,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "refMake": {
+      "ops": "Sync",
+      "count": 1,
+      "done": true,
+      "exit": "success(obj)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "bindStore": {
+      "ops": "OnSuccess Sync Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(obj)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "bindTwice": {
+      "ops": "OnSuccess Sync OnSuccess Sync Success",
+      "count": 5,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "bindSync": {
+      "ops": "OnSuccess Sync Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(2)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "catchSkipped": {
+      "ops": "OnFailure Success",
+      "count": 2,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "catchTaken": {
+      "ops": "OnFailure Failure Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(9)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "matchSuccess": {
+      "ops": "OnSuccessAndFailure Success Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(5)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "matchFailure": {
+      "ops": "OnSuccessAndFailure Failure Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(2)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "onExitPure": {
+      "ops": "OnExit Success OnSuccess Success Success",
+      "count": 5,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "onExitRef": {
+      "ops": "OnSuccess Sync OnSuccess OnExit Success OnSuccess Sync Success Sync",
+      "count": 9,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "exitSucceed": {
+      "ops": "Success",
+      "count": 1,
+      "done": true,
+      "exit": "success(exit:success(1))",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "exitFail": {
+      "ops": "Success",
+      "count": 1,
+      "done": true,
+      "exit": "success(exit:failure(fail(7)))",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "exitSync": {
+      "ops": "Exit Sync Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(exit:success(1))",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "exitExit": {
+      "ops": "Success",
+      "count": 1,
+      "done": true,
+      "exit": "success(exit:success(exit:success(1)))",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "exitYieldError": {
+      "ops": "Exit YieldableError Failure Success",
+      "count": 4,
+      "done": true,
+      "exit": "success(exit:failure(fail(NoSuchElementError: boom)))",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "uninterruptible": {
+      "ops": "WithFiber Success",
+      "count": 2,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "interruptible": {
+      "ops": "WithFiber Success",
+      "count": 2,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "maskedInner": {
+      "ops": "WithFiber WithFiber Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "branch": {
+      "ops": "Suspend Success",
+      "count": 2,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "genInline": {
+      "ops": "Suspend Iterator Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "genResumed": {
+      "ops": "Suspend Iterator Sync Sync Success",
+      "count": 5,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "genMixed": {
+      "ops": "Suspend Iterator Sync Success",
+      "count": 4,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "genFail": {
+      "ops": "Suspend Iterator Failure",
+      "count": 3,
+      "done": true,
+      "exit": "failure(fail(7))",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "genLoop": {
+      "ops": "Suspend Iterator Sync Sync Sync Sync Sync Sync Sync Sync Success",
+      "count": 11,
+      "done": true,
+      "exit": "success(3)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "whileThree": {
+      "ops": "Suspend While Success Success Success Success",
+      "count": 6,
+      "done": true,
+      "exit": "success(undefined)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "whileZero": {
+      "ops": "Suspend While Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(undefined)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "whileRef": {
+      "ops": "OnSuccess Sync OnSuccess Suspend While Sync Sync Sync Success Sync",
+      "count": 10,
+      "done": true,
+      "exit": "success(3)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "yieldNowThen": {
+      "ops": "OnSuccess Yield | Success Success",
+      "count": 2,
+      "done": true,
+      "exit": "success(5)",
+      "fibers": 1,
+      "callbacks": 1
+    },
+    "fiberId": {
+      "ops": "WithFiber Success",
+      "count": 2,
+      "done": true,
+      "exit": "success(35)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "context": {
+      "ops": "WithFiber Success",
+      "count": 2,
+      "done": true,
+      "exit": "success(obj)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "scopedContext": {
+      "ops": "WithFiber OnExit WithFiber Success Success",
+      "count": 5,
+      "done": true,
+      "exit": "success(obj)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "forkJoinImmediate": {
+      "ops": "OnSuccess WithFiber Success Success",
+      "count": 4,
+      "done": true,
+      "exit": "success(42)",
+      "fibers": 2,
+      "callbacks": 0
+    },
+    "forkJoinDeferred": {
+      "ops": "OnSuccess WithFiber Success Async | Success",
+      "count": 1,
+      "done": true,
+      "exit": "success(42)",
+      "fibers": 2,
+      "callbacks": 1
+    },
+    "deferredImmediate": {
+      "ops": "OnSuccess Sync OnSuccess Sync Async Success",
+      "count": 6,
+      "done": true,
+      "exit": "success(7)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "raceAll": {
+      "ops": "WithFiber Async Success",
+      "count": 3,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 2,
+      "callbacks": 0
+    }
+  },
+  "budget2": {
+    "sync": {
+      "ops": "Sync",
+      "count": 1,
+      "done": true,
+      "exit": "success(1)",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "suspend": {
+      "ops": "Suspend OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield",
+      "count": 3,
+      "done": false,
+      "exit": "live",
+      "fibers": 1,
+      "callbacks": 3
+    },
+    "catchSkipped": {
+      "ops": "OnFailure OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield",
+      "count": 3,
+      "done": false,
+      "exit": "live",
+      "fibers": 1,
+      "callbacks": 3
+    },
+    "exitSucceed": {
+      "ops": "Success",
+      "count": 1,
+      "done": true,
+      "exit": "success(exit:success(1))",
+      "fibers": 1,
+      "callbacks": 0
+    },
+    "genInline": {
+      "ops": "Suspend OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield",
+      "count": 3,
+      "done": false,
+      "exit": "live",
+      "fibers": 1,
+      "callbacks": 3
+    },
+    "whileThree": {
+      "ops": "Suspend OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield",
+      "count": 3,
+      "done": false,
+      "exit": "live",
+      "fibers": 1,
+      "callbacks": 3
+    },
+    "bindSync": {
+      "ops": "OnSuccess OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield | Success OnSuccess Yield",
+      "count": 3,
+      "done": false,
+      "exit": "live",
+      "fibers": 1,
+      "callbacks": 3
+    }
+  }
+}

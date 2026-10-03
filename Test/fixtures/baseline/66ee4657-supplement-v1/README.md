@@ -68,7 +68,7 @@ an output file. Independent tests accept unchanged shapes and named appends;
 they reject payload substitution, constructor reorder/removal, field reorder,
 byte remapping/tag reuse, changed framing, missing consumers and malformed shapes.
 
-The history observer (`scripts/test-compatibility-history.py`, which compiled the
+The history observer (`git:bd732113:scripts/test-compatibility-history.py`, which compiled the
 production OCaml decoder together with the hand-written checker against the
 retained old byte vectors) was retired on 2026-09-13 with that checker. The old
 bytes it read are still the retained goldens of this directory, and the current

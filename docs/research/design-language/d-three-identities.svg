@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560" font-family="ui-monospace, Menlo, Consolas, 'DejaVu Sans Mono', monospace" font-size="12">
+  <title>Study (d): the three identities of a layer, as three kinds of mark. Content = a seal (Cid, the payload digest). Occurrence = a pin on the program tree (program cid + path). Allocation = a tag tethered to a run (Site, memo entry, handle). Numbers from docs/research/2026-09-07-cas-design.md: p42's payload digest fa5f40…62a3, the program document 2ddd3c…cc83, the occurrence digest of p42 at the root c39eaa…a68f; probe 1's `graft` places p42 three times and gets one digest.</title>
+  <rect width="1000" height="560" fill="#f7f4ee"/>
+  <text x="24" y="24" font-family="Georgia, 'Iowan Old Style', serif" font-size="15" fill="#1b1f2a">One layer, three identities, three marks</text>
+  <text x="24" y="44" fill="#8a8f98">the layer is the subterm `(succeed (lit 42))` — p42 — grafted three times into one program (cas-design §2, probe 1)</text>
+
+  <!-- ===== content: the seal ===== -->
+  <g transform="translate(24,70)">
+    <rect x="0" y="0" width="300" height="200" fill="none" stroke="#c9ccd3"/>
+    <text x="12" y="20" font-family="Georgia, serif" font-size="13" fill="#1b1f2a">content · Cid</text>
+    <!-- the seal: a filled square with the hex tail; one seal per byte string, wherever it appears -->
+    <rect x="16" y="40" width="22" height="22" fill="#1b1f2a"/>
+    <text x="27" y="56" text-anchor="middle" fill="#f7f4ee" font-size="11">#</text>
+    <text x="46" y="56" fill="#1b1f2a">program:fa5f40…62a3</text>
+    <text x="12" y="86" fill="#1b1f2a" font-size="11">sexp   (cid program "fa5f40…62a3")</text>
+    <text x="12" y="104" fill="#1b1f2a" font-size="11">spoken "the seal fa5f40"</text>
+    <text x="12" y="130" fill="#8a8f98" font-size="10">Filled shape: the thing itself, checked by</text>
+    <text x="12" y="143" fill="#8a8f98" font-size="10">recomputation (cas-design §3). No colour: an</text>
+    <text x="12" y="156" fill="#8a8f98" font-size="10">identity is read, never matched by hue. One seal</text>
+    <text x="12" y="169" fill="#8a8f98" font-size="10">at every occurrence, in every job naming it.</text>
+    <text x="12" y="190" fill="#1b1f2a" font-size="10">Bertin: shape + label — associative, unordered.</text>
+  </g>
+
+  <!-- ===== occurrence: the pin ===== -->
+  <g transform="translate(350,70)">
+    <rect x="0" y="0" width="300" height="200" fill="none" stroke="#c9ccd3"/>
+    <text x="12" y="20" font-family="Georgia, serif" font-size="13" fill="#1b1f2a">occurrence · program cid + path</text>
+    <!-- a pin: a hollow circle on a stem, planted at a path in a tree -->
+    <circle cx="27" cy="46" r="7" fill="#f7f4ee" stroke="#1b1f2a" stroke-width="1.5"/>
+    <line x1="27" y1="53" x2="27" y2="64" stroke="#1b1f2a" stroke-width="1.5"/>
+    <text x="46" y="50" fill="#1b1f2a">program:2ddd3c…cc83 / [1 0]</text>
+    <text x="12" y="86" fill="#1b1f2a" font-size="11">sexp   (at (cid program "2ddd3c…cc83") (1 0))</text>
+    <text x="12" y="104" fill="#1b1f2a" font-size="11">spoken "p42 at one-zero in 2ddd3c"</text>
+    <text x="12" y="130" fill="#8a8f98" font-size="10">Hollow shape on a stem: a place, not a thing.</text>
+    <text x="12" y="143" fill="#8a8f98" font-size="10">Derived: its digest c39eaa…a68f is a function of</text>
+    <text x="12" y="156" fill="#8a8f98" font-size="10">program and path, never stored (cas §1-§2).</text>
+    <text x="12" y="169" fill="#8a8f98" font-size="10">Three pins, one seal: the graft.</text>
+    <text x="12" y="190" fill="#1b1f2a" font-size="10">Tree position carries the address; label repeats.</text>
+  </g>
+
+  <!-- ===== allocation: the tag on a tether ===== -->
+  <g transform="translate(676,70)">
+    <rect x="0" y="0" width="300" height="200" fill="none" stroke="#c9ccd3"/>
+    <text x="12" y="20" font-family="Georgia, serif" font-size="13" fill="#1b1f2a">allocation · Site / handle</text>
+    <!-- a tag: a rounded rect with a hole, tethered by a line to the run it belongs to -->
+    <path d="M16,38 L60,38 L68,46 L60,54 L16,54 z" fill="#f7f4ee" stroke="#1b1f2a" stroke-width="1.5"/>
+    <circle cx="24" cy="46" r="2.5" fill="#1b1f2a"/>
+    <line x1="24" y1="46" x2="8" y2="70" stroke="#1b1f2a" stroke-width="1" stroke-dasharray="2 2"/>
+    <text x="76" y="50" fill="#1b1f2a">scope·7  ·  site 0/[1 0]</text>
+    <text x="12" y="86" fill="#1b1f2a" font-size="11">sexp   (handle scope 7)   (site 0 (1 0))</text>
+    <text x="12" y="104" fill="#1b1f2a" font-size="11">spoken "scope seven of this run"</text>
+    <text x="12" y="130" fill="#8a8f98" font-size="10">A tag on a tether: valid only attached to the</text>
+    <text x="12" y="143" fill="#8a8f98" font-size="10">run that minted it. `Val.handle` is not content</text>
+    <text x="12" y="156" fill="#8a8f98" font-size="10">(Val.lean:109-111). One site under two memo maps</text>
+    <text x="12" y="169" fill="#8a8f98" font-size="10">is two entries (Stores.lean:172-176).</text>
+    <text x="12" y="190" fill="#1b1f2a" font-size="10">The middle dot means "this run's index", never a name.</text>
+  </g>
+
+  <!-- ===== the graft, drawn: one seal, three pins, N tags ===== -->
+  <g transform="translate(24,296)">
+    <rect x="0" y="0" width="952" height="240" fill="none" stroke="#c9ccd3"/>
+    <text x="12" y="20" font-family="Georgia, serif" font-size="13" fill="#1b1f2a">The graft: one seal, three pins, and however many tags a run mints</text>
+    <!-- tree -->
+    <text x="12" y="48" fill="#8a8f98">[]</text><text x="80" y="48" fill="#1b1f2a">(bind</text>
+    <text x="12" y="70" fill="#8a8f98">[0]</text>
+    <circle cx="90" cy="66" r="6" fill="#f7f4ee" stroke="#1b1f2a" stroke-width="1.5"/><line x1="90" y1="72" x2="90" y2="80" stroke="#1b1f2a" stroke-width="1.5"/>
+    <text x="104" y="70" fill="#1b1f2a">(succeed (lit 42))</text>
+    <rect x="270" y="56" width="16" height="16" fill="#1b1f2a"/><text x="278" y="68" text-anchor="middle" fill="#f7f4ee" font-size="10">#</text><text x="292" y="68" fill="#1b1f2a" font-size="10">fa5f40</text>
+    <text x="12" y="92" fill="#8a8f98">[1]</text><text x="100" y="92" fill="#1b1f2a">(bind</text>
+    <text x="12" y="114" fill="#8a8f98">[1 0]</text>
+    <circle cx="110" cy="110" r="6" fill="#f7f4ee" stroke="#1b1f2a" stroke-width="1.5"/><line x1="110" y1="116" x2="110" y2="124" stroke="#1b1f2a" stroke-width="1.5"/>
+    <text x="124" y="114" fill="#1b1f2a">(succeed (lit 42))</text>
+    <rect x="270" y="100" width="16" height="16" fill="#1b1f2a"/><text x="278" y="112" text-anchor="middle" fill="#f7f4ee" font-size="10">#</text><text x="292" y="112" fill="#1b1f2a" font-size="10">fa5f40</text>
+    <text x="12" y="136" fill="#8a8f98">[1 1]</text>
+    <circle cx="110" cy="132" r="6" fill="#f7f4ee" stroke="#1b1f2a" stroke-width="1.5"/><line x1="110" y1="138" x2="110" y2="146" stroke="#1b1f2a" stroke-width="1.5"/>
+    <text x="124" y="136" fill="#1b1f2a">(succeed (lit 42))))</text>
+    <rect x="270" y="122" width="16" height="16" fill="#1b1f2a"/><text x="278" y="134" text-anchor="middle" fill="#f7f4ee" font-size="10">#</text><text x="292" y="134" fill="#1b1f2a" font-size="10">fa5f40</text>
+    <text x="12" y="166" fill="#8a8f98" font-size="10">Paths shown as a plausible graft shape; probe 1 reports "three occurrences, one digest fa5f40…" and does not print the paths (cas-design §2).</text>
+
+    <!-- the run: tags -->
+    <text x="420" y="48" fill="#8a8f98">a run of this program (job = program + tape + fuel + profile):</text>
+    <line x1="420" y1="70" x2="920" y2="70" stroke="#1b1f2a" stroke-width="3"/>
+    <path d="M414,64 L422,70 L414,76 z" fill="#1b1f2a"/>
+    <line x1="918" y1="60" x2="918" y2="80" stroke="#1b1f2a" stroke-width="1.5"/><line x1="923" y1="60" x2="923" y2="80" stroke="#1b1f2a" stroke-width="3.5"/>
+    <!-- tags tethered to positions on the run -->
+    <g>
+      <line x1="500" y1="70" x2="500" y2="96" stroke="#1b1f2a" stroke-width="1" stroke-dasharray="2 2"/>
+      <path d="M492,96 L560,96 L568,104 L560,112 L492,112 z" fill="#f7f4ee" stroke="#1b1f2a" stroke-width="1.5"/><circle cx="500" cy="104" r="2.5" fill="#1b1f2a"/>
+      <text x="506" y="108" fill="#1b1f2a" font-size="10">site 0/[0]</text>
+      <line x1="640" y1="70" x2="640" y2="96" stroke="#1b1f2a" stroke-width="1" stroke-dasharray="2 2"/>
+      <path d="M632,96 L706,96 L714,104 L706,112 L632,112 z" fill="#f7f4ee" stroke="#1b1f2a" stroke-width="1.5"/><circle cx="640" cy="104" r="2.5" fill="#1b1f2a"/>
+      <text x="646" y="108" fill="#1b1f2a" font-size="10">site 0/[1 0]</text>
+      <line x1="780" y1="70" x2="780" y2="96" stroke="#1b1f2a" stroke-width="1" stroke-dasharray="2 2"/>
+      <path d="M772,96 L846,96 L854,104 L846,112 L772,112 z" fill="#f7f4ee" stroke="#1b1f2a" stroke-width="1.5"/><circle cx="780" cy="104" r="2.5" fill="#1b1f2a"/>
+      <text x="786" y="108" fill="#1b1f2a" font-size="10">site 0/[1 1]</text>
+    </g>
+    <text x="420" y="140" fill="#1b1f2a" font-size="11">registry query "programs using fa5f40" = a join over subterm indexes, computed (cas-design §2) — one seal, many pins.</text>
+    <text x="420" y="158" fill="#1b1f2a" font-size="11">memo lookup "was site 0/[1 0] built in this run?" = a tag question — never answered by the seal (LAYER-FB-LAYER-IDENTITY).</text>
+    <text x="420" y="186" fill="#1b1f2a" font-size="11">Forbidden: a colour per identity; a seal drawn hollow; a tag drawn without its tether; a pin without its program's seal.</text>
+    <text x="420" y="204" fill="#8a8f98" font-size="10">Naming: Unison separates a definition's hash from its names (Unison docs, "The big idea"); here the seal is the hash and the</text>
+    <text x="420" y="217" fill="#8a8f98" font-size="10">registry's `Publish` annotation is the name (cas-design §6). A name is a trait; it is drawn beside a seal in the display face, never as the seal.</text>
+  </g>
+</svg>

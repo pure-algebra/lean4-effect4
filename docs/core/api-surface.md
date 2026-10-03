@@ -121,8 +121,8 @@ fail.
 the spelling; the reviver table is D-B's work anyway.
 
 **D-F — the MCP server.** (C's D1, D2, D4, D9, D10, D11 — one choice.) *Recommend:* a Lean
-`--run` driver in `src/Tools/McpRun.lean` over a `ToolSpec` table inside the gate
-(`src/Effect4/Tooling/ToolSpec.lean`), fourteen tools with `run.play` withheld, the server holding
+`--run` driver `Tools.McpRun` over a `ToolSpec` table inside the gate
+(`Effect4.Tooling.ToolSpec`), fourteen tools with `run.play` withheld, the server holding
 the journal (`journal_replays` makes the cached `Run` an optimisation), no reactor over the wire,
 the run protocol before R12's inspection protocol (four of its nine commands are buildable; five
 need a `Doc` that does not exist). The decisive reason is `Built`: a `Module` is a Lean function

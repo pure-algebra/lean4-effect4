@@ -5,4 +5,4 @@ and its runner (`git:606918e:harness/trace/fibers-tail.ts`, retired on
 2026-09-04) produced against the pinned install. They are kept because
 `src/Effect4/Machine/Stores.lean` and `src/Effect4/Laws/Machine/Witnesses.lean` cite the four race traces as
 the host evidence behind the race witnesses. They are evidence, frozen: nothing regenerates
-them, and `generated/traces/` no longer has a `fiber/` directory.
+them, and `git:606918eb:generated/traces` no longer has a `fiber/` directory.

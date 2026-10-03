@@ -1,0 +1,46 @@
+Study (a3): the score in a terminal. Same grammar as a1/a2, three columns per trace index.
+Alphabet (ASCII only, one glyph per primitive):
+  |      bar line: a host decision; the verb is written above the line
+  >      entered: a run segment begins            ---  running     ===  running under a mask (uninterruptible)
+  ~t     park on token t (a rest)                 ...  parked      =t   resume with token t
+  +n     fork of child n (on the parent's lane)   .    exists, not yet entered
+  o      task scheduled on this queue             *    task ran (the arrow it caused is the next event in the target's lane)
+  [k     scope k opened                           k]   scope k closed          {k finalizer registered   k} finalizer ran
+  ||     exit, success, value follows in sexp     x #  -|   fail  die  interrupt (a cause is a flat list of these, in order)
+  (hold) frontier: the run is live and waits for the next decision — a fermata, the rest held past the tape's end
+  //     stuck: a state rc.112 cannot reach (Api.Outcome.stuck)
+
+=========================================================================================================
+job pFork      program pFork   fuel 1000   tape (evaluate 0) (flush)   outcome finished   2 fibers   14 events
+---------------------------------------------------------------------------------------------------------
+          evaluate 0            flush
+      i   |  1  2  3  4      |  5  6  7  8  9 10 11 12 13 14
+fiber 0   |  >-----+1----~0   |  .  .  .  .  .  .  .  =0 >--||  (success (success 7))
+queue 0   |        o          |  *
+fiber 1   |     .  .  .  .    |  .  >--~1 .  .  =1 >--||  (success 7)
+queue 1   |                   |        (o) *
+---------------------------------------------------------------------------------------------------------
+causes    2 forked 0 1 -> 6 entered 1        3 scheduled 0 (start 1) -> 5 ran 0 (start 1) -> 6
+          9 ran 1 (resume 1 1) -> 10 resume 1 1        11 exit 1 -> observer resumeAwait 0 0 -> 12 resume 0 0
+not recorded: the yield's scheduling on queue 1 (drawn as (o)), the row each park awaits.
+=========================================================================================================
+
+=========================================================================================================
+job pAwait     program pAwait   fuel 1000   tape (evaluate 0) (flush)   outcome frontier    1 fiber    2 events
+---------------------------------------------------------------------------------------------------------
+          evaluate 0   flush
+      i   |  1  2      |
+fiber 0   |  >--~0 ... |  ... (hold)   awaits deferred·0   answer shape: (success number) | (failure number)
+---------------------------------------------------------------------------------------------------------
+The flush measure is empty: nothing was armed. The rest is held past the last bar line: a frontier is a third outcome,
+live and resumable (Api.lean:142-148). The next decision that can move it is (answer 0 0 <completion>) — the row the
+park awaits is what INV-TAPE-2 says a frontier must name (grill-agenda §1 Q7); the trace does not record it today.
+=========================================================================================================
+
+Reading rules, the same as on the page:
+  - columns are trace indices; three characters each; equal by construction. Nothing here is a duration.
+  - a lane is a fiber, lanes in allocation order (nextId is monotone, Fibers.lean:415). Its queue is the thin lane beneath it.
+  - the only lines that cross lanes are causes: fork (+n above, the child's lane begins), task ran -> target entered/resumed,
+    exit -> observer -> resume. In the terminal they are listed under `causes` by index pair rather than drawn.
+  - a decision's measure is the events between two bar lines. `evaluate 0` produced 1..4; `flush` produced 5..14.
+  - the sexp of an exit is written after the final bar exactly as the receipt prints it.

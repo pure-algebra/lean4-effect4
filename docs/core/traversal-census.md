@@ -637,7 +637,7 @@ that changes the next steps, all at zero install:
    instead of a gate written by hand.
 2. **`leanchecker`** ships in the toolchain since v4.28: an independent kernel replay of every
    module's declarations — the right trust rung for `eq_cata` connectors that the elaborator
-   built without source (`make check-kernel`).
+   built without source (a `check-kernel` make target, not yet written).
 3. **Core `fun_induction`** proves `f = cata alg` for the accumulator shape when `rfl` will
    not (`fun_induction f <;> simp [cata, alg, *]`): the proof engine for the next iteration.
 4. **import-graph at v4.33.0** (`#min_imports`, `#find_home`, `unused_transitive_imports`) turns

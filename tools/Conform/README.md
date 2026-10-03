@@ -15,7 +15,6 @@ requested profile once in an empty directory and keeps the receipt under `.lake/
 python3 scripts/check-conform.py                      # the native layout (make check-native)
 python3 scripts/check-conform.py compiler             # actual emitted OCaml checkpoint
 make check-cases                                      # compiled cases / mirrors / rules (python3 scripts/check-conform.py cases)
-make gen-specs                                        # ordinary checked specifications (python3 scripts/generate.py --only specs)
 ```
 
 `compiler` requires `ocamlopt` from the `effect4` opam switch (or `OCAMLOPT`). `cases`

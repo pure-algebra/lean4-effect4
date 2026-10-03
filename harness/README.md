@@ -7,14 +7,14 @@ section below states one harness's purpose, its entry script, its pins, and
 what a pass does and does not establish.
 
 The entry point for all of them together is the Makefile (`make help`): `make check`
-is the tier that runs after every change, `make check-host` adds the outside oracles
+is the tier that runs after every change, `make check-full` adds the outside oracles
 (the truth harness, the TypeScript typing oracle, the schema codec, the OCaml tests,
 the ingest smoke), and `make check-full` is everything, the long censuses included.
 Each check is a rule keyed on the files it reads -- its fixtures, the goldens it
 compares with, the Lake trace of the compiled core, the pinned host manifests -- and is
 skipped while none of that has changed; `make -B <target>` or `make clean-check`
 forces it. One Lean process runs at a time. (Until 2026-09-13 this was
-`scripts/sweep.sh` with a per-script result cache; the script survives as a wrapper.)
+`git:c67ff096:scripts/sweep.sh` with a per-script result cache; the script survives as a wrapper.)
 
 `truth/` is two lanes on one runner: `make check-truth`, the hand-written programs with
 their recorded tapes (the behaviour register: layer sharing counters, host rows, the tag
@@ -44,7 +44,7 @@ checks that Effect revives the exact canonical tag order.
 `trace/` and `effect-v4-family/` were archived to branch `archive/flow-route`
 on 2026-09-04 with the Flow route they served, together with their gates
 (`check-trace-*.sh`, `check-lowering-*.sh`), their goldens under
-`generated/traces/`, and `docs/research/TRACE-DAG.md`.
+`git:606918eb:generated/traces`, and the trace DAG note (not retained).
 
 The former fiber-supervision harness was retired with the old supervision calculus.
 Its observations remain historical evidence in git; it is not a runnable lane here.

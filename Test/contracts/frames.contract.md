@@ -23,7 +23,7 @@ Counterexamples: `E4-RUN-CE-010` through `E4-RUN-CE-021` in
 Proof graph: `FRAME-PG-STACK` in `docs/research/FRAMES-DAG.md`
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
-Reading: `docs/effect-rc112-fiber-runtime.html` sections 1-4.
+Reading: `docs/research/effect-rc112-fiber-runtime.html` sections 1-4.
 
 ## Claim boundary
 
@@ -302,7 +302,7 @@ Prim.hasArm  : Prim … -> Arm -> Bool
 Prim.isFrame : Prim … -> Bool
 ```
 
-Frozen exactly as `docs/effect-rc112-fiber-runtime.html` section 3 states it:
+Frozen exactly as `docs/research/effect-rc112-fiber-runtime.html` section 3 states it:
 
 | Frame | `contA` | `contE` | `contAll` |
 | --- | --- | --- | --- |

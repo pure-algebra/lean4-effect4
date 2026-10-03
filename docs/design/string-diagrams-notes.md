@@ -1,9 +1,9 @@
 # String diagrams for this runtime — 2026-09-08
 
 Seat: the string-diagram reading, against the tree at `781cfbc`. Sources: Kissinger's *Picturing
-Quantum Processes* deck (`docs/research/picturing_quantum_processes.pdf`; the deck is an
+Quantum Processes* deck (the untracked PDF `picturing_quantum_processes.pdf` under docs/research; the deck is an
 incremental build with no printed numbers, so "slide N" here means PDF page N), Coecke &
-Kissinger *CQM II* (`docs/research/categorical_quantum_mechanics_2.pdf`; printed page = PDF page), CQM I (arXiv:1510.05468), and the effectful-category line
+Kissinger *CQM II* (the untracked PDF `categorical_quantum_mechanics_2.pdf` under docs/research; printed page = PDF page), CQM I (arXiv:1510.05468), and the effectful-category line
 (Román, arXiv:2205.07664 and arXiv:2305.06075; Jeffrey 1997). Nothing tracked was edited except
 this file. This note is an input to `2026-09-08-design-language.md`, written in parallel; it does
 not depend on it.

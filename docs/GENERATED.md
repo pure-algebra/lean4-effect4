@@ -87,7 +87,7 @@ set still requires the typing-world instantiation; frame premises are not that p
 | semantics | `tools/Drivers/Semantics.lean` over `tools/Tools/Semantics.lean` (`make gen-semantics`; hermetic) | `tools/Tools/SemanticsRegistry.lean` (concepts, claims, cuts, defaults, roots), the loaded roots and `semantics` tags, the counterexample register and the decisions register | `generated/semantics.md` (the JSON form is a build artifact) | `make check-gen` (drift); `make check-semantics` (the refusal controls, `tools/Drivers/SemanticsControls.lean`) | reproduced; checked against the loaded roots |
 | architecture | `tools/Tools/Architecture.lean` (`make gen-architecture`) | every `.lean` under `src/`, `tools/` and `Test/` (import headers through `Lean.Elab.parseImports`), the roots `Tools.Architecture.roots` loaded for declaration counts, the estates by file walk, the Makefile's `GEN_GROUPS`, the manifest, this table and `lakefile.toml`; the role register `tools/Tools/ArchitectureRoles.lean` is its one hand input | `.lake/gen/architecture-map.html` (a report, never committed) | none: a report | measured |
 
-Retired 2026-09-13 (the scripts ledger): `generated/schema-structural-assurance.tsv`, a
+Retired 2026-09-13 (the scripts ledger): `git:c67ff096:generated/schema-structural-assurance.tsv`, a
 2,682-row projection whose 446-line producer carried the SHA-256 of every Schema source
 inside itself and refused to run once any of them changed (the owner had deferred its
 stamp on 2026-09-08). The Lean module it projected, and the three other hand-frozen

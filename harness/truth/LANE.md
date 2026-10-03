@@ -1,7 +1,7 @@
 # rc.112 truth lane — Phase 1 report
 
 2026-09-04. Scope: `harness/truth/` and the `Corpus` namespace of
-`src/Effect4/Program/Wire.lean`. No `lake build` was run; no commit was made.
+`src/Effect4/Store/Domain/ProgramWire.lean`. No `lake build` was run; no commit was made.
 
 Where the lane stood at the start (`result.md`, generated 16:31): 7 of 9 programs agreed,
 `p42` disagreed on schedule row 0, `pScope` disagreed on everything, and `pLoop` and

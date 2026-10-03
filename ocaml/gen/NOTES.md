@@ -227,7 +227,7 @@ above. The rule the backend now follows, and the reason it is a *rule* and not a
 
 * **`Nat.pow` saturates at `max_int`.** `Nat.pow` is `@[extern]`, so without a table row it
   became a hole; with the naive spelling it would overflow silently. `Effect4.Store.Val.WF`
-  and `Val.wf` (`src/Effect4/Store/Val.lean:279-316`) decide `… .length < 2 ^ 64` at every
+  and `Val.wf` (`src/Effect4/Store/Carrier/Val.lean:279-316`) decide `… .length < 2 ^ 64` at every
   frame. A wrapping `2 ^ 64` is `0` in 63-bit `int`, so `wf` would answer `false` for every
   value and `Api.ofBytes` would answer `none` for every program — **a wrong answer, not a
   compile error**. `Translate.powClamped` computes `a ^ b` by repeated multiplication that
@@ -323,7 +323,7 @@ lean -M6144 --run src/OCaml5/Tools/LcnfGen.lean --out ocaml/gen/api_gen.ml \
 ```
 
 (`--import` is new; it defaults to `Effect4.Machine.Fibers`, so every command above is
-unchanged.) `api_check.ml` builds the corpus programs of `src/Effect4/Program/Wire.lean:74-106`
+unchanged.) `api_check.ml` builds the corpus programs of `src/Effect4/Store/Domain/ProgramWire.lean:74-106`
 in the generated `eff` type and runs them through the generated `api_run` at fuel 1000 with no
 choices. Both halves print the same:
 

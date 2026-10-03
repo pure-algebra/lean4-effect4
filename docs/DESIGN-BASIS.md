@@ -230,23 +230,23 @@ Two facts bound what extension means.
   (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:215`),
   `post_refinement_needed` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:332`)
   (the model probe's pedigree seat); `c4_iff`
-  (`docs/research/2026-09-30-model-probe/pedigree/VerifyConservativity.lean:84`), `mono_needed`
-  (`docs/research/2026-09-30-model-probe/pedigree/VerifyConservativity.lean:143`),
+  (`git:f62c972d:docs/research/2026-09-30-model-probe/pedigree/VerifyConservativity.lean:84`), `mono_needed`
+  (`git:f62c972d:docs/research/2026-09-30-model-probe/pedigree/VerifyConservativity.lean:143`),
   `pre_refinement_needed`
-  (`docs/research/2026-09-30-model-probe/pedigree/VerifyConservativity.lean:179`) (its verifier);
-  C3's monotone half `hasTy_ext` (`docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:115`),
-  `check_ext` (`docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:221`), `rows_append`
-  (`docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:247`), `services_append`
-  (`docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:289`), reflection on the looped fragment
-  `hasTy_restrict_looped` (`docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:379`), and the
-  red controls `prepend_not_extends` (`docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:341`),
-  `shadow_not_extends` (`docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:360`) (the TREE
+  (`git:f62c972d:docs/research/2026-09-30-model-probe/pedigree/VerifyConservativity.lean:179`) (its verifier);
+  C3's monotone half `hasTy_ext` (`git:f62c972d:docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:115`),
+  `check_ext` (`git:f62c972d:docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:221`), `rows_append`
+  (`git:f62c972d:docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:247`), `services_append`
+  (`git:f62c972d:docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:289`), reflection on the looped fragment
+  `hasTy_restrict_looped` (`git:f62c972d:docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:379`), and the
+  red controls `prepend_not_extends` (`git:f62c972d:docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:341`),
+  `shadow_not_extends` (`git:f62c972d:docs/research/2026-09-30-model-probe/TREE/R2Probe.lean:360`) (the TREE
   seat); `not_injective`
-  (`docs/research/2026-09-30-codex-review-model-probe/probes/MorphismCollapse.lean:389`),
+  (`git:f62c972d:docs/research/2026-09-30-codex-review-model-probe/probes/MorphismCollapse.lean:389`),
   `refinement_not_iff`
-  (`docs/research/2026-09-30-codex-review-model-probe/probes/RefinementNotIff.lean:203`),
+  (`git:f62c972d:docs/research/2026-09-30-codex-review-model-probe/probes/RefinementNotIff.lean:203`),
   `typedProg_not_table_monotone`
-  (`docs/research/2026-09-30-codex-review-model-probe/probes/VerifyTreeCurrent.lean:97`) (Codex's
+  (`git:f62c972d:docs/research/2026-09-30-codex-review-model-probe/probes/VerifyTreeCurrent.lean:97`) (Codex's
   audit; the last restates the TREE verifier's control after item E). Proved in the tree since
   `a561d604` (landed by seat E from the algebra seat's probes): `sum_is_coproduct`
   (`src/Effect4/Laws/Effects/Sum.lean:103`), `interpret_inl_restrict`
@@ -828,7 +828,7 @@ Source revision and installed package bytes are separate evidence. The
 upstream commit and tree identify source history. Foldlab's lockfile identifies
 the exercised package by integrity
 `sha512-wXxwuh1Ywnv4cPRM3Wfa0vDwuOHnZ1TsTgHJkG9XgzND6inhBH9n1vBxhg3iIXOia/OrpmvVmd3lrD4vq6bF3A==`.
-The installed `src/Schema.ts` has SHA-256
+The installed `vendor/effect-4.0.0-rc.112/src/Schema.ts` has SHA-256
 `9358710e2c0d613371d8feeeccb3716fe98a43f67e6aa1076b00d4079a258784`,
 while the file at the pinned upstream commit has SHA-256
 `f0ecfa4511a62c2eb7ed820449d12653a2bbb8ef82ead842189a56b503d0de2f`.
@@ -1373,10 +1373,10 @@ admission refusals; row 2's stage (b) is ruled by row 119.
   (`src/Effect4/Laws/Program/Typed.lean:1027`); tested: `Test/Program/TypedContract.lean` (the
   retired `E4-TYPED-CE-001`'s fixture). Records: witness missing at `6b3f2c92` (stage 1 not landed);
   the design's facts are proved in the data probe's models: `positional_width_unsound`
-  (`docs/research/2026-10-01-data-probe/tree/RecordNested.lean:1087`), `fitsFields_exact_mono`
-  (`docs/research/2026-10-01-data-probe/tree/RecordNested.lean:1259`) (the tree seat);
-  `hasTyV_normalize_fails` (`docs/research/2026-10-01-data-probe/tree/verify-RecordRed.lean:1324`),
-  `fits_coerce` (`docs/research/2026-10-01-data-probe/tree/verify-CoerciveWidth.lean:107`) (its
+  (`git:f62c972d:docs/research/2026-10-01-data-probe/tree/RecordNested.lean:1087`), `fitsFields_exact_mono`
+  (`git:f62c972d:docs/research/2026-10-01-data-probe/tree/RecordNested.lean:1259`) (the tree seat);
+  `hasTyV_normalize_fails` (`git:f62c972d:docs/research/2026-10-01-data-probe/tree/verify-RecordRed.lean:1324`),
+  `fits_coerce` (`git:f62c972d:docs/research/2026-10-01-data-probe/tree/verify-CoerciveWidth.lean:107`) (its
   verifier); in the synthesis's own model, `hasTy_normalize`
   (`docs/research/2026-10-01-data-probe/synthesis.md:1143`) and its red control
   `written_order_not_invariant` (`docs/research/2026-10-01-data-probe/synthesis.md:1174`).
