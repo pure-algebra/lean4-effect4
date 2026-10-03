@@ -70,7 +70,7 @@ fragment, not a second semantics.
 | Generators (`gen`) | yes (`genProtocol`, `Clauses/Gen.lean`) | yes | no | yes | none |
 | Scheduled (fork, await, race, async, interrupt, scopes) | yes (the M6 clauses) | yes | **no** | yes | answer-free tapes only |
 | Layers (provide, memo, build, merge) | yes (M5 layer arm, the memo rows) | yes | **no** | yes | answer-free tapes only |
-| Host-answered runs | **no** (`RReachable` excludes them) | **no** (`run_eq_ref` holds at the empty table; DI-57) | no | no | the open lane, R6 |
+| Host-answered runs | **ghost-admitted only** (`reachable_typed`, §12) | at the empty table only (`run_eq_ref` holds on every tape; the table-aware form is DI-57) | no | at the empty table, ghost-admitted (`obs_typed`) | executable admission open (`admit_sound`, R6) |
 
 Each "yes" holds under its own conditions:
 - **Typing (M5, M6):** lawful, checked, closed requirement row (`rootTy.requires = empty`).
@@ -241,7 +241,8 @@ A table-aware `run_eq_ref` (DI-57) is the host-answer extension of the first sta
 Each entry gives the statement, its semantic value (what a consumer may rely on), its placement,
 and its feasibility as measured.
 
-**T1. Observed exits have the meaning layer's type, on every fragment.**
+**T1. Observed exits have the meaning layer's type, on every fragment.** *Landed 2026-10-03
+(§12): `exits_hasTy`, `root_exit_hasTy`, `Typed/Results.lean`; ledger `M7Results`.*
 - **Statement.** On `M7Fragment root rootTy tape`, every recorded exit `(id, some ex)` of
   `obs (Api.replay root.program fuel tape).machine` satisfies `Denote.ExitHasTy ty.answer
   ty.error stores ex` at `id`'s declared type `ty`, and the root's type is `rootTy`.
@@ -261,8 +262,11 @@ and its feasibility as measured.
 - **Feasibility.** Small.
 - **Not established.** Host answers; open requirement rows.
 
-**T2. `M7.exitHandles_valid`.** Its statement lacks the closed requirement row, and `J` exists only
-on closed rows, so the typed route (probe 1) proves only the closed-row form. Two ways:
+**T2. `M7.exitHandles_valid`.** *Landed 2026-10-03 (§12) as stated, with no restatement: no proof of
+M5 or M6 reads the closed-row premise, so `J` exists on open rows too and the typed route closes
+the goal (`exitHandles_valid`). The analysis below is kept as history.* Its statement lacks the
+closed requirement row, and `J` was thought to exist only on closed rows, so the typed route
+(probe 1) seemed to prove only the closed-row form. Two ways:
 - **(a)** restate the goal with the closed row: a contract change to a ledger statement, owner's
   call;
 - **(b)** prove the open-row goal by row 180 (a)'s native invariant: every value frame's handle
@@ -281,7 +285,9 @@ Recommendation: land `exitHandles_valid_closed` now as T1's ingredient, and keep
 - **Feasibility.** Medium. The halting arms are already classified (row 139's census in each
   command proof); the new part is the enabled-decision side.
 
-**T4. Host admission soundness and the typed session** (rows 97–99, R6).
+**T4. Host admission soundness and the typed session** (rows 97–99, R6). *Typing half landed
+2026-10-03 (§12): `reachable_typed` and `obs_typed` over ghost-admitted tapes (`AdmittedTape`).
+What remains is `admit_sound`, executable admission implying `AnswerOk`.*
 - **Statement.** `admit_sound` and `session_typed` (§4).
 - **Value.** The public promise for programs that call the host: no host that follows the session
   API can break typing.
@@ -500,3 +506,229 @@ reuses the async route the external rows already take, answered internally.
 6. **H5** with the host lane (T4).
 
 T1 and T3 from §7 are independent and can proceed meanwhile.
+
+## 11. Concrete definitions that would organize the proofs and simplify the lowering
+
+The owner's question (2026-10-03): is there anything to define concretely about the stores, the
+tapes, pure functions, memory as a function of tables, editing and scheduler semantics, so that
+the work stays organized and the lowering abstractions get simpler? The answer below is measured
+against the tree. The test for each proposal: it is a definition the tree already uses implicitly,
+many times, by hand. Naming it turns casework into one theorem (the owner's general-over-casework
+rule) and gives the lowering one contract per piece.
+
+### 11.1 What exists and should not be reinvented
+
+- **The journal** is the free monoid on rows, acting on a run (`Run.lean`; `journal_replays`, the
+  `Laws/Api/Runner.lean` laws).
+- **The host as a state machine.** `Run.Reactor σ := Row → Val → σ → Option (Answer × σ)`
+  (`Run.lean:269`) is a Mealy machine over rows. `Run.driveFrom` is the driver every host lane
+  wrote by hand.
+- **The six storage interfaces** with their laws (`machine-state.md` §7). The arena laws are proved
+  (`Laws/Machine/Arena.lean`, `RefKernel.lean`).
+- **`#frame_rules`** (`Laws/Auto/Frames.lean`): for a structure-valued store invariant, one frame
+  theorem per `Stores` field, with each clause either reused or demanded.
+- **The typed world's tables:** `Γ` (fibers), `Π` (promises), `Ρ` (refs), `Θ` (tokens) and the
+  service table (`Typed/World.lean`).
+- **Lowering's four obligations, kept apart** (`machine-state.md` §5):
+  - program meaning to machine behaviour;
+  - concrete storage to logical storage;
+  - LCNF to target syntax;
+  - target execution.
+
+### 11.2 Store footprints: memory as a function of tables
+
+- **Definition.**
+  - `Family`: the seven `Stores` fields (refs, deferreds, scopes, memo, timers, the name supply,
+    externals).
+  - `SyncOp.writes : SyncOp → List Family`, and the same for each store-touching hook:
+    `registerAsync`, `dueResumes`, `wakeList`, `clockStep`, `closeScope`, `dropFinalizer`,
+    `scopeLinkFiber`.
+  - One theorem: `syncOpStep o s = some (s', v) → ∀ f ∉ o.writes, f.get s' = f.get s`, by
+    `fun_cases` on `syncOpStep` and aesop.
+  - `#frame_rules` then composes with it: a predicate that reads only the families `F` is kept by
+    every operation with `writes ∩ F = ∅`.
+- **The casework it removes, measured.**
+  - The typed store clauses take about forty per-family premises by hand (`refs : s.refs = …` ×13,
+    `externals` ×8, `scopes` ×5, `memo` ×5, `timers` ×4, `deferreds` ×4, across
+    `Typed/Commands/Clauses/*.lean` and `Typed/Adequacy.lean`).
+  - `CellsKept` and `DueKept` are partly the same fact for the deferred family.
+  - Today's slice hand-wrote it twelve times: the "no external handle" field of the frame store
+    invariant had to be re-established at every scope, memo and link site (§12).
+- **What the lowering gets.**
+  - A footprint licenses splitting the store into one target module per family, each behind its
+    `machine-state.md` §7 interface.
+  - It licenses commuting two operations with disjoint footprints. That is an optimization law
+    which needs equality of stores only, not the behavioural preorder of §5.
+- **Effort.** Small: one definition and one theorem, with callers migrating incrementally (build
+  in parallel, slot in).
+
+### 11.3 Tables with declarations: the store typing as a product
+
+- **The shape.** The store is a product of keyed tables, and the typed world is a product of
+  declaration tables over the same keys. `StoreTyped` is the product of per-table facts:
+  - every entry fits its declaration;
+  - the declarations cover exactly the allocated keys (`WorldValid.heap`, `.promises`).
+- **Definition.**
+  - `TableTyped decl tab fit`, with one allocation lemma, one update lemma, one frame lemma and
+    one monotonicity lemma.
+  - `StoreTyped` becomes a conjunction of instances, and the heap and promise clauses of M6 become
+    instances.
+- **What the lowering gets.** The "concrete storage to logical storage" obligation, per table, is
+  a refinement of that table's §7 interface. That is exactly where the proved arena laws plug in.
+  The first refinement consumer the plan names, the dense Ref arena, is one instance.
+
+### 11.4 Schedulers as functions: the run as an unfold
+
+Today the tape is relational, and every driver chooses decisions by hand: `Run.runPure` plays
+`[evaluate, flush]`, and `Run.driveFrom` loops answer and flush rounds.
+- **Definitions.**
+  - **`Enabled m : List Decision`** for the internal decisions:
+    - `evaluate` for a runnable fiber;
+    - `fire` for an armed owner;
+    - `flush` when work is armed;
+    - `yieldVerdict` for a pending verdict.
+
+    This completes the frontier reasons: armed dispatcher work is invisible to them today
+    (`awaitDecision_iff`, R12).
+  - **`Scheduler := RState → Option Decision`**, sound when `s m = some d → d ∈ Enabled m`.
+  - **`rc112 : Scheduler`**, rc.112's own policy (evaluate, then drain the dispatchers in FIFO
+    order), which `runPure` and `driveFrom` already approximate.
+  - **`runUnder s env fuel`**, the run under scheduler `s` and environment stream `env`, as an
+    unfold.
+- **What it gives.**
+  1. **Progress (T3) becomes a concrete statement.**
+     - `rc112 m = none ↔ Enabled m = []`.
+     - Under `J` and a no-lost-wakeup invariant, `Enabled m = []` gives one of: finished, awaiting
+       the host, awaiting the timer, or deadlocked.
+  2. **Fairness (T7) is a property of a scheduler.** FIFO `rc112` is fair by construction, and
+     `flush_fair` is one step of it.
+  3. **Lowering becomes functional rather than relational.** The OCaml engine implements one
+     scheduler. Its correctness is that its run equals `runUnder rc112` on the same environment
+     events. `run_eq_ref` holds per tape, so it instantiates there. The relational semantics
+     stays as the one to reason about all schedules in.
+  4. **The session API's `inspect` is `Enabled` plus the outstanding calls.** A session can tell
+     "the program waits for me" from "the scheduler has work".
+
+### 11.5 Splitting the tape: scheduler choices and environment events
+
+- **The split.**
+  - **Scheduler choices:** `evaluate`, `fire`, `flush`, `yieldVerdict`.
+  - **Environment events:** `advance`, `interruptFrom`, `installMiddleware`, `answerAsync`.
+  - With §11.4, a run is determined by a scheduler and an environment stream.
+- **The answerer interface.**
+  - §10's handlers take over the `answerAsync` events.
+  - `Run.Reactor` is already the external answerer's interface. A program handler is a
+    first-order reactor: its state is a machine, and its step runs the clause program.
+  - So every answerer, program or host, has one interface, and `HostSpec` refinement (H5) is a
+    law on that interface.
+
+### 11.6 The pure core as its own lowering stage
+
+The fragments form a ladder, each rung with a denotation of more structure:
+
+| Rung | Denotation in the tree |
+| --- | --- |
+| Pure terms (`Term`, `evalTerm`, `nativeAtom`) | a partial function of the environment; no store, no decision |
+| `Straight` (one fiber, sync rows) | a store transformer, `meaning e env : Stores → ExitV × Stores` (`Laws/Program/Denote.lean:130`) |
+| `Looped` | the same, with a budgeted iteration (`meaningB`, `loopAgreement`) |
+| Scheduled and layers | a behaviour over tapes (§1) |
+
+- **The recommendation.** Lower by rung, with the smallest trusted surface first.
+  - The pure core's correctness is compositional and denotational:
+    `⟦t⟧ env = evalTerm env t`, with no machine and no tape. It is the natural first verified
+    stage of the LCNF route.
+  - The `Straight` rung's is a state-transformer equation per store family (§11.2's footprints
+    say which).
+  - Only the top rung needs the behavioural preorder (T5).
+
+### 11.7 Program edits: a lens on `Eff` by path, with a replacement lemma
+
+- **The gap.** The tree reads a node by path (`Node.at_`, `Program/Refs.lean:44`) but has no write
+  by path. Every rewrite an author, an agent or an optimizer performs is a write at a path.
+- **Definitions.**
+  - **`Node.set : Node Op → List Nat → Node Op → Option (Node Op)`**, generic over the operation
+    alphabet, so one definition serves every sort built on `Node`. It is a fold, as the coherence
+    principle asks.
+  - **The three lens laws:** get after set, set after get, set after set.
+  - **A replacement lemma.** If the point type at path `p` in `e` equals the type of `x`, then
+    `set e p x` checks at `e`'s type. The checker is a fold, and its inversions are aesop-proved,
+    so this is TAPL's replacement lemma.
+  - **Behavioural congruence at a path** is T5's congruence, read through the lens.
+- **What it gives.**
+  - Typed refactoring and agent edits with no whole-program recheck, in an API an author holds.
+  - §10's `link H P`, and the inline mode of answering, are both edits: substitution at the
+    perform sites.
+- **What it needs.** The point-typing context at a path. M5's `PointTyped` already reads the
+  checker at a point, so the lemma reuses it.
+
+### 11.8 World edits (lower priority)
+
+- **The idea.** The world ordering `leHost` is reachability by world edits:
+  - declare a fiber, a ref, a promise or a token;
+  - extend the external allocation.
+
+  A `WorldEdit` alphabet acting on worlds would let every predicate built from declarations and
+  `Fits` be proved monotone by generation, as `#frame_rules` does for stores.
+- **Why it is lower priority.** The `Effect4.TypedState` aesop bank already closes most of these
+  (`M3bWorld`, `M6Edits`), so the gain is smaller than §11.2–§11.4.
+
+### 11.9 Order
+
+| Item | Cost | Unlocks |
+| --- | --- | --- |
+| §11.2 footprints | small | removes the per-family casework; per-family target modules; the commuting law |
+| §11.4 `Enabled` and `Scheduler` | medium (definitions small; the no-lost-wakeup invariant is M6-sized) | T3, T7, a functional lowering criterion, an honest `inspect` |
+| §11.7 the program lens | small to medium | typed edits for authors and agents; §10's inline handlers |
+| §11.3 table typing | medium, a refactor of `StoreTyped` | per-table storage refinement |
+| §11.6 rung-staged lowering | design; a note for the LCNF route | the first verified lowering stage |
+| §11.5, §11.8 | definitions, as consumers appear | |
+
+None of these is started. §11.2 and §11.7 are the two whose definitions are small enough to land
+with their first consumer in one slice.
+
+## 12. Landed 2026-10-03: T1, T2 and T4's typing half (slice T-LOW)
+
+The low-hanging part of §7, with the reorganization it needed. Built: `lake build Effect4.Laws`
+(579 jobs, green). Every new declaration is at `[propext, Quot.sound]`. Ledger reports:
+- M7: 4/4, now closed;
+- `M7Results`: 1/1;
+- M6Ledger: 20/20;
+- M6Clauses: 2/2;
+- M6Edits: 13/13;
+- M3bAssembly: 5/5.
+
+- **The finding that made T2 free.** M5's proof ignores its lawful and closed-row premises
+  (`intro _ checked _`), and `DecisionKeeps` mentions neither. So `J` holds on every checked
+  program. `load_typed` and `load_typed_of_denotesTyped` state the load without the premises,
+  and `LoadsTyped` (the ledger statement) is derived from them unchanged.
+- **Ghost-admitted host answers (T4's typing half).**
+  - `AdmittedTape`: the replay meets each host answer at a machine where `AnswerOk` holds at every
+    typing world.
+  - `admitted_typed`: the route through the replay lift.
+  - `reachable_typed`: every checked program, every admitted tape.
+  - `obs_typed`: the same across `run_eq_ref`.
+  - `reachable_of_ledger` and `m7_of_ledger` are now their answer-free cases, and
+    `m7_of_capstone` is gone.
+- **T2.** `exitHandles_valid` proves `M7.exitHandles_valid` as stated, from `reachable_typed` and
+  `fits_validIn`. The native route (`exitHandles_valid_of_registered` and its three helpers,
+  `Typed/Edits.lean`) existed only for this goal and was cut. Decisions row 180's native invariant
+  is superseded (receipt). `RawHandles` stays: the layer arm reads `lit_toVal_handles`, and the
+  register cites the subset laws.
+- **T1.** The connector's allocation premise is now a machine fact.
+  - `StoresOk.externals`: the frame store invariant (`Simulation/Hooks.lean`) gains "no external
+    handle allocated". It is re-established at the twelve sites that build the invariant, the
+    measured motivation for §11.2.
+  - `book_replayEval_ok`: the left invariant at the end of any replay, generic in `Machine/Book`.
+  - `replay_ok`, `replay_externals`, `replayR_externals`: every tape, host answers included, at
+    the empty row table.
+  - `exits_hasTy` and `root_exit_hasTy` then give `Denote.ExitHasTy` for every recorded exit of
+    every checked program's frame-machine run.
+- **Still open from §7.**
+  - **T3** needs `Enabled` and a no-lost-wakeup invariant, which is M6-sized (§11.4).
+  - **T4's remainder** is `admit_sound` (row 97).
+  - **T6** needs a trace or ghost invariant over the close walks.
+  - **T7** comes after T3.
+  - **T8** needs row 117's presence clause.
+  - **T9** is DI-57.
+
+  None of these is low-hanging. Their precise shapes are in §7 and §11.
