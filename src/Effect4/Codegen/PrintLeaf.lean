@@ -1,6 +1,7 @@
 import Effect4.Program.Typing
 import Effect4.Codegen.Names
 import Effect4.Codegen.Types
+import Effect4.Codegen.Record
 import TypeScript
 
 /-!
@@ -136,15 +137,18 @@ def reserved : List String := heads.map Head.spelling
 
 /-- The names in a row cannot capture a printed binder or a reserved program head. -/
 def rowNamesSafe (row : Row) : Bool :=
-  firstByte row.spelling != some 97 && !reserved.contains row.spelling &&
-    row.trailing.all (fun name => firstByte name != some 97 && name != "undefined")
+  (firstByte row.spelling != some 97 && !reserved.contains row.spelling &&
+    row.trailing.all (fun name => firstByte name != some 97 && name != "undefined" &&
+      !Effect4.Codegen.Record.helperNames.contains name)) &&
+    !Effect4.Codegen.Record.helperNames.contains row.spelling
 
 /-- A legal export name for the main declaration: a legal binder that is no printed binder
 (`a…`), no reserved head, and no layer reference name (`L_…`), so a declaration block's own
 names stay distinct from everything the reader decodes by name. -/
 def exportNameSafe (name : String) : Bool :=
   Effect4.Codegen.Names.binderName name && firstByte name != some 97 &&
-    !reserved.contains name && (LayerTerm.readRefName name).isNone
+    !reserved.contains name && (LayerTerm.readRefName name).isNone &&
+    !Effect4.Codegen.Record.helperNames.contains name
 
 /-- The binder minted for environment position `index`: `a0`, `a1`, … The environment is
 positional, so a position is a name and the printer needs no source identifiers. -/
@@ -159,12 +163,18 @@ def printLit : Lit → TypeScript.Expr
   | .str value => .str value
 
 mutual
-  /-- A pure term: a variable as its binder name, a literal as itself, and an atom applied
-  to its arguments as the call `atom(args)`. -/
+  /-- A pure term as target syntax. Generic record wrappers retain raw declarations and
+  distinguish construction, access and update from existing atom calls. -/
   def printTerm : Term → TypeScript.Expr
     | .var index => .ident (Var.name index)
     | .lit value => printLit value
     | .app atom args => .call (.ident atom) (printTerms args)
+    | .record fields names values =>
+      Effect4.Codegen.Record.writeRecord fields names (printTerms values)
+    | .field mode target name =>
+      Effect4.Codegen.Record.writeField (decide (mode = .optional)) name (printTerm target)
+    | .recordSet target name value =>
+      Effect4.Codegen.Record.writeSet name (printTerm target) (printTerm value)
 
   /-- The argument list of an atom application, in order. -/
   def printTerms : Terms → List TypeScript.Expr

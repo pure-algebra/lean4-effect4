@@ -19,6 +19,9 @@ set_option autoImplicit false
 namespace Effect4.Codegen.Record
 open Effect4.Program TypeScript
 
+/-- Runtime helper bindings owned by the record target profile, separate from program heads. -/
+def helperNames : List String := ["recordValue", "recordRaw", "recordOptional", "recordSet"]
+
 /-- Existing raw record declaration data, not a new type representation. -/
 abbrev Fields := List (String × Bool × Ty)
 
