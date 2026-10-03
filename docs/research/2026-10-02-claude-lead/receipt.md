@@ -1133,3 +1133,67 @@ Commands: `lake env lean -DwarningAsError=true …/Evaluate.lean` (27 s, no warn
 (seventeen declarations, every printed footprint at `[propext, Quot.sound]`, `RefMakeClause.log`). The register ids: my `.fin`
 row was first written as `CE-036`, an id row 190 already held; it is `CE-039`, and the seam is
 `CE-040`.
+
+## Slice M6-I — the context clauses and `scoped`; finding F-CLOSED
+
+**First:** fourteen fiber clauses are unconditional (`suspend`, `foreignRelease`, `closeWalk`,
+`frontier`, `construction`, `sync`, `guard_`, `mask`, `scopeExit`, `refuse`, `setContext`, `getId`,
+`ambientScope`, `scoped`), two and the walk are under `ScopedExitKeeps`. The fork family waits on a
+second interface fact, closedness (below).
+
+- `Evaluating.recontext`: a running fiber's context moves to one whose services fit, with its cached
+  budget, through `configTyped_rupdate_code` (one lemma; `setContext` and `scoped` use it).
+  `Evaluating.emit` for a trace event. `SettlesTyped.mono` for a settlement from a later world.
+- `clause_setContext` (the pre's services; `unit` answered), `clause_getId`, `clause_ambientScope`
+  (`ambientScope_live`, row 156; the `missingService` defect is admitted at every type).
+- `clause_scoped`: the store edit is the `scopeMake` row's step (`syncOpStep_scopeMake`), so its order,
+  well-formedness and generated typing are the row's through `configTyped_restate` (the new entry is
+  empty); the context gains the scope (`servicesFit_addV`, the scope present); the body under the
+  `onExit` guard bound to the scope's exit callback (`scopedGuardBind_typed`, row 188 (a)). The
+  world grows by the store.
+
+**Finding F-CLOSED** (the fork family: `fork`, `forkIn`, `forkScoped`, `raceAll`). `WorldValid.fiberClosed`
+declares every fiber at a closed type (`ClosedEff`: no `Ty.var`); an allocation re-establishes it
+from `closed : ClosedEff ty` (`machineWide_alloc`, `configTyped_alloc`; `launch` has it from the race
+token, `tokenClosed`). A fork declares its child at its certificate, and
+`fiberPre (.fork body) cert = BodyTyped root w body cert` says nothing about closedness, so the fork
+clauses cannot re-establish the clause. The closed clauses are read (`Ty.closed_normalize`,
+`rowTy_closed_some`, `Typed/Denotation.lean:2514`), so they are not dead. Proposal (a decisions row):
+`PointTyped` carries a closed lexical environment (`∀ t ∈ env, t.closed = true`; the root's is `[]`,
+`pointTyped_child` extends it by checker outputs), a `check_closed` lemma over the checker (the native
+rows are closed, `NativeOp.row_closed`; the checker mints no `var`) makes every checked certificate
+closed, and the fork producers (`fork_arm`, `forkIn_arm`, `forkScoped_arm`, `raceAll_arm`,
+`forkLayer_typed`) discharge `ClosedEff cert` in `fiberPre`. A Typing lemma and an admission field;
+no runtime change. Until the ruling the fork clauses are not attempted.
+
+Still open and their blockers: `closeScope` and the walk's callback (F-WF: the closing exit's
+`validIn`); `fork`/`forkIn`/`forkScoped`/`raceAll` (F-CLOSED); `gen`/`loop`/`closeIter .sequential`
+(decisions row 190 (b), the owner's); `snapshotChildren` (no children clause in `J`: a fiber's
+`children` are not known declared — a third gap, small: `FiberTyped` gains `childrenBelow`/declared,
+discharged at `trackChild`); `getContext` (needs `Live w (Val.context ctx)` from `ServicesFit`, a
+lemma over the encoded services); the parking and interrupting actions (`yieldNow`, `async`, `await`,
+`awaitAll*`, `awaitNewChildren`, `interrupt*`, `runIn`, `cancelRace`, `dropObservers`,
+`closeIter .parallel`, `raceRegister`), each a composition of existing edit lemmas.
+
+Commands: `lake env lean -DwarningAsError=true …/Evaluate.lean` after each clause (10–27 s, no
+warnings); `lake build Effect4.Laws` before each commit (`b553ce8d`, `77a9f813`).
+
+**Finding F-PRE** (the interrupt family: `interrupt`, `interruptScoped`, `interruptAll`). The pre of an
+operation that installs code or queues a command must contain what that code's or command's own
+contract demands at the install: `interrupt target` (pre `True`) installs
+`fiberValR (.interruptAs target self)` (`interruptAsCode`, `Laws/Program/InterpR.lean:339`), whose
+pre is `(w.Γ target).isSome` (row 139's halting arm), so the installed code is not `TypedProg` from
+the clause's hypotheses; `interruptScoped target` (pre `True`) installs `fiberValR (.interrupt target)`;
+`interruptAll targets _` (pre `True`) queues `afterInterrupt self y (.awaitAll targets)`, whose
+delivery clause asks `FiberListColumns w targets …` (`AfterInterruptReply`, `Typed/Scheduler.lean:467`).
+`interruptAs` already carries its pre and its `afterInterrupt (.join …)` reply reads it. Proposal (a
+decisions row): `fiberPre (.interrupt target) := (w.Γ target).isSome`,
+`fiberPre (.interruptScoped target) := (w.Γ target).isSome`,
+`fiberPre (.interruptAll targets _) := ∀ t ∈ targets, (w.Γ t).isSome`; the producers discharge them
+from the fiber values' membership (`Fits … (.fiberOf …)` is `FiberDeclared`; `interrupt_arm`,
+`interruptScoped_arm`, `interruptAll_arm`, `Typed/Denotation.lean:1799-1879`), and the
+`interruptFiber` finalizer's admission (`FinalizerAdmitted`, today `True`) becomes the fiber's
+declaration, discharged where `link` registers it (the forked child is declared). `Γ` is monotone, so
+the pres are stable. Same kind as `sourceWF` and `BodyTyped`: the admission arm states what the
+program's typing derivation needs. Not landed: it changes `fiberPre` (a Residual rebuild) and three
+producers; the owner's call on ordering against F-WF and F-CLOSED.
