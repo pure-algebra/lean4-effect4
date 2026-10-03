@@ -696,26 +696,12 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
 - **Capstone M7 goals (`m7-capstone-goals`)**: Exit value agreement, final store agreement, non-halting, and exit handle
   validity on `M7Fragment` (`m7_proved` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1814`)).
 
-## 3. The Object-Language Glossary (Object-Language vs. Host Metatheory)
+## 3. The object-language glossary (moved 2026-10-03)
 
-A frequent point of confusion is that words used to describe Effect4 object-language concepts
-("syntax", "elaborate", "print", "read") are identical to names in Lean 4's metaprogramming framework.
-The table below disambiguates each term, giving its object-language denotation, its in-tree type
-and file location, its Lean 4 metaprogramming counterpart, and whether the two denote the same concept.
-
-| Our Word | What It Denotes Here | Our Type and File:Line | Lean's Layer with Same Word | Same Thing or Not? |
-|---|---|---|---|---|
-| **syntax** | First-order free objects representing abstract syntax trees: programs, types, terms, values, representations. | `Eff Op` (`src/Effect4/Program/Eff.lean:28`), `Ty` (`src/Effect4/Program/Ty.lean:37`), `Term` (`src/Effect4/Machine/Term.lean:100`), `Store.Val` (`src/Effect4/Machine/Value.lean:24`), `Representation` (`src/Effect4/Schema/Bridge.lean:56`). | `Lean.Syntax` (host concrete syntax tree produced by Lean's parser). | **No.** Lean's `Syntax` is host syntax for source code, used only by our authoring macros and custom commands. Our syntax types are first-order data structures. |
-| **elaborate** *(Sense 1: Lean)* | Translation of Lean host syntax into Lean core expressions. | N/A (Lean metaprogramming framework). | `Lean.Elab.TermElabM`, `Lean.Elab.CommandElabM`. | **Host only.** Standard Lean compilation pass. |
-| **elaborate** *(Sense 2: Authoring)* | Desugaring the authoring surface DSL into `Eff` programs; total by refusal. | `elaborate` (`src/Effect4/Program/Authoring.lean:307`), `elaborateModule` (`src/Effect4/Program/Authoring.lean:386`). Signature: `Src Op → Except Refusal (Eff Op)`. | `Lean.Elab.Term.elabTerm`. | **No.** Our authoring elaboration is an AST-to-AST desugaring returning `Except Refusal`, entirely independent of Lean `Expr`. *(Proposed distinct word: `surfaceElaborate` or `ingest`)*. |
-| **elaborate** *(Sense 3: Hefty)* | Lowering scoped syntax into first-order residual operations with bracket markers (`denoteR`). | `denoteR` (`src/Effect4/Laws/Program/DenoteR.lean:799`). Signature: `NativeEff → NativeEff → Point → RProgram`. | None (analogous to compiler lowering / desugaring passes). | **No.** It is a denotational translation from `Eff` to `RProgram` (system map §9 line 284). *(Proposed distinct word: `residualize` or `denote`)*. |
-| **print** | Producing target syntax trees from first-order program data. Readback laws apply on their stated domains. | `printT` (`src/Effect4/Codegen/Templates.lean:438`) returns `Except PrintRefusal Expr`; `printModule` (`src/Effect4/Codegen/Print.lean:142`) returns `Except PrintRefusal (List TypeScript.ConstDecl)`. | `Lean.PrettyPrinter.ppCategory`, `Lean.Widget.InteractiveCode`. | **No.** These functions construct target syntax trees. Rendering them into text is a separate operation. |
-| **read** | Reconstructing first-order programs from target syntax trees. | `readEff` (`src/Effect4/Codegen/Read.lean:736`) consumes `Expr`; for fixed `sig` and `spell`, `readModule` (`:758`) has type `List TypeScript.Decl → Except ReadRefusal (Eff Op)`. | `Lean.Parser.runParserCategory`. | **No.** Readback reconstructs the printed program under the laws' stated premises. The raw module reader ignores declaration annotations, export flags and the main declaration's name; it is not exact source-module admission or parsing from text. |
-| **render** | Producing string representations of types and atoms for TypeScript or OCaml. | `Ty.render` (`src/Effect4/Program/Ty.lean:756`), `renderAll` (`tools/Effect4Gen/Atoms.lean:64`). | `Lean.PrettyPrinter.delab`. | **No.** Our `render` is a deterministic catamorphic fold into target string templates. |
-| **lift** | Authoring macros that lift host Lean literals/expressions into program constructors. | `eff { ... }` macros (`src/Effect4/Program/Authoring.lean:42`). | `Lean.Macro`, `Lean.MacroM`. | **Yes in implementation, No in semantics.** Implemented using Lean macros, but semantically represents embedding into the initial algebra. |
-| **sugar** | High-level syntax convenience forms in the authoring surface (e.g. `let*`, `try*`). | Authoring DSL syntax rules (`src/Effect4/Program/Authoring.lean:80`). | `syntax` and `macro_rules` declarations. | **Yes in implementation.** Concrete syntax sugar expanding into AST constructors. |
-| **census** | Meta-command auditing repository-wide completeness against an explicit model. | `#traversal_census` (`src/Effect4/Laws/Auto/Census.lean:32`), `#semantics_census` (`src/Effect4/Laws/Auto/Semantics.lean:45`). | Custom command elab (`Lean.Elab.Command.elabCommand`). | **Tooling only.** Diagnostic commands inspecting Lean's `Environment`. |
-| **gate** | Build-time audit ensuring no axioms outside the ceiling `[propext, Quot.sound]`. | `AxiomGate` (`Test/Audit/AxiomGate.lean:376`). | `#print axioms`, kernel verification. | **Verification.** Directly verifies Lean environment axioms across all compiled modules. |
+The glossary that set our words against Lean's moved to the dictionary,
+`docs/core/controlled-english.md` §3.2 and §3.3. It covers syntax, the three senses of
+elaboration, print, read, render, lift, sugar, census and gate, each with its Lean counterpart.
+Each site is now cited by name and path, not by line.
 
 ---
 

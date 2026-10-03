@@ -1404,8 +1404,8 @@ there (row 154). Settled by decisions rows 44–45 (coarse values, a typed world
 106 and 107 (the queue facts and the exit clause), 134 and 137 (ruled 2026-10-01) and the slice-5
 contract ruling of 2026-09-23. Rows 135, 136 and 156 have landed in the tree and row 139 in part;
 what is ruled and what is open is each row's own status. The glossary of the formal notions (tree
-name, literature name, law) is system map §9 (row 142); this row links to it and does not copy
-it.
+name, literature name, law) is the dictionary's §3.9 (`docs/core/controlled-english.md`; moved
+from system map §9 on 2026-10-03); this row links to it and does not copy it.
 
 **The judgment.** A protocol says, for each operation, what it demands of the world it is
 performed in (`pre`) and what its handler promises of the answer in the world it answers in
@@ -1725,7 +1725,7 @@ and decisions rows 51 (`ServiceOk` context-wide; ruled 2026-09-20), 90 (the cont
 fiber; ruled 2026-09-24), 104 and 105 (ruled, landed). This row owns the calculus's rationale. One
 context and layers by path are DB-12's; the service table's place in the world and the lawful
 service declarations are rows 112–114 (ruled 2026-10-01) and 118 (structured carriers, open); the
-glossary entry for provision is system map §9 (row 142).
+glossary entry for provision is in the dictionary's §3.9 (`docs/core/controlled-english.md`).
 
 **The rows.** A requirement row is a finite set of service keys with one canonical spelling
 (`Row`), so its laws are equalities: union is associative, commutative and idempotent with the
@@ -1891,7 +1891,7 @@ explicit comparison models and target-specific implementations.
 
 The literature's name for each object, where an earlier note used a looser one. One line each,
 with its mark. This is pedigree only: what the tree calls these objects is the vocabulary's,
-owned by the system map's glossary (§9, row 142) and `AGENTS.md`, which this section does not
+owned by the dictionary (`docs/core/controlled-english.md`), which this section does not
 restate. Sources: the formal pass's synthesis §1 and §5 (tracked), the organization verifier's M7
 and the types verifier's §3 (tracked).
 

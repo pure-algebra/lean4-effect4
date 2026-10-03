@@ -287,7 +287,7 @@ doctor: ## the tools and installs every tier needs, with their versions
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
-  host-protocol census schema-ts schema-pins tools corpus tsgo semantics docs
+  host-protocol census schema-ts schema-pins tools corpus tsgo semantics docs language
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
 
@@ -358,6 +358,19 @@ $(CHK)/paths: FORCE
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
 $(CHK)/docs: $(CHK)/paths $(DOCS) Makefile scripts/check-docs.py scripts/lib/doc_refs.py
 	$(PY) scripts/check-docs.py
+	@mkdir -p $(CHK) && touch $@
+
+# The controlled English (docs/core/controlled-english.md): the checker's red and green controls,
+# then strict mode on the specification and AGENTS.md. The other documents are reported, never
+# refused, until a later slice normalizes them (`python3 scripts/check-language.py` prints the
+# report). The rules and the dictionary are read from the specification itself. Keyed on the
+# documents, the checker, the tracked-path inventory and the Lean sources the dictionary's anchors
+# name, so a renamed declaration re-runs it. Not in `make check` yet.
+LANGUAGE_SOURCES := scripts/check-language.py scripts/lib/language.py scripts/lib/doc_refs.py \
+  $(LEAN_SOURCES) $(shell git ls-files -- 'tools/*.lean')
+$(CHK)/language: $(CHK)/paths $(DOCS) $(LANGUAGE_SOURCES)
+	$(PY) scripts/check-language.py --self-test
+	$(PY) scripts/check-language.py --strict docs/core/controlled-english.md AGENTS.md
 	@mkdir -p $(CHK) && touch $@
 
 CONFORM_SOURCES := $(shell find tools/Conform -name '*.lean' -o -name '*.json') scripts/check-conform.py scripts/lib/conform_report.py
@@ -571,7 +584,7 @@ help: ## this list
 	@echo
 	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
 	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts, corpus,'
-	@echo '                     schema-pins, tools, tsgo, semantics, docs'
+	@echo '                     schema-pins, tools, tsgo, semantics, docs, language'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
 	@echo '                     truth, host-protocol, schema-ts, census, semantics'

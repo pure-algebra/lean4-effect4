@@ -1,7 +1,7 @@
 # Effect4 — agent operating rules
 
-This file is the always-loaded router for work in this repository. Read it in
-full, then open only the authority documents named for the current task.
+This file is the router that every session loads. Read it in full, then open only the authority
+documents that the current task names.
 
 ## Authority map
 
@@ -9,7 +9,7 @@ full, then open only the authority documents named for the current task.
 | --- | --- |
 | `README.md` | what the product is, the application face, how to build |
 | `docs/STATE.md` | the entry point: true at HEAD, the documents, what is next, what the owner must decide |
-| `docs/core/` | the current authorities: `system-map.md` (the goal, what a full program is, the layers and their owners, the sorts and arrow kinds, the requirements R1–R13 and their status: the frame and the vocabulary's definitions), `semantics.md` (the language's judgments by concept: what the literature defines, our adaptation and cuts, the definitions in the tree, the required properties; statuses are generated, `generated/semantics.md`), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md` (the live surface and its open decisions), `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land) |
+| `docs/core/` | the current authorities: `system-map.md` (the goal, what a full program is, the layers and their owners, the sorts and arrow kinds, the requirements R1–R13 and their status: the frame), `controlled-english.md` (the writing rules for every Markdown artifact; the dictionary, one meaning per word with its tree anchor, its literature term and the words not to use; the seven judgments and the boundary behaviours; the artifact skeletons; checked by `make check-language`), `semantics.md` (the language's judgments by concept: what the literature defines, our adaptation and cuts, the definitions in the tree, the required properties; statuses are generated, `generated/semantics.md`), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md` (the live surface and its open decisions), `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land) |
 | `docs/ARCHITECTURE.md` | the source tree, module boundaries, dependency direction, the API seam |
 | `docs/GENERATED.md` | the generated groups: producers (`make gen-<group>`), inputs, consumers and checks |
 | `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-17): decision, rationale, witnesses, refusals, sources and literature marks; status only by link to the system map's §8 |
@@ -20,7 +20,7 @@ full, then open only the authority documents named for the current task.
 | `Test/Counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
 | `Test/fixtures/baseline/<commit>/` | retained pre-change baselines of the descriptions and alphabets, the independent authority a compatibility gate compares against (DI-47). No generator writes here; it changes only by a named promotion command, and a diff in it is a review event, not drift; the mirror census reads it, and no comparator runs against it |
 | `src/Effect4/` | API and functional utilities through `Effect4`; the proof graph through `Effect4.Laws`, with declaration namespaces unchanged |
-| `Test/` | batteries, attacks and proof receipts; `Audit/AxiomGate.lean` is the gate |
+| `Test/` | batteries, counterexamples and proof receipts; `Test/Audit/AxiomGate.lean` holds the gates: the axiom gate, the module-closure gate and the library-root gate |
 | `generated/` | deterministic projections only; never hand-edited |
 | `docs/research/` (gitignored; the notes that matter are force-added) | working notes, scout briefs and notes, receipts, evidence trees; history, not authority |
 
@@ -28,99 +28,128 @@ If two files appear to own the same fact, stop and repair the ownership map.
 
 ## What the tree is
 
-The product is Effect codegen (`README.md`): `Eff` is the one program IR,
-`Effect4.Api` the program interface an application imports, the Machine module the
-semantics under it, Schema the data plane beside it. The Flow route of
-earlier work is at `606918e` in main's history, also on branch `archive/flow-route`; do not re-import it, and
-do not write a second program representation. The OCaml estate (`ocaml/`, one
-dune workspace, and its Lean half `src/OCaml5`, lake library `OCaml5`) is
-held to `ocaml/STANDARDS.md`: libraries with thin drivers, a property list at
-the head of every component, generated files marked and regenerable, every
-number in a report behind a command; `ocaml/README.md` is its map.
+The product is Effect codegen (`README.md`). `Eff` is the one program IR, and `Effect4.Api` is the
+program interface that an application imports. The Machine module is the semantics under it, and
+Schema is the data plane beside it.
+
+The Flow route of earlier work is at `606918e` in main's history and on branch
+`archive/flow-route`. Do not re-import it, and do not write a second program representation.
+
+The OCaml estate is `ocaml/`, one dune workspace, with its Lean half `src/OCaml5` (lake library
+`OCaml5`). `ocaml/README.md` is its map, and `ocaml/STANDARDS.md` holds it to four rules:
+
+- libraries with thin drivers;
+- a property list at the head of every component;
+- generated files marked and regenerable;
+- every number in a report behind a command.
 
 ## Representation rules
 
-- Canonical program content is first-order data. Lean functions, `Expr`, host
-  closures, promises, and runtime objects are not stored program syntax.
-- Every rc.112 behaviour a declaration models names the line it transcribes
-  (`vendor/effect-4.0.0-rc.112/src/…`); a theorem that witnesses a census row
-  names the row id in its docstring and is joined in
-  `Test/Audit/RuntimeCoverage.lean`. The theorem alone moves no number.
-- Fuel exhaustion and unanswered choices are live frontiers, never typed
-  errors, causes, or refusals.
-- Full meaning is relational over explicit decisions. Determinism is claimed
-  only after fixing a complete compatible decision tape or proving a fragment
-  contains no decision source.
+- Canonical program content is first-order data. Lean functions, `Expr`, host closures, promises
+  and runtime objects are not stored program syntax.
+- Every rc.112 behaviour that a declaration models names the line it transcribes
+  (`vendor/effect-4.0.0-rc.112/src/…`).
+- A theorem that witnesses a census row names the row id in its docstring, and
+  `Test/Audit/RuntimeCoverage.lean` joins it. The theorem alone moves no number.
+- Fuel exhaustion and unanswered choices are live frontiers, never typed errors, causes or
+  refusals.
+- Full meaning is relational over explicit decisions. Determinism is claimed only after fixing a
+  compatible decision tape that answers every decision, or after proving that a fragment contains
+  no decision source.
 - State produced before failure remains available to finalization.
 - Effect TypeScript is one target profile, not the identity or semantic owner.
-- Names are data: an alphabet instantiated at a function type fails the
-  separation gates at the foot of the machine modules.
+- Names are data: an alphabet instantiated at a function type fails the separation gates at the
+  foot of the machine modules.
+
+## Writing rules
+
+Every Markdown artifact follows `docs/core/controlled-english.md`. Its §2 owns the rules, and
+`make check-language` checks that file and this one. The summary:
+
+- Write one idea per sentence. A description has at most 25 words, an instruction at most 20.
+- Use the active voice, the present tense for facts and the imperative for procedures.
+- Use each dictionary word in its one meaning. Never use a synonym, and define a new word first.
+- Keep the evidence when you shorten. Keep every hypothesis, the observation, the fragment and
+  the evidence kind.
+- Cite a declaration by its name and its path, never by a line number.
+- Take counts, statuses and dates of a run from the tool that measures them.
+- Draw an order, a state machine, a pipeline or a concept map as a Mermaid diagram.
+- Keep proof role, evidence status and scope as separate labels.
+
+`python3 scripts/check-language.py` reports the findings of every other document.
 
 ## Vocabulary
 
-The words below have one meaning each (`docs/core/system-map.md` §§4–5 defines them against
-the tree). A new representation is admitted by naming its sort's signature and the kind of each of
-its arrows; anything else is a leak.
+Each line below points to its entry in the dictionary, `docs/core/controlled-english.md` §3. A new
+representation enters the tree only by naming its sort's syntax signature and the kind of each of
+its arrows. Anything else is a leak.
 
-- **Free object**: the one representation of a sort, an inductive family with its signature as
-  data (`Eff` with `binders.json`/`LayerView`; `Ty`; `Term`; `Store.Val`; `Representation`;
-  `List Command`). One per sort.
-- **Algebra** and **fold**: a carrier with one field per constructor (`EffAlgebra`,
-  `TyAlgebra`, …, generated) and the unique map out of the free object (`cataFam`, `cata_eff`,
-  `cata_ty`, …). Every traversal is a fold or generated from the signature; a hand `match` is an
-  exemption the census (`#traversal_census`, `docs/core/traversal-census.md`) lists by name.
-  Two folds agree when their algebras do (`hom_eq_cata_eff`); no pairwise agreement proof.
-- **Exact embedding**: a write/read pair `write : A → F`, `read : F → Option A` with three
-  laws — total on its domain, retraction `read (write a) = some a`, exactness
-  `read v = some a → v ≡ write a` modulo a named normaliser (`Canonical`; `print`/`read` on the
-  readable domain; the store, node and program byte codecs; `Config.Val`). The JSON codec is exact
-  modulo `normJ`, the object-key sort (`decode_iff`), and `Bridge.schema`/`ofSchema` modulo `normS`,
-  the annotation keys that change no decoding erased (row 179's nine; `ofSchema_exact`; its
-  retraction on closed types whose handles avoid `effect/schema/TypeParameter`), stated at the
-  bridge because `Ty.schema` normalizes first (decisions row 128). A read without exactness is a
-  widening, not an embedding.
-- **Simulation**: two behaviours related on one observation over a named fragment. The
-  statements are equal-observation theorems (`run_eq_meaning` on `Straight`, `loopAgreement` on
-  `Looped`, `run_eq_ref` at the empty host table), proved through a simulation relation (the
-  book's `ReplayRel`/`BMeans`); the Conform rungs and the truth lane are finite checks of one. The
-  only statement about two behaviours; never "equivalent" without the observation.
-- **Located refusal**: a total-by-refusal map `Src → Except Refusal F` whose refusal names a
-  path and a reason, complete against the judgment (`explain = none ↔ wellTyped`).
+- **Free object**: the one representation of a sort, an inductive family whose signature is
+  data. The free objects are `Eff` (with `binders.json` and `LayerView`), `Ty`, `Term`,
+  `Store.Val`, `Representation` and `List Command`, one per sort (§3.5).
+- **Algebra** and **fold**: an algebra is a carrier with one field per constructor (`EffAlgebra`,
+  `TyAlgebra`, …; generated). Its fold is the unique map out of the free object (`cataFam`,
+  `cata_eff`, `cata_ty`, …; §3.5).
+- **Traversal**: every traversal is a fold or is generated from the signature. A hand `match` is
+  an exemption that the census (`#traversal_census`, `docs/core/traversal-census.md`) lists by
+  name.
+- **Agreement of folds**: two folds agree when their algebras do (`hom_eq_cata_eff`). Write no
+  pairwise agreement proof.
+- **Exact embedding**: a write/read pair `write : A → F`, `read : F → Option A` with three laws:
+  total on its domain; retraction `read (write a) = some a`; exactness
+  `read v = some a → v ≡ write a` modulo a named normaliser (§3.5).
+- **Widening**: a read without exactness is a widening, not an embedding. Same endpoint types do
+  not make a pair exact, and a decoder with an encoder is not by itself a lawful optic.
+- **Simulation**: two behaviours related on one observation over a named fragment (§3.2). Its
+  statement is an equal-observation theorem, proved through a simulation relation (the book's
+  `ReplayRel` and `BMeans`).
+- **Equal-observation theorems**: `run_eq_meaning` on `Straight`, `loopAgreement` on `Looped`, and
+  `run_eq_ref` at the empty row table. The Conform rungs and the truth lane are finite checks of
+  one.
+- **Equivalent**: never write it without its observation. A simulation is the only statement
+  about two behaviours.
+- **Located refusal**: a total-by-refusal map `Src → Except Refusal F` whose refusal names a path
+  and a reason. It is complete against the judgment: `explain = none ↔ wellTyped` (§3.2).
 - **Monoid action**: the journal `List Command` acting on the run (`replay_unique`,
-  `journal_replays`); a run is data because its journal is.
-- **Schema and program**: Schema is a data language; every effectful slot in it is a hole
-  filled by an `Eff` program with a typing certificate; `Ty` and the schema carriers never
-  mention `Eff`; a foreign transformation is a name with a typed signature that any
-  meaning-needing operation refuses.
+  `journal_replays`). A run is data because its journal is (§3.5).
+- **Schema and program**: Schema is a data language. Every effectful slot in it is a hole filled by
+  an `Eff` program with a typing certificate. `Ty` and the schema carriers never mention `Eff`.
+- **Foreign transformation**: a name with a type signature. Any operation that needs its meaning
+  refuses it.
+- **The seven judgments**: formation, canonical form, membership, inhabitance, profile support,
+  codec admission and reply admission. Keep them distinct, and use only the implications that a
+  definition or a named theorem establishes (§4).
 
 ## Trust
 
-- No `sorry`, `partial`, `unsafe`, `native_decide`, `axiom`, `extern`,
-  `implemented_by`. The gate audits every declaration of every `Effect4.*` and `Test.*`
-  module at `[propext, Quot.sound]`; a rendering declaration that must
-  traverse a `String` is admitted by exact name in `AxiomGate.lean`, never by
-  module. A battery `def` over rendered text reaches `Classical.choice`: keep
-  rendered bytes inside `#guard`s.
-- Every library source must be reachable from `Effect4` or `Effect4.Laws`; `Effect4`
-  must never import the Laws graph. The module-closure gate checks both roots.
-- Every battery file under `Test/` must be reachable from
-  `Test/All.lean`, or the module-closure gate refuses the build; the slow lane is the one
-  exception, the files `slowLane` lists in `Test/Audit/AxiomGate.lean`, reached from
-  `Test/Slow.lean` and built at a sweep (`make check-slow`).
-- Do not say "sound", "equivalent", "preserves", "fully reified", or
-  "complete" without naming the exact judgment, observation, theorem or gate,
-  assumptions, and remaining host boundary. A compiling finite probe is
-  reported as a finite probe.
-- **Every proof obligation is placed in the theory before it is worked** (owner, 2026-10-02:
-  no proofs to nowhere). Before a theorem is stated, proved, repaired or put in a brief, write
-  down five things:
+- No `sorry`, `partial`, `unsafe`, `native_decide`, `axiom`, `extern` or `implemented_by`.
+- The axiom gate audits every declaration of every `Effect4.*` and `Test.*` module at
+  `[propext, Quot.sound]`.
+- A rendering declaration that must traverse a `String` is exempted by its exact name in
+  `AxiomGate.lean`, never by module.
+- A battery `def` over rendered text reaches `Classical.choice`: keep rendered bytes inside
+  `#guard`s.
+- Every library source must be reachable from `Effect4` or `Effect4.Laws`, and `Effect4` must never
+  import the Laws graph. The library-root gate checks both roots.
+- Every battery file under `Test/` must be reachable from `Test/All.lean`, or the module-closure
+  gate refuses the build.
+- The slow lane is the one exception: the files `slowLane` lists in `Test/Audit/AxiomGate.lean`,
+  reached from `Test/Slow.lean` and built at a sweep (`make check-slow`).
+- Name the exact judgment, observation, theorem or gate before you say "sound", "equivalent",
+  "preserves", "fully reified" or "complete". Name its assumptions and the remaining host
+  boundary too.
+- Report a compiling finite probe as a finite probe.
+- **Every proof obligation is placed in the theory before it is worked** (owner, 2026-10-02: no
+  proofs to nowhere). Before a theorem is stated, proved, repaired or put in a brief, write down
+  five things:
   1. its concept, the one of the ten in `docs/core/semantics.md`, and the required property there
      that it is or serves;
   2. its question: a registry claim with its role (`tools/Tools/SemanticsRegistry.lean`,
      `generated/semantics.md`), whose pointer is the proving theorem once it exists. While a goal
-     is open and has no theorem, a `ProofGraph` ledger goal (`#proof_wanted`) holds its place; it
-     is retired when the proof lands, never kept beside the theorem as a second statement
-     (2026-10-03). A helper names the claim it is a step of, and the consumer that uses it;
+     is open and has no theorem, a `ProofGraph` ledger goal (`#proof_wanted`) holds its place.
+     The ledger goal is retired when the proof lands, never kept beside the theorem as a second
+     statement (2026-10-03). A helper names the claim it is a step of, and the consumer that uses
+     it;
   3. its reach: the exact judgment, observation, fragment and hypotheses, with the decisions rows
      and register lines that bound it;
   4. what it does not establish:
@@ -133,85 +162,117 @@ its arrows; anything else is a leak.
      `docs/core/system-map.md`).
 
   Do not start a lemma that has no consumer on a path to a ledger goal or a registry claim. If the
-  theory lacks a property, add it to `semantics.md` and the registry (or propose it in the receipt)
-  in the slice that proves it. A receipt gives each landed theorem's placement, and a brief gives
-  each assigned obligation's.
-- Coverage of the Effect runtime is stated only in the block printed by
-  `scripts/report-effect-runtime-coverage.sh`, after
-  `scripts/check-effect-runtime-census.sh` passes.
+  theory lacks a property, add it to `semantics.md` and the semantics registry, or propose it in
+  the receipt. Do it in the slice that proves the property. A receipt gives each landed theorem's
+  placement, and a brief gives each assigned obligation's. No open ledger goal does not mean the
+  semantics is finished.
+- Coverage of the Effect runtime is stated only in the block that
+  `scripts/report-effect-runtime-coverage.sh` writes, after `scripts/check-effect-runtime-census.sh`
+  passes.
 
 ## Working
 
-- Design first, land in slices: a change to the machine or the syntax starts as a plan or a
-  research note in `docs/research/`, then lands as commits by explicit paths, each after a
-  narrow build of the modules it touches (`lake build <Module>` and its direct dependents;
-  `lake env lean <file>` for a test). No closure or battery run is owed for an integration; the
-  whole battery (`lake build Test`, the trust gate) and `make check`/`make check-full` run when
-  the owner asks for a sweep. A docstring or comment edit needs no build of a dependent module.
-- An agent commits the same way, on its own branch in its own worktree, from the base the
-  coordinator names, on the files its brief names. `git add` names files (never `git add -A`
-  without reading `git status`); the owner's untracked `docs/*.md` and `README.md` stay as they
-  are. The root imports (`src/Effect4.lean`, `src/Effect4/Laws.lean`, `Test/All.lean`) and
-  `Test/Audit/AxiomGate.lean` are edited at the anchor the brief names, so parallel branches
-  merge clean; `lakefile.toml` and `docs/core/decisions.md` are the coordinator's — an agent
-  proposes a decisions row in its receipt (`docs/research/<date>-seat-<X>-receipt.md`), never
-  edits the register. A worktree never copies `docs/research` (2 GB).
-- `make status` prints what is true at HEAD, measured (the build and check markers against their
-  inputs, the claims by status, the open ledger goals, the registers, the documents' stale
-  references); `make check-docs`, in `make check`, refuses a path, link, `git:<rev>:<path>` citation
-  or make target that an authority document names and that does not resolve. A cited research
-  note must be tracked (force-added); history (`docs/research/`, the archives, `ATTACKS.md`) is not
-  checked. What these measure is not written by hand anywhere else.
-- One `lake` at a time in a working tree.
+- Design first, then land in slices. A change to the machine or the program syntax starts as a plan
+  or a research note in `docs/research/`.
+- The change lands as commits by explicit paths, each after a narrow build of the modules it
+  touches. A narrow build is `lake build <Module>` and its direct dependents, or
+  `lake env lean <file>` for a test.
+- No closure or battery run is owed for an integration. The whole battery (`lake build Test`, the
+  axiom gate) and `make check` and `make check-full` run when the owner asks for a sweep.
+- A docstring or comment edit needs no build of a dependent module.
+- An agent commits the same way, on its own branch in its own worktree. It starts from the base the
+  coordinator names and edits the files its brief names.
+- `git add` names files. Never run `git add -A` without reading `git status`. The owner's untracked
+  `docs/*.md` and `README.md` stay as they are.
+- The root imports (`src/Effect4.lean`, `src/Effect4/Laws.lean`, `Test/All.lean`) and
+  `Test/Audit/AxiomGate.lean` are edited at the anchor the brief names, so parallel branches merge
+  clean.
+- `lakefile.toml` and `docs/core/decisions.md` are the coordinator's. An agent proposes a decisions
+  row in its receipt (`docs/research/<date>-seat-<X>-receipt.md`) and never edits the register.
+- A worktree never copies `docs/research` (2 GB).
+- `make status` gives what is true at HEAD, measured:
+  - the build and check markers against their inputs;
+  - the claims by status and the open ledger goals;
+  - the registers;
+  - the documents' stale references.
+- `make check-docs`, part of `make check`, refuses a path, link, `git:<rev>:<path>` citation or make
+  target that an authority document names and that does not resolve. A cited research note must be
+  tracked (force-added).
+- History (`docs/research/`, the archives, `ATTACKS.md`) is not checked. What these tools measure
+  is not written by hand anywhere else.
+- One `lake` at a time in a working tree, run as `LEAN_NUM_THREADS=3 lake build <Module>` or through
+  a `make` target, which exports the same bound. A bare `lake build` starts one compilation per
+  core, and the machine swaps (measured 2026-10-03).
 - In `src/Effect4/Laws/**` proof search is `aesop`
-  (`https://github.com/leanprover-community/aesop`, a dependency of the law graph only; the core
-  root never imports it). Register a lemma in the named bank that fits
-  (`src/Effect4/Laws/Auto/RuleSets.lean`; `@[aesop norm simp (rule_sets := [X])]` for a
-  definition, `safe`/`unsafe` with the builder that fits the fact: `constructors`/`cases` for an
-  inductive predicate, `forward`/`destruct` for an implication), introduce induction hypotheses
-  by hand and hand them to the call (`aesop (add safe forward [ih1, ih2])`), and keep a rule that
-  creates metavariables (a transitivity) in the call that needs it, never in a bank. A bank lands
-  with a theorem that closes only with `(rule_sets := [X])` and a `Test` fixture with the clause
-  omitted under `#guard_msgs (error)` (decisions row 65). `#auto_census Some.Module using aesop`
-  (`Laws/Auto/Census.lean`) reports which theorems of a module the search already closes from
-  their statements; run it before rewriting proofs against a bank. Prefer a short searched
-  proof to a long unpacked one, and take a proof's case list from the definition it is about
-  (`fun_induction`/`fun_cases`) rather than from `cases a <;> cases b`. The axiom gate holds a
-  searched proof to `[propext, Quot.sound]` like any other; `simp` at `(x == x) = true` for
-  `String`/`Nat` and aesop on a catch-all's negative hypotheses both reach `Classical.choice`.
-  Not written by hand in a new or touched proof, anywhere under `src/`: `simp_all`, `first | …`
-  and `try` (a fallback that fails silently into an unsolved goal hides a missing lemma). Every
-  warning is an error (`-DwarningAsError=true` in the lakefile, 2026-09-19): an unused `simp`
-  argument, a dead tactic or a `sorry` in an `example` fails the build where it is written. A
-  hand-written `simp` names its lemmas as `simp only [...]`.
-- The gates that run with a commit are the ones the change reaches: `make check-cases` after a
-  new match on a policy family, `python3 scripts/generate.py --only <family>` after a generator
-  or its input (the output must be byte-identical or committed), `dune build` (only via
-  `opam exec --switch=effect4`) after the OCaml estate.
-- On Windows the shell is PowerShell; the bash gate scripts run through WSL.
-- TypeScript is checked by one compiler, tsgo 7 (the pinned `@typescript/native-preview`,
-  7.0.0-dev.20260629.1, in `ts/eff` and `harness/truth`; `typescript@7.0.2` patched by `effect-tsgo` in
-  `harness/schema-host`), the oracle of `check-target`, `check-truth` and the corpus lane (owner, 2026-09-18,
-  restated 2026-10-01). `tsc` and `typescript@5.x` are never run, in a gate, a probe or a review; a
-  TypeScript result names its compiler and version. `scripts/check-host-protocol.py` runs tsgo (seat J, 2026-10-01). The ingest parses with `oxc-parser` (one entry, `ts/eff/ingest/oxc.ts`) and `check-styles.ts`
-  asks tsgo's own API (`unstable/sync`, under node) for the oracle's grammar (decisions row 168, seat
-  J2); no `typescript` below 7 is installed under `ts/`, `harness/` or `tools/`, and `make check-tsgo`,
+  (`https://github.com/leanprover-community/aesop`), a dependency of the law graph only. The core
+  root never imports it.
+  - Register a lemma in the named bank that fits (`src/Effect4/Laws/Auto/RuleSets.lean`).
+  - For a definition, use `@[aesop norm simp (rule_sets := [X])]`. For a fact, use `safe` or
+    `unsafe` with the builder that fits it.
+  - The builder is `constructors` or `cases` for an inductive predicate, and `forward` or
+    `destruct` for an implication.
+  - Introduce induction hypotheses by hand and hand them to the call
+    (`aesop (add safe forward [ih1, ih2])`).
+  - Keep a rule that creates metavariables (a transitivity) in the call that needs it, never in a
+    bank.
+  - A bank lands with a theorem that closes only with `(rule_sets := [X])`. It lands with a `Test`
+    fixture too, which omits the clause under `#guard_msgs (error)` (decisions row 65).
+  - `#auto_census Some.Module using aesop` (`src/Effect4/Laws/Auto/Census.lean`) reports which
+    theorems of a module the search already closes from their statements. Run it before you
+    rewrite proofs against a bank.
+  - Prefer a short searched proof to a long unpacked one. Take a proof's case list from the
+    definition it is about (`fun_induction`, `fun_cases`), not from `cases a <;> cases b`.
+  - The axiom gate holds a searched proof to `[propext, Quot.sound]` like any other. `simp` at
+    `(x == x) = true` for `String` or `Nat`, and aesop on a catch-all's negative hypotheses, both
+    reach `Classical.choice`.
+  - Not written by hand in a new or touched proof, anywhere under `src/`: `simp_all`, `first | …`
+    and `try`. A fallback that fails silently into an unsolved goal hides a missing lemma.
+  - Every warning is an error (`-DwarningAsError=true` in the lakefile, 2026-09-19). An unused
+    `simp` argument, a dead tactic or a `sorry` in an `example` fails the build where it is
+    written.
+  - A hand-written `simp` names its lemmas as `simp only [...]`.
+- The gates that run with a commit are the ones the change reaches:
+  - `make check-cases` after a new match on a policy family;
+  - `python3 scripts/generate.py --only <family>` after a generator or its input, whose output
+    must be byte-identical or committed;
+  - `dune build`, only through `opam exec --switch=effect4`, after the OCaml estate.
+- On Windows the shell is PowerShell, and the bash gate scripts run through WSL.
+- TypeScript is checked by one compiler, tsgo 7 (owner, 2026-09-18, restated 2026-10-01):
+  - the pinned `@typescript/native-preview` 7.0.0-dev.20260629.1 in `ts/eff` and `harness/truth`;
+  - `typescript@7.0.2`, patched by `effect-tsgo`, in `harness/schema-host`.
+- tsgo 7 is the oracle of `check-target`, `check-truth` and the corpus lane. `tsc` and
+  `typescript@5.x` are never run, in a gate, a probe or a review.
+- A TypeScript result names its compiler and version. `scripts/check-host-protocol.py` runs tsgo
+  (seat J, 2026-10-01).
+- The ingest parses with `oxc-parser` (one entry, `ts/eff/ingest/oxc.ts`). `check-styles.ts` asks
+  tsgo's own API (`unstable/sync`, under node) for the oracle's grammar (decisions row 168, seat J2).
+- No `typescript` below 7 is installed under `ts/`, `harness/` or `tools/`, and `make check-tsgo`,
   part of `make check`, refuses one.
-- A proof graph is mandatory only for admission or refusal, judgments or
-  denotations, interpreters or handlers, reification or generated-code
-  relations, nontrivial composition or recursive invariants, and external
-  semantic equivalence; a passive finite alphabet closes with its local
-  receipts.
-- Build in parallel, slot in, delete at a good place: a new representation is a second file
-  beside the old one with its connector (the agreement theorem), the callers move, then the old
-  one goes. Never an edit in place that throws away work to be repeated.
-- A handoff or receipt records base and head commits, changed files, exact commands and
-  results, axiom output, open obligations, and whether any evidence is bounded
-  or host-only — and, first, the one thing the coordinator must know before merging.
+- A proof graph is mandatory only for these kinds of work:
+  - an admission or a refusal of any input (a program, a table, a reply, a codec value, …);
+  - judgments or denotations;
+  - interpreters or handlers;
+  - reification or generated-code relations;
+  - nontrivial composition or recursive invariants;
+  - an equal-observation claim against an outside implementation.
+
+  A passive finite alphabet closes with its local receipts.
+- Build in parallel, slot in, and delete at a good place. A new representation is a second file
+  beside the old one, with its connector (the agreement theorem). The callers move, then the old
+  one goes.
+- Never edit in place in a way that throws away work to be repeated.
+- A handoff or receipt records, first, the one thing the coordinator must know before merging. Then
+  it records:
+  - the base and head commits;
+  - the changed files;
+  - the exact commands and their results;
+  - the axiom output;
+  - the open obligations;
+  - whether any evidence is bounded or host-only.
 
 ## Registers
 
-Open decisions: `docs/core/decisions.md` (one list) and `docs/DESIGN-ISSUES.md` (the DI
-register; a ruling is made only when written there). Settled representation decisions:
+Open decisions: `docs/core/decisions.md` (one list) and `docs/DESIGN-ISSUES.md` (the DI register:
+a ruling is made only when written there). Settled representation decisions:
 `docs/DESIGN-BASIS.md`. Contracts and counterexamples: `Test/contracts/`,
 `Test/Counterexamples/REGISTER.md`. No external tracker, no ADR directory.
