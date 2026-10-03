@@ -275,72 +275,11 @@ private def checkUnloadedWitness : MetaM Unit := do
     (← buildReport (withPointer (.witness name)) registers toolchain)
     #[#["fixture-claim", "currentWitness", "witness module is not loaded"]]
 
-private def checkProofMap : MetaM Unit := do
-  let shown := (← getConstInfo `Tools.ProofMapFixture.conditional).type
-  let canonical ← Display.expression shown
-  let altered ← withOptions (fun opts => opts.setBool `pp.all true |>.setBool `pp.universes true) do
-    Display.expression shown
-  unless canonical == altered do throwError "proof map controls: caller printer options leaked into report"
-  let declarations := [`Tools.ProofMapFixture.Predicate, `Tools.ProofMapFixture.independent,
-    `Tools.ProofMapFixture.consumes, `Tools.ProofMapFixture.conditional,
-    `Tools.ProofMapFixture.Restricted, fixtureName `checkedGoal, fixtureName `wantedGoal]
-  let feature : ProofMap.Feature :=
-    { id := "fixture", title := "Fixture"
-      concepts := ["fixture-one"], rules := declarations, boundary := "Finite control" }
-  let selection : ProofMap.Selection :=
-    { features := #[feature]
-      prerequisites := #[(fixtureName `wantedGoal, fixtureName `checkedGoal)] }
-  let report ← ProofMap.build base selection
-  let nodes ← arrayField report "nodes"
-  let edges ← arrayField report "edges"
-  let hasEdge (origin to kind : String) := edges.any fun e =>
-    (e.getObjValAs? String "from").toOption == some origin &&
-    (e.getObjValAs? String "to").toOption == some to &&
-    (e.getObjValAs? String "kind").toOption == some kind
-  unless hasEdge "Tools.ProofMapFixture.Predicate" "Tools.ProofMapFixture.independent"
-      "statement-reference" &&
-      hasEdge "Tools.ProofMapFixture.independent" "Tools.ProofMapFixture.consumes"
-      "proof-reference" &&
-      !hasEdge "Tools.ProofMapFixture.Predicate" "Tools.ProofMapFixture.independent"
-      "proof-reference" do
-    throwError "proof map controls: statement vocabulary and proof references conflated"
-  expectString (← named nodes "id" (fixtureName `wantedGoal).toString) "status" "wanted"
-  let conditional ← named nodes "id" "Tools.ProofMapFixture.conditional"
-  expectString conditional "status" "proved"
-  unless (← arrayField conditional "premises").size == 1 do
-    throwError "proof map controls: conditional premise lost"
-  let restricted ← named nodes "id" "Tools.ProofMapFixture.Restricted"
-  unless (← stringField restricted "body").contains "False" do
-    throwError "proof map controls: structure fields lost"
-  let variants : Array (String × ProofMap.Selection × String) := #[
-    ("stale name", { selection with features := #[{ feature with rules := [`Missing.Proof] }] }, "Missing.Proof"),
-    ("duplicate feature", { selection with features := #[feature, feature] }, "duplicate"),
-    ("feature cycle", { selection with features := #[{ feature with requires := ["fixture"] }] }, "cycle"),
-    ("unknown concept", { selection with features := #[{ feature with concepts := ["missing"] }] }, "unknown concept"),
-    ("unknown goal", { selection with prerequisites := #[(fixtureName `wantedGoal, `Missing.Goal)] }, "unknown ledger"),
-    ("goal cycle", { selection with prerequisites := selection.prerequisites.push (fixtureName `checkedGoal, fixtureName `wantedGoal) }, "cycle"),
-    ("wrong proof", { features := #[{ feature with rules := [fixtureName `wrongCheckedGoal] }] }, "proposition"),
-    ("wrong placeholder", { features := #[{ feature with rules := [fixtureName `wrongWantedGoal] }] }, "proposition"),
-    ("missing marker", { features := #[{ feature with rules := [fixtureName `missingGoal] }] }, "missing evidence"),
-    ("stale marker", { features := #[{ feature with rules := [fixtureName `bothGoal] }] }, "stale"),
-    ("unknown work reference", { selection with work := #[{ id := "later", title := "Later", features := ["fixture"], after := ["missing"], source := "fixture", reason := "control" }] }, "unknown prerequisite"),
-    ("work cycle", { selection with work := #[{ id := "later", title := "Later", features := ["fixture"], after := ["later"], source := "fixture", reason := "control" }] }, "cycle")]
-  for (label, candidate, fragment) in variants do
-    let result : Except String Json ← try pure (.ok (← ProofMap.build base candidate))
-      catch error => pure (.error (← error.toMessageData.toString))
-    match result with
-    | .ok _ => throwError "proof map controls: {label} unexpectedly accepted"
-    | .error reason =>
-      unless reason.contains fragment do
-        throwError "proof map controls: {label}: expected {fragment}, received {reason}"
-  IO.println s!"PASS proof map controls: real expression edges; conditional and structure premises; wanted stays open; {variants.size} refusing controls"
-
 def run : MetaM Unit := do
   checkPositive
   for test in negativeCases do
     refused test.label (← buildReport test.registry registers toolchain) test.expected
   checkUnloadedWitness
-  checkProofMap
   let parsing ← checkParsing
   IO.println s!"PASS semantics controls: imported tags and all statuses; {negativeCases.size + 1} report refusals; {parsing} register controls"
 
@@ -348,7 +287,6 @@ end Tools.Semantics.Controls
 
 def main : IO Unit := do
   Lean.initSearchPath (← Lean.findSysroot)
-  let env ← Lean.importModules #[{ module := `Test.Audit.SemanticsCensus },
-    { module := `Tools.ProofMapFixture }] {} 0
+  let env ← Lean.importModules #[{ module := `Test.Audit.SemanticsCensus }] {} 0
   let context : Lean.Core.Context := { fileName := "<semantics-controls>", fileMap := default }
   discard <| (Tools.Semantics.Controls.run.run' {}).toIO context { env }

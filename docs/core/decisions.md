@@ -147,7 +147,7 @@ already given; it does not approve any choice below.
 
 These are proposed technical contracts, not owner rulings. The checked counterexamples,
 current declarations and full slice/acceptance plan are in
-[the post-Phase C review](post-phase-c-synthesis.md). Existing rows continue to own stack
+[the post-Phase C review](../research/history/post-phase-c-synthesis.md). Existing rows continue to own stack
 policy (48), service requirements (51), progress corollaries (52), memo domain policy (78),
 and the transaction/clock/behavior choices (80–84). A reported prior approval still needs its
 provenance reconciled; implementation alone does not ratify a row.
@@ -303,7 +303,7 @@ for the typed-state milestone.
    only, so row 8's `ShapeDoc.document` fix did not land in it and stays open in
    `Schema/OfShape.lean`.) Then row 10 (one `Val → Json`) over what remains.
 3. **Row 41, the milestone** — the typed-state invariant on the reference machine, in the corrected order
-   of `docs/core/post-phase-c-synthesis.md` §§5–6: relational interfaces and valid-world
+   of `docs/research/history/post-phase-c-synthesis.md` §§5–6: relational interfaces and valid-world
    transport, protocols before predicate assembly, stack/delivery, denotation and initialization,
    transition preservation, then transfer through `BMeans` to the compiled machine's exits.
    Direct proofs and an explicit inventory suffice while the semantic structure is changing;

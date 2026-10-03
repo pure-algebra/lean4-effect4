@@ -1,5 +1,5 @@
 import Tools.SemanticsRegistry
-import Tools.ProofMapSelection
+import Tools.SemanticsDisplay
 import Tools.GeneratedStamp
 import Effect4.Laws.Auto.Semantics
 import ProofGraph.Ledger
@@ -179,7 +179,7 @@ private def literatureJson (r : LiteratureRef) : Json :=
   obj [("work", text r.work), ("locator", text r.locator), ("relation", text r.relation)]
 
 /-- Validate and collect all located refusals. No status is accepted from authored input. -/
-def buildReport (registry : Registry) (registers : Registers) (toolchain : String) (proofMap : Json := ProofMap.empty) :
+def buildReport (registry : Registry) (registers : Registers) (toolchain : String) :
     MetaM (Except (Array String) Json) := do
   let env ← getEnv
   let mut errors : Array String := #[]
@@ -273,17 +273,17 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
   if !errors.isEmpty then return .error errors
   unplaced := unplaced.qsort (·.1.toString < ·.1.toString)
   return .ok <| obj [
-    ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (2 : Nat)),
+    ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (3 : Nat)),
     ("producer", text (Tools.GeneratedStamp.note "tools/Drivers/Semantics.lean (make gen-semantics)")),
     ("command", text "make gen-semantics"),
     ("inputs", toJson (["tools/Tools/SemanticsRegistry.lean", "tools/Tools/Semantics.lean",
-      "tools/Drivers/Semantics.lean", "tools/Tools/SemanticsDisplay.lean", "tools/Tools/ProofMap.lean", "tools/Tools/ProofMapSelection.lean",
+      "tools/Drivers/Semantics.lean", "tools/Tools/SemanticsDisplay.lean",
       "src/Effect4/Laws/Auto/Semantics.lean",
       "Test/Counterexamples/REGISTER.md", "docs/core/decisions.md", "lean-toolchain"] : List String)),
     ("provenance", obj [("toolchain", text toolchain), ("roots", names registry.roots),
       ("policy", obj [("gate", text "Test/Audit/AxiomGate.lean"),
         ("ceiling", toJson (["propext", "Quot.sound"] : List String))])]),
-    ("proofMap", proofMap), ("concepts", toJson concepts), ("claims", toJson (rows.map (·.2.2))), ("cuts", toJson cuts),
+    ("concepts", toJson concepts), ("claims", toJson (rows.map (·.2.2))), ("cuts", toJson cuts),
     ("placement", obj [
       ("universe", text "theorems of the registry's concept-named modules; auxiliary names, ledger goals and their checked witnesses excluded"),
       ("declarations", toJson placements),
@@ -307,8 +307,7 @@ def loadReport (registry : Registry) : IO (Except (Array String) Json) := do
         options := ({} : Options).set `maxHeartbeats (4000000 : Nat) }
     let (report, _) ← ((do
       try
-        let proofMap ← ProofMap.build registry ProofMap.selection
-        buildReport registry registers toolchain proofMap
+        buildReport registry registers toolchain
       catch error => return .error #[← error.toMessageData.toString]).run' {}).toIO ctx { env := env }
     return report
   catch ex => return .error #[s!"roots: {ex}"]
@@ -330,23 +329,6 @@ def renderMarkdown (report : Json) : String := Id.run do
   let inputs := String.intercalate ", " ((array report "inputs").toList.map fun value => value.getStr?.toOption.getD "")
   let mut out := s!"<!-- {field report "producer"}\nformat: {field report "format"} v{(nested report "schemaVersion").compress}\ncommand: {field report "command"}\ninputs: {inputs}\n-->\n# Semantics evidence\n\n"
   out := out ++ "Selected evidence only. English associations are authored; inherited placement is provisional. The semantic axiom ceiling is not a whole-library gate verdict.\n\n"
-  let proofMap := nested report "proofMap"
-  out := out ++ "## Features and proof connections\n\n[Interactive architecture view](../docs/core/architecture-map.html#proof-map) · [Notation and method](../docs/ARCHITECTURE.md#proof-and-feature-view).\n\n"
-  out := out ++ field proofMap "scope" ++ "\n\n"
-  out := out ++ "| Feature | Authored prerequisites | Scope boundary |\n| --- | --- | --- |\n"
-  for feature in array proofMap "features" do
-    let prerequisites := String.intercalate ", " ((array feature "requires").toList.map fun s => s.getStr?.toOption.getD "")
-    out := out ++ s!"| {cell (field feature "title")} | {cell prerequisites} | {cell (field feature "boundary")} |\n"
-  out := out ++ "\n### Open formal goals in this selection\n\n"
-  for node in (array proofMap "nodes").filter (field · "status" == "wanted") do
-    out := out ++ s!"- `{field node "id"}` — [{field node "path"}](../{field node "path"}).\n"
-  out := out ++ "\n### Proposed work, separate from declared goals\n\n"
-  for item in array proofMap "work" do
-    out := out ++ s!"- **{cell (field item "title")}**: {cell (field item "reason")} ([source](../{field item "source"})).\n"
-  out := out ++ "\n### Method sources\n\n"
-  for reference in array proofMap "literature" do
-    out := out ++ s!"- {field reference "work"}, {field reference "locator"}: {field reference "use"}\n"
-  out := out ++ "\n"
   for concept in array report "concepts" do
     out := out ++ s!"## {field concept "id"}\n\n{field concept "title"}\n\n"
     out := out ++ "| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |\n| --- | --- | --- | --- | --- | --- |\n"

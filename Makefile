@@ -183,40 +183,22 @@ generated/effect-runtime-census.tsv: scripts/generate-effect-runtime-census.sh $
 $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 	@mkdir -p $(GEN) && touch $@
 
-# This report reads no previous generation group. The owner prepares these roots in
-# the bounded Lean lane; the script checks Lake freshness without building or installing.
-SEMANTICS_INPUTS := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
-  tools/Tools/SemanticsDisplay.lean \
-  tools/Tools/ProofMap.lean tools/Tools/ProofMapSelection.lean tools/Tools/ProofMapFixture.lean \
-  tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean \
-  src/Effect4/Laws/Auto/Semantics.lean Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain \
-  tools/ProofGraph/Proof.lean tools/ProofGraph/Ledger.lean tools/Tools/GeneratedStamp.lean \
-  Test/Audit/AxiomGate.lean scripts/check-semantics.py lakefile.toml lake-manifest.json Makefile
-SEMANTICS_TRACES := $(TRACE)/Laws.trace .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
-  .lake/build/lib/lean/Test/Program/ProtocolPosts.trace \
-  .lake/build/lib/lean/Test/Audit/SemanticsCensus.trace .lake/build/lib/lean/Drivers/Semantics.trace \
-  .lake/build/lib/lean/Drivers/SemanticsControls.trace .lake/build/lib/lean/Tools/ProofMapFixture.trace
-# Detect edits before Lake has refreshed a root trace, and replaced imported artifacts.
-# The preflight then checks the exact resolved closure; this broader trigger does not build it.
-SEMANTICS_LEAN_INPUTS := $(LEAN_SOURCES) $(shell find tools -name '*.lean')
-SEMANTICS_PACKAGE_INPUTS := $(shell find .lake/packages -type d \( -name .lake -o -name .git -o -name node_modules \) -prune -o -type f \( -name '*.lean' -o -name lakefile.toml -o -name lake-manifest.json -o -name lean-toolchain \) -print 2>/dev/null)
-SEMANTICS_ARTIFACTS := $(shell find .lake/build/lib/lean .lake/packages -type f \( -name '*.olean' -o -name '*.olean.private' -o -name '*.olean.server' -o -name '*.ir' -o -name '*.ir.sig' -o -name '*.trace' \) 2>/dev/null)
-SEMANTICS_TS_INPUTS := $(shell find ts/eff -path '*/node_modules' -prune -o -type f \( -name '*.ts' -o -name '*.json' \) -print) ts/eff/bun.lock
-# Keep the successful run's input names even after a file is deleted. Old/missing
-# receipts or reports force the existing preflight; reading this metadata runs no Lean.
-SEMANTICS_GEN_SAVED := $(shell $(PY) scripts/check-semantics.py --make-deps generate || echo FORCE)
-SEMANTICS_CHECK_SAVED := $(shell $(PY) scripts/check-semantics.py --make-deps check || echo FORCE)
-$(SEMANTICS_TRACES):
-	@echo 'Missing semantics artifact $@. Prepare in the bounded Lean lane:' >&2
-	@echo '$(LAKE) build Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts Test.Audit.SemanticsCensus Drivers.Semantics Drivers.SemanticsControls Tools.ProofMapFixture' >&2
-	@exit 1
-
-$(GEN)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) $(SEMANTICS_LEAN_INPUTS) $(SEMANTICS_PACKAGE_INPUTS) $(SEMANTICS_ARTIFACTS) $(SEMANTICS_GEN_SAVED)
-	$(PY) scripts/check-semantics.py --generate generated
+# The semantics report (generated/semantics.md): the registry's claims checked against the
+# loaded roots and rendered once. Pure Lean, no host; the JSON form is a build artifact under
+# .lake/gen/semantics-report. It reads no other generation group, so it is a hermetic group of
+# its own and `check-gen` holds its drift like any other committed generated file.
+SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
+  tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
+  Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain
+$(GEN)/semantics: $(SEMANTICS_SOURCES) $(LAWS) | build
+	$(LAKE) build Drivers.Semantics
+	rm -rf $(GEN)/semantics-report && mkdir -p $(GEN)/semantics-report
+	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Drivers/Semantics.lean $(GEN)/semantics-report
+	cp $(GEN)/semantics-report/semantics.md generated/semantics.md
 	@mkdir -p $(GEN) && touch $@
 
 # The groups generate.py can regenerate into a temporary directory (no host runtime).
-HERMETIC_GROUPS := variances derived eff wire cas ts readme
+HERMETIC_GROUPS := variances derived eff wire cas ts readme semantics
 # `gen`'s order, which is the producers' order above; lcnf is named here, between derived
 # and eff, and nowhere in HERMETIC_GROUPS.
 GEN_GROUPS := variances derived lcnf eff wire cas ts readme truth host-protocol schema-ts census semantics
@@ -242,7 +224,7 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.le
   harness/truth/tapes harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
   $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \
   generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv generated/row-citations.tsv \
-  generated/semantics.json generated/semantics.md
+  generated/semantics.md
 
 # ---------------------------------------------------------------------------- corpus
 #
@@ -414,17 +396,12 @@ gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus
 # The architecture map (docs/GENERATED.md, group `architecture`): measured from the tree by a
 # Lean driver that parses every import header, loads the roots for declaration counts and
 # walks the estates; the role register tools/Tools/ArchitectureRoles.lean is its one hand
-# input. A report, replaced at landings like STATE.md; `check-architecture` says whether the
-# committed map still matches the tree and is not a member of `check`.
-.PHONY: gen-architecture check-architecture
-gen-architecture: $(GEN)/semantics | build build-tools ## the architecture map, measured from the tree, into docs/core/architecture-map.html
+# input. A report under .lake/gen, never committed and not in `check`.
+.PHONY: gen-architecture
+gen-architecture: | build ## the architecture map, measured from the tree, into .lake/gen/architecture-map.html (a report)
 	$(LAKE) build Tools.Architecture
-	$(LAKE) build ProofGraph
-	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Tools/Architecture.lean
-check-architecture: $(CHK)/semantics | build build-tools ## does the committed architecture map match the tree (a report, not in check)
-	$(LAKE) build Tools.Architecture
-	$(LAKE) build ProofGraph
-	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Tools/Architecture.lean --check
+	@mkdir -p $(GEN)
+	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Tools/Architecture.lean --out $(GEN)/architecture-map.html
 
 # T0: the printed programs' answer, error and requirement types against the one compiler
 # (tsgo, decisions row 57; tools/target). The oracle reads the truth modules and their
@@ -514,14 +491,11 @@ $(CHK)/census: $(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/
 	bash scripts/check-effect-runtime-census.sh
 	@mkdir -p $(CHK) && touch $@
 
-# Two fresh reports, Lean refusal controls, pinned tsgo 7 and strict decoding controls.
-# No order-only build/install prerequisite: missing prepared artifacts are a refusal.
-$(CHK)/semantics: $(SEMANTICS_INPUTS) $(SEMANTICS_TRACES) $(SEMANTICS_LEAN_INPUTS) $(SEMANTICS_PACKAGE_INPUTS) $(SEMANTICS_ARTIFACTS) $(SEMANTICS_TS_INPUTS) $(SEMANTICS_CHECK_SAVED) \
-  $(wildcard generated/semantics.json generated/semantics.md) \
-  tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean $(TS_EFF_SOURCES) \
-  ts/eff/test/semantics.fixture.json $(wildcard ts/eff/node_modules/effect/package.json \
-  ts/eff/node_modules/@typescript/native-preview/package.json ts/eff/node_modules/@typescript/native-preview/bin/tsgo)
-	$(PY) scripts/check-semantics.py
+# The semantics report's refusal controls: a registry naming an unloaded root, a stale witness or
+# a malformed register row is refused with its reason. The report's own drift is `check-gen`'s.
+$(CHK)/semantics: $(SEMANTICS_SOURCES) tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean $(LAWS) | build
+	$(LAKE) build Drivers.SemanticsControls Test.Audit.SemanticsCensus
+	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Drivers/SemanticsControls.lean
 	@mkdir -p $(CHK) && touch $@
 
 SCHEMA_SOURCES := $(shell find src/Effect4/Schema -name '*.lean') src/Effect4/Codegen/Schema.lean

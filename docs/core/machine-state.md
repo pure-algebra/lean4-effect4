@@ -7,7 +7,7 @@ The approved typed-world model is recorded in decisions rows 44–45. The new re
 observation and control choices remain proposals in rows 78–83; §6 points to that one register.
 
 The current proposed sequence and whole-core semantic workstreams are in
-`docs/core/post-phase-c-synthesis.md`; the earlier contracts are retained in
+`docs/research/history/post-phase-c-synthesis.md`; the earlier contracts are retained in
 `docs/research/2026-09-19-state-refinement-plan.md`. That earlier plan includes a finite rc.112 control
 showing that changing wake timing can change a returned value. It does not establish general
 agreement for a composed API or a lowered backend.
@@ -177,7 +177,7 @@ not a rewrite of every store.
 scheduled waking, stored behaviors, and Clock/Random profiles. DI-11 remains the existing
 composition ruling; correcting a contradictory summary does not require ruling it again.
 
-`docs/core/post-phase-c-synthesis.md` now owns the proposed staged sequence and acceptance;
+`docs/research/history/post-phase-c-synthesis.md` now owns the proposed staged sequence and acceptance;
 `docs/research/2026-09-19-state-refinement-plan.md` is its historical contract basis:
 contracts and observations, completion/memo migration, generic-cell/world tooling and the
 concrete ledger, typed-state proofs, one storage refinement, then the additional primitive

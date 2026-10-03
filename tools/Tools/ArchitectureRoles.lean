@@ -1,7 +1,7 @@
 /-!
 # Tools.ArchitectureRoles — the one hand-written input of the architecture map
 
-`tools/Tools/Architecture.lean` measures the tree and writes `docs/core/architecture-map.html`.
+`tools/Tools/Architecture.lean` measures the tree and writes `.lake/gen/architecture-map.html`.
 Everything measured comes from the tree itself: the import headers through Lean's own parser,
 declaration counts from the loaded roots, sizes from disk, the generated groups from
 `docs/GENERATED.md`, the pinned packages from `lakefile.toml`. What the tree cannot say is

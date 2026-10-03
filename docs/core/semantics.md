@@ -8,7 +8,7 @@ exclusions; the definition and judgment in the tree; the required properties.
 What this document does not own, and who does:
 
 - **Status.** Whether a property is proved, wanted, refuted, absent or assumed is measured, never
-  written here: `generated/semantics.json` and `generated/semantics.md` (`make gen-semantics`;
+  written here: `generated/semantics.md` (`make gen-semantics`;
   `docs/GENERATED.md`, group `semantics`), produced from the registry
   `tools/Tools/SemanticsRegistry.lean` and the loaded environment, every status derived through
   `ProofRef.validate` and `ProofGraph.check`.
@@ -149,7 +149,7 @@ verified Chapter 6 (Crary).
   with explicit partitioned tables for fibers ($\Gamma$), promises ($\Pi$), heap references (`Ρ`, Greek rho, field `w.Ρ`),
   and ghost resume states ($\Theta$).
 - **Exclusion of Stored Functions (Row 163)**: Stored `Eff` syntax and stored values `Val` contain
-  no function values or closures (`language-cut.md` §1). Consequently, `Fits` contains **no arrow clause**,
+  no function values or closures (`../research/history/language-cut.md` §1). Consequently, `Fits` contains **no arrow clause**,
   and step-indexing is unnecessary for this finite structural membership relation. (Analogy to Ahmed's
   worlds, but excluding semantic-store circularity).
 - **Checker Order & Normalization (Rows 96, 137)**: Handle arm subtyping uses `Equiv` under `subN`

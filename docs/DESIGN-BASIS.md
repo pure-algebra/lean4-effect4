@@ -1952,7 +1952,7 @@ refresh, and no paper was opened for it; titles and venues are given only where 
 the former list gives them. "lit-papers" is `docs/research/2026-09-07-lit-papers.md`, whose corpus
 numbers its papers 01–21; "the papers review" is `docs/research/2026-09-05-effects-papers-review.md`;
 "core math" is `docs/research/2026-09-05-runtime-semantics-core-math.md`; "the coherence principle"
-is the literature list of `docs/core/coherence-principle.md`.
+is the literature list of `docs/research/history/coherence-principle.md`.
 
 *Algebraic effects, signatures and sums*
 
@@ -2220,6 +2220,6 @@ target` mix theorems with tested and reproduced evidence. No edge is closed: whe
 **pending** in bold, that is the named judgment of the edge which still has nothing, and for
 `Logic` it is the whole row. No edge asserts agreement with the rc.112 runtime —
 the only evidence for that is the truth harness's bounded differential, which is a differential
-and not a bisimulation. `docs/DESIGN-MAP.md` grades the same material with the four evidence
+and not a bisimulation. `docs/research/history/DESIGN-MAP.md` grades the same material with the four evidence
 words and `docs/RUNTIME-COVERAGE.md` owns the coverage number; a claim quoted from here should
 agree with both.

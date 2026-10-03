@@ -2,10 +2,10 @@
 
 Slice S1b, 2026-09-09 (DI-50). This packet is a **statement of what is claimed and by what
 evidence**, not a red battery: every battery it names already exists and none is added here
-(v1 DI-50: "cite the batteries that exist; add none"). `docs/DESIGN-MAP.md` §L4 is the prose;
+(v1 DI-50: "cite the batteries that exist; add none"). `docs/research/history/DESIGN-MAP.md` §L4 is the prose;
 this is the packet the map says the layer lacks.
 
-Evidence words are `docs/DESIGN-MAP.md`'s four, and **several may apply to one claim**
+Evidence words are `docs/research/history/DESIGN-MAP.md`'s four, and **several may apply to one claim**
 (DI-32): *proved* (a Lean theorem, with its premises), *reproduced* (a gate that regenerates
 and compares bytes), *tested* (a golden, differential, property or metamorphic corpus under a
 named observer — `tsc` and `#guard` are finite checker runs and count here), *stamped* (a
@@ -31,7 +31,7 @@ holds it, and where the battery is.
 | 9 | the OCaml conformance face | `ocaml/eff`: generated families, wire and JSON implementations; core typing verdicts retained as goldens, with no independent OCaml type checker | reproduced (goldens), tested (`dune-tests`) | `ocaml/eff/`; `make check-ocaml` (which took over `git:c67ff096:scripts/check-ocaml.sh`'s `dune-tests` at `b2f6aef1`); `src/OCaml5/Tools/EffGen.lean` |
 
 **Not a face of this layer.** The runtime coverage census is the traceability matrix for
-rc.112's runtime, not a representation of an `Eff` program (`docs/DESIGN-MAP.md` §L4).
+rc.112's runtime, not a representation of an `Eff` program (`docs/research/history/DESIGN-MAP.md` §L4).
 
 ---
 

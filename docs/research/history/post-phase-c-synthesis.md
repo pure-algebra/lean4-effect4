@@ -4,7 +4,7 @@ Date: 2026-09-20. Reviewed HEAD: `10d5c009` on `refactor/phase1-phase3`.
 Status: reviewed proposal and evidence snapshot; **not an owner ruling or implementation receipt**.
 
 The landed foundations are useful, but the supplied synthesis is not an executable plan as
-written. A fresh Lean counterexample refutes the pending `M1Origin.actionAt_raceAll` statement:
+written. A fresh Lean counterexample refutes the pending `actionAt_raceAll` statement:
 it omits the source-location premise present in its backing theorem. It remains open; no false
 theorem has been accepted. Before the main preservation proof, repair the shape of the state predicates, make
 world transport precise, and compare every proposed theorem reference with its actual frozen
@@ -189,7 +189,7 @@ before treating the protocol interface as frozen.
 ### F4. The residue is not "31 namesakes and 11 missing proofs"
 
 **Confirmed false pending statement:** `Laws/Program/Intro/Weight.lean:177–179` declares
-`M1Origin.actionAt_raceAll` without the section's source-location hypothesis `h`.
+`actionAt_raceAll` without the section's source-location hypothesis `h`.
 The theorem at line 182 includes `h`; `include h` did not insert it into the `def` obligation.
 Take `root = .withFiber (.raceAll .nil)`, `p = rootPoint 0`, and the unconstrained `a = .getId`.
 The decoding premise holds, but the demanded equality `a = .raceAll es` is impossible.
