@@ -1,8 +1,8 @@
-import Effect4.Program.Eff
+import Effect4.Program.Admission
 
 /-! Finite controls for the record term signature in decisions row 195.
-The first stage checks raw evaluation, stored modes and variable weakening.
-Typing and the semantic bridge are checked after the generated fold is restored. -/
+The controls check raw evaluation, stored modes, variable weakening and term typing.
+They establish no target execution claim. -/
 
 namespace Effect4.Test.RecordTerms
 open Effect4.Program Effect4.Machine
@@ -42,8 +42,64 @@ def person : Term := .record personFields ["name"] (.cons (.lit (.str "Ada")) .n
 #guard Term.weaken 1 (.recordSet (.var 0) "name" (.field .optional (.var 1) "nickname")) =
   .recordSet (.var 0) "name" (.field .optional (.var 2) "nickname")
 
+-- The declaration retains absent optional fields and direct literal tags.
+#guard termTy (nativeSignature []) [] person = some (Ty.record personFields).normalize
+#guard termTy (nativeSignature []) [] (.record personFields [] .nil) = none
+#guard termTy (nativeSignature []) [] (.record personFields ["other"] (.cons (.lit .unit) .nil)) = none
+#guard termTy (nativeSignature []) [] (.record personFields ["name", "name"]
+  (.cons (.lit (.str "Ada")) (.cons (.lit (.str "A")) .nil))) = none
+#guard termTy (nativeSignature []) [] (.record personFields ["name"] .nil) = none
+#guard termTy (nativeSignature []) [] (.record personFields ["name"] (.cons (.lit (.nat 1)) .nil)) = none
+#guard termTy (nativeSignature []) []
+  (.record [("x", true, .nat), ("x", true, .nat)] [] .nil) = none
+#guard termTy (nativeSignature []) []
+  (.record [("x", true, .map .nat .string)] [] .nil) = none
+#guard termTy (nativeSignature []) [] (.record [("_tag", false, .lit "Found")]
+  ["_tag"] (.cons (.lit (.str "Found")) .nil)) = some (.record [("_tag", false, .lit "Found")])
+#guard termTy (nativeSignature []) [.string] (.record [("_tag", false, .lit "Found")]
+  ["_tag"] (.cons (.var 0) .nil)) = none
+
+#guard termTy (nativeSignature []) [] (.field .required person "name") = some .string
+#guard termTy (nativeSignature []) [] (.field .required person "nickname") = none
+#guard termTy (nativeSignature []) [] (.field .optional person "nickname") = some (.option .string)
+#guard termTy (nativeSignature []) [.record [("x", true, .option .nat)]]
+  (.field .optional (.var 0) "x") = some (.option (.option .nat))
+#guard termTy (nativeSignature []) [.union (.record [("x", false, .nat)])
+  (.record [("x", false, .string)])] (.field .required (.var 0) "x") = some (Ty.join .nat .string)
+#guard termTy (nativeSignature []) [.union (.record [("x", false, .nat)]) .nat]
+  (.field .required (.var 0) "x") = none
+#guard termTy (nativeSignature []) [] (.recordSet person "nickname" (.lit (.nat 4))) =
+  some (.record [("name", false, .string), ("nickname", false, .nat)])
+#guard termTy (nativeSignature []) [] (.recordSet person "name" (.lit (.str "Grace"))) =
+  some (.record [("name", false, .lit "Grace"), ("nickname", true, .string)])
+#guard argTy (nativeSignature []) [] true person = argTy (nativeSignature []) [] false person
+
+-- Raw metadata remains visible after its value is discarded.
+def intRecord : Term := .record [("n", false, .int)] ["n"] (.cons (.lit (.nat 1)) .nil)
+def discardInt : NativeEff := .bind (.succeed intRecord) (.succeed (.lit (.nat 0)))
+#guard (findIntInProgram discardInt).isSome
+#guard match admitProgram discardInt [] with
+  | .error (.uninhabited _) => true
+  | _ => false
+#guard findIntInProgram (.iterate (some .int) (.lit (.nat 0)) (.lit (.bool false))
+  (.lit (.nat 0)) (.lit (.nat 0)) (.succeed (.lit .unit))) = some ["program", "cursorTy"]
+
+-- Generated program views reach terms in every type-bearing leaf position.
+def badMetadata : Term := .record [("x", true, .map .nat .string)] [] .nil
+#guard (Formation.checkInput (.succeed badMetadata : NativeEff) []).isSome
+#guard (Formation.checkInput (.failCause (.die badMetadata) : NativeEff) []).isSome
+#guard (Formation.checkInput (.gen (.cons (.ret badMetadata) .nil) : NativeEff) []).isSome
+#guard (Formation.checkInput (.withFiber (.interruptAll (.lit .unit) (some badMetadata)) : NativeEff) []).isSome
+#guard (Formation.checkInput (.provideLayer (.effect ⟨⟨0⟩, ⟨0⟩⟩ (.succeed badMetadata)) false
+  (.succeed (.lit .unit)) : NativeEff) []).isSome
+#guard (Formation.checkInput (.succeed (.app "some" (.cons badMetadata .nil)) : NativeEff) []).isSome
+
 #print axioms evalTerm
 #print axioms Term.weaken_eq_lit
 #print axioms instDecidableEqTerm
+#print axioms argTy_weaken
+#print axioms argTy_cases
+#print axioms tagTest?_weaken
+#print axioms Formation.checkInput_eq_none_iff
 
 end Effect4.Test.RecordTerms

@@ -174,16 +174,10 @@ where
 def findIntInEffTy (ty : EffTy) : Option Path :=
   findInt ["program", "answer"] ty.answer <|> findInt ["program", "error"] ty.error
 
-/-- A type stated inside the program tree is the third place the reserved constructor can
-hide (DI-92): an `iterate`'s cursor annotation. The columns of the certificate do not see it,
-since a cursor's type need not reach the answer or the error. The path is the node's, then
-`cursorTy`. -/
+/-- DI-92's raw integer profile reaches every program annotation, including a
+record whose value is later discarded. The shared collector retains cursor paths. -/
 def findIntInProgram (program : NativeEff) : Option Path :=
-  foldMapAt_eff (M := Option Path) none (· <|> ·) [] program
-    (f_eff := fun e p => match e with
-      | .iterate (some t) _ _ _ _ _ =>
-        findInt ("program" :: p.map toString ++ ["cursorTy"]) t
-      | _ => none)
+  (Formation.programAnnotations program).findSome? fun (path, ty) => findInt path ty
 
 /-! ## The column check, located (rows 127 and 149)
 

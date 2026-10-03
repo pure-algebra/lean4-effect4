@@ -1,4 +1,4 @@
-import Effect4.Program.Fold
+import Effect4.Program.LayerView
 
 /-!
 # Raw type formation
@@ -96,13 +96,49 @@ def instantiatedSites (row : Row) (bindings : Ty.Subst) : List Site :=
   sites false ["row", "answer"] (row.answer.instantiate bindings) ++
   sites false ["row", "error"] (row.error.instantiate bindings)
 
-/-- The only type annotation stored in an effect node is its iteration cursor. -/
+/-- Raw declarations in a term, collected by the generated term fold. -/
+def termAnnotations (path : List String) (term : Term) : List (List String × Ty) :=
+  foldMapAt_term [] (· ++ ·) [] term (f_term := fun term pos => match term with
+    | .record fields _ _ => [(path ++ ["term"] ++ pos.map toString ++ ["fields"], .record fields)]
+    | _ => [])
+
+/-- Cause leaves carry terms too; the generated cause fold retains their order. -/
+def causeAnnotations (path : List String) (cause : CauseTerm) : List (List String × Ty) :=
+  cata_cause (R := fun _ => List String → List (List String × Ty)) {
+    cause_fail := fun term pos => termAnnotations (pos ++ ["fail"]) term
+    cause_die := fun term pos => termAnnotations (pos ++ ["die"]) term
+    cause_interrupt := fun who pos =>
+      who.toList.flatMap (termAnnotations (pos ++ ["interrupt"]))
+    cause_both := fun left right pos => left (pos ++ ["left"]) ++ right (pos ++ ["right"])
+  } cause path
+
+/-- Read type-bearing leaves from a generated program-family view. -/
+def argumentAnnotations {Op : Type} (path : List String) (index : Nat) :
+    ArgF Op (EffSelfCarrier Op) → List (List String × Ty)
+  | .term term => termAnnotations (path ++ ["argument", toString index]) term
+  | .cause cause => causeAnnotations (path ++ ["argument", toString index]) cause
+  | .optTerm term => term.toList.flatMap (termAnnotations (path ++ ["argument", toString index]))
+  | .optTy ty => ty.toList.map fun t => (path ++ ["cursorTy"], t)
+  | _ => []
+
+/-- The generated view supplies every leaf without a second program-constructor match. -/
+def nodeAnnotations {Op : Type} (fam : EffFam) (node : EffSelfCarrier Op fam)
+    (path : List Nat) : List (List String × Ty) :=
+  ((view fam node).2.zipIdx).flatMap fun (argument, index) =>
+    argumentAnnotations ("program" :: path.map toString) index argument
+
+/-- Every raw program annotation. Formation and the integer profile share this collector.
+The existing iteration annotation retains its `cursorTy` path. -/
+def programAnnotations {Op : Type} (program : Eff Op) : List (List String × Ty) :=
+  foldMapAt_eff [] (· ++ ·) [] program
+    (f_eff := nodeAnnotations .eff) (f_stmt := nodeAnnotations .stmt)
+    (f_stmts := nodeAnnotations .stmts) (f_effs := nodeAnnotations .effs)
+    (f_action := nodeAnnotations .action) (f_layer := nodeAnnotations .layer)
+    (f_layers := nodeAnnotations .layers)
+
+/-- Strict raw formation reaches every program annotation, including nested record terms. -/
 def programSites {Op : Type} (program : Eff Op) : List Site :=
-  foldMapAt_eff (M := List Site) [] (· ++ ·) [] program
-    (f_eff := fun e path => match e with
-      | .iterate (some ty) _ _ _ _ _ =>
-        sites false ("program" :: path.map toString ++ ["cursorTy"]) ty
-      | _ => [])
+  (programAnnotations program).flatMap fun (path, ty) => sites false path ty
 
 /-- The shared raw input of every checked public boundary. -/
 def input {Op : Type} (program : Eff Op) (table : List Row) : List Site :=

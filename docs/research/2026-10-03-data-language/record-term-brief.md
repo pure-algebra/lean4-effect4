@@ -27,7 +27,11 @@ The term checker uses the existing `Formation.sites false` check on the complete
 It then calls `Record.check` with argument types computed under the literal-retaining flag.
 A field target uses the ordinary flag. An overwrite replacement uses the literal-retaining flag.
 This retains literal discriminants without refining a variable typed as general `string`.
-`Formation.programSites` also collects every declared record under its existing located term callback.
+The shared raw annotation collector composes generated Eff views with the generated Term fold.
+Eff callbacks expose term, cause, optional-term and type-annotation leaves; there is no direct term callback on `foldMapAt_eff`.
+`Formation.programSites` expands each raw annotation into its type occurrences.
+The existing integer-profile scan consumes those same raw annotations through `findInt`.
+This retains DI-92 for a discarded record and keeps the existing cursor path.
 The public raw check therefore sees metadata before any program typing call.
 
 ## Exact edit fence
@@ -35,7 +39,8 @@ The public raw check therefore sees metadata before any program typing call.
 - `src/Effect4/Machine/Term.lean`: type-data import, mode alphabet, appended term constructors, scope and evaluator branches; revise affected module comments.
 - `src/Effect4/Program/Eff.lean`: term weakening and its existing literal inversion lemma only.
 - `src/Effect4/Program/Typing/Rules.lean`: the new term rules, literal split, weakening and tag-test weakening consumers.
-- `src/Effect4/Program/Formation.lean`: the located term metadata collector.
+- `src/Effect4/Program/Formation.lean`: the shared located annotation collector.
+- `src/Effect4/Program/Admission.lean`: reuse that collector for the existing raw integer-profile restriction.
 - `src/Effect4/Laws/Program/Signature.lean`: the direct term-type congruence consumer.
 - `Test/Program/RecordTerms.lean`: dedicated core typing, scope, weakening and formation controls.
 - `src/Effect4/Program/Authoring/Records.lean`: `record`, `field`, `optionalField` and `recordSet` builders in the existing scope reader.
@@ -64,9 +69,12 @@ No syntax, generator, root import or policy file has been changed by this prepar
 | Weakening keeps the exact typing result | Residual Program Typing; existing binder-typing compatibility | Any signature, inserted type, environment split and term; success and refusal | `termTy_weaken`, program weakening and scoped authoring; R3 | No arbitrary relocation without a variable map |
 | Signature extension keeps term typing | Residual Program Typing; existing signature-extension compatibility | Equal atom typing and constant flags; every new term | `SigExtends.termTy` and existing program-source proofs; R3 | No change to row or service premises |
 | The checker still agrees with its judgment | Residual Program Typing; existing checker agreement | Existing signature and environment assumptions, extended term rules | `CheckSound`, `CheckInversion`, then M5 | Invariant evidence alone gives no progress |
-| Builder reconstruction keeps scope | Residual Program Typing; existing authoring scope judgment | Each child has `TermScoped`; unchanged environment and path | `TermScoped` instances and ergonomic record authoring; R3 | No typing or evaluation certificate from name resolution alone |
+| Builder reconstruction keeps scope | Residual Program Typing; existing authoring scope judgment | Each child has `TermSrc.Scoped`; unchanged environment and path | `TermSrc.Scoped` certificates and ergonomic record authoring; R3 | No typing or evaluation certificate from name resolution alone |
 | Evaluation produces a fitting result | Residual Program Typing; `denote-typed` | Fitting environment, successful term typing, existing native atom assumption | Operations seat's `evalTerm_progress`, then M5 | Operations-owned; no host liveness or target execution claim |
 
+The raw annotation collector also serves the existing DI-92 integer-profile scan.
+Its controls retain the cursor path and reject integer metadata in a discarded intermediate record.
+It does not add another formation, typing or inhabitance judgment.
 The first six obligations are direct consumers or repairs of existing claims.
 The operations seat owns the last theorem and its record helper premises.
 No new parallel proof graph is needed.

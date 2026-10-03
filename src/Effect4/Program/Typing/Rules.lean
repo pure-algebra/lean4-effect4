@@ -1,5 +1,6 @@
 import Effect4.Program.Refs
 import Effect4.Program.Formation
+import Effect4.Program.Record
 import Effect4.Machine.Context
 
 /-!
@@ -93,6 +94,19 @@ mutual
     | .app atom args => do
       let tys ← argsTy sig env (sig.constAtom atom) args
       sig.atomOf atom tys
+    | .record fields names values =>
+      match Formation.check (Formation.sites false [] (.record fields)) with
+      | some _ => none
+      | none => do
+        let types ← argsTy sig env true values
+        Record.check fields names types
+    | .field mode target name => do
+      let type ← argTy sig env false target
+      Record.fieldType (mode = .optional) type name
+    | .recordSet target name value => do
+      let targetType ← argTy sig env false target
+      let valueType ← argTy sig env true value
+      Record.setType targetType name valueType
   /-- The argument types of an application, argument by argument. -/
   def argsTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Terms → Option (List Ty)
     | .nil => some []
@@ -161,6 +175,9 @@ theorem argTy_cases (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Te
   | lit value => exact Or.inl ⟨value, rfl, (Option.some.inj h).symm⟩
   | var index => exact Or.inr h
   | app atom args => exact Or.inr h
+  | record fields names values => exact Or.inr h
+  | field mode target name => exact Or.inr h
+  | recordSet target name value => exact Or.inr h
 
 /-- The error type a cause carries: its `fail` reasons; defects and interrupts contribute
 none (`Cause.die` and `Cause.interrupt` are outside `E`). A `die` carries an admitted error
@@ -361,6 +378,13 @@ mutual
     | .lit _ => rfl
     | .app atom args => by
       simp only [Term.weaken, argTy, argsTy_weaken sig pre post inserted _ args]
+    | .record fields names values => by
+      simp only [Term.weaken, argTy, argsTy_weaken sig pre post inserted true values]
+    | .field mode target name => by
+      simp only [Term.weaken, argTy, argTy_weaken sig pre post inserted false target]
+    | .recordSet target name value => by
+      simp only [Term.weaken, argTy, argTy_weaken sig pre post inserted false target,
+        argTy_weaken sig pre post inserted true value]
 
   theorem argsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
       (const : Bool) (terms : Terms) :
@@ -396,6 +420,7 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
   cases test with
   | var _ => rfl
   | lit _ => rfl
+  | record _ _ _ | field _ _ _ | recordSet _ _ _ => rfl
   | app atom args =>
     cases args with
     | nil => rfl
@@ -403,6 +428,7 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
       cases head with
       | var _ => rfl
       | app _ _ => rfl
+      | record _ _ _ | field _ _ _ | recordSet _ _ _ => rfl
       | lit value =>
         cases value with
         | unit | nat _ | bool _ => rfl
@@ -413,6 +439,7 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
             cases second with
             | lit _ => rfl
             | app _ _ => rfl
+            | record _ _ _ | field _ _ _ | recordSet _ _ _ => rfl
             | var index =>
               cases rest with
               | cons _ _ => rfl
@@ -424,8 +451,8 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
                   have h1 : index ≠ caught := Nat.ne_of_lt (Nat.lt_of_lt_of_le hlt h)
                   have h2 : index ≠ caught + 1 :=
                     Nat.ne_of_lt (Nat.lt_succ_of_lt (Nat.lt_of_lt_of_le hlt h))
-                  simp [hlt, h1, h2]
-                · simp [hlt]
+                  simp only [hlt, ↓reduceIte, h1, h2, and_false]
+                · simp only [hlt, ↓reduceIte, Nat.add_right_cancel_iff]
 
 /-- The `catchIf` error column survives an inserted slot (`tagTest?_weaken` at the caught
 position, which is the environment's length). -/
