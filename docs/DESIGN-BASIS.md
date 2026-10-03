@@ -1601,7 +1601,7 @@ Each repair changed statements only, no runtime code.
   (`src/Effect4/Laws/Program/Typed/Contracts.lean`), `stackAccepts_mono`
   (`src/Effect4/Laws/Program/Typed/Contracts.lean`), `savedOk_mono`
   (`src/Effect4/Laws/Program/Typed/Contracts.lean`), `HookLaws`
-  (`Test/Program/FramesNotKripke.lean`). The typed state: `TypedState`
+  (`git:780516bd:src/Effect4/Laws/Program/Typed/Stack.lean`). The typed state: `TypedState`
   (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `QueueOk`
   (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `LiveCode`
   (`src/Effect4/Laws/Program/Typed/Assembly.lean`), `ReadCode`
