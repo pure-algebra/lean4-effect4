@@ -164,4 +164,36 @@ theorem storesOk_refs {root : ProgramSource} {w w' : World} {s s' : Stores}
   · exact memo.symm ▸ c4
   · exact c5
 
+/-- **A store step over the same declaration tables settles typed** (the ref rows): the new store
+keeps every column but the heap (`storesOk_refs`), grows (`syncOpStep_le`) and stays well formed
+(`syncOpStep_wf`, given the step's validity), and the answer is in the row's post at the restated
+world. -/
+theorem Evaluating.store_restated {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    {op : SyncOp} {next : Val → RProgram} (hc : f.frame.current = .vis (.inl op) next)
+    {s : Stores} {ans : Val} (step : syncOpStep op w.state = some (s, ans))
+    (valid : op.validIn w.state = true)
+    (store' : StoreTyped root { w with state := s }) (ord : w.leHost { w with state := s })
+    (deferreds : s.deferreds = w.state.deferreds) (scopes : s.scopes = w.state.scopes)
+    (memo : s.memo = w.state.memo) (timers : s.timers = w.state.timers)
+    (post : ∀ cert, storePre root w op cert → storePost { w with state := s } op cert ans) :
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR (evaluateRawR (interpRAt root.program m.completedExits) m f y)) := by
+  have wide := ev.typed.machine.wide
+  have state : w.state = m.state := wide.state
+  rw [state] at step valid deferreds scopes memo timers
+  refine ev.store_step hc step ord rfl rfl rfl rfl store'
+    (syncOpStep_wf op m.state s ans wide.wf valid step)
+    (storesOk_refs wide.stores ord rfl rfl rfl rfl store' deferreds scopes memo) ?_ ?_ ?_ post
+  · rw [timers]
+    exact wide.timers
+  · intro key cell hcell a e hpi
+    rw [deferreds] at hcell
+    exact wide.waiters key cell hcell a e hpi
+  · intro o ho owner priority mode
+    rw [deferreds] at ho
+    have owned := wide.live.dueOwners o ho owner priority mode
+    rw [rfiber?_update, Option.isSome_map] at owned
+    exact owned
+
 end Effect4.Program.Typed
