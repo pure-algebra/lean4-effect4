@@ -1536,4 +1536,185 @@ theorem Evaluating.countdown_parks {root : ProgramSource} {rootTy : EffTy} {w : 
       have ef := congrArg RunMachine.fibers e
       exact ef
 
+/-- The exits a walk collects are typed at columns every target's declaration is below. -/
+theorem Evaluating.walk_exitOk {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    {targets : List FiberId} {a e : Ty} (cols : ∀ t ∈ targets, FiberColumnsBelow w t a e) {k : Nat}
+    {exits : List ExitV} {live : Option (FiberId × List FiberId)}
+    (hw : countdownWalk ({ m with nextToken := k } : RState) targets [] = (exits, live)) :
+    ∀ ex ∈ exits, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex := by
+  intro ex hex
+  obtain ⟨⟨extra, hextra, found⟩, _⟩ := countdownWalk_spec ({ m with nextToken := k } : RState) targets []
+  rw [hw, List.nil_append] at hextra
+  have e' : exits = extra := hextra
+  rw [e'] at hex
+  obtain ⟨t, ht, g, hg, gx⟩ := found ex hex
+  obtain ⟨fty, d, ha, he⟩ := cols t ht
+  exact exitOk_subN (ev.target_exit (t := g) hg gx fty d) ha he
+
+/-- A declared fiber is below `nextId`. -/
+theorem Evaluating.declared_below {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    {id : FiberId} (h : (w.Γ id).isSome = true) : id.value < m.nextId := by
+  obtain ⟨x, hx, hid⟩ := List.mem_map.mp ((ev.typed.machine.wide.fibers id).mp h)
+  rw [← hid]
+  exact (ev.typed.machine.fiber hx).below
+
+theorem prepareIterR_awaitAll {M : RState} {g : RFiber} {y : Bool} {targets : List FiberId}
+    {k : (FiberOp.awaitAll targets).answer → RProgram}
+    (hg : g.frame.current = .vis (.inr (.awaitAll targets)) k) :
+    prepareIterR ⟨M, g, y, .parked, []⟩ = ⟨M, g, y, .parked, []⟩ := by
+  rcases g with ⟨id, ⟨cur, stk, i, ic, di⟩, running, parked, pending, finalizing, exit, count,
+    maxOps, prevent, yo, observers, children, dispatcher, context⟩
+  change cur = _ at hg
+  subst hg
+  rfl
+
+theorem prepareIterR_awaitAllFailFast {M : RState} {g : RFiber} {y : Bool} {targets : List FiberId}
+    {k : (FiberOp.awaitAllFailFast targets).answer → RProgram}
+    (hg : g.frame.current = .vis (.inr (.awaitAllFailFast targets)) k) :
+    prepareIterR ⟨M, g, y, .parked, []⟩ = ⟨M, g, y, .parked, []⟩ := by
+  rcases g with ⟨id, ⟨cur, stk, i, ic, di⟩, running, parked, pending, finalizing, exit, count,
+    maxOps, prevent, yo, observers, children, dispatcher, context⟩
+  change cur = _ at hg
+  subst hg
+  rfl
+
+theorem prepareIterR_awaitNewChildren {M : RState} {g : RFiber} {y : Bool} {snapshot : List FiberId}
+    {k : (FiberOp.awaitNewChildren snapshot).answer → RProgram}
+    (hg : g.frame.current = .vis (.inr (.awaitNewChildren snapshot)) k) :
+    prepareIterR ⟨M, g, y, .parked, []⟩ = ⟨M, g, y, .parked, []⟩ := by
+  rcases g with ⟨id, ⟨cur, stk, i, ic, di⟩, running, parked, pending, finalizing, exit, count,
+    maxOps, prevent, yo, observers, children, dispatcher, context⟩
+  change cur = _ at hg
+  subst hg
+  rfl
+
+/-- **`awaitAll`'s park with no deferred interrupt**: the record resumes with the exits at the
+certificate's columns (the pre's, raised to the checker's order). -/
+theorem awaitAllParks_live (root : ProgramSource) (rootTy : EffTy) (targets : List FiberId) :
+    ∀ (w : World) (m : RState) (rest : List RCmd) (f : RFiber) (y : Bool)
+      (next : (FiberOp.awaitAll targets).answer → RProgram) (exits : List ExitV) (target : FiberId)
+      (remaining : List FiberId),
+      Evaluating root rootTy w m rest f y → f.frame.current = .vis (.inr (.awaitAll targets)) next →
+      countdownWalk ({ m with nextToken := m.nextToken + 1 } : RState) targets [] =
+        (exits, some (target, remaining)) → f.frame.deferredInterrupt = false →
+      SettlesTyped root rootTy w f.id rest
+        (prepareIterR (evaluateFiberR (interpRAt root.program m.completedExits) m f y
+          (.awaitAll targets) next)) := by
+  intro w m rest f y next exits target remaining ev hc hw hdef
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, ⟨a, e, hcert, cols⟩, typedNext⟩ := TypedProg.fiber_inv current
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have colsN : ∀ id ∈ targets, FiberColumnsBelow w id a e := fun id hid => by
+    obtain ⟨fty, d, ha, he⟩ := cols id hid
+    exact ⟨fty, d, Ty.sub_le_subN ha, Ty.sub_le_subN he⟩
+  have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+    fun _ h => Option.some.inj (h.symm.trans declared)
+  show SettlesTyped root rootTy w f.id rest (prepareIterR
+    (FiberAction.awaitAll (interpRAt root.program m.completedExits) m (saveAnswerR f (seqR next)) y
+      targets false))
+  simp only [FiberAction.awaitAll, countdownPark, hw]
+  exact ev.countdown_parks hdef (by rw [hc]; rfl) (by rw [hc]; rfl) .exitsValue false hw
+    (fun id hid => by
+      obtain ⟨fty, d, _, _⟩ := cols id hid
+      exact ev.declared_below (by rw [d]; rfl))
+    colsN (ev.walk_exitOk colsN hw) rfl (seqR next)
+    (fun ty' d => by
+      rw [same ty' d]
+      exact hostStack_push (seqFrame_typed
+        (post := fun w' ans => fiberPost w' (.awaitAll targets) cert ans) rfl
+        (fun _ _ v hv => by
+          show Fits _ v cert
+          rw [hcert]
+          exact hv) typedNext) stack)
+    (fun _ _ hg => prepareIterR_awaitAll (hg.trans hc))
+
+/-- **`awaitAllFailFast`'s park with no deferred interrupt**: `awaitAll`'s, the record fail-fast. -/
+theorem awaitAllFailFastParks_live (root : ProgramSource) (rootTy : EffTy) (targets : List FiberId) :
+    ∀ (w : World) (m : RState) (rest : List RCmd) (f : RFiber) (y : Bool)
+      (next : (FiberOp.awaitAllFailFast targets).answer → RProgram) (exits : List ExitV)
+      (target : FiberId) (remaining : List FiberId),
+      Evaluating root rootTy w m rest f y →
+      f.frame.current = .vis (.inr (.awaitAllFailFast targets)) next →
+      countdownWalk ({ m with nextToken := m.nextToken + 1 } : RState) targets [] =
+        (exits, some (target, remaining)) → f.frame.deferredInterrupt = false →
+      SettlesTyped root rootTy w f.id rest
+        (prepareIterR (evaluateFiberR (interpRAt root.program m.completedExits) m f y
+          (.awaitAllFailFast targets) next)) := by
+  intro w m rest f y next exits target remaining ev hc hw hdef
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, ⟨a, e, hcert, cols⟩, typedNext⟩ := TypedProg.fiber_inv current
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have colsN : ∀ id ∈ targets, FiberColumnsBelow w id a e := fun id hid => by
+    obtain ⟨fty, d, ha, he⟩ := cols id hid
+    exact ⟨fty, d, Ty.sub_le_subN ha, Ty.sub_le_subN he⟩
+  have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+    fun _ h => Option.some.inj (h.symm.trans declared)
+  show SettlesTyped root rootTy w f.id rest (prepareIterR
+    (FiberAction.awaitAll (interpRAt root.program m.completedExits) m (saveAnswerR f (seqR next)) y
+      targets true))
+  simp only [FiberAction.awaitAll, countdownPark, hw]
+  exact ev.countdown_parks hdef (by rw [hc]; rfl) (by rw [hc]; rfl) .exitsValue true hw
+    (fun id hid => by
+      obtain ⟨fty, d, _, _⟩ := cols id hid
+      exact ev.declared_below (by rw [d]; rfl))
+    colsN (ev.walk_exitOk colsN hw) rfl (seqR next)
+    (fun ty' d => by
+      rw [same ty' d]
+      exact hostStack_push (seqFrame_typed
+        (post := fun w' ans => fiberPost w' (.awaitAllFailFast targets) cert ans) rfl
+        (fun _ _ v hv => by
+          show Fits _ v cert
+          rw [hcert]
+          exact hv) typedNext) stack)
+    (fun _ _ hg => prepareIterR_awaitAllFailFast (hg.trans hc))
+
+/-- **`awaitNewChildren`'s park with no deferred interrupt**: the record resumes with `void`, its
+columns `unknown` (every child is declared, `FiberTyped.children`). -/
+theorem awaitNewChildrenParks_live (root : ProgramSource) (rootTy : EffTy) (snapshot : List FiberId) :
+    ∀ (w : World) (m : RState) (rest : List RCmd) (f : RFiber) (y : Bool)
+      (next : (FiberOp.awaitNewChildren snapshot).answer → RProgram) (exits : List ExitV)
+      (target : FiberId) (remaining : List FiberId),
+      Evaluating root rootTy w m rest f y →
+      f.frame.current = .vis (.inr (.awaitNewChildren snapshot)) next →
+      countdownWalk ({ m with nextToken := m.nextToken + 1 } : RState)
+        ((saveAnswerR f (seqR next)).children.filter fun c => !(snapshot.contains c)) [] =
+        (exits, some (target, remaining)) → f.frame.deferredInterrupt = false →
+      SettlesTyped root rootTy w f.id rest
+        (prepareIterR (evaluateFiberR (interpRAt root.program m.completedExits) m f y
+          (.awaitNewChildren snapshot) next)) := by
+  intro w m rest f y next exits target remaining ev hc hw hdef
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨_, _, typedNext⟩ := TypedProg.fiber_inv current
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have typedNext' : ∀ w', w.leHost w' → ∀ ans : Val, ans = Val.unit →
+      TypedProg root w' tin (next ans) :=
+    fun w' o ans post => typedNext w' o ans post
+  have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+    fun _ h => Option.some.inj (h.symm.trans declared)
+  have kids : ∀ c ∈ f.children, (w.Γ c).isSome = true :=
+    (ev.typed.machine.fiber (rfiber?_mem ev.look)).children
+  have colsU : ∀ id ∈ (saveAnswerR f (seqR next)).children.filter (fun c => !(snapshot.contains c)),
+      FiberColumnsBelow w id .unknown .unknown := fun id hid => by
+    obtain ⟨fty, d⟩ := Option.isSome_iff_exists.mp (kids id (List.mem_filter.mp hid).1)
+    exact ⟨fty, d, subN_unknown _, subN_unknown _⟩
+  show SettlesTyped root rootTy w f.id rest (prepareIterR
+    (FiberAction.awaitNewChildren (interpRAt root.program m.completedExits) m
+      (saveAnswerR f (seqR next)) y snapshot))
+  simp only [FiberAction.awaitNewChildren, countdownPark, hw]
+  exact ev.countdown_parks hdef (by rw [hc]; rfl) (by rw [hc]; rfl) .void false hw
+    (fun id hid => ev.declared_below (kids id (List.mem_filter.mp hid).1))
+    colsU (ev.walk_exitOk colsU hw) rfl (seqR next)
+    (fun ty' d => by
+      rw [same ty' d]
+      exact hostStack_push (Evaluating.unitAnswerFrame typedNext') stack)
+    (fun _ _ hg => prepareIterR_awaitNewChildren (hg.trans hc))
+
 end Effect4.Program.Typed
