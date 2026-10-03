@@ -87,7 +87,8 @@ theorem valid : WorldValid unitTy world machine := by
     { ids := rfl, fibers := old.fibers, heap := old.heap, promises := old.promises,
       tokens := ?_, tokenBound := ?_, tokenTargets := ?_, state := rfl, wf := ?_,
       cells := old.cells, root := old.root, timers := ?_,
-      waiters := fun _ _ h => by cases h }
+      waiters := (fun _ _ h => by cases h),
+      children := fun f hf c hc => by rw [member_fiber hf] at hc; cases hc }
   · intro f hf token hp
     rw [member_fiber hf] at hp
     cases hp

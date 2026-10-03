@@ -660,7 +660,8 @@ theorem valid : WorldValid ty world machine := by
     cells := old.cells
     root := old.root
     timers := WakeTyped.empty _ _
-    waiters := fun _ _ h => by cases h }
+    waiters := fun _ _ h => by cases h
+    children := fun f hf c hc => by change f ∈ [_] at hf; rw [List.mem_singleton] at hf; subst hf; cases hc }
   · intro f hf token hp
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
@@ -1046,7 +1047,9 @@ theorem mT_typed (w : Typed.World)
   obtain ⟨hv, hok, hpark⟩ := h
   refine ⟨⟨hv.ids, hv.fibers, hv.heap, hv.promises, ?_, hv.tokenBound, hv.tokenTargets, hv.state,
     hv.wf, hv.cells, hv.root,
-    hv.timers, hv.waiters⟩,
+    hv.timers, hv.waiters, fun f hf c hc => by
+      obtain ⟨g, hg, rfl⟩ := List.mem_map.mp hf
+      exact hv.children g hg c hc⟩,
     ⟨?_, hok.c1, hok.c2⟩, ?_⟩
   · intro f hf token hp
     obtain ⟨g, hg, rfl⟩ := List.mem_map.mp hf
@@ -1152,7 +1155,8 @@ theorem valid : WorldValid unitTy world machine := by
     ids := old.ids, fibers := old.fibers, heap := old.heap, promises := old.promises,
     tokens := ?_, tokenBound := old.tokenBound, tokenTargets := old.tokenTargets,
     state := old.state, wf := old.wf, cells := old.cells, root := old.root,
-    timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
+    timers := WakeTyped.empty _ _, waiters := (fun _ _ h => by cases h),
+    children := fun f hf c hc => by change f ∈ [_] at hf; rw [List.mem_singleton] at hf; subst hf; cases hc }
   intro f hf token hp
   change f ∈ [fiber] at hf
   rw [List.mem_singleton] at hf
@@ -1404,7 +1408,8 @@ theorem result_valid : WorldValid unitTy world result.1 := by
     ids := old.ids, fibers := old.fibers, heap := old.heap, promises := old.promises,
     tokens := ?_, tokenBound := old.tokenBound, tokenTargets := old.tokenTargets,
     state := old.state, wf := old.wf, cells := old.cells, root := old.root,
-    timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
+    timers := WakeTyped.empty _ _, waiters := (fun _ _ h => by cases h),
+    children := fun f hf c hc => by change f ∈ [_] at hf; rw [List.mem_singleton] at hf; subst hf; cases hc }
   intro f hf token hp
   change f ∈ [afterFiber] at hf
   rw [List.mem_singleton] at hf
@@ -1992,6 +1997,8 @@ theorem valid : WorldValid unitTy world machine := by
   · rfl
   · exact WakeTyped.empty _ _
   · intro key cell h; cases h
+  · intro f member c hc
+    rcases member_cases f member with rfl | rfl <;> cases hc
 
 theorem no_requests (id : FiberId) (token : Nat) : requestOfR machine id token = none := by
   unfold requestOfR
@@ -2276,7 +2283,9 @@ theorem result_valid : WorldValid unitTy world result.1 := by
     ids := valid.ids, fibers := valid.fibers, heap := valid.heap, promises := valid.promises,
     tokens := ?_, tokenBound := valid.tokenBound, tokenTargets := valid.tokenTargets,
     state := valid.state, wf := valid.wf, cells := valid.cells, root := valid.root, timers := valid.timers,
-    waiters := valid.waiters }
+    waiters := valid.waiters,
+    children := fun f member c hc => by
+      rcases result_member_cases f member with rfl | rfl <;> cases hc }
   intro f member token parked
   rcases result_member_cases f member with rfl | rfl <;> cases parked
 

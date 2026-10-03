@@ -543,7 +543,8 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
   refine ⟨{ ids := valid.ids, fibers := valid.fibers, heap := valid.heap,
             promises := valid.promises, tokens := valid.tokens, tokenBound := valid.tokenBound,
             tokenTargets := valid.tokenTargets, state := valid.state, wf := valid.wf,
-            cells := valid.cells, root := valid.root, timers := valid.timers, waiters := valid.waiters },
+            cells := valid.cells, root := valid.root, timers := valid.timers, waiters := valid.waiters,
+            children := valid.children },
     ⟨fun f hf => runFiberOk_tr f saved (ok.c0 f hf), ok.c1, storesOk_tr m.state ok.c2⟩,
     activeDelivery_races (m := m) rfl (racesKept_of_eq fun _ => rfl) deliv, ?_, ?_,
     registrationState_races (m := m) rfl (racesKept_of_eq fun _ => rfl) reg⟩
@@ -610,7 +611,7 @@ abbrev QuietFiber (f : RFiber) : Prop :=
     (f.running || f.exit.isSome) = true ∧ (!f.exit.isSome || !f.running) = true ∧
     (f.exit.all fun ex => match ex with
       | .success _ => false
-      | .failure c => c.reasons.all (·.tag == .interrupt)) = true
+      | .failure c => c.reasons.all (·.tag == .interrupt)) = true ∧ f.children.isEmpty = true
 
 /-- A machine of one quiet root over empty stores. Every field is decidable. -/
 structure QuietRoot (m : RState) : Prop where
@@ -647,13 +648,14 @@ structure QuietFacts (f : RFiber) : Prop where
   live : f.running = true ∨ f.exit.isSome = true
   idle : f.exit.isSome = true → f.running = false
   exitClean : ∀ ex, f.exit = some ex → ∃ c, ex = .failure c ∧ ∀ r ∈ c.reasons, r.tag = .interrupt
+  children : f.children = []
 
 theorem quietFacts {f : RFiber} (h : QuietFiber f) : QuietFacts f := by
   obtain ⟨fid, parked, pending, finalizing, stack, observers, buckets, context, deferred, marker,
-    recorded, live, idle, exitClean⟩ := h
+    recorded, live, idle, exitClean, children⟩ := h
   refine ⟨fid, parked, List.isEmpty_iff.mp pending, Option.isNone_iff_eq_none.mp finalizing,
     List.isEmpty_iff.mp stack, List.isEmpty_iff.mp observers, List.isEmpty_iff.mp buckets, context,
-    deferred, marker, ?_, Bool.or_eq_true_iff.mp live, ?_, ?_⟩
+    deferred, marker, ?_, Bool.or_eq_true_iff.mp live, ?_, ?_, List.isEmpty_iff.mp children⟩
   · intro c hc
     rw [hc] at recorded
     exact interrupts_of_all recorded
@@ -726,6 +728,9 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
       waiters := fun key cell hc => by
         unfold DeferredStore.cellAt at hc
         rw [cells] at hc
+        cases hc
+      children := fun f hf c hc => by
+        rw [(facts f hf).children] at hc
         cases hc }
   refine ⟨⟨valid, ⟨fun f hf => ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩, rfl, ?_,
     ⟨q.stuck, fun o ho => ?_⟩, rfl⟩
@@ -893,7 +898,8 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
   exact ⟨{ ids := valid.ids, fibers := valid.fibers, heap := valid.heap,
            promises := valid.promises, tokens := valid.tokens, tokenBound := valid.tokenBound,
            tokenTargets := valid.tokenTargets, state := valid.state, wf := valid.wf,
-           cells := valid.cells, root := valid.root, timers := valid.timers, waiters := valid.waiters },
+           cells := valid.cells, root := valid.root, timers := valid.timers, waiters := valid.waiters,
+            children := valid.children },
     ⟨ok.c0, ok.c1, ok.c2⟩, activeDelivery_races (m := m) rfl (racesKept_of_eq fun _ => rfl) deliv,
     { fiberIds := sched.fiberIds, fibersBelow := sched.fibersBelow, raceIds := sched.raceIds,
       racesBelow := sched.racesBelow, raceHosts := sched.raceHosts, keysBelow := sched.keysBelow,
