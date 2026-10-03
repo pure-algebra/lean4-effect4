@@ -124,6 +124,8 @@ def main() -> int:
     parser.add_argument("--rule", choices=RULES, help="with --show: only this rule")
     parser.add_argument("--top", type=int, default=0, help="the report: only the N documents with most findings")
     args = parser.parse_args()
+    if args.rule and not args.show:
+        parser.error("--rule filters what --show prints; strict mode and the report judge every rule")
 
     spec = load_spec(ROOT)
     if not spec.entries:
