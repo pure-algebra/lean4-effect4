@@ -246,7 +246,7 @@ theorem fiberTyped_tok {root : ProgramSource} {m : RState} {x : RFiber}
     h.parkedIdle, h.parkedBelow, h.exited, h.exitedStack, h.deferredCause,
     fun p hp => theta_isSome ord (h.pendingOwner p hp),
     fun o ho => storedObserverOk_tok ord o (h.observers o ho), fun raceId marker => ?_,
-    fun hx hr hm ty declared => ?_, fun token hp => theta_isSome ord (h.tokens token hp),
+    fun hx hr hm hp ty declared => ?_, fun token hp => theta_isSome ord (h.tokens token hp),
     h.raceObservers, h.targetsBelow, h.observersBelow, fun c hc => by rw [hΓ]; exact h.children c hc⟩
   · obtain ⟨tin, final, declared, final', stack, provenance⟩ := h.delivery token hp
     exact ⟨tin, final, theta_of ord declared, by rw [hΓ]; exact final', hostStack_mono ord stack,
@@ -254,7 +254,7 @@ theorem fiberTyped_tok {root : ProgramSource} {m : RState} {x : RFiber}
   · obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
     exact ⟨race, resultTy, found, host, theta_of ord token, stackReply_world ord hΓ reply⟩
   · rw [hΓ] at declared
-    exact codeOk_mono ord (h.code hx hr hm ty declared)
+    exact codeOk_mono ord (h.code hx hr hm hp ty declared)
 
 include ord back in
 theorem storesOk_tok {root : ProgramSource} (hΡ : w'.Ρ = w.Ρ) (hPi : w'.«Π» = w.«Π») {e : Expect}
@@ -606,8 +606,7 @@ theorem clause_yieldNow (root : ProgramSource) (rootTy : EffTy) (priority : Nat)
           (fun hk => internal _ (List.mem_append_left _ (List.mem_flatMap.mpr ⟨o, ho, hk⟩)) rfl)
           (storedObserverOk_view (obsView_bump M0 _) o (storedObserverOk_tok ord o (old.observers o ho)))
         registration := fun _ h => nomatch h
-        code := fun _ _ _ ty' d =>
-          ⟨EffTy.pure .unit, TypedProg.pure (strongExit_success w1 _ _ trivial), stackG ty' d, pG⟩
+        code := fun _ _ _ hp => nomatch hp
         tokens := fun token h => by
           rw [tokenOf token h, declaredG]
           rfl
