@@ -252,6 +252,43 @@ def observe (s : Run) : Observation :=
     reasons := read.reasons
     fibers := Api.fiberStatuses s.machine }
 
+/-! ## Work available to an opt-in control planner -/
+
+/-- Recorded work and waits, read from their existing owners. This separate view adds no
+field to the existing Observation or host wire. Empty lists describe only these categories;
+they do not establish deadlock, completion or absence of unfinished command residue. -/
+structure Work where
+  runnable : List FiberId
+  queued : List FiberId
+  awaiting : List Await
+  pending : List Key
+  timers : List Api.FrontierReason
+  deriving DecidableEq
+
+/-- Runnable fibers, armed dispatcher owners, host calls, received replies and timer waits.
+Arming is reported independently of host waits and of the aggregate protocol state. -/
+def work (s : Run) : Work :=
+  { runnable := Api.runnableFibers s.machine
+    queued := s.machine.armed
+    awaiting := s.outstanding
+    pending := s.observe.pending
+    timers := Api.timerReasons s.machine }
+
+/-- One explicit policy: decline a stuck machine; otherwise flush queued dispatchers first,
+then evaluate the first runnable fiber in machine order. Host replies and clock advances
+remain choices of the caller. A selected control can still refuse or exhaust its budget. -/
+def nextControl (s : Run) : Option Api.Decision :=
+  if s.machine.stuck.isSome then none
+  else if !s.work.queued.isEmpty then some Api.flush
+  else s.work.runnable.head?.map fun fiber => .evaluate fiber
+
+/-- Execute at most one planned control through the existing checked session and journal.
+With no selected control, the Run is unchanged. The recorded phase reports what execution did. -/
+def controlOnce (s : Run) : Run :=
+  match s.nextControl with
+  | none => s
+  | some decision => s.control decision
+
 /-- The live fibers nobody holds: a function of `fibers`, never a second field. -/
 def Observation.daemons (o : Observation) : List FiberId :=
   o.fibers.filterMap fun entry => if entry.2 = Api.FiberStatus.daemon then some entry.1 else none

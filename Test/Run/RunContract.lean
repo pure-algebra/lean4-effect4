@@ -225,6 +225,102 @@ def noFuel : Run := Run.open twice "fuel-frontier" { compileFuel := 40, fuel := 
 #guard (noFuel.play (Rows.tape [Api.evaluate, .installMiddleware])).phases ≠
   noFuel.phases ++ List.replicate 2 Api.HostSession.Phase.progressed
 
+/-! ## Recorded work and one opt-in control step -/
+
+#guard (Run.open twice "work").work.runnable = [Api.root]
+#guard (Run.open twice "work").nextControl = some Api.evaluate
+#guard (Run.open twice "work").controlOnce.journal = Rows.start
+#guard (Run.open twice "work").controlOnce.work.awaiting =
+  (Run.open twice "work").controlOnce.outstanding
+#guard (Run.open twice "work").controlOnce.nextControl = none
+
+-- Yield parks the fiber while its dispatcher owns a queued resume. The new view exposes
+-- this work without changing the existing protocol observation or frontier reasons.
+def yieldingProgram : Api.Program := .bind (.yieldNow 0) (.succeed (.lit (.nat 23)))
+
+def yieldingAdmitted : Api.AdmittedProgram yieldingProgram [] where
+  ty := ⟨.nat, .never, .empty⟩
+  typed := by cbv
+  lawful := by decide
+  runnable := by decide
+  intFreeTable := by decide
+  internalFreeTable := by decide
+  intFreeProgram := by decide
+  intFreeType := by decide
+  columnsTable := by decide +kernel
+  columnsType := by decide +kernel
+
+def yielding : Api.Built :=
+  { table := [], program := yieldingProgram, admitted := yieldingAdmitted }
+
+def yielded : Run := (Run.open yielding "yielded").controlOnce
+
+#guard yielded.observe.state = .parked
+#guard yielded.work.runnable = []
+#guard yielded.observe.reasons = []
+#guard yielded.work.queued = [Api.root]
+#guard yielded.nextControl = some Api.flush
+#guard yielded.controlOnce.exit = some (.success (.nat 23))
+#guard yielded.controlOnce.journal = Rows.start ++ Rows.flush
+
+-- An outstanding host call does not hide an independent queued child continuation.
+def mixedWorkProgram : Api.Program :=
+  .bind (.withFiber (.fork yieldingProgram opts))
+    (.perform (.external 0) (.lit (.nat 2)))
+
+def mixedWorkAdmitted : Api.AdmittedProgram mixedWorkProgram Test.Api.HostSessionContract.table where
+  ty := ⟨.nat, .prod .string .string, .empty⟩
+  typed := by cbv
+  lawful := by decide
+  runnable := by decide
+  intFreeTable := by decide
+  internalFreeTable := by decide
+  intFreeProgram := by decide
+  intFreeType := by decide
+  columnsTable := by decide +kernel
+  columnsType := by decide +kernel
+
+def mixedWorkBuilt : Api.Built :=
+  { table := Test.Api.HostSessionContract.table, program := mixedWorkProgram,
+    admitted := mixedWorkAdmitted }
+
+def mixedWork : Run := (Run.open mixedWorkBuilt "mixed-work").controlOnce
+
+#guard mixedWork.observe.state = .awaitingAsync
+#guard !mixedWork.work.awaiting.isEmpty
+#guard !mixedWork.work.queued.isEmpty
+#guard mixedWork.nextControl = some Api.flush
+#guard mixedWork.controlOnce.work.queued = []
+#guard mixedWork.controlOnce.outstanding = mixedWork.outstanding
+
+-- Inspection reports pending replies and timers. The internal planner does not apply
+-- replies or advance time on the caller's behalf.
+def pendingWork : Run :=
+  ((Run.open twice "pending-work").controlOnce).receive ⟨Api.root, 0⟩ (.ofExit (.success (.nat 2)))
+
+#guard pendingWork.work.pending = [⟨Api.root, 0⟩]
+#guard pendingWork.nextControl = none
+#guard pendingWork.controlOnce.journal = pendingWork.journal
+#guard (Run.open timed "timer-work").controlOnce.work.timers = [.awaitTimer ⟨1⟩ 5]
+#guard (Run.open timed "timer-work").controlOnce.nextControl = none
+
+-- Choosing a control is not a progress certificate: zero command fuel records a frontier.
+#guard noFuel.nextControl = some Api.evaluate
+#guard noFuel.controlOnce.phases = [.frontier]
+
+-- The empty-choice case on a stuck machine is deliberate even if other fields contain work.
+def stoppedWork : Run :=
+  let s := Run.open twice "stopped-work"
+  { s with session := { s.session with machine :=
+    { s.machine with stuck := some (.unknownFiber Api.root), armed := [Api.root] } } }
+
+#guard stoppedWork.nextControl = none
+#guard stoppedWork.controlOnce.journal = []
+
+example (s : Run) (decision : Api.Decision) (chosen : s.nextControl = some decision) :
+    s.controlOnce.journal = s.journal ++ [.control decision] :=
+  Run.controlOnce_journal s decision chosen
+
 /-! ## One completion per call
 
 Once an answer has been applied the machine holds no call at that key, so a second answer
@@ -258,6 +354,12 @@ has no rows at all. -/
 #guard_msgs in #print axioms Effect4.Run.play_controls_eq_replay
 /-- info: 'Effect4.Run.runClock_eq_run' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms Effect4.Run.runClock_eq_run
+/-- info: 'Effect4.Run.nextControl_spec' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.nextControl_spec
+/-- info: 'Effect4.Run.nextControl_evaluate_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.nextControl_evaluate_mem
+/-- info: 'Effect4.Run.controlOnce_journal' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.controlOnce_journal
 /-- info: 'Effect4.Run.admitProgram_certificate' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms Effect4.Run.admitProgram_certificate
 

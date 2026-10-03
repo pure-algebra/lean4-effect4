@@ -1,10 +1,20 @@
 import Effect4.Api.HostProtocol
+import Effect4.Laws.Auto.Inversion
 
 /-! P2b observation laws. Host waits take priority over aggregate exit and
 runnable observations. Driver completion is not inferred from these predicates. -/
 set_option autoImplicit false
 namespace Effect4.Api
 open Effect4 Effect4.Machine Effect4.Program
+/-- Work inspection's runnable-ID reader names exactly a live unparked recorded fiber.
+This is the membership helper for Run's `run-work-selection` claim, not progress. -/
+theorem mem_runnableFibers (m : NativeMachine) (id : FiberId) :
+    id ∈ runnableFibers m ↔
+      ∃ f ∈ m.fibers, f.id = id ∧ f.exit.isNone = true ∧ f.parked = .notParked := by
+  simp only [runnableFibers, List.mem_map, List.mem_filter, isRunnable,
+    Bool.and_eq_true, beq_iff_eq]
+  aesop
+
 theorem awaitHost_mem (why : Exhaustion) (m : NativeMachine) (key : HostProtocol.Key) :
     .awaitHost key ∈ frontierReasons why m ↔ .awaitHost key ∈ hostReasons m := by
   cases why <;> cases h : hasRunnable m <;>

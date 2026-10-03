@@ -733,6 +733,96 @@ theorem acceptReply_after_applied (s : Run) (key : Key) (bound : BoundCall) (rep
   rw [hkey] at h
   exact h
 
+/-! ## Recorded work and the opt-in control policy
+
+Concept 4's proposed `run-work-selection` property, with concept 9's checked session as
+consumer. The plan is `docs/research/2026-10-03-session-work/plan.md`. Exact selection feeds
+`controlOnce`; no theorem here asserts progress, fairness, deadlock or typed host admission.
+-/
+
+namespace WorkWanted
+
+/-- The planner chooses exactly a queued flush or the first runnable evaluation, when the
+machine is not stuck. This local goal serves `controlOnce` and R12's driver inspection. -/
+theorem nextControl_spec (s : Run) (decision : Api.Decision) : ProofGraph.Obligation
+    (s.nextControl = some decision ↔ s.machine.stuck = none ∧
+      ((decision = Api.flush ∧ s.work.queued ≠ []) ∨
+        ∃ fiber, decision = .evaluate fiber ∧ s.work.queued = [] ∧
+          s.work.runnable.head? = some fiber)) := ⟨⟩
+
+end WorkWanted
+
+/-- Exact membership in the runnable portion of the work view. -/
+theorem work_runnable_mem (s : Run) (id : FiberId) :
+    id ∈ s.work.runnable ↔
+      ∃ f ∈ s.machine.fibers, f.id = id ∧ f.exit.isNone = true ∧ f.parked = .notParked :=
+  Api.mem_runnableFibers s.machine id
+
+/-- The queued-work view is the existing arming order, independently of host waits. -/
+theorem work_queued (s : Run) : s.work.queued = s.machine.armed := rfl
+
+/-- The external waits and receipts retain the session's existing readers; timers retain
+frontier inspection's existing reader. These equalities claim no eventual service. -/
+theorem work_waits (s : Run) :
+    s.work.awaiting = s.outstanding ∧ s.work.pending = s.observe.pending ∧
+      s.work.timers = Api.timerReasons s.machine := ⟨rfl, rfl, rfl⟩
+
+/-- The selected control belongs to the declared two-choice policy. -/
+theorem nextControl_spec (s : Run) (decision : Api.Decision) :
+    s.nextControl = some decision ↔ s.machine.stuck = none ∧
+      ((decision = Api.flush ∧ s.work.queued ≠ []) ∨
+        ∃ fiber, decision = .evaluate fiber ∧ s.work.queued = [] ∧
+          s.work.runnable.head? = some fiber) := by
+  cases hs : s.machine.stuck with
+  | some why => aesop (add norm unfold [nextControl])
+  | none =>
+    cases hq : s.work.queued with
+    | cons owner rest => aesop (add norm unfold [nextControl])
+    | nil =>
+      cases hr : s.work.runnable.head? <;> aesop (add norm unfold [nextControl])
+
+#obligation_proved WorkWanted.nextControl_spec := @nextControl_spec
+#typed_state_obligations Effect4.Run.WorkWanted ceiling 0 using aesop
+
+/-- No choice means a stuck machine, or no work in the two internal categories inspected.
+It says nothing about pending host replies, timers, command residue or deadlock. -/
+theorem nextControl_none_iff (s : Run) :
+    s.nextControl = none ↔ s.machine.stuck.isSome = true ∨
+      (s.work.queued = [] ∧ s.work.runnable = []) := by
+  cases hs : s.machine.stuck <;> cases hq : s.work.queued <;> cases hr : s.work.runnable <;>
+    simp only [nextControl, hs, hq, hr, Option.isSome_none, Option.isSome_some,
+      Bool.false_eq_true, if_false, if_true, List.isEmpty_nil, List.isEmpty_cons,
+      Bool.not_true, Bool.not_false, List.head?_nil, List.head?_cons, Option.map_none,
+      Option.map_some, reduceCtorEq, false_or, true_or, and_self, false_and,
+      and_false]
+
+/-- A selected evaluation names a recorded live unparked fiber. -/
+theorem nextControl_evaluate_mem (s : Run) (id : FiberId)
+    (chosen : s.nextControl = some (.evaluate id)) :
+    ∃ f ∈ s.machine.fibers, f.id = id ∧ f.exit.isNone = true ∧ f.parked = .notParked := by
+  obtain ⟨_, selected⟩ := (nextControl_spec s (.evaluate id)).mp chosen
+  rcases selected with ⟨different, _⟩ | ⟨fiber, same, _, first⟩
+  · cases different
+  · cases same
+    exact (work_runnable_mem s id).mp (List.mem_of_head? first)
+
+/-- The opt-in consumer does nothing when the planner has no control. -/
+theorem controlOnce_none (s : Run) (chosen : s.nextControl = none) : s.controlOnce = s := by
+  simp only [controlOnce, chosen]
+
+/-- The opt-in consumer uses the existing checked control path exactly. -/
+theorem controlOnce_some (s : Run) (decision : Api.Decision)
+    (chosen : s.nextControl = some decision) : s.controlOnce = s.control decision := by
+  simp only [controlOnce, chosen]
+
+/-- A selected control is recorded once, after the previous journal. The actual phase is
+left to the checked session; choosing a control is not evidence that it progressed. -/
+theorem controlOnce_journal (s : Run) (decision : Api.Decision)
+    (chosen : s.nextControl = some decision) :
+    s.controlOnce.journal = s.journal ++ [.control decision] := by
+  rw [controlOnce_some s decision chosen]
+  exact step_journal s (.control decision)
+
 /-! ## The ordinary run -/
 
 /-- The machine a replay reached, whichever way it ended. -/

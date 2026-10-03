@@ -27,8 +27,17 @@ inductive FrontierReason
   | awaitDecision
 deriving DecidableEq, Repr
 
-def hasRunnable (m : NativeMachine) : Bool :=
-  m.fibers.any fun f => f.exit.isNone && f.parked == .notParked
+/-- The runnable condition already used by frontier inspection: the fiber has no exit and
+is not parked. This does not assert that its next command will progress at a given budget. -/
+@[simp] def isRunnable (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : Bool :=
+  f.exit.isNone && f.parked == .notParked
+
+def hasRunnable (m : NativeMachine) : Bool := m.fibers.any isRunnable
+
+/-- Runnable fibers in their existing machine order. Frontier inspection and work planning
+read the same predicate. -/
+def runnableFibers (m : NativeMachine) : List FiberId :=
+  (m.fibers.filter isRunnable).map (·.id)
 
 def hostReasons (m : NativeMachine) : List FrontierReason :=
   (Program.awaits m).map fun a => .awaitHost ⟨a.fiber, a.token⟩
