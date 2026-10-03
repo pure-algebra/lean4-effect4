@@ -239,7 +239,7 @@ theorem edit_drain (root : ProgramSource) (rootTy : EffTy) : EditDrain root root
     · exact Or.inl (fiberKeys_internal hmem (List.mem_append_left _ obs))
     · exact nomatch buckets
   have edited := configTyped_rupdate (g := g) (configTyped_nil typed) hf rfl (PendingWeaker.refl _)
-    rfl rfl rfl rfl rfl (fun p => p) keysG fresh
+    rfl rfl rfl rfl rfl (fun p => p) (fun d => d) keysG fresh
   refine ⟨machineTyped_congr (m := m.update g) (m' := (m.update g).disarm owner) rfl rfl rfl rfl
     rfl rfl rfl edited.machine, ?_⟩
   refine snapshotTyped_drain old.ok.c4 (fun k hk => wide.keysBelow k (bucketsIn k hk)) ?_

@@ -106,7 +106,7 @@ theorem Evaluating.enqueueStart {root : ProgramSource} {rootTy : EffTy} {w : Wor
       · exact Or.inl (fiberKeys_internal hmem (List.mem_append_right _ hk))
       · exact absurd hk List.not_mem_nil
   have edited := configTyped_rupdate (g := g) ev.typed look rfl (PendingWeaker.refl _) rfl rfl rfl
-    rfl rfl (fun p => p) keys fresh
+    rfl rfl (fun p => p) (fun d => d) keys fresh
   rw [rupdate_rupdate m (show g.id = f.id from rfl)] at edited
   exact ⟨edited, ev.stale, ev.running, ev.live⟩
 

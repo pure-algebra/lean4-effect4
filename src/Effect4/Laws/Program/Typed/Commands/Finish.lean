@@ -198,18 +198,19 @@ theorem evaluate_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId
       have readLoop : ReadCode root w (m.update g) (.loop id false :: rest) := by
         intro x hx running reads marker ty declared
         rcases mem_rupdate hx with rfl | ⟨hold, hne⟩
-        · exact codeOk_races (racesKept_of_eq (m := m) fun _ => rfl)
-            (old.code live idle marker notParked ty declared)
+        · exact Or.inl (codeOk_races (racesKept_of_eq (m := m) fun _ => rfl)
+            (old.code live idle marker notParked ty declared))
         · obtain ⟨y, r⟩ := reads
-          refine edited.code x hx running ⟨y, ?_⟩ marker ty declared
-          rcases r with r | r
-          · rcases List.mem_cons.mp r with h | h
-            · cases h
-              exact absurd fid.symm hne
-            · exact Or.inl h
-          · rcases List.mem_cons.mp r with h | h
-            · cases h
-            · exact Or.inr h
+          refine (edited.code x hx running ⟨y, ?_⟩ marker ty declared).cons fun y' h => ?_
+          · rcases r with r | r
+            · rcases List.mem_cons.mp r with h | h
+              · cases h
+                exact absurd fid.symm hne
+              · exact Or.inl h
+            · rcases List.mem_cons.mp r with h | h
+              · cases h
+              · exact Or.inr h
+          · cases h
       exact configTyped_emit ⟨edited.machine, readLoop, queueOk_cons head edited.queue⟩ _
 
 /-! ## `resume` (no halting arm) -/

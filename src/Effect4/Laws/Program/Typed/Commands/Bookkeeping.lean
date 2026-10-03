@@ -437,8 +437,10 @@ theorem configTyped_tail {root : ProgramSource} {rootTy : EffTy} {w : World} {m 
     {c : RCmd} {rest : List RCmd} (typed : ConfigTyped root rootTy w m (c :: rest)) :
     ConfigTyped root rootTy w m rest := by
   obtain ⟨machine, code, queue⟩ := typed
-  refine ⟨machine, fun f hf hr ⟨y, reads⟩ => code f hf hr ⟨y, ?_⟩, ?_⟩
-  · rcases reads with r | r
+  refine ⟨machine, fun f hf hr reads marker ty d => ?_, ?_⟩
+  · obtain ⟨y, r⟩ := reads
+    refine (code f hf hr ⟨y, ?_⟩ marker ty d).sub fun _ hy => List.mem_cons_of_mem _ hy
+    rcases r with r | r
     · exact Or.inl (List.mem_cons_of_mem _ r)
     · exact Or.inr (List.mem_cons_of_mem _ r)
   · refine ⟨fun x hx => queue.payload x (List.mem_cons_of_mem _ hx),
@@ -1015,12 +1017,12 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
       · exact fiberTyped_transport (machine.fiber hold) view (Nat.le_refl _) (Nat.le_refl _)
     · intro x hx running reads marker ty declared
       rcases mem_rupdate hx with rfl | ⟨hold, _⟩
-      · rw [quiet.frame f, quiet.id f]
-        rw [quiet.running f] at running
+      · rw [quiet.running f] at running
         rw [quiet.id f] at reads declared
         rw [quiet.frame f] at marker
-        exact codeOk_races (racesKept_of_eq view.races) (code f hmem running reads marker ty declared)
-      · exact codeOk_races (racesKept_of_eq view.races) (code x hold running reads marker ty declared)
+        exact ((code f hmem running reads marker ty declared).races
+          (racesKept_of_eq view.races)).congr (quiet.id f) (quiet.frame f)
+      · exact (code x hold running reads marker ty declared).races (racesKept_of_eq view.races)
     · intro fiber token r hr
       by_cases same : fiber = (k f).id
       · subst same
@@ -1215,7 +1217,7 @@ theorem readCode_world {root : ProgramSource} {m : RState} {q : List RCmd}
     (code : ReadCode root w m q) : ReadCode root w' m q := by
   intro f hf running reads marker ty declared
   rw [hΓ] at declared
-  exact codeOk_mono ord (code f hf running reads marker ty declared)
+  exact (code f hf running reads marker ty declared).world ord
 
 include hΓ hΘ in
 theorem runFiberOk_world {root : ProgramSource} {f : RFiber}
@@ -1387,7 +1389,7 @@ theorem readCode_cons {root : ProgramSource} {w : World} {m : RState} {c : RCmd}
     (code : ReadCode root w m q) : ReadCode root w m (c :: q) := by
   intro f hf running reads marker ty declared
   obtain ⟨y, r⟩ := reads
-  refine code f hf running ⟨y, ?_⟩ marker ty declared
+  refine (code f hf running ⟨y, ?_⟩ marker ty declared).cons fun y' => noDeliver f.id y'
   rcases r with r | r
   · rcases List.mem_cons.mp r with h | h
     · exact absurd h.symm (noLoop f.id y)
@@ -1504,7 +1506,7 @@ theorem configTyped_rupdate_code {root : ProgramSource} {rootTy : EffTy} {w : Wo
       requestOfR m f.id token = some r)
     (auth : ∀ c ∈ q, CommandAuthorityR m c → CommandAuthorityR (m.update g) c)
     (readG : g.running = true → ReadsCode g.id q → raceRegistrationR g.frame.current = none →
-      ∀ ty, w.Γ g.id = some ty → CodeOk root w (m.update g) g.id ty g.frame)
+      ∀ ty, w.Γ g.id = some ty → ReadOk root w (m.update g) q g ty)
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q := by
   have view : ObsView m (m.update g) := obsView_rupdate hf hid pending
   have sview := stackView_rupdate hf hid stack prov
@@ -1518,7 +1520,7 @@ theorem configTyped_rupdate_code {root : ProgramSource} {rootTy : EffTy} {w : Wo
   · intro x hx hrun reads marker ty declared
     rcases mem_rupdate hx with rfl | ⟨hold, _⟩
     · exact readG hrun reads marker ty declared
-    · exact codeOk_races (racesKept_of_eq view.races) (code x hold hrun reads marker ty declared)
+    · exact (code x hold hrun reads marker ty declared).races (racesKept_of_eq view.races)
   · intro fiber token r hr
     by_cases same : fiber = g.id
     · subst same
@@ -1543,7 +1545,8 @@ theorem configTyped_rupdate_gen {root : ProgramSource} {rootTy : EffTy} {w : Wor
       ∀ ty, w.Γ g.id = some ty → SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty g.frame)
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q :=
   configTyped_rupdate_code typed hf hid pending stack prov keys request auth
-    (fun hrun reads marker ty declared => codeOk_of_saved (readG hrun reads marker ty declared)) fresh
+    (fun hrun reads marker ty declared => Or.inl (codeOk_of_saved (readG hrun reads marker ty declared)))
+    fresh
 
 /-- **A fiber edit that keeps the fiber's flags keeps `I`**: the edited fiber keeps its id, flags,
 current code and saved stack, finds no new pending park, keeps its provenance, carries only keys
@@ -1554,6 +1557,7 @@ theorem configTyped_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     (running : g.running = f.running) (parked : g.parked = f.parked) (exit : g.exit = f.exit)
     (current : g.frame.current = f.frame.current) (stack : g.frame.stack = f.frame.stack)
     (prov : InterruptProvenance f.frame → InterruptProvenance g.frame)
+    (deferred : f.frame.deferredInterrupt = true → g.frame.deferredInterrupt = true)
     (keys : ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys m ∨
       (k.2 < m.nextToken ∧ requestOfR m k.1 k.2 = none))
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q := by
@@ -1574,10 +1578,14 @@ theorem configTyped_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     rw [running] at hrun
     rw [hid] at reads declared
     rw [current] at marker
-    obtain ⟨tin, typedCode, stackOk, provenance⟩ := typed.code f hmem hrun reads marker ty declared
-    exact ⟨tin, by rw [current]; exact typedCode,
-      by rw [stack, hid]; exact hostStack_races (racesKept_of_eq (m := m) fun _ => rfl) stackOk,
-      prov provenance⟩
+    rcases typed.code f hmem hrun reads marker ty declared with
+      ⟨tin, typedCode, stackOk, provenance⟩ | ⟨d, nd, tin, stackOk, provenance⟩
+    · exact Or.inl ⟨tin, by rw [current]; exact typedCode,
+        by rw [stack, hid]; exact hostStack_races (racesKept_of_eq (m := m) fun _ => rfl) stackOk,
+        prov provenance⟩
+    · exact Or.inr ⟨deferred d, by rw [hid]; exact nd, tin,
+        by rw [stack, hid]; exact hostStack_races (racesKept_of_eq (m := m) fun _ => rfl) stackOk,
+        prov provenance⟩
 
 /-! ## A store edit outside the store rows
 
@@ -2010,7 +2018,7 @@ theorem configTyped_postTask {root : ProgramSource} {rootTy : EffTy} {w : World}
         · rw [List.mem_singleton.mp hk]
           exact Or.inr ⟨below, free⟩
     have edited := configTyped_rupdate (g := g) typed hf rfl (PendingWeaker.refl _) rfl rfl rfl rfl rfl
-      (fun p => p) keys fresh
+      (fun p => p) (fun d => d) keys fresh
     exact configTyped_congr rfl rfl rfl rfl rfl rfl rfl
       (configTyped_congr (m := m.update g) rfl rfl rfl rfl rfl rfl rfl edited)
 
@@ -2397,14 +2405,14 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
     ⟨_, hr⟩ | ⟨hx, acc, hacc, ⟨_, hr⟩ | ⟨_, _, hr⟩ | ⟨_, hidle, hr⟩⟩
   · rw [hr]
     exact configTyped_rupdate (g := t) typed hf rfl (PendingWeaker.refl _) rfl rfl rfl rfl rfl
-      (fun p => p) (sameKeys t rfl rfl)
+      (fun p => p) (fun d => d) (sameKeys t rfl rfl)
       (fiberTyped_transport old (obsView_rupdate hf rfl (PendingWeaker.refl _)) (Nat.le_refl _)
         (Nat.le_refl _))
   · rw [hr]
     have newProv : InterruptProvenance (recordedFiber t acc).frame :=
       ⟨fun c hc => by cases hc; exact hacc, fun _ => rfl⟩
     exact configTyped_rupdate (g := recordedFiber t acc) typed hf rfl (PendingWeaker.refl _) rfl
-      rfl rfl rfl rfl (fun _ => newProv) (sameKeys _ rfl rfl)
+      rfl rfl rfl rfl (fun _ => newProv) (fun d => d) (sameKeys _ rfl rfl)
       (fiberTyped_reframe old (obsView_rupdate (g := recordedFiber t acc) hf rfl
         (PendingWeaker.refl _)) (Nat.le_refl _) (Nat.le_refl _) (recordedFiber t acc).frame rfl rfl
         newProv)
@@ -2412,7 +2420,7 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
     have newProv : InterruptProvenance (deferredFiber t acc).frame :=
       ⟨fun c hc => by cases hc; exact hacc, fun _ => rfl⟩
     exact configTyped_rupdate (g := deferredFiber t acc) typed hf rfl (PendingWeaker.refl _) rfl
-      rfl rfl rfl rfl (fun _ => newProv) (sameKeys _ rfl rfl)
+      rfl rfl rfl rfl (fun _ => newProv) (fun _ => rfl) (sameKeys _ rfl rfl)
       (fiberTyped_reframe old (obsView_rupdate (g := deferredFiber t acc) hf rfl
         (PendingWeaker.refl _)) (Nat.le_refl _) (Nat.le_refl _) (deferredFiber t acc).frame rfl rfl
         newProv)

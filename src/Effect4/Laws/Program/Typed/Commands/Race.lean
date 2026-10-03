@@ -318,9 +318,11 @@ theorem configTyped_cons_loop {root : ProgramSource} {rootTy : EffTy} {w : World
     by_cases same : x.id = f.id
     · have xf : x = f := rfiber?_same hf (rfiber?_of_mem wide.fiberIds hx) same
       rw [xf] at marker declared ⊢
-      exact code marker ty declared
+      exact Or.inl (code marker ty declared)
     · obtain ⟨y, r⟩ := reads
-      refine typed.code x hx run ⟨y, ?_⟩ marker ty declared
+      refine (typed.code x hx run ⟨y, ?_⟩ marker ty declared).cons fun y' h => ?_
+      rotate_left
+      · cases h
       rcases r with r | r
       · rcases List.mem_cons.mp r with h | h
         · injection h with hid _
@@ -531,7 +533,7 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
   have edited := configTyped_rupdate_code (g := g) tail hf rfl (PendingWeaker.refl _) rfl
     (fun p => ⟨p.recorded, p.deferred⟩) (fun k hk => Or.inl (fiberKeys_internal hmem hk)) noRequest
     (fun c hc h => commandAuthority_flags (g := g) hf rfl rfl rfl rfl freeF c hc h)
-    (fun _ _ _ ty d => codeG ty d) fresh
+    (fun _ _ _ ty d => Or.inl (codeG ty d)) fresh
   have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (m.update g)) := by
     rw [commandOwner_update]
     exact freeF
@@ -611,8 +613,8 @@ theorem configTyped_rupdate_owner {root : ProgramSource} {rootTy : EffTy} {w : W
     · exact fiberTyped_transport (machine.fiber hold) view (Nat.le_refl _) (Nat.le_refl _)
   · intro x hx hrun reads marker ty declared
     rcases mem_rupdate hx with rfl | ⟨hold, _⟩
-    · exact readG hrun reads marker ty declared
-    · exact codeOk_races (racesKept_of_eq view.races) (code x hold hrun reads marker ty declared)
+    · exact Or.inl (readG hrun reads marker ty declared)
+    · exact (code x hold hrun reads marker ty declared).races (racesKept_of_eq view.races)
   · intro fiber token r hr
     by_cases same : fiber = g.id
     · subst same

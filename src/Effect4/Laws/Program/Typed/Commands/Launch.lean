@@ -484,7 +484,7 @@ theorem readCode_alloc (typed : ConfigTyped root rootTy w m q) :
   · have ne : (⟨m.nextId⟩ : FiberId) ≠ f.id :=
       Ne.symm (ne_next ((typed.machine.fiber hold).below))
     rw [addFiber_Γ_other ne] at declared
-    exact codeOk_mono ord (codeOk_races kept (typed.code f hold running reads marker ty' declared))
+    exact ((typed.code f hold running reads marker ty' declared).races kept).world ord
   · rw [List.mem_singleton] at hnew
     subst hnew
     cases running

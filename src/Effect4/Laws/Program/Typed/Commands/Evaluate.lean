@@ -112,8 +112,8 @@ theorem configTyped_rupdate_frame {root : ProgramSource} {rootTy : EffTy} {w : W
     · exact fiberTyped_transport (machine.fiber hold) view (Nat.le_refl _) (Nat.le_refl _)
   · intro x hx hrun reads marker ty declared
     rcases mem_rupdate hx with rfl | ⟨hold, _⟩
-    · exact readG hrun reads marker ty declared
-    · exact codeOk_races (racesKept_of_eq view.races) (code x hold hrun reads marker ty declared)
+    · exact Or.inl (readG hrun reads marker ty declared)
+    · exact (code x hold hrun reads marker ty declared).races (racesKept_of_eq view.races)
   · intro fiber token r hr
     by_cases same : fiber = g.id
     · subst same
@@ -143,17 +143,19 @@ theorem configTyped_cons_deliver {root : ProgramSource} {rootTy : EffTy} {w : Wo
     by_cases same : x.id = f.id
     · have xf : x = f := rfiber?_same hf (rfiber?_of_mem wide.fiberIds hx) same
       rw [xf] at marker declared ⊢
-      exact code marker ty declared
+      exact Or.inl (code marker ty declared)
     · obtain ⟨y, r⟩ := reads
-      refine typed.code x hx run ⟨y, ?_⟩ marker ty declared
-      rcases r with r | r
-      · rcases List.mem_cons.mp r with h | h
-        · cases h
-        · exact Or.inl h
-      · rcases List.mem_cons.mp r with h | h
-        · injection h with hid _
-          exact absurd hid same
-        · exact Or.inr h
+      refine (typed.code x hx run ⟨y, ?_⟩ marker ty declared).cons fun y' h => ?_
+      · rcases r with r | r
+        · rcases List.mem_cons.mp r with h | h
+          · cases h
+          · exact Or.inl h
+        · rcases List.mem_cons.mp r with h | h
+          · injection h with hid _
+            exact absurd hid same
+          · exact Or.inr h
+      · injection h with hid _
+        exact absurd hid.symm same
   · refine ⟨trivial, ⟨f, hf, running, parked⟩, trivial, ?_, trivial, (fun _ h => nomatch h),
       (fun _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h), (fun _ _ h => nomatch h),
       (fun _ _ _ h => nomatch h), (fun _ _ _ _ _ h => nomatch h), (fun _ _ _ h => nomatch h)⟩
@@ -651,8 +653,8 @@ theorem evaluate_keeps {root : ProgramSource} {rootTy : EffTy}
     cases hmark : raceRegistrationR f.frame.current with
     | none =>
       have code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty f.frame :=
-        fun ty declared => ev.typed.code f (rfiber?_mem look) ev.running
-          ⟨y, Or.inr List.mem_cons_self⟩ hmark ty declared
+        fun ty declared => (ev.typed.code f (rfiber?_mem look) ev.running
+          ⟨y, Or.inr List.mem_cons_self⟩ hmark ty declared).code_of_deliver List.mem_cons_self
       obtain ⟨ty, declared⟩ : ∃ ty, w.Γ f.id = some ty :=
         Option.isSome_iff_exists.mp ((ev.typed.machine.wide.fibers f.id).mpr
           (List.mem_map.mpr ⟨f, rfiber?_mem look, rfl⟩))
@@ -721,8 +723,8 @@ theorem Evaluating.code {root : ProgramSource} {rootTy : EffTy} {w : World} {m :
     {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
     (marker : raceRegistrationR f.frame.current = none) :
     ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty f.frame :=
-  fun ty declared => ev.typed.code f (rfiber?_mem ev.look) ev.running
-    ⟨y, Or.inr List.mem_cons_self⟩ marker ty declared
+  fun ty declared => (ev.typed.code f (rfiber?_mem ev.look) ev.running
+    ⟨y, Or.inr List.mem_cons_self⟩ marker ty declared).code_of_deliver List.mem_cons_self
 
 /-- The evaluated fiber is declared. -/
 theorem Evaluating.declared {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
@@ -1113,8 +1115,8 @@ theorem top_keeps {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RStat
       ⟨prov.recorded, fun h => Bool.noConfusion h⟩
     cases marker : raceRegistrationR f.frame.current with
     | none =>
-      obtain ⟨mid, _, stack, _⟩ := typed.code f (rfiber?_mem look) running
-        ⟨y, Or.inl List.mem_cons_self⟩ marker final declared
+      obtain ⟨mid, stack, _⟩ := (typed.code f (rfiber?_mem look) running
+        ⟨y, Or.inl List.mem_cons_self⟩ marker final declared).stack
       exact ⟨mid, TypedProg.pure (strongExit_of_clean w mid _ (pendingCause_clean prov)
         (pendingCause_noShapeDefect mid prov)), stack, newProv⟩
     | some raceId =>
@@ -1143,6 +1145,7 @@ theorem injected_frame_code {root : ProgramSource} {rootTy : EffTy} {w : World} 
     {rest : List RCmd} {f : RFiber} {y : Bool}
     (typed : ConfigTyped root rootTy w m (.loop f.id y :: rest))
     (look : m.fiber? f.id = some f) (running : f.running = true)
+    (notDeferred : f.frame.deferredInterrupt = false)
     (final : EffTy) (declared : w.Γ f.id = some final) :
     CodeOk root w m f.id final
       { f.frame with
@@ -1154,8 +1157,8 @@ theorem injected_frame_code {root : ProgramSource} {rootTy : EffTy} {w : World} 
   refine ⟨EffTy.pure .unit, yield_body_typed root w f.frame.current, ?_, ⟨prov.recorded, prov.deferred⟩⟩
   cases marker : raceRegistrationR f.frame.current with
   | none =>
-    obtain ⟨mid, current, stack, _⟩ := typed.code f (rfiber?_mem look) running
-      ⟨y, Or.inl List.mem_cons_self⟩ marker final declared
+    obtain ⟨mid, current, stack, _⟩ := (typed.code f (rfiber?_mem look) running
+      ⟨y, Or.inl List.mem_cons_self⟩ marker final declared).code_of_not_deferred notDeferred
     refine hostStack_push (.resume .onSuccess (seqR fun _ => f.frame.current) ?_ ?_) stack
     · intro later ord ex _ arm
       cases ex with
@@ -1178,15 +1181,16 @@ theorem injected_frame_code {root : ProgramSource} {rootTy : EffTy} {w : World} 
 theorem loop_to_deliver {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y : Bool}
     (typed : ConfigTyped root rootTy w m (.loop f.id y :: rest))
-    (look : m.fiber? f.id = some f) (running : f.running = true) (y' : Bool) :
+    (look : m.fiber? f.id = some f) (running : f.running = true)
+    (notDeferred : f.frame.deferredInterrupt = false) (y' : Bool) :
     ConfigTyped root rootTy w m (.deliver f.id y' :: rest) := by
   obtain ⟨f0, look0, _, parked⟩ := typed.queue.authority _ List.mem_cons_self
   have same : f0 = f := Option.some.inj (look0.symm.trans look)
   subst f0
   exact configTyped_cons_deliver (configTyped_tail typed) look running parked
     (owner_free typed.queue rfl) y'
-    (fun marker ty declared => typed.code f (rfiber?_mem look) running
-      ⟨y, Or.inl List.mem_cons_self⟩ marker ty declared)
+    (fun marker ty declared => (typed.code f (rfiber?_mem look) running
+      ⟨y, Or.inl List.mem_cons_self⟩ marker ty declared).code_of_not_deferred notDeferred)
 
 /-- The full actual loop step, conditional only on the existing evaluator's operation/walk
 clauses. The injected guard is reduced directly because a saved registration callback need
@@ -1214,6 +1218,13 @@ theorem loop_preserves_of_clauses (root : ProgramSource) (rootTy : EffTy)
     change (runloopTop f).exit = f.exit
     unfold runloopTop
     split <;> rfl
+  have chargedNotDeferred : charged.frame.deferredInterrupt = false := by
+    change (runloopTop f).frame.deferredInterrupt = false
+    unfold runloopTop
+    split
+    · rfl
+    · rename_i h
+      exact Bool.eq_false_iff.mpr h
   have topTyped := top_keeps typed hf running
   have topLook : (m.update top).fiber? top.id = some top := rfiber?_update_self hf topId
   have counted := budget_fields topTyped topLook (top.currentOpCount + 1) top.yieldOverride
@@ -1256,7 +1267,8 @@ theorem loop_preserves_of_clauses (root : ProgramSource) (rootTy : EffTy)
           rw [injected]
         _ = ⟨m.emit events, g, true, .continue_, []⟩ := rfl
     have frameTyped := (configTyped_frame_step chargedTyped rfl chargedLook chargedRunning fr
-      (fun ty declared => injected_frame_code chargedTyped chargedLook chargedRunning ty declared)
+      (fun ty declared => injected_frame_code chargedTyped chargedLook chargedRunning
+        chargedNotDeferred ty declared)
       rfl).1 true
     change ConfigTyped root rootTy w ((m.update charged).update framed)
       (.loop charged.id true :: rest) at frameTyped
@@ -1280,7 +1292,7 @@ theorem loop_preserves_of_clauses (root : ProgramSource) (rootTy : EffTy)
       dsimp only
       rw [noInjection]
     have ev : Evaluating root rootTy w m rest charged y :=
-      ⟨loop_to_deliver chargedTyped chargedLook chargedRunning y,
+      ⟨loop_to_deliver chargedTyped chargedLook chargedRunning chargedNotDeferred y,
         ⟨f, by rw [chargedId]; exact hf, chargedExit.symm⟩, chargedRunning, live⟩
     have keeps := evaluate_keeps fibers stores walk ev
     rw [chargedId] at keeps
@@ -1442,8 +1454,8 @@ theorem Evaluating.recontext {root : ProgramSource} {rootTy : EffTy} {w : World}
       · exact ⟨g, lookG, ev.running, notParked⟩
       · exact commandAuthority_frame (g := g) look rfl rfl rfl rfl c (free c hc) h
     · intro _ _ marker ty declared
-      exact codeOk_races (m := m.update f) (m' := (m.update f).update g)
-        (racesKept_of_eq fun _ => rfl) (ev.code marker ty declared)
+      exact Or.inl (codeOk_races (m := m.update f) (m' := (m.update f).update g)
+        (racesKept_of_eq fun _ => rfl) (ev.code marker ty declared))
   rw [rupdate_rupdate m (show g.id = f.id from rfl)] at typed
   obtain ⟨f0, hf0, exit0⟩ := ev.stale
   exact ⟨typed, ⟨f0, hf0, exit0⟩, ev.running, ev.live⟩
