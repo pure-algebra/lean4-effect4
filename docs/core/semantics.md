@@ -327,8 +327,15 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   progress additionally requires classifying configurations into finished, stepping, or live frontier states.
 - **Finite Fairness**: `flush_fair` guarantees actual callback entry within a round bound for armed owners
   in a duplicate-free queue (`FlushReady`). It does not promise eventual callback termination or external host response.
-- **Exclusions (Rows 106, 107, 134)**: Unbounded tokens are excluded by `GuardState.keysBelow` in `QueueOk`.
-  Defect-bearing exits are excluded by `NoShapeDefect`. Timer and race columns are separated in configuration typing.
+- **Exclusions (Rows 106, 107, 134, 188, 189)**: Unbounded tokens are excluded by `GuardState.keysBelow` in `QueueOk` (Row 106).
+  Defect-bearing exits are excluded by `NoShapeDefect` (Row 107). Timer and race columns are separated in configuration typing;
+  queued enrollment children are bounded below `nextId` (`EnrollRaceOk`, row 134 (e), `E4-TYPED-CE-032`).
+  Administrative markers are excluded from ordinary program typing: the raw `scopeExit` marker remains in the semantic carrier
+  but is excluded by `TypedProg`, admitting the callback only at the `scoped` guard's run position and saved slot (`scopedGuard`, `scopedResume`,
+  row 188 (a), `E4-TYPED-CE-034`); registration callbacks under injected yields are admitted by the host-stack judgment as correlated arrows
+  carrying race existence and token typing (`HostStack`, `PositionStack`, row 188 (b), `E4-TYPED-CE-033`).
+  Queued observe sources are bounded below `nextId` (`QueueOk.observer`, `HeadOk.observer`, row 189, `E4-TYPED-CE-035`) to prevent vacuous
+  antitone $\Gamma$-reads admitting unallocated future fibers.
 
 #### 3. Project Definition and Judgment
 The operational configuration and decision types are defined in `src/Effect4/Machine/Fibers.lean`:
@@ -348,8 +355,8 @@ inductive RunDecision ...
 - **Step invariant lifting (`drivestate-lift`)**: Step invariant lifting for sequential command loops
   (`driveState_lift` (`src/Effect4/Laws/Machine/Lift.lean:56`)).
 - **Scheduler step preservation (`step-loop-preserves`, `step-deliver-preserves`)**: Preservation of `ConfigTyped`
-  across the actual `driveStep` command at an extending world (`StepPreserves`, `M6Ledger.step_loop`,
-  `M6Ledger.step_deliver` in `src/Effect4/Laws/Program/Typed/Assembly.lean`). The later decision
+  across the actual `driveStep` command at an extending world (`StepPreserves`, `loop_preserves`,
+  `deliver_preserves` in `src/Effect4/Laws/Program/Typed/Assembly.lean`). The later decision
   and reachability statements use `MachineTyped`; they are distinct assembly goals.
 - **Operational progress (`scheduler-progress`)**: Every typed state is either terminal, takes a step, or is at a live frontier
   (decisions row 139).
@@ -362,13 +369,13 @@ command and decision case, then assemble reachability. This follows the invarian
 Lynch and Vaandrager, *Forward and Backward Simulations I*, §6 (audit C4), rather than inferring
 whole-machine typing from isolated command tests. `decisionKeeps_of_steps` and
 `typedState_reachable_of_steps` expose the remaining premises; their formal consumers are
-`M6Ledger.decision_preserves` and `M6Ledger.typedState_reachable`.
+`decision_preserves` and `typedState_reachable`.
 
 Within a command, two smaller arguments meet. `configTyped_frame` transports clauses across a
 store edit under its explicit unchanged-view, typing, key and due-owner hypotheses.
 `completionStrong_await` moves a completed Deferred's answer and error evidence to a declared
 waiter type. `wake_preserves` uses both arguments at the actual machine step, and supplies
-`M6Ledger.step_wake`'s checked witness. The analogy to the frame rule and protocol subsumption in
+`wake_preserves`'s checked witness. The analogy to the frame rule and protocol subsumption in
 de Vilhena and Pottier, *A Separation Logic for Effect Handlers*, §3.3 and §4.2.4 (audit P8), guides
 this decomposition. Our ordinary Lean predicates do not implement that paper's Iris resource
 algebra or separation logic; the displayed theorem premises are the local contract.
@@ -378,24 +385,27 @@ Registration completion adds a pending record at one race key. `ObsViewOff` and
 correlations at other keys. Decisions row 134(d) supplies the stored and queued observer
 exclusions. `registrationDone_preserves` combines this transport, race payload typing and
 cancellation-frame typing for the accepted, deferred-interrupt and ordinary park branches.
-It supplies the unchanged `M6Ledger.step_registrationDone` goal; the CE-028 battery separately
+It supplies the unchanged `registrationDone_preserves` goal; the CE-028 battery separately
 checks refusal of the historical countdown collision and acceptance after removing only that
 countdown. The [receipt](../research/2026-10-02-codex-lead/registration-receipt.md) records each
 helper's concrete consumer. This remains a local invariant proof, with the same limits as above.
 
-The machine generates two administrative markers that are no programs, and the invariant types
-each where the machine puts it (decisions row 188; the lead
-[receipt](../research/2026-10-02-claude-lead/receipt.md)). A scope's exit callback lives only in
-the run arm of the `scoped` guard and its saved slot, and the walk hands it to
-`prepareScopedExitR` (the walk's `CallbackSaved` outcome). A race's registration marker may be saved
-by an injected yield in a success callback; a host's saved stack is therefore a typed path
-(`HostStack`) of ordinary frame arrows and registration arrows that carry their race's existence,
-host and token type on the arrow, and every reader of a host stack (`CodeOk`, `ActiveDelivery`,
-`StackReply`) uses it. This is the same free-category structure as `StackAccepts` (composition and
-decomposition through middle types, decisions row 48), extended by arrows whose premises read the
-machine; correlation on the arrow, rather than a separate clause over the stack's shape, is what
-keeps typed code from forging a callback. Each was found by a checked refutation of an open command
-goal (`E4-TYPED-CE-033`, `-034`) and two review cases before landing; none closes a goal by itself.
+The machine generates two internal administrative markers during execution that are not user-space programs, and the typing invariant places each strictly where the operational semantics expects it (decisions row 188):
+1. **Scope-Exit Callbacks (`E4-TYPED-CE-034`)**: When a `.scoped` block executes, it creates a scope-exit callback to close the scope and restore the surrounding context. The raw `scopeExit` marker remains in the semantic program carrier, but ordinary `TypedProg` admission excludes it. The scope callback is admitted at the `scoped` guard's run position and saved slot (`scopedGuard`, `scopedResume`). This repairs the typing contract around the evaluator's explicit `badShapeExit` fallback (`evaluateFiberR`); it does not remove syntax or prove general loop/delivery preservation. The evaluation walk yields the `CallbackSaved` alternative of `WalkTyped`, which `prepareScopedExitR` consumes directly.
+2. **Race Registration Callbacks under Injected Yields (`E4-TYPED-CE-033`)**: When `beginRace` sets up a race, budget preemption (`injectYield`) can save the registration marker inside a success continuation on the stack. The host-stack judgment composes ordinary frames and registration arrows that carry race existence, the matching host and token typing. It admits the injected-callback shapes while requiring those correlations. Preservation by the actual injected yield and subsequent walk remains part of the open loop/delivery proofs.
+
+All saved-stack judgments are factored through a unified typed-path relation (`Contracts.FramePath Edge`, decisions row 48):
+- `Contracts.FramePath Edge` is a Prop-valued typed-path relation over frame lists, interpreting composition through existential middle types.
+- It provides generic identity (`nil`), append (`append`), splitting (`split`), and transport along edge implications (`map`).
+- `HostStack` and `PositionStack` instantiate it over `HostEdge` and `PositionEdge` respectively.
+- The unchanged `StackAccepts` is connected by the two conversion theorems (`framePath_of_stackAccepts`, `stackAccepts_of_framePath`).
+- Conversions (`positionStack_of_host`, `hostStack_of_stackAccepts`) and Kripke-monotonicity transports (`hostStack_mono`, `positionStack_mono`) are derived as single functorial edge maps (`FramePath.map`).
+
+
+Queued command arguments are bounded below `nextId` wherever an antitone declaration reading would otherwise admit unallocated future fibers (decisions rows 134 (e) and 189). In particular, `RCmdOk`'s `observe` arm reads the static fiber environment $\Gamma$ antitonically:
+$$\forall ty,\; \Gamma(\text{source}) = \text{some } ty \implies \text{ExitOk } ty \text{ exit}$$
+If a queued command names an unallocated fiber ID, this premise is satisfied vacuously. When `launch` subsequently allocates that ID below the race's column, the retained exit can violate the child's declared type (`E4-TYPED-CE-035`). Requiring `source.value < m.nextId` in `QueueOk.observer` and `HeadOk.observer` closes this gap, mirroring the enrollment bound for race children (`EnrollRaceOk`).
+
 
 In particular, token bounds, disjointness from external requests, and race/observer separation
 are different properties. They do not state that every internal key occurs at most once, nor
@@ -520,6 +530,7 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
 - **Provable Uniqueness vs. Defeq**: Fold uniqueness (`hom_eq_cata_eff`) is a **provable proposition** via induction,
   not a definitional equality (`rfl`).
 - **Finite Syntax Folding (Row 127)**: `inhabited` is a fold over finite syntax, not an infinite equi-recursive unfolding.
+- **Free-Category Path Interpretation (Row 48)**: Saved-stack judgments are factored through `Contracts.FramePath Edge`, a Prop-valued typed-path relation over frame lists interpreting composition through existential middle types. Identity (`nil`), append (`append`), splitting (`split`), and transport along edge implications (`map`) are proved once. Concrete stack judgments (`HostStack`, `PositionStack`) instantiate `FramePath` over `HostEdge` and `PositionEdge`; the unchanged `StackAccepts` is connected by two conversion theorems, with conversions and transports realized as functorial edge maps (`FramePath.map`).
 
 #### 3. Project Definition and Judgment
 Catamorphic folds and algebra homomorphisms are defined in `src/Effect4/Program/Fold.lean`:
@@ -677,7 +688,7 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
 - **M7 conditional route (`m7-route`)**: Derivation of M7 capstone conditionally from M5 and M6 ledger components
   (`m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1612`)).
 - **Capstone M7 goals (`m7-capstone-goals`)**: Exit value agreement, final store agreement, non-halting, and exit handle
-  validity on `M7Fragment` (`M7.exits_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1814`)).
+  validity on `M7Fragment` (`m7_proved` (`src/Effect4/Laws/Program/Typed/Assembly.lean:1814`)).
 
 ## 3. The Object-Language Glossary (Object-Language vs. Host Metatheory)
 
