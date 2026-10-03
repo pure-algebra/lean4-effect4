@@ -806,6 +806,65 @@ def nestedSharing : NativeEff :=
   root.restoreAll [([0], first), ([0], second)] !=
     root.restoreAll [([0], second), ([0], first)]
 
+/-! Structural path edits share the layer-hoisting update mechanism. These finite controls
+cover the seven node sorts, invalid paths/sorts, and the distinction between a structural
+edit and whole-program admission. Universal laws are in `Laws.Program.References`. -/
+
+private def editedPure : NativeEff := .succeed (.lit (.nat 9))
+private def editSorts : List (Node NativeOp) :=
+  [.eff editedPure, .stmts .nil, .stmt .breakLoop, .action .getId,
+    .effs .nil, .layer (.ref []), .layers .nil]
+
+#guard editSorts.all fun n => n.replaceAt [] n == some n
+#guard editSorts.all fun n => editSorts.all fun other =>
+  (n.replaceAt [] other).isSome == (n.ctorIdx == other.ctorIdx)
+#guard (Node.eff editedPure).replaceAt [0] (.eff editedPure) = none
+#guard (Node.eff (.suspend editedPure)).replaceAt [0] (.layer (.ref [])) = none
+#guard (Node.eff (.suspend editedPure)).replaceAt [0] (.eff (.succeed (.lit .unit))) =
+  some (.eff (.suspend (.succeed (.lit .unit))))
+#guard (Node.eff (.bind editedPure editedPure)).replaceAt [1] (.eff (.succeed (.lit .unit))) =
+  some (.eff (.bind editedPure (.succeed (.lit .unit))))
+
+-- Hoisting's layer update is the general operation, including nested target sites.
+#guard (Node.eff nestedSharing).replaceAt [0, 0, 0]
+    (.layer (.succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 9))) =
+  (Node.eff nestedSharing).replaceLayerAt [0, 0, 0]
+    (.succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 9))
+#guard match (Node.eff nestedSharing).replaceAt [0, 0, 0]
+    (.layer (.succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 9))) with
+  | some (.eff changed) =>
+    changed.layerRefsWF && match changed.hoistAll with
+      | .ok (main, declarations) => main.restoreAll declarations == some changed
+      | .error _ => false
+  | _ => false
+
+-- Equal local layer types do not protect references into an erased descendant.
+private def editLeaf : LayerTerm NativeOp := .succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 7)
+private def editWithReference : NativeEff :=
+  .bind (.provideLayer (.merge editLeaf editLeaf) false (.succeed (.lit .unit)))
+    (.provideLayer (.ref [0, 0, 0]) false (.succeed (.lit .unit)))
+
+#guard layerTy nativeSignature (.merge editLeaf editLeaf) = layerTy nativeSignature editLeaf
+#guard editWithReference.layerRefsWF
+#guard (Effect4.Api.typeOf editWithReference).isSome
+#guard match (Node.eff editWithReference).replaceAt [0, 0] (.layer editLeaf) with
+  | some (.eff changed) => !changed.layerRefsWF && (Effect4.Api.typeOf changed).isNone
+  | _ => false
+
+#print axioms Effect4.Program.Node.replaceAt
+#print axioms Effect4.Program.Node.replaceAt_spec
+#print axioms Effect4.Program.Node.replaceAt_exists
+#print axioms Effect4.Program.Node.replaceAt_self
+#print axioms Effect4.Program.Node.replaceAt_overwrite
+#print axioms Effect4.Program.Node.at_replaceAt_disjoint
+#print axioms Effect4.Program.Node.setChild_self
+#print axioms Effect4.Program.Node.setChild_overwrite
+#print axioms Effect4.Program.Node.replaceLayerAt_eq_replaceAt
+#print axioms Effect4.Program.Node.replaceLayerAt_cons
+#print axioms Effect4.Program.Node.layerAt_eq_some_iff
+#print axioms Effect4.Program.Node.replaceLayerAt_spec
+#print axioms Effect4.Program.Node.replaceLayerAt_exists
+
 #print axioms nativeServiceTy_profile
 #print axioms Effect4.Program.Eff.hoistAll_exists
 #print axioms Effect4.Program.readModule_printModule

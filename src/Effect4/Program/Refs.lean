@@ -51,14 +51,20 @@ def layerAt (n : Node Op) (p : List Nat) : Option (LayerTerm Op) :=
   | some (layer l) => some l
   | _ => none
 
-/-- The node with the layer at a path replaced; `none` when the path names no layer. -/
-def replaceLayerAt : Node Op → List Nat → LayerTerm Op → Option (Node Op)
-  | layer _, [], l' => some (layer l')
-  | _, [], _ => none
-  | n, i :: rest, l' => do
-    let c ← n.child i
-    let c' ← replaceLayerAt c rest l'
-    n.setChild i c'
+/-- Replace an existing addressed node by one of the same sort, including at the root.
+The path traversal reuses the generated immediate-child operations. This is a structural
+edit: it does not rebind variables, relocate layer references, or certify the resulting
+program's typing or behavior. Terms are not nodes in this path language. -/
+def replaceAt : Node Op → List Nat → Node Op → Option (Node Op)
+  | n, [], replacement =>
+    if replacement.ctorIdx = n.ctorIdx then some replacement else none
+  | n, i :: rest, replacement =>
+    (n.child i).bind fun c => (replaceAt c rest replacement).bind (n.setChild i)
+
+/-- The node with the layer at a path replaced; `none` when the path names no layer.
+The shared structural edit also checks the node sort at an empty path. -/
+def replaceLayerAt (n : Node Op) (path : List Nat) (replacement : LayerTerm Op) :
+    Option (Node Op) := n.replaceAt path (.layer replacement)
 
 /-- The program of an `eff` node. -/
 def eff? : Node Op → Option (Eff Op)
