@@ -198,7 +198,8 @@ theorem evaluate_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId
       have readLoop : ReadCode root w (m.update g) (.loop id false :: rest) := by
         intro x hx running reads marker ty declared
         rcases mem_rupdate hx with rfl | ⟨hold, hne⟩
-        · exact codeOk_races (racesKept_of_eq (m := m) fun _ => rfl) (old.code live idle marker ty declared)
+        · exact codeOk_races (racesKept_of_eq (m := m) fun _ => rfl)
+            (old.code live idle marker notParked ty declared)
         · obtain ⟨y, r⟩ := reads
           refine edited.code x hx running ⟨y, ?_⟩ marker ty declared
           rcases r with r | r
@@ -324,8 +325,9 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
           rw [notMarker] at marker
           cases marker
         have codeG : g.exit = none → g.running = false → raceRegistrationR g.frame.current = none →
-            ∀ ty, w.Γ g.id = some ty → CodeOk root w (m.update g) g.id ty g.frame := by
-          intro _ _ _ ty declared
+            g.parked = .notParked → ∀ ty, w.Γ g.id = some ty →
+              CodeOk root w (m.update g) g.id ty g.frame := by
+          intro _ _ _ _ ty declared
           have same : ty = final := by
             have both : w.Γ t.id = some ty := declared
             rw [declaredFinal] at both
@@ -842,7 +844,7 @@ theorem finish_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
         registration := fun raceId marker => by
           rw [show g.frame.current = code from rfl, raceRegistrationR_typed codeTyped] at marker
           cases marker
-        code := fun _ _ _ ty d => by
+        code := fun _ _ _ _ ty d => by
           rw [finalOf ty d]
           exact ⟨final, codeTyped, by rw [show g.frame.stack = [] from empty]; exact .nil final,
             provG⟩

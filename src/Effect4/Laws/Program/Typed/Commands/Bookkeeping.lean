@@ -182,8 +182,11 @@ structure FiberTyped (root : ProgramSource) (w : World) (m : RState) (f : RFiber
   registration : ∀ raceId, raceRegistrationR f.frame.current = some raceId →
     ∃ race resultTy, m.race? raceId = some race ∧ race.host = f.id ∧
       w.Θ race.host race.token = some resultTy ∧ StackReply root w m f resultTy
+  /-- An idle fiber's code is typed at its declaration; a parked one is typed by `delivery` (its
+  current is the operation it parked on, which nothing reads: `resume` and an applied interrupt
+  overwrite it, `evaluate` skips it; seat M6B's finding). -/
   code : f.exit = none → f.running = false → raceRegistrationR f.frame.current = none →
-    ∀ ty, w.Γ f.id = some ty → CodeOk root w m f.id ty f.frame
+    f.parked = .notParked → ∀ ty, w.Γ f.id = some ty → CodeOk root w m f.id ty f.frame
   tokens : ∀ token, f.parked = .withGuard token → (w.Θ f.id token).isSome = true
   /-- Decisions row 134 (d), at this fiber: none of its stored observers holds a race's key. -/
   raceObservers : ∀ raceId race, m.race? raceId = some race → ∀ o ∈ f.observers,
@@ -210,8 +213,8 @@ theorem FiberTyped.delivery_races {root : ProgramSource} {w : World} {m m' : RSt
 theorem FiberTyped.code_races {root : ProgramSource} {w : World} {m m' : RState} {x : RFiber}
     (h : FiberTyped root w m x) (kept : RacesKept m m') :
     x.exit = none → x.running = false → raceRegistrationR x.frame.current = none →
-      ∀ ty, w.Γ x.id = some ty → CodeOk root w m' x.id ty x.frame :=
-  fun hx hr hm ty declared => codeOk_races kept (h.code hx hr hm ty declared)
+      x.parked = .notParked → ∀ ty, w.Γ x.id = some ty → CodeOk root w m' x.id ty x.frame :=
+  fun hx hr hm hp ty declared => codeOk_races kept (h.code hx hr hm hp ty declared)
 
 /-- The machine-wide clauses of `J`. -/
 structure MachineWide (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) : Prop where
@@ -970,7 +973,7 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
         obtain ⟨race, resultTy, found, host, token, reply⟩ := old.registration raceId marker
         exact ⟨race, resultTy, found, host.trans (quiet.id f).symm, token,
           stackReply_congr (racesKept_of_eq view.races) (quiet.id f) (quiet.frame f) reply⟩
-      · rw [quiet.exit f, quiet.running f, quiet.frame f, quiet.id f]
+      · rw [quiet.exit f, quiet.running f, quiet.frame f, quiet.id f, quiet.parked f]
         exact old.code_races (racesKept_of_eq view.races)
       · rw [quiet.parked f, quiet.id f]
         exact old.tokens
@@ -1245,7 +1248,7 @@ theorem fiberTyped_world {root : ProgramSource} {m : RState} {x : RFiber}
   refine ⟨runFiberOk_world ord hΓ hΘ h.ok, fun token hp => ?_, h.below, h.pendingShape,
     h.parkedIdle, h.parkedBelow, h.exited, h.exitedStack, h.deferredCause, fun p hp => ?_,
     fun o ho => storedObserverOk_world ord hΓ hΘ o (h.observers o ho), fun raceId marker => ?_,
-    fun hx hr hm ty declared => ?_, fun token hp => ?_, h.raceObservers, h.targetsBelow,
+    fun hx hr hm hp ty declared => ?_, fun token hp => ?_, h.raceObservers, h.targetsBelow,
     h.observersBelow, fun c hc => by rw [hΓ]; exact h.children c hc⟩
   · obtain ⟨tin, final, declared, final', stack, provenance⟩ := h.delivery token hp
     exact ⟨tin, final, by rw [hΘ]; exact declared, by rw [hΓ]; exact final',
@@ -1255,7 +1258,7 @@ theorem fiberTyped_world {root : ProgramSource} {m : RState} {x : RFiber}
   · obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
     exact ⟨race, resultTy, found, host, by rw [hΘ]; exact token, stackReply_world ord hΓ reply⟩
   · rw [hΓ] at declared
-    exact codeOk_mono ord (h.code hx hr hm ty declared)
+    exact codeOk_mono ord (h.code hx hr hm hp ty declared)
   · rw [hΘ]
     exact h.tokens token hp
 
@@ -2336,7 +2339,7 @@ theorem fiberTyped_reframe {root : ProgramSource} {w : World} {m m' : RState} {t
       moved.ok.c5⟩, fun token hp => ?_, moved.below, moved.pendingShape, moved.parkedIdle,
     moved.parkedBelow, moved.exited, fun hx => stack.trans (moved.exitedStack hx), fun _ => ?_,
     moved.pendingOwner, moved.observers,
-    fun raceId marker => ?_, fun hx hr hm ty declared => ?_, moved.tokens, moved.raceObservers,
+    fun raceId marker => ?_, fun hx hr hm hp ty declared => ?_, moved.tokens, moved.raceObservers,
     moved.targetsBelow, moved.observersBelow, moved.children⟩
   · obtain ⟨tin, stackOk, _⟩ := h.position declared
     exact ⟨tin, by rw [stack]; exact stackOk, prov⟩
@@ -2350,7 +2353,7 @@ theorem fiberTyped_reframe {root : ProgramSource} {w : World} {m m' : RState} {t
       stackReply_view (f := t) (racesKept_of_eq (m := m') fun _ => rfl) rfl (by rw [stack])
         (fun _ => prov) reply⟩
   · rw [current] at hm
-    obtain ⟨tin, code, stackOk, _⟩ := h.code hx hr hm ty declared
+    obtain ⟨tin, code, stackOk, _⟩ := h.code hx hr hm hp ty declared
     exact ⟨tin, by rw [current]; exact code,
       by rw [stack]; exact hostStack_races (racesKept_of_eq view.races) stackOk, prov⟩
 
@@ -2431,7 +2434,7 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
           moved.ok.c4, moved.ok.c5⟩, (fun _ hp => nomatch hp), moved.below, rfl,
         (fun h => absurd rfl h), (fun _ hp => nomatch hp), (fun hx' => ?_), (fun hx' => ?_),
         (fun _ => rfl), (fun _ hp => nomatch hp), moved.observers, (fun _ hm => nomatch hm),
-        (fun _ _ _ ty' declared' => ?_), (fun _ hp => nomatch hp), moved.raceObservers,
+        (fun _ _ _ _ ty' declared' => ?_), (fun _ hp => nomatch hp), moved.raceObservers,
         (fun _ hp => nomatch hp), moved.observersBelow, moved.children⟩
       · obtain ⟨tin', stackOk, _⟩ := old.position declared'
         exact ⟨tin', stackOk, newProv⟩
@@ -2443,9 +2446,21 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
         -- code clause, or its registration's reply stack (row 188 (b))
         cases hm : raceRegistrationR t.frame.current with
         | none =>
-          obtain ⟨tin', _, stackOk, _⟩ := old.code live hidle hm ty' declared'
-          exact ⟨tin', TypedProg.pure (exitOk_interrupts w tin' hacc),
-            hostStack_races (racesKept_of_eq view.races) stackOk, newProv⟩
+          -- an idle fiber's stack by its code clause, a parked one's by its delivery clause
+          cases hp : t.parked with
+          | notParked =>
+            obtain ⟨tin', _, stackOk, _⟩ := old.code live hidle hm hp ty' declared'
+            exact ⟨tin', TypedProg.pure (exitOk_interrupts w tin' hacc),
+              hostStack_races (racesKept_of_eq view.races) stackOk, newProv⟩
+          | withGuard token =>
+            obtain ⟨tin', final, _, declaredF, stackOk, _⟩ := old.delivery token hp
+            have same : final = ty' := by
+              have both : w.Γ t.id = some ty' := declared'
+              rw [declaredF] at both
+              exact Option.some.inj both
+            subst same
+            exact ⟨tin', TypedProg.pure (exitOk_interrupts w tin' hacc),
+              hostStack_races (racesKept_of_eq view.races) stackOk, newProv⟩
         | some r =>
           obtain ⟨_, resultTy, _, _, _, final, declaredF, stackOk, _⟩ := old.registration r hm
           have same : final = ty' := by

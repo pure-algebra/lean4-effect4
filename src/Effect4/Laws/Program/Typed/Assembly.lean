@@ -251,7 +251,7 @@ command that continues it, which a budget cut may have dropped. A race registrat
 registration arrow of the code's `HostStack` (decisions row 188 (b)). -/
 def LiveCode (root : ProgramSource) (w : World) (m : RState) : Prop :=
   ∀ f ∈ m.fibers, f.exit = none → f.running = false → raceRegistrationR f.frame.current = none →
-    ∀ ty, w.Γ f.id = some ty → CodeOk root w m f.id ty f.frame
+    f.parked = .notParked → ∀ ty, w.Γ f.id = some ty → CodeOk root w m f.id ty f.frame
 
 /-- `I`'s code clause for running fibers: a running fiber whose current code a queued `loop` or
 `deliver` reads is typed with its stack at its declared type. A running fiber continued by
@@ -839,8 +839,8 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     fun f hf token parked => ?_, ?_,
     ⟨fun f hf => obsv.pendingOwner f (member f hf), fun f hf o ho =>
       storedObserverOk_congr lookup raceLookup state o (obsv.observers f (member f hf) o ho)⟩,
-    fun f hf raceId marker => ?_⟩, services, fun f hf hx hr hm ty d =>
-      codeOk_races (racesKept_of_eq raceLookup) (code f (member f hf) hx hr hm ty d), ?_, sourceWF⟩
+    fun f hf raceId marker => ?_⟩, services, fun f hf hx hr hm hp ty d =>
+      codeOk_races (racesKept_of_eq raceLookup) (code f (member f hf) hx hr hm hp ty d), ?_, sourceWF⟩
   · exact
       { ids := by rw [fibers]; exact valid.ids
         fibers := fun id => by rw [fibers]; exact valid.fibers id
@@ -1250,7 +1250,7 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
     insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
   refine ⟨typedState_of_load root rootTy fuel compileFuel noMarker code, rfl, ?_,
     machineLive_of_quiet _ rfl rfl, sourceWF⟩
-  intro f hf _ _ _ ty hty
+  intro f hf _ _ _ _ ty hty
   change f ∈ [_] at hf
   rw [List.mem_singleton] at hf
   subst hf

@@ -942,7 +942,7 @@ theorem afterGood_config :
     ConfigTyped (refProg : ProgramSource) unitTy w1g afterGood.1 afterGood.2 := by
   refine ⟨⟨afterGood_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl, rfl⟩, ?_,
     afterGood_queueOk⟩
-  · intro f hf _ _ _ ty declared
+  · intro f hf _ _ _ _ ty declared
     have saved := afterGood_saved f hf
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf

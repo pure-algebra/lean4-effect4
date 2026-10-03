@@ -412,7 +412,7 @@ theorem fiberTyped_alloc (typed : MachineTyped root rootTy w m) {x : RFiber} (hx
     fun token hp => ?_, Nat.lt_succ_of_lt old.below, old.pendingShape, old.parkedIdle,
     old.parkedBelow, old.exited, old.exitedStack, old.deferredCause, old.pendingOwner,
     fun o ho => storedObserverOk_alloc typed hx ho (old.observers o ho),
-    fun raceId marker => ?_, fun hx' hr hm ty' declared => ?_, old.tokens, old.raceObservers,
+    fun raceId marker => ?_, fun hx' hr hm hp ty' declared => ?_, old.tokens, old.raceObservers,
     fun p hp id hid => Nat.lt_succ_of_lt (old.targetsBelow p hp id hid),
     fun o ho k hk => Nat.lt_succ_of_lt (old.observersBelow o ho k hk),
     fun c hc => let ⟨t, ht⟩ := Option.isSome_iff_exists.mp (old.children c hc)
@@ -440,7 +440,7 @@ theorem fiberTyped_alloc (typed : MachineTyped root rootTy w m) {x : RFiber} (hx
     exact ⟨race, resultTy, found, host, token, final, addFiber_extends fresh.2 declared,
       hostStack_mono ord (hostStack_races kept stack), provenance⟩
   · rw [addFiber_Γ_other ne] at declared
-    exact codeOk_mono ord (codeOk_races kept (old.code hx' hr hm ty' declared))
+    exact codeOk_mono ord (codeOk_races kept (old.code hx' hr hm hp ty' declared))
 
 /-- The spawned child's per-fiber clauses: idle, unparked, no pending record, observer or exit,
 an empty stack, its typed code at its declaration. -/
@@ -461,7 +461,7 @@ theorem fiberTyped_child (typed : MachineTyped root rootTy w m) (code : TypedPro
       (fun _ h => nomatch h), ⟨fun _ h => nomatch h⟩, servicesFit_mono ord services⟩,
     (fun _ h => nomatch h), Nat.lt_succ_self _, rfl, (fun h => absurd rfl h), (fun _ h => nomatch h),
     (fun h => nomatch h), (fun h => nomatch h), (fun h => nomatch h), (fun _ h => nomatch h),
-    (fun _ h => nomatch h), (fun _ marker => ?_), (fun _ _ _ ty' d => ?_), (fun _ h => nomatch h),
+    (fun _ h => nomatch h), (fun _ marker => ?_), (fun _ _ _ _ ty' d => ?_), (fun _ h => nomatch h),
     (fun _ _ _ _ h => nomatch h), (fun _ h => nomatch h), (fun _ h => nomatch h),
     (fun _ h => nomatch h)⟩
   · rw [declaredOnly ty' d]

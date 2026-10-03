@@ -399,7 +399,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           registration := fun _ marker' => by
             rw [notMarker] at marker'
             cases marker'
-          code := fun _ _ _ ty d => codeG ty d
+          code := fun _ _ _ _ ty d => codeG ty d
           tokens := moved.tokens
           raceObservers := moved.raceObservers
           targetsBelow := moved.targetsBelow

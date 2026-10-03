@@ -307,7 +307,7 @@ theorem m5_forces_leaf (typed : ∃ w, MachineTyped src rootTy3 w (loadR prog3 1
   obtain ⟨w, typed⟩ := typed
   have hvalid := typed.typed.1
   obtain ⟨tin, hcode, hstack, -⟩ :=
-    typed.code _ (List.mem_singleton_self _) rfl rfl rfl rootTy3 hvalid.root
+    typed.code _ (List.mem_singleton_self _) rfl rfl rfl rfl rootTy3 hvalid.root
   change HostStack src w _ _ tin rootTy3 [] at hstack
   cases hstack
   obtain ⟨mid, hbody, hrun, -⟩ := TypedProg.guard_inv_of_ne hcode (fun h => nomatch h)
