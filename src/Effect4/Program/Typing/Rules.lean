@@ -161,11 +161,18 @@ def causeTy (sig : Signature Op) (env : TyEnv) : CauseTerm → Option Ty
     some (l.join r)
 
 /-- The typing state of a generator body: the answer its `return`s agree on (none before
-the first), the errors and requirements so far. -/
+the first), the errors and requirements so far, and two reachability bits over the statements'
+syntax: `completes`, the end of the statements is reachable (control falls off it), and
+`breaks`, a `break` of the innermost enclosing `while (true)` is reachable in them. A `gen`
+whose body's end is reachable answers `void` there (`walkR`, `Compile.runStmts`), so its answer
+type includes `void` (`genAnswer`; seat M6E's finding, owner option (a), 2026-10-02). The bits
+over-approximate the walk's paths: a test is never evaluated. -/
 structure GenTy where
   answer : Option Ty
   error : Ty
   requires : Requirement
+  completes : Bool
+  breaks : Bool
 
 namespace GenTy
 
@@ -174,9 +181,38 @@ def joinAnswer : Option Ty → Option Ty → Option (Option Ty)
   | a, none => some a
   | some a, some b => (EffTy.joinAnswer a b).map some
 
+/-- An `if`'s two branches: the answers join, the errors and requirements union, and the end or a
+`break` is reachable when it is in either branch. -/
 def merge (a b : GenTy) : Option GenTy := do
   let answer ← joinAnswer a.answer b.answer
-  some ⟨answer, a.error.join b.error, a.requires.union b.requires⟩
+  some ⟨answer, a.error.join b.error, a.requires.union b.requires, a.completes || b.completes,
+    a.breaks || b.breaks⟩
+
+/-- A statement's state `s`, then its tail's `r`: the tail runs only when the statement completes,
+so the end is reachable when both are, and a `break` is reachable in the statement or, once it
+completes, in the tail. The answers, errors and requirements cover both (a dead tail is checked
+too). -/
+def seq (s r : GenTy) : Option GenTy := do
+  let answer ← joinAnswer s.answer r.answer
+  some ⟨answer, s.error.join r.error, s.requires.union r.requires, s.completes && r.completes,
+    s.breaks || (s.completes && r.breaks)⟩
+
+/-- `while (true)` around a body with state `b`: the loop completes exactly when a `break` of its
+own is reachable in the body, and a `break` inside it leaves it, not an enclosing loop. -/
+def loop (b : GenTy) : GenTy :=
+  ⟨b.answer, b.error, b.requires, b.breaks, false⟩
+
+/-- `break` before a tail with state `r`: the end is not reachable through it, a `break` is. -/
+def broken (r : GenTy) : GenTy :=
+  ⟨r.answer, r.error, r.requires, false, true⟩
+
+/-- The answer of `Effect.gen` over a body with state `g` (`:1184`): the `return`s' answer, joined
+with `void` when the body's end is reachable (TS infers `T | undefined` for such a body), and
+`void` when the body has no `return`. -/
+def genAnswer (g : GenTy) : Ty :=
+  match g.answer with
+  | none => .unit
+  | some t => if g.completes then Ty.join t .unit else t
 
 end GenTy
 

@@ -27,7 +27,7 @@ open Effect4.Machine.Env (Requirement)
 theorem checkStmts_afterRet (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (ret p : List Nat) :
     (rest : Stmts Op) → checkStmts sig env inLoop (some ret) p rest =
       (match rest with
-        | .nil => pure ⟨none, .never, Requirement.empty⟩
+        | .nil => pure ⟨none, .never, Requirement.empty, true, false⟩
         | .cons _ _ => throw ⟨ret, .returnNotLast⟩)
   | .nil => rfl
   | .cons _ _ => rfl
