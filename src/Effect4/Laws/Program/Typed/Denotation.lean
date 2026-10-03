@@ -1839,8 +1839,18 @@ theorem interruptScoped_arm {target : Term}
     (fun _ _ _ h => nomatch h) () (show (w.Γ ⟨index⟩).isSome = true by rw [hdecl]; rfl)
     (fun w' _ ans post => unitAnswer_typed root post)
 
-/-- **`interruptAll`**: the targets a list of fiber handles (`fibers_of_fits`), the interruptor a
-number; the row answers `unit`. -/
+/-- Fiber handles that fit are declared. -/
+theorem fibersDeclared_of_fits {ids : List FiberId} {a e : Ty}
+    (hdecl : ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf a e)) :
+    ∀ t ∈ ids, (w.Γ t).isSome = true := by
+  intro t ht
+  obtain ⟨fty, hΓ, -, -⟩ : ∃ fty, w.Γ t = some fty ∧ Ty.subN fty.answer a = true ∧
+      Ty.subN fty.error e = true := hdecl t ht
+  rw [hΓ]
+  rfl
+
+/-- **`interruptAll`**: the targets a list of declared fiber handles (`fibers_of_fits`, the row's
+pre), the interruptor a number; the row answers `unit`. -/
 theorem interruptAll_arm {targets : Term} {who : Option Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.interruptAll targets who))))
@@ -1853,48 +1863,58 @@ theorem interruptAll_arm {targets : Term} {who : Option Term}
     obtain ⟨inner, pair, hts, hfib, rfl⟩ := Checker.inv_action_interruptAll_self _ _ _ _ _ hc
     rw [fiberTy_eq_some hfib] at hts
     obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
-    obtain ⟨ids, hact⟩ : ∃ ids, actionAt root.program p =
-        some (WithFiberAction.interruptAll ids none) := by
+    obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
+        some (WithFiberAction.interruptAll ids none) ∧
+          ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf pair.1 pair.2) := by
       unfold actionAt
       rw [hat]
       simp only []
       rw [hv, Option.bind_some]
-      rcases fibers_of_fits hfit with ⟨xs, rfl, hall⟩ | ⟨hs, ids, rfl, hofv, -⟩
+      rcases fibers_of_fits hfit with ⟨xs, rfl, hall⟩ | ⟨hs, ids, rfl, hofv, hall⟩
       · simp only [Val.tuple?, Option.bind_some]
         split
-        · next ids _ => exact ⟨ids, rfl⟩
+        · next ids heq =>
+          obtain ⟨ids', hids', hfits⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
+          cases hids'
+          exact ⟨ids, rfl, hfits⟩
         · next heq =>
           obtain ⟨ids, hids, -⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
           exact nomatch hids
       · simp only [hofv]
-        exact ⟨ids, rfl⟩
+        exact ⟨ids, rfl, hall⟩
     rw [denoteAction_of _ _ hact]
     exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => unitAnswer_typed root post)
+      (fun _ _ _ h => nomatch h) () (fibersDeclared_of_fits hdecl)
+      (fun w' _ ans post => unitAnswer_typed root post)
   | some who =>
     obtain ⟨inner, pair, hts, hfib, hwho, rfl⟩ := Checker.inv_action_interruptAll_by _ _ _ _ _ _ hc
     rw [fiberTy_eq_some hfib] at hts
     obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
     obtain ⟨n, hn, hnfit⟩ := evalTerm_progress_env henv hwho
     obtain ⟨m, rfl⟩ := fits_nat_inv hnfit
-    obtain ⟨ids, hact⟩ : ∃ ids, actionAt root.program p =
-        some (WithFiberAction.interruptAll ids (some ⟨m⟩)) := by
+    obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
+        some (WithFiberAction.interruptAll ids (some ⟨m⟩)) ∧
+          ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf pair.1 pair.2) := by
       unfold actionAt
       rw [hat]
       simp only []
       rw [hv, Option.bind_some, hn]
-      rcases fibers_of_fits hfit with ⟨xs, rfl, hall⟩ | ⟨hs, ids, rfl, hofv, -⟩
+      rcases fibers_of_fits hfit with ⟨xs, rfl, hall⟩ | ⟨hs, ids, rfl, hofv, hall⟩
       · simp only [Val.tuple?, Option.bind_some]
         split
-        · next ids _ => exact ⟨ids, rfl⟩
+        · next ids heq =>
+          obtain ⟨ids', hids', hfits⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
+          cases hids'
+          exact ⟨ids, rfl, hfits⟩
         · next heq =>
           obtain ⟨ids, hids, -⟩ := mapM_fibers_eq heq (by intro _; rfl) hall
           exact nomatch hids
       · simp only [hofv]
-        exact ⟨ids, rfl⟩
+        exact ⟨ids, rfl, hall⟩
     rw [denoteAction_of _ _ hact]
     exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => unitAnswer_typed root post)
+      (fun _ _ _ h => nomatch h) () (fibersDeclared_of_fits hdecl)
+      (fun w' _ ans post => unitAnswer_typed root post)
 
 /-- **`awaitAll`**: the targets a list of declared fibers (`fibers_of_fits`); the row is met at the
 raw unions of their declared columns (`awaitAllCert`), whose answer is below the checked list of

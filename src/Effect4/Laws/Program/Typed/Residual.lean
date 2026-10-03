@@ -182,7 +182,10 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .raceAll entrants _ => ∀ p ∈ entrants, ∃ ty, PointTyped root w p ty ∧
       ty.answer.sub cert.answer = true ∧ ty.error.sub cert.error = true
   | .async register _ => asyncPre root w register cert
-  | .suspend _ | .interruptAll _ _ | .awaitNewChildren _ => True
+  | .suspend _ | .awaitNewChildren _ => True
+  -- the queued `afterInterrupt` awaits every target (`FiberListColumns`), so the row demands
+  -- each declared, as `interrupt` demands its one target (finding F-PRE)
+  | .interruptAll targets _ => ∀ t ∈ targets, (w.Γ t).isSome = true
   -- the public interrupt installs `interruptAs(target, self)` (`:857`), whose row demands the
   -- target (finding F-PRE); `interruptScoped` installs the public interrupt on another fiber
   | .interrupt target | .interruptScoped target => (w.Γ target).isSome = true
@@ -857,6 +860,9 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | runIn target scope =>
     simp only [fiberPre] at h ⊢
     exact ⟨isSome_extends hGamma h.1, scopeLive_mono ord.1 h.2⟩
+  | interruptAll targets _ =>
+    simp only [fiberPre] at h ⊢
+    exact fun t ht => isSome_extends hGamma (h t ht)
   | scopeExit _ scope _ =>
     simp only [fiberPre] at h ⊢
     exact scopeLive_mono ord.1 h
@@ -864,7 +870,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
     simp only [fiberPre] at h ⊢
     exact ⟨scopeLive_mono ord.1 h.1, fitsExit_mono ord h.2⟩
   | getId | yieldNow _ | ambientScope | sync _ | suspend _
-  | interruptAll _ _ | awaitNewChildren _ | guard_ _ | unguard _
+  | awaitNewChildren _ | guard_ _ | unguard _
   | finishFinalizer _ | construction | foreignRelease _ _
   | closeWalk _ _ _ | closeIter _ _ _ | cancelRace _ | dropObservers _
   | frontier _ _ => exact trivial

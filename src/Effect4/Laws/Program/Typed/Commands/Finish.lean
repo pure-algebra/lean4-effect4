@@ -623,14 +623,15 @@ theorem observerCommandOk_of_stored {root : ProgramSource} {w : World} {m : RSta
   | callback key => trivial
 
 /-- **The exit middleware's program is typed** at a fiber's declared type when the exit is
-admitted there: `interruptAll` of the children answers `unit` (`fiberPre` reads nothing), then the
-exit (`restoreR`, `Laws/Program/InterpR.lean:62`). -/
+admitted there: `interruptAll` of the children, each declared (`fiberPre`; `J`'s `children`),
+answers `unit`, then the exit (`restoreR`, `Laws/Program/InterpR.lean:62`). -/
 theorem middlewareCode_typed (root : ProgramSource) {w : World} {ty : EffTy}
-    (children : List FiberId) {exit : ExitV} (hex : ExitOk w ty exit) :
+    (children : List FiberId) (declared : ∀ c ∈ children, (w.Γ c).isSome = true) {exit : ExitV}
+    (hex : ExitOk w ty exit) :
     TypedProg root w ty (restoreR (fiberValR (.interruptAll children none) rfl) (.restore exit)) :=
   seqGuard_typed root (mid := EffTy.pure .unit)
     (TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () trivial (fun _ _ _ post => unitAnswer_typed root post))
+      (fun _ _ _ h => nomatch h) () declared (fun _ _ _ post => unitAnswer_typed root post))
     (subN_never _) (fun _ o _ _ => .pure (strongExit_mono _ _ _ _ o hex))
 
 /-- The head facts of a `drainDue`: it reads nothing, owns nothing, carries no key. -/
@@ -806,7 +807,7 @@ theorem finish_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
         finalizing := some exit
         frame := { f.frame with deferredInterrupt := false, current := code } }
     have codeTyped : TypedProg root w final code :=
-      middlewareCode_typed root f.children (exitF final declared)
+      middlewareCode_typed root f.children old.children (exitF final declared)
     have provG : InterruptProvenance g.frame := ⟨provF.recorded, fun h => nomatch h⟩
     have view : ObsView m (m.update g) := obsView_rupdate (g := g) hf rfl (PendingWeaker.refl _)
     have look : (m.update g).fiber? g.id = some g := rfiber?_update_self hf rfl
