@@ -2617,6 +2617,37 @@ theorem scopeStoreOk_removeFinalizer {root : ProgramSource} {w : World} {e : Exp
       rw [Effect4.Scope.closingExit_removeUnsafe entry.scope key] at hex
       exact scopeStateOk_closed old ex hex
 
+/-- The scope column after a close (`ScopeStore.closeState`, the state half of `scopeCloseUnsafe`,
+`internal/effect.ts:3778-3798`): the closed entry holds no registrations, and its exit is the one
+it already held or the closing exit, which the column types (finding F-CLOSE). -/
+theorem scopeStoreOk_closeState {root : ProgramSource} {w : World} {e : Expect} {st : ScopeStore}
+    (h : ScopeStoreOk (preds root) w e st) (scope : Nat) {ex : ExitV}
+    (hex : (preds root).ScopeExitOk w e ex) :
+    ScopeStoreOk (preds root) w e (st.closeState scope ex) := by
+  unfold ScopeStore.closeState
+  split
+  · exact h
+  · rename_i entry hentry
+    have old := (h.c0 entry (List.mem_of_find?_eq_some hentry)).c0.c0
+    have none : (entry.scope.closeState ex).finalizers = [] := Effect4.Scope.closeState_finalizers _ _
+    refine scopeStoreOk_setEntry h
+      ⟨⟨scopeStateOk_of (fun v hv => ?_) (fun v hv => ?_) (fun ex' hex' => ?_)⟩⟩
+    · change v ∈ (entry.scope.closeState ex).finalizers at hv
+      rw [none] at hv
+      cases hv
+    · change v ∈ (entry.scope.closeState ex).finalizers at hv
+      rw [none] at hv
+      cases hv
+    · change (entry.scope.closeState ex).closingExit? = some ex' at hex'
+      cases hcl : entry.scope.isClosed with
+      | true =>
+        rw [Effect4.Scope.closeState_idempotent _ _ hcl] at hex'
+        exact scopeStateOk_closed old ex' hex'
+      | false =>
+        rw [Effect4.Scope.close_closingExit _ _ hcl] at hex'
+        cases hex'
+        exact hex
+
 /-- The internal keys do not read the scope store. -/
 theorem internalKeys_scopes (m : RState) (scopes : ScopeStore) (nextName : Nat) :
     Guard.internalKeys { m with state := { m.state with scopes := scopes, nextName := nextName } } =

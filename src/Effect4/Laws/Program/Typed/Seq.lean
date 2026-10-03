@@ -218,14 +218,19 @@ theorem exitOk_restore {w : World} {ty : EffTy} {cause c : CauseV}
     · exact hbody.2 r hm
     · exact hfin.2 r hm
 
-/-- **A finalizer's boundary** (`finalizerR`, `DenoteR.lean`): the cleanup typed at `f`, whose
-error column is below the result's, and the restored exit typed at the result: the boundary is
-typed at the result. A succeeding cleanup is followed by the `finishFinalizer` marker carrying the
-restored exit; a failing cleanup after a failed body combines both causes. -/
-theorem finalizer_typed (root : ProgramSource) {w : World} {ty f : EffTy} {ex : ExitV}
+/-- **A finalizer's boundary under any continuation** (`finalizerR`, `DenoteR.lean`): the cleanup
+typed at `f`, whose error column is below the result's, and the restored exit typed at the result:
+the boundary, bound to any continuation, is typed at the result. A succeeding cleanup is followed by
+the `finishFinalizer` marker carrying the restored exit, which reads no continuation; a failing
+cleanup after a failed body combines both causes; every other exit skips the bind
+(`seqGuard_typed`). The scoped exit's close binds the callback's continuation after the boundary
+(`prepareScopedExitR`). -/
+theorem finalizerBind_typed (root : ProgramSource) {w : World} {ty f : EffTy} {ex : ExitV}
     {cleanup : RProgram} (hex : ExitOk w ty ex) (herr : Ty.subN f.error ty.error = true)
-    (hclean : TypedProg root w f cleanup) : TypedProg root w ty (finalizerR ex cleanup) := by
+    (hclean : TypedProg root w f cleanup) (next : ExitV → RProgram) :
+    TypedProg root w ty ((finalizerR ex cleanup).bind next) := by
   unfold finalizerR
+  rw [Effects.Program.bind_assoc]
   refine seqGuard_typed root (mid := ⟨f.answer, ty.error, f.requires⟩) ?_ (Ty.subN_refl _)
     (fun w' o _ _ => .finishFinalizer (strongExit_mono _ _ _ _ o hex))
   cases ex with
@@ -234,6 +239,14 @@ theorem finalizer_typed (root : ProgramSource) {w : World} {ty f : EffTy} {ex : 
     refine catchGuard_typed root hclean (Ty.subN_refl _) (fun w' o c hc => ?_)
     exact .pure (exitOk_restore (strongExit_mono _ _ _ _ o hex)
       (exitOk_failure_of_errorN herr hc))
+
+/-- **A finalizer's boundary** (`finalizerR`), at the empty continuation. -/
+theorem finalizer_typed (root : ProgramSource) {w : World} {ty f : EffTy} {ex : ExitV}
+    {cleanup : RProgram} (hex : ExitOk w ty ex) (herr : Ty.subN f.error ty.error = true)
+    (hclean : TypedProg root w f cleanup) : TypedProg root w ty (finalizerR ex cleanup) := by
+  have h := finalizerBind_typed root hex herr hclean Effects.Program.pure
+  rw [Effects.Program.bind_pure_right] at h
+  exact h
 
 /-- **The `onExit` shape** (`onExitR`, `DenoteR.lean`): the body typed at `b`, below the result
 in both columns, and the finalizer typed at `f` on every exit `b` admits, its error column below

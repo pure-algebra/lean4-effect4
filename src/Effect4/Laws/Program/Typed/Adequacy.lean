@@ -1382,6 +1382,39 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
       exact voidedClose_typed root (fins entry hentry fin hfin w (leHost_refl w) exit exitFits)
     | _ :: _ :: _, _ => exact closeWalk_typed root w strategy _ exit
 
+/-- **The unsafe close's program is typed at rc.112's finalizer type `⟨unknown, never⟩`**: the lone
+finalizer by the scope store's typing at the closing exit, the walk at `⟨unit, never⟩` widened. It
+is what the scoped exit's close runs under the finalizer boundary (`prepareScopedExitR`,
+`internal/effect.ts:3944-3947`), with the same premises as `closeScope_installs`. -/
+theorem closeScopeUnsafe_installs (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV)
+    (flag : Bool) (st st' : Stores) (program : Option RProgram)
+    (fins : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin)
+    (exitFits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit)
+    (h : closeScopeUnsafeR scope exit flag st = some (st', program)) :
+    ∀ code, program = some code → TypedProg root w ⟨.unknown, .never, Env.Requirement.empty⟩ code := by
+  unfold closeScopeUnsafeR at h
+  cases hs : scopeCloseSnapshot scope exit st with
+  | none =>
+    rw [hs] at h
+    cases h
+  | some snapshot =>
+    obtain ⟨state, strategy, order⟩ := snapshot
+    rw [hs] at h
+    simp only at h
+    obtain ⟨_, rfl⟩ := h
+    intro code hcode
+    match order, hs, hcode with
+    | [], _, hcode => cases hcode
+    | [fin], hs, hcode =>
+      cases hcode
+      obtain ⟨entry, hentry, hfin⟩ := lone_of_snapshot hs
+      exact fins entry hentry fin hfin w (leHost_refl w) exit exitFits
+    | _ :: _ :: _, _, hcode =>
+      cases hcode
+      refine typedProg_widen root (T := EffTy.pure .unit) ?_ (Ty.subN_refl _)
+        (closeWalk_typed root w strategy _ exit)
+      exact Ty.sub_unknown _
+
 /-! ## The ledger: the handler side of decisions row 136
 
 One goal per row the evaluator answers, beside the eighteen command goals (`M6Ledger`), with the

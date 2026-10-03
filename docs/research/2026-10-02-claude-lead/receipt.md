@@ -1356,3 +1356,47 @@ Commands: `lake build Effect4.Laws` (green); `lake build Test.Program.ProtocolPo
 `Test.Counterexamples.Machine.Semantics.{AsyncHookContract, M6Capstone, ScopePresence, StaleCode,
 ValueMembership}`, `Test.Program.TypedProgRows`, `Test.Audit.RuntimeCoverage` (green); the touched
 controls print `[propext, Quot.sound]`.
+
+## Slice M6-J — the scope close and the walk, unconditional (2026-10-02)
+
+**First:** the walk's one premise is gone. `ScopedExitKeeps` is deleted: the scoped exit's close is
+proved (`Evaluating.settle_callback`), so `walkKeeps root rootTy`, `clause_unguard` and
+`clause_finishFinalizer` hold with no premise, and `clause_closeScope` is proved. All four rest on
+F-CLOSE's pre (slice above).
+
+Landed (`Typed/Commands/Evaluate.lean` unless named):
+- `configTyped_closeState`: closing a present scope with an exit that fits `Exit<unknown, unknown>`
+  keeps `I` at the world over the closed store. Growth is `scopeCloseSnapshot_keys`;
+  well-formedness is the closing exit's validity (`fits_validIn` through
+  `storeTyped_of_typedState`) plus the memo entries' scopes staying present; the scope column is
+  `scopeStoreOk_closeState` (`Commands/Bookkeeping.lean`, beside the `addUnsafe`/`removeFinalizer`
+  columns). The heap, cells, externals, due list and timers are untouched. Shared by both closes.
+- `clause_closeScope`: presence and the fit from the pre; the program installed (void, the lone
+  finalizer voided, the walk) is `closeScope_installs` at `J`'s finalizer typing
+  (`finalizers_of_typedState`), over the saved answer frame at the post `ExitOk ⟨unit, never⟩`.
+- `Evaluating.settle_callback` (replaces `ScopedExitKeeps`): `prepareScopedExitR` restores the
+  previous context (its services fit: the slot's protocol, so `Evaluating.recontext`, moved up),
+  closes the present scope with the callback's exit (`fitsExit_unknown` of its `ExitOk`), and
+  installs either `finishFinalizer ex` or the close's program under the finalizer boundary, bound to
+  the callback's continuation.
+  - The second case needed `finalizerBind_typed` (`Typed/Seq.lean`): a finalizer's boundary bound to
+    any continuation is typed. The success arm ends at `finishFinalizer`, which reads no
+    continuation; every other exit skips the bind (`seqGuard_typed`).
+  - `finalizer_typed` is now its corollary at `Program.pure`.
+  - The close's optional program is typed at `⟨unknown, never⟩` by `closeScopeUnsafe_installs`
+    (`Typed/Adequacy.lean`, beside `closeScope_installs`).
+- `settle_frame_ready` / `Evaluating.settle_ready`: a continue iteration whose glue already ran
+  settles typed (the tail of `settle_frame_continue`, which now calls it).
+- `scopeExitCallback?_some`: the callback recognizer's inversion.
+
+Placement: concept 4 (`step-deliver-preserves`, `step-loop-preserves`), clauses of
+`M6Ledger.step_deliver` through `evaluate_keeps`; `finalizerBind_typed` and
+`closeScopeUnsafe_installs` are concept 2 (`residual-program-typing`) steps with this consumer. Not
+established: the remaining fiber clauses (fork family, race registration, async/await family,
+interrupt family behind children/F-PRE, getContext behind F-CTX, dropObservers, yieldNow, runIn,
+closeIter, gen/loop behind row 190), the store family (Codex), and so `step_deliver`/`step_loop`
+themselves.
+
+Commands: `lake build Effect4.Laws` (green; M6Ledger 4 open of 20, unchanged until the clauses
+close); `lake env lean` axiom print of the twelve new or restated theorems: `[propext, Quot.sound]`
+each.
