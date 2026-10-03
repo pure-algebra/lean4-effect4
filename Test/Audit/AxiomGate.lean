@@ -413,7 +413,9 @@ elab "#effect4_axiom_gate" : command => do
   let t2 ← liftIO IO.monoMsNow
   -- one native fold over the constants: every audited declaration's facts, and the same
   -- declarations by module for the exemption checks below
-  let (facts, byModule) := ProofGraph.Audit.auditedFacts environment belongsToAuditedTree
+  let (facts, byModule, missing) := ProofGraph.Audit.auditedFacts environment belongsToAuditedTree
+  unless missing.isEmpty do
+    throwError "Effect4 trust gate: modules list declarations the environment does not hold: {missing}"
   for fact in facts do
     let name := fact.name
     if !fact.safeRecursor then

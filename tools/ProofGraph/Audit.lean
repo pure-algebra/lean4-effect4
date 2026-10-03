@@ -77,27 +77,34 @@ def factsOf (env : Environment) (module : Name) (info : ConstantInfo) : Facts :=
     hasInitFn := (getInitFnNameFor? env name).isSome }
 
 /-- Every declaration of the imported modules `audited` selects, with its facts, and the same
-declarations grouped by module. Read from each selected module's own constant list, so the scan
-touches only those declarations: a fold over the whole environment also pages in every constant
-of Lean and of the dependencies, which under memory pressure was most of the gate's time. The
-set is the one `moduleOf?` attributes to those modules (`ModuleData.constants`; the code
-generator's auxiliaries in `extraConstNames` are not constants of the environment). -/
+declarations grouped by module; and the names a module lists that the environment does not hold,
+which the caller refuses. The names come from each selected module's own list, so the scan touches
+only those declarations: a fold over the whole environment also pages in every constant of Lean
+and of the dependencies, which under memory pressure was most of the gate's time. The facts are
+read from the environment's final declaration (`env.find?`), never from the module's stored copy:
+when a module lists a name twice, the import keeps the later, subsuming declaration (Codex, from
+`finalizeImport`). The set is the one `moduleOf?` attributes to those modules; the code generator's
+auxiliaries in `extraConstNames` are not constants of the environment. -/
 def auditedFacts (env : Environment) (audited : Name → Bool) :
-    Array Facts × Std.HashMap Name (Array Name) := Id.run do
+    Array Facts × Std.HashMap Name (Array Name) × Array Name := Id.run do
   let mut facts : Array Facts := #[]
   let mut byModule : Std.HashMap Name (Array Name) := {}
+  let mut missing : Array Name := #[]
   let mut seen : Std.HashSet Name := {}
   for (module, data) in env.header.moduleNames.zip env.header.moduleData do
     if audited module then
       let mut names : Array Name := #[]
-      for info in data.constants do
+      for name in data.constNames do
         -- a name can be listed twice; it is one declaration, of the module the environment says
-        if seen.contains info.name || moduleOf? env info.name != some module then continue
-        seen := seen.insert info.name
-        facts := facts.push (factsOf env module info)
-        names := names.push info.name
+        if seen.contains name || moduleOf? env name != some module then continue
+        seen := seen.insert name
+        match env.find? name with
+        | some info =>
+          facts := facts.push (factsOf env module info)
+          names := names.push name
+        | none => missing := missing.push name
       byModule := byModule.insert module names
-  return (facts, byModule)
+  return (facts, byModule, missing)
 
 /-- The modules a root reaches through imports, the root included. -/
 def moduleImportClosure (graph : Array (Name × Array Name)) (root : Name) : Array Name := Id.run do
