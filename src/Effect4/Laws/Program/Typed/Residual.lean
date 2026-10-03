@@ -169,6 +169,25 @@ def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : Eff
   | .store (.externalRegister _) => True
   | _ => False
 
+/-- **A typed loop point with a typed cursor** (decisions row 190 (b), `E4-TYPED-CE-037`): the
+point addresses an `iterate` the checker types at `ty` under an environment its values fit, read
+through the expansion's rounds as `PointTyped` reads a node, its completed view typed, and the
+cursor fits the loop's checked cursor type `cursorTy.getD c0`, `c0` the initial term's type
+(`Checker.check`'s `iterate` rule, `Program/Checker.lean:178-189`). `PointTyped` alone admitted a
+Boolean-cursor loop entered with `unit`, whose entry installs `badShapeExit`. The loop entry's
+producer is `iterate_arm` (`Typed/Denotation.lean`); its consumer, `clause_loop`
+(`Typed/Commands/Clauses/Loop.lean`). -/
+def LoopPointTyped (root : ProgramSource) (w : World) (p : Point) (ty : EffTy) (cursor : Val) :
+    Prop :=
+  ∃ (cursorTy : Option Ty) (initial test step result : Term) (body : NativeEff) (env : List Ty)
+    (c0 : Ty),
+    Node.at_ (.eff root.program) p.path =
+      some (.eff (.iterate cursorTy initial test step result body)) ∧
+    Checker.check root.signature env p.path
+      (Eff.expandIn root.program (.iterate cursorTy initial test step result body)) = .ok ty ∧
+    EnvTyped w env p.env ∧ (∀ q ∈ p.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) ∧
+    termTy root.signature env initial = some c0 ∧ Fits w cursor (cursorTy.getD c0)
+
 def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert op) : Prop :=
   match op with
   | .getId | .yieldNow _ | .ambientScope | .sync _ => True
@@ -210,7 +229,8 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .fork body _ _ => BodyTyped root w body cert
   | .forkIn child _ scope _ => PointTyped root w child cert ∧ ScopeLive w scope
   | .gen p => PointTyped root w p cert
-  | .loop p _ => PointTyped root w p cert
+  -- the cursor at the loop's checked cursor type (decisions row 190 (b))
+  | .loop p cursor => LoopPointTyped root w p cert cursor
   | .refuse _ => False
 
 /-- What each fiber row's answer satisfies: what the machine delivers to the continuation
@@ -713,6 +733,17 @@ theorem pointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {t
   obtain ⟨fty, hfty, hex⟩ := hview q hq
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
+/-- A typed loop point with a typed cursor stays typed at every later world (decisions row
+190 (b)). -/
+theorem loopPointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {ty : EffTy}
+    {cursor : Val} (h : LoopPointTyped src w p ty cursor) : LoopPointTyped src w' p ty cursor := by
+  obtain ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, henv, hview, hc0,
+    hfit⟩ := h
+  refine ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, envTyped_mono ord henv,
+    fun q hq => ?_, hc0, fits_mono ord hfit⟩
+  obtain ⟨fty, hfty, hex⟩ := hview q hq
+  exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
+
 theorem layerPointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {lt : LayerTy}
     (h : LayerPointTyped src w p lt) : LayerPointTyped src w' p lt := by
   obtain ⟨l, hat, hchk, henv, hview⟩ := h
@@ -830,7 +861,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | forkScoped child _ _ => exact pointTyped_mono ord h
   | «scoped» body => exact pointTyped_mono ord h
   | gen p => exact pointTyped_mono ord h
-  | loop p _ => exact pointTyped_mono ord h
+  | loop p _ => exact loopPointTyped_mono ord h
   | await target _ =>
     simp only [fiberPre] at h ⊢
     exact isSome_extends hGamma h
@@ -952,6 +983,18 @@ theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
   · rw [hprog]
     exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
 
+theorem loopPointTyped_rows_append {w : World} {point : Point} {ty : EffTy} {cursor : Val}
+    (h : LoopPointTyped src w point ty cursor) : LoopPointTyped src' w point ty cursor := by
+  obtain ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, henv, hview, hc0,
+    hfit⟩ := h
+  refine ⟨cursorTy, initial, test, step, result, body, env, c0, ?_, ?_, henv, hview, ?_, hfit⟩
+  · rw [hprog]
+    exact hat
+  · rw [hprog]
+    exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
+  · rw [(signature_rows_append src src' t' htab hsvc).termTy env initial]
+    exact hc0
+
 theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
     (h : LayerPointTyped src w point lt) : LayerPointTyped src' w point lt := by
   obtain ⟨l, hat, hcheck, henv, hview⟩ := h
@@ -1048,7 +1091,7 @@ theorem fiberPre_rows_append {w : World} {op : FiberOp} {cert : FiberCert op}
   | forkIn child options scope path =>
     exact ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, h.2⟩
   | gen p => exact pointTyped_rows_append src src' t' hprog htab hsvc h
-  | loop p name => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | loop p name => exact loopPointTyped_rows_append src src' t' hprog htab hsvc h
   | _ => exact h
 
 /-- **`TypedProg` is monotone along an appended row table** (TY-12's positive control, proved;

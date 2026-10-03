@@ -1160,21 +1160,25 @@ theorem gen_arm {body : Stmts NativeOp} (hfuel : p.fuel = f + 1)
     (pointTyped_mono o hpt) (fun _ _ _ post => .pure post))
 
 /-- **`iterate`**: the counted step, the initial cursor (`evalTerm_progress_env`), then the loop
-entry at the point itself. -/
+entry at the point itself, its cursor at the loop's checked cursor type (`LoopPointTyped`,
+decisions row 190 (b)): the initial term's type is below it (`Checker.inv_iterate`). -/
 theorem iterate_arm {cursorTy : Option Ty} {initial test step result : Term} {body : NativeEff}
     (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.iterate cursorTy initial test step result body)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.iterate cursorTy initial test step result body) p) := by
-  obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  have checked := hcheck
   rw [Eff.expandIn_iterate] at hcheck
-  obtain ⟨c0, _, _, _, hc0, _⟩ := Checker.inv_iterate _ _ _ _ _ _ _ _ _ _ hcheck
-  obtain ⟨cursor, hcursor, _⟩ := evalTerm_progress_env henv hc0
+  obtain ⟨c0, _, _, _, hc0, _, _, _, _, hsub0, _, _⟩ := Checker.inv_iterate _ _ _ _ _ _ _ _ _ _ hcheck
+  obtain ⟨cursor, hcursor, hfit⟩ := evalTerm_progress_env henv hc0
+  have pre : LoopPointTyped root w p ty cursor := ⟨cursorTy, initial, test, step, result, body, env,
+    c0, hat, checked, henv, hview, hc0, fits_subN w (a := c0) (b := cursorTy.getD c0) hsub0 cursor hfit⟩
   rw [denoteR_iterate _ _ _ _ _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hcursor]
   exact suspendR_typed root (fun w' o => TypedProg.fiber (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) ty
-    (pointTyped_mono o hpt) (fun _ _ _ post => .pure post))
+    (loopPointTyped_mono o pre) (fun _ _ _ post => .pure post))
 
 /-- **`uninterruptible`**: the mask row over the body at the child, at the body's type. -/
 theorem uninterruptible_arm {b : NativeEff} (hfuel : p.fuel = f + 1)

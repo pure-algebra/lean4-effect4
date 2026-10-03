@@ -27,18 +27,6 @@ namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 open Contracts
 
-/-- **A typed loop point with a typed cursor** (decisions row 190 (b), `E4-TYPED-CE-037`). -/
-def LoopPointTyped (root : ProgramSource) (w : World) (p : Point) (ty : EffTy) (cursor : Val) :
-    Prop :=
-  ∃ (cursorTy : Option Ty) (initial test step result : Term) (body : NativeEff) (env : List Ty)
-    (c0 : Ty),
-    Node.at_ (.eff root.program) p.path =
-      some (.eff (.iterate cursorTy initial test step result body)) ∧
-    Checker.check root.signature env p.path
-      (Eff.expandIn root.program (.iterate cursorTy initial test step result body)) = .ok ty ∧
-    EnvTyped w env p.env ∧ (∀ q ∈ p.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) ∧
-    termTy root.signature env initial = some c0 ∧ Fits w cursor (cursorTy.getD c0)
-
 /-! ## The loop frame's invariant -/
 
 /-- The checker's verdicts on the loop at `p` (`Checker.check`'s `iterate` rule,
@@ -197,5 +185,52 @@ theorem loopFrameTyped_of_point {w : World} {p : Point} {ty : EffTy} {cursor : V
     ⟨hat, htest, hbody, ⟨c1, hstep, hsub1⟩, ⟨d, hresult, rfl⟩⟩, henv, hfit⟩
 
 end Invariant
+
+/-! ## The clause -/
+
+/-- **`loop`** (`evaluateFiberR`'s `.loop` arm, `Laws/Program/EvaluateR.lean`): the answer frame is
+saved over the continuation, then the machine's interpreter enters the loop at the cursor
+(`interpRAt`'s `loopEnter`). A continue pushes the loop frame, accepted by its protocol
+(`loopProtocol_of_frameTyped`, coinduction from the invariant the pre gives, decisions row 190),
+over the answer frame and installs the body typed by M5 at its point; a finish installs the result
+typed at the certificate. The machine and the world are unchanged. -/
+theorem clause_loop (root : ProgramSource) (rootTy : EffTy) (p : Point) (cursor : Val) :
+    FiberClauseKeeps root rootTy (.loop p cursor) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  obtain ⟨tb, frame⟩ :=
+    loopFrameTyped_of_point ev.typed.machine.sourceWF ev.typed.machine.services pre
+  have answer : FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w cert tin
+      (.answer next) :=
+    answerFrame_typed (fun _ _ _ hex => hex) (fun w' o ex hex => typedNext w' o ex hex)
+  have entered := loopEnter_typed frame ev.view
+  show SettlesTyped root rootTy w f.id rest (prepareIterR
+    (match (interpRAt root.program m.completedExits).loopEnter (.loop p) cursor with
+      | .continue cursor' body =>
+        (⟨m, answerR (pushR (saveAnswerR f next) (.loop (.loop p) cursor')) body, y, .continue_,
+          []⟩ : RIter)
+      | .finish code => ⟨m, answerR (saveAnswerR f next) code, y, .continue_, []⟩))
+  split
+  · rename_i cursor' body heq
+    rw [heq] at entered
+    obtain ⟨tin', typed, tail⟩ := entered
+    refine ev.settle_continue { f.frame with
+      current := body, stack := .loop (.loop p) cursor' :: .answer next :: f.frame.stack }
+      (fun ty' declared' => ?_)
+    have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
+    subst same
+    exact ⟨tin', typed, hostStack_push (frameAccepts_loop (loopProtocol_of_frameTyped tail))
+      (hostStack_push answer stack), ⟨prov.recorded, prov.deferred⟩⟩
+  · rename_i code heq
+    rw [heq] at entered
+    refine ev.settle_continue { f.frame with current := code, stack := .answer next :: f.frame.stack }
+      (fun ty' declared' => ?_)
+    have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
+    subst same
+    exact ⟨cert, entered, hostStack_push answer stack, ⟨prov.recorded, prov.deferred⟩⟩
 
 end Effect4.Program.Typed
