@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts" / "lib"))
 
 from doc_refs import stale_references  # noqa: E402
+from build_profile import profile  # noqa: E402
 
 
 class StatusError(Exception):
@@ -229,6 +230,11 @@ def main() -> int:
                               text=True).stdout.strip()
         state = "up to date" if changed == 0 else f"{changed} Lean source(s) changed since (lake build)"
         print(f"build     battery built {when}; {state}")
+    log = ROOT / ".lake/gen/build.log"
+    last = profile(log) if log.is_file() else None
+    if last is not None:
+        print(f"profile   last make build: {len(last['times'])} modules rebuilt, {last['summed']:.0f} s summed, "
+              f"critical path {last['critical']:.0f} s; slowest {last['ranked'][0][0]} (make build-profile)")
 
     inventories = {".lake/check/inventory": sources,
                    ".lake/check/paths": run("git", "ls-files").split("\n")[:-1]}

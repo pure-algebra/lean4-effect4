@@ -56,8 +56,13 @@ VENDOR_SOURCES := $(wildcard vendor/effect-4.0.0-rc.112/src/*.ts vendor/effect-4
 # ---------------------------------------------------------------------------- build
 
 .PHONY: build build-tools
-build: ## lake build: the core, the proof graph, the batteries and the axiom gate
-	$(LAKE) build
+build: ## lake build: the core, the proof graph, the batteries and the axiom gate; the log feeds `make build-profile`
+	@mkdir -p $(GEN)
+	set -o pipefail; $(LAKE) build 2>&1 | tee $(GEN)/build.log
+
+.PHONY: build-profile
+build-profile: ## where the last `make build` spent its time: the critical path and the slowest modules (.lake/gen/build-profile.md)
+	@$(PY) scripts/build-profile.py $(GEN)/build.log
 
 build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, Effect4Gen)
 	$(LAKE) build Tools
