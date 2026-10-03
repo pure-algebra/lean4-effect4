@@ -151,18 +151,62 @@ def toolName (tool : String) : String :=
   let file := (tool.replace "\\" "/").splitOn "/" |>.getLast!
   if file.endsWith ".lean" then (file.dropEnd 5).toString else file
 
+/-- Catalogue tools inspect compiled values; early tools inspect loaded declarations. -/
+def executable (tool : String) : String :=
+  if ["Rows", "Forms", "PreludeAtoms"].contains (toolName tool)
+  then "effect4gen-catalogue" else "effect4gen"
+
 /-- The generator's argument list for one group: the old `Invoke-Lean`'s, in its order. -/
 def generateArgs (tool : String) (g : Group) (appendGuards : Bool) : Array String :=
-  let base := #["exe", "effect4gen", toolName tool] ++ g.flags ++
+  let base := #["exe", executable tool, toolName tool] ++ g.flags ++
     #["--group", g.name, "--imports", g.imports, "--out", g.out]
   let base := if appendGuards then base ++ #["--append", g.guards] else base
   let base := g.kinds.foldl (fun acc k => acc ++ #["--kind", k]) base
   base ++ g.types
 
+/-- Source headers for the scheduler, parsed by Lean without elaborating the modules.
+Manifest imports own generated modules, including outputs absent during bootstrap. -/
+def sourceGraph (groups : Array Group) : IO Json := do
+  let mut pending := #["Effect4Gen.Exe", "Effect4Gen.CatalogueExe", "Tools.GeneratedStamp"]
+  for g in groups do pending := pending ++ (g.imports.splitOn ",").toArray
+  let mut seen : Array String := #[]
+  let mut rows : Array Json := #[]
+  while !pending.isEmpty do
+    let name := pending.back!
+    pending := pending.pop
+    if seen.contains name then continue
+    seen := seen.push name
+    let generated := groups.find? fun g =>
+      (g.out.replace "\\" "/") == "src/" ++ name.replace "." "/" ++ ".lean"
+    let imports ← match generated with
+      | some g => pure (g.imports.splitOn ",").toArray
+      | none => do
+        let mut path : Option System.FilePath := none
+        for root in #["src/", "tools/", ""] do
+          let candidate := System.FilePath.mk (root ++ name.replace "." "/" ++ ".lean")
+          if ← candidate.pathExists then
+            if path.isSome then throw (IO.userError s!"ambiguous local module {name}")
+            path := some candidate
+        match path with
+        | some sourcePath =>
+          let (imports, _, messages) ← Lean.Elab.parseImports (← IO.FS.readFile sourcePath) (some sourcePath.toString)
+          if messages.hasErrors then
+            throw (IO.userError s!"invalid import header: {sourcePath}")
+          pure (imports.map (·.module.toString))
+        | none =>
+          let localRoots := #["Effect4", "Effect4Gen", "Tools", "Conform", "ProofGraph", "OCaml5", "Test"]
+          if localRoots.any (fun root => name == root || name.startsWith (root ++ ".")) then
+            throw (IO.userError s!"missing local module {name}")
+          pure #[]
+    rows := rows.push (Json.mkObj [("module", toJson name), ("imports", toJson imports)])
+    pending := pending ++ imports
+  return toJson rows
+
 structure Config where
   group : Option String := none
   check : Bool := false
   commands : Bool := false
+  plan : Bool := false
   verify : Bool := false
   manifest : String := "tools/Effect4Gen/manifest.json"
   help : Bool := false
@@ -172,6 +216,7 @@ partial def parseArgs : List String → Config → Except String Config
   | "--group" :: g :: rest, c => parseArgs rest { c with group := some g }
   | "--manifest" :: p :: rest, c => parseArgs rest { c with manifest := p }
   | "--commands" :: rest, c => parseArgs rest { c with commands := true }
+  | "--plan" :: rest, c => parseArgs rest { c with plan := true }
   | "--check" :: rest, c => parseArgs rest { c with check := true }
   | "--verify" :: rest, c => parseArgs rest { c with verify := true }
   | "--help" :: rest, c => parseArgs rest { c with help := true }
@@ -180,7 +225,7 @@ partial def parseArgs : List String → Config → Except String Config
 
 def usage : String :=
   "lake env lean --run tools/Effect4Gen/Driver.lean [--group NAME] [--check] [--verify] " ++
-    "[--manifest PATH] [--commands]"
+    "[--manifest PATH] [--commands] [--plan]"
 
 def joined (xs : Array String) : String := String.intercalate ", " xs.toList
 
@@ -205,7 +250,7 @@ def main (argv : List String) : IO Unit := do
 
   -- Emit the same manifest argument arrays and exit before a child Lean starts.
   -- The shell entry point owns the lane and a separate timeout for each command.
-  if config.commands then
+  if config.commands || config.plan then
     let mut commands : Array Json := #[]
     for g in groups do
       if config.group.isSome && config.group != some g.name then continue
@@ -213,7 +258,11 @@ def main (argv : List String) : IO Unit := do
       commands := commands.push (Json.mkObj [
         ("name", toJson g.name), ("out", toJson (hostPath g.out)),
         ("args", toJson args)])
-    IO.println (toJson commands).compress
+    if config.plan then
+      if config.group.isSome then throw (IO.userError "--plan requires every manifest group")
+      IO.println (Json.mkObj [("commands", toJson commands), ("imports", ← sourceGraph groups)]).compress
+    else
+      IO.println (toJson commands).compress
     return
 
   let mut changed : Array String := #[]

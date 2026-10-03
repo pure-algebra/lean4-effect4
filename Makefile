@@ -89,24 +89,25 @@ WIRE_TAGS := tools/Effect4Gen/wire-tags.json
 
 # What every `scripts/generate.py` group reads besides its own sources: the orchestrator itself and
 # the one header-and-layout module each Lean producer writes through (`Tools.GeneratedStamp`).
-PRODUCER_COMMON := scripts/generate.py tools/Tools/GeneratedStamp.lean
+PRODUCER_COMMON := scripts/generate.py scripts/lib/derived_plan.py tools/Tools/GeneratedStamp.lean
 
 # Declaration-site variance, read off the vendored rc.112 sources by a Lean `--run` driver
 # (tooling plan 1.4a). It is an INPUT of `derived` -- the TyView group reads it -- so it is the
 # first link of the chain, and `check-gen` holds it like any other generated file.
 VARIANCES := tools/Effect4Gen/variances.json
-VARIANCE_SOURCES := tools/Tools/Variances.lean $(VENDOR_SOURCES) scripts/generate.py
-$(GEN)/variances: $(VARIANCE_SOURCES) | build
+VARIANCE_OUT := $(VARIANCES) src/Effect4/Program/TyVariance.lean
+VARIANCE_SOURCES := tools/Tools/Variances.lean $(VENDOR_SOURCES) $(PRODUCER_COMMON) \
+  $(wildcard src/Effect4/Store/Carrier/*.lean) lakefile.toml lake-manifest.json lean-toolchain
+.PHONY: variance-output-missing
+$(GEN)/variances: $(VARIANCE_SOURCES) $(wildcard $(VARIANCE_OUT)) $(if $(filter-out $(wildcard $(VARIANCE_OUT)),$(VARIANCE_OUT)),variance-output-missing)
 	$(PY) scripts/generate.py --only variances
 	@mkdir -p $(GEN) && touch $@
 
 DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json \
-  $(VARIANCES) $(WIRE_TAGS) tools/Tools/WireTags.lean $(PRODUCER_COMMON) lakefile.toml
-DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Domain/Canonical.trace Program/Native.trace Store/Domain/RowCanonical.trace \
-  Store/Domain/Pin.trace Store/Domain/Node.trace Api/Frontier.trace Program/Eff.trace Program/TyCore.trace Program/Ty.trace Laws/Program/Folds/Ty.trace Laws/Auto/RuleSets.trace Program/Refs.trace \
-  Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \
-  Api/Runner.trace Store/Domain/AnnotationsCanonical.trace Schema/Representation.trace \
-  Machine/Term.trace Program/NativeAtom.trace Run.trace)
+  $(wildcard $(VARIANCES)) $(WIRE_TAGS) tools/Tools/WireTags.lean $(PRODUCER_COMMON) lakefile.toml
+# Bootstrap freshness cannot depend on compiled consumers of stale generated files.
+# Source files and directories also notice additions and deletions before Lake runs.
+DERIVED_INPUTS := $(shell find src tools -type d -o -name '*.lean') lake-manifest.json lean-toolchain
 DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Json.lean src/Effect4/Store/Domain/Derived/Schema.lean \
   src/Effect4/Store/Domain/Derived/Program.lean src/Effect4/Store/Domain/PinDerived.lean src/Effect4/Api/Derived.lean \
   src/Effect4/Store/Domain/Derived/Value.lean src/Effect4/Api/RefusalsDerived.lean src/Effect4/Api/RunnerDerived.lean \
@@ -114,9 +115,11 @@ DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Js
   src/Effect4/Program/Authoring/Lifts.lean src/Effect4/Laws/Program/Authoring/Lifts.lean \
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
   src/Effect4/Codegen/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
-  src/Effect4/Program/AtomInventory.lean
+  src/Effect4/Program/AtomInventory.lean harness/truth/prelude-atoms.gen.ts
 
-$(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
+# A missing output must run its producer instead of becoming a missing prerequisite.
+.PHONY: derived-output-missing
+$(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_INPUTS) $(wildcard $(DERIVED_OUT)) $(if $(filter-out $(wildcard $(DERIVED_OUT)),$(DERIVED_OUT)),derived-output-missing)
 	$(PY) scripts/generate.py --only derived
 	@mkdir -p $(GEN) && touch $@
 

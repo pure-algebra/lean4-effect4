@@ -1,5 +1,4 @@
 import Conform.Source.Description
-import Effect4.Program.Native
 
 /-!
 Effect4's selected source families and instantiated mutual groups. Generic extraction and

@@ -3,9 +3,9 @@
 `python3 scripts/generate.py --only <family>` regenerates that family's files in the tree;
 `--output-dir DIR` writes them under DIR instead and refuses if a file differs from the
 committed one (the drift check's temporary route). Ordering and staleness are the
-Makefile's: each `gen-*` rule names the generator's sources and the Lake traces of the
-compiled core it reads, and `make check-gen` regenerates every group without trusting
-file times. Nothing here reads or writes a provenance label.
+Makefile's: each `gen-*` rule names its source inputs or compiled input traces.
+The derived group orders generated prerequisites before their consumers.
+`make check-gen-full` reruns the hermetic groups without trusting file times.
 """
 import argparse
 from pathlib import Path
@@ -14,6 +14,8 @@ import os
 import shlex
 import subprocess
 import tempfile
+
+from lib.derived_plan import imports_of, stages
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -90,51 +92,52 @@ def lean_module(canonical):
 
 
 def derived(out, checking, scratch):
-    """The derived group: every manifest row in one `effect4gen --batch` process, after one
-    `lake build` of the executable and of every row's imports. When an output differs from the
-    committed file, the rows from the first such row on are run again one at a time, each after
-    building the modules it imports, so a row reads the outputs installed before it (the
-    producers' order, DI-33). With `checking`, the first difference refuses."""
-    rows = json.loads(run(['lake', 'env', 'lean', '-M4096', '--run',
-                           'tools/Effect4Gen/Driver.lean', '--commands'], True))
-    def imports_of(args):
-        return args[args.index('--imports') + 1].split(',')
-    def prepared(row):
-        args = list(row['args'])
-        if args[:2] != ['exe', 'effect4gen']:
-            raise ValueError(f"{row['name']}: the driver's command is not an effect4gen run: {args[:3]}")
-        canonical = row['out'].replace('\\', '/')
-        temp = out / canonical
-        temp.parent.mkdir(parents=True, exist_ok=True)
-        args[args.index('--out') + 1] = str(temp)
-        if '--append' in args:
-            i = args.index('--append') + 1
-            args[i] = args[i].replace('\\', '/')
-        return canonical, temp, args[2:] + ['--header-out', canonical]
-    runs = [prepared(row) for row in rows]
-    needed = dict.fromkeys(['Tools.GeneratedStamp'] + [m for row in rows for m in imports_of(row['args'])])
-    run(['lake', 'build', 'effect4gen', *needed])
-    batch = scratch / 'derived-runs.json'
-    batch.write_text(json.dumps([words for _, _, words in runs]))
-    run(['lake', 'exe', 'effect4gen', '--batch', str(batch)])
-    first_change = next((i for i, (canonical, temp, _) in enumerate(runs)
-                         if not (ROOT / canonical).is_file()
-                         or temp.read_bytes() != (ROOT / canonical).read_bytes()), None)
-    if first_change is None:
-        return
+    """Refresh generated prerequisites before building their consumers.
+
+    Lean parses source headers; the manifest supplies generated modules' imports.
+    A batch contains independent rows for one executable. A failed batch installs nothing.
+    Check mode refuses a difference before compiling any dependent stage.
+    """
+    plan = json.loads(run(['lake', 'env', 'lean', '-M4096', '--run',
+                          'tools/Effect4Gen/Driver.lean', '--plan'], True))
     if checking:
-        canonical = runs[first_change][0]
-        raise ValueError(f'{canonical} is not what Lean emits')
-    for index, (canonical, temp, words) in enumerate(runs):
-        if index < first_change:
-            continue
-        if index > first_change:
-            run(['lake', 'build', 'Tools.GeneratedStamp', *imports_of(rows[index]['args'])])
-            run(['lake', 'exe', 'effect4gen', *words])
-        install(temp, ROOT / canonical, checking)
-        module = lean_module(canonical)
-        if module is not None:
-            run(['lake', 'build', module])
+        for row in plan['commands']:
+            canonical = row['out'].replace('\\', '/')
+            if (out / canonical).resolve() == (ROOT / canonical).resolve():
+                raise ValueError(f'{canonical}: check output aliases repository destination')
+    emitted = scratch / 'derived-emitted'
+    for stage_index, rows in enumerate(stages(plan)):
+        executables = dict.fromkeys(row['args'][1] for row in rows)
+        needed = dict.fromkeys(['Tools.GeneratedStamp'] + [m for row in rows for m in imports_of(row)])
+        run(['lake', 'build', *executables, *needed])
+        prepared = []
+        for row in rows:
+            args = list(row['args'])
+            canonical = row['out'].replace('\\', '/')
+            temp = emitted / canonical
+            temp.parent.mkdir(parents=True, exist_ok=True)
+            temp.unlink(missing_ok=True)
+            args[args.index('--out') + 1] = str(temp)
+            if '--append' in args:
+                i = args.index('--append') + 1
+                args[i] = args[i].replace('\\', '/')
+            prepared.append((args[1], canonical, temp, args[2:] + ['--header-out', canonical]))
+        for executable in executables:
+            batch = scratch / f'derived-{stage_index}-{executable}.json'
+            batch.write_text(json.dumps([words for exe, _, _, words in prepared if exe == executable]))
+            run(['lake', 'exe', executable, '--batch', str(batch)])
+        # Validate every output exists before installing any output from the stage.
+        for _, canonical, temp, _ in prepared:
+            if not temp.is_file():
+                raise ValueError(f'{canonical}: generator left no output')
+        for _, canonical, temp, _ in prepared:
+            install(temp, ROOT / canonical, checking)
+            if checking:
+                target = out / canonical
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(temp.read_bytes())
+    modules = [m for row in plan['commands'] if (m := lean_module(row['out'].replace('\\', '/')))]
+    run(['lake', 'build', *modules])
 
 
 def generate(families, output):

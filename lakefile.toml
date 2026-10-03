@@ -69,13 +69,18 @@ roots = ["Effect4Gen.Main", "Effect4Gen.Check"]
 globs = ["Effect4Gen.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
-# The derived-code generators compiled into one executable (`tools/Effect4Gen/Exe.lean`):
-# `lake exe effect4gen <Tool> <args>` for one run, `--batch <file>` for every run of the manifest in
-# one process. `lean --run` elaborated the generator's source again for every run and interpreted it.
+# Early generators inspect loaded declarations without importing Effect4.
 [[lean_exe]]
 name = "effect4gen"
 srcDir = "tools"
 root = "Effect4Gen.Exe"
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
+# Catalogue generators read compiled rows, forms and atom specifications.
+[[lean_exe]]
+name = "effect4gen-catalogue"
+srcDir = "tools"
+root = "Effect4Gen.CatalogueExe"
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The Effect4-side `--run` drivers (`tools/Tools/`): thin `main`s over library modules that
@@ -208,7 +213,7 @@ git = "https://github.com/pure-algebra/lean4-effects"
 rev = "a4ee7a14248ee5976039b73039319efa87834986"
 
 # TypeScript as a target: syntax, renderer, identifier profile, host pins.
-# Version 0.6.0 carrier: structural type annotations and retained source bindings.
+# Version 0.7.0 includes optional fields, element access and object key forms.
 [[require]]
 name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"

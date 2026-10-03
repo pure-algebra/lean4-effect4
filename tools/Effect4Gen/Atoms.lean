@@ -1,6 +1,5 @@
 import Lean
 import Tools.GeneratedStamp
-import Effect4.Machine.Term
 
 /-!
 # Effect4Gen.Atoms — the atom inventory from the constructor list
@@ -44,7 +43,7 @@ def plainIdent (s : String) : Bool :=
 refused: the inventory spells each atom as a bare constructor, and an atom carrying data
 would need an enumeration of its own before it could be listed. -/
 def atomCtors : MetaM (List String) := do
-  let iv ← getConstInfoInduct ``Effect4.Program.NativeAtom
+  let iv ← getConstInfoInduct `Effect4.Program.NativeAtom
   let mut out : List String := []
   for c in iv.ctors do
     let ci ← getConstInfoCtor c

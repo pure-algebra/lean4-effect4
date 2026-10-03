@@ -43,6 +43,33 @@ to run last, after readme, which made `make gen` a non-fixpoint: a changed row n
 pass before the mirror agreed with the face (tooling plan 4.2). `make gen-<group>` regenerates
 one group; `make clean-gen` forgets the markers. The recipes hold the Lean lane one at a time.
 
+## Generator bootstrap
+
+`make gen-derived` can run before the Effect4 library builds.
+Its freshness inputs include Lean source files and directories, package pins and declared producer inputs.
+A missing derived output also triggers its producer.
+The variance producer uses its own narrow build.
+Neither producer first builds the whole library.
+
+`Effect4Gen.Driver.sourceGraph` parses ordinary source imports with Lean's parser.
+The manifest declares imports for generated modules, including missing outputs.
+The scheduler includes each generator executable's imports and each manifest row's runtime imports.
+It refuses missing import evidence, repeated output paths, self-dependencies and dependency cycles.
+Each stage builds its prerequisites, generates temporary files, then compares or installs them.
+A failed stage installs none of its outputs.
+A difference in check mode stops generation before dependent stages build.
+The final narrow build checks every generated Lean module.
+
+```mermaid
+flowchart LR
+  S[Source headers and manifest] --> P[Dependency stages]
+  P --> E[Early generator]
+  E --> F[Generated prerequisites]
+  F --> C[Catalogue generator]
+  C --> O[Dependent outputs]
+  O --> B[Generated module builds]
+```
+
 ## Declarations generated during elaboration
 
 The typed-state group has no generated source file or committed table. `#typed_state`
@@ -73,7 +100,7 @@ set still requires the typing-world instantiation; frame premises are not that p
 | Group | Producer (`make gen-<group>`) | Inputs | Consumers | Check | Evidence (DI-32) |
 | --- | --- | --- | --- | --- | --- |
 | variances | `tools/Tools/Variances.lean` (`scripts/generate.py --only variances`): declaration-site variance read off the vendored rc.112 sources | the vendored `vendor/effect-4.0.0-rc.112/src` modules the file pins, the driver's head list | `tools/Effect4Gen/variances.json`, an input of `derived` (the TyView group reads it) | `make check-gen` (in `HERMETIC_GROUPS` and `GENERATED_PATHS`) | reproduced |
-| derived | `tools/Effect4Gen/Driver.lean` turns every group of `tools/Effect4Gen/manifest.json` into a run of the compiled `effect4gen` executable (`tools/Effect4Gen/Exe.lean`: the group's tool, `Main` unless the group names another, with the group's `Flags` when it has any, `TyExtras`: `--extras`); `scripts/generate.py` runs them all in one `effect4gen --batch` process and re-runs in the producers' order only from the first output that changed | `tools/Effect4Gen/manifest.json`, the guards, the imports named per group, `variances.json`, `wire-tags.json` | the file each manifest group's `Out` names: Lean modules of the Effect4 library (the Makefile's `DERIVED_OUT`) and `harness/truth/prelude-atoms.gen.ts` | `make check-gen`; `lake build Test` for shapes | reproduced; tested |
+| derived | `tools/Effect4Gen/Driver.lean` reads the manifest and parses source imports. `scripts/generate.py` orders dependent outputs before their consumers. `Effect4Gen.Exe` builds without Effect4; `Effect4Gen.CatalogueExe` builds after its generated prerequisites | `tools/Effect4Gen/manifest.json`, source imports, generator and guard sources, package pins, `variances.json`, `wire-tags.json`, `binders.json` | Each manifest group's `Out`; Lean modules and `harness/truth/prelude-atoms.gen.ts` | `make check-gen`; focused module builds after generation | reproduced; tested |
 | eff | `src/OCaml5/Tools/EffGen.lean`, then `scripts/generate-engine-structure.py` | `Effect4.Program.Native`, `OCaml5.Eff.*` | `ocaml/eff/eff_{types,wire,json,native,layout}.ml`, `eff_manifest.txt`, `program-structure.json`, the 48-program goldens under `ocaml/eff/goldens/`, `ocaml/engine/e4_program_layout.{ml,json}` | `make check-gen`; `make check-ocaml` (the goldens decode, re-encode and print in OCaml; the `.ty` goldens and `corpus.txt` are Lean's typing verdicts, held by the drift check alone since the OCaml checker was retired on 2026-09-13) | reproduced; tested |
 | wire | `src/OCaml5/Tools/EffWire.lean` | `Effect4.Program.Wire` and its corpus | `ocaml/goldens/eff/*.hex`, `manifest.txt`, `same-programs.txt` | `make check-gen`; `make check-ocaml` (`test_lean_wire`) | reproduced; tested |
 | cas | `src/OCaml5/Tools/CasGoldens.lean` | the store word, genesis and machine stores | `ocaml/engine/cas/goldens/` (119 files) | `make check-gen`; `make check-ocaml` (`engine-tests`) | reproduced; tested |
