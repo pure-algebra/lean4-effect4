@@ -1,0 +1,35 @@
+'Effect4.Program.Denote.StraightEqWanted.run_agrees' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.StraightEq.refl' depends on axioms: [propext]
+'Effect4.Program.Denote.StraightEq.symm' depends on axioms: [propext]
+'Effect4.Program.Denote.StraightEq.trans' depends on axioms: [propext]
+'Effect4.Program.Denote.StraightEq.suspend_remove' depends on axioms: [propext]
+'Effect4.Program.Denote.StraightEq.suspend_congr' depends on axioms: [propext]
+'Effect4.Program.Denote.StraightEq.bind' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.StraightEq.select' depends on axioms: [propext]
+'Effect4.Program.Denote.StraightEq.exit' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.StraightEq.catchCause' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.StraightEq.matchCause' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.StraightEq.onExit' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.StraightEq.fuelFor' depends on axioms: [propext]
+'Effect4.Program.Denote.StraightEq.run_agrees' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.StraightEq.run_agrees_at_bound' depends on axioms: [propext, Quot.sound]
+'Test.Program.MeaningEqContract.rewrite_agrees' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.Denote.StraightEq.run_agrees : ∀ {a b : Effect4.Program.NativeEff},
+  Effect4.Program.Denote.StraightEq a b →
+    ∀ (fa fb : Nat),
+      Effect4.Program.Agreement.depth a ≤ fa →
+        2 * Effect4.Program.Agreement.steps a + 6 ≤ fa →
+          Effect4.Program.Agreement.depth b ≤ fb →
+            2 * Effect4.Program.Agreement.steps b + 6 ≤ fb →
+              (Effect4.Api.run a fa).outcome = Effect4.Api.Outcome.finished ∧
+                (Effect4.Api.run b fb).outcome = Effect4.Api.Outcome.finished ∧
+                  (Effect4.Api.run a fa).exit = (Effect4.Api.run b fb).exit ∧
+                    (Effect4.Api.run a fa).stores = (Effect4.Api.run b fb).stores
+@Effect4.Program.Denote.StraightEq.run_agrees_at_bound : ∀ {a b : Effect4.Program.NativeEff},
+  Effect4.Program.Denote.StraightEq a b →
+    (Effect4.Api.run a (Effect4.Program.Denote.StraightEq.fuelFor a)).outcome = Effect4.Api.Outcome.finished ∧
+      (Effect4.Api.run b (Effect4.Program.Denote.StraightEq.fuelFor b)).outcome = Effect4.Api.Outcome.finished ∧
+        (Effect4.Api.run a (Effect4.Program.Denote.StraightEq.fuelFor a)).exit =
+            (Effect4.Api.run b (Effect4.Program.Denote.StraightEq.fuelFor b)).exit ∧
+          (Effect4.Api.run a (Effect4.Program.Denote.StraightEq.fuelFor a)).stores =
+            (Effect4.Api.run b (Effect4.Program.Denote.StraightEq.fuelFor b)).stores

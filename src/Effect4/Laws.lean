@@ -28,6 +28,7 @@ import Effect4.Laws.Program.TypedRun
 import Effect4.Laws.Program.Agreement.Loop
 import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.Agreement.Machine
+import Effect4.Laws.Program.MeaningEq
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.DenoteR
 import Effect4.Laws.Program.InterpR

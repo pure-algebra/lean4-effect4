@@ -125,6 +125,7 @@ import Test.Program.MeaningSoundContract
 import Test.Program.LoopSoundContract
 import Test.Program.LoopAgreementContract
 import Test.Program.AgreementContract
+import Test.Program.MeaningEqContract
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract
