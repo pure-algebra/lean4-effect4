@@ -38,8 +38,8 @@ theorem exitOf?_eq_some (t : Ty) (x : Ty × Ty) : exitOf? t = some x ↔ t = .ex
   cases t <;> simp only [exitOf?, reduceCtorEq, Option.some.injEq, Ty.exitOf.injEq, Prod.mk.injEq]
 
 attribute [aesop norm simp (rule_sets := [Effect4.Checker])] expect_eq_ok listOf?_eq_some exitOf?_eq_some term? check checkStmt
-  checkStmts checkEffs checkAction checkLayer checkLayers StmtTy.fold GenTy.mergeT
-  GenTy.joinAnswerT EffTy.joinAnswer_eq GenTy.merge_eq
+  checkStmts checkEffs checkAction checkLayer checkLayers StmtTy.fold GenTy.mergeT GenTy.seqT
+  GenTy.joinAnswerT EffTy.joinAnswer_eq GenTy.merge_eq GenTy.seq_eq
 
 /-! ## `check` — one lemma per constructor (`awaitFiber` splits on the observer mode) -/
 
@@ -86,7 +86,7 @@ theorem inv_bind (sig : Signature Op) (env : TyEnv) (p : List Nat) (first rest :
 theorem inv_gen (sig : Signature Op) (env : TyEnv) (p : List Nat) (body : Stmts Op) :
     ∀ t, check sig env p (.gen body) = .ok t →
       ∃ g, checkStmts sig env false none (p ++ [0]) body = .ok g ∧
-        t = ⟨g.answer.getD .unit, g.error, g.requires⟩ := by
+        t = ⟨g.genAnswer, g.error, g.requires⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_catchCause (sig : Signature Op) (env : TyEnv) (p : List Nat) (body handler : Eff Op) :
@@ -225,7 +225,7 @@ theorem inv_provideService (sig : Signature Op) (env : TyEnv) (p : List Nat) (ke
 
 theorem inv_stmts_nil (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat) :
     ∀ g, checkStmts sig env inLoop none p .nil = .ok g →
-      g = ⟨none, .never, Requirement.empty⟩ := by
+      g = ⟨none, .never, Requirement.empty, true, false⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_stmts_bindYield (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat)
@@ -233,7 +233,8 @@ theorem inv_stmts_bindYield (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (
     ∀ g, checkStmts sig env inLoop none p (.cons (.bindYield effect) rest) = .ok g →
       ∃ t r, check sig env (p ++ [0, 0]) effect = .ok t ∧
         checkStmts sig (env ++ [t.answer]) inLoop none (p ++ [1]) rest = .ok r ∧
-        g = ⟨r.answer, t.error.join r.error, t.requires.union r.requires⟩ := by
+        g = ⟨r.answer, t.error.join r.error, t.requires.union r.requires, r.completes,
+          r.breaks⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_stmts_yieldDiscard (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat)
@@ -241,13 +242,15 @@ theorem inv_stmts_yieldDiscard (sig : Signature Op) (env : TyEnv) (inLoop : Bool
     ∀ g, checkStmts sig env inLoop none p (.cons (.yieldDiscard effect) rest) = .ok g →
       ∃ t r, check sig env (p ++ [0, 0]) effect = .ok t ∧
         checkStmts sig env inLoop none (p ++ [1]) rest = .ok r ∧
-        g = ⟨r.answer, t.error.join r.error, t.requires.union r.requires⟩ := by
+        g = ⟨r.answer, t.error.join r.error, t.requires.union r.requires, r.completes,
+          r.breaks⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_stmts_ret (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat)
     (value : Term) :
     ∀ g, checkStmts sig env inLoop none p (.cons (.ret value) .nil) = .ok g →
-      ∃ ty, termTy sig env value = some ty ∧ g = ⟨some ty, .never, Requirement.empty⟩ := by
+      ∃ ty, termTy sig env value = some ty ∧
+        g = ⟨some ty, .never, Requirement.empty, false, false⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_stmts_ret_cons (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat)
@@ -263,20 +266,21 @@ theorem inv_stmts_ifElse (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p :
         checkStmts sig env inLoop none (p ++ [0, 0]) thenB = .ok a ∧
         checkStmts sig env inLoop none (p ++ [0, 1]) elseB = .ok b ∧
         checkStmts sig env inLoop none (p ++ [1]) rest = .ok r ∧
-        g = GenTy.mergeT (GenTy.mergeT a b) r := by
+        g = GenTy.seqT (GenTy.mergeT a b) r := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_stmts_whileTrue (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat)
     (body rest : Stmts Op) :
     ∀ g, checkStmts sig env inLoop none p (.cons (.whileTrue body) rest) = .ok g →
       ∃ b r, checkStmts sig env true none (p ++ [0, 0]) body = .ok b ∧
-        checkStmts sig env inLoop none (p ++ [1]) rest = .ok r ∧ g = GenTy.mergeT b r := by
+        checkStmts sig env inLoop none (p ++ [1]) rest = .ok r ∧ g = GenTy.seqT b.loop r := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_stmts_breakLoop (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat)
     (rest : Stmts Op) :
     ∀ g, checkStmts sig env inLoop none p (.cons .breakLoop rest) = .ok g →
-      inLoop = true ∧ checkStmts sig env inLoop none (p ++ [1]) rest = .ok g := by
+      inLoop = true ∧
+        ∃ r, checkStmts sig env inLoop none (p ++ [1]) rest = .ok r ∧ g = r.broken := by
   aesop (rule_sets := [Effect4.Checker])
 
 /-! ## `checkEffs` — two arms -/

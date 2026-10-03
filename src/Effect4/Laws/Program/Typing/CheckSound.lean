@@ -180,17 +180,17 @@ theorem checkStmts_sound (sig : Signature Op) (body : Stmts Op) :
         inv_stmts_ifElse sig env inLoop p test thenB elseB tail g h
       exact .ifElse htest (checkStmts_sound sig thenB env inLoop _ a ha)
         (checkStmts_sound sig elseB env inLoop _ b hb) (checkStmts_sound sig tail env inLoop _ r hr)
-        (GenTy.merge_eq _ _) (GenTy.merge_eq _ _)
+        (GenTy.merge_eq _ _) (GenTy.seq_eq _ _)
     | whileTrue loopBody =>
       intro env inLoop p g h
       obtain ⟨b, r, hb, hr, rfl⟩ := inv_stmts_whileTrue sig env inLoop p loopBody tail g h
       exact .whileTrue (checkStmts_sound sig loopBody env true _ b hb)
-        (checkStmts_sound sig tail env inLoop _ r hr) (GenTy.merge_eq _ _)
+        (checkStmts_sound sig tail env inLoop _ r hr) (GenTy.seq_eq _ _)
     | breakLoop =>
       intro env inLoop p g h
-      obtain ⟨hflag, hrest⟩ := inv_stmts_breakLoop sig env inLoop p tail g h
+      obtain ⟨hflag, r, hrest, rfl⟩ := inv_stmts_breakLoop sig env inLoop p tail g h
       subst hflag
-      exact .breakLoop (checkStmts_sound sig tail env true _ g hrest)
+      exact .breakLoop (checkStmts_sound sig tail env true _ r hrest)
 termination_by structural body
 
 theorem checkEffs_sound (sig : Signature Op) (entrants : Effs Op) :

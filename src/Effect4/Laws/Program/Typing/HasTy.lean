@@ -105,10 +105,11 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       HasTy sig env (.bind first rest)
         ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩
   /-- `Effect.gen(function* () { … })` (`:1184`): the body is typed as a statement sequence
-  outside a loop; a body that never returns answers `void`. -/
+  outside a loop; a body that never returns answers `void`, and one whose end is reachable answers
+  its returns' type joined with `void` (`GenTy.genAnswer`). -/
   | gen {env : TyEnv} {body : Stmts Op} {g : GenTy} :
       StmtsHasTy sig env false body g →
-      HasTy sig env (.gen body) ⟨g.answer.getD .unit, g.error, g.requires⟩
+      HasTy sig env (.gen body) ⟨g.genAnswer, g.error, g.requires⟩
   /-- `Effect.catchCause` (`:2417`): the handler sees `Cause<E>` of the body; the two answers
   join as the least upper bound (`EffTy.joinAnswer`, S4c), and the conclusion's error column
   is the **handler's** alone — the body's failures have been caught. -/
@@ -247,34 +248,39 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
         ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
 
 /-- `Σ; Γ; inLoop ⊢ b ⇒ g` — a generator body's statements leave the generator state `g`: the
-answer its `return`s agree on (absent before the first), the errors and requirements so far.
+answer its `return`s agree on (absent before the first), the errors and requirements so far, and
+whether the statements' end or a `break` of the enclosing loop is reachable (`GenTy`'s two bits).
 One rule per arm of `stmtsTy` (`Typing.lean:328-356`). -/
 inductive StmtsHasTy (sig : Signature Op) : TyEnv → Bool → Stmts Op → GenTy → Prop
-  /-- The empty body: no answer yet, no error, no requirement. -/
+  /-- The empty body: no answer yet, no error, no requirement; its end is reachable, no `break`
+  is. -/
   | nil {env : TyEnv} {inLoop : Bool} :
-      StmtsHasTy sig env inLoop .nil ⟨none, .never, Requirement.empty⟩
+      StmtsHasTy sig env inLoop .nil ⟨none, .never, Requirement.empty, true, false⟩
   /-- `const aN = yield* e`: the rest is typed under the environment extended by the answer. -/
   | bindYield {env : TyEnv} {inLoop : Bool} {effect : Eff Op} {rest : Stmts Op} {t : EffTy}
       {r : GenTy} :
       HasTy sig env effect t →
       StmtsHasTy sig (env ++ [t.answer]) inLoop rest r →
       StmtsHasTy sig env inLoop (.cons (.bindYield effect) rest)
-        ⟨r.answer, t.error.join r.error, t.requires.union r.requires⟩
+        ⟨r.answer, t.error.join r.error, t.requires.union r.requires, r.completes, r.breaks⟩
   /-- `yield* e`: the answer is dropped, so the environment does not grow. -/
   | yieldDiscard {env : TyEnv} {inLoop : Bool} {effect : Eff Op} {rest : Stmts Op} {t : EffTy}
       {r : GenTy} :
       HasTy sig env effect t →
       StmtsHasTy sig env inLoop rest r →
       StmtsHasTy sig env inLoop (.cons (.yieldDiscard effect) rest)
-        ⟨r.answer, t.error.join r.error, t.requires.union r.requires⟩
+        ⟨r.answer, t.error.join r.error, t.requires.union r.requires, r.completes, r.breaks⟩
   /-- `return v`: the answer appears, and the tail is `.nil` — there is **no** rule for a
-  statement after a return, which is how `stmtsTy` refuses one. -/
+  statement after a return, which is how `stmtsTy` refuses one. Neither the end nor a `break` is
+  reachable through it. -/
   | ret {env : TyEnv} {inLoop : Bool} {value : Term} {ty : Ty} :
       termTy sig env value = some ty →
-      StmtsHasTy sig env inLoop (.cons (.ret value) .nil) ⟨some ty, .never, Requirement.empty⟩
+      StmtsHasTy sig env inLoop (.cons (.ret value) .nil)
+        ⟨some ty, .never, Requirement.empty, false, false⟩
   /-- `if (t) { … } else { … }` block-scoped: the branches' bindings do not survive, so all
-  three of the branches and the continuation are typed at the same environment; the three
-  generator states merge (`GenTy.merge`, which is where two disagreeing `return` types refuse). -/
+  three of the branches and the continuation are typed at the same environment; the branches'
+  states merge (`GenTy.merge`, which is where two disagreeing `return` types refuse) and the
+  continuation's follows them (`GenTy.seq`: it runs when a branch completes). -/
   | ifElse {env : TyEnv} {inLoop : Bool} {test : Term} {thenB elseB rest : Stmts Op}
       {a b r ab g : GenTy} :
       termTy sig env test = some .bool →
@@ -282,19 +288,21 @@ inductive StmtsHasTy (sig : Signature Op) : TyEnv → Bool → Stmts Op → GenT
       StmtsHasTy sig env inLoop elseB b →
       StmtsHasTy sig env inLoop rest r →
       GenTy.merge a b = some ab →
-      GenTy.merge ab r = some g →
+      GenTy.seq ab r = some g →
       StmtsHasTy sig env inLoop (.cons (.ifElse test thenB elseB) rest) g
   /-- `while (true) { … }`: the body is typed **in** a loop, so a `break` inside it has a rule;
-  the continuation keeps the ambient flag. -/
+  the continuation keeps the ambient flag, and runs when a `break` of the loop does
+  (`GenTy.loop`). -/
   | whileTrue {env : TyEnv} {inLoop : Bool} {body rest : Stmts Op} {b r g : GenTy} :
       StmtsHasTy sig env true body b →
       StmtsHasTy sig env inLoop rest r →
-      GenTy.merge b r = some g →
+      GenTy.seq b.loop r = some g →
       StmtsHasTy sig env inLoop (.cons (.whileTrue body) rest) g
-  /-- `break`: stated only at `inLoop = true` — outside a loop there is no rule. -/
+  /-- `break`: stated only at `inLoop = true` — outside a loop there is no rule. The dead tail is
+  typed; the end is not reachable through the `break`, the `break` is (`GenTy.broken`). -/
   | breakLoop {env : TyEnv} {rest : Stmts Op} {g : GenTy} :
       StmtsHasTy sig env true rest g →
-      StmtsHasTy sig env true (.cons .breakLoop rest) g
+      StmtsHasTy sig env true (.cons .breakLoop rest) g.broken
 
 /-- `Σ; Γ ⊢ es ⇉ ⟨A, E, R⟩` — the entrants of a race: every entrant's answer joins with the
 rest, the errors union and the rows union. One rule per arm of `effsTy`

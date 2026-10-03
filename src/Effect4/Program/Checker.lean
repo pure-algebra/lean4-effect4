@@ -23,8 +23,9 @@ Two shapes differ from the hand blocks so that every member is a fold of its sor
 - **The layers of a `mergeAll` are a list of signatures**; the nonempty merge and the
   `mergeAllEmpty` refusal are `mergeAll`'s own rule (`LayerTy.mergeNonempty`).
 
-The answer join never refuses (`EffTy.joinAnswer_eq`), so the fold joins with `Ty.join` and
-merges generator states with `GenTy.mergeT`; the hand blocks' `Option` there is history.
+The answer join never refuses (`EffTy.joinAnswer_eq`), so the fold joins with `Ty.join`,
+merges an `if`'s branches with `GenTy.mergeT` and sequences a statement before its tail with
+`GenTy.seqT`; the hand blocks' `Option` there is history.
 -/
 
 namespace Effect4.Program
@@ -63,10 +64,21 @@ theorem joinAnswer_eq (a b : Option Ty) : joinAnswer a b = some (joinAnswerT a b
 
 /-- `merge` without the refusal it never makes. -/
 def mergeT (a b : GenTy) : GenTy :=
-  ⟨joinAnswerT a.answer b.answer, a.error.join b.error, a.requires.union b.requires⟩
+  ⟨joinAnswerT a.answer b.answer, a.error.join b.error, a.requires.union b.requires,
+    a.completes || b.completes, a.breaks || b.breaks⟩
 
 theorem merge_eq (a b : GenTy) : merge a b = some (mergeT a b) := by
   unfold merge mergeT
+  rw [joinAnswer_eq]
+  rfl
+
+/-- `seq` without the refusal it never makes. -/
+def seqT (s r : GenTy) : GenTy :=
+  ⟨joinAnswerT s.answer r.answer, s.error.join r.error, s.requires.union r.requires,
+    s.completes && r.completes, s.breaks || (s.completes && r.breaks)⟩
+
+theorem seq_eq (s r : GenTy) : seq s r = some (seqT s r) := by
+  unfold seq seqT
   rw [joinAnswer_eq]
   rfl
 
@@ -141,7 +153,7 @@ mutual
       pure ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩
     | .gen body => do
       let g ← checkStmts sig env false none (p ++ [0]) body
-      pure ⟨g.answer.getD .unit, g.error, g.requires⟩
+      pure ⟨g.genAnswer, g.error, g.requires⟩
     | .catchCause body handler => do
       let b ← check sig env (p ++ [0]) body
       let h ← check sig (env ++ [.causeOf b.error]) (p ++ [1]) handler
@@ -276,10 +288,10 @@ mutual
       Stmt Op → Except TypeRefusal StmtTy
     | .bindYield effect => do
       let t ← check sig env (p ++ [0]) effect
-      pure (.step ⟨none, t.error, t.requires⟩ [t.answer])
+      pure (.step ⟨none, t.error, t.requires, true, false⟩ [t.answer])
     | .yieldDiscard effect => do
       let t ← check sig env (p ++ [0]) effect
-      pure (.step ⟨none, t.error, t.requires⟩ [])
+      pure (.step ⟨none, t.error, t.requires, true, false⟩ [])
     | .ret value => pure (.ret (term? sig env p value))
     | .ifElse test thenB elseB => do
       let t ← term? sig env p test
@@ -290,14 +302,14 @@ mutual
       else throw ⟨p, .predicateNotBool t⟩
     | .whileTrue body => do
       let b ← checkStmts sig env true none (p ++ [0]) body
-      pure (.step b [])
+      pure (.step b.loop [])
     | .breakLoop => if inLoop then pure .pass else throw ⟨p, .breakOutsideLoop⟩
 
   /-- A generator body, statement by statement; `inLoop` admits `break`, `afterRet` (the path
   of the return that ended the body) refuses every statement. -/
   def checkStmts (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (afterRet : Option (List Nat))
       (p : List Nat) : Stmts Op → Except TypeRefusal GenTy
-    | .nil => pure ⟨none, .never, Requirement.empty⟩
+    | .nil => pure ⟨none, .never, Requirement.empty, true, false⟩
     | .cons head rest =>
       match afterRet with
       | some ret => throw ⟨ret, .returnNotLast⟩
@@ -306,12 +318,14 @@ mutual
         s.fold
           (fun g binds => do
             let r ← checkStmts sig (env ++ binds) inLoop none (p ++ [1]) rest
-            pure (g.mergeT r))
+            pure (g.seqT r))
           (fun answer => do
             let _ ← checkStmts sig env inLoop (some (p ++ [0])) (p ++ [1]) rest
             let t ← answer
-            pure ⟨some t, .never, Requirement.empty⟩)
-          (checkStmts sig env inLoop none (p ++ [1]) rest)
+            pure ⟨some t, .never, Requirement.empty, false, false⟩)
+          (do
+            let r ← checkStmts sig env inLoop none (p ++ [1]) rest
+            pure r.broken)
 
   /-- Race entrants: every entrant's answer joins, the errors union. -/
   def checkEffs (sig : Signature Op) (env : TyEnv) (p : List Nat) : Effs Op → Except TypeRefusal EffTy
