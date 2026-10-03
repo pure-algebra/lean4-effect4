@@ -48,6 +48,12 @@ theorem argTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂
   | _, .lit _ => rfl
   | _, .app atom args => by
     simp only [argTy, argsTy_congr ha hc env, ha, hc]
+  | _, .record fields names values => by
+    simp only [argTy, argsTy_congr ha hc env true values]
+  | _, .field mode target name => by
+    simp only [argTy, argTy_congr ha hc env false target]
+  | _, .recordSet target name value => by
+    simp only [argTy, argTy_congr ha hc env false target, argTy_congr ha hc env true value]
 
 theorem argsTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂.constAtom)
     (env : TyEnv) : ∀ (c : Bool) (ts : Terms), argsTy s₁ env c ts = argsTy s₂ env c ts
