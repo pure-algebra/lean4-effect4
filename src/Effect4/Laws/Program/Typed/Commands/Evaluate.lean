@@ -1761,4 +1761,165 @@ theorem clause_interruptScoped (root : ProgramSource) (rootTy : EffTy) (target :
     exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) () trivial (fun _ _ _ post => unitAnswer_typed root post)
 
+/-! ## `interruptAs`: the interrupt recorded on a declared target -/
+
+/-- Editing two distinct fibers commutes. -/
+theorem rupdate_comm (m : RState) {f g : RFiber} (hne : g.id ≠ f.id) :
+    (m.update f).update g = (m.update g).update f := by
+  unfold RunMachine.update
+  have fibers : ((m.fibers.map fun x => if x.id = f.id then f else x).map
+      fun x => if x.id = g.id then g else x) =
+      ((m.fibers.map fun x => if x.id = g.id then g else x).map
+        fun x => if x.id = f.id then f else x) := by
+    rw [List.map_map, List.map_map]
+    apply List.map_congr_left
+    intro x _
+    show (if (if x.id = f.id then f else x).id = g.id then g else if x.id = f.id then f else x) =
+      (if (if x.id = g.id then g else x).id = f.id then f else if x.id = g.id then g else x)
+    by_cases hf : x.id = f.id
+    · by_cases hg : x.id = g.id
+      · exact absurd (hg.symm.trans hf) hne
+      · simp only [if_pos hf, if_neg hg, if_neg (show f.id ≠ g.id from fun h => hne h.symm)]
+    · by_cases hg : x.id = g.id
+      · simp only [if_neg hf, if_pos hg, if_neg hne]
+      · simp only [if_neg hf, if_neg hg]
+  rw [fibers]
+
+/-- A trace event and a fiber edit commute. -/
+theorem emit_update_comm (m : RState) (g : RFiber)
+    (events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram Unit)) :
+    (m.emit events).update g = (m.update g).emit events := by
+  cases events <;> rfl
+
+/-- An interrupt record keeps the fiber's id. -/
+theorem interruptRecord_id (interp : RInterp) (who : Option FiberId) (extra : ReasonAnnotations Ann)
+    (t : RFiber) : (interruptRecord interp who extra t).1.id = t.id := by
+  unfold interruptRecord
+  aesop
+
+/-- **`interruptAs`** (`:871-884`, D6b): the target is declared (the pre), so it is a fiber of the
+machine; the interrupt is recorded on it (`configTyped_interruptRecord`), its evaluation queued when it
+was idle and interruptible, and `afterInterrupt` queued for the host, whose reply (`unit`, the
+target's exit awaited as a value) walks the saved stack through the answer frame saved first. On the
+fiber itself the record is overwritten by the fiber's own settlement, as the machine does. -/
+theorem clause_interruptAs (root : ProgramSource) (rootTy : EffTy) (target who : FiberId) :
+    FiberClauseKeeps root rootTy (.interruptAs target who) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨_, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have wide := ev.typed.machine.wide
+  have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
+  have old := ev.typed.machine.fiber hmem
+  have notParked : f.parked = .notParked := by
+    cases hp : f.parked with
+    | notParked => rfl
+    | withGuard _ =>
+      have idle := old.parkedIdle (by rw [hp]; exact fun h => nomatch h)
+      rw [ev.running] at idle
+      cases idle
+  -- the saved answer frame, an arrow from `unit` to the code's type
+  let fr' : RSaved := { f.frame with stack := .answer (seqR next) :: f.frame.stack }
+  let g : RFiber := { f with frame := fr' }
+  have typedNext' : ∀ w', w.leHost w' → ∀ ans : Val, ans = Val.unit →
+      TypedProg root w' tin (next ans) :=
+    fun w' o ans post => typedNext w' o ans post
+  have frame := Evaluating.unitAnswerFrame typedNext'
+  have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+    fun _ h => Option.some.inj (h.symm.trans declared)
+  have fresh : FiberTyped root w ((m.update f).update g) g :=
+    fiberTyped_frame old ev.look ev.running fr'
+      (fun ty' d => by
+        rw [same ty' d]
+        exact ⟨_, positionStack_of_host (hostStack_push frame stack)⟩)
+      ⟨prov.recorded, prov.deferred⟩
+      (fun _ h => by
+        change raceRegistrationR f.frame.current = some _ at h
+        rw [hc, raceRegistrationR_typed current] at h
+        cases h)
+  have edited : ConfigTyped root rootTy w (m.update g) rest := by
+    rw [← rupdate_rupdate m (show g.id = f.id from rfl)]
+    exact configTyped_frame_edit ev.typed rfl ev.look ev.running fr' fresh
+  obtain ⟨f0, hf0, _⟩ := ev.stale
+  have lookG : (m.update g).fiber? f.id = some g :=
+    rfiber?_update_self (f := f0) (g := g) (by rw [rfiber?_id hf0]; exact hf0) (rfiber?_id hf0).symm
+  obtain ⟨sourceTy, hsource⟩ := Option.isSome_iff_exists.mp pre
+  have after : ConfigTyped root rootTy w (m.update g)
+      (.afterInterrupt f.id y (.join target .awaitValue) :: rest) := by
+    refine configTyped_cons_plain edited _ trivial ⟨g, lookG, ev.running, notParked⟩ ?_ ?_ trivial
+      rfl (fun _ _ _ h => nomatch h) (fun _ _ h => nomatch h) (fun _ _ _ h => nomatch h)
+      (fun _ _ _ _ _ h => nomatch h) (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
+    · intro x hx
+      rw [lookG] at hx
+      cases hx
+      exact ⟨EffTy.pure .unit, ⟨sourceTy, hsource, rfl⟩, ty, declared,
+        hostStack_push frame (hostStack_races (m := m.update f) (m' := m.update g)
+          (racesKept_of_eq fun _ => rfl) stack), ⟨prov.recorded, prov.deferred⟩⟩
+    · intro o ho
+      cases ho
+      rw [commandOwner_rupdate]
+      exact owner_free ev.typed.queue rfl
+  -- the target is a fiber of the machine
+  have targetMem : target ∈ (m.update f).fibers.map RunFiber.id := (wide.fibers target).mp pre
+  obtain ⟨t₁, ht₁⟩ : ∃ t₁, (m.update f).fiber? target = some t₁ := by
+    obtain ⟨x, hx, hid⟩ := List.mem_map.mp targetMem
+    refine ⟨x, ?_⟩
+    rw [← hid]
+    exact rfiber?_of_mem wide.fiberIds hx
+  show SettlesTyped root rootTy w f.id rest
+    (prepareIterR (FiberAction.interruptAs _ m g y target who))
+  unfold FiberAction.interruptAs
+  by_cases self : target = f.id
+  · -- the fiber interrupts itself: the record is overwritten by its own settlement
+    subst self
+    rw [hf0]
+    dsimp only
+    rcases hr : interruptRecord (interpRAt root.program m.completedExits) (some who)
+      ((interpRAt root.program m.completedExits).stackAnnotations g.id) f0 with ⟨t', applyNow⟩
+    have tid : t'.id = f.id := by
+      rw [← rfiber?_id hf0, ← interruptRecord_id (interpRAt root.program m.completedExits) (some who)
+        ((interpRAt root.program m.completedExits).stackAnnotations g.id) f0, hr]
+    have machines : ((m.update t').emit [RunEvent.interruptRecorded (some who) f.id]).update g =
+        (m.update g).emit [RunEvent.interruptRecorded (some who) f.id] := by
+      rw [emit_update_comm, rupdate_rupdate m (show g.id = t'.id from tid.symm)]
+    refine ⟨w, leHost_refl w, ?_⟩
+    show ConfigTyped root rootTy w
+      (((m.update t').emit [RunEvent.interruptRecorded (some who) f.id]).update g)
+      ((if applyNow then [Cmd.evaluate f.id] else []) ++
+        [Cmd.afterInterrupt f.id y (.join f.id .awaitValue)] ++ rest)
+    rw [machines, List.append_assoc]
+    cases applyNow
+    · exact configTyped_emit after _
+    · exact configTyped_emit (configTyped_cons_evaluate after f.id) _
+  · -- another fiber: recorded, with its evaluation queued when it was idle and interruptible
+    have ht : m.fiber? target = some t₁ := by
+      rw [← rfiber?_update_other (m := m) (g := f) self]
+      exact ht₁
+    rw [ht]
+    dsimp only
+    rcases hr : interruptRecord (interpRAt root.program m.completedExits) (some who)
+      ((interpRAt root.program m.completedExits).stackAnnotations g.id) t₁ with ⟨t', applyNow⟩
+    have hr' : interruptRecord (interpR root.program) (some who) (stackAnnotationsOf f.id) t₁ =
+        (t', applyNow) := hr
+    have tid : t'.id = target := by
+      rw [← rfiber?_id ht, ← interruptRecord_id (interpRAt root.program m.completedExits) (some who)
+        ((interpRAt root.program m.completedExits).stackAnnotations g.id) t₁, hr]
+    have htG : (m.update g).fiber? target = some t₁ := by
+      rw [rfiber?_update_other (m := m) (g := g) self]
+      exact ht
+    have recorded := configTyped_interruptRecord after htG (some who) (stackAnnotationsOf f.id)
+    rw [hr'] at recorded
+    have machines : ((m.update t').emit [RunEvent.interruptRecorded (some who) target]).update g =
+        ((m.update g).update t').emit [RunEvent.interruptRecorded (some who) target] := by
+      rw [emit_update_comm, rupdate_comm m (show g.id ≠ t'.id from fun h => self (tid.symm.trans h.symm))]
+    refine ⟨w, leHost_refl w, ?_⟩
+    show ConfigTyped root rootTy w
+      (((m.update t').emit [RunEvent.interruptRecorded (some who) target]).update g)
+      ((if applyNow then [Cmd.evaluate target] else []) ++
+        [Cmd.afterInterrupt f.id y (.join target .awaitValue)] ++ rest)
+    rw [machines, List.append_assoc]
+    exact configTyped_emit recorded _
+
 end Effect4.Program.Typed
