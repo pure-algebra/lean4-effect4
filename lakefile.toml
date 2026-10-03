@@ -81,6 +81,27 @@ srcDir = "tools"
 globs = ["Tools.+", "Drivers.+", "TestSupport.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
+# The report drivers, compiled (`lake exe <name> …`): the semantics report and its refusal controls
+# (`make gen-semantics`, `make check-semantics`) and the architecture map (`make gen-architecture`).
+# Each loads the environment it reports on at run time, so its own imports are Lean and tool modules.
+[[lean_exe]]
+name = "semantics-report"
+srcDir = "tools"
+root = "Drivers.Semantics"
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
+[[lean_exe]]
+name = "semantics-controls"
+srcDir = "tools"
+root = "Drivers.SemanticsControls"
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
+[[lean_exe]]
+name = "architecture-map"
+srcDir = "tools"
+root = "Tools.Architecture"
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
 # Shared metaprogramming evidence. No Effect4, Aesop or target-profile dependency.
 # Laws and Conform both depend on this seam; neither depends on the other.
 [[lean_lib]]

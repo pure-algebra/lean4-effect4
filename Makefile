@@ -193,11 +193,11 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 # its own and `check-gen` holds its drift like any other committed generated file.
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
-  Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain
+  Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml
 $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LAWS) | build
-	$(LAKE) build Drivers.Semantics
+	$(LAKE) build semantics-report
 	rm -rf $(GEN)/semantics-report && mkdir -p $(GEN)/semantics-report
-	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Drivers/Semantics.lean $(GEN)/semantics-report
+	$(LAKE) exe semantics-report $(GEN)/semantics-report
 	cp $(GEN)/semantics-report/semantics.md generated/semantics.md
 	@mkdir -p $(GEN) && touch $@
 
@@ -428,9 +428,9 @@ gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus
 # input. A report under .lake/gen, never committed and not in `check`.
 .PHONY: gen-architecture
 gen-architecture: | build ## the architecture map, measured from the tree, into .lake/gen/architecture-map.html (a report)
-	$(LAKE) build Tools.Architecture
+	$(LAKE) build architecture-map
 	@mkdir -p $(GEN)
-	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Tools/Architecture.lean --out $(GEN)/architecture-map.html
+	$(LAKE) exe architecture-map --out $(GEN)/architecture-map.html
 
 # T0: the printed programs' answer, error and requirement types against the one compiler
 # (tsgo, decisions row 57; tools/target). The oracle reads the truth modules and their
@@ -523,8 +523,8 @@ $(CHK)/census: $(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/
 # The semantics report's refusal controls: a registry naming an unloaded root, a stale witness or
 # a malformed register row is refused with its reason. The report's own drift is `check-gen`'s.
 $(CHK)/semantics: $(SEMANTICS_SOURCES) tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean $(LAWS) | build
-	$(LAKE) build Drivers.SemanticsControls Test.Audit.SemanticsCensus
-	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Drivers/SemanticsControls.lean
+	$(LAKE) build semantics-controls Test.Audit.SemanticsCensus
+	$(LAKE) exe semantics-controls
 	@mkdir -p $(CHK) && touch $@
 
 SCHEMA_SOURCES := $(shell find src/Effect4/Schema -name '*.lean') src/Effect4/Codegen/Schema.lean

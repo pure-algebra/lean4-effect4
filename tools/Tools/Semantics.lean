@@ -132,7 +132,10 @@ private def declaration (memo : IO.Ref ProofGraph.AxiomMemo) (name : Name)
 
 private def witness (memo : IO.Ref ProofGraph.AxiomMemo) (name : Name) : MetaM Json := do
   -- `ProofRef.validate`'s checks at the theorem's own proposition, with the axioms memoized
-  let some (.thmInfo t) := (← getEnv).find? name | throwError "{name}: missing or not a theorem"
+  let t ← match (← getEnv).find? name with
+    | some (.thmInfo t) => pure t
+    | some _ => throwError "{name}: not a theorem"
+    | none => throwError "Unknown constant `{name}`"
   if t.type.hasMVar || t.type.hasFVar then throwError "{name}: open proposition"
   if (← ProofGraph.readGoal name).isSome then
     throwError "{name}: obligation marker requires a goal pointer"
