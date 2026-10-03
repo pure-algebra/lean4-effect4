@@ -74,9 +74,9 @@ The gates beyond the build (bash; on Windows run them through WSL):
 
 ```text
 make check-tools                                 # the checkers' own self-tests (planted defects must be refused)
-make check-roots                                 # fresh library-root and trust audit
+make check-roots                                 # the module-closure, library-root and axiom gates, freshly
 make check-docs                                  # every path, link, citation and make target in the documents resolves
-make status                                      # one screen, measured: HEAD, build and check freshness, claims, registers, document drift
+make status                                      # one screen, measured: HEAD, build and check freshness, claims, registers, stale references
 make check-census                                # the rc.112 mechanism census join
 npm ci --prefix harness/schema-host # pinned Schema host and compiler integrations
 make check-gen                                   # every generated file is what its generator emits

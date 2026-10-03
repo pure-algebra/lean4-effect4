@@ -1,14 +1,14 @@
 # The one entry point. `make help` lists the targets.
 #
 # Four kinds of target:
-#   build*   Lake builds; the axiom audit runs inside `lake build Test`.
+#   build*   Lake builds; the axiom gate runs inside `lake build Test`.
 #   corpus   the printed corpus, a build artifact under .lake/corpus that three checks
 #            read (the TypeScript reader, the ingest smoke, the OCaml engine differential).
 #   gen-*    the generated files, one rule per group, in the dependency order the
 #            producers need. A rule fires when its generator, its inputs, or the
 #            compiled core it reads changed; its marker is .lake/gen/<group>.
 #   check-*  the checks. `check` is the tier that runs after every change: the build
-#            (the axiom audit runs inside it), the fresh root elaboration and the
+#            (the axiom gate runs inside it), the fresh root elaboration and the
 #            generated-file drift. `check-full` is everything else: the outside oracles
 #            (the real Effect runtime, the TypeScript compiler, the OCaml engine), the
 #            host groups and the tool harnesses.
@@ -56,7 +56,7 @@ VENDOR_SOURCES := $(wildcard vendor/effect-4.0.0-rc.112/src/*.ts vendor/effect-4
 # ---------------------------------------------------------------------------- build
 
 .PHONY: build build-tools
-build: ## lake build: the core, the proof graph, the batteries and the axiom audit
+build: ## lake build: the core, the proof graph, the batteries and the axiom gate
 	$(LAKE) build
 
 build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, Effect4Gen)
@@ -291,7 +291,7 @@ CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest in
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
 
-check: build check-roots check-gen check-tsgo check-docs ## after every change: the build with its axiom audit, the fresh root elaboration, the generated-file drift, no TypeScript below 7, the authority documents' references
+check: build check-roots check-gen check-tsgo check-docs ## after every change: the build with its axiom gate, the fresh root elaboration, the generated-file drift, no TypeScript below 7, the authority documents' references
 check-full: check check-slow check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
@@ -304,7 +304,7 @@ define refuse_drift
 endef
 
 # The slow lane (owner, 2026-10-02): the batteries out of the default build, at a sweep.
-check-slow: ## the slow batteries (`Test/Slow.lean`: long finite runs, the trace laws, the traversal census) and the axiom audit over them
+check-slow: ## the slow batteries (`Test/Slow.lean`: long finite runs, the trace laws, the traversal census) and the axiom gate over them
 	$(LAKE) build Test.Slow
 
 traversal-census: ## print the traversal census (`docs/core/traversal-census.md`)
@@ -334,7 +334,7 @@ $(CHK)/inventory: FORCE
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
 $(CHK)/roots: $(CHK)/inventory lakefile.toml lean-toolchain | build
 	$(LAKE) env lean -DwarningAsError=true Test/All.lean
-	@echo 'PASS library-roots: fresh module, root-closure and axiom audit'
+	@echo 'PASS check-roots: the module-closure, library-root and axiom gates'
 	@mkdir -p $(CHK) && touch $@
 
 # One TypeScript compiler, tsgo 7 (AGENTS.md; decisions rows 57 and 168): no `typescript` package below
@@ -575,7 +575,7 @@ check-ty-rule: ## the Ty append's rule checker: its controls (the gate is the ap
 # ---------------------------------------------------------------------------- help
 
 .PHONY: status
-status: ## one screen, measured: HEAD and dirty paths, build and check freshness, generated drift, claims, ledger goals, registers, document drift
+status: ## one screen, measured: HEAD and dirty paths, build and check freshness, generated drift, claims, ledger goals, registers, stale references
 	@$(PY) scripts/status.py
 
 .PHONY: help clean

@@ -253,7 +253,7 @@ def main() -> int:
     print(f"ledger    {ledger_goals()} open goal(s) (#proof_wanted)")
     print(f"decisions {summarise(decisions(), ('open', 'ruled', 'landed'))}  (docs/core/decisions.md)")
     print(f"issues    {summarise(design_issues(), ('open', 'ruled', 'basis'))}  (docs/DESIGN-ISSUES.md)")
-    print(f"attacks   {summarise(counterexamples(), ('seeded', 'repaired', 'pinned', 'retired'))}  (Test/Counterexamples/REGISTER.md)")
+    print(f"counterex {summarise(counterexamples(), ('seeded', 'repaired', 'pinned', 'retired'))}  (Test/Counterexamples/REGISTER.md)")
     if "--why" in sys.argv:
         for name in checks:
             if states[name] == "stale":
