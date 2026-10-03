@@ -138,6 +138,7 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Spawn
 import Effect4.Laws.Program.Typed.Commands.Clauses.Command
 import Effect4.Laws.Program.Typed.Commands.Clauses.Loop
 import Effect4.Laws.Program.Typed.Commands.Clauses.Store
+import Effect4.Laws.Program.Typed.Commands.Clauses.All
 import Effect4.Laws.Program.Typed.Edits
 import Effect4.Laws.Program.Typed.AnswerSchema
 import Effect4.Laws.Program.Typed.Stack

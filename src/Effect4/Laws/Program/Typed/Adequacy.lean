@@ -670,11 +670,12 @@ theorem refUpdateSomeAndGet_implements (root : ProgramSource) (cell : RefKey) (f
     obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared new
     exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord new⟩⟩
 
-theorem refMake_implements (root : ProgramSource) (initial : Val) :
-    StoreImplements root (.refMake initial) := by
-  intro w cert store pre
-  change Ty at cert
-  have fits : Fits w initial cert := pre
+/-- `refMake`'s world: the fresh cell declared at the certificate over the grown heap, typed. -/
+theorem refMake_world (root : ProgramSource) (w : World) (initial : Val) (cert : Ty)
+    (store : StoreTyped root w) (fits : Fits w initial cert) :
+    w.leHost (w.addRef { w.state with refs := w.state.refs ++ [initial] } ⟨w.state.refs.length⟩ cert) ∧
+      StoreTyped root
+        (w.addRef { w.state with refs := w.state.refs ++ [initial] } ⟨w.state.refs.length⟩ cert) := by
   have fresh : w.Ρ ⟨w.state.refs.length⟩ = none := by
     cases h : w.Ρ ⟨w.state.refs.length⟩ with
     | none => rfl
@@ -685,7 +686,7 @@ theorem refMake_implements (root : ProgramSource) (initial : Val) :
   obtain ⟨le, _⟩ := refMake_extension w initial cert _ _ step fresh (fits_hasTy w cert initial fits)
   have ord : w.leHost (w.addRef { w.state with refs := w.state.refs ++ [initial] }
       ⟨w.state.refs.length⟩ cert) := ⟨le, fun _ _ h => h⟩
-  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
+  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩
   · change ∀ k, (tableInsert w.Ρ ⟨w.state.refs.length⟩ cert k).isSome = true ↔
       k.index < (w.state.refs ++ [initial]).length
     rw [List.length_append, List.length_singleton]
@@ -720,6 +721,13 @@ theorem refMake_implements (root : ProgramSource) (initial : Val) :
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
   · exact syncOpStep_memoValid _ _ _ _ store.memo step
   · exact memoTable_step ord store.memoTable (layerCells_of_not_build step (fun _ _ h => nomatch h))
+
+theorem refMake_implements (root : ProgramSource) (initial : Val) :
+    StoreImplements root (.refMake initial) := by
+  intro w cert store pre
+  change Ty at cert
+  obtain ⟨ord, store'⟩ := refMake_world root w initial cert store pre
+  exact ⟨_, _, syncOpStep_refMake w.state initial, _, ord, rfl, store', ⟨_, rfl, insert_here _ _ _⟩⟩
 
 theorem refGet_implements (root : ProgramSource) (cell : RefKey) :
     StoreImplements root (.refGet cell) := by

@@ -1400,3 +1400,48 @@ themselves.
 Commands: `lake build Effect4.Laws` (green; M6Ledger 4 open of 20, unchanged until the clauses
 close); `lake env lean` axiom print of the twelve new or restated theorems: `[propext, Quot.sound]`
 each.
+
+## Consolidation — the clause push (2026-10-02, evening)
+
+**First, for the owner:** the contract changes below were made under the "the pre/invariant states
+what the program needs" principle and need sign-off; the checker change (item 9) is a language
+change.
+
+Contract changes landed (each with its finding):
+1. **Children declared** (owner-approved): `WorldValid.children`/`FiberTyped.children`; `trackChild`
+   appends only a fiber the machine holds.
+2. **F-CTX** (owner-approved, a third route): `ServicesFit` gains "every service entry's value is
+   live", so every context `J` or a pre carries is live and `getContext` answers a fitting handle.
+   Neither earlier proposal (all-key coverage; `Live` beside `ServicesFit`) was used.
+3. **F-PRE** (owner-approved): `interrupt`/`interruptScoped` pres and
+   `FinalizerAdmitted.interruptFiber` demand a declared target; seat M6C extended it to
+   `interruptAll` (`∀ t ∈ targets, declared`), the middleware passing `J`'s children.
+4. **Parked code** (seat M6B, finding 1): `LiveCode`/`FiberTyped.code` read unparked fibers only; a
+   parked fiber's current is the operation it parked on, over an answer frame no type admits;
+   `delivery` types it.
+5. **Deferred-interrupt reads** (seat M6B, finding 2): `ReadCode` concludes `ReadOk`: full code, or,
+   for a fiber with a deferred interrupt that only a `loop` reads, its stack alone.
+6. **Scope column stores admission** (seat M6E, finding 2): `FinalizerOk = FinalizerAdmitted`;
+   the `closeIter` pre demands each finalizer admitted and the exit fitting `Exit<unknown, unknown>`.
+7. **Row 190 (b)** (ruled): the loop pre reads the cursor's fit (`LoopPointTyped`, seat M6D).
+8. **`gen` pre names its node** (seat M6E, finding 3): at a point of another node the walk halts with
+   `badName`, which no type admits.
+9. **Checker** (seat M6E, finding 1; option (a)): a generator whose end is reachable after a
+   conditional `return` answers `t | void` (`GenTy` gains reachability bits), matching TS.
+
+Clauses (all `FiberClauseKeeps`/`StoreClauseKeeps`, `[propext, Quot.sound]` where built):
+- Fiber, 38 of 40 unconditional, plus `gen` from `GenProtocol` (`Clauses/Iter.lean`): spawn/race
+  (M6A, `Clauses/Spawn`), park/await (M6B, `Clauses/Park`), `runIn`/`dropObservers`/`interruptAll`
+  (M6C, `Clauses/Command`), `closeIter .sequential` (M6C, `Clauses/Close`), `loop` (M6D,
+  `Clauses/Loop`), `async` (M6F, `Clauses/Async`), `snapshotChildren`/`getContext`/`interrupt`
+  (lead, `Clauses/Answer`), the rest in `Commands/Evaluate.lean`.
+- Store, 24 of 31: the four read rows, the twelve ref rows (lead, `Clauses/StoreRef`, over
+  `Evaluating.store_restated`/`store_step`), eight scope/memo rows (seat M6G's draft,
+  `Clauses/StoreScope`).
+- `Clauses/All.lean`: `fiberClauses_of`, `storeClauses_of`, `deliver_preserves_of_open`,
+  `loop_preserves_of_open` — `step_deliver`/`step_loop` from exactly the open premises.
+
+Open (the premises of `Clauses/All.lean`): `closeIter .parallel`; `GenProtocol` (the coinduction
+over typed generator positions); store rows `deferredMake`, `deferredCompleteWith`,
+`deferredInterruptWith`, `deferredAwaitCleanup`, `sleepCancel`, `memoBuild`, `memoComplete`. Then
+`decision_preserves`, `typedState_reachable`.

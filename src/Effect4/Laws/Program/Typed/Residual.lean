@@ -235,7 +235,10 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .forkScoped child _ _ => PointTyped root w child cert
   | .fork body _ _ => BodyTyped root w body cert
   | .forkIn child _ scope _ => PointTyped root w child cert ∧ ScopeLive w scope
-  | .gen p => PointTyped root w p cert
+  -- the entry walks the generator at the point (`walkR`), which halts with `badName` at a point of
+  -- another node, an exit no type admits: the row names the node (seat M6E's third finding)
+  | .gen p => PointTyped root w p cert ∧
+      ∃ body, Node.at_ (.eff root.program) p.path = some (.eff (.gen body))
   -- the cursor at the loop's checked cursor type (decisions row 190 (b))
   | .loop p cursor => LoopPointTyped root w p cert cursor
   | .refuse _ => False
@@ -867,7 +870,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | forkIn child _ scope _ => exact ⟨pointTyped_mono ord h.1, scopeLive_mono ord.1 h.2⟩
   | forkScoped child _ _ => exact pointTyped_mono ord h
   | «scoped» body => exact pointTyped_mono ord h
-  | gen p => exact pointTyped_mono ord h
+  | gen p => exact ⟨pointTyped_mono ord h.1, h.2⟩
   | loop p _ => exact loopPointTyped_mono ord h
   | await target _ =>
     simp only [fiberPre] at h ⊢
@@ -1102,7 +1105,10 @@ theorem fiberPre_rows_append {w : World} {op : FiberOp} {cert : FiberCert op}
   | fork body options path => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
   | forkIn child options scope path =>
     exact ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, h.2⟩
-  | gen p => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | gen p =>
+    refine ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, ?_⟩
+    rw [hprog]
+    exact h.2
   | loop p name => exact loopPointTyped_rows_append src src' t' hprog htab hsvc h
   | closeIter _ order _ =>
     exact ⟨fun fin hf => finalizerAdmitted_rows_append src src' t' hprog htab hsvc (h.1 fin hf), h.2⟩

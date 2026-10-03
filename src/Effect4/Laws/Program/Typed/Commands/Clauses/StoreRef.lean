@@ -224,4 +224,31 @@ theorem clause_refUpdateSomeAndGet (root : ProgramSource) (rootTy : EffTy) (cell
     exact ev.store_restated hc step valid store' ord rfl rfl rfl rfl
       fun _ _ => ⟨t, declared, fits_mono ord new⟩
 
+/-- **`refMake`** (`Stores.lean:485`): the fresh cell declared at the code's certificate over the
+grown heap (`refMake_world`), the initial value valid because it fits (`fits_validIn`); every
+other column is untouched. -/
+theorem clause_refMake (root : ProgramSource) (rootTy : EffTy) (initial : Val) :
+    StoreClauseKeeps root rootTy (.refMake initial) := by
+  intro w m rest fb y next ev hc
+  have wide := ev.typed.machine.wide
+  have store := storeTyped_of_typedState ev.typed.machine
+  have state : w.state = m.state := wide.state
+  refine ev.store_step hc (syncOpStep_refMake m.state initial) (fun o ho owner priority mode => ?_)
+    fun cert pre => ?_
+  · have owned := wide.live.dueOwners o ho owner priority mode
+    rw [rfiber?_update, Option.isSome_map] at owned
+    exact owned
+  · change Ty at cert
+    have fits : Fits w initial cert := pre
+    have valid : (SyncOp.refMake initial).validIn m.state = true := by
+      rw [← state]
+      exact fits_validIn store fits
+    obtain ⟨ord, store'⟩ := refMake_world root w initial cert store fits
+    rw [state] at ord store'
+    exact ⟨_, ord, rfl, rfl, rfl, rfl, store',
+      syncOpStep_wf _ _ _ _ wide.wf valid (syncOpStep_refMake m.state initial),
+      storesOk_refs wide.stores ord rfl rfl rfl store' rfl rfl rfl, wide.timers,
+      fun key cell hcell a e hpi => wide.waiters key cell hcell a e hpi,
+      ⟨_, rfl, insert_here _ _ _⟩⟩
+
 end Effect4.Program.Typed

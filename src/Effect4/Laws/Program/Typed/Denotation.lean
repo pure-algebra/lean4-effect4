@@ -1150,14 +1150,15 @@ theorem scoped_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
     (fun _ _ _ post => .pure post)
 
 /-- **`gen`**: the counted step, then the generator entry at the point itself, whose row the
-point's typing meets. -/
+point's typing and its generator node meet. -/
 theorem gen_arm {body : Stmts NativeOp} (hfuel : p.fuel = f + 1)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.gen body)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.gen body) p) := by
   rw [denoteR_gen _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   exact suspendR_typed root (fun w' o => TypedProg.fiber (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) ty
-    (pointTyped_mono o hpt) (fun _ _ _ post => .pure post))
+    ⟨pointTyped_mono o hpt, body, hat⟩ (fun _ _ _ post => .pure post))
 
 /-- **`iterate`**: the counted step, the initial cursor (`evalTerm_progress_env`), then the loop
 entry at the point itself, its cursor at the loop's checked cursor type (`LoopPointTyped`,
@@ -3093,7 +3094,7 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | suspend b => exact suspend_arm hq hat hqt htie (hch b 0 rfl)
       | perform op r => exact perform_arm hpos hat hqt
       | bind a b => exact bind_arm hq hat hqt htie (hch a 0 rfl) (hch b 1 rfl)
-      | gen body => exact gen_arm hq hqt
+      | gen body => exact gen_arm hq hat hqt
       | catchCause b h => exact catchCause_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl)
       | matchCause b v c =>
         exact matchCause_arm hq hat hqt htie (hch b 0 rfl) (hch v 1 rfl) (hch c 2 rfl)
