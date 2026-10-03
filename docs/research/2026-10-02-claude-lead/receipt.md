@@ -1252,3 +1252,52 @@ and had been red since.
 Commands: `lake build Effect4.Laws` (green after six rounds: Residual, Denotation, Adequacy, Assembly,
 Finish and Edits each held a destructuring of the dropped premise); `lake build` of the twenty-one
 batteries reading the changed statements (green after one round of four fixes).
+
+## Slice F-WF — membership at `unknown` is validity (owner's ruling, 2026-10-02: "unknown means valid")
+
+**First:** `Live` (`Typed/Membership.lean`), what `Fits … unknown` is and what every handle arm
+implies, now reads every raw handle frame (`Store.Val.handles`, unregistered bytes included): each
+frame's kind byte is registered and its column holds it (`KindLive`: cells, deferreds and fibers in
+the declaration tables; scopes, memo maps and externals in the store). With the store's forward
+bounds this is the store's validity: `live_validIn`, and `fits_validIn` (`Typed/Adequacy.lean`) at a
+typed store. So the store family and the scope close can re-establish `Stores.WF` from their pres,
+and `E4-TYPED-CE-040`'s input is refused (`raw_byte_refused`). `WF` was not weakened; no output
+preservation was assumed.
+
+Decisions row 187 amended (memo maps): a memo map handle fits only where the map is present
+(`MemoLive`, `World.lean`, beside `ScopeLive`; monotone, `memoLive_mono`, since memo maps are never
+removed). Its consequences, threaded exactly as `ScopeLive` already was:
+- `memoFork`'s post gives the fresh map's presence (`memoFork_implements`, `mapAt_append_self`); a
+  `memoGet` hit's post gives the owner's (`memoGet_implements`: the owner holds the entry, and the
+  store's order keeps it);
+- `BodyTyped.layerBuild` carries the memo map's presence; the build quantifier (`BuildsTyped`)
+  takes it after `ScopeLive`; `forkLayer_typed`, `mergeFork_typed`, `mergeTwo_typed`,
+  `mergeAllFork_typed`, `buildWithMemoMap_typed`, `addCurrentMemoMap_typed`, `layerBuild_typed`,
+  `layerBuildR_typed` take it; `forkBuild_typed`'s build is quantified over present maps and gets
+  the fork's from the post; `provideLayer_arm` passes it;
+- `fits_handle_fresh` (row 127's inhabitance) allocates a real memo map (`World.allocMemo`, as
+  `memoFork none` does) instead of the unchecked index 0; `inhabited_iff_fits` keeps its statement.
+
+The transport section (`kindLive_map`, `live_map`, `handleFits_map`, `servicesFit_map`, `fits_map`,
+`Grows`) takes the store's order (`w1.state.le w2.state`) in place of its scope-only premise; every
+caller had a world order and passes `ord.1.1.2`. The context lemmas gained raw-frame twins in
+`Handles/Layer.lean` (`Env.Context.rawHandles`, `Val.handles_context`, `Val.handles_builtContext`,
+`Val.context?_handles`, `rawHandles_addV`/`_merge`/`_mergeAll`, `contextsOfList_handles`; Codex's
+`RawContextHandles.candidate.lean` placed); `LayerArm`'s context proofs read them. The key-based
+helpers `live_of_keys_nil`, `keys_of_cause`, `intImage_keys`, `numberImage_keys`,
+`live_of_keys_subset`/`_append` are replaced by their raw-frame forms.
+
+Tests: the new battery `Test/Program/CapabilityMembership.lean` (red: the raw byte fits no type;
+`refMake (.handle 255 7)` is admitted at no certificate; an absent memo map fits nowhere; green:
+scalars, a present memo map, its validity). Historical batteries: ValueMembership's
+`live_iff_handlesLive` deleted (its converse is false under the ruling: raw bytes and presence);
+TypedDenotation's CE-020 walk gives its world memo map 0 for the fork's post; TypedResidual,
+ProtocolPosts and MemoTable read the raw frames and the new posts.
+
+Placement: concept 1 (value/capability membership) serving concept 4's store and walk clauses
+(`step-deliver-preserves`, `step-loop-preserves`). Not established: the store-family clauses and
+`ScopedExitKeeps` themselves (they can now be proved; not yet done); source reachability.
+
+Commands: `lake build Effect4.Laws` (green; Membership 26 s alone); the twenty-five batteries reading
+`Live`, `HandleFits`, the memo posts or the transport signatures (green); the axiom scan over every
+declaration of the sixteen touched modules: 4,388, none outside `[propext, Quot.sound]`.

@@ -64,12 +64,12 @@ theorem fits_builtContext {w : World} {s : Env.Ctx} (hs : ServicesFit w s)
     (hl : Live w (builtContext s)) : Fits w (builtContext s) (.handle Ty.contextTarget) :=
   ⟨rfl, Ctx.withServices s, Val.context?_context _, hs, hl⟩
 
-/-- Declared liveness of a built context from its handles' sources. -/
+/-- Capability membership of a built context from its raw frames' sources. -/
 theorem live_builtContext_of {w : World} {s : Env.Ctx} {vs : List Val}
-    (hsub : Env.Context.handleKeys s ⊆ vs.flatMap Val.keys) (hl : ∀ v ∈ vs, Live w v) :
+    (hsub : Env.Context.rawHandles s ⊆ vs.flatMap Store.Val.handles) (hl : ∀ v ∈ vs, Live w v) :
     Live w (builtContext s) := by
   intro h hm
-  rw [Val.keys_builtContext] at hm
+  rw [Val.handles_builtContext] at hm
   obtain ⟨v, hv, hk⟩ := List.mem_flatMap.mp (hsub hm)
   exact hl v hv h hk
 
@@ -144,14 +144,15 @@ theorem fits_deferredOf_inv {w : World} {x : Val} {a e : Ty} (h : Fits w x (.def
     exact ⟨⟨index⟩, rfl, h⟩
   · exact h.elim
 
-/-- A memo map's handle is a member of the memo map type (decisions row 187). -/
-theorem fits_memoMap (w : World) (o : MemoMapId) : Fits w (Val.memoMap o) Ty.memoMap := by
+/-- A present memo map's handle is a member of the memo map type (decisions row 187, amended by
+F-WF). -/
+theorem fits_memoMap (w : World) (o : MemoMapId) (h : MemoLive w o) : Fits w (Val.memoMap o) Ty.memoMap := by
   show HandleFits w HandleKind.memoMap.byte o.index Ty.memoMapTarget
-  rfl
+  exact ⟨rfl, h⟩
 
 /-- A member of the memo map type is a memo map's handle. -/
 theorem fits_memoMap_inv {w : World} {y : Val} (h : Fits w y Ty.memoMap) :
-    ∃ o, y = Val.memoMap o := by
+    ∃ o, y = Val.memoMap o ∧ MemoLive w o := by
   simp only [Fits, Ty.memoMap] at h
   split at h
   · rename_i kind index
@@ -161,7 +162,7 @@ theorem fits_memoMap_inv {w : World} {y : Val} (h : Fits w y Ty.memoMap) :
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
     · rename_i hk
-      exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact hk]; rfl⟩
+      exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact hk]; rfl, h.2⟩
     · exact absurd h.1 (by decide)
     · exact h.elim
   · exact absurd h.1 (by decide)
@@ -245,11 +246,11 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt 
       .never, Env.Requirement.empty⟩) ?_ (subN_never _) (fun w2 o2 v hv => ?_)
   · refine TypedProg.store (op := .memoGet q.path m) (cert := lt.error) ⟨l, lt, hat, hcheck, rfl⟩
       (fun w' _ ans post => .pure (strongExit_success w' _ ans ?_))
-    rcases post with rfl | ⟨cell, owner, hhit, hdecl⟩
+    rcases post with rfl | ⟨cell, owner, hhit, hdecl, hpresent⟩
     · exact Or.inl trivial
     · rw [Val.memoHit?_exact hhit]
       exact Or.inr ⟨⟨_, _, hdecl, ⟨Ty.subN_refl _, Ty.subN_refl _⟩, ⟨Ty.subN_refl _, Ty.subN_refl _⟩⟩,
-        fits_memoMap w' owner⟩
+        fits_memoMap w' owner hpresent⟩
   · have o12 := leHost_trans _ _ _ o1 o2
     simp only [seqR]
     rcases hv with hunit | hhit
@@ -278,7 +279,7 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt 
     · -- a hit: the entry finalizer registered, then the await of the entry's deferred
       obtain ⟨x, y, rfl, hx, hy⟩ := (fits_prod_iff w2 v _ _).mp hhit
       obtain ⟨c, rfl, hdecl⟩ := fits_deferredOf_inv hx
-      obtain ⟨o, rfl⟩ := fits_memoMap_inv hy
+      obtain ⟨o, rfl, _⟩ := fits_memoMap_inv hy
       rw [show Val.memoHit? (.list [Val.promise c, Val.memoMap o]) = some (c, o) from
         Val.memoHit?_memoHit c o]
       refine seqGuard_typed root (mid := EffTy.pure .unit)
@@ -291,22 +292,14 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt 
         ⟨a', e', hpi, Ty.sub_refl _, Ty.sub_refl _⟩
         (fun w4 _ ans post => .pure (exitOk_widen ha.1 he.1 post))
 
-/-- Declared liveness through a key inclusion. -/
-theorem live_of_keys_subset {w : World} {v v' : Val} (hsub : v.keys ⊆ v'.keys) (h : Live w v') :
-    Live w v :=
+/-- Capability membership through a raw-frame inclusion. -/
+theorem live_of_handles_subset {w : World} {v v' : Val}
+    (hsub : Store.Val.handles v ⊆ Store.Val.handles v') (h : Live w v') : Live w v :=
   fun x hx => h x (hsub hx)
 
-/-- Declared liveness through an inclusion in two values' keys. -/
-theorem live_of_keys_append {w : World} {v a b : Val} (hsub : v.keys ⊆ a.keys ++ b.keys)
-    (ha : Live w a) (hb : Live w b) : Live w v :=
-  fun x hx => (List.mem_append.mp (hsub hx)).elim (ha x) (hb x)
-
-/-- A memo map's handle needs no declaration. -/
-theorem live_memoMap (w : World) (m : MemoMapId) : Live w (Val.memoMap m) := by
-  intro h hh
-  rw [Val.keys_memoMap, List.mem_singleton] at hh
-  subst hh
-  trivial
+/-- A present memo map's handle is live (row 187, amended by F-WF). -/
+theorem live_memoMap (w : World) (m : MemoMapId) (h : MemoLive w m) : Live w (Val.memoMap m) :=
+  live_kind (k := .memoMap) h
 
 /-- The machine's current-memo-map key types nothing (`SigApp.serviceTy`: a reserved name below
 `firstFreeName` other than the scope's). -/
@@ -347,7 +340,7 @@ theorem bindService_typed {w : World} {key : Option ServiceKey} {v : Val} {T : E
     refine .pure (strongExit_success w T _ ?_)
     rw [hT]
     exact fits_builtContext (servicesFit_empty w) (live_builtContext_of (vs := [])
-      (by rw [Env.Context.handleKeys_empty]; exact List.nil_subset _) (fun _ h => nomatch h))
+      (by rw [Env.Context.rawHandles_empty]; exact List.nil_subset _) (fun _ h => nomatch h))
   | some k =>
     refine .pure (strongExit_success w T _ ?_)
     rw [hT]
@@ -357,16 +350,17 @@ theorem bindService_typed {w : World} {key : Option ServiceKey} {v : Val} {T : E
       subst hx
       exact hlive)
     intro h hh
-    rcases List.mem_append.mp (Env.Context.handleKeys_addV _ k v hh) with h' | h'
+    rcases List.mem_append.mp (Env.Context.rawHandles_addV _ k v hh) with h' | h'
     · exact List.mem_flatMap.mpr ⟨v, List.mem_singleton_self _, h'⟩
-    · rw [Env.Context.handleKeys_empty] at h'
+    · rw [Env.Context.rawHandles_empty] at h'
       exact absurd h' List.not_mem_nil
 
 /-- `Context.add(CurrentMemoMap, memoMap)` over a built context (`addCurrentMemoMapR`): the context
 read back, the memo map added under a key that types nothing. -/
 theorem addCurrentMemoMap_typed {w : World} {m : MemoMapId} {v : Val} {T : EffTy}
     (htie : w.serviceTy = root.sig.serviceTy) (hT : T.answer = .handle Ty.contextTarget)
-    (hv : Fits w v (.handle Ty.contextTarget)) : TypedProg root w T (addCurrentMemoMapR m v) := by
+    (hm : MemoLive w m) (hv : Fits w v (.handle Ty.contextTarget)) :
+    TypedProg root w T (addCurrentMemoMapR m v) := by
   obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hv
   have hlive := fits_live w _ v hv
   unfold addCurrentMemoMapR
@@ -378,13 +372,13 @@ theorem addCurrentMemoMap_typed {w : World} {m : MemoMapId} {v : Val} {T : EffTy
     cases h
   · refine live_builtContext_of (vs := [Val.memoMap m, v]) ?_ ?_
     · intro h hh
-      rcases List.mem_append.mp (Env.Context.handleKeys_addV _ _ _ hh) with h' | h'
+      rcases List.mem_append.mp (Env.Context.rawHandles_addV _ _ _ hh) with h' | h'
       · exact List.mem_flatMap.mpr ⟨_, List.mem_cons_self .., h'⟩
       · refine List.mem_flatMap.mpr ⟨v, List.mem_cons_of_mem _ (List.mem_singleton_self _), ?_⟩
-        exact Val.context?_keys hctx h'
+        exact Val.context?_handles hctx h'
     · intro x hx
       rcases List.mem_cons.mp hx with rfl | hx'
-      · exact live_memoMap w m
+      · exact live_memoMap w m hm
       · rw [List.mem_singleton] at hx'
         subst hx'
         exact hlive
@@ -416,12 +410,12 @@ theorem combineWith_typed {w : World} {mode : CombineMode} {that : Env.Ctx} {v :
     refine fits_builtContext (servicesFit_merge hthatSvc hsvc) ?_
     refine live_builtContext_of (vs := [builtContext that, v]) ?_ ?_
     · intro h hh
-      rcases List.mem_append.mp (Env.Context.handleKeys_merge _ _ hh) with h' | h'
+      rcases List.mem_append.mp (Env.Context.rawHandles_merge _ _ hh) with h' | h'
       · refine List.mem_flatMap.mpr ⟨builtContext that, List.mem_cons_self .., ?_⟩
-        rw [Val.keys_builtContext]
+        rw [Val.handles_builtContext]
         exact h'
       · exact List.mem_flatMap.mpr ⟨v, List.mem_cons_of_mem _ (List.mem_singleton_self _),
-          Val.context?_keys hctx h'⟩
+          Val.context?_handles hctx h'⟩
     · intro x hx
       rcases List.mem_cons.mp hx with rfl | hx'
       · exact fits_live w _ _ hthat
@@ -443,10 +437,10 @@ theorem provideWith_typed {w : World} {dependency dependent : RProgram} {mode : 
   rw [hTd] at hv
   obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hv
   have hbuilt : Fits w' (builtContext ctx.services) (.handle Ty.contextTarget) := by
-    refine fits_builtContext hsvc (live_of_keys_subset ?_ (fits_live w' _ v hv))
+    refine fits_builtContext hsvc (live_of_handles_subset ?_ (fits_live w' _ v hv))
     intro x hx
-    rw [Val.keys_builtContext] at hx
-    exact Val.context?_keys hctx hx
+    rw [Val.handles_builtContext] at hx
+    exact Val.context?_handles hctx hx
   simp only [seqR]
   rw [hctx]
   dsimp only
@@ -461,7 +455,7 @@ theorem provideWith_typed {w : World} {dependency dependent : RProgram} {mode : 
 /-- **`buildWithMemoMap`** (`Layer.ts:756-765`): the build through the map under
 `provideService(CurrentMemoMap)`, the map added to its answer; the key types nothing. -/
 theorem buildWithMemoMap_typed {w : World} {build : MemoMapId → RProgram} {m : MemoMapId}
-    {lt : LayerTy} (htie : w.serviceTy = root.sig.serviceTy)
+    {lt : LayerTy} (htie : w.serviceTy = root.sig.serviceTy) (hm : MemoLive w m)
     (hbuild : ∀ w', w.leHost w' → TypedProg root w' (buildTy lt) (build m)) :
     TypedProg root w (buildTy lt) (buildWithMemoMapR build m) := by
   unfold buildWithMemoMapR
@@ -470,7 +464,8 @@ theorem buildWithMemoMap_typed {w : World} {build : MemoMapId → RProgram} {m :
   · rw [serviceTy_leHost o htie, serviceTy_currentMemoMapKey] at h
     cases h
   · exact seqGuard_typed root (hbuild w' o) (Ty.subN_refl _) (fun w'' o' v hv =>
-      addCurrentMemoMap_typed (serviceTy_leHost (leHost_trans _ _ _ o o') htie) rfl hv)
+      addCurrentMemoMap_typed (serviceTy_leHost (leHost_trans _ _ _ o o') htie) rfl
+        (memoLive_mono (leHost_trans _ _ _ o o').1 hm) hv)
 
 /-- The contexts read back from awaited exits each fit, when every exit fits `Exit<Context, e>`. -/
 theorem contextsOfList_fit {w : World} {e : Ty} : ∀ (xs : List Val) (cs : List Env.Ctx),
@@ -575,7 +570,7 @@ theorem mergeContexts_typed {w : World} {v : Val} {e : Ty} {T : EffTy}
     rw [hT]
     refine fits_builtContext (servicesFit_mergeAll cs (contextsOfList_fit xs cs hall hc)) ?_
     exact live_builtContext_of (vs := xs)
-      (List.Subset.trans (Env.Context.handleKeys_mergeAll cs) (contextsOfList_keys xs cs hc))
+      (List.Subset.trans (Env.Context.rawHandles_mergeAll cs) (contextsOfList_handles xs cs hc))
       (fun x hx => fits_live w _ x (hall x hx))
   | none =>
     have hfailed : failedIn v = true := by
@@ -620,11 +615,11 @@ theorem mergeContexts_typed {w : World} {v : Val} {e : Ty} {T : EffTy}
 build at the sibling's admitted layer point into a present scope (`BodyTyped.layerBuild`, decisions
 row 186 (a)), its fiber declared at the build's types. -/
 theorem forkLayer_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt : LayerTy}
-    (hpt : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) :
+    (hpt : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) (hmemo : MemoLive w m) :
     TypedProg root w ⟨.fiberOf (.handle Ty.contextTarget) lt.error, .never, Env.Requirement.empty⟩
       (forkLayerR q m scope) :=
   TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) (buildTy lt) (BodyTyped.layerBuild q m scope lt hpt hlive)
+    (fun _ _ _ h => nomatch h) (buildTy lt) (BodyTyped.layerBuild q m scope lt hpt hlive hmemo)
     (fun w' _ ans post => by
       obtain ⟨id, rfl, hΓ⟩ := post
       exact .pure (strongExit_success w' _ _ ⟨buildTy lt, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩))
@@ -639,7 +634,7 @@ theorem fiberDeclared_widen {w : World} {id : FiberId} {a e e' : Ty}
 present parallel parent per sibling, the sibling's build forked into it, then the await of both
 and the merge, at the merge's types. -/
 theorem mergeFork_typed {w : World} {q : Point} {m : MemoMapId} {parent : Nat} {la lb : LayerTy}
-    (hlive : ScopeLive w parent) (ha : LayerPointTyped root w (q.child 0) la)
+    (hlive : ScopeLive w parent) (hmemo : MemoLive w m) (ha : LayerPointTyped root w (q.child 0) la)
     (hb : LayerPointTyped root w (q.child 1) lb) :
     TypedProg root w (buildTy (la.merge lb)) (mergeForkR q m parent) := by
   unfold mergeForkR
@@ -649,7 +644,8 @@ theorem mergeFork_typed {w : World} {q : Point} {m : MemoMapId} {parent : Nat} {
     (subN_never _) (fun w1 o1 v hv => ?_)
   obtain ⟨c0, rfl, hc0⟩ := fits_scope_inv hv
   simp only [seqR, Val.scope?_scopeHandle]
-  refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 ha) hc0) (subN_never _)
+  refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 ha) hc0 (memoLive_mono o1.1 hmemo))
+    (subN_never _)
     (fun w2 o2 f0 hf0 => ?_)
   obtain ⟨i0, rfl, hd0⟩ := fiber_of_fits hf0
   simp only [seqR]
@@ -664,7 +660,8 @@ theorem mergeFork_typed {w : World} {q : Point} {m : MemoMapId} {parent : Nat} {
   obtain ⟨c1, rfl, hc1⟩ := fits_scope_inv hu
   simp only [seqR, Val.scope?_scopeHandle]
   have o13 := leHost_trans _ _ _ o12 o3
-  refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o13 hb) hc1) (subN_never _)
+  refine seqGuard_typed root
+    (forkLayer_typed (layerPointTyped_mono o13 hb) hc1 (memoLive_mono o13.1 hmemo)) (subN_never _)
     (fun w4 o4 f1 hf1 => ?_)
   obtain ⟨i1, rfl, hd1⟩ := fiber_of_fits hf1
   simp only [seqR]
@@ -696,7 +693,7 @@ theorem mergeFork_typed {w : World} {q : Point} {m : MemoMapId} {parent : Nat} {
 /-- **`Layer.merge`'s build** after `fromBuild` (`Layer.ts:1587-1602`): the parallel parent forked
 from the layer scope, then the two siblings. -/
 theorem mergeTwo_typed {w : World} {q : Point} {m : MemoMapId} {child : Nat} {la lb : LayerTy}
-    (hlive : ScopeLive w child) (ha : LayerPointTyped root w (q.child 0) la)
+    (hlive : ScopeLive w child) (hmemo : MemoLive w m) (ha : LayerPointTyped root w (q.child 0) la)
     (hb : LayerPointTyped root w (q.child 1) lb) :
     TypedProg root w (buildTy (la.merge lb)) (mergeTwoR q m child) := by
   unfold mergeTwoR
@@ -706,7 +703,8 @@ theorem mergeTwo_typed {w : World} {q : Point} {m : MemoMapId} {child : Nat} {la
     (subN_never _) (fun w1 o1 v hv => ?_)
   obtain ⟨parent, rfl, hparent⟩ := fits_scope_inv hv
   simp only [seqR, Val.scope?_scopeHandle]
-  exact mergeFork_typed hparent (layerPointTyped_mono o1 ha) (layerPointTyped_mono o1 hb)
+  exact mergeFork_typed hparent (memoLive_mono o1.1 hmemo) (layerPointTyped_mono o1 ha)
+    (layerPointTyped_mono o1 hb)
 
 /-- A layer point's check, read at its node. -/
 theorem LayerPointTyped.at_layer {w : World} {q : Point} {lt : LayerTy} {l : LayerTerm NativeOp}
@@ -839,17 +837,18 @@ theorem construction_typed {w : World} {q : Point} {key : Option ServiceKey} {bo
       (fits_live w'' _ v hv)
 
 /-- The recursion's motive: the build of a layer term is typed at every admitted point of it, at a
-world whose service table is the source's, into a present scope, within the fuel bounds. -/
+world whose service table is the source's, into a present scope through a present memo map
+(finding F-WF: the map is installed into the built context), within the fuel bounds. -/
 abbrev BuildsTyped (root : ProgramSource) (f K : Nat) (l : LayerTerm NativeOp) : Prop :=
   ∀ (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId) (scope : Nat),
     q.fuel ≤ K → q.fuel ≤ f → w.serviceTy = root.sig.serviceTy →
     Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
-    ScopeLive w scope → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope)
+    ScopeLive w scope → MemoLive w m → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope)
 
 /-- **`Layer.succeed`** (`Layer.ts:1129`): the literal bound under its key, at the key's carrier. -/
 theorem succeed_builds {key : ServiceKey} {value : Lit} {f K : Nat} :
     BuildsTyped root f K (.succeed key value) := by
-  intro q w lt m scope _ _ htie hat hpt _
+  intro q w lt m scope _ _ htie hat hpt _ _
   obtain ⟨hcheck, -, -⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_succeed] at hcheck
   obtain ⟨v, ty, hlv, hsty, hsub, rfl⟩ := Checker.inv_layer_succeed _ _ _ _ _ hcheck
@@ -863,7 +862,7 @@ theorem succeed_builds {key : ServiceKey} {value : Lit} {f K : Nat} :
   obtain ⟨x, hx, hfx⟩ := hlit
   rw [hx]
   refine bindService_typed (key := some key) rfl (fun k hk sty hst => ?_)
-    (live_of_keys_nil (Lit.toVal_keys value x hx))
+    (live_of_handles_nil (Effect4.Program.RawHandles.lit_toVal_handles value x hx))
   cases hk
   rw [htie] at hst
   have hsty' : root.sig.serviceTy key = some ty := hsty
@@ -874,28 +873,28 @@ theorem succeed_builds {key : ServiceKey} {value : Lit} {f K : Nat} :
 /-- **`Layer.fresh`** (`Layer.ts:3851`): the inner layer built through a brand-new memo map. -/
 theorem fresh_builds {inner : LayerTerm NativeOp} {f K : Nat} (hi : BuildsTyped root f K inner) :
     BuildsTyped root f K (.fresh inner) := by
-  intro q w lt m scope hK hf htie hat hpt hlive
+  intro q w lt m scope hK hf htie hat hpt hlive hmemo
   obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_fresh] at hcheck
   have hc := Checker.inv_layer_fresh _ _ _ _ hcheck
   rw [denoteLayer_fresh]
   refine seqGuard_typed root (mid := EffTy.pure Ty.memoMap)
     (TypedProg.store (op := .memoFork none) (cert := ()) trivial (fun w' _ ans post => by
-      obtain ⟨id, rfl⟩ := post
-      exact .pure (strongExit_success w' _ _ (fits_memoMap w' id))))
+      obtain ⟨id, rfl, hid⟩ := post
+      exact .pure (strongExit_success w' _ _ (fits_memoMap w' id hid))))
     (subN_never _) (fun w' o v hv => ?_)
-  obtain ⟨id, rfl⟩ := fits_memoMap_inv hv
+  obtain ⟨id, rfl, hid⟩ := fits_memoMap_inv hv
   simp only [seqR, Val.memoMap?_memoMap]
   exact hi (q.child 0) w' lt id scope
     (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf)
     (serviceTy_leHost o htie) (node_at_child hat rfl)
-    (layerPointTyped_child hat rfl hc henv (completed_mono o hview)) (scopeLive_mono o.1 hlive)
+    (layerPointTyped_child hat rfl hc henv (completed_mono o hview)) (scopeLive_mono o.1 hlive) hid
 
 /-- **`Layer.orDie`** (`Layer.ts:3327`): the inner build's failure turned into a defect, which fits
 every error column (`orDieCause_exitOk`); the inner layer is built as it resolves (decisions row 185). -/
 theorem orDie_builds {inner : LayerTerm NativeOp} {f K : Nat} (hi : BuildsTyped root f K inner) :
     BuildsTyped root f K (.orDie inner) := by
-  intro q w lt m scope hK hf htie hat hpt hlive
+  intro q w lt m scope hK hf htie hat hpt hlive hmemo
   obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_orDie] at hcheck
   obtain ⟨li, hci, rfl⟩ := Checker.inv_layer_orDie _ _ _ _ hcheck
@@ -903,7 +902,7 @@ theorem orDie_builds {inner : LayerTerm NativeOp} {f K : Nat} (hi : BuildsTyped 
   exact catchGuard_typed root
     (hi (q.child 0) w li m scope
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf) htie
-      (node_at_child hat rfl) (layerPointTyped_child hat rfl hci henv hview) hlive)
+      (node_at_child hat rfl) (layerPointTyped_child hat rfl hci henv hview) hlive hmemo)
     (Ty.subN_refl _) (fun w' _ c hc => .pure (orDieCause_exitOk hc))
 
 /-- **`Layer.effect`** (`Layer.ts:1482`): `fromBuild`, the memoized leaf, its construction on the
@@ -911,7 +910,7 @@ layer scope, the body's answer bound under the key at the key's carrier. -/
 theorem effect_builds {key : ServiceKey} {body : NativeEff} {f K : Nat} (hIH : ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path) :
     BuildsTyped root f K (.effect key body) := by
-  intro q w lt m scope _ hf htie hat hpt hlive
+  intro q w lt m scope _ hf htie hat hpt hlive _
   obtain ⟨hcheck0, henv, hview⟩ := hpt.at_layer hat
   have hcheck := hcheck0
   rw [LayerTerm.expandIn_effect] at hcheck
@@ -941,7 +940,7 @@ context. -/
 theorem effectDiscard_builds {body : NativeEff} {f K : Nat} (hIH : ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path) :
     BuildsTyped root f K (.effectDiscard body) := by
-  intro q w lt m scope _ hf htie hat hpt hlive
+  intro q w lt m scope _ hf htie hat hpt hlive _
   obtain ⟨hcheck0, henv, hview⟩ := hpt.at_layer hat
   have hcheck := hcheck0
   rw [LayerTerm.expandIn_effectDiscard] at hcheck
@@ -964,7 +963,7 @@ theorem effectDiscard_builds {body : NativeEff} {f K : Nat} (hIH : ∀ f' ≤ f,
 context; the dependent's context answered. -/
 theorem provide_builds {self that : LayerTerm NativeOp} {f K : Nat} (hs : BuildsTyped root f K self) (ht : BuildsTyped root f K that) :
     BuildsTyped root f K (.provide self that) := by
-  intro q w lt m scope hK hf htie hat hpt hlive
+  intro q w lt m scope hK hf htie hat hpt hlive hmemo
   obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_provide] at hcheck
   obtain ⟨ls, lt', hcs, hct, rfl⟩ := Checker.inv_layer_provide _ _ _ _ _ hcheck
@@ -976,17 +975,19 @@ theorem provide_builds {self that : LayerTerm NativeOp} {f K : Nat} (hs : Builds
     rfl rfl rfl (Ty.subN_join_right ls.error lt'.error) (Ty.subN_join_left ls.error lt'.error)
     (ht (q.child 1) w1 lt' m child
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf) htie1
-      (node_at_child hat rfl) (layerPointTyped_child hat rfl hct henv hview1) hchild)
+      (node_at_child hat rfl) (layerPointTyped_child hat rfl hct henv hview1) hchild
+      (memoLive_mono o1.1 hmemo))
     (fun w2 o2 => hs (q.child 0) w2 ls m child
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf)
       (serviceTy_leHost o2 htie1) (node_at_child hat rfl)
-      (layerPointTyped_child hat rfl hcs henv (completed_mono o2 hview1)) (scopeLive_mono o2.1 hchild))
+      (layerPointTyped_child hat rfl hcs henv (completed_mono o2 hview1)) (scopeLive_mono o2.1 hchild)
+      (memoLive_mono (leHost_trans _ _ _ o1 o2).1 hmemo))
 
 /-- **`Layer.provideMerge`** (`Layer.ts:1915-1923`): as `provide`, the dependency's map merged under
 the dependent's. -/
 theorem provideMerge_builds {self that : LayerTerm NativeOp} {f K : Nat} (hs : BuildsTyped root f K self) (ht : BuildsTyped root f K that) :
     BuildsTyped root f K (.provideMerge self that) := by
-  intro q w lt m scope hK hf htie hat hpt hlive
+  intro q w lt m scope hK hf htie hat hpt hlive hmemo
   obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_provideMerge] at hcheck
   obtain ⟨ls, lt', hcs, hct, rfl⟩ := Checker.inv_layer_provideMerge _ _ _ _ _ hcheck
@@ -999,22 +1000,24 @@ theorem provideMerge_builds {self that : LayerTerm NativeOp} {f K : Nat} (hs : B
     (Ty.subN_join_left ls.error lt'.error)
     (ht (q.child 1) w1 lt' m child
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf) htie1
-      (node_at_child hat rfl) (layerPointTyped_child hat rfl hct henv hview1) hchild)
+      (node_at_child hat rfl) (layerPointTyped_child hat rfl hct henv hview1) hchild
+      (memoLive_mono o1.1 hmemo))
     (fun w2 o2 => hs (q.child 0) w2 ls m child
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf)
       (serviceTy_leHost o2 htie1) (node_at_child hat rfl)
-      (layerPointTyped_child hat rfl hcs henv (completed_mono o2 hview1)) (scopeLive_mono o2.1 hchild))
+      (layerPointTyped_child hat rfl hcs henv (completed_mono o2 hview1)) (scopeLive_mono o2.1 hchild)
+      (memoLive_mono (leHost_trans _ _ _ o1 o2).1 hmemo))
 
 /-- **`Layer.merge`** (`Layer.ts:1587-1602`): `fromBuild`, then the two siblings forked and merged. -/
 theorem merge_builds {left right : LayerTerm NativeOp} {f K : Nat} :
     BuildsTyped root f K (.merge left right) := by
-  intro q w lt m scope _ _ _ hat hpt hlive
+  intro q w lt m scope _ _ _ hat hpt hlive hmemo
   obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_merge] at hcheck
   obtain ⟨a, b, ha, hb, rfl⟩ := Checker.inv_layer_merge _ _ _ _ _ hcheck
   rw [denoteLayer_merge]
   exact fromBuild_typed hlive (fun w1 o1 child hchild =>
-    mergeTwo_typed hchild (layerPointTyped_child hat rfl ha henv (completed_mono o1 hview))
+    mergeTwo_typed hchild (memoLive_mono o1.1 hmemo) (layerPointTyped_child hat rfl ha henv (completed_mono o1 hview))
       (layerPointTyped_child hat rfl hb henv (completed_mono o1 hview)))
 
 /-- **A layer reference** (decisions rows 153, 170, 185): no fuel is the frontier; else the hop to the
@@ -1024,9 +1027,9 @@ theorem ref_builds {target : List Nat} {f K : Nat} (hwf : root.program.layerRefs
     (hhop : ∀ (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId)
       (scope : Nat), q.fuel < K → q.fuel ≤ f → w.serviceTy = root.sig.serviceTy →
       Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
-      ScopeLive w scope → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope)) :
+      ScopeLive w scope → MemoLive w m → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope)) :
     BuildsTyped root f K (.ref target) := by
-  intro q w lt m scope hK hf htie hat hpt hlive
+  intro q w lt m scope hK hf htie hat hpt hlive hmemo
   cases hfq : q.fuel with
   | zero =>
     rw [denoteLayer_ref_zero _ _ _ _ _ hfq]
@@ -1043,7 +1046,8 @@ theorem ref_builds {target : List Nat} {f K : Nat} (hwf : root.program.layerRefs
     have hfk : (q.redirect target).fuel ≤ f := by rw [hk]; rw [hfq] at hf; omega
     cases lt_t with
     | ref t' => exact absurd rfl (hnotref t')
-    | _ => exact hhop _ (q.redirect target) w lt m scope hKk hfk htie (at_of_layerAt hlayer) hredir hlive
+    | _ =>
+      exact hhop _ (q.redirect target) w lt m scope hKk hfk htie (at_of_layerAt hlayer) hredir hlive hmemo
 
 /-- Each layer of a nonempty merge errs below the merge (`Layer.ts:1652`, the errors joined). -/
 theorem mergeNonempty_error : ∀ (ls : List LayerTy) (lt : LayerTy),
@@ -1113,13 +1117,13 @@ fiber forked so far declared below `(Context, E)` and every remaining layer's po
 type erring below `E`, each layer forked into a sequential child of the present parallel parent,
 then the await of all and the merge. -/
 theorem mergeAllFork_typed {q : Point} {m : MemoMapId} {parent : Nat} {E : Ty} :
-    ∀ (remaining i : Nat) (forked : List FiberId) (w : World), ScopeLive w parent →
+    ∀ (remaining i : Nat) (forked : List FiberId) (w : World), ScopeLive w parent → MemoLive w m →
       (∀ id ∈ forked, FiberDeclared w id (.handle Ty.contextTarget) E) →
       (∀ j, i ≤ j → j < i + remaining → ∃ ltj, LayerPointTyped root w (q.spineChild j) ltj ∧
         Ty.subN ltj.error E = true) →
       TypedProg root w ⟨.handle Ty.contextTarget, E, Env.Requirement.empty⟩
         (mergeAllForkR q m parent remaining i forked)
-  | 0, _, forked, w, _, hforked, _ => by
+  | 0, _, forked, w, _, _, hforked, _ => by
     obtain ⟨A, E', hpre, hA, hE⟩ := awaitAllCert (ids := forked) (a := .handle Ty.contextTarget)
       (e := E) hforked
     refine seqGuard_typed root (mid := ⟨.list (.exitOf A E'), .never, Env.Requirement.empty⟩)
@@ -1129,7 +1133,7 @@ theorem mergeAllFork_typed {q : Point} {m : MemoMapId} {parent : Nat} {E : Ty} :
       (subN_never _) (fun w' _ ex hex => ?_)
     simp only [seqR]
     exact mergeContexts_typed rfl (Ty.subN_refl _) (fits_subN w' (subN_listExitOf hA hE) ex hex)
-  | remaining + 1, i, forked, w, hlive, hforked, hspine => by
+  | remaining + 1, i, forked, w, hlive, hmemo, hforked, hspine => by
     obtain ⟨lti, hpti, herri⟩ := hspine i (Nat.le_refl _) (by omega)
     show TypedProg root w _ ((guardR .onSuccess (storeR (.scopeFork parent .sequential))).bind _)
     refine seqGuard_typed root (mid := EffTy.pure Ty.scope)
@@ -1138,7 +1142,8 @@ theorem mergeAllFork_typed {q : Point} {m : MemoMapId} {parent : Nat} {E : Ty} :
       (subN_never _) (fun w1 o1 v hv => ?_)
     obtain ⟨c, rfl, hc⟩ := fits_scope_inv hv
     simp only [seqR, Val.scope?_scopeHandle]
-    refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 hpti) hc) (subN_never _)
+    refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 hpti) hc (memoLive_mono o1.1 hmemo))
+      (subN_never _)
       (fun w2 o2 f hf => ?_)
     obtain ⟨index, rfl, hd⟩ := fiber_of_fits hf
     simp only [seqR]
@@ -1146,7 +1151,7 @@ theorem mergeAllFork_typed {q : Point} {m : MemoMapId} {parent : Nat} {E : Ty} :
     dsimp only
     have o12 := leHost_trans _ _ _ o1 o2
     refine mergeAllFork_typed remaining (i + 1) (forked ++ [⟨index⟩]) w2
-      (scopeLive_mono o12.1 hlive) (fun id hid => ?_) (fun j hj1 hj2 => ?_)
+      (scopeLive_mono o12.1 hlive) (memoLive_mono o12.1 hmemo) (fun id hid => ?_) (fun j hj1 hj2 => ?_)
     · rcases List.mem_append.mp hid with hid' | hid'
       · exact fiberDeclared_mono o12 (hforked id hid')
       · rw [List.mem_singleton] at hid'
@@ -1160,7 +1165,7 @@ then every layer of the spine forked at its admitted point (`spine_layerPointTyp
 each layer errs below the merge (`mergeNonempty_error`). -/
 theorem mergeAll_builds {layers : LayerTerms NativeOp} {f K : Nat} :
     BuildsTyped root f K (.mergeAll layers) := by
-  intro q w lt m scope _ _ _ hat hpt hlive
+  intro q w lt m scope _ _ _ hat hpt hlive hmemo
   obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_mergeAll] at hcheck
   obtain ⟨ls, hcs, hmerge⟩ := Checker.inv_layer_mergeAll _ _ _ _ hcheck
@@ -1176,7 +1181,7 @@ theorem mergeAll_builds {layers : LayerTerms NativeOp} {f K : Nat} :
   obtain ⟨parent, rfl, hparent⟩ := fits_scope_inv hv
   simp only [seqR, Val.scope?_scopeHandle]
   have o12 := leHost_trans _ _ _ o1 o2
-  refine mergeAllFork_typed layers.length 0 [] w2 hparent (fun _ h => nomatch h)
+  refine mergeAllFork_typed layers.length 0 [] w2 hparent (memoLive_mono o12.1 hmemo) (fun _ h => nomatch h)
     (fun j _ hj => ?_)
   have hj' : j < ls.length := by rw [hlen]; omega
   refine ⟨ls[j], ?_, mergeNonempty_error ls lt hmerge _ (List.getElem_mem hj')⟩
@@ -1196,7 +1201,7 @@ theorem layerTerm_typed (hwf : root.program.layerRefsWF = true) (f : Nat)
     (hhop : ∀ (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId)
       (scope : Nat), q.fuel < K → q.fuel ≤ f → w.serviceTy = root.sig.serviceTy →
       Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
-      ScopeLive w scope → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope)) :
+      ScopeLive w scope → MemoLive w m → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope)) :
     ∀ l, BuildsTyped root f K l
   | .succeed _ _ => succeed_builds
   | .fresh inner => fresh_builds (layerTerm_typed hwf f hIH K hhop inner)
@@ -1219,12 +1224,14 @@ theorem layerBuild_typed (hwf : root.program.layerRefsWF = true) (f : Nat)
     (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId) (scope : Nat)
     (hf : q.fuel ≤ f) (htie : w.serviceTy = root.sig.serviceTy)
     (hat : Node.at_ (.eff root.program) q.path = some (.layer l)) (hpt : LayerPointTyped root w q lt)
-    (hlive : ScopeLive w scope) : TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope) := by
+    (hlive : ScopeLive w scope) (hmemo : MemoLive w m) :
+    TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope) := by
   suffices main : ∀ K, ∀ (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy)
       (m : MemoMapId) (scope : Nat), q.fuel ≤ K → q.fuel ≤ f → w.serviceTy = root.sig.serviceTy →
       Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
-      ScopeLive w scope → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope) from
-    main q.fuel l q w lt m scope (Nat.le_refl _) hf htie hat hpt hlive
+      ScopeLive w scope → MemoLive w m →
+        TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope) from
+    main q.fuel l q w lt m scope (Nat.le_refl _) hf htie hat hpt hlive hmemo
   intro K
   induction K with
   | zero =>
@@ -1243,7 +1250,7 @@ built through it at the closed build point (`layerBuild_typed`), the body under
 /-- `MemoMap.fork` read back, then the build through the forked map (`buildWithMemoMap`). -/
 theorem forkBuild_typed {w : World} {parent : Option MemoMapId} {build : MemoMapId → RProgram}
     {lt : LayerTy} (htie : w.serviceTy = root.sig.serviceTy)
-    (hbuild : ∀ w', w.leHost w' → ∀ m, TypedProg root w' (buildTy lt) (build m)) :
+    (hbuild : ∀ w', w.leHost w' → ∀ m, MemoLive w' m → TypedProg root w' (buildTy lt) (build m)) :
     TypedProg root w (buildTy lt) ((guardR .onSuccess (storeR (.memoFork parent))).bind
       (seqR fun u => match Val.memoMap? u with
         | some id => buildWithMemoMapR build id
@@ -1251,12 +1258,12 @@ theorem forkBuild_typed {w : World} {parent : Option MemoMapId} {build : MemoMap
   refine seqGuard_typed root (mid := EffTy.pure Ty.memoMap)
     (TypedProg.store (op := .memoFork parent) (cert := ()) trivial
       (fun w' _ ans post => ?_)) (subN_never _) (fun w' o v hv => ?_)
-  · obtain ⟨id, rfl⟩ := post
-    exact .pure (strongExit_success w' _ _ (fits_memoMap w' id))
-  · obtain ⟨id, rfl⟩ := fits_memoMap_inv hv
+  · obtain ⟨id, rfl, hid⟩ := post
+    exact .pure (strongExit_success w' _ _ (fits_memoMap w' id hid))
+  · obtain ⟨id, rfl, hid⟩ := fits_memoMap_inv hv
     simp only [seqR, Val.memoMap?_memoMap]
-    exact buildWithMemoMap_typed (serviceTy_leHost o htie)
-      (fun w'' o' => hbuild w'' (leHost_trans _ _ _ o o') id)
+    exact buildWithMemoMap_typed (serviceTy_leHost o htie) hid
+      (fun w'' o' => hbuild w'' (leHost_trans _ _ _ o o') id (memoLive_mono o'.1 hid))
 
 /-- **The layer family's arm** (decisions row 176 (b)): a typed `provideLayer` point denotes a
 typed program. The build answers the built context at the layer's checked error type
@@ -1294,13 +1301,13 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () (scopeLive_mono o4.1 hlive)
       (fun _ _ _ post => .pure post))
   -- the build: at every later world, through any map, the layer's build at the closed point
-  have hbuild : ∀ w', w3.leHost w' → ∀ m, TypedProg root w' (buildTy lt)
+  have hbuild : ∀ w', w3.leHost w' → ∀ m, MemoLive w' m → TypedProg root w' (buildTy lt)
       (denoteLayer root.program l ({ p with completed } : Point).layerBuild m scope) :=
-    fun w' o m => layerBuild_typed hwf f hIH l _ w' lt m scope
+    fun w' o m hm => layerBuild_typed hwf f hIH l _ w' lt m scope
       (by rw [Point.layerBuild_fuel]; show p.fuel - 1 ≤ f; omega)
       (serviceTy_leHost (leHost_trans _ _ _ o13 o) htie) hatl
       ⟨l, hatl, hcl, rfl, completed_mono (leHost_trans _ _ _ o3 o) hview⟩
-      (scopeLive_mono o.1 hlive)
+      (scopeLive_mono o.1 hlive) hm
   refine seqGuard_typed root (mid := buildTy lt) ?_ (Ty.subN_join_right _ _)
     (fun w5 o5 u hu => ?_)
   · cases i with
@@ -1311,7 +1318,7 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
       simp only [seqR]
       rw [hctx]
       exact forkBuild_typed (serviceTy_leHost (leHost_trans _ _ _ o13 o) htie)
-        (fun w'' o' m => hbuild w'' (leHost_trans _ _ _ o o') m)
+        (fun w'' o' m hm => hbuild w'' (leHost_trans _ _ _ o o') m hm)
   -- the body, under the built context, at child 1 of the constructed point
   obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hu
   simp only [seqR]

@@ -71,6 +71,7 @@ import Test.Program.ProtocolPosts
 import Test.Program.RawHandleTerms
 import Test.Program.CompletionDueControls
 import Test.Program.ReadOnlyStoreClauses
+import Test.Program.CapabilityMembership
 import Test.Audit.AnswerGate
 import Test.Machine.Runtime.RepresentationFoundations
 import Test.Machine.Runtime.ScopeContract

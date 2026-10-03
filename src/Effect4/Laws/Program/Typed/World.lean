@@ -162,6 +162,13 @@ def ScopeLive (w : World) (sc : Nat) : Prop := w.state.ScopeLive sc
 instance (w : World) (sc : Nat) : Decidable (ScopeLive w sc) :=
   inferInstanceAs (Decidable (w.state.ScopeLive sc))
 
+/-- **Memo map presence** (decisions row 187, amended 2026-10-02 by finding F-WF): the world's store
+holds memo map `m` (`MemoWorld.mapAt`). Read where a memo map handle is a member (`HandleFits`,
+`Live`), supplied by the posts that answer one (`memoFork`, a `memoGet` hit's owner) and carried
+through the layer builds that install one into a context. It persists along the world order
+(`memoLive_mono`): memo maps are never removed (`Stores.le`). -/
+def MemoLive (w : World) (m : MemoMapId) : Prop := (w.state.memo.mapAt m).isSome = true
+
 /-- Ghost updates used by the four allocation contracts. -/
 def World.addFiber (w : World) (id : FiberId) (ty : EffTy) : World :=
   { w with ids := w.ids ++ [id], Γ := tableInsert w.Γ id ty }
@@ -443,6 +450,12 @@ removed (`Stores.le`'s scope component, under the machine world order). -/
 theorem scopeLive_mono {w newer : World} (ordered : w.le newer) {sc : Nat} (h : ScopeLive w sc) :
     ScopeLive newer sc :=
   ordered.1.2.2.2.1 sc h
+
+/-- **Memo map presence persists along the world order**: a memo map is never removed (`Stores.le`'s
+memo component). -/
+theorem memoLive_mono {w newer : World} (ordered : w.le newer) {m : MemoMapId} (h : MemoLive w m) :
+    MemoLive newer m :=
+  ordered.1.2.2.2.2.2.1 m h
 
 theorem protocol_order : ∃ order : Effect4.Laws.Effects.WorldOrder World, order.le = World.le :=
   ⟨⟨World.le, order_refl, fun h₁ h₂ => order_trans _ _ _ h₁ h₂⟩, rfl⟩

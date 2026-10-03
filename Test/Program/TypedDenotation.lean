@@ -127,8 +127,8 @@ theorem emptyCtx_fits (w : W) : Fits w (Val.context emptyCtx) (.handle Ty.contex
     rw [Machine.Env.Context.getV_empty] at hget
     cases hget
   · intro hd hm
-    have keys : (Val.context emptyCtx).keys = [] := rfl
-    rw [keys] at hm
+    have none : Store.Val.handles (Val.context emptyCtx) = [] := rfl
+    rw [none] at hm
     cases hm
 
 /-! ## `E4-TYPED-CE-020`: a reference to a reference (decisions row 170) -/
@@ -196,7 +196,7 @@ def scopeStore : Stores :=
 
 def w0 : W where
   ids := []
-  state := scopeStore
+  state := { scopeStore with memo := [⟨⟨0⟩, none, []⟩] }
   Γ := fun _ => none
   «Π» := fun _ => none
   Ρ := fun _ => none
@@ -231,7 +231,7 @@ theorem old_chain_refuted : ¬ OldDenotesTyped chainSrc := by
   have t6 := guardGetContext_run t5 w0 (leHost_refl w0) (Val.context emptyCtx) (emptyCtx_fits w0)
   simp only [seqR, Val.context?_context, Effects.Program.bind_assoc] at t6
   obtain ⟨_, _, run7⟩ := guardStore_run t6
-  have t7 := run7 w0 (leHost_refl w0) (Val.memoMap ⟨0⟩) ⟨⟨0⟩, rfl⟩
+  have t7 := run7 w0 (leHost_refl w0) (Val.memoMap ⟨0⟩) ⟨⟨0⟩, rfl, rfl⟩
   simp only [seqR, Val.memoMap?_memoMap, buildWithMemoMapR, updateContextR,
     Effects.Program.bind_assoc] at t7
   have t8 := guardGetContext_run t7 w0 (leHost_refl w0) (Val.context emptyCtx) (emptyCtx_fits w0)
@@ -361,8 +361,8 @@ theorem strCtx_fits : Fits w2 (Val.context strCtx) (.handle Ty.contextTarget) :=
   · intro key sv sty _ hty
     cases hty
   · intro hd hm
-    have keys : (Val.context strCtx).keys = [] := rfl
-    rw [keys] at hm
+    have none : Store.Val.handles (Val.context strCtx) = [] := rfl
+    rw [none] at hm
     cases hm
 
 /-- **History, red (`E4-TYPED-CE-022`'s witness)**: with row 170's premise alone `DenotesTyped`

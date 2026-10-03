@@ -112,9 +112,9 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .scopeRemove _ _ => ans = Val.unit
   | .scopeIsClosed _ => ∃ b, ans = Val.bool b
   | .scopeFork _ _ => Fits w' ans Ty.scope
-  | .memoFork _ => ∃ id, ans = Val.memoMap id
+  | .memoFork _ => ∃ id, ans = Val.memoMap id ∧ MemoLive w' id
   | .memoGet _ _ => ans = Val.unit ∨ ∃ cell owner, Val.memoHit? ans = some (cell, owner) ∧
-      w'.«Π» cell = some (.handle Ty.contextTarget, cert)
+      w'.«Π» cell = some (.handle Ty.contextTarget, cert) ∧ MemoLive w' owner
   | .memoBuild _ _ => Fits w' ans Ty.scope
   | .memoComplete _ _ _ => ans = Val.unit
   -- the last observer's release answers the layer's scope handle, for the caller to close; the
@@ -580,7 +580,7 @@ theorem guard_frame {root : ProgramSource} {w : World} {ty : EffTy} {kind : Guar
   rcases guard_inv h with ⟨mid, body, run, skip⟩ | ⟨rfl, mid, prev, sc, body, callback, live, services, widen⟩
   · exact ⟨mid, body, .resume kind _ (fun w' ord ex hex arm => run w' ord ex ⟨arm, hex⟩) skip⟩
   · refine ⟨mid, body, .scopedResume _ prev sc callback (fun w' ord => ⟨scopeLive_mono ord.1 live, ?_⟩) widen⟩
-    exact servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 (fun _ hs => scopeLive_mono ord.1 hs)
+    exact servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
       (serviceTy_of_le ord.1) services
 
 end TypedProg
@@ -723,7 +723,7 @@ theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin :
   | foreign c =>
     obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, hsvc⟩ := h
     exact ⟨acquire, release, env, t, a, hnode, hcheck, hacq, envTyped_mono ord henv,
-      servicesFit_map hPi hRho ord.2 (fun _ hs => scopeLive_mono ord.1 hs) (serviceTy_of_le ord.1)
+      servicesFit_map hPi hRho ord.2 ord.1.1.2 (serviceTy_of_le ord.1)
         hsvc⟩
   | release _ _ => exact h
   | closeChildScope _ | closeChildOnFailure _ | detachFromParent _ _ => exact scopeLive_mono ord.1 h
@@ -732,7 +732,7 @@ theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin :
 theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty : EffTy}
     (h : BodyTyped src w b ty) : BodyTyped src w' b ty := by
   have services : ∀ {ctx : Ctx}, ServicesFit w ctx.services → ServicesFit w' ctx.services :=
-    fun h => servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 (fun _ hs => scopeLive_mono ord.1 hs)
+    fun h => servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
       (serviceTy_of_le ord.1) h
   cases h with
   | at_ p ty h => exact .at_ p ty (pointTyped_mono ord h)
@@ -742,8 +742,9 @@ theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty 
   | acquireIn p ctx ty h node hsvc =>
     exact .acquireIn p ctx ty (pointTyped_mono ord h) node (services hsvc)
   | release p prev ty h hsvc => exact .release p prev ty (pointTyped_mono ord h) (services hsvc)
-  | layerBuild p m scope lt h live =>
+  | layerBuild p m scope lt h live memo =>
     exact .layerBuild p m scope lt (layerPointTyped_mono ord h) (scopeLive_mono ord.1 live)
+      (memoLive_mono ord.1 memo)
 
 
 /-- Every store row's demand is upward closed (all 31 rows). -/
@@ -839,7 +840,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | async register _ => exact asyncPre_mono root ord register cert h
   | setContext ctx =>
     simp only [fiberPre] at h ⊢
-    exact servicesFit_map hPi hRho ord.2 (fun _ hs => scopeLive_mono ord.1 hs) (serviceTy_of_le ord.1) h
+    exact servicesFit_map hPi hRho ord.2 ord.1.1.2 (serviceTy_of_le ord.1) h
   | getContext | snapshotChildren => exact h
   | refuse _ | raceRegister _ => exact (h : False).elim
   | interruptAs target _ =>
@@ -880,7 +881,7 @@ theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : R
   | finishFinalizer payload => exact .finishFinalizer (strongExit_mono _ _ _ _ ord payload)
   | scopedGuard mid prev sc _ callback live services widen ihBody =>
     exact .scopedGuard mid prev sc (ihBody _ ord) callback (scopeLive_mono ord.1 live)
-      (servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 (fun _ hs => scopeLive_mono ord.1 hs)
+      (servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
         (serviceTy_of_le ord.1) services)
       (fun w'' ord' ex hex => widen w'' (leHost_trans _ _ _ ord ord') ex hex)
 
@@ -981,8 +982,9 @@ theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     exact node
   | release p prev ty hp services =>
     exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp) services
-  | layerBuild p m scope lt hp live =>
+  | layerBuild p m scope lt hp live memo =>
     exact .layerBuild p m scope lt (layerPointTyped_rows_append src src' t' hprog htab hsvc hp) live
+      memo
 
 theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     (h : storePre src w op cert) : storePre src' w op cert := by

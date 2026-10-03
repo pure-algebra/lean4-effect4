@@ -972,7 +972,7 @@ their programs, the foreign one by its capture's typing. -/
 /-- The void answer at rc.112's finalizer type. -/
 theorem exitOk_unit_finalizer (w : World) :
     ExitOk w ⟨.unknown, .never, Env.Requirement.empty⟩ (.success .unit) :=
-  ⟨(fitsExit_success_iff w _ _).mpr (live_of_keys_nil rfl), trivial⟩
+  ⟨(fitsExit_success_iff w _ _).mpr (live_of_handles_nil rfl), trivial⟩
 
 /-- An exit at a type whose error column normalizes to `never` is an exit at the finalizer type
 `⟨unknown, never⟩`: the answer column is below `unknown`, the error column below `never`. -/

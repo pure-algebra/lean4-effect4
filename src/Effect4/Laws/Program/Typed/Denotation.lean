@@ -2173,7 +2173,7 @@ theorem fits_refTy_inv {w : World} {v : Val} (h : Fits w v NativeOp.refTy) :
       exact ⟨⟨index⟩, rfl, h.2⟩
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
-    · exact absurd h (by decide)
+    · exact absurd h.1 (by decide)
     · exact nomatch h
     · exact nomatch h
   · exact absurd h.1 (by decide)
@@ -2193,7 +2193,7 @@ theorem fits_deferredTy_inv {w : World} {v : Val} (h : Fits w v NativeOp.deferre
       subst hk_byte
       exact ⟨⟨index⟩, rfl, h.2⟩
     · exact absurd h.1 (by decide)
-    · exact absurd h (by decide)
+    · exact absurd h.1 (by decide)
     · exact nomatch h
     · exact nomatch h
   · exact absurd h.1 (by decide)
@@ -2742,7 +2742,7 @@ theorem serviceTy_flat (root : ProgramSource) (key : ServiceKey) (sty : Ty)
 /-- A context's services fit at every later world. -/
 theorem servicesFit_mono {w w' : World} (ord : w.leHost w') {ctx : Env.Ctx}
     (h : ServicesFit w ctx) : ServicesFit w' ctx :=
-  servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 (fun _ hs => scopeLive_mono ord.1 hs)
+  servicesFit_map ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
     (serviceTy_of_le ord.1) h
 
 /-- The context set, at a context whose services fit, answers `unit`. -/

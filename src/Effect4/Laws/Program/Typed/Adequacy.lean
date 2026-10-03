@@ -106,6 +106,14 @@ def StoreImplements (root : ProgramSource) (op : SyncOp) : Prop :=
     ∃ st' ans, syncOpStep op w.state = some (st', ans) ∧
       ∃ w', w.leHost w' ∧ w'.state = st' ∧ StoreTyped root w' ∧ storePost w' op cert ans
 
+/-- **Membership is the store's validity** (finding F-WF, owner's ruling 2026-10-02): at a world whose
+store is typed, a value that fits any type is valid in that store (`Val.validIn`, what `Stores.WF`
+asks of every stored value and closing exit): `fits_live` gives capability membership, and the
+store's forward bounds (`StoreTyped.heap`, `.promises`) make it validity (`live_validIn`). -/
+theorem fits_validIn {root : ProgramSource} {w : World} (store : StoreTyped root w) {ty : Ty} {v : Val}
+    (h : Fits w v ty) : v.validIn w.state = true :=
+  live_validIn (fun k => (store.heap k).mp) (fun k => (store.promises k).mp) (fits_live w ty v h)
+
 /-- **The handler rule for `TypedProg`'s store arm**, one theorem for every row: a typed store
 operation run by a handler that fulfils its row steps to a typed continuation at a later world
 over the new store, which is typed again. This is what the evaluator's store arm needs
@@ -887,7 +895,7 @@ theorem memoFork_implements (root : ProgramSource) (parent : Option MemoMapId) :
   intro w _ store _
   obtain ⟨ord, store'⟩ := restate_world (op := .memoFork parent) store rfl rfl rfl
     (fun _ c' h => ⟨c', h, rfl⟩) rfl
-  exact ⟨_, _, rfl, _, ord, rfl, store', ⟨_, rfl⟩⟩
+  exact ⟨_, _, rfl, _, ord, rfl, store', ⟨_, rfl, MemoWorld.mapAt_append_self _ _⟩⟩
 
 theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap : MemoMapId) :
     StoreImplements root (.memoBuild layer memoMap) := by
@@ -947,12 +955,17 @@ theorem memoGet_implements (root : ProgramSource) (layer : LayerId) (memoMap : M
     obtain ⟨owner, entry⟩ := q
     have step := syncOpStep_memoGet_some w.state layer memoMap hget
     obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
-    obtain ⟨m, hm, _, he⟩ := MemoWorld.get_mem hget
+    obtain ⟨m, hm, hid, he⟩ := MemoWorld.get_mem hget
     have declared := store.memoTable (layer, entry.deferred)
       (MemoWorld.mem_layerCells.mpr ⟨m, hm, (layer, entry), he, rfl⟩) l lt node checked
     rw [hcert] at declared
+    -- the owner holds the entry, so it is present, and memo maps are never removed
+    have present : MemoLive w owner := by
+      unfold MemoLive MemoWorld.mapAt
+      rw [List.find?_isSome]
+      exact ⟨m, hm, by simp only [hid, decide_true]⟩
     exact ⟨_, _, step, _, ord, rfl, store',
-      Or.inr ⟨entry.deferred, owner, Val.memoHit?_memoHit _ _, declared⟩⟩
+      Or.inr ⟨entry.deferred, owner, Val.memoHit?_memoHit _ _, declared, memoLive_mono ord.1 present⟩⟩
 
 /-- **`memoComplete` fulfils its row** (decisions row 187): the memo table declares the entry's
 cell at the layer's columns, which the row's exit fits, so the completed cell stays typed; an

@@ -41,6 +41,125 @@ theorem Val.context?_keys {v : Val} {ctx : Ctx} (h : Val.context? v = some ctx) 
   rw [Val.context?_exact h, Val.keys_context, Ctx.keys_eq_handleKeys]
   exact List.Subset.refl _
 
+/-! ### Raw handle frames of a context (finding F-WF)
+
+The raw frames (`Store.Val.handles`, unregistered bytes included) a context value carries are
+exactly its service values': the key codec and the cache fields write none. Codex's
+`RawContextHandles.candidate.lean` (`m6-adoption-next/`, checked at `f409507f`), placed here beside
+the registered-key versions above. -/
+
+/-- The raw frames of a context's service values. -/
+def Env.Context.rawHandles (c : Env.Ctx) : List (UInt8 × Nat) :=
+  c.entries.flatMap fun e => Store.Val.handles e.valueVal
+
+theorem Env.entry_handles (key : ServiceKey) (v : Val) :
+    Store.Val.handles (Env.entryStore key v) = Store.Val.handles v := by
+  show Store.Val.handles (Env.serviceKeyImage.toVal key) ++ Store.Val.handles v = Store.Val.handles v
+  rw [Env.serviceKeyImage_handleFree, List.nil_append]
+
+theorem Env.entries_handles : ∀ es : List (Env.Service Env.ValU),
+    Store.Val.handlesList (es.map fun s => Env.entryStore s.key s.valueVal) =
+      es.flatMap fun s => Store.Val.handles s.valueVal
+  | [] => rfl
+  | s :: rest => by
+    rw [List.map_cons, Store.Val.handlesList_cons, Env.entry_handles, List.flatMap_cons,
+      Env.entries_handles rest]
+
+theorem Val.handles_context (ctx : Ctx) :
+    Store.Val.handles (Val.context ctx) = Env.Context.rawHandles ctx.services := by
+  change Store.Val.handlesList (ctx.services.entries.map fun s => Env.entryStore s.key s.valueVal)
+    ++ [] = _
+  rw [Env.entries_handles, List.append_nil]
+  rfl
+
+theorem Val.handles_builtContext (s : Env.Ctx) :
+    Store.Val.handles (builtContext s) = Env.Context.rawHandles s :=
+  Val.handles_context (Ctx.withServices s)
+
+theorem Val.context?_handles {v : Val} {ctx : Ctx} (h : Val.context? v = some ctx) :
+    Env.Context.rawHandles ctx.services ⊆ Store.Val.handles v := by
+  rw [Val.context?_exact h, Val.handles_context]
+  exact List.Subset.refl _
+
+theorem Env.Context.rawHandles_empty : Env.Context.rawHandles Env.Context.empty = [] := rfl
+
+theorem Env.Context.rawHandles_addV (s : Env.Ctx) (key : ServiceKey) (v : Val) :
+    Env.Context.rawHandles (s.addV key v) ⊆ Store.Val.handles v ++ Env.Context.rawHandles s :=
+  Env.Context.flatMap_setEntries_subset (fun e => Store.Val.handles e.valueVal) key v s.entries
+
+theorem Env.Context.rawHandles_mergeEntries (self : Env.Ctx) :
+    ∀ es : List (Env.Service Env.ValU),
+      Env.Context.rawHandles (Env.Context.mergeEntries self es) ⊆
+        Env.Context.rawHandles self ++ es.flatMap (fun s => Store.Val.handles s.valueVal)
+  | [] => by
+    simp only [Env.Context.mergeEntries, List.flatMap_nil, List.append_nil]
+    exact List.Subset.refl _
+  | s :: rest => by
+    simp only [Env.Context.mergeEntries, List.flatMap_cons]
+    intro x hx
+    rcases List.mem_append.mp (Env.Context.rawHandles_mergeEntries (self.add s.key s.value) rest hx)
+      with h | h
+    · rcases List.mem_append.mp (Env.Context.rawHandles_addV self s.key s.value h) with h | h
+      · exact List.mem_append_right _ (List.mem_append_left _ h)
+      · exact List.mem_append_left _ h
+    · exact List.mem_append_right _ (List.mem_append_right _ h)
+
+theorem Env.Context.rawHandles_merge (a b : Env.Ctx) :
+    Env.Context.rawHandles (a.merge b) ⊆ Env.Context.rawHandles a ++ Env.Context.rawHandles b :=
+  Env.Context.rawHandles_mergeEntries a b.entries
+
+theorem Env.Context.rawHandles_foldl_merge : ∀ (cs : List Env.Ctx) (acc : Env.Ctx),
+    Env.Context.rawHandles (cs.foldl Env.Context.merge acc) ⊆
+      Env.Context.rawHandles acc ++ cs.flatMap Env.Context.rawHandles
+  | [], acc => by
+    simp only [List.foldl_nil, List.flatMap_nil, List.append_nil]
+    exact List.Subset.refl _
+  | c :: rest, acc => by
+    simp only [List.foldl_cons, List.flatMap_cons]
+    intro x hx
+    rcases List.mem_append.mp (Env.Context.rawHandles_foldl_merge rest (acc.merge c) hx) with h | h
+    · rcases List.mem_append.mp (Env.Context.rawHandles_merge acc c h) with h | h
+      · exact List.mem_append_left _ h
+      · exact List.mem_append_right _ (List.mem_append_left _ h)
+    · exact List.mem_append_right _ (List.mem_append_right _ h)
+
+theorem Env.Context.rawHandles_mergeAll : ∀ cs : List Env.Ctx,
+    Env.Context.rawHandles (Env.Context.mergeAll cs) ⊆ cs.flatMap Env.Context.rawHandles
+  | [] => List.nil_subset _
+  | c :: rest => by
+    simp only [Env.Context.mergeAll, List.flatMap_cons]
+    exact Env.Context.rawHandles_foldl_merge rest c
+
+/-- The contexts read back from awaited exits carry only the exits' raw frames. -/
+theorem contextsOfList_handles : ∀ (vs : List Val) (cs : List Env.Ctx), contextsOfList vs = some cs →
+    cs.flatMap Env.Context.rawHandles ⊆ vs.flatMap Store.Val.handles
+  | [], cs, h => by
+    simp only [contextsOfList, Option.some.injEq] at h
+    subst h
+    exact List.nil_subset _
+  | x :: rest, cs, h => by
+    simp only [contextsOfList] at h
+    split at h
+    · next c hc =>
+      split at h
+      · next ctx ctxs hctx hrest =>
+        simp only [Option.some.injEq] at h
+        subst h
+        simp only [List.flatMap_cons]
+        refine List.append_subset.mpr ⟨?_, ?_⟩
+        · have hx : Store.Val.handles c ⊆ Store.Val.handles x := by
+            rw [exitImage.ofVal_exact hc]
+            intro y hy
+            show y ∈ Store.Val.handles c ++ []
+            rw [List.append_nil]
+            exact hy
+          exact List.Subset.trans (Val.context?_handles hctx)
+            (List.Subset.trans hx (List.subset_append_left _ _))
+        · exact List.Subset.trans (contextsOfList_handles rest ctxs hrest)
+            (List.subset_append_right _ _)
+      · cases h
+    · cases h
+
 theorem compileLayer_keys : ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat),
     nativeKeys (compileLayer l q m scope) ⊆ Handle.scope scope :: Handle.memoMap m.index :: q.keys
   | .succeed key value, q, m, scope => by

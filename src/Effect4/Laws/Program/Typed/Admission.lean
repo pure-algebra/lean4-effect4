@@ -199,8 +199,9 @@ def FinalizerAdmitted (root : ProgramSource) (w : World) : FinName → Prop
 - `acquireRelease`'s masked half (`acquireInR`) names its node and a context whose services fit: the
   release's registration reads both (`CaptureTyped`), and the acquire runs at the node's child 0.
 - A capture's release restores a context whose services fit (`setContext`'s pre).
-- A layer's build runs into a present scope (`layerBuild_typed` reads it, `Typed/LayerArm.lean`) at
-  the build's types: the built context at the layer's checked error (`buildTy`). -/
+- A layer's build runs into a present scope and a present memo map (`layerBuild_typed` reads both,
+  `Typed/LayerArm.lean`; the memo map is installed into the built context, finding F-WF) at the
+  build's types: the built context at the layer's checked error (`buildTy`). -/
 inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
   | at_ (p : Point) (ty : EffTy) (h : PointTyped src w p ty) :
       BodyTyped src w (.at_ p) ty
@@ -218,7 +219,7 @@ inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
       (services : ServicesFit w prev.services) :
       BodyTyped src w (.release p prev) ty
   | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (lt : LayerTy)
-      (h : LayerPointTyped src w p lt) (live : ScopeLive w scope) :
+      (h : LayerPointTyped src w p lt) (live : ScopeLive w scope) (memo : MemoLive w m) :
       BodyTyped src w (.layerBuild p m scope)
         ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩
 
@@ -266,7 +267,7 @@ theorem fits_restrict {app app' : SigApp} (hext : SigExtends app.signature app'.
     (w : World) (hw : w.serviceTy = app'.serviceTy) (ty : Ty) (v : Val) (h : Fits w v ty) :
     Fits (restrictWorld app w) v ty :=
   @fits_map w (restrictWorld app w) (table_refl _) (table_refl _) (table_refl _) (fun _ _ hx => hx)
-    (fun _ hs => hs)
+    (Stores.le_refl _)
     (fun key sty hk => by
       change app.serviceTy key = some sty at hk
       rw [hw]

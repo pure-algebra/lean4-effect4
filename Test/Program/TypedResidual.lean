@@ -50,10 +50,7 @@ theorem test_fitsExit_bool (w : World) :
 theorem forged_cell_not_live (w : World) (hnone : w.Ρ ⟨0⟩ = none) :
     ¬ Live w (Val.cell ⟨0⟩) := by
   intro hlive
-  have hmem : Handle.cell ⟨0⟩ ∈ (Val.cell ⟨0⟩).keys := by
-    rw [Val.keys_cell]
-    exact List.mem_singleton_self _
-  have hlive0 := hlive (Handle.cell ⟨0⟩) hmem
+  have hlive0 := hlive (2, 0) List.mem_cons_self
   change (w.Ρ ⟨0⟩).isSome = true at hlive0
   rw [hnone] at hlive0
   cases hlive0

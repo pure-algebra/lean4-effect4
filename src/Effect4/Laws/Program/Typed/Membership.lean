@@ -46,15 +46,27 @@ covariant. -/
 def FiberDeclared (w : World) (id : FiberId) (a e : Ty) : Prop :=
   ∃ fty, w.Γ id = some fty ∧ Ty.subN fty.answer a = true ∧ Ty.subN fty.error e = true
 
-/-- Declared liveness: every cell, deferred and fiber handle the value names is declared in the
-world's tables. This is the declaration evidence supplied by allocation postconditions;
-no heap-length evidence is required here. -/
+/-- The column a handle frame of kind `kind` at `index` is read in: a cell, deferred or fiber the
+world declares, a scope or memo map the world's store holds, an external it has allocated. An
+unregistered byte is no capability. -/
+def KindLive (w : World) (index : Nat) : Option HandleKind → Prop
+  | some .cell => (w.Ρ ⟨index⟩).isSome = true
+  | some .promise => (w.«Π» ⟨index⟩).isSome = true
+  | some .fiber => (w.Γ ⟨index⟩).isSome = true
+  | some .scope => ScopeLive w index
+  | some .memoMap => MemoLive w ⟨index⟩
+  | some .external => index < w.state.externals.allocated.length
+  | none => False
+
+/-- **Capability membership** (finding F-WF, owner's ruling 2026-10-02: membership at `unknown` is
+validity): every raw handle frame of the value (`Store.Val.handles`, unregistered bytes included)
+is live in its kind's column (`KindLive`). Cells, deferreds and fibers are read in the declaration
+tables, as allocation posts supply them; with the store's forward bounds (`StoreTyped.heap`,
+`.promises`) this is the store's validity (`live_validIn`), which `Stores.WF` asks of every stored
+value and closing exit. Before the ruling only the registered cell, deferred and fiber frames
+were read (`Val.keys`), so `.handle 255 7` fit `unknown` (`E4-TYPED-CE-040`). -/
 def Live (w : World) (v : Val) : Prop :=
-  ∀ h ∈ v.keys, match h with
-  | .cell key => (w.Ρ key).isSome = true
-  | .promise key => (w.«Π» key).isSome = true
-  | .fiber id => (w.Γ id).isSome = true
-  | _ => True
+  ∀ h ∈ Store.Val.handles v, KindLive w h.2 (HandleKind.ofByte? h.1)
 
 /-- The reserved and external handle spellings (`Val.hasTy`'s `.handle` arm), with the native
 cell and deferred spellings read as their declarations: `Ref.Ref<number>` is a cell declared at
@@ -66,9 +78,10 @@ def HandleFits (w : World) (kind : UInt8) (index : Nat) (target : String) : Prop
   | some .cell => target = NativeOp.refTarget ∧ RefDeclared w ⟨index⟩ .nat
   | some .promise => target = NativeOp.deferredTarget ∧ PromiseDeclared w ⟨index⟩ .nat .nat
   | some .scope => target = Ty.scopeTarget ∧ ScopeLive w index
-  -- a memo map is read through a guard, so its handle has its own type; no world column holds
-  -- memo maps, and no store row halts on an unknown one (decisions row 187)
-  | some .memoMap => target = Ty.memoMapTarget
+  -- a memo map is read through a guard, so its handle has its own type; it names a memo map the
+  -- world's store holds (decisions row 187, amended 2026-10-02 by finding F-WF: capability
+  -- membership reads presence for every kind; memo maps are never removed, `Stores.le`)
+  | some .memoMap => target = Ty.memoMapTarget ∧ MemoLive w ⟨index⟩
   | some .external => externalHandleTarget target = true ∧
       w.state.externals.allocated[index]? = some target
   | _ => False
@@ -386,7 +399,7 @@ theorem handle_fits_hasTy (w : World) {v : Val} {target : String} (h : Fits w v 
       exact beq_iff_eq.mpr h.1
     · rename_i hk
       simp only [hk]
-      exact beq_iff_eq.mpr h
+      exact beq_iff_eq.mpr h.1
     · rename_i hk
       simp only [hk]
       exact Bool.and_eq_true_iff.mpr ⟨h.1, beq_iff_eq.mpr h.2⟩
@@ -860,7 +873,7 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
 
 /-! ## Declared liveness follows from membership -/
 
-theorem live_of_keys_nil {w : World} {v : Val} (h : v.keys = []) : Live w v := by
+theorem live_of_handles_nil {w : World} {v : Val} (h : Store.Val.handles v = []) : Live w v := by
   intro k hk
   rw [h] at hk
   cases hk
@@ -868,15 +881,16 @@ theorem live_of_keys_nil {w : World} {v : Val} (h : v.keys = []) : Live w v := b
 theorem live_list {w : World} {values : List Val} (h : ∀ x ∈ values, Live w x) :
     Live w (.list values) := by
   intro k hk
-  rw [Val.keys_list, List.mem_flatMap] at hk
-  obtain ⟨x, hx, hkx⟩ := hk
+  have hk' : k ∈ Store.Val.handlesList values := hk
+  rw [Store.Val.handlesList_eq_flatMap, List.mem_flatMap] at hk'
+  obtain ⟨x, hx, hkx⟩ := hk'
   exact h x hx k hkx
 
 theorem live_ctor {w : World} {i : Nat} {args : List Val} (h : ∀ x ∈ args, Live w x) :
     Live w (.ctor i args) := by
   intro k hk
-  have hk' : k ∈ Val.keysList args := hk
-  rw [Val.keysList_eq_flatMap, List.mem_flatMap] at hk'
+  have hk' : k ∈ Store.Val.handlesList args := hk
+  rw [Store.Val.handlesList_eq_flatMap, List.mem_flatMap] at hk'
   obtain ⟨x, hx, hkx⟩ := hk'
   exact h x hx k hkx
 
@@ -886,22 +900,38 @@ theorem live_ctor_one {w : World} {i : Nat} {x : Val} (h : Live w x) : Live w (.
     subst hy
     exact h
 
-/-- A reified cause names no handle (`causeImage_handleFree`). -/
-theorem keys_of_cause {v : Val} {c : CauseV} (h : Val.cause? v = some c) : v.keys = [] := by
+/-- A reified failed exit names no handle: the cause image writes none (`causeImage_handleFree`). -/
+theorem handles_exitErr (c : CauseV) : Store.Val.handles (Val.exitErr c) = [] := by
+  show Store.Val.handles (.ctor 1 [causeImage.toVal c]) = []
+  rw [Store.Val.handles, Store.Val.handlesList_cons, causeImage_handleFree c,
+    Store.Val.handlesList_nil]
+  rfl
+
+/-- A reified cause names no handle. -/
+theorem handles_of_cause {v : Val} {c : CauseV} (h : Val.cause? v = some c) :
+    Store.Val.handles v = [] := by
   unfold Val.cause? at h
   split at h
   · rename_i written
     rw [Store.Image.ofVal_exact causeImage h]
-    exact Val.keys_exitErr c
+    exact handles_exitErr c
   · exact nomatch h
+
+/-- One handle frame of a registered kind is live when its column holds it. -/
+theorem live_kind {w : World} {k : HandleKind} {index : Nat} (h : KindLive w index (some k)) :
+    Live w (.handle k.byte index) := by
+  intro x hx
+  have hx' : x ∈ [(k.byte, index)] := hx
+  rw [List.mem_singleton] at hx'
+  subst hx'
+  show KindLive w index (HandleKind.ofByte? k.byte)
+  rw [HandleKind.ofByte?_byte]
+  exact h
 
 theorem live_fiber {w : World} {index : Nat} {a e : Ty} (h : FiberDeclared w ⟨index⟩ a e) :
     Live w (Value.fiber index) := by
   obtain ⟨fty, hΓ, _⟩ := h
-  intro k hk
-  have hk' : k ∈ (Val.fiber ⟨index⟩).keys := hk
-  rw [Val.keys_fiber, List.mem_singleton] at hk'
-  subst hk'
+  refine live_kind (k := .fiber) ?_
   show (w.Γ ⟨index⟩).isSome = true
   rw [hΓ]
   rfl
@@ -909,10 +939,7 @@ theorem live_fiber {w : World} {index : Nat} {a e : Ty} (h : FiberDeclared w ⟨
 theorem live_cell {w : World} {index : Nat} {t : Ty} (h : RefDeclared w ⟨index⟩ t) :
     Live w (Value.cell index) := by
   obtain ⟨t', hΡ, _⟩ := h
-  intro k hk
-  have hk' : k ∈ (Val.cell ⟨index⟩).keys := hk
-  rw [Val.keys_cell, List.mem_singleton] at hk'
-  subst hk'
+  refine live_kind (k := .cell) ?_
   show (w.Ρ ⟨index⟩).isSome = true
   rw [hΡ]
   rfl
@@ -920,10 +947,7 @@ theorem live_cell {w : World} {index : Nat} {t : Ty} (h : RefDeclared w ⟨index
 theorem live_promise {w : World} {index : Nat} {a e : Ty}
     (h : PromiseDeclared w ⟨index⟩ a e) : Live w (Value.promise index) := by
   obtain ⟨a', e', hPi, _⟩ := h
-  intro k hk
-  have hk' : k ∈ (Val.promise ⟨index⟩).keys := hk
-  rw [Val.keys_promise, List.mem_singleton] at hk'
-  subst hk'
+  refine live_kind (k := .promise) ?_
   show (w.«Π» ⟨index⟩).isSome = true
   rw [hPi]
   rfl
@@ -940,36 +964,48 @@ theorem live_handle {w : World} {kind : UInt8} {index : Nat} {target : String}
     exact live_promise h.2
   · rename_i hk
     rw [HandleKind.ofByte?_exact hk]
-    intro k hk'
-    have hk'' : k ∈ (Val.scopeHandle index).keys := hk'
-    rw [Val.keys_scopeHandle, List.mem_singleton] at hk''
-    subst hk''
-    trivial
+    exact live_kind (k := .scope) h.2
   · rename_i hk
     rw [HandleKind.ofByte?_exact hk]
-    intro k hk'
-    have hk'' : k ∈ (Val.memoMap ⟨index⟩).keys := hk'
-    rw [Val.keys_memoMap, List.mem_singleton] at hk''
-    subst hk''
-    trivial
+    exact live_kind (k := .memoMap) h.2
   · rename_i hk
     rw [HandleKind.ofByte?_exact hk]
-    intro k hk'
-    have hk'' : k ∈ (Handle.ofCode (7, index)).toList := hk'
-    have hcode : Handle.ofCode (7, index) = some (.external index) := rfl
-    rw [hcode, Option.toList_some, List.mem_singleton] at hk''
-    subst hk''
-    trivial
+    exact live_kind (k := .external) (List.getElem?_eq_some_iff.mp h.2).1
   · exact h.elim
 
 theorem live_some {w : World} {x : Val} (h : Live w x) : Live w (.some x) := h
 
 theorem live_pair {w : World} {a x : Val} (ha : Live w a) (hx : Live w x) : Live w (.pair a x) := by
   intro k hk
-  have hk' : k ∈ Val.keys a ++ Val.keys x := hk
+  have hk' : k ∈ Store.Val.handles a ++ Store.Val.handles x := hk
   rcases List.mem_append.mp hk' with h | h
   · exact ha k h
   · exact hx k h
+
+/-- **Capability membership is the store's validity**, given the store's forward bounds (the
+heap and the Deferred cells hold every declared index; `StoreTyped.heap`, `.promises`). Codex's
+`rawLive_validIn` (`m6-adoption-next/RawLiveBridge.lean`), on the restated `Live`. -/
+theorem live_validIn {w : World} {v : Val}
+    (heap : ∀ k, (w.Ρ k).isSome = true → k.index < w.state.refs.length)
+    (promises : ∀ k, (w.«Π» k).isSome = true → k.index < w.state.deferreds.cells.length)
+    (live : Live w v) : v.validIn w.state = true := by
+  rw [Val.validIn_eq_handles, List.all_eq_true]
+  intro h hh
+  have hl := live h hh
+  unfold Stores.handleValid
+  cases hk : HandleKind.ofByte? h.1 with
+  | none =>
+    rw [hk] at hl
+    exact hl.elim
+  | some k =>
+    rw [hk] at hl
+    cases k with
+    | cell => exact decide_eq_true (heap ⟨h.2⟩ hl)
+    | promise => exact decide_eq_true (promises ⟨h.2⟩ hl)
+    | fiber => rfl
+    | scope => exact hl
+    | memoMap => exact hl
+    | external => exact decide_eq_true hl
 
 /-- The handle arm keeps declared liveness (shared by a nominal reference, `fits_app_iff`). -/
 theorem handle_fits_live {w : World} {v : Val} {target : String} (h : Fits w v (.handle target)) :
@@ -980,17 +1016,17 @@ theorem handle_fits_live {w : World} {v : Val} {target : String} (h : Fits w v (
   · obtain ⟨_, _, _, _, hl⟩ := h
     exact hl
 
-theorem intImage_keys {v : Val} (h : intImage v = true) : v.keys = [] := by
+theorem intImage_handles {v : Val} (h : intImage v = true) : Store.Val.handles v = [] := by
   unfold intImage at h
   split at h
   · rfl
   · rfl
   · exact Bool.noConfusion h
 
-theorem numberImage_keys {v : Val} (h : numberImage v = true) : v.keys = [] := by
+theorem numberImage_handles {v : Val} (h : numberImage v = true) : Store.Val.handles v = [] := by
   unfold numberImage at h
   rcases Bool.or_eq_true_iff.mp h with h | h
-  · exact intImage_keys h
+  · exact intImage_handles h
   · split at h
     · rfl
     · exact Bool.noConfusion h
@@ -1019,7 +1055,7 @@ theorem namedFit_live {w : World} :
           obtain ⟨hns, hxs⟩ := namedFit_live ps ns xs hp' h.2
           refine ⟨fun y hy => ?_, fun y hy => ?_⟩
           · rcases List.mem_cons.mp hy with rfl | hy
-            · exact live_of_keys_nil rfl
+            · exact live_of_handles_nil rfl
             · exact hns y hy
           · rcases List.mem_cons.mp hy with rfl | hy
             · exact hP y h.1
@@ -1040,7 +1076,7 @@ theorem itemsFit_live {w : World} :
     · exact itemsFit_live ps xs (fun Q hQ => hp Q (List.mem_cons_of_mem _ hQ)) h.2 z hz
   | [], _ :: _, _, h => h.elim
 
-/-- **Membership implies declared liveness**, at every type. -/
+/-- **Membership implies capability membership**, at every type. -/
 theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w v := by
   intro ty
   induction ty with
@@ -1049,32 +1085,32 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
     intro v h
     simp only [Fits] at h
     split at h
-    · exact live_of_keys_nil rfl
+    · exact live_of_handles_nil rfl
     · exact h.elim
   | nat =>
     intro v h
     simp only [Fits] at h
     split at h
-    · exact live_of_keys_nil rfl
+    · exact live_of_handles_nil rfl
     · exact h.elim
   | string =>
     intro v h
     simp only [Fits] at h
     split at h
-    · exact live_of_keys_nil rfl
+    · exact live_of_handles_nil rfl
     · exact h.elim
   | bool =>
     intro v h
     simp only [Fits] at h
     split at h
-    · exact live_of_keys_nil rfl
+    · exact live_of_handles_nil rfl
     · exact h.elim
   | handle target => intro v h; exact handle_fits_live h
   | option a ih =>
     intro v h
     simp only [Fits] at h
     split at h
-    · exact live_of_keys_nil rfl
+    · exact live_of_handles_nil rfl
     · rename_i x
       exact ih x h
     · exact h.elim
@@ -1086,10 +1122,9 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
       split at h
       · rename_i ids hids
         rw [Val.snapshot?_exact hids]
-        intro k hk
-        rw [Val.keys_fibers, List.mem_map] at hk
-        obtain ⟨id, hid, rfl⟩ := hk
-        exact ih _ (h id hid) (Handle.fiber id) (by rw [Val.keys_fiber]; exact List.mem_singleton_self _)
+        refine live_ctor_one (live_list fun x hx => ?_)
+        obtain ⟨id, hid, rfl⟩ := List.mem_map.mp hx
+        exact ih _ (h id hid)
       · exact h.elim
     · exact live_list fun x hx => ih x (h x hx)
     · exact h.elim
@@ -1119,9 +1154,9 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
     · rename_i written
       split at h
       · rename_i c hc
-        refine live_ctor_one (live_of_keys_nil ?_)
+        refine live_ctor_one (live_of_handles_nil ?_)
         rw [Store.Image.ofVal_exact causeImage hc]
-        exact Val.keys_causeImage c
+        exact causeImage_handleFree c
       · exact h.elim
     · exact h.elim
   | causeOf e _ =>
@@ -1129,7 +1164,7 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
     simp only [Fits] at h
     split at h
     · rename_i c hc
-      exact live_of_keys_nil (keys_of_cause hc)
+      exact live_of_handles_nil (handles_of_cause hc)
     · exact h.elim
   | fiberOf a e _ _ =>
     intro v h
@@ -1145,7 +1180,7 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
     intro v h
     simp only [Fits] at h
     split at h
-    · exact live_of_keys_nil rfl
+    · exact live_of_handles_nil rfl
     · exact h.elim
   | refOf t _ =>
     intro v h
@@ -1199,13 +1234,13 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
       exact ih t ht y hy
     all_goals exact h.elim
   | app name args _ => intro v h; exact handle_fits_live ((fits_app_iff w v name args).mp h)
-  | int => intro v h; exact live_of_keys_nil (intImage_keys h)
-  | number => intro v h; exact live_of_keys_nil (numberImage_keys h)
+  | int => intro v h; exact live_of_handles_nil (intImage_handles h)
+  | number => intro v h; exact live_of_handles_nil (numberImage_handles h)
   | null | undefined | bytes =>
     intro v h
     simp only [Fits] at h
     split at h
-    · exact live_of_keys_nil rfl
+    · exact live_of_handles_nil rfl
     · exact h.elim
 
 
@@ -1221,19 +1256,31 @@ section Map
 variable {w1 w2 : World}
   (hΓ : TableExtends w1.Γ w2.Γ) (hPi : TableExtends w1.«Π» w2.«Π») (hRho : TableExtends w1.Ρ w2.Ρ)
   (halloc : Extends w1.state.externals.allocated w2.state.externals.allocated)
-  (hscope : ∀ sc, ScopeLive w1 sc → ScopeLive w2 sc)
+  (hstore : w1.state.le w2.state)
 include hΓ hPi hRho
 
-theorem live_map {v : Val} (h : Live w1 v) : Live w2 v := by
-  intro k hk
-  have hk' := h k hk
+include halloc hstore in
+/-- A handle frame's column moves along the tables and the store: scopes and memo maps are never
+removed (`Stores.le`), externals only grow. -/
+theorem kindLive_map {index : Nat} {k : Option HandleKind} (h : KindLive w1 index k) :
+    KindLive w2 index k := by
   cases k with
-  | cell key => exact isSome_extends hRho hk'
-  | promise key => exact isSome_extends hPi hk'
-  | fiber id => exact isSome_extends hΓ hk'
-  | scope _ => trivial
-  | memoMap _ => trivial
-  | external _ => trivial
+  | none => exact h
+  | some k =>
+    cases k with
+    | cell => exact isSome_extends hRho h
+    | promise => exact isSome_extends hPi h
+    | fiber => exact isSome_extends hΓ h
+    | scope => exact hstore.2.2.1 index h
+    | memoMap => exact hstore.2.2.2.2.1 ⟨index⟩ h
+    | external =>
+      obtain ⟨t, ht⟩ : ∃ t, w1.state.externals.allocated[index]? = some t :=
+        ⟨_, List.getElem?_eq_getElem h⟩
+      exact (List.getElem?_eq_some_iff.mp (halloc index t ht)).1
+
+include halloc hstore in
+theorem live_map {v : Val} (h : Live w1 v) : Live w2 v :=
+  fun k hk => kindLive_map hΓ hPi hRho halloc hstore (h k hk)
 
 omit hPi hRho in
 theorem fiberDeclared_map {id : FiberId} {a e : Ty} (h : FiberDeclared w1 id a e) :
@@ -1253,22 +1300,22 @@ theorem promiseDeclared_map {key : DeferredKey} {a e : Ty} (h : PromiseDeclared 
   obtain ⟨a', e', hs, ha, he⟩ := h
   exact ⟨a', e', hPi key (a', e') hs, ha, he⟩
 
-include halloc hscope in
+include halloc hstore in
 omit hΓ in
-/-- A handle's membership moves along the tables and the scope store (row 156: a scope handle
-needs its scope present in the later world too). -/
+/-- A handle's membership moves along the tables and the store (row 156: a scope handle needs
+its scope present in the later world too; row 187 amended: a memo map handle its map). -/
 theorem handleFits_map {kind : UInt8} {index : Nat} {target : String}
     (h : HandleFits w1 kind index target) : HandleFits w2 kind index target := by
   simp only [HandleFits] at h ⊢
   split at h
   · exact ⟨h.1, refDeclared_map hRho h.2⟩
   · exact ⟨h.1, promiseDeclared_map hPi h.2⟩
-  · exact ⟨h.1, hscope index h.2⟩
-  · exact h
+  · exact ⟨h.1, hstore.2.2.1 index h.2⟩
+  · exact ⟨h.1, hstore.2.2.2.2.1 ⟨index⟩ h.2⟩
   · exact ⟨h.1, halloc index target h.2⟩
   · exact h.elim
 
-include halloc hscope in
+include halloc hstore in
 omit hΓ in
 theorem flatFits_map {v : Val} {t : Ty} (h : FlatFits w1 v t) : FlatFits w2 v t := by
   cases t
@@ -1279,11 +1326,11 @@ theorem flatFits_map {v : Val} {t : Ty} (h : FlatFits w1 v t) : FlatFits w2 v t 
   case handle target =>
     simp only [FlatFits] at h ⊢
     split at h
-    · exact handleFits_map hPi hRho halloc hscope h
+    · exact handleFits_map hPi hRho halloc hstore h
     · exact h.elim
   all_goals exact h.elim
 
-include halloc hscope in
+include halloc hstore in
 omit hΓ in
 /-- A context's services fit in a later world when every carrier the later world reads was the
 earlier world's (the lookup agreement of decisions row 112; the world order gives it as an
@@ -1292,7 +1339,7 @@ theorem servicesFit_map {services : Env.Ctx}
     (hsvc : ∀ key sty, w2.serviceTy key = some sty → w1.serviceTy key = some sty)
     (h : ServicesFit w1 services) : ServicesFit w2 services :=
   fun key sv sty hget hty =>
-    flatFits_map hPi hRho halloc hscope (h key sv sty hget (hsvc key sty hty))
+    flatFits_map hPi hRho halloc hstore (h key sv sty hget (hsvc key sty hty))
 
 end Map
 
@@ -1344,23 +1391,23 @@ theorem itemsFit_mono :
 theorem handle_fits_map {w1 w2 : World}
     (hΓ : TableExtends w1.Γ w2.Γ) (hPi : TableExtends w1.«Π» w2.«Π») (hRho : TableExtends w1.Ρ w2.Ρ)
     (halloc : Extends w1.state.externals.allocated w2.state.externals.allocated)
-    (hscope : ∀ sc, ScopeLive w1 sc → ScopeLive w2 sc)
+    (hstore : w1.state.le w2.state)
     (hsvc : ∀ key sty, w2.serviceTy key = some sty → w1.serviceTy key = some sty)
     {v : Val} {target : String} (h : Fits w1 v (.handle target)) : Fits w2 v (.handle target) := by
   simp only [Fits] at h
   split at h
-  · exact handleFits_map hPi hRho halloc hscope h
+  · exact handleFits_map hPi hRho halloc hstore h
   · obtain ⟨ht, ctx, hctx, hs, hl⟩ := h
     simp only [Fits]
-    exact ⟨ht, ctx, hctx, servicesFit_map hPi hRho halloc hscope hsvc hs, live_map hΓ hPi hRho hl⟩
+    exact ⟨ht, ctx, hctx, servicesFit_map hPi hRho halloc hstore hsvc hs, live_map hΓ hPi hRho halloc hstore hl⟩
 
 /-- Membership moves to a world whose declaration tables and allocation spellings extend
-the old ones, whose scope store keeps every present scope (row 156), and whose service table
-agrees on every key it types. -/
+the old ones, whose store grows (`Stores.le`: every present scope and memo map stays, rows 156 and
+187), and whose service table agrees on every key it types. -/
 theorem fits_map {w1 w2 : World}
     (hΓ : TableExtends w1.Γ w2.Γ) (hPi : TableExtends w1.«Π» w2.«Π») (hRho : TableExtends w1.Ρ w2.Ρ)
     (halloc : Extends w1.state.externals.allocated w2.state.externals.allocated)
-    (hscope : ∀ sc, ScopeLive w1 sc → ScopeLive w2 sc)
+    (hstore : w1.state.le w2.state)
     (hsvc : ∀ key sty, w2.serviceTy key = some sty → w1.serviceTy key = some sty) :
     ∀ (ty : Ty) (v : Val), Fits w1 v ty → Fits w2 v ty := by
   intro ty
@@ -1370,7 +1417,7 @@ theorem fits_map {w1 w2 : World}
   | nat => intro v h; exact h
   | string => intro v h; exact h
   | bool => intro v h; exact h
-  | handle target => intro v h; exact handle_fits_map hΓ hPi hRho halloc hscope hsvc h
+  | handle target => intro v h; exact handle_fits_map hΓ hPi hRho halloc hstore hsvc h
   | option a ih =>
     intro v h
     simp only [Fits] at h
@@ -1448,7 +1495,7 @@ theorem fits_map {w1 w2 : World}
     · exact promiseDeclared_map hPi h
     · exact h.elim
   | var _ => intro v h; exact h.elim
-  | unknown => intro v h; exact live_map hΓ hPi hRho h
+  | unknown => intro v h; exact live_map hΓ hPi hRho halloc hstore h
   | record fs ih =>
     intro v h
     obtain ⟨ns, xs, hv, hfit⟩ := fits_record_inv w1 v fs h
@@ -1489,7 +1536,7 @@ theorem fits_map {w1 w2 : World}
   | app name args _ =>
     intro v h
     exact (fits_app_iff w2 v name args).mpr
-      (handle_fits_map hΓ hPi hRho halloc hscope hsvc ((fits_app_iff w1 v name args).mp h))
+      (handle_fits_map hΓ hPi hRho halloc hstore hsvc ((fits_app_iff w1 v name args).mp h))
   | int | null | undefined | number | bytes => intro v h; exact h
 
 /-- The world order fixes the service table, so a later world's lookups are the earlier one's. -/
@@ -1500,8 +1547,8 @@ theorem serviceTy_of_le {w w' : World} (ordered : w.le w') :
 /-- Membership is monotone under the host world order. -/
 theorem fits_mono {w w' : World} (ordered : w.leHost w') {ty : Ty} {v : Val} (h : Fits w v ty) :
     Fits w' v ty :=
-  fits_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2
-    (fun _ live => scopeLive_mono ordered.1 live) (serviceTy_of_le ordered.1) ty v h
+  fits_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 ordered.1.1.2
+    (serviceTy_of_le ordered.1) ty v h
 
 /-! ## Scope handles: membership owns presence (decisions row 156) -/
 
@@ -1522,7 +1569,7 @@ theorem fits_scope_inv {w : World} {v : Val} (h : Fits w v Ty.scope) :
       have hkind : kind = HandleKind.scope.byte := HandleKind.ofByte?_exact hk
       subst hkind
       exact ⟨index, rfl, h.2⟩
-    · exact absurd h (by decide)
+    · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
     · exact h.elim
   · exact absurd h.1 (by decide)
@@ -2338,7 +2385,7 @@ theorem fits_context_inv {w : World} {v : Val} (h : Fits w v (.handle Ty.context
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
-    · exact absurd h (by decide)
+    · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
     · exact h.elim
   · obtain ⟨_, ctx, hctx, services, _⟩ := h
@@ -2356,7 +2403,7 @@ theorem fits_nat_irrel (w : World) (n m : Nat) : ∀ t, Fits w (Val.nat n) t →
     rcases h with h | h
     · exact Or.inl (ihl h)
     · exact Or.inr (ihr h)
-  | unknown => intro _; exact live_of_keys_nil rfl
+  | unknown => intro _; exact live_of_handles_nil rfl
   | handle target =>
     intro h
     obtain ⟨_, ctx, hctx, _⟩ := h
@@ -3543,7 +3590,7 @@ theorem fits_of_inhabited_handleFree :
   | bool => intro _ _; exact ⟨.bool true, fun _ => trivial⟩
   | lit s => intro _ _; exact ⟨.str s, fun _ => rfl⟩
   | option _ _ => intro _ _; exact ⟨.none, fun _ => trivial⟩
-  | unknown => intro _ _; exact ⟨.unit, fun _ => live_of_keys_nil rfl⟩
+  | unknown => intro _ _; exact ⟨.unit, fun _ => live_of_handles_nil rfl⟩
   | list a _ =>
     intro _ _
     refine ⟨.list [], fun w => ?_⟩
@@ -3606,27 +3653,27 @@ structure Grows (w w' : World) : Prop where
   promise : TableExtends w.«Π» w'.«Π»
   cell : TableExtends w.Ρ w'.Ρ
   alloc : Extends w.state.externals.allocated w'.state.externals.allocated
-  scope : ∀ sc, ScopeLive w sc → ScopeLive w' sc
+  store : w.state.le w'.state
   service : w'.serviceTy = w.serviceTy
 
 theorem Grows.refl (w : World) : Grows w w :=
-  ⟨table_refl _, table_refl _, table_refl _, fun _ _ h => h, fun _ h => h, rfl⟩
+  ⟨table_refl _, table_refl _, table_refl _, fun _ _ h => h, Stores.le_refl _, rfl⟩
 
 theorem Grows.trans {a b c : World} (hab : Grows a b) (hbc : Grows b c) : Grows a c :=
   ⟨table_trans _ _ _ hab.fiber hbc.fiber, table_trans _ _ _ hab.promise hbc.promise,
     table_trans _ _ _ hab.cell hbc.cell, fun i t h => hbc.alloc i t (hab.alloc i t h),
-    fun sc h => hbc.scope sc (hab.scope sc h), hbc.service.trans hab.service⟩
+    Stores.le_trans hab.store hbc.store, hbc.service.trans hab.service⟩
 
 theorem Grows.fits {w w' : World} (h : Grows w w') {t : Ty} {v : Val} (hv : Fits w v t) :
     Fits w' v t :=
-  fits_map h.fiber h.promise h.cell h.alloc h.scope
+  fits_map h.fiber h.promise h.cell h.alloc h.store
     (fun key sty hk => by rw [← h.service]; exact hk) t v hv
 
 /-- Declaring fiber `n` keeps every earlier membership and frees the keys above it. -/
 theorem FreshFrom.addFiber {w : World} {n : Nat} (h : FreshFrom w n) (ty : EffTy) :
     Grows w (w.addFiber ⟨n⟩ ty) ∧ FreshFrom (w.addFiber ⟨n⟩ ty) (n + 1) := by
   refine ⟨⟨insert_extends _ _ _ (h.fiber ⟨n⟩ (Nat.le_refl n)), table_refl _, table_refl _,
-    fun _ _ hx => hx, fun _ hs => hs, rfl⟩, ⟨fun id hid => ?_, fun key hk => h.promise key (Nat.le_of_succ_le hk),
+    fun _ _ hx => hx, Stores.le_refl _, rfl⟩, ⟨fun id hid => ?_, fun key hk => h.promise key (Nat.le_of_succ_le hk),
     fun key hk => h.cell key (Nat.le_of_succ_le hk)⟩⟩
   have hne : id ≠ ⟨n⟩ := fun heq => by
     subst heq
@@ -3639,7 +3686,7 @@ theorem FreshFrom.addFiber {w : World} {n : Nat} (h : FreshFrom w n) (ty : EffTy
 theorem FreshFrom.addRef {w : World} {n : Nat} (h : FreshFrom w n) (ty : Ty) :
     Grows w (w.addRef w.state ⟨n⟩ ty) ∧ FreshFrom (w.addRef w.state ⟨n⟩ ty) (n + 1) := by
   refine ⟨⟨table_refl _, table_refl _, insert_extends _ _ _ (h.cell ⟨n⟩ (Nat.le_refl n)),
-    fun _ _ hx => hx, fun _ hs => hs, rfl⟩, ⟨fun id hid => h.fiber id (Nat.le_of_succ_le hid),
+    fun _ _ hx => hx, Stores.le_refl _, rfl⟩, ⟨fun id hid => h.fiber id (Nat.le_of_succ_le hid),
     fun key hk => h.promise key (Nat.le_of_succ_le hk), fun key hk => ?_⟩⟩
   have hne : key ≠ ⟨n⟩ := fun heq => by
     subst heq
@@ -3652,7 +3699,7 @@ theorem FreshFrom.addRef {w : World} {n : Nat} (h : FreshFrom w n) (ty : Ty) :
 theorem FreshFrom.addPromise {w : World} {n : Nat} (h : FreshFrom w n) (types : Ty × Ty) :
     Grows w (w.addPromise w.state ⟨n⟩ types) ∧ FreshFrom (w.addPromise w.state ⟨n⟩ types) (n + 1) := by
   refine ⟨⟨table_refl _, insert_extends _ _ _ (h.promise ⟨n⟩ (Nat.le_refl n)), table_refl _,
-    fun _ _ hx => hx, fun _ hs => hs, rfl⟩, ⟨fun id hid => h.fiber id (Nat.le_of_succ_le hid),
+    fun _ _ hx => hx, Stores.le_refl _, rfl⟩, ⟨fun id hid => h.fiber id (Nat.le_of_succ_le hid),
     fun key hk => ?_, fun key hk => h.cell key (Nat.le_of_succ_le hk)⟩⟩
   have hne : key ≠ ⟨n⟩ := fun heq => by
     subst heq
@@ -3668,7 +3715,9 @@ def World.allocExternal (w : World) (target : String) : World :=
 
 theorem FreshFrom.allocExternal {w : World} {n : Nat} (h : FreshFrom w n) (target : String) :
     Grows w (w.allocExternal target) ∧ FreshFrom (w.allocExternal target) n :=
-  ⟨⟨table_refl _, table_refl _, table_refl _, extends_append _ _, fun _ hs => hs, rfl⟩,
+  ⟨⟨table_refl _, table_refl _, table_refl _, extends_append _ _,
+      ⟨Nat.le_refl _, Nat.le_refl _, fun _ hs => hs, Nat.le_refl _, fun _ hm => hm,
+        by show _ ≤ (_ ++ [target]).length; rw [List.length_append]; exact Nat.le_add_right _ _⟩, rfl⟩,
     ⟨h.fiber, h.promise, h.cell⟩⟩
 
 /-- A scope allocated at the store's next name, as `scopeMake` allocates it
@@ -3683,8 +3732,26 @@ present (row 156: a scope handle needs a present scope). -/
 theorem FreshFrom.allocScope {w : World} {n : Nat} (h : FreshFrom w n) :
     Grows w w.allocScope ∧ FreshFrom w.allocScope n ∧ ScopeLive w.allocScope w.state.nextName :=
   ⟨⟨table_refl _, table_refl _, table_refl _, fun _ _ hx => hx,
-      fun sc hs => ScopeStore.entryAt_make_isSome _ _ _ sc hs, rfl⟩,
+      ⟨Nat.le_refl _, Nat.le_refl _, fun sc hs => ScopeStore.entryAt_make_isSome _ _ _ sc hs,
+        Nat.le_succ _, fun _ hm => hm, Nat.le_refl _⟩, rfl⟩,
     ⟨h.fiber, h.promise, h.cell⟩, ScopeStore.entryAt_make_self _ _ _⟩
+
+/-- A memo map allocated at the store's next name, as `memoFork none` allocates it
+(`Machine/Stores.lean`'s `syncOpStep`, `StoresLaws.syncOpStep_memoFork`). -/
+def World.allocMemo (w : World) : World :=
+  { w with state := { w.state with
+      memo := w.state.memo ++ [⟨⟨w.state.nextName⟩, none, []⟩]
+      nextName := w.state.nextName + 1 } }
+
+/-- Allocating a memo map keeps every earlier membership and every fresh key, and the new map is
+present (row 187 amended by F-WF: a memo map handle needs a present map). -/
+theorem FreshFrom.allocMemo {w : World} {n : Nat} (h : FreshFrom w n) :
+    Grows w w.allocMemo ∧ FreshFrom w.allocMemo n ∧
+      MemoLive w.allocMemo ⟨w.state.nextName⟩ :=
+  ⟨⟨table_refl _, table_refl _, table_refl _, fun _ _ hx => hx,
+      ⟨Nat.le_refl _, Nat.le_refl _, fun _ hs => hs, Nat.le_succ _,
+        fun _ hm => MemoWorld.mapAt_append_isSome hm, Nat.le_refl _⟩, rfl⟩,
+    ⟨h.fiber, h.promise, h.cell⟩, MemoWorld.mapAt_append_self _ ⟨⟨w.state.nextName⟩, none, []⟩⟩
 
 /-- The `handle` former at every target, in a world grown from any world with fresh keys. -/
 theorem fits_handle_fresh (target : String) (w : World) (n : Nat) (hn : FreshFrom w n) :
@@ -3712,15 +3779,16 @@ theorem fits_handle_fresh (target : String) (w : World) (n : Nat) (hn : FreshFro
     · obtain ⟨hg, hf, hlive⟩ := hn.allocScope
       exact ⟨_, n, Val.handle HandleKind.scope.byte w.state.nextName, hg, hf,
         (rfl : Ty.scopeTarget = Ty.scopeTarget), hlive⟩
-    · have hkeys : (Val.context emptyCtx).keys = [] := by decide
+    · have hhandles : Store.Val.handles (Val.context emptyCtx) = [] := by decide
       refine ⟨w, n, Val.context emptyCtx, Grows.refl w, hn, rfl, emptyCtx,
-        ctxImage.ofVal_toVal emptyCtx, ?_, live_of_keys_nil hkeys⟩
+        ctxImage.ofVal_toVal emptyCtx, ?_, live_of_handles_nil hhandles⟩
       intro key sv sty hget _
       have hnone : emptyCtx.services.getV key = none := rfl
       rw [hnone] at hget
       cases hget
-    -- a memo map handle names no world column (decisions row 187)
-    · exact ⟨w, n, Val.handle HandleKind.memoMap.byte 0, Grows.refl w, hn, rfl⟩
+    -- a memo map handle names a present map (decisions row 187, amended by F-WF): allocate one
+    · obtain ⟨hg, hf, hpresent⟩ := hn.allocMemo
+      exact ⟨_, n, Val.handle HandleKind.memoMap.byte w.state.nextName, hg, hf, rfl, hpresent⟩
 
 /-- The record case's induction: one world threaded through the canonical fields; an optional
 field is left out of both lists, a required one gets a witness built in the grown world. -/
@@ -3811,7 +3879,7 @@ theorem fits_of_inhabited_fresh : ∀ (t : Ty), inhabited t = true → ∀ (w : 
   | bool => intro _ w n hn; exact ⟨w, n, .bool true, Grows.refl w, hn, trivial⟩
   | lit s => intro _ w n hn; exact ⟨w, n, .str s, Grows.refl w, hn, rfl⟩
   | option _ _ => intro _ w n hn; exact ⟨w, n, .none, Grows.refl w, hn, trivial⟩
-  | unknown => intro _ w n hn; exact ⟨w, n, .unit, Grows.refl w, hn, live_of_keys_nil rfl⟩
+  | unknown => intro _ w n hn; exact ⟨w, n, .unit, Grows.refl w, hn, live_of_handles_nil rfl⟩
   | list _ _ =>
     intro _ w n hn
     exact ⟨w, n, .list [], Grows.refl w, hn, fun x hx => nomatch hx⟩

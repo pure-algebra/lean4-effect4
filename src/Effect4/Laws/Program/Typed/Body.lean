@@ -23,8 +23,8 @@ any completed view is `TypedProg` at the admitted type. One arm per `Body` const
   acquired value is the answer, at the node's own answer column (`Checker.inv_acquireRelease`);
 - `release`: the release at its point (M5) under the finalizer that restores the previous context
   (`onExit_typed`, `setContext_typed`);
-- `layerBuild`: the layer family's build into a present scope (`layerBuild_typed`, every arm's
-  denotation from `childDenotes_upto`), at the build's types.
+- `layerBuild`: the layer family's build into a present scope through a present memo map
+  (`layerBuild_typed`, every arm's denotation from `childDenotes_upto`), at the build's types.
 
 Not established: anything about a machine; the clauses that consume this are `Evaluate`'s.
 `E4-TYPED-CE-039` refutes this bridge on the earlier `BodyTyped.fin`
@@ -121,17 +121,18 @@ theorem release_typed (root : ProgramSource) {w : World} (hwf : root.program.lay
     (subN_never _) (denoteAt_typed root hwf htie h)
     (fun _ o _ _ => setContext_typed root (servicesFit_mono o hsvc))
 
-/-- **A layer's build body is typed** at the build's types, into a present scope. -/
+/-- **A layer's build body is typed** at the build's types, into a present scope through a present
+memo map. -/
 theorem layerBuildR_typed (root : ProgramSource) {w : World} (hwf : root.program.layerRefsWF = true)
     (htie : w.serviceTy = root.sig.serviceTy) {q : Point} {lt : LayerTy} (m : MemoMapId)
-    {scope : Nat} (h : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) :
+    {scope : Nat} (h : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) (hmemo : MemoLive w m) :
     TypedProg root w (buildTy lt) (layerBuildR root.program q m scope) := by
   obtain ⟨l, hat, hcheck, henv, hview⟩ := h
   have unfolded : layerBuildR root.program q m scope = denoteLayer root.program l q m scope := by
     simp only [layerBuildR, hat]
   rw [unfolded]
   exact layerBuild_typed hwf q.fuel (childDenotes_upto root (provideLayerArm root) hwf q.fuel) l q w
-    lt m scope (Nat.le_refl _) htie hat ⟨l, hat, hcheck, henv, hview⟩ hlive
+    lt m scope (Nat.le_refl _) htie hat ⟨l, hat, hcheck, henv, hview⟩ hlive hmemo
 
 /-- **The body bridge**: an admitted body's program, at any completed view, is typed at the
 admitted type. -/
@@ -158,8 +159,8 @@ theorem bodyTyped_typed (root : ProgramSource) {w : World} (hwf : root.program.l
     show TypedProg root w ty
       (onExitR (denoteAt root.program p) fun _ => fiberValR (.setContext prev) rfl)
     exact release_typed root hwf htie h hsvc
-  | layerBuild p m scope lt h hlive =>
+  | layerBuild p m scope lt h hlive hmemo =>
     show TypedProg root w (buildTy lt) (layerBuildR root.program p m scope)
-    exact layerBuildR_typed root hwf htie m h hlive
+    exact layerBuildR_typed root hwf htie m h hlive hmemo
 
 end Effect4.Program.Typed

@@ -96,7 +96,7 @@ theorem hit : ∃ (w2 : W) (cell : DeferredKey) (owner : MemoMapId), Val.memoHit
     rw [← hst, step] at h
     exact Option.some.inj h
   subst answer
-  rcases post with unit | ⟨cell, owner, read, declared⟩
+  rcases post with unit | ⟨cell, owner, read, declared, _⟩
   · cases unit
   · exact ⟨w2, cell, owner, read, declared⟩
 

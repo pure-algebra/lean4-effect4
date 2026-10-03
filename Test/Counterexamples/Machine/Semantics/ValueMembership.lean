@@ -446,41 +446,6 @@ def TypedState (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) 
 
 end Reviewed
 
-/-- Under `WorldValid`, declared liveness is exactly `Reviewed.HandlesLive` (store lengths). -/
-theorem live_iff_handlesLive {rootTy : EffTy} {w : W} {m : RState} (valid : WorldValid rootTy w m)
-    (v : Val) : Effect4.Program.Typed.Live w v ↔ Reviewed.HandlesLive w v := by
-  constructor
-  · intro h k hk
-    have hk' := h k hk
-    cases k with
-    | cell key =>
-      show key.index < w.state.refs.length
-      rw [valid.state]
-      exact (valid.heap key).mp hk'
-    | promise key =>
-      show key.index < w.state.deferreds.cells.length
-      rw [valid.state]
-      exact (valid.promises key).mp hk'
-    | fiber id => exact hk'
-    | scope _ => trivial
-    | memoMap _ => trivial
-    | external _ => trivial
-  · intro h k hk
-    have hk' := h k hk
-    cases k with
-    | cell key =>
-      have hlt : key.index < m.state.refs.length := valid.state ▸ hk'
-      exact (valid.heap key).mpr hlt
-    | promise key =>
-      have hlt : key.index < m.state.deferreds.cells.length := valid.state ▸ hk'
-      exact (valid.promises key).mpr hlt
-    | fiber id => exact hk'
-    | scope _ => trivial
-    | memoMap _ => trivial
-    | external _ => trivial
-
-
-#print axioms live_iff_handlesLive
 
 /-! The unchanged experimental equality reading, confined to this test. -/
 namespace ExactSpelling
@@ -504,7 +469,7 @@ def FiberDeclared (w : W) (id : FiberId) (a e : Ty) : Prop :=
 
 /-- Declared liveness: every cell, deferred and fiber handle the value names is declared in the
 world's tables. The table form, not the store-length form of `HandlesLive`: the two agree under
-`WorldValid` (`live_iff_handlesLive` below), and only the table form follows from an allocation's
+`WorldValid` (before finding F-WF; `Live` now also reads raw registration and presence), and only the table form follows from an allocation's
 post (`storePost (.refMake _)` names `w'.Ρ key`, never the heap length). -/
 def Live (w : W) (v : Val) : Prop :=
   ∀ h ∈ v.keys, match h with
@@ -974,7 +939,7 @@ theorem getProg_typedF (w : W) :
           exact TypedProg.pure ⟨fits_subN w''' hsub ans hfit, trivial⟩
         · exact absurd hv.1 (by decide)
         · exact absurd hv.1 (by decide)
-        · exact absurd hv (by decide)
+        · exact absurd hv.1 (by decide)
         · exact absurd hv.1 (by decide)
         · exact hv.elim
       · exact absurd hv.1 (by decide)

@@ -551,7 +551,7 @@ theorem failing_release_untyped (root : ProgramSource) (w : W) :
     ¬ FinalizerTyped root w (.release 7 true) := by
   intro h
   have typed := h w (leHost_refl w) (.success .unit)
-    ((fitsExit_success_iff w _ _).mpr (live_of_keys_nil rfl))
+    ((fitsExit_success_iff w _ _).mpr (live_of_handles_nil rfl))
   have clean := cleanExit_of_never_fits w ⟨.unknown, .never, Env.Requirement.empty⟩
     (Cause.fail (.tag 7)) rfl (TypedProg.pure_inv typed).1
   exact Bool.noConfusion clean
@@ -603,7 +603,7 @@ theorem foreign_untyped (w : W) (ex : ExitV) (ty : EffTy) (unit : ty.answer = .u
     change (Env.Context.empty : Env.Ctx).getV key = some sv at hget
     rw [Env.Context.getV_empty] at hget
     cases hget
-  have live : Live w (Val.context emptyCtx) := live_of_keys_nil rfl
+  have live : Live w (Val.context emptyCtx) := live_of_handles_nil rfl
   have hG := nextG w (leHost_refl w) (Val.context emptyCtx)
     (getContext_answers (acqProg : ProgramSource) w emptyCtx services live)
   have hmid := unguard_payload_inv _ _ _ _ _ hG
@@ -698,7 +698,7 @@ theorem lone_of_order {st : Stores} {order : List FinName}
 theorem failed_fits (w : W) : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ failed := by
   refine (fitsExit_failure_iff w _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩
   · cases hr with
-    | head => exact ⟨_, rfl, live_of_keys_nil rfl⟩
+    | head => exact ⟨_, rfl, live_of_handles_nil rfl⟩
     | tail _ h => cases h
   · cases hr with
     | head => trivial
