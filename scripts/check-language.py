@@ -81,16 +81,19 @@ CONTROLS: list[tuple[str, str, str, list[str]]] = [
 # (declared at HEAD in `src/C.lean` only). `src/Other/A.lean` shares the file name.
 FIX_OLD = ("theorem foo : True := by\n  trivial\n  -- line 3\n\n/-- `bar`'s docstring,\n"
            "  line 6 -/\ntheorem bar : True := trivial\n\ntheorem gone : True := trivial\n\n"
-           "theorem moved_one : True := trivial\n")
+           "theorem moved_one : True := trivial\n\nnamespace N\ntheorem twin : True := trivial\n"
+           "theorem kept_ns : True := trivial\nend N\n")
 FIX_MOVED = "theorem bar : True := by\n  trivial\n  -- line 3\n\ntheorem foo : True := trivial\n"
 FIX_FILES = {
     (ZERO, "src/A.lean"): "theorem bar : True := trivial\n\ntheorem foo : True := by\n  trivial\n",
     ("r1", "src/A.lean"): FIX_OLD, ("r2", "src/A.lean"): FIX_OLD, ("r3", "src/A.lean"): FIX_MOVED,
     (ZERO, "src/C.lean"): "theorem moved_one : True := trivial\n",
     (ZERO, "src/Other/A.lean"): "theorem foo2 : True := trivial\n",
+    (ZERO, "src/D.lean"): "namespace M\ntheorem twin : True := trivial\nend M\n",
+    (ZERO, "src/E.lean"): "namespace N\ntheorem kept_ns : True := trivial\nend N\n",
 }
 FIX_SEEN = {("A.lean", 3): "r1", ("A.lean", 4): "r1", ("A.lean", 6): "r1", ("A.lean", 9): "r1",
-            ("A.lean", 11): "r1"}
+            ("A.lean", 11): "r1", ("A.lean", 14): "r1", ("A.lean", 15): "r1"}
 FIX_CONTROLS: list[tuple[str, str, str, int, str]] = [
     ("green: a named citation drops its line", "`foo` (`src/A.lean:3`)", "`foo` (`src/A.lean`)", 0, "r2"),
     ("green: a paragraph that names the declaration keeps only the path",
@@ -109,6 +112,10 @@ FIX_CONTROLS: list[tuple[str, str, str, int, str]] = [
      "`foo` and `bar` hold (`src/A.lean:3`, `:6`).", "`foo` and `bar` hold (`src/A.lean`).", 0, "r2"),
     ("green: a moved declaration is cited at its new file",
      "`moved_one` holds (`src/A.lean:11`).", "`moved_one` holds (`src/C.lean`).", 0, "r2"),
+    ("green: a moved declaration keeps its namespace at its new file",
+     "`kept_ns` holds (`src/A.lean:15`).", "`kept_ns` holds (`src/E.lean`).", 0, "r2"),
+    ("red: another namespace's declaration of the same short name is not a move",
+     "`twin` holds (`src/A.lean:14`).", "`twin` holds (`src/A.lean:14`).", 1, "r2"),
     ("green: the paragraph confirms what the line's last edit contradicts",
      "`foo` again (`src/A.lean:3`).", "`foo` again (`src/A.lean`).", 0, "r3"),
     ("red: history alone is listed, not written", "See `src/A.lean:3`.", "See `src/A.lean:3`.", 1, "r2"),
@@ -123,7 +130,7 @@ FIX_CONTROLS: list[tuple[str, str, str, int, str]] = [
 
 
 def fix_self_test() -> int:
-    tracked = ["src/A.lean", "src/C.lean", "src/Other/A.lean", "control.md"]
+    tracked = ["src/A.lean", "src/C.lean", "src/D.lean", "src/E.lean", "src/Other/A.lean", "control.md"]
     failed = 0
     for title, text, expected, left, blamed in FIX_CONTROLS:
         fixer = Fixer(tracked, lambda path: not path.startswith("vendor/"),

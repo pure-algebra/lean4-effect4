@@ -14,7 +14,9 @@ line of a file whose lines move. The rewrite keeps the pointer and drops the num
 
 The candidates of `path` are the tracked files it names: itself, or each tracked path it ends.
 `file` is written from the root. A declaration that left `file` for exactly one other tracked
-Lean file is cited at its new file.
+Lean file is cited at its new file. It must be the same declaration: the full name, with the
+namespaces open at its header, matches. A short name declared in another namespace is another
+declaration and is left.
 
 When was a citation written? Its earliest revision is the first commit whose Markdown history
 adds the citation (the same file name and line, in any spelling of the path). A range names the
@@ -50,6 +52,8 @@ LEADING = re.compile(r"^\s*(?:@\[|set_option\b.*\bin\s*$|/--|-/|\S.*-/\s*$)")
 NAMED_BEFORE = re.compile(r"`(?P<name>[^`]+)`\s*\(\s*$")
 RANGE_REST = re.compile(r"(?:[-–,]\s?\d+)*")
 HISTORY_CITE = re.compile(r"(?<![\w@./+-])([\w@./+-]+\.lean):(\d+)")
+NAMESPACE = re.compile(r"^\s*namespace\s+(?P<name>[\w.'«»]+)\s*$")
+END_BLOCK = re.compile(r"^\s*end\s+(?P<name>[\w.'«»]+)\s*$")
 ZERO = "0" * 40
 
 
@@ -66,6 +70,26 @@ def headers(text: str) -> list[tuple[int, str]]:
         match = HEADER.match(line)
         if match and match.group("name") and not match.group("name").startswith(("·", "_")):
             found.append((number, match.group("name")))
+    return found
+
+
+def qualified_headers(text: str) -> list[tuple[int, str]]:
+    """Each named declaration header with its full name: the namespaces open at the header, then
+    the name as written (`_root_.` opts out of them). Two declarations with one short name in two
+    namespaces are two names here."""
+    starts = dict(headers(text))
+    namespaces: list[str] = []
+    found = []
+    for number, line in enumerate(text.split("\n"), start=1):
+        opened, closed = NAMESPACE.match(line), END_BLOCK.match(line)
+        if opened:
+            namespaces.append(opened.group("name"))
+        elif closed and namespaces and namespaces[-1] == closed.group("name"):
+            namespaces.pop()
+        elif number in starts:
+            name = starts[number]
+            found.append((number, name.removeprefix("_root_.") if name.startswith("_root_.")
+                          else ".".join(namespaces + [name])))
     return found
 
 
@@ -95,24 +119,36 @@ def declaration_at(text: str, line: int) -> str | None:
     """The declaration that holds `line`: the one whose docstring, attributes or header the line
     is part of, or else the last header above it. None inside a module or section comment, and
     on a blank, `end`, `namespace`, `section`, `open` or `variable` line."""
+    number = header_line_at(text, line)
+    return None if number is None else dict(headers(text))[number]
+
+
+def full_declaration_at(text: str, line: int) -> str | None:
+    """`declaration_at` with the namespaces open at its header (`qualified_headers`)."""
+    number = header_line_at(text, line)
+    return None if number is None else dict(qualified_headers(text))[number]
+
+
+def header_line_at(text: str, line: int) -> int | None:
+    """The header line of the declaration that holds `line` (`declaration_at`)."""
     lines = text.split("\n")
     if not 1 <= line <= len(lines):
         return None
     marks = headers(text)
-    for number, name in marks:     # a docstring or attribute block belongs to the header below it
+    for number, _ in marks:     # a docstring or attribute block belongs to the header below it
         if number >= line:
             above = number - 1
             while above >= line and (LEADING.match(lines[above - 1]) or in_docstring(lines, above)):
                 above -= 1
             if above < line:
-                return name
+                return number
             break
     if in_block_comment(lines, line):
         return None
     stripped = lines[line - 1].strip()
     if not stripped or stripped.startswith(("end ", "namespace ", "section", "open ", "variable")):
         return None
-    before = [name for number, name in marks if number <= line]
+    before = [number for number, _ in marks if number <= line]
     return before[-1] if before else None
 
 
@@ -128,9 +164,11 @@ def cited_lines(cited: str) -> list[int]:
     return numbers
 
 
-def declaration_of(text: str, lines: list[int]) -> str | None:
-    """The declaration that holds most of the cited lines; on a tie, the one at the first line."""
-    owners = [declaration_at(text, line) for line in lines]
+def declaration_of(text: str, lines: list[int],
+                   at: Callable[[str, int], str | None] = declaration_at) -> str | None:
+    """The declaration that holds most of the cited lines; on a tie, the one at the first line.
+    `at` reads one line: its short name (`declaration_at`) or its full name."""
+    owners = [at(text, line) for line in lines]
     named = [owner for owner in owners if owner is not None]
     if not named:
         return None
@@ -206,22 +244,19 @@ class Fixer:
             return [path]
         return [p for p in self.tracked if p.endswith("/" + path)]
 
-    def moved(self, name: str, away_from: str) -> str | None:
-        """The one other tracked Lean file that declares `name` at HEAD, if exactly one does."""
+    def moved(self, full: str, away_from: str) -> str | None:
+        """The one other tracked Lean file that declares the full name `full` at HEAD, if exactly
+        one does. A short name alone is no move: `Api.schemaOf`, deleted, is not the
+        `Api.Runner.schemaOf` of another file (decisions row 9, rewritten wrongly by `eb00182d`)."""
         if self._index is None:
             self._index = {}
             for path in self.tracked:
                 if path.endswith(".lean") and path.startswith(("src/", "Test/", "tools/")):
                     text = self.file_at(ZERO, path)
                     if text is not None:
-                        for _, found in headers(text):
+                        for _, found in qualified_headers(text):
                             self._index.setdefault(found, []).append(path)
-                            self._index.setdefault("." + last_component(found), []).append(path)
-        exact = [p for p in self._index.get(name, []) if p != away_from]
-        if "." in name:
-            homes = sorted(set(exact))
-        else:
-            homes = sorted(set(exact) | {p for p in self._index.get("." + name, []) if p != away_from})
+        homes = sorted({p for p in self._index.get(full, []) if p != away_from})
         return homes[0] if len(homes) == 1 else None
 
     def fix(self, doc: str, text: str) -> tuple[str, Result]:
@@ -308,7 +343,7 @@ class Fixer:
             result.left.append(Left(doc, number, content, reason))
             return None, None
         declaration = options[0][1]
-        home = self.home(file, declaration)
+        home = self.home(file, self.full_declaration(file, cited, earliest) or declaration)
         if home is None:
             result.left.append(Left(doc, number, content, f"`{declaration}` is no longer declared in {file}"))
             return None, (file, earliest, blamed)
@@ -360,24 +395,32 @@ class Fixer:
                       else f"no declaration held line {cited} of {file} when it was cited")
             result.left.append(Left(doc, number, content, reason))
             return None
-        if self.home(file, then) != file:
+        if self.home(file, self.full_declaration(file, cited, earliest) or then) != file:
             result.left.append(Left(doc, number, content, f"`{then}` is no longer declared in {file}"))
             return None
         result.count("continuation")
         return ""
 
-    def home(self, file: str, declaration: str) -> str | None:
-        """Where `declaration` is declared at HEAD: `file`, or the one file it moved to."""
+    def home(self, file: str, full: str) -> str | None:
+        """Where the declaration of full name `full` is declared at HEAD: `file`, or the one file
+        it moved to."""
         head = self.file_at(ZERO, file)
-        if head is not None and declares(head, declaration):
+        if head is not None and full in {found for _, found in qualified_headers(head)}:
             return file
-        return self.moved(declaration, file)
+        return self.moved(full, file)
 
     def declaration(self, path: str, cited: str, revision: str | None) -> str | None:
         if revision is None:
             return None
         text = self.file_at(revision, path)
         return None if text is None else declaration_of(text, cited_lines(cited))
+
+    def full_declaration(self, path: str, cited: str, revision: str | None) -> str | None:
+        """`declaration`, with the namespaces open at its header then."""
+        if revision is None:
+            return None
+        text = self.file_at(revision, path)
+        return None if text is None else declaration_of(text, cited_lines(cited), full_declaration_at)
 
 
 def git_file_at(root: Path) -> Callable[[str, str], str | None]:
