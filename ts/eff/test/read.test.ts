@@ -23,8 +23,9 @@ const refusal = (source: string): Refusal => {
 }
 
 describe("the profile", () => {
-  test("has the reader's 56 heads and one entry per NativeOp value", () => {
-    expect(heads.length).toBe(56)
+  test("has the reader's 57 heads and one entry per NativeOp value", () => {
+    expect(heads.length).toBe(57)
+    expect(heads).toContain("Scope.Scope")
     expect(rows.length).toBe(55)
     expect(new Set(rows.map((e) => e.row.spelling)).size).toBe(22)
     expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(55)
@@ -242,7 +243,7 @@ describe("program files", () => {
 })
 
 describe("the join", () => {
-  const key = 'Context.Service<number>("k4_4")'
+  const key = 'Context.Service<"k4_4", number>("k4_4")'
   const leaf = `Layer.succeed(${key}, 7)`
   test("reads a service with both numeric fields", () => {
     expect(json(`Effect.service(${key})`)).toBe('["service",{"name":{"value":4},"service":{"value":4}}]')
@@ -286,40 +287,40 @@ describe("the join", () => {
     )
   })
   test.each([
-    'Context.Service<boolean>("k4_4")',
-    'Context.Service<number>("k04_4")',
-    'Context.Service<number>("k4_04")',
-    'Context.Service<number>("k4_4_")',
+    'Context.Service<"k4_4", boolean>("k4_4")',
+    'Context.Service<"k04_4", number>("k04_4")',
+    'Context.Service<"k4_04", number>("k4_04")',
+    'Context.Service<"k4_4_", number>("k4_4_")',
     'Context.Service("k4_4")',
     'Context.Service<number, number>("k4_4")',
   ])("rejects a noncanonical key %s", (invalid) => {
     expect(refusal(`Effect.service(${invalid})`)).toEqual({ _tag: "shape", what: "service key" })
   })
   test("checks reserved and untyped keys against the native signature", () => {
-    expect(json('Effect.service(Context.Service<Scope.Scope>("k0_0"))')).toBe('["service",{"name":{"value":0},"service":{"value":0}}]')
-    expect(json('Effect.service(Context.Service<Ref.Ref<number>>("k4_7"))')).toBe(
+    expect(json('Effect.service(Scope.Scope)')).toBe('["service",{"name":{"value":0},"service":{"value":0}}]')
+    expect(json('Effect.service(Context.Service<"k4_7", Ref.Ref<number>>("k4_7"))')).toBe(
       '["service",{"name":{"value":4},"service":{"value":7}}]',
     )
     expect(json('Effect.service(Context.Service("k1_4"))')).toBe('["service",{"name":{"value":1},"service":{"value":4}}]')
     expect(refusal('Effect.service(Context.Service<number>("k1_4"))')).toEqual({ _tag: "shape", what: "service key" })
   })
   test("keeps service keys exact at the JavaScript integer boundary", () => {
-    expect(json('Effect.service(Context.Service<number>("k9007199254740991_4"))')).toBe(
+    expect(json('Effect.service(Context.Service<"k9007199254740991_4", number>("k9007199254740991_4"))')).toBe(
       '["service",{"name":{"value":9007199254740991},"service":{"value":4}}]',
     )
-    for (const key of ['Context.Service<number>("k9007199254740992_4")',
+    for (const key of ['Context.Service<"k9007199254740992_4", number>("k9007199254740992_4")',
       'Context.Service("k4_9007199254740993")']) {
       expect(refusal(`Effect.service(${key})`)).toEqual({ _tag: "shape", what: "service key" })
     }
   })
   test("checks the external service handle spellings at codes 8 and 9", () => {
-    expect(json('Effect.service(Context.Service<SqlClient.SqlClient>("k4_8"))')).toBe(
+    expect(json('Effect.service(Context.Service<"k4_8", SqlClient.SqlClient>("k4_8"))')).toBe(
       '["service",{"name":{"value":4},"service":{"value":8}}]',
     )
-    expect(json('Effect.service(Context.Service<KeyValueStore.KeyValueStore>("k5_9"))')).toBe(
+    expect(json('Effect.service(Context.Service<"k5_9", KeyValueStore.KeyValueStore>("k5_9"))')).toBe(
       '["service",{"name":{"value":5},"service":{"value":9}}]',
     )
-    expect(refusal('Effect.service(Context.Service<KeyValueStore.KeyValueStore>("k4_8"))')).toEqual(
+    expect(refusal('Effect.service(Context.Service<"k4_8", KeyValueStore.KeyValueStore>("k4_8"))')).toEqual(
       { _tag: "shape", what: "service key" },
     )
   })
@@ -334,7 +335,7 @@ describe("the join", () => {
 // must give the IR the printer started from: the site at the target's path is the layer
 // itself, every later site a `ref` to it (`readModule`, `Refs.lean`).
 describe("the n-ary merge", () => {
-  const key = 'Context.Service<number>("k4_4")'
+  const key = 'Context.Service<"k4_4", number>("k4_4")'
   const leaf = `Layer.succeed(${key}, 7)`
 
   /** The layer of `Effect.provide(Effect.succeed(7), <layer>)`. */
@@ -365,8 +366,8 @@ describe("the n-ary merge", () => {
 })
 
 describe("layer references", () => {
-  const key = 'Context.Service<number>("k4_4")'
-  const kRef = 'Context.Service<Ref.Ref<number>>("k6_7")'
+  const key = 'Context.Service<"k4_4", number>("k4_4")'
+  const kRef = 'Context.Service<"k6_7", Ref.Ref<number>>("k6_7")'
   const k44 = { name: { value: 4 }, service: { value: 4 } }
   const k67 = { name: { value: 6 }, service: { value: 7 } }
 

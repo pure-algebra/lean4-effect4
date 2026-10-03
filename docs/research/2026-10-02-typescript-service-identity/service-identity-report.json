@@ -1,0 +1,92 @@
+{
+  "claim": "finite compiler/runtime controls over actual Lean API emissions",
+  "versions": {
+    "@typescript/native-preview": "7.0.0-dev.20260629.1",
+    "effect": "4.0.0-rc.112",
+    "bun": "1.4.2"
+  },
+  "commands": [
+    {
+      "argv": [
+        "/Users/pooks/.local/share/mise/installs/bun/1.3.14/bin/bun",
+        "--version"
+      ],
+      "exit": 0,
+      "stdout": "1.4.2\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/Users/pooks/.elan/bin/lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "-M4096",
+        "--run",
+        "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/tools/TestSupport/ServiceIdentity.lean",
+        "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/.lake/service-identity"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/Users/pooks/.local/share/mise/installs/node/22.23.2/bin/node",
+        "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/.lake/service-identity/tsconfig.positive.json"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/Users/pooks/.local/share/mise/installs/node/22.23.2/bin/node",
+        "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/.lake/service-identity/tsconfig.false-closed.json"
+      ],
+      "exit": 1,
+      "stdout": ".lake/service-identity/false-closed.ts(4,14): error TS2375: Type 'Effect<number, never, \"k5_4\">' is not assignable to type 'Effect<number, never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.\n  Type '\"k5_4\"' is not assignable to type 'never'.\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/Users/pooks/.local/share/mise/installs/node/22.23.2/bin/node",
+        "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/.lake/service-identity/tsconfig.wrong-brand.json"
+      ],
+      "exit": 1,
+      "stdout": ".lake/service-identity/wrong-brand.ts(4,14): error TS2375: Type 'Effect<number, never, \"k4_4\">' is not assignable to type 'Effect<number, never, \"k5_4\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.\n  Type '\"k4_4\"' is not assignable to type '\"k5_4\"'.\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/Users/pooks/.local/share/mise/installs/bun/1.3.14/bin/bun",
+        "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/.lake/service-identity/runtime.mjs"
+      ],
+      "exit": 0,
+      "stdout": "{\"correct\":9,\"sameKey\":7,\"scopedLookup\":42,\"missing\":\"k5_4\"}\n",
+      "stderr": ""
+    }
+  ],
+  "passed": true,
+  "emitted_sha256": {
+    "positive.ts": "c3c6c6919177abe3d2529d0f7a24ee7923dd831c76650d0afb170f4da48a09a7",
+    "inferred.ts": "995004682690bb92be9cb3d218cc24adbf136f7a55dc6f5d380da05d4e6d0dd8",
+    "false-closed.ts": "e0b14703a8ea4fc08a3a87059b56a9c49ab77989bea9b98fb0f77fa4072f95c1",
+    "wrong-brand.ts": "e77939c279e0b333cecf879411f033e56867c5247aa1960b60710769cb5e9e08"
+  }
+}

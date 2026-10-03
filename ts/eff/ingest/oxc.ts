@@ -41,6 +41,7 @@ export const childNodes = (n: object): readonly TreeNode[] => {
 
 /** The foreign readers read under the canonical package table (`Packages.table`). */
 const underTable = <A>(body: () => A): A => withTable(packageTable, body)
+const scopeKey = serviceTypes.reserved.find(entry => entry.rendered === "Scope.Scope")?.key
 import { forms } from "../forms.gen.ts"
 import { taxonomy } from "../taxonomy.gen.ts"
 import { encodeProgram } from "../wire.gen.ts"
@@ -132,6 +133,7 @@ class Normalize {
       }
       const rewriteKey = (key: ServiceKey): ServiceKey => {
         if (!keys) return key
+        if (scopeKey !== undefined && key.name.value === scopeKey.name.value && key.service.value === scopeKey.service.value) return key
         const old = keys.find(k => k.ordinal === key.name.value)
         if (!old) return reject("E-REF-UNBOUND", "service key")
         let entry = this.keys.find(k => k.sourceId === old.sourceId)
@@ -211,7 +213,8 @@ class Normalize {
     const interned = internServiceKey(this.keys, pkg.key, pkg.service)
     if (!interned.ok) return reject("E-TYPE-PARAM", "service identity has conflicting shapes")
     const entry = interned.key
-    return { _tag: "call", fn: { _tag: "generic", fn: id("Context.Service"), typeArgs: [pkg.target] }, args: [{ _tag: "str", value: `k${entry.ordinal}_${pkg.service}` }] }
+    const key = `k${entry.ordinal}_${pkg.service}`
+    return { _tag: "call", fn: { _tag: "generic", fn: id("Context.Service"), typeArgs: [JSON.stringify(key), pkg.target] }, args: [{ _tag: "str", value: key }] }
   }
   /** A method on a binder, as the printer's fragment (`receiver.spelling(args)`, or
    * `receiver.spelling<T>(args)`), which `read.ts` reads as the table's row under
@@ -312,8 +315,30 @@ class Normalize {
     }
     return this.sqlPart(x, tag, env)
   }
-  key(n: Node): Expr {
+  /** Refuse only a shadowed reference to the native scope namespace. Check inline
+   * layer syntax before its closed IR environment replaces the surrounding bindings. */
+  checkScopeBindings(input: Node, env: readonly string[]): void {
+    if (env.length === 0) return
+    const visit = (value: object): void => {
+      if (!isNode(value)) return
+      if (value.type === "MemberExpression" && !value.computed && !value.optional) {
+        let root = value
+        while (root.type === "MemberExpression" && !root.computed && !root.optional) root = unwrap(node(root, "object"))
+        if (root.type === "Identifier" && env.includes(str(root, "name"))) {
+          const origin = this.bindings.get(str(root, "name"))
+          if (origin !== undefined && origin !== "opaque" && this.head(value) === "Scope.Scope")
+            reject("E-OP-RECEIVER", "shadowed scope namespace")
+        }
+      }
+      for (const child of childNodes(value)) visit(child)
+    }
+    visit(input)
+  }
+  key(n: Node, env: readonly string[] = []): Expr {
     n = unwrap(n)
+    this.checkScopeBindings(n, env)
+    if (n.type === "MemberExpression" && !n.computed && !n.optional && this.head(n) === "Scope.Scope")
+      return scopeKey ? id("Scope.Scope") : reject("E-OP-UNKNOWN", "scope key")
     const pkg = this.packageOf(n)
     if (pkg) return this.packageKey(pkg)
     if (n.type === "Identifier") n = this.declaration(n)
@@ -323,6 +348,7 @@ class Normalize {
     const a = list(n, "arguments")
     if (a.length !== 1) return reject("E-BIND-SHAPE", "arity")
     const types = list(node(factory, "typeArguments"), "params")
+    if (types.length < 1 || types.length > 2) return reject("E-TYPE-PARAM", "service type arguments")
     const t = types.at(-1)
     const shape = t ? this.source.slice(offset(t, "start"), offset(t, "end")) : ""
     const [root, ...tail] = shape.split("."), binding = this.bindings.get(root!)
@@ -333,10 +359,21 @@ class Normalize {
     const service = entryType?.code ?? reject("E-TYPE-PARAM", "service shape")
     const sourceId = this.literal(a[0]!)
     if (sourceId._tag !== "str") return reject("E-ARG-DYNAMIC", "service identifier")
+    if (types.length === 2) {
+      const identity = types[0]!
+      // The two-stage class factory has a nominal Self parameter. A direct
+      // Identifier is data and must agree with the runtime string.
+      if (identity.type === "TSLiteralType") {
+        const literal = node(identity, "literal")
+        if (literal.type !== "Literal" || literal.value !== sourceId.value)
+          return reject("E-TYPE-PARAM", "service identifier does not match runtime key")
+      } else if (factory === n) return reject("E-TYPE-PARAM", "service identifier must be a string literal")
+    }
     const interned = internServiceKey(this.keys, sourceId.value, service)
     if (!interned.ok) return reject("E-TYPE-PARAM", "service identity has conflicting shapes")
     const entry = interned.key
-    return { _tag: "call", fn: { _tag: "generic", fn: id("Context.Service"), typeArgs: [canonical] }, args: [{ _tag: "str", value: `k${entry.ordinal}_${service}` }] }
+    const key = `k${entry.ordinal}_${service}`
+    return { _tag: "call", fn: { _tag: "generic", fn: id("Context.Service"), typeArgs: [JSON.stringify(key), canonical] }, args: [{ _tag: "str", value: key }] }
   }
   term(n: Node, env: readonly string[]): Expr {
     n = unwrap(n)
@@ -521,11 +558,12 @@ class Normalize {
     }
     if (h === "Effect.provide") {
       if (length !== 2 && length !== 3) return reject("E-BIND-SHAPE", "arity")
+      this.checkScopeBindings(arg(1), env)
       const first = p(0), layer = this.layer(arg(1))
       return call(h, [first, layer, ...(length === 3 ? [{ _tag: "object" as const, fields: this.fields(arg(2), ["local"]).map(([k, v]) => [k, this.literal(v)] as const) }] : [])])
     }
     if (h === "Effect.provideService") {
-      arity(3); const first = p(0), key = this.key(arg(1)), value = this.provided(key, arg(2))
+      arity(3); const first = p(0), key = this.key(arg(1), env), value = this.provided(key, arg(2))
       return call(h, [first, key, value])
     }
     if (h === "Effect.suspend") {
@@ -713,7 +751,7 @@ class Normalize {
       const i = env.lastIndexOf(str(n, "name"))
       if (i >= 0 || n.name === "undefined") return this.term(n, env)
       const value = unwrap(this.declaration(n))
-      if (value.type === "CallExpression" && this.head(node(value, "callee").type === "CallExpression" ? node(node(value, "callee"), "callee") : node(value, "callee")) === "Context.Service") return lowerForm("yieldKey", env.length, { effects: [], keys: [this.key(n)] })
+      if (value.type === "CallExpression" && this.head(node(value, "callee").type === "CallExpression" ? node(node(value, "callee"), "callee") : node(value, "callee")) === "Context.Service") return lowerForm("yieldKey", env.length, { effects: [], keys: [this.key(n, env)] })
       const previous = this.referenceCut
       this.referenceCut = offset(this.declarations.get(str(n, "name"))!, "start")
       try { return this.program(value, env) }
@@ -780,7 +818,7 @@ class Normalize {
     }
     const arg = (i: number) => a[i] ?? reject("E-BIND-SHAPE", "arity")
     const arity = (k: number) => { if (a.length !== k) reject("E-BIND-SHAPE", "arity") }
-    if (h === "Effect.service") { arity(1); return call(h, [this.key(arg(0))]) }
+    if (h === "Effect.service") { arity(1); return call(h, [this.key(arg(0), env)]) }
     if (h === "Effect.succeed") { arity(1); return call(h, [this.term(arg(0), env)]) }
     if (h === "Effect.fail" || h === "Effect.die") {
       arity(1); let value: Expr
@@ -789,7 +827,7 @@ class Normalize {
     }
     if (h === "Effect.provideService") {
       arity(3)
-      const body = this.program(arg(0), env), key = this.key(arg(1)), value = this.provided(key, arg(2))
+      const body = this.program(arg(0), env), key = this.key(arg(1), env), value = this.provided(key, arg(2))
       return call(h, [body, key, value])
     }
     if (h === "Effect.flatMap" || h === "Effect.catchCause" || h === "Effect.catch" || h === "Effect.onExit") { arity(2); return call(h, [this.program(arg(0), env), this.continuation(arg(1), env, 1)]) }

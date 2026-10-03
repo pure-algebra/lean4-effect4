@@ -1,0 +1,34 @@
+[
+  {
+    "name": "original",
+    "command": [
+      "node",
+      "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--noEmit",
+      "--pretty",
+      "false",
+      "-p",
+      "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/.lake/service-identity/g309/original.json"
+    ],
+    "exit": 1,
+    "stdout": ".lake/service-identity/g309/original.ts(5,14): error TS2375: Type 'Effect<Fiber<unknown, unknown>, never, Scope>' is not assignable to type 'Effect<Fiber<number | Context<unknown>, number>, never, Scope>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.\n  Type 'Fiber<unknown, unknown>' is not assignable to type 'Fiber<number | Context<unknown>, number>'.\n    Type 'unknown' is not assignable to type 'number | Context<unknown>'.\n",
+    "stderr": "",
+    "sha256": "a3a2d891da8a73fc47b1bf9d00ec2b6b7656280f1367c9f65ac1fe3b3964a6ee"
+  },
+  {
+    "name": "explicit-payload-proposal",
+    "command": [
+      "node",
+      "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--noEmit",
+      "--pretty",
+      "false",
+      "-p",
+      "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/.lake/service-identity/g309/explicit-payload-proposal.json"
+    ],
+    "exit": 1,
+    "stdout": ".lake/service-identity/g309/explicit-payload-proposal.ts(5,14): error TS2375: Type 'Effect<Fiber<number | Context<never>, number>, never, Scope>' is not assignable to type 'Effect<Fiber<number | Context<unknown>, number>, never, Scope>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.\n  Type 'Fiber<number | Context<never>, number>' is not assignable to type 'Fiber<number | Context<unknown>, number>'.\n    Type 'number | Context<never>' is not assignable to type 'number | Context<unknown>'.\n      Type 'Context<never>' is not assignable to type 'number | Context<unknown>'.\n        Type 'Context<never>' is not assignable to type 'Context<unknown>'.\n          Type 'unknown' is not assignable to type 'never'.\n",
+    "stderr": "",
+    "sha256": "f8539227d630813228822d097cff6f4d159c931b82796bdabe2c08ff3b9b3d47"
+  }
+]

@@ -1,0 +1,290 @@
+[
+  {
+    "command": [
+      "python3",
+      "/private/tmp/effect4-service-identity-implementation/build-serial.py",
+      "Effect4.Laws.Api.ModuleReadable",
+      "Effect4.Laws.Codegen.Admit",
+      "Effect4.Laws.Api.Codegen",
+      "Test.Codegen.PrintContract",
+      "Test.Codegen.ReadContract",
+      "Drivers.TsGen",
+      "Drivers.Corpus",
+      "harness/truth/Truth.lean"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 582.3712048750604,
+    "label": "lean-narrow-06",
+    "log_sha256": "b270e368b19ea5e7971426ad33efbd2ca02dc017c530c5d06f5442950bb206c5"
+  },
+  {
+    "command": [
+      "lake",
+      "build",
+      "Effect4.Codegen.Read"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 20.498978583025746,
+    "label": "lean-read-comment-final",
+    "log_sha256": "8466900b6326435f0a76e62fa47126b7fadac5a9ecd1b9de78dccc19f05fc8a8"
+  },
+  {
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "-DwarningAsError=true",
+      "-M4096",
+      "/private/tmp/effect4-service-identity-implementation/axioms.lean"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 4.087665583007038,
+    "label": "final-axioms",
+    "log_sha256": "21bb482def36f2d0af78d4d390d6aef6f93dcbe11ad4f473ac5a421f8a361426"
+  },
+  {
+    "command": [
+      "node",
+      "ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--noEmit",
+      "-p",
+      "ts/eff/tsconfig.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 1.282229125034064,
+    "label": "ts-typecheck-final",
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "command": [
+      "node",
+      "ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--noEmit",
+      "-p",
+      "tools/target/tsconfig.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 0.6717600419651717,
+    "label": "target-typecheck-final",
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "command": [
+      "bun",
+      "test",
+      "--timeout",
+      "20000",
+      "ts/eff"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 9.39668379095383,
+    "label": "ts-eff-tests-final",
+    "log_sha256": "099b1ea74ed7682e213343342c762b020112f9a1626787b1740e973ffab86e26"
+  },
+  {
+    "command": [
+      "bun",
+      "test",
+      "--timeout",
+      "20000",
+      "tools/target"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 31.27692712494172,
+    "label": "target-tests-final2",
+    "log_sha256": "cc43b0f9f155ebe4e39bf47dc3bcf58bfaf390e27c9588e7874c632b29c7a5cd"
+  },
+  {
+    "command": [
+      "bun",
+      "tools/target/cli.ts",
+      "--repo",
+      "."
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 3.0838463329710066,
+    "label": "target-selection-final",
+    "log_sha256": "4e8cabbf511bb6aff599a227bca65db2eb51121a3f580a96affaca5159c8d5b6"
+  },
+  {
+    "command": [
+      "python3",
+      "scripts/check-service-identity.py",
+      "--out",
+      ".lake/service-identity"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 2.263107334030792,
+    "label": "service-identity-05",
+    "log_sha256": "d502189725411d87af1933a9217233810425bb185e884edec6e62b91f9e795da"
+  },
+  {
+    "command": [
+      "python3",
+      "scripts/generate.py",
+      "--only",
+      "ts"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 8.139081040979363,
+    "label": "gen-ts",
+    "log_sha256": "54cb220abc6a41e87400f4f5df30b1452da817d795c9d5d3d78730cfd7afef2f"
+  },
+  {
+    "command": [
+      "python3",
+      "scripts/generate.py",
+      "--only",
+      "readme"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 0.18654462497215718,
+    "label": "gen-readme",
+    "log_sha256": "56358165413a75ae3d46faa239d8c6265bbc11de1a35ddb3c75d505cbdffb887"
+  },
+  {
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "-DwarningAsError=true",
+      "-M4096",
+      "--run",
+      "tools/Drivers/Corpus.lean",
+      ".lake/corpus",
+      "400",
+      "4"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 4.383470458094962,
+    "label": "gen-corpus",
+    "log_sha256": "728ea07bce0347ba7ff89ad57167ce7173040aa2d9545220592795c1ab2735b9"
+  },
+  {
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "-DwarningAsError=true",
+      "-M4096",
+      "--run",
+      "harness/truth/Truth.lean",
+      "harness/truth/corpus.json",
+      "--tapes",
+      "harness/truth/tapes"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 4.3754864579532295,
+    "label": "gen-truth-lean",
+    "log_sha256": "d8a0feb0da0b331f4a90456cede18563be871a9d9383ce15fb99f6c5783dcfc6"
+  },
+  {
+    "command": [
+      "bun",
+      "run",
+      "harness/truth/run-truth.ts",
+      "--manifest",
+      "harness/truth/corpus.json",
+      "--out",
+      "harness/truth",
+      "--timeout",
+      "300",
+      "--tape-out",
+      "harness/truth/tapes"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 1.8572335409699008,
+    "label": "gen-truth-host",
+    "log_sha256": "94ae712790806963bc870c2c4bb8f04ff6e12efe5d5a5dbfcad0a36241c380a9"
+  },
+  {
+    "command": [
+      "bun",
+      "run",
+      "ts/eff/check.ts",
+      "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/.lake/corpus",
+      "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/harness/truth/generated",
+      "--oracle",
+      "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4/.lake/corpus"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 0.3436613749945536,
+    "label": "ts-reader-corpus",
+    "log_sha256": "c158c07c038e254c9082fa8944d2cb463d1e2cddcbd68a13bef22330f4765e80"
+  },
+  {
+    "command": [
+      "python3",
+      "scripts/generate.py",
+      "--only",
+      "ts",
+      "--output-dir",
+      "/private/tmp/effect4-service-identity-implementation/generated-check"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 44.796622000052594,
+    "label": "generated-ts-repeat",
+    "log_sha256": "8431946e23b7c8db15cc1767c2146cf8555b16c11616752d615e14067e706ea0"
+  },
+  {
+    "command": [
+      "python3",
+      "scripts/check-truth.py"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 12.239622249966487,
+    "label": "truth-check-final",
+    "log_sha256": "b272b5aa31e1436c2d52fc9eafc9c0de4b93b1df5041174648934a96f526860c"
+  },
+  {
+    "command": [
+      "python3",
+      "scripts/check-corpus.py",
+      "--promote"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 88.87025937496219,
+    "label": "corpus-promote",
+    "log_sha256": "5df1225f1d84d7620f25a88ac10c458a5e5d7d6673cbe3ad5a5a153eecd7d1b2"
+  },
+  {
+    "command": [
+      "python3",
+      "/private/tmp/effect4-service-identity-implementation/check-corpus-record.py"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 0,
+    "seconds": 0.07815362501423806,
+    "label": "corpus-record-final",
+    "log_sha256": "5baa10742796651c09e438b610190fa32afb34a26194e56aae4c6174b7849f93"
+  },
+  {
+    "command": [
+      "python3",
+      "/private/tmp/effect4-service-identity-implementation/g309-probe.py"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/typescript-service-identity/lean4-effect4",
+    "exit": 1,
+    "seconds": 1.5993660000385717,
+    "label": "g309-candidate-probe",
+    "log_sha256": "0a5c0e3ffa0df55937d7dfba529c3c98793ff10c27b2c1ff3e98ac2f6707981a"
+  }
+]

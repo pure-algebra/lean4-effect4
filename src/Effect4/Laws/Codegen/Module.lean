@@ -179,7 +179,7 @@ theorem readModule_printModule {sig : Signature Op}
   rw [hoisted] at printed
   change ((Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
     (printCaptured sig history) >>= fun ds => print sig 0 main >>= fun body =>
-    printDecl name ty body >>= fun decl => .ok (ds ++ [decl])) = .ok decls at printed
+    printDecl name ty body sig.scopeKey >>= fun decl => .ok (ds ++ [decl])) = .ok decls at printed
   obtain ⟨ds, hp, hmain⟩ := bind_eq_ok.mp printed
   obtain ⟨body, hbody, hdecl⟩ := bind_eq_ok.mp hmain
   obtain ⟨decl, declaration, heq⟩ := bind_eq_ok.mp hdecl
@@ -241,7 +241,7 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
     {block : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok block) :
     ∃ layers main body, block = layers ++ [main] ∧
       (∀ decl ∈ layers, decl.type = none ∧ decl.exported = true) ∧
-      printDecl name ty body = .ok main := by
+      printDecl name ty body sig.scopeKey = .ok main := by
   unfold printModule at printed
   cases hoisted : root.hoistAll with
   | error target => rw [hoisted] at printed; simp at printed
@@ -250,7 +250,7 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
     rw [hoisted] at printed
     change ((Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
       (printCaptured sig history) >>= fun ds => print sig 0 main >>= fun body =>
-      printDecl name ty body >>= fun decl => .ok (ds ++ [decl])) = .ok block at printed
+      printDecl name ty body sig.scopeKey >>= fun decl => .ok (ds ++ [decl])) = .ok block at printed
     obtain ⟨ds, hp, hmain⟩ := bind_eq_ok.mp printed
     obtain ⟨body, _, hdecl⟩ := bind_eq_ok.mp hmain
     obtain ⟨decl, declaration, heq⟩ := bind_eq_ok.mp hdecl
