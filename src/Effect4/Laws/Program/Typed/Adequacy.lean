@@ -1357,9 +1357,8 @@ rows 136 and 151 (a″)): void for no finalizer, the walk for two or more (`clos
 lone finalizer voided (`voidedClose_typed`), typed by the scope store's typing (`fins`, what the
 generated bundle's `FinalizerOk` states at every finalizer a scope holds) at the closing exit. The
 one premise beside the store's typing is the closing exit's fit at `Exit<unknown, unknown>`: the
-lone finalizer's typing reads it, as the closed-scope row reads the closing exit (`ScopeExitOk`);
-the close-scope row's pre does not give it yet (decisions row proposed by seat D4,
-`closeScope_pre_admits_unfit_exit`). -/
+lone finalizer's typing reads it, as the closed-scope row reads the closing exit (`ScopeExitOk`),
+and the close-scope row's pre gives it (finding F-CLOSE, `closeScope_pre_refuses_unfit_exit`). -/
 theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV)
     (flag : Bool) (st st' : Stores) (code : RProgram)
     (fins : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin)

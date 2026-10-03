@@ -1011,7 +1011,7 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
       exact TypedProg.pure (exitOk_unit_finalizer w'')
   | closeChildScope scope =>
     exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () (scopeLive_mono ord.1 h)
+      (fun _ _ _ h => nomatch h) () ⟨scopeLive_mono ord.1 h, hex⟩
       fun _ _ _ post => TypedProg.pure (exitOk_finalizer rfl post)
   | detachFromParent parent key =>
     refine TypedProg.store () (scopeLive_mono ord.1 h) fun w'' _ ans post => ?_
@@ -1034,7 +1034,7 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
     | success _ => exact TypedProg.pure (exitOk_unit_finalizer w')
     | failure cause =>
       exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-        (fun _ _ _ h => nomatch h) () (scopeLive_mono ord.1 h)
+        (fun _ _ _ h => nomatch h) () ⟨scopeLive_mono ord.1 h, hex⟩
         fun _ _ _ post => TypedProg.pure (exitOk_finalizer rfl post)
   | memoDone layer memoMap => exact h.elim
   | memoEntry layer memoMap =>
@@ -1047,13 +1047,13 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
       · subst unit
         exact Or.inl trivial
       · exact Or.inr scope
-    · intro w'' _ v hv
+    · intro w'' o'' v hv
       rcases hv with unit | scope
       · rw [fits_unit_inv unit]
         exact TypedProg.pure (exitOk_unit_finalizer w'')
       · obtain ⟨sc, rfl, live⟩ := fits_scope_inv scope
         exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
-          (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () live
+          (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () ⟨live, fitsExit_mono o'' hex⟩
           fun _ _ _ post => TypedProg.pure (exitOk_finalizer rfl post)
   | foreign c =>
     have hc : CaptureTyped root w' c := finalizerAdmitted_mono root ord (.foreign c) h

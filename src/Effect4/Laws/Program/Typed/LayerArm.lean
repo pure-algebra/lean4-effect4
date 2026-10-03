@@ -202,12 +202,13 @@ theorem scopeAdd_typed {w : World} {scope : Nat} {fin : FinName} (hlive : ScopeL
 
 /-- `fromBuild`'s finalizer (`Layer.ts:343`): the layer scope closed on failure only. -/
 theorem closeChildOnFailure_typed {w : World} {child : Nat} (hlive : ScopeLive w child)
-    (ex : ExitV) : TypedProg root w (EffTy.pure .unit) (denoteFin (.closeChildOnFailure child) ex) := by
+    (ex : ExitV) (hex : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex) :
+    TypedProg root w (EffTy.pure .unit) (denoteFin (.closeChildOnFailure child) ex) := by
   cases ex with
   | success v => exact .pure (strongExit_success w _ _ trivial)
   | failure c =>
     exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () hlive (fun _ _ _ post => .pure post)
+      (fun _ _ _ h => nomatch h) () ⟨hlive, hex⟩ (fun _ _ _ post => .pure post)
 
 /-- **`fromBuild`** (`Layer.ts:333-345`): the layer scope forked from the caller's present one, the
 inner build inside it under the finalizer that closes it on failure. -/
@@ -223,7 +224,8 @@ theorem fromBuild_typed {w : World} {T : EffTy} {scope : Nat} {inner : Nat → R
     simp only [seqR, Val.scope?_scopeHandle]
     exact onExit_typed root (b := T) (f := EffTy.pure .unit) (Ty.subN_refl _) (Ty.subN_refl _)
       (subN_never _) (hinner w' o child hchild)
-      (fun w'' o' ex _ => closeChildOnFailure_typed (scopeLive_mono o'.1 hchild) ex)
+      (fun w'' o' ex hok => closeChildOnFailure_typed (scopeLive_mono o'.1 hchild) ex
+        (fitsExit_unknown hok.1))
 
 /-- **`getOrElseMemoize`** (`Layer.ts:445-457`) at a checked layer leaf: the counted suspend, the
 lookup at the layer's columns; a hit registers the entry finalizer on the caller's present scope
@@ -1297,8 +1299,9 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
   have o13 := leHost_trans _ _ _ o12 o3
   refine onExit_typed root (b := ⟨tb.answer, tb.error.join lt.error, _⟩) (f := EffTy.pure .unit)
     (Ty.subN_refl _) (Ty.subN_refl _) (subN_never _) ?_
-    (fun w4 o4 _ _ => TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () (scopeLive_mono o4.1 hlive)
+    (fun w4 o4 _ hok => TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) ()
+      ⟨scopeLive_mono o4.1 hlive, fitsExit_unknown hok.1⟩
       (fun _ _ _ post => .pure post))
   -- the build: at every later world, through any map, the layer's build at the closed point
   have hbuild : ∀ w', w3.leHost w' → ∀ m, MemoLive w' m → TypedProg root w' (buildTy lt)

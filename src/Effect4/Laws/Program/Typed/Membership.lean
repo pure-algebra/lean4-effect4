@@ -2216,6 +2216,14 @@ theorem fitsExit_subN {w : World} {ty ty' : EffTy} (ha : Ty.subN ty.answer ty'.a
     rw [fitsExit_failure_iff] at h ⊢
     exact ⟨causeFits_map (fun x hx => fits_subN w he x hx) h.1, h.2⟩
 
+/-- Every fitting exit fits `Exit<unknown, unknown>`, the exit a scope closes with (`closeScope`'s
+pre, finding F-CLOSE). -/
+theorem fitsExit_unknown {w : World} {ty : EffTy} {ex : ExitV} (h : FitsExit w ty ex) :
+    FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex := by
+  refine fitsExit_subN ?_ ?_ h
+  · exact Ty.sub_unknown _
+  · exact Ty.sub_unknown _
+
 /-! ## Products and fiber results -/
 
 /-- The pair atom's value (`NativeAtom.eval .pair`, `Machine/Term.lean:374`) fits the product. -/

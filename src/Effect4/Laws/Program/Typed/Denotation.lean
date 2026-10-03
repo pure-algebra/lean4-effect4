@@ -2094,8 +2094,8 @@ theorem getId_arm
   obtain ⟨id, rfl⟩ := post
   exact .pure (strongExit_success w' _ _ trivial)
 
-/-- **`closeScope`**: a present scope (the row's pre) and an exit value that decodes
-(`exitOfVal_of_fits`); the close answers an exit at `pure unit`. -/
+/-- **`closeScope`**: a present scope and an exit value that decodes (`exitOfVal_of_fits`) and fits
+`Exit<unknown, unknown>` (the row's pre, F-CLOSE); the close answers an exit at `pure unit`. -/
 theorem closeScope_arm {scope exit : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.closeScope scope exit))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
@@ -2114,8 +2114,19 @@ theorem closeScope_arm {scope exit : Term}
     rw [hu, hv, Option.bind_some, hexv]
     rfl
   rw [denoteAction_of _ _ hact]
+  -- the closing exit fits `Exit<unknown, unknown>` (F-CLOSE): the value is the exit's image, at
+  -- its checked exit type, widened
+  have himage : v = reifyExitVal ex := by
+    rw [reifyExitVal_eq_exitImage]
+    exact exitImage.ofVal_exact hexv
+  have hfits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex := by
+    show Fits w (reifyExitVal ex) (.exitOf .unknown .unknown)
+    rw [← himage]
+    refine fits_subN w (subN_exitOf ?_ ?_) v hvfit
+    · exact Ty.sub_unknown _
+    · exact Ty.sub_unknown _
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () hlive (fun _ _ _ post => .pure post)
+    (fun _ _ _ h => nomatch h) () ⟨hlive, hfits⟩ (fun _ _ _ post => .pure post)
 
 /-- **`withFiber`**: the sixteen actions, each by its arm. -/
 theorem withFiber_arm {a : ActionTerm NativeOp} (hfuel : p.fuel ≠ 0)

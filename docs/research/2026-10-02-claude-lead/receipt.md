@@ -1317,3 +1317,42 @@ form; H2PartOne's `new_admitted` proves it (its `OldRacePayload` keeps the old f
 
 Commands: `lake build Effect4.Laws` (green); the twelve batteries that build `J` or a `RacePayload`
 (green).
+
+## Slice F-CLOSE — a scope closes with an exit that fits `Exit<unknown, unknown>` (2026-10-02)
+
+**First, for the coordinator:** this is a pre strengthening landed under the principle of the four
+approved small pres (the admission states what the program needs), not on its own ruling. The
+`closeScope` row's fiber pre (`Typed/Residual.lean`) now reads
+`ScopeLive w scope ∧ FitsExit w ⟨unknown, unknown, empty⟩ ex`. The closing exit becomes the scope's
+(`scopeCloseSnapshot`), which the scope store types at `Exit<unknown, unknown>` (`ScopeExitOk`, DI-94)
+and `Stores.WF` asks to be valid; with presence alone, typed code could write `closed badClose` and no
+later world typed the store (seat D4's open finding from landing row 151 (a″), the old
+`closeScope_pre_admits_unfit_exit`). `closeScope_installs` already took the same fit as its one
+premise beside the store's typing. The coordinator should propose this as a decisions row or reject
+it; the clause `closeScope` and `ScopedExitKeeps` are proved against it.
+
+Producers, each now supplying the fit:
+- the `closeScope` arm of the fundamental property (`closeScope_arm`, `Typed/Denotation.lean`): the
+  exit term's checked type `Exit<a, e>` widened to `Exit<unknown, unknown>`;
+- the synthetic finalizers that close (`finalizerTyped_of_admitted`, `Typed/Assembly.lean`):
+  `closeChildScope` and `closeChildOnFailure` take the finalizer's closing exit, which
+  `FinalizerTyped` already types at `Exit<unknown, unknown>`; `memoEntry`'s last-observer close
+  takes it forward (`fitsExit_mono`);
+- `fromBuild`'s finalizer (`closeChildOnFailure_typed`, `Typed/LayerArm.lean`) and `provideLayer`'s
+  scope close, from the body's `ExitOk` through the new `fitsExit_unknown` (`Typed/Membership.lean`:
+  every fitting exit fits `Exit<unknown, unknown>`).
+
+Tests: ProtocolPosts' red control becomes `closeScope_pre_refuses_unfit_exit` (the pre refuses
+`badClose` at every world, as the closed-scope clause does) with a green twin
+(`closeScope_fitting_exit_typed`); `close_code_typed` and `close_code_refused_absent` read the
+conjunction (`failed_fits` moved before them); ScopePresence's `close_live` and
+`old_makeThenClose_refused` likewise.
+
+Placement: concept 4 (`step-deliver-preserves`), the store's validity under the scope close; it
+serves `clause_closeScope` and the walk's `ScopedExitKeeps` (`M6Ledger.step_deliver`). Not
+established: those clauses themselves (next).
+
+Commands: `lake build Effect4.Laws` (green); `lake build Test.Program.ProtocolPosts`,
+`Test.Counterexamples.Machine.Semantics.{AsyncHookContract, M6Capstone, ScopePresence, StaleCode,
+ValueMembership}`, `Test.Program.TypedProgRows`, `Test.Audit.RuntimeCoverage` (green); the touched
+controls print `[propext, Quot.sound]`.

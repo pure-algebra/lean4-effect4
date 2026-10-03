@@ -212,9 +212,9 @@ theorem old_makeThenClose_refused (root : ProgramSource) (w : W) (ty : EffTy) (s
   obtain ⟨_, pre, _⟩ := OldPostTypedProg.fiber_inv close
     (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  change (w.state.scopes.entryAt scope).isSome = true at pre
-  rw [absent] at pre
-  exact Bool.noConfusion pre
+  have present : (w.state.scopes.entryAt scope).isSome = true := pre.1
+  rw [absent] at present
+  exact Bool.noConfusion present
 
 /-- **History (Codex's `forkAfterMake_denotation_refused`)**: under the old posts the checked
 source's denotation at `point` had no derivation at a world where scope 0 is absent. -/
@@ -306,12 +306,12 @@ theorem scopeMake_post_iff (w : W) (strategy : FinalizerStrategy) (ans : Val) :
   ⟨fits_scope_inv, fun ⟨sc, same, live⟩ => same ▸ fits_scopeHandle w sc live⟩
 
 /-- Codex's passing control `close_live`, read through `ScopeLive`: the close rule accepts a
-present scope. -/
+present scope, closed with an exit that fits `Exit<unknown, unknown>` (finding F-CLOSE). -/
 theorem close_live (root : ProgramSource) (w : W) (scope : Nat) (live : ScopeLive w scope) :
     TypedProg root w unitTy
       (.vis (.inr (.closeScope scope (.success .unit))) Effects.Program.pure) :=
   TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () live
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () ⟨live, live_of_handles_nil rfl⟩
     (fun _ _ _ post => TypedProg.pure post)
 
 /-- Codex's passing control `allocation_alone_typed`: the allocator alone answers at `Ty.scope`

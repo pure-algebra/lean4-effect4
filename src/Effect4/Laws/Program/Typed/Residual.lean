@@ -194,7 +194,12 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .guard_ _ | .unguard _ | .finishFinalizer _ | .construction
   | .foreignRelease _ _ | .closeWalk _ _ _ | .closeIter _ _ _
   | .cancelRace _ | .dropObservers _ | .frontier _ _ => True
-  | .scopeExit _ scope _ | .closeScope scope _ => ScopeLive w scope
+  | .scopeExit _ scope _ => ScopeLive w scope
+  -- the closing exit becomes the scope's (`scopeCloseSnapshot`), which the scope store types at
+  -- `Exit<unknown, unknown>` (`ScopeExitOk`, DI-94) and `Stores.WF` asks valid (finding F-CLOSE,
+  -- `closeScope_pre_refuses_unfit_exit`; the admission states what the program needs)
+  | .closeScope scope ex =>
+    ScopeLive w scope ∧ FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex
   | .raceRegister _ => False
   | .snapshotChildren => cert = .list (.fiberOf .unknown .unknown)
   | .scoped body => PointTyped root w body cert
@@ -849,9 +854,12 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | runIn target scope =>
     simp only [fiberPre] at h ⊢
     exact ⟨isSome_extends hGamma h.1, scopeLive_mono ord.1 h.2⟩
-  | scopeExit _ scope _ | closeScope scope _ =>
+  | scopeExit _ scope _ =>
     simp only [fiberPre] at h ⊢
     exact scopeLive_mono ord.1 h
+  | closeScope scope _ =>
+    simp only [fiberPre] at h ⊢
+    exact ⟨scopeLive_mono ord.1 h.1, fitsExit_mono ord h.2⟩
   | getId | yieldNow _ | ambientScope | sync _ | suspend _ | interrupt _
   | interruptScoped _ | interruptAll _ _ | awaitNewChildren _ | guard_ _ | unguard _
   | finishFinalizer _ | construction | foreignRelease _ _

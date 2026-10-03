@@ -36,8 +36,8 @@ signed divergence `U-02`; `closeLone` answers `unit`), every finalizer a scope h
 `⟨unknown, never⟩` by the scope store's typing, the registration pre refuses the failing release
 (`release_registration_refused`, the base's admission history over `OldScopeAddPre`), and the
 close of a lone typed finalizer is typed at the post (`close_one_typed`, `foreign_close_typed`).
-One finding of that landing is open: the close-scope row's pre admits a closing exit the
-closed-scope row refuses (`closeScope_pre_admits_unfit_exit`).
+That landing's one finding, the close-scope row's pre admitting a closing exit the closed-scope row
+refuses, is repaired by finding F-CLOSE (`closeScope_pre_refuses_unfit_exit`).
 -/
 
 set_option autoImplicit false
@@ -440,6 +440,17 @@ namespace CloseScope
 def failed : ExitV := .failure (Cause.fail (.tag 1))
 def closeCode : RProgram := .vis (.inr (.closeScope 0 failed)) Effects.Program.pure
 
+/-- The closing exit `failed` fits `Exit<unknown, unknown>` at every world: its one reason is a
+`Fail` of a live error value, and it carries no shape defect. -/
+theorem failed_fits (w : W) : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ failed := by
+  refine (fitsExit_failure_iff w _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩
+  · cases hr with
+    | head => exact ⟨_, rfl, live_of_handles_nil rfl⟩
+    | tail _ h => cases h
+  · cases hr with
+    | head => trivial
+    | tail _ h => cases h
+
 def isPureUnit : Option (Stores × RProgram) → Bool
   | some (_, .pure (.success .unit)) => true
   | _ => false
@@ -475,7 +486,7 @@ theorem close_code_typed (root : ProgramSource) (w : W)
     (live : (w.state.scopes.entryAt 0).isSome = true) :
     TypedProg root w (EffTy.pure .unit) closeCode :=
   TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () live (fun _ _ _ post => TypedProg.pure post)
+    (fun _ _ _ h => nomatch h) () ⟨live, failed_fits w⟩ (fun _ _ _ post => TypedProg.pure post)
 
 /-- Row 139: at a world whose store holds no scope 0 the close code is refused, so the halting
 arm `FiberAction.closeScope` is unreachable from typed code. -/
@@ -484,8 +495,8 @@ theorem close_code_refused_absent (root : ProgramSource) :
   intro h
   obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  change (Stores.empty.scopes.entryAt 0).isSome = true at pre
-  exact Bool.noConfusion pre
+  have absent : (Stores.empty.scopes.entryAt 0).isSome = true := pre.1
+  exact Bool.noConfusion absent
 
 /-- The positive instance: over a store holding one open scope at 0 the close code is typed. -/
 theorem close_code_typed_live (root : ProgramSource) :
@@ -693,17 +704,6 @@ theorem lone_of_order {st : Stores} {order : List FinName}
   rw [hs] at horder
   exact (Option.some.inj horder).symm
 
-/-- The closing exit `failed` fits `Exit<unknown, unknown>` at every world: its one reason is a
-`Fail` of a live error value, and it carries no shape defect. -/
-theorem failed_fits (w : W) : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ failed := by
-  refine (fitsExit_failure_iff w _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩
-  · cases hr with
-    | head => exact ⟨_, rfl, live_of_handles_nil rfl⟩
-    | tail _ h => cases h
-  · cases hr with
-    | head => trivial
-    | tail _ h => cases h
-
 /-- The stores' finalizers, read off by the kernel: none on the open scope, one succeeding
 `release`, two. -/
 theorem zero_fins : ∀ entry ∈ StoreUnit.oneScope.scopes.entries, entry.scope.closeOrder = [] := by
@@ -774,15 +774,15 @@ theorem foreign_close_typed (w : W) (st' : Stores) (code : RProgram)
       exact foreign_typed_unknown w)
     (failed_fits w) h
 
-/-! ### The close-scope row's pre and the closing exit (found landing row 151 (a″))
+/-! ### The close-scope row's pre and the closing exit (finding F-CLOSE, repaired)
 
-`fiberPre`'s `closeScope` arm reads the scope's presence only (`Typed/Residual.lean`), so code
-closing a present scope with a reified `badName` failure is typed, while the scope store's typing
+Landing row 151 (a″) found `fiberPre`'s `closeScope` arm reading the scope's presence only, so code
+closing a present scope with a reified `badName` failure was typed, while the scope store's typing
 types a closed scope's exit at `Exit<unknown, unknown>` (`ScopeExitOk`, decisions row 140), which
-refuses it (row 152's `ShapeFree`): `FiberAction.closeScope` writes `closed badClose` and no later
-world types the store. The same fit is `closeScope_installs`' one premise beside the store's
-typing (a lone foreign finalizer's release reads the exit at that type). A decisions row is
-proposed: the arm demands `FitsExit w ⟨unknown, unknown⟩ ex` (seat D4's receipt). -/
+refuses it (row 152's `ShapeFree`): `FiberAction.closeScope` wrote `closed badClose` and no later
+world typed the store. The arm now demands `FitsExit w ⟨unknown, unknown⟩ ex`
+(`Typed/Residual.lean`; finding F-CLOSE, `docs/research/2026-10-02-claude-lead/receipt.md`), the
+same fit as `closeScope_installs`' one premise beside the store's typing. -/
 
 def badClose : ExitV := .failure (Cause.die .badName)
 
@@ -792,15 +792,21 @@ def oneScopeWorld : W := { initialWorld (EffTy.pure .unit) with state := StoreUn
 theorem oneScope_live : ScopeLive oneScopeWorld 0 := by
   decide +kernel
 
-/-- **Red**: at a world whose store holds the open scope 0, the code closing it with `badClose`
-is typed, and the closed-scope clause refuses `badClose` at every world. -/
-theorem closeScope_pre_admits_unfit_exit (root : ProgramSource) :
-    TypedProg root oneScopeWorld (EffTy.pure .unit)
-        (.vis (.inr (.closeScope 0 badClose)) Effects.Program.pure) ∧
+/-- **Repaired**: the close-scope row's pre refuses `badClose` at every world, as the closed-scope
+clause does. -/
+theorem closeScope_pre_refuses_unfit_exit (root : ProgramSource) :
+    (∀ w : W, ¬ (Ψ_F root).pre w (.closeScope 0 badClose) ()) ∧
       ∀ (w : W) (e : Expect), ¬ (preds root).ScopeExitOk w e badClose :=
-  ⟨TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () oneScope_live (fun _ _ _ post => TypedProg.pure post),
+  ⟨fun w h => Test.Program.H2PartOne.base_badName_refused w _ h.2,
     fun w _ => Test.Program.H2PartOne.base_badName_refused w ⟨.unknown, .unknown, Env.Requirement.empty⟩⟩
+
+/-- **Green**: closing the present scope 0 with a fitting exit is still typed. -/
+theorem closeScope_fitting_exit_typed (root : ProgramSource) :
+    TypedProg root oneScopeWorld (EffTy.pure .unit)
+      (.vis (.inr (.closeScope 0 (.success .unit))) Effects.Program.pure) :=
+  TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () ⟨oneScope_live, live_of_handles_nil rfl⟩
+    (fun _ _ _ post => TypedProg.pure post)
 
 /-! ### A lone finalizer answering a value closes to `unit` (decisions row 151 (a″))
 
@@ -1520,7 +1526,9 @@ open Test.Program.ProtocolPosts in
 open Test.Program.ProtocolPosts in
 #print axioms CloseScope.oneScope_live
 open Test.Program.ProtocolPosts in
-#print axioms CloseScope.closeScope_pre_admits_unfit_exit
+#print axioms CloseScope.closeScope_pre_refuses_unfit_exit
+open Test.Program.ProtocolPosts in
+#print axioms CloseScope.closeScope_fitting_exit_typed
 open Test.Program.ProtocolPosts in
 #print axioms CloseScope.acq_checked
 open Test.Program.ProtocolPosts in
