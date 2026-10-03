@@ -542,6 +542,18 @@ The active sequence is the foundations review above. Phase C's existing receipt 
 historical evidence; the dated notes below explain the redirect and its earlier plans. They
 do not override the corrected protocol-before-assembly order or constitute a new pause instruction.
 
+**Short-term backlog, 2026-10-03 (owner): the core documents cleaned up.** The documents that
+development, meta tooling, PL design and semantics read are brought to the writing rules. Scope:
+- this file, as an entry point true at HEAD (tooling map item 3.4);
+- the eight authorities under `docs/core/` that do not yet pass;
+- `docs/DESIGN-BASIS.md`, `docs/DESIGN-ISSUES.md`, `docs/ARCHITECTURE.md` and `docs/GENERATED.md`.
+
+These 13 documents hold 932 of the 1,776 findings (`python3 scripts/check-language.py`). Done when
+each passes `python3 scripts/check-language.py --strict` and `make check-docs` stays green. Method:
+one time-boxed dynamic workflow, one agent per document group, run when the owner confirms it.
+Two owner decisions come first: the language seat's P4 (the design basis cites witnesses by name
+and path) and the shape of this file (3.4). The contract packets and the READMEs come later.
+
 **Scheduler Contract Hardening & Milestone Status, 2026-10-02 (current).** Four command contracts
 are repaired and ratified, eliminating checked refutations without weakening theorems:
 1. **Queued enrollment bound** (decisions row 134 (e), `E4-TYPED-CE-032`): `EnrollRaceOk` bounds queued children
