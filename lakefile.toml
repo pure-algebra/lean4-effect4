@@ -133,6 +133,17 @@ roots = ["ProofGraph.Axioms", "ProofGraph.Audit"]
 precompileModules = true
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
+# The projection guard on the generated files, compiled to native code the same way: the `#eval` of
+# `Test.Store.DerivedCheck` runs it over the four generated files, and interpreted it took 30 s of
+# that module's 33 s (measured 2026-10-03). Declared after `Effect4Gen` and `Tools`, whose roots and
+# globs also claim these modules. Both import only Lean.
+[[lean_lib]]
+name = "Effect4GenNative"
+srcDir = "tools"
+roots = ["Effect4Gen.Check", "Tools.WireTags"]
+precompileModules = true
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
 # Verification tooling (docs/research/type-tooling/, 2026-09-09): the generic core of
 # conformance checks between representations — one report format, separate evidence methods,
 # obligations, strict policy readers (`Conform.Core`), the mono-LCNF walkers and semantics
