@@ -17,6 +17,11 @@ closing exit (`FinalizerTyped`, from the row's admission, `finalizerTyped_of_adm
 fitting `Exit<unknown, unknown>`, and the reasons captured so far a clean failure at the row's post
 type `⟨unit, never⟩`.
 
+The parallel frame's protocol (`closeParDone`) holds outright: it reads the children's reified exits
+and never resumes (`closeParProtocol`). The forks are `Evaluating.alloc` folded over the finalizers
+(`Evaluating.forkAll`); the host keeps its operation current over the saved answer frame, read by no
+queued command until `closeParAwait` installs the await (`QueueOk.owners`).
+
 Not established here: progress; that the walk finishes; the finalizers' own runs.
 -/
 
@@ -160,5 +165,200 @@ theorem clause_closeIter_sequential (root : ProgramSource) (rootTy : EffTy) (ord
         (leHost_refl w) ex hex),
       hostStack_push (frameAccepts_iter (closeSeqProtocol inv)) (hostStack_push answer stack),
       ⟨prov.recorded, prov.deferred⟩⟩
+
+
+/-! ## The parallel walk -/
+
+section Parallel
+variable {root : ProgramSource}
+
+/-- The reasons a reified exit list at `Array<Exit<a, never>>` carries are a clean failure at
+`⟨unit, never⟩` (`reasonsOfList_fit`; a fiber snapshot carries none). -/
+theorem exitOk_reasons_of_list {w : World} {v : Val} {a : Ty}
+    (hv : Fits w v (.list (.exitOf a .never))) :
+    ExitOk w (EffTy.pure .unit) (.failure ⟨reasonsOfVal v⟩) := by
+  obtain ⟨xs, hxs, hall⟩ := (fits_list_iff w v _).mp hv
+  have hreasons : ∀ r ∈ reasonsOfVal v,
+      (match r with
+        | .fail err _ => ∃ u, valOfErr err = some u ∧ Fits w u .never
+        | .die _ _ | .interrupt _ _ => True) ∧
+      (match r with
+        | .die defect _ => defect ≠ .badName ∧ defect ≠ .notImplemented
+        | _ => True) := by
+    rcases Val.asList?_exact hxs with rfl | ⟨ids, rfl, -⟩
+    · exact reasonsOfList_fit xs hall
+    · intro r hr
+      simp only [reasonsOfVal] at hr
+      exact nomatch hr
+  refine ⟨(fitsExit_failure_iff w _ _).mpr ⟨fun r hr => ?_, fun r hr => (hreasons r hr).2⟩,
+    fun r hr => (hreasons r hr).2⟩
+  have h1 := (hreasons r hr).1
+  revert h1
+  cases r with
+  | fail err ann => exact id
+  | die _ _ => intro _; trivial
+  | interrupt _ _ => intro _; trivial
+
+/-- **The parallel close's await frame** (`closeParDone`, rc.112 `exitAsVoidAll`,
+`internal/effect.ts:3823-3826`): it reads the children's reified exits at
+`Array<Exit<unknown, never>>` and answers at the close row's post, `⟨unit, never⟩`. -/
+def CloseParTyped : IterState → Prop
+  | (_, tin, tout, name) =>
+    tin = ⟨.list (.exitOf .unknown .never), .never, Env.Requirement.empty⟩ ∧
+      tout = EffTy.pure .unit ∧ name = .store .closeParDone
+
+/-- **The await frame's one step**: the exits' reasons, merged (`closeDone`), answer `void` or the
+captured failure; it never resumes. -/
+theorem closeParTyped_closed : ∀ s, CloseParTyped s → IteratorStep root CloseParTyped s := by
+  rintro ⟨w, tin, tout, name⟩ ⟨rfl, rfl, rfl⟩
+  refine ⟨rfl, fun _ => rfl, fun w' _ C _ v hv => ?_⟩
+  have hstep : ((interpRAt root.program C).iterNext (.store .closeParDone) v).2 =
+      closeDone (reasonsOfVal v) := rfl
+  rw [hstep]
+  have hcap := exitOk_reasons_of_list hv
+  cases hc : reasonsOfVal v with
+  | nil => exact ⟨trivial, trivial⟩
+  | cons r rs =>
+    rw [hc] at hcap
+    exact hcap
+
+/-- **The await frame has its protocol** (`Contracts.Greatest.coind`). -/
+theorem closeParProtocol (w : World) :
+    IteratorProtocol root w ⟨.list (.exitOf .unknown .never), .never, Env.Requirement.empty⟩
+      (EffTy.pure .unit) (.store .closeParDone) :=
+  Greatest.coind closeParTyped_closed ⟨rfl, rfl, rfl⟩
+
+/-- **The parallel close's forks under the evaluated fiber** (`forkFinalizers`,
+`Machine/Fibers.lean:992-998`): each finalizer program allocated as a child declared at
+`⟨unknown, never⟩` (`Evaluating.alloc`) with its trace event, in close order; the children's
+columns are the finalizers' (`FiberListColumns` at `unknown`, `never`). -/
+theorem Evaluating.forkAll {rootTy : EffTy} (interp : RInterp) (host : RFiber) :
+    ∀ (progs : List RProgram) {w : World} {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool},
+      Evaluating root rootTy w m rest f y → host.id = f.id → host.context = f.context →
+      (∀ prog ∈ progs, ∀ w', w.leHost w' →
+        TypedProg root w' ⟨.unknown, .never, Env.Requirement.empty⟩ prog) →
+      ∃ w', w.leHost w' ∧ Evaluating root rootTy w' (forkFinalizers interp m host progs).1 rest f y ∧
+        FiberListColumns w' (forkFinalizers interp m host progs).2 .unknown .never
+  | [], w, _, _, _, _, ev, _, _, _ => ⟨w, leHost_refl w, ev, fun _ h => nomatch h⟩
+  | prog :: progs, w, m, rest, f, y, ev, hid, hctx, typed => by
+    have freshΓ : w.Γ ⟨m.nextId⟩ = none := (fresh_of_typed ev.typed.machine).2
+    have ord : w.leHost (w.addFiber ⟨m.nextId⟩ ⟨.unknown, .never, Env.Requirement.empty⟩) :=
+      addFiber_leHost freshΓ
+    obtain ⟨flag, hspawn⟩ := spawn_eq interp m host prog ⟨true, true, .inherit⟩ []
+    have ev1 := (ev.alloc (typed prog List.mem_cons_self w (leHost_refl w)) flag
+      (interp.budgetOf f.context) ⟨⟨m.nextId⟩, f.id, true, []⟩).emit
+        [RunEvent.forked f.id ⟨m.nextId⟩ true]
+    obtain ⟨w2, ord2, ev2, cols⟩ := Evaluating.forkAll interp host progs ev1 hid hctx
+      (fun p hp w' o => typed p (List.mem_cons_of_mem _ hp) w' (leHost_trans _ _ _ ord o))
+    have unfolded : forkFinalizers interp m host (prog :: progs) =
+        ((forkFinalizers interp (spawn interp m host prog ⟨true, true, .inherit⟩ []).1 host
+            progs).1,
+          (spawn interp m host prog ⟨true, true, .inherit⟩ []).2.2 ::
+            (forkFinalizers interp (spawn interp m host prog ⟨true, true, .inherit⟩ []).1 host
+              progs).2) := rfl
+    rw [unfolded, hspawn, hid, hctx]
+    refine ⟨w2, leHost_trans _ _ _ ord ord2, ev2, fun id hmem => ?_⟩
+    rcases List.mem_cons.mp hmem with rfl | hmem
+    · exact ⟨_, ord2.1.2.1 _ _ addFiber_Γ_self, subN_unknown _, subN_never _⟩
+    · exact cols id hmem
+
+end Parallel
+
+/-- **`closeIter`, parallel** (`evaluateFiberR`'s `.closeIter .parallel` arm, `FiberAction.closePar`,
+`Machine/Fibers.lean:1502-1507`; rc.112 `internal/effect.ts:3819-3826`): the answer frame saved over
+the continuation; every finalizer, typed at `⟨unknown, never⟩` by the row's admission at the closing
+exit the pre fits (`finalizerTyped_of_admitted`), forked as an immediate daemon declared at that type
+(`Evaluating.forkAll`); their runs queued (`evaluate`), then the await over them (`closeParAwait`),
+whose reply the `closeParDone` frame (`closeParProtocol`) and the saved answer frame accept. No
+queued command reads the host's code (`QueueOk.owners`), so its stale operation needs no type. -/
+theorem clause_closeIter_parallel (root : ProgramSource) (rootTy : EffTy) (order : List FinName)
+    (ex : ExitV) : FiberClauseKeeps root rootTy (.closeIter .parallel order ex) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, _, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨_, ⟨fins, hex⟩, _⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  obtain ⟨w', ord, ev', cols⟩ := Evaluating.forkAll (interpRAt root.program m.completedExits)
+    (saveAnswerR f next) (order.map fun fin => denoteFin fin ex) ev rfl rfl
+    (fun prog hprog w1 o => by
+      obtain ⟨fin, hfin, rfl⟩ := List.mem_map.mp hprog
+      exact finalizerTyped_of_admitted root w fin (fins fin hfin) w1 o ex (fitsExit_mono o hex))
+  show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.closePar
+    (interpRAt root.program m.completedExits) m (saveAnswerR f next) y
+    (order.map fun fin => denoteFin fin ex)))
+  refine ⟨w', ord, ?_⟩
+  show ConfigTyped root rootTy w'
+    ((forkFinalizers (interpRAt root.program m.completedExits) m (saveAnswerR f next)
+      (order.map fun fin => denoteFin fin ex)).1.update (saveAnswerR f next))
+    ((forkFinalizers (interpRAt root.program m.completedExits) m (saveAnswerR f next)
+      (order.map fun fin => denoteFin fin ex)).2.map Cmd.evaluate ++
+      [Cmd.closeParAwait (saveAnswerR f next).id y
+        (forkFinalizers (interpRAt root.program m.completedExits) m (saveAnswerR f next)
+          (order.map fun fin => denoteFin fin ex)).2] ++ rest)
+  generalize (forkFinalizers (interpRAt root.program m.completedExits) m (saveAnswerR f next)
+    (order.map fun fin => denoteFin fin ex)) = forks at ev' cols ⊢
+  obtain ⟨M, children⟩ := forks
+  change Evaluating root rootTy w' M rest f y at ev'
+  change FiberListColumns w' children .unknown .never at cols
+  change ConfigTyped root rootTy w' (M.update { f with frame := (saveAnswerR f next).frame })
+    (children.map Cmd.evaluate ++ [Cmd.closeParAwait f.id y children] ++ rest)
+  -- the host's code at the later world
+  obtain ⟨ty', declared'⟩ := ev'.declared
+  obtain ⟨tin', current', stack', prov'⟩ := ev'.code (by rw [hc]; rfl) ty' declared'
+  rw [hc] at current'
+  have answer := closeIter_frame current'
+  have hmem : f ∈ (M.update f).fibers := rfiber?_mem ev'.look
+  have old := ev'.typed.machine.fiber hmem
+  have notParked : f.parked = .notParked := by
+    cases hp : f.parked with
+    | notParked => rfl
+    | withGuard _ =>
+      have idle := old.parkedIdle (by rw [hp]; exact fun h => nomatch h)
+      rw [ev'.running] at idle
+      cases idle
+  have same : ∀ ty'', w'.Γ f.id = some ty'' → ty'' = ty' :=
+    fun _ h => Option.some.inj (h.symm.trans declared')
+  have fresh : FiberTyped root w' ((M.update f).update { f with frame := (saveAnswerR f next).frame })
+      { f with frame := (saveAnswerR f next).frame } :=
+    fiberTyped_frame old ev'.look ev'.running (saveAnswerR f next).frame
+      (fun ty'' d => by
+        rw [same ty'' d]
+        exact ⟨_, positionStack_of_host (hostStack_push answer stack')⟩)
+      ⟨prov'.recorded, prov'.deferred⟩
+      (fun _ h => by
+        change raceRegistrationR f.frame.current = some _ at h
+        rw [hc, raceRegistrationR_typed current'] at h
+        cases h)
+  have edited : ConfigTyped root rootTy w' (M.update { f with frame := (saveAnswerR f next).frame })
+      rest := by
+    rw [← rupdate_rupdate M (show ({ f with frame := (saveAnswerR f next).frame } : RFiber).id =
+      f.id from rfl)]
+    exact configTyped_frame_edit ev'.typed rfl ev'.look ev'.running (saveAnswerR f next).frame fresh
+  obtain ⟨f0, hf0, _⟩ := ev'.stale
+  have lookG : (M.update { f with frame := (saveAnswerR f next).frame }).fiber? f.id =
+      some { f with frame := (saveAnswerR f next).frame } :=
+    rfiber?_update_self (f := f0) (by rw [rfiber?_id hf0]; exact hf0) (rfiber?_id hf0).symm
+  have after : ConfigTyped root rootTy w' (M.update { f with frame := (saveAnswerR f next).frame })
+      (.closeParAwait f.id y children :: rest) := by
+    refine configTyped_cons_plain edited _ trivial ⟨_, lookG, ev.running, notParked⟩ ?_ ?_ trivial
+      rfl (fun _ _ _ h => nomatch h) (fun _ _ h => nomatch h) (fun _ _ _ h => nomatch h)
+      (fun _ _ _ _ _ h => nomatch h) (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
+    · intro x hx
+      rw [lookG] at hx
+      cases hx
+      exact ⟨.unknown, .never, cols, closeParProtocol w', ty', declared',
+        hostStack_push answer (hostStack_races (m := M.update f)
+          (m' := M.update { f with frame := (saveAnswerR f next).frame })
+          (racesKept_of_eq fun _ => rfl) stack'), ⟨prov'.recorded, prov'.deferred⟩⟩
+    · intro o ho
+      change some f.id = some o at ho
+      cases ho
+      rw [commandOwner_rupdate]
+      exact owner_free ev'.typed.queue rfl
+  rw [List.append_assoc]
+  exact configTyped_evaluates after _ fun c hc => by
+    obtain ⟨t, _, rfl⟩ := List.mem_map.mp hc
+    exact ⟨t, rfl⟩
 
 end Effect4.Program.Typed

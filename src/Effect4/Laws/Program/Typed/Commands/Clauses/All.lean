@@ -16,11 +16,10 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.StoreDeferred
 Concept 4 (`step-deliver-preserves`, `step-loop-preserves`): every fiber clause and every store
 clause by name, so `M6Ledger.step_deliver` and `step_loop` follow from `deliver_preserves_of_clauses`
 and `loop_preserves_of_clauses` (`Commands/Evaluate.lean`) with the walk (`walkKeeps`). Every store
-clause is proved (`storeClauses`); the fiber clauses not yet proved are this file's premises,
-stated exactly: `closeIter` at the parallel strategy and the generator producer's obligation
-`GenProtocol`. Each premise is discharged where its clause lands.
+clause is proved (`storeClauses`), and every fiber clause but the generator's, whose producer
+obligation `GenProtocol` is this file's one premise (the ledger goal `M6Clauses.gen_protocol`).
 
-Not established: the premises; `decision_preserves`, `typedState_reachable`.
+Not established: `GenProtocol`; `decision_preserves`, `typedState_reachable`.
 -/
 
 set_option autoImplicit false
@@ -50,10 +49,8 @@ theorem gen_protocol (root : ProgramSource) : ProofGraph.Obligation (GenProtocol
 
 end M6Clauses
 
-/-- **Every fiber clause**, from the proved ones and the two open rows. -/
-theorem fiberClauses_of (root : ProgramSource) (rootTy : EffTy)
-    (closeIter : ∀ o e, FiberClauseKeeps root rootTy (.closeIter .parallel o e))
-    (gen : GenProtocol root) :
+/-- **Every fiber clause**, from the proved ones and the generator's protocol. -/
+theorem fiberClauses_of (root : ProgramSource) (rootTy : EffTy) (gen : GenProtocol root) :
     ∀ op, FiberClauseKeeps root rootTy op := by
   intro op
   cases op with
@@ -90,7 +87,7 @@ theorem fiberClauses_of (root : ProgramSource) (rootTy : EffTy)
   | closeIter strategy order ex =>
     cases strategy with
     | sequential => exact clause_closeIter_sequential root rootTy order ex
-    | parallel => exact closeIter order ex
+    | parallel => exact clause_closeIter_parallel root rootTy order ex
   | frontier reason p => exact clause_frontier root rootTy reason p
   | guard_ kind => exact clause_guard_ root rootTy kind
   | unguard ex => exact clause_unguard root rootTy ex
@@ -140,23 +137,22 @@ theorem storeClauses (root : ProgramSource) (rootTy : EffTy) :
 
 /-- **`deliver` keeps `I`**, from the open clauses. -/
 theorem deliver_preserves_of_open (root : ProgramSource) (rootTy : EffTy)
-    (closeIter : ∀ o e, FiberClauseKeeps root rootTy (.closeIter .parallel o e))
     (gen : GenProtocol root)
     (id : FiberId) (y : Bool) : StepPreserves root rootTy (.deliver id y) :=
-  deliver_preserves_of_clauses root rootTy (fiberClauses_of root rootTy closeIter gen)
+  deliver_preserves_of_clauses root rootTy (fiberClauses_of root rootTy gen)
     (storeClauses root rootTy) (walkKeeps root rootTy) id y
 
 /-- **`loop` keeps `I`**, from the open clauses. -/
 theorem loop_preserves_of_open (root : ProgramSource) (rootTy : EffTy)
-    (closeIter : ∀ o e, FiberClauseKeeps root rootTy (.closeIter .parallel o e))
     (gen : GenProtocol root)
     (id : FiberId) (y : Bool) : StepPreserves root rootTy (.loop id y) :=
-  LoopPrefix.loop_preserves_of_clauses root rootTy (fiberClauses_of root rootTy closeIter gen)
+  LoopPrefix.loop_preserves_of_clauses root rootTy (fiberClauses_of root rootTy gen)
     (storeClauses root rootTy) (walkKeeps root rootTy) id y
 
 end Effect4.Program.Typed
 
-#proof_wanted Effect4.Program.Typed.M6Clauses.closeIter_parallel
+#obligation_proved Effect4.Program.Typed.M6Clauses.closeIter_parallel :=
+  @Effect4.Program.Typed.clause_closeIter_parallel
 #proof_wanted Effect4.Program.Typed.M6Clauses.gen_protocol
-#typed_state_obligations Effect4.Program.Typed.M6Clauses ceiling 2
+#typed_state_obligations Effect4.Program.Typed.M6Clauses ceiling 1
   using aesop (rule_sets := [Effect4.TypedState])
