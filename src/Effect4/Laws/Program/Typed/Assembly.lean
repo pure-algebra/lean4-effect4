@@ -253,6 +253,64 @@ def LiveCode (root : ProgramSource) (w : World) (m : RState) : Prop :=
   ∀ f ∈ m.fibers, f.exit = none → f.running = false → raceRegistrationR f.frame.current = none →
     f.parked = .notParked → ∀ ty, w.Γ f.id = some ty → CodeOk root w m f.id ty f.frame
 
+/-- What a queued `loop` or `deliver` reads of a running fiber at its declared type: its current
+code with its stack (`CodeOk`); or, when it holds a deferred interrupt and no queued `deliver` reads
+it, its stack alone. The queued `loop`'s top replaces such a fiber's code with the recorded cause
+before evaluating (`runloopTop`), and the parks leave their operation current over a saved answer
+frame no type admits (seat M6B's finding). -/
+def ReadOk (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd) (f : RFiber)
+    (ty : EffTy) : Prop :=
+  CodeOk root w m f.id ty f.frame ∨
+    (f.frame.deferredInterrupt = true ∧ (∀ y, Cmd.deliver f.id y ∉ commands) ∧
+      ∃ tin, HostStack root w m f.id tin ty f.frame.stack ∧ Contracts.InterruptProvenance f.frame)
+
+theorem ReadOk.races {root : ProgramSource} {w : World} {m m' : RState} {q : List RCmd} {f : RFiber}
+    {ty : EffTy} (h : ReadOk root w m q f ty) (kept : RacesKept m m') : ReadOk root w m' q f ty :=
+  h.imp (codeOk_races kept) fun ⟨d, nd, tin, st, pv⟩ => ⟨d, nd, tin, hostStack_races kept st, pv⟩
+
+/-- A fiber a queued `deliver` reads has its code typed. -/
+theorem ReadOk.code_of_deliver {root : ProgramSource} {w : World} {m : RState} {q : List RCmd}
+    {f : RFiber} {ty : EffTy} (h : ReadOk root w m q f ty) {y : Bool}
+    (hd : Cmd.deliver f.id y ∈ q) : CodeOk root w m f.id ty f.frame :=
+  h.elim id fun ⟨_, nd, _⟩ => absurd hd (nd y)
+
+/-- A fiber holding no deferred interrupt has its code typed. -/
+theorem ReadOk.code_of_not_deferred {root : ProgramSource} {w : World} {m : RState} {q : List RCmd}
+    {f : RFiber} {ty : EffTy} (h : ReadOk root w m q f ty)
+    (nd : f.frame.deferredInterrupt = false) : CodeOk root w m f.id ty f.frame :=
+  h.elim id fun ⟨d, _⟩ => absurd (nd.symm.trans d) Bool.false_ne_true
+
+/-- Either way, the stack is typed. -/
+theorem ReadOk.stack {root : ProgramSource} {w : World} {m : RState} {q : List RCmd} {f : RFiber}
+    {ty : EffTy} (h : ReadOk root w m q f ty) :
+    ∃ tin, HostStack root w m f.id tin ty f.frame.stack ∧ Contracts.InterruptProvenance f.frame :=
+  h.elim (fun ⟨tin, _, st, pv⟩ => ⟨tin, st, pv⟩) fun ⟨_, _, s⟩ => s
+
+/-- What is read of a fiber reads only its id and its saved frame. -/
+theorem ReadOk.congr {root : ProgramSource} {w : World} {m : RState} {q : List RCmd} {f g : RFiber}
+    {ty : EffTy} (h : ReadOk root w m q f ty) (hid : g.id = f.id) (hframe : g.frame = f.frame) :
+    ReadOk root w m q g ty := by
+  unfold ReadOk
+  rw [hid, hframe]
+  exact h
+
+/-- …and moves to a later world. -/
+theorem ReadOk.world {root : ProgramSource} {w w' : World} {m : RState} {q : List RCmd} {f : RFiber}
+    {ty : EffTy} (h : ReadOk root w m q f ty) (ord : w.leHost w') : ReadOk root w' m q f ty :=
+  h.imp (codeOk_mono ord) fun ⟨d, nd, tin, st, pv⟩ => ⟨d, nd, tin, hostStack_mono ord st, pv⟩
+
+/-- A queue holding no `deliver` of this fiber the other did not keeps what is read of it. -/
+theorem ReadOk.sub {root : ProgramSource} {w : World} {m : RState} {q q' : List RCmd} {f : RFiber}
+    {ty : EffTy} (h : ReadOk root w m q f ty)
+    (hsub : ∀ y, Cmd.deliver f.id y ∈ q' → Cmd.deliver f.id y ∈ q) : ReadOk root w m q' f ty :=
+  h.imp id fun ⟨d, nd, s⟩ => ⟨d, fun y hy => nd y (hsub y hy), s⟩
+
+/-- A command that is not this fiber's `deliver` keeps what is read of it. -/
+theorem ReadOk.cons {root : ProgramSource} {w : World} {m : RState} {q : List RCmd} {f : RFiber}
+    {ty : EffTy} {c : RCmd} (h : ReadOk root w m q f ty) (hc : ∀ y, c ≠ Cmd.deliver f.id y) :
+    ReadOk root w m (c :: q) f ty :=
+  h.imp id fun ⟨d, nd, s⟩ => ⟨d, fun y hy => (List.mem_cons.mp hy).elim (fun e => hc y e.symm) (nd y), s⟩
+
 /-- `I`'s code clause for running fibers: a running fiber whose current code a queued `loop` or
 `deliver` reads is typed with its stack at its declared type. A running fiber continued by
 `finish`, the race commands or the interrupt commands is typed by their own facts (`QueueOk`,
@@ -261,14 +319,14 @@ inert. -/
 def ReadCode (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd) : Prop :=
   ∀ f ∈ m.fibers, f.running = true → ReadsCode f.id commands →
     raceRegistrationR f.frame.current = none → ∀ ty, w.Γ f.id = some ty →
-      CodeOk root w m f.id ty f.frame
+      ReadOk root w m commands f ty
 
 /-- `ReadCode` moves to a machine with the same fibers whose races keep their host and token. -/
 theorem readCode_races {root : ProgramSource} {w : World} {m m' : RState} {q : List RCmd}
     (fibers : m'.fibers = m.fibers) (kept : RacesKept m m') (code : ReadCode root w m q) :
     ReadCode root w m' q := by
   intro f hf running reads marker ty declared
-  exact codeOk_races kept (code f (by rw [← fibers]; exact hf) running reads marker ty declared)
+  exact (code f (by rw [← fibers]; exact hf) running reads marker ty declared).races kept
 
 /-- Row 139's halting freedom and liveness, on the machine alone. Each clause names the halting
 arm it rules out; with the scope-finalizer drops of `ObserverState` and `QueueOk.observer`, with
@@ -774,10 +832,13 @@ theorem configTyped_append_tasks {root : ProgramSource} {rootTy : EffTy} {w : Wo
   constructor
   · intro typed
     obtain ⟨queue, snapshot⟩ := queueOk_append_tasks.mp typed.queue
-    exact ⟨⟨typed.machine, fun f hf hr reads => typed.code f hf hr (readsCode_append_tasks.mpr reads),
-      queue⟩, snapshot⟩
+    exact ⟨⟨typed.machine, fun f hf hr reads marker ty d =>
+      (typed.code f hf hr (readsCode_append_tasks.mpr reads) marker ty d).sub
+        fun _ hy => List.mem_append_left _ hy, queue⟩, snapshot⟩
   · rintro ⟨typed, snapshot⟩
-    exact ⟨typed.machine, fun f hf hr reads => typed.code f hf hr (readsCode_append_tasks.mp reads),
+    exact ⟨typed.machine, fun f hf hr reads marker ty d =>
+      (typed.code f hf hr (readsCode_append_tasks.mp reads) marker ty d).sub fun y hy =>
+        (List.mem_append.mp hy).elim id fun there => absurd rfl (taskCmd_not_reads there f.id y).2,
       queueOk_append_tasks.mpr ⟨typed.queue, snapshot⟩⟩
 
 /-- **`StepPreserves` is the lift's `step` premise.** The eighteen command facts give

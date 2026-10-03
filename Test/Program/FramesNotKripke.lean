@@ -668,7 +668,7 @@ theorem good_config : ConfigTyped (refProg : ProgramSource) unitTy world good [c
     change world.Γ Api.root = some ty at declared
     rw [(valid_of [.answer goodNext] true).root] at declared
     cases declared
-    exact codeOk_of_saved (good_saved world)
+    exact Or.inl (codeOk_of_saved (good_saved world))
 
 def afterGood : RState × List RCmd :=
   letI := termEvaluatorFor (refProg : ProgramSource).program
@@ -959,7 +959,7 @@ theorem afterGood_config :
     change w1g.Γ Api.root = some ty at declared
     rw [valid_w1g.root] at declared
     cases declared
-    exact codeOk_of_saved saved
+    exact Or.inl (codeOk_of_saved saved)
 
 /-- **Green control: with a frame typed into `unit` on every success, the same `loop` keeps
 the typed configuration** (`good_config` to `afterGood_config`), at the world that declares the
