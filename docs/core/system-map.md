@@ -148,7 +148,7 @@ Each syntax sort has one owner, and its signature is data the generator reads.
 | Sort | The one representation | Signature as data | Maps out |
 | --- | --- | --- | --- |
 | program | `Eff` (`Program/Eff.lean`) | `binders.json` → `LayerView` | `cataFam`, unique by `hom_eq_cata_eff` |
-| type | `Ty` (`Program/Ty.lean`, 20 constructors); types up to `≡N` (equal normal forms) are the checker's types, `Ty/≡N ≅ CTy`, ordered by `Ty.subN` (row 137) | its generated family description | `cata_ty` (`Program/Fold.lean`) |
+| type | `Ty` (`Program/Ty.lean`); types up to `≡N` (equal normal forms) are the checker's types, `Ty/≡N ≅ CTy`, ordered by `Ty.subN` (row 137) | its generated family description | `cata_ty` (`Program/Fold.lean`) |
 | term | `Term` (`Machine/Term.lean`) | generated | `cata_term` |
 | value | `Store.Val` | its inductive; `Kind`/`Shape` classify it | `cata_val`; `Canonical` gives exact embeddings |
 | schema carrier | `Representation` | its inductive | an exact embedding from `Ty` modulo `normS` (rows 6, 128) |

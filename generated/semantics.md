@@ -606,7 +606,7 @@ Exact Codecs: Invertible embeddings for JSON and Schema representations
 | decode-encode | compatibility | proved | Effect4.Schema.decode_encode | yes |  |
 | of-schema-exact | compatibility | proved | Effect4.Schema.Bridge.ofSchema_exact | yes |  |
 | of-schema-schema | compatibility | proved | Effect4.Schema.Bridge.ofSchema_schema | yes |  |
-| record-codec-layout | compatibility | absent | Planned data-wave feature under decisions row 165; record codecs carry canonical field names when implemented | — |  |
+| record-codec-layout | compatibility | absent | Open: the JSON codec has no record arm and the Schema face refuses record by name; record values carry canonical names (decisions row 165 (a)) | — |  |
 
 ### Printed statements
 
@@ -663,7 +663,6 @@ Subtyping Algebra: Preorder laws, normalization, and join-semilattice on CTy
 | subn-equiv-iff | decidability | proved | Effect4.Program.Ty.subN_equiv_iff | yes |  |
 | normalize-idem | compatibility | proved | Effect4.Program.Ty.normalize_idem | yes |  |
 | sub-antisymm-canonical | antisymmetry | proved | Effect4.Program.Ty.sub_antisymm_canonical | yes |  |
-| record-app-subtyping | compatibility | absent | Planned data-wave feature under decisions row 119; Ty currently has 20 constructors without record or app | — |  |
 
 ### Printed statements
 

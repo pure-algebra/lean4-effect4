@@ -441,11 +441,15 @@ and checked/wanted evidence remain available through the existing report and arc
   3. Exactness: `read v = some a → norm v = write a` modulo an explicit normaliser.
 - **Normalisers (Row 128)**: `normJ` sorts JSON object keys; `normS` normalises Schema representation ASTs.
 - **Approved Erasure List (Row 179)**: `normS` erases **only nine approved annotation keys** (`identifier`,
-  `title`, `description`, `examples`, `default`, `documentation`, `message`, `arbitrary`, and check annotations).
+  `title`, `description`, `documentation`, `examples`, `default`, `message`, `expected`, `arbitrary`:
+  `Schema.Bridge.erasedKeys`).
   Arbitrary metadata (`effect4/*`) is **not** unconditionally erased.
-- **Pinned Limitation (`E4-SCHEMA-CE-059`)**: Overlapping union variants decode with left bias; exactness
-  holds on unambiguous disjoint sums.
-- **Planned Feature (Row 165)**: Positional record codecs (`record-codec-layout`) planned for data wave W5.
+- **Pinned Limitation (`E4-SCHEMA-CE-059`)**: Overlapping union variants decode with left bias. Exactness
+  on the accepted image (`decode_iff`) holds at every type; what an overlap loses is retraction, for a
+  right-variant value that the left variant also accepts.
+- **Records (rows 119, 165)**: a record value carries its canonical field names (row 165 (a), ruled). The
+  JSON codec has no record arm yet and the Schema face refuses `record` by name, so record codecs
+  (`record-codec-layout`) are open.
 
 #### 3. Project Definition and Judgment
 Data plane conversions in Effect4 are exact embeddings between syntactic carriers and serializable formats:
@@ -459,14 +463,15 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 #### 4. Required Properties and Obligations
 - **Exactness modulo key sorting (`decode-iff`)**: JSON decoding is exact modulo `normJ`
   (`decode_iff` (`src/Effect4/Laws/Schema/Codec.lean:1052`)).
-- **Retraction on canonical values (`decode-encode`)**: Decoding an encoded canonical value recovers it
-  (`decode_encode` (`src/Effect4/Laws/Schema/Codec.lean:1065`)).
+- **Retraction on codec-admitted values (`decode-encode`)**: at a canonical type (`CTy`), decoding the
+  encoding of a value that passes the shape check and is codec-admitted (`Ty.isCodecValue`) recovers it
+  (`decode_encode`, `src/Effect4/Laws/Schema/Codec.lean`).
 - **Schema exactness modulo nine keys (`of-schema-exact`)**: Schema decoding is exact modulo `normS`
   (`ofSchema_exact` (`src/Effect4/Schema/Bridge.lean:492`)).
 - **Schema retraction (`of-schema-schema`)**: Inverting schema representations on reserved-free types
   (`ofSchema_schema` (`src/Effect4/Schema/Bridge.lean:412`)).
-- **Record layout codecs (`record-codec-layout`)**: Exact codec representation for positional record layouts
-  (decisions row 165, Data-Wave W5).
+- **Record codecs (`record-codec-layout`)**: exact JSON and Schema codecs for record values, which carry
+  their canonical names (decisions row 165 (a)); open.
 
 ### 2.6 Concept 6: Subtyping Algebra & Normalization (`subtyping-algebra`)
 
@@ -485,8 +490,10 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 - **Exclusion & Repair of Raw Subtyping (Row 137, `E4-TYPED-CE-009`)**: Raw `sub` does not distribute products
   over unions; subtyping equivalence and comparisons are defined through `subN`.
 - **Exclusion of Function Types (Row 163)**: No function arrow types exist in `Ty`; arrow subtyping is excluded.
-- **Planned Feature (Row 119)**: `Ty` currently has 20 constructors without record or app constructors. Record
-  and app subtyping rules (`record-app-subtyping`) are planned for data-wave stages W2/W4.
+- **Records, maps, tuples and applications (rows 119, 162)**: the constructors are in `Ty`. `Ty.sub` compares
+  a record with its canonical partner exactly, by names and fields (no width rule), a map exactly in the key
+  and covariantly in the value, and tuples and applications pointwise. The laws below quantify over every
+  `Ty`, so they cover these constructors.
 
 #### 3. Project Definition and Judgment
 The static type language `Ty` possesses a decidable subtyping preorder `Ty.subN` evaluated on normalized forms:
@@ -507,8 +514,6 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   (`normalize_idem` (`src/Effect4/Laws/Program/TypeAlgebra.lean:1081`)).
 - **Antisymmetry on canonical types (`sub-antisymm-canonical`)**: `subN` is antisymmetric on canonical representatives.
   (`sub_antisymm_canonical` (`src/Effect4/Laws/Program/TypeAlgebra.lean:1035`)).
-- **Record and application subtyping (`record-app-subtyping`)**: Subtyping, join, and normalization laws for record and app constructors
-  (decisions row 119, Data-Wave W2/W4).
 
 ### 2.7 Concept 7: Initial Algebras & Catamorphic Folds (`initial-algebras-folds`)
 

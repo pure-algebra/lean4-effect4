@@ -366,8 +366,8 @@ def registry : Registry where
       title := "Retraction of Schema generation on reserved-free types"
       pointer := .witness `Effect4.Schema.Bridge.ofSchema_schema },
     { id := "record-codec-layout", concept := "exact-codecs", role := .compatibility
-      title := "Exact codec representation for positional record layouts"
-      pointer := .absent "Planned data-wave feature under decisions row 165; record codecs carry canonical field names when implemented" },
+      title := "Exact JSON and Schema codecs for record values, which carry their canonical names"
+      pointer := .absent "Open: the JSON codec has no record arm and the Schema face refuses record by name; record values carry canonical names (decisions row 165 (a))" },
 
     -- 6. subtyping-algebra
     { id := "subn-refl", concept := "subtyping-algebra", role := .compatibility
@@ -397,9 +397,6 @@ def registry : Registry where
       literature := [
         { work := "Castagna2024", locator := "audit P6", relation := "adaptedResult" }
       ] },
-    { id := "record-app-subtyping", concept := "subtyping-algebra", role := .compatibility
-      title := "Subtyping and normalization for record and application constructors"
-      pointer := .absent "Planned data-wave feature under decisions row 119; Ty currently has 20 constructors without record or app" },
 
     -- 7. initial-algebras-folds
     { id := "hom-eq-cata-eff", concept := "initial-algebras-folds", role := .fundamentalProperty
