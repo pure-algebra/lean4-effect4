@@ -106,7 +106,7 @@ def main (argv : List String) : IO Unit := do
   let act : MetaM Unit := do
     let lines ← run args
     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/PreludeAtoms.lean"
-    let text := "// " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n"
+    let text := Tools.GeneratedStamp.endWithOneNewline ("// " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
     match args.out with
     | some p => IO.FS.writeFile p text
     | none => IO.println text

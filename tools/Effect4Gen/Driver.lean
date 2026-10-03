@@ -23,8 +23,9 @@ One invocation per manifest group:
 
 with the group's fields in the manifest's order, the output file's bytes compared before
 and after, and one line per group saying `new`, `CHANGED` or `same`. `--check` then
-type-checks each emitted file, counts its `#print axioms` receipts, refuses any that
-reaches `sorryAx` or `Classical.choice`, and runs the projection guard over all of them.
+type-checks each emitted file and runs the projection guard over all of them; the axioms an
+emitted declaration reaches are the axiom gate's (`Test/Audit/AxiomGate.lean`), which audits
+every library module, generated or not.
 `--verify` turns a change into a non-zero exit and also asks `git diff --exit-code`
 whether an emitted file differs from the committed one.
 
@@ -261,20 +262,13 @@ def main (argv : List String) : IO Unit := do
     for file in files do
       if ← exists? file then
         let r ← runLake #["env", "lean", "-M", "4096", file]
-        let receipts := countOccurrences r.out "depends on axioms"
-          + countOccurrences r.out "does not depend on any axioms"
-        let bad := countOccurrences r.out "sorryAx" + countOccurrences r.out "Classical.choice"
-        if bad > 0 then
-          IO.println ("FAILED  " ++ file ++ ": " ++ toString bad ++
-            " receipts reach sorryAx or Classical.choice")
-          failed := failed.push file
         if r.code != 0 then
           IO.println ("FAILED  " ++ file ++ ": lean exited " ++ toString r.code)
           unless r.out.isEmpty do IO.println r.out
           unless r.err.isEmpty do IO.println r.err
           failed := failed.push file
         else
-          IO.println ("green   " ++ file ++ " (" ++ toString receipts ++ " receipts)")
+          IO.println ("green   " ++ file)
     let mut present : Array String := #[]
     for file in files do
       if ← exists? file then present := present.push file

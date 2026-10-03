@@ -627,6 +627,7 @@ theorem build_view {Op : Type} : (fam : EffFam) → (e : EffSelfCarrier Op fam) 
   | .layer, e => build_view_layer e
   | .layers, e => build_view_layers e
 
+
 end Effect4.Program
 
 /-! ## Acceptance guards for the generated layer view

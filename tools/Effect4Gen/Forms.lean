@@ -274,10 +274,7 @@ def run (args : Args) : IO (Array String) := do
   | "FormsLaws" =>
     for e in emitted do lines := lines.push e.lemma
   | g => throw (IO.userError s!"unknown group {g}: Forms or FormsLaws")
-  lines := lines ++ #["/-! ## Receipts -/", ""]
-  for e in emitted do
-    lines := lines.push s!"#print axioms Effect4.Program.Authoring.Forms.{e.id}{if args.group == "FormsLaws" then "_scoped" else ""}"
-  lines := lines ++ #["", "end Effect4.Program.Authoring.Forms", ""]
+  lines := Tools.GeneratedStamp.trimBlankTail lines ++ #["", "end Effect4.Program.Authoring.Forms", ""]
   if let some p := args.append then
     let txt ← IO.FS.readFile p
     lines := lines ++ (txt.splitOn "\n").toArray.map (·.replace "\r" "")
@@ -294,7 +291,7 @@ def main (argv : List String) : IO Unit := do
     throw (IO.userError "--imports names the modules the emitted file imports; none given")
   let lines ← run args
   let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/Forms.lean"
-  let text := "-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n"
+  let text := Tools.GeneratedStamp.endWithOneNewline ("-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
   match args.out with
   | some p => IO.FS.writeFile p text
   | none => IO.println text

@@ -799,7 +799,7 @@ def run (args : Args) : MetaM (Array String) := do
   lines := lines ++ #["", "set_option autoImplicit false", ""]
   let ctors ← readFamilies (table.profile.families ++
     [`Effect4.Program.Stmts, `Effect4.Program.Stmt, `Effect4.Program.Effs, `Effect4.Program.LayerTerms])
-  let (text, receipts) ← match args.group with
+  let (text, _) ← match args.group with
     | "Binders" =>
       let (t, r) ← emitBinders table ctors
       pure ("namespace Effect4.Program\n\n" ++ t ++ "\n", r)
@@ -817,12 +817,9 @@ def run (args : Args) : MetaM (Array String) := do
       pure ("namespace Effect4.Program\n\n" ++ t, r)
     | g => throwError "unknown group {g}: Binders, Authoring, Scoped, ScopedLaws or NodeLenses"
   lines := lines.push text
-  lines := lines ++ #["/-! ## Receipts -/", ""]
-  for r in receipts do
-    lines := lines.push s!"#print axioms {r}"
   let ns := if args.group == "Authoring" || args.group == "ScopedLaws" then "Effect4.Program.Authoring"
     else "Effect4.Program"
-  lines := lines ++ #["", s!"end {ns}", ""]
+  lines := Tools.GeneratedStamp.trimBlankTail lines ++ #["", s!"end {ns}", ""]
   if let some p := args.append then
     let txt ← IO.FS.readFile p
     lines := lines ++ (txt.splitOn "\n").toArray.map (·.replace "\r" "")
@@ -843,7 +840,7 @@ def main (argv : List String) : IO Unit := do
   let act : MetaM Unit := do
     let lines ← run args
     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/Authoring.lean"
-    let text := "-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n"
+    let text := Tools.GeneratedStamp.endWithOneNewline ("-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
     match args.out with
     | some p => IO.FS.writeFile p text
     | none => IO.println text

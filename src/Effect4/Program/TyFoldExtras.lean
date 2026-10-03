@@ -25,6 +25,7 @@ def nodeThen {M : Type u} (op : M → M → M) (here : M) (kids : List M) : M :=
   | none => here
   | some k => op here k
 
+
 /-- The constructor tags of `Effect4.Program.Ty`, in declaration order. -/
 inductive TyCtor where
   | never

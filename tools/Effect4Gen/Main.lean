@@ -38,7 +38,7 @@ The environment walk is `git:bb807c93:src/OCaml5/Tools/Describe.lean`'s (`getCon
 pattern is `git:ddb51b6c:src/OCaml5/Lib/Derived.lean`'s.
 
 This is a tool (`IO`, `Lean.Meta`); it is not part of any audited library, and its own axioms
-are not the emitted code's. The emitted code's receipts are printed by the emitted file.
+are not the emitted code's. The emitted code is audited by the axiom gate like any other.
 
 ## What decides the shape of the emitted proof
 
@@ -1036,7 +1036,6 @@ def run (args : Args) : MetaM (Array String) := do
          ""] }
   -- One item per requested type, skipping a type already emitted as a member of an earlier item.
   let mut done : Array Expr := #[]
-  let mut receipts : Array String := #[]
   for s in seeds do
     if done.any (fun d => d == s) then continue
     let (st, recursive) ← buildItem tags s
@@ -1047,23 +1046,6 @@ def run (args : Args) : MetaM (Array String) := do
       if recursive then emitRecursive st ns kinds else emitPlain st ns kinds
     let (_, o) ← emitAct.run { lines := #[] }
     out := { out with lines := out.lines ++ o.lines }
-    let prefix' := args.group ++ "Gen." ++ ns ++ "."
-    if recursive then
-      for m in st.members do
-        receipts := receipts.push (prefix' ++ "toVal" ++ m.ident)
-        receipts := receipts.push (prefix' ++ "raw" ++ m.ident ++ "_toVal" ++ m.ident)
-        receipts := receipts.push (prefix' ++ "fits" ++ m.ident)
-        receipts := receipts.push (prefix' ++ "instCanonical" ++ m.ident)
-        if (kindFor kinds m).isSome then
-          receipts := receipts.push (prefix' ++ "instContent" ++ m.ident)
-    else
-      receipts := receipts.push (prefix' ++ "toVal")
-      receipts := receipts.push (prefix' ++ "ofVal_toVal")
-      receipts := receipts.push (prefix' ++ "ofVal_exact")
-      receipts := receipts.push (prefix' ++ "fits")
-      receipts := receipts.push (prefix' ++ "instCanonical")
-      if (kindFor kinds st.members[0]!).isSome then
-        receipts := receipts.push (prefix' ++ "instContent")
   -- Every `--kind` must name a type this group emitted.
   for k in kinds do
     unless done.any (fun d => d == k.ty) do
@@ -1072,10 +1054,7 @@ def run (args : Args) : MetaM (Array String) := do
   if let some p := args.append then
     let txt ← IO.FS.readFile p
     out := { out with lines := out.lines ++ (txt.splitOn "\n").toArray.map (·.replace "\r" "") }
-  out := { out with lines := out.lines ++ #["/-! ## Receipts -/", ""] }
-  for r in receipts do
-    out := { out with lines := out.lines.push ("#print axioms " ++ r) }
-  out := { out with lines := out.lines ++ #["", "end Effect4.Store"] }
+  out := { out with lines := Tools.GeneratedStamp.trimBlankTail out.lines ++ #["", "end Effect4.Store"] }
   return out.lines
 
 end Effect4Gen
@@ -1096,7 +1075,7 @@ def main (argv : List String) : IO Unit := do
   let act : MetaM Unit := do
     let lines ← run args
     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/Main.lean"
-    let text := "-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n"
+    let text := Tools.GeneratedStamp.endWithOneNewline ("-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
     match args.out with
     | some p => IO.FS.writeFile p text
     | none => IO.println text

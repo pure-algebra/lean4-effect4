@@ -1695,11 +1695,6 @@ def emitElim (root : Name) (pfxIn : Option String) : MetaM String := do
     | _ => throwError "elim: no printer for the position {p.key}"
   s := s ++ "end\n\n"
   s := s ++ s!"instance {instNs}instRepr{short} : Repr {T} := ⟨{pfx}.repr⟩\n\n"
-  s := s ++ "/-! ## Receipts -/\n\n"
-  s := s ++ s!"#print axioms {pfx}.ind\n#print axioms {pfx}.beq_iff\n"
-  s := s ++ s!"#print axioms {instNs}instDecidableEq{short}\n#print axioms {instNs}instRepr{short}\n"
-  for p in comps do
-    s := s ++ s!"#print axioms {pfx}.beq_pos_{p.suffix}_iff\n"
   return s
 
 end Elim
@@ -2602,14 +2597,10 @@ def runExtras (args : Args) : MetaM (Array String) := do
   let opens := (args.types.map fun t => t.toName.getPrefix.toString).eraseDups
   lines := lines ++ #["", "set_option autoImplicit false", "", "namespace " ++ ns, "",
     "open " ++ String.intercalate " " opens, "", "universe u v w", "", Extras.helpers]
-  let mut receipts : List String := []
   for t in args.types do
-    let (text, rs) ← Extras.emit t.toName
+    let (text, _) ← Extras.emit t.toName
     lines := lines.push text
-    receipts := receipts ++ rs
-  lines := lines ++ #["/-! ## Receipts -/", ""]
-  for r in receipts do lines := lines.push s!"#print axioms {r}"
-  lines := lines ++ #["", "end " ++ ns, ""]
+  lines := Tools.GeneratedStamp.trimBlankTail lines ++ #["", "end " ++ ns, ""]
   if let some p := args.append then
     let txt ← IO.FS.readFile p
     lines := lines ++ (txt.splitOn "\n").toArray.map (·.replace "\r" "")
@@ -2620,7 +2611,6 @@ def run (args : Args) : MetaM (Array String) := do
   -- The blocks first: the emitted header depends on whether any of them has a monadic half,
   -- and the namespace is the first carrier's own prefix.
   let mut blockTexts : Array String := #[]
-  let mut allReceipts : List String := []
   let mut anyMonadic := false
   let mut emittedAux : List String := []
   let namespaceName :=
@@ -2638,15 +2628,13 @@ def run (args : Args) : MetaM (Array String) := do
     | none => pure ()
     let (_, _, block) ← readBlock root
     if blockNested block then
-      let (blockText, blockReceipts, aux) ← emitNestedBlock namespaceName root emittedAux
+      let (blockText, _, aux) ← emitNestedBlock namespaceName root emittedAux
       emittedAux := aux
       blockTexts := blockTexts.push blockText
-      allReceipts := allReceipts ++ blockReceipts
     else
       anyMonadic := true
-      let (blockText, blockReceipts) ← emitBlock root
+      let (blockText, _) ← emitBlock root
       blockTexts := blockTexts.push blockText
-      allReceipts := allReceipts ++ blockReceipts
 
   let mut lines : Array String := #[]
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
@@ -2699,17 +2687,12 @@ def run (args : Args) : MetaM (Array String) := do
     lines := lines.push blockText
 
   if args.types.contains "Effect4.Program.Eff" then
-    let (frontierText, frontierReceipts) ← emitFrontier `Effect4.Program.Eff [
+    let (frontierText, _) ← emitFrontier `Effect4.Program.Eff [
       `Effect4.Program.Eff, `Effect4.Program.Stmt, `Effect4.Program.Stmts,
       `Effect4.Program.Effs, `Effect4.Program.ActionTerm]
     lines := lines.push frontierText
-    allReceipts := allReceipts ++ frontierReceipts
 
-  if !allReceipts.isEmpty then
-    lines := lines ++ #["/-! ## Receipts -/", ""]
-  for r in allReceipts do
-    lines := lines.push s!"#print axioms {r}"
-  lines := lines ++ #["", "end " ++ namespaceName.toString, ""]
+  lines := Tools.GeneratedStamp.trimBlankTail lines ++ #["", "end " ++ namespaceName.toString, ""]
 
   if let some p := args.append then
     let txt ← IO.FS.readFile p
@@ -2734,7 +2717,7 @@ def main (argv : List String) : IO Unit := do
   let act : MetaM Unit := do
     let lines ← run args
     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/Fold.lean"
-    let text := "-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n"
+    let text := Tools.GeneratedStamp.endWithOneNewline ("-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
     match args.out with
     | some p => IO.FS.writeFile p text
     | none => IO.println text

@@ -199,4 +199,3 @@ export const mod = (a: number, b: number): number => (b === 0 ? a : a % b)
  * `"concat", [str a, str b] => str (a ++ b)`
  */
 export const concat = (a: string, b: string): string => a + b
-

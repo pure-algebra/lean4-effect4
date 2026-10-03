@@ -82,17 +82,21 @@ build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, E
 # the TypeScript writer (ts).
 WIRE_TAGS := tools/Effect4Gen/wire-tags.json
 
+# What every `scripts/generate.py` group reads besides its own sources: the orchestrator itself and
+# the one header-and-layout module each Lean producer writes through (`Tools.GeneratedStamp`).
+PRODUCER_COMMON := scripts/generate.py tools/Tools/GeneratedStamp.lean
+
 # Declaration-site variance, read off the vendored rc.112 sources by a Lean `--run` driver
 # (tooling plan 1.4a). It is an INPUT of `derived` -- the TyView group reads it -- so it is the
 # first link of the chain, and `check-gen` holds it like any other generated file.
 VARIANCES := tools/Effect4Gen/variances.json
-VARIANCE_SOURCES := tools/Tools/Variances.lean $(VENDOR_SOURCES)
+VARIANCE_SOURCES := tools/Tools/Variances.lean $(VENDOR_SOURCES) scripts/generate.py
 $(GEN)/variances: $(VARIANCE_SOURCES) | build
 	$(PY) scripts/generate.py --only variances
 	@mkdir -p $(GEN) && touch $@
 
 DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json \
-  $(VARIANCES) $(WIRE_TAGS) tools/Tools/WireTags.lean
+  $(VARIANCES) $(WIRE_TAGS) tools/Tools/WireTags.lean $(PRODUCER_COMMON)
 DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Domain/Canonical.trace Program/Native.trace Store/Domain/RowCanonical.trace \
   Store/Domain/Pin.trace Store/Domain/Node.trace Api/Frontier.trace Program/Eff.trace Program/TyCore.trace Program/Ty.trace Laws/Program/Folds/Ty.trace Laws/Auto/RuleSets.trace Program/Refs.trace \
   Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \
@@ -119,29 +123,29 @@ $(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
 # together they make the second pass unnecessary. `make gen-lcnf` is run by name, by `gen`
 # and by the check-ocaml CI job.
 LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean) \
-  ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml
+  ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml $(PRODUCER_COMMON)
 $(GEN)/lcnf: $(GEN)/derived $(LCNF_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only lcnf
 	@mkdir -p $(GEN) && touch $@
 
 EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) $(WIRE_TAGS) \
   scripts/generate-engine-structure.py scripts/lib/program_structure.py \
-  ocaml/engine/layout-allowance.json ocaml/engine/api_engine.ml
+  ocaml/engine/layout-allowance.json ocaml/engine/api_engine.ml $(PRODUCER_COMMON)
 $(GEN)/eff: $(GEN)/derived $(EFF_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only eff
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/wire: $(GEN)/eff src/OCaml5/Tools/EffWire.lean $(CORE)
+$(GEN)/wire: $(GEN)/eff src/OCaml5/Tools/EffWire.lean $(PRODUCER_COMMON) $(CORE)
 	$(PY) scripts/generate.py --only wire
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/cas: $(GEN)/wire src/OCaml5/Tools/CasGoldens.lean $(CORE)
+$(GEN)/cas: $(GEN)/wire src/OCaml5/Tools/CasGoldens.lean $(PRODUCER_COMMON) $(CORE)
 	$(PY) scripts/generate.py --only cas
 	@mkdir -p $(GEN) && touch $@
 
 TS_SOURCES := $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean) $(WIRE_TAGS) src/Effect4/Codegen/Print.lean lakefile.toml \
   vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlClient.ts vendor/effect-4.0.0-rc.112/src/unstable/sql/Statement.ts \
-  vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts
+  vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts scripts/generate.py
 $(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only ts
 	@mkdir -p $(GEN) && touch $@
@@ -150,7 +154,7 @@ $(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE)
 # with "install the dependencies": it resolves `effect` to whatever is above the worktree and
 # dies inside a generated schema (`Schema.TaggedUnion is not a function`), which is what a
 # fresh worktree saw here. Order-only, like every other consumer of the install.
-$(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts/eff/forms.gen.ts ts/eff/taxonomy.gen.ts | ts/eff/node_modules
+$(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts/eff/forms.gen.ts ts/eff/taxonomy.gen.ts scripts/generate.py | ts/eff/node_modules
 	$(PY) scripts/generate.py --only readme
 	@mkdir -p $(GEN) && touch $@
 

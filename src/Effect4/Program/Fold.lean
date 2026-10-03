@@ -673,6 +673,7 @@ def foldMap_pos_list_ty {M : Type u} (unit : M) (op : M → M → M) (xs : List 
 termination_by structural xs
 end
 
+
 inductive TermFam where
   | term
   | terms
@@ -931,6 +932,7 @@ theorem foldM_natural_terms {M : Type u → Type v} {N : Type u → Type w}
 termination_by structural node
 end
 
+
 inductive CauseTermFam where
   | cause
 deriving DecidableEq, Repr
@@ -1101,6 +1103,7 @@ theorem foldM_natural_cause {M : Type u → Type v} {N : Type u → Type w}
   | .both a0 a1 =>
     simp only [foldM_cause, CauseTermMAlgebra.map, φ.map_bind, foldM_natural_cause φ alg a0, foldM_natural_cause φ alg a1]
 termination_by structural node
+
 
 inductive EffFam where
   | eff
@@ -3032,6 +3035,7 @@ theorem foldM_natural_layers {Op : Type} {M : Type u → Type v} {N : Type u →
     simp only [foldM_layers, EffMAlgebra.map, φ.map_bind, foldM_natural_layer φ alg a0, foldM_natural_layers φ alg a1]
 termination_by structural node
 end
+
 
 inductive EffFrontierFam where
   | eff

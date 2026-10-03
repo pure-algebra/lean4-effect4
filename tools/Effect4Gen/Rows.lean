@@ -149,10 +149,7 @@ def run (args : Args) : MetaM (Array String) := do
   | "Rows" => lines := lines.push (render rows (·.wrapper))
   | "RowsLaws" => lines := lines.push (render rows (·.lemma))
   | g => throwError "unknown group {g}: Rows or RowsLaws"
-  lines := lines ++ #["/-! ## Receipts -/", ""]
-  for r in rows do
-    lines := lines.push s!"#print axioms {r.receipt}{if args.group == "RowsLaws" then "_scoped" else ""}"
-  lines := lines ++ #["", "end Effect4.Program.Authoring", ""]
+  lines := Tools.GeneratedStamp.trimBlankTail lines ++ #["", "end Effect4.Program.Authoring", ""]
   if let some p := args.append then
     let txt ← IO.FS.readFile p
     lines := lines ++ (txt.splitOn "\n").toArray.map (·.replace "\r" "")
@@ -173,7 +170,7 @@ def main (argv : List String) : IO Unit := do
   let act : MetaM Unit := do
     let lines ← run args
     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/Rows.lean"
-    let text := "-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n"
+    let text := Tools.GeneratedStamp.endWithOneNewline ("-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
     match args.out with
     | some p => IO.FS.writeFile p text
     | none => IO.println text
