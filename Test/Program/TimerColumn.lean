@@ -82,12 +82,11 @@ theorem natWorld_refused : ¬ WorldValid unitTy natWorld machine := by
 /-! ## The edit at the repaired witness -/
 
 theorem valid : WorldValid unitTy world machine := by
-  have old := initial_world_valid_at unitTy nativeServiceTy rootProgram 20 20 ⟨rfl, rfl⟩
+  have old := initial_world_valid_at unitTy nativeServiceTy rootProgram 20 20
   refine
     { ids := rfl, fibers := old.fibers, heap := old.heap, promises := old.promises,
       tokens := ?_, tokenBound := ?_, tokenTargets := ?_, state := rfl, wf := ?_,
-      cells := old.cells, fiberClosed := old.fiberClosed, heapClosed := old.heapClosed,
-      promiseClosed := old.promiseClosed, tokenClosed := ?_, root := old.root, timers := ?_,
+      cells := old.cells, root := old.root, timers := ?_,
       waiters := fun _ _ h => by cases h }
   · intro f hf token hp
     rw [member_fiber hf] at hp
@@ -108,14 +107,6 @@ theorem valid : WorldValid unitTy world machine := by
       cases h
   · exact ⟨(fun _ h => nomatch h), (fun _ h => nomatch h), (fun _ h => nomatch h),
       TimerStore.sleep_wf Stores.empty_wf.2.2.2 Api.root 0 0⟩
-  · intro id token ty h
-    change (if id = Api.root ∧ token = 0 then some unitTy else none) = some ty at h
-    by_cases c : id = Api.root ∧ token = 0
-    · rw [if_pos c] at h
-      cases h
-      exact ⟨rfl, rfl⟩
-    · rw [if_neg c] at h
-      cases h
   · intro k hk
     rw [timer_keys, List.mem_singleton] at hk
     subst hk

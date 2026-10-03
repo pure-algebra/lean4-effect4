@@ -1175,15 +1175,13 @@ theorem load_not_inert (p : NativeEff) (fuel compileFuel : Nat) :
 theorem one_not_loaded : (⟨1⟩ : FiberId) ∉ (loadR awaitProg 5 5).fibers.map (·.id) := by
   decide
 
-theorem closed_root : ClosedEff rootTy := ⟨rfl, rfl⟩
-
 /-- **Historical: under the old post, M5's load proposition is false for this program** (fuel
 5; `E4-TYPED-CE-010`, the program level): no world loads it with its code clause satisfied. -/
 theorem typedState_load_false :
-    ¬ (Api.typeOf awaitProg [] = some rootTy → ClosedEff rootTy →
+    ¬ (Api.typeOf awaitProg [] = some rootTy →
         ∃ w, OldLoaded (awaitProg : ProgramSource) rootTy w (loadR awaitProg 5 5)) := by
   intro h
-  obtain ⟨w, valid, ok⟩ := h typed_source closed_root
+  obtain ⟨w, valid, ok⟩ := h typed_source
   have fresh : w.Γ ⟨1⟩ = none := by
     cases hg : w.Γ ⟨1⟩ with
     | none => rfl

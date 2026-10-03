@@ -1230,3 +1230,25 @@ a static type (shape A, row 112: the table fixes the keys a context may bind), a
 Landed meanwhile: `clause_interruptScoped` (self: `unit`; another fiber: the public interrupt
 program, typed at `unit` over the saved answer frame — `Evaluating.unitAnswerFrame`, the arrow from
 `⟨unit, never⟩` to the code's type through `seqR next`). Fifteen fiber clauses unconditional.
+
+## Slice C — J's closedness clauses cut (owner's ruling, 2026-10-02: "cut them")
+
+**First:** `WorldValid`/`MachineWide` lose `fiberClosed`, `heapClosed`, `promiseClosed` and
+`tokenClosed`. Nothing but their own re-establishment read them; they blocked every clause that
+declares a fiber or token at an operation certificate, and the checker does mint open certificates
+(Codex's `ForkClosednessLocal.candidate.lean`: `list(var0)`). With them go `ClosedEff` itself, the
+`closed` premises of `initial_world_valid(_at)`, `typedState_of_load`, `machineTyped_load`,
+`typedState_load_of_code`, `machineWide_alloc` and `configTyped_alloc`, the `cert.closed` conjuncts of
+`storePre`'s `refMake` and `deferredMake` rows (`deferredMake`'s pre is now `True`), and the
+`ClosedEff rootTy` premise of `LoadsTyped`, `ReachableTyped`, `ExitHandlesValid` and `M7Fragment`.
+Each dropped premise strengthens its goal; no statement weakens. `Fits` at a type variable is still
+`False`, so an open certificate admits nothing at its variables.
+
+Tests: the J witnesses lose the four fields; the historical batteries' refutations drop the premise
+(`¬ (A → ClosedEff → B)` becomes `¬ (A → B)`, still proved by the same witness). FramesNotKripke's two
+`MachineTyped` witnesses also gain `sourceWF` (`rfl`): that battery was not in the `f681d65e` rebuild
+and had been red since.
+
+Commands: `lake build Effect4.Laws` (green after six rounds: Residual, Denotation, Adequacy, Assembly,
+Finish and Edits each held a destructuring of the dropped premise); `lake build` of the twenty-one
+batteries reading the changed statements (green after one round of four fixes).

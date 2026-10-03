@@ -2237,7 +2237,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     cases v with
     | nat n =>
       refine ⟨SyncOp.refMake (Val.nat n), rfl, ?_⟩
-      refine TypedProg.store (op := SyncOp.refMake (Val.nat n)) (cert := .nat) ⟨rfl, hfit⟩ ?_
+      refine TypedProg.store (op := SyncOp.refMake (Val.nat n)) (cert := .nat) hfit ?_
       intro w' ord ans post
       obtain ⟨key, rfl, hlookup⟩ := post
       refine TypedProg.pure ?_
@@ -2374,7 +2374,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     have hv : v = Val.unit := fits_unit_inv hfit
     subst hv
     refine ⟨SyncOp.deferredMake, rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.deferredMake) (cert := (.nat, .nat)) ⟨rfl, rfl⟩ ?_
+    refine TypedProg.store (op := SyncOp.deferredMake) (cert := (.nat, .nat)) trivial ?_
     intro w' ord ans post
     obtain ⟨key, rfl, hlookup⟩ := post
     refine TypedProg.pure ?_

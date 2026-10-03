@@ -47,7 +47,6 @@ def awaitProg : NativeEff := .bind forked (.awaitFiber (v 0) .awaitValue)
 def rootTy : EffTy := EffTy.pure (.exitOf .nat .never)
 
 theorem typed_source : Api.typeOf awaitProg = some rootTy := by rfl'
-theorem closed_root : ClosedEff rootTy := ⟨rfl, rfl⟩
 
 def code : RProgram := denoteR awaitProg awaitProg (rootPoint 5)
 
@@ -109,12 +108,12 @@ structure OldMachineTyped (root : ProgramSource) (rootTy : EffTy) (w : W) (m : R
 
 /-- M5's proposition (`LoadsTyped`) over the old judgment. -/
 def OldLoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
-  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
+  LawfulSource root → Api.typeOf root.program root.table = some rootTy →
     ∃ w, OldMachineTyped root rootTy w (loadR root.program fuel compileFuel)
 
 /-- The capstone's proposition (`ReachableTyped`) over the old judgment. -/
 def OldReachableTyped (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
-  LawfulSource root → Api.typeOf root.program root.table = some rootTy → ClosedEff rootTy →
+  LawfulSource root → Api.typeOf root.program root.table = some rootTy →
     RReachable root fuel m → ∃ w, OldMachineTyped root rootTy w m
 
 /-- **Historical: M5 restated over `J` was false here under the old post** (`E4-TYPED-CE-010`):
@@ -122,7 +121,7 @@ M5's proposition at this program, fuel 5, the empty row table, with `J`'s code c
 old judgment. -/
 theorem loadsTyped_false : ¬ OldLoadsTyped (awaitProg : ProgramSource) rootTy 5 5 := by
   intro h
-  obtain ⟨w, typed⟩ := h (awaitProg : ProgramSource).lawful typed_source closed_root
+  obtain ⟨w, typed⟩ := h (awaitProg : ProgramSource).lawful typed_source
   have valid := typed.typed.1
   have fresh : w.Γ ⟨1⟩ = none := by
     cases hg : w.Γ ⟨1⟩ with
@@ -144,9 +143,9 @@ loaded machine, which the empty tape reaches. -/
 theorem capstone_false :
     ¬ OldReachableTyped (awaitProg : ProgramSource) rootTy 5 (loadR awaitProg 5 5) :=
   fun cap => by
-    obtain ⟨w, typed⟩ := cap (awaitProg : ProgramSource).lawful typed_source closed_root
+    obtain ⟨w, typed⟩ := cap (awaitProg : ProgramSource).lawful typed_source
       (rreachable_load (awaitProg : ProgramSource) 5)
-    exact loadsTyped_false (fun _ _ _ => ⟨w, typed⟩)
+    exact loadsTyped_false (fun _ _ => ⟨w, typed⟩)
 
 -- Red fixture: seat C's refutation script (`56a63f07`, from the port), verbatim, against the
 -- current judgment. The await's post now admits the encoded exit (row 136), so the `nat` the old
@@ -288,12 +287,12 @@ theorem code_typed (w : W) : TypedProg (awaitProg : ProgramSource) w rootTy code
 /-- **The flip of `loadsTyped_false`: M5's proposition over `J` holds at this program** (fuel 5,
 the empty row table), through `machineTyped_load`. -/
 theorem loadsTyped : LoadsTyped (awaitProg : ProgramSource) rootTy 5 5 :=
-  fun _ _ closed _ => ⟨_, machineTyped_load _ rootTy 5 5 closed rfl rfl (code_typed _)⟩
+  fun _ _ _ => ⟨_, machineTyped_load _ rootTy 5 5 rfl rfl (code_typed _)⟩
 
 /-- **The flip of `capstone_false`: the capstone's proposition holds at the loaded machine.** -/
 theorem capstone_at_load :
     ReachableTyped (awaitProg : ProgramSource) rootTy 5 (loadR awaitProg 5 5) :=
-  fun lawful checked closed row _ => loadsTyped lawful checked closed row
+  fun lawful checked row _ => loadsTyped lawful checked row
 
 end Test.Counterexamples.Machine.Semantics.AwaitLoad
 

@@ -90,12 +90,11 @@ theorem theta {id : FiberId} {t : Nat} {ty : EffTy} (h : world.Θ id t = some ty
     cases h
 
 theorem valid : WorldValid natTy world machine := by
-  have old := initial_world_valid_at natTy nativeServiceTy rootProgram 20 20 ⟨rfl, rfl⟩
+  have old := initial_world_valid_at natTy nativeServiceTy rootProgram 20 20
   refine
     { ids := rfl, fibers := old.fibers, heap := old.heap, promises := old.promises,
       tokens := ?_, tokenBound := ?_, tokenTargets := ?_, state := rfl, wf := old.wf,
-      cells := old.cells, fiberClosed := old.fiberClosed, heapClosed := old.heapClosed,
-      promiseClosed := old.promiseClosed, tokenClosed := ?_, root := old.root,
+      cells := old.cells, root := old.root,
       timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
   · intro f hf token hp
     rw [member hf] at hp
@@ -106,9 +105,6 @@ theorem valid : WorldValid natTy world machine := by
   · intro id token ty h
     obtain ⟨rfl, _, _⟩ := theta h
     rfl
-  · intro id token ty h
-    obtain ⟨_, _, rfl⟩ := theta h
-    exact ⟨rfl, rfl⟩
 
 theorem no_requests (id : FiberId) (token : Nat) : requestOfR machine id token = none := by
   unfold requestOfR

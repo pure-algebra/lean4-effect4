@@ -849,8 +849,6 @@ abbrev refTy : EffTy := EffTy.pure (.handle NativeOp.refTarget)
 
 theorem refProg_checks : Api.typeOf refProg [] = some refTy := by decide +kernel
 
-theorem refTy_closed : ClosedEff refTy := ⟨rfl, rfl⟩
-
 theorem loaded_root : ∃ f, (loadR refProg 20 20).fiber? Api.root = some f ∧
     f.frame.stack = [] ∧ f.frame.current = denoteR refProg refProg (rootPoint 20) :=
   ⟨_, rfl, rfl, rfl⟩
@@ -881,10 +879,10 @@ theorem refProg_untypable (w : W) (hRho : w.Ρ ⟨0⟩ = none) (hrefs : w.state.
 /-- **The obligation's instance at `Ref.make(5)` is false**: its premises hold and no typed state
 of the loaded machine exists. -/
 theorem typedState_load_false :
-    ¬ (Api.typeOf refProg [] = some refTy → ClosedEff refTy →
+    ¬ (Api.typeOf refProg [] = some refTy →
       ∃ w, Reviewed.TypedState (refProg : ProgramSource) refTy w (loadR refProg 20 20)) := by
   intro obligation
-  obtain ⟨w, valid, ok, _⟩ := obligation refProg_checks refTy_closed
+  obtain ⟨w, valid, ok, _⟩ := obligation refProg_checks
   obtain ⟨f, hf, hstack, hcur⟩ := loaded_root
   have hmem : f ∈ (loadR refProg 20 20).fibers := List.mem_of_find?_eq_some hf
   have hid : f.id = Api.root := by
@@ -910,7 +908,6 @@ theorem typedState_load_false :
   exact refProg_untypable w hRho hrefs hprog
 
 #print axioms refProg_checks
-#print axioms refTy_closed
 #print axioms loaded_root
 #print axioms refProg_untypable
 #print axioms typedState_load_false
@@ -925,7 +922,7 @@ def getProg : NativeEff := .bind (.perform .refMake (.lit (.nat 5))) (.perform .
 theorem refProg_typedF (w : W) :
     TypedProg (refProg : ProgramSource) w (EffTy.pure (.handle NativeOp.refTarget))
       (denoteR refProg refProg (rootPoint 20)) := by
-  refine TypedProg.store (cert := Ty.nat) ⟨rfl, trivial⟩ ?_
+  refine TypedProg.store (cert := Ty.nat) trivial ?_
   intro w' _ ans hpost
   obtain ⟨key, rfl, hs⟩ := hpost
   exact TypedProg.pure ⟨⟨rfl, .nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
@@ -945,7 +942,7 @@ theorem getProg_typedF (w : W) :
     TypedProg (getProg : ProgramSource) w (EffTy.pure .nat)
       (denoteR getProg getProg (rootPoint 20)) := by
   refine TypedProg.guard (EffTy.pure (.handle NativeOp.refTarget)) ?_ ?_ ?_
-  · refine TypedProg.store (cert := Ty.nat) ⟨rfl, trivial⟩ ?_
+  · refine TypedProg.store (cert := Ty.nat) trivial ?_
     intro w' _ ans hpost
     obtain ⟨key, rfl, hs⟩ := hpost
     exact TypedProg.unguard ⟨⟨rfl, .nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
@@ -998,20 +995,19 @@ seat A's landing (2026-10-01). Since seat I2 (2026-10-01) the argument lives onc
 `machineTyped_load` over row 134's split), and this battery keeps a one-line use. -/
 
 theorem typedStateF_load (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
-    (closed : ClosedEff ty)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
     ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) :=
-  typedState_load_of_code root ty fuel compileFuel closed noMarker code
+  typedState_load_of_code root ty fuel compileFuel noMarker code
 
 theorem typedStateF_load_ref :
     ∃ w, TypedState (refProg : ProgramSource) (EffTy.pure (.handle NativeOp.refTarget)) w
       (loadR refProg 20 20) :=
-  typedStateF_load refProg _ 20 20 ⟨rfl, rfl⟩ rfl refProg_typedF
+  typedStateF_load refProg _ 20 20 rfl refProg_typedF
 
 theorem typedStateF_load_get :
     ∃ w, TypedState (getProg : ProgramSource) (EffTy.pure .nat) w (loadR getProg 20 20) :=
-  typedStateF_load getProg _ 20 20 ⟨rfl, rfl⟩ rfl getProg_typedF
+  typedStateF_load getProg _ 20 20 rfl getProg_typedF
 
 /-- The existing TypedState bank supplies the heap-extension rule. -/
 theorem search_heap_extends (w : W) (cert : Ty) (hRho : w.Ρ ⟨0⟩ = none) :

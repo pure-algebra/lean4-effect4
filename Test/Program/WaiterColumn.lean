@@ -82,12 +82,11 @@ theorem member_fiber {f : RFiber} (hf : f ∈ machine.fibers) : f = fiber := by
   exact List.mem_singleton.mp hf
 
 theorem valid : WorldValid unitTy world machine := by
-  have old := initial_world_valid_at unitTy nativeServiceTy rootProgram 20 20 ⟨rfl, rfl⟩
+  have old := initial_world_valid_at unitTy nativeServiceTy rootProgram 20 20
   refine
     { ids := rfl, fibers := old.fibers, heap := old.heap, promises := ?_,
       tokens := ?_, tokenBound := ?_, tokenTargets := ?_, state := rfl, wf := ?_,
-      cells := ⟨(fun i v h => nomatch h), ?_⟩, fiberClosed := old.fiberClosed,
-      heapClosed := old.heapClosed, promiseClosed := ?_, tokenClosed := ?_, root := old.root, timers := WakeTyped.empty _ _, waiters := ?_ }
+      cells := ⟨(fun i v h => nomatch h), ?_⟩, root := old.root, timers := WakeTyped.empty _ _, waiters := ?_ }
   · intro key
     change (if key.index = 0 then some (Ty.unit, Ty.never) else none).isSome = true ↔ key.index < 1
     by_cases c : key.index = 0
@@ -132,23 +131,6 @@ theorem valid : WorldValid unitTy world machine := by
     rw [if_pos rfl] at declared
     cases declared
     rfl
-  · intro key types h
-    change (if key.index = 0 then some (Ty.unit, Ty.never) else none) = some types at h
-    by_cases c : key.index = 0
-    · rw [if_pos c] at h
-      cases h
-      exact ⟨rfl, rfl⟩
-    · rw [if_neg c] at h
-      cases h
-  · intro id token ty h
-    change (if id = Api.root ∧ token = 0 then some unitTy else none) = some ty at h
-    by_cases c : id = Api.root ∧ token = 0
-    · rw [if_pos c] at h
-      cases h
-      exact ⟨rfl, rfl⟩
-    · rw [if_neg c] at h
-      cases h
-
   · intro key c hc a e hPi
     obtain ⟨zero, same⟩ := cellAt_some hc
     rw [same]

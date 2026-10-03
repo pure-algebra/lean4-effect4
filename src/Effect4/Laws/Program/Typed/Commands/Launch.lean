@@ -326,7 +326,7 @@ theorem internalKeys_allocR :
   simp only [Guard.internalKeys, allocR, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
     List.append_nil, child]
 
-theorem machineWide_alloc (typed : MachineTyped root rootTy w m) (closed : ClosedEff ty) :
+theorem machineWide_alloc (typed : MachineTyped root rootTy w m) :
     MachineWide root rootTy (w.addFiber ⟨m.nextId⟩ ty)
       (allocR m (spawnChild m program flag budget ctx) record) := by
   have wide := typed.wide
@@ -344,8 +344,8 @@ theorem machineWide_alloc (typed : MachineTyped root rootTy w m) (closed : Close
     have below := sched.fibersBelow f hf
     rw [hid] at below
     exact Nat.lt_irrefl _ below
-  refine ⟨?_, ?_, wide.heap, wide.promises, wide.tokenBound, ?_, wide.state, wide.wf, ?_, ?_,
-    wide.heapClosed, wide.promiseClosed, wide.tokenClosed, addFiber_extends fresh.2 wide.rootDeclared,
+  refine ⟨?_, ?_, wide.heap, wide.promises, wide.tokenBound, ?_, wide.state, wide.wf, ?_,
+    addFiber_extends fresh.2 wide.rootDeclared,
     ?_, storesOk_world ord rfl rfl rfl wide.stores, ?_, wide.raceIds, wide.racesBelow, ?_, ?_, ?_, ?_,
     wide.services, ⟨wide.live.running, ?_⟩, wide.timers, wide.waiters,
     fun r race h id hid => Nat.lt_succ_of_lt (wide.liveBelow r race h id hid), wide.sourceWF⟩
@@ -368,14 +368,6 @@ theorem machineWide_alloc (typed : MachineTyped root rootTy w m) (closed : Close
     rfl
   · exact ⟨(fork_extension w _ ty fresh.2).2.2.1 wide.cells.1,
       (fork_extension w _ ty fresh.2).2.2.2.1 wide.cells.2⟩
-  · intro id t h
-    by_cases same : id = ⟨m.nextId⟩
-    · subst same
-      rw [addFiber_Γ_self] at h
-      cases h
-      exact closed
-    · rw [addFiber_Γ_other (Ne.symm same)] at h
-      exact wide.fiberClosed id t h
   · intro r hr
     obtain ⟨resultTy, payload⟩ := wide.races r hr
     exact ⟨resultTy, racePayload_alloc ord back rfl
@@ -576,11 +568,11 @@ theorem queueOk_alloc (typed : ConfigTyped root rootTy w m q) :
 
 /-- **The allocation keeps `I`**: the queue unchanged, the world extended by the child's
 declaration at a closed type its code is typed at. -/
-theorem configTyped_alloc (typed : ConfigTyped root rootTy w m q) (closed : ClosedEff ty)
+theorem configTyped_alloc (typed : ConfigTyped root rootTy w m q)
     (code : TypedProg root w ty program) (services : ServicesFit w ctx.services) :
     ConfigTyped root rootTy (w.addFiber ⟨m.nextId⟩ ty)
       (allocR m (spawnChild m program flag budget ctx) record) q := by
-  refine ⟨machineTyped_of (machineWide_alloc typed.machine closed) fun f hf => ?_,
+  refine ⟨machineTyped_of (machineWide_alloc typed.machine) fun f hf => ?_,
     readCode_alloc typed, queueOk_alloc typed⟩
   rcases List.mem_append.mp hf with hold | hnew
   · exact fiberTyped_alloc typed.machine hold
@@ -683,7 +675,6 @@ theorem launch_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) 
           let record : ForkRecord := ⟨⟨m.nextId⟩, host.id, true, race.nextSite.getD []⟩
           have allocated := configTyped_alloc (record := record) (flag := true)
             (budget := (interpR root.program).budgetOf host.context) typed
-            (wide.tokenClosed race.host race.token resultTy payload.token)
             (typedProg_widen root subA subE code) services
           have edited := configTyped_emit (configTyped_updateRace
             (configTyped_emit allocated [RunEvent.forked host.id ⟨m.nextId⟩ true]) (old := race)

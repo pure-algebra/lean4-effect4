@@ -96,7 +96,6 @@ def isFuel : RR → Bool | .frontier .fuel _ => true | _ => false
 
 theorem typed_source : Api.typeOf prog = some ty := by rfl'
 
-theorem closed_ty : ClosedEff ty := ⟨rfl, rfl⟩
 
 theorem answerFree : ∀ d ∈ tape, NoHostAnswer d := by
   intro d hd
@@ -238,10 +237,10 @@ theorem window_untyped (w : W) : ¬ H1Shapes.TypedState (prog : ProgramSource) t
   exact stale_not_saved w m6 [] _ f.frame hni hlen hstale (((typed.2.1.c0 f hf).c0).c0 ty declared)
 
 /-- H1's `M6Ledger.typedState_reachable` proposition, refuted at the cut. -/
-theorem capstone_false_window : ¬ (Api.typeOf prog [] = some ty → ClosedEff ty →
+theorem capstone_false_window : ¬ (Api.typeOf prog [] = some ty →
     RReachable (prog : ProgramSource) 6 m6 → ∃ w, H1Shapes.TypedState (prog : ProgramSource) ty w m6) := by
   intro h
-  obtain ⟨w, hw⟩ := h typed_source closed_ty reach6
+  obtain ⟨w, hw⟩ := h typed_source reach6
   exact window_untyped w hw
 
 /-- A tape with no host answer is admitted by `AnswerOk` at every machine it meets. -/
@@ -421,7 +420,7 @@ theorem worldValid_not_upward_closed :
   let m := loadR prog 3 3
   have fresh : w.Γ ⟨1⟩ = none := rfl
   obtain ⟨le, here, _⟩ := fork_extension w ⟨1⟩ ty fresh
-  refine ⟨w, w.addFiber ⟨1⟩ ty, m, ⟨le, fun _ _ h => h⟩, initial_world_valid ty prog 3 3 closed_ty, ?_⟩
+  refine ⟨w, w.addFiber ⟨1⟩ ty, m, ⟨le, fun _ _ h => h⟩, initial_world_valid ty prog 3 3, ?_⟩
   intro valid
   have hmem := (valid.fibers ⟨1⟩).mp (by rw [here]; rfl)
   revert hmem
@@ -544,9 +543,7 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
   refine ⟨{ ids := valid.ids, fibers := valid.fibers, heap := valid.heap,
             promises := valid.promises, tokens := valid.tokens, tokenBound := valid.tokenBound,
             tokenTargets := valid.tokenTargets, state := valid.state, wf := valid.wf,
-            cells := valid.cells, fiberClosed := valid.fiberClosed, heapClosed := valid.heapClosed,
-            promiseClosed := valid.promiseClosed, tokenClosed := valid.tokenClosed,
-            root := valid.root, timers := valid.timers, waiters := valid.waiters },
+            cells := valid.cells, root := valid.root, timers := valid.timers, waiters := valid.waiters },
     ⟨fun f hf => runFiberOk_tr f saved (ok.c0 f hf), ok.c1, storesOk_tr m.state ok.c2⟩,
     activeDelivery_races (m := m) rfl (racesKept_of_eq fun _ => rfl) deliv, ?_, ?_,
     registrationState_races (m := m) rfl (racesKept_of_eq fun _ => rfl) reg⟩
@@ -675,7 +672,7 @@ theorem quietFacts {f : RFiber} (h : QuietFiber f) : QuietFacts f := by
 /-- A quiet root machine is in `J` at its root world. -/
 theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
     MachineTyped (prog : ProgramSource) ty (rootWorld m) m := by
-  have old := initial_world_valid ty prog 6 6 closed_ty
+  have old := initial_world_valid ty prog 6 6
   have facts : ∀ f ∈ m.fibers, QuietFacts f := fun f hf => quietFacts (q.fibers f hf)
   have races : m.races = [] := List.isEmpty_iff.mp q.races
   have refs : m.state.refs = [] := List.isEmpty_iff.mp q.refs
@@ -720,10 +717,6 @@ theorem machineTyped_of_quiet (m : RState) (q : QuietRoot m) :
           change m.state.deferreds.cells[i]? = some v at hv
           rw [cells] at hv
           cases hv)⟩
-      fiberClosed := old.fiberClosed
-      heapClosed := old.heapClosed
-      promiseClosed := old.promiseClosed
-      tokenClosed := old.tokenClosed
       root := old.root
       timers := fun k hk => by
         have h : k ∈ Guard.internalKeys m := List.mem_append_left _ (List.mem_append_left _
@@ -855,9 +848,9 @@ theorem machineTyped_m9 : MachineTyped (prog : ProgramSource) ty (rootWorld m9) 
 
 /-- The amended capstone's conclusion at the cut: probe A does not refute it. -/
 theorem capstone_window_holds :
-    LawfulSource (prog : ProgramSource) → Api.typeOf prog [] = some ty → ClosedEff ty →
+    LawfulSource (prog : ProgramSource) → Api.typeOf prog [] = some ty →
       RReachable (prog : ProgramSource) 6 m6 → ∃ w, MachineTyped (prog : ProgramSource) ty w m6 :=
-  fun _ _ _ _ => ⟨rootWorld m6, machineTyped_m6⟩
+  fun _ _ _ => ⟨rootWorld m6, machineTyped_m6⟩
 
 /-- The decision lift's loop entry at the cut: `J` gives `I` at the evaluate queue. -/
 theorem evaluate_entry_m6 :
@@ -900,9 +893,7 @@ theorem typedState_halt (root : ProgramSource) (rootTy : EffTy) (w : W) (m : RSt
   exact ⟨{ ids := valid.ids, fibers := valid.fibers, heap := valid.heap,
            promises := valid.promises, tokens := valid.tokens, tokenBound := valid.tokenBound,
            tokenTargets := valid.tokenTargets, state := valid.state, wf := valid.wf,
-           cells := valid.cells, fiberClosed := valid.fiberClosed, heapClosed := valid.heapClosed,
-           promiseClosed := valid.promiseClosed, tokenClosed := valid.tokenClosed,
-           root := valid.root, timers := valid.timers, waiters := valid.waiters },
+           cells := valid.cells, root := valid.root, timers := valid.timers, waiters := valid.waiters },
     ⟨ok.c0, ok.c1, ok.c2⟩, activeDelivery_races (m := m) rfl (racesKept_of_eq fun _ => rfl) deliv,
     { fiberIds := sched.fiberIds, fibersBelow := sched.fibersBelow, raceIds := sched.raceIds,
       racesBelow := sched.racesBelow, raceHosts := sched.raceHosts, keysBelow := sched.keysBelow,

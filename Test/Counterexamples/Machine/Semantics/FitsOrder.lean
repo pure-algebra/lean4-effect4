@@ -83,7 +83,6 @@ def rootTy3 : EffTy := ⟨.fiberOf T.normalize .never, .never, Requirement.empty
 
 theorem prog3_typed : Api.typeOf prog3 [] = some rootTy3 := by decide +kernel
 
-theorem rootTy3_closed : ClosedEff rootTy3 := ⟨by decide +kernel, by decide +kernel⟩
 
 theorem child_cert : effTy (nativeSignature []) [] child = some certT := by decide +kernel
 
@@ -394,7 +393,7 @@ theorem m5_false (raw : RawLeaf) : ¬ ∃ w, MachineTyped src rootTy3 w (loadR p
 
 /-- **Historical: M5's proposition was false at this program (proved).** -/
 theorem loadsTyped_false (raw : RawLeaf) : ¬ LoadsTyped src rootTy3 100 100 :=
-  fun h => m5_false raw (h src.lawful prog3_typed rootTy3_closed rfl)
+  fun h => m5_false raw (h src.lawful prog3_typed rfl)
 
 /-- **Historical: M5's obligation was false (proved).** -/
 theorem typedState_load_false (raw : RawLeaf) :
@@ -412,7 +411,7 @@ theorem capstone_implies_load
         ReachableTyped root rootTy fuel m)
     (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) :
     LoadsTyped root rootTy fuel fuel :=
-  fun lawful h1 h2 h3 => cap root rootTy fuel _ lawful h1 h2 h3 (rreachable_load root fuel)
+  fun lawful h1 h2 => cap root rootTy fuel _ lawful h1 h2 (rreachable_load root fuel)
 
 /-- **Historical: M6's capstone was false (proved)**, at this program and the empty tape. -/
 theorem Reviewed.capstone_false (raw : RawLeaf) :
@@ -500,16 +499,16 @@ theorem prog3_typedF (w : Typed.World) :
 /-- **M5's first positive control (proved).** The TY-01 program, which refuted M5 and the
 capstone under the raw arms, loads into `J` under row 137. -/
 theorem prog3_loads_typed : ∃ w, MachineTyped src rootTy3 w (loadR prog3 100 100) :=
-  ⟨_, machineTyped_load src rootTy3 100 100 rootTy3_closed rfl rfl (prog3_typedF _)⟩
+  ⟨_, machineTyped_load src rootTy3 100 100 rfl rfl (prog3_typedF _)⟩
 
 /-- **The flip of `Reviewed.loadsTyped_false`: M5's proposition holds at this program.** -/
 theorem loadsTyped : LoadsTyped src rootTy3 100 100 :=
-  fun _ _ closed _ => ⟨_, machineTyped_load src rootTy3 100 100 closed rfl rfl (prog3_typedF _)⟩
+  fun _ _ _ => ⟨_, machineTyped_load src rootTy3 100 100 rfl rfl (prog3_typedF _)⟩
 
 /-- **The flip of `Reviewed.capstone_false` at this program: the capstone's proposition holds at
 the loaded machine**, which the empty tape reaches. -/
 theorem capstone_at_load : ReachableTyped src rootTy3 100 (loadR prog3 100 100) :=
-  fun lawful checked closed row _ => loadsTyped lawful checked closed row
+  fun lawful checked row _ => loadsTyped lawful checked row
 
 /-- And its leaf, read off the typed load. -/
 theorem prog3_leaf : ∃ w : Typed.World, w.Γ ⟨1⟩ = some certT ∧
@@ -517,7 +516,6 @@ theorem prog3_leaf : ∃ w : Typed.World, w.Γ ⟨1⟩ = some certT ∧
   m5_forces_leaf prog3_loads_typed
 
 #print axioms prog3_typed
-#print axioms rootTy3_closed
 #print axioms child_cert
 #print axioms T_not_sub
 #print axioms child_at

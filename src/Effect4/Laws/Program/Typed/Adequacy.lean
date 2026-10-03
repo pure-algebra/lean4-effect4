@@ -666,7 +666,7 @@ theorem refMake_implements (root : ProgramSource) (initial : Val) :
     StoreImplements root (.refMake initial) := by
   intro w cert store pre
   change Ty at cert
-  obtain ⟨_, fits⟩ := pre
+  have fits : Fits w initial cert := pre
   have fresh : w.Ρ ⟨w.state.refs.length⟩ = none := by
     cases h : w.Ρ ⟨w.state.refs.length⟩ with
     | none => rfl

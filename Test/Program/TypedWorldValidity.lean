@@ -123,7 +123,7 @@ def root : NativeEff := .succeed (.lit (.nat 0))
 def rootTy : EffTy := EffTy.pure .nat
 
 theorem initial_positive : WorldValid rootTy (initialWorld rootTy) (loadR root 10) :=
-  initial_world_valid _ _ _ _ ⟨rfl, rfl⟩
+  initial_world_valid _ _ _ _
 
 def ghostHeap : TWorld := { initialWorld rootTy with Ρ := fun _ => some .nat }
 

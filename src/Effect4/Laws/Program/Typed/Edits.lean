@@ -528,7 +528,7 @@ theorem exitHandles_valid_of_registered (root : ProgramSource) (rootTy : EffTy) 
     (m : RState)
     (registered : ∀ f ∈ m.fibers, ∀ v, f.exit = some (.success v) → HandlesRegistered v) :
     ExitHandlesValid root rootTy fuel m := by
-  rintro _ _ _ ⟨tape, free, rfl⟩ f hf v hx
+  rintro _ _ ⟨tape, free, rfl⟩ f hf v hx
   have minted := handles_minted root.program fuel tape
     ⟨load_minted root.program fuel, answersValid_of_noHostAnswer root.program fuel tape free _⟩
   rw [replay_machine] at minted

@@ -49,11 +49,10 @@ theorem bad_not_typed (w : Typed.World) :
 -- this machine too. No accepted theorem is contradicted.
 theorem current_m6_capstone_false : ¬ (
     Api.typeOf sleeper [] = some (EffTy.pure .unit) →
-    ClosedEff (EffTy.pure .unit) →
     ReviewedRReachable (sleeper : ProgramSource) 80 bad →
     ∃ w, TypedState (sleeper : ProgramSource) (EffTy.pure .unit) w bad) := by
   intro h
-  obtain ⟨w, hw⟩ := h (by rfl') ⟨rfl, rfl⟩ bad_reachable
+  obtain ⟨w, hw⟩ := h (by rfl') bad_reachable
   exact bad_not_typed w hw
 
 
@@ -112,11 +111,10 @@ theorem loaded_code (w : W) : TypedProg (program : ProgramSource) w ty
 
 -- This local builder checks every clause; it does not assume initialization.
 theorem typed_loaded_at (p : NativeEff) (resultTy : EffTy) (fuel compileFuel : Nat)
-    (closed : ClosedEff resultTy)
     (noMarker : raceRegistrationR (denoteR p p (rootPoint compileFuel)) = none)
     (code : ∀ w, TypedProg (p : ProgramSource) w resultTy (denoteR p p (rootPoint compileFuel))) :
     ∃ w, TypedState (p : ProgramSource) resultTy w (loadR p fuel compileFuel) := by
-  refine ⟨initialWorld resultTy, initial_world_valid _ p fuel compileFuel closed, ⟨?_, ?_, ?_⟩,
+  refine ⟨initialWorld resultTy, initial_world_valid _ p fuel compileFuel, ⟨?_, ?_, ?_⟩,
     ?_, schedulerState_load p fuel compileFuel, observerState_load (p : ProgramSource) _ fuel compileFuel,
     registrationState_load (p : ProgramSource) _ fuel compileFuel noMarker⟩
   · intro f hf
@@ -150,14 +148,14 @@ theorem typed_loaded_at (p : NativeEff) (resultTy : EffTy) (fuel compileFuel : N
     subst hf
     cases hq
 
-theorem typed_loaded (p : NativeEff) (resultTy : EffTy) (closed : ClosedEff resultTy)
+theorem typed_loaded (p : NativeEff) (resultTy : EffTy)
     (noMarker : raceRegistrationR (denoteR p p (rootPoint 20)) = none)
     (code : ∀ w, TypedProg (p : ProgramSource) w resultTy (denoteR p p (rootPoint 20))) :
     ∃ w, TypedState (p : ProgramSource) resultTy w (loadR p 20 20) :=
-  typed_loaded_at p resultTy 20 20 closed noMarker code
+  typed_loaded_at p resultTy 20 20 noMarker code
 
 theorem loaded_typed : ∃ w, TypedState (program : ProgramSource) ty w m0 :=
-  typed_loaded program ty ⟨rfl, rfl⟩ rfl loaded_code
+  typed_loaded program ty rfl loaded_code
 
 theorem loaded_sleep_code (w : W) :
     TypedProg (sleeper : ProgramSource) w (EffTy.pure .unit)
@@ -171,7 +169,7 @@ theorem loaded_sleep_code (w : W) :
 
 theorem loaded_sleep_typed :
     ∃ w, TypedState (sleeper : ProgramSource) (EffTy.pure .unit) w (loadR sleeper 20 20) :=
-  typed_loaded sleeper (EffTy.pure .unit) ⟨rfl, rfl⟩ rfl loaded_sleep_code
+  typed_loaded sleeper (EffTy.pure .unit) rfl loaded_sleep_code
 
 theorem loaded_sleep80_code (w : W) :
     TypedProg (sleeper : ProgramSource) w (EffTy.pure .unit)
@@ -185,7 +183,7 @@ theorem loaded_sleep80_code (w : W) :
 
 theorem loaded_sleep80_typed :
     ∃ w, TypedState (sleeper : ProgramSource) (EffTy.pure .unit) w (loadR sleeper 80 80) :=
-  typed_loaded_at sleeper (EffTy.pure .unit) 80 80 ⟨rfl, rfl⟩ rfl loaded_sleep80_code
+  typed_loaded_at sleeper (EffTy.pure .unit) 80 80 rfl loaded_sleep80_code
 
 /-- Retain the pre-H1 race-table slot and the pre-row-134 unconditional saved-code clause (the
 production `preds` no longer types current code; `J` and `I` do); other slots use current H2
@@ -243,10 +241,9 @@ theorem load_code_live (p : NativeEff) (fuel compileFuel : Nat) (position : Expe
 
 /-- Build the historical loaded state directly; its stronger live-code clause is retained. -/
 theorem reviewed_loaded_at (p : NativeEff) (resultTy : EffTy) (fuel compileFuel : Nat)
-    (closed : ClosedEff resultTy)
     (code : ∀ w, TypedProg (p : ProgramSource) w resultTy (denoteR p p (rootPoint compileFuel))) :
     ∃ w, ReviewedTypedState (p : ProgramSource) resultTy w (loadR p fuel compileFuel) := by
-  refine ⟨initialWorld resultTy, initial_world_valid _ p fuel compileFuel closed, ⟨?_, ?_, ?_⟩, ?_⟩
+  refine ⟨initialWorld resultTy, initial_world_valid _ p fuel compileFuel, ⟨?_, ?_, ?_⟩, ?_⟩
   · intro f hf
     change f ∈ [_] at hf
     rw [List.mem_singleton] at hf
@@ -311,14 +308,14 @@ theorem halted_bad_exit_rejected (w : W) :
 
 theorem step_finish_false : ¬ ReviewedStepPreserves (program : ProgramSource) ty badFinish := by
   intro step
-  obtain ⟨w, typed⟩ := reviewed_loaded_at program ty 20 20 ⟨rfl, rfl⟩ loaded_code
+  obtain ⟨w, typed⟩ := reviewed_loaded_at program ty 20 20 loaded_code
   obtain ⟨w', _, after, _⟩ := step w m0 [] typed (old_bad_queue w)
   exact finished_untyped w' after
 
 theorem proposed_step_finish_false :
     ¬ ReviewedStepPreservesFresh (program : ProgramSource) ty badFinish := by
   intro step
-  obtain ⟨w, typed⟩ := reviewed_loaded_at program ty 20 20 ⟨rfl, rfl⟩ loaded_code
+  obtain ⟨w, typed⟩ := reviewed_loaded_at program ty 20 20 loaded_code
   have internal : Guard.InternalKeysBelow m0 := (schedulerState_load program 20 20).keysBelow
   have fresh : QueueFresh m0 [badFinish] := by intro key hk; cases hk
   obtain ⟨w', _, after, _⟩ := step w m0 [] typed
@@ -649,7 +646,7 @@ theorem loaded_code (w : W) : TypedProg (program : ProgramSource) w ty
   exact TypedProg.pure ⟨trivial, trivial⟩
 
 theorem valid : WorldValid ty world machine := by
-  have old := initial_world_valid ty program 20 20 ⟨rfl, rfl⟩
+  have old := initial_world_valid ty program 20 20
   refine {
     ids := old.ids
     fibers := old.fibers
@@ -661,10 +658,6 @@ theorem valid : WorldValid ty world machine := by
     state := old.state
     wf := old.wf
     cells := old.cells
-    fiberClosed := old.fiberClosed
-    heapClosed := old.heapClosed
-    promiseClosed := old.promiseClosed
-    tokenClosed := ?_
     root := old.root
     timers := WakeTyped.empty _ _
     waiters := fun _ _ h => by cases h }
@@ -686,12 +679,6 @@ theorem valid : WorldValid ty world machine := by
     · rename_i hkey
       rw [hkey.1]
       rfl
-    · cases h
-  · intro id token tokenTy h
-    change (if id = Api.root ∧ token = 0 then some ty else none) = some tokenTy at h
-    split at h
-    · cases h
-      exact ⟨rfl, rfl⟩
     · cases h
 
 theorem typed : H1.ReviewedTypedState (program : ProgramSource) ty world machine := by
@@ -930,7 +917,7 @@ theorem early_queueOk (w : Typed.World)
 
 /-- `typedState_load`'s statement at this program and budget. -/
 def LoadAt : Prop :=
-  Api.typeOf sleeper [] = some (EffTy.pure .unit) → ClosedEff (EffTy.pure .unit) →
+  Api.typeOf sleeper [] = some (EffTy.pure .unit) →
     ∃ w, H1.ReviewedTypedState (sleeper : ProgramSource) (EffTy.pure .unit) w (loadR sleeper 80 80)
 
 /-- **`typedState_load` at `sleeper` and five of the ledger's per-command obligations cannot all
@@ -941,7 +928,7 @@ theorem load_and_five_inconsistent (load : LoadAt)
     (resume : ∀ id t c, H1.ReviewedStepPreserves (sleeper : ProgramSource) (EffTy.pure .unit) (.resume id t c))
     (finish : ∀ id ex, H1.ReviewedStepPreserves (sleeper : ProgramSource) (EffTy.pure .unit) (.finish id ex))
     (drainDue : H1.ReviewedStepPreserves (sleeper : ProgramSource) (EffTy.pure .unit) .drainDue) : False := by
-  obtain ⟨w₀, h₀⟩ := load (by rfl') ⟨rfl, rfl⟩
+  obtain ⟨w₀, h₀⟩ := load (by rfl')
   have steps : ∀ cmd, five cmd = true →
       H1.ReviewedStepPreserves (sleeper : ProgramSource) (EffTy.pure .unit) cmd := by
     intro cmd hc
@@ -975,8 +962,8 @@ theorem load_and_steps_inconsistent (load : LoadAt)
     (fun _ _ _ => steps _) (fun _ _ => steps _) (steps _)
 
 theorem loaded_at80 : LoadAt := by
-  intro _ _
-  exact H1.reviewed_loaded_at sleeper (EffTy.pure .unit) 80 80 ⟨rfl, rfl⟩ H1.loaded_sleep80_code
+  intro _
+  exact H1.reviewed_loaded_at sleeper (EffTy.pure .unit) 80 80 H1.loaded_sleep80_code
 
 /-- The exact retained early queue makes the old collection of step laws false,
 now without assuming initialization. This proves no repaired transition law. -/
@@ -1058,7 +1045,7 @@ theorem mT_typed (w : Typed.World)
   have hd := dT_ok w h
   obtain ⟨hv, hok, hpark⟩ := h
   refine ⟨⟨hv.ids, hv.fibers, hv.heap, hv.promises, ?_, hv.tokenBound, hv.tokenTargets, hv.state,
-    hv.wf, hv.cells, hv.fiberClosed, hv.heapClosed, hv.promiseClosed, hv.tokenClosed, hv.root,
+    hv.wf, hv.cells, hv.root,
     hv.timers, hv.waiters⟩,
     ⟨?_, hok.c1, hok.c2⟩, ?_⟩
   · intro f hf token hp
@@ -1076,7 +1063,7 @@ theorem mT_typed (w : Typed.World)
 
 /-- `typedState_load`'s statement at this program and budget. -/
 def LoadAt : Prop :=
-  Api.typeOf sleeper [] = some (EffTy.pure .unit) → ClosedEff (EffTy.pure .unit) →
+  Api.typeOf sleeper [] = some (EffTy.pure .unit) →
     ∃ w, H1.ReviewedTypedState (sleeper : ProgramSource) (EffTy.pure .unit) w (loadR sleeper 80 80)
 
 /-- `decision_preserves`'s statement at this program, budget and decision. -/
@@ -1091,13 +1078,13 @@ def FireAt : Prop :=
 `fire` is not an answer, so this also makes the premises of the seat's `m6_capstone` (load, and
 `decision_preserves` for every non-answer decision) inconsistent at this program. -/
 theorem load_and_fire_inconsistent (load : LoadAt) (dec : FireAt) : False := by
-  obtain ⟨w₀, h₀⟩ := load (by rfl') ⟨rfl, rfl⟩
+  obtain ⟨w₀, h₀⟩ := load (by rfl')
   obtain ⟨w, _, hw⟩ := dec w₀ mT (mT_typed w₀ h₀) trivial
   exact mFired_not_typed w hw
 
 theorem loaded_at80 : LoadAt := by
-  intro _ _
-  exact H1.reviewed_loaded_at sleeper (EffTy.pure .unit) 80 80 ⟨rfl, rfl⟩ H1.loaded_sleep80_code
+  intro _
+  exact H1.reviewed_loaded_at sleeper (EffTy.pure .unit) 80 80 H1.loaded_sleep80_code
 
 /-- The exact retained dispatcher witness refutes the old fire statement,
 now without assuming initialization. -/
@@ -1160,13 +1147,11 @@ def machine : RState := { loadR rootProgram 20 20 with fibers := [fiber] }
 def world : W := initialWorld unitTy
 
 theorem valid : WorldValid unitTy world machine := by
-  have old := initial_world_valid unitTy rootProgram 20 20 ⟨rfl, rfl⟩
+  have old := initial_world_valid unitTy rootProgram 20 20
   refine {
     ids := old.ids, fibers := old.fibers, heap := old.heap, promises := old.promises,
     tokens := ?_, tokenBound := old.tokenBound, tokenTargets := old.tokenTargets,
-    state := old.state, wf := old.wf, cells := old.cells, fiberClosed := old.fiberClosed,
-    heapClosed := old.heapClosed, promiseClosed := old.promiseClosed,
-    tokenClosed := old.tokenClosed, root := old.root,
+    state := old.state, wf := old.wf, cells := old.cells, root := old.root,
     timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
   intro f hf token hp
   change f ∈ [fiber] at hf
@@ -1414,13 +1399,11 @@ theorem typed_queued (commands : List RCmd) : H1Shapes.TypedState (rootProgram :
     cases hp
 
 theorem result_valid : WorldValid unitTy world result.1 := by
-  have old := initial_world_valid unitTy rootProgram 20 20 ⟨rfl, rfl⟩
+  have old := initial_world_valid unitTy rootProgram 20 20
   refine {
     ids := old.ids, fibers := old.fibers, heap := old.heap, promises := old.promises,
     tokens := ?_, tokenBound := old.tokenBound, tokenTargets := old.tokenTargets,
-    state := old.state, wf := old.wf, cells := old.cells, fiberClosed := old.fiberClosed,
-    heapClosed := old.heapClosed, promiseClosed := old.promiseClosed,
-    tokenClosed := old.tokenClosed, root := old.root,
+    state := old.state, wf := old.wf, cells := old.cells, root := old.root,
     timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
   intro f hf token hp
   change f ∈ [afterFiber] at hf
@@ -2006,14 +1989,6 @@ theorem valid : WorldValid unitTy world machine := by
   · rfl
   · exact Stores.empty_wf
   · exact ⟨(fun _ _ h => nomatch h), (fun _ _ h => nomatch h)⟩
-  · intro id ty declared
-    change (if id = Api.root ∨ id = workerId then some unitTy else none) = some ty at declared
-    split at declared
-    · cases declared; exact ⟨rfl, rfl⟩
-    · cases declared
-  · intro key ty declared; cases declared
-  · intro key types declared; cases declared
-  · intro id token ty declared; cases declared
   · rfl
   · exact WakeTyped.empty _ _
   · intro key cell h; cases h
@@ -2300,9 +2275,7 @@ theorem result_valid : WorldValid unitTy world result.1 := by
   refine {
     ids := valid.ids, fibers := valid.fibers, heap := valid.heap, promises := valid.promises,
     tokens := ?_, tokenBound := valid.tokenBound, tokenTargets := valid.tokenTargets,
-    state := valid.state, wf := valid.wf, cells := valid.cells, fiberClosed := valid.fiberClosed,
-    heapClosed := valid.heapClosed, promiseClosed := valid.promiseClosed,
-    tokenClosed := valid.tokenClosed, root := valid.root, timers := valid.timers,
+    state := valid.state, wf := valid.wf, cells := valid.cells, root := valid.root, timers := valid.timers,
     waiters := valid.waiters }
   intro f member token parked
   rcases result_member_cases f member with rfl | rfl <;> cases parked

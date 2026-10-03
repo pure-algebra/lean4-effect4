@@ -48,7 +48,7 @@ fact, since `Finish` imports `Assembly`. -/
 theorem loadsTyped_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
     (fuel compileFuel : Nat) (denotes : DenotesTyped root) :
     LoadsTyped root rootTy fuel compileFuel := by
-  intro lawful checked closed empty
+  intro lawful checked empty
   have wf := layerRefsWF_of_typeOf checked
   have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
     rw [Eff.expandIn_self]
@@ -61,7 +61,7 @@ theorem loadsTyped_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
     ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
       fun _ h => nomatch h⟩
   exact loadsTyped_of_denotesTyped root rootTy fuel compileFuel denotes
-    (raceRegistrationR_typed rootTyped) lawful checked closed empty
+    (raceRegistrationR_typed rootTyped) lawful checked empty
 
 /-- **The typed load on the layer-free fragment**: a checked program none of whose nodes is a
 `provideLayer` loads into `J` (`denotesTyped_of_layerFree`, then the load connector). -/

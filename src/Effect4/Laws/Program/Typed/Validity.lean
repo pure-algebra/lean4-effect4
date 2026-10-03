@@ -7,13 +7,12 @@ Foundations slice 3: data validity and local transport. `WorldValid` connects th
 declarations to a particular reference machine. `World.leHost` transports existing local
 judgments; it does not establish validity of newly allocated cells or of the next machine.
 The initial witness types the empty tables only. Source admission and execution typing are
-separate M3/M5 obligations, even when the root's declared columns are closed.
+separate M3/M5 obligations.
 -/
 set_option autoImplicit false
 namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program.Sched
 
-def ClosedEff (ty : EffTy) : Prop := ty.answer.closed = true ∧ ty.error.closed = true
 
 /-! ## The wake columns (decisions row 134 (a), (b))
 
@@ -77,10 +76,6 @@ structure WorldValid (rootTy : EffTy) (w : World) (m : RState) : Prop where
   state : w.state = m.state
   wf : m.state.WF
   cells : HeapTable w ∧ PromiseTable w
-  fiberClosed : ∀ id ty, w.Γ id = some ty → ClosedEff ty
-  heapClosed : ∀ key ty, w.Ρ key = some ty → ty.closed = true
-  promiseClosed : ∀ key types, w.«Π» key = some types → types.1.closed = true ∧ types.2.closed = true
-  tokenClosed : ∀ id token ty, w.Θ id token = some ty → ClosedEff ty
   root : w.Γ Api.root = some rootTy
   /-- Decisions row 134 (a): every sleeper of the timer store is declared at a type `void` fits,
   as `asyncPre`'s `registerSleep` demanded when it parked (F1). -/
@@ -138,7 +133,7 @@ theorem promiseTypedAt_mono (w newer : World) (key : DeferredKey) (types : Ty ×
 theorem exitFits_mono (w newer : World) (ty : EffTy) (ex : ExitV) : ProofGraph.Obligation
     (w.leHost newer → ExitFits w ty ex → ExitFits newer ty ex) := ⟨⟩
 theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat) :
-    ProofGraph.Obligation (ClosedEff rootTy → WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel)) := ⟨⟩
+    ProofGraph.Obligation (WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel)) := ⟨⟩
 end M2Validity
 theorem valid_refMake_fresh (rootTy : EffTy) (w : World) (m : RState)
     (valid : WorldValid rootTy w m) : w.Ρ ⟨m.state.refs.length⟩ = none := by
@@ -223,7 +218,7 @@ theorem exitFits_mono (w newer : World) (ty : EffTy) (ex : ExitV) (ordered : w.l
 /-- The initial world is valid for the loaded machine, at every static service table (validity
 reads no service table). -/
 theorem initial_world_valid_at (rootTy : EffTy) (serviceTy : ServiceKey → Option Ty) (e : NativeEff)
-    (fuel compileFuel : Nat) (closed : ClosedEff rootTy) :
+    (fuel compileFuel : Nat) :
     WorldValid rootTy (initialWorld rootTy serviceTy) (loadR e fuel compileFuel) := by
   constructor
   · rfl
@@ -257,27 +252,14 @@ theorem initial_world_valid_at (rootTy : EffTy) (serviceTy : ServiceKey → Opti
       cases h
     · intro i cell h
       cases h
-  · intro id ty h
-    change tableInsert (fun _ => none) Api.root rootTy id = some ty at h
-    unfold tableInsert at h
-    split at h
-    · cases h
-      exact closed
-    · cases h
-  · intro key ty h
-    cases h
-  · intro key types h
-    cases h
-  · intro id token ty h
-    cases h
   · exact insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
   · exact WakeTyped.empty _ _
   · intro key cell h
     cases h
 
-theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat)
-    (closed : ClosedEff rootTy) : WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel) :=
-  initial_world_valid_at rootTy nativeServiceTy e fuel compileFuel closed
+theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat) :
+    WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel) :=
+  initial_world_valid_at rootTy nativeServiceTy e fuel compileFuel
 
 end Effect4.Program.Typed
 

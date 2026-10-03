@@ -852,10 +852,6 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
         state := by rw [state]; exact valid.state
         wf := by rw [state]; exact valid.wf
         cells := valid.cells
-        fiberClosed := valid.fiberClosed
-        heapClosed := valid.heapClosed
-        promiseClosed := valid.promiseClosed
-        tokenClosed := valid.tokenClosed
         root := valid.root
         timers := by rw [state]; exact valid.timers
         waiters := by rw [state]; exact valid.waiters }
@@ -1120,7 +1116,7 @@ def LawfulSource (root : ProgramSource) : Prop := LawfulSig root.sig
 the premise yet: it is part two's (the presence clause), which stays open. -/
 def LoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
   LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
-    ClosedEff rootTy → rootTy.requires = Env.Requirement.empty →
+    rootTy.requires = Env.Requirement.empty →
       ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel)
 
 /-- M6b's proposition: one tape decision keeps `J` when its host answer, if any, is admitted. -/
@@ -1136,7 +1132,7 @@ source whose requirement row is empty is in `J` (the empty row as `LoadsTyped` t
 `runPromise`, `Effect.ts:17494-17497`; decisions row 117). -/
 def ReachableTyped (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
   LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
-    ClosedEff rootTy → rootTy.requires = Env.Requirement.empty → RReachable root fuel m →
+    rootTy.requires = Env.Requirement.empty → RReachable root fuel m →
       ∃ w, MachineTyped root rootTy w m
 
 /-- Row 148 (algebra A3): M5's fundamental property. For a program whose layer references are
@@ -1199,7 +1195,6 @@ service table (row 112), and whose head is not a race marker, loads into `J` the
 read at that world only (decisions row 175; before it this premise demanded every world, which is
 false for a program that reads a service, `E4-TYPED-CE-022`). -/
 theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
-    (closed : ClosedEff rootTy)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : TypedProg root (initialWorld rootTy root.sig.serviceTy) rootTy
       (denoteR root.program root.program (rootPoint compileFuel))) :
@@ -1207,7 +1202,7 @@ theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compile
       (loadR root.program fuel compileFuel) := by
   have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
     insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
-  refine ⟨initial_world_valid_at _ _ root.program fuel compileFuel closed, ⟨?_, ?_, ?_⟩, ?_,
+  refine ⟨initial_world_valid_at _ _ root.program fuel compileFuel, ⟨?_, ?_, ?_⟩, ?_,
     schedulerState_load root.program fuel compileFuel,
     observerState_load root _ fuel compileFuel,
     registrationState_load root _ fuel compileFuel noMarker⟩
@@ -1247,7 +1242,7 @@ theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compile
 /-- **M5's builder.** `typedState_of_load` with the loaded root's code clause, the quiet machine's
 liveness and the source's well-formedness (decisions row 170, `MachineTyped.sourceWF`). -/
 theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
-    (closed : ClosedEff rootTy) (sourceWF : root.program.layerRefsWF = true)
+    (sourceWF : root.program.layerRefsWF = true)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : TypedProg root (initialWorld rootTy root.sig.serviceTy) rootTy
       (denoteR root.program root.program (rootPoint compileFuel))) :
@@ -1255,7 +1250,7 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
       (loadR root.program fuel compileFuel) := by
   have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
     insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
-  refine ⟨typedState_of_load root rootTy fuel compileFuel closed noMarker code, rfl, ?_,
+  refine ⟨typedState_of_load root rootTy fuel compileFuel noMarker code, rfl, ?_,
     machineLive_of_quiet _ rfl rfl, sourceWF⟩
   intro f hf _ _ _ ty hty
   change f ∈ [_] at hf
@@ -1272,11 +1267,10 @@ loaded code is typed at every world, with no race marker at its head, loads into
 the initial world. It is `J`'s first component (`machineTyped_load`), so the argument is written
 once; the battery keeps a one-line use. -/
 theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
-    (closed : ClosedEff ty)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
     ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) :=
-  ⟨_, typedState_of_load root ty fuel compileFuel closed noMarker (code _)⟩
+  ⟨_, typedState_of_load root ty fuel compileFuel noMarker (code _)⟩
 
 /-- **A checked program's layer references are well formed** (decisions row 170):
 `typeOfProgram` answers only under `layerRefsWF` (`Program/Typing.lean:61-64`), so the load's
@@ -1300,7 +1294,7 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
     (denotes : DenotesTyped root)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none) :
     LoadsTyped root rootTy fuel compileFuel := by
-  intro _ checked closed _
+  intro _ checked _
   have wf := layerRefsWF_of_typeOf checked
   have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
     rw [Eff.expandIn_self]
@@ -1308,7 +1302,7 @@ theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
     split at checked
     · exact checked
     · cases checked
-  exact ⟨_, machineTyped_load root rootTy fuel compileFuel closed wf noMarker
+  exact ⟨_, machineTyped_load root rootTy fuel compileFuel wf noMarker
     (denotes wf _ rfl (rootPoint compileFuel) root.program rootTy rfl
       ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
         fun _ h => nomatch h⟩)⟩
@@ -1382,8 +1376,8 @@ theorem admittedReplay_noHostAnswer (root : ProgramSource) (J : World → RState
 theorem reachable_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (load : LoadsTyped root rootTy fuel fuel) (decisions : ∀ d, DecisionKeeps root rootTy fuel d)
     (m : RState) : ReachableTyped root rootTy fuel m := by
-  rintro lawful checked closed row ⟨tape, free, rfl⟩
-  obtain ⟨w₀, loaded⟩ := load lawful checked closed row
+  rintro lawful checked row ⟨tape, free, rfl⟩
+  obtain ⟨w₀, loaded⟩ := load lawful checked row
   letI := termEvaluatorFor root.program
   obtain ⟨w, _, typed⟩ := Machine.Lift.replayEval_lift hostOrder (MachineTyped root rootTy)
     (fun w m d => AnswerOk w m d) (interpR root.program) fuel
@@ -1612,7 +1606,6 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   lawful : LawfulSource root
   emptyTable : root.table = []
   checked : Program.typeOfProgram root.signature root.program = some rootTy
-  closed : ClosedEff rootTy
   closedRow : rootTy.requires = Env.Requirement.empty
   answerFree : ∀ d ∈ tape, NoHostAnswer d
 
@@ -1655,7 +1648,7 @@ memo handles unchecked at `unknown`, so it does not yet follow from `J`; with th
 consequence of `J`, otherwise the native guard's handle facts transport through R4's bridge. -/
 def ExitHandlesValid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
   LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
-    ClosedEff rootTy → RReachable root fuel m →
+    RReachable root fuel m →
       ∀ f ∈ m.fibers, ∀ v, f.exit = some (.success v) → Val.validIn m.state v = true
 
 /-- `J` on a reference machine types its observation: the exits and the stores. -/
@@ -1690,7 +1683,7 @@ theorem m7_of_capstone (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
       (Api.replay root.program fuel tape).machine.stuck =
         (replayR root.program fuel tape).machine.stuck := by
     intro fragment
-    obtain ⟨w, typed⟩ := capstone _ fragment.lawful fragment.checked fragment.closed
+    obtain ⟨w, typed⟩ := capstone _ fragment.lawful fragment.checked
       fragment.closedRow ⟨tape, fragment.answerFree, rfl⟩
     have related := ReplayRel.machine (replay_rel root.program fuel fuel tape)
     refine ⟨w, typed, ?_, replay_stuck_eq root.program fuel tape⟩

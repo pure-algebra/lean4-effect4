@@ -222,10 +222,6 @@ structure MachineWide (root : ProgramSource) (rootTy : EffTy) (w : World) (m : R
   state : w.state = m.state
   wf : m.state.WF
   cells : HeapTable w ∧ PromiseTable w
-  fiberClosed : ∀ id ty, w.Γ id = some ty → ClosedEff ty
-  heapClosed : ∀ key ty, w.Ρ key = some ty → ty.closed = true
-  promiseClosed : ∀ key types, w.«Π» key = some types → types.1.closed = true ∧ types.2.closed = true
-  tokenClosed : ∀ id token ty, w.Θ id token = some ty → ClosedEff ty
   rootDeclared : w.Γ Api.root = some rootTy
   races : (preds root).RaceOk w Expect.root m.races
   stores : StoresOk (preds root) w Expect.root m.state
@@ -255,8 +251,7 @@ theorem MachineTyped.wide {root : ProgramSource} {rootTy : EffTy} {w : World} {m
     (typed : MachineTyped root rootTy w m) : MachineWide root rootTy w m := by
   obtain ⟨⟨valid, ok, _, sched, _, _⟩, services, _, live, sourceWF⟩ := typed
   exact ⟨valid.ids, valid.fibers, valid.heap, valid.promises, valid.tokenBound, valid.tokenTargets,
-    valid.state, valid.wf, valid.cells, valid.fiberClosed, valid.heapClosed, valid.promiseClosed,
-    valid.tokenClosed, valid.root, ok.c1, ok.c2, sched.fiberIds, sched.raceIds, sched.racesBelow,
+    valid.state, valid.wf, valid.cells, valid.root, ok.c1, ok.c2, sched.fiberIds, sched.raceIds, sched.racesBelow,
     sched.raceHosts, sched.keysBelow, sched.requestsBelow, sched.requestsOwned, services, live,
     valid.timers, valid.waiters, sched.liveBelow, sourceWF⟩
 
@@ -276,8 +271,7 @@ theorem machineTyped_of {root : ProgramSource} {rootTy : EffTy} {w : World} {m :
     (wide : MachineWide root rootTy w m) (fibers : ∀ f ∈ m.fibers, FiberTyped root w m f) :
     MachineTyped root rootTy w m :=
   ⟨⟨⟨wide.ids, wide.fibers, wide.heap, wide.promises, fun f hf => (fibers f hf).tokens,
-      wide.tokenBound, wide.tokenTargets, wide.state, wide.wf, wide.cells, wide.fiberClosed,
-      wide.heapClosed, wide.promiseClosed, wide.tokenClosed, wide.rootDeclared, wide.timers,
+      wide.tokenBound, wide.tokenTargets, wide.state, wide.wf, wide.cells, wide.rootDeclared, wide.timers,
       wide.waiters⟩,
     ⟨fun f hf => (fibers f hf).ok, wide.races, wide.stores⟩,
     fun f hf => (fibers f hf).delivery,
@@ -835,7 +829,7 @@ theorem machineWide_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
       exact hr
   refine ⟨wide.ids.trans ids.symm, fun id => by rw [ids]; exact wide.fibers id, wide.heap,
     wide.promises, wide.tokenBound, wide.tokenTargets, wide.state, wide.wf, wide.cells,
-    wide.fiberClosed, wide.heapClosed, wide.promiseClosed, wide.tokenClosed, wide.rootDeclared,
+    wide.rootDeclared,
     wide.races, wide.stores, by rw [rupdate_ids]; exact wide.fiberIds, wide.raceIds,
     wide.racesBelow, fun race hr => ?_, fun key hk => ?_,
     fun fiber token r hr => wide.requestsBelow fiber token r (requests fiber token r hr),
@@ -1765,8 +1759,7 @@ theorem machineWide_frame {root : ProgramSource} {rootTy : EffTy} {w : World} {m
     rw [frame.externals, wide.state]
     exact fun _ _ h => h
   refine ⟨wide.ids, wide.fibers, fun key => ?_, fun key => ?_, wide.tokenBound, wide.tokenTargets,
-    rfl, wf, ⟨fun i v hv ty hty => ?_, fun i cell hc types hty c hcomp => ?_⟩, wide.fiberClosed,
-    wide.heapClosed, wide.promiseClosed, wide.tokenClosed, wide.rootDeclared,
+    rfl, wf, ⟨fun i v hv ty hty => ?_, fun i cell hc types hty c hcomp => ?_⟩, wide.rootDeclared,
     fun r hr => ?_, stores, wide.fiberIds, wide.raceIds, wide.racesBelow, wide.raceHosts,
     fun key hk => wide.keysBelow key (keys hk), wide.requestsBelow,
     fun fiber token r hr hk => wide.requestsOwned fiber token r hr (keys hk), wide.services,
@@ -3053,8 +3046,7 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
     · rw [Function.comp_apply, if_pos h, h]
     · rw [Function.comp_apply, if_neg h]
   refine ⟨machineTyped_of ⟨wide.ids, wide.fibers, wide.heap, wide.promises, wide.tokenBound,
-      wide.tokenTargets, wide.state, wide.wf, wide.cells, wide.fiberClosed, wide.heapClosed,
-      wide.promiseClosed, wide.tokenClosed, wide.rootDeclared, fun r hr' => ?_, wide.stores,
+      wide.tokenTargets, wide.state, wide.wf, wide.cells, wide.rootDeclared, fun r hr' => ?_, wide.stores,
       wide.fiberIds, by rw [raceIds]; exact wide.raceIds, fun r hr' => ?_, fun r hr' => ?_,
       fun key hk => wide.keysBelow key (by rw [← keys]; exact hk), wide.requestsBelow,
       fun fiber token r' hr'' hk => wide.requestsOwned fiber token r' hr'' (by rw [← keys]; exact hk),

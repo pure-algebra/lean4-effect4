@@ -269,13 +269,11 @@ abbrev machine : RState := machineOf [.answer badNext] true
 
 theorem valid_of (s : List ScopeFrame) (running : Bool) (trace := (loadR refProg 20 20).trace) :
     WorldValid unitTy world (machineOf s running trace) := by
-  have old := initial_world_valid unitTy refProg 20 20 ⟨rfl, rfl⟩
+  have old := initial_world_valid unitTy refProg 20 20
   refine {
     ids := old.ids, fibers := old.fibers, heap := old.heap, promises := old.promises,
     tokens := ?_, tokenBound := old.tokenBound, tokenTargets := old.tokenTargets,
-    state := old.state, wf := old.wf, cells := old.cells, fiberClosed := old.fiberClosed,
-    heapClosed := old.heapClosed, promiseClosed := old.promiseClosed,
-    tokenClosed := old.tokenClosed, root := old.root,
+    state := old.state, wf := old.wf, cells := old.cells, root := old.root,
     timers := WakeTyped.empty _ _, waiters := fun _ _ h => by cases h }
   intro f hf token hp
   change f ∈ [rootFiber s running] at hf
@@ -382,7 +380,7 @@ theorem registration_of (s : List ScopeFrame) (running : Bool) (trace := (loadR 
 
 theorem code_typed (w : W) :
     TypedProg (refProg : ProgramSource) w tin current := by
-  refine TypedProg.store (cert := Ty.nat) ⟨rfl, trivial⟩ ?_
+  refine TypedProg.store (cert := Ty.nat) trivial ?_
   intro w' _ ans hpost
   obtain ⟨key, rfl, hs⟩ := hpost
   refine TypedProg.pure ⟨?_, trivial⟩
@@ -661,7 +659,7 @@ theorem good_queue : QueueOk (refProg : ProgramSource) world good [command] :=
 root's code, which the queued `loop` reads, is typed with its stack (`ReadCode`). Before the
 split this was the code clause of `TypedState … [command]`. -/
 theorem good_config : ConfigTyped (refProg : ProgramSource) unitTy world good [command] := by
-  refine ⟨⟨good_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl⟩, ?_, good_queue⟩
+  refine ⟨⟨good_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl, rfl⟩, ?_, good_queue⟩
   · intro f hf _ idle
     change f ∈ [rootFiber [.answer goodNext] true] at hf
     rw [List.mem_singleton] at hf
@@ -707,10 +705,10 @@ theorem w0_le_w1g : world.leHost w1g := by
     fun _ _ _ h => h, rfl⟩, fun _ _ h => h⟩
 
 theorem valid_w1g : WorldValid unitTy w1g afterGood.1 := by
-  have v0 := initial_world_valid unitTy refProg 20 20 ⟨rfl, rfl⟩
+  have v0 := initial_world_valid unitTy refProg 20 20
   have hids : afterGood.1.fibers.map (·.id) = (loadR refProg 20 20).fibers.map (·.id) := rfl
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, ?_, ⟨?_, ?_⟩, v0.fiberClosed, ?_, v0.promiseClosed,
-    v0.tokenClosed, v0.root, WakeTyped.empty _ _, fun _ _ h => by cases h⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, ?_, ⟨?_, ?_⟩, v0.root, WakeTyped.empty _ _,
+    fun _ _ h => by cases h⟩
   · rw [hids]
     exact v0.ids
   · intro id
@@ -758,14 +756,6 @@ theorem valid_w1g : WorldValid unitTy w1g afterGood.1 := by
       cases hv
   · intro i v hv
     cases hv
-  · intro key ty h
-    rw [rho_w1g] at h
-    by_cases hk : key = ⟨0⟩
-    · rw [if_pos hk] at h
-      cases h
-      rfl
-    · rw [if_neg hk] at h
-      cases h
 
 theorem cell0_ok_w1g : ExitOk w1g tin (.success (Val.cell ⟨0⟩)) := by
   refine ⟨?_, trivial⟩
@@ -957,7 +947,7 @@ theorem afterGood_queueOk :
 `deliver` reads, is typed with its stack at the world that declares cell 0. -/
 theorem afterGood_config :
     ConfigTyped (refProg : ProgramSource) unitTy w1g afterGood.1 afterGood.2 := by
-  refine ⟨⟨afterGood_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl⟩, ?_,
+  refine ⟨⟨afterGood_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl, rfl⟩, ?_,
     afterGood_queueOk⟩
   · intro f hf _ _ _ ty declared
     have saved := afterGood_saved f hf

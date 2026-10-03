@@ -35,7 +35,7 @@ def StoreCert : SyncOp → Type
 `refModifySome` and the scope rows). -/
 def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert op) : Prop :=
   match op with
-  | .refMake initial => cert.closed = true ∧ Fits w initial cert
+  | .refMake initial => Fits w initial cert
   | .refGet cell => ∃ ty, w.Ρ cell = some ty
   | .refSet cell v => ∃ ty, w.Ρ cell = some ty ∧ Fits w v ty
   | .refGetAndSet cell v => ∃ ty, w.Ρ cell = some ty ∧ Fits w v ty
@@ -46,7 +46,7 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   -- the native row's declared cell type (`Ref.Ref<number>`, `HandleFits`'s cell arm): the
   -- handler answers the cell's old value, which the `nat` post then describes
   | .refModify cell _ | .refModifySome cell _ => RefDeclared w cell .nat
-  | .deferredMake => cert.1.closed = true ∧ cert.2.closed = true
+  | .deferredMake => True
   | .deferredIsDone key | .deferredPoll key | .deferredAwaitCleanup key _ _ => (w.«Π» key).isSome = true
   -- the completion fits the promise's declared columns (`CompletionStrong`'s two arms), so the
   -- completed cell stays typed; an ill-typed completion leaves no later world over the new store
@@ -601,7 +601,7 @@ theorem strongExit_bool (w : World) (v : Val) (hv : Fits w v .bool) :
 
 theorem settling_ref_allocation (root : ProgramSource) (w : World) (_h0 : HeapTypedAt w ⟨0⟩ .nat) :
     TypedProg root w (EffTy.pure .bool) refAllocGetProg := by
-  refine TypedProg.store (cert := Ty.bool) ⟨rfl, strongValue_bool_true w⟩ ?_
+  refine TypedProg.store (cert := Ty.bool) (strongValue_bool_true w) ?_
   intro w' _ ans hpost
   rcases hpost with ⟨key, rfl, hkey⟩
   dsimp only [refAllocCont]
@@ -754,7 +754,7 @@ theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
   cases op with
   | refMake initial =>
     simp only [storePre] at h ⊢
-    exact ⟨h.1, fits_mono ord h.2⟩
+    exact fits_mono ord h
   | refGet cell | refUpdate cell _ | refGetAndUpdate cell _ | refUpdateAndGet cell _
   | refUpdateSome cell _ | refGetAndUpdateSome cell _ | refUpdateSomeAndGet cell _ =>
     simp only [storePre] at h ⊢
