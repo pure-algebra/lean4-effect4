@@ -1,13 +1,16 @@
 import Effect4.Machine.Alphabets
+import Effect4.Machine.Record
+import Effect4.Program.TyEq
 
 /-!
 # Machine.Term — the first-order term language and its evaluation, below the stores
 
 The literals (`Lit`), the positional variables (`Var`), the terms (`Term`, `Terms`: a variable,
-a literal, or an atom applied to terms), their scope check, the closed atom alphabet
+a literal, an atom application, or a named record operation), their scope check, the closed atom alphabet
 (`NativeAtom`: its name, arity, lookup and `eval`) and the evaluator (`evalTerm`), together with the error
 image (`errOf`, `valOfErr`) and the cause queries the query atoms read. Everything here is
-first-order data over the shared carrier `Val` and needs no type: the atoms' *typing*
+first-order data over the shared carrier `Val`. Record declarations retain `Ty` data,
+without importing the checker or the Laws graph. The atoms' *typing*
 (`NativeAtom.typeOf`) is `Program/NativeAtom.lean`, the literals' types (`Lit.ty`) are
 `Program/Eff.lean`. The module sits below `Machine/Stores.lean` so that a store step can
 evaluate a term (the function-taking rows of decisions row 43 carry one) and stay one atomic
@@ -94,13 +97,22 @@ deriving DecidableEq, Repr
 /-- A variable is a position in the current environment (D1). -/
 abbrev Var := Nat
 
+/-- Required reads return a value; optional reads return an outer presence option. -/
+inductive FieldReadMode
+  | required
+  | optional
+  deriving DecidableEq, Repr
+
 mutual
-  /-- A pure value: a variable, a literal, or an atom applied to values. Atoms are the
-  pure functions a family declares (`AtomRow`), named, never stored. -/
+  /-- A pure value expression. Atoms are named functions; record declarations and
+  read modes are stored data. No function value is stored in a term. -/
   inductive Term
     | var (index : Var)
     | lit (value : Lit)
     | app (atom : String) (args : Terms)
+    | record (fields : List (String × Bool × Ty)) (presentNames : List String) (values : Terms)
+    | field (mode : FieldReadMode) (target : Term) (name : String)
+    | recordSet (target : Term) (name : String) (value : Term)
   inductive Terms
     | nil
     | cons (head : Term) (tail : Terms)
@@ -120,6 +132,9 @@ mutual
     | .var index => decide (index < n)
     | .lit _ => true
     | .app _ args => Terms.scoped n args
+    | .record _ _ values => Terms.scoped n values
+    | .field _ target _ => Term.scoped n target
+    | .recordSet target _ value => Term.scoped n target && Term.scoped n value
   def Terms.scoped (n : Nat) : Terms → Bool
     | .nil => true
     | .cons head tail => Term.scoped n head && Terms.scoped n tail
@@ -178,8 +193,9 @@ Three things the record deliberately does not hold. **No function field** — an
 compiler's exhaustiveness error (the one mechanism that has caught every omission in this
 alphabet) and the OCaml engine's jump table, since LCNF's mono phase cannot see through a
 closure read out of a table row (`ocaml/gen/api_gen.ml`, the lowering of `eval`). **No `Ty`**
-— the type language stays above the stores, so the machine's import closure, and the LCNF cut
-taken from it, does not carry the checker; the typing half is `Program/NativeAtom.lean`. **No
+— the atom table carries no typing function. Record metadata imports only the type data
+and its equality, so the machine and its LCNF cut still exclude the checker; the typing half
+is `Program/NativeAtom.lean`. **No
 citation** — that belongs with the typing rule it transcribes (`NativeAtom.Spec.cite`). -/
 structure AtomRow where
   /-- The atom's name: its spelling on the wire, in the generated profile, in the OCaml
@@ -428,6 +444,16 @@ mutual
     | .app atom args => do
       let values ← evalTerms env args
       nativeAtom atom values
+    | .record _ names terms => do
+      let values ← evalTerms env terms
+      Machine.Record.build names values
+    | .field mode target name => do
+      let value ← evalTerm env target
+      Machine.Record.read (mode = .optional) value name
+    | .recordSet target name replacement => do
+      let value ← evalTerm env target
+      let next ← evalTerm env replacement
+      Machine.Record.set value name next
   def evalTerms (env : List Val) : Terms → Option (List Val)
     | .nil => some []
     | .cons head tail => do

@@ -1,7 +1,7 @@
 # Record term core slice
 
-Status: prepared from source. No syntax edit or Lean command has started.
-Current seat head: `5208a4f3`. The coordinator supplies a combined base before implementation.
+Status: implementation authorized. No record syntax edit or Lean command has started.
+Preparation head: `ae89c2dd`. Dependencies are the approved bootstrap commits and `6a02b2b8`.
 Contract: `record-contract.md` in the coordinator's data-language-wave worktree.
 
 ## Contract and division
@@ -38,6 +38,9 @@ The public raw check therefore sees metadata before any program typing call.
 - `src/Effect4/Program/Formation.lean`: the located term metadata collector.
 - `src/Effect4/Laws/Program/Signature.lean`: the direct term-type congruence consumer.
 - `Test/Program/RecordTerms.lean`: dedicated core typing, scope, weakening and formation controls.
+- `src/Effect4/Program/Authoring/Records.lean`: `record`, `field`, `optionalField` and `recordSet` builders in the existing scope reader.
+- `src/Effect4/Laws/Program/Authoring/Records.lean`: scope certificates for those four builders.
+- `Test/Program/AuthoringRecords.lean`: focused reconstruction, scope and refusal controls.
 - `Test/Program/FormationContract.lean`: the new raw term metadata entry-point controls.
 - This brief and its final receipt.
 
@@ -45,7 +48,10 @@ The public raw check therefore sees metadata before any program typing call.
 A source change there requires a concrete need and coordination first.
 `Laws/Program/Folds/Term.lean` remains the shared verification consumer; its commands should regenerate their proofs in elaboration.
 The coordinator owns any edit there caused by target printer or reader work.
-This fence does not add authoring wrappers; their owner must be assigned before that API work begins.
+The coordinator assigned the four authoring wrappers to this seat.
+They elaborate child sources in order under the same environment and term path, following `Authoring.app`.
+The record wrapper accepts a full declaration and a list of named value sources; it keeps absent optional declarations.
+It reconstructs raw terms only. Ordinary typing and formation remain the existing checked boundaries.
 
 No syntax, generator, root import or policy file has been changed by this preparation.
 
@@ -58,9 +64,10 @@ No syntax, generator, root import or policy file has been changed by this prepar
 | Weakening keeps the exact typing result | Residual Program Typing; existing binder-typing compatibility | Any signature, inserted type, environment split and term; success and refusal | `termTy_weaken`, program weakening and scoped authoring; R3 | No arbitrary relocation without a variable map |
 | Signature extension keeps term typing | Residual Program Typing; existing signature-extension compatibility | Equal atom typing and constant flags; every new term | `SigExtends.termTy` and existing program-source proofs; R3 | No change to row or service premises |
 | The checker still agrees with its judgment | Residual Program Typing; existing checker agreement | Existing signature and environment assumptions, extended term rules | `CheckSound`, `CheckInversion`, then M5 | Invariant evidence alone gives no progress |
+| Builder reconstruction keeps scope | Residual Program Typing; existing authoring scope judgment | Each child has `TermScoped`; unchanged environment and path | `TermScoped` instances and ergonomic record authoring; R3 | No typing or evaluation certificate from name resolution alone |
 | Evaluation produces a fitting result | Residual Program Typing; `denote-typed` | Fitting environment, successful term typing, existing native atom assumption | Operations seat's `evalTerm_progress`, then M5 | Operations-owned; no host liveness or target execution claim |
 
-The first five obligations are direct consumers or repairs of existing claims.
+The first six obligations are direct consumers or repairs of existing claims.
 The operations seat owns the last theorem and its record helper premises.
 No new parallel proof graph is needed.
 
@@ -121,5 +128,7 @@ The `Machine/Term.lean` module comments currently say the machine needs no type 
 Retained record metadata changes that dependency to `TyEq`, while still excluding the checker and Laws graph.
 The source comments and later LCNF lowering input census must describe that exact boundary.
 
-The coordinator will supply the combined base and build slot before implementation.
+The coordinator approved the current branch plus the named dependency commits.
+The shared Lean slot remains with the operations seat until explicitly transferred.
+The first source-stage commit may temporarily require regenerated companions; its receipt will say so before integration.
 No Lean, generator, full battery, push or syntax edit was performed while preparing this brief.

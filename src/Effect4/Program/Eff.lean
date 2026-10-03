@@ -454,6 +454,10 @@ mutual
     | .var index => .var (Var.weaken cut index)
     | .lit value => .lit value
     | .app atom args => .app atom (Terms.weaken cut args)
+    | .record fields names values => .record fields names (Terms.weaken cut values)
+    | .field mode target name => .field mode (Term.weaken cut target) name
+    | .recordSet target name value =>
+      .recordSet (Term.weaken cut target) name (Term.weaken cut value)
 
   def Terms.weaken (cut : Nat) : Terms → Terms
     | .nil => .nil
@@ -462,7 +466,7 @@ end
 
 @[simp] theorem Term.weaken_eq_lit (cut : Nat) (term : Term) (value : Lit) :
     Term.weaken cut term = .lit value ↔ term = .lit value := by
-  cases term <;> simp [Term.weaken]
+  cases term <;> simp only [Term.weaken, reduceCtorEq]
 
 def CauseTerm.weaken (cut : Nat) : CauseTerm → CauseTerm
   | .fail error => .fail (Term.weaken cut error)
