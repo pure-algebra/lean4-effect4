@@ -1445,3 +1445,47 @@ Open (the premises of `Clauses/All.lean`): `closeIter .parallel`; `GenProtocol` 
 over typed generator positions); store rows `deferredMake`, `deferredCompleteWith`,
 `deferredInterruptWith`, `deferredAwaitCleanup`, `sleepCancel`, `memoBuild`, `memoComplete`. Then
 `decision_preserves`, `typedState_reachable`.
+
+## Slice M6-CLOSE — the last clauses; the M6 ledger closed
+
+**First:** the M6 ledger is closed (`M6Ledger: 0 open, 20 proved, 20 total; ceiling 0`, at the foot
+of `Typed/Commands/Clauses/All.lean`), with no contract change in this slice: every theorem below
+is over the definitions as they stood at `dbd39044`. Axioms of `typedState_reachable`,
+`decision_preserves`, `genProtocol`, `clause_closeIter_parallel`, `storeClauses`:
+`[propext, Quot.sound]`.
+
+Base `dbd39044`, head `053aa3d9` (branch `claude/proofs`, fast-forwarded onto
+`refactor/phase1-phase3`). Commits: `e8ff091d` (store rows), `4df67461` (the two open clauses as
+ledger goals, `M6Clauses`), `2953b3cd` (`closeIter .parallel`), `053aa3d9` (`GenProtocol`, the
+ledger). Builds: `lake build Effect4.Laws.Program.Typed.Commands.Clauses.All` after each batch,
+`lake build Effect4.Laws` at the end, green. No battery, trust gate or generator was run; the
+generated semantics statuses (`generated/semantics.*`, the architecture map) are stale until the
+owner regenerates them (the owner's uncommitted edits to those files were left untouched).
+
+Placement (concept 4, the configuration invariant; every helper is a step of the named goal):
+- **Store rows** (`Clauses/StoreDeferred.lean`; goals `M6Ledger.step_deliver`/`step_loop` through
+  `StoreClauseKeeps`): `deferredMake`, `deferredCompleteWith`, `deferredInterruptWith`,
+  `deferredAwaitCleanup`, `sleepCancel`, `memoBuild`, `memoComplete`. One settle for every store
+  step that adds no declaration, `Evaluating.store_kept` (`Clauses/Store.lean`: `CellsKept`,
+  `DueKept`; `store_restated` is its corollary); the two allocations share `storesOk_make` and
+  `waiters_make`; `deferredMake_world`, `memoBuild_world` extracted in `Typed/Adequacy.lean`.
+  Reach: `I` at the world over the new store; not progress.
+- **`closeIter .parallel`** (`Clauses/Close.lean`, ledger goal `M6Clauses.closeIter_parallel`):
+  `Evaluating.forkAll` folds `Evaluating.alloc` over the finalizers (children at
+  `⟨unknown, never⟩`); the queued `closeParAwait`'s delivery: the children's columns, the
+  `closeParDone` protocol (`closeParProtocol`, coinduction, never resumes) and the saved answer
+  frame; the host's stale operation is read by no queued command (`QueueOk.owners`).
+- **`GenProtocol`** (`Clauses/Gen.lean`, ledger goal `M6Clauses.gen_protocol`, decisions row 190):
+  coinduction (`genSt_closed`) from a typed walk position (`PosOk` at a block context `GenCtx`,
+  with `Fall`/`Brk` for leaving a block, gated by `GenTy.completes`/`breaks`, the bits of option
+  (a)); `walk_typed` by induction on the walk's fuel; the expansion commutes through statements
+  (`Stmts.expandIn`); the program-counter facts (`splitPc_ctx`, `blockEnv_eq`, `blockExit_*`,
+  `loopExit_typed`). Reach: every iterator step of a checked generator is typed; not that a
+  generator finishes (the compile-fuel frontier is typed at every type).
+- **The ledger** (`Clauses/All.lean`): `deliver_preserves`, `loop_preserves`, `steps_preserve`
+  (the eighteen command facts), `decision_preserves` (`decisionKeeps_of_ledger` with the six
+  edits), `typedState_reachable` (`reachable_of_ledger` with `loadsTyped`).
+
+Not established: progress or liveness (`J` is an invariant); host answers (M6's tapes carry none,
+`NoHostAnswer`, row 95); M7 (`M7.*` remain `#proof_wanted`). Unlocks: M7's transfer to the frame
+machine (`docs/core/system-map.md`, R4/R9 on the M5 → M6 → M7 spine).
