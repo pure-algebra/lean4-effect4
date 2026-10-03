@@ -406,6 +406,7 @@ private def admittedInitializedHandles : List Name :=
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do
   let environment ← getEnv
+  let t0 ← liftIO IO.monoMsNow
   -- `lake build` hands the elaborator an absolute file name; `lake env lean Test/All.lean`
   -- hands it the relative one, whose parent walk ends at `Test` and finds no root.
   let named := System.FilePath.mk (← getFileName)
@@ -422,6 +423,8 @@ elab "#effect4_axiom_gate" : command => do
     if source.normalize != sourceFile.normalize && !importedPaths.contains source.normalize then
       throwError
         "Effect4 module-closure gate: {source} is not reachable from the Test.All audit root"
+
+  let t1 ← liftIO IO.monoMsNow
 
   -- A Test-only import is not a library root. Every library source must belong
   -- to Effect4 or Effect4.Laws, and the application root must never reach Laws.
@@ -452,7 +455,10 @@ elab "#effect4_axiom_gate" : command => do
     (`Effect4).isPrefixOf name && !apiModules.contains name).size
   logInfo m!"Effect4 library-root gate: {apiCount} API/utility modules, {lawsCount} Laws-only modules; every library source is reachable; Effect4 never reaches Laws"
 
+  let t2 ← liftIO IO.monoMsNow
   let mut declarations : Array Name := #[]
+  -- the audited declarations by module, for the exemption checks below
+  let mut byModule : Std.HashMap Name (Array Name) := {}
   for (name, info) in environment.constants.toList do
     if let some moduleName := moduleOf? environment name then
       if belongsToAuditedTree moduleName then
@@ -476,7 +482,9 @@ elab "#effect4_axiom_gate" : command => do
                  denotes an arbitrary inhabitant rather than the value it advertises; give it \
                  a body or make the boundary an authored admission"
         declarations := declarations.push name
+        byModule := byModule.insert moduleName ((byModule.getD moduleName #[]).push name)
 
+  let t3 ← liftIO IO.monoMsNow
   let exactImplementationDeclarations ←
     match resolveChoiceImplementationDeclarations environment declarations with
     | .ok resolved => pure resolved
@@ -485,6 +493,7 @@ elab "#effect4_axiom_gate" : command => do
   let admitted (declaration : Name) : Bool :=
     (moduleOf? environment declaration).any choiceImplementationModules.contains ||
       exactImplementationDeclarations.contains declaration
+  let t4 ← liftIO IO.monoMsNow
   -- one memoized traversal of the dependency graph serves every declaration below
   let mut memo : ProofGraph.AxiomMemo := {}
   for declaration in declarations do
@@ -507,17 +516,17 @@ elab "#effect4_axiom_gate" : command => do
         throwError
           "Effect4 axiom gate: declaration {declaration} reaches unexpected axiom {axiomName}; allowed axioms are {bound}"
 
+  let t5 ← liftIO IO.monoMsNow
   -- The exemption list must not outlive its reason. A named implementation
   -- module that no longer reaches `Classical.choice` is a stale entry and
   -- widens the trust boundary for nothing, so it fails the gate.
   for exempted in choiceImplementationModules do
     let mut used := false
-    for declaration in declarations do
-      if moduleOf? environment declaration == some exempted then
-        let (reached, memo') := (ProofGraph.reachedAxioms environment declaration).run memo
-        memo := memo'
-        if (reached.getD #[]).contains ``Classical.choice then
-          used := true
+    for declaration in byModule.getD exempted #[] do
+      let (reached, memo') := (ProofGraph.reachedAxioms environment declaration).run memo
+      memo := memo'
+      if (reached.getD #[]).contains ``Classical.choice then
+        used := true
     if !used then
       throwError
         "Effect4 axiom gate: stale implementation exemption for {exempted}; no declaration in it reaches Classical.choice, so remove it from choiceImplementationModules"
@@ -542,8 +551,9 @@ elab "#effect4_axiom_gate" : command => do
       throwError
         "Effect4 trust gate: initialized-handle admission names a missing or non-opaque declaration {handle}"
 
+  let t6 ← liftIO IO.monoMsNow
   logInfo
-    m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {exactImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
+    m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; phases (ms): sources and closure {t1 - t0}, library roots {t2 - t1}, declarations {t3 - t2}, resolution {t4 - t3}, axioms {t5 - t4}, exemptions {t6 - t5}; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {exactImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
 
 /-!
 ## Re-pinning the exact choice list
