@@ -773,9 +773,13 @@ theorem refSetAndGet_implements (root : ProgramSource) (cell : RefKey) (v : Val)
   obtain ⟨ord, store'⟩ := poke_world store step rfl rfl rfl declared fits
   exact ⟨_, _, step, _, ord, rfl, store', ⟨t, declared, fits_mono ord fits⟩⟩
 
-theorem deferredMake_implements (root : ProgramSource) : StoreImplements root .deferredMake := by
-  intro w cert store _
-  change Ty × Ty at cert
+/-- `deferredMake`'s world: the fresh cell declared at the certificate over the grown cells, typed. -/
+theorem deferredMake_world (root : ProgramSource) (w : World) (cert : Ty × Ty)
+    (store : StoreTyped root w) :
+    w.leHost (w.addPromise { w.state with deferreds := w.state.deferreds.make.2 }
+      w.state.deferreds.make.1 cert) ∧
+      StoreTyped root (w.addPromise { w.state with deferreds := w.state.deferreds.make.2 }
+        w.state.deferreds.make.1 cert) := by
   have fresh : w.«Π» w.state.deferreds.make.1 = none := by
     cases h : w.«Π» w.state.deferreds.make.1 with
     | none => rfl
@@ -786,7 +790,7 @@ theorem deferredMake_implements (root : ProgramSource) : StoreImplements root .d
   obtain ⟨le, _⟩ := deferredMake_extension w cert _ _ step fresh
   have ord : w.leHost (w.addPromise { w.state with deferreds := w.state.deferreds.make.2 }
       w.state.deferreds.make.1 cert) := ⟨le, fun _ _ h => h⟩
-  refine ⟨_, _, step, _, ord, rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨_, rfl, insert_here _ _ _⟩⟩
+  refine ⟨ord, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩
   · exact store.heap
   · change ∀ k, (tableInsert w.«Π» w.state.deferreds.make.1 cert k).isSome = true ↔
       k.index < w.state.deferreds.make.2.cells.length
@@ -802,6 +806,12 @@ theorem deferredMake_implements (root : ProgramSource) : StoreImplements root .d
     exact fitsExit_mono ord (store.scopeExits e₀ he₀ ex hex₀)
   · exact syncOpStep_memoValid _ _ _ _ store.memo step
   · exact memoTable_step ord store.memoTable (layerCells_of_not_build step (fun _ _ h => nomatch h))
+
+theorem deferredMake_implements (root : ProgramSource) : StoreImplements root .deferredMake := by
+  intro w cert store _
+  change Ty × Ty at cert
+  obtain ⟨ord, store'⟩ := deferredMake_world root w cert store
+  exact ⟨_, _, syncOpStep_deferredMake w.state, _, ord, rfl, store', ⟨_, rfl, insert_here _ _ _⟩⟩
 
 theorem deferredIsDone_implements (root : ProgramSource) (key : DeferredKey) :
     StoreImplements root (.deferredIsDone key) := by
@@ -905,10 +915,23 @@ theorem memoFork_implements (root : ProgramSource) (parent : Option MemoMapId) :
     (fun _ c' h => ⟨c', h, rfl⟩) rfl
   exact ⟨_, _, rfl, _, ord, rfl, store', ⟨_, rfl, MemoWorld.mapAt_append_self _ _⟩⟩
 
-theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap : MemoMapId) :
-    StoreImplements root (.memoBuild layer memoMap) := by
-  intro w cert store pre
-  change Ty × Ty at cert
+/-- `memoBuild`'s world: the entry's fresh cell declared at the certificate over the new store,
+typed; the memo table declares it at the layer's columns (the pre). -/
+theorem memoBuild_world (root : ProgramSource) (w : World) (layer : LayerId) (memoMap : MemoMapId)
+    (cert : Ty × Ty) (store : StoreTyped root w)
+    (pre : storePre root w (.memoBuild layer memoMap) cert) :
+    w.leHost (w.addPromise { w.state with
+        scopes := w.state.scopes.make w.state.nextName FinalizerStrategy.sequential
+        deferreds := w.state.deferreds.make.2
+        memo := w.state.memo.insertEntry memoMap layer
+          ⟨1, w.state.nextName, w.state.deferreds.make.1, FinName.memoEntry layer memoMap⟩
+        nextName := w.state.nextName + 1 } w.state.deferreds.make.1 cert) ∧
+      StoreTyped root (w.addPromise { w.state with
+        scopes := w.state.scopes.make w.state.nextName FinalizerStrategy.sequential
+        deferreds := w.state.deferreds.make.2
+        memo := w.state.memo.insertEntry memoMap layer
+          ⟨1, w.state.nextName, w.state.deferreds.make.1, FinName.memoEntry layer memoMap⟩
+        nextName := w.state.nextName + 1 } w.state.deferreds.make.1 cert) := by
   have fresh : w.«Π» w.state.deferreds.make.1 = none := by
     cases h : w.«Π» w.state.deferreds.make.1 with
     | none => rfl
@@ -917,8 +940,7 @@ theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap :
       exact absurd this (Nat.lt_irrefl _)
   have step := syncOpStep_memoBuild w.state layer memoMap
   obtain ⟨le, _⟩ := memoBuild_extension w cert _ layer memoMap _ step fresh
-  refine ⟨_, _, step, _, ⟨le, fun _ _ h => h⟩, rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩,
-    fits_scopeHandle _ _ (ScopeStore.entryAt_make_self _ _ _)⟩
+  refine ⟨⟨le, fun _ _ h => h⟩, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩
   · exact store.heap
   · change ∀ k, (tableInsert w.«Π» w.state.deferreds.make.1 cert k).isSome = true ↔
       k.index < w.state.deferreds.make.2.cells.length
@@ -946,6 +968,14 @@ theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap :
       rw [cell]
       change tableInsert w.«Π» w.state.deferreds.make.1 cert w.state.deferreds.make.1 = _
       rw [insert_here, hcert]
+
+theorem memoBuild_implements (root : ProgramSource) (layer : LayerId) (memoMap : MemoMapId) :
+    StoreImplements root (.memoBuild layer memoMap) := by
+  intro w cert store pre
+  change Ty × Ty at cert
+  obtain ⟨ord, store'⟩ := memoBuild_world root w layer memoMap cert store pre
+  exact ⟨_, _, syncOpStep_memoBuild w.state layer memoMap, _, ord, rfl, store',
+    fits_scopeHandle _ _ (ScopeStore.entryAt_make_self _ _ _)⟩
 
 /-- **`memoGet` fulfils its row** (decisions row 187): a hit answers the entry's cell and its map,
 and the memo table declares the cell at the asked layer's columns, the built context and the

@@ -6,9 +6,8 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Store
 Concept 4 (`step-deliver-preserves`, `step-loop-preserves`): `StoreClauseKeeps` for the scope and
 memo rows, over one restated-store settle (`Evaluating.store_restate`: refs, deferreds, timers and
 externals unchanged, world `{ w with state := s }`), each row supplying its new scope column, memo
-column and post. Drafted by seat M6G.
-
-Not established: `memoBuild`, `memoComplete`.
+column and post. Drafted by seat M6G. The memo entry's build and completion allocate and complete a
+Deferred cell, and are `Clauses/StoreDeferred.lean`'s.
 -/
 
 set_option autoImplicit false
@@ -332,11 +331,5 @@ theorem clause_memoRelease (root : ProgramSource) (rootTy : EffTy) (layer : Laye
         (fun _ old => old) (fun _ old => memoMapOk_updateEntry (g := fun e =>
           { e with observers := e.observers - 1 }) old memoMap layer (fun _ => rfl))
         (fun _ _ _ => Or.inl rfl)
-
--- NOT DRAFTED: memoBuild (world `w.addPromise s key cert`, cert from `ev.store_pre`; post ignores
--- cert; StoreTyped as in `memoBuild_implements`; c2/waiters: new cell empty, old keys via
--- `insert_other`; c3 `scopeStoreOk_make` after `scopeStateOk_world`; c4 `memoMapOk_insertEntry`
--- with `trivial`), memoComplete (hit = direct-completion block, shared with the coordinator's
--- deferredCompleteWith row; miss = `store_same`).
 
 end Effect4.Program.Typed

@@ -179,10 +179,75 @@ theorem storesOk_refs {root : ProgramSource} {w w' : World} {s s' : Stores}
   · exact scopes.symm ▸ ⟨fun entry he => ⟨⟨scopeStateOk_world ord (c3 entry he).c0.c0⟩⟩⟩
   · exact memo.symm ▸ fun mm hm => ⟨fun v0 hv => ⟨finNameOk_world ord ((c4 mm hm).c0 v0 hv).c0⟩⟩
 
-/-- **A store step over the same declaration tables settles typed** (the ref rows): the new store
-keeps every column but the heap (`storesOk_refs`), grows (`syncOpStep_le`) and stays well formed
-(`syncOpStep_wf`, given the step's validity), and the answer is in the row's post at the restated
-world. -/
+/-- A store edit keeps the Deferred cells at `w`: every new cell is an old one with fewer waiters,
+its completion the old one or one typed at the cell's declared columns (a cancellation, a
+completion, or no edit). -/
+def CellsKept (w : World) (d' d : DeferredStore) : Prop :=
+  ∀ key c', d'.cellAt key = some c' → ∃ c, d.cellAt key = some c ∧
+    Guard.wakeKeys c'.wake ⊆ Guard.wakeKeys c.wake ∧
+    (c'.completion = c.completion ∨ ∀ a e, w.«Π» key = some (a, e) → ∀ x, c'.completion = some x →
+      CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ x)
+
+/-- A store edit keeps the due list at `w`: every new entry is an old one, or owed now and typed at
+its waiter's token. -/
+def DueKept (w : World) (d' d : DeferredStore) : Prop :=
+  ∀ o ∈ d'.due, o ∈ d.due ∨
+    (o.mode = .now ∧ ∀ ty, w.Θ o.waiter o.token = some ty → CompletionStrong w ty o.code)
+
+theorem CellsKept.refl (w : World) (d : DeferredStore) : CellsKept w d d :=
+  fun _ c' h => ⟨c', h, List.Subset.refl _, Or.inl rfl⟩
+
+theorem DueKept.refl (w : World) (d : DeferredStore) : DueKept w d d :=
+  fun _ h => Or.inl h
+
+/-- **A store step that adds no declaration settles typed**: the world over the new store is later
+and typed (`restate_world`, `poke_world`, `complete_world`), the Deferred cells and the due list
+are kept (`CellsKept`, `DueKept`), the scope and memo columns are untouched, the sleeps only lose
+waiters, the new store is well formed, and the answer is in the row's post. -/
+theorem Evaluating.store_kept {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    {op : SyncOp} {next : Val → RProgram} (hc : f.frame.current = .vis (.inl op) next)
+    {s : Stores} {ans : Val} (step : syncOpStep op w.state = some (s, ans))
+    (wf : w.state.WF → s.WF)
+    (store' : StoreTyped root { w with state := s }) (ord : w.leHost { w with state := s })
+    (due : DueKept w s.deferreds w.state.deferreds) (cells : CellsKept w s.deferreds w.state.deferreds)
+    (scopes : s.scopes = w.state.scopes) (memo : s.memo = w.state.memo)
+    (timers : Guard.wakeKeys s.timers.wake ⊆ Guard.wakeKeys w.state.timers.wake)
+    (post : ∀ cert, storePre root w op cert → storePost { w with state := s } op cert ans) :
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR (evaluateRawR (interpRAt root.program m.completedExits) m f y)) := by
+  have wide := ev.typed.machine.wide
+  have state : w.state = m.state := wide.state
+  rw [state] at step wf due cells scopes memo timers
+  obtain ⟨c0, _, ⟨c2⟩, ⟨c3⟩, c4, c5⟩ := wide.stores
+  have stores : StoresOk (preds root) { w with state := s } Expect.root s := by
+    refine ⟨⟨fun o ho ty declared => ?_, store'.memoTable⟩,
+      fun i v hv ty declared => store'.values i v hv ty declared,
+      ⟨fun i cell hc a e' declared c hcomp => ?_⟩,
+      scopes.symm ▸ ⟨fun entry he => ⟨⟨scopeStateOk_world ord (c3 entry he).c0.c0⟩⟩⟩,
+      memo.symm ▸ fun mm hm => ⟨fun v0 hv => ⟨finNameOk_world ord ((c4 mm hm).c0 v0 hv).c0⟩⟩, c5⟩
+    · rcases due o ho with old | ⟨_, typed⟩
+      · exact completionStrong_mono ord (PromiseTableOk.due c0 o old ty declared)
+      · exact completionStrong_mono ord (typed ty declared)
+    · obtain ⟨c0', hc0, _, alt⟩ := cells ⟨i⟩ cell hc
+      rcases alt with same | typed
+      · rw [same] at hcomp
+        exact completionStrong_mono ord (c2 i c0' hc0 a e' declared c hcomp)
+      · exact completionStrong_mono ord (typed a e' declared c hcomp)
+  refine ev.store_step hc step (fun o ho owner priority mode => ?_) fun cert pre =>
+    ⟨_, ord, rfl, rfl, rfl, rfl, store', wf wide.wf, stores, WakeTyped.of_subset timers wide.timers, fun key cell hcell a e hpi => ?_,
+      post cert pre⟩
+  · rcases due o ho with old | ⟨now, _⟩
+    · have owned := wide.live.dueOwners o old owner priority mode
+      rw [rfiber?_update, Option.isSome_map] at owned
+      exact owned
+    · rw [now] at mode
+      cases mode
+  · obtain ⟨c, hc0, sub, _⟩ := cells key cell hcell
+    exact WakeTyped.of_subset sub (wide.waiters key c hc0 a e hpi)
+
+/-- **A store step over the same declaration tables settles typed** (the ref rows): every column
+but the heap is untouched (`Evaluating.store_kept`). -/
 theorem Evaluating.store_restated {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
     {op : SyncOp} {next : Val → RProgram} (hc : f.frame.current = .vis (.inl op) next)
@@ -193,19 +258,9 @@ theorem Evaluating.store_restated {root : ProgramSource} {rootTy : EffTy} {w : W
     (memo : s.memo = w.state.memo) (timers : s.timers = w.state.timers)
     (post : ∀ cert, storePre root w op cert → storePost { w with state := s } op cert ans) :
     SettlesTyped root rootTy w f.id rest
-      (prepareIterR (evaluateRawR (interpRAt root.program m.completedExits) m f y)) := by
-  have wide := ev.typed.machine.wide
-  have state : w.state = m.state := wide.state
-  rw [state] at step valid deferreds scopes memo timers
-  refine ev.store_step hc step (fun o ho owner priority mode => ?_) fun cert pre =>
-    ⟨_, ord, rfl, rfl, rfl, rfl, store', syncOpStep_wf op m.state s ans wide.wf valid step,
-      storesOk_refs wide.stores ord rfl rfl rfl store' deferreds scopes memo,
-      timers ▸ wide.timers, fun key cell hcell a e hpi => ?_, post cert pre⟩
-  · rw [deferreds] at ho
-    have owned := wide.live.dueOwners o ho owner priority mode
-    rw [rfiber?_update, Option.isSome_map] at owned
-    exact owned
-  · rw [deferreds] at hcell
-    exact wide.waiters key cell hcell a e hpi
+      (prepareIterR (evaluateRawR (interpRAt root.program m.completedExits) m f y)) :=
+  ev.store_kept hc step (fun h => syncOpStep_wf op w.state s ans h valid step) store' ord
+    (deferreds ▸ DueKept.refl w _)
+    (deferreds ▸ CellsKept.refl w _) scopes memo (timers ▸ List.Subset.refl _) post
 
 end Effect4.Program.Typed

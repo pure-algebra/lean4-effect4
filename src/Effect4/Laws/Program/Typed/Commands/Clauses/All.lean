@@ -8,15 +8,17 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Loop
 import Effect4.Laws.Program.Typed.Commands.Clauses.Async
 import Effect4.Laws.Program.Typed.Commands.Clauses.StoreRef
 import Effect4.Laws.Program.Typed.Commands.Clauses.StoreScope
+import Effect4.Laws.Program.Typed.Commands.Clauses.StoreDeferred
 
 /-!
 # Laws.Program.Typed.Commands.Clauses.All — the evaluator's clauses, assembled
 
 Concept 4 (`step-deliver-preserves`, `step-loop-preserves`): every fiber clause and every store
 clause by name, so `M6Ledger.step_deliver` and `step_loop` follow from `deliver_preserves_of_clauses`
-and `loop_preserves_of_clauses` (`Commands/Evaluate.lean`) with the walk (`walkKeeps`). The clauses
-not yet proved are this file's premises, stated exactly: `closeIter` at the parallel strategy, the generator producer's obligation `GenProtocol`,
-and seven store rows. Each premise is discharged where its clause lands.
+and `loop_preserves_of_clauses` (`Commands/Evaluate.lean`) with the walk (`walkKeeps`). Every store
+clause is proved (`storeClauses`); the fiber clauses not yet proved are this file's premises,
+stated exactly: `closeIter` at the parallel strategy and the generator producer's obligation
+`GenProtocol`. Each premise is discharged where its clause lands.
 
 Not established: the premises; `decision_preserves`, `typedState_reachable`.
 -/
@@ -76,18 +78,8 @@ theorem fiberClauses_of (root : ProgramSource) (rootTy : EffTy)
   | loop p cursor => exact clause_loop root rootTy p cursor
   | construction => exact clause_construction root rootTy
 
-/-- The store rows still open, one premise each. -/
-structure StoreRowsOpen (root : ProgramSource) (rootTy : EffTy) : Prop where
-  deferredMake : StoreClauseKeeps root rootTy .deferredMake
-  deferredCompleteWith : ∀ key c, StoreClauseKeeps root rootTy (.deferredCompleteWith key c)
-  deferredInterruptWith : ∀ key c, StoreClauseKeeps root rootTy (.deferredInterruptWith key c)
-  deferredAwaitCleanup : ∀ key w t, StoreClauseKeeps root rootTy (.deferredAwaitCleanup key w t)
-  sleepCancel : ∀ w t, StoreClauseKeeps root rootTy (.sleepCancel w t)
-  memoBuild : ∀ l m, StoreClauseKeeps root rootTy (.memoBuild l m)
-  memoComplete : ∀ l m e, StoreClauseKeeps root rootTy (.memoComplete l m e)
-
-/-- **Every store clause**, from the proved rows and the open ones. -/
-theorem storeClauses_of (root : ProgramSource) (rootTy : EffTy) (rows : StoreRowsOpen root rootTy) :
+/-- **Every store clause.** -/
+theorem storeClauses (root : ProgramSource) (rootTy : EffTy) :
     ∀ op, StoreClauseKeeps root rootTy op := by
   intro op
   cases op with
@@ -104,14 +96,14 @@ theorem storeClauses_of (root : ProgramSource) (rootTy : EffTy) (rows : StoreRow
   | refUpdateSomeAndGet cell f => exact clause_refUpdateSomeAndGet root rootTy cell f
   | refModify cell f => exact clause_refModify root rootTy cell f
   | refModifySome cell f => exact clause_refModifySome root rootTy cell f
-  | deferredMake => exact rows.deferredMake
+  | deferredMake => exact clause_deferredMake root rootTy
   | deferredIsDone key => exact clause_deferredIsDone root rootTy key
   | deferredPoll key => exact clause_deferredPoll root rootTy key
-  | deferredCompleteWith key c => exact rows.deferredCompleteWith key c
-  | deferredInterruptWith key c => exact rows.deferredInterruptWith key c
-  | deferredAwaitCleanup key w t => exact rows.deferredAwaitCleanup key w t
+  | deferredCompleteWith key c => exact clause_deferredCompleteWith root rootTy key c
+  | deferredInterruptWith key c => exact clause_deferredInterruptWith root rootTy key c
+  | deferredAwaitCleanup key w t => exact clause_deferredAwaitCleanup root rootTy key w t
   | clockNow => exact clause_clockNow root rootTy
-  | sleepCancel w t => exact rows.sleepCancel w t
+  | sleepCancel w t => exact clause_sleepCancel root rootTy w t
   | scopeMake s => exact clause_scopeMake root rootTy s
   | scopeAdd sc f => exact clause_scopeAdd root rootTy sc f
   | scopeRemove sc k => exact clause_scopeRemove root rootTy sc k
@@ -119,24 +111,24 @@ theorem storeClauses_of (root : ProgramSource) (rootTy : EffTy) (rows : StoreRow
   | scopeFork p s => exact clause_scopeFork root rootTy p s
   | memoFork p => exact clause_memoFork root rootTy p
   | memoGet l m => exact clause_memoGet root rootTy l m
-  | memoBuild l m => exact rows.memoBuild l m
-  | memoComplete l m e => exact rows.memoComplete l m e
+  | memoBuild l m => exact clause_memoBuild root rootTy l m
+  | memoComplete l m e => exact clause_memoComplete root rootTy l m e
   | memoRelease l m => exact clause_memoRelease root rootTy l m
 
 /-- **`deliver` keeps `I`**, from the open clauses. -/
 theorem deliver_preserves_of_open (root : ProgramSource) (rootTy : EffTy)
     (closeIter : ∀ o e, FiberClauseKeeps root rootTy (.closeIter .parallel o e))
-    (gen : GenProtocol root) (rows : StoreRowsOpen root rootTy)
+    (gen : GenProtocol root)
     (id : FiberId) (y : Bool) : StepPreserves root rootTy (.deliver id y) :=
   deliver_preserves_of_clauses root rootTy (fiberClauses_of root rootTy closeIter gen)
-    (storeClauses_of root rootTy rows) (walkKeeps root rootTy) id y
+    (storeClauses root rootTy) (walkKeeps root rootTy) id y
 
 /-- **`loop` keeps `I`**, from the open clauses. -/
 theorem loop_preserves_of_open (root : ProgramSource) (rootTy : EffTy)
     (closeIter : ∀ o e, FiberClauseKeeps root rootTy (.closeIter .parallel o e))
-    (gen : GenProtocol root) (rows : StoreRowsOpen root rootTy)
+    (gen : GenProtocol root)
     (id : FiberId) (y : Bool) : StepPreserves root rootTy (.loop id y) :=
   LoopPrefix.loop_preserves_of_clauses root rootTy (fiberClauses_of root rootTy closeIter gen)
-    (storeClauses_of root rootTy rows) (walkKeeps root rootTy) id y
+    (storeClauses root rootTy) (walkKeeps root rootTy) id y
 
 end Effect4.Program.Typed
