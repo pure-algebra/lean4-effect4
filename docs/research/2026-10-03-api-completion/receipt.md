@@ -1,17 +1,17 @@
 # Landed authoring, host-session and proof-reuse tranche
 
-Merge fact: all implementation slices are integrated into main and the combined affected graph
-passes. General progress and the remaining full T obligations are not being reported as closed.
+Merge fact: all implementation slices are integrated into the primary checkout on
+`refactor/phase1-phase3`, and the combined affected graph passes. General progress and the remaining full T obligations are not being reported as closed.
 The reserved host-failure mismatch remains an explicit contract dependency, with a checked
 counterexample. The pre-existing dirty authorities/generated files are byte-for-byte unchanged.
 
 Base: `8913519b146d95c07a3eaa195df1a1fcda2c642a`.
-Verified implementation head, fast-forwarded into main: `c05eb111d792a953660e05b6c9d2049b05300abf`.
+Verified implementation head, fast-forwarded into `refactor/phase1-phase3`: `c05eb111d792a953660e05b6c9d2049b05300abf`.
 This receipt is a following documentation-only commit. No push.
 
 ## What landed
 
-| Commit on main | Result | Placement and evidence |
+| Integrated commit | Result | Placement and evidence |
 | --- | --- | --- |
 | `8db6dcf8` | Straight-program composition, suspension removal and an actual exit/full-store execution comparison with computed sufficient budgets. | [Composition receipt](meaning-eq-receipt.md); concept 10, R8, bounded T5 contribution. |
 | `dd26f097`, `63aaf059` | General same-sort path replacement with lookup/overwrite/restore/disjoint laws; existing layer editing uses the shared operation. | [Editing receipt](../2026-10-03-program-path-editing/receipt.md); concept 7, R8. |
@@ -42,10 +42,10 @@ module and test are imported at the documented existing root anchors.
   same axiom ceiling in their retained audits.
 - `git diff --check`: exit 0. The existing M6 ledger remains 20/20, M7 4/4, M7Results 1/1;
   these pre-existing closures are not counted as new results from this tranche.
-- Main fast-forwarded from the base to the verified implementation head. Hashes before and
+- The primary checkout (`refactor/phase1-phase3`) fast-forwarded from the base to the verified implementation head. Hashes before and
   after confirm that `docs/STATE.md`, `docs/core/architecture-map.html`,
   `docs/core/semantics.md`, `generated/semantics.json` and `generated/semantics.md` are
-  unchanged. Those are still the only pre-existing dirty paths. No main-worktree build,
+  unchanged. Those are still the only pre-existing dirty paths. No build in the primary checkout,
   generated-output rewrite, push or external tracker update occurred.
 
 No whole Test/AxiomGate/make-check sweep or TypeScript/OCaml host run is claimed. These are
