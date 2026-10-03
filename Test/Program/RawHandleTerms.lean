@@ -1,9 +1,9 @@
 import Effect4.Laws.Program.Handles.Term
-import Effect4.Laws.Program.Typed.Edits
 
 /-!
 Controls for the raw-frame term preservation helper; definitions pinned in the receipt.
-Concept 4; helper of M7.exitHandles_valid's registered-frame producer invariant.
+Concept 4: terms mint no handle frames (`RawHandles`). `M7.exitHandles_valid` is proved by the typed
+route (`Typed/Commands/Clauses/All.lean`), not through these laws.
 These exercise the actual evaluator and raw Store.Val.handles. They do not prove
 machine-wide registration or reachable exit validity. The retained receipt distinguishes compilation from complete machine preservation.
 -/
@@ -64,9 +64,10 @@ theorem external_handle_variable :
 
 end RawHandleControls
 
-/-- The exported helper supplies the existing predicate without a new invariant definition. -/
+/-- The exported helper: registered frames in, registered frames out. -/
 example (t : Effect4.Program.Term) (env : List Effect4.Machine.Val) (v : Effect4.Machine.Val)
-    (registered : ∀ x ∈ env, Effect4.Program.Typed.HandlesRegistered x)
+    (registered : ∀ x ∈ env, ∀ code ∈ Effect4.Store.Val.handles x,
+      (Effect4.Machine.HandleKind.ofByte? code.1).isSome = true)
     (evaluates : Effect4.Program.evalTerm env t = some v) :
-    Effect4.Program.Typed.HandlesRegistered v :=
+    ∀ code ∈ Effect4.Store.Val.handles v, (Effect4.Machine.HandleKind.ofByte? code.1).isSome = true :=
   Effect4.Program.RawHandles.evalTerm_registered t env v registered evaluates

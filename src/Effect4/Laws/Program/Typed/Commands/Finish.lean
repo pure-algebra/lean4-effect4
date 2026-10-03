@@ -43,12 +43,12 @@ theorem raceRegistrationR_typed {root : ProgramSource} {w : World} {ty : EffTy} 
 
 /-- **M5's load connector, its marker premise discharged** (decisions rows 148, 153 (b)): the root
 code's typing makes it no race registration marker (`raceRegistrationR_typed`), so
-`loadsTyped_of_denotesTyped` needs only the fundamental property. Placed here, after the marker
-fact, since `Finish` imports `Assembly`. -/
-theorem loadsTyped_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
-    (fuel compileFuel : Nat) (denotes : DenotesTyped root) :
-    LoadsTyped root rootTy fuel compileFuel := by
-  intro lawful checked empty
+`load_typed_of_denotesTyped` needs only the fundamental property and the checker's verdict. Placed
+here, after the marker fact, since `Finish` imports `Assembly`. -/
+theorem load_typed_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
+    (fuel compileFuel : Nat) (denotes : DenotesTyped root)
+    (checked : Program.typeOfProgram root.signature root.program = some rootTy) :
+    ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) := by
   have wf := layerRefsWF_of_typeOf checked
   have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
     rw [Eff.expandIn_self]
@@ -60,8 +60,14 @@ theorem loadsTyped_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
     root.program rootTy rfl
     ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
       fun _ h => nomatch h⟩
-  exact loadsTyped_of_denotesTyped root rootTy fuel compileFuel denotes
-    (raceRegistrationR_typed rootTyped) lawful checked empty
+  exact load_typed_of_denotesTyped root rootTy fuel compileFuel denotes
+    (raceRegistrationR_typed rootTyped) checked
+
+/-- M5's proposition from the connector: its lawful and closed-row premises are not read. -/
+theorem loadsTyped_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
+    (fuel compileFuel : Nat) (denotes : DenotesTyped root) :
+    LoadsTyped root rootTy fuel compileFuel := fun _ checked _ =>
+  load_typed_of_denotesTyped_typed root rootTy fuel compileFuel denotes checked
 
 /-- **The typed load on the layer-free fragment**: a checked program none of whose nodes is a
 `provideLayer` loads into `J` (`denotesTyped_of_layerFree`, then the load connector). -/

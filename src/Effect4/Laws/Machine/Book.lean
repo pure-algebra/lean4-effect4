@@ -1241,6 +1241,33 @@ theorem book_replayEval (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAg
       · rw [if_pos hr, if_pos hr]; exact ih _ _ hd.1 hd.2.1
       · rw [if_neg hr, if_neg hr]; exact ⟨rfl, hd.2.1⟩
 
+/-- The left instance's invariant holds of the whole replay's machine: what the step obligation
+keeps beside the book (`MachineOk StOk`), read at the end of the tape. -/
+theorem book_replayEval_ok (hstep : StepAgrees i₁ i₂ StOk C S)
+    (hooks : HooksAgree (η₁ := η₁) (η₂ := η₂) i₁ i₂ StOk C S) (fuel : Nat) :
+    ∀ (tape : List (RunDecision ν σ β ε δ ι α)) (a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
+      (b : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂), MachineOk StOk a → BookMeans C S a b →
+      MachineOk StOk (replayEval i₁ fuel tape a).machine := by
+  intro tape
+  induction tape with
+  | nil =>
+    intro a _ hok _
+    rw [replayEval_nil]
+    cases a.stuck with
+    | some why => exact hok
+    | none => dsimp only; split <;> exact hok
+  | cons d rest ih =>
+    intro a b hok h
+    rw [replayEval_cons]
+    cases a.stuck with
+    | some why => exact hok
+    | none =>
+      have hd := book_stepDecisionState i₁ i₂ hstep hooks fuel hok h d
+      dsimp only
+      split
+      · exact ih _ _ hd.1 hd.2.1
+      · exact hd.1
+
 /-- The sufficiency receipt of a whole tape agrees. -/
 theorem book_suffices (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAgree (η₁ := η₁) (η₂ := η₂) i₁ i₂ StOk C S)
     (fuel : Nat) :

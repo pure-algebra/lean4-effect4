@@ -1019,7 +1019,8 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     -- the scoped entry makes a fresh scope with an empty registration table and advances
     -- the supply past its handle, so the registration-key bound survives
     refine iterRelP_prepare ⟨machineOk_stateOf hok
-        ⟨(ScopeStore.keysBelow_make (hm.state ▸ hok.state).keysFresh).mono (Nat.le_succ _)⟩,
+        ⟨(ScopeStore.keysBelow_make (hm.state ▸ hok.state).keysFresh).mono (Nat.le_succ _),
+          (hm.state ▸ hok.state).externals⟩,
       hm.stateOf _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
     refine FMeans.mk' hf'.id hf'.parked rfl hf'.running hf'.pending hf'.finalizing hf'.exit hf'.opCount rfl rfl
       hf'.yieldOverride hf'.observers hf'.children hf'.dispatcher

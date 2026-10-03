@@ -404,13 +404,14 @@ registration-key bound survives. -/
 theorem scopeCloseSnapshot_scopes {scope : Nat} {ex : ExitV} {s st : Stores}
     {strategy : FinalizerStrategy} {order : List FinName}
     (h : scopeCloseSnapshot scope ex s = some (st, strategy, order)) :
-    st.scopes = s.scopes.closeState scope ex ∧ st.nextName = s.nextName := by
+    st.scopes = s.scopes.closeState scope ex ∧ st.nextName = s.nextName ∧
+      st.externals = s.externals := by
   unfold scopeCloseSnapshot at h
   cases hentry : s.scopes.entryAt scope with
   | none => simp [hentry] at h
   | some entry =>
     simp [hentry] at h
-    exact ⟨by rw [← h.1], by rw [← h.1]⟩
+    exact ⟨by rw [← h.1], by rw [← h.1], by rw [← h.1]⟩
 
 theorem M1Deliver.storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s' : Stores}
     {program : Option Program} (_hs : StoresOk s)
@@ -426,11 +427,13 @@ theorem storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s'
   | some r =>
     obtain ⟨st, strategy, order⟩ := r
     simp [hsnap] at h
-    obtain ⟨hsc, hnm⟩ := scopeCloseSnapshot_scopes hsnap
-    refine ⟨?_⟩
-    show ScopeStore.KeysBelow s'.scopes s'.nextName
-    rw [← h.1, hsc, hnm]
-    exact ScopeStore.keysBelow_closeState hs.keysFresh
+    obtain ⟨hsc, hnm, hx⟩ := scopeCloseSnapshot_scopes hsnap
+    refine ⟨?_, ?_⟩
+    · show ScopeStore.KeysBelow s'.scopes s'.nextName
+      rw [← h.1, hsc, hnm]
+      exact ScopeStore.keysBelow_closeState hs.keysFresh
+    · rw [← h.1, hx]
+      exact hs.externals
 
 /-! ## The delivery agreement -/
 

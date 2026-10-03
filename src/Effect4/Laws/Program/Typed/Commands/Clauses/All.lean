@@ -25,9 +25,15 @@ edits, `decision_preserves` and `typedState_reachable` (`decisionKeeps_of_ledger
 (`m7_proved`, through `m7_of_ledger`): on the M7 fragment the frame machine's observation is typed
 and its run never halts.
 
-Not established: progress (`J` is an invariant, not a liveness result); host answers (the tapes
-carry none, `NoHostAnswer`); scope-handle validity (`M7.exitHandles_valid`, stated without the
-closed requirement row); anything about the OCaml engine or a TypeScript run.
+The strongest form is `reachable_typed`: every checked program, with no lawful-signature or
+closed-row premise (no proof of M5 or M6 reads either), stays in `J` on every tape whose host
+answers are admitted at the ghost token table (`AdmittedTape`); `obs_typed` carries it to the frame
+machine. Scope-handle validity follows from it and capability membership (`exitHandles_valid`,
+`M7.exitHandles_valid`), which closes the M7 ledger.
+
+Not established: progress (`J` is an invariant, not a liveness result); executable admission of host
+answers (`AdmittedTape` reads `Θ`, which no host sees: `admit_sound`, rows 97–99); a table-aware
+frame machine (DI-57); anything about the OCaml engine or a TypeScript run.
 -/
 
 set_option autoImplicit false
@@ -203,6 +209,51 @@ theorem m7_proved (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : L
   m7_of_ledger root rootTy fuel tape (loadsTyped root rootTy fuel fuel)
     (decision_preserves root rootTy fuel)
 
+/-- **Every admitted replay of a checked program is typed**: the reference replay of a tape whose
+host answers are admitted (`AdmittedTape`, the ghost admission at `Θ`) ends in `J`, for every
+checked program, its requirement row open or closed and its signature lawful or not. M5 in its
+premise-free form (`load_typed`) and M6 (`decision_preserves`) through `admitted_typed`. Concept 4
+(`typed-state-reachable`); it reduces the host lane's typing half (T4) to executable admission
+(`admit_sound`, decisions rows 97–99). -/
+theorem reachable_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
+    (checked : Program.typeOfProgram root.signature root.program = some rootTy)
+    (tape : List Api.Decision) (admitted : AdmittedTape root rootTy fuel tape) :
+    ∃ w, MachineTyped root rootTy w (replayR root.program fuel tape).machine :=
+  admitted_typed root rootTy fuel (load_typed root rootTy fuel fuel checked)
+    (decision_preserves root rootTy fuel) tape admitted
+
+/-- **The frame machine's observation on every admitted tape is typed** and its run has not
+halted: `reachable_typed` across `run_eq_ref`'s relation (`obsTyped_admitted`). M7a–c without the
+fragment's lawful, closed-row and answer-free premises; the frame machine at its empty row table
+only. -/
+theorem obs_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision)
+    (checked : Program.typeOfProgram root.signature root.program = some rootTy)
+    (admitted : AdmittedTape root rootTy fuel tape) :
+    ∃ w, MachineTyped root rootTy w (replayR root.program fuel tape).machine ∧
+      ExitsFit rootTy w (obs (Api.replay root.program fuel tape).machine) ∧
+      StoresFit root w (obs (Api.replay root.program fuel tape).machine).stores ∧
+      (Api.replay root.program fuel tape).machine.stuck = none :=
+  obsTyped_admitted root rootTy fuel tape (load_typed root rootTy fuel fuel checked)
+    (decision_preserves root rootTy fuel) admitted
+
+/-- **Recorded successes name only live handles** (`M7.exitHandles_valid`, organization M4, row
+139): on every reachable machine of a checked program, a fiber's successful exit value is valid in
+the machine's stores. `J` holds there (`reachable_typed`, no closed-row premise needed), the exit
+fits its fiber's declared type, and a member of any type is valid in a typed store
+(`fits_validIn`, the F-WF repair). The exit connector's validity premise. -/
+theorem exitHandles_valid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
+    ExitHandlesValid root rootTy fuel m := by
+  rintro _ checked ⟨tape, free, rfl⟩ f hf v hx
+  obtain ⟨w, typed⟩ := reachable_typed root rootTy fuel checked tape
+    (admittedTape_of_noHostAnswer root rootTy fuel tape free)
+  have store := storeTyped_of_typedState typed
+  obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _⟩ := typed
+  obtain ⟨ty, declared⟩ := Option.isSome_iff_exists.mp
+    ((valid.fibers f.id).mpr (List.mem_map_of_mem hf))
+  have hfit := (fitsExit_success_iff w ty v).mp ((ok.c0 f hf).c3 _ hx ty declared).1
+  rw [← valid.state]
+  exact fits_validIn store hfit
+
 end Effect4.Program.Typed
 
 #obligation_proved Effect4.Program.Typed.M6Clauses.closeIter_parallel :=
@@ -227,6 +278,8 @@ end Effect4.Program.Typed
   fun root rootTy fuel tape => (Effect4.Program.Typed.m7_proved root rootTy fuel tape).2.1
 #obligation_proved Effect4.Program.Typed.M7.never_halts :=
   fun root rootTy fuel tape => (Effect4.Program.Typed.m7_proved root rootTy fuel tape).2.2
--- `M7`'s report: a–c proved; scope-handle validity (`exitHandles_valid`) open.
-#typed_state_obligations Effect4.Program.Typed.M7 ceiling 1
+#obligation_proved Effect4.Program.Typed.M7.exitHandles_valid :=
+  @Effect4.Program.Typed.exitHandles_valid
+-- `M7`'s report: every goal proved.
+#typed_state_obligations Effect4.Program.Typed.M7 ceiling 0
   using aesop (rule_sets := [Effect4.TypedState])

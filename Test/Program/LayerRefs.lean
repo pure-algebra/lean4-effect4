@@ -10,7 +10,7 @@ import Test.Program.TypedSplit
 reference's target by redirect (`Laws/Program/DenoteR.lean`, the `.ref` arm of
 `denoteLayerWith`). Before row 153 the typed state checked a point's node as written
 (`PointTyped`), so the root point of such a program was typed at no type and M5's reduction to
-the denotation lemma (`loadsTyped_of_denotesTyped`) carried a reference-free premise. That is
+the denotation lemma (`load_typed_of_denotesTyped`) carried a reference-free premise. That is
 kept below as history over a local copy of the old point typing (`OldPointTyped`,
 `old_root_untyped`). Since row 153 the typed state checks a node through the rounds of the
 program's expansion (`Eff.expandIn`, `Laws/Program/ReferenceTyping.lean`), the corpus's
@@ -25,7 +25,7 @@ expansion, not an equality of the program's and the expansion's denotations.
 
 `DenotesTyped` is M5's denotation lemma (`M3bAssembly.denoteR_typed`, proved at every source by
 `denotesTyped`, `Laws/Program/Typed/LayerArm.lean`); `loadsTyped` here is the reduction from it at
-this program, as `loadsTyped_of_denotesTyped` is. Its premise that the references are well
+this program, as `load_typed_of_denotesTyped` is. Its premise that the references are well
 formed (decisions row 170) holds here (`wellFormed`), and the reduction discharges it from the
 checker's verdict (`checked`, `layerRefsWF_of_typeOf`). The finite facts (`checked`,
 `wellFormed`, `site`, the memo keys) are computed by the kernel.
@@ -118,7 +118,7 @@ denotation lemma `DenotesTyped`): the program loads into `J` at every fuel. Befo
 reduction's reference-free premise excluded it; row 170's well-formedness premise is the
 checker's (`layerRefsWF_of_typeOf`). -/
 theorem loadsTyped (denotes : DenotesTyped src) (fuel cf : Nat) : LoadsTyped src rootTy fuel cf :=
-  loadsTyped_of_denotesTyped src rootTy fuel cf denotes (noMarker cf)
+  fun _ checked _ => load_typed_of_denotesTyped src rootTy fuel cf denotes (noMarker cf) checked
 
 /-! ## The redirect at the program's reference -/
 
@@ -226,7 +226,7 @@ open Test.Program.LayerRefs in
 open Test.Program.LayerRefs in
 #print axioms memo_keys_differ
 #print axioms Effect4.Program.Sched.denoteLayer_ref_redirect
-#print axioms Effect4.Program.Typed.loadsTyped_of_denotesTyped
+#print axioms Effect4.Program.Typed.load_typed_of_denotesTyped
 #print axioms Effect4.Program.Typed.capture_lookup
 #print axioms Effect4.Program.Eff.expandIn_self
 #print axioms Effect4.Program.Eff.expandIn_eq_self

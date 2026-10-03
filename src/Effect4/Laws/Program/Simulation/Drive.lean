@@ -196,7 +196,7 @@ theorem dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (h
   split at h
   · cases h
   · rw [← Option.some.inj h]
-    exact ⟨ScopeStore.keysBelow_removeFinalizer hs.keysFresh⟩
+    exact ⟨ScopeStore.keysBelow_removeFinalizer hs.keysFresh, hs.externals⟩
 
 theorem M1Drive.dueResumes_frame (root : NativeEff) (s : Stores) : ProofGraph.Obligation ((interpOf root).dueResumes s =
       ((s.deferreds.drainDue).1.map (Owed.mapCode (fun c => embed (completionPrim c))),

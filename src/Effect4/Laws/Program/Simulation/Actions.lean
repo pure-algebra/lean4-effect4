@@ -59,11 +59,27 @@ theorem M1Actions.scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.Scope
     (fiber : FiberId) (s s' : Stores) (key : Nat) (_hs : StoresOk s)
     (_h : (interpOf root).scopeLinkFiber mode scope fiber s = some (s', key)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
 
+/-- Registration writes only the scope store (`Machine/Stores.lean`, `stores.scopeLinkFiber`). -/
+theorem scopeLinkFiber_externals (mode : Supervision.ScopeMode) (scope : Nat) (fiber : FiberId)
+    {state state' : Stores} {key : Nat}
+    (h : stores.scopeLinkFiber mode scope fiber state = some (state', key)) :
+    state'.externals = state.externals := by
+  dsimp only [stores] at h
+  cases hentry : state.scopes.entryAt scope with
+  | none => rw [hentry] at h; cases h
+  | some entry =>
+    rw [hentry] at h
+    dsimp only at h
+    obtain ⟨h₁, -⟩ := Prod.mk.inj (Option.some.inj h)
+    subst h₁
+    rfl
+
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.ScopeMode) (scope : Nat)
     (fiber : FiberId) (s s' : Stores) (key : Nat) (hs : StoresOk s)
     (h : (interpOf root).scopeLinkFiber mode scope fiber s = some (s', key)) : StoresOk s' := by
-  exact ⟨scopeLinkFiber_keysFresh mode scope fiber hs.keysFresh h⟩
+  exact ⟨scopeLinkFiber_keysFresh mode scope fiber hs.keysFresh h,
+    by rw [scopeLinkFiber_externals mode scope fiber h]; exact hs.externals⟩
 
 theorem interpAgree_at (root : NativeEff) (c c' : List (FiberId × ExitV)) :
     InterpAgree (interpAt root c) (interpRAt root c') :=

@@ -10,7 +10,8 @@ relates, hook by hook, what `interpOf`/`interpAt` (the frame instance) and `inte
 `interpRAt` (the term instance) answer, at the relation of `Means.lean`: completion data,
 exit values, parks, the interrupt programs, a settled race, the cancel chain, finalizer
 programs, the scope close, and the generator walks. Deferred completion shape follows from
-its carrier; the remaining store invariant bounds scope registration keys. This module
+its carrier; the remaining store invariant bounds scope registration keys and keeps the external
+allocation table empty (the frame instance runs at the empty row table). This module
 states its preservation by store steps and the `FiberCore` agreements: each core operation
 preserves the saved-state relation.
 -/
@@ -21,14 +22,20 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Program.Agreement
 
-/-! ## The remaining store invariant: scope registration keys are fresh -/
+/-! ## The remaining store invariant: fresh scope keys, no external handle -/
 
 /-- Scope registration keys lie below the fresh-name supply at every reachable registration.
 Deferred completion shape is now guaranteed by its data type. -/
 structure StoresOk (s : Stores) : Prop where
   keysFresh : s.ScopeKeysFresh
+  /-- No external handle is allocated. The frame instance runs at the empty row table
+  (`interpOf`'s default), where the external registration and `prepareExternalAnswer` fall back
+  without minting (`Program/Compile.lean`), and no store step writes the external store; the
+  reference never mints one either (`interpR`). The exit connector's allocation premise
+  (`exitHasTy_of_fitsExit`) reads it through `replay_externals`. -/
+  externals : s.externals.allocated = []
 
-/-- info: frame rules: 7 checked theorems, 5 reused clauses, 2 explicit premises -/
+/-- info: frame rules: 7 checked theorems, 11 reused clauses, 3 explicit premises -/
 #guard_msgs in
 #frame_rules StoresOk
 
@@ -89,7 +96,7 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
     -- a new scope holds no registrations, and the supply advances past its handle
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨(ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _)⟩
+    exact ⟨(ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _), hs.externals⟩
   | scopeAdd scope finalizer =>
     cases hentry : s.scopes.entryAt scope with
     | none => rw [syncOpStep_scopeAdd_none s scope finalizer hentry] at h; cases h
@@ -103,11 +110,11 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
         -- the registration key is the supply's own value, and the supply advances past it
         rw [syncOpStep_scopeAdd_open s scope finalizer hentry hclose] at h
         rw [← (Prod.mk.inj (Option.some.inj h)).1]
-        exact ⟨ScopeStore.keysBelow_addUnsafe_entry hs.keysFresh hentry⟩
+        exact ⟨ScopeStore.keysBelow_addUnsafe_entry hs.keysFresh hentry, hs.externals⟩
   | scopeRemove scope key =>
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨ScopeStore.keysBelow_removeFinalizer hs.keysFresh⟩
+    exact ⟨ScopeStore.keysBelow_removeFinalizer hs.keysFresh, hs.externals⟩
   | scopeIsClosed scope =>
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
@@ -120,19 +127,20 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
       rw [← (Prod.mk.inj (Option.some.inj h)).1]
       -- the shared key is the supply's successor, and the supply advances past both keys
       exact ⟨ScopeStore.keysBelow_forkChild (m := s.nextName + 2) (shared := s.nextName + 1)
-        hs.keysFresh (Nat.le_add_right _ _) (Nat.lt_succ_self _)⟩
+        hs.keysFresh (Nat.le_add_right _ _) (Nat.lt_succ_self _), hs.externals⟩
   | memoFork parent =>
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨hs.keysFresh.mono (Nat.le_succ _)⟩
+    exact ⟨hs.keysFresh.mono (Nat.le_succ _), hs.externals⟩
   | memoGet layer memoMap =>
-    obtain ⟨_, _, hsc, hn⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
-    exact ⟨by change ScopeStore.KeysBelow s'.scopes s'.nextName; rw [hsc, hn]; exact hs.keysFresh⟩
+    obtain ⟨_, _, hsc, hn, hx⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
+    exact ⟨by change ScopeStore.KeysBelow s'.scopes s'.nextName; rw [hsc, hn]; exact hs.keysFresh,
+      by rw [hx]; exact hs.externals⟩
   | memoBuild layer memoMap =>
     -- a layer scope holds no registrations; the Deferred is fresh; the supply advances
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨(ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _)⟩
+    exact ⟨(ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _), hs.externals⟩
   | memoComplete layer memoMap exit =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>

@@ -66,12 +66,12 @@ The ledger is the one list (decisions row 140): M5 (`M3bAssembly`: `typedState_l
 (`M6Edits`: `DecisionLift`'s fields other than `step`, and the split's re-establishment), world
 monotonicity (`M3bWorld`: seat B's laws in `Typed/Residual.lean`, with the bundle's `SavedOk`
 transport proved and declared here, `preds_savedOk_mono`) and M7 (`M7`: a–c and scope-handle
-validity). M5 and M6 are proved: `typedState_load` at `Typed/LayerArm.lean`, the eighteen across
-`Typed/Commands/*.lean`, `decision_preserves` and `typedState_reachable` at
-`Typed/Commands/Clauses/All.lean`, whose foot reports the M6 ledger; M7 remains open. This module
-proves the adapters between them and the lift, the six bookkeeping edits, M5's builder
-(`machineTyped_load`) and its reduction to `denoteR_typed` (`loadsTyped_of_denotesTyped`), never a
-command case.
+validity). All are proved: `typedState_load` at `Typed/LayerArm.lean`, the eighteen across
+`Typed/Commands/*.lean`, `decision_preserves`, `typedState_reachable` and M7 at
+`Typed/Commands/Clauses/All.lean`, whose foot reports the M6 and M7 ledgers. This module proves the
+adapters between them and the lift (at every admitted tape, `admitted_typed`), the six bookkeeping
+edits, M5's builder (`machineTyped_load`) and its reduction to `denoteR_typed`
+(`load_typed_of_denotesTyped`), never a command case.
 -/
 
 set_option autoImplicit false
@@ -1189,7 +1189,9 @@ def LawfulSource (root : ProgramSource) : Prop := LawfulSig root.sig
 `J`. The empty row is rc.112's own rule for a run (decisions row 117, ruled 2026-10-01):
 `Effect.runPromise` takes an `Effect<A, E>`, whose requirement parameter is `never`
 (`Effect.ts:17494-17497`); an open row runs only through `runPromiseWith(context)`. No proof reads
-the premise yet: it is part two's (the presence clause), which stays open. -/
+the premise, nor the lawful one: the load is typed for every checked program
+(`load_typed_of_denotesTyped`). The closed row is part two's (the presence clause), which stays
+open. -/
 def LoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
   LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
     rootTy.requires = Env.Requirement.empty →
@@ -1253,7 +1255,7 @@ clause of `J` is over an empty list or the empty context. So M5 is the root code
 the initial world (`machineTyped_load`; decisions row 175: the code is read there only, and at
 every world it is false for a program that reads a service), and that is `DenotesTyped` at the
 root point
-(`loadsTyped_of_denotesTyped`): `typeOfProgram` checks the program, under the source's signature
+(`load_typed_of_denotesTyped`): `typeOfProgram` checks the program, under the source's signature
 (`root.signature`, rows 111–114), after expanding its layer references
 (`Program/Typing.lean:61-64`), `loadR` loads the program as written (`RuntimeR.lean:41-46`), and
 the root point's typing reads the loaded node through the expansion's rounds (`PointTyped`,
@@ -1363,11 +1365,11 @@ row 153 it carried `root.program.refSites [] = []` (`E4-TYPED-CE-019`,
 `Test/Program/LayerRefs.lean`). The same verdict discharges the property's well-formedness
 premise (row 170, `layerRefsWF_of_typeOf`); the initial world carries the source's service table
 and the root point an empty completed view (row 175). -/
-theorem loadsTyped_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
+theorem load_typed_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (denotes : DenotesTyped root)
-    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none) :
-    LoadsTyped root rootTy fuel compileFuel := by
-  intro _ checked _
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
+    (checked : Program.typeOfProgram root.signature root.program = some rootTy) :
+    ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) := by
   have wf := layerRefsWF_of_typeOf checked
   have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
     rw [Eff.expandIn_self]
@@ -1445,19 +1447,47 @@ theorem admittedReplay_noHostAnswer (root : ProgramSource) (J : World → RState
     | installMiddleware => trivial
     | advance millis => trivial
 
-/-- **M6c from M5 and M6b**, through the replay lift (`Machine.Lift.replayEval_lift`). -/
-theorem reachable_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
-    (load : LoadsTyped root rootTy fuel fuel) (decisions : ∀ d, DecisionKeeps root rootTy fuel d)
-    (m : RState) : ReachableTyped root rootTy fuel m := by
-  rintro lawful checked row ⟨tape, free, rfl⟩
-  obtain ⟨w₀, loaded⟩ := load lawful checked row
+/-- A tape whose every host answer is admitted where it is applied: at each machine the replay
+meets, at every world that types that machine (`AnswerOk`). This is the ghost admission: it reads
+the token table `Θ`, which no host sees, so it is the premise the host lane's executable admission
+must discharge (`admit_sound`, decisions rows 97–99), not a check a session runs. A tape with no
+host answer is admitted (`admittedTape_of_noHostAnswer`). -/
+def AdmittedTape (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
+    Prop :=
+  letI := termEvaluatorFor root.program
+  Machine.Lift.AdmittedReplay (MachineTyped root rootTy) (fun w m d => AnswerOk w m d)
+    (interpR root.program) fuel (loadR root.program fuel fuel) tape
+
+theorem admittedTape_of_noHostAnswer (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
+    (tape : List Api.Decision) (free : ∀ d ∈ tape, NoHostAnswer d) :
+    AdmittedTape root rootTy fuel tape :=
+  admittedReplay_noHostAnswer root (MachineTyped root rootTy) fuel tape free _
+
+/-- **`J` at the end of every admitted replay** (M6c's route, host answers included): a typed load
+and decisions that keep `J` at an admitted answer give `J` on the reference replay of any admitted
+tape, through the replay lift (`Machine.Lift.replayEval_lift`). It takes no lawful-signature or
+closed-row premise; no proof of M5 or M6 reads either (`load_typed_of_denotesTyped`,
+`DecisionKeeps`). -/
+theorem admitted_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
+    (load : ∃ w, MachineTyped root rootTy w (loadR root.program fuel fuel))
+    (decisions : ∀ d, DecisionKeeps root rootTy fuel d) (tape : List Api.Decision)
+    (admitted : AdmittedTape root rootTy fuel tape) :
+    ∃ w, MachineTyped root rootTy w (replayR root.program fuel tape).machine := by
+  obtain ⟨w₀, loaded⟩ := load
   letI := termEvaluatorFor root.program
   obtain ⟨w, _, typed⟩ := Machine.Lift.replayEval_lift hostOrder (MachineTyped root rootTy)
     (fun w m d => AnswerOk w m d) (interpR root.program) fuel
     (fun w m d _ held admitted => decisions d w m held admitted) tape w₀
-    (loadR root.program fuel fuel) loaded
-    (admittedReplay_noHostAnswer root (MachineTyped root rootTy) fuel tape free _)
+    (loadR root.program fuel fuel) loaded admitted
   exact ⟨w, typed⟩
+
+/-- **M6c from M5 and M6b**: the answer-free case of `admitted_typed`. -/
+theorem reachable_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
+    (load : LoadsTyped root rootTy fuel fuel) (decisions : ∀ d, DecisionKeeps root rootTy fuel d)
+    (m : RState) : ReachableTyped root rootTy fuel m := by
+  rintro lawful checked row ⟨tape, free, rfl⟩
+  exact admitted_typed root rootTy fuel (load lawful checked row) decisions tape
+    (admittedTape_of_noHostAnswer root rootTy fuel tape free)
 
 /-- The empty tape leaves the loaded machine. -/
 theorem replayR_nil_machine (p : NativeEff) (fuel : Nat) :
@@ -1667,11 +1697,12 @@ half of Σ_app with the row table fixed empty. The table-aware agreement (DI-57'
 external registration, evaluator selection) belongs to R6, after M7
 (`Test/contracts/machine-scheduler-core.contract.md`, "Table-aware agreement (DI-57)").
 
-The route is proved here (`m7_of_ledger`): from `typedState_load` and `decision_preserves`,
-through `replayEval_lift`, to `J` on the reference replay, then across `BMeans`
-(`bookMeans_obs`, `BookMeans.stuck`). With M5 and M6 proved, M7a–c follow (`m7_proved`,
-`Typed/Commands/Clauses/All.lean`); scope-handle validity (`M7.exitHandles_valid`) is stated without
-the closed requirement row and stays open. -/
+The route is proved here at every admitted tape (`obsTyped_admitted`): from a typed load and
+`decision_preserves`, through `replayEval_lift`, to `J` on the reference replay, then across
+`BMeans` (`bookMeans_obs`, `BookMeans.stuck`); `m7_of_ledger` is its answer-free case. With M5 and
+M6 proved, M7a–c follow (`m7_proved`, `Typed/Commands/Clauses/All.lean`), and scope-handle validity
+(`M7.exitHandles_valid`) follows from `J` and capability membership (`exitHandles_valid`, same
+module): `J` holds without the closed requirement row, which no proof of M5 or M6 reads. -/
 
 /-- The M7 fragment: a lawful source at the empty host table, checked and closed, its requirement
 row empty (decisions row 117: rc.112's `runPromise` takes `Effect<A, E>`, `Effect.ts:17494-17497`),
@@ -1718,9 +1749,10 @@ its machine's stores hold, on every reachable machine. The exit connector from `
 meaning layer's exit judgment (`organization/verify-ExitOkConnector.lean`, `exitOk_of_fitsExit`)
 takes this as its validity premise. The scope arm of `HandleFits` reads the scope's presence
 since decisions row 156 (the formal pass's `redA_scope` dangling handle no longer fits:
-`Test/Program/ExitConnector.lean`, `dangling_scope_refused`), but `Live` still admits scope and
-memo handles unchecked at `unknown`, so it does not yet follow from `J`; with those arms it is a
-consequence of `J`, otherwise the native guard's handle facts transport through R4's bridge. -/
+`Test/Program/ExitConnector.lean`, `dangling_scope_refused`), and membership at `unknown` reads
+every raw handle frame since the F-WF repair (`E4-TYPED-CE-040`), so a member of any type is valid
+in a typed store (`fits_validIn`): it is a consequence of `J` (`exitHandles_valid`,
+`Typed/Commands/Clauses/All.lean`). -/
 def ExitHandlesValid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
   LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
     RReachable root fuel m →
@@ -1746,34 +1778,24 @@ theorem replay_stuck_eq (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) 
   rw [replay_machine]
   exact (ReplayRel.machine (replay_rel e fuel fuel tape)).stuck
 
-/-- **M7's route from the capstone.** `J` on the reference replay of every answer-free tape gives
-M7a–c on the frame machine's replay of the same tape. -/
-theorem m7_of_capstone (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
-    (tape : List Api.Decision) (capstone : ∀ m, ReachableTyped root rootTy fuel m) :
-    M7Exits root rootTy fuel tape ∧ M7Stores root rootTy fuel tape ∧
-      M7NoHalt root rootTy fuel tape := by
-  have transfer : M7Fragment root rootTy tape → ∃ w,
-      MachineTyped root rootTy w (replayR root.program fuel tape).machine ∧
-      obs (Api.replay root.program fuel tape).machine = obs (replayR root.program fuel tape).machine ∧
-      (Api.replay root.program fuel tape).machine.stuck =
-        (replayR root.program fuel tape).machine.stuck := by
-    intro fragment
-    obtain ⟨w, typed⟩ := capstone _ fragment.lawful fragment.checked
-      fragment.closedRow ⟨tape, fragment.answerFree, rfl⟩
-    have related := ReplayRel.machine (replay_rel root.program fuel fuel tape)
-    refine ⟨w, typed, ?_, replay_stuck_eq root.program fuel tape⟩
+/-- **M7's route at every admitted tape.** `J` on the reference replay (`admitted_typed`) crosses
+`run_eq_ref`'s relation, which holds on every tape: the frame machine's observation of the same
+tape is typed and its run has not halted. -/
+theorem obsTyped_admitted (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
+    (tape : List Api.Decision) (load : ∃ w, MachineTyped root rootTy w (loadR root.program fuel fuel))
+    (decisions : ∀ d, DecisionKeeps root rootTy fuel d) (admitted : AdmittedTape root rootTy fuel tape) :
+    ∃ w, MachineTyped root rootTy w (replayR root.program fuel tape).machine ∧
+      ExitsFit rootTy w (obs (Api.replay root.program fuel tape).machine) ∧
+      StoresFit root w (obs (Api.replay root.program fuel tape).machine).stores ∧
+      (Api.replay root.program fuel tape).machine.stuck = none := by
+  obtain ⟨w, typed⟩ := admitted_typed root rootTy fuel load decisions tape admitted
+  have sameObs : obs (Api.replay root.program fuel tape).machine =
+      obs (replayR root.program fuel tape).machine := by
     rw [replay_machine]
-    exact bookMeans_obs related
-  refine ⟨fun fragment => ?_, fun fragment => ?_, fun fragment => ?_⟩
-  · obtain ⟨w, typed, sameObs, _⟩ := transfer fragment
-    rw [sameObs]
-    exact ⟨w, (obsTyped_of_machineTyped typed).1⟩
-  · obtain ⟨w, typed, sameObs, _⟩ := transfer fragment
-    rw [sameObs]
-    exact ⟨w, (obsTyped_of_machineTyped typed).2⟩
-  · obtain ⟨_, typed, _, sameStuck⟩ := transfer fragment
-    rw [sameStuck]
-    exact typed.live.running
+    exact bookMeans_obs (ReplayRel.machine (replay_rel root.program fuel fuel tape))
+  rw [sameObs, replay_stuck_eq]
+  exact ⟨w, typed, (obsTyped_of_machineTyped typed).1, (obsTyped_of_machineTyped typed).2,
+    typed.live.running⟩
 
 /-- **M7 from the ledger** (decisions row 138's route): `typedState_load` and
 `decision_preserves` at one source and budget give M7a–c at every answer-free tape. -/
@@ -1781,8 +1803,17 @@ theorem m7_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (tape : List Api.Decision) (load : LoadsTyped root rootTy fuel fuel)
     (decisions : ∀ d, DecisionKeeps root rootTy fuel d) :
     M7Exits root rootTy fuel tape ∧ M7Stores root rootTy fuel tape ∧
-      M7NoHalt root rootTy fuel tape :=
-  m7_of_capstone root rootTy fuel tape (reachable_of_ledger root rootTy fuel load decisions)
+      M7NoHalt root rootTy fuel tape := by
+  have transfer := fun fragment : M7Fragment root rootTy tape =>
+    obsTyped_admitted root rootTy fuel tape (load fragment.lawful fragment.checked fragment.closedRow)
+      decisions (admittedTape_of_noHostAnswer root rootTy fuel tape fragment.answerFree)
+  refine ⟨fun fragment => ?_, fun fragment => ?_, fun fragment => ?_⟩
+  · obtain ⟨w, _, exits, _, _⟩ := transfer fragment
+    exact ⟨w, exits⟩
+  · obtain ⟨w, _, _, stores, _⟩ := transfer fragment
+    exact ⟨w, stores⟩
+  · obtain ⟨_, _, _, _, halt⟩ := transfer fragment
+    exact halt
 
 /-! ## R4: the reference replay is in the book with a native reachable machine
 
@@ -2062,9 +2093,8 @@ end Effect4.Program.Typed
 -- (the import direction forbids this module naming the proofs; decisions row 140)
 -- `M6Ledger`'s goals are proved across `Typed/Commands/*.lean`; its report is at the foot of
 -- `Typed/Commands/Clauses/All.lean`, which sees every proof.
--- `M7`'s a–c are proved at the foot of `Typed/Commands/Clauses/All.lean` (`m7_proved`), which
--- runs its report; scope-handle validity stays open.
-#proof_wanted Effect4.Program.Typed.M7.exitHandles_valid
+-- `M7`'s four goals are proved at the foot of `Typed/Commands/Clauses/All.lean` (`m7_proved`,
+-- `exitHandles_valid`), which runs its report.
 #obligation_proved Effect4.Program.Typed.M6Edits.nil := @Effect4.Program.Typed.edit_nil
 #obligation_proved Effect4.Program.Typed.M6Edits.evaluate := @Effect4.Program.Typed.edit_evaluate
 #obligation_proved Effect4.Program.Typed.M6Edits.ran := @Effect4.Program.Typed.edit_ran

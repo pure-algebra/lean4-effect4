@@ -449,7 +449,7 @@ open Test.Program.TypedDenotation in
 open Test.Program.TypedDenotation in
 #print axioms table_world_excluded
 #print axioms Effect4.Program.Typed.layerRefsWF_of_typeOf
-#print axioms Effect4.Program.Typed.loadsTyped_of_denotesTyped
+#print axioms Effect4.Program.Typed.load_typed_of_denotesTyped
 #print axioms Effect4.Program.Typed.machineTyped_load
 #print axioms Effect4.Program.Typed.capture_lookup
 #print axioms Effect4.Program.Typed.pointTyped_mono

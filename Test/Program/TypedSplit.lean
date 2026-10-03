@@ -63,7 +63,7 @@ open Effect4.Program.Typed
 #print axioms Effect4.Program.Typed.machineTyped_load
 #print axioms Effect4.Program.Typed.typedState_load_of_code
 #print axioms Effect4.Program.Typed.envTyped_nil
-#print axioms Effect4.Program.Typed.loadsTyped_of_denotesTyped
+#print axioms Effect4.Program.Typed.load_typed_of_denotesTyped
 #print axioms Effect4.Program.Typed.preds_savedOk_mono
 #print axioms Effect4.Program.Typed.admittedReplay_noHostAnswer
 #print axioms Effect4.Program.Typed.reachable_of_ledger
@@ -82,7 +82,8 @@ open Effect4.Program.Typed
 #print axioms Effect4.Program.Typed.reestablishes
 #print axioms Effect4.Program.Typed.obsTyped_of_machineTyped
 #print axioms Effect4.Program.Typed.replay_stuck_eq
-#print axioms Effect4.Program.Typed.m7_of_capstone
+#print axioms Effect4.Program.Typed.obsTyped_admitted
+#print axioms Effect4.Program.Typed.admitted_typed
 #print axioms Effect4.Program.Typed.m7_of_ledger
 #print axioms Effect4.Program.Typed.replayEval_machine_prefix
 #print axioms Effect4.Program.Typed.replayR_bmeans_reachable
@@ -114,7 +115,7 @@ certifies the program's expansion (`Program/Typing.lean:61-64`), the checker ref
 as written at its reference (`Program/Checker.lean:259`), and `loadR` loads the program as
 written, its reference resolved at run time by redirect (`Laws/Program/DenoteR.lean`, the `.ref`
 arm). Before decisions row 153 `PointTyped` checked the node as written, so it failed at this
-program's root point and `loadsTyped_of_denotesTyped` carried a reference-free premise. Since row
+program's root point and `load_typed_of_denotesTyped` carried a reference-free premise. Since row
 153 a node is checked through the expansion's rounds and the reduction has no such premise:
 `Test/Program/LayerRefs.lean` (`E4-TYPED-CE-019`). The guards below are unchanged facts about the
 program. -/

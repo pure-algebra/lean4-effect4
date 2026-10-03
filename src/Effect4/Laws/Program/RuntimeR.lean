@@ -215,6 +215,33 @@ theorem run_eq_ref (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
   rw [replay_outcome, replay_machine]
   exact replayRel_classify_obs (replay_rel e fuel fuel tape)
 
+/-- The frame replay keeps the frame instance's store invariant (`StoresOk`) to the end of the
+tape, at any compile and command budget (`book_replayEval_ok`). -/
+theorem replay_ok (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision) :
+    letI := evaluatorFor e
+    MachineOk StoresOk (replayEval (interpOf e) fuel tape (Api.load e cfuel)).machine := by
+  letI := evaluatorFor e
+  letI := termEvaluatorFor e
+  exact book_replayEval_ok (interpOf e) (interpR e) (stepAgrees e) (hooksAgree_of e) fuel tape _ _
+    (load_ok e cfuel) (load_rel e cfuel)
+
+/-- **No replay allocates an external handle**, on every tape, host answers included: the frame
+machine runs at the empty row table, where the external registration and the prepared answer
+fall back without minting (`StoresOk.externals`). The exit connector's allocation premise
+(`exitHasTy_of_fitsExit`). -/
+theorem replay_externals (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
+    (Api.replay e fuel tape).machine.state.externals.allocated = [] := by
+  rw [replay_machine]
+  exact (replay_ok e fuel fuel tape).state.externals
+
+/-- The term reference's replay allocates none either: its store is the frame replay's
+(`replay_rel`, `BookMeans.state`). -/
+theorem replayR_externals (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
+    (replayR e fuel tape).machine.state.externals.allocated = [] := by
+  have ok := (replay_ok e fuel fuel tape).state.externals
+  rw [(ReplayRel.machine (replay_rel e fuel fuel tape)).state] at ok
+  exact ok
+
 /-- Both sufficiency receipts agree, at any compile budget and any command budget. -/
 theorem suffices_eq_ref (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision)
  :

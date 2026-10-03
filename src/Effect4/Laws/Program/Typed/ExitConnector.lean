@@ -21,9 +21,10 @@ under two premises, and each is necessary (the red controls are `Test/Program/Ex
   `.handle Ty.scopeTarget` at the initial world, while the meaning layer asks the store for the
   scope's entry (`validity_needed`).
 
-The typed state supplies neither premise today: `TypedState` carries no scope-handle validity
-(organization verifier, `docs/research/2026-10-01-formal-pass/organization/verify.md` ORG-11 and
-§3 M4), and the allocation premise holds on host-free runs only. The meaning-level judgment was
+On every run of a checked program both premises are theorems (`Typed/Results.lean`, T1): the
+frame machine runs at the empty row table and mints no external handle (`replay_externals`), and a
+member of any type is valid in a typed store (`fits_validIn`, the F-WF repair), so every recorded
+exit satisfies the meaning layer's judgment (`exits_hasTy`). The meaning-level judgment was
 called `ExitOk` until 2026-10-01; it was renamed `ExitHasTy` (landing plan O5) so that `ExitOk`
 names one judgment, the typed state's `FitsExit ∧ NoShapeDefect` (`Typed/Admission.lean`). The
 proof is the organization verifier's (`verify-ExitOkConnector.lean`), at the renamed judgment.

@@ -211,14 +211,15 @@ The corresponding isolated candidate was checked on Lean v4.33.1 at
 
 Placement:
 1. Concept4 native value invariant; Concept1 identifies the value boundary.
-2. Serves M7.exitHandles_valid through Edits.exitHandles_valid_of_registered:
-   this term producer is a local step of the still-missing reachable-exit connector.
+2. Serves the value boundary: `lit_toVal_handles` is read by the layer arm
+   (`Typed/LayerArm.lean`), and the subset laws are the register's evidence that terms
+   mint no frames (`E4-TYPED-CE-040`). `M7.exitHandles_valid` is proved by the typed route
+   (`Typed/Commands/Clauses/All.lean`), which supersedes row 180's native invariant.
 3. Actual nativeAtom/evalTerm success, arbitrary values/environments, ALL raw
    Store.Val.handles; no typing or registered-input premise on the subset laws.
 4. No machine preservation, reachability, handle existence, progress, host or
    backend claim. The final consequence requires registered environment values.
-5. Supplies term-construction closure for the separate fourth M7 goal (R4/R9);
-   does not close that goal or strengthen its frozen statement.
+5. Term-construction closure for raw frames (R4); no M7 goal reads it.
 
 The immediate consumer of evalTerm_handles is evalTerm_registered below. The raw
 collector is needed because the existing Val.keys collector drops unregistered
@@ -367,7 +368,7 @@ mutual
  termination_by structural ts
 end
 
-/-- Exactly the HandlesRegistered conclusion, without importing the changing Typed.Edits. -/
+/-- Registered frames in, registered frames out. -/
 theorem evalTerm_registered (t : Term) (env : List Val) (v : Val)
     (registered : ∀ x ∈ env, ∀ code ∈ Store.Val.handles x,
       (HandleKind.ofByte? code.1).isSome = true)

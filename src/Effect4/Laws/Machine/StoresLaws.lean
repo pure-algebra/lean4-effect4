@@ -788,17 +788,17 @@ theorem syncOpStep_memoRelease_dec (s : Stores) (layer : LayerId) (memoMap : Mem
 theorem syncOpStep_memoGet_families (s s' : Stores) (layer : LayerId) (memoMap : MemoMapId)
     (v : Val) (h : syncOpStep (SyncOp.memoGet layer memoMap) s = some (s', v)) :
     s'.refs = s.refs ∧ s'.deferreds = s.deferreds ∧ s'.scopes = s.scopes ∧
-      s'.nextName = s.nextName := by
+      s'.nextName = s.nextName ∧ s'.externals = s.externals := by
   cases hget : s.memo.get layer memoMap with
   | none =>
     rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
-    exact ⟨rfl, rfl, rfl, rfl⟩
+    exact ⟨rfl, rfl, rfl, rfl, rfl⟩
   | some p =>
     obtain ⟨owner, entry⟩ := p
     rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
-    exact ⟨rfl, rfl, rfl, rfl⟩
+    exact ⟨rfl, rfl, rfl, rfl, rfl⟩
 
 /-! ### The join's finalizer names, as programs (`Layer.ts:343`, `:401-417`)
 
@@ -1856,7 +1856,7 @@ theorem syncOpStep_wf (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     obtain ⟨rfl, _⟩ := h
     exact fun x hx => Val.validIn_mono hle x (hwf.1 x hx)
   | memoGet layer memoMap =>
-    obtain ⟨hrefs, _, _, _⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
+    obtain ⟨hrefs, _, _, _, _⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
     rw [hrefs]
     exact fun x hx => Val.validIn_mono hle x (hwf.1 x hx)
   | memoBuild layer memoMap =>
