@@ -17,6 +17,7 @@ abbrev Family := Conform.Source.Family
 def blocks : List (List Spec) :=
   [ [⟨`Effect4.Program.Ty, "ty", []⟩]
   , [⟨`Effect4.Program.Lit, "lit", []⟩]
+  , [⟨`Effect4.Program.FieldReadMode, "field_read_mode", []⟩]
   , [⟨`Effect4.Program.Term, "term", []⟩, ⟨`Effect4.Program.Terms, "terms", []⟩]
   , [⟨`Effect4.Program.CauseTerm, "cause_term", []⟩]
   , [⟨`Effect4.Supervision.MaskMode, "mask_mode", []⟩]

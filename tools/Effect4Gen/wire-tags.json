@@ -38,8 +38,12 @@
       "active": {"unit": 0, "nat": 1, "bool": 2, "str": 3},
       "retired": {}
     },
+    "Effect4.Program.FieldReadMode": {
+      "active": {"required": 0, "optional": 1},
+      "retired": {}
+    },
     "Effect4.Program.Term": {
-      "active": {"var": 0, "lit": 1, "app": 2},
+      "active": {"var": 0, "lit": 1, "app": 2, "record": 3, "field": 4, "recordSet": 5},
       "retired": {}
     },
     "Effect4.Program.Terms": {
