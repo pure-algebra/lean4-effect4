@@ -683,6 +683,9 @@ structure TermAlgebra (R : TermFam → Type u) where
   term_var : (Effect4.Program.Var) → R .term
   term_lit : (Effect4.Program.Lit) → R .term
   term_app : (String) → R .terms → R .term
+  term_record : (List (Prod String (Prod Bool Effect4.Program.Ty))) → (List String) → R .terms → R .term
+  term_field : (Effect4.Program.FieldReadMode) → R .term → (String) → R .term
+  term_recordSet : R .term → (String) → R .term → R .term
   terms_nil : R .terms
   terms_cons : R .term → R .terms → R .terms
 
@@ -693,6 +696,9 @@ def cata_term {R : TermFam → Type u} (alg : TermAlgebra R)
   | .var a0 => alg.term_var a0
   | .lit a0 => alg.term_lit a0
   | .app a0 a1 => alg.term_app a0 (cata_terms alg a1)
+  | .record a0 a1 a2 => alg.term_record a0 a1 (cata_terms alg a2)
+  | .field a0 a1 a2 => alg.term_field a0 (cata_term alg a1) a2
+  | .recordSet a0 a1 a2 => alg.term_recordSet (cata_term alg a0) a1 (cata_term alg a2)
 termination_by structural node
 def cata_terms {R : TermFam → Type u} (alg : TermAlgebra R)
     (node : Effect4.Program.Terms) : R .terms :=
@@ -708,6 +714,9 @@ structure TermHom {R : TermFam → Type u} (alg : TermAlgebra R) where
   h_term_var : ∀ a0, f_term (.var a0) = alg.term_var a0
   h_term_lit : ∀ a0, f_term (.lit a0) = alg.term_lit a0
   h_term_app : ∀ a0 a1, f_term (.app a0 a1) = alg.term_app a0 (f_terms a1)
+  h_term_record : ∀ a0 a1 a2, f_term (.record a0 a1 a2) = alg.term_record a0 a1 (f_terms a2)
+  h_term_field : ∀ a0 a1 a2, f_term (.field a0 a1 a2) = alg.term_field a0 (f_term a1) a2
+  h_term_recordSet : ∀ a0 a1 a2, f_term (.recordSet a0 a1 a2) = alg.term_recordSet (f_term a0) a1 (f_term a2)
   h_terms_nil : f_terms (.nil) = alg.terms_nil
   h_terms_cons : ∀ a0 a1, f_terms (.cons a0 a1) = alg.terms_cons (f_term a0) (f_terms a1)
 
@@ -722,6 +731,12 @@ theorem hom_eq_cata_term {R : TermFam → Type u}
     simp only [cata_term, hom.h_term_lit a0]
   | .app a0 a1 =>
     simp only [cata_term, hom.h_term_app a0 a1, hom_eq_cata_terms hom a1]
+  | .record a0 a1 a2 =>
+    simp only [cata_term, hom.h_term_record a0 a1 a2, hom_eq_cata_terms hom a2]
+  | .field a0 a1 a2 =>
+    simp only [cata_term, hom.h_term_field a0 a1 a2, hom_eq_cata_term hom a1]
+  | .recordSet a0 a1 a2 =>
+    simp only [cata_term, hom.h_term_recordSet a0 a1 a2, hom_eq_cata_term hom a0, hom_eq_cata_term hom a2]
 termination_by structural node
 theorem hom_eq_cata_terms {R : TermFam → Type u}
     {alg : TermAlgebra R} (hom : TermHom alg) (node : Effect4.Program.Terms) :
@@ -742,6 +757,9 @@ def TermAlgebra.id : TermAlgebra (TermSelfCarrier) where
   term_var a0 := Effect4.Program.Term.var a0
   term_lit a0 := Effect4.Program.Term.lit a0
   term_app a0 a1 := Effect4.Program.Term.app a0 a1
+  term_record a0 a1 a2 := Effect4.Program.Term.record a0 a1 a2
+  term_field a0 a1 a2 := Effect4.Program.Term.field a0 a1 a2
+  term_recordSet a0 a1 a2 := Effect4.Program.Term.recordSet a0 a1 a2
   terms_nil := Effect4.Program.Terms.nil
   terms_cons a0 a1 := Effect4.Program.Terms.cons a0 a1
 
@@ -757,6 +775,15 @@ mutual
     rfl
   | .app a0 a1 =>
     simp only [cata_term, cata_id_terms a1]
+    rfl
+  | .record a0 a1 a2 =>
+    simp only [cata_term, cata_id_terms a2]
+    rfl
+  | .field a0 a1 a2 =>
+    simp only [cata_term, cata_id_term a1]
+    rfl
+  | .recordSet a0 a1 a2 =>
+    simp only [cata_term, cata_id_term a0, cata_id_term a2]
     rfl
 termination_by structural node
 @[simp] theorem cata_id_terms (node : Effect4.Program.Terms) :
@@ -781,6 +808,12 @@ def foldMapAt_term {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (
     f_term (.lit a0) p
   | .app a0 a1 =>
     op (f_term (.app a0 a1) p) ((foldMapAt_terms unit op (p ++ [0]) a1 f_term f_terms))
+  | .record a0 a1 a2 =>
+    op (f_term (.record a0 a1 a2) p) ((foldMapAt_terms unit op (p ++ [0]) a2 f_term f_terms))
+  | .field a0 a1 a2 =>
+    op (f_term (.field a0 a1 a2) p) ((foldMapAt_term unit op (p ++ [0]) a1 f_term f_terms))
+  | .recordSet a0 a1 a2 =>
+    op (f_term (.recordSet a0 a1 a2) p) (op (foldMapAt_term unit op (p ++ [0]) a0 f_term f_terms) ((foldMapAt_term unit op (p ++ [1]) a2 f_term f_terms)))
 termination_by structural node
 def foldMapAt_terms {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Terms)
     (f_term : Effect4.Program.Term → List Nat → M := fun _ _ => unit) (f_terms : Effect4.Program.Terms → List Nat → M := fun _ _ => unit) : M :=
@@ -802,6 +835,12 @@ def foldMap_term {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Pr
     f_term (.lit a0)
   | .app a0 a1 =>
     op (f_term (.app a0 a1)) ((foldMap_terms unit op a1 f_term f_terms))
+  | .record a0 a1 a2 =>
+    op (f_term (.record a0 a1 a2)) ((foldMap_terms unit op a2 f_term f_terms))
+  | .field a0 a1 a2 =>
+    op (f_term (.field a0 a1 a2)) ((foldMap_term unit op a1 f_term f_terms))
+  | .recordSet a0 a1 a2 =>
+    op (f_term (.recordSet a0 a1 a2)) (op (foldMap_term unit op a0 f_term f_terms) ((foldMap_term unit op a2 f_term f_terms)))
 termination_by structural node
 def foldMap_terms {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.Terms)
     (f_term : Effect4.Program.Term → M := fun _ => unit) (f_terms : Effect4.Program.Terms → M := fun _ => unit) : M :=
@@ -817,6 +856,9 @@ structure TermMAlgebra (M : Type u → Type v) (R : TermFam → Type u) where
   term_var : (Effect4.Program.Var) → M (R .term)
   term_lit : (Effect4.Program.Lit) → M (R .term)
   term_app : (String) → R .terms → M (R .term)
+  term_record : (List (Prod String (Prod Bool Effect4.Program.Ty))) → (List String) → R .terms → M (R .term)
+  term_field : (Effect4.Program.FieldReadMode) → R .term → (String) → M (R .term)
+  term_recordSet : R .term → (String) → R .term → M (R .term)
   terms_nil : M (R .terms)
   terms_cons : R .term → R .terms → M (R .terms)
 
@@ -825,6 +867,9 @@ def TermAlgebra.toM {M : Type u → Type v} [Monad M] {R : TermFam → Type u}
   term_var a0 := pure (alg.term_var a0)
   term_lit a0 := pure (alg.term_lit a0)
   term_app a0 a1 := pure (alg.term_app a0 a1)
+  term_record a0 a1 a2 := pure (alg.term_record a0 a1 a2)
+  term_field a0 a1 a2 := pure (alg.term_field a0 a1 a2)
+  term_recordSet a0 a1 a2 := pure (alg.term_recordSet a0 a1 a2)
   terms_nil := pure alg.terms_nil
   terms_cons a0 a1 := pure (alg.terms_cons a0 a1)
 
@@ -834,6 +879,9 @@ def TermMAlgebra.map {M : Type u → Type v} {N : Type u → Type w}
   term_var a0 := φ (alg.term_var a0)
   term_lit a0 := φ (alg.term_lit a0)
   term_app a0 a1 := φ (alg.term_app a0 a1)
+  term_record a0 a1 a2 := φ (alg.term_record a0 a1 a2)
+  term_field a0 a1 a2 := φ (alg.term_field a0 a1 a2)
+  term_recordSet a0 a1 a2 := φ (alg.term_recordSet a0 a1 a2)
   terms_nil := φ alg.terms_nil
   terms_cons a0 a1 := φ (alg.terms_cons a0 a1)
 
@@ -845,6 +893,16 @@ def TermMAlgebra.toSeq {M : Type u → Type v} [Monad M]
   term_app a0 a1 := do
     let x1 ← a1
     alg.term_app a0 x1
+  term_record a0 a1 a2 := do
+    let x2 ← a2
+    alg.term_record a0 a1 x2
+  term_field a0 a1 a2 := do
+    let x1 ← a1
+    alg.term_field a0 x1 a2
+  term_recordSet a0 a1 a2 := do
+    let x0 ← a0
+    let x2 ← a2
+    alg.term_recordSet x0 a1 x2
   terms_nil := alg.terms_nil
   terms_cons a0 a1 := do
     let x0 ← a0
@@ -860,6 +918,16 @@ def foldM_term {M : Type u → Type v} [Monad M] {R : TermFam → Type u}
   | .app a0 a1 => do
       let x1 ← foldM_terms alg a1
       alg.term_app a0 x1
+  | .record a0 a1 a2 => do
+      let x2 ← foldM_terms alg a2
+      alg.term_record a0 a1 x2
+  | .field a0 a1 a2 => do
+      let x1 ← foldM_term alg a1
+      alg.term_field a0 x1 a2
+  | .recordSet a0 a1 a2 => do
+      let x0 ← foldM_term alg a0
+      let x2 ← foldM_term alg a2
+      alg.term_recordSet x0 a1 x2
 termination_by structural node
 def foldM_terms {M : Type u → Type v} [Monad M] {R : TermFam → Type u}
     (alg : TermMAlgebra M R) (node : Effect4.Program.Terms) : M (R .terms) :=
@@ -883,6 +951,12 @@ theorem foldM_eq_cata_term {M : Type u → Type v} [Monad M]
     simp only [foldM_term, cata_term, TermMAlgebra.toSeq]
   | .app a0 a1 =>
     simp only [foldM_term, cata_term, TermMAlgebra.toSeq, foldM_eq_cata_terms alg a1]
+  | .record a0 a1 a2 =>
+    simp only [foldM_term, cata_term, TermMAlgebra.toSeq, foldM_eq_cata_terms alg a2]
+  | .field a0 a1 a2 =>
+    simp only [foldM_term, cata_term, TermMAlgebra.toSeq, foldM_eq_cata_term alg a1]
+  | .recordSet a0 a1 a2 =>
+    simp only [foldM_term, cata_term, TermMAlgebra.toSeq, foldM_eq_cata_term alg a0, foldM_eq_cata_term alg a2]
 termination_by structural node
 theorem foldM_eq_cata_terms {M : Type u → Type v} [Monad M]
     {R : TermFam → Type u} (alg : TermMAlgebra M R) (node : Effect4.Program.Terms) :
@@ -919,6 +993,12 @@ theorem foldM_natural_term {M : Type u → Type v} {N : Type u → Type w}
     simp only [foldM_term, TermMAlgebra.map]
   | .app a0 a1 =>
     simp only [foldM_term, TermMAlgebra.map, φ.map_bind, foldM_natural_terms φ alg a1]
+  | .record a0 a1 a2 =>
+    simp only [foldM_term, TermMAlgebra.map, φ.map_bind, foldM_natural_terms φ alg a2]
+  | .field a0 a1 a2 =>
+    simp only [foldM_term, TermMAlgebra.map, φ.map_bind, foldM_natural_term φ alg a1]
+  | .recordSet a0 a1 a2 =>
+    simp only [foldM_term, TermMAlgebra.map, φ.map_bind, foldM_natural_term φ alg a0, foldM_natural_term φ alg a2]
 termination_by structural node
 theorem foldM_natural_terms {M : Type u → Type v} {N : Type u → Type w}
     [Monad M] [Monad N] {R : TermFam → Type u} (φ : MonadMorphism M N)
