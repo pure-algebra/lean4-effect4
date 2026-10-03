@@ -86,7 +86,7 @@ theorem hasRunnable_eq_ref {e : NativeEff} {m : NativeMachine} {r : RState}
   apply listRel_any h.fibers
   intro f g hfg
   have hf : FMeans e f g := hfg
-  rw [hf.exit, hf.parked]
+  simp only [isRunnable, hf.exit, hf.parked]
 
 theorem externalRequest_eq_ref {e : NativeEff} {c : NCode} {r : RProgram}
     (h : CodeMeans e c r) : externalRequest c = externalRequestR r := by

@@ -67,3 +67,39 @@ Coordinator source fence: new `src/Effect4/Laws/Program/MeaningEq.lean`, new
 `Test.Program.AgreementContract` in `Test/All.lean`. No existing runtime definitions change.
 Proofs use existing meaning equations and fragment definitions, without a new traversal.
 Focused build and retained axiom/positive/negative fixture checks precede commit.
+
+## Ready follow-ons and public documentation
+
+The first independent slices passed their focused checks and reviews. The owner also asked
+for authoring and host-session completeness where the settled contracts permit it. Two
+follow-ons make the new primitives useful at those boundaries:
+
+- B2, `Built.rebuild`: its prior five-part placement and fence are in
+  `../2026-10-03-program-path-editing/rebuild-brief.md`. Reuse the original table and names,
+  re-admit the complete candidate with the existing checker and located refusals, and retain
+  both changed-result-type success and dangling-reference failure consumers.
+- F2, actual successful reply admission: its prior placement and fence are recorded by the
+  session-work seat before proof work. Connect successful session preflight to the prepared
+  successful value's membership for shape-decided answer columns. Preserve the actual bound
+  call, row and decision; do not claim failure admission, ghost token/world correspondence,
+  residual typing or all of T4. An accepted reserved-defect failure, if found, is retained as
+  a discriminator for the still-open full statement, without changing the runtime contract.
+
+The coordinator will add a compact current usage section to `docs/core/api-surface.md` after
+these APIs are checked, linking executable fixtures and naming the exact scope of each proof.
+This is documentation of the new interfaces, not a redesign of the older surface or a new
+owner for semantic status. The final receipt will include a source-grounded T1-T9 disposition,
+combined affected-module verification, and the unchanged dirty-main-document check.
+
+## Integration repair: existing runnable observation connector
+
+The combined `Effect4.Laws` build found `ReasonsR.hasRunnable_eq_ref` relying on the old
+inline predicate. Its statement remains unchanged. Expand the coordinator fence by one
+proof body in `src/Effect4/Laws/Program/ReasonsR.lean` to unfold `Api.isRunnable` explicitly.
+Placement: concept 10 runtime/reference observation agreement; existing `reasons_eq_ref`
+is the consumer of this helper through `book_reasons_nonCompile`. Reach and hypotheses
+remain `BookMeans` and the existing empty-table reason observation, with compile-frontier
+reasons excluded by the consumer. This is no progress, new simulation fragment or T9
+closure; it maintains the existing R8/R13 observation connector after predicate extraction.
+A narrow module build, unchanged declaration axiom inspection and repeated combined check
+will verify the repair before landing.

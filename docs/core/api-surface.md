@@ -19,12 +19,16 @@ call. Everything else is either a mechanical fix with no decision content (§4, 
 that ties two existing pieces together (§3), or one of ten decisions (§5) — of which the first,
 *how a record and a sum are named at the boundary*, is the language decision the rest hang on.
 
+The additions in §1.1 describe the editing and session APIs added on 2026-10-03. The later
+consolidation assessment retains its 2026-09-17 scope; current rulings live in
+[decisions.md](decisions.md).
+
 ## 1. The surface as it stands
 
 | module | file | what an agent calls | laws |
 | --- | --- | --- | --- |
-| `Author` | `src/Effect4/Api/Author.lean`, `Program/Authoring*.lean` | `Module` (rows, services, layers, main) → `Author.build : Except BuildRefusal Built`; `Row.host`, `Row.call` by spelling; `ServiceDef.{use,give,layer,constant}`; `Package.install`; `Layer.{value,empty,mergeAll}`, `provide`, `provideAll`, `provideFresh`; `fork`, `daemon p`, `daemon p in s`, `await`, `join`; `Built.{typed,ty,requires,closed,positionOf,runSync,print,bytes}` | `build_table_lawful`, `build_rows_resolve`, `Row.call_scoped`, `carrier_unique`, `var_reserved` |
-| `Run` | `src/Effect4/Run.lean` | `Run.open` (cannot refuse), `Rows.{start,flush,clock,receive,answer,control,tape}` into `List Command`, `Run.{play,step,answer,receive,control}`, `Run.observe : Observation` (first-order, with `fibers`), `Run.inspect : Inspection` (holds the machine), `Reactor σ`, `Run.drive`, `runPure`/`runClock`/`runWith` | `open_total`, `journal_replays`, `drive_eq_play`, `drive_envelope`, `runPure_eq_run`, `answer_once`, `answer_accepted`, `bindCall_at` |
+| `Author` | `src/Effect4/Api/Author.lean`, `Program/Authoring*.lean` | `Module` (rows, services, layers, main) → `Author.build : Except BuildRefusal Built`; `Row.host`, `Row.call` by spelling; `ServiceDef.{use,give,layer,constant}`; `Package.install`; `Layer.{value,empty,mergeAll}`, `provide`, `provideAll`, `provideFresh`; `fork`, `daemon p`, `daemon p in s`, `await`, `join`; `Node.{at_,replaceAt,replaceLayerAt}`; `Built.{rebuild,typed,ty,requires,closed,positionOf,runSync,print,bytes}` | `build_table_lawful`, `build_rows_resolve`, `Row.call_scoped`, `carrier_unique`, `var_reserved`, `rebuild_spec`, `rebuild_self` |
+| `Run` | `src/Effect4/Run.lean` | `Run.open` (cannot refuse), `Rows.{start,flush,clock,receive,answer,control,tape}` into `List Command`, `Run.{play,step,answer,receive,control}`, `Run.observe : Observation` (first-order, with `fibers`), `Run.inspect : Inspection` (holds the machine), `Run.{work,nextControl,controlOnce}`, `Reactor σ`, `Run.drive`, `runPure`/`runClock`/`runWith` | `open_total`, `journal_replays`, `drive_eq_play`, `drive_envelope`, `runPure_eq_run`, `answer_once`, `answer_accepted`, `bindCall_at`, `nextControl_spec`, `controlOnce_journal`, `play_controls_eq_replay`, `runClock_eq_run` |
 | `Supervision` | `src/Effect4/Api/Supervision.lean` | `supervision : Eff Op → List ForkSite`, `ForkSite.parent`, `fiberStatuses`, `daemonsQuiet`, `Supervised`, `Inspection.{fibers,forked,daemonsQuiet}` | `supervision_static`, `supervision_child_flag`, `status_persists`, `spawn_status_fresh`, `daemonsQuiet_iff` |
 | `Api` (the older face) | `src/Effect4/Api.lean`, `Api/*.lean` | `check`, `explain`, `blame`, `author`, `Typed.*`, `TypedLayer`/`checkLayer`, `Inspection`, `replay`/`run`/`runSync`, `print`/`read`/`bytesOf`/`ofBytes`, `schemaOf`, `HostSession`, `Runner`, `RunnerBytes` | the DI-85/86 laws, `replay_unique`, the codec laws |
 
@@ -32,6 +36,73 @@ Imports are clean (no surface module imports `Laws`, `Test` or `Aesop`); the pac
 all four. What the integration already unified: one size fold, `Api.Run` → `Inspection`, the
 `Built` face through `Built.typed`, `Layer.all`/`printLayer`/`Built.run`/`authorModule` cut,
 `with_` → `provide`.
+
+### 1.1 Editing, session work and composition (2026-10-03)
+
+**Edit, then check the complete candidate.** `Node.replaceAt` replaces an existing node with
+another of the same sort. Paths follow structural children: `[]` names the root; for
+`bind p q`, `[0]` names `p` and `[1]` names `q`. A missing path or wrong sort returns `none`.
+This path language covers the seven program-node sorts; it does not descend into `Term`.
+`replaceLayerAt` uses the same operation, so existing layer hoisting and restoration retain
+one update mechanism. The lookup, overwrite, restoration and disjoint-path laws are in
+[`Laws.Program.References`](../../src/Effect4/Laws/Program/References.lean).
+
+`Built.rebuild` checks a candidate against the original table and retains its row names. A
+successful result supplies the newly admitted program and type; the type may differ from the
+old one. It reuses the final admission step of `Author.build`, including located typing
+refusals. It does not relocate variables or references, or establish unchanged behavior.
+Here the outer result reports a structural failure and the inner result reports admission:
+
+```lean
+open Effect4
+
+def editProgram (b : Api.Built) (path : List Nat)
+    (replacement : Api.Program) :
+    Option (Except Api.BuildRefusal Api.Built) := do
+  let node ← (Program.Node.eff b.program).replaceAt path (.eff replacement)
+  let candidate ← node.eff?
+  pure (b.rebuild candidate)
+```
+
+[`AuthorContract`](../../Test/Program/AuthorContract.lean) exercises a changed result type
+with a nonempty host table, retains table/names, and refuses an unbound variable or a removed
+reference target. Whole-program checking matters: even a layer replacement with the same
+local type can invalidate references from elsewhere in the program.
+
+**Read recorded work before choosing a control.** `Run.work` exposes runnable fiber IDs,
+queued dispatcher owners, outstanding host calls, received reply keys and timer waits.
+Queued work is visible even while another fiber is waiting for the host. `nextControl`
+selects a queued flush first, otherwise evaluation of the first runnable fiber in machine
+order; it selects nothing for a stuck machine. `controlOnce` executes at most that one
+control through the existing checked session and journal, or returns the run unchanged.
+Inspect the resulting phases and observation: a selected command may refuse or exhaust its
+fuel. Host replies, applying received replies and advancing the clock remain caller choices.
+An empty work view does not certify completion or deadlock.
+
+[`RunContract`](../../Test/Run/RunContract.lean) demonstrates a yielded continuation, internal
+work alongside a host wait, pending receipts, timer waits and insufficient fuel. The selection
+and journal laws live in [`Laws.Run`](../../src/Effect4/Laws/Run.lean). For a control sequence,
+`play_controls_eq_replay` compares its resulting machine with raw replay when every newly
+recorded phase is `.progressed`; the existing history may contain other phases. That premise
+is accepted execution at the supplied budgets, not a general progress or termination theorem.
+
+For successful host replies, `HostSession.preflight_success_prepared_fits` and its
+`submit_success_prepared_fits` consumer connect actual acceptance on a non-stuck machine to the prepared value at
+the selected external row. Membership requires that row's answer type to satisfy
+`Typed.shapeDecides`. The result retains the selected call and decision; it does not apply
+the receipt, cover failed replies, or establish full T4 token/world correspondence. The
+concrete session fixture is in [`HostSessionContract`](../../Test/Api/HostSessionContract.lean).
+
+**Compose a semantic comparison within its proved fragment.**
+[`Denote.StraightEq`](../../src/Effect4/Laws/Program/MeaningEq.lean) relates existing straight
+programs by equality of exit and complete stores for every environment and initial store.
+Its composition laws cover binding, selection, cause handling and finalization; removing a
+suspension is one concrete use. `run_agrees_at_bound` supplies sufficient budgets for both
+programs and concludes equal exits/stores from the existing empty initial machine setup.
+[`MeaningEqContract`](../../Test/Program/MeaningEqContract.lean) checks a rewrite under failure
+and cleanup, including retained state. This comparison does not cover traces, arbitrary
+finite-fuel frontiers, loops, scheduling, host tables or target execution; it is a contribution
+to T5, not the general relation. Typing an edited program still uses admission separately.
 
 ## 2. The opaque and awkward constructs, each with its replacement
 
