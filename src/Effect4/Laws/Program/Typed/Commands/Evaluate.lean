@@ -1615,4 +1615,98 @@ theorem clause_ambientScope (root : ProgramSource) (rootTy : EffTy) :
     subst member
     exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
 
+
+/-! ## `scoped`: a scope made, the context extended, the body guarded -/
+
+/-- A settlement typed from a later world is typed from an earlier one. -/
+theorem SettlesTyped.mono {root : ProgramSource} {rootTy : EffTy} {w w' : World} (ord : w.leHost w')
+    {id : FiberId} {rest : List RCmd} {it : RIter} (h : SettlesTyped root rootTy w' id rest it) :
+    SettlesTyped root rootTy w id rest it :=
+  let ⟨w'', o, typed⟩ := h
+  ⟨w'', leHost_trans _ _ _ ord o, typed⟩
+
+/-- **`scoped`** (`internal/effect.ts:3938-3948`, decisions row 188 (a)): a fresh sequential scope is
+made in the store (the edit is the `scopeMake` row's step, so the store's order, well-formedness and
+generated typing are the row's, and the new entry is empty), the fiber's context gains it as its
+ambient scope (`withScope`; the scope service fits because the scope is present), and the body,
+typed at the certificate by M5 at the point (the pre), runs under the `onExit` guard bound to the
+scope's exit callback (`scopedGuardBind_typed`) over the saved answer frame. The world grows by the
+store. -/
+theorem clause_scoped (root : ProgramSource) (rootTy : EffTy) (body : Point) :
+    FiberClauseKeeps root rootTy (.scoped body) := by
+  intro w m rest f y next ev hc
+  have wide := ev.typed.machine.wide
+  have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
+  have c5 : ServicesFit w f.context.services := (ev.typed.machine.fiber hmem).ok.c5
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  -- the store with the new scope: the `scopeMake` row's step
+  let scope := m.state.nextName
+  let s : Stores :=
+    { m.state with scopes := m.state.scopes.make scope .sequential, nextName := scope + 1 }
+  have step : syncOpStep (.scopeMake .sequential) m.state = some (s, Val.scopeHandle scope) :=
+    syncOpStep_scopeMake m.state .sequential
+  have le : m.state.le s := syncOpStep_le _ _ _ _ step
+  have wf : s.WF := syncOpStep_wf _ _ _ _ wide.wf rfl step
+  have ord : w.leHost { w with state := s } :=
+    leHost_restate (by rw [wide.state]; exact le) (by rw [wide.state]; rfl)
+      (by rw [wide.state]; rfl) (by rw [wide.state]; rfl)
+  have stores : StoresOk (preds root) { w with state := s } Expect.root s := by
+    obtain ⟨c0, c1, c2, ⟨c3⟩, c4, _⟩ := storesOk_world ord rfl rfl rfl wide.stores
+    refine ⟨c0, c1, c2, ⟨fun e he => ?_⟩, c4, trivial⟩
+    change e ∈ m.state.scopes.entries ++ [⟨scope, Scope.make .sequential⟩] at he
+    rcases List.mem_append.mp he with old | new
+    · exact c3 e old
+    · rw [List.mem_singleton] at new
+      subst new
+      exact ⟨⟨trivial⟩⟩
+  obtain ⟨_, restated⟩ := configTyped_restate ev.typed le rfl rfl rfl wf stores
+    (Guard.internalKeys_state_subset _ s
+      (Guard.storeKeys_mono (List.Subset.refl _) (List.Subset.refl _)))
+    (fun o ho owner priority mode => wide.live.dueOwners o ho owner priority mode)
+    (List.Subset.refl _)
+  have live' : ScopeLive { w with state := s } scope := ScopeStore.entryAt_make_self _ _ _
+  have ev1 : Evaluating root rootTy { w with state := s } { m with state := s } rest f y :=
+    ⟨restated, ev.stale, ev.running, ev.live⟩
+  -- the context with the scope installed
+  let ctx := f.context.withScope scope
+  have services : ServicesFit { w with state := s } ctx.services := by
+    show ServicesFit _ (f.context.services.addV Env.scopeKey (Value.scope scope))
+    refine servicesFit_addV (servicesFit_mono ord c5) (fun sty hty => ?_)
+    have carrier : ({ w with state := s } : World).serviceTy Env.scopeKey = some Ty.scope := by
+      show w.serviceTy Env.scopeKey = some Ty.scope
+      rw [ev.typed.machine.services]
+      rfl
+    rw [carrier] at hty
+    cases hty
+    exact ⟨rfl, live'⟩
+  have ev2 := ev1.recontext ctx services ctx.maxOpsBeforeYield ctx.preventYield
+  let f' : RFiber := { f with context := ctx, maxOpsBeforeYield := ctx.maxOpsBeforeYield, preventYield := ctx.preventYield }
+  -- the guarded body over the saved answer frame
+  have typedCode : TypedProg root { w with state := s } cert
+      ((guardR (.onExit false) (denoteAt root.program body)).bind fun ex =>
+        .vis (.inr (.scopeExit f.context scope ex)) Effects.Program.pure) :=
+    scopedGuardBind_typed root (j := Effects.Program.pure)
+      (denoteAt_typed root (w := { w with state := s }) ev.typed.machine.sourceWF
+        ev.typed.machine.services (pointTyped_mono ord pre))
+      live' (servicesFit_mono ord c5) (fun _ _ _ h => h)
+  let fr' : RSaved := { f.frame with
+    current := (guardR (.onExit false) (denoteAt root.program body)).bind fun ex =>
+      .vis (.inr (.scopeExit f.context scope ex)) Effects.Program.pure
+    stack := .answer next :: f.frame.stack }
+  have fresh : ∀ ty', ({ w with state := s } : World).Γ f.id = some ty' →
+      CodeOk root { w with state := s } (({ m with state := s } : RState).update f') f.id ty' fr' := by
+    intro ty' declared'
+    have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
+    subst same
+    refine ⟨cert, typedCode, hostStack_push (answerFrame_typed (fun _ _ _ hex => hex)
+      (fun w'' o ans post => typedNext w'' (leHost_trans _ _ _ ord o) ans post)) ?_,
+      ⟨prov.recorded, prov.deferred⟩⟩
+    exact hostStack_mono ord (hostStack_races (m := m.update f)
+      (m' := ({ m with state := s } : RState).update f') (racesKept_of_eq fun _ => rfl) stack)
+  exact SettlesTyped.mono ord (ev2.settle_continue fr' fresh)
+
 end Effect4.Program.Typed
