@@ -120,7 +120,59 @@ theorem instantiate_closed (σ : Subst) (t : Ty) (h : closed t = true) : instant
 
 theorem infer_closed {join : Bool} (σ : Subst) (t r : Ty) (h : closed t = true) :
     infer σ t r join = σ := by
-  induction t generalizing σ r <;> cases r <;> aesop (add norm simp [closed, infer])
+  revert h
+  induction σ, t, r using infer.induct_unfolding join
+      (motive_2 := fun σ ts _ result => closedItems ts = true → result = σ)
+      (motive_3 := fun σ fs _ result => closedFields fs = true → result = σ)
+  case case1 => intro h; cases h
+  case case2 => intro h; cases h
+  case case3 => intro h; cases h
+  case case4 ih => exact ih
+  case case5 ih => exact ih
+  case case6 ih => exact ih
+  case case7 ih => exact ih
+  case case8 ih₁ ih₂ =>
+    intro h
+    have hc := Bool.and_eq_true_iff.mp h
+    exact (ih₂ hc.2).trans (ih₁ hc.1)
+  case case9 ih₁ ih₂ =>
+    intro h
+    have hc := Bool.and_eq_true_iff.mp h
+    exact (ih₂ hc.2).trans (ih₁ hc.1)
+  case case10 ih₁ ih₂ =>
+    intro h
+    have hc := Bool.and_eq_true_iff.mp h
+    exact (ih₂ hc.2).trans (ih₁ hc.1)
+  case case11 ih₁ ih₂ =>
+    intro h
+    have hc := Bool.and_eq_true_iff.mp h
+    exact (ih₂ hc.2).trans (ih₁ hc.1)
+  case case12 ih₁ ih₂ =>
+    intro h
+    have hc := Bool.and_eq_true_iff.mp h
+    exact (ih₂ hc.2).trans (ih₁ hc.1)
+  case case13 ih₁ ih₂ =>
+    intro h
+    have hc := Bool.and_eq_true_iff.mp h
+    exact (ih₂ hc.2).trans (ih₁ hc.1)
+  case case14 ih₁ ih₂ =>
+    intro h
+    have hc := Bool.and_eq_true_iff.mp h
+    exact (ih₂ hc.2).trans (ih₁ hc.1)
+  case case15 ih => exact ih
+  case case16 ih => exact ih
+  case case17 ih => exact ih
+  case case18 => intro _; rfl
+  case case19 => intro _; rfl
+  case case20 => rfl
+  case case21 ih h => exact ih (Bool.and_eq_true_iff.mp h).2
+  case case22 ih₁ ih₂ h =>
+    have hc := Bool.and_eq_true_iff.mp h
+    exact (ih₂ hc.2).trans (ih₁ hc.1)
+  case case23 ih₁ ih₂ h =>
+    have hc := Bool.and_eq_true_iff.mp h
+    exact (ih₂ hc.2).trans (ih₁ hc.1)
+  case case24 => rfl
 
 /-- A match is sound: the request is a subtype of the template at the bindings. -/
 theorem matchTemplate_sound {join : Bool} (σ : Subst) (t r : Ty) (σ' : Subst)
@@ -236,34 +288,8 @@ theorem hasTy_instantiate_widens {σ σ' : Subst} (hw : Widens σ σ') (t : Ty)
   exact hw i w bl hw'
 
 /-- Inference only widens: a new binding was `never`, a joined one moves up the order. -/
-theorem infer_widens (σ : Subst) (t r : Ty) (join : Bool) : Widens σ (infer σ t r join) := by
-  fun_induction infer σ t r join
-  case case1 σ i r hnone =>
-    refine Widens.of_lookup fun j u hj => ⟨u, ?_, sub_refl u⟩
-    rw [List.lookup_append, hj, Option.some_or]
-  case case2 σ i r bound hbound hjoin =>
-    refine Widens.of_lookup fun j u hj => ?_
-    rw [List.lookup_cons]
-    cases hji : j == i with
-    | true =>
-      have : j = i := beq_iff_eq.mp hji
-      subst this
-      rw [hbound] at hj
-      cases hj
-      exact ⟨r, rfl, (Bool.and_eq_true_iff.mp hjoin).2⟩
-    | false => exact ⟨u, hj, sub_refl u⟩
-  case case3 => exact Widens.refl _
-  case case4 ih => exact ih
-  case case5 ih => exact ih
-  case case6 ih => exact ih
-  case case7 ih => exact ih
-  case case8 ih₁ ih₂ => exact ih₁.trans ih₂
-  case case9 ih₁ ih₂ => exact ih₁.trans ih₂
-  case case10 ih₁ ih₂ => exact ih₁.trans ih₂
-  case case11 ih₁ ih₂ => exact ih₁.trans ih₂
-  case case12 ih₁ ih₂ => exact ih₁.trans ih₂
-  case case13 ih₁ ih₂ => exact ih₁.trans ih₂
-  case case14 => exact Widens.refl _
+theorem infer_widens (σ : Subst) (t r : Ty) (join : Bool) : Widens σ (infer σ t r join) :=
+  Widens.of_lookup (infer_widensSub σ t r join)
 
 /-- A match widens its seed. -/
 theorem matchTemplate_widens {join : Bool} {σ σ' : Subst} {t r : Ty}
@@ -292,25 +318,95 @@ theorem matchTemplateArgs_widens {join : Bool} {σ σ' : Subst} {ps rs : List Ty
 
 end Ty
 
-/-- A closed row types as before the templates: subsumption at the request, its own columns. -/
+/-- A closed, raw formed row types by subsumption and its own columns.
+The formation premise is required by rows 192 and 193 even on closed rows. -/
 theorem rowTy_closed (row : Row) (r : Ty) (hreq : row.request.closed = true)
-    (hans : row.answer.closed = true) (herr : row.error.closed = true) :
+    (hans : row.answer.closed = true) (herr : row.error.closed = true)
+    (formed : Formation.Formed (Formation.instantiatedSites row [])) :
     rowTy row r =
       if Ty.sub r.normalize row.request.normalize then
         some ⟨row.answer.normalize, row.error.normalize, Requirement.ofList row.requires⟩
       else none := by
-  simp only [rowTy, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq)]
-  split <;> simp only [Option.map_some, Option.map_none, Ty.instantiate_closed _ _ hans,
-    Ty.instantiate_closed _ _ herr]
+  have hformed := (Formation.check_eq_none_iff _).mpr formed
+  cases hsub : Ty.sub r.normalize row.request.normalize with
+  | false =>
+    simp only [rowTy, checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
+      hsub, Bool.false_eq_true, ↓reduceIte, Except.toOption]
+  | true =>
+    simp only [rowTy, checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
+      hsub, ↓reduceIte, hformed, Except.toOption,
+      Ty.instantiate_closed _ _ hans, Ty.instantiate_closed _ _ herr]
 
-/-- `rowTy_closed`, read off a successful match. -/
+/-- A successful closed-row match still exposes subsumption and its own columns.
+Success itself discharges the new formation guard, so callers need no added premise. -/
 theorem rowTy_closed_some {row : Row} {r : Ty} {t : EffTy} (hreq : row.request.closed = true)
     (hans : row.answer.closed = true) (herr : row.error.closed = true)
     (h : rowTy row r = some t) :
     Ty.sub r.normalize row.request.normalize = true ∧
       t = ⟨row.answer.normalize, row.error.normalize, Requirement.ofList row.requires⟩ := by
-  rw [rowTy_closed row r hreq hans herr] at h
-  aesop
+  rw [rowTy_eq_some_iff] at h
+  cases hsub : Ty.sub r.normalize row.request.normalize with
+  | false =>
+    simp only [checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
+      hsub, Bool.false_eq_true, ↓reduceIte] at h
+    cases h
+  | true =>
+    simp only [checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
+      hsub, ↓reduceIte] at h
+    split at h
+    · cases h
+    · simp only [Ty.instantiate_closed _ _ hans, Ty.instantiate_closed _ _ herr,
+        Except.ok.injEq] at h
+      exact ⟨rfl, h.symm⟩
+
+/-- `instantiated-formation`: a successful row use retains the actual bindings and
+strict formation of every substituted column. Typing consumes this through `rowTy`.
+This is a static property; it makes no host reply or execution claim. -/
+theorem rowTy_instantiated_formed {row : Row} {request : Ty} {ty : EffTy}
+    (accepted : rowTy row request = some ty) :
+    ∃ bindings, Ty.matchTemplate [] row.request.normalize request.normalize = some bindings ∧
+      Formation.Formed (Formation.instantiatedSites row bindings) := by
+  rw [rowTy_eq_some_iff] at accepted
+  unfold checkRow at accepted
+  split at accepted
+  · cases accepted
+  · rename_i bindings matched
+    split at accepted
+    · cases accepted
+    · rename_i formed
+      exact ⟨bindings, matched, (Formation.check_eq_none_iff _).mp formed⟩
+
+/-- The precise diagnostic part of `instantiated-formation`: this refusal names
+an actual failed column check after a successful template match. -/
+theorem checkRow_formation_iff (row : Row) (request : Ty) (why : FormationRefusal) :
+    checkRow row request = .error (.formation why) ↔
+      ∃ bindings, Ty.matchTemplate [] row.request.normalize request.normalize = some bindings ∧
+        Formation.check (Formation.instantiatedSites row bindings) = some why := by
+  constructor
+  · intro refused
+    unfold checkRow at refused
+    split at refused
+    · cases refused
+    · rename_i bindings matched
+      split at refused
+      · rename_i actual failed
+        have same : actual = why := RowTypingRefusal.formation.inj (Except.error.inj refused)
+        subst same
+        exact ⟨bindings, matched, failed⟩
+      · cases refused
+  · rintro ⟨bindings, matched, failed⟩
+    simp only [checkRow, matched, failed]
+
+/-- Request mismatch retains its exact meaning and precedence. The formation
+branch cannot be reported as a subtype mismatch by the shared row checker. -/
+theorem checkRow_request_iff (row : Row) (request : Ty) :
+    checkRow row request = .error .requestNotSubtype ↔
+      Ty.matchTemplate [] row.request.normalize request.normalize = none := by
+  cases matched : Ty.matchTemplate [] row.request.normalize request.normalize with
+  | none => simp only [checkRow, matched]
+  | some bindings =>
+    simp only [checkRow, matched, reduceCtorEq]
+    split <;> simp only [Except.error.injEq, reduceCtorEq]
 
 /-- Every native row of this cut is closed: no row is a template yet. -/
 theorem NativeOp.row_closed (op : NativeOp) :
@@ -370,24 +466,61 @@ def varsOfItems : List Ty → List Nat
   | t :: rest => varsOf t ++ varsOfItems rest
 end
 
-/-- A template is admissible when no parameter sits under a union head. `infer` walks the
-template and the request together and binds at a position; a union is a ROW, whose members
-the request may carry in any order and any number, so a parameter inside one names no
-position and the guard would be all that decided the match. -/
+mutual
+/-- A template is admissible when no parameter sits under a union head. Named
+fields and positional arguments are inference positions; a union has no fixed
+position correspondence. This is the profile consumed by `admitSig`. -/
 def templateAdmissible : Ty → Bool
   | .union a b => a.closed && b.closed
   | .option t | .list t | .causeOf t | .refOf t => templateAdmissible t
-  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .deferredOf a b =>
+  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .deferredOf a b | .map a b =>
     templateAdmissible a && templateAdmissible b
+  | .record fs => templateAdmissibleFields fs
+  | .tuple ts | .app _ ts => templateAdmissibleItems ts
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
   | .var _ | .null | .undefined | .number | .bytes => true
-  -- `infer` binds no position under the data wave's heads, so a parameter there would be
-  -- instantiated at nothing: they are admissible only when closed
-  | t@(.record _) | t@(.map _ _) | t@(.tuple _) | t@(.app _ _) => t.closed
+/-- The field companion of the template profile, retaining every raw field. -/
+def templateAdmissibleFields : List (String × Bool × Ty) → Bool
+  | [] => true
+  | (_, _, ty) :: rest => templateAdmissible ty && templateAdmissibleFields rest
+/-- The positional companion of the template profile. -/
+def templateAdmissibleItems : List Ty → Bool
+  | [] => true
+  | ty :: rest => templateAdmissible ty && templateAdmissibleItems rest
+end
+
+/-- The list equation used by `templateAdmissible_of_closed` for row admission. -/
+theorem templateAdmissibleFields_eq_all (fs : List (String × Bool × Ty)) :
+    templateAdmissibleFields fs = fs.all (fun p => templateAdmissible p.2.2) := by
+  induction fs with
+  | nil => rfl
+  | cons p fs ih =>
+    obtain ⟨name, optional, ty⟩ := p
+    simp only [templateAdmissibleFields, List.all_cons, ih]
+
+/-- The list equation used by `templateAdmissible_of_closed` for row admission. -/
+theorem templateAdmissibleItems_eq_all (ts : List Ty) :
+    templateAdmissibleItems ts = ts.all templateAdmissible := by
+  induction ts with
+  | nil => rfl
+  | cons t ts ih => simp only [templateAdmissibleItems, List.all_cons, ih]
 
 theorem templateAdmissible_of_closed (t : Ty) (h : closed t = true) :
     templateAdmissible t = true := by
-  induction t <;> aesop (add norm simp [closed, templateAdmissible])
+  induction t with
+  | record fs ih =>
+    simp only [closed, closedFields_eq_all, List.all_eq_true] at h
+    simp only [templateAdmissible, templateAdmissibleFields_eq_all, List.all_eq_true]
+    exact fun p hp => ih p hp (h p hp)
+  | tuple ts ih =>
+    simp only [closed, closedItems_eq_all, List.all_eq_true] at h
+    simp only [templateAdmissible, templateAdmissibleItems_eq_all, List.all_eq_true]
+    exact fun t ht => ih t ht (h t ht)
+  | app name ts ih =>
+    simp only [closed, closedItems_eq_all, List.all_eq_true] at h
+    simp only [templateAdmissible, templateAdmissibleItems_eq_all, List.all_eq_true]
+    exact fun t ht => ih t ht (h t ht)
+  | _ => aesop (add norm simp [closed, templateAdmissible])
 
 theorem varsOfFields_nil {fs : List (String × Bool × Ty)} (h : ∀ p ∈ fs, varsOf p.2.2 = []) :
     varsOfFields fs = [] := by

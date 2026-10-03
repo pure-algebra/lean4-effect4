@@ -1,4 +1,5 @@
 import Effect4.Program.Refs
+import Effect4.Program.Formation
 import Effect4.Machine.Context
 
 /-!
@@ -106,15 +107,36 @@ is `Lit.ty` (`litArgTy_false`). -/
 def termTy (sig : Signature Op) (env : TyEnv) (t : Term) : Option Ty :=
   argTy sig env false t
 
-/-- The type of a row performed on a request of type `r` (decisions row 42): the request,
-canonical, is matched against the row's request template (`Ty.matchTemplate`), and the answer
-and error columns are instantiated at the bindings and made canonical. A row with no template
-parameter reduces to subsumption at the request and its own columns (`rowTy_closed`,
-`Laws/Program/Template.lean`). `none` is the refusal `requestNotSubtype`. -/
-def rowTy (row : Row) (r : Ty) : Option EffTy :=
-  (Ty.matchTemplate [] row.request.normalize r.normalize).map fun σ =>
-    ⟨(row.answer.instantiate σ).normalize, (row.error.instantiate σ).normalize,
-      Requirement.ofList row.requires⟩
+/-- A request mismatch and malformed instantiated columns are distinct refusals. -/
+inductive RowTypingRefusal where
+  | requestNotSubtype
+  | formation (why : FormationRefusal)
+  deriving DecidableEq, Repr
+
+/-- Match the request, then check all raw instantiated columns before normalization.
+Request mismatch retains precedence when both checks would fail (rows 42 and 193).
+The checker and `rowTy` project this one result. -/
+def checkRow (row : Row) (request : Ty) : Except RowTypingRefusal EffTy :=
+  match Ty.matchTemplate [] row.request.normalize request.normalize with
+  | none => .error .requestNotSubtype
+  | some bindings =>
+    match Formation.check (Formation.instantiatedSites row bindings) with
+    | some why => .error (.formation why)
+    | none => .ok ⟨(row.answer.instantiate bindings).normalize,
+        (row.error.instantiate bindings).normalize, Requirement.ofList row.requires⟩
+
+/-- The type projection of the row check. A closed, raw formed row reduces to
+subsumption and its own columns (`rowTy_closed`, `Laws/Program/Template.lean`). -/
+def rowTy (row : Row) (request : Ty) : Option EffTy :=
+  (checkRow row request).toOption
+
+/-- The row judgment and diagnostic worker accept the same type. The checker
+inversion and completeness laws consume this projection of `checkRow`. -/
+theorem rowTy_eq_some_iff (row : Row) (request : Ty) (ty : EffTy) :
+    rowTy row request = some ty ↔ checkRow row request = .ok ty := by
+  cases checked : checkRow row request with
+  | error why => simp only [rowTy, checked, Except.toOption, reduceCtorEq]
+  | ok result => simp only [rowTy, checked, Except.toOption, Option.some.injEq, Except.ok.injEq]
 
 /-- `argsTy` on a cons, as nested `Option.bind`s. -/
 theorem argsTy_cons (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Term)

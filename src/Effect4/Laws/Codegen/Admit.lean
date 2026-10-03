@@ -176,7 +176,7 @@ theorem envelopeCheck_iff (name : String) (ty : EffTy) (decls : List TypeScript.
 /-- A completed reading is exactly what the computed boundary returns for its module. -/
 theorem ModuleReading.recheck (r : ModuleReading table name allowed ambient) :
     admitModule name r.module table allowed ambient = .ok r := by
-  obtain ⟨module, program, typing, bound, read, env⟩ := r
+  obtain ⟨module, program, formed, typing, bound, read, env⟩ := r
   unfold admitModule
   split
   · rename_i refused
@@ -190,21 +190,26 @@ theorem ModuleReading.recheck (r : ModuleReading table name allowed ambient) :
     · rename_i program' hread
       have same : program' = program := Except.ok.inj (hread.symm.trans read)
       subst same
+      have hformed := (Formation.checkInput_eq_none_iff program' table).mpr formed
       split
-      · rename_i refused
-        rw [checkTypedProgram_eq_some typing] at refused
+      · rename_i why refused
+        rw [hformed] at refused
         cases refused
-      · rename_i typing' htyping
-        have sameTyping : typing' = typing :=
-          Option.some.inj (htyping.symm.trans (checkTypedProgram_eq_some typing))
-        subst sameTyping
-        split
-        · rename_i why refused
-          rw [env] at refused
+      · split
+        · rename_i refused
+          rw [checkTypedProgram_eq_some typing] at refused
           cases refused
-        · cases bound'
-          cases bound
-          rfl
+        · rename_i typing' htyping
+          have sameTyping : typing' = typing :=
+            Option.some.inj (htyping.symm.trans (checkTypedProgram_eq_some typing))
+          subst sameTyping
+          split
+          · rename_i why refused
+            rw [env] at refused
+            cases refused
+          · cases bound'
+            cases bound
+            rfl
 
 /-- The certificate is indexed by the module it was computed from. -/
 theorem admitModule_module {module : TypeScript.Module}
@@ -212,15 +217,17 @@ theorem admitModule_module {module : TypeScript.Module}
     (h : admitModule name module table allowed ambient = .ok r) : r.module = module := by
   unfold admitModule at h
   split at h
-  · simp at h
+  · cases h
   · split at h
-    · simp at h
+    · cases h
     · split at h
-      · simp at h
+      · cases h
       · split at h
-        · simp at h
         · cases h
-          rfl
+        · split at h
+          · cases h
+          · cases h
+            rfl
 
 /-- O3: typed reading is a projection of the certificate, at the one core checker. -/
 theorem admitModule_typed {module : TypeScript.Module}
@@ -259,17 +266,18 @@ theorem ModuleReading.typing_eq (r : ModuleReading table name allowed ambient)
     (typing : TypedProgram (nativeSignature table) r.program) : r.typing = typing :=
   TypedProgram.unique _ _
 
-/-- Completeness of the boundary against its own four checks. -/
+/-- Completeness of the boundary against its own five checks. -/
 theorem admitModule_complete {module : TypeScript.Module} {program : NativeEff}
     (bound : SourceBindings.Checked allowed (withAmbient ambient module))
     (read : Program.readModule (nativeSignature table) (nativeSpell table) module.decls =
       .ok program)
+    (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
     (env : envelopeCheck name typing.ty module.decls = none) :
     ∃ r, admitModule name module table allowed ambient = .ok r ∧
       r.program = program ∧ r.typing.ty = typing.ty :=
-  ⟨⟨module, program, typing, bound, read, env⟩,
-    ModuleReading.recheck ⟨module, program, typing, bound, read, env⟩, rfl, rfl⟩
+  ⟨⟨module, program, formed, typing, bound, read, env⟩,
+    ModuleReading.recheck ⟨module, program, formed, typing, bound, read, env⟩, rfl, rfl⟩
 
 /-- A module has one reading: the program, the typing and the evidence are functions of it. -/
 theorem ModuleReading.unique (left right : ModuleReading table name allowed ambient)
@@ -296,15 +304,15 @@ theorem ModuleEmission.admit {program : NativeEff} {table : RowTable} {name : St
   obtain ⟨layers, main, body, shape, plain, declaration⟩ := Program.printModule_shape printed
   obtain ⟨hname, _, hexported, htype⟩ := Program.printDecl_fields declaration
   have decls : e.module.decls = layers.map TypeScript.Decl.const ++ [.const main] := by
-    simp [ModuleEmission.module, shape, List.map_append]
+    simp only [ModuleEmission.module, shape, List.map_append, List.map_cons, List.map_nil]
   have env : envelopeCheck name e.typing.ty e.module.decls = none := by
     refine (envelopeCheck_iff _ _ _).mpr ⟨safe, ⟨main, ?_, hname, hexported, htype⟩, ?_⟩
-    · simp [decls, List.getLast?_append, List.getLast?_singleton]
+    · simp only [decls, List.getLast?_append, List.getLast?_singleton, Option.some_or]
     · intro d mem
       rw [decls] at mem
       simp only [List.dropLast_append_cons, List.dropLast_singleton, List.append_nil] at mem
       obtain ⟨c, hc, heq⟩ := List.mem_map.mp mem
       exact ⟨c, heq.symm, (plain c hc).1, (plain c hc).2⟩
-  exact admitModule_complete bound read e.typing env
+  exact admitModule_complete bound read e.formed e.typing env
 
 end Effect4.Codegen

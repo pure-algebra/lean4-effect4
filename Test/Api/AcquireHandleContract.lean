@@ -57,7 +57,7 @@ def parked := (Api.replay acquire 1000 [Api.evaluate] [] table).machine
   | .inl run => run.exit = some (.success (.handle 7 0)) && run.stores.externals.allocated == [resource]
   | .inr _ => false
 #guard match Api.replayChecked acquire 1000 [Api.evaluate, .answerAsync Api.root 0 (answer (.nat 1))] [] table with
-  | .inr (_, _, .answerType _ _ _, m) => m.state.externals.allocated.isEmpty
+  | .inr (.decision _ _ (.answerType _ _ _) m) => m.state.externals.allocated.isEmpty
   | _ => false
 
 end Test.Api.AcquireHandleContract

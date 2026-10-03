@@ -1,3 +1,4 @@
+import Effect4.Program.Formation
 import Effect4.Program.CheckedTyping
 import Effect4.Program.Native
 import Effect4.Codegen.Print
@@ -24,12 +25,15 @@ open Effect4.Program
 inductive EmissionRefusal where
   | illTyped
   | print (why : PrintRefusal)
+  | formation (why : Formation.Refusal)
   deriving DecidableEq, Repr
 
 /-- A module's declarations and the checks that produced them from exactly the
-indexed program, table and name. The only type evidence is `TypedProgram`.
+indexed program, table and name. `formed` records raw formation; `typing` records
+the ordinary core typing judgment.
 There are no runner-only registration conditions at the code generation boundary. -/
 structure ModuleEmission (program : NativeEff) (table : RowTable) (name : String) where
+  formed : Formation.InputFormed program table
   typing : TypedProgram (nativeSignature table) program
   declarations : List TypeScript.ConstDecl
   generated : Program.printEntry table (nativeSignature table) name typing.ty program =
@@ -40,21 +44,34 @@ Empty imports are an explicit limit of this producer, not evidence of source bin
 def ModuleEmission.module (emission : ModuleEmission program table name) : TypeScript.Module :=
   { header := [], imports := [], decls := emission.declarations.map .const }
 
-/-- Emit from a checked input without accepting an independently supplied `EffTy`.
-This worker does not rerun the checker or impose the runner's row restrictions. -/
-def emitTypedModule (name : String) {program : NativeEff} {table : RowTable}
+/-- Print from retained typing and raw formation evidence. Both public producers
+obtain this evidence before calling the declaration printer. -/
+def emitFormedModule (name : String) {program : NativeEff} {table : RowTable}
+    (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program) :
     Except EmissionRefusal (ModuleEmission program table name) :=
   match printed : Program.printEntry table (nativeSignature table) name typing.ty program with
   | .error why => .error (.print why)
-  | .ok declarations => .ok ⟨typing, declarations, printed⟩
+  | .ok declarations => .ok ⟨formed, typing, declarations, printed⟩
 
-/-- Check once, then retain the successful check and the actual printer result.
-Raw expression printing remains available for diagnostics and negative corpora. -/
+/-- A typing certificate does not replace raw formation. Check it before printing. -/
+def emitTypedModule (name : String) {program : NativeEff} {table : RowTable}
+    (typing : TypedProgram (nativeSignature table) program) :
+    Except EmissionRefusal (ModuleEmission program table name) :=
+  match hformed : Formation.checkInput program table with
+  | some why => .error (.formation why)
+  | none => emitFormedModule name
+      ((Formation.checkInput_eq_none_iff program table).mp hformed) typing
+
+/-- Check raw formation before the type checker can normalize the input. -/
 def emitModule (name : String) (program : NativeEff) (table : RowTable := []) :
     Except EmissionRefusal (ModuleEmission program table name) :=
-  match checkTypedProgram (nativeSignature table) program with
-  | none => .error .illTyped
-  | some typing => emitTypedModule name typing
+  match hformed : Formation.checkInput program table with
+  | some why => .error (.formation why)
+  | none =>
+    match checkTypedProgram (nativeSignature table) program with
+    | none => .error .illTyped
+    | some typing => emitFormedModule name
+        ((Formation.checkInput_eq_none_iff program table).mp hformed) typing
 
 end Effect4.Codegen

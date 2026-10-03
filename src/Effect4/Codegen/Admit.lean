@@ -9,8 +9,8 @@ import Effect4.Codegen.SourceBindings
 program and ignores its name, its export flag, its annotation and the module's imports.
 This module is the checked boundary beside it, in the way `emitModule` sits beside
 `printModule`: `admitModule` runs the lexical binding check on the original module, the
-raw reconstruction, the one whole-program checker, and a comparison of the declaration
-envelope with what the printer would have emitted for the checked type, and keeps all four
+raw reconstruction, raw formation, the one whole-program checker, and the declaration
+envelope compared with the printer output for the checked type. It keeps all five
 as a certificate indexed by the exact module it read.
 
 What it does **not** do. There is no widening of a declared type: the comparison is
@@ -41,6 +41,7 @@ inductive SurfaceRefusal where
   | notExported (name : String)
   | declaredType (expected actual : Option TypeScript.TypeRef)
   | layerDeclaration (name : String)
+  | formation (why : Formation.Refusal)
   deriving DecidableEq
 
 /-- Every earlier declaration of a block is a plain exported layer constant: the shape
@@ -101,6 +102,7 @@ structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindi
     (ambient : List TypeScript.Import) where
   module : TypeScript.Module
   program : NativeEff
+  formed : Formation.InputFormed program table
   typing : TypedProgram (nativeSignature table) program
   bound : SourceBindings.Checked allowed (withAmbient ambient module)
   read : Program.readModule (nativeSignature table) (nativeSpell table) module.decls = .ok program
@@ -118,11 +120,15 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
     match hread : Program.readModule (nativeSignature table) (nativeSpell table) module.decls with
     | .error why => .error (.read why)
     | .ok program =>
+      match hformed : Formation.checkInput program table with
+      | some why => .error (.formation why)
+      | none =>
       match checkTypedProgram (nativeSignature table) program with
       | none => .error .illTyped
       | some typing =>
         match henv : envelopeCheck name typing.ty module.decls with
         | some why => .error why
-        | none => .ok ⟨module, program, typing, bound, hread, henv⟩
+        | none => .ok ⟨module, program, (Formation.checkInput_eq_none_iff program table).mp hformed,
+            typing, bound, hread, henv⟩
 
 end Effect4.Codegen

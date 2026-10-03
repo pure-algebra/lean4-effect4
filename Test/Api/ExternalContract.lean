@@ -32,7 +32,8 @@ def refusal (p : NativeEff) (tape : List Api.Decision)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : Option Refusal :=
   match Api.replayChecked p 1000 tape answers table with
   | .inl _ => none
-  | .inr (_, _, why, _) => some why
+  | .inr (.formation _) => none
+  | .inr (.decision _ _ why _) => some why
 
 #guard Api.typeOf (program 0) table = some (.pure .nat)
 #guard Api.roundTrip (program 0) table = .ok (program 0)
@@ -41,7 +42,7 @@ def refusal (p : NativeEff) (tape : List Api.Decision)
 #guard refusal (program 0) [Api.evaluate] [wrong] = some (.oracleType 0 .nat)
 -- E4-HOST-CE-001: the current decision's rejected oracle head is reported even at a fuel frontier.
 #guard match Api.replayChecked (program 0) 2 [Api.evaluate] [wrong] table with
-  | .inr (0, _, .oracleType 0 .nat, _) => true
+  | .inr (.decision 0 _ (.oracleType 0 .nat) _) => true
   | _ => false
 #guard match Api.replayChecked (program 0) 2 [Api.evaluate] [accepted] table with
   | .inl _ => true

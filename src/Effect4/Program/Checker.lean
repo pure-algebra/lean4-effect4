@@ -144,9 +144,10 @@ mutual
       let r ← term? sig env p request
       let row := sig.rowOf op
       if sig.dom op = false then throw ⟨p, .outsideDomain row.name⟩
-      else match rowTy row r with
-        | some t => pure t
-        | none => throw ⟨p, .requestNotSubtype row.name r row.request⟩
+      else match checkRow row r with
+        | .ok t => pure t
+        | .error .requestNotSubtype => throw ⟨p, .requestNotSubtype row.name r row.request⟩
+        | .error (.formation why) => throw ⟨p, .instantiatedFormation row.name why⟩
     | .bind first rest => do
       let f ← check sig env (p ++ [0]) first
       let r ← check sig (env ++ [f.answer]) (p ++ [1]) rest

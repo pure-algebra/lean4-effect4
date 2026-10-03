@@ -37,7 +37,7 @@ theorem exitOf?_eq_some (t : Ty) (x : Ty × Ty) : exitOf? t = some x ↔ t = .ex
   cases x
   cases t <;> simp only [exitOf?, reduceCtorEq, Option.some.injEq, Ty.exitOf.injEq, Prod.mk.injEq]
 
-attribute [aesop norm simp (rule_sets := [Effect4.Checker])] expect_eq_ok listOf?_eq_some exitOf?_eq_some term? check checkStmt
+attribute [aesop norm simp (rule_sets := [Effect4.Checker])] rowTy_eq_some_iff expect_eq_ok listOf?_eq_some exitOf?_eq_some term? check checkStmt
   checkStmts checkEffs checkAction checkLayer checkLayers StmtTy.fold GenTy.mergeT GenTy.seqT
   GenTy.joinAnswerT EffTy.joinAnswer_eq GenTy.merge_eq GenTy.seq_eq
 

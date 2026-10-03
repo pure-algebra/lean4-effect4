@@ -4,6 +4,7 @@ import Effect4.Program.Native
 import Effect4.Program.Typed
 import Effect4.Program.Fragment
 import Effect4.Program.Fold
+import Effect4.Program.Formation
 
 /-!
 # Program.Admission — static verification and admission certificates
@@ -18,7 +19,10 @@ A program is admitted to run when:
    columns, are inhabited or `never` (`admitColumn`, rows 127 and 149; refused as
    `emptyColumn at`).
 
-All six requirements are verified by `admitProgram`, producing a certified `AdmittedProgram`
+7. Every raw type has distinct record names and valid map keys. Open map keys in row templates
+   are checked after actual substitution (rows 192 and 193).
+
+All seven requirements are verified by `admitProgram`, producing a certified `AdmittedProgram`
 whose fields witness each check. If admission fails, an exact `AdmitRefusal` reports the failure.
 Admission depends strictly on the program plane and never imports codegen.
 
@@ -350,13 +354,16 @@ inductive AdmitRefusal
   /-- A request, answer or error column of the table, or the program's answer or error
   column, is empty and is not `never` (rows 127, 149). -/
   | emptyColumn («at» : Path)
+  /-- A raw type fails the shared formation judgment (rows 192 and 193). -/
+  | formation (why : Formation.Refusal)
 deriving DecidableEq, Repr
 
 /-- A program admitted to run against a table: its type, the execution checks, and
-the successful integer, internal-handle and column scans. The fields are proofs, so an `AdmittedProgram` cannot be forged by
-building the structure with the wrong table — the table and the program are its indices. -/
+raw formation and the integer, internal-handle and column scans. Its proof fields
+refer to the exact program and table that index the certificate. -/
 structure AdmittedProgram (program : NativeEff) (table : RowTable)
     extends TypedProgram (nativeSignature table) program where
+  formed : Formation.InputFormed program table
   lawful : Table.lawful table = true
   runnable : checkTable table = none
   intFreeTable : findIntInTable table = none
@@ -367,7 +374,7 @@ structure AdmittedProgram (program : NativeEff) (table : RowTable)
   columnsType : findEmptyColumnInEffTy ty = none
 
 /-- Decide admission by scanning raw table types, taking the one typing certificate
-(`checkTypedProgram`, shared with code generation), scanning its columns, then checking
+(`checkTypedProgram`, shared with code generation) after raw formation, scanning its columns, then checking
 names and registrations, and last the column check (rows 127, 149). Each certificate field
 records the exact check that admitted it. -/
 def admitProgram (program : NativeEff) (table : RowTable := []) :
@@ -380,6 +387,9 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
     | none =>
     match hprogram : findIntInProgram program with
     | some pos => .error (.uninhabited pos)
+    | none =>
+    match hformed : Formation.checkInput program table with
+    | some why => .error (.formation why)
     | none =>
     match checkTypedProgram (nativeSignature table) program with
     | none => .error .illTyped
@@ -400,7 +410,8 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
             | none =>
               match hcolType : findEmptyColumnInEffTy typing.ty with
               | some pos => .error (.emptyColumn pos)
-              | none => .ok ⟨typing, (Table.checkLawful_eq_none_iff table).mp hlawful, hrunnable,
+              | none => .ok ⟨typing, (Formation.checkInput_eq_none_iff program table).mp hformed,
+                  (Table.checkLawful_eq_none_iff table).mp hlawful, hrunnable,
                   htable, hinternal, hprogram, htype, hcolumns, hcolType⟩
 
 /-- Failure of ordinary admission, or a program outside the proved straight fragment.
@@ -504,10 +515,11 @@ theorem admitProgram_program_int (program : NativeEff) (table : RowTable) (pos :
         rw [h] at hnone
         contradiction
 
-/-- An inferred integer occurrence is refused after the table and tree scans succeed. -/
+/-- An inferred integer occurrence is refused after the raw scans and formation succeed. -/
 theorem admitProgram_type_int (program : NativeEff) (table : RowTable) (ty : EffTy) (pos : Path)
     (hTable : findIntInTable table = none) (hInternal : findInternalHandleInTable table = none)
     (hProgram : findIntInProgram program = none)
+    (hFormed : Formation.checkInput program table = none)
     (hTy : typeOfProgram (nativeSignature table) program = some ty)
     (hInt : findIntInEffTy ty = some pos) :
     admitProgram program table = .error (.uninhabited pos) := by
@@ -524,25 +536,28 @@ theorem admitProgram_type_int (program : NativeEff) (table : RowTable) (ty : Eff
       · rename_i found hfound
         rw [hProgram] at hfound
         contradiction
-      · have hChecked : checkTypedProgram (nativeSignature table) program = some ⟨ty, hTy⟩ := by
-          unfold checkTypedProgram
+      · split
+        · rename_i why refused
+          rw [hFormed] at refused
+          contradiction
+        · have hChecked : checkTypedProgram (nativeSignature table) program = some ⟨ty, hTy⟩ := by
+            unfold checkTypedProgram
+            split
+            · rename_i hnone
+              rw [hTy] at hnone
+              contradiction
+            · rename_i inferred hinferred
+              have same : inferred = ty := Option.some.inj (hinferred.symm.trans hTy)
+              cases same
+              rfl
+          rw [hChecked]
+          dsimp only
           split
-          · rename_i hnone
-            rw [hTy] at hnone
-            contradiction
-          · rename_i inferred hinferred
-            have same : inferred = ty := Option.some.inj (hinferred.symm.trans hTy)
+          · rename_i found hfound
+            have same : found = pos := Option.some.inj (hfound.symm.trans hInt)
             cases same
             rfl
-        rw [hChecked]
-        dsimp only
-        split
-        · rename_i found hfound
-          have same : found = pos := Option.some.inj (hfound.symm.trans hInt)
-          cases same
-          rfl
-        · rename_i hnone
-          rw [hInt] at hnone
-          contradiction
-
+          · rename_i hnone
+            rw [hInt] at hnone
+            contradiction
 end Effect4.Program

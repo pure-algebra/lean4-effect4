@@ -152,6 +152,7 @@ theorem lawful_rowNamesSafe {table : RowTable} (lawful : LawfulTable table = tru
 /-- **Every checked program whose pieces are readable emits**, at a safe export name and a
 representable declaration type. -/
 theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : String}
+    (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
     (safe : exportNameSafe name = true) (lawful : LawfulTable table = true)
     (readable : moduleReadable (nativeSignature table) program = true)
@@ -161,7 +162,7 @@ theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : Str
   have generated : printEntry table (nativeSignature table) name typing.ty program = .ok decls := by
     simp only [printEntry, safe, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
       lawful_rowNamesSafe lawful, printed]
-  exact ⟨⟨typing, decls, generated⟩, ModuleEmission.recheck _⟩
+  exact ⟨⟨formed, typing, decls, generated⟩, ModuleEmission.recheck _⟩
 
 end Effect4.Codegen
 

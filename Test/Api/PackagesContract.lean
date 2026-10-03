@@ -70,7 +70,7 @@ def sqliteAnswers : List (Completion Val Err Defect FiberId Ann) :=
 #guard (Api.run pSqlite 1000 sqliteAnswers sqliteBun).stores.externals.allocated = [NativeOp.sqlTarget]
 -- a wrong-shaped row set is refused at the answer type: a cell that is not a pair
 #guard match Api.replayChecked pSqlite 1000 [Api.evaluate] [answer (.nat 0), answer (.list [.list [.str "a"]])] sqliteBun with
-  | .inr (_, _, .oracleType _ _, _) => true
+  | .inr (.decision _ _ (.oracleType _ _) _) => true
   | _ => false
 
 -- The printed image: the method row on the handle binder, the parameters through `strings`.
@@ -157,10 +157,10 @@ def pSqlCatch : Api.Program :=
 -- a failed answer is refused where the row's error channel is empty (the open row): at the
 -- oracle's position on the registration path, at the token on the delayed path
 #guard match Api.replayChecked (sqlClient sqlMissing) 1000 [Api.evaluate] [failed] sqliteBun with
-  | .inr (0, _, .oracleType 0 .never, _) => true
+  | .inr (.decision 0 _ (.oracleType 0 .never) _) => true
   | _ => false
 #guard match Api.replayChecked (sqlClient sqlMissing) 1000 [Api.evaluate, .answerAsync Api.root 0 failed] [] sqliteBun with
-  | .inr (1, _, .errorType _ 0 .never, _) => true
+  | .inr (.decision 1 _ (.errorType _ 0 .never) _) => true
   | _ => false
 
 /-- DI-31: the actual package pair survives layer orDie, after its client is released. -/

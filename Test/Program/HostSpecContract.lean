@@ -262,7 +262,7 @@ end Envelope
 section Frontier
 
 /-- The same program, the ordinary tape, and **no** recorded answer supplied to the oracle. -/
-def exhausted : Api.Inspection ⊕ (Nat × Api.Decision × Refusal × Api.Machine) :=
+def exhausted : Api.Inspection ⊕ Api.ReplayCheckRefusal :=
   Api.replayChecked program 40 [Api.evaluate, Api.flush] [] table
 
 -- the tape ran out with the call outstanding: a live frontier, and no refusal
@@ -281,7 +281,7 @@ def exhausted : Api.Inspection ⊕ (Nat × Api.Decision × Refusal × Api.Machin
   | .inr _ => false
 
 /-- The same run with the reply fed in as a decision: the frontier is not a dead end. -/
-def completed : Api.Inspection ⊕ (Nat × Api.Decision × Refusal × Api.Machine) :=
+def completed : Api.Inspection ⊕ Api.ReplayCheckRefusal :=
   Api.replayChecked program 40
     [Api.evaluate, .answerAsync Api.root 0 reply, Api.flush] [] table
 
@@ -294,14 +294,15 @@ def completed : Api.Inspection ⊕ (Nat × Api.Decision × Refusal × Api.Machin
 
 /-- A malformed reply in the tape is a refusal, and it names its position. This is the other
 side of the rule: a valid prefix parks, a malformed envelope refuses. -/
-def refused : Api.Inspection ⊕ (Nat × Api.Decision × Refusal × Api.Machine) :=
+def refused : Api.Inspection ⊕ Api.ReplayCheckRefusal :=
   Api.replayChecked program 40
     [Api.evaluate, .answerAsync Api.root 0 (.ofExit (.success (.str "9"))), Api.flush]
      [] table
 
 #guard match refused with
   | .inl _ => false
-  | .inr (position, _, why, _) => position == 1 && why == Refusal.answerType Api.root 0 .nat
+  | .inr (.formation _) => false
+  | .inr (.decision position _ why _) => position == 1 && why == Refusal.answerType Api.root 0 .nat
 
 end Frontier
 

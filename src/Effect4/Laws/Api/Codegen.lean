@@ -37,8 +37,9 @@ theorem checkTyping_type (program : Program) (table : RowTable) :
     (checkTyping program table).map TypedProgram.ty = typeOf program table :=
   checkTypedProgram_type _ _
 
-/-- Evidence retention does not alter any prior module output or refusal. -/
-theorem printModule_erasure (name : String) (program : Program) (table : RowTable) :
+/-- On raw formed input, evidence retention keeps the existing module output. -/
+theorem printModule_erasure (name : String) (program : Program) (table : RowTable)
+    (formed : Formation.InputFormed program table) :
     printModule name program table =
       match typeOf program table with
       | some ty =>
@@ -46,22 +47,24 @@ theorem printModule_erasure (name : String) (program : Program) (table : RowTabl
         | .ok decls => some { header := [], imports := [], decls := decls.map .const }
         | .error _ => none
       | none => none :=
-  Effect4.Codegen.emitModule_erasure name program table
+  Effect4.Codegen.emitModule_erasure name program table formed
 
-/-- Evidence retention also leaves the declaration interface unchanged. -/
-theorem printDecl_erasure (name : String) (program : Program) (table : RowTable) :
+/-- On raw formed input, evidence retention leaves the declaration result unchanged. -/
+theorem printDecl_erasure (name : String) (program : Program) (table : RowTable)
+    (formed : Formation.InputFormed program table) :
     printDecl name program table =
       match typeOf program table, print program table with
       | some ty, .ok body => (Effect4.Program.printDecl name ty body).toOption
       | _, _ => none := by
+  have hformed := (Formation.checkInput_eq_none_iff program table).mpr formed
   cases checked : checkTypedProgram (nativeSignature table) program with
   | none =>
     have typed := checkTypedProgram_refusal_iff.mp checked
     cases body : print program table <;>
-      simp [printDecl, checkTyping, checked, typeOf, typed, body]
+      simp only [printDecl, hformed, checkTyping, checked, typeOf, typed, body]
   | some typing =>
     cases body : print program table <;>
-      simp [printDecl, checkTyping, checked, typeOf, typing.typed, body]
+      simp only [printDecl, hformed, checkTyping, checked, typeOf, typing.typed, body]
 
 /-- O3 through the application face: an admitted module's program carries the type the
 certificate records, by the one whole-program checker the rest of the tree uses. -/

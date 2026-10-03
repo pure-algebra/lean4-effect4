@@ -65,6 +65,8 @@ inductive TypeReason
   | returnNotLast
   | breakOutsideLoop
   | literalOutsideAlphabet (value : Lit)
+  /-- The request matched, but an actual substituted row column fails formation. -/
+  | instantiatedFormation (row : String) (why : FormationRefusal)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -94,6 +96,7 @@ def TypeReason.head : TypeReason → String
   | .returnNotLast => "returnNotLast"
   | .breakOutsideLoop => "breakOutsideLoop"
   | .literalOutsideAlphabet _ => "literalOutsideAlphabet"
+  | .instantiatedFormation _ _ => "instantiatedFormation"
 
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where

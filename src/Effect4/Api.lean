@@ -175,12 +175,15 @@ def bytesOf (program : Program) : Store.Bytes := Wire.encodeProgram program
 well-formed program and nothing else. Type it with `wellTyped` before running it. -/
 def ofBytes (bytes : Store.Bytes) : Option Program := Wire.decodeProgram bytes
 
-/-- The program as an exported constant with its `Effect.Effect<A, E>` type; `none` when it
-is ill-typed or the printer refuses it. -/
+/-- The program as an exported constant with its `Effect.Effect<A, E>` type. Raw
+formation, typing and printing must all succeed; otherwise the result is `none`. -/
 def printDecl (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.ConstDecl :=
-  match checkTyping program table, print program table with
-  | some typing, Except.ok body => (Program.printDecl name typing.ty body).toOption
-  | _, _ => none
+  match Program.Formation.checkInput program table with
+  | some _ => none
+  | none =>
+    match checkTyping program table, print program table with
+    | some typing, Except.ok body => (Program.printDecl name typing.ty body).toOption
+    | _, _ => none
 
 /-- The program as a declaration block: one `const L_<path> = …` per referenced layer target
 (the host rows slice, `Program.printModule`), then the exported main constant; `none` when it
@@ -346,18 +349,25 @@ def requestOf (m : Machine) (fiber : FiberId) (token : Nat) : Option (NativeOp �
 
 abbrev Refusal := Program.Refusal
 
-/-- Replay with admission. A refusal contains the decision position and the
-machine at the refusal; it is separate from the program's exit. -/
-def replayChecked (program : Program) (fuel : Nat) (tape : List Decision)
+/-- Static malformed input has no decision position. A dynamic refusal retains
+its actual decision and the machine at that point. Neither is a program exit. -/
+inductive ReplayCheckRefusal where
+  | formation (why : Program.Formation.Refusal)
+  | decision (position : Nat) (input : Decision) (why : Refusal) (machine : Machine)
 
+/-- Check raw formation, then replay with the existing decision admission checks. -/
+def replayChecked (program : Program) (fuel : Nat) (tape : List Decision)
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
-    (table : RowTable := []) : Inspection ⊕ (Nat × Decision × Refusal × Machine) :=
-  match Program.replayCheckedFrom program fuel answers table 0 tape
-      (load program fuel answers) with
-  | .inr refusal => .inr refusal
-  | .inl (.finished m) => .inl ⟨.finished, m, []⟩
-  | .inl (.frontier why m) => .inl ⟨.frontier, m, frontierReasons why m⟩
-  | .inl (.stuck why m) => .inl ⟨.stuck why, m, []⟩
+    (table : RowTable := []) : Inspection ⊕ ReplayCheckRefusal :=
+  match Program.Formation.checkInput program table with
+  | some why => .inr (.formation why)
+  | none =>
+    match Program.replayCheckedFrom program fuel answers table 0 tape
+        (load program fuel answers) with
+    | .inr (position, input, why, machine) => .inr (.decision position input why machine)
+    | .inl (.finished m) => .inl ⟨.finished, m, []⟩
+    | .inl (.frontier why m) => .inl ⟨.frontier, m, frontierReasons why m⟩
+    | .inl (.stuck why m) => .inl ⟨.stuck why, m, []⟩
 
 /-- The external frontiers after each decision, with their row and request. -/
 def replaySteps (program : Program) (fuel : Nat) (tape : List Decision)

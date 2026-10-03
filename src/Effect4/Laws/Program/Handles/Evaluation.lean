@@ -351,16 +351,21 @@ theorem checked_replay_minted (program : Api.Program) (fuel : Nat) (tape : List 
     (h : Api.replayChecked program fuel tape answers table = .inl run) :
     Minted run.machine := by
   letI := evaluatorFor program table
-  cases hc : replayCheckedFrom program fuel answers table 0 tape
-      (Api.load program fuel answers) with
-  | inr refusal => simp only [Api.replayChecked, hc, reduceCtorEq] at h
-  | inl result =>
-    have hv := replayCheckedFrom_answersValid program fuel answers table 0 tape _ result hc
-    have he := replayCheckedFrom_eq_replay program fuel answers table 0 tape _ result hc
-    have hm := (replayEval_minted_of_evaluator EffName.keys EffThunk.keys
-      (interpOf_keyBounded program table) (evaluatorFor_minted program table) fuel tape _ hv
-      (load_minted program fuel answers)).2
-    rw [← he] at hm
-    cases result <;> simp only [Api.replayChecked, hc, Sum.inl.injEq] at h <;> cases h <;> exact hm
+  unfold Api.replayChecked at h
+  split at h
+  · cases h
+  · cases hc : replayCheckedFrom program fuel answers table 0 tape
+        (Api.load program fuel answers) with
+    | inr refusal =>
+      obtain ⟨position, input, why, machine⟩ := refusal
+      simp only [hc, reduceCtorEq] at h
+    | inl result =>
+      have hv := replayCheckedFrom_answersValid program fuel answers table 0 tape _ result hc
+      have he := replayCheckedFrom_eq_replay program fuel answers table 0 tape _ result hc
+      have hm := (replayEval_minted_of_evaluator EffName.keys EffThunk.keys
+        (interpOf_keyBounded program table) (evaluatorFor_minted program table) fuel tape _ hv
+        (load_minted program fuel answers)).2
+      rw [← he] at hm
+      cases result <;> simp only [hc, Sum.inl.injEq] at h <;> cases h <;> exact hm
 
 end Effect4.Program

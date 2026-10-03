@@ -1410,9 +1410,12 @@ theorem WidensSub.trans {σ₁ σ₂ σ₃ : Subst} (h₁ : WidensSub σ₁ σ�
   obtain ⟨u₃, hj₃, hs₃⟩ := h₂ j u₂ hj₂
   exact ⟨u₃, hj₃, sub_trans _ _ _ hs₂ hs₃⟩
 
-/-- Inference only widens, in the raw order: a new binding was unbound, a joined one moves up. -/
+/-- Inference only widens, in the raw order. The mutual induction covers named
+fields and positional type arguments; `infer_widens` consumes this same proof. -/
 theorem infer_widensSub (σ : Subst) (t r : Ty) (join : Bool) : WidensSub σ (infer σ t r join) := by
-  fun_induction infer σ t r join
+  induction σ, t, r using infer.induct_unfolding join
+      (motive_2 := fun σ _ _ result => WidensSub σ result)
+      (motive_3 := fun σ _ _ result => WidensSub σ result)
   case case1 σ i r hnone =>
     intro j u hj
     refine ⟨u, ?_, sub_refl u⟩
@@ -1422,8 +1425,8 @@ theorem infer_widensSub (σ : Subst) (t r : Ty) (join : Bool) : WidensSub σ (in
     rw [List.lookup_cons]
     cases hji : j == i with
     | true =>
-      have : j = i := beq_iff_eq.mp hji
-      subst this
+      have same : j = i := beq_iff_eq.mp hji
+      subst same
       rw [hbound] at hj
       cases hj
       exact ⟨r, rfl, (Bool.and_eq_true_iff.mp hjoin).2⟩
@@ -1439,7 +1442,17 @@ theorem infer_widensSub (σ : Subst) (t r : Ty) (join : Bool) : WidensSub σ (in
   case case11 ih₁ ih₂ => exact ih₁.trans ih₂
   case case12 ih₁ ih₂ => exact ih₁.trans ih₂
   case case13 ih₁ ih₂ => exact ih₁.trans ih₂
-  case case14 => exact WidensSub.refl _
+  case case14 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case15 ih => exact ih
+  case case16 ih => exact ih
+  case case17 ih => exact ih
+  case case18 => exact WidensSub.refl _
+  case case19 => exact WidensSub.refl _
+  case case20 => exact WidensSub.refl _
+  case case21 ih => exact ih
+  case case22 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case23 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case24 => exact WidensSub.refl _
 
 /-- A match widens its seed in the raw order. -/
 theorem matchTemplate_widensSub {join : Bool} {σ σ' : Subst} {t r : Ty}

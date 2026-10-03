@@ -844,6 +844,7 @@ theorem instantiateItems_eq_map (σ : Subst) (ts : List Ty) :
   | nil => rfl
   | cons t ts ih => rw [instantiateItems, ih, List.map_cons]
 
+mutual
 /-- The bindings a request fixes for a template, read structurally from the seed: a
 parameter binds at its first occurrence, to the request's type at that position; shapes that
 do not correspond bind nothing and are left to the check.
@@ -872,7 +873,30 @@ def infer (σ : Subst) (template request : Ty) (join : Bool := false) : Subst :=
   | .fiberOf a b, .fiberOf c d => infer (infer σ a c join) b d join
   | .deferredOf a b, .deferredOf c d => infer (infer σ a c join) b d join
   | .union a b, .union c d => infer (infer σ a c join) b d join
+  | .map a b, .map c d => infer (infer σ a c join) b d join
+  | .record fs, .record gs => inferFields σ fs gs join
+  | .tuple ts, .tuple rs => inferItems σ ts rs join
+  | .app name ts, .app other rs =>
+    if name = other then inferItems σ ts rs join else σ
   | _, _ => σ
+
+/-- Infer record parameters by field name. The match guard checks flags and shape. -/
+def inferFields (σ : Subst) (templates requests : List (String × Bool × Ty))
+    (join : Bool) : Subst :=
+  match templates with
+  | [] => σ
+  | (name, _, ty) :: rest =>
+    match requests.lookup name with
+    | none => inferFields σ rest requests join
+    | some (_, request) => inferFields (infer σ ty request join) rest requests join
+
+/-- Infer tuple and nominal arguments by position. The match guard checks arity. -/
+def inferItems (σ : Subst) (templates requests : List Ty) (join : Bool) : Subst :=
+  match templates, requests with
+  | ty :: rest, request :: remaining =>
+    inferItems (infer σ ty request join) rest remaining join
+  | _, _ => σ
+end
 
 /-- The match of a request against a template from a seed: the bindings inference reads,
 kept exactly when the request is a subtype of the template instantiated at them. The guard is
