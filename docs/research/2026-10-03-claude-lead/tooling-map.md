@@ -1,6 +1,6 @@
 # Tooling for the next wave: a measured map
 
-Base: `394bc602`, revised at `eb00182d`. Author: Claude, lead. Status: a proposal for the owner,
+Base: `394bc602`, last revised 2026-10-03. Author: Claude, lead. Status: a proposal for the owner,
 updated in place as its items land. It lands no planned work. The commands behind the numbers are
 at the end.
 
@@ -42,6 +42,8 @@ authoring, host-session typing and an LCNF lowering checked against named observ
 | the semantics report | 27 s | 7 s | `e8222420`, `bca33ff6` |
 | the semantics controls | 57 s | 5 s | `e8222420`, `bca33ff6` |
 | a fresh worktree's first build | 318 s, 807 jobs built | about 1 s, 815 jobs restored | 1.3 below |
+| `Laws/Program/TyView` (generated), on a quiet machine | 48 s | 14 s | 1.11 below |
+| `Test.Store.DerivedCheck`, the projection guard | 33 s, guard interpreted | 9.4 s, guard native | 1.12 below |
 
 Four more facts bound the next steps:
 
@@ -150,16 +152,50 @@ Four more facts bound the next steps:
     check that the gate still reaches every proof.
   - It touches every file header, so it needs a research note, a pilot on one leaf chain, and a
     ruling.
-- **1.11 The slowest modules, profiled on a moderately loaded machine.** Per-module rewrites save
-  little against the 4226 s total, so these are recorded, not changed:
-  - `Store/Domain/Derived/Program` (generated) took 70 s. Lean spent 15.4 s proving the
-    equation lemmas of the `rawEff` decoder and 13.1 s those of `rawTy`. A shared match splitter
-    of the `NativeOp` decoder took 4.6 s. The generator's proof strategy is the lever, and it
-    belongs with the staged-generation research.
-  - `Laws/Machine/Scheduling` took 42 s, and `driveStep_queue` took 12 s of it. That proof tries
-    `first | …` fallbacks in every branch, a form `AGENTS.md` bans in new or touched proofs.
-  - `Laws/Program/Guard/RaceSites` and `Guard/FrameOwned` took 24 s each, against 94 s and 78 s in
-    the loaded build. Most of their time is simp.
+
+  **Owner, 2026-10-03: no pilot for now** ("these savings are adequate for now"). The analysis
+  stays here as the record.
+- **1.11 The slowest modules, profiled on a quiet machine.** The 40 slowest modules of the loaded
+  build took 860 s here, against 1540 s there (`-Dprofiler=true`, one module at a time). Simp leads
+  Lean's profile categories, then aesop. Most of these modules already write `simp only`, so a
+  general rewrite of simp calls saves little. The time sits in about twenty proofs. Each splits into
+  many cases and runs aesop or a `first | …` fallback in every case. Their elaboration tasks, from
+  `-Dtrace.profiler=true` (tasks run in parallel and can wait on each other, so the times overlap):
+
+  | Proof | Module | Task s | Shape |
+  | --- | --- | ---: | --- |
+  | the four `sameHead` laws (generated) | `Laws/Program/TyView` | 97 together | 784 cases each, aesop in each: fixed |
+  | `readLeaf_print` | `Laws/Codegen/ReadPrint` | 39 | `cases v`, then aesop per case |
+  | `raceSites_contAOf` | `Laws/Program/Guard/RaceSites` | 34 | `try first \| …` in every case |
+  | `match_apart` | `Laws/Codegen/ReadPrint` | 31 | a split, then aesop per branch |
+  | `readCapture_print` | `Laws/Codegen/ReadPrint` | 29 | |
+  | `interpOf_keyBounded` | `Laws/Program/Handles/Hooks` | 23 | |
+  | `evaluatePrim_pending` | `Laws/Program/Guard/ReturnFields` | 22 | |
+  | `readLeaf_exact` | `Laws/Codegen/Read` | 16 | aesop near the heartbeat limit: it timed out when traced |
+  | `driveStep_grows` | `Laws/Machine/Approximation` | 9 | the hop macros' `first \| …` chains (4.4) |
+
+  - The four `sameHead` laws took one template change in `tools/Effect4Gen/View.lean`.
+    `fun_cases` on `sameHead` splits by its arms, and `simp only` closes each case whose heads
+    differ before aesop runs. The four now take about 4 s, and `TyView` builds in 14 s. Axioms:
+    `propext` and `Quot.sound`.
+  - The other proofs are rewrites, one at a time. They are recorded here, not done.
+  - `Store/Domain/Derived/Schema` (generated) spends 13 s proving the unfolding equation of the
+    `rawRepresentation` decoder and 9 s on its match splitter. `Derived/Program` has the same cost
+    for `rawEff` and `rawTy`. The decoder's shape is the lever, with the staged-generation research.
+  - Lean builds an equation lemma or a match splitter in the module that first needs it, and a
+    splitter built outside its definition's module is private to the module that built it. Among
+    the traced modules, `Node.child`'s splitter was built twice (13 s), `contAOf`'s three times
+    (10 s), and `compileEff.eq_def` twice (7 s).
+  - `Test.Program.AgreementContract` and `Test.Store.NodeContract` spend 20 s and 11 s
+    interpreting Effect4 code in `#guard`s. Precompiling the core would compile every module to C.
+- **1.12 The projection guard, compiled: landed.** `Test.Store.DerivedCheck` runs the guard over
+  the four generated files in an `#eval`. Interpreted, the guard took 30 s of the module's 33 s.
+  The library `Effect4GenNative` precompiles `Effect4Gen.Check` and `Tools.WireTags`, which import
+  only Lean, the way `ProofGraphNative` does (1.4). The module builds in 9.4 s.
+
+  Finding: `lake build Effect4Gen` fails, with or without this change. The library's glob takes
+  the twenty guard files under `tools/Effect4Gen/guards/`. They are appended to generated files and
+  do not elaborate alone.
 
 ### Lane 2 — obligations and progress visible from the tree
 
@@ -211,11 +247,12 @@ None of these has landed. Each serves the planned work directly.
 
 ## 4. Order
 
-1. **Landed today:** 1.1's speed, 1.2's rule, 1.3–1.6, 3.1, 3.2, 3.6, and the three repaired
-   checks. 1.7 closed with no change, and 1.9 was measured and dropped.
-2. **Next:** the staged-generation decision with Codex and the owner, then its pilot. Then the
-   module system decision (1.10) and its pilot, and one measured build at 4 jobs on a quiet
-   machine (1.2).
+1. **Landed today:** 1.1's speed, 1.2's rule, 1.3–1.6, 1.12, 3.1, 3.2, 3.6, the `TyView` template
+   of 1.11, and the three repaired checks. 1.7 closed with no change, and 1.9 was measured and
+   dropped. The module system (1.10) waits: the owner declined a pilot for now.
+2. **Next:** the staged-generation decision with Codex and the owner, then its pilot. One measured
+   build at 4 jobs on a quiet machine (1.2). The proofs of 1.11, each when its module is next
+   touched.
 3. **The visibility core:** 2.1–2.5, entering the plan's order and the vertical example as data.
 4. **Documents:** the 194 citations 3.2 left, then 3.3–3.5 and 3.7.
 5. **With the planned work:** 2.7 before the first brief, 2.8 with the vertical example, 2.9 with
@@ -230,7 +267,8 @@ None of these has landed. Each serves the planned work directly.
 5. What `generated/semantics.md` keeps (3.7).
 6. Whether the language checker joins `make check` once the documents meet it.
 7. An incremental axiom gate (1.8).
-8. Lean's module system across the tree and the three packages it needs first (1.10).
+8. Lean's module system across the tree and the three packages it needs first (1.10): ruled
+   2026-10-03, no pilot for now.
 
 ## Commands
 
