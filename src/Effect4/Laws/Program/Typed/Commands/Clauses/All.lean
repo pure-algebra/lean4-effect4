@@ -9,17 +9,22 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Async
 import Effect4.Laws.Program.Typed.Commands.Clauses.StoreRef
 import Effect4.Laws.Program.Typed.Commands.Clauses.StoreScope
 import Effect4.Laws.Program.Typed.Commands.Clauses.StoreDeferred
+import Effect4.Laws.Program.Typed.Commands.Clauses.Gen
+import Effect4.Laws.Program.Typed.Edits
 
 /-!
 # Laws.Program.Typed.Commands.Clauses.All — the evaluator's clauses, assembled
 
 Concept 4 (`step-deliver-preserves`, `step-loop-preserves`): every fiber clause and every store
 clause by name, so `M6Ledger.step_deliver` and `step_loop` follow from `deliver_preserves_of_clauses`
-and `loop_preserves_of_clauses` (`Commands/Evaluate.lean`) with the walk (`walkKeeps`). Every store
-clause is proved (`storeClauses`), and every fiber clause but the generator's, whose producer
-obligation `GenProtocol` is this file's one premise (the ledger goal `M6Clauses.gen_protocol`).
+and `loop_preserves_of_clauses` (`Commands/Evaluate.lean`) with the walk (`walkKeeps`). Every clause is
+proved (`storeClauses`, `fiberClauses`, the generator's protocol `genProtocol`), so
+`step_deliver` and `step_loop` hold, and with the other sixteen command facts and the six decision
+edits, `decision_preserves` and `typedState_reachable` (`decisionKeeps_of_ledger`,
+`reachable_of_ledger`): the M6 ledger is closed here.
 
-Not established: `GenProtocol`; `decision_preserves`, `typedState_reachable`.
+Not established: progress (`J` is an invariant, not a liveness result); the M7 transfer to the
+frame machine; host answers (M6's tapes carry none, `NoHostAnswer`).
 -/
 
 set_option autoImplicit false
@@ -28,9 +33,10 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
 
 /-! ## The open clauses, as ledger goals
 
-`M6Ledger.step_deliver` and `step_loop` follow from the clauses (`deliver_preserves_of_open`,
-`loop_preserves_of_open` below). The two clauses not yet proved are declared here as the ledger's
-goals, so the proof graph names what `step_deliver` and `step_loop` still wait on. -/
+`M6Ledger.step_deliver` and `step_loop` follow from the clauses (`deliver_preserves`,
+`loop_preserves` below). The two clauses proved last are the ledger's goals here, so the proof graph
+names them: the parallel close (`Clauses/Close.lean`) and the generator's protocol
+(`Clauses/Gen.lean`). -/
 
 namespace M6Clauses
 
@@ -49,8 +55,8 @@ theorem gen_protocol (root : ProgramSource) : ProofGraph.Obligation (GenProtocol
 
 end M6Clauses
 
-/-- **Every fiber clause**, from the proved ones and the generator's protocol. -/
-theorem fiberClauses_of (root : ProgramSource) (rootTy : EffTy) (gen : GenProtocol root) :
+/-- **Every fiber clause.** -/
+theorem fiberClauses (root : ProgramSource) (rootTy : EffTy) :
     ∀ op, FiberClauseKeeps root rootTy op := by
   intro op
   cases op with
@@ -94,7 +100,7 @@ theorem fiberClauses_of (root : ProgramSource) (rootTy : EffTy) (gen : GenProtoc
   | finishFinalizer ex => exact clause_finishFinalizer root rootTy ex
   | suspend p => exact clause_suspend root rootTy p
   | sync v => exact clause_sync root rootTy v
-  | gen p => exact clause_gen_of root rootTy gen p
+  | gen p => exact clause_gen_of root rootTy (genProtocol root) p
   | loop p cursor => exact clause_loop root rootTy p cursor
   | construction => exact clause_construction root rootTy
 
@@ -135,24 +141,70 @@ theorem storeClauses (root : ProgramSource) (rootTy : EffTy) :
   | memoComplete l m e => exact clause_memoComplete root rootTy l m e
   | memoRelease l m => exact clause_memoRelease root rootTy l m
 
-/-- **`deliver` keeps `I`**, from the open clauses. -/
-theorem deliver_preserves_of_open (root : ProgramSource) (rootTy : EffTy)
-    (gen : GenProtocol root)
-    (id : FiberId) (y : Bool) : StepPreserves root rootTy (.deliver id y) :=
-  deliver_preserves_of_clauses root rootTy (fiberClauses_of root rootTy gen)
+/-- **`deliver` keeps `I`** (`M6Ledger.step_deliver`): every clause, the walk. -/
+theorem deliver_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (y : Bool) :
+    StepPreserves root rootTy (.deliver id y) :=
+  deliver_preserves_of_clauses root rootTy (fiberClauses root rootTy) (storeClauses root rootTy)
+    (walkKeeps root rootTy) id y
+
+/-- **`loop` keeps `I`** (`M6Ledger.step_loop`): every clause, the walk. -/
+theorem loop_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (y : Bool) :
+    StepPreserves root rootTy (.loop id y) :=
+  LoopPrefix.loop_preserves_of_clauses root rootTy (fiberClauses root rootTy)
     (storeClauses root rootTy) (walkKeeps root rootTy) id y
 
-/-- **`loop` keeps `I`**, from the open clauses. -/
-theorem loop_preserves_of_open (root : ProgramSource) (rootTy : EffTy)
-    (gen : GenProtocol root)
-    (id : FiberId) (y : Bool) : StepPreserves root rootTy (.loop id y) :=
-  LoopPrefix.loop_preserves_of_clauses root rootTy (fiberClauses_of root rootTy gen)
-    (storeClauses root rootTy) (walkKeeps root rootTy) id y
+/-- **Every command keeps `I`**: the eighteen command facts, one per command. -/
+theorem steps_preserve (root : ProgramSource) (rootTy : EffTy) :
+    ∀ command, StepPreserves root rootTy command
+  | .evaluate id => evaluate_preserves root rootTy id
+  | .loop id y => loop_preserves root rootTy id y
+  | .deliver id y => deliver_preserves root rootTy id y
+  | .finish id ex => finish_preserves root rootTy id ex
+  | .resume id token code => resume_preserves root rootTy id token code
+  | .launch race => launch_preserves root rootTy race
+  | .enrollRace race child => enrollRace_preserves root rootTy race child
+  | .registrationDone race y => registrationDone_preserves root rootTy race y
+  | .interruptTarget target who extra => interruptTarget_preserves root rootTy target who extra
+  | .afterInterrupt host y kind => afterInterrupt_preserves root rootTy host y kind
+  | .raceCancel race host y remaining visited =>
+    raceCancel_preserves root rootTy race host y remaining visited
+  | .trackChild parent child => trackChild_preserves root rootTy parent child
+  | .observe fiber ex observer => observe_preserves root rootTy fiber ex observer
+  | .exitDone fiber => exitDone_preserves root rootTy fiber
+  | .closeParAwait host y fibers => closeParAwait_preserves root rootTy host y fibers
+  | .link mode scope target who extra => link_preserves root rootTy mode scope target who extra
+  | .drainDue => drainDue_preserves root rootTy
+  | .wake list phase => wake_preserves root rootTy list phase
+
+/-- **A tape decision keeps `J`** (`M6Ledger.decision_preserves`): the command facts and the six
+edits through the decision lift (`decisionKeeps_of_ledger`). -/
+theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.Decision) :
+    DecisionKeeps root rootTy fuel d :=
+  decisionKeeps_of_ledger root rootTy fuel d (steps_preserve root rootTy)
+    ⟨edit_drain root rootTy, edit_yield root rootTy, edit_interrupt root rootTy,
+      edit_clockNone root rootTy, edit_clockSome root rootTy, edit_answer root rootTy⟩
+
+/-- **Every reachable machine is typed** (`M6Ledger.typedState_reachable`): the load (M5,
+`loadsTyped`) and every decision (`reachable_of_ledger`). -/
+theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
+    ReachableTyped root rootTy fuel m :=
+  reachable_of_ledger root rootTy fuel (loadsTyped root rootTy fuel fuel)
+    (decision_preserves root rootTy fuel) m
 
 end Effect4.Program.Typed
 
 #obligation_proved Effect4.Program.Typed.M6Clauses.closeIter_parallel :=
   @Effect4.Program.Typed.clause_closeIter_parallel
-#proof_wanted Effect4.Program.Typed.M6Clauses.gen_protocol
-#typed_state_obligations Effect4.Program.Typed.M6Clauses ceiling 1
+#obligation_proved Effect4.Program.Typed.M6Clauses.gen_protocol := @Effect4.Program.Typed.genProtocol
+#typed_state_obligations Effect4.Program.Typed.M6Clauses ceiling 0
+  using aesop (rule_sets := [Effect4.TypedState])
+
+#obligation_proved Effect4.Program.Typed.M6Ledger.step_deliver := @Effect4.Program.Typed.deliver_preserves
+#obligation_proved Effect4.Program.Typed.M6Ledger.step_loop := @Effect4.Program.Typed.loop_preserves
+#obligation_proved Effect4.Program.Typed.M6Ledger.decision_preserves :=
+  @Effect4.Program.Typed.decision_preserves
+#obligation_proved Effect4.Program.Typed.M6Ledger.typedState_reachable :=
+  @Effect4.Program.Typed.typedState_reachable
+-- `M6Ledger`'s report: every goal proved.
+#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 0
   using aesop (rule_sets := [Effect4.TypedState])

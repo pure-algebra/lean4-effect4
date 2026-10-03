@@ -2052,12 +2052,8 @@ end Effect4.Program.Typed
   @Effect4.Program.Typed.termFits
 -- `M3bAssembly`'s report runs at the foot of `Typed/LayerArm.lean`, which proves its last three goals
 -- (the import direction forbids this module naming the proofs; decisions row 140)
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_loop
-#proof_wanted Effect4.Program.Typed.M6Ledger.step_deliver
-#proof_wanted Effect4.Program.Typed.M6Ledger.decision_preserves
-#proof_wanted Effect4.Program.Typed.M6Ledger.typedState_reachable
--- `M6Ledger`'s proved goals and its report are at the foot of the last command module
--- (`Typed/Commands/*.lean`), which imports this one and sees every proof.
+-- `M6Ledger`'s goals are proved across `Typed/Commands/*.lean`; its report is at the foot of
+-- `Typed/Commands/Clauses/All.lean`, which sees every proof.
 #proof_wanted Effect4.Program.Typed.M7.exits_typed
 #proof_wanted Effect4.Program.Typed.M7.stores_typed
 #proof_wanted Effect4.Program.Typed.M7.never_halts
