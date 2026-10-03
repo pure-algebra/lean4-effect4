@@ -1498,4 +1498,121 @@ theorem clause_finishFinalizer {root : ProgramSource} {rootTy : EffTy}
       rw [hc] at current
       exact finishFinalizer_payload_inv root w tin ex next current)
 
+
+/-! ## The clauses that edit the fiber's context -/
+
+/-- The evaluator's machine after a trace event is the evaluated state's machine with that event. -/
+theorem Evaluating.emit {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    (events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram Unit)) :
+    Evaluating root rootTy w (m.emit events) rest f y :=
+  ⟨configTyped_emit ev.typed events, ev.stale, ev.running, ev.live⟩
+
+/-- **A running fiber's context moves** to one whose services fit (`setContext`'s pre, decisions row
+90; `scoped`'s `withScope`), with its cached budget: every clause of `J` at the fiber but the
+services reads fields the edit keeps; the queue's owner and reads are the fiber's own. -/
+theorem Evaluating.recontext {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    (ctx : Ctx) (services : ServicesFit w ctx.services) (maxOps : Nat) (prevent : Bool) :
+    Evaluating root rootTy w m rest
+      { f with context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent } y := by
+  let g : RFiber := { f with context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent }
+  have look := ev.look
+  have hmem : f ∈ (m.update f).fibers := rfiber?_mem look
+  have old := ev.typed.machine.fiber hmem
+  have notParked : f.parked = .notParked := by
+    cases hp : f.parked with
+    | notParked => rfl
+    | withGuard _ =>
+      have idle := old.parkedIdle (by rw [hp]; exact fun h => nomatch h)
+      rw [ev.running] at idle
+      cases idle
+  have lookG : ((m.update f).update g).fiber? g.id = some g := rfiber?_update_self look rfl
+  have view : ObsView (m.update f) ((m.update f).update g) :=
+    obsView_rupdate look rfl (PendingWeaker.refl _)
+  have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
+  have fresh : FiberTyped root w ((m.update f).update g) g :=
+    ⟨⟨moved.ok.c0, moved.ok.c1, moved.ok.c2, moved.ok.c3, moved.ok.c4, services⟩, moved.delivery,
+      moved.below, moved.pendingShape, moved.parkedIdle, moved.parkedBelow, moved.exited,
+      moved.exitedStack, moved.deferredCause, moved.pendingOwner, moved.observers,
+      moved.registration, moved.code, moved.tokens, moved.raceObservers, moved.targetsBelow,
+      moved.observersBelow⟩
+  have free := owner_free_rest ev.typed.queue (c := .deliver f.id y) rfl
+  have typed : ConfigTyped root rootTy w ((m.update f).update g) (.deliver f.id y :: rest) := by
+    refine configTyped_rupdate_code ev.typed look rfl (PendingWeaker.refl _) rfl (fun p => p)
+      (fun k hk => Or.inl (fiberKeys_internal hmem hk)) ?_ ?_ ?_ fresh
+    · intro token r hr
+      have off : g.parked ≠ .withGuard token := by
+        show f.parked ≠ _
+        rw [notParked]
+        exact fun h => nomatch h
+      rw [requestOfR_of_not_parked lookG off] at hr
+      cases hr
+    · intro c hc h
+      rcases List.mem_cons.mp hc with rfl | hc
+      · exact ⟨g, lookG, ev.running, notParked⟩
+      · exact commandAuthority_frame (g := g) look rfl rfl rfl rfl c (free c hc) h
+    · intro _ _ marker ty declared
+      exact codeOk_races (m := m.update f) (m' := (m.update f).update g)
+        (racesKept_of_eq fun _ => rfl) (ev.code marker ty declared)
+  rw [rupdate_rupdate m (show g.id = f.id from rfl)] at typed
+  obtain ⟨f0, hf0, exit0⟩ := ev.stale
+  exact ⟨typed, ⟨f0, hf0, exit0⟩, ev.running, ev.live⟩
+
+/-- **`setContext`**: the context set (its services fit, the pre), the budget cached from it, the
+trace event, and `unit` answered. -/
+theorem clause_setContext (root : ProgramSource) (rootTy : EffTy) (ctx : Ctx) :
+    FiberClauseKeeps root rootTy (.setContext ctx) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, _, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  show SettlesTyped root rootTy w f.id rest
+    (prepareIterR (FiberAction.setContext _ m f y ctx (answerWith next)))
+  unfold FiberAction.setContext
+  rcases hb : (interpRAt root.program m.completedExits).budgetOf ctx with ⟨maxOps, prevent⟩
+  have ev' := (ev.recontext ctx pre maxOps prevent).emit [RunEvent.contextSet f.id ctx]
+  exact ev'.settle_continue _ (ev'.answer_typed hc
+    (by show raceRegistrationR f.frame.current = none; rw [hc]; rfl) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) .unit
+    (fun _ _ => rfl))
+
+/-- **`getId`**: the fiber's own id, answered as a number. -/
+theorem clause_getId (root : ProgramSource) (rootTy : EffTy) :
+    FiberClauseKeeps root rootTy .getId := by
+  intro w m rest f y next ev hc
+  exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) (Val.nat f.id.value)
+    (fun _ _ => ⟨f.id, rfl⟩))
+
+/-- **`ambientScope`**: the context's ambient scope, present by `J` (`ambientScope_live`, decisions
+row 156), answered as its handle; without one, the `missingService` defect, which the exit judgment
+admits at every type (part one excludes only `badName` and `notImplemented`). -/
+theorem clause_ambientScope (root : ProgramSource) (rootTy : EffTy) :
+    FiberClauseKeeps root rootTy .ambientScope := by
+  intro w m rest f y next ev hc
+  show SettlesTyped root rootTy w f.id rest
+    (prepareIterR (FiberAction.ambientScope _ m f y (answerWith next)))
+  unfold FiberAction.ambientScope
+  rw [show (interpRAt root.program m.completedExits).ambientScope = Ctx.ambientScope from rfl]
+  cases hscope : Ctx.ambientScope f.context with
+  | some scope =>
+    have live : ScopeLive w scope :=
+      ambientScope_live ev.typed.machine (rfiber?_mem ev.look) hscope
+    exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
+      (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+      (Val.scopeHandle scope) (fun _ _ => fits_scopeHandle _ _ live))
+  | none =>
+    refine ev.settle_continue { f.frame with current := .pure (.failure (Cause.die .missingService)) }
+      (fun ty declared => ?_)
+    obtain ⟨tin, _, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+    refine ⟨tin, TypedProg.pure (strongExit_of_clean w tin _ rfl ?_), stack,
+      ⟨prov.recorded, prov.deferred⟩⟩
+    intro reason member
+    simp only [Cause.die_reasons, List.mem_singleton] at member
+    subst member
+    exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
+
 end Effect4.Program.Typed

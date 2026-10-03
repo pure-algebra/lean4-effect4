@@ -1068,10 +1068,12 @@ checked seam, `/private/tmp/codex-lead-2026-10-02/m6-close-stores/checked-seam.m
 any ordinary non-marker `Evaluating` witness frame-edited to that allocation stays `ConfigTyped`, and
 no later world has the result `WF`), or out of a `scoped` region as the body's exit (the walk's
 callback outcome: `prepareScopedExitR` writes it as the scope's closing exit). No fact of `J` gives
-`validIn` there. Not reachable from a checked source (terms mint no frames, `RawHandles`; host answers
-are decoded; store reads return `WF` values), but the clause interface (`Evaluating`) admits it, so
-the universal clauses `StoreClauseKeeps (refMake …)` and `WalkKeeps` are false as stated
-(`E4-TYPED-CE-040`: Codex's hypothesis-free `refMake_clause_false`, copied to `witnesses/RefMakeClause.lean`).
+`validIn` there. Source reachability is not established by the witness (terms mint no frames, `RawHandles`; host
+answers are decoded; store reads return `WF` values — none of which is a reachability proof), but the
+clause interface (`Evaluating`) admits it, so the universal clause `StoreClauseKeeps (refMake …)` is
+false as stated (`E4-TYPED-CE-040`: Codex's hypothesis-free `refMake_clause_false`, copied to
+`witnesses/RefMakeClause.lean`); the walk's callback outcome is not established from `J` (no compiled
+refutation of `WalkKeeps`).
 
 What this does and does not show: the refutations are at the clause interface over `ConfigTyped`;
 they are not a reachable-source counterexample and not a refutation of M6's reachable statement.
@@ -1128,6 +1130,6 @@ family), progress.
 
 Commands: `lake env lean -DwarningAsError=true …/Evaluate.lean` (27 s, no warnings);
 `lake build Effect4.Laws` (below); `witnesses/RefMakeClause.lean` compiled here at this head
-(twelve footprints at `[propext, Quot.sound]`, `RefMakeClause.log`). The register ids: my `.fin`
+(seventeen declarations, every printed footprint at `[propext, Quot.sound]`, `RefMakeClause.log`). The register ids: my `.fin`
 row was first written as `CE-036`, an id row 190 already held; it is `CE-039`, and the seam is
 `CE-040`.
