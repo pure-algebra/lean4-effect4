@@ -394,8 +394,4 @@ private theorem representationSites_lawful :
 
 end MultiDocument
 
-namespace Document
-
-end Document
-
 end Effect4

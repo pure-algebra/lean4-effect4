@@ -56,7 +56,4 @@ example :
       (Val.nat 7, { Stores.empty with refs := Stores.empty.refs.set 0 (Val.nat 7) }) :=
   put_get (s := Stores.empty) (c := ⟨0⟩) (by decide) (Val.nat 7)
 
-#print axioms put_get_one_cell
-#print axioms put_put_one_cell
-#print axioms put_get_dead_fails
 end Test.Program.StoreComodel

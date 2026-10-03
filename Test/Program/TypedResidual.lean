@@ -89,14 +89,4 @@ theorem finishFinalizer_inversion_rejects_unadmitted (root : NativeEff) (w : Wor
   rw [hex] at hstrong
   exact forged_cell_not_fit w hnone hstrong.1
 
-#print axioms test_settling_ref_allocation
-#print axioms test_settling_ref_preserves_nat
-#print axioms test_settling_fork
-#print axioms test_settling_mask
-#print axioms forged_cell_not_live
-#print axioms forged_cell_not_fit
-#print axioms forged_fiber_not_fit
-#print axioms unguard_inversion_rejects_unadmitted
-#print axioms finishFinalizer_inversion_rejects_unadmitted
-
 end Test.Program.TypedResidual

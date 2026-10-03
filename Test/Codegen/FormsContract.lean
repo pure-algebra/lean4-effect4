@@ -113,7 +113,4 @@ def capturedSecond : NativeEff :=
 #guard effTy nativeSignature ([.nat] ++ [.bool, .unit] ++ [.string])
   (insert 1 2 (.succeed (.app "succ" (.cons (.var 1) .nil)) : NativeEff)) = none
 
-#print axioms lambdaAtom_exact
-#print axioms Template.expand
-#print axioms expression
 end Test.Codegen.FormsContract

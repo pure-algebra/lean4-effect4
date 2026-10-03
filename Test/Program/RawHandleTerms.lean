@@ -2,7 +2,7 @@ import Effect4.Laws.Program.Handles.Term
 
 /-!
 Controls for the raw-frame term preservation helper; definitions pinned in the receipt.
-Concept 4: terms mint no handle frames (`RawHandles`). `M7.exitHandles_valid` is proved by the typed
+Concept 4: terms mint no handle frames (`RawHandles`). `exitHandles_valid` is proved by the typed
 route (`Typed/Commands/Clauses/All.lean`), not through these laws.
 These exercise the actual evaluator and raw Store.Val.handles. They do not prove
 machine-wide registration or reachable exit validity. The retained receipt distinguishes compilation from complete machine preservation.

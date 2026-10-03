@@ -16,9 +16,6 @@ import Effect4.Machine.Exit
 
 set_option autoImplicit false
 
-namespace Effect4
-end Effect4
-
 namespace Test.Semantics.CauseExitContract
 
 open Effect4
@@ -222,20 +219,6 @@ example : keptAnnotations.annotate ReasonAnnotations.empty true = keptAnnotation
 end GroundChecks
 
 section AxiomReceipts
-
-#print axioms Effect4.ReasonAnnotations.keys_eq
-#print axioms Effect4.ReasonAnnotations.annotate_entries
-#print axioms Effect4.ReasonAnnotations.lookup_annotate_kept
-#print axioms Effect4.ReasonAnnotations.order_retained
-#print axioms Effect4.Reason.host_memory_refused
-#print axioms Effect4.Reason.cases_receipt
-#print axioms Effect4.Cause.eq_iff_pointwise
-#print axioms Effect4.Cause.combine_order
-#print axioms Effect4.Cause.combine_self
-#print axioms Effect4.Cause.squash_error
-#print axioms Effect4.Cause.squash_emptyCause_iff
-#print axioms Effect4.Exit.mergeFinalizer_failure_failure
-#print axioms Effect4.Exit.asVoidAll_reasons
 
 end AxiomReceipts
 

@@ -55,7 +55,6 @@ theorem current_m6_capstone_false : ¬ (
   obtain ⟨w, hw⟩ := h (by rfl') bad_reachable
   exact bad_not_typed w hw
 
-
 /-- The forged answer is outside the repaired reachability premise. -/
 theorem badTape_rejected : ¬ (∀ d ∈ badTape, NoHostAnswer d) := by
   intro h
@@ -75,14 +74,6 @@ theorem timed_reachable : RReachable (sleeper : ProgramSource) 80 timed :=
 
 #guard (timed.fiber? Api.root).bind RunFiber.exit = some (.success .unit)
 
-#print axioms bad_reachable
-#print axioms bad_exit_not_typed
-#print axioms bad_has_bad_exit
-#print axioms bad_not_typed
-#print axioms current_m6_capstone_false
-#print axioms badTape_rejected
-#print axioms timerTape_answerFree
-#print axioms timed_reachable
 /-! H1: earlier queue and current-code clauses, instantiated with current H2 admission.
 These witnesses refute the former structural clauses even with the two-defect exclusion.
 They do not freeze the complete pre-H2 judgment. The exact original checked statements
@@ -296,10 +287,6 @@ theorem halted_bad_exit_rejected (w : W) :
   change ∀ resultTy, w.Γ f.id = some resultTy → ExitOk w resultTy (.success (.nat 42)) at value
   exact (value ty (by rw [id]; exact typed.1.root)).1
 
-#print axioms load_code_live
-#print axioms reviewed_loaded_at
-#print axioms halted_bad_exit_rejected
-
 theorem step_finish_false : ¬ ReviewedStepPreserves (program : ProgramSource) ty badFinish := by
   intro step
   obtain ⟨w, typed⟩ := reviewed_loaded_at program ty 20 20 loaded_code
@@ -366,18 +353,6 @@ theorem await_delivery_typed (w : W) :
       ((interpR program).exitValue (.success .unit) .awaitValue) :=
   observer_exitValue_typed (program : ProgramSource) w ty (.success .unit) .awaitValue ⟨trivial, trivial⟩
 
-#print axioms loaded_typed
-#print axioms loaded_sleep_typed
-#print axioms loaded_sleep80_typed
-#print axioms step_finish_false
-#print axioms proposed_step_finish_false
-#print axioms bad_generated_command_rejected
-#print axioms bad_finish_rejected
-#print axioms early_resume_rejected
-#print axioms bad_observe_rejected
-#print axioms join_delivery_typed
-#print axioms await_delivery_typed
-
 /-- The native guard also requires every launch/enrollment to retain its return command.
 A later launch cannot borrow a host which this finish is about to deactivate. -/
 theorem dangling_launch_rejected (root : ProgramSource) (w : W) (m : RState)
@@ -398,10 +373,6 @@ theorem registration_tail_green (race : Nat) (yielding : Bool) :
     Guard.RegistrationQueue.RegistrationQueue
       ([.launch race, .registrationDone race yielding] : List RCmd) :=
   ⟨⟨yielding, List.mem_singleton_self _⟩, trivial, trivial⟩
-
-#print axioms dangling_launch_rejected
-#print axioms dangling_enroll_rejected
-#print axioms registration_tail_green
 
 /-- The empty stack is the identity on its input/output type. -/
 theorem stackReply_empty_declared (root : ProgramSource) (w : W) {m : RState} (fiber : RFiber)
@@ -522,14 +493,6 @@ theorem afterInterrupt_unit_stack_green :
   refine ⟨EffTy.pure .unit, ⟨.never, .never, ?_, rfl⟩, ty, rfl, .nil _, ?_⟩
   · intro id hid; cases hid
   · exact ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩
-
-#print axioms registration_mismatch_rejected
-#print axioms registration_typed_state_rejected
-#print axioms registration_matching_green
-#print axioms afterInterrupt_nat_stack_rejected
-#print axioms raceCancel_nat_stack_rejected
-#print axioms closeParAwait_nat_stack_rejected
-#print axioms afterInterrupt_unit_stack_green
 
 end H1
 
@@ -786,18 +749,6 @@ theorem proposed_step_observe_false (noRace : RProgram → Prop) :
   obtain ⟨w', ordered, _, _, queue'⟩ := step world machine [] typed internal_below (queue noRace)
   exact result_queue_refused noRace w' ordered queue'
 
-#print axioms loaded_code
-#print axioms valid
-#print axioms typed
-#print axioms internal_below
-#print axioms no_requests
-#print axioms command_payload
-#print axioms queue
-#print axioms result_queue
-#print axioms emitted_refused
-#print axioms result_queue_refused
-#print axioms proposed_step_observe_false
-
 end OldObserve
 
 /-! Early-queue and dispatcher falsifiers under the former structural clauses, using current
@@ -972,8 +923,6 @@ theorem early_queue_rejected (w : Typed.World) :
   have impossible : 0 < 0 := queue.keys.below (Api.root, 0) (List.mem_singleton_self _)
   exact Nat.not_lt_zero 0 impossible
 
-#print axioms old_steps_false
-#print axioms early_queue_rejected
 end EarlyStep
 
 namespace EarlyDecision
@@ -1094,10 +1043,7 @@ theorem early_dispatcher_rejected (w : Typed.World) :
     (List.mem_singleton_self _)
   exact Nat.not_lt_zero 0 impossible
 
-#print axioms old_fire_false
-#print axioms early_dispatcher_rejected
 end EarlyDecision
-
 
 /-! Terminal-delivery and halt boundaries: historical refutations and repaired controls. -/
 namespace H1TerminalAmendment
@@ -1346,18 +1292,6 @@ theorem step_deliver_false : ¬ OldStepPreserves (rootProgram : ProgramSource) u
   obtain ⟨w', _, after, _⟩ := step world machine [] typed queue
   exact result_not_typed w' after
 
-#print axioms valid
-#print axioms scheduler
-#print axioms observers
-#print axioms registration
-#print axioms saved_typed
-#print axioms typed
-#print axioms queue
-#print axioms result_fiber
-#print axioms result_commands
-#print axioms result_exit_none
-#print axioms result_not_typed
-#print axioms step_deliver_false
 /-! Row 133 under H1 (historical, `H1Shapes`): normal terminal delivery and the published-code
 boundary, as merged at `0c534f06`. -/
 
@@ -1599,20 +1533,6 @@ theorem published_saved_typed : H1Shapes.SavedPosition (rootProgram : ProgramSou
   ⟨unitTy, (fun live => False.elim (live (Or.inr completed_position))), .nil _,
     ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
 
-#print axioms typed_queued
-#print axioms result_valid
-#print axioms result_no_requests
-#print axioms result_scheduler
-#print axioms result_observers
-#print axioms result_registration
-#print axioms result_typed
-#print axioms result_queue
-#print axioms deliver_preserves_this_state
-#print axioms completed_commands
-#print axioms completed_fiber
-#print axioms completed_position
-#print axioms published_saved_typed
-
 /-- Row 139's liveness at a machine with no owed resume (the ambient scopes are `J`'s typed
 state's since row 156, `ambientScope_live`). -/
 theorem quiet_live (m : RState) (stuck : m.stuck = none)
@@ -1728,20 +1648,7 @@ theorem completed_liveCode : LiveCode (rootProgram : ProgramSource) world comple
   subst f
   cases live
 
-#print axioms quiet_live
-#print axioms typedState_machine
-#print axioms machine_typed
-#print axioms config_typed
-#print axioms typedState_result
-#print axioms result_config_typed
-#print axioms deliver_keeps_config
-#print axioms completed_liveCode
-
 end H1TerminalAmendment
-
-#print axioms H1TerminalAmendment.no_requests
-#print axioms H1TerminalAmendment.result_current
-#print axioms H1TerminalAmendment.result_stack
 
 namespace H1HaltAmendment
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
@@ -2217,22 +2124,6 @@ theorem step_deliver_false : ¬ OldStepPreserves (rootProgram : ProgramSource) u
   obtain ⟨w, _, after, _⟩ := step world machine rest old_typed queue
   exact output_not_typed w after
 
-#print axioms member_cases
-#print axioms valid
-#print axioms no_requests
-#print axioms scheduler
-#print axioms observers
-#print axioms registration
-#print axioms callback_untyped
-#print axioms typed
-#print axioms queue
-#print axioms result_queue
-#print axioms result_halted
-#print axioms root_unchanged
-#print axioms root_not_terminal
-#print axioms output_not_typed
-#print axioms step_deliver_false
-
 /-- This is the worker left by the actual scope-error/settle path. -/
 def afterWorker : RFiber :=
   { workerFiber with
@@ -2264,7 +2155,6 @@ theorem result_no_requests (id : FiberId) (token : Nat) : requestOfR result.1 id
   | some found =>
     rcases result_member_cases found (List.mem_of_find?_eq_some lookup) with rfl | rfl <;> rfl
 
-
 theorem result_scheduler : SchedulerState result.1 := by
   constructor
   · decide +kernel
@@ -2295,7 +2185,6 @@ theorem result_scheduler : SchedulerState result.1 := by
   · intro f member o ho
     rcases result_member_cases f member with rfl | rfl <;> cases ho
 
-
 theorem result_observers : ObserverState (rootProgram : ProgramSource) world result.1 := by
   constructor
   · intro f member pending hp
@@ -2303,11 +2192,9 @@ theorem result_observers : ObserverState (rootProgram : ProgramSource) world res
   · intro f member observer ho
     rcases result_member_cases f member with rfl | rfl <;> cases ho
 
-
 theorem result_registration : RegistrationState (rootProgram : ProgramSource) world result.1 := by
   intro f member race marker
   rcases result_member_cases f member with rfl | rfl <;> cases marker
-
 
 /-- H1 (historical): halting made only current code inert, so the halted output was typed. -/
 theorem result_typed (commands : List RCmd) :
@@ -2421,21 +2308,6 @@ theorem halted_loop_retains_any_queue (fuel : Nat) (commands : List RCmd) :
     | nil => rfl
     | cons c rest => rfl
 
-#print axioms oldSaved_of_saved
-#print axioms old_typed
-#print axioms result_fibers
-#print axioms result_member_cases
-#print axioms result_valid
-#print axioms result_no_requests
-#print axioms result_scheduler
-#print axioms result_observers
-#print axioms result_registration
-#print axioms result_typed
-#print axioms result_queue_typed
-#print axioms deliver_preserves_this_state
-#print axioms halted_loop_retains_any_queue
-
-
 /-- Raw driveStep can inspect stale code on an already halted machine. Its admission is
 intentionally stronger than the command loop's actual dispatch relation. -/
 def rawCommand : RCmd := .deliver Api.root false
@@ -2504,11 +2376,6 @@ theorem unguarded_step_false :
   obtain ⟨w', _, typed, queue⟩ := step world result.1 []
     (result_typed [rawCommand]) raw_input_queue
   exact raw_output_untyped w' ⟨typed, queue⟩
-
-#print axioms raw_input_queue
-#print axioms raw_result_commands
-#print axioms raw_output_untyped
-#print axioms unguarded_step_false
 
 /-! Rows 134, 139 and 156: the queue-discard witness under the split. Before row 156 the input
 was a typed configuration (the running root's stale slot is continued by its queued `finish`, the
@@ -2600,7 +2467,7 @@ theorem step_deliver_refuted_by_absent_scope :
 input is no typed configuration at any world. The queued `deliver` reads the running worker's code
 (`ReadCode`), whose saved `onSuccess` frame must type the callback as code at the input's world,
 and the scope's exit callback is typed only at a `scoped` guard's run position
-(`callback_untyped`). So this witness does not refute `M6Ledger.step_deliver`. -/
+(`callback_untyped`). So this witness does not refute `deliver_preserves`. -/
 theorem input_refused (w : W) :
     ¬ ConfigTyped (rootProgram : ProgramSource) unitTy w machine commands := by
   intro config
@@ -2622,19 +2489,6 @@ theorem input_refused (w : W) :
     · -- row 188 (b)'s registration arrow names a race, and the witness has none
       cases head with
       | mk _ _ found _ _ => cases found
-
-#print axioms typedState_input
-#print axioms config_input
-#print axioms output_outside
-#print axioms old_output_outside
-#print axioms step_deliver_refuted_by_absent_scope
-#print axioms input_refused
-#print axioms old_callback_typed
-#print axioms callback_refused
-#print axioms old_result_typed
-#print axioms oldH1SavedPosition_of_saved
-#print axioms oldSplitSavedPosition_of_saved
-#print axioms OldTypedProg.pure_inv
 
 end H1HaltAmendment
 
@@ -2671,11 +2525,6 @@ theorem drop_absent_refused (root : ProgramSource) (w : W) : ¬ QueueOk root w m
   have live := (queue.observer Api.root (.success .unit) (.dropScopeFinalizer 7 0)
     (List.mem_singleton_self _)).2
   cases live
-
-#print axioms link_absent_halts
-#print axioms drop_absent_halts
-#print axioms link_absent_refused
-#print axioms drop_absent_refused
 
 /-! Row 139's premises on the halting fiber rows (seat C's hunk on `fiberPre`, landed by seat I):
 typed code names no unknown interrupt target and no absent scope for `runIn`, `forkIn` or
@@ -2716,11 +2565,6 @@ theorem raceRegister_refused (root : ProgramSource) (w : W) (ty : EffTy) (race :
   obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   exact pre
-
-#print axioms interruptAs_unknown_refused
-#print axioms runIn_absent_refused
-#print axioms forkIn_absent_refused
-#print axioms raceRegister_refused
 
 end Liveness
 

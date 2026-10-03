@@ -215,5 +215,4 @@ theorem registrationQueue_driveStep_finish (p : NativeEff) (table : RowTable)
     simpa only [driveStep, hf] using registrationQueue_append
       (registrationQueue_exitFiber p table m { f with running := false } exit) registration
 
-
 end Effect4.Program.Guard.FinishQueue

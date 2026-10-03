@@ -16,7 +16,7 @@ import Effect4.Laws.Program.Typed.Edits
 # Laws.Program.Typed.Commands.Clauses.All — the evaluator's clauses, assembled
 
 Concept 4 (`step-deliver-preserves`, `step-loop-preserves`): every fiber clause and every store
-clause by name, so `M6Ledger.step_deliver` and `step_loop` follow from `deliver_preserves_of_clauses`
+clause by name, so `deliver_preserves` and `step_loop` follow from `deliver_preserves_of_clauses`
 and `loop_preserves_of_clauses` (`Commands/Evaluate.lean`) with the walk (`walkKeeps`). Every clause is
 proved (`storeClauses`, `fiberClauses`, the generator's protocol `genProtocol`), so
 `step_deliver` and `step_loop` hold, and with the other sixteen command facts and the six decision
@@ -29,7 +29,7 @@ The strongest form is `reachable_typed`: every checked program, with no lawful-s
 closed-row premise (no proof of M5 or M6 reads either), stays in `J` on every tape whose host
 answers are admitted at the ghost token table (`AdmittedTape`); `obs_typed` carries it to the frame
 machine. Scope-handle validity follows from it and capability membership (`exitHandles_valid`,
-`M7.exitHandles_valid`), which closes the M7 ledger.
+`exitHandles_valid`), which closes the M7 ledger.
 
 Not established: progress (`J` is an invariant, not a liveness result); executable admission of host
 answers (`AdmittedTape` reads `Θ`, which no host sees: `admit_sound`, rows 97–99); a table-aware
@@ -42,27 +42,10 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
 
 /-! ## The open clauses, as ledger goals
 
-`M6Ledger.step_deliver` and `step_loop` follow from the clauses (`deliver_preserves`,
+`deliver_preserves` and `step_loop` follow from the clauses (`deliver_preserves`,
 `loop_preserves` below). The two clauses proved last are the ledger's goals here, so the proof graph
 names them: the parallel close (`Clauses/Close.lean`) and the generator's protocol
 (`Clauses/Gen.lean`). -/
-
-namespace M6Clauses
-
-/-- **`closeIter`, parallel** (`FiberAction.closePar`, `Machine/Fibers.lean:1502-1507`; rc.112
-`internal/effect.ts:3819-3826`): every finalizer forked as an immediate daemon at
-`⟨unknown, never⟩`, their runs queued, and the await over them (`closeParAwait`) queued with its
-delivery (`CommandDeliveryOk`: the children's columns, the `closeParDone` protocol, the host's
-saved answer frame). A step of `M6Ledger.step_deliver` and `step_loop`. -/
-theorem closeIter_parallel (root : ProgramSource) (rootTy : EffTy) (order : List FinName)
-    (ex : ExitV) :
-    ProofGraph.Obligation (FiberClauseKeeps root rootTy (.closeIter .parallel order ex)) := ⟨⟩
-
-/-- **The generator producer's obligation** (`GenProtocol`, decisions row 190): the coinduction
-over typed generator positions. A step of `M6Ledger.step_deliver` and `step_loop`. -/
-theorem gen_protocol (root : ProgramSource) : ProofGraph.Obligation (GenProtocol root) := ⟨⟩
-
-end M6Clauses
 
 /-- **Every fiber clause.** -/
 theorem fiberClauses (root : ProgramSource) (rootTy : EffTy) :
@@ -150,13 +133,13 @@ theorem storeClauses (root : ProgramSource) (rootTy : EffTy) :
   | memoComplete l m e => exact clause_memoComplete root rootTy l m e
   | memoRelease l m => exact clause_memoRelease root rootTy l m
 
-/-- **`deliver` keeps `I`** (`M6Ledger.step_deliver`): every clause, the walk. -/
+/-- **`deliver` keeps `I`** (`deliver_preserves`): every clause, the walk. -/
 theorem deliver_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (y : Bool) :
     StepPreserves root rootTy (.deliver id y) :=
   deliver_preserves_of_clauses root rootTy (fiberClauses root rootTy) (storeClauses root rootTy)
     (walkKeeps root rootTy) id y
 
-/-- **`loop` keeps `I`** (`M6Ledger.step_loop`): every clause, the walk. -/
+/-- **`loop` keeps `I`** (`loop_preserves`): every clause, the walk. -/
 theorem loop_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (y : Bool) :
     StepPreserves root rootTy (.loop id y) :=
   LoopPrefix.loop_preserves_of_clauses root rootTy (fiberClauses root rootTy)
@@ -185,7 +168,7 @@ theorem steps_preserve (root : ProgramSource) (rootTy : EffTy) :
   | .drainDue => drainDue_preserves root rootTy
   | .wake list phase => wake_preserves root rootTy list phase
 
-/-- **A tape decision keeps `J`** (`M6Ledger.decision_preserves`): the command facts and the six
+/-- **A tape decision keeps `J`** (`decision_preserves`): the command facts and the six
 edits through the decision lift (`decisionKeeps_of_ledger`). -/
 theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.Decision) :
     DecisionKeeps root rootTy fuel d :=
@@ -193,7 +176,7 @@ theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) 
     ⟨edit_drain root rootTy, edit_yield root rootTy, edit_interrupt root rootTy,
       edit_clockNone root rootTy, edit_clockSome root rootTy, edit_answer root rootTy⟩
 
-/-- **Every reachable machine is typed** (`M6Ledger.typedState_reachable`): the load (M5,
+/-- **Every reachable machine is typed** (`typedState_reachable`): the load (M5,
 `loadsTyped`) and every decision (`reachable_of_ledger`). -/
 theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
     ReachableTyped root rootTy fuel m :=
@@ -236,7 +219,7 @@ theorem obs_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : L
   obsTyped_admitted root rootTy fuel tape (load_typed root rootTy fuel fuel checked)
     (decision_preserves root rootTy fuel) admitted
 
-/-- **Recorded successes name only live handles** (`M7.exitHandles_valid`, organization M4, row
+/-- **Recorded successes name only live handles** (`exitHandles_valid`, organization M4, row
 139): on every reachable machine of a checked program, a fiber's successful exit value is valid in
 the machine's stores. `J` holds there (`reachable_typed`, no closed-row premise needed), the exit
 fits its fiber's declared type, and a member of any type is valid in a typed store
@@ -255,31 +238,3 @@ theorem exitHandles_valid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (
   exact fits_validIn store hfit
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M6Clauses.closeIter_parallel :=
-  @Effect4.Program.Typed.clause_closeIter_parallel
-#obligation_proved Effect4.Program.Typed.M6Clauses.gen_protocol := @Effect4.Program.Typed.genProtocol
-#typed_state_obligations Effect4.Program.Typed.M6Clauses ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])
-
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_deliver := @Effect4.Program.Typed.deliver_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_loop := @Effect4.Program.Typed.loop_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.decision_preserves :=
-  @Effect4.Program.Typed.decision_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.typedState_reachable :=
-  @Effect4.Program.Typed.typedState_reachable
--- `M6Ledger`'s report: every goal proved.
-#typed_state_obligations Effect4.Program.Typed.M6Ledger ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])
-
-#obligation_proved Effect4.Program.Typed.M7.exits_typed :=
-  fun root rootTy fuel tape => (Effect4.Program.Typed.m7_proved root rootTy fuel tape).1
-#obligation_proved Effect4.Program.Typed.M7.stores_typed :=
-  fun root rootTy fuel tape => (Effect4.Program.Typed.m7_proved root rootTy fuel tape).2.1
-#obligation_proved Effect4.Program.Typed.M7.never_halts :=
-  fun root rootTy fuel tape => (Effect4.Program.Typed.m7_proved root rootTy fuel tape).2.2
-#obligation_proved Effect4.Program.Typed.M7.exitHandles_valid :=
-  @Effect4.Program.Typed.exitHandles_valid
--- `M7`'s report: every goal proved.
-#typed_state_obligations Effect4.Program.Typed.M7 ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])

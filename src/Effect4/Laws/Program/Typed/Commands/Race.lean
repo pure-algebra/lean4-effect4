@@ -804,15 +804,3 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
   exact configTyped_cons_loop edited look running parked freeG yielding fun _ ty d => codeG ty d
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_interruptTarget :=
-  @Effect4.Program.Typed.interruptTarget_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_raceCancel :=
-  @Effect4.Program.Typed.raceCancel_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_enrollRace :=
-  @Effect4.Program.Typed.enrollRace_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_afterInterrupt :=
-  @Effect4.Program.Typed.afterInterrupt_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_closeParAwait :=
-  @Effect4.Program.Typed.closeParAwait_preserves
--- `M6Ledger`'s report runs at the foot of the last command module, which sees every proof.

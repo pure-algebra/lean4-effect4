@@ -130,11 +130,6 @@ def setChild : Node Op → Nat → Node Op → Option (Node Op)
 
 end Node
 
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.Node.child
-#print axioms Effect4.Program.Node.setChild
-
 end Effect4.Program
 
 /-! ## Acceptance guards for the generated child lenses
@@ -165,4 +160,3 @@ private def e1 : Eff Unit := .succeed (.lit (.nat 1))
 #guard Node.setChild (.eff e0) 0 (.eff e1) = none
 
 end Effect4.Program.NodeLensesGuards
-

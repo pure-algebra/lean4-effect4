@@ -3,8 +3,8 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Park
 /-!
 # Laws.Program.Typed.Commands.Clauses.Async — the `async` clause (M6)
 
-Concept 4 (the configuration invariant `I`); question `M6Ledger.step_deliver` and
-`M6Ledger.step_loop`, through `evaluate_keeps`, which reads `∀ op, FiberClauseKeeps root rootTy op`;
+Concept 4 (the configuration invariant `I`); question `deliver_preserves` and
+`loop_preserves`, through `evaluate_keeps`, which reads `∀ op, FiberClauseKeeps root rootTy op`;
 this file supplies the `.async` row (`evaluateFiberR`'s `async` arm, `Laws/Program/EvaluateR.lean`,
 transcribing `internal/effect.ts`'s `callback` registration). The fiber saves the answer frame,
 takes the fresh token, and runs the interpreter's registration (`interpR`'s `registerAsync`): a

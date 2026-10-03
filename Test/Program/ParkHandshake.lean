@@ -88,16 +88,4 @@ theorem duplicates_refuse_handshake :
   · cases guarded
   · exact duplicates_not_inert inert
 
-#print axioms active_handshake
-#print axioms unparked_inert
-#print axioms wrong_token_inert
-#print axioms matching_zero_budget
-#print axioms matching_stuck_inert
-#print axioms matching_resume_changes_observation
-#print axioms duplicates_refuse_handshake
-#print axioms Effect4.Machine.fiber_lookup_of_mem_nodup
-#print axioms Effect4.Machine.drive_resume_unchanged_of_lookup_not_guard
-#print axioms Effect4.Machine.parkHandshake_of_fiberIds_nodup
-#print axioms Effect4.Program.Guard.M4Handshake.parkHandshake_reachable.checked
-
 end Test.Program.ParkHandshake

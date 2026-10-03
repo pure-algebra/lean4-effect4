@@ -3,7 +3,7 @@ import Effect4.Laws.Program.Typed.Scheduler
 /-!
 # Laws.Program.Typed.HostWalk — the saved-stack walk over a host stack
 
-Concept 4 (the configuration invariant); questions `M6Ledger.step_loop` and `M6Ledger.step_deliver`,
+Concept 4 (the configuration invariant); questions `loop_preserves` and `deliver_preserves`,
 whose `unguard`/`finishFinalizer`/bare-exit arms deliver an exit through the fiber's saved stack
 (`deliverR`, `popR`). The stack a live fiber holds is a `HostStack` (decisions row 188 (b)): ordinary
 frames and registration arrows in any order. This module types the walk over it, reusing the
@@ -241,4 +241,3 @@ theorem deliverR_hostTyped (root : ProgramSource) (interp : RInterp) (w : World)
       (pendingCause_noShapeDefect tin hp)), stack, ⟨hp.recorded, fun h => nomatch h⟩⟩
 
 end Effect4.Program.Typed
-

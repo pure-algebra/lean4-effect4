@@ -388,9 +388,6 @@ def demoV : Val := .pair (.pair (.str "localhost") (.nat 5432)) (.str "checkout"
 #guard Val.image.encode .none = Effect4.Store.Canonical.encode (Option.none : Option Nat)
 #guard (Val.toStore demoV).handles = []
 
-#print axioms Effect4.Program.Config.Val.image
-#print axioms Effect4.Program.Config.Val.image_handleFree
-
 end Foundation
 
 end Test.Program.ConfigContract

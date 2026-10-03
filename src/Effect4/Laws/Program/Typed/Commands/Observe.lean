@@ -1404,7 +1404,3 @@ theorem observe_preserves (root : ProgramSource) (rootTy : EffTy) (source : Fibe
     exact restated
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_observe :=
-  @Effect4.Program.Typed.observe_preserves
--- `M6Ledger`'s report runs at the foot of `Typed/Commands/Clauses/All.lean`, which sees every proof.

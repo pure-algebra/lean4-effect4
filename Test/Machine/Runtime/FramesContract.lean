@@ -598,13 +598,4 @@ private def cleanupConstFiber : ConstFiber :=
       Effect4.FrameEvent.ranContAll (.setInterruptible true),
       Effect4.FrameEvent.popped olderHandler])
 
-#print axioms Effect4.Prim.cases_receipt
-#print axioms Effect4.Prim.arms_onSuccessConst
-#print axioms Effect4.Prim.ensure_onSuccessConst
-#print axioms Effect4.Prim.armA_onSuccessConst
-#print axioms Effect4.Prim.armE_onSuccessConst_none
-#print axioms Effect4.FrameFiber.step_onSuccessConst
-#print axioms Effect4.FrameFiber.resumeValue_onSuccessConst
-#print axioms Effect4.FrameFiber.step_success_onSuccessConst
-
 end Test.Runtime.FramesContract

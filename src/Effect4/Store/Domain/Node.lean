@@ -466,6 +466,4 @@ private def sampleNode : Node := ⟨0, .«export», zeroDigest, sampleEntry⟩
 #guard Canonical.decode (α := AnyRef) (Val.encode (.ref 2 (List.replicate 31 0))) = none
 #guard (Canonical.shape AnyRef).accepts (Canonical.toVal (AnyRef.mk .tree zeroDigest)) = true
 
-/-! ## Receipts -/
-
 end Effect4.Store

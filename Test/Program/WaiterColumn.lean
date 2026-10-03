@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Typed.Edits
 # Test.Program.WaiterColumn — the repaired CE-026 wake boundary
 
 Placement: semantics Concept 4, scheduler step preservation, with Concept 1's store columns;
-`M6Ledger.step_wake`, decision 134(b). `wake_preserves` supplies the general theorem. These
+`wake_preserves`, decision 134(b). `wake_preserves` supplies the general theorem. These
 controls retain seat D3's exact batched-waiter witness: a `(unit, never)` cell whose token used
 to be declared `nat`. That world is now refused. Declaring the same token `unit` gives a typed
 input and the real wake step stays typed. Completed and uncompleted cells exercise delivery and
@@ -303,7 +303,6 @@ def owed : Owed (Completion Val Err Defect FiberId Ann) :=
 
 theorem result_due : result.1.state.deferreds.due = [owed] := rfl
 
-
 /-- The repaired input is inhabited, and the actual step remains in `I`. -/
 theorem result_typed : ∃ w', world.leHost w' ∧
     ConfigTyped (rootProgram : ProgramSource) unitTy w' result.1 result.2 := by
@@ -346,13 +345,3 @@ theorem absent_cell_inert :
       (machine, []) := rfl
 
 end Test.Program.WaiterColumn
-
-#print axioms Test.Program.WaiterColumn.natWorld_refused
-#print axioms Test.Program.WaiterColumn.config_typed
-#print axioms Test.Program.WaiterColumn.result_typed
-#print axioms Test.Program.WaiterColumn.result_due
-#print axioms Test.Program.WaiterColumn.completed_batch_cleared
-#print axioms Test.Program.WaiterColumn.uncompleted_rejoins
-#print axioms Test.Program.WaiterColumn.deferred_phase_ignored
-#print axioms Test.Program.WaiterColumn.repeated_wake_no_new_due
-#print axioms Test.Program.WaiterColumn.absent_cell_inert

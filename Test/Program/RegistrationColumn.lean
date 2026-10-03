@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Typed.Commands.Registration
 # Test.Program.RegistrationColumn — row 134(d)'s race/observer boundary
 
 Placement: semantics Concept 4 (`reactive-scheduling`), scheduler step
-preservation and step invariant lifting; `M6Ledger.step_registrationDone`. The general theorem
+preservation and step invariant lifting; `registrationDone_preserves`. The general theorem
 is `registrationDone_preserves`. These controls serve its repaired input boundary, decision
 134(d), and the exact historical `E4-TYPED-CE-028` witness in
 `docs/research/2026-10-01-landing/seat-D3/probes/Races.lean`, namespace `Registration`.
@@ -57,8 +57,6 @@ theorem emptyPayload (w : W) (r : Effect4.Program.Typed.RRace) (ty : EffTy) (tok
     cases he
   · rw [cleanup] at hw
     cases hw
-
-#print axioms emptyPayload
 
 def fiber : RFiber :=
   { RunFiber.make Api.root marker true (stores.budgetOf emptyCtx) emptyCtx with
@@ -316,20 +314,3 @@ theorem historical_parked : ∃ g, historicalResult.1.fibers = [g] ∧
   ⟨_, rfl, rfl, rfl, rfl, rfl⟩
 
 end Test.Program.RegistrationColumn
-
-#print axioms Test.Program.RegistrationColumn.provenance
-#print axioms Test.Program.RegistrationColumn.member
-#print axioms Test.Program.RegistrationColumn.theta
-#print axioms Test.Program.RegistrationColumn.valid
-#print axioms Test.Program.RegistrationColumn.no_requests
-#print axioms Test.Program.RegistrationColumn.internalKeys_machine
-#print axioms Test.Program.RegistrationColumn.typedState
-#print axioms Test.Program.RegistrationColumn.machine_typed
-#print axioms Test.Program.RegistrationColumn.config_typed
-#print axioms Test.Program.RegistrationColumn.only_countdown_removed
-#print axioms Test.Program.RegistrationColumn.historical_scheduler_refused
-#print axioms Test.Program.RegistrationColumn.historical_config_refused
-#print axioms Test.Program.RegistrationColumn.parked
-#print axioms Test.Program.RegistrationColumn.registration_flag_cleared
-#print axioms Test.Program.RegistrationColumn.result_typed
-#print axioms Test.Program.RegistrationColumn.historical_parked

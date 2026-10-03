@@ -3,8 +3,8 @@ import Effect4.Laws.Program.Typed.Assembly
 /-!
 # Test.Program.ScopeExitCallback — the scope-exit marker at its run position only
 
-Placement: semantics Concept 4 (the configuration invariant `I`), question `M6Ledger.step_deliver`
-and `M6Ledger.step_loop`; decisions row 188 (a), `E4-TYPED-CE-034`. The historical refutation is
+Placement: semantics Concept 4 (the configuration invariant `I`), question `deliver_preserves`
+and `loop_preserves`; decisions row 188 (a), `E4-TYPED-CE-034`. The historical refutation is
 pinned unchanged at `docs/research/2026-10-02-claude-lead/witnesses/RawScopeExit.lean` (checked at
 `53caad0f`): `TypedProg`'s general `scopeExit` constructor typed a raw marker of a present scope as
 current code, and the counted step answers it `badShapeExit`. Row 188 (a) types the scope's exit
@@ -126,11 +126,3 @@ theorem absent_scope_refused (ty : EffTy) :
     exact absurd live (by decide)
 
 end Test.Program.ScopeExitCallback
-
-#print axioms Test.Program.ScopeExitCallback.live
-#print axioms Test.Program.ScopeExitCallback.marker_untyped
-#print axioms Test.Program.ScopeExitCallback.input_refused
-#print axioms Test.Program.ScopeExitCallback.empty_services
-#print axioms Test.Program.ScopeExitCallback.scoped_code_typed
-#print axioms Test.Program.ScopeExitCallback.scoped_slot_accepted
-#print axioms Test.Program.ScopeExitCallback.absent_scope_refused

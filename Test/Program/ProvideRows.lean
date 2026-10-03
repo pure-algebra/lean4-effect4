@@ -68,7 +68,4 @@ is false
 example : ((l.provide d₁).provide d₂).requires = (l.provide (d₁.provide d₂)).requires := by
   decide
 
-#print axioms provide_not_assoc
-#print axioms provideMerge_regroups
-#print axioms provide_sequenced
 end Test.Program.ProvideRows

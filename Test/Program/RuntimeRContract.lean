@@ -695,9 +695,6 @@ theorem pending_finish_controls :
     (termDrive uninterruptibleOne 3).2 = [.finish Api.root (.success (.nat 1)), .drainDue] :=
   ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
-#print axioms finished_pop_state
-#print axioms pending_finish_controls
-
 -- The old frame compiler finished this source at budget 7 while the term and host
 -- parked. Equal sufficient command budgets now retain the same live observation.
 #guard rootExit (frameRun (.suspend whileThree) [Api.evaluate] 7) = none

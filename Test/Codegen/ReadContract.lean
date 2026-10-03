@@ -580,9 +580,6 @@ to tell "annotated, not admitted here" from "wrong shape".
     (.call (.ident "Effect.gen") [.generator [.letDefinite "x" (.name ["number"] [])]]) =
   .error .unsupportedStmt
 
-#print axioms Effect4.Program.annotationSite
-#print axioms Effect4.Program.callRefusal
-#print axioms Effect4.Program.stmtRefusal
 #guard roundTrip nativeSignature nativeSpell 0
     (.bind (.succeed (.lit (.nat 1))) (.succeed (.var 0))) =
   .ok (.bind (.succeed (.lit (.nat 1))) (.succeed (.var 0)))
@@ -850,55 +847,5 @@ private def editWithReference : NativeEff :=
 #guard match (Node.eff editWithReference).replaceAt [0, 0] (.layer editLeaf) with
   | some (.eff changed) => !changed.layerRefsWF && (Effect4.Api.typeOf changed).isNone
   | _ => false
-
-#print axioms Effect4.Program.Node.replaceAt
-#print axioms Effect4.Program.Node.replaceAt_spec
-#print axioms Effect4.Program.Node.replaceAt_exists
-#print axioms Effect4.Program.Node.replaceAt_self
-#print axioms Effect4.Program.Node.replaceAt_overwrite
-#print axioms Effect4.Program.Node.at_replaceAt_disjoint
-#print axioms Effect4.Program.Node.setChild_self
-#print axioms Effect4.Program.Node.setChild_overwrite
-#print axioms Effect4.Program.Node.replaceLayerAt_eq_replaceAt
-#print axioms Effect4.Program.Node.replaceLayerAt_cons
-#print axioms Effect4.Program.Node.layerAt_eq_some_iff
-#print axioms Effect4.Program.Node.replaceLayerAt_spec
-#print axioms Effect4.Program.Node.replaceLayerAt_exists
-
-#print axioms nativeServiceTy_profile
-#print axioms Effect4.Program.Eff.hoistAll_exists
-#print axioms Effect4.Program.readModule_printModule
-#print axioms Effect4.Program.read_exact
-#print axioms Effect4.Program.readLayer_exact
-#print axioms Effect4.Program.readRow_exact
-#print axioms Effect4.Program.readPerform_exact
-#print axioms Effect4.Program.printModule_shape
-#print axioms Effect4.Program.checkTypedProgram
-#print axioms Effect4.Program.checkTypedProgram_type
-#print axioms Effect4.Program.checkTypedProgram_refusal_iff
-#print axioms Effect4.Program.TypedProgram.hasTy
-#print axioms Effect4.Codegen.emitModule
-#print axioms Effect4.Codegen.emitModule_erasure
-#print axioms Effect4.Codegen.ModuleEmission.unique
-#print axioms Effect4.Api.printDecl_erasure
-#print axioms Effect4.Codegen.envelopeCheck_iff
-#print axioms Effect4.Codegen.layersPlain_iff
-#print axioms Effect4.Codegen.mainConst_eq_some
-#print axioms Effect4.Codegen.ModuleReading.recheck
-#print axioms Effect4.Codegen.ModuleReading.unique
-#print axioms Effect4.Codegen.ModuleReading.typing_eq
-#print axioms Effect4.Codegen.admitModule_module
-#print axioms Effect4.Codegen.admitModule_typed
-#print axioms Effect4.Codegen.admitModule_read
-#print axioms Effect4.Codegen.admitModule_bound
-#print axioms Effect4.Codegen.admitModule_envelope
-#print axioms Effect4.Codegen.admitModule_complete
-#print axioms Effect4.Codegen.ModuleEmission.admit
-#print axioms Effect4.Api.admitModule_typed
-#print axioms Effect4.Api.admitModule_emitModule
-#print axioms Effect4.Program.Eff.restoreAll_hoistAll
-#print axioms Effect4.Program.readKey_printKey
-#print axioms Effect4.Program.readKey_exact
-#print axioms Effect4.Program.roundTrip_eq
 
 end Test.Codegen.ReadContract

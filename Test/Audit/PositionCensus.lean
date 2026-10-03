@@ -41,4 +41,3 @@ open Effect4.Laws.Auto.Positions
 open Effect4.Laws.Auto.PositionGate in
 #position_gate Effect4.Program.Sched.RState Effect4.Program.Sched.RCmd
   Effect4.Program.Sched.RInterp Effect4.Program.Sched.RIter
-

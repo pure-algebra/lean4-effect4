@@ -114,8 +114,6 @@ private def canonicalUniverse : List Ty := scoutUniverse.map Ty.normalize
 #guard Val.hasTy (Val.nat 1) (Ty.join .nat .bool)
 #guard Val.hasTy (Val.bool true) (Ty.join .nat .bool)
 #guard !Val.hasTy (Val.str "x") (Ty.join .nat .bool)
-#print axioms Effect4.Program.Ty.hasTy_join_left
-#print axioms Effect4.Program.Ty.hasTy_join_right
 
 /-! ### The tag residual (DI-39, part 4 commit 3, 2026-09-12)
 
@@ -143,10 +141,6 @@ private def hiddenNever : Ty := .union (.prod .never .string) (.prod (.lit "X") 
 #guard Ty.diffTag "X" hiddenNever = .prod .never .string
 #guard !supportedErrTy (Ty.diffTag "X" hiddenNever)
 #guard supportedErrTy (Ty.diffTag "X" hiddenNever.normalize)
-#print axioms Effect4.Program.Ty.diffTag_sub
-#print axioms Effect4.Program.Ty.diffTag_sound
-#print axioms Effect4.Program.Ty.diffTag_canonical
-#print axioms Effect4.Program.supportedErrTy_diffTag
 
 private def hiddenPair : Ty := .prod (.union .string .never) .string
 #guard !rawSupportedErrTy hiddenPair

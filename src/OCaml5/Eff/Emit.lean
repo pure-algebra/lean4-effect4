@@ -514,5 +514,4 @@ def emitNative (nullaryOps fnOps stratOps : Nat) : String :=
   "let scope_ty : ty = " ++ tyO Ty.scope ++ "\n" ++
   "let context_ty : ty = " ++ tyO Ty.context ++ "\n"
 
-
 end OCaml5.Eff

@@ -17,5 +17,4 @@ example (s : DeferredStore) (k : DeferredKey) (c : DeferredCell)
     (h : s.cellAt k = some c) : s.poll k = some c.completion := by
   aesop
 
-#print axioms Effect4.Machine.poll_reads_cell
 end Test.Machine.CompletionDataContract

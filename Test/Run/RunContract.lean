@@ -146,7 +146,7 @@ def byKey : Run :=
 
 /-! ## Journaled controls agree with machine replay
 
-Fixtures for `ControlReplayWanted.play_controls_eq_replay`: the convenience APIs keep the
+Fixtures for `play_controls_eq_replay`: the convenience APIs keep the
 same frame machine, including the nonempty table, independent budgets and pre-existing phases.
 -/
 

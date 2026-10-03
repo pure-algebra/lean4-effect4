@@ -487,37 +487,11 @@ private def danglingReferenceEdit : Option (Except Api.BuildRefusal Api.Built) :
   | .error (.admission (.uninhabited _)) => true
   | _ => false) = some true
 
-#print axioms Effect4.Api.Author.Internal.finishBuild
-#print axioms Effect4.Api.Built.rebuild
-#print axioms Effect4.Program.Authoring.build_table
-#print axioms Effect4.Program.Authoring.rebuild_spec
-#print axioms Effect4.Program.Authoring.rebuild_admitted
-#print axioms Effect4.Program.Authoring.rebuild_self
-
 /-! ## Scope safety of the new surface, and the axioms every proof reaches -/
 
 #guard (elaborateModule once).toOption.map (Eff.scopedAt 0) = some true
 #guard (elaborateModule readKey).toOption.map (Eff.scopedAt 0) = some true
 #guard (elaborate handler).toOption.map (Eff.scopedAt 0) = some true
 #guard (elaborate detachedInScope).toOption.map (Eff.scopedAt 0) = some true
-
-#print axioms counter_scoped
-#print axioms deployment_scoped
-#print axioms handler_scoped
-#print axioms forked_scoped
-#print axioms detached_scoped
-#print axioms detachedInScope_scoped
-#print axioms Effect4.Program.Authoring.Row.call_scoped
-#print axioms Effect4.Program.Authoring.build_table_lawful
-#print axioms Effect4.Program.Authoring.build_rows_resolve
-#print axioms Effect4.Program.Authoring.var_push_minted
-#print axioms Effect4.Program.Authoring.var_reserved
-#print axioms Effect4.Program.Authoring.ServiceDef.carrier_unique
-#print axioms Effect4.Program.Authoring.build_lawful
-#print axioms Effect4.Program.Authoring.build_runnable
-#print axioms Effect4.Api.Author.build
-#print axioms Effect4.Program.Authoring.Row.call
-#print axioms Effect4.Program.Authoring.elaborateModule
-#print axioms Effect4.Program.nativeSignatureWith_nil
 
 end Test.Program.AuthorContract

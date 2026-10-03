@@ -269,7 +269,6 @@ nonempty batch requirement at the pull boundary. A successful exit carries `Done
 def take (a : Ty) (e : Ty := .never) (done : Ty := .unit) : Ty :=
   .union (.list a) (.exitOf done e)
 
-
 private theorem flag_inj {o p : Bool} (h : (if o then 1 else 0 : Nat) = (if p then 1 else 0)) :
     o = p := by
   cases o <;> cases p

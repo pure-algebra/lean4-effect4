@@ -52,6 +52,4 @@ def Json.ofNat (n : Nat) : Json := .number ⟨binary64OfNat n⟩
 #guard binary64OfNat 1947 = 0x409E6C0000000000
 #guard binary64OfNat (2 ^ 53 + 1) = binary64OfNat (2 ^ 53)
 
-/-! ## Receipts -/
-
 end Effect4.Arch

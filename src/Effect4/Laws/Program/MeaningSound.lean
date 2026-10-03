@@ -381,7 +381,6 @@ theorem ExitHasTy.later {a e : Ty} {s s' : Stores} {ex : ExitV} (hle : s.le s')
   | success v => exact ⟨h.1, Val.validIn_mono hle v h.2⟩
   | failure c => exact h
 
-
 theorem SoundP.widen {pw pd : Effects.Program StoreSig ExitV} {s : Stores} {a a' e e' : Ty}
     (ha : ∀ v, Val.hasTy v a = true → Val.hasTy v a' = true)
     (he : ∀ v, Val.hasTy v e = true → Val.hasTy v e' = true)
@@ -403,7 +402,6 @@ theorem SoundP.bind {pw pd : Effects.Program StoreSig ExitV} {s : Stores} {a e a
   · rw [hd]; exact Stores.le_trans h.le hk.le
   · rw [hd]; exact hk.wf
   · rw [hd]; exact hk.heap
-
 
 theorem exitOk_fail {ty : Ty} {s : Stores} {x : Val} (hs : supportedErrTy ty = true)
     (hx : Val.hasTy x ty = true) (answer : Ty) :
@@ -430,7 +428,6 @@ theorem reify_ok {a e : Ty} {s : Stores} {ex : ExitV} (h : ExitHasTy a e s ex) :
     show Val.hasTy (Val.exitErr c) (.exitOf a e) = true
     rw [hasTy_exitErr]
     exact h
-
 
 /-- What a decision binds is part of the scrutinee, so it is valid where the scrutinee is. -/
 theorem Decision.decide_validIn (d : Decision) (s : Stores) {v x : Val} {first : Bool}
@@ -771,6 +768,5 @@ theorem run_typed (e : NativeEff) (t : EffTy) (fuel : Nat) (hs : Straight e = tr
   refine ⟨hout, _, hexit, ?_⟩
   rw [hstores]
   exact meaning_typed e t hs hty
-
 
 end Effect4.Program.Denote

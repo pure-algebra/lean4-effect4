@@ -163,7 +163,6 @@ open Effect4.Program
 #guard nativeAtom "mod" [.nat 10, .nat 0] = some (.nat 10)
 #guard nativeAtom "concat" [.str "a", .str "b"] = some (.str "ab")
 
-
 /-- Every successful native typing names an inventoried atom, for arbitrary input types. -/
 theorem typed_name_known (name : String) (args : List Ty) (answer : Ty)
     (h : nativeAtomTy name args = some answer) : name ∈ NativeAtom.names := by
@@ -178,13 +177,5 @@ theorem evaluated_name_known (name : String) (args : List Effect4.Machine.Val)
   obtain ⟨atom, hname, _⟩ := Option.bind_eq_some_iff.mp h
   rw [← NativeAtom.ofName?_sound hname]
   exact List.mem_map.mpr ⟨atom, NativeAtom.all_complete atom, rfl⟩
-
-#print axioms Effect4.Program.NativeAtom.all_complete
-#print axioms Effect4.Program.NativeAtom.ofName?_name
-#print axioms Effect4.Program.NativeAtom.ofName?_sound
-#print axioms Effect4.Program.NativeAtom.name_injective
-#print axioms Effect4.Program.NativeAtom.covers_iff
-#print axioms typed_name_known
-#print axioms evaluated_name_known
 
 end Test.Program.NativeAtomContract

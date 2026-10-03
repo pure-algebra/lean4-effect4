@@ -89,9 +89,6 @@ theorem evaluate_retains_token :
 #guard outstanding (applyPending replyAfterEvaluate 100).session =
   [⟨Api.root, 1, .external 0, .nat 3⟩]
 
-#print axioms evaluate_retains_guard
-#print axioms evaluate_retains_token
-
 -- One command consumes the reply even if the subsequent evaluation lacks fuel.
 def shortApplied : Session program table := (applyPending pending0 1).session
 #guard (applyPending pending0 1).phase = .applied

@@ -175,5 +175,4 @@ def readNodeSorts : MetaM (List (String × String)) := do
         | throwError "EffGen: {ctorName} carries the unselected family {family}"
       pure (shortName ctorName, spec.label)
 
-
 end OCaml5.Eff

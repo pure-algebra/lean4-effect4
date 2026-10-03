@@ -203,15 +203,4 @@ theorem control_cancellation_cannot_type (root : NativeEff) (w : W) (cause : Cau
 -- The same source completes normally when its timer fires.
 #guard (((replayR sleeping 40 [.evaluate Api.root, .advance (ClockMillis.ofNat 1)]).machine.fiber? Api.root).bind RunFiber.exit) == some (.success .unit)
 
-#print axioms cancellation_exit
-#print axioms cancellation_cannot_type
-#print axioms frozen_hook_rejects_unit
-#print axioms sleep_stack_exact
-#print axioms sleep_stack_rejected
-#print axioms guard_admits_wrong_arm
-#print axioms clean_cancellation_cannot_type
-#print axioms clean_input_fits
-#print axioms clean_cancellation_still_rejected
-#print axioms store_rejects_wrong_answer
-#print axioms control_cancellation_cannot_type
 end Test.Counterexamples.AsyncHookContract

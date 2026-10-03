@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Typed.AnswerSchema
 # Test.Program.AnswerSchema — decoded host answers at their token
 
 Placement: semantics Concept 5 (exact codecs) with Concept 1's membership, consumed by the host-answer
-edit (`edit_answer`, `M6Edits.answer`) through `answerOk_of_decode` (`Typed/AnswerSchema.lean`).
+edit (`edit_answer`, `edit_answer`) through `answerOk_of_decode` (`Typed/AnswerSchema.lean`).
 
 * A string-error failure and a unit success, encoded by the Schema codec and decoded back, are
   admitted at a declared token.

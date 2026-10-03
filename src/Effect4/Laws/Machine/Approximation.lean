@@ -321,12 +321,6 @@ macro_rules
 /-! ### The leaves -/
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-theorem M1OriginApproximation.spawn_grows {interp : RunInterp ν σ β ε δ ι α χ St}
-    {m : RunMachine ν σ β ε δ ι α χ St} {parent : RunFiber ν σ β ε δ ι α χ}
-    {program : Prim ν σ β ε δ ι α} {options : Supervision.ForkOptions} {site : List Nat} :
-    ProofGraph.Obligation (Grows m (spawn interp m parent program options site)) := ⟨⟩
-
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem spawn_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {parent : RunFiber ν σ β ε δ ι α χ} {program : Prim ν σ β ε δ ι α}
@@ -390,12 +384,6 @@ macro "hops_leaf" : tactic => `(tactic| first
   | exact countdownPark_grows
   | exact linkScope_grows
   | exact forkFinalizers_grows)
-
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-theorem M1OriginApproximation.launchEntrant_grows {interp : RunInterp ν σ β ε δ ι α χ St}
-    {raceId : Nat} {m : RunMachine ν σ β ε δ ι α χ St} {host : RunFiber ν σ β ε δ ι α χ}
-    {program : Prim ν σ β ε δ ι α} {site : List Nat} :
-    ProofGraph.Obligation (Grows m (launchEntrant interp raceId m host program site)) := ⟨⟩
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
@@ -684,11 +672,6 @@ theorem flushRoot_trace_extends (interp : RunInterp ν σ β ε δ ι α χ St) 
     (root : FiberId) (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St) :
     ∃ ev, (stepDecision.flushRoot interp fuel root rounds m).trace = m.trace ++ ev :=
   flushRoot_extends.exists
-
-/-- An advance extends the trace it starts from: every fire drains, drives and flushes, each of
-which extends (the timer, A4). -/
-theorem M1Clock.advance_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat} {millis : ClockMillis} : ProofGraph.Obligation (∀ {rounds : Nat} {m : RunMachine ν σ β ε δ ι α χ St},
-      Extends m (advanceState interp fuel millis rounds m).1) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem advance_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat} {millis : ClockMillis} :
@@ -1083,14 +1066,6 @@ theorem flushRoot_eq_flushRootState (interp : RunInterp ν σ β ε δ ι α χ 
     (root : FiberId) (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
     stepDecision.flushRoot interp fuel root rounds m = (flushRootState interp fuel root rounds m).1 := by aesop
 
-/-- An advance whose fuel sufficed is the same advance, receipt included, at every larger fuel
-and fire budget (the timer, A4): each fire's drive was settled and each flush's receipt true,
-so both are stable, and the loop recurs on the same machine. -/
-theorem M1Clock.advanceState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η),
-      (advanceState interp fuel millis rounds m).2 = true →
-      ∀ k j, advanceState interp (fuel + k) millis (rounds + j) m =
-        advanceState interp fuel millis rounds m) := ⟨⟩
-
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem advanceState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (millis : ClockMillis) :
     ∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η),
@@ -1380,13 +1355,6 @@ def SingleLoop : RunDecision ν σ β ε δ ι α → Bool
   | RunDecision.flush => false
   | RunDecision.advance _ => false
   | _ => true
-
-/-- More fuel and a larger fire budget extend an advance's trace (the timer, A4): a fire whose
-drive or flush stopped at the smaller fuel is extended by the larger one, and a fire that
-completed is the same fire. -/
-theorem M1Clock.advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St) (k j : Nat),
-      Extends (advanceState interp fuel millis rounds m).1
-        (advanceState interp (fuel + k) millis (rounds + j) m).1) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (millis : ClockMillis) :
@@ -1774,5 +1742,3 @@ theorem replay_colimit_eq_of_sufficient (interp : RunInterp ν σ β ε δ ι α
     exact replay_colimit interp tape m found k
 
 end Effect4.Machine
-
-#typed_state_obligations Effect4.Machine.M1OriginApproximation ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

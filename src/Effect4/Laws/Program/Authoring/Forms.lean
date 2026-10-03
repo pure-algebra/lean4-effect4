@@ -89,27 +89,4 @@ theorem releaseOne_scoped (resource : String) {effect : Src NativeOp} {release :
     ((releaseOne resource effect release) : Src NativeOp).Scoped := by
   unfold releaseOne; authoring_scoped
 
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.Authoring.Forms.void_scoped
-#print axioms Effect4.Program.Authoring.Forms.die_scoped
-#print axioms Effect4.Program.Authoring.Forms.yieldKey_scoped
-#print axioms Effect4.Program.Authoring.Forms.andThenEffect_scoped
-#print axioms Effect4.Program.Authoring.Forms.andThenContinuation_scoped
-#print axioms Effect4.Program.Authoring.Forms.andThenThunk_scoped
-#print axioms Effect4.Program.Authoring.Forms.as_scoped
-#print axioms Effect4.Program.Authoring.Forms.asVoid_scoped
-#print axioms Effect4.Program.Authoring.Forms.tapContinuation_scoped
-#print axioms Effect4.Program.Authoring.Forms.tapEffect_scoped
-#print axioms Effect4.Program.Authoring.Forms.ensuring_scoped
-#print axioms Effect4.Program.Authoring.Forms.matchCause_scoped
-#print axioms Effect4.Program.Authoring.Forms.matchCauseEffect_scoped
-#print axioms Effect4.Program.Authoring.Forms.yieldNow_scoped
-#print axioms Effect4.Program.Authoring.Forms.forkChildDefault_scoped
-#print axioms Effect4.Program.Authoring.Forms.forkDetachDefault_scoped
-#print axioms Effect4.Program.Authoring.Forms.forkInDefault_scoped
-#print axioms Effect4.Program.Authoring.Forms.forkScopedDefault_scoped
-#print axioms Effect4.Program.Authoring.Forms.releaseOne_scoped
-
 end Effect4.Program.Authoring.Forms
-

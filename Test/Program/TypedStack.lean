@@ -123,18 +123,4 @@ theorem parked_reachable : RReachable (sleeping : ProgramSource) 20 parked := by
   subst d
   trivial
 
-#print axioms popR_typed
-#print axioms hookLawsAt_interpRAt
-#print axioms saveAnswerR_typed
-#print axioms deliver_active
-#print axioms deliver_stale
-#print axioms capture_lookup
-#print axioms catch_walk
-#print axioms preempted_walk
-#print axioms wrong_middle
-#print axioms stale_is_inert
-#print axioms changing_middle
-#print axioms middle_differs
-#print axioms Effect4.Machine.RunMachine.fiber?_update_other
-#print axioms Effect4.Machine.RunMachine.fiber?_update_self
 end Test.Program.TypedStack

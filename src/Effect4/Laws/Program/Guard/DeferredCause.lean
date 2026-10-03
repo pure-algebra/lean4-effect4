@@ -221,5 +221,4 @@ theorem iteration_deferredCause (p : NativeEff) (table : RowTable)
       evaluateNative_deferredCause p table it.machine it.fiber it.yielding
         (injectYield_deferredCause m _ yielding it ht hi)
 
-
 end Effect4.Program.Guard.DeferredCause

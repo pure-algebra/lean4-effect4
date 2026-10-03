@@ -102,6 +102,4 @@ clause, so it is judged in the full inventory and passes alone. -/
 not carrying a vacuous inventory. -/
 #guard NativeAtom.all.all fun a => specWellFormed NativeAtom.names (NativeAtom.row a) (NativeAtom.spec a)
 
-#print axioms NativeAtom.atom_table_wf
-
 end Test.Program.AtomTable

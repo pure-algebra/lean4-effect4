@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Typed.Commands.Evaluate
 # Laws.Program.Typed.Commands.Clauses.Store — the store rows' clauses
 
 Concept 4 of `docs/core/semantics.md` (`step-deliver-preserves`, `step-loop-preserves`): the store
-clauses `StoreClauseKeeps root rootTy op` of `M6Ledger.step_deliver` / `step_loop` through
+clauses `StoreClauseKeeps root rootTy op` of `deliver_preserves` / `step_loop` through
 `evaluate_keeps` (`Commands/Evaluate.lean`).
 
 The shared part (Codex's `StoreFamilyTransport` candidate, adapted to the current `J`): every store

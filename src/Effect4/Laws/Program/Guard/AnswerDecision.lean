@@ -81,7 +81,6 @@ theorem guardQueue_resume_from_tail (p : NativeEff) (table : RowTable)
           controls races (Nat.le_refl _) (requestOf_update_unparked_subset m g rfl))
       · exact tail
 
-
 theorem registrationQueue_resume_result (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (target : FiberId) (offered : Nat) (code : NCode)
     (rest : List NCmd) (registration : RegistrationQueue rest) :

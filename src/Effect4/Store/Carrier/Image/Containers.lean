@@ -75,5 +75,4 @@ def tuple2 (I : Image α) (J : Image β) : Image (α × β) where
       · exact nomatch h
     · exact nomatch h
 
-
 end Effect4.Store.Image

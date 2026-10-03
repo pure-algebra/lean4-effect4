@@ -145,5 +145,4 @@ theorem scopeAdd_intro (root : NativeEff) (scope : Nat) (fin : FinName)
       exact CodeMeans.success _
     | none => exact codeMeans_badShape root
 
-
 end Effect4.Program.Sched

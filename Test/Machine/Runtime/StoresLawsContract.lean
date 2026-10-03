@@ -91,8 +91,6 @@ def withExternalFrame : Stores := { Stores.empty with externals := externalFrame
 -- The primitive's absent-key frontier has not been filled in to obtain the frame law.
 #guard syncOpStep (.refGet ⟨0⟩) withExternalFrame = none
 
-#print axioms Effect4.Machine.syncOpStep_externals
-
 /-! ## The register rows -/
 
 section Rows
@@ -441,14 +439,6 @@ def shapeCode : Val → Nat
 #guard (Env.serviceKeyImage.encode ⟨⟨1⟩, ⟨2⟩⟩).length = 74
 
 #check @Effect4.Machine.Env.Val.ofSpine_entries
-
-#print axioms Effect4.Machine.Val.image
-#print axioms Effect4.Machine.Val.keys_eq_handles
-#print axioms Effect4.Machine.Val.validIn_eq_handles
-#print axioms Effect4.Machine.Val.handles_eq_keys_code
-#print axioms Effect4.Machine.exitImage
-#print axioms Effect4.Machine.Val.image
-#print axioms Effect4.Machine.Env.Val.ofSpine_entries
 
 end Foundation
 

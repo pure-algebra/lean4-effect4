@@ -187,5 +187,3 @@ theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {t
       exact ⟨safe, clean, h⟩
 
 end Effect4.Program
-
-

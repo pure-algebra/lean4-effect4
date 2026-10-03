@@ -324,21 +324,4 @@ Every attack witness above is finite and decidable. The accepted ceiling is
 no dependency, `propext`, or `propext` with `Quot.sound`.
 -/
 
-#print axioms Test.Counterexamples.Semantics.CauseExit.tree_invents_structure
-#print axioms Test.Counterexamples.Semantics.CauseExit.tree_empty_not_unique
-#print axioms Test.Counterexamples.Semantics.CauseExit.append_duplicates_reasons
-#print axioms Test.Counterexamples.Semantics.CauseExit.append_breaks_self_combine
-#print axioms Test.Counterexamples.Semantics.CauseExit.squash_must_partition_before_choosing
-#print axioms Test.Counterexamples.Semantics.CauseExit.squash_interrupt_does_not_shadow_defect
-#print axioms Test.Counterexamples.Semantics.CauseExit.squash_empty_is_a_fourth_arm
-#print axioms Test.Counterexamples.Semantics.CauseExit.annotate_must_not_overwrite_by_default
-#print axioms Test.Counterexamples.Semantics.CauseExit.annotate_overwrite_keeps_position
-#print axioms Test.Counterexamples.Semantics.CauseExit.annotate_empty_is_identity
-#print axioms Test.Counterexamples.Semantics.CauseExit.finalizer_failure_stands_alone
-#print axioms Test.Counterexamples.Semantics.CauseExit.successful_finalizer_under_failed_exit
-#print axioms Test.Counterexamples.Semantics.CauseExit.empty_cause_failure_joins_to_success
-#print axioms Test.Counterexamples.Semantics.CauseExit.join_is_not_combine
-#print axioms Test.Counterexamples.Semantics.CauseExit.union_is_not_commutative
-#print axioms Test.Counterexamples.Semantics.CauseExit.order_changes_squash
-
 end Test.Counterexamples.Semantics.CauseExit

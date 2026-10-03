@@ -740,18 +740,6 @@ consumer. The plan is `docs/research/2026-10-03-session-work/plan.md`. Exact sel
 `controlOnce`; no theorem here asserts progress, fairness, deadlock or typed host admission.
 -/
 
-namespace WorkWanted
-
-/-- The planner chooses exactly a queued flush or the first runnable evaluation, when the
-machine is not stuck. This local goal serves `controlOnce` and R12's driver inspection. -/
-theorem nextControl_spec (s : Run) (decision : Api.Decision) : ProofGraph.Obligation
-    (s.nextControl = some decision ↔ s.machine.stuck = none ∧
-      ((decision = Api.flush ∧ s.work.queued ≠ []) ∨
-        ∃ fiber, decision = .evaluate fiber ∧ s.work.queued = [] ∧
-          s.work.runnable.head? = some fiber)) := ⟨⟩
-
-end WorkWanted
-
 /-- Exact membership in the runnable portion of the work view. -/
 theorem work_runnable_mem (s : Run) (id : FiberId) :
     id ∈ s.work.runnable ↔
@@ -786,9 +774,6 @@ theorem nextControl_spec (s : Run) (decision : Api.Decision) :
     | cons owner rest => aesop (add norm unfold [nextControl])
     | nil =>
       cases hr : s.work.runnable.head? <;> aesop (add norm unfold [nextControl])
-
-#obligation_proved WorkWanted.nextControl_spec := @nextControl_spec
-#typed_state_obligations Effect4.Run.WorkWanted ceiling 0 using aesop
 
 /-- No choice means a stuck machine, or no work in the two internal categories inspected.
 It says nothing about pending host replies, timers, command residue or deadlock. -/
@@ -919,20 +904,7 @@ are `runPure_eq_run` and `runClock_eq_run`; it neither chooses a scheduler nor e
 empty-table reference-machine agreement. Only newly recorded phases must have progressed.
 -/
 
-namespace ControlReplayWanted
-
-/-- `run-controls-replay`: progressing control rows leave the raw replay's machine, from
-any starting Run, without requiring its earlier phases to have progressed. -/
-theorem play_controls_eq_replay (s : Run) (tape : List Api.Decision)
-    (_h : (s.play (Rows.tape tape)).phases =
-      s.phases ++ List.replicate tape.length Phase.progressed) :
-    ProofGraph.Obligation
-      ((s.play (Rows.tape tape)).machine =
-        machineOf (replayFrom s.built.program s.built.table s.budget.fuel tape s.machine)) := ⟨⟩
-
-end ControlReplayWanted
-
-/-- Phase-prefix helper for `ControlReplayWanted.play_controls_eq_replay`: playing only
+/-- Phase-prefix helper for `play_controls_eq_replay`: playing only
 appends verdicts, so a premise about the new suffix says nothing about earlier phases. -/
 theorem play_phases_extend (s : Run) (rows : List Command) :
     ∃ added, (s.play rows).phases = s.phases ++ added := by
@@ -980,10 +952,6 @@ theorem play_controls_eq_replay (s : Run) (tape : List Api.Decision)
     rw [ih (s.step (.control decision)) htail, step_built, step_budget, hstep,
       replayFrom_cons _ _ _ _ _ _ hstuck henough]
 
-#obligation_proved ControlReplayWanted.play_controls_eq_replay := @play_controls_eq_replay
-
-#typed_state_obligations Effect4.Run.ControlReplayWanted ceiling 0 using aesop
-
 /-- **O-10.** The ordinary run is the ordinary run: the journal `[evaluate, flush]` leaves
 `Api.run`'s machine when both rows progressed. This is the two-decision instance of
 `play_controls_eq_replay`; fuel frontiers and refusals remain outside its premise. -/
@@ -1016,13 +984,6 @@ end Effect4.Run
 namespace Effect4.Run.M1Trace
 open Effect4 Effect4.Machine Effect4.Program
 
-theorem observe_replace_trace (s : Run)
-    (trace : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
-    ProofGraph.Obligation
-      (Run.observe { s with session :=
-        { s.session with machine := { s.session.machine with trace } } } =
-       Run.observe s) := ⟨⟩
-
 /-- The observation reads the machine's fibers, store, stuck flag and host readers, never its
 trace: every reader but the zero-fuel inspection reduces as is, and the inspection's replay
 splits only on the stuck flag and the finished test, which the trace does not touch. -/
@@ -1044,8 +1005,4 @@ theorem observe_replace_trace_proof (s : Run)
 
 end Effect4.Run.M1Trace
 
-#obligation_proved Effect4.Run.M1Trace.observe_replace_trace :=
-  @Effect4.Run.M1Trace.observe_replace_trace_proof
 -- END M1 PHASE B Run
-
-#typed_state_obligations Effect4.Run.M1Trace ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

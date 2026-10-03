@@ -83,10 +83,6 @@ def productUnion : Program := .bind
 #guard Effect4.Program.NativeAtom.projectProduct true
   (.union (.prod .nat .bool) (.list .nat)) = none
 #guard Effect4.Program.NativeAtom.projectProduct true (.list (.fiberOf .nat .never)) = none
-#print axioms Effect4.Program.admitStraightProgram
-#print axioms Effect4.Program.admitStraightProgram_admission_error
-#print axioms Effect4.Program.admitStraightProgram_ok
-#print axioms Effect4.Program.admitStraightProgram_outside
 
 /-! Checked production keeps typing failures separate from printing failures and
 uses the same type evidence as execution admission, without inheriting its limits. -/
@@ -245,10 +241,6 @@ def joinNumberModule : TypeScript.Module :=
   | .error (.print (.unsafeName name)) => name == "a0"
   | _ => false
 
-#print axioms Effect4.Codegen.admitModule
-#print axioms Effect4.Codegen.envelopeCheck
-#print axioms Effect4.Api.admitModule
-
 /-! ## Running -/
 
 #guard (run p42 100).outcome = Outcome.finished
@@ -335,25 +327,7 @@ private def exitPayload? : Val → Option Val
 #guard !Effect4.Program.Val.hasTy (.handle 7 0) Ty.duration ["DateTime.DateTime"]
 #guard !Effect4.Program.Val.hasTy .unit Ty.null
 
-#print axioms Effect4.Program.Ty.chunk
-#print axioms Effect4.Program.Ty.take
-#print axioms Effect4.Machine.Value.resultFailure
-#print axioms Effect4.Machine.Value.resultSuccess
-
-/-! ## Axiom receipts -/
-
-#print axioms Effect4.Api.typeOf
-#print axioms Effect4.Api.print
-#print axioms Effect4.Api.printDecl
-#print axioms Effect4.Api.compile
-#print axioms Effect4.Api.replay
-#print axioms Effect4.Api.run
-#print axioms Effect4.Api.runSync
-#print axioms Effect4.Api.schemaDocument
-#print axioms Effect4.Api.jsonExpr
-
 end Test.Api.ApiContract
-
 
 namespace Test.Api.IntegerAdmission
 open Effect4 Effect4.Program Effect4.Api
@@ -405,10 +379,4 @@ def foreignInt : Representation := .number none [Schema.Check.int]
     (.union .nat .int, ["right"]) ] : List (Ty × Path)).all
       (fun (t, path) => findInt [] t == some path)
 
-#print axioms Api.findInt
-#print axioms Api.findIntInTable
-#print axioms Api.findIntInEffTy
-#print axioms Api.admitProgram
-#print axioms Api.admitProgram_table_int
-#print axioms Api.admitProgram_type_int
 end Test.Api.IntegerAdmission

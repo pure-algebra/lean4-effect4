@@ -88,9 +88,4 @@ theorem plain_roundtrip : PlainTyped order plainPre plainPost 0
     (fun _ answer => answer = true) request :=
   (Typed.plain_iff _ _ _ _ _ _).mp plain_compatibility
 
-#print axioms exchanged_certificate_refused
-#print axioms monotone_request
-#print axioms sum_left_recovers
-#print axioms sum_right_recovers
-#print axioms plain_roundtrip
 end Test.Program.ProtocolCertificates

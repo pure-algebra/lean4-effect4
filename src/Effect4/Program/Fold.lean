@@ -673,7 +673,6 @@ def foldMap_pos_list_ty {M : Type u} (unit : M) (op : M → M → M) (xs : List 
 termination_by structural xs
 end
 
-
 inductive TermFam where
   | term
   | terms
@@ -932,7 +931,6 @@ theorem foldM_natural_terms {M : Type u → Type v} {N : Type u → Type w}
 termination_by structural node
 end
 
-
 inductive CauseTermFam where
   | cause
 deriving DecidableEq, Repr
@@ -1103,7 +1101,6 @@ theorem foldM_natural_cause {M : Type u → Type v} {N : Type u → Type w}
   | .both a0 a1 =>
     simp only [foldM_cause, CauseTermMAlgebra.map, φ.map_bind, foldM_natural_cause φ alg a0, foldM_natural_cause φ alg a1]
 termination_by structural node
-
 
 inductive EffFam where
   | eff
@@ -3036,7 +3033,6 @@ theorem foldM_natural_layers {Op : Type} {M : Type u → Type v} {N : Type u →
 termination_by structural node
 end
 
-
 inductive EffFrontierFam where
   | eff
   | stmt
@@ -3424,107 +3420,6 @@ theorem weaken_eq_cata_action {Op : Type} (cut : Nat) (node : Effect4.Program.Ac
 termination_by structural node
 end
 
-
-/-! ## Receipts -/
-
-#print axioms cata_pos_prod_bool_ty_eq
-#print axioms cata_pos_prod_string_prod_bool_ty_eq
-#print axioms cata_pos_list_prod_string_prod_bool_ty_eq
-#print axioms cata_pos_list_ty_eq
-#print axioms cata_ty_never
-#print axioms cata_ty_unit
-#print axioms cata_ty_nat
-#print axioms cata_ty_int
-#print axioms cata_ty_string
-#print axioms cata_ty_bool
-#print axioms cata_ty_handle
-#print axioms cata_ty_option
-#print axioms cata_ty_list
-#print axioms cata_ty_prod
-#print axioms cata_ty_except
-#print axioms cata_ty_exitOf
-#print axioms cata_ty_causeOf
-#print axioms cata_ty_fiberOf
-#print axioms cata_ty_union
-#print axioms cata_ty_lit
-#print axioms cata_ty_refOf
-#print axioms cata_ty_deferredOf
-#print axioms cata_ty_var
-#print axioms cata_ty_unknown
-#print axioms cata_ty_record
-#print axioms cata_ty_map
-#print axioms cata_ty_tuple
-#print axioms cata_ty_app
-#print axioms cata_ty_null
-#print axioms cata_ty_undefined
-#print axioms cata_ty_number
-#print axioms cata_ty_bytes
-#print axioms hom_eq_cata_ty
-#print axioms hom_pos_prod_bool_ty
-#print axioms hom_pos_prod_string_prod_bool_ty
-#print axioms hom_pos_list_prod_string_prod_bool_ty
-#print axioms hom_pos_list_ty
-#print axioms cata_id_ty
-#print axioms cata_id_pos_prod_bool_ty
-#print axioms cata_id_pos_prod_string_prod_bool_ty
-#print axioms cata_id_pos_list_prod_string_prod_bool_ty
-#print axioms cata_id_pos_list_ty
-#print axioms hom_eq_cata_term
-#print axioms hom_eq_cata_terms
-#print axioms cata_id_term
-#print axioms cata_id_terms
-#print axioms foldM_eq_cata_term
-#print axioms foldM_eq_cata_terms
-#print axioms foldM_id_term
-#print axioms foldM_id_terms
-#print axioms foldM_natural_term
-#print axioms foldM_natural_terms
-#print axioms hom_eq_cata_cause
-#print axioms cata_id_cause
-#print axioms foldM_eq_cata_cause
-#print axioms foldM_id_cause
-#print axioms foldM_natural_cause
-#print axioms hom_eq_cata_eff
-#print axioms hom_eq_cata_stmt
-#print axioms hom_eq_cata_stmts
-#print axioms hom_eq_cata_effs
-#print axioms hom_eq_cata_action
-#print axioms hom_eq_cata_layer
-#print axioms hom_eq_cata_layers
-#print axioms cata_id_eff
-#print axioms cata_id_stmt
-#print axioms cata_id_stmts
-#print axioms cata_id_effs
-#print axioms cata_id_action
-#print axioms cata_id_layer
-#print axioms cata_id_layers
-#print axioms foldM_eq_cata_eff
-#print axioms foldM_eq_cata_stmt
-#print axioms foldM_eq_cata_stmts
-#print axioms foldM_eq_cata_effs
-#print axioms foldM_eq_cata_action
-#print axioms foldM_eq_cata_layer
-#print axioms foldM_eq_cata_layers
-#print axioms foldM_id_eff
-#print axioms foldM_id_stmt
-#print axioms foldM_id_stmts
-#print axioms foldM_id_effs
-#print axioms foldM_id_action
-#print axioms foldM_id_layer
-#print axioms foldM_id_layers
-#print axioms foldM_natural_eff
-#print axioms foldM_natural_stmt
-#print axioms foldM_natural_stmts
-#print axioms foldM_natural_effs
-#print axioms foldM_natural_action
-#print axioms foldM_natural_layer
-#print axioms foldM_natural_layers
-#print axioms weaken_eq_cata_eff
-#print axioms weaken_eq_cata_stmt
-#print axioms weaken_eq_cata_stmts
-#print axioms weaken_eq_cata_effs
-#print axioms weaken_eq_cata_action
-
 end Effect4.Program
 
 /-! ## Acceptance guards for the generated Program Fold
@@ -3757,4 +3652,3 @@ def depthEnv : List Nat := [7, 8, 9]
 #guard (cata_frontier_eff (frontierMap id id) pWeaken : Eff Nat) == pWeaken
 
 end FoldAcceptance
-

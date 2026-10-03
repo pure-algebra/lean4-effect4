@@ -919,79 +919,6 @@ def foldMap_pos_option_checkRepresentationAnnotationOf_representation {M : Type 
 termination_by structural x
 end
 
-
-/-! ## Receipts -/
-
-#print axioms Effect4.ElementOf.map_map
-#print axioms Effect4.ElementOf.map_id
-#print axioms Effect4.PropertySignatureOf.map_map
-#print axioms Effect4.PropertySignatureOf.map_id
-#print axioms Effect4.IndexSignatureOf.map_map
-#print axioms Effect4.IndexSignatureOf.map_id
-#print axioms Effect4.CheckRepresentationAnnotationOf.map_map
-#print axioms Effect4.CheckRepresentationAnnotationOf.map_id
-#print axioms cata_pos_list_representation_eq
-#print axioms cata_pos_list_check_eq
-#print axioms cata_pos_elementOf_representation_eq
-#print axioms cata_pos_list_elementOf_representation_eq
-#print axioms cata_pos_propertySignatureOf_representation_eq
-#print axioms cata_pos_list_propertySignatureOf_representation_eq
-#print axioms cata_pos_indexSignatureOf_representation_eq
-#print axioms cata_pos_list_indexSignatureOf_representation_eq
-#print axioms cata_pos_option_list_representation_eq
-#print axioms cata_pos_checkRepresentationAnnotationOf_representation_eq
-#print axioms cata_pos_option_checkRepresentationAnnotationOf_representation_eq
-#print axioms cata_representation_declaration
-#print axioms cata_representation_reference
-#print axioms cata_representation_suspend
-#print axioms cata_representation_null
-#print axioms cata_representation_undefined
-#print axioms cata_representation_void
-#print axioms cata_representation_never
-#print axioms cata_representation_unknown
-#print axioms cata_representation_any
-#print axioms cata_representation_string
-#print axioms cata_representation_number
-#print axioms cata_representation_boolean
-#print axioms cata_representation_bigint
-#print axioms cata_representation_symbol
-#print axioms cata_representation_literal
-#print axioms cata_representation_uniqueSymbol
-#print axioms cata_representation_objectKeyword
-#print axioms cata_representation_enum
-#print axioms cata_representation_templateLiteral
-#print axioms cata_representation_arrays
-#print axioms cata_representation_objects
-#print axioms cata_representation_union
-#print axioms cata_check_filter
-#print axioms cata_check_filterGroup
-#print axioms hom_eq_cata_representation
-#print axioms hom_eq_cata_check
-#print axioms hom_pos_list_representation
-#print axioms hom_pos_list_check
-#print axioms hom_pos_elementOf_representation
-#print axioms hom_pos_list_elementOf_representation
-#print axioms hom_pos_propertySignatureOf_representation
-#print axioms hom_pos_list_propertySignatureOf_representation
-#print axioms hom_pos_indexSignatureOf_representation
-#print axioms hom_pos_list_indexSignatureOf_representation
-#print axioms hom_pos_option_list_representation
-#print axioms hom_pos_checkRepresentationAnnotationOf_representation
-#print axioms hom_pos_option_checkRepresentationAnnotationOf_representation
-#print axioms cata_id_representation
-#print axioms cata_id_check
-#print axioms cata_id_pos_list_representation
-#print axioms cata_id_pos_list_check
-#print axioms cata_id_pos_elementOf_representation
-#print axioms cata_id_pos_list_elementOf_representation
-#print axioms cata_id_pos_propertySignatureOf_representation
-#print axioms cata_id_pos_list_propertySignatureOf_representation
-#print axioms cata_id_pos_indexSignatureOf_representation
-#print axioms cata_id_pos_list_indexSignatureOf_representation
-#print axioms cata_id_pos_option_list_representation
-#print axioms cata_id_pos_checkRepresentationAnnotationOf_representation
-#print axioms cata_id_pos_option_checkRepresentationAnnotationOf_representation
-
 end Effect4
 
 /-! ## Acceptance guards for the generated Schema Fold
@@ -1091,4 +1018,3 @@ def cataHom {R : RepresentationFam → Type} (alg : RepresentationAlgebra R) :
   h_check_filterGroup := cata_check_filterGroup alg
 
 end SchemaFoldAcceptance
-

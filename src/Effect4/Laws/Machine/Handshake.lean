@@ -140,7 +140,6 @@ theorem parkHandshake_of_fiberIds_nodup
     · simpa only [sameId] using fiber_lookup_of_mem_nodup m unique f member
     · exact guarded
 
-
 end Predicate
 
 /-! M4 boundary: cancellation can leave a token in an already captured batch;

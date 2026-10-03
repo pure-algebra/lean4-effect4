@@ -146,7 +146,6 @@ def exportNameSafe (name : String) : Bool :=
   Effect4.Codegen.Names.binderName name && firstByte name != some 97 &&
     !reserved.contains name && (LayerTerm.readRefName name).isNone
 
-
 /-- The binder minted for environment position `index`: `a0`, `a1`, … The environment is
 positional, so a position is a name and the printer needs no source identifiers. -/
 def Var.name (index : Nat) : String := "a" ++ toString index

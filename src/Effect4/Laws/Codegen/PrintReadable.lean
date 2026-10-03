@@ -291,7 +291,6 @@ theorem printArg_ok {sig : Signature Op} {d : Nat} {daemon : Bool}
       argSortOf, Arg.kind, bind, Except.bind, pure, Except.pure])
   | _ => exact printArg_ok_leaf _ hr (fun _ h => by cases h)
 
-
 /-! ## The table: every hole is filled by a capture of its kind -/
 
 /-- The pattern at `i` forces the argument to print (`someTerm`, `decisionTag`, `someTy`). -/
@@ -395,7 +394,6 @@ theorem kinds_of_printArgs {sig : Signature Op} {n : Nat} {row : Templates.Row}
       refine ⟨a, (Except.ok.inj this).symm, ?_⟩
       rw [hk.1] at hkind
       exact Option.some.inj hkind
-
 
 /-! ## The row call prints -/
 
@@ -529,7 +527,6 @@ theorem print_stmt {st : Program.Stmt Op} {n d : Nat} (hd : cata_stmt (readableA
   simp only at hout hfamrow hctor
   subst hout hfamrow hctor
   simp only [tableLayer, hfind', hτ, ok_bind, hinst]
-
 
 /-- The spines print item by item. -/
 theorem print_effs {e : Effs Op} {n : Nat} (hr : ReadableAt sig .effs e n)

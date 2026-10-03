@@ -3,8 +3,8 @@ import Effect4.Laws.Program.Typed.Commands.Evaluate
 /-!
 # Laws.Program.Typed.Commands.Clauses.Park — the park/await clauses (M6)
 
-Concept 4 (the configuration invariant `I`); questions `M6Ledger.step_deliver` and
-`M6Ledger.step_loop`, through `evaluate_keeps` and `loop_preserves_of_clauses`, which read
+Concept 4 (the configuration invariant `I`); questions `deliver_preserves` and
+`loop_preserves`, through `evaluate_keeps` and `loop_preserves_of_clauses`, which read
 `∀ op, FiberClauseKeeps root rootTy op`. A fiber that parks takes the machine's next token
 (`m.nextToken`, the counter then bumped) and the world declares it (`World.addToken`): the token
 transport (`configTyped_token`) moves the whole configuration to that world, and the park edit then

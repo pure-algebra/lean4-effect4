@@ -192,7 +192,6 @@ theorem matchT_cond_nodeLike (n : Nat) (t a b : Tpl) (y : Expr) (hy : nodeLike y
     matchT n (.cond t a b) y = none := by
   cases y <;> simp_all [nodeLike]
 
-
 /-! ## Two skeletons apart: no instance of the second matches the first
 
 The table is read first match wins, so the printing row's image must match no row before it.
@@ -457,7 +456,6 @@ theorem readLeaf_print {sig : Signature Op} {d : Nat} {daemon : Bool}
   cases v <;> aesop (add norm simp [leafReadable, ArgF.fold, printArg, argSortOf, readLeaf,
     readLiteral_print, readForkOptions_print])
 
-
 /-! ## The arguments read back -/
 
 theorem argsReadable_at {sig : Signature Op} {fam : EffFam} {n : Nat} {out : RowOut}
@@ -519,7 +517,6 @@ theorem captured_of_lookup : ∀ (σ : Subst) (i : Nat) (a : Arg), lookup σ i =
 theorem Fixed.holds_eq {R : EffFam → Type} (v : Fixed) (a : ArgF Op R) (h : v.holds a = true) :
     a = v.arg := by
   cases v <;> cases a <;> aesop (add norm simp [Templates.Fixed.holds, Templates.Fixed.arg])
-
 
 /-- A child that printed to a capture prints to it (the inverse of `printArg_child`). -/
 theorem printsTo_of_printArg {sig : Signature Op} {d : Nat} {fam : EffFam}
@@ -600,7 +597,6 @@ theorem readCapture_print
       aesop (add norm simp [readCapture_expr_child, readCapture_exprs_child,
         readCapture_stmts_child, argSortOf, PrintsTo], safe forward [hchild, hchildren, hblock])
   | _ => exact readCapture_print_leaf sig σ daemon d _ hr a hp (fun _ h => by cases h) i hmem
-
 
 /-! ### One argument, then all of them -/
 
@@ -708,7 +704,6 @@ theorem argSorts_view : ∀ (fam : EffFam) (e : EffSelfCarrier Op fam),
   | .layer, e => by cases e <;> rfl
   | .layers, e => by cases e <;> rfl
 
-
 /-! ## Facts of the table, decided -/
 
 /-- Every argument of a skeleton row is a hole of the skeleton or fixed by the classifier: the
@@ -762,7 +757,6 @@ theorem hole_of_not_supplied_stmt {row : Templates.Row} (hmem : row ∈ table) {
     rw [← ArgPat.supplies_isSome (Op := Op) (R := EffSelfCarrier Op), hsup] at hc
     rw [hout]; simpa only [Option.isSome_none, Bool.false_eq_true, or_false] using hc
 
-
 /-! ## Lists: the index of what `find?` finds; `findSome?` over an indexed list -/
 
 theorem find?_index {α : Type} (p : α → Bool) : ∀ (l : List α) (a : α), l.find? p = some a →
@@ -811,7 +805,6 @@ theorem printRow_nodeLike {row : Row} {r : Term} {x : Expr} (h : printRow row r 
     nodeLike x = true := by
   unfold printRow at h
   aesop (add norm simp [printRowHead, printMethod, nodeLike])
-
 
 /-! ## The pairwise fact of the table: no row before the printing row matches its image -/
 
@@ -877,7 +870,6 @@ def actionRowHeaded (row : Templates.Row) : Bool :=
     | _ => false
 
 theorem table_actionHeaded : table.all actionRowHeaded = true := by decide
-
 
 /-! ## The printer and the domain at a node, inverted -/
 
@@ -957,7 +949,6 @@ theorem readRow_none_of_same {row : Templates.Row} {i : Nat} (hout : row.out = .
   unfold readRow
   aesop (add norm simp [Tpl.rigid, hsame])
 
-
 /-! ## The printing row reads its image back -/
 
 theorem selects_fam_ctor {R : EffFam → Type} {row : Templates.Row} {ctor : String}
@@ -1023,7 +1014,6 @@ theorem readArgs_at_print {row : Templates.Row} (hmem : row ∈ table)
     rw [argSortOf_fold] at this
     simpa only [hfam, hout] using this
 
-
 /-- **The printing row reads its image back**, when it is a rigid skeleton. -/
 theorem readRow_rigid_print {row : Templates.Row} (hk : table[k]? = some row)
     {ctor : String} {args : List (ArgF Op (EffSelfCarrier Op))} {e : EffSelfCarrier Op fam}
@@ -1064,7 +1054,6 @@ theorem readRow_rigid_print {row : Templates.Row} (hk : table[k]? = some row)
     rw [hσ] at hσ'
     obtain rfl := Option.some.inj hσ'
     simp only [hargs, ok_bind, hb]
-
 
 /-- The printing row, transparent to the action family (`withFiber`), reads its image back:
 the same tree read as an action, then the node rebuilt. -/
@@ -1123,7 +1112,6 @@ theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.R
   subst hfam hrow
   unfold readRow
   simp only [↓reduceIte, read_printRow hl op hd r hreq hp, rowAnswer, Except.mapError]
-
 
 /-! ## No row before the printing row fires -/
 
@@ -1256,7 +1244,6 @@ theorem earlier_none_rowCall (hl : LawfulSpelling sig spell) (hrow : row.out = .
 
 end Earlier
 
-
 /-! ## The reader reaches the printing row -/
 
 /-- Rows before `k` in the table are apart from row `k`, or of another family. -/
@@ -1294,7 +1281,6 @@ theorem readT_of_row {row : Templates.Row} (hk : table[k]? = some row)
     (fun j hj rj hrj => ?_) hk ?_
   · simpa only [Nat.zero_add] using hbefore j hj rj hrj
   · simpa only [Nat.zero_add] using hat
-
 
 /-! ## The node step -/
 
@@ -1337,7 +1323,6 @@ theorem fold_eq_op_term {R : EffFam → Type} (alg : EffAlgebra Op R)
   | [_], h => by simp only [List.map_cons, List.map_nil, List.cons.injEq, reduceCtorEq, and_false] at h
   | _ :: _ :: _ :: _, h => by
     simp only [List.map_cons, List.cons.injEq, reduceCtorEq, and_false] at h
-
 
 section Step
 
@@ -1398,7 +1383,6 @@ theorem child_at_hole {t : Tpl} (_hout : row.out = .tpl t) (hrigid : t.rigid = t
     | child fam' c =>
       exact (hchild fam' _ y hlt c (readableAt_of_argReadable hra) (printsTo_of_printArg hp)).2
     | _ => exact absurd hc Bool.false_ne_true
-
 
 /-- The single argument of a transparent row, from the sort column. -/
 theorem args_of_sorts_single {args : List (ArgF Op (EffSelfCarrier Op))} {s : ArgSort}
@@ -1740,7 +1724,6 @@ theorem readT_print_step (hl : LawfulSpelling sig spell) {m : Nat}
     (hblock := fun d ss hy c hr' hp' => (ih (sizeOf ss) (by omega)).2.2 d c ss (Nat.le_refl _) hr' hp')
     (hsame := hsame) hfam hp hr
 
-
 /-- The domain's spines, item by item (the definition, at each cons). -/
 theorem dom_effs_cons (e : Eff Op) (es : Effs Op) (n : Nat) :
     cata_effs (readableAlg sig) (.cons e es) n =
@@ -1803,7 +1786,6 @@ theorem readSpine_print_step {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo s
   | .layer, _, _, _, _, _, hp => by simp only [PrintsTo] at hp
   | .stmt, _, _, _, _, _, hp => by simp only [PrintsTo] at hp
   | .stmts, _, _, _, _, _, hp => by simp only [PrintsTo] at hp
-
 
 /-- A readable statement whose image is `(s, declared)` reads back from `s` through the first
 statement row that fires, declaring `declared`, given the recursion below it. -/

@@ -11,6 +11,4 @@ open Effect4.Ingest
 #guard Code.importOpaque.spectrum == .classification
 #guard Code.bindShape.spectrum == .applicativeGap
 #guard Code.node.spectrum == .instrument
-#print axioms Code.all_complete
-#print axioms Code.reserved_iff
 end Test.Ingest.TaxonomyContract

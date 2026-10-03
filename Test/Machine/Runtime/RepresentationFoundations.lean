@@ -239,13 +239,4 @@ theorem composed_success : ∃ model answer, modelStep true 1 = some (model, ans
 theorem composed_frontier : modelStep false 1 = none :=
   induced.frontier false (0, true) 1 ⟨⟨True.intro, rfl⟩, rfl⟩ rfl
 
-#print axioms heterogeneous_update
-#print axioms heterogeneous_read
-#print axioms wrong_write_refused
-#print axioms indexed_bank
-#print axioms composed
-#print axioms induced
-#print axioms missing_middle_invariant_refused
-#print axioms missing_relation_invariant_refused
-#print axioms changed_answer_refused
 end Test.Machine.RepresentationFoundations

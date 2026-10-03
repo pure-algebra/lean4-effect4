@@ -52,13 +52,6 @@ structure InterpAgree (i₁ : FInterp) (i₂ : RInterp) : Prop where
   linkOk : ∀ mode scope fiber s s' key, StoresOk s →
     i₁.scopeLinkFiber mode scope fiber s = some (s', key) → StoresOk s'
 
-/-- Registration keeps the loop's store invariant: the deferred half is untouched, and the
-registration-key bound survives because the allocated key is the supply's own value
-(`Machine.scopeLinkFiber_keysFresh`, `E4-CHECK-CE-016`). -/
-theorem M1Actions.scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.ScopeMode) (scope : Nat)
-    (fiber : FiberId) (s s' : Stores) (key : Nat) (_hs : StoresOk s)
-    (_h : (interpOf root).scopeLinkFiber mode scope fiber s = some (s', key)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
-
 /-- Registration writes only the scope store (`Machine/Stores.lean`, `stores.scopeLinkFiber`). -/
 theorem scopeLinkFiber_externals (mode : Supervision.ScopeMode) (scope : Nat) (fiber : FiberId)
     {state state' : Stores} {key : Nat}
@@ -199,12 +192,6 @@ theorem listRel_evaluate (root : NativeEff) :
   | [] => ListRel.nil
   | _ :: rest => ListRel.cons rfl (listRel_evaluate root rest)
 
-theorem M1Origin.spawn_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (_hb : i₁.budgetOf = i₂.budgetOf)
-    {m₁ : FMachine} {m₂ : RState}
-    (_hok : MachineOk StoresOk m₁) (_hm : BMeans root m₁ m₂) {p₁ : FRun} {p₂ : RFiber}
-    (_hp : FMeans root p₁ p₂) {prog₁ : NCode} {prog₂ : RProgram} (_hprog : CodeMeans root prog₁ prog₂)
-    (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (TripleRel root Eq (spawn i₁ m₁ p₁ prog₁ options site) (spawn i₂ m₂ p₂ prog₂ options site)) := ⟨⟩
-
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem spawn_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hb : i₁.budgetOf = i₂.budgetOf)
     {m₁ : FMachine} {m₂ : RState}
@@ -326,11 +313,6 @@ theorem countdownPark_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁
         exact hg.withObservers _
       · rw [hf.id]
         exact means_pushAsyncFinalizer hf.means _
-
-theorem M1Origin.beginRace_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
-    (_hok : MachineOk StoresOk m₁) (_hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
-    (_hf : FMeans root f₁ f₂) (y : Bool) {e₁ : List NCode} {e₂ : List RProgram}
-    (_he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) : ProofGraph.Obligation (IterRel root (beginRace (interpAt root c) m₁ f₁ y e₁ site) (beginRace (interpRAt root c) m₂ f₂ y e₂ site)) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem beginRace_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
@@ -529,11 +511,6 @@ theorem runIn_rel (target : FiberId) (scope : Nat) {a₁ : FAnswer} {a₂ : RAns
   dsimp only at hok' hm' hcs
   exact ⟨hok', hm', ha _ _ _ hf, rfl, outcomeOf_eq hm' false, hcs⟩
 
-set_option linter.unusedSectionVars false in
-theorem M1Origin.fork_rel {p₁ : NCode} {p₂ : RProgram} (_hp : CodeMeans root p₁ p₂)
-    (options : Supervision.ForkOptions) {a₁ : FAnswer} {a₂ : RAnswer} (_ha : AnswerRel root a₁ a₂) (site : List Nat := []) : ProofGraph.Obligation (IterRel root (FiberAction.fork (interpAt root c) m₁ f₁ y p₁ options a₁ site)
-      (FiberAction.fork (interpRAt root c) m₂ f₂ y p₂ options a₂ site)) := ⟨⟩
-
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂)
     (options : Supervision.ForkOptions) {a₁ : FAnswer} {a₂ : RAnswer} (ha : AnswerRel root a₁ a₂) (site : List Nat := []) :
@@ -581,12 +558,6 @@ theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂
     dsimp only at hok'' hm'' hf'' hn
     exact ⟨hok'', hm'', ha _ _ _ hf'', rfl, rfl,
       ListRel.append hn (ListRel.cons ⟨hf.id, rfl⟩ ListRel.nil)⟩
-
-set_option linter.unusedSectionVars false in
-theorem M1Origin.forkIn_rel {p₁ : NCode} {p₂ : RProgram} (_hp : CodeMeans root p₁ p₂)
-    (options : Supervision.ForkOptions) (scope : Nat) {a₁ : FAnswer} {a₂ : RAnswer}
-    (_ha : AnswerRel root a₁ a₂) (site : List Nat := []) : ProofGraph.Obligation (IterRel root (FiberAction.forkIn (interpAt root c) m₁ f₁ y p₁ options scope a₁ site)
-      (FiberAction.forkIn (interpRAt root c) m₂ f₂ y p₂ options scope a₂ site)) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem forkIn_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂)
@@ -782,10 +753,6 @@ theorem cancelRace_rel (raceId : Nat) {a₁ : FAnswer} {a₂ : RAnswer} (ha : An
     exact ⟨hok, hm, hf, rfl, rfl,
       ListRel.cons ⟨rfl, hf.id, rfl, congrArg (fun s => s.live) (raceMeans_state hr), rfl⟩ ListRel.nil⟩
 
-set_option linter.unusedSectionVars false in
-theorem M1Origin.raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (_he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) : ProofGraph.Obligation (IterRel root (FiberAction.raceAll (interpAt root c) m₁ f₁ y e₁ site)
-      (FiberAction.raceAll (interpRAt root c) m₂ f₂ y e₂ site)) := ⟨⟩
-
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) :
     IterRel root (FiberAction.raceAll (interpAt root c) m₁ f₁ y e₁ site)
@@ -836,12 +803,3 @@ theorem join_rel (target : FiberId) (mode : Supervision.ObserverMode) :
 end Actions
 
 end Effect4.Program.Sched
-
-
-#obligation_proved Effect4.Program.Sched.M1Actions.scopeLinkFiber_ok := @Effect4.Program.Sched.scopeLinkFiber_ok
-#obligation_proved Effect4.Program.Sched.M1Origin.fork_rel := @Effect4.Program.Sched.fork_rel
-#obligation_proved Effect4.Program.Sched.M1Origin.forkIn_rel := @Effect4.Program.Sched.forkIn_rel
-#obligation_proved Effect4.Program.Sched.M1Origin.raceAll_rel := @Effect4.Program.Sched.raceAll_rel
-
-#typed_state_obligations Effect4.Program.Sched.M1Actions ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
-#typed_state_obligations Effect4.Program.Sched.M1Origin ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

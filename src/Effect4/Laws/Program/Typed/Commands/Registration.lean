@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Typed.Commands.Race
 # Registration completion and key-local park transport
 
 Placement: semantics Concept 4, scheduler step preservation;
-`M6Ledger.step_registrationDone`, decisions row 134(d), historical CE-028.
+`registrationDone_preserves`, decisions row 134(d), historical CE-028.
 The park adds a pending record at the race token. Stored and queued observer exclusion
 allows the other countdown correlations to retain their meaning. The ordinary observer
 view forbids every new park, so the restricted view below permits exactly this exception.
@@ -658,6 +658,3 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           [RunEvent.parkedOn f.id race.token]
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_registrationDone :=
-  @Effect4.Program.Typed.registrationDone_preserves

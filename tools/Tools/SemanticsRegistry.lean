@@ -196,12 +196,15 @@ def registry : Registry where
       ] },
     { id := "denote-typed", concept := "residual-program-typing", role := .fundamentalProperty
       title := "The denotation of a checked program is TypedProg at its certificate (M5)"
-      pointer := .goal `Effect4.Program.Typed.M3bAssembly.denoteR_typed
+      pointer := .witness `Effect4.Program.Typed.denotesTyped
       contestedBy := ["E4-TYPED-CE-020", "E4-TYPED-CE-021", "E4-TYPED-CE-022", "E4-TYPED-CE-023",
         "E4-TYPED-CE-031"]
       literature := [
         { work := "XiaEtAl2020", locator := "audit P37", relation := "definitionUsed" }
       ] },
+    { id := "rebuild-admission", concept := "residual-program-typing", role := .compatibility
+      title := "Successful rebuilding checks the exact candidate under the retained host table and row names (Built.rebuild)"
+      pointer := .witness `Effect4.Program.Authoring.rebuild_spec },
     { id := "denote-typed-layer-free", concept := "residual-program-typing",
       role := .fundamentalProperty
       title := "M5 on the layer-free fragment: every arm but provideLayer's, assembled by induction on fuel"
@@ -214,11 +217,14 @@ def registry : Registry where
       pointer := .witness `Effect4.Program.Typed.loadsTyped_of_layerFree },
     { id := "provide-layer-arm", concept := "residual-program-typing", role := .compatibility
       title := "The layer family's arm: a layer build at an admitted layer point answers the built context at the layer's checked error type, and the provide protocol around it is typed (decisions rows 176 (b), 185-187)"
-      pointer := .goal `Effect4.Program.Typed.M3bAssembly.denoteR_typed_provideLayer
+      pointer := .witness `Effect4.Program.Typed.provideLayerArm
       contestedBy := ["E4-TYPED-CE-023", "E4-TYPED-CE-031"] },
     { id := "load-typed", concept := "residual-program-typing", role := .preservation
       title := "M5: a lawful, checked, closed source with an empty requirement row loads into J"
-      pointer := .goal `Effect4.Program.Typed.M3bAssembly.typedState_load },
+      pointer := .witness `Effect4.Program.Typed.loadsTyped },
+    { id := "load-typed-checked", concept := "residual-program-typing", role := .preservation
+      title := "The typed load for every checked program: M5 with no lawful-signature or closed-row premise"
+      pointer := .witness `Effect4.Program.Typed.load_typed },
     { id := "bind-closed", concept := "residual-program-typing", role := .compatibility
       title := "TypedProg is closed under bind"
       pointer := .refutedBy "E4-TYPED-CE-030" `Test.Program.TypedProgBindRed.typedProg_not_bind_closed
@@ -279,14 +285,14 @@ def registry : Registry where
       ] },
     { id := "step-loop-preserves", concept := "reactive-scheduling", role := .preservation
       title := "The loop decision preserves configuration typing"
-      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_loop
+      pointer := .witness `Effect4.Program.Typed.loop_preserves
       contestedBy := ["E4-TYPED-CE-012", "E4-TYPED-CE-025"]
       literature := [
         { work := "WrightFelleisen1994", locator := "audit P36", relation := "adaptedResult" }
       ] },
     { id := "step-deliver-preserves", concept := "reactive-scheduling", role := .preservation
       title := "The deliver decision preserves configuration typing"
-      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_deliver
+      pointer := .witness `Effect4.Program.Typed.deliver_preserves
       contestedBy := ["E4-TYPED-CE-025"] },
     { id := "store-frame-typing", concept := "reactive-scheduling", role := .preservation
       title := "A store edit satisfying the stated frame, store typing, key and due-owner premises keeps configuration typing"
@@ -302,18 +308,18 @@ def registry : Registry where
       ] },
     { id := "step-wake-preserves", concept := "reactive-scheduling", role := .preservation
       title := "The wake command keeps configuration typing through its waiter-to-due transfer"
-      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_wake
+      pointer := .witness `Effect4.Program.Typed.wake_preserves
       contestedBy := ["E4-TYPED-CE-026"]
       literature := [
         { work := "LynchVaandrager1995", locator := "§6 (invariants); audit C4", relation := "proofTechnique" }
       ] },
     { id := "step-launch-preserves", concept := "reactive-scheduling", role := .preservation
       title := "The launch command keeps configuration typing when adding a fresh race entrant"
-      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_launch
+      pointer := .witness `Effect4.Program.Typed.launch_preserves
       contestedBy := ["E4-TYPED-CE-029"] },
     { id := "step-registration-done-preserves", concept := "reactive-scheduling", role := .preservation
       title := "Completing race registration keeps configuration typing through immediate settlement or parking"
-      pointer := .goal `Effect4.Program.Typed.M6Ledger.step_registrationDone
+      pointer := .witness `Effect4.Program.Typed.registrationDone_preserves
       contestedBy := ["E4-TYPED-CE-028"] },
     { id := "drivestate-lift", concept := "reactive-scheduling", role := .simulation
       title := "Command loop invariant lifting for driveState"
@@ -321,6 +327,12 @@ def registry : Registry where
       literature := [
         { work := "PFPL", locator := "ch. 28, pp. 261–268", relation := "proofTechnique" }
       ] },
+    { id := "typed-state-admitted", concept := "reactive-scheduling", role := .preservation
+      title := "Every admitted replay of a checked program ends in J: host answers admitted at the ghost token table keep the typed state"
+      pointer := .witness `Effect4.Program.Typed.reachable_typed },
+    { id := "run-work-selection", concept := "reactive-scheduling", role := .compatibility
+      title := "The opt-in control planner selects exactly a queued flush or the first runnable evaluation on a non-stuck machine"
+      pointer := .witness `Effect4.Run.nextControl_spec },
     { id := "scheduler-progress", concept := "reactive-scheduling", role := .progress
       title := "Operational progress with successor transitions or live frontier classification"
       pointer := .absent "Operational progress is an open obligation; machineTyped_not_halted provides an invariant consequence (stuck = none) without successor existence" },
@@ -406,6 +418,9 @@ def registry : Registry where
     { id := "cata-eff-congr-on", concept := "initial-algebras-folds", role := .compatibility
       title := "Fold congruence along agreeing signature algebras"
       pointer := .witness `Effect4.Program.cata_eff_congr_on },
+    { id := "addressed-replacement", concept := "initial-algebras-folds", role := .compatibility
+      title := "Successful same-sort path replacement reads back, retains the root sort, and restores the original tree"
+      pointer := .witness `Effect4.Program.Node.replaceAt_spec },
 
     -- 8. context-requirements
     { id := "satisfies-empty", concept := "context-requirements", role := .compatibility
@@ -446,6 +461,13 @@ def registry : Registry where
       literature := [
         { work := "LynchVaandrager1995", locator := "audit C4", relation := "analogy" }
       ] },
+    { id := "session-success-prepared-membership", concept := "host-session-protocol", role := .preservation
+      title := "A session-accepted successful reply prepares a member of its selected shape-decided row"
+      pointer := .witness `Effect4.Api.HostSession.preflight_success_prepared_fits },
+    { id := "session-failure-shape-free", concept := "host-session-protocol", role := .preservation
+      title := "A session-accepted failing reply carries no reserved defect: the failure half of admit_sound (decisions row 191, E4-HOST-CE-008)"
+      pointer := .witness `Effect4.Api.HostSession.preflight_failure_noShapeDefect
+      contestedBy := ["E4-HOST-CE-008"] },
     { id := "frontier-awaithost", concept := "host-session-protocol", role := .inversion
       title := "Machine awaitingAsync state matches frontier awaitHost reasons"
       pointer := .witness `Effect4.Api.observe_awaitingAsync_iff },
@@ -477,25 +499,40 @@ def registry : Registry where
       ] },
     { id := "m7-exits-typed", concept := "translation-simulation", role := .adequacy
       title := "M7a: every exit the observation records fits its fiber's declared type on M7Fragment"
-      pointer := .goal `Effect4.Program.Typed.M7.exits_typed
+      pointer := .witness `Effect4.Program.Typed.m7_proved
       literature := [
         { work := "WrightFelleisen1994", locator := "audit P36", relation := "analogy" }
       ] },
     { id := "m7-stores-typed", concept := "translation-simulation", role := .adequacy
       title := "M7b: the observed stores fit at a world that describes them on M7Fragment"
-      pointer := .goal `Effect4.Program.Typed.M7.stores_typed },
+      pointer := .witness `Effect4.Program.Typed.m7_proved },
     { id := "m7-never-halts", concept := "translation-simulation", role := .progress
       title := "M7c: the frame machine never halts on M7Fragment (row 139's stuck = none in J)"
-      pointer := .goal `Effect4.Program.Typed.M7.never_halts },
+      pointer := .witness `Effect4.Program.Typed.m7_proved },
     { id := "m7-exit-handles-valid", concept := "translation-simulation", role := .preservation
       title := "Recorded exits name only live scope handles on every reachable machine (row 139)"
-      pointer := .goal `Effect4.Program.Typed.M7.exitHandles_valid }
+      pointer := .witness `Effect4.Program.Typed.exitHandles_valid },
+    { id := "obs-typed-admitted", concept := "translation-simulation", role := .adequacy
+      title := "The frame machine's observation on every ghost-admitted tape of a checked program is typed and the run has not halted"
+      pointer := .witness `Effect4.Program.Typed.obs_typed },
+    { id := "m7-results-exit-hasty", concept := "translation-simulation", role := .adequacy
+      title := "Every recorded exit of a checked program's frame-machine run satisfies the meaning layer's exit judgment at its declared type (T1)"
+      pointer := .witness `Effect4.Program.Typed.exits_hasTy },
+    { id := "replay-externals", concept := "translation-simulation", role := .preservation
+      title := "No replay at the empty row table allocates an external handle"
+      pointer := .witness `Effect4.Program.Sched.replay_externals },
+    { id := "run-controls-replay", concept := "translation-simulation", role := .simulation
+      title := "Journaled control rows leave the raw replay's machine whenever every added phase progressed"
+      pointer := .witness `Effect4.Run.play_controls_eq_replay },
+    { id := "straight-composition-agreement", concept := "translation-simulation", role := .simulation
+      title := "StraightEq programs run to equal exits and stores at their own sufficient budgets (the straight-fragment composition relation)"
+      pointer := .witness `Effect4.Program.Denote.StraightEq.run_agrees }
   ]
   cuts := [
     -- 1. store-typing
     { concept := "store-typing", decisionRow := 163
       excluded := "function values and closures in Val: Fits contains no arrow clause"
-      reason := "the language cut, docs/core/language-cut.md section 1" },
+      reason := "the language cut, docs/research/history/language-cut.md section 1" },
     { concept := "store-typing", decisionRow := 96
       excluded := "raw subtyping in handle arms: comparisons use Equiv under Ty.subN"
       reason := "checker compares and joins in normalized order (decisions row 137, E4-TYPED-CE-009)" },
@@ -506,7 +543,7 @@ def registry : Registry where
     -- 2. residual-program-typing
     { concept := "residual-program-typing", decisionRow := 163
       excluded := "stored function values and closures: stored Eff syntax uses first-order program trees, while proof-side RProgram carries Lean function continuations at visible operations"
-      reason := "the language cut, docs/core/language-cut.md section 1; row 163 excludes stored function values, not functions in the semantic model" },
+      reason := "the language cut, docs/research/history/language-cut.md section 1; row 163 excludes stored function values, not functions in the semantic model" },
     { concept := "residual-program-typing", decisionRow := 117
       excluded := "open root requirement rows: M5, M6c and M7 take the premise rootTy.requires = empty"
       reason := "rc.112 runs closed root rows (Effect.ts:17494-17497), while retaining separate per-position obligations" },
@@ -547,7 +584,7 @@ def registry : Registry where
       reason := "raw sub does not distribute products over unions (E4-TYPED-CE-009)" },
     { concept := "subtyping-algebra", decisionRow := 163
       excluded := "arrow subtyping: Ty contains no function constructor"
-      reason := "the language cut, docs/core/language-cut.md section 1" },
+      reason := "the language cut, docs/research/history/language-cut.md section 1" },
 
     -- 7. initial-algebras-folds
     { concept := "initial-algebras-folds", decisionRow := 127

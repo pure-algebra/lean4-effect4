@@ -56,7 +56,6 @@ open Effect4.Store
 
 /-! ## The census entry as content -/
 
-
 #guard Content.kind Effect4.Store.Templates.Entry = .«export»
 #guard (Content.kind Effect4.Store.Templates.Entry).byte = 2
 
@@ -175,36 +174,5 @@ def entryTyped : Ref Effect4.Store.Templates.Entry := ⟨entryAddress⟩
 #check @Effect4.Store.Node.encode_injective
 #check @Effect4.Store.metaSchema_accepts
 #check @Effect4.Store.specOf_document
-
-/-! ## Axiom receipts -/
-
-#print axioms Effect4.Store.Kind.byte
-#print axioms Effect4.Store.Kind.ofByte?_byte
-#print axioms Effect4.Store.Kind.byte_injective
-#print axioms Effect4.Store.Kind.name_injective
-#print axioms Effect4.Store.Node.encode
-#print axioms Effect4.Store.Node.decode
-#print axioms Effect4.Store.Node.decode_encode
-#print axioms Effect4.Store.Node.decode_exact
-#print axioms Effect4.Store.Node.encode_injective
-#print axioms Effect4.Store.instCanonicalRef
-#print axioms Effect4.Store.instCanonicalAnyRef
-#print axioms Effect4.Store.metaSchema
-#print axioms Effect4.Store.genesisNode
-#print axioms Effect4.Store.genesisAddress
-#print axioms Effect4.Store.specOf
-#print axioms Effect4.Store.specFor
-#print axioms Effect4.Store.nodeOf
-#print axioms Effect4.Store.address
-#print axioms Effect4.Store.address_eq_or_collision
-#print axioms Effect4.Store.address_inj
-#print axioms Effect4.Store.specOf_document
-#print axioms Effect4.Store.metaSchema_accepts
-#print axioms instContentEntry
-#print axioms entrySpec
-#print axioms entryNode
-#print axioms entryAddress
-#print axioms entryTwin
-#print axioms entryTyped
 
 end Test.Store.NodeContract

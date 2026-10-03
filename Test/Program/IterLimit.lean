@@ -57,7 +57,4 @@ but is expected to have type
 #guard_msgs (error) in
 example : iter twoRounds 1 0 = (twoRounds 0 >>= iterNext (iter twoRounds 1)) := rfl
 
-#print axioms twoRounds_converges
-#print axioms spin_never_converges
-#print axioms budget_not_fixpoint
 end Test.Program.IterLimit

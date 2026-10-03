@@ -276,7 +276,6 @@ theorem advance_conforms {program : Api.Program} {table : RowTable}
       · rename_i allowed
         simp_all [retire]
 
-
 /-! ## Accepted successful replies and the actual prepared value
 
 Concept 9 (host-answer admission) meeting concept 1 membership; proposed T4 contributor
@@ -300,18 +299,6 @@ def PreparedSuccess {program : Api.Program} {table : RowTable}
       reply.completion).2 = .success result ∧
     ∀ w : Typed.World, Typed.shapeDecides row.answer = true → Typed.Fits w result row.answer
 
-namespace PreparedWanted
-
-/-- T4 contributor: an accepted success prepares a member of its selected shape-decided row. -/
-theorem preflight_success_prepared_fits {program : Api.Program} {table : RowTable}
-    (s : Session program table) (reply : Reply) (decision : NativeDecision) (value : Machine.Val)
-    (_live : s.machine.stuck = none)
-    (_success : reply.completion = .ofExit (.success value))
-    (_accepted : preflight s reply = .ok decision) :
-    ProofGraph.Obligation (PreparedSuccess s reply decision) := ⟨⟩
-
-end PreparedWanted
-
 /-- A session-accepted successful completion prepares the actual row-typed value. Membership
 requires the selected row's shape-decided answer column; failures, world-reading columns and
 token-world correlation remain outside this theorem. The session is not executed here. -/
@@ -332,10 +319,6 @@ theorem preflight_success_prepared_fits {program : Api.Program} {table : RowTabl
   · simpa only [success] using prepared
   · intro w decided
     exact Typed.fits_of_hasTy_shapeDecides w row.answer decided result _ typed
-
-#obligation_proved PreparedWanted.preflight_success_prepared_fits :=
-  @preflight_success_prepared_fits
-#typed_state_obligations Effect4.Api.HostSession.PreparedWanted ceiling 0 using aesop
 
 /-- A cause with no reserved defect satisfies the typed exit judgment's defect exclusion at
 every type (`NoShapeDefect` reads exactly `badName` and `notImplemented`). -/

@@ -5,8 +5,8 @@ import Effect4.Laws.Program.Typed.HostWalk
 /-!
 # Laws.Program.Typed.Commands.Evaluate — the evaluation step as handler soundness
 
-Concept 4 (the configuration invariant `I`); questions `M6Ledger.step_deliver` and
-`M6Ledger.step_loop`. `deliver` settles one evaluation of the fiber's current code
+Concept 4 (the configuration invariant `I`); questions `deliver_preserves` and
+`loop_preserves`. `deliver` settles one evaluation of the fiber's current code
 (`Machine/Fibers.lean:1861-1864`) and `loop` settles one after the loop top, the op counter and the
 yield injection (`iteration`, `:1650-1656`). The evaluation (`evaluateR`, `Laws/Program/EvaluateR.lean`)
 is a handler of the fiber and store signatures `TypedProg` types each operation by: a certificate,
@@ -684,7 +684,7 @@ theorem evaluate_keeps {root : ProgramSource} {rootTy : EffTy}
       exact ev.typed
   exact evaluateRaw_keeps fibers stores walk ev1
 
-/-- **`deliver` keeps `I` from the clauses** (`M6Ledger.step_deliver`'s shape): the head's authority
+/-- **`deliver` keeps `I` from the clauses** (`deliver_preserves`'s shape): the head's authority
 finds the running fiber, which is its own record, and the evaluation settles typed. -/
 theorem deliver_preserves_of_clauses (root : ProgramSource) (rootTy : EffTy)
     (fibers : ∀ op, FiberClauseKeeps root rootTy op) (stores : ∀ op, StoreClauseKeeps root rootTy op)
@@ -840,7 +840,6 @@ theorem clause_sync (root : ProgramSource) (rootTy : EffTy) (v : Val) :
   exact ev.settle_answered _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) v (fun _ _ => rfl))
 
-
 /-! ## The clauses: the frame pushers -/
 
 /-- **`guard_`**: the guard installs its body and saves the resume frame (`saveR`), the arrow
@@ -911,7 +910,7 @@ theorem clause_mask (root : ProgramSource) (rootTy : EffTy) (flag : Bool) (body 
 
 /-! ## Read-only store clauses (Concept 4)
 
-Helpers of `M6Ledger.step_loop` and `M6Ledger.step_deliver`, via `StoreClauseKeeps` and
+Helpers of `loop_preserves` and `deliver_preserves`, via `StoreClauseKeeps` and
 `evaluateRaw_keeps`/`evaluate_keeps`. These preserve the unchanged `ConfigTyped` judgment for
 four actual same-state store operations, including the real `[.drainDue]` queue prefix.
 The operation's returned value meets `storePost`; `TypedProg.store_inv` supplies the typed
@@ -1028,7 +1027,6 @@ theorem clause_deferredPoll (root : ProgramSource) (rootTy : EffTy) (key : Defer
     simp only [syncOpStep, DeferredStore.poll, DeferredStore.cellAt, hc0, Option.map_some]
   exact ev.store_same hc (Val.bool c.completion.isSome) step (fun _ _ => ⟨_, rfl⟩)
 
-
 /-! ## The clauses no typed code reaches -/
 
 /-- **`scopeExit`**: a raw scope-exit marker is no typed code (`TypedProg.fiber` excludes it,
@@ -1053,7 +1051,6 @@ theorem clause_refuse (root : ProgramSource) (rootTy : EffTy) (cause : CauseV) :
   obtain ⟨_, pre, _⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   exact (pre : False).elim
-
 
 /-! ## The actual loop prefix — M6.step_loop, conditional on the evaluator clauses
 Checked against f409507f. This composes the existing handler premises; it does not discharge them.
@@ -1300,7 +1297,6 @@ theorem loop_preserves_of_clauses (root : ProgramSource) (rootTy : EffTy)
     exact keeps
 
 end LoopPrefix
-
 
 /-! ## The walk: an exit delivered through the saved stack
 
@@ -1802,7 +1798,6 @@ theorem clause_finishFinalizer (root : ProgramSource) (rootTy : EffTy) (ex : Exi
       rw [hc] at current
       exact finishFinalizer_payload_inv root w tin ex next current)
 
-
 /-! ## The clauses that edit the fiber's context -/
 
 /-- The evaluator's machine after a trace event is the evaluated state's machine with that event. -/
@@ -1867,7 +1862,6 @@ theorem clause_ambientScope (root : ProgramSource) (rootTy : EffTy) :
     simp only [Cause.die_reasons, List.mem_singleton] at member
     subst member
     exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
-
 
 /-! ## `scoped`: a scope made, the context extended, the body guarded -/
 
@@ -1955,7 +1949,6 @@ theorem clause_scoped (root : ProgramSource) (rootTy : EffTy) (body : Point) :
     exact hostStack_mono ord (hostStack_races (m := m.update f)
       (m' := ({ m with state := s } : RState).update f') (racesKept_of_eq fun _ => rfl) stack)
   exact SettlesTyped.mono ord (ev2.settle_continue fr' fresh)
-
 
 /-! ## `interruptScoped`: the scope's fiber finalizer -/
 
@@ -2169,7 +2162,6 @@ theorem clause_interruptAs (root : ProgramSource) (rootTy : EffTy) (target who :
         [Cmd.afterInterrupt f.id y (.join target .awaitValue)] ++ rest)
     rw [machines, List.append_assoc]
     exact configTyped_emit recorded _
-
 
 /-! ## `cancelRace`: the race's entrants interrupted through the queue -/
 

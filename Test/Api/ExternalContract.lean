@@ -121,11 +121,6 @@ def failed : Completion Val Err Defect FiberId Ann :=
 #guard !LawfulTable [row "query" .nat, row "query" .nat]
 #guard !LawfulTable [{ row "query" .nat with spelling := "Ref.get" }]
 
-#print axioms Effect4.Program.external_answer_typed
-#print axioms Effect4.Program.external_oracle_typed
-#print axioms Effect4.Program.mintedIn_iff_MintedIn
-#print axioms Effect4.Program.replayCheckedFrom_answersValid
-
 /-- DI-62: a text failure is checked against an explicit text error column. -/
 def failedText : Completion Val Err Defect FiberId Ann :=
   .ofExit (.failure (Cause.fail (.text "lost")))

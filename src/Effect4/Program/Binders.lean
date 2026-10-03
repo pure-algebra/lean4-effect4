@@ -50,13 +50,6 @@ def readerOnlyHeads : List String := ["gen"]
 /-- The fiber actions the printer refuses as internal. -/
 def machineOnlyHeads : List String := ["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"]
 
-
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.Node.binders
-#print axioms Effect4.Program.Node.closedChild
-#print axioms Effect4.Program.Node.childLevel
-
 end Effect4.Program
 
 /-! ## Acceptance guards for the generated binder table
@@ -96,4 +89,3 @@ private def e0 : Eff Unit := .succeed (.lit .unit)
 #guard machineOnlyHeads.length = 5
 
 end Effect4.Program.BindersGuards
-

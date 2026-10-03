@@ -112,11 +112,4 @@ but is expected to have type
 example : leftProtocol.Le leftSilent :=
   ⟨fun _ cert => cert, fun _ _ _ demand => demand, fun _ _ _ _ promise => promise⟩
 
-#print axioms right_lift
-#print axioms left_reflects
-#print axioms right_reflects
-#print axioms exchanged_certificate_refused_in_sum
-#print axioms refined
-#print axioms promise_needed
-#print axioms demand_needed
 end Test.Program.ProtocolLaws

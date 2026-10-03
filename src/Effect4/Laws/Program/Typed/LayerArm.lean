@@ -13,8 +13,8 @@ denotation of a checked program is `TypedProg` at its certificate, at every worl
 (`Typed/Denotation.lean`) assembles every arm of `denoteR` by induction on fuel except the layer
 family's, which it takes as the hypothesis `ProvideLayerArm` (decisions row 176 (b)). This module
 proves that hypothesis at every source (`provideLayerArm`), so M5's two goals close without a
-fragment premise: the fundamental property (`denotesTyped`, `M3bAssembly.denoteR_typed`) and the
-load (`loadsTyped`, `M3bAssembly.typedState_load`), through the load connector whose race-marker
+fragment premise: the fundamental property (`denotesTyped`, `denotesTyped`) and the
+load (`loadsTyped`, `loadsTyped`), through the load connector whose race-marker
 premise the root code's typing discharges (`loadsTyped_of_denotesTyped_typed`,
 `Typed/Commands/Finish.lean`, which this module imports for it).
 
@@ -1351,14 +1351,14 @@ end Builds
 
 /-! ## M5, unconditional -/
 
-/-- **M5's fundamental property** (decisions row 148, `M3bAssembly.denoteR_typed`): at every source
+/-- **M5's fundamental property** (decisions row 148, `denotesTyped`): at every source
 whose layer references are well formed, a checked point denotes a typed program at every world
 whose service table is the source's. The arms by induction on fuel (`childDenotes_upto`), the
 layer family's by `provideLayerArm`. -/
 theorem denotesTyped (root : ProgramSource) : DenotesTyped root :=
   denotesTyped_of_provideLayer root (provideLayerArm root)
 
-/-- **M5** (`M3bAssembly.typedState_load`): a lawful, checked, closed source whose requirement row is
+/-- **M5** (`loadsTyped`): a lawful, checked, closed source whose requirement row is
 empty loads into `J` at the initial world, at every fuel and compile budget. -/
 theorem loadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) :
     LoadsTyped root rootTy fuel compileFuel :=
@@ -1372,12 +1372,3 @@ theorem load_typed (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : N
   load_typed_of_denotesTyped_typed root rootTy fuel compileFuel (denotesTyped root) checked
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M3bAssembly.denoteR_typed_provideLayer :=
-  @Effect4.Program.Typed.provideLayerArm
-#obligation_proved Effect4.Program.Typed.M3bAssembly.denoteR_typed :=
-  @Effect4.Program.Typed.denotesTyped
-#obligation_proved Effect4.Program.Typed.M3bAssembly.typedState_load :=
-  @Effect4.Program.Typed.loadsTyped
-#typed_state_obligations Effect4.Program.Typed.M3bAssembly ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])

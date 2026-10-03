@@ -617,13 +617,6 @@ theorem DeferredStore.make_quiet {d : DeferredStore} (hdue : d.due = [])
   · exact hcells c hc
   · exact ⟨rfl, rfl⟩
 
-theorem M1Quiet.complete_quiet {d : DeferredStore} (_hdue : d.due = [])
-    (_hcells : ∀ c ∈ d.cells, c.wake.waiters = [] ∧ c.wake.batch = none) (cell : DeferredKey)
-    (e : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (
-    (d.complete cell e).1.due = [] ∧
-      ∀ c ∈ (d.complete cell e).1.cells, c.wake.waiters = [] ∧ c.wake.batch = none) := ⟨⟩
-
-
 @[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem DeferredStore.complete_quiet {d : DeferredStore} (hdue : d.due = [])
     (hcells : ∀ c ∈ d.cells, c.wake.waiters = [] ∧ c.wake.batch = none) (cell : DeferredKey)
@@ -1903,7 +1896,6 @@ theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e =
     rw [replayEval_cons (evaluator := evaluatorFor e) _ _ _ _ _ rfl (by rw [hflush]), hflush]
     exact replayEval_nil_finished (evaluator := evaluatorFor e) _ _ _ rfl (Mexit_finished _ _ _ _ _ _ _)
 
-
 /-- The ordinary run ends in the exited machine of the meaning, whatever the road: under the
 op budget, `evaluate` runs the root to its exit and `flush` finds nothing armed; past it,
 the root yields, parks, and `flush` fires its dispatcher round after round until the exit. -/
@@ -1939,5 +1931,3 @@ theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
     rfl
 
 end Effect4.Program.Agreement
-
-#typed_state_obligations Effect4.Program.Agreement.M1Quiet ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

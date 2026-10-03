@@ -196,7 +196,6 @@ instance Forest.instCanonical : Canonical Forest :=
 
 /-! ## The receipts of the facts note §6, on the templates -/
 
-
 -- The structure template writes exactly the value tree the substrate pins.
 #guard Canonical.toVal entry = sampleEntry
 #guard Canonical.encode entry = Val.encode sampleEntry
@@ -236,29 +235,5 @@ def templateJson : Effect4.Json :=
 #guard Canonical.decode (Canonical.encode templateJson) = some templateJson
 #guard Canonical.decode (α := Effect4.Json) (Canonical.encode (Effect4.Json.arr [.null]) ++ [0])
   = none
-
-/-! ## Axiom receipts -/
-
-#print axioms Templates.ExportKind.ofVal_toVal
-#print axioms Templates.ExportKind.ofVal_exact
-#print axioms Templates.ExportKind.fits
-#print axioms Templates.ExportKind.instCanonical
-#print axioms Templates.Entry.ofVal_toVal
-#print axioms Templates.Entry.ofVal_exact
-#print axioms Templates.Entry.fits
-#print axioms Templates.Entry.instCanonical
-#print axioms Templates.TreeForest.mem_tree
-#print axioms Templates.TreeForest.mem_forest
-#print axioms Templates.TreeForest.ofValT_toValT
-#print axioms Templates.TreeForest.ofValF_toValF
-#print axioms Templates.TreeForest.exact_aux
-#print axioms Templates.TreeForest.ofValT_exact
-#print axioms Templates.TreeForest.fitsT
-#print axioms Templates.TreeForest.fitsF
-#print axioms Templates.Tree.instCanonical
-#print axioms Templates.Forest.instCanonical
-#print axioms Templates.entry
-#print axioms Templates.forest
-#print axioms templateJson
 
 end Effect4.Store

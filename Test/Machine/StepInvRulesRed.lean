@@ -19,7 +19,6 @@ example (m : NativeMachine)
     (h : Ok m) (hf : NoFork events) : Ok (m.emit events) := by
   aesop
 
-#print axioms Effect4.Api.TraceFacts.Agreement.emit_with_bank
 end Test.Machine.StepInvRulesRed
 
 namespace Test.Machine.StepInvRulesRed
@@ -39,5 +38,4 @@ example (m : NativeMachine) (f : Guard.NFiber)
     Effect4.Machine.ForkLedger.Invariant.Ok (m.update f) := by
   aesop
 
-#print axioms Effect4.Machine.ForkLedger.Invariant.Native.update_with_bank
 end Test.Machine.StepInvRulesRed

@@ -529,7 +529,6 @@ theorem walkExit_mask_failure (cause : CauseV) (flag : Bool) (rest : List NCode)
     subst stack
     cases interrupted <;> cases flag <;> rfl
 
-
 /-! ## What the two walks may leave -/
 
 /-- The frame's pop and the term's walk agree: both finish with the exit, or the frame

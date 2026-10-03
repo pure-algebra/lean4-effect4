@@ -655,6 +655,4 @@ def putRootOr (store : Store) (root : Root) : Store :=
   | .ok moved => moved
   | .error _ => store
 
-/-! ## Receipts -/
-
 end Effect4.Store

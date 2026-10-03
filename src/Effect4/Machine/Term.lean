@@ -125,7 +125,6 @@ mutual
     | .cons head tail => Term.scoped n head && Terms.scoped n tail
 end
 
-
 /-- A literal as a machine value: `unit`, `nat` and `bool` against the carrier's frames, and
 `str` against its `string` frame. Strings are machine values on the native route since the
 host rows slice (2026-09-08, DB-15): a canonical row's request and answer carry them, so a

@@ -111,56 +111,6 @@ theorem widens_needs_valueVars :
 #guard Ty.valueVars (.var 0) && Ty.valueVars (.option (.var 0)) && Ty.valueVars (.list (.var 0))
 #guard !Ty.valueVars (.refOf (.var 0))
 
-#print axioms pairTerm_ty
-#print axioms env_u
-#print axioms pair_fits
-#print axioms fstTerm_ty
-#print axioms env_P
-#print axioms fst_union_fits
-#print axioms union_not_subN_nat
-#print axioms widens_needs_valueVars
-
 /-! The step's own theorems. -/
-#print axioms Effect4.Program.Ty.WidensSub.refl
-#print axioms Effect4.Program.Ty.WidensSub.trans
-#print axioms Effect4.Program.Ty.infer_widensSub
-#print axioms Effect4.Program.Ty.matchTemplate_widensSub
-#print axioms Effect4.Program.Ty.matchTemplateArgs_widensSub
-#print axioms Effect4.Program.Ty.instantiate_of_noVars
-#print axioms Effect4.Program.Typed.fits_unit_inv
-#print axioms Effect4.Program.Typed.fits_nat_inv
-#print axioms Effect4.Program.Typed.fits_bool_inv
-#print axioms Effect4.Program.Typed.fits_string_inv
-#print axioms Effect4.Program.Typed.fits_option_inv
-#print axioms Effect4.Program.Typed.fits_nat_irrel
-#print axioms Effect4.Program.Typed.FitsAll.get?
-#print axioms Effect4.Program.Typed.FitsAll.nil_inv
-#print axioms Effect4.Program.Typed.FitsAll.singleton_inv
-#print axioms Effect4.Program.Typed.FitsAll.pair_inv
-#print axioms Effect4.Program.Typed.FitsAll.triple_inv
-#print axioms Effect4.Program.Typed.FitsAll.sub
-#print axioms Effect4.Program.Typed.FitsAll.all_sub
-#print axioms Effect4.Program.Typed.fitsAll_of_pointwise
-#print axioms Effect4.Program.Typed.fits_instantiate_widens
-#print axioms Effect4.Program.Typed.FitsAll.instantiate
-#print axioms Effect4.Program.Typed.atomFits_of_mono
-#print axioms Effect4.Program.Typed.atomFits_of_variadic
-#print axioms Effect4.Program.Typed.atomFits_of_custom
-#print axioms Effect4.Program.Typed.atomFits_of_poly
-#print axioms Effect4.Program.Typed.atomFits_of_alts
-#print axioms Effect4.Program.Typed.atomFits_of_shape
-#print axioms Effect4.Program.Typed.projectProduct_fits
-#print axioms Effect4.Program.Typed.queryTag_bool
-#print axioms Effect4.Program.Typed.fits_queryReasons
-#print axioms Effect4.Program.Typed.fits_firstErrorValue
-#print axioms Effect4.Program.Typed.queryError_fits
-#print axioms Effect4.Program.Typed.atomFits
-#print axioms Effect4.Program.Typed.fits_lit
-#print axioms Effect4.Program.Typed.evalTerm_fitsAll
-#print axioms Effect4.Program.Typed.evalTerms_fitsAll
-#print axioms Effect4.Program.Typed.evalTerm_fits
-#print axioms Effect4.Program.Typed.evalTerm_fits_native
-#print axioms Effect4.Program.Typed.heapTable_of_fits
-#print axioms Effect4.Program.Typed.completionOk_of_fitsExit
 
 end Test.Program.TermFits

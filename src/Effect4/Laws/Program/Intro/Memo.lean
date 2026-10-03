@@ -214,5 +214,4 @@ theorem provideWith_intro (root : NativeEff) (q : Point) (m : MemoMapId) (child 
     | none => exact codeMeans_badShape root
   | none => exact codeMeans_badShape root
 
-
 end Effect4.Program.Sched

@@ -87,7 +87,6 @@ theorem observe_idle_tape_iff (m : NativeMachine)
   rw [observe_idle_iff .tape, awaitDecision_iff]
   simp [h]
 
-
 /-- The observation and reason alphabet agree, with host priority explicit. -/
 theorem observe_of_reasons (why : Exhaustion) (m : NativeMachine) :
     (HostProtocol.observe m = .awaitingAsync ↔ ∃ key, .awaitHost key ∈ frontierReasons why m) ∧

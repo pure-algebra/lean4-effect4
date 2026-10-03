@@ -48,12 +48,4 @@ def recoverText : NativeEff := .catchCause (.fail (.lit (.str "lost")))
 #guard typeOf nativeSignature recoverText = some (EffTy.pure (.option .string))
 #guard (Api.run recoverText 200).exit = some (.success (.some (.str "lost")))
 
-#print axioms Effect4.Program.firstFailure?_head
-#print axioms Effect4.Program.firstFailure?_eq_some_iff
-#print axioms Effect4.Program.firstErrorValue?_boom
-#print axioms Effect4.Program.firstErrorValue?_typed
-#print axioms Effect4.Program.queryReasons?_typed
-#print axioms Effect4.Program.queryTag_typed
-#print axioms Effect4.Program.queryError_typed
-
 end Test.Program.ErrorQueriesContract

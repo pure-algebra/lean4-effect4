@@ -48,13 +48,4 @@ def requirementRow : Row :=
     (.scoped (.perform (.external 0) (.lit .unit))) =
   some ⟨.nat, .never, Requirement.single sameCodeOtherName⟩
 
-#print axioms Effect4.Program.effTy_scoped
-#print axioms Effect4.Program.effTy_scoped_some
-#print axioms Effect4.Program.effTy_scoped_none_iff
-#print axioms Effect4.Program.effTy_scoped_isSome
-#print axioms Effect4.Program.bodyRequires_not_scope
-#print axioms Effect4.Program.bodyRequires_other
-#print axioms Effect4.Program.bodyRequires_idempotent
-#print axioms Effect4.Program.effTy_scoped_idempotent
-
 end Test.Program.ScopedTypingContract

@@ -20,7 +20,7 @@ now a theorem on every run of a checked program:
 Placement (AGENTS.md):
 1. Concept 10 (`translation-simulation`): the frame machine's observation in the meaning layer's
    judgment; it serves the registry claim `m7-capstone-goals`.
-2. Question: the ledger goal `M7Results.exits_hasTy`, declared and proved here.
+2. Question: the ledger goal `exits_hasTy`, declared and proved here.
 3. Reach: every checked program (no lawful-signature or closed-row premise), every command budget,
    every tape whose host answers are admitted at the ghost token table (`AdmittedTape`; answer-free
    tapes are, `admittedTape_of_noHostAnswer`), the frame machine `Api.replay` at its empty row table,
@@ -87,24 +87,5 @@ theorem root_exit_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
   exact hty
 
 /-! T1's ledger goal (concept 10, `m7-capstone-goals`). -/
-namespace M7Results
-
-/-- T1: on every admitted tape of a checked program, every exit the frame machine records
-satisfies the meaning layer's exit judgment at its fiber's declared type, the root's being the
-program's. -/
-theorem exits_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
-    ProofGraph.Obligation
-      (Program.typeOfProgram root.signature root.program = some rootTy →
-        AdmittedTape root rootTy fuel tape →
-        ∃ Γ : FiberId → Option EffTy, Γ Api.root = some rootTy ∧
-          ∀ id ex, (id, some ex) ∈ (obs (Api.replay root.program fuel tape).machine).exits →
-            ∃ ty, Γ id = some ty ∧ Denote.ExitHasTy ty.answer ty.error
-              (obs (Api.replay root.program fuel tape).machine).stores ex) := ⟨⟩
-
-end M7Results
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M7Results.exits_hasTy := @Effect4.Program.Typed.exits_hasTy
-#typed_state_obligations Effect4.Program.Typed.M7Results ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])

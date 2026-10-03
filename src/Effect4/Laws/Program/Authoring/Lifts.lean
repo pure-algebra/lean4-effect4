@@ -525,60 +525,6 @@ theorem Cause.both_scoped {left : CauseSrc} {right : CauseSrc} (h0 : left.Scoped
   have s1 := h1.holds _ _ _ hx1
   simp [CauseTerm.scoped, s0, s1]
 
-
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.Authoring.succeed_scoped
-#print axioms Effect4.Program.Authoring.fail_scoped
-#print axioms Effect4.Program.Authoring.failCause_scoped
-#print axioms Effect4.Program.Authoring.sync_scoped
-#print axioms Effect4.Program.Authoring.suspend_scoped
-#print axioms Effect4.Program.Authoring.perform_scoped
-#print axioms Effect4.Program.Authoring.bind_scoped
-#print axioms Effect4.Program.Authoring.catchCause_scoped
-#print axioms Effect4.Program.Authoring.matchCause_scoped
-#print axioms Effect4.Program.Authoring.onExit_scoped
-#print axioms Effect4.Program.Authoring.exit_scoped
-#print axioms Effect4.Program.Authoring.uninterruptible_scoped
-#print axioms Effect4.Program.Authoring.interruptible_scoped
-#print axioms Effect4.Program.Authoring.yieldNow_scoped
-#print axioms Effect4.Program.Authoring.awaitFiber_scoped
-#print axioms Effect4.Program.Authoring.withFiber_scoped
-#print axioms Effect4.Program.Authoring.scope_scoped
-#print axioms Effect4.Program.Authoring.acquireRelease_scoped
-#print axioms Effect4.Program.Authoring.provideLayer_scoped
-#print axioms Effect4.Program.Authoring.service_scoped
-#print axioms Effect4.Program.Authoring.provideService_scoped
-#print axioms Effect4.Program.Authoring.catchIf_scoped
-#print axioms Effect4.Program.Authoring.selectBool_scoped
-#print axioms Effect4.Program.Authoring.selectOption_scoped
-#print axioms Effect4.Program.Authoring.selectTag_scoped
-#print axioms Effect4.Program.Authoring.iterate_scoped
-#print axioms Effect4.Program.Authoring.Action.fork_scoped
-#print axioms Effect4.Program.Authoring.Action.forkIn_scoped
-#print axioms Effect4.Program.Authoring.Action.forkScoped_scoped
-#print axioms Effect4.Program.Authoring.Action.runIn_scoped
-#print axioms Effect4.Program.Authoring.Action.interrupt_scoped
-#print axioms Effect4.Program.Authoring.Action.interruptAll_scoped
-#print axioms Effect4.Program.Authoring.Action.awaitAll_scoped
-#print axioms Effect4.Program.Authoring.Action.raceAll_scoped
-#print axioms Effect4.Program.Authoring.Action.getContext_scoped
-#print axioms Effect4.Program.Authoring.Action.getId_scoped
-#print axioms Effect4.Program.Authoring.Action.closeScope_scoped
-#print axioms Effect4.Program.Authoring.Layer.succeed_scoped
-#print axioms Effect4.Program.Authoring.Layer.effect_scoped
-#print axioms Effect4.Program.Authoring.Layer.effectDiscard_scoped
-#print axioms Effect4.Program.Authoring.Layer.provide_scoped
-#print axioms Effect4.Program.Authoring.Layer.provideMerge_scoped
-#print axioms Effect4.Program.Authoring.Layer.merge_scoped
-#print axioms Effect4.Program.Authoring.Layer.fresh_scoped
-#print axioms Effect4.Program.Authoring.Layer.orDie_scoped
-#print axioms Effect4.Program.Authoring.Layer.mergeAll_scoped
-#print axioms Effect4.Program.Authoring.Cause.fail_scoped
-#print axioms Effect4.Program.Authoring.Cause.die_scoped
-#print axioms Effect4.Program.Authoring.Cause.interrupt_scoped
-#print axioms Effect4.Program.Authoring.Cause.both_scoped
-
 end Effect4.Program.Authoring
 
 /-! ## Acceptance guards for the generated scope-preservation lemmas
@@ -625,4 +571,3 @@ example : LayerSrc.Scoped (Op := Unit) (Layer.mergeAll [Layer.effectDiscard (suc
   authoring_scoped
 
 end Effect4.Program.AuthoringScopedGuards
-

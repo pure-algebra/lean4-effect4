@@ -303,5 +303,4 @@ theorem registrationQueue_driveStep_registrationDone (p : NativeEff) (table : Ro
     | (simp only [settle, List.nil_append, List.cons_append]; split)
     | split
 
-
 end Effect4.Program.Guard

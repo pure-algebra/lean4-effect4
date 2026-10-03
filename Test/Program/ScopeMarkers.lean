@@ -94,7 +94,4 @@ example : eraseControl ((guardR .onSuccess failing).bind toUnit) =
       if GuardKind.onSuccess.hasExitArm ex then eraseControl (toUnit ex) else .pure ex) :=
   eraseControl_guardR_bind_taken .onSuccess failing toUnit (fun _ _ => rfl)
 
-#print axioms guardR_not_algebraic
-#print axioms erasure_runs_skipped
-#print axioms seq_reads_taken
 end Test.Program.ScopeMarkers

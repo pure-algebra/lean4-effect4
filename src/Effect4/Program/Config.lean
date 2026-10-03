@@ -165,11 +165,9 @@ variable {Name : Type}
 theorem load_source (get : Lookup Name) (t : Path Name → Path Name) (p : Path Name) :
     (Provider.source get t).load p = get (t p) := rfl
 
-
 /-- A fresh source loads at the requested path. -/
 theorem load_make (get : Lookup Name) (p : Path Name) :
     (Provider.make get).load p = get p := rfl
-
 
 /-- `orElse` consults its fallback exactly on absence (`ConfigProvider.ts:379-383`). -/
 theorem load_orElse (a b : Provider Name) (p : Path Name) :
@@ -178,7 +176,6 @@ theorem load_orElse (a b : Provider Name) (p : Path Name) :
       | .ok (some n) => .ok (some n)
       | .ok none => b.load p
       | .error e => .error e := rfl
-
 
 /-- `orElse` is associative on `load`. -/
 theorem orElse_assoc (a b c : Provider Name) :
@@ -196,13 +193,11 @@ theorem orElse_assoc (a b c : Provider Name) :
       | error e => rfl
       | ok nb => cases nb <;> rfl
 
-
 /-- `empty` is a left unit for `orElse`. -/
 theorem orElse_empty_left (p : Provider Name) :
     (Provider.orElse Provider.empty p).load = p.load := by
   funext q
   simp only [Provider.load, Provider.empty]
-
 
 /-- `empty` is a right unit for `orElse`. -/
 theorem orElse_empty_right (p : Provider Name) :
@@ -213,7 +208,6 @@ theorem orElse_empty_right (p : Provider Name) :
   | error e => rfl
   | ok n => cases n <;> rfl
 
-
 /-- `orElse` is idempotent on `load`. -/
 theorem orElse_idem (p : Provider Name) :
     (Provider.orElse p p).load = p.load := by
@@ -223,7 +217,6 @@ theorem orElse_idem (p : Provider Name) :
   | error e => rfl
   | ok n => cases n <;> rfl
 
-
 /-- Transforms compose in application order: the later one runs outermost
 (`ConfigProvider.ts:628-631`). -/
 theorem mapInput_mapInput (f g : Path Name → Path Name) (p : Provider Name) :
@@ -232,41 +225,34 @@ theorem mapInput_mapInput (f g : Path Name → Path Name) (p : Provider Name) :
   | source get t => rfl
   | orElse a b iha ihb => simp only [Provider.mapInput, iha, ihb]
 
-
 /-- Transforming by the identity changes nothing. -/
 theorem mapInput_id (p : Provider Name) : p.mapInput id = p := by
   induction p with
   | source get t => rfl
   | orElse a b iha ihb => simp only [Provider.mapInput, iha, ihb]
 
-
 /-- A composite distributes a transform to both operands (`ConfigProvider.ts:384`). -/
 theorem mapInput_orElse (f : Path Name → Path Name) (a b : Provider Name) :
     (Provider.orElse a b).mapInput f = Provider.orElse (a.mapInput f) (b.mapInput f) := rfl
-
 
 /-- A later `nested` is the *outer* prefix (`ConfigProvider.ts:767-772`). -/
 theorem nested_nested (p : Provider Name) (q r : Path Name) :
     (p.nested q).nested r = p.nested (r ++ q) := by
   simp only [Provider.nested, mapInput_mapInput, List.append_assoc]
 
-
 /-- On a fresh source, `mapInput` is pre-composition — the special case that makes the
 general rule look like something it is not (compare `E4-CONF-CE-001`). -/
 theorem load_mapInput_fresh (get : Lookup Name) (f : Path Name → Path Name) (p : Path Name) :
     ((Provider.make get).mapInput f).load p = get (f p) := rfl
 
-
 /-- On a fresh source, `nested` prepends its prefix to the requested path. -/
 theorem load_nested_fresh (get : Lookup Name) (q p : Path Name) :
     ((Provider.make get).nested q).load p = get (q ++ p) := rfl
-
 
 /-- Transforming a composite is transforming both operands. -/
 theorem load_mapInput_orElse (f : Path Name → Path Name) (a b : Provider Name) (p : Path Name) :
     ((Provider.orElse a b).mapInput f).load p
       = (Provider.orElse (a.mapInput f) (b.mapInput f)).load p := rfl
-
 
 end ProviderLaws
 
@@ -791,13 +777,11 @@ theorem eval_withDefault_absent (c : ConfigTerm Name) (d : Val) (P : Provider Na
     eval S (.withDefault c d) P q = .ok (.resolved d false) := by
   simp only [eval, h, defaultStep]
 
-
 /-- `withDefault` never replaces a value that resolved (`Config.ts:850`). -/
 theorem eval_withDefault_resolved (c : ConfigTerm Name) (d v : Val) (P : Provider Name)
     (q : Path Name) (hi : Bool) (h : eval S c P q = .ok (.resolved v hi)) :
     eval S (.withDefault c d) P q = .ok (.resolved v hi) := by
   simp only [eval, h, defaultStep]
-
 
 /-- `orElse` on absence is the fallback, evaluated with no evidence carried
 (`Config.ts:570-572`). -/
@@ -806,14 +790,12 @@ theorem eval_orElse_absent (c d : ConfigTerm Name) (P : Provider Name) (q : Path
     eval S (.orElse c d) P q = eval S d P q := by
   simp only [eval, h, orElseStep]
 
-
 /-- `orElse` on a failure is the fallback with the failure's evidence preserved
 (`Config.ts:564-568`, `:211-224`). -/
 theorem eval_orElse_failure (c d : ConfigTerm Name) (P : Provider Name) (q : Path Name)
     (f : Failure Name) (h : eval S c P q = .error f) :
     eval S (.orElse c d) P q = recover f (eval S d P q) := by
   simp only [eval, h, orElseStep]
-
 
 /-- A recovery that read no input is the fallback untouched (`Config.ts:215`). -/
 theorem recover_no_input (f : Failure Name) (y : Outcome Name) (h : f.hasInput = false) :
@@ -825,18 +807,15 @@ theorem recover_no_input (f : Failure Name) (y : Outcome Name) (h : f.hasInput =
     | resolved v hi => simp [recover, h]
     | absent e => simp [recover, h]
 
-
 /-- `option` turns absence into `none`, with no input evidence (`Config.ts:887-888`). -/
 theorem eval_option_absent (c : ConfigTerm Name) (P : Provider Name) (q : Path Name)
     (e : ConfigError Name) (h : eval S c P q = .ok (.absent e)) :
     eval S (.option c) P q = .ok (.resolved Val.none false) := by
   simp only [eval, h, optionStep]
 
-
 /-- `Config.nested` extends the evaluator's prefix (`Config.ts:2050-2051`). -/
 theorem eval_nested (n : Name) (c : ConfigTerm Name) (P : Provider Name) (q : Path Name) :
     eval S (.nested n c) P q = eval S c P (q ++ [Seg.key n]) := rfl
-
 
 end EvalLaws
 
@@ -973,7 +952,6 @@ theorem eval_nested_transfer (S : Scalars) (get : Lookup Name) (q : Path Name) :
     rw [ih (r ++ [Seg.key n]), List.append_assoc]
   | zip a b iha ihb => intro r; simp only [eval, reroot_zipRes, iha, ihb]
 
-
 /-- The corollary the two `nested`s are usually confused by: nesting the *term* under `n` and
 nesting the *provider* under `n` agree, once the provider-side answer is re-rooted. -/
 theorem eval_nested_eq_provider_nested (S : Scalars) (get : Lookup Name) (n : Name)
@@ -982,7 +960,6 @@ theorem eval_nested_eq_provider_nested (S : Scalars) (get : Lookup Name) (n : Na
       = reroot [Seg.key n] (eval S c ((Provider.make get).nested [Seg.key n]) []) := by
   rw [eval_nested_transfer S get [Seg.key n] c []]
   rfl
-
 
 end Transfer
 
@@ -1107,7 +1084,6 @@ theorem expand_lit (fuel : Nat) (env : List (Name × Tmpl Name)) (s : String) :
     expand fuel env (.lit s) = .ok s := by
   cases fuel <;> rfl
 
-
 /-- `E4-CONF-CE-003` as a theorem: the self-reference rc.112 diverges on is refused at every
 fuel, so no amount of fuel turns the refusal into an answer. -/
 theorem expand_ref_self_refused (a : Name) (fuel : Nat) :
@@ -1115,7 +1091,6 @@ theorem expand_ref_self_refused (a : Name) (fuel : Nat) :
   induction fuel with
   | zero => simp [expand, expandAt, lookupTmpl, refFinish]
   | succ n ih => simp [expand, expandAt, lookupTmpl, refFinish, ih]
-
 
 private theorem expandAt_mono (env : List (Name × Tmpl Name))
     (s1 s2 : Name → Tmpl Name → Except (Refusal Name) String)
@@ -1170,7 +1145,6 @@ theorem expand_fuel_mono :
       refine expandAt_mono env (fun _ u => expand n env u) _ ?_ t r h
       intro k u w hw
       exact ih m env u w (Nat.le_of_succ_le_succ hnm) hw
-
 
 end Expand
 
@@ -1413,7 +1387,6 @@ theorem absent_names_missing (S : Scalars) (render : Seg Name → String)
       exact ⟨p, by simp [reads, hp], hnp⟩
     · obtain ⟨p, hp, hnp⟩ := ihb q e hb
       exact ⟨p, by simp [reads, hp], hnp⟩
-
 
 end Missing
 

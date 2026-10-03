@@ -115,31 +115,6 @@ def currentTimeMillis : Src NativeOp :=
 
 end Effect
 
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.Authoring.Ref.make
-#print axioms Effect4.Program.Authoring.Ref.get
-#print axioms Effect4.Program.Authoring.Ref.set
-#print axioms Effect4.Program.Authoring.Ref.getAndSet
-#print axioms Effect4.Program.Authoring.Ref.setAndGet
-#print axioms Effect4.Program.Authoring.Ref.update
-#print axioms Effect4.Program.Authoring.Ref.getAndUpdate
-#print axioms Effect4.Program.Authoring.Ref.updateAndGet
-#print axioms Effect4.Program.Authoring.Ref.updateSome
-#print axioms Effect4.Program.Authoring.Ref.getAndUpdateSome
-#print axioms Effect4.Program.Authoring.Ref.updateSomeAndGet
-#print axioms Effect4.Program.Authoring.Ref.modify
-#print axioms Effect4.Program.Authoring.Ref.modifySome
-#print axioms Effect4.Program.Authoring.Deferred.make
-#print axioms Effect4.Program.Authoring.Deferred.isDone
-#print axioms Effect4.Program.Authoring.Deferred.poll
-#print axioms Effect4.Program.Authoring.Deferred.succeed
-#print axioms Effect4.Program.Authoring.Deferred.fail
-#print axioms Effect4.Program.Authoring.Deferred.await
-#print axioms Effect4.Program.Authoring.Scope.make
-#print axioms Effect4.Program.Authoring.Effect.sleep
-#print axioms Effect4.Program.Authoring.Effect.currentTimeMillis
-
 end Effect4.Program.Authoring
 
 /-! ## Acceptance guards for the generated row wrappers
@@ -163,4 +138,3 @@ open Effect4.Program Effect4.Program.Authoring
 #guard elaborate Deferred.make = .ok (.perform .deferredMake (.lit .unit))
 
 end Effect4.Program.AuthoringRowsGuards
-

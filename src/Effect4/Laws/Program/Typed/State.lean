@@ -17,7 +17,6 @@ inductive Expect
   | fiber (id : Effect4.FiberId)
   | hook (name : String)
 
-
 #position_gate Effect4.Program.Sched.RState Effect4.Program.Sched.RCmd
   Effect4.Program.Sched.RInterp Effect4.Program.Sched.RIter
 

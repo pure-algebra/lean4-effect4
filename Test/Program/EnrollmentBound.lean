@@ -5,7 +5,7 @@ import Effect4.Laws.Program.Typed.Commands.Observe
 # Test.Program.EnrollmentBound — weak queued-child allocation bound
 
 Placement: semantics Concept 4, scheduler preservation and step invariant lifting;
-`M6Ledger.step_launch` and the existing `M6Ledger.step_enrollRace`. This battery checks the
+`launch_preserves` and the existing `enrollRace_preserves`. This battery checks the
 lead coordinator's row 134 (e) weak-bound clarification (ratified by the owner, 2026-10-02):
 an enrollment child is below `nextId`, while an absent old child remains inert
 (`E4-TYPED-CE-032`). It leaves the current successful-lookup column test intact.
@@ -316,22 +316,3 @@ theorem result_typed : ∃ w', world.leHost w' ∧ ConfigTyped (rootProgram : Pr
 end ObserveSource
 
 end Test.Program.EnrollmentBound
-
-#print axioms Test.Program.EnrollmentBound.Future.at_counter
-#print axioms Test.Program.EnrollmentBound.Future.enrollment_refused
-#print axioms Test.Program.EnrollmentBound.Future.config_refused
-#print axioms Test.Program.EnrollmentBound.MissingOld.nextId_grows
-#print axioms Test.Program.EnrollmentBound.MissingOld.absent_below
-#print axioms Test.Program.EnrollmentBound.MissingOld.enrollment_ok
-#print axioms Test.Program.EnrollmentBound.MissingOld.scheduler
-#print axioms Test.Program.EnrollmentBound.MissingOld.typedState
-#print axioms Test.Program.EnrollmentBound.MissingOld.machine_typed
-#print axioms Test.Program.EnrollmentBound.MissingOld.tail_typed
-#print axioms Test.Program.EnrollmentBound.MissingOld.config_typed
-#print axioms Test.Program.EnrollmentBound.MissingOld.inert
-#print axioms Test.Program.EnrollmentBound.MissingOld.result_typed
-#print axioms Test.Program.EnrollmentBound.IncompatiblePresent.present_below
-#print axioms Test.Program.EnrollmentBound.IncompatiblePresent.enrollment_refused
-#print axioms Test.Program.EnrollmentBound.ObserveSource.future_refused
-#print axioms Test.Program.EnrollmentBound.ObserveSource.config_typed
-#print axioms Test.Program.EnrollmentBound.ObserveSource.result_typed

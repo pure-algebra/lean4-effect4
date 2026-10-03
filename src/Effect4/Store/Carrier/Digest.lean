@@ -338,6 +338,4 @@ theorem Digest.ofBytes?_exact {bs : Bytes} {d : Digest} (h : Digest.ofBytes? bs 
     rfl
   · exact nomatch h
 
-/-! ## Receipts -/
-
 end Effect4.Store

@@ -329,60 +329,6 @@ def Cause.both (left : CauseSrc) (right : CauseSrc) : CauseSrc :=
     let x1 ← right env p
     .ok (.both x0 x1)
 
-
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.Authoring.succeed
-#print axioms Effect4.Program.Authoring.fail
-#print axioms Effect4.Program.Authoring.failCause
-#print axioms Effect4.Program.Authoring.sync
-#print axioms Effect4.Program.Authoring.suspend
-#print axioms Effect4.Program.Authoring.perform
-#print axioms Effect4.Program.Authoring.bind
-#print axioms Effect4.Program.Authoring.catchCause
-#print axioms Effect4.Program.Authoring.matchCause
-#print axioms Effect4.Program.Authoring.onExit
-#print axioms Effect4.Program.Authoring.exit
-#print axioms Effect4.Program.Authoring.uninterruptible
-#print axioms Effect4.Program.Authoring.interruptible
-#print axioms Effect4.Program.Authoring.yieldNow
-#print axioms Effect4.Program.Authoring.awaitFiber
-#print axioms Effect4.Program.Authoring.withFiber
-#print axioms Effect4.Program.Authoring.scope
-#print axioms Effect4.Program.Authoring.acquireRelease
-#print axioms Effect4.Program.Authoring.provideLayer
-#print axioms Effect4.Program.Authoring.service
-#print axioms Effect4.Program.Authoring.provideService
-#print axioms Effect4.Program.Authoring.catchIf
-#print axioms Effect4.Program.Authoring.selectBool
-#print axioms Effect4.Program.Authoring.selectOption
-#print axioms Effect4.Program.Authoring.selectTag
-#print axioms Effect4.Program.Authoring.iterate
-#print axioms Effect4.Program.Authoring.Action.fork
-#print axioms Effect4.Program.Authoring.Action.forkIn
-#print axioms Effect4.Program.Authoring.Action.forkScoped
-#print axioms Effect4.Program.Authoring.Action.runIn
-#print axioms Effect4.Program.Authoring.Action.interrupt
-#print axioms Effect4.Program.Authoring.Action.interruptAll
-#print axioms Effect4.Program.Authoring.Action.awaitAll
-#print axioms Effect4.Program.Authoring.Action.raceAll
-#print axioms Effect4.Program.Authoring.Action.getContext
-#print axioms Effect4.Program.Authoring.Action.getId
-#print axioms Effect4.Program.Authoring.Action.closeScope
-#print axioms Effect4.Program.Authoring.Layer.succeed
-#print axioms Effect4.Program.Authoring.Layer.effect
-#print axioms Effect4.Program.Authoring.Layer.effectDiscard
-#print axioms Effect4.Program.Authoring.Layer.provide
-#print axioms Effect4.Program.Authoring.Layer.provideMerge
-#print axioms Effect4.Program.Authoring.Layer.merge
-#print axioms Effect4.Program.Authoring.Layer.fresh
-#print axioms Effect4.Program.Authoring.Layer.orDie
-#print axioms Effect4.Program.Authoring.Layer.mergeAll
-#print axioms Effect4.Program.Authoring.Cause.fail
-#print axioms Effect4.Program.Authoring.Cause.die
-#print axioms Effect4.Program.Authoring.Cause.interrupt
-#print axioms Effect4.Program.Authoring.Cause.both
-
 end Effect4.Program.Authoring
 
 /-! ## Acceptance guards for the generated authoring lifts
@@ -427,4 +373,3 @@ open Effect4.Program Effect4.Program.Authoring
   = .ok (.withFiber (.raceAll (.cons (.succeed (.lit (.nat 1))) (.cons (.succeed (.lit (.nat 2))) .nil))))
 
 end Effect4.Program.AuthoringGuards
-

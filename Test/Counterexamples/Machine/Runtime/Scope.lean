@@ -403,24 +403,4 @@ Every attack witness above is finite and decidable. The accepted ceiling is
 no dependency, `propext`, or `propext` with `Quot.sound`.
 -/
 
-#print axioms Test.Counterexamples.Runtime.Scope.close_must_write_state_first
-#print axioms Test.Counterexamples.Runtime.Scope.close_state_is_independent_of_finalizers
-#print axioms Test.Counterexamples.Runtime.Scope.close_order_is_lifo
-#print axioms Test.Counterexamples.Runtime.Scope.close_order_changes_the_cause
-#print axioms Test.Counterexamples.Runtime.Scope.close_is_idempotent
-#print axioms Test.Counterexamples.Runtime.Scope.close_guard_prevents_double_run
-#print axioms Test.Counterexamples.Runtime.Scope.add_after_closed_runs_now
-#print axioms Test.Counterexamples.Runtime.Scope.add_after_closed_registers_nothing
-#print axioms Test.Counterexamples.Runtime.Scope.remove_leaves_non_open_untouched
-#print axioms Test.Counterexamples.Runtime.Scope.cleared_inline_slot_is_its_own_state
-#print axioms Test.Counterexamples.Runtime.Scope.remove_inline_miss_is_a_no_op
-#print axioms Test.Counterexamples.Runtime.Scope.fork_of_closed_parent_is_born_closed
-#print axioms Test.Counterexamples.Runtime.Scope.fork_link_needs_one_shared_key
-#print axioms Test.Counterexamples.Runtime.Scope.fork_registers_the_same_key_on_both_sides
-#print axioms Test.Counterexamples.Runtime.Scope.sequential_close_captures_failures
-#print axioms Test.Counterexamples.Runtime.Scope.short_circuit_loses_a_reason
-#print axioms Test.Counterexamples.Runtime.Scope.single_finalizer_is_not_merged
-#print axioms Test.Counterexamples.Runtime.Scope.many_finalizers_are_merged_flat
-#print axioms Test.Counterexamples.Runtime.Scope.merge_is_concatenation_not_union
-
 end Test.Counterexamples.Runtime.Scope

@@ -180,7 +180,7 @@ theorem behaviour_cons (p : Runner) (c : Command) (rest : List Command) :
 /-- **`behaviour` is the only map that unfolds along `step`**: any map satisfying
 `behaviour_nil` and `behaviour_cons` is `behaviour`, the uniqueness half of finality for the
 runner's Mealy machine (formal pass, algebra note A7, probe `P3TapeAction.lean`). It concerns
-the session runner, row 27 of the coherence census (`docs/core/coherence-principle.md`, §2:
+the session runner, row 27 of the coherence census (`docs/research/history/coherence-principle.md`, §2:
 `replay`/`replayPlay`, `behaviour`), not that census's row 38: run observations still have no
 finality law (equal observations, equal runs), and this theorem does not supply one. Decisions
 row 38 (`explain` onto the fold) is unrelated. -/

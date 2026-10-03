@@ -100,7 +100,6 @@ theorem step_failure_pass_whileLoop (p : Point) (c : Val) (cause : CauseV) (K : 
     (Prim.failure cause) i rfl rfl
   exact exitFrom_ext root _ s hpop.1 hpop.2
 
-
 /-- Where a loop's next decision leaves the fiber: the body under the frame, or the finishing
 code with the frame gone. -/
 def enter (q : Point) (K : List NCode) (i : Bool) : LoopNext Val NCode → NFiber

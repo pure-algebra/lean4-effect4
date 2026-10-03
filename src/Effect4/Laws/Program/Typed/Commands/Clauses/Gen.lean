@@ -4,8 +4,8 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Iter
 # Laws.Program.Typed.Commands.Clauses.Gen — the generator producer's obligation
 
 Concept 4 (`step-deliver-preserves`, `step-loop-preserves`): `GenProtocol` (`Clauses/Iter.lean`,
-decisions row 190), the ledger goal `M6Clauses.gen_protocol`, the last premise of
-`M6Ledger.step_deliver` and `step_loop`. A generator entry at a checked point is in the iterator
+decisions row 190), the ledger goal `genProtocol`, the last premise of
+`deliver_preserves` and `step_loop`. A generator entry at a checked point is in the iterator
 protocol, by coinduction (`Contracts.Greatest.coind`) from a source-derived invariant on the walk's
 positions (`walkR`, `Laws/Program/InterpR.lean`; rc.112 `Effect.gen`, `internal/effect.ts:1175-1196`).
 

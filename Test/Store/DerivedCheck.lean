@@ -86,8 +86,4 @@ as before; green: one key in two different objects, which is no repetition. -/
 
 #guard Tools.WireTags.repeatedKeys "{\"x\": \"a \\\" b\", \"y\": [{\"x\": 1}, {\"x\": 2}], \"x\": 3}" == ["x"]
 
-/-! ## Axiom receipts -/
-
-#print axioms derivedFiles
-
 end Test.Store.DerivedCheck

@@ -5,8 +5,8 @@ import Effect4.Laws.Schema.Codec
 # Laws.Program.Typed.AnswerSchema — a host answer decoded by its Schema, admitted at its token
 
 Concept 5 (exact codecs) meeting Concept 1's membership (`Fits`), consumed by the host-answer edit of
-the decision lane (`edit_answer`, `M6Edits.answer`, the `DecisionKeeps` premise of
-`M6Ledger.decision_preserves`). The Schema JSON codec (`Schema.decode`) filters by the shape check
+the decision lane (`edit_answer`, `edit_answer`, the `DecisionKeeps` premise of
+`decision_preserves`). The Schema JSON codec (`Schema.decode`) filters by the shape check
 `Val.hasTy` (`hasTy_of_decode`); membership is stronger. On the shape-decided fragment
 (`shapeDecides`, the classifier table's column) the two agree at every world
 (`fits_of_hasTy_shapeDecides`). An exit is not in that fragment: its codec is total over every

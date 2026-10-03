@@ -131,6 +131,4 @@ theorem holds_of_injective (hInj : Function.Injective sha256) (p : Pin)
 
 end Pin
 
-/-! ## Receipts -/
-
 end Effect4.Store

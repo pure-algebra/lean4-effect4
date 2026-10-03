@@ -15,16 +15,6 @@ def insertOnAbsent (xs : List Nat) (i value : Nat) : List Nat :=
 /-- Key 2 is present, while key 0 is absent despite the one-entry extent. -/
 def sparseScopes : ScopeStore := ⟨[⟨2, Effect4.Scope.make .sequential⟩]⟩
 
-namespace Obligations
-
-theorem inserting_poke_fails_absent : ProofGraph.Obligation (
-    ([] : List Nat).length ≤ 0 ∧ insertOnAbsent [] 0 7 ≠ []) := ⟨⟩
-
-theorem scopes_fail_dense : ProofGraph.Obligation (
-    ¬ ((sparseScopes.entryAt 0).isSome = true ↔ 0 < sparseScopes.entries.length)) := ⟨⟩
-
-end Obligations
-
 /-- The inserting write is refused by `poke_absent`: it changes an empty store at an absent key. -/
 theorem inserting_poke_fails_absent : ([] : List Nat).length ≤ 0 ∧ insertOnAbsent [] 0 7 ≠ [] := by
   decide
@@ -36,5 +26,3 @@ theorem scopes_fail_dense :
 
 end ArenaRed
 end Effect4.Machine
-
-#typed_state_obligations Effect4.Machine.ArenaRed.Obligations ceiling 0 using decide

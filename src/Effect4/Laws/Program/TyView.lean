@@ -1250,4 +1250,3 @@ example {t : Ty} {v : Ty.Variance} {x : Ty} (h : (v, x) ∈ t.args) : sizeOf x <
 #guard (Ty.unknown).args = []
 
 end TyViewAcceptance
-

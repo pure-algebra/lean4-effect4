@@ -350,6 +350,4 @@ def traitStore : Store :=
 #guard (afterPut traitStore trait2Node).find probeEntryAddress = some probeEntry
 #guard verified (afterPut traitStore trait2Node).verify
 
-/-! ## Receipts -/
-
 end Effect4.Store

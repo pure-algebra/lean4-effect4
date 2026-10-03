@@ -31,8 +31,6 @@ theorem tape_exhaustion : exhaustionTag 40 [] = 1 := by decide
 #guard (Api.run nested 100 [] [] 32).exit = some (.success (.nat 42))
 #guard (Api.runSync nested 100 [] [] 32).2 = .success (.nat 42)
 
-#print axioms command_exhaustion
-#print axioms tape_exhaustion
 def sleeping : Api.Program := .perform .sleep (.lit (.nat 4))
 def waiting : Api.Program := .perform (.external 0) (.lit (.nat 7))
 def waitTable : RowTable := [Profile.Scalar.waitRow]
@@ -58,17 +56,4 @@ theorem sleeping_complete : Api.Tape.Complete sleeping [] [Api.evaluate, Api.flu
   rw [hr]
   simp
 
-#print axioms sleeping_complete
-#print axioms Effect4.Api.awaitHost_mem
-#print axioms Effect4.Api.awaitDecision_iff
-#print axioms Effect4.Api.commandFuel_iff
-#print axioms Effect4.Api.exists_awaitHost_iff
-#print axioms Effect4.Api.all_exited_not_runnable
-#print axioms Effect4.Api.observe_awaitingAsync_iff
-#print axioms Effect4.Api.observe_terminated_iff
-#print axioms Effect4.Api.observe_idle_iff
-#print axioms Effect4.Api.observe_idle_tape_iff
-#print axioms Effect4.Api.observe_of_reasons
-#print axioms Effect4.Program.Sched.reasons_eq_ref
-#print axioms Effect4.Program.Sched.book_reasons_eq_ref
 end Test.Api.FrontierContract

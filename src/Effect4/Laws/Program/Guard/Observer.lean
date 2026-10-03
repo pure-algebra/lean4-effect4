@@ -12,7 +12,6 @@ namespace Effect4.Program.Guard
 open Effect4 Effect4.Machine Effect4.Program
 open Effect4.Program.Guard.RegistrationQueue
 
-
 abbrev NPending := Pending EffName Val Err Defect FiberId Ann
 
 theorem fiberGuardState_pendingMap {m : NativeMachine} {f : NFiber}
@@ -181,7 +180,6 @@ theorem interruptedAt_interruptEach (p : NativeEff) (table : RowTable)
         interruptedAt_update_interruptRecord p table ht (some who) extra fiber interrupted
       simpa only [interruptEach, List.foldl_cons, ht] using ih next pending hi
 
-
 theorem fiber_lookup_addObserver_fields (m : NativeMachine) (target : FiberId)
     (observer : Observer) {fiber : FiberId} {f : NFiber} (hf : m.fiber? fiber = some f) :
     ∃ g, (m.modify target fun old => { old with observers := old.observers ++ [observer] }).fiber?
@@ -306,7 +304,6 @@ theorem guardState_fireObserver_countdown (p : NativeEff) (table : RowTable)
               { q with waitingOn := some next, remaining := rest, collected := exits } else q)
             (by intro q; split <;> rfl)
 
-
 theorem interruptEach_append (p : NativeEff) (table : RowTable)
     (who : FiberId) (extra : ReasonAnnotations Ann) (targets : List FiberId)
     (m : NativeMachine) (front rest : List NCmd) :
@@ -405,7 +402,6 @@ theorem guardQueue_fireObserver_countdown (p : NativeEff) (table : RowTable)
             (afterRunning.trans (currentRunning.trans idle)) (afterExit.trans currentExit) code
             (fun q => if q.token = token then
               { q with waitingOn := some next, remaining := rest, collected := exits } else q)
-
 
 theorem guardState_fireObserver (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (id : FiberId) (exit : ExitV) (commands : List NCmd)
@@ -506,7 +502,6 @@ theorem guardQueue_fireObserver (p : NativeEff) (table : RowTable)
                 { next with settled := true }) _
           · exact raceSites_raceSettle p table _ _ _
       · exact updated
-
 
 theorem nextToken_modify (m : NativeMachine) (target : FiberId) (changeFiber : NFiber → NFiber) :
     (m.modify target changeFiber).nextToken = m.nextToken := by
@@ -651,7 +646,6 @@ theorem interruptedAt_restorePending {m n : NativeMachine} {w current : NFiber}
     refine ⟨{ w with pending := w.pending.map changePending }, ?_, hi⟩
     exact same ▸ fiber_lookup_update_self hc _ rfl
   · exact interruptedAt_update_other _ _ same updated
-
 
 theorem requestOrInterrupted_update_other (m : NativeMachine) (g : NFiber)
     (fiber : FiberId) (token : Nat) (request : NativeOp × Val) (different : g.id ≠ fiber)
@@ -811,7 +805,6 @@ theorem interruptedAt_fireObserver (p : NativeEff) (table : RowTable)
     simp only [fireObserver]
     repeat' first | exact interrupted | split
 
-
 theorem guardQueue_swap_append (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {front rest : List NCmd} (queue : GuardQueue p table m (front ++ rest)) :
     GuardQueue p table m (rest ++ front) := by
@@ -894,7 +887,6 @@ theorem interruptedAt_driveStep_observe (p : NativeEff) (table : RowTable)
     InterruptedAt (driveStep (interpOf p table) m (.observe id exit observer) rest).1 fiber :=
   interruptedAt_fireObserver p table m id exit [] observer fiber interrupted
 
-
 theorem registrationQueue_interruptEach (p : NativeEff) (table : RowTable)
     (who : FiberId) (extra : ReasonAnnotations Ann) (targets : List FiberId)
     (m : NativeMachine) (commands : List NCmd) (registration : RegistrationQueue commands) :
@@ -970,14 +962,5 @@ theorem registrationQueue_driveStep_observe (p : NativeEff) (table : RowTable)
   exact registrationQueue_append
     (registrationQueue_fireObserver p table m id exit [] observer True.intro)
     (registrationQueue_tail registration)
-
-
-
-
-
-
-
-
-
 
 end Effect4.Program.Guard

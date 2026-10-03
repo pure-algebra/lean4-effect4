@@ -304,16 +304,4 @@ theorem rendezvous_scoped : Src.Scoped rendezvous := by
 #guard (elaborate rendezvous).toOption.map (Eff.scopedAt 0) = some true
 #guard (elaborateModule twiceByName).toOption.map (Eff.scopedAt 0) = some true
 
-#print axioms writeThenRead_scoped
-#print axioms writeThenReadEff_scoped
-#print axioms writeThenReadEffDo_scoped
-#print axioms conditionalBranchProg_scoped
-#print axioms rendezvous_scoped
-#print axioms Effect4.Program.Authoring.elaborate_scoped
-#print axioms Effect4.Program.Authoring.Node.scopedAt_child
-#print axioms Effect4.Program.Authoring.elaborate
-#print axioms Effect4.Program.Authoring.elaborateModule
-#print axioms Effect4.Program.Authoring.bind
-#print axioms Effect4.Program.Authoring.var
-
 end Test.Program.AuthoringContract

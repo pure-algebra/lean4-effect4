@@ -96,6 +96,4 @@ def isBadShape : Option ExitV → Bool
 #guard !isBadShape (frameExit leak poisoned)
 #guard !isBadShape (termExit leak poisoned)
 
-#print axioms escaped_exit_does_not_fit
-#print axioms escaped_exit_fits_region
 end Test.Counterexamples.InterruptEscape

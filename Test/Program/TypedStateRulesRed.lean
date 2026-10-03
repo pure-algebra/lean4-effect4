@@ -24,5 +24,4 @@ theorem from_owner {W : Type} (P : Preds W) (w : W) (e : Expect)
     (x : Effect4.Program.Sched.RSaved) (saved : P.SavedOk w e x) : RSavedOk P w e x := by
   aesop (rule_sets := [Effect4.TypedState])
 
-#print axioms from_owner
 end Test.Program.TypedStateRulesRed

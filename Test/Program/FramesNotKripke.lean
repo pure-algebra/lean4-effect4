@@ -578,7 +578,7 @@ theorem post_untyped (w : W) :
       change Typed.Fits w (Val.str "x") .unit at hp
       simp only [Typed.Fits] at hp
 
-/-- **The declared `M6Ledger.step_loop` proposition, over the one-world judgment, is false at
+/-- **The declared `loop_preserves` proposition, over the one-world judgment, is false at
 this instance** (`E4-TYPED-CE-012`, the step; historical). -/
 theorem step_loop_refuted :
     ¬ Old.StepPreserves (refProg : ProgramSource) unitTy (.loop Api.root false) := by
@@ -1210,42 +1210,3 @@ theorem output_not_kripke :
       cases h1.1
 
 end Test.Program.FramesNotKripke
-
-open Test.Program.FramesNotKripke in
-#print axioms stackAccepts_not_mono
-open Test.Program.FramesNotKripke in
-#print axioms typed
-open Test.Program.FramesNotKripke in
-#print axioms queue
-open Test.Program.FramesNotKripke in
-#print axioms post_untyped
-open Test.Program.FramesNotKripke in
-#print axioms step_loop_refuted
-open Test.Program.FramesNotKripke in
-#print axioms evaluate_keeps
-open Test.Program.FramesNotKripke in
-#print axioms bad_not_kripke_initial
-open Test.Program.FramesNotKripke in
-#print axioms frameAccepts_now
-open Test.Program.FramesNotKripke in
-#print axioms stackAccepts_now
-open Test.Program.FramesNotKripke in
-#print axioms bad_not_kripke_by_transport
-open Test.Program.FramesNotKripke in
-#print axioms good_stack_transports
-open Test.Program.FramesNotKripke in
-#print axioms preds_savedOk_mono
-open Test.Program.FramesNotKripke in
-#print axioms good_config
-open Test.Program.FramesNotKripke in
-#print axioms afterGood_config
-open Test.Program.FramesNotKripke in
-#print axioms step_loop_good
-open Test.Program.FramesNotKripke in
-#print axioms hookLawsX_old
-open Test.Program.FramesNotKripke in
-#print axioms hookLawsX_refused
-open Test.Program.FramesNotKripke in
-#print axioms output_typed_one_world
-open Test.Program.FramesNotKripke in
-#print axioms output_not_kripke

@@ -400,9 +400,4 @@ refuses all three by name, before it looks at the row table. -/
 #guard (printEntry [] nativeSignature "main" ⟨.nat, .never, Requirement.empty⟩
     (.succeed (.lit (.nat 1)))).isOk
 
-#print axioms Effect4.Program.exportNameSafe
-#print axioms Effect4.Program.declarationType
-#print axioms Effect4.Program.printDecl_fields
-#print axioms Effect4.Program.printEntry_ok
-
 end Test.Syntax.PrintContract

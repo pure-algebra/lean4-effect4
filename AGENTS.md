@@ -9,12 +9,12 @@ full, then open only the authority documents named for the current task.
 | --- | --- |
 | `README.md` | what the product is, the application face, how to build |
 | `docs/STATE.md` | the entry point: true at HEAD, the documents, what is next, what the owner must decide |
-| `docs/core/` | the current authorities: `system-map.md` (the goal, what a full program is, the layers and their owners, the sorts and arrow kinds, the requirements R1–R13 and their status: the frame and the vocabulary's definitions), `semantics.md` (the language's judgments by concept: what the literature defines, our adaptation and cuts, the definitions in the tree, the required properties; statuses are generated, `generated/semantics.md`), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `coherence-principle.md`, `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md`, `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land), `post-phase-c-synthesis.md` (the foundations review and coverage planning, its §11); `language-cut.md` is history |
+| `docs/core/` | the current authorities: `system-map.md` (the goal, what a full program is, the layers and their owners, the sorts and arrow kinds, the requirements R1–R13 and their status: the frame and the vocabulary's definitions), `semantics.md` (the language's judgments by concept: what the literature defines, our adaptation and cuts, the definitions in the tree, the required properties; statuses are generated, `generated/semantics.md`), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md` (the live surface and its open decisions), `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land) |
 | `docs/ARCHITECTURE.md` | the source tree, module boundaries, dependency direction, the API seam |
 | `docs/GENERATED.md` | the generated groups: producers (`make gen-<group>`), inputs, consumers and checks |
 | `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-17): decision, rationale, witnesses, refusals, sources and literature marks; status only by link to the system map's §8 |
 | `docs/DESIGN-ISSUES.md` | the open design questions (DI-nn): status, what each would force to be redone, the milestone to decide by; a ruling is made only when written into a tracked file |
-| `docs/DESIGN-MAP.md` | the earlier five-layer map, cited by section from code; superseded in substance by `docs/core/system-map.md` |
+| `docs/research/history/` | superseded authorities kept for citation (force-added): the five-layer design map, the language cut, the coherence principle, the post-Phase C synthesis, the 2026-09-17 API assessment; history, never authority |
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
 | `Test/contracts/` | frozen contract packets and their executable falsifiers |
 | `Test/Counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
@@ -116,9 +116,11 @@ its arrows; anything else is a leak.
   down five things:
   1. its concept, the one of the ten in `docs/core/semantics.md`, and the required property there
      that it is or serves;
-  2. its question: a `ProofGraph` ledger goal, or a registry claim with its role
-     (`tools/Tools/SemanticsRegistry.lean`, `generated/semantics.md`). A helper names the goal or
-     claim it is a step of, and the consumer that uses it;
+  2. its question: a registry claim with its role (`tools/Tools/SemanticsRegistry.lean`,
+     `generated/semantics.md`), whose pointer is the proving theorem once it exists. While a goal
+     is open and has no theorem, a `ProofGraph` ledger goal (`#proof_wanted`) holds its place; it
+     is retired when the proof lands, never kept beside the theorem as a second statement
+     (2026-10-03). A helper names the claim it is a step of, and the consumer that uses it;
   3. its reach: the exact judgment, observation, fragment and hypotheses, with the decisions rows
      and register lines that bound it;
   4. what it does not establish:

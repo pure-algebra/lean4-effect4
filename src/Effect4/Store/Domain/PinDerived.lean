@@ -292,24 +292,4 @@ def sample : Pin :=
 
 end PinAcceptance
 
-/-! ## Receipts -/
-
-#print axioms PinGen.PinRoleC.toVal
-#print axioms PinGen.PinRoleC.ofVal_toVal
-#print axioms PinGen.PinRoleC.ofVal_exact
-#print axioms PinGen.PinRoleC.fits
-#print axioms PinGen.PinRoleC.instCanonical
-#print axioms PinGen.PinC.toVal
-#print axioms PinGen.PinC.ofVal_toVal
-#print axioms PinGen.PinC.ofVal_exact
-#print axioms PinGen.PinC.fits
-#print axioms PinGen.PinC.instCanonical
-#print axioms PinGen.PinC.instContent
-#print axioms PinGen.TreeC.toVal
-#print axioms PinGen.TreeC.ofVal_toVal
-#print axioms PinGen.TreeC.ofVal_exact
-#print axioms PinGen.TreeC.fits
-#print axioms PinGen.TreeC.instCanonical
-#print axioms PinGen.TreeC.instContent
-
 end Effect4.Store

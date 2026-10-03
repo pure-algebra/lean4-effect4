@@ -714,7 +714,6 @@ def postTask (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : Fiber
     ((m.update { o with dispatcher := o.dispatcher.enqueue priority task }).arm owner).emit
       [RunEvent.scheduledTask owner priority task]
 
-
 end RunMachine
 
 /-! ## The commands the loop runs

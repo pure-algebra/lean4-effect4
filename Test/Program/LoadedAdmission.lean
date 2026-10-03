@@ -190,13 +190,4 @@ theorem memoAwait_typed (w : W) (m : MemoMapId) :
         ⟨_, _, hPi.1, Ty.sub_refl _, Ty.sub_refl _⟩ (fun _ _ _ hpost => TypedProg.pure hpost)
   · exact TypedProg.pure (Test.Program.H2PartOne.interrupt_admitted w' _ none)
 
-#print axioms sleep_admitted
-#print axioms fork_admitted
-#print axioms scoped_admitted
-#print axioms race_admitted
-#print axioms generator_admitted
-#print axioms service_admitted
-#print axioms service_admitted_initial
-#print axioms lookup_typed
-#print axioms memoAwait_typed
 end Test.Program.LoadedAdmission

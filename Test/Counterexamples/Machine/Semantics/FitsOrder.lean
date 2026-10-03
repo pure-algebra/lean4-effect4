@@ -83,7 +83,6 @@ def rootTy3 : EffTy := ⟨.fiberOf T.normalize .never, .never, Requirement.empty
 
 theorem prog3_typed : Api.typeOf prog3 [] = some rootTy3 := by decide +kernel
 
-
 theorem child_cert : effTy (nativeSignature []) [] child = some certT := by decide +kernel
 
 /-- The raw order does not see product distribution: `T` is not below its own normal form. -/
@@ -515,71 +514,6 @@ theorem prog3_leaf : ∃ w : Typed.World, w.Γ ⟨1⟩ = some certT ∧
     FitsExit w rootTy3 (.success (Val.fiber ⟨1⟩)) :=
   m5_forces_leaf prog3_loads_typed
 
-#print axioms prog3_typed
-#print axioms child_cert
-#print axioms T_not_sub
-#print axioms child_at
-#print axioms w0_root
-#print axioms T_subN_normal
-#print axioms normal_subN_T
-#print axioms Reviewed.fits_fiber_raw
-#print axioms Reviewed.not_fits_fiber_normal
-#print axioms Reviewed.fits_cell_normal
-#print axioms Reviewed.not_fits_cell_raw
-#print axioms Reviewed.not_fits_join
-#print axioms fits_fiber_normal
-#print axioms fits_cell_raw
-#print axioms fits_join
-#print axioms load_not_inert
-#print axioms m5_forces_leaf
-#print axioms leaf_holds
-#print axioms rawLeaf_false
-#print axioms Reviewed.leaf_false
-#print axioms Reviewed.m5_false
-#print axioms Reviewed.loadsTyped_false
-#print axioms Reviewed.typedState_load_false
-#print axioms capstone_implies_load
-#print axioms Reviewed.capstone_false
-#print axioms child_check
-#print axioms fiber_subN_root
-#print axioms prog3_typedF
-#print axioms prog3_loads_typed
-#print axioms loadsTyped
-#print axioms capstone_at_load
-#print axioms prog3_leaf
-#print axioms Effect4.Program.Typed.machineTyped_load
-#print axioms Effect4.Program.Typed.typedState_load_of_code
-#print axioms Effect4.Program.Typed.rreachable_load
-
 /-! The repair's own theorems (`Laws/Program/TypeAlgebra.lean`, `Laws/Program/Typed/Membership.lean`). -/
-#print axioms Effect4.Program.Ty.subN_refl
-#print axioms Effect4.Program.Ty.subN_trans
-#print axioms Effect4.Program.Ty.sub_le_subN
-#print axioms Effect4.Program.Ty.subN_normalize_left
-#print axioms Effect4.Program.Ty.subN_normalize_right
-#print axioms Effect4.Program.Ty.subN_equiv_iff
-#print axioms Effect4.Program.Ty.ofRaw_eq_iff
-#print axioms Effect4.Program.Ty.subN_join_left
-#print axioms Effect4.Program.Ty.subN_join_right
-#print axioms Effect4.Program.Typed.fits_sub
-#print axioms Effect4.Program.Typed.fits_ofMembers
-#print axioms Effect4.Program.Typed.fits_members
-#print axioms Effect4.Program.Typed.fits_factors
-#print axioms Effect4.Program.Typed.fits_normalizeRow
-#print axioms Effect4.Program.Typed.fits_prod_iff
-#print axioms Effect4.Program.Typed.fits_productMembers
-#print axioms Effect4.Program.Typed.causeFits_iff
-#print axioms Effect4.Program.Typed.fiberDeclared_normalize
-#print axioms Effect4.Program.Typed.equiv_normalize
-#print axioms Effect4.Program.Typed.fits_normalize
-#print axioms Effect4.Program.Typed.fits_subN
-#print axioms Effect4.Program.Typed.fits_join_left
-#print axioms Effect4.Program.Typed.fits_join_right
-#print axioms Effect4.Program.Typed.fitsExit_subN
-#print axioms Effect4.Program.Typed.await_fits
-#print axioms Effect4.Program.Typed.fits_mono
-#print axioms Effect4.Program.Typed.fits_map
-#print axioms Effect4.Program.Typed.fits_live
-#print axioms Effect4.Program.Typed.fits_hasTy
 
 end Test.Counterexamples.Machine.Semantics.FitsOrder

@@ -38,6 +38,4 @@ example {Op : Type} (sig : Signature Op) (env : TyEnv) (p : List Nat) (value : T
       ∃ ty, termTy sig env value = some ty ∧ t = EffTy.pure ty := by
   aesop
 
-#print axioms Effect4.Program.Checker.inv_succeed
-
 end Test.Program.CheckerRulesRed

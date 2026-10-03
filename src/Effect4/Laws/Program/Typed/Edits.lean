@@ -416,7 +416,7 @@ theorem edit_clockSome (root : ProgramSource) (rootTy : EffTy) : EditClockSome r
 
 /-! ## M6b from what remains
 
-The six edits are proved above. `DecisionKeeps` (`M6Ledger.decision_preserves`) follows from the
+The six edits are proved above. `DecisionKeeps` (`decision_preserves`) follows from the
 eighteen command facts through the lift (`decisionKeeps_of_ledger`); these two theorems state
 exactly that, so the goal closes by one line when its premises do. -/
 
@@ -447,13 +447,3 @@ theorem typedState_reachable_of_steps (root : ProgramSource) (rootTy : EffTy) (f
     (fun d => decisionKeeps_of_steps root rootTy fuel steps d) m
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M6Edits.drain := @Effect4.Program.Typed.edit_drain
-#obligation_proved Effect4.Program.Typed.M6Edits.yield := @Effect4.Program.Typed.edit_yield
-#obligation_proved Effect4.Program.Typed.M6Edits.interrupt := @Effect4.Program.Typed.edit_interrupt
-#obligation_proved Effect4.Program.Typed.M6Edits.clockNone := @Effect4.Program.Typed.edit_clockNone
-#obligation_proved Effect4.Program.Typed.M6Edits.clockSome := @Effect4.Program.Typed.edit_clockSome
-#obligation_proved Effect4.Program.Typed.M6Edits.answer := @Effect4.Program.Typed.edit_answer
--- `M6Edits`' report moved here from `Assembly.lean`'s foot: this module sees the proofs.
-#typed_state_obligations Effect4.Program.Typed.M6Edits ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])

@@ -332,17 +332,4 @@ end
 
 instance instReprTy : Repr _root_.Effect4.Program.Ty := ⟨Ty.repr⟩
 
-/-! ## Receipts -/
-
-#print axioms Ty.ind
-#print axioms Ty.beq_iff
-#print axioms instDecidableEqTy
-#print axioms instReprTy
-#print axioms Ty.beq_pos_prod_bool_ty_iff
-#print axioms Ty.beq_pos_prod_string_prod_bool_ty_iff
-#print axioms Ty.beq_pos_list_prod_string_prod_bool_ty_iff
-#print axioms Ty.beq_pos_list_ty_iff
-
-
 end Effect4.Program
-

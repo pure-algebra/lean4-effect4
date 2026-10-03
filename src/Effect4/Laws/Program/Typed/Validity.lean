@@ -13,7 +13,6 @@ set_option autoImplicit false
 namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program.Sched
 
-
 /-! ## The wake columns (decisions row 134 (a), (b))
 
 Every waiting family's list has one shape (`WakeList`) and one view of its keys (`Guard.wakeKeys`,
@@ -103,42 +102,6 @@ def initialWorld (rootTy : EffTy) (serviceTy : ServiceKey → Option Ty := nativ
     Γ := tableInsert (fun _ => none) Api.root rootTy,
     «Π» := fun _ => none, Ρ := fun _ => none, Θ := fun _ _ => none, serviceTy := serviceTy }
 
-namespace M2Validity
-theorem valid_refMake_fresh (rootTy : EffTy) (w : World) (m : RState) :
-    ProofGraph.Obligation (WorldValid rootTy w m → w.Ρ ⟨m.state.refs.length⟩ = none) := ⟨⟩
-theorem valid_deferredMake_fresh (rootTy : EffTy) (w : World) (m : RState) :
-    ProofGraph.Obligation (WorldValid rootTy w m → w.«Π» ⟨m.state.deferreds.cells.length⟩ = none) := ⟨⟩
-theorem valid_nextToken_fresh (rootTy : EffTy) (w : World) (m : RState) :
-    ProofGraph.Obligation (WorldValid rootTy w m → ∀ id, w.Θ id m.nextToken = none) := ⟨⟩
-theorem ref_completion_live (rootTy : EffTy) (w : World) (m : RState)
-    (types : Ty × Ty) (key : RefKey) : ProofGraph.Obligation
-    (WorldValid rootTy w m → CompletionOk w types (.ofRefGet key) → key.index < m.state.refs.length) := ⟨⟩
-theorem leHost_refl (w : World) : ProofGraph.Obligation (w.leHost w) := ⟨⟩
-theorem leHost_trans (a b c : World) : ProofGraph.Obligation
-    (a.leHost b → b.leHost c → a.leHost c) := ⟨⟩
-theorem leHost_base (w newer : World) : ProofGraph.Obligation (w.leHost newer → w.le newer) := ⟨⟩
-theorem value_transport (w newer : World) (ty : Ty) (value : Val) : ProofGraph.Obligation
-    (Extends w.state.externals.allocated newer.state.externals.allocated →
-      ValueOk w ty value → ValueOk newer ty value) := ⟨⟩
-/-- C1: table lookup and spelling extension suffice, without assuming CellCompatible. -/
-theorem completion_transport (w newer : World) (types : Ty × Ty) : ProofGraph.Obligation
-    (TableExtends w.Ρ newer.Ρ →
-      Extends w.state.externals.allocated newer.state.externals.allocated →
-      ∀ completion, CompletionOk w types completion → CompletionOk newer types completion) := ⟨⟩
-theorem valueOk_mono (w newer : World) (ty : Ty) (value : Val) : ProofGraph.Obligation
-    (w.leHost newer → ValueOk w ty value → ValueOk newer ty value) := ⟨⟩
-theorem completionOk_mono (w newer : World) (types : Ty × Ty)
-    (completion : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation
-    (w.leHost newer → CompletionOk w types completion → CompletionOk newer types completion) := ⟨⟩
-theorem heapTypedAt_mono (w newer : World) (key : RefKey) (ty : Ty) : ProofGraph.Obligation
-    (w.leHost newer → HeapTypedAt w key ty → HeapTypedAt newer key ty) := ⟨⟩
-theorem promiseTypedAt_mono (w newer : World) (key : DeferredKey) (types : Ty × Ty) : ProofGraph.Obligation
-    (w.leHost newer → PromiseTypedAt w key types → PromiseTypedAt newer key types) := ⟨⟩
-theorem exitFits_mono (w newer : World) (ty : EffTy) (ex : ExitV) : ProofGraph.Obligation
-    (w.leHost newer → ExitFits w ty ex → ExitFits newer ty ex) := ⟨⟩
-theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel : Nat) :
-    ProofGraph.Obligation (WorldValid rootTy (initialWorld rootTy) (loadR e fuel compileFuel)) := ⟨⟩
-end M2Validity
 theorem valid_refMake_fresh (rootTy : EffTy) (w : World) (m : RState)
     (valid : WorldValid rootTy w m) : w.Ρ ⟨m.state.refs.length⟩ = none := by
   cases h : w.Ρ ⟨m.state.refs.length⟩ with
@@ -271,21 +234,3 @@ theorem initial_world_valid (rootTy : EffTy) (e : NativeEff) (fuel compileFuel :
   initial_world_valid_at rootTy nativeServiceTy e fuel compileFuel
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M2Validity.valid_refMake_fresh := @Effect4.Program.Typed.valid_refMake_fresh
-#obligation_proved Effect4.Program.Typed.M2Validity.valid_deferredMake_fresh := @Effect4.Program.Typed.valid_deferredMake_fresh
-#obligation_proved Effect4.Program.Typed.M2Validity.valid_nextToken_fresh := @Effect4.Program.Typed.valid_nextToken_fresh
-#obligation_proved Effect4.Program.Typed.M2Validity.ref_completion_live := @Effect4.Program.Typed.ref_completion_live
-#obligation_proved Effect4.Program.Typed.M2Validity.leHost_refl := @Effect4.Program.Typed.leHost_refl
-#obligation_proved Effect4.Program.Typed.M2Validity.leHost_trans := @Effect4.Program.Typed.leHost_trans
-#obligation_proved Effect4.Program.Typed.M2Validity.leHost_base := @Effect4.Program.Typed.leHost_base
-#obligation_proved Effect4.Program.Typed.M2Validity.value_transport := @Effect4.Program.Typed.value_transport
-#obligation_proved Effect4.Program.Typed.M2Validity.completion_transport := @Effect4.Program.Typed.completion_transport
-#obligation_proved Effect4.Program.Typed.M2Validity.valueOk_mono := @Effect4.Program.Typed.valueOk_mono
-#obligation_proved Effect4.Program.Typed.M2Validity.completionOk_mono := @Effect4.Program.Typed.completionOk_mono
-#obligation_proved Effect4.Program.Typed.M2Validity.heapTypedAt_mono := @Effect4.Program.Typed.heapTypedAt_mono
-#obligation_proved Effect4.Program.Typed.M2Validity.promiseTypedAt_mono := @Effect4.Program.Typed.promiseTypedAt_mono
-#obligation_proved Effect4.Program.Typed.M2Validity.exitFits_mono := @Effect4.Program.Typed.exitFits_mono
-#obligation_proved Effect4.Program.Typed.M2Validity.initial_world_valid := @Effect4.Program.Typed.initial_world_valid
-
-#typed_state_obligations Effect4.Program.Typed.M2Validity ceiling 0 using aesop (rule_sets := [Effect4.TypedState])

@@ -210,5 +210,4 @@ theorem interruptedAt_driveStep_finish (p : NativeEff) (table : RowTable)
     simpa only [driveStep, hf] using interruptedAt_exitFiber p table state
       (by simpa only [fiber_id_of_lookup hf] using hf) exit before
 
-
 end Effect4.Program.Guard.Finish

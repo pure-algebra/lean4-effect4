@@ -3,7 +3,7 @@ import Effect4.Laws.Program.Typed.Commands.Registration
 /-!
 # Laws.Program.Typed.Commands.Launch — allocation and a race entrant's launch
 
-Concept 4 (the configuration invariant `I`); question `M6Ledger.step_launch`, and through the
+Concept 4 (the configuration invariant `I`); question `launch_preserves`, and through the
 allocation transport every allocating evaluator arm (`fork`, `forkIn`, `forkScoped`, the parallel
 close). The actual allocation (`spawn`, `Machine/Fibers.lean:948-966`) appends one fresh fiber at
 the old `nextId` and increments the counter; the world declares it (`World.addFiber`).
@@ -691,6 +691,3 @@ theorem launch_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) 
               ⟨yielding, List.mem_cons_of_mem _ queued⟩) _⟩
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_launch :=
-  @Effect4.Program.Typed.launch_preserves

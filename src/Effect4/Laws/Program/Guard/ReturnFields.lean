@@ -108,7 +108,6 @@ theorem iteration_running (p : NativeEff) (table : RowTable)
       (evaluateNative_running p table it.machine it.fiber it.yielding).trans
         ((injectYield_running m _ yielding it hi).trans (runloopTop_running f))
 
-
 theorem pendingShape_of_unparked (f : NFiber) (park : f.parked = .notParked)
     (pending : f.pending = []) : PendingShape f := by
   simp only [PendingShape, park, pending]
@@ -447,6 +446,5 @@ theorem iteration_freshPark (p : NativeEff) (table : RowTable)
     have out := result token (by simpa only [iteration, hi] using hpark)
     refine ⟨out.1.trans next, ?_⟩
     simpa only [iteration, hi] using out.2
-
 
 end Effect4.Program.Guard.ReturnFields

@@ -93,11 +93,4 @@ theorem delivery_does_not_intercept_failure (interp : RInterp) (m : RState) (f :
     (yielding : Bool) :
     (deliverR interp m { f with frame := deferred } yielding failure).outcome = .finished sanitized := rfl
 
-#print axioms masked_satisfies_reviewed_correlation
-#print axioms masked_has_provenance
-#print axioms reviewed_catch_skip
-#print axioms reviewed_catch_run
-#print axioms restore_then_skip
-#print axioms proposed_entry_mask_exception_false
-#print axioms delivery_does_not_intercept_failure
 end Test.Counterexamples.InterruptDelivery

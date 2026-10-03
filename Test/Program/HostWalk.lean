@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Typed.HostWalk
 /-!
 # Test.Program.HostWalk — the walk over a host stack reaches its new outcomes
 
-Placement: semantics Concept 4, the walk consumer of `M6Ledger.step_loop` and `.step_deliver`
+Placement: semantics Concept 4, the walk consumer of `loop_preserves` and `.step_deliver`
 (`popR_hostTyped`, `Typed/HostWalk.lean`). Two stacks from RegistrationYield's fixtures, each
 delivered a typed success under the machine's interpreter at an empty view (`hookLawsAt_interpRAt`). Two
 registration arrows: the first installs its race's marker over the second (the `HostMarker`
@@ -86,6 +86,3 @@ theorem reaches_marker :
 end AnswerThenArrow
 
 end Test.Program.HostWalkControls
-
-#print axioms Test.Program.HostWalkControls.Double.reaches_marker
-#print axioms Test.Program.HostWalkControls.AnswerThenArrow.reaches_marker

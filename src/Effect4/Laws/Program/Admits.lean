@@ -851,4 +851,3 @@ theorem Val.hasTy_admitsNormalize : AdmitsNormalize Val.hasTy.alg where
   deferredOf := fun _ _ _ _ => rfl
 
 end Effect4.Program
-

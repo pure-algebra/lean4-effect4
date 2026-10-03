@@ -345,16 +345,4 @@ def floats : List Float64 := [⟨0⟩, ⟨3⟩, ⟨1⟩, ⟨18446744073709551615
 
 end JsonAcceptance
 
-/-! ## Receipts -/
-
-#print axioms JsonGen.Float64C.toVal
-#print axioms JsonGen.Float64C.ofVal_toVal
-#print axioms JsonGen.Float64C.ofVal_exact
-#print axioms JsonGen.Float64C.fits
-#print axioms JsonGen.Float64C.instCanonical
-#print axioms JsonGen.JsonC.toValJson
-#print axioms JsonGen.JsonC.rawJson_toValJson
-#print axioms JsonGen.JsonC.fitsJson
-#print axioms JsonGen.JsonC.instCanonicalJson
-
 end Effect4.Store

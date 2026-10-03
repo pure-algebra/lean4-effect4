@@ -147,27 +147,4 @@ def releaseOne (resource : String) (effect : Src NativeOp) (release : Src Native
 #guard (elaborate (releaseOne "b0" (succeed (nat 11)) (succeed (var "b0")))).toOption =
   (Effect4.Codegen.Forms.all.find? (·.id == "releaseOne")).bind fun f => f.expansion.expand 0 (f.exampleArgs 0)
 
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.Authoring.Forms.void
-#print axioms Effect4.Program.Authoring.Forms.die
-#print axioms Effect4.Program.Authoring.Forms.yieldKey
-#print axioms Effect4.Program.Authoring.Forms.andThenEffect
-#print axioms Effect4.Program.Authoring.Forms.andThenContinuation
-#print axioms Effect4.Program.Authoring.Forms.andThenThunk
-#print axioms Effect4.Program.Authoring.Forms.as
-#print axioms Effect4.Program.Authoring.Forms.asVoid
-#print axioms Effect4.Program.Authoring.Forms.tapContinuation
-#print axioms Effect4.Program.Authoring.Forms.tapEffect
-#print axioms Effect4.Program.Authoring.Forms.ensuring
-#print axioms Effect4.Program.Authoring.Forms.matchCause
-#print axioms Effect4.Program.Authoring.Forms.matchCauseEffect
-#print axioms Effect4.Program.Authoring.Forms.yieldNow
-#print axioms Effect4.Program.Authoring.Forms.forkChildDefault
-#print axioms Effect4.Program.Authoring.Forms.forkDetachDefault
-#print axioms Effect4.Program.Authoring.Forms.forkInDefault
-#print axioms Effect4.Program.Authoring.Forms.forkScopedDefault
-#print axioms Effect4.Program.Authoring.Forms.releaseOne
-
 end Effect4.Program.Authoring.Forms
-

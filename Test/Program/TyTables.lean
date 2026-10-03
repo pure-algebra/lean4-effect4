@@ -66,5 +66,3 @@ example : TyTable ClassRow := { tyClasses with bigint := ⟨true, true⟩ }
 example : TyTable ClassRow := { tyClasses with never := ⟨true, true⟩, never := ⟨false, true⟩ }
 
 end Test.Program.TyTables
-
-#print axioms Test.Program.TyTables.schema_eq_face

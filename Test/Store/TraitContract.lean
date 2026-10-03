@@ -108,19 +108,4 @@ open Effect4.Store
 #check @Effect4.Store.traitsOf_perm
 #check @Effect4.Store.headsUnder_perm
 
-/-! ## Axiom receipts -/
-
-#print axioms Effect4.Store.Annotation.shapeDoc
-#print axioms Effect4.Store.Store.annotationsOf
-#print axioms Effect4.Store.Store.superseded
-#print axioms Effect4.Store.Store.traitsOf
-#print axioms Effect4.Store.Store.headsUnder
-#print axioms Effect4.Store.Store.effective
-#print axioms Effect4.Store.nodeBytes_trait_free
-#print axioms Effect4.Store.trait_put_preserves
-#print axioms Effect4.Store.trait_get_preserves
-#print axioms Effect4.Store.effective_deterministic
-#print axioms Effect4.Store.traitsOf_perm
-#print axioms Effect4.Store.headsUnder_perm
-
 end Test.Store.TraitContract

@@ -145,5 +145,4 @@ theorem guardQueue_transport_away (p : NativeEff) (table : RowTable)
   rw [aux commands (fun c hc => commandOwner_transport p table races c (queue.authority c hc))]
   exact queue.owners
 
-
 end Effect4.Program.Guard.RegistrationQueue

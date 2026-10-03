@@ -152,15 +152,4 @@ theorem asyncFinalizer_pushes_without_answering
   · simp [Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, interruptible]
   · simp [Prim.ensure, interruptible]
 
-#print axioms arm_shape_does_not_identify_payload
-#print axioms answer_only_misses_current
-#print axioms cause_tags_do_not_identify_annotations
-#print axioms answer_only_misses_event_order
-#print axioms post_hook_mask_stops_discard
-#print axioms stale_decision_positive_control
-#print axioms masked_deferred_distinguishes_inner_and_legacy
-#print axioms legacy_discards_deferred_event
-#print axioms current_profile_no_answer_keeps_stack
-#print axioms asyncFinalizer_pushes_without_answering
-
 end Test.Counterexamples.Runtime.LiveStack

@@ -603,7 +603,6 @@ private def renderTyBody (b : TyBody) : String :=
 private def renderAttrs (attrs : List String) : String :=
   String.join (attrs.map fun a => " [@@" ++ a ++ "]")
 
-
 private def renderTypeDecl (d : TypeDecl) : String :=
   renderParams d.params d.tparams ++ d.name
     ++ (match d.body with

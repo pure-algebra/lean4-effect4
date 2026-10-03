@@ -17,29 +17,6 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program
 
-namespace M1PendingOrigin
-
-theorem beginRace_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (entrants : List NCode)
-    (site : Option (List Nat)) (_hf : PendingOk f) :
-    ProofGraph.Obligation (PendingOk (beginRace i m f y entrants site).fiber) := ⟨⟩
-
-theorem fork_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (_hf : PendingOk f)
-    (program : NCode) (options : Supervision.ForkOptions) (site : List Nat) {a : FAnswer}
-    (_ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
-    ProofGraph.Obligation (PendingOk (FiberAction.fork i m f y program options a site).fiber) := ⟨⟩
-
-theorem forkIn_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (_hf : PendingOk f)
-    (program : NCode) (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat) {a : FAnswer}
-    (_ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
-    ProofGraph.Obligation (PendingOk (FiberAction.forkIn i m f y program options scope a site).fiber) := ⟨⟩
-
-theorem forkScoped_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (_hf : PendingOk f)
-    (program : NCode) (options : Supervision.ForkOptions) (site : List Nat) {a : FAnswer}
-    (_ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
-    ProofGraph.Obligation (PendingOk (FiberAction.forkScoped i m f y program options a site).fiber) := ⟨⟩
-
-end M1PendingOrigin
-
 theorem pendingOk_parkVoid {f : FRun} (hf : PendingOk f) (token : Nat) (waitingOn : Option FiberId)
     (remaining : List FiberId) (collected : List ExitV) (failFast : Bool) :
     PendingOk (f.park ⟨token, waitingOn, remaining, collected, Resume.void, failFast⟩) :=
@@ -286,10 +263,3 @@ theorem iteration_pendingOk (root : NativeEff) (m : FMachine) (f : FRun) (y : Bo
 -- The namespace ceiling is pinned with the final-path skeleton in Phase B.
 
 end Effect4.Program.Sched
-
-
-#obligation_proved Effect4.Program.Sched.M1PendingOrigin.fork_pendingOk := fun i m f y hf program options site a ha => @Effect4.Program.Sched.fork_pendingOk i m f y hf program options a ha site
-#obligation_proved Effect4.Program.Sched.M1PendingOrigin.forkIn_pendingOk := fun i m f y hf program options scope site a ha => @Effect4.Program.Sched.forkIn_pendingOk i m f y hf program options scope a ha site
-#obligation_proved Effect4.Program.Sched.M1PendingOrigin.forkScoped_pendingOk := fun i m f y hf program options site a ha => @Effect4.Program.Sched.forkScoped_pendingOk i m f y hf program options a ha site
-
-#typed_state_obligations Effect4.Program.Sched.M1PendingOrigin ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

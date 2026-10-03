@@ -172,8 +172,3 @@ The machine and program judgments, simulation, composition and execution laws.
 These modules continue their definition modules' namespaces; the module paths
 separate build targets. `import Effect4` never reaches this root.
 -/
-
-#typed_state_obligations Effect4.Machine.M1.DeferredWanted ceiling 0
-  using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel, Effect4.Fibers]) (add safe forward [Effect4.Machine.Refinement.factors_trans])
-#typed_state_obligations Effect4.Machine.M1Clock ceiling 0
-  using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel, Effect4.Fibers])

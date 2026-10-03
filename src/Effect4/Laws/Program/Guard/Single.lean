@@ -212,32 +212,21 @@ theorem quiet_taskCmds {fiber : FiberId} {token : Nat} (task : NTask)
     (safe : (fiber, token) ∉ taskKeys task) : QuietQueue fiber token (taskCmds task) := by
   cases task <;> simp_all [taskCmds, QuietQueue, QuietCmd, taskKeys, Ne.symm]
 
-theorem M1Clock.timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
-
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code : Completion Val Err Defect FiberId Ann) :
     wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake :=
   Effect4.Program.Guard.timer_fireNext_keys timers target code
-
-theorem M1Clock.timer_clockStep_keys (timers : TimerStore) (millis : ClockMillis) (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (wakeKeys (timers.clockStep millis code).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem timer_clockStep_keys (timers : TimerStore) (millis : ClockMillis) (code : Completion Val Err Defect FiberId Ann) :
     wakeKeys (timers.clockStep millis code).2.wake ⊆ wakeKeys timers.wake :=
   Effect4.Program.Guard.timer_clockStep_keys timers millis code
 
-theorem M1Clock.clockStep_storeKeys (p : NativeEff) (table : RowTable) (stores : Stores) (millis : ClockMillis) : ProofGraph.Obligation (storeKeys ((interpOf p table).clockStep millis stores).2 ⊆ storeKeys stores) := ⟨⟩
-
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem clockStep_storeKeys (p : NativeEff) (table : RowTable) (stores : Stores) (millis : ClockMillis) :
     storeKeys ((interpOf p table).clockStep millis stores).2 ⊆ storeKeys stores := by
   change storeKeys { stores with timers := (stores.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 } ⊆ _
   exact storeKeys_mono (timer_clockStep_keys stores.timers millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)) (List.Subset.refl _)
-
-theorem M1Clock.clockStep_owed_safe (p : NativeEff) (table : RowTable) {m : NativeMachine}
-    {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
-    (_h : Held m fiber token request) (millis : ClockMillis) (owed : Owed NCode)
-    (_ho : ((interpOf p table).clockStep millis m.state).1 = some owed) : ProofGraph.Obligation ((owed.waiter, owed.token) ≠ (fiber, token)) := ⟨⟩
 
 @[aesop safe forward (rule_sets := [Effect4.Fibers])]
 theorem clockStep_owed_safe (p : NativeEff) (table : RowTable) {m : NativeMachine}
@@ -356,12 +345,6 @@ theorem held_flushAllState (p : NativeEff) (table : RowTable) (fuel rounds : Nat
   obtain ⟨_, _, held⟩ := (held_foldLift p table fiber token request).flushAllState_lift fuel
     rounds () m h
   exact held
-
-theorem M1Clock.held_advanceState (p : NativeEff) (table : RowTable) (fuel : Nat) (millis : ClockMillis) (rounds : Nat)
-    {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
-    (_h : Held m fiber token request) : ProofGraph.Obligation (
-    letI := evaluatorFor p table
-    Held (advanceState (interpOf p table) fuel millis rounds m).1 fiber token request) := ⟨⟩
 
 /-- An `advance` keeps `Held`: the fold lift (`held_foldLift`) at `advanceState_lift`. -/
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
@@ -486,5 +469,3 @@ theorem requestOf_singleton_takePrefix (p : NativeEff) (table : RowTable)
     (fun entry he => safe entry (List.mem_of_mem_take he))
 
 end Effect4.Program.Guard.SingleGuard
-
-#typed_state_obligations Effect4.Program.Guard.SingleGuard.M1Clock ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

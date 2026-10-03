@@ -905,7 +905,6 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
     · rfl
     · exact h.elim
 
-
 /-! ## Declared liveness follows from membership -/
 
 theorem live_of_handles_nil {w : World} {v : Val} (h : Store.Val.handles v = []) : Live w v := by
@@ -1277,7 +1276,6 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
     split at h
     · exact live_of_handles_nil rfl
     · exact h.elim
-
 
 /-! ## Membership under world extension -/
 
@@ -2219,7 +2217,6 @@ theorem fits_join_left (w : World) (a b : Ty) (v : Val) (h : Fits w v a) : Fits 
 theorem fits_join_right (w : World) (a b : Ty) (v : Val) (h : Fits w v b) : Fits w v (Ty.join a b) :=
   fits_subN w (Ty.subN_join_right a b) v h
 
-
 /-! ## Exit monotonicity and subsumption
 
 An exit is a value: `FitsExit` is `Fits` at the reified exit. -/
@@ -2291,7 +2288,6 @@ theorem await_fits {w w' : World} {id : FiberId} {a e : Ty} {ty : EffTy} {ex : E
   cases hs'
   exact fitsExit_subN ha he hex
 
-
 /-! ## The list arm reads one decoded element view
 
 `Val.asList?` gives ordinary lists and admitted snapshots one decoded element view. The list
@@ -2343,7 +2339,6 @@ theorem fits_list_iff (w : World) (v : Val) (a : Ty) :
         exact (hlist values rfl).elim
       · rw [hnone, Option.map_none] at hxs
         cases hxs
-
 
 /-! ## The coarse heap reading from the strong one (TY-08)
 
@@ -3681,7 +3676,6 @@ theorem fits_of_inhabited_handleFree :
       exact ⟨v, fun w => Or.inl (hv w)⟩
     · obtain ⟨v, hv⟩ := ihr hfr hir
       exact ⟨v, fun w => Or.inr (hv w)⟩
-
 
 /-! ### Handles: one world for several, by fresh keys -/
 

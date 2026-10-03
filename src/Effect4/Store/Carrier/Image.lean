@@ -535,6 +535,4 @@ theorem ctor3_handleFree (I : Image α) (J : Image β) (K : Image γ) (i : Nat) 
 
 end Image
 
-/-! ## Receipts -/
-
 end Effect4.Store

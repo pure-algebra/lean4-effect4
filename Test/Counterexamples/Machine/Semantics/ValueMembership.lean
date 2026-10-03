@@ -446,7 +446,6 @@ def TypedState (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) 
 
 end Reviewed
 
-
 /-! The unchanged experimental equality reading, confined to this test. -/
 namespace ExactSpelling
 /-- The relation an invariant handle's declared type must bear to the static type. -/
@@ -800,7 +799,7 @@ theorem natCell_equiv_spelling :
 namespace ReviewedLoad
 /-! ## G10: the declared M5 obligation `typedState_load` is false for `Ref.make(5)`
 
-`M3bAssembly.typedState_load` (`Typed/Assembly.lean:148-150`, `#proof_wanted`) promises a typed
+`loadsTyped` (`Typed/Assembly.lean:148-150`, `#proof_wanted`) promises a typed
 initial state for every checked source with closed columns. The one-line program below checks at
 `Ref.Ref<number>` (kernel, `decide +kernel`); its loaded code is the store protocol's
 `refMake` step followed by returning the answer (`loaded_root`, by `rfl`). Every typed state of the
@@ -872,10 +871,6 @@ theorem typedState_load_false :
     rfl
   exact refProg_untypable w hRho hrefs hprog
 
-#print axioms refProg_checks
-#print axioms loaded_root
-#print axioms refProg_untypable
-#print axioms typedState_load_false
 end ReviewedLoad
 
 /-! ## New: the allocation programs' loaded code under the proposed judgment -/
@@ -984,52 +979,5 @@ example (w : W) (cert : Ty) (hRho : w.Ρ ⟨0⟩ = none) :
     TableExtends w.Ρ (w.addRef w.state ⟨0⟩ cert).Ρ := by
   fail_if_success aesop
   exact insert_extends _ _ _ hRho
-
-
-#print axioms wString_one
-#print axioms wNat_one
-#print axioms wBoolCell_zero
-#print axioms wNatCell_zero
-#print axioms string_not_sub_nat
-#print axioms bool_not_sub_nat
-#print axioms fiber1_refused
-#print axioms fiber1_accepted
-#print axioms handlesLive_one
-#print axioms shape_without_fit
-#print axioms converse_false
-#print axioms g1_old
-#print axioms g1_refused
-#print axioms g1_control
-#print axioms g2_old
-#print axioms g2_refused
-#print axioms g2_control
-#print axioms g3_old
-#print axioms g3_refused
-#print axioms g3_control
-#print axioms g4_old
-#print axioms g4_refused
-#print axioms g4_control
-#print axioms g5_old
-#print axioms g5_refused
-#print axioms g5_control
-#print axioms g6_old
-#print axioms g6_refused
-#print axioms g6_control
-#print axioms sub_nat_union
-#print axioms sub_union_nat
-#print axioms sub_ref_equiv
-#print axioms cell0_keys
-#print axioms natCell_old
-#print axioms natCell_old_refused
-#print axioms strongValue_not_closed_under_sub
-#print axioms fitsEq_not_closed_under_sub
-#print axioms natCell_equiv_spelling
-#print axioms refProg_typedF
-#print axioms getProg_after
-#print axioms getProg_typedF
-#print axioms typedStateF_load
-#print axioms typedStateF_load_ref
-#print axioms typedStateF_load_get
-#print axioms search_heap_extends
 
 end Test.Counterexamples.Machine.Semantics.ValueMembership

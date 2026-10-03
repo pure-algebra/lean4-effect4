@@ -307,27 +307,4 @@ def reasons : List FrontierReason :=
 
 end ApiAcceptance
 
-/-! ## Receipts -/
-
-#print axioms ApiGen.FiberIdC.toVal
-#print axioms ApiGen.FiberIdC.ofVal_toVal
-#print axioms ApiGen.FiberIdC.ofVal_exact
-#print axioms ApiGen.FiberIdC.fits
-#print axioms ApiGen.FiberIdC.instCanonical
-#print axioms ApiGen.KeyC.toVal
-#print axioms ApiGen.KeyC.ofVal_toVal
-#print axioms ApiGen.KeyC.ofVal_exact
-#print axioms ApiGen.KeyC.fits
-#print axioms ApiGen.KeyC.instCanonical
-#print axioms ApiGen.ExhaustionC.toVal
-#print axioms ApiGen.ExhaustionC.ofVal_toVal
-#print axioms ApiGen.ExhaustionC.ofVal_exact
-#print axioms ApiGen.ExhaustionC.fits
-#print axioms ApiGen.ExhaustionC.instCanonical
-#print axioms ApiGen.FrontierReasonC.toVal
-#print axioms ApiGen.FrontierReasonC.ofVal_toVal
-#print axioms ApiGen.FrontierReasonC.ofVal_exact
-#print axioms ApiGen.FrontierReasonC.fits
-#print axioms ApiGen.FrontierReasonC.instCanonical
-
 end Effect4.Store

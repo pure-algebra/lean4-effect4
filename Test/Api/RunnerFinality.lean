@@ -46,6 +46,4 @@ but is expected to have type
 example : ∀ journal p, silent p journal = behaviour p journal :=
   behaviour_unique silent (fun _ => rfl) (fun _ _ _ => rfl)
 
-#print axioms replayPlay_phases
-#print axioms behaviour_needs_cons
 end Test.Api.RunnerFinality

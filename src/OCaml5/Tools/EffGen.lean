@@ -8,7 +8,6 @@ import OCaml5.Eff.Metadata
 
     lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff
 
-
 Writes into `<outdir>`:
 
 * `eff_types.ml`    — one OCaml variant or record per Lean inductive or structure of the
@@ -61,8 +60,6 @@ def countOps (nativeOp : Family) : Nat × Nat × Nat × Nat :=
     | [(_, .named "finalizer_strategy")] => (nul, fn, st + 1, indexed)
     | [(_, .int)] => (nul, fn, st, indexed + 1)
     | _ => (nul, fn, st, indexed)
-
-
 
 end OCaml5.Eff
 

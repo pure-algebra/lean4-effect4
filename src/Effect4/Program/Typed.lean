@@ -309,5 +309,4 @@ theorem causeAdmits_mono_sub {m1 m2 : Val → Ty → Bool} {e1 e2 : Ty}
   intro h
   exact list_all_mono c.reasons (fun r => reasonAdmits_mono_sub hm r) h
 
-
 end Effect4.Program

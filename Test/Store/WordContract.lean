@@ -202,29 +202,4 @@ open Effect4.Store
 #check @Effect4.Store.verify_sound
 #check @Effect4.Store.verify_roots
 
-/-! ## Axiom receipts -/
-
-#print axioms Effect4.Store.Store.putNode
-#print axioms Effect4.Store.Store.getNode
-#print axioms Effect4.Store.Store.find
-#print axioms Effect4.Store.Store.putRoot
-#print axioms Effect4.Store.Store.verify
-#print axioms Effect4.Store.get_put
-#print axioms Effect4.Store.put_duplicate
-#print axioms Effect4.Store.put_preserves
-#print axioms Effect4.Store.putNode_closed
-#print axioms Effect4.Store.putRoot_root?
-#print axioms Effect4.Store.Word.wf
-#print axioms Effect4.Store.Word.apply
-#print axioms Effect4.Store.apply_idempotent
-#print axioms Effect4.Store.wf_closed
-#print axioms Effect4.Store.Store.closure
-#print axioms Effect4.Store.closure_wf
-#print axioms Effect4.Store.closure_closed
-#print axioms Effect4.Store.layered_get
-#print axioms Effect4.Store.sync_sub
-#print axioms Effect4.Store.sync_idempotent
-#print axioms Effect4.Store.verify_sound
-#print axioms Effect4.Store.verify_roots
-
 end Test.Store.WordContract

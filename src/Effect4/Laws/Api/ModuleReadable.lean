@@ -64,7 +64,6 @@ theorem readModule_printModule_readable {sig : Signature Op}
   exact readModule_printModule hoisted (ReadsBack.of_Readable hl hmain)
     (fun entry hm x hp => readLayer_print hl (hlayers entry hm) hp) hnames printed
 
-
 /-! ## A program whose pieces are readable prints as a declaration block -/
 
 /-- A path is its own key. (`simp` proves this through the lawful-`BEq` instance of lists,
@@ -141,7 +140,6 @@ theorem ModuleEmission.readModule {program : NativeEff} {table : RowTable} {name
       .ok program := by
   obtain ⟨_, _, printed⟩ := Program.printEntry_ok emission.generated
   exact readModule_printModule_readable (nativeLawful table lawful) readable printed
-
 
 /-- Every row of a lawful table has safe names. -/
 theorem lawful_rowNamesSafe {table : RowTable} (lawful : LawfulTable table = true) :

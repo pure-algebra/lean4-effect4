@@ -82,8 +82,4 @@ example : readThenId = idThenRead := rfl
 
 end RSig
 
-#print axioms copair_injections
-#print axioms rHandler_restrict
-#print axioms sum_not_tensor
-#print axioms store_fiber_do_not_commute
 end Test.Program.SignatureSum

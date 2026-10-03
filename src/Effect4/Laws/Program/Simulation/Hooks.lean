@@ -39,15 +39,9 @@ structure StoresOk (s : Stores) : Prop where
 #guard_msgs in
 #frame_rules StoresOk
 
-/-- The empty store has no registered scope keys. -/
-theorem M1Hooks.storesOk_empty : ProofGraph.Obligation (StoresOk Stores.empty) := ⟨⟩
-
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_empty : StoresOk Stores.empty := by
   aesop (add safe constructors StoresOk) (add safe apply Stores.scopeKeysFresh_empty)
-
-/-- A wake changes only the deferred store, whose frame is generated above. -/
-theorem M1Hooks.storesOk_wakeList {s : Stores} (_hs : StoresOk s) (key : WakeKey) (phase : WakePhase) : ProofGraph.Obligation (StoresOk (Stores.wakeList key phase s)) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_wakeList {s : Stores} (hs : StoresOk s) (key : WakeKey) (phase : WakePhase) :
@@ -56,10 +50,6 @@ theorem storesOk_wakeList {s : Stores} (hs : StoresOk s) (key : WakeKey) (phase 
   split
   · exact StoresOk.frame_deferreds s hs _
   · exact hs
-
-/-- Every store step keeps the registration-key bound. -/
-theorem M1Hooks.storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (_hs : StoresOk s)
-    (_h : syncOpStep o s = some (s', v)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresOk s)
@@ -171,10 +161,6 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
     rw [← (Prod.mk.inj hf).1]; exact hs.keysFresh
 
 /-! ## Code-valued hooks -/
-
-/-- An exit becomes the matching terminal code in both interpreters. -/
-theorem M1Hooks.exit_completion_means (root : NativeEff) (ex : ExitV) :
-    ProofGraph.Obligation (CodeMeans root (embed (Prim.ofExit ex)) (.pure ex)) := ⟨⟩
 
 theorem exit_completion_means (root : NativeEff) (ex : ExitV) :
     CodeMeans root (embed (Prim.ofExit ex)) (.pure ex) := by
@@ -746,5 +732,3 @@ theorem means_clearStack {root : NativeEff} {f₁ : FFiber} {f₂ : RSaved} (h :
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, StackMeans.nil, trivial⟩
 
 end Effect4.Program.Sched
-
-#typed_state_obligations Effect4.Program.Sched.M1Hooks ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

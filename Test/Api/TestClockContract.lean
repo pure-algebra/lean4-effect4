@@ -71,7 +71,4 @@ def noSleep : Api.Program := .bind (.perform .refMake (.lit (.nat 1))) (.perform
 #guard elaborate (Effect.sleep (nat 5) : Src NativeOp) = .ok (.perform .sleep (.lit (.nat 5)))
 #guard Api.readable twoSleeps
 
-#print axioms Effect4.Api.TestClock.fastForward
-#print axioms Effect4.Api.TestClock.sleepDeadlines
-
 end Test.Api.TestClockContract

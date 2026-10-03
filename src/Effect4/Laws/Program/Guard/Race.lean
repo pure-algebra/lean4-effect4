@@ -144,7 +144,6 @@ theorem registrationQueue_driveStep_launch (p : NativeEff) (table : RowTable)
         exact ⟨True.intro, ⟨⟨yielding, List.mem_cons_of_mem _ hy⟩, registration⟩⟩)
     | split
 
-
 theorem guardState_driveStep_enrollRace (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (raceId : Nat) (child : FiberId) (rest : List NCmd) (state : GuardState m) :
     letI := evaluatorFor p table
@@ -265,7 +264,5 @@ theorem registrationQueue_driveStep_enrollRace (p : NativeEff) (table : RowTable
     | exact registrationQueue_append
         (registrationQueue_fireObserver p table _ child _ [] (.raceCallback raceId) True.intro) tail
     | split
-
-
 
 end Effect4.Program.Guard

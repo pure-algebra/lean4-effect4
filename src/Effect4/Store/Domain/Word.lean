@@ -951,6 +951,4 @@ def verified (r : Except VerifyError Unit) : Bool :=
   | _ => false)
 #guard verified (Store.mk probeStore.nodes [⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 1⟩]).verify
 
-/-! ## Receipts -/
-
 end Effect4.Store

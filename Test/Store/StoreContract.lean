@@ -236,33 +236,4 @@ Machine layer uses, byte for byte. -/
 #check @Effect4.Store.Image.decode_encode?
 #check @Effect4.Store.Image.decode_exact
 
-/-! ## Axiom receipts -/
-
-#print axioms Effect4.Store.Val.encode?
-#print axioms Effect4.Store.Val.decode_encode?
-#print axioms Effect4.Store.Val.encode?_of_decode
-#print axioms Effect4.Store.Val.handles
-#print axioms Effect4.Store.Image.decode_encode?
-#print axioms Effect4.Store.Image.list
-#print axioms Effect4.Store.Canonical.image
-#print axioms Effect4.Store.framed
-#print axioms Effect4.Store.framed_length
-#print axioms Effect4.Store.framed_inj
-#print axioms Effect4.Store.framed_head
-#print axioms Effect4.Store.Val.encode
-#print axioms Effect4.Store.Val.decode
-#print axioms Effect4.Store.Val.decode_encode
-#print axioms Effect4.Store.Val.decode_exact
-#print axioms Effect4.Store.Val.encode_injective
-#print axioms Effect4.Store.Canonical.encode
-#print axioms Effect4.Store.Canonical.decode
-#print axioms Effect4.Store.Canonical.decode_encode
-#print axioms Effect4.Store.Canonical.decode_exact
-#print axioms Effect4.Store.Canonical.encode_injective
-#print axioms Effect4.Store.Canonical.digest
-#print axioms Effect4.Store.sha256
-#print axioms Effect4.Store.Digest.sha256_length
-#print axioms Effect4.Program.Wire.encodeProgram
-#print axioms Effect4.Program.Wire.decodeProgram
-
 end Test.Store.StoreContract

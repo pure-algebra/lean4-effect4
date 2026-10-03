@@ -38,8 +38,6 @@ namespace Effect4.Program
 
 open Effect4 (ServiceKey)
 
-
-
 /-- Whether a type is a represented tag (string, string literal, or union of them). -/
 def isTagTy : Ty → Bool
   | .string | .lit _ => true
@@ -471,7 +469,6 @@ def CauseTerm.weaken (cut : Nat) : CauseTerm → CauseTerm
   | .die defect => .die (Term.weaken cut defect)
   | .interrupt who => .interrupt (who.map (Term.weaken cut))
   | .both left right => .both (CauseTerm.weaken cut left) (CauseTerm.weaken cut right)
-
 
 /-! ## The arms: constructor ↔ combinator ↔ primitive, with rc.112 lines -/
 

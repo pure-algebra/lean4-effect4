@@ -6,7 +6,7 @@ import Effect4.Laws.Program.Typed.HostWalk
 Placement: semantics Concept 2/4, the frame contract for saved `loop`/`iter` slots
 (`IteratorProtocol`, `LoopProtocol`, `Typed/Residual.lean`) and the machine's hook laws
 (`hookLawsAt_interpRAt`, `M5Hooks`), consumed by the walk (`popR_typed`, `popR_hostTyped`) on the way
-to `M6Ledger.step_loop`/`.step_deliver`. The flips of `E4-TYPED-CE-036` and `-038`
+to `loop_preserves`/`.step_deliver`. The flips of `E4-TYPED-CE-036` and `-038`
 (`docs/research/2026-10-02-claude-lead/witnesses/LoopProtocols.lean`):
 
 * `Endless`: the checker-admitted always-true loop now has a protocol, by coinduction on the one

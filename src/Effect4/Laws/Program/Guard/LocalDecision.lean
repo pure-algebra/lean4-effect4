@@ -62,7 +62,6 @@ theorem requestOrInterrupted_interrupted_emit (p : NativeEff) (table : RowTable)
   simp only [driveStep, lookup] at check
   simpa only [requestOf, InterruptedAt, RunMachine.emit, RunMachine.update, RunMachine.fiber?] using check
 
-
 def interruptBeforeLoop (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (target : FiberId) (f : NFiber) (who : Option FiberId) (extra : ReasonAnnotations Ann) : NativeMachine :=
   let g := (interruptRecord (interpOf p table) who extra f).1

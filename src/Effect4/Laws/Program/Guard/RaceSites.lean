@@ -480,11 +480,6 @@ theorem race_lookup_fresh {m : NativeMachine} (bounds : RaceIdsBelow m) :
   intro race hr h
   exact (Nat.ne_of_lt (bounds race hr)) (of_decide_eq_true h)
 
-theorem M1Origin.raceCodeOwned_beginRace (p : NativeEff) (table : RowTable)
-    (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)
-    (_bounds : RaceIdsBelow m) (site : Option (List Nat) := none) : ProofGraph.Obligation (RaceCodeOwned (beginRace (interpOf p table) m f yielding entrants site).machine f.id
-      (beginRace (interpOf p table) m f yielding entrants site).fiber.frame.current) := ⟨⟩
-
 theorem raceCodeOwned_beginRace (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)
     (bounds : RaceIdsBelow m) (site : Option (List Nat) := none) :
@@ -505,8 +500,5 @@ theorem raceCodeOwned_beginRace (p : NativeEff) (table : RowTable)
 def FrameCodeOwned (m : NativeMachine) (f : NFiber) : Prop :=
   RaceCodeOwned m f.id f.frame.current ∧
     ∀ code ∈ f.frame.stack, RaceCodeOwned m f.id code
-
-#typed_state_obligations Effect4.Program.Guard.M1Origin ceiling 0 using
-  aesop (rule_sets := [Effect4.Stores]) (add safe apply [raceCodeOwned_beginRace])
 
 end Effect4.Program.Guard

@@ -192,5 +192,4 @@ theorem resumeClosedScope_success_cleanup_failure
   apply resumeClosedScope_failure_pending
   simp [ScopeMachine.restore?, completed, original, Exit.restoreAfterFinalizer, Exit.mergeFinalizer]
 
-
 end Effect4.ScopeRestoration

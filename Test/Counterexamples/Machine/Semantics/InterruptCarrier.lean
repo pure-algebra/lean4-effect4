@@ -81,10 +81,4 @@ theorem remasked_handler_receives_sanitized (interp : Interp) (handler : EffName
     ((skippedThenRemasked handler).resumeCause interp original (some (.failure original))).1 =
       .running ⟨interp.contE handler sanitized, [], false, some sanitized, false⟩ := rfl
 
-#print axioms original_ne_sanitized
-#print axioms finished_uses_carried_exit
-#print axioms sanitized_current_is_ignored
-#print axioms masked_catch_returns_sanitized
-#print axioms remasked_handler_receives_original
-#print axioms remasked_handler_receives_sanitized
 end Test.Counterexamples.InterruptCarrier

@@ -86,5 +86,4 @@ theorem undeclared_post_refused :
   intro ⟨ty, declared, _⟩
   cases declared
 
-
 end Effect4.Program.Typed.ReadOnlyStoreControls

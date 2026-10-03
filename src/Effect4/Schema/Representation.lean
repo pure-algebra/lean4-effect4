@@ -487,7 +487,6 @@ theorem mem_census (kind : PropertyKeyKind) : kind ∈ census := by
 
 end PropertyKeyKind
 
-
 end Effect4
 
 /-!
@@ -1245,6 +1244,5 @@ stated with the containers' own maps, `RepresentationHom` with its uniqueness th
 the identity algebra with `cata_id_*`, and `foldMap_*`. It sits one module above this one
 because it needs the carrier; nothing here may depend on it.
 -/
-
 
 end Effect4

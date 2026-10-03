@@ -488,6 +488,4 @@ def sparseDoc : ShapeDoc :=
   = false
 #guard (ShapeDoc.mk (.list (.sum "Bad" [("a", 1, []), ("b", 1, [])])) []).wellTagged = false
 
-/-! ## Receipts -/
-
 end Effect4.Store

@@ -191,28 +191,6 @@ theorem refStepOf_keeps {P Q : Val → Prop} {cell : RefKey} {k : RefKernel}
   · exact hheap x hmem
   · exact hnext x hw
 
-namespace RefKernelObligations
-/-- The lookup fact used by C2 also covers indices outside the heap. -/
-theorem refWriteBack_peek_other (heap : RefHeap) (cell : RefKey) (next : Option Val)
-    (index : Nat) (_different : index ≠ cell.index) : ProofGraph.Obligation
-    (refPeek (refWriteBack heap cell next) ⟨index⟩ = refPeek heap ⟨index⟩) := ⟨⟩
-
-/-- C2: each heap index keeps its own predicate; allocation is a separate contract. -/
-theorem indexed_ref_step_preserves : ProofGraph.Obligation (
-    ∀ (P : Nat → Val → Prop) (Q : Val → Prop)
-      (op : SyncOp) (cell : RefKey) (kernel : RefKernel)
-      (before after : RefHeap) (answer : Val),
-      op.refKernel = some (cell, kernel) →
-      (∀ index value, refPeek before ⟨index⟩ = some value → P index value) →
-      RefKernel.Keeps (P cell.index) Q kernel →
-      refStep op before = some (answer, after) →
-      Q answer ∧
-      (∀ index value, refPeek after ⟨index⟩ = some value → P index value) ∧
-      after.length = before.length ∧
-      (∀ index, index ≠ cell.index →
-        refPeek after ⟨index⟩ = refPeek before ⟨index⟩)) := ⟨⟩
-
-end RefKernelObligations
 /-- Writing one cell leaves every other lookup exactly unchanged, including absent keys. -/
 theorem refWriteBack_peek_other (heap : RefHeap) (cell : RefKey) (next : Option Val)
     (index : Nat) (different : index ≠ cell.index) :
@@ -263,11 +241,6 @@ theorem indexed_ref_step_preserves
 
 attribute [aesop safe -100 apply (rule_sets := [Effect4.Stores])] indexed_ref_step_preserves
 
-#obligation_proved RefKernelObligations.refWriteBack_peek_other := @refWriteBack_peek_other
-#obligation_proved RefKernelObligations.indexed_ref_step_preserves := @indexed_ref_step_preserves
-#typed_state_obligations Effect4.Machine.RefKernelObligations ceiling 0
-  using aesop (rule_sets := [Effect4.Stores])
-
 end Effect4.Machine
 
 -- BEGIN M1 PHASE B RefKernel
@@ -285,37 +258,6 @@ def refStepOfA {σ : Type} [Arena σ Val] (cell : RefKey) (k : RefKernel)
     (s : σ) : Option (Val × σ) :=
   (Arena.peek s cell.index).bind fun a =>
     (k a).map fun r => (r.1, writeBackA s cell r.2)
-
-namespace ArenaObligations
-
-theorem toList_refStepOf {σ : Type} [Arena σ Val] [LawfulArena σ Val]
-    (cell : RefKey) (k : RefKernel) (s : σ) : ProofGraph.Obligation (
-    (refStepOfA cell k s).map (Prod.map id Arena.toList) =
-      refStepOf cell k (Arena.toList s)) := ⟨⟩
-
-theorem refStepOfA_list (cell : RefKey) (k : RefKernel) (xs : List Val) :
-    ProofGraph.Obligation (refStepOfA cell k xs = refStepOf cell k xs) := ⟨⟩
-
-theorem refStepOfA_size {σ : Type} [Arena σ Val] [LawfulArena σ Val]
-    {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
-    (_h : refStepOfA cell k s = some (a, s')) :
-    ProofGraph.Obligation (Arena.size s' = Arena.size s) := ⟨⟩
-
-theorem refStepOfA_keeps {σ : Type} [Arena σ Val] [LawfulArena σ Val]
-    {P Q : Val → Prop} {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
-    (_hheap : ∀ i v, Arena.peek s i = some v → P v)
-    (_hk : RefKernel.Keeps P Q k) (_h : refStepOfA cell k s = some (a, s')) :
-    ProofGraph.Obligation (Q a ∧ ∀ i v, Arena.peek s' i = some v → P v) := ⟨⟩
-
-end ArenaObligations
-
-namespace M1.RefKernelSupport
-
-theorem toList_writeBackA {σ : Type} [Arena σ Val] [LawfulArena σ Val]
-    (s : σ) (cell : RefKey) (next : Option Val) : ProofGraph.Obligation
-    (Arena.toList (writeBackA s cell next) = refWriteBack (Arena.toList s) cell next) := ⟨⟩
-
-end M1.RefKernelSupport
 
 /-- Projecting the optional write-back gives the existing list write-back. -/
 theorem toList_writeBackA {σ : Type} [Arena σ Val] [LawfulArena σ Val]
@@ -377,12 +319,6 @@ theorem refStepOfA_keeps {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     (add norm simp [Arena.peek_toList]) (add safe forward [List.mem_of_getElem?])
 
 attribute [aesop safe forward (rule_sets := [Effect4.Stores])] refStepOfA_keeps
-
-#typed_state_obligations Effect4.Machine.ArenaObligations ceiling 0
-  using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
-
-#typed_state_obligations Effect4.Machine.M1.RefKernelSupport ceiling 0
-  using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 end Effect4.Machine
 -- END M1 PHASE B RefKernel

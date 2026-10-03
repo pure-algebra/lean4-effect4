@@ -43,7 +43,3 @@ theorem capstone_false (raw : RawLeaf) : ¬ ReachableTyped src rootTy3 100 (load
     (cap src.lawful FitsOrder.prog3_typed rfl (rreachable_load src 100))
 
 end Test.Counterexamples.Machine.Semantics.RawOrderLoad
-
-#print axioms Test.Counterexamples.Machine.Semantics.RawOrderLoad.m5_false
-#print axioms Test.Counterexamples.Machine.Semantics.RawOrderLoad.loadsTyped_false
-#print axioms Test.Counterexamples.Machine.Semantics.RawOrderLoad.capstone_false

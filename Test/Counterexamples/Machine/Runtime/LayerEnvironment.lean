@@ -175,12 +175,4 @@ theorem fiber_exit_agreement (program : NativeEff) (fuel : Nat)
 #guard ((replayR (serviceContextRetained true) 200 tape).machine.fiber? Api.root).bind RunFiber.exit =
   some (.success (.nat 5))
 
-#print axioms key_service_nat
-#print axioms errLeak_checked
-#print axioms forkLeak_checked
-#print axioms forkLeak_handle
-#print axioms discardLeak_checked
-#print axioms crash1_checked
-#print axioms fiber_exit_agreement
-
 end Test.Counterexamples.Runtime.LayerEnvironment

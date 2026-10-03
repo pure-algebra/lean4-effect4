@@ -5,7 +5,7 @@ import Effect4.Laws.Program.Typed.Commands.Launch
 # Test.Program.LaunchEntrant — one race entrant's launch keeps `I`
 
 Placement: semantics Concept 4 (`reactive-scheduling`), scheduler step preservation;
-`M6Ledger.step_launch` (`launch_preserves`, `Typed/Commands/Launch.lean`). The input is
+`launch_preserves` (`launch_preserves`, `Typed/Commands/Launch.lean`). The input is
 RegistrationColumn's typed configuration with one unlaunched entrant program on its race, moved
 there by the general race edit (`configTyped_updateRace`), and the two commands `registerRace`
 queues (`Machine/Fibers.lean:944`). The actual step takes the allocating arm: it appends the

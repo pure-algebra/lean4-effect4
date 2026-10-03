@@ -3172,7 +3172,6 @@ theorem step_ofExit_finishes [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] 
       (FrameStep.finished exit, [FrameEvent.yielded exit]) := by
   cases exit <;> rfl
 
-
 /-- No fuel is no step. census: exit.success-failure -/
 theorem run_zero [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α) :
@@ -3363,7 +3362,6 @@ theorem step_scopedFrame [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [Dec
         [FrameEvent.pushed (Prim.onExit body closeScope false)]) := rfl
 
 end FrameFiber
-
 
 /-! ## The uninterrupted fragment, and fuel additivity
 

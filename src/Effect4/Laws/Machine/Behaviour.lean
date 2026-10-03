@@ -108,12 +108,5 @@ end Effect4.Machine
 namespace Effect4.Machine.M1Trace
 open Effect4
 
-theorem obs_replace_trace {ν σ χ κ φ η : Type}
-    (m : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ φ η)
-    (trace : List (RunEvent ν σ Val Err Defect FiberId Ann χ κ η)) :
-    ProofGraph.Obligation (obs { m with trace } = obs m) := ⟨⟩
-
 end Effect4.Machine.M1Trace
 -- END M1 PHASE B Machine.Behaviour
-
-#typed_state_obligations Effect4.Machine.M1Trace ceiling 0 using aesop (rule_sets := [Effect4.Stores])

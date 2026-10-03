@@ -52,7 +52,4 @@ private def savedPair : Term :=
   (Eff.weaken 0 (.perform .refSet savedPair)) = false
 #guard (Term.weaken 1 (.var 2)).scoped 3 = false
 
-#print axioms Effect4.Program.typeOf_weaken
-#print axioms Effect4.Program.effTy_weaken
-
 end Test.Program.WeakenContract

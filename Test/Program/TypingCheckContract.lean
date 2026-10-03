@@ -18,8 +18,4 @@ theorem returned_judgment (sig : Signature Op) (env : TyEnv) (program : Eff Op)
     (result : { t : EffTy // HasTy sig env program t }) : HasTy sig env program result.val :=
   result.property
 
-#print axioms checkTyping
-#print axioms checkTyping_refuses_iff
-#print axioms checkTyping_spec
-#print axioms returned_judgment
 end Test.Program.TypingCheckContract

@@ -186,7 +186,6 @@ def pFailTagged : NativeEff :=
 #guard errOf (Val.list [Val.str "SqlError", Val.nat 1]) = Err.boom
 #guard errOf (Val.bool true) = Err.boom
 
-
 /-- DI-62: text remains text through a failure and through a failed cause. -/
 def pFailText : NativeEff := .fail (.lit (.str "lost"))
 def pCauseText : NativeEff := .failCause (.fail (.lit (.str "lost")))

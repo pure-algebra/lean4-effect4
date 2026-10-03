@@ -185,13 +185,4 @@ theorem unguard_payload_rejected (root : NativeEff) (w : W) (k : ExitV → RProg
     ¬ TypedProg root w (EffTy.pure .unit) (.vis (.inr (.unguard (.success (.nat 1)))) k) :=
   fun h => (unguard_payload_inv root w _ _ k h).1
 
-#print axioms cancel_typed
-#print axioms cancel_interrupt_typed
-#print axioms sleep_stack_accepted
-#print axioms natCatch_typed
-#print axioms natCatch_frame
-#print axioms natToBool_typed
-#print axioms guard_rejects_wrong_arm
-#print axioms leakyGuard_rejected
-#print axioms unguard_payload_rejected
 end Test.Program.TypedControl

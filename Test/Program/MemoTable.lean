@@ -161,9 +161,3 @@ theorem wrong_certificate_refused (w : W) :
   cases err
 
 end Test.Program.MemoTable
-
-#print axioms Test.Program.MemoTable.built
-#print axioms Test.Program.MemoTable.hit
-#print axioms Test.Program.MemoTable.completed
-#print axioms Test.Program.MemoTable.wrong_column_refused
-#print axioms Test.Program.MemoTable.wrong_certificate_refused

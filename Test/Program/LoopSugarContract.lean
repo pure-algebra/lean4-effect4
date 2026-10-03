@@ -107,10 +107,4 @@ theorem count3_closed {e : Eff NativeOp} (h : elaborate count3 = .ok e) :
       (fun _ _ hc _ => app_scoped "succ" (TermSrc.Scoped_cons hc TermSrc.Scoped_nil))
       (fun _ hc => hc)) h
 
-#print axioms iterateWith_scoped
-#print axioms forRange_scoped
-#print axioms foldRange_scoped
-#print axioms repeatWhile_scoped
-#print axioms count3_closed
-
 end Test.Program.LoopSugarContract

@@ -3,8 +3,8 @@ import Effect4.Laws.Program.Typed.Commands.Evaluate
 /-!
 # Laws.Program.Typed.Commands.Clauses.Loop — the loop entry clause (M6)
 
-Concept 4 (the configuration invariant `I`); questions `M6Ledger.step_deliver` and
-`M6Ledger.step_loop`, through `evaluate_keeps` and `loop_preserves_of_clauses`, which read
+Concept 4 (the configuration invariant `I`); questions `deliver_preserves` and
+`loop_preserves`, through `evaluate_keeps` and `loop_preserves_of_clauses`, which read
 `∀ op, FiberClauseKeeps root rootTy op`. The loop entry (`evaluateFiberR`'s `.loop` arm,
 `Laws/Program/EvaluateR.lean`) saves the answer frame, then the machine's interpreter
 (`interpRAt root m.completedExits`) either continues, pushing the loop frame over the body, or

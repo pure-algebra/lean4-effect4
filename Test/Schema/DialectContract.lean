@@ -77,7 +77,4 @@ def twoServices : EffTy :=
 #guard ((EffTy.document twoServices).references.drop 2).map (·.representation) =
   [Bridge.schema (.handle "k3_7"), Bridge.schema (.handle "k3_8")]
 
-#print axioms requirementKey_eq_keyText
-#print axioms requirementKey_injective
-
 end Test.Schema.DialectContract

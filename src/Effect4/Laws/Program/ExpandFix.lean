@@ -212,7 +212,6 @@ private theorem erounds_provideLayer : ∀ (xs : List Nat) (l : LayerTerm Op) (i
   | [], _, _, _ => rfl
   | _ :: xs, l, i, b => erounds_provideLayer xs (LayerTerm.expandRound orig l) i (Eff.expandRound orig b)
 
-
 /-- `mergeAll` is a homomorphism from the spine's rounds to the layer's. -/
 private theorem lrounds_mergeAll : ∀ (xs : List Nat) (ls : LayerTerms Op),
     lrounds orig xs (.mergeAll ls) =
@@ -298,6 +297,5 @@ theorem LayerTerm.expandIn_mergeAll (ls : LayerTerms Op) :
 theorem LayerTerm.expandIn_succeed (key : ServiceKey) (value : Lit) :
     LayerTerm.expandIn root (.succeed key value) = .succeed key value :=
   lrounds_fix _ _ rfl _
-
 
 end Effect4.Program

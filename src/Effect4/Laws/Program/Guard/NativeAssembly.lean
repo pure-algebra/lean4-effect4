@@ -283,5 +283,4 @@ theorem registrationQueue_driveStep_deliver (p : NativeEff) (table : RowTable)
     simpa only [driveStep, hf] using Effect4.Program.Guard.RegistrationNested.registrationQueue_settle target rest _
       (Effect4.Program.Guard.RegistrationNested.evaluateNative_registration p table m f yielding) registration
 
-
 end Effect4.Program.Guard.NativeAssembly

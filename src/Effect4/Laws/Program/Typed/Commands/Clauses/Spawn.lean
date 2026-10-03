@@ -4,8 +4,8 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Park
 /-!
 # Laws.Program.Typed.Commands.Clauses.Spawn — the spawn and race evaluator clauses
 
-Concept 4 (the configuration invariant `I`); steps of `M6Ledger.step_deliver` and
-`M6Ledger.step_loop` through `evaluate_keeps` (`FiberClauseKeeps`). The shared shape of `fork`,
+Concept 4 (the configuration invariant `I`); steps of `deliver_preserves` and
+`loop_preserves` through `evaluate_keeps` (`FiberClauseKeeps`). The shared shape of `fork`,
 `forkIn` and `forkScoped` (`Machine/Fibers.lean:1451-1489`): a child spawned over the evaluated
 fiber at the old `nextId` (`spawn`, `:948-966`), started now or deferred onto the parent's
 dispatcher (`start`, `:970-977`), the parent answered, the nested commands queued in front of its

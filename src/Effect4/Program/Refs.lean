@@ -128,7 +128,6 @@ def LayerTerm.refSites {Op : Type} (p : List Nat) (l : LayerTerm Op) : List (Lis
 def LayerTerms.refSites {Op : Type} (p : List Nat) (ls : LayerTerms Op) : List (List Nat × List Nat) :=
   foldMapAt_layers [] (· ++ ·) p ls (f_layer := LayerTerm.refSite)
 
-
 /-! ## Expansion, for typing -/
 
 /-- The expansion algebra: the identity fold with every `ref` replaced by the layer at its
@@ -152,7 +151,6 @@ def LayerTerm.expandRound {Op : Type} (orig : Node Op) (l : LayerTerm Op) : Laye
   cata_layer (expandAlgebra orig) l
 def LayerTerms.expandRound {Op : Type} (orig : Node Op) (ls : LayerTerms Op) : LayerTerms Op :=
   cata_layers (expandAlgebra orig) ls
-
 
 /-- The layer references of a program are well formed: every target names a layer of this
 program that is not itself a reference, precedes the reference in program order, and does
@@ -181,7 +179,6 @@ def LayerTerm.layerPaths {Op : Type} (p : List Nat) (l : LayerTerm Op) : List (L
   foldMapAt_layer [] (· ++ ·) p l (f_layer := fun _ q => [q])
 def LayerTerms.layerPaths {Op : Type} (p : List Nat) (ls : LayerTerms Op) : List (List Nat) :=
   foldMapAt_layers [] (· ++ ·) p ls (f_layer := fun _ q => [q])
-
 
 /-- The program with every reference expanded to its target's term, `refSites + 1` rounds:
 each round resolves one hop, and a well-formed program's hops are bounded by its sites. -/

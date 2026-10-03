@@ -351,21 +351,6 @@ end GroundChecks
 
 section AxiomReceipts
 
-#print axioms Effect4.Scope.make_state
-#print axioms Effect4.Scope.addUnsafe_finalizers
-#print axioms Effect4.Scope.addExit_closed
-#print axioms Effect4.Scope.removeUnsafe_inline_hit
-#print axioms Effect4.Scope.close_state_independent_of_run
-#print axioms Effect4.Scope.close_reentrant_add
-#print axioms Effect4.Scope.close_idempotent
-#print axioms Effect4.Scope.closeOrder_last_first
-#print axioms Effect4.Scope.closeResult_single
-#print axioms Effect4.Scope.closeResult_reasons
-#print axioms Effect4.Scope.fork_closed_parent
-#print axioms Effect4.Scope.fork_detach
-#print axioms Effect4.Scope.runScoped_lifo
-#print axioms Effect4.Scope.acquireRelease_registers
-
 end AxiomReceipts
 
 end Test.Runtime.ScopeContract

@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Typed.Commands.Evaluate
 # Laws.Program.Typed.Commands.Clauses.Answer — fiber clauses that answer from the machine
 
 Concept 4 of `docs/core/semantics.md` (`step-deliver-preserves`, `step-loop-preserves`): clauses of
-`M6Ledger.step_deliver` / `step_loop` through `evaluate_keeps` (`Commands/Evaluate.lean`), each
+`deliver_preserves` / `step_loop` through `evaluate_keeps` (`Commands/Evaluate.lean`), each
 `FiberClauseKeeps root rootTy op` for an operation whose evaluation answers a value read off the
 machine and continues.
 

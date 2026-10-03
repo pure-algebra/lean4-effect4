@@ -120,9 +120,6 @@ theorem Links.interruptRecord (p : NativeEff) (table : RowTable) (completed)
     exact (requestOf_update_other m g id token
       (fun heq => he ((interruptRecord_id p table who extra f).symm.trans heq))) ▸ hr
 
-theorem M1Origin.Links.spawn (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)
-    (f : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (Links m (spawn (interpAt p completed table) m f code options site).1) := ⟨⟩
-
 theorem Links.spawn (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)
     (f : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
     Links m (spawn (interpAt p completed table) m f code options site).1 := by
@@ -149,9 +146,6 @@ theorem Links.forkFinalizers (p : NativeEff) (table : RowTable) (completed)
   | nil => exact .refl m
   | cons code rest ih =>
     exact (Links.spawn p table completed m f code ⟨true,true,.inherit⟩).trans (ih _)
-
-theorem M1Origin.Links.beginRace (interp : NInterp) (m : NativeMachine) (f : NFiber)
-    (yielding : Bool) (codes : List NCode) (site : Option (List Nat) := none) : ProofGraph.Obligation (Links m (beginRace interp m f yielding codes site).machine) := ⟨⟩
 
 theorem Links.beginRace (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (codes : List NCode) (site : Option (List Nat) := none) :
@@ -337,8 +331,5 @@ theorem iteration_links (p : NativeEff) (table : RowTable) (m : NativeMachine)
       apply ((Links.refl m).emit _).trans
       exact evaluateNative_links _ _ _ _ _
     · cases hy
-
-#typed_state_obligations Effect4.Program.Guard.NativeStateLinks.M1Origin ceiling 0 using
-  aesop (rule_sets := [Effect4.Stores]) (add unsafe apply [Links.spawn, Links.beginRace])
 
 end Effect4.Program.Guard.NativeStateLinks

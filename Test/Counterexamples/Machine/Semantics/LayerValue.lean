@@ -117,25 +117,6 @@ theorem effect_body_refusal_first :
       .error ⟨[0], .term (.var 0)⟩ := by
   decide +kernel
 
-#print axioms key_service_nat
-#print axioms old_succeed_admitted
-#print axioms old_effect_admitted
-#print axioms old_succeed_carrier_claim_false
-#print axioms old_effect_carrier_claim_false
-#print axioms valueLeak_refused
-#print axioms valueLeak_location
-#print axioms succeedLeak_refused
-#print axioms succeedLeak_location
-#print axioms crash2_refused
-#print axioms crash2_location
-#print axioms untypedSucceed_refused
-#print axioms untypedSucceed_location
-#print axioms untypedEffect_refused
-#print axioms untypedEffect_location
-#print axioms valueControl_checked
-#print axioms literal_refusal_first
-#print axioms effect_body_refusal_first
-
 end Test.Counterexamples.LayerValue
 
 namespace Test.Counterexamples.LayerValue.TemplateFixture
@@ -163,8 +144,4 @@ theorem template_succeed_leaf_accepted :
         some (.ok ⟨Env.Requirement.single key, .never, Env.Requirement.empty⟩) := by
   decide +kernel
 
-#print axioms exact_source_effect
-#print axioms template_effect_leaf_refused
-#print axioms exact_source_succeed
-#print axioms template_succeed_leaf_accepted
 end Test.Counterexamples.LayerValue.TemplateFixture

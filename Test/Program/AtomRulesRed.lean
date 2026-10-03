@@ -30,6 +30,4 @@ example {vs : List Val} (h : Fits vs [Ty.nat, Ty.nat]) :
     ∃ m n : Nat, vs = [Val.nat m, Val.nat n] := by
   aesop
 
-#print axioms Effect4.Program.pair_inv_closes
-
 end Test.Program.AtomRulesRed

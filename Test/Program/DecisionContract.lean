@@ -66,9 +66,4 @@ def column : Ty := .union (.prod (.lit "A") .nat) .string
 
 /-! ## The laws, at the axiom ceiling -/
 
-#print axioms Effect4.Program.Decision.arms_length
-#print axioms Effect4.Program.NativeAtom.tagHit_eq
-#print axioms Effect4.Program.Ty.payload_hasTy
-#print axioms Effect4.Program.Decision.decide_typed
-
 end Test.Program.DecisionContract

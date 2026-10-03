@@ -569,6 +569,4 @@ theorem decodeString_toUTF8 (s : String) : decodeString s.toUTF8.data.toList = s
 #guard utf8Bytes ['A'] = [65]
 #guard utf8Bytes ['é'] = [0xc3, 0xa9]
 
-/-! ## Receipts -/
-
 end Effect4.Store

@@ -23,7 +23,7 @@ copy at the site would memoize at the site's own path (`memo_keys_differ`, at a 
 target is memoized). So the agreement is the redirect, with the typing read through the
 expansion, not an equality of the program's and the expansion's denotations.
 
-`DenotesTyped` is M5's denotation lemma (`M3bAssembly.denoteR_typed`, proved at every source by
+`DenotesTyped` is M5's denotation lemma (`denotesTyped`, proved at every source by
 `denotesTyped`, `Laws/Program/Typed/LayerArm.lean`); `loadsTyped` here is the reduction from it at
 this program, as `load_typed_of_denotesTyped` is. Its premise that the references are well
 formed (decisions row 170) holds here (`wellFormed`), and the reduction discharges it from the
@@ -190,45 +190,3 @@ theorem memo_keys_differ :
   cases keys
 
 end Test.Program.LayerRefs
-
-open Test.Program.LayerRefs in
-#print axioms checked
-open Test.Program.LayerRefs in
-#print axioms wellFormed
-open Test.Program.LayerRefs in
-#print axioms site
-open Test.Program.LayerRefs in
-#print axioms has_reference
-open Test.Program.LayerRefs in
-#print axioms check_refuses
-open Test.Program.LayerRefs in
-#print axioms check_expansion
-open Test.Program.LayerRefs in
-#print axioms old_root_untyped
-open Test.Program.LayerRefs in
-#print axioms root_typed
-open Test.Program.LayerRefs in
-#print axioms noMarker
-open Test.Program.LayerRefs in
-#print axioms loadsTyped
-open Test.Program.LayerRefs in
-#print axioms site_redirect
-open Test.Program.LayerRefs in
-#print axioms expansion_site_is_target
-open Test.Program.LayerRefs in
-#print axioms effectRef_wellFormed
-open Test.Program.LayerRefs in
-#print axioms effectRef_expanded_site
-open Test.Program.LayerRefs in
-#print axioms run_key
-open Test.Program.LayerRefs in
-#print axioms expansion_key
-open Test.Program.LayerRefs in
-#print axioms memo_keys_differ
-#print axioms Effect4.Program.Sched.denoteLayer_ref_redirect
-#print axioms Effect4.Program.Typed.load_typed_of_denotesTyped
-#print axioms Effect4.Program.Typed.capture_lookup
-#print axioms Effect4.Program.Eff.expandIn_self
-#print axioms Effect4.Program.Eff.expandIn_eq_self
-#print axioms Effect4.Program.LayerTerm.expandIn_eq_self
-#print axioms Effect4.Program.Eff.expandIn_acquireRelease

@@ -953,11 +953,6 @@ def w10Into : M :=
     (ProgName.intoDeferred (ProgName.failCause (Cause.fail Err.boom)) ⟨0⟩)
     [RunDecision.evaluate ⟨0⟩]
 
-/-- `into` answers `true` and stores the body's failed exit as the completion. -/
-theorem M1Witnesses.w10_into_completes_on_failure : ProofGraph.Obligation (exitOf w10Into 0 = some (Exit.success (Val.bool true)) ∧
-      ((w10Into.state.deferreds.cellAt ⟨0⟩).map DeferredCell.completion) =
-        some (some (Completion.ofExit (Exit.failure (Cause.fail Err.boom))))) := ⟨⟩
-
 theorem w10_into_completes_on_failure :
     exitOf w10Into 0 = some (Exit.success (Val.bool true)) ∧
       ((w10Into.state.deferreds.cellAt ⟨0⟩).map DeferredCell.completion) =
@@ -1474,8 +1469,6 @@ theorem db07_store_survives_failure :
       dbSeven.state.refs = [Val.nat 5] :=
   by aesop
 
-
-
 /-! ## Axiom receipt
 
 Checked once with `#print axioms` over the theorems above: every one depends on `propext` and
@@ -1484,5 +1477,3 @@ alone) — the receipt `docs/RUNTIME-COVERAGE.md:52-55` requires of a witness. T
 `sorry`, no `native_decide` and no custom axiom anywhere in this spike. -/
 
 end Effect4.Machine.Witnesses
-
-#typed_state_obligations Effect4.Machine.Witnesses.M1Witnesses ceiling 0 using aesop (rule_sets := [Effect4.Stores])

@@ -193,7 +193,6 @@ theorem Val.hasTy_list_inv {v : Val} {t : Ty}
     ∃ vs, Val.asList? v = some vs ∧ ∀ x ∈ vs, Val.hasTy x t = true :=
   Val.hasTy_list_inv_at h
 
-
 /-! ## Allocation
 
 Row DI-17. `Val.hasTy` takes an allocation table (`allocated : List String`, the target

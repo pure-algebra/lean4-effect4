@@ -284,10 +284,3 @@ theorem late_frontier :
 theorem late_fires : ((interpR rootProgram).clockStep 5 lateState).1 = some owed := rfl
 
 end Test.Program.TimerColumn
-
-#print axioms Test.Program.TimerColumn.natWorld_refused
-#print axioms Test.Program.TimerColumn.machine_typed
-#print axioms Test.Program.TimerColumn.queued_typed
-#print axioms Test.Program.TimerColumn.matching_lands
-#print axioms Test.Program.TimerColumn.stale_inert
-#print axioms Test.Program.TimerColumn.late_frontier

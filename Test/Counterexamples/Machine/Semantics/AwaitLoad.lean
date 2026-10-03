@@ -295,32 +295,3 @@ theorem capstone_at_load :
   fun lawful checked row _ => loadsTyped lawful checked row
 
 end Test.Counterexamples.Machine.Semantics.AwaitLoad
-
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms typed_source
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms code_eq
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms cert_of_bodyTyped
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms root_code_refused
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms one_not_loaded
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms loadsTyped_false
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms capstone_false
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms sub_exitOf_mono
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms fiber_of_fits
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms fork_typed
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms await_typed
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms code_typed
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms loadsTyped
-open Test.Counterexamples.Machine.Semantics.AwaitLoad in
-#print axioms capstone_at_load

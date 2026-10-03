@@ -96,7 +96,6 @@ def isFuel : RR → Bool | .frontier .fuel _ => true | _ => false
 
 theorem typed_source : Api.typeOf prog = some ty := by rfl'
 
-
 theorem answerFree : ∀ d ∈ tape, NoHostAnswer d := by
   intro d hd
   simp only [tape, List.mem_cons, List.not_mem_nil, or_false] at hd
@@ -236,7 +235,7 @@ theorem window_untyped (w : W) : ¬ H1Shapes.TypedState (prog : ProgramSource) t
   have hni : ¬ H1Shapes.CodeInert m6 [] (.fiber f.id) := by rw [hid]; exact m6_not_inert
   exact stale_not_saved w m6 [] _ f.frame hni hlen hstale (((typed.2.1.c0 f hf).c0).c0 ty declared)
 
-/-- H1's `M6Ledger.typedState_reachable` proposition, refuted at the cut. -/
+/-- H1's `typedState_reachable` proposition, refuted at the cut. -/
 theorem capstone_false_window : ¬ (Api.typeOf prog [] = some ty →
     RReachable (prog : ProgramSource) 6 m6 → ∃ w, H1Shapes.TypedState (prog : ProgramSource) ty w m6) := by
   intro h
@@ -527,7 +526,6 @@ theorem storedObserverOk_halt {root : ProgramSource} {w : W} {m : RState} {why :
   | untrackChild parent => trivial
   | dropScopeFinalizer scope key => exact h
   | callback key => trivial
-
 
 /-- Halting changes no clause the merged typed state checks: H1's `CodeInert` makes every current
 code inert on a halted machine, and the rest reads fields `halt` leaves alone. -/
@@ -923,72 +921,3 @@ theorem halting_result_outside (root : ProgramSource) (rootTy : EffTy) (w : W) (
 end Test.Counterexamples.Machine.Semantics.StaleCode
 
 open Test.Counterexamples.Machine.Semantics.StaleCode
-
-#print axioms typed_source
-#print axioms answerFree
-#print axioms reach6
-#print axioms reach7
-#print axioms reach9
-#print axioms window6
-#print axioms m6_stuck_none
-#print axioms m6_root_running
-#print axioms m6_only_root
-#print axioms finished7m
-#print axioms budget7_is_fuel_frontier
-#print axioms budget7_not_finished
-#print axioms finished7
-#print axioms finished9
-#print axioms m9_root_stale
-#print axioms only_root6
-#print axioms only_root7
-#print axioms residue6_shape
-#print axioms residue6_machine
-#print axioms any_fail_not_clean
-#print axioms m6_not_inert
-#print axioms stale_not_saved
-#print axioms window_untyped
-#print axioms capstone_false_window
-#print axioms admitted_noAnswer
-#print axioms ledger_jointly_false_window
-#print axioms m7_root_published
-#print axioms m9_root_published
-#print axioms m7_root_inert
-#print axioms m9_root_inert
-#print axioms stale_not_savedOk
-#print axioms seat_split_not_decisionLift
-#print axioms running_clause_vacuous_at_m6
-#print axioms running_exempt_at_m6
-#print axioms exitsTyped_of
-#print axioms exitsTyped6
-#print axioms exitsTyped7
-#print axioms worldValid_not_upward_closed
-#print axioms H1.finNameOk_tr
-#print axioms H1.scopeStateOk_tr
-#print axioms H1.storesOk_tr
-#print axioms H1.dispatcherOk_tr
-#print axioms H1.runFiberOk_tr
-#print axioms H1.halt_fiber?
-#print axioms H1.halt_race?
-#print axioms H1.countdownAt_halt
-#print axioms H1.storedObserverOk_halt
-#print axioms H1.typedState_halt
-#print axioms H1.queueOk_nil
-#print axioms H1.halting_result_typed
-#print axioms H1.typed_not_imply_running
-#print axioms liveCode_m6
-#print axioms interrupts_of_all
-#print axioms quietFacts
-#print axioms machineTyped_of_quiet
-#print axioms quiet6
-#print axioms quiet9
-#print axioms machineTyped_m6
-#print axioms machineTyped_m9
-#print axioms capstone_window_holds
-#print axioms evaluate_entry_m6
-#print axioms m7_exits_at_cut
-#print axioms m7_exits_finished
-#print axioms m7_no_halt_at_cut
-#print axioms cut_native_reachable
-#print axioms typedState_halt
-#print axioms machineTyped_not_halted_here
-#print axioms halting_result_outside

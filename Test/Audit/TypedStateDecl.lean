@@ -306,11 +306,6 @@ theorem saved_flag_distinguished :
   have bad : false = true := h.c0
   cases bad
 
-#print axioms resume_token_distinguished
-#print axioms resume_target_distinguished
-#print axioms capture_path_distinguished
-#print axioms capture_root_distinguished
-#print axioms saved_flag_distinguished
 end Test.TypedStateDecl.ActualOwners
 
 namespace Test.TypedStateDecl.TokenContracts
@@ -346,6 +341,4 @@ theorem token_replacement_refused :
   change some (EffTy.pure .bool) = some (EffTy.pure .nat) at bad
   cases bad
 
-#print axioms typed_resume
-#print axioms token_replacement_refused
 end Test.TypedStateDecl.TokenContracts

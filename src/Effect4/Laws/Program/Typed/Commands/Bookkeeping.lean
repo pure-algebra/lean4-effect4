@@ -1852,7 +1852,6 @@ theorem configTyped_restate {root : ProgramSource} {rootTy : EffTy} {w : World} 
       ConfigTyped root rootTy { w with state := s } { m with state := s } q :=
   configTyped_frame typed (StoreFrame.ofCells le refs cells externals timerKeys) wf stores keys due
 
-
 /-! ## `wake` (`E4-TYPED-CE-026` repaired)
 
 A scheduled wake runs one Deferred cell's batch (`Stores.wakeList`, `DeferredStore.wakeBatch`,
@@ -3356,16 +3355,6 @@ theorem observe_raceCallback (root : ProgramSource) (rootTy : EffTy) {w : World}
 
 end Effect4.Program.Typed
 
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_trackChild :=
-  @Effect4.Program.Typed.trackChild_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_drainDue :=
-  @Effect4.Program.Typed.drainDue_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_link :=
-  @Effect4.Program.Typed.link_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_wake :=
-  @Effect4.Program.Typed.wake_preserves
--- `M6Ledger`'s report runs at the foot of the last command module, which sees every proof.
-
 /-!
 ## Completing a Deferred preserves the due-typing column
 
@@ -3423,7 +3412,6 @@ theorem complete_due {κ : Type} {store : DeferredStore κ} {cell : DeferredKey}
   rcases complete_due_origin h with old | ⟨c, w, hc, hd, hw, rfl⟩
   · exact Or.inl old
   · exact Or.inr ⟨c, hc, hd, wakeKeys_waiter_mem hw, rfl, rfl⟩
-
 
 theorem completion_due_typed {root : ProgramSource} {rootTy : EffTy}
     {w : Effect4.Program.Typed.World} {m : RState} (wide : MachineWide root rootTy w m)

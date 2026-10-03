@@ -389,10 +389,6 @@ def rcNatDocument : Representation := .number none [rcIsIntFilter, rcNonNegative
 
 #check @ofSchema_exact
 #check @ofSchema_schema
-#print axioms ofSchema_exact
-#print axioms ofSchema_exact'
-#print axioms ofSchema_schema
-#print axioms normS_schema
 
 /-! ## Multi-Tier Cascading CAS -/
 
@@ -414,9 +410,6 @@ private def testNodeAddress : Effect4.Store.Digest := Effect4.Store.sha256 testN
       cs1.find testNodeAddress = some testNode &&
       (cs1.findWithSource testNodeAddress).map Prod.snd = some .«local»
   | _ => false
-
-#print axioms CascadingStore.find_of_local
-#print axioms CascadingStore.find_of_upstream
 
 /-! ## S-3: the checked JSON boundary, owner amendment 2026-09-11 -/
 
@@ -608,11 +601,6 @@ did not evaluate to `true`
 #check @Schema.decode_iff
 #check @Schema.encode_of_decode
 #check @Schema.decode_of_encode
-#print axioms Schema.decode_iff
-#print axioms Schema.encode_of_decode
-#print axioms Schema.decode_of_encode
-#print axioms Schema.Codec.decodeRaw_exact
-#print axioms Schema.Codec.decodeRaw_normJ
 
 /-! ## Stability of Core Language Constructs & Effect Reification -/
 
@@ -783,4 +771,3 @@ end Test.Codegen.SchemaGenerationContract
 #guard (Effect4.Schema.Bridge.effObjectDocument
   ⟨.union (.lit "A") .string, .never, Effect4.Row.empty⟩).representation =
     Effect4.Program.Ty.schema .string
-#print axioms Effect4.Program.CTy.ofSchema_schema

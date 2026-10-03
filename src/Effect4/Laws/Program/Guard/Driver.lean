@@ -88,7 +88,6 @@ theorem driverContract_of_lift (p : NativeEff) (table : RowTable) : DriverContra
   ⟨guard_invariant p table, guard_reserved p table, guard_request p table,
     guard_interrupted p table⟩
 
-
 /-- The native command driver satisfies the internal contract for every fuel budget.
 The generic loop lift supplies all four fields from the per-command facts. -/
 theorem driverContract (p : NativeEff) (table : RowTable) : DriverContract p table :=

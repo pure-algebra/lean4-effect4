@@ -100,7 +100,3 @@ theorem allocation_needed :
     redB_external.2.1)
 
 end Test.Program.ExitConnector
-
-#print axioms Test.Program.ExitConnector.redA_scope
-#print axioms Test.Program.ExitConnector.dangling_scope_refused
-#print axioms Test.Program.ExitConnector.validity_needed

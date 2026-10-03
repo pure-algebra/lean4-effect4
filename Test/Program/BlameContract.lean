@@ -93,11 +93,6 @@ def authorRefusalOf {table : RowTable} : Except Api.AuthorRefusal (Api.Typed tab
 #guard (Effect4.Codegen.codesOf { exactOptionalPropertyTypes := false } (.valueNotSubtype ⟨⟨0⟩, ⟨0⟩⟩ .nat .string)).contains 2375 = false
 #guard (Effect4.Codegen.HostConfig.pinned.tsconfig ["programs"]).startsWith "{\n  \"compilerOptions\": {"
 
-#print axioms Effect4.Api.explain_none_iff
-#print axioms Effect4.Api.check
-#print axioms Effect4.Api.author
-#print axioms Effect4.Program.explain_none_iff
-
 /-! ## A red control for every reason (scout F, 2026-09-17)
 
 Ten of the twenty-four reasons had no test that produces them; three belong to `select` and

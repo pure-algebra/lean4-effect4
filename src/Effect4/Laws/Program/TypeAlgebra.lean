@@ -31,7 +31,6 @@ theorem isMember_eq_false {t : Ty} (h : isMember t = false) :
   case union a b => exact Or.inr ⟨a, b, rfl⟩
   all_goals exact Bool.noConfusion h
 
-
 /-- Absorption and the canonical order use the same structural transitivity proof.
 
 The case list is the **order's**, not the alphabet's. Four equalities and the top are
@@ -1305,7 +1304,6 @@ decreasing_by
   all_goals simp_wf
   all_goals omega
 
-
 end Effect4.Program.Ty.OrderProof
 
 namespace Effect4.Program.Ty
@@ -1615,7 +1613,6 @@ theorem join_unknown (t : CTy) : join t unknown = unknown :=
 
 end Effect4.Program.CTy
 
-
 namespace Effect4.Program.ErrTy
 open Effect4.Program
 
@@ -1655,6 +1652,5 @@ theorem join_never (t : ErrTy) : join never t = t := by
 theorem join_never_right (t : ErrTy) : join t never = t := by
   apply Subtype.ext
   exact CTy.join_never_right t.toCTy
-
 
 end Effect4.Program.ErrTy

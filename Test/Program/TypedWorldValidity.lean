@@ -112,7 +112,6 @@ theorem valueOk_lookup_transport (w newer : TWorld)
     (ty : Ty) (value : Val) (typed : ValueOk w ty value) : ValueOk newer ty value :=
   Effect4.Program.hasTy_mono ty value _ _ ext typed
 
-
 /-- Actual leHost, not merely spelling equality: new invalid cells remain unconstrained. -/
 theorem invalid_extension :
     (emptyTables Stores.empty).leHost (emptyTables danglingStore) ∧
@@ -188,16 +187,4 @@ theorem mixed_allocation_preserves_old_and_new :
     mixed_allocation_step rfl rfl
   exact ⟨heap_typed_at_mono _ _ _ _ extension.1 old_nat_typed, extension.2.1⟩
 
-#print axioms initial_positive
-#print axioms ghost_next_heap_refused
-#print axioms ghost_next_promise_refused
-#print axioms unbounded_tokens_refused
-#print axioms invalid_extension
-#print axioms renamed_spelling_refused
-#print axioms valid_completion_cannot_dangle
-#print axioms mixed_allocation_preserves_old_and_new
-#print axioms Effect4.Program.Typed.park_extension
-#print axioms Effect4.Program.Typed.completion_transport
-#print axioms Effect4.Program.Typed.initial_world_valid
-#print axioms Effect4.Program.Typed.initial_world_valid_at
 end Test.Program.TypedWorldValidity

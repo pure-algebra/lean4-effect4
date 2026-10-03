@@ -19,11 +19,4 @@ theorem nested_member (allocated : List String) (n : Nat) :
     Program.Val.hasTy (nested.image.toVal (some (some n))) nested.type.toRaw allocated = true :=
   nested.member allocated (some (some n)) trivial
 
-#print axioms nested_member
-#print axioms ValueModel.ofImage
-#print axioms ValueModel.list
-#print axioms ValueModel.pair
-#print axioms Image.sum
-#print axioms Image.except
-
 end Test.Program.ValueModelContract

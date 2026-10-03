@@ -915,10 +915,6 @@ theorem suspendBodyAt_memoLookup (q : Point) (m : MemoMapId) (scope : Nat) :
     suspendBodyAt root (.memoLookup q m scope) =
       Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.path m))) (.memoize q m scope) := by aesop
 
-theorem M1Origin.withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
-    ProofGraph.Obligation ((interpOf root).withFiberOf (.forkLayer q m scope) =
-      some (.fork (resolveLayer root q m scope) ⟨true, true, .inherit⟩ q.path)) := ⟨⟩
-
 theorem withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
     (interpOf root).withFiberOf (.forkLayer q m scope) =
       some (.fork (resolveLayer root q m scope) ⟨true, true, .inherit⟩ q.path) := by aesop
@@ -1979,5 +1975,3 @@ theorem localRun_root (e : NativeEff) (fuel : Nat) (hpl : Straight e = true)
   exact h₁.trans h₂
 
 end Effect4.Program.Agreement
-
-#typed_state_obligations Effect4.Program.Agreement.M1Origin ceiling 0 using aesop (rule_sets := [Effect4.Stores])

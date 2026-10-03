@@ -1167,7 +1167,6 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
 
 Named once, so the ledger's declarations and the connectors below read the same statement. -/
 
-
 /-- **`J` types every finalizer a scope of the world's store holds**: admission, typed
 (`finalizerTyped_of_admitted`). -/
 theorem finalizers_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
@@ -1385,7 +1384,7 @@ theorem load_typed_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
 /-- **M5 from the layer family's arm** (`Typed/Denotation.lean`, `childDenotes_upto`: every arm of
 `denoteR` by induction on fuel). The layer family's arm (`ProvideLayerArm`, decisions row 176 (b)) is
 proved at every source in `Typed/LayerArm.lean` (`provideLayerArm`), where this closes
-`M3bAssembly.denoteR_typed` (`denotesTyped`). -/
+`denotesTyped` (`denotesTyped`). -/
 theorem denotesTyped_of_provideLayer (root : ProgramSource) (hlayer : ProvideLayerArm root) :
     DenotesTyped root := fun hwf w htie p e ty hat hpt =>
   childDenotes_upto root hlayer hwf p.fuel p.fuel (Nat.le_refl _) e p.path hat w htie p ty rfl rfl
@@ -1701,7 +1700,7 @@ The route is proved here at every admitted tape (`obsTyped_admitted`): from a ty
 `decision_preserves`, through `replayEval_lift`, to `J` on the reference replay, then across
 `BMeans` (`bookMeans_obs`, `BookMeans.stuck`); `m7_of_ledger` is its answer-free case. With M5 and
 M6 proved, M7a–c follow (`m7_proved`, `Typed/Commands/Clauses/All.lean`), and scope-handle validity
-(`M7.exitHandles_valid`) follows from `J` and capability membership (`exitHandles_valid`, same
+(`exitHandles_valid`) follows from `J` and capability membership (`exitHandles_valid`, same
 module): `J` holds without the closed requirement row, which no proof of M5 or M6 reads. -/
 
 /-- The M7 fragment: a lawful source at the empty host table, checked and closed, its requirement
@@ -1863,248 +1862,19 @@ theorem replayR_bmeans_reachable (e : NativeEff) (fuel : Nat) (tape : List Api.D
 `Typed/LayerArm.lean`, where `M3bAssembly`'s report runs. The transition ledger (M6): one
 preservation obligation per command constructor, one for a tape decision under admitted host
 answers, and the capstone that every reachable state is typed. -/
-namespace M3bAssembly
-
-/-- Row 148: the fundamental property (algebra A3); proved in `Typed/LayerArm.lean` (`denotesTyped`). -/
-theorem denoteR_typed (root : ProgramSource) : ProofGraph.Obligation (DenotesTyped root) := ⟨⟩
-
-/-- Row 148: term soundness at `Fits` (types TY-07); seat A proves it. -/
-theorem evalTerm_fits (table : RowTable) : ProofGraph.Obligation (TermFits table) := ⟨⟩
-
-theorem typedState_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) :
-    ProofGraph.Obligation (LoadsTyped root rootTy fuel compileFuel) := ⟨⟩
-
-/-- Row 176 (b): the layer family's arm (`ProvideLayerArm`, `Typed/Denotation.lean`), the one arm
-`denotesTyped_of_provideLayer` takes as a hypothesis; proved in `Typed/LayerArm.lean`
-(`provideLayerArm`). -/
-theorem denoteR_typed_provideLayer (root : ProgramSource) :
-    ProofGraph.Obligation (ProvideLayerArm root) := ⟨⟩
-
-theorem capture_lookup (root : ProgramSource) (w : World) (c : Capture)
-    (completed : List (FiberId × ExitV)) (exVal : Val) (_h : CaptureTyped root w c)
-    (_hex : Fits w exVal (.exitOf .unknown .unknown))
-    (_hview : ∀ q ∈ completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) :
-    ProofGraph.Obligation
-    (∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty) := ⟨⟩
-
-end M3bAssembly
-
-namespace M6Ledger
-
-theorem step_evaluate (root : ProgramSource) (rootTy : EffTy) (id : FiberId) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.evaluate id)) := ⟨⟩
-
-/-- `E4-TYPED-CE-012` refuted it as declared at `dceae006` (one `loop` allocates a cell and no
-world types the result: the saved stack does not transport along world growth,
-`docs/research/2026-10-01-landing/ports-at-dceae006/HeadStepLoop.lean`). Repaired by seat B's
-Kripke closure (row 135): the refutation is retained over the one-world judgment
-(`Test/Program/FramesNotKripke.lean`, `step_loop_refuted`), and the same `loop` with a frame typed
-into `unit` keeps `I` at the world that declares the new cell (`step_loop_good`, over this split).
-Its halting arms (the census in `MachineLive`'s section) read the target and scope premises
-`fiberPre` carries on the halting rows (row 139); the absent-scope callback that refuted
-`step_deliver` before row 156 reaches the same walk from `loop` (`Laws/Program/EvaluateR.lean`
-`:309-319`; reading, not checked here); since rows 156 and 188 (a) the callback is typed only at a
-`scoped` guard's run position, where the scope is present. `E4-TYPED-CE-033` (a registration
-marker under an injected yield) refuted this statement at `53caad0f`; decisions row 188 (b). -/
-theorem step_loop (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.loop id yielding)) := ⟨⟩
-
-/-- Proved (`deliver_preserves`, `Typed/Commands/Clauses/All.lean`). `E4-SCHED-CE-020`'s witness
-under `J`'s `stuck = none` refuted it before decisions row
-156: a configuration typed by a judgment whose `scopeExit` constructor read no pre delivered into
-a scope-exit marker for the absent scope 0 and halted (`prepareScopedExitR`); that refutation is
-kept as history over a local copy of that judgment
-(`M6Capstone.H1HaltAmendment.step_deliver_refuted_by_absent_scope`). Since row 156 the
-constructor carries the scope's presence (`ScopeLive`), and the witness's input is no typed
-configuration at any world (`M6Capstone.H1HaltAmendment.input_refused`), so it no longer refutes
-this obligation. `E4-TYPED-CE-034` refuted it again at `53caad0f` with the scope present: the
-general constructor typed a raw marker as current code, which the counted step answers
-`badShapeExit`. Decisions row 188 (a) types the callback only at the `scoped` guard's run position
-(`TypedProg.scopedGuard`, `FrameAccepts.scopedResume`, the walk's `CallbackSaved`); the witness's
-input is refused at every world (`Test/Program/ScopeExitCallback.lean`, `input_refused`). -/
-theorem step_deliver (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (yielding : Bool) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.deliver id yielding)) := ⟨⟩
-
-theorem step_finish (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (exit : ExitV) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.finish id exit)) := ⟨⟩
-
-theorem step_resume (root : ProgramSource) (rootTy : EffTy) (id : FiberId) (token : Nat) (code : RProgram) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.resume id token code)) := ⟨⟩
-
-/-- Proved in `Typed/Commands/Launch.lean` (`launch_preserves`): the entrant is allocated at the
-old `nextId` and declared at the race's result type. Its transport needs every negative read of the
-fiber table at an id below `nextId` (decisions rows 134 (e) and 189). -/
-theorem step_launch (root : ProgramSource) (rootTy : EffTy) (race : Nat) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.launch race)) := ⟨⟩
-
-theorem step_enrollRace (root : ProgramSource) (rootTy : EffTy) (race : Nat) (child : FiberId) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.enrollRace race child)) := ⟨⟩
-
-theorem step_registrationDone (root : ProgramSource) (rootTy : EffTy) (race : Nat) (yielding : Bool) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.registrationDone race yielding)) := ⟨⟩
-
-theorem step_interruptTarget (root : ProgramSource) (rootTy : EffTy) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.interruptTarget target who extra)) := ⟨⟩
-
-theorem step_afterInterrupt (root : ProgramSource) (rootTy : EffTy) (host : FiberId) (yielding : Bool) (kind : ParkKind) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.afterInterrupt host yielding kind)) := ⟨⟩
-
-theorem step_raceCancel (root : ProgramSource) (rootTy : EffTy) (race : Nat) (host : FiberId)
-    (yielding : Bool) (remaining visited : List FiberId) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.raceCancel race host yielding remaining visited)) := ⟨⟩
-
-theorem step_trackChild (root : ProgramSource) (rootTy : EffTy) (parent child : FiberId) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.trackChild parent child)) := ⟨⟩
-
-theorem step_observe (root : ProgramSource) (rootTy : EffTy) (fiber : FiberId) (exit : ExitV) (observer : Observer) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.observe fiber exit observer)) := ⟨⟩
-
-theorem step_exitDone (root : ProgramSource) (rootTy : EffTy) (fiber : FiberId) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.exitDone fiber)) := ⟨⟩
-
-theorem step_closeParAwait (root : ProgramSource) (rootTy : EffTy) (host : FiberId) (yielding : Bool) (fibers : List FiberId) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.closeParAwait host yielding fibers)) := ⟨⟩
-
-theorem step_link (root : ProgramSource) (rootTy : EffTy) (mode : Supervision.ScopeMode) (scope : Nat)
-    (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.link mode scope target interruptor extra)) := ⟨⟩
-
-theorem step_drainDue (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (StepPreserves root rootTy .drainDue) := ⟨⟩
-
-theorem step_wake (root : ProgramSource) (rootTy : EffTy) (list : WakeKey) (phase : WakePhase) :
-    ProofGraph.Obligation (StepPreserves root rootTy (.wake list phase)) := ⟨⟩
-
-/-- A tape decision keeps `J` when its host answer, if any, is admitted. -/
-theorem decision_preserves (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.Decision) :
-    ProofGraph.Obligation (DecisionKeeps root rootTy fuel d) := ⟨⟩
-
-/-- The capstone obligation: every machine a tape with no host answer reaches from a lawful,
-checked, closed source is in `J` (`reachable_of_ledger` derives it from `typedState_load` and
-`decision_preserves`). The host-answer restriction repairs `E4-SCHED-CE-015`.
-
-`E4-TYPED-CE-009` (`Fits` compared declared types in the raw order while the checker
-normalizes, so M5 was false for a checked program) is repaired by row 137 (seat A):
-`Test/Counterexamples/Machine/Semantics/FitsOrder.lean` proves M5's proposition and this
-capstone's at that program's loaded machine, which the empty tape reaches (`rreachable_load`;
-`loadsTyped`, `capstone_at_load`), and keeps the refutations over the raw leaf
-(`Reviewed.m5_false`, `Reviewed.loadsTyped_false`, `Reviewed.capstone_false`; seat C's
-restatement over `J`, `RawOrderLoad.lean`, is history under the same hypothesis).
-`E4-TYPED-CE-018` (the posts that answer a scope handle carry no presence, so an allocation's
-continuation must be typed at an absent scope; registered from Codex's second-eyes review,
-`docs/research/2026-10-01-landing/codex-second-eyes/ScopeAllocationPost.lean`) refuted
-`DenotesTyped` at a checked allocate-then-fork program and is repaired by decisions row 156 (the
-posts that answer a scope handle carry its presence).
-`E4-TYPED-CE-010` (the await-by-value post read the
-target's answer column, so M5 was false for the typed corpus's `awaitFiber.value`) is repaired by
-row 136's post: `Test/Counterexamples/Machine/Semantics/AwaitLoad.lean` proves M5's proposition
-and this capstone's at that program's loaded machine (`loadsTyped`, `capstone_at_load`) and keeps
-the refutation over the old post (`loadsTyped_false`, `capstone_false`, over `OldMachineTyped`).
-`E4-TYPED-CE-011` (the saved-code clause read at a budget cut) refuted the
-statement over the typed state before row 134 and is repaired by the split
-(`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), as is `E4-TYPED-CE-014` (a halted
-machine typed) by `J`'s `stuck = none`.
-
-Proved (`typedState_reachable`, `Typed/Commands/Clauses/All.lean`, from `loadsTyped` and
-`decision_preserves`). `ExitOk` excludes `badName` and `notImplemented` at typed code, saved-stack,
-queued-result and stored-completion exit positions (`E4-TYPED-CE-007`), so on every machine an
-answer-free tape reaches from a lawful, checked, closed source those positions hold neither. This is
-an invariant, not progress, and says nothing of host answers (row 95). `missingService` remains
-admitted at every requirement row in H2 part one; its exclusion requires row 117's
-frame-and-operation contract. -/
-theorem typedState_reachable (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
-    ProofGraph.Obligation (ReachableTyped root rootTy fuel m) := ⟨⟩
-
-end M6Ledger
 
 /-! M7 (decisions row 138, ruled 2026-10-01): at the empty host table, on answer-free tapes, with
 observation `obs`, the frame machine's run is typed. `m7_of_ledger` derives all three from
 `typedState_load` and `decision_preserves`. -/
-namespace M7
-
-/-- M7a: every exit the observation records fits its fiber's declared type. -/
-theorem exits_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
-    ProofGraph.Obligation (M7Exits root rootTy fuel tape) := ⟨⟩
-
-/-- M7b: the observed stores fit at a world that describes them. -/
-theorem stores_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
-    ProofGraph.Obligation (M7Stores root rootTy fuel tape) := ⟨⟩
-
-/-- M7c: the frame machine never halts on the fragment (row 139's `stuck = none` in `J`). -/
-theorem never_halts (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision) :
-    ProofGraph.Obligation (M7NoHalt root rootTy fuel tape) := ⟨⟩
-
-/-- Scope-handle validity (organization M4, row 139): recorded exits name only live handles on
-every reachable machine; the exit connector's premise. -/
-theorem exitHandles_valid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) :
-    ProofGraph.Obligation (ExitHandlesValid root rootTy fuel m) := ⟨⟩
-
-end M7
 
 /-! The decision edits and the fire snapshot (decisions row 140, R3): `DecisionLift`'s fields
 other than `step`, over `J`, `I` and `O`, and the split's re-establishment. -/
-namespace M6Edits
-
-theorem nil (root : ProgramSource) : ProofGraph.Obligation (EditNil root) := ⟨⟩
-theorem evaluate (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (EditEvaluate root rootTy) := ⟨⟩
-theorem drain (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (EditDrain root rootTy) := ⟨⟩
-theorem ran (root : ProgramSource) (rootTy : EffTy) : ProofGraph.Obligation (EditRan root rootTy) := ⟨⟩
-theorem task (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (EditTask root rootTy) := ⟨⟩
-theorem skip (root : ProgramSource) : ProofGraph.Obligation (EditSkip root) := ⟨⟩
-theorem yield (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (EditYield root rootTy) := ⟨⟩
-theorem interrupt (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (EditInterrupt root rootTy) := ⟨⟩
-theorem middleware (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (EditMiddleware root rootTy) := ⟨⟩
-theorem clockNone (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (EditClockNone root rootTy) := ⟨⟩
-theorem clockSome (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (EditClockSome root rootTy) := ⟨⟩
-theorem answer (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (EditAnswer root rootTy) := ⟨⟩
-theorem reestablish (root : ProgramSource) (rootTy : EffTy) :
-    ProofGraph.Obligation (Reestablishes root rootTy) := ⟨⟩
-
-end M6Edits
 
 /-! Row 87: the bundle's owner predicates' world monotonicity joins seat B's `M3bWorld`
 (`Typed/Residual.lean`), whose report runs at the foot of this module, after this goal. -/
-namespace M3bWorld
-
-/-- Row 87's transport for the bundle's `SavedOk` at a position the world declares (seat B's
-ledger line, receipt-B "For seat C" item 2). -/
-theorem preds_savedOk_mono (root : ProgramSource) (w w' : World) (e : Expect) (x : RSaved) :
-    ProofGraph.Obligation (w.leHost w' → (expectOf w e).isSome = true →
-      (preds root).SavedOk w e x → (preds root).SavedOk w' e x) := ⟨⟩
-
-end M3bWorld
 
 end Effect4.Program.Typed
 
-#obligation_proved Effect4.Program.Typed.M3bAssembly.capture_lookup :=
-  @Effect4.Program.Typed.capture_lookup
-#obligation_proved Effect4.Program.Typed.M3bAssembly.evalTerm_fits :=
-  @Effect4.Program.Typed.termFits
--- `M3bAssembly`'s report runs at the foot of `Typed/LayerArm.lean`, which proves its last three goals
 -- (the import direction forbids this module naming the proofs; decisions row 140)
 -- `M6Ledger`'s goals are proved across `Typed/Commands/*.lean`; its report is at the foot of
 -- `Typed/Commands/Clauses/All.lean`, which sees every proof.
--- `M7`'s four goals are proved at the foot of `Typed/Commands/Clauses/All.lean` (`m7_proved`,
--- `exitHandles_valid`), which runs its report.
-#obligation_proved Effect4.Program.Typed.M6Edits.nil := @Effect4.Program.Typed.edit_nil
-#obligation_proved Effect4.Program.Typed.M6Edits.evaluate := @Effect4.Program.Typed.edit_evaluate
-#obligation_proved Effect4.Program.Typed.M6Edits.ran := @Effect4.Program.Typed.edit_ran
-#obligation_proved Effect4.Program.Typed.M6Edits.task := @Effect4.Program.Typed.edit_task
-#obligation_proved Effect4.Program.Typed.M6Edits.skip := @Effect4.Program.Typed.edit_skip
-#obligation_proved Effect4.Program.Typed.M6Edits.middleware := @Effect4.Program.Typed.edit_middleware
-#obligation_proved Effect4.Program.Typed.M6Edits.reestablish := @Effect4.Program.Typed.reestablishes
--- `M6Edits`' report is at `Typed/Edits.lean`'s foot, which imports this module and proves six goals.
-#obligation_proved Effect4.Program.Typed.M3bWorld.preds_savedOk_mono :=
-  @Effect4.Program.Typed.preds_savedOk_mono
-#obligation_audit Effect4.Program.Typed.M3bWorld
-#typed_state_obligations Effect4.Program.Typed.M3bWorld ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])

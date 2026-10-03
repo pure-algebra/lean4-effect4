@@ -194,12 +194,3 @@ theorem chain_runs_reference :
   decide +kernel
 
 end Test.Program.LayerDenotation
-
-#print axioms Test.Program.LayerDenotation.hit_reads
-#print axioms Test.Program.LayerDenotation.built_reads
-#print axioms Test.Program.LayerDenotation.memo_runs
-#print axioms Test.Program.LayerDenotation.memo_runs_reference
-#print axioms Test.Program.LayerDenotation.orDie_runs
-#print axioms Test.Program.LayerDenotation.orDie_runs_reference
-#print axioms Test.Program.LayerDenotation.chain_runs
-#print axioms Test.Program.LayerDenotation.chain_runs_reference

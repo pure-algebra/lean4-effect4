@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Typed.Commands.Evaluate
 # Laws.Program.Typed.Commands.Clauses.Iter — the generator's entry clause
 
 Concept 4 of `docs/core/semantics.md` (`step-deliver-preserves`, `step-loop-preserves`): the clause
-of `M6Ledger.step_deliver` / `step_loop` (through `evaluate_keeps`, `Commands/Evaluate.lean`) for
+of `deliver_preserves` / `step_loop` (through `evaluate_keeps`, `Commands/Evaluate.lean`) for
 `FiberOp.gen`, the generator's entry (`evaluateFiberR`, `Laws/Program/EvaluateR.lean`, the `gen`
 arm; `Effect.gen`, `internal/effect.ts:1175-1196`): the answer frame saved, the walk's first step
 (`interpRAt`'s `iterNext`, `walkR`) run from the body's start, and a resumed yield's code installed

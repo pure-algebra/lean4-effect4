@@ -55,9 +55,3 @@ theorem covers_iff (consumerNames : List String) :
     exact h atom
 
 end Effect4.Program.NativeAtom
-
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.NativeAtom.all_complete
-#print axioms Effect4.Program.NativeAtom.covers_iff
-

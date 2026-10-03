@@ -76,5 +76,3 @@ def StepPreserves (root : ProgramSource) (rootTy : EffTy) (cmd : RCmd) : Prop :=
     ∃ w', w.leHost w' ∧ TypedState root rootTy w' r.1 r.2 ∧ QueueOk root w' r.1 r.2
 
 end Test.Counterexamples.Machine.Semantics.H1Shapes
-
-#print axioms Test.Counterexamples.Machine.Semantics.H1Shapes.savedPosition_of_saved

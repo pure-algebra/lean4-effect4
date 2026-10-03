@@ -3,8 +3,8 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Spawn
 /-!
 # Laws.Program.Typed.Commands.Clauses.Command — the command-shaped evaluator clauses
 
-Concept 4 (the configuration invariant `I`); steps of `M6Ledger.step_deliver` and
-`M6Ledger.step_loop` through `evaluate_keeps` (`FiberClauseKeeps`). Three fiber operations whose
+Concept 4 (the configuration invariant `I`); steps of `deliver_preserves` and
+`loop_preserves` through `evaluate_keeps` (`FiberClauseKeeps`). Three fiber operations whose
 work is a machine step beside the fiber's own: `interruptAll` queues one `interruptTarget` per
 target and the `afterInterrupt` that awaits them (`Machine/Fibers.lean:1556-1564`), `runIn` links
 a fiber to a scope inline (`linkScope`, `:1005-1037`, the `link` command's step), and

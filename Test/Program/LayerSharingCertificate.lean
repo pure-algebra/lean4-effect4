@@ -102,17 +102,11 @@ theorem once_commands_done : once_s220.2 = [] := rfl
 theorem once_exit : (once_s220.1.fiber? Api.root).bind RunFiber.exit =
     some (.success (.nat 1)) := rfl
 theorem once_refs : once_s220.1.state.refs = [.nat 1] := rfl
-#print axioms once_prefix220
-#print axioms once_exit
-#print axioms once_refs
 
 theorem twice_commands_done : twice_s301.2 = [] := rfl
 theorem twice_exit : (twice_s301.1.fiber? Api.root).bind RunFiber.exit =
     some (.success (.nat 1)) := rfl
 theorem twice_refs : twice_s301.1.state.refs = [.nat 1] := rfl
-#print axioms twice_prefix301
-#print axioms twice_exit
-#print axioms twice_refs
 
 theorem once_run : (Api.run once 220 [] [] 16).outcome = .finished ∧
     (Api.run once 220 [] [] 16).machine = once_s220.1 :=
@@ -163,13 +157,6 @@ theorem provide_ref_twice (fuel : Nat) (hf : 301 ≤ fuel) :
   exact ⟨once_count.1, twice_count.1, twice_count.2.1.trans once_count.2.1.symm,
     once_count.2.2, twice_count.2.2⟩
 
-#print axioms replay_of_ticks
-#print axioms run_of_ticks
-#print axioms once_run
-#print axioms twice_run
-#print axioms once_count
-#print axioms twice_count
-#print axioms provide_ref_twice
 end Test.Program.LayerSharingContract
 
 run_cmd do

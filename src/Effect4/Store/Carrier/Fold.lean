@@ -326,28 +326,4 @@ def foldMap_pos_list_val {M : Type u} (unit : M) (op : M → M → M) (xs : List
 termination_by structural xs
 end
 
-
-/-! ## Receipts -/
-
-#print axioms cata_pos_list_val_eq
-#print axioms cata_val_unit
-#print axioms cata_val_bool
-#print axioms cata_val_nat
-#print axioms cata_val_str
-#print axioms cata_val_bytes
-#print axioms cata_val_list
-#print axioms cata_val_pair
-#print axioms cata_val_none
-#print axioms cata_val_some
-#print axioms cata_val_ctor
-#print axioms cata_val_ref
-#print axioms cata_val_handle
-#print axioms cata_val_negInt
-#print axioms cata_val_float
-#print axioms hom_eq_cata_val
-#print axioms hom_pos_list_val
-#print axioms cata_id_val
-#print axioms cata_id_pos_list_val
-
 end Effect4.Store
-

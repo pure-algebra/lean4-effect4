@@ -132,11 +132,4 @@ theorem hostBody_admitted (w : W) :
       (rootPoint 20) (EffTy.pure .nat) :=
   ⟨hostBody, [], rfl, hostBody_checks, ⟨rfl, fun _ _ _ h => nomatch h⟩, fun _ h => nomatch h⟩
 
-#print axioms sleep_code_typed
-#print axioms joinAll_typed
-#print axioms modify_typed
-#print axioms frontier_typed
-#print axioms joinsFiber_typed
-#print axioms hostTable_lawful
-#print axioms hostBody_admitted
 end Test.Counterexamples.TrivialPosts

@@ -916,13 +916,3 @@ theorem finish_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
       exact observed
 
 end Effect4.Program.Typed
-
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_evaluate :=
-  @Effect4.Program.Typed.evaluate_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_resume :=
-  @Effect4.Program.Typed.resume_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_exitDone :=
-  @Effect4.Program.Typed.exitDone_preserves
-#obligation_proved Effect4.Program.Typed.M6Ledger.step_finish :=
-  @Effect4.Program.Typed.finish_preserves
--- `M6Ledger`'s report runs at the foot of the last command module, which sees every proof.

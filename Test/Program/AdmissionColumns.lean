@@ -53,15 +53,6 @@ def dupTable : RowTable := [row "query" .nat, row "query" .string]
 theorem dupTable_located : Table.checkLawful dupTable ≠ none :=
   Table.checkLawful_of_not_lawful dupTable (by decide)
 
-#print axioms Effect4.Program.Table.findDup_eq_none_iff
-#print axioms Effect4.Program.Table.lawful_eq_true_iff
-#print axioms Effect4.Program.Table.checkLawful_eq_none_iff
-#print axioms Effect4.Program.Table.checkLawful_of_not_lawful
-#print axioms Effect4.Program.admitProgram
-#print axioms Effect4.Program.admitProgram_eq_ok
-#print axioms Effect4.Run.admitProgram_certificate
-#print axioms dupTable_located
-
 /-! ## Rows 127 and 149: the column check -/
 
 /-- A host row at the given request and answer columns (the data probe's `hostRow`). -/
@@ -150,45 +141,5 @@ is false
 #guard_msgs (error) in
 example : findEmptyColumnInTable [hostRow .nat (.except .never .never)] = none := by
   decide +kernel
-
-#print axioms Effect4.Program.emptyColumnAt_eq_none_iff
-#print axioms Effect4.Program.findEmptyColumnInTable_go_eq_none_iff
-#print axioms Effect4.Program.findEmptyColumnInTable_eq_none_iff
-#print axioms Effect4.Program.findEmptyColumnInEffTy_eq_none_iff
-#print axioms Effect4.Program.Typed.inhabited_of_fits
-#print axioms Effect4.Program.Typed.inhabited_of_hasTy
-#print axioms Effect4.Program.Typed.fits_of_inhabited_handleFree
-#print axioms Effect4.Program.Typed.Grows.refl
-#print axioms Effect4.Program.Typed.Grows.trans
-#print axioms Effect4.Program.Typed.Grows.fits
-#print axioms Effect4.Program.Typed.FreshFrom.addFiber
-#print axioms Effect4.Program.Typed.FreshFrom.addRef
-#print axioms Effect4.Program.Typed.FreshFrom.addPromise
-#print axioms Effect4.Program.Typed.FreshFrom.allocExternal
-#print axioms Effect4.Program.Typed.fits_handle_fresh
-#print axioms Effect4.Program.Typed.fits_of_inhabited_fresh
-#print axioms Effect4.Program.Typed.initialWorld_freshFrom
-#print axioms Effect4.Program.Typed.inhabited_iff_fits
-#print axioms Effect4.Program.Typed.inhabited_iff_handleFree
-#print axioms Effect4.Program.Typed.fiber_inhabited
-#print axioms Effect4.Program.Typed.cell_inhabited
-#print axioms Effect4.Program.Typed.promise_inhabited
-#print axioms Effect4.Program.Typed.handle_inhabited
-#print axioms Effect4.Program.Typed.inhabited_sub
-#print axioms Effect4.Program.Typed.inhabited_subN
-#print axioms Effect4.Program.Typed.inhabited_normalize
-#print axioms Effect4.Program.Typed.inhabited_join
-#print axioms Effect4.Program.Typed.admitColumn_iff
-#print axioms Effect4.Program.Typed.admitColumn_normalize
-#print axioms Effect4.Program.Typed.prod_never_nat_empty
-#print axioms Effect4.Program.Typed.except_never_never_empty
-#print axioms Effect4.Program.Typed.prod_never_nat_no_hasTy
-#print axioms Effect4.Program.Typed.except_never_never_no_hasTy
-#print axioms Effect4.Program.Typed.admitColumn_prod_never_nat
-#print axioms Effect4.Program.Typed.admitColumn_except_never_never
-#print axioms ce015_table_refused
-#print axioms ce015_program_refused
-#print axioms shared_key_not_fits
-#print axioms two_cells_inhabited
 
 end Test.Program.AdmissionColumns

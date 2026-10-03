@@ -474,7 +474,6 @@ theorem interruptFrom_eq (interp : RunInterp ν σ β ε δ ι α χ St κ) (fue
                [Cmd.evaluate target, Cmd.drainDue]))
          else (interruptEdit interp m who extra target t, true)) := rfl
 
-
 /-- The answer premise from a split on parking: a parked fiber's `resume` enters the queue
 under `I` and runs as a command; an inert one is a no-op (`inert_resume`) and only
 `[drainDue]` remains. The live-answer premise is imposed on the prepared machine. -/

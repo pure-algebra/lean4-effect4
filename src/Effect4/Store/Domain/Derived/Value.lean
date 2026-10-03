@@ -838,25 +838,4 @@ def docs : List ShapeDoc :=
 
 end ValueAcceptance
 
-/-! ## Receipts -/
-
-#print axioms ValueGen.ValC.toValVal
-#print axioms ValueGen.ValC.rawVal_toValVal
-#print axioms ValueGen.ValC.fitsVal
-#print axioms ValueGen.ValC.instCanonicalVal
-#print axioms ValueGen.KindC.toVal
-#print axioms ValueGen.KindC.ofVal_toVal
-#print axioms ValueGen.KindC.ofVal_exact
-#print axioms ValueGen.KindC.fits
-#print axioms ValueGen.KindC.instCanonical
-#print axioms ValueGen.ShapeC.toValShape
-#print axioms ValueGen.ShapeC.rawShape_toValShape
-#print axioms ValueGen.ShapeC.fitsShape
-#print axioms ValueGen.ShapeC.instCanonicalShape
-#print axioms ValueGen.ShapeDocC.toVal
-#print axioms ValueGen.ShapeDocC.ofVal_toVal
-#print axioms ValueGen.ShapeDocC.ofVal_exact
-#print axioms ValueGen.ShapeDocC.fits
-#print axioms ValueGen.ShapeDocC.instCanonical
-
 end Effect4.Store

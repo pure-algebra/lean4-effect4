@@ -313,6 +313,4 @@ theorem natBytes_zero : natBytes 0 = [] := rfl
 #guard be64 (2 ^ 64 + 1) = be64 1
 #guard natOfDigits [0x07, 0x9b] = 1947
 
-/-! ## Receipts -/
-
 end Effect4.Store

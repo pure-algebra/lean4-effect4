@@ -28,20 +28,6 @@ structure StraightEq (left right : NativeEff) : Prop where
   right_straight : Straight right = true
   same : ∀ env stores, meaning left env stores = meaning right env stores
 
-namespace StraightEqWanted
-
-/-- `straight-composition-agreement`: compare executions at their own sufficient budgets,
-with the exit/store observation of the existing denotation contract, E4-DEN-CE-003/004/005. -/
-theorem run_agrees (a b : NativeEff) (_h : StraightEq a b) (fa fb : Nat)
-    (_da : depth a ≤ fa) (_sa : 2 * steps a + 6 ≤ fa)
-    (_db : depth b ≤ fb) (_sb : 2 * steps b + 6 ≤ fb) :
-    ProofGraph.Obligation
-      ((Api.run a fa).outcome = .finished ∧ (Api.run b fb).outcome = .finished ∧
-        (Api.run a fa).exit = (Api.run b fb).exit ∧
-        (Api.run a fa).stores = (Api.run b fb).stores) := ⟨⟩
-
-end StraightEqWanted
-
 namespace StraightEq
 
 /-- Reflexivity on the admitted fragment; helper for the composition/run connector. -/
@@ -150,8 +136,5 @@ theorem run_agrees_at_bound {a b : NativeEff} (h : StraightEq a b) :
     (Nat.le_max_left _ _) (Nat.le_max_right _ _)
 
 end StraightEq
-
-#obligation_proved StraightEqWanted.run_agrees := @StraightEq.run_agrees
-#typed_state_obligations Effect4.Program.Denote.StraightEqWanted ceiling 0 using aesop
 
 end Effect4.Program.Denote

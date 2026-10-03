@@ -684,33 +684,6 @@ theorem settling_mask (root : ProgramSource) (w : World) (flag : Bool) (body : B
   exact TypedProg.pure hpost
 
 /-! FR-09's payload inversions, restated over the one judgment under their M3a names. -/
-namespace M3aAdmissionObligations
-
-theorem unguard_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
-    ProofGraph.Obligation (TypedProg root w ty (.vis (.inr (.unguard ex)) k) → ExitOk w ty ex) := ⟨⟩
-
-theorem finishFinalizer_payload_inv (root : ProgramSource) (w : World) (ty : EffTy) (ex : ExitV) (k : ExitV → RProgram) :
-    ProofGraph.Obligation (TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k) → ExitOk w ty ex) := ⟨⟩
-
-end M3aAdmissionObligations
-
-namespace M3aResidualObligations
-
-theorem settling_ref_allocation (_root : ProgramSource) (_w : World) (_h0 : HeapTypedAt _w ⟨0⟩ .nat) :
-    ProofGraph.Obligation (TypedProg _root _w (EffTy.pure .bool) refAllocGetProg) := ⟨⟩
-
-theorem settling_ref_preserves_nat (_w _w' : World) (_ordered : _w.leHost _w') (_h0 : HeapTypedAt _w ⟨0⟩ .nat) :
-    ProofGraph.Obligation (HeapTypedAt _w' ⟨0⟩ .nat) := ⟨⟩
-
-theorem settling_fork (_root : ProgramSource) (_w : World) (_child : Body) (_cert : EffTy)
-    (_hbody : BodyTyped _root _w _child _cert) :
-    ProofGraph.Obligation (TypedProg _root _w (EffTy.pure (.fiberOf _cert.answer _cert.error)) (forkProg _child)) := ⟨⟩
-
-theorem settling_mask (_root : ProgramSource) (_w : World) (_flag : Bool) (_body : Body) (_cert : EffTy)
-    (_hbody : BodyTyped _root _w _body _cert) :
-    ProofGraph.Obligation (TypedProg _root _w _cert (maskProg _flag _body)) := ⟨⟩
-
-end M3aResidualObligations
 
 /-! World weakening (ruling 2026-09-23, audit A4; decisions rows 87 and 135): typing survives
 every later world the host order allows. Every continuation of `TypedProg` is typed at the
@@ -794,7 +767,6 @@ theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty 
   | layerBuild p m scope lt h live memo =>
     exact .layerBuild p m scope lt (layerPointTyped_mono ord h) (scopeLive_mono ord.1 live)
       (memoLive_mono ord.1 memo)
-
 
 /-- Every store row's demand is upward closed (all 31 rows). -/
 theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
@@ -917,7 +889,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
 
 end Mono
 
-/-- **`TypedProg` is world-monotone** (closes `M3bWorld.typedProg_mono`; seat ALGEBRA's P2,
+/-- **`TypedProg` is world-monotone** (closes `typedProg_mono`; seat ALGEBRA's P2,
 2026-10-01). Every continuation clause already quantifies over later worlds, so only the
 leaves, the demands and the guard's body need transport. -/
 theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : RProgram)
@@ -1138,61 +1110,6 @@ theorem typedProg_rows_append :
 
 end RowsAppend
 
-namespace M3bWorld
-
-theorem strongValue_mono (w w' : World) (ty : Ty) (v : Val) :
-    ProofGraph.Obligation (w.leHost w' → Fits w v ty → Fits w' v ty) := ⟨⟩
-
-theorem strongExit_mono (w w' : World) (ty : EffTy) (ex : ExitV) :
-    ProofGraph.Obligation (w.leHost w' → ExitOk w ty ex → ExitOk w' ty ex) := ⟨⟩
-
-theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : RProgram) :
-    ProofGraph.Obligation (w.leHost w' → TypedProg root w ty p → TypedProg root w' ty p) := ⟨⟩
-
-/-- A saved stack transports along the host order (row 135). -/
-theorem stackAccepts_mono (root : ProgramSource) (w w' : World) (a b : EffTy)
-    (s : List ScopeFrame) : ProofGraph.Obligation (w.leHost w' →
-      Contracts.StackAccepts (TypedProg root) ExitOk (frameProtocols root) w a b s →
-      Contracts.StackAccepts (TypedProg root) ExitOk (frameProtocols root) w' a b s) := ⟨⟩
-
-/-- A saved frame (code and stack) transports along the host order (row 135). -/
-theorem savedOk_mono (root : ProgramSource) (w w' : World) (final : EffTy) (x : RSaved) :
-    ProofGraph.Obligation (w.leHost w' →
-      Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final x →
-      Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w' final x) := ⟨⟩
-
-end M3bWorld
-
 end Effect4.Program.Typed
 
-#obligation_proved Effect4.Program.Typed.M3aResidualObligations.settling_ref_allocation :=
-  @Effect4.Program.Typed.settling_ref_allocation
-#obligation_proved Effect4.Program.Typed.M3aResidualObligations.settling_ref_preserves_nat :=
-  @Effect4.Program.Typed.settling_ref_preserves_nat
-#obligation_proved Effect4.Program.Typed.M3aResidualObligations.settling_fork :=
-  @Effect4.Program.Typed.settling_fork
-#obligation_proved Effect4.Program.Typed.M3aResidualObligations.settling_mask :=
-  @Effect4.Program.Typed.settling_mask
-
-#obligation_proved Effect4.Program.Typed.M3aAdmissionObligations.unguard_payload_inv :=
-  @Effect4.Program.Typed.unguard_payload_inv
-#obligation_proved Effect4.Program.Typed.M3aAdmissionObligations.finishFinalizer_payload_inv :=
-  @Effect4.Program.Typed.finishFinalizer_payload_inv
-
-#typed_state_obligations Effect4.Program.Typed.M3aAdmissionObligations ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])
-#typed_state_obligations Effect4.Program.Typed.M3aResidualObligations ceiling 0
-  using aesop (rule_sets := [Effect4.TypedState])
-
-#obligation_proved Effect4.Program.Typed.M3bWorld.strongValue_mono :=
-  @Effect4.Program.Typed.strongValue_mono
-#obligation_proved Effect4.Program.Typed.M3bWorld.strongExit_mono :=
-  @Effect4.Program.Typed.strongExit_mono
-#obligation_proved Effect4.Program.Typed.M3bWorld.typedProg_mono :=
-  @Effect4.Program.Typed.typedProg_mono
-#obligation_proved Effect4.Program.Typed.M3bWorld.stackAccepts_mono :=
-  fun _ _ _ _ _ _ ord h => Effect4.Program.Typed.Contracts.stackAccepts_mono ord h
-#obligation_proved Effect4.Program.Typed.M3bWorld.savedOk_mono :=
-  @Effect4.Program.Typed.savedOk_mono
--- The scope's audit and report run at the foot of `Typed/Assembly.lean`, after the bundle's
--- `SavedOk` transport joins it (row 87: `M3bWorld.preds_savedOk_mono`), so it is counted once.
+-- `SavedOk` transport joins it (row 87: `preds_savedOk_mono`), so it is counted once.

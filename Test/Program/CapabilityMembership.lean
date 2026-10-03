@@ -60,13 +60,4 @@ theorem present_memo_valid : Val.validIn withMemo.state (Val.memoMap ⟨0⟩) = 
   live_validIn (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fits_live withMemo Ty.memoMap _ present_memo_fits)
 
-#print axioms raw_byte_refused
-#print axioms refMake_raw_refused
-#print axioms absent_memo_refused
-#print axioms present_memo_fits
-#print axioms scalar_unknown
-#print axioms present_memo_valid
-#print axioms Effect4.Program.Typed.fits_validIn
-#print axioms Effect4.Program.Typed.live_validIn
-
 end Test.Program.CapabilityMembership

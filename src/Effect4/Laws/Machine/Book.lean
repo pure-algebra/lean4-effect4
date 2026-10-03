@@ -431,11 +431,6 @@ theorem fiberMeans_context {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
   congrArg FiberControl.context h.1
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-/-- Provenance is compared in the machine ledger, independently of fiber updates. -/
-theorem M1OriginBook.bookMeans_forks (_h : BookMeans C S m₁ m₂) :
-    ProofGraph.Obligation (m₁.forks = m₂.forks) := ⟨⟩
-
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_interruptedCause {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) :
     core₁.interruptedCause f₁.frame = core₂.interruptedCause f₂.frame :=
@@ -548,10 +543,6 @@ theorem book_fiber?_cases (h : BookMeans C S m₁ m₂) (id : FiberId) :
     cases h₂ : m₂.fiber? id with
     | none => rw [h₁, h₂] at hf; exact absurd hf not_false
     | some g => rw [h₁, h₂] at hf; exact Or.inr ⟨f, g, rfl, rfl, hf⟩
-
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-theorem M1OriginBook.bookMeans_originOf (_h : BookMeans C S m₁ m₂) (id : FiberId) :
-    ProofGraph.Obligation (m₁.originOf id = m₂.originOf id) := ⟨⟩
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The same member lookup and the same first-match ledger give the same origin.
@@ -990,18 +981,6 @@ def HooksAgree (StOk : St → Prop) (C : κ₁ → κ₂ → Prop) (S : φ₁ �
         C (prepareAsyncAnswer i₁ a id token answer).2
           (prepareAsyncAnswer i₂ b id token answer).2
 
-/-- The advance lemma (the timer, A4): fire by fire, the two instances drain the same owed
-resume, drive and flush in the book, and recur on machines in the book. -/
-theorem M1Clock.book_advanceState (_hstep : StepAgrees i₁ i₂ StOk C S)
-    (_hclock : ∀ millis s, StOk s →
-      StOk (i₁.clockStep millis s).2 ∧ (i₁.clockStep millis s).2 = (i₂.clockStep millis s).2 ∧
-        ListRel (OwedMeans C) (i₁.clockStep millis s).1.toList (i₂.clockStep millis s).1.toList)
-    (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
-      (b : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂), MachineOk StOk a → BookMeans C S a b →
-      MachineOk StOk (advanceState i₁ fuel millis rounds a).1 ∧
-        BookMeans C S (advanceState i₁ fuel millis rounds a).1 (advanceState i₂ fuel millis rounds b).1 ∧
-        (advanceState i₁ fuel millis rounds a).2 = (advanceState i₂ fuel millis rounds b).2) := ⟨⟩
-
 @[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem book_advanceState (hstep : StepAgrees i₁ i₂ StOk C S)
     (hclock : ∀ millis s, StOk s →
@@ -1330,10 +1309,3 @@ theorem bookMeans_controls_forks {m₁ : RunMachine ν σ Val Err Defect FiberId
 end Observation
 
 end Effect4.Machine
-
-
-#obligation_proved Effect4.Machine.M1Clock.book_advanceState := @Effect4.Machine.book_advanceState
-
-#obligation_proved Effect4.Machine.M1OriginBook.bookMeans_forks := @Effect4.Machine.BookMeans.forks
-#obligation_proved Effect4.Machine.M1OriginBook.bookMeans_originOf := @Effect4.Machine.BookMeans.originOf
-#typed_state_obligations Effect4.Machine.M1OriginBook ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

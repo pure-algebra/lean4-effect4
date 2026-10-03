@@ -68,11 +68,6 @@ def retained (test : Term) : NativeEff :=
 #guard Api.roundTrip miss = .ok miss
 #guard Api.ofBytes (Api.bytesOf hit) = some hit
 
-#print axioms Effect4.Program.Sched.code_intro
-#print axioms Effect4.Program.Sched.run_eq_ref
-#print axioms Effect4.Program.caughtErrorValue?_first
-#print axioms Effect4.Program.caughtErrorValue?_keys
-
 /-! ## The tag residual (DI-39, DI-17; part 4 commit 3, 2026-09-12)
 
 Every retained failure must fit the inferred column. Mixed columns remain joined unless
@@ -121,11 +116,6 @@ def twoFailValue : CauseV := ⟨[.fail (.tagged "B" "x") .empty, .fail (.tagged 
 #guard SingleFail (Cause.fail (.tagged "A" "m"))
 #guard caughtErrorValue? [] (tagTest "A" 0) twoFailValue = none
 #guard caughtErrorValue? [] (tagTest "A" 0) (Cause.fail (.tagged "A" "m")) = some (.list [.str "A", .str "m"])
-#print axioms Effect4.Program.catchIf_miss_admits
-#print axioms Effect4.Program.Ty.diffTag_sound
-#print axioms Effect4.Program.tagTest?_weaken
-#print axioms Effect4.Program.catchIfError_weaken
-
 
 -- Catching an entire tagged column does not require a single failure.
 def allCaught : NativeEff := .catchIf (tagTest "A" 0)
@@ -158,10 +148,5 @@ def tagInterrupt : NativeEff := .catchIf (tagTest "A" 0)
 #guard typeOf nativeSignature tagInterrupt = some ⟨.nat, .never, .empty⟩
 #guard (Api.run tagDefect 300).exit = some (.failure (.die (.user 3)))
 #guard (Api.run tagInterrupt 300).exit = some (.failure (.interrupt none))
-
-#print axioms Effect4.Program.catchIf_miss_admits_of_le_one
-#print axioms Effect4.Program.catchIf_miss_allCaught
-#print axioms Effect4.Program.catchIf_miss_error_admits
-#print axioms Effect4.Program.catchIf_handler_error_admits
 
 end Test.Program.CatchIfContract

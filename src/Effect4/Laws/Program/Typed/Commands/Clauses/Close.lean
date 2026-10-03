@@ -3,8 +3,8 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Command
 /-!
 # Laws.Program.Typed.Commands.Clauses.Close — the close walk's evaluator clauses
 
-Concept 4 (the configuration invariant `I`); steps of `M6Ledger.step_deliver` and
-`M6Ledger.step_loop` through `evaluate_keeps` (`FiberClauseKeeps`). The close walk's counted
+Concept 4 (the configuration invariant `I`); steps of `deliver_preserves` and
+`loop_preserves` through `evaluate_keeps` (`FiberClauseKeeps`). The close walk's counted
 `Iterator` entry (`closeIter`, `evaluateFiberR`, `Laws/Program/EvaluateR.lean`; rc.112
 `scopeCloseFinalizers`, `internal/effect.ts:3800-3830`): the sequential strategy saves the answer
 frame and runs the walk's generator (`closeSeqStepR`, `Laws/Program/InterpR.lean`), each finalizer
@@ -165,7 +165,6 @@ theorem clause_closeIter_sequential (root : ProgramSource) (rootTy : EffTy) (ord
         (leHost_refl w) ex hex),
       hostStack_push (frameAccepts_iter (closeSeqProtocol inv)) (hostStack_push answer stack),
       ⟨prov.recorded, prov.deferred⟩⟩
-
 
 /-! ## The parallel walk -/
 

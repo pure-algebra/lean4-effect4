@@ -20,7 +20,6 @@ theorem universal_missing_premise_false :
   obtain ⟨es, impossible, _⟩ := h root point .getId (some [0, 0]) [] decoded
   cases impossible
 
-#print axioms universal_missing_premise_false
 end Test.Counterexamples.ActionAtRaceAllPremise
 
 /-! E4-SCHED-CE-005: all three premise-free action relations fail when the two
@@ -66,7 +65,4 @@ theorem raceAll_counterexample :
   have bad := h.machine.nextId
   change 0 = 1 at bad
   cases bad
-#print axioms fork_counterexample
-#print axioms forkIn_counterexample
-#print axioms raceAll_counterexample
 end Test.Counterexamples.ActionsPremises

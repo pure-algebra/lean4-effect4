@@ -8,7 +8,6 @@ open Effect4 Effect4.Program Effect4.Machine
 set_option maxRecDepth 8192
 set_option maxHeartbeats 4000000
 
-
 def acquire : NativeEff := .perform (.external 0) (.lit .unit)
 def answer (v : Val) : Completion Val Err Defect FiberId Ann := .ofExit (.success v)
 def program : NativeEff :=

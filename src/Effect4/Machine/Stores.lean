@@ -141,7 +141,6 @@ structure Capture where
   root : Nat := 0
 deriving DecidableEq, Repr
 
-
 /-- The scope finalizer *name* alphabet. `Effect4.Scope` stores a `φ`; giving `φ` these arms is
 what lets a finalizer name *mean* an operation on another scope or on a fiber — the open half of
 `SCOPE-FB-FINALIZER-MEANING` (`docs/research/SCOPE-DAG.md:228`). -/
@@ -215,8 +214,6 @@ theorem ctxImage_toVal (ctx : Ctx) :
     ctxImage.toVal ctx =
       Value.fiberContext (Env.encode ctx.services) (.nat ctx.maxOpsBeforeYield)
         (.bool ctx.preventYield) := rfl
-
-
 
 namespace Val
 
@@ -2174,7 +2171,6 @@ identity and the value carries nothing. -/
 def stackAnnotationsOf (fiber : FiberId) : ReasonAnnotations Ann where
   entries := [(stackKey fiber, ())]
   keysNodup := by simp
-
 
 /-- A batch wake runs on a waiter list (`Task.wake`, the scheduler surface): by the key's
 family. A Deferred's list owes its batch the stored completion inline (`wakeBatch`); the phase

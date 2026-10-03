@@ -58,7 +58,6 @@ theorem frame_step_interruptedCause (interp : PrimInterp EffName EffThunk Val Er
     | (injection h with h'; subst h'; rfl)
     | (split at h <;> (injection h with h'; subst h'; rfl))
 
-
 abbrev NFiber := RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx
 abbrev NInterp := RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
 
@@ -93,7 +92,6 @@ theorem finalizerOr_interruptedCause (interp : NInterp) (m : NativeMachine)
       · exact stepFrame_interruptedCause _ _ _ _
     · exact stepFrame_interruptedCause _ _ _ _
 
-
 theorem withFiber_interruptedCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction) :
     (evaluatePrim.withFiber interp m f yielding action).fiber.frame.interruptedCause =
@@ -105,7 +103,6 @@ theorem withFiber_interruptedCause (interp : NInterp) (m : NativeMachine)
       FrameFiber.setFiberInterruptible]
   all_goals repeat' first | rfl | split
   all_goals simp_all
-
 
 theorem evaluatePrim_interruptedCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
@@ -120,7 +117,6 @@ theorem evaluatePrim_interruptedCause (interp : NInterp) (m : NativeMachine)
     | split
   all_goals simp_all
   all_goals repeat' first | rfl | split
-
 
 theorem exitScoped_interruptedCause (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :
@@ -370,8 +366,6 @@ theorem iteration_exit (p : NativeEff) (table : RowTable)
     simpa only [iteration, hi] using
       (evaluateNative_exit p table it.machine it.fiber it.yielding).trans
         ((injectYield_exit m _ yielding it hi).trans (runloopTop_exit f))
-
-
 
 /-- The owner-approved interruption observation; consistency is an internal invariant. -/
 def Interrupted (f : NFiber) : Prop := f.interruptPending = true ∨ f.exit.isSome = true

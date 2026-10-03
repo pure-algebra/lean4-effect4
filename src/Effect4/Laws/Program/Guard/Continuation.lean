@@ -281,6 +281,4 @@ theorem registrationQueue_driveStep_closeParAwait (p : NativeEff) (table : RowTa
     simp only [driveStep, lookup, settle, List.nil_append, List.cons_append]
     exact ⟨True.intro, registration.2⟩
 
-
-
 end Effect4.Program.Guard

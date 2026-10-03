@@ -193,5 +193,4 @@ theorem guardQueue_settle (p : NativeEff) (table : RowTable)
   cases ho : it.outcome <;> try exact joined
   exact guardQueue_nil p table _
 
-
 end Effect4.Program.Guard.SettleQueue

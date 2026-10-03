@@ -116,31 +116,6 @@ theorem currentTimeMillis_scoped :
 
 end Effect
 
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.Authoring.Ref.make_scoped
-#print axioms Effect4.Program.Authoring.Ref.get_scoped
-#print axioms Effect4.Program.Authoring.Ref.set_scoped
-#print axioms Effect4.Program.Authoring.Ref.getAndSet_scoped
-#print axioms Effect4.Program.Authoring.Ref.setAndGet_scoped
-#print axioms Effect4.Program.Authoring.Ref.update_scoped
-#print axioms Effect4.Program.Authoring.Ref.getAndUpdate_scoped
-#print axioms Effect4.Program.Authoring.Ref.updateAndGet_scoped
-#print axioms Effect4.Program.Authoring.Ref.updateSome_scoped
-#print axioms Effect4.Program.Authoring.Ref.getAndUpdateSome_scoped
-#print axioms Effect4.Program.Authoring.Ref.updateSomeAndGet_scoped
-#print axioms Effect4.Program.Authoring.Ref.modify_scoped
-#print axioms Effect4.Program.Authoring.Ref.modifySome_scoped
-#print axioms Effect4.Program.Authoring.Deferred.make_scoped
-#print axioms Effect4.Program.Authoring.Deferred.isDone_scoped
-#print axioms Effect4.Program.Authoring.Deferred.poll_scoped
-#print axioms Effect4.Program.Authoring.Deferred.succeed_scoped
-#print axioms Effect4.Program.Authoring.Deferred.fail_scoped
-#print axioms Effect4.Program.Authoring.Deferred.await_scoped
-#print axioms Effect4.Program.Authoring.Scope.make_scoped
-#print axioms Effect4.Program.Authoring.Effect.sleep_scoped
-#print axioms Effect4.Program.Authoring.Effect.currentTimeMillis_scoped
-
 end Effect4.Program.Authoring
 
 /-! ## Acceptance guards for the generated row lemmas
@@ -159,4 +134,3 @@ example : Src.Scoped (bind "d" Deferred.make (Deferred.succeed (var "d") (nat 7)
   authoring_scoped
 
 end Effect4.Program.AuthoringRowsLawsGuards
-

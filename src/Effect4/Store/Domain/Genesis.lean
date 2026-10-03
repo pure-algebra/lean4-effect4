@@ -48,6 +48,4 @@ theorem nodeOf_document' (d : Document) : nodeOf d = schemaNode d := nodeOf_docu
 /-- The meta-schema fits its own shape: the genesis theorem, closed. -/
 theorem metaSchema_fits : (shape Document).accepts (toVal metaSchema) = true := metaSchema_accepts
 
-/-! ## Receipts -/
-
 end Effect4.Store

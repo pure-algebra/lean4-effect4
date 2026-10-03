@@ -86,5 +86,4 @@ did not evaluate to `true`
 #guard kind (replayEval (interpOf pBindSync) 2 ([Api.evaluate] ++ []) (machineOf pBindSync)) ==
   kind (replayEval (interpOf pBindSync) 2 [] frontierAt2.machine)
 
-#print axioms naive_append_fails
 end Test.Runtime.TapeAction

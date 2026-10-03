@@ -231,5 +231,4 @@ theorem returnedFiber_guardSafe (m : NativeMachine) (f : NFiber) (it : NIter)
       (internalKeys_fiber member (fiberKeys token request park external hk))
     exact Nat.lt_irrefl _ (tokenEq ▸ bound)
 
-
 end Effect4.Program.Guard.Settle

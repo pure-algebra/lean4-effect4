@@ -3,7 +3,7 @@ import Effect4.Laws.Program.Typed.Commands.Registration
 /-!
 # Test.Program.RegistrationYield — a registration marker under an injected yield
 
-Placement: semantics Concept 4 (the configuration invariant `I`), question `M6Ledger.step_loop`;
+Placement: semantics Concept 4 (the configuration invariant `I`), question `loop_preserves`;
 decisions row 188 (b), `E4-TYPED-CE-033`. The historical refutation is pinned unchanged at
 `docs/research/2026-10-02-claude-lead/witnesses/LoopMarkerYield.lean` (checked at `53caad0f`):
 `beginRace` leaves a race's registration marker current with `loop` queued; at a reached budget
@@ -743,19 +743,3 @@ theorem result_typed : ∃ w', world.leHost w' ∧
 end Double
 
 end Test.Program.RegistrationYield
-
-#print axioms Test.Program.RegistrationYield.config_typed
-#print axioms Test.Program.RegistrationYield.result_eq
-#print axioms Test.Program.RegistrationYield.output_not_saved
-#print axioms Test.Program.RegistrationYield.yieldCurrent_typed
-#print axioms Test.Program.RegistrationYield.typedState_of
-#print axioms Test.Program.RegistrationYield.Single.output_typed
-#print axioms Test.Program.RegistrationYield.Single.result_typed
-#print axioms Test.Program.RegistrationYield.Interrupt.config_typed
-#print axioms Test.Program.RegistrationYield.Interrupt.result_eq
-#print axioms Test.Program.RegistrationYield.Interrupt.output_typed
-#print axioms Test.Program.RegistrationYield.Interrupt.result_typed
-#print axioms Test.Program.RegistrationYield.Double.config_typed
-#print axioms Test.Program.RegistrationYield.Double.result_eq
-#print axioms Test.Program.RegistrationYield.Double.output_typed
-#print axioms Test.Program.RegistrationYield.Double.result_typed

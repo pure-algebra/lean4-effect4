@@ -150,10 +150,4 @@ example (root : ProgramSource) (w : Typed.World) :
     (fun w' _ _ _ => TypedProg.pure (strongExit_success w' unitTy Val.unit trivial))
     (fun _ _ _ fits _ => fits)
 
-#print axioms typedProg_not_bind_closed
-#print axioms catchNat_typed
-#print axioms toUnit_typed
-#print axioms bind_not_typed
-#print axioms guard_bind_not_closed
-#print axioms seq_sample
 end Test.Program.TypedProgBindRed

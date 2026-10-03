@@ -1359,6 +1359,4 @@ def sampleEntry : Val :=
 #guard Val.encode? sampleEntry = some (Val.encode sampleEntry)
 #guard (Val.encode? sampleEntry).bind Val.decode = some sampleEntry
 
-/-! ## Receipts -/
-
 end Effect4.Store

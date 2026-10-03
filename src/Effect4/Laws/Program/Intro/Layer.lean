@@ -357,5 +357,4 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
     simp only [prepareR_pure]
     exact codeMeans_badShape root
 
-
 end Effect4.Program.Sched

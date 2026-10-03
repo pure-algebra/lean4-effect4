@@ -102,18 +102,4 @@ def p42Node : Node :=
 #guard probeEntry = ⟨0, .«export», probeSchemaAddress, Canonical.toVal Templates.entry⟩
 #guard probeEntry.payload = sampleEntry
 
-/-! ## Axiom receipts -/
-
-#print axioms Effect4.Store.outcomeIs
-#print axioms Effect4.Store.refusedWith
-#print axioms Effect4.Store.afterPut
-#print axioms Effect4.Store.probeSchema
-#print axioms Effect4.Store.probeEntry
-#print axioms Effect4.Store.probeStore
-#print axioms Effect4.Store.probeWord
-#print axioms Effect4.Store.probeLocal
-#print axioms seededSpec
-#print axioms seeded
-#print axioms p42Node
-
 end Test.Store.ProbeContract

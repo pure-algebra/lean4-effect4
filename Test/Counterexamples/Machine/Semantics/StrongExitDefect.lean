@@ -31,5 +31,4 @@ theorem bad_shape_still_admitted (StrongValue : TWorld → Ty → Val → Prop)
     simp only [List.mem_singleton] at mem
     cases mem
 
-#print axioms bad_shape_still_admitted
 end Test.Counterexamples.StrongExitDefect

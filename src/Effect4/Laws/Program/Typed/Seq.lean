@@ -109,7 +109,7 @@ theorem guardBind_typed (root : ProgramSource) {w : World} {mid ty : EffTy} {kin
 callback. It is typed at `ty` when the body is typed at `mid`, the scope is present, the context
 the callback restores fits, and every exit `mid` admits fits `ty`. The callback is typed only at
 this run position (`TypedProg.scopedGuard`); as code it is not (`E4-TYPED-CE-034`). Consumer: the
-`scoped` arm of `M6Ledger.step_loop` and `M6Ledger.step_deliver`. -/
+`scoped` arm of `loop_preserves` and `deliver_preserves`. -/
 theorem scopedGuardBind_typed (root : ProgramSource) {w : World} {mid ty : EffTy} {a : RProgram}
     {prev : Ctx} {sc : Nat} {j : ExitV → RProgram} (ha : TypedProg root w mid a)
     (live : ScopeLive w sc) (services : ServicesFit w prev.services)

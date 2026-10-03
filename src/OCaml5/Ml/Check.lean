@@ -500,7 +500,6 @@ end
 def checkExprN (env : Env) (site : String) (e : Expr) : List Diag :=
   checkExpr env site .nonTail e
 
-
 /-! ## Declarations -/
 
 private def tysOfField (f : Field) : List Ty := [f.ty]

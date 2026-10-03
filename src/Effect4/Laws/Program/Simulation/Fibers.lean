@@ -94,17 +94,6 @@ theorem FMeans.stack (h : FMeans root f₁ f₂) : StackMeans root f₁.frame.st
 theorem FMeans.maskInv (h : FMeans root f₁ f₂) : MaskInv f₂.frame.interruptible f₂.frame.stack :=
   h.means.2.2.2.2.2
 
-theorem M1OriginFibers.FMeans_mk' (_hid : f₁.id = f₂.id) (_hpk : f₁.parked = f₂.parked)
-    (_hctx : f₁.context = f₂.context) (_hrun : f₁.running = f₂.running)
-    (_hpend : f₁.pending = f₂.pending) (_hfin : f₁.finalizing = f₂.finalizing)
-    (_hex : f₁.exit = f₂.exit) (_hoc : f₁.currentOpCount = f₂.currentOpCount)
-    (_hmo : f₁.maxOpsBeforeYield = f₂.maxOpsBeforeYield) (_hpy : f₁.preventYield = f₂.preventYield)
-    (_hyo : f₁.yieldOverride = f₂.yieldOverride) (_hobs : f₁.observers = f₂.observers)
-    (_hch : f₁.children = f₂.children)
-    (_hdisp : DispatcherMeans (CodeMeans root) f₁.dispatcher f₂.dispatcher)
-    (_hS : Means root f₁.frame f₂.frame) : ProofGraph.Obligation (
-    FMeans root f₁ f₂) := ⟨⟩
-
 /-- The relation from its fields. -/
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem FMeans.mk' (hid : f₁.id = f₂.id) (hpk : f₁.parked = f₂.parked)
@@ -255,10 +244,6 @@ theorem FMeans.enqueue (h : FMeans root f₁ f₂) (priority : Nat) {t₁ : FTas
     h.preventYield h.yieldOverride h.observers h.children (dispatcherMeans_enqueue h.dispatcher priority ht)
     h.means
 
-theorem M1OriginFibers.fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
-    (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) : ProofGraph.Obligation (
-    FMeans root (RunFiber.make id c₁ flag budget ctx) (RunFiber.make id c₂ flag budget ctx)) := ⟨⟩
-
 /-- A fresh fiber over related programs. -/
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
@@ -287,9 +272,6 @@ theorem BMeans.middleware (h : BMeans root m₁ m₂) :
 theorem BMeans.armed (h : BMeans root m₁ m₂) : m₁.armed = m₂.armed := h.2.2.2.2.2.2.1
 theorem BMeans.state (h : BMeans root m₁ m₂) : m₁.state = m₂.state := h.2.2.2.2.2.2.2.1
 theorem BMeans.stuck (h : BMeans root m₁ m₂) : m₁.stuck = m₂.stuck := h.2.2.2.2.2.2.2.2.1
-
-theorem M1OriginFibers.BMeans_forks (_h : BMeans root m₁ m₂) :
-    ProofGraph.Obligation (m₁.forks = m₂.forks) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem BMeans.forks (h : BMeans root m₁ m₂) : m₁.forks = m₂.forks := BookMeans.forks h
@@ -391,18 +373,9 @@ theorem raceMeans_registering {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (Code
 theorem raceMeans_programs {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (CodeMeans root) r₁ r₂) :
     ListRel (CodeMeans root) r₁.programs r₂.programs := h.2.2.2.2.2.2.1
 
-theorem M1OriginFibers.raceMeans_nextSite {r₁ : FRace} {r₂ : RRace} (_h : RaceMeans (CodeMeans root) r₁ r₂) : ProofGraph.Obligation (
-    r₁.nextSite = r₂.nextSite) := ⟨⟩
-
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem raceMeans_nextSite {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (CodeMeans root) r₁ r₂) :
     r₁.nextSite = r₂.nextSite := h.2.2.2.2.2.2.2
-
-theorem M1OriginFibers.raceMeans_mk' {r₁ : FRace} {r₂ : RRace} (_hid : r₁.id = r₂.id) (_hhost : r₁.host = r₂.host)
-    (_htok : r₁.token = r₂.token) (_hst : r₁.state = r₂.state) (_hsettled : r₁.settled = r₂.settled)
-    (_hreg : r₁.registering = r₂.registering) (_hprog : ListRel (CodeMeans root) r₁.programs r₂.programs)
-    (_hsite : r₁.nextSite = r₂.nextSite) : ProofGraph.Obligation (
-    RaceMeans (CodeMeans root) r₁ r₂) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem raceMeans_mk' {r₁ : FRace} {r₂ : RRace} (hid : r₁.id = r₂.id) (hhost : r₁.host = r₂.host)
@@ -476,13 +449,6 @@ end Machine
 
 /-! ## The invariant, at the shapes the arms produce -/
 
-theorem M1Origin.pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
-    ProofGraph.Obligation (PendingOk (RunFiber.make id c flag budget ctx : FRun)) := ⟨⟩
-
-theorem M1OriginFibers.make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
-    (ctx : Ctx) : ProofGraph.Obligation (
-    (RunFiber.make id c flag budget ctx : FRun).pending = []) := ⟨⟩
-
 @[aesop norm simp (rule_sets := [Effect4.Stores])]
 theorem make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
     (ctx : Ctx) :
@@ -533,6 +499,3 @@ theorem machineOk_mapFibers {m : FMachine} (hok : MachineOk StoresOk m) {g : FRu
   exact hg f' (hok.2 f' hf')
 
 end Effect4.Program.Sched
-
-#obligation_proved Effect4.Program.Sched.M1OriginFibers.BMeans_forks := @Effect4.Program.Sched.BMeans.forks
-#typed_state_obligations Effect4.Program.Sched.M1OriginFibers ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

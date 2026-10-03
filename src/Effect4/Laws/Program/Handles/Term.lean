@@ -213,7 +213,7 @@ Placement:
 1. Concept4 native value invariant; Concept1 identifies the value boundary.
 2. Serves the value boundary: `lit_toVal_handles` is read by the layer arm
    (`Typed/LayerArm.lean`), and the subset laws are the register's evidence that terms
-   mint no frames (`E4-TYPED-CE-040`). `M7.exitHandles_valid` is proved by the typed route
+   mint no frames (`E4-TYPED-CE-040`). `exitHandles_valid` is proved by the typed route
    (`Typed/Commands/Clauses/All.lean`), which supersedes row 180's native invariant.
 3. Actual nativeAtom/evalTerm success, arbitrary values/environments, ALL raw
    Store.Val.handles; no typing or registered-input premise on the subset laws.

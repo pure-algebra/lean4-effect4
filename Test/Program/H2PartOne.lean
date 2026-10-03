@@ -103,22 +103,6 @@ theorem missingService_current_code_admitted (root : ProgramSource) (w : W) (ty 
     TypedProg root w ty (.pure (.failure (Cause.die .missingService))) :=
   TypedProg.pure (missingService_admitted_at_any_type w ty)
 
-#print axioms old_base_badName_fits
-#print axioms base_badName_refused
-#print axioms base_notImplemented_refused
-#print axioms clean_still_allows_badName
-#print axioms badName_refused
-#print axioms notImplemented_refused
-#print axioms bad_current_code_refused
-#print axioms notImplemented_current_code_refused
-#print axioms ordinary_die_shape
-#print axioms user_die_admitted
-#print axioms user_current_code_admitted
-#print axioms missingService_admitted_at_any_type
-#print axioms missingService_empty_admitted
-#print axioms missingService_nonempty_admitted
-#print axioms missingService_current_code_admitted
-
 theorem interrupt_admitted (w : W) (ty : EffTy) (who : Option FiberId) :
     ExitOk w ty (.failure (Cause.interrupt who)) := by
   apply strongExit_of_clean w ty _ rfl
@@ -127,8 +111,6 @@ theorem interrupt_admitted (w : W) (ty : EffTy) (who : Option FiberId) :
   simp only [Cause.interrupt_reasons, List.mem_singleton] at member
   subst member
   rfl
-
-#print axioms interrupt_admitted
 
 /-! Race failure-buffer controls. The whole historical payload predicate isolates the missing
 exclusion; the current predicate refuses both forbidden buffers. The actual raceComplete
@@ -273,21 +255,7 @@ theorem raceComplete_publishes_notImplemented :
       (.failure Cause.empty)).accepted = some (.failure (Cause.die .notImplemented)) :=
   raceComplete_packages_buffer _
 
-#print axioms old_admitted
-#print axioms old_badName_admitted
-#print axioms old_notImplemented_admitted
-#print axioms new_badName_refused
-#print axioms new_notImplemented_refused
-#print axioms new_admitted
-#print axioms user_die_admitted
-#print axioms interrupt_admitted
-#print axioms missingService_admitted
-#print axioms raceComplete_packages_buffer
-#print axioms last_empty_failure_typed
-#print axioms raceComplete_publishes_badName
-#print axioms raceComplete_publishes_notImplemented
 end RaceFailureBuffers
-
 
 /-! E4-TYPED-CE-008: retained part-two saved-frame witness from the model-probe audit.
 The local FullExitOk additionally refuses missingService at an empty requirement row.
@@ -412,13 +380,6 @@ theorem output_bad (w : W) : ¬ FullExitOk w outer (.failure missing) := by
   change true = false at excluded
   exact Bool.noConfusion excluded
 
-#print axioms old_loop_admitted
-#print axioms loop_refused
-#print axioms loop_kept_admitted
-#print axioms input_ok
-#print axioms provenance
-#print axioms output_eq
-#print axioms output_bad
 end MissingServiceTransport
 
 /-! ## Row 117's presence clause, measured (seat D1, 2026-10-01)
@@ -527,20 +488,5 @@ theorem load_presence_needs_closed_row (fuel compileFuel : Nat) :
   rfl
 
 end PresenceMeasure
-
-open PresenceMeasure in
-#print axioms next_typed
-open PresenceMeasure in
-#print axioms input_present
-open PresenceMeasure in
-#print axioms walk_installs
-open PresenceMeasure in
-#print axioms presence_not_walked
-open PresenceMeasure in
-#print axioms walked_typed
-open PresenceMeasure in
-#print axioms openProg_checked
-open PresenceMeasure in
-#print axioms load_presence_needs_closed_row
 
 end Test.Program.H2PartOne

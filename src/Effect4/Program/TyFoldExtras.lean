@@ -25,7 +25,6 @@ def nodeThen {M : Type u} (op : M → M → M) (here : M) (kids : List M) : M :=
   | none => here
   | some k => op here k
 
-
 /-- The constructor tags of `Effect4.Program.Ty`, in declaration order. -/
 inductive TyCtor where
   | never
@@ -829,37 +828,4 @@ theorem foldMap_eq_cata {M : Type u} (unit : M) (op : M → M → M) (f : Effect
       simp only [List.map_map, List.filterMap_map, Function.comp_def, TyArgF.map_comp, TyArgF.map_id,
         List.map_id', tyBuild_view])) t
 
-
-/-! ## Receipts -/
-
-#print axioms tyBuild_view
-#print axioms map_pos_prod_bool_ty_comp
-#print axioms map_pos_prod_bool_ty_id
-#print axioms kids_pos_prod_bool_ty_map
-#print axioms foldMap_pos_prod_bool_ty_eq
-#print axioms map_pos_prod_string_prod_bool_ty_comp
-#print axioms map_pos_prod_string_prod_bool_ty_id
-#print axioms kids_pos_prod_string_prod_bool_ty_map
-#print axioms foldMap_pos_prod_string_prod_bool_ty_eq
-#print axioms map_pos_list_prod_string_prod_bool_ty_comp
-#print axioms map_pos_list_prod_string_prod_bool_ty_id
-#print axioms kids_pos_list_prod_string_prod_bool_ty_map
-#print axioms foldMap_pos_list_prod_string_prod_bool_ty_eq
-#print axioms map_pos_list_ty_comp
-#print axioms map_pos_list_ty_id
-#print axioms kids_pos_list_ty_map
-#print axioms foldMap_pos_list_ty_eq
-#print axioms TyArgF.map_comp
-#print axioms TyArgF.map_id
-#print axioms TyArgF.kids_map
-#print axioms cata_ofLayer_view
-#print axioms eq_cata_ofLayer
-#print axioms cata_fusion_ty
-#print axioms cata_ofLayer_inv
-#print axioms cata_prod_ty
-#print axioms foldMap_view
-#print axioms foldMap_head_eq_cata
-#print axioms foldMap_eq_cata
-
 end Effect4.Program
-

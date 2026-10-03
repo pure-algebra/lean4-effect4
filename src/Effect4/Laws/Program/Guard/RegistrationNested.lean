@@ -112,5 +112,4 @@ theorem registrationQueue_settle (id : FiberId) (rest : List NCmd) (it : NIter)
     | constructor
     | split
 
-
 end Effect4.Program.Guard.RegistrationNested

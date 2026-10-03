@@ -510,7 +510,6 @@ def printedRow (fam : EffFam) (ctor : String) (args : List (ArgF Op (EffSelfCarr
     (k : Nat) : Bool :=
   decide (Templates.table.findIdx? (fun r => r.selects fam ctor args) = some k)
 
-
 /-- What a row accepts of the arguments it read: the printer would choose this row for them
 (exactness), and they make a node of the row's constructor. Every row ends here. -/
 def buildRow (fam : EffFam) (ctor : String) (args : List (ArgF Op (EffSelfCarrier Op)))
@@ -1060,7 +1059,6 @@ theorem keyFromText_print (name service : Nat) :
   rw [(split_separator _ _ (repr_no_separator name)).1,
     (split_separator _ _ (repr_no_separator name)).2]
   simp only [List.drop_succ_cons, List.drop_zero, decodeBytes_repr]
-
 
 /-- The successful structural key image reads back. Unsupported legacy type text
 now refuses printing, so success is explicit instead of assuming a total string printer. -/
@@ -1685,9 +1683,6 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
         subst x
         simp [readPerform, readMethod, hm]
 
-
-
-
 /-- The tuple reading reconstructs its two arguments: a saved variable prints as its two
 component reads, any other pair as the printed components. -/
 theorem readTupleArgs_exact {n : Nat} {x y : Expr} {r : Term}
@@ -1813,7 +1808,6 @@ theorem readMethod_exact {sig : Signature Op} {spell : String → List String �
   · exact readRowMethod_exact hl h
   · exact readRowMethod_exact hl h
   · cases h
-
 
 /-- What a row call reads from: `spelling(args)`, or `spelling<T…>(args)` when the row declares
 type arguments. -/

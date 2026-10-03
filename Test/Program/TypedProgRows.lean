@@ -132,19 +132,4 @@ def AsyncEntryRows : Prop :=
 theorem asyncEntryRows : AsyncEntryRows :=
   fun src src' t' htab _ op _ cert h => bitEntry_rows_append src src' t' htab op cert h
 
-#print axioms asyncDomainBit_now
-#print axioms rowB_lawful
-#print axioms typedProg_not_table_monotone_of
-#print axioms asyncRowOnly_false
-#print axioms typedProg_table_monotone
-#print axioms asyncEntryRows
-#print axioms Effect4.Program.Typed.bitEntry_rows_append
-#print axioms Effect4.Program.Typed.signature_rows_append
-#print axioms Effect4.Program.Typed.pointTyped_rows_append
-#print axioms Effect4.Program.Typed.bodyTyped_rows_append
-#print axioms Effect4.Program.Typed.storePre_rows_append
-#print axioms Effect4.Program.Typed.asyncPre_rows_append
-#print axioms Effect4.Program.Typed.fiberPre_rows_append
-#print axioms Effect4.Program.Typed.typedProg_rows_append
-
 end Test.Program.TypedProgRows

@@ -146,6 +146,4 @@ end Corpus
 #guard (Canonical.digest Corpus.p42).hex =
   "fa5f40f054198e91b2446522308e197b0a02c4edfe823f894763d3aa63ad62a3"
 
-/-! ## Receipts -/
-
 end Effect4.Program.Wire

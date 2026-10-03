@@ -171,15 +171,4 @@ example : binderName = Effect4.Codegen.Names.binderName := rfl
 #guard !Effect4.Codegen.Names.binderName "undefined"
 #guard !Effect4.Codegen.Names.binderName "export"
 
-#print axioms Effect4.Codegen.Names.binderName
-#print axioms Effect4.Api.checkSourceBindings
-#print axioms Effect4.Api.checkSourceBindings_iff
-#print axioms Effect4.Codegen.Bindings.resolve_iff
-#print axioms Effect4.Codegen.Bindings.lawfulImports_resolve
-#print axioms Effect4.Codegen.SourceBindings.check_iff
-#print axioms Effect4.Codegen.SourceBindings.validate_refusal_iff
-#print axioms Effect4.Codegen.SourceBindings.Checked.use_binding
-#print axioms Effect4.Codegen.SourceBindings.resolve_pending
-#print axioms Effect4.Codegen.SourceBindings.stmtsUses_ifElse
-
 end Test.Codegen.SourceBindingContract

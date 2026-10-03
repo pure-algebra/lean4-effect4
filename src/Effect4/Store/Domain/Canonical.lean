@@ -708,6 +708,4 @@ open Canonical in
 open Canonical in
 #guard (Canonical.document UInt64).references.length = 1
 
-/-! ## Receipts -/
-
 end Effect4.Store

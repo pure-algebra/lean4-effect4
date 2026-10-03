@@ -14,16 +14,6 @@ namespace Effect4
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
   ClockMillis.ofNat_toNat ClockMillis.toNat_ofNat ClockMillis.toNat_add
 
-namespace ClockMillis.M1
-
-theorem ofNat_toNat (a : ClockMillis) : ProofGraph.Obligation (ClockMillis.ofNat a.toNat = a) := ⟨⟩
-theorem toNat_ofNat (n : Nat) : ProofGraph.Obligation ((ClockMillis.ofNat n).toNat = n) := ⟨⟩
-theorem toNat_add (a b : ClockMillis) : ProofGraph.Obligation ((a + b).toNat = a.toNat + b.toNat) := ⟨⟩
-
-#typed_state_obligations Effect4.ClockMillis.M1 ceiling 0 using aesop (rule_sets := [Effect4.Stores])
-
-end ClockMillis.M1
-
 namespace Machine.TimerStore
 universe u
 
@@ -33,53 +23,6 @@ attribute [aesop safe forward (rule_sets := [Effect4.Stores])]
   dueMin_none_of_late dueMin_mem dueMin_le dueMin_min fireNext_now fireNext_owed clockStep_owed
 attribute [aesop safe apply (rule_sets := [Effect4.Stores])]
   empty_wf empty_quiet sleep_wf cancel_wf fireNext_wf clockStep_wf
-
-theorem M1Clock.empty_wf : ProofGraph.Obligation (empty.WF) := ⟨⟩
-
-theorem M1Clock.empty_quiet : ProofGraph.Obligation (empty.Quiet) := ⟨⟩
-
-theorem M1Clock.sleep_wf {self : TimerStore} (_h : self.WF) (fiber : FiberId) (token : Nat) (millis : ClockMillis) : ProofGraph.Obligation ((self.sleep fiber token millis).WF) := ⟨⟩
-
-theorem M1Clock.cancel_wf {self : TimerStore} (_h : self.WF) (fiber : FiberId) (token : Nat) : ProofGraph.Obligation ((self.cancel fiber token).WF) := ⟨⟩
-
-theorem M1Clock.cancel_pending (self : TimerStore) (fiber : FiberId) (token : Nat) : ProofGraph.Obligation ((self.cancel fiber token).wake.pending fiber token = false) := ⟨⟩
-
-theorem M1Clock.dueMin_none_of_late (target : ClockMillis) : ProofGraph.Obligation (∀ (l : List (Waiter ClockMillis)), dueMin target l = none → ∀ w ∈ l, target < w.payload) := ⟨⟩
-
-theorem M1Clock.dueMin_mem (target : ClockMillis) : ProofGraph.Obligation (∀ (l : List (Waiter ClockMillis)) (m : Waiter ClockMillis), dueMin target l = some m → m ∈ l) := ⟨⟩
-
-theorem M1Clock.dueMin_le (target : ClockMillis) : ProofGraph.Obligation (∀ (l : List (Waiter ClockMillis)) (m : Waiter ClockMillis), dueMin target l = some m → m.payload ≤ target) := ⟨⟩
-
-theorem M1Clock.dueMin_min (target : ClockMillis) : ProofGraph.Obligation (∀ (l : List (Waiter ClockMillis)) (m : Waiter ClockMillis), dueMin target l = some m →
-      ∀ x ∈ l, x.payload ≤ target → m.payload ≤ x.payload) := ⟨⟩
-
-theorem M1Clock.dueMin_first (target : ClockMillis) (w : Waiter ClockMillis) (rest : List (Waiter ClockMillis))
-    (_hw : w.payload ≤ target) (_hrest : ∀ x ∈ rest, w.payload ≤ x.payload) : ProofGraph.Obligation (dueMin target (w :: rest) = some w) := ⟨⟩
-
-theorem M1Clock.fireNext_none {κ : Type u} (self : TimerStore) (target : ClockMillis) (resume : κ)
-    (_h : dueMin target self.wake.waiters = none) : ProofGraph.Obligation (self.fireNext target resume = (none, self)) := ⟨⟩
-
-theorem M1Clock.fireNext_now {κ : Type u} (self : TimerStore) (target : ClockMillis) (resume : κ) (w : Waiter ClockMillis)
-    (_h : dueMin target self.wake.waiters = some w) : ProofGraph.Obligation ((self.fireNext target resume).1 = some ⟨w.fiber, w.token, resume, WakeMode.now⟩ ∧
-      (self.fireNext target resume).2.now = w.payload ∧
-      (self.fireNext target resume).2.wake.waiters = self.wake.waiters.erase w) := ⟨⟩
-
-theorem M1Clock.fireNext_owed {κ : Type u} (self : TimerStore) (target : ClockMillis) (resume : κ) (o : Owed κ)
-    (_h : (self.fireNext target resume).1 = some o) : ProofGraph.Obligation (o.code = resume ∧ o.mode = WakeMode.now) := ⟨⟩
-
-theorem M1Clock.fireNext_wf {κ : Type u} {self : TimerStore} (_hwf : self.WF) (target : ClockMillis) (resume : κ) : ProofGraph.Obligation ((self.fireNext target resume).2.WF) := ⟨⟩
-
-theorem M1Clock.clockStep_finish {κ : Type u} (self : TimerStore) (millis : ClockMillis) (resume : κ)
-    (_h : dueMin (self.target.getD (self.now + millis)) self.wake.waiters = none) : ProofGraph.Obligation (self.clockStep millis resume =
-      (none, { self with now := self.target.getD (self.now + millis), target := none })) := ⟨⟩
-
-theorem M1Clock.clockStep_owed {κ : Type u} (self : TimerStore) (millis : ClockMillis) (resume : κ) (o : Owed κ)
-    (_h : (self.clockStep millis resume).1 = some o) : ProofGraph.Obligation (o.code = resume ∧ o.mode = WakeMode.now) := ⟨⟩
-
-theorem M1Clock.clockStep_wf {κ : Type u} {self : TimerStore} (_hwf : self.WF) (millis : ClockMillis) (resume : κ) : ProofGraph.Obligation ((self.clockStep millis resume).2.WF) := ⟨⟩
-
-#typed_state_obligations Effect4.Machine.TimerStore.M1Clock ceiling 0
-  using aesop (rule_sets := [Effect4.Stores])
 
 end Machine.TimerStore
 end Effect4
@@ -95,42 +38,4 @@ attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
 attribute [aesop safe forward (rule_sets := [Effect4.Stores])]
   ClockMillis.ofDecimal_exact Store.ClockCanonical.ofVal_exact
 
-namespace ClockMillis.M1Decimal
-
-theorem readBytes_digits (chars : List Char) (initial : Nat)
-    (_h : ∀ c ∈ chars, c.isDigit = true) : ProofGraph.Obligation
-    (Decimal.readBytes (chars.flatMap String.utf8EncodeChar) initial = Nat.ofDigitChars 10 chars initial) := ⟨⟩
-
-theorem readChars_core (fuel n : Nat) (tail : List Char) (_h : n < fuel) : ProofGraph.Obligation
-    (Nat.ofDigitChars 10 (Nat.toDigitsCore 10 fuel n tail) 0 = Nat.ofDigitChars 10 tail n) := ⟨⟩
-
-theorem readBytes_repr (n : Nat) : ProofGraph.Obligation
-    (Decimal.readBytes (Nat.repr n).toByteArray.data.toList = n) := ⟨⟩
-
-theorem ofDecimal_toDecimal (a : ClockMillis) : ProofGraph.Obligation
-    (ClockMillis.ofDecimal a.toDecimal = some a) := ⟨⟩
-
-theorem ofDecimal_exact (text : String) (a : ClockMillis) (_h : ClockMillis.ofDecimal text = some a) :
-    ProofGraph.Obligation (text = a.toDecimal) := ⟨⟩
-
-#typed_state_obligations Effect4.ClockMillis.M1Decimal ceiling 0
-  using aesop (rule_sets := [Effect4.Stores])
-
-end ClockMillis.M1Decimal
-
-namespace Store.ClockCanonical.M1
-
-theorem ofVal_toVal (value : ClockMillis) : ProofGraph.Obligation
-    (ClockCanonical.ofVal (ClockCanonical.toVal value) = some value) := ⟨⟩
-
-theorem ofVal_exact (value : Val) (clock : ClockMillis) (_h : ClockCanonical.ofVal value = some clock) :
-    ProofGraph.Obligation (value = ClockCanonical.toVal clock) := ⟨⟩
-
-theorem fits (value : ClockMillis) : ProofGraph.Obligation
-    (ClockCanonical.shapeDoc.accepts (ClockCanonical.toVal value) = true) := ⟨⟩
-
-#typed_state_obligations Effect4.Store.ClockCanonical.M1 ceiling 0
-  using aesop (rule_sets := [Effect4.Stores])
-
-end Store.ClockCanonical.M1
 end Effect4

@@ -157,6 +157,4 @@ end Kind
 #guard Kind.ofName? "export" = some .«export»
 #guard Kind.ofName? "Export" = none
 
-/-! ## Receipts -/
-
 end Effect4.Store

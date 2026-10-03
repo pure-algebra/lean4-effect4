@@ -70,7 +70,6 @@ def Defect.ofError : Err → Defect
 (`internal/effect.ts:579-580` is `fiberStackAnnotations`, host stack data). -/
 abbrev Ann := Unit
 
-
 /-! ## Identities -/
 
 /-- A layer, by the path of its node from the root program (`Program/Compile.lean`'s `Node`;

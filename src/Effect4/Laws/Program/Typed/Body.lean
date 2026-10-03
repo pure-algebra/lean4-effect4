@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Typed.LayerArm
 # Laws.Program.Typed.Body — an admitted body's program is typed
 
 Concept 2 of `docs/core/semantics.md` (`residual-program-typing`), serving concept 4's
-`step-deliver-preserves` and `step-loop-preserves`: a helper of `M6Ledger.step_deliver`, consumed by
+`step-deliver-preserves` and `step-loop-preserves`: a helper of `deliver_preserves`, consumed by
 the `mask` clause and the fork clauses (`Typed/Commands/Evaluate.lean`), which install
 `bodyR interp body` as a fiber's current code when `fiberPre` admits `body` (`BodyTyped`,
 `Typed/Admission.lean`).

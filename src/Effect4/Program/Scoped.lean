@@ -246,12 +246,6 @@ def Node.scopedAt {Op : Type} (n : Nat) : Node Op → Bool
 @[simp] theorem LayerTerms.scoped_cons {Op : Type} (a0 : Effect4.Program.LayerTerm Op) (a1 : Effect4.Program.LayerTerms Op) :
     LayerTerms.scoped ((.cons a0 a1 : LayerTerms Op)) = (LayerTerm.scoped a0 && LayerTerms.scoped a1) := rfl
 
-/-! ## Receipts -/
-
-#print axioms Effect4.Program.scopedAlgebra
-#print axioms Effect4.Program.Eff.scopedAt
-#print axioms Effect4.Program.Node.scopedAt
-
 end Effect4.Program
 
 /-! ## Acceptance guards for the generated scope algebra
@@ -299,4 +293,3 @@ private def u : Eff Unit := .succeed (.lit .unit)
 #guard Node.scopedAt 7 (.layer (.effectDiscard u)) = true
 
 end Effect4.Program.ScopedGuards
-

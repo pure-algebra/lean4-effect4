@@ -230,7 +230,6 @@ theorem mem_supervision_of_at (program : Eff Op) (path : List Nat) (m : Node Op)
     s ∈ supervision program :=
   at_sub path (.eff program) m [] s located (by simpa only [List.nil_append] using own)
 
-
 /-! ## (a) The machine half: what a fork stamps -/
 
 section MachineForks
@@ -263,17 +262,6 @@ theorem spawn_nextId (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (spawn interp m parent program options).1.nextId = m.nextId + 1 := by aesop
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-/-- The spawn appends the child and touches no other fiber (`:922`); the child starts with no
-exit, no observer and no child of its own (`RunFiber.make`, `:259-275`). -/
-theorem M1Origin.spawn_fibers (interp : RunInterp ν σ β ε δ ι α χ St κ)
-    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
-    (program : κ) (options : Supervision.ForkOptions) : ProofGraph.Obligation (∃ child : RunFiber ν σ β ε δ ι α χ κ φ,
-      (spawn interp m parent program options).1.fibers = m.fibers ++ [child] ∧
-        child.id = ⟨m.nextId⟩ ∧ child.exit = none ∧ child.observers = [] ∧
-        child.children = [] ∧ (spawn interp m parent program options).1.forks =
-          m.forks ++ [ForkRecord.mk child.id parent.id options.daemon []]) := ⟨⟩
-
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem spawn_fibers (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
     (program : κ) (options : Supervision.ForkOptions) :
@@ -300,15 +288,6 @@ def nextIdFresh (m : Machine) : Bool :=
 theorem nextIdFresh_iff (m : Machine) : nextIdFresh m = true ↔ NextIdFresh m := by
   unfold nextIdFresh NextIdFresh
   aesop
-
-/-- **status_persists.** A fiber's status is a function of four observations and nothing
-else: its own exit, the fiber that tracks it, the scope it is pinned to, and its origin. So it survives every change to the machine except a change to one of those four —
-the fiber exits, its parent starts or stops tracking it, its pin is made or dropped, or its origin changes. This is `guard_persists`' shape (`Laws/Api/Guard.lean:22`) for supervision. -/
-theorem M1Origin.status_persists (m m' : Machine) (f f' : Fiber)
-    (_exit : f'.exit = f.exit)
-    (_track : parentOf m' f'.id = parentOf m f.id)
-    (_pin : pinOf f' = pinOf f)
-    (_origin : m'.originOf f'.id = m.originOf f.id) : ProofGraph.Obligation (statusOf m' f' = statusOf m f) := ⟨⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem status_persists (m m' : Machine) (f f' : Fiber)
@@ -502,169 +481,7 @@ variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (ma
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 variable {κ φ η : Type (max u v)} [FiberCore ν β ε δ ι α κ φ]
 
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-theorem spawn_origins (interp : RunInterp ν σ β ε δ ι α χ St κ)
-    (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (parent : RunFiber ν σ β ε δ ι α χ κ φ) (program : κ)
-    (options : Supervision.ForkOptions) (site : List Nat) : ProofGraph.Obligation
-    (originEntries (spawn interp m parent program options site).1 =
-      originEntries m ++ [(⟨m.nextId⟩, .forked parent.id options.daemon site)]) := ⟨⟩
-
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  [FiberCore ν β ε δ ι α κ φ] in
-theorem start_origins (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (parent : RunFiber ν σ β ε δ ι α χ κ φ) (child : FiberId) (immediate : Bool) :
-    ProofGraph.Obligation
-    (originEntries (start m parent child immediate).1 = originEntries m) := ⟨⟩
-
-/-- Exact replacement shape: state retains the explicit action/list-cell path. -/
-theorem supervision_static (interp : RunInterp ν σ β ε δ ι α χ St)
-    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
-    (yielding : Bool) (program : Prim ν σ β ε δ ι α)
-    (options : Supervision.ForkOptions) (scope raceId : Nat)
-    (site entrantSite : List Nat)
-    (_ambient : interp.ambientScope f.context = some scope) : ProofGraph.Obligation
-    (originEntries (evaluatePrim.withFiber interp m f yielding
-        (.fork program options site)).machine =
-      originEntries m ++ [(⟨m.nextId⟩, .forked f.id options.daemon site)] ∧
-    originEntries (evaluatePrim.withFiber interp m f yielding
-        (.forkIn program options scope site)).machine =
-      originEntries m ++ [(⟨m.nextId⟩, .forked f.id true site)] ∧
-    originEntries (evaluatePrim.withFiber interp m f yielding
-        (.forkScoped program options site)).machine =
-      originEntries m ++ [(⟨m.nextId⟩, .forked f.id true site)] ∧
-    originEntries (launchEntrant interp raceId m f program entrantSite).1 =
-      originEntries m ++ [(⟨m.nextId⟩, .forked f.id true entrantSite)]) := ⟨⟩
-
-theorem forkScoped_none_origins (interp : RunInterp ν σ β ε δ ι α χ St)
-    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
-    (yielding : Bool) (program : Prim ν σ β ε δ ι α)
-    (options : Supervision.ForkOptions) (site : List Nat)
-    (_ambient : interp.ambientScope f.context = none) : ProofGraph.Obligation
-    (originEntries (evaluatePrim.withFiber interp m f yielding
-      (.forkScoped program options site)).machine = originEntries m) := ⟨⟩
-
 end MachineForks
-
-/-- A load has no fork records and its member root reads as a root, independent of diagnostics. -/
-theorem load_origins (program : NativeEff) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) : ProofGraph.Obligation
-    (originEntries (Api.load program fuel answers) = [] ∧
-      (Api.load program fuel answers).originOf Api.root = some .root) := ⟨⟩
-
-/-- One located source fork, its decoded action, and its stamp. Static membership
-is frozen separately with exactly the same parameters and premises.
-No claim that the point is ever reached is made. -/
-theorem source_fork (program body : NativeEff) (point : Point)
-    (options : Supervision.ForkOptions)
-    (_located : Node.at_ (.eff program) point.path = some (.eff (.withFiber (.fork body options))))
-    (table : RowTable) (m : Machine) (parent : Fiber) (yielding : Bool) : ProofGraph.Obligation
-    (let q := point.child 0
-     let action : NAction := .fork (resolve program (q.child 0)) options q.path
-     let site : ForkSite := ⟨q.path, if options.daemon then .daemon else .child, options⟩
-     actionAt program point = some action ∧
-      originEntries (evaluatePrim.withFiber (interpOf program table) m parent yielding action).machine =
-        originEntries m ++ [(⟨m.nextId⟩, .forked parent.id site.isDaemon site.path)]) := ⟨⟩
-
-theorem source_forkIn (program body : NativeEff) (point : Point)
-    (options : Supervision.ForkOptions) (scopeTerm : Term) (scope : Nat)
-    (_located : Node.at_ (.eff program) point.path =
-      some (.eff (.withFiber (.forkIn body options scopeTerm))))
-    (_scope : evalTerm point.env scopeTerm = some (Val.scopeHandle scope))
-    (table : RowTable) (m : Machine) (parent : Fiber) (yielding : Bool) : ProofGraph.Obligation
-    (let q := point.child 0
-     let action : NAction := .forkIn (resolve program (q.child 0)) options scope q.path
-     let site : ForkSite := ⟨q.path, .pinned (some scopeTerm), options⟩
-     actionAt program point = some action ∧
-      originEntries (evaluatePrim.withFiber (interpOf program table) m parent yielding action).machine =
-        originEntries m ++ [(⟨m.nextId⟩, .forked parent.id site.isDaemon site.path)]) := ⟨⟩
-
-/-- The supplied scope is the callback argument; this does not bypass or prove
-successful evaluation of forkScoped's earlier ambient-service read. -/
-theorem source_forkScoped (program body : NativeEff) (point : Point)
-    (options : Supervision.ForkOptions) (scope : Nat)
-    (_located : Node.at_ (.eff program) point.path =
-      some (.eff (.withFiber (.forkScoped body options))))
-    (table : RowTable) (m : Machine) (parent : Fiber) (yielding : Bool) : ProofGraph.Obligation
-    (let q := point.child 0
-     let action : NAction := .forkIn (resolve program (q.child 0)) options scope q.path
-     let site : ForkSite := ⟨q.path, .pinned none, options⟩
-     actionAt program point = some .ambientScope ∧ forkScopedAt program point scope = some action ∧
-      originEntries (evaluatePrim.withFiber (interpOf program table) m parent yielding action).machine =
-        originEntries m ++ [(⟨m.nextId⟩, .forked parent.id site.isDaemon site.path)]) := ⟨⟩
-
-/-- Race creation records the list cursor, but creates no child yet. -/
-theorem source_race (program : NativeEff) (point : Point) (entrants : Effs NativeOp)
-    (_located : Node.at_ (.eff program) point.path = some (.eff (.withFiber (.raceAll entrants))))
-    (table : RowTable) (m : Machine) (parent : Fiber) (yielding : Bool) : ProofGraph.Obligation
-    (let q := (point.child 0).child 0
-     let codes := actionAt.entrants entrants q
-     actionAt program point = some (.raceAll codes (some q.path)) ∧
-      originEntries (beginRace (interpOf program table) m parent yielding codes (some q.path)).machine =
-        originEntries m ∧
-      (beginRace (interpOf program table) m parent yielding codes (some q.path)).machine.races.map
-        (fun r => r.nextSite) = m.races.map (fun r => r.nextSite) ++ [some q.path]) := ⟨⟩
-
-/-- A list cons at an actual source path is the static row for that launch. -/
-theorem source_race_site (program body : NativeEff) (rest : Effs NativeOp) (path : List Nat)
-    (_located : Node.at_ (.eff program) path = some (.effs (.cons body rest))) : ProofGraph.Obligation
-    ((⟨path, .raceEntrant, raceEntrantOptions⟩ : ForkSite) ∈ supervision program) := ⟨⟩
-
-/-- Exact local launch boundary, including the no-accepted-answer condition.
-The driver may stop between launches; nothing here forces the next one to occur. -/
-theorem race_launch_origins (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
-    (m : Machine) (raceId : Nat) (race : Race EffName EffThunk Val Err Defect FiberId Ann)
-    (parent : Fiber) (code : NCode) (remaining : List NCode) (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann))
-    (_race : m.race? raceId = some race) (_programs : race.programs = code :: remaining)
-    (_open : race.state.accepted.isSome = false) (_parent : m.fiber? race.host = some parent) :
-    ProofGraph.Obligation
-    (originEntries (driveStep interp m (.launch raceId) rest).1 =
-      originEntries m ++ [(⟨m.nextId⟩, .forked parent.id true (race.nextSite.getD []))] ∧
-      ((driveStep interp m (.launch raceId) rest).1.race? raceId).map (fun r => r.nextSite) =
-        some (race.nextSite.map (fun path => path ++ [1]))) := ⟨⟩
-
-/-- Symbolic two-entrant path control, not a claim that both entrants run. -/
-theorem source_two_race_paths (program first second : NativeEff) (point : Point)
-    (_located : Node.at_ (.eff program) point.path =
-      some (.eff (.withFiber (.raceAll (.cons first (.cons second .nil)))))) : ProofGraph.Obligation
-    (let q := (point.child 0).child 0
-     actionAt program point = some (.raceAll
-       [compileEff first (q.child 0), compileEff second ((q.child 1).child 0)] (some q.path))) := ⟨⟩
-
-theorem source_fork_site (program body : NativeEff) (point : Point)
-    (options : Supervision.ForkOptions)
-    (_located : Node.at_ (.eff program) point.path = some (.eff (.withFiber (.fork body options))))
-    (_table : RowTable) (_m : Machine) (_parent : Fiber) (_yielding : Bool) : ProofGraph.Obligation
-    (let q := point.child 0
-     let site : ForkSite := ⟨q.path, if options.daemon then .daemon else .child, options⟩
-     site ∈ supervision program) := ⟨⟩
-
-theorem source_forkIn_site (program body : NativeEff) (point : Point)
-    (options : Supervision.ForkOptions) (scopeTerm : Term) (scope : Nat)
-    (_located : Node.at_ (.eff program) point.path =
-      some (.eff (.withFiber (.forkIn body options scopeTerm))))
-    (_scope : evalTerm point.env scopeTerm = some (Val.scopeHandle scope))
-    (_table : RowTable) (_m : Machine) (_parent : Fiber) (_yielding : Bool) : ProofGraph.Obligation
-    (let q := point.child 0
-     let site : ForkSite := ⟨q.path, .pinned (some scopeTerm), options⟩
-     site ∈ supervision program) := ⟨⟩
-
-theorem source_forkScoped_site (program body : NativeEff) (point : Point)
-    (options : Supervision.ForkOptions) (_scope : Nat)
-    (_located : Node.at_ (.eff program) point.path =
-      some (.eff (.withFiber (.forkScoped body options))))
-    (_table : RowTable) (_m : Machine) (_parent : Fiber) (_yielding : Bool) : ProofGraph.Obligation
-    (let q := point.child 0
-     let site : ForkSite := ⟨q.path, .pinned none, options⟩
-     site ∈ supervision program) := ⟨⟩
-
-theorem source_two_race_sites (program first second : NativeEff) (point : Point)
-    (_located : Node.at_ (.eff program) point.path =
-      some (.eff (.withFiber (.raceAll (.cons first (.cons second .nil)))))) : ProofGraph.Obligation
-    (let q := (point.child 0).child 0
-     (⟨q.path, .raceEntrant, raceEntrantOptions⟩ : ForkSite) ∈ supervision program ∧
-      (⟨(q.child 1).path, .raceEntrant, raceEntrantOptions⟩ : ForkSite) ∈ supervision program) := ⟨⟩
-
 
 /-! The five source-site connectors (slice 6), proved. -/
 
@@ -729,14 +546,6 @@ end Effect4.Api
 
 namespace Effect4.Api.M1Trace
 open Effect4 Effect4.Machine Effect4.Program
-
-theorem statusOf_replace_trace (m : Api.Machine) (f : Api.Fiber)
-    (trace : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
-    ProofGraph.Obligation (statusOf { m with trace } f = statusOf m f) := ⟨⟩
-
-theorem fiberStatuses_replace_trace (m : Api.Machine)
-    (trace : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
-    ProofGraph.Obligation (fiberStatuses { m with trace } = fiberStatuses m) := ⟨⟩
 
 end Effect4.Api.M1Trace
 namespace Effect4.Api
@@ -1002,19 +811,3 @@ attribute [aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 end Effect4.Api
 
 -- END M1 PHASE B Api.Supervision
-
-
-#obligation_proved Effect4.Api.M1Origin.load_origins := @Effect4.Api.load_origins
-#obligation_proved Effect4.Api.M1Origin.supervision_static := @Effect4.Api.supervision_static_origins
-#obligation_proved Effect4.Api.M1Origin.source_fork := @Effect4.Api.source_fork_holds
-#obligation_proved Effect4.Api.M1Origin.race_launch_origins := @Effect4.Api.race_launch_origins_holds
-
-#obligation_proved Effect4.Api.M1Origin.source_race_site := @Effect4.Api.M1Origin.source_race_site_proof
-#obligation_proved Effect4.Api.M1Origin.source_fork_site := @Effect4.Api.M1Origin.source_fork_site_proof
-#obligation_proved Effect4.Api.M1Origin.source_forkIn_site := @Effect4.Api.M1Origin.source_forkIn_site_proof
-#obligation_proved Effect4.Api.M1Origin.source_forkScoped_site :=
-  @Effect4.Api.M1Origin.source_forkScoped_site_proof
-#obligation_proved Effect4.Api.M1Origin.source_two_race_sites :=
-  @Effect4.Api.M1Origin.source_two_race_sites_proof
-#typed_state_obligations Effect4.Api.M1Origin ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
-#typed_state_obligations Effect4.Api.M1Trace ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
