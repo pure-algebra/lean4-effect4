@@ -1,9 +1,11 @@
 import Effect4.Program.Typed
+import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Program.ErrorImage
 import Effect4.Laws.Program.ErrorQueries
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Template
 import Effect4.Laws.Auto.Inversion
+import Effect4.Laws.Machine.Book
 
 /-!
 # Program.Typed — the value typing of the native cut (slice 1, lane 1)
@@ -946,6 +948,415 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
   simp only [nativeAtom, hname, Option.bind_some]
   exact NativeAtom.sound named tys ty vs hty hfit
 
+/-! Record operations at the Boolean value check.
+These laws serve the existing native term contracts, separately from world-indexed membership.
+The shared named-frame facts retain the operation's actual returned value. -/
+namespace RecordChecks
+open Typed
+
+private abbrev Has (value : Val) (type : Ty) : Prop := Val.hasTy value type = true
+private def pred (field : Bool × Ty) : Bool × (Val → Prop) :=
+  (field.1, fun value => Has value field.2)
+
+private theorem has_normalize (type : Ty) (value : Val) : Has value type.normalize ↔ Has value type := by
+  unfold Has
+  rw [hasTy_normalize]
+
+private theorem has_subN {a b : Ty} (hsub : Ty.subN a b = true) (value : Val)
+    (hvalue : Has value a) : Has value b := by
+  change Val.hasTy value b = true
+  rw [← hasTy_normalize b value []]
+  exact hasTy_sub a.normalize b.normalize value [] hsub ((has_normalize a value).mpr hvalue)
+
+private theorem has_members (value : Val) (type : Ty) :
+    (∃ branch ∈ type.members, Has value branch) ↔ Has value type := by
+  change (∃ branch ∈ type.members, Val.hasTy value branch = true) ↔ Val.hasTy value type = true
+  rw [← hasTy_members value type [], List.any_eq_true]
+
+private theorem join_left (a b : Ty) (value : Val) (h : Has value a) : Has value (Ty.join a b) :=
+  Ty.hasTy_join_left a b value [] h
+
+private theorem join_right (a b : Ty) (value : Val) (h : Has value b) : Has value (Ty.join a b) :=
+  Ty.hasTy_join_right a b value [] h
+
+private theorem has_record {v : Val} {ns xs : List Val} (hv : recordParts? v = some (ns, xs))
+    (fields : List (String × Bool × Ty)) :
+    Has v (.record fields) ↔ NamedFit ((Ty.canon fields).map (fun q => (q.1, pred q.2))) ns xs := by
+  unfold Has
+  rw [Val.hasTy_record hv fields [], ← namedFit_check_iff]
+  simp only [List.map_map, Function.comp_def, Val.checkerOf, pred]
+
+private theorem has_record_inv (v : Val) (fields : List (String × Bool × Ty))
+    (hfit : Has v (.record fields)) : ∃ ns xs, recordParts? v = some (ns, xs) ∧
+      NamedFit ((Ty.canon fields).map (fun q => (q.1, pred q.2))) ns xs := by
+  cases hv : recordParts? v with
+  | none =>
+    change Val.hasTy v (.record fields) = true at hfit
+    rw [Val.hasTy_record_none hv] at hfit
+    exact Bool.noConfusion hfit
+  | some parts =>
+    obtain ⟨ns, xs⟩ := parts
+    exact ⟨ns, xs, rfl, (has_record hv fields).mp hfit⟩
+
+/-- Fitting argument lists stay paired with their supplied names. -/
+theorem zipNames_checked {values : List Val} {types : List Ty}
+    (hfit : Effect4.Program.Fits values types) :
+    ∀ (names : List String) (arguments : List (String × Ty)),
+      Record.zipNames names types = some arguments →
+      ∃ es, Record.zipNames names values = some es ∧
+        ListRel (fun e a => e.1 = a.1 ∧ Has e.2 a.2) es arguments := by
+  induction hfit with
+  | nil =>
+    intro names arguments h
+    cases names with
+    | nil => cases h; exact ⟨[], rfl, .nil⟩
+    | cons n ns => cases h
+  | cons hv _ ih =>
+    intro names arguments h
+    cases names with
+    | nil => cases h
+    | cons n names =>
+      obtain ⟨args, hargs, rfl⟩ := Option.map_eq_some_iff.mp h
+      obtain ⟨es, hes, hrel⟩ := ih names args hargs
+      refine ⟨(n, _) :: es, ?_, .cons ⟨rfl, hv⟩ hrel⟩
+      simp only [Record.zipNames, hes, Option.map_some]
+
+
+/-- Paired fitting values and argument types give matching named lookups. -/
+theorem firstOf_checked {es : List (String × Val)} {arguments : List (String × Ty)}
+    (hrel : ListRel (fun e a => e.1 = a.1 ∧ Has e.2 a.2) es arguments) (name : String) :
+    match Field.firstOf name es, Field.firstOf name arguments with
+    | none, none => True
+    | some value, some type => Has value type
+    | _, _ => False := by
+  induction hrel with
+  | nil => trivial
+  | @cons e a es arguments hhead _ ih =>
+    by_cases hn : a.1 = name
+    · simpa only [Field.firstOf, hhead.1, if_pos hn] using hhead.2
+    · simpa only [Field.firstOf, hhead.1, if_neg hn] using ih
+
+
+/-- Every admitted construction returns a value fitting its checked record type.
+The premise uses the evaluated argument list; the term evaluator supplies it through `FitsAll`. -/
+theorem build {fields : List (String × Bool × Ty)}
+    {names : List String} {types : List Ty} {values : List Val} {answer : Ty}
+    (hcheck : Program.Record.check fields names types = some answer)
+    (hfit : Effect4.Program.Fits values types) :
+    ∃ value, Record.build names values = some value ∧ Has value answer := by
+  cases hargs : Record.zipNames names types with
+  | none =>
+    simp only [Program.Record.check, hargs, Option.bind_eq_bind, Option.bind_none] at hcheck
+    cases hcheck
+  | some arguments =>
+    simp only [Program.Record.check, hargs, Option.bind_eq_bind, Option.bind_some] at hcheck
+    split at hcheck
+    next hchecks =>
+      cases hcheck
+      obtain ⟨es, hes, hrel⟩ := zipNames_checked hfit names arguments hargs
+      have hargsNames := (zipNames_columns names types arguments hargs).1
+      have hesNames := (zipNames_columns names values es hes).1
+      have hall := Bool.and_eq_true_iff.mp hchecks.2.2
+      have hsubsetRaw : es.map Prod.fst ⊆ fields.map Prod.fst := by
+        intro name hname
+        rw [hesNames, ← hargsNames] at hname
+        obtain ⟨a, ha, rfl⟩ := List.mem_map.mp hname
+        have hadmitted := List.all_eq_true.mp hall.1 a ha
+        cases hf : Field.firstOf a.1 fields with
+        | none => simp only [hf, Option.isSome_none, Bool.false_eq_true] at hadmitted
+        | some field => exact List.mem_map.mpr ⟨(a.1, field), Field.firstOf_mem hf, rfl⟩
+      let canonical := Field.canonBy Field.bytesKey es
+      let predicates := (Ty.canon fields).map (fun q => (q.1, pred q.2))
+      have hsorted : Field.Ascending Field.bytesKey predicates :=
+        Field.ascending_map (pred) (Field.canonBy_ascending fields)
+      have hcanonical : Field.Ascending Field.bytesKey canonical := Field.canonBy_ascending es
+      have hsubset : canonical.map Prod.fst ⊆ predicates.map Prod.fst := by
+        intro name hname
+        have hraw : name ∈ es.map Prod.fst :=
+          (Field.mem_names_canonBy Field.bytesKey_injective es name).mp hname
+        have hf : name ∈ (Ty.canon fields).map Prod.fst :=
+          (Field.mem_names_canonBy Field.bytesKey_injective fields name).mpr (hsubsetRaw hraw)
+        simpa only [predicates, List.map_map, Function.comp_def] using hf
+      have hlookup : ∀ q ∈ predicates, match Field.firstOf q.1 canonical with
+          | none => q.2.1 = true
+          | some value => q.2.2 value := by
+        intro q hq
+        obtain ⟨f, hf, rfl⟩ := List.mem_map.mp hq
+        have hfield := List.all_eq_true.mp hall.2 f (Field.mem_canonBy hf)
+        have hvalues := firstOf_checked hrel f.1
+        rw [Field.firstOf_canonBy Field.bytesKey_injective]
+        cases ht : Field.firstOf f.1 arguments with
+        | none =>
+          simp only [ht] at hfield hvalues
+          cases hv : Field.firstOf f.1 es with
+          | none => exact hfield
+          | some value => simp only [hv] at hvalues
+        | some type =>
+          simp only [ht] at hfield hvalues
+          cases hv : Field.firstOf f.1 es with
+          | none => simp only [hv] at hvalues
+          | some value =>
+            simp only [hv] at hvalues
+            exact has_subN hfield value hvalues
+      refine ⟨Record.frame canonical, ?_, ?_⟩
+      · simp only [Record.build, hes, Option.bind_eq_bind, Option.bind_some, if_pos hchecks.2.1, canonical]
+      · apply (has_normalize (.record fields) _).mpr
+        apply (has_record (v := Record.frame canonical) rfl fields).mpr
+        exact namedFit_of_sublist_lookup predicates canonical
+          (Field.names_nodup_of_ascending hsorted)
+          (ascending_names_sublist predicates canonical hsorted hcanonical hsubset) hlookup
+    next hchecks => cases hcheck
+
+
+/-- Membership supplies an actual well-shaped, uniquely named frame to lookup.
+The result concerns the existing value, not a replacement witness. -/
+theorem entries {v : Val} {fields : List (String × Bool × Ty)}
+    (hfit : Has v (.record fields)) :
+    ∃ es, Record.entries v = some es ∧
+      NamedFit ((Ty.canon fields).map (fun q => (q.1, pred q.2)))
+        (es.map (fun e => .str e.1)) (es.map Prod.snd) := by
+  obtain ⟨ns, xs, hparts, hnamed⟩ := has_record_inv v fields hfit
+  obtain ⟨es, rfl, rfl⟩ := namedFit_columns _ ns xs hnamed
+  have hnd : (((Ty.canon fields).map (fun q => (q.1, pred q.2))).map Prod.fst).Nodup := by
+    simpa only [List.map_map, Function.comp_def] using
+      Field.canonBy_names_nodup (key := Field.bytesKey) fields
+  have hend := (namedFit_names_sublist _ es hnamed).nodup hnd
+  refine ⟨es, ?_, hnamed⟩
+  simp only [Record.entries, hparts, Option.bind_eq_bind, Option.bind_some, readColumns_frame, if_pos hend]
+
+
+/-- A declared field's actual lookup either returns its member or proves optional absence.
+The term evaluator consumes this bridge for both field-read modes. -/
+theorem lookup {v : Val} {fields : List (String × Bool × Ty)}
+    {name : String} {optional : Bool} {type : Ty}
+    (hfit : Has v (.record fields))
+    (hfield : Field.firstOf name (Ty.canon fields) = some (optional, type)) :
+    ∃ result, Record.lookup v name = some result ∧
+      match result with
+      | none => optional = true
+      | some value => Has value type := by
+  obtain ⟨es, hentries, hnamed⟩ := entries hfit
+  have hnd : (((Ty.canon fields).map (fun q => (q.1, pred q.2))).map Prod.fst).Nodup := by
+    simpa only [List.map_map, Function.comp_def] using
+      Field.canonBy_names_nodup (key := Field.bytesKey) fields
+  have hmem := Field.firstOf_mem hfield
+  have hq : (name, optional, fun x => Has x type) ∈
+      (Ty.canon fields).map (fun q => (q.1, pred q.2)) :=
+    List.mem_map.mpr ⟨(name, optional, type), hmem, rfl⟩
+  refine ⟨Field.firstOf name es, ?_, namedFit_lookup _ es hnd hnamed _ hq⟩
+  simp only [Record.lookup, hentries, Option.map_some]
+
+
+/-- Required lookup finds the existing fitting field.
+This is a value-operation premise for `evalTerm_progress`, not whole-program progress. -/
+theorem required {v : Val} {fields : List (String × Bool × Ty)}
+    {name : String} {type : Ty}
+    (hfit : Has v (.record fields))
+    (hfield : Field.firstOf name (Ty.canon fields) = some (false, type)) :
+    ∃ value, Record.lookup v name = some (some value) ∧ Has value type := by
+  obtain ⟨result, hlookup, hresult⟩ := lookup hfit hfield
+  cases result with
+  | none => exact Bool.noConfusion hresult
+  | some value => exact ⟨value, hlookup, hresult⟩
+
+
+/-- Optional lookup wraps presence, including present `undefined` or an inner empty option. -/
+theorem optional {v : Val} {fields : List (String × Bool × Ty)}
+    {name : String} {optional : Bool} {type : Ty}
+    (hfit : Has v (.record fields))
+    (hfield : Field.firstOf name (Ty.canon fields) = some (optional, type)) :
+    ∃ result, Record.lookup v name = some result ∧ Has (result.elim .none .some) (.option type) := by
+  obtain ⟨result, hlookup, hresult⟩ := lookup hfit hfield
+  refine ⟨result, hlookup, ?_⟩
+  cases result with
+  | none => trivial
+  | some value => exact hresult
+
+
+/-- Joining results retains a fitting member of the accumulator or any remaining branch. -/
+theorem foldl_join {value : Val} (types : List Ty) (acc : Ty)
+    (hfit : Has value acc ∨ ∃ type ∈ types, Has value type) :
+    Has value (types.foldl Ty.join acc) := by
+  induction types generalizing acc with
+  | nil =>
+    rcases hfit with h | ⟨_, h, _⟩
+    · exact h
+    · cases h
+  | cons type types ih =>
+    apply ih (Ty.join acc type)
+    rcases hfit with h | ⟨t, ht, h⟩
+    · exact Or.inl (join_left acc type value h)
+    · rcases List.mem_cons.mp ht with rfl | ht
+      · exact Or.inl (join_right acc t value h)
+      · exact Or.inr ⟨t, ht, h⟩
+
+
+/-- A branch's fitting result fits the joined result type. -/
+theorem joinResults {value : Val} {types : List Ty} {type : Ty}
+    (ht : type ∈ types) (hfit : Has value type) : Has value (Program.Record.joinResults types) :=
+  foldl_join types .never (Or.inr ⟨type, ht, hfit⟩)
+
+
+/-- The single-record field rule returns the actual fitting read result in either mode. -/
+theorem fieldOf {value : Val} {target answer : Ty}
+    {optional : Bool} {name : String}
+    (htype : Program.Record.fieldOf optional name target = some answer)
+    (hfit : Has value target) :
+    ∃ out, Record.read optional value name = some out ∧ Has out answer := by
+  cases target with
+  | record fields =>
+    cases hf : Field.firstOf name fields with
+    | none =>
+      simp only [Program.Record.fieldOf, hf, Option.bind_eq_bind, Option.bind_none] at htype
+      cases htype
+    | some field =>
+      obtain ⟨mayBeAbsent, type⟩ := field
+      have hcanonical : Field.firstOf name (Ty.canon fields) = some (mayBeAbsent, type) := by
+        rw [Field.firstOf_canonBy Field.bytesKey_injective]
+        exact hf
+      cases optional with
+      | true =>
+        simp only [Program.Record.fieldOf, hf, Option.bind_eq_bind, Option.bind_some,
+          ↓reduceIte, Option.some.injEq] at htype
+        subst answer
+        obtain ⟨result, hlookup, hresult⟩ := optional hfit hcanonical
+        refine ⟨result.elim .none .some, ?_, hresult⟩
+        simp only [Record.read, hlookup, Option.bind_eq_bind, Option.bind_some,
+          ↓reduceIte]
+      | false =>
+        cases mayBeAbsent with
+        | true =>
+          simp only [Program.Record.fieldOf, hf, Option.bind_eq_bind, Option.bind_some,
+            Bool.false_eq_true, ↓reduceIte] at htype
+          cases htype
+        | false =>
+          simp only [Program.Record.fieldOf, hf, Option.bind_eq_bind, Option.bind_some,
+            Bool.false_eq_true, ↓reduceIte, Option.some.injEq] at htype
+          subst answer
+          obtain ⟨out, hlookup, hresult⟩ := required hfit hcanonical
+          refine ⟨out, ?_, hresult⟩
+          simp only [Record.read, hlookup, Option.bind_eq_bind, Option.bind_some,
+            Bool.false_eq_true, ↓reduceIte]
+  | _ => cases htype
+
+
+/-- Field typing covers every union branch and returns an actual fitting read result. -/
+theorem fieldType {value : Val} {target answer : Ty}
+    {optional : Bool} {name : String}
+    (htype : Program.Record.fieldType optional target name = some answer)
+    (hfit : Has value target) :
+    ∃ out, Record.read optional value name = some out ∧ Has out answer := by
+  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp htype
+  obtain ⟨branch, hbranch, hbranchFit⟩ :=
+    (has_members value target.normalize).mpr ((has_normalize target value).mpr hfit)
+  obtain ⟨branchAnswer, ha, hbranchType⟩ := mapM_some_mem hanswers branch hbranch
+  obtain ⟨out, hout, hfit⟩ := fieldOf hbranchType hbranchFit
+  exact ⟨out, hout, joinResults ha hfit⟩
+
+
+/-- A sorted frame fits a record when its names and all declared lookups fit. -/
+theorem frame {fields : List (String × Bool × Ty)}
+    {es : List (String × Val)}
+    (hsorted : Field.Ascending Field.bytesKey es)
+    (hsubset : es.map Prod.fst ⊆ (Ty.canon fields).map Prod.fst)
+    (hlookup : ∀ q ∈ Ty.canon fields, match Field.firstOf q.1 es with
+      | none => q.2.1 = true
+      | some value => Has value q.2.2) : Has (Record.frame es) (.record fields) := by
+  apply (has_record (v := Record.frame es) rfl fields).mpr
+  let predicates := (Ty.canon fields).map (fun q => (q.1, pred q.2))
+  have hps : Field.Ascending Field.bytesKey predicates :=
+    Field.ascending_map (pred) (Field.canonBy_ascending fields)
+  apply namedFit_of_sublist_lookup predicates es (Field.names_nodup_of_ascending hps)
+  · apply ascending_names_sublist predicates es hps hsorted
+    simpa only [predicates, List.map_map, Function.comp_def] using hsubset
+  · intro q hq
+    obtain ⟨f, hf, rfl⟩ := List.mem_map.mp hq
+    exact hlookup f hf
+
+
+/-- Overwrite returns a fitting record with the replacement field required at its new type.
+No subtype relation to the input record is asserted. -/
+theorem set {value replacement : Val}
+    {fields : List (String × Bool × Ty)} {name : String} {replacementType : Ty}
+    (hfit : Has value (.record fields)) (hreplacement : Has replacement replacementType) :
+    ∃ out, Record.set value name replacement = some out ∧
+      Has out (Ty.record ((name, false, replacementType) ::
+        fields.filter (fun q => decide (q.1 ≠ name)))).normalize := by
+  obtain ⟨es, hentries, hnamed⟩ := entries hfit
+  let outputFields := (name, false, replacementType) :: fields.filter (fun q => decide (q.1 ≠ name))
+  let outputEntries := Field.canonBy Field.bytesKey ((name, replacement) :: es)
+  have hsubsetOld : es.map Prod.fst ⊆ (Ty.canon fields).map Prod.fst := by
+    have hsub := (namedFit_names_sublist _ es hnamed).subset
+    simpa only [List.map_map, Function.comp_def] using hsub
+  refine ⟨Record.frame outputEntries, ?_, ?_⟩
+  · simp only [Record.set, hentries, Option.bind_eq_bind, Option.bind_some, outputEntries]
+  · apply (has_normalize (.record outputFields) _).mpr
+    apply frame (Field.canonBy_ascending _)
+    · intro n hn
+      apply (Field.mem_names_canonBy Field.bytesKey_injective outputFields n).mpr
+      have hraw := (Field.mem_names_canonBy Field.bytesKey_injective ((name, replacement) :: es) n).mp hn
+      rcases List.mem_cons.mp hraw with rfl | hraw
+      · exact List.mem_cons_self
+      · by_cases hne : n = name
+        · subst n
+          exact List.mem_cons_self
+        · obtain ⟨q, hq, hqn⟩ := List.mem_map.mp (hsubsetOld hraw)
+          apply List.mem_cons_of_mem
+          refine List.mem_map.mpr ⟨q, ?_, hqn⟩
+          exact List.mem_filter.mpr ⟨Field.mem_canonBy hq,
+            decide_eq_true (fun h => hne (hqn.symm.trans h))⟩
+    · intro q hq
+      have hqlookup := Field.firstOf_of_nodup (Field.canonBy_names_nodup outputFields) hq
+      rw [Field.firstOf_canonBy Field.bytesKey_injective] at hqlookup
+      change Field.firstOf q.1 ((name, false, replacementType) ::
+        fields.filter (fun q => decide (q.1 ≠ name))) = some q.2 at hqlookup
+      change match Field.firstOf q.1 (Field.canonBy Field.bytesKey ((name, replacement) :: es)) with
+        | none => q.2.1 = true
+        | some value => Has value q.2.2
+      rw [Field.firstOf_canonBy Field.bytesKey_injective]
+      by_cases hn : name = q.1
+      · simp only [Field.firstOf, if_pos hn, Option.some.injEq] at hqlookup
+        simp only [Field.firstOf, if_pos hn, ← hqlookup]
+        exact hreplacement
+      · simp only [Field.firstOf, if_neg hn, firstOf_filter_other name q.1 hn] at hqlookup
+        have hfield : Field.firstOf q.1 (Ty.canon fields) = some q.2 := by
+          rw [Field.firstOf_canonBy Field.bytesKey_injective]
+          exact hqlookup
+        obtain ⟨result, hlookup, hresult⟩ := lookup hfit hfield
+        simp only [Record.lookup, hentries, Option.map_some, Option.some.injEq] at hlookup
+        simp only [Field.firstOf, if_neg hn, hlookup]
+        exact hresult
+
+
+/-- The record-only overwrite rule returns the actual fitting value. -/
+theorem setOf {value replacement : Val} {target answer replacementType : Ty}
+    {name : String}
+    (htype : Program.Record.setOf name replacementType target = some answer)
+    (hfit : Has value target) (hreplacement : Has replacement replacementType) :
+    ∃ out, Record.set value name replacement = some out ∧ Has out answer := by
+  cases target with
+  | record fields =>
+    cases htype
+    exact set hfit hreplacement
+  | _ => cases htype
+
+
+/-- Overwrite typing covers every union branch and returns an actual fitting value. -/
+theorem setType {value replacement : Val} {target answer replacementType : Ty}
+    {name : String}
+    (htype : Program.Record.setType target name replacementType = some answer)
+    (hfit : Has value target) (hreplacement : Has replacement replacementType) :
+    ∃ out, Record.set value name replacement = some out ∧ Has out answer := by
+  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp htype
+  obtain ⟨branch, hbranch, hbranchFit⟩ :=
+    (has_members value target.normalize).mpr ((has_normalize target value).mpr hfit)
+  obtain ⟨branchAnswer, ha, hbranchType⟩ := mapM_some_mem hanswers branch hbranch
+  obtain ⟨out, hout, hfit⟩ := setOf hbranchType hbranchFit hreplacement
+  exact ⟨out, hout, joinResults ha hfit⟩
+
+
+end RecordChecks
+
 /-! ## Terms -/
 
 /-- `termTy` on an application is the atom's type at the arguments' types, typed under the
@@ -964,6 +1375,16 @@ theorem evalTerms_cons (env : List Val) (head : Term) (tail : Terms) :
     evalTerms env (.cons head tail) =
       (evalTerm env head).bind fun v =>
         (evalTerms env tail).bind fun rest => some (v :: rest) := rfl
+
+/-- Record typing supplies checked argument types after the formation guard. -/
+theorem termTy_record_inv {Op : Type} {sig : Signature Op} {env : TyEnv}
+    {fields : List (String × Bool × Ty)} {names : List String} {values : Terms} {ty : Ty}
+    (h : termTy sig env (.record fields names values) = some ty) :
+    ∃ types, argsTy sig env true values = some types ∧ Record.check fields names types = some ty := by
+  unfold termTy argTy at h
+  split at h
+  · cases h
+  · exact Option.bind_eq_some_iff.mp h
 
 mutual
 /-- Under `Fits`, a term that types and evaluates evaluates to a value of its type
@@ -991,6 +1412,41 @@ theorem evalTerm_hasTy (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty) (v : 
     rw [hv'] at hv
     cases hv
     exact hty'
+  | record fields names values =>
+    obtain ⟨types, ht, hc⟩ := termTy_record_inv hty
+    have he : (evalTerms env values).bind (Machine.Record.build names) = some v := hev
+    obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp he
+    obtain ⟨out, hout, hfitout⟩ := RecordChecks.build hc (evalTerms_hasTy values env tys true types vs hfit ht hvs)
+    rw [hout] at hv
+    cases hv
+    exact hfitout
+  | field mode target name =>
+    have ht : (termTy nativeSignature tys target).bind (fun ty => Record.fieldType (mode = .optional) ty name) = some ty := hty
+    obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
+    have he : (evalTerm env target).bind (fun value => Machine.Record.read (mode = .optional) value name) = some v := hev
+    obtain ⟨value, he, hv⟩ := Option.bind_eq_some_iff.mp he
+    obtain ⟨out, hout, hfitout⟩ := RecordChecks.fieldType hc (evalTerm_hasTy target env tys targetType value hfit ht he)
+    rw [hout] at hv
+    cases hv
+    exact hfitout
+  | recordSet target name replacement =>
+    have ht : ((termTy nativeSignature tys target).bind fun targetType =>
+      (argTy nativeSignature tys true replacement).bind fun replacementType =>
+      Record.setType targetType name replacementType) = some ty := hty
+    obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
+    obtain ⟨replacementType, hr, hc⟩ := Option.bind_eq_some_iff.mp hc
+    have he : ((evalTerm env target).bind fun value => (evalTerm env replacement).bind
+      fun next => Machine.Record.set value name next) = some v := hev
+    obtain ⟨value, he, hv⟩ := Option.bind_eq_some_iff.mp he
+    obtain ⟨next, hn, hv⟩ := Option.bind_eq_some_iff.mp hv
+    have hnext : Val.hasTy next replacementType = true := by
+      rcases argTy_cases _ _ _ replacement replacementType hr with ⟨l, rfl, rfl⟩ | hr
+      · exact Lit.toVal_hasTy_arg true l next hn
+      · exact evalTerm_hasTy replacement env tys replacementType next hfit hr hn
+    obtain ⟨out, hout, hfitout⟩ := RecordChecks.setType hc (evalTerm_hasTy target env tys targetType value hfit ht he) hnext
+    rw [hout] at hv
+    cases hv
+    exact hfitout
 termination_by structural t
 /-- The list form of `evalTerm_hasTy`: the values fit the types (ENSURES 6), under either
 const flag — a literal argument fits its literal-rule type (`Lit.toVal_hasTy_arg`). -/
@@ -1050,6 +1506,40 @@ theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
     rw [evalTerm_app, hvs]
     show (nativeAtom atom vs).isSome = true
     rw [hv']
+    rfl
+  | record fields names values =>
+    obtain ⟨types, ht, hc⟩ := termTy_record_inv hty
+    obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp (evalTerms_isSome values env tys true types hfit ht)
+    obtain ⟨out, hout, _⟩ := RecordChecks.build hc (evalTerms_hasTy values env tys true types vs hfit ht hvs)
+    show ((evalTerms env values).bind (Machine.Record.build names)).isSome = true
+    rw [hvs, Option.bind_some, hout]
+    rfl
+  | field mode target name =>
+    have ht : (termTy nativeSignature tys target).bind (fun ty => Record.fieldType (mode = .optional) ty name) = some ty := hty
+    obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
+    obtain ⟨value, he⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome target env tys targetType hfit ht)
+    obtain ⟨out, hout, _⟩ := RecordChecks.fieldType hc (evalTerm_hasTy target env tys targetType value hfit ht he)
+    show ((evalTerm env target).bind (fun value => Machine.Record.read (mode = .optional) value name)).isSome = true
+    rw [he, Option.bind_some, hout]
+    rfl
+  | recordSet target name replacement =>
+    have ht : ((termTy nativeSignature tys target).bind fun targetType =>
+      (argTy nativeSignature tys true replacement).bind fun replacementType =>
+      Record.setType targetType name replacementType) = some ty := hty
+    obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
+    obtain ⟨replacementType, hr, hc⟩ := Option.bind_eq_some_iff.mp hc
+    obtain ⟨value, he⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome target env tys targetType hfit ht)
+    have hnext : ∃ next, evalTerm env replacement = some next ∧ Val.hasTy next replacementType = true := by
+      rcases argTy_cases _ _ _ replacement replacementType hr with ⟨l, rfl, rfl⟩ | hr
+      · obtain ⟨next, hn⟩ := Option.isSome_iff_exists.mp (Lit.toVal_isSome l)
+        exact ⟨next, hn, Lit.toVal_hasTy_arg true l next hn⟩
+      · obtain ⟨next, hn⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome replacement env tys replacementType hfit hr)
+        exact ⟨next, hn, evalTerm_hasTy replacement env tys replacementType next hfit hr hn⟩
+    obtain ⟨next, hn, hnext⟩ := hnext
+    obtain ⟨out, hout, _⟩ := RecordChecks.setType hc (evalTerm_hasTy target env tys targetType value hfit ht he) hnext
+    show ((evalTerm env target).bind fun value => (evalTerm env replacement).bind
+      fun next => Machine.Record.set value name next).isSome = true
+    rw [he, Option.bind_some, hn, Option.bind_some, hout]
     rfl
 termination_by structural t
 /-- The list form of `evalTerm_isSome` (ENSURES 7), under either const flag. -/

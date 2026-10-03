@@ -31,6 +31,20 @@ def namedHasTy : List (String × Bool × (Val → Bool)) → List Val → List V
     else o && namedHasTy cs (.str m :: ns) (x :: xs)
   | _, _, _ => false
 
+namespace Typed
+
+/-- **The named read, as a proposition** (`namedHasTy`'s, decisions rows 157, 165): the canonical
+field predicates against a record value's names and values. -/
+def NamedFit : List (String × Bool × (Val → Prop)) → List Val → List Val → Prop
+  | [], [], [] => True
+  | (_, o, _) :: ps, [], [] => o = true ∧ NamedFit ps [] []
+  | (n, o, P) :: ps, .str m :: ns, x :: xs =>
+    if m = n then P x ∧ NamedFit ps ns xs
+    else o = true ∧ NamedFit ps (.str m :: ns) (x :: xs)
+  | _, _, _ => False
+
+end Typed
+
 /-- A tuple's items, one for one (decisions row 159). -/
 def itemsHasTy : List (Val → Bool) → List Val → Bool
   | [], [] => true

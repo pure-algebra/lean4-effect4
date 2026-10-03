@@ -65,3 +65,51 @@ Check replacement types and required-field output flags.
 Inspect each exported proof's axioms.
 Record any unproved construction connection without weakening its statement.
 The coordinator adds the root imports at integration.
+
+## Term proof integration
+
+The coordinator assigns the term proof integration after the checked operation bridges.
+The syntax dependency is `70d35a9d`.
+Generated folds and typing rules arrive from the coordinator before compilation.
+
+Concepts: Store Typing & Value Membership and Residual Program Typing (`docs/core/semantics.md`).
+Role: helpers for `denote-typed` and its M5 consumers.
+The existing contracts in `Test/contracts/program-denotation.contract.md` retain their statements.
+
+`evalTerm_hasTy` and `evalTerm_isSome` retain Boolean value typing and term evaluation at the native signature.
+`evalTerm_fitsAll` retains world-indexed membership under its existing signature and environment premises.
+`evalTerm_progress` retains an actual returned value and world-indexed membership.
+Their consumers include source admission, typed denotation, and straight-fragment meaning typing.
+
+Concept: Reactive Scheduling & Machine Invariants.
+Role: term-operation helpers for handle registration and the existing native value invariant.
+`evalTerm_keys` and `RawHandles.evalTerm_handles` retain their actual successful-evaluation premise.
+The raw handle theorem includes every kind byte and allocation index.
+Its immediate consumer is `RawHandles.evalTerm_registered`.
+`evalTerm_validIn` retains valid environment values and actual evaluation as premises.
+These helpers serve R4 and the value side of the M5 to M6 path.
+
+No statement becomes a whole-program termination or liveness claim.
+Boolean value typing remains separate from world-indexed membership.
+Handle containment alone establishes neither registration nor allocation validity.
+The host boundary remains unchanged.
+
+The coordinator approves a narrow dependency repair.
+Move `NamedFit` unchanged into core `Program.Typed` with its existing namespace.
+Lower world-independent proof helpers into `Laws/Program/Typed/RecordValues.lean`.
+Move the term-membership mutual block from `Membership.lean` into `RecordOperations.lean`, retaining names and statements.
+Update `Typed/Admission.lean` to import that new theorem owner.
+This order lets the term proofs consume the checked operation bridges without an import cycle.
+
+```mermaid
+flowchart TD
+  C[Core NamedFit and namedHasTy] --> F[Shared named-frame facts]
+  F --> B[Boolean record operation laws]
+  B --> T[evalTerm_hasTy and evalTerm_isSome]
+  F --> M[World membership and record operation laws]
+  M --> E[evalTerm_fitsAll and evalTerm_progress]
+  T --> D[Checked program denotation]
+  E --> D
+  K[Record key and raw-handle containment] --> H[Term containment and registration]
+  H --> I[Machine value invariant]
+```

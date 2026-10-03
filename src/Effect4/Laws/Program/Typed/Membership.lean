@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Validity
+import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Program.FoldOf
 import Effect4.Laws.Program.Signature
 import Effect4.Program.TyClasses
@@ -155,16 +156,6 @@ def ShapeFree (c : CauseV) : Prop :=
   ∀ r ∈ c.reasons, match r with
   | .die defect _ => defect ≠ .badName ∧ defect ≠ .notImplemented
   | _ => True
-
-/-- **The named read, as a proposition** (`namedHasTy`'s, decisions rows 157, 165): the canonical
-field predicates against a record value's names and values. -/
-def NamedFit : List (String × Bool × (Val → Prop)) → List Val → List Val → Prop
-  | [], [], [] => True
-  | (_, o, _) :: ps, [], [] => o = true ∧ NamedFit ps [] []
-  | (n, o, P) :: ps, .str m :: ns, x :: xs =>
-    if m = n then P x ∧ NamedFit ps ns xs
-    else o = true ∧ NamedFit ps (.str m :: ns) (x :: xs)
-  | _, _, _ => False
 
 /-- A tuple's items, one for one (decisions row 159). -/
 def ItemsFit : List (Val → Prop) → List Val → Prop
@@ -499,55 +490,10 @@ theorem fits_record_none (w : World) {v : Val} (hv : recordParts? v = none)
   rw [Fits, hv]
   exact id
 
-/-- A record value's frame, from its parts. -/
-theorem recordParts?_eq_some {v : Val} {ns xs : List Val} (h : recordParts? v = some (ns, xs)) :
-    v = .ctor 0 [.list ns, .list xs] := by
-  match v, h with
-  | .ctor 0 [.list _, .list _], rfl => rfl
-
 /-- The tuple arm. -/
 theorem fits_tuple (w : World) (xs : List Val) (ts : List Ty) :
     Fits w (.list xs) (.tuple ts) ↔ ItemsFit (ts.map (fun t x => Fits w x t)) xs := by
   rw [Fits, itemFitters_eq_map]
-
-/-- The named read: the proposition implies the check. -/
-theorem namedFit_hasTy :
-    ∀ (ps : List (String × Bool × (Val → Prop))) (cs : List (String × Bool × (Val → Bool)))
-      (ns xs : List Val),
-      ps.map (fun p => (p.1, p.2.1)) = cs.map (fun p => (p.1, p.2.1)) →
-      (∀ pc ∈ ps.zip cs, ∀ x, pc.1.2.2 x → pc.2.2.2 x = true) →
-      NamedFit ps ns xs → namedHasTy cs ns xs = true
-  | [], [], [], [], _, _, _ => rfl
-  | [], [], [], _ :: _, _, _, h => h.elim
-  | [], [], _ :: _, _, _, _, h => h.elim
-  | [], _ :: _, _, _, hh, _, _ => nomatch hh
-  | _ :: _, [], _, _, hh, _, _ => nomatch hh
-  | (n, o, P) :: ps, (m, p, c) :: cs, ns, xs, hh, hpt, h => by
-    simp only [List.map_cons, List.cons.injEq, Prod.mk.injEq] at hh
-    obtain ⟨⟨rfl, rfl⟩, hrest⟩ := hh
-    have hc : ∀ x, P x → c x = true := hpt ((n, o, P), (n, o, c)) List.mem_cons_self
-    have hpt' : ∀ q ∈ ps.zip cs, ∀ x, q.1.2.2 x → q.2.2.2 x = true :=
-      fun q hq => hpt q (List.mem_cons_of_mem _ hq)
-    match ns, xs, h with
-    | [], [], h =>
-      simp only [NamedFit] at h
-      simp only [namedHasTy, Bool.and_eq_true]
-      exact ⟨h.1, namedFit_hasTy ps cs [] [] hrest hpt' h.2⟩
-    | [], _ :: _, h => exact h.elim
-    | v0 :: _, [], h => cases v0 <;> exact h.elim
-    | v0 :: ns, x :: xs, h =>
-      cases v0 with
-      | str k =>
-        simp only [NamedFit] at h
-        simp only [namedHasTy]
-        by_cases hk : k = n
-        · rw [if_pos hk] at h
-          rw [if_pos hk, Bool.and_eq_true]
-          exact ⟨hc x h.1, namedFit_hasTy ps cs ns xs hrest hpt' h.2⟩
-        · rw [if_neg hk] at h
-          rw [if_neg hk, Bool.and_eq_true]
-          exact ⟨h.1, namedFit_hasTy ps cs (.str k :: ns) (x :: xs) hrest hpt' h.2⟩
-      | _ => exact h.elim
 
 /-- The tuple read: the proposition implies the check. -/
 theorem itemsFit_hasTy :
@@ -562,42 +508,6 @@ theorem itemsFit_hasTy :
   | [], _ :: _, _, hlen, _, _ => nomatch hlen
   | _ :: _, [], _, hlen, _, _ => nomatch hlen
   | _ :: _, _ :: _, [], _, _, h => h.elim
-
-/-- The named read from the check: where each field's check implies its predicate, the Boolean
-read implies the proposition (`namedFit_hasTy`'s converse). -/
-theorem namedFit_of_namedHasTy {β : Type} (P : β → Val → Prop) (c : β → Val → Bool) :
-    ∀ (l : List (String × Bool × β)) (ns xs : List Val),
-      (∀ q ∈ l, ∀ x, c q.2.2 x = true → P q.2.2 x) →
-      namedHasTy (l.map fun q => (q.1, q.2.1, c q.2.2)) ns xs = true →
-      NamedFit (l.map fun q => (q.1, q.2.1, P q.2.2)) ns xs
-  | [], ns, xs, _, h => by
-    match ns, xs, h with
-    | [], [], _ => trivial
-    | [], _ :: _, h => exact Bool.noConfusion h
-    | _ :: _, _, h => exact Bool.noConfusion h
-  | (n, o, t) :: l, ns, xs, hpt, h => by
-    have hl : ∀ q ∈ l, ∀ x, c q.2.2 x = true → P q.2.2 x :=
-      fun q hq => hpt q (List.mem_cons_of_mem _ hq)
-    have ht : ∀ x, c t x = true → P t x := hpt (n, o, t) List.mem_cons_self
-    match ns, xs, h with
-    | [], [], h =>
-      simp only [List.map_cons, namedHasTy, Bool.and_eq_true] at h
-      exact ⟨h.1, namedFit_of_namedHasTy P c l [] [] hl h.2⟩
-    | [], _ :: _, h => exact Bool.noConfusion h
-    | v0 :: _, [], h => cases v0 <;> exact Bool.noConfusion h
-    | v0 :: ns, x :: xs, h =>
-      cases v0 with
-      | str k =>
-        simp only [List.map_cons, namedHasTy] at h
-        simp only [List.map_cons, NamedFit]
-        by_cases hk : k = n
-        · rw [if_pos hk, Bool.and_eq_true] at h
-          rw [if_pos hk]
-          exact ⟨ht x h.1, namedFit_of_namedHasTy P c l ns xs hl h.2⟩
-        · rw [if_neg hk, Bool.and_eq_true] at h
-          rw [if_neg hk]
-          exact ⟨h.1, namedFit_of_namedHasTy P c l (.str k :: ns) (x :: xs) hl h.2⟩
-      | _ => exact Bool.noConfusion h
 
 /-- The tuple read from the check. -/
 theorem itemsFit_of_itemsHasTy {β : Type} (P : β → Val → Prop) (c : β → Val → Bool) :
@@ -3199,63 +3109,6 @@ theorem fits_lit (w : World) (const : Bool) (l : Lit) (v : Val) (h : l.toVal = s
   | nat n => cases Option.some.inj h; trivial
   | bool b => cases Option.some.inj h; trivial
 
-mutual
-/-- **Term soundness for membership (TY-07, proved).** Under a signature whose atoms are the
-native table's, a term that types and evaluates over values fitting their types evaluates to a
-value that fits the term's type: the environment's fit at a variable, `fits_lit` at a literal,
-`atomFits` at an application over the fitted argument values. -/
-theorem evalTerm_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = nativeAtomTy)
-    (hconst : sig.constAtom = nativeConstAtom) (w : World) (t : Term) (env : List Val)
-    (tys : List Ty) (ty : Ty) (v : Val) (hfit : FitsAll w env tys)
-    (hty : termTy sig tys t = some ty) (hev : evalTerm env t = some v) : Fits w v ty := by
-  cases t with
-  | var i => exact hfit.get? hev hty
-  | lit l =>
-    have hty' : some (litArgTy false l) = some ty := hty
-    cases hty'
-    exact fits_lit w false l v hev
-  | app atom args =>
-    have hty' : (argsTy sig tys (sig.constAtom atom) args).bind (sig.atomOf atom) = some ty := hty
-    obtain ⟨tl, hts, hatomTy⟩ := Option.bind_eq_some_iff.mp hty'
-    rw [hatom] at hatomTy
-    have hev' : (evalTerms env args).bind (nativeAtom atom) = some v := hev
-    obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp hev'
-    unfold nativeAtomTy at hatomTy
-    obtain ⟨named, hname, hty2⟩ := Option.bind_eq_some_iff.mp hatomTy
-    simp only [nativeAtom, hname, Option.bind_some] at hv
-    exact atomFits named w tl ty vs v hty2
-      (evalTerms_fitsAll sig hatom hconst w args env tys (sig.constAtom atom) tl vs hfit hts hvs) hv
-termination_by structural t
-
-/-- The list form: the values of typed arguments fit their argument types. -/
-theorem evalTerms_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = nativeAtomTy)
-    (hconst : sig.constAtom = nativeConstAtom) (w : World) (ts : Terms) (env : List Val)
-    (tys : List Ty) (const : Bool) (tl : List Ty) (vs : List Val) (hfit : FitsAll w env tys)
-    (hty : argsTy sig tys const ts = some tl) (hev : evalTerms env ts = some vs) :
-    FitsAll w vs tl := by
-  cases ts with
-  | nil =>
-    have hty' : some ([] : List Ty) = some tl := hty
-    have hev' : some ([] : List Val) = some vs := hev
-    cases hty'
-    cases hev'
-    exact .nil
-  | cons head tail =>
-    rw [argsTy_cons] at hty
-    obtain ⟨t1, ht1, hty'⟩ := Option.bind_eq_some_iff.mp hty
-    obtain ⟨rest, hrest, hcons⟩ := Option.bind_eq_some_iff.mp hty'
-    cases hcons
-    have hev2 : ((evalTerm env head).bind fun v =>
-        (evalTerms env tail).bind fun rest => some (v :: rest)) = some vs := hev
-    obtain ⟨v1, hv1, hev'⟩ := Option.bind_eq_some_iff.mp hev2
-    obtain ⟨vrest, hvrest, hvcons⟩ := Option.bind_eq_some_iff.mp hev'
-    cases hvcons
-    refine .cons ?_ (evalTerms_fitsAll sig hatom hconst w tail env tys const rest vrest hfit hrest hvrest)
-    rcases argTy_cases _ _ _ head t1 ht1 with ⟨value, rfl, rfl⟩ | ht1'
-    · exact fits_lit w const value v1 hv1
-    · exact evalTerm_fitsAll sig hatom hconst w head env tys t1 v1 hfit ht1' hv1
-termination_by structural ts
-end
 
 /-! ## Inhabitance agrees with membership (decisions row 127; DI-67)
 
@@ -4624,5 +4477,63 @@ theorem valueVars_of_noInternalHandle : ∀ (t : Ty) (pos : Path),
     refine List.all_eq_true.mpr fun t ht => ?_
     obtain ⟨i, hi⟩ := hall _ (List.mem_map_of_mem ht)
     exact ih t ht (pos ++ [toString i]) hi
+
+mutual
+/-- **Term soundness for membership (TY-07, proved).** Under a signature whose atoms are the
+native table's, a term that types and evaluates over values fitting their types evaluates to a
+value that fits the term's type: the environment's fit at a variable, `fits_lit` at a literal,
+`atomFits` at an application over the fitted argument values. -/
+theorem evalTerm_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = nativeAtomTy)
+    (hconst : sig.constAtom = nativeConstAtom) (w : World) (t : Term) (env : List Val)
+    (tys : List Ty) (ty : Ty) (v : Val) (hfit : FitsAll w env tys)
+    (hty : termTy sig tys t = some ty) (hev : evalTerm env t = some v) : Fits w v ty := by
+  cases t with
+  | var i => exact hfit.get? hev hty
+  | lit l =>
+    have hty' : some (litArgTy false l) = some ty := hty
+    cases hty'
+    exact fits_lit w false l v hev
+  | app atom args =>
+    have hty' : (argsTy sig tys (sig.constAtom atom) args).bind (sig.atomOf atom) = some ty := hty
+    obtain ⟨tl, hts, hatomTy⟩ := Option.bind_eq_some_iff.mp hty'
+    rw [hatom] at hatomTy
+    have hev' : (evalTerms env args).bind (nativeAtom atom) = some v := hev
+    obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp hev'
+    unfold nativeAtomTy at hatomTy
+    obtain ⟨named, hname, hty2⟩ := Option.bind_eq_some_iff.mp hatomTy
+    simp only [nativeAtom, hname, Option.bind_some] at hv
+    exact atomFits named w tl ty vs v hty2
+      (evalTerms_fitsAll sig hatom hconst w args env tys (sig.constAtom atom) tl vs hfit hts hvs) hv
+termination_by structural t
+
+/-- The list form: the values of typed arguments fit their argument types. -/
+theorem evalTerms_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = nativeAtomTy)
+    (hconst : sig.constAtom = nativeConstAtom) (w : World) (ts : Terms) (env : List Val)
+    (tys : List Ty) (const : Bool) (tl : List Ty) (vs : List Val) (hfit : FitsAll w env tys)
+    (hty : argsTy sig tys const ts = some tl) (hev : evalTerms env ts = some vs) :
+    FitsAll w vs tl := by
+  cases ts with
+  | nil =>
+    have hty' : some ([] : List Ty) = some tl := hty
+    have hev' : some ([] : List Val) = some vs := hev
+    cases hty'
+    cases hev'
+    exact .nil
+  | cons head tail =>
+    rw [argsTy_cons] at hty
+    obtain ⟨t1, ht1, hty'⟩ := Option.bind_eq_some_iff.mp hty
+    obtain ⟨rest, hrest, hcons⟩ := Option.bind_eq_some_iff.mp hty'
+    cases hcons
+    have hev2 : ((evalTerm env head).bind fun v =>
+        (evalTerms env tail).bind fun rest => some (v :: rest)) = some vs := hev
+    obtain ⟨v1, hv1, hev'⟩ := Option.bind_eq_some_iff.mp hev2
+    obtain ⟨vrest, hvrest, hvcons⟩ := Option.bind_eq_some_iff.mp hev'
+    cases hvcons
+    refine .cons ?_ (evalTerms_fitsAll sig hatom hconst w tail env tys const rest vrest hfit hrest hvrest)
+    rcases argTy_cases _ _ _ head t1 ht1 with ⟨value, rfl, rfl⟩ | ht1'
+    · exact fits_lit w const value v1 hv1
+    · exact evalTerm_fitsAll sig hatom hconst w head env tys t1 v1 hfit ht1' hv1
+termination_by structural ts
+end
 
 end Effect4.Program.Typed
