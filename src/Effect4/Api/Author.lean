@@ -39,6 +39,24 @@ inductive BuildRefusal
   | serviceCarrier (key : Effect4.ServiceKey) (declared : Ty) (signature : Option Ty)
 deriving DecidableEq
 
+namespace Author.Internal
+
+/-- Check already elaborated syntax against a host table and retain its row-name metadata.
+This is the final admission step shared by initial authoring and rebuilding edited syntax;
+row names label the table for callers and do not alter admission. -/
+def finishBuild (program : Program) (table : RowTable)
+    (rowNames : List (String × Nat)) : Except BuildRefusal Built :=
+  match admitProgram program table with
+  | .ok admitted =>
+    .ok { table := table, program := program, admitted := admitted, rowNames := rowNames }
+  | .error .illTyped =>
+    match Api.explain program table with
+    | some refusal => .error (.typing refusal)
+    | none => .error (.admission .illTyped)
+  | .error why => .error (.admission why)
+
+end Author.Internal
+
 namespace Author
 
 /-- The first service whose declared carrier is not the one the native signature types its
@@ -59,15 +77,7 @@ def build (m : Module NativeOp) : Except BuildRefusal Built :=
     let table := m.table
     match disagreeingService m table with
     | some refusal => .error refusal
-    | none =>
-      match admitProgram program table with
-      | .ok admitted =>
-        .ok { table := table, program := program, admitted := admitted, rowNames := m.rowNames }
-      | .error .illTyped =>
-        match Api.explain program table with
-        | some refusal => .error (.typing refusal)
-        | none => .error (.admission .illTyped)
-      | .error why => .error (.admission why)
+    | none => Internal.finishBuild program table m.rowNames
 
 /-- A program with no declarations of its own: the module whose only field is its main. -/
 def program (src : Src NativeOp) : Except BuildRefusal Built := build { main := src }
@@ -75,6 +85,14 @@ def program (src : Src NativeOp) : Except BuildRefusal Built := build { main := 
 end Author
 
 namespace Built
+
+/-- Check an edited candidate against the existing host table, retaining declared row names.
+The complete admission procedure supplies a new certificate and type; a typing refusal has
+its existing location. This does not require or imply the old type or behavior, and does not
+relocate variables or layer references. Structural editing failures remain the caller's
+separate `Option` result before this operation is called. -/
+def rebuild (b : Built) (candidate : Program) : Except BuildRefusal Built :=
+  Author.Internal.finishBuild candidate b.table b.rowNames
 
 /-- The built program as a typed one: the admission certificate extends the typing
 certificate, so every reading `Typed` has is this one's, through this projection and not by

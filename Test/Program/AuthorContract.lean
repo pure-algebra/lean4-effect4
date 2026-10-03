@@ -433,6 +433,67 @@ did not evaluate to `true`
   = .ok (.bind (.succeed (.lit (.bool false)))
       (.iterate none (.lit (.nat 0)) (.var 0) (.var 1) (.var 1) (.succeed (.lit .unit))))
 
+/-! ## Edited programs are checked again against the same host setup
+
+`readKey` is a real package-backed program with five host rows. The path edit is
+structural (`Option`); rebuilding is separately allowed to refuse admission. -/
+
+private def editedReadKey : Option (Except Api.BuildRefusal Api.Built) := do
+  let before ← (Api.Author.build readKey).toOption
+  let .eff candidate ← (Node.eff before.program).replaceAt [1]
+      (.eff (.succeed (.lit (.str "edited")))) | none
+  pure (before.rebuild candidate)
+
+#guard (editedReadKey.bind Except.toOption).map (fun b => b.ty.answer) = some .string
+#guard (editedReadKey.bind Except.toOption).map (fun b => b.table) = some readKey.table
+#guard (editedReadKey.bind Except.toOption).map (fun b => b.rowNames) = some readKey.rowNames
+#guard (editedReadKey.bind Except.toOption).map (fun b => b.positionOf "get") = some (some 1)
+#guard (editedReadKey.bind Except.toOption).map (fun b => b.program) = some
+  (.bind (.perform (.external 0) (.lit .unit)) (.succeed (.lit (.str "edited"))))
+
+private def badEditedReadKey : Option (Except Api.BuildRefusal Api.Built) := do
+  let before ← (Api.Author.build readKey).toOption
+  let .eff candidate ← (Node.eff before.program).replaceAt [1]
+      (.eff (.succeed (.var 1))) | none
+  pure (before.rebuild candidate)
+
+#guard badEditedReadKey.map (fun result => match result with
+  | .error (.typing refusal) => some refusal
+  | _ => none) = some (some ⟨[1], .term (.var 1)⟩)
+
+-- Identical local layer types can still erase a reference target elsewhere in the tree.
+private def rebuildLeaf : LayerTerm NativeOp := .succeed Counter.key (.nat 7)
+private def rebuildWithReference : NativeEff :=
+  .bind (.provideLayer (.merge rebuildLeaf rebuildLeaf) false (.succeed (.lit .unit)))
+    (.provideLayer (.ref [0, 0, 0]) false (.succeed (.lit .unit)))
+
+#guard layerTy nativeSignature (.merge rebuildLeaf rebuildLeaf) =
+  layerTy nativeSignature rebuildLeaf
+
+private def danglingReferenceEdit : Option (Except Api.BuildRefusal Api.Built) := do
+  let original ← (Api.Author.build readKey).toOption
+  let before ← (original.rebuild rebuildWithReference).toOption
+  let .eff candidate ← (Node.eff before.program).replaceAt [0, 0] (.layer rebuildLeaf) | none
+  pure (before.rebuild candidate)
+
+#guard danglingReferenceEdit.map (fun result => match result with
+  | .error (.typing refusal) => some refusal
+  | _ => none) = some (some ⟨[], .referencesIllFormed⟩)
+
+-- Complete admission also retains non-typing refusals.
+#guard (Api.Author.build readKey).toOption.map (fun before =>
+  match before.rebuild (.iterate (some .int) (.lit (.nat 0)) (.lit (.bool false))
+      (.var 0) (.var 0) (.succeed (.lit .unit))) with
+  | .error (.admission (.uninhabited _)) => true
+  | _ => false) = some true
+
+#print axioms Effect4.Api.Author.Internal.finishBuild
+#print axioms Effect4.Api.Built.rebuild
+#print axioms Effect4.Program.Authoring.build_table
+#print axioms Effect4.Program.Authoring.rebuild_spec
+#print axioms Effect4.Program.Authoring.rebuild_admitted
+#print axioms Effect4.Program.Authoring.rebuild_self
+
 /-! ## Scope safety of the new surface, and the axioms every proof reaches -/
 
 #guard (elaborateModule once).toOption.map (Eff.scopedAt 0) = some true

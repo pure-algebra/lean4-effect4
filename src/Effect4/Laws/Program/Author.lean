@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Api.Author
+import Effect4.Laws.Program.CheckedTyping
 
 /-!
 # Laws.Program.Author — what a module's declarations guarantee
@@ -193,7 +194,7 @@ theorem build_rows_resolve {Op : Type} (m : Module Op) (names : RowNames)
 /-- A built program's table is the module's own, and its row names are the module's. -/
 theorem build_table {m : Module NativeOp} {b : Api.Built} (h : Api.Author.build m = .ok b) :
     b.table = m.table ∧ b.rowNames = m.rowNames := by
-  unfold Api.Author.build at h
+  unfold Api.Author.build Api.Author.Internal.finishBuild at h
   aesop
 
 /-- A built program's table is lawful: the certificate says so, and `build_table_lawful` is
@@ -203,6 +204,37 @@ theorem build_lawful {b : Api.Built} : Table.lawful b.table = true := b.admitted
 /-- A built program's table can be registered by this runner: every row is an external
 asynchronous row, which is what `Row.host` writes. -/
 theorem build_runnable {b : Api.Built} : checkTable b.table = none := b.admitted.runnable
+
+/-! ## Rebuilding edited syntax
+
+Concept 2, proposed `rebuild-admission` compatibility claim, supplying the checked input to
+`denote-typed` and `load-typed`; placement and exclusions precede these proofs in
+`docs/research/2026-10-03-program-path-editing/rebuild-brief.md`. These equations identify
+which program and host setup were checked. They compare no program behaviors or types. -/
+
+/-- Successful rebuilding retains the host setup and checks exactly the candidate. The
+returned `Built.admitted` certificate is indexed by those program and table fields. -/
+theorem rebuild_spec {before after : Api.Built} {candidate : Api.Program}
+    (h : before.rebuild candidate = .ok after) :
+    after.program = candidate ∧ after.table = before.table ∧
+      after.rowNames = before.rowNames := by
+  unfold Api.Built.rebuild Api.Author.Internal.finishBuild at h
+  split at h <;> aesop
+
+/-- An already admitted candidate succeeds with its certificate against the unchanged
+host setup. This reuses completeness of the existing admission procedure. -/
+theorem rebuild_admitted (before : Api.Built) (candidate : Api.Program)
+    (admitted : AdmittedProgram candidate before.table) :
+    before.rebuild candidate = .ok
+      { table := before.table, program := candidate, admitted := admitted,
+        rowNames := before.rowNames } := by
+  have accepted := admitProgram_eq_ok admitted
+  unfold Api.Built.rebuild Api.Author.Internal.finishBuild
+  split <;> aesop
+
+/-- Rebuilding the original program returns the original built value. -/
+theorem rebuild_self (b : Api.Built) : b.rebuild b.program = .ok b := by
+  exact rebuild_admitted b b.program b.admitted
 
 /-! ## Services -/
 
