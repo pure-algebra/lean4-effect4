@@ -1,0 +1,38 @@
+Successful serial commands, working directory /Users/pooks/.codex/worktrees/store-frame-laws/lean4-effect4.
+Each command exited 0. Output below is selected from the corresponding saved build log.
+The final fixture command checks the stronger Option.map = some guards.
+
+$ lake build Effect4.Laws.Machine.StoresLaws
+info: src/Effect4/Laws/Machine/StoresLaws.lean:870:0: Effect4.Machine.StoreFrameWanted: 0 open, 1 proved, 1 total; ceiling 0
+info: src/Effect4/Laws/Machine/StoresLaws.lean:2428:0: Effect4.Machine.M1.StoresLaws: 0 open, 5 proved, 5 total; ceiling 0
+Build completed successfully (201 jobs).
+
+$ lake build Effect4.Laws.Program.Simulation.Hooks Effect4.Laws.Program.Typed.Commands.Clauses.StoreScope Test.Machine.Runtime.StoresLawsContract
+ℹ [373/418] Built Effect4.Laws.Program.Simulation.Hooks (3.1s)
+ℹ [387/418] Built Test.Machine.Runtime.StoresLawsContract (2.9s)
+✔ [418/418] Built Effect4.Laws.Program.Typed.Commands.Clauses.StoreScope (1.4s)
+Build completed successfully (418 jobs).
+
+$ lake build Effect4.Laws.Program.Simulation.Walk Effect4.Laws.Program.Typed.Commands.Clauses.StoreDeferred Effect4.Laws.Program.Typed.Commands.Clauses.All Effect4.Laws.Program.LayerSharing Effect4.Laws.Program.Progress Effect4.Laws.Program.Guard.MemoIds Effect4.Laws.Machine.Folds.Val Effect4.Laws.Program.Typed.Adequacy Effect4.Laws.Machine.Handles Effect4.Laws.Machine.Behaviour Test.Program.SimulationContract
+✔ [415/434] Built Effect4.Laws.Program.Typed.Commands.Clauses.StoreDeferred (2.3s)
+✔ [435/439] Built Test.Program.SimulationContract (1.9s)
+ℹ [439/439] Built Effect4.Laws.Program.Typed.Commands.Clauses.All (1.6s)
+info: src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean:272:0: Effect4.Program.Typed.M6Ledger: 0 open, 20 proved, 20 total; ceiling 0
+info: src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean:284:0: Effect4.Program.Typed.M7: 0 open, 4 proved, 4 total; ceiling 0
+Build completed successfully (439 jobs).
+
+$ lake build Test.Machine.Runtime.StoresLawsContract
+info: src/Effect4/Laws/Machine/StoresLaws.lean:870:0: Effect4.Machine.StoreFrameWanted: 0 open, 1 proved, 1 total; ceiling 0
+ℹ [210/210] Built Test.Machine.Runtime.StoresLawsContract (1.4s)
+info: Test/Machine/Runtime/StoresLawsContract.lean:94:0: 'Effect4.Machine.syncOpStep_externals' depends on axioms: [propext, Quot.sound]
+Build completed successfully (210 jobs).
+
+$ lake env lean /private/tmp/store-frame-laws-axioms.lean
+Exit 0. Full source and output retained as axioms.lean and axioms.txt.
+
+$ git diff --check
+Exit 0; no output.
+
+Source comparison against base 8913519b:
+hs.externals references inside storesOk_syncOpStep: 7 -> 1.
+Evaluating.store_restate consumers: 8; redundant explicit externals arguments: 8 -> 0.
