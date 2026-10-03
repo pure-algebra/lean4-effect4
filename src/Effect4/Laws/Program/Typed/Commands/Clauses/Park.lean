@@ -644,4 +644,111 @@ theorem clause_yieldNow (root : ProgramSource) (rootTy : EffTy) (priority : Nat)
       rfl rfl rfl rfl rfl final
     exact (congrArg RunMachine.fibers (rupdate_rupdate m (show g.id = f.id from rfl))).symm
 
+/-! ## `await`: an exited target answers at once; a live one parks -/
+
+/-- **`await`'s park branch** (`FiberAction.join`'s live-target arm): the clause at a target the
+evaluator's machine holds and that has not exited. Its proof reads `J` with the parked fiber's code
+clause dropped (the owner's repair of `FiberTyped.code`, 2026-10-02). -/
+def AwaitParks (root : ProgramSource) (rootTy : EffTy) (target : FiberId)
+    (mode : Supervision.ObserverMode) : Prop :=
+  ∀ (w : World) (m : RState) (rest : List RCmd) (f : RFiber) (y : Bool)
+    (next : (FiberOp.await target mode).answer → RProgram) (t : RFiber),
+    Evaluating root rootTy w m rest f y → f.frame.current = .vis (.inr (.await target mode)) next →
+    m.fiber? target = some t → t.exit = none →
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR (evaluateFiberR (interpRAt root.program m.completedExits) m f y
+        (.await target mode) next))
+
+/-- The target the evaluator's machine finds is a fiber of the configuration, and an exited one is
+not the running fiber: its exit is typed at its declaration. -/
+theorem Evaluating.target_exit {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    {target : FiberId} {t : RFiber} (ht : m.fiber? target = some t) {exit : ExitV}
+    (hx : t.exit = some exit) : ∀ ty, w.Γ target = some ty → ExitOk w ty exit := by
+  obtain ⟨f0, hf0, exit0⟩ := ev.stale
+  have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
+  have live : f.exit = none := by
+    cases hfx : f.exit with
+    | none => rfl
+    | some _ =>
+      have stopped := ((ev.typed.machine.fiber hmem).exited (by rw [hfx]; rfl)).2
+      rw [ev.running] at stopped
+      cases stopped
+  have other : target ≠ f.id := by
+    intro same
+    rw [same, hf0] at ht
+    cases ht
+    rw [exit0, live] at hx
+    cases hx
+  have ht' : (m.update f).fiber? target = some t := by
+    rw [rfiber?_update_other other]
+    exact ht
+  have tid : t.id = target := rfiber?_id ht
+  intro ty declared
+  exact (ev.typed.machine.fiber (rfiber?_mem ht')).ok.c3 exit hx ty (by rw [tid]; exact declared)
+
+/-- The target the pre declares is a fiber of the evaluator's machine. -/
+theorem Evaluating.target_found {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    {target : FiberId} (pre : (w.Γ target).isSome = true) : ∃ t, m.fiber? target = some t := by
+  have wide := ev.typed.machine.wide
+  have mem : target ∈ m.fibers.map RunFiber.id := by
+    rw [← rupdate_ids m f]
+    exact (wide.fibers target).mp pre
+  have nodup : (m.fibers.map RunFiber.id).Nodup := by
+    rw [← rupdate_ids m f]
+    exact wide.fiberIds
+  obtain ⟨x, hx, hid⟩ := List.mem_map.mp mem
+  exact ⟨x, by rw [← hid]; exact rfiber?_of_mem nodup hx⟩
+
+/-- **`await`** (`internal/effect.ts:5291`, `:5304`): the target, declared by the pre, is a fiber of
+the machine (no `unknownFiber` halt); an exited target's exit, typed at its declaration, answers at
+once over the saved answer frame (by effect, or encoded as a value); a live target parks
+(`AwaitParks`). -/
+theorem clause_await_of_parks (root : ProgramSource) (rootTy : EffTy) (target : FiberId)
+    (mode : Supervision.ObserverMode) (parks : AwaitParks root rootTy target mode) :
+    FiberClauseKeeps root rootTy (.await target mode) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  obtain ⟨t, ht⟩ := ev.target_found pre
+  cases hx : t.exit with
+  | none => exact parks w m rest f y next t ev hc ht hx
+  | some exit =>
+    obtain ⟨sourceTy, hsrc⟩ := Option.isSome_iff_exists.mp pre
+    have exitOk : ExitOk w sourceTy exit := ev.target_exit ht hx sourceTy hsrc
+    have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+      fun _ h => Option.some.inj (h.symm.trans declared)
+    cases mode with
+    | joinEffect =>
+      show SettlesTyped root rootTy w f.id rest (prepareIterR
+        (FiberAction.join (interpRAt root.program m.completedExits) m (saveAnswerR f next) y target
+          .joinEffect))
+      simp only [FiberAction.join, ht, hx]
+      refine ev.settle_continue { f.frame with
+        current := .pure exit, stack := .answer next :: f.frame.stack } (fun ty' d => ?_)
+      rw [same ty' d]
+      exact ⟨sourceTy, TypedProg.pure exitOk,
+        hostStack_push (answerFrame_typed
+          (post := fun w' ans => fiberPost w' (.await target .joinEffect) cert ans)
+          (fun w' o ex hex => ⟨sourceTy, o.1.2.1 _ _ hsrc, hex⟩) typedNext) stack,
+        ⟨prov.recorded, prov.deferred⟩⟩
+    | awaitValue =>
+      show SettlesTyped root rootTy w f.id rest (prepareIterR
+        (FiberAction.join (interpRAt root.program m.completedExits) m (saveAnswerR f (seqR next)) y
+          target .awaitValue))
+      simp only [FiberAction.join, ht, hx]
+      refine ev.settle_continue { f.frame with
+        current := .pure (.success (reifyExitVal exit)), stack := .answer (seqR next) :: f.frame.stack }
+        (fun ty' d => ?_)
+      rw [same ty' d]
+      exact ⟨EffTy.pure (.exitOf sourceTy.answer sourceTy.error), TypedProg.pure ⟨exitOk.1, trivial⟩,
+        hostStack_push (seqFrame_typed
+          (post := fun w' ans => fiberPost w' (.await target .awaitValue) cert ans) rfl
+          (fun w' o v hv => ⟨sourceTy, o.1.2.1 _ _ hsrc, hv⟩) typedNext) stack,
+        ⟨prov.recorded, prov.deferred⟩⟩
+
 end Effect4.Program.Typed
