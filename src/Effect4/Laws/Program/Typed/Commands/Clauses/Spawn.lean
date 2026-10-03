@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Commands.Evaluate
+import Effect4.Laws.Program.Typed.Commands.Clauses.Park
 
 /-!
 # Laws.Program.Typed.Commands.Clauses.Spawn — the spawn and race evaluator clauses
@@ -394,5 +395,371 @@ theorem clause_raceRegister (root : ProgramSource) (rootTy : EffTy) (raceId : Na
   unfold registerRace
   rw [found']
   exact ⟨w, leHost_refl w, edited⟩
+
+/-! ## A race appended (`beginRace`, `Machine/Fibers.lean:919-933`) -/
+
+section AddRace
+variable {M : RState} {race : RRace}
+
+theorem race?_addRace (r : Nat) :
+    ({ M with races := M.races ++ [race], nextRace := M.nextRace + 1 } : RState).race? r =
+      (M.race? r).or ([race].find? fun s => s.id = r) :=
+  List.find?_append
+
+theorem race?_addRace_old {r : Nat} {old : RRace} (h : M.race? r = some old) :
+    ({ M with races := M.races ++ [race], nextRace := M.nextRace + 1 } : RState).race? r =
+      some old := by
+  rw [race?_addRace, h]
+  rfl
+
+theorem race?_addRace_cases {r : Nat} {r' : RRace}
+    (h : ({ M with races := M.races ++ [race], nextRace := M.nextRace + 1 } : RState).race? r =
+      some r') : M.race? r = some r' ∨ r' = race := by
+  rw [race?_addRace] at h
+  cases ho : M.race? r with
+  | some old =>
+    rw [ho] at h
+    exact .inl h
+  | none =>
+    rw [ho, Option.none_or] at h
+    exact .inr (List.mem_singleton.mp (List.mem_of_find?_eq_some h))
+
+theorem internalKeys_addRace {k : Guard.GuardKey}
+    (hk : k ∈ Guard.internalKeys
+      ({ M with races := M.races ++ [race], nextRace := M.nextRace + 1 } : RState)) :
+    k ∈ Guard.internalKeys M ∨ k = (race.host, race.token) := by
+  simp only [Guard.internalKeys, List.map_append, List.map_cons, List.map_nil, List.mem_append,
+    List.mem_singleton] at hk ⊢
+  aesop
+
+/-- A countdown reads the fibers only: it moves to a machine with the same fibers. -/
+theorem countdownAt_sameFibers {w : World} {M' : RState} (fibers : M'.fibers = M.fibers)
+    {waiter : FiberId} {token : Nat} {incoming : Ty → Ty → Prop}
+    (h : CountdownAt w M waiter token incoming) : CountdownAt w M' waiter token incoming := by
+  have look : ∀ id, M'.fiber? id = M.fiber? id := fun id => by
+    unfold RunMachine.fiber?
+    rw [fibers]
+  unfold CountdownAt at h ⊢
+  rw [look]
+  cases hf : M.fiber? waiter with
+  | none => trivial
+  | some fiber =>
+    rw [hf] at h
+    dsimp only at h ⊢
+    cases hp : fiber.pending.find? (fun pending => pending.token = token) with
+    | none => trivial
+    | some pending =>
+      rw [hp] at h
+      dsimp only at h ⊢
+      obtain ⟨answer, error, tokenTy, payload, inc⟩ := h
+      exact ⟨answer, error, tokenTy, ⟨payload.token, payload.collected,
+        fun id hid target hlook => payload.targets id hid target (by rw [← look]; exact hlook),
+        payload.resume⟩, inc⟩
+
+theorem storedObserverOk_addRace {root : ProgramSource} {w : World} {resultTy : EffTy}
+    (payload : RacePayload root w race resultTy) (live : race.state.live = []) {source : FiberId}
+    (o : Observer) (h : StoredObserverOk root w M source o) :
+    StoredObserverOk root w { M with races := M.races ++ [race], nextRace := M.nextRace + 1 }
+      source o := by
+  cases o with
+  | raceCallback raceId =>
+    simp only [StoredObserverOk] at h ⊢
+    split
+    · trivial
+    · rename_i r' hr
+      rcases race?_addRace_cases hr with old | rfl
+      · rw [old] at h
+        exact h
+      · exact ⟨resultTy, payload, fun hl => by rw [live] at hl; cases hl⟩
+  | countdown _ _ => exact countdownAt_sameFibers (M := M) (by rfl) h
+  | resumeAwait _ _ _ => exact h
+  | dropScopeFinalizer _ _ => exact h
+  | untrackChild _ => exact h
+  | callback _ => exact h
+
+theorem observerCommandOk_addRace {root : ProgramSource} {w : World} {resultTy : EffTy}
+    (payload : RacePayload root w race resultTy) (live : race.state.live = []) {source : FiberId}
+    {exit : ExitV} (o : Observer) (h : ObserverCommandOk root w M source exit o) :
+    ObserverCommandOk root w { M with races := M.races ++ [race], nextRace := M.nextRace + 1 }
+      source exit o := by
+  cases o with
+  | raceCallback raceId =>
+    simp only [ObserverCommandOk] at h ⊢
+    split
+    · trivial
+    · rename_i r' hr
+      rcases race?_addRace_cases hr with old | rfl
+      · rw [old] at h
+        exact h
+      · exact ⟨resultTy, payload, fun hl => by rw [live] at hl; cases hl⟩
+  | countdown _ _ => exact countdownAt_sameFibers (M := M) (by rfl) h
+  | resumeAwait _ _ _ => exact h
+  | dropScopeFinalizer _ _ => exact h
+  | untrackChild _ => exact h
+  | callback _ => exact h
+
+theorem commandAuthority_addRace {c : RCmd} (h : CommandAuthorityR M c) :
+    CommandAuthorityR { M with races := M.races ++ [race], nextRace := M.nextRace + 1 } c := by
+  cases c with
+  | registrationDone raceId _ =>
+    obtain ⟨r, fiber, found, host, running, parked, marker⟩ := h
+    exact ⟨r, fiber, race?_addRace_old found, host, running, parked, marker⟩
+  | launch raceId =>
+    obtain ⟨r, found, active⟩ := h
+    exact ⟨r, race?_addRace_old found, active⟩
+  | enrollRace raceId _ =>
+    obtain ⟨r, found, active⟩ := h
+    exact ⟨r, race?_addRace_old found, active⟩
+  | evaluate _ => exact h
+  | loop _ _ => exact h
+  | deliver _ _ => exact h
+  | finish _ _ => exact h
+  | resume _ _ _ => exact h
+  | interruptTarget _ _ _ => exact h
+  | afterInterrupt _ _ _ => exact h
+  | raceCancel _ _ _ _ _ => exact h
+  | trackChild _ _ => exact h
+  | observe _ _ _ => exact h
+  | exitDone _ => exact h
+  | closeParAwait _ _ _ => exact h
+  | link _ _ _ _ _ => exact h
+  | drainDue => exact h
+  | wake _ _ => exact h
+
+end AddRace
+
+/-- **A race appended keeps `I`**: its id the next race id, its host present, its token's key below
+the counter and fresh (no internal key, no queued key, no request), its payload at its result type,
+no live entrant. Every clause reading the races reads an existing race's id, which the append
+keeps; a stored or queued race callback at the new id reads the new payload, whose live set is
+empty. -/
+theorem configTyped_addRace {root : ProgramSource} {rootTy : EffTy} {w : World} {M : RState}
+    {q : List RCmd} (typed : ConfigTyped root rootTy w M q) {race : RRace} {resultTy : EffTy}
+    (hid : race.id = M.nextRace) (payload : RacePayload root w race resultTy)
+    (live : race.state.live = []) (host : (M.fiber? race.host).isSome = true)
+    (internal : ∀ k ∈ Guard.internalKeys M, k ≠ (race.host, race.token))
+    (queued : ∀ k ∈ q.flatMap Guard.commandKeys, k ≠ (race.host, race.token))
+    (below : race.token < M.nextToken) (noRequest : requestOfR M race.host race.token = none) :
+    ConfigTyped root rootTy w { M with races := M.races ++ [race], nextRace := M.nextRace + 1 } q := by
+  have wide := typed.machine.wide
+  have kept : RacesKept M { M with races := M.races ++ [race], nextRace := M.nextRace + 1 } :=
+    fun _ old h => ⟨old, race?_addRace_old h, rfl, rfl⟩
+  have wideNew : MachineWide root rootTy w
+      { M with races := M.races ++ [race], nextRace := M.nextRace + 1 } :=
+    { ids := wide.ids
+      fibers := wide.fibers
+      heap := wide.heap
+      promises := wide.promises
+      tokenBound := wide.tokenBound
+      tokenTargets := wide.tokenTargets
+      state := wide.state
+      wf := wide.wf
+      cells := wide.cells
+      rootDeclared := wide.rootDeclared
+      races := fun r hr => by
+        rcases List.mem_append.mp hr with old | new
+        · exact wide.races r old
+        · rw [List.mem_singleton.mp new]
+          exact ⟨resultTy, payload⟩
+      stores := wide.stores
+      fiberIds := wide.fiberIds
+      raceIds := by
+        show ((M.races ++ [race]).map Race.id).Nodup
+        rw [List.map_append]
+        refine List.nodup_append.mpr ⟨wide.raceIds, List.nodup_cons.mpr ⟨List.not_mem_nil,
+          List.nodup_nil⟩, fun a ha b hb same => ?_⟩
+        obtain ⟨r, hr, rfl⟩ := List.mem_map.mp ha
+        have lt := wide.racesBelow r hr
+        have hb' : b = race.id := List.mem_singleton.mp hb
+        rw [same, hb', hid] at lt
+        exact Nat.lt_irrefl _ lt
+      racesBelow := fun r hr => by
+        rcases List.mem_append.mp hr with old | new
+        · exact Nat.lt_succ_of_lt (wide.racesBelow r old)
+        · rw [List.mem_singleton.mp new, hid]
+          exact Nat.lt_succ_self _
+      raceHosts := fun r hr => by
+        rcases List.mem_append.mp hr with old | new
+        · exact wide.raceHosts r old
+        · rw [List.mem_singleton.mp new]
+          exact Option.isSome_iff_exists.mp host
+      keysBelow := fun k hk => by
+        rcases internalKeys_addRace hk with old | rfl
+        · exact wide.keysBelow k old
+        · exact below
+      requestsBelow := wide.requestsBelow
+      requestsOwned := fun fiber token r hr hk => by
+        rcases internalKeys_addRace hk with old | same
+        · exact wide.requestsOwned fiber token r hr old
+        · obtain ⟨rfl, rfl⟩ := Prod.mk.inj same
+          have hr' : requestOfR M race.host race.token = some r := hr
+          rw [noRequest] at hr'
+          cases hr'
+      services := wide.services
+      live := ⟨wide.live.running, wide.live.dueOwners⟩
+      timers := wide.timers
+      waiters := wide.waiters
+      liveBelow := fun raceId r' hr' id hid' => by
+        rcases race?_addRace_cases hr' with old | rfl
+        · exact wide.liveBelow raceId r' old id hid'
+        · rw [live] at hid'
+          cases hid'
+      sourceWF := wide.sourceWF }
+  have fiberOk : ∀ x ∈ ({ M with races := M.races ++ [race], nextRace := M.nextRace + 1 } :
+      RState).fibers, FiberTyped root w
+        { M with races := M.races ++ [race], nextRace := M.nextRace + 1 } x := by
+    intro x hx
+    have old := typed.machine.fiber hx
+    exact
+      { ok := old.ok
+        delivery := old.delivery_races kept
+        below := old.below
+        pendingShape := old.pendingShape
+        parkedIdle := old.parkedIdle
+        parkedBelow := old.parkedBelow
+        exited := old.exited
+        exitedStack := old.exitedStack
+        deferredCause := old.deferredCause
+        pendingOwner := old.pendingOwner
+        observers := fun o ho => storedObserverOk_addRace payload live o (old.observers o ho)
+        registration := fun raceId marker => by
+          obtain ⟨r, resultTy', found, host', token, reply⟩ := old.registration raceId marker
+          exact ⟨r, resultTy', race?_addRace_old found, host', token, stackReply_races kept reply⟩
+        code := old.code_races kept
+        tokens := old.tokens
+        raceObservers := fun raceId r' hr' o ho => by
+          rcases race?_addRace_cases hr' with h | rfl
+          · exact old.raceObservers raceId r' h o ho
+          · intro hk
+            exact internal _ (fiberKeys_internal (m := M) hx (List.mem_append_left _
+              (List.mem_flatMap.mpr ⟨o, ho, hk⟩))) rfl
+        targetsBelow := old.targetsBelow
+        observersBelow := old.observersBelow
+        children := old.children }
+  have owners : q.filterMap (Guard.commandOwner
+      ({ M with races := M.races ++ [race], nextRace := M.nextRace + 1 } : RState)) =
+      q.filterMap (Guard.commandOwner M) :=
+    filterMap_congr_mem q fun c hc => by
+      cases c with
+      | registrationDone raceId _ =>
+        obtain ⟨r, _, found, _⟩ := typed.queue.authority _ hc
+        show (({ M with races := M.races ++ [race], nextRace := M.nextRace + 1 } : RState).race?
+          raceId).map Race.host = (M.race? raceId).map Race.host
+        rw [race?_addRace_old found, found]
+      | _ => rfl
+  refine ⟨machineTyped_of wideNew fiberOk, readCode_races (m := M) rfl kept typed.code,
+    { payload := typed.queue.payload
+      authority := fun c hc => commandAuthority_addRace (typed.queue.authority c hc)
+      delivery := fun c hc => commandDelivery_mono (leHost_refl w) (fun _ _ h => h) kept
+        (fun _ _ => rfl) (typed.queue.delivery c hc)
+      owners := by rw [owners]; exact typed.queue.owners
+      registration := typed.queue.registration
+      keys := ⟨typed.queue.keys.below, typed.queue.keys.disjoint⟩
+      observer := fun s e o ho => ⟨(typed.queue.observer s e o ho).1,
+        observerCommandOk_addRace payload live o (typed.queue.observer s e o ho).2⟩
+      enroll := fun r c hc => ?_
+      noRaceAfterInterrupt := typed.queue.noRaceAfterInterrupt
+      links := typed.queue.links
+      raceObservers := fun s e o ho raceId r' hr' => by
+        rcases race?_addRace_cases hr' with h | rfl
+        · exact typed.queue.raceObservers s e o ho raceId r' h
+        · intro hk
+          exact queued _ (List.mem_flatMap.mpr ⟨_, ho, hk⟩) rfl }⟩
+  obtain ⟨race0, found, _⟩ := typed.queue.authority _ hc
+  have h := typed.queue.enroll r c hc
+  unfold EnrollRaceOk at h ⊢
+  rw [race?_addRace_old found]
+  rw [found] at h
+  exact h
+
+/-! ## `raceAll` -/
+
+/-- **`raceAll`** (`beginRace`, `Machine/Fibers.lean:919-933`, rc.112 `:1493`): the answer frame saved;
+the host's next token declared at the certificate (`configTyped_token`); the race appended with the
+entrants' programs, each typed at a type below the certificate (the pre, `denoteAt_typed`), and no
+live entrant (`configTyped_addRace`); the registration marker installed over the answer frame, which
+carries the race's exit to the continuation at the post (`Evaluating.settle_marker`). -/
+theorem clause_raceAll (root : ProgramSource) (rootTy : EffTy) (entrants : List Point)
+    (site : Option (List Nat)) : FiberClauseKeeps root rootTy (.raceAll entrants site) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have wide := ev.typed.machine.wide
+  have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
+  have old := ev.typed.machine.fiber hmem
+  have notParked : f.parked = .notParked := by
+    cases hp : f.parked with
+    | notParked => rfl
+    | withGuard _ =>
+      have idle := old.parkedIdle (by rw [hp]; exact fun h => nomatch h)
+      rw [ev.running] at idle
+      cases idle
+  obtain ⟨ord, tokened⟩ := configTyped_token ev.typed (n := f.id) (by rw [declared]; rfl) cert
+  let programs := entrants.map fun p => bodyR (interpRAt root.program m.completedExits) (.at_ p)
+  let race : RRace := ⟨m.nextRace, f.id, m.nextToken,
+    { Supervision.RaceAllState.initial [] with remaining := programs.length }, false, programs,
+    false, site⟩
+  have payload : RacePayload root (w.addToken f.id m.nextToken cert) race cert :=
+    { token := addToken_Θ_self
+      failures := strongExit_of_clean _ cert _ rfl (fun _ h => nomatch h)
+      winner := fun _ h => nomatch h
+      accepted := fun _ h => nomatch h
+      cleanup := fun _ h => nomatch h
+      live := fun _ h => nomatch h
+      programs := fun code hcode => by
+        obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hcode
+        obtain ⟨pty, ptyped, ha, he⟩ := pre p hp
+        exact ⟨pty, typedProg_mono root w _ pty _ ord
+          (denoteAt_typed root ev.typed.machine.sourceWF ev.typed.machine.services ptyped),
+          Ty.sub_le_subN ha, Ty.sub_le_subN he⟩ }
+  have internal : ∀ k ∈ Guard.internalKeys (m.update f), k ≠ (f.id, m.nextToken) :=
+    fun k hk same => by
+      have lt := wide.keysBelow k hk
+      rw [same] at lt
+      exact Nat.lt_irrefl _ lt
+  have queued : ∀ k ∈ (Cmd.deliver f.id y :: rest).flatMap Guard.commandKeys,
+      k ≠ (f.id, m.nextToken) := fun k hk same => by
+    have lt := ev.typed.queue.keys.below k hk
+    rw [same] at lt
+    exact Nat.lt_irrefl _ lt
+  have noRequest : requestOfR (m.update f) f.id m.nextToken = none :=
+    requestOfR_of_not_parked ev.look (by rw [notParked]; exact fun h => nomatch h)
+  have appended := configTyped_addRace tokened (race := race) rfl payload rfl
+    (by show ((m.update f).fiber? f.id).isSome = true; rw [ev.look]; rfl) internal queued
+    (Nat.lt_succ_self _) noRequest
+  let fr : RSaved := { f.frame with
+    current := .vis (.inr (.raceRegister m.nextRace)) Effects.Program.pure
+    stack := .answer next :: f.frame.stack }
+  have hstack : HostStack root (w.addToken f.id m.nextToken cert) (m.update f) f.id cert ty fr.stack :=
+    hostStack_push (answerFrame_typed (fun _ _ _ hex => hex)
+      (fun w'' o ans post => typedNext w'' (leHost_trans _ _ _ ord o) ans post))
+      (hostStack_mono ord stack)
+  have fresh : m.races.find? (fun s => decide (s.id = m.nextRace)) = none := by
+    cases hr : (m.update f).race? m.nextRace with
+    | none => exact hr
+    | some r =>
+      have lt := wide.racesBelow r (List.mem_of_find?_eq_some hr)
+      rw [rrace?_id hr] at lt
+      exact absurd lt (Nat.lt_irrefl _)
+  show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.raceAll _ m
+    (saveAnswerR f next) y programs site))
+  unfold FiberAction.raceAll beginRace
+  refine SettlesTyped.mono ord (Evaluating.settle_marker ?_ fr declared
+    ⟨m.nextRace, race, cert, rfl, ?_, rfl, addToken_Θ_self, hostStack_races ?_ hstack,
+      ⟨prov.recorded, prov.deferred⟩⟩)
+  · obtain ⟨f0, hf0, exit0⟩ := ev.stale
+    exact ⟨configTyped_congr (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl)
+      appended, ⟨f0, hf0, exit0⟩, ev.running, ev.live⟩
+  · show (m.races ++ [race]).find? (fun s => decide (s.id = m.nextRace)) = some race
+    rw [List.find?_append, fresh, Option.none_or, List.find?_cons, decide_eq_true rfl]
+  · intro r old h
+    refine ⟨old, ?_, rfl, rfl⟩
+    have h' : m.races.find? (fun s => decide (s.id = r)) = some old := h
+    show (m.races ++ [race]).find? (fun s => decide (s.id = r)) = some old
+    rw [List.find?_append, h']
+    rfl
 
 end Effect4.Program.Typed
