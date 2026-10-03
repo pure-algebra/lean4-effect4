@@ -1922,4 +1922,86 @@ theorem clause_interruptAs (root : ProgramSource) (rootTy : EffTy) (target who :
     rw [machines, List.append_assoc]
     exact configTyped_emit recorded _
 
+
+/-! ## `cancelRace`: the race's entrants interrupted through the queue -/
+
+/-- **`cancelRace`** (`Machine/Fibers.lean`'s `cancelRace`, D6a): the answer frame saved; an unknown
+race answers `unit` inline; a known race queues `raceCancel` for this host, whose reply contract
+reads every live entrant's declaration (`RacePayload.live`, finding F-LIVE) and a `unit` reply over
+the saved stack. -/
+theorem clause_cancelRace (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) :
+    FiberClauseKeeps root rootTy (.cancelRace raceId) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨_, _, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have typedNext' : ∀ w', w.leHost w' → ∀ ans : Val, ans = Val.unit →
+      TypedProg root w' tin (next ans) :=
+    fun w' o ans post => typedNext w' o ans post
+  have hstack : HostStack root w (m.update f) f.id ⟨.unit, .never, Env.Requirement.empty⟩ ty
+      (.answer (seqR next) :: f.frame.stack) :=
+    hostStack_push (Evaluating.unitAnswerFrame typedNext') stack
+  have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+    fun _ h => Option.some.inj (h.symm.trans declared)
+  show SettlesTyped root rootTy w f.id rest
+    (prepareIterR (FiberAction.cancelRace _ m (saveAnswerR f (seqR next)) y raceId))
+  unfold FiberAction.cancelRace
+  cases hr : m.race? raceId with
+  | none =>
+    refine ev.settle_continue { f.frame with
+      current := .pure (.success Val.unit), stack := .answer (seqR next) :: f.frame.stack }
+      (fun ty' d => ?_)
+    rw [same ty' d]
+    exact ⟨⟨.unit, .never, Env.Requirement.empty⟩, TypedProg.pure (strongExit_success w _ _ trivial),
+      hstack, ⟨prov.recorded, prov.deferred⟩⟩
+  | some race =>
+    let fr' : RSaved := { f.frame with stack := .answer (seqR next) :: f.frame.stack }
+    let g : RFiber := { f with frame := fr' }
+    have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
+    have old := ev.typed.machine.fiber hmem
+    have notParked : f.parked = .notParked := by
+      cases hp : f.parked with
+      | notParked => rfl
+      | withGuard _ =>
+        have idle := old.parkedIdle (by rw [hp]; exact fun h => nomatch h)
+        rw [ev.running] at idle
+        cases idle
+    have fresh : FiberTyped root w ((m.update f).update g) g :=
+      fiberTyped_frame old ev.look ev.running fr'
+        (fun ty' d => by
+          rw [same ty' d]
+          exact ⟨_, positionStack_of_host hstack⟩)
+        ⟨prov.recorded, prov.deferred⟩
+        (fun _ h => by
+          change raceRegistrationR f.frame.current = some _ at h
+          rw [hc, raceRegistrationR_typed current] at h
+          cases h)
+    have edited : ConfigTyped root rootTy w (m.update g) rest := by
+      rw [← rupdate_rupdate m (show g.id = f.id from rfl)]
+      exact configTyped_frame_edit ev.typed rfl ev.look ev.running fr' fresh
+    obtain ⟨f0, hf0, _⟩ := ev.stale
+    have lookG : (m.update g).fiber? f.id = some g :=
+      rfiber?_update_self (f := f0) (g := g) (by rw [rfiber?_id hf0]; exact hf0) (rfiber?_id hf0).symm
+    have wide := ev.typed.machine.wide
+    obtain ⟨resultTy, payload⟩ := wide.races race
+      (List.mem_of_find?_eq_some (show (m.update f).races.find? _ = some race from hr))
+    refine ⟨w, leHost_refl w, ?_⟩
+    show ConfigTyped root rootTy w (m.update g) (.raceCancel raceId f.id y race.state.live [] :: rest)
+    refine configTyped_cons_plain edited _ trivial ⟨g, lookG, ev.running, notParked⟩ ?_ ?_ trivial
+      rfl (fun _ _ _ h => nomatch h) (fun _ _ h => nomatch h) (fun _ _ _ h => nomatch h)
+      (fun _ _ _ _ _ h => nomatch h) (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
+    · intro x hx
+      rw [lookG] at hx
+      cases hx
+      refine ⟨resultTy.answer, resultTy.error, fun id hid => ?_, ty, declared,
+        hostStack_races (m := m.update f) (m' := m.update g) (racesKept_of_eq fun _ => rfl) hstack,
+        ⟨prov.recorded, prov.deferred⟩⟩
+      exact payload.live id (by simpa only [List.nil_append] using hid)
+    · intro o ho
+      cases ho
+      rw [commandOwner_rupdate]
+      exact owner_free ev.typed.queue rfl
+
 end Effect4.Program.Typed
