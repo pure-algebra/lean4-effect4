@@ -160,7 +160,7 @@ theorem replaceAt_overwrite {node result replacement : Node Op} {path : List Nat
               | none => rfl
               | some final => exact setChild_overwrite set final
 
-/-- Paths that split at different children below a common common are independent.
+/-- Paths that split at different children below a common ancestor are independent.
 An ancestor or descendant is deliberately excluded: replacing an ancestor can erase paths. -/
 theorem at_replaceAt_disjoint {node result replacement : Node Op}
     (common path other : List Nat) {index sibling : Nat}

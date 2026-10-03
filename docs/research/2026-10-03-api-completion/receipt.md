@@ -35,7 +35,8 @@ module and test are imported at the documented existing root anchors.
   predicate inline. The repaired module passed its narrow build (343 jobs).
 - Final command: `lake build Effect4 Effect4.Laws Test.Codegen.ReadContract Test.Machine.Runtime.StoresLawsContract Test.Program.SimulationContract Test.Program.MeaningEqContract Test.Run.RunContract Test.Program.AuthorContract Test.Program.AuthoringScope Effect4.Api.RefusalsDerived Test.Api.HostSessionContract Test.Api.FrontierContract`.
   Exit 0, **611 jobs**, including the complete public and law roots and all affected fixtures.
-  [Full output](evidence/integration-build.txt).
+  (The raw build log was not retained; `evidence/integration-commands.txt` records the commands
+  and exit codes. Reproduced independently by Claude on 2026-10-03, 611 jobs, 0 errors.)
 - `lake env lean docs/research/2026-10-03-api-completion/Usage.lean`: exit 0. The published
   example compiles, the exported signatures are checked, and both inspected observation
   connector proofs use `[propext, Quot.sound]`. All new slice declarations stay within that

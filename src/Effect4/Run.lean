@@ -262,7 +262,8 @@ structure Work where
   queued : List FiberId
   awaiting : List Await
   pending : List Key
-  timers : List Api.FrontierReason
+  /-- Each sleeping fiber with the clock reading it wakes at. -/
+  timers : List (FiberId × ClockMillis)
   deriving DecidableEq
 
 /-- Runnable fibers, armed dispatcher owners, host calls, received replies and timer waits.
@@ -271,8 +272,8 @@ def work (s : Run) : Work :=
   { runnable := Api.runnableFibers s.machine
     queued := s.machine.armed
     awaiting := s.outstanding
-    pending := s.observe.pending
-    timers := Api.timerReasons s.machine }
+    pending := (Api.HostSession.pendingReplies s.session).map Reply.key
+    timers := s.machine.state.timers.wake.waiters.map fun w => (w.fiber, w.payload) }
 
 /-- One explicit policy: decline a stuck machine; otherwise flush queued dispatchers first,
 then evaluate the first runnable fiber in machine order. Host replies and clock advances

@@ -584,17 +584,3 @@ help: ## this list
 
 clean: ## lake clean (drops the build, the generation and check markers)
 	$(LAKE) clean
-
-# Typed-state declarations are elaborated by Lean, so there are no generated source
-# bytes or TSVs to refresh. Both entry points exercise the producer and its controls.
-.PHONY: gen-typed-state check-typed-state
-gen-typed-state: check-typed-state
-check-typed-state:
-	lake build Effect4.Laws.Program.Typed.Frames
-	lake build Test.Audit.PositionCensus
-	lake build Test.Audit.PositionAnalysis
-	lake build Test.Audit.TypedStateDecl
-	lake build Test.Audit.FrameRules
-	lake build Test.Audit.ProofGraph
-	lake build Test.Audit.Obligations
-	lake build Test.Program.TypedStateRulesRed

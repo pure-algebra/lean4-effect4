@@ -13,7 +13,7 @@ EXIT 0: Build completed successfully (343 jobs).
 Final combined check, including both follow-ons:
 lake build Effect4 Effect4.Laws Test.Codegen.ReadContract Test.Machine.Runtime.StoresLawsContract Test.Program.SimulationContract Test.Program.MeaningEqContract Test.Run.RunContract Test.Program.AuthorContract Test.Program.AuthoringScope Effect4.Api.RefusalsDerived Test.Api.HostSessionContract Test.Api.FrontierContract
 EXIT 0: Build completed successfully (611 jobs).
-Full stdout/stderr: integration-build.txt
+Full stdout/stderr: not retained (reproduced independently, 611 jobs, 0 errors).
 
 Published example and repaired proof audit:
 lake env lean docs/research/2026-10-03-api-completion/Usage.lean

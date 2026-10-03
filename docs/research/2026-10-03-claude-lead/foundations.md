@@ -152,13 +152,19 @@ session runs:
 
 > `admit_sound : MachineTyped w m → admit m d = true → AnswerOk w m d`
 
-It needs two facts.
+It needs three facts.
 1. **`RequestFits`** (`host-boundary.md` §4.1): for a fiber parked on an external call, `Θ` at its
    token is the row's answer type at the evaluated request. This is a clause of `J` to add or
    derive.
-2. **Admission is at least as strict as `Fits` at that type.** Row 97's hole breaks this today:
-   `Val.hasTy` checks a handle by kind only, and a checked `nat` program finishes with a string on
-   the certified session (`host-boundary.md` §3).
+2. **On values, admission is at least as strict as `Fits` at that type.** Row 97's hole breaks
+   this today: `Val.hasTy` checks a handle by kind only, and a checked `nat` program finishes with
+   a string on the certified session (`host-boundary.md` §3). On shape-decided types it holds
+   (`fits_of_hasTy_shapeDecides`; the session form is Codex's `preflight_success_prepared_fits`).
+3. **On failures, admission refuses the reserved defects.** Found by Codex on 2026-10-03
+   (`E4-HOST-CE-008`): the session accepted `die badName`, which `ExitOk` refuses
+   (`NoShapeDefect`), so the statement above was false for failures independently of row 97.
+   Repaired the same day (decisions row 191): `admit` and `externalAdmits` refuse `badName` and
+   `notImplemented`, and `preflight_failure_noShapeDefect` is the failure half of `admit_sound`.
 
 The end theorem is then:
 
@@ -287,7 +293,8 @@ Recommendation: land `exitHandles_valid_closed` now as T1's ingredient, and keep
 
 **T4. Host admission soundness and the typed session** (rows 97–99, R6). *Typing half landed
 2026-10-03 (§12): `reachable_typed` and `obs_typed` over ghost-admitted tapes (`AdmittedTape`).
-What remains is `admit_sound`, executable admission implying `AnswerOk`.*
+The failure half of `admit_sound` landed the same day after Codex's `E4-HOST-CE-008` (row 191,
+`preflight_failure_noShapeDefect`). What remains is the value half (row 97) and `RequestFits`.*
 - **Statement.** `admit_sound` and `session_typed` (§4).
 - **Value.** The public promise for programs that call the host: no host that follows the session
   API can break typing.
@@ -725,7 +732,9 @@ The low-hanging part of §7, with the reorganization it needed. Built: `lake bui
     every checked program's frame-machine run.
 - **Still open from §7.**
   - **T3** needs `Enabled` and a no-lost-wakeup invariant, which is M6-sized (§11.4).
-  - **T4's remainder** is `admit_sound` (row 97).
+  - **T4's remainder** is `admit_sound`'s value half (row 97) and `RequestFits`. Its failure half
+    was false as §4 first stated it: Codex's `E4-HOST-CE-008` (a session-accepted `die badName`)
+    refuted it, and decisions row 191 repaired admission the same day.
   - **T6** needs a trace or ghost invariant over the close walks.
   - **T7** comes after T3.
   - **T8** needs row 117's presence clause.

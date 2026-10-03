@@ -301,7 +301,7 @@ def pendingWork : Run :=
 #guard pendingWork.work.pending = [⟨Api.root, 0⟩]
 #guard pendingWork.nextControl = none
 #guard pendingWork.controlOnce.journal = pendingWork.journal
-#guard (Run.open timed "timer-work").controlOnce.work.timers = [.awaitTimer ⟨1⟩ 5]
+#guard (Run.open timed "timer-work").controlOnce.work.timers = [(⟨1⟩, 5)]
 #guard (Run.open timed "timer-work").controlOnce.nextControl = none
 
 -- Choosing a control is not a progress certificate: zero command fuel records a frontier.

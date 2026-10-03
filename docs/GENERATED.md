@@ -70,9 +70,8 @@ one group; `make clean-gen` forgets the markers. The recipes hold the Lean lane 
 The typed-state group has no generated source file or committed table. `#typed_state`
 constructs the skeleton inside `Laws/Program/Typed/State.lean` from its roots and the
 `Typed/Sources.lean` declaration. `#frame_rules` constructs checked theorems in
-`Typed/Frames.lean`. Lake owns the dependencies and rebuilds both with the input changes.
-`make gen-typed-state` and `make check-typed-state` run the same focused build and controls;
-the normal Laws/Test roots include them. A `Source.owner` row receives the entire structure
+`Typed/Frames.lean`. Lake owns the dependencies and rebuilds both with the input changes;
+the normal Laws/Test roots include them and their controls (`Test/Audit/`). A `Source.owner` row receives the entire structure
 or every constructor argument. Its descendants are covered; a redundant row is refused. A
 `Source.each` row on a containment edge with one child type states a hand predicate at each child
 the field holds, beside the child's own clause, and covers nothing (decisions row 151 (a″): the

@@ -761,11 +761,17 @@ theorem work_runnable_mem (s : Run) (id : FiberId) :
 /-- The queued-work view is the existing arming order, independently of host waits. -/
 theorem work_queued (s : Run) : s.work.queued = s.machine.armed := rfl
 
-/-- The external waits and receipts retain the session's existing readers; timers retain
-frontier inspection's existing reader. These equalities claim no eventual service. -/
+/-- The external waits and receipts retain the session's existing readers; the timers are the
+timer store's waiters. These equalities claim no eventual service. -/
 theorem work_waits (s : Run) :
     s.work.awaiting = s.outstanding ∧ s.work.pending = s.observe.pending ∧
-      s.work.timers = Api.timerReasons s.machine := ⟨rfl, rfl, rfl⟩
+      s.work.timers = s.machine.state.timers.wake.waiters.map (fun w => (w.fiber, w.payload)) :=
+  ⟨rfl, rfl, rfl⟩
+
+/-- Frontier inspection's timer reasons are the work view's timers, read as reasons. -/
+theorem timerReasons_eq_work (s : Run) :
+    Api.timerReasons s.machine = s.work.timers.map fun t => .awaitTimer t.1 t.2 := by
+  simp only [Api.timerReasons, work, List.map_map, Function.comp_def]
 
 /-- The selected control belongs to the declared two-choice policy. -/
 theorem nextControl_spec (s : Run) (decision : Api.Decision) :

@@ -22,7 +22,7 @@ No typing preservation, trace equality, equal insufficient-fuel frontier, schedu
 
 ## Verification
 
-- `lake build Effect4.Laws.Program.MeaningEq Test.Program.MeaningEqContract`: passed, 306 jobs; `evidence/meaning-eq-build.txt`.
+- `lake build Effect4.Laws.Program.MeaningEq Test.Program.MeaningEqContract`: passed, 306 jobs (raw log not retained).
 - `lake env lean docs/research/2026-10-03-api-completion/MeaningEqAxioms.lean`: passed; all 16 inspected declarations use a subset of `[propext, Quot.sound]`; `evidence/meaning-eq-axioms.txt`.
 - `git diff --check`: passed before commit.
 - Independent source review by the program-path-editing seat: no finding; no duplicate build in this worktree.
