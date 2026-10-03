@@ -1192,4 +1192,179 @@ theorem configTyped_addObserver {root : ProgramSource} {rootTy : EffTy} {w : Wor
           · exact (keysOk k hk).2.2
         children := moved.children }
 
+/-! ## `await`'s park -/
+
+/-- The glue leaves a parked fiber whose current is an `await`. -/
+theorem prepareIterR_await {M : RState} {g : RFiber} {y : Bool} {target : FiberId}
+    {mode : Supervision.ObserverMode} {k : (FiberOp.await target mode).answer → RProgram}
+    (hg : g.frame.current = .vis (.inr (.await target mode)) k) :
+    prepareIterR ⟨M, g, y, .parked, []⟩ = ⟨M, g, y, .parked, []⟩ := by
+  rcases g with ⟨id, ⟨cur, stk, i, ic, di⟩, running, parked, pending, finalizing, exit, count,
+    maxOps, prevent, yo, observers, children, dispatcher, context⟩
+  change cur = _ at hg
+  subst hg
+  rfl
+
+/-- **`await`'s park with no deferred interrupt** (`FiberAction.join`'s live-target arm,
+`internal/effect.ts:5291`, `:5304`): the fiber parks on the fresh token, declared at the observer's
+delivered type (`observerDeliveredType`), under the park's cancel frame over the saved answer frame
+(`Evaluating.park_fresh`); the target, another fiber, gets the `resumeAwait` observer at the token
+(`configTyped_addObserver`); a self-join's observer is overwritten by the park, as the machine does. -/
+theorem Evaluating.join_parks {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    {target : FiberId} {mode : Supervision.ObserverMode}
+    {next : (FiberOp.await target mode).answer → RProgram}
+    (hc : f.frame.current = .vis (.inr (.await target mode)) next)
+    {t : RFiber} (ht : m.fiber? target = some t) (hx : t.exit = none)
+    (hdef : f.frame.deferredInterrupt = false)
+    {sourceTy : EffTy} (hsrc : w.Γ target = some sourceTy) (next' : ExitV → RProgram)
+    (frame : ∀ ty, w.Γ f.id = some ty →
+      HostStack root w (m.update f) f.id (observerDeliveredType mode sourceTy) ty
+        (.answer next' :: f.frame.stack)) :
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR (FiberAction.join (interpRAt root.program m.completedExits) m (saveAnswerR f next')
+        y target mode)) := by
+  have wide := ev.typed.machine.wide
+  have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
+  have old := ev.typed.machine.fiber hmem
+  let tok : Nat := m.nextToken
+  let tin : EffTy := observerDeliveredType mode sourceTy
+  let name := (interpR root.program).cancelName (interpR root.program).parkCancelName f.id tok
+  let fr : RSaved := { f.frame with stack := .asyncFinalizer name :: .answer next' :: f.frame.stack }
+  let p : RPending := ⟨tok, some target, [], [], .void, false⟩
+  let gP : RFiber := { f with frame := fr, dispatcher := f.dispatcher, parked := .withGuard tok,
+                              pending := f.pending ++ [p], running := false }
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨_, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  have tbelow : target.value < m.nextId := by
+    obtain ⟨x, hx', hid⟩ := List.mem_map.mp ((wide.fibers target).mp (by rw [hsrc]; rfl))
+    rw [← hid]
+    exact (ev.typed.machine.fiber hx').below
+  have ord0 : w.leHost (w.addToken f.id tok tin) :=
+    addToken_leHost (valid_nextToken_fresh rootTy w (m.update f) ev.typed.machine.typed.1 f.id)
+  have back : ∀ id t' ty', (w.addToken f.id tok tin).Θ id t' = some ty' → (id, t') ≠ (f.id, tok) →
+      w.Θ id t' = some ty' := fun id t' ty' h ne => by rwa [addToken_Θ_other ne] at h
+  have internal : ∀ k ∈ Guard.fiberKeys f, k ≠ (f.id, tok) :=
+    fun k hk => key_ne_of_lt (wide.keysBelow k (fiberKeys_internal hmem hk))
+  obtain ⟨_, _, _, _, ⟨c4⟩, _⟩ := runFiberOk_tok ord0 rfl back internal old.ok
+  obtain ⟨ord, parked⟩ := ev.park_fresh tin fr f.dispatcher p
+    (fun ty' d => hostStack_parkFinalizer root f.id tok (frame ty' d)) ⟨prov.recorded, prov.deferred⟩
+    rfl
+    (fun id hid => by
+      rcases List.mem_append.mp hid with h | h
+      · rw [List.mem_singleton.mp h]
+        exact tbelow
+      · cases h)
+    (by show externalRequestR f.frame.current = none; rw [hc]; rfl)
+    (by show raceRegistrationR f.frame.current = none; rw [hc]; rfl)
+    (fun b hb t' ht' => (c4 b hb).c0 t' ht') (fun k hk => Or.inl (List.mem_append_right _ hk))
+  let gE : RFiber := { f with frame := fr, parked := .withGuard tok, pending := f.pending ++ [p] }
+  simp only [FiberAction.join, ht, hx]
+  rw [show (none : Option ExitV) = t.exit from hx.symm]
+  show SettlesTyped root rootTy w f.id rest (prepareIterR
+    ⟨((({ m with nextToken := m.nextToken + 1 } : RState).update
+        { t with observers := t.observers ++ [.resumeAwait f.id m.nextToken mode] }).emit
+        [.parkedOn f.id m.nextToken]), gE, y, .parked, []⟩)
+  rw [prepareIterR_await (g := gE) hc]
+  refine ⟨w.addToken f.id tok tin, ord, ?_⟩
+  unfold settle
+  dsimp only
+  split
+  · rename_i hd
+    exact absurd (show f.frame.deferredInterrupt = true from hd) (by rw [hdef]; exact Bool.false_ne_true)
+  · have tid : t.id = target := rfiber?_id ht
+    let t' : RFiber := { t with observers := t.observers ++ [.resumeAwait f.id tok mode] }
+    let Mp : RState := ({ (m.update f) with nextToken := m.nextToken + 1 } : RState).update gP
+    by_cases self : target = f.id
+    · -- a self-join: the target's record is the fiber's own, which the park overwrites
+      have e : (m.update t').update gP = (m.update f).update gP :=
+        (rupdate_rupdate m (f := t') (g := gP) (show gP.id = t'.id by
+          show f.id = t.id
+          rw [tid, self])).trans (rupdate_rupdate m (f := f) (g := gP) rfl).symm
+      refine configTyped_congr (m := Mp) ?_ rfl rfl rfl rfl rfl rfl parked
+      have ef := congrArg RunMachine.fibers e
+      exact ef
+    · have hne : t.id ≠ gP.id := by rw [tid]; exact self
+      have htM : Mp.fiber? t.id = some t := by
+        rw [rfiber?_update_other hne]
+        show (m.update f).fiber? t.id = some t
+        rw [rfiber?_update_other (show t.id ≠ f.id by rw [tid]; exact self), tid]
+        exact ht
+      have lookP : Mp.fiber? f.id = some gP := rfiber?_update_self (f := f) ev.look rfl
+      have added := configTyped_addObserver parked htM (.resumeAwait f.id tok mode)
+        (fun k hk => by
+          rw [show Guard.observerKeys (.resumeAwait f.id tok mode) = [(f.id, tok)] from rfl,
+            List.mem_singleton] at hk
+          subst hk
+          refine ⟨Nat.lt_succ_self _, ?_, old.below⟩
+          rw [requestOfR_of_parked lookP rfl]
+          show externalRequestR f.frame.current = none
+          rw [hc]
+          rfl)
+        (fun r race hr hk => by
+          rw [show Guard.observerKeys (.resumeAwait f.id tok mode) = [(f.id, tok)] from rfl,
+            List.mem_singleton] at hk
+          exact key_ne_of_lt (wide.keysBelow _
+            (raceKey_internal (m := m.update f) (List.mem_of_find?_eq_some hr))) hk)
+        ⟨sourceTy, by rw [tid]; exact hsrc, addToken_Θ_self⟩
+      have e : (m.update t').update gP = ((m.update f).update gP).update t' := by
+        rw [rupdate_rupdate m (show gP.id = f.id from rfl), rupdate_comm m (show t'.id ≠ gP.id from hne)]
+      refine configTyped_congr (m := Mp.update t') ?_ rfl rfl rfl rfl rfl rfl added
+      have ef := congrArg RunMachine.fibers e
+      exact ef
+
+/-- **`await`'s park branch with no deferred interrupt**, at the clause's statement. -/
+theorem awaitParks_live (root : ProgramSource) (rootTy : EffTy) (target : FiberId)
+    (mode : Supervision.ObserverMode) :
+    ∀ (w : World) (m : RState) (rest : List RCmd) (f : RFiber) (y : Bool)
+      (next : (FiberOp.await target mode).answer → RProgram) (t : RFiber),
+      Evaluating root rootTy w m rest f y → f.frame.current = .vis (.inr (.await target mode)) next →
+      m.fiber? target = some t → t.exit = none → f.frame.deferredInterrupt = false →
+      SettlesTyped root rootTy w f.id rest
+        (prepareIterR (evaluateFiberR (interpRAt root.program m.completedExits) m f y
+          (.await target mode) next)) := by
+  intro w m rest f y next t ev hc ht hx hdef
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  obtain ⟨sourceTy, hsrc⟩ := Option.isSome_iff_exists.mp pre
+  have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+    fun _ h => Option.some.inj (h.symm.trans declared)
+  cases mode with
+  | joinEffect =>
+    exact ev.join_parks hc ht hx hdef hsrc next (fun ty' d => by
+      rw [same ty' d]
+      exact hostStack_push (answerFrame_typed
+        (post := fun w' ans => fiberPost w' (.await target .joinEffect) cert ans)
+        (fun w' o ex hex => ⟨sourceTy, o.1.2.1 _ _ hsrc, hex⟩) typedNext) stack)
+  | awaitValue =>
+    exact ev.join_parks hc ht hx hdef hsrc (seqR next) (fun ty' d => by
+      rw [same ty' d]
+      exact hostStack_push (seqFrame_typed
+        (post := fun w' ans => fiberPost w' (.await target .awaitValue) cert ans) rfl
+        (fun w' o v hv => ⟨sourceTy, o.1.2.1 _ _ hsrc, hv⟩) typedNext) stack)
+
+/-- `AwaitParks` at a pending deferred interrupt: the branch the `ReadCode` repair (2026-10-02)
+discharges. -/
+def AwaitParksDeferred (root : ProgramSource) (rootTy : EffTy) (target : FiberId)
+    (mode : Supervision.ObserverMode) : Prop :=
+  ∀ (w : World) (m : RState) (rest : List RCmd) (f : RFiber) (y : Bool)
+    (next : (FiberOp.await target mode).answer → RProgram) (t : RFiber),
+    Evaluating root rootTy w m rest f y → f.frame.current = .vis (.inr (.await target mode)) next →
+    m.fiber? target = some t → t.exit = none → f.frame.deferredInterrupt = true →
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR (evaluateFiberR (interpRAt root.program m.completedExits) m f y
+        (.await target mode) next))
+
+/-- `await`'s park branch from its deferred-interrupt case. -/
+theorem awaitParks_of_deferred (root : ProgramSource) (rootTy : EffTy) (target : FiberId)
+    (mode : Supervision.ObserverMode) (deferred : AwaitParksDeferred root rootTy target mode) :
+    AwaitParks root rootTy target mode := by
+  intro w m rest f y next t ev hc ht hx
+  cases hdef : f.frame.deferredInterrupt with
+  | true => exact deferred w m rest f y next t ev hc ht hx hdef
+  | false => exact awaitParks_live root rootTy target mode w m rest f y next t ev hc ht hx hdef
+
 end Effect4.Program.Typed
