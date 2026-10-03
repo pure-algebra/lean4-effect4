@@ -1,4 +1,5 @@
 import Effect4.Program.Native
+import Effect4.Machine.Record
 
 /-! Executable value admission lives below Laws so the application API can use it.
 The associated inversions and term-typing proofs stay in `Laws/Program/Typed.lean`. -/
@@ -17,12 +18,6 @@ def internalHandleTargets : List String :=
 otherwise read as a Ref, Deferred, Scope, Context or MemoMap handle by its target alone. -/
 def externalHandleTarget (target : String) : Bool :=
   !internalHandleTargets.contains target
-
-/-- A record value's parts (decisions row 165 (a)): its present fields' names, as `str`, and their
-values, both in canonical order: `ctor 0 [list names, list values]`, no new `Val` frame. -/
-def recordParts? : Val → Option (List Val × List Val)
-  | .ctor 0 [.list ns, .list xs] => some (ns, xs)
-  | _ => none
 
 /-- **The named read** (decisions rows 157, 165): the canonical checkers against the value's names
 and values. A name equal to the next field's is read at its type; a field the value does not name

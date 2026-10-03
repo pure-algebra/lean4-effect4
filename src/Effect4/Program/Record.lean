@@ -1,0 +1,51 @@
+import Effect4.Program.Ty
+import Effect4.Machine.Record
+
+/-! Record type operations over types already computed by the term checker.
+Recursive declaration formation is checked before these operations by public admission.
+These checks retain original field and supplied-name duplicates before normalization. -/
+
+namespace Effect4.Program.Record
+
+abbrev Fields := List (String × Bool × Ty)
+
+/-- Check supplied argument types against every declared field, including absent fields. -/
+def argumentsFit (fields : Fields) (arguments : List (String × Ty)) : Bool :=
+  arguments.all (fun argument => (Field.firstOf argument.1 fields).isSome) &&
+  fields.all (fun field => match Field.firstOf field.1 arguments with
+    | none => field.2.1
+    | some actual => Ty.sub actual.normalize field.2.2.normalize)
+
+/-- Check original columns before returning the normalized declared record type. -/
+def check (fields : Fields) (presentNames : List String) (argumentTypes : List Ty) : Option Ty := do
+  let arguments ← Machine.Record.zipNames presentNames argumentTypes
+  if (fields.map Prod.fst).Nodup ∧ presentNames.Nodup ∧ argumentsFit fields arguments = true then
+    some (Ty.normalize (.record fields))
+  else none
+
+/-- The record-only field rule. Optional mode also accepts required declarations. -/
+def fieldOf (optional : Bool) (name : String) : Ty → Option Ty
+  | .record fields => do
+    let (mayBeAbsent, type) ← Field.firstOf name fields
+    if optional then some (.option type)
+    else if mayBeAbsent then none else some type
+  | _ => none
+
+/-- Join branch results only after every input alternative admits the field operation. -/
+def joinResults (types : List Ty) : Ty := types.foldl Ty.join .never
+
+/-- Read a declared field from every normalized record alternative. -/
+def fieldType (optional : Bool) (target : Ty) (name : String) : Option Ty :=
+  ((Ty.members target.normalize).mapM (fieldOf optional name)).map joinResults
+
+/-- The record-only overwrite rule makes the replacement field required. -/
+def setOf (name : String) (valueType : Ty) : Ty → Option Ty
+  | .record fields => some (Ty.normalize (.record ((name, false, valueType) ::
+      fields.filter (fun field => decide (field.1 ≠ name)))))
+  | _ => none
+
+/-- Overwrite every record alternative. An unsupported alternative refuses the operation. -/
+def setType (target : Ty) (name : String) (valueType : Ty) : Option Ty :=
+  ((Ty.members target.normalize).mapM (setOf name valueType)).map joinResults
+
+end Effect4.Program.Record
