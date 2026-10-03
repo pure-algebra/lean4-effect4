@@ -1,6 +1,6 @@
 # Tooling for the next wave: a measured map
 
-Base: `394bc602`, revised at `2410655e`. Author: Claude, lead. Status: a proposal for the owner,
+Base: `394bc602`, revised at `eb00182d`. Author: Claude, lead. Status: a proposal for the owner,
 updated in place as its items land. It lands no planned work. The commands behind the numbers are
 at the end.
 
@@ -43,10 +43,34 @@ authoring, host-session typing and an LCNF lowering checked against named observ
 | the semantics controls | 57 s | 5 s | `e8222420`, `bca33ff6` |
 | a fresh worktree's first build | 318 s, 807 jobs built | about 1 s, 815 jobs restored | 1.3 below |
 
-Three more facts bound the next steps:
+Four more facts bound the next steps:
 
-- **The critical path.** The last profiled rebuild (`make build-profile`) spent 190 s on its critical
-  path, through the `Handles` chain. `Laws/Program/Handles/Hooks` took 84 s of it, under load.
+- **A build from scratch is bounded by total work.** One build of every module, measured at
+  `edc4da72` under load (load average 15 to 27, swap 6.4 of 7.2 GB used by other processes):
+
+  | Measure | Seconds |
+  | --- | ---: |
+  | wall time, 607 modules | 1451 |
+  | summed module time | 4226 |
+  | summed time divided by the 3 parallel jobs | 1409 |
+  | critical path, 71 modules | 534 |
+
+  The wall time is the summed work divided by the job count. The critical path is far below it,
+  so more jobs or less work would shorten the build, and shorter chains would not. The Laws
+  modules of `Effect4.Laws.Program` take 42% of the work, and the batteries under `Test` take 20%.
+- **Load inflates module times three- to fivefold.** `Laws/Program/Handles/Hooks` took 84 s and
+  51 s in loaded builds. On a quiet machine it took 16 s: 4.4 s of import and 10.2 s over about
+  220 simp calls.
+- **An edit rebuilds every module that imports it.** None of the tree's files uses Lean's module
+  system, so a changed proof changes the `.olean` that importers trace. Measured from the same
+  build:
+
+  | Edit in | Median modules rebuilt after it | Median work |
+  | --- | ---: | ---: |
+  | a Laws module | 11 | 80 s |
+  | a Store module | 249 | 1819 s |
+  | a Program module | 282 | 2063 s |
+  | a Machine module | 433 | 3214 s |
 - **Memory.** A bare `lake build` runs one compilation per core and swaps this 16 GB machine.
   `AGENTS.md` now bounds every Lake call at `LEAN_NUM_THREADS=3` (`6437547c`).
 - **Disk.** 14 GB of 460 GB are free. A worktree that builds its own outputs takes 3 GB in
@@ -84,9 +108,8 @@ Three more facts bound the next steps:
 - **1.5 Compiled report drivers: landed** (`bca33ff6`): `semantics-report`, `semantics-controls`
   and `architecture-map`.
 - **1.6 The build profile: landed** (`43866b84`): `make build-profile`, and one line in `make status`.
-- **1.7 `Hooks` on the critical path: next.** Simp takes about 80% of its time. The module makes 124
-  explicit `simp only` calls and 95 `sub_tac` calls. Profile it on a quiet machine before changing
-  either.
+- **1.7 `Hooks` on the critical path: closed, no change.** On a quiet machine the module takes
+  16 s, and no simp call takes more than 0.6 s. Its 84 s was load.
 - **1.8 An incremental axiom gate: for the owner.** The gate traverses every declaration at the end
   of the build. A check per module would run in parallel and only for rebuilt modules. It changes
   the trust architecture, so it needs a ruling.
@@ -108,6 +131,18 @@ Three more facts bound the next steps:
   object code again before the next run. The report drivers of 1.5 differ. They load their
   environment at run time, and their executables link at most one Effect4 module, the semantics
   attribute (`Effect4.Laws.Auto.Semantics`).
+- **1.10 Lean's module system: for the owner.** In Lake 4.33 a `module` file that imports
+  another `module` traces only the public part of the import's `.olean`. Theorem proofs and
+  definition bodies without `@[expose]` sit in the private part, so editing them would rebuild
+  no importer. That removes most of the rebuild costs in §2. The costs:
+  - Lean refuses a non-module import from a module, so adoption runs bottom-up. Three of the
+    owner's packages come first: `effects` (3 of 46 files are modules), `hash` (3 of 54) and
+    `typescript` (0 of 12).
+  - A definition that an importer unfolds (`rfl`, `decide`, `simp` by its equations) needs
+    `@[expose]`. An edit to it still rebuilds its importers.
+  - Tactic and generator code that a file runs needs a `meta import`.
+  - It touches every file header, so it needs a research note, a pilot on one leaf chain, and a
+    ruling.
 
 ### Lane 2 — obligations and progress visible from the tree
 
@@ -137,8 +172,11 @@ None of these has landed. Each serves the planned work directly.
 
 - **3.1 Controlled English: landed** (`6437547c`, `1461f5bf`, `afcff997`, `0b790321`). The language
   seat wrote the writing rules, the dictionary, `make check-language` and the `AGENTS.md` rewrite.
-- **3.2 Line citations.** The language checker's `line-cite` rule finds them. Open: a fix mode that
-  drops the line number.
+- **3.2 Line citations: landed** (`16f96c6d`, `eb00182d`). `check-language.py --fix` drops a line
+  number where the text names the cited declaration. It rewrote 453 citations in 13 documents,
+  and the findings fell from 671 to 213. It lists the 194 it left with their reasons. History
+  alone never writes a name: one citation in `docs/core/semantics.md` was wrong on the day it was
+  written.
 - **3.3 One list of required properties.** Generate `semantics.md`'s property lists from the
   registry. Open.
 - **3.4 `STATE.md` as an entry point.** A proposal for the owner, open.
@@ -156,11 +194,13 @@ None of these has landed. Each serves the planned work directly.
 
 ## 4. Order
 
-1. **Landed today:** 1.1's speed, 1.2's rule, 1.3–1.6, 3.1, 3.6, and the three repaired checks.
-   1.9 was measured and dropped.
-2. **Next:** the staged-generation decision with Codex and the owner, then its pilot; 1.7.
+1. **Landed today:** 1.1's speed, 1.2's rule, 1.3–1.6, 3.1, 3.2, 3.6, and the three repaired
+   checks. 1.7 closed with no change, and 1.9 was measured and dropped.
+2. **Next:** the staged-generation decision with Codex and the owner, then its pilot. Then the
+   module system decision (1.10) and its pilot, and one measured build at 4 jobs on a quiet
+   machine (1.2).
 3. **The visibility core:** 2.1–2.5, entering the plan's order and the vertical example as data.
-4. **Documents:** 3.2–3.5 and 3.7.
+4. **Documents:** the 194 citations 3.2 left, then 3.3–3.5 and 3.7.
 5. **With the planned work:** 2.7 before the first brief, 2.8 with the vertical example, 2.9 with
    P4, and 2.6 as a cleanup pass.
 
@@ -173,6 +213,7 @@ None of these has landed. Each serves the planned work directly.
 5. What `generated/semantics.md` keeps (3.7).
 6. Whether the language checker joins `make check` once the documents meet it.
 7. An incremental axiom gate (1.8).
+8. Lean's module system across the tree and the three packages it needs first (1.10).
 
 ## Commands
 
