@@ -604,7 +604,7 @@ def iaCode : RProgram := fiberValR (.interruptAll [] none) rfl
 theorem iaCode_typed (w : W) :
     TypedProg (rootProgram : ProgramSource) w (EffTy.pure .unit) iaCode :=
   TypedProg.fiber (op := .interruptAll [] none) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => by
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () (fun _ h => nomatch h) (fun w' _ ans post => by
       change ans = Val.unit at post
       subst post
       exact TypedProg.pure (ty := EffTy.pure .unit) ⟨trivial, trivial⟩)

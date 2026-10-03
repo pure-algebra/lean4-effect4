@@ -92,7 +92,8 @@ theorem generator_admitted (w : W) :
     (fun _ _ _ h => nomatch h) () trivial ?_
   intro w' _ _ _
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) (EffTy.pure .nat) ⟨generator, [], rfl, generator_checks, env0 w', fun _ h => nomatch h⟩
+    (fun _ _ _ h => nomatch h) (EffTy.pure .nat)
+    ⟨⟨generator, [], rfl, generator_checks, env0 w', fun _ h => nomatch h⟩, _, rfl⟩
     (fun _ _ _ hpost => TypedProg.pure hpost)
 
 /-! ## Contexts (decision row 90)
