@@ -3,6 +3,7 @@ import Tools.SemanticsDisplay
 import Tools.GeneratedStamp
 import Effect4.Laws.Auto.Semantics
 import ProofGraph.Ledger
+import ProofGraph.Axioms
 
 /-! A measured report of selected claims. English claim-to-witness associations are authored;
 ProofGraph checks their actual propositions. This library neither proves the descriptions nor
@@ -110,13 +111,17 @@ def roleName (r : Role) : String := match r with
   | .adequacy => "adequacy" | .simulation => "simulation"
   | .compatibility => "compatibility" | .fundamentalProperty => "fundamentalProperty"
 
-private def declaration (name : Name) (proposition : Option Expr := none) : MetaM Json := do
+private def declaration (memo : IO.Ref ProofGraph.AxiomMemo) (name : Name)
+    (proposition : Option Expr := none) : MetaM Json := do
   let ci ← getConstInfo name
   let env ← getEnv
   unless (env.getModuleIdxFor? name).isSome do
     throwError "{name}: witness module is not loaded"
   let printed ← Display.expression (proposition.getD ci.type)
-  let axioms := (← collectAxioms name).qsort (·.toString < ·.toString)
+  let (reached, table) := (ProofGraph.reachedAxioms env name).run (← memo.get)
+  memo.set table
+  let some reached := reached | throwError "{name}: axiom collection exhausted its step budget"
+  let axioms := reached.qsort (·.toString < ·.toString)
   let disallowed := ProofGraph.disallowedAxioms axioms
   unless disallowed.isEmpty do throwError "{name}: disallowed axioms {disallowed}"
   return obj [
@@ -125,13 +130,13 @@ private def declaration (name : Name) (proposition : Option Expr := none) : Meta
     ("axioms", names axioms.toList),
     ("withinSemanticAxiomCeiling", toJson (ProofGraph.disallowedAxioms axioms).isEmpty)]
 
-private def witness (name : Name) : MetaM Json := do
-  let ci ← getConstInfo name
-  let reference : ProofGraph.ProofRef := ⟨name, ci.levelParams, ci.type⟩
-  if let .error why ← reference.validate then throwError "{why}"
+private def witness (memo : IO.Ref ProofGraph.AxiomMemo) (name : Name) : MetaM Json := do
+  -- `ProofRef.validate`'s checks at the theorem's own proposition, with the axioms memoized
+  let some (.thmInfo t) := (← getEnv).find? name | throwError "{name}: missing or not a theorem"
+  if t.type.hasMVar || t.type.hasFVar then throwError "{name}: open proposition"
   if (← ProofGraph.readGoal name).isSome then
     throwError "{name}: obligation marker requires a goal pointer"
-  declaration name
+  declaration memo name
 
 private def counterexample (index : Registers) (id : String) : MetaM CounterexampleEntry := do
   let some row := index.counterexamples.find? (·.id == id)
@@ -141,10 +146,11 @@ private def counterexample (index : Registers) (id : String) : MetaM Counterexam
   unless nonblank row.row do throwError "missing register context for {id}"
   return row
 
-private def claimStatus (index : Registers) (pointer : Pointer) : MetaM (String × Json) := do
+private def claimStatus (memo : IO.Ref ProofGraph.AxiomMemo) (index : Registers) (pointer : Pointer) :
+    MetaM (String × Json) := do
   match pointer with
   | .witness name =>
-    let evidence ← witness name
+    let evidence ← witness memo name
     return ("proved", obj [("_tag", text "proved"), ("by", text "theorem"),
       ("witness", evidence), ("goal", .null)])
   | .goal name =>
@@ -156,16 +162,16 @@ private def claimStatus (index : Registers) (pointer : Pointer) : MetaM (String 
     if env.contains checked then
       discard <| ProofGraph.check #[goal] #[⟨name, .proved checked⟩] 0
       return ("proved", obj [("_tag", text "proved"), ("by", text "ledger"),
-        ("witness", ← declaration checked), ("goal", ← declaration name (some goal.proposition))])
+        ("witness", ← declaration memo checked), ("goal", ← declaration memo name (some goal.proposition))])
     if env.contains wanted then
       discard <| ProofGraph.check #[goal] #[⟨name, .wanted wanted⟩] 1
       return ("wanted", obj [("_tag", text "wanted"),
-        ("goal", ← declaration name (some goal.proposition)), ("placeholder", text wanted.toString)])
+        ("goal", ← declaration memo name (some goal.proposition)), ("placeholder", text wanted.toString)])
     throwError "{name}: missing proof or placeholder"
   | .refutedBy id name =>
     let status ← counterexample index id
     if status.status == "RETIRED" then throwError "retired counterexample id {id}"
-    let evidence ← witness name
+    let evidence ← witness memo name
     return ("refuted", obj [("_tag", text "refuted"), ("counterexample", obj [
       ("id", text id), ("registerStatus", text status.status), ("record", text status.row), ("witness", evidence)])])
   | .absent reason =>
@@ -182,6 +188,7 @@ private def literatureJson (r : LiteratureRef) : Json :=
 def buildReport (registry : Registry) (registers : Registers) (toolchain : String) :
     MetaM (Except (Array String) Json) := do
   let env ← getEnv
+  let memo ← IO.mkRef ({} : ProofGraph.AxiomMemo)
   let mut errors : Array String := #[]
   unless nonblank toolchain do errors := errors.push "provenance: blank toolchain"
   let mut ids : List String := []
@@ -220,7 +227,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
           ["definitionUsed", "proofTechnique", "adaptedResult", "analogy", "excludedFeature"].contains ref.relation do
         errors := errors.push s!"{location}: invalid literature reference"
     try
-      let (tag, status) ← claimStatus registers claim.pointer
+      let (tag, status) ← claimStatus memo registers claim.pointer
       let mut contests : Array Json := #[]
       let mut contestIds : List String := []
       for id in claim.contestedBy do
@@ -244,6 +251,8 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     | some (_, who) =>
       cuts := cuts.push (obj [("concept", text cut.concept), ("decisionRow", toJson cut.decisionRow),
         ("excluded", text cut.excluded), ("reason", text cut.reason), ("who", text who)])
+  -- A registry that fails its own checks is refused before the environment is scanned.
+  if !errors.isEmpty then return .error errors
   -- Tags outside the committed population must still refer to a known concept.
   for (name, _) in env.constants.toList do
     if let some concept := semanticsAttribute.getParam? env name then

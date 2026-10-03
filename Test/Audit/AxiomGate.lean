@@ -1,5 +1,6 @@
 import Lean
 import Lean.Util.CollectAxioms
+import ProofGraph.Axioms
 import Effect4
 
 /-!
@@ -484,8 +485,13 @@ elab "#effect4_axiom_gate" : command => do
   let admitted (declaration : Name) : Bool :=
     (moduleOf? environment declaration).any choiceImplementationModules.contains ||
       exactImplementationDeclarations.contains declaration
+  -- one memoized traversal of the dependency graph serves every declaration below
+  let mut memo : ProofGraph.AxiomMemo := {}
   for declaration in declarations do
-    let axioms ← collectAxioms declaration
+    let (reached, memo') := (ProofGraph.reachedAxioms environment declaration).run memo
+    memo := memo'
+    let some axioms := reached
+      | throwError "Effect4 axiom gate: axiom collection exhausted its step budget at {declaration}"
     -- An auxiliary or equation lemma inherits the admission of the declaration
     -- it was generated from; see `admissionAncestors` for which parents count.
     let bound :=
@@ -508,7 +514,9 @@ elab "#effect4_axiom_gate" : command => do
     let mut used := false
     for declaration in declarations do
       if moduleOf? environment declaration == some exempted then
-        if (← collectAxioms declaration).contains ``Classical.choice then
+        let (reached, memo') := (ProofGraph.reachedAxioms environment declaration).run memo
+        memo := memo'
+        if (reached.getD #[]).contains ``Classical.choice then
           used := true
     if !used then
       throwError
@@ -518,7 +526,9 @@ elab "#effect4_axiom_gate" : command => do
     if !(declarations.contains exempted) then
       throwError
         "Effect4 axiom gate: exact implementation exemption names missing declaration {exempted}"
-    if !(← collectAxioms exempted).contains ``Classical.choice then
+    let (reached, memo') := (ProofGraph.reachedAxioms environment exempted).run memo
+    memo := memo'
+    if !(reached.getD #[]).contains ``Classical.choice then
       throwError
         "Effect4 axiom gate: stale exact implementation exemption for {exempted}; it no longer reaches Classical.choice"
 
@@ -558,10 +568,13 @@ open Lean Elab Command in
 elab "#effect4_print_choice_reachers" : command => do
   let environment ← getEnv
   let mut reachers : Array Name := #[]
+  let mut memo : ProofGraph.AxiomMemo := {}
   for (name, _) in environment.constants.toList do
     if let some moduleName := moduleOf? environment name then
       if belongsToAuditedTree moduleName then
-        if (← collectAxioms name).contains ``Classical.choice then
+        let (reached, memo') := (ProofGraph.reachedAxioms environment name).run memo
+        memo := memo'
+        if (reached.getD #[]).contains ``Classical.choice then
           reachers := reachers.push name
   let isReacher (name : Name) : Bool := reachers.contains name
   let roots := reachers.filter fun name =>
