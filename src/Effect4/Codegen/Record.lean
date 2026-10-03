@@ -178,4 +178,32 @@ theorem readField_size (e : Expr) (optional : Bool) (name : String) (target : Ex
     · exact nomatch h
   · exact nomatch h
 
+/-- A constant-type-preserving identity marks the canonical spread update.
+The target appears first and the replacement appears once after it. -/
+def writeSet (name : String) (target value : Expr) : Expr :=
+  .call (.call (.generic (.ident "recordSet") [.literal name]) [])
+    [.objectWith (keyForm [name]) [.spread target, .property name value]]
+
+/-- Read exactly one spread followed by one property, with a matching literal key. -/
+def readSet : Expr → Option (String × Expr × Expr)
+  | .call (.call (.generic (.ident "recordSet") [.literal key]) [])
+      [.objectWith form [.spread target, .property name value]] =>
+    if key = name ∧ form = keyForm [name] then some (name, target, value) else none
+  | _ => none
+
+/-- Exact-codecs termination helper for the two update children of `readTerm`.
+Successful structural reading is the only premise; it makes no execution claim (R2/R3). -/
+theorem readSet_size (e : Expr) (name : String) (target value : Expr)
+    (h : readSet e = some (name, target, value)) :
+    sizeOf target < sizeOf e ∧ sizeOf value < sizeOf e := by
+  unfold readSet at h
+  split at h
+  · split at h
+    · cases h
+      simp only [Expr.call.sizeOf_spec, List.cons.sizeOf_spec, Expr.objectWith.sizeOf_spec,
+        ObjectEntry.spread.sizeOf_spec, ObjectEntry.property.sizeOf_spec]
+      constructor <;> omega
+    · exact nomatch h
+  · exact nomatch h
+
 end Effect4.Codegen.Record

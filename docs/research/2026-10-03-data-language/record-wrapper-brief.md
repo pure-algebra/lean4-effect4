@@ -92,6 +92,37 @@ These functions do not inspect the target's type or choose its mode dynamically.
 
 The runtime helper's own-presence test and `Option` result remain a later target implementation obligation.
 
+## Update image and term integration
+
+The update wrapper has this structural image:
+
+```text
+recordSet<"key">()({ ...target, key: replacement })
+```
+
+Its outer literal type argument retains the stored field name.
+The inner identity uses an inferred constant type parameter to retain the result's literal properties.
+The structural object has exactly one spread followed by exactly one property.
+The spread evaluates the target first; the property evaluates the replacement second, once each.
+The singleton property uses row 196's canonical key form.
+The structural reader checks the key argument, entry count, entry order and key form.
+
+The update retraction and exactness laws quantify over every string name and both arbitrary child expressions.
+They serve `printed-modules` through the update cases of `readTerm_printTerm` and `readTerm_exact`, under Exact Codecs & Data Plane Embeddings.
+The successful-read size lemma serves recursion into the target and replacement in the core reader.
+These helpers serve R2 and R3, with no typing or target execution claim.
+
+The next integration extends `PrintLeaf.printTerm` and the mutually recursive `readTerm` and `readTerms`.
+The public round-trip premise remains scope alone, including raw declarations and unequal field/value lists.
+Generic helper heads distinguish the new forms from legacy arbitrary `Term.app` calls.
+
+The existing core `Codegen.Read` also owns proofs of leaf and row reconstruction.
+Their record cases now need the exact wrapper laws from the Laws graph.
+The smallest proof-only section moves into a Laws companion; runtime definitions and readability predicates remain in the core module.
+Declaration names and namespaces remain unchanged.
+The coordinator approved this relocation because importing the Laws graph into the core would break the module boundary.
+The receipt will list direct consumers that need a new proof-module import.
+
 ## Proof dependencies and trust
 
 ```mermaid
@@ -118,6 +149,9 @@ The slice owns these new files:
 - `src/Effect4/Laws/Codegen/Record.lean`
 - `Test/Codegen/Record.lean`
 - This brief and its receipt
+
+The continuation also owns `Codegen/PrintLeaf.lean`, `Codegen/Read.lean`, and the necessary `Laws/Codegen/Read.lean` and `Laws/Codegen/ReadPrint.lean` cases.
+A proof-only `Laws/Codegen/ReadLeaf.lean` companion may hold the relocated leaf and row proofs.
 
 The coordinator owns `Codegen/Types.lean`, term constructors, root imports, prelude registration and the target-text reader.
 The coordinator also owns semantics registry and traversal-census integration.

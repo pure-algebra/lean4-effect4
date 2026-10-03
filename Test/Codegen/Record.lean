@@ -76,6 +76,29 @@ def normalWith (annotation : TypeRef) (form : KeyForm) (entries : List ObjectEnt
 #guard (readField (.call (.call (.generic (.ident "recordOptional") [.literal "nickname"])
   [.str "other"]) [.ident "p"])).isNone
 
+-- Updates have exactly one spread followed by one property, with an independent generic marker.
+#guard readSet (writeSet "nickname" (.ident "p") (.str "Ada")) ==
+  some ("nickname", .ident "p", .str "Ada")
+#guard readSet (writeSet "a-b" (.ident "p") (.int 4)) ==
+  some ("a-b", .ident "p", .int 4)
+#guard readSet (writeSet "__proto__" (.ident "p") (.ident "undefined")) ==
+  some ("__proto__", .ident "p", .ident "undefined")
+
+def updateWith (key : String) (form : KeyForm) (entries : List ObjectEntry) : Expr :=
+  .call (.call (.generic (.ident "recordSet") [.literal key]) []) [.objectWith form entries]
+
+#guard (readSet (updateWith "x" .plain [.spread (.ident "p"), .property "x" (.int 1)])).isSome
+#guard (readSet (updateWith "other" .plain [.spread (.ident "p"), .property "x" (.int 1)])).isNone
+#guard (readSet (updateWith "x" .quoted [.spread (.ident "p"), .property "x" (.int 1)])).isNone
+#guard (readSet (updateWith "__proto__" .plain
+  [.spread (.ident "p"), .property "__proto__" (.int 1)])).isNone
+#guard (readSet (updateWith "x" .plain [.property "x" (.int 1), .spread (.ident "p")])).isNone
+#guard (readSet (updateWith "x" .plain
+  [.spread (.ident "p"), .property "x" (.int 1), .spread (.ident "q")])).isNone
+#guard (readSet (updateWith "x" .plain
+  [.spread (.ident "p"), .property "x" (.int 1), .property "y" (.int 2)])).isNone
+#guard (readSet (.call (.ident "recordSet") [.ident "p"])).isNone
+
 example (fs : Fields) (ns : List String) (vs : List Expr) :
     readRecord (writeRecord fs ns vs) = some (fs, ns, vs) := readRecord_writeRecord fs ns vs
 example (e : Expr) (fs : Fields) (ns : List String) (vs : List Expr)
@@ -95,3 +118,6 @@ end Effect4.Test.Record
 #print axioms Effect4.Codegen.Record.readRecord_exact
 #print axioms Effect4.Codegen.Record.readField_writeField
 #print axioms Effect4.Codegen.Record.readField_exact
+#print axioms Effect4.Codegen.Record.readSet_size
+#print axioms Effect4.Codegen.Record.readSet_writeSet
+#print axioms Effect4.Codegen.Record.readSet_exact

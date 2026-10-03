@@ -171,4 +171,25 @@ theorem readField_exact (e : Expr) (optional : Bool) (name : String) (target : E
     · exact nomatch h
   · exact nomatch h
 
+/-- The update wrapper retains its exact key and both arbitrary child expressions. -/
+theorem readSet_writeSet (name : String) (target value : Expr) :
+    readSet (writeSet name target value) = some (name, target, value) := by
+  simp only [writeSet, readSet, and_self, ↓reduceIte]
+
+/-- No extra entry, alternate key form, or different literal key is accepted. -/
+theorem readSet_exact (e : Expr) (name : String) (target value : Expr)
+    (h : readSet e = some (name, target, value)) : writeSet name target value = e := by
+  unfold readSet at h
+  split at h
+  · next key form target' name' value' =>
+    split at h
+    · next hc =>
+      cases h
+      obtain ⟨hk, hf⟩ := hc
+      subst key
+      subst form
+      rfl
+    · exact nomatch h
+  · exact nomatch h
+
 end Effect4.Codegen.Record
