@@ -1,9 +1,0 @@
-$ bash -c cd ts/eff && bun test
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:32:01Z
-bun test v1.4.2 (744846f84)
-
- 399 pass
- 0 fail
- 1799 expect() calls
-Ran 399 tests across 20 files. [5.00s]
-exit=0 (5s)

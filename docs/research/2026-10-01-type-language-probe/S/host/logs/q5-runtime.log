@@ -1,8 +1,0 @@
-# check: q5-runtime
-# date: 2026-10-01T19:39:18Z
-# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
-# command: bash -c cd q5 && bun run runtime.ts
-# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
-raw JSON object keys: 8; deduped: 8
-the two revived documents are equal: true
-# exit=0 seconds=0

@@ -1,1 +1,0 @@
-['lake', 'env', 'lean', '-DwarningAsError=true', 'Test/Api/ForkLedgerRunner.lean']

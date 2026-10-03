@@ -1,9 +1,0 @@
-fold_of: Effect4.Machine.Val.keys.eq_cata : ∀ (a : Val), a.keys = Store.cata_val Val.keys.alg a
-fold_of: Effect4.Machine.Val.keysList.eq_cata : ∀ (a : List Val),
-  Val.keysList a = List.foldr (fun r rrest => r ++ rrest) [] (Store.cata_pos_list_val Val.keys.alg a)
-fold_of: Effect4.Machine.Val.keys.alg : Store.ValAlgebra fun fam => Store.ValFam.rec (List Handle) fam
-fold_of: Effect4.Machine.Val.validIn.eq_cata : ∀ (s : Stores) (a : Val),
-  Val.validIn s a = Store.cata_val (Val.validIn.alg s) a
-fold_of: Effect4.Machine.Val.validInList.eq_cata : ∀ (s : Stores) (a : List Val),
-  Val.validInList s a = List.foldr (fun r rrest => r && rrest) true (Store.cata_pos_list_val (Val.validIn.alg s) a)
-fold_of: Effect4.Machine.Val.validIn.alg : Stores → Store.ValAlgebra fun fam => Store.ValFam.rec Bool fam

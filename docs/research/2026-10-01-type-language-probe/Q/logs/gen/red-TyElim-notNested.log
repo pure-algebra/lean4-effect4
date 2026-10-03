@@ -1,5 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -M 4096 --run docs/research/2026-10-01-type-language-probe/Q/tools/Effect4Gen/Fold.lean --group TyEq --imports Effect4.Program.Ty --out /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/red1.lean --kind Effect4.Program.Ty=elim Effect4.Program.Ty
-# started 2026-10-01T18:48:30Z (LEAN_NUM_THREADS=1)
-uncaught exception: elim: Effect4.Program.Ty has no member under a container; derive `DecidableEq` and `Repr` and use `induction` as they are
-# exit=1 seconds=9

@@ -1,1 +1,0 @@
-$ python3 (inline): generated/variances.json without its `map` head -> generated/variances-record-only.json; heads: ['option', 'list', 'prod', 'except', 'exitOf', 'causeOf', 'fiberOf', 'union', 'refOf', 'deferredOf', 'record']

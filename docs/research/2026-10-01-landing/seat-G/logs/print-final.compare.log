@@ -1,6 +1,0 @@
-SAME statement of Effect4.Program.Guard.SingleGuard.held_fireFold; proof half 15 lines before, 7 after
-SAME statement of Effect4.Program.Guard.SingleGuard.held_flushAllState; proof half 247 lines before, 6 after
-SAME statement of Effect4.Program.Guard.SingleGuard.held_advanceState; proof half 2109 lines before, 6 after
-SAME statement of Effect4.Program.Guard.OuterDriver.fireFold_preserved; proof half 26 lines before, 7 after
-SAME statement of Effect4.Program.Guard.OuterDriver.flushAllState_preserved; proof half 184 lines before, 7 after
-SAME statement of Effect4.Program.Guard.OuterDriver.advanceState_preserved; proof half 1976 lines before, 7 after

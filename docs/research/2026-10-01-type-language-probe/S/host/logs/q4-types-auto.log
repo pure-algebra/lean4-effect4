@@ -1,8 +1,0 @@
-# check: q4-types-auto
-# date: 2026-10-01T19:35:27Z
-# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
-# command: /opt/homebrew/bin/tsgo -p tsconfig.q4auto.json --pretty false
-# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
-q4-types-auto.ts(24,27): error TS2344: Type 'false' does not satisfy the constraint 'true'.
-upstream-types.ts(36,28): error TS2707: Generic type 'Exit' requires between 1 and 2 type arguments.
-# exit=1 seconds=0

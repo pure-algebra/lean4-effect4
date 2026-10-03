@@ -1,4 +1,0 @@
-$ bun docs/research/2026-10-01-landing/seat-J2/probes/jsonc-corpus.ts
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:31:25Z
-files 578 (projects 34); read alike by parseJsonc, Bun.JSONC and (where it reads them) JSON.parse: 578; JSON.parse refuses 0; parseJsonc refuses 0; disagreements 0
-exit=0 (2s)

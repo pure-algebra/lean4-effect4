@@ -1,5 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -M 4096 --run docs/research/2026-10-01-type-language-probe/Q/tools/Effect4Gen/Fold.lean --group EffEq --imports Effect4.Program.Eff --out /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/red2.lean --kind Effect4.Program.Eff=elim Effect4.Program.Eff
-# started 2026-10-01T18:48:39Z (LEAN_NUM_THREADS=1)
-uncaught exception: elim: Effect4.Program.Eff has parameters or indices; this emission reads a plain family
-# exit=1 seconds=10

@@ -1,2 +1,0 @@
-'Probe.RecordK2.dec_enc' depends on axioms: [propext, Quot.sound]
-'Probe.RecordK2.enc_dec' depends on axioms: [propext]

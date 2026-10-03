@@ -1,9 +1,0 @@
-docs/research/2026-09-30-seat-codex-slice6-evidence/H2/diagnostics/MissingServiceTransport.lean:35:2: error: failed to synthesize
-  Decidable (NoShapeDefect requiredTy (Exit.failure missing))
-
-Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
-'SideAudit.H2.MissingServiceTransport.same_error' depends on axioms: [propext, Quot.sound]
-'SideAudit.H2.MissingServiceTransport.requirements_differ' depends on axioms: [propext, Quot.sound]
-'SideAudit.H2.MissingServiceTransport.allowed_inside' depends on axioms: [propext, sorryAx, Quot.sound]
-'SideAudit.H2.MissingServiceTransport.excluded_outside' depends on axioms: [propext, Quot.sound]
-'SideAudit.H2.MissingServiceTransport.failure_of_error_refuted' depends on axioms: [propext, sorryAx, Quot.sound]

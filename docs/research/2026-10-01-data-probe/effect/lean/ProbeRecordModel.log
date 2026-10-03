@@ -1,5 +1,0 @@
-'DataProbeEffect.RecordModel.decode_fits' depends on axioms: [propext]
-'DataProbeEffect.RecordModel.encode_decode' depends on axioms: [propext, Quot.sound]
-'DataProbeEffect.RecordModel.decode_encode' depends on axioms: [propext, Quot.sound]
-'DataProbeEffect.RecordModel.fits_sub' depends on axioms: [propext]
-exit=0

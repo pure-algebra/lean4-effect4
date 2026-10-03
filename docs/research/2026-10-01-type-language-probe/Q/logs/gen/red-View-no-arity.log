@@ -1,5 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ ./docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M 4096 --run docs/research/2026-10-01-type-language-probe/Q/tools/Effect4Gen/View.lean --group TyView --imports ProbeQW.Fold\,Effect4.Laws.Auto.RuleSets\,Effect4.Machine.Alphabets --variances docs/research/2026-10-01-type-language-probe/Q/red/variances-wave-no-arity.json --out /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/red-TyView.lean ProbeQW.Ty
-# started 2026-10-01T20:57:23Z (LEAN_NUM_THREADS=1)
-uncaught exception: View: `Ty.tuple` has variable arity: a field list or a `List Ty` needs a row with "arity": "each" and the one variance co; a name and a `List Ty` needs "arity": "byName" (tools/Effect4Gen/variances.json)
-# exit=1 seconds=5

@@ -1,1 +1,0 @@
-Final read-only source/statement review found no defect or scope escape. g141 changes Lean refusal and tsgo diagnostic codes, with both verdict bits unchanged. Register updates were applied after this independent read. No independent build run.

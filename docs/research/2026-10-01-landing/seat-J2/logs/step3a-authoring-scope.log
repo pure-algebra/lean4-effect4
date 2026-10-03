@@ -1,3 +1,0 @@
-$ lake env lean -DwarningAsError=true Test/Program/AuthoringScope.lean
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T22:21:56Z
-exit=0 (1s)

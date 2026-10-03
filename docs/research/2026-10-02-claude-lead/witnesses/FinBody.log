@@ -1,3 +1,0 @@
-'Effect4.Program.Typed.FinBodyWitness.admitted' depends on axioms: [propext, Quot.sound]
-'Effect4.Program.Typed.FinBodyWitness.body_untyped' depends on axioms: [propext, Quot.sound]
-'Effect4.Program.Typed.FinBodyWitness.bridge_refuted' depends on axioms: [propext, Quot.sound]

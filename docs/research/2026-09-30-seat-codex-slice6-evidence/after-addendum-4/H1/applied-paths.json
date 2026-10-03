@@ -1,6 +1,0 @@
-[
-  "src/Effect4/Laws/Program/Guard/Core.lean",
-  "src/Effect4/Laws/Program/Guard/RegistrationQueue.lean",
-  "src/Effect4/Laws/Program/Typed/Scheduler.lean",
-  "src/Effect4/Laws/Program/Typed/Assembly.lean"
-]

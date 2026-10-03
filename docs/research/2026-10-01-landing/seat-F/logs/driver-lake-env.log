@@ -1,1 +1,0 @@
-## exit=0 seconds=53 cmd=lake env lean -M6144 -DwarningAsError=true Test/Audit/TraversalCensus.lean

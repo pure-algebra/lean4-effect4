@@ -1,6 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ ./docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true docs/research/2026-10-01-type-language-probe/Q/probes/Q4/TyOcamlVsRender.lean
-# started 2026-10-01T20:43:33Z (LEAN_NUM_THREADS=1)
-[Ty_never  |  Ty_never, Ty_unit  |  Ty_unit, Ty_nat  |  Ty_nat, Ty_int  |  Ty_int, Ty_string  |  Ty_string, Ty_bool  |  Ty_bool, Ty_handle ("Host.R")  |  Ty_handle("Host.R"), Ty_option (Ty_nat)  |  Ty_option(Ty_nat), Ty_list (Ty_string)  |  Ty_list(Ty_string), Ty_prod (Ty_nat, Ty_bool)  |  Ty_prod(Ty_nat, Ty_bool), Ty_except (Ty_string, Ty_nat)  |  Ty_except(Ty_string, Ty_nat), Ty_exitOf (Ty_nat, Ty_string)  |  Ty_exitOf(Ty_nat, Ty_string), Ty_causeOf (Ty_string)  |  Ty_causeOf(Ty_string), Ty_fiberOf (Ty_unit, Ty_nat)  |  Ty_fiberOf(Ty_unit, Ty_nat), Ty_union (Ty_nat, Ty_string)  |  Ty_union(Ty_nat, Ty_string), Ty_lit ("tag")  |  Ty_lit("tag"), Ty_refOf (Ty_nat)  |  Ty_refOf(Ty_nat), Ty_deferredOf (Ty_nat, Ty_string)  |  Ty_deferredOf(Ty_nat, Ty_string), Ty_var (3)  |  Ty_var(3), Ty_unknown  |  Ty_unknown, Ty_list (Ty_prod (Ty_option (Ty_nat), Ty_union (Ty_never, Ty_unknown)))  |  Ty_list(Ty_prod(Ty_option(Ty_nat), Ty_union(Ty_never, Ty_unknown)))]
-equal on 7 of 21
-# exit=0 seconds=2

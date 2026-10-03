@@ -1,6 +1,0 @@
-# RED CONTROL. bun 1.4.2, oxc-parser 0.147.0; bun scripts/form_census.ts check scripts/fixtures/module-types.ts scripts/fixtures/module-types.expected-red.tsv
-ok   T.moduleTypeRef expected 3 got 3
-FAIL T.moduleTypeRef.generic expected 3 got 2
-ok   R.Option.Option expected 1 got 1
-1 MISMATCH(ES)
-exit=1

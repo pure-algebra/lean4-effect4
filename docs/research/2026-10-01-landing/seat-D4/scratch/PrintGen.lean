@@ -1,9 +1,0 @@
-import Effect4.Laws.Program.Typed.State
-open Effect4.Program.Typed
-#print Preds
-#print ScopeStateOk
-#print FinNameOk
-#print CaptureOk
-#print ScopeOk
-#print ScopeEntryOk
-#print ScopeStoreOk

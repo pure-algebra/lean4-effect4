@@ -1,6 +1,0 @@
-'Test.Program.TypedProgBindRed.typedProg_not_bind_closed' depends on axioms: [propext, Quot.sound]
-'Test.Program.TypedProgBindRed.catchNat_typed' depends on axioms: [propext, Quot.sound]
-'Test.Program.TypedProgBindRed.toUnit_typed' depends on axioms: [propext, Quot.sound]
-'Test.Program.TypedProgBindRed.bind_not_typed' depends on axioms: [propext, Quot.sound]
-'Test.Program.TypedProgBindRed.guard_bind_not_closed' depends on axioms: [propext, Quot.sound]
-'Test.Program.TypedProgBindRed.seq_sample' depends on axioms: [propext, Quot.sound]

@@ -1,3 +1,0 @@
-# scratch-hasTy.lean (deleted after use): two proof scripts for `Val.hasTy v (.prod .never b) a = false`,
-# variant A `simp only [Val.hasTy, Bool.false_and]; split <;> rfl`, variant B `unfold Val.hasTy; split; ...`.
-# Compiled through the lock with -DwarningAsError=true: exit 0, no output. Variant B went into PedigreeProbe.lean (P3).

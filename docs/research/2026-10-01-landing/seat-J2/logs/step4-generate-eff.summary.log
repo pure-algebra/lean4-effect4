@@ -1,8 +1,0 @@
-# summary: LEAN_NUM_THREADS=1 python3 scripts/generate.py --only eff (command lines and verdict; after each run git status of ocaml/, ts/ and harness/ was empty: byte-identical)
-$ python3 scripts/generate.py --only eff
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T22:57:22Z
-+ lake build OCaml5.Tools.EffGen
-+ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/EffGen.lean <scratch>/ocaml/eff
-+ python3 scripts/generate-engine-structure.py --descriptor <scratch>/ocaml/eff/program-structure.json --out <scratch>/ocaml/engine
-PASS generate: requested producers ran in dependency order
-exit=0 (13s)

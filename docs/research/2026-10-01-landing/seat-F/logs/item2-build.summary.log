@@ -1,6 +1,0 @@
-✔ [150/155] Built Effect4.Api.Runner (425ms)
-✔ [151/155] Built Effect4.Run (527ms)
-✔ [153/155] Built Effect4.Api.RunnerBytes (395ms)
-✔ [154/155] Built Effect4 (1.1s)
-Build completed successfully (155 jobs).
-## exit=0 seconds=37 cmd=lake build Effect4.Machine.Context Effect4.Program.Typing.Rules Effect4.Laws.Machine.ContextValue Effect4

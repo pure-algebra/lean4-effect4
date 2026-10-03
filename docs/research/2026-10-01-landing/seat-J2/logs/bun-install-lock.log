@@ -1,7 +1,0 @@
-$ bash -c cd ts/eff && bun install
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:29:15Z
-bun install v1.4.2 (744846f84)
-Saved lockfile
-
-1 package removed [42.00ms]
-exit=0 (0s)

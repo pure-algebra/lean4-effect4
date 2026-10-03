@@ -1,7 +1,0 @@
-A3_RETAINED|a3_control_select|control|selected|26:4
-A3_RETAINED|a3_control_rollback|control|after-rollback|33:4
-A3_RETAINED|a3_control_partial|control|partial|37:2
-A3_RETAINED|a3_control_multigoal|control|multi-selected|45:20
-A3_RETAINED|a3_control_multigoal|control|multi-selected|45:20
-A3_RETAINED|a3_control_nested|child|leaf|49:32
-A3_RETAINED|a3_control_nested|parent|nested|49:2

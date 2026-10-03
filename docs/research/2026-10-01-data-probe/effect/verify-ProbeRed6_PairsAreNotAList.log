@@ -1,4 +1,0 @@
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/effect/verify-ProbeRed6_PairsAreNotAList.lean:11:0: error: Expression
-  decide (Val.hasTy abPairs (Ty.string.prod Ty.nat).list = false)
-did not evaluate to `true`
-exit=1 (red control: must be nonzero) elapsed=0s

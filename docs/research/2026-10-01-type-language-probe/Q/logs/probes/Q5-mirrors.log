@@ -1,7 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ ./docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true docs/research/2026-10-01-type-language-probe/Q/probes/Q5/Mirrors.lean
-# started 2026-10-01T20:15:56Z (LEAN_NUM_THREADS=1)
-(Ty_record [("b", ((Ty_tuple [Ty_nat; Ty_null]), true)); ("a", ((Ty_app ("Ref.Ref", [(Ty_map (Ty_string, Ty_number))])), false))])
-Ty_record ([("b", (Ty_tuple ([Ty_nat; Ty_null]), true)); ("a", (Ty_app ("Ref.Ref", [Ty_map (Ty_string, Ty_number)]), false))])
-{"_tag":"record","fields":[{"name":"b","optional":true,"type":{"_tag":"tuple","items":[{"_tag":"nat"},{"_tag":"null"}]}},{"name":"a","optional":false,"type":{"_tag":"app","args":[{"_tag":"map","key":{"_tag":"string"},"value":{"_tag":"number"}}],"name":"Ref.Ref"}}]}
-# exit=0 seconds=4

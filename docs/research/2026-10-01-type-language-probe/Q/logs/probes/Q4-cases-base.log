@@ -1,5 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ lake env lean -DwarningAsError=true -M4096 --run tools/Conform/Cli/Audit.lean --config tools/Conform/Effect4/cases.json --out docs/research/2026-10-01-type-language-probe/Q/generated/conform/cases-base.json
-# started 2026-10-01T19:36:59Z (LEAN_NUM_THREADS=1)
-conform-cases: 174/174 subjects, 174 pass, 0 refused, 0 counterexample, 0 unresolved, exit 0
-# exit=0 seconds=6

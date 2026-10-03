@@ -1,6 +1,0 @@
-4c4
-< --   lake env lean -M 4096 --run tools/Effect4Gen/Forms.lean --group FormsLaws --imports Effect4.Laws.Program.Authoring.Lifts,Effect4.Codegen.Authoring.Forms,Effect4.Codegen.Forms --out src/Effect4/Laws/Program/Authoring/Forms.lean
----
-> --   lake env lean -M 4096 --run tools/Effect4Gen/Forms.lean --group FormsLaws --imports Effect4.Laws.Program.Authoring.Lifts,Effect4.Laws.Program.Authoring.Sugar,Effect4.Codegen.Authoring.Forms,Effect4.Codegen.Forms --out src/Effect4/Laws/Program/Authoring/Forms.lean
-5a6
-> import Effect4.Laws.Program.Authoring.Sugar

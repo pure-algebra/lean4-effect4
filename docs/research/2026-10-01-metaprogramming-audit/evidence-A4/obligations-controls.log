@@ -1,4 +1,0 @@
-'Test.Obligations.Positive.closed.checked' depends on axioms: [propext]
-'Test.Obligations.Reference.direct.checked' does not depend on any axioms
-'Test.Obligations.Included.statement.checked' does not depend on any axioms
-Test.Obligations.BadAudit.Wanted.target: 1/2 binders; law Test.Obligations.BadAudit.target; exact false; adapter false

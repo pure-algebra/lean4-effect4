@@ -1,4 +1,0 @@
-$ bun /Users/pooks/Dev/lean4-effect4-seat-J2/docs/research/2026-10-01-landing/seat-J2/probes/engine-verdicts.ts oxc meta-recognize <scratch>/foreign-base <scratch>/verdicts-1b/oxc-meta-foreign.jsonl
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:55:45Z
-oxc meta-recognize <scratch>/foreign-base: 22986 files; units: 22986; files with drift: 0
-exit=0 (84s)

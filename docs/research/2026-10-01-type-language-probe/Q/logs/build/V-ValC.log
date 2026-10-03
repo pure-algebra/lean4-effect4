@@ -1,8 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ ./docs/research/2026-10-01-type-language-probe/Q/bin/olean.sh docs/research/2026-10-01-type-language-probe/Q/generated docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQV/ValC.lean
-# started 2026-10-01T20:38:35Z (LEAN_NUM_THREADS=1)
-'Effect4.Store.ProbeValCGen.ValC.toValVal' depends on axioms: [propext]
-'Effect4.Store.ProbeValCGen.ValC.rawVal_toValVal' depends on axioms: [propext]
-'Effect4.Store.ProbeValCGen.ValC.fitsVal' depends on axioms: [propext, Quot.sound]
-'Effect4.Store.ProbeValCGen.ValC.instCanonicalVal' depends on axioms: [propext, Quot.sound]
-# exit=0 seconds=2

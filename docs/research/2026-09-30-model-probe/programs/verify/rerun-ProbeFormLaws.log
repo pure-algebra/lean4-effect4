@@ -1,3 +1,0 @@
-'Probe.FormLaws.timeoutForm_scoped' depends on axioms: [propext, Quot.sound]
-'Probe.FormLaws.retryForm_scoped' depends on axioms: [propext, Quot.sound]
-'Probe.FormLaws.leaky_not_scoped' depends on axioms: [propext]

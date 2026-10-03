@@ -1,6 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M6144 -R docs/research/2026-10-01-type-language-probe/Q/probes docs/research/2026-10-01-type-language-probe/Q/probes/Q1/ElimControls.lean
-# started 2026-10-01T18:52:35Z (LEAN_NUM_THREADS=1)
-'Q1.val_beq_agrees' depends on axioms: [propext]
-'Q1.json_beq_decides' depends on axioms: [propext]
-# exit=0 seconds=1

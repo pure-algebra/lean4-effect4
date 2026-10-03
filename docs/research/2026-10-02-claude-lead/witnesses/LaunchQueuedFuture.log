@@ -1,2 +1,0 @@
-'LaunchQueuedFuture.config_typed' depends on axioms: [propext, Quot.sound]
-'LaunchQueuedFuture.launch_false' depends on axioms: [propext, Quot.sound]

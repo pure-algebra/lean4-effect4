@@ -1,3 +1,0 @@
-'Test.Counterexamples.Machine.Semantics.RawScopeExit.config' depends on axioms: [propext, Quot.sound]
-'Test.Counterexamples.Machine.Semantics.RawScopeExit.output_refused' depends on axioms: [propext, Quot.sound]
-'Test.Counterexamples.Machine.Semantics.RawScopeExit.step_deliver_false' depends on axioms: [propext, Quot.sound]

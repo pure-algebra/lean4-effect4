@@ -1,7 +1,0 @@
-{
-  "peak_compilers": 1,
-  "active_at_receipt": 0,
-  "lean_threads": 1,
-  "max_lean_memory_mib": 4096,
-  "per_compiler_timeout_seconds": 600
-}

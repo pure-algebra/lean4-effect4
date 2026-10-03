@@ -1,4 +1,0 @@
-$ bun /Users/pooks/Dev/lean4-effect4-seat-J2/docs/research/2026-10-01-landing/seat-J2/probes/engine-verdicts.ts oxc meta-recognize /Users/pooks/Dev/lean4-effect4-seat-J2/ts/eff/ingest/fixtures/refusals <scratch>/verdicts-1b/oxc-meta-refusals.jsonl
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:57:09Z
-oxc meta-recognize /Users/pooks/Dev/lean4-effect4-seat-J2/ts/eff/ingest/fixtures/refusals: 22 files; units: 23; files with drift: 0
-exit=0 (0s)

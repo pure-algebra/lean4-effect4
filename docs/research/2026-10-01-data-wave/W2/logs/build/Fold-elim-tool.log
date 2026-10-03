@@ -1,4 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-seat-W2
-$ lake env lean -DwarningAsError=true tools/Effect4Gen/Fold.lean
-# started 2026-10-01T21:40:55Z (LEAN_NUM_THREADS=4)
-# exit=0 seconds=4

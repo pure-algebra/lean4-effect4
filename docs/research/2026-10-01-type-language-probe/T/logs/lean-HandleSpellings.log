@@ -1,2 +1,0 @@
-# LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true docs/research/2026-10-01-type-language-probe/T/probes/HandleSpellings.lean (worktree probe-T, bff50631)
-exit=0 seconds=1

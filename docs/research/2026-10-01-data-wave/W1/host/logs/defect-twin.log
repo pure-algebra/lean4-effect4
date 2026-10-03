@@ -1,6 +1,0 @@
-# check: defect-twin
-# date: 2026-10-01T22:05:27Z
-# command: bun defect-twin.ts logs/lean-docs.ts
-# versions: bun 1.4.2; node v22.23.2; effect "version":"4.0.0-rc.112"
-PASS defect-twin: 8 checks (2 revivals, 2 persisted forms modulo annotations, 3 encodings, 1 red)
-# exit=0

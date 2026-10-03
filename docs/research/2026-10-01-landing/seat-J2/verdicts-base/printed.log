@@ -1,4 +1,0 @@
-$ bun /Users/pooks/Dev/lean4-effect4-seat-J2/docs/research/2026-10-01-landing/seat-J2/probes/engine-verdicts.ts oxc printed /Users/pooks/Dev/lean4-effect4-seat-J2/.lake/corpus /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/verdicts-base/oxc-printed.jsonl
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T20:56:56Z
-oxc printed /Users/pooks/Dev/lean4-effect4-seat-J2/.lake/corpus: 408 files; oracle: true x408
-exit=0 (1s)

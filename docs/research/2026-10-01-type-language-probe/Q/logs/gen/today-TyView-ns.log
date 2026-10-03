@@ -1,5 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ lake env lean -DwarningAsError=true -M 4096 --run docs/research/2026-10-01-type-language-probe/Q/tools/Effect4Gen/View-ns.lean --group TyView --imports Effect4.Laws.Program.Folds.Ty\,Effect4.Laws.Auto.RuleSets --out docs/research/2026-10-01-type-language-probe/Q/generated/today/Laws/TyView-ns.lean --append tools/Effect4Gen/guards/tyview.lean --header-out src/Effect4/Laws/Program/TyView.lean Effect4.Program.Ty
-# started 2026-10-01T19:04:01Z (LEAN_NUM_THREADS=1)
-# exit=0 seconds=9
-REPRODUCED: the namespace-only copy is byte-neutral on today's Ty

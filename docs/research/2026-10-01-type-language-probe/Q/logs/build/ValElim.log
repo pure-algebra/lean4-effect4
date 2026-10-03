@@ -1,9 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ docs/research/2026-10-01-type-language-probe/Q/bin/olean.sh docs/research/2026-10-01-type-language-probe/Q/generated docs/research/2026-10-01-type-language-probe/Q/generated/QCheck/ValElim.lean
-# started 2026-10-01T18:46:17Z (LEAN_NUM_THREADS=1)
-'Effect4.Store.QCheck.Val.ind' does not depend on any axioms
-'Effect4.Store.QCheck.Val.beq_iff' depends on axioms: [propext]
-'Effect4.Store.QCheck.instDecidableEqVal' depends on axioms: [propext]
-'Effect4.Store.QCheck.instReprVal' depends on axioms: [propext]
-'Effect4.Store.QCheck.Val.beq_pos_list_val_iff' depends on axioms: [propext]
-# exit=0 seconds=3

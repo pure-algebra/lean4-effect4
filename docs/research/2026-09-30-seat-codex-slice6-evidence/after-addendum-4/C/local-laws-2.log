@@ -1,7 +1,0 @@
-✖ [16/52] Building Effect4.Machine.Fibers (2.7s)
-trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-slice6/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4-slice6/src/Effect4/Machine/Fibers.lean -o /Users/pooks/Dev/lean4-effect4-slice6/.lake/build/lib/lean/Effect4/Machine/Fibers.olean -i /Users/pooks/Dev/lean4-effect4-slice6/.lake/build/lib/lean/Effect4/Machine/Fibers.ilean -c /Users/pooks/Dev/lean4-effect4-slice6/.lake/build/ir/Effect4/Machine/Fibers.c --setup /Users/pooks/Dev/lean4-effect4-slice6/.lake/build/ir/Effect4/Machine/Fibers.setup.json --json
-error: src/Effect4/Machine/Fibers.lean:968:25: Invalid `⟨...⟩` notation: The expected type of this term could not be determined
-error: Lean exited with code 1
-Some required targets logged failures:
-- Effect4.Machine.Fibers
-error: build failed

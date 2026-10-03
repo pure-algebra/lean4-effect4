@@ -1,7 +1,0 @@
-'SeatR.Boundary.MTy.ind'' does not depend on any axioms
-'SeatR.Boundary.conv_member' depends on axioms: [propext, Quot.sound]
-'SeatR.Boundary.adapt_member' depends on axioms: [propext, Quot.sound]
-'SeatR.Boundary.codec_sub_adapt' depends on axioms: [propext, Quot.sound]
-'SeatR.Boundary.paired_control' depends on axioms: [propext]
-'SeatR.Boundary.adapter_not_exact' depends on axioms: [propext]
-exit=0 seconds=1

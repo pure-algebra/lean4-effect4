@@ -1,2 +1,0 @@
-'VerifyEffect.Model.model_sub_not_antisymm' depends on axioms: [propext]
-exit=0 elapsed=1s (includes lock wait)

@@ -1,5 +1,0 @@
-'Effect4.Laws.Auto.semanticsId' depends on axioms: [propext, Classical.choice, Quot.sound]
-'Effect4.Laws.Auto.semanticsTheorems' depends on axioms: [propext, Classical.choice, Quot.sound]
-'Effect4.Laws.Auto.elabSemanticsCensus' depends on axioms: [propext, Classical.choice, Quot.sound]
-'Effect4.Program.Typed.close_typed' depends on axioms: [propext, Quot.sound]
-'Effect4.Program.Typed.seq_typed' depends on axioms: [propext, Quot.sound]

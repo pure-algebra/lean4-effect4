@@ -1,9 +1,0 @@
-some (Effect4.Program.Ty.never)
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/pedigree/verify-Probe.lean:114:0: error: Expression
-  decide (Option.map (fun x => x.answer) (Api.typeOf pHostNat [hostRow Ty.nat (Ty.var 0)]) = some (Ty.var 0))
-did not evaluate to `true`
-'DataProbe.PedigreeVerify.fits_except_never_never_empty' depends on axioms: [propext, Quot.sound]
-'DataProbe.PedigreeVerify.hasTy_except_never_never_false' depends on axioms: [propext]
-'DataProbe.PedigreeVerify.fits_var_empty' depends on axioms: [propext, Quot.sound]
-bash  lake env lean -M6144 -DwarningAsError=true   0.59s user 0.87s system 102% cpu 1.418 total
-exit=1

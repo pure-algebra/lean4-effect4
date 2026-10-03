@@ -1,8 +1,0 @@
-docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/stages/repaired/probes/Repaired.lean:1065:18: error: Type mismatch
-  TypedProg.pure
-has type
-  ExitOk ?m.42 ?m.43 ?m.44 → TypedProg ?m.41 ?m.42 ?m.43 (Effects.Program.pure ?m.44)
-but is expected to have type
-  TypedProg root w (observerDeliveredType Supervision.ObserverMode.awaitValue ty)
-    ((interpR root.program).exitValue exit Supervision.ObserverMode.awaitValue)
-docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/stages/repaired/probes/Repaired.lean:1066:6: error: unexpected token '('; expected command

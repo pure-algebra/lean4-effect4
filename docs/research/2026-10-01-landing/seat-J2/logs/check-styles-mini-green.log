@@ -1,4 +1,0 @@
-$ bash -c cd ts/eff && bun run check-styles.ts /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/styles-mini-green
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:31:03Z
-PASS styles construction: 2 indexed files, 1 configurations, both parsers (tsgo 7.0.0-dev.20260629.1 through its API, oxc) accept every source, JSON/wire oracle pairs present; oxc children recycled at 128 files (319 ms)
-exit=0 (0s)

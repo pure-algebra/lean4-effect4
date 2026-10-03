@@ -1,3 +1,0 @@
-'Test.Schema.DialectContract.requirementKey_eq_keyText' depends on axioms: [propext]
-'Test.Schema.DialectContract.requirementKey_injective' depends on axioms: [propext, Quot.sound]
-## exit=0 seconds=2 cmd=LEAN_NUM_THREADS=4 lake env lean -DwarningAsError=true Test/Schema/DialectContract.lean head=6ca2326e dirty=2

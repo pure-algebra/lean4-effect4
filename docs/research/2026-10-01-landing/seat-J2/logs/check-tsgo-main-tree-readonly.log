@@ -1,6 +1,0 @@
-# receipt J's check-tsgo line, run read-only from the main checkout /Users/pooks/Dev/lean4-effect4 (2026-10-01, Python 3.13.14; it reads package.json files only; nothing TypeScript run)
-FAIL check-tsgo: typescript below 7 (tsgo 7 is the one compiler):
-ts/eff/node_modules/typescript/package.json: 5.9.2
-harness/truth/node_modules/typescript/package.json: 5.9.2
-exit=1
-# the second path is the link harness/truth/node_modules -> ../../ts/eff/node_modules: one install

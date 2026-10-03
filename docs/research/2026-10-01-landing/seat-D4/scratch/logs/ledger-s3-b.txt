@@ -1,8 +1,0 @@
-68 scopes, 36 open, 419 proved, 455 total
-Effect4.Program.Guard.M4Handshake 1 0 1
-Effect4.Program.Typed.M3bAdequacy 2 72 74
-Effect4.Program.Typed.M3bAssembly 3 1 4
-Effect4.Program.Typed.M3bWorld 0 7 7
-Effect4.Program.Typed.M6Edits 6 7 13
-Effect4.Program.Typed.M6Ledger 20 0 20
-Effect4.Program.Typed.M7 4 0 4

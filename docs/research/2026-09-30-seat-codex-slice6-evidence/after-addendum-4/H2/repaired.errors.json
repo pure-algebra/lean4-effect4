@@ -1,8 +1,0 @@
-{
-  "probe": "Repaired",
-  "note": "Diagnostic regions only: distinguish primary failures, propagation, harness artifacts, and necessary body repairs.",
-  "distinct_primary_error_theorem_regions": [],
-  "distinct_primary_error_theorem_region_count": 0,
-  "non_theorem_primary_errors": [],
-  "diagnostics": []
-}

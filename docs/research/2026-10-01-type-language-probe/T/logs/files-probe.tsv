@@ -1,5 +1,0 @@
-probe	probe	/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/programs/ts/p1-http-cache.ts
-probe	probe	/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/programs/ts/p2-handler-layers.ts
-probe	probe	/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/programs/ts/p3-worker-queue.ts
-probe	probe	/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/programs/ts/p4-rate-limiter.ts
-probe	probe	/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/programs/ts/p5-ledger-service.ts

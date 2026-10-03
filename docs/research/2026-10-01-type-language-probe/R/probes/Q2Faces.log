@@ -1,7 +1,0 @@
-'SeatR.Faces.printVal_needs_type' depends on axioms: [propext]
-'SeatR.Faces.read_print' depends on axioms: [propext, Quot.sound]
-'SeatR.Faces.read_exact' depends on axioms: [propext, Quot.sound]
-'SeatR.Faces.no_untyped_reader' depends on axioms: [propext]
-'SeatR.Faces.Named.read_print' depends on axioms: [propext, Quot.sound]
-'SeatR.Faces.Named.read_exact' depends on axioms: [propext, Quot.sound]
-exit=0 seconds=2

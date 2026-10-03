@@ -1,8 +1,0 @@
-v4 app+test files that mention SchemaError, SchemaIssue or decodeUnknown; occurrences / files / projects
-catchTag("SchemaError"                                            0      0    0
-Schema.isSchemaError(                                            11      7    3
-.issue read                                                      36     12    4
-SchemaIssue.<formatter>                                           2      2    2
-SchemaIssue.<any>                                                14      9    2
-decode...(...).pipe(Effect.mapError / orDie / catch*)            33     23    5
-Effect.orDie                                                    207     46    5

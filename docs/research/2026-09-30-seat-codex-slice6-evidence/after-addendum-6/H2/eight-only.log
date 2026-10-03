@@ -1,8 +1,0 @@
-docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-6/H2/stages/eight-only/probes/EightOnly.lean:1064:68: error: Application type mismatch: The argument
-  typed
-has type
-  ExitOk w ty exit
-but is expected to have type
-  FitsExit w ty exit
-in the application
-  reifyExitVal_fits w ty exit typed

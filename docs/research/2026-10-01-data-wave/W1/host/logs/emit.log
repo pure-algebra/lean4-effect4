@@ -1,3 +1,0 @@
-# date: 2026-10-01T22:05:20Z
-# command: lake env lean -M4096 --run docs/research/2026-10-01-data-wave/W1/host/EmitDefectDocs.lean docs/research/2026-10-01-data-wave/W1/host/logs/lean-docs.ts
-# exit=0

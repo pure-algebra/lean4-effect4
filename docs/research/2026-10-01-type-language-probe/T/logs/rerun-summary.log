@@ -1,6 +1,0 @@
-python3 docs/research/2026-10-01-data-probe/effect/count_schema.py > T/logs/rerun-count_schema.log : exit=0, 93s, vs counts.log: identical
-python3 docs/research/2026-10-01-data-probe/effect/member_histogram.py > T/logs/rerun-member_histogram.log : exit=0, 4s, vs member_histogram.log: identical
-python3 docs/research/2026-10-01-data-probe/effect/census_heads.py > T/logs/rerun-census_heads.log : exit=0, 1s, vs census_heads.log: identical
-python3 docs/research/2026-10-01-data-probe/effect/sample_decode_sites.py > T/logs/rerun-sample_decode_sites.log : exit=0, 5s, vs sample_decode_sites.log: identical
-python3 docs/research/2026-10-01-data-probe/effect/top_files.py > T/logs/rerun-top_files.log : exit=0, 3s, vs top_files.log: identical
-python3 docs/research/2026-10-01-data-probe/effect/schemaerror_consumers.py > T/logs/rerun-schemaerror_consumers.log : exit=0, 2s, vs schemaerror_consumers.log: identical

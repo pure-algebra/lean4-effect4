@@ -1,6 +1,0 @@
-# the axiom lines the generated module prints for the BuildRefusal codec (from the passing derived run, LEAN_NUM_THREADS=1 python3 scripts/generate.py --only derived)
-info: src/Effect4/Api/RefusalsDerived.lean:1196:0: 'Effect4.Store.RefusalsGen.BuildRefusalC.toVal' depends on axioms: [propext, Quot.sound]
-info: src/Effect4/Api/RefusalsDerived.lean:1197:0: 'Effect4.Store.RefusalsGen.BuildRefusalC.ofVal_toVal' depends on axioms: [propext, Quot.sound]
-info: src/Effect4/Api/RefusalsDerived.lean:1198:0: 'Effect4.Store.RefusalsGen.BuildRefusalC.ofVal_exact' depends on axioms: [propext, Quot.sound]
-info: src/Effect4/Api/RefusalsDerived.lean:1199:0: 'Effect4.Store.RefusalsGen.BuildRefusalC.fits' depends on axioms: [propext, Quot.sound]
-info: src/Effect4/Api/RefusalsDerived.lean:1200:0: 'Effect4.Store.RefusalsGen.BuildRefusalC.instCanonical' depends on axioms: [propext, Quot.sound]

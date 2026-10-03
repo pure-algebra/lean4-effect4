@@ -1,5 +1,0 @@
-# command: LEAN_NUM_THREADS=1 scripts/check-effect-runtime-census.sh (worktree probe-T at bff50631, 2026-10-01T18:19:26Z)
-DIVERGED checkpoint.exit-failcause-skip: U-01; Test/Counterexamples/Machine/Semantics/InterruptEscape.lean
-PASS generated Effect 4.0.0-rc.112 runtime census is current: 137 mechanism rows
-PASS census ids and kinds join the Lean row list
-exit=0

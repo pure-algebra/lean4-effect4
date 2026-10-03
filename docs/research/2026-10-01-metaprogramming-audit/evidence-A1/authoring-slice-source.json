@@ -1,7 +1,0 @@
-{
-  "source": "/Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4/Test/Program/AuthoringContract.lean",
-  "sha256": "d01c4e94768b0912acf464bc6870a1ecb4582f0e71d9df60db6b09f21680a29e",
-  "selection": "Prefix before the real-service/layer-sharing section, removing only its import and adding namespace end",
-  "guards": 28,
-  "limitation": "Unchanged authoring-only finite controls; not the full AuthoringContract or LayerSharingContract battery"
-}

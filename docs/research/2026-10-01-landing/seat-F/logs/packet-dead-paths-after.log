@@ -1,5 +1,0 @@
-dead path citations in live packets (not git:-pinned): 4
-Test/contracts/schema-annotations.contract.md:306	Test/Counterexamples/Schema/AnnotationDataPlane.lean
-Test/contracts/schema-recursor.contract.md:15	Test/Counterexamples/Schema/RecursiveElimination.lean
-Test/contracts/scope-restoration.contract.md:197	src/internal/effect.ts
-Test/contracts/scope-restoration.contract.md:199	src/internal/core.ts

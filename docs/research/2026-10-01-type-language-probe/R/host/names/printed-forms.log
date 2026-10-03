@@ -1,6 +1,0 @@
-# Version 7.0.0-dev.20260629.1 (/opt/homebrew/bin/tsgo), node v22.23.2, 2026-10-01T18:56:29Z
-## tsgo -p tsconfig.printed.json
-exit=0
-## node --experimental-strip-types printed-forms.ts
-{"g1":1,"g2":true,"g3":"x","g4":"n","g5":"x","own":true,"r3":"{\"__proto__\":\"x\",\"a\":1}"}
-exit=0

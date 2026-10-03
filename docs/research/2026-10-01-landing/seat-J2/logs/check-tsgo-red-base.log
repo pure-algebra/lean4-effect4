@@ -1,5 +1,0 @@
-$ bash docs/research/2026-10-01-landing/seat-J2/check-tsgo-line.sh
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T20:46:59Z
-FAIL check-tsgo: typescript below 7 (tsgo 7 is the one compiler):
-ts/eff/node_modules/typescript/package.json: 5.9.2
-exit=1 (0s)

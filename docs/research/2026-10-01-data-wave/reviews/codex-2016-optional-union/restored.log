@@ -1,2 +1,0 @@
-{"memory":{"rss":38518784,"heapTotal":3585024,"heapUsed":2459365,"external":848469,"arrayBuffers":0},"namesA":["a","b"],"namesB":["a","c"],"input":{"a":1,"c":2},"strict":{"a":1,"c":2},"adapted":{"a":1},"taggedControl":{"_tag":"B","a":1,"c":2},"malformedRejected":true}
-PASS controls and optional-field counterexample

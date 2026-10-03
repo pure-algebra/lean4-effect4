@@ -1,4 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ opam exec --switch=effect4 -- dune build --root docs/research/2026-10-01-type-language-probe/Q/ocaml/lcnf --build-dir /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/dune-lcnf
-# started 2026-10-01T20:16:13Z (LEAN_NUM_THREADS=1)
-# exit=0 seconds=0

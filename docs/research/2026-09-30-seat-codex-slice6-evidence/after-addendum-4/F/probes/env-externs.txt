@@ -1,2 +1,0 @@
-field Effect4.Program.Point.env E.t
-ops E.t take E.take

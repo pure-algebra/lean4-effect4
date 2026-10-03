@@ -1,1 +1,0 @@
-'Effect4.Api.TraceFacts.Agreement.emit_with_bank' depends on axioms: [propext, Quot.sound]

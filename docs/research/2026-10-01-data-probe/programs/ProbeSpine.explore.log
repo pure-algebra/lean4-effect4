@@ -1,9 +1,0 @@
-'Probe.Spine.fitsT_defT' depends on axioms: [propext]
-'Probe.Spine.fitsFs_defFs' depends on axioms: [propext]
-'Probe.Spine.defU_list' depends on axioms: [propext]
-'Probe.Spine.fitsU_defU' depends on axioms: [propext]
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/programs/ProbeSpine.lean:165:2: error: The `induction` tactic does not support the type `Probe.Spine.T` because it is mutually inductive
-
-Hint: Consider using the `cases` tactic instead
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/programs/ProbeSpine.lean:172:15: error: unknown namespace `Command`
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/programs/ProbeSpine.lean:173:11: error(lean.unknownIdentifier): Unknown identifier `CommandElabM`

@@ -1,4 +1,0 @@
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/effect/lean/ProbeRed1_RecordReads.lean:12:0: error: Expression
-  decide (Ty.ofSchema userRep ≠ none)
-did not evaluate to `true`
-exit=1 (red control: must be nonzero)

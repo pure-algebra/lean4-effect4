@@ -1,5 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-seat-W2
-$ lake env lean -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Fold.lean --group Fold --imports Effect4.Program.Eff\,Effect4.Program.Ty --out /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/w2/today/Fold.lean --append tools/Effect4Gen/guards/fold.lean Effect4.Program.Ty Effect4.Program.Term Effect4.Program.CauseTerm Effect4.Program.Eff --header-out src/Effect4/Program/Fold.lean
-# started 2026-10-01T21:58:15Z (LEAN_NUM_THREADS=1)
-# exit=0 seconds=18
-Program/Fold BYTE-IDENTICAL

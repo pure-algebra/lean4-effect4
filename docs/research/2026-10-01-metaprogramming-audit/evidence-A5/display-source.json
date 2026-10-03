@@ -1,6 +1,0 @@
-{
-  "source": "Test/Program/TypedProgBindRed.lean",
-  "sha256": "d9537b1053e099cd81b0ad0a82f0cb523f0af4b0b544ce2584772a438890daa5",
-  "change": "Add local value-literal display experiment, keeping all original fixture expectations as detecting controls",
-  "scope": "One existing battery, two guard_msgs fixtures, not the full Test closure"
-}

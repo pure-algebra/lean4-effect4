@@ -1,4 +1,0 @@
-# RED CONTROL: module-types.expected.tsv with T.moduleTypeRef.generic deliberately wrong (3: counting Duration.Duration as generic); must exit 1
-T.moduleTypeRef	3
-T.moduleTypeRef.generic	3
-R.Option.Option	1

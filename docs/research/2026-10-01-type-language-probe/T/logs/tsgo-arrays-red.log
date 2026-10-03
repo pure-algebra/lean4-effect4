@@ -1,3 +1,0 @@
-# RED CONTROL. Version 7.0.0-dev.20260629.1 (/opt/homebrew/bin/tsgo); tsgo -p tsconfig.arrays-red.json --pretty false
-arrays-red.ts(3,14): error TS4104: The type 'readonly number[]' is 'readonly' and cannot be assigned to the mutable type 'number[]'.
-exit=1

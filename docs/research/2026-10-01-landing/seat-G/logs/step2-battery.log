@@ -1,1 +1,0 @@
-## exit=0 seconds=3 cmd=LEAN_NUM_THREADS=4 lake env lean -M6144 -DwarningAsError=true Test/Program/GuardFoldLift.lean head=7baca4c1 dirty=2

@@ -1,9 +1,0 @@
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/programs/verify/RedPrograms345.lean:81:0: error: Expression
-  decide (answer false = some (Exit.success (Val.list [Val.nat 3, Val.nat 3])))
-did not evaluate to `true`
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/programs/verify/RedPrograms345.lean:216:0: error: Expression
-  decide (Option.map (fun r => (r.snd.fst, r.snd.snd.fst, r.snd.snd.snd)) runPool = some (5, 10, 0))
-did not evaluate to `true`
-real 0.76
-user 0.45
-sys 0.33

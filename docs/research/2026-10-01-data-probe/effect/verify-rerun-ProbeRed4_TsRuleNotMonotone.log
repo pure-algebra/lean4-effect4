@@ -1,4 +1,0 @@
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/effect/lean/ProbeRed4_TsRuleNotMonotone.lean:629:0: error: Expression
-  !(fits emptyRec valueX && subTS emptyRec optX) || fits optX valueX
-did not evaluate to `true`
-exit=1 elapsed=2s (includes lock wait)

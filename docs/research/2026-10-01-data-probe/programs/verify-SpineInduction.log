@@ -1,6 +1,0 @@
-'Verify.Spine.fitsT_defT_using' depends on axioms: [propext]
-'Verify.Spine.fitsT_defT_term' depends on axioms: [propext]
-'Verify.Spine.T.ind' depends on axioms: [propext]
-'Verify.Spine.fitsFs_defFs_of' depends on axioms: [propext]
-'Verify.Spine.fitsT_defT_plain' depends on axioms: [propext]
-exit=0

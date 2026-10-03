@@ -1,3 +1,0 @@
-# date: 2026-10-01T22:30:41Z
-# command: lake env lean -M4096 --run docs/research/2026-10-01-data-wave/W1/host/vendored/EmitIntDocs.lean docs/research/2026-10-01-data-wave/W1/host/vendored/logs/lean-int-docs.ts
-# exit=0

@@ -1,3 +1,0 @@
-families equal (as JSON values, every row, cover and note): True
-top-level note: committed has one (1051 chars); the re-seed writes none (CasesPolicy.toJson drops it)
-row notes kept: 9 of 9

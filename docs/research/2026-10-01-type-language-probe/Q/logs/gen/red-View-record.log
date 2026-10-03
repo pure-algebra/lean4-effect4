@@ -1,5 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M 4096 --run tools/Effect4Gen/View.lean --group TyView --imports ProbeQ.Fold --out /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/red-view.lean ProbeQ.Ty
-# started 2026-10-01T19:01:07Z (LEAN_NUM_THREADS=1)
-uncaught exception: View: constructor ProbeQ.Ty.record field fields has type List (Prod String ProbeQ.Ty), which `sameHead` does not know how to compare; add it to `knownPayload` in tools/Effect4Gen/View.lean
-# exit=1 seconds=4

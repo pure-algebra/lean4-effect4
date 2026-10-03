@@ -1,6 +1,0 @@
-'VerifyTree.Coerce.find_fits' depends on axioms: [propext]
-'VerifyTree.Coerce.fits_coerce' depends on axioms: [propext]
-'VerifyTree.Coerce.fitsF_coerceF' depends on axioms: [propext]
-'VerifyTree.Coerce.ada_projects' depends on axioms: [propext]
-'VerifyTree.Coerce.projected_fits' depends on axioms: [propext]
-'VerifyTree.Coerce.unprojected_not_fits' depends on axioms: [propext]

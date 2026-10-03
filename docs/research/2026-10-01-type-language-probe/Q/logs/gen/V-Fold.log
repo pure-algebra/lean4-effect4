@@ -1,4 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ ./docs/research/2026-10-01-type-language-probe/Q/bin/qlean.sh -DwarningAsError=true -M 4096 --run tools/Effect4Gen/Fold.lean --group ValFold --imports ProbeQV.Val --out docs/research/2026-10-01-type-language-probe/Q/generated/ProbeQV/Fold.lean ProbeQV.Val
-# started 2026-10-01T20:38:03Z (LEAN_NUM_THREADS=1)
-# exit=0 seconds=4

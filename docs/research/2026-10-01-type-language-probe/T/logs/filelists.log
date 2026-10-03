@@ -1,7 +1,0 @@
-probe: 5 files, 1 projects
-dogfood: 6 files, 4 projects
-v4-app: 10905 files, 15 projects
-v4-test: 3208 files, 11 projects
-v3-app: 883 files, 14 projects
-v4/app cross-check against the effect seat's v4-app-files.txt: identical (10905 vs 10905 lines)
-exit=0

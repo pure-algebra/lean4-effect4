@@ -1,1 +1,0 @@
-{ "extends": "./tsconfig.tsgo.json", "files": ["upstream-generated.ts", "q4-types.ts"] }

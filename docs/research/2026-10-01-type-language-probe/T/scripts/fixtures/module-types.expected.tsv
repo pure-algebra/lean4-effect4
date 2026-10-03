@@ -1,4 +1,0 @@
-# hand-counted from module-types.ts (seat T); id<TAB>expected count
-T.moduleTypeRef	3
-T.moduleTypeRef.generic	2
-R.Option.Option	1

@@ -1,4 +1,0 @@
-$ lake env lean -M4096 --run tools/Drivers/Corpus.lean --foreign /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/foreign-base 400 4
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T20:55:38Z
-foreign 22986; isolated 21; products 11520; forms 19 at four depths; construction JSON/wire/keys before readers
-exit=0 (33s)

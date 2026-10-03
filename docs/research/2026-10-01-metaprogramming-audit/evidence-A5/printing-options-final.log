@@ -1,2 +1,0 @@
-default: List (Effect4.ServiceKey × Effect4.Program.Ty)
-notation disabled: List (Prod Effect4.ServiceKey Effect4.Program.Ty)

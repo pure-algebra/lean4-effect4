@@ -1,8 +1,0 @@
-'Effect4.Schema.Bridge.ofSchema_schema' depends on axioms: [propext]
-'Effect4.Program.CTy.ofSchema_schema' depends on axioms: [propext, Quot.sound]
-'Effect4.Schema.decode_of_encode' depends on axioms: [propext, Quot.sound]
-'Effect4.Schema.decode_encode' depends on axioms: [propext, Quot.sound]
-'Effect4.Schema.hasTy_decode' depends on axioms: [propext, Quot.sound]
-'Effect4.Schema.encode_injective' depends on axioms: [propext, Quot.sound]
-'Effect4.Schema.encode_sub' depends on axioms: [propext, Quot.sound]
-exit=0

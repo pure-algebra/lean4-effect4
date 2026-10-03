@@ -1,9 +1,0 @@
-# verifier rerun 2026-10-01T03:11:46Z; Version 7.0.0-dev.20260629.1; effect "version":"4.0.0-rc.112"
-## green: tsgo -p tsconfig.json
-exit 0
-## red: tsgo -p tsconfig.red.json
-red-control.ts(5,26): error TS2339: Property 'forkDaemon' does not exist on type 'typeof import("/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/Effect")'.
-red-control.ts(6,28): error TS2339: Property 'intersect' does not exist on type 'typeof import("/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/Schedule")'.
-red-control.ts(7,14): error TS2375: Type 'Effect<never, string, never>' is not assignable to type 'Effect<number, never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
-  Type 'string' is not assignable to type 'never'.
-exit 1

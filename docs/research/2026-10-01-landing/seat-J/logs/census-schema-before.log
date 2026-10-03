@@ -1,6 +1,0 @@
-#traversal_census Effect4.Representation (family [Effect4.Representation,
- Effect4.Check]) under Effect4.Codegen.Schema: 3 definitions take a family value (0 private) — fold 0, generated 0, structural 0 (of which 0 with a fold beside them, 0 instance implementations), wf 0 (of which 0 with a fold beside them), one-level 0 (of which 0 with a fold beside them), delegates 1, opaque 2; declared folds: []
-  delegates	Effect4.Codegen.Schema:328	Effect4.Codegen.Schema.representationSource	(Representation)	→ [Effect4.Codegen.Schema.representation]
-  opaque	Effect4.Codegen.Schema:302	Effect4.Codegen.Schema.representation	(Representation)
-  opaque	Effect4.Codegen.Schema:305	Effect4.Codegen.Schema.check	(Check)
-LEAN_NUM_THREADS=2 lake env lean   3.18s user 1.11s system 69% cpu 6.156 total

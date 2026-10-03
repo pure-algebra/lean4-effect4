@@ -1,1 +1,0 @@
-['lake', 'env', 'lean', '-DwarningAsError=true', 'docs/research/2026-09-30-seat-codex-slice6-evidence/after-addendum-4/C/MergeSites.lean']

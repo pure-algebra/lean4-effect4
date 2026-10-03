@@ -1,9 +1,0 @@
-# Version 7.0.0-dev.20260629.1 (/opt/homebrew/bin/tsgo), effect 4.0.0-rc.112, 2026-10-01T18:59:10Z
-## tsgo -p tsconfig.green.json
-exit=0
-## tsgo -p tsconfig.red.json
-printed-types-red.ts(5,49): error TS2345: Argument of type 'true' is not assignable to parameter of type 'false'.
-printed-types-red.ts(7,63): error TS2345: Argument of type 'true' is not assignable to parameter of type 'false'.
-printed-types-red.ts(9,51): error TS2345: Argument of type 'true' is not assignable to parameter of type 'false'.
-printed-types-red.ts(10,53): error TS2345: Argument of type 'true' is not assignable to parameter of type 'false'.
-exit=1

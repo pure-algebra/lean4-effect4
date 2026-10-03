@@ -1,4 +1,0 @@
-$ bun ts/eff/ingest/check-fidelity.ts
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T22:08:00Z
-PASS fidelity: four original/reprinted programs agree; requirement, foreign import and v3 exclusions hold; poisoned rerun reuses no old observations
-exit=0 (9s)

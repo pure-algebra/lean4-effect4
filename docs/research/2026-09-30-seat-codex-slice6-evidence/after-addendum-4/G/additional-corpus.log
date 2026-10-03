@@ -1,5 +1,0 @@
-'Research.Slice6.G.AdditionalLayerCensus.exact_source_program' depends on axioms: [propext]
-'Research.Slice6.G.AdditionalLayerCensus.already_refused' depends on axioms: [propext, Quot.sound]
-'Research.Slice6.G.AdditionalLayerCensus.old_layer_accepted' depends on axioms: [propext, Quot.sound]
-'Research.Slice6.G.AdditionalLayerCensus.body_answer_is_unit' depends on axioms: [propext, Quot.sound]
-'Research.Slice6.G.AdditionalLayerCensus.new_leaf_refused' depends on axioms: [propext, Quot.sound]

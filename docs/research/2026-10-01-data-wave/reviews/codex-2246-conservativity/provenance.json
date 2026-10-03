@@ -1,8 +1,0 @@
-{
-  "source_repo": "/Users/pooks/Dev/lean4-effect4-seat-W2",
-  "revision": "1d7d4ce9d96a2bd9c89b28db65a9778ee8a95304",
-  "source_path": "scripts/lib/conservativity.py",
-  "sha256": "7afda9478b2a7e96e6bfb84af3a2269478d70e3ee11e7fd3f3f981a9bd61e9bd",
-  "timestamp": "2026-10-01T22:48:35.845824+00:00",
-  "scope": "Exact committed source; isolated Git fixture; serial 20-second-bounded Python invocations; no active repository edits or compiler"
-}

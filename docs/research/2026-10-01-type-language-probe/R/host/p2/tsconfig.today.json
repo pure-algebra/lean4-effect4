@@ -1,1 +1,0 @@
-{ "extends": "./tsconfig.base.json", "include": ["today-positional-red.ts"] }

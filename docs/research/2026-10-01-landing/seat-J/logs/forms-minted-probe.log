@@ -1,4 +1,0 @@
-'Effect4.Program.Authoring.Forms.tapEffect_scoped' depends on axioms: [propext, Quot.sound]
-'Effect4.Program.Authoring.Forms.tapContinuation_scoped' depends on axioms: [propext, Quot.sound]
-'Effect4.Program.Authoring.Forms.releaseOne_scoped' depends on axioms: [propext, Quot.sound]
-'Effect4.Program.Authoring.Forms.ensuring_scoped' depends on axioms: [propext, Quot.sound]

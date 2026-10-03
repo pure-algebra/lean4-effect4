@@ -1,6 +1,0 @@
-['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', 'docs/research/2026-09-30-seat-codex-slice6-evidence/F/truth-before.json', '--tapes', 'harness/truth/tapes']
-wrote 37 programs to docs/research/2026-09-30-seat-codex-slice6-evidence/F/truth-before.json
-exit 0
-['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', '--corpus', 'docs/research/2026-09-30-seat-codex-slice6-evidence/F/corpus-before.json', '400', '4']
-wrote 400 generated programs at depth 4 to docs/research/2026-09-30-seat-codex-slice6-evidence/F/corpus-before.json
-exit 0

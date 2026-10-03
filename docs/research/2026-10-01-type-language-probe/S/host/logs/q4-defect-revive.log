@@ -1,9 +1,0 @@
-# check: q4-defect-revive
-# date: 2026-10-01T19:33:59Z
-# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
-# command: bun run q4-defect-revive.ts
-# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
-rc.112's own Exit with [ExitReviver, CauseReviver]: Missing reviver for effect/schema/Json
-JsonReviver exported: true
-with JsonReviver: ok
-# exit=0 seconds=0

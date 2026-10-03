@@ -1,9 +1,0 @@
-# check: smoke-bun
-# date: 2026-10-01T18:35:23Z
-# cwd: /Users/pooks/Dev/lean4-effect4-probe-S/docs/research/2026-10-01-type-language-probe/S/host
-# command: bun run smoke.ts
-# versions: bun 1.4.2; tsgo 7.0.0-dev.20260629.1; node v22.23.2
-{"a":1}
-{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"Number","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
-file:///Users/pooks/Dev/lean4-effect4-probe-S/vendor/effect-4.0.0-rc.112/src/Schema.ts
-# exit=0 seconds=0

@@ -1,3 +1,0 @@
-{"projects": 34, "fileCount": 26145, "candidateFiles": 15866, "parsedFiles": 16516, "disagreeFiles": 3320, "declarationDisagreements": 0}
-{"pre-v3": {"candidates": 38, "disagree": 5, "lifted": 0, "refused": 38}, "v3": {"candidates": 5087, "disagree": 516, "lifted": 56, "refused": 5031}, "v4": {"candidates": 69447, "disagree": 8376, "lifted": 44, "refused": 69403}}
-{"corpus": "7e469e0fcedc15cca8d1aac49f8073232414bf0f4dd9cd680091673062acc284", "instrumentSource": "foldlab@4005d34f", "labels": "b7c1b4a3d056f71f02a3ddba6dea909ed80a421c9dd5d1904c4e92c9bf4a0d9b", "recognizer": "c34fe5be749b8e27e80faff7a867655009f3dd98b4a0961cb14efd608f39b263"}

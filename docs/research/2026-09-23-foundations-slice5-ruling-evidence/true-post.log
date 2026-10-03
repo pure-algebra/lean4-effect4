@@ -1,2 +1,0 @@
-'Probe.TruePost.joinAll_protocol_untypable' depends on axioms: [propext, Quot.sound]
-'Probe.TruePost.joinAll_untypable' depends on axioms: [propext, Quot.sound]

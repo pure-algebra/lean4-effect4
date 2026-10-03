@@ -1,5 +1,0 @@
-python3 /private/tmp/codex-second-eyes-2026-10-01/metaprogramming/a7/measure.py --repo /Users/pooks/.codex/worktrees/metaprogramming-audit/lean4-effect4 --out /private/tmp/codex-second-eyes-2026-10-01/metaprogramming/a7 > /private/tmp/codex-second-eyes-2026-10-01/metaprogramming/a7/run.log 2>&1
-
-Result: exit 0. No Lean/Lake compiler process, no repository writes.
-The script resolves immutable base 198dd5331eb6607e1e94f3abad39ebbda90c86dc;
-the worktree's moving HEAD and local edits are not input to the census.

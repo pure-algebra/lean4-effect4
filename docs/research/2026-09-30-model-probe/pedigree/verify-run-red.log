@@ -1,7 +1,0 @@
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/pedigree/VerifyRunRed.lean:36:0: error: Expression
-  decide (refusal prepended = refusal oldTable)
-did not evaluate to `true`
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-30-model-probe/pedigree/VerifyRunRed.lean:38:0: error: Expression
-  decide (exitOf prepended = exitOf oldTable)
-did not evaluate to `true`
-exit=1

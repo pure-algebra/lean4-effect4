@@ -1,6 +1,0 @@
-/**
-
- */
-
-export const lastMove: Effect.Effect<readonly ["debit", number] | readonly ["credit", number], never> = Effect.flatMap(Ledger.lastEntry(), (a0) => caseTag(a0, "Deposit", (a1) => Effect.succeed(pair("credit", a1)), (a1) => Effect.succeed(pair("debit", snd(a1)))))
-

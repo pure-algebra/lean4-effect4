@@ -1,5 +1,0 @@
-$ python3 scripts/generate.py --only readme
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:40:34Z
-+ bun ts/eff/ingest/render-readme.ts
-PASS generate: requested producers ran in dependency order
-exit=0 (0s)

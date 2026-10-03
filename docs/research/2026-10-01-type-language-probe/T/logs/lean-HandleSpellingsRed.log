@@ -1,5 +1,0 @@
-# LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true docs/research/2026-10-01-type-language-probe/T/probes/HandleSpellingsRed.lean (worktree probe-T, bff50631)
-docs/research/2026-10-01-type-language-probe/T/probes/HandleSpellingsRed.lean:9:0: error: Expression
-  (parseLegacy "Queue.Dequeue<{ readonly id: number }>").isSome
-did not evaluate to `true`
-exit=1 seconds=1

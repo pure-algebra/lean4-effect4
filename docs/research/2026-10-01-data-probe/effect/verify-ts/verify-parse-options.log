@@ -1,9 +1,0 @@
-P1 toCodecJson(Option(Number)) with {_tag: None, extra}, onExcessProperty: error: true  expect=true  ok
-P2 Struct with onExcessProperty: preserve keeps the extra key: {"ok":{"extra":true,"id":1,"name":"a"}}  expect={"ok":{"extra":true,"id":1,"name":"a"}}  ok
-P3 propertyOrder: original keeps input order: {"ok":["name","id"]}  expect={"ok":["name","id"]}  ok
-P4 parseOptions annotation refuses an extra key with no per-call option: true  expect=true  ok
-P5 toRepresentation keeps the parseOptions annotation: {"onExcessProperty":"error"}  expect={"onExcessProperty":"error"}  ok
-P6 identifier annotation in the SchemaError message: {"error":"SchemaError: Expected UserId"}  expect={"error":"SchemaError: Expected UserId"}  ok
-P7 errors: all changes the message: false  expect=false  ok
-ALL OK
-exit=0

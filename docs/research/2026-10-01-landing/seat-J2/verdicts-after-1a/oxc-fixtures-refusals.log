@@ -1,4 +1,0 @@
-$ bun /Users/pooks/Dev/lean4-effect4-seat-J2/docs/research/2026-10-01-landing/seat-J2/probes/engine-verdicts.ts oxc fixtures /Users/pooks/Dev/lean4-effect4-seat-J2/ts/eff/ingest/fixtures/refusals /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/0b88b41e-40ac-47c3-a942-8b02c701bb13/scratchpad/verdicts-after/oxc-fixtures-refusals.jsonl
-# cwd /Users/pooks/Dev/lean4-effect4-seat-J2, 2026-10-01T21:26:11Z
-oxc fixtures /Users/pooks/Dev/lean4-effect4-seat-J2/ts/eff/ingest/fixtures/refusals: 22 files; parsed: true x22; verdicts: 23
-exit=0 (0s)

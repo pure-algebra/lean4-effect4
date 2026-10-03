@@ -1,7 +1,0 @@
-V1 decode builds an instance: [true,"a"]  expect=[true,"a"]  ok
-V2 encode refuses a plain object at a Schema.Class: true  expect=false  MISMATCH
-V3 encode of the instance: {"name":"a"}  expect={"name":"a"}  ok
-V4 encode accepts another class with the same identifier: false  expect=false  ok
-V5 encode refuses a class with another identifier: true  expect=true  ok
-1 MISMATCH(ES)
-exit=1 (red control: must be 1)

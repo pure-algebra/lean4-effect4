@@ -1,7 +1,0 @@
-'DataProbe.Pedigree.hasTy_prod_never_false' depends on axioms: [propext]
-'DataProbe.Pedigree.di67_no_value_at_prod_never_nat' depends on axioms: [propext]
-'DataProbe.Pedigree.fits_int_empty' depends on axioms: [propext, Quot.sound]
-'DataProbe.Pedigree.fits_prod_never_empty' depends on axioms: [propext, Quot.sound]
-'DataProbe.Pedigree.inhabitance_needs_admission' depends on axioms: [propext, Quot.sound]
-bash  lake env lean -M6144 -DwarningAsError=true   0.62s user 1.05s system 62% cpu 2.677 total
-exit=0

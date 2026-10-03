@@ -1,9 +1,0 @@
-{
-  "bun": "1.4.2",
-  "files": {
-    "vendor/effect-4.0.0-rc.112/src/Effect.ts": "92372a76d06a1c66a47319cd67e1f25c8aa0bc81970ea7cfe7fea2253134e718",
-    "vendor/effect-4.0.0-rc.112/src/Exit.ts": "f9e4baea6718bd6617069563028710cfaee3ba7b432826f87c405e0ca3513818",
-    "vendor/effect-4.0.0-rc.112/src/Scope.ts": "d1f31095954a8348853620ac102ae665acb86afbac54189d99e57c37757ddf18",
-    "vendor/effect-4.0.0-rc.112/src/internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0"
-  }
-}

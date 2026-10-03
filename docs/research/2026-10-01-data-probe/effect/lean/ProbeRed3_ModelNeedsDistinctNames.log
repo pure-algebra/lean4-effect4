@@ -1,4 +1,0 @@
-/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-data-probe/effect/lean/ProbeRed3_ModelNeedsDistinctNames.lean:632:0: error: Expression
-  Option.all (fits dupA) (decode dupA dupWire)
-did not evaluate to `true`
-exit=1 (red control: must be nonzero)

@@ -1,5 +1,0 @@
-$ cd /Users/pooks/Dev/lean4-effect4-probe-Q
-$ lake env lean -DwarningAsError=true -M 4096 --run docs/research/2026-10-01-type-language-probe/Q/tools/Effect4Gen/Fold.lean --group ValFold --imports Effect4.Store.Carrier.Val --out docs/research/2026-10-01-type-language-probe/Q/generated/commit2/ValFold.lean --header-out src/Effect4/Store/Carrier/Fold.lean Effect4.Store.Val
-# started 2026-10-01T21:01:17Z (LEAN_NUM_THREADS=1)
-# exit=0 seconds=5
-the elim-patched Fold.lean reproduces src/Effect4/Store/Carrier/Fold.lean byte for byte
