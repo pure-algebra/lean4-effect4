@@ -27,7 +27,7 @@ any completed view is `TypedProg` at the admitted type. One arm per `Body` const
   denotation from `childDenotes_upto`), at the build's types.
 
 Not established: anything about a machine; the clauses that consume this are `Evaluate`'s.
-`E4-TYPED-CE-036` refutes this bridge on the earlier `BodyTyped.fin`
+`E4-TYPED-CE-039` refutes this bridge on the earlier `BodyTyped.fin`
 (`docs/research/2026-10-02-claude-lead/witnesses/FinBody.lean`).
 -/
 

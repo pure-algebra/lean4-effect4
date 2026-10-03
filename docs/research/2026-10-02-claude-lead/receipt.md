@@ -936,7 +936,7 @@ evidence is kernel-checked; none is bounded or host-only.
 six arms so that an admitted body's program is typed (`bodyTyped_typed`, the new
 `Typed/Body.lean`). The old `fin` arm admitted a finalizer body at any type its exit fits while the
 step installs the finalizer's own program: a refutation of the bridge at every source and world
-(`E4-TYPED-CE-036`, the witness compiled at `f4d8be8f` and kept under `witnesses/`). The three
+(`E4-TYPED-CE-039`, the witness compiled at `f4d8be8f` and kept under `witnesses/`). The three
 producers of the strengthened arms already had the facts and discharge them; no runtime definition
 changed; no ledger goal's text changed. Two additive Codex ports ride the same rebuild.
 
@@ -987,7 +987,7 @@ and the closed branch's release now, typed by the registration pre's bridge at t
 Eight of the fiber clauses are now proved: `suspend`, `foreignRelease`, `closeWalk`, `frontier`,
 `construction`, `sync`, `guard_`, `mask`.
 
-### `E4-TYPED-CE-036` (register row added)
+### `E4-TYPED-CE-039` (register row added; first written as `CE-036`, an id row 190 holds)
 
 `docs/research/2026-10-02-claude-lead/witnesses/FinBody.lean` (log beside it): at every source,
 world and view, `BodyTyped root w (.fin (.interruptFiber ⟨0⟩ true) (.success (.str "x"))) ⟨string, never⟩`
@@ -1055,3 +1055,79 @@ Commands and results:
 
 Not run: `lake build Test`, the trust gate, `make check` (owed at the sweep). All evidence is
 kernel-checked; none is bounded or host-only.
+
+## Finding F-WF — the store well-formedness clause of `J` is not re-establishable from membership (2026-10-02, with Codex's checked seam)
+
+**First:** `WorldValid.wf : m.state.WF` (`Laws/Machine/StoresLaws.lean:223`) asks every stored value
+and every scope's closing exit to be `validIn` the store (`Val.validIn`, `Laws/Machine/StoresLaws.lean:83`,
+through `Stores.handleValid`, `:70`: every handle frame has a registered kind byte and names a present
+cell, promise, scope, memo map or external; a fiber frame is accepted; an unregistered byte is refused). Membership at `unknown` is
+`Live` (`Typed/Membership.lean:52,203`), which reads only `Val.keys`: the registered cell, promise
+and fiber frames. So a typed program may carry `.handle 255 7` at `unknown` — into `refMake` (Codex's
+checked seam, `/private/tmp/codex-lead-2026-10-02/m6-close-stores/checked-seam.md`, at `f409507f`:
+any ordinary non-marker `Evaluating` witness frame-edited to that allocation stays `ConfigTyped`, and
+no later world has the result `WF`), or out of a `scoped` region as the body's exit (the walk's
+callback outcome: `prepareScopedExitR` writes it as the scope's closing exit). No fact of `J` gives
+`validIn` there. Not reachable from a checked source (terms mint no frames, `RawHandles`; host answers
+are decoded; store reads return `WF` values), but the clause interface (`Evaluating`) admits it, so
+the universal clauses `StoreClauseKeeps (refMake …)` and `WalkKeeps` are false as stated
+(`E4-TYPED-CE-040`: Codex's hypothesis-free `refMake_clause_false`, copied to `witnesses/RefMakeClause.lean`).
+
+What this does and does not show: the refutations are at the clause interface over `ConfigTyped`;
+they are not a reachable-source counterexample and not a refutation of M6's reachable statement.
+
+Owner's constraints (2026-10-02): do not weaken `WF`; do not assume output preservation; supply the
+actual capability-validity relation at the interface, or a justified narrower interface.
+
+Proposal (a decisions row for the coordinator): **membership at `unknown` is validity.** Strengthen
+`Live w v` to every handle frame of `v` (`Store.Val.handles`), each with a registered kind byte and
+present in its table: cells and promises in the world's tables (as now), fibers in the world's ids,
+scopes live at `w.state`, memo maps present (`mapAt`), externals allocated. Then
+`fits_validIn : HeapTable w → PromiseTable w → Fits w v ty → v.validIn w.state` holds for every form
+(the handle forms by their declarations, the data forms by their parts, `unknown` directly), the
+store family and the scope close re-establish `WF` from the pre, and `refMake (.handle 255 7)` is no
+longer typed. `HandleFits`'s memo arm gains presence (row 187 revisited: memo maps are never removed,
+`Stores.le`). Producers of `Fits … unknown` today: closed values (`live_of_keys_nil`), decoded host
+answers, store reads (already `WF`). Cost: one Membership change with its `fits_live`/`fits_subN`
+arms re-proved (the full Typed rebuild), and the register row for the seam. Rejected alternative:
+dropping `wf` from `J` — it is the runtime's store invariant and its memo clause is consumed
+(`Typed/Assembly.lean:402`).
+
+Until the ruling: the walk lands with its callback outcome isolated as the one named premise
+(`ScopedExitKeeps`), the three other outcomes proved; the clauses that touch no stored value
+(`scoped`'s make, the inline answers, the forks) continue.
+
+## Slice M6-H — the walk under one named premise; the loop prefix and four store clauses adopted
+
+**First:** every outcome of the saved-stack walk settles typed except the scoped-exit callback's
+close, isolated as `ScopedExitKeeps` (finding F-WF above): `walkKeeps_of_scopedExit`,
+`clause_unguard` and `clause_finishFinalizer` take it as their one premise. With Codex's loop prefix
+adopted (`loop_preserves_of_clauses`, `53ea8fad`) both heads of M6 now reduce to the clause family;
+Codex's four read-only store clauses are adopted too (`clockNow`, `refGet`, `deferredIsDone`,
+`deferredPoll`; the fixture `Test/Program/ReadOnlyStoreClauses.lean`).
+
+- `fiberTyped_frame` generalized (one lemma, no second copy): a race registration marker current
+  carries its registration facts (row 188 (b)); the no-marker callers discharge it vacuously.
+- `configTyped_frame_edit` factored out of `configTyped_frame_step`; beside it
+  `configTyped_frame_marker` (the marker outcome, `loop` queued) and `configTyped_frame_finish`
+  (the delivered exit, `finish` queued over the empty stack, row 134 (c), through
+  `configTyped_cons_plain`).
+- `popR_done` (a completed walk leaves the stack empty and the current code as handed),
+  `raceRegistrationR_shape`; `Evaluating.settle_marker`, `.settle_finished`, `.deliver_keeps` (the
+  four outcomes of `popR_hostTyped` at the typed view's hook laws, `hookLawsAt_interpRAt`, and the
+  deferred-interrupt branch).
+- Fiber clauses proved: ten unconditional (`suspend`, `foreignRelease`, `closeWalk`, `frontier`,
+  `construction`, `sync`, `guard_`, `mask`, `scopeExit`, `refuse`), two under `ScopedExitKeeps`
+  (`unguard`, `finishFinalizer`); the walk under it.
+
+Placement: concept 4, `step-deliver-preserves` and `step-loop-preserves`; helpers of
+`M6Ledger.step_deliver` and `step_loop`. Reach: the `Evaluating` fragment at the same world (the walk
+allocates nothing). Not established: `ScopedExitKeeps` (the owner's ruling on F-WF), the clauses
+still open (`scoped`, `gen`, `loop`, `raceRegister`, the fiber actions, `closeIter`, the store
+family), progress.
+
+Commands: `lake env lean -DwarningAsError=true …/Evaluate.lean` (27 s, no warnings);
+`lake build Effect4.Laws` (below); `witnesses/RefMakeClause.lean` compiled here at this head
+(twelve footprints at `[propext, Quot.sound]`, `RefMakeClause.log`). The register ids: my `.fin`
+row was first written as `CE-036`, an id row 190 already held; it is `CE-039`, and the seam is
+`CE-040`.

@@ -194,7 +194,7 @@ def FinalizerAdmitted (root : ProgramSource) (w : World) : FinName → Prop
 - A body at a point is the point's admission (`PointTyped`).
 - A finalizer body is its admission by name (`FinalizerAdmitted`) at a closing exit that fits rc.112's
   release parameter type `Exit<unknown, unknown>`, and runs at the finalizer type `⟨unknown, never⟩`
-  (`E4-TYPED-CE-036`: admitting it at any type its exit fits typed a program the finalizer never
+  (`E4-TYPED-CE-039`: admitting it at any type its exit fits typed a program the finalizer never
   runs; no producer of `Body.fin` exists in the tree).
 - `acquireRelease`'s masked half (`acquireInR`) names its node and a context whose services fit: the
   release's registration reads both (`CaptureTyped`), and the acquire runs at the node's child 0.

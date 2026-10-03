@@ -1,7 +1,7 @@
 import Effect4.Laws.Program.Typed.Commands.Evaluate
 
 /-!
-# `E4-TYPED-CE-036` — the `fin` body's admission types an exit the finalizer never answers
+# `E4-TYPED-CE-039` — the `fin` body's admission types an exit the finalizer never answers
 
 Historical refutation, compiled once at `f4d8be8f` against the pre-change `BodyTyped.fin`
 (`Typed/Admission.lean`: `fin name ex ty (hex : ExitOk w ty ex)`), with its log beside it.
