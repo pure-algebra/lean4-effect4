@@ -782,6 +782,9 @@ How to run it:
    and fails on any finding there.
 2. Run `python3 scripts/check-language.py` for the report: the findings per document, by rule.
 3. Run `python3 scripts/check-language.py --show FILE` to list one document's findings.
+4. Run `python3 scripts/check-language.py --fix FILE` to repair the file's line citations (W25).
+   A citation loses its line number only where the text names the cited declaration. The fixer
+   lists every other citation with its reason, and a candidate name where history gives one.
 
 The checker does not measure five rules, which are for the writer and the reviewer:
 

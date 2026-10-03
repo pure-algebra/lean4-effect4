@@ -2,11 +2,13 @@
 """check-language: the controlled-English findings of the documents (docs/core/controlled-english.md).
 
 The rules and the dictionary are read from the specification itself (scripts/lib/language.py);
-there is no second list. Four modes:
+there is no second list. Five modes:
 
     check-language.py                  the report: findings per document, by rule; exit 0
     check-language.py --show FILE...   every finding in the named files; exit 0
     check-language.py --strict FILE... every finding in the named files; exit 1 if there is one
+    check-language.py --fix FILE...    rewrite the files' line citations by declaration name
+                                       (scripts/lib/line_cites.py) and list each one left; exit 0
     check-language.py --self-test      the red and green controls below; exit 1 if one fails
 
 The documents are the ones `make check-docs` reads (scripts/lib/doc_refs.py: every tracked
@@ -26,6 +28,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "lib"))
 import language  # noqa: E402
 from doc_refs import doc_files  # noqa: E402
 from language import RULES, SPEC, Checker, Finding, load_spec  # noqa: E402
+from line_cites import ZERO, Fixer, git_blame, git_file_at, git_first_seen  # noqa: E402
 
 
 # The controls: each Markdown fixture, checked against the real dictionary, must give exactly the
@@ -71,6 +74,71 @@ CONTROLS: list[tuple[str, str, str, list[str]]] = [
 ]
 
 
+# The fix controls run the fixer over a fake tree and history. `src/A.lean` was cited at `r1`;
+# at `r2` (the citing line's last edit, unless a control says otherwise) the file is unchanged, and
+# at `r3` it has moved, so line 3 lies in `bar`. At `r1` line 3 lay in `foo`'s body, line 6 in
+# `bar`'s docstring, line 9 in `gone` (declared nowhere at HEAD) and line 11 in `moved_one`
+# (declared at HEAD in `src/C.lean` only). `src/Other/A.lean` shares the file name.
+FIX_OLD = ("theorem foo : True := by\n  trivial\n  -- line 3\n\n/-- `bar`'s docstring,\n"
+           "  line 6 -/\ntheorem bar : True := trivial\n\ntheorem gone : True := trivial\n\n"
+           "theorem moved_one : True := trivial\n")
+FIX_MOVED = "theorem bar : True := by\n  trivial\n  -- line 3\n\ntheorem foo : True := trivial\n"
+FIX_FILES = {
+    (ZERO, "src/A.lean"): "theorem bar : True := trivial\n\ntheorem foo : True := by\n  trivial\n",
+    ("r1", "src/A.lean"): FIX_OLD, ("r2", "src/A.lean"): FIX_OLD, ("r3", "src/A.lean"): FIX_MOVED,
+    (ZERO, "src/C.lean"): "theorem moved_one : True := trivial\n",
+    (ZERO, "src/Other/A.lean"): "theorem foo2 : True := trivial\n",
+}
+FIX_SEEN = {("A.lean", 3): "r1", ("A.lean", 4): "r1", ("A.lean", 6): "r1", ("A.lean", 9): "r1",
+            ("A.lean", 11): "r1"}
+FIX_CONTROLS: list[tuple[str, str, str, int, str]] = [
+    ("green: a named citation drops its line", "`foo` (`src/A.lean:3`)", "`foo` (`src/A.lean`)", 0, "r2"),
+    ("green: a paragraph that names the declaration keeps only the path",
+     "`foo` holds (`src/A.lean:3`).", "`foo` holds (`src/A.lean`).", 0, "r2"),
+    ("green: a docstring line belongs to the declaration below it",
+     "`bar` is cited at `src/A.lean:6`.", "`bar` is cited at `src/A.lean`.", 0, "r2"),
+    ("green: a range names the declaration that holds most of its lines",
+     "`bar` spans `src/A.lean:4-7`.", "`bar` spans `src/A.lean`.", 0, "r2"),
+    ("green: a shared file name resolves to the file that declares the name",
+     "`foo2` (`A.lean:1`)", "`foo2` (`src/Other/A.lean`)", 0, "r2"),
+    ("green: a shared file name resolves to the file whose history holds the line",
+     "`foo` is at `A.lean:3-4`.", "`foo` is at `src/A.lean`.", 0, "r2"),
+    ("green: a continuation named in place takes the file",
+     "`foo` (`src/A.lean:3`) and `bar` (`:6`)", "`foo` (`src/A.lean`) and `bar` (`src/A.lean`)", 0, "r2"),
+    ("green: a continuation the paragraph names is dropped with its separator",
+     "`foo` and `bar` hold (`src/A.lean:3`, `:6`).", "`foo` and `bar` hold (`src/A.lean`).", 0, "r2"),
+    ("green: a moved declaration is cited at its new file",
+     "`moved_one` holds (`src/A.lean:11`).", "`moved_one` holds (`src/C.lean`).", 0, "r2"),
+    ("green: the paragraph confirms what the line's last edit contradicts",
+     "`foo` again (`src/A.lean:3`).", "`foo` again (`src/A.lean`).", 0, "r3"),
+    ("red: history alone is listed, not written", "See `src/A.lean:3`.", "See `src/A.lean:3`.", 1, "r2"),
+    ("red: a line edited after the cited file moved is left", "See `src/A.lean:3`.", "See `src/A.lean:3`.", 1, "r3"),
+    ("red: a declaration gone from the tree is left",
+     "`gone` holds (`src/A.lean:9`).", "`gone` holds (`src/A.lean:9`).", 1, "r2"),
+    ("red: a named citation whose name is gone is left",
+     "`zap` (`src/A.lean:3`)", "`zap` (`src/A.lean:3`)", 1, "r2"),
+    ("red: a span with more than the citation is left",
+     "See `src/A.lean:3: foo`.", "See `src/A.lean:3: foo`.", 1, "r2"),
+]
+
+
+def fix_self_test() -> int:
+    tracked = ["src/A.lean", "src/C.lean", "src/Other/A.lean", "control.md"]
+    failed = 0
+    for title, text, expected, left, blamed in FIX_CONTROLS:
+        fixer = Fixer(tracked, lambda path: not path.startswith("vendor/"),
+                      lambda revision, path: FIX_FILES.get((revision, path)),
+                      lambda doc, blamed=blamed: {1: blamed},
+                      lambda name, line: FIX_SEEN.get((name, line)))
+        got, result = fixer.fix("control.md", text)
+        ok = got == expected and len(result.left) == left
+        failed += not ok
+        if not ok:
+            print(f"FAIL {title}: expected {expected!r} with {left} left, got {got!r} with "
+                  f"{len(result.left)} left {[entry.reason for entry in result.left]}")
+    return failed
+
+
 def self_test(checker: Checker) -> int:
     failed = 0
     for title, kind, text, expected in CONTROLS:
@@ -80,9 +148,30 @@ def self_test(checker: Checker) -> int:
         failed += not ok
         if not ok:
             print(f"FAIL {title}: expected {expected}, got {got}")
+    failed += fix_self_test()
+    total = len(CONTROLS) + len(FIX_CONTROLS)
     print(f"{'PASS' if not failed else 'FAIL'} check-language self-test: "
-          f"{len(CONTROLS) - failed} of {len(CONTROLS)} controls")
+          f"{total - failed} of {total} controls")
     return 1 if failed else 0
+
+
+def fix(checker: Checker, names: list[str]) -> int:
+    """Rewrite the named documents' line citations in place; list what is left, and why."""
+    fixer = Fixer(checker.tracked, checker.ours, git_file_at(ROOT), git_blame(ROOT), git_first_seen(ROOT))
+    rewritten = 0
+    left = []
+    for name in names:
+        path = relative(name)
+        text = (ROOT / path).read_text(errors="replace")
+        fixed, result = fixer.fix(path, text)
+        if fixed != text:
+            (ROOT / path).write_text(fixed)
+        rewritten += result.rewritten
+        left += result.left
+    for entry in left:
+        print(f"{entry.doc}:{entry.line}: left `{entry.cite}`: {entry.reason}")
+    print(f"check-language --fix: {rewritten} citation(s) rewritten, {len(left)} left, in {len(names)} file(s)")
+    return 0
 
 
 def relative(name: str) -> str:
@@ -120,6 +209,7 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--strict", nargs="+", metavar="FILE", help="fail on any finding in these files")
     mode.add_argument("--show", nargs="+", metavar="FILE", help="print every finding in these files")
+    mode.add_argument("--fix", nargs="+", metavar="FILE", help="rewrite these files' line citations")
     mode.add_argument("--self-test", action="store_true", help="run the red and green controls")
     parser.add_argument("--rule", choices=RULES, help="with --show: only this rule")
     parser.add_argument("--top", type=int, default=0, help="the report: only the N documents with most findings")
@@ -135,6 +225,8 @@ def main() -> int:
 
     if args.self_test:
         return self_test(checker)
+    if args.fix:
+        return fix(checker, args.fix)
 
     if args.show or args.strict:
         results = findings_of(checker, args.show or args.strict)
