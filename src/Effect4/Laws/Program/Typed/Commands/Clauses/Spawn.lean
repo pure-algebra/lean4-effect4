@@ -145,16 +145,17 @@ theorem Evaluating.spawn_settles {root : ProgramSource} {rootTy : EffTy} {w : Wo
     (options : Supervision.ForkOptions) (site : List Nat) {ty tin : EffTy}
     (declared : w.Γ f.id = some ty) (stack : HostStack root w (m.update f) f.id tin ty f.frame.stack)
     (prov : InterruptProvenance f.frame) {code : RProgram}
-    (typedCode : TypedProg root (w.addFiber ⟨m.nextId⟩ cty) tin code) (tail : List RCmd)
-    (push : ∀ (M : RState), M.state = m.state → (M.fiber? ⟨m.nextId⟩).isSome = true →
+    (typedCode : TypedProg root (w.addFiber ⟨m.nextId⟩ cty) tin code) (tail : RFiber → List RCmd)
+    (push : ∀ (g : RFiber) (M : RState), M.state = m.state → (M.fiber? ⟨m.nextId⟩).isSome = true →
       ConfigTyped root rootTy (w.addFiber ⟨m.nextId⟩ cty) M (.loop f.id y :: rest) →
-      ConfigTyped root rootTy (w.addFiber ⟨m.nextId⟩ cty) M (tail ++ .loop f.id y :: rest)) :
+      ConfigTyped root rootTy (w.addFiber ⟨m.nextId⟩ cty) M (tail g ++ .loop f.id y :: rest)) :
     SettlesTyped root rootTy w f.id rest (prepareIterR
       ⟨(start (spawn interp m f program options site).1 f ⟨m.nextId⟩ options.startImmediately).1,
         answerR (start (spawn interp m f program options site).1 f ⟨m.nextId⟩
           options.startImmediately).2.1 code, y, .continue_,
         (start (spawn interp m f program options site).1 f ⟨m.nextId⟩
-          options.startImmediately).2.2 ++ tail⟩) := by
+          options.startImmediately).2.2 ++ tail (start (spawn interp m f program options site).1 f
+            ⟨m.nextId⟩ options.startImmediately).2.1⟩) := by
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
   have old := ev.typed.machine.fiber hmem
   have ne : (⟨m.nextId⟩ : FiberId) ≠ f.id := Ne.symm (ne_next (m := m) old.below)
@@ -198,13 +199,13 @@ theorem Evaluating.spawn_settles {root : ProgramSource} {rootTy : EffTy} {w : Wo
     refine SettlesTyped.mono ord ((ev1.emit _).settle_nested { f.frame with current := code }
       (codeNew _ (by rfl)) _ fun g gid typed => ?_)
     rw [List.append_assoc, List.append_assoc]
-    exact configTyped_cons_evaluate (push _ (by rfl) (present _ g (by rfl) gid) typed) _
+    exact configTyped_cons_evaluate (push _ _ (by rfl) (present _ g (by rfl) gid) typed) _
   | false =>
     refine SettlesTyped.mono ord (((ev1.enqueueStart ⟨m.nextId⟩).congr (by rfl) (by rfl)
       (by rfl) (by rfl) (by rfl) (by rfl) (by rfl)).settle_nested { f.frame with current := code }
       (codeNew _ (by rfl)) _ fun g gid typed => ?_)
     rw [List.append_assoc]
-    exact push _ (by rfl) (present _ g (by rfl) gid) typed
+    exact push _ _ (by rfl) (present _ g (by rfl) gid) typed
 
 /-! ## The nested commands of the spawn shape -/
 
@@ -254,12 +255,95 @@ theorem clause_fork (root : ProgramSource) (rootTy : EffTy) (child : Body)
   unfold FiberAction.fork
   cases hd : options.daemon with
   | true =>
-    exact ev.spawn_settles _ typedChild options site declared stack prov typedCode []
-      (fun _ _ _ typed => typed)
+    exact ev.spawn_settles _ typedChild options site declared stack prov typedCode (fun _ => [])
+      (fun _ _ _ _ typed => typed)
   | false =>
     exact (ev.congr (m' := { m with middlewareInstalled := true }) rfl rfl rfl rfl rfl rfl
       rfl).spawn_settles _ typedChild options site declared
       (hostStack_races (m := m.update f) (racesKept_of_eq fun _ => rfl) stack) prov typedCode
-      [.trackChild f.id ⟨m.nextId⟩] (fun _ _ _ typed => configTyped_cons_trackChild typed _ _)
+      (fun _ => [.trackChild f.id ⟨m.nextId⟩])
+      (fun _ _ _ _ typed => configTyped_cons_trackChild typed _ _)
+
+/-! ## `forkIn` and `forkScoped` -/
+
+/-- **`forkIn`** (`Machine/Fibers.lean:1463-1472`, `internal/effect.ts:5364-5378`): a daemon child of
+the point's program, typed at the certificate (`denoteAt_typed`), declared there and answered as
+its handle; the link to the scope, present by the pre, queued after its start. -/
+theorem clause_forkIn (root : ProgramSource) (rootTy : EffTy) (child : Point)
+    (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat) :
+    FiberClauseKeeps root rootTy (.forkIn child options scope site) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, ⟨pre, hlive⟩, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have typedChild : TypedProg root w cert
+      (bodyR (interpRAt root.program m.completedExits) (.at_ child)) :=
+    denoteAt_typed root ev.typed.machine.sourceWF ev.typed.machine.services pre
+  have live : m.state.ScopeLive scope := by
+    have l : w.state.ScopeLive scope := hlive
+    rw [ev.typed.machine.wide.state] at l
+    exact l
+  have freshΓ : w.Γ ⟨m.nextId⟩ = none := (fresh_of_typed ev.typed.machine).2
+  have ord : w.leHost (w.addFiber ⟨m.nextId⟩ cert) := addFiber_leHost freshΓ
+  have typedCode : TypedProg root (w.addFiber ⟨m.nextId⟩ cert) tin (next (Val.fiber ⟨m.nextId⟩)) :=
+    typedNext _ ord _ ⟨⟨m.nextId⟩, rfl, addFiber_Γ_self⟩
+  show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.forkIn _ m f y
+    (bodyR (interpRAt root.program m.completedExits) (.at_ child)) options scope (answerWith next)
+    site))
+  unfold FiberAction.forkIn
+  exact ev.spawn_settles _ typedChild { options with daemon := true } site declared stack prov
+    typedCode (fun g => [.link .forkIn scope ⟨m.nextId⟩ (some g.id)
+      ((interpRAt root.program m.completedExits).stackAnnotations g.id)])
+    (fun _ _ state present typed => configTyped_cons_link typed (by rw [state]; exact live) present)
+
+/-- **`forkScoped`** (`Machine/Fibers.lean:1474-1489`, `internal/effect.ts:5400-5406`): `forkIn` on the
+context's ambient scope, present by `J` (`ambientScope_live`), its handle answered as a success; with
+no ambient scope, the `missingService` defect, which the exit judgment admits at every type. -/
+theorem clause_forkScoped (root : ProgramSource) (rootTy : EffTy) (child : Point)
+    (options : Supervision.ForkOptions) (site : List Nat) :
+    FiberClauseKeeps root rootTy (.forkScoped child options site) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have typedChild : TypedProg root w cert
+      (bodyR (interpRAt root.program m.completedExits) (.at_ child)) :=
+    denoteAt_typed root ev.typed.machine.sourceWF ev.typed.machine.services pre
+  have freshΓ : w.Γ ⟨m.nextId⟩ = none := (fresh_of_typed ev.typed.machine).2
+  have ord : w.leHost (w.addFiber ⟨m.nextId⟩ cert) := addFiber_leHost freshΓ
+  have typedCode : TypedProg root (w.addFiber ⟨m.nextId⟩ cert) tin
+      (next (.success (Val.fiber ⟨m.nextId⟩))) :=
+    typedNext _ ord _ ⟨⟨m.nextId⟩, rfl, addFiber_Γ_self⟩
+  show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.forkScoped _ m f y
+    (bodyR (interpRAt root.program m.completedExits) (.at_ child)) options
+    (fun f v => answerR f (next (.success v))) site))
+  unfold FiberAction.forkScoped
+  rw [show (interpRAt root.program m.completedExits).ambientScope = Ctx.ambientScope from rfl]
+  cases hscope : Ctx.ambientScope f.context with
+  | some scope =>
+    have live : m.state.ScopeLive scope := by
+      have l : w.state.ScopeLive scope :=
+        ambientScope_live ev.typed.machine (rfiber?_mem ev.look) hscope
+      rw [ev.typed.machine.wide.state] at l
+      exact l
+    exact ev.spawn_settles _ typedChild { options with daemon := true } site declared stack prov
+      typedCode (fun g => [.link .forkIn scope ⟨m.nextId⟩ (some g.id)
+        ((interpRAt root.program m.completedExits).stackAnnotations g.id)])
+      (fun _ _ state present typed => configTyped_cons_link typed (by rw [state]; exact live) present)
+  | none =>
+    refine ev.settle_continue { f.frame with current := .pure (.failure (Cause.die .missingService)) }
+      (fun ty' declared' => ?_)
+    have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
+    subst same
+    refine ⟨tin, TypedProg.pure (strongExit_of_clean w tin _ rfl ?_), stack,
+      ⟨prov.recorded, prov.deferred⟩⟩
+    intro reason member
+    simp only [Cause.die_reasons, List.mem_singleton] at member
+    subst member
+    exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
 
 end Effect4.Program.Typed
