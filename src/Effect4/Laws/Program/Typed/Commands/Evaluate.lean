@@ -986,4 +986,241 @@ theorem clause_refuse (root : ProgramSource) (rootTy : EffTy) (cause : CauseV) :
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   exact (pre : False).elim
 
+
+/-! ## The actual loop prefix — M6.step_loop, conditional on the evaluator clauses
+Checked against f409507f. This composes the existing handler premises; it does not discharge them.
+-/
+namespace LoopPrefix
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+open Effect4.Program.Typed Effect4.Program.Typed.Contracts
+
+/-- The counter and override are quiet fields; their updates use existing preservation. -/
+theorem budget_fields {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {q : List RCmd} {f : RFiber} (typed : ConfigTyped root rootTy w m q)
+    (look : m.fiber? f.id = some f) (count : Nat) (override : Option Bool) :
+    ConfigTyped root rootTy w
+      (m.update { f with currentOpCount := count, yieldOverride := override }) q := by
+  have quiet : QuietEdit (fun x : RFiber =>
+      { x with currentOpCount := count, yieldOverride := override }) :=
+    { id := fun _ => rfl
+      frame := fun _ => rfl
+      running := fun _ => rfl
+      parked := fun _ => rfl
+      pending := fun _ => rfl
+      finalizing := fun _ => rfl
+      exit := fun _ => rfl
+      dispatcher := fun _ => rfl
+      context := fun _ => rfl
+      observers := fun x => ⟨[], (List.append_nil _).symm, fun _ h => nomatch h⟩ }
+  have moved := configTyped_modify_quiet typed f.id quiet
+    (fun _ _ _ member => Or.inl member)
+  simpa only [RunMachine.modify, look] using moved
+
+/-- The loop's deferred-interrupt delivery keeps the actual saved stack. A direct race marker
+uses its already-correlated token reply stack, as interruptRecord's existing proof does. -/
+theorem top_keeps {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool}
+    (typed : ConfigTyped root rootTy w m (.loop f.id y :: rest))
+    (look : m.fiber? f.id = some f) (running : f.running = true) :
+    ConfigTyped root rootTy w (m.update (runloopTop f)) (.loop f.id y :: rest) := by
+  cases deferred : f.frame.deferredInterrupt with
+  | false =>
+    have unchanged : runloopTop f = f := by
+      change (if f.frame.deferredInterrupt then _ else f) = f
+      rw [deferred]
+      rfl
+    rw [unchanged, rupdate_self look typed.machine.wide.fiberIds]
+    exact typed
+  | true =>
+    let fr : RSaved := { f.frame with
+      current := .pure (.failure f.frame.pendingCause), deferredInterrupt := false }
+    have changed : runloopTop f = { f with frame := fr } := by
+      change (if f.frame.deferredInterrupt then _ else f) = _
+      rw [deferred]
+      rfl
+    rw [changed]
+    refine (configTyped_frame_step typed rfl look running fr ?_ rfl).1 y
+    intro final declared
+    have old := typed.machine.fiber (rfiber?_mem look)
+    obtain ⟨_, _, prov⟩ := old.position declared
+    have newProv : InterruptProvenance fr :=
+      ⟨prov.recorded, fun h => Bool.noConfusion h⟩
+    cases marker : raceRegistrationR f.frame.current with
+    | none =>
+      obtain ⟨mid, _, stack, _⟩ := typed.code f (rfiber?_mem look) running
+        ⟨y, Or.inl List.mem_cons_self⟩ marker final declared
+      exact ⟨mid, TypedProg.pure (strongExit_of_clean w mid _ (pendingCause_clean prov)
+        (pendingCause_noShapeDefect mid prov)), stack, newProv⟩
+    | some raceId =>
+      obtain ⟨_, resultTy, _, _, _, final0, declared0, stack, _⟩ := old.registration raceId marker
+      have same : final0 = final := Option.some.inj (declared0.symm.trans declared)
+      subst same
+      exact ⟨resultTy, TypedProg.pure
+        (strongExit_of_clean w resultTy _ (pendingCause_clean prov)
+          (pendingCause_noShapeDefect resultTy prov)), stack, newProv⟩
+
+/-- The body reached after the injected guard is typed independently of its saved callback;
+unguard delivers the successful Yield reply through that saved callback. -/
+theorem yield_body_typed (root : ProgramSource) (w : World) (previous : RProgram) :
+    TypedProg root w (EffTy.pure .unit)
+      (.vis (.inr (.yieldNow 0)) fun v =>
+        .vis (.inr (.unguard (.success v))) (seqR fun _ => previous)) :=
+  TypedProg.fiber (op := .yieldNow 0) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => by
+      change ans = Val.unit at post
+      subst post
+      exact TypedProg.unguard (ty := EffTy.pure .unit) ⟨trivial, trivial⟩)
+
+/-- Executing the injected success guard saves either an ordinary constant callback or the
+existing race's correlated registration callback; both meet the original host stack. -/
+theorem injected_frame_code {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool}
+    (typed : ConfigTyped root rootTy w m (.loop f.id y :: rest))
+    (look : m.fiber? f.id = some f) (running : f.running = true)
+    (final : EffTy) (declared : w.Γ f.id = some final) :
+    CodeOk root w m f.id final
+      { f.frame with
+        current := .vis (.inr (.yieldNow 0)) fun v =>
+          .vis (.inr (.unguard (.success v))) (seqR fun _ => f.frame.current)
+        stack := .resume .onSuccess (seqR fun _ => f.frame.current) :: f.frame.stack } := by
+  have old := typed.machine.fiber (rfiber?_mem look)
+  obtain ⟨_, _, prov⟩ := old.position declared
+  refine ⟨EffTy.pure .unit, yield_body_typed root w f.frame.current, ?_, ⟨prov.recorded, prov.deferred⟩⟩
+  cases marker : raceRegistrationR f.frame.current with
+  | none =>
+    obtain ⟨mid, current, stack, _⟩ := typed.code f (rfiber?_mem look) running
+      ⟨y, Or.inl List.mem_cons_self⟩ marker final declared
+    refine hostStack_push (.resume .onSuccess (seqR fun _ => f.frame.current) ?_ ?_) stack
+    · intro later ord ex _ arm
+      cases ex with
+      | success v => exact typedProg_mono root w later mid f.frame.current ord current
+      | failure c => cases arm
+    · intro later _ ex admitted arm
+      cases ex with
+      | success v => cases arm
+      | failure c => exact exitOk_failure_of_errorN (subN_never mid.error) admitted
+  | some raceId =>
+    obtain ⟨race, resultTy, found, hosted, token, final0, declared0, stack, _⟩ :=
+      old.registration raceId marker
+    have same : final0 = final := Option.some.inj (declared0.symm.trans declared)
+    subst same
+    exact .cons (.inr (.mk (fun _ => marker)
+      (fun _ _ _ admitted => exitOk_failure_of_errorN (subN_never resultTy.error) admitted)
+      found hosted token)) stack
+
+/-- The same owned, running fiber can be continued by deliver instead of loop. -/
+theorem loop_to_deliver {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool}
+    (typed : ConfigTyped root rootTy w m (.loop f.id y :: rest))
+    (look : m.fiber? f.id = some f) (running : f.running = true) (y' : Bool) :
+    ConfigTyped root rootTy w m (.deliver f.id y' :: rest) := by
+  obtain ⟨f0, look0, _, parked⟩ := typed.queue.authority _ List.mem_cons_self
+  have same : f0 = f := Option.some.inj (look0.symm.trans look)
+  subst f0
+  exact configTyped_cons_deliver (configTyped_tail typed) look running parked
+    (owner_free typed.queue rfl) y'
+    (fun marker ty declared => typed.code f (rfiber?_mem look) running
+      ⟨y, Or.inl List.mem_cons_self⟩ marker ty declared)
+
+/-- The full actual loop step, conditional only on the existing evaluator's operation/walk
+clauses. The injected guard is reduced directly because a saved registration callback need
+not make its temporary current wrapper TypedProg. -/
+theorem loop_preserves_of_clauses (root : ProgramSource) (rootTy : EffTy)
+    (fibers : ∀ op, FiberClauseKeeps root rootTy op)
+    (stores : ∀ op, StoreClauseKeeps root rootTy op) (walk : WalkKeeps root rootTy)
+    (id : FiberId) (y : Bool) : StepPreserves root rootTy (.loop id y) := by
+  intro w m rest live typed
+  letI := termEvaluatorFor root.program
+  obtain ⟨f, hf, running, _⟩ := typed.queue.authority _ List.mem_cons_self
+  have fid : f.id = id := rfiber?_id hf
+  subst fid
+  let top := runloopTop f
+  let charged := countOp top
+  have topId : top.id = f.id := by
+    unfold top runloopTop
+    split <;> rfl
+  have chargedId : charged.id = f.id := topId
+  have chargedRunning : charged.running = true := by
+    change (runloopTop f).running = true
+    unfold runloopTop
+    split <;> exact running
+  have chargedExit : charged.exit = f.exit := by
+    change (runloopTop f).exit = f.exit
+    unfold runloopTop
+    split <;> rfl
+  have topTyped := top_keeps typed hf running
+  have topLook : (m.update top).fiber? top.id = some top := rfiber?_update_self hf topId
+  have counted := budget_fields topTyped topLook (top.currentOpCount + 1) top.yieldOverride
+  change ConfigTyped root rootTy w ((m.update top).update charged) (.loop f.id y :: rest) at counted
+  rw [rupdate_rupdate m (show charged.id = top.id from rfl)] at counted
+  have chargedTyped : ConfigTyped root rootTy w (m.update charged) (.loop charged.id y :: rest) := by
+    rw [chargedId]
+    exact counted
+  have chargedLook : (m.update charged).fiber? charged.id = some charged :=
+    rfiber?_update_self hf chargedId
+  show ∃ w', w.leHost w' ∧ ConfigTyped root rootTy w'
+    (driveStep (interpR root.program) m (.loop f.id y) rest).1
+    (driveStep (interpR root.program) m (.loop f.id y) rest).2
+  simp only [driveStep, hf]
+  by_cases injects : (!y && !charged.preventYield && yieldVerdict charged) = true
+  · let fr : RSaved := { charged.frame with
+      current := .vis (.inr (.yieldNow 0)) fun v =>
+        .vis (.inr (.unguard (.success v))) (seqR fun _ => charged.frame.current)
+      stack := .resume .onSuccess (seqR fun _ => charged.frame.current) :: charged.frame.stack }
+    let framed : RFiber := { charged with frame := fr }
+    let g : RFiber := { framed with yieldOverride := none }
+    let events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram Unit) :=
+      [RunEvent.yieldInjected charged.id charged.currentOpCount]
+    let wrapped : RFiber := { charged with
+      yieldOverride := none
+      frame := { charged.frame with current :=
+        ((guardR .onSuccess (.vis (.inr (.yieldNow 0)) fun v => .pure (.success v))).bind
+          (seqR fun _ => charged.frame.current)) } }
+    have injected : injectYield m charged y = some ⟨m.emit events, wrapped, true, .continue_, []⟩ := by
+      unfold injectYield
+      rw [if_pos injects]
+    have iterationEq : iteration (interpR root.program) m f y =
+        ⟨m.emit events, g, true, .continue_, []⟩ := by
+      calc
+        iteration (interpR root.program) m f y =
+            evaluateR (interpRAt root.program (m.emit events).completedExits)
+              (m.emit events) wrapped true := by
+          unfold iteration
+          dsimp only
+          rw [injected]
+        _ = ⟨m.emit events, g, true, .continue_, []⟩ := rfl
+    have frameTyped := (configTyped_frame_step chargedTyped rfl chargedLook chargedRunning fr
+      (fun ty declared => injected_frame_code chargedTyped chargedLook chargedRunning ty declared)
+      rfl).1 true
+    change ConfigTyped root rootTy w ((m.update charged).update framed)
+      (.loop charged.id true :: rest) at frameTyped
+    rw [rupdate_rupdate m (show framed.id = charged.id from rfl)] at frameTyped
+    have framedLook : (m.update framed).fiber? framed.id = some framed :=
+      rfiber?_update_self hf chargedId
+    have output := budget_fields frameTyped framedLook charged.currentOpCount none
+    change ConfigTyped root rootTy w ((m.update framed).update g)
+      (.loop charged.id true :: rest) at output
+    rw [rupdate_rupdate m (show g.id = framed.id from rfl)] at output
+    have emitted := configTyped_emit output events
+    rw [chargedId] at emitted
+    rw [iterationEq]
+    exact ⟨w, leHost_refl w, emitted⟩
+  · have noInjection : injectYield m charged y = none := by
+      unfold injectYield
+      rw [if_neg injects]
+    have iterationEq : iteration (interpR root.program) m f y =
+        evaluateR (interpRAt root.program m.completedExits) m charged y := by
+      unfold iteration
+      dsimp only
+      rw [noInjection]
+    have ev : Evaluating root rootTy w m rest charged y :=
+      ⟨loop_to_deliver chargedTyped chargedLook chargedRunning y,
+        ⟨f, by rw [chargedId]; exact hf, chargedExit.symm⟩, chargedRunning, live⟩
+    have keeps := evaluate_keeps fibers stores walk ev
+    rw [chargedId] at keeps
+    rw [iterationEq]
+    exact keeps
+
+end LoopPrefix
+
 end Effect4.Program.Typed
