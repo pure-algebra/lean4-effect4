@@ -24,7 +24,7 @@ they are not a count of unique obligations. The banks are `Effect4.Stores`,
 `Effect4.StoreKernel`, `Effect4.Fibers` and `Effect4.TypedState`.
 
 The current foundations review and proposed execution plan is
-[`docs/core/post-phase-c-synthesis.md`](core/post-phase-c-synthesis.md), checked against
+[`docs/research/history/post-phase-c-synthesis.md`](research/history/post-phase-c-synthesis.md), checked against
 `10d5c009`. A retained Lean counterexample refutes the former `M1Origin.actionAt_raceAll`
 statement because it omitted the source-location premise of its backing theorem. Slice 1
 restores that premise and checks the backing proof; no false theorem was accepted. The review also found that the then-generated resume checks
@@ -84,7 +84,7 @@ refuted in the counterexample file. A wider finding is recorded for M6: every fi
 answer feeds a leaf under a `True` post makes its programs untypable, so those posts are stated
 with the M6 declarations. The typed-state modules now layer as the world, validity, admission,
 then the residual protocols, with the stack contracts a parametric interface only the residual
-module instantiates. The regenerated [architecture map](core/architecture-map.html) found three
+module instantiates. The regenerated architecture map (`make gen-architecture`) found three
 upward imports that arrived after 2026-09-20 (the answer gate, the trace-origin obligations and
 the protocol ledger file); all three are repaired, so the map shows no import against the
 declared direction beyond the two accepted ones, and no pair of areas importing each other. The production ledger was unchanged then at 342 total, 333 proved, 9 open. Slice
@@ -122,7 +122,7 @@ documentation is cut over:
 - `machine-state.md` §7 holds the six storage interfaces.
 - `lcnf-route.md` §8 holds the compilation stages and the number policy.
 - The open choices are decisions rows 95–101.
-- The [architecture map](core/architecture-map.html) is regenerated from the tree.
+- The architecture map (`make gen-architecture`, a build artifact under `.lake/gen`) is regenerated from the tree.
 
 **Right-sized by the owner the same day:** the route stands (`system-map.md` §1, §3).
 - **Near term:** slice 6, plus three bounded fixes: rows 95, 96, and 97's interim rule.
@@ -471,8 +471,8 @@ The token table is per fiber, the world order retains its declarations, and the 
 interface composes through a shared middle type. `TypedProg`, named-frame protocols and the
 capture environment relation remain parameters; no operational preservation is claimed.
 The unique ledger has 309 obligations, 299 checked and ten open: the removed saved-field
-assembly is replaced by the explicitly open `park_extension`. `make check-typed-state`,
-`make build` and `make check` pass. The older look-ahead's namesake-first closure forecast and
+assembly is replaced by the explicitly open `park_extension`. The focused typed-state check (since
+retired), `make build` and `make check` pass. The older look-ahead's namesake-first closure forecast and
 M2b-before-M3 sequence are superseded.
 
 The owner's broader direction is captured in the review's §11: all 452 pinned TypeScript
@@ -520,20 +520,21 @@ and focused proofs; add tools or repeat broad checks only when they serve concre
 | file | what it holds |
 | --- | --- |
 | `docs/core/system-map.md` | the frame: the goal, the ten layers with their owners and status, the sorts with one representation each, the five arrow kinds and what each owes, coherence, scope-correct composition, generation as a fixed point |
-| `docs/core/semantics.md` | the language's judgments by concept (ten): the literature each adopts or adapts, the cuts by decisions row, the definitions in the tree, the required properties and the glossary of our words against Lean's; the statuses are generated (`generated/semantics.md`, `make gen-semantics`) from `tools/Tools/SemanticsRegistry.lean` |
+| `docs/core/semantics.md` | the language's judgments by concept (ten): the literature each adopts or adapts, the cuts by decisions row, the definitions in the tree, the required properties (the glossary moved to `docs/core/controlled-english.md`); the statuses are generated (`generated/semantics.md`, `make gen-semantics`) from `tools/Tools/SemanticsRegistry.lean` |
 | `docs/core/host-boundary.md` | the external-reply lane: how host answers flow today, the known holes with evidence, the boundary contract (lifecycle, handle declarations, membership matrix, entry paths, controls), the interim profile and the order |
-| `docs/core/coherence-principle.md` | scout F: the principle in full, the seven squares, the arrows lacking obligations |
+| `docs/research/history/coherence-principle.md` | history: scout F's principle in full, the seven squares, the arrows lacking obligations |
 | `docs/core/traversal-census.md` | the census numbers, every hand traversal by root, the converter design |
 | `docs/core/decisions.md` | every open decision, one list (status by row; rows 44–45 record the approved world and rows 78–85 the state/refinement proposals and 86–88 the foundation contracts) with the order |
-| `docs/core/language-cut.md` | the historical language-cut analysis and profile/cut distinctions; live whole-pin dispositions and remaining work are in the post-Phase C plan §11 |
+| `docs/research/history/language-cut.md` | history: the language-cut analysis and profile/cut distinctions; live whole-pin dispositions and remaining work are in the post-Phase C plan §11 |
 | `docs/core/api-surface.md` | the consolidated API and its awkward constructs |
 | `docs/core/lcnf-route.md` | what the LCNF lowering handles and refuses; the LLVM-shaped architecture |
 | `docs/core/machine-state.md` | The state and log owners, proposed representation changes, conditional transaction profile, and shared basis for the surveyed stateful modules. Approved world and open choices are separated; the implementation plan and supporting research are tracked under `docs/research/` |
 | `docs/DESIGN-ISSUES.md` | the DI register (rulings are made only when written here) |
-| `docs/ARCHITECTURE.md`, `docs/GENERATED.md`, `docs/DESIGN-BASIS.md`, `docs/DESIGN-MAP.md`, `docs/RUNTIME-COVERAGE.md` | the tree, the generated groups, the DB register, the earlier five-layer map (superseded in substance by `docs/core/system-map.md`), the runtime census |
-| `docs/core/architecture-map.html` | the measured architecture map: the roots at their declared heights, the import matrix, every import against the direction, the typed-state stack with its planned modules, the file map by role; regenerated from the tree by `make gen-architecture`, roles declared in `tools/Tools/ArchitectureRoles.lean` |
-| `docs/core/post-phase-c-synthesis.md` | the checked post-Phase C review and full proposed execution plan: false pending statement, relational predicate gaps, decision reconciliation, slice contracts, controls and evidence; not an owner ruling |
-| `AGENTS.md` | the operating rules and the vocabulary |
+| `docs/ARCHITECTURE.md`, `docs/GENERATED.md`, `docs/DESIGN-BASIS.md`, `docs/research/history/DESIGN-MAP.md`, `docs/RUNTIME-COVERAGE.md` | the tree, the generated groups, the DB register, the earlier five-layer map (history) (superseded in substance by `docs/core/system-map.md`), the runtime census |
+| `.lake/gen/architecture-map.html` | a build artifact, not committed: the measured architecture map: the roots at their declared heights, the import matrix, every import against the direction, the typed-state stack with its planned modules, the file map by role; regenerated from the tree by `make gen-architecture`, roles declared in `tools/Tools/ArchitectureRoles.lean` |
+| `docs/research/history/post-phase-c-synthesis.md` | history: the checked post-Phase C review and full proposed execution plan: false pending statement, relational predicate gaps, decision reconciliation, slice contracts, controls and evidence; not an owner ruling |
+| `AGENTS.md` | the operating rules, with one line per core term pointing into `docs/core/controlled-english.md` |
+| `docs/core/controlled-english.md` | the writing rules for every Markdown artifact and the dictionary: one meaning per word, its tree anchor and its literature term (`make check-language`) |
 
 ## Next, in order
 
@@ -541,32 +542,48 @@ The active sequence is the foundations review above. Phase C's existing receipt 
 historical evidence; the dated notes below explain the redirect and its earlier plans. They
 do not override the corrected protocol-before-assembly order or constitute a new pause instruction.
 
-**Lead continuation, 2026-10-02 (current).** At the owner's instruction ("hand back primary
-implementation to claude") Claude is the lead implementation and integration seat again, on
-`claude/proofs`; Codex reviews and supports (testing, proof-graph organisation, landing checks) and
-edits no production file. Three checked refutations of the open command goals are repaired at the
-contract, each ratified by the owner ("ratified as recommended"), with controls and history kept
-([the lead receipt](research/2026-10-02-claude-lead/receipt.md)): the queued enrollment bound
-(decisions row 134 (e), `E4-TYPED-CE-032`), the scope-exit callback typed only at the `scoped` guard's
-run position (row 188 (a), `E4-TYPED-CE-034`), and registration callbacks under injected yields as
-correlated arrows of a host stack (row 188 (b), `E4-TYPED-CE-033`). They close no ledger goal: the
-three goals stay open, no longer refuted by those witnesses. Earlier: Codex led implementation on
-`codex/proofs-lead`. Claude's clean handoff `247d7487` and the CE-026 regression battery
-`e493b67d` are now merged into the local `refactor/phase1-phase3`; nothing was pushed.
-M5 and all 31 store rows of M3bAdequacy are closed; M6Edits has 0 open of 13. M6Ledger has
-5 open of 20: `loop`, `deliver`, `launch`, decision preservation and
-reachable typing. M7 retains 4 open on its existing fragment. The general wake proof and its
-positive/refusing controls are recorded in
-[the wake receipt](research/2026-10-02-codex-lead/waiter-receipt.md).
-The unchanged registration-completion obligation is now proved for all three command branches;
-its CE-028 controls reject the old countdown collision and accept the input with only that
-countdown removed. See [the registration receipt](research/2026-10-02-codex-lead/registration-receipt.md).
-The [lead plan](research/2026-10-02-codex-lead/plan.md) carries the remaining sequence, including
-the theoretical placement and proof-graph update required with each slice. The shared frame
-method and its ownership limits are explained in semantics Concept 4 §5. The earlier design
-note's unique-sender interpretation is explicitly corrected; it is not an extra theorem.
-The full generator sweep remains due at the handoff checkpoint; a documentation regeneration
-is not that sweep. Row 180(a)'s registered-handle invariant remains part of the M7 work.
+**Scheduler Contract Hardening & Milestone Status, 2026-10-02 (current).** Four command contracts
+are repaired and ratified, eliminating checked refutations without weakening theorems:
+1. **Queued enrollment bound** (decisions row 134 (e), `E4-TYPED-CE-032`): `EnrollRaceOk` bounds queued children
+   below `nextId`, preventing unallocated fibers from passing compatibility vacuously before `launch`.
+2. **Scope-exit callback position** (row 188 (a), `E4-TYPED-CE-034`): The raw `scopeExit` marker remains in
+   the semantic program carrier, but ordinary `TypedProg` admission excludes it. The scope callback is admitted
+   at the `scoped` guard's run position and saved slot (`scopedGuard`, `scopedResume`). This repairs the typing
+   contract around the evaluator's explicit `badShapeExit` fallback; it does not remove syntax or prove general
+   loop/delivery preservation.
+3. **Registration callbacks under injected yields** (row 188 (b), `E4-TYPED-CE-033`): The host-stack judgment
+   composes ordinary frames and registration arrows that carry race existence, the matching host and token typing.
+   It admits the injected-callback shapes while requiring those correlations. Preservation by the actual
+   injected yield and subsequent walk is part of the loop and delivery proofs, proved 2026-10-03
+   (`loop_preserves`, `deliver_preserves`).
+4. **Queued observe sources** (row 189, `E4-TYPED-CE-035`): `QueueOk.observer` bounds sources below `nextId`,
+   closing an antitone $\Gamma$-read loophole where naming future unallocated fibers bypassed typing checks.
+
+Saved-stack judgments are unified through `Contracts.FramePath Edge` (row 48), a Prop-valued typed-path
+relation over frame lists, interpreting composition through existential middle types. It provides generic
+identity, append, splitting and transport along edge implications. `HostStack` and `PositionStack` instantiate
+it; the unchanged `StackAccepts` is connected by the two conversion theorems.
+
+**Current Milestone Progress** (measured at HEAD, 2026-10-03: `make status` reports 0 open ledger
+goals, and the proved ledger is retired, `0821bb2d`):
+- **M5 (Denotation & Load Typing)**: **Closed** (0 open of 5). Both `denoteR_typed` and `typedState_load`
+  hold unconditionally; the layer family arm (`provideLayerArm`) is proved across all sources.
+- **M3bAdequacy (Store Rows)**: **Closed** (31 of 31 store rows, including memo table operations under row 187 (c)).
+- **M6Edits (Lift Edits)**: **Closed** (0 open of 13).
+- **M6Ledger (Command Preservation)**: **Closed** (20 of 20). The last proved are
+  `loop_preserves` and `deliver_preserves` (over the waiter column, `E4-TYPED-CE-025`),
+  `decision_preserves` and `typedState_reachable`
+  (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`), and `launch_preserves`
+  (`src/Effect4/Laws/Program/Typed/Commands/Launch.lean`).
+- **M7 (Capstone on its fragment)**: **Proved** (`m7_proved`, decisions row 138): on the
+  empty host table, a checked closed source and answer-free tapes, the frame machine's observation
+  is typed and its run never halts. The frame machine only: not the OCaml engine, not a TypeScript run.
+- **Open claims** (`generated/semantics.md`): `scheduler-progress`, `fair-scheduling`, `store-safety`
+  and `record-codec-layout` are absent; `host-progress` is assumed; `bind-closed` is refuted.
+The unchanged registration-completion obligation is proved across all three branches (`registrationDone_preserves`,
+`Test/Program/RegistrationColumn.lean`, CE-028 controls). The general wake proof is verified in
+`Test/Program/WaiterColumn.lean` (CE-026 controls). Full details in `docs/research/2026-10-02-claude-lead/receipt.md`.
+
 
 **Earlier M5 closure, 2026-10-02 (pre-integration snapshot).** The layer family's arm is proved at every source (`provideLayerArm`,
 `src/Effect4/Laws/Program/Typed/LayerArm.lean`), so M5's two goals hold with no fragment premise:
@@ -583,7 +600,7 @@ slice C of row 182 (`Ty`'s generic fold families generated into the core; the cl
 tables as values of the generated `TyTable`, the Schema column Schema IR templates filled by a fold
 over the Schema AST, its agreement with `Bridge.schema` proved; `handleFree` on the table's column);
 row 8 (C) (the emitter writes each reference key once and refuses a conflicting repeat; the three
-fixtures byte-identical). Deferred to the next pause: `make check-gen`, `scripts/test-generators.py`,
+fixtures byte-identical). Deferred to the next pause: `make check-gen`, `git:0821bb2d:scripts/test-generators.py` (since retired),
 the semantics report and the architecture page. Next: M6 (row 187's memo-table store clause, which
 makes `memoGet_implements` and `memoComplete_implements` provable; row 180 (a); the open commands),
 then M7; row 182's C.3 and C.4 (the key and TypeScript faces; `Bridge.schema` onto the fold) and the
@@ -752,7 +769,7 @@ deep-dive review. Step 0 of the milestone is landed
 (`docs/research/2026-09-18-position-census-design.md` §3a): the position census, the source
 table under a totality gate (87/87, two refusals named), layer 0, and the generated skeleton
 `Laws/Program/Typed/State.lean`, elaborated in place and parametric in the carrier predicates
-(the source-file writer is retired; `make check-typed-state` owns the focused group).
+(the source-file writer is retired, and so is its focused check).
 The concrete transition-obligation set and its pinned count were declared at slice 5 (2026-09-24):
 `M6Ledger`, 20 goals, ceiling 20 (`Laws/Program/Typed/Assembly.lean`). Open, in the order `decisions.md`'s last section
 gives: group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2, 7, 10, 11; then 1
@@ -788,4 +805,4 @@ with 3, and 19–22. Row 5 has the restatement `docs/research/2026-09-17-ontolog
 - Build in parallel, slot in, delete at a good place: a new representation is a second file
   beside the old one with the connector (the agreement theorem), never an edit in place.
 - `docs/core/` is tracked and is the current authority; `docs/research/` is gitignored, with the
-  notes that matter force-added; `docs/agents/` and `COORDINATION.md` are gone.
+  notes that matter force-added; the agents folder and the coordination file are gone.
