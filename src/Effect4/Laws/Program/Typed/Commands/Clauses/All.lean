@@ -27,6 +27,29 @@ set_option autoImplicit false
 namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
 
+/-! ## The open clauses, as ledger goals
+
+`M6Ledger.step_deliver` and `step_loop` follow from the clauses (`deliver_preserves_of_open`,
+`loop_preserves_of_open` below). The two clauses not yet proved are declared here as the ledger's
+goals, so the proof graph names what `step_deliver` and `step_loop` still wait on. -/
+
+namespace M6Clauses
+
+/-- **`closeIter`, parallel** (`FiberAction.closePar`, `Machine/Fibers.lean:1502-1507`; rc.112
+`internal/effect.ts:3819-3826`): every finalizer forked as an immediate daemon at
+`⟨unknown, never⟩`, their runs queued, and the await over them (`closeParAwait`) queued with its
+delivery (`CommandDeliveryOk`: the children's columns, the `closeParDone` protocol, the host's
+saved answer frame). A step of `M6Ledger.step_deliver` and `step_loop`. -/
+theorem closeIter_parallel (root : ProgramSource) (rootTy : EffTy) (order : List FinName)
+    (ex : ExitV) :
+    ProofGraph.Obligation (FiberClauseKeeps root rootTy (.closeIter .parallel order ex)) := ⟨⟩
+
+/-- **The generator producer's obligation** (`GenProtocol`, decisions row 190): the coinduction
+over typed generator positions. A step of `M6Ledger.step_deliver` and `step_loop`. -/
+theorem gen_protocol (root : ProgramSource) : ProofGraph.Obligation (GenProtocol root) := ⟨⟩
+
+end M6Clauses
+
 /-- **Every fiber clause**, from the proved ones and the two open rows. -/
 theorem fiberClauses_of (root : ProgramSource) (rootTy : EffTy)
     (closeIter : ∀ o e, FiberClauseKeeps root rootTy (.closeIter .parallel o e))
@@ -132,3 +155,8 @@ theorem loop_preserves_of_open (root : ProgramSource) (rootTy : EffTy)
     (storeClauses root rootTy) (walkKeeps root rootTy) id y
 
 end Effect4.Program.Typed
+
+#proof_wanted Effect4.Program.Typed.M6Clauses.closeIter_parallel
+#proof_wanted Effect4.Program.Typed.M6Clauses.gen_protocol
+#typed_state_obligations Effect4.Program.Typed.M6Clauses ceiling 2
+  using aesop (rule_sets := [Effect4.TypedState])
