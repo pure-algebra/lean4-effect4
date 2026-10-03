@@ -844,6 +844,31 @@ theorem contAOf_closeIfLast_scope (exit : ExitV) (scope : Nat) :
 
 /-! ## The laws of `syncOpStep` -/
 
+/-! The untouched external-store projection, slice C of
+`docs/research/2026-10-03-store-frame-laws/brief.md`. Semantics concept 10: this supports
+`run-eq-ref` through `Sched.M1Hooks.storesOk_syncOpStep` and its no-external-allocation clause.
+It says nothing about host-answer preparation, which can allocate an external handle. -/
+
+namespace StoreFrameWanted
+
+/-- A successful synchronous store primitive leaves the entire external store untouched. -/
+theorem syncOpStep_externals (o : SyncOp) (s s' : Stores) (v : Val)
+    (_step : syncOpStep o s = some (s', v)) :
+    ProofGraph.Obligation (s'.externals = s.externals) := ⟨⟩
+
+end StoreFrameWanted
+
+/-- Every successful synchronous store primitive keeps the queued external answers,
+allocations and rejected-answer marker. No heap-validity or empty-external-store premise is
+needed. Consumer: `Sched.storesOk_syncOpStep`, whose external clause is framed once. -/
+theorem syncOpStep_externals (o : SyncOp) (s s' : Stores) (v : Val)
+    (step : syncOpStep o s = some (s', v)) : s'.externals = s.externals := by
+  fun_cases syncOpStep o s <;>
+    aesop (add norm simp [syncOpStep, Option.map_eq_some_iff])
+
+#obligation_proved StoreFrameWanted.syncOpStep_externals := @syncOpStep_externals
+#typed_state_obligations Effect4.Machine.StoreFrameWanted ceiling 0 using aesop
+
 /-- A step grows the store (plan §3.2, ENSURES 11): one case per arm of `syncOpStep`. -/
 theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s = some (s', v)) :
     s.le s' := by

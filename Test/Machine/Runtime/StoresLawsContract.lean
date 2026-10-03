@@ -59,6 +59,40 @@ def s3 : Stores := after (SyncOp.scopeMake .sequential) Stores.empty
 /-- A heap holding a handle no allocation minted. -/
 def dangling : Stores := { Stores.empty with refs := [Val.cell ⟨9⟩] }
 
+/-! ## The untouched external-store frame
+
+Slice C's exact primitive law and its nonempty-state controls. The successful-step premise
+says nothing about well-formedness, allocated labels or host admission. -/
+
+example : ∀ (o : SyncOp) (s s' : Stores) (v : Val),
+    syncOpStep o s = some (s', v) → s'.externals = s.externals := @syncOpStep_externals
+
+def externalFrame : ExternalStore :=
+  { answers := [.ofExit (.success (.nat 29))]
+    allocated := ["fixture/resource"]
+    rejected := some (7, .ofExit (.success (.nat 31)), 1) }
+
+def withExternalFrame : Stores := { Stores.empty with externals := externalFrame }
+
+#guard (syncOpStep (.refMake (.nat 5)) withExternalFrame).map (fun p => p.1.externals) =
+  some externalFrame
+#guard (syncOpStep .deferredMake withExternalFrame).map (fun p => p.1.externals) =
+  some externalFrame
+#guard (syncOpStep (.scopeMake .sequential) withExternalFrame).map (fun p => p.1.externals) =
+  some externalFrame
+#guard (syncOpStep (.sleepCancel ⟨3⟩ 4) withExternalFrame).map (fun p => p.1.externals) =
+  some externalFrame
+#guard (syncOpStep (.memoFork none) withExternalFrame).map (fun p => p.1.externals) =
+  some externalFrame
+#guard (syncOpStep (.memoBuild [] ⟨0⟩) (after (.memoFork none) withExternalFrame)).map
+  (fun p => p.1.externals) = some externalFrame
+-- The law is a frame for this projection, not equality of the whole store.
+#guard (after (.refMake (.nat 5)) withExternalFrame).refs ≠ withExternalFrame.refs
+-- The primitive's absent-key frontier has not been filled in to obtain the frame law.
+#guard syncOpStep (.refGet ⟨0⟩) withExternalFrame = none
+
+#print axioms Effect4.Machine.syncOpStep_externals
+
 /-! ## The register rows -/
 
 section Rows

@@ -40,13 +40,14 @@ theorem finNameOk_of_admitted {root : ProgramSource} {w : World} {e : Expect} {f
   | foreign c => exact ⟨h⟩
   | _ => trivial
 
-/-- Shared settle lemma: refs, deferreds, timers, externals unchanged; world `{ w with state := s }`. -/
+/-- Shared settle lemma: refs, deferreds and timers unchanged; external-store equality is
+inferred from the successful primitive step. World `{ w with state := s }`. -/
 theorem Evaluating.store_restate {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
     {op : SyncOp} {next : Val → RProgram} (hc : f.frame.current = .vis (.inl op) next)
     {s : Stores} {ans : Val} (step : syncOpStep op m.state = some (s, ans))
     (refs : s.refs = m.state.refs) (deferreds : s.deferreds = m.state.deferreds)
-    (timers : s.timers = m.state.timers) (externals : s.externals = m.state.externals)
+    (timers : s.timers = m.state.timers)
     (scopes : w.leHost { w with state := s } →
       ScopeStoreOk (preds root) { w with state := s } Expect.root m.state.scopes →
       ScopeStoreOk (preds root) { w with state := s } Expect.root s.scopes)
@@ -62,6 +63,7 @@ theorem Evaluating.store_restate {root : ProgramSource} {rootTy : EffTy} {w : Wo
   have wf0 : m.state.WF := wide.wf
   have store := storeTyped_of_typedState ev.typed.machine
   have step' : syncOpStep op w.state = some (s, ans) := by rw [state]; exact step
+  have externals := syncOpStep_externals op m.state s ans step
   obtain ⟨ord, store'⟩ := restate_world store step' (by rw [refs, state])
     (by rw [deferreds, state])
     (fun key c' h => ⟨c', by rw [state, ← deferreds]; exact h, rfl⟩) (by rw [externals, state])
@@ -214,7 +216,7 @@ theorem memoMapOk_insertEntry {root : ProgramSource} {w : World} {e : Expect} {m
 theorem clause_scopeMake (root : ProgramSource) (rootTy : EffTy) (strategy : FinalizerStrategy) :
     StoreClauseKeeps root rootTy (.scopeMake strategy) := by
   intro w m rest f y next ev hc
-  exact ev.store_restate hc (syncOpStep_scopeMake m.state strategy) rfl rfl rfl rfl
+  exact ev.store_restate hc (syncOpStep_scopeMake m.state strategy) rfl rfl rfl
     (fun _ old => scopeStoreOk_make old m.state.nextName strategy) (fun _ old => old)
     (fun _ _ _ => fits_scopeHandle _ _ (ScopeStore.entryAt_make_self _ _ _))
 
@@ -234,7 +236,7 @@ theorem clause_scopeAdd (root : ProgramSource) (rootTy : EffTy) (scope : Nat) (f
         (by rw [state]; exact List.mem_of_find?_eq_some hentry) ex hexit⟩)
   | none =>
     exact ev.store_restate hc (syncOpStep_scopeAdd_open m.state scope fin hentry hexit)
-      rfl rfl rfl rfl
+      rfl rfl rfl
       (fun ord old => scopeStoreOk_addUnsafe old hentry m.state.nextName
         (finNameOk_of_admitted (finalizerAdmitted_mono root ord fin admitted))
         (finalizerAdmitted_mono root ord fin admitted))
@@ -243,7 +245,7 @@ theorem clause_scopeAdd (root : ProgramSource) (rootTy : EffTy) (scope : Nat) (f
 theorem clause_scopeRemove (root : ProgramSource) (rootTy : EffTy) (scope key : Nat) :
     StoreClauseKeeps root rootTy (.scopeRemove scope key) := by
   intro w m rest f y next ev hc
-  exact ev.store_restate hc (syncOpStep_scopeRemove m.state scope key) rfl rfl rfl rfl
+  exact ev.store_restate hc (syncOpStep_scopeRemove m.state scope key) rfl rfl rfl
     (fun _ old => scopeStoreOk_removeFinalizer old scope key) (fun _ old => old)
     (fun _ _ _ => rfl)
 
@@ -270,14 +272,14 @@ theorem clause_scopeFork (root : ProgramSource) (rootTy : EffTy) (parent : Nat)
     (m.state.nextName + 1) strategy hp
   have parentLive := ScopeStore.entryAt_forkChild_isSome m.state.scopes parent m.state.nextName
     (m.state.nextName + 1) strategy parent live'
-  exact ev.store_restate hc (syncOpStep_scopeFork_some m.state parent strategy hp) rfl rfl rfl rfl
+  exact ev.store_restate hc (syncOpStep_scopeFork_some m.state parent strategy hp) rfl rfl rfl
     (fun _ old => scopeStoreOk_forkChild old hp _ _ strategy childLive parentLive)
     (fun _ old => old) (fun _ _ _ => fits_scopeHandle _ _ childLive)
 
 theorem clause_memoFork (root : ProgramSource) (rootTy : EffTy) (parent : Option MemoMapId) :
     StoreClauseKeeps root rootTy (.memoFork parent) := by
   intro w m rest f y next ev hc
-  exact ev.store_restate hc (syncOpStep_memoFork m.state parent) rfl rfl rfl rfl (fun _ old => old)
+  exact ev.store_restate hc (syncOpStep_memoFork m.state parent) rfl rfl rfl (fun _ old => old)
     (fun _ old mm hmm => by
       rcases List.mem_append.mp hmm with hmm | hmm
       · exact old mm hmm
@@ -297,7 +299,7 @@ theorem clause_memoGet (root : ProgramSource) (rootTy : EffTy) (layer : LayerId)
   | some q =>
     obtain ⟨owner, entry⟩ := q
     obtain ⟨mm, hm, hid, he⟩ := MemoWorld.get_mem hget
-    exact ev.store_restate hc (syncOpStep_memoGet_some m.state layer memoMap hget) rfl rfl rfl rfl
+    exact ev.store_restate hc (syncOpStep_memoGet_some m.state layer memoMap hget) rfl rfl rfl
       (fun _ old => old) (fun _ old => memoMapOk_updateEntry (g := fun e =>
         { e with observers := e.observers + 1 }) old owner layer (fun _ => rfl))
       (fun ord cert pre => by
@@ -324,10 +326,10 @@ theorem clause_memoRelease (root : ProgramSource) (rootTy : EffTy) (layer : Laye
   | some entry =>
     by_cases hobs : entry.observers ≤ 1
     · obtain ⟨mm, hm, _, hmem⟩ := MemoWorld.entryAt_mem hentry
-      exact ev.store_restate hc (syncOpStep_memoRelease_last _ _ _ hentry hobs) rfl rfl rfl rfl
+      exact ev.store_restate hc (syncOpStep_memoRelease_last _ _ _ hentry hobs) rfl rfl rfl
         (fun _ old => old) (fun _ old => memoMapOk_deleteEntry old memoMap layer)
         (fun _ _ _ => Or.inr (fits_scopeHandle _ _ (valid mm hm _ hmem).2))
-    · exact ev.store_restate hc (syncOpStep_memoRelease_dec _ _ _ hentry hobs) rfl rfl rfl rfl
+    · exact ev.store_restate hc (syncOpStep_memoRelease_dec _ _ _ hentry hobs) rfl rfl rfl
         (fun _ old => old) (fun _ old => memoMapOk_updateEntry (g := fun e =>
           { e with observers := e.observers - 1 }) old memoMap layer (fun _ => rfl))
         (fun _ _ _ => Or.inl rfl)

@@ -64,39 +64,41 @@ theorem M1Hooks.storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (_hs 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresOk s)
     (h : syncOpStep o s = some (s', v)) : StoresOk s' := by
+  -- The external field is independent of the scope/name-supply invariant below.
+  refine ⟨?_, by rw [syncOpStep_externals o s s' v h]; exact hs.externals⟩
   cases o with
   | deferredMake =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact StoresOk.frame_deferreds s hs _
+    rw [← h'.1]; exact hs.keysFresh
   | deferredIsDone cell =>
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
-    rw [← (Prod.mk.inj hf).1]; exact hs
+    rw [← (Prod.mk.inj hf).1]; exact hs.keysFresh
   | deferredPoll cell =>
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
-    rw [← (Prod.mk.inj hf).1]; exact hs
+    rw [← (Prod.mk.inj hf).1]; exact hs.keysFresh
   | deferredCompleteWith cell completion =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact StoresOk.frame_deferreds s hs _
+    rw [← h'.1]; exact hs.keysFresh
   | deferredInterruptWith cell interruptor =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact StoresOk.frame_deferreds s hs _
+    rw [← h'.1]; exact hs.keysFresh
   | deferredAwaitCleanup cell waiter token =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact StoresOk.frame_deferreds s hs _
+    rw [← h'.1]; exact hs.keysFresh
   | clockNow =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact hs
+    rw [← h'.1]; exact hs.keysFresh
   | sleepCancel waiter token =>
     -- the invariant reads nothing of the timer store
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact StoresOk.frame_timers s hs _
+    rw [← h'.1]; exact hs.keysFresh
   | scopeMake strategy =>
     -- a new scope holds no registrations, and the supply advances past its handle
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨(ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _), hs.externals⟩
+    exact (ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _)
   | scopeAdd scope finalizer =>
     cases hentry : s.scopes.entryAt scope with
     | none => rw [syncOpStep_scopeAdd_none s scope finalizer hentry] at h; cases h
@@ -105,20 +107,20 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
       | some exit =>
         -- a closed scope answers its exit and keeps the store
         rw [syncOpStep_scopeAdd_closed s scope finalizer hentry hclose] at h
-        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs.keysFresh
       | none =>
         -- the registration key is the supply's own value, and the supply advances past it
         rw [syncOpStep_scopeAdd_open s scope finalizer hentry hclose] at h
         rw [← (Prod.mk.inj (Option.some.inj h)).1]
-        exact ⟨ScopeStore.keysBelow_addUnsafe_entry hs.keysFresh hentry, hs.externals⟩
+        exact ScopeStore.keysBelow_addUnsafe_entry hs.keysFresh hentry
   | scopeRemove scope key =>
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨ScopeStore.keysBelow_removeFinalizer hs.keysFresh, hs.externals⟩
+    exact ScopeStore.keysBelow_removeFinalizer hs.keysFresh
   | scopeIsClosed scope =>
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
-    rw [← (Prod.mk.inj hf).1]; exact hs
+    rw [← (Prod.mk.inj hf).1]; exact hs.keysFresh
   | scopeFork parent strategy =>
     cases hentry : s.scopes.entryAt parent with
     | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
@@ -126,46 +128,47 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
       rw [syncOpStep_scopeFork_some s parent strategy hentry] at h
       rw [← (Prod.mk.inj (Option.some.inj h)).1]
       -- the shared key is the supply's successor, and the supply advances past both keys
-      exact ⟨ScopeStore.keysBelow_forkChild (m := s.nextName + 2) (shared := s.nextName + 1)
-        hs.keysFresh (Nat.le_add_right _ _) (Nat.lt_succ_self _), hs.externals⟩
+      exact ScopeStore.keysBelow_forkChild (m := s.nextName + 2) (shared := s.nextName + 1)
+        hs.keysFresh (Nat.le_add_right _ _) (Nat.lt_succ_self _)
   | memoFork parent =>
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨hs.keysFresh.mono (Nat.le_succ _), hs.externals⟩
+    exact hs.keysFresh.mono (Nat.le_succ _)
   | memoGet layer memoMap =>
-    obtain ⟨_, _, hsc, hn, hx⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
-    exact ⟨by change ScopeStore.KeysBelow s'.scopes s'.nextName; rw [hsc, hn]; exact hs.keysFresh,
-      by rw [hx]; exact hs.externals⟩
+    obtain ⟨_, _, hsc, hn, _⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
+    change ScopeStore.KeysBelow s'.scopes s'.nextName
+    rw [hsc, hn]
+    exact hs.keysFresh
   | memoBuild layer memoMap =>
     -- a layer scope holds no registrations; the Deferred is fresh; the supply advances
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨(ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _), hs.externals⟩
+    exact (ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _)
   | memoComplete layer memoMap exit =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
       rw [syncOpStep_memoComplete_none s layer memoMap exit hentry] at h
-      rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs.keysFresh
     | some entry =>
       rw [syncOpStep_memoComplete_some s layer memoMap exit hentry] at h
       rw [← (Prod.mk.inj (Option.some.inj h)).1]
-      exact StoresOk.frame_memo _ (StoresOk.frame_deferreds s hs _) _
+      exact hs.keysFresh
   | memoRelease layer memoMap =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
       rw [syncOpStep_memoRelease_none s layer memoMap hentry] at h
-      rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs.keysFresh
     | some entry =>
       by_cases hobs : entry.observers ≤ 1
       · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs] at h
-        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact StoresOk.frame_memo s hs _
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs.keysFresh
       · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs] at h
-        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact StoresOk.frame_memo s hs _
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs.keysFresh
   | _ =>
     -- every remaining operation is a `refStep`: only the heap changes
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
-    rw [← (Prod.mk.inj hf).1]; exact StoresOk.frame_refs s hs _
+    rw [← (Prod.mk.inj hf).1]; exact hs.keysFresh
 
 /-! ## Code-valued hooks -/
 
