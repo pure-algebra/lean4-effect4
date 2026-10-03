@@ -444,12 +444,12 @@ and checked/wanted evidence remain available through the existing report and arc
   `title`, `description`, `documentation`, `examples`, `default`, `message`, `expected`, `arbitrary`:
   `Schema.Bridge.erasedKeys`).
   Arbitrary metadata (`effect4/*`) is **not** unconditionally erased.
-- **Pinned Limitation (`E4-SCHEMA-CE-059`)**: Overlapping union variants decode with left bias. Exactness
-  on the accepted image (`decode_iff`) holds at every type; what an overlap loses is retraction, for a
-  right-variant value that the left variant also accepts.
+- **Pinned Limitation (`E4-SCHEMA-CE-059`)**: Overlapping JSON images can defeat unchecked left-biased
+  recovery. The public encoder (`Schema.encode`) refuses those values, so every successful encoding still
+  round-trips (`decode_of_encode`, at every type), and `decode_iff` stays exact modulo `normJ`.
 - **Records (rows 119, 165)**: a record value carries its canonical field names (row 165 (a), ruled). The
-  JSON codec has no record arm yet and the Schema face refuses `record` by name, so record codecs
-  (`record-codec-layout`) are open.
+  Schema bridge, which describes record types, refuses `record` by name, and the JSON codec, which
+  encodes record values, has no record arm yet, so record codecs (`record-codec-layout`) are open.
 
 #### 3. Project Definition and Judgment
 Data plane conversions in Effect4 are exact embeddings between syntactic carriers and serializable formats:
@@ -491,9 +491,10 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   over unions; subtyping equivalence and comparisons are defined through `subN`.
 - **Exclusion of Function Types (Row 163)**: No function arrow types exist in `Ty`; arrow subtyping is excluded.
 - **Records, maps, tuples and applications (rows 119, 162)**: the constructors are in `Ty`. `Ty.sub` compares
-  a record with its canonical partner exactly, by names and fields (no width rule), a map exactly in the key
-  and covariantly in the value, and tuples and applications pointwise. The laws below quantify over every
-  `Ty`, so they cover these constructors.
+  records with the same canonical names and optionality field by field, covariantly (no width rule); maps
+  exactly in the key and covariantly in the value; tuples of one length pointwise; and applications of one
+  name and arity argument by argument, by each argument's declared variance (`argVariance`). The laws below
+  quantify over every `Ty`, so they cover these constructors.
 
 #### 3. Project Definition and Judgment
 The static type language `Ty` possesses a decidable subtyping preorder `Ty.subN` evaluated on normalized forms:

@@ -97,10 +97,12 @@ Each item names what it serves (P1–P5, PX, or the build) and when it is done.
   encoder has no arm for `record`, `map`, `tuple`, `app`, `null`, `undefined`, `number`, `bytes` or `int`,
   which fall to its catch-all, and the Schema face refuses eight constructors by name. Serves P2, P3,
   profile support and lowering.
-- **2.5 Entry-point reachability.** Which checkers each public entry point reaches (`Author.build`,
-  `Built.rebuild`, the admission functions, the session's preflight and acceptance, `Schema.decode`,
-  `Run`). The plan's "the formation helpers are not yet connected to public admission" becomes a cell
-  that flips when the connection lands. Serves P1, P4.
+- **2.5 Entry-point reachability.** Which checkers each public entry point reaches in its call graph
+  (`Author.build`, `Built.rebuild`, the admission functions, the session's preflight and acceptance,
+  `Schema.decode`, `Run`), labelled as syntactic reachability. The plan's "the formation helpers are not
+  yet connected to public admission" becomes a cell that flips when a call lands. A reachable checker
+  does not establish that every successful public path enforces it: that stronger admission-path claim
+  stays a theorem or a pair of controls of P1 and P4 (Codex). Serves P1, P4.
 - **2.6 Proofs to nowhere.** The library theorems that no claim, no test and no runtime definition
   reaches, listed by module. Each is deleted or earns a claim. Serves focus and build time.
 - **2.7 Briefs from the tree.** `make brief CLAIM=<id>`: the placement, the printed statement, the
