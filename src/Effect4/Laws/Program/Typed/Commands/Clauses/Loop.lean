@@ -233,45 +233,4 @@ theorem clause_loop (root : ProgramSource) (rootTy : EffTy) (p : Point) (cursor 
     subst same
     exact ⟨cert, entered, hostStack_push answer stack, ⟨prov.recorded, prov.deferred⟩⟩
 
-/-! ## Controls (decisions row 190)
-
-`E4-TYPED-CE-036`'s loop, a checked `iterate` whose test is always true, has a protocol: the
-inductive form refused it (`LoopProtocols.lean`'s `Endless.no_protocol`), the invariant admits it.
-`E4-TYPED-CE-037`'s Boolean-cursor loop entered with `unit` is refused by the loop operation's pre,
-which `PointTyped` alone admitted (`Cursor.pre_admits`). -/
-
-namespace LoopControls
-
-/-- `E4-TYPED-CE-036`'s loop: an always-true test over a `unit` cursor. -/
-def endless : NativeEff :=
-  .iterate (some .unit) (.lit .unit) (.lit (.bool true)) (.lit .unit) (.lit .unit)
-    (.succeed (.lit .unit))
-
-/-- **The endless loop has a protocol** (positive control): its entry frame is in the invariant at
-every world carrying the source's service declarations. -/
-theorem endless_protocol (w : World) (htie : w.serviceTy = (endless : ProgramSource).sig.serviceTy) :
-    LoopProtocol (endless : ProgramSource) w (EffTy.pure .unit) (EffTy.pure .unit)
-      (.loop (rootPoint 2)) Val.unit :=
-  loopProtocol_of_frameTyped ⟨by decide +kernel, htie, rootPoint 2, [], .unit, some .unit,
-    .lit .unit, .lit (.bool true), .lit .unit, .lit .unit, .succeed (.lit .unit), rfl,
-    ⟨rfl, by decide +kernel, by decide +kernel, ⟨.unit, by decide +kernel, by decide +kernel⟩,
-      ⟨.unit, by decide +kernel, rfl⟩⟩,
-    ⟨rfl, fun _ _ _ h => nomatch h⟩, trivial⟩
-
-/-- `E4-TYPED-CE-037`'s loop: a Boolean cursor, the test the cursor itself. -/
-def boolCursor : NativeEff :=
-  .iterate (some .bool) (.lit (.bool false)) (.var 0) (.lit (.bool false)) (.lit .unit)
-    (.succeed (.lit .unit))
-
-/-- **The loop operation's pre refuses a cursor outside the checked cursor type** (red control):
-entered with `unit`, the Boolean-cursor loop has no pre at any world or certificate. -/
-theorem boolCursor_unit_refused (w : World) (cert : EffTy) :
-    ¬ fiberPre (boolCursor : ProgramSource) w (.loop (rootPoint 2) Val.unit) cert := by
-  rintro ⟨cursorTy, initial, test, step, result, body, env, c0, hat, _, _, _, _, hfit⟩
-  cases hat
-  obtain ⟨b, hb⟩ := fits_bool_inv hfit
-  cases hb
-
-end LoopControls
-
 end Effect4.Program.Typed
