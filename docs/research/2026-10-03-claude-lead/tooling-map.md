@@ -137,12 +137,29 @@ Four more facts bound the next steps:
   no importer. That removes most of the rebuild costs in §2. The costs:
   - Lean refuses a non-module import from a module, so adoption runs bottom-up. Three of the
     owner's packages come first: `effects` (3 of 46 files are modules), `hash` (3 of 54) and
-    `typescript` (0 of 12).
-  - A definition that an importer unfolds (`rfl`, `decide`, `simp` by its equations) needs
-    `@[expose]`. An edit to it still rebuilds its importers.
+    `typescript` (0 of 12). In the tree, `Store/Carrier/Digest` imports `hash`, and
+    `Laws/Program/Denote` and `Sched` import `effects`, so nothing above them can convert first.
+  - The packages' idiom keeps today's meaning: `module`, `public import` for each import, and
+    `@[expose] public section`, which leaves every definition unfoldable by its importers. Only
+    theorem proofs become private, and proof edits are the common change in the Laws graph.
+  - A definition that an importer unfolds (`rfl`, `decide`, `simp` by its equations) stays
+    exposed, so an edit to it still rebuilds its importers.
   - Tactic and generator code that a file runs needs a `meta import`.
+  - The axiom gate needs proof bodies. Lake hands a non-module importer such as `Test.All` every
+    part of each import, the private part included (`ModuleImportInfo.addImport`). The pilot must
+    check that the gate still reaches every proof.
   - It touches every file header, so it needs a research note, a pilot on one leaf chain, and a
     ruling.
+- **1.11 The slowest modules, profiled on a moderately loaded machine.** Per-module rewrites save
+  little against the 4226 s total, so these are recorded, not changed:
+  - `Store/Domain/Derived/Program` (generated) took 70 s. Lean spent 15.4 s proving the
+    equation lemmas of the `rawEff` decoder and 13.1 s those of `rawTy`. A shared match splitter
+    of the `NativeOp` decoder took 4.6 s. The generator's proof strategy is the lever, and it
+    belongs with the staged-generation research.
+  - `Laws/Machine/Scheduling` took 42 s, and `driveStep_queue` took 12 s of it. That proof tries
+    `first | …` fallbacks in every branch, a form `AGENTS.md` bans in new or touched proofs.
+  - `Laws/Program/Guard/RaceSites` and `Guard/FrameOwned` took 24 s each, against 94 s and 78 s in
+    the loaded build. Most of their time is simp.
 
 ### Lane 2 — obligations and progress visible from the tree
 
