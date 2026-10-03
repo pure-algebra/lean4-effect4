@@ -162,11 +162,11 @@ const unitRequest = (e: Entry): boolean => e.row.request._tag === "unit"
 
 /* ============================================================ § 2  oxc's tree → the printer's fragment */
 
-// `Expr` and `Stmt` are the formers of lean4-typescript's `TypeScript.Expr` / `TypeScript.Stmt`
-// that `src/Effect4/Codegen/Print.lean` uses, nothing more: the printer's image is exactly this
-// fragment, so § 3 is a port of `Read.lean` over the same tree and this section is the one
-// place that knows what oxc calls things. It admits exactly the shapes the printer emits and
-// refuses every other node by its ESTree type name. Two facts of oxc's output are folded
+// `Expr` and `Stmt` retain the structural target forms used by the Lean printer.
+// This adapter recognizes syntax; § 3 checks each form against the program printer image.
+// Record forms remain outside term admission until their reading rules land.
+// This section is the one place that knows what oxc calls things.
+// Two facts of oxc's output are folded
 // here: a dotted head such as `Effect.flatMap` arrives as a member chain of identifiers, and
 // oxc-parser keeps parentheses as `ParenthesizedExpression` nodes.
 
@@ -180,9 +180,12 @@ export type Expr =
    * arguments as the spellings the printer writes (`E4-CHECK-CE-013`). */
   | { readonly _tag: "generic"; readonly fn: Expr; readonly typeArgs: ReadonlyArray<string> }
   | { readonly _tag: "method"; readonly base: Expr; readonly name: string; readonly args: ReadonlyArray<Expr> }
-  /** `receiver.name` on its own: lean4-typescript's `Expr.member`, which the printer emits only
-   * as the callee of a typed method call `receiver.name<T>(args)` (`Print.lean` `printMethod`). */
+  /** `receiver.name`: the target member form, also used by typed method callees. */
   | { readonly _tag: "member"; readonly base: Expr; readonly name: string }
+  | { readonly _tag: "index"; readonly base: Expr; readonly key: Expr }
+  | { readonly _tag: "new"; readonly callee: Expr; readonly args: ReadonlyArray<Expr> }
+  | { readonly _tag: "jsNull" }
+  | { readonly _tag: "objectWith"; readonly keys: KeyForm; readonly entries: ReadonlyArray<ObjectEntry> }
   | { readonly _tag: "object"; readonly fields: ReadonlyArray<readonly [string, Expr]> }
   | { readonly _tag: "arr"; readonly items: ReadonlyArray<Expr> }
   /** `() => body` */
@@ -194,6 +197,12 @@ export type Expr =
   | { readonly _tag: "cond"; readonly test: Expr; readonly thenBranch: Expr; readonly elseBranch: Expr }
   /** `(a) => { body }` */
   | { readonly _tag: "arrowBlock"; readonly params: ReadonlyArray<string>; readonly body: ReadonlyArray<TsStmt> }
+
+/** Object key forms remain distinct until the canonical term reader checks them. */
+export type KeyForm = "plain" | "quoted" | "computed"
+export type ObjectEntry =
+  | { readonly _tag: "property"; readonly name: string; readonly value: Expr }
+  | { readonly _tag: "spread"; readonly value: Expr }
 
 export type TsStmt =
   /** `const name = yield* value` */
@@ -243,9 +252,11 @@ const qualifiedTypeName = (n: Node): string | undefined => {
   return prefix === undefined ? undefined : `${prefix}.${right.name}`
 }
 
-/** A type argument's spelling: the keywords and bare type names the printer writes
- * (`Expr.generic` in `src/Effect4/Codegen/Print.lean`, `Deferred.make<number, number>()`);
- * anything else is outside the printer's image. */
+/** The pinned renderer's double-quoted string form. */
+const quotedTypeString = (value: string): string =>
+  `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")}"`
+
+/** The structural type arguments emitted by the pinned target printer. */
 const typeName = (t: Node): string | undefined => {
   switch (t.type) {
     case "TSNumberKeyword": return "number"
@@ -254,6 +265,13 @@ const typeName = (t: Node): string | undefined => {
     case "TSUnknownKeyword": return "unknown"
     case "TSNeverKeyword": return "never"
     case "TSVoidKeyword": return "void"
+    case "TSUndefinedKeyword": return "undefined"
+    case "TSNullKeyword": return "null"
+    case "TSLiteralType": {
+      const literal = nodeAt(t, "literal")
+      return literal?.type === "Literal" && typeof literal.value === "string"
+        ? quotedTypeString(literal.value) : undefined
+    }
     case "TSTypeReference": {
       const ref = nodeAt(t, "typeName")
       if (!ref) return undefined
@@ -261,16 +279,53 @@ const typeName = (t: Node): string | undefined => {
       if (name === undefined) return undefined
       const typeArgs = nodeAt(t, "typeArguments")
       if (!typeArgs) return name
-      const rendered: string[] = []
-      for (const arg of listAt(typeArgs, "params") ?? []) {
-        const text = isNode(arg) ? typeName(arg) : undefined
-        if (text === undefined) return undefined
-        rendered.push(text)
+      const rendered = typeNames(listAt(typeArgs, "params"))
+      return rendered === undefined ? undefined : `${name}<${rendered.join(", ")}>`
+    }
+    case "TSUnionType": {
+      const members = typeNames(listAt(t, "types"))
+      return members === undefined || members.length === 0 ? undefined : members.join(" | ")
+    }
+    case "TSTupleType": {
+      const items = typeNames(listAt(t, "elementTypes"))
+      return items === undefined ? undefined : `[${items.join(", ")}]`
+    }
+    case "TSTypeOperator": {
+      const value = nodeAt(t, "typeAnnotation")
+      if (t.operator !== "readonly" || value?.type !== "TSTupleType") return undefined
+      const tuple = typeName(value)
+      return tuple === undefined ? undefined : `readonly ${tuple}`
+    }
+    case "TSTypeLiteral": {
+      const fields: string[] = []
+      const members = listAt(t, "members")
+      if (members === undefined) return undefined
+      for (const field of members) {
+        if (!isNode(field) || field.type !== "TSPropertySignature" || field.computed === true) return undefined
+        const key = nodeAt(field, "key")
+        const name = key?.type === "Identifier" && typeof key.name === "string" ? key.name
+          : key?.type === "Literal" && typeof key.value === "string" ? quotedTypeString(key.value) : undefined
+        const annotation = nodeAt(field, "typeAnnotation")
+        const value = annotation && nodeAt(annotation, "typeAnnotation")
+        const rendered = value && typeName(value)
+        if (name === undefined || rendered === undefined) return undefined
+        fields.push(`${field.readonly === true ? "readonly " : ""}${name}${field.optional === true ? "?" : ""}: ${rendered}`)
       }
-      return `${name}<${rendered.join(", ")}>`
+      return fields.length === 0 ? "{}" : `{ ${fields.join("; ")} }`
     }
     default: return undefined
   }
+}
+
+const typeNames = (nodes: ReadonlyArray<unknown> | undefined): ReadonlyArray<string> | undefined => {
+  if (nodes === undefined) return undefined
+  const values: string[] = []
+  for (const node of nodes) {
+    const value = isNode(node) ? typeName(node) : undefined
+    if (value === undefined) return undefined
+    values.push(value)
+  }
+  return values
 }
 
 const unwrap = (n: Node): Node => {
@@ -344,6 +399,17 @@ export const exprOf = (raw: Node): Read<Expr> => {
     case "Identifier":
       return typeof n.name === "string" ? ok({ _tag: "ident", name: n.name }) : unsupported(n, "identifier")
     case "MemberExpression": {
+      if (n.optional === true) return unsupported(n, "optional access")
+      if (n.computed === true) {
+        const object = nodeAt(n, "object")
+        const property = nodeAt(n, "property")
+        if (!object || !property) return unsupported(n, "element access")
+        const base = exprOf(object)
+        if (failed(base)) return again(base)
+        const key = exprOf(property)
+        if (failed(key)) return again(key)
+        return ok({ _tag: "index", base: base.success, key: key.success })
+      }
       const receiver = receiverMember(n)
       if (receiver) return Result.map(exprOf(receiver.object), (base): Expr => ({ _tag: "member", base, name: receiver.name }))
       const name = dotted(n)
@@ -351,6 +417,7 @@ export const exprOf = (raw: Node): Read<Expr> => {
     }
     case "Literal": {
       const v = n.value
+      if (v === null) return ok({ _tag: "jsNull" })
       if (typeof v === "number") {
         return Number.isInteger(v) && v >= 0
           ? ok({ _tag: "int", value: v })
@@ -427,22 +494,58 @@ export const exprOf = (raw: Node): Read<Expr> => {
       if (failed(block)) return again(block)
       return ok({ _tag: "generator", body: block.success })
     }
+    case "NewExpression": {
+      const callee = nodeAt(n, "callee")
+      if (!callee || n.optional === true) return unsupported(n, "constructor")
+      const target = exprOf(callee)
+      if (failed(target)) return again(target)
+      const args = exprsOf(listAt(n, "arguments") ?? [], "constructor argument")
+      if (failed(args)) return again(args)
+      const typeArgs = nodeAt(n, "typeArguments")
+      if (!typeArgs) return ok({ _tag: "new", callee: target.success, args: args.success })
+      const names = typeNames(listAt(typeArgs, "params"))
+      return names === undefined ? unsupported(n, "constructor typeArgument")
+        : ok({ _tag: "new", callee: { _tag: "generic", fn: target.success, typeArgs: names }, args: args.success })
+    }
     case "ObjectExpression": {
-      const fields: Array<readonly [string, Expr]> = []
+      const entries: ObjectEntry[] = []
+      let keys: KeyForm | undefined
+      let spread = false
       for (const p of listAt(n, "properties") ?? []) {
         if (!isNode(p)) return unsupported(n, "property")
-        if (p.type !== "Property" || p.kind !== "init" || p.computed === true || p.method === true || p.shorthand === true) {
+        if (p.type === "SpreadElement") {
+          const argument = nodeAt(p, "argument")
+          if (!argument) return unsupported(p, "spread value")
+          const value = exprOf(argument)
+          if (failed(value)) return again(value)
+          entries.push({ _tag: "spread", value: value.success })
+          spread = true
+          continue
+        }
+        if (p.type !== "Property" || p.kind !== "init" || p.method === true || p.shorthand === true) {
           return unsupported(p, "property")
         }
         const key = nodeAt(p, "key")
-        if (!key || key.type !== "Identifier" || typeof key.name !== "string") return unsupported(key ?? p, "property key")
+        const form: KeyForm | undefined = p.computed === true
+          ? key?.type === "Literal" && typeof key.value === "string" ? "computed" : undefined
+          : key?.type === "Identifier" ? "plain"
+          : key?.type === "Literal" && typeof key.value === "string" ? "quoted" : undefined
+        if (form === undefined || (keys !== undefined && keys !== form)) return unsupported(key ?? p, "property key form")
+        keys = form
+        const name = form === "plain" ? key?.name : key?.value
+        if (typeof name !== "string") return unsupported(key ?? p, "property key")
         const value = nodeAt(p, "value")
         if (!value) return unsupported(p, "property value")
         const v = exprOf(value)
         if (failed(v)) return again(v)
-        fields.push([key.name, v.success])
+        entries.push({ _tag: "property", name, value: v.success })
       }
-      return ok({ _tag: "object", fields })
+      if (!spread && (keys === undefined || keys === "plain")) {
+        const fields: Array<readonly [string, Expr]> = []
+        for (const entry of entries) if (entry._tag === "property") fields.push([entry.name, entry.value])
+        return ok({ _tag: "object", fields })
+      }
+      return ok({ _tag: "objectWith", keys: keys ?? "plain", entries })
     }
     case "ArrayExpression": {
       const items = exprsOf(listAt(n, "elements") ?? [], "array item")
