@@ -346,4 +346,53 @@ theorem clause_forkScoped (root : ProgramSource) (rootTy : EffTy) (child : Point
     subst member
     exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
 
+/-! ## `raceRegister` -/
+
+/-- **`raceRegister`** (`registerRace`, `Machine/Fibers.lean:937-944`, rc.112 `:1117-1141`): the
+marker's race exists and is hosted here (`RegistrationState`), so the registration does not halt;
+the race marked registering (`configTyped_updateRace`), and the race's launch and registration
+return queued in place of the head, the return owning the host. -/
+theorem clause_raceRegister (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) :
+    FiberClauseKeeps root rootTy (.raceRegister raceId) := by
+  intro w m rest f y next ev hc
+  have look := ev.look
+  have hmem : f ∈ (m.update f).fibers := rfiber?_mem look
+  have old := ev.typed.machine.fiber hmem
+  have marker : raceRegistrationR f.frame.current = some raceId := by rw [hc]; rfl
+  obtain ⟨race, _, found, host, _, _⟩ := old.registration raceId marker
+  have notParked : f.parked = .notParked := by
+    cases hp : f.parked with
+    | notParked => rfl
+    | withGuard _ =>
+      have idle := old.parkedIdle (by rw [hp]; exact fun h => nomatch h)
+      rw [ev.running] at idle
+      cases idle
+  obtain ⟨resultTy, payload⟩ := ev.typed.machine.wide.races race (List.mem_of_find?_eq_some found)
+  have hr : (m.update f).race? race.id = some race := by rw [rrace?_id found]; exact found
+  have lookHost : (m.update f).fiber? race.host = some f := by rw [host]; exact look
+  have tail := configTyped_tail ev.typed
+  have done : ConfigTyped root rootTy w (m.update f) (.registrationDone raceId y :: rest) := by
+    refine configTyped_cons_plain tail _ trivial ⟨race, f, found, lookHost, ev.running, notParked,
+      marker⟩ trivial (fun o ho => ?_) trivial rfl (fun _ _ _ h => nomatch h)
+      (fun _ _ h => nomatch h) (fun _ _ _ h => nomatch h) (fun _ _ _ _ _ h => nomatch h)
+      (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
+    have ho' : ((m.update f).race? raceId).map Race.host = some o := ho
+    rw [found, Option.map_some, host] at ho'
+    cases ho'
+    exact owner_free ev.typed.queue rfl
+  have launched : ConfigTyped root rootTy w (m.update f)
+      (.launch raceId :: .registrationDone raceId y :: rest) :=
+    configTyped_cons_plain done _ trivial ⟨race, found, ⟨f, lookHost, ev.running, notParked⟩⟩ trivial
+      (fun _ h => nomatch h) ⟨y, List.mem_cons_self⟩ rfl (fun _ _ _ h => nomatch h)
+      (fun _ _ h => nomatch h) (fun _ _ _ h => nomatch h) (fun _ _ _ _ _ h => nomatch h)
+      (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
+  have edited := configTyped_updateRace launched (new := { race with registering := true }) hr rfl
+    rfl rfl ⟨payload.token, payload.failures, payload.winner, payload.accepted, payload.cleanup,
+      payload.live, payload.programs⟩ (fun _ h => .inl h)
+  have found' : m.race? raceId = some race := found
+  show SettlesTyped root rootTy w f.id rest (prepareIterR (registerRace m f y raceId))
+  unfold registerRace
+  rw [found']
+  exact ⟨w, leHost_refl w, edited⟩
+
 end Effect4.Program.Typed
