@@ -103,4 +103,160 @@ theorem clause_interruptAll (root : ProgramSource) (rootTy : EffTy) (targets : L
   rw [List.append_assoc]
   exact configTyped_cons_interrupts after targets _ _
 
+/-! ## Observers dropped -/
+
+/-- **Dropping observers from one fiber keeps `I`**: every clause reads a fiber's observers one at a
+time (`StoredObserverOk`, the race and bound columns) or through its keys, which only shrink; no
+clause asks that a key be held (`configTyped_rupdate`'s `keys`). -/
+theorem configTyped_shrinkObservers {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {M : RState} {q : List RCmd} (typed : ConfigTyped root rootTy w M q) {x : RFiber}
+    (hx : M.fiber? x.id = some x) (obs : List Observer) (sub : ∀ o ∈ obs, o ∈ x.observers) :
+    ConfigTyped root rootTy w (M.update { x with observers := obs }) q := by
+  let g : RFiber := { x with observers := obs }
+  have hmem : x ∈ M.fibers := rfiber?_mem hx
+  have old := typed.machine.fiber hmem
+  have view : ObsView M (M.update g) := obsView_rupdate hx rfl (PendingWeaker.refl _)
+  have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
+  have fresh : FiberTyped root w (M.update g) g :=
+    ⟨runFiberOk_congr moved.ok rfl rfl rfl rfl rfl rfl rfl, moved.delivery, moved.below,
+      moved.pendingShape, moved.parkedIdle, moved.parkedBelow, moved.exited, moved.exitedStack,
+      moved.deferredCause, moved.pendingOwner, fun o ho => moved.observers o (sub o ho),
+      moved.registration, moved.code, moved.tokens,
+      fun r race hr o ho => moved.raceObservers r race hr o (sub o ho), moved.targetsBelow,
+      fun o ho => moved.observersBelow o (sub o ho), moved.children⟩
+  have keys : ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys M ∨
+      (k.2 < M.nextToken ∧ requestOfR M k.1 k.2 = none) := by
+    intro k hk
+    refine Or.inl (fiberKeys_internal hmem ?_)
+    unfold Guard.fiberKeys at hk ⊢
+    rcases List.mem_append.mp hk with hk | hk
+    · obtain ⟨o, ho, hko⟩ := List.mem_flatMap.mp hk
+      exact List.mem_append_left _ (List.mem_flatMap.mpr ⟨o, sub o ho, hko⟩)
+    · exact List.mem_append_right _ hk
+  exact configTyped_rupdate typed hx rfl (PendingWeaker.refl _) rfl rfl rfl rfl rfl (fun h => h)
+    (fun h => h) keys fresh
+
+/-- **Dropping observers from every fiber keeps `I`**, one fiber at a time along the fiber list
+(`configTyped_shrinkObservers`): the fibers before `post` already dropped theirs. -/
+theorem configTyped_shrinkAll {root : ProgramSource} {rootTy : EffTy} {w : World} {q : List RCmd}
+    (obs : RFiber → List Observer) (sub : ∀ x, ∀ o ∈ obs x, o ∈ x.observers) :
+    ∀ (post pre : List RFiber) (M : RState),
+      M.fibers = pre.map (fun x => { x with observers := obs x }) ++ post →
+      ConfigTyped root rootTy w M q →
+      ConfigTyped root rootTy w
+        { M with fibers := (pre ++ post).map fun x => { x with observers := obs x } } q := by
+  intro post
+  induction post with
+  | nil =>
+    intro pre M hM typed
+    rw [List.append_nil] at hM ⊢
+    rw [← hM]
+    exact typed
+  | cons x post ih =>
+    intro pre M hM typed
+    have nodup := typed.machine.wide.fiberIds
+    have hx : M.fiber? x.id = some x := by
+      apply rfiber?_of_mem nodup
+      rw [hM]
+      exact List.mem_append_right _ List.mem_cons_self
+    have step := configTyped_shrinkObservers typed hx (obs x) (sub x)
+    have hM' : (M.update { x with observers := obs x }).fibers =
+        (pre ++ [x]).map (fun x => { x with observers := obs x }) ++ post := by
+      have nd : ((pre.map fun x => ({ x with observers := obs x } : RFiber)).map RunFiber.id ++
+          x.id :: post.map RunFiber.id).Nodup := by
+        have h := nodup
+        rw [hM, List.map_append, List.map_cons] at h
+        exact h
+      obtain ⟨_, ndPost, disj⟩ := List.nodup_append.mp nd
+      have xPost : x.id ∉ post.map RunFiber.id := (List.nodup_cons.mp ndPost).1
+      have hpre : (pre.map fun x => ({ x with observers := obs x } : RFiber)).map
+          (fun y => if y.id = x.id then { x with observers := obs x } else y) =
+          pre.map fun x => ({ x with observers := obs x } : RFiber) := by
+        conv => rhs; rw [← List.map_id (pre.map fun x => ({ x with observers := obs x } : RFiber))]
+        apply List.map_congr_left
+        intro y hy
+        show (if y.id = x.id then _ else y) = y
+        rw [if_neg (fun hid => disj y.id (List.mem_map_of_mem hy) x.id List.mem_cons_self hid)]
+      have hpost : post.map (fun y => if y.id = x.id then { x with observers := obs x } else y) =
+          post := by
+        conv => rhs; rw [← List.map_id post]
+        apply List.map_congr_left
+        intro y hy
+        show (if y.id = x.id then _ else y) = y
+        rw [if_neg (fun (hid : y.id = x.id) => xPost (by rw [← hid]; exact List.mem_map_of_mem hy))]
+      unfold RunMachine.update
+      rw [hM, List.map_append, List.map_cons, hpre, hpost, List.map_append, List.map_singleton,
+        List.append_assoc, List.singleton_append]
+      show _ ++ (if x.id = x.id then _ else x) :: post = _
+      rw [if_pos rfl]
+    have next := ih (pre ++ [x]) _ hM' step
+    rw [List.append_assoc, List.singleton_append] at next
+    exact next
+
+/-- **The evaluated state after `dropObservers`' edit** (`Machine/Fibers.lean:1434-1441`): every
+fiber's observers filtered; the evaluated fiber's record is the configuration's own, which the
+settlement reinstalls unfiltered, so the edit shrinks every other fiber's observers. -/
+theorem Evaluating.dropObs {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    (keep : Observer → Bool) :
+    Evaluating root rootTy w
+      { m with fibers := m.fibers.map fun g => { g with observers := g.observers.filter keep } }
+      rest f y := by
+  obtain ⟨f0, hf0, exit0⟩ := ev.stale
+  have sub : ∀ x : RFiber, ∀ o ∈ (if x.id = f.id then x.observers else x.observers.filter keep),
+      o ∈ x.observers := by
+    intro x o ho
+    by_cases h : x.id = f.id
+    · rw [if_pos h] at ho
+      exact ho
+    · rw [if_neg h] at ho
+      exact (List.mem_filter.mp ho).1
+  have all := configTyped_shrinkAll
+    (fun x => if x.id = f.id then x.observers else x.observers.filter keep) sub
+    (m.update f).fibers [] (m.update f) (by rw [List.map_nil, List.nil_append]) ev.typed
+  have fibers : (({ m with fibers := m.fibers.map fun (g : RFiber) =>
+        { g with observers := g.observers.filter keep } } : RState).update f).fibers =
+      ([] ++ (m.update f).fibers).map fun (x : RFiber) =>
+        { x with observers := if x.id = f.id then x.observers else x.observers.filter keep } := by
+    unfold RunMachine.update
+    rw [List.nil_append, List.map_map, List.map_map]
+    apply List.map_congr_left
+    intro x _
+    by_cases h : x.id = f.id
+    · show (if x.id = f.id then f else { x with observers := x.observers.filter keep }) =
+        ({ (if x.id = f.id then f else x) with observers :=
+          if (if x.id = f.id then f else x).id = f.id then (if x.id = f.id then f else x).observers
+          else (if x.id = f.id then f else x).observers.filter keep } : RFiber)
+      rw [if_pos h, if_pos h, if_pos rfl]
+    · show (if x.id = f.id then f else { x with observers := x.observers.filter keep }) =
+        ({ (if x.id = f.id then f else x) with observers :=
+          if (if x.id = f.id then f else x).id = f.id then (if x.id = f.id then f else x).observers
+          else (if x.id = f.id then f else x).observers.filter keep } : RFiber)
+      rw [if_neg h, if_neg h, if_neg h]
+  refine ⟨configTyped_congr ?_ (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) all,
+    ⟨{ f0 with observers := f0.observers.filter keep }, ?_, exit0⟩, ev.running, ev.live⟩
+  · exact fibers
+  show (m.fibers.map fun g => ({ g with observers := g.observers.filter keep } : RFiber)).find?
+    (fun x => decide (x.id = f.id)) = some _
+  rw [List.find?_map]
+  show (m.fibers.find? fun x => decide (x.id = f.id)).map _ = _
+  rw [show (m.fibers.find? fun x => decide (x.id = f.id)) = some f0 from hf0]
+  rfl
+
+/-- **`dropObservers`** (`Machine/Fibers.lean:1434-1441`, the park's cleanup, `internal/effect.ts:773`):
+every fiber's token observers dropped (`Evaluating.dropObs`), the fiber answered `void`. -/
+theorem clause_dropObservers (root : ProgramSource) (rootTy : EffTy) (token : Nat) :
+    FiberClauseKeeps root rootTy (.dropObservers token) := by
+  intro w m rest f y next ev hc
+  show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.dropObservers
+    (interpRAt root.program m.completedExits) m f y token (answerWith next)))
+  unfold FiberAction.dropObservers
+  have keeps : ∀ keep : Observer → Bool, SettlesTyped root rootTy w f.id rest (prepareIterR
+      ⟨{ m with fibers := m.fibers.map fun g => { g with observers := g.observers.filter keep } },
+        answerR f (next .unit), y, .continue_, []⟩) := fun keep =>
+    (ev.dropObs keep).settle_continue _ ((ev.dropObs keep).answer_typed hc (by rw [hc]; rfl)
+      (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl))
+  exact keeps _
+
 end Effect4.Program.Typed
