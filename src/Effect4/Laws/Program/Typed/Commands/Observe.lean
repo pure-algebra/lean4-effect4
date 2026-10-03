@@ -275,7 +275,7 @@ theorem configTyped_replace {root : ProgramSource} {rootTy : EffTy} {w : World} 
   · rcases mem_rupdate hx with rfl | ⟨hold, _⟩
     · rw [gIdle] at hrun
       cases hrun
-    · exact codeOk_races (racesKept_of_eq view.races) (code x hold hrun reads marker ty declared)
+    · exact (code x hold hrun reads marker ty declared).races (racesKept_of_eq view.races)
   · have same : Guard.commandOwner (Code := RProgram) (M.update g) = Guard.commandOwner M :=
       commandOwner_update M g
     refine ⟨queue.payload,
@@ -1125,7 +1125,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
           obsView_rupdate hgn' rfl (PendingWeaker.refl _)
         have t3 : ConfigTyped root rootTy w (m2.update (obs gn)) rest := by
           refine configTyped_rupdate t2 hgn' rfl (PendingWeaker.refl _) rfl rfl rfl rfl rfl
-            (fun p => p) (fun k hk => ?_) ?_
+            (fun p => p) (fun d => d) (fun k hk => ?_) ?_
           · unfold Guard.fiberKeys at hk
             rw [show (obs gn).observers = gn.observers ++ [Observer.countdown waiter token] from rfl,
               List.flatMap_append] at hk

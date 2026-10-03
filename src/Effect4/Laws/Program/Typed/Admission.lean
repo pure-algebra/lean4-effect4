@@ -182,7 +182,9 @@ def FinalizerAdmitted (root : ProgramSource) (w : World) : FinName → Prop
   | .release _ fails => fails = false
   | .closeChildScope scope | .closeChildOnFailure scope => ScopeLive w scope
   | .detachFromParent parent _ => ScopeLive w parent
-  | .interruptFiber _ _ | .awaitNewChildren _ | .parkThen _ | .memoEntry _ _ => True
+  -- the target's interrupt row demands it (finding F-PRE); `link` registers a fiber the machine holds
+  | .interruptFiber fiber _ => (w.Γ fiber).isSome = true
+  | .awaitNewChildren _ | .parkThen _ | .memoEntry _ _ => True
   -- `memoMapBuild`'s `onExit` (`Layer.ts:414-417`), never a scope's finalizer: its exit is the
   -- construction's, which `memoComplete`'s pre types at the layer's columns (decisions row 187)
   | .memoDone _ _ => False

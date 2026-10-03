@@ -236,8 +236,8 @@ theorem configTyped_rupdate_park {root : ProgramSource} {rootTy : EffTy} {w : Wo
         (Nat.le_refl _)
   · intro x hx hrun reads marker ty declared
     rcases mem_rupdate hx with rfl | ⟨hold, _⟩
-    · exact codeOk_of_saved (readG hrun reads marker ty declared)
-    · exact codeOk_races (racesKept_of_eq view.races) (code x hold hrun reads marker ty declared)
+    · exact Or.inl (codeOk_of_saved (readG hrun reads marker ty declared))
+    · exact (code x hold hrun reads marker ty declared).races (racesKept_of_eq view.races)
   · intro fiber token r hr
     by_cases same : fiber = g.id
     · subst same
@@ -416,7 +416,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
       have edited := configTyped_rupdate_code (g := g) tail hf rfl (PendingWeaker.refl _) rfl
         (fun p => ⟨p.recorded, p.deferred⟩) (fun k hk => Or.inl (fiberKeys_internal hmem hk))
         noRequest (fun c hc h => commandAuthority_flags (g := g) hf rfl rfl rfl rfl freeF c hc h)
-        (fun _ _ _ ty d => codeG ty d) fresh
+        (fun _ _ _ ty d => Or.inl (codeG ty d)) fresh
       have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (m.update g)) := by
         rw [commandOwner_update]
         exact freeF

@@ -1669,7 +1669,7 @@ theorem config_typed : ConfigTyped (rootProgram : ProgramSource) unitTy world ma
   change world.Γ Api.root = some ty at declared
   rw [valid.root] at declared
   cases declared
-  exact codeOk_of_saved saved_typed
+  exact Or.inl (codeOk_of_saved saved_typed)
 
 theorem typedState_result : TypedState (rootProgram : ProgramSource) unitTy world result.1 := by
   refine ⟨result_valid, ⟨?_, ?_, ?_⟩, ?_, result_scheduler, result_observers, result_registration⟩
@@ -2610,7 +2610,8 @@ theorem input_refused (w : W) :
   obtain ⟨ty, declared⟩ := Option.isSome_iff_exists.mp
     ((valid.fibers workerId).mpr (List.mem_map_of_mem workerMember))
   have reads : ReadsCode workerId commands := ⟨false, Or.inr List.mem_cons_self⟩
-  obtain ⟨tin, code, stack, _⟩ := config.code workerFiber workerMember rfl reads rfl ty declared
+  obtain ⟨tin, code, stack, _⟩ := (config.code workerFiber workerMember rfl reads rfl ty declared).code_of_deliver
+    List.mem_cons_self
   have exited := TypedProg.pure_inv code
   cases stack with
   | cons head _ =>

@@ -497,7 +497,7 @@ theorem config_loop (b : Bool) (machine : MachineTyped (rootProgram : ProgramSou
     change world.Γ Api.root = some ty at declared
     rw [(valid_of c s n).root] at declared
     cases declared
-    exact code hm
+    exact Or.inl (code hm)
   · refine ⟨?_, ?_, ?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩,
       ⟨trivial, trivial⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
     · intro c' hc

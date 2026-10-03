@@ -78,7 +78,8 @@ theorem input_refused (w : W) :
   obtain ⟨ty, declared⟩ := Option.isSome_iff_exists.mp
     ((valid.fibers Api.root).mpr (List.mem_map_of_mem member))
   have reads : ReadsCode Api.root commands := ⟨false, Or.inr List.mem_cons_self⟩
-  obtain ⟨tin, code, _, _⟩ := config.code rootFiber member rfl reads rfl ty declared
+  obtain ⟨tin, code, _, _⟩ :=
+    (config.code rootFiber member rfl reads rfl ty declared).code_of_deliver List.mem_cons_self
   exact marker_untyped w tin code
 
 /-- The producer's code: the `onExit false` guard over a unit body, bound to scope 0's exit

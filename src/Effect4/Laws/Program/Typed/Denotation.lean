@@ -1804,7 +1804,7 @@ theorem interrupt_arm {target : Term}
     Checker.inv_action_interrupt _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   rw [fiberTy_eq_some hfib] at hty
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
-  obtain ⟨index, rfl, -⟩ := fiber_of_fits hfit
+  obtain ⟨index, rfl, fty, hdecl, -⟩ := fiber_of_fits hfit
   have hact : actionAt root.program p = some (WithFiberAction.interrupt ⟨index⟩) := by
     unfold actionAt
     rw [hat]
@@ -1813,7 +1813,8 @@ theorem interrupt_arm {target : Term}
     rfl
   rw [denoteAction_of _ _ hact]
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => unitAnswer_typed root post)
+    (fun _ _ _ h => nomatch h) () (show (w.Γ ⟨index⟩).isSome = true by rw [hdecl]; rfl)
+    (fun w' _ ans post => unitAnswer_typed root post)
 
 /-- **`interruptScoped`**: as `interrupt`. -/
 theorem interruptScoped_arm {target : Term}
@@ -1826,7 +1827,7 @@ theorem interruptScoped_arm {target : Term}
     Checker.inv_action_interruptScoped _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   rw [fiberTy_eq_some hfib] at hty
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
-  obtain ⟨index, rfl, -⟩ := fiber_of_fits hfit
+  obtain ⟨index, rfl, fty, hdecl, -⟩ := fiber_of_fits hfit
   have hact : actionAt root.program p = some (WithFiberAction.interruptScoped ⟨index⟩) := by
     unfold actionAt
     rw [hat]
@@ -1835,7 +1836,8 @@ theorem interruptScoped_arm {target : Term}
     rfl
   rw [denoteAction_of _ _ hact]
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => unitAnswer_typed root post)
+    (fun _ _ _ h => nomatch h) () (show (w.Γ ⟨index⟩).isSome = true by rw [hdecl]; rfl)
+    (fun w' _ ans post => unitAnswer_typed root post)
 
 /-- **`interruptAll`**: the targets a list of fiber handles (`fibers_of_fits`), the interruptor a
 number; the row answers `unit`. -/

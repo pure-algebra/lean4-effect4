@@ -51,4 +51,25 @@ theorem clause_getContext (root : ProgramSource) (rootTy : EffTy) :
       subst pre
       exact getContext_answers root w f.context c5 (live_context_of_servicesFit c5)))
 
+/-- **`interrupt`** (`:857`, D6b): the public interrupt installs `interruptAs(target, self)` over
+the saved answer frame, typed at `unit` by its row's pre, the target's declaration, which this
+row's pre gives (finding F-PRE); the frame carries the reply to the continuation. -/
+theorem clause_interrupt (root : ProgramSource) (rootTy : EffTy) (target : FiberId) :
+    FiberClauseKeeps root rootTy (.interrupt target) := by
+  intro w m rest f y next ev hc
+  show SettlesTyped root rootTy w f.id rest
+    (prepareIterR (FiberAction.interrupt _ m (saveAnswerR f (seqR next)) y target))
+  unfold FiberAction.interrupt
+  refine ev.settle_continue { f.frame with
+    current := fiberValR (.interruptAs target f.id) rfl, stack := .answer (seqR next) :: f.frame.stack }
+    (fun ty declared => ?_)
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨_, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  refine ⟨⟨.unit, .never, Env.Requirement.empty⟩, ?_,
+    hostStack_push (Evaluating.unitAnswerFrame typedNext) stack, ⟨prov.recorded, prov.deferred⟩⟩
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () pre (fun _ _ _ post => unitAnswer_typed root post)
+
 end Effect4.Program.Typed
