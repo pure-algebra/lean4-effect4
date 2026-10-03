@@ -139,19 +139,10 @@ def EffThunk.keys : EffThunk → List Handle
 /-- The handles of compiled code. -/
 abbrev nativeKeys : NCode → List Handle := primKeys EffName.keys EffThunk.keys
 
-/-- The membership search also unfolds the native alphabet, the stores' alphabet and the
-points' children. -/
-macro_rules
-  | `(tactic| sub_tac) => `(tactic| sub_tac norm [Point.keys, Point.child, Point.childWith, Point.childWith2,
-      EffName.keys, EffThunk.keys, programKeys, Name.keys, Thunk.keys, ActionName.keys, FinName.keys,
-      ProgName.keys, SyncOp.keys, Completion.keys, ParkKind.keys,
-      Region.keys, Env.ContextUpdate.keys, updateContextAt, scopeAddAt, List.map_append, List.map_cons,
-      List.map_nil])
-  | `(tactic| sub_tac using $hs:term,*) => `(tactic| sub_tac using $hs,* norm [Point.keys, Point.child,
-      Point.childWith, Point.childWith2, EffName.keys, EffThunk.keys, programKeys, Name.keys, Thunk.keys,
-      ActionName.keys, FinName.keys, ProgName.keys, SyncOp.keys, Completion.keys, ParkKind.keys,
-      Region.keys, Env.ContextUpdate.keys, updateContextAt, scopeAddAt, List.map_append, List.map_cons,
-      List.map_nil])
+/-! The subset decision also unfolds the native alphabet and the points' children (the stores'
+alphabet is in `keys_norm` since `Laws/Machine/Handles.lean`). -/
+attribute [keys_norm] Point.keys Point.child Point.childWith Point.childWith2 EffName.keys EffThunk.keys
+  Region.keys Env.ContextUpdate.keys updateContextAt scopeAddAt
 
 theorem Point.child_keys (p : Point) (i : Nat) : (p.child i).keys = p.keys := rfl
 

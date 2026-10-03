@@ -211,7 +211,7 @@ open Lean Elab Command
 #guard_msgs in
 run_cmd do
   let env ← getEnv
-  let forms := #["keys_mem_norm", "keys_mem_norm_at h", "mem_tac", "close_mem h", "sub_tac norm"]
+  let forms := #["mem_tac", "sub_tac norm"]
   let suffixes := #[" []", " [h]", " [← h]", " [-h]", " [*]", " [h, ← h, -h, *]"]
   for form in forms do
     for suffix in suffixes do
@@ -222,9 +222,33 @@ run_cmd do
       let text := form ++ suffix
       if (Parser.runParserCategory env `tactic text).isOk then
         throwError "expected tactic syntax to refuse: {text}"
-  for text in #["keys_mem_norm", "keys_mem_norm_at h", "mem_tac", "close_mem h", "sub_tac",
-      "sub_tac using h", "sub_tac using h, k norm [h]"] do
+  for text in #["mem_tac", "sub_tac", "sub_tac using h", "sub_tac using h, k norm [h]"] do
     if let .error why := Parser.runParserCategory env `tactic text then
       throwError "expected optional arguments to parse: {text}: {why}"
 
 end HandleTacticGrammar
+
+namespace Test.Runtime.HandlesContract.Decision
+
+open Effect4 Effect4.Machine
+
+/-! The decision behind `sub_tac` (`Laws/Auto/SubsetTac.lean`): an inclusion over the machine's
+handles carried through a hypothesis with a hole, a membership read from the local context, and a
+refusal that names the part of the left side nothing covers. -/
+
+theorem decided_through_hole (a b : List Handle) (f : List Handle → List Handle)
+    (hf : ∀ l, f l ⊆ l ++ b) : f a ++ b ⊆ b ++ a := by
+  sub_tac using (hf _)
+
+theorem decided_from_context (h : Handle) (a b : List Handle) (hh : h ∈ a) : h ∈ b ++ a := by
+  mem_tac
+
+/-- error: sub_tac: the left side has parts no part of the right side covers:
+  c
+after `keys_norm` the goal is
+  a ++ c ⊆ b ++ a -/
+#guard_msgs in
+example (a b c : List Handle) : a ++ c ⊆ b ++ a := by
+  sub_tac
+
+end Test.Runtime.HandlesContract.Decision

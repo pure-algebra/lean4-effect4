@@ -1,4 +1,5 @@
 import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Auto.SubsetTac
 import Effect4.Laws.Machine.Clauses
 import Effect4.Laws.Machine.StoresLaws
 import Effect4.Laws.Machine.Approximation
@@ -1087,123 +1088,31 @@ theorem World.le_of_state {ids : List FiberId} {s s' : Stores} (h : s.le s') :
     World.le ⟨ids, s⟩ ⟨ids, s'⟩ :=
   ⟨fun _ hh => hh, h⟩
 
-/-! ### The subset and membership searches
+/-! ### The subset and membership decisions
 
-`sub_tac` proves `A ⊆ B` when `A` and `B` are trees of `++`, `::` and `[]` over atoms and every
-atom of `A` is an atom of `B` or a hypothesis names it: the key traversals of the machine's
-carriers are unfolded to the same depth on both sides, membership is unfolded over the tree,
-the hypothesis is split into its cases, and each case is found among the goal's disjuncts.
-`mem_tac` proves `a ∈ B` the same way. Neither chain ends in an `exact` on a name that might
-not exist, and the search is linear in the tree. -/
+`sub_tac` proves `A ⊆ B`, and `mem_tac` proves `a ∈ B`, when `A` and `B` are lists built from
+`++`, `::` and `[]` over atoms once the key traversals in them are unfolded
+(`Laws/Auto/SubsetTac.lean`, the theory in `Laws/Auto/ListSubset.lean`): every atom of `A` must be
+an atom of `B`, or be carried to atoms of `B` by a hypothesis of `sub_tac using h` (`h : L ⊆ M`; a
+hole in `h` is matched against the atoms). The decision is reflected and the kernel evaluates it;
+there is no search, and a refusal names the parts of the left side nothing covers. The traversals
+it unfolds are the simp set `keys_norm`: the machine's own carriers here, the alphabets of each
+instance where they are defined (`attribute [keys_norm] …`), and what a call adds with
+`norm [...]`. -/
 
-syntax "or_search" : tactic
-macro_rules
-  | `(tactic| or_search) => `(tactic| first
-      | assumption
-      | exact Or.inl ‹_›
-      | (apply Or.inr; or_search))
-
-/-- The key traversals unfolded to one depth, and membership unfolded over the tree. The optional
-list adds the unfoldings a section needs beyond the machine's own carriers. -/
-syntax "keys_mem_norm" (" [" Lean.Parser.Tactic.simpArg,* "]")? : tactic
-macro_rules
-  | `(tactic| keys_mem_norm) => `(tactic| keys_mem_norm [])
-  | `(tactic| keys_mem_norm [$extra,*]) => `(tactic|
-      simp only [RunMachine.keys, RunMachine.emit, RunMachine.halt, races_update, armed_update, state_update,
-        fibers_updateRace, armed_updateRace, state_updateRace, fibers_arm, races_arm, state_arm, fibers_disarm,
-        races_disarm, state_disarm, races_modify, armed_modify, state_modify, WithFiberAction.keys,
-        RunFiber.keys, RunFiber.park, frameKeys, Race.keys, iterKeys, cmdsKeys,
-        Cmd.keys, Outcome.keys, Pending.keys, Task.keys, Observer.keys, Resume.keys, optExitKeys, Stores.keys,
-        primKeys, exitKeys, Val.keys, Val.keysList, Val.keys_fiber, Val.keys_cell, Val.keys_promise,
-        Val.keys_scopeHandle, Val.keys_memoMap, Val.keys_exitOk, Val.keys_exitErr, Val.keys_context,
-        Val.keys_fibers,
-        Val.keys_causeImage, Val.keys_snapshotPayload,
-        Handle.ofCode_fiber, Handle.ofCode_cell, Handle.ofCode_promise, Handle.ofCode_scope,
-        Handle.ofCode_memoMap,
-        Supervision.RaceAllState.initial,
-        List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.map_append, List.map_cons, List.map_nil,
-        List.append_nil, List.nil_append, List.append_assoc, Option.map, Option.toList, Option.getD_some,
-        Option.getD_none, List.mem_append,
-        List.mem_cons, List.mem_singleton, List.not_mem_nil, or_assoc, true_or, or_true, false_or, or_false,
-        eq_self_iff_true, $extra,*])
-
-/-- The same normalisation at a hypothesis. -/
-syntax "keys_mem_norm_at" ident (" [" Lean.Parser.Tactic.simpArg,* "]")? : tactic
-macro_rules
-  | `(tactic| keys_mem_norm_at $h:ident) => `(tactic| keys_mem_norm_at $h [])
-  | `(tactic| keys_mem_norm_at $h:ident [$extra,*]) => `(tactic|
-      simp only [RunMachine.keys, RunMachine.emit, RunMachine.halt, races_update, armed_update, state_update,
-        fibers_updateRace, armed_updateRace, state_updateRace, fibers_arm, races_arm, state_arm, fibers_disarm,
-        races_disarm, state_disarm, races_modify, armed_modify, state_modify, WithFiberAction.keys,
-        RunFiber.keys, RunFiber.park, frameKeys, Race.keys, iterKeys, cmdsKeys,
-        Cmd.keys, Outcome.keys, Pending.keys, Task.keys, Observer.keys, Resume.keys, optExitKeys, Stores.keys,
-        primKeys, exitKeys, Val.keys, Val.keysList, Val.keys_fiber, Val.keys_cell, Val.keys_promise,
-        Val.keys_scopeHandle, Val.keys_memoMap, Val.keys_exitOk, Val.keys_exitErr, Val.keys_context,
-        Val.keys_fibers,
-        Val.keys_causeImage, Val.keys_snapshotPayload,
-        Handle.ofCode_fiber, Handle.ofCode_cell, Handle.ofCode_promise, Handle.ofCode_scope,
-        Handle.ofCode_memoMap,
-        Supervision.RaceAllState.initial,
-        List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.map_append, List.map_cons, List.map_nil,
-        List.append_nil, List.nil_append, List.append_assoc, Option.map, Option.toList, Option.getD_some,
-        Option.getD_none, List.mem_append,
-        List.mem_cons, List.mem_singleton, List.not_mem_nil, or_assoc, true_or, or_true, false_or, or_false,
-        eq_self_iff_true, $extra,*] at $h:ident)
-
-syntax "mem_tac" (" [" Lean.Parser.Tactic.simpArg,* "]")? : tactic
-macro_rules
-  | `(tactic| mem_tac) => `(tactic| mem_tac [])
-  | `(tactic| mem_tac [$extra,*]) => `(tactic| (
-      try keys_mem_norm [$extra,*]
-      first | done | trivial | or_search))
-
-/-- Close a membership goal from the case hypothesis `h`: the goal is already normalised, so
-rewriting with `h` is tried first (syntactic, cheap), an equation left by `subst` next, and
-the linear search last. -/
-syntax "close_mem" ident (" [" Lean.Parser.Tactic.simpArg,* "]")? : tactic
-macro_rules
-  | `(tactic| close_mem $h:ident) => `(tactic| close_mem $h [])
-  | `(tactic| close_mem $h:ident [$extra,*]) => `(tactic| first
-      | done
-      | trivial
-      | (simp only [$h:ident, true_or, or_true]; done)
-      | (simp only [eq_self_iff_true, true_or, or_true]; done)
-      | mem_tac [$extra,*])
-
-syntax "sub_tac" (" using " term,+)? (" norm " "[" Lean.Parser.Tactic.simpArg,* "]")? : tactic
-macro_rules
-  | `(tactic| sub_tac) => `(tactic| sub_tac norm [])
-  | `(tactic| sub_tac using $hs:term,*) => `(tactic| sub_tac using $hs,* norm [])
-  | `(tactic| sub_tac norm [$extra,*]) => `(tactic| (
-      intro x hx
-      try keys_mem_norm_at hx [$extra,*]
-      try keys_mem_norm [$extra,*]
-      repeat' (refine Or.elim hx (fun hx => ?_) (fun hx => ?_))
-      all_goals (try subst hx)
-      all_goals close_mem hx [$extra,*]))
-  | `(tactic| sub_tac using $hs:term,* norm [$extra,*]) => `(tactic| (
-      intro x hx
-      try keys_mem_norm_at hx [$extra,*]
-      try keys_mem_norm [$extra,*]
-      repeat' (refine Or.elim hx (fun hx => ?_) (fun hx => ?_))
-      all_goals (try subst hx)
-      -- a case not among the goal's atoms is carried through the facts, at most three deep
-      all_goals (first
-        | close_mem hx [$extra,*]
-        | (first $[| replace hx := $hs hx]*
-           try keys_mem_norm_at hx [$extra,*]
-           repeat' (refine Or.elim hx (fun hx => ?_) (fun hx => ?_))
-           all_goals (first
-             | close_mem hx [$extra,*]
-             | (first $[| replace hx := $hs hx]*
-                try keys_mem_norm_at hx [$extra,*]
-                repeat' (refine Or.elim hx (fun hx => ?_) (fun hx => ?_))
-                all_goals (first
-                  | close_mem hx [$extra,*]
-                  | (first $[| replace hx := $hs hx]*
-                     try keys_mem_norm_at hx [$extra,*]
-                     repeat' (refine Or.elim hx (fun hx => ?_) (fun hx => ?_))
-                     all_goals close_mem hx [$extra,*]))))))))
+attribute [keys_norm] RunMachine.keys RunMachine.emit RunMachine.halt races_update armed_update state_update
+  fibers_updateRace armed_updateRace state_updateRace fibers_arm races_arm state_arm fibers_disarm
+  races_disarm state_disarm races_modify armed_modify state_modify WithFiberAction.keys
+  RunFiber.keys RunFiber.park frameKeys Race.keys iterKeys cmdsKeys
+  Cmd.keys Outcome.keys Pending.keys Task.keys Observer.keys Resume.keys optExitKeys Stores.keys
+  primKeys exitKeys Val.keys Val.keysList Val.keys_fiber Val.keys_cell Val.keys_promise
+  Val.keys_scopeHandle Val.keys_memoMap Val.keys_exitOk Val.keys_exitErr Val.keys_context
+  Val.keys_fibers Val.keys_causeImage Val.keys_snapshotPayload
+  Handle.ofCode_fiber Handle.ofCode_cell Handle.ofCode_promise Handle.ofCode_scope Handle.ofCode_memoMap
+  Supervision.RaceAllState.initial
+  List.flatMap_append List.flatMap_cons List.flatMap_nil List.map_append List.map_cons List.map_nil
+  List.append_nil List.nil_append List.append_assoc Option.map Option.toList Option.getD_some
+  Option.getD_none
 
 /-! ### Small facts about the key traversals -/
 
@@ -1948,10 +1857,10 @@ theorem RunMachine.completedExits_keys (m : RunMachine ν σ Val Err Defect Fibe
     have he : optExitKeys f.exit = exitKeys exit := by rw [hexit]; rfl
     have hfk : handle ∈ f.keys nk sk := by
       have hopt : handle ∈ optExitKeys f.exit := he.symm ▸ h
-      mem_tac
+      mem_tac using hopt
     have hm : handle ∈ m.fibers.flatMap (RunFiber.keys nk sk) :=
       List.mem_flatMap.mpr ⟨f, hf, hfk⟩
-    mem_tac
+    mem_tac using hm
 
 theorem fiber?_exists {id : FiberId} {f : RunFiber ν σ Val Err Defect FiberId Ann Ctx}
     (h : m.fiber? id = some f) : (Handle.fiber f.id).existsIn m.world = true := by
@@ -2300,7 +2209,7 @@ theorem countdownPark_minted (hb : KeyBounded nk sk interp ambient)
       refine Ok_append.mpr ⟨hm, ?_⟩
       refine Ok_cons.mpr ⟨?_, Ok_append.mpr ⟨Ok_append.mpr ⟨?_, ?_⟩, ?_⟩⟩
       · have : Handle.fiber target ∈ targets.map Handle.fiber := List.mem_map.mpr ⟨target, htarget, rfl⟩
-        exact hm _ (by mem_tac)
+        exact hm _ (by mem_tac using this)
       · exact Ok_of_subset (List.map_subset Handle.fiber hremaining) (Ok_of_subset (by sub_tac) hm)
       · exact Ok_of_subset hexits (Ok_of_subset (by sub_tac) hm)
       · exact Ok_of_subset hname (Ok_of_subset (by sub_tac) hm)
@@ -5207,15 +5116,11 @@ leaves. -/
 
 section StoresInstance
 
-/-- From here on, the membership search also unfolds the stores' own alphabets and the stores'
-key traversals. These rules are tried before the general ones and expand to the `norm` form. -/
-macro_rules
-  | `(tactic| sub_tac) => `(tactic| sub_tac norm [programKeys, Name.keys, Thunk.keys, ActionName.keys,
-      FinName.keys, ProgName.keys, SyncOp.keys, Completion.keys, ParkKind.keys, DeferredStore.keys,
-      DeferredCell.keys, ScopeStore.keys, ScopeEntry.keys])
-  | `(tactic| sub_tac using $hs:term,*) => `(tactic| sub_tac using $hs,* norm [programKeys, Name.keys,
-      Thunk.keys, ActionName.keys, FinName.keys, ProgName.keys, SyncOp.keys, Completion.keys, ParkKind.keys,
-      DeferredStore.keys, DeferredCell.keys, ScopeStore.keys, ScopeEntry.keys])
+/-! From here on, the decision also unfolds the stores' own alphabets and the stores' key
+traversals. -/
+attribute [keys_norm] programKeys Name.keys Thunk.keys ActionName.keys FinName.keys ProgName.keys
+  SyncOp.keys Completion.keys ParkKind.keys DeferredStore.keys DeferredCell.keys ScopeStore.keys
+  ScopeEntry.keys
 
 theorem programKeys_ofExit (e : ExitV) : programKeys (Prim.ofExit e) = exitKeys e :=
   primKeys_ofExit _ _ e
