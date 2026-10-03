@@ -751,4 +751,172 @@ theorem clause_await_of_parks (root : ProgramSource) (rootTy : EffTy) (target : 
           (fun w' o v hv => ⟨sourceTy, o.1.2.1 _ _ hsrc, hv⟩) typedNext) stack,
         ⟨prov.recorded, prov.deferred⟩⟩
 
+/-! ## The countdown parks: no live target answers at once -/
+
+/-- **A continue after a consumed token settles typed** (`countdownPark` takes the token before its
+walk): the counter bumped, the world declaring the unused token (`configTyped_token`). -/
+theorem Evaluating.settle_continue_bump {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} {rest : List RCmd} {f : RFiber} {y y' : Bool}
+    (ev : Evaluating root rootTy w m rest f y) (fr : RSaved)
+    (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR ⟨{ m with nextToken := m.nextToken + 1 }, { f with frame := fr }, y', .continue_, []⟩) := by
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨ord, bumped⟩ := configTyped_token ev.typed
+    (show (w.Γ f.id).isSome = true by rw [declared]; rfl) (EffTy.pure .unit)
+  have ev' : Evaluating root rootTy (w.addToken f.id m.nextToken (EffTy.pure .unit))
+      { m with nextToken := m.nextToken + 1 } rest f y := ⟨bumped, ev.stale, ev.running, ev.live⟩
+  exact SettlesTyped.mono ord (ev'.settle_continue fr (fun ty' d => codeOk_races (m := m.update f)
+    (racesKept_of_eq fun _ => rfl) (codeOk_mono ord (code ty' d))))
+
+/-- **A countdown's park branch**: the clause where the walk over the operation's targets (after the
+token is taken) meets a live target. Its proof reads `J` with the parked fiber's code clause dropped
+(the owner's repair of `FiberTyped.code`, 2026-10-02). -/
+def CountdownParks (root : ProgramSource) (rootTy : EffTy) (op : FiberOp)
+    (targetsOf : RFiber → List FiberId) : Prop :=
+  ∀ (w : World) (m : RState) (rest : List RCmd) (f : RFiber) (y : Bool) (next : op.answer → RProgram)
+    (exits : List ExitV) (target : FiberId) (remaining : List FiberId),
+    Evaluating root rootTy w m rest f y → f.frame.current = .vis (.inr op) next →
+    countdownWalk ({ m with nextToken := m.nextToken + 1 } : RState) (targetsOf f) [] =
+      (exits, some (target, remaining)) →
+    SettlesTyped root rootTy w f.id rest
+      (prepareIterR (evaluateFiberR (interpRAt root.program m.completedExits) m f y op next))
+
+/-- The exits a walk collects are exited targets' exits, typed at the columns every target's
+declaration is below. -/
+theorem Evaluating.walk_exits {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
+    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
+    {targets : List FiberId} {a e : Ty}
+    (cols : ∀ t ∈ targets, ∃ fty, w.Γ t = some fty ∧ fty.answer.sub a = true ∧ fty.error.sub e = true)
+    {k : Nat} : ∀ ex ∈ (countdownWalk ({ m with nextToken := k } : RState) targets []).1,
+      FitsExit w ⟨a, e, Env.Requirement.empty⟩ ex := by
+  intro ex hex
+  obtain ⟨⟨extra, hextra, found⟩, _⟩ := countdownWalk_spec ({ m with nextToken := k } : RState) targets []
+  rw [hextra, List.nil_append] at hex
+  obtain ⟨t, ht, g, hg, gx⟩ := found ex hex
+  obtain ⟨fty, d, ha, he⟩ := cols t ht
+  exact fitsExit_sub ha he (ev.target_exit (t := g) hg gx fty d).1
+
+/-- **`awaitAll`** (`fiberAwaitAll`, `internal/effect.ts:779-813`): the token taken, a walk with no
+live target answers the collected exits, typed at the certificate's list of exits (the pre's
+columns), over the saved answer frame; a live target parks (`CountdownParks`). -/
+theorem clause_awaitAll_of_parks (root : ProgramSource) (rootTy : EffTy) (targets : List FiberId)
+    (parks : CountdownParks root rootTy (.awaitAll targets) fun _ => targets) :
+    FiberClauseKeeps root rootTy (.awaitAll targets) := by
+  intro w m rest f y next ev hc
+  cases hw : countdownWalk ({ m with nextToken := m.nextToken + 1 } : RState) targets [] with
+  | mk exits live =>
+    cases live with
+    | some p => exact parks w m rest f y next exits p.1 p.2 ev hc hw
+    | none =>
+      obtain ⟨ty, declared⟩ := ev.declared
+      obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+      rw [hc] at current
+      obtain ⟨cert, ⟨a, e, hcert, cols⟩, typedNext⟩ := TypedProg.fiber_inv current
+        (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+      have typedExits := ev.walk_exits cols (k := m.nextToken + 1)
+      rw [hw] at typedExits
+      have value : Fits w (exitsVal exits) cert := by
+        rw [hcert]
+        exact awaitAll_delivered (targets := targets) typedExits
+      have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+        fun _ h => Option.some.inj (h.symm.trans declared)
+      show SettlesTyped root rootTy w f.id rest (prepareIterR
+        (FiberAction.awaitAll (interpRAt root.program m.completedExits) m (saveAnswerR f (seqR next)) y
+          targets false))
+      have hout : FiberAction.outcomeOf ({ m with nextToken := m.nextToken + 1 } : RState) false =
+          .continue_ := by
+        simp only [FiberAction.outcomeOf, ev.live]
+        rfl
+      simp only [FiberAction.awaitAll, countdownPark, hw, hout]
+      refine ev.settle_continue_bump { f.frame with
+        current := .pure (.success (exitsVal exits)), stack := .answer (seqR next) :: f.frame.stack }
+        (fun ty' d => ?_)
+      rw [same ty' d]
+      exact ⟨EffTy.pure cert, TypedProg.pure ⟨value, trivial⟩,
+        hostStack_push (seqFrame_typed
+          (post := fun w' ans => fiberPost w' (.awaitAll targets) cert ans) rfl
+          (fun _ _ _ hv => hv) typedNext) stack, ⟨prov.recorded, prov.deferred⟩⟩
+
+/-- **`awaitAllFailFast`** (`Effect.all` with concurrency, S5 §7.4): `awaitAll`'s clause; fail-fast
+changes only what a later failing exit does to the remaining targets. -/
+theorem clause_awaitAllFailFast_of_parks (root : ProgramSource) (rootTy : EffTy)
+    (targets : List FiberId)
+    (parks : CountdownParks root rootTy (.awaitAllFailFast targets) fun _ => targets) :
+    FiberClauseKeeps root rootTy (.awaitAllFailFast targets) := by
+  intro w m rest f y next ev hc
+  cases hw : countdownWalk ({ m with nextToken := m.nextToken + 1 } : RState) targets [] with
+  | mk exits live =>
+    cases live with
+    | some p => exact parks w m rest f y next exits p.1 p.2 ev hc hw
+    | none =>
+      obtain ⟨ty, declared⟩ := ev.declared
+      obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+      rw [hc] at current
+      obtain ⟨cert, ⟨a, e, hcert, cols⟩, typedNext⟩ := TypedProg.fiber_inv current
+        (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+      have typedExits := ev.walk_exits cols (k := m.nextToken + 1)
+      rw [hw] at typedExits
+      have value : Fits w (exitsVal exits) cert := by
+        rw [hcert]
+        exact awaitAll_delivered (targets := targets) typedExits
+      have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+        fun _ h => Option.some.inj (h.symm.trans declared)
+      show SettlesTyped root rootTy w f.id rest (prepareIterR
+        (FiberAction.awaitAll (interpRAt root.program m.completedExits) m (saveAnswerR f (seqR next)) y
+          targets true))
+      have hout : FiberAction.outcomeOf ({ m with nextToken := m.nextToken + 1 } : RState) false =
+          .continue_ := by
+        simp only [FiberAction.outcomeOf, ev.live]
+        rfl
+      simp only [FiberAction.awaitAll, countdownPark, hw, hout]
+      refine ev.settle_continue_bump { f.frame with
+        current := .pure (.success (exitsVal exits)), stack := .answer (seqR next) :: f.frame.stack }
+        (fun ty' d => ?_)
+      rw [same ty' d]
+      exact ⟨EffTy.pure cert, TypedProg.pure ⟨value, trivial⟩,
+        hostStack_push (seqFrame_typed
+          (post := fun w' ans => fiberPost w' (.awaitAllFailFast targets) cert ans) rfl
+          (fun _ _ _ hv => hv) typedNext) stack, ⟨prov.recorded, prov.deferred⟩⟩
+
+/-- **`awaitNewChildren`** (`awaitAllChildren`'s count-down over the children not in the snapshot):
+the token taken, a walk with no live child answers `void` over the saved answer frame; a live child
+parks (`CountdownParks`). -/
+theorem clause_awaitNewChildren_of_parks (root : ProgramSource) (rootTy : EffTy)
+    (snapshot : List FiberId)
+    (parks : CountdownParks root rootTy (.awaitNewChildren snapshot)
+      fun f => f.children.filter fun c => !(snapshot.contains c)) :
+    FiberClauseKeeps root rootTy (.awaitNewChildren snapshot) := by
+  intro w m rest f y next ev hc
+  cases hw : countdownWalk ({ m with nextToken := m.nextToken + 1 } : RState)
+      ((saveAnswerR f (seqR next)).children.filter fun c => !(snapshot.contains c)) [] with
+  | mk exits live =>
+    cases live with
+    | some p => exact parks w m rest f y next exits p.1 p.2 ev hc hw
+    | none =>
+      obtain ⟨ty, declared⟩ := ev.declared
+      obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+      rw [hc] at current
+      obtain ⟨_, _, typedNext⟩ := TypedProg.fiber_inv current
+        (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+      have typedNext' : ∀ w', w.leHost w' → ∀ ans : Val, ans = Val.unit →
+          TypedProg root w' tin (next ans) :=
+        fun w' o ans post => typedNext w' o ans post
+      have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
+        fun _ h => Option.some.inj (h.symm.trans declared)
+      show SettlesTyped root rootTy w f.id rest (prepareIterR
+        (FiberAction.awaitNewChildren (interpRAt root.program m.completedExits) m
+          (saveAnswerR f (seqR next)) y snapshot))
+      have hout : FiberAction.outcomeOf ({ m with nextToken := m.nextToken + 1 } : RState) false =
+          .continue_ := by
+        simp only [FiberAction.outcomeOf, ev.live]
+        rfl
+      simp only [FiberAction.awaitNewChildren, countdownPark, hw, hout]
+      refine ev.settle_continue_bump { f.frame with
+        current := .pure (.success .unit), stack := .answer (seqR next) :: f.frame.stack }
+        (fun ty' d => ?_)
+      rw [same ty' d]
+      exact ⟨EffTy.pure .unit, TypedProg.pure (strongExit_success w _ _ trivial),
+        hostStack_push (Evaluating.unitAnswerFrame typedNext') stack, ⟨prov.recorded, prov.deferred⟩⟩
+
 end Effect4.Program.Typed
