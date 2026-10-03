@@ -133,6 +133,8 @@ import Effect4.Laws.Program.Typed.Commands.Launch
 import Effect4.Laws.Program.Typed.Commands.Observe
 import Effect4.Laws.Program.Typed.Commands.Evaluate
 import Effect4.Laws.Program.Typed.Commands.Clauses.Answer
+import Effect4.Laws.Program.Typed.Commands.Clauses.Park
+import Effect4.Laws.Program.Typed.Commands.Clauses.Spawn
 import Effect4.Laws.Program.Typed.Edits
 import Effect4.Laws.Program.Typed.AnswerSchema
 import Effect4.Laws.Program.Typed.Stack
