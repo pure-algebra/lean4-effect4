@@ -722,6 +722,9 @@ theorem close_zero_typed (root : ProgramSource) (w : W) (st' : Stores) (code : R
     (fun entry he fin hfin => by
       rw [zero_fins entry he] at hfin
       cases hfin)
+    (fun entry he fin hfin => by
+      rw [zero_fins entry he] at hfin
+      cases hfin)
     (failed_fits w) h
 
 theorem close_one_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RProgram)
@@ -731,6 +734,9 @@ theorem close_one_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RP
     (fun entry he fin hfin => by
       rw [one_fins entry he fin hfin]
       exact finalizerTyped_of_admitted root w _ rfl)
+    (fun entry he fin hfin => by
+      rw [one_fins entry he fin hfin]
+      rfl)
     (failed_fits w) h
 
 theorem close_two_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RProgram)
@@ -741,6 +747,10 @@ theorem close_two_typed (root : ProgramSource) (w : W) (st' : Stores) (code : RP
       rcases two_fins entry he fin hfin with rfl | rfl
       · exact finalizerTyped_of_admitted root w _ rfl
       · exact finalizerTyped_of_admitted root w _ rfl)
+    (fun entry he fin hfin => by
+      rcases two_fins entry he fin hfin with rfl | rfl
+      · rfl
+      · rfl)
     (failed_fits w) h
 
 /-! ### The closing corollary for the value-answering capture (decisions row 151 (a″))
@@ -766,6 +776,9 @@ theorem foreign_close_typed (w : W) (st' : Stores) (code : RProgram)
     (fun entry he fin hfin => by
       rw [foreign_fins entry he fin hfin]
       exact foreign_typed_unknown w)
+    (fun entry he fin hfin => by
+      rw [foreign_fins entry he fin hfin]
+      exact acq_capture_typed w)
     (failed_fits w) h
 
 /-! ### The close-scope row's pre and the closing exit (finding F-CLOSE, repaired)

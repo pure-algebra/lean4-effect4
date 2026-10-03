@@ -1685,9 +1685,9 @@ theorem scopeStateOk_world {root : ProgramSource} {w w' : World} (ord : w.leHost
   cases st with
   | empty => trivial
   | openEmpty => trivial
-  | openInline key fin => exact ⟨finalizerTyped_mono root w w' fin ord h.1, finNameOk_world ord h.2⟩
+  | openInline key fin => exact ⟨finalizerAdmitted_mono root ord fin h.1, finNameOk_world ord h.2⟩
   | openMap entries =>
-    exact ⟨fun v0 hv => finalizerTyped_mono root w w' v0.2 ord (h.1 v0 hv),
+    exact ⟨fun v0 hv => finalizerAdmitted_mono root ord v0.2 (h.1 v0 hv),
       fun v0 hv => finNameOk_world ord (h.2 v0 hv)⟩
   | closed exit => exact fits_mono ord h
 
@@ -2502,7 +2502,7 @@ closing exit. -/
 
 theorem scopeStateOk_of {root : ProgramSource} {w : World} {e : Expect}
     {st : ScopeState Nat FinName Val Err Defect FiberId Ann}
-    (typed : ∀ v ∈ st.entries, FinalizerTyped root w v.2)
+    (typed : ∀ v ∈ st.entries, FinalizerAdmitted root w v.2)
     (fins : ∀ v ∈ st.entries, FinNameOk (preds root) w e v.2)
     (closed : ∀ ex, st.closingExit? = some ex → (preds root).ScopeExitOk w e ex) :
     ScopeStateOk (preds root) w e st := by
@@ -2528,11 +2528,11 @@ theorem scopeStateOk_entries {root : ProgramSource} {w : World} {e : Expect}
   | openMap entries => exact h.2
   | closed exit => exact fun _ hv => nomatch hv
 
-/-- The typed half of the scope clause at every registered finalizer (seat D4's `FinalizerOk`,
+/-- The admitted half of the scope clause at every registered finalizer (seat D4's `FinalizerOk`,
 decisions row 151 (a″)): the sibling of `scopeStateOk_entries`. -/
-theorem scopeStateOk_typed {root : ProgramSource} {w : World} {e : Expect}
+theorem scopeStateOk_admitted {root : ProgramSource} {w : World} {e : Expect}
     {st : ScopeState Nat FinName Val Err Defect FiberId Ann}
-    (h : ScopeStateOk (preds root) w e st) : ∀ v ∈ st.entries, FinalizerTyped root w v.2 := by
+    (h : ScopeStateOk (preds root) w e st) : ∀ v ∈ st.entries, FinalizerAdmitted root w v.2 := by
   cases st with
   | empty => exact fun _ hv => nomatch hv
   | openEmpty => exact fun _ hv => nomatch hv
@@ -2619,13 +2619,13 @@ theorem scopeStoreOk_setEntry {root : ProgramSource} {w : World} {e : Expect} {s
 theorem scopeStoreOk_addUnsafe {root : ProgramSource} {w : World} {e : Expect} {st : ScopeStore}
     (h : ScopeStoreOk (preds root) w e st) {scope : Nat} {entry : ScopeEntry}
     (hentry : st.entryAt scope = some entry) (key : Nat) {fin : FinName}
-    (finOk : FinNameOk (preds root) w e fin) (finTyped : FinalizerTyped root w fin) :
+    (finOk : FinNameOk (preds root) w e fin) (finTyped : FinalizerAdmitted root w fin) :
     ScopeStoreOk (preds root) w e (st.setEntry { entry with scope := entry.scope.addUnsafe key fin }) := by
   have old := (h.c0 entry (List.mem_of_find?_eq_some hentry)).c0.c0
   refine scopeStoreOk_setEntry h
     ⟨⟨scopeStateOk_of (fun v hv => ?_) (fun v hv => ?_) (fun ex hex => ?_)⟩⟩
   · rcases entries_addUnsafe entry.scope key fin v hv with oldv | rfl
-    · exact scopeStateOk_typed old v oldv
+    · exact scopeStateOk_admitted old v oldv
     · exact finTyped
   · rcases entries_addUnsafe entry.scope key fin v hv with oldv | rfl
     · exact scopeStateOk_entries old v oldv
@@ -2645,7 +2645,7 @@ theorem scopeStoreOk_removeFinalizer {root : ProgramSource} {w : World} {e : Exp
     have old := (h.c0 entry (List.mem_of_find?_eq_some hentry)).c0.c0
     refine scopeStoreOk_setEntry h
       ⟨⟨scopeStateOk_of (fun v hv => ?_) (fun v hv => ?_) (fun ex hex => ?_)⟩⟩
-    · exact scopeStateOk_typed old v
+    · exact scopeStateOk_admitted old v
         ((Effect4.Scope.removeUnsafe_finalizers_sublist entry.scope key).subset hv)
     · exact scopeStateOk_entries old v
         ((Effect4.Scope.removeUnsafe_finalizers_sublist entry.scope key).subset hv)
@@ -2787,7 +2787,7 @@ theorem link_preserves (root : ProgramSource) (rootTy : EffTy) (mode : Supervisi
       have stores : StoresOk (preds root) { w with state := s } Expect.root s := by
         obtain ⟨c0, c1, c2, c3, c4, c5⟩ := storesOk_world ord rfl rfl rfl wide.stores
         exact ⟨c0, c1, ⟨c2.c0⟩, scopeStoreOk_addUnsafe c3 hentry m.state.nextName trivial
-          (finalizerTyped_of_admitted root _ _ declared), c4, c5⟩
+          declared, c4, c5⟩
       obtain ⟨_, restated⟩ := configTyped_restate tail le rfl rfl rfl wf stores
         (fun _ h => h) wide.live.dueOwners (fun _ h => h)
       have modified := configTyped_modify_quiet restated target

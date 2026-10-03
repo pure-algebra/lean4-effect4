@@ -1303,13 +1303,16 @@ theorem snapshotChildren_answers (root : ProgramSource) (w : World) (children : 
 /-- The multi-finalizer close: the counted suspend, then the walk, each answered within its
 post, so the close is typed at `⟨unit, never⟩` whatever the finalizers are. -/
 theorem closeWalk_typed (root : ProgramSource) (w : World) (strategy : FinalizerStrategy)
-    (order : List FinName) (exit : ExitV) :
+    (order : List FinName) (exit : ExitV) (fins : ∀ fin ∈ order, FinalizerAdmitted root w fin)
+    (exitFits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit) :
     TypedProg root w (EffTy.pure .unit) (closeWalkR strategy order exit) := by
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) () trivial ?_
-  intro w' _ _ _
+  intro w' o _ _
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () trivial (fun _ _ ans post => TypedProg.pure post)
+    (fun _ _ _ h => nomatch h) ()
+    ⟨fun fin hf => finalizerAdmitted_mono root o fin (fins fin hf), fitsExit_mono o exitFits⟩
+    (fun _ _ ans post => TypedProg.pure post)
 
 /-- **A registered finalizer is typed** (decisions row 151 (a″)): at every later world and every
 closing exit that fits rc.112's release parameter type `Exit<unknown, unknown>`
@@ -1339,6 +1342,17 @@ theorem voidedClose_typed (root : ProgramSource) {w : World} {fin : FinName} {ex
       ((guardR .onSuccess (denoteFin fin exit)).bind (seqR fun _ => .pure (.success .unit))) :=
   seq_typed root h (fun _ _ _ _ => TypedProg.pure ⟨trivial, trivial⟩) rfl
 
+/-- Every finalizer a close snapshot captures is one a scope of the store holds. -/
+theorem mem_of_snapshot {scope : Nat} {exit : ExitV} {st state : Stores}
+    {strategy : FinalizerStrategy} {order : List FinName}
+    (hs : scopeCloseSnapshot scope exit st = some (state, strategy, order)) :
+    ∃ entry ∈ st.scopes.entries, order = entry.scope.closeOrder := by
+  unfold scopeCloseSnapshot at hs
+  obtain ⟨entry, hentry, hs⟩ := Option.bind_eq_some_iff.mp hs
+  change some _ = some (state, strategy, order) at hs
+  simp only [Option.some.injEq, Prod.mk.injEq] at hs
+  exact ⟨entry, List.mem_of_find?_eq_some hentry, hs.2.2.symm⟩
+
 /-- A lone-finalizer snapshot reads the finalizer off a scope the store holds. -/
 theorem lone_of_snapshot {scope : Nat} {exit : ExitV} {st state : Stores}
     {strategy : FinalizerStrategy} {fin : FinName}
@@ -1362,6 +1376,8 @@ and the close-scope row's pre gives it (finding F-CLOSE, `closeScope_pre_refuses
 theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV)
     (flag : Bool) (st st' : Stores) (code : RProgram)
     (fins : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin)
+    (admitted : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder,
+      FinalizerAdmitted root w fin)
     (exitFits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit)
     (h : closeScopeR scope exit flag st = some (st', code)) :
     TypedProg root w (EffTy.pure .unit) code := by
@@ -1380,7 +1396,10 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
     | [fin], hs =>
       obtain ⟨entry, hentry, hfin⟩ := lone_of_snapshot hs
       exact voidedClose_typed root (fins entry hentry fin hfin w (leHost_refl w) exit exitFits)
-    | _ :: _ :: _, _ => exact closeWalk_typed root w strategy _ exit
+    | _ :: _ :: _, hs =>
+      obtain ⟨entry, hentry, horder⟩ := mem_of_snapshot hs
+      exact closeWalk_typed root w strategy _ exit
+        (fun fin hf => admitted entry hentry fin (horder ▸ hf)) exitFits
 
 /-- **The unsafe close's program is typed at rc.112's finalizer type `⟨unknown, never⟩`**: the lone
 finalizer by the scope store's typing at the closing exit, the walk at `⟨unit, never⟩` widened. It
@@ -1389,6 +1408,8 @@ is what the scoped exit's close runs under the finalizer boundary (`prepareScope
 theorem closeScopeUnsafe_installs (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV)
     (flag : Bool) (st st' : Stores) (program : Option RProgram)
     (fins : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin)
+    (admitted : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder,
+      FinalizerAdmitted root w fin)
     (exitFits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit)
     (h : closeScopeUnsafeR scope exit flag st = some (st', program)) :
     ∀ code, program = some code → TypedProg root w ⟨.unknown, .never, Env.Requirement.empty⟩ code := by
@@ -1409,10 +1430,12 @@ theorem closeScopeUnsafe_installs (root : ProgramSource) (w : World) (scope : Na
       cases hcode
       obtain ⟨entry, hentry, hfin⟩ := lone_of_snapshot hs
       exact fins entry hentry fin hfin w (leHost_refl w) exit exitFits
-    | _ :: _ :: _, _, hcode =>
+    | _ :: _ :: _, hs, hcode =>
       cases hcode
+      obtain ⟨entry, hentry, horder⟩ := mem_of_snapshot hs
       refine typedProg_widen root (T := EffTy.pure .unit) ?_ (Ty.subN_refl _)
-        (closeWalk_typed root w strategy _ exit)
+        (closeWalk_typed root w strategy _ exit
+          (fun fin hf => admitted entry hentry fin (horder ▸ hf)) exitFits)
       exact Ty.sub_unknown _
 
 /-! ## The ledger: the handler side of decisions row 136
@@ -1706,11 +1729,14 @@ theorem snapshotChildren_answers (root : ProgramSource) (w : World) (children : 
 
 theorem closeWalk_typed (root : ProgramSource) (w : World) (strategy : FinalizerStrategy) (order : List FinName)
     (exit : ExitV) : ProofGraph.Obligation
-    (TypedProg root w (EffTy.pure .unit) (closeWalkR strategy order exit)) := ⟨⟩
+    ((∀ fin ∈ order, FinalizerAdmitted root w fin) →
+      FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit →
+      TypedProg root w (EffTy.pure .unit) (closeWalkR strategy order exit)) := ⟨⟩
 
 theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV) (flag : Bool)
     (st st' : Stores) (code : RProgram) : ProofGraph.Obligation
     ((∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin) →
+      (∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerAdmitted root w fin) →
       FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit →
       closeScopeR scope exit flag st = some (st', code) → TypedProg root w (EffTy.pure .unit) code) := ⟨⟩
 

@@ -1569,8 +1569,10 @@ theorem clause_closeScope (root : ProgramSource) (rootTy : EffTy) (scope : Nat) 
     ⟨restated, ev.stale, ev.running, ev.live⟩
   have fins := finalizers_of_typedState ev.typed.machine
   rw [wide.state] at fins
+  have finsAdm := finalizersAdmitted_of_typedState ev.typed.machine
+  rw [wide.state] at finsAdm
   have typedCode : TypedProg root w (EffTy.pure .unit) code :=
-    closeScope_installs root w scope ex false m.state s code fins hex (hcode false)
+    closeScope_installs root w scope ex false m.state s code fins finsAdm hex (hcode false)
   let fr' : RSaved := { f.frame with current := code, stack := .answer next :: f.frame.stack }
   have fresh : ∀ ty', ({ w with state := s } : World).Γ f.id = some ty' →
       CodeOk root { w with state := s } (({ m with state := s } : RState).update f) f.id ty' fr' := by
@@ -1644,7 +1646,9 @@ theorem Evaluating.settle_callback {root : ProgramSource} {rootTy : EffTy} {w : 
         ⟨{ m with state := s }, { g with frame := { fr with current := code } }, y, .continue_, []⟩ by
     have fins := finalizers_of_typedState ev.typed.machine
     rw [wide.state] at fins
-    have installs := closeScopeUnsafe_installs root w sc ex false m.state s program fins
+    have finsAdm := finalizersAdmitted_of_typedState ev.typed.machine
+    rw [wide.state] at finsAdm
+    have installs := closeScopeUnsafe_installs root w sc ex false m.state s program fins finsAdm
       (fitsExit_unknown hexOk.1) (hprog false)
     cases program with
     | none =>

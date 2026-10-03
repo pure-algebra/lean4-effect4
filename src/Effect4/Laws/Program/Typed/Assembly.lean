@@ -124,7 +124,7 @@ def preds (root : ProgramSource) : Preds World where
   HeapCell w key v := ∀ ty, w.Ρ key = some ty → Fits w v ty
   PromiseCell w key cell := ∀ a e, w.«Π» key = some (a, e) →
     ∀ c, cell.completion = some c → CompletionStrong w ⟨a, e, Env.Requirement.empty⟩ c
-  FinalizerOk w _ fin := FinalizerTyped root w fin
+  FinalizerOk w _ fin := FinalizerAdmitted root w fin
   CaptureOk w _ c := CaptureTyped root w c
   ScopeExitOk w _ ex := Fits w (reifyExitVal ex) (.exitOf .unknown .unknown)
 
@@ -461,12 +461,13 @@ theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : Wo
   · rw [valid.state]
     exact PromiseTableOk.memo ok.c2.c0
 
-/-- **The generated scope clause types every finalizer the scope holds** (decisions row 151
-(a″)): it states the bundle's `FinalizerOk` at the inline slot and at each entry of the map, and a
-scope's close order is its registrations, backwards (`Effect4.Scope.closeOrder_eq`). -/
-theorem scopeFinalizers_typed {root : ProgramSource} {w : World} {e : Expect} {sc : ScopeV}
+/-- **The generated scope clause admits every finalizer the scope holds** (decisions row 151
+(a″); seat M6E's finding: admission, which a pre can name, is what the store keeps): it states the
+bundle's `FinalizerOk` at the inline slot and at each entry of the map, and a scope's close order is
+its registrations, backwards (`Effect4.Scope.closeOrder_eq`). -/
+theorem scopeFinalizers_admitted {root : ProgramSource} {w : World} {e : Expect} {sc : ScopeV}
     (h : ScopeStateOk (preds root) w e sc.state) :
-    ∀ fin ∈ sc.closeOrder, FinalizerTyped root w fin := by
+    ∀ fin ∈ sc.closeOrder, FinalizerAdmitted root w fin := by
   intro fin hfin
   rw [Effect4.Scope.closeOrder_eq, List.mem_reverse] at hfin
   obtain ⟨⟨key, fin'⟩, hmem, hfin'⟩ := List.mem_map.mp hfin
@@ -485,15 +486,16 @@ theorem scopeFinalizers_typed {root : ProgramSource} {w : World} {e : Expect} {s
   | openEmpty => cases hmem
   | closed _ => cases hmem
 
-/-- **`J` types every finalizer a scope of the world's store holds** (decisions row 151 (a″)), the
-store typing `closeScope_installs` reads at a close. -/
-theorem finalizers_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
+/-- **`J` admits every finalizer a scope of the world's store holds** (decisions row 151 (a″)), the
+store typing `closeScope_installs` and the `closeIter` row's pre read at a close. -/
+theorem finalizersAdmitted_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} (typed : MachineTyped root rootTy w m) :
-    ∀ entry ∈ w.state.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin := by
+    ∀ entry ∈ w.state.scopes.entries, ∀ fin ∈ entry.scope.closeOrder,
+      FinalizerAdmitted root w fin := by
   obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _, _⟩ := typed
   intro entry he
   rw [valid.state] at he
-  exact scopeFinalizers_typed (ok.c2.c3.c0 entry he).c0.c0
+  exact scopeFinalizers_admitted (ok.c2.c3.c0 entry he).c0.c0
 
 /-- **TY-08's promise half (proved)**: the coarse promise column (`PromiseTable`, the leaf
 `CompletionOk`) from the strong one (`preds`' `PromiseCell`, the leaf `CompletionStrong`): an
@@ -1162,6 +1164,15 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
 /-! ## The milestone propositions
 
 Named once, so the ledger's declarations and the connectors below read the same statement. -/
+
+
+/-- **`J` types every finalizer a scope of the world's store holds**: admission, typed
+(`finalizerTyped_of_admitted`). -/
+theorem finalizers_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} (typed : MachineTyped root rootTy w m) :
+    ∀ entry ∈ w.state.scopes.entries, ∀ fin ∈ entry.scope.closeOrder, FinalizerTyped root w fin :=
+  fun entry he fin hfin =>
+    finalizerTyped_of_admitted root w fin (finalizersAdmitted_of_typedState typed entry he fin hfin)
 
 /-- Rows 111–116: the source's Σ_app is lawful, the proposition seat A's evidence field on
 `ProgramSource` carries (`ProgramSource.lawful`, row 114), so every source has it

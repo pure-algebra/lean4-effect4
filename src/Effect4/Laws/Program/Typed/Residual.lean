@@ -197,8 +197,12 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .interruptAs target _ => (w.Γ target).isSome = true
   | .runIn target scope => (w.Γ target).isSome = true ∧ ScopeLive w scope
   | .guard_ _ | .unguard _ | .finishFinalizer _ | .construction
-  | .foreignRelease _ _ | .closeWalk _ _ _ | .closeIter _ _ _
+  | .foreignRelease _ _ | .closeWalk _ _ _
   | .cancelRace _ | .dropObservers _ | .frontier _ _ => True
+  -- the walk runs each finalizer at the closing exit: the store's admission of each, and the
+  -- exit's fit (seat M6E's finding; the scope registration's precedent, by name)
+  | .closeIter _ order ex => (∀ fin ∈ order, FinalizerAdmitted root w fin) ∧
+    FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex
   | .scopeExit _ scope _ => ScopeLive w scope
   -- the closing exit becomes the scope's (`scopeCloseSnapshot`), which the scope store types at
   -- `Exit<unknown, unknown>` (`ScopeExitOk`, DI-94) and `Stores.WF` asks valid (finding F-CLOSE,
@@ -872,8 +876,10 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | getId | yieldNow _ | ambientScope | sync _ | suspend _
   | awaitNewChildren _ | guard_ _ | unguard _
   | finishFinalizer _ | construction | foreignRelease _ _
-  | closeWalk _ _ _ | closeIter _ _ _ | cancelRace _ | dropObservers _
+  | closeWalk _ _ _ | cancelRace _ | dropObservers _
   | frontier _ _ => exact trivial
+  | closeIter _ order _ =>
+    exact ⟨fun fin hf => finalizerAdmitted_mono root ord fin (h.1 fin hf), fitsExit_mono ord h.2⟩
 
 end Mono
 
@@ -1055,6 +1061,8 @@ theorem fiberPre_rows_append {w : World} {op : FiberOp} {cert : FiberCert op}
     exact ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, h.2⟩
   | gen p => exact pointTyped_rows_append src src' t' hprog htab hsvc h
   | loop p name => exact pointTyped_rows_append src src' t' hprog htab hsvc h
+  | closeIter _ order _ =>
+    exact ⟨fun fin hf => finalizerAdmitted_rows_append src src' t' hprog htab hsvc (h.1 fin hf), h.2⟩
   | _ => exact h
 
 /-- **`TypedProg` is monotone along an appended row table** (TY-12's positive control, proved;
