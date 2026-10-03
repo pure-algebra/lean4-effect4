@@ -27,8 +27,9 @@ and the obligations it names.
 * **One completion per call** (`answer_once`): after an answer is applied the machine holds
   no call at that key, so there is nothing left to answer there and the recorded rows are
   refused if they are played again.
-* **The ordinary run is the ordinary run** (`runPure_eq_run`): the journal `[evaluate,
-  flush]` leaves the machine `Api.run` leaves.
+* **Control rows agree with machine replay** (`play_controls_eq_replay`): any progressing
+  control tape leaves the raw replay's machine. Ordinary and clock-driven runs inherit this
+  connection (`runPure_eq_run`, `runClock_eq_run`).
 -/
 
 set_option autoImplicit false
@@ -813,56 +814,103 @@ theorem advance_progressed {program : Api.Program} {table : RowTable}
   have hcases := advance_step s fuel d
   aesop
 
-/-- **O-10.** The ordinary run is the ordinary run: the journal `[evaluate, flush]` leaves
-the machine `Api.run` leaves. Both step by `stepDecisionState`, one decision at a time; the
-session adds the protocol edge and the retirement of removed bindings, and neither of those
-touches the machine.
+/-! ## Control rows and machine replay
 
-The hypothesis is that both rows progressed. A run that gets stuck, or whose step runs out of
-fuel, stops at a frontier in both routes, but not at the same place: the session keeps the
-machine it stepped to and stops, while `Api.replay` keeps stepping the rest of its tape. -/
+Slice A of `docs/research/2026-10-03-codex-usable-apis/plan.md`: semantics concepts 9/10,
+proposed registry claim `run-controls-replay`, serving R8/R13. The question below connects the
+journaled API to existing frame replay on the same decisions, table and budgets. Its consumers
+are `runPure_eq_run` and `runClock_eq_run`; it neither chooses a scheduler nor extends the
+empty-table reference-machine agreement. Only newly recorded phases must have progressed.
+-/
+
+namespace ControlReplayWanted
+
+/-- `run-controls-replay`: progressing control rows leave the raw replay's machine, from
+any starting Run, without requiring its earlier phases to have progressed. -/
+theorem play_controls_eq_replay (s : Run) (tape : List Api.Decision)
+    (_h : (s.play (Rows.tape tape)).phases =
+      s.phases ++ List.replicate tape.length Phase.progressed) :
+    ProofGraph.Obligation
+      ((s.play (Rows.tape tape)).machine =
+        machineOf (replayFrom s.built.program s.built.table s.budget.fuel tape s.machine)) := ⟨⟩
+
+end ControlReplayWanted
+
+/-- Phase-prefix helper for `ControlReplayWanted.play_controls_eq_replay`: playing only
+appends verdicts, so a premise about the new suffix says nothing about earlier phases. -/
+theorem play_phases_extend (s : Run) (rows : List Command) :
+    ∃ added, (s.play rows).phases = s.phases ++ added := by
+  induction rows generalizing s with
+  | nil => exact ⟨[], by rw [play_nil, List.append_nil]⟩
+  | cons row rows ih =>
+    obtain ⟨added, hadded⟩ := ih (s.step row)
+    refine ⟨(Api.Runner.result s.runner row).phase :: added, ?_⟩
+    rw [play_cons, hadded, step_phases]
+    simp only [List.append_assoc, List.cons_append, List.nil_append]
+
+/-- Journaled control execution agrees with raw frame replay at the same machine, table
+and command budget when every added row progressed. The initial machine already fixes the
+compile budget. Earlier phases may include host answers, refusals or fuel frontiers.
+
+This is machine equality, not equality of session metadata or an assertion that the program
+has finished. A refused row or an insufficient-budget row cannot satisfy the premise. -/
+theorem play_controls_eq_replay (s : Run) (tape : List Api.Decision)
+    (h : (s.play (Rows.tape tape)).phases =
+      s.phases ++ List.replicate tape.length Phase.progressed) :
+    (s.play (Rows.tape tape)).machine =
+      machineOf (replayFrom s.built.program s.built.table s.budget.fuel tape s.machine) := by
+  induction tape generalizing s with
+  | nil => exact (machineOf_nil _ _ _ _).symm
+  | cons decision tape ih =>
+    obtain ⟨added, hadded⟩ := play_phases_extend (s.step (.control decision)) (Rows.tape tape)
+    have hphases : (Api.HostSession.advance s.session s.budget.fuel decision).phase :: added =
+        Phase.progressed :: List.replicate tape.length Phase.progressed := by
+      apply List.append_cancel_left (as := s.phases)
+      change ((s.step (.control decision)).play (Rows.tape tape)).phases =
+        s.phases ++ List.replicate (tape.length + 1) Phase.progressed at h
+      rw [hadded, step_phases_control] at h
+      simpa only [List.replicate_succ, List.append_assoc, List.cons_append,
+        List.nil_append] using h
+    obtain ⟨hphase, hrest⟩ := List.cons.inj hphases
+    have htail : ((s.step (.control decision)).play (Rows.tape tape)).phases =
+        (s.step (.control decision)).phases ++ List.replicate tape.length Phase.progressed := by
+      rw [hadded, hrest]
+    obtain ⟨hstuck, henough, hmachine⟩ := advance_progressed s.session s.budget.fuel decision hphase
+    change s.machine.stuck = none at hstuck
+    change enoughFor s.built.program s.built.table s.budget.fuel s.machine decision = true at henough
+    have hstep : (s.step (.control decision)).machine =
+        steppedBy s.built.program s.budget.fuel s.built.table s.machine decision := hmachine
+    change ((s.step (.control decision)).play (Rows.tape tape)).machine = _
+    rw [ih (s.step (.control decision)) htail, step_built, step_budget, hstep,
+      replayFrom_cons _ _ _ _ _ _ hstuck henough]
+
+#obligation_proved ControlReplayWanted.play_controls_eq_replay := @play_controls_eq_replay
+
+#typed_state_obligations Effect4.Run.ControlReplayWanted ceiling 0 using aesop
+
+/-- **O-10.** The ordinary run is the ordinary run: the journal `[evaluate, flush]` leaves
+`Api.run`'s machine when both rows progressed. This is the two-decision instance of
+`play_controls_eq_replay`; fuel frontiers and refusals remain outside its premise. -/
 theorem runPure_eq_run (b : Api.Built) (id : String) (budget : Api.Budget)
     (h : (Run.runPure b id budget).phases = [.progressed, .progressed]) :
     (Run.runPure b id budget).machine =
       (Api.run b.program budget.fuel [] b.table budget.compileFuel).machine := by
-  have hphases : ((Run.open b id budget).step (.control Api.evaluate)).phases ++
-      [(Api.HostSession.advance
-        ((Run.open b id budget).step (.control Api.evaluate)).session budget.fuel
-        Api.flush).phase] = [Phase.progressed, Phase.progressed] := h
-  rw [step_phases_control, open_phases] at hphases
-  simp only [List.nil_append, List.cons_append, List.cons.injEq] at hphases
-  obtain ⟨h1, h2⟩ := hphases
-  obtain ⟨hstuck1, henough1, hmachine1⟩ :=
-    advance_progressed (Run.open b id budget).session budget.fuel Api.evaluate h1
-  obtain ⟨hstuck2, henough2, hmachine2⟩ :=
-    advance_progressed ((Run.open b id budget).step (.control Api.evaluate)).session budget.fuel
-      Api.flush h2.1
-  have hstuck1' : (Api.load b.program budget.compileFuel).stuck = none := hstuck1
-  have henough1' : enoughFor b.program b.table budget.fuel
-      (Api.load b.program budget.compileFuel) Api.evaluate = true := henough1
-  have hm1 : ((Run.open b id budget).step (.control Api.evaluate)).session.machine =
-      steppedBy b.program budget.fuel b.table (Api.load b.program budget.compileFuel)
-        Api.evaluate := hmachine1
-  have hstuck2' : (steppedBy b.program budget.fuel b.table
-      (Api.load b.program budget.compileFuel) Api.evaluate).stuck = none := by
-    rw [← hm1]
-    exact hstuck2
-  have henough2' : enoughFor b.program b.table budget.fuel (steppedBy b.program budget.fuel
-      b.table (Api.load b.program budget.compileFuel) Api.evaluate) Api.flush = true := by
-    rw [← hm1]
-    exact henough2
-  have hlhs : (Run.runPure b id budget).machine = steppedBy b.program budget.fuel b.table
-      (steppedBy b.program budget.fuel b.table (Api.load b.program budget.compileFuel)
-        Api.evaluate) Api.flush := by
-    rw [← hm1]
-    exact hmachine2
-  rw [hlhs, Api.run, replay_machine,
-    replayFrom_cons b.program b.table budget.fuel Api.evaluate [Api.flush]
-      (Api.load b.program budget.compileFuel) hstuck1' henough1',
-    replayFrom_cons b.program b.table budget.fuel Api.flush []
-      (steppedBy b.program budget.fuel b.table (Api.load b.program budget.compileFuel)
-        Api.evaluate) hstuck2' henough2',
-    machineOf_nil]
+  have replay := play_controls_eq_replay (Run.open b id budget) [Api.evaluate, Api.flush] h
+  rw [Api.run, replay_machine]
+  exact replay
+
+/-- The clock-driven Run and the raw test-clock replay leave the same frame machine when
+all control rows progressed. The supplied row table and both budgets are unchanged; clock
+advances may run scheduled fibers and may leave further external requests outstanding. -/
+theorem runClock_eq_run (b : Api.Built) (adjusts : List ClockMillis) (id : String)
+    (budget : Api.Budget)
+    (h : (Run.runClock b adjusts id budget).phases =
+      List.replicate (Api.TestClock.tape adjusts).length Phase.progressed) :
+    (Run.runClock b adjusts id budget).machine =
+      (Api.TestClock.run b.program budget.fuel adjusts [] b.table budget.compileFuel).machine := by
+  have replay := play_controls_eq_replay (Run.open b id budget) (Api.TestClock.tape adjusts) h
+  rw [Api.TestClock.run, replay_machine]
+  exact replay
 
 end Effect4.Run
 

@@ -144,6 +144,87 @@ def byKey : Run :=
 #guard (Run.runClock twice [5]).journal = Rows.tape [Api.evaluate, .advance 5, Api.flush]
 #guard (Run.runClock twice []).journal = (Run.runPure twice).journal
 
+/-! ## Journaled controls agree with machine replay
+
+Fixtures for `ControlReplayWanted.play_controls_eq_replay`: the convenience APIs keep the
+same frame machine, including the nonempty table, independent budgets and pre-existing phases.
+-/
+
+example (s : Run) :
+    (s.play (Rows.tape [])).machine =
+      Run.machineOf (Run.replayFrom s.built.program s.built.table s.budget.fuel [] s.machine) := by
+  apply Run.play_controls_eq_replay
+  simp only [Rows.tape, List.map_nil, Run.play_nil, List.length_nil, List.replicate_zero,
+    List.append_nil]
+
+-- Ordinary and clock-driven runs on a nonempty table agree even while waiting for a host.
+example : (Run.runPure twice).machine =
+    (Api.run twice.program 1000 [] twice.table 1000).machine := by
+  exact Run.runPure_eq_run twice "run" {} (by decide +kernel)
+
+example : (Run.runClock twice [5]).machine =
+    (Api.TestClock.run twice.program 1000 [5] [] twice.table 1000).machine := by
+  exact Run.runClock_eq_run twice [5] "run" {} (by decide +kernel)
+
+-- The child sleeps and returns a value; the parent awaits it. Compile and command budgets
+-- deliberately differ, so neither connector may silently identify the two budgets.
+def timedProgram : Api.Program :=
+  .bind (.withFiber (.fork
+    (.bind (.perform .sleep (.lit (.nat 5))) (.succeed (.lit (.nat 17)))) opts))
+    (.awaitFiber (.var 0) .awaitValue)
+
+def timedAdmitted : Api.AdmittedProgram timedProgram [] where
+  ty := ⟨.exitOf .nat .never, .never, .empty⟩
+  typed := by cbv
+  lawful := by decide
+  runnable := by decide
+  intFreeTable := by decide
+  internalFreeTable := by decide
+  intFreeProgram := by decide
+  intFreeType := by decide
+  columnsTable := by decide +kernel
+  columnsType := by decide +kernel
+
+def timed : Api.Built :=
+  { table := [], program := timedProgram, admitted := timedAdmitted }
+
+def clockBudget : Api.Budget := { compileFuel := 40, fuel := 1000 }
+
+#guard (Run.runClock timed [4] (budget := clockBudget)).exit = none
+#guard (Run.runClock timed [4, 1] (budget := clockBudget)).exit =
+  some (.success (.exitOk (.nat 17)))
+#guard (Run.runClock timed [4, 1] (budget := clockBudget)).phases =
+  [.progressed, .progressed, .progressed, .progressed]
+
+example : (Run.runClock timed [4, 1] (budget := clockBudget)).machine =
+    (Api.TestClock.run timed.program clockBudget.fuel [4, 1] [] [] clockBudget.compileFuel).machine := by
+  exact Run.runClock_eq_run timed [4, 1] "run" clockBudget (by decide +kernel)
+
+-- Only the added phases must progress: an earlier refusal does not poison later controls.
+def refusedHistory : Run :=
+  (Run.open twice "prior-refusal").control (.answerAsync Api.root 0 (.ofExit (.success (.nat 2))))
+
+#guard refusedHistory.phases = [.refused .directAnswer]
+#guard (refusedHistory.play (Rows.tape [Api.evaluate, Api.flush])).phases =
+  [.refused .directAnswer, .progressed, .progressed]
+
+example : (refusedHistory.play (Rows.tape [Api.evaluate, Api.flush])).machine =
+    Run.machineOf (Run.replayFrom refusedHistory.built.program refusedHistory.built.table
+      refusedHistory.budget.fuel [Api.evaluate, Api.flush] refusedHistory.machine) := by
+  exact Run.play_controls_eq_replay refusedHistory [Api.evaluate, Api.flush] (by decide +kernel)
+
+-- Dropping the premise is false: the journal keeps playing after a fuel frontier, whereas
+-- raw replay stops there. The later middleware control changes a machine field.
+def noFuel : Run := Run.open twice "fuel-frontier" { compileFuel := 40, fuel := 0 }
+
+#guard (noFuel.play (Rows.tape [Api.evaluate, .installMiddleware])).phases =
+  [.frontier, .progressed]
+#guard (noFuel.play (Rows.tape [Api.evaluate, .installMiddleware])).machine.middlewareInstalled
+#guard !(Run.machineOf (Run.replayFrom noFuel.built.program noFuel.built.table
+  noFuel.budget.fuel [Api.evaluate, .installMiddleware] noFuel.machine)).middlewareInstalled
+#guard (noFuel.play (Rows.tape [Api.evaluate, .installMiddleware])).phases ≠
+  noFuel.phases ++ List.replicate 2 Api.HostSession.Phase.progressed
+
 /-! ## One completion per call
 
 Once an answer has been applied the machine holds no call at that key, so a second answer
@@ -171,6 +252,12 @@ has no rows at all. -/
 #guard_msgs in #print axioms Effect4.Run.answer_once
 /-- info: 'Effect4.Run.runPure_eq_run' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms Effect4.Run.runPure_eq_run
+/-- info: 'Effect4.Run.play_phases_extend' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.play_phases_extend
+/-- info: 'Effect4.Run.play_controls_eq_replay' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.play_controls_eq_replay
+/-- info: 'Effect4.Run.runClock_eq_run' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.runClock_eq_run
 /-- info: 'Effect4.Run.admitProgram_certificate' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms Effect4.Run.admitProgram_certificate
 
