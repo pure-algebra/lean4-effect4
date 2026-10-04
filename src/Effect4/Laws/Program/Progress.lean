@@ -84,16 +84,80 @@ validity, the memo entries and the timers (`Stores.WF`'s other clauses). -/
 theorem StoreFits.step {w w' : Typed.World} {o : SyncOp} {st' : Stores} {a : Val}
     (store : StoreFits w) (step : syncOpStep o w.state = some (st', a)) (hstate : w'.state = st')
     (cells : Typed.CellsTyped w') : StoreFits w' := by
-  subst hstate
-  refine ⟨cells, ⟨fun v hv => ?_, syncOpStep_closingValid o w.state _ a store.wf step,
-    syncOpStep_memoValid o w.state _ a store.wf.2.2.1 step,
-    syncOpStep_timers_wf o w.state _ a store.wf.2.2.2 step⟩⟩
-  obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hv
-  obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp
-    ((cells.heap ⟨i⟩).mpr (List.getElem?_eq_some_iff.mp hi).1)
-  exact cells.fits_validIn (cells.values i v hi ty hty)
+  refine ⟨cells, ?_⟩
+  rw [hstate]
+  exact Typed.CellsTyped.wf_step store.wf step hstate cells
 
 end Denote
+
+/-! ## The cutover's connector (the state plan's T2)
+
+The store runs binder terms since T2 (decisions row 43). A read-modify-write row of `NativeOp` still
+names its function, and `syncOpOf` hands the store the name's lowering (`FnName.updateTerm` and its
+three siblings, `Machine/Stores.lean`). The connector says that the lowered row runs, on every
+number, the heap kernel the name ran before the cutover (`NativeOp.fnKernel`, the table that
+`git:c58bcc43:src/Effect4/Laws/Machine/RefKernel.lean` held). On a value that is not a number the
+two differ: the name answered it unchanged and the term stops (the state plan's T2, ruling D1;
+the red controls of `Test/Program/ProgressContract.lean`). Both retire with `FnName` at T3. -/
+
+/-- The read-modify-write rows' heap kernels at a function name, as the store ran them before it
+took terms. -/
+def NativeOp.fnKernel : NativeOp → Option RefKernel
+  | .refUpdate f => some fun a => some (Val.unit, some (f.total a))
+  | .refGetAndUpdate f => some fun a => some (a, some (f.total a))
+  | .refUpdateAndGet f => some fun a => some (f.total a, some (f.total a))
+  | .refUpdateSome f => some fun a => some (Val.unit, f.partialUpdate a)
+  | .refGetAndUpdateSome f => some fun a => some (a, f.partialUpdate a)
+  | .refUpdateSomeAndGet f => some fun a => some ((f.partialUpdate a).getD a, f.partialUpdate a)
+  | .refModify f => some fun a => some ((f.modify a).1, some (f.modify a).2)
+  | .refModifySome f =>
+    some fun a => some ((f.modifySome a).1, some ((f.modifySome a).2.getD a))
+  | _ => none
+
+/-- **The cutover's connector**: a read-modify-write row, lowered through its name's binder term,
+runs on every number the heap kernel the name ran. -/
+@[semantics "translation-simulation" (requirement := R4)]
+theorem kernel_term_agrees {op : NativeOp} {k : RefKernel} (hk : op.fnKernel = some k)
+    (cell : RefKey) :
+    ∃ o k', op.syncOpOf (Val.cell cell) = some o ∧ o.refKernel = some (cell, k') ∧
+      ∀ n, k' (.nat n) = k (.nat n) := by
+  cases op <;> cases hk
+  case refUpdate f | refGetAndUpdate f | refUpdateAndGet f =>
+    refine ⟨_, _, rfl, rfl, fun n => ?_⟩
+    show ((Program.evalTerm ([] ++ [Val.nat n]) f.updateTerm).bind some).map _ = _
+    rw [List.nil_append, FnName.updateTerm_agrees]
+    rfl
+  case refUpdateSome f | refGetAndUpdateSome f | refUpdateSomeAndGet f =>
+    refine ⟨_, _, rfl, rfl, fun n => ?_⟩
+    show ((Program.evalTerm ([] ++ [Val.nat n]) f.updateSomeTerm).bind
+      (Store.Image.ofOption Store.Image.ident)).map _ = _
+    rw [List.nil_append, FnName.updateSomeTerm_agrees, Option.bind_some,
+      show Store.Image.ofOption Store.Image.ident
+          (Store.Image.toOption Store.Image.ident (f.partialUpdate (Val.nat n))) =
+        some (f.partialUpdate (Val.nat n)) from
+        (Store.Image.option Store.Image.ident).ofVal_toVal _]
+    rfl
+  case refModify f =>
+    refine ⟨_, _, rfl, rfl, fun n => ?_⟩
+    show ((Program.evalTerm ([] ++ [Val.nat n]) f.modifyTerm).bind
+      (Store.Image.ofTuple2 Store.Image.ident Store.Image.ident)).map _ = _
+    rw [List.nil_append, FnName.modifyTerm_agrees, Option.bind_some,
+      show Store.Image.ofTuple2 Store.Image.ident Store.Image.ident
+          (Program.Val.tuple [(f.modify (Val.nat n)).1, (f.modify (Val.nat n)).2]) =
+        some ((f.modify (Val.nat n)).1, (f.modify (Val.nat n)).2) from
+        (Store.Image.tuple2 Store.Image.ident Store.Image.ident).ofVal_toVal _]
+    rfl
+  case refModifySome f =>
+    refine ⟨_, _, rfl, rfl, fun n => ?_⟩
+    show ((Program.evalTerm ([] ++ [Val.nat n]) f.modifySomeTerm).bind
+      (Store.Image.ofTuple2 Store.Image.ident (Store.Image.option Store.Image.ident))).map _ = _
+    rw [List.nil_append, FnName.modifySomeTerm_agrees, Option.bind_some,
+      show Store.Image.ofTuple2 Store.Image.ident (Store.Image.option Store.Image.ident)
+          (Program.Val.tuple [(f.modifySome (Val.nat n)).1,
+            Store.Image.toOption Store.Image.ident (f.modifySome (Val.nat n)).2]) =
+        some ((f.modifySome (Val.nat n)).1, (f.modifySome (Val.nat n)).2) from
+        (Store.Image.tuple2 Store.Image.ident (Store.Image.option Store.Image.ident)).ofVal_toVal _]
+    rfl
 
 /-! ## The native rows' store steps, one row each -/
 

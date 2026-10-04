@@ -91,7 +91,7 @@ fn Effect4.Machine.spawn 7 sh_spawn_generic run_fiber_make
 fn List.mapTR.loop._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1.spec_12 3 sh_drop_observers
 
 # ---- E3: the ref heap ---------------------------------------------------------------------
-fn Effect4.Machine.refStep 2 sh_ref_step fn_name_total fn_name_partial_update fn_name_modify fn_name_modify_some
+fn Effect4.Machine.refStep 2 sh_ref_step program_eval_term
 
 # ---- E4: the deferred cells ---------------------------------------------------------------
 fn Effect4.Machine.DeferredStore.make 1 sh_deferred_make

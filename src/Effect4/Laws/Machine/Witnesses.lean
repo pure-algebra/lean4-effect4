@@ -1090,21 +1090,25 @@ def oneRef : Stores := { Stores.empty with refs := [Val.nat 1] }
 def w7Set : M :=
   replay oneRef (ProgName.syncOp (SyncOp.refSet ⟨0⟩ (Val.nat 5))) [RunDecision.evaluate ⟨0⟩]
 
+-- the read-modify-write rows run the names' lowerings (`FnName.updateTerm` and kin)
 def w7Update : M :=
-  replay oneRef (ProgName.syncOp (SyncOp.refUpdate ⟨0⟩ FnName.incr)) [RunDecision.evaluate ⟨0⟩]
+  replay oneRef (ProgName.syncOp (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []))
+    [RunDecision.evaluate ⟨0⟩]
 
 def w7ModifySome : M :=
-  replay oneRef (ProgName.syncOp (SyncOp.refModifySome ⟨0⟩ FnName.noChange))
+  replay oneRef (ProgName.syncOp (SyncOp.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm []))
     [RunDecision.evaluate ⟨0⟩]
 
 def w7UpdateSomeAndGet : M :=
   replay { Stores.empty with refs := [Val.nat 3] }
-    (ProgName.syncOp (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive))
+    (ProgName.syncOp
+      (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []))
     [RunDecision.evaluate ⟨0⟩]
 
 def w7GetAndUpdateSome : M :=
   replay { Stores.empty with refs := [Val.nat 3] }
-    (ProgName.syncOp (SyncOp.refGetAndUpdateSome ⟨0⟩ FnName.zeroWhenPositive))
+    (ProgName.syncOp
+      (SyncOp.refGetAndUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []))
     [RunDecision.evaluate ⟨0⟩]
 
 /-- `ref.set-void-returns-cell` / `ref.cell-set-returns-self`: the effect succeeds with the

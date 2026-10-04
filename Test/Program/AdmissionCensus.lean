@@ -110,9 +110,9 @@ def storeAnswer : SyncOp → Val
   | .deferredMake => Val.promise ⟨0⟩
   | .scopeMake _ | .scopeFork _ _ | .memoBuild _ _ => Val.scopeHandle 1
   | .memoFork _ => Val.memoMap ⟨0⟩
-  | .refGet _ | .refGetAndSet _ _ | .refSetAndGet _ _ | .refGetAndUpdate _ _
-  | .refUpdateAndGet _ _ | .refGetAndUpdateSome _ _ | .refUpdateSomeAndGet _ _
-  | .refModify _ _ | .refModifySome _ _ | .clockNow => Val.nat 0
+  | .refGet _ | .refGetAndSet _ _ | .refSetAndGet _ _ | .refGetAndUpdate _ _ _
+  | .refUpdateAndGet _ _ _ | .refGetAndUpdateSome _ _ _ | .refUpdateSomeAndGet _ _ _
+  | .refModify _ _ _ | .refModifySome _ _ _ | .clockNow => Val.nat 0
   | .deferredIsDone _ | .deferredPoll _ | .deferredCompleteWith _ _ | .deferredInterruptWith _ _
   | .scopeIsClosed _ => Val.bool true
   | _ => Val.unit

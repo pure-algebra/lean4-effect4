@@ -1,6 +1,7 @@
 import Effect4.Machine.Stores
 import Effect4.Laws.Machine.Arena
 import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Machine.TermHandles
 
 /-!
 # Machine.RefKernel — the heap rows as one kernel
@@ -14,9 +15,17 @@ that row's kernel answers and writes.
 
 `refStep` stays the machine's definition: its census clauses (`refStep_make` and kin) keep their
 statements, and no function value enters the runtime closure. A kernel answers `none` where its
-row has no answer for the value it read. No row does today; once a row carries a term
-(decisions row 43), a term that does not evaluate is that `none`, and `refStepOf` carries it as
-the step's frontier.
+row has no answer for the value it read: a term row (decisions row 43) whose term does not
+evaluate at `env ++ [a]`, or answers outside the row's shape (`termKernel`). `refStepOf` carries
+that `none` as the step's frontier.
+
+What a kernel answers and writes carries only the frames of the value it read and of the row's
+own values (`SyncOp.refKernel_handles`): at a term row, the term's value carries only its
+environment's (`RawHandles.evalTerm_handles`, `Laws/Machine/TermHandles.lean`). So every
+property of values that their frames decide passes through every heap row
+(`RefKernel.Frames.keeps`): validity in the store (`SyncOp.refKernel_validIn`,
+`Laws/Machine/StoresLaws.lean`) and key containment (`SyncOp.refKernel_keys`,
+`Laws/Machine/Handles.lean`).
 -/
 
 set_option autoImplicit false
@@ -36,23 +45,38 @@ def refWriteBack (heap : RefHeap) (cell : RefKey) : Option Val → RefHeap
 def refStepOf (cell : RefKey) (k : RefKernel) (heap : RefHeap) : Option (Val × RefHeap) :=
   (refPeek heap cell).bind fun a => (k a).map fun r => (r.1, refWriteBack heap cell r.2)
 
+/-- A term row's kernel: the term's value at `env ++ [a]`, read in the row's shape by `decode`,
+then the row's answer and write-back by `arrange`. A term that does not evaluate, or whose value
+`decode` refuses, is the kernel's `none`. -/
+def termKernel {D : Type} (decode : Val → Option D) (arrange : Val → D → Val × Option Val)
+    (f : Program.Term) (env : List Val) : RefKernel :=
+  fun a => ((Program.evalTerm (env ++ [a]) f).bind decode).map (arrange a)
+
 /-- Each heap row's cell and kernel. `refMake` allocates, so it is not a kernel row, and no other
-operation touches the heap. -/
+operation touches the heap. A term row decodes as its `refStep` arm does: the value itself, the
+exact option image, or the exact pair image. -/
 def SyncOp.refKernel : SyncOp → Option (RefKey × RefKernel)
   | .refGet cell => some (cell, fun a => some (a, none))
   | .refSet cell value => some (cell, fun _ => some (Val.cell cell, some value))
   | .refGetAndSet cell value => some (cell, fun a => some (a, some value))
   | .refSetAndGet cell value => some (cell, fun _ => some (value, some value))
-  | .refUpdate cell f => some (cell, fun a => some (Val.unit, some (f.total a)))
-  | .refGetAndUpdate cell f => some (cell, fun a => some (a, some (f.total a)))
-  | .refUpdateAndGet cell f => some (cell, fun a => some (f.total a, some (f.total a)))
-  | .refUpdateSome cell pf => some (cell, fun a => some (Val.unit, pf.partialUpdate a))
-  | .refGetAndUpdateSome cell pf => some (cell, fun a => some (a, pf.partialUpdate a))
-  | .refUpdateSomeAndGet cell pf =>
-    some (cell, fun a => some ((pf.partialUpdate a).getD a, pf.partialUpdate a))
-  | .refModify cell f => some (cell, fun a => some ((f.modify a).1, some (f.modify a).2))
-  | .refModifySome cell pf =>
-    some (cell, fun a => some ((pf.modifySome a).1, some ((pf.modifySome a).2.getD a)))
+  | .refUpdate cell f env => some (cell, termKernel some (fun _ a' => (Val.unit, some a')) f env)
+  | .refGetAndUpdate cell f env => some (cell, termKernel some (fun a a' => (a, some a')) f env)
+  | .refUpdateAndGet cell f env => some (cell, termKernel some (fun _ a' => (a', some a')) f env)
+  | .refUpdateSome cell f env =>
+    some (cell, termKernel (Store.Image.ofOption Store.Image.ident) (fun _ o => (Val.unit, o)) f env)
+  | .refGetAndUpdateSome cell f env =>
+    some (cell, termKernel (Store.Image.ofOption Store.Image.ident) (fun a o => (a, o)) f env)
+  | .refUpdateSomeAndGet cell f env =>
+    some (cell,
+      termKernel (Store.Image.ofOption Store.Image.ident) (fun a o => (o.getD a, o)) f env)
+  | .refModify cell f env =>
+    some (cell, termKernel (Store.Image.ofTuple2 Store.Image.ident Store.Image.ident)
+      (fun _ r => (r.1, some r.2)) f env)
+  | .refModifySome cell f env =>
+    some (cell,
+      termKernel (Store.Image.ofTuple2 Store.Image.ident (Store.Image.option Store.Image.ident))
+        (fun a r => (r.1, some (r.2.getD a))) f env)
   | .refMake _ | .deferredMake | .deferredIsDone _ | .deferredPoll _ | .deferredCompleteWith _ _
   | .deferredInterruptWith _ _ | .deferredAwaitCleanup _ _ _ | .clockNow | .sleepCancel _ _
   | .scopeMake _ | .scopeAdd _ _ | .scopeRemove _ _ | .scopeIsClosed _ | .scopeFork _ _
@@ -62,22 +86,49 @@ def SyncOp.refKernel : SyncOp → Option (RefKey × RefKernel)
 
 /-- Each row's kernel, run by `refStepOf`, is its `refStep` arm: after the read, the two agree
 by unfolding (`refStep` maps over the read where `refStepOf` binds, since a kernel may refuse).
-`refUpdateSomeAndGet` reads the cell again after its write, and that read is the value written
-(`refPeek_poke_self`). -/
+A term row agrees once its term's value is decoded. `refUpdateSomeAndGet` reads the cell again
+after its write, and that read is the value written (`refPeek_poke_self`). -/
 theorem refStep_eq_refStepOf {o : SyncOp} {cell : RefKey} {k : RefKernel}
     (hk : o.refKernel = some (cell, k)) (heap : RefHeap) :
     refStep o heap = refStepOf cell k heap := by
   cases o with
-  | refUpdateSomeAndGet _ pf =>
+  | refUpdate _ f env | refGetAndUpdate _ f env | refUpdateAndGet _ f env =>
     cases hk
-    simp only [refStep, refStepOf]
-    refine Option.bind_congr fun a hpeek => ?_
-    cases pf.partialUpdate a with
-    | some a' =>
-      dsimp only
-      rw [refPeek_poke_self heap cell a' a hpeek]
-      rfl
+    refine Option.bind_congr fun a _ => ?_
+    show _ = (((Program.evalTerm (env ++ [a]) f).bind some).map _).map _
+    cases Program.evalTerm (env ++ [a]) f <;> rfl
+  | refUpdateSome _ f env | refGetAndUpdateSome _ f env =>
+    cases hk
+    refine Option.bind_congr fun a _ => ?_
+    show _ = (((Program.evalTerm (env ++ [a]) f).bind _).map _).map _
+    cases (Program.evalTerm (env ++ [a]) f).bind (Store.Image.ofOption Store.Image.ident) with
     | none => rfl
+    | some next => cases next <;> rfl
+  | refUpdateSomeAndGet _ f env =>
+    cases hk
+    refine Option.bind_congr fun a hpeek => ?_
+    show _ = (((Program.evalTerm (env ++ [a]) f).bind _).map _).map _
+    cases (Program.evalTerm (env ++ [a]) f).bind (Store.Image.ofOption Store.Image.ident) with
+    | none => rfl
+    | some next =>
+      cases next with
+      | some a' =>
+        show (refPeek (refPoke heap cell a') cell).map _ = _
+        rw [refPeek_poke_self heap cell a' a hpeek]
+        rfl
+      | none => rfl
+  | refModify _ f env =>
+    cases hk
+    refine Option.bind_congr fun a _ => ?_
+    show _ = (((Program.evalTerm (env ++ [a]) f).bind _).map _).map _
+    cases (Program.evalTerm (env ++ [a]) f).bind
+      (Store.Image.ofTuple2 Store.Image.ident Store.Image.ident) <;> rfl
+  | refModifySome _ f env =>
+    cases hk
+    refine Option.bind_congr fun a _ => ?_
+    show _ = (((Program.evalTerm (env ++ [a]) f).bind _).map _).map _
+    cases (Program.evalTerm (env ++ [a]) f).bind
+      (Store.Image.ofTuple2 Store.Image.ident (Store.Image.option Store.Image.ident)) <;> rfl
   | _ =>
     cases hk <;> simp only [refStep, refStepOf, Option.map_eq_bind] <;>
       exact Option.bind_congr fun _ _ => rfl
@@ -190,6 +241,153 @@ theorem refStepOf_keeps {P Q : Val → Prop} {cell : RefKey} {k : RefKernel}
   rcases mem_refWriteBack hx with hmem | ⟨next, hw, rfl⟩
   · exact hheap x hmem
   · exact hnext x hw
+
+/-! ## Frames: what a heap row answers and writes
+
+A heap row answers and writes the value it read, `unit`, its own values (`SyncOp.refArgs`) or,
+at a term row, parts of its term's value, which carries only its environment's frames
+(`RawHandles.evalTerm_handles`). So its answer and its write carry only frames of the value it
+read and of its own values (`SyncOp.refKernel_handles`). A property of values that frames decide
+then passes through every heap row (`RefKernel.Frames.keeps`), with no case on the row. -/
+
+/-- The values a heap row carries besides the one it reads: the cell `refSet` answers and the
+value it writes, the value the other two `set` rows write, a term row's environment. -/
+def SyncOp.refArgs : SyncOp → List Val
+  | .refSet cell value => [Val.cell cell, value]
+  | .refGetAndSet _ value | .refSetAndGet _ value => [value]
+  | .refUpdate _ _ env | .refGetAndUpdate _ _ env | .refUpdateAndGet _ _ env
+  | .refUpdateSome _ _ env | .refGetAndUpdateSome _ _ env | .refUpdateSomeAndGet _ _ env
+  | .refModify _ _ env | .refModifySome _ _ env => env
+  | _ => []
+
+/-- `k` answers and writes only frames of the value it read and of `L`. -/
+def RefKernel.Frames (L : List Val) (k : RefKernel) : Prop :=
+  ∀ a r, k a = some r →
+    Store.Val.handles r.1 ⊆ (L ++ [a]).flatMap Store.Val.handles ∧
+      ∀ next, r.2 = some next → Store.Val.handles next ⊆ (L ++ [a]).flatMap Store.Val.handles
+
+/-- A property of values that their frames decide: a value has it when every frame it carries is
+a frame of values that have it. Validity in a store and key containment are two
+(`Val.validIn_framesClosed`, `Val.keys_framesClosed`). -/
+def FramesClosed (P : Val → Prop) : Prop :=
+  ∀ v (L : List Val), Store.Val.handles v ⊆ L.flatMap Store.Val.handles → (∀ x ∈ L, P x) → P v
+
+/-- **A frames-closed property passes through a kernel** that answers and writes only frames of
+the value it read and of `L`, when every value of `L` has it. -/
+theorem RefKernel.Frames.keeps {P : Val → Prop} {L : List Val} {k : RefKernel}
+    (closed : FramesClosed P) (hargs : ∀ x ∈ L, P x) (h : k.Frames L) : k.Keeps P P := by
+  intro a r ha hr
+  have hall : ∀ x ∈ L ++ [a], P x := fun x hx =>
+    (List.mem_append.mp hx).elim (hargs x) fun hx => (List.mem_singleton.mp hx) ▸ ha
+  obtain ⟨hanswer, hwrite⟩ := h a r hr
+  exact ⟨closed _ _ hanswer hall, fun next hn => closed _ _ (hwrite next hn) hall⟩
+
+/-- A member's frames are frames of the list. -/
+theorem mem_flatMap_handles {x : Val} {L : List Val} (h : x ∈ L) :
+    Store.Val.handles x ⊆ L.flatMap Store.Val.handles :=
+  fun _ hx => List.mem_flatMap.mpr ⟨x, h, hx⟩
+
+/-- What the exact option image reads off a value carries only that value's frames. -/
+theorem ofOption_ident_handles {v : Val} {o : Option Val}
+    (h : Store.Image.ofOption Store.Image.ident v = some o) {next : Val} (hn : o = some next) :
+    Store.Val.handles next ⊆ Store.Val.handles v := by
+  subst hn
+  rw [(Store.Image.option Store.Image.ident).ofVal_exact h]
+  exact List.Subset.refl _
+
+/-- What the exact pair image reads off a value carries only that value's frames. -/
+theorem ofTuple2_ident_handles {β : Type} {J : Store.Image β} {v x : Val} {y : β}
+    (h : Store.Image.ofTuple2 Store.Image.ident J v = some (x, y)) :
+    Store.Val.handles x ⊆ Store.Val.handles v ∧
+      Store.Val.handles (J.toVal y) ⊆ Store.Val.handles v := by
+  rw [(Store.Image.tuple2 Store.Image.ident J).ofVal_exact h]
+  exact ⟨fun _ hx => List.mem_append_left _ hx,
+    fun _ hx => List.mem_append_right _ (List.mem_append_left _ hx)⟩
+
+/-- **A term kernel answers and writes only frames of its environment and the value read**, when
+its arrangement builds from the value read and from what the decoder reads off the term's value,
+which carries only the environment's frames and the read value's (`RawHandles.evalTerm_handles`). -/
+theorem termKernel_frames {D : Type} {decode : Val → Option D}
+    {arrange : Val → D → Val × Option Val} {f : Program.Term} {env : List Val}
+    (shape : ∀ a v d, decode v = some d →
+      Store.Val.handles (arrange a d).1 ⊆ Store.Val.handles v ++ Store.Val.handles a ∧
+        ∀ next, (arrange a d).2 = some next →
+          Store.Val.handles next ⊆ Store.Val.handles v ++ Store.Val.handles a) :
+    (termKernel decode arrange f env).Frames env := by
+  intro a r hr
+  obtain ⟨d, hd, rfl⟩ := Option.map_eq_some_iff.mp hr
+  obtain ⟨v, hv, hdec⟩ := Option.bind_eq_some_iff.mp hd
+  have hframes : Store.Val.handles v ++ Store.Val.handles a ⊆
+      (env ++ [a]).flatMap Store.Val.handles :=
+    List.append_subset.mpr ⟨Program.RawHandles.evalTerm_handles f (env ++ [a]) v hv,
+      mem_flatMap_handles (List.mem_append_right env (List.mem_singleton_self a))⟩
+  obtain ⟨hanswer, hwrite⟩ := shape a v d hdec
+  exact ⟨List.Subset.trans hanswer hframes,
+    fun next hn => List.Subset.trans (hwrite next hn) hframes⟩
+
+/-- **Every heap row answers and writes only frames of the value it read and of its own values.**
+The four rows without a term by their kernels; a term row by `termKernel_frames` and its
+decoder's exactness. -/
+theorem SyncOp.refKernel_handles {o : SyncOp} {cell : RefKey} {k : RefKernel}
+    (hk : o.refKernel = some (cell, k)) : k.Frames o.refArgs := by
+  have read : ∀ (L : List Val) (a : Val), Store.Val.handles a ⊆ (L ++ [a]).flatMap Store.Val.handles :=
+    fun L a => mem_flatMap_handles (List.mem_append_right L (List.mem_singleton_self a))
+  have arg : ∀ (L : List Val) (a x : Val), x ∈ L →
+      Store.Val.handles x ⊆ (L ++ [a]).flatMap Store.Val.handles :=
+    fun L a x hx => mem_flatMap_handles (List.mem_append_left [a] hx)
+  have left : ∀ v a : Val, Store.Val.handles v ⊆ Store.Val.handles v ++ Store.Val.handles a :=
+    fun _ _ _ hx => List.mem_append_left _ hx
+  have right : ∀ v a : Val, Store.Val.handles a ⊆ Store.Val.handles v ++ Store.Val.handles a :=
+    fun _ _ _ hx => List.mem_append_right _ hx
+  cases o <;> cases hk
+  case refGet => exact fun a r hr => by cases hr; exact ⟨read [] a, nofun⟩
+  case refSet =>
+    exact fun a r hr => by
+      cases hr
+      exact ⟨arg _ a _ (List.mem_cons_self ..), fun _ hn => by
+        cases hn; exact arg _ a _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))⟩
+  case refGetAndSet =>
+    exact fun a r hr => by
+      cases hr
+      exact ⟨read _ a, fun _ hn => by cases hn; exact arg _ a _ (List.mem_cons_self ..)⟩
+  case refSetAndGet =>
+    exact fun a r hr => by
+      cases hr
+      exact ⟨arg _ a _ (List.mem_cons_self ..), fun _ hn => by
+        cases hn; exact arg _ a _ (List.mem_cons_self ..)⟩
+  case refUpdate =>
+    exact termKernel_frames fun a v d hd => by
+      cases hd; exact ⟨List.nil_subset _, fun _ hn => by cases hn; exact left _ _⟩
+  case refGetAndUpdate =>
+    exact termKernel_frames fun a v d hd => by
+      cases hd; exact ⟨(right _ _), fun _ hn => by cases hn; exact left _ _⟩
+  case refUpdateAndGet =>
+    exact termKernel_frames fun a v d hd => by
+      cases hd; exact ⟨(left _ _), fun _ hn => by cases hn; exact left _ _⟩
+  case refUpdateSome =>
+    exact termKernel_frames fun a v d hd =>
+      ⟨List.nil_subset _, fun _ hn => List.Subset.trans (ofOption_ident_handles hd hn) (left _ _)⟩
+  case refGetAndUpdateSome =>
+    exact termKernel_frames fun a v d hd =>
+      ⟨(right _ _), fun _ hn => List.Subset.trans (ofOption_ident_handles hd hn) (left _ _)⟩
+  case refUpdateSomeAndGet =>
+    refine termKernel_frames fun a v d hd =>
+      ⟨?_, fun _ hn => List.Subset.trans (ofOption_ident_handles hd hn) (left _ _)⟩
+    cases d with
+    | some next => exact List.Subset.trans (ofOption_ident_handles hd rfl) (left _ _)
+    | none => exact right _ _
+  case refModify =>
+    exact termKernel_frames fun a v d hd =>
+      ⟨List.Subset.trans (ofTuple2_ident_handles hd).1 (left _ _), fun _ hn => by
+        cases hn; exact List.Subset.trans (ofTuple2_ident_handles hd).2 (left _ _)⟩
+  case refModifySome =>
+    refine termKernel_frames fun a v d hd =>
+      ⟨List.Subset.trans (ofTuple2_ident_handles hd).1 (left _ _), fun _ hn => ?_⟩
+    cases hn
+    obtain ⟨x, o⟩ := d
+    cases o with
+    | some next => exact List.Subset.trans (ofTuple2_ident_handles hd).2 (left _ _)
+    | none => exact right _ _
 
 /-- Writing one cell leaves every other lookup exactly unchanged, including absent keys. -/
 theorem refWriteBack_peek_other (heap : RefHeap) (cell : RefKey) (next : Option Val)

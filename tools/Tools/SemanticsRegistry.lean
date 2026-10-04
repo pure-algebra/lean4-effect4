@@ -205,6 +205,12 @@ def registry : Registry where
       literature := [
         { work := "ATTAPL", locator := "ch. 3, pp. 87–136", relation := "analogy" }
       ] },
+    { id := "term-maps-mono", concept := "store-typing", role := .monotonicity
+      title := "A binder term's map between member types is monotone under host world order"
+      pointer := .witness `Effect4.Program.Typed.TermMaps.mono
+      literature := [
+        { work := "Ahmed2004", locator := "audit P1", relation := "adaptedResult" }
+      ] },
     { id := "store-safety", concept := "store-typing", role := .progress
       title := "Store safety through inductive configuration typing"
       pointer := .absent "Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139)"
@@ -721,7 +727,7 @@ def registry : Registry where
       top := [`Effect4.Program.Typed.order_refl, `Effect4.Program.Typed.order_trans,
         `Effect4.Program.Typed.refMake_extension, `Effect4.Program.Typed.deferredMake_extension,
         `Effect4.Program.Typed.memoBuild_extension]
-      openParts := ["the store runs binder terms, FnName retires (decisions row 43; state plan T2–T3)",
+      openParts := ["FnName retires: the store runs binder terms since T2, and a NativeOp row hands it its name's lowering, which runs the name's kernel on every number (kernel_term_agrees); the rows carry terms at T3 (decisions row 43; state plan T3)",
         "rows as templates: Ref and Deferred rows over parameters, Deferred.make carrying its type arguments, modify answering B while storing A; until then the native spellings read as cells at nat (decisions row 42, row 96 D2; state plan T3)",
         "the faces of Ref<A> and Deferred<A, E>: printer, readers, TypeScript profile and OCaml, binder terms printed (decisions rows 42–43, step 5; state plan T5)"] },
     { id := "R5", title := "Services: the service table, layers and provision"

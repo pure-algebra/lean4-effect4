@@ -7,6 +7,8 @@ public import Effect4.Machine.ContextMap
 public import Effect4.Machine.Wake
 public import Effect4.Machine.Timer
 public import Effect4.Machine.Alphabets
+public import Effect4.Machine.Term
+public import Effect4.Store.Carrier.Image.Containers
 
 /-!
 # Deep spike S2: the concrete stores and the `RunInterp` over them
@@ -19,8 +21,9 @@ Model reading: `docs/research/2026-09-03-deep-state-models.md` §2 and §3. Repo
 
 This file supplies the `St` that `Deep.Fibers` is parametric in, and the `RunInterp` over it,
 at concrete first-order alphabets. Nothing here is a closure: every function-valued argument of
-rc.112 is a *name* plus a total interpretation, as `PrimInterp` already is
-(`src/Effect4/Machine/Frames.lean:188-215`, DB-02).
+rc.112 is first-order data (DB-02). A read-modify-write row carries a binder term and its
+environment, and `refStep` evaluates the term at `env ++ [current]` inside the one store step
+(decisions row 43), as `iterate` evaluates its test (`src/Effect4/Program/Compile.lean`).
 
 The three stores:
 
@@ -57,11 +60,14 @@ open Effect4
 -- `DeferredKey`, a cell of the Deferred store, lives in `Machine/Wake.lean` (the scheduler
 -- surface, 2026-09-08), below the fiber machine, so a task can name a Deferred's waiter list.
 
-/-! ## The function-name alphabet (retires at L4 of the language push: rows carry binder terms) -/
+/-! ## The function-name alphabet (retires at T3 of the state plan: `NativeOp`'s rows carry terms) -/
 
-/-- Names of the pure functions the read-modify-write `Ref` operations apply. rc.112 takes a
-JavaScript function; DB-02 forbids storing one, so the operation carries a name and the
-interpretation below is the `RefInterp` of the state note §3.1. -/
+/-- Names of the pure functions the read-modify-write `Ref` operations of `NativeOp` apply.
+rc.112 takes a JavaScript function; DB-02 forbids storing one. Since T2 of the state plan the
+store runs binder terms (decisions row 43), and a name reaches it as its lowering, one term per
+shape (`FnName.updateTerm` and its three siblings). The interpretations below are the
+lowerings' left side: on every number each term evaluates to the name's answer
+(`FnName.updateTerm_agrees`). -/
 inductive FnName
   /-- `a ↦ a + 1`. -/
   | incr
@@ -252,23 +258,24 @@ inductive SyncOp
   | refGetAndSet (cell : RefKey) (value : Val)
   /-- `Ref.setAndGet` (`Ref.ts:747`): the assignment expression's value. -/
   | refSetAndGet (cell : RefKey) (value : Val)
-  /-- `Ref.update` (`Ref.ts:1273-1276`): answers `undefined`. -/
-  | refUpdate (cell : RefKey) (f : FnName)
+  /-- `Ref.update` (`Ref.ts:1273-1276`): answers `undefined`. The binder term `f` runs at
+  `env ++ [current]` (decisions row 43), and so do the seven rows below. -/
+  | refUpdate (cell : RefKey) (f : Program.Term) (env : List Val)
   /-- `Ref.getAndUpdate` (`Ref.ts:496-501`). -/
-  | refGetAndUpdate (cell : RefKey) (f : FnName)
+  | refGetAndUpdate (cell : RefKey) (f : Program.Term) (env : List Val)
   /-- `Ref.updateAndGet` (`Ref.ts:1368`). -/
-  | refUpdateAndGet (cell : RefKey) (f : FnName)
-  /-- `Ref.updateSome` (`Ref.ts:1502-1508`). -/
-  | refUpdateSome (cell : RefKey) (pf : FnName)
+  | refUpdateAndGet (cell : RefKey) (f : Program.Term) (env : List Val)
+  /-- `Ref.updateSome` (`Ref.ts:1502-1508`): the term answers an option. -/
+  | refUpdateSome (cell : RefKey) (f : Program.Term) (env : List Val)
   /-- `Ref.getAndUpdateSome` (`Ref.ts:635-643`): the value read *before* the write. -/
-  | refGetAndUpdateSome (cell : RefKey) (pf : FnName)
+  | refGetAndUpdateSome (cell : RefKey) (f : Program.Term) (env : List Val)
   /-- `Ref.updateSomeAndGet` (`Ref.ts:1639-1646`): a fresh read *after* the write. -/
-  | refUpdateSomeAndGet (cell : RefKey) (pf : FnName)
-  /-- `Ref.modify` (`Ref.ts:896-901`). -/
-  | refModify (cell : RefKey) (f : FnName)
-  /-- `Ref.modifySome` (`Ref.ts:1159-1163`): on `None` it writes back the value `modify`
-  already read, never a re-read. -/
-  | refModifySome (cell : RefKey) (pf : FnName)
+  | refUpdateSomeAndGet (cell : RefKey) (f : Program.Term) (env : List Val)
+  /-- `Ref.modify` (`Ref.ts:896-901`): the term answers the pair `[b, a']`. -/
+  | refModify (cell : RefKey) (f : Program.Term) (env : List Val)
+  /-- `Ref.modifySome` (`Ref.ts:1159-1163`): the term answers `[b, Option<a'>]`; on `None` it
+  writes back the value `modify` already read, never a re-read. -/
+  | refModifySome (cell : RefKey) (f : Program.Term) (env : List Val)
   /-- `Deferred.make` (`Deferred.ts:171`). -/
   | deferredMake
   /-- `Deferred.isDone` (`Deferred.ts:1382`). -/
@@ -873,9 +880,78 @@ def FnName.modifySome : FnName → Val → Val × Option Val
   | FnName.noChange, value => (value, none)
   | f, value => ((f.modify value).1, some (f.modify value).2)
 
-/-- One step of the Ref heap. `none` is a frontier: a key no allocation of this heap minted.
-Every arm is one `Effect.sync` thunk, so the read and the write of a read-modify-write happen
-with no intervening runtime step (`Ref.ts:400-404`). -/
+/-! ### The connector: a name lowered to a binder term, one term per shape
+
+A name means one function at each of rc.112's four shapes (`Ref.ts`, the eight bodies):
+`A → A` at the three update rows, `A → Option<A>` at the three `Some` rows, `A → [B, A]` at
+`modify` and `A → [B, Option<A>]` at `modifySome`. So a name lowers to one term per shape. Each
+term reads the cell's value at level 0 of the environment `[]`, and on every number it evaluates
+to the image of the name's answer (`FnName.updateTerm_agrees` and its three siblings, by `rfl`).
+On a value that is not a number the terms of the computing names stop, since every atom that
+reads a number refuses any other value: the agreement holds on numbers only (the state plan's
+T2, ruling D1). -/
+
+/-- The term of a name at `A → A`: `succ(a)` for `incr` and `takeAndBump`, `mul(a, 2)` for
+`double`, `a` for the other two. -/
+def FnName.updateTerm : FnName → Program.Term
+  | FnName.incr | FnName.takeAndBump => .app "succ" (.cons (.var 0) .nil)
+  | FnName.double => .app "mul" (.cons (.var 0) (.cons (.lit (.nat 2)) .nil))
+  | FnName.zeroWhenPositive | FnName.noChange => .var 0
+
+/-- The term of a name at `A → Option<A>`: `none()` for `noChange`,
+`ite(lt(0, a), some(0), none())` for `zeroWhenPositive`, `some` of the `A → A` term for the
+others. -/
+def FnName.updateSomeTerm : FnName → Program.Term
+  | FnName.noChange => .app "none" .nil
+  | FnName.zeroWhenPositive =>
+    .app "ite" (.cons (.app "lt" (.cons (.lit (.nat 0)) (.cons (.var 0) .nil)))
+      (.cons (.app "some" (.cons (.lit (.nat 0)) .nil)) (.cons (.app "none" .nil) .nil)))
+  | f => .app "some" (.cons f.updateTerm .nil)
+
+/-- The term of a name at `A → [B, A]`: the pair of the value read and the `A → A` term. -/
+def FnName.modifyTerm (f : FnName) : Program.Term :=
+  .app "pair" (.cons (.var 0) (.cons f.updateTerm .nil))
+
+/-- The term of a name at `A → [B, Option<A>]`: the value read, paired with `none()` for
+`noChange` and with `some` of the `A → A` term for the others. -/
+def FnName.modifySomeTerm : FnName → Program.Term
+  | FnName.noChange => .app "pair" (.cons (.var 0) (.cons (.app "none" .nil) .nil))
+  | f => .app "pair" (.cons (.var 0) (.cons (.app "some" (.cons f.updateTerm .nil)) .nil))
+
+/-- On every number the `A → A` term evaluates to the name's answer. -/
+theorem FnName.updateTerm_agrees (f : FnName) (n : Nat) :
+    Program.evalTerm [.nat n] f.updateTerm = some (f.total (.nat n)) := by
+  cases f <;> rfl
+
+/-- On every number the `A → Option<A>` term evaluates to the option image of the name's
+answer. -/
+theorem FnName.updateSomeTerm_agrees (f : FnName) (n : Nat) :
+    Program.evalTerm [.nat n] f.updateSomeTerm =
+      some (Store.Image.toOption Store.Image.ident (f.partialUpdate (.nat n))) := by
+  cases f
+  case zeroWhenPositive => cases n <;> rfl
+  all_goals rfl
+
+/-- On every number the `A → [B, A]` term evaluates to the pair of the name's answer. -/
+theorem FnName.modifyTerm_agrees (f : FnName) (n : Nat) :
+    Program.evalTerm [.nat n] f.modifyTerm =
+      some (Program.Val.tuple [(f.modify (.nat n)).1, (f.modify (.nat n)).2]) := by
+  cases f <;> rfl
+
+/-- On every number the `A → [B, Option<A>]` term evaluates to the pair of the name's answer,
+its second component through the option image. -/
+theorem FnName.modifySomeTerm_agrees (f : FnName) (n : Nat) :
+    Program.evalTerm [.nat n] f.modifySomeTerm =
+      some (Program.Val.tuple [(f.modifySome (.nat n)).1,
+        Store.Image.toOption Store.Image.ident (f.modifySome (.nat n)).2]) := by
+  cases f <;> rfl
+
+/-- One step of the Ref heap. `none` is a frontier: a key no allocation of this heap minted, or
+a term that does not evaluate at `env ++ [current]` or answers outside its row's shape. A `Some`
+row reads its term's answer with the carrier's exact option image (`Store.Image.option`), and
+the two `modify` rows read theirs with the exact pair image (`Store.Image.tuple2`), the frame
+the `pair` atom writes. Every arm is one `Effect.sync` thunk, so the read and the write of a
+read-modify-write happen with no intervening runtime step (`Ref.ts:400-404`). -/
 def refStep : SyncOp → RefHeap → Option (Val × RefHeap)
   | SyncOp.refMake initial, heap => some (Val.cell ⟨heap.length⟩, heap ++ [initial])
   | SyncOp.refGet cell, heap => (refPeek heap cell).map (fun a => (a, heap))
@@ -885,34 +961,49 @@ def refStep : SyncOp → RefHeap → Option (Val × RefHeap)
     (refPeek heap cell).map (fun a => (a, refPoke heap cell value))
   | SyncOp.refSetAndGet cell value, heap =>
     (refPeek heap cell).map (fun _ => (value, refPoke heap cell value))
-  | SyncOp.refUpdate cell f, heap =>
-    (refPeek heap cell).map (fun a => (Val.unit, refPoke heap cell (f.total a)))
-  | SyncOp.refGetAndUpdate cell f, heap =>
-    (refPeek heap cell).map (fun a => (a, refPoke heap cell (f.total a)))
-  | SyncOp.refUpdateAndGet cell f, heap =>
-    (refPeek heap cell).map (fun a => (f.total a, refPoke heap cell (f.total a)))
-  | SyncOp.refUpdateSome cell pf, heap =>
-    (refPeek heap cell).map (fun a =>
-      (Val.unit,
-        match pf.partialUpdate a with
-        | some a' => refPoke heap cell a'
-        | none => heap))
-  | SyncOp.refGetAndUpdateSome cell pf, heap =>
-    (refPeek heap cell).map (fun a =>
-      (a,
-        match pf.partialUpdate a with
-        | some a' => refPoke heap cell a'
-        | none => heap))
-  | SyncOp.refUpdateSomeAndGet cell pf, heap =>
-    (refPeek heap cell).bind (fun a =>
-      match pf.partialUpdate a with
-      | some a' => (refPeek (refPoke heap cell a') cell).map (fun fresh => (fresh, refPoke heap cell a'))
-      | none => some (a, heap))
-  | SyncOp.refModify cell f, heap =>
-    (refPeek heap cell).map (fun a => ((f.modify a).1, refPoke heap cell (f.modify a).2))
-  | SyncOp.refModifySome cell pf, heap =>
-    (refPeek heap cell).map (fun a =>
-      ((pf.modifySome a).1, refPoke heap cell ((pf.modifySome a).2.getD a)))
+  | SyncOp.refUpdate cell f env, heap =>
+    (refPeek heap cell).bind fun a =>
+      (Program.evalTerm (env ++ [a]) f).map fun a' => (Val.unit, refPoke heap cell a')
+  | SyncOp.refGetAndUpdate cell f env, heap =>
+    (refPeek heap cell).bind fun a =>
+      (Program.evalTerm (env ++ [a]) f).map fun a' => (a, refPoke heap cell a')
+  | SyncOp.refUpdateAndGet cell f env, heap =>
+    (refPeek heap cell).bind fun a =>
+      (Program.evalTerm (env ++ [a]) f).map fun a' => (a', refPoke heap cell a')
+  | SyncOp.refUpdateSome cell f env, heap =>
+    (refPeek heap cell).bind fun a =>
+      ((Program.evalTerm (env ++ [a]) f).bind (Store.Image.ofOption Store.Image.ident)).map
+        fun next =>
+          (Val.unit,
+            match next with
+            | some a' => refPoke heap cell a'
+            | none => heap)
+  | SyncOp.refGetAndUpdateSome cell f env, heap =>
+    (refPeek heap cell).bind fun a =>
+      ((Program.evalTerm (env ++ [a]) f).bind (Store.Image.ofOption Store.Image.ident)).map
+        fun next =>
+          (a,
+            match next with
+            | some a' => refPoke heap cell a'
+            | none => heap)
+  | SyncOp.refUpdateSomeAndGet cell f env, heap =>
+    (refPeek heap cell).bind fun a =>
+      ((Program.evalTerm (env ++ [a]) f).bind (Store.Image.ofOption Store.Image.ident)).bind
+        fun next =>
+          match next with
+          | some a' =>
+            (refPeek (refPoke heap cell a') cell).map (fun fresh => (fresh, refPoke heap cell a'))
+          | none => some (a, heap)
+  | SyncOp.refModify cell f env, heap =>
+    (refPeek heap cell).bind fun a =>
+      ((Program.evalTerm (env ++ [a]) f).bind
+          (Store.Image.ofTuple2 Store.Image.ident Store.Image.ident)).map
+        fun r => (r.1, refPoke heap cell r.2)
+  | SyncOp.refModifySome cell f env, heap =>
+    (refPeek heap cell).bind fun a =>
+      ((Program.evalTerm (env ++ [a]) f).bind
+          (Store.Image.ofTuple2 Store.Image.ident (Store.Image.option Store.Image.ident))).map
+        fun r => (r.1, refPoke heap cell (r.2.getD a))
   | _, _ => none
 
 /-! ### The ten `ref.*` census clauses, one theorem each -/
@@ -1007,65 +1098,82 @@ theorem refStep_setAndGet (heap : RefHeap) (cell : RefKey) (v a : Val)
     refStep (SyncOp.refSetAndGet cell v) heap = some (v, refPoke heap cell v) := by
   simp [refStep, h]
 
-/-- `ref.update`: the function is applied once, the result is written back, and the effect
-succeeds with `undefined`. census: ref.update -/
-theorem refStep_update (heap : RefHeap) (cell : RefKey) (f : FnName) (a : Val)
-    (h : refPeek heap cell = some a) :
-    refStep (SyncOp.refUpdate cell f) heap = some (Val.unit, refPoke heap cell (f.total a)) := by
-  simp [refStep, h]
+/-- `ref.update`: the term is applied once, its value is written back, and the effect succeeds
+with `undefined`. census: ref.update -/
+theorem refStep_update (heap : RefHeap) (cell : RefKey) (f : Program.Term) (env : List Val)
+    (a a' : Val) (h : refPeek heap cell = some a)
+    (hf : Program.evalTerm (env ++ [a]) f = some a') :
+    refStep (SyncOp.refUpdate cell f env) heap = some (Val.unit, refPoke heap cell a') := by
+  simp only [refStep, h, hf, Option.bind_some, Option.map_some]
 
-/-- `ref.update`: applied exactly once, not twice. census: ref.update -/
+/-- `ref.update`: applied exactly once, not twice; the term is `incr`'s lowering.
+census: ref.update -/
 theorem refStep_update_applies_once (heap : RefHeap) (cell : RefKey) (a : Val)
     (h : refPeek heap cell = some a) (hval : a = Val.nat 0) :
-    (refStep (SyncOp.refUpdate cell FnName.incr) heap).map Prod.snd =
+    (refStep (SyncOp.refUpdate cell FnName.incr.updateTerm []) heap).map Prod.snd =
       some (refPoke heap cell (Val.nat 1)) := by
   subst hval
-  simp [refStep, h, FnName.total]
+  rw [refStep_update heap cell _ [] (Val.nat 0) (Val.nat 1) h rfl]
+  rfl
 
-/-- `ref.modify`: the second component is written back and the first is the success value.
-census: ref.modify -/
-theorem refStep_modify (heap : RefHeap) (cell : RefKey) (f : FnName) (a : Val)
-    (h : refPeek heap cell = some a) :
-    refStep (SyncOp.refModify cell f) heap =
-      some ((f.modify a).1, refPoke heap cell (f.modify a).2) := by
-  simp [refStep, h]
+/-- `ref.modify`: the term answers a pair; its second component is written back and its first is
+the success value. census: ref.modify -/
+theorem refStep_modify (heap : RefHeap) (cell : RefKey) (f : Program.Term) (env : List Val)
+    (a b a' : Val) (h : refPeek heap cell = some a)
+    (hf : Program.evalTerm (env ++ [a]) f = some (Program.Val.tuple [b, a'])) :
+    refStep (SyncOp.refModify cell f env) heap = some (b, refPoke heap cell a') := by
+  simp only [refStep, h, hf, Option.bind_some]
+  rfl
 
 /-- `ref.modify-some-no-reread`: on a `None` second component the cell is written back with the
 value `modify` already read, not with a re-read. census: ref.modify-some-no-reread -/
-theorem refStep_modifySome_none (heap : RefHeap) (cell : RefKey) (a : Val)
-    (h : refPeek heap cell = some a) :
-    refStep (SyncOp.refModifySome cell FnName.noChange) heap =
-      some (a, refPoke heap cell a) := by
-  simp [refStep, h, FnName.modifySome]
+theorem refStep_modifySome_none (heap : RefHeap) (cell : RefKey) (f : Program.Term)
+    (env : List Val) (a b : Val) (h : refPeek heap cell = some a)
+    (hf : Program.evalTerm (env ++ [a]) f = some (Program.Val.tuple [b, Store.Val.none])) :
+    refStep (SyncOp.refModifySome cell f env) heap = some (b, refPoke heap cell a) := by
+  simp only [refStep, h, hf, Option.bind_some]
+  rfl
 
 /-- `ref.modify-some-no-reread`: `modifySome` *is* `modify` of the derived pair
-(`Ref.ts:1160-1162`). census: ref.modify-some-no-reread -/
-theorem refStep_modifySome_eq_modify (heap : RefHeap) (cell : RefKey) (pf : FnName) (a : Val)
-    (h : refPeek heap cell = some a) :
-    refStep (SyncOp.refModifySome cell pf) heap =
-      some ((pf.modifySome a).1, refPoke heap cell ((pf.modifySome a).2.getD a)) := by
-  simp [refStep, h]
+(`Ref.ts:1160-1162`). Where its term answers `[b, o]`, it takes the step of every `modify` whose
+term answers `[b, o.getD a]`. census: ref.modify-some-no-reread -/
+theorem refStep_modifySome_eq_modify (heap : RefHeap) (cell : RefKey) (f g : Program.Term)
+    (env env' : List Val) (a b : Val) (o : Option Val) (h : refPeek heap cell = some a)
+    (hf : Program.evalTerm (env ++ [a]) f =
+      some (Program.Val.tuple [b, Store.Image.toOption Store.Image.ident o]))
+    (hg : Program.evalTerm (env' ++ [a]) g = some (Program.Val.tuple [b, o.getD a])) :
+    refStep (SyncOp.refModifySome cell f env) heap =
+      refStep (SyncOp.refModify cell g env') heap := by
+  rw [refStep_modify heap cell g env' a b (o.getD a) h hg]
+  simp only [refStep, h, hf, Option.bind_some]
+  cases o <;> rfl
 
 /-- `ref.update-some-and-get-reread`: on `Some` the cell is written and the answer is a fresh
 read of `current` taken after the write. census: ref.update-some-and-get-reread -/
-theorem refStep_updateSomeAndGet_some (heap : RefHeap) (cell : RefKey) (pf : FnName) (a a' : Val)
-    (h : refPeek heap cell = some a) (hpf : pf.partialUpdate a = some a') :
-    refStep (SyncOp.refUpdateSomeAndGet cell pf) heap =
+theorem refStep_updateSomeAndGet_some (heap : RefHeap) (cell : RefKey) (f : Program.Term)
+    (env : List Val) (a a' : Val) (h : refPeek heap cell = some a)
+    (hf : Program.evalTerm (env ++ [a]) f = some (Store.Val.some a')) :
+    refStep (SyncOp.refUpdateSomeAndGet cell f env) heap =
       (refPeek (refPoke heap cell a') cell).map (fun fresh => (fresh, refPoke heap cell a')) := by
-  simp [refStep, h, hpf]
+  simp only [refStep, h, hf, Option.bind_some]
+  rfl
 
 /-- `ref.update-some-and-get-reread`: on `None` nothing is written. -/
-theorem refStep_updateSomeAndGet_none (heap : RefHeap) (cell : RefKey) (a : Val)
-    (h : refPeek heap cell = some a) :
-    refStep (SyncOp.refUpdateSomeAndGet cell FnName.noChange) heap = some (a, heap) := by
-  simp [refStep, h, FnName.partialUpdate]
+theorem refStep_updateSomeAndGet_none (heap : RefHeap) (cell : RefKey) (f : Program.Term)
+    (env : List Val) (a : Val) (h : refPeek heap cell = some a)
+    (hf : Program.evalTerm (env ++ [a]) f = some Store.Val.none) :
+    refStep (SyncOp.refUpdateSomeAndGet cell f env) heap = some (a, heap) := by
+  simp only [refStep, h, hf, Option.bind_some]
+  rfl
 
 /-- `ref.update-some-and-get-reread`: `updateSomeAndGet` and `getAndUpdateSome` differ — the
-first answers after the write, the second before it. census: ref.update-some-and-get-reread -/
+first answers after the write, the second before it; the term is `zeroWhenPositive`'s lowering.
+census: ref.update-some-and-get-reread -/
 theorem updateSomeAndGet_ne_getAndUpdateSome :
-    (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive) [Val.nat 3]).map Prod.fst ≠
-      (refStep (SyncOp.refGetAndUpdateSome ⟨0⟩ FnName.zeroWhenPositive) [Val.nat 3]).map
-        Prod.fst := by
+    (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
+        [Val.nat 3]).map Prod.fst ≠
+      (refStep (SyncOp.refGetAndUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
+        [Val.nat 3]).map Prod.fst := by
   decide
 
 /-! ## The Deferred store (`Deferred.ts`) -/

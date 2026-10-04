@@ -177,7 +177,8 @@ Lane 2, `Effect4.Machine`:
 11. `refStep_length`; `syncOpStep_le`.
 12. `Val.validIn`, `SyncOp.validIn`, `Stores.WF`; `Stores.empty` is `WF`.
 13. `Val.validIn_mono`, `SyncOp.validIn_mono`.
-14. `syncOpStep_isSome_of_valid`.
+14. `syncOpStep_isSome_of_valid`. The store runs binder terms (decisions row 43), so it has the
+    heap table's premise: each heap row's kernel answers on its cell's value.
 15. `syncOpStep_wf`.
 16. `syncOpStep_answer_valid`.
 17. `syncOpStep_read_unchanged` for `refGet`, `deferredIsDone`, `deferredPoll`,

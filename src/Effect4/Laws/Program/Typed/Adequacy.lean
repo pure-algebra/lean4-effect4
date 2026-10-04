@@ -23,8 +23,10 @@ row's fulfilment is one instance; the open ones are declared in `M3bAdequacy`.
 with the meaning layer's `Denote.StoreFits` (`Laws/Program/Progress.lean`), so the columns are
 defined once. `CellImplements root op` is `StoreImplements` on the cell columns alone. Each native
 `sync` row has one instance; the heap kernels are one theorem (`kernel_step`) over one table
-(`kernel_typed`). `CellImplements.implements` reads an instance on the typed state, so a native
-row is proved once, and the meaning layer's `progress` reads the same instances.
+(`kernel_typed`), whose eight term rows are one lemma (`termKernel_typed`): the row's term maps
+the cell's type into the row's result type (`TermMaps`, decisions row 43), and the row's decoder
+reads every member of that type. `CellImplements.implements` reads an instance on the typed state,
+so a native row is proved once, and the meaning layer's `progress` reads the same instances.
 
 This module proves no command preservation step: `StoreTyped` is the store half of the typed
 state, which M6's `loop`/`deliver` arms supply and consume.
@@ -143,6 +145,23 @@ theorem fits_validIn {root : ProgramSource} {w : World} (store : StoreTyped root
     (h : Fits w v ty) : v.validIn w.state = true :=
   store.toCellsTyped.fits_validIn h
 
+/-- **The store's validity moves along a step by membership** (finding F-WF): at a world over the
+new store whose cell columns are typed, every heap value fits its declared type and so is valid
+(`CellsTyped.fits_validIn`); the scope, memo and timer clauses move by the step. A term row's
+environment is not in its precondition, so its new heap's validity is read here, not off
+`SyncOp.validIn`. -/
+theorem CellsTyped.wf_step {w w' : World} {o : SyncOp} {st' : Stores} {a : Val}
+    (wf : w.state.WF) (step : syncOpStep o w.state = some (st', a)) (hstate : w'.state = st')
+    (cells : CellsTyped w') : st'.WF := by
+  subst hstate
+  refine ⟨fun v hv => ?_, syncOpStep_closingValid o w.state _ a wf step,
+    syncOpStep_memoValid o w.state _ a wf.2.2.1 step,
+    syncOpStep_timers_wf o w.state _ a wf.2.2.2 step⟩
+  obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hv
+  obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp
+    ((cells.heap ⟨i⟩).mpr (List.getElem?_eq_some_iff.mp hi).1)
+  exact cells.fits_validIn (cells.values i v hi ty hty)
+
 /-- **The handler rule for `TypedProg`'s store arm**, one theorem for every row: a typed store
 operation run by a handler that fulfils its row steps to a typed continuation at a later world
 over the new store, which is typed again. This is what the evaluator's store arm needs
@@ -259,63 +278,11 @@ theorem same_world {root : ProgramSource} {w : World} {op : SyncOp} {ans : Val}
 
 /-! ## Value facts the store rows read -/
 
-/-- On a `nat` cell, `modify` answers the old value and writes a `nat`. -/
-theorem modify_nat (f : FnName) (n : Nat) :
-    (f.modify (.nat n)).1 = .nat n ∧ ∃ m, (f.modify (.nat n)).2 = .nat m := by
-  cases f <;> exact ⟨rfl, _, rfl⟩
-
-theorem modifySome_nat (f : FnName) (n : Nat) :
-    (f.modifySome (.nat n)).1 = .nat n ∧ ∃ m, (f.modifySome (.nat n)).2.getD (.nat n) = .nat m := by
-  cases f <;> exact ⟨rfl, _, rfl⟩
-
-/-- A total read-modify-write keeps the cell's value at its declared type: it writes a number for
-a number (`fits_nat_irrel`) and leaves every other value as it is. -/
-theorem fits_total {w : World} (f : FnName) {a : Val} {t : Ty} (h : Fits w a t) :
-    Fits w (f.total a) t := by
-  unfold FnName.total
-  split
-  · exact fits_nat_irrel w _ _ t h
-  · exact fits_nat_irrel w _ _ t h
-  · exact fits_nat_irrel w _ _ t h
-  · exact h
-
-/-- A partial read-modify-write that writes keeps the cell's value at its declared type: it writes
-`0` for a positive number, or the total update. -/
-theorem fits_partialUpdate {w : World} (f : FnName) {a a' : Val} {t : Ty} (h : Fits w a t)
-    (hp : f.partialUpdate a = some a') : Fits w a' t := by
-  unfold FnName.partialUpdate at hp
-  split at hp
-  · cases hp
-  · cases hp
-    exact fits_nat_irrel w _ 0 t h
-  · cases hp
-  · cases hp
-    exact fits_total _ h
-
-/-- A declared cell holds a value: reading it is not a frontier. -/
-theorem cell_readable {root : ProgramSource} {w : World} {cell : RefKey} {t : Ty}
-    (store : StoreTyped root w)
-    (declared : w.Ρ cell = some t) : ∃ a, w.state.refs[cell.index]? = some a :=
-  ⟨_, List.getElem?_eq_getElem ((store.heap cell).mp (by rw [declared]; rfl))⟩
-
 /-- A declared promise has a cell: reading it is not a frontier. -/
 theorem promise_readable {root : ProgramSource} {w : World} {key : DeferredKey}
     (store : StoreTyped root w)
     (declared : (w.«Π» key).isSome = true) : ∃ c, w.state.deferreds.cells[key.index]? = some c :=
   ⟨_, List.getElem?_eq_getElem ((store.promises key).mp declared)⟩
-
-/-- The cell a `refModify`-like row names holds a `nat` at a cell declared at the native row's
-cell type; reading it is not a frontier. -/
-theorem nat_cell {root : ProgramSource} {w : World} {cell : RefKey} (store : StoreTyped root w)
-    (pre : RefDeclared w cell .nat) :
-    ∃ t n, w.Ρ cell = some t ∧ Equiv t .nat ∧ refPeek w.state.refs cell = some (.nat n) := by
-  obtain ⟨t, declared, equiv⟩ := pre
-  have live : cell.index < w.state.refs.length := (store.heap cell).mp (by rw [declared]; rfl)
-  obtain ⟨a, ha⟩ : ∃ a, w.state.refs[cell.index]? = some a :=
-    ⟨_, List.getElem?_eq_getElem live⟩
-  have fa : Fits w a t := store.values cell.index a ha t declared
-  obtain ⟨n, rfl⟩ := fits_nat_inv (fits_subN w equiv.1 a fa)
-  exact ⟨t, n, declared, equiv, ha⟩
 
 /-- A table that covers exactly the indices below `n`, extended by the one key at index `n`,
 covers exactly the indices below `n + 1`. -/
@@ -564,60 +531,125 @@ theorem CellsTyped.addPromise {w : World} (cells : CellsTyped w) (types : Ty × 
     rw [hrefs] at hv
     exact fits_mono ord (cells.values i v hv t hty)
 
+/-- The world over a heap with one cell written back (`refWriteBack`): every other column and every
+declaration table as it was. A heap-kernel row steps to it (`kernel_step`). -/
+def writeWorld (w : World) (cell : RefKey) (next : Option Val) : World :=
+  { w with state := { w.state with refs := refWriteBack w.state.refs cell next } }
+
 /-- **A heap-kernel row on the cell columns** (one theorem for every kernel row): at a cell declared
-at `t`, a kernel that answers on every value fitting `t`, writes only values fitting `t` and
-answers in `Q` steps (no frontier) to the world over the written heap. That world is later in the
-host order, its cell columns are typed, and the answer is in `Q` there. Every other cell keeps its
-value (`indexed_ref_step_preserves`, FR-03's index-aware adapter). -/
+at `t`, a kernel that answers on every value fitting `t` and writes only values fitting `t` steps
+(no frontier) to the world over the written heap (`writeWorld`). That world is later in the host
+order and its cell columns are typed; the value read fits `t`, and the step answers what the
+kernel answers on it. Every other cell keeps its value (`indexed_ref_step_preserves`, FR-03's
+index-aware adapter). -/
 theorem kernel_step {w : World} {o : SyncOp} {cell : RefKey} {k : RefKernel} {t : Ty}
-    {Q : World → Val → Prop} (Qmono : ∀ w₁ w₂ a, w₁.leHost w₂ → Q w₁ a → Q w₂ a)
     (cells : CellsTyped w) (hk : o.refKernel = some (cell, k)) (declared : w.Ρ cell = some t)
     (runs : ∀ c, Fits w c t → (k c).isSome = true)
-    (keeps : RefKernel.Keeps (Fits w · t) (Q w) k) :
-    ∃ st' a, syncOpStep o w.state = some (st', a) ∧
-      ∃ w', w.leHost w' ∧ w'.state = st' ∧ CellsTyped w' ∧ Q w' a := by
+    (writes : RefKernel.Keeps (Fits w · t) (fun _ => True) k) :
+    ∃ c r, Fits w c t ∧ k c = some r ∧
+      syncOpStep o w.state = some ((writeWorld w cell r.2).state, r.1) ∧
+      w.leHost (writeWorld w cell r.2) ∧ CellsTyped (writeWorld w cell r.2) := by
   obtain ⟨c, hc⟩ : ∃ c, refPeek w.state.refs cell = some c :=
     ⟨_, List.getElem?_eq_getElem ((cells.heap cell).mp (by rw [declared]; rfl))⟩
-  obtain ⟨r, hr⟩ := Option.isSome_iff_exists.mp (runs c (cells.values cell.index c hc t declared))
+  have fc := cells.values cell.index c hc t declared
+  obtain ⟨r, hr⟩ := Option.isSome_iff_exists.mp (runs c fc)
   have hstepOf : refStepOf cell k w.state.refs = some (r.1, refWriteBack w.state.refs cell r.2) := by
     simp only [refStepOf, hc, Option.bind_some, hr, Option.map_some]
-  have step : syncOpStep o w.state =
-      some ({ w.state with refs := refWriteBack w.state.refs cell r.2 }, r.1) := by
+  have step : syncOpStep o w.state = some ((writeWorld w cell r.2).state, r.1) := by
     rw [syncOpStep_eq_refStepOf hk, hstepOf, Option.map_some]
+    rfl
   have hrs : refStep o w.state.refs = some (r.1, refWriteBack w.state.refs cell r.2) := by
     rw [refStep_eq_refStepOf hk]
     exact hstepOf
   have cellKeeps : RefKernel.Keeps
-      ((fun i x => ∀ ty, w.Ρ ⟨i⟩ = some ty → Fits w x ty) cell.index) (Q w) k := by
+      ((fun i x => ∀ ty, w.Ρ ⟨i⟩ = some ty → Fits w x ty) cell.index) (fun _ => True) k := by
     intro c' r' hc' hkr
-    obtain ⟨hq, hw⟩ := keeps c' r' (hc' t declared) hkr
-    refine ⟨hq, fun next hn ty hty => ?_⟩
+    obtain ⟨_, hw⟩ := writes c' r' (hc' t declared) hkr
+    refine ⟨trivial, fun next hn ty hty => ?_⟩
     have same : ty = t := Option.some.inj (hty.symm.trans declared)
     subst same
     exact hw next hn
-  obtain ⟨ans, typed, len, _⟩ := indexed_ref_step_preserves
-    (fun i x => ∀ ty, w.Ρ ⟨i⟩ = some ty → Fits w x ty) (Q w) o cell k w.state.refs _ r.1 hk
-    (fun i v hv ty hty => cells.values i v hv ty hty) cellKeeps hrs
+  obtain ⟨_, typed, len, _⟩ := indexed_ref_step_preserves
+    (fun i x => ∀ ty, w.Ρ ⟨i⟩ = some ty → Fits w x ty) (fun _ => True) o cell k w.state.refs _ r.1
+    hk (fun i v hv ty hty => cells.values i v hv ty hty) cellKeeps hrs
   obtain ⟨ord, cells'⟩ := cells.restate step len (fun i v hv ty hty => typed i v hv ty hty) rfl
     (fun key c' hc' completion hcomp => .inl ⟨c', hc', hcomp⟩) rfl
-  exact ⟨_, r.1, step, _, ord, rfl, cells', Qmono _ _ _ ord ans⟩
+  exact ⟨c, r, fc, hr, step, ord, cells'⟩
+
+/-- **A term kernel under its row's demand** (one lemma for the eight term rows): when the term
+maps the cell's type `t` into the row's result type `R` at every later world (`TermMaps`), the
+row's decoder reads every member of `R` as a good part, and the row's arrangement of a member of
+`t` and a good part answers in `Q` and writes members of `t`, the kernel answers on every member
+of `t` and keeps `t` in the cell. -/
+theorem termKernel_typed {D : Type} {decode : Val → Option D}
+    {arrange : Val → D → Val × Option Val} {w : World} {f : Term} {env : List Val}
+    {t R : Ty} {Good : D → Prop} {Q : Val → Prop} (maps : TermMaps w f env t R)
+    (hdecode : ∀ r, Fits w r R → ∃ d, decode r = some d ∧ Good d)
+    (harrange : ∀ a d, Fits w a t → Good d →
+      Q (arrange a d).1 ∧ ∀ next, (arrange a d).2 = some next → Fits w next t) :
+    (∀ c, Fits w c t → (termKernel decode arrange f env c).isSome = true) ∧
+      RefKernel.Keeps (Fits w · t) Q (termKernel decode arrange f env) := by
+  have run : ∀ c, Fits w c t →
+      ∃ d, termKernel decode arrange f env c = some (arrange c d) ∧ Good d := by
+    intro c hc
+    obtain ⟨r, hr, hfit⟩ := maps w (leHost_refl w) c hc
+    obtain ⟨d, hd, good⟩ := hdecode r hfit
+    exact ⟨d, by simp only [termKernel, hr, Option.bind_some, hd, Option.map_some], good⟩
+  refine ⟨fun c hc => ?_, fun c p hc hp => ?_⟩
+  · obtain ⟨d, hk, _⟩ := run c hc
+    rw [hk]
+    rfl
+  · obtain ⟨d, hk, good⟩ := run c hc
+    rw [hk] at hp
+    cases hp
+    exact harrange c d hc good
+
+/-- The exact option image reads every member of `Option<t>`, as a member of `t` or nothing. -/
+theorem decode_option {w : World} {t : Ty} (r : Val) (h : Fits w r (.option t)) :
+    ∃ o, Store.Image.ofOption Store.Image.ident r = some o ∧ ∀ a, o = some a → Fits w a t := by
+  rcases fits_option_inv h with rfl | ⟨x, rfl, hx⟩
+  · exact ⟨none, rfl, fun _ h => nomatch h⟩
+  · exact ⟨some x, rfl, fun a h => by cases h; exact hx⟩
+
+/-- The exact pair image reads every member of `[b, t]` as its two members. -/
+theorem decode_pair {w : World} {b t : Ty} (r : Val) (h : Fits w r (.prod b t)) :
+    ∃ p, Store.Image.ofTuple2 Store.Image.ident Store.Image.ident r = some p ∧
+      Fits w p.1 b ∧ Fits w p.2 t := by
+  obtain ⟨x, y, rfl, hx, hy⟩ := (fits_prod_iff _ _ _ _).mp h
+  exact ⟨(x, y), rfl, hx, hy⟩
+
+/-- The exact pair image over the option image reads every member of `[b, Option<t>]`. -/
+theorem decode_pairOption {w : World} {b t : Ty} (r : Val) (h : Fits w r (.prod b (.option t))) :
+    ∃ p, Store.Image.ofTuple2 Store.Image.ident (Store.Image.option Store.Image.ident) r = some p ∧
+      Fits w p.1 b ∧ ∀ a, p.2 = some a → Fits w a t := by
+  obtain ⟨x, y, rfl, hx, hy⟩ := (fits_prod_iff _ _ _ _).mp h
+  obtain ⟨o, ho, good⟩ := decode_option y hy
+  obtain rfl : y = (Store.Image.option Store.Image.ident).toVal o :=
+    (Store.Image.option Store.Image.ident).ofVal_exact ho
+  exact ⟨(x, o),
+    (Store.Image.tuple2 Store.Image.ident (Store.Image.option Store.Image.ident)).ofVal_toVal (x, o),
+    hx, good⟩
 
 /-- **The heap kernels under the store pre** (one table, the cases of `SyncOp.refKernel`): the row's
 cell is declared at some `t`; its kernel answers on every value that fits `t`, writes only values
-that fit `t`, and answers inside the row's post at every later world. The function-name rows read a
-cell declared equivalent to `nat` (`storePre`, decisions row 136) and write numbers (`fits_total`,
-`fits_partialUpdate`, `modify_nat`, `modifySome_nat`). -/
+that fit `t`, and answers inside the row's post at every later world. A term row reads its term's
+demand (`TermMaps`, decisions row 43) through `termKernel_typed`, with its shape's decoder:
+the value itself, `decode_option`, `decode_pair` or `decode_pairOption`. -/
 theorem kernel_typed {root : ProgramSource} {w : World} {o : SyncOp} {cert : StoreCert o}
     {cell : RefKey} {k : RefKernel} (hk : o.refKernel = some (cell, k))
     (pre : storePre root w o cert) :
     ∃ t, w.Ρ cell = some t ∧ (∀ c, Fits w c t → (k c).isSome = true) ∧
       RefKernel.Keeps (Fits w · t) (fun a => ∀ w', w.leHost w' → storePost w' o cert a) k := by
+  -- a value read from the cell, or written to it, answers at every later world
+  have read : ∀ {t : Ty} {a : Val}, w.Ρ cell = some t → Fits w a t → ∀ w', w.leHost w' →
+      ∃ ty, w'.Ρ cell = some ty ∧ Fits w' a ty :=
+    fun declared ha w' ord => ⟨_, ord.1.2.2.2.1 cell _ declared, fits_mono ord ha⟩
   cases o <;> cases hk
   case refGet =>
     obtain ⟨t, declared⟩ := pre
     refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
     cases hr
-    exact ⟨fun w' ord => ⟨t, ord.1.2.2.2.1 cell t declared, fits_mono ord hc⟩, fun _ h => nomatch h⟩
+    exact ⟨read declared hc, fun _ h => nomatch h⟩
   case refSet v =>
     obtain ⟨t, declared, fits⟩ := pre
     refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
@@ -627,70 +659,46 @@ theorem kernel_typed {root : ProgramSource} {w : World} {o : SyncOp} {cert : Sto
     obtain ⟨t, declared, fits⟩ := pre
     refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
     cases hr
-    exact ⟨fun w' ord => ⟨t, ord.1.2.2.2.1 cell t declared, fits_mono ord hc⟩,
-      fun _ h => by cases h; exact fits⟩
+    exact ⟨read declared hc, fun _ h => by cases h; exact fits⟩
   case refSetAndGet v =>
     obtain ⟨t, declared, fits⟩ := pre
     refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
     cases hr
-    exact ⟨fun w' ord => ⟨t, ord.1.2.2.2.1 cell t declared, fits_mono ord fits⟩,
-      fun _ h => by cases h; exact fits⟩
-  case refUpdate f =>
-    obtain ⟨t, declared⟩ := pre
-    refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
-    cases hr
-    exact ⟨fun _ _ => rfl, fun _ h => by cases h; exact fits_total f hc⟩
-  case refGetAndUpdate f =>
-    obtain ⟨t, declared⟩ := pre
-    refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
-    cases hr
-    exact ⟨fun w' ord => ⟨t, ord.1.2.2.2.1 cell t declared, fits_mono ord hc⟩,
-      fun _ h => by cases h; exact fits_total f hc⟩
-  case refUpdateAndGet f =>
-    obtain ⟨t, declared⟩ := pre
-    refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
-    cases hr
-    exact ⟨fun w' ord => ⟨t, ord.1.2.2.2.1 cell t declared, fits_mono ord (fits_total f hc)⟩,
-      fun _ h => by cases h; exact fits_total f hc⟩
-  case refUpdateSome f =>
-    obtain ⟨t, declared⟩ := pre
-    refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
-    cases hr
-    exact ⟨fun _ _ => rfl, fun _ h => fits_partialUpdate f hc h⟩
-  case refGetAndUpdateSome f =>
-    obtain ⟨t, declared⟩ := pre
-    refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
-    cases hr
-    exact ⟨fun w' ord => ⟨t, ord.1.2.2.2.1 cell t declared, fits_mono ord hc⟩,
-      fun _ h => fits_partialUpdate f hc h⟩
-  case refUpdateSomeAndGet f =>
-    obtain ⟨t, declared⟩ := pre
-    refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
-    cases hr
-    have written : ∀ a', f.partialUpdate c = some a' → Fits w a' t :=
-      fun _ h => fits_partialUpdate f hc h
-    exact ⟨fun w' ord => ⟨t, ord.1.2.2.2.1 cell t declared,
-      fits_mono ord (RefKernel.getD_keeps written hc)⟩, written⟩
-  case refModify f =>
-    obtain ⟨t, declared, equiv⟩ := pre
-    refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
-    cases hr
-    obtain ⟨n, rfl⟩ := fits_nat_inv (fits_subN w equiv.1 c hc)
-    obtain ⟨answer, m, written⟩ := modify_nat f n
-    refine ⟨fun _ _ => ⟨n, answer⟩, fun next h => ?_⟩
-    cases h
-    rw [written]
-    exact fits_subN w equiv.2 _ trivial
-  case refModifySome f =>
-    obtain ⟨t, declared, equiv⟩ := pre
-    refine ⟨t, declared, fun _ _ => rfl, fun c r hc hr => ?_⟩
-    cases hr
-    obtain ⟨n, rfl⟩ := fits_nat_inv (fits_subN w equiv.1 c hc)
-    obtain ⟨answer, m, written⟩ := modifySome_nat f n
-    refine ⟨fun _ _ => ⟨n, answer⟩, fun next h => ?_⟩
-    cases h
-    rw [written]
-    exact fits_subN w equiv.2 _ trivial
+    exact ⟨read declared fits, fun _ h => by cases h; exact fits⟩
+  case refUpdate f env =>
+    obtain ⟨t, declared, maps⟩ := pre
+    exact ⟨t, declared, termKernel_typed maps (fun r hr => ⟨r, rfl, hr⟩)
+      fun _ _ _ hd => ⟨fun _ _ => rfl, fun _ h => by cases h; exact hd⟩⟩
+  case refGetAndUpdate f env =>
+    obtain ⟨t, declared, maps⟩ := pre
+    exact ⟨t, declared, termKernel_typed maps (fun r hr => ⟨r, rfl, hr⟩)
+      fun _ _ ha hd => ⟨read declared ha, fun _ h => by cases h; exact hd⟩⟩
+  case refUpdateAndGet f env =>
+    obtain ⟨t, declared, maps⟩ := pre
+    exact ⟨t, declared, termKernel_typed maps (fun r hr => ⟨r, rfl, hr⟩)
+      fun _ _ _ hd => ⟨read declared hd, fun _ h => by cases h; exact hd⟩⟩
+  case refUpdateSome f env =>
+    obtain ⟨t, declared, maps⟩ := pre
+    exact ⟨t, declared, termKernel_typed maps decode_option
+      fun _ _ _ good => ⟨fun _ _ => rfl, good⟩⟩
+  case refGetAndUpdateSome f env =>
+    obtain ⟨t, declared, maps⟩ := pre
+    exact ⟨t, declared, termKernel_typed maps decode_option
+      fun _ _ ha good => ⟨read declared ha, good⟩⟩
+  case refUpdateSomeAndGet f env =>
+    obtain ⟨t, declared, maps⟩ := pre
+    exact ⟨t, declared, termKernel_typed maps decode_option
+      fun _ _ ha good => ⟨read declared (RefKernel.getD_keeps good ha), good⟩⟩
+  case refModify f env =>
+    obtain ⟨t, declared, maps⟩ := pre
+    exact ⟨t, declared, termKernel_typed maps decode_pair
+      fun _ _ _ good => ⟨fun _ ord => fits_mono ord good.1,
+        fun _ h => by cases h; exact good.2⟩⟩
+  case refModifySome f env =>
+    obtain ⟨t, declared, maps⟩ := pre
+    exact ⟨t, declared, termKernel_typed maps decode_pairOption
+      fun _ _ ha good => ⟨fun _ ord => fits_mono ord good.1,
+        fun _ h => by cases h; exact RefKernel.getD_keeps good.2 ha⟩⟩
 
 /-- The heap kernels fulfil their rows on the cell columns: `kernel_typed`'s table run by
 `kernel_step`. -/
@@ -698,10 +706,9 @@ theorem kernel_cellImplements (root : ProgramSource) {o : SyncOp} {cell : RefKey
     {k : RefKernel} (hk : o.refKernel = some (cell, k)) : CellImplements root o := by
   intro w cert cells pre
   obtain ⟨t, declared, runs, keeps⟩ := kernel_typed hk pre
-  obtain ⟨st', ans, step, w', ord, hstate, cells', post⟩ := kernel_step
-    (Q := fun w a => ∀ w', w.leHost w' → storePost w' o cert a)
-    (fun w₁ w₂ _ o₁₂ h w₃ o₂₃ => h w₃ (leHost_trans w₁ w₂ w₃ o₁₂ o₂₃)) cells hk declared runs keeps
-  exact ⟨st', ans, step, w', ord, hstate, cells', post w' (leHost_refl w')⟩
+  obtain ⟨c, r, hc, hr, step, ord, cells'⟩ := kernel_step cells hk declared runs
+    fun c r hc hr => ⟨trivial, (keeps c r hc hr).2⟩
+  exact ⟨_, r.1, step, _, ord, rfl, cells', (keeps c r hc hr).1 _ ord⟩
 
 theorem refMake_cellImplements (root : ProgramSource) (initial : Val) :
     CellImplements root (.refMake initial) := by
@@ -772,12 +779,9 @@ theorem clockNow_cellImplements (root : ProgramSource) : CellImplements root .cl
 /-! ## The store rows, one instance each
 
 Twenty-nine of the thirty-one rows. Each native `sync` row is its cell-level instance read on the
-typed state (`CellImplements.implements`), so a row is proved once, on the cell columns. The six
-read-modify-write rows that write `f.total a` (`refUpdate`, `refGetAndUpdate`, `refUpdateAndGet`,
-`refUpdateSome`, `refGetAndUpdateSome`, `refUpdateSomeAndGet`) read
-`Fits w (nat n) t → Fits w (nat m) t` (`fits_nat_irrel`, one induction over the membership fold in
-`Membership.lean`) through `fits_total` and `fits_partialUpdate` (`kernel_typed`); `memoGet` and
-`memoComplete` read the memo table (`MemoTableTyped`: every entry's Deferred declared at its
+typed state (`CellImplements.implements`), so a row is proved once, on the cell columns. The eight
+read-modify-write rows read their term's demand (`TermMaps`) through `termKernel_typed`
+(`kernel_typed`), at any cell type; `memoGet` and `memoComplete` read the memo table (`MemoTableTyped`: every entry's Deferred declared at its
 layer's context and error types, decisions row 187 (c)), which `memoBuild` establishes and every
 other row keeps (`syncOpStep_layerCells`). -/
 
@@ -850,39 +854,39 @@ theorem memoRelease_implements (root : ProgramSource) (layer : LayerId) (memoMap
       obtain ⟨ord, store'⟩ := restate_world store step rfl rfl (fun _ c' h => ⟨c', h, rfl⟩) rfl
       exact ⟨_, _, step, _, ord, rfl, store', Or.inl rfl⟩
 
-theorem refModify_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
-    StoreImplements root (.refModify cell f) :=
+theorem refModify_implements (root : ProgramSource) (cell : RefKey) (f : Term) (env : List Val) :
+    StoreImplements root (.refModify cell f env) :=
   CellImplements.implements (kernel_cellImplements root rfl) fun _ _ h => nomatch h
 
-theorem refModifySome_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
-    StoreImplements root (.refModifySome cell f) :=
+theorem refModifySome_implements (root : ProgramSource) (cell : RefKey) (f : Term)
+    (env : List Val) : StoreImplements root (.refModifySome cell f env) :=
   CellImplements.implements (kernel_cellImplements root rfl) fun _ _ h => nomatch h
 
-/-- The six rows that write `f.total a` or `pf.partialUpdate a` (closed by integration seat I2
-with `fits_nat_irrel`): the cell holds a value of its declared type, the update writes one, and
-the answer is the old value, the new value or `unit` as the row says (`kernel_typed`). -/
-theorem refUpdate_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
-    StoreImplements root (.refUpdate cell f) :=
+/-- The six rows whose term answers the cell's new value or an option of it: the cell holds a value
+of its declared type, the term maps it to one (`TermMaps`), and the answer is the old value, the
+new value or `unit` as the row says (`kernel_typed`). -/
+theorem refUpdate_implements (root : ProgramSource) (cell : RefKey) (f : Term) (env : List Val) :
+    StoreImplements root (.refUpdate cell f env) :=
   CellImplements.implements (kernel_cellImplements root rfl) fun _ _ h => nomatch h
 
-theorem refGetAndUpdate_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
-    StoreImplements root (.refGetAndUpdate cell f) :=
+theorem refGetAndUpdate_implements (root : ProgramSource) (cell : RefKey) (f : Term)
+    (env : List Val) : StoreImplements root (.refGetAndUpdate cell f env) :=
   CellImplements.implements (kernel_cellImplements root rfl) fun _ _ h => nomatch h
 
-theorem refUpdateAndGet_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
-    StoreImplements root (.refUpdateAndGet cell f) :=
+theorem refUpdateAndGet_implements (root : ProgramSource) (cell : RefKey) (f : Term)
+    (env : List Val) : StoreImplements root (.refUpdateAndGet cell f env) :=
   CellImplements.implements (kernel_cellImplements root rfl) fun _ _ h => nomatch h
 
-theorem refUpdateSome_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
-    StoreImplements root (.refUpdateSome cell f) :=
+theorem refUpdateSome_implements (root : ProgramSource) (cell : RefKey) (f : Term)
+    (env : List Val) : StoreImplements root (.refUpdateSome cell f env) :=
   CellImplements.implements (kernel_cellImplements root rfl) fun _ _ h => nomatch h
 
-theorem refGetAndUpdateSome_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
-    StoreImplements root (.refGetAndUpdateSome cell f) :=
+theorem refGetAndUpdateSome_implements (root : ProgramSource) (cell : RefKey) (f : Term)
+    (env : List Val) : StoreImplements root (.refGetAndUpdateSome cell f env) :=
   CellImplements.implements (kernel_cellImplements root rfl) fun _ _ h => nomatch h
 
-theorem refUpdateSomeAndGet_implements (root : ProgramSource) (cell : RefKey) (f : FnName) :
-    StoreImplements root (.refUpdateSomeAndGet cell f) :=
+theorem refUpdateSomeAndGet_implements (root : ProgramSource) (cell : RefKey) (f : Term)
+    (env : List Val) : StoreImplements root (.refUpdateSomeAndGet cell f env) :=
   CellImplements.implements (kernel_cellImplements root rfl) fun _ _ h => nomatch h
 
 /-- `refMake`'s world: the fresh cell declared at the certificate over the grown heap, typed. -/
