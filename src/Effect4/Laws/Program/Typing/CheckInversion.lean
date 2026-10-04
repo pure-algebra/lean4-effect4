@@ -28,6 +28,20 @@ theorem expect_eq_ok {α : Type} (r : TypeRefusal) (o : Option α) (a : α) :
   | none => simp only [expect, reduceCtorEq]
   | some b => simp only [expect, Except.ok.injEq, Option.some.injEq]
 
+/-- Diagnostic payloads do not change term acceptance. Used by the checker inversion bank. -/
+theorem term?_eq_ok (sig : Signature Op) (env : TyEnv) (path : List Nat) (term : Term)
+    (type : Ty) : term? sig env path term = .ok type ↔ termTy sig env term = some type := by
+  cases result : termTy sig env term with
+  | none => simp only [term?, result, reduceCtorEq]
+  | some value => simp only [term?, result, Except.ok.injEq, Option.some.injEq]
+
+/-- Cause diagnostics keep the existing cause rule. Used by the checker inversion bank. -/
+theorem cause?_eq_ok (sig : Signature Op) (env : TyEnv) (path : List Nat) (cause : CauseTerm)
+    (type : Ty) : cause? sig env path cause = .ok type ↔ causeTy sig env cause = some type := by
+  cases result : causeTy sig env cause with
+  | none => simp only [cause?, result, reduceCtorEq]
+  | some value => simp only [cause?, result, Except.ok.injEq, Option.some.injEq]
+
 /-- The element type of a list type, inverted. -/
 theorem listOf?_eq_some (t inner : Ty) : listOf? t = some inner ↔ t = .list inner := by
   cases t <;> simp only [listOf?, reduceCtorEq, Option.some.injEq, Ty.list.injEq]
@@ -37,7 +51,7 @@ theorem exitOf?_eq_some (t : Ty) (x : Ty × Ty) : exitOf? t = some x ↔ t = .ex
   cases x
   cases t <;> simp only [exitOf?, reduceCtorEq, Option.some.injEq, Ty.exitOf.injEq, Prod.mk.injEq]
 
-attribute [aesop norm simp (rule_sets := [Effect4.Checker])] rowTy_eq_some_iff expect_eq_ok listOf?_eq_some exitOf?_eq_some term? check checkStmt
+attribute [aesop norm simp (rule_sets := [Effect4.Checker])] rowTy_eq_some_iff expect_eq_ok term?_eq_ok cause?_eq_ok listOf?_eq_some exitOf?_eq_some check checkStmt
   checkStmts checkEffs checkAction checkLayer checkLayers StmtTy.fold GenTy.mergeT GenTy.seqT
   GenTy.joinAnswerT EffTy.joinAnswer_eq GenTy.merge_eq GenTy.seq_eq
 
