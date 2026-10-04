@@ -94,17 +94,14 @@ def pairProgram : Api.Program :=
     (.bind (.withFiber (.fork (.perform (.external 0) (.lit (.nat 3))) opts))
       (.bind (.awaitFiber (.var 0) .awaitValue) (.awaitFiber (.var 1) .awaitValue)))
 
-def pairAdmitted : Api.AdmittedProgram pairProgram Test.Api.HostSessionContract.table where
+def pairAdmitted : Api.AdmittedProgram pairProgram ⟨Test.Api.HostSessionContract.table, []⟩ where
   ty := ⟨.exitOf .nat (.prod .string .string), .never, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  lawful := by decide
-  runnable := by decide
   intFreeTable := by decide
-  internalFreeTable := by decide
+  signature := by decide +kernel
   intFreeProgram := by decide
   intFreeType := by decide
-  columnsTable := by decide +kernel
   columnsType := by decide +kernel
 
 def pairUp : Api.Built :=
@@ -174,17 +171,14 @@ def timedProgram : Api.Program :=
     (.bind (.perform .sleep (.lit (.nat 5))) (.succeed (.lit (.nat 17)))) opts))
     (.awaitFiber (.var 0) .awaitValue)
 
-def timedAdmitted : Api.AdmittedProgram timedProgram [] where
+def timedAdmitted : Api.AdmittedProgram timedProgram {} where
   ty := ⟨.exitOf .nat .never, .never, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  lawful := by decide
-  runnable := by decide
   intFreeTable := by decide
-  internalFreeTable := by decide
+  signature := by decide +kernel
   intFreeProgram := by decide
   intFreeType := by decide
-  columnsTable := by decide +kernel
   columnsType := by decide +kernel
 
 def timed : Api.Built :=
@@ -241,17 +235,14 @@ def noFuel : Run := Run.open twice "fuel-frontier" { compileFuel := 40, fuel := 
 -- protocol observation stays `parked`.
 def yieldingProgram : Api.Program := .bind (.yieldNow 0) (.succeed (.lit (.nat 23)))
 
-def yieldingAdmitted : Api.AdmittedProgram yieldingProgram [] where
+def yieldingAdmitted : Api.AdmittedProgram yieldingProgram {} where
   ty := ⟨.nat, .never, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  lawful := by decide
-  runnable := by decide
   intFreeTable := by decide
-  internalFreeTable := by decide
+  signature := by decide +kernel
   intFreeProgram := by decide
   intFreeType := by decide
-  columnsTable := by decide +kernel
   columnsType := by decide +kernel
 
 def yielding : Api.Built :=
@@ -272,17 +263,14 @@ def mixedWorkProgram : Api.Program :=
   .bind (.withFiber (.fork yieldingProgram opts))
     (.perform (.external 0) (.lit (.nat 2)))
 
-def mixedWorkAdmitted : Api.AdmittedProgram mixedWorkProgram Test.Api.HostSessionContract.table where
+def mixedWorkAdmitted : Api.AdmittedProgram mixedWorkProgram ⟨Test.Api.HostSessionContract.table, []⟩ where
   ty := ⟨.nat, .prod .string .string, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  lawful := by decide
-  runnable := by decide
   intFreeTable := by decide
-  internalFreeTable := by decide
+  signature := by decide +kernel
   intFreeProgram := by decide
   intFreeType := by decide
-  columnsTable := by decide +kernel
   columnsType := by decide +kernel
 
 def mixedWorkBuilt : Api.Built :=

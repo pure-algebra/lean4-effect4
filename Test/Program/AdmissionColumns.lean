@@ -6,26 +6,28 @@ import Effect4.Laws.Program.Typed.Membership
 /-!
 # Admission's table check and column check (TY-05, rows 127 and 149)
 
-**TY-05.** `Table.lawful` and `Table.checkLawful` decide one condition
-(`Table.checkLawful_eq_none_iff`, proved in `Program/Admission.lean`), so admission takes its
-refusal from the located check alone and no key is invented for a failure it does not explain.
-The certificate theorems that unfold `admitProgram` (`admitProgram_eq_ok`,
-`admitProgram_certificate`) read the same fact.
+**TY-05.** `Table.lawful` and the signature's located refusal (`admitSig`,
+`Program/SigApp.lean`) decide one condition on a table's keys: `LawfulSig.tableLawful` reads
+`Table.lawful` off a lawful signature, and `admitSig_ok_iff` makes the refusal complete. Program
+admission runs `admitSig` (decisions row 21), so it takes its refusal from the located check alone
+and no key is invented for a failure it does not explain. The certificate theorems that unfold
+`admitProgram` (`admitProgram_eq_ok`, `admitProgram_certificate`) read the certificate's
+`signature` field.
 
 **Rows 127 and 149 (E4-TYPED-CE-015).** `inhabited` is a `TyAlgebra` fold that agrees with `Fits`
 on every type (`inhabited_iff_fits`, `Laws/Program/Typed/Membership.lean`); the column check
 `admitColumn` refuses exactly the empty columns that are not the designed bottom
-(`admitColumn_iff`). The located scans (`findEmptyColumnInTable`, `findEmptyColumnInEffTy`,
-`Program/Admission.lean`) name each refused column's position; the signature check refuses a row
-with an empty column (`RowReason.emptyColumn`, `Laws/Program/Signature.lean`). Runner admission
-(`admitProgram`) calls the scans last, after the registration check, and refuses as
-`AdmitRefusal.emptyColumn at` (decision D-A1 (a), integration seat I2, with the generated runner
-group regenerated); the refusal `#guard`s below replace seat A's tripwire, which pinned the old
-acceptance.
+(`admitColumn_iff`). The signature check refuses a row with an empty column, at the row and the
+column (`RowReason.emptyColumn`, `Program/SigApp.lean`), and program admission reports it as
+`AdmitRefusal.signature`. The program's own columns are admission's located scan
+(`findEmptyColumnInEffTy`, `Program/Admission.lean`), refused as `AdmitRefusal.emptyColumn at`
+after every other check (decision D-A1 (a), integration seat I2). The refusal `#guard`s below
+replace seat A's tripwire, which pinned the old acceptance.
 
 Red controls: a pair naming one cell twice fits `prod (refOf nat) (refOf string)` in no world
 (`shared_key_not_fits`, proved), which is why completeness declares each handle position at its
-own fresh key; and the column scan no longer admits CE-015's host table (`#guard_msgs (error)`).
+own fresh key; and the signature check no longer admits CE-015's host table
+(`#guard_msgs (error)`).
 -/
 
 set_option autoImplicit false
@@ -44,14 +46,15 @@ def dupTable : RowTable := [row "query" .nat, row "query" .string]
 
 -- tested: the located refusal names the repeated key, and admission reports it
 #guard Table.lawful dupTable == false
-#guard Table.checkLawful dupTable == some (.duplicateKey (rowKey (row "query" .nat)))
-#guard match admitProgram (.succeed (.lit (.nat 0))) dupTable with
-  | .error (.duplicateKey k) => k == rowKey (row "query" .nat)
+#guard admitSig ⟨dupTable, []⟩ == .error (.duplicateRow (rowKey (row "query" .nat)))
+#guard match admitProgram (.succeed (.lit (.nat 0))) ⟨dupTable, []⟩ with
+  | .error (.signature (.duplicateRow k)) => k == rowKey (row "query" .nat)
   | _ => false
 
-/-- TY-05 on a table: `lawful` refuses and `checkLawful` locates (proved, by the theorem). -/
-theorem dupTable_located : Table.checkLawful dupTable ≠ none :=
-  Table.checkLawful_of_not_lawful dupTable (by decide)
+/-- TY-05 on a table: `lawful` refuses and the signature's refusal locates (proved, by the
+theorems: a table `Table.lawful` refuses is no lawful signature). -/
+theorem dupTable_located : admitSig ⟨dupTable, []⟩ ≠ .ok () := fun h =>
+  absurd ((admitSig_ok_iff _).mp h).tableLawful (by decide)
 
 /-! ## Rows 127 and 149: the column check -/
 
@@ -71,13 +74,14 @@ def pNeverPair : NativeEff :=
 -- tested: the checker types it at `prod never nat`, the column admission refuses
 #guard (Api.typeOf pNeverPair).map (·.answer) == some (.prod .never .nat)
 
--- tested: the scans locate CE-015's columns (a host-row answer, a host-row request, a program
+-- tested: the checks locate CE-015's columns (a host-row answer, a host-row request, a program
 -- answer), and leave the designed bottom and inhabited columns alone
-#guard findEmptyColumnInTable [hostRow .nat (.except .never .never)] = some ["table", "0", "answer"]
-#guard findEmptyColumnInTable [hostRow (.prod .never .nat) .nat] = some ["table", "0", "request"]
-#guard findEmptyColumnInTable [hostRow .nat .nat, hostRow .nat (.prod .nat .never)] =
-  some ["table", "1", "answer"]
-#guard findEmptyColumnInTable [hostRow .nat .nat, hostRow (.list .never) (.option .never)] = none
+#guard admitSig ⟨[hostRow .nat (.except .never .never)], []⟩ = .error (.row 0 (.emptyColumn "answer"))
+#guard admitSig ⟨[hostRow (.prod .never .nat) .nat], []⟩ = .error (.row 0 (.emptyColumn "request"))
+#guard admitSig ⟨[hostRow .nat .nat, { hostRow .nat (.prod .nat .never) with spelling := "Host.b" }],
+  []⟩ = .error (.row 1 (.emptyColumn "answer"))
+#guard admitSig ⟨[hostRow .nat .nat, { hostRow (.list .never) (.option .never) with spelling := "Host.b" }],
+  []⟩ = .ok ()
 #guard findEmptyColumnInEffTy ⟨.prod .never .nat, .never, .empty⟩ = some ["program", "answer"]
 #guard findEmptyColumnInEffTy ⟨.never, .except .never .never, .empty⟩ = some ["program", "error"]
 #guard findEmptyColumnInEffTy ⟨.never, .never, .empty⟩ = none
@@ -85,30 +89,25 @@ def pNeverPair : NativeEff :=
 -- and misses `prod never nat`, which has none
 #guard admitColumn (.list .int) && (findInt [] (.list .int)).isSome
 #guard !admitColumn (.prod .never .nat) && (findInt [] (.prod .never .nat)).isNone
--- tested: the signature check refuses the same rows, at the row and the column
-#guard admitSig (SigApp.mk [hostRow .nat (.except .never .never)] []) =
-  .error (.row 0 (.emptyColumn "answer"))
-#guard admitSig (SigApp.mk [hostRow (.prod .never .nat) .nat] []) =
-  .error (.row 0 (.emptyColumn "request"))
--- tested: runner admission refuses CE-015's columns, each at its position, after every other
--- check has passed (a host-row answer, a host-row request, a program answer), and still admits
--- the inhabited table
-#guard (match admitProgram pHostNat [hostRow .nat (.except .never .never)] with
-  | .error (.emptyColumn pos) => pos == ["table", "0", "answer"]
+-- tested: runner admission refuses CE-015's columns, each at its position (a host-row answer and
+-- a host-row request at the signature, a program answer after every other check has passed),
+-- and still admits the inhabited table
+#guard (match admitProgram pHostNat ⟨[hostRow .nat (.except .never .never)], []⟩ with
+  | .error (.signature why) => why == .row 0 (.emptyColumn "answer")
   | _ => false)
-#guard (match admitProgram (.succeed (.lit (.nat 0))) [hostRow (.prod .never .nat) .nat] with
-  | .error (.emptyColumn pos) => pos == ["table", "0", "request"]
+#guard (match admitProgram (.succeed (.lit (.nat 0))) ⟨[hostRow (.prod .never .nat) .nat], []⟩ with
+  | .error (.signature why) => why == .row 0 (.emptyColumn "request")
   | _ => false)
-#guard (match admitProgram pNeverPair [] with
+#guard (match admitProgram pNeverPair with
   | .error (.emptyColumn pos) => pos == ["program", "answer"]
   | _ => false)
-#guard (match admitProgram pHostNat [hostRow .nat .nat] with
+#guard (match admitProgram pHostNat ⟨[hostRow .nat .nat], []⟩ with
   | .ok _ => true
   | .error _ => false)
 
-/-- The located scan refuses the CE-015 table (proved). -/
+/-- The signature check refuses the CE-015 table (proved). -/
 theorem ce015_table_refused :
-    findEmptyColumnInTable [hostRow .nat (.except .never .never)] ≠ none := by
+    admitSig ⟨[hostRow .nat (.except .never .never)], []⟩ = .error (.row 0 (.emptyColumn "answer")) := by
   decide +kernel
 
 /-- The located scan refuses CE-015's program answer column (proved). -/
@@ -132,14 +131,14 @@ theorem two_cells_inhabited :
   (Typed.inhabited_iff_fits (.prod (.refOf .nat) (.refOf .string))).mp rfl
 
 -- **Red control.** The old acceptance of CE-015's host table does not close against the
--- column scan.
+-- signature check.
 /--
 error: Tactic `decide` proved that the proposition
-  findEmptyColumnInTable [hostRow Ty.nat (Ty.never.except Ty.never)] = none
+  admitSig { rows := [hostRow Ty.nat (Ty.never.except Ty.never)] } = Except.ok ()
 is false
 -/
 #guard_msgs (error) in
-example : findEmptyColumnInTable [hostRow .nat (.except .never .never)] = none := by
+example : admitSig ⟨[hostRow .nat (.except .never .never)], []⟩ = .ok () := by
   decide +kernel
 
 end Test.Program.AdmissionColumns

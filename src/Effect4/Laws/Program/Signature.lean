@@ -1,14 +1,16 @@
 import Effect4.Laws.Program.Typing.Sound
 import Effect4.Laws.Program.Folds.Checker
 import Effect4.Laws.Program.Template
-import Effect4.Program.Admission
+import Effect4.Program.SigApp
 
 /-!
 # Laws.Program.Signature — Σ_app: the signature as data, its extension and its lawfulness
 
 Decisions rows 111–116 (ruled 2026-10-01). The open part of the signature is Σ_app: the host-row
 table and the application's service declarations (`SigApp`). The core alphabet (`NativeOp`,
-`SyncOp`, `FiberOp`, the atoms) stays fixed and grows only under DI-47's finite gate.
+`SyncOp`, `FiberOp`, the atoms) stays fixed and grows only under DI-47's finite gate. The
+definitions are the core's (`Program/SigApp.lean`): `SigApp`, its signature and its located
+refusal `admitSig`, which program admission runs. This module holds their laws.
 
 * **The signature an application's tables give the checker** (`SigApp.signature`). Service
   carriers are per code (row 113; `Machine/Key.lean`'s `carrier_def`: "selection is by the
@@ -265,39 +267,9 @@ theorem rows_append (t t' : RowTable) :
     simp only [nativeRowOf, List.getElem?_append_left hi]
   | _ => exact ⟨rfl, rfl⟩
 
-/-! ## Σ_app -/
-
-/-- The application's part of the signature (row 111): the host-row table and the service
-declarations, each a key and its carrier. -/
-structure SigApp where
-  rows : RowTable := []
-  services : List (ServiceKey × Ty) := []
+/-! ## Σ_app (`SigApp`, `Program/SigApp.lean`) -/
 
 namespace SigApp
-
-/-- The carrier the application declares for a service code: its first declaration there. -/
-def codeTy (app : SigApp) (code : ServiceTypeCode) : Option Ty :=
-  (app.services.find? (fun entry => entry.1.service == code)).map Prod.snd
-
-/-- The carrier the built-in table gives a service code. -/
-def builtinCodeTy (code : ServiceTypeCode) : Option Ty :=
-  (nativeServiceTypes.find? (fun entry => entry.1 == code.value)).map Prod.snd
-
-/-- A key's carrier under the application's signature, selected by its code (row 113): the
-reserved `Scope` key keeps its exception, the machine's reserved names type nothing, and a
-free name's code reads the application's declarations before the built-in codes. -/
-def serviceTy (app : SigApp) (key : ServiceKey) : Option Ty :=
-  match nativeReservedServiceTypes.find? (fun entry => entry.1 == key) with
-  | some (_, ty) => some ty
-  | none =>
-    if key.name.value < Effect4.Machine.Env.firstFreeName then none
-    else match app.codeTy key.service with
-      | some ty => some ty
-      | none => builtinCodeTy key.service
-
-/-- The checker's signature over an application's tables. -/
-def signature (app : SigApp) : Signature NativeOp :=
-  { nativeSignature app.rows with serviceTy := app.serviceTy }
 
 /-- With no declarations the service table is the built-in one. -/
 theorem serviceTy_nil (rows : RowTable) : (⟨rows, []⟩ : SigApp).serviceTy = nativeServiceTy :=
@@ -920,109 +892,16 @@ theorem effTy_restrict {Op : Type} {s s' : Signature Op} (h : SigExtends s s') {
 /-! ## Lawful signatures (rows 97, 113, 114, 127; TY-05)
 
 `LawfulSig` gathers the conditions an application's signature must meet behind one located
-refusal (`admitSig`) and proves the two agree (`admitSig_ok_iff`). Its shape is C6's
+refusal (`admitSig`, `Program/SigApp.lean`, which program admission runs) and proves the two
+agree (`admitSig_ok_iff`). Its shape is C6's
 (the synthesis §2.2, as Codex's audit amends it): every row and every declaration meets its own
 conditions, the rows and the declarations are pairwise compatible, and every key a row requires
 has a carrier (the third clause shape, which points from rows to services and is monotone under
 append). So `LawfulSig (Σ ++ ε)` splits into the parts and the cross terms by
 `List.forall_mem_append` and `List.pairwise_append` (`lawful_append`). -/
 
-/-- A row's local conditions, with the reason each one gives when it fails. -/
-inductive RowReason
-  /-- `checkTable`: the runner registers only external rows. -/
-  | notExternal
-  /-- `checkTable`: only asynchronous rows. -/
-  | notAsync
-  /-- `Table.lawful`: the row's key collides with a built-in operation's. -/
-  | builtinCollision
-  /-- `Table.lawful`: a value row has trailing names. -/
-  | valueRowTrailing
-  /-- DB-15: the column mentions the reserved integer type. -/
-  | intType (column : String)
-  /-- Row 97: the answer or error column mentions an internal handle kind. -/
-  | internalHandle (column : String)
-  /-- Row 127: the column is empty and is not `never`. -/
-  | emptyColumn (column : String)
-  /-- Row 42: a template parameter sits under a union in the column. -/
-  | templateNotAdmissible (column : String)
-  /-- Row 42: the answer or error names a parameter the request does not bind. -/
-  | notWellScoped
-deriving DecidableEq, Repr
-
-/-- A row's local checks, in the order a refusal names the first failing one. -/
-def rowChecks (r : Row) : List (Bool × RowReason) :=
-  [(r.registration == .external, .notExternal),
-   (r.kind == .async, .notAsync),
-   (!(NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey r), .builtinCollision),
-   (!(r.shape == .value) || r.trailing.isEmpty, .valueRowTrailing),
-   ((findInt [] r.request).isNone, .intType "request"),
-   ((findInt [] r.answer).isNone, .intType "answer"),
-   ((findInt [] r.error).isNone, .intType "error"),
-   ((findInternalHandle [] r.answer).isNone, .internalHandle "answer"),
-   ((findInternalHandle [] r.error).isNone, .internalHandle "error"),
-   (admitColumn r.request, .emptyColumn "request"),
-   (admitColumn r.answer, .emptyColumn "answer"),
-   (admitColumn r.error, .emptyColumn "error"),
-   (r.request.templateAdmissible, .templateNotAdmissible "request"),
-   (r.answer.templateAdmissible, .templateNotAdmissible "answer"),
-   (r.error.templateAdmissible, .templateNotAdmissible "error"),
-   (r.wellScoped, .notWellScoped)]
-
-/-- A declaration's local conditions (row 114), with their reasons. -/
-inductive ServiceReason
-  /-- The key's name is one the machine reserves (`Env.firstFreeName`). -/
-  | reservedName
-  /-- The carrier is not flat (`unit`, `nat`, `bool`, `string`, a non-context handle). -/
-  | nonFlatCarrier
-  /-- The built-in table gives the key's code another carrier. -/
-  | conflictsBuiltin
-deriving DecidableEq, Repr
-
-/-- The flat carriers, as a fold: the scalars and every handle but the context. -/
-def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
-  ty_never := false
-  ty_unit := true
-  ty_nat := true
-  ty_int := false
-  ty_string := true
-  ty_bool := true
-  ty_handle target := target != Ty.contextTarget
-  ty_option _ := false
-  ty_list _ := false
-  ty_prod _ _ := false
-  ty_except _ _ := false
-  ty_exitOf _ _ := false
-  ty_causeOf _ := false
-  ty_fiberOf _ _ := false
-  ty_union _ _ := false
-  ty_lit _ := false
-  ty_refOf _ := false
-  ty_deferredOf _ _ := false
-  ty_var _ := false
-  ty_unknown := false
-  -- structured carriers are row 118's; the data wave's leaves are not service carriers yet
-  ty_record _ := false
-  ty_map _ _ := false
-  ty_tuple _ := false
-  ty_app _ _ := false
-  ty_null := false
-  ty_undefined := false
-  ty_number := false
-  ty_bytes := false
-
-/-- A flat carrier (row 114; row 118 owns structured carriers). -/
-def flatCarrier (t : Ty) : Bool := cata_ty flatCarrierAlg t
-
-/-- A declaration's local checks, in order. -/
-def serviceChecks (e : ServiceKey × Ty) : List (Bool × ServiceReason) :=
-  [(decide (Effect4.Machine.Env.firstFreeName ≤ e.1.name.value), .reservedName),
-   (flatCarrier e.2, .nonFlatCarrier),
-   ((SigApp.builtinCodeTy e.1.service).all (· == e.2), .conflictsBuiltin)]
-
-/-- The first failing check's reason. -/
-def firstFailing {β : Type} (checks : List (Bool × β)) : Option β :=
-  (checks.find? fun c => !c.1).map Prod.snd
-
+/-- `firstFailing` (`Program/SigApp.lean`) names no reason exactly when every check holds. A step
+of `sigRefusal?_eq_none_iff`. -/
 theorem firstFailing_eq_none_iff {β : Type} (checks : List (Bool × β)) :
     firstFailing checks = none ↔ ∀ c ∈ checks, c.1 = true := by
   unfold firstFailing
@@ -1038,14 +917,8 @@ theorem firstFailing_eq_none_iff {β : Type} (checks : List (Bool × β)) :
     rw [h c hc] at hbad
     cases hbad
 
-/-- The first position of a list whose element a check refuses, with the refusal. -/
-def firstIndexed {α β : Type} (f : α → Option β) : Nat → List α → Option (Nat × β)
-  | _, [] => none
-  | i, x :: xs =>
-    match f x with
-    | some b => some (i, b)
-    | none => firstIndexed f (i + 1) xs
-
+/-- `firstIndexed` (`Program/SigApp.lean`) finds no position exactly when the check refuses no
+element. A step of `sigRefusal?_eq_none_iff`. -/
 theorem firstIndexed_eq_none_iff {α β : Type} (f : α → Option β) :
     ∀ (i : Nat) (xs : List α), firstIndexed f i xs = none ↔ ∀ x ∈ xs, f x = none
   | _, [] => ⟨fun _ _ hx => (nomatch hx), fun _ => rfl⟩
@@ -1066,11 +939,8 @@ theorem firstIndexed_eq_none_iff {α β : Type} (f : α → Option β) :
       · intro h y hy
         exact h y (List.mem_cons_of_mem x hy)
 
-/-- The first repeated element of a list. -/
-def firstDup {α : Type} [DecidableEq α] : List α → Option α
-  | [] => none
-  | x :: xs => if x ∈ xs then some x else firstDup xs
-
+/-- `firstDup` (`Program/SigApp.lean`) finds no repeat exactly when the list has none. A step of
+`sigRefusal?_eq_none_iff`. -/
 theorem firstDup_eq_none_iff {α : Type} [DecidableEq α] :
     ∀ xs : List α, firstDup xs = none ↔ xs.Nodup
   | [] => ⟨fun _ => List.nodup_nil, fun _ => rfl⟩
@@ -1082,33 +952,6 @@ theorem firstDup_eq_none_iff {α : Type} [DecidableEq α] :
       exact ⟨fun h => (nomatch h), fun h => absurd hx h.1⟩
     · rw [if_neg hx, firstDup_eq_none_iff xs]
       exact ⟨fun h => ⟨hx, h⟩, fun h => h.2⟩
-
-/-- Why a signature is not lawful, located: a row by its position, a declaration by its
-position, a repeated row key or service code, a required key with no carrier. -/
-inductive SigRefusal
-  | row (index : Nat) (reason : RowReason)
-  | duplicateRow (key : String × List String)
-  | service (index : Nat) (reason : ServiceReason)
-  | duplicateCode (code : ServiceTypeCode)
-  | unservedKey (row : Nat) (key : ServiceKey)
-deriving DecidableEq, Repr
-
-/-- The first refusal, in the order rows, row keys, declarations, codes, required keys. -/
-def sigRefusal? (app : SigApp) : Option SigRefusal :=
-  ((firstIndexed (fun r => firstFailing (rowChecks r)) 0 app.rows).map
-      fun found => .row found.1 found.2).or <|
-  ((firstDup (app.rows.map rowKey)).map .duplicateRow).or <|
-  ((firstIndexed (fun e => firstFailing (serviceChecks e)) 0 app.services).map
-      fun found => .service found.1 found.2).or <|
-  ((firstDup (app.services.map (·.1.service))).map .duplicateCode).or <|
-  (firstIndexed (fun r => r.requires.find? fun k => !(app.serviceTy k).isSome) 0 app.rows).map
-      fun found => .unservedKey found.1 found.2
-
-/-- **Admit a signature**: a located refusal, or `ok`. -/
-def admitSig (app : SigApp) : Except SigRefusal Unit :=
-  match sigRefusal? app with
-  | some why => .error why
-  | none => .ok ()
 
 /-- **The lawful signatures** (rows 97, 113, 114, 127; C6's shape). -/
 structure LawfulSig (app : SigApp) : Prop where
@@ -1173,6 +1016,16 @@ theorem LawfulSig.tableLawful {app : SigApp} (h : LawfulSig app) : Table.lawful 
   unfold Table.lawful
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true]
   exact ⟨⟨List.pairwise_map.mpr h.rowsDistinct, collision⟩, trailing⟩
+
+/-- **A lawful signature's rows are the runner's to register** (proved): every row is an external
+asynchronous row, `rowChecks`' first two checks (`checkTable`'s two conditions). A step of the
+claim `admitted-source-lawful`, read off program admission's certificate. Consumer:
+`build_runnable` (`Laws/Program/Author.lean`), the registration fact of a built program, which the
+certificate held as a field until admission ran `admitSig`. -/
+theorem LawfulSig.registered {app : SigApp} (h : LawfulSig app) :
+    ∀ r ∈ app.rows, r.registration = .external ∧ r.kind = .async := fun r hr =>
+  ⟨beq_iff_eq.mp (h.rows r hr _ List.mem_cons_self),
+    beq_iff_eq.mp (h.rows r hr _ (List.mem_cons_of_mem _ List.mem_cons_self))⟩
 
 /-- The empty signature is lawful: what every source with no rows and no declarations carries. -/
 theorem SigApp.lawful_empty : LawfulSig (SigApp.mk [] []) :=

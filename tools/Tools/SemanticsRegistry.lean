@@ -561,7 +561,7 @@ def registry : Registry where
       title := "M7a–c for a program the API admits at the empty row table, with a closed requirement row and an answer-free tape"
       pointer := .witness `Effect4.Program.Typed.m7_admitted },
     { id := "admitted-source-lawful", concept := "residual-program-typing", role := .compatibility
-      title := "An admitted table that meets the admission gap (served keys, scoped rows, admissible templates) is a lawful signature with the built-in services (the bridge from admission to the typed state, row-table half)"
+      title := "An admitted program's signature, its row table and its service declarations, is lawful: program admission runs admitSig (the bridge from admission to the typed state)"
       pointer := .witness `Effect4.Program.Typed.lawfulSig_of_admitted
       contestedBy := ["E4-TYPED-CE-041"] },
     { id := "m7-exit-handles-valid", concept := "translation-simulation", role := .preservation
@@ -682,7 +682,7 @@ def registry : Registry where
         `Effect4.Program.admitSig_ok_iff, `Effect4.Program.Denote.meaning_typed_app,
         `Effect4.Program.Denote.run_typed_app, `Effect4.Program.Denote.meaningB_typed_app,
         `Effect4.Program.Typed.reachable_typed_admitted]
-      openParts := ["admission pinned to the built-in signature and weaker than LawfulSig: AdmittedProgram checks neither served keys, row scoping nor union templates (E4-TYPED-CE-041), and code generation's admission check is at nativeSignature table (decisions row 21; the slice plan, docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md)",
+      openParts := ["program admission at declared services is reached by tests only: authoring, Built, the session and Run.open admit at the table's own signature ⟨table, []⟩, and code generation's admission check is at nativeSignature table (decisions row 21; the slice plan's steps 3 and 4, docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md)",
         "the faces (22 lines) pinned to the built-in signature: Laws/Codegen/Admit, Laws/Codegen/Checked and Laws/Api/ModuleReadable take nativeSignature table (the Σ_app slice; C7, conditional on decisions row 115)",
         "meaning, loop and run soundness at service declarations that rebind a code: restored 2026-10-04 at fresh codes only (SoundAnySignature.lean)",
         "structured service carriers: LawfulSig admits flat carriers only (decisions row 118, open: waits on a program that needs one)"] },

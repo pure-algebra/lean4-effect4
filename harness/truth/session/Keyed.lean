@@ -339,7 +339,7 @@ def plan (f : Fixture) : Except String (List J × J) := do
 
 def emitFixture (name : String) : Except String J := do
   let f ← fixture name
-  discard <| (Api.admitProgram f.program f.table).mapError (fun _ => "program admission refused: " ++ name)
+  discard <| (Api.admitProgram f.program ⟨f.table, []⟩).mapError (fun _ => "program admission refused: " ++ name)
   let expr ← (Api.print f.program f.table).mapError (fun _ => "print refused: " ++ name)
   let (schedule, expected) ← plan f
   return Json.mkObj [("name", .str name), ("table", tableJson f.table),

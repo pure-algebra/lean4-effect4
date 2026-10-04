@@ -3,8 +3,8 @@ src/Effect4/Api.lean	check	simp-without-only	1
 src/Effect4/Api.lean	explain_none_iff	simp_all	2
 src/Effect4/Api/Derived.lean	ofVal_exact	first	2
 src/Effect4/Api/Derived.lean	ofVal_toVal	simp-without-only	4
-src/Effect4/Api/RefusalsDerived.lean	ofVal_exact	first	13
-src/Effect4/Api/RefusalsDerived.lean	ofVal_toVal	simp-without-only	20
+src/Effect4/Api/RefusalsDerived.lean	ofVal_exact	first	16
+src/Effect4/Api/RefusalsDerived.lean	ofVal_toVal	simp-without-only	23
 src/Effect4/Api/RunnerDerived.lean	ofVal_exact	first	13
 src/Effect4/Api/RunnerDerived.lean	ofVal_toVal	simp-without-only	20
 src/Effect4/Codegen/PrintLeaf.lean	methodArgsRow_shape	simp-without-only	2
@@ -1095,9 +1095,6 @@ src/Effect4/Machine/Wake.lean	schedule_coalesces	simp-without-only	1
 src/Effect4/Machine/Wake.lean	schedule_empty	simp-without-only	1
 src/Effect4/Machine/Wake.lean	schedule_posts	simp-without-only	1
 src/Effect4/Machine/Wake.lean	wakeAll_cancel_owed	simp-without-only	1
-src/Effect4/Program/Admission.lean	admitStraightProgram_admission_error	simp-without-only	1
-src/Effect4/Program/Admission.lean	admitStraightProgram_ok	simp-without-only	1
-src/Effect4/Program/Admission.lean	admitStraightProgram_outside	simp-without-only	1
 src/Effect4/Program/AtomInventory.lean	all_complete	simp-without-only	1
 src/Effect4/Program/Authoring/Services.lean	<Lean.Parser.Command.macro_rules>	unread	1
 src/Effect4/Program/Authoring/Sugar.lean	<Lean.Parser.Command.macro_rules>	unread	1

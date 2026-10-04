@@ -3,15 +3,16 @@
 -- Regenerate (tools/Effect4Gen/Driver.lean runs this for every group; --verify refuses a diff):
 --   lake exe effect4gen Main --group Refusals --imports Effect4.Api,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author --out src/Effect4/Api/RefusalsDerived.lean --append tools/Effect4Gen/guards/refusals.lean \
 --     Effect4.Program.TableRefusal Effect4.Program.FormationReason \
---    Effect4.Program.FormationRefusal Effect4.Program.AdmitRefusal \
---    Effect4.Program.Authoring.Reason Effect4.Program.Authoring.Refusal \
---    Effect4.Program.RecordTypingReason Effect4.Program.RecordTermRefusal \
---    Effect4.Program.RecordCauseRefusal Effect4.Program.TupleTypingReason \
---    Effect4.Program.TupleTermRefusal Effect4.Program.TupleCauseRefusal \
---    Effect4.Program.TermTypingRefusal Effect4.Program.CauseTypingRefusal \
---    Effect4.Program.TypeReason Effect4.Program.TypeRefusal Effect4.Api.AuthorRefusal \
---    Effect4.Program.PrintRefusal Effect4.Program.ReadRefusal Effect4.Api.BuildRefusal
--- Carriers read from: Effect4.Program.Native, Effect4.Program.Formation, Effect4.Program.Admission, Effect4.Program.Authoring, Effect4.Program.Typing.TermRefusal, Effect4.Program.Typing.Blame, Effect4.Api, Effect4.Codegen.PrintLeaf, Effect4.Codegen.Read, Effect4.Api.Author
+--    Effect4.Program.FormationRefusal Effect4.Program.RowReason Effect4.Program.ServiceReason \
+--    Effect4.Program.SigRefusal Effect4.Program.AdmitRefusal Effect4.Program.Authoring.Reason \
+--    Effect4.Program.Authoring.Refusal Effect4.Program.RecordTypingReason \
+--    Effect4.Program.RecordTermRefusal Effect4.Program.RecordCauseRefusal \
+--    Effect4.Program.TupleTypingReason Effect4.Program.TupleTermRefusal \
+--    Effect4.Program.TupleCauseRefusal Effect4.Program.TermTypingRefusal \
+--    Effect4.Program.CauseTypingRefusal Effect4.Program.TypeReason Effect4.Program.TypeRefusal \
+--    Effect4.Api.AuthorRefusal Effect4.Program.PrintRefusal Effect4.Program.ReadRefusal \
+--    Effect4.Api.BuildRefusal
+-- Carriers read from: Effect4.Program.Native, Effect4.Program.Formation, Effect4.Program.SigApp, Effect4.Program.Admission, Effect4.Program.Authoring, Effect4.Program.Typing.TermRefusal, Effect4.Program.Typing.Blame, Effect4.Api, Effect4.Codegen.PrintLeaf, Effect4.Codegen.Read, Effect4.Api.Author
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/refusals.lean
 import Effect4.Api
 import Effect4.Api.HostSession
@@ -215,48 +216,307 @@ instance instCanonical : Canonical (_root_.Effect4.Program.FormationRefusal) :=
 
 end FormationRefusalC
 
+namespace RowReasonC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "RowReason"
+     [("notExternal", 0, []),
+      ("notAsync", 1, []),
+      ("builtinCollision", 2, []),
+      ("valueRowTrailing", 3, []),
+      ("intType", 4, [("column", (shape _root_.String).root)]),
+      ("internalHandle", 5, [("column", (shape _root_.String).root)]),
+      ("emptyColumn", 6, [("column", (shape _root_.String).root)]),
+      ("templateNotAdmissible", 7, [("column", (shape _root_.String).root)]),
+      ("notWellScoped", 8, [])],
+   (shape _root_.String).defs⟩
+
+def toVal : _root_.Effect4.Program.RowReason → Val
+  | .notExternal => .ctor 0 []
+  | .notAsync => .ctor 1 []
+  | .builtinCollision => .ctor 2 []
+  | .valueRowTrailing => .ctor 3 []
+  | .intType a0 => .ctor 4 [Canonical.toVal a0]
+  | .internalHandle a0 => .ctor 5 [Canonical.toVal a0]
+  | .emptyColumn a0 => .ctor 6 [Canonical.toVal a0]
+  | .templateNotAdmissible a0 => .ctor 7 [Canonical.toVal a0]
+  | .notWellScoped => .ctor 8 []
+
+def ofVal : Val → Option (_root_.Effect4.Program.RowReason)
+  | .ctor 0 [] => some .notExternal
+  | .ctor 1 [] => some .notAsync
+  | .ctor 2 [] => some .builtinCollision
+  | .ctor 3 [] => some .valueRowTrailing
+  | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .intType
+  | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .internalHandle
+  | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .emptyColumn
+  | .ctor 7 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .templateNotAdmissible
+  | .ctor 8 [] => some .notWellScoped
+  | _ => none
+
+set_option linter.unusedSimpArgs false in
+theorem ofVal_toVal (a : _root_.Effect4.Program.RowReason) : ofVal (toVal a) = some a := by
+  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RowReason} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  all_goals first
+    | (injection h with h; subst h; rfl)
+    | (rename_i w
+       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+       subst hj
+       simp only [toVal]
+       rw [Canonical.ofVal_exact hx])
+    | exact nomatch h
+
+theorem lift_String (x : _root_.String) :
+    acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => hp)
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Program.RowReason) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «notExternal» =>
+    exact accepts_sum _ _ _ 0 "notExternal" [] [] rfl (acceptsFields_nil _)
+  | «notAsync» =>
+    exact accepts_sum _ _ _ 1 "notAsync" [] [] rfl (acceptsFields_nil _)
+  | «builtinCollision» =>
+    exact accepts_sum _ _ _ 2 "builtinCollision" [] [] rfl (acceptsFields_nil _)
+  | «valueRowTrailing» =>
+    exact accepts_sum _ _ _ 3 "valueRowTrailing" [] [] rfl (acceptsFields_nil _)
+  | «intType» a0 =>
+    exact accepts_sum _ _ _ 4 "intType" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «internalHandle» a0 =>
+    exact accepts_sum _ _ _ 5 "internalHandle" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «emptyColumn» a0 =>
+    exact accepts_sum _ _ _ 6 "emptyColumn" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «templateNotAdmissible» a0 =>
+    exact accepts_sum _ _ _ 7 "templateNotAdmissible" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «notWellScoped» =>
+    exact accepts_sum _ _ _ 8 "notWellScoped" [] [] rfl (acceptsFields_nil _)
+
+instance instCanonical : Canonical (_root_.Effect4.Program.RowReason) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end RowReasonC
+
+namespace ServiceReasonC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "ServiceReason"
+     [("reservedName", 0, []),
+      ("nonFlatCarrier", 1, []),
+      ("conflictsBuiltin", 2, [])],
+   []⟩
+
+def toVal : _root_.Effect4.Program.ServiceReason → Val
+  | .reservedName => .ctor 0 []
+  | .nonFlatCarrier => .ctor 1 []
+  | .conflictsBuiltin => .ctor 2 []
+
+def ofVal : Val → Option (_root_.Effect4.Program.ServiceReason)
+  | .ctor 0 [] => some .reservedName
+  | .ctor 1 [] => some .nonFlatCarrier
+  | .ctor 2 [] => some .conflictsBuiltin
+  | _ => none
+
+set_option linter.unusedSimpArgs false in
+theorem ofVal_toVal (a : _root_.Effect4.Program.ServiceReason) : ofVal (toVal a) = some a := by
+  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.ServiceReason} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  all_goals first
+    | (injection h with h; subst h; rfl)
+    | (rename_i w
+       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+       subst hj
+       simp only [toVal]
+       rw [Canonical.ofVal_exact hx])
+    | exact nomatch h
+
+theorem fits (a : _root_.Effect4.Program.ServiceReason) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «reservedName» =>
+    exact accepts_sum _ _ _ 0 "reservedName" [] [] rfl (acceptsFields_nil _)
+  | «nonFlatCarrier» =>
+    exact accepts_sum _ _ _ 1 "nonFlatCarrier" [] [] rfl (acceptsFields_nil _)
+  | «conflictsBuiltin» =>
+    exact accepts_sum _ _ _ 2 "conflictsBuiltin" [] [] rfl (acceptsFields_nil _)
+
+instance instCanonical : Canonical (_root_.Effect4.Program.ServiceReason) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end ServiceReasonC
+
+namespace SigRefusalC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "SigRefusal"
+     [("row", 0, [("index", (shape _root_.Nat).root),
+        ("reason", (shape _root_.Effect4.Program.RowReason).root)]),
+      ("duplicateRow", 1, [
+        ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
+      ("service", 2, [("index", (shape _root_.Nat).root),
+        ("reason", (shape _root_.Effect4.Program.ServiceReason).root)]),
+      ("duplicateCode", 3, [("code", (shape _root_.Effect4.ServiceTypeCode).root)]),
+      ("unservedKey", 4, [("row", (shape _root_.Nat).root),
+        ("key", (shape _root_.Effect4.ServiceKey).root)])],
+   (shape _root_.Nat).defs ++ (shape _root_.Effect4.Program.RowReason).defs ++
+     (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).defs ++
+     (shape _root_.Effect4.Program.ServiceReason).defs ++
+     (shape _root_.Effect4.ServiceTypeCode).defs ++ (shape _root_.Effect4.ServiceKey).defs⟩
+
+def toVal : _root_.Effect4.Program.SigRefusal → Val
+  | .row a0 a1 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1]
+  | .duplicateRow a0 => .ctor 1 [Canonical.toVal a0]
+  | .service a0 a1 => .ctor 2 [Canonical.toVal a0, Canonical.toVal a1]
+  | .duplicateCode a0 => .ctor 3 [Canonical.toVal a0]
+  | .unservedKey a0 a1 => .ctor 4 [Canonical.toVal a0, Canonical.toVal a1]
+
+def ofVal : Val → Option (_root_.Effect4.Program.SigRefusal)
+  | .ctor 0 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Nat) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.RowReason) v1 with
+    | some a0, some a1 => some (.row a0 a1)
+    | _, _ => none
+  | .ctor 1 [v0] => (Canonical.ofVal (α := (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))) v0).map .duplicateRow
+  | .ctor 2 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Nat) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.ServiceReason) v1 with
+    | some a0, some a1 => some (.service a0 a1)
+    | _, _ => none
+  | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.Effect4.ServiceTypeCode) v0).map .duplicateCode
+  | .ctor 4 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Nat) v0,
+        Canonical.ofVal (α := _root_.Effect4.ServiceKey) v1 with
+    | some a0, some a1 => some (.unservedKey a0 a1)
+    | _, _ => none
+  | _ => none
+
+set_option linter.unusedSimpArgs false in
+theorem ofVal_toVal (a : _root_.Effect4.Program.SigRefusal) : ofVal (toVal a) = some a := by
+  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.SigRefusal} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  all_goals first
+    | (injection h with h; subst h; rfl)
+    | (rename_i w
+       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+       subst hj
+       simp only [toVal]
+       rw [Canonical.ofVal_exact hx])
+    | (split at h
+       · rename_i b0 b1 h0 h1
+         injection h with h
+         subst h
+         simp only [toVal]
+         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+         done
+       all_goals exact nomatch h)
+    | exact nomatch h
+
+theorem lift_Nat (x : _root_.Nat) :
+    acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))
+    _ _ (Canonical.fits x)
+theorem lift_RowReason (x : _root_.Effect4.Program.RowReason) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RowReason).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+    _ _ (Canonical.fits x)
+theorem lift_ProdStringListString (x : (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+    _ _ (Canonical.fits x)
+theorem lift_ServiceReason (x : _root_.Effect4.Program.ServiceReason) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.ServiceReason).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_ServiceTypeCode (x : _root_.Effect4.ServiceTypeCode) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.ServiceTypeCode).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_ServiceKey (x : _root_.Effect4.ServiceKey) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.ServiceKey).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Program.SigRefusal) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «row» a0 a1 =>
+    exact accepts_sum _ _ _ 0 "row" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_RowReason a1) (acceptsFields_nil _)))
+  | «duplicateRow» a0 =>
+    exact accepts_sum _ _ _ 1 "duplicateRow" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_ProdStringListString a0) (acceptsFields_nil _))
+  | «service» a0 a1 =>
+    exact accepts_sum _ _ _ 2 "service" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_ServiceReason a1) (acceptsFields_nil _)))
+  | «duplicateCode» a0 =>
+    exact accepts_sum _ _ _ 3 "duplicateCode" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_ServiceTypeCode a0) (acceptsFields_nil _))
+  | «unservedKey» a0 a1 =>
+    exact accepts_sum _ _ _ 4 "unservedKey" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_ServiceKey a1) (acceptsFields_nil _)))
+
+instance instCanonical : Canonical (_root_.Effect4.Program.SigRefusal) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end SigRefusalC
+
 namespace AdmitRefusalC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "AdmitRefusal"
      [("illTyped", 0, []),
-      ("duplicateKey", 1, [
-        ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
-      ("builtinCollision", 2, [
-        ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
-      ("valueRowTrailing", 3, [
-        ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
-      ("table", 4, [("why", (shape _root_.Effect4.Program.TableRefusal).root)]),
-      ("uninhabited", 5, [("at", (shape (@_root_.List (_root_.String))).root)]),
-      ("internalHandle", 6, [("at", (shape (@_root_.List (_root_.String))).root)]),
-      ("emptyColumn", 7, [("at", (shape (@_root_.List (_root_.String))).root)]),
-      ("formation", 8, [("why", (shape _root_.Effect4.Program.FormationRefusal).root)])],
-   (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).defs ++
-     (shape _root_.Effect4.Program.TableRefusal).defs ++
+      ("signature", 1, [("why", (shape _root_.Effect4.Program.SigRefusal).root)]),
+      ("uninhabited", 2, [("at", (shape (@_root_.List (_root_.String))).root)]),
+      ("emptyColumn", 3, [("at", (shape (@_root_.List (_root_.String))).root)]),
+      ("formation", 4, [("why", (shape _root_.Effect4.Program.FormationRefusal).root)])],
+   (shape _root_.Effect4.Program.SigRefusal).defs ++
      (shape (@_root_.List (_root_.String))).defs ++
      (shape _root_.Effect4.Program.FormationRefusal).defs⟩
 
 def toVal : _root_.Effect4.Program.AdmitRefusal → Val
   | .illTyped => .ctor 0 []
-  | .duplicateKey a0 => .ctor 1 [Canonical.toVal a0]
-  | .builtinCollision a0 => .ctor 2 [Canonical.toVal a0]
-  | .valueRowTrailing a0 => .ctor 3 [Canonical.toVal a0]
-  | .table a0 => .ctor 4 [Canonical.toVal a0]
-  | .uninhabited a0 => .ctor 5 [Canonical.toVal a0]
-  | .internalHandle a0 => .ctor 6 [Canonical.toVal a0]
-  | .emptyColumn a0 => .ctor 7 [Canonical.toVal a0]
-  | .formation a0 => .ctor 8 [Canonical.toVal a0]
+  | .signature a0 => .ctor 1 [Canonical.toVal a0]
+  | .uninhabited a0 => .ctor 2 [Canonical.toVal a0]
+  | .emptyColumn a0 => .ctor 3 [Canonical.toVal a0]
+  | .formation a0 => .ctor 4 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.AdmitRefusal)
   | .ctor 0 [] => some .illTyped
-  | .ctor 1 [v0] => (Canonical.ofVal (α := (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))) v0).map .duplicateKey
-  | .ctor 2 [v0] => (Canonical.ofVal (α := (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))) v0).map .builtinCollision
-  | .ctor 3 [v0] => (Canonical.ofVal (α := (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))) v0).map .valueRowTrailing
-  | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.TableRefusal) v0).map .table
-  | .ctor 5 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .uninhabited
-  | .ctor 6 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .internalHandle
-  | .ctor 7 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .emptyColumn
-  | .ctor 8 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FormationRefusal) v0).map .formation
+  | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.SigRefusal) v0).map .signature
+  | .ctor 2 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .uninhabited
+  | .ctor 3 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .emptyColumn
+  | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FormationRefusal) v0).map .formation
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -276,15 +536,10 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.AdmitRefusal} (h : ofV
        rw [Canonical.ofVal_exact hx])
     | exact nomatch h
 
-theorem lift_ProdStringListString (x : (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))) :
-    acceptsIn shapeDoc.defs (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root
+theorem lift_SigRefusal (x : _root_.Effect4.Program.SigRefusal) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.SigRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))
-    _ _ (Canonical.fits x)
-theorem lift_TableRefusal (x : _root_.Effect4.Program.TableRefusal) :
-    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TableRefusal).root
-      (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (hp)))
     _ _ (Canonical.fits x)
 theorem lift_ListString (x : (@_root_.List (_root_.String))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.String))).root
@@ -301,29 +556,17 @@ theorem fits (a : _root_.Effect4.Program.AdmitRefusal) : shapeDoc.accepts (toVal
   cases a with
   | «illTyped» =>
     exact accepts_sum _ _ _ 0 "illTyped" [] [] rfl (acceptsFields_nil _)
-  | «duplicateKey» a0 =>
-    exact accepts_sum _ _ _ 1 "duplicateKey" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_ProdStringListString a0) (acceptsFields_nil _))
-  | «builtinCollision» a0 =>
-    exact accepts_sum _ _ _ 2 "builtinCollision" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_ProdStringListString a0) (acceptsFields_nil _))
-  | «valueRowTrailing» a0 =>
-    exact accepts_sum _ _ _ 3 "valueRowTrailing" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_ProdStringListString a0) (acceptsFields_nil _))
-  | «table» a0 =>
-    exact accepts_sum _ _ _ 4 "table" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_TableRefusal a0) (acceptsFields_nil _))
+  | «signature» a0 =>
+    exact accepts_sum _ _ _ 1 "signature" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_SigRefusal a0) (acceptsFields_nil _))
   | «uninhabited» a0 =>
-    exact accepts_sum _ _ _ 5 "uninhabited" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
-  | «internalHandle» a0 =>
-    exact accepts_sum _ _ _ 6 "internalHandle" _ _ rfl
+    exact accepts_sum _ _ _ 2 "uninhabited" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
   | «emptyColumn» a0 =>
-    exact accepts_sum _ _ _ 7 "emptyColumn" _ _ rfl
+    exact accepts_sum _ _ _ 3 "emptyColumn" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
   | «formation» a0 =>
-    exact accepts_sum _ _ _ 8 "formation" _ _ rfl
+    exact accepts_sum _ _ _ 4 "formation" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_FormationRefusal a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.AdmitRefusal) :=
@@ -1854,10 +2097,23 @@ def recordTerms : List RecordTermRefusal := recordReasons.map fun why => ⟨[0, 
 
 def recordCauses : List RecordCauseRefusal := recordTerms.map fun why => ⟨[1, 0], why⟩
 
+/-- Every constructor of a row's reason (decisions row 21: the signature's refusal reaches an
+agent through admission's). -/
+def rowReasons : List RowReason :=
+  [.notExternal, .notAsync, .builtinCollision, .valueRowTrailing, .intType "request",
+   .internalHandle "answer", .emptyColumn "error", .templateNotAdmissible "request",
+   .notWellScoped]
+
+def serviceReasons : List ServiceReason := [.reservedName, .nonFlatCarrier, .conflictsBuiltin]
+
+def signatures : List SigRefusal :=
+  rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", ["get"])] ++
+    serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩]
+
 def admissions : List AdmitRefusal :=
-  [.illTyped, .duplicateKey ("Db", ["get"]), .builtinCollision ("Ref", ["get"]),
-   .valueRowTrailing ("Clock", ["now"]), .table (.notAsync 2), .uninhabited ["program", "answer"],
-   .internalHandle ["table", "1", "answer"], .emptyColumn ["table", "0", "request"]] ++ formations.map .formation
+  [.illTyped] ++ signatures.map .signature ++
+    [.uninhabited ["program", "answer"], .uninhabited ["table", "0", "request", "inner"],
+     .emptyColumn ["program", "error"]] ++ formations.map .formation
 
 def scopes : List Authoring.Refusal :=
   [⟨[], .unbound "x"⟩, ⟨[0, 1], .unboundLayer "L"⟩, ⟨[2], .duplicateLayer "L"⟩,
@@ -1941,6 +2197,13 @@ def printedHead : Effect4.Json → String
 #guard formations.all fun x => (Canonical.shape FormationRefusal).accepts (Canonical.toVal x)
 #guard formationReasons.all fun x => (Canonical.shape FormationReason).accepts (Canonical.toVal x)
 #guard tables.all fun x => Canonical.decode (α := TableRefusal) (Canonical.encode x) = some x
+#guard rowReasons.all fun x => Canonical.decode (α := RowReason) (Canonical.encode x) = some x
+#guard serviceReasons.all fun x => Canonical.decode (α := ServiceReason) (Canonical.encode x) = some x
+#guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x) = some x
+#guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x ++ [0]) = none
+#guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x).dropLast = none
+#guard signatures.all fun x => (Canonical.shape SigRefusal).accepts (Canonical.toVal x)
+#guard (signatures.map Canonical.encode).eraseDups.length = signatures.length
 #guard admissions.all fun x => Canonical.decode (α := AdmitRefusal) (Canonical.encode x) = some x
 #guard scopes.all fun x => Canonical.decode (α := Authoring.Refusal) (Canonical.encode x) = some x
 #guard typings.all fun x => Canonical.decode (α := TypeRefusal) (Canonical.encode x) = some x
@@ -1981,8 +2244,11 @@ def printedHead : Effect4.Json → String
 -- hand-written `TypeReason.head` on every constructor (the list is every case, in order) ...
 #guard reasons.map TypeReason.head == Canonical.heads TypeReason
 #guard reasons.all fun x => Canonical.head x == x.head
--- ... and with the name `ShapeDoc.print` writes, for every value of the group's eight sums.
+-- ... and with the name `ShapeDoc.print` writes, for every value of the group's sums.
 #guard tables.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard rowReasons.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard serviceReasons.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard signatures.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard admissions.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard (scopes.map (·.reason)).all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard reasons.all fun x => Canonical.head x == printedHead (Canonical.print x)

@@ -333,9 +333,8 @@ Literature: deVilhenaPottier2021, audit P8 — excludedFeature
 **admitted-source-lawful**
 
 ```lean
-∀ {program : Effect4.Program.NativeEff} {table : Effect4.Program.RowTable}
-  (a : Effect4.Program.AdmittedProgram program table),
-  Effect4.Program.Typed.AdmissionGap table → Effect4.Program.LawfulSig { rows := table }
+∀ {program : Effect4.Program.NativeEff} {app : Effect4.Program.SigApp}
+  (a : Effect4.Program.AdmittedProgram program app), Effect4.Program.LawfulSig app
 ```
 
 ## scope-lifetime-finalization
@@ -1222,19 +1221,16 @@ Literature: WrightFelleisen1994, audit P36 — analogy
 **m7-admitted**
 
 ```lean
-∀ {program : Effect4.Program.NativeEff} (a : Effect4.Program.AdmittedProgram program List.nil)
-  (fuel : Nat) (tape : List Effect4.Api.Decision),
-  Eq a.ty.requires Effect4.Machine.Env.Requirement.empty →
-    (∀ (d : Effect4.Api.Decision),
-        List.instMembership.mem tape d → Effect4.Program.Typed.NoHostAnswer d) →
-      And
-        (Effect4.Program.Typed.M7Exits
-          { program := program, lawful := Effect4.Program.SigApp.lawful_empty } a.ty fuel tape)
-        (And
-          (Effect4.Program.Typed.M7Stores
-            { program := program, lawful := Effect4.Program.SigApp.lawful_empty } a.ty fuel tape)
-          (Effect4.Program.Typed.M7NoHalt
-            { program := program, lawful := Effect4.Program.SigApp.lawful_empty } a.ty fuel tape))
+∀ {program : Effect4.Program.NativeEff} {app : Effect4.Program.SigApp}
+  (a : Effect4.Program.AdmittedProgram program app),
+  Eq app.rows List.nil →
+    ∀ (fuel : Nat) (tape : List Effect4.Api.Decision),
+      Eq a.ty.requires Effect4.Machine.Env.Requirement.empty →
+        (∀ (d : Effect4.Api.Decision),
+            List.instMembership.mem tape d → Effect4.Program.Typed.NoHostAnswer d) →
+          And (Effect4.Program.Typed.M7Exits a.source a.ty fuel tape)
+            (And (Effect4.Program.Typed.M7Stores a.source a.ty fuel tape)
+              (Effect4.Program.Typed.M7NoHalt a.source a.ty fuel tape))
 ```
 
 **m7-exit-handles-valid**
@@ -1437,7 +1433,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 **admitted-source-lawful: E4-TYPED-CE-041**
 
 ```text
-| `E4-TYPED-CE-041` | SEEDED 2026-10-04 (Claude, the Σ_app slice survey; kernel-checked by `decide +kernel`) | A program the API admits denotes a lawful source: `AdmittedProgram program table` implies `LawfulSig ⟨table, []⟩`, the premise of M5–M7 (`ProgramSource.lawful`) | `Test/Counterexamples/Program/AdmissionUnserved.lean`, one witness per clause the API does not check, each admitted by `admitProgram` and refused by `admitSig`: a row requiring the key at service code 30, which no built-in carrier serves, performed by the program (`admitted`, `refused`: `unservedKey 0`, `not_lawful`); a row whose answer mentions an unbound parameter (`admitted_unscoped`, `refused_unscoped`: `notWellScoped`); a parameter under a union head (`admitted_union`, `refused_union`: `templateNotAdmissible`) | decisions row 21's slice: the signature's admission joins program admission (`docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md`); until then the bridge takes the three as a premise (`AdmissionGap`, `lawfulSig_of_admitted`) |
+| `E4-TYPED-CE-041` | REPAIRED 2026-10-04 (seat S, branch `seat/sigapp`: decisions row 21's slice, step 2; `lawfulSig_of_admitted` has no premise, `[propext, Quot.sound]`); SEEDED 2026-10-04 (Claude, the Σ_app slice survey; kernel-checked by `decide +kernel`) | A program the API admits denotes a lawful source: `AdmittedProgram program table` implies `LawfulSig ⟨table, []⟩`, the premise of M5–M7 (`ProgramSource.lawful`) | `Test/Counterexamples/Program/AdmissionUnserved.lean`, one witness per clause the API did not check: a row requiring the key at service code 30, which no built-in carrier serves, performed by the program; a row whose answer mentions an unbound parameter; a parameter under a union head. Each was admitted by `admitProgram` and refused by `admitSig`. Repaired: `admitProgram` refuses each with the refusal `admitSig` gives (`refused`: `.signature (.unservedKey 0 appKey)`; `refused_unscoped`: `.signature (.row 0 .notWellScoped)`; `refused_union`: `.signature (.row 0 (.templateNotAdmissible "request"))`; `decide +kernel`), `not_lawful` stays, and each old acceptance is a red control under `#guard_msgs (error)` | decisions row 21's slice, step 2 (`docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md`): program admission runs the signature's located refusal (`admitSig`, `src/Effect4/Program/SigApp.lean`) at `AdmittedProgram program app`, whose certificate holds `admitSig app = .ok ()`; the bridge `lawfulSig_of_admitted` is `admitSig_ok_iff` read off that field, and the premise `AdmissionGap` is deleted |
 ```
 
 ## Applicability decisions
@@ -1501,7 +1497,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
-- Open: admission pinned to the built-in signature and weaker than LawfulSig: AdmittedProgram checks neither served keys, row scoping nor union templates (E4-TYPED-CE-041), and code generation's admission check is at nativeSignature table (decisions row 21; the slice plan, docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md)
+- Open: program admission at declared services is reached by tests only: authoring, Built, the session and Run.open admit at the table's own signature ⟨table, []⟩, and code generation's admission check is at nativeSignature table (decisions row 21; the slice plan's steps 3 and 4, docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md)
 - Open: the faces (22 lines) pinned to the built-in signature: Laws/Codegen/Admit, Laws/Codegen/Checked and Laws/Api/ModuleReadable take nativeSignature table (the Σ_app slice; C7, conditional on decisions row 115)
 - Open: meaning, loop and run soundness at service declarations that rebind a code: restored 2026-10-04 at fresh codes only (SoundAnySignature.lean)
 - Open: structured service carriers: LawfulSig admits flat carriers only (decisions row 118, open: waits on a program that needs one)
@@ -1577,6 +1573,7 @@ flowchart LR
   n12 --> n17
   n12 --> n18
   n12 --> n19
+  n13 --> n2
   n16 --> n20
   n16 --> n19
   n16 --> n21
@@ -1719,14 +1716,14 @@ flowchart LR
 | `meaning_typed_app` | proved | — | `check_restrict`, `meaning_typed` | 75 | 331 |
 | `run_typed_app` | proved | — | `check_restrict`, `meaning_typed`, `run_eq_meaning` | 102 | 1102 |
 | `meaningB_typed_app` | proved | — | `check_restrict`, `normalize_idem`, `hom_eq_cata_ty`, `check_sound`, `check_complete` | 740 | 735 |
-| `reachable_typed_admitted` | proved | — | `reachable_typed`, `lawfulSig_of_admitted` | 79 | 1181 |
+| `reachable_typed_admitted` | proved | — | `reachable_typed`, `lawfulSig_of_admitted` | 79 | 1187 |
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 70 | 282 |
 | `meaning_typed` | proved | — | `normalize_idem`, `hom_eq_cata_ty`, `check_sound`, `check_complete` | 693 | 649 |
 | `run_eq_meaning` | proved | — | — | 309 | 902 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
 | `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 85 | 1208 |
-| `lawfulSig_of_admitted` | proved | — | — | 67 | 163 |
+| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 41 | 152 |
 | `cata_eff_congr_on` | proved | — | — | 63 | 71 |
 | `hom_eq_cata_eff` | proved | — | — | 63 | 77 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1003 | 1482 |
@@ -2168,44 +2165,46 @@ flowchart LR
   n2["decision_preserves<br/>proved"]
   n3["loadsTyped<br/>proved"]
   n4["m7_of_ledger<br/>proved"]
-  n5["fits_subN<br/>proved"]
-  n6["order_refl<br/>proved"]
-  n7["subN_trans<br/>proved"]
-  n8["configTyped_frame<br/>proved"]
-  n9["fits_mono<br/>proved"]
-  n10["hom_eq_cata_ty<br/>proved"]
-  n11["wake_preserves<br/>proved"]
-  n12["order_trans<br/>proved"]
-  n13["close_typed<br/>proved"]
-  n14["registrationDone_preserves<br/>proved"]
-  n15["launch_preserves<br/>proved"]
-  n16["guardBind_typed<br/>proved"]
-  n17["deliver_preserves<br/>proved"]
-  n18["loop_preserves<br/>proved"]
-  n19["driveState_lift<br/>proved"]
-  n20["denotesTyped<br/>proved"]
-  n21["check_sound<br/>proved"]
-  n22["check_complete<br/>proved"]
-  n23["fits_normalize<br/>proved"]
-  n24["completionStrong_await<br/>proved"]
-  n25["subN_refl<br/>proved"]
-  n26["catchGuard_typed<br/>proved"]
-  n27["closeOrder_eq<br/>proved"]
-  n28["fits_scope_inv<br/>proved"]
-  n29["seq_typed<br/>proved"]
-  n30["memoBuild_extension<br/>proved"]
-  n31["deferredMake_extension<br/>proved"]
-  n32["refMake_extension<br/>proved"]
-  n33["normalize_idem<br/>proved"]
-  n34["allGuard_typed<br/>proved"]
-  n35["provideLayerArm<br/>proved"]
-  n36["onExit_typed<br/>proved"]
-  n37["rowTy_instantiated_formed<br/>proved"]
+  n5["lawfulSig_of_admitted<br/>proved"]
+  n6["fits_subN<br/>proved"]
+  n7["order_refl<br/>proved"]
+  n8["subN_trans<br/>proved"]
+  n9["configTyped_frame<br/>proved"]
+  n10["fits_mono<br/>proved"]
+  n11["hom_eq_cata_ty<br/>proved"]
+  n12["wake_preserves<br/>proved"]
+  n13["order_trans<br/>proved"]
+  n14["close_typed<br/>proved"]
+  n15["registrationDone_preserves<br/>proved"]
+  n16["launch_preserves<br/>proved"]
+  n17["guardBind_typed<br/>proved"]
+  n18["deliver_preserves<br/>proved"]
+  n19["loop_preserves<br/>proved"]
+  n20["driveState_lift<br/>proved"]
+  n21["denotesTyped<br/>proved"]
+  n22["check_sound<br/>proved"]
+  n23["check_complete<br/>proved"]
+  n24["admitSig_ok_iff<br/>proved"]
+  n25["fits_normalize<br/>proved"]
+  n26["completionStrong_await<br/>proved"]
+  n27["subN_refl<br/>proved"]
+  n28["catchGuard_typed<br/>proved"]
+  n29["closeOrder_eq<br/>proved"]
+  n30["fits_scope_inv<br/>proved"]
+  n31["seq_typed<br/>proved"]
+  n32["memoBuild_extension<br/>proved"]
+  n33["deferredMake_extension<br/>proved"]
+  n34["refMake_extension<br/>proved"]
+  n35["normalize_idem<br/>proved"]
+  n36["allGuard_typed<br/>proved"]
+  n37["provideLayerArm<br/>proved"]
+  n38["onExit_typed<br/>proved"]
+  n39["rowTy_instantiated_formed<br/>proved"]
   n0 --> n2
   n0 --> n3
   n0 --> n4
   n1 --> n0
-  n2 --> n5
+  n1 --> n5
   n2 --> n6
   n2 --> n7
   n2 --> n8
@@ -2220,134 +2219,137 @@ flowchart LR
   n2 --> n17
   n2 --> n18
   n2 --> n19
-  n3 --> n20
+  n2 --> n20
   n3 --> n21
   n3 --> n22
-  n4 --> n12
-  n4 --> n6
-  n5 --> n7
-  n5 --> n23
-  n8 --> n9
-  n8 --> n12
-  n8 --> n10
-  n11 --> n6
-  n11 --> n8
-  n11 --> n9
-  n11 --> n24
-  n11 --> n10
-  n14 --> n9
-  n14 --> n13
-  n14 --> n5
-  n14 --> n6
-  n15 --> n25
-  n15 --> n5
-  n15 --> n9
-  n15 --> n12
+  n3 --> n23
+  n4 --> n13
+  n4 --> n7
+  n5 --> n24
+  n6 --> n8
+  n6 --> n25
+  n9 --> n10
+  n9 --> n13
+  n9 --> n11
+  n12 --> n7
+  n12 --> n9
+  n12 --> n10
+  n12 --> n26
+  n12 --> n11
+  n15 --> n10
+  n15 --> n14
   n15 --> n6
+  n15 --> n7
+  n16 --> n27
+  n16 --> n6
+  n16 --> n10
   n16 --> n13
-  n17 --> n6
-  n17 --> n5
-  n17 --> n9
-  n17 --> n26
-  n17 --> n25
-  n17 --> n16
-  n17 --> n27
-  n17 --> n28
-  n17 --> n12
-  n17 --> n29
-  n17 --> n8
-  n17 --> n10
-  n17 --> n24
-  n17 --> n30
-  n17 --> n31
-  n17 --> n32
-  n17 --> n20
-  n17 --> n23
-  n17 --> n33
-  n17 --> n7
-  n17 --> n34
-  n17 --> n13
-  n17 --> n35
-  n17 --> n36
-  n17 --> n37
-  n18 --> n6
-  n18 --> n5
-  n18 --> n9
-  n18 --> n26
-  n18 --> n25
-  n18 --> n16
-  n18 --> n27
-  n18 --> n28
-  n18 --> n12
-  n18 --> n29
-  n18 --> n8
-  n18 --> n10
-  n18 --> n24
-  n18 --> n30
-  n18 --> n31
-  n18 --> n32
-  n18 --> n20
-  n18 --> n23
-  n18 --> n33
+  n16 --> n7
+  n17 --> n14
   n18 --> n7
-  n18 --> n34
+  n18 --> n6
+  n18 --> n10
+  n18 --> n28
+  n18 --> n27
+  n18 --> n17
+  n18 --> n29
+  n18 --> n30
   n18 --> n13
+  n18 --> n31
+  n18 --> n9
+  n18 --> n11
+  n18 --> n26
+  n18 --> n32
+  n18 --> n33
+  n18 --> n34
+  n18 --> n21
+  n18 --> n25
   n18 --> n35
+  n18 --> n8
   n18 --> n36
+  n18 --> n14
   n18 --> n37
-  n20 --> n35
-  n20 --> n9
-  n20 --> n5
-  n20 --> n23
-  n20 --> n33
-  n20 --> n7
-  n20 --> n10
-  n20 --> n12
-  n20 --> n25
-  n20 --> n26
-  n20 --> n36
-  n20 --> n16
-  n20 --> n28
-  n20 --> n34
-  n20 --> n37
-  n23 --> n7
-  n23 --> n33
-  n24 --> n7
-  n26 --> n5
-  n26 --> n16
-  n29 --> n25
-  n29 --> n5
-  n29 --> n16
-  n34 --> n16
-  n35 --> n5
-  n35 --> n6
-  n35 --> n25
-  n35 --> n23
-  n35 --> n33
-  n35 --> n7
-  n35 --> n10
-  n35 --> n12
-  n35 --> n36
-  n35 --> n16
-  n35 --> n9
-  n35 --> n28
-  n35 --> n29
-  n35 --> n26
-  n36 --> n5
-  n36 --> n9
-  n36 --> n26
-  n36 --> n25
-  n36 --> n16
-  n36 --> n34
+  n18 --> n38
+  n18 --> n39
+  n19 --> n7
+  n19 --> n6
+  n19 --> n10
+  n19 --> n28
+  n19 --> n27
+  n19 --> n17
+  n19 --> n29
+  n19 --> n30
+  n19 --> n13
+  n19 --> n31
+  n19 --> n9
+  n19 --> n11
+  n19 --> n26
+  n19 --> n32
+  n19 --> n33
+  n19 --> n34
+  n19 --> n21
+  n19 --> n25
+  n19 --> n35
+  n19 --> n8
+  n19 --> n36
+  n19 --> n14
+  n19 --> n37
+  n19 --> n38
+  n19 --> n39
+  n21 --> n37
+  n21 --> n10
+  n21 --> n6
+  n21 --> n25
+  n21 --> n35
+  n21 --> n8
+  n21 --> n11
+  n21 --> n13
+  n21 --> n27
+  n21 --> n28
+  n21 --> n38
+  n21 --> n17
+  n21 --> n30
+  n21 --> n36
+  n21 --> n39
+  n25 --> n8
+  n25 --> n35
+  n26 --> n8
+  n28 --> n6
+  n28 --> n17
+  n31 --> n27
+  n31 --> n6
+  n31 --> n17
+  n36 --> n17
+  n37 --> n6
+  n37 --> n7
+  n37 --> n27
+  n37 --> n25
+  n37 --> n35
+  n37 --> n8
+  n37 --> n11
+  n37 --> n13
+  n37 --> n38
+  n37 --> n17
+  n37 --> n10
+  n37 --> n30
+  n37 --> n31
+  n37 --> n28
+  n38 --> n6
+  n38 --> n10
+  n38 --> n28
+  n38 --> n27
+  n38 --> n17
+  n38 --> n36
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
 | `m7_proved` | proved | — | `decision_preserves`, `loadsTyped`, `m7_of_ledger` | 0 | 3 |
-| `m7_admitted` | proved | — | `m7_proved` | 58 | 408 |
+| `m7_admitted` | proved | — | `m7_proved`, `lawfulSig_of_admitted` | 54 | 354 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1003 | 1482 |
 | `loadsTyped` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 106 | 1132 |
 | `m7_of_ledger` | proved | — | `order_trans`, `order_refl` | 917 | 1404 |
+| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 41 | 152 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 244 | 220 |
 | `order_refl` | proved | — | — | 56 | 195 |
 | `subN_trans` | proved | — | — | 96 | 53 |
@@ -2366,6 +2368,7 @@ flowchart LR
 | `denotesTyped` | proved | — | `provideLayerArm`, `fits_mono`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `allGuard_typed`, `rowTy_instantiated_formed` | 787 | 859 |
 | `check_sound` | proved | — | — | 133 | 217 |
 | `check_complete` | proved | — | — | 68 | 220 |
+| `admitSig_ok_iff` | proved | — | — | 44 | 151 |
 | `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 261 | 220 |
 | `completionStrong_await` | proved | — | `subN_trans` | 247 | 233 |
 | `subN_refl` | proved | — | — | 38 | 44 |

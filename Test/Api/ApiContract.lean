@@ -105,8 +105,8 @@ def syncSourceTable : Effect4.Program.RowTable :=
      registration := .external, request := .unit, answer := .nat,
      error := .never, cite := "" }]
 def syncSource : Program := .perform (.external 0) (.lit .unit)
-#guard match admitProgram syncSource syncSourceTable with
-  | .error (.table (.notAsync 0)) => true
+#guard match admitProgram syncSource ⟨syncSourceTable, []⟩ with
+  | .error (.signature (.row 0 .notAsync)) => true
   | _ => false
 #guard match emitModule "main" syncSource syncSourceTable with
   | .ok emitted => emitted.typing.ty == (.pure .nat) &&
@@ -337,7 +337,7 @@ def row (answer : Ty) (request : Ty := .nat) (error : Ty := .never) : Effect4.Pr
     kind := .async, registration := .external, cite := "" }
 def program : Api.Program := .perform (.external 0) (.lit (.nat 1))
 def refusal (p : Api.Program) (table : RowTable) : Option AdmitRefusal :=
-  match admitProgram p table with
+  match admitProgram p ⟨table, []⟩ with
   | .error why => some why
   | .ok _ => none
 

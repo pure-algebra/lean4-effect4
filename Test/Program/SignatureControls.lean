@@ -5,9 +5,10 @@ import Effect4.Program.Authoring.Services
 /-!
 # Σ_app (decisions rows 111–116): the extension's red and positive controls
 
-`Laws/Program/Signature.lean` states the signature an application's tables give the checker and
-extension along it. These are the fixtures the rows rule on (the model probe's TREE and pedigree
-seats and Codex's audit proved them as probes; kept here as controls):
+`Program/SigApp.lean` defines the signature an application's tables give the checker, and
+`Laws/Program/Signature.lean` states extension along it. These are the fixtures the rows rule on
+(the model probe's TREE and pedigree seats and Codex's audit proved them as probes; kept here as
+controls):
 
 * `prepend_not_extends` (red, proved): a row prepended to the table is not an extension; the same
   program, unchanged, answers another row's type. Appending is (`rows_append`, tested).

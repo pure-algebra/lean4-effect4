@@ -91,7 +91,7 @@ theorem T_not_sub : Ty.sub T T.normalize = false := by decide +kernel
 theorem child_at : Node.at_ (.eff prog3) [0, 0, 0] = some (.eff child) := rfl
 
 -- tested: admission accepts the program (no host row, no `int`)
-#guard (match admitProgram prog3 [] with | .ok _ => true | .error _ => false)
+#guard (match admitProgram prog3 with | .ok _ => true | .error _ => false)
 
 /-! ## Worlds for the controls -/
 

@@ -115,7 +115,7 @@ theorem crash1_checked : Api.typeOf crash1 [] = some (EffTy.pure .nat) := by
   decide +kernel
 
 #guard [errLeak, forkLeak, discardLeak, crash1, errLeakControl, valueControl].all fun p =>
-  (admitProgram p []).toOption.isSome
+  (admitProgram p).toOption.isSome
 
 /-- Native and reference fiber exits agree at the empty table and without host answers.
 Concrete outcomes below are executable checks, not kernel reductions of whole runs. -/

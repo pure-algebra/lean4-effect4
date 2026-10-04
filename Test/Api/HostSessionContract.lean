@@ -15,17 +15,14 @@ def table : RowTable := [Profile.Scalar.waitRow]
 def program : Api.Program :=
   .bind (.perform (.external 0) (.lit (.nat 2))) (.perform (.external 0) (.lit (.nat 3)))
 def header : Header := ⟨version, "session-A", "serial-root-scalar-v1", table⟩
-def admitted : Api.AdmittedProgram program table where
+def admitted : Api.AdmittedProgram program ⟨table, []⟩ where
   ty := ⟨.nat, .prod .string .string, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  lawful := by decide
-  runnable := by decide
   intFreeTable := by decide
-  internalFreeTable := by decide
+  signature := by decide +kernel
   intFreeProgram := by decide
   intFreeType := by decide
-  columnsTable := by decide +kernel
   columnsType := by decide +kernel
 
 def initial : Session program table := { admitted, header, machine := Api.load program 100 }

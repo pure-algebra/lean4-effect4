@@ -109,17 +109,17 @@ theorem checkTypedProgram_of_hasTy {ty : EffTy}
 
 /-- A completed runner certificate passes every retained admission check.
 Its typing component is the same shared certificate used by other boundaries. -/
-theorem admitProgram_eq_ok {program : NativeEff} {table : RowTable}
-    (admitted : AdmittedProgram program table) :
-    admitProgram program table = .ok admitted := by
+theorem admitProgram_eq_ok {program : NativeEff} {app : SigApp}
+    (admitted : AdmittedProgram program app) :
+    admitProgram program app = .ok admitted := by
   unfold admitProgram
   split
   · rename_i found hfound
     rw [admitted.intFreeTable] at hfound
     contradiction
   · split
-    · rename_i found hfound
-      rw [admitted.internalFreeTable] at hfound
+    · rename_i why hwhy
+      rw [admitted.signature] at hwhy
       contradiction
     · split
       · rename_i found hfound
@@ -127,7 +127,7 @@ theorem admitProgram_eq_ok {program : NativeEff} {table : RowTable}
         contradiction
       · split
         · rename_i why refused
-          rw [(Formation.checkInput_eq_none_iff program table).mpr admitted.formed] at refused
+          rw [(Formation.checkInput_eq_none_iff program app.rows).mpr admitted.formed] at refused
           cases refused
         · rw [checkTypedProgram_eq_some admitted.toTypedProgram]
           dsimp only
@@ -135,30 +135,11 @@ theorem admitProgram_eq_ok {program : NativeEff} {table : RowTable}
           · rename_i found hfound
             rw [admitted.intFreeType] at hfound
             contradiction
-          · have hlawful := (Table.checkLawful_eq_none_iff table).mpr admitted.lawful
-            split
-            · rename_i hfound
-              rw [hlawful] at hfound
+          · split
+            · rename_i pos hpos
+              rw [admitted.columnsType] at hpos
               contradiction
-            · rename_i hfound
-              rw [hlawful] at hfound
-              contradiction
-            · rename_i hfound
-              rw [hlawful] at hfound
-              contradiction
-            · split
-              · rename_i why hwhy
-                rw [admitted.runnable] at hwhy
-                contradiction
-              · split
-                · rename_i pos hpos
-                  rw [admitted.columnsTable] at hpos
-                  contradiction
-                · split
-                  · rename_i pos hpos
-                    rw [admitted.columnsType] at hpos
-                    contradiction
-                  · cases admitted
-                    rfl
+            · cases admitted
+              rfl
 
 end Effect4.Program

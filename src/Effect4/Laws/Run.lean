@@ -203,12 +203,12 @@ theorem drive_eq_play {σ : Type} (r : Reactor σ) (rounds : Nat) (s : Run) (st 
 
 /-! ## Opening cannot refuse -/
 
-/-- A program has at most one admission certificate against one table: every field but the
+/-- A program has at most one admission certificate against one signature: every field but the
 type is a proof, and the type is the one the checker computes, so two certificates agree. -/
-theorem admitted_unique (program : Api.Program) (table : RowTable)
-    (a b : AdmittedProgram program table) : a = b := by
-  obtain ⟨⟨tya, ha⟩, _, _, _, _, _, _, _, _, _⟩ := a
-  obtain ⟨⟨tyb, hb⟩, _, _, _, _, _, _, _, _, _⟩ := b
+theorem admitted_unique (program : Api.Program) (app : SigApp)
+    (a b : AdmittedProgram program app) : a = b := by
+  obtain ⟨⟨tya, ha⟩, _, _, _, _, _, _⟩ := a
+  obtain ⟨⟨tyb, hb⟩, _, _, _, _, _, _⟩ := b
   have hty : tya = tyb := Option.some.inj (ha.symm.trans hb)
   subst hty
   rfl
@@ -216,13 +216,12 @@ theorem admitted_unique (program : Api.Program) (table : RowTable)
 /-- Admission answers with the certificate it is given: every check `admitProgram` runs is a
 field of the certificate, so none of them can fail. This is the fact `HostSession.start`
 needs and the tree did not have. -/
-theorem admitProgram_certificate (program : Api.Program) (table : RowTable)
-    (c : AdmittedProgram program table) : admitProgram program table = .ok c := by
-  have hlawful : Table.checkLawful table = none := (Table.checkLawful_eq_none_iff table).mpr c.lawful
-  have hformed := (Formation.checkInput_eq_none_iff program table).mpr c.formed
+theorem admitProgram_certificate (program : Api.Program) (app : SigApp)
+    (c : AdmittedProgram program app) : admitProgram program app = .ok c := by
+  have hformed := (Formation.checkInput_eq_none_iff program app.rows).mpr c.formed
   aesop (add norm unfold [admitProgram, checkTypedProgram])
-    (add norm simp [c.intFreeTable, c.internalFreeTable, c.intFreeProgram, c.typed, c.intFreeType,
-      hformed, hlawful, c.runnable, c.columnsTable, c.columnsType]) (add safe apply admitted_unique)
+    (add norm simp [c.intFreeTable, c.signature, c.intFreeProgram, c.typed, c.intFreeType,
+      hformed, c.columnsType]) (add safe apply admitted_unique)
 
 /-- **O-1.** Opening cannot refuse. With a `Built` in hand the checked `start` of
 `HostSession` returns exactly the session `Run.open` builds: its five identity refusals are
@@ -235,7 +234,7 @@ theorem open_total (b : Api.Built) (id : String) (budget : Api.Budget) (profile 
     Api.HostSession.start b.program b.table profile
         ⟨Api.HostSession.version, id, profile, b.table⟩ budget.compileFuel
       = .ok (Run.open b id budget profile).session := by
-  have hadmit := admitProgram_certificate b.program b.table b.admitted
+  have hadmit := admitProgram_certificate b.program ⟨b.table, []⟩ b.admitted
   aesop (add norm unfold [Api.HostSession.start]) (add norm simp [hid, hadmit])
 
 /-! ## Small facts the answer rows need -/

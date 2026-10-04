@@ -23,10 +23,23 @@ def recordTerms : List RecordTermRefusal := recordReasons.map fun why => ⟨[0, 
 
 def recordCauses : List RecordCauseRefusal := recordTerms.map fun why => ⟨[1, 0], why⟩
 
+/-- Every constructor of a row's reason (decisions row 21: the signature's refusal reaches an
+agent through admission's). -/
+def rowReasons : List RowReason :=
+  [.notExternal, .notAsync, .builtinCollision, .valueRowTrailing, .intType "request",
+   .internalHandle "answer", .emptyColumn "error", .templateNotAdmissible "request",
+   .notWellScoped]
+
+def serviceReasons : List ServiceReason := [.reservedName, .nonFlatCarrier, .conflictsBuiltin]
+
+def signatures : List SigRefusal :=
+  rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", ["get"])] ++
+    serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩]
+
 def admissions : List AdmitRefusal :=
-  [.illTyped, .duplicateKey ("Db", ["get"]), .builtinCollision ("Ref", ["get"]),
-   .valueRowTrailing ("Clock", ["now"]), .table (.notAsync 2), .uninhabited ["program", "answer"],
-   .internalHandle ["table", "1", "answer"], .emptyColumn ["table", "0", "request"]] ++ formations.map .formation
+  [.illTyped] ++ signatures.map .signature ++
+    [.uninhabited ["program", "answer"], .uninhabited ["table", "0", "request", "inner"],
+     .emptyColumn ["program", "error"]] ++ formations.map .formation
 
 def scopes : List Authoring.Refusal :=
   [⟨[], .unbound "x"⟩, ⟨[0, 1], .unboundLayer "L"⟩, ⟨[2], .duplicateLayer "L"⟩,
@@ -110,6 +123,13 @@ def printedHead : Effect4.Json → String
 #guard formations.all fun x => (Canonical.shape FormationRefusal).accepts (Canonical.toVal x)
 #guard formationReasons.all fun x => (Canonical.shape FormationReason).accepts (Canonical.toVal x)
 #guard tables.all fun x => Canonical.decode (α := TableRefusal) (Canonical.encode x) = some x
+#guard rowReasons.all fun x => Canonical.decode (α := RowReason) (Canonical.encode x) = some x
+#guard serviceReasons.all fun x => Canonical.decode (α := ServiceReason) (Canonical.encode x) = some x
+#guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x) = some x
+#guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x ++ [0]) = none
+#guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x).dropLast = none
+#guard signatures.all fun x => (Canonical.shape SigRefusal).accepts (Canonical.toVal x)
+#guard (signatures.map Canonical.encode).eraseDups.length = signatures.length
 #guard admissions.all fun x => Canonical.decode (α := AdmitRefusal) (Canonical.encode x) = some x
 #guard scopes.all fun x => Canonical.decode (α := Authoring.Refusal) (Canonical.encode x) = some x
 #guard typings.all fun x => Canonical.decode (α := TypeRefusal) (Canonical.encode x) = some x
@@ -150,8 +170,11 @@ def printedHead : Effect4.Json → String
 -- hand-written `TypeReason.head` on every constructor (the list is every case, in order) ...
 #guard reasons.map TypeReason.head == Canonical.heads TypeReason
 #guard reasons.all fun x => Canonical.head x == x.head
--- ... and with the name `ShapeDoc.print` writes, for every value of the group's eight sums.
+-- ... and with the name `ShapeDoc.print` writes, for every value of the group's sums.
 #guard tables.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard rowReasons.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard serviceReasons.all fun x => Canonical.head x == printedHead (Canonical.print x)
+#guard signatures.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard admissions.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard (scopes.map (·.reason)).all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard reasons.all fun x => Canonical.head x == printedHead (Canonical.print x)

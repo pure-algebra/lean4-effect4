@@ -5,9 +5,10 @@ import Effect4.Api
 
 Everything a run needs of a program, packed once: the row table, the program whose host calls
 are positions in that table, the admission certificate (typing and the execution checks,
-`Program/Admission.lean`), and the names the rows were declared under (for blame, printing and
-the reactor). `Author.build` produces one; `Run.open` consumes one and cannot refuse it, because
-the certificate is the evidence `HostSession.start` re-derives today.
+`Program/Admission.lean`) at the table's own signature `⟨table, []⟩`, and the names the rows were
+declared under (for blame, printing and the reactor). `Author.build` produces one; `Run.open`
+consumes one and cannot refuse it, because the certificate is the evidence `HostSession.start`
+re-derives today. A built program at declared services is the Σ_app slice's step 3.
 -/
 
 set_option autoImplicit false
@@ -20,7 +21,7 @@ open Effect4.Program (RowTable AdmittedProgram)
 structure Built where
   table : RowTable
   program : Program
-  admitted : AdmittedProgram program table
+  admitted : AdmittedProgram program ⟨table, []⟩
   /-- The spelling each row was declared under, with its position in `table`. -/
   rowNames : List (String × Nat) := []
 

@@ -44,12 +44,12 @@ def program : Api.Program :=
 def fiberHeader : Header := ⟨version, "forgery", "forgery-v1", fiberTable⟩
 
 #guard Api.typeOf program fiberTable = some (EffTy.pure .nat)
-#guard findInternalHandleInTable fiberTable = some ["table", "0", "answer"]
-#guard match admitProgram program fiberTable with
-  | .error (.internalHandle ["table", "0", "answer"]) => true
+#guard admitSig ⟨fiberTable, []⟩ = .error (.row 0 (.internalHandle "answer"))
+#guard match admitProgram program ⟨fiberTable, []⟩ with
+  | .error (.signature (.row 0 (.internalHandle "answer"))) => true
   | _ => false
 #guard match start program fiberTable "forgery-v1" fiberHeader 1000 with
-  | .error (.program (.internalHandle ["table", "0", "answer"])) => true
+  | .error (.program (.signature (.row 0 (.internalHandle "answer")))) => true
   | _ => false
 
 /-- Pin every internal constructor and the reserved spellings at table admission. -/
@@ -57,10 +57,10 @@ def internalTypes : List Ty :=
   [.fiberOf .nat .never, .refOf .nat, .deferredOf .nat .never,
    NativeOp.refTy, NativeOp.deferredTy, .scope, .context]
 #guard internalTypes.all fun ty =>
-  findInternalHandleInTable [{ fiberRow with answer := ty }] = some ["table", "0", "answer"]
+  admitSig ⟨[{ fiberRow with answer := ty }], []⟩ = .error (.row 0 (.internalHandle "answer"))
 #guard internalTypes.all fun ty =>
-  findInternalHandleInTable [{ fiberRow with answer := .unit, error := ty }] =
-    some ["table", "0", "error"]
+  admitSig ⟨[{ fiberRow with answer := .unit, error := ty }], []⟩ =
+    .error (.row 0 (.internalHandle "error"))
 
 /-- Each recursive value shape must expose its nested handle; each path is independent data. -/
 def nestedTypes : List (Ty × Path) :=
@@ -76,13 +76,13 @@ def nestedTypes : List (Ty × Path) :=
    (.exitOf (.refOf .nat) .never, ["value"]),
    (.exitOf .unit (.refOf .nat), ["error"])]
 #guard nestedTypes.all fun (ty, path) =>
-  findInternalHandleInTable [{ fiberRow with answer := ty }] =
-    some (["table", "0", "answer"] ++ path)
+  findInternalHandle ["answer"] ty = some (["answer"] ++ path)
+#guard nestedTypes.all fun (ty, _) =>
+  admitSig ⟨[{ fiberRow with answer := ty }], []⟩ = .error (.row 0 (.internalHandle "answer"))
 -- Request types are outside this reply rule; a later row's answer is still scanned.
-#guard findInternalHandleInTable
-  [{ fiberRow with request := .fiberOf .nat .never, answer := .unit }] = none
-#guard findInternalHandleInTable
-  [{ fiberRow with answer := .unit }, fiberRow] = some ["table", "1", "answer"]
+#guard admitSig ⟨[{ fiberRow with request := .fiberOf .nat .never, answer := .unit }], []⟩ = .ok ()
+#guard admitSig ⟨[{ fiberRow with answer := .unit }, fiberRow], []⟩ =
+  .error (.row 1 (.internalHandle "answer"))
 
 /-- An unknown answer is admitted, so value admission must still reject the live handle. -/
 def unknownTable : RowTable := [{ fiberRow with answer := .unknown }]
@@ -103,7 +103,7 @@ def unknownParked : Option (Session unknownProgram unknownTable) :=
 def unknownBound : Option (Session unknownProgram unknownTable) :=
   unknownParked.map fun parked => (bindCall parked unknownCall 0).session
 
-#guard (admitProgram unknownProgram unknownTable).toOption.isSome
+#guard (admitProgram unknownProgram ⟨unknownTable, []⟩).toOption.isSome
 #guard unknownParked.isSome
 #guard unknownParked.any fun parked =>
   (bindCall parked unknownCall 0).phase = .bound
@@ -131,7 +131,8 @@ def inTreeRows : RowTable :=
     [Profile.Scalar.waitRow, Profile.Resource.acquireRow, Profile.Resource.useRow,
      Profile.Resource.releaseRow]
 #guard inTreeRows.length = 15
-#guard findInternalHandleInTable inTreeRows = none
+#guard inTreeRows.all fun row =>
+  (findInternalHandle [] row.answer).isNone && (findInternalHandle [] row.error).isNone
 
 /-- A fresh external allocation still passes the certified session and records the handle. -/
 def allocationTable : RowTable := Test.Api.AcquireHandleContract.table

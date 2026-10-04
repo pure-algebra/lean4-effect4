@@ -21,13 +21,10 @@ def initial : Session program table where
     ty := ⟨.exitOf .nat (.prod .string .string), .never, .empty⟩
     typed := by cbv
     formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-    lawful := by decide
-    runnable := by decide
     intFreeTable := by decide
-    internalFreeTable := by decide
+    signature := by decide +kernel
     intFreeProgram := by decide
     intFreeType := by decide
-    columnsTable := by decide +kernel
     columnsType := by decide +kernel }
   header := ⟨version, "multi", "keyed-v3", table⟩
   machine := Api.load program 1000
@@ -87,7 +84,7 @@ def shared : Api.Program := .bind (.perform .refMake (.lit (.nat 0)))
         (.bind (.awaitFiber (.var 2) .awaitValue) (.perform .refGet (.var 0))))))
 def da : Api.Decision := .answerAsync ⟨1⟩ 0 (.ofExit (.success (.nat 1)))
 def db : Api.Decision := .answerAsync ⟨2⟩ 1 (.ofExit (.success (.nat 2)))
-#guard (Api.admitProgram shared table).isOk
+#guard (Api.admitProgram shared ⟨table, []⟩).isOk
 #guard match Api.replayChecked shared 1000 [Api.evaluate, da, db, .flush] [] table with
   | .inl run => run.exit = some (.success (.nat 2)) | .inr _ => false
 #guard match Api.replayChecked shared 1000 [Api.evaluate, db, da, .flush] [] table with

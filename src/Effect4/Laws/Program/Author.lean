@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Api.Author
 import Effect4.Laws.Program.CheckedTyping
+import Effect4.Laws.Program.Signature
 
 /-!
 # Laws.Program.Author — what a module's declarations guarantee
@@ -197,13 +198,16 @@ theorem build_table {m : Module NativeOp} {b : Api.Built} (h : Api.Author.build 
   unfold Api.Author.build Api.Author.Internal.finishBuild at h
   aesop
 
-/-- A built program's table is lawful: the certificate says so, and `build_table_lawful` is
-what lets an author know it before the build. -/
-theorem build_lawful {b : Api.Built} : Table.lawful b.table = true := b.admitted.lawful
+/-- A built program's table is lawful: the certificate's signature is (`admitSig_ok_iff`), and
+`build_table_lawful` is what lets an author know it before the build. -/
+theorem build_lawful {b : Api.Built} : Table.lawful b.table = true :=
+  ((admitSig_ok_iff _).mp b.admitted.signature).tableLawful
 
 /-- A built program's table can be registered by this runner: every row is an external
-asynchronous row, which is what `Row.host` writes. -/
-theorem build_runnable {b : Api.Built} : checkTable b.table = none := b.admitted.runnable
+asynchronous row, which is what `Row.host` writes (`LawfulSig.registered`). -/
+theorem build_runnable {b : Api.Built} :
+    ∀ r ∈ b.table, r.registration = .external ∧ r.kind = .async :=
+  ((admitSig_ok_iff _).mp b.admitted.signature).registered
 
 /-! ## Rebuilding edited syntax
 
@@ -224,7 +228,7 @@ theorem rebuild_spec {before after : Api.Built} {candidate : Api.Program}
 /-- An already admitted candidate succeeds with its certificate against the unchanged
 host setup. This reuses completeness of the existing admission procedure. -/
 theorem rebuild_admitted (before : Api.Built) (candidate : Api.Program)
-    (admitted : AdmittedProgram candidate before.table) :
+    (admitted : AdmittedProgram candidate ⟨before.table, []⟩) :
     before.rebuild candidate = .ok
       { table := before.table, program := candidate, admitted := admitted,
         rowNames := before.rowNames } := by

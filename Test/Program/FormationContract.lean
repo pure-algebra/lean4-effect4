@@ -43,7 +43,7 @@ def badAnnotation : NativeEff :=
   | none => false
 
 -- Every checked public boundary shares the raw refusal, independent of the tape.
-#guard match admitProgram pureProgram badTable with
+#guard match admitProgram pureProgram ⟨badTable, []⟩ with
   | .error (.formation why) => why.ty = duplicate
   | _ => false
 #guard match Effect4.Codegen.emitModule "main" pureProgram badTable with
@@ -72,13 +72,13 @@ def source : TypeScript.Module :=
   | _ => false
 
 -- Positive controls: none of the new checks is an unconditional refusal.
-#guard (admitProgram pureProgram validTable).isOk
+#guard (admitProgram pureProgram ⟨validTable, []⟩).isOk
 #guard (Effect4.Codegen.emitModule "main" pureProgram validTable).isOk
 #guard (Effect4.Codegen.admitModule "main" source validTable).isOk
 #guard match Api.replayChecked pureProgram 10 [Api.evaluate] [] validTable with
   | .inl run => run.exit = some (.success (.nat 1))
   | _ => false
-#guard match admitProgram pureProgram [row .nat .int] with
+#guard match admitProgram pureProgram ⟨[row .nat .int], []⟩ with
   | .error (.uninhabited _) => true
   | _ => false
 
@@ -142,7 +142,7 @@ def recordAnnotation : Term := .record [("x", true, duplicate)] [] .nil
   | _ => false
 
 -- Certificates expose the independent raw judgment.
-example (admitted : AdmittedProgram pureProgram validTable) :
+example (admitted : AdmittedProgram pureProgram ⟨validTable, []⟩) :
     Formation.InputFormed pureProgram validTable := admitted.formed
 example (emission : Effect4.Codegen.ModuleEmission pureProgram validTable "main") :
     Formation.InputFormed pureProgram validTable := emission.formed

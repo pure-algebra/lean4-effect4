@@ -159,8 +159,10 @@ def readAt (expression : TypeScript.Expr) (table : RowTable := []) :
 
 /-- Whether `read` of the program's printing is the program itself: the round trip, decided by
 running it. What the printer loses is listed in `Codegen/Read.lean`'s module note (a variable
-out of scope, a dropped `unit` request, the `daemon` flag of a scoped fork, a loop's cursor
-annotation, the internal fiber actions). -/
+out of scope, a dropped `unit` request, a loop's cursor annotation, the internal fiber actions).
+A program the printer refuses is not readable either: a child fork into a scope has no rc.112
+spelling, so it is refused (`internalAction "forkScoped:child"`, `Codegen/Templates.lean`), never
+printed as the daemon it is not. -/
 def readable (program : Program) (table : RowTable := []) : Bool :=
   Program.readable (nativeSignature table) (nativeSpell table) 0 program
 
@@ -385,14 +387,18 @@ def replaySteps (program : Program) (fuel : Nat) (tape : List Decision)
 
 Five different questions are answered by five different checks
 (`docs/research/2026-09-09-foundation-admission-boundary.md` §1), and this face keeps them
-apart. The execution certificate retains the following three checks:
+apart. Admission is at an application's signature (`SigApp`, decisions row 21); a caller with a
+row table alone admits at `⟨table, []⟩`, whose signature is `nativeSignature table`. The
+execution certificate retains the following checks:
 
-* **typed** — `typeOf` computes an `EffTy`. Since DI-54 that includes operation-domain
-  membership, so an external index outside the supplied table no longer types.
-* **lawful** — `LawfulTable`: the supplied rows' *names* are unique, do not collide with a
-  built-in, drop no trailing name and capture no printed binder.
-* **runnable** — `checkTable`: this runner can register every supplied row, i.e. each is
-  `(registration := .external, kind := .async)`. Naming lawfulness does not imply it.
+* **typed** — the checker computes an `EffTy` at `app.signature`. Since DI-54 that includes
+  operation-domain membership, so an external index outside the supplied table no longer types.
+* **signature** — `admitSig`: the supplied rows' keys are unique, collide with no built-in and
+  drop no trailing name; this runner can register every row, i.e. each is
+  `(registration := .external, kind := .async)`; every row's columns are lawful and its template
+  admissible; every service declaration is lawful; and every key a row requires has a carrier.
+  Naming lawfulness does not imply registration, and neither implies a carrier. `checkTable`
+  answers the registration question alone, with the first position it refuses.
 
 P2a additionally scans every raw table type and both inferred program columns for
 `int`. Successful admission records both negative scan results in its certificate;
@@ -408,13 +414,13 @@ separate optional certificate, `imageCertificate`. (The example this paragraph o
 None of this is a completion claim: an admitted program may park at a live frontier, and a
 frontier is never a refusal (`AGENTS.md`, representation rules). -/
 
-export Effect4.Program (TableRefusal checkTable rowKey AdmittedProgram AdmitRefusal admitProgram
-  admitProgram_table_int admitProgram_program_int admitProgram_type_int Path findInt findIntInTable
-  findIntInProgram findIntInEffTy
-  AdmittedStraightProgram StraightAdmitRefusal admitStraightProgram)
+export Effect4.Program (TableRefusal checkTable rowKey SigApp SigRefusal RowReason ServiceReason
+  admitSig AdmittedProgram AdmitRefusal admitProgram admitProgram_table_int admitProgram_signature
+  admitProgram_program_int admitProgram_type_int Path findInt findIntInTable findIntInProgram
+  findIntInEffTy AdmittedStraightProgram StraightAdmitRefusal admitStraightProgram)
 
 namespace Table
-export Effect4.Program.Table (lawful checkLawful LawfulRefusal)
+export Effect4.Program.Table (lawful)
 end Table
 
 /-- The print-image certificate, separate from admission on purpose: the proof that this
@@ -426,9 +432,10 @@ def imageCertificate (program : Program) (table : RowTable := []) :
     Option (PLift (readable program table = true)) :=
   if h : readable program table = true then some ⟨h⟩ else none
 
-/-- The checked ordinary run: `run`, with the certificate consumed. -/
+/-- The checked ordinary run: `run`, with the certificate consumed. The certificate is at the
+table's own signature, `⟨table, []⟩`; a run at declared services is the Σ_app slice's step 3. -/
 def runAdmitted {program : Program} {table : RowTable}
-    (admitted : AdmittedProgram program table) (fuel : Nat)
+    (admitted : AdmittedProgram program ⟨table, []⟩) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
     (compileFuel : Nat := fuel) : Inspection :=
   let _ := admitted.ty
@@ -438,7 +445,7 @@ def runAdmitted {program : Program} {table : RowTable}
 as in `replay`; admission says nothing about which decisions are legal (that is
 `replayChecked`) and nothing about finishing. -/
 def replayAdmitted {program : Program} {table : RowTable}
-    (admitted : AdmittedProgram program table) (fuel : Nat) (tape : List Decision)
+    (admitted : AdmittedProgram program ⟨table, []⟩) (fuel : Nat) (tape : List Decision)
 
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
     (compileFuel : Nat := fuel) : Inspection :=

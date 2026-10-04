@@ -13,9 +13,10 @@ row was declared under.
 Everything the build can refuse already has a located refusal, and `BuildRefusal` is their
 sum: the scope reader's (a name with no binder, a row or a layer nobody declared, a name only
 the surface may write), the checker's (DI-86, the deepest node whose own rule refuses), and
-admission's (the table's names, the runner's registrations, the reserved integer type). The
-type refusal is the located one: `admitProgram` answers `illTyped` without a site, so a build
-that fails to type asks `Api.explain` where.
+admission's (the table's signature, formation, the reserved integer type). The type refusal is
+the located one: `admitProgram` answers `illTyped` without a site, so a build that fails to type
+asks `Api.explain` where. The build admits at the table's own signature, `⟨table, []⟩`; a module's
+services join the signature in the Σ_app slice's step 3.
 
 The table is the module's own. That is the point of declaring rows: an external position is
 a position in whichever table is supplied beside the program (DI-22), and a module that
@@ -32,7 +33,8 @@ inductive BuildRefusal
   | scope (refusal : Effect4.Program.Authoring.Refusal)
   /-- The checker refused, at the deepest node whose own rule refuses (DI-86). -/
   | typing (refusal : Effect4.Program.TypeRefusal)
-  /-- Admission refused: a table name, a registration, or the reserved integer type. -/
+  /-- Admission refused: the table's signature (a name, a registration, a column, a template, a
+  required key with no carrier), formation, or the reserved integer type. -/
   | admission (refusal : Effect4.Program.AdmitRefusal)
   /-- A service's declared carrier is not the one the signature types its key at, so the
   declaration and the checker disagree about what `Effect.service(key)` answers. -/
@@ -46,7 +48,7 @@ This is the final admission step shared by initial authoring and rebuilding edit
 row names label the table for callers and do not alter admission. -/
 def finishBuild (program : Program) (table : RowTable)
     (rowNames : List (String × Nat)) : Except BuildRefusal Built :=
-  match admitProgram program table with
+  match admitProgram program ⟨table, []⟩ with
   | .ok admitted =>
     .ok { table := table, program := program, admitted := admitted, rowNames := rowNames }
   | .error .illTyped =>
