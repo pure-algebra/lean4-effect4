@@ -11,6 +11,11 @@ import Test.Schema.PayloadContract
 import Test.Data.RowContract
 import Test.Machine.Environment.ContextKeyContract
 import Test.Codegen.ExprContract
+import Test.Codegen.DataTypes
+import Test.Codegen.Metadata
+import Test.Codegen.Record
+import Test.Codegen.RecordTerms
+import Test.Codegen.RecordEmission
 import Test.Codegen.SchemaGenerationContract
 import Test.Codegen.SchemaGenerationCoverage
 import Test.Machine.Semantics.CauseExitContract
@@ -35,6 +40,13 @@ import Test.Program.TermFits
 import Test.Program.SignatureControls
 import Test.Program.TypedProgRows
 import Test.Program.AdmissionColumns
+import Test.Program.FormationContract
+import Test.Program.RecordValues
+import Test.Program.RecordOperations
+import Test.Program.FoldFamilySelection
+import Test.Program.RecordRefusals
+import Test.Program.RecordTerms
+import Test.Program.AuthoringRecords
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.ProtocolLaws

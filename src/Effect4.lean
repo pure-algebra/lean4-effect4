@@ -103,6 +103,7 @@ import Effect4.Program.Authoring.Loops
 import Effect4.Codegen.Print
 import Effect4.Codegen.Diagnostics
 import Effect4.Codegen.Read
+import Effect4.Codegen.Metadata
 import Effect4.Codegen.Templates
 import Effect4.Program.Native
 import Effect4.Program.Compile

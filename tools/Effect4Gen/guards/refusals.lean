@@ -6,10 +6,27 @@ open Effect4 Effect4.Program Effect4.Api
 
 def tables : List TableRefusal := [.notExternal 0, .notAsync 3]
 
+def formationReasons : List FormationReason := [.repeatedField "x", .mapKey]
+
+def formations : List FormationRefusal :=
+  [⟨["table", "0", "answer", "type", "0"], .map .nat .string, .mapKey⟩,
+   ⟨["program", "cursorTy", "type", "0"],
+     .record [("x", false, .nat), ("x", true, .string)], .repeatedField "x"⟩]
+
+def recordReasons : List RecordTypingReason :=
+  [.duplicateDeclaration "x", .duplicateSupplied "x", .missingRequired "x",
+   .unknownSupplied "x", .fieldNotSubtype "x" .string .nat, .columnLengths 1 2,
+   .missingReadField "x" (.record []), .optionalReadField "x" (.record [("x", true, .nat)]),
+   .declarationFormation ⟨["type"], .map .nat .string, .mapKey⟩]
+
+def recordTerms : List RecordTermRefusal := recordReasons.map fun why => ⟨[0, 2], why⟩
+
+def recordCauses : List RecordCauseRefusal := recordTerms.map fun why => ⟨[1, 0], why⟩
+
 def admissions : List AdmitRefusal :=
   [.illTyped, .duplicateKey ("Db", ["get"]), .builtinCollision ("Ref", ["get"]),
    .valueRowTrailing ("Clock", ["now"]), .table (.notAsync 2), .uninhabited ["program", "answer"],
-   .internalHandle ["table", "1", "answer"], .emptyColumn ["table", "0", "request"]]
+   .internalHandle ["table", "1", "answer"], .emptyColumn ["table", "0", "request"]] ++ formations.map .formation
 
 def scopes : List Authoring.Refusal :=
   [⟨[], .unbound "x"⟩, ⟨[0, 1], .unboundLayer "L"⟩, ⟨[2], .duplicateLayer "L"⟩,
@@ -24,7 +41,10 @@ def typings : List TypeRefusal :=
    ⟨[], .initialNotCursor .bool .nat⟩, ⟨[], .releaseFails .string⟩, ⟨[], .notFiber .unit⟩,
    ⟨[], .serviceUnknown ⟨⟨3⟩, ⟨7⟩⟩⟩, ⟨[], .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat⟩,
    ⟨[], .layerReference [0, 1]⟩, ⟨[], .referencesIllFormed⟩, ⟨[], .mergeAllEmpty⟩,
-   ⟨[], .returnNotLast⟩, ⟨[], .breakOutsideLoop⟩, ⟨[], .literalOutsideAlphabet (.str "x")⟩]
+   ⟨[], .returnNotLast⟩, ⟨[], .breakOutsideLoop⟩, ⟨[], .literalOutsideAlphabet (.str "x")⟩] ++
+    formations.map (fun why => ⟨[0], .instantiatedFormation "Db.get" why⟩) ++
+    recordTerms.map (fun why => ⟨[1], .recordTerm why⟩) ++
+    recordCauses.map (fun why => ⟨[2], .recordCause why⟩)
 
 def authors : List AuthorRefusal := scopes.map .scope ++ typings.map .typing
 
@@ -54,7 +74,10 @@ def reasons : List TypeReason :=
    .natExpected .string, .listOfFibersExpected .nat, .contextExpected .unit,
    .snapshotExpected .bool, .exitExpected .string, .serviceUnknown ⟨⟨3⟩, ⟨7⟩⟩,
    .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat, .layerReference [0, 1], .referencesIllFormed,
-   .mergeAllEmpty, .returnNotLast, .breakOutsideLoop, .literalOutsideAlphabet (.str "x")]
+   .mergeAllEmpty, .returnNotLast, .breakOutsideLoop, .literalOutsideAlphabet (.str "x"),
+   .instantiatedFormation "Db.get" ⟨["row", "answer", "type", "0"], .map .nat .string, .mapKey⟩,
+   .recordTerm ⟨[0], .missingRequired "x"⟩,
+   .recordCause ⟨[1], ⟨[0], .missingRequired "x"⟩⟩]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/
@@ -65,6 +88,25 @@ def printedHead : Effect4.Json → String
     | _ => ""
   | _ => ""
 
+#guard recordReasons.all fun x => Canonical.decode (α := RecordTypingReason) (Canonical.encode x) = some x
+#guard recordReasons.all fun x => Canonical.decode (α := RecordTypingReason) (Canonical.encode x ++ [0]) = none
+#guard recordReasons.all fun x => Canonical.decode (α := RecordTypingReason) (Canonical.encode x).dropLast = none
+#guard recordReasons.all fun x => (Canonical.shape RecordTypingReason).accepts (Canonical.toVal x)
+#guard recordTerms.all fun x => Canonical.decode (α := RecordTermRefusal) (Canonical.encode x) = some x
+#guard recordTerms.all fun x => Canonical.decode (α := RecordTermRefusal) (Canonical.encode x ++ [0]) = none
+#guard recordTerms.all fun x => Canonical.decode (α := RecordTermRefusal) (Canonical.encode x).dropLast = none
+#guard recordTerms.all fun x => (Canonical.shape RecordTermRefusal).accepts (Canonical.toVal x)
+#guard recordCauses.all fun x => Canonical.decode (α := RecordCauseRefusal) (Canonical.encode x) = some x
+#guard recordCauses.all fun x => Canonical.decode (α := RecordCauseRefusal) (Canonical.encode x ++ [0]) = none
+#guard recordCauses.all fun x => Canonical.decode (α := RecordCauseRefusal) (Canonical.encode x).dropLast = none
+#guard recordCauses.all fun x => (Canonical.shape RecordCauseRefusal).accepts (Canonical.toVal x)
+
+#guard formationReasons.all fun x => Canonical.decode (α := FormationReason) (Canonical.encode x) = some x
+#guard formations.all fun x => Canonical.decode (α := FormationRefusal) (Canonical.encode x) = some x
+#guard formations.all fun x => Canonical.decode (α := FormationRefusal) (Canonical.encode x ++ [0]) = none
+#guard formations.all fun x => Canonical.decode (α := FormationRefusal) (Canonical.encode x).dropLast = none
+#guard formations.all fun x => (Canonical.shape FormationRefusal).accepts (Canonical.toVal x)
+#guard formationReasons.all fun x => (Canonical.shape FormationReason).accepts (Canonical.toVal x)
 #guard tables.all fun x => Canonical.decode (α := TableRefusal) (Canonical.encode x) = some x
 #guard admissions.all fun x => Canonical.decode (α := AdmitRefusal) (Canonical.encode x) = some x
 #guard scopes.all fun x => Canonical.decode (α := Authoring.Refusal) (Canonical.encode x) = some x

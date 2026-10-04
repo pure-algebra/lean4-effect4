@@ -125,6 +125,22 @@ def erasedParameter : Row := row (.map (.union .unknown (.var 0)) .nat) .unit
 #guard rowTy erasedParameter.normalizeTypes (.map .unknown .nat) = none
 #guard rowTy (row (.map .nat .nat) .unit) (.map .nat .nat) = none
 
+-- New term metadata is visible in every surrounding program family.
+def recordAnnotation : Term := .record [("x", true, duplicate)] [] .nil
+#guard (Formation.checkInput (.succeed recordAnnotation : NativeEff) []).isSome
+#guard (Formation.checkInput (.failCause (.die recordAnnotation) : NativeEff) []).isSome
+#guard (Formation.checkInput (.gen (.cons (.ret recordAnnotation) .nil) : NativeEff) []).isSome
+#guard (Formation.checkInput (.withFiber (.interruptAll (.lit .unit) (some recordAnnotation)) : NativeEff) []).isSome
+#guard (Formation.checkInput (.provideLayer (.effect ⟨⟨0⟩, ⟨0⟩⟩ (.succeed recordAnnotation)) false
+  (.succeed (.lit .unit)) : NativeEff) []).isSome
+#guard (Formation.checkInput (.succeed (.app "some" (.cons recordAnnotation .nil)) : NativeEff) []).isSome
+#guard match Api.replayChecked (.succeed recordAnnotation) 10 [] with
+  | .inr (.formation why) => why.ty = duplicate
+  | _ => false
+#guard match Effect4.Codegen.emitModule "main" (.succeed recordAnnotation) [] with
+  | .error (.formation why) => why.ty = duplicate
+  | _ => false
+
 -- Certificates expose the independent raw judgment.
 example (admitted : AdmittedProgram pureProgram validTable) :
     Formation.InputFormed pureProgram validTable := admitted.formed

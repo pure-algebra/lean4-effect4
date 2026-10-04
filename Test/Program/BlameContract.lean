@@ -125,4 +125,7 @@ private def unitP : Api.Program := .succeed (.lit .unit)
 #guard Effect4.Program.explain (nativeSignature []) [] (.provideLayer (.ref [0]) false unitP)
   = some ⟨[0], .layerReference [0]⟩
 
+#guard Effect4.Codegen.codesOf {}
+    (.instantiatedFormation "Db.get" ⟨["row", "answer"], .map .nat .string, .mapKey⟩) = []
+
 end Test.Program.BlameContract

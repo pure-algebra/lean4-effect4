@@ -81,6 +81,10 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   | .term (.var _) => [2304]
   | .term (.app _ _) => [2345, 2769, 2554]
   | .term (.lit _) => []
+  -- No measured target diagnostic mapping exists for record operations.
+  | .term (.record _ _ _) => []
+  | .term (.field _ _ _) => []
+  | .term (.recordSet _ _ _) => []
   | .cause _ => []
   | .errorNotAdmitted _ => []
   | .outsideDomain _ => []
@@ -111,5 +115,9 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   | .returnNotLast => []
   | .breakOutsideLoop => [1107]
   | .literalOutsideAlphabet _ => []
+  -- Formation belongs to the core type language; no target diagnostic is claimed.
+  | .instantiatedFormation _ _ => []
+  | .recordTerm _ => []
+  | .recordCause _ => []
 
 end Effect4.Codegen
