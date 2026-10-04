@@ -1,0 +1,8 @@
+'KripkeResumeResearch.fresh' does not depend on any axioms
+'KripkeResumeResearch.grows' depends on axioms: [propext, Quot.sound]
+'KripkeResumeResearch.new_declaration' depends on axioms: [propext, Quot.sound]
+'KripkeResumeResearch.old_condition' depends on axioms: [propext, Quot.sound]
+'KripkeResumeResearch.new_condition_refused' depends on axioms: [propext, Quot.sound]
+'KripkeResumeResearch.good_code_control' depends on axioms: [propext, Quot.sound]
+'KripkeResumeResearch.resume_at_stable_key' depends on axioms: [propext, Quot.sound]
+'KripkeResumeResearch.resume_below_fresh_supply' depends on axioms: [propext, Quot.sound]

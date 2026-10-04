@@ -1,0 +1,21 @@
+{
+  "commands": [],
+  "scope": "research only; all writes confined to this scratch directory",
+  "head": "845ce06e09dffd6b9f19cbe46f795566a602d5e3",
+  "verifiedInputsReceipt": "/private/tmp/codex-second-eyes-2026-10-01/kripke-followup/verified-inputs.json",
+  "probeSha256": "80bcbd134449a1c26f0cc9fc8e92874a5e518223518bf35c867adbcdd312a1d1",
+  "probe": {
+    "command": [
+      "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+      "-j1",
+      "-M4096",
+      "-DwarningAsError=true",
+      "--setup=/private/tmp/codex-second-eyes-2026-10-01/kripke-followup/ResumeProbe.setup.json",
+      "/private/tmp/codex-second-eyes-2026-10-01/kripke-followup/ResumeProbe.lean"
+    ],
+    "exit": 0,
+    "seconds": 2.728,
+    "log": "/private/tmp/codex-second-eyes-2026-10-01/kripke-followup/ResumeProbe-1.log"
+  },
+  "result": "passed"
+}

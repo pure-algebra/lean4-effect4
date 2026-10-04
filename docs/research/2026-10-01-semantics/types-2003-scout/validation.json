@@ -1,0 +1,160 @@
+{
+  "declarationLocators": [
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "declaration": "evalTerm_progress",
+      "cited": 517,
+      "actual": 517
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "declaration": "evalTerm_progress_env",
+      "cited": 573,
+      "actual": 573
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "declaration": "ChildDenotes",
+      "cited": 826,
+      "actual": 826
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "declaration": "PointTyped.at_node",
+      "cited": 698,
+      "actual": 698
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "declaration": "getContext_typed",
+      "cited": 1047,
+      "actual": 1047
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "declaration": "child_fuel_eq",
+      "cited": 831,
+      "actual": 831
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "declaration": "serviceTy_leHost",
+      "cited": 248,
+      "actual": 248
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "declaration": "RefDeclared",
+      "cited": 36,
+      "actual": 36
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "declaration": "Equiv",
+      "cited": 33,
+      "actual": 33
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "declaration": "ServicesFit",
+      "cited": 86,
+      "actual": 86
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "declaration": "fits_subN",
+      "cited": 1262,
+      "actual": 1262
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "declaration": "fits_context_inv",
+      "cited": 1467,
+      "actual": 1467
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "declaration": "flatFits_fits",
+      "cited": 270,
+      "actual": 270
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+      "declaration": "storePre",
+      "cited": 54,
+      "actual": 51
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+      "declaration": "storePost",
+      "cited": 94,
+      "actual": 91
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Residual.lean",
+      "declaration": "storePre_mono",
+      "cited": 621,
+      "actual": 621
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Seq.lean",
+      "declaration": "allGuard_typed",
+      "cited": 139,
+      "actual": 139
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Seq.lean",
+      "declaration": "seq_typed",
+      "cited": 153,
+      "actual": 153
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "declaration": "termFits",
+      "cited": 1089,
+      "actual": 1089
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "declaration": "loadsTyped_of_denotesTyped",
+      "cited": 1201,
+      "actual": 1201
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "declaration": "m7_of_ledger",
+      "cited": 1597,
+      "actual": 1597
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Commands/Finish.lean",
+      "declaration": "raceRegistrationR_typed",
+      "cited": 26,
+      "actual": 26
+    },
+    {
+      "path": "tools/ProofGraph/Ledger.lean",
+      "declaration": "readGoal",
+      "cited": 26,
+      "actual": 26
+    },
+    {
+      "path": "tools/ProofGraph/Ledger.lean",
+      "declaration": "check",
+      "cited": 72,
+      "actual": 72
+    },
+    {
+      "path": "tools/Tools/Semantics.lean",
+      "declaration": "renderMarkdown",
+      "cited": 321,
+      "actual": 322
+    }
+  ],
+  "pdfSha256": "c96a2965756f8388b1bfc4d8ddf890a415e32b219dc1a7ac9eed7ef6af1c7dfe",
+  "leanControls": "PASS, including observed gaps",
+  "hostDecoderControls": 6,
+  "productionProofControls": "Not run; cards are proposals",
+  "sources": 10,
+  "importArtifacts": 26
+}

@@ -1,0 +1,9 @@
+PASS extracted goals: 2 proved, 0 registered dependency edges
+PASS explicit dependency: 1 edge retained
+PASS cycle: proof graph: dependency cycle through [VisibilityProbe.firstGoal, VisibilityProbe.secondGoal]
+PASS unknown dependency: proof graph: unknown dependency VisibilityProbe.missing of VisibilityProbe.secondGoal
+PASS wrong proposition: proof graph: VisibilityProbe.trueWitness: proposition changed
+OBSERVED unknown source/locator accepted; JSON retains citation; Markdown omits it
+PASS blank source: [claim unproved-probe: invalid literature reference]
+PASS unknown relation: [claim unproved-probe: invalid literature reference]
+'VisibilityProbe.trueWitness' does not depend on any axioms

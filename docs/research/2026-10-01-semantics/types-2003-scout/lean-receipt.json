@@ -1,0 +1,105 @@
+{
+  "revision": "a8cc886697e173e28a7cf67eca0f49566164b0d8",
+  "boundary": "Isolated tooling probe; no production proof or generator run",
+  "checkerSha256": "86b34597e921d5e2b543a46cfc3d842bcba4c10854010b946c51a158e788577d",
+  "commands": [
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-j1",
+        "-M4096",
+        "-DwarningAsError=true",
+        "--setup=/private/tmp/codex-second-eyes-2026-10-01/types-2003-scout/VisibilityProbe.setup.json",
+        "/private/tmp/codex-second-eyes-2026-10-01/types-2003-scout/VisibilityProbe.lean"
+      ],
+      "cwd": "/private/tmp/codex-second-eyes-2026-10-01/types-2003-scout",
+      "exit": 0,
+      "seconds": 8.359,
+      "timeoutSeconds": 90
+    }
+  ],
+  "savedOutputs": {
+    ".lake/build/lib/lean/Effect4/Laws/Auto/Semantics.olean": "ec2593af90995c3c",
+    ".lake/build/lib/lean/ProofGraph/Ledger.olean": "b760c16b3fe1f30a",
+    ".lake/build/lib/lean/ProofGraph/Proof.olean": "2ac31e041c6afd57",
+    ".lake/build/lib/lean/Tools/GeneratedStamp.olean": "43c192dd2db142c7",
+    ".lake/build/lib/lean/Tools/Semantics.olean": "e2f046cb7b6ab6ac",
+    ".lake/build/lib/lean/Tools/SemanticsRegistry.olean": "f8665ee76b381e06",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Syntax.olean": "3183fd47a0dd5b12",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Syntax.olean.server": "1a91c3fdd5e7af56",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Syntax.olean.private": "54295841fe6e5497",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Syntax.ir.sig": "623d2b4ea927e899",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Lean/Syntax.ir": "2110ff88e8021ca2",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Basic.olean": "0dc394a9256e5ac5",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Basic.olean.server": "cf364906dc2b5819",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Basic.olean.private": "1179af98048b10f7",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Basic.ir.sig": "517ef6e85c873a0f",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Basic.ir": "11fbfe1865be8a3c",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Misc.olean": "37f3f38811a19d27",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Misc.olean.server": "4165de2d9b4e8359",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Misc.olean.private": "6fdf78161f229952",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Misc.ir.sig": "4ffaa0397fb95fdd",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Tactic/Lint/Misc.ir": "cc178fe4caa2ce69",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Util/ProofWanted.olean": "2c9b38a417bac3bf",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Util/ProofWanted.olean.server": "4ab23b06db0acc1b",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Util/ProofWanted.olean.private": "7cdc8fbec826d54b",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Util/ProofWanted.ir.sig": "02e2f70b6df036de",
+    ".lake/packages/batteries/.lake/build/lib/lean/Batteries/Util/ProofWanted.ir": "38eccd508f891391"
+  },
+  "savedOutputBoundary": "prepared project/package roots and resolved transitive import artifacts; bundled toolchain is pinned",
+  "sources": {
+    "Tools.SemanticsRegistry": {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "sha256": "19ae76a058d5a2e3844e6751ccc83607b8685a5739159868521324eaf6a0c1be",
+      "lakeHash": "df6b8021918db3af"
+    },
+    "Tools.Semantics": {
+      "path": "tools/Tools/Semantics.lean",
+      "sha256": "8eaad586b824a9d15532fbb73c4123e99bb28550824cc29d8231052e068ed5ab",
+      "lakeHash": "0e0d16270c70ce38"
+    },
+    "Tools.GeneratedStamp": {
+      "path": "tools/Tools/GeneratedStamp.lean",
+      "sha256": "d00baa7de51d9003ab44cda0a336d568991b05650e402c2b23def3b52f9bcab5",
+      "lakeHash": "4dd6d7c48089eec8"
+    },
+    "ProofGraph.Proof": {
+      "path": "tools/ProofGraph/Proof.lean",
+      "sha256": "283b11563eb0328e1b354c257b5436d64d957ef51596defa738699fe5b9e62d7",
+      "lakeHash": "df8c881e27f3d9a7"
+    },
+    "ProofGraph.Ledger": {
+      "path": "tools/ProofGraph/Ledger.lean",
+      "sha256": "02e071b8df7cc571d81abf8e7dc59a1ba67baaf0e9b6024774b1d5173d2dc29c",
+      "lakeHash": "37514800075311a0"
+    },
+    "Effect4.Laws.Auto.Semantics": {
+      "path": "src/Effect4/Laws/Auto/Semantics.lean",
+      "sha256": "5fd41d7d6d76d906dc4338ab1f4c74ec39d8ad7a566c5d1ee45ccf353276fe49",
+      "lakeHash": "a7c1159cd42121c9"
+    },
+    "Batteries.Util.ProofWanted": {
+      "path": ".lake/packages/batteries/Batteries/Util/ProofWanted.lean",
+      "sha256": "cfd89307234c074205ee323ee1e77cd9aab0c5c895e16eac032d478d93feec1b",
+      "lakeHash": "51722c8057089613"
+    },
+    "Batteries.Tactic.Lint.Misc": {
+      "path": ".lake/packages/batteries/Batteries/Tactic/Lint/Misc.lean",
+      "sha256": "f686cbdbcf8c266533eecaa7ba49ed4c5fdb1a7375352bf9e3029cfd255362bb",
+      "lakeHash": "aae7ec12d23515ae"
+    },
+    "Batteries.Tactic.Lint.Basic": {
+      "path": ".lake/packages/batteries/Batteries/Tactic/Lint/Basic.lean",
+      "sha256": "a6df6a54285448c19a3a4a721011f36a8735e027707fa3225c718380f14081e3",
+      "lakeHash": "03ac2ee2036ae389"
+    },
+    "Batteries.Lean.Syntax": {
+      "path": ".lake/packages/batteries/Batteries/Lean/Syntax.lean",
+      "sha256": "996f042a39a2ead850d3f2466b52002c7d194b2432d75605f345f460cd92cf44",
+      "lakeHash": "ef77c24ed6af545b"
+    }
+  },
+  "probeSha256": "ba94eb74f3d92d159b00c84099d1b6702471966013fa559c966700a5322a1a25",
+  "headAfter": "a8cc886697e173e28a7cf67eca0f49566164b0d8",
+  "statusAfter": ""
+}

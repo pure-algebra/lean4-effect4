@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/Users/pooks/.local/share/mise/shims/bun",
+    "/private/tmp/codex-second-eyes-2026-10-01/types-2003-scout/schema-probe.mjs"
+  ],
+  "seconds": 0.169,
+  "exit": 0,
+  "timeoutSeconds": 45,
+  "files": {
+    "/Users/pooks/Dev/lean4-effect4-gemini/ts/eff/semantics.ts": "38a0283aabb3fd7741f61d7e94a71ea061018ca2ae5028dc23ddbeb5c990b6c1",
+    "/Users/pooks/Dev/lean4-effect4-gemini/ts/eff/package.json": "1f7a29bdf5ec701d8eef07742b2f5db7f3b9fd93bf18c29d8cb8baa888ea3444",
+    "/Users/pooks/Dev/lean4-effect4-gemini/generated/semantics.json": "d53d4304992fb7f9d6b4ff77646941f54e7e22cf4f6253668e62f45d87b83e8d",
+    "/private/tmp/codex-second-eyes-2026-10-01/types-2003-scout/schema-probe.mjs": "179fd54244fed4470096c0367830bdeefb3109818ec6b3a695a9d7530fb86750",
+    "/private/tmp/codex-second-eyes-2026-10-01/types-2003-scout/literature-refs.json": "5c973ffd5c66665b14cd938d55eec5de5ad121c843176f4a092cc62f901c5c3e"
+  }
+}

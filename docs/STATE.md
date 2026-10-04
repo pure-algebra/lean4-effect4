@@ -643,14 +643,14 @@ reconciled by hand with D4 (rows 170 and 175 landed; M5's arm groups 1–3 and e
 compatibility lemma). The sweep passes: `lake build` 758 jobs, the trust gate 536 modules and 75 032
 declarations, `make check-gen` (W2's interaction check: every Lean-only generated file is what its
 generator emits), after decisions row 184 (the gate admits the `semantics` attribute's
-initializer-set handle by exact name; the owner ratifies). The language's judgments are described by
+initializer-set handle by exact name; owner-ratified, row 184). The language's judgments are described by
 concept in `docs/core/semantics.md` (promoted from Gemini's draft, every locator checked), and their
 status is measured in `generated/semantics.md` over the ten concepts: 57 claims, 43 proved, 7
 wanted, 5 absent, 1 refuted, 1 assumed (`make gen-semantics`; `python3 scripts/check-semantics.py`
 passes). Next, in this order (Gemini, `docs/research/2026-10-01-semantics/brief-gemini-proofs.md`):
 M5's `evalTerm_fits`, group 4 and the assembly for layer-free programs (receipt D2); then M6 as seat
-D5's brief has it (row 134 (a)–(e), row 181, the eight goals, M6b, M6c, row 180); then M7. Owner
-decisions in the way: row 176 (the layer family), row 184 (ratify the gate admission). The review
+D5's brief has it (row 134 (a)–(e), row 181, the eight goals, M6b, M6c, row 180); then M7. The two
+owner decisions then in the way are settled: row 176 (b) landed on 2026-10-02, and row 184 (a) is ratified. The review
 record of the pass: `docs/research/2026-10-01-semantics/review-codex-gemini-2026-10-01-late.md`.
 
 **Design review before implementation resumes (2026-09-19).** The completed STM and stateful-API

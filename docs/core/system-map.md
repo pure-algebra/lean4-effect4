@@ -276,20 +276,27 @@ criteria as conditions a reader can check, each with its status. The evidence wo
    `hasTy_normalize` (membership is invariant under normalisation), `fits_sub` (membership is
    closed under the order). Identity is equality of normal forms, the kernel of `Ty.subN`
    (row 137). **Instance:** `TypeAlgebra.lean`, `Fold.lean`; proved.
-2. **Programs are the free monad over the signature's rows, typed by a protocol-indexed weakest
-   precondition over a Kripke world.** `Eff` and `RProgram` are free objects; `TypedProg root w ty p`
-   says `p` meets the protocol's pres and posts at every later world (`typedProg_mono`), with one
-   sequencing law (`seq_typed`). Worlds are store typings ordered by extension; every judgment on
-   values, frames and stores is monotone along it (`fits_mono`, `stackAccepts_mono`,
-   `savedOk_mono`, `scopeLive_mono`). The checker is sound and complete against `HasTy`
-   (`check_sound`, `check_complete`), and admission is a located refusal complete against the
-   judgment. **Instance:** `Typed/Residual.lean`, `Membership.lean`, `Contracts.lean`; proved.
+2. **Stored programs are first-order trees; their residual semantics has protocol-indexed typing
+   over a Kripke world.** `Eff` stores child trees; `RProgram` has Lean-function continuations.
+   `TypedProg root w ty p` requires ordinary operation continuations to accept permitted replies
+   at every accessible world; its control markers have their own clauses. Construct-specific
+   compatibility lemmas connect sequencing (`seq_typed`); unrestricted bind closure is refuted
+   (`E4-TYPED-CE-030`). Value membership, residual typing and closed stacks have named transport
+   laws (`fits_mono`, `typedProg_mono`, `stackAccepts_mono`, `savedOk_mono`, `scopeLive_mono`).
+   `leHost` is compatible world extension, not execution. Store typing and configuration validity
+   are re-established by transitions; conditional resume typing also needs stability of the
+   addressed declaration. `TypedProg` is not an execution weakest precondition without a
+   connecting theorem. The checker is sound and complete against `HasTy` (`check_sound`,
+   `check_complete`), a different judgment from machine safety. Program admission is a located
+   refusal complete against the judgment. **Instance:** `Typed/Residual.lean`, `Membership.lean`,
+   `Contracts.lean`; proved.
 3. **The machine is a transition system with an invariant proved by one lift rule.** The typed
    state is `J` (machine-only) inside `I` (the configuration with its queue); `StepPreserves` for a
    command is exactly the lift's `step` premise (`guarded_stepKeeps_of_stepPreserves`), and the
    lifts (`FoldLift`, `DecisionLift` as its corollary through `FoldLift.ofDecisionLift`) carry an
    invariant through every fold, loop and decision once, by relative induction over a monotone
-   ghost world. A typed machine never halts (`machineTyped_not_halted`). **Instance:**
+   ghost world. `machineTyped_not_halted` extracts `stuck = none` from the maintained invariant;
+   it supplies no successor. **Instance:**
    `Typed/Assembly.lean`, `Machine/Lift.lean`; the rule proved, and the eighteen command instances
    (M6, proved 2026-10-03, `Typed/Commands/`).
 4. **Handlers meet their protocols by one adequacy theorem.** For every row, the handler's
@@ -348,7 +355,7 @@ row 181.)
 
 | Criterion | The check | Status (2026-10-01) |
 | --- | --- | --- |
-| S1 every clause of `J` and `I` is a world-indexed predicate monotone along the order | one `*_mono` theorem per clause, in `M3bWorld` | 0 open, 6 proved |
+| S1 every reused world-indexed fact names its transport conditions; transitions re-establish state validity | persistent predicates use `M3bWorld`; conditional lookups use stability or freshness; changing-state clauses use `StepPreserves` | 0 open, 6 proved; the six cover their named predicates, not every clause of `J` and `I` |
 | S2 every row's post is the handler's theorem | `M3bAdequacy` | 8 open, 66 proved |
 | S3 every halting site of the machine has the clause that excludes it | row 139's census against `MachineLive`, `QueueOk`, `fiberPre`, `ScopeLive` | complete; the three machine-store spellings have one name since seat D3's step 0 (`Stores.ScopeLive`, `2f8a786a`) |
 | S4 every fact has one name at every site (no second spelling) | the dictionary (`docs/core/controlled-english.md`) and §§4–5; the census instrument (row 143) | holds for the typed state since row 156; the renames of row 141 pending |

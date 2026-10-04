@@ -128,6 +128,62 @@ verified Chapter 6 (Crary).
 
 ---
 
+### 1.4 Applying the textbook proof method
+
+TAPL §8.3 splits safety into progress and preservation, here `StepPreserves`; §§13.4–13.5 develop store typing.
+The verified [contents](https://www.cis.upenn.edu/~bcpierce/tapl/contents.pdf) locates these sections.
+The vendored PLF `References.v` supplies inspectable definitions: `store_weakening`,
+`store_well_typed_app`, `preservation` and `progress`.
+These are different sources, not interchangeable theorem attributions.
+
+Effect4 applies that proof discipline to its own judgments:
+
+| Proof responsibility | Effect4 meaning and owner | Boundary |
+| --- | --- | --- |
+| Formation and inversion | Source and checker admission, and `Fits` inversion at the consumer | A shape check alone does not establish declared handle types |
+| Environment and binder reasoning | Positional input and capture typing in admission and the denotation | Stored syntax has no lambda values; binders use environment extension and lookup lemmas, not a beta-substitution theorem |
+| Store weakening | Existing membership preserved along `World.leHost` | Does not establish validity of new contents or declarations |
+| Store operation safety | `StoreImplements` and `storeStep_typed`: an actual answer, an extended world, a typed store and a typed continuation | The configuration invariant also keeps stacks, queues and its other clauses |
+| Preservation | `StepPreserves` under `ConfigTyped`, lifted through decisions and reachability | Each added invariant holds at load and at each writer; world monotonicity alone does not suffice |
+| Progress | An explicit finished, transition or live-frontier classification | `stuck = none` alone supplies no successor; waiting, missing decisions and exhausted fuel are not errors |
+| Subtyping | Membership under normalized `subN`, with handle variance justified by permitted reads and writes | Transports a value along types, not a machine along execution |
+
+This table states responsibilities, not completed claims. Each proof slice records four things:
+the cited definition or technique, the local adaptation and cut, the exact proposition, and its caller.
+A missing textbook role is an explicit scoped omission or a named obligation.
+Assigning every theorem to a chapter does not establish metatheory coverage.
+
+### 1.5 Constructing and explaining the proofs
+
+The inspected TYPES 2003 chapters add methods for organizing proofs. They supply no new Effect4
+semantic result. The [source audit](../research/2026-10-01-semantics/types-2003-scout/book-scout.md)
+records the edition, checksum, pages and limits of each connection.
+
+Ballarin's *Locales and Locale Expressions in Isabelle/Isar* (§§3.2–3.5, pp. 37–41) explains how
+fixed parameters and assumptions stay visible when derived facts are exported. In Lean, the proofs
+reuse the existing parameters, predicate bundles and conditional theorems. A constructor arm keeps
+point admission, service-table agreement and its child hypotheses explicit. A handler also
+establishes the protocol's actual postcondition and the resulting state invariants. Erasing a
+shared assumption at a boundary changes the theorem.
+
+Wiedijk's *Formal Proof Sketches* (§§3–4, pp. 383–386; §7, pp. 388–389) motivates a short account
+of the essential argument with named justification tasks. Here a sketch is planning prose; the Lean
+proposition and its checked evidence remain the authority. A conditional assembly leaves its
+parameters open until they are discharged. An explanation names what each lemma enables and does
+not reproduce tactic logs.
+
+Adams's *A Modular Hierarchy of Logical Frameworks* (§3.4, pp. 11–12) proves conservativity for the
+features of his framework hierarchy. Here it is an analogy for reviewing a change's judgments, rules
+and dependencies. It establishes neither `StepPreserves` for a step nor Kripke persistence. Strengthening an
+invariant after a counterexample names the changed program admission premise and re-establishes the
+affected transitions.
+
+For each slice, the prose records the literature relation, the local adaptation and cuts, the
+argument and the consumer. The semantics registry and the generated report own the exact statement and its
+evidence status. The [tooling follow-up](../research/2026-10-01-semantics/types-2003-scout/tooling-adoption.md)
+records the source-resolution and rendering gaps and two bounded adoption slices. Planned
+prerequisites stay distinct from checked theorem applications.
+
 ## 2. The Ten Semantic Concepts
 
 ### 2.1 Concept 1: Store Typing & Value Membership (`store-typing`)
@@ -149,9 +205,17 @@ verified Chapter 6 (Crary).
   with explicit partitioned tables for fibers ($\Gamma$), promises ($\Pi$), heap references (`Ρ`, Greek rho, field `w.Ρ`),
   and ghost resume states ($\Theta$).
 - **Exclusion of Stored Functions (Row 163)**: Stored `Eff` syntax and stored values `Val` contain
-  no function values or closures (`../research/history/language-cut.md` §1). Consequently, `Fits` contains **no arrow clause**,
-  and step-indexing is unnecessary for this finite structural membership relation. (Analogy to Ahmed's
-  worlds, but excluding semantic-store circularity).
+  no function values or closures (`../research/history/language-cut.md` §1). Consequently, `Fits` contains **no arrow clause**
+  and recurses over finite type structure. Worlds carry syntactic type declarations. Reference
+  membership reads those declarations instead of recursively interpreting stored contents. These
+  choices avoid a recursive semantic-store definition here. No-arrow syntax alone would not justify
+  excluding step indices from every future extension (Ahmed §2.2.5 and §3.2.3).
+- **Accessibility and state validity**: a future world is accessible through `World.leHost`, not
+  necessarily reachable by execution. `Fits` is a unary Kripke logical predicate (Ahmed §2.2.5),
+  not a binary equivalence between programs. `StoreTyped`, `WorldValid` and the full configuration
+  invariant are separate obligations; accessibility alone does not give them. An actual store
+  operation produces a suitable extended world, typed contents and the promised reply.
+  `StoreImplements` and `storeStep_typed` own that connection (`src/Effect4/Laws/Program/Typed/Adequacy.lean`).
 - **Checker Order & Normalization (Rows 96, 137)**: Handle arm subtyping uses `Equiv` under `subN`
   (normalized subtyping both ways), as raw subtyping does not distribute products over unions (`E4-TYPED-CE-009`).
 - **Scope Handle Persistence (Row 156)**: Scope handles require `ScopeLive w sc`; dangling handles do not fit `Ty.scope`.
@@ -167,7 +231,7 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
 (excluding defects `badName` and `notImplemented`, decisions row 152).
 
 #### 4. Required Properties and Obligations
-- **Monotonicity (`fits-mono`)**: World extension preserves value membership.
+- **Monotonicity (`fits-mono`)**: `World.leHost` preserves value membership for a fixed value and type.
   (`fits_mono` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
 - **Subtyping preservation (`fits-subn`)**: Subtyping in normalized order preserves membership.
   (`fits_subN` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
@@ -229,6 +293,8 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   (`load-typed`, `typedState_load`, `Assembly.lean:1674`) by `loadsTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`), through
   the load connector whose race-marker premise the root code's typing discharges
   (`loadsTyped_of_denotesTyped_typed`, `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
+  The displayed implication abbreviates the premises of `DenotesTyped`. They are well-formed layer
+  references, a world whose service table equals the source's, and an admitted source point whose path selects an effect node.
 - **Failure handler compatibility (`on-failure-typed`)**: Compatibility lemma for the error recovery bracket `onFailure` (decisions row 148), proved by
   `catchGuard_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean`).
 - **M5 on the layer-free fragment (`denote-typed-layer-free`), and the layer family's arm

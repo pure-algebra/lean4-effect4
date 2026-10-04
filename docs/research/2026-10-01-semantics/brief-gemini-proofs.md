@@ -81,8 +81,11 @@ obstacles". In order:
    layer family stays one named goal. Then the controls D2 lists flip (the typed corpus at a starting
    world, `AwaitLoad.loadsTyped`, the CE-021/022 flips) and `M3bAssembly.typedState_load` follows
    from `loadsTyped_of_denotesTyped`.
-4. Group 5 (the layer family) is **blocked on the owner**: decisions row 176 (the type of a built
-   layer context). Do not start it; if you meet it, write the measurement row 176 asks for.
+4. Group 5 (the layer family): the owner has **ratified row 176 (b)**, builds using the existing
+   `Val.context` / `ctxImage` image. D2's memo-hit counterexample was not compiled; measure it before
+   claiming a refutation. Move the layer helpers, compilation twins and agreement proofs together;
+   resolve the separate layer-node/`PointTyped` mismatch. M5 stays open until this repair is proved.
+   This ruling permits the repair in the existing sequence; it does not reopen the representation choice.
 
 **M6, the step goals (`step-loop-preserves`, `step-deliver-preserves` and the ledger's other seven
 open goals in `M6Ledger`, plus `M6Edits.clockSome`).** These are false as stated until five
@@ -99,9 +102,44 @@ docstrings at `Assembly.lean`'s `M7` namespace when you get there; nothing here 
 
 **Not yours, and why:** row 183 (host adequacy at a template row: the coordinator's repair is
 recommended; group 4's host-row arm closes meanwhile through the template bridge, as D2 did); row
-184 (the gate's exact admission of the `semantics` attribute's handle, for the owner's ratification);
+184 (the gate's exact admission is now owner-ratified; keep the existing checks);
 the fairness claim (`fair-scheduling`, R12) and the two planned data-wave claims (`record-codec-layout`,
 `record-app-subtyping`), which are the data path's (seats W4, W5).
+
+## Kripke and TAPL alignment within this sequence
+
+Read [the adoption addendum](kripke-adoption/brief.md) before the next coherent slice. It supplies
+three bounded tasks: correct claim roles and record a theory-to-proof map (K0), reuse the checked
+restricted resume lemmas in M6 where a caller benefits (K1), and expose the existing store-step
+adequacy chain in M5/M6 with its necessity controls (K2). K0 can accompany report maintenance; K1
+and K2 belong to the relevant existing proof arms, not a parallel implementation.
+
+The addendum corrects D5 step 1's blanket monotonicity demand: classify each clause as persistent,
+requiring a stable lookup/freshness premise, or re-established by the actual transition. Do not
+weaken `ConfigTyped`, or promise unconditional monotonicity of all its fields. Existing `M3bWorld`
+proofs stay closed. The selected report is not a complete obligation census. No new modal calculus,
+step-indexing framework or duplicate preservation ledger is requested.
+
+## Book-guided proof cards and visible citations
+
+The [TYPES 2003 scouting packet](types-2003-scout/book-scout.md) refines group 4 into reference
+read, service read, and the non-inline exit branch. It supplies exact inspected book locators,
+a short argument for each proof, existing dependencies, consumers and stop conditions. Use it
+within this sequence; it introduces no new semantic framework or capstone status.
+
+Two candidate tasks are already covered: `evalTerm_progress` / `evalTerm_progress_env` establish
+term evaluation existence, and `raceRegistrationR_typed` supplies the load connector's marker
+premise once root typing is known. The latter currently lives downstream of Assembly: follow
+the packet's placement note rather than creating an import cycle. The conditional layer
+assembly is not an unconditional M5 proof or a layer-free theorem until its premises are supplied.
+
+The [tooling adoption note](types-2003-scout/tooling-adoption.md) retains the source-key slice
+below and adds one small renderer slice: show each claim's citations and relation beside its
+statement, including absent/assumed claims. Isolated controls confirmed that unknown citation
+keys currently pass and that JSON citations disappear from Markdown. Keep semantic statuses
+unchanged in these documentation slices. Supplied dependency edges are checked by the existing
+ledger, but the current obligation collector initializes no edges; do not present the authored
+work plan as an extracted dependency graph.
 
 ## One small tooling slice, any time
 

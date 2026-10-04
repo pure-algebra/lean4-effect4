@@ -345,8 +345,8 @@ private def auditedSources (projectRoot : System.FilePath) (slowRoot : Bool) :
   return effect4 ++ tests |>.push (projectRoot / "src" / "Effect4.lean")
 
 /--
-The `initialize`d handles admitted by exact name (decisions row 184; the coordinator, 2026-10-01,
-for the owner's ratification). `initialize x : T ← action` compiles to `opaque x : T` with the
+The `initialize`d handles admitted by exact name (decisions row 184; ruled 2026-10-01, ratified by
+the owner). `initialize x : T ← action` compiles to `opaque x : T` with the
 synthesised value and an `[init]` initializer that sets the run-time value: the handle is a
 registration object (an attribute's environment extension), never a value a theorem is stated
 about, so the ruling on `opaque` above does not reach it. Admitted only while the declaration

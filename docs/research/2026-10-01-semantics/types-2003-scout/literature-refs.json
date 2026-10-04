@@ -1,0 +1,5 @@
+[
+  {"work":"Adams2004","locator":"audit TYPES-A1: section 3.4, printed pp. 11-12 (PDF pp. 19-20)","relation":"analogy"},
+  {"work":"Ballarin2004","locator":"audit TYPES-B1: sections 3.2-3.5, printed pp. 37-41 (PDF pp. 45-49)","relation":"proofTechnique"},
+  {"work":"Wiedijk2004","locator":"audit TYPES-W1: sections 3-4 and 7, printed pp. 383-386, 388-389 (PDF pp. 391-394, 396-397)","relation":"proofTechnique"}
+]

@@ -1,0 +1,42 @@
+{
+  "effect": "4.0.0-rc.112",
+  "cases": [
+    {
+      "name": "current selected report",
+      "expected": true,
+      "accepted": true,
+      "reason": null
+    },
+    {
+      "name": "three proposed reference shapes",
+      "expected": true,
+      "accepted": true,
+      "reason": null
+    },
+    {
+      "name": "blank source",
+      "expected": false,
+      "accepted": false,
+      "reason": "Expected a string matching the RegExp \\S\n  at [0][\"work\"]"
+    },
+    {
+      "name": "unknown relation",
+      "expected": false,
+      "accepted": false,
+      "reason": "Expected \"definitionUsed\" | \"proofTechnique\" | \"adaptedResult\" | \"analogy\" | \"excludedFeature\"\n  at [0][\"relation\"]"
+    },
+    {
+      "name": "unmodeled verified flag",
+      "expected": false,
+      "accepted": false,
+      "reason": "Expected no excess property\n  at [0][\"verified\"]"
+    },
+    {
+      "name": "unknown source currently accepted by full report decoder",
+      "expected": true,
+      "accepted": true,
+      "reason": null
+    }
+  ],
+  "boundary": "Bun runtime decoder probe, no TypeScript compiler run or evidence revalidation"
+}

@@ -1,0 +1,20 @@
+{
+  "result": "PASS",
+  "base": "01e3118065e64ddc5f9d28f0a0d982b5f8c647cd",
+  "changedTrackedFiles": [
+    "docs/STATE.md",
+    "docs/core/decisions.md",
+    "docs/core/semantics.md",
+    "docs/core/system-map.md",
+    "docs/research/2026-10-01-semantics/brief-gemini-proofs.md"
+  ],
+  "productionSourcesChanged": false,
+  "registryAndGeneratedBytesUnchanged": true,
+  "exactDeclarationLocators": 10,
+  "primaryPLFLocators": 4,
+  "historicalProbeHashes": 2,
+  "historicalAxiomLines": 21,
+  "newCompilerRuns": 0,
+  "ownerRulings": "176(b),184(a)",
+  "documentationLocatorCheck": "PASS, 60 doc locators; legacy draft registry 51 claims, 14 already-pending bibliography keys; not an environment report check"
+}
