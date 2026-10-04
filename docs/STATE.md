@@ -29,6 +29,36 @@ The [host-instance note](research/2026-10-03-data-language/host-instance-follow-
 Inferring that instance from a runtime value loses information, including the element type of an empty list.
 That representation change precedes the host correspondence proof and later lowering work.
 
+## Proof graph and infrastructure (2026-10-04)
+
+The [proof graph audit](research/2026-10-04-proof-graph-audit/audit.md) found that the ledger
+held no goals and that no tool recorded edges between them. The
+[reference scout](research/2026-10-04-reference-scout/synthesis.md) read 17 pinned outside
+projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
+
+- **The plan** (`tools/ProofGraph/Plan.lean`). Ledger goals and named theorems are nodes. A
+  reduction registered in the semantics registry becomes an edge once the kernel checks its
+  implication within the semantic ceiling. Statuses are derived: declared, reduced, ready,
+  proved. A loose premise keeps its target from being ready. `#plan_status` and
+  `#obligation_close` work in the editor.
+- **The plan in the report.** `generated/semantics.md` has a plan section. Per requirement it
+  shows a derived status, the open parts, the next goals and a Mermaid graph. Per proved node it
+  shows what the proof brings in. R9's M7 is the first edge (`m7_of_ledger`); R9 and R12 stay open through
+  their listed open parts.
+- **R12-a** (`fairTape_unarmed`): a fair finite tape that suffices leaves nothing armed at its
+  live end. It is the finite endpoint only.
+- **One population filter** (`ProofGraph.isAuxiliary`) for the census, the report and the
+  architecture map. The old string filter dropped authored theorems such as `eq_cata`.
+- **`make check-kernel`** (the sweep tier): every compiled declaration replayed through the
+  kernel in one environment.
+- **The proof-style ratchet** (`Test/Audit/ProofStyle.lean`): no new `simp_all`, `first`, `try`
+  or `simp` without `only` under `src/Effect4`.
+- **The module system** (decisions row 200). `hash` is converted on a local branch, not pushed
+  (`/Users/pooks/Dev/lean4-hash`, branch `module-system`). M1 and M3 hold, and M2 is amended to
+  a coverage test. The estate's package-free modules are converting in the worktree
+  `/Users/pooks/Dev/lean4-effect4-modules`. See the
+  [seat M receipt](research/2026-10-04-seat-M-receipt.md).
+
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 
 Phase A, placement, the Phase B skeleton and the Phase C fills of the skeleton-first redirect
