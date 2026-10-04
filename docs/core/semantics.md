@@ -184,6 +184,14 @@ evidence status. The [tooling follow-up](../research/2026-10-01-semantics/types-
 records the source-resolution and rendering gaps and two bounded adoption slices. Planned
 prerequisites stay distinct from checked theorem applications.
 
+The plan (`tools/ProofGraph/Plan.lean`) holds that distinction mechanically. A ledger goal states a
+wanted proposition before its proof exists. A conditional theorem registered as a reduction of a
+goal is the decomposition, in the style of `m7_of_ledger`. It becomes an edge only when the kernel
+checks the implication from the matched premise nodes to the goal, within the semantic ceiling. A premise that no node matches is loose, and it keeps the goal from being ready. Statuses
+are derived: declared, reduced, ready, proved. The plan section of `generated/semantics.md` renders
+them per requirement. This is the blueprint method of formalization projects, with the authored
+edges replaced by checked implications and no `sorry` stubs.
+
 ## 2. The Ten Semantic Concepts
 
 ### 2.1 Concept 1: Store Typing & Value Membership (`store-typing`)
