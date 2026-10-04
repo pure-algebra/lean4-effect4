@@ -89,7 +89,7 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 | on-failure-typed | compatibility | proved | Effect4.Program.Typed.catchGuard_typed | yes |  |
 | all-guard-typed | compatibility | proved | Effect4.Program.Typed.allGuard_typed | yes |  |
 | on-exit-typed | compatibility | proved | Effect4.Program.Typed.onExit_typed | yes |  |
-| admitted-source-lawful | compatibility | wanted | Effect4.Program.Typed.lawfulSig_of_admitted | yes | E4-TYPED-CE-041 |
+| admitted-source-lawful | compatibility | proved | Effect4.Program.Typed.lawfulSig_of_admitted | yes | E4-TYPED-CE-041 |
 
 ### Printed statements
 
@@ -1483,7 +1483,7 @@ A requirement is proved when every top node is proved and no open part remains. 
 
 | Requirement | Status | Top nodes | Next goals |
 | --- | --- | --- | --- |
-| R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (modulo) | `lawfulSig_of_admitted` |
+| R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved) | — |
 | R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | — |
@@ -1497,7 +1497,7 @@ A requirement is proved when every top node is proved and no open part remains. 
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | — |
 | R13 | open | `journal_replays` (proved) | — |
 
-**Next goals** (1): `lawfulSig_of_admitted`
+**Next goals** (0): —
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
@@ -1514,14 +1514,14 @@ flowchart LR
   n3["meaning_typed_app<br/>proved"]
   n4["run_typed_app<br/>proved"]
   n5["meaningB_typed_app<br/>proved"]
-  n6["reachable_typed_admitted<br/>modulo"]
+  n6["reachable_typed_admitted<br/>proved"]
   n7["check_restrict<br/>proved"]
   n8["meaning_typed<br/>proved"]
   n9["run_eq_meaning<br/>proved"]
   n10["normalize_idem<br/>proved"]
   n11["hom_eq_cata_ty<br/>proved"]
   n12["reachable_typed<br/>proved"]
-  n13["lawfulSig_of_admitted<br/>goal"]
+  n13["lawfulSig_of_admitted<br/>proved"]
   n14["cata_eff_congr_on<br/>proved"]
   n15["hom_eq_cata_eff<br/>proved"]
   n16["decision_preserves<br/>proved"]
@@ -1719,14 +1719,14 @@ flowchart LR
 | `meaning_typed_app` | proved | — | `check_restrict`, `meaning_typed` | 75 | 331 |
 | `run_typed_app` | proved | — | `check_restrict`, `meaning_typed`, `run_eq_meaning` | 102 | 1102 |
 | `meaningB_typed_app` | proved | — | `check_restrict`, `normalize_idem`, `hom_eq_cata_ty`, `check_sound`, `check_complete` | 740 | 735 |
-| `reachable_typed_admitted` | modulo | `lawfulSig_of_admitted` | `reachable_typed`, `lawfulSig_of_admitted` | 79 | 1181 |
+| `reachable_typed_admitted` | proved | — | `reachable_typed`, `lawfulSig_of_admitted` | 79 | 1181 |
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 70 | 282 |
 | `meaning_typed` | proved | — | `normalize_idem`, `hom_eq_cata_ty`, `check_sound`, `check_complete` | 693 | 649 |
 | `run_eq_meaning` | proved | — | — | 309 | 902 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
 | `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 85 | 1208 |
-| `lawfulSig_of_admitted` | goal | `lawfulSig_of_admitted` | — | 0 | 2 |
+| `lawfulSig_of_admitted` | proved | — | — | 67 | 163 |
 | `cata_eff_congr_on` | proved | — | — | 63 | 71 |
 | `hom_eq_cata_eff` | proved | — | — | 63 | 77 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1003 | 1482 |
