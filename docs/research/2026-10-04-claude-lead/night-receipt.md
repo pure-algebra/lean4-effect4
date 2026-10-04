@@ -87,6 +87,8 @@ Base `faad3e9e`, head of this receipt's last edit: see `git log` on `refactor/ph
 
 ## What this evidence does not establish
 
+- No sweep ran on the merge: `make check`, `make check-full` and `make check-gen` wait for the
+  owner. `make status` lists their markers as stale; the narrow gates above ran.
 - The plan's statuses cover the thirteen requirement rows. A row's open parts are authored, so
   "open" is honest, but the list may miss a part.
 - The ratchet does not read 60 commands; the bank census reads clauses from source text.
