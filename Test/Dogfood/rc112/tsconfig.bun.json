@@ -1,0 +1,11 @@
+{
+  "//": "Runtime resolution for bun only: the same pinned package, its JavaScript entry points.",
+  "compilerOptions": {
+    "paths": {
+      "effect": ["/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/index.js"],
+      "effect/unstable/*": ["/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/unstable/*/index.js"],
+      "effect/*": ["/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/*.js"],
+      "@effect/sql-sqlite-bun": ["/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@effect/sql-sqlite-bun/dist/index.js"]
+    }
+  }
+}

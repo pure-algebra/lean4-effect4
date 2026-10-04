@@ -208,6 +208,11 @@ import Test.Program.LayerSharingContract
 import Test.Program.BlameContract
 import Test.Program.DecisionContract
 import Test.Machine.Runtime.ArenaContract
+import Test.Dogfood.P1HttpCache
+import Test.Dogfood.P2HandlerLayers
+import Test.Dogfood.P3WorkerQueue
+import Test.Dogfood.P4RateLimiter
+import Test.Dogfood.P5LedgerService
 
 /-!
 # Effect4 test battery

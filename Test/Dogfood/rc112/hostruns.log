@@ -1,0 +1,25 @@
+# bun 1.4.2, effect 4.0.0-rc.112 (ts/eff/node_modules), 2026-10-01T02:19:01Z; runtime paths: tsconfig.bun.json
+## bun --tsconfig-override=./tsconfig.bun.json run-p1.ts
+p1 answer 42 elapsedMs>=2000 true
+p1 host ["call 1 https://api.example.com/quotes/EFX","abort 1","call 2 https://api.example.com/quotes/EFX","call 3 https://api.example.com/quotes/EFX"]
+p1 404 {"_id":"Cause","failures":[{"_tag":"Fail","error":{"status":404,"url":"https://api.example.com/quotes/NOPE","_tag":"HttpError"}}]} calls 1
+## bun --tsconfig-override=./tsconfig.bun.json run-p2.ts
+p2 secret 2 {"status":200,"body":"bob"}
+p2 secret 9 {"status":404,"body":"no user 9"}
+p2 wrong 2 {"status":401,"body":"bad token"}
+p2 no ADMIN_TOKEN success
+## bun --tsconfig-override=./tsconfig.bun.json run-p3.ts
+p3 log ["open 1","open 2","open 3","done 1 by 1","failed 2: bad payload","done 3 by 3","done 4 by 1","done 5 by 2","close 1 Failure","stopped 1","close 3 Failure","stopped 3","close 2 Failure","stopped 2"]
+## bun --tsconfig-override=./tsconfig.bun.json run-p4.ts
+p4 [3,2,3]
+## bun --tsconfig-override=./tsconfig.bun.json run-p5.ts
+p5 [-15,[10,10],"settled"]
+p2 fresh process, no ADMIN_TOKEN: {"_id":"Cause","failures":[{"_tag":"Fail","error":{"_tag":"ConfigError","name":"ConfigError","cause":{"issue":{"~effect/SchemaIssue/Issue":"~effect/SchemaIssue/Issue","_tag":"Pointer","path":["ADMIN_T
+## bun --tsconfig-override=./tsconfig.bun.json capture-control.ts
+capture control [1,2]
+## typecheck after adding capture-control.ts
+exit 0
+## bun --tsconfig-override=./tsconfig.bun.json capture-cache-control.ts
+cache capture control [2,7]
+## typecheck after adding capture-cache-control.ts
+exit 0
