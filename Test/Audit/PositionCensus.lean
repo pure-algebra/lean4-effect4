@@ -29,13 +29,13 @@ open Effect4.Laws.Auto.Positions
 
 /-! ## The totality gate -/
 
-/-- info: 85 positions from 4 roots, 88 source rows
+/-- info: 86 positions from 4 roots, 89 source rows
   11	owner
   9	custom
   5	exit
   3	column
   6	journal
-  51	hook
+  52	hook
   refused	Effect4.Machine.Stores.externals	external rows are the table-aware slice (DI-57); the reference parks them forever -/
 #guard_msgs in
 open Effect4.Laws.Auto.PositionGate in

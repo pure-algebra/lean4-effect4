@@ -18,6 +18,8 @@ This module holds the words the five batteries share:
 * `typingReason?`: the checker's whole reason, for a pin that names the expected type.
 * `Answer` and `Reach`: the stage one battery measures, one value per program.
 * `formAdmits`: whether the form table admits an rc.112 head (DI-39, DI-89; requirement R10).
+* `PartReach`, `recordOf` and `partReach`: how far one error payload part gets (decisions row
+  120, part E1): built, run to its record, and printed or refused by name.
 
 A slice of row 204 moves a program when one of its pins turns red: a refused part builds, or a
 run reaches rc.112's answer. The slice then edits the battery to the next spelling, and the
@@ -92,6 +94,47 @@ def printedOf (b : Effect4.Api.Built) : Bool × Bool :=
 `catchTag` and five more heads; DI-89 names `retry`, `catchTag`, `forEach` and `all`. -/
 def formAdmits (head : String) : Bool := Effect4.Codegen.Forms.all.any (·.head == head)
 
+/-! ## Error payload parts (decisions row 120)
+
+Since the error payload carrier landed (part E1), a typed failure may carry a record. A battery
+measures each payload part of its program apart from the program's own stage: the build's
+verdict, whether the run fails with the part's record as its first typed failure, and what the
+printer answers. The printer refuses a payload by name (`Err.payload`) until part E2 prints one
+`Data.TaggedError` class per tag. -/
+
+/-- How far one payload part gets. -/
+structure PartReach where
+  /-- The build's verdict (`verdict`). -/
+  verdict : String
+  /-- The run's root exit fails with the part's record as its first typed failure. -/
+  failsWith : Bool
+  /-- `Api.print`'s answer: `"printed"`, or the printer's refusal by name. -/
+  printed : String
+deriving DecidableEq, Repr
+
+/-- A record value, its fields in canonical order. -/
+def recordOf (names : List String) (values : List Effect4.Machine.Val) : Effect4.Machine.Val :=
+  (Effect4.Machine.Record.build names values).getD .unit
+
+/-- The printer's answer on a built program, by name. -/
+def printVerdict (b : Effect4.Api.Built) : String :=
+  match Effect4.Api.print b.program b.table with
+  | .ok _ => "printed"
+  | .error (.internalAction name) => "refused: " ++ name
+  | .error _ => "refused"
+
+/-- How far a payload part gets: its build, its run against the record it must fail with, and
+its printing. -/
+def partReach (m : Module NativeOp) (record : Effect4.Machine.Val) : PartReach :=
+  match Effect4.Api.Author.build m with
+  | .ok b =>
+    { verdict := "built"
+      failsWith := match b.runSync with
+        | .failure c => firstErrorValue? c == some record
+        | .success _ => false
+      printed := printVerdict b }
+  | .error _ => { verdict := verdict m, failsWith := false, printed := "not built" }
+
 /-! ## Controls of the shared words -/
 
 -- `verdict`: a green control and one red control per kind the batteries pin.
@@ -113,5 +156,14 @@ def formAdmits (head : String) : Bool := Effect4.Codegen.Forms.all.any (·.head 
 -- `formAdmits`: a head the table holds, and one it does not.
 #guard formAdmits "Effect.andThen"
 #guard !formAdmits "Effect.catchTag"
+-- `partReach`: a payload part that builds, runs to its record and is refused by name; a red
+-- control whose expected record differs; and a part the checker refuses.
+#guard partReach (program (fail (record [("_tag", false, .lit "E"), ("n", false, .nat)]
+    [("_tag", str "E"), ("n", nat 1)]))) (recordOf ["_tag", "n"] [.str "E", .nat 1]) =
+  ⟨"built", true, "refused: Err.payload"⟩
+#guard (partReach (program (fail (record [("_tag", false, .lit "E"), ("n", false, .nat)]
+    [("_tag", str "E"), ("n", nat 1)]))) (recordOf ["_tag", "n"] [.str "E", .nat 2])).failsWith =
+  false
+#guard (partReach (program (fail (bool true))) .unit).verdict = "typing: errorNotAdmitted"
 
 end Test.Dogfood

@@ -31,9 +31,12 @@ program is a different one: the encoding counts closes and finished jobs instead
   2026-09-17, before the probe). Both spellings run to the same observations. The verifier read
   the refusal as a dropped flag, from `Api.readable`'s note in `src/Effect4/Api.lean`, which still
   says so.
+* The error payload carrier landed (decisions row 120, part E1). `JobFailed{id, reason}` builds
+  as a typed failure and runs to `Err.payload`; the printer refuses it by name until E2 prints the
+  class (section 7). The worker still catches the host's pair.
 
 **What the language refuses** (section 6): the log, a `Ref` holding a list (`requestNotSubtype`);
-`JobFailed{id, reason}` as a typed failure (`errorNotAdmitted`); `Deferred<void>`, since the
+the payload's face until E2; `Deferred<void>`, since the
 native deferred is `Deferred<number, number>`, whose `await` fails with a number (so the pool's
 error column is `nat` where rc.112's is `never`); the forms `forEach` and `catchTag`. A queue has
 no spelling inside a program: DI-11 rules it a composite over `Ref`, `Deferred` and a wait list.
@@ -41,8 +44,8 @@ When the scope interrupts a worker parked on the host's `take`, the session reti
 rc.112's take is in-process.
 
 **Waits on:** R4 with rows 42–43 steps 3–5 (a list cell, `Deferred<void>`, `Ref.modify` with a
-binder); R10 with DI-11 (the queue composite) and DI-89 (`forEach`); R3 and row 120 (the
-payload); row 131 (the log lines interpolate numbers); R11 (release on interruption, the whole
+binder); R10 with DI-11 (the queue composite) and DI-89 (`forEach`); R3 with row 120's face
+(E2); row 131 (the log lines interpolate numbers); R11 (release on interruption, the whole
 run). The slices of row 204 that move it: state at any type, then queues.
 -/
 
@@ -241,9 +244,15 @@ def jobFailedModule : Module NativeOp :=
 #guard typingReason? logCell = some (.requestNotSubtype "refMake" (.list .never) .nat)
 #guard typingReason? (program (Ref.make (app "cons" [str "open 1", app "nil" []]))) =
   some (.requestNotSubtype "refMake" (.list .string) .nat)
--- A typed failure carries no number (row 120); the tag with a string message types.
-#guard verdict jobFailedModule = "typing: errorNotAdmitted"
+-- The error payload carrier (row 120, part E1): the record is a typed failure (section 7); the
+-- tag with a string message still types as the pair.
+#guard verdict jobFailedModule = "built"
 #guard verdict (program (fail (app "pair" [str "JobFailed", str "bad payload"]))) = "built"
+-- The worker's `catchTag("JobFailed", …)` catches the payload by its `_tag`.
+#guard (built? (program (catchIf "e" (app "tagIs" [str "JobFailed", var "e"])
+    (fail (record [("_tag", false, .lit "JobFailed"), ("id", false, .nat), ("reason", false, .string)]
+      [("_tag", str "JobFailed"), ("id", nat 2), ("reason", str "bad payload")]))
+    (succeed (field (var "e") "reason"))))).map (·.runSync) = some (.success (.str "bad payload"))
 -- `Deferred.make` answers the one native deferred, `Deferred<number, number>`.
 #guard (built? (program Deferred.make)).map (fun b => b.ty.answer) =
   some (.handle "Deferred.Deferred<number, number>")
@@ -252,8 +261,7 @@ def jobFailedModule : Module NativeOp :=
 
 def measured : Reach :=
   { refused :=
-      [ ("the log as a Ref of a list", verdict logCell)
-      , ("JobFailed{id, reason} as a typed failure", verdict jobFailedModule) ]
+      [ ("the log as a Ref of a list", verdict logCell) ]
     admitted := verdict (pool 5) == "built"
     answer := match runPool (pool 5) with
       | some r => answerOf r.1 rc112
@@ -265,11 +273,26 @@ def measured : Reach :=
 scripted host, with counts where rc.112 answers the log; printed and read back. -/
 def stage : Reach :=
   { refused :=
-      [ ("the log as a Ref of a list", "typing: requestNotSubtype")
-      , ("JobFailed{id, reason} as a typed failure", "typing: errorNotAdmitted") ]
+      [ ("the log as a Ref of a list", "typing: requestNotSubtype") ]
     admitted := true, answer := .differs, printed := true, readBack := true }
 
 #guard measured = stage
+
+/-- The failure `run-p3.ts` raises for job 2: `JobFailed{id: 2, reason: "bad payload"}`, which
+`hostruns.log` records as its log line `failed 2: bad payload`. -/
+def jobFailed2 : Val :=
+  recordOf ["_tag", "id", "reason"] [.str "JobFailed", .nat 2, .str "bad payload"]
+
+/-- How far the payload part gets (decisions row 120, part E1). -/
+def payloadMeasured : List (String × PartReach) :=
+  [("JobFailed{id, reason} as a typed failure", partReach jobFailedModule jobFailed2)]
+
+/-- The payload part's stage, as `Test/Dogfood/README.md` quotes it: built, run to `Err.payload`,
+and refused by the printer by name until E2. -/
+def payloadStage : List (String × PartReach) :=
+  [("JobFailed{id, reason} as a typed failure", ⟨"built", true, "refused: Err.payload"⟩)]
+
+#guard payloadMeasured = payloadStage
 
 /-- The requirements of the system map's §8 that this program waits on, as its row in
 `Test/Dogfood/README.md` explains them. The semantics report lists the program under each and

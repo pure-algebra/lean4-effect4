@@ -54,7 +54,10 @@ def typings : List TypeRefusal :=
    ⟨[], .initialNotCursor .bool .nat⟩, ⟨[], .releaseFails .string⟩, ⟨[], .notFiber .unit⟩,
    ⟨[], .serviceUnknown ⟨⟨3⟩, ⟨7⟩⟩⟩, ⟨[], .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat⟩,
    ⟨[], .layerReference [0, 1]⟩, ⟨[], .referencesIllFormed⟩, ⟨[], .mergeAllEmpty⟩,
-   ⟨[], .returnNotLast⟩, ⟨[], .breakOutsideLoop⟩, ⟨[], .literalOutsideAlphabet (.str "x")⟩] ++
+   ⟨[], .returnNotLast⟩, ⟨[], .breakOutsideLoop⟩, ⟨[], .literalOutsideAlphabet (.str "x")⟩,
+   ⟨[], .errorPayloadField (.record [("_tag", false, .lit "E"), ("id", false, .int)]) ["id"] .int⟩,
+   ⟨[], .errorSpelling (.record [("_tag", false, .lit "E"), ("message", false, .string)])
+     (.prod (.lit "E") .string)⟩] ++
     formations.map (fun why => ⟨[0], .instantiatedFormation "Db.get" why⟩) ++
     recordTerms.map (fun why => ⟨[1], .recordTerm why⟩) ++
     recordCauses.map (fun why => ⟨[2], .recordCause why⟩)
@@ -92,7 +95,10 @@ def reasons : List TypeReason :=
    .recordTerm ⟨[0], .missingRequired "x"⟩,
    .recordCause ⟨[1], ⟨[0], .missingRequired "x"⟩⟩,
    .tupleTerm ⟨[0], 2, .outOfBounds 2⟩,
-   .tupleCause ⟨[1], ⟨[0], 0, .nonTuple .nat⟩⟩]
+   .tupleCause ⟨[1], ⟨[0], 0, .nonTuple .nat⟩⟩,
+   .errorPayloadField (.record [("_tag", false, .lit "E"), ("cause", false, .unknown)])
+     ["cause"] .unknown,
+   .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E")]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/

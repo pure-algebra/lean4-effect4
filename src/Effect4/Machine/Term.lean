@@ -29,14 +29,19 @@ open Effect4 Effect4.Machine
 
 /-! ## The error image (DI-62) -/
 
-/-- The represented error image: natural, text, and the two-string package payload.
-Every other raw value collapses to `boom`; the supported-error typing guards exclude those
-values at each admitted failure introduction (DI-62). -/
+/-- The represented error image: natural, text, the two-string package payload, and a
+handle-free record frame read by `Payload.image` (decisions row 120). Every other raw value
+collapses to `boom`; the supported-error typing guards exclude those values at each admitted
+failure introduction (DI-62). A frame matches none of the first three arms, so the payload arm
+takes nothing from them. -/
 def errOf : Val → Err
   | .nat n => .tag n
   | .str s => .text s
   | .list [.str t, .str m] => .tagged t m
-  | _ => .boom
+  | v =>
+    match Payload.image.ofVal v with
+    | some p => .payload p
+    | none => .boom
 
 /-- The partial inverse of `errOf`. `boom` has no typed payload; no arm invents one. -/
 def valOfErr : Err → Option Val
@@ -44,6 +49,7 @@ def valOfErr : Err → Option Val
   | .tag n => some (.nat n)
   | .tagged tag message => some (.list [.str tag, .str message])
   | .text s => some (.str s)
+  | .payload p => some p.val
 
 /-! ## Cause queries (DI-09) -/
 
@@ -171,14 +177,16 @@ def stringsAtom (vs : List Val) : Option Val :=
 inductive NativeAtom
   | succ | pred | isZero | boolNot | add | lt | eq | pair | fst | snd | strings
   | causeIsFail | causeError | causeIsDie | causeIsInterrupt | boolOr | boolAnd
-  /-- The tag test (DI-39, part 4 commit 3, 2026-09-12): `tagIs(tag, e)` is true exactly on a
-  pair whose first component is the string `tag` (`.list [.str tag, _]`, the pair
-  representation of `Typed.lean`), and false on every other value — a bare string, a natural,
-  a pair whose first component is not the tag — so it never refuses a well-typed program
-  (an error typed `union (prod (lit "A") string) string` can be a bare string). It is what a
-  `catchIf` test names for the tag residual (`Typing.lean` `catchIfError`, `Ty.diffTag`), and
-  it prints as `tagIs("A", aN)` through the atom printer with `tagIs` in the prelude. Atoms
-  are spelled by name on the wire, so appending it moves no ordinal and no byte. -/
+  /-- The tag test (DI-39, part 4 commit 3, 2026-09-12): `tagIs(tag, e)` is true on a pair
+  whose first component is the string `tag` (`.list [.str tag, _]`, the pair representation
+  of `Typed.lean`), and since decisions row 120 on a record whose `_tag` field is `tag`
+  (`Record.tagHit`, the error payload's class tag). It is false on every other value — a bare
+  string, a natural, a pair or a record with another tag — so it never refuses a well-typed
+  program (an error typed `union (prod (lit "A") string) string` can be a bare string). It is
+  what a `catchIf` test names for the tag residual (`Typing.lean` `catchIfError`,
+  `Ty.diffTag`; a record member stays in the residual until decisions row 130), and it prints
+  as `tagIs("A", aN)` through the atom printer with `tagIs` in the prelude. Atoms are spelled
+  by name on the wire, so appending it moves no ordinal and no byte. -/
   | tagIs
   /-- Pure option elimination; applications remain named terms on the wire (DI-78). -/
   | isSome | getOrElse
@@ -274,7 +282,10 @@ def row : NativeAtom → AtomRow
                   prelude := "(a: boolean, b: boolean): boolean => a && b" }
   | .tagIs => { name := "tagIs", arity := some 2, constGeneric := false,
                 prelude := "(tag: string, e: unknown): boolean =>\n  \
-                            Array.isArray(e) && e.length === 2 && e[0] === tag" }
+                            (Array.isArray(e) && e.length === 2 && e[0] === tag) ||\n  \
+                            (typeof e === \"object\" && e !== null && !Array.isArray(e) &&\n    \
+                            Object.prototype.hasOwnProperty.call(e, \"_tag\") &&\n    \
+                            (e as { readonly _tag?: unknown })._tag === tag)" }
   | .isSome => { name := "isSome", arity := some 1, constGeneric := false,
                  prelude := "(value: Option.Option<unknown>): boolean => Option.isSome(value)" }
   | .getOrElse =>
@@ -416,11 +427,13 @@ def arity (atom : NativeAtom) : Option Nat := (row atom).arity
 lifted by name in `nativeConstAtom` (`Program/Native.lean`) and read by the literal rule. -/
 def constGeneric (atom : NativeAtom) : Bool := (row atom).constGeneric
 
-/-- The tag test on a value (DI-39): true exactly on a pair whose first component is the
-tag; false on every other value. Total, so `tagIs` never answers `none` on a string tag. -/
+/-- The tag test on a value (DI-39, decisions row 120): true on a pair whose first component is
+the tag, and on a record whose `_tag` field is the tag, as the record select reads it
+(`Record.tagHit`); false on every other value. Total, so `tagIs` never answers `none` on a
+string tag. A pair is no record frame, so the two arms never disagree. -/
 def tagHit (tag : String) : Val → Bool
   | .list [.str t, _] => t == tag
-  | _ => false
+  | v => Program.Record.tagHit tag v
 
 def eval : NativeAtom → List Val → Option Val
   | .succ, [Val.nat n] => some (Val.nat (n + 1))

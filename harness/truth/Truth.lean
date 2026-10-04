@@ -56,7 +56,8 @@ The value wire: `unit` ↦ `null`, `nat` ↦ number,
 `bool` ↦ boolean, a tuple / exit list ↦ JSON array, `fiber k` ↦ `{"fiber":k}`,
 `cell k` ↦ `{"ref":k}`, `promise k` ↦ `{"deferred":k}`, `scopeHandle k` ↦ `{"scope":k}`,
 `context` ↦ `{"context":true}`, a reified exit ↦ `{"success":v}` / `{"failure":cause}`; a
-cause is `{"reasons":[…]}` with `{"fail":n|string|{"boom":null}|[tag,message]}`, `{"die":d}`,
+cause is `{"reasons":[…]}` with `{"fail":n|string|{"boom":null}|[tag,message]|{"payload":hex}}`,
+`{"die":d}`,
 where a represented error defect is `{"die":{"error":<the same error wire>}}`,
 `{"interrupt":who|null}`;
 an exit is `{"success":v}` / `{"failure":cause}`. Annotations are dropped.
@@ -382,6 +383,10 @@ def errJson : Err → J
   -- the host wires the failed pair as a two-element array, as `pair` builds it
   | .tagged t m => Lean.Json.arr #[Lean.Json.str t, Lean.Json.str m]
   | .text s => Lean.Json.str s
+  -- a record payload (decisions row 120): the codec's one-key object of its canonical bytes in
+  -- hexadecimal (`Schema.Codec.encodeErr`), apart from the four shapes above. No corpus program
+  -- fails with one until E2 prints its class; E2 sets the face's comparison.
+  | .payload p => Lean.Json.mkObj [("payload", Lean.Json.str (Effect4.Schema.Codec.payloadHex p))]
 
 def defectJson : Defect → J
   | .notImplemented => Lean.Json.str "notImplemented"
@@ -814,6 +819,10 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard errJson .boom == Lean.Json.mkObj [("boom", Lean.Json.null)]
 #guard errJson (.text "boom") == Lean.Json.str "boom"
 #guard errJson .boom != errJson (.text "boom")
+-- a record payload (decisions row 120) is the codec's image, apart from the other four shapes
+#guard ((Payload.image.ofVal (.ctor 0 [.list [.str "boom"], .list [.unit]])).map fun p =>
+  errJson (.payload p) != errJson .boom && errJson (.payload p) ==
+    Lean.Json.mkObj [("payload", Lean.Json.str (Effect4.Schema.Codec.payloadHex p))]) = some true
 #guard defectJson (.error (.text "lost")) == Lean.Json.mkObj [("error", Lean.Json.str "lost")]
 #guard Api.typeOf pFailText = some ⟨.never, .string, Env.Requirement.empty⟩
 #guard Api.typeOf pFailBoomText = some ⟨.never, .string, Env.Requirement.empty⟩

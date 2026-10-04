@@ -234,6 +234,10 @@ theorem ArgPat.holds_fold {R : EffFam → Type} (alg : EffAlgebra Op R) (p : Arg
     | optTy o => cases o <;> rfl
     | _ => rfl
   | daemon b => cases a <;> rfl
+  | recordTerm =>
+    cases a with
+    | term t => cases t <;> rfl
+    | _ => rfl
 
 theorem patternAt_fold {R : EffFam → Type} (alg : EffAlgebra Op R)
     (args : List (ArgF Op (EffSelfCarrier Op))) (i : Nat) (p : ArgPat) :
@@ -413,10 +417,8 @@ theorem readArg_exact
         (argDepth row.fam (argSortOf (ArgF.fold (printAlg sig) (fixed.arg (Op := Op)))) n
           (row.out.levelAt i)) fixed
       exact ⟨x, hx, fun hin => absurd hin hnot⟩
-    | decisionTag | decisionRecordTag => rw [hp2] at hp; cases hp
-    | someTerm => rw [hp2] at hp; cases hp
-    | someTy => rw [hp2] at hp; cases hp
-    | daemon b => rw [hp2] at hp; cases hp
+    -- every other pattern only chooses the row and supplies nothing
+    | _ => rw [hp2] at hp; cases hp
   · split at h
     · rename_i a hmem hcap
       obtain ⟨hsort, hprint⟩ :=

@@ -149,6 +149,7 @@ theorem valOfErr_validIn (s : Stores) (e : Err) (v : Val) (h : valOfErr e = some
   | tag n => cases h; rfl
   | tagged t m => cases h; rfl
   | text t => cases h; rfl
+  | payload p => cases h; rw [Val.validIn_eq_handles, handles_of_isPayload p.property]; rfl
 
 theorem validIn_list_mem {s : Stores} {vs : List Val} (h : Val.validIn s (.list vs) = true) :
     ∀ x ∈ vs, x.validIn s = true := by
@@ -291,6 +292,7 @@ theorem causeAdmits_of_forall {f g : Val → Ty → Bool} {ty ty' : Ty}
     | tag n => exact h _ hr'
     | tagged t m => exact h _ hr'
     | text t => exact h _ hr'
+    | payload p => exact h _ hr'
   | die _ _ => rfl
   | interrupt _ _ => rfl
 

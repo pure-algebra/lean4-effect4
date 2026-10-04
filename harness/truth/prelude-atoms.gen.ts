@@ -108,13 +108,17 @@ export const or = (a: boolean, b: boolean): boolean => a || b
 export const and = (a: boolean, b: boolean): boolean => a && b
 
 /**
- * NativeAtom.tagIs: true exactly on a pair whose first component is the tag
- * (`.list [.str tag, _]`, `NativeAtom.tagHit`). This ordinary Boolean test carries no
+ * NativeAtom.tagIs: true on a pair whose first component is the tag
+ * (`.list [.str tag, _]`) and on a record whose own `_tag` is the tag
+ * (`NativeAtom.tagHit`, `Record.tagHit`; decisions row 120). This ordinary Boolean test carries no
  * refinement promise. In particular, catchIf's first-failure test does not establish
  * that every failure in a re-raised cause excludes this tag (DI-17, DI-39).
  */
 export const tagIs = (tag: string, e: unknown): boolean =>
-  Array.isArray(e) && e.length === 2 && e[0] === tag
+  (Array.isArray(e) && e.length === 2 && e[0] === tag) ||
+  (typeof e === "object" && e !== null && !Array.isArray(e) &&
+    Object.prototype.hasOwnProperty.call(e, "_tag") &&
+    (e as { readonly _tag?: unknown })._tag === tag)
 
 /**
  * NativeAtom.isSome: presence only, with no TypeScript branch refinement.

@@ -53,11 +53,17 @@ def requirementType (scopeKey : ServiceKey) (requires : Requirement) : TypeScrip
   | [one] => one
   | many => .union many
 
+/-- Whether an error column holds an error payload type (decisions row 120): a member with a
+literal `_tag`, the class tag. Its face, one `Data.TaggedError` class per tag, is E2's. -/
+def payloadColumn (t : Ty) : Bool := t.normalize.members.any fun m => (Record.tagOf m).isSome
+
 /-- The complete declared type `Effect.Effect<A, E, R>`. The native API defaults to
 its reserved scope key; generic module printing passes the signature's scope key.
-This is structural annotation evidence, not a general target typing theorem. -/
+This is structural annotation evidence, not a general target typing theorem. An error column
+that holds a payload type is refused by name (`errorPayloadRefusal`) until E2 prints its class. -/
 def declarationType (ty : EffTy) (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
-    Except PrintRefusal (Option TypeScript.TypeRef) := do
+    Except PrintRefusal (Option TypeScript.TypeRef) :=
+  if payloadColumn ty.error then .error errorPayloadRefusal else do
   let answer ← match Effect4.Codegen.Types.ofTy ty.answer with
     | some target => .ok target
     | none => .error (.typeSpelling ty.answer.render)
@@ -73,18 +79,22 @@ def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr)
   let annotation ← declarationType ty scopeKey
   .ok { doc := [], name := name, value := body, type := annotation }
 
-/-- Answer and error types must both be representable; a nonempty requirement row
-never bypasses that check. Requirement identifiers have a total structural spelling. -/
+/-- Answer and error types must both be representable, and the error column must hold no
+payload type until E2; a nonempty requirement row never bypasses that check. Requirement
+identifiers have a total structural spelling. -/
 def declarationTypeRepresentable (ty : EffTy) : Bool :=
-  (Effect4.Codegen.Types.ofTy ty.answer).isSome && (Effect4.Codegen.Types.ofTy ty.error).isSome
+  (Effect4.Codegen.Types.ofTy ty.answer).isSome && (Effect4.Codegen.Types.ofTy ty.error).isSome &&
+    !payloadColumn ty.error
 
 /-- Representability suffices for a complete annotation at every scope identity. -/
 theorem declarationType_ok {ty : EffTy} (hr : declarationTypeRepresentable ty = true)
     (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
     ∃ annotation, declarationType ty scopeKey = .ok annotation := by
-  simp only [declarationTypeRepresentable, Bool.and_eq_true, Option.isSome_iff_exists] at hr
-  obtain ⟨⟨answer, ha⟩, ⟨error, he⟩⟩ := hr
-  exact ⟨_, by simp only [declarationType, ha, he, bind, Except.bind]; rfl⟩
+  simp only [declarationTypeRepresentable, Bool.and_eq_true, Option.isSome_iff_exists,
+    Bool.not_eq_eq_eq_not, Bool.not_true] at hr
+  obtain ⟨⟨⟨answer, ha⟩, ⟨error, he⟩⟩, hp⟩ := hr
+  exact ⟨_, by simp only [declarationType, hp, Bool.false_eq_true, ↓reduceIte, ha, he, bind,
+    Except.bind]; rfl⟩
 
 /-- A successful declaration always retains all three slots, including the complete
 requirement row. Consumer: checked module production and its annotation admission check. -/
@@ -93,6 +103,11 @@ theorem declarationType_complete {ty : EffTy} {scopeKey : ServiceKey}
     ∃ answer error, annotation = some (.name ["Effect", "Effect"]
       [answer, error, requirementType scopeKey ty.requires]) := by
   unfold declarationType at h
+  have hp : payloadColumn ty.error = false := by
+    cases hp : payloadColumn ty.error with
+    | false => rfl
+    | true => simp only [hp, ↓reduceIte] at h; cases h
+  simp only [hp, Bool.false_eq_true, ↓reduceIte] at h
   cases ha : Effect4.Codegen.Types.ofTy ty.answer with
   | none => simp only [ha, bind, Except.bind] at h; cases h
   | some answer =>

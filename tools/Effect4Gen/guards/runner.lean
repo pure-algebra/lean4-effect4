@@ -82,8 +82,25 @@ def observation : Run.Observation :=
 #guard (Canonical.shape Run.Observation).accepts (Canonical.toVal observation)
 -- `Canonical.head` (decisions row 17, seat J2): the constructor's name read off the shape is the
 -- name `ShapeDoc.print` writes, for every value of the group's thirteen sums.
-def errs : List Effect4.Machine.Err := [.boom, .tag 7, .tagged "NotFound" "no row", .text "x"]
-def defects : List Effect4.Machine.Defect := [.notImplemented, .asyncFiber, .badName, .missingService, .user 3, .error .boom]
+-- An error payload (decisions row 120) is a handle-free record frame, carried in its value's own
+-- canonical bytes and read back exactly; the reader refuses a frame that holds a handle.
+def payloadFrame : Effect4.Store.Val :=
+  .ctor 0 [.list [.str "_tag", .str "id"], .list [.str "NotFound", .nat 9]]
+def notFound : List Effect4.Machine.Err :=
+  ((Payload.image.ofVal payloadFrame).map Effect4.Machine.Err.payload).toList
+#guard notFound.length = 1
+#guard Canonical.ofVal (α := Payload)
+  (Canonical.toVal (Effect4.Store.Val.ctor 0 [.list [.str "_tag"], .list [.handle 1 0]])) = none
+def errs : List Effect4.Machine.Err :=
+  [.boom, .tag 7, .tagged "NotFound" "no row", .text "x"] ++ notFound
+def defects : List Effect4.Machine.Defect :=
+  [.notImplemented, .asyncFiber, .badName, .missingService, .user 3, .error .boom] ++
+    notFound.map .error
+#guard errs.all fun x => Canonical.decode (α := Effect4.Machine.Err) (Canonical.encode x) = some x
+#guard errs.all fun x =>
+  Canonical.decode (α := Effect4.Machine.Err) (Canonical.encode x ++ [0]) = none
+#guard defects.all fun x =>
+  Canonical.decode (α := Effect4.Machine.Defect) (Canonical.encode x) = some x
 def exits : List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Unit) :=
   [.success (.nat 3), .failure failed]
 def completions : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Unit) :=

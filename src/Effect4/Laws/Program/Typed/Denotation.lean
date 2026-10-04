@@ -656,20 +656,24 @@ theorem valOfErr_errOf_fits {w : World} {e : Ty} {v : Val} (hs : admittedErrTy e
     (hv : Fits w v e) : valOfErr (errOf v) = some v :=
   valOfErr_errOf_supported e v _ hs (fits_hasTy w e v hv)
 
+/-- **A member of a payload-admissible type holds no handle, at every world** (decisions row
+120): `handles_of_payloadFieldTy` read through `fits_hasTy`, since such a type reads no
+allocation table (`hasTy_payloadFieldTy_allocation`). An admitted record error's payload so names
+no world entry. Concept `store-typing`, the host boundary (`docs/core/host-boundary.md` §5). -/
+@[semantics "store-typing" (requirement := R6)]
+theorem handles_of_fits_payloadFieldTy {w : World} {t : Ty} {v : Val}
+    (ht : payloadFieldTy t = true) (hv : Fits w v t) : v.handles = [] := by
+  have h := fits_hasTy w t v hv
+  rw [hasTy_payloadFieldTy_allocation t ht] at h
+  exact handles_of_payloadFieldTy t ht v h
+
 /-- A defect made from an admitted error value is not a shape defect. -/
 theorem shapeFree_die_of_fits {w : World} {e : Ty} {v : Val} (hs : admittedErrTy e = true)
     (hv : Fits w v e) : ShapeFree (Cause.die (Defect.ofError (errOf v)) : CauseV) := by
-  have hval := valOfErr_errOf_fits hs hv
   intro r hr
   simp only [Cause.die, List.mem_singleton] at hr
   subst hr
-  cases herr : errOf v with
-  | boom =>
-    rw [herr] at hval
-    exact nomatch hval
-  | tag n => exact ⟨nofun, nofun⟩
-  | tagged t m => exact ⟨nofun, nofun⟩
-  | text s => exact ⟨nofun, nofun⟩
+  exact Defect.ofError_shapeFree (valOfErr_errOf_fits hs hv)
 
 /-- **Cause progress at a world** (proved): a cause term the checker types at an error column
 evaluates, in a typed environment, to a cause whose typed failures fit the column and which no
@@ -1005,8 +1009,9 @@ theorem decide_fits {w : World} {d : Decision} {t : Ty} {e0 e1 : List Ty} {v : V
           refine ⟨m, List.mem_filter.mpr ⟨hm, ?_⟩, hvm⟩
           cases htag : Ty.isTagged name m
           · rfl
-          · have hhit := Ty.hasTy_of_not_tagged name m v _ htag (fits_hasTy w m v hvm)
-            simp only [NativeAtom.tagHit_eq, hp, Option.isSome_none, Bool.false_eq_true] at hhit
+          · have hsome := Ty.tagPayload_of_tagged name m v _ htag (fits_hasTy w m v hvm)
+            rw [hp] at hsome
+            exact nomatch hsome
     · exact nomatch harms
 
   | recordTag name =>

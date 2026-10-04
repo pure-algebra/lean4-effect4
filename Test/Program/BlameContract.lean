@@ -128,4 +128,47 @@ private def unitP : Api.Program := .succeed (.lit .unit)
 #guard Effect4.Codegen.codesOf {}
     (.instantiatedFormation "Db.get" ⟨["row", "answer"], .map .nat .string, .mapKey⟩) = []
 
+/-! ## Error payloads, refused by name (decisions row 120)
+
+A record failure is admitted at a required literal `_tag` with payload-admissible fields. Two
+reasons name what is refused: a field no payload admits (ruling (a)), with its path through
+nested records, and a class that already has another rc.112 spelling (ruling (c)). A record with
+no literal tag keeps `errorNotAdmitted`. -/
+
+/-- `fail` of a record, from authored source. -/
+def failRecord (fields : List (String × Bool × Ty)) (values : List (String × TermSrc)) :
+    Src NativeOp :=
+  Authoring.fail (record fields values)
+
+def withUnknown : List (String × Bool × Ty) := [("_tag", false, .lit "E"), ("cause", false, .unknown)]
+def nestedUnknown : List (String × Bool × Ty) :=
+  [("_tag", false, .lit "E"), ("meta", false, .record [("owner", false, .unknown)])]
+def messageOnly : List (String × Bool × Ty) := [("_tag", false, .lit "E"), ("message", false, .string)]
+def tagOnly : List (String × Bool × Ty) := [("_tag", false, .lit "E")]
+def untagged : List (String × Bool × Ty) := [("code", false, .nat)]
+
+-- ruling (a): `cause: unknown` is refused by name, at its path and its type
+#guard authorRefusalOf (Api.author (failRecord withUnknown [("_tag", str "E"), ("cause", nat 1)])) =
+  some (.typing ⟨[], .errorPayloadField (.record withUnknown) ["cause"] .unknown⟩)
+-- through a nested record, the path names the inner field
+#guard authorRefusalOf (Api.author (failRecord nestedUnknown
+    [("_tag", str "E"), ("meta", record [("owner", false, .unknown)] [("owner", nat 1)])])) =
+  some (.typing ⟨[], .errorPayloadField (.record nestedUnknown) ["meta", "owner"] .unknown⟩)
+-- ruling (c): a message-only class is the pair, a no-field class the literal
+#guard authorRefusalOf (Api.author (failRecord messageOnly [("_tag", str "E"), ("message", str "m")])) =
+  some (.typing ⟨[], .errorSpelling (.record messageOnly) (.prod (.lit "E") .string)⟩)
+#guard authorRefusalOf (Api.author (failRecord tagOnly [("_tag", str "E")])) =
+  some (.typing ⟨[], .errorSpelling (.record tagOnly) (.lit "E")⟩)
+-- no literal tag (ruling (b)): the error type is not admitted, as before
+#guard authorRefusalOf (Api.author (failRecord untagged [("code", nat 1)])) =
+  some (.typing ⟨[], .errorNotAdmitted (.record untagged)⟩)
+-- green controls: a message beside another field is a payload, and the pair spelling stays
+#guard (Api.author (failRecord [("_tag", false, .lit "E"), ("message", false, .string),
+    ("id", false, .nat)] [("_tag", str "E"), ("message", str "m"), ("id", nat 1)])).toOption.isSome
+#guard (Api.author (Authoring.fail (app "pair" [str "E", str "m"]))).toOption.isSome
+#guard TypeReason.head (.errorPayloadField .unknown [] .unknown) = "errorPayloadField"
+#guard TypeReason.head (.errorSpelling .unknown .unknown) = "errorSpelling"
+#guard Effect4.Codegen.codesOf .pinned (.errorPayloadField .unknown [] .unknown) = []
+#guard Effect4.Codegen.codesOf .pinned (.errorSpelling .unknown .unknown) = []
+
 end Test.Program.BlameContract

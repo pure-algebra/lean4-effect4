@@ -79,6 +79,14 @@ inductive TypeReason
   | tupleTerm (why : TupleTermRefusal)
   /-- A static tuple failure inside a cause leaf. -/
   | tupleCause (why : TupleCauseRefusal)
+  /-- `fail` at a record type with a field no payload admits (decisions row 120, ruling (a)):
+  `error` is the record member of the error column, `path` the field (through nested records)
+  and `field` its type, such as `unknown`, a handle or `int`. -/
+  | errorPayloadField (error : Ty) (path : List String) (field : Ty)
+  /-- `fail` at a record type that is a class with another rc.112 spelling (decisions row 120,
+  ruling (c)): a message-only class is the pair `[tag, message]` and a no-field class the
+  literal `tag`, which `spelling` names. -/
+  | errorSpelling (error : Ty) (spelling : Ty)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -113,6 +121,8 @@ def TypeReason.head : TypeReason → String
   | .recordCause _ => "recordCause"
   | .tupleTerm _ => "tupleTerm"
   | .tupleCause _ => "tupleCause"
+  | .errorPayloadField _ _ _ => "errorPayloadField"
+  | .errorSpelling _ _ => "errorSpelling"
 
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where
@@ -128,6 +138,21 @@ def selectRefusal : Decision → Ty → TypeReason
   | .option, t => .notSelectable .option t
   | .tag name, t => .notSelectable (.tag name) t
   | .recordTag name, t => .notSelectable (.recordTag name) t
+
+/-- Why one record member of an error column is refused, by name (decisions row 120): a class
+with another spelling (ruling (c)), or a field no payload admits (ruling (a)). -/
+def payloadRefusal? : Ty → Option TypeReason
+  | .record fs =>
+    match classSpelling? fs with
+    | some spelling => some (.errorSpelling (.record fs) spelling)
+    | none => (excludedField fs).map fun found => .errorPayloadField (.record fs) found.1 found.2
+  | _ => none
+
+/-- Why `fail` refuses its error type: the first record member of the canonical column that
+`payloadRefusal?` names, and `errorNotAdmitted` otherwise. The refusal names a reason only; the
+verdict is `admittedErrTy`'s, so `explain = none ↔ effTy.isSome` is unchanged. -/
+def errorRefusal (e : Ty) : TypeReason :=
+  (e.normalize.members.findSome? payloadRefusal?).getD (.errorNotAdmitted e)
 
 /-- The generator answer join never refuses (part 4: the least upper bound). -/
 @[simp] theorem GenTy.joinAnswer_isSome (a b : Option Ty) : (GenTy.joinAnswer a b).isSome = true := by

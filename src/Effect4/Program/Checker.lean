@@ -151,7 +151,7 @@ mutual
     | .fail error => do
       let e ← term? sig env p error
       if admittedErrTy e then pure ⟨.never, e, Requirement.empty⟩
-      else throw ⟨p, .errorNotAdmitted e⟩
+      else throw ⟨p, errorRefusal e⟩
     | .failCause cause => do
       let e ← cause? sig env p cause
       pure ⟨.never, e, Requirement.empty⟩

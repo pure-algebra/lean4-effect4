@@ -789,11 +789,7 @@ theorem orDieCause_exitOk {w : World} {T T' : EffTy} {c : CauseV} (h : ExitOk w 
         intro r' hr'
         simp only [Cause.die, List.mem_singleton] at hr'
         subst hr'
-        cases e' with
-        | boom => exact nomatch hv
-        | tag n => exact ⟨nofun, nofun⟩
-        | tagged t m => exact ⟨nofun, nofun⟩
-        | text s => exact ⟨nofun, nofun⟩
+        exact Defect.ofError_shapeFree hv
       refine ⟨(fitsExit_failure_iff w T' _).mpr ⟨fun r' hr' => ?_, hshape⟩, hshape⟩
       simp only [Cause.die, List.mem_singleton] at hr'
       subst hr'

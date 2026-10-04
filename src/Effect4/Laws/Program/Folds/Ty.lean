@@ -27,6 +27,8 @@ fold_of Effect4.Program.Ty.isMember
 fold_of Effect4.Program.Ty.normalize
 fold_of Effect4.Program.isTagTy
 fold_of Effect4.Program.rawSupportedErrTy
+fold_of Effect4.Program.payloadFieldTy
+fold_of Effect4.Program.excludedAt
 fold_of Effect4.Program.NativeAtom.projectProduct
 fold_of Effect4.Program.Tuple.project
 fold_of Effect4.Program.findInt

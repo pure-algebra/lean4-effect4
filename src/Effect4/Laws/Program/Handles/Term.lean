@@ -446,7 +446,10 @@ theorem lit_toVal_handles (l : Lit) (v : Val) (h : l.toVal = some v) :
 
 theorem valOfErr_handles (err : Err) (v : Val) (h : valOfErr err = some v) :
     Store.Val.handles v = [] := by
-  cases err <;> cases h <;> rfl
+  cases err with
+  -- a record payload holds none by the carrier's own proof (decisions row 120)
+  | payload p => cases h; exact handles_of_isPayload p.property
+  | _ => cases h <;> rfl
 
 theorem queryTag_handles (tag : ReasonTag) (input output : Val)
     (h : queryTag tag input = some output) : Store.Val.handles output = [] := by

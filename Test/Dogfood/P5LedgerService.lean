@@ -20,16 +20,20 @@ the one fragment that runs: `settle` on the logical clock, the verifier's altern
 row (its finding X11).
 
 **Changes since 2026-09-30.** Records landed (row 119): the `Account` value types, list field and
-variants included, but a cell still holds a number only. No construct the probe used changed.
+variants included, but a cell still holds a number only. The error payload carrier landed
+(decisions row 120, part E1): `InsufficientFunds{needed, available}` with natural fields builds as
+a typed failure and runs to `Err.payload`, and the printer refuses it by name until E2 prints the
+class (section 2).
 
 **What the language refuses** (sections 1 and 2): the `Account` record, the account id and the
-history in a cell (`requestNotSubtype`); `InsufficientFunds{needed, available}` as a typed failure
-(`errorNotAdmitted`); a signed number (table admission refuses an `int` column as uninhabited,
+history in a cell (`requestNotSubtype`); `needed` and `available` as rc.112 types them, signed
+numbers (admission refuses `int` by the field's path; row 121); the payload's face until E2; a
+signed number (table admission refuses an `int` column as uninhabited,
 and `sub` truncates, so `10 - 25` answers `0` where rc.112 answers `-15`). A listener is code,
 which no value holds; so are `Ref.modify`'s effect-valued answer and `Effect.callback`'s cancel
 effect, and removal by identity needs equality on code (R7, row 82).
 
-**Waits on:** R4 with rows 42–43 steps 3–5 (record and list cells); R3 with row 120 (the payload)
+**Waits on:** R4 with rows 42–43 steps 3–5 (record and list cells); R3 with row 120's face (E2)
 and row 121 (`int`); R7 with row 82 (listeners, the effect-valued answer, the cancel effect);
 R10 with DI-89 (`forEach`) and DI-39 (`catchTag`); R6, parked, or the logical clock (`settle`).
 The slices of row 204 that move it: state at any type, and error payloads.
@@ -79,10 +83,24 @@ def insufficientModule : Module NativeOp :=
     [("_tag", false, .lit "InsufficientFunds"), ("needed", false, .nat), ("available", false, .nat)]
     [("_tag", str "InsufficientFunds"), ("needed", nat 25), ("available", nat 10)]))
 
--- A typed failure carries no number (row 120), as a record or as the probe's nested pairs.
-#guard verdict insufficientModule = "typing: errorNotAdmitted"
+-- The error payload carrier (row 120, part E1): the record is a typed failure (section 5); the
+-- probe's nested pairs stay refused, since a pair's message is a string (DB-15).
+#guard verdict insufficientModule = "built"
 #guard verdict (program (fail (app "pair" [str "InsufficientFunds", app "pair" [nat 25, nat 10]]))) =
   "typing: errorNotAdmitted"
+
+/-- `InsufficientFunds` with its fields typed as rc.112 types them, numbers that may be negative. -/
+def insufficientIntModule : Module NativeOp :=
+  program (fail (record
+    [("_tag", false, .lit "InsufficientFunds"), ("needed", false, .int), ("available", false, .int)]
+    [("_tag", str "InsufficientFunds"), ("needed", nat 25), ("available", nat 10)]))
+
+-- Signed fields stay refused (row 121: `int` is not inhabited yet): admission refuses the first
+-- before typing, at its path.
+#guard (match Effect4.Api.Author.build insufficientIntModule with
+  | .error (.admission r) =>
+    r == .uninhabited ["program", "argument", "0", "term", "fields", "needed"]
+  | _ => false)
 
 /-- `e.available - e.needed` with the recorded run's numbers. -/
 def balanceAfter : Module NativeOp := program (succeed (app "sub" [nat 10, nat 25]))
@@ -131,25 +149,42 @@ def settle : Module NativeOp := program (andThen (Effect.sleep (nat 5)) (succeed
 /-! ## 5. The stage
 
 No encoding of the whole program exists, so the battery measures only `refused`. The slice that admits
-the account cell writes the program in this battery, and measures the other four fields. -/
+the account cell writes the program in this battery, and measures the other four fields. The
+payload part is measured on its own (decisions row 120, part E1). -/
 
 def measured : Reach :=
   { refused :=
       [ ("the Account record in one Ref", verdict accountCell)
-      , ("InsufficientFunds{needed, available} as a typed failure", verdict insufficientModule)
       , ("a signed number", verdict intModule) ]
     admitted := false, answer := .notRun, printed := false, readBack := false }
 
 /-- The stage p5 reaches today, as `Test/Dogfood/README.md` quotes it: no encoding of the program
-builds, and the language refuses its state, its failure and its signed answer. -/
+builds, and the language refuses its state and its signed answer. -/
 def stage : Reach :=
   { refused :=
       [ ("the Account record in one Ref", "typing: requestNotSubtype")
-      , ("InsufficientFunds{needed, available} as a typed failure", "typing: errorNotAdmitted")
       , ("a signed number", "admission") ]
     admitted := false, answer := .notRun, printed := false, readBack := false }
 
 #guard measured = stage
+
+/-- The failure `run-p5.ts`'s `withdraw(25)` raises at a balance of 10:
+`InsufficientFunds{needed: 25, available: 10}`, whose `available - needed` is the `-15` that
+`hostruns.log` records. -/
+def insufficient25 : Val :=
+  recordOf ["_tag", "available", "needed"] [.str "InsufficientFunds", .nat 10, .nat 25]
+
+/-- How far the payload part gets (decisions row 120, part E1). -/
+def payloadMeasured : List (String × PartReach) :=
+  [("InsufficientFunds{needed, available} as a typed failure",
+    partReach insufficientModule insufficient25)]
+
+/-- The payload part's stage, as `Test/Dogfood/README.md` quotes it: built with natural fields, run
+to `Err.payload`, and refused by the printer by name until E2. -/
+def payloadStage : List (String × PartReach) :=
+  [("InsufficientFunds{needed, available} as a typed failure", ⟨"built", true, "refused: Err.payload"⟩)]
+
+#guard payloadMeasured = payloadStage
 
 /-- The requirements of the system map's §8 that this program waits on, as its row in
 `Test/Dogfood/README.md` explains them. The semantics report lists the program under each and

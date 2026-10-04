@@ -30,6 +30,10 @@ This battery ports four encodings:
 * The host is a `Run.Reactor` driven by `Run.runWith` (`src/Effect4/Run.lean`). The probes wrote
   the same policy by hand over `Api.HostSession`, whose `outstanding` now answers `Await` records
   (row 16).
+* The error payload carrier landed (decisions row 120, part E1). `NotFound{id}` and
+  `Unauthorized{reason}` build as typed failures and run to `Err.payload`, and `tagIs` catches a
+  payload by its `_tag`; the printer refuses a payload by name until E2 prints the class
+  (section 6). The handler still fails with the pairs, which print and read back.
 
 **Bounded as seat W10's brief bounds the data wave's acceptance**
 (`docs/research/2026-10-01-data-wave/brief-W10.md`): the handler only; errors are DB-15's
@@ -37,11 +41,10 @@ literal-tagged pairs; the caller threads the id's text (row 131); the host decod
 `CurrentUser` is a value, not a service (row 118). The battery encodes no layered program.
 
 **What the language refuses** (section 6): a string or record service carrier (`AppConfig`,
-`CurrentUser`), a number or record payload in a typed failure (`NotFound{id}`,
-`Unauthorized{reason}`), number-to-text, and the `catchTag` form. `UserRepo`'s methods are code,
-which no value holds (R7).
+`CurrentUser`), a pair whose message is a number, number-to-text, the `catchTag` form, and a
+payload's face until E2. `UserRepo`'s methods are code, which no value holds (R7).
 
-**Waits on:** R3 and row 120 (error payloads); R5 and R7 with rows 21, 82 and 118 (code-valued
+**Waits on:** R3 with row 120's face (E2); R5 and R7 with rows 21, 82 and 118 (code-valued
 services and structured carriers); R13 with rows 51 and 83 (`Config` at load); row 131
 (number to text); row 123 (decoding inside a program); R10 with DI-39, DI-89 and row 130
 (`catchTag` and its residual). The slices of row 204 that move it: error payloads (row 120), and
@@ -269,12 +272,34 @@ def interpolateModule : Module NativeOp := program (succeed (app "concat" [str "
 -- The service table types no string and no record carrier (row 118; R1's open part).
 #guard verdict adminTokenModule = "serviceCarrier: signature none"
 #guard verdict currentUserModule = "serviceCarrier: signature none"
--- A typed failure carries no number and no record payload (row 120, ratified, not landed).
-#guard typingReason? notFoundModule = some (.errorNotAdmitted
-  (.record [("_tag", false, .lit "NotFound"), ("id", false, .nat)]))
-#guard verdict unauthorizedModule = "typing: errorNotAdmitted"
+-- The error payload carrier (row 120, part E1): both records are typed failures (section 8).
+#guard verdict notFoundModule = "built"
+#guard verdict unauthorizedModule = "built"
+-- Red control: a pair whose message is a number stays refused (DB-15).
 #guard typingReason? (program (fail (app "pair" [str "NotFound", nat 7]))) =
   some (.errorNotAdmitted (.prod (.lit "NotFound") .nat))
+
+/-- `catchTag("Unauthorized", e => …)` over a record payload: `catchIf` over `tagIs`, which reads
+the record's `_tag` (decisions row 120). -/
+def catchUnauthorizedModule : Module NativeOp :=
+  program (catchIf "e" (app "tagIs" [str "Unauthorized", var "e"])
+    (fail (record [("_tag", false, .lit "Unauthorized"), ("reason", false, .string)]
+      [("_tag", str "Unauthorized"), ("reason", str "bad token")]))
+    (succeed (field (var "e") "reason")))
+
+-- The test hits the payload, and the handler reads its field: rc.112's 401 body.
+#guard (built? catchUnauthorizedModule).map (·.runSync) = some (.success (.str "bad token"))
+-- The error column keeps the caught record: the residual of a record column is the whole column
+-- until decisions row 130 rules it (sound, not precise).
+#guard (built? catchUnauthorizedModule).map (·.ty.error) =
+  some (.record [("_tag", false, .lit "Unauthorized"), ("reason", false, .string)])
+-- Red control: another tag misses, and the payload reaches the root.
+#guard (built? (program (catchIf "e" (app "tagIs" [str "NotFound", var "e"])
+    (fail (record [("_tag", false, .lit "Unauthorized"), ("reason", false, .string)]
+      [("_tag", str "Unauthorized"), ("reason", str "bad token")]))
+    (succeed (str "caught"))))).map (fun b => match b.runSync with
+      | .failure _ => true
+      | .success _ => false) = some true
 -- Green control: the tag with a string message types (DB-15's pair).
 #guard verdict (program (fail (app "pair" [str "NotFound", str "7"]))) = "built"
 -- No atom turns a number into text (row 131): the term has no type.
@@ -338,8 +363,6 @@ def measured : Reach :=
   { refused :=
       [ ("AppConfig as a string service", verdict adminTokenModule)
       , ("CurrentUser as a record service", verdict currentUserModule)
-      , ("NotFound{id} as a typed failure", verdict notFoundModule)
-      , ("Unauthorized{reason} as a typed failure", verdict unauthorizedModule)
       , ("a number in a template string", verdict interpolateModule) ]
     admitted := verdict (caseModule "secret" 2 "2") == "built"
     answer := if exits = cases.map (fun (_, _, _, v) => some (.success v)) then .rc112 else .differs
@@ -352,12 +375,29 @@ def stage : Reach :=
   { refused :=
       [ ("AppConfig as a string service", "serviceCarrier: signature none")
       , ("CurrentUser as a record service", "serviceCarrier: signature none")
-      , ("NotFound{id} as a typed failure", "typing: errorNotAdmitted")
-      , ("Unauthorized{reason} as a typed failure", "typing: errorNotAdmitted")
       , ("a number in a template string", "typing: term") ]
     admitted := true, answer := .rc112, printed := true, readBack := true }
 
 #guard measured = stage
+
+/-- The two failures `run-p2.ts`'s handler catches: `NotFound{id: 9}` (the 404 run) and
+`Unauthorized{reason: "bad token"}` (the 401 run). `hostruns.log` records the responses they
+become, not the errors. -/
+def notFound9 : Val := recordOf ["_tag", "id"] [.str "NotFound", .nat 9]
+def unauthorizedBadToken : Val := recordOf ["_tag", "reason"] [.str "Unauthorized", .str "bad token"]
+
+/-- How far the payload parts get (decisions row 120, part E1). -/
+def payloadMeasured : List (String × PartReach) :=
+  [ ("NotFound{id} as a typed failure", partReach notFoundModule notFound9)
+  , ("Unauthorized{reason} as a typed failure", partReach unauthorizedModule unauthorizedBadToken) ]
+
+/-- The payload parts' stage, as `Test/Dogfood/README.md` quotes it: built, run to `Err.payload`,
+and refused by the printer by name until E2. -/
+def payloadStage : List (String × PartReach) :=
+  [ ("NotFound{id} as a typed failure", ⟨"built", true, "refused: Err.payload"⟩)
+  , ("Unauthorized{reason} as a typed failure", ⟨"built", true, "refused: Err.payload"⟩) ]
+
+#guard payloadMeasured = payloadStage
 
 /-- The requirements of the system map's §8 that this program waits on, as its row in
 `Test/Dogfood/README.md` explains them. The semantics report lists the program under each and

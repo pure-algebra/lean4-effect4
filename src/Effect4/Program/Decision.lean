@@ -30,8 +30,8 @@ namespace Effect4.Program
 open Effect4.Store
 
 /-- The payload of a tagged pair `[tag, payload]`; `none` on every other value. The one
-reader of a tagged value; `NativeAtom.tagHit` is its Boolean image
-(`NativeAtom.tagHit_eq`, `Laws/Program/Decision.lean`). -/
+reader of a tagged pair; `NativeAtom.tagHit` is its Boolean image joined with the record
+reader's, `Record.tagHit` (`NativeAtom.tagHit_eq`, `Laws/Program/Decision.lean`). -/
 def Val.tagPayload? (tag : String) : Val → Option Val
   | .list [.str t, payload] => if t == tag then some payload else none
   | _ => none
