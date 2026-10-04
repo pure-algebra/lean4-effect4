@@ -60,6 +60,7 @@ so what a reader supplies and what the printer tested cannot come apart
 inductive ArgPat where
   | is (v : Fixed)
   | decisionTag
+  | decisionRecordTag
   | someTerm
   | someTy
   | daemon (b : Bool)
@@ -164,6 +165,8 @@ def effRows : List Row :=
       .tpl (call "optionCase" [h 0, .arrow (h 2), lam (h 3)])⟩
   , ⟨.eff, "select", [(1, .decisionTag)],
       .tpl (call "caseTag" [h 0, .strHole 1, lam (h 2), lam (h 3)])⟩
+  , ⟨.eff, "select", [(1, .decisionRecordTag)],
+      .tpl (call "caseTagR" [h 0, h 1, lam (h 2), lam (h 3)])⟩
   , ⟨.eff, "iterate", [(0, .is .noTy)], .tpl (iterateTpl none)⟩
   , ⟨.eff, "iterate", [(0, .someTy)], .tpl (iterateTpl (some 0))⟩
   , ⟨.eff, "suspend", [], .tpl (call "Effect.suspend" [.arrow (h 0)])⟩
@@ -283,6 +286,7 @@ theorem Fixed.holds_arg {R : EffFam → Type} (v : Fixed) :
 def ArgPat.holds {R : EffFam → Type} : ArgPat → ArgF Op R → Bool
   | .is v, a => v.holds a
   | .decisionTag, .decision (.tag _) => true
+  | .decisionRecordTag, .decision (.recordTag _) => true
   | .someTerm, .optTerm (some _) => true
   | .someTy, .optTy (some _) => true
   | .daemon b, .forkOptions o => decide (o.daemon = b)
@@ -302,6 +306,7 @@ theorem ArgPat.holds_of_supplies {R : EffFam → Type} {p : ArgPat} {a : ArgF Op
     subst h
     exact v.holds_arg
   | decisionTag => cases h
+  | decisionRecordTag => cases h
   | someTerm => cases h
   | someTy => cases h
   | daemon b => cases h
@@ -354,6 +359,7 @@ def printArg (sig : Signature Op) (d : Nat) :
   | .lit l => .ok (some (.expr (printLit l)))
   | .key k => do return some (.expr (← printKey sig k))
   | .decision (.tag t) => .ok (some (.str t))
+  | .decision (.recordTag t) => .ok (some (.expr (.str t)))
   | .decision _ => .ok none
   | .forkOptions o => .ok (some (.expr (printForkOptions o)))
   | .nat k => .ok (some (.int (Int.ofNat k)))

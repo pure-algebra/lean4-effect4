@@ -117,6 +117,7 @@ def selectRefusal : Decision → Ty → TypeReason
   | .bool, t => .predicateNotBool t
   | .option, t => .notSelectable .option t
   | .tag name, t => .notSelectable (.tag name) t
+  | .recordTag name, t => .notSelectable (.recordTag name) t
 
 /-- The generator answer join never refuses (part 4: the least upper bound). -/
 @[simp] theorem GenTy.joinAnswer_isSome (a b : Option Ty) : (GenTy.joinAnswer a b).isSome = true := by

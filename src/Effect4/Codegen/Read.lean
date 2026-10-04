@@ -444,6 +444,7 @@ def readLeaf {R : EffFam → Type} (sig : Signature Op) (d : Nat) (daemon : Bool
   | .key, .expr y => (readKey sig y).map .key
   | .forkOptions, .expr y => (readForkOptions daemon y).map .forkOptions
   | .decision, .str t => .ok (.decision (.tag t))
+  | .decision, .expr (.str t) => .ok (.decision (.recordTag t))
   | .nat, .int v => if 0 ≤ v then .ok (.nat v.toNat) else .error (.negative v)
   | .path, .expr (.ident s) =>
     match LayerTerm.readRefName s with

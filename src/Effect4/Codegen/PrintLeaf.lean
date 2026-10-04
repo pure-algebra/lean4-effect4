@@ -53,7 +53,7 @@ inductive Head
   | catchError | catchIf
   /-- The prelude's two `select` heads (the `select` packet §1.8): `optionCase(s, onNone,
   onSome)` and `caseTag(s, "tag", hit, miss)`, each suspending internally. -/
-  | optionCase | caseTag
+  | optionCase | caseTag | caseTagR
   /-- `Effect.map`, the head that maps an `iterate`'s printed `Effect.whileLoop` to its result
   (`reduce`'s shape, `internal/effect.ts:4450-4470`). -/
   | map
@@ -73,6 +73,7 @@ def Head.spelling : Head → String
   | .catchIf => "Effect.catchIf"
   | .optionCase => "optionCase"
   | .caseTag => "caseTag"
+  | .caseTagR => "caseTagR"
   | .matchCauseEffect => "Effect.matchCauseEffect"
   | .onExit => "Effect.onExit"
   | .exit => "Effect.exit"
@@ -129,7 +130,7 @@ def heads : List Head :=
   , .contextService, .provide, .service, .provideService
   , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
   , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf
-  , .optionCase, .caseTag, .map ]
+  , .optionCase, .caseTag, .caseTagR, .map ]
 
 /-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
 these. -/
