@@ -360,6 +360,11 @@ private def admittedInitializedHandles : List Name :=
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do
   let environment ← getEnv
+  -- A `module` root imports the exported part of each module: its theorems arrive as axioms and
+  -- its private declarations not at all, so the walk below would refuse every theorem or audit
+  -- less. Only a non-module root sees every kernel constant (decisions row 200).
+  if environment.header.isModule then
+    throwError "Effect4 axiom gate: the audit root is a `module`; it sees imported theorems as axioms and no private declaration, so the gate runs only in a non-module root"
   let t0 ← liftIO IO.monoMsNow
   -- `lake build` hands the elaborator an absolute file name; `lake env lean Test/All.lean`
   -- hands it the relative one, whose parent walk ends at `Test` and finds no root.
