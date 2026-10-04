@@ -230,12 +230,12 @@ git = "https://github.com/pure-algebra/lean4-typescript"
 rev = "f5878bf879bd5712db964c2cd12802748c707605"
 
 # Proved SHA-256 for content addresses (src/Effect4/Store/Carrier/Digest.lean): exact commit of
-# pure-algebra/lean4-hash main. Its SHA-256 family is audited at zero declarations
+# pure-algebra/lean4-hash, branch module-system (its library is Lean modules, decisions row 200). Its SHA-256 family is audited at zero declarations
 # reaching Classical.choice, so a digest stays inside this tree's axiom ceiling.
 [[require]]
 name = "hash"
 git = "https://github.com/pure-algebra/lean4-hash"
-rev = "c906b15dc3e94ebac0c10056270fbb345a1d2b6e"
+rev = "ab7eda433f0390fde7aa240189761540c9744c79"
 
 
 # Proof search for the law graph (`src/Effect4/Laws/**`) and the batteries: nothing under the
