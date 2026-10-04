@@ -153,7 +153,26 @@ The plan as written:
   - the data-wave brief's `keys_of_cause`, now `handles_of_cause`.
 - The printer refuses a payload by name until E2.
 
-### E2. The face (after E1)
+### E2. The face (landed 2026-10-04, seat E2, merged `a917b768`)
+
+Landed; the receipt is `docs/research/2026-10-04-seat-E2-receipt.md`. A construction prints as
+`new Tag({ … })` everywhere, because the printer is untyped (row 165). An error-position-only rule
+would print a structural object on the bound-variable route, which tsgo refuses (TS2375).
+
+The coordinator's calls on the seat's proposals:
+- **E2-A, kept as landed.** DI-59's adapter no longer projects a host error class with fields
+  beyond `message` to the pair. Dropping its fields would give one class two spellings. Such an
+  error stays outside the typed boundary until R6, with host payloads.
+- **E2-B, open.** DI-55's F3 (a `select` over two classes, or a number beside a string, refused
+  by tsgo, TS2375) is now reachable through p2's handler pattern. It goes to the owner with an
+  `Effect.gen` candidate, which already type-checks, measured beside F3's two candidates.
+- **E2-C, next.** Payload fields named `toJSON`, `pipe`, `constructor` or `toString` shadow the
+  instance's methods, and tsgo accepts them. The checker refuses the four by name; a small slice.
+- **E2-D, to measure.** `recordSet` on a class instance returns a structural object while its type
+  names the class. A truth program measures it before a fix is chosen.
+- **E2-E, done.** `Test/contracts/faces.contract.md` carries the amendment.
+
+The plan as written:
 
 - One class per tagged payload type, named by its tag:
   `export class NotFound extends Data.TaggedError("NotFound")<{ readonly id: number }> {}`.

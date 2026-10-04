@@ -456,3 +456,19 @@ The owner ruled a fast cutover. What this changes in the packet above, and nothi
   loop image or the two non-Boolean decisions until it becomes a matcher over the exported
   table (R6). `make check-ts-reader` is expected to differ on exactly those oracles until then.
 
+## Amendment, 2026-10-04: payload classes (decisions row 120, part E2)
+
+- **The reader's signature.** The table reader takes the module's payload classes as its first
+  explicit argument: `readTerm`, `readTerms`, `readCause`, `readLeaf`, `readT`, `readEff`,
+  `readLayer` and their kin (`src/Effect4/Codegen/Read.lean`). `Api.read` and `Api.readAt` pass
+  `[]`. §2's `readEff sig spell n x` reads `readEff classes sig spell n x`, and `read_print` and
+  `read_exact` are stated over the classes in place.
+- **Face 1 and face 3 gain the class form.** Each tagged payload type prints once per module as
+  `export class Tag extends Data.TaggedError("Tag")<{ readonly f: T; … }> {}`, and its value as
+  `new Tag({ … })`. The Lean reader and `ts/eff/read.ts` read both back, restoring `_tag`. The
+  envelope admits exactly the printed class declarations (`admitModule_classDecls`). Refusals carry
+  the tag (`PrintRefusal.payloadClass`).
+- **Evidence.** *Proved*: `read_print`, `read_exact`, `readModule_printModule`,
+  `readClassDecl_exact`, `admitModule_classDecls`. *Tested*: tsgo 7.0.0-dev.20260629.1 on a green
+  file and a red twin (TS2740, TS2375, TS2353, TS2322), the TypeScript reader lane, and two truth
+  programs against rc.112. Seat E2's receipt: `docs/research/2026-10-04-seat-E2-receipt.md`.

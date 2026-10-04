@@ -104,7 +104,8 @@ deleted. T0 landed (seat T0, merged `c8f01acf`): the scope check reads an operat
 (seat T2, merged `89e41ae9`): the store runs binder terms, behind the function names' connector. Error payloads run
 in two parts, E1 (the carrier) before T3 and E2 (the face), in the
 [error payloads plan](research/2026-10-04-claude-lead/error-payloads-plan.md). E1 landed (seat E1,
-merged `db504f03`): a program fails with a tagged record; p1, p2, p3 and p5 build their errors.
+merged `db504f03`): a program fails with a tagged record; p1, p2, p3 and p5 build their errors. E2
+landed (seat E2, merged `a917b768`): payloads print and read back as `Data.TaggedError` classes.
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 
