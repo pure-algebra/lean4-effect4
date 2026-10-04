@@ -19,11 +19,12 @@ The scheme language is the row-template calculus of decisions row 42, not a seco
 and `Ty.matchTemplateArgs` (`Ty.lean`, beside `matchTemplate`) is its list-level fold. One
 calculus, two consumers.
 
-A scheme deliberately does not **normalise** the instantiated answer: normalising would
+A polymorphic template does not **normalise** its instantiated answer: normalising would
 change the typing judgment, since `normalize` distributes a product over a union, and that is
 rows 42/43 calculus scheduled with L4, not a refactor of what the table says today. What it
 does choose is how a parameter repeated across the arguments binds (`Scheme.poly`'s `join`):
-the prelude's own declaration decides, `NoInfer` or not.
+the prelude's own declaration decides, `NoInfer` or not. The custom tuple rule explicitly
+normalizes its exact positional answer, as decisions rows 159 and 197 require.
 
 `all_complete` forces an appended constructor into the inventory, `Scheme.apply` is total, and
 every dispatch here covers the enum explicitly, so a new constructor cannot inherit a fallback.
@@ -64,6 +65,8 @@ inductive CustomScheme
   | causeTest
   /-- `causeError`: the same input, an option of its error column out. -/
   | causeError
+  /-- Variadic exact tuple construction, with normalized positional answer. -/
+  | tuple
 deriving DecidableEq, Repr
 
 /-- The arity each custom rule accepts, so the table's `arity` column is checked against the
@@ -72,6 +75,7 @@ def CustomScheme.declaredArity : CustomScheme → Option Nat
   | .project _ => some 1
   | .causeTest => some 1
   | .causeError => some 1
+  | .tuple => none
 
 /-! Each rule is its own definition over the argument list, so "one rule, one definition" is
 literally true and a proof about one rule splits that rule's arms and no others. The input
@@ -99,6 +103,7 @@ def CustomScheme.apply : CustomScheme → List Ty → Option Ty
   | .project second => projectRule second
   | .causeTest => causeTestRule
   | .causeError => causeErrorRule
+  | .tuple => fun types => some (Ty.normalize (.tuple types))
 
 /-- A fixed signature applied: each argument at a subtype of its parameter (`Ty.sub` is
 TypeScript assignability at a call site, so `succ` takes a `nat` and therefore a `never`). -/
@@ -309,6 +314,10 @@ def spec : NativeAtom → Spec
   | .mapFromEntries =>
       { scheme := .poly [.list (.prod .string (.var 0))] (.map .string (.var 0)),
         cite := "Decision row 197: ordinary input pairs become sorted map entries, with the last repeated key retained." }
+
+  | .tuple =>
+      { scheme := .custom .tuple,
+        cite := "Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary." }
 
 /-- The typing of an application by its argument types (DI-40; DI-15, the 2026-09-12 clause):
 the atom's scheme, applied. -/

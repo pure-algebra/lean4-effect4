@@ -1,6 +1,6 @@
 # Tuple source checkpoint
 
-Merge this checkpoint only together with regenerated syntax companions and the later checker/proof stages.
+Merge this checkpoint only together with regenerated stored term companions and the later checker/proof stages.
 It appends `Term.tupleAt` and `NativeAtom.tuple`; existing constructor ordinals stay unchanged.
 This source stage does not claim that downstream exhaustive consumers compile yet.
 

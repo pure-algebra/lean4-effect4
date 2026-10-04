@@ -108,17 +108,19 @@ def expect {α : Type} (r : TypeRefusal) : Option α → Except TypeRefusal α
 def term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) : Except TypeRefusal Ty :=
   match termTy sig env t with
   | some type => .ok type
-  | none => .error ⟨p, match TermRefusal.locate sig env t with
-      | some why => .recordTerm why
+  | none => .error ⟨p, match TermRefusal.diagnose sig env t with
+      | some (.record why) => .recordTerm why
+      | some (.tuple why) => .tupleTerm why
       | none => .term t⟩
 
-/-- A cause's type, or a record-specific explanation when a leaf term failed. -/
+/-- A cause's type, or a located explanation when a leaf term failed. -/
 def cause? (sig : Signature Op) (env : TyEnv) (p : List Nat) (cause : CauseTerm) :
     Except TypeRefusal Ty :=
   match causeTy sig env cause with
   | some type => .ok type
-  | none => .error ⟨p, match TermRefusal.locateCause sig env cause with
-      | some why => .recordCause why
+  | none => .error ⟨p, match TermRefusal.diagnoseCause sig env cause with
+      | some (.record why) => .recordCause why
+      | some (.tuple why) => .tupleCause why
       | none => .cause cause⟩
 
 /-- The element type of a list type. -/

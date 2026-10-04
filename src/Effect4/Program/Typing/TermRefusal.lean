@@ -2,7 +2,7 @@ import Effect4.Program.Typing.Rules
 import Effect4.Program.Fold
 
 /-!
-Field-specific reasons for failed record term typing. The diagnostic fold never returns a type.
+Located reasons for failed record and tuple term typing. The diagnostic fold never returns a type.
 `argTy` and `argsTy` remain the acceptance rules; the caller invokes this fold only after failure.
 Program paths and nested term addresses remain separate data.
 -/
@@ -35,6 +35,37 @@ deriving DecidableEq
 structure RecordCauseRefusal where
   causePath : List Nat
   term : RecordTermRefusal
+deriving DecidableEq
+
+/-- Why a normalized alternative cannot supply a static tuple position. -/
+inductive TupleTypingReason
+  | nonTuple (branch : Ty)
+  | outOfBounds (arity : Nat)
+deriving DecidableEq
+
+/-- A static tuple refusal retains the raw index and its separate term address. -/
+structure TupleTermRefusal where
+  path : List Nat
+  index : Nat
+  reason : TupleTypingReason
+deriving DecidableEq
+
+/-- Cause and term addresses remain separate for a failed tuple projection. -/
+structure TupleCauseRefusal where
+  causePath : List Nat
+  term : TupleTermRefusal
+deriving DecidableEq
+
+/-- The diagnostic fold's alternatives, independent of term acceptance. -/
+inductive TermTypingRefusal
+  | record (why : RecordTermRefusal)
+  | tuple (why : TupleTermRefusal)
+deriving DecidableEq
+
+/-- The corresponding diagnostic alternatives inside cause leaves. -/
+inductive CauseTypingRefusal
+  | record (why : RecordCauseRefusal)
+  | tuple (why : TupleCauseRefusal)
 deriving DecidableEq
 
 namespace TermRefusal
@@ -76,9 +107,18 @@ def readField (mode : FieldReadMode) (target : Ty) (name : String) :
         else rest
     | _ => none) none
 
+/-- Explain the first rejected normalized alternative, consulting the actual projection rule. -/
+def tupleIndex (target : Ty) (index : Nat) : Option TupleTypingReason :=
+  (Ty.members target.normalize).foldr (fun branch rest =>
+    if (Tuple.project index branch).isSome then rest else
+      match branch with
+      | .tuple items => some (.outOfBounds items.length)
+      | .prod _ _ => some (.outOfBounds 2)
+      | _ => some (.nonTuple branch)) none
+
 private def Carrier : TermFam → Type
-  | .term => Term × (Bool → List Nat → Option RecordTermRefusal)
-  | .terms => Terms × (Bool → List Nat → Nat → Option RecordTermRefusal)
+  | .term => Term × (Bool → List Nat → Option TermTypingRefusal)
+  | .terms => Terms × (Bool → List Nat → Nat → Option TermTypingRefusal)
 
 /-- The generated term fold carries its raw node beside a diagnostic computation.
 Only failed children are descended into, in the typing rule's order and literal mode. -/
@@ -91,21 +131,25 @@ private def algebra (infer : Bool → Term → Option Ty)
     args.2 (constAtom atom) path 0)
   term_record fields names values := (.record fields names values.1, fun _ path =>
     match declaration fields with
-    | some why => some ⟨path, why⟩
+    | some why => some (.record ⟨path, why⟩)
     | none =>
       match inferArgs true values.1 with
       | none => values.2 true path 0
-      | some types => (construction fields names types).map (⟨path, ·⟩))
+      | some types => (construction fields names types).map (fun why => .record ⟨path, why⟩))
   term_field mode target name := (.field mode target.1 name, fun _ path =>
     match infer false target.1 with
     | none => target.2 false (path ++ [0])
-    | some type => (readField mode type name).map (⟨path, ·⟩))
+    | some type => (readField mode type name).map (fun why => .record ⟨path, why⟩))
   term_recordSet target name value := (.recordSet target.1 name value.1, fun _ path =>
     match infer false target.1 with
     | none => target.2 false (path ++ [0])
     | some _ => match infer true value.1 with
       | none => value.2 true (path ++ [1])
       | some _ => none)
+  term_tupleAt target index := (.tupleAt target.1 index, fun _ path =>
+    match infer false target.1 with
+    | none => target.2 false (path ++ [0])
+    | some type => (tupleIndex type index).map (fun why => .tuple ⟨path, index, why⟩))
   terms_nil := (.nil, fun _ _ _ => none)
   terms_cons head tail := (.cons head.1 tail.1, fun flag path index =>
     match infer flag head.1 with
@@ -113,27 +157,38 @@ private def algebra (infer : Bool → Term → Option Ty)
     | some _ => tail.2 flag path (index + 1))
 
 /-- Diagnose a failed term. This function never supplies a successful type. -/
-def locate {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
-    Option RecordTermRefusal :=
+def diagnose {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
+    Option TermTypingRefusal :=
   (cata_term (algebra (argTy sig env) (argsTy sig env) sig.constAtom) term).2 false []
 
+/-- Compatibility projection for callers that request record-specific diagnostics. -/
+def locate {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
+    Option RecordTermRefusal := do
+  match ← diagnose sig env term with
+  | .record why => some why
+  | .tuple _ => none
+
+private def inCause (path : List Nat) : TermTypingRefusal → CauseTypingRefusal
+  | .record why => .record ⟨path, why⟩
+  | .tuple why => .tuple ⟨path, why⟩
+
 private def CauseCarrier (_ : CauseTermFam) : Type :=
-  CauseTerm × (List Nat → Option RecordCauseRefusal)
+  CauseTerm × (List Nat → Option CauseTypingRefusal)
 
 private def causeAlgebra (inferCause : CauseTerm → Option Ty) (inferTerm : Term → Option Ty)
-    (diagnose : Term → Option RecordTermRefusal) : CauseTermAlgebra CauseCarrier where
+    (diagnose : Term → Option TermTypingRefusal) : CauseTermAlgebra CauseCarrier where
   cause_fail term := (.fail term, fun path =>
     match inferTerm term with
-    | none => (diagnose term).map (⟨path, ·⟩)
+    | none => (diagnose term).map (inCause path)
     | some _ => none)
   cause_die term := (.die term, fun path =>
     match inferTerm term with
-    | none => (diagnose term).map (⟨path, ·⟩)
+    | none => (diagnose term).map (inCause path)
     | some _ => none)
   cause_interrupt term := (.interrupt term, fun path => do
     let who ← term
     match inferTerm who with
-    | none => (diagnose who).map (⟨path, ·⟩)
+    | none => (diagnose who).map (inCause path)
     | some _ => none)
   cause_both left right := (.both left.1 right.1, fun path =>
     match inferCause left.1 with
@@ -141,9 +196,16 @@ private def causeAlgebra (inferCause : CauseTerm → Option Ty) (inferTerm : Ter
     | some _ => right.2 (path ++ [1]))
 
 /-- Diagnose a failed cause while keeping cause and term addresses separate. -/
+def diagnoseCause {Op : Type} (sig : Signature Op) (env : TyEnv) (cause : CauseTerm) :
+    Option CauseTypingRefusal :=
+  (cata_cause (causeAlgebra (causeTy sig env) (termTy sig env) (diagnose sig env)) cause).2 []
+
+/-- Compatibility projection retaining the separate record cause and term addresses. -/
 def locateCause {Op : Type} (sig : Signature Op) (env : TyEnv) (cause : CauseTerm) :
-    Option RecordCauseRefusal :=
-  (cata_cause (causeAlgebra (causeTy sig env) (termTy sig env) (locate sig env)) cause).2 []
+    Option RecordCauseRefusal := do
+  match ← diagnoseCause sig env cause with
+  | .record why => some why
+  | .tuple _ => none
 
 end TermRefusal
 end Effect4.Program

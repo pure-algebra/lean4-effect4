@@ -71,6 +71,10 @@ inductive TypeReason
   | recordTerm (why : RecordTermRefusal)
   /-- A failed record operation inside a cause leaf, at two separate addresses. -/
   | recordCause (why : RecordCauseRefusal)
+  /-- A static tuple projection failed at its exact stored index. -/
+  | tupleTerm (why : TupleTermRefusal)
+  /-- A static tuple failure inside a cause leaf. -/
+  | tupleCause (why : TupleCauseRefusal)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -103,6 +107,8 @@ def TypeReason.head : TypeReason → String
   | .instantiatedFormation _ _ => "instantiatedFormation"
   | .recordTerm _ => "recordTerm"
   | .recordCause _ => "recordCause"
+  | .tupleTerm _ => "tupleTerm"
+  | .tupleCause _ => "tupleCause"
 
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where

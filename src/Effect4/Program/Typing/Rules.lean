@@ -1,6 +1,7 @@
 import Effect4.Program.Refs
 import Effect4.Program.Formation
 import Effect4.Program.Record
+import Effect4.Program.Tuple
 import Effect4.Machine.Context
 
 /-!
@@ -85,8 +86,8 @@ def litArgTy (const : Bool) : Lit → Ty
 mutual
   /-- The type of a term in argument position, as a fold: a variable from the environment, the
   literal rule under the enclosing atom's const-generic flag, an application by its atom at its
-  arguments' types under the atom's own flag (`Signature.constAtom`) — so a string literal
-  argument of `pair` is a `lit` and a string literal argument of any other atom is a `string`.
+  arguments' types under the atom's own flag (`Signature.constAtom`). A const-generic atom
+  retains direct string literals; other atoms widen them to `string`.
   The flag is the accumulator; `fold_of` reads the algebra (`Program/Folds/Term.lean`). -/
   def argTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Term → Option Ty
     | .var index => env[index]?
@@ -107,6 +108,9 @@ mutual
       let targetType ← argTy sig env false target
       let valueType ← argTy sig env true value
       Record.setType targetType name valueType
+    | .tupleAt target index => do
+      let targetType ← argTy sig env false target
+      Tuple.typeAt targetType index
   /-- The argument types of an application, argument by argument. -/
   def argsTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Terms → Option (List Ty)
     | .nil => some []
@@ -178,6 +182,7 @@ theorem argTy_cases (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Te
   | record fields names values => exact Or.inr h
   | field mode target name => exact Or.inr h
   | recordSet target name value => exact Or.inr h
+  | tupleAt target index => exact Or.inr h
 
 /-- The error type a cause carries: its `fail` reasons; defects and interrupts contribute
 none (`Cause.die` and `Cause.interrupt` are outside `E`). A `die` carries an admitted error
@@ -385,6 +390,8 @@ mutual
     | .recordSet target name value => by
       simp only [Term.weaken, argTy, argTy_weaken sig pre post inserted false target,
         argTy_weaken sig pre post inserted true value]
+    | .tupleAt target index => by
+      simp only [Term.weaken, argTy, argTy_weaken sig pre post inserted false target]
 
   theorem argsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
       (const : Bool) (terms : Terms) :
@@ -420,7 +427,7 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
   cases test with
   | var _ => rfl
   | lit _ => rfl
-  | record _ _ _ | field _ _ _ | recordSet _ _ _ => rfl
+  | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => rfl
   | app atom args =>
     cases args with
     | nil => rfl
@@ -428,7 +435,7 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
       cases head with
       | var _ => rfl
       | app _ _ => rfl
-      | record _ _ _ | field _ _ _ | recordSet _ _ _ => rfl
+      | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => rfl
       | lit value =>
         cases value with
         | unit | nat _ | bool _ => rfl
@@ -439,7 +446,7 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
             cases second with
             | lit _ => rfl
             | app _ _ => rfl
-            | record _ _ _ | field _ _ _ | recordSet _ _ _ => rfl
+            | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => rfl
             | var index =>
               cases rest with
               | cons _ _ => rfl

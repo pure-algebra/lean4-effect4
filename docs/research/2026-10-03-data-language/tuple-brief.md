@@ -12,8 +12,9 @@ Its checked answer is `Ty.normalize (.tuple argumentTypes)`.
 Evaluation returns `Val.list values` at every arity.
 Append only `Term.tupleAt target index`; retain its exact natural index as data.
 Its type rule normalizes the target, projects tuples and products, distributes over unions, and joins the answers.
-Every inhabited alternative must admit the index.
-Bottom answers bottom; lists, unknown types and out-of-range alternatives refuse.
+Every remaining normalized tuple alternative must contain the requested position.
+Explicit bottom answers bottom; lists, unknown types and out-of-range alternatives refuse.
+The rule does not decide general inhabitance, so a tuple containing a bottom column can still refuse an out-of-range index.
 Evaluation projects only a plain list frame, not a list-view snapshot.
 Authoring resolves names with the existing `TermSrc` discipline.
 No general row argument-spreading convention changes.
@@ -42,14 +43,19 @@ Its existing scope-only premise must remain unchanged for every raw natural inde
 ## Files and stages
 
 1. Source checkpoint: `Machine/Term.lean`, `Program/Eff.lean`, `Test/Program/TupleTerms.lean`.
-   Append syntax and atom rows; check these modules before requesting generated companions.
-2. Checker and authoring: `Program/NativeAtom.lean`, a small `Program/Tuple.lean` projection owner, `Program/Typing/Rules.lean`, `Program/Formation.lean` if its generated traversal needs a case, `Program/Typing/TermRefusal.lean`, `Program/Typing/Blame.lean`, the actual Checker owner, `Program/Authoring/Tuples.lean`, and focused tuple typing/authoring/refusal fixtures.
-3. Proof consumers: `Laws/Program/Typed.lean`, `Laws/Program/Typed/Membership.lean`, `Laws/Program/Typed/Denotation.lean`, `Laws/Program/Handles/Term.lean`, `Laws/Program/Signature.lean`, `Laws/Program/MeaningSound.lean` only if needed, and a dedicated tuple value helper module if it serves both proof families.
+   Append stored term constructors and atom rows; check these modules before requesting generated companions.
+2. Checker and authoring: `Program/NativeAtom.lean`, `Program/Tuple.lean`, `Program/Typing/Rules.lean`, `Program/Typing/TermRefusal.lean`, `Program/Typing/Blame.lean`, `Program/Checker.lean` and `Program/Authoring/Tuples.lean`.
+   Update `Program/Formation.lean` only if its generated traversal needs a case.
+   Add focused tuple typing, authoring and refusal fixtures.
+   The diagnostic fold returns a record/tuple sum; old `locate` wrappers keep their record-only result types.
+   Tuple packets retain an exact index, term path, reason and separate cause path.
+   The rule `Tuple.project` remains the only projection acceptance owner.
+3. Proof consumers: `Laws/Program/Typed.lean`, `Laws/Program/Typed/Membership.lean`, `Laws/Program/Typed/Denotation.lean`, `Laws/Program/Handles/Term.lean`, `Laws/Program/Signature.lean`, `Laws/Program/MeaningSound.lean` only if needed, `Laws/Program/Authoring/Tuples.lean`, and a dedicated tuple value helper module if it serves both proof families.
 4. The coordinator regenerates AtomInventory, Fold, canonical Program, PreludeAtoms and reached mirror/binder outputs; owns all root imports, manifest entries, target files, decisions and case census.
 
 Do not edit Codegen record/read/proof files, Schema files, root imports, generated files, manifests, the decision register or lake configuration.
 Keep the preexisting `FormationContract.lean` draft unchanged and unstaged.
-No new tuple-construction syntax, second value representation, generalized substitution library or row-spreading API belongs to this slice.
+No stored tuple-construction constructor, second value representation, generalized substitution library or row-spreading API belongs to this slice.
 
 ## Verification commands
 
