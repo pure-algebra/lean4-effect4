@@ -132,11 +132,22 @@ def litV : Lit → V
   | .bool b => .ctor ``Lit.bool [.bool b]
   | .str s => .ctor ``Lit.str [.str s]
 
+/-- The field read mode remains a constructor in the wire tree. -/
+def fieldReadModeV : FieldReadMode → V
+  | .required => .ctor ``FieldReadMode.required []
+  | .optional => .ctor ``FieldReadMode.optional []
+
 mutual
 partial def termV : PTerm → V
   | .var i => .ctor ``Term.var [.nat i]
   | .lit l => .ctor ``Term.lit [litV l]
   | .app atom args => .ctor ``Term.app [.str atom, termsV args]
+  | .record fields names values =>
+    .ctor ``Term.record [.list (fieldsV fields), .list (names.map V.str), termsV values]
+  | .field mode target name =>
+    .ctor ``Term.field [fieldReadModeV mode, termV target, .str name]
+  | .recordSet target name value =>
+    .ctor ``Term.recordSet [termV target, .str name, termV value]
 partial def termsV : Terms → V
   | .nil => .ctor ``Terms.nil []
   | .cons h t => .ctor ``Terms.cons [termV h, termsV t]
@@ -476,6 +487,24 @@ def pCatchError : P := .catchIf (.lit (.bool true)) (.fail (n 7)) (.succeed (v 0
 def pCatchIf : P := .catchIf (.app "eq" (ts [v 0, n 7])) (.fail (n 7)) (.succeed (v 0))
 def pIllCatchIf : P := .catchIf (n 1) (.fail (n 7)) (.succeed (v 0))
 
+/-- Record metadata keeps its source order. Optional absence uses no value slot. -/
+def recordExample : PTerm := .record
+  [("z", false, .string), ("a-b", false, .nat), ("nickname", true, .string)]
+  ["a-b", "z"] (ts [n 7, .lit (.str "last")])
+
+def pRecord : P := .succeed recordExample
+def pRecordRequired : P := .succeed (.field .required recordExample "a-b")
+def pRecordOptionalAbsent : P := .succeed (.field .optional recordExample "nickname")
+def pRecordOptionalPresent : P := .succeed (.field .optional recordExample "z")
+def pRecordSet : P := .succeed (.recordSet recordExample "__proto__" (.lit (.str "data")))
+
+/-- Raw syntax keeps duplicate declarations and mismatched names and values. -/
+def pIllRecordRaw : P := .succeed (.record
+  [("x", true, .int), ("x", false, .number)] ["unknown", "unknown"] (ts [n 1]))
+
+def pIllRecordExtraValue : P := .succeed (.record
+  [("x", true, .nat)] [] (ts [n 1]))
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -490,7 +519,11 @@ def corpus : List (String × P) :=
   , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor)
   , ("pProvide", pProvide), ("pSleep", pSleep), ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pExternal", pExternal), ("pIllExternalDomain", pIllExternalDomain)
   , ("pFailText", pFailText), ("pIllFailBool", pIllFailBool), ("pIllCauseBool", pIllCauseBool)
-  , ("pCatchError", pCatchError), ("pCatchIf", pCatchIf), ("pIllCatchIf", pIllCatchIf) ]
+  , ("pCatchError", pCatchError), ("pCatchIf", pCatchIf), ("pIllCatchIf", pIllCatchIf)
+  , ("pRecord", pRecord), ("pRecordRequired", pRecordRequired)
+  , ("pRecordOptionalAbsent", pRecordOptionalAbsent), ("pRecordOptionalPresent", pRecordOptionalPresent)
+  , ("pRecordSet", pRecordSet), ("pIllRecordRaw", pIllRecordRaw)
+  , ("pIllRecordExtraValue", pIllRecordExtraValue) ]
 
 end Corpus
 
