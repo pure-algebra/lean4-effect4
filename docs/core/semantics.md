@@ -265,6 +265,16 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   checked layer-free program loads into `J` (`loadsTyped_of_layerFree`,
   `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
 
+The `straight-meaning-typed` claim requires `Straight e = true` and successful native program typing in the empty environment.
+`Denote.meaning_typed` establishes `ExitHasTy` at the resulting stores, starting from empty stores.
+Its declaration lives in `src/Effect4/Laws/Program/MeaningSound.lean`.
+Raw handle containment serves this claim through `evalTerm_validIn` and `Denote.sound`.
+It establishes no scheduled-program liveness or external host execution property.
+
+The `instantiated-formation` claim requires actual row use to check map keys after substitution.
+It serves `rowTy` and M5 under decision row 193.
+It establishes no host reply admission or liveness property.
+
 ### 2.3 Concept 3: Scope Lifetime & Finalization (`scope-lifetime-finalization`)
 
 #### 1. What the Literature Defines
@@ -473,6 +483,12 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 - **Record codecs (`record-codec-layout`)**: exact JSON and Schema codecs for record values, which carry
   their canonical names (decisions row 165 (a)); open.
 
+The `type-metadata-exact` claim requires an exact embedding of stored `Ty` declarations into structural TypeScript metadata.
+It retains raw declaration order and absent optional fields.
+Its retraction has no byte-frame size premise.
+It supports record print/read reconstruction under decision row 196.
+It establishes no execution property for generated TypeScript.
+
 ### 2.6 Concept 6: Subtyping Algebra & Normalization (`subtyping-algebra`)
 
 #### 1. What the Literature Defines
@@ -505,6 +521,10 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
 (`src/Effect4/Laws/Program/TypeAlgebra.lean:1067`). Canonical types `CTy` form a bounded join-semilattice.
 
 #### 4. Required Properties and Obligations
+- **Raw formation (`raw-formation`)**: The raw check agrees with distinct record names and the admitted map-key predicate.
+  Rows 192 and 193 require this check before normalization at each checked public boundary.
+  Open map keys are deferred only in row templates.
+  Formation establishes no inhabitance, codec admission or execution property.
 - **Reflexivity (`subn-refl`)**: Normalized subtyping is reflexive.
   (`subN_refl` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
 - **Transitivity (`subn-trans`)**: Normalized subtyping is transitive.

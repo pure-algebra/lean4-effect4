@@ -35,6 +35,8 @@ import Effect4.Laws.Program.InterpR
 import Effect4.Laws.Program.EvaluateR
 import Effect4.Laws.Program.ScopeMarkers
 import Effect4.Laws.Program.Typed
+import Effect4.Laws.Program.Typed.RecordValues
+import Effect4.Laws.Program.Typed.RecordOperations
 import Effect4.Laws.Program.ScopedTyping
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Provision
@@ -50,6 +52,7 @@ import Effect4.Laws.Api.Fuel
 import Effect4.Laws.Api.Guard
 import Effect4.Laws.Api.Supervision
 import Effect4.Laws.Api.Codegen
+import Effect4.Laws.Api.Formation
 import Effect4.Laws.Run
 import Effect4.Laws.Program.Handles
 import Effect4.Laws.Program.Means
@@ -105,12 +108,15 @@ import Effect4.Laws.Program.Typed.State
 import Effect4.Laws.Program.Typed.Frames
 import Effect4.Laws.Codegen.Template
 import Effect4.Laws.Codegen.Read
+import Effect4.Laws.Codegen.Metadata
+import Effect4.Laws.Codegen.Record
 import Effect4.Laws.Codegen.ReadPrint
 import Effect4.Laws.Codegen.PrintReadable
 import Effect4.Laws.Api.ModuleReadable
 import Effect4.Laws.Store.CanonicalSpec
 import Effect4.Laws.Schema.Codec
 import Effect4.Laws.Program.Authoring
+import Effect4.Laws.Program.Authoring.Records
 import Effect4.Laws.Program.Authoring.Lifts
 import Effect4.Laws.Program.Authoring.Rows
 import Effect4.Laws.Program.Authoring.Forms

@@ -148,6 +148,15 @@ def registry : Registry where
       ] }
   ]
   claims := [
+    { id := "type-metadata-exact", concept := "exact-codecs", role := .compatibility
+      title := "Structural TypeScript metadata retains the exact stored Ty declaration"
+      pointer := .witness `Effect4.Codegen.Metadata.type_metadata_exact },
+    { id := "raw-formation", concept := "subtyping-algebra", role := .decidability
+      title := "Raw formation checking agrees with distinct record names and admitted map keys"
+      pointer := .witness `Effect4.Program.Formation.checkInput_eq_none_iff },
+    { id := "instantiated-formation", concept := "residual-program-typing", role := .compatibility
+      title := "Successful row template use checks instantiated map keys"
+      pointer := .witness `Effect4.Program.rowTy_instantiated_formed },
     -- 1. store-typing
     { id := "fits-mono", concept := "store-typing", role := .monotonicity
       title := "Membership is monotone under host world order"
@@ -194,6 +203,9 @@ def registry : Registry where
       literature := [
         { work := "deVilhenaPottier2021", locator := "audit P8", relation := "proofTechnique" }
       ] },
+    { id := "straight-meaning-typed", concept := "residual-program-typing", role := .fundamentalProperty
+      title := "Typed straight programs return ExitHasTy from the empty environment and stores"
+      pointer := .witness `Effect4.Program.Denote.meaning_typed },
     { id := "denote-typed", concept := "residual-program-typing", role := .fundamentalProperty
       title := "The denotation of a checked program is TypedProg at its certificate (M5)"
       pointer := .witness `Effect4.Program.Typed.denotesTyped

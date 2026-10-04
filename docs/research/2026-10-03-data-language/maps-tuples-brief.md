@@ -44,7 +44,7 @@ The coordinator registers such a claim before proving it; no new ledger mechanis
 | Work | Concept and required property | Claim, role, and consumer | Reach and hypotheses | Limits and requirement |
 | --- | --- | --- | --- | --- |
 | Map operations and tuple construction/projection | Store Typing & Value Membership: typed evaluation and membership | Helpers of `denote-typed`, fundamental property, consumed by `NativeAtom.Sound`, `Typed.AtomFits`, `evalTerm_hasTy`, `evalTerm_isSome`, and world-indexed term evaluation | Accepted native argument types; fitted values in the same world; formed string maps; tuple projection admitted at every union branch | Actual pure-term results, not scheduler progress or host execution; M5, R3 |
-| No new handles | Scope Lifetime & Finalization: handle reachability | Helpers of `m7-exit-handles-valid`, preservation, consumed by `nativeAtom_keys`, `evalTerm_keys`, and existing compiler connectors | Every successful raw evaluation; output handle keys are a subset of input keys | No allocation or finalization theorem added; existing M6/M7 consumers, R3 |
+| No new handles | Residual Program Typing: valid values during straight evaluation | Helpers of `straight-meaning-typed`, consumed by `MeaningSound.evalTerm_validIn`; decoded-key containment separately feeds `Handles.Hooks` and `Handles.Layer` | Every successful raw evaluation; output raw handle frames belong to input frames; valid environments establish valid outputs | No direct M7 dependency, allocation or finalization theorem; R4 |
 | Tuple-index target image | Exact Codecs & Data Plane Embeddings: retraction and exact reading | Proposed registry question `collection-term-print-read`, compatibility; consumers `readTerm_printTerm`, `readTerm_exact`, `ReadPrint`, and checked module reading | Retraction keeps only the existing scope premise; exactness assumes successful structural reading; arbitrary stored natural index retained | Structural TypeScript expressions only, not rendered-source parsing or target execution; R2/R3 |
 | JSON faces | Exact Codecs & Data Plane Embeddings: retraction and exact reading | Existing `decode-encode` and `decode-iff`, compatibility/decidability; consumers `Ty.isCodecValue`, boundary admission and session adapters | Existing theorem domains retained, including canonical type and value admission conditions; string map keys and exact tuple arity | No opaque-handle serialization, numeric widening, or host-response totality; R2/R3/R4 |
 | Schema faces | Exact Codecs & Data Plane Embeddings: retraction modulo the existing normalizer | Existing `of-schema-schema` and `of-schema-exact`, compatibility; consumers `Ty.schema`, schema documents and boundary profiles | Existing closed/reserved-free domains and annotation policy; plain tuple elements, no rest; string index signatures only | No new Schema transformations, optional tuple elements, or foreign type computation; R3 |
@@ -219,6 +219,26 @@ Retain row 179's annotation policy and the existing reserved-handle condition.
 Add data-plane laws by extending the existing codec and Schema proofs, with map duplicate and tuple/list-union controls.
 Record payloads inside maps depend on the separate record codec landing.
 Do not claim that example crosses JSON before it does.
+
+## Schema alias boundary before implementation
+
+The existing raw Schema retraction returns the exact input `Ty`.
+Its premises are closedness and `Bridge.reservedFree`, which currently excludes every tuple.
+The public `Ty.schema` first normalizes its input.
+These are different domains.
+
+Row 159 makes a two-item tuple and a product share the same Schema array image.
+A reader of that image returns `prod`.
+Therefore, the raw exact-input theorem cannot admit an unnormalized two-item `Ty.tuple` through its profile premise.
+The implementation must keep that raw alias outside the exact-input domain.
+The public normalized writer still admits the corresponding product and both source spellings.
+Do not add a metadata wrapper merely to distinguish this normalized alias.
+
+Keep the raw theorem's statement and make its profile condition explicit for the enlarged domain.
+Prove the public canonical-type result through the existing normalization connection.
+Do not describe the raw profile condition as only a restriction on handle names after extending it.
+These obligations serve `of-schema-schema` and its existing `CTy` consumer.
+They establish structural Schema reconstruction, not execution by the external Schema runtime.
 
 ## Dependency order, generation and acceptance
 

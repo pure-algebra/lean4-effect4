@@ -72,8 +72,10 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 
 | Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
 | --- | --- | --- | --- | --- | --- |
+| instantiated-formation | compatibility | proved | Effect4.Program.rowTy_instantiated_formed | yes |  |
 | seq-typed | compatibility | proved | Effect4.Program.Typed.seq_typed | yes |  |
 | close-typed | preservation | proved | Effect4.Program.Typed.close_typed | yes |  |
+| straight-meaning-typed | fundamentalProperty | proved | Effect4.Program.Denote.meaning_typed | yes |  |
 | denote-typed | fundamentalProperty | proved | Effect4.Program.Typed.denotesTyped | yes | E4-TYPED-CE-020, E4-TYPED-CE-021, E4-TYPED-CE-022, E4-TYPED-CE-023, E4-TYPED-CE-031 |
 | rebuild-admission | compatibility | proved | Effect4.Program.Authoring.rebuild_spec | yes |  |
 | denote-typed-layer-free | fundamentalProperty | proved | Effect4.Program.Typed.denotesTyped_of_layerFree | yes |  |
@@ -88,6 +90,19 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 | on-exit-typed | compatibility | proved | Effect4.Program.Typed.onExit_typed | yes |  |
 
 ### Printed statements
+
+**instantiated-formation**
+
+```lean
+∀ {row : Effect4.Program.Row} {request : Effect4.Program.Ty} {ty : Effect4.Program.EffTy},
+  Eq (Effect4.Program.rowTy row request) (Option.some ty) →
+    Exists fun bindings =>
+      And
+        (Eq (Effect4.Program.Ty.matchTemplate List.nil row.request.normalize request.normalize)
+          (Option.some bindings))
+        (Effect4.Program.Formation.Formed
+          (Effect4.Program.Formation.instantiatedSites row bindings))
+```
 
 **seq-typed**
 
@@ -123,6 +138,17 @@ Literature: ATTAPL, ch. 3, pp. 87–136 — adaptedResult
 ```
 
 Literature: deVilhenaPottier2021, audit P8 — proofTechnique
+
+**straight-meaning-typed**
+
+```lean
+∀ (e : Effect4.Program.NativeEff) (t : Effect4.Program.EffTy),
+  Eq (Effect4.Program.Denote.Straight e) Bool.true →
+    Eq (Effect4.Program.effTy Effect4.Program.nativeSignature List.nil e) (Option.some t) →
+      Effect4.Program.Denote.ExitHasTy t.answer t.error
+        (Effect4.Program.Denote.meaning e List.nil Effect4.Machine.Stores.empty).snd
+        (Effect4.Program.Denote.meaning e List.nil Effect4.Machine.Stores.empty).fst
+```
 
 **denote-typed**
 
@@ -602,6 +628,7 @@ Exact Codecs: Invertible embeddings for JSON and Schema representations
 
 | Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
 | --- | --- | --- | --- | --- | --- |
+| type-metadata-exact | compatibility | proved | Effect4.Codegen.Metadata.type_metadata_exact | yes |  |
 | decode-iff | decidability | proved | Effect4.Schema.decode_iff | yes |  |
 | decode-encode | compatibility | proved | Effect4.Schema.decode_encode | yes |  |
 | of-schema-exact | compatibility | proved | Effect4.Schema.Bridge.ofSchema_exact | yes |  |
@@ -609,6 +636,17 @@ Exact Codecs: Invertible embeddings for JSON and Schema representations
 | record-codec-layout | compatibility | absent | Open: the JSON codec has no record arm and the Schema face refuses record by name; record values carry canonical names (decisions row 165 (a)) | — |  |
 
 ### Printed statements
+
+**type-metadata-exact**
+
+```lean
+And
+  (∀ (t : Effect4.Program.Ty),
+    Eq (Effect4.Codegen.Metadata.readTy (Effect4.Codegen.Metadata.writeTy t)) (Option.some t))
+  (∀ (e : TypeScript.Expr) (t : Effect4.Program.Ty),
+    Eq (Effect4.Codegen.Metadata.readTy e) (Option.some t) →
+      Eq (Effect4.Codegen.Metadata.writeTy t) e)
+```
 
 **decode-iff**
 
@@ -658,6 +696,7 @@ Subtyping Algebra: Preorder laws, normalization, and join-semilattice on CTy
 
 | Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |
 | --- | --- | --- | --- | --- | --- |
+| raw-formation | decidability | proved | Effect4.Program.Formation.checkInput_eq_none_iff | yes |  |
 | subn-refl | compatibility | proved | Effect4.Program.Ty.subN_refl | yes |  |
 | subn-trans | transitivity | proved | Effect4.Program.Ty.subN_trans | yes |  |
 | subn-equiv-iff | decidability | proved | Effect4.Program.Ty.subN_equiv_iff | yes |  |
@@ -665,6 +704,14 @@ Subtyping Algebra: Preorder laws, normalization, and join-semilattice on CTy
 | sub-antisymm-canonical | antisymmetry | proved | Effect4.Program.Ty.sub_antisymm_canonical | yes |  |
 
 ### Printed statements
+
+**raw-formation**
+
+```lean
+∀ {Op : Type} (program : Effect4.Program.Eff Op) (table : List Effect4.Program.Row),
+  Iff (Eq (Effect4.Program.Formation.checkInput program table) Option.none)
+    (Effect4.Program.Formation.InputFormed program table)
+```
 
 **subn-refl**
 
@@ -1250,4 +1297,4 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names, ledger goals and their checked witnesses excluded
 
-Tagged: 2; inherited (provisional): 1279; unplaced: 0.
+Tagged: 2; inherited (provisional): 1277; unplaced: 0.
