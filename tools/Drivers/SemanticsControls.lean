@@ -186,16 +186,20 @@ private def checkPositive : MetaM Unit := do
     claims := [claim "plain" (.witness (fixtureName `firstWitness)),
                claim "checked" (.goal (fixtureName `checkedGoal)),
                { (claim "wanted" (.goal (fixtureName `wantedGoal))) with contestedBy := ["E4-TEST-CE-003"] },
+               claim "extracted" (.goal (fixtureName `extractedGoal.part1)),
                claim "refuted" (.refutedBy "E4-TEST-CE-001" (fixtureName `firstWitness)),
                claim "absent" (.absent "No fixture witness is claimed"),
                claim "assumed" (.assumed "External fixture" "Not locally proved")]
     cuts := [cut "fixture-one" 1] }
   let claims ← arrayField report "claims"
   for (id, status) in #[("plain", "proved"), ("checked", "proved"), ("wanted", "wanted"),
+                       ("extracted", "wanted"),
                        ("refuted", "refuted"), ("absent", "absent"), ("assumed", "assumed")] do
     expectString (← field (← named claims "id" id) "status") "_tag" status
   expectString (← field (← named claims "id" "plain") "status") "by" "theorem"
   expectString (← field (← named claims "id" "checked") "status") "by" "ledger"
+  -- an extracted part is pending by its extraction tag, with no placeholder
+  expectString (← field (← named claims "id" "extracted") "status") "by" "extraction"
   let wanted ← named claims "id" "wanted"
   let contested ← arrayField wanted "contestedBy"
   expectString (← named contested "id" "E4-TEST-CE-003") "registerStatus" "SEEDED"
@@ -213,7 +217,7 @@ private def checkPositive : MetaM Unit := do
     expectString placed "placement" kind
   let concepts ← arrayField report "concepts"
   let counts ← field (← named concepts "id" "fixture-one") "counts"
-  for (key, expected) in #[("claims", 6), ("proved", 2), ("wanted", 1), ("refuted", 1),
+  for (key, expected) in #[("claims", 7), ("proved", 2), ("wanted", 2), ("refuted", 1),
                           ("absent", 1), ("assumed", 1)] do
     let actual ← checked key (counts.getObjValAs? Nat key)
     unless actual == expected do throwError "semantics controls: count {key}: {actual} != {expected}"

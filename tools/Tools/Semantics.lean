@@ -5,6 +5,7 @@ import Effect4.Laws.Auto.Semantics
 import ProofGraph.Ledger
 import ProofGraph.Axioms
 import ProofGraph.Plan
+import ProofGraph.Extract
 
 /-! A measured report of selected claims. English claim-to-witness associations are authored;
 ProofGraph checks their actual propositions. This library neither proves the descriptions nor
@@ -171,6 +172,11 @@ private def claimStatus (memo : IO.Ref ProofGraph.AxiomMemo) (index : Registers)
       discard <| ProofGraph.check #[goal] #[⟨name, .wanted wanted⟩] 1
       return ("wanted", obj [("_tag", text "wanted"),
         ("goal", ← declaration memo name (some goal.proposition)), ("placeholder", text wanted.toString)])
+    -- a part `#extract_obligations` declared is pending without a placeholder: its tag holds
+    -- its place; a part with a `wanted` too is refused above as stale only if also proved
+    if ProofGraph.isExtractedPart env name then
+      return ("wanted", obj [("_tag", text "wanted"), ("by", text "extraction"),
+        ("goal", ← declaration memo name (some goal.proposition)), ("placeholder", .null)])
     throwError "{name}: missing proof or placeholder"
   | .refutedBy id name =>
     let status ← counterexample index id

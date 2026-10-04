@@ -23,12 +23,22 @@ proved by a theorem `G.partᵢ.checked`; once every part is, `G` is ready and
 The script runs twice, once to read the residual goals and once to build the reduction, the second
 time in a context that does not hold the parts' hypotheses, so it cannot use them. A script whose
 residual goals differ between the runs is refused. The parts get no `wanted` placeholder: the ledger
-goal holds their place, and the placement facts of `AGENTS.md` are the author's to write, as for
-any goal. Universe-polymorphic goals are refused. This reflection is tooling only; it never enters
+goal holds their place, tagged as extracted (`isExtractedPart`) so that the semantics report reads
+a claim on a part as pending, and the placement facts of `AGENTS.md` are the author's to write, as
+for any goal. Universe-polymorphic goals are refused. This reflection is tooling only; it never enters
 stored program content.
 -/
 namespace ProofGraph
 open Lean Meta Elab Term Command
+
+/-- The parts `#extract_obligations` declared. A part has no `wanted` placeholder: its tag is the
+mark that it was declared open by extraction, which the semantics report reads as a pending goal
+(`Tools.Semantics.claimStatus`). -/
+initialize extractedPartExt : TagDeclarationExtension ←
+  mkTagDeclarationExtension `ProofGraph.extractedPart
+
+/-- Whether `n` is a part `#extract_obligations` declared. -/
+def isExtractedPart (env : Environment) (n : Name) : Bool := extractedPartExt.isTagged env n
 
 /-- A residual goal's proposition, closed over the hypotheses in its context other than
 `exclude`, with those hypotheses in order. -/
@@ -84,6 +94,7 @@ def extractObligations (goal : Name) (tac : Syntax) : TermElabM (Array Name × N
     let type := mkApp (mkConst ``Obligation) p
     let value := mkApp (mkConst ``Obligation.mk) p
     addDecl <| .thmDecl { name, levelParams := [], type, value }
+    modifyEnv (extractedPartExt.tag · name)
     parts := parts.push name
   return (parts, reduction)
 

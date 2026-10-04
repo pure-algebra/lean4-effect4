@@ -1,5 +1,6 @@
 import Effect4.Laws.Auto.Semantics
 import ProofGraph.Ledger
+import ProofGraph.Extract
 
 namespace Test.Audit.SemanticsCensus
 
@@ -54,5 +55,11 @@ theorem wrongCheckedGoal : ProofGraph.Obligation False := ⟨⟩
 theorem wrongCheckedGoal.checked : True := True.intro
 theorem wrongWantedGoal : ProofGraph.Obligation True := ⟨⟩
 def wrongWantedGoal.wanted : ProofWanted False := ⟨⟩
+-- An extracted part: pending without a `wanted` placeholder, by its extraction tag. The report
+-- reads a claim on it as wanted (by extraction); `missingGoal` above, written by hand with no
+-- marker, is still refused.
+theorem extractedGoal : ProofGraph.Obligation (True ∧ True) := ⟨⟩
+#extract_obligations extractedGoal using
+  refine ⟨?_, ?_⟩
 
 end Test.Audit.SemanticsCensus
