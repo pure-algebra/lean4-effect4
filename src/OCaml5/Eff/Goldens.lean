@@ -148,6 +148,7 @@ partial def termV : PTerm → V
     .ctor ``Term.field [fieldReadModeV mode, termV target, .str name]
   | .recordSet target name value =>
     .ctor ``Term.recordSet [termV target, .str name, termV value]
+  | .tupleAt target index => .ctor ``Term.tupleAt [termV target, .nat index]
 partial def termsV : Terms → V
   | .nil => .ctor ``Terms.nil []
   | .cons h t => .ctor ``Terms.cons [termV h, termsV t]
@@ -218,6 +219,7 @@ def decisionV : Decision → V
   | .bool => .ctor ``Decision.bool []
   | .option => .ctor ``Decision.option []
   | .tag t => .ctor ``Decision.tag [.str t]
+  | .recordTag t => .ctor ``Decision.recordTag [.str t]
 
 mutual
 partial def effV : Eff NativeOp → V
@@ -505,6 +507,25 @@ def pIllRecordRaw : P := .succeed (.record
 def pIllRecordExtraValue : P := .succeed (.record
   [("x", true, .nat)] [] (ts [n 1]))
 
+/-- Tuple projection retains raw indices and nested term structure. -/
+def pTupleAt : P := .succeed (.tupleAt (.app "pair" (ts [n 7, .lit (.str "second")])) 1)
+def pTupleAtNested : P := .succeed (.field .required
+  (.tupleAt (.app "pair" (ts [recordExample, n 9])) 0) "a-b")
+def pIllTupleAtIndex : P := .succeed (.tupleAt (.app "pair" (ts [n 1, n 2])) 9007199254740993)
+
+/-- Record tag selection keeps the whole record in the selected branch. -/
+def taggedRecordExample : PTerm := .record
+  [("_tag", false, .lit "Found"), ("value", false, .nat)]
+  ["value", "_tag"] (ts [n 7, .lit (.str "Found")])
+def pSelectRecordTag : P := .select taggedRecordExample (.recordTag "Found")
+  (.succeed (v 0)) (.succeed (v 0))
+def pSelectRecordTagMiss : P := .select taggedRecordExample (.recordTag "Other")
+  (.succeed (v 0)) (.succeed (v 0))
+
+/-- The wire retains arbitrary tag strings even on refused program syntax. -/
+def pIllRecordTagRaw : P := .select (v 999) (.recordTag "é\n\"raw")
+  (.succeed (v 0)) (.succeed (v 0))
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -523,7 +544,11 @@ def corpus : List (String × P) :=
   , ("pRecord", pRecord), ("pRecordRequired", pRecordRequired)
   , ("pRecordOptionalAbsent", pRecordOptionalAbsent), ("pRecordOptionalPresent", pRecordOptionalPresent)
   , ("pRecordSet", pRecordSet), ("pIllRecordRaw", pIllRecordRaw)
-  , ("pIllRecordExtraValue", pIllRecordExtraValue) ]
+  , ("pIllRecordExtraValue", pIllRecordExtraValue)
+  , ("pTupleAt", pTupleAt), ("pTupleAtNested", pTupleAtNested)
+  , ("pIllTupleAtIndex", pIllTupleAtIndex)
+  , ("pSelectRecordTag", pSelectRecordTag), ("pSelectRecordTagMiss", pSelectRecordTagMiss)
+  , ("pIllRecordTagRaw", pIllRecordTagRaw) ]
 
 end Corpus
 
