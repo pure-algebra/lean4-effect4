@@ -5,15 +5,18 @@ import Effect4.Program.Admission
 # `E4-TYPED-CE-041`: the API's admission is weaker than a lawful signature
 
 `admitProgram` (`src/Effect4/Program/Admission.lean`) checks a row table's keys, kinds, columns
-and formation. It does not check that every service key a row requires has a carrier. The
-`served` clause of `LawfulSig` (`src/Effect4/Laws/Program/Signature.lean`) does, and the typed
-state's milestones M5–M7 range over lawful sources only (`ProgramSource.lawful`). So a program the
-API admits need not denote a lawful source: the bridge from admission to the typed state takes the
-served premise (`Effect4.Program.Typed.lawfulSig_of_admitted`), until decisions row 21's slice
-makes the signature's admission part of program admission.
+and formation. `LawfulSig` (`src/Effect4/Laws/Program/Signature.lean`) asks three things more, and
+the typed state's milestones M5–M7 range over lawful sources only (`ProgramSource.lawful`):
 
-The witness: one host row that requires the key at service code 30, which no built-in carrier
-serves, and a program that performs that row. Kernel-checked.
+1. every service key a row requires has a carrier (`served`);
+2. every parameter a row's answer or error mentions is bound by its request (`wellScoped`);
+3. no parameter sits under a union head (`templateAdmissible`).
+
+So a program the API admits need not denote a lawful source. The bridge from admission to the
+typed state takes the three as a premise (`AdmissionGap`, `lawfulSig_of_admitted`), until
+decisions row 21's slice makes the signature's admission part of program admission.
+
+The witnesses, one per clause, each admitted by the API and refused by `admitSig`. Kernel-checked.
 -/
 
 set_option autoImplicit false
@@ -39,6 +42,32 @@ theorem admitted : (admitProgram callIt [unservedRow]).toOption.isSome = true :=
 
 /-- The signature of the same table is not lawful: the row's key has no carrier. -/
 theorem refused : admitSig (SigApp.mk [unservedRow] []) = .error (.unservedKey 0 appKey) := by
+  decide +kernel
+
+/-- A row whose answer mentions a parameter its request does not bind (clause 2). -/
+def unscopedRow : Row :=
+  { name := "s", spelling := "S.s", kind := .async, request := .list (.var 0),
+    answer := .list (.var 1), cite := "E4-TYPED-CE-041", registration := .external }
+
+/-- A row with a parameter under a union head (clause 3). -/
+def unionRow : Row :=
+  { name := "u", spelling := "U.u", kind := .async, request := .union (.var 0) .nat, answer := .nat,
+    cite := "E4-TYPED-CE-041", registration := .external }
+
+/-- The API admits a program over each. -/
+theorem admitted_unscoped :
+    (admitProgram (.succeed (.lit .unit)) [unscopedRow]).toOption.isSome = true := by
+  decide +kernel
+theorem admitted_union :
+    (admitProgram (.succeed (.lit .unit)) [unionRow]).toOption.isSome = true := by
+  decide +kernel
+
+/-- `admitSig` refuses each, at the row condition the API skipped. -/
+theorem refused_unscoped :
+    admitSig (SigApp.mk [unscopedRow] []) = .error (.row 0 .notWellScoped) := by
+  decide +kernel
+theorem refused_union :
+    admitSig (SigApp.mk [unionRow] []) = .error (.row 0 (.templateNotAdmissible "request")) := by
   decide +kernel
 
 /-- So the admitted program's table is no lawful source. -/

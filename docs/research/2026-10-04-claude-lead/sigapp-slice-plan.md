@@ -33,11 +33,12 @@ Requirement: R1 (`docs/core/system-map.md` §8). Survey: the coordinator's read-
 
 ## 2. The finding: `E4-TYPED-CE-041`
 
-`admitProgram` checks a table's keys, kinds, columns and formation. It does not check `LawfulSig`'s
-`served` clause: every key a row requires has a carrier. One host row requiring the key at code 30
-is admitted, and so is a program that performs it. `admitSig` refuses the same table
-(`unservedKey 0`). Witness: `Test/Counterexamples/Program/AdmissionUnserved.lean` (`admitted`,
-`refused`, `not_lawful`, by `decide +kernel`).
+`admitProgram` checks a table's keys, kinds, columns and formation. It skips three conditions of
+`LawfulSig`: every key a row requires has a carrier (`served`); every parameter of a row's answer
+or error is bound by its request (`wellScoped`); no parameter sits under a union head
+(`templateAdmissible`). For each, a row the API admits and `admitSig` refuses is kernel-checked in
+`Test/Counterexamples/Program/AdmissionUnserved.lean` (`decide +kernel`). The bridge names the
+three as one premise, `AdmissionGap`.
 
 ## 3. Step 0, landed with this plan
 
@@ -46,8 +47,8 @@ is admitted, and so is a program that performs it. `admitSig` refuses the same t
 | Declaration | Status | What it says |
 | --- | --- | --- |
 | `m7_admitted` | proved | at the empty row table, a program the API admits, with a closed row and an answer-free tape, satisfies M7a–c |
-| `lawfulSig_of_admitted` | planned goal | an admitted table whose required keys are served (`TableServed`) is a lawful signature with the built-in services |
-| `reachable_typed_admitted` | modulo `lawfulSig_of_admitted` | every machine an admitted program's admitted tapes reach is typed |
+| `lawfulSig_of_admitted` | planned goal | an admitted table that meets `AdmissionGap` is a lawful signature with the built-in services |
+| `reachable_typed_admitted` | modulo `lawfulSig_of_admitted` | every machine an admitted program's admitted tapes reach is typed, over a table that meets the gap |
 
 The registry names `m7_admitted` (claim `m7-admitted`, R9) and `lawfulSig_of_admitted` (claim
 `admitted-source-lawful`, R1). `generated/semantics.md` shows the goal as R1's next goal.
@@ -57,9 +58,9 @@ Placement of `lawfulSig_of_admitted`:
 - Concept: `residual-program-typing`; property: admission implies the typed state's lawful source.
 - Question: claim `admitted-source-lawful` (role compatibility); consumer: `AdmittedProgram.source`,
   then `reachable_typed_admitted`.
-- Reach: the built-in services (no declaration), any row table, with the served premise.
+- Reach: the built-in services (no declaration), any row table, with the gap as a premise.
 - Does not establish: program admission at declared services; the premise stays open until step 2.
-- Unlocks: M6 for every program the API admits over a served table (R1).
+- Unlocks: M6 for every program the API admits over a table that meets the gap (R1).
 
 ## 4. The steps
 
@@ -81,8 +82,8 @@ flowchart TD
    program` and keeps `admitSig app = .ok ()`. `admitProgram` runs `admitSig` first, with a new
    refusal `signature (why : SigRefusal)`. Callers at a table move through `⟨table, []⟩`, whose
    signature is `nativeSignature table` by `rfl` (`SigApp.signature_nil`).
-   - `lawfulSig_of_admitted` loses its served premise: `admitSig_ok_iff` gives it. CE-041 is
-     repaired.
+   - `lawfulSig_of_admitted` loses its gap premise: admission checks the three conditions, so
+     `AdmissionGap` follows from it. CE-041 is repaired.
    - Goal to state when the carrier lands: `AdmittedProgram.lawful : LawfulSig app`.
 3. **Authoring and the run.** `Author.build` builds the `SigApp` from `Module.table` and
    `Module.serviceTypes`. `disagreeingService` retires: `admitSig`'s service refusal replaces it.

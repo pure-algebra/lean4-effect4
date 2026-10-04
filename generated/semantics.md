@@ -335,7 +335,7 @@ Literature: deVilhenaPottier2021, audit P8 — excludedFeature
 ```lean
 ∀ {program : Effect4.Program.NativeEff} {table : Effect4.Program.RowTable}
   (a : Effect4.Program.AdmittedProgram program table),
-  Effect4.Program.Typed.TableServed table → Effect4.Program.LawfulSig { rows := table }
+  Effect4.Program.Typed.AdmissionGap table → Effect4.Program.LawfulSig { rows := table }
 ```
 
 ## scope-lifetime-finalization
@@ -1437,7 +1437,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 **admitted-source-lawful: E4-TYPED-CE-041**
 
 ```text
-| `E4-TYPED-CE-041` | SEEDED 2026-10-04 (Claude, the Σ_app slice survey; kernel-checked by `decide +kernel`) | A program the API admits denotes a lawful source: `AdmittedProgram program table` implies `LawfulSig ⟨table, []⟩`, the premise of M5–M7 (`ProgramSource.lawful`) | `Test/Counterexamples/Program/AdmissionUnserved.lean`: one host row requiring the key at service code 30, which no built-in carrier serves, and a program that performs it; `admitted` (the API admits it), `refused` (`admitSig` answers `unservedKey 0`), `not_lawful` | decisions row 21's slice: the signature's admission joins program admission (`docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md`); until then the bridge takes the served premise (`lawfulSig_of_admitted`, `TableServed`) |
+| `E4-TYPED-CE-041` | SEEDED 2026-10-04 (Claude, the Σ_app slice survey; kernel-checked by `decide +kernel`) | A program the API admits denotes a lawful source: `AdmittedProgram program table` implies `LawfulSig ⟨table, []⟩`, the premise of M5–M7 (`ProgramSource.lawful`) | `Test/Counterexamples/Program/AdmissionUnserved.lean`, one witness per clause the API does not check, each admitted by `admitProgram` and refused by `admitSig`: a row requiring the key at service code 30, which no built-in carrier serves, performed by the program (`admitted`, `refused`: `unservedKey 0`, `not_lawful`); a row whose answer mentions an unbound parameter (`admitted_unscoped`, `refused_unscoped`: `notWellScoped`); a parameter under a union head (`admitted_union`, `refused_union`: `templateNotAdmissible`) | decisions row 21's slice: the signature's admission joins program admission (`docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md`); until then the bridge takes the three as a premise (`AdmissionGap`, `lawfulSig_of_admitted`) |
 ```
 
 ## Applicability decisions
@@ -1501,7 +1501,7 @@ A requirement is proved when every top node is proved and no open part remains. 
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
-- Open: admission pinned to the built-in signature and weaker than LawfulSig: AdmittedProgram checks no served key (E4-TYPED-CE-041), and code generation's admission check is at nativeSignature table (decisions row 21; the slice plan, docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md)
+- Open: admission pinned to the built-in signature and weaker than LawfulSig: AdmittedProgram checks neither served keys, row scoping nor union templates (E4-TYPED-CE-041), and code generation's admission check is at nativeSignature table (decisions row 21; the slice plan, docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md)
 - Open: the faces (22 lines) pinned to the built-in signature: Laws/Codegen/Admit, Laws/Codegen/Checked and Laws/Api/ModuleReadable take nativeSignature table (the Σ_app slice; C7, conditional on decisions row 115)
 - Open: meaning, loop and run soundness at service declarations that rebind a code: restored 2026-10-04 at fresh codes only (SoundAnySignature.lean)
 - Open: structured service carriers: LawfulSig admits flat carriers only (decisions row 118, open: waits on a program that needs one)
@@ -1719,14 +1719,14 @@ flowchart LR
 | `meaning_typed_app` | proved | — | `check_restrict`, `meaning_typed` | 75 | 331 |
 | `run_typed_app` | proved | — | `check_restrict`, `meaning_typed`, `run_eq_meaning` | 102 | 1102 |
 | `meaningB_typed_app` | proved | — | `check_restrict`, `normalize_idem`, `hom_eq_cata_ty`, `check_sound`, `check_complete` | 740 | 735 |
-| `reachable_typed_admitted` | modulo | `lawfulSig_of_admitted` | `reachable_typed`, `lawfulSig_of_admitted` | 79 | 1186 |
+| `reachable_typed_admitted` | modulo | `lawfulSig_of_admitted` | `reachable_typed`, `lawfulSig_of_admitted` | 79 | 1181 |
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 70 | 282 |
 | `meaning_typed` | proved | — | `normalize_idem`, `hom_eq_cata_ty`, `check_sound`, `check_complete` | 693 | 649 |
 | `run_eq_meaning` | proved | — | — | 309 | 902 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
 | `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 85 | 1208 |
-| `lawfulSig_of_admitted` | goal | `lawfulSig_of_admitted` | — | 0 | 30 |
+| `lawfulSig_of_admitted` | goal | `lawfulSig_of_admitted` | — | 0 | 2 |
 | `cata_eff_congr_on` | proved | — | — | 63 | 71 |
 | `hom_eq_cata_eff` | proved | — | — | 63 | 77 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1003 | 1482 |
