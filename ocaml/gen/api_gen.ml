@@ -355,14 +355,14 @@ and sync_op =
   | SyncOp_refSet of ref_key * val_
   | SyncOp_refGetAndSet of ref_key * val_
   | SyncOp_refSetAndGet of ref_key * val_
-  | SyncOp_refUpdate of ref_key * fn_name
-  | SyncOp_refGetAndUpdate of ref_key * fn_name
-  | SyncOp_refUpdateAndGet of ref_key * fn_name
-  | SyncOp_refUpdateSome of ref_key * fn_name
-  | SyncOp_refGetAndUpdateSome of ref_key * fn_name
-  | SyncOp_refUpdateSomeAndGet of ref_key * fn_name
-  | SyncOp_refModify of ref_key * fn_name
-  | SyncOp_refModifySome of ref_key * fn_name
+  | SyncOp_refUpdate of ref_key * term * val_ list
+  | SyncOp_refGetAndUpdate of ref_key * term * val_ list
+  | SyncOp_refUpdateAndGet of ref_key * term * val_ list
+  | SyncOp_refUpdateSome of ref_key * term * val_ list
+  | SyncOp_refGetAndUpdateSome of ref_key * term * val_ list
+  | SyncOp_refUpdateSomeAndGet of ref_key * term * val_ list
+  | SyncOp_refModify of ref_key * term * val_ list
+  | SyncOp_refModifySome of ref_key * term * val_ list
   | SyncOp_deferredMake
   | SyncOp_deferredIsDone of deferred_key
   | SyncOp_deferredPoll of deferred_key
@@ -751,12 +751,6 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
   | ScopeState_openInline of 'k * 'f
   | ScopeState_openMap of ('k * 'f) list
   | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) exit_
-and fn_name =
-  | FnName_incr
-  | FnName_double
-  | FnName_zeroWhenPositive
-  | FnName_noChange
-  | FnName_takeAndBump
 and native_atom =
   | NativeAtom_succ
   | NativeAtom_pred
@@ -799,6 +793,12 @@ and native_atom =
   | NativeAtom_mapFromEntries
   | NativeAtom_tuple
 and reason_tag = ReasonTag_fail | ReasonTag_die | ReasonTag_interrupt
+and fn_name =
+  | FnName_incr
+  | FnName_double
+  | FnName_zeroWhenPositive
+  | FnName_noChange
+  | FnName_takeAndBump
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket = { priority : int; tasks : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task list }
 and stuck = Stuck_unknownFiber of fiber_id | Stuck_unknownScope of int | Stuck_unknownRace of int
 and 'u reference = { key : service_key; default : 'u }
@@ -4043,6 +4043,108 @@ let program_async_route (op : native_op) (request : term) (p : point) : (eff_nam
 
 
 
+(* LCNF mono: Effect4.Machine.FnName.updateTerm (x.1 : Effect4.Machine.FnName) : Effect4.Program.Term *)
+
+let fn_name_update_term (x_1 : fn_name) : term =
+  let _jp_2 = fun () -> let _x_3 = 0 in
+  Term_var _x_3 in
+  match (x_1 : fn_name) with
+    | FnName_double -> (let _x_5 = "mul" in
+      let _x_6 = 0 in
+      let _x_7 = Term_var _x_6 in
+      let _x_8 = 2 in
+      let _x_9 = Lit_nat _x_8 in
+      let _x_10 = Term_lit _x_9 in
+      let _x_11 = Terms_nil in
+      let _x_12 = Terms_cons (_x_10, _x_11) in
+      let _x_13 = Terms_cons (_x_7, _x_12) in
+      Term_app (_x_5, _x_13))
+    | FnName_zeroWhenPositive -> _jp_2 ()
+    | FnName_noChange -> _jp_2 ()
+    | _ -> (let _x_15 = "succ" in
+      let _x_16 = 0 in
+      let _x_17 = Term_var _x_16 in
+      let _x_18 = Terms_nil in
+      let _x_19 = Terms_cons (_x_17, _x_18) in
+      Term_app (_x_15, _x_19))
+
+
+
+(* LCNF mono: Effect4.Machine.FnName.updateSomeTerm (x.1 : Effect4.Machine.FnName) : Effect4.Program.Term *)
+
+let fn_name_update_some_term (x_1 : fn_name) : term =
+  match (x_1 : fn_name) with
+    | FnName_noChange -> (let _x_2 = "none" in
+      let _x_3 = Terms_nil in
+      Term_app (_x_2, _x_3))
+    | FnName_zeroWhenPositive -> (let _x_5 = "ite" in
+      let _x_6 = "lt" in
+      let _x_7 = 0 in
+      let _x_8 = Lit_nat _x_7 in
+      let _x_9 = Term_lit _x_8 in
+      let _x_10 = Term_var _x_7 in
+      let _x_11 = Terms_nil in
+      let _x_12 = Terms_cons (_x_10, _x_11) in
+      let _x_13 = Terms_cons (_x_9, _x_12) in
+      let _x_14 = Term_app (_x_6, _x_13) in
+      let _x_15 = "some" in
+      let _x_16 = Terms_cons (_x_9, _x_11) in
+      let _x_17 = Term_app (_x_15, _x_16) in
+      let _x_18 = "none" in
+      let _x_19 = Term_app (_x_18, _x_11) in
+      let _x_20 = Terms_cons (_x_19, _x_11) in
+      let _x_21 = Terms_cons (_x_17, _x_20) in
+      let _x_22 = Terms_cons (_x_14, _x_21) in
+      Term_app (_x_5, _x_22))
+    | _ -> (let _x_24 = "some" in
+      let _x_25 = fn_name_update_term x_1 in
+      let _x_26 = Terms_nil in
+      let _x_27 = Terms_cons (_x_25, _x_26) in
+      Term_app (_x_24, _x_27))
+
+
+
+(* LCNF mono: Effect4.Machine.FnName.modifyTerm (f : Effect4.Machine.FnName) : Effect4.Program.Term *)
+
+let fn_name_modify_term (f : fn_name) : term =
+  let _x_1 = "pair" in
+  let _x_2 = 0 in
+  let _x_3 = Term_var _x_2 in
+  let _x_4 = fn_name_update_term f in
+  let _x_5 = Terms_nil in
+  let _x_6 = Terms_cons (_x_4, _x_5) in
+  let _x_7 = Terms_cons (_x_3, _x_6) in
+  Term_app (_x_1, _x_7)
+
+
+
+(* LCNF mono: Effect4.Machine.FnName.modifySomeTerm (x.1 : Effect4.Machine.FnName) : Effect4.Program.Term *)
+
+let fn_name_modify_some_term (x_1 : fn_name) : term =
+  match (x_1 : fn_name) with
+    | FnName_noChange -> (let _x_2 = "pair" in
+      let _x_3 = 0 in
+      let _x_4 = Term_var _x_3 in
+      let _x_5 = "none" in
+      let _x_6 = Terms_nil in
+      let _x_7 = Term_app (_x_5, _x_6) in
+      let _x_8 = Terms_cons (_x_7, _x_6) in
+      let _x_9 = Terms_cons (_x_4, _x_8) in
+      Term_app (_x_2, _x_9))
+    | _ -> (let _x_11 = "pair" in
+      let _x_12 = 0 in
+      let _x_13 = Term_var _x_12 in
+      let _x_14 = "some" in
+      let _x_15 = fn_name_update_term x_1 in
+      let _x_16 = Terms_nil in
+      let _x_17 = Terms_cons (_x_15, _x_16) in
+      let _x_18 = Term_app (_x_14, _x_17) in
+      let _x_19 = Terms_cons (_x_18, _x_16) in
+      let _x_20 = Terms_cons (_x_13, _x_19) in
+      Term_app (_x_11, _x_20))
+
+
+
 (* LCNF mono: Effect4.Program.NativeOp.syncOpOf (x.1 : Effect4.Program.NativeOp) (x.2 : Effect4.Store.Val) : Option Effect4.Machine.SyncOp *)
 
 let program_native_op_sync_op_of (x_1 : native_op) (x_2 : val_) : sync_op option =
@@ -4102,79 +4204,95 @@ let program_native_op_sync_op_of (x_1 : native_op) (x_2 : val_) : sync_op option
     | NativeOp_refUpdate f_66 -> (match (x_2 : val_) with
         | Val_handle (kind_67, key_68) -> (let _x_69 = 2 in
           let _x_70 = kind_67 = _x_69 in
-          if _x_70 then (let _x_72 = SyncOp_refUpdate (key_68, f_66) in
-            Some _x_72) else None)
+          if _x_70 then (let _x_72 = fn_name_update_term f_66 in
+            let _x_73 = [] in
+            let _x_74 = SyncOp_refUpdate (key_68, _x_72, _x_73) in
+            Some _x_74) else None)
         | _ -> None)
-    | NativeOp_refGetAndUpdate f_75 -> (match (x_2 : val_) with
-        | Val_handle (kind_76, key_77) -> (let _x_78 = 2 in
-          let _x_79 = kind_76 = _x_78 in
-          if _x_79 then (let _x_81 = SyncOp_refGetAndUpdate (key_77, f_75) in
-            Some _x_81) else None)
+    | NativeOp_refGetAndUpdate f_77 -> (match (x_2 : val_) with
+        | Val_handle (kind_78, key_79) -> (let _x_80 = 2 in
+          let _x_81 = kind_78 = _x_80 in
+          if _x_81 then (let _x_83 = fn_name_update_term f_77 in
+            let _x_84 = [] in
+            let _x_85 = SyncOp_refGetAndUpdate (key_79, _x_83, _x_84) in
+            Some _x_85) else None)
         | _ -> None)
-    | NativeOp_refUpdateAndGet f_84 -> (match (x_2 : val_) with
-        | Val_handle (kind_85, key_86) -> (let _x_87 = 2 in
-          let _x_88 = kind_85 = _x_87 in
-          if _x_88 then (let _x_90 = SyncOp_refUpdateAndGet (key_86, f_84) in
-            Some _x_90) else None)
+    | NativeOp_refUpdateAndGet f_88 -> (match (x_2 : val_) with
+        | Val_handle (kind_89, key_90) -> (let _x_91 = 2 in
+          let _x_92 = kind_89 = _x_91 in
+          if _x_92 then (let _x_94 = fn_name_update_term f_88 in
+            let _x_95 = [] in
+            let _x_96 = SyncOp_refUpdateAndGet (key_90, _x_94, _x_95) in
+            Some _x_96) else None)
         | _ -> None)
-    | NativeOp_refUpdateSome f_93 -> (match (x_2 : val_) with
-        | Val_handle (kind_94, key_95) -> (let _x_96 = 2 in
-          let _x_97 = kind_94 = _x_96 in
-          if _x_97 then (let _x_99 = SyncOp_refUpdateSome (key_95, f_93) in
-            Some _x_99) else None)
+    | NativeOp_refUpdateSome f_99 -> (match (x_2 : val_) with
+        | Val_handle (kind_100, key_101) -> (let _x_102 = 2 in
+          let _x_103 = kind_100 = _x_102 in
+          if _x_103 then (let _x_105 = fn_name_update_some_term f_99 in
+            let _x_106 = [] in
+            let _x_107 = SyncOp_refUpdateSome (key_101, _x_105, _x_106) in
+            Some _x_107) else None)
         | _ -> None)
-    | NativeOp_refGetAndUpdateSome f_102 -> (match (x_2 : val_) with
-        | Val_handle (kind_103, key_104) -> (let _x_105 = 2 in
-          let _x_106 = kind_103 = _x_105 in
-          if _x_106 then (let _x_108 = SyncOp_refGetAndUpdateSome (key_104, f_102) in
-            Some _x_108) else None)
+    | NativeOp_refGetAndUpdateSome f_110 -> (match (x_2 : val_) with
+        | Val_handle (kind_111, key_112) -> (let _x_113 = 2 in
+          let _x_114 = kind_111 = _x_113 in
+          if _x_114 then (let _x_116 = fn_name_update_some_term f_110 in
+            let _x_117 = [] in
+            let _x_118 = SyncOp_refGetAndUpdateSome (key_112, _x_116, _x_117) in
+            Some _x_118) else None)
         | _ -> None)
-    | NativeOp_refUpdateSomeAndGet f_111 -> (match (x_2 : val_) with
-        | Val_handle (kind_112, key_113) -> (let _x_114 = 2 in
-          let _x_115 = kind_112 = _x_114 in
-          if _x_115 then (let _x_117 = SyncOp_refUpdateSomeAndGet (key_113, f_111) in
-            Some _x_117) else None)
+    | NativeOp_refUpdateSomeAndGet f_121 -> (match (x_2 : val_) with
+        | Val_handle (kind_122, key_123) -> (let _x_124 = 2 in
+          let _x_125 = kind_122 = _x_124 in
+          if _x_125 then (let _x_127 = fn_name_update_some_term f_121 in
+            let _x_128 = [] in
+            let _x_129 = SyncOp_refUpdateSomeAndGet (key_123, _x_127, _x_128) in
+            Some _x_129) else None)
         | _ -> None)
-    | NativeOp_refModify f_120 -> (match (x_2 : val_) with
-        | Val_handle (kind_121, key_122) -> (let _x_123 = 2 in
-          let _x_124 = kind_121 = _x_123 in
-          if _x_124 then (let _x_126 = SyncOp_refModify (key_122, f_120) in
-            Some _x_126) else None)
+    | NativeOp_refModify f_132 -> (match (x_2 : val_) with
+        | Val_handle (kind_133, key_134) -> (let _x_135 = 2 in
+          let _x_136 = kind_133 = _x_135 in
+          if _x_136 then (let _x_138 = fn_name_modify_term f_132 in
+            let _x_139 = [] in
+            let _x_140 = SyncOp_refModify (key_134, _x_138, _x_139) in
+            Some _x_140) else None)
         | _ -> None)
-    | NativeOp_refModifySome f_129 -> (match (x_2 : val_) with
-        | Val_handle (kind_130, key_131) -> (let _x_132 = 2 in
-          let _x_133 = kind_130 = _x_132 in
-          if _x_133 then (let _x_135 = SyncOp_refModifySome (key_131, f_129) in
-            Some _x_135) else None)
+    | NativeOp_refModifySome f_143 -> (match (x_2 : val_) with
+        | Val_handle (kind_144, key_145) -> (let _x_146 = 2 in
+          let _x_147 = kind_144 = _x_146 in
+          if _x_147 then (let _x_149 = fn_name_modify_some_term f_143 in
+            let _x_150 = [] in
+            let _x_151 = SyncOp_refModifySome (key_145, _x_149, _x_150) in
+            Some _x_151) else None)
         | _ -> None)
     | NativeOp_deferredMake -> (match (x_2 : val_) with
-        | Val_unit -> (let _x_138 = SyncOp_deferredMake in
-          Some _x_138)
+        | Val_unit -> (let _x_154 = SyncOp_deferredMake in
+          Some _x_154)
         | _ -> None)
     | NativeOp_deferredIsDone -> (match (x_2 : val_) with
-        | Val_handle (kind_141, key_142) -> (let _x_143 = 3 in
-          let _x_144 = kind_141 = _x_143 in
-          if _x_144 then (let _x_146 = SyncOp_deferredIsDone key_142 in
-            Some _x_146) else None)
+        | Val_handle (kind_157, key_158) -> (let _x_159 = 3 in
+          let _x_160 = kind_157 = _x_159 in
+          if _x_160 then (let _x_162 = SyncOp_deferredIsDone key_158 in
+            Some _x_162) else None)
         | _ -> None)
     | NativeOp_deferredPoll -> (match (x_2 : val_) with
-        | Val_handle (kind_149, key_150) -> (let _x_151 = 3 in
-          let _x_152 = kind_149 = _x_151 in
-          if _x_152 then (let _x_154 = SyncOp_deferredPoll key_150 in
-            Some _x_154) else None)
+        | Val_handle (kind_165, key_166) -> (let _x_167 = 3 in
+          let _x_168 = kind_165 = _x_167 in
+          if _x_168 then (let _x_170 = SyncOp_deferredPoll key_166 in
+            Some _x_170) else None)
         | _ -> None)
     | NativeOp_deferredSucceed -> (match (x_2 : val_) with
-        | Val_list xs_157 -> (match xs_157 with
-            | head_158 :: tail_159 -> (match (head_158 : val_) with
-                | Val_handle (kind_160, key_161) -> (let _x_162 = 3 in
-                  let _x_163 = kind_160 = _x_162 in
-                  if _x_163 then (match tail_159 with
-                      | head_165 :: tail_166 -> (match (head_165 : val_) with
-                          | Val_nat _ -> (match tail_166 with
-                              | [] -> (let _x_168 = Exit_success head_165 in
-                                let _x_169 = Completion_ofExit _x_168 in
-                                let _x_170 = SyncOp_deferredCompleteWith (key_161, _x_169) in
-                                Some _x_170)
+        | Val_list xs_173 -> (match xs_173 with
+            | head_174 :: tail_175 -> (match (head_174 : val_) with
+                | Val_handle (kind_176, key_177) -> (let _x_178 = 3 in
+                  let _x_179 = kind_176 = _x_178 in
+                  if _x_179 then (match tail_175 with
+                      | head_181 :: tail_182 -> (match (head_181 : val_) with
+                          | Val_nat _ -> (match tail_182 with
+                              | [] -> (let _x_184 = Exit_success head_181 in
+                                let _x_185 = Completion_ofExit _x_184 in
+                                let _x_186 = SyncOp_deferredCompleteWith (key_177, _x_185) in
+                                Some _x_186)
                               | _ -> None)
                           | _ -> None)
                       | _ -> None) else None)
@@ -4182,32 +4300,32 @@ let program_native_op_sync_op_of (x_1 : native_op) (x_2 : val_) : sync_op option
             | _ -> None)
         | _ -> None)
     | NativeOp_deferredFail -> (match (x_2 : val_) with
-        | Val_list xs_178 -> (match xs_178 with
-            | head_179 :: tail_180 -> (match (head_179 : val_) with
-                | Val_handle (kind_181, key_182) -> (let _x_183 = 3 in
-                  let _x_184 = kind_181 = _x_183 in
-                  if _x_184 then (match tail_180 with
-                      | head_186 :: tail_187 -> (match (head_186 : val_) with
-                          | Val_nat n_188 -> (match tail_187 with
-                              | [] -> (let _x_189 = Err_tag n_188 in
-                                let _x_190 = cause_fail _x_189 in
-                                let _x_191 = Exit_failure _x_190 in
-                                let _x_192 = Completion_ofExit _x_191 in
-                                let _x_193 = SyncOp_deferredCompleteWith (key_182, _x_192) in
-                                Some _x_193)
+        | Val_list xs_194 -> (match xs_194 with
+            | head_195 :: tail_196 -> (match (head_195 : val_) with
+                | Val_handle (kind_197, key_198) -> (let _x_199 = 3 in
+                  let _x_200 = kind_197 = _x_199 in
+                  if _x_200 then (match tail_196 with
+                      | head_202 :: tail_203 -> (match (head_202 : val_) with
+                          | Val_nat n_204 -> (match tail_203 with
+                              | [] -> (let _x_205 = Err_tag n_204 in
+                                let _x_206 = cause_fail _x_205 in
+                                let _x_207 = Exit_failure _x_206 in
+                                let _x_208 = Completion_ofExit _x_207 in
+                                let _x_209 = SyncOp_deferredCompleteWith (key_198, _x_208) in
+                                Some _x_209)
                               | _ -> None)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
-    | NativeOp_scopeMake strategy_201 -> (match (x_2 : val_) with
-        | Val_unit -> (let _x_202 = SyncOp_scopeMake strategy_201 in
-          Some _x_202)
+    | NativeOp_scopeMake strategy_217 -> (match (x_2 : val_) with
+        | Val_unit -> (let _x_218 = SyncOp_scopeMake strategy_217 in
+          Some _x_218)
         | _ -> None)
     | NativeOp_clockNow -> (match (x_2 : val_) with
-        | Val_unit -> (let _x_205 = SyncOp_clockNow in
-          Some _x_205)
+        | Val_unit -> (let _x_221 = SyncOp_clockNow in
+          Some _x_221)
         | _ -> None)
     | _ -> None
 
@@ -6054,72 +6172,27 @@ let ref_poke (heap : val_ list) (cell : int) (value : val_) : val_ list =
 
 
 
-(* LCNF mono: Effect4.Machine.FnName.total (x.1 : Effect4.Machine.FnName) (x.2 : Effect4.Store.Val) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.Image.ofTuple2._redArg (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (x.1 : Effect4.Store.Val) : Option (Prod lcAny lcAny) *)
 
-let fn_name_total (x_1 : fn_name) (x_2 : val_) : val_ =
-  let _jp_3 = fun n -> let _x_4 = 1 in
-  let _x_5 = n + _x_4 in
-  Val_nat _x_5 in
-  match (x_1 : fn_name) with
-    | FnName_incr -> (match (x_2 : val_) with
-        | Val_nat n_7 -> _jp_3 n_7
-        | _ -> x_2)
-    | FnName_double -> (match (x_2 : val_) with
-        | Val_nat n_8 -> (let _x_9 = 2 in
-          let _x_10 = let _mula = n_8 in
-          let _mulb = _x_9 in
-          if _mula = 0 then 0 else if _mulb > max_int / _mula then max_int else _mula * _mulb in
-          Val_nat _x_10)
-        | _ -> x_2)
-    | FnName_takeAndBump -> (match (x_2 : val_) with
-        | Val_nat n_12 -> _jp_3 n_12
-        | _ -> x_2)
-    | _ -> x_2
-
-
-
-(* LCNF mono: Effect4.Machine.FnName.partialUpdate (x.1 : Effect4.Machine.FnName) (x.2 : Effect4.Store.Val) : Option Effect4.Store.Val *)
-
-let fn_name_partial_update (x_1 : fn_name) (x_2 : val_) : val_ option =
-  match (x_1 : fn_name) with
-    | FnName_noChange -> None
-    | FnName_zeroWhenPositive -> (match (x_2 : val_) with
-        | Val_nat n_4 -> (let zero = 0 in
-          let is_zero = n_4 = zero in
-          if is_zero then None else (let _x_5 = Val_nat zero in
-            Some _x_5))
+let store_image_of_tuple2 (i : _ image) (j : _ image) (x_1 : val_) : (_ * _) option =
+  match (x_1 : val_) with
+    | Val_list xs_2 -> (match xs_2 with
+        | head_3 :: tail_4 -> (match tail_4 with
+            | head_5 :: tail_6 -> (match tail_6 with
+                | [] -> (match (i : _ image) with
+                    | { of_val = of_val; _ } -> (let _x_7 = of_val head_3 in
+                      match _x_7 with
+                        | Some val__8 -> (match (j : _ image) with
+                            | { of_val = of_val_1; _ } -> (let _x_9 = of_val_1 head_5 in
+                              match _x_9 with
+                                | Some val__10 -> (let _x_11 = val__8, val__10 in
+                                  Some _x_11)
+                                | _ -> None))
+                        | _ -> None))
+                | _ -> None)
+            | _ -> None)
         | _ -> None)
-    | _ -> (let _x_9 = fn_name_total x_1 x_2 in
-      Some _x_9)
-
-
-
-(* LCNF mono: Effect4.Machine.FnName.modify (x.1 : Effect4.Machine.FnName) (x.2 : Effect4.Store.Val) : Prod Effect4.Store.Val Effect4.Store.Val *)
-
-let fn_name_modify (x_1 : fn_name) (x_2 : val_) : val_ * val_ =
-  let _jp_3 = fun f value -> let _x_4 = fn_name_total f value in
-  value, _x_4 in
-  match (x_1 : fn_name) with
-    | FnName_takeAndBump -> (match (x_2 : val_) with
-        | Val_nat n_6 -> (let _x_7 = 1 in
-          let _x_8 = n_6 + _x_7 in
-          let _x_9 = Val_nat _x_8 in
-          x_2, _x_9)
-        | _ -> _jp_3 x_1 x_2)
-    | _ -> _jp_3 x_1 x_2
-
-
-
-(* LCNF mono: Effect4.Machine.FnName.modifySome (x.1 : Effect4.Machine.FnName) (x.2 : Effect4.Store.Val) : Prod Effect4.Store.Val (Option Effect4.Store.Val) *)
-
-let fn_name_modify_some (x_1 : fn_name) (x_2 : val_) : val_ * val_ option =
-  match (x_1 : fn_name) with
-    | FnName_noChange -> (let _x_3 = None in
-      x_2, _x_3)
-    | _ -> (let _x_5 = fn_name_modify x_1 x_2 in
-      match _x_5 with
-        | fst_1, snd_1 -> (let _x_6 = Some snd_1 in
-          fst_1, _x_6))
+    | _ -> None
 
 
 
@@ -6160,81 +6233,142 @@ let ref_step (x_1 : sync_op) (x_2 : val_ list) : (val_ * val_ list) option =
         | Some _ -> (let _x_41 = ref_poke x_2 cell_36 value_37 in
           let _x_42 = value_37, _x_41 in
           Some _x_42))
-    | SyncOp_refUpdate (cell_44, f_45) -> (let _x_46 = list_get_opt_internal x_2 cell_44 in
-      match _x_46 with
+    | SyncOp_refUpdate (cell_44, f_45, env_46) -> (let _x_47 = list_get_opt_internal x_2 cell_44 in
+      match _x_47 with
         | None -> None
-        | Some val__48 -> (let _x_49 = Val_unit in
-          let _x_50 = fn_name_total f_45 val__48 in
-          let _x_51 = ref_poke x_2 cell_44 _x_50 in
-          let _x_52 = _x_49, _x_51 in
-          Some _x_52))
-    | SyncOp_refGetAndUpdate (cell_54, f_55) -> (let _x_56 = list_get_opt_internal x_2 cell_54 in
-      match _x_56 with
+        | Some val__49 -> (let _x_50 = [] in
+          let _x_51 = val__49 :: _x_50 in
+          let _x_52 = env_46 @ _x_51 in
+          let _x_53 = program_eval_term _x_52 f_45 in
+          match _x_53 with
+            | None -> None
+            | Some val__55 -> (let _x_56 = Val_unit in
+              let _x_57 = ref_poke x_2 cell_44 val__55 in
+              let _x_58 = _x_56, _x_57 in
+              Some _x_58)))
+    | SyncOp_refGetAndUpdate (cell_60, f_61, env_62) -> (let _x_63 = list_get_opt_internal x_2 cell_60 in
+      match _x_63 with
         | None -> None
-        | Some val__58 -> (let _x_59 = fn_name_total f_55 val__58 in
-          let _x_60 = ref_poke x_2 cell_54 _x_59 in
-          let _x_61 = val__58, _x_60 in
-          Some _x_61))
-    | SyncOp_refUpdateAndGet (cell_63, f_64) -> (let _x_65 = list_get_opt_internal x_2 cell_63 in
-      match _x_65 with
+        | Some val__65 -> (let _x_66 = [] in
+          let _x_67 = val__65 :: _x_66 in
+          let _x_68 = env_62 @ _x_67 in
+          let _x_69 = program_eval_term _x_68 f_61 in
+          match _x_69 with
+            | None -> None
+            | Some val__71 -> (let _x_72 = ref_poke x_2 cell_60 val__71 in
+              let _x_73 = val__65, _x_72 in
+              Some _x_73)))
+    | SyncOp_refUpdateAndGet (cell_75, f_76, env_77) -> (let _x_78 = list_get_opt_internal x_2 cell_75 in
+      match _x_78 with
         | None -> None
-        | Some val__67 -> (let _x_68 = fn_name_total f_64 val__67 in
-          let _x_69 = ref_poke x_2 cell_63 _x_68 in
-          let _x_70 = _x_68, _x_69 in
-          Some _x_70))
-    | SyncOp_refUpdateSome (cell_72, pf_73) -> (let _x_74 = list_get_opt_internal x_2 cell_72 in
-      match _x_74 with
+        | Some val__80 -> (let _x_81 = [] in
+          let _x_82 = val__80 :: _x_81 in
+          let _x_83 = env_77 @ _x_82 in
+          let _x_84 = program_eval_term _x_83 f_76 in
+          match _x_84 with
+            | None -> None
+            | Some val__86 -> (let _x_87 = ref_poke x_2 cell_75 val__86 in
+              let _x_88 = val__86, _x_87 in
+              Some _x_88)))
+    | SyncOp_refUpdateSome (cell_90, f_91, env_92) -> (let _x_93 = list_get_opt_internal x_2 cell_90 in
+      match _x_93 with
         | None -> None
-        | Some val__76 -> (let _x_77 = Val_unit in
-          let _x_78 = fn_name_partial_update pf_73 val__76 in
-          match _x_78 with
-            | None -> (let _x_79 = _x_77, x_2 in
-              Some _x_79)
-            | Some val__81 -> (let _x_82 = ref_poke x_2 cell_72 val__81 in
-              let _x_83 = _x_77, _x_82 in
-              Some _x_83)))
-    | SyncOp_refGetAndUpdateSome (cell_85, pf_86) -> (let _x_87 = list_get_opt_internal x_2 cell_85 in
-      match _x_87 with
-        | None -> None
-        | Some val__89 -> (let _x_90 = fn_name_partial_update pf_86 val__89 in
-          match _x_90 with
-            | None -> (let _x_91 = val__89, x_2 in
-              Some _x_91)
-            | Some val__93 -> (let _x_94 = ref_poke x_2 cell_85 val__93 in
-              let _x_95 = val__89, _x_94 in
-              Some _x_95)))
-    | SyncOp_refUpdateSomeAndGet (cell_97, pf_98) -> (let _x_99 = list_get_opt_internal x_2 cell_97 in
-      match _x_99 with
-        | None -> None
-        | Some val__101 -> (let _x_102 = fn_name_partial_update pf_98 val__101 in
-          match _x_102 with
-            | None -> (let _x_103 = val__101, x_2 in
-              Some _x_103)
-            | Some val__105 -> (let _x_106 = ref_poke x_2 cell_97 val__105 in
-              let _x_107 = list_get_opt_internal _x_106 cell_97 in
-              match _x_107 with
+        | Some val__95 -> (let _x_96 = [] in
+          let _x_97 = val__95 :: _x_96 in
+          let _x_98 = env_92 @ _x_97 in
+          let _x_99 = program_eval_term _x_98 f_91 in
+          match _x_99 with
+            | None -> None
+            | Some val__101 -> (let _x_102 = store_image_ident in
+              let _x_103 = store_image_of_option _x_102 val__101 in
+              match _x_103 with
                 | None -> None
-                | Some val__109 -> (let _x_110 = val__109, _x_106 in
-                  Some _x_110))))
-    | SyncOp_refModify (cell_112, f_113) -> (let _x_114 = list_get_opt_internal x_2 cell_112 in
-      match _x_114 with
+                | Some val__105 -> (let _x_106 = Val_unit in
+                  match val__105 with
+                    | None -> (let _x_107 = _x_106, x_2 in
+                      Some _x_107)
+                    | Some val__109 -> (let _x_110 = ref_poke x_2 cell_90 val__109 in
+                      let _x_111 = _x_106, _x_110 in
+                      Some _x_111)))))
+    | SyncOp_refGetAndUpdateSome (cell_113, f_114, env_115) -> (let _x_116 = list_get_opt_internal x_2 cell_113 in
+      match _x_116 with
         | None -> None
-        | Some val__116 -> (let _x_117 = fn_name_modify f_113 val__116 in
-          match _x_117 with
-            | fst_1, snd_1 -> (let _x_118 = ref_poke x_2 cell_112 snd_1 in
-              let _x_119 = fst_1, _x_118 in
-              Some _x_119)))
-    | SyncOp_refModifySome (cell_121, pf_122) -> (let _x_123 = list_get_opt_internal x_2 cell_121 in
-      match _x_123 with
+        | Some val__118 -> (let _x_119 = [] in
+          let _x_120 = val__118 :: _x_119 in
+          let _x_121 = env_115 @ _x_120 in
+          let _x_122 = program_eval_term _x_121 f_114 in
+          match _x_122 with
+            | None -> None
+            | Some val__124 -> (let _x_125 = store_image_ident in
+              let _x_126 = store_image_of_option _x_125 val__124 in
+              match _x_126 with
+                | None -> None
+                | Some val__128 -> (match val__128 with
+                    | None -> (let _x_129 = val__118, x_2 in
+                      Some _x_129)
+                    | Some val__131 -> (let _x_132 = ref_poke x_2 cell_113 val__131 in
+                      let _x_133 = val__118, _x_132 in
+                      Some _x_133)))))
+    | SyncOp_refUpdateSomeAndGet (cell_135, f_136, env_137) -> (let _x_138 = list_get_opt_internal x_2 cell_135 in
+      match _x_138 with
         | None -> None
-        | Some val__125 -> (let _x_126 = fn_name_modify_some pf_122 val__125 in
-          match _x_126 with
-            | fst_2, snd_2 -> (let _jp_127 = fun _y_128 -> let _x_129 = ref_poke x_2 cell_121 _y_128 in
-              let _x_130 = fst_2, _x_129 in
-              Some _x_130 in
-              match snd_2 with
-                | None -> _jp_127 val__125
-                | Some val__132 -> _jp_127 val__132)))
+        | Some val__140 -> (let _x_141 = [] in
+          let _x_142 = val__140 :: _x_141 in
+          let _x_143 = env_137 @ _x_142 in
+          let _x_144 = program_eval_term _x_143 f_136 in
+          match _x_144 with
+            | None -> None
+            | Some val__146 -> (let _x_147 = store_image_ident in
+              let _x_148 = store_image_of_option _x_147 val__146 in
+              match _x_148 with
+                | None -> None
+                | Some val__150 -> (match val__150 with
+                    | None -> (let _x_151 = val__140, x_2 in
+                      Some _x_151)
+                    | Some val__153 -> (let _x_154 = ref_poke x_2 cell_135 val__153 in
+                      let _x_155 = list_get_opt_internal _x_154 cell_135 in
+                      match _x_155 with
+                        | None -> None
+                        | Some val__157 -> (let _x_158 = val__157, _x_154 in
+                          Some _x_158))))))
+    | SyncOp_refModify (cell_160, f_161, env_162) -> (let _x_163 = list_get_opt_internal x_2 cell_160 in
+      match _x_163 with
+        | None -> None
+        | Some val__165 -> (let _x_166 = [] in
+          let _x_167 = val__165 :: _x_166 in
+          let _x_168 = env_162 @ _x_167 in
+          let _x_169 = program_eval_term _x_168 f_161 in
+          match _x_169 with
+            | None -> None
+            | Some val__171 -> (let _x_172 = store_image_ident in
+              let _x_173 = store_image_of_tuple2 _x_172 _x_172 val__171 in
+              match _x_173 with
+                | None -> None
+                | Some val__175 -> (match val__175 with
+                    | fst_1, snd_1 -> (let _x_176 = ref_poke x_2 cell_160 snd_1 in
+                      let _x_177 = fst_1, _x_176 in
+                      Some _x_177)))))
+    | SyncOp_refModifySome (cell_179, f_180, env_181) -> (let _x_182 = list_get_opt_internal x_2 cell_179 in
+      match _x_182 with
+        | None -> None
+        | Some val__184 -> (let _x_185 = [] in
+          let _x_186 = val__184 :: _x_185 in
+          let _x_187 = env_181 @ _x_186 in
+          let _x_188 = program_eval_term _x_187 f_180 in
+          match _x_188 with
+            | None -> None
+            | Some val__190 -> (let _x_191 = store_image_ident in
+              let _x_192 = store_image_option _x_191 in
+              let _x_193 = store_image_of_tuple2 _x_191 _x_192 val__190 in
+              match _x_193 with
+                | None -> None
+                | Some val__195 -> (match val__195 with
+                    | fst_2, snd_2 -> (let _jp_196 = fun _y_197 -> let _x_198 = ref_poke x_2 cell_179 _y_197 in
+                      let _x_199 = fst_2, _x_198 in
+                      Some _x_199 in
+                      match snd_2 with
+                        | None -> _jp_196 val__184
+                        | Some val__201 -> _jp_196 val__201)))))
     | _ -> None
 
 

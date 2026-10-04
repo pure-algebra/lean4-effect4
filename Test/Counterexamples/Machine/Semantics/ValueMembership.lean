@@ -122,9 +122,9 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .refSet cell v => ∃ ty, w.Ρ cell = some ty ∧ StrongValue w ty v
   | .refGetAndSet cell v => ∃ ty, w.Ρ cell = some ty ∧ StrongValue w ty v
   | .refSetAndGet cell v => ∃ ty, w.Ρ cell = some ty ∧ StrongValue w ty v
-  | .refUpdate cell _ | .refGetAndUpdate cell _ | .refUpdateAndGet cell _
-  | .refUpdateSome cell _ | .refGetAndUpdateSome cell _ | .refUpdateSomeAndGet cell _
-  | .refModify cell _ | .refModifySome cell _ => ∃ ty, w.Ρ cell = some ty
+  | .refUpdate cell _ _ | .refGetAndUpdate cell _ _ | .refUpdateAndGet cell _ _
+  | .refUpdateSome cell _ _ | .refGetAndUpdateSome cell _ _ | .refUpdateSomeAndGet cell _ _
+  | .refModify cell _ _ | .refModifySome cell _ _ => ∃ ty, w.Ρ cell = some ty
   | .deferredMake => cert.1.closed = true ∧ cert.2.closed = true
   | .deferredIsDone key | .deferredPoll key | .deferredAwaitCleanup key _ _ => (w.«Π» key).isSome = true
   | .deferredCompleteWith key _ => (w.«Π» key).isSome = true
@@ -144,10 +144,12 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .refSet cell _ => ans = Val.cell cell
   | .refGetAndSet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
   | .refSetAndGet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
-  | .refUpdate _ _ | .refUpdateSome _ _ => ans = Val.unit
-  | .refGetAndUpdate cell _ | .refGetAndUpdateSome cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
-  | .refUpdateAndGet cell _ | .refUpdateSomeAndGet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
-  | .refModify _ _ | .refModifySome _ _ => ∃ n, ans = Val.nat n
+  | .refUpdate _ _ _ | .refUpdateSome _ _ _ => ans = Val.unit
+  | .refGetAndUpdate cell _ _ | .refGetAndUpdateSome cell _ _ =>
+    ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
+  | .refUpdateAndGet cell _ _ | .refUpdateSomeAndGet cell _ _ =>
+    ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
+  | .refModify _ _ _ | .refModifySome _ _ _ => ∃ n, ans = Val.nat n
   | .deferredMake => ∃ key : DeferredKey, ans = Val.promise key ∧ w'.«Π» key = some cert
   | .deferredIsDone _ => ∃ b, ans = Val.bool b
   | .deferredPoll _ => ∃ b, ans = Val.bool b

@@ -23,8 +23,10 @@ module owns:
 
 The read-modify-write rows carry their pure function as a `FnName` *in the operation*
 (`Ref.update(ref, incr)` is the row `refUpdate FnName.incr` on the request `ref`): rc.112
-takes a JavaScript function, DB-02 forbids storing one, and the store already interprets the
-names. The Layer and Context rows (`RowKind.program`) are not in this first cut.
+takes a JavaScript function, and DB-02 forbids storing one. The store runs binder terms
+(decisions row 43), so `syncOpOf` hands it the name's lowering at the row's shape. The rows
+carry terms themselves at T3 of the state plan. The Layer and Context rows (`RowKind.program`)
+are not in this first cut.
 -/
 
 @[expose] public section
@@ -243,21 +245,25 @@ def row (op : NativeOp) : Row :=
 
 /-- The store operation a row runs on a request value; `none` is a request of the wrong
 shape, which the compile turns into the `badName` defect (`Deep.Stores` does the same for a
-continuation applied to the wrong value). -/
+continuation applied to the wrong value). A read-modify-write row runs its name's lowering at
+the row's shape, with the environment `[]` (`FnName.updateTerm` and its three siblings,
+`Machine/Stores.lean`). -/
 def syncOpOf : NativeOp → Val → Option SyncOp
   | refMake, Val.nat n => some (SyncOp.refMake (Val.nat n))
   | refGet, Val.cell ⟨k⟩ => some (SyncOp.refGet ⟨k⟩)
   | refSet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSet ⟨k⟩ v)
   | refGetAndSet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refGetAndSet ⟨k⟩ v)
   | refSetAndGet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSetAndGet ⟨k⟩ v)
-  | refUpdate f, Val.cell ⟨k⟩ => some (SyncOp.refUpdate ⟨k⟩ f)
-  | refGetAndUpdate f, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdate ⟨k⟩ f)
-  | refUpdateAndGet f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateAndGet ⟨k⟩ f)
-  | refUpdateSome f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSome ⟨k⟩ f)
-  | refGetAndUpdateSome f, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdateSome ⟨k⟩ f)
-  | refUpdateSomeAndGet f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSomeAndGet ⟨k⟩ f)
-  | refModify f, Val.cell ⟨k⟩ => some (SyncOp.refModify ⟨k⟩ f)
-  | refModifySome f, Val.cell ⟨k⟩ => some (SyncOp.refModifySome ⟨k⟩ f)
+  | refUpdate f, Val.cell ⟨k⟩ => some (SyncOp.refUpdate ⟨k⟩ f.updateTerm [])
+  | refGetAndUpdate f, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdate ⟨k⟩ f.updateTerm [])
+  | refUpdateAndGet f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateAndGet ⟨k⟩ f.updateTerm [])
+  | refUpdateSome f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSome ⟨k⟩ f.updateSomeTerm [])
+  | refGetAndUpdateSome f, Val.cell ⟨k⟩ =>
+    some (SyncOp.refGetAndUpdateSome ⟨k⟩ f.updateSomeTerm [])
+  | refUpdateSomeAndGet f, Val.cell ⟨k⟩ =>
+    some (SyncOp.refUpdateSomeAndGet ⟨k⟩ f.updateSomeTerm [])
+  | refModify f, Val.cell ⟨k⟩ => some (SyncOp.refModify ⟨k⟩ f.modifyTerm [])
+  | refModifySome f, Val.cell ⟨k⟩ => some (SyncOp.refModifySome ⟨k⟩ f.modifySomeTerm [])
   | deferredMake, Val.unit => some SyncOp.deferredMake
   | deferredIsDone, Val.promise ⟨k⟩ => some (SyncOp.deferredIsDone ⟨k⟩)
   | deferredPoll, Val.promise ⟨k⟩ => some (SyncOp.deferredPoll ⟨k⟩)

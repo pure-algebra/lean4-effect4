@@ -14,7 +14,10 @@ a declaration that keeps the frozen name but weakens the statement fails here
 over first-order values: the store operations the compile contract's programs perform
 (`Test/Program/CompileContract.lean`: `pRefSet`, `pRefUpdate`, `pRefModify`), one Deferred and
 one Scope sequence for the store rows, the pure functions on numbers, and the two register rows.
-Every helper is a store or an answer, never a rendering. `Stores.WF` is decided through the
+Every helper is a store or an answer, never a rendering. The read-modify-write rows run their
+names' lowerings (decisions row 43): on numbers they run the names' kernels (`kernel_term_agrees`),
+and on a non-number a computing name's lowering stops, where the name answered the value
+unchanged (the guards of section `Functions`). `Stores.WF` is decided through the
 instance the modules supply. Every cell today's rows reach holds a number, the guard
 `refs.all (Val.hasTy · .nat)`: the cell spelling reads as a cell declared at `nat` (decisions
 row 96 D2). `Val.hasTy` is well-founded, so its guards are evaluations, never `decide`.
@@ -61,10 +64,11 @@ def answer (o : SyncOp) (s : Stores) : Option Val := (syncOpStep o s).map Prod.s
 def s1 : Stores := after (SyncOp.refMake (Val.nat 5)) Stores.empty
 /-- `Ref.set(ref, 7)` after `Ref.make(5)`: `pRefSet`'s second step. -/
 def s1set : Stores := after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1
-/-- `Ref.update(ref, incr)` after `Ref.make(5)`: `pRefUpdate`'s second step. -/
-def s1upd : Stores := after (SyncOp.refUpdate ⟨0⟩ .incr) s1
+/-- `Ref.update(ref, incr)` after `Ref.make(5)`: `pRefUpdate`'s second step, running `incr`'s
+lowering (decisions row 43). -/
+def s1upd : Stores := after (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) s1
 /-- `Ref.modify(ref, takeAndBump)` after `Ref.make(5)`: `pRefModify`'s second step. -/
-def s1mod : Stores := after (SyncOp.refModify ⟨0⟩ .takeAndBump) s1
+def s1mod : Stores := after (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) s1
 /-- `Deferred.make()` on the empty store. -/
 def s2 : Stores := after SyncOp.deferredMake Stores.empty
 /-- `Deferred.succeed(d, 1)` after `Deferred.make()`. -/
@@ -99,6 +103,13 @@ example (w : Typed.World) : Denote.StoreFits w ↔ Typed.CellsTyped w ∧ w.stat
 /-- After a run: a later world in the host order whose store fits. -/
 example (w w' : Typed.World) : Denote.StoreOk w w' ↔ w.leHost w' ∧ Denote.StoreFits w' :=
   ⟨fun h => ⟨h.le, h.store⟩, fun h => ⟨h.1, h.2⟩⟩
+
+/-- The cutover's connector (the state plan's T2), at its exact proposition: a read-modify-write
+row lowered through its name's term runs on every number the kernel the name ran. -/
+example : ∀ {op : NativeOp} {k : RefKernel}, op.fnKernel = some k → ∀ (cell : RefKey),
+    ∃ o k', op.syncOpOf (Val.cell cell) = some o ∧ o.refKernel = some (cell, k') ∧
+      ∀ n, k' (.nat n) = k (.nat n) :=
+  @kernel_term_agrees
 
 /-! ## The register rows -/
 
@@ -256,9 +267,9 @@ section RefUpdate
 
 #guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row (.refUpdate .incr)).request
 #guard NativeOp.syncOpOf (.refUpdate .incr) (Val.cell ⟨0⟩)
-  = some (SyncOp.refUpdate ⟨0⟩ .incr)
-#guard SyncOp.validIn s1 (SyncOp.refUpdate ⟨0⟩ .incr) = true
-#guard answer (SyncOp.refUpdate ⟨0⟩ .incr) s1 = some Val.unit
+  = some (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm [])
+#guard SyncOp.validIn s1 (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) = true
+#guard answer (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) s1 = some Val.unit
 #guard Val.hasTy Val.unit (NativeOp.row (.refUpdate .incr)).answer
 #guard Stores.WF s1upd
 #guard s1upd.refs.all (Val.hasTy · .nat)
@@ -274,9 +285,9 @@ section RefModify
 
 #guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row (.refModify .takeAndBump)).request
 #guard NativeOp.syncOpOf (.refModify .takeAndBump) (Val.cell ⟨0⟩)
-  = some (SyncOp.refModify ⟨0⟩ .takeAndBump)
-#guard SyncOp.validIn s1 (SyncOp.refModify ⟨0⟩ .takeAndBump) = true
-#guard answer (SyncOp.refModify ⟨0⟩ .takeAndBump) s1 = some (Val.nat 5)
+  = some (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm [])
+#guard SyncOp.validIn s1 (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) = true
+#guard answer (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) s1 = some (Val.nat 5)
 #guard Val.hasTy (Val.nat 5) (NativeOp.row (.refModify .takeAndBump)).answer
 #guard Stores.WF s1mod
 #guard s1mod.refs.all (Val.hasTy · .nat)
@@ -300,6 +311,22 @@ section Functions
 #guard Val.hasTy ((FnName.modifySome .noChange (Val.nat 5)).2.getD (Val.nat 5)) .nat
 -- the functions fix a non-number, so the typing of the result is the typing of the argument
 #guard Val.hasTy (FnName.total .incr (Val.bool true)) .nat = false
+-- the connector holds on numbers only (the state plan's T2, ruling D1): a computing name fixes a
+-- non-number, and its lowering stops there; the identity names agree on every value
+#guard FnName.total .incr (Val.bool true) = Val.bool true
+#guard Program.evalTerm [Val.bool true] FnName.incr.updateTerm = none
+#guard FnName.modify .incr (Val.bool true) = (Val.bool true, Val.bool true)
+#guard Program.evalTerm [Val.bool true] FnName.incr.modifyTerm = none
+#guard FnName.partialUpdate .zeroWhenPositive (Val.bool true) = none
+#guard Program.evalTerm [Val.bool true] FnName.zeroWhenPositive.updateSomeTerm = none
+#guard Program.evalTerm [Val.bool true] FnName.noChange.updateTerm =
+  some (FnName.total .noChange (Val.bool true))
+-- on a number the lowered row runs the name's kernel (`kernel_term_agrees`)
+#guard answer (SyncOp.refUpdate ⟨0⟩ FnName.double.updateTerm []) s1 = some Val.unit
+#guard (after (SyncOp.refUpdate ⟨0⟩ FnName.double.updateTerm []) s1).refs = [Val.nat 10]
+#guard answer (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) s1 =
+  some (Val.nat 0)
+#guard answer (SyncOp.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm []) s1 = some (Val.nat 5)
 
 end Functions
 

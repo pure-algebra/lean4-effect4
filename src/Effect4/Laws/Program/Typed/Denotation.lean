@@ -2351,6 +2351,103 @@ theorem refRead_nat {w : World} {key : RefKey} {ty : Ty} {ans : Val}
   cases hlookup'
   exact fits_subN w hequiv.1 ans hfit
 
+/-! #### The names' lowerings at a cell declared equivalent to `nat`
+
+Each read-modify-write row runs its name's lowering (`FnName.updateTerm` and its three siblings,
+`Machine/Stores.lean`). At a cell declared equivalent to `nat` the cell holds a number, the
+lowering evaluates to the name's answer on it (`FnName.updateTerm_agrees`), and a number fits
+wherever another does (`fits_nat_irrel`). So each lowering maps the cell's type into its shape's
+result type at every later world (`TermMaps`): the four discharges `syncRow_typed` reads. They
+retire at T3 of the state plan, when the rows carry terms that the checker types. -/
+
+/-- On a `nat` cell, `modify` answers the old value and writes a `nat`. -/
+theorem modify_nat (f : FnName) (n : Nat) :
+    (f.modify (.nat n)).1 = .nat n ∧ ∃ m, (f.modify (.nat n)).2 = .nat m := by
+  cases f <;> exact ⟨rfl, _, rfl⟩
+
+theorem modifySome_nat (f : FnName) (n : Nat) :
+    (f.modifySome (.nat n)).1 = .nat n ∧ ∃ m, (f.modifySome (.nat n)).2.getD (.nat n) = .nat m := by
+  cases f <;> exact ⟨rfl, _, rfl⟩
+
+/-- A total read-modify-write keeps the cell's value at its declared type: it writes a number for
+a number (`fits_nat_irrel`) and leaves every other value as it is. -/
+theorem fits_total {w : World} (f : FnName) {a : Val} {t : Ty} (h : Fits w a t) :
+    Fits w (f.total a) t := by
+  unfold FnName.total
+  split
+  · exact fits_nat_irrel w _ _ t h
+  · exact fits_nat_irrel w _ _ t h
+  · exact fits_nat_irrel w _ _ t h
+  · exact h
+
+/-- A partial read-modify-write that writes keeps the cell's value at its declared type: it writes
+`0` for a positive number, or the total update. -/
+theorem fits_partialUpdate {w : World} (f : FnName) {a a' : Val} {t : Ty} (h : Fits w a t)
+    (hp : f.partialUpdate a = some a') : Fits w a' t := by
+  unfold FnName.partialUpdate at hp
+  split at hp
+  · cases hp
+  · cases hp
+    exact fits_nat_irrel w _ 0 t h
+  · cases hp
+  · cases hp
+    exact fits_total _ h
+
+/-- A member of a type equivalent to `nat` is a number. -/
+theorem nat_of_equiv {w : World} {t : Ty} (equiv : Equiv t .nat) {a : Val} (h : Fits w a t) :
+    ∃ n, a = .nat n :=
+  fits_nat_inv (fits_subN w equiv.1 a h)
+
+/-- The option image of members of `t` is a member of `Option<t>`. -/
+theorem fits_toOption {w : World} {t : Ty} {o : Option Val}
+    (h : ∀ a, o = some a → Fits w a t) :
+    Fits w (Store.Image.toOption Store.Image.ident o) (.option t) := by
+  cases o with
+  | none => exact trivial
+  | some a => exact h a rfl
+
+/-- The `A → A` lowering maps a cell type equivalent to `nat` into itself. -/
+theorem updateTerm_maps {w : World} {t : Ty} (equiv : Equiv t .nat) (f : FnName) :
+    TermMaps w f.updateTerm [] t t := by
+  intro w' _ a ha
+  obtain ⟨n, rfl⟩ := nat_of_equiv equiv ha
+  exact ⟨_, FnName.updateTerm_agrees f n, fits_total f ha⟩
+
+/-- The `A → Option<A>` lowering maps a cell type equivalent to `nat` into its option. -/
+theorem updateSomeTerm_maps {w : World} {t : Ty} (equiv : Equiv t .nat) (f : FnName) :
+    TermMaps w f.updateSomeTerm [] t (.option t) := by
+  intro w' _ a ha
+  obtain ⟨n, rfl⟩ := nat_of_equiv equiv ha
+  exact ⟨_, FnName.updateSomeTerm_agrees f n,
+    fits_toOption fun _ h => fits_partialUpdate f ha h⟩
+
+/-- The `A → [B, A]` lowering maps a cell type equivalent to `nat` into `[nat, A]`. -/
+theorem modifyTerm_maps {w : World} {t : Ty} (equiv : Equiv t .nat) (f : FnName) :
+    TermMaps w f.modifyTerm [] t (.prod .nat t) := by
+  intro w' _ a ha
+  obtain ⟨n, rfl⟩ := nat_of_equiv equiv ha
+  obtain ⟨answer, m, written⟩ := modify_nat f n
+  refine ⟨_, FnName.modifyTerm_agrees f n, (fits_prod_iff _ _ _ _).mpr ⟨_, _, rfl, ?_, ?_⟩⟩
+  · rw [answer]
+    exact trivial
+  · rw [written]
+    exact fits_nat_irrel w' n m t ha
+
+/-- The `A → [B, Option<A>]` lowering maps a cell type equivalent to `nat` into
+`[nat, Option<A>]`. -/
+theorem modifySomeTerm_maps {w : World} {t : Ty} (equiv : Equiv t .nat) (f : FnName) :
+    TermMaps w f.modifySomeTerm [] t (.prod .nat (.option t)) := by
+  intro w' _ a ha
+  obtain ⟨n, rfl⟩ := nat_of_equiv equiv ha
+  refine ⟨_, FnName.modifySomeTerm_agrees f n, (fits_prod_iff _ _ _ _).mpr ⟨_, _, rfl, ?_, ?_⟩⟩
+  · rw [(modifySome_nat f n).1]
+    exact trivial
+  · refine fits_toOption fun a' h => ?_
+    obtain ⟨_, m, written⟩ := modifySome_nat f n
+    rw [h] at written
+    cases written
+    exact fits_nat_irrel w' n m t ha
+
 /-- **The store rows**: a request fitting a `sync` row's request column decodes to the row's
 store operation (`NativeOp.syncOpOf`), whose pre it meets at a certificate the row fixes, and
 whose post answers at the row's answer column at every later world. -/
@@ -2427,9 +2524,10 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
   | refUpdate f =>
     obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
-    obtain ⟨t', hlookup, _⟩ := hdecl
-    refine ⟨SyncOp.refUpdate k f, rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refUpdate k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refUpdate k f.updateTerm [], rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refUpdate k f.updateTerm []) (cert := ())
+      ⟨t', hlookup, updateTerm_maps hequiv f⟩ ?_
     intro w' ord ans post
     subst post
     refine TypedProg.pure ?_
@@ -2437,8 +2535,9 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
   | refGetAndUpdate f =>
     obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
     obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refGetAndUpdate k f, rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refGetAndUpdate k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    refine ⟨SyncOp.refGetAndUpdate k f.updateTerm [], rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refGetAndUpdate k f.updateTerm []) (cert := ())
+      ⟨t', hlookup, updateTerm_maps hequiv f⟩ ?_
     intro w' ord ans post
     obtain ⟨ty, hlookup', hfit'⟩ := post
     refine TypedProg.pure ?_
@@ -2447,8 +2546,9 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
   | refUpdateAndGet f =>
     obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
     obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refUpdateAndGet k f, rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refUpdateAndGet k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    refine ⟨SyncOp.refUpdateAndGet k f.updateTerm [], rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refUpdateAndGet k f.updateTerm []) (cert := ())
+      ⟨t', hlookup, updateTerm_maps hequiv f⟩ ?_
     intro w' ord ans post
     obtain ⟨ty, hlookup', hfit'⟩ := post
     refine TypedProg.pure ?_
@@ -2456,9 +2556,10 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
   | refUpdateSome f =>
     obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
-    obtain ⟨t', hlookup, _⟩ := hdecl
-    refine ⟨SyncOp.refUpdateSome k f, rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refUpdateSome k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refUpdateSome k f.updateSomeTerm [], rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refUpdateSome k f.updateSomeTerm []) (cert := ())
+      ⟨t', hlookup, updateSomeTerm_maps hequiv f⟩ ?_
     intro w' ord ans post
     subst post
     refine TypedProg.pure ?_
@@ -2466,8 +2567,9 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
   | refGetAndUpdateSome f =>
     obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
     obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refGetAndUpdateSome k f, rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refGetAndUpdateSome k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    refine ⟨SyncOp.refGetAndUpdateSome k f.updateSomeTerm [], rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refGetAndUpdateSome k f.updateSomeTerm []) (cert := ())
+      ⟨t', hlookup, updateSomeTerm_maps hequiv f⟩ ?_
     intro w' ord ans post
     obtain ⟨ty, hlookup', hfit'⟩ := post
     refine TypedProg.pure ?_
@@ -2476,8 +2578,9 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
   | refUpdateSomeAndGet f =>
     obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
     obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refUpdateSomeAndGet k f, rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refUpdateSomeAndGet k f) (cert := ()) ⟨t', hlookup⟩ ?_
+    refine ⟨SyncOp.refUpdateSomeAndGet k f.updateSomeTerm [], rfl, ?_⟩
+    refine TypedProg.store (op := SyncOp.refUpdateSomeAndGet k f.updateSomeTerm []) (cert := ())
+      ⟨t', hlookup, updateSomeTerm_maps hequiv f⟩ ?_
     intro w' ord ans post
     obtain ⟨ty, hlookup', hfit'⟩ := post
     refine TypedProg.pure ?_
@@ -2485,20 +2588,24 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     exact refRead_nat (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
   | refModify f =>
     obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
-    refine ⟨SyncOp.refModify k f, rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refModify k f) (cert := ()) hdecl ?_
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refModify k f.modifyTerm [], rfl, ?_⟩
+    -- the certificate is the answer column `nat`, the row's
+    refine TypedProg.store (op := SyncOp.refModify k f.modifyTerm []) (cert := .nat)
+      ⟨t', hlookup, modifyTerm_maps hequiv f⟩ ?_
     intro w' ord ans post
-    obtain ⟨n, rfl⟩ := post
     refine TypedProg.pure ?_
-    refine strongExit_success w' _ (Val.nat n) trivial
+    exact strongExit_success w' _ ans post
   | refModifySome f =>
     obtain ⟨k, rfl, hdecl⟩ := fits_refTy_inv hfit
-    refine ⟨SyncOp.refModifySome k f, rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refModifySome k f) (cert := ()) hdecl ?_
+    obtain ⟨t', hlookup, hequiv⟩ := hdecl
+    refine ⟨SyncOp.refModifySome k f.modifySomeTerm [], rfl, ?_⟩
+    -- the certificate is the answer column `nat`, the row's
+    refine TypedProg.store (op := SyncOp.refModifySome k f.modifySomeTerm []) (cert := .nat)
+      ⟨t', hlookup, modifySomeTerm_maps hequiv f⟩ ?_
     intro w' ord ans post
-    obtain ⟨n, rfl⟩ := post
     refine TypedProg.pure ?_
-    refine strongExit_success w' _ (Val.nat n) trivial
+    exact strongExit_success w' _ ans post
   | deferredMake =>
     have hv : v = Val.unit := fits_unit_inv hfit
     subst hv

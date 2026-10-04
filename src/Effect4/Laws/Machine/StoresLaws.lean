@@ -23,10 +23,12 @@ What is deliberately not said, each named so it is a refusal and not an omission
 * `ScopeStore.forkChild` is reached through `SyncOp.scopeFork` since the join; the memo world's
   operations are the join's, with `Stores.MemoValid` the conjunct `WF` gained for them.
 
-`SyncOp.validIn` is a sufficient condition for `syncOpStep` to answer, not a necessary one:
-`deferredCompleteWith` on an unknown cell answers `false` without stepping into the frontier
-(`DeferredStore.complete`, `Stores.lean:742-751`), and the argument value of `refMake` is
-part of validity because `syncOpStep_wf` stores it (plan §7).
+`SyncOp.validIn`, with a heap row's kernel answering on the value its cell holds, is a sufficient
+condition for `syncOpStep` to answer, not a necessary one: `deferredCompleteWith` on an unknown
+cell answers `false` without stepping into the frontier (`DeferredStore.complete`,
+`Stores.lean:742-751`), and the argument value of `refMake` is part of validity because
+`syncOpStep_wf` stores it (plan §7). A term row's environment is part of validity too: its term's
+value carries only the environment's frames and the read value's.
 -/
 
 set_option autoImplicit false
@@ -168,23 +170,24 @@ theorem Val.validIn_exitErr (s : Stores) (cause : CauseV) : Val.validIn s (Val.e
 
 /-- An operation's keys and argument values exist in the store (plan §3.1, ENSURES 12): the
 `Ref` rows on the cell index and, where a value is written (`refMake`, `refSet`,
-`refGetAndSet`, `refSetAndGet`; `Stores.lean:485-493`), on that value; the Deferred rows on
-the cell index (`:1211-1224`); `deferredMake` and `scopeMake` unconditionally; `scopeAdd`,
-`scopeRemove` and `scopeIsClosed` on the entry (`:1228-1234`). -/
+`refGetAndSet`, `refSetAndGet`; `Stores.lean:485-493`), on that value, and a term row on its
+environment (decisions row 43); the Deferred rows on the cell index (`:1211-1224`);
+`deferredMake` and `scopeMake` unconditionally; `scopeAdd`, `scopeRemove` and `scopeIsClosed` on
+the entry (`:1228-1234`). -/
 def SyncOp.validIn (s : Stores) : SyncOp → Bool
   | SyncOp.refMake initial => initial.validIn s
   | SyncOp.refGet cell => cell.index < s.refs.length
   | SyncOp.refSet cell value => cell.index < s.refs.length && value.validIn s
   | SyncOp.refGetAndSet cell value => cell.index < s.refs.length && value.validIn s
   | SyncOp.refSetAndGet cell value => cell.index < s.refs.length && value.validIn s
-  | SyncOp.refUpdate cell _ => cell.index < s.refs.length
-  | SyncOp.refGetAndUpdate cell _ => cell.index < s.refs.length
-  | SyncOp.refUpdateAndGet cell _ => cell.index < s.refs.length
-  | SyncOp.refUpdateSome cell _ => cell.index < s.refs.length
-  | SyncOp.refGetAndUpdateSome cell _ => cell.index < s.refs.length
-  | SyncOp.refUpdateSomeAndGet cell _ => cell.index < s.refs.length
-  | SyncOp.refModify cell _ => cell.index < s.refs.length
-  | SyncOp.refModifySome cell _ => cell.index < s.refs.length
+  | SyncOp.refUpdate cell _ env => cell.index < s.refs.length && Val.validInList s env
+  | SyncOp.refGetAndUpdate cell _ env => cell.index < s.refs.length && Val.validInList s env
+  | SyncOp.refUpdateAndGet cell _ env => cell.index < s.refs.length && Val.validInList s env
+  | SyncOp.refUpdateSome cell _ env => cell.index < s.refs.length && Val.validInList s env
+  | SyncOp.refGetAndUpdateSome cell _ env => cell.index < s.refs.length && Val.validInList s env
+  | SyncOp.refUpdateSomeAndGet cell _ env => cell.index < s.refs.length && Val.validInList s env
+  | SyncOp.refModify cell _ env => cell.index < s.refs.length && Val.validInList s env
+  | SyncOp.refModifySome cell _ env => cell.index < s.refs.length && Val.validInList s env
   | SyncOp.deferredMake => true
   | SyncOp.deferredIsDone cell => cell.index < s.deferreds.cells.length
   | SyncOp.deferredPoll cell => cell.index < s.deferreds.cells.length
@@ -285,11 +288,15 @@ theorem SyncOp.validIn_mono {s s' : Stores} (hle : s.le s') (o : SyncOp)
   | refSet cell value | refGetAndSet cell value | refSetAndGet cell value =>
     simp only [SyncOp.validIn, Bool.and_eq_true, decide_eq_true_eq] at h ⊢
     exact ⟨Nat.lt_of_lt_of_le h.1 hle.1, Val.validIn_mono hle value h.2⟩
-  | refGet cell | refUpdate cell _ | refGetAndUpdate cell _ | refUpdateAndGet cell _
-  | refUpdateSome cell _ | refGetAndUpdateSome cell _ | refUpdateSomeAndGet cell _
-  | refModify cell _ | refModifySome cell _ =>
+  | refGet cell =>
     simp only [SyncOp.validIn, decide_eq_true_eq] at h ⊢
     exact Nat.lt_of_lt_of_le h hle.1
+  | refUpdate cell _ env | refGetAndUpdate cell _ env | refUpdateAndGet cell _ env
+  | refUpdateSome cell _ env | refGetAndUpdateSome cell _ env | refUpdateSomeAndGet cell _ env
+  | refModify cell _ env | refModifySome cell _ env =>
+    simp only [SyncOp.validIn, Bool.and_eq_true, decide_eq_true_eq] at h ⊢
+    rw [Val.validInList_eq_all, List.all_eq_true] at h ⊢
+    exact ⟨Nat.lt_of_lt_of_le h.1 hle.1, fun x hx => Val.validIn_mono hle x (h.2 x hx)⟩
   | deferredMake | scopeMake _ => rfl
   | deferredIsDone cell | deferredPoll cell | deferredCompleteWith cell _
   | deferredInterruptWith cell _ | deferredAwaitCleanup cell _ _ =>
@@ -305,48 +312,6 @@ theorem SyncOp.validIn_mono {s s' : Stores} (hle : s.le s') (o : SyncOp)
   | memoComplete _ memoMap exit =>
     simp only [SyncOp.validIn, Bool.and_eq_true] at h ⊢
     exact ⟨hle.2.2.2.2.1 memoMap h.1, Val.validIn_mono hle _ h.2⟩
-
-/-! ## The pure functions keep validity
-
-`FnName.total` (`Stores.lean:458`) sends a `nat` to a `nat` and fixes everything else, so what
-a read-modify-write row writes back is as valid as what it read. -/
-
-/-- `total` preserves validity. -/
-theorem FnName.total_validIn (s : Stores) (f : FnName) (a : Val) :
-    (f.total a).validIn s = a.validIn s := by
-  cases f <;> cases a <;> rfl
-
-/-- `partialUpdate` (`Stores.lean:465`) preserves validity where it answers. -/
-theorem FnName.partialUpdate_validIn (s : Stores) (f : FnName) (a a' : Val)
-    (h : f.partialUpdate a = some a') : a'.validIn s = a.validIn s := by
-  cases f with
-  | noChange => simp [FnName.partialUpdate] at h
-  | zeroWhenPositive =>
-    cases a with
-    | nat n =>
-      cases n with
-      | zero => simp [FnName.partialUpdate] at h
-      | succ n =>
-        simp only [FnName.partialUpdate, Option.some.injEq] at h
-        subst h
-        rfl
-    | _ => simp [FnName.partialUpdate] at h
-  | _ =>
-    simp only [FnName.partialUpdate, Option.some.injEq] at h
-    subst h
-    exact FnName.total_validIn s _ a
-
-/-- Both components of `modify` (`Stores.lean:472`) preserve validity. -/
-theorem FnName.modify_validIn (s : Stores) (f : FnName) (a : Val) :
-    (f.modify a).1.validIn s = a.validIn s ∧ (f.modify a).2.validIn s = a.validIn s := by
-  cases f <;> cases a <;> exact ⟨rfl, rfl⟩
-
-/-- Both components of `modifySome` (`Stores.lean:477`), the written one read through
-`getD` as `refStep` does (`:521-523`), preserve validity. -/
-theorem FnName.modifySome_validIn (s : Stores) (f : FnName) (a : Val) :
-    (f.modifySome a).1.validIn s = a.validIn s ∧
-      ((f.modifySome a).2.getD a).validIn s = a.validIn s := by
-  cases f <;> cases a <;> exact ⟨rfl, rfl⟩
 
 /-! ## The heap -/
 
@@ -372,44 +337,48 @@ theorem refStep_length (o : SyncOp) (heap : RefHeap) (v : Val) (heap' : RefHeap)
     exact Nat.le_succ _
   · exact Nat.le_of_eq (refStepOf_length hstep).symm
 
-/-- Each kernel keeps validity in the store it reads: it answers and writes the value it read,
-the function's images of it (`FnName.*_validIn`), `unit`, the cell's own handle, or the
-operation's written value, and `SyncOp.validIn` covers the last two. One case a heap row. -/
+/-- Validity in a store is decided by frames (`Val.validIn_eq_handles`): a value is valid when
+every frame it carries is a frame of valid values. -/
+theorem Val.validIn_framesClosed (s : Stores) : FramesClosed (·.validIn s = true) := by
+  intro v L hv hL
+  rw [Val.validIn_eq_handles, List.all_eq_true]
+  intro code hcode
+  obtain ⟨x, hx, hcx⟩ := List.mem_flatMap.mp (hv hcode)
+  have hxv : Val.validIn s x = true := hL x hx
+  rw [Val.validIn_eq_handles, List.all_eq_true] at hxv
+  exact hxv code hcx
+
+/-- A heap row's own values (`SyncOp.refArgs`) are valid where the row is. -/
+theorem SyncOp.refArgs_validIn {o : SyncOp} {s : Stores} (hv : o.validIn s = true) :
+    ∀ x ∈ o.refArgs, x.validIn s = true := by
+  cases o with
+  | refSet cell value =>
+    simp only [SyncOp.validIn, Bool.and_eq_true] at hv
+    intro x hx
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact hv.1
+    · rw [List.mem_singleton.mp hx]
+      exact hv.2
+  | refGetAndSet _ value | refSetAndGet _ value =>
+    simp only [SyncOp.validIn, Bool.and_eq_true] at hv
+    intro x hx
+    rw [List.mem_singleton.mp hx]
+    exact hv.2
+  | refUpdate _ _ env | refGetAndUpdate _ _ env | refUpdateAndGet _ _ env
+  | refUpdateSome _ _ env | refGetAndUpdateSome _ _ env | refUpdateSomeAndGet _ _ env
+  | refModify _ _ env | refModifySome _ _ env =>
+    simp only [SyncOp.validIn, Bool.and_eq_true] at hv
+    rw [Val.validInList_eq_all, List.all_eq_true] at hv
+    exact hv.2
+  | _ => exact fun _ h => nomatch h
+
+/-- Each kernel keeps validity in the store it reads: it answers and writes only frames of the
+value it read and of the row's own values (`SyncOp.refKernel_handles`), which validity covers,
+and validity is decided by frames. -/
 theorem SyncOp.refKernel_validIn {o : SyncOp} {cell : RefKey} {k : RefKernel} {s : Stores}
     (hk : o.refKernel = some (cell, k)) (hv : o.validIn s = true) :
-    RefKernel.Keeps (·.validIn s = true) (·.validIn s = true) k := by
-  cases o <;> cases hk <;> intro c r hc hr <;> cases hr
-  case refGet => exact ⟨hc, nofun⟩
-  case refSet =>
-    simp only [SyncOp.validIn, Bool.and_eq_true] at hv
-    exact ⟨hv.1, fun _ h => by cases h; exact hv.2⟩
-  case refGetAndSet =>
-    simp only [SyncOp.validIn, Bool.and_eq_true] at hv
-    exact ⟨hc, fun _ h => by cases h; exact hv.2⟩
-  case refSetAndGet =>
-    simp only [SyncOp.validIn, Bool.and_eq_true] at hv
-    exact ⟨hv.2, fun _ h => by cases h; exact hv.2⟩
-  case refUpdate f =>
-    exact ⟨rfl, fun _ h => by cases h; exact (FnName.total_validIn s f c).trans hc⟩
-  case refGetAndUpdate f =>
-    exact ⟨hc, fun _ h => by cases h; exact (FnName.total_validIn s f c).trans hc⟩
-  case refUpdateAndGet f =>
-    have ht := (FnName.total_validIn s f c).trans hc
-    exact ⟨ht, fun _ h => by cases h; exact ht⟩
-  case refUpdateSome f =>
-    exact ⟨rfl, fun a' h => (FnName.partialUpdate_validIn s f c a' h).trans hc⟩
-  case refGetAndUpdateSome f =>
-    exact ⟨hc, fun a' h => (FnName.partialUpdate_validIn s f c a' h).trans hc⟩
-  case refUpdateSomeAndGet f =>
-    have hw : ∀ a', f.partialUpdate c = some a' → a'.validIn s = true :=
-      fun a' h => (FnName.partialUpdate_validIn s f c a' h).trans hc
-    exact ⟨RefKernel.getD_keeps hw hc, hw⟩
-  case refModify f =>
-    have hm := FnName.modify_validIn s f c
-    exact ⟨hm.1.trans hc, fun _ h => by cases h; exact hm.2.trans hc⟩
-  case refModifySome f =>
-    have hm := FnName.modifySome_validIn s f c
-    exact ⟨hm.1.trans hc, fun _ h => by cases h; exact hm.2.trans hc⟩
+    RefKernel.Keeps (·.validIn s = true) (·.validIn s = true) k :=
+  (SyncOp.refKernel_handles hk).keeps (Val.validIn_framesClosed s) (SyncOp.refArgs_validIn hv)
 
 /-- The heap after a valid `refStep` on a well-formed heap is well-formed in the store that
 carries it, and the answer is valid there. `refMake` stores its argument, which validity covers,
@@ -1129,29 +1098,39 @@ theorem syncOpStep_closingValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.
     simp only [Option.map, Option.getD] at h₀ ⊢
     exact Val.validIn_mono hle _ h₀
 
-/-- A valid operation steps (plan §3.2, ENSURES 14): every `none` of `syncOpStep` and
-`refStep` is a failed lookup, and validity is the lookup's success; `refUpdateSomeAndGet`
-re-reads after a `refPoke`, which keeps the length (`refPeek_poke_self`, `Stores.lean`). -/
-theorem syncOpStep_isSome_of_valid (o : SyncOp) (s : Stores) (hv : o.validIn s = true) :
+/-- A kernel row steps where its cell reads and its kernel answers on the value the cell holds:
+the step is the kernel's (`syncOpStep_eq_refStepOf`). -/
+theorem syncOpStep_isSome_of_kernel {o : SyncOp} {cell : RefKey} {k : RefKernel} {s : Stores}
+    (hk : o.refKernel = some (cell, k)) (hlt : cell.index < s.refs.length)
+    (hans : ∀ a, refPeek s.refs cell = some a → (k a).isSome = true) :
+    (syncOpStep o s).isSome = true := by
+  have hpeek := refPeek_eq_some_of_lt s.refs cell hlt
+  rw [syncOpStep_eq_refStepOf hk, Option.isSome_map]
+  simp only [refStepOf, hpeek, Option.bind_some, Option.isSome_map]
+  exact hans _ hpeek
+
+/-- A valid operation steps where its heap row's kernel answers on the value its cell holds
+(plan §3.2, ENSURES 14). Every other `none` of `syncOpStep` and `refStep` is a failed lookup, and
+validity is the lookup's success. The premise is the heap table's (`SyncOp.refKernel`): it holds
+at the four rows without a term, and at a term row it is the term's success on the value read,
+which validity cannot carry, since that value changes along the store order and
+`SyncOp.validIn_mono` (ENSURES 13) would fail. -/
+theorem syncOpStep_isSome_of_valid (o : SyncOp) (s : Stores) (hv : o.validIn s = true)
+    (hk : ∀ cell k, o.refKernel = some (cell, k) → ∀ a, refPeek s.refs cell = some a →
+      (k a).isSome = true) :
     (syncOpStep o s).isSome = true := by
   cases o with
   | refMake initial => rfl
   | clockNow | sleepCancel _ _ => rfl
-  | refGet cell | refUpdate cell _ | refGetAndUpdate cell _ | refUpdateAndGet cell _
-  | refUpdateSome cell _ | refGetAndUpdateSome cell _ | refModify cell _ | refModifySome cell _ =>
+  | refGet cell =>
     simp only [SyncOp.validIn, decide_eq_true_eq] at hv
-    simp [syncOpStep, refStep, refPeek_eq_some_of_lt s.refs cell hv]
-  | refSet cell value | refGetAndSet cell value | refSetAndGet cell value =>
+    exact syncOpStep_isSome_of_kernel rfl hv (hk cell _ rfl)
+  | refSet cell _ | refGetAndSet cell _ | refSetAndGet cell _
+  | refUpdate cell _ _ | refGetAndUpdate cell _ _ | refUpdateAndGet cell _ _
+  | refUpdateSome cell _ _ | refGetAndUpdateSome cell _ _ | refUpdateSomeAndGet cell _ _
+  | refModify cell _ _ | refModifySome cell _ _ =>
     simp only [SyncOp.validIn, Bool.and_eq_true, decide_eq_true_eq] at hv
-    simp [syncOpStep, refStep, refPeek_eq_some_of_lt s.refs cell hv.1]
-  | refUpdateSomeAndGet cell pf =>
-    simp only [SyncOp.validIn, decide_eq_true_eq] at hv
-    have hpeek := refPeek_eq_some_of_lt s.refs cell hv
-    simp only [syncOpStep, refStep, hpeek, Option.isSome_map, Option.bind_some]
-    split
-    · rename_i a' _
-      simp [refPeek_poke_self s.refs cell a' _ hpeek]
-    · rfl
+    exact syncOpStep_isSome_of_kernel rfl hv.1 (hk cell _ rfl)
   | deferredMake => rfl
   | deferredIsDone cell =>
     simp only [SyncOp.validIn, decide_eq_true_eq] at hv

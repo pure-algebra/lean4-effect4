@@ -56,17 +56,6 @@ theorem asList?_keys {v : Val} {vs : List Val} (h : Val.asList? v = some vs) :
     rw [List.append_nil, Val.keys_list]
     exact List.Subset.refl _
 
-private theorem native_keys_of_handles {value : Val} {inputs : List Val}
-    (h : Store.Val.handles value ⊆ inputs.flatMap Store.Val.handles) :
-    value.keys ⊆ inputs.flatMap Val.keys := by
-  intro key hk
-  rw [Val.keys_eq_handles] at hk
-  obtain ⟨code, hc, hk⟩ := List.mem_filterMap.mp hk
-  obtain ⟨input, hi, hc⟩ := List.mem_flatMap.mp (h hc)
-  refine List.mem_flatMap.mpr ⟨input, hi, ?_⟩
-  rw [Val.keys_eq_handles]
-  exact List.mem_filterMap.mpr ⟨code, hc, hk⟩
-
 /-- Static tuple projection introduces no decoded key; consumed by `evalTerm_keys`. -/
 theorem tupleAt_keys {value out : Val} {index : Nat}
     (h : Val.tupleAt? value index = some out) : out.keys ⊆ value.keys := by
@@ -132,11 +121,11 @@ theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAto
     exact hk.imp (fun hk => asList?_keys hf hk) (fun hk => asList?_keys hb hk)
   case h_37 => cases h; exact List.nil_subset _
   case h_38 =>
-    apply native_keys_of_handles
+    apply Val.keys_subset_of_handles
     simpa only [List.flatMap_cons, List.flatMap_nil, Store.Val.handles,
       List.nil_append, List.append_nil] using Machine.Map.get_handles h
   case h_39 =>
-    apply native_keys_of_handles
+    apply Val.keys_subset_of_handles
     intro code hc
     have hm := Machine.Map.set_handles h hc
     simp only [List.flatMap_cons, List.flatMap_nil, Store.Val.handles,
@@ -146,11 +135,11 @@ theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAto
     rw [Val.keys_eq_handles, Machine.Map.keys_handles h]
     exact List.nil_subset _
   case h_41 =>
-    apply native_keys_of_handles
+    apply Val.keys_subset_of_handles
     simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
       using Machine.Map.entries_handles h
   case h_42 =>
-    apply native_keys_of_handles
+    apply Val.keys_subset_of_handles
     simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
       using Machine.Map.fromEntries_handles h
   case h_43 =>
@@ -168,32 +157,21 @@ theorem flatMap_subset_of_subset {α : Type} {f : α → List Handle} {l l' : Li
 
 namespace RecordHandles
 
-private theorem keys_of_handles {v : Val} {vs : List Val}
-    (h : Store.Val.handles v ⊆ vs.flatMap Store.Val.handles) :
-    v.keys ⊆ vs.flatMap Val.keys := by
-  intro k hk
-  rw [Val.keys_eq_handles] at hk
-  obtain ⟨code, hc, hk⟩ := List.mem_filterMap.mp hk
-  obtain ⟨value, hv, hc⟩ := List.mem_flatMap.mp (h hc)
-  refine List.mem_flatMap.mpr ⟨value, hv, ?_⟩
-  rw [Val.keys_eq_handles]
-  exact List.mem_filterMap.mpr ⟨code, hc, hk⟩
-
 theorem build_keys {names : List String} {values : List Val} {v : Val}
     (h : Record.build names values = some v) : v.keys ⊆ values.flatMap Val.keys :=
-  keys_of_handles (build h)
+  Val.keys_subset_of_handles (build h)
 
 theorem read_keys {optional : Bool} {value out : Val} {name : String}
     (h : Record.read optional value name = some out) : out.keys ⊆ value.keys := by
   have hr : Store.Val.handles out ⊆ [value].flatMap Store.Val.handles := by
     simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using read h
-  simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using keys_of_handles hr
+  simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using Val.keys_subset_of_handles hr
 
 theorem set_keys {value replacement out : Val} {name : String}
     (h : Record.set value name replacement = some out) : out.keys ⊆ replacement.keys ++ value.keys := by
   have hr : Store.Val.handles out ⊆ [replacement, value].flatMap Store.Val.handles := by
     simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using set h
-  simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using keys_of_handles hr
+  simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using Val.keys_subset_of_handles hr
 
 end RecordHandles
 

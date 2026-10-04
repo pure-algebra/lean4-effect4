@@ -987,20 +987,6 @@ theorem clause_clockNow (root : ProgramSource) (rootTy : EffTy) :
   intro w m rest f y next ev hc
   exact ev.store_same hc (Val.nat m.state.timers.now.toNat) rfl (fun _ _ => ⟨_, rfl⟩)
 
-theorem clause_refGet (root : ProgramSource) (rootTy : EffTy) (cell : RefKey) :
-    StoreClauseKeeps root rootTy (.refGet cell) := by
-  intro w m rest f y next ev hc
-  have store := storeTyped_of_typedState ev.typed.machine
-  have state : w.state = m.state := ev.typed.machine.wide.state
-  obtain ⟨cert, pre⟩ := ev.store_pre hc
-  obtain ⟨t, declared⟩ := pre
-  obtain ⟨a, ha⟩ := cell_readable store declared
-  have step : syncOpStep (.refGet cell) m.state = some (m.state, a) := by
-    rw [← state]
-    simp only [syncOpStep, refStep, refPeek, ha, Option.map_some]
-  exact ev.store_same hc a step
-    (fun _ _ => ⟨t, declared, store.values cell.index a ha t declared⟩)
-
 theorem clause_deferredIsDone (root : ProgramSource) (rootTy : EffTy) (key : DeferredKey) :
     StoreClauseKeeps root rootTy (.deferredIsDone key) := by
   intro w m rest f y next ev hc

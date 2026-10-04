@@ -155,13 +155,21 @@ section Heap
 #guard answer (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1 = some (Val.cell ⟨0⟩)
 #guard answer (SyncOp.refGet ⟨0⟩) (after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1) = some (Val.nat 7)
 #guard (after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1).refs.length = 1
-#guard answer (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) s1 = some (Val.nat 0)
-#guard Stores.WF (after (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) s1)
+#guard answer (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) s1 = some (Val.nat 0)
+#guard Stores.WF (after (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) s1)
 -- a handle stored in a cell: valid when it exists, and the argument is part of validity
 #guard SyncOp.validIn s1 (SyncOp.refMake (Val.cell ⟨0⟩)) = true
 #guard Stores.WF (after (SyncOp.refMake (Val.cell ⟨0⟩)) s1)
 #guard SyncOp.validIn Stores.empty (SyncOp.refMake (Val.cell ⟨3⟩)) = false
 #guard ¬ Stores.WF (after (SyncOp.refMake (Val.cell ⟨3⟩)) Stores.empty)
+-- atomicity (a finite probe; decisions row 43 keeps a term row one store step): a
+-- read-modify-write split into a read and a later write loses a write made between them, and
+-- the one-step row reads the write made before it
+#guard answer (SyncOp.refGet ⟨0⟩) s1 = some (Val.nat 5)
+#guard (after (SyncOp.refSet ⟨0⟩ (Val.nat 6)) (after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1)).refs =
+  [Val.nat 6]
+#guard (after (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm [])
+  (after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1)).refs = [Val.nat 8]
 
 end Heap
 
@@ -174,12 +182,15 @@ def viaKernel (o : SyncOp) (heap : RefHeap) : Option (Option (Val × RefHeap)) :
   o.refKernel.map fun (cell, k) => refStepOf cell k heap
 
 -- the one row that reads again after its write agrees with the machine on both branches
-#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) [Val.nat 3] =
-  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) [Val.nat 3])
-#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) [Val.nat 0] =
-  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) [Val.nat 0])
+#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) [Val.nat 3] =
+  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) [Val.nat 3])
+#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) [Val.nat 0] =
+  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) [Val.nat 0])
 -- a dangling cell is the kernel row's frontier, as it is the machine's; `refMake` has no kernel
 #guard viaKernel (SyncOp.refGet ⟨1⟩) [Val.nat 3] = some none
+-- a term that does not evaluate on the value read is the frontier of both (decisions row 43)
+#guard viaKernel (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) [Val.bool true] = some none
+#guard refStep (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) [Val.bool true] = none
 #guard viaKernel (SyncOp.refMake (Val.nat 1)) [] = none
 -- the red control: a kernel line that disagrees with its `refStep` arm (`getAndSet` answering
 -- the value it wrote rather than the one it read) differs at the first heap with a live cell,

@@ -102,18 +102,11 @@ theorem storeClauses (root : ProgramSource) (rootTy : EffTy) :
   intro op
   cases op with
   | refMake initial => exact clause_refMake root rootTy initial
-  | refGet cell => exact clause_refGet root rootTy cell
-  | refSet cell v => exact clause_refSet root rootTy cell v
-  | refGetAndSet cell v => exact clause_refGetAndSet root rootTy cell v
-  | refSetAndGet cell v => exact clause_refSetAndGet root rootTy cell v
-  | refUpdate cell f => exact clause_refUpdate root rootTy cell f
-  | refGetAndUpdate cell f => exact clause_refGetAndUpdate root rootTy cell f
-  | refUpdateAndGet cell f => exact clause_refUpdateAndGet root rootTy cell f
-  | refUpdateSome cell f => exact clause_refUpdateSome root rootTy cell f
-  | refGetAndUpdateSome cell f => exact clause_refGetAndUpdateSome root rootTy cell f
-  | refUpdateSomeAndGet cell f => exact clause_refUpdateSomeAndGet root rootTy cell f
-  | refModify cell f => exact clause_refModify root rootTy cell f
-  | refModifySome cell f => exact clause_refModifySome root rootTy cell f
+  -- the twelve heap rows: one clause from their table (`SyncOp.refKernel`)
+  | refGet _ | refSet _ _ | refGetAndSet _ _ | refSetAndGet _ _
+  | refUpdate _ _ _ | refGetAndUpdate _ _ _ | refUpdateAndGet _ _ _
+  | refUpdateSome _ _ _ | refGetAndUpdateSome _ _ _ | refUpdateSomeAndGet _ _ _
+  | refModify _ _ _ | refModifySome _ _ _ => exact clause_kernel root rootTy rfl
   | deferredMake => exact clause_deferredMake root rootTy
   | deferredIsDone key => exact clause_deferredIsDone root rootTy key
   | deferredPoll key => exact clause_deferredPoll root rootTy key

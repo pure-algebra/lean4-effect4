@@ -186,14 +186,26 @@ let sh_drop_observers token fibers (_acc : 'acc list) =
 
 (* -- the ref heap ------------------------------------------------------------------------ *)
 
-(* Effect4.Machine.refStep, src/Effect4/Machine/Stores.lean:1149-1186, arm for arm.
-   `refPeek` (:1116, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:1119-1120,
-   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:1150,
+(* Effect4.Machine.refStep, src/Effect4/Machine/Stores.lean:955-1007, arm for arm.
+   `refPeek` (:853, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:856-857,
+   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:956,
    `(Val.cell ⟨heap.length⟩, heap ++ [initial])`) is the one arm that forced this row -- it
    applies `List.length` and `++` to the carrier inline.  `Val.cell k` is `Val.handle 2 k`.
-   `total`, `partial_update`, `modify` and `modify_some` are `Effect4.Machine.FnName.*`,
-   generated below this prelude, so the row hands them in. *)
-let sh_ref_step total partial_update modify modify_some op heap =
+   A read-modify-write row carries a binder term and its environment (decisions row 43) and
+   runs the term at `env ++ [a]`: `eval_term` is `Effect4.Program.evalTerm`, generated below
+   this prelude, so the row hands it in, and it reads the point environment carrier, built
+   here by `E.of_list`.  The term's answer is read as Lean's arm reads it: the option frames
+   (`Store.Image.ofOption Store.Image.ident`: `Val_none`, `Val_some`) and the two-element
+   tuple (`Store.Image.ofTuple2`: `Val_list [b; a]`); any other answer is a frontier. *)
+let sh_ref_step eval_term op heap =
+  let run env f a = eval_term (E.of_list (env @ [a])) f in
+  let option_of = function
+    | Val_none -> Some None
+    | Val_some v -> Some (Some v)
+    | _ -> None in
+  let pair_of = function
+    | Val_list [b; v] -> Some (b, v)
+    | _ -> None in
   match op with
   | SyncOp_refMake initial ->
     let k = M.cardinal heap in
@@ -212,54 +224,74 @@ let sh_ref_step total partial_update modify modify_some op heap =
     (match M.find_opt cell heap with
      | None -> None
      | Some _ -> Some (value, M.set cell value heap))
-  | SyncOp_refUpdate (cell, f) ->
-    (match M.find_opt cell heap with
-     | None -> None
-     | Some a -> Some (Val_unit, M.set cell (total f a) heap))
-  | SyncOp_refGetAndUpdate (cell, f) ->
-    (match M.find_opt cell heap with
-     | None -> None
-     | Some a -> Some (a, M.set cell (total f a) heap))
-  | SyncOp_refUpdateAndGet (cell, f) ->
-    (match M.find_opt cell heap with
-     | None -> None
-     | Some a -> let a' = total f a in Some (a', M.set cell a' heap))
-  | SyncOp_refUpdateSome (cell, pf) ->
+  | SyncOp_refUpdate (cell, f, env) ->
     (match M.find_opt cell heap with
      | None -> None
      | Some a ->
-       (match partial_update pf a with
-        | None -> Some (Val_unit, heap)
+       (match run env f a with
+        | None -> None
         | Some a' -> Some (Val_unit, M.set cell a' heap)))
-  | SyncOp_refGetAndUpdateSome (cell, pf) ->
+  | SyncOp_refGetAndUpdate (cell, f, env) ->
     (match M.find_opt cell heap with
      | None -> None
      | Some a ->
-       (match partial_update pf a with
-        | None -> Some (a, heap)
+       (match run env f a with
+        | None -> None
         | Some a' -> Some (a, M.set cell a' heap)))
-  | SyncOp_refUpdateSomeAndGet (cell, pf) ->
+  | SyncOp_refUpdateAndGet (cell, f, env) ->
     (match M.find_opt cell heap with
      | None -> None
      | Some a ->
-       (match partial_update pf a with
-        | None -> Some (a, heap)
-        | Some a' ->
+       (match run env f a with
+        | None -> None
+        | Some a' -> Some (a', M.set cell a' heap)))
+  | SyncOp_refUpdateSome (cell, f, env) ->
+    (match M.find_opt cell heap with
+     | None -> None
+     | Some a ->
+       (match Option.bind (run env f a) option_of with
+        | None -> None
+        | Some None -> Some (Val_unit, heap)
+        | Some (Some a') -> Some (Val_unit, M.set cell a' heap)))
+  | SyncOp_refGetAndUpdateSome (cell, f, env) ->
+    (match M.find_opt cell heap with
+     | None -> None
+     | Some a ->
+       (match Option.bind (run env f a) option_of with
+        | None -> None
+        | Some None -> Some (a, heap)
+        | Some (Some a') -> Some (a, M.set cell a' heap)))
+  | SyncOp_refUpdateSomeAndGet (cell, f, env) ->
+    (match M.find_opt cell heap with
+     | None -> None
+     | Some a ->
+       (match Option.bind (run env f a) option_of with
+        | None -> None
+        | Some None -> Some (a, heap)
+        | Some (Some a') ->
           let heap' = M.set cell a' heap in
           (match M.find_opt cell heap' with
            | None -> None
            | Some fresh -> Some (fresh, heap'))))
-  | SyncOp_refModify (cell, f) ->
-    (match M.find_opt cell heap with
-     | None -> None
-     | Some a -> let (b, a') = modify f a in Some (b, M.set cell a' heap))
-  | SyncOp_refModifySome (cell, pf) ->
+  | SyncOp_refModify (cell, f, env) ->
     (match M.find_opt cell heap with
      | None -> None
      | Some a ->
-       let (b, a') = modify_some pf a in
-       let stored = match a' with None -> a | Some v -> v in
-       Some (b, M.set cell stored heap))
+       (match Option.bind (run env f a) pair_of with
+        | None -> None
+        | Some (b, a') -> Some (b, M.set cell a' heap)))
+  | SyncOp_refModifySome (cell, f, env) ->
+    (match M.find_opt cell heap with
+     | None -> None
+     | Some a ->
+       (match Option.bind (run env f a) pair_of with
+        | None -> None
+        | Some (b, o) ->
+          (match option_of o with
+           | None -> None
+           | Some next ->
+             let stored = match next with None -> a | Some v -> v in
+             Some (b, M.set cell stored heap))))
   | _ -> None
 
 (* -- the deferred cells ------------------------------------------------------------------ *)

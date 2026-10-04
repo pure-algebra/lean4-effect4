@@ -199,6 +199,18 @@ theorem Val.keys_eq_handles (v : Val) : v.keys = v.handles.filterMap Handle.ofCo
   | some a ih => exact ih
   | ctor _ args ih => exact Val.keysList_eq_handlesList args ih
 
+/-- A value whose frames are frames of `vs` names only handles some value of `vs` names: the keys
+are the frames read through `Handle.ofCode` (`Val.keys_eq_handles`). -/
+theorem Val.keys_subset_of_handles {v : Val} {vs : List Val}
+    (h : Store.Val.handles v ⊆ vs.flatMap Store.Val.handles) : v.keys ⊆ vs.flatMap Val.keys := by
+  intro key hk
+  rw [Val.keys_eq_handles] at hk
+  obtain ⟨code, hc, hk⟩ := List.mem_filterMap.mp hk
+  obtain ⟨value, hv, hc⟩ := List.mem_flatMap.mp (h hc)
+  refine List.mem_flatMap.mpr ⟨value, hv, ?_⟩
+  rw [Val.keys_eq_handles]
+  exact List.mem_filterMap.mpr ⟨code, hc, hk⟩
+
 /-- A reified failed exit carries a cause only: the cause image writes no handle. -/
 theorem Val.keys_exitErr (cause : CauseV) : (Val.exitErr cause).keys = [] := by
   rw [Val.keys_eq_handles]
@@ -442,21 +454,22 @@ def FinName.keys : FinName → List Handle
   | FinName.memoEntry _ memoMap => [Handle.memoMap memoMap.index]
   | FinName.memoDone _ memoMap => [Handle.memoMap memoMap.index]
 
-/-- The handles of a store operation: its keys and the values it writes. -/
+/-- The handles of a store operation: its keys, the values it writes and a term row's
+environment. -/
 def SyncOp.keys : SyncOp → List Handle
   | SyncOp.refMake initial => initial.keys
   | SyncOp.refGet cell => [Handle.cell cell]
   | SyncOp.refSet cell value => Handle.cell cell :: value.keys
   | SyncOp.refGetAndSet cell value => Handle.cell cell :: value.keys
   | SyncOp.refSetAndGet cell value => Handle.cell cell :: value.keys
-  | SyncOp.refUpdate cell _ => [Handle.cell cell]
-  | SyncOp.refGetAndUpdate cell _ => [Handle.cell cell]
-  | SyncOp.refUpdateAndGet cell _ => [Handle.cell cell]
-  | SyncOp.refUpdateSome cell _ => [Handle.cell cell]
-  | SyncOp.refGetAndUpdateSome cell _ => [Handle.cell cell]
-  | SyncOp.refUpdateSomeAndGet cell _ => [Handle.cell cell]
-  | SyncOp.refModify cell _ => [Handle.cell cell]
-  | SyncOp.refModifySome cell _ => [Handle.cell cell]
+  | SyncOp.refUpdate cell _ env => Handle.cell cell :: Val.keysList env
+  | SyncOp.refGetAndUpdate cell _ env => Handle.cell cell :: Val.keysList env
+  | SyncOp.refUpdateAndGet cell _ env => Handle.cell cell :: Val.keysList env
+  | SyncOp.refUpdateSome cell _ env => Handle.cell cell :: Val.keysList env
+  | SyncOp.refGetAndUpdateSome cell _ env => Handle.cell cell :: Val.keysList env
+  | SyncOp.refUpdateSomeAndGet cell _ env => Handle.cell cell :: Val.keysList env
+  | SyncOp.refModify cell _ env => Handle.cell cell :: Val.keysList env
+  | SyncOp.refModifySome cell _ env => Handle.cell cell :: Val.keysList env
   | SyncOp.deferredMake => []
   | SyncOp.deferredIsDone cell => [Handle.promise cell]
   | SyncOp.deferredPoll cell => [Handle.promise cell]
@@ -5721,67 +5734,49 @@ theorem ScopeStore.entryAt_closeState_isSome (self : ScopeStore) (scope key : Na
 
 /-! ### The heap and the store step -/
 
-theorem FnName.total_keys (f : FnName) (a : Val) : (f.total a).keys ⊆ a.keys := by
-  cases f <;> cases a <;> simp only [FnName.total] <;> exact List.Subset.refl _
-
-theorem FnName.partialUpdate_keys (f : FnName) (a a' : Val) (h : f.partialUpdate a = some a') :
-    a'.keys ⊆ a.keys := by
-  cases f <;> cases a <;> simp only [FnName.partialUpdate, FnName.total, Option.some.injEq] at h <;>
-    first
-      | (subst h; exact List.Subset.refl _)
-      | (cases h)
-      | (rename_i n; cases n <;> simp only [Option.some.injEq] at h <;> first | (subst h; exact List.Subset.refl _) | cases h)
-
-theorem FnName.modify_keys (f : FnName) (a : Val) :
-    (f.modify a).1.keys ⊆ a.keys ∧ (f.modify a).2.keys ⊆ a.keys := by
-  cases f <;> cases a <;> simp only [FnName.modify, FnName.total] <;> exact ⟨List.Subset.refl _, List.Subset.refl _⟩
-
-theorem FnName.modifySome_keys (f : FnName) (a : Val) :
-    (f.modifySome a).1.keys ⊆ a.keys ∧ ((f.modifySome a).2.getD a).keys ⊆ a.keys := by
-  cases f <;> cases a <;> simp only [FnName.modifySome, FnName.modify, FnName.total, Option.getD] <;>
-    exact ⟨List.Subset.refl _, List.Subset.refl _⟩
-
 theorem mem_heap_keys {heap : RefHeap} {a : Val} (h : a ∈ heap) : a.keys ⊆ heap.flatMap Val.keys :=
   fun _ hx => List.mem_flatMap.mpr ⟨a, h, hx⟩
 
+/-- Key containment is decided by frames: a value names only handles that values of `L` name when
+its frames are theirs (`Val.keys_subset_of_handles`). -/
+theorem Val.keys_framesClosed (K : List Handle) : FramesClosed (·.keys ⊆ K) := by
+  intro v L hv hL key hk
+  obtain ⟨x, hx, hkx⟩ := List.mem_flatMap.mp (Val.keys_subset_of_handles hv hk)
+  exact hL x hx hkx
+
+/-- A heap row's own values (`SyncOp.refArgs`) name only handles of the row's keys. -/
+theorem SyncOp.refArgs_keys {o : SyncOp} {K : List Handle} (hK : o.keys ⊆ K) :
+    ∀ x ∈ o.refArgs, x.keys ⊆ K := by
+  cases o with
+  | refSet cell value =>
+    intro x hx
+    rcases List.mem_cons.mp hx with rfl | hx
+    · rw [Val.keys_cell]
+      exact fun _ hk => by
+        rw [List.mem_singleton.mp hk]
+        exact hK (List.mem_cons_self ..)
+    · rw [List.mem_singleton.mp hx]
+      exact fun _ hk => hK (List.mem_cons_of_mem _ hk)
+  | refGetAndSet _ value | refSetAndGet _ value =>
+    intro x hx
+    rw [List.mem_singleton.mp hx]
+    exact fun _ hk => hK (List.mem_cons_of_mem _ hk)
+  | refUpdate _ _ env | refGetAndUpdate _ _ env | refUpdateAndGet _ _ env
+  | refUpdateSome _ _ env | refGetAndUpdateSome _ _ env | refUpdateSomeAndGet _ _ env
+  | refModify _ _ env | refModifySome _ _ env =>
+    intro x hx _ hk
+    exact hK (List.mem_cons_of_mem _
+      (by rw [Val.keysList_eq_flatMap]; exact List.mem_flatMap.mpr ⟨x, hx, hk⟩))
+  | _ => exact fun _ h => nomatch h
+
 /-- Each kernel keeps its values' handles inside any list that holds the operation's keys: it
-answers and writes the value it read, the function's images of it (`FnName.*_keys`), `unit`,
-the cell's handle, or the written argument, and the operation's keys hold the last two. One case
-a heap row. -/
+answers and writes only frames of the value it read and of the row's own values
+(`SyncOp.refKernel_handles`), whose handles the operation's keys hold, and key containment is
+decided by frames. -/
 theorem SyncOp.refKernel_keys {o : SyncOp} {cell : RefKey} {k : RefKernel} {K : List Handle}
     (hk : o.refKernel = some (cell, k)) (hK : o.keys ⊆ K) :
-    RefKernel.Keeps (·.keys ⊆ K) (·.keys ⊆ K) k := by
-  cases o <;> cases hk <;> intro c r hc hr <;> cases hr
-  case refGet => exact ⟨hc, nofun⟩
-  case refSet =>
-    exact ⟨fun _ hx => hK (List.mem_cons.mpr (.inl (List.mem_singleton.mp hx))),
-      fun _ h => by cases h; exact fun _ hx => hK (List.mem_cons_of_mem _ hx)⟩
-  case refGetAndSet =>
-    exact ⟨hc, fun _ h => by cases h; exact fun _ hx => hK (List.mem_cons_of_mem _ hx)⟩
-  case refSetAndGet =>
-    have hw : _ ⊆ K := fun _ hx => hK (List.mem_cons_of_mem _ hx)
-    exact ⟨hw, fun _ h => by cases h; exact hw⟩
-  case refUpdate f =>
-    exact ⟨List.nil_subset K, fun _ h => by cases h; exact (FnName.total_keys f c).trans hc⟩
-  case refGetAndUpdate f =>
-    exact ⟨hc, fun _ h => by cases h; exact (FnName.total_keys f c).trans hc⟩
-  case refUpdateAndGet f =>
-    have ht := (FnName.total_keys f c).trans hc
-    exact ⟨ht, fun _ h => by cases h; exact ht⟩
-  case refUpdateSome f =>
-    exact ⟨List.nil_subset K, fun a' h => (FnName.partialUpdate_keys f c a' h).trans hc⟩
-  case refGetAndUpdateSome f =>
-    exact ⟨hc, fun a' h => (FnName.partialUpdate_keys f c a' h).trans hc⟩
-  case refUpdateSomeAndGet f =>
-    have hw : ∀ a', f.partialUpdate c = some a' → a'.keys ⊆ K :=
-      fun a' h => (FnName.partialUpdate_keys f c a' h).trans hc
-    exact ⟨RefKernel.getD_keeps hw hc, hw⟩
-  case refModify f =>
-    have hm := FnName.modify_keys f c
-    exact ⟨hm.1.trans hc, fun _ h => by cases h; exact hm.2.trans hc⟩
-  case refModifySome f =>
-    have hm := FnName.modifySome_keys f c
-    exact ⟨hm.1.trans hc, fun _ h => by cases h; exact hm.2.trans hc⟩
+    RefKernel.Keeps (·.keys ⊆ K) (·.keys ⊆ K) k :=
+  (SyncOp.refKernel_handles hk).keeps (Val.keys_framesClosed K) (SyncOp.refArgs_keys hK)
 
 /-- One heap step answers and writes only values built from the operation's argument and the
 values already in the heap; the fresh cell of `refMake` exists in the heap it leaves. Every row

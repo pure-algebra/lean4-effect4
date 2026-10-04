@@ -2,7 +2,7 @@ import Effect4.Laws.Program.Typed.Commands.Evaluate
 
 /-!
 Concept4 controls for the exact read-only StoreClauseKeeps interface.
-Consumers: configTyped_cons_drainDue / Evaluating.store_same / clause_refGet.
+Consumers: configTyped_cons_drainDue / Evaluating.store_same / clause_kernel (refGet's row).
 The queue statements inspect actual preparation and settlement. The reference
 fixtures test the precise row pre/post and actual read; they are deliberately
 not claimed ConfigTyped or reachable. No premise of the production goal changes.

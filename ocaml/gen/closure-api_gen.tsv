@@ -238,7 +238,7 @@ Effect4.Machine.MemoWorld.insertEntry	memo_world_insert_entry	false	7	0	0	0	2	2	
 Effect4.Machine.MemoWorld.entryAt	memo_world_entry_at	false	5	0	0	0	4	3	0	0	0	0	5	0	0	0	0	0	0	0	0	3	5	0	6	0	1	0	15868151588380298666
 Effect4.Machine.syncOpStep._lam_1	sync_op_step__lam_1	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	6	0	1	0	1	0	6664544959681741359
 Effect4.Machine.MemoWorld.deleteEntry	memo_world_delete_entry	false	5	0	0	0	2	2	0	0	0	0	5	0	0	0	0	0	0	0	0	1	10	0	3	0	1	0	6374010683480676408
-Effect4.Machine.refStep	ref_step	false	88	0	1	2	20	30	0	2	0	0	86	0	0	0	2	0	0	0	0	64	134	0	49	1	1	0	16479998470594638855
+Effect4.Machine.refStep	ref_step	false	136	0	1	2	33	43	0	2	0	0	134	0	0	0	2	0	0	0	0	93	179	0	75	1	1	0	16613368893299234740
 Effect4.Machine.DeferredStore.cellAt._redArg	deferred_store_cell_at	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	1	0	1	0	2683930862243776319
 Effect4.Machine.WakeList.register._redArg	wake_list_register	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	4	11	0	1	0	1	0	15423574983730355961
 Effect4.Machine.DeferredStore.setCell._redArg	deferred_store_set_cell	false	4	0	0	0	1	1	0	1	0	0	3	0	1	0	0	0	0	0	0	3	8	0	1	0	1	0	4863290763208402043
@@ -310,7 +310,7 @@ Effect4.Program.errOf	program_err_of	false	7	0	1	6	8	5	0	0	0	0	6	1	0	0	0	0	0	0	0
 Effect4.Program.causeOf	program_cause_of	true	24	0	0	0	8	11	0	0	0	0	24	0	0	0	0	0	0	0	0	11	25	0	16	2	1	0	9457042485382529284
 Effect4.Program.asyncRoute	program_async_route	false	35	0	0	0	11	10	0	2	0	0	33	0	2	0	0	0	0	0	0	31	35	0	18	2	1	0	7262553214963935438
 Effect4.Program.NativeOp.kind	program_native_op_kind	false	13	0	0	0	1	13	0	0	0	0	13	0	0	0	0	0	0	0	0	0	0	0	12	1	1	0	3316187330418484696
-Effect4.Program.NativeOp.syncOpOf	program_native_op_sync_op_of	false	137	0	0	0	59	79	0	16	0	0	121	0	0	0	16	0	0	0	0	99	89	0	94	43	1	0	8717326583008451551
+Effect4.Program.NativeOp.syncOpOf	program_native_op_sync_op_of	false	153	0	0	0	59	79	0	16	0	0	137	0	0	0	16	0	0	0	0	107	105	0	94	43	1	0	5597118805423139550
 Effect4.Program.Point.awaitExit	program_point_await_exit	false	6	0	0	0	5	3	0	0	0	0	6	0	0	0	0	0	0	0	0	8	6	0	7	0	1	0	14222100522500772345
 Effect4.Machine.WakeList.runBatch._redArg	wake_list_run_batch	false	4	0	1	2	2	1	0	0	0	0	4	0	0	0	0	0	0	0	0	5	7	0	3	0	1	0	7329157058882427048
 List.mapTR.loop._at_.Effect4.Machine.DeferredStore.complete.spec_0._redArg	list_map_tr_loop_at_deferred_store_complete_spec_0	true	5	0	0	0	2	2	0	0	0	0	5	0	0	0	0	0	0	0	0	2	10	0	3	0	1	0	14889061139683581634
@@ -358,10 +358,10 @@ Effect4.Machine.MemoWorld.setMap	memo_world_set_map	false	2	0	0	0	0	1	0	0	0	0	2	
 List.find?._at_.Effect4.Machine.MemoWorld.entryAt.spec_0	list_find_opt_at_memo_world_entry_at_spec_0	true	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	2	6	0	5	0	1	0	5468994318988498905
 List.filterTR.loop._at_.Effect4.Machine.MemoWorld.deleteEntry.spec_0	list_filter_tr_loop_at_memo_world_delete_entry_spec_0	true	6	0	0	0	3	3	0	0	0	0	6	0	0	0	0	0	0	0	0	1	12	0	5	0	1	0	15839575944230453547
 Effect4.Machine.refPoke	ref_poke	false	3	0	0	0	0	1	0	1	0	0	2	0	1	0	0	0	0	0	0	2	6	0	0	0	1	0	596843256215832198
-Effect4.Machine.FnName.total	fn_name_total	false	6	0	1	2	4	6	0	2	0	0	4	0	2	0	0	0	0	0	0	0	8	0	6	4	1	0	12741899710592536063
-Effect4.Machine.FnName.partialUpdate	fn_name_partial_update	false	9	0	0	0	3	5	0	1	0	0	8	0	1	0	0	0	0	0	0	5	7	0	4	3	1	0	17583358025737998475
-Effect4.Machine.FnName.modify	fn_name_modify	false	6	0	1	2	2	2	0	1	0	0	5	0	1	0	0	0	0	0	0	4	13	0	2	2	1	0	17436298346736581601
-Effect4.Machine.FnName.modifySome	fn_name_modify_some	false	5	0	0	0	2	2	0	0	0	0	5	0	0	0	0	0	0	0	0	6	7	0	2	1	1	0	15199763769077543110
+Effect4.Store.Image.ident	store_image_ident	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	3	2	0	0	0	1	0	9069232611622863230
+Effect4.Store.Image.ofOption._redArg	store_image_of_option	false	6	0	0	0	3	4	0	0	0	0	5	1	0	0	0	0	0	0	0	5	3	0	5	1	1	0	8235355711092466144
+Effect4.Store.Image.ofTuple2._redArg	store_image_of_tuple2	false	10	0	0	0	8	7	0	0	0	0	8	2	0	0	0	0	0	0	0	9	5	0	8	6	1	0	9318158517249028903
+Effect4.Store.Image.option._redArg	store_image_option	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	5	4	0	0	0	1	0	11814931051240193455
 _private.Init.Data.List.Impl.0.List.setTR.go._redArg	list_set_tr_go	true	12	0	0	0	3	4	0	3	0	0	9	0	2	0	0	0	0	0	1	3	21	0	6	0	1	0	11118919780352739084
 Effect4.Program.Registration.ctorIdx	program_registration_ctor_idx	false	2	0	0	0	1	2	0	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	2	0	1	0	10727365113068853929
 Effect4.Program.RowKind.ctorIdx	program_row_kind_ctor_idx	false	3	0	0	0	1	3	0	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	3	0	1	0	14034235607024829668
@@ -383,7 +383,6 @@ Effect4.Store.Image.equiv._redArg._lam_1	store_image_equiv__red_arg__lam_1	false
 List.mapTR.loop._at_.Effect4.Store.Image.toList.spec_0._redArg	list_map_tr_loop_at_store_image_to_list_spec_0	true	4	0	0	0	1	2	0	0	0	0	3	1	0	0	0	0	0	0	0	1	7	0	2	0	1	0	11238768579864127048
 Effect4.Store.Image.ofListAux._redArg	store_image_of_list_aux	true	8	0	0	0	4	4	0	0	0	0	7	1	0	0	0	0	0	0	0	6	7	0	5	2	1	0	13396575942200608117
 List.hasDecEq._redArg	list_has_dec_eq	true	5	0	0	0	5	6	0	0	0	0	4	1	0	0	0	0	0	0	0	0	5	0	10	0	1	0	13825789189740611004
-Effect4.Store.Image.ident	store_image_ident	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	3	2	0	0	0	1	0	9069232611622863230
 Effect4.Machine.Value.exit._redArg	value_exit_	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	13	6	0	0	0	1	0	9432948382649543817
 _private.Init.Data.List.Impl.0.List.takeTR.go._redArg	list_take_tr_go	true	7	0	0	0	2	3	0	2	0	0	5	0	2	0	0	0	0	0	0	2	11	0	4	0	1	0	95947191579385798
 Effect4.Machine.Env.budgetOf	env_budget_of	false	8	0	1	2	2	2	0	1	0	0	7	0	1	0	0	0	0	0	0	4	10	0	2	2	1	0	16348502553951233815
@@ -420,6 +419,10 @@ Effect4.Machine.Record.entries	record_entries	false	8	0	0	0	4	4	0	0	0	0	8	0	0	0	
 Effect4.Machine.Payload.image	payload_image	false	5	0	0	0	0	1	0	0	0	0	5	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	14435125897488166780
 Effect4.Program.NativeOp.sleepMillisOf	program_native_op_sleep_millis_of	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	2	1	0	1	1	1	0	11326569151157239370
 Effect4.Program.NativeOp.awaitCellOf	program_native_op_await_cell_of	false	5	0	0	0	2	3	0	1	0	0	4	0	0	0	1	0	0	0	0	3	3	0	3	1	1	0	3357839316270022950
+Effect4.Machine.FnName.updateTerm	fn_name_update_term	false	18	0	1	2	1	3	0	6	0	0	12	0	4	2	0	0	0	0	0	0	15	0	3	1	1	0	7962336482700788719
+Effect4.Machine.FnName.updateSomeTerm	fn_name_update_some_term	false	27	0	0	0	1	3	0	7	0	0	20	0	1	6	0	0	0	0	0	0	30	0	2	1	1	0	13410351933767368456
+Effect4.Machine.FnName.modifyTerm	fn_name_modify_term	false	8	0	0	0	0	1	0	2	0	0	6	0	1	1	0	0	0	0	0	0	8	0	0	0	1	0	6743894503434312885
+Effect4.Machine.FnName.modifySomeTerm	fn_name_modify_some_term	false	20	0	0	0	1	2	0	6	0	0	14	0	2	4	0	0	0	0	0	0	21	0	1	1	1	0	13707184877642530087
 List.find?._at_.Effect4.Program.Point.awaitExit.spec_0	list_find_opt_at_program_point_await_exit_spec_0	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	5	0	5	0	1	0	1062798198059721375
 Effect4.Program.intImage	program_int_image	false	3	0	0	0	1	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	0	0	2	1	1	0	6305286560700620247
 Effect4.Machine.HandleKind.ofByte?	handle_kind_of_byte_opt	false	25	0	0	0	6	7	0	6	0	0	19	0	0	0	6	0	0	0	0	7	18	0	12	0	1	0	16898434589793192307
@@ -477,6 +480,9 @@ Effect4.Machine.WakeList.pending._redArg	wake_list_pending	false	1	0	0	0	1	1	0	0
 List.filterTR.loop._at_.Effect4.Machine.WakeList.cancel.spec_0._redArg	list_filter_tr_loop_at_wake_list_cancel_spec_0	true	7	0	1	2	5	4	0	0	0	0	7	0	0	0	0	0	0	0	0	1	24	0	9	0	1	0	9165562772435415110
 Effect4.Scope.tableInsert._at_._private.Effect4.Machine.Scope.0.Effect4.Scope.addState._at_.Effect4.Scope.addUnsafe._at_.Effect4.Scope.addExit._at_.Effect4.Machine.ScopeStore.addFinalizer.spec_0.spec_0.spec_1.spec_2._redArg	scope_table_insert_at__private_effect4_machine_scope_0_effect4_scope_add_state_at_scope_add_unsafe_at_scope_add_exit_at_scope_store_add_finalizer_spec_0_spec_0_spec_1_spec_2	false	7	0	0	0	1	2	0	0	0	0	7	0	0	0	0	0	0	0	0	5	12	0	2	0	1	0	6068756688321179068
 List.mapTR.loop._at_.Effect4.Machine.MemoWorld.setMap.spec_0	list_map_tr_loop_at_memo_world_set_map_spec_0	true	4	0	1	2	4	2	0	0	0	0	4	0	0	0	0	0	0	0	0	1	10	0	6	0	1	0	53626417807330206
+Effect4.Store.Image.ident._lam_0	store_image_ident__lam_0	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	1	1	0	0	0	1	0	4848990596133363058
+Effect4.Store.Image.ident._lam_1	store_image_ident__lam_1	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	18114758898142727760
+Effect4.Store.Image.toOption._redArg	store_image_to_option	false	3	0	0	0	2	2	0	0	0	0	2	1	0	0	0	0	0	0	0	0	2	0	3	0	1	0	5601203391203989687
 _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_._private.Init.Data.List.Impl.0.List.setTR.go.spec_0._redArg	array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_set_tr_go_spec_0	true	6	0	0	0	1	2	0	1	0	0	5	0	0	0	0	0	0	0	1	3	12	0	2	0	1	0	8110460290529840772
 Effect4.Program.Ty.productMembers	program_ty_product_members	false	4	0	0	0	0	1	0	1	0	0	3	0	1	0	0	0	0	0	0	1	5	0	0	0	1	0	13137715901732889463
 Effect4.Program.Ty.normalizeRow	program_ty_normalize_row	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	3	0	0	0	1	0	15478094685946660281
@@ -499,8 +505,6 @@ Effect4.Machine.Env.spine	env_spine	false	5	0	0	0	2	3	0	1	0	0	4	0	1	0	0	0	0	0	0	
 Effect4.instDecidableEqServiceKey	inst_decidable_eq_service_key	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	0	0	1	0	1646365181630179133
 List.mapTR.loop._at_.Effect4.Machine.Env.decode.spec_0	list_map_tr_loop_at_env_decode_spec_0	true	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	5	0	3	0	1	0	9103543189574140161
 Effect4.Machine.HandleKind.byte	handle_kind_byte	false	6	0	0	0	1	6	0	6	0	0	0	0	0	0	6	0	0	0	0	0	0	0	6	0	1	0	10840657379008926012
-Effect4.Store.Image.ident._lam_0	store_image_ident__lam_0	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	1	1	0	0	0	1	0	4848990596133363058
-Effect4.Store.Image.ident._lam_1	store_image_ident__lam_1	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	18114758898142727760
 Effect4.Machine.Value.toExit._redArg	value_to_exit	false	10	0	0	0	3	2	0	2	0	0	6	2	2	0	0	0	0	0	0	4	10	0	4	0	1	0	7631666306562959531
 Effect4.Machine.Value.ofExit._redArg	value_of_exit	false	18	0	0	0	11	10	0	2	0	0	14	2	2	0	0	0	0	0	0	20	10	0	15	5	1	0	10835814892244805104
 Effect4.Machine.Env.preventYieldRef	env_prevent_yield_ref	false	4	0	0	0	0	1	0	0	0	0	4	0	0	0	0	0	0	0	0	1	3	0	0	0	1	0	10154023185087433670
@@ -591,7 +595,6 @@ Effect4.Machine.Env.entriesOf	env_entries_of	true	9	0	0	0	4	4	0	0	0	0	9	0	0	0	0	
 Effect4.Machine.Env.preventYieldKey	env_prevent_yield_key	false	2	0	0	0	0	1	0	1	0	0	1	0	1	0	0	0	0	0	0	0	2	0	0	0	1	0	13171744531954890830
 Effect4.Machine.Env.maxOpsKey	env_max_ops_key	false	2	0	0	0	0	1	0	1	0	0	1	0	1	0	0	0	0	0	0	0	2	0	0	0	1	0	14103280107417374031
 Effect4.Machine.Value.annotations._redArg	value_annotations	false	9	0	0	0	0	1	0	1	0	0	8	0	1	0	0	0	0	0	0	0	9	0	0	0	1	0	9542743580282034123
-Effect4.Store.Image.option._redArg	store_image_option	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	5	4	0	0	0	1	0	11814931051240193455
 List.all._at_.Effect4.Program.stringsAtom.spec_0	list_all_at_program_strings_atom_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	1	0	3	1	1	0	13517934322442177125
 Effect4.Program.queryReasons?	program_query_reasons_opt	false	9	0	1	4	5	3	0	1	0	0	8	0	1	0	0	0	0	0	0	4	13	0	7	3	1	0	15128540791951619176
 List.any._at_.Effect4.Program.queryTag.spec_0	list_any_at_program_query_tag_spec_0	true	4	0	0	0	2	3	0	0	0	0	4	0	0	0	0	0	0	0	0	0	5	0	4	0	1	0	11071611085291567909
@@ -659,8 +662,6 @@ Effect4.Machine.Value.annotations._redArg._lam_1	value_annotations__red_arg__lam
 Effect4.Store.Image.string	store_image_string	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	3	2	0	0	0	1	0	7633446746595136565
 Effect4.Store.Image.pair._redArg	store_image_pair	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	7	6	0	0	0	1	0	387744060397565697
 Effect4.Store.Image.subtype._at_.Effect4.Machine.Value.annotations.spec_1._redArg	store_image_subtype_at_value_annotations_spec_1	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	3	4	0	0	0	1	0	6624017823046534723
-Effect4.Store.Image.toOption._redArg	store_image_to_option	false	3	0	0	0	2	2	0	0	0	0	2	1	0	0	0	0	0	0	0	0	2	0	3	0	1	0	5601203391203989687
-Effect4.Store.Image.ofOption._redArg	store_image_of_option	false	6	0	0	0	3	4	0	0	0	0	5	1	0	0	0	0	0	0	0	5	3	0	5	1	1	0	8235355711092466144
 Effect4.Reason.tag._redArg	reason_tag	false	3	0	0	0	1	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	0	0	3	0	1	0	14832341672318620149
 Effect4.instDecidableEqReasonTag	inst_decidable_eq_reason_tag	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	2715974501176864896
 Effect4.Machine.Map.readPairs	map_read_pairs	true	8	0	0	0	4	5	0	0	0	0	8	0	0	0	0	0	0	0	0	8	7	0	6	2	1	0	1543667134487144478

@@ -2,6 +2,7 @@ import Effect4.Laws.Program.Typed.Admission
 import Effect4.Laws.Program.Typed.Contracts
 import Effect4.Laws.Effects.Protocol
 import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Auto.Semantics
 
 /-!
 # Laws.Program.Typed.Residual — concrete protocols and the program judgment
@@ -26,13 +27,35 @@ open Effect4.Laws.Effects
 
 /-! ## The Store Protocol (31 SyncOp rows) -/
 
+/-- **A binder term maps one type into another**, at a world and at every later one: a value that
+fits `A` runs the term at `env ++ [a]` to a value that fits `R`. It is the unary Kripke relation
+at a function type, the world-indexing line of `docs/core/semantics.md` §2.1. The term is
+first-order data, so `Fits` gains no arrow clause (decisions row 163). A read-modify-write row
+demands it of its term (decisions row 43). -/
+def TermMaps (w : World) (f : Term) (env : List Val) (A R : Ty) : Prop :=
+  ∀ w', w.leHost w' → ∀ a, Fits w' a A → ∃ r, evalTerm (env ++ [a]) f = some r ∧ Fits w' r R
+
+/-- **The term relation is closed under later worlds**, by the order's transitivity: what
+`storePre_mono` needs of a read-modify-write row. Quantifying over later worlds is what closes
+it; a statement at one world is not closed (`Test/Program/ProtocolPosts.lean`, the control
+`termMaps_oneWorld_not_mono`). -/
+@[semantics "store-typing" (requirement := R4)]
+theorem TermMaps.mono {w w' : World} {f : Term} {env : List Val} {A R : Ty}
+    (ord : w.leHost w') (h : TermMaps w f env A R) : TermMaps w' f env A R :=
+  fun w'' o a ha => h w'' (leHost_trans _ _ _ ord o) a ha
+
+/-- A row's ghost certificate: the allocated type, the promise's columns, the memo hit's error
+type, or the answer column `B` of the two `modify` rows. -/
 def StoreCert : SyncOp → Type
-  | .refMake _ | .memoGet _ _ => Ty
+  | .refMake _ | .memoGet _ _ | .refModify _ _ _ | .refModifySome _ _ _ => Ty
   | .deferredMake | .memoBuild _ _ => Ty × Ty
   | _ => PUnit
 
-/-- What each store row demands of its request (decisions row 136 for `refModify`,
-`refModifySome` and the scope rows). -/
+/-- What each store row demands of its request (decisions row 136 for the scope rows). A
+read-modify-write row demands a declared cell and that its term maps the cell's type into the
+row's result type at every later world (`TermMaps`): `A` at the three update rows, `Option<A>`
+at the three `Some` rows, `[B, A]` at `modify` and `[B, Option<A>]` at `modifySome`, where `B` is
+the row's certificate. -/
 def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert op) : Prop :=
   match op with
   | .refMake initial => Fits w initial cert
@@ -40,12 +63,15 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .refSet cell v => ∃ ty, w.Ρ cell = some ty ∧ Fits w v ty
   | .refGetAndSet cell v => ∃ ty, w.Ρ cell = some ty ∧ Fits w v ty
   | .refSetAndGet cell v => ∃ ty, w.Ρ cell = some ty ∧ Fits w v ty
-  | .refUpdate cell _ | .refGetAndUpdate cell _ | .refUpdateAndGet cell _
-  | .refUpdateSome cell _ | .refGetAndUpdateSome cell _ | .refUpdateSomeAndGet cell _ =>
-    ∃ ty, w.Ρ cell = some ty
-  -- the native row's declared cell type (`Ref.Ref<number>`, `HandleFits`'s cell arm): the
-  -- handler answers the cell's old value, which the `nat` post then describes
-  | .refModify cell _ | .refModifySome cell _ => RefDeclared w cell .nat
+  | .refUpdate cell f env | .refGetAndUpdate cell f env | .refUpdateAndGet cell f env =>
+    ∃ ty, w.Ρ cell = some ty ∧ TermMaps w f env ty ty
+  | .refUpdateSome cell f env | .refGetAndUpdateSome cell f env
+  | .refUpdateSomeAndGet cell f env =>
+    ∃ ty, w.Ρ cell = some ty ∧ TermMaps w f env ty (.option ty)
+  -- the answer column `B` is the certificate: `modify` may answer another type than it stores
+  | .refModify cell f env => ∃ ty, w.Ρ cell = some ty ∧ TermMaps w f env ty (.prod cert ty)
+  | .refModifySome cell f env =>
+    ∃ ty, w.Ρ cell = some ty ∧ TermMaps w f env ty (.prod cert (.option ty))
   | .deferredMake => True
   | .deferredIsDone key | .deferredPoll key | .deferredAwaitCleanup key _ _ => (w.«Π» key).isSome = true
   -- the completion fits the promise's declared columns (`CompletionStrong`'s two arms), so the
@@ -91,10 +117,12 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .refSet cell _ => ans = Val.cell cell
   | .refGetAndSet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ Fits w' ans ty
   | .refSetAndGet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ Fits w' ans ty
-  | .refUpdate _ _ | .refUpdateSome _ _ => ans = Val.unit
-  | .refGetAndUpdate cell _ | .refGetAndUpdateSome cell _ => ∃ ty, w'.Ρ cell = some ty ∧ Fits w' ans ty
-  | .refUpdateAndGet cell _ | .refUpdateSomeAndGet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ Fits w' ans ty
-  | .refModify _ _ | .refModifySome _ _ => ∃ n, ans = Val.nat n
+  | .refUpdate _ _ _ | .refUpdateSome _ _ _ => ans = Val.unit
+  | .refGetAndUpdate cell _ _ | .refGetAndUpdateSome cell _ _ =>
+    ∃ ty, w'.Ρ cell = some ty ∧ Fits w' ans ty
+  | .refUpdateAndGet cell _ _ | .refUpdateSomeAndGet cell _ _ =>
+    ∃ ty, w'.Ρ cell = some ty ∧ Fits w' ans ty
+  | .refModify _ _ _ | .refModifySome _ _ _ => Fits w' ans cert
   | .deferredMake => ∃ key : DeferredKey, ans = Val.promise key ∧ w'.«Π» key = some cert
   | .deferredIsDone _ => ∃ b, ans = Val.bool b
   | .deferredPoll _ => ∃ b, ans = Val.bool b
@@ -777,15 +805,16 @@ theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
   | refMake initial =>
     simp only [storePre] at h ⊢
     exact fits_mono ord h
-  | refGet cell | refUpdate cell _ | refGetAndUpdate cell _ | refUpdateAndGet cell _
-  | refUpdateSome cell _ | refGetAndUpdateSome cell _ | refUpdateSomeAndGet cell _ =>
+  | refGet cell =>
     simp only [storePre] at h ⊢
     obtain ⟨ty, hty⟩ := h
     exact ⟨ty, hRho _ _ hty⟩
-  | refModify cell _ | refModifySome cell _ =>
+  | refUpdate cell _ _ | refGetAndUpdate cell _ _ | refUpdateAndGet cell _ _
+  | refUpdateSome cell _ _ | refGetAndUpdateSome cell _ _ | refUpdateSomeAndGet cell _ _
+  | refModify cell _ _ | refModifySome cell _ _ =>
     simp only [storePre] at h ⊢
-    obtain ⟨ty, hty, equiv⟩ := h
-    exact ⟨ty, hRho _ _ hty, equiv⟩
+    obtain ⟨ty, hty, maps⟩ := h
+    exact ⟨ty, hRho _ _ hty, maps.mono ord⟩
   | refSet cell v | refGetAndSet cell v | refSetAndGet cell v =>
     simp only [storePre] at h ⊢
     obtain ⟨ty, hty, hv⟩ := h

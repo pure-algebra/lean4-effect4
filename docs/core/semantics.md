@@ -249,6 +249,10 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   (`fits_normalize` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
 - **Scope inversion (`fits-scope-inv`)**: Inversion on scope handle values.
   (`fits_scope_inv` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
+- **Term-map monotonicity (`term-maps-mono`)**: A read-modify-write row demands that its binder term
+  map one type into another (decisions row 43). The map holds at every world later than one where it
+  holds. It quantifies over later worlds, so `Fits` gains no arrow clause (row 163).
+  (`TermMaps.mono` (`src/Effect4/Laws/Program/Typed/Residual.lean`)).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 

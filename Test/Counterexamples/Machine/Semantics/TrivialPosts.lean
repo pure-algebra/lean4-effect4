@@ -59,19 +59,21 @@ theorem joinAll_typed (root : ProgramSource) (w : W) (targets : List FiberId) (a
     (fun _ _ _ h => nomatch h) (Ty.list (.exitOf a e)) ⟨a, e, rfl, declared⟩
     (fun w' _ ans hpost => TypedProg.pure (strongExit_success w' _ ans hpost))
 
-/-- A performed store operation, in the shape `denoteR`'s `.perform` arm emits for a sync row. -/
+/-- A performed store operation, in the shape `denoteR`'s `.perform` arm emits for a sync row:
+the row runs its name's lowering (decisions row 43). -/
 def modifyCode (cell : RefKey) (f : FnName) : RProgram :=
-  .vis (.inl (.refModify cell f)) fun v => .pure (.success v)
+  .vis (.inl (.refModify cell f.modifyTerm [])) fun v => .pure (.success v)
 
-/-- `Ref.modify` answers a `nat`, the row's answer column, on a cell declared at the native
-row's cell type (decisions row 136: the pre names it, so the `nat` post is the handler's). -/
+/-- `Ref.modify` answers a `nat`, the row's answer column and its certificate, on a cell declared
+at the native row's cell type: the name's lowering maps the cell's type into `[nat, A]`
+(`modifyTerm_maps`, `Typed/Denotation.lean`), so the post at `nat` is the handler's. -/
 theorem modify_typed (root : ProgramSource) (w : W) (cell : RefKey) (f : FnName)
     (declared : RefDeclared w cell .nat) :
     TypedProg root w (EffTy.pure .nat) (modifyCode cell f) := by
-  refine TypedProg.store () declared ?_
+  obtain ⟨t, hlookup, hequiv⟩ := declared
+  refine TypedProg.store (cert := Ty.nat) ⟨t, hlookup, modifyTerm_maps hequiv f⟩ ?_
   intro w' _ ans hpost
-  obtain ⟨n, rfl⟩ := hpost
-  exact TypedProg.pure ⟨trivial, trivial⟩
+  exact TypedProg.pure (strongExit_success w' _ ans hpost)
 
 /-- The fuel frontier is never answered, so its continuation owes nothing. -/
 theorem frontier_typed (root : ProgramSource) (w : W) (ty : EffTy) (reason : PendingReason)
