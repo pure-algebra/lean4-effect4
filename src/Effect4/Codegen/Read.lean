@@ -158,16 +158,21 @@ mutual
           let v ← readTerm n value
           .ok (.recordSet t name v)
         | none =>
-          match x with
-          | .ident s =>
-            match Var.read n s with
-            | some i => .ok (.var i)
-            | none => if s = "undefined" then .ok (.lit .unit) else .error (.unknownIdent s)
-          | .int k => if 0 ≤ k then .ok (.lit (.nat k.toNat)) else .error (.negative k)
-          | .bool b => .ok (.lit (.bool b))
-          | .str s => .ok (.lit (.str s))
-          | .call (.ident atom) args => (readTerms n args).map (.app atom)
-          | _ => .error (.shape "term")
+          match ht : Effect4.Codegen.Tuple.readAt x with
+          | some (index, target) =>
+            have := Effect4.Codegen.Tuple.readAt_size x index target ht
+            (readTerm n target).map fun t => .tupleAt t index
+          | none =>
+            match x with
+            | .ident s =>
+              match Var.read n s with
+              | some i => .ok (.var i)
+              | none => if s = "undefined" then .ok (.lit .unit) else .error (.unknownIdent s)
+            | .int k => if 0 ≤ k then .ok (.lit (.nat k.toNat)) else .error (.negative k)
+            | .bool b => .ok (.lit (.bool b))
+            | .str s => .ok (.lit (.str s))
+            | .call (.ident atom) args => (readTerms n args).map (.app atom)
+            | _ => .error (.shape "term")
   termination_by sizeOf x
   decreasing_by all_goals simp_wf; all_goals omega
 
@@ -347,10 +352,10 @@ def readMethod (sig : Signature Op) (spell : String → List String → Option O
   | _ => .error (.shape "expression")
 
 /-- The digit a byte spells, `'0'` as `0`. -/
-def digitOfByte (b : UInt8) : Nat := b.toNat - 48
+abbrev digitOfByte := Effect4.Data.NatDecimal.digitOfByte
 
 /-- The number a byte string spells in decimal. -/
-def decodeBytes (bs : List UInt8) : Nat := bs.foldl (fun acc b => acc * 10 + digitOfByte b) 0
+abbrev decodeBytes := Effect4.Data.NatDecimal.decodeBytes
 
 /-- Decode the two numeric fields; `readKey` checks the complete canonical spelling. -/
 def keyFromText (text : String) : ServiceKey :=

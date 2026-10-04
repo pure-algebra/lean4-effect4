@@ -85,6 +85,8 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   | .term (.record _ _ _) => []
   | .term (.field _ _ _) => []
   | .term (.recordSet _ _ _) => []
+  | .term (.tupleAt _ _) => []
+  | .tupleTerm _ | .tupleCause _ => []
   | .cause _ => []
   | .errorNotAdmitted _ => []
   | .outsideDomain _ => []

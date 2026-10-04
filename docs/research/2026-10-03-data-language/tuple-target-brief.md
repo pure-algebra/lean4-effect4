@@ -1,6 +1,6 @@
 # Exact tuple target syntax
 
-Base: `064236a4` on the integration branch.
+Base: `b1f5b9e0` on the integration branch.
 The record seat continues on its own branch, `codex/tuple-codegen`, from this base.
 The owner authorizes robust, expressive implementation through the data-language plan.
 
@@ -8,7 +8,7 @@ The owner authorizes robust, expressive implementation through the data-language
 
 Use `tupleAt<"2">("2")(target)` for static projection.
 The two literal strings must match the canonical decimal spelling of the stored natural index.
-The structural printer and reader retain every natural index, including values above JavaScript's exact numeric range.
+Structural `printTerm` and `readTerm` retain every natural index, including values above JavaScript's exact numeric range.
 The helper requires a readonly tuple containing the requested key.
 It retains `never` for an impossible receiver.
 It refuses arrays, absent positions and non-tuples at target typing.
@@ -60,3 +60,23 @@ Refuse malformed markers, noncanonical decimals, missing positions and number-ro
 Use only pinned tsgo 7 and existing Bun dependencies for target checks.
 Record exact commands, results, trust queries and remaining host assumptions in a receipt.
 Commit explicit paths after focused checks; do not push or run a full sweep.
+
+## Concrete dependencies
+
+`Data.NatDecimal.decodeBytes` owns the byte fold extracted from `Codegen.Read`.
+The existing `Program.digitOfByte` and `Program.decodeBytes` names remain aliases.
+`Laws.Data.NatDecimal` owns decimal retraction; the existing public theorem names in `ReadLeaf` forward to those facts.
+`NatDecimal.read` checks the complete canonical spelling after byte decoding.
+Its retraction covers every natural; its exactness assumes only a successful read.
+These are helpers of `collection-term-print-read` and `printed-modules`, consumed by `Tuple.readAt_writeAt` and `Tuple.readAt_exact`.
+The shared decoder also serves existing variable-name and service-key laws.
+
+`Tuple.readAt_size` serves recursive term reading under the same claims, with successful wrapper reading as its only premise.
+The wrapper laws quantify over every natural index and arbitrary child expression.
+The existing term and program reconstruction statements keep their hypotheses.
+All these obligations belong to Exact Codecs and Data Plane Embeddings and serve R2/R3.
+They establish no target execution, source-number representability or liveness theorem.
+
+`Program.termHelperNames` combines record and tuple helper bindings for row and export name checks.
+`Codegen.Diagnostics.codesOf` gains the necessary tuple case without asserting a measured target diagnostic mapping.
+The coordinator owns the corresponding generated helper-name inventory.
