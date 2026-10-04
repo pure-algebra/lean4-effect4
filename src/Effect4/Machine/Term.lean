@@ -7,7 +7,7 @@ import Effect4.Program.TyEq
 # Machine.Term — the first-order term language and its evaluation, below the stores
 
 The literals (`Lit`), the positional variables (`Var`), the terms (`Term`, `Terms`: a variable,
-a literal, an atom application, or a named record operation), their scope check, the closed atom alphabet
+a literal, an atom application, a named record operation, or a static tuple projection), their scope check, the closed atom alphabet
 (`NativeAtom`: its name, arity, lookup and `eval`) and the evaluator (`evalTerm`), together with the error
 image (`errOf`, `valOfErr`) and the cause queries the query atoms read. Everything here is
 first-order data over the shared carrier `Val`. Record declarations retain `Ty` data,
@@ -76,6 +76,10 @@ def Val.tuple? : Val → Option (List Val)
   | .list values => some values
   | _ => none
 
+/-- Select an exact position from a plain tuple frame. List-view snapshots are refused. -/
+def Val.tupleAt? (value : Val) (index : Nat) : Option Val :=
+  (Val.tuple? value).bind fun items => items[index]?
+
 theorem Val.tuple?_tuple (vs : List Val) : Val.tuple? (Val.tuple vs) = some vs := rfl
 
 theorem Val.tuple?_exact {v : Val} {vs : List Val} (h : Val.tuple? v = some vs) : v = Val.tuple vs := by
@@ -114,6 +118,7 @@ mutual
     | record (fields : List (String × Bool × Ty)) (presentNames : List String) (values : Terms)
     | field (mode : FieldReadMode) (target : Term) (name : String)
     | recordSet (target : Term) (name : String) (value : Term)
+    | tupleAt (target : Term) (index : Nat)
   inductive Terms
     | nil
     | cons (head : Term) (tail : Terms)
@@ -136,6 +141,7 @@ mutual
     | .record _ _ values => Terms.scoped n values
     | .field _ target _ => Term.scoped n target
     | .recordSet target _ value => Term.scoped n target && Term.scoped n value
+    | .tupleAt target _ => Term.scoped n target
   def Terms.scoped (n : Nat) : Terms → Bool
     | .nil => true
     | .cons head tail => Term.scoped n head && Terms.scoped n tail
@@ -179,6 +185,8 @@ inductive NativeAtom
   | listNil | listCons | listGet | listLength | listAppend | natSub | natDiv | natMod | strConcat
   /-- Pure string-map operations (decisions rows 125, 166 and 197). -/
   | mapEmpty | mapGet | mapSet | mapKeys | mapEntries | mapFromEntries
+  /-- Exact positional construction at every arity (decisions rows 159 and 197). -/
+  | tuple
   deriving DecidableEq, BEq
 
 namespace NativeAtom
@@ -207,8 +215,8 @@ structure AtomRow where
   /-- `some n` for a fixed arity, `none` for a variadic atom. -/
   arity : Option Nat
   /-- The literal rule's flag (DI-55, the prelude's `pair<const A, const B>`): a string literal
-  argument keeps its literal type under `litArgTy` (DI-15). Only `pair` is; every other atom
-  widens a literal to `string`, as TypeScript does at a non-`const` parameter. -/
+  argument keeps its literal type under `litArgTy` (DI-15). `pair` and `tuple` retain literal
+  columns; every other atom widens a literal to `string`. -/
   constGeneric : Bool
   /-- The atom's body in the TypeScript prelude: the text after `export const <name> = `.
   `harness/truth/prelude-atoms.gen.ts` is this column, one line per atom. -/
@@ -330,6 +338,10 @@ def row : NativeAtom → AtomRow
       { name := "mapFromEntries", arity := some 1, constGeneric := false,
         prelude := "<A = never>(entries: ReadonlyArray<readonly [string, A]>): Readonly<Record<string, A>> => Object.fromEntries(entries)" }
 
+  | .tuple =>
+      { name := "tuple", arity := none, constGeneric := true,
+        prelude := "<const A extends readonly unknown[]>(...items: A): A => items" }
+
 def name (atom : NativeAtom) : String := (row atom).name
 
 /-- Exact lookup over the complete inventory; unknown names remain refused. A match on the
@@ -378,6 +390,7 @@ def ofName? : String → Option NativeAtom
   | "mapKeys" => some .mapKeys
   | "mapEntries" => some .mapEntries
   | "mapFromEntries" => some .mapFromEntries
+  | "tuple" => some .tuple
   | _ => none
 
 theorem ofName?_name (atom : NativeAtom) : ofName? atom.name = some atom := by
@@ -452,6 +465,7 @@ def eval : NativeAtom → List Val → Option Val
   | .mapKeys, [value] => Machine.Map.keys value
   | .mapEntries, [value] => Machine.Map.entries value
   | .mapFromEntries, [value] => Machine.Map.fromEntries value
+  | .tuple, values => some (.list values)
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
@@ -489,6 +503,9 @@ mutual
       let value ← evalTerm env target
       let next ← evalTerm env replacement
       Machine.Record.set value name next
+    | .tupleAt target index => do
+      let value ← evalTerm env target
+      Val.tupleAt? value index
   def evalTerms (env : List Val) : Terms → Option (List Val)
     | .nil => some []
     | .cons head tail => do

@@ -458,6 +458,7 @@ mutual
     | .field mode target name => .field mode (Term.weaken cut target) name
     | .recordSet target name value =>
       .recordSet (Term.weaken cut target) name (Term.weaken cut value)
+    | .tupleAt target index => .tupleAt (Term.weaken cut target) index
 
   def Terms.weaken (cut : Nat) : Terms → Terms
     | .nil => .nil
