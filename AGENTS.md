@@ -122,7 +122,12 @@ its arrows. Anything else is a leak.
 
 ## Trust
 
-- No `sorry`, `partial`, `unsafe`, `native_decide`, `axiom`, `extern` or `implemented_by`.
+- No `partial`, `unsafe`, `native_decide`, `axiom`, `extern` or `implemented_by`.
+- No `sorry`, except as the body of a planned goal (`proof_goal`, decisions row 203):
+  - the command adds the theorem with a `sorry` body and tags it; the token stays out of source;
+  - a goal lives in `Effect4.Laws` or a `Test` fixture, never in a module the `Effect4` root reaches;
+  - the axiom gate admits `sorryAx` only as a goal's own body and counts what rests on goals;
+  - a claim or a requirement's top node is proved only when it rests on no goal.
 - The axiom gate audits every declaration of every `Effect4.*` and `Test.*` module at
   `[propext, Quot.sound]`.
 - A rendering declaration that must traverse a `String` is exempted by its exact name in
@@ -147,16 +152,15 @@ its arrows. Anything else is a leak.
   1. its concept, the one of the ten in `docs/core/semantics.md`, and the required property there
      that it is or serves;
   2. its question: a registry claim with its role (`tools/Tools/SemanticsRegistry.lean`,
-     `generated/semantics.md`), whose pointer is the proving theorem once it exists. While a goal
-     is open and has no theorem, a `ProofGraph` ledger goal (`#proof_wanted`) holds its place.
-     The ledger goal is retired when the proof lands, never kept beside the theorem as a second
-     statement (2026-10-03). A helper names the claim it is a step of, and the consumer that uses
-     it. A decomposition is a conditional theorem, registered as a reduction of its target in
-     the semantics registry. The plan (`tools/ProofGraph/Plan.lean`) checks it in the kernel and derives the
-     statuses: declared, reduced, ready, proved. `#extract_obligations` turns a proof sketch's
-     open goals into parts and the sketch into the reduction. `#plan_status` shows a goal's plan,
-     and `#obligation_close` proves a ready goal. A requirement row lists the parts that no node
-     states yet as its open parts;
+     `generated/semantics.md`), whose pointer is the theorem that states it. While the claim is
+     open, the pointer is a planned goal: `proof_goal G : P`, a theorem whose body is `sorry`.
+     Downstream proofs use `G` as a theorem. Its proof replaces the `proof_goal` in place, with no
+     second statement. A helper names the claim it is a step of, and the consumer that uses it.
+     A decomposition is an ordinary theorem whose proof uses goals: it is proved modulo them.
+     The plan (`tools/ProofGraph/Plan.lean`) derives each node's status from its proof: goal,
+     modulo or proved. `proof_sketch` turns a proof sketch's open goals into goals.
+     `#plan_status` shows a node's status and the goals it rests on. A requirement row lists the
+     parts that no goal states yet as its open parts;
   3. its reach: the exact judgment, observation, fragment and hypotheses, with the decisions rows
      and register lines that bound it;
   4. what it does not establish:
@@ -168,10 +172,10 @@ its arrows. Anything else is a leak.
   5. what it unlocks on the M5 → M6 → M7 spine, or which requirement it serves (R1–R13,
      `docs/core/system-map.md`).
 
-  Do not start a lemma that has no consumer on a path to a ledger goal or a registry claim. If the
+  Do not start a lemma that has no consumer on a path to a planned goal or a registry claim. If the
   theory lacks a property, add it to `semantics.md` and the semantics registry, or propose it in
   the receipt. Do it in the slice that proves the property. A receipt gives each landed theorem's
-  placement, and a brief gives each assigned obligation's. No open ledger goal does not mean the
+  placement, and a brief gives each assigned obligation's. No open planned goal does not mean the
   semantics is finished.
 - Coverage of the Effect runtime is stated only in the block that
   `scripts/report-effect-runtime-coverage.sh` writes, after `scripts/check-effect-runtime-census.sh`
@@ -204,7 +208,7 @@ its arrows. Anything else is a leak.
 - `make status` gives what is true at HEAD, measured:
   - the build and check markers against their inputs;
   - the size of Lake's artifact cache, and the part of it that no worktree uses;
-  - the claims by status and the open ledger goals;
+  - the claims by status and the open planned goals;
   - the registers;
   - the documents' stale references.
 - `make check-docs`, part of `make check`, refuses a path, link, `git:<rev>:<path>` citation or make

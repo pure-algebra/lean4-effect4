@@ -112,6 +112,7 @@ import Test.Counterexamples.Machine.Runtime.LiveStack
 import Test.Counterexamples.Machine.Runtime.HostHandleForgery
 import Test.Counterexamples.Machine.Runtime.HostReservedDefect
 import Test.Counterexamples.Machine.Runtime.LayerEnvironment
+import Test.Counterexamples.Program.AdmissionUnserved
 import Test.Machine.Runtime.StoresLawsContract
 import Test.Machine.Runtime.CompletionDataContract
 import Test.Machine.Runtime.ApproximationContract

@@ -2,10 +2,8 @@ import Tools.SemanticsRegistry
 import Tools.SemanticsDisplay
 import Tools.GeneratedStamp
 import Effect4.Laws.Auto.Semantics
-import ProofGraph.Ledger
 import ProofGraph.Axioms
 import ProofGraph.Plan
-import ProofGraph.Extract
 
 /-! A measured report of selected claims. English claim-to-witness associations are authored;
 ProofGraph checks their actual propositions. This library neither proves the descriptions nor
@@ -120,9 +118,11 @@ private def declaration (memo : IO.Ref ProofGraph.AxiomMemo) (name : Name)
   unless (env.getModuleIdxFor? name).isSome do
     throwError "{name}: witness module is not loaded"
   let printed ← Display.expression (proposition.getD ci.type)
-  let (reached, table) := (ProofGraph.reachedAxioms env name).run (← memo.get)
+  -- goals are leaves of the walk (decisions row 203): a theorem that rests on one reaches its
+  -- name, never its `sorry`
+  let (reached, table) := (ProofGraph.reachedWithGoals env name).run (← memo.get)
   memo.set table
-  let some reached := reached | throwError "{name}: axiom collection exhausted its step budget"
+  let some (reached, goals) := reached | throwError "{name}: axiom collection exhausted its step budget"
   let axioms := reached.qsort (·.toString < ·.toString)
   let disallowed := ProofGraph.disallowedAxioms axioms
   unless disallowed.isEmpty do throwError "{name}: disallowed axioms {disallowed}"
@@ -130,6 +130,7 @@ private def declaration (memo : IO.Ref ProofGraph.AxiomMemo) (name : Name)
     ("name", text name.toString), ("module", text (semanticsModule env name).toString),
     ("levels", names ci.levelParams), ("statement", text printed),
     ("axioms", names axioms.toList),
+    ("restsOn", names (goals.qsort (·.toString < ·.toString)).toList),
     ("withinSemanticAxiomCeiling", toJson (ProofGraph.disallowedAxioms axioms).isEmpty)]
 
 private def witness (memo : IO.Ref ProofGraph.AxiomMemo) (name : Name) : MetaM Json := do
@@ -139,8 +140,6 @@ private def witness (memo : IO.Ref ProofGraph.AxiomMemo) (name : Name) : MetaM J
     | some _ => throwError "{name}: not a theorem"
     | none => throwError "Unknown constant `{name}`"
   if t.type.hasMVar || t.type.hasFVar then throwError "{name}: open proposition"
-  if (← ProofGraph.readGoal name).isSome then
-    throwError "{name}: obligation marker requires a goal pointer"
   declaration memo name
 
 private def counterexample (index : Registers) (id : String) : MetaM CounterexampleEntry := do
@@ -155,33 +154,25 @@ private def claimStatus (memo : IO.Ref ProofGraph.AxiomMemo) (index : Registers)
     MetaM (String × Json) := do
   match pointer with
   | .witness name =>
+    -- the standing is derived (decisions row 203): an open goal, a theorem that rests on goals,
+    -- or a theorem that reaches none
     let evidence ← witness memo name
+    let env ← getEnv
+    if ProofGraph.isGoal env name then
+      return ("wanted", obj [("_tag", text "wanted"), ("by", text "goal"), ("goal", evidence)])
+    let goals := ((evidence.getObjValAs? (Array String) "restsOn").toOption.getD #[])
+    unless goals.isEmpty do
+      return ("modulo", obj [("_tag", text "modulo"), ("by", text "theorem"),
+        ("witness", evidence), ("restsOn", toJson goals)])
     return ("proved", obj [("_tag", text "proved"), ("by", text "theorem"),
       ("witness", evidence), ("goal", .null)])
-  | .goal name =>
-    let some goal ← ProofGraph.readGoal name | throwError "{name}: not an obligation"
-    let env ← getEnv
-    let checked := name ++ `checked
-    let wanted := name ++ `wanted
-    if env.contains checked && env.contains wanted then throwError "{name}: stale placeholder (both checked and wanted)"
-    if env.contains checked then
-      discard <| ProofGraph.check #[goal] #[⟨name, .proved checked⟩] 0
-      return ("proved", obj [("_tag", text "proved"), ("by", text "ledger"),
-        ("witness", ← declaration memo checked), ("goal", ← declaration memo name (some goal.proposition))])
-    if env.contains wanted then
-      discard <| ProofGraph.check #[goal] #[⟨name, .wanted wanted⟩] 1
-      return ("wanted", obj [("_tag", text "wanted"),
-        ("goal", ← declaration memo name (some goal.proposition)), ("placeholder", text wanted.toString)])
-    -- a part `#extract_obligations` declared is pending without a placeholder: its tag holds
-    -- its place; a part with a `wanted` too is refused above as stale only if also proved
-    if ProofGraph.isExtractedPart env name then
-      return ("wanted", obj [("_tag", text "wanted"), ("by", text "extraction"),
-        ("goal", ← declaration memo name (some goal.proposition)), ("placeholder", .null)])
-    throwError "{name}: missing proof or placeholder"
   | .refutedBy id name =>
     let status ← counterexample index id
     if status.status == "RETIRED" then throwError "retired counterexample id {id}"
+    if ProofGraph.isGoal (← getEnv) name then throwError "{name}: a refutation is a planned goal"
     let evidence ← witness memo name
+    unless ((evidence.getObjValAs? (Array String) "restsOn").toOption.getD #[]).isEmpty do
+      throwError "{name}: a refutation rests on planned goals"
     return ("refuted", obj [("_tag", text "refuted"), ("counterexample", obj [
       ("id", text id), ("registerStatus", text status.status), ("record", text status.row), ("witness", evidence)])])
   | .absent reason =>
@@ -194,46 +185,31 @@ private def claimStatus (memo : IO.Ref ProofGraph.AxiomMemo) (index : Registers)
 private def literatureJson (r : LiteratureRef) : Json :=
   obj [("work", text r.work), ("locator", text r.locator), ("relation", text r.relation)]
 
-/-- The plan's report section: the requirements with their derived statuses, the nodes reachable
-from their top nodes and every ledger goal, the checked and unchecked edges, the loose premises and
-the next goals (`ProofGraph.Plan`). -/
-private def planJson (plan : ProofGraph.Plan) (requirements : List Requirement) (scopes : List Name) :
-    MetaM Json := do
+/-- The plan's report section: the requirements with their derived statuses, every node with its
+standing and what its proof brings in, the edges to its nearest nodes, and the next goals
+(`ProofGraph.Plan`). -/
+private def planJson (plan : ProofGraph.Plan) (requirements : List Requirement) : MetaM Json := do
   let env ← getEnv
   let tops := requirements.foldl (init := #[]) fun acc r => acc ++ r.top.toArray
-  let reach := plan.reachable tops
-  let goals := (plan.nodes.filter (·.isGoal)).map (·.name)
-  let shown := plan.nodes.filter fun n => reach.contains n.name || n.isGoal
-  let mut nodes : Array Json := #[]
-  for n in shown do
-    let brought ← ProofGraph.broughtIn scopes plan n
-    nodes := nodes.push (obj [("name", text n.name.toString),
-      ("kind", text (if n.isGoal then "goal" else "theorem")),
-      ("status", text (plan.status n.name).word),
+  let nodes := plan.nodes.map fun n => obj [("name", text n.name.toString),
+      ("kind", text (if ProofGraph.isGoal env n.name then "goal" else "theorem")),
+      ("status", text n.standing.word),
+      ("restsOn", names n.restsOn.toList),
       ("module", text (semanticsModule env n.name).toString),
-      ("broughtIn", obj [("nearest", toJson (brought.nearest.map Name.toString)),
-        ("lemmas", toJson brought.lemmas), ("definitions", toJson brought.definitions)])])
-  let edges := plan.edges.map fun e => obj [("target", text e.target.toString),
-    ("reduction", text e.reduction.toString), ("checked", toJson e.checked),
-    ("premises", toJson (e.premises.map fun m => obj [("premise", text m.premise),
-      ("node", match m.node with | some d => text d.toString | none => .null),
-      ("byHypothesis", toJson m.byHypothesis)]))]
+      ("broughtIn", obj [("nearest", names n.nearest.toList),
+        ("lemmas", toJson n.lemmas), ("definitions", toJson n.definitions)])]
+  let word (n : Name) : String := ((plan.find? n).map (·.standing.word)).getD "missing"
   let reqs := requirements.toArray.map fun r =>
-    let statuses := r.top.map plan.status
-    let word := if !r.openParts.isEmpty then "open"
-      else if statuses.all (· == .proved) then "proved"
-      else if statuses.any (· == .ready) then "ready"
-      else if statuses.any (· == .reduced) then "reduced" else "declared"
-    obj [("id", text r.id), ("title", text r.title), ("status", text word),
+    let proved := r.openParts.isEmpty && r.top.all (word · == "proved")
+    obj [("id", text r.id), ("title", text r.title), ("status", text (if proved then "proved" else "open")),
       ("openParts", toJson r.openParts),
-      ("top", toJson (r.top.map fun n =>
-        obj [("name", text n.toString), ("status", text (plan.status n).word)])),
-      ("reachable", toJson ((plan.reachable r.top.toArray).map Name.toString)),
-      ("next", toJson ((plan.next r.top.toArray).map Name.toString))]
-  let loose := plan.loose.map fun (t, r, premise) =>
-    obj [("target", text t.toString), ("reduction", text r.toString), ("premise", text premise)]
-  return obj [("requirements", toJson reqs), ("nodes", toJson nodes), ("edges", toJson edges),
-    ("loose", toJson loose), ("next", toJson ((plan.next (tops ++ goals)).map Name.toString))]
+      ("top", toJson (r.top.map fun n => obj [("name", text n.toString), ("status", text (word n))])),
+      ("next", names (plan.next r.top.toArray).toList)]
+  let next := plan.next tops
+  -- a goal no requirement reaches is planned work without a place in the requirements
+  let unplaced := (plan.nodes.filter fun n => ProofGraph.isGoal env n.name && !next.contains n.name).map (·.name)
+  return obj [("requirements", toJson reqs), ("nodes", toJson nodes),
+    ("next", names next.toList), ("unplacedGoals", names unplaced.toList)]
 
 /-- Validate and collect all located refusals. No status is accepted from authored input. -/
 def buildReport (registry : Registry) (registers : Registers) (toolchain : String) :
@@ -270,9 +246,10 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     if claimIds.contains claim.id then errors := errors.push s!"{location}: duplicate id"
     claimIds := claim.id :: claimIds
     unless ids.contains claim.concept do errors := errors.push s!"{location}: unknown concept {claim.concept}"
-    if let .goal goal := claim.pointer then
-      if goals.contains goal then errors := errors.push s!"{location}: duplicate goal {goal}"
-      goals := goal :: goals
+    if let .witness goal := claim.pointer then
+      if ProofGraph.isGoal env goal then
+        if goals.contains goal then errors := errors.push s!"{location}: duplicate goal {goal}"
+        goals := goal :: goals
     for ref in claim.literature do
       unless nonblank ref.work && nonblank ref.locator &&
           ["definitionUsed", "proofTechnique", "adaptedResult", "analogy", "excludedFeature"].contains ref.relation do
@@ -334,32 +311,28 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
   for pre in registry.planScope do
     unless env.header.moduleNames.any (pre.isPrefixOf ·) do
       errors := errors.push s!"plan scope {pre}: matches no loaded module"
-  -- The plan (`ProofGraph.Plan`): the ledger goals of the plan scope, the claims' witnesses and
-  -- the requirements' top nodes are the nodes; the authored reductions become checked edges.
+  -- The plan (`ProofGraph.Plan`): the requirements' top nodes, the claims' witnesses and every
+  -- planned goal of the plan scope are the nodes; the edges are read from their proofs.
   let mut plan : Json := .null
   try
-    let mut nodes ← (← ProofGraph.goalsIn registry.planScope).mapM fun g => ProofGraph.Node.ofGoal g
-    let mut named : Array Name := #[]
+    let mut named := registry.requirements.foldl (init := #[]) fun acc r => acc ++ r.top.toArray
     for claim in registry.claims do
-      if let .witness w := claim.pointer then named := named.push w
-    for req in registry.requirements do named := named ++ req.top.toArray
-    for n in named do
-      unless nodes.any (·.name == n) do nodes := nodes.push (← ProofGraph.Node.ofName n)
-    let built ← ProofGraph.buildPlan nodes
-      (registry.reductions.toArray.map fun r => (r.target, r.reduction))
-    plan ← planJson built registry.requirements registry.planScope
+      if let .witness w := claim.pointer then
+        unless named.contains w do named := named.push w
+    let built ← ProofGraph.buildPlan registry.planScope named memo
+    plan ← planJson built registry.requirements
   catch ex => errors := errors.push s!"plan: {← ex.toMessageData.toString}"
   let concepts := registry.concepts.map fun concept =>
     let members := rows.filter (·.1 == concept.id)
     let counts := ("claims", toJson members.size) ::
-      (["proved", "wanted", "refuted", "absent", "assumed"].map fun tag =>
+      (["proved", "modulo", "wanted", "refuted", "absent", "assumed"].map fun tag =>
         (tag, toJson (members.filter (·.2.1 == tag)).size))
     obj [("id", text concept.id), ("title", text concept.title),
       ("defaultModules", names concept.defaultModules), ("counts", obj counts)]
   if !errors.isEmpty then return .error errors
   unplaced := unplaced.qsort (·.1.toString < ·.1.toString)
   return .ok <| obj [
-    ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (4 : Nat)),
+    ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (5 : Nat)),
     ("producer", text (Tools.GeneratedStamp.note "tools/Drivers/Semantics.lean (make gen-semantics)")),
     ("command", text "make gen-semantics"),
     ("inputs", toJson (["tools/Tools/SemanticsRegistry.lean", "tools/Tools/Semantics.lean",
@@ -371,7 +344,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
         ("ceiling", toJson (["propext", "Quot.sound"] : List String))])]),
     ("concepts", toJson concepts), ("claims", toJson (rows.map (·.2.2))), ("cuts", toJson cuts), ("plan", plan),
     ("placement", obj [
-      ("universe", text "theorems of the registry's concept-named modules; auxiliary names, ledger goals and their checked witnesses excluded"),
+      ("universe", text "theorems of the registry's concept-named modules; auxiliary names and planned goals excluded"),
       ("declarations", toJson placements),
       ("unplacedCount", toJson (unplaced.foldl (fun total row => total + row.2) 0)),
       ("unplacedByModule", toJson (unplaced.map fun (mod, count) =>
@@ -418,49 +391,52 @@ diagram per requirement over the nodes it reaches. -/
 private def renderPlan (plan : Json) : String := Id.run do
   if plan == .null then return ""
   let nodes := array plan "nodes"
-  let statusOf (name : String) : String :=
-    ((nodes.find? (field · "name" == name)).map (field · "status")).getD "declared"
-  let mut out := "\n## Plan\n\nThe requirements that have plan nodes. A node is a ledger goal or a proved theorem; an edge is an authored reduction whose implication from its premise nodes to its target the kernel checked within the semantic ceiling (`tools/ProofGraph/Plan.lean`). Statuses are derived: declared, reduced, ready, proved. A loose premise is one no node discharges; it keeps its target from being ready.\n\n"
-  out := out ++ "A requirement with an open part not yet stated as a plan node is open, whatever its nodes' statuses.\n\n"
+  let strings (j : Json) : List String := (j.getArr?.toOption.getD #[]).toList.map fun n =>
+    n.getStr?.toOption.getD ""
+  let nodeOf (name : String) : Option Json := nodes.find? (field · "name" == name)
+  let statusOf (name : String) : String := ((nodeOf name).map (field · "status")).getD "missing"
+  let nearestOf (name : String) : List String :=
+    ((nodeOf name).map fun n => strings (nested (nested n "broughtIn") "nearest")).getD []
+  let ticked (names : List String) : String :=
+    if names.isEmpty then "—" else String.intercalate ", " (names.map fun n => s!"`{shortName n}`")
+  let mut out := "\n## Plan\n\nThe requirements and their nodes. A node is a planned goal (a theorem whose body is `sorry`, declared by `proof_goal`) or a theorem a requirement names. Its status is derived from its proof, with goals as leaves (`tools/ProofGraph/Plan.lean`, decisions row 203): goal, modulo (proved from the goals it rests on), or proved. An edge goes from a node to the nodes its proof reaches first.\n\n"
+  out := out ++ "A requirement is proved when every top node is proved and no open part remains. An open part is one not yet stated as a goal.\n\n"
   out := out ++ "| Requirement | Status | Top nodes | Next goals |\n| --- | --- | --- | --- |\n"
   for req in array plan "requirements" do
     let tops := String.intercalate ", " ((array req "top").toList.map fun t =>
       s!"`{shortName (field t "name")}` ({field t "status"})")
     let tops := if tops.isEmpty then "—" else tops
-    let next := (nested req "next").getArr?.toOption.getD #[]
-    let nextText := if next.isEmpty then "—" else
-      String.intercalate ", " (next.toList.map fun n => s!"`{shortName (n.getStr?.toOption.getD "")}`")
-    out := out ++ s!"| {field req "id"} | {field req "status"} | {tops} | {nextText} |\n"
-  let next := (nested plan "next").getArr?.toOption.getD #[]
-  out := out ++ s!"\n**Next goals** ({next.size}): {String.intercalate ", " (next.toList.map fun n => n.getStr?.toOption.getD "")}\n"
-  let loose := array plan "loose"
-  unless loose.isEmpty do
-    out := out ++ s!"\n**Loose premises** ({loose.size}):\n\n"
-    for l in loose do
-      out := out ++ s!"- `{shortName (field l "target")}` via `{shortName (field l "reduction")}`: `{cell (field l "premise")}`\n"
+    out := out ++ s!"| {field req "id"} | {field req "status"} | {tops} | {ticked (strings (nested req "next"))} |\n"
+  let next := strings (nested plan "next")
+  out := out ++ s!"\n**Next goals** ({next.length}): {ticked next}\n"
+  let unplaced := strings (nested plan "unplacedGoals")
+  unless unplaced.isEmpty do
+    out := out ++ s!"\n**Goals no requirement reaches** ({unplaced.length}): {ticked unplaced}\n"
   for req in array plan "requirements" do
-    let reach := ((nested req "reachable").getArr?.toOption.getD #[]).toList.map fun n => n.getStr?.toOption.getD ""
+    -- the nodes the requirement's top nodes reach through their nearest nodes
+    let mut reach : List String := []
+    let mut todo := (array req "top").toList.map (field · "name")
+    for _ in [0:nodes.size + 1] do
+      let some n := todo.head? | break
+      todo := todo.tail
+      if reach.contains n then continue
+      reach := reach ++ [n]
+      todo := todo ++ nearestOf n
     out := out ++ s!"\n### {field req "id"}: {field req "title"}\n\n"
-    for part in (nested req "openParts").getArr?.toOption.getD #[] do
-      out := out ++ s!"- Open: {part.getStr?.toOption.getD ""}\n"
+    for part in strings (nested req "openParts") do
+      out := out ++ s!"- Open: {part}\n"
     out := out ++ "\n```mermaid\nflowchart LR\n"
     for (n, i) in reach.zipIdx do
       out := out ++ s!"  n{i}[\"{shortName n}<br/>{statusOf n}\"]\n"
-    for e in array plan "edges" do
-      let some src := reach.idxOf? (field e "target") | continue
-      for m in array e "premises" do
-        let dst := field m "node"
-        if let some j := reach.idxOf? dst then
-          let arrow := if (e.getObjValAs? Bool "checked").toOption == some true then "-->" else "-.->"
-          out := out ++ s!"  n{src} {arrow}|\"{shortName (field e "reduction")}\"| n{j}\n"
-    out := out ++ "```\n\n| Node | Status | Nearest nodes | Lemmas | Definitions |\n| --- | --- | --- | --- | --- |\n"
+    for (n, i) in reach.zipIdx do
+      for d in nearestOf n do
+        if let some j := reach.idxOf? d then out := out ++ s!"  n{i} --> n{j}\n"
+    out := out ++ "```\n\n| Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |\n| --- | --- | --- | --- | --- | --- |\n"
     for n in reach do
-      let some node := nodes.find? (field · "name" == n) | continue
+      let some node := nodeOf n | continue
       let b := nested node "broughtIn"
-      let nearest := ((nested b "nearest").getArr?.toOption.getD #[]).toList.map fun d =>
-        s!"`{shortName (d.getStr?.toOption.getD "")}`"
       let count (key : String) := ((b.getObjValAs? Nat key).toOption.getD 0)
-      out := out ++ s!"| `{shortName n}` | {statusOf n} | {if nearest.isEmpty then "—" else String.intercalate ", " nearest} | {count "lemmas"} | {count "definitions"} |\n"
+      out := out ++ s!"| `{shortName n}` | {statusOf n} | {ticked (strings (nested node "restsOn"))} | {ticked (nearestOf n)} | {count "lemmas"} | {count "definitions"} |\n"
   return out
 
 def renderMarkdown (report : Json) : String := Id.run do
@@ -474,14 +450,18 @@ def renderMarkdown (report : Json) : String := Id.run do
       let status := nested claim "status"
       let tag := field status "_tag"
       let evidence := match tag with
-        | "proved" => nested status "witness"
+        | "proved" | "modulo" => nested status "witness"
         | "wanted" => nested status "goal"
         | "refuted" => nested (nested status "counterexample") "witness"
         | _ => .null
       let contests := String.intercalate ", " ((array claim "contestedBy").toList.map fun r => field r "id")
       let ceiling := if evidence == .null then "—" else
         if (evidence.getObjValAs? Bool "withinSemanticAxiomCeiling").toOption == some true then "yes" else "no"
-      let evidenceText := if evidence == .null then field status "reason" else field evidence "name"
+      let restsOn := ((nested status "restsOn").getArr?.toOption.getD #[]).toList.map fun n =>
+        shortName (n.getStr?.toOption.getD "")
+      let evidenceText := if evidence == .null then field status "reason"
+        else if restsOn.isEmpty then field evidence "name"
+        else s!"{field evidence "name"}, modulo {String.intercalate ", " restsOn}"
       out := out ++ s!"| {cell (field claim "id")} | {field claim "role"} | {tag} | {cell evidenceText} | {ceiling} | {cell contests} |\n"
     out := out ++ "\n### Printed statements\n\n"
     for claim in (array report "claims").filter (field · "concept" == field concept "id") do

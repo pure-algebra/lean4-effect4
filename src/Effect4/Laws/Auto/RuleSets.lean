@@ -9,9 +9,10 @@ definitions in `Laws/Program/Typing/CheckInversion.lean`, the generated typed-st
 This module only *declares* the banks; moving registrations into them is one commit per bank,
 each with a narrow build and a red control (a theorem that closes only with the bank).
 
-`Effect4.Inversion` stays on for every call (`default := true`), so moving the generic
-`Except`/`Option`/`Bool`/`ite` inversions into it changes no proof. The others are asked for by
-name: `aesop (rule_sets := [Effect4.TyOrder])`. Reserved names are `default`, `builtin`, `local`.
+A bank is asked for by name: `aesop (rule_sets := [Effect4.Checker])`. Reserved names are
+`default`, `builtin`, `local`. A bank with no rule is deleted (decisions row 65, 2026-10-04:
+`Inversion`, `Reader`, `Rows` and `TyOrder`, found by `make bank-census`); it returns with the
+lemma that needs it.
 
 The declaration expands to a binder-free `initialize` (a plain `def`), which the trust gate
 admits; if the gate reports `Classical.choice` through the simp attribute this registers, this
@@ -19,11 +20,8 @@ module joins `auditImplementationModules` — only then, since a listed module t
 it fails the gate's staleness check.
 -/
 
-declare_aesop_rule_sets [Effect4.Inversion] (default := true)
-
-declare_aesop_rule_sets [Effect4.TyOrder, Effect4.TypedState, Effect4.Rows, Effect4.Atoms,
-  Effect4.Reader, Effect4.Checker, Effect4.Stores, Effect4.StoreKernel, Effect4.Fibers,
-  Effect4.StepInv, Effect4.Coind]
+declare_aesop_rule_sets [Effect4.TypedState, Effect4.Atoms, Effect4.Checker, Effect4.Stores,
+  Effect4.StoreKernel, Effect4.Fibers, Effect4.StepInv, Effect4.Coind]
 
 /-! `Effect4.Stores` carries the store equations and laws only; `Effect4.StoreKernel` carries the
 store definitions and the arena view, unfolded inside the store kernel modules

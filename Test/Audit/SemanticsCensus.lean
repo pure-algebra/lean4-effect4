@@ -1,6 +1,6 @@
 import Effect4.Laws.Auto.Semantics
-import ProofGraph.Ledger
-import ProofGraph.Extract
+import ProofGraph.Goal
+import ProofGraph.Sketch
 
 namespace Test.Audit.SemanticsCensus
 
@@ -42,24 +42,20 @@ Test.Audit.SemanticsCensus	Test.Audit.SemanticsCensus.untaggedWitness
 #guard_msgs in
 #semantics_census Test.Audit.SemanticsCensus
 
--- Ledger fixtures loaded by the separate report driver; they follow the census snapshot.
-theorem checkedGoal : ProofGraph.Obligation True := ⟨⟩
-theorem checkedGoal.checked : True := True.intro
-theorem wantedGoal : ProofGraph.Obligation True := ⟨⟩
-def wantedGoal.wanted : ProofWanted True := ⟨⟩
-theorem missingGoal : ProofGraph.Obligation True := ⟨⟩
-theorem bothGoal : ProofGraph.Obligation True := ⟨⟩
-theorem bothGoal.checked : True := True.intro
-def bothGoal.wanted : ProofWanted True := ⟨⟩
-theorem wrongCheckedGoal : ProofGraph.Obligation False := ⟨⟩
-theorem wrongCheckedGoal.checked : True := True.intro
-theorem wrongWantedGoal : ProofGraph.Obligation True := ⟨⟩
-def wrongWantedGoal.wanted : ProofWanted False := ⟨⟩
--- An extracted part: pending without a `wanted` placeholder, by its extraction tag. The report
--- reads a claim on it as wanted (by extraction); `missingGoal` above, written by hand with no
--- marker, is still refused.
-theorem extractedGoal : ProofGraph.Obligation (True ∧ True) := ⟨⟩
-#extract_obligations extractedGoal using
+-- Planned-goal fixtures (decisions row 203), loaded by the separate report driver
+-- (`tools/Drivers/SemanticsControls.lean`); they follow the census snapshot.
+/-- an open planned goal -/
+proof_goal wantedGoal : True
+/-- a theorem that rests on the goal: proved modulo `wantedGoal` -/
+theorem restingWitness : True ∧ True := ⟨wantedGoal, True.intro⟩
+-- a sketch: proved modulo its two parts, which no requirement of the controls reaches
+/--
+info: Test.Audit.SemanticsCensus.sketchedGoal: proved modulo 2 part(s)
+proof_goal sketchedGoal.part1 : True
+proof_goal sketchedGoal.part2 : True
+-/
+#guard_msgs in
+proof_sketch sketchedGoal : True ∧ True := by
   refine ⟨?_, ?_⟩
 
 end Test.Audit.SemanticsCensus

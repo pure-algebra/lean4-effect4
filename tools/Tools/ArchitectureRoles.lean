@@ -199,7 +199,7 @@ def allowed (a b : Area) : Bool :=
 /-- The roots loaded for declaration counts. A module that defines `main` cannot share an
 environment with another such module, so the drivers stay out and are measured from disk. -/
 def roots : List String := [
-  "Test", "OCaml5", "ProofGraph.Ledger", "ProofGraph.Search",
+  "Test", "OCaml5", "ProofGraph.Goal", "ProofGraph.Plan", "ProofGraph.Sketch", "ProofGraph.Search",
   "Tools.ProgramStructure", "Tools.WireTags", "Drivers.Styles", "Drivers.ForeignCorpus",
   "Tools.ProfileJson", "Tools.GeneratedStamp",
   "Conform.Core.Evidence", "Conform.Core.Obligation", "Conform.Core.Policy", "Conform.Core.Proof",
@@ -226,7 +226,7 @@ deriving Repr, Inhabited
 
 def milestone : List Slice := [
   ⟨"layer 0", "the protocol-typed predicate on the free monad", ["Effect4.Laws.Effects.Protocol"]⟩,
-  ⟨"T1", "the checked evidence seam", ["ProofGraph.Proof", "ProofGraph.Search", "ProofGraph.Ledger"]⟩,
+  ⟨"T1", "the checked evidence seam", ["ProofGraph.Proof", "ProofGraph.Search", "ProofGraph.Goal", "ProofGraph.Plan", "ProofGraph.Sketch"]⟩,
   ⟨"T2", "the census, the source table, the skeleton in place", ["Effect4.Laws.Auto.Positions", "Effect4.Laws.Program.Typed.Vocabulary", "Effect4.Laws.Program.Typed.Sources", "Effect4.Laws.Program.Typed.TypedSources", "Effect4.Laws.Program.Typed.TypedStateDecl", "Effect4.Laws.Program.Typed.PositionGate", "Effect4.Laws.Program.Typed.State"]⟩,
   ⟨"T3 · T4", "frames and the ledger", ["Effect4.Laws.Auto.Frames", "Effect4.Laws.Program.Typed.Frames", "Effect4.Laws.Auto.Obligations"]⟩,
   ⟨"M2", "the world and its order; validity; a fiber's type from its fork site; the saved-frame contracts", ["Effect4.Laws.Program.Typed.World", "Effect4.Laws.Program.Typed.Validity", "Effect4.Laws.Program.Typed.ForkSource", "Effect4.Laws.Program.Typed.Contracts", "Effect4.Laws.Program.Typed.ProtocolObligations"]⟩,

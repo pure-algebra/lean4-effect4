@@ -953,7 +953,7 @@ src/Effect4/Laws/Program/Typed.lean	syncOpOf_isSome	simp-without-only	3
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	<Lean.Parser.Command.attribute>	unread	4
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	<Lean.Parser.Command.end>	unread	1
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	<Lean.Parser.Command.syntax>	unread	1
-src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	<instance_wanted>	unread	3
+src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	<ProofGraph.goalDecl>	unread	3
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	[anonymous]	unread	2
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	elabTypedState	unread	1
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	emitOwner	unread	1

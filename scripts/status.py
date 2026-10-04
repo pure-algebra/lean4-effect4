@@ -5,7 +5,7 @@
     since; the size of Lake's artifact cache and the part no build directory uses; which check
     and generation markers are fresh against the inputs the Makefile names
     for them; the committed generated files that differ from HEAD; the semantics claims by
-    status (generated/semantics.md); the open ledger goals (#proof_wanted); the decision
+    status (generated/semantics.md); the open planned goals (proof_goal); the decision
     registers and the counterexample register by status; the stale references in the
     authority documents (scripts/lib/doc_refs.py).
 
@@ -211,15 +211,15 @@ def counterexamples() -> Counter:
     return counts
 
 
-def ledger_goals() -> int:
-    """The library's open goals: `#proof_wanted` under src/. The ledger's own controls in Test/
-    (Test/Audit/Obligations.lean, IndexedColumns.lean) test the instrument and are not goals."""
+def planned_goals() -> int:
+    """The library's open goals: `proof_goal` declarations under src/ (decisions row 203). The
+    goals in Test/ test the instrument and are not the library's."""
     count = 0
     for path in lean_sources():
-        if not path.startswith("src/") or path.endswith("Laws/Auto/Obligations.lean"):
+        if not path.startswith("src/"):
             continue
         for line in (ROOT / path).read_text().split("\n"):
-            if re.match(r"^\s*#proof_wanted\s+\S", line):
+            if re.match(r"^\s*proof_goal\s+\S", line):
                 count += 1
     return count
 
@@ -311,7 +311,7 @@ def main() -> int:
     print(f"generated {gen_line}; {drift_line}")
 
     print(f"claims    {summarise(claims(), ('proved', 'absent', 'refuted', 'assumed', 'wanted'))}  (generated/semantics.md)")
-    print(f"ledger    {ledger_goals()} open goal(s) (#proof_wanted)")
+    print(f"goals     {planned_goals()} open planned goal(s) (proof_goal)")
     print(f"plan      requirements {plan_rows()}; {plan_next()}  (generated/semantics.md)")
     print(f"decisions {summarise(decisions(), ('open', 'ruled', 'landed'))}  (docs/core/decisions.md)")
     print(f"issues    {summarise(design_issues(), ('open', 'ruled', 'basis'))}  (docs/DESIGN-ISSUES.md)")

@@ -36,11 +36,10 @@ held no goals and that no tool recorded edges between them. The
 [reference scout](research/2026-10-04-reference-scout/synthesis.md) read 17 pinned outside
 projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
 
-- **The plan** (`tools/ProofGraph/Plan.lean`). Ledger goals and named theorems are nodes. A
-  reduction registered in the semantics registry becomes an edge once the kernel checks its
-  implication within the semantic ceiling. Statuses are derived: declared, reduced, ready,
-  proved. A loose premise keeps its target from being ready. `#plan_status` and
-  `#obligation_close` work in the editor.
+- **The plan** (`tools/ProofGraph/Plan.lean`). Planned goals and named theorems are nodes. A
+  planned goal is a theorem whose body is `sorry` (`proof_goal`, decisions row 203), and
+  downstream proofs use it. A node's status is read from its proof, with goals as leaves: goal,
+  modulo or proved. `#plan_status` works in the editor.
 - **The plan in the report.** `generated/semantics.md` has a plan section. Per requirement it
   shows a derived status, the open parts, the next goals and a Mermaid graph. Per proved node it
   shows what the proof brings in. R9's M7 is the first edge (`m7_of_ledger`); R9 and R12 stay open through
@@ -55,8 +54,8 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
   - Every shared form has its typing lemma (R10, `Laws/Codegen/Forms.lean`).
 - **`E4-SCHED-CE-021`**: a live frontier names no reason while work is armed. Decisions row 201
   proposes the repair.
-- **`#extract_obligations`**: a proof sketch's open goals become ledger goals, and the sketch the
-  checked reduction.
+- **`proof_sketch`**: a proof sketch's open goals become planned goals, and the sketch a theorem
+  proved modulo them.
 - **The battery is green again** after the data wave (the `formed` field, the native alphabet).
 - **One population filter** (`ProofGraph.isAuxiliary`) for the census, the report and the
   architecture map. The old string filter dropped authored theorems such as `eq_cata`.

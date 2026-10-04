@@ -22,10 +22,10 @@ deriving Repr, Inhabited, BEq
 
 /-- What the claim points at. Authored; never a status (§3 derives the status). -/
 inductive Pointer
-  /-- a plain theorem stating the claim (not `theorem`, a keyword, which v2 had to escape) -/
+  /-- a theorem stating the claim, or a planned goal (`proof_goal`, decisions row 203); its status is
+  derived from its proof: wanted for a goal, modulo when it rests on goals, proved otherwise (not
+  `theorem`, a keyword, which v2 had to escape) -/
   | witness (name : Name)
-  /-- a ledger goal: a theorem whose type concludes `ProofGraph.Obligation p` -/
-  | goal (name : Name)
   /-- a theorem refuting the claim, and the register row that records it -/
   | refutedBy (registerId : String) (witness : Name)
   /-- no witness, no goal, no refutation; the reason is required -/
@@ -70,21 +70,14 @@ structure Cut where
 deriving Repr, Inhabited
 
 /-- A requirement row of the system map (`docs/core/system-map.md` §8) with the plan nodes that
-state it in Lean: ledger goals or proved theorems. Its status is derived from theirs. -/
+state it in Lean: planned goals or theorems. Its status is derived from theirs. -/
 structure Requirement where
   id : String                     -- the row, `R1` … `R13`
   title : String
   top : List Name
-  /-- the parts of the row not yet stated as plan nodes, each with what it waits on; while one
-  remains, the requirement is open whatever its nodes' statuses -/
+  /-- the parts of the row not yet stated as goals, each with what it waits on; while one remains,
+  the requirement is open whatever its nodes' statuses -/
   openParts : List String := []
-deriving Repr, Inhabited
-
-/-- An authored reduction: the conditional theorem `reduction` reduces the plan node `target`
-(`ProofGraph.Plan`). The association is authored; the edge is kernel-checked, never trusted. -/
-structure Reduction where
-  target : Name
-  reduction : Name
 deriving Repr, Inhabited
 
 structure Registry where
@@ -94,8 +87,7 @@ structure Registry where
   cuts : List Cut
   /-- the requirements with plan nodes, in the system map's order -/
   requirements : List Requirement := []
-  reductions : List Reduction := []
-  /-- module prefixes whose ledger goals join the plan as nodes -/
+  /-- module prefixes whose planned goals join the plan as nodes -/
   planScope : List Name := []
 deriving Repr, Inhabited
 
@@ -562,6 +554,13 @@ def registry : Registry where
     { id := "m7-never-halts", concept := "translation-simulation", role := .progress
       title := "M7c: the frame machine never halts on M7Fragment (row 139's stuck = none in J)"
       pointer := .witness `Effect4.Program.Typed.m7_proved },
+    { id := "m7-admitted", concept := "translation-simulation", role := .fundamentalProperty
+      title := "M7a–c for a program the API admits at the empty row table, with a closed requirement row and an answer-free tape"
+      pointer := .witness `Effect4.Program.Typed.m7_admitted },
+    { id := "admitted-source-lawful", concept := "residual-program-typing", role := .compatibility
+      title := "An admitted table whose required keys are served is a lawful signature with the built-in services (the bridge from admission to the typed state, row-table half)"
+      pointer := .witness `Effect4.Program.Typed.lawfulSig_of_admitted
+      contestedBy := ["E4-TYPED-CE-041"] },
     { id := "m7-exit-handles-valid", concept := "translation-simulation", role := .preservation
       title := "Recorded exits name only live scope handles on every reachable machine (row 139)"
       pointer := .witness `Effect4.Program.Typed.exitHandles_valid },
@@ -678,8 +677,9 @@ def registry : Registry where
     { id := "R1", title := "The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it"
       top := [`Conform.Effect4.Typing.check_sound, `Conform.Effect4.Typing.check_complete,
         `Effect4.Program.admitSig_ok_iff, `Effect4.Program.Denote.meaning_typed_app,
-        `Effect4.Program.Denote.run_typed_app, `Effect4.Program.Denote.meaningB_typed_app]
-      openParts := ["admission pinned to the built-in signature: AdmittedProgram and code generation's admission check at nativeSignature table (decisions row 21, ruled 2026-10-01: thread it in the Σ_app slice)",
+        `Effect4.Program.Denote.run_typed_app, `Effect4.Program.Denote.meaningB_typed_app,
+        `Effect4.Program.Typed.reachable_typed_admitted]
+      openParts := ["admission pinned to the built-in signature and weaker than LawfulSig: AdmittedProgram checks no served key (E4-TYPED-CE-041), and code generation's admission check is at nativeSignature table (decisions row 21; the slice plan, docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md)",
         "the faces (22 lines) pinned to the built-in signature: Laws/Codegen/Admit, Laws/Codegen/Checked and Laws/Api/ModuleReadable take nativeSignature table (the Σ_app slice; C7, conditional on decisions row 115)",
         "meaning, loop and run soundness at service declarations that rebind a code: restored 2026-10-04 at fresh codes only (SoundAnySignature.lean)",
         "structured service carriers: LawfulSig admits flat carriers only (decisions row 118, open: waits on a program that needs one)"] },
@@ -739,7 +739,7 @@ def registry : Registry where
         "the TypeScript face against rc.112: finite truth-harness checks only (DI-49)",
         "the profile as data, named by each face's law (decisions row 79, R79.5)"] },
     { id := "R9", title := "Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)"
-      top := [`Effect4.Program.Typed.m7_proved]
+      top := [`Effect4.Program.Typed.m7_proved, `Effect4.Program.Typed.m7_admitted]
       openParts := ["part two: a saved frame transports missingService across a change in the requirement row (decisions row 117)"] },
     { id := "R10", title := "Library code inherits theorems: a composed module's law is Agrees profile module expansion"
       top := [`Effect4.Codegen.Forms.andThenEffect_typed,
@@ -779,13 +779,6 @@ def registry : Registry where
       openParts := ["load inputs, the environment snapshot and the seed: designed (the 2026-09-10 Config route B), not implemented (decisions rows 51, 83)",
         "supplied values fit the admitted load requirements: restates M5 (loadsTyped, the retired ledger's typedState_load) when Config lands",
         "the service half of the signature as a recorded input: Built carries the row table only (decisions row 21)"] }
-  ]
-  reductions := [
-    { target := `Effect4.Program.Typed.m7_proved, reduction := `Effect4.Program.Typed.m7_of_ledger },
-    { target := `Effect4.Program.Typed.loadsTyped,
-      reduction := `Effect4.Program.Typed.loadsTyped_of_denotesTyped_typed },
-    { target := `Effect4.Program.Typed.denotesTyped,
-      reduction := `Effect4.Program.Typed.denotesTyped_of_provideLayer }
   ]
   planScope := [`Effect4]
 
