@@ -23,6 +23,7 @@ import { childNodes, parseTypeScript } from "./oxc.ts"
 import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
 import { rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 import { readTypeMetadata } from "../metadata.ts"
+import { readTupleIndex } from "../tuple-index.ts"
 import { targetType, legacyType, recordKeyForm, quoteType } from "../target-types.ts"
 import type { Expr } from "../read.ts"
 
@@ -271,10 +272,25 @@ class CompilerReader {
     if (!isString(key) || this.text(fn.typeArguments.params[0]!) !== quoteType(key.value)) return bad("record field key")
     return { _tag: "field", mode: head === "recordRequired" ? "required" : "optional", target: this.term(this.at(x.arguments, 0), env), name: key.value }
   }
+  tupleTerm(x: Ex, env: readonly string[]): Term | undefined {
+    if (x.type !== "CallExpression" || x.optional) return undefined
+    const marker = this.unwrap(x.callee)
+    if (marker.type !== "CallExpression" || marker.optional || marker.callee.type !== "Identifier" ||
+        marker.callee.name !== "tupleAt" || !marker.typeArguments) return undefined
+    if (x.typeArguments || marker.typeArguments.params.length !== 1) return bad("tuple index type arguments")
+    this.arity(x.arguments, 1); this.arity(marker.arguments, 1)
+    const key = this.at(marker.arguments, 0)
+    if (!isString(key) || this.text(marker.typeArguments.params[0]!) !== quoteType(key.value)) return bad("tuple index marker")
+    const index = readTupleIndex(key.value)
+    if (index === undefined) return bad("tuple index outside canonical safe-natural profile")
+    return { _tag: "tupleAt", target: this.term(this.at(x.arguments, 0), env), index }
+  }
   term(x: Ex, env: readonly string[]): Term {
     x = this.unwrap(x)
     const i = this.variable(x, env)
     if (i !== undefined) return { _tag: "var", index: i }
+    const tuple = this.tupleTerm(x, env)
+    if (tuple !== undefined) return tuple
     const record = this.recordTerm(x, env)
     if (record !== undefined) return record
     if (x.type === "CallExpression") return { _tag: "app", atom: this.name(x.callee), args: x.arguments.map(a => this.term(a, env)) }

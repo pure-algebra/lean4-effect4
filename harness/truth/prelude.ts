@@ -45,6 +45,7 @@ import { SqliteClient } from "@effect/sql-sqlite-bun"
 
 export * from "./prelude-atoms.gen.ts"
 export { recordValue, recordRequired, recordOptional, recordSet, caseTagR } from "./records.ts"
+export { tupleAt } from "./tuples.ts"
 import * as Atoms from "./prelude-atoms.gen.ts"
 
 // ---- `select`'s printed heads (`Codegen/Print.lean`, `Head.optionCase`/`Head.caseTag`) ----

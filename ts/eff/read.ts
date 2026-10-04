@@ -18,6 +18,7 @@ import { parseSync } from "oxc-parser"
 import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
 import { readTypeMetadata } from "./metadata.ts"
+import { readTupleIndex } from "./tuple-index.ts"
 import { targetType, legacyType, recordKeyForm, quoteType } from "./target-types.ts"
 import { heads, rows, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
 import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
@@ -811,7 +812,23 @@ const readRecordTerm = (n: number, x: Expr): Read<Term> | undefined => {
   return Result.map(readTerm(n, x.args[0]!), (target): Term => ({ _tag: "field", mode: head === "recordRequired" ? "required" : "optional", target, name }))
 }
 
+/** Exact string index markers; the host representation refuses unsafe numeric indices. */
+const readTupleTerm = (n: number, x: Expr): Read<Term> | undefined => {
+  if (x._tag !== "call" || x.fn._tag !== "call" || x.fn.fn._tag !== "generic" ||
+      x.fn.fn.fn._tag !== "ident" || x.fn.fn.fn.name !== "tupleAt") return undefined
+  const marker = x.fn
+  const malformed = (what: string) => refuse({ _tag: "shape", what: `tuple ${what}` })
+  if (marker.fn._tag !== "generic" || marker.fn.typeArgs.length !== 1 || marker.args.length !== 1 ||
+      x.args.length !== 1 || marker.args[0]?._tag !== "str" ||
+      marker.fn.typeArgs[0] !== quoteType(marker.args[0].value)) return malformed("index marker or arity")
+  const index = readTupleIndex(marker.args[0].value)
+  if (index === undefined) return malformed("index outside canonical safe-natural profile")
+  return Result.map(readTerm(n, x.args[0]!), (target): Term => ({ _tag: "tupleAt", target, index }))
+}
+
 export const readTerm = (n: number, x: Expr): Read<Term> => {
+  const tuple = readTupleTerm(n, x)
+  if (tuple !== undefined) return tuple
   const record = readRecordTerm(n, x)
   if (record !== undefined) return record
   switch (x._tag) {
