@@ -46,11 +46,14 @@ Its existing scope-only premise must remain unchanged for every raw natural inde
    Append stored term constructors and atom rows; check these modules before requesting generated companions.
 2. Checker and authoring: `Program/NativeAtom.lean`, `Program/Tuple.lean`, `Program/Typing/Rules.lean`, `Program/Typing/TermRefusal.lean`, `Program/Typing/Blame.lean`, `Program/Checker.lean` and `Program/Authoring/Tuples.lean`.
    Update `Program/Formation.lean` only if its generated traversal needs a case.
-   Add focused tuple typing, authoring and refusal fixtures.
+   Add focused tuple typing, handle, authoring and refusal fixtures.
    The diagnostic fold returns a record/tuple sum; old `locate` wrappers keep their record-only result types.
    Tuple packets retain an exact index, term path, reason and separate cause path.
    The rule `Tuple.project` remains the only projection acceptance owner.
-3. Proof consumers: `Laws/Program/Typed.lean`, `Laws/Program/Typed/Membership.lean`, `Laws/Program/Typed/Denotation.lean`, `Laws/Program/Handles/Term.lean`, `Laws/Program/Signature.lean`, `Laws/Program/MeaningSound.lean` only if needed, `Laws/Program/Authoring/Tuples.lean`, and a dedicated tuple value helper module if it serves both proof families.
+3. Proof consumers: `Laws/Program/Typed.lean`, `Laws/Program/Typed/Membership.lean`, `Laws/Program/Typed/Denotation.lean`, `Laws/Program/Handles/Term.lean`, `Laws/Program/Signature.lean` and `Laws/Program/Authoring/Tuples.lean`.
+   Add only the `Tuple.project` connector line to `Laws/Program/Folds/Ty.lean`.
+   Update `Laws/Program/MeaningSound.lean` only if needed.
+   A dedicated tuple value helper module belongs here only if it serves both proof families.
 4. The coordinator regenerates AtomInventory, Fold, canonical Program, PreludeAtoms and reached mirror/binder outputs; owns all root imports, manifest entries, target files, decisions and case census.
 
 Do not edit Codegen record/read/proof files, Schema files, root imports, generated files, manifests, the decision register or lake configuration.

@@ -54,6 +54,8 @@ theorem argTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂
     simp only [argTy, argTy_congr ha hc env false target]
   | _, .recordSet target name value => by
     simp only [argTy, argTy_congr ha hc env false target, argTy_congr ha hc env true value]
+  | _, .tupleAt target index => by
+    simp only [argTy, argTy_congr ha hc env false target]
 
 theorem argsTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂.constAtom)
     (env : TyEnv) : ∀ (c : Bool) (ts : Terms), argsTy s₁ env c ts = argsTy s₂ env c ts
@@ -786,30 +788,36 @@ has a carrier in `s` — exactly the reads the checker's algebra makes of the si
 def SigProgram {Op : Type} (s : Signature Op) (e : Eff Op) : Prop :=
   cata_eff (readsAlg (SigOkOp s) (SigOkKey s)) e
 
-/-- Record diagnostics read only the atom typing and literal flags.
-Used by the term and cause check extension helpers below. -/
-theorem termRefusal_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
-    TermRefusal.locate s' = TermRefusal.locate s := by
+/-- Collection diagnostics read only atom typing and literal flags.
+This serves checker/refusal agreement through the extension helpers below. -/
+theorem termDiagnostic_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
+    TermRefusal.diagnose s' = TermRefusal.diagnose s := by
   funext env term
   have harg : argTy s' env = argTy s env :=
     funext fun flag => funext fun value => argTy_congr h.atomOf h.constAtom env flag value
   have hargs : argsTy s' env = argsTy s env :=
     funext fun flag => funext fun terms => argsTy_congr h.atomOf h.constAtom env flag terms
-  simp only [TermRefusal.locate, harg, hargs, h.constAtom]
+  simp only [TermRefusal.diagnose, harg, hargs, h.constAtom]
+
+/-- The record-only compatibility projection follows the same diagnostic agreement. -/
+theorem termRefusal_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
+    TermRefusal.locate s' = TermRefusal.locate s := by
+  funext env term
+  simp only [TermRefusal.locate, termDiagnostic_ext h]
 
 /-- The term reader agrees along an extension. -/
 theorem term?_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
     Checker.term? s' = Checker.term? s := by
   funext env p term
-  simp only [Checker.term?, h.termTy, termRefusal_ext h]
+  simp only [Checker.term?, h.termTy, termDiagnostic_ext h]
 
-/-- The cause reader agrees along an extension, including its record diagnostics. -/
+/-- The cause reader agrees along an extension, including its collection diagnostics. -/
 theorem cause?_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
     Checker.cause? s' = Checker.cause? s := by
   funext env p cause
   have hcause : causeTy s' env = causeTy s env := funext fun value => h.causeTy env value
   have hterm : termTy s' env = termTy s env := funext fun value => h.termTy env value
-  simp only [Checker.cause?, TermRefusal.locateCause, hcause, hterm, termRefusal_ext h]
+  simp only [Checker.cause?, TermRefusal.diagnoseCause, hcause, hterm, termDiagnostic_ext h]
 
 /-- **Along an extension the checker's two algebras agree on the reads the smaller signature
 admits** (proved): field by field, outright where the field reads only atoms and the scope key,

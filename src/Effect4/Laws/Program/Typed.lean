@@ -544,6 +544,76 @@ theorem Lit.toVal_hasTy_arg (const : Bool) (l : Lit) (v : Val) (h : l.toVal = so
   | nat n => cases Option.some.inj h; rfl
   | bool b => cases Option.some.inj h; rfl
 
+/-- Exact tuple construction from fitted atom arguments, for `NativeAtom.sound`. -/
+theorem Fits.tuple {values : List Val} {types : List Ty} (h : Fits values types) :
+    Val.hasTy (.list values) (.tuple types) = true := by
+  rw [Val.hasTy_tuple]
+  induction h with
+  | nil => rfl
+  | cons hx _ ih =>
+    simp only [List.map_cons, itemsHasTy, Bool.and_eq_true]
+    exact ⟨hx, ih⟩
+
+/-- A typed tuple's admitted position has a value of that exact column.
+This is the indexed helper consumed by `Tuple.project_typed`. -/
+theorem tupleItem_typed (allocated : List String) :
+    ∀ (types : List Ty) (values : List Val) (index : Nat) (answer : Ty),
+      types[index]? = some answer →
+      itemsHasTy (types.map (fun t x => Val.hasTy x t allocated)) values = true →
+      ∃ value, values[index]? = some value ∧ Val.hasTy value answer allocated = true
+  | [], _, _, _, h, _ => by cases h
+  | _ :: _, [], _, _, _, h => by cases h
+  | t :: ts, value :: values, 0, answer, h, hv => by
+    cases h
+    exact ⟨value, rfl, (Bool.and_eq_true_iff.mp hv).1⟩
+  | t :: ts, value :: values, index + 1, answer, h, hv =>
+    tupleItem_typed allocated ts values index answer h (Bool.and_eq_true_iff.mp hv).2
+
+/-- A plain tuple frame supports every statically admitted column. -/
+theorem tupleAt_typed {allocated : List String} {types : List Ty} {value : Val}
+    {index : Nat} {answer : Ty} (hi : types[index]? = some answer)
+    (hv : Val.hasTy value (.tuple types) allocated = true) :
+    ∃ out, Val.tupleAt? value index = some out ∧ Val.hasTy out answer allocated = true := by
+  simp only [Val.hasTy] at hv
+  split at hv
+  · next values =>
+    rw [Val.itemCheckers_eq_map] at hv
+    exact tupleItem_typed allocated types values index answer hi hv
+  · cases hv
+
+/-- The projection rule produces a member of the selected type, at the same allocation table.
+This serves `denote-typed` through the term membership and progress consumers. -/
+theorem Tuple.project_typed (index : Nat) (input output : Ty) (value : Val)
+    (allocated : List String) (hp : Tuple.project index input = some output)
+    (hv : Val.hasTy value input allocated = true) :
+    ∃ out, Val.tupleAt? value index = some out ∧ Val.hasTy out output allocated = true := by
+  induction input generalizing output with
+  | never => cases hv
+  | tuple items _ => exact tupleAt_typed hp hv
+  | prod a b _ _ =>
+    apply tupleAt_typed hp
+    rw [hasTy_tuple_pair]
+    exact hv
+  | union a b iha ihb =>
+    obtain ⟨left, hl, rest⟩ := Option.bind_eq_some_iff.mp hp
+    obtain ⟨right, hr, heq⟩ := Option.bind_eq_some_iff.mp rest
+    cases heq
+    rcases Bool.or_eq_true_iff.mp hv with ha | hb
+    · obtain ⟨out, he, hm⟩ := iha left hl ha
+      exact ⟨out, he, Ty.hasTy_join_left left right out allocated hm⟩
+    · obtain ⟨out, he, hm⟩ := ihb right hr hb
+      exact ⟨out, he, Ty.hasTy_join_right left right out allocated hm⟩
+  | _ => simp only [Tuple.project, reduceCtorEq] at hp
+
+/-- Normalization retains the tuple projection's membership premise. -/
+theorem Tuple.typeAt_typed {index : Nat} {input output : Ty} {value : Val}
+    {allocated : List String} (hp : Tuple.typeAt input index = some output)
+    (hv : Val.hasTy value input allocated = true) :
+    ∃ out, Val.tupleAt? value index = some out ∧ Val.hasTy out output allocated = true := by
+  apply Tuple.project_typed index input.normalize output value allocated hp
+  rw [hasTy_normalize]
+  exact hv
+
 /-! ## Atoms -/
 
 /-- Projecting a typed product union uses the existing evaluator and retains membership
@@ -1060,6 +1130,12 @@ theorem sound (a : NativeAtom) : Sound a := by
     refine sound_of_poly rfl fun σ vs hfit => ?_
     obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
     exact MapChecks.fromEntries hv
+  | tuple =>
+    refine sound_of_custom rfl fun types answer values ht hv => ?_
+    cases ht
+    refine ⟨.list values, rfl, ?_⟩
+    rw [hasTy_normalize]
+    exact hv.tuple
 
 end NativeAtom
 
@@ -1566,6 +1642,15 @@ theorem evalTerm_hasTy (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty) (v : 
     rw [hout] at hv
     cases hv
     exact hfitout
+  | tupleAt target index =>
+    have ht : (termTy nativeSignature tys target).bind (fun targetType => Tuple.typeAt targetType index) = some ty := hty
+    obtain ⟨targetType, ht, hp⟩ := Option.bind_eq_some_iff.mp ht
+    have he : (evalTerm env target).bind (fun value => Val.tupleAt? value index) = some v := hev
+    obtain ⟨value, he, hv⟩ := Option.bind_eq_some_iff.mp he
+    obtain ⟨out, hout, hm⟩ := Tuple.typeAt_typed hp (evalTerm_hasTy target env tys targetType value hfit ht he)
+    rw [hout] at hv
+    cases hv
+    exact hm
 termination_by structural t
 /-- The list form of `evalTerm_hasTy`: the values fit the types (ENSURES 6), under either
 const flag — a literal argument fits its literal-rule type (`Lit.toVal_hasTy_arg`). -/
@@ -1658,6 +1743,14 @@ theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
     show ((evalTerm env target).bind fun value => (evalTerm env replacement).bind
       fun next => Machine.Record.set value name next).isSome = true
     rw [he, Option.bind_some, hn, Option.bind_some, hout]
+    rfl
+  | tupleAt target index =>
+    have ht : (termTy nativeSignature tys target).bind (fun targetType => Tuple.typeAt targetType index) = some ty := hty
+    obtain ⟨targetType, ht, hp⟩ := Option.bind_eq_some_iff.mp ht
+    obtain ⟨value, he⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome target env tys targetType hfit ht)
+    obtain ⟨out, hout, _⟩ := Tuple.typeAt_typed hp (evalTerm_hasTy target env tys targetType value hfit ht he)
+    show ((evalTerm env target).bind (fun value => Val.tupleAt? value index)).isSome = true
+    rw [he, Option.bind_some, hout]
     rfl
 termination_by structural t
 /-- The list form of `evalTerm_isSome` (ENSURES 7), under either const flag. -/

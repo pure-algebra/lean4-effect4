@@ -29,6 +29,7 @@ fold_of Effect4.Program.Ty.normalize
 fold_of Effect4.Program.isTagTy
 fold_of Effect4.Program.rawSupportedErrTy
 fold_of Effect4.Program.NativeAtom.projectProduct
+fold_of Effect4.Program.Tuple.project
 fold_of Effect4.Program.findInt
 fold_of Effect4.Program.Val.hasTy
 fold_of Effect4.Schema.Bridge.schema
