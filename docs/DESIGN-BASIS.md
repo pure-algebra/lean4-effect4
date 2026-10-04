@@ -1365,8 +1365,8 @@ admission refusals; row 2's stage (b) is ruled by row 119.
   string pairs, with the pair made at the row adapter; a program's failure payload is restricted to
   `never`, `nat`, `string`, `prod string string` or their unions; `int` stays uninhabited. Row 120
   adds a record with a required literal `_tag` and payload-admissible fields (`Err.payload`). Records
-  enter `Ty` by row 119's ruled design (canonical field order, positional values, exact subtyping,
-  width projected at the boundary); until that slice lands, `Ty` has none.
+  are in `Ty` by row 119's ruled design, as amended by row 165 (a record value carries its names);
+  the data wave landed them.
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved (string values and pairs): `Lit.toVal`
   (`src/Effect4/Machine/Term.lean`), `Val.hasTy` (`src/Effect4/Program/Typed.lean`), `errOf`
   (`src/Effect4/Machine/Term.lean`), `errAdmits_errOf`

@@ -37,8 +37,11 @@ if [ "${1:-}" = "--regen-command" ]; then
 fi
 
 # ---- C1  no fiber is ever removed --------------------------------------------------------
-# `\b` keeps `m.fibers.filterMap` out: `completedExits` (Fibers.lean:1543) is a READ.
-hits=$(grep -rEn 'fibers\.(filter|erase|removeAll|dropWhile|eraseP|removeIf)\b' "$REPO/src/Effect4/" || true)
+# A removal is a WRITE of the field: `fibers := … fibers.filter …`. A read that filters the
+# table (`Api/Frontier.lean`'s runnable ids, `completedExits`' filterMap) removes nothing, and a
+# write that maps every fiber keeps them all (`fibers := m.fibers.map …`, whose body may filter
+# a fiber's own observers). `\b` keeps `filterMap` out.
+hits=$(grep -rEn 'fibers[[:space:]]*:=[^\n]*fibers\.(filter|erase|removeAll|dropWhile|eraseP|removeIf)\b' "$REPO/src/Effect4/" || true)
 if [ -n "$hits" ]; then
   note FAIL "C1 a fiber is removed from the fiber table — the ordering argument is dead:"
   printf '%s\n' "$hits"

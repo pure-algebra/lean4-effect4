@@ -102,7 +102,29 @@ flowchart LR
 
 ## 3. The two parts
 
-### E1. The carrier (one seat)
+### E1. The carrier (landed 2026-10-04, seat E1, merged `db504f03`)
+
+Landed as planned; the receipt is `docs/research/2026-10-04-seat-E1-receipt.md`. Its deviations:
+- the `Canonical Payload` instance is a hand module, because the generator derives none for a carrier
+  with a `Prop` field;
+- the LCNF cut has an explicit heartbeat budget;
+- the printer's refusal is a table row;
+- `Record.tagHit` moved below both readers;
+- an `int` field is refused at admission, as `uninhabited`.
+
+The JSON image of a payload where no type directs it (a promoted defect's error) is the hexadecimal
+of its canonical bytes: exact, and opaque.
+
+The coordinator's rulings on the seat's two proposals:
+- **The printer until E2** (proposal B): (b). A payload the printer does not see as one prints
+  structurally: as a record, valid TypeScript but not the class idiom. A test pins the route
+  (`Test/Codegen/PrintContract.lean`). E2 reaches every route the seat's probe lists, not only the
+  two the printer refuses today.
+- **A payload at the truth face** (proposal A): decided in E2, recommended (a). A truth program's
+  error column is typed, so the comparison runs through the type-directed codec, which writes the
+  record as rc.112 writes a class instance.
+
+The plan as written:
 
 - The carrier, `errOf`, `valOfErr`, the six compile-forced `Err` definitions (`Err.image`,
   `Repr`, `Defect.ofError`, `valOfErr`, `Codec.encodeErr`, `RunnerGen.ErrC`) and the store image.
