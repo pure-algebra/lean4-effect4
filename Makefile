@@ -217,6 +217,13 @@ SEMANTICS_DOGFOOD := Test.Dogfood.P1HttpCache Test.Dogfood.P2HandlerLayers Test.
 SEMANTICS_ROOTS := .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
   .lake/build/lib/lean/Test/Program/ProtocolPosts.trace \
   $(foreach m,P1HttpCache P2HandlerLayers P3WorkerQueue P4RateLimiter P5LedgerService,.lake/build/lib/lean/Test/Dogfood/$(m).trace)
+
+# Lake rewrites these traces while `build` runs. Make reads a prerequisite that has no rule once,
+# before any recipe, so a rule whose Lean sources changed saw the old time and stayed stale until
+# a second run (seat T1, 2026-10-04). As targets of `build` with an empty recipe, they are read
+# again after `build`: a rule reruns exactly when a trace moved.
+$(CORE) $(LAWS) $(SEMANTICS_ROOTS) $(TRACE)/Api/HostSession.trace $(TRACE)/Codegen/Schema.trace \
+  .lake/build/lib/lean/Test/Program/Gen.trace: build ;
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \

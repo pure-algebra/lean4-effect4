@@ -439,7 +439,7 @@ in wave 2's `loop` arm. -/
 theorem storeTyped_of_typedState {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} (typed : MachineTyped root rootTy w m) : StoreTyped root w := by
   obtain ⟨⟨valid, ok, _, _, _, _⟩, _, _, _⟩ := typed
-  refine ⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_, fun e he ex hex => ?_, ?_, ?_⟩
+  refine ⟨⟨fun key => ?_, fun key => ?_, fun i v hv ty hty => ?_⟩, fun e he ex hex => ?_, ?_, ?_⟩
   · rw [valid.state]
     exact valid.heap key
   · rw [valid.state]

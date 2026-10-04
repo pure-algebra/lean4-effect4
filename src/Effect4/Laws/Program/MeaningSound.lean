@@ -1,10 +1,7 @@
-import Effect4.Laws.Program.Handles.Term
 import Effect4.Laws.Program.DenoteB
 import Effect4.Laws.Program.Progress
-import Effect4.Laws.Program.Admit
-import Effect4.Laws.Program.Decision
+import Effect4.Laws.Program.Typed.ExitConnector
 import Effect4.Laws.Program.Typing.Inversion
-import Effect4.Laws.Program.Template
 import Effect4.Laws.Program.Agreement.Machine
 
 /-!
@@ -18,18 +15,24 @@ through `run_eq_meaning`.
   wrong-shape exit as a parameter (`denoteWith_badShape`). A typed program's run does not
   depend on that parameter (`meaning_never_wrong`): no arm that answers it is reached. An exit
   predicate could not say this, because a program may legitimately die.
-* **The exit has the type** (`meaning_typed`, `ExitHasTy`): a success is a valid value of the
-  answer type, and every typed failure of a cause is inside the error type. Defects and
-  interruptions are outside the error type by construction.
-* **The invariant a run keeps** (`TypedAt`): the environment fits its types, every value in it
-  is valid in the stores, the stores are well-formed, and every cell holds a number (the one
-  cell type this cut spells, `Progress.lean`).
+* **The invariant a run keeps** (`TypedAt`, decisions row 209): the environment fits its types at a
+  world (`Typed.EnvTyped`, pointwise `Fits`), and the store fits (`StoreFits`: the cell columns the
+  typed state shares, and `Stores.WF`). A handle in scope carries its cell's declaration
+  (`Fits w (Val.cell k) (refOf A)` is `RefDeclared w k A`), so a cell read at its declared type is
+  typed (`progress`), at every cell type.
+* **The exit has the type at a later world** (`SoundP`): the run reaches a world over the stores it
+  leaves, later in the host order, whose store fits, at which the exit satisfies R9's exit
+  judgment `Typed.ExitOk`.
+* **From the empty stores, `ExitHasTy`** (`meaning_typed`): the typed state's connector
+  `Typed.exitHasTy_of_fitsExit` reads `Typed.ExitOk` as the meaning layer's judgment, because a
+  store-signature program allocates no external handle (`runP_externals`) and a member of a type is
+  valid in a store that fits.
 
 The proof is one induction (`sound`) over a pair of programs run side by side (`SoundP`), with
-one sequencing lemma (`SoundP.bind`) that every composite arm uses. What it needed and the
-tree did not have: a term over valid values evaluates to a valid value (`evalTerm_validIn`),
-what a decision binds is valid (`Decision.decide_validIn`), and cause admission under
-`Cause.combine` (`causeAdmits_combine`).
+one sequencing lemma (`SoundP.bind`) that every composite arm uses. The terms, causes and
+decisions are the typed state's (`Typed.evalTerm_progress`, `Typed.causeOf_progress`,
+`Typed.decide_fits`, `Typed/Denotation.lean`), and so are the exits (`Typed.exitOk_widen`,
+`Typed.exitOk_restore`, `Typed/Seq.lean`).
 
 Scope: the empty row table (`nativeSignature` at its default), the straight fragment. Loops
 (`denoteB` on `Looped`) and external rows are not covered here.
@@ -142,269 +145,35 @@ theorem denoteWith_badShape : ∀ (e : NativeEff) (env : List Val),
     rw [denoteWith, denote]
     all_goals (intros; rename_i heq; cases heq)
 
-theorem valOfErr_validIn (s : Stores) (e : Err) (v : Val) (h : valOfErr e = some v) :
-    v.validIn s = true := by
-  cases e with
-  | boom => cases h
-  | tag n => cases h; rfl
-  | tagged t m => cases h; rfl
-  | text t => cases h; rfl
-  | payload p => cases h; rw [Val.validIn_eq_handles, handles_of_isPayload p.property]; rfl
-
-theorem validIn_list_mem {s : Stores} {vs : List Val} (h : Val.validIn s (.list vs) = true) :
-    ∀ x ∈ vs, x.validIn s = true := by
-  rw [Val.validIn_list] at h
-  exact fun x hx => List.all_eq_true.mp h x hx
-
-theorem validIn_list_of_mem {s : Stores} {vs : List Val} (h : ∀ x ∈ vs, x.validIn s = true) :
-    Val.validIn s (.list vs) = true := by
-  rw [Val.validIn_list]
-  exact List.all_eq_true.mpr h
-
-/-- A list read back holds only valid values when its value is valid: the value is that list,
-or the snapshot that carries it (`Val.asList?_exact`). -/
-theorem asList?_validIn {s : Stores} {v : Val} {vs : List Val} (h : Val.asList? v = some vs)
-    (hv : v.validIn s = true) : ∀ x ∈ vs, x.validIn s = true := by
-  rcases Val.asList?_exact h with rfl | rfl
-  · exact validIn_list_mem hv
-  · exact validIn_list_mem (Bool.and_eq_true_iff.mp hv).1
-
-theorem NativeAtom.eval_validIn (s : Stores) (atom : NativeAtom) (vs : List Val) (v : Val)
-    (hvs : ∀ x ∈ vs, x.validIn s = true) (h : atom.eval vs = some v) : v.validIn s = true := by
-  have hnamed : nativeAtom atom.name vs = some v := by
-    simp only [nativeAtom, NativeAtom.ofName?_name, Option.bind_some]
-    exact h
-  rw [Val.validIn_eq_handles, List.all_eq_true]
-  intro code hc
-  obtain ⟨value, hv, hc⟩ := List.mem_flatMap.mp
-    (RawHandles.nativeAtom_handles atom.name vs v hnamed hc)
-  have hv := hvs value hv
-  rw [Val.validIn_eq_handles, List.all_eq_true] at hv
-  exact hv code hc
-
-theorem Lit.toVal_validIn (s : Stores) (l : Lit) (v : Val) (h : l.toVal = some v) :
-    v.validIn s = true := by
-  cases l with
-  | unit => cases h; rfl
-  | nat n => cases h; rfl
-  | bool b => cases h; rfl
-  | str t => cases h; rfl
-
-/-- A term over valid values evaluates to a valid value because its raw handles come from its environment. -/
-theorem evalTerm_validIn (s : Stores) (t : Term) (env : List Val) (v : Val)
-    (henv : ∀ x ∈ env, x.validIn s = true) (h : evalTerm env t = some v) :
-    v.validIn s = true := by
-  rw [Val.validIn_eq_handles, List.all_eq_true]
-  intro code hc
-  obtain ⟨value, hv, hc⟩ := List.mem_flatMap.mp (RawHandles.evalTerm_handles t env v h hc)
-  have hv := henv value hv
-  rw [Val.validIn_eq_handles, List.all_eq_true] at hv
-  exact hv code hc
-
-/-- Every returned argument remains valid in the input stores. -/
-theorem evalTerms_validIn (s : Stores) (ts : Terms) (env : List Val) (vs : List Val)
-    (henv : ∀ x ∈ env, x.validIn s = true) (h : evalTerms env ts = some vs) :
-    ∀ x ∈ vs, x.validIn s = true := by
-  intro x hx
-  rw [Val.validIn_eq_handles, List.all_eq_true]
-  intro code hc
-  have hc := RawHandles.evalTerms_handles ts env vs h (List.mem_flatMap.mpr ⟨x, hx, hc⟩)
-  obtain ⟨value, hv, hc⟩ := List.mem_flatMap.mp hc
-  have hv := henv value hv
-  rw [Val.validIn_eq_handles, List.all_eq_true] at hv
-  exact hv code hc
-
 /-! ## The invariant and the statement -/
 
-/-- What a run keeps: the environment fits its types and is valid in the stores, the stores
-are well-formed, and every cell holds a number. -/
-structure TypedAt (tys : TyEnv) (env : List Val) (s : Stores) : Prop where
-  fits : Fits env tys
-  valid : ∀ v ∈ env, v.validIn s = true
-  wf : s.WF
-  heap : Stores.HeapNat s
+/-- **What a run keeps** (decisions row 209): the environment fits its types at the world, and the
+store fits. -/
+structure TypedAt (tys : TyEnv) (env : List Val) (w : Typed.World) : Prop where
+  fits : Typed.EnvTyped w tys env
+  store : StoreFits w
 
-/-- The invariant at a later store, under one more typed and valid binder. -/
-theorem TypedAt.push {tys : TyEnv} {env : List Val} {s s' : Stores} (h : TypedAt tys env s)
-    (hle : s.le s') (hwf : s'.WF) (hheap : Stores.HeapNat s') {v : Val} {ty : Ty}
-    (hv : Val.hasTy v ty = true) (hvalid : v.validIn s' = true) :
-    TypedAt (tys ++ [ty]) (env ++ [v]) s' where
-  fits := h.fits.append hv
-  valid := by
-    intro x hx
-    rcases List.mem_append.mp hx with hx | hx
-    · exact Val.validIn_mono hle x (h.valid x hx)
-    · cases List.mem_singleton.mp hx
-      exact hvalid
-  wf := hwf
-  heap := hheap
+/-- The invariant at a later world. -/
+theorem TypedAt.later {tys : TyEnv} {env : List Val} {w w' : Typed.World} (h : TypedAt tys env w)
+    (ok : StoreOk w w') : TypedAt tys env w' :=
+  ⟨Typed.envTyped_mono ok.le h.fits, ok.store⟩
 
-/-- The invariant at a later store. -/
-theorem TypedAt.later {tys : TyEnv} {env : List Val} {s s' : Stores} (h : TypedAt tys env s)
-    (hle : s.le s') (hwf : s'.WF) (hheap : Stores.HeapNat s') : TypedAt tys env s' where
-  fits := h.fits
-  valid := fun x hx => Val.validIn_mono hle x (h.valid x hx)
-  wf := hwf
-  heap := hheap
+/-- The invariant at a later world, under one more binder that fits its type there. -/
+theorem TypedAt.push {tys : TyEnv} {env : List Val} {w w' : Typed.World} (h : TypedAt tys env w)
+    (ok : StoreOk w w') {v : Val} {ty : Ty} (hv : Typed.Fits w' v ty) :
+    TypedAt (tys ++ [ty]) (env ++ [v]) w' :=
+  ⟨Typed.envTyped_append (Typed.envTyped_mono ok.le h.fits) hv, ok.store⟩
 
-/-- An exit has a program's type: a success is a valid value of the answer type, and every
-typed failure of a cause is inside the error type. Named `ExitOk` until 2026-10-01; renamed so
-that `ExitOk` names one judgment, the typed state's `Typed.ExitOk` (`FitsExit ∧ NoShapeDefect`,
-`Typed/Admission.lean`), landing plan O5. The typed state's `FitsExit` reaches this judgment
-through `Typed.exitHasTy_of_fitsExit` (`Typed/ExitConnector.lean`) under two premises. -/
-def ExitHasTy (answer error : Ty) (s : Stores) : ExitV → Prop
-  | .success v => Val.hasTy v answer = true ∧ v.validIn s = true
-  | .failure c => causeAdmits (fun w ty => Val.hasTy w ty) error c = true
-
-/-- Soundness of one run of a pair of programs, the first with the parameter and the second
-without: they run alike, the exit has the type, and the store half of the invariant holds. -/
-structure SoundP (pw pd : Effects.Program StoreSig ExitV) (s : Stores) (answer error : Ty) :
-    Prop where
-  independent : runP pw s = runP pd s
-  exit : ExitHasTy answer error (runP pd s).2 (runP pd s).1
-  le : s.le (runP pd s).2
-  wf : (runP pd s).2.WF
-  heap : Stores.HeapNat (runP pd s).2
-
-/-- Soundness of a program's run: it does not depend on the wrong-shape exit, its exit has the
-program's type, and the invariant's store half holds after it. -/
-abbrev Sound (bad : ExitV) (e : NativeEff) (env : List Val) (s : Stores) (t : EffTy) : Prop :=
-  SoundP (denoteWith bad e env) (denote e env) s t.answer t.error
-
-/-- A pure exit on both sides is sound when the exit has the type. -/
-theorem SoundP.pure {s : Stores} {answer error : Ty} (hwf : s.WF) (hheap : Stores.HeapNat s)
-    (ex : ExitV) (hex : ExitHasTy answer error s ex) :
-    SoundP (Pure.pure ex) (Pure.pure ex) s answer error :=
-  ⟨rfl, hex, Stores.le_refl s, hwf, hheap⟩
-
-/-- Cause admission moves along any pointwise implication of membership, across types. -/
-theorem causeAdmits_of_forall {f g : Val → Ty → Bool} {ty ty' : Ty}
-    (h : ∀ v, f v ty = true → g v ty' = true) (c : CauseV) :
-    causeAdmits f ty c = true → causeAdmits g ty' c = true := by
-  intro hc
-  apply List.all_eq_true.mpr
-  intro r hr
-  have hr' := List.all_eq_true.mp hc r hr
-  cases r with
-  | fail e _ =>
-    cases e with
-    | boom => cases hr'
-    | tag n => exact h _ hr'
-    | tagged t m => exact h _ hr'
-    | text t => exact h _ hr'
-    | payload p => exact h _ hr'
-  | die _ _ => rfl
-  | interrupt _ _ => rfl
-
-theorem ExitHasTy.widen {a a' e e' : Ty} {s : Stores} {ex : ExitV}
-    (ha : ∀ v, Val.hasTy v a = true → Val.hasTy v a' = true)
-    (he : ∀ v, Val.hasTy v e = true → Val.hasTy v e' = true)
-    (h : ExitHasTy a e s ex) : ExitHasTy a' e' s ex := by
-  cases ex with
-  | success v => exact ⟨ha v h.1, h.2⟩
-  | failure c => exact causeAdmits_of_forall he c h
-
-theorem ExitHasTy.later {a e : Ty} {s s' : Stores} {ex : ExitV} (hle : s.le s')
-    (h : ExitHasTy a e s ex) : ExitHasTy a e s' ex := by
-  cases ex with
-  | success v => exact ⟨h.1, Val.validIn_mono hle v h.2⟩
-  | failure c => exact h
-
-theorem SoundP.widen {pw pd : Effects.Program StoreSig ExitV} {s : Stores} {a a' e e' : Ty}
-    (ha : ∀ v, Val.hasTy v a = true → Val.hasTy v a' = true)
-    (he : ∀ v, Val.hasTy v e = true → Val.hasTy v e' = true)
-    (h : SoundP pw pd s a e) : SoundP pw pd s a' e' :=
-  ⟨h.independent, h.exit.widen ha he, h.le, h.wf, h.heap⟩
-
-/-- Sequencing: a sound first program, and a continuation sound from the state it reaches. -/
-theorem SoundP.bind {pw pd : Effects.Program StoreSig ExitV} {s : Stores} {a e a' e' : Ty}
-    (h : SoundP pw pd s a e) (kw kd : ExitV → Effects.Program StoreSig ExitV)
-    (hk : SoundP (kw (runP pd s).1) (kd (runP pd s).1) (runP pd s).2 a' e') :
-    SoundP (Effects.Program.bind pw kw) (Effects.Program.bind pd kd) s a' e' := by
-  have hw : runP (Effects.Program.bind pw kw) s = runP (kw (runP pw s).1) (runP pw s).2 :=
-    runP_bind pw kw s
-  have hd : runP (Effects.Program.bind pd kd) s = runP (kd (runP pd s).1) (runP pd s).2 :=
-    runP_bind pd kd s
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · rw [hw, hd, h.independent, hk.independent]
-  · rw [hd]; exact hk.exit
-  · rw [hd]; exact Stores.le_trans h.le hk.le
-  · rw [hd]; exact hk.wf
-  · rw [hd]; exact hk.heap
-
-theorem exitOk_fail {ty : Ty} {s : Stores} {x : Val} (hs : supportedErrTy ty = true)
-    (hx : Val.hasTy x ty = true) (answer : Ty) :
-    ExitHasTy answer ty s (Exit.failure (Cause.fail (errOf x))) := by
-  show causeAdmits _ ty (Cause.fail (errOf x)) = true
-  unfold causeAdmits Cause.fail
-  rw [List.all_cons, List.all_nil, Bool.and_true]
-  exact errAdmits_errOf ty x [] _ hs hx
-
-/-- A reified exit has the exit type of its program, and is valid where the exit is. -/
-theorem reify_ok {a e : Ty} {s : Stores} {ex : ExitV} (h : ExitHasTy a e s ex) :
-    Val.hasTy (reifyExitVal ex) (.exitOf a e) = true ∧ (reifyExitVal ex).validIn s = true := by
-  cases ex with
-  | success v =>
-    refine ⟨?_, ?_⟩
-    · show Val.hasTy (Val.exitOk v) (.exitOf a e) = true
-      simp only [Val.hasTy]
-      exact h.1
-    · show Val.validIn s (Val.exitOk v) = true
-      rw [Val.validIn_exitOk]
-      exact h.2
-  | failure c =>
-    refine ⟨?_, Val.validIn_exitErr s c⟩
-    show Val.hasTy (Val.exitErr c) (.exitOf a e) = true
-    rw [hasTy_exitErr]
-    exact h
-
-/-- What a decision binds is part of the scrutinee, so it is valid where the scrutinee is. -/
-theorem Decision.decide_validIn (d : Decision) (s : Stores) {v x : Val} {first : Bool}
-    (hv : Val.validIn s v = true) (h : d.decide v = some (first, some x)) :
-    Val.validIn s x = true := by
-  cases d with
-  | bool => cases v <;> cases h
-  | option =>
-    cases v <;> cases h
-    exact hv
-  | tag t =>
-    have h' : (match Val.tagPayload? t v with
-        | some payload => some (true, some payload)
-        | none => some (false, some v)) = some (first, some x) := h
-    cases hp : Val.tagPayload? t v with
-    | none =>
-      rw [hp] at h'
-      cases h'
-      exact hv
-    | some payload =>
-      rw [hp] at h'
-      cases h'
-      unfold Val.tagPayload? at hp
-      split at hp
-      · next t' payload' =>
-        split at hp
-        · cases hp
-          exact validIn_list_mem hv _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
-        · cases hp
-      · cases hp
-
-  | recordTag name =>
-    simp only [Decision.decide, Option.some.injEq, Prod.mk.injEq] at h
-    cases h.2
-    exact hv
-
-/-- The invariant under what a decision binds. -/
-theorem TypedAt.bound {tys : TyEnv} {env : List Val} {s : Stores} (h : TypedAt tys env s)
-    {bound : Option Val} {arm : List Ty} (hb : Decision.BoundTyped [] bound arm)
-    (hvalid : ∀ x, bound = some x → Val.validIn s x = true) :
-    TypedAt (tys ++ arm) (env ++ bound.toList) s := by
+/-- The invariant under what a decision binds (`Typed.BoundFits`). -/
+theorem TypedAt.bound {tys : TyEnv} {env : List Val} {w : Typed.World} (h : TypedAt tys env w)
+    {bound : Option Val} {arm : List Ty} (hb : Typed.BoundFits w bound arm) :
+    TypedAt (tys ++ arm) (env ++ bound.toList) w := by
   cases bound with
   | none =>
     cases arm with
     | nil =>
-      rw [List.append_nil]
-      show TypedAt tys (env ++ []) s
-      rw [List.append_nil]
+      show TypedAt (tys ++ []) (env ++ []) w
+      rw [List.append_nil, List.append_nil]
       exact h
     | cons _ _ => exact hb.elim
   | some x =>
@@ -412,169 +181,235 @@ theorem TypedAt.bound {tys : TyEnv} {env : List Val} {s : Stores} (h : TypedAt t
     | nil => exact hb.elim
     | cons ty rest =>
       cases rest with
-      | nil => exact h.push (Stores.le_refl s) h.wf h.heap hb (hvalid x rfl)
+      | nil => exact h.push (StoreOk.refl h.store) hb
       | cons _ _ => exact hb.elim
 
-theorem causeAdmits_combine {f : Val → Ty → Bool} {ty : Ty} {c d : CauseV}
-    (hc : causeAdmits f ty c = true) (hd : causeAdmits f ty d = true) :
-    causeAdmits f ty (Cause.combine c d) = true := by
-  unfold Cause.combine
-  split
-  · exact hd
-  · split
-    · exact hc
-    · apply List.all_eq_true.mpr
-      intro r hr
-      rcases List.mem_append.mp ((Cause.mem_dedup r _).mp hr) with hm | hm
-      · exact List.all_eq_true.mp hc r hm
-      · exact List.all_eq_true.mp hd r hm
+/-- A term the checker types evaluates in the environment to a value of its type
+(`Typed.evalTerm_progress`, at the native atoms). -/
+theorem TypedAt.eval {tys : TyEnv} {env : List Val} {w : Typed.World} (h : TypedAt tys env w)
+    {r : Term} {ty : Ty} (hty : termTy nativeSignature tys r = some ty) :
+    ∃ x, evalTerm env r = some x ∧ Typed.Fits w x ty :=
+  Typed.evalTerm_progress (sig := nativeSignature) rfl
+    (Typed.fitsAll_of_pointwise h.fits.1 h.fits.2) r ty hty
 
-/-- The exit a finalizer leaves: the body's exit, or the finalizer's failure, or both. -/
-theorem restore_ok {a e ef af : Ty} {s : Stores} {ex fex : ExitV}
-    (hex : ExitHasTy a e s ex) (hfex : ExitHasTy af ef s fex) :
-    ExitHasTy a (e.join ef) s (Exit.restoreAfterFinalizer ex (finVoid fex)) := by
+/-- **Soundness of one run of a pair of programs**, the first with the parameter and the second
+without: they run alike, and the run reaches a later world over the stores it leaves, whose store
+fits, at which the exit satisfies `Typed.ExitOk` at the type. -/
+structure SoundP (pw pd : Effects.Program StoreSig ExitV) (w : Typed.World) (answer error : Ty) :
+    Prop where
+  independent : runP pw w.state = runP pd w.state
+  reaches : ∃ w', w'.state = (runP pd w.state).2 ∧ StoreOk w w' ∧
+    Typed.ExitOk w' ⟨answer, error, Env.Requirement.empty⟩ (runP pd w.state).1
+
+/-- Soundness of a program's run: it does not depend on the wrong-shape exit, and it reaches a
+world whose store fits, at which its exit has the program's type. -/
+abbrev Sound (bad : ExitV) (e : NativeEff) (env : List Val) (w : Typed.World) (t : EffTy) : Prop :=
+  SoundP (denoteWith bad e env) (denote e env) w t.answer t.error
+
+/-- A pure exit on both sides is sound when the exit has the type. -/
+theorem SoundP.pure {w : Typed.World} {answer error : Ty} (h : StoreFits w) (ex : ExitV)
+    (hex : Typed.ExitOk w ⟨answer, error, Env.Requirement.empty⟩ ex) :
+    SoundP (Pure.pure ex) (Pure.pure ex) w answer error :=
+  ⟨rfl, w, rfl, StoreOk.refl h, hex⟩
+
+/-- Widening along the checker's order, column by column. -/
+theorem SoundP.widen {pw pd : Effects.Program StoreSig ExitV} {w : Typed.World} {a a' e e' : Ty}
+    (ha : Ty.subN a a' = true) (he : Ty.subN e e' = true) (h : SoundP pw pd w a e) :
+    SoundP pw pd w a' e' := by
+  obtain ⟨w', hs, ok, hex⟩ := h.reaches
+  exact ⟨h.independent, w', hs, ok, Typed.exitOk_widen ha he hex⟩
+
+/-- Sequencing: a sound first program, and a continuation sound from every world the first one
+reaches. -/
+theorem SoundP.bind {pw pd : Effects.Program StoreSig ExitV} {w : Typed.World} {a e a' e' : Ty}
+    (h : SoundP pw pd w a e) (kw kd : ExitV → Effects.Program StoreSig ExitV)
+    (hk : ∀ w₁, w₁.state = (runP pd w.state).2 → StoreOk w w₁ →
+      Typed.ExitOk w₁ ⟨a, e, Env.Requirement.empty⟩ (runP pd w.state).1 →
+      SoundP (kw (runP pd w.state).1) (kd (runP pd w.state).1) w₁ a' e') :
+    SoundP (Effects.Program.bind pw kw) (Effects.Program.bind pd kd) w a' e' := by
+  obtain ⟨w₁, hs₁, ok₁, hex₁⟩ := h.reaches
+  have k := hk w₁ hs₁ ok₁ hex₁
+  obtain ⟨w₂, hs₂, ok₂, hex₂⟩ := k.reaches
+  have hw : runP (Effects.Program.bind pw kw) w.state =
+      runP (kw (runP pw w.state).1) (runP pw w.state).2 := runP_bind pw kw w.state
+  have hd : runP (Effects.Program.bind pd kd) w.state =
+      runP (kd (runP pd w.state).1) (runP pd w.state).2 := runP_bind pd kd w.state
+  refine ⟨?_, w₂, ?_, ok₁.trans ok₂, ?_⟩
+  · rw [hw, hd, h.independent, ← hs₁, k.independent]
+  · rw [hd, hs₂, hs₁]
+  · rw [hd, ← hs₁]
+    exact hex₂
+
+/-! ## Exits at a world -/
+
+/-- A typed failure of a value of an admitted error type: its one reason fits the error column
+(`Typed.valOfErr_errOf_fits`), and it carries no shape defect. -/
+theorem exitOk_fail {w : Typed.World} {ty : Ty} {x : Val} (hs : admittedErrTy ty = true)
+    (hx : Typed.Fits w x ty) (answer : Ty) :
+    Typed.ExitOk w ⟨answer, ty, Env.Requirement.empty⟩ (Exit.failure (Cause.fail (errOf x))) := by
+  refine ⟨(Typed.fitsExit_failure_iff w _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩, fun r hr => ?_⟩
+  · simp only [Cause.fail, List.mem_singleton] at hr
+    subst hr
+    exact ⟨x, Typed.valOfErr_errOf_fits hs hx, hx⟩
+  · simp only [Cause.fail, List.mem_singleton] at hr
+    subst hr
+    trivial
+  · simp only [Cause.fail, List.mem_singleton] at hr
+    subst hr
+    trivial
+
+/-- A reified exit has the exit type of its program. -/
+theorem reify_ok {w : Typed.World} {a e e' : Ty} {ex : ExitV}
+    (h : Typed.ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex) :
+    Typed.ExitOk w ⟨.exitOf a e, e', Env.Requirement.empty⟩ (Exit.success (reifyExitVal ex)) :=
+  ⟨h.1, trivial⟩
+
+/-- The exit a finalizer leaves: the body's exit, or the finalizer's failure, or both combined, at
+the body's answer and the join of the two error columns. -/
+theorem restore_ok {w : Typed.World} {a e af ef : Ty} {ex fex : ExitV}
+    (hex : Typed.ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex)
+    (hfex : Typed.ExitOk w ⟨af, ef, Env.Requirement.empty⟩ fex) :
+    Typed.ExitOk w ⟨a, e.join ef, Env.Requirement.empty⟩
+      (Exit.restoreAfterFinalizer ex (finVoid fex)) := by
+  have body : Typed.ExitOk w ⟨a, e.join ef, Env.Requirement.empty⟩ ex :=
+    Typed.exitOk_widen (mid := ⟨a, e, Env.Requirement.empty⟩) (Ty.subN_refl _)
+      (Ty.subN_join_left e ef) hex
   cases ex with
   | success v =>
     cases fex with
-    | success w => exact ⟨hex.1, hex.2⟩
-    | failure cf =>
-      exact causeAdmits_of_forall (fun w h => Ty.hasTy_join_right e ef w [] h) cf hfex
+    | success _ => exact body
+    | failure cf => exact Typed.exitOk_failure_of_errorN (Ty.subN_join_right e ef) hfex
   | failure c =>
-    have hc : causeAdmits (fun w ty => Val.hasTy w ty) (e.join ef) c = true :=
-      causeAdmits_of_forall (fun w h => Ty.hasTy_join_left e ef w [] h) c hex
     cases fex with
-    | success w => exact hc
+    | success _ => exact body
     | failure cf =>
-      exact causeAdmits_combine hc
-        (causeAdmits_of_forall (fun w h => Ty.hasTy_join_right e ef w [] h) cf hfex)
+      exact Typed.exitOk_restore body (Typed.exitOk_failure_of_errorN (Ty.subN_join_right e ef) hfex)
 
-/-- The main theorem: a typed program of the straight fragment is sound from every state
-the invariant holds in. -/
-theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val) (s : Stores)
+/-- One store operation and its success, run from stores where it steps. -/
+theorem runP_perform_step {o : SyncOp} {s s' : Stores} {a : Val}
+    (h : syncOpStep o s = some (s', a)) :
+    runP (Effects.Program.bind (Effects.Program.perform (S := StoreSig) o)
+      (fun v => pure (Exit.success v))) s = ((Exit.success a : ExitV), s') := by
+  have hp : runP (Effects.Program.perform (S := StoreSig) o) s = (a, s') := by
+    unfold runP
+    rw [Effects.interpret_perform]
+    show (match syncOpStep o s with
+      | some (s', v) => (v, s')
+      | none => (Val.unit, s)) = _
+    rw [h]
+  rw [show Effects.Program.bind (Effects.Program.perform (S := StoreSig) o)
+      (fun v => pure (Exit.success v)) =
+      Effects.Program.perform (S := StoreSig) o >>= (fun v => pure (Exit.success v)) from rfl,
+    runP_bind, hp]
+  rfl
+
+/-! ## The main theorem -/
+
+/-- **The main theorem**: a typed program of the straight fragment is sound from every world whose
+store fits, in every environment typed there. -/
+theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val) (w : Typed.World)
     (t : EffTy), Straight e = true → effTy nativeSignature tys e = some t →
-    TypedAt tys env s → Sound bad e env s t
-  | .succeed v, tys, env, s, t, _, hty, hat => by
+    TypedAt tys env w → Sound bad e env w t
+  | .succeed v, tys, env, w, t, _, hty, hat => by
     obtain ⟨ty, hv, rfl⟩ := inv_succeed nativeSignature tys v t hty
-    obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome v env tys ty hat.fits hv)
-    show SoundP _ _ s _ _
+    obtain ⟨x, hx, hfit⟩ := hat.eval hv
+    show SoundP _ _ w _ _
     rw [denoteWith, denote, hx]
-    exact SoundP.pure hat.wf hat.heap _
-      ⟨evalTerm_hasTy v env tys ty x hat.fits hv hx, evalTerm_validIn s v env x hat.valid hx⟩
-  | .sync v, tys, env, s, t, _, hty, hat => by
+    exact SoundP.pure hat.store _ (Typed.strongExit_success w _ x hfit)
+  | .sync v, tys, env, w, t, _, hty, hat => by
     obtain ⟨ty, hv, rfl⟩ := inv_sync nativeSignature tys v t hty
-    obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome v env tys ty hat.fits hv)
-    show SoundP _ _ s _ _
+    obtain ⟨x, hx, hfit⟩ := hat.eval hv
+    show SoundP _ _ w _ _
     rw [denoteWith, denote, hx]
-    exact SoundP.pure hat.wf hat.heap _
-      ⟨evalTerm_hasTy v env tys ty x hat.fits hv hx, evalTerm_validIn s v env x hat.valid hx⟩
-  | .suspend b, tys, env, s, t, hs, hty, hat => by
-    show SoundP _ _ s _ _
+    exact SoundP.pure hat.store _ (Typed.strongExit_success w _ x hfit)
+  | .suspend b, tys, env, w, t, hs, hty, hat => by
+    show SoundP _ _ w _ _
     rw [denoteWith, denote]
-    exact sound bad b tys env s t (Straight.suspend hs)
-      (inv_suspend nativeSignature tys b t hty) hat
-  | .bind a b, tys, env, s, t, hs, hty, hat => by
+    exact sound bad b tys env w t (Straight.suspend hs) (inv_suspend nativeSignature tys b t hty) hat
+  | .bind a b, tys, env, w, t, hs, hty, hat => by
     obtain ⟨ha, hb⟩ := Straight.bind hs
     obtain ⟨f, r, hf, hr, rfl⟩ := inv_bind nativeSignature tys a b t hty
-    have iha := sound bad a tys env s f ha hf hat
-    show SoundP _ _ s _ _
+    have iha := sound bad a tys env w f ha hf hat
+    show SoundP _ _ w _ _
     rw [denoteWith, denote]
-    refine SoundP.bind iha _ _ ?_
-    have hex := iha.exit
-    cases hrun : (runP (denote a env) s).1 with
+    refine SoundP.bind iha _ _ (fun w₁ _ ok₁ hex₁ => ?_)
+    cases hrun : (runP (denote a env) w.state).1 with
     | success v =>
-      rw [hrun] at hex
-      have hat' := hat.push iha.le iha.wf iha.heap hex.1 hex.2
-      exact (sound bad b (tys ++ [f.answer]) (env ++ [v]) _ r hb hr hat').widen
-        (fun _ h => h) (fun w h => Ty.hasTy_join_right f.error r.error w [] h)
+      rw [hrun] at hex₁
+      exact (sound bad b (tys ++ [f.answer]) (env ++ [v]) w₁ r hb hr (hat.push ok₁ hex₁.1)).widen
+        (Ty.subN_refl _) (Ty.subN_join_right f.error r.error)
     | failure c =>
-      rw [hrun] at hex
-      exact SoundP.pure iha.wf iha.heap _
-        (causeAdmits_of_forall (fun w h => Ty.hasTy_join_left f.error r.error w [] h) c hex)
-  | .fail v, tys, env, s, t, _, hty, hat => by
+      rw [hrun] at hex₁
+      exact SoundP.pure ok₁.store _
+        (Typed.exitOk_failure_of_errorN (Ty.subN_join_left f.error r.error) hex₁)
+  | .fail v, tys, env, w, t, _, hty, hat => by
     obtain ⟨ty, hv, hadm, rfl⟩ := inv_fail nativeSignature tys v t hty
-    obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome v env tys ty hat.fits hv)
-    show SoundP _ _ s _ _
+    obtain ⟨x, hx, hfit⟩ := hat.eval hv
+    show SoundP _ _ w _ _
     rw [denoteWith, denote, hx]
-    exact SoundP.pure hat.wf hat.heap _
-      (exitOk_fail hadm (evalTerm_hasTy v env tys ty x hat.fits hv hx) _)
-  | .failCause c, tys, env, s, t, _, hty, hat => by
+    exact SoundP.pure hat.store _ (exitOk_fail hadm hfit _)
+  | .failCause c, tys, env, w, t, _, hty, hat => by
     obtain ⟨ty, hc, rfl⟩ := inv_failCause nativeSignature tys c t hty
-    obtain ⟨cause, hcause⟩ :=
-      Option.isSome_iff_exists.mp (causeOf_isSome_of_causeTy tys env hat.fits c ty hc)
-    show SoundP _ _ s _ _
+    obtain ⟨cause, hcause, hfits, hshape⟩ :=
+      Typed.causeOf_progress (src := ({ program := .failCause c } : Typed.ProgramSource)) hat.fits
+        c ty hc
+    show SoundP _ _ w _ _
     rw [denoteWith, denote, hcause]
-    exact SoundP.pure hat.wf hat.heap _ (causeOf_admits tys env hat.fits c ty hc cause hcause)
-  | .exit b, tys, env, s, t, hs, hty, hat => by
+    exact SoundP.pure hat.store _ ⟨(Typed.fitsExit_failure_iff w _ _).mpr ⟨hfits, hshape⟩, hshape⟩
+  | .exit b, tys, env, w, t, hs, hty, hat => by
     obtain ⟨tb, htb, rfl⟩ := inv_exit nativeSignature tys b t hty
-    have ih := sound bad b tys env s tb (Straight.exit hs) htb hat
-    show SoundP _ _ s _ _
+    have ih := sound bad b tys env w tb (Straight.exit hs) htb hat
+    show SoundP _ _ w _ _
     rw [denoteWith, denote]
-    refine SoundP.bind ih _ _ ?_
-    exact SoundP.pure ih.wf ih.heap _ (reify_ok ih.exit)
-  | .catchCause b h, tys, env, s, t, hs, hty, hat => by
+    exact SoundP.bind ih _ _ (fun w₁ _ ok₁ hex₁ => SoundP.pure ok₁.store _ (reify_ok hex₁))
+  | .catchCause b h, tys, env, w, t, hs, hty, hat => by
     obtain ⟨hsb, hsh⟩ := Straight.catchCause hs
     obtain ⟨tb, th, answer, htb, hth, hans, rfl⟩ := inv_catchCause nativeSignature tys b h t hty
     rw [EffTy.joinAnswer_eq] at hans
     cases hans
-    have ih := sound bad b tys env s tb hsb htb hat
-    show SoundP _ _ s _ _
+    have ih := sound bad b tys env w tb hsb htb hat
+    show SoundP _ _ w _ _
     rw [denoteWith, denote]
-    refine SoundP.bind ih _ _ ?_
-    have hex := ih.exit
-    cases hrun : (runP (denote b env) s).1 with
+    refine SoundP.bind ih _ _ (fun w₁ _ ok₁ hex₁ => ?_)
+    cases hrun : (runP (denote b env) w.state).1 with
     | success v =>
-      rw [hrun] at hex
-      exact SoundP.pure ih.wf ih.heap _
-        ⟨Ty.hasTy_join_left tb.answer th.answer v [] hex.1, hex.2⟩
+      rw [hrun] at hex₁
+      exact SoundP.pure ok₁.store _
+        (Typed.exitOk_success_of_answerN (Ty.subN_join_left tb.answer th.answer) hex₁)
     | failure c =>
-      rw [hrun] at hex
-      have hc : Val.hasTy (Val.exitErr c) (.causeOf tb.error) = true := by
-        rw [hasTy_causeOf_exitErr]; exact hex
-      have hat' := hat.push ih.le ih.wf ih.heap hc (Val.validIn_exitErr _ c)
-      exact (sound bad h (tys ++ [.causeOf tb.error]) (env ++ [Val.exitErr c]) _ th hsh hth
-        hat').widen (fun w hw => Ty.hasTy_join_right tb.answer th.answer w [] hw) (fun _ hw => hw)
-  | .matchCause b v c, tys, env, s, t, hs, hty, hat => by
+      rw [hrun] at hex₁
+      exact (sound bad h (tys ++ [.causeOf tb.error]) (env ++ [Val.exitErr c]) w₁ th hsh hth
+        (hat.push ok₁ (Typed.fits_exitErr_causeOf (Typed.fitsExit_failure_cause hex₁.1)))).widen
+        (Ty.subN_join_right tb.answer th.answer) (Ty.subN_refl _)
+  | .matchCause b v c, tys, env, w, t, hs, hty, hat => by
     obtain ⟨hsb, hsv, hsc⟩ := Straight.matchCause hs
     obtain ⟨tb, tv, tc, answer, htb, htv, htc, hans, rfl⟩ :=
       inv_matchCause nativeSignature tys b v c t hty
     rw [EffTy.joinAnswer_eq] at hans
     cases hans
-    have ih := sound bad b tys env s tb hsb htb hat
-    show SoundP _ _ s _ _
+    have ih := sound bad b tys env w tb hsb htb hat
+    show SoundP _ _ w _ _
     rw [denoteWith, denote]
-    refine SoundP.bind ih _ _ ?_
-    have hex := ih.exit
-    cases hrun : (runP (denote b env) s).1 with
+    refine SoundP.bind ih _ _ (fun w₁ _ ok₁ hex₁ => ?_)
+    cases hrun : (runP (denote b env) w.state).1 with
     | success x =>
-      rw [hrun] at hex
-      have hat' := hat.push ih.le ih.wf ih.heap hex.1 hex.2
-      exact (sound bad v (tys ++ [tb.answer]) (env ++ [x]) _ tv hsv htv hat').widen
-        (fun w hw => Ty.hasTy_join_left tv.answer tc.answer w [] hw)
-        (fun w hw => Ty.hasTy_join_left tv.error tc.error w [] hw)
+      rw [hrun] at hex₁
+      exact (sound bad v (tys ++ [tb.answer]) (env ++ [x]) w₁ tv hsv htv (hat.push ok₁ hex₁.1)).widen
+        (Ty.subN_join_left tv.answer tc.answer) (Ty.subN_join_left tv.error tc.error)
     | failure cause =>
-      rw [hrun] at hex
-      have hc : Val.hasTy (Val.exitErr cause) (.causeOf tb.error) = true := by
-        rw [hasTy_causeOf_exitErr]; exact hex
-      have hat' := hat.push ih.le ih.wf ih.heap hc (Val.validIn_exitErr _ cause)
-      exact (sound bad c (tys ++ [.causeOf tb.error]) (env ++ [Val.exitErr cause]) _ tc hsc htc
-        hat').widen (fun w hw => Ty.hasTy_join_right tv.answer tc.answer w [] hw)
-        (fun w hw => Ty.hasTy_join_right tv.error tc.error w [] hw)
-  | .select test d a b, tys, env, s, t, hs, hty, hat => by
+      rw [hrun] at hex₁
+      exact (sound bad c (tys ++ [.causeOf tb.error]) (env ++ [Val.exitErr cause]) w₁ tc hsc htc
+        (hat.push ok₁ (Typed.fits_exitErr_causeOf (Typed.fitsExit_failure_cause hex₁.1)))).widen
+        (Ty.subN_join_right tv.answer tc.answer) (Ty.subN_join_right tv.error tc.error)
+  | .select test d a b, tys, env, w, t, hs, hty, hat => by
     obtain ⟨ha, hb⟩ := Straight.select hs
     obtain ⟨ty, e0, e1, t0, t1, answer, htest, harms, ht0, ht1, hans, rfl⟩ :=
       inv_select nativeSignature tys test d a b t hty
     rw [EffTy.joinAnswer_eq] at hans
     cases hans
-    obtain ⟨x, hx⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome test env tys ty hat.fits htest)
-    have hxty := evalTerm_hasTy test env tys ty x hat.fits htest hx
-    have hxv := evalTerm_validIn s test env x hat.valid hx
-    obtain ⟨first, bound, hdec, hbound⟩ := Decision.decide_typed d harms hxty
-    have hvalid : ∀ y, bound = some y → Val.validIn s y = true := by
-      intro y hy
-      subst hy
-      exact Decision.decide_validIn d s hxv hdec
-    show SoundP _ _ s _ _
+    obtain ⟨x, hx, hxfit⟩ := hat.eval htest
+    obtain ⟨first, bound, hdec, hbound⟩ := Typed.decide_fits harms hxfit
+    show SoundP _ _ w _ _
     rw [denoteWith, denote, hx]
     show SoundP (match (some x).bind d.decide with
         | some (true, bound) => denoteWith bad a (env ++ bound.toList)
@@ -583,73 +418,49 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
       (match (some x).bind d.decide with
         | some (true, bound) => denote a (env ++ bound.toList)
         | some (false, bound) => denote b (env ++ bound.toList)
-        | none => pure badShapeExit) s _ _
+        | none => pure badShapeExit) w _ _
     rw [Option.bind_some, hdec]
     cases first with
     | true =>
-      exact (sound bad a (tys ++ e0) (env ++ bound.toList) s t0 ha ht0
-        (hat.bound hbound hvalid)).widen
-        (fun w h => Ty.hasTy_join_left t0.answer t1.answer w [] h)
-        (fun w h => Ty.hasTy_join_left t0.error t1.error w [] h)
+      exact (sound bad a (tys ++ e0) (env ++ bound.toList) w t0 ha ht0 (hat.bound hbound)).widen
+        (Ty.subN_join_left t0.answer t1.answer) (Ty.subN_join_left t0.error t1.error)
     | false =>
-      exact (sound bad b (tys ++ e1) (env ++ bound.toList) s t1 hb ht1
-        (hat.bound hbound hvalid)).widen
-        (fun w h => Ty.hasTy_join_right t0.answer t1.answer w [] h)
-        (fun w h => Ty.hasTy_join_right t0.error t1.error w [] h)
-  | .onExit b f, tys, env, s, t, hs, hty, hat => by
+      exact (sound bad b (tys ++ e1) (env ++ bound.toList) w t1 hb ht1 (hat.bound hbound)).widen
+        (Ty.subN_join_right t0.answer t1.answer) (Ty.subN_join_right t0.error t1.error)
+  | .onExit b f, tys, env, w, t, hs, hty, hat => by
     obtain ⟨hsb, hsf⟩ := Straight.onExit hs
     obtain ⟨tb, tf, htb, htf, rfl⟩ := inv_onExit nativeSignature tys b f t hty
-    have ih := sound bad b tys env s tb hsb htb hat
-    show SoundP _ _ s _ _
+    have ih := sound bad b tys env w tb hsb htb hat
+    show SoundP _ _ w _ _
     rw [denoteWith, denote]
-    refine SoundP.bind ih _ _ ?_
-    have hre := reify_ok ih.exit
-    have hat' := hat.push ih.le ih.wf ih.heap hre.1 hre.2
+    refine SoundP.bind ih _ _ (fun w₁ _ ok₁ hex₁ => ?_)
     have ihf := sound bad f (tys ++ [.exitOf tb.answer tb.error])
-      (env ++ [reifyExitVal (runP (denote b env) s).1]) _ tf hsf htf hat'
-    refine SoundP.bind ihf _ _ ?_
-    exact SoundP.pure ihf.wf ihf.heap _ (restore_ok (ih.exit.later ihf.le) ihf.exit)
-  | .perform op r, tys, env, s, t, hs, hty, hat => by
+      (env ++ [reifyExitVal (runP (denote b env) w.state).1]) w₁ tf hsf htf
+      (hat.push ok₁ (show Typed.Fits w₁ (reifyExitVal (runP (denote b env) w.state).1)
+        (.exitOf tb.answer tb.error) from hex₁.1))
+    exact SoundP.bind ihf _ _ (fun w₂ _ ok₂ hex₂ =>
+      SoundP.pure ok₂.store _ (restore_ok (Typed.strongExit_mono _ _ _ _ ok₂.le hex₁) hex₂))
+  | .perform op r, tys, env, w, t, hs, hty, hat => by
     have hkind := Straight.perform_sync hs
-    obtain ⟨requestTy, _, hr, hrow⟩ := inv_perform nativeSignature tys op r t hty
-    obtain ⟨hcreq, hcans, hcerr⟩ := nativeSignature_row_closed op
-    obtain ⟨hsub, rfl⟩ := rowTy_closed_some hcreq hcans hcerr hrow
-    obtain ⟨x, hx⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome r env tys requestTy hat.fits hr)
-    have hxty := evalTerm_hasTy r env tys requestTy x hat.fits hr hx
-    have hxv := evalTerm_validIn s r env x hat.valid hx
-    have hreq : Val.hasTy x (NativeOp.row op).request = true := by
-      have h1 : Val.hasTy x requestTy.normalize = true := by
-        rw [Effect4.Program.hasTy_normalize]; exact hxty
-      have h2 := hasTy_sub _ _ x [] hsub h1
-      have hrow : (nativeSignature.rowOf op).request = (NativeOp.row op).request.normalize := by
-        show ((nativeRowOf [] op).normalizeTypes).request = _
-        rw [nativeRowOf_nil]; rfl
-      rw [hrow, Ty.normalize_idem, Effect4.Program.hasTy_normalize] at h2
-      exact h2
-    obtain ⟨o, s', a, ho, hstep, haty, hav, hwf', hheap'⟩ :=
-      progress op x s hat.wf hat.heap hkind hreq hxv
-    have hrun : runP (denote (.perform op r) env) s = (Exit.success a, s') := by
-      have := meaning_perform_sync op r env s hkind hx ho
-      rw [hstep] at this
-      exact this
-    have hrunW : runP (denoteWith bad (.perform op r) env) s = (Exit.success a, s') := by
-      rw [← hrun]
-      congr 1
+    obtain ⟨o, w', a, hden, step, ok, hans⟩ := progress op r tys env w t hkind hty hat.fits hat.store
+    have hrun : runP (denote (.perform op r) env) w.state = (Exit.success a, w'.state) := by
+      rw [hden]
+      exact runP_perform_step step
+    have hindep : runP (denoteWith bad (.perform op r) env) w.state =
+        runP (denote (.perform op r) env) w.state := by
+      have hden' := hden
+      rw [denote] at hden'
       rw [denoteWith, denote]
-      simp only [hkind, hx, Option.bind_some, ho]
-    have hans : Val.hasTy a (nativeSignature.rowOf op).answer.normalize = true := by
-      rw [Effect4.Program.hasTy_normalize]
-      show Val.hasTy a ((nativeRowOf [] op).normalizeTypes).answer = true
-      rw [nativeRowOf_nil]
-      show Val.hasTy a (NativeOp.row op).answer.normalize = true
-      rw [Effect4.Program.hasTy_normalize]; exact haty
-    refine ⟨?_, ?_, ?_, ?_, ?_⟩
-    · rw [hrunW, hrun]
-    · rw [hrun]; exact ⟨hans, hav⟩
-    · rw [hrun]; exact syncOpStep_le o s s' a hstep
-    · rw [hrun]; exact hwf'
-    · rw [hrun]; exact hheap'
+      simp only [hkind] at hden' ⊢
+      cases hd : (evalTerm env r).bind (NativeOp.syncOpOf op) with
+      | none =>
+        rw [hd] at hden'
+        cases hden'
+      | some o' => rfl
+    refine ⟨hindep, w', ?_, ok, ?_⟩
+    · rw [hrun]
+    · rw [hrun]
+      exact Typed.strongExit_success w' _ a hans
   -- the non-straight constructors, last: `Straight` answers `false` at each, so the arm is
   -- unreachable. A wildcard would not do — the contradiction is `Straight` REDUCING on the
   -- constructor, and at an opaque `e` there is nothing to reduce
@@ -664,30 +475,77 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
 
 /-! ## The corollaries -/
 
-/-- The invariant holds of the empty environment in the empty stores. -/
-theorem TypedAt.empty : TypedAt [] [] Stores.empty :=
-  ⟨Fits.nil, (fun _ h => nomatch h), Stores.empty_wf, Stores.empty_heapNat⟩
+/-- **A store-signature program keeps the external allocations**: the store handler only runs
+`syncOpStep`, which keeps them (`syncOpStep_externals`), or leaves the stores at a frontier. -/
+theorem runP_externals {A : Type} :
+    ∀ (p : Effects.Program StoreSig A) (s : Stores), (runP p s).2.externals = s.externals
+  | .pure _, _ => rfl
+  | .vis o next, s => by
+    have h : runP (Effects.Program.vis o next) s =
+        runP (next (runP (Effects.Program.perform (S := StoreSig) o) s).1)
+          (runP (Effects.Program.perform (S := StoreSig) o) s).2 :=
+      runP_bind (Effects.Program.perform (S := StoreSig) o) next s
+    rw [h, runP_externals]
+    unfold runP
+    rw [Effects.interpret_perform]
+    show (match syncOpStep o s with
+      | some (s', v) => (v, s')
+      | none => (Val.unit, s)).2.externals = s.externals
+    cases hstep : syncOpStep o s with
+    | none => rfl
+    | some r => exact syncOpStep_externals o s r.1 r.2 hstep
+
+/-- The store fits the world a program is loaded at (`Typed.initialWorld`): its tables and its
+store are empty. -/
+theorem StoreFits.initial (ty : EffTy) : StoreFits (Typed.initialWorld ty) :=
+  ⟨⟨fun _ => ⟨(fun h => nomatch h), (fun h => absurd h (Nat.not_lt_zero _))⟩,
+    fun _ => ⟨(fun h => nomatch h), (fun h => absurd h (Nat.not_lt_zero _))⟩,
+    fun _ _ h => nomatch h⟩, Stores.empty_wf⟩
+
+/-- The invariant holds of the empty environment at the initial world. -/
+theorem TypedAt.empty (ty : EffTy) : TypedAt [] [] (Typed.initialWorld ty) :=
+  ⟨Typed.envTyped_nil _, StoreFits.initial ty⟩
+
+/-- **The meaning layer's exit judgment at the stores a run from the empty stores leaves**: the
+typed state's `Typed.ExitOk` at a world over them whose store fits, read by
+`Typed.exitHasTy_of_fitsExit`. The run allocates no external handle (`runP_externals`), and a
+success is valid in a store that fits (`CellsTyped.fits_validIn`). -/
+theorem exitHasTy_of_reaches {A : Type} {p : Effects.Program StoreSig A} {w : Typed.World}
+    {ty : EffTy} {ex : ExitV} (hstate : w.state = (runP p Stores.empty).2) (store : StoreFits w)
+    (h : Typed.ExitOk w ty ex) : ExitHasTy ty.answer ty.error w.state ex :=
+  Typed.exitHasTy_of_fitsExit w ty w.state ex
+    (by rw [hstate, runP_externals]; rfl)
+    (fun v hv => by
+      subst hv
+      exact store.toCellsTyped.fits_validIn ((Typed.fitsExit_success_iff w ty v).mp h.1))
+    h.1
 
 /-- **A typed straight program's meaning has its type.** From the empty stores, the exit is a
 valid value of the answer type or a cause inside the error type. -/
 theorem meaning_typed (e : NativeEff) (t : EffTy) (hs : Straight e = true)
     (hty : effTy nativeSignature [] e = some t) :
-    ExitHasTy t.answer t.error (meaning e [] Stores.empty).2 (meaning e [] Stores.empty).1 :=
-  (sound badShapeExit e [] [] Stores.empty t hs hty TypedAt.empty).exit
+    ExitHasTy t.answer t.error (meaning e [] Stores.empty).2 (meaning e [] Stores.empty).1 := by
+  obtain ⟨w', hs', ok, hex⟩ :=
+    (sound badShapeExit e [] [] (Typed.initialWorld t) t hs hty (TypedAt.empty t)).reaches
+  have h := exitHasTy_of_reaches hs' ok.store hex
+  rw [hs'] at h
+  exact h
 
 /-- **A typed straight program does not go wrong.** Whatever exit the wrong-shape arms are
 given, the run is the meaning: no such arm is reached. -/
 theorem meaning_never_wrong (bad : ExitV) (e : NativeEff) (t : EffTy) (hs : Straight e = true)
     (hty : effTy nativeSignature [] e = some t) :
     runP (denoteWith bad e []) Stores.empty = meaning e [] Stores.empty :=
-  (sound bad e [] [] Stores.empty t hs hty TypedAt.empty).independent
+  (sound bad e [] [] (Typed.initialWorld t) t hs hty (TypedAt.empty t)).independent
 
-/-- The stores a typed straight program leaves are well-formed, with a number in every cell. -/
+/-- The stores a typed straight program leaves are typed by a world: they are well-formed, and every
+cell holds a value of its declared type. -/
 theorem meaning_stores (e : NativeEff) (t : EffTy) (hs : Straight e = true)
     (hty : effTy nativeSignature [] e = some t) :
-    (meaning e [] Stores.empty).2.WF ∧ Stores.HeapNat (meaning e [] Stores.empty).2 :=
-  ⟨(sound badShapeExit e [] [] Stores.empty t hs hty TypedAt.empty).wf,
-    (sound badShapeExit e [] [] Stores.empty t hs hty TypedAt.empty).heap⟩
+    ∃ w, w.state = (meaning e [] Stores.empty).2 ∧ StoreFits w := by
+  obtain ⟨w', hs', ok, _⟩ :=
+    (sound badShapeExit e [] [] (Typed.initialWorld t) t hs hty (TypedAt.empty t)).reaches
+  exact ⟨w', hs', ok.store⟩
 
 open Effect4.Program.Agreement in
 /-- **The machine, on the straight fragment.** The ordinary run of a typed straight program,

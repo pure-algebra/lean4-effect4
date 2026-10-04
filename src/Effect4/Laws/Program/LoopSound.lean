@@ -4,16 +4,16 @@ import Effect4.Laws.Auto.Inversion
 /-!
 # Type soundness of the budgeted meaning: loops
 
-`MeaningSound.lean` on the loop-bearing fragment `Looped`. The statement has the same three
-parts, read at a budget: a typed program's budgeted run does not depend on the wrong-shape
-exit (`meaningB_never_wrong`); when it finishes, its exit has the program's type
-(`meaningB_typed`); and finished or not, the stores it leaves are well-formed
-(`meaningB_stores`). An unfinished run is not a wrong run: the budget ended, and the stores
-written so far are still inside the invariant.
+`MeaningSound.lean` on the loop-bearing fragment `Looped`, at the same invariant (`TypedAt`,
+decisions row 209). The statement has the same three parts, read at a budget: a typed program's
+budgeted run does not depend on the wrong-shape exit (`meaningB_never_wrong`); when it finishes,
+its exit has the program's type (`meaningB_typed`); and finished or not, the stores it leaves are
+the state of a world whose store fits (`meaningB_stores`). An unfinished run is not a wrong run:
+the budget ended, and the stores written so far still fit a world.
 
-The loop's invariant is the one its typing rule states: the cursor is a valid value of the
-annotated cursor type. The initial cursor and every stepped cursor have a subtype of it
-(`inv_iterate`), and `hasTy_sub` carries membership along.
+The loop's invariant is the one its typing rule states: the cursor fits the annotated cursor type
+at the world of the round. The initial cursor and every stepped cursor have a subtype of it
+(`inv_iterate`), and `Typed.fits_subN` carries membership along.
 -/
 
 set_option autoImplicit false
@@ -153,102 +153,104 @@ theorem denoteBWith_badShape (k : Nat) : ∀ (e : NativeEff) (env : List Val),
 
 /-! ## Soundness of a budgeted run -/
 
-/-- The store half of the invariant, after a run. -/
-structure StoreOk (s s' : Stores) : Prop where
-  le : s.le s'
-  wf : s'.WF
-  heap : Stores.HeapNat s'
-
-/-- Soundness of one budgeted run of a pair of programs: they run alike, a finished exit has
-the type, and the stores are inside the invariant whether the run finished or not. -/
-structure SoundB (pw pd : Effects.Program StoreSig (Option ExitV)) (s : Stores)
+/-- Soundness of one budgeted run of a pair of programs: they run alike, and the run reaches a
+later world over the stores it leaves, whose store fits, at which a finished exit satisfies
+`Typed.ExitOk` at the type. An unfinished run reaches such a world too. -/
+structure SoundB (pw pd : Effects.Program StoreSig (Option ExitV)) (w : Typed.World)
     (answer error : Ty) : Prop where
-  independent : runP pw s = runP pd s
-  exit : ∀ ex, (runP pd s).1 = some ex → ExitHasTy answer error (runP pd s).2 ex
-  stores : StoreOk s (runP pd s).2
+  independent : runP pw w.state = runP pd w.state
+  reaches : ∃ w', w'.state = (runP pd w.state).2 ∧ StoreOk w w' ∧
+    ∀ ex, (runP pd w.state).1 = some ex → Typed.ExitOk w' ⟨answer, error, Env.Requirement.empty⟩ ex
 
-theorem SoundB.pure {s : Stores} {answer error : Ty} (hwf : s.WF) (hheap : Stores.HeapNat s)
-    (ex : ExitV) (hex : ExitHasTy answer error s ex) :
-    SoundB (Pure.pure (some ex)) (Pure.pure (some ex)) s answer error :=
-  ⟨rfl, fun ex' h => by cases h; exact hex, ⟨Stores.le_refl s, hwf, hheap⟩⟩
+theorem SoundB.pure {w : Typed.World} {answer error : Ty} (h : StoreFits w) (ex : ExitV)
+    (hex : Typed.ExitOk w ⟨answer, error, Env.Requirement.empty⟩ ex) :
+    SoundB (Pure.pure (some ex)) (Pure.pure (some ex)) w answer error :=
+  ⟨rfl, w, rfl, StoreOk.refl h, fun ex' h' => by cases h'; exact hex⟩
 
-theorem SoundB.widen {pw pd : Effects.Program StoreSig (Option ExitV)} {s : Stores}
-    {a a' e e' : Ty} (ha : ∀ v, Val.hasTy v a = true → Val.hasTy v a' = true)
-    (he : ∀ v, Val.hasTy v e = true → Val.hasTy v e' = true)
-    (h : SoundB pw pd s a e) : SoundB pw pd s a' e' :=
-  ⟨h.independent, fun ex hex => (h.exit ex hex).widen ha he, h.stores⟩
+/-- Widening along the checker's order, column by column. -/
+theorem SoundB.widen {pw pd : Effects.Program StoreSig (Option ExitV)} {w : Typed.World}
+    {a a' e e' : Ty} (ha : Ty.subN a a' = true) (he : Ty.subN e e' = true)
+    (h : SoundB pw pd w a e) : SoundB pw pd w a' e' := by
+  obtain ⟨w', hs, ok, hex⟩ := h.reaches
+  exact ⟨h.independent, w', hs, ok, fun ex hr => Typed.exitOk_widen ha he (hex ex hr)⟩
 
 /-- A straight program's soundness, read at a budget. -/
-theorem SoundB.of_sound {pw pd : Effects.Program StoreSig ExitV} {s : Stores} {a e : Ty}
-    (h : SoundP pw pd s a e) : SoundB (some <$> pw) (some <$> pd) s a e := by
-  refine ⟨?_, ?_, ?_⟩
+theorem SoundB.of_sound {pw pd : Effects.Program StoreSig ExitV} {w : Typed.World} {a e : Ty}
+    (h : SoundP pw pd w a e) : SoundB (some <$> pw) (some <$> pd) w a e := by
+  obtain ⟨w', hs, ok, hex⟩ := h.reaches
+  refine ⟨?_, w', ?_, ok, fun ex hr => ?_⟩
   · rw [runP_map, runP_map, h.independent]
-  · intro ex hex
-    rw [runP_map] at hex ⊢
-    cases hex
-    exact h.exit
   · rw [runP_map]
-    exact ⟨h.le, h.wf, h.heap⟩
+    exact hs
+  · rw [runP_map] at hr
+    cases hr
+    exact hex
 
-/-- Sequencing at a budget. -/
-theorem SoundB.thenB {pw pd : Effects.Program StoreSig (Option ExitV)} {s : Stores}
-    {a e a' e' : Ty} (h : SoundB pw pd s a e)
+/-- Sequencing at a budget: a sound first program, and a continuation sound from every world the
+first one finishes at. -/
+theorem SoundB.thenB {pw pd : Effects.Program StoreSig (Option ExitV)} {w : Typed.World}
+    {a e a' e' : Ty} (h : SoundB pw pd w a e)
     (kw kd : ExitV → Effects.Program StoreSig (Option ExitV))
-    (hk : ∀ ex, (runP pd s).1 = some ex → SoundB (kw ex) (kd ex) (runP pd s).2 a' e') :
-    SoundB (Denote.thenB pw kw) (Denote.thenB pd kd) s a' e' := by
-  rcases hd : runP pd s with ⟨r, s₁⟩
-  have hw : runP pw s = (r, s₁) := by rw [h.independent, hd]
-  have hst : StoreOk s s₁ := by have := h.stores; rw [hd] at this; exact this
+    (hk : ∀ ex (w₁ : Typed.World), (runP pd w.state).1 = some ex →
+      w₁.state = (runP pd w.state).2 → StoreOk w w₁ →
+      Typed.ExitOk w₁ ⟨a, e, Env.Requirement.empty⟩ ex → SoundB (kw ex) (kd ex) w₁ a' e') :
+    SoundB (Denote.thenB pw kw) (Denote.thenB pd kd) w a' e' := by
+  obtain ⟨w₁, hs₁, ok₁, hex₁⟩ := h.reaches
+  have hk₁ := fun ex hr => hk ex w₁ hr hs₁ ok₁
+  rcases hd : runP pd w.state with ⟨r, s₁⟩
+  have hw : runP pw w.state = (r, s₁) := by rw [h.independent, hd]
+  rw [hd] at hs₁ hex₁ hk₁
+  have hstate : w₁.state = s₁ := hs₁
   cases r with
   | none =>
-    refine ⟨?_, ?_, ?_⟩
+    refine ⟨?_, w₁, ?_, ok₁, fun ex hex => ?_⟩
     · rw [runP_thenB_none hw, runP_thenB_none hd]
-    · intro ex hex
-      rw [runP_thenB_none hd] at hex
-      cases hex
     · rw [runP_thenB_none hd]
-      exact hst
+      exact hstate
+    · rw [runP_thenB_none hd] at hex
+      cases hex
   | some ex =>
-    have hk' := hk ex (by rw [hd])
-    rw [hd] at hk'
-    refine ⟨?_, ?_, ?_⟩
-    · rw [runP_thenB_some hw, runP_thenB_some hd]
-      exact hk'.independent
-    · intro ex' hex'
-      rw [runP_thenB_some hd] at hex' ⊢
-      exact hk'.exit ex' hex'
-    · rw [runP_thenB_some hd]
-      exact ⟨Stores.le_trans hst.le hk'.stores.le, hk'.stores.wf, hk'.stores.heap⟩
+    have k := hk₁ ex rfl (hex₁ ex rfl)
+    obtain ⟨w₂, hs₂, ok₂, hex₂⟩ := k.reaches
+    refine ⟨?_, w₂, ?_, ok₁.trans ok₂, fun ex' hex' => ?_⟩
+    · rw [runP_thenB_some hw, runP_thenB_some hd, ← hstate]
+      exact k.independent
+    · rw [runP_thenB_some hd, ← hstate]
+      exact hs₂
+    · rw [runP_thenB_some hd, ← hstate] at hex'
+      exact hex₂ ex' hex'
 
 /-! ## A loop is sound when each round is -/
 
-/-- `Inv` holds of the cursor and the stores at the start of a round. The two step functions
-run alike there, a finished round has the type, a continuing round re-establishes `Inv`, and
-every round keeps the stores inside the invariant. Then the loop is sound at every budget. -/
+/-- `Inv` holds of the cursor and the world at the start of a round, and the store fits there. The
+two step functions run alike there, and a round reaches a later world over the stores it leaves,
+whose store fits, at which a finished round has the type and a continuing round re-establishes
+`Inv`. Then the loop is sound at every budget. -/
 theorem iter_soundB {fw fd : Val → Effects.Program StoreSig (Option ExitV ⊕ Val)}
-    {answer error : Ty} (Inv : Val → Stores → Prop)
-    (hinv : ∀ c s, Inv c s → s.WF ∧ Stores.HeapNat s)
-    (hstep : ∀ c s, Inv c s → runP (fw c) s = runP (fd c) s ∧
-      StoreOk s (runP (fd c) s).2 ∧
-      (∀ ex, (runP (fd c) s).1 = .inl (some ex) → ExitHasTy answer error (runP (fd c) s).2 ex) ∧
-      (∀ c', (runP (fd c) s).1 = .inr c' → Inv c' (runP (fd c) s).2)) :
-    ∀ (k : Nat) (c : Val) (s : Stores), Inv c s →
-      SoundB (Option.join <$> iter fw k c) (Option.join <$> iter fd k c) s answer error
-  | 0, c, s, hc => by
+    {answer error : Ty} (Inv : Val → Typed.World → Prop)
+    (hinv : ∀ c w, Inv c w → StoreFits w)
+    (hstep : ∀ c (w : Typed.World), Inv c w → runP (fw c) w.state = runP (fd c) w.state ∧
+      ∃ w', w'.state = (runP (fd c) w.state).2 ∧ StoreOk w w' ∧
+        (∀ ex, (runP (fd c) w.state).1 = .inl (some ex) →
+          Typed.ExitOk w' ⟨answer, error, Env.Requirement.empty⟩ ex) ∧
+        (∀ c', (runP (fd c) w.state).1 = .inr c' → Inv c' w')) :
+    ∀ (k : Nat) (c : Val) (w : Typed.World), Inv c w →
+      SoundB (Option.join <$> iter fw k c) (Option.join <$> iter fd k c) w answer error
+  | 0, c, w, hc => by
     rw [iter_zero, iter_zero]
-    refine ⟨rfl, ?_, ⟨Stores.le_refl s, (hinv c s hc).1, (hinv c s hc).2⟩⟩
-    intro ex hex
+    refine ⟨rfl, w, rfl, StoreOk.refl (hinv c w hc), fun ex hex => ?_⟩
     rw [runP_map, runP_pure] at hex
     cases hex
-  | k + 1, c, s, hc => by
-    obtain ⟨hrun, hst, hexit, hnext⟩ := hstep c s hc
-    rcases hd : runP (fd c) s with ⟨r, s₁⟩
-    have hw : runP (fw c) s = (r, s₁) := by rw [hrun, hd]
-    rw [hd] at hst hexit hnext
-    have eW : runP (Option.join <$> iter fw (k + 1) c) s =
+  | k + 1, c, w, hc => by
+    obtain ⟨hrun, w₁, hs₁, ok₁, hexit, hnext⟩ := hstep c w hc
+    rcases hd : runP (fd c) w.state with ⟨r, s₁⟩
+    have hw : runP (fw c) w.state = (r, s₁) := by rw [hrun, hd]
+    rw [hd] at hs₁ hexit hnext
+    have hstate : w₁.state = s₁ := hs₁
+    have eW : runP (Option.join <$> iter fw (k + 1) c) w.state =
         runP (Option.join <$> iterNext (iter fw k) r) s₁ := by
       rw [iter_succ, runP_map, runP_bind, hw, runP_map]
-    have eD : runP (Option.join <$> iter fd (k + 1) c) s =
+    have eD : runP (Option.join <$> iter fd (k + 1) c) w.state =
         runP (Option.join <$> iterNext (iter fd k) r) s₁ := by
       rw [iter_succ, runP_map, runP_bind, hd, runP_map]
     cases r with
@@ -258,166 +260,136 @@ theorem iter_soundB {fw fd : Val → Effects.Program StoreSig (Option ExitV ⊕ 
         intro f
         rw [show iterNext (iter f k) (Sum.inl y) = pure (some y) from rfl, runP_map, runP_pure]
         rfl
-      refine ⟨?_, ?_, ?_⟩
+      refine ⟨?_, w₁, ?_, ok₁, fun ex hex => ?_⟩
       · rw [eW, eD, hy, hy]
-      · intro ex hex
-        rw [eD, hy] at hex ⊢
+      · rw [eD, hy]
+        exact hstate
+      · rw [eD, hy] at hex
         cases hex
         exact hexit ex rfl
-      · rw [eD, hy]
-        exact hst
     | inr c' =>
-      have ih := iter_soundB Inv hinv hstep k c' s₁ (hnext c' rfl)
+      have ih := iter_soundB Inv hinv hstep k c' w₁ (hnext c' rfl)
+      obtain ⟨w₂, hs₂, ok₂, hex₂⟩ := ih.reaches
       have hn : ∀ (f : Val → Effects.Program StoreSig (Option ExitV ⊕ Val)),
           iterNext (iter f k) (Sum.inr c') = iter f k c' := fun _ => rfl
-      refine ⟨?_, ?_, ?_⟩
-      · rw [eW, eD, hn, hn]
+      refine ⟨?_, w₂, ?_, ok₁.trans ok₂, fun ex hex => ?_⟩
+      · rw [eW, eD, hn, hn, ← hstate]
         exact ih.independent
-      · intro ex hex
-        rw [eD, hn] at hex ⊢
-        exact ih.exit ex hex
-      · rw [eD, hn]
-        exact ⟨Stores.le_trans hst.le ih.stores.le, ih.stores.wf, ih.stores.heap⟩
+      · rw [eD, hn, ← hstate]
+        exact hs₂
+      · rw [eD, hn, ← hstate] at hex
+        exact hex₂ ex hex
 
 /-! ## The main theorem -/
-
-/-- A value of a subtype, through the normal forms the typing rule compares. -/
-theorem hasTy_of_sub_normalize {a b : Ty} {v : Val}
-    (hsub : Ty.sub a.normalize b.normalize = true) (hv : Val.hasTy v a = true) :
-    Val.hasTy v b = true := by
-  have h1 : Val.hasTy v a.normalize = true := by
-    rw [Effect4.Program.hasTy_normalize]; exact hv
-  have h2 := hasTy_sub _ _ v [] hsub h1
-  rw [Effect4.Program.hasTy_normalize] at h2
-  exact h2
 
 /-- The leaf case of `soundB`: on a leaf the budgeted meaning is the meaning, and the fragments
 agree arm for arm (`Looped` names every leaf `Straight` names), so `sound` applies. -/
 private theorem soundB_leaf (bad : ExitV) (k : Nat) (e : NativeEff) (tys : TyEnv)
-    (env : List Val) (s : Stores) (t : EffTy) (hleaf : composite e = false)
+    (env : List Val) (w : Typed.World) (t : EffTy) (hleaf : composite e = false)
     (hs : Straight e = true) (hty : effTy nativeSignature tys e = some t)
-    (hat : TypedAt tys env s) :
-    SoundB (denoteBWith bad k e env) (denoteB k e env) s t.answer t.error := by
+    (hat : TypedAt tys env w) :
+    SoundB (denoteBWith bad k e env) (denoteB k e env) w t.answer t.error := by
   rw [denoteBWith_leaf bad k _ env hleaf, denoteB_leaf k _ env hleaf, leafB, if_pos hs, if_pos hs]
-  exact SoundB.of_sound (sound bad _ tys env s t hs hty hat)
+  exact SoundB.of_sound (sound bad _ tys env w t hs hty hat)
 
-/-- A typed program of the loop-bearing fragment is sound at every budget, from every state the
-invariant holds in. -/
+/-- A typed program of the loop-bearing fragment is sound at every budget, from every world whose
+store fits, in every environment typed there. -/
 theorem soundB (bad : ExitV) (k : Nat) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
-    (s : Stores) (t : EffTy), Looped e = true → effTy nativeSignature tys e = some t →
-    TypedAt tys env s →
-    SoundB (denoteBWith bad k e env) (denoteB k e env) s t.answer t.error
-  | .iterate cursorTy initial test step result body, tys, env, s, t, hl, hty, hat => by
+    (w : Typed.World) (t : EffTy), Looped e = true → effTy nativeSignature tys e = some t →
+    TypedAt tys env w →
+    SoundB (denoteBWith bad k e env) (denoteB k e env) w t.answer t.error
+  | .iterate cursorTy initial test step result body, tys, env, w, t, hl, hty, hat => by
     have hlb := Looped.iterate hl
     obtain ⟨c0, c1, d, b, hinit, htest, hbody, hstepTy, hres, hsub0, hsub1, rfl⟩ :=
       inv_iterate nativeSignature tys cursorTy initial test step result body t hty
     -- the cursor's type: the annotation, or the initial value's (DI-91)
     generalize cursorTy.getD c0 = cursor at htest hbody hstepTy hres hsub0 hsub1
-    obtain ⟨x₀, hx₀⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome initial env tys c0 hat.fits hinit)
-    have hx₀ty := hasTy_of_sub_normalize hsub0 (evalTerm_hasTy initial env tys c0 x₀ hat.fits hinit hx₀)
-    have hx₀v := evalTerm_validIn s initial env x₀ hat.valid hx₀
+    obtain ⟨x₀, hx₀, hx₀fit⟩ := hat.eval hinit
     rw [denoteBWith, denoteB, hx₀]
-    refine iter_soundB
-      (fun c s' => TypedAt tys env s' ∧ Val.hasTy c cursor = true ∧ Val.validIn s' c = true)
-      (fun c s' h => ⟨h.1.wf, h.1.heap⟩) ?_ k x₀ s ⟨hat, hx₀ty, hx₀v⟩
-    intro c s' ⟨hat₀, hcty, hcv⟩
-    have hat' : TypedAt (tys ++ [cursor]) (env ++ [c]) s' :=
-      hat₀.push (Stores.le_refl s') hat₀.wf hat₀.heap hcty hcv
-    obtain ⟨tv, htv⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome test _ _ .bool hat'.fits htest)
-    obtain ⟨flag, rfl⟩ := Val.hasTy_bool_inv (evalTerm_hasTy test _ _ .bool tv hat'.fits htest htv)
+    refine iter_soundB (fun c w' => TypedAt tys env w' ∧ Typed.Fits w' c cursor)
+      (fun _ _ h => h.1.store) ?_ k x₀ w
+      ⟨hat, Typed.fits_subN w (a := c0) (b := cursor) hsub0 x₀ hx₀fit⟩
+    intro c w' ⟨hat₀, hcty⟩
+    have hat' : TypedAt (tys ++ [cursor]) (env ++ [c]) w' :=
+      hat₀.push (StoreOk.refl hat₀.store) hcty
+    obtain ⟨tv, htv, htvfit⟩ := hat'.eval htest
+    obtain ⟨flag, rfl⟩ := Typed.fits_bool_inv htvfit
     unfold iterateStepWith iterateStep
     rw [htv]
     cases flag with
     | false =>
-      obtain ⟨v, hv⟩ :=
-        Option.isSome_iff_exists.mp (evalTerm_isSome result _ _ d hat'.fits hres)
+      obtain ⟨v, hv, hvfit⟩ := hat'.eval hres
       rw [hv]
-      refine ⟨rfl, ⟨Stores.le_refl s', hat₀.wf, hat₀.heap⟩, ?_, ?_⟩
-      · intro ex hex
-        rw [runP_pure] at hex ⊢
+      refine ⟨rfl, w', rfl, StoreOk.refl hat₀.store, fun ex hex => ?_, fun c' hc' => ?_⟩
+      · rw [runP_pure] at hex
         cases hex
-        exact ⟨evalTerm_hasTy result _ _ d v hat'.fits hres hv,
-          evalTerm_validIn s' result _ v hat'.valid hv⟩
-      · intro c' hc'
-        rw [runP_pure] at hc'
+        exact Typed.strongExit_success w' _ v hvfit
+      · rw [runP_pure] at hc'
         cases hc'
     | true =>
-      have ihb := soundB bad k body (tys ++ [cursor]) (env ++ [c]) s' b hlb hbody hat'
+      have ihb := soundB bad k body (tys ++ [cursor]) (env ++ [c]) w' b hlb hbody hat'
+      obtain ⟨w₂, hs₂, ok₂, hexb⟩ := ihb.reaches
       dsimp only
       rw [runP_bind, runP_bind, ihb.independent]
-      rcases hrb : runP (denoteB k body (env ++ [c])) s' with ⟨rb, s₂⟩
-      have hst₂ : StoreOk s' s₂ := by have := ihb.stores; rw [hrb] at this; exact this
-      have hexb := ihb.exit
-      rw [hrb] at hexb
+      rcases hrb : runP (denoteB k body (env ++ [c])) w'.state with ⟨rb, s₂⟩
+      rw [hrb] at hs₂ hexb
+      have hstate : w₂.state = s₂ := hs₂
       cases rb with
       | none =>
-        refine ⟨rfl, hst₂, ?_, ?_⟩
-        · intro ex hex; rw [runP_pure] at hex; cases hex
-        · intro c' hc'; rw [runP_pure] at hc'; cases hc'
+        refine ⟨rfl, w₂, hstate, ok₂, fun ex hex => ?_, fun c' hc' => ?_⟩
+        · rw [runP_pure] at hex
+          cases hex
+        · rw [runP_pure] at hc'
+          cases hc'
       | some exb =>
         cases exb with
         | failure cause =>
-          refine ⟨rfl, hst₂, ?_, ?_⟩
-          · intro ex hex
-            rw [runP_pure] at hex ⊢
+          refine ⟨rfl, w₂, hstate, ok₂, fun ex hex => ?_, fun c' hc' => ?_⟩
+          · rw [runP_pure] at hex
             cases hex
             exact hexb _ rfl
-          · intro c' hc'; rw [runP_pure] at hc'; cases hc'
+          · rw [runP_pure] at hc'
+            cases hc'
         | success a =>
           have hab := hexb _ rfl
-          have hat₂ : TypedAt (tys ++ [cursor, b.answer]) (env ++ [c, a]) s₂ := by
-            have := (hat'.later hst₂.le hst₂.wf hst₂.heap).push (Stores.le_refl s₂) hst₂.wf
-              hst₂.heap hab.1 hab.2
-            rw [List.append_assoc, List.append_assoc] at this
-            exact this
-          obtain ⟨c', hc'⟩ :=
-            Option.isSome_iff_exists.mp (evalTerm_isSome step _ _ c1 hat₂.fits hstepTy)
+          have hat₂ : TypedAt (tys ++ [cursor, b.answer]) (env ++ [c, a]) w₂ := by
+            have h2 : TypedAt (tys ++ [cursor] ++ [b.answer]) (env ++ [c] ++ [a]) w₂ :=
+              hat'.push ok₂ hab.1
+            rw [List.append_assoc, List.append_assoc] at h2
+            exact h2
+          obtain ⟨c', hc', hc'fit⟩ := hat₂.eval hstepTy
           dsimp only
           rw [hc']
-          refine ⟨rfl, hst₂, ?_, ?_⟩
-          · intro ex hex; rw [runP_pure] at hex; cases hex
-          · intro c'' hc''
-            rw [runP_pure] at hc'' ⊢
+          refine ⟨rfl, w₂, hstate, ok₂, fun ex hex => ?_, fun c'' hc'' => ?_⟩
+          · rw [runP_pure] at hex
+            cases hex
+          · rw [runP_pure] at hc''
             cases hc''
-            exact ⟨hat₀.later hst₂.le hst₂.wf hst₂.heap,
-              hasTy_of_sub_normalize hsub1 (evalTerm_hasTy step _ _ c1 c' hat₂.fits hstepTy hc'),
-              evalTerm_validIn s₂ step _ c' hat₂.valid hc'⟩
-  | .suspend b, tys, env, s, t, hl, hty, hat => by
+            exact ⟨hat₀.later ok₂, Typed.fits_subN w₂ (a := c1) (b := cursor) hsub1 c' hc'fit⟩
+  | .suspend b, tys, env, w, t, hl, hty, hat => by
     rw [denoteBWith, denoteB]
-    exact soundB bad k b tys env s t (Looped.suspend hl) (inv_suspend nativeSignature tys b t hty) hat
-  | .bind a b, tys, env, s, t, hl, hty, hat => by
+    exact soundB bad k b tys env w t (Looped.suspend hl) (inv_suspend nativeSignature tys b t hty) hat
+  | .bind a b, tys, env, w, t, hl, hty, hat => by
     obtain ⟨ha, hb⟩ := Looped.bind hl
     obtain ⟨f, r, hf, hr, rfl⟩ := inv_bind nativeSignature tys a b t hty
-    have iha := soundB bad k a tys env s f ha hf hat
+    have iha := soundB bad k a tys env w f ha hf hat
     rw [denoteBWith, denoteB]
-    refine SoundB.thenB iha _ _ ?_
-    intro ex hex
-    have hok := iha.exit ex hex
+    refine SoundB.thenB iha _ _ (fun ex w₁ _ _ ok₁ hex₁ => ?_)
     cases ex with
     | success v =>
-      have hat' := hat.push iha.stores.le iha.stores.wf iha.stores.heap hok.1 hok.2
-      exact (soundB bad k b (tys ++ [f.answer]) (env ++ [v]) _ r hb hr hat').widen
-        (fun _ h => h) (fun w h => Ty.hasTy_join_right f.error r.error w [] h)
+      exact (soundB bad k b (tys ++ [f.answer]) (env ++ [v]) w₁ r hb hr (hat.push ok₁ hex₁.1)).widen
+        (Ty.subN_refl _) (Ty.subN_join_right f.error r.error)
     | failure c =>
-      exact SoundB.pure iha.stores.wf iha.stores.heap _
-        (causeAdmits_of_forall (fun w h => Ty.hasTy_join_left f.error r.error w [] h) c hok)
-  | .select test d a b, tys, env, s, t, hl, hty, hat => by
+      exact SoundB.pure ok₁.store _
+        (Typed.exitOk_failure_of_errorN (Ty.subN_join_left f.error r.error) hex₁)
+  | .select test d a b, tys, env, w, t, hl, hty, hat => by
     obtain ⟨ha, hb⟩ := Looped.select hl
     obtain ⟨ty, e0, e1, t0, t1, answer, htest, harms, ht0, ht1, hans, rfl⟩ :=
       inv_select nativeSignature tys test d a b t hty
     rw [EffTy.joinAnswer_eq] at hans
     cases hans
-    obtain ⟨x, hx⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome test env tys ty hat.fits htest)
-    have hxty := evalTerm_hasTy test env tys ty x hat.fits htest hx
-    have hxv := evalTerm_validIn s test env x hat.valid hx
-    obtain ⟨first, bound, hdec, hbound⟩ := Decision.decide_typed d harms hxty
-    have hvalid : ∀ y, bound = some y → Val.validIn s y = true := by
-      intro y hy
-      subst hy
-      exact Decision.decide_validIn d s hxv hdec
+    obtain ⟨x, hx, hxfit⟩ := hat.eval htest
+    obtain ⟨first, bound, hdec, hbound⟩ := Typed.decide_fits harms hxfit
     rw [denoteBWith, denoteB, hx]
     show SoundB (match (some x).bind d.decide with
         | some (true, bound) => denoteBWith bad k a (env ++ bound.toList)
@@ -426,94 +398,71 @@ theorem soundB (bad : ExitV) (k : Nat) : ∀ (e : NativeEff) (tys : TyEnv) (env 
       (match (some x).bind d.decide with
         | some (true, bound) => denoteB k a (env ++ bound.toList)
         | some (false, bound) => denoteB k b (env ++ bound.toList)
-        | none => pure (some badShapeExit)) s _ _
+        | none => pure (some badShapeExit)) w _ _
     rw [Option.bind_some, hdec]
     cases first with
     | true =>
-      exact (soundB bad k a (tys ++ e0) (env ++ bound.toList) s t0 ha ht0
-        (hat.bound hbound hvalid)).widen
-        (fun w h => Ty.hasTy_join_left t0.answer t1.answer w [] h)
-        (fun w h => Ty.hasTy_join_left t0.error t1.error w [] h)
+      exact (soundB bad k a (tys ++ e0) (env ++ bound.toList) w t0 ha ht0 (hat.bound hbound)).widen
+        (Ty.subN_join_left t0.answer t1.answer) (Ty.subN_join_left t0.error t1.error)
     | false =>
-      exact (soundB bad k b (tys ++ e1) (env ++ bound.toList) s t1 hb ht1
-        (hat.bound hbound hvalid)).widen
-        (fun w h => Ty.hasTy_join_right t0.answer t1.answer w [] h)
-        (fun w h => Ty.hasTy_join_right t0.error t1.error w [] h)
-  | .exit b, tys, env, s, t, hl, hty, hat => by
+      exact (soundB bad k b (tys ++ e1) (env ++ bound.toList) w t1 hb ht1 (hat.bound hbound)).widen
+        (Ty.subN_join_right t0.answer t1.answer) (Ty.subN_join_right t0.error t1.error)
+  | .exit b, tys, env, w, t, hl, hty, hat => by
     obtain ⟨tb, htb, rfl⟩ := inv_exit nativeSignature tys b t hty
-    have ih := soundB bad k b tys env s tb (Looped.exit hl) htb hat
+    have ih := soundB bad k b tys env w tb (Looped.exit hl) htb hat
     rw [denoteBWith, denoteB]
-    refine SoundB.thenB ih _ _ ?_
-    intro ex hex
-    exact SoundB.pure ih.stores.wf ih.stores.heap _ (reify_ok (ih.exit ex hex))
-  | .catchCause b h, tys, env, s, t, hl, hty, hat => by
+    exact SoundB.thenB ih _ _ (fun _ _ _ _ ok₁ hex₁ => SoundB.pure ok₁.store _ (reify_ok hex₁))
+  | .catchCause b h, tys, env, w, t, hl, hty, hat => by
     obtain ⟨hlb, hlh⟩ := Looped.catchCause hl
     obtain ⟨tb, th, answer, htb, hth, hans, rfl⟩ := inv_catchCause nativeSignature tys b h t hty
     rw [EffTy.joinAnswer_eq] at hans
     cases hans
-    have ih := soundB bad k b tys env s tb hlb htb hat
+    have ih := soundB bad k b tys env w tb hlb htb hat
     rw [denoteBWith, denoteB]
-    refine SoundB.thenB ih _ _ ?_
-    intro ex hex
-    have hok := ih.exit ex hex
+    refine SoundB.thenB ih _ _ (fun ex w₁ _ _ ok₁ hex₁ => ?_)
     cases ex with
     | success v =>
-      exact SoundB.pure ih.stores.wf ih.stores.heap _
-        ⟨Ty.hasTy_join_left tb.answer th.answer v [] hok.1, hok.2⟩
+      exact SoundB.pure ok₁.store _
+        (Typed.exitOk_success_of_answerN (Ty.subN_join_left tb.answer th.answer) hex₁)
     | failure c =>
-      have hc : Val.hasTy (Val.exitErr c) (.causeOf tb.error) = true := by
-        rw [hasTy_causeOf_exitErr]; exact hok
-      have hat' := hat.push ih.stores.le ih.stores.wf ih.stores.heap hc (Val.validIn_exitErr _ c)
-      exact (soundB bad k h (tys ++ [.causeOf tb.error]) (env ++ [Val.exitErr c]) _ th hlh hth
-        hat').widen (fun w hw => Ty.hasTy_join_right tb.answer th.answer w [] hw) (fun _ hw => hw)
-  | .matchCause b v c, tys, env, s, t, hl, hty, hat => by
+      exact (soundB bad k h (tys ++ [.causeOf tb.error]) (env ++ [Val.exitErr c]) w₁ th hlh hth
+        (hat.push ok₁ (Typed.fits_exitErr_causeOf (Typed.fitsExit_failure_cause hex₁.1)))).widen
+        (Ty.subN_join_right tb.answer th.answer) (Ty.subN_refl _)
+  | .matchCause b v c, tys, env, w, t, hl, hty, hat => by
     obtain ⟨hlb, hlv, hlc⟩ := Looped.matchCause hl
     obtain ⟨tb, tv, tc, answer, htb, htv, htc, hans, rfl⟩ :=
       inv_matchCause nativeSignature tys b v c t hty
     rw [EffTy.joinAnswer_eq] at hans
     cases hans
-    have ih := soundB bad k b tys env s tb hlb htb hat
+    have ih := soundB bad k b tys env w tb hlb htb hat
     rw [denoteBWith, denoteB]
-    refine SoundB.thenB ih _ _ ?_
-    intro ex hex
-    have hok := ih.exit ex hex
+    refine SoundB.thenB ih _ _ (fun ex w₁ _ _ ok₁ hex₁ => ?_)
     cases ex with
     | success x =>
-      have hat' := hat.push ih.stores.le ih.stores.wf ih.stores.heap hok.1 hok.2
-      exact (soundB bad k v (tys ++ [tb.answer]) (env ++ [x]) _ tv hlv htv hat').widen
-        (fun w hw => Ty.hasTy_join_left tv.answer tc.answer w [] hw)
-        (fun w hw => Ty.hasTy_join_left tv.error tc.error w [] hw)
+      exact (soundB bad k v (tys ++ [tb.answer]) (env ++ [x]) w₁ tv hlv htv (hat.push ok₁ hex₁.1)).widen
+        (Ty.subN_join_left tv.answer tc.answer) (Ty.subN_join_left tv.error tc.error)
     | failure cause =>
-      have hc : Val.hasTy (Val.exitErr cause) (.causeOf tb.error) = true := by
-        rw [hasTy_causeOf_exitErr]; exact hok
-      have hat' :=
-        hat.push ih.stores.le ih.stores.wf ih.stores.heap hc (Val.validIn_exitErr _ cause)
-      exact (soundB bad k c (tys ++ [.causeOf tb.error]) (env ++ [Val.exitErr cause]) _ tc hlc htc
-        hat').widen (fun w hw => Ty.hasTy_join_right tv.answer tc.answer w [] hw)
-        (fun w hw => Ty.hasTy_join_right tv.error tc.error w [] hw)
-  | .onExit b f, tys, env, s, t, hl, hty, hat => by
+      exact (soundB bad k c (tys ++ [.causeOf tb.error]) (env ++ [Val.exitErr cause]) w₁ tc hlc htc
+        (hat.push ok₁ (Typed.fits_exitErr_causeOf (Typed.fitsExit_failure_cause hex₁.1)))).widen
+        (Ty.subN_join_right tv.answer tc.answer) (Ty.subN_join_right tv.error tc.error)
+  | .onExit b f, tys, env, w, t, hl, hty, hat => by
     obtain ⟨hlb, hlf⟩ := Looped.onExit hl
     obtain ⟨tb, tf, htb, htf, rfl⟩ := inv_onExit nativeSignature tys b f t hty
-    have ih := soundB bad k b tys env s tb hlb htb hat
+    have ih := soundB bad k b tys env w tb hlb htb hat
     rw [denoteBWith, denoteB]
-    refine SoundB.thenB ih _ _ ?_
-    intro ex hex
-    have hok := ih.exit ex hex
-    have hre := reify_ok hok
-    have hat' := hat.push ih.stores.le ih.stores.wf ih.stores.heap hre.1 hre.2
-    have ihf := soundB bad k f (tys ++ [.exitOf tb.answer tb.error]) (env ++ [reifyExitVal ex]) _
-      tf hlf htf hat'
-    refine SoundB.thenB ihf _ _ ?_
-    intro fex hfex
-    exact SoundB.pure ihf.stores.wf ihf.stores.heap _
-      (restore_ok (hok.later ihf.stores.le) (ihf.exit fex hfex))
-  | .succeed v, tys, env, s, t, hl, hty, hat => soundB_leaf bad k (.succeed v) tys env s t rfl hl hty hat
-  | .fail v, tys, env, s, t, hl, hty, hat => soundB_leaf bad k (.fail v) tys env s t rfl hl hty hat
-  | .failCause v, tys, env, s, t, hl, hty, hat =>
-    soundB_leaf bad k (.failCause v) tys env s t rfl hl hty hat
-  | .sync v, tys, env, s, t, hl, hty, hat => soundB_leaf bad k (.sync v) tys env s t rfl hl hty hat
-  | .perform op r, tys, env, s, t, hl, hty, hat =>
-    soundB_leaf bad k (.perform op r) tys env s t rfl hl hty hat
+    refine SoundB.thenB ih _ _ (fun ex w₁ _ _ ok₁ hex₁ => ?_)
+    have ihf := soundB bad k f (tys ++ [.exitOf tb.answer tb.error]) (env ++ [reifyExitVal ex]) w₁
+      tf hlf htf (hat.push ok₁ (show Typed.Fits w₁ (reifyExitVal ex) (.exitOf tb.answer tb.error)
+        from hex₁.1))
+    exact SoundB.thenB ihf _ _ (fun _ _ _ _ ok₂ hex₂ =>
+      SoundB.pure ok₂.store _ (restore_ok (Typed.strongExit_mono _ _ _ _ ok₂.le hex₁) hex₂))
+  | .succeed v, tys, env, w, t, hl, hty, hat => soundB_leaf bad k (.succeed v) tys env w t rfl hl hty hat
+  | .fail v, tys, env, w, t, hl, hty, hat => soundB_leaf bad k (.fail v) tys env w t rfl hl hty hat
+  | .failCause v, tys, env, w, t, hl, hty, hat =>
+    soundB_leaf bad k (.failCause v) tys env w t rfl hl hty hat
+  | .sync v, tys, env, w, t, hl, hty, hat => soundB_leaf bad k (.sync v) tys env w t rfl hl hty hat
+  | .perform op r, tys, env, w, t, hl, hty, hat =>
+    soundB_leaf bad k (.perform op r) tys env w t rfl hl hty hat
   | .gen _, _, _, _, _, hl, _, _ | .uninterruptible _, _, _, _, _, hl, _, _
   | .interruptible _, _, _, _, _, hl, _, _
   | .yieldNow _, _, _, _, _, hl, _, _
@@ -529,24 +478,29 @@ theorem soundB (bad : ExitV) (k : Nat) : ∀ (e : NativeEff) (tys : TyEnv) (env 
 theorem meaningB_never_wrong (bad : ExitV) (k : Nat) (e : NativeEff) (t : EffTy)
     (hl : Looped e = true) (hty : effTy nativeSignature [] e = some t) :
     runP (denoteBWith bad k e []) Stores.empty = meaningB k e [] Stores.empty :=
-  (soundB bad k e [] [] Stores.empty t hl hty TypedAt.empty).independent
+  (soundB bad k e [] [] (Typed.initialWorld t) t hl hty (TypedAt.empty t)).independent
 
-/-- **A finished budgeted run has the program's type.** -/
+/-- **A finished budgeted run has the program's type.** From the empty stores, a finished exit is
+a valid value of the answer type or a cause inside the error type. -/
 theorem meaningB_typed (k : Nat) (e : NativeEff) (t : EffTy) (hl : Looped e = true)
     (hty : effTy nativeSignature [] e = some t) {ex : ExitV} {s' : Stores}
     (h : meaningB k e [] Stores.empty = (some ex, s')) : ExitHasTy t.answer t.error s' ex := by
-  have hs := (soundB badShapeExit k e [] [] Stores.empty t hl hty TypedAt.empty).exit ex
-    (by show (meaningB k e [] Stores.empty).1 = some ex; rw [h])
-  have : (runP (denoteB k e []) Stores.empty).2 = s' := by
-    show (meaningB k e [] Stores.empty).2 = s'; rw [h]
-  rw [this] at hs
-  exact hs
+  obtain ⟨w', hs', ok, hex⟩ :=
+    (soundB badShapeExit k e [] [] (Typed.initialWorld t) t hl hty (TypedAt.empty t)).reaches
+  have hfinished : (meaningB k e [] Stores.empty).1 = some ex := by rw [h]
+  have hleft : (meaningB k e [] Stores.empty).2 = s' := by rw [h]
+  have typed := exitHasTy_of_reaches hs' ok.store (hex ex hfinished)
+  rw [hs'] at typed
+  rw [← hleft]
+  exact typed
 
-/-- **Finished or not, the stores stay inside the invariant.** -/
+/-- **Finished or not, the stores fit a world**: the stores a typed loop-bearing program leaves at
+any budget are the state of a world whose store fits. -/
 theorem meaningB_stores (k : Nat) (e : NativeEff) (t : EffTy) (hl : Looped e = true)
     (hty : effTy nativeSignature [] e = some t) :
-    (meaningB k e [] Stores.empty).2.WF ∧ Stores.HeapNat (meaningB k e [] Stores.empty).2 :=
-  ⟨(soundB badShapeExit k e [] [] Stores.empty t hl hty TypedAt.empty).stores.wf,
-    (soundB badShapeExit k e [] [] Stores.empty t hl hty TypedAt.empty).stores.heap⟩
+    ∃ w, w.state = (meaningB k e [] Stores.empty).2 ∧ StoreFits w := by
+  obtain ⟨w', hs', ok, _⟩ :=
+    (soundB badShapeExit k e [] [] (Typed.initialWorld t) t hl hty (TypedAt.empty t)).reaches
+  exact ⟨w', hs', ok.store⟩
 
 end Effect4.Program.Denote

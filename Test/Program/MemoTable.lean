@@ -40,9 +40,9 @@ def w0 : W :=
   { wHit with state := s0, «Π» := fun _ => none }
 
 theorem store0 : StoreTyped memoSrc w0 :=
-  ⟨fun _ => ⟨(fun h => nomatch h), (fun h => absurd h (Nat.not_lt_zero _))⟩,
+  ⟨⟨fun _ => ⟨(fun h => nomatch h), (fun h => absurd h (Nat.not_lt_zero _))⟩,
     fun _ => ⟨(fun h => nomatch h), (fun h => absurd h (Nat.not_lt_zero _))⟩,
-    (fun _ _ h => nomatch h), (fun _ h => nomatch h),
+    (fun _ _ h => nomatch h)⟩, (fun _ h => nomatch h),
     (fun m hm e he => by
       change m ∈ [_] at hm
       rw [List.mem_singleton] at hm

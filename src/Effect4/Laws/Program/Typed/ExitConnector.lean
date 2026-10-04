@@ -1,15 +1,15 @@
 import Effect4.Laws.Program.Typed.Membership
-import Effect4.Laws.Program.MeaningSound
 
 /-!
 # Typed.ExitConnector — the typed state's exit judgment reaches the meaning layer's
 
 Two judgments say that an exit has its program's type. The typed state's `FitsExit w ty ex`
 (`Typed/Membership.lean`) reads the reified exit with `Fits` at a world, as every typed position
-does. The meaning layer's `Denote.ExitHasTy answer error s ex` (`MeaningSound.lean`), which
-`meaning_typed` and the run theorems conclude, reads a success with the executable shape check
-`Val.hasTy` at its default, empty allocation list and asks it to be valid in the store `s`, and
-a failure's cause with `causeAdmits`. `exitHasTy_of_fitsExit` takes the first to the second
+does. The meaning layer's `Denote.ExitHasTy answer error s ex` (defined here since 2026-10-04, so
+that the straight theorems of `MeaningSound.lean` can read the connector), which `meaning_typed`
+and the run theorems conclude, reads a success with the executable shape check `Val.hasTy` at its
+default, empty allocation list and asks it to be valid in the store `s`, and a failure's cause with
+`causeAdmits`. `exitHasTy_of_fitsExit` takes the first to the second
 under two premises, and each is necessary (the red controls are `Test/Program/ExitConnector.lean`):
 
 * **The world allocates no external handle** (`w.state.externals.allocated = []`). `Fits` admits
@@ -31,6 +31,21 @@ proof is the organization verifier's (`verify-ExitOkConnector.lean`), at the ren
 -/
 
 set_option autoImplicit false
+
+namespace Effect4.Program.Denote
+
+open Effect4 Effect4.Machine Effect4.Program
+
+/-- An exit has a program's type: a success is a valid value of the answer type, and every
+typed failure of a cause is inside the error type. Named `ExitOk` until 2026-10-01; renamed so
+that `ExitOk` names one judgment, the typed state's `Typed.ExitOk` (`FitsExit ∧ NoShapeDefect`,
+`Typed/Admission.lean`), landing plan O5. The typed state's `FitsExit` reaches this judgment
+through `Typed.exitHasTy_of_fitsExit` below, under two premises. -/
+def ExitHasTy (answer error : Ty) (s : Stores) : ExitV → Prop
+  | .success v => Val.hasTy v answer = true ∧ v.validIn s = true
+  | .failure c => causeAdmits (fun w ty => Val.hasTy w ty) error c = true
+
+end Effect4.Program.Denote
 
 namespace Effect4.Program.Typed
 

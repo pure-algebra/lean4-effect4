@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typed.RecordOperations
 import Effect4.Laws.Program.Typed.Denotation
+import Effect4.Laws.Program.Handles.Term
 import Effect4.Laws.Program.MeaningSound
 
 /-! Finite record-operation controls for rows 165, 178, and 195.
@@ -102,7 +103,6 @@ example (w : Typed.World) : ∃ value,
 #print axioms Effect4.Program.evalTerm_keys
 #print axioms Effect4.Program.RawHandles.evalTerm_handles
 #print axioms Effect4.Program.RawHandles.evalTerm_registered
-#print axioms Effect4.Program.Denote.evalTerm_validIn
 
 #print axioms ascending_names_sublist
 #print axioms namedFit_of_sublist_lookup

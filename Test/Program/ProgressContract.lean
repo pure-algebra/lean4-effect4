@@ -1,35 +1,43 @@
 import Effect4.Laws.Program.Progress
 
 /-!
-# Progress contract — a typed, valid request steps to a typed, valid answer, frozen
+# Progress contract — a typed `sync` node steps to a typed answer, frozen
 
-Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §6, node `PROGRESS/answer`.
-Packet: `Test/contracts/program-denotation.contract.md`. The module under contract is
+Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §6, node `PROGRESS/answer`; restated at
+a world by decisions row 209 (the state plan's T1). Packet:
+`Test/contracts/program-denotation.contract.md`. The module under contract is
 `src/Effect4/Laws/Program/Progress.lean`, the first join of lanes 1 and 2.
 
 Every obligation below is ascribed at its exact proposition and supplied by name with `@`, so
 a declaration that keeps the frozen name but weakens the statement fails here
 (`Test/Program/ProvisionContract.lean` is the model). The executable receipts are `#guard`s
-over first-order values: the theorem's hypotheses and conclusions instantiated on the store
-operations the compile contract's programs perform (`Test/Program/CompileContract.lean`:
-`pRefSet`, `pRefUpdate`, `pRefModify`), one Deferred and one Scope sequence for the store
-rows, the pure functions on numbers, and the two register rows as groups of guards. Every
-helper is a store or an answer, never a rendering; `Stores.HeapNat` and `Stores.WF` are
-decided through the instances the modules supply, and `Val.hasTy` is well-founded, so its
-guards are evaluations, never `decide`.
+over first-order values: the store operations the compile contract's programs perform
+(`Test/Program/CompileContract.lean`: `pRefSet`, `pRefUpdate`, `pRefModify`), one Deferred and
+one Scope sequence for the store rows, the pure functions on numbers, and the two register rows.
+Every helper is a store or an answer, never a rendering. `Stores.WF` is decided through the
+instance the modules supply. Every cell today's rows reach holds a number, the guard
+`refs.all (Val.hasTy · .nat)`: the cell spelling reads as a cell declared at `nat` (decisions
+row 96 D2). `Val.hasTy` is well-founded, so its guards are evaluations, never `decide`.
 
-Register rows (`Test/Counterexamples/REGISTER.md`):
+Register rows (`Test/Counterexamples/REGISTER.md`), each a group of guards and a theorem at worlds:
 
-* `E4-PROGRESS-CE-001` — a well-formed store answers typed values, so `answer_typed` needs
-  no more than `Stores.WF`. Refuted: the heap `[Val.bool true]` is `WF`, `refGet ⟨0⟩` is
-  valid in it, the request `Val.cell ⟨0⟩` has the row's request type, and the answer
-  `Val.bool true` does not have the row's answer type `.nat`; `answer_typed` carries
-  `Stores.HeapNat`, which that heap fails.
-* `E4-PROGRESS-CE-002` — `Stores.HeapNat` survives every valid step, so its preservation can
-  be stated on `SyncOp.validIn`. Refuted: `refMake (Val.bool true)` is valid on the empty
-  store, steps, and leaves the heap `[Val.bool true]`; `step_heapNat` is stated on a typed
-  request decoded through `syncOpOf`, and `Val.bool true` does not have `refMake`'s request
-  type.
+* `E4-PROGRESS-CE-001` — a well-formed store answers typed values, so `progress` needs no more
+  than `Stores.WF`. Refuted: the heap `[Val.bool true]` is `WF`, `refGet ⟨0⟩` is valid in it,
+  and its answer `Val.bool true` has not the row's answer type `.nat`. At a world where the
+  request `Val.cell ⟨0⟩` fits the row's request type, the cell columns fail (`ce001_columns`);
+  `progress` carries them (`Denote.StoreFits`).
+* `E4-PROGRESS-CE-002` — the store half survives every valid step, so `progress` can be stated
+  on `SyncOp.validIn`. Refuted: `refMake (Val.bool true)` is valid on the empty store and steps;
+  no world over the store it leaves has typed cell columns and admits its answer at the row's
+  answer type (`ce002_answer`). `progress` is stated on a typed `perform` node, and
+  `Val.bool true` has not `refMake`'s request type.
+
+The red control of the coarse column (the seat's design note, finding F3): `HeapTable` reads a
+stored value with `Val.hasTy`, which accepts every cell handle at `Ref<A>` (decisions row 44).
+At `coarseWorld` cell 0 is declared at `Ref<number>` and holds the handle of cell 1, which is
+declared at `string`. The coarse column holds there (`coarseWorld_heapTable`) and the cell
+columns fail (`coarseWorld_not_cells`), so a read through cell 0 would answer a string at
+`number` under the coarse column.
 -/
 
 set_option autoImplicit false
@@ -70,35 +78,146 @@ def setRequest : Val := Val.tuple [Val.cell ⟨0⟩, Val.nat 7]
 /-- `Deferred.succeed`'s request: the pair of the promise and the number. -/
 def succeedRequest : Val := Val.tuple [Val.promise ⟨0⟩, Val.nat 1]
 
+/-! ## The obligation, ascribed -/
+
+/-- `progress`, at its exact proposition. -/
+example : ∀ (op : NativeOp) (r : Term) (tys : TyEnv) (env : List Val) (w : Typed.World)
+    (t : EffTy), (NativeOp.row op).kind = .sync →
+    effTy nativeSignature tys (.perform op r) = some t →
+    Typed.EnvTyped w tys env → Denote.StoreFits w →
+    ∃ o w' a, Denote.denote (.perform op r) env =
+        Effects.Program.bind (Effects.Program.perform (S := Denote.StoreSig) o)
+          (fun v => pure (Exit.success v)) ∧
+      syncOpStep o w.state = some (w'.state, a) ∧ Denote.StoreOk w w' ∧
+      Typed.Fits w' a t.answer :=
+  @progress
+
+/-- The store half at a world: the cell columns and `Stores.WF`. -/
+example (w : Typed.World) : Denote.StoreFits w ↔ Typed.CellsTyped w ∧ w.state.WF :=
+  ⟨fun h => ⟨h.toCellsTyped, h.wf⟩, fun h => ⟨h.1, h.2⟩⟩
+
+/-- After a run: a later world in the host order whose store fits. -/
+example (w w' : Typed.World) : Denote.StoreOk w w' ↔ w.leHost w' ∧ Denote.StoreFits w' :=
+  ⟨fun h => ⟨h.le, h.store⟩, fun h => ⟨h.1, h.2⟩⟩
+
 /-! ## The register rows -/
 
 section Rows
 
--- E4-PROGRESS-CE-001: `WF` is the handle half only; the answer's type needs `HeapNat`
+/-- At a world whose cell columns are typed and whose cell 0 holds a boolean, the cell's handle
+does not fit the cell spelling `Ref.Ref<number>`, which reads a cell declared at `nat`. -/
+theorem bool_cell_not_ref (w : Typed.World) (cells : Typed.CellsTyped w)
+    (h0 : w.state.refs[0]? = some (Val.bool true)) :
+    ¬ Typed.Fits w (Val.cell ⟨0⟩) NativeOp.refTy := by
+  intro hfit
+  obtain ⟨k, hk, t, declared, equiv⟩ := Typed.fits_refTy_inv hfit
+  cases k with
+  | mk index =>
+    cases hk
+    obtain ⟨n, hn⟩ :=
+      Typed.fits_nat_inv (Typed.fits_subN w equiv.1 _ (cells.values 0 _ h0 t declared))
+    cases hn
+
+-- E4-PROGRESS-CE-001: `WF` is the handle half only; the answer's type needs the cell columns
 #guard Stores.WF boolCell
 #guard SyncOp.validIn boolCell (SyncOp.refGet ⟨0⟩) = true
 #guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row .refGet).request
 #guard NativeOp.syncOpOf .refGet (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
 #guard answer (SyncOp.refGet ⟨0⟩) boolCell = some (Val.bool true)
 #guard Val.hasTy (Val.bool true) (NativeOp.row .refGet).answer = false
-#guard ¬ Stores.HeapNat boolCell
+#guard !boolCell.refs.all (Val.hasTy · .nat)
 
--- E4-PROGRESS-CE-002: validity does not keep `HeapNat`; the typed request does
-#guard Stores.HeapNat Stores.empty
+/-- `E4-PROGRESS-CE-001` at worlds: over the heap `[Val.bool true]`, a world at which `refGet`'s
+request `Val.cell ⟨0⟩` fits the row's request type has no typed cell columns. -/
+theorem ce001_columns (w : Typed.World) (hs : w.state = boolCell)
+    (hreq : Typed.Fits w (Val.cell ⟨0⟩) (NativeOp.row .refGet).request) :
+    ¬ Typed.CellsTyped w :=
+  fun cells => bool_cell_not_ref w cells (by rw [hs]; rfl) hreq
+
+-- E4-PROGRESS-CE-002: validity does not keep the cell columns at the row's types; the typed
+-- request does
+#guard Stores.empty.refs.all (Val.hasTy · .nat)
 #guard SyncOp.validIn Stores.empty (SyncOp.refMake (Val.bool true)) = true
 #guard (syncOpStep (SyncOp.refMake (Val.bool true)) Stores.empty).isSome
-#guard ¬ Stores.HeapNat (after (SyncOp.refMake (Val.bool true)) Stores.empty)
+#guard answer (SyncOp.refMake (Val.bool true)) Stores.empty = some (Val.cell ⟨0⟩)
+#guard !(after (SyncOp.refMake (Val.bool true)) Stores.empty).refs.all (Val.hasTy · .nat)
 #guard Val.hasTy (Val.bool true) (NativeOp.row .refMake).request = false
 #guard NativeOp.syncOpOf .refMake (Val.bool true) = none
 
+/-- `E4-PROGRESS-CE-002` at worlds: no world over the store `refMake (Val.bool true)` leaves has
+typed cell columns and admits the answer `Val.cell ⟨0⟩` at the row's answer type. -/
+theorem ce002_answer (w : Typed.World)
+    (hs : w.state = after (SyncOp.refMake (Val.bool true)) Stores.empty)
+    (cells : Typed.CellsTyped w) :
+    ¬ Typed.Fits w (Val.cell ⟨0⟩) (NativeOp.row .refMake).answer := by
+  refine bool_cell_not_ref w cells ?_
+  rw [hs, after, Typed.syncOpStep_refMake]
+  rfl
+
 end Rows
+
+/-! ## The red control of the coarse column -/
+
+section Coarse
+
+/-- Cell 0 declared at `Ref<number>` holds the handle of cell 1, declared at `string`, which holds
+a string. -/
+def coarseWorld : Typed.World :=
+  { Typed.initialWorld (EffTy.pure .unit) with
+    state := { Stores.empty with refs := [Val.cell ⟨1⟩, Val.str "s"] }
+    Ρ := fun k => if k.index = 0 then some (.refOf .nat) else if k.index = 1 then some .string
+      else none }
+
+-- the coarse leaf accepts the inner handle at `Ref<number>`: handles carry no type in `hasTy`
+#guard Val.hasTy (Val.cell ⟨1⟩) (.refOf .nat)
+#guard Val.hasTy (Val.str "s") (.refOf .nat) = false
+
+/-- The coarse column holds at `coarseWorld`. -/
+theorem coarseWorld_heapTable : Typed.HeapTable coarseWorld := by
+  intro i v hv ty hty
+  match i, hv, hty with
+  | 0, hv, hty =>
+    cases hv
+    cases hty
+    show Val.hasTy (Val.cell ⟨1⟩) (.refOf .nat) [] = true
+    simp only [Val.hasTy]
+    rfl
+  | 1, hv, hty =>
+    cases hv
+    cases hty
+    show Val.hasTy (Val.str "s") .string [] = true
+    simp only [Val.hasTy]
+  | _ + 2, hv, _ => cases hv
+
+/-- The cell columns fail at `coarseWorld`: the handle in cell 0 fits `Ref<number>` only if
+cell 1 is declared equivalent to `nat`, and it is declared at `string`. -/
+theorem coarseWorld_not_cells : ¬ Typed.CellsTyped coarseWorld := by
+  intro cells
+  have h := cells.values 0 (Val.cell ⟨1⟩) rfl (.refOf .nat) rfl
+  obtain ⟨t, declared, equiv⟩ : Typed.RefDeclared coarseWorld ⟨1⟩ .nat := h
+  cases declared
+  obtain ⟨n, hn⟩ := Typed.fits_nat_inv (Typed.fits_subN coarseWorld equiv.1 (Val.str "s") trivial)
+  cases hn
+
+end Coarse
+
+/-- info: 'Test.Program.ProgressContract.ce001_columns' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms ce001_columns
+/-- info: 'Test.Program.ProgressContract.ce002_answer' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms ce002_answer
+/-- info: 'Test.Program.ProgressContract.coarseWorld_heapTable' depends on axioms: [propext] -/
+#guard_msgs in #print axioms coarseWorld_heapTable
+/-- info: 'Test.Program.ProgressContract.coarseWorld_not_cells' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms coarseWorld_not_cells
+/-- info: 'Effect4.Program.progress' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms progress
 
 /-! ## `pRefSet`: `Ref.make(5)`, `Ref.set(ref, 7)`, `Ref.get(ref)` -/
 
 section RefSet
 
 -- `Ref.make(5)` on the empty store
-#guard Stores.HeapNat Stores.empty
+#guard Stores.empty.refs.all (Val.hasTy · .nat)
 #guard Val.hasTy (Val.nat 5) (NativeOp.row .refMake).request
 #guard NativeOp.syncOpOf .refMake (Val.nat 5) = some (SyncOp.refMake (Val.nat 5))
 #guard SyncOp.validIn Stores.empty (SyncOp.refMake (Val.nat 5)) = true
@@ -106,7 +225,7 @@ section RefSet
 #guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row .refMake).answer
 #guard Val.validIn s1 (Val.cell ⟨0⟩)
 #guard Stores.WF s1
-#guard Stores.HeapNat s1
+#guard s1.refs.all (Val.hasTy · .nat)
 #guard s1.refs = [Val.nat 5]
 
 -- `Ref.set(ref, 7)`: the request is the pair, the answer is the cell
@@ -118,7 +237,7 @@ section RefSet
 #guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row .refSet).answer
 #guard Val.validIn s1set (Val.cell ⟨0⟩)
 #guard Stores.WF s1set
-#guard Stores.HeapNat s1set
+#guard s1set.refs.all (Val.hasTy · .nat)
 #guard s1set.refs = [Val.nat 7]
 
 -- `Ref.get(ref)`: the answer is the cell's number
@@ -142,7 +261,7 @@ section RefUpdate
 #guard answer (SyncOp.refUpdate ⟨0⟩ .incr) s1 = some Val.unit
 #guard Val.hasTy Val.unit (NativeOp.row (.refUpdate .incr)).answer
 #guard Stores.WF s1upd
-#guard Stores.HeapNat s1upd
+#guard s1upd.refs.all (Val.hasTy · .nat)
 #guard s1upd.refs = [Val.nat 6]
 #guard answer (SyncOp.refGet ⟨0⟩) s1upd = some (Val.nat 6)
 #guard Val.hasTy (Val.nat 6) (NativeOp.row .refGet).answer
@@ -160,7 +279,7 @@ section RefModify
 #guard answer (SyncOp.refModify ⟨0⟩ .takeAndBump) s1 = some (Val.nat 5)
 #guard Val.hasTy (Val.nat 5) (NativeOp.row (.refModify .takeAndBump)).answer
 #guard Stores.WF s1mod
-#guard Stores.HeapNat s1mod
+#guard s1mod.refs.all (Val.hasTy · .nat)
 #guard s1mod.refs = [Val.nat 6]
 
 end RefModify
@@ -194,7 +313,7 @@ section Deferred
 #guard Val.hasTy (Val.promise ⟨0⟩) (NativeOp.row .deferredMake).answer
 #guard Val.validIn s2 (Val.promise ⟨0⟩)
 #guard Stores.WF s2
-#guard Stores.HeapNat s2
+#guard s2.refs.all (Val.hasTy · .nat)
 
 #guard Val.hasTy succeedRequest (NativeOp.row .deferredSucceed).request
 #guard Val.validIn s2 succeedRequest
@@ -207,7 +326,7 @@ section Deferred
   = some (Val.bool true)
 #guard Val.hasTy (Val.bool true) (NativeOp.row .deferredSucceed).answer
 #guard Stores.WF s2done
-#guard Stores.HeapNat s2done
+#guard s2done.refs.all (Val.hasTy · .nat)
 
 #guard Val.hasTy (Val.promise ⟨0⟩) (NativeOp.row .deferredIsDone).request
 #guard NativeOp.syncOpOf .deferredIsDone (Val.promise ⟨0⟩)
@@ -217,7 +336,7 @@ section Deferred
 #guard answer (SyncOp.deferredPoll ⟨0⟩) s2 = some (Val.bool false)
 #guard Val.hasTy (Val.bool false) (NativeOp.row .deferredPoll).answer
 
--- the async row decodes to nothing: `answer_typed` has nothing to say about it
+-- the async row decodes to nothing: `progress` is stated at `sync` rows only
 #guard (NativeOp.row .deferredAwait).kind = .async
 #guard NativeOp.syncOpOf .deferredAwait (Val.promise ⟨0⟩) = none
 
@@ -233,7 +352,7 @@ section Scope
 #guard Val.hasTy (Val.scopeHandle 0) (NativeOp.row (.scopeMake .sequential)).answer
 #guard Val.hasTy (Val.scopeHandle 0) (NativeOp.row (.scopeMake .parallel)).answer
 #guard Val.validIn (after (SyncOp.scopeMake .sequential) Stores.empty) (Val.scopeHandle 0)
-#guard Stores.HeapNat (after (SyncOp.scopeMake .sequential) Stores.empty)
+#guard (after (SyncOp.scopeMake .sequential) Stores.empty).refs.all (Val.hasTy · .nat)
 
 end Scope
 

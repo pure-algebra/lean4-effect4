@@ -346,7 +346,8 @@ The `sound-at-app-signature` claim carries `meaning_typed`, `run_typed` and `mea
 The `straight-meaning-typed` claim requires `Straight e = true` and successful native program typing in the empty environment.
 `Denote.meaning_typed` establishes `ExitHasTy` at the resulting stores, starting from empty stores.
 Its declaration lives in `src/Effect4/Laws/Program/MeaningSound.lean`.
-Raw handle containment serves this claim through `evalTerm_validIn` and `Denote.sound`.
+`Denote.sound` keeps the typed state's invariant: the environment fits at a world, and the store fits (`Denote.StoreFits`, decisions row 209).
+A value that fits is valid in a store whose cell columns are typed (`CellsTyped.fits_validIn`, `src/Effect4/Laws/Program/Typed/Adequacy.lean`).
 It establishes no scheduled-program liveness or external host execution property.
 
 The `instantiated-formation` claim requires actual row use to check map keys after substitution.

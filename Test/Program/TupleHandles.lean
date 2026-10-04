@@ -1,7 +1,9 @@
+import Effect4.Laws.Program.Handles.Term
 import Effect4.Laws.Program.MeaningSound
 
 /-! Finite raw-handle controls and trust queries for tuple evaluation.
-The universal subset laws serve `straight-meaning-typed` without requiring typed inputs. -/
+The universal subset laws are the register's evidence that terms mint no frames
+(`E4-TYPED-CE-040`); they need no typed inputs. -/
 namespace Effect4.Test.TupleHandles
 open Program Machine
 
@@ -14,7 +16,5 @@ open Program Machine
 #print axioms tupleAt_handles
 #print axioms RawHandles.nativeAtom_handles
 #print axioms RawHandles.evalTerm_handles
-#print axioms Denote.evalTerm_validIn
-#print axioms Denote.Decision.decide_validIn
 #print axioms Denote.meaning_typed
 end Effect4.Test.TupleHandles
