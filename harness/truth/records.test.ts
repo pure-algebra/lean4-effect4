@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { Option } from "effect"
-import { recordOptional, recordSet, recordValue } from "./records.ts"
+import { Effect, Option } from "effect"
+import { caseTagR, recordOptional, recordSet, recordValue } from "./records.ts"
 
 describe("record target helpers", () => {
   test("absence, present undefined, and nested none remain distinct", () => {
@@ -38,5 +38,37 @@ describe("record target helpers", () => {
     expect(Object.getPrototypeOf(result)).toBe(Object.prototype)
     expect(Object.hasOwn(result, "__proto__")).toBe(true)
     expect(result["__proto__"]).toEqual({ x: 2 })
+  })
+})
+
+
+describe("whole-record tag selection", () => {
+  test("binds the original object and constructs only the chosen callback when run", async () => {
+    const value = { _tag: "Found" as const, id: 7, hasOwnProperty: false }
+    const calls: string[] = []
+    const scrutinee = () => { calls.push("scrutinee"); return value }
+    const program = caseTagR(scrutinee(), "Found", record => {
+      calls.push("hit")
+      expect(record).toBe(value)
+      return Effect.succeed(record.id)
+    }, () => { calls.push("miss"); return Effect.succeed(0) })
+    expect(calls).toEqual(["scrutinee"])
+    expect(await Effect.runPromise(program)).toBe(7)
+    expect(calls).toEqual(["scrutinee", "hit"])
+  })
+
+  test("the miss branch retains the whole object and inherited tags do not match", async () => {
+    const value = { _tag: "Missing" as const, query: "Ada" }
+    expect(await Effect.runPromise(caseTagR(value, "Found", () => Effect.succeed(null),
+      record => Effect.succeed(record)))).toBe(value)
+    const inherited: { readonly _tag?: string } = Object.create({ _tag: "Found" })
+    expect(await Effect.runPromise(caseTagR(inherited, "Found", () => Effect.succeed("hit"),
+      record => { expect(record).toBe(inherited); return Effect.succeed("miss") }))).toBe("miss")
+  })
+
+  test("literal tags include ordinary prototype names", async () => {
+    const value = { _tag: "__proto__" as const, ["__proto__"]: 9 }
+    expect(await Effect.runPromise(caseTagR(value, "__proto__",
+      record => Effect.succeed(record["__proto__"]), () => Effect.succeed(0)))).toBe(9)
   })
 })
