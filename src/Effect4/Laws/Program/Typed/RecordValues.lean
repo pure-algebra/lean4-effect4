@@ -1,4 +1,5 @@
 import Effect4.Program.Typed
+import Effect4.Laws.Machine.TermHandles
 
 /-!
 # Named record value helpers
@@ -269,20 +270,6 @@ theorem namedFit_of_sublist_lookup :
         (fun q hq => hall q (List.mem_cons_of_mem _ hq))⟩
 
 
-/-- Successful pairing retains both original columns. Construction uses the name equation. -/
-theorem zipNames_columns {α : Type} :
-    ∀ (names : List String) (values : List α) (es : List (String × α)),
-      Record.zipNames names values = some es →
-      es.map Prod.fst = names ∧ es.map Prod.snd = values
-  | [], [], _, h => by cases h; exact ⟨rfl, rfl⟩
-  | [], _ :: _, _, h => by cases h
-  | _ :: _, [], _, h => by cases h
-  | n :: names, value :: values, _, h => by
-    obtain ⟨es, hes, rfl⟩ := Option.map_eq_some_iff.mp h
-    obtain ⟨hn, hv⟩ := zipNames_columns names values es hes
-    exact ⟨congrArg (List.cons n) hn, congrArg (List.cons value) hv⟩
-
-
 /-- A successful branchwise check gives a result for each input branch. -/
 theorem mapM_some_mem {α β : Type} {f : α → Option β} :
     ∀ {xs : List α} {ys : List β}, xs.mapM f = some ys →
@@ -312,13 +299,6 @@ theorem firstOf_filter_other {α : Type} (removed name : String) (hne : removed 
       simp only [List.filter_cons, decide_eq_true_eq]
       rw [if_neg hp]
       simp only [Field.firstOf, heq, if_neg hne, ih]
-
-/-- A record value's frame, from its parts. -/
-theorem recordParts?_eq_some {v : Val} {ns xs : List Val} (h : recordParts? v = some (ns, xs)) :
-    v = .ctor 0 [.list ns, .list xs] := by
-  match v, h with
-  | .ctor 0 [.list _, .list _], rfl => rfl
-
 
 /-- The named read: the proposition implies the check. -/
 theorem namedFit_hasTy :
