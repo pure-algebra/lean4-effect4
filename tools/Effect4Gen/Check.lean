@@ -17,8 +17,10 @@ change of every address in the store.
 
     lake env lean -M 4096 --run tools\Effect4Gen\Check.lean src\Effect4\Store\Domain\Derived\Program.lean
 
-The environment is the one the generated files elaborate in: the tool reads the `import` lines
-of every file it is given and imports exactly those modules before it looks anything up.
+The environment is the one the generated files elaborate in: the tool reads the header of every
+file it is given with `Lean.Elab.parseImports`, so a `module` header's `public import`,
+`meta import` and `import all` count too, and imports exactly those modules before it looks
+anything up.
 
 The comparison is deliberately *independent* of `Effect4Gen.Main`: this file reads the
 generated text, not the generator's intermediate representation, and finds each carrier in the
@@ -155,10 +157,16 @@ def fileCtorIndices (lines : Array String) : List (String × String × Nat) := I
       | _ => pure ()
   return out
 
-/-- The `import` lines of a generated file: the modules it elaborates in. -/
-def fileImports (lines : Array String) : List String :=
-  lines.toList.filterMap fun l =>
-    if l.startsWith "import " then some ((l.drop 7).copy.trimAscii.copy) else none
+/-- The modules a generated file elaborates in, read from its header by `Lean.Elab.parseImports`,
+the parser the compiler uses on the same header: `import`, `public import`, `meta import` and
+`import all` alike. The implicit `Init` is left out, so a file that imports nothing still reads as
+importing nothing. A header that does not parse is refused. -/
+def fileImports (path text : String) : IO (List String) := do
+  let (imports, _, messages) ← Lean.Elab.parseImports text (some path)
+  if messages.hasErrors then
+    throw (IO.userError s!"{path}: the import header does not parse")
+  return (imports.toList.filterMap fun i =>
+    if i.module == `Init then none else some i.module.toString).eraseDups
 
 /-! ## Reading the environment -/
 
@@ -241,9 +249,7 @@ def main (argv : List String) : IO Unit := do
   -- Import the union of the files' own imports: the environment each file elaborates in.
   let mut mods : Array Name := #[]
   for path in argv do
-    let text ← IO.FS.readFile path
-    let lines := (text.splitOn "\n").toArray.map (·.replace "\r" "")
-    for m in fileImports lines do
+    for m in ← fileImports path (← IO.FS.readFile path) do
       let n := m.toName
       unless mods.contains n do mods := mods.push n
   if mods.isEmpty then
