@@ -153,6 +153,15 @@ private def negativeCases : Array ReportCase := #[
   { label := "refutation that is a goal"
     registry := withPointer (.refutedBy "E4-TEST-CE-001" (fixtureName `wantedGoal))
     expected := #[#["fixture-claim", "wantedGoal", "is a planned goal"]] },
+  { label := "acceptance program without a stage", registry := { base with acceptance := [fixtureModule] }
+    expected := #[#["acceptance", "SemanticsCensus", "no `stage` definition"]] },
+  { label := "acceptance stage that is not a Reach literal"
+    registry := { base with acceptance := [fixtureName `notReach],
+                            requirements := [{ id := "R1", title := "A", top := [fixtureName `firstWitness] }] }
+    expected := #[#["acceptance", "notReach", "not a `Reach` literal"]] },
+  { label := "acceptance waiting on an unknown requirement"
+    registry := { base with acceptance := [fixtureName `unknownWait] }
+    expected := #[#["acceptance", "unknownWait", "unknown requirement R99"]] },
   { label := "placement at an unknown requirement", registry := base
     expected := #[#["placedGoal", "unknown requirement R2"], #["placedWitness", "unknown requirement R2"]] },
   { label := "requirement top that is not a theorem"

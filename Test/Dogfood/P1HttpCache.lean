@@ -385,4 +385,9 @@ def stage : Reach :=
 
 #guard measured = stage
 
+/-- The requirements of the system map's §8 that this program waits on, as its row in
+`Test/Dogfood/README.md` explains them. The semantics report lists the program under each and
+prints `stage` beside it (decisions row 206). -/
+def waitsOn : List String := ["R3", "R6", "R7", "R10"]
+
 end Test.Dogfood.P1HttpCache

@@ -226,6 +226,64 @@ private def planJson (plan : ProofGraph.Plan) (requirements : List Requirement)
   return obj [("requirements", toJson reqs), ("nodes", toJson nodes),
     ("next", names next.toList), ("unplacedGoals", names unplaced.toList)]
 
+/-! ## The acceptance programs (decisions row 206)
+
+Each battery of `Test/Dogfood` declares the stage its program reaches (`stage : Reach`, tied to
+the measurement by a guard) and the requirements it waits on (`waitsOn`). The report reads both
+literals from the battery, so the battery owns them. -/
+
+/-- A list literal's elements, as the elaborator writes `[a, b]`. -/
+private def listLit? : Expr → Option (List Expr)
+  | .app (.app (.app (.const ``List.cons _) _) hd) tl => (listLit? tl).map (hd :: ·)
+  | .app (.const ``List.nil _) _ => some []
+  | .mdata _ e => listLit? e
+  | _ => none
+
+private def strLit? : Expr → Option String
+  | .lit (.strVal s) => some s
+  | .mdata _ e => strLit? e
+  | _ => none
+
+private def boolLit? : Expr → Option Bool
+  | .const ``Bool.true _ => some true
+  | .const ``Bool.false _ => some false
+  | .mdata _ e => boolLit? e
+  | _ => none
+
+/-- A `Test.Dogfood.Reach` literal as JSON: the refused parts with their verdicts, and the four
+stages. `none` if the value is not such a literal. -/
+private def reachJson? (e : Expr) : Option Json := do
+  let e := e.consumeMData
+  guard (e.getAppFn.constName? == some `Test.Dogfood.Reach.mk && e.getAppNumArgs == 5)
+  let args := e.getAppArgs
+  let refused ← (← listLit? args[0]!).mapM fun pair => do
+    let pair := pair.consumeMData
+    guard (pair.getAppFn.constName? == some ``Prod.mk && pair.getAppNumArgs == 4)
+    return obj [("part", text (← strLit? pair.getAppArgs[2]!)),
+      ("verdict", text (← strLit? pair.getAppArgs[3]!))]
+  let some answer := args[2]!.consumeMData.constName? | none
+  guard (answer.getPrefix == `Test.Dogfood.Answer)
+  return obj [("refused", toJson refused), ("admitted", toJson (← boolLit? args[1]!)),
+    ("answer", text answer.getString!), ("printed", toJson (← boolLit? args[3]!)),
+    ("readBack", toJson (← boolLit? args[4]!))]
+
+/-- One acceptance program: its stage and the requirements it waits on, read from its battery. -/
+private def acceptanceJson (battery : Name) (requirements : List String) :
+    MetaM (Except String Json) := do
+  let env ← getEnv
+  let some (.defnInfo stage) := env.find? (battery ++ `stage)
+    | return .error s!"acceptance {battery}: no `stage` definition"
+  let some (.defnInfo waits) := env.find? (battery ++ `waitsOn)
+    | return .error s!"acceptance {battery}: no `waitsOn` definition"
+  let some ids := (listLit? waits.value).bind (·.mapM strLit?)
+    | return .error s!"acceptance {battery}: `waitsOn` is not a list of string literals"
+  for id in ids do
+    unless requirements.contains id do
+      return .error s!"acceptance {battery}: unknown requirement {id}"
+  let some reach := reachJson? stage.value
+    | return .error s!"acceptance {battery}: `stage` is not a `Reach` literal"
+  return .ok (obj [("program", text battery.toString), ("stage", reach), ("waitsOn", toJson ids)])
+
 /-- Validate and collect all located refusals. No status is accepted from authored input. -/
 def buildReport (registry : Registry) (registers : Registers) (toolchain : String) :
     MetaM (Except (Array String) Json) := do
@@ -347,6 +405,12 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     let built ← ProofGraph.buildPlan registry.planScope named memo
     plan ← planJson built registry.requirements placed
   catch ex => errors := errors.push s!"plan: {← ex.toMessageData.toString}"
+  -- The acceptance programs (decisions row 206): each battery's own stage and requirements.
+  let mut acceptance : Array Json := #[]
+  for battery in registry.acceptance do
+    match ← acceptanceJson battery (registry.requirements.map (·.id)) with
+    | .ok row => acceptance := acceptance.push row
+    | .error why => errors := errors.push why
   let concepts := registry.concepts.map fun concept =>
     let members := rows.filter (·.1 == concept.id)
     let counts := ("claims", toJson members.size) ::
@@ -368,6 +432,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
       ("policy", obj [("gate", text "Test/Audit/AxiomGate.lean"),
         ("ceiling", toJson (["propext", "Quot.sound"] : List String))])]),
     ("concepts", toJson concepts), ("claims", toJson (rows.map (·.2.2))), ("cuts", toJson cuts), ("plan", plan),
+    ("acceptance", toJson acceptance),
     ("placement", obj [
       ("universe", text "theorems of the registry's concept-named modules; auxiliary names and planned goals excluded"),
       ("declarations", toJson placements),
@@ -410,6 +475,30 @@ private def cell (s : String) : String := s.replace "|" "\\|" |>.replace "\n" " 
 /-- Display a validated report. Generated statements/statuses have one owner; handwritten
 language explanations live in docs/core. Code fences are longer than any statement run. -/
 private def shortName (name : String) : String := (name.splitOn ".").getLast!
+
+/-- The acceptance section (decisions row 206): one row per program, its stage as its battery
+declares it, and the programs each requirement keeps waiting. -/
+private def renderAcceptance (programs : Array Json) : String := Id.run do
+  if programs.isEmpty then return ""
+  let shortProgram (p : Json) : String := shortName (field p "program")
+  let yes (j : Json) (name : String) : String :=
+    match j.getObjValAs? Bool name with | .ok true => "yes" | .ok false => "no" | .error _ => "?"
+  let strings (j : Json) (name : String) : List String :=
+    (array j name).toList.map fun s => s.getStr?.toOption.getD ""
+  let mut out := "\n## Acceptance programs\n\nThe rc.112 probe programs as acceptance tests (decisions row 206; `Test/Dogfood/README.md`). Each row is the `stage` its battery declares, which a guard ties to the battery's own measurement, and the requirements it `waitsOn`. A slice that moves a program edits both.\n\n"
+  out := out ++ "| Program | Admitted | Answer | Printed | Read back | Refused parts | Waits on |\n| --- | --- | --- | --- | --- | --- | --- |\n"
+  for p in programs do
+    let stage := nested p "stage"
+    let refused := (array stage "refused").toList.map fun r => s!"{field r "part"} ({field r "verdict"})"
+    let refusedText := if refused.isEmpty then "—" else String.intercalate "; " refused
+    out := out ++ s!"| `{shortProgram p}` | {yes stage "admitted"} | {field stage "answer"} | {yes stage "printed"} | {yes stage "readBack"} | {cell refusedText} | {String.intercalate ", " (strings p "waitsOn")} |\n"
+  let ids := (programs.toList.flatMap (strings · "waitsOn")).eraseDups
+  let ordered := ids.toArray.qsort fun a b => (a.drop 1).toNat! < (b.drop 1).toNat!
+  out := out ++ "\nThe programs each requirement keeps waiting:\n\n"
+  for id in ordered do
+    let waiting := programs.toList.filter (strings · "waitsOn" |>.contains id)
+    out := out ++ s!"- {id}: {String.intercalate ", " (waiting.map fun p => s!"`{shortProgram p}`")}\n"
+  return out
 
 /-- The plan section: the requirements table, the next goals, the loose premises, and one Mermaid
 diagram per requirement over the nodes it reaches. -/
@@ -519,5 +608,6 @@ def renderMarkdown (report : Json) : String := Id.run do
   let inherited := declarations.filter (field · "placement" == "inherited")
   out := out ++ s!"\n## Placement\n\n{field placement "universe"}\n\nTagged: {tagged.size}; inherited (provisional): {inherited.size}; unplaced: {(nested placement "unplacedCount").compress}.\n"
   out := out ++ renderPlan (nested report "plan")
+  out := out ++ renderAcceptance (array report "acceptance")
   return out
 end Tools.Semantics
