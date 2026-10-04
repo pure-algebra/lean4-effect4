@@ -320,6 +320,14 @@ endef
 check-slow: ## the slow batteries (`Test/Slow.lean`: long finite runs, the trace laws, the traversal census) and the axiom gate over them
 	$(LAKE) build Test.Slow
 
+# The kernel rung, at a sweep only: every compiled Effect4 and Test declaration in the closure of the
+# battery roots, replayed through the kernel into one environment of their dependencies
+# (tools/Drivers/KernelReplay.lean). Never a bare `leanchecker`: it holds one environment per core.
+check-kernel: ## (sweep) replay every compiled Effect4 and Test declaration through the kernel, after its self-test
+	$(LAKE) build kernel-replay Test Test.Slow
+	$(LAKE) exe kernel-replay --self-test
+	$(LAKE) exe kernel-replay Test Test.Slow
+
 traversal-census: ## print the traversal census (`docs/core/traversal-census.md`)
 	$(LAKE) build Test.Audit.TraversalCensus
 

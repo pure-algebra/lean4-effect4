@@ -112,6 +112,16 @@ srcDir = "tools"
 root = "Drivers.SemanticsControls"
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
+# The kernel rung (`make check-kernel`, the sweep tier): every compiled declaration of this
+# repository's modules in the closure of the given roots, replayed through the kernel into one
+# environment of their dependencies (tools/Drivers/KernelReplay.lean). `--self-test` requires the
+# refusal of a forged theorem.
+[[lean_exe]]
+name = "kernel-replay"
+srcDir = "tools"
+root = "Drivers.KernelReplay"
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
 [[lean_exe]]
 name = "architecture-map"
 srcDir = "tools"

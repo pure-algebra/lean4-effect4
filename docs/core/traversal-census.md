@@ -646,7 +646,10 @@ that changes the next steps, all at zero install:
    instead of a gate written by hand.
 2. **`leanchecker`** ships in the toolchain since v4.28: an independent kernel replay of every
    module's declarations — the right trust rung for `eq_cata` connectors that the elaborator
-   built without source (a `check-kernel` make target, not yet written).
+   built without source. Written 2026-10-04 as `make check-kernel` (the sweep tier) over
+   `tools/Drivers/KernelReplay.lean`, one environment instead of one per core. Its first run
+   replayed 67,434 constants of 414 modules in the closure of `Effect4.Laws` in 66 s, at a peak
+   resident set of 2.3 GB.
 3. **Core `fun_induction`** proves `f = cata alg` for the accumulator shape when `rfl` will
    not (`fun_induction f <;> simp [cata, alg, *]`): the proof engine for the next iteration.
 4. **import-graph at v4.33.0** (`#min_imports`, `#find_home`, `unused_transitive_imports`) turns
