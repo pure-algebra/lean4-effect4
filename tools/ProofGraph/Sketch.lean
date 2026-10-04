@@ -34,8 +34,10 @@ private def closeResidual (g : MVarId) : MetaM (Expr × Array Expr) :=
     let p ← mkForallFVars fvars (← instantiateMVars decl.type)
     return (← instantiateMVars p, fvars)
 
-/-- Declare the sketch `name : ∀ xs, P` proved by `tac`, and its parts. Returns the parts. -/
-def addSketch (name : Name) (xs : Array Expr) (P : Expr) (tac : Syntax) : TermElabM (Array Name) := do
+/-- Declare the sketch `name : ∀ xs, P` proved by `tac`, and its parts, each carrying `attrs`.
+Returns the parts. -/
+def addSketch (name : Name) (xs : Array Expr) (P : Expr) (tac : Syntax)
+    (attrs : Array Attribute := #[]) : TermElabM (Array Name) := do
   let type ← instantiateMVars (← mkForallFVars xs P)
   if type.hasMVar || type.hasLevelParam then
     throwError "sketch: the statement of {name} is not closed, or is universe-polymorphic"
@@ -58,30 +60,36 @@ def addSketch (name : Name) (xs : Array Expr) (P : Expr) (tac : Syntax) : TermEl
     withOptions (warn.sorry.set · false) do
       addDecl <| .thmDecl { name := part, levelParams := [], type := p, value := ← mkSorry p false }
     tagGoal part
+    Term.applyAttributes part attrs
     m.assign (mkAppN (mkConst part) fvars)
     parts := parts.push part
   let value ← instantiateMVars (← mkLambdaFVars xs root)
   if value.hasMVar then throwError "sketch: the proof of {name} leaves a metavariable"
   addDecl <| .thmDecl { name, levelParams := [], type, value }
+  Term.applyAttributes name attrs
   return parts
 
 /-- `proof_sketch G binders : P := by tac`: declare `G`, proved by the script modulo the parts it leaves
-open, which become planned goals `G.partᵢ`. -/
-syntax (name := sketchCmd) "proof_sketch " ident (ppSpace bracketedBinder)* " : " term " := " "by "
-  tacticSeq : command
+open, which become planned goals `G.partᵢ`. Attributes before it go on `G` and on every part, so
+the parts carry the sketch's placement (decisions row 207). -/
+syntax (name := sketchCmd) (Lean.Parser.Term.attributes)? "proof_sketch " ident (ppSpace bracketedBinder)* " : "
+  term " := " "by " tacticSeq : command
 
 @[command_elab sketchCmd] def elabSketch : CommandElab := fun stx => do
-  let name := (← getCurrNamespace) ++ stx[1].getId
+  let name := (← getCurrNamespace) ++ stx[2].getId
+  let attrs ← if stx[0].isNone then pure #[] else elabDeclAttrs stx[0][0]
+  -- the attributes as written, so each printed part carries them when pasted
+  let attrText := if stx[0].isNone then "" else s!"{stx[0][0].prettyPrint} "
   let report ← liftTermElabM do
-    Term.elabBinders stx[2].getArgs fun xs => do
-      let P ← Term.elabType stx[4]
+    Term.elabBinders stx[3].getArgs fun xs => do
+      let P ← Term.elabType stx[5]
       Term.synthesizeSyntheticMVarsNoPostponing
-      let parts ← addSketch name xs (← instantiateMVars P) stx[7]
+      let parts ← addSketch name xs (← instantiateMVars P) stx[8] attrs
       let mut out := s!"{name}: proved modulo {parts.size} part(s)"
       for p in parts do
         let some (.thmInfo t) := (← getEnv).find? p | throwError "sketch: {p} was not added"
         -- the part's name as the sketch's namespace reads it, ready to paste beside the sketch
-        out := out ++ s!"\nproof_goal {stx[1].getId ++ p.componentsRev.head!} : {← ppExpr t.type}"
+        out := out ++ s!"\n{attrText}proof_goal {stx[2].getId ++ p.componentsRev.head!} : {← ppExpr t.type}"
       return out
   logInfo report
 

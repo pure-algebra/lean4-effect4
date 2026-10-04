@@ -88,7 +88,9 @@ alone proves termination or eventual host cooperation.
 
 The generated report checks every concept's selected claims in the loaded environment. A
 concept's claims are a selection, not a complete inventory: an owed property is made visible as
-an `absent` claim, and a planned goal the registry does not name is not in the report. Generated tables own evidence status, propositions,
+an `absent` claim. A planned goal placed at a requirement (`@[semantics "concept" (requirement :=
+Rn)]`, decisions row 207) is one of that requirement's nodes; a goal neither placed nor reached is
+listed as unplaced. Generated tables own evidence status, propositions,
 and counts; prose explains meaning, scope, and boundaries. Cuts own applicability.
 
 ### 1.2 API and Evidence Boundary

@@ -186,29 +186,40 @@ private def literatureJson (r : LiteratureRef) : Json :=
   obj [("work", text r.work), ("locator", text r.locator), ("relation", text r.relation)]
 
 /-- The plan's report section: the requirements with their derived statuses, every node with its
-standing and what its proof brings in, the edges to its nearest nodes, and the next goals
-(`ProofGraph.Plan`). -/
-private def planJson (plan : ProofGraph.Plan) (requirements : List Requirement) : MetaM Json := do
+standing, its placement and what its proof brings in, the edges to its nearest nodes, and the next
+goals (`ProofGraph.Plan`). A requirement's nodes are its registry top nodes and the declarations
+placed at it (`placed`, decisions row 207). -/
+private def planJson (plan : ProofGraph.Plan) (requirements : List Requirement)
+    (placed : Array (Name × String)) : MetaM Json := do
   let env ← getEnv
-  let tops := requirements.foldl (init := #[]) fun acc r => acc ++ r.top.toArray
+  let placedAt (r : Requirement) : List Name := (placed.filter (·.2 == r.id)).toList.map (·.1)
+  let nodesOf (r : Requirement) : List Name := r.top ++ (placedAt r).filter (!r.top.contains ·)
+  let tops := requirements.foldl (init := #[]) fun acc r => acc ++ (nodesOf r).toArray
   let mut nodes : Array Json := #[]
   for n in plan.nodes do
+    let placement := match semanticsAttribute.getParam? env n.name with
+      | some p => obj [("concept", text p.concept),
+          ("requirement", match p.requirement with | some r => text r | none => .null)]
+      | none => .null
     nodes := nodes.push (obj [("name", text n.name.toString),
       ("kind", text (if ProofGraph.isGoal env n.name then "goal" else "theorem")),
       ("status", text n.standing.word),
       ("restsOn", names n.restsOn.toList),
       ("module", text (semanticsModule env n.name).toString),
+      ("placement", placement),
       ("statement", text (← Display.expression (← getConstInfo n.name).type)),
       ("axioms", names (n.axioms.qsort (·.toString < ·.toString)).toList),
       ("broughtIn", obj [("nearest", names n.nearest.toList),
         ("lemmas", toJson n.lemmas), ("definitions", toJson n.definitions)])])
   let word (n : Name) : String := ((plan.find? n).map (·.standing.word)).getD "missing"
+  let status (n : Name) : Json := obj [("name", text n.toString), ("status", text (word n))]
   let reqs := requirements.toArray.map fun r =>
-    let proved := r.openParts.isEmpty && r.top.all (word · == "proved")
+    let proved := r.openParts.isEmpty && (nodesOf r).all (word · == "proved")
     obj [("id", text r.id), ("title", text r.title), ("status", text (if proved then "proved" else "open")),
       ("openParts", toJson r.openParts),
-      ("top", toJson (r.top.map fun n => obj [("name", text n.toString), ("status", text (word n))])),
-      ("next", names (plan.next r.top.toArray).toList)]
+      ("top", toJson (r.top.map status)),
+      ("placed", toJson ((placedAt r).map status)),
+      ("next", names (plan.next (nodesOf r).toArray).toList)]
   let next := plan.next tops
   -- a goal no requirement reaches is planned work without a place in the requirements
   let unplaced := (plan.nodes.filter fun n => ProofGraph.isGoal env n.name && !next.contains n.name).map (·.name)
@@ -285,16 +296,24 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
         ("excluded", text cut.excluded), ("reason", text cut.reason), ("who", text who)])
   -- A registry that fails its own checks is refused before the environment is scanned.
   if !errors.isEmpty then return .error errors
-  -- Tags outside the committed population must still refer to a known concept.
+  -- Tags outside the committed population must still refer to a known concept, and a placement
+  -- at a requirement to a requirement of the registry (decisions row 207). A declaration placed
+  -- at a requirement is one of its nodes, beside the registry's top nodes.
+  let mut placed : Array (Name × String) := #[]
   for (name, _) in env.constants.toList do
-    if let some concept := semanticsAttribute.getParam? env name then
-      unless ids.contains concept do errors := errors.push s!"tag {name}: unknown concept {concept}"
+    if let some placement := semanticsAttribute.getParam? env name then
+      unless ids.contains placement.concept do
+        errors := errors.push s!"tag {name}: unknown concept {placement.concept}"
+      if let some req := placement.requirement then
+        if registry.requirements.any (·.id == req) then placed := placed.push (name, req)
+        else errors := errors.push s!"tag {name}: unknown requirement {req}"
+  placed := placed.qsort (·.1.toString < ·.1.toString)
   let mut placements : Array Json := #[]
   let mut unplaced : Array (Name × Nat) := #[]
   for name in semanticsTheorems env do
     let mod := semanticsModule env name
     if !defaults.contains mod then continue
-    let tagged := semanticsAttribute.getParam? env name
+    let tagged := (semanticsAttribute.getParam? env name).map (·.concept)
     let inherited := registry.concepts.find? (·.defaultModules.contains mod)
     let concept := tagged.orElse (fun _ => inherited.map (·.id))
     match concept with
@@ -310,21 +329,23 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
   for req in registry.requirements do
     if reqIds.contains req.id then errors := errors.push s!"requirement {req.id}: duplicate id"
     reqIds := req.id :: reqIds
-    if req.top.isEmpty && req.openParts.isEmpty then
-      errors := errors.push s!"requirement {req.id}: no top node and no open part"
+    if req.top.isEmpty && req.openParts.isEmpty && !placed.any (·.2 == req.id) then
+      errors := errors.push s!"requirement {req.id}: no top node, no placed node and no open part"
   for pre in registry.planScope do
     unless env.header.moduleNames.any (pre.isPrefixOf ·) do
       errors := errors.push s!"plan scope {pre}: matches no loaded module"
-  -- The plan (`ProofGraph.Plan`): the requirements' top nodes, the claims' witnesses and every
-  -- planned goal of the plan scope are the nodes; the edges are read from their proofs.
+  -- The plan (`ProofGraph.Plan`): the requirements' top and placed nodes, the claims' witnesses
+  -- and every planned goal of the plan scope are the nodes; the edges are read from their proofs.
   let mut plan : Json := .null
   try
     let mut named := registry.requirements.foldl (init := #[]) fun acc r => acc ++ r.top.toArray
+    for (n, _) in placed do
+      unless named.contains n do named := named.push n
     for claim in registry.claims do
       if let .witness w := claim.pointer then
         unless named.contains w do named := named.push w
     let built ← ProofGraph.buildPlan registry.planScope named memo
-    plan ← planJson built registry.requirements
+    plan ← planJson built registry.requirements placed
   catch ex => errors := errors.push s!"plan: {← ex.toMessageData.toString}"
   let concepts := registry.concepts.map fun concept =>
     let members := rows.filter (·.1 == concept.id)
@@ -336,7 +357,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
   if !errors.isEmpty then return .error errors
   unplaced := unplaced.qsort (·.1.toString < ·.1.toString)
   return .ok <| obj [
-    ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (5 : Nat)),
+    ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (6 : Nat)),
     ("producer", text (Tools.GeneratedStamp.note "tools/Drivers/Semantics.lean (make gen-semantics)")),
     ("command", text "make gen-semantics"),
     ("inputs", toJson (["tools/Tools/SemanticsRegistry.lean", "tools/Tools/Semantics.lean",
@@ -404,22 +425,22 @@ private def renderPlan (plan : Json) : String := Id.run do
   let ticked (names : List String) : String :=
     if names.isEmpty then "—" else String.intercalate ", " (names.map fun n => s!"`{shortName n}`")
   let mut out := "\n## Plan\n\nThe requirements and their nodes. A node is a planned goal (a theorem whose body is `sorry`, declared by `proof_goal`) or a theorem a requirement names. Its status is derived from its proof, with goals as leaves (`tools/ProofGraph/Plan.lean`, decisions row 203): goal, modulo (proved from the goals it rests on), or proved. An edge goes from a node to the nodes its proof reaches first.\n\n"
-  out := out ++ "A requirement is proved when every top node is proved and no open part remains. An open part is one not yet stated as a goal.\n\n"
-  out := out ++ "| Requirement | Status | Top nodes | Next goals |\n| --- | --- | --- | --- |\n"
-  for req in array plan "requirements" do
-    let tops := String.intercalate ", " ((array req "top").toList.map fun t =>
+  out := out ++ "A requirement's nodes are its top nodes, named by the registry, and the declarations placed at it (`@[semantics \"concept\" (requirement := Rn)]`, decisions row 207). A requirement is proved when every node is proved and no open part remains. An open part is one not yet stated as a goal.\n\n"
+  out := out ++ "| Requirement | Status | Top nodes | Placed nodes | Next goals |\n| --- | --- | --- | --- | --- |\n"
+  let listed (items : Array Json) : String :=
+    if items.isEmpty then "—" else String.intercalate ", " (items.toList.map fun t =>
       s!"`{shortName (field t "name")}` ({field t "status"})")
-    let tops := if tops.isEmpty then "—" else tops
-    out := out ++ s!"| {field req "id"} | {field req "status"} | {tops} | {ticked (strings (nested req "next"))} |\n"
+  for req in array plan "requirements" do
+    out := out ++ s!"| {field req "id"} | {field req "status"} | {listed (array req "top")} | {listed (array req "placed")} | {ticked (strings (nested req "next"))} |\n"
   let next := strings (nested plan "next")
   out := out ++ s!"\n**Next goals** ({next.length}): {ticked next}\n"
   let unplaced := strings (nested plan "unplacedGoals")
   unless unplaced.isEmpty do
     out := out ++ s!"\n**Goals no requirement reaches** ({unplaced.length}): {ticked unplaced}\n"
   for req in array plan "requirements" do
-    -- the nodes the requirement's top nodes reach through their nearest nodes
+    -- the nodes the requirement's top and placed nodes reach through their nearest nodes
     let mut reach : List String := []
-    let mut todo := (array req "top").toList.map (field · "name")
+    let mut todo := ((array req "top") ++ (array req "placed")).toList.map (field · "name")
     for _ in [0:nodes.size + 1] do
       let some n := todo.head? | break
       todo := todo.tail

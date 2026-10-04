@@ -136,7 +136,7 @@ private def negativeCases : Array ReportCase := #[
     expected := #[#["999", "unknown decision row"]] },
   { label := "requirement without evidence or open part"
     registry := { base with requirements := [{ id := "R0", title := "Fixture requirement", top := [] }] }
-    expected := #[#["requirement R0", "no top node and no open part"]] },
+    expected := #[#["requirement R0", "no top node, no placed node and no open part"]] },
   { label := "plan scope matching no module", registry := { base with planScope := [`Missing.Scope] }
     expected := #[#["Missing.Scope", "matches no loaded module"]] },
   { label := "duplicate requirement id"
@@ -153,6 +153,8 @@ private def negativeCases : Array ReportCase := #[
   { label := "refutation that is a goal"
     registry := withPointer (.refutedBy "E4-TEST-CE-001" (fixtureName `wantedGoal))
     expected := #[#["fixture-claim", "wantedGoal", "is a planned goal"]] },
+  { label := "placement at an unknown requirement", registry := base
+    expected := #[#["placedGoal", "unknown requirement R2"], #["placedWitness", "unknown requirement R2"]] },
   { label := "requirement top that is not a theorem"
     registry := { base with requirements := [{ id := "R0", title := "A", top := [fixtureName `semantics] }] }
     expected := #[#["plan", "semantics", "not a theorem"]] },
@@ -178,10 +180,15 @@ private def negativeCases : Array ReportCase := #[
 
 private def checkPositive : MetaM Unit := do
   let env ← getEnv
-  unless Effect4.Laws.Auto.semanticsAttribute.getParam? env (fixtureName `firstWitness) == some "fixture-one" do
+  let placement (suffix : Name) := Effect4.Laws.Auto.semanticsAttribute.getParam? env (fixtureName suffix)
+  unless placement `firstWitness == some { concept := "fixture-one" } do
     throwError "semantics controls: first imported attribute was not loaded"
-  unless Effect4.Laws.Auto.semanticsAttribute.getParam? env (fixtureName `secondWitness) == some "fixture-two" do
+  unless placement `secondWitness == some { concept := "fixture-two" } do
     throwError "semantics controls: second imported attribute was not loaded"
+  -- a sketch's parts carry the sketch's placement (decisions row 207)
+  for suffix in [`placedGoal, `placedSketch, `placedSketch.part1] do
+    unless placement suffix == some { concept := "fixture-two", requirement := some "R2" } do
+      throwError "semantics controls: {suffix} is not placed at R2"
   let report ← accepted "all statuses" { base with
     claims := [claim "plain" (.witness (fixtureName `firstWitness)),
                claim "resting" (.witness (fixtureName `restingWitness)),
@@ -193,7 +200,8 @@ private def checkPositive : MetaM Unit := do
                claim "assumed" (.assumed "External fixture" "Not locally proved")]
     cuts := [cut "fixture-one" 1]
     requirements := [{ id := "R0", title := "Fixture requirement", top := [fixtureName `restingWitness] },
-                     { id := "R1", title := "Proved fixture requirement", top := [fixtureName `firstWitness] }]
+                     { id := "R1", title := "Proved fixture requirement", top := [fixtureName `firstWitness] },
+                     { id := "R2", title := "Placed fixture requirement", top := [] }]
     planScope := [fixtureModule] }
   let claims ← arrayField report "claims"
   for (id, status) in #[("plain", "proved"), ("resting", "modulo"), ("wanted", "wanted"),
@@ -220,6 +228,18 @@ private def checkPositive : MetaM Unit := do
   unless (← arrayField plan "unplacedGoals") == #[toJson s!"{fixtureModule}.sketchedGoal.part1",
       toJson s!"{fixtureModule}.sketchedGoal.part2"] do
     throwError "semantics controls: the unplaced goals are not the sketch's parts"
+  -- R2 has no top node: its nodes are the declarations placed at it, and its next goals are the
+  -- placed goal and the placed sketch's part
+  let r2 ← named reqs "id" "R2"
+  expectString r2 "status" "open"
+  let placedNames ← (← arrayField r2 "placed").mapM (stringField · "name")
+  unless placedNames == #["placedGoal", "placedSketch", "placedSketch.part1", "placedWitness"].map
+      (s!"{fixtureModule}." ++ ·) do
+    throwError "semantics controls: R2's placed nodes are {placedNames}"
+  unless (← arrayField r2 "next") == #[toJson s!"{fixtureModule}.placedGoal",
+      toJson s!"{fixtureModule}.placedSketch.part1"] do
+    throwError "semantics controls: R2's next goals are not the placed goal and the placed part"
+  expectString (← named (← arrayField r2 "placed") "name" s!"{fixtureModule}.placedWitness") "status" "proved"
   let wanted ← named claims "id" "wanted"
   let contested ← arrayField wanted "contestedBy"
   expectString (← named contested "id" "E4-TEST-CE-003") "registerStatus" "SEEDED"

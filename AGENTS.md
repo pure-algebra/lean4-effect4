@@ -126,6 +126,9 @@ its arrows. Anything else is a leak.
 - No `sorry`, except as the body of a planned goal (`proof_goal`, decisions row 203):
   - the command adds the theorem with a `sorry` body and tags it; the token stays out of source;
   - a goal lives in `Effect4.Laws` or a `Test` fixture, never in a module the `Effect4` root reaches;
+  - a goal in `Effect4.Laws` carries its placement:
+    `@[semantics "concept" (requirement := R4)] proof_goal G : P` (decisions row 207);
+  - proving it changes `proof_goal` to `theorem`, and the placement stays;
   - the axiom gate admits `sorryAx` only as a goal's own body and counts what rests on goals;
   - a claim or a requirement's top node is proved only when it rests on no goal.
 - The axiom gate audits every declaration of every `Effect4.*` and `Test.*` module at

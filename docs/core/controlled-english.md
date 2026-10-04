@@ -283,8 +283,8 @@ Each entry is one row of six columns:
 | **`#guard`** | A check that a battery runs during Lean elaboration. Rendered bytes stay inside it. | — | — | — | — |
 | **definitional equality** | Equality by the kernel's reduction (`rfl`). Fold uniqueness is a theorem, not a definitional equality. | `hom_eq_cata_eff` (`src/Effect4/Program/Fold.lean`) | — | — | — |
 | **aesop bank** (bank) | A named aesop rule set of the law graph. | `src/Effect4/Laws/Auto/RuleSets.lean` | aesop, by name | — | — |
-| **`proof_goal`** | The command that declares a planned goal: a theorem with its statement and a `sorry` body. | `elabGoal` (`tools/ProofGraph/Goal.lean`) | Mathlib's `proof_wanted`, by analogy | `#proof_wanted` | — |
-| **`proof_sketch`** | The command that proves a theorem by a script and declares the script's open goals as planned goals. | `elabSketch` (`tools/ProofGraph/Sketch.lean`) | lean-mlir's `extract_goals`, by name | `#extract_obligations` | — |
+| **`proof_goal`** | The command that declares a planned goal: a theorem with its statement and a `sorry` body. Its attributes are the theorem's, so a goal carries its placement (`@[semantics "concept" (requirement := Rn)]`, decisions row 207). | `elabGoal` (`tools/ProofGraph/Goal.lean`) | Mathlib's `proof_wanted`, by analogy | `#proof_wanted` | — |
+| **`proof_sketch`** | The command that proves a theorem by a script and declares the script's open goals as planned goals. The parts carry the sketch's attributes. | `elabSketch` (`tools/ProofGraph/Sketch.lean`) | lean-mlir's `extract_goals`, by name | `#extract_obligations` | — |
 | **delaboration** | Lean's display of an expression as syntax for people. It is not our printer, and it keeps no inverse. | — | the Lean 4 metaprogramming book, by name; Lean: `Lean.PrettyPrinter.delab` | — | — |
 | **generated declaration** | A declaration that a command or a generator writes. | `fold_of` (`src/Effect4/Program/FoldOf.lean`) | — | — | — |
 | **Lake trace** | Lake's `.trace` record that a module or one of its imports changed. The Makefile judges staleness by it. | `Makefile` | — | — | — |

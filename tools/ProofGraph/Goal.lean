@@ -43,17 +43,19 @@ def tagGoal (name : Name) : CoreM Unit := do
   modifyEnv (goalExt.tag · name)
 
 /-- `proof_goal G binders : P` declares the planned goal `G`: the theorem `G binders : P` whose body is
-`sorry`. A docstring before it is the goal's docstring. -/
-syntax (name := goalDecl) (docComment)? "proof_goal " declId declSig : command
+`sorry`. A docstring and attributes before it are the theorem's, so a goal carries its placement
+as a theorem does (`@[semantics "concept" (requirement := R4)] proof_goal G : P`, decisions row
+207), and proving it changes `proof_goal` to `theorem` with nothing else moved. -/
+syntax (name := goalDecl) (docComment)? (Lean.Parser.Term.attributes)? "proof_goal " declId declSig : command
 
 @[command_elab goalDecl] def elabGoal : CommandElab := fun stx => do
   let doc? : Option (TSyntax ``Parser.Command.docComment) :=
     if stx[0].isNone then none else some ⟨stx[0][0]⟩
-  let id : TSyntax ``Parser.Command.declId := ⟨stx[2]⟩
-  let sig : TSyntax ``Parser.Command.declSig := ⟨stx[3]⟩
-  let decl ← match doc? with
-    | some doc => `(command| $doc:docComment theorem $id $sig := sorry)
-    | none => `(command| theorem $id $sig := sorry)
+  let attrs? : Option (TSyntax ``Parser.Term.attributes) :=
+    if stx[1].isNone then none else some ⟨stx[1][0]⟩
+  let id : TSyntax ``Parser.Command.declId := ⟨stx[3]⟩
+  let sig : TSyntax ``Parser.Command.declSig := ⟨stx[4]⟩
+  let decl ← `(command| $[$doc?:docComment]? $[$attrs?:attributes]? theorem $id $sig := sorry)
   -- the body is `sorry`, so the binders are unused by construction: both warnings are off here only
   withScope (fun scope => { scope with
       opts := (warn.sorry.set scope.opts false).setBool `linter.unusedVariables false }) do

@@ -474,9 +474,11 @@ gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus
 # Lean driver that parses every import header, loads the roots for declaration counts and
 # walks the estates; the role register tools/Tools/ArchitectureRoles.lean is its one hand
 # input. Its proof graph is drawn from the semantics report's JSON, which gen-semantics writes.
-# A report under .lake/gen, never committed and not in `check`.
+# A report under .lake/gen, never committed and not in `check`. The view's input check runs first,
+# on the report and on broken copies of it (scripts/check-proofgraph-input.mjs).
 .PHONY: gen-architecture
 gen-architecture: gen-semantics | build ## the architecture map, measured from the tree, into .lake/gen/architecture-map.html (a report)
+	node scripts/check-proofgraph-input.mjs
 	$(LAKE) build architecture-map
 	@mkdir -p $(GEN)
 	$(LAKE) exe architecture-map --out $(GEN)/architecture-map.html

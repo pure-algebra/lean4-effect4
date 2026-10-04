@@ -4,6 +4,7 @@ import ProofGraph.Audit
 import ProofGraph.Axioms
 import ProofGraph.Goal
 import Effect4
+import Effect4.Laws.Auto.Semantics
 
 /-!
 # Effect4 axiom allowlist gate
@@ -473,6 +474,12 @@ elab "#effect4_axiom_gate" : command => do
         throwError "Effect4 goal gate: the body of goal {declaration} is not `sorry`"
       if (moduleOf? environment declaration).any apiModules.contains then
         throwError "Effect4 goal gate: goal {declaration} is in a module the Effect4 root reaches"
+      -- a goal of the law graph carries its placement, its concept and the requirement it serves
+      -- (decisions row 207); a `Test` fixture's goal need not
+      if (moduleOf? environment declaration).any (`Effect4.Laws).isPrefixOf then
+        let placement := Effect4.Laws.Auto.semanticsAttribute.getParam? environment declaration
+        unless (placement.bind (·.requirement)).isSome do
+          throwError "Effect4 goal gate: goal {declaration} carries no requirement; place it with @[semantics \"concept\" (requirement := Rn)] (decisions row 207)"
       goalCount := goalCount + 1
       continue
     if axioms.any isGoal then resting := resting + 1

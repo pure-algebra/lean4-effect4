@@ -21,10 +21,62 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm';
 import { graphStratify, sugiyama, layeringSimplex, decrossTwoLayer, coordSimplex, coordGreedy } from 'https://cdn.jsdelivr.net/npm/d3-dag@1.1.0/+esm';
 
+// pg-validate:begin
+// The report's plan, checked before anything is drawn: the fields the drawings read, and every
+// reference between nodes. A report that fails is shown as unavailable with its problems, never
+// drawn as an empty or partial graph. scripts/check-proofgraph-input.mjs runs this block on the
+// generated report and on broken copies of it.
+function validatePlan(report) {
+  const problems = [];
+  const isArr = (v) => Array.isArray(v);
+  const isStr = (v) => typeof v === 'string' && v.length > 0;
+  if (!report || typeof report !== 'object') return ['the semantics report is missing'];
+  const plan = report.plan;
+  if (!plan || typeof plan !== 'object') return ['the report has no plan section'];
+  if (!isArr(plan.requirements)) problems.push('plan.requirements is not a list');
+  if (!isArr(plan.nodes)) problems.push('plan.nodes is not a list');
+  if (problems.length) return problems;
+  const names = new Set();
+  for (const n of plan.nodes) {
+    if (!n || !isStr(n.name)) { problems.push('a plan node has no name'); continue; }
+    if (names.has(n.name)) problems.push(`plan node ${n.name} appears twice`);
+    names.add(n.name);
+    if (!['proved', 'modulo', 'goal'].includes(n.status)) problems.push(`plan node ${n.name} has status ${n.status}`);
+  }
+  const known = (where, list) => {
+    if (list === undefined) return;
+    if (!isArr(list)) { problems.push(`${where} is not a list`); return; }
+    for (const t of list) {
+      const name = t && typeof t === 'object' ? t.name : t;
+      if (!names.has(name)) problems.push(`${where} names ${name}, which is not a plan node`);
+    }
+  };
+  for (const n of plan.nodes) {
+    if (!n || !isStr(n.name)) continue;
+    known(`${n.name}'s nearest nodes`, (n.broughtIn || {}).nearest);
+    known(`${n.name}'s goals`, n.restsOn);
+  }
+  for (const r of plan.requirements) {
+    if (!r || !isStr(r.id) || !isStr(r.title) || !isStr(r.status)) { problems.push('a requirement lacks its id, title or status'); continue; }
+    known(`${r.id}'s top nodes`, r.top);
+    known(`${r.id}'s placed nodes`, r.placed);
+    known(`${r.id}'s next goals`, r.next);
+  }
+  known('the next goals', plan.next);
+  known('the unplaced goals', plan.unplacedGoals);
+  return problems;
+}
+// pg-validate:end
+
 const root = document.getElementById('pg');
 const report = JSON.parse(document.getElementById('pg-data').textContent);
 const areaRows = JSON.parse((document.getElementById('pg-areas') || { textContent: '[]' }).textContent);
-const plan = report.plan || { requirements: [], nodes: [], next: [], unplacedGoals: [] };
+const problems = validatePlan(report);
+if (problems.length) {
+  root.innerHTML = `<div class="pg-unavailable" role="alert"><b>The proof graph is unavailable.</b> The semantics report fails ${problems.length} check(s); regenerate it with <code>make gen-semantics</code>.<ul>${problems.slice(0, 20).map((p) => `<li>${String(p).replace(/&/g, '&amp;').replace(/[<]/g, '&lt;')}</li>`).join('')}</ul></div>`;
+  throw new Error(`proof graph: ${problems.length} problem(s) in the semantics report: ${problems[0]}`);
+}
+const plan = report.plan;
 const short = (n) => n.split('.').pop();
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/[<]/g, '&lt;').replace(/>/g, '&gt;');
 // card sizes; a foundation is a theorem the proofs of HUB or more others reach first
@@ -56,7 +108,7 @@ const nodes = new Map();
 const reqs = plan.requirements.map((r) => r.id);
 for (const r of plan.requirements) {
   nodes.set('req:' + r.id, { id: 'req:' + r.id, kind: 'requirement', label: r.id, title: r.title, status: r.status,
-    openParts: r.openParts || [], next: r.next || [], out: (r.top || []).map((t) => t.name) });
+    openParts: r.openParts || [], next: r.next || [], out: [...(r.top || []), ...(r.placed || [])].map((t) => t.name) });
 }
 for (const n of plan.nodes) {
   const claims = claimsOf[n.name] || [];
@@ -67,7 +119,6 @@ for (const n of plan.nodes) {
     concept: (claims[0] && claims[0].concept) || placement[n.name] || null,
     role: claims[0] ? claims[0].role : null });
 }
-for (const n of nodes.values()) n.out = n.out.filter((t) => nodes.has(t));
 const parentsOf = new Map([...nodes.keys()].map((k) => [k, []]));
 for (const n of nodes.values()) for (const t of n.out) parentsOf.get(t).push(n.id);
 const down = (id) => nodes.get(id).out;

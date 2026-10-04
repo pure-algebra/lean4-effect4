@@ -23,6 +23,10 @@ attribute [semantics "Not a concept"] untaggedWitness
 #guard_msgs (error) in
 attribute [semantics "other-concept"] firstWitness
 
+/-- error: semantics: expected a requirement id such as R4 -/
+#guard_msgs (error) in
+attribute [semantics "fixture-one" (requirement := Q1)] untaggedWitness
+
 /-- error: Cannot add attribute `[semantics]` to declaration `Nat.add_comm` because it is in an imported module -/
 #guard_msgs (error) in
 attribute [semantics "fixture-one"] Nat.add_comm
@@ -57,5 +61,19 @@ proof_goal sketchedGoal.part2 : True
 #guard_msgs in
 proof_sketch sketchedGoal : True ∧ True := by
   refine ⟨?_, ?_⟩
+
+-- Placed fixtures (decisions row 207): a goal and a theorem placed at the controls' requirement
+-- `R2`, and a sketch whose parts carry its placement.
+/-- a goal placed at `R2` -/
+@[semantics "fixture-two" (requirement := R2)] proof_goal placedGoal : 1 = 1
+/-- a theorem placed at `R2` -/
+@[semantics "fixture-two" (requirement := R2)] theorem placedWitness : True := True.intro
+/--
+info: Test.Audit.SemanticsCensus.placedSketch: proved modulo 1 part(s)
+@[semantics "fixture-two" (requirement := R2)] proof_goal placedSketch.part1 : True
+-/
+#guard_msgs in
+@[semantics "fixture-two" (requirement := R2)] proof_sketch placedSketch : True ∧ True := by
+  refine ⟨?_, True.intro⟩
 
 end Test.Audit.SemanticsCensus
