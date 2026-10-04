@@ -1,5 +1,6 @@
 import Effect4.Machine.Alphabets
 import Effect4.Machine.Record
+import Effect4.Machine.Map
 import Effect4.Program.TyEq
 
 /-!
@@ -176,6 +177,8 @@ inductive NativeAtom
   /-- The L3 atoms (plan §2.6): the list operations, which read a fiber snapshot as the list of
   its handles (`Val.asList?`), the rest of natural arithmetic, and string concatenation. -/
   | listNil | listCons | listGet | listLength | listAppend | natSub | natDiv | natMod | strConcat
+  /-- Pure string-map operations (decisions rows 125, 166 and 197). -/
+  | mapEmpty | mapGet | mapSet | mapKeys | mapEntries | mapFromEntries
   deriving DecidableEq, BEq
 
 namespace NativeAtom
@@ -308,6 +311,25 @@ def row : NativeAtom → AtomRow
       { name := "concat", arity := some 2, constGeneric := false,
         prelude := "(a: string, b: string): string => a + b" }
 
+  | .mapEmpty =>
+      { name := "mapEmpty", arity := some 0, constGeneric := false,
+        prelude := "(): Readonly<Record<string, never>> => ({})" }
+  | .mapGet =>
+      { name := "mapGet", arity := some 2, constGeneric := false,
+        prelude := "<A>(map: Readonly<Record<string, A>>, key: string): Option.Option<A> => Object.prototype.hasOwnProperty.call(map, key) ? Option.some(map[key] as A) : Option.none()" }
+  | .mapSet =>
+      { name := "mapSet", arity := some 3, constGeneric := false,
+        prelude := "<A, B>(map: Readonly<Record<string, A>>, key: string, value: B): Readonly<Record<string, A | B>> => ({ ...map, [key]: value })" }
+  | .mapKeys =>
+      { name := "mapKeys", arity := some 1, constGeneric := false,
+        prelude := "<A>(map: Readonly<Record<string, A>>): ReadonlyArray<string> => Object.keys(map).sort((a, b) => { const encoder = new TextEncoder(); const x = encoder.encode(a), y = encoder.encode(b); for (let i = 0; i < Math.min(x.length, y.length); i++) { const delta = (x[i] as number) - (y[i] as number); if (delta !== 0) return delta; } return x.length - y.length; })" }
+  | .mapEntries =>
+      { name := "mapEntries", arity := some 1, constGeneric := false,
+        prelude := "<A>(map: Readonly<Record<string, A>>): ReadonlyArray<readonly [string, A]> => mapKeys(map).map(key => [key, map[key] as A] as const)" }
+  | .mapFromEntries =>
+      { name := "mapFromEntries", arity := some 1, constGeneric := false,
+        prelude := "<A = never>(entries: ReadonlyArray<readonly [string, A]>): Readonly<Record<string, A>> => Object.fromEntries(entries)" }
+
 def name (atom : NativeAtom) : String := (row atom).name
 
 /-- Exact lookup over the complete inventory; unknown names remain refused. A match on the
@@ -350,6 +372,12 @@ def ofName? : String → Option NativeAtom
   | "div" => some .natDiv
   | "mod" => some .natMod
   | "concat" => some .strConcat
+  | "mapEmpty" => some .mapEmpty
+  | "mapGet" => some .mapGet
+  | "mapSet" => some .mapSet
+  | "mapKeys" => some .mapKeys
+  | "mapEntries" => some .mapEntries
+  | "mapFromEntries" => some .mapFromEntries
   | _ => none
 
 theorem ofName?_name (atom : NativeAtom) : ofName? atom.name = some atom := by
@@ -418,13 +446,20 @@ def eval : NativeAtom → List Val → Option Val
   | .natDiv, [Val.nat a, Val.nat b] => some (Val.nat (a / b))
   | .natMod, [Val.nat a, Val.nat b] => some (Val.nat (a % b))
   | .strConcat, [Val.str a, Val.str b] => some (Val.str (a ++ b))
+  | .mapEmpty, [] => some Machine.Map.empty
+  | .mapGet, [value, .str key] => Machine.Map.get value key
+  | .mapSet, [value, .str key, replacement] => Machine.Map.set value key replacement
+  | .mapKeys, [value] => Machine.Map.keys value
+  | .mapEntries, [value] => Machine.Map.entries value
+  | .mapFromEntries, [value] => Machine.Map.fromEntries value
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
   | .boolOr, _ | .boolAnd, _ | .tagIs, _ | .isSome, _ | .getOrElse, _
   | .ite, _ | .optSome, _ | .optNone, _ | .mul, _
   | .listNil, _ | .listCons, _ | .listGet, _ | .listLength, _ | .listAppend, _
-  | .natSub, _ | .natDiv, _ | .natMod, _ | .strConcat, _ => none
+  | .natSub, _ | .natDiv, _ | .natMod, _ | .strConcat, _
+  | .mapEmpty, _ | .mapGet, _ | .mapSet, _ | .mapKeys, _ | .mapEntries, _ | .mapFromEntries, _ => none
 
 end NativeAtom
 
